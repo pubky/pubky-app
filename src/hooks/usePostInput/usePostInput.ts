@@ -304,7 +304,8 @@ export function usePostInput({
 
         const isImage = file.type.startsWith('image/');
         const maxSize = isImage ? ATTACHMENT_MAX_IMAGE_SIZE : ATTACHMENT_MAX_OTHER_SIZE;
-        const maxSizeLabel = isImage ? '5MB' : '20MB';
+        const maxOtherSizeLabel = `${Math.round(ATTACHMENT_MAX_OTHER_SIZE / (1024 * 1024))}MB`;
+        const maxSizeLabel = isImage ? '5MB' : maxOtherSizeLabel;
 
         if (file.size > maxSize) {
           errors.push(`"${file.name}" exceeds the maximum size of ${maxSizeLabel}.`);
