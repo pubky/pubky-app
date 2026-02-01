@@ -7,6 +7,7 @@ import {
   createQuickPost,
   createPostFromDialog,
   deletePost,
+  editPost,
   replyToPost,
   repostPost,
   MAX_POST_LENGTH,
@@ -76,8 +77,21 @@ describe('posts', () => {
     latestPostInFeedContentEq(postContent);
   });
 
-  // todo: implement when editing posts is implemented, see https://github.com/pubky/franky/issues/751
-  it.skip('can edit a post');
+  it('can edit a post', () => {
+    const postContent = `I can edit this post! ${Date.now()}`;
+    const editedContent = `I have edited this post! ${Date.now()}`;
+
+    createQuickPost(postContent);
+    latestPostInFeedContentEq(postContent);
+
+    editPost({ newPostContent: editedContent, filterText: postContent });
+
+    latestPostInFeedContentEq(editedContent);
+
+    // Reload and check post is still displayed with edited content
+    cy.reload();
+    latestPostInFeedContentEq(editedContent);
+  });
 
   // todo: ready to implement these tests
   it('can post with maximum character limit (2000)', () => {
