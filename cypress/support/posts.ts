@@ -307,21 +307,25 @@ export const editPost = ({
   newPostContent,
   filterText,
   postIdx = 0,
+  type = PostOrReply.Post,
 }: {
   newPostContent: string;
   filterText?: string;
   postIdx?: number;
+  type?: PostOrReply;
 }) => {
   cy.findPostInFeed(postIdx, filterText, CheckForNewPosts.Yes).within(() => {
-    cy.get('[data-cy="post-more-btn"]').should('be.visible').click();
+    cy.get('[data-cy="post-more-btn"]').eq(type).should('be.visible').click();
   });
 
   cy.get('[data-cy="post-menu-action-edit"]').should('be.visible').click();
 
-  cy.get('[data-cy="edit-post-input"]').should('be.visible').within(() => {
-    cy.get('textarea').clear().type(newPostContent);
-    cy.get('[data-cy="post-input-action-bar-edit"]').click();
-  });
+  cy.get('[data-cy="edit-post-input"]')
+    .should('be.visible')
+    .within(() => {
+      cy.get('textarea').clear().type(newPostContent);
+      cy.get('[data-cy="post-input-action-bar-edit"]').click();
+    });
 
   cy.get('[data-cy="edit-post-input"]').should('not.exist');
 };
