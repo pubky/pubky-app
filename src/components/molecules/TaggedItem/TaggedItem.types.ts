@@ -2,7 +2,8 @@ import type { NexusTag } from '@/core/services/nexus/nexus.types';
 
 export interface TaggerWithAvatar {
   id: string;
-  avatarUrl: string;
+  /** Avatar URL - may be undefined if user has no avatar */
+  avatarUrl?: string;
   /** Optional display name for the user */
   name?: string;
 }
