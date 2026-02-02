@@ -26,6 +26,10 @@ interface PostInputBaseProps {
   onArticleModeChange?: (isArticle: boolean) => void;
   /** Data Cy for the post input */
   dataCy?: string;
+  /** Initial content to pre-fill (e.g. from OS share target) */
+  initialContent?: string;
+  /** Initial file attachments to pre-fill (e.g. from OS share target) */
+  initialAttachments?: File[];
 }
 
 export type PostInputProps =
