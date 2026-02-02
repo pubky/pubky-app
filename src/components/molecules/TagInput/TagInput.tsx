@@ -1,6 +1,6 @@
 'use client';
 
-import { useRef } from 'react';
+import { useRef, useMemo } from 'react';
 import { useTranslations } from 'next-intl';
 import * as Atoms from '@/atoms';
 import * as Molecules from '@/molecules';
@@ -24,6 +24,9 @@ export function TagInput({
   limitReachedPlaceholder,
   onBlur,
   onClick,
+  enableApiSuggestions = false,
+  excludeFromApiSuggestions = [],
+  addOnSuggestionClick = false,
   autoFocus = false,
   className,
 }: TagInputProps) {
@@ -32,6 +35,15 @@ export function TagInput({
   const defaultLimitReachedPlaceholder = limitReachedPlaceholder ?? t('limitReached');
   const containerRef = useRef<HTMLDivElement>(null);
   const emojiPickerOpenRef = useRef(false);
+
+  // Convert existingTags to string array for API exclusions
+  const existingTagLabels = useMemo(() => existingTags.map((tag) => tag.label), [existingTags]);
+
+  // Combine exclusions for API suggestions: excludeFromApiSuggestions + existingTagLabels
+  const apiExcludeTags = useMemo(() => {
+    const combined = new Set([...excludeFromApiSuggestions, ...existingTagLabels]);
+    return Array.from(combined);
+  }, [excludeFromApiSuggestions, existingTagLabels]);
 
   const isAtLimit = maxTags !== undefined && currentTagsCount >= maxTags;
   const isDisabled = disabled || isAtLimit;
@@ -62,7 +74,33 @@ export function TagInput({
     allTags: existingTags,
   });
 
-  const isListboxOpen = showSuggestions && suggestions.length > 0;
+  // Fetch API suggestions when enabled
+  const { suggestions: apiSuggestions } = Hooks.useTagSuggestions({
+    query: inputValue,
+    excludeTags: apiExcludeTags,
+    enabled: enableApiSuggestions && showSuggestions,
+  });
+
+  // Merge local suggestions from hook with API suggestions (local first, deduplicated)
+  const mergedSuggestions = useMemo(() => {
+    if (!enableApiSuggestions || apiSuggestions.length === 0) {
+      return suggestions;
+    }
+
+    // Get existing labels from local suggestions
+    const localSet = new Set(suggestions.map((t) => t.label.toLowerCase()));
+
+    // Add API suggestions that aren't already in local
+    const apiTagsToAdd = apiSuggestions
+      .filter((label) => !localSet.has(label.toLowerCase()))
+      .map((label) => ({ label }));
+
+    // Combine and limit to 5 total
+    return [...suggestions, ...apiTagsToAdd].slice(0, 5);
+  }, [enableApiSuggestions, suggestions, apiSuggestions]);
+
+  const displaySuggestions = enableApiSuggestions ? mergedSuggestions : suggestions;
+  const isListboxOpen = showSuggestions && displaySuggestions.length > 0;
 
   const handleInputBlur = () => {
     setTimeout(() => {
@@ -93,7 +131,14 @@ export function TagInput({
   };
 
   const selectSuggestion = (label: string) => {
-    setInputValue(label.toLowerCase());
+    if (addOnSuggestionClick) {
+      // Directly add the tag
+      onTagAdd(label.toLowerCase());
+      setInputValue('');
+    } else {
+      // Just fill the input
+      setInputValue(label.toLowerCase());
+    }
     setShowSuggestions(false);
     resetSelection();
     inputRef.current?.focus();
@@ -168,7 +213,7 @@ export function TagInput({
             overrideDefaults={true}
             className="absolute top-full left-0 z-50 mt-1 w-full rounded-md border border-border bg-popover"
           >
-            {suggestions.map((tag, index) => (
+            {displaySuggestions.map((tag, index) => (
               <Atoms.Container
                 key={tag.label}
                 overrideDefaults={true}
@@ -176,6 +221,7 @@ export function TagInput({
                   'cursor-pointer px-3 py-2 hover:rounded-md hover:bg-accent',
                   index === selectedSuggestionIndex && 'rounded-md bg-accent',
                 )}
+                onMouseDown={preventBlur}
                 onClick={() => selectSuggestion(tag.label)}
                 onMouseEnter={() => setSelectedSuggestionIndex(index)}
               >
