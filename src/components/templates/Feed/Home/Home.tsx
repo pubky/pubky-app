@@ -7,12 +7,12 @@ export function Home() {
     <>
       <Organisms.DialogWelcome />
       <Organisms.ContentLayout
+        showRightMobileButton={false}
         leftSidebarContent={<Organisms.HomeFeedSidebar />}
         rightSidebarContent={<Organisms.HomeFeedRightSidebar />}
         leftDrawerContent={<Organisms.HomeFeedDrawer />}
         rightDrawerContent={<Organisms.HomeFeedRightDrawer />}
         leftDrawerContentMobile={<Organisms.HomeFeedDrawerMobile />}
-        rightDrawerContentMobile={<Organisms.HomeFeedRightDrawerMobile />}
       >
         <Organisms.AlertBackup />
         <Organisms.TimelineFeed variant={TIMELINE_FEED_VARIANT.HOME}>

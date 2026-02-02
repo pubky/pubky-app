@@ -32,12 +32,12 @@ export function Search() {
     <>
       <Organisms.DialogWelcome />
       <Organisms.ContentLayout
+        showRightMobileButton={false}
         leftSidebarContent={<Organisms.HomeFeedSidebar hideReachFilter />}
         rightSidebarContent={<Organisms.HomeFeedRightSidebar />}
         leftDrawerContent={<Organisms.HomeFeedDrawer hideReachFilter />}
         rightDrawerContent={<Organisms.HomeFeedRightDrawer />}
         leftDrawerContentMobile={<Organisms.HomeFeedDrawerMobile hideReachFilter />}
-        rightDrawerContentMobile={<Organisms.HomeFeedRightDrawerMobile />}
       >
         {/* Mobile search input - hidden on desktop (shown in header there) */}
         <Atoms.Container className="lg:hidden">

@@ -28,7 +28,7 @@ export function DialogFeedbackContent({
       </Atoms.DialogHeader>
       <Atoms.Container className="gap-3">
         <Atoms.Container overrideDefaults className="rounded-md border border-dashed border-input p-6">
-          <Atoms.Container className="gap-4" overrideDefaults>
+          <Atoms.Container className="gap-4 contain-inline-size" overrideDefaults>
             <Organisms.PostHeader
               postId={currentUserPubky}
               isReplyInput={true}

@@ -69,6 +69,9 @@ export function PostTagsPanel({ postId, className }: PostTagsPanelProps) {
         viewerTags={viewerTags}
         disabled={!isAuthenticated}
         onClick={handleInputClick}
+        enableApiSuggestions
+        excludeFromApiSuggestions={tags.map((t) => t.label)}
+        addOnSuggestionClick
       />
 
       {tags.length > 0 && (

@@ -13,12 +13,12 @@ import { TIMELINE_FEED_VARIANT } from '@/organisms/TimelineFeed/TimelineFeed.typ
 export function Bookmarks() {
   return (
     <Organisms.ContentLayout
+      showRightMobileButton={false}
       leftSidebarContent={<Organisms.HomeFeedSidebar hideReachFilter />}
       rightSidebarContent={<Organisms.HomeFeedRightSidebar />}
       leftDrawerContent={<Organisms.HomeFeedDrawer hideReachFilter />}
       rightDrawerContent={<Organisms.HomeFeedRightDrawer />}
       leftDrawerContentMobile={<Organisms.HomeFeedDrawerMobile hideReachFilter />}
-      rightDrawerContentMobile={<Organisms.HomeFeedRightDrawerMobile />}
     >
       <Organisms.TimelineFeed variant={TIMELINE_FEED_VARIANT.BOOKMARKS} />
     </Organisms.ContentLayout>

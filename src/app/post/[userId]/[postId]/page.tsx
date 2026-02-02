@@ -5,7 +5,7 @@ import * as Core from '@/core';
 import { Metadata } from '@/molecules/Metadata/Metadata';
 import { httpResponseToError, ErrorService } from '@/libs';
 
-interface PostPageProps {
+export interface PostPageProps {
   params: Promise<{
     userId: string;
     postId: string;

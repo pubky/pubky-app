@@ -40,6 +40,9 @@ export function PostInputTags({ tags, onTagsChange, maxTags = POST_MAX_TAGS, dis
             maxTags={maxTags}
             currentTagsCount={tags.length}
             onBlur={disabled ? undefined : handleInputBlur}
+            enableApiSuggestions
+            excludeFromApiSuggestions={tags}
+            addOnSuggestionClick
           />
         )}
 

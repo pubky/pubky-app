@@ -154,7 +154,7 @@ export function PostInput({
       )}
 
       {showThreadConnector && <Atoms.PostThreadConnector variant={POST_THREAD_CONNECTOR_VARIANTS.DIALOG_REPLY} />}
-      <Atoms.Container className="gap-4">
+      <Atoms.Container className="gap-4 contain-inline-size">
         {isArticle && (
           <Atoms.Input
             placeholder={t('articleTitle')}

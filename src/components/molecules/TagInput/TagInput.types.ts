@@ -25,6 +25,12 @@ export interface TagInputProps {
   onBlur?: () => void;
   /** Callback when the input container is clicked (useful for auth prompts) */
   onClick?: (e: React.MouseEvent) => void;
+  /** Enable API-based tag suggestions (fetches from Nexus) */
+  enableApiSuggestions?: boolean;
+  /** Tags to exclude from API suggestions (e.g., already added tags on the entity) */
+  excludeFromApiSuggestions?: string[];
+  /** When true, clicking a suggestion directly adds the tag instead of filling the input */
+  addOnSuggestionClick?: boolean;
   /** Whether to auto-focus the input on mount */
   autoFocus?: boolean;
   /** Additional className for the container (useful for width override) */
