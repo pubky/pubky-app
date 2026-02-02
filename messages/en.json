@@ -321,7 +321,10 @@
       "shareUnavailable": "Sharing unavailable",
       "shareUnavailableDescription": "We copied your pubky so you can paste it into your favorite app.",
       "shareFailed": "Share failed",
-      "shareFailedDescription": "Unable to share right now. Please try again."
+      "shareFailedDescription": "Unable to share right now. Please try again.",
+      "signUpFailed": "Error - Failed to sign up",
+      "signUpError": "Something went wrong. Please try again.",
+      "invalidInvite": "Invalid or expired invite code. Please get or request a new invite code."
     },
     "backupMethod": {
       "title": "Choose backup method",

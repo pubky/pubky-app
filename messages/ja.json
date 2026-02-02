@@ -321,7 +321,10 @@
       "shareUnavailable": "共有が利用できません",
       "shareUnavailableDescription": "pubkyをコピーしました。お気に入りのアプリに貼り付けできます。",
       "shareFailed": "共有に失敗しました",
-      "shareFailedDescription": "現在共有できません。再試行してください。"
+      "shareFailedDescription": "現在共有できません。再試行してください。",
+      "signUpFailed": "エラー - サインアップに失敗しました",
+      "signUpError": "問題が発生しました。再試行してください。",
+      "invalidInvite": "無効または期限切れの招待コードです。新しい招待コードを取得またはリクエストしてください。"
     },
     "backupMethod": {
       "title": "バックアップ方法を選択",

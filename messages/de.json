@@ -321,7 +321,10 @@
       "shareUnavailable": "Teilen nicht verfügbar",
       "shareUnavailableDescription": "Wir haben Ihren Pubky kopiert, damit Sie ihn in Ihre Lieblings-App einfuegen können.",
       "shareFailed": "Teilen fehlgeschlagen",
-      "shareFailedDescription": "Teilen momentan nicht möglich. Bitte versuchen Sie es erneut."
+      "shareFailedDescription": "Teilen momentan nicht möglich. Bitte versuchen Sie es erneut.",
+      "signUpFailed": "Fehler - Registrierung fehlgeschlagen",
+      "signUpError": "Etwas ist schief gelaufen. Bitte versuchen Sie es erneut.",
+      "invalidInvite": "Ungültiger oder abgelaufener Einladungscode. Bitte holen Sie sich einen neuen Einladungscode."
     },
     "backupMethod": {
       "title": "Backup-Methode wählen",

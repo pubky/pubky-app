@@ -321,7 +321,10 @@
       "shareUnavailable": "分享不可用",
       "shareUnavailableDescription": "我们已复制您的 pubky，您可以将其粘贴到您喜欢的应用中。",
       "shareFailed": "分享失败",
-      "shareFailedDescription": "当前无法分享。请重试。"
+      "shareFailedDescription": "当前无法分享。请重试。",
+      "signUpFailed": "错误 - 注册失败",
+      "signUpError": "出了点问题。请重试。",
+      "invalidInvite": "无效或已过期的邀请码。请获取或申请新的邀请码。"
     },
     "backupMethod": {
       "title": "选择备份方式",

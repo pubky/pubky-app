@@ -321,7 +321,10 @@
       "shareUnavailable": "Partage indisponible",
       "shareUnavailableDescription": "Nous avons copie votre pubky pour que vous puissiez le coller dans votre application préférée.",
       "shareFailed": "Échec du partage",
-      "shareFailedDescription": "Impossible de partager pour le moment. Veuillez réessayer."
+      "shareFailedDescription": "Impossible de partager pour le moment. Veuillez réessayer.",
+      "signUpFailed": "Erreur - Échec de l'inscription",
+      "signUpError": "Une erreur s'est produite. Veuillez réessayer.",
+      "invalidInvite": "Code d'invitation invalide ou expiré. Veuillez obtenir ou demander un nouveau code d'invitation."
     },
     "backupMethod": {
       "title": "Choisir la methode de sauvegarde",

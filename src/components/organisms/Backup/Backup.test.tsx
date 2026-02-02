@@ -1,14 +1,7 @@
 import React from 'react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { render, screen, fireEvent, waitFor } from '@testing-library/react';
+import { render, screen, fireEvent } from '@testing-library/react';
 import { BackupNavigation, BackupPageHeader } from './Backup';
-import * as Libs from '@/libs';
-
-// Hoisted mocks so they can be used inside vi.mock factories
-const { mockToast, mockSignUp } = vi.hoisted(() => ({
-  mockToast: vi.fn(),
-  mockSignUp: vi.fn(),
-}));
 
 // Mock Next.js router
 const mockPush = vi.fn();
@@ -16,17 +9,6 @@ vi.mock('next/navigation', () => ({
   useRouter: () => ({
     push: mockPush,
   }),
-}));
-
-// Mock core
-vi.mock('@/core', () => ({
-  useOnboardingStore: () => ({
-    secretKey: 'test-secret-key',
-    inviteCode: 'test-invite-code',
-  }),
-  AuthController: {
-    signUp: mockSignUp,
-  },
 }));
 
 // Mock atoms
@@ -102,9 +84,6 @@ vi.mock('@/molecules', () => ({
       {children}
     </h1>
   ),
-  useToast: () => ({
-    toast: mockToast,
-  }),
 }));
 
 // Mock app
@@ -126,9 +105,15 @@ describe('BackupNavigation', () => {
     expect(container.firstChild).toMatchSnapshot();
   });
 
-  it('shows loading state when continue button is clicked', async () => {
-    mockSignUp.mockImplementation(() => new Promise(() => {})); // Never resolves
+  it('renders buttons navigation component', () => {
+    render(<BackupNavigation />);
 
+    expect(screen.getByTestId('buttons-navigation')).toBeInTheDocument();
+    expect(screen.getByTestId('back-button')).toBeInTheDocument();
+    expect(screen.getByTestId('continue-button')).toBeInTheDocument();
+  });
+
+  it('shows loading state when continue button is clicked', () => {
     render(<BackupNavigation />);
 
     const continueButton = screen.getByTestId('continue-button');
@@ -136,91 +121,25 @@ describe('BackupNavigation', () => {
 
     fireEvent.click(continueButton);
 
-    await waitFor(() => {
-      expect(continueButton).toHaveAttribute('data-loading', 'true');
-    });
+    expect(continueButton).toHaveAttribute('data-loading', 'true');
   });
 
-  it('navigates to profile on successful signup', async () => {
-    mockSignUp.mockResolvedValue(undefined);
-
+  it('navigates to profile on continue button click', () => {
     render(<BackupNavigation />);
 
     const continueButton = screen.getByTestId('continue-button');
     fireEvent.click(continueButton);
 
-    await waitFor(() => {
-      expect(mockPush).toHaveBeenCalledWith('/profile');
-    });
+    expect(mockPush).toHaveBeenCalledWith('/profile');
   });
 
-  it('shows error toast with correct message for auth error', async () => {
-    const error = Libs.Err.auth(Libs.AuthErrorCode.SESSION_EXPIRED, 'Session expired', {
-      service: Libs.ErrorService.Homeserver,
-      operation: 'signUp',
-    });
-    mockSignUp.mockRejectedValue(error);
-
+  it('navigates to pubky on back button click', () => {
     render(<BackupNavigation />);
 
-    const continueButton = screen.getByTestId('continue-button');
-    fireEvent.click(continueButton);
+    const backButton = screen.getByTestId('back-button');
+    fireEvent.click(backButton);
 
-    await waitFor(() => {
-      expect(mockToast).toHaveBeenCalledWith({
-        title: 'Error - Failed to sign up',
-        description: 'Invalid or expired invite code. Please get or request a new invite code.',
-      });
-    });
-  });
-
-  it('shows error message from AppError for non-auth errors', async () => {
-    const error = Libs.Err.server(Libs.ServerErrorCode.INTERNAL_ERROR, 'Custom error message', {
-      service: Libs.ErrorService.Homeserver,
-      operation: 'signUp',
-    });
-    mockSignUp.mockRejectedValue(error);
-
-    render(<BackupNavigation />);
-
-    const continueButton = screen.getByTestId('continue-button');
-    fireEvent.click(continueButton);
-
-    await waitFor(() => {
-      expect(mockToast).toHaveBeenCalledWith({
-        title: 'Error - Failed to sign up',
-        description: 'Custom error message',
-      });
-    });
-  });
-
-  it('shows generic error message for non-AppError errors', async () => {
-    mockSignUp.mockRejectedValue(new Error('Unknown error'));
-
-    render(<BackupNavigation />);
-
-    const continueButton = screen.getByTestId('continue-button');
-    fireEvent.click(continueButton);
-
-    await waitFor(() => {
-      expect(mockToast).toHaveBeenCalledWith({
-        title: 'Error - Failed to sign up',
-        description: 'Something went wrong. Please try again.',
-      });
-    });
-  });
-
-  it('resets loading state after error', async () => {
-    mockSignUp.mockRejectedValue(new Error('Error'));
-
-    render(<BackupNavigation />);
-
-    const continueButton = screen.getByTestId('continue-button');
-    fireEvent.click(continueButton);
-
-    await waitFor(() => {
-      expect(continueButton).toHaveAttribute('data-loading', 'false');
-    });
+    expect(mockPush).toHaveBeenCalledWith('/pubky');
   });
 });
 

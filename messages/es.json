@@ -321,7 +321,10 @@
       "shareUnavailable": "Compartir no disponible",
       "shareUnavailableDescription": "Copiamos tu pubky para que puedas pegarlo en tu app favorita.",
       "shareFailed": "Error al compartir",
-      "shareFailedDescription": "No se puede compartir ahora. Por favor intenta de nuevo."
+      "shareFailedDescription": "No se puede compartir ahora. Por favor intenta de nuevo.",
+      "signUpFailed": "Error - Fallo en el registro",
+      "signUpError": "Algo salió mal. Por favor intenta de nuevo.",
+      "invalidInvite": "Código de invitación inválido o expirado. Por favor obtén o solicita un nuevo código de invitación."
     },
     "backupMethod": {
       "title": "Elige el metodo de respaldo",
