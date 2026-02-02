@@ -20,7 +20,7 @@ export const HumanPhoneInputField = ({
         <Atoms.Container className="flex hidden h-full w-full flex-1 items-center lg:block lg:w-auto">
           <Atoms.Image
             priority={true}
-            src="/images/sms-verification-phone.png"
+            src="/images/sms-verification-phone.webp"
             alt="Pubky phone representing phone number verification"
             className="h-auto w-[192px] max-w-full"
           />

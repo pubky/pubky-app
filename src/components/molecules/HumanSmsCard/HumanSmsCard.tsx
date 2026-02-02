@@ -34,7 +34,7 @@ export const HumanSmsCard = ({ onClick }: HumanSmsCardProps) => {
           <Atoms.Container className="hidden h-full w-full flex-1 items-center lg:block lg:w-auto">
             <Atoms.Image
               priority={true}
-              src="/images/sms-verification-phone.png"
+              src="/images/sms-verification-phone.webp"
               alt="Lime Pubky phone representing SMS verification"
               className="size-48"
             />

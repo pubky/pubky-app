@@ -20,7 +20,7 @@ exports[`HumanPhoneInputField > matches snapshot 1`] = `
         data-nimg="1"
         decoding="async"
         height="600"
-        src="/images/sms-verification-phone.png"
+        src="/images/sms-verification-phone.webp"
         style="color: transparent;"
         width="800"
       />
