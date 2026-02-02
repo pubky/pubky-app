@@ -1,208 +1,171 @@
 'use client';
 
-import { useState, useCallback, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import * as Core from '@/core';
 import * as Libs from '@/libs';
 import * as Molecules from '@/molecules';
 import { PubkyAppPostKind } from 'pubky-app-specs';
-
-interface UsePostReplyOptions {
-  postId: string;
-  onSuccess?: (createdPostId: string) => void;
-}
-
-interface UsePostPostOptions {
-  onSuccess?: (createdPostId: string) => void;
-}
-
-interface UsePostRepostOptions {
-  originalPostId: string;
-  onSuccess?: (createdPostId: string) => void;
-}
-
-interface UsePostEditOptions {
-  editPostId: string;
-  onSuccess?: (createdPostId: string) => void;
-}
+import type {
+  UsePostEditOptions,
+  UsePostPostOptions,
+  UsePostReplyOptions,
+  UsePostRepostOptions,
+  UsePostReturn,
+} from './usePost.types';
 
 /**
- * Custom hook to handle post creation or edits (replies, reposts, and root posts)
+ * Hook for creating and editing posts: replies, reposts, root posts, and edits.
  *
- * @returns Object containing content state, setContent function, tags state, setTags function, attachments state, setAttachments function, isArticle state, setIsArticle function, articleTitle state, setArticleTitle function, reply method, post method, repost method, isSubmitting state, and error state
+ * @returns UsePostReturn - Content and attachment state, setters, and methods: reply, post, repost, edit. Also isSubmitting.
  *
  * @example
  * ```tsx
- * const { content, setContent, tags, setTags, attachments, setAttachments, reply, post, repost, isSubmitting, error } = usePost();
+ * const { content, setContent, tags, setTags, attachments, setAttachments, reply, post, repost, edit, isSubmitting } = usePost();
  *
- * // For replies:
- * const handleSubmit = reply({ postId: 'post-123', onSuccess: () => {} });
+ * // Reply to a post
+ * await reply({ postId: 'author:postId', onSuccess: (id) => {} });
  *
- * // For reposts:
- * const handleSubmit = repost({ originalPostId: 'post-123', onSuccess: () => {} });
+ * // Repost (quote or with attachments)
+ * await repost({ originalPostId: 'author:postId', onSuccess: (id) => {} });
  *
- * // For root posts:
- * const handleSubmit = post({ onSuccess: () => {} });
+ * // Create root post
+ * await post({ onSuccess: (id) => {} });
  *
- * // For edits:
- * const handleSubmit = edit({ editPostId: 'post-123', onSuccess: () => {} });
+ * // Edit existing post
+ * await edit({ editPostId: 'author:postId', onSuccess: (id) => {} });
  * ```
  */
-export function usePost() {
+export function usePost(): UsePostReturn {
   const [content, setContent] = useState('');
   const [tags, setTags] = useState<string[]>([]);
   const [attachments, setAttachments] = useState<File[]>([]);
   const [isArticle, setIsArticle] = useState(false);
   const [articleTitle, setArticleTitle] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
-  // selectCurrentUserPubky() throws an error when user is not authenticated;
-  // access currentUserPubky directly to get null instead (post actions return early if null)
+  // selectCurrentUserPubky() throws when not authenticated; use currentUserPubky for null
   const currentUserId = Core.useAuthStore((state) => state.currentUserPubky);
   const { toast } = Molecules.useToast();
 
-  const showErrorToast = useCallback(
-    (description: string) => {
-      toast({
-        title: 'Error',
-        description,
-        className: 'destructive border-destructive bg-destructive text-destructive-foreground',
+  function showErrorToast(description: string) {
+    toast({
+      title: 'Error',
+      description,
+      className: 'destructive border-destructive bg-destructive text-destructive-foreground',
+    });
+  }
+
+  function showSuccessToast(title: string, description: string) {
+    toast({
+      title,
+      description,
+    });
+  }
+
+  async function reply({ postId, onSuccess }: UsePostReplyOptions) {
+    if ((!content.trim() && attachments.length === 0) || !postId || !currentUserId) return;
+
+    setIsSubmitting(true);
+    try {
+      const createdPostId = await Core.PostController.commitCreate({
+        parentPostId: postId,
+        content: content.trim(),
+        authorId: currentUserId,
+        tags: tags.length > 0 ? tags : undefined,
+        attachments: attachments.length > 0 ? attachments : undefined,
       });
-    },
-    [toast],
-  );
+      setContent('');
+      setTags([]);
+      setAttachments([]);
+      showSuccessToast('Reply posted', 'Your reply has been posted successfully.');
+      onSuccess?.(createdPostId);
+    } catch (err) {
+      Libs.Logger.error('[usePost] Failed to submit reply:', err);
+      showErrorToast('Failed to post reply. Please try again.');
+    } finally {
+      setIsSubmitting(false);
+    }
+  }
 
-  const showSuccessToast = useCallback(
-    (title: string, description: string) => {
-      toast({
-        title,
-        description,
+  async function post({ onSuccess }: UsePostPostOptions) {
+    if (
+      (!content.trim() && attachments.length === 0) ||
+      (isArticle && (!content.trim() || !articleTitle.trim())) ||
+      !currentUserId
+    )
+      return;
+
+    setIsSubmitting(true);
+    try {
+      const createdPostId = await Core.PostController.commitCreate({
+        content: isArticle ? JSON.stringify({ title: articleTitle.trim(), body: content.trim() }) : content.trim(),
+        authorId: currentUserId,
+        tags: tags.length > 0 ? tags : undefined,
+        attachments: attachments.length > 0 ? attachments : undefined,
+        kind: isArticle ? PubkyAppPostKind.Long : PubkyAppPostKind.Short,
       });
-    },
-    [toast],
-  );
+      setContent('');
+      setTags([]);
+      setAttachments([]);
+      setIsArticle(false);
+      setArticleTitle('');
+      showSuccessToast('Post created', 'Your post has been created successfully.');
+      onSuccess?.(createdPostId);
+    } catch (err) {
+      Libs.Logger.error('[usePost] Failed to create post:', err);
+      showErrorToast('Failed to create post. Please try again.');
+    } finally {
+      setIsSubmitting(false);
+    }
+  }
 
-  const reply = useCallback(
-    async ({ postId, onSuccess }: UsePostReplyOptions) => {
-      // allow empty content and attachments
-      if ((!content.trim() && attachments.length === 0) || !postId || !currentUserId) return;
+  async function repost({ originalPostId, onSuccess }: UsePostRepostOptions) {
+    if (!originalPostId || !currentUserId) return;
 
-      setIsSubmitting(true);
+    setIsSubmitting(true);
+    try {
+      const createdPostId = await Core.PostController.commitCreate({
+        originalPostId,
+        content: content.trim(),
+        authorId: currentUserId,
+        tags: tags.length > 0 ? tags : undefined,
+        attachments: attachments.length > 0 ? attachments : undefined,
+      });
+      setContent('');
+      setTags([]);
+      setAttachments([]);
+      showSuccessToast('Repost successful', 'Your repost has been created successfully.');
+      onSuccess?.(createdPostId);
+    } catch (err) {
+      Libs.Logger.error('[usePost] Failed to repost:', err);
+      showErrorToast('Failed to repost. Please try again.');
+    } finally {
+      setIsSubmitting(false);
+    }
+  }
 
-      try {
-        const createdPostId = await Core.PostController.commitCreate({
-          parentPostId: postId,
-          content: content.trim(),
-          authorId: currentUserId,
-          tags: tags.length > 0 ? tags : undefined,
-          attachments: attachments.length > 0 ? attachments : undefined,
-        });
-        setContent('');
-        setTags([]);
-        setAttachments([]);
-        showSuccessToast('Reply posted', 'Your reply has been posted successfully.');
-        onSuccess?.(createdPostId);
-      } catch (err) {
-        Libs.Logger.error('[usePost] Failed to submit reply:', err);
-        showErrorToast('Failed to post reply. Please try again.');
-      } finally {
-        setIsSubmitting(false);
-      }
-    },
-    [content, tags, attachments, currentUserId, showErrorToast, showSuccessToast],
-  );
+  async function edit({ editPostId, onSuccess }: UsePostEditOptions) {
+    if (!content.trim() || (isArticle && (!content.trim() || !articleTitle.trim())) || !editPostId || !currentUserId)
+      return;
 
-  const post = useCallback(
-    async ({ onSuccess }: UsePostPostOptions) => {
-      // allow empty content and attachments if not article
-      if (
-        (!content.trim() && attachments.length === 0) ||
-        (isArticle && (!content.trim() || !articleTitle.trim())) ||
-        !currentUserId
-      )
-        return;
+    setIsSubmitting(true);
+    try {
+      await Core.PostController.commitEdit({
+        compositePostId: editPostId,
+        content: isArticle ? JSON.stringify({ title: articleTitle.trim(), body: content.trim() }) : content.trim(),
+      });
+      setContent('');
+      setIsArticle(false);
+      setArticleTitle('');
+      showSuccessToast('Post edited', 'Your post has been edited successfully.');
+      onSuccess?.(editPostId);
+    } catch (err) {
+      Libs.Logger.error('[usePost] Failed to edit post:', err);
+      showErrorToast('Failed to edit post. Please try again.');
+    } finally {
+      setIsSubmitting(false);
+    }
+  }
 
-      setIsSubmitting(true);
-
-      try {
-        const createdPostId = await Core.PostController.commitCreate({
-          content: isArticle ? JSON.stringify({ title: articleTitle.trim(), body: content.trim() }) : content.trim(),
-          authorId: currentUserId,
-          tags: tags.length > 0 ? tags : undefined,
-          attachments: attachments.length > 0 ? attachments : undefined,
-          kind: isArticle ? PubkyAppPostKind.Long : PubkyAppPostKind.Short,
-        });
-        setContent('');
-        setTags([]);
-        setAttachments([]);
-        setIsArticle(false);
-        setArticleTitle('');
-        showSuccessToast('Post created', 'Your post has been created successfully.');
-        onSuccess?.(createdPostId);
-      } catch (err) {
-        Libs.Logger.error('[usePost] Failed to create post:', err);
-        showErrorToast('Failed to create post. Please try again.');
-      } finally {
-        setIsSubmitting(false);
-      }
-    },
-    [content, tags, attachments, isArticle, articleTitle, currentUserId, showErrorToast, showSuccessToast],
-  );
-
-  const repost = useCallback(
-    async ({ originalPostId, onSuccess }: UsePostRepostOptions) => {
-      if (!originalPostId || !currentUserId) return;
-
-      setIsSubmitting(true);
-
-      try {
-        const createdPostId = await Core.PostController.commitCreate({
-          originalPostId,
-          content: content.trim(),
-          authorId: currentUserId,
-          tags: tags.length > 0 ? tags : undefined,
-        });
-        setContent('');
-        setTags([]);
-        showSuccessToast('Repost successful', 'Your repost has been created successfully.');
-        onSuccess?.(createdPostId);
-      } catch (err) {
-        Libs.Logger.error('[usePost] Failed to repost:', err);
-        showErrorToast('Failed to repost. Please try again.');
-      } finally {
-        setIsSubmitting(false);
-      }
-    },
-    [content, tags, currentUserId, showErrorToast, showSuccessToast],
-  );
-
-  const edit = useCallback(
-    async ({ editPostId, onSuccess }: UsePostEditOptions) => {
-      // requires content if normal edit and title if article
-      if (!content.trim() || (isArticle && (!content.trim() || !articleTitle.trim())) || !editPostId || !currentUserId)
-        return;
-
-      setIsSubmitting(true);
-
-      try {
-        await Core.PostController.commitEdit({
-          compositePostId: editPostId,
-          content: isArticle ? JSON.stringify({ title: articleTitle.trim(), body: content.trim() }) : content.trim(),
-        });
-        setContent('');
-        setIsArticle(false);
-        setArticleTitle('');
-        showSuccessToast('Post edited', 'Your post has been edited successfully.');
-        onSuccess?.(editPostId);
-      } catch (err) {
-        Libs.Logger.error('[usePost] Failed to edit post:', err);
-        showErrorToast('Failed to edit post. Please try again.');
-      } finally {
-        setIsSubmitting(false);
-      }
-    },
-    [content, isArticle, articleTitle, currentUserId, showErrorToast, showSuccessToast],
-  );
-
-  // Clear attachments when switching to article mode
   useEffect(() => {
     if (isArticle && attachments.length > 0) {
       toast({
