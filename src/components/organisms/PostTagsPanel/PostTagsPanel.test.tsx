@@ -7,6 +7,9 @@ const mockUsePostTags = vi.fn();
 const mockRequireAuth = vi.fn((action: () => void) => action());
 vi.mock('@/hooks', () => ({
   usePostTags: () => mockUsePostTags(),
+  useBulkUserAvatars: () => ({
+    usersMap: new Map(),
+  }),
   useRequireAuth: () => ({
     isAuthenticated: true,
     requireAuth: mockRequireAuth,

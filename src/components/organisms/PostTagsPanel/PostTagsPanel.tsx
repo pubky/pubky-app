@@ -1,5 +1,6 @@
 'use client';
 
+import { useMemo } from 'react';
 import { useTranslations } from 'next-intl';
 import * as Atoms from '@/atoms';
 import * as Molecules from '@/molecules';
@@ -27,6 +28,35 @@ export function PostTagsPanel({ postId, className }: PostTagsPanelProps) {
   const t = useTranslations('common');
   const { tags, isLoading, handleTagAdd, handleTagToggle, hasMore, isLoadingMore, loadMore } =
     Hooks.usePostTags(postId);
+
+  // Collect all unique tagger IDs from tags for bulk user details lookup
+  const allTaggerIds = useMemo(() => {
+    const ids = new Set<Core.Pubky>();
+    for (const tag of tags) {
+      for (const tagger of tag.taggers) {
+        ids.add(tagger.id as Core.Pubky);
+      }
+    }
+    return Array.from(ids);
+  }, [tags]);
+
+  // Get user details (name, avatarUrl) for all taggers
+  const { usersMap } = Hooks.useBulkUserAvatars(allTaggerIds);
+
+  // Enrich tags with user details for proper avatar fallbacks
+  const enrichedTags = useMemo(() => {
+    return tags.map((tag) => ({
+      ...tag,
+      taggers: tag.taggers.map((tagger) => {
+        const userDetails = usersMap.get(tagger.id as Core.Pubky);
+        return {
+          ...tagger,
+          name: userDetails?.name ?? tagger.name,
+          avatarUrl: userDetails?.avatarUrl,
+        };
+      }),
+    }));
+  }, [tags, usersMap]);
 
   // Auth requirement for tag actions
   const { isAuthenticated, requireAuth } = Hooks.useRequireAuth();
@@ -77,7 +107,7 @@ export function PostTagsPanel({ postId, className }: PostTagsPanelProps) {
       {tags.length > 0 && (
         <Atoms.Container overrideDefaults className="max-h-80 overflow-x-hidden overflow-y-auto pr-1">
           <Molecules.TaggedList
-            tags={tags}
+            tags={enrichedTags}
             hasMore={hasMore}
             isLoadingMore={isLoadingMore}
             onLoadMore={loadMore}

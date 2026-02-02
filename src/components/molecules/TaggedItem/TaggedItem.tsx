@@ -74,7 +74,7 @@ export function TaggedItem({
             {visibleTaggers.map((tagger, index) => (
               <Organisms.AvatarWithFallback
                 key={tagger.id}
-                name={tagger.id}
+                name={tagger.name || Libs.formatPublicKey({ key: tagger.id })}
                 avatarUrl={tagger.avatarUrl}
                 size="md"
                 className={Libs.cn('shrink-0', index > 0 && '-ml-2')}
