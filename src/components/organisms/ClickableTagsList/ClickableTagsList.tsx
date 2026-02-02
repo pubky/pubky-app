@@ -65,6 +65,9 @@ export function ClickableTagsList({
     handleTagAdd,
   } = Hooks.useEntityTags(taggedId, taggedKind, { providedTags });
 
+  // Determine if input should be shown
+  const hasInput = showInput || isAdding;
+
   // Get viewer's own tags for duplicate checking
   // This allows adding a tag that others have used but the viewer hasn't
   const viewerTags = fetchedTags.filter((t) => isViewerTagger(t));
@@ -108,8 +111,6 @@ export function ClickableTagsList({
 
   // Check if we should render anything
   const hasVisibleTags = visibleTags.length > 0;
-  // Show input for all users (unauthenticated users see dialog on click)
-  const hasInput = showInput || isAdding;
   const hasAddButton = showAddButton && !showInput && !isAdding;
 
   if (!hasVisibleTags && !hasInput && !hasAddButton) return null;
@@ -151,6 +152,9 @@ export function ClickableTagsList({
           onTagAdd={handleTagAddFromInput}
           existingTags={fetchedTags}
           viewerTags={viewerTags}
+          enableApiSuggestions={isAuthenticated}
+          excludeFromApiSuggestions={fetchedTags.map((t) => t.label)}
+          addOnSuggestionClick={true}
           className="w-32 shrink-0"
           autoFocus={isAuthenticated && isAdding}
           disabled={!isAuthenticated}

@@ -77,4 +77,5 @@ export * from './useMentionAutocomplete';
 export * from './useListboxNavigation';
 export * from './useUserDetailsFromIds';
 export * from './usePostAncestors';
+export * from './useTagSuggestions';
 export * from './useRelativeTime';

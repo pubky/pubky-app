@@ -19,7 +19,13 @@ export function TaggedSection({
         {userName ? `${userName} was tagged as:` : 'Tagged as:'}
       </Atoms.Typography>
 
-      <Molecules.TagInput onTagAdd={handleTagAdd} existingTags={tags} />
+      <Molecules.TagInput
+        onTagAdd={handleTagAdd}
+        existingTags={tags}
+        enableApiSuggestions
+        excludeFromApiSuggestions={tags.map((t) => t.label)}
+        addOnSuggestionClick
+      />
 
       <Molecules.TaggedList
         tags={tags}
