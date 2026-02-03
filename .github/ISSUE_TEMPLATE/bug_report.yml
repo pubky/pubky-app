@@ -7,17 +7,25 @@ body:
   - type: markdown
     attributes:
       value: |
-        Thanks for taking the time to fill out this bug report! 🐛
-
-        The more details you provide, the faster we can fix it.
+        Thanks for reporting a bug! 🐛
 
   - type: textarea
     id: describe-bug
     attributes:
-      label: Bug Description
-      description: A clear and concise description of what the bug is.
+      label: Description
+      description: A clear description of what the bug is.
       placeholder: |
-        What happened? What did you expect to happen instead?
+        What happened?
+    validations:
+      required: true
+
+  - type: textarea
+    id: expected
+    attributes:
+      label: Expected Behaviour
+      description: What should happen instead?
+      placeholder: |
+        I expected...
     validations:
       required: true
 
@@ -25,81 +33,19 @@ body:
     id: reproduce-bug
     attributes:
       label: Steps to Reproduce
-      description: How do you trigger this bug? Please walk us through it step by step.
+      description: How do you trigger this bug?
       placeholder: |
         1. Go to '...'
         2. Click on '...'
-        3. Scroll down to '...'
-        4. See error
-    validations:
-      required: true
-
-  - type: dropdown
-    id: area
-    attributes:
-      label: Affected Area
-      description: Which part of the app is affected?
-      options:
-        - Feed / Timeline
-        - Post (create/edit/delete)
-        - Profile / User
-        - Authentication / Login
-        - Notifications
-        - Search
-        - Tags
-        - Bookmarks
-        - Settings
-        - Navigation / Routing
-        - Media (images/videos)
-        - Other
-    validations:
-      required: true
-
-  - type: dropdown
-    id: layer
-    attributes:
-      label: Suspected Layer (if known)
-      description: |
-        If you have technical knowledge, which layer seems affected?
-        See .cursor/docs/core-context.md for architecture details.
-      options:
-        - UI / Component (visual issue)
-        - Data not loading (network/cache)
-        - Data not saving (local-first sync)
-        - Data inconsistency (local vs server)
-        - Performance issue
-        - Unknown / Not sure
-    validations:
-      required: false
-
-  - type: dropdown
-    id: frequency
-    attributes:
-      label: Frequency
-      description: How often does this bug occur?
-      options:
-        - Always (100%)
-        - Often (>50%)
-        - Sometimes (<50%)
-        - Rarely (happened once or twice)
-    validations:
-      required: true
-
-  - type: textarea
-    id: expected
-    attributes:
-      label: Expected Behavior
-      description: What should happen instead?
-      placeholder: |
-        I expected the post to appear in my feed immediately after creating it.
+        3. See error
     validations:
       required: true
 
   - type: textarea
     id: screenshots
     attributes:
-      label: Screenshots / Recording
-      description: If applicable, add screenshots or a video recording to help explain your problem.
+      label: Screenshots
+      description: If applicable, add screenshots or a recording.
       placeholder: |
         Drag and drop images here, or paste a link to a video.
     validations:
@@ -108,10 +54,9 @@ body:
   - type: textarea
     id: logs
     attributes:
-      label: Console Log Output
+      label: Console Log
       description: |
-        Open browser DevTools (F12) → Console tab → Copy any red error messages.
-        This will be automatically formatted as code.
+        Open browser DevTools (F12) → Console tab → Copy any error messages.
       render: shell
     validations:
       required: false
@@ -122,26 +67,5 @@ body:
       label: Browser & Version
       description: What browser are you using?
       placeholder: e.g. Chrome 120, Safari 17, Firefox 121
-    validations:
-      required: false
-
-  - type: input
-    id: device
-    attributes:
-      label: Device
-      description: What device are you using?
-      placeholder: e.g. iPhone 15, MacBook Pro M2, Windows Desktop
-    validations:
-      required: false
-
-  - type: textarea
-    id: additional
-    attributes:
-      label: Additional Context
-      description: Any other information that might help us debug this issue.
-      placeholder: |
-        - Were you offline when this happened?
-        - Did you recently update the app?
-        - Does it happen with a specific post/user?
     validations:
       required: false

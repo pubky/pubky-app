@@ -14,7 +14,7 @@ export const LogoutContent = () => {
       <LogoutHeader />
       <Molecules.ContentCard layout="column">
         <Atoms.Container className="items-center justify-center">
-          <Image src="/images/tag.png" alt="Pubky Ring" width={192} height={192} />
+          <Image src="/images/tag.webp" alt="Pubky Ring" width={192} height={192} />
         </Atoms.Container>
       </Molecules.ContentCard>
     </Atoms.Container>

@@ -188,7 +188,7 @@ describe('BackupMethodCard', () => {
     render(<BackupMethodCard />);
 
     const contentCard = screen.getByTestId('content-card');
-    expect(contentCard).toHaveAttribute('data-image-src', '/images/shield.png');
+    expect(contentCard).toHaveAttribute('data-image-src', '/images/shield.webp');
     expect(contentCard).toHaveAttribute('data-image-alt', 'Shield');
   });
 
