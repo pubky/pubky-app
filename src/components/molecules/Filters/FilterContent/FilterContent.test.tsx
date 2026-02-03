@@ -2,7 +2,6 @@ import { render, screen, fireEvent } from '@testing-library/react';
 import { describe, it, expect, vi } from 'vitest';
 import { FilterContent } from './FilterContent';
 import { CONTENT, type ContentType } from '@/core/stores/home/home.types';
-import { normaliseRadixIds } from '@/libs/utils/utils';
 
 // Mock libs - use actual utility functions and icons from lucide-react
 vi.mock('@/libs', async () => {
@@ -74,49 +73,41 @@ describe('FilterContent', () => {
 describe('FilterContent - Snapshots', () => {
   it('matches snapshot with default props', () => {
     const { container } = render(<FilterContent />);
-    const normalisedContainer = normaliseRadixIds(container);
-    expect(normalisedContainer.firstChild).toMatchSnapshot();
+    expect(container.firstChild).toMatchSnapshot();
   });
 
   it('matches snapshot with All content selected tab', () => {
     const { container } = render(<FilterContent selectedTab={CONTENT.ALL} />);
-    const normalisedContainer = normaliseRadixIds(container);
-    expect(normalisedContainer.firstChild).toMatchSnapshot();
+    expect(container.firstChild).toMatchSnapshot();
   });
 
   it('matches snapshot with Posts content selected tab', () => {
     const { container } = render(<FilterContent selectedTab={CONTENT.SHORT} />);
-    const normalisedContainer = normaliseRadixIds(container);
-    expect(normalisedContainer.firstChild).toMatchSnapshot();
+    expect(container.firstChild).toMatchSnapshot();
   });
 
   it('matches snapshot with Articles content selected tab', () => {
     const { container } = render(<FilterContent selectedTab={CONTENT.LONG} />);
-    const normalisedContainer = normaliseRadixIds(container);
-    expect(normalisedContainer.firstChild).toMatchSnapshot();
+    expect(container.firstChild).toMatchSnapshot();
   });
 
   it('matches snapshot with Images content selected tab', () => {
     const { container } = render(<FilterContent selectedTab={CONTENT.IMAGES} />);
-    const normalisedContainer = normaliseRadixIds(container);
-    expect(normalisedContainer.firstChild).toMatchSnapshot();
+    expect(container.firstChild).toMatchSnapshot();
   });
 
   it('matches snapshot with Videos content selected tab', () => {
     const { container } = render(<FilterContent selectedTab={CONTENT.VIDEOS} />);
-    const normalisedContainer = normaliseRadixIds(container);
-    expect(normalisedContainer.firstChild).toMatchSnapshot();
+    expect(container.firstChild).toMatchSnapshot();
   });
 
   it('matches snapshot with Links content selected tab', () => {
     const { container } = render(<FilterContent selectedTab={CONTENT.LINKS} />);
-    const normalisedContainer = normaliseRadixIds(container);
-    expect(normalisedContainer.firstChild).toMatchSnapshot();
+    expect(container.firstChild).toMatchSnapshot();
   });
 
   it('matches snapshot with Files content selected tab', () => {
     const { container } = render(<FilterContent selectedTab={CONTENT.FILES} />);
-    const normalisedContainer = normaliseRadixIds(container);
-    expect(normalisedContainer.firstChild).toMatchSnapshot();
+    expect(container.firstChild).toMatchSnapshot();
   });
 });

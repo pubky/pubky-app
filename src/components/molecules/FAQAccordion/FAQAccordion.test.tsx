@@ -3,7 +3,6 @@ import { describe, it, expect } from 'vitest';
 import { render, screen } from '@testing-library/react';
 import { FAQAccordion } from './FAQAccordion';
 import type { FAQAccordionItem } from './FAQAccordion.types';
-import { normaliseRadixIds } from '@/libs/utils/utils';
 
 const mockItems: FAQAccordionItem[] = [
   {
@@ -30,14 +29,12 @@ describe('FAQAccordion', () => {
 describe('FAQAccordion - Snapshots', () => {
   it('matches snapshot with default props', () => {
     const { container } = render(<FAQAccordion items={mockItems} />);
-    const normalizedContainer = normaliseRadixIds(container);
-    expect(normalizedContainer.firstChild).toMatchSnapshot();
+    expect(container.firstChild).toMatchSnapshot();
   });
 
   it('matches snapshot with custom className', () => {
     const { container } = render(<FAQAccordion items={mockItems} className="custom-faq-class" />);
-    const normalizedContainer = normaliseRadixIds(container);
-    expect(normalizedContainer.firstChild).toMatchSnapshot();
+    expect(container.firstChild).toMatchSnapshot();
   });
 
   it('matches snapshot with empty items', () => {
@@ -60,7 +57,6 @@ describe('FAQAccordion - Snapshots', () => {
       },
     ];
     const { container } = render(<FAQAccordion items={markdownItems} />);
-    const normalizedContainer = normaliseRadixIds(container);
-    expect(normalizedContainer.firstChild).toMatchSnapshot();
+    expect(container.firstChild).toMatchSnapshot();
   });
 });

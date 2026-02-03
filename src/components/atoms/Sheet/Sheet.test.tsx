@@ -1,6 +1,5 @@
 import { describe, it, expect, vi } from 'vitest';
 import { render, screen } from '@testing-library/react';
-import { normaliseRadixIds } from '@/libs/utils/utils';
 
 // Mock @/libs - use actual implementations
 vi.mock('@/libs', async () => {
@@ -154,7 +153,6 @@ describe('Sheet', () => {
   });
 });
 
-// Use normaliseRadixIds to ensure the snapshots are consistent.
 describe('Sheet - Snapshots', () => {
   it('matches snapshot for Sheet with default props', () => {
     const { container } = render(
@@ -162,8 +160,7 @@ describe('Sheet - Snapshots', () => {
         <div>Sheet Content</div>
       </Sheet>,
     );
-    const normalizedContainer = normaliseRadixIds(container);
-    expect(normalizedContainer.firstChild).toMatchSnapshot();
+    expect(container.firstChild).toMatchSnapshot();
   });
 
   it('matches snapshot for SheetTrigger with default props', () => {
@@ -172,8 +169,7 @@ describe('Sheet - Snapshots', () => {
         <SheetTrigger>Open Sheet</SheetTrigger>
       </Sheet>,
     );
-    const normalizedContainer = normaliseRadixIds(container);
-    expect(normalizedContainer.firstChild).toMatchSnapshot();
+    expect(container.firstChild).toMatchSnapshot();
   });
 
   it('matches snapshot for SheetTrigger with asChild', () => {
@@ -184,8 +180,7 @@ describe('Sheet - Snapshots', () => {
         </SheetTrigger>
       </Sheet>,
     );
-    const normalizedContainer = normaliseRadixIds(container);
-    expect(normalizedContainer.firstChild).toMatchSnapshot();
+    expect(container.firstChild).toMatchSnapshot();
   });
 
   it('matches snapshot for SheetContent with default side', () => {
@@ -198,8 +193,7 @@ describe('Sheet - Snapshots', () => {
     );
     const sheetContent = document.querySelector('[role="dialog"]') as HTMLElement;
     const wrapper = sheetContent?.parentElement as HTMLElement;
-    const normalizedContainer = normaliseRadixIds(wrapper);
-    expect(normalizedContainer).toMatchSnapshot();
+    expect(wrapper).toMatchSnapshot();
   });
 
   it('matches snapshot for SheetContent with top side', () => {
@@ -212,8 +206,7 @@ describe('Sheet - Snapshots', () => {
     );
     const sheetContent = document.querySelector('[role="dialog"]') as HTMLElement;
     const wrapper = sheetContent?.parentElement as HTMLElement;
-    const normalizedContainer = normaliseRadixIds(wrapper);
-    expect(normalizedContainer).toMatchSnapshot();
+    expect(wrapper).toMatchSnapshot();
   });
 
   it('matches snapshot for SheetContent with bottom side', () => {
@@ -226,8 +219,7 @@ describe('Sheet - Snapshots', () => {
     );
     const sheetContent = document.querySelector('[role="dialog"]') as HTMLElement;
     const wrapper = sheetContent?.parentElement as HTMLElement;
-    const normalizedContainer = normaliseRadixIds(wrapper);
-    expect(normalizedContainer).toMatchSnapshot();
+    expect(wrapper).toMatchSnapshot();
   });
 
   it('matches snapshot for SheetContent with left side', () => {
@@ -240,8 +232,7 @@ describe('Sheet - Snapshots', () => {
     );
     const sheetContent = document.querySelector('[role="dialog"]') as HTMLElement;
     const wrapper = sheetContent?.parentElement as HTMLElement;
-    const normalizedContainer = normaliseRadixIds(wrapper);
-    expect(normalizedContainer).toMatchSnapshot();
+    expect(wrapper).toMatchSnapshot();
   });
 
   it('matches snapshot for SheetContent with right side', () => {
@@ -254,8 +245,7 @@ describe('Sheet - Snapshots', () => {
     );
     const sheetContent = document.querySelector('[role="dialog"]') as HTMLElement;
     const wrapper = sheetContent?.parentElement as HTMLElement;
-    const normalizedContainer = normaliseRadixIds(wrapper);
-    expect(normalizedContainer).toMatchSnapshot();
+    expect(wrapper).toMatchSnapshot();
   });
 
   it('matches snapshot for SheetHeader', () => {
@@ -269,8 +259,7 @@ describe('Sheet - Snapshots', () => {
       </Sheet>,
     );
     const sheetHeader = document.querySelector('[class*="flex flex-col space-y-2"]');
-    const normalizedContainer = normaliseRadixIds(sheetHeader as HTMLElement);
-    expect(normalizedContainer).toMatchSnapshot();
+    expect(sheetHeader).toMatchSnapshot();
   });
 
   it('matches snapshot for SheetTitle', () => {
@@ -282,8 +271,7 @@ describe('Sheet - Snapshots', () => {
       </Sheet>,
     );
     const sheetTitle = document.querySelector('h2');
-    const normalizedContainer = normaliseRadixIds(sheetTitle as HTMLElement);
-    expect(normalizedContainer).toMatchSnapshot();
+    expect(sheetTitle).toMatchSnapshot();
   });
 
   it('matches snapshot for SheetDescription', () => {
@@ -295,8 +283,7 @@ describe('Sheet - Snapshots', () => {
       </Sheet>,
     );
     const sheetDescription = document.querySelector('p');
-    const normalizedContainer = normaliseRadixIds(sheetDescription as HTMLElement);
-    expect(normalizedContainer).toMatchSnapshot();
+    expect(sheetDescription).toMatchSnapshot();
   });
 
   it('matches snapshot for SheetHeader with Title and Description', () => {
@@ -311,7 +298,6 @@ describe('Sheet - Snapshots', () => {
       </Sheet>,
     );
     const sheetHeader = document.querySelector('[class*="flex flex-col space-y-2"]');
-    const normalizedContainer = normaliseRadixIds(sheetHeader as HTMLElement);
-    expect(normalizedContainer).toMatchSnapshot();
+    expect(sheetHeader).toMatchSnapshot();
   });
 });

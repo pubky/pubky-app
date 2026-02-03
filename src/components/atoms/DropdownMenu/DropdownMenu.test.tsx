@@ -2,7 +2,6 @@ import { describe, it, expect } from 'vitest';
 import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuItem } from './DropdownMenu';
-import { normaliseRadixIds } from '@/libs/utils/utils';
 
 describe('DropdownMenu', () => {
   it('renders with default props', () => {
@@ -41,8 +40,7 @@ describe('DropdownMenu - Snapshots', () => {
         <DropdownMenuTrigger>Open Menu</DropdownMenuTrigger>
       </DropdownMenu>,
     );
-    const normalizedContainer = normaliseRadixIds(container);
-    expect(normalizedContainer.firstChild).toMatchSnapshot();
+    expect(container.firstChild).toMatchSnapshot();
   });
 
   it('matches snapshot for DropdownMenuTrigger with asChild', () => {
@@ -53,8 +51,7 @@ describe('DropdownMenu - Snapshots', () => {
         </DropdownMenuTrigger>
       </DropdownMenu>,
     );
-    const normalizedContainer = normaliseRadixIds(container);
-    expect(normalizedContainer.firstChild).toMatchSnapshot();
+    expect(container.firstChild).toMatchSnapshot();
   });
 
   it('matches snapshot for dropdown menu in open state', () => {
@@ -69,7 +66,6 @@ describe('DropdownMenu - Snapshots', () => {
         </DropdownMenuContent>
       </DropdownMenu>,
     );
-    const normalizedContainer = normaliseRadixIds(container);
-    expect(normalizedContainer.firstChild).toMatchSnapshot();
+    expect(container.firstChild).toMatchSnapshot();
   });
 });

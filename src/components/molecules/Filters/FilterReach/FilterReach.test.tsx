@@ -2,7 +2,6 @@ import { render, screen, fireEvent } from '@testing-library/react';
 import { describe, it, expect, vi } from 'vitest';
 import { FilterReach } from './FilterReach';
 import { REACH } from '@/core';
-import { normaliseRadixIds } from '@/libs/utils/utils';
 
 describe('FilterReach', () => {
   it('renders with default selected tab and proper ARIA attributes', () => {
@@ -270,31 +269,26 @@ describe('FilterReach - Performance', () => {
 describe('FilterReach - Snapshots', () => {
   it('matches snapshot with default props (All selected)', () => {
     const { container } = render(<FilterReach />);
-    const normalisedContainer = normaliseRadixIds(container);
-    expect(normalisedContainer.firstChild).toMatchSnapshot();
+    expect(container.firstChild).toMatchSnapshot();
   });
 
   it('matches snapshot with All selected tab', () => {
     const { container } = render(<FilterReach selectedTab={REACH.ALL} />);
-    const normalisedContainer = normaliseRadixIds(container);
-    expect(normalisedContainer.firstChild).toMatchSnapshot();
+    expect(container.firstChild).toMatchSnapshot();
   });
 
   it('matches snapshot with Following selected', () => {
     const { container } = render(<FilterReach selectedTab={REACH.FOLLOWING} />);
-    const normalisedContainer = normaliseRadixIds(container);
-    expect(normalisedContainer.firstChild).toMatchSnapshot();
+    expect(container.firstChild).toMatchSnapshot();
   });
 
   it('matches snapshot with Friends selected', () => {
     const { container } = render(<FilterReach selectedTab={REACH.FRIENDS} />);
-    const normalisedContainer = normaliseRadixIds(container);
-    expect(normalisedContainer.firstChild).toMatchSnapshot();
+    expect(container.firstChild).toMatchSnapshot();
   });
 
   it('matches snapshot in uncontrolled mode with defaultSelectedTab', () => {
     const { container } = render(<FilterReach defaultSelectedTab={REACH.FRIENDS} />);
-    const normalisedContainer = normaliseRadixIds(container);
-    expect(normalisedContainer.firstChild).toMatchSnapshot();
+    expect(container.firstChild).toMatchSnapshot();
   });
 });
