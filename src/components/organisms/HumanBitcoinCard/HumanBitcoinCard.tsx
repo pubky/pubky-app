@@ -39,7 +39,7 @@ export const HumanBitcoinCard = ({ onClick }: HumanBitcoinCardProps) => {
           <Atoms.Container className="hidden w-full flex-1 flex-col items-center gap-3 lg:flex lg:w-auto">
             <Atoms.Image
               priority={true}
-              src="/images/bitcoin-payment.png"
+              src="/images/bitcoin-payment.webp"
               alt="Lime Pubky coins representing Bitcoin payments"
               className="size-48"
             />

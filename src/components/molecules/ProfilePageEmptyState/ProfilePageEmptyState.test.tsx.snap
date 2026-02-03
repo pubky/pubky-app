@@ -152,7 +152,7 @@ exports[`ProfilePageEmptyState - Snapshots > matches snapshot with different ico
   <img
     alt="Tagged - Empty state"
     data-testid="image"
-    src="/images/tagged-empty-state.png"
+    src="/images/tagged-empty-state.webp"
   />
   <div
     class="relative z-10 flex shrink-0 items-center justify-center rounded-full bg-brand/16 p-6"

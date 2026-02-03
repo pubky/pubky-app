@@ -11,7 +11,7 @@ import * as Molecules from '@/molecules';
 export function UserNotFound() {
   return (
     <Molecules.ProfilePageEmptyState
-      imageSrc="/images/connections-empty-state.png"
+      imageSrc="/images/connections-empty-state.webp"
       imageAlt="User not found"
       icon={UserX}
       title="User not found"

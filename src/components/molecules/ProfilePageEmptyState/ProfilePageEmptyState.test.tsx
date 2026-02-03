@@ -246,7 +246,7 @@ describe('ProfilePageEmptyState - Snapshots', () => {
   it('matches snapshot with different icon', () => {
     const { container } = render(
       <ProfilePageEmptyState
-        imageSrc="/images/tagged-empty-state.png"
+        imageSrc="/images/tagged-empty-state.webp"
         imageAlt="Tagged - Empty state"
         icon={Tag}
         title="Discover who tagged you"
