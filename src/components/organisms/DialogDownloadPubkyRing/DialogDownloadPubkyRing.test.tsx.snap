@@ -14,7 +14,7 @@ exports[`DialogDownloadPubkyRing - Snapshots > matches snapshot for android stor
       alt="Google Play"
       data-testid="next-image"
       height="40"
-      src="/images/badge-android.png"
+      src="/images/badge-android.webp"
       width="210"
     />
   </a>
@@ -26,7 +26,7 @@ exports[`DialogDownloadPubkyRing - Snapshots > matches snapshot for android stor
       alt="Google Play"
       data-testid="next-image"
       height="40"
-      src="/images/badge-android.png"
+      src="/images/badge-android.webp"
       width="135"
     />
   </div>
@@ -62,7 +62,7 @@ exports[`DialogDownloadPubkyRing - Snapshots > matches snapshot for android stor
           alt="App preview"
           data-testid="next-image"
           height="256"
-          src="/images/pubky-ring-phone.png"
+          src="/images/pubky-ring-phone.webp"
           width="96"
         />
         <div
@@ -105,7 +105,7 @@ exports[`DialogDownloadPubkyRing - Snapshots > matches snapshot for android stor
                 alt="Google Play"
                 data-testid="next-image"
                 height="40"
-                src="/images/badge-android.png"
+                src="/images/badge-android.webp"
                 width="135"
               />
             </a>
@@ -131,7 +131,7 @@ exports[`DialogDownloadPubkyRing - Snapshots > matches snapshot for apple store 
       alt="App Store"
       data-testid="next-image"
       height="40"
-      src="/images/badge-apple.png"
+      src="/images/badge-apple.webp"
       width="192"
     />
   </a>
@@ -143,7 +143,7 @@ exports[`DialogDownloadPubkyRing - Snapshots > matches snapshot for apple store 
       alt="App Store"
       data-testid="next-image"
       height="40"
-      src="/images/badge-apple.png"
+      src="/images/badge-apple.webp"
       width="120"
     />
   </div>
@@ -179,7 +179,7 @@ exports[`DialogDownloadPubkyRing - Snapshots > matches snapshot for apple store 
           alt="App preview"
           data-testid="next-image"
           height="256"
-          src="/images/pubky-ring-phone.png"
+          src="/images/pubky-ring-phone.webp"
           width="96"
         />
         <div
@@ -222,7 +222,7 @@ exports[`DialogDownloadPubkyRing - Snapshots > matches snapshot for apple store 
                 alt="App Store"
                 data-testid="next-image"
                 height="40"
-                src="/images/badge-apple.png"
+                src="/images/badge-apple.webp"
                 width="120"
               />
             </a>

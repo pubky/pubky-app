@@ -47,22 +47,22 @@ describe('useDeletePost', () => {
   });
 
   it('returns isDeleting false initially', () => {
-    const { result } = renderHook(() => useDeletePost(mockPostId));
+    const { result } = renderHook(() => useDeletePost());
     expect(result.current.isDeleting).toBe(false);
   });
 
   it('returns deletePost function', () => {
-    const { result } = renderHook(() => useDeletePost(mockPostId));
+    const { result } = renderHook(() => useDeletePost());
     expect(typeof result.current.deletePost).toBe('function');
   });
 
   it('optimistically removes post from timeline feed', async () => {
     mockDelete.mockResolvedValue(undefined);
 
-    const { result } = renderHook(() => useDeletePost(mockPostId));
+    const { result } = renderHook(() => useDeletePost());
 
     await act(async () => {
-      await result.current.deletePost();
+      await result.current.deletePost(mockPostId);
     });
 
     expect(mockRemovePosts).toHaveBeenCalledWith(mockPostId);
@@ -72,10 +72,10 @@ describe('useDeletePost', () => {
   it('calls PostController.commitDelete with correct postId', async () => {
     mockDelete.mockResolvedValue(undefined);
 
-    const { result } = renderHook(() => useDeletePost(mockPostId));
+    const { result } = renderHook(() => useDeletePost());
 
     await act(async () => {
-      await result.current.deletePost();
+      await result.current.deletePost(mockPostId);
     });
 
     expect(Core.PostController.commitDelete).toHaveBeenCalledWith({
@@ -86,10 +86,10 @@ describe('useDeletePost', () => {
   it('shows success toast on successful deletion', async () => {
     mockDelete.mockResolvedValue(undefined);
 
-    const { result } = renderHook(() => useDeletePost(mockPostId));
+    const { result } = renderHook(() => useDeletePost());
 
     await act(async () => {
-      await result.current.deletePost();
+      await result.current.deletePost(mockPostId);
     });
 
     expect(mockToast).toHaveBeenCalledWith({
@@ -105,10 +105,10 @@ describe('useDeletePost', () => {
     });
     mockDelete.mockReturnValue(deletePromise);
 
-    const { result } = renderHook(() => useDeletePost(mockPostId));
+    const { result } = renderHook(() => useDeletePost());
 
     act(() => {
-      result.current.deletePost();
+      result.current.deletePost(mockPostId);
     });
 
     await waitFor(() => {
@@ -131,10 +131,10 @@ describe('useDeletePost', () => {
     // Post still exists in DB
     mockGetPostDetails.mockResolvedValue({ id: mockPostId, content: 'Test post' });
 
-    const { result } = renderHook(() => useDeletePost(mockPostId));
+    const { result } = renderHook(() => useDeletePost());
 
     await act(async () => {
-      await result.current.deletePost();
+      await result.current.deletePost(mockPostId);
     });
 
     expect(mockGetPostDetails).toHaveBeenCalledWith({ compositeId: mockPostId });
@@ -147,10 +147,10 @@ describe('useDeletePost', () => {
     // Post already deleted from DB (local-first write succeeded)
     mockGetPostDetails.mockResolvedValue(null);
 
-    const { result } = renderHook(() => useDeletePost(mockPostId));
+    const { result } = renderHook(() => useDeletePost());
 
     await act(async () => {
-      await result.current.deletePost();
+      await result.current.deletePost(mockPostId);
     });
 
     expect(mockGetPostDetails).toHaveBeenCalledWith({ compositeId: mockPostId });
@@ -161,10 +161,10 @@ describe('useDeletePost', () => {
     const error = new Error('Deletion failed');
     mockDelete.mockRejectedValue(error);
 
-    const { result } = renderHook(() => useDeletePost(mockPostId));
+    const { result } = renderHook(() => useDeletePost());
 
     await act(async () => {
-      await result.current.deletePost();
+      await result.current.deletePost(mockPostId);
     });
 
     expect(mockToast).toHaveBeenCalledWith({
@@ -178,10 +178,10 @@ describe('useDeletePost', () => {
     const error = new Error('Deletion failed');
     mockDelete.mockRejectedValue(error);
 
-    const { result } = renderHook(() => useDeletePost(mockPostId));
+    const { result } = renderHook(() => useDeletePost());
 
     await act(async () => {
-      await result.current.deletePost();
+      await result.current.deletePost(mockPostId);
     });
 
     expect(result.current.isDeleting).toBe(false);
@@ -194,16 +194,16 @@ describe('useDeletePost', () => {
     });
     mockDelete.mockReturnValue(deletePromise);
 
-    const { result } = renderHook(() => useDeletePost(mockPostId));
+    const { result } = renderHook(() => useDeletePost());
 
     // Start first deletion
     act(() => {
-      result.current.deletePost();
+      result.current.deletePost(mockPostId);
     });
 
     // Try to delete again while first is in progress
     await act(async () => {
-      await result.current.deletePost();
+      await result.current.deletePost(mockPostId);
     });
 
     // Should only remove once
@@ -219,10 +219,10 @@ describe('useDeletePost', () => {
     vi.mocked(Organisms.useTimelineFeedContext).mockReturnValue(null);
     mockDelete.mockResolvedValue(undefined);
 
-    const { result } = renderHook(() => useDeletePost(mockPostId));
+    const { result } = renderHook(() => useDeletePost());
 
     await act(async () => {
-      await result.current.deletePost();
+      await result.current.deletePost(mockPostId);
     });
 
     expect(mockRemovePosts).not.toHaveBeenCalled();

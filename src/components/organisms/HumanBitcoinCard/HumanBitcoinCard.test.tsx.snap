@@ -22,7 +22,7 @@ exports[`BitcoinPaymentCard > matches snapshot 1`] = `
           alt="Lime Pubky coins representing Bitcoin payments"
           class="max-w-full size-48"
           height="600"
-          src="/images/bitcoin-payment.png"
+          src="/images/bitcoin-payment.webp"
           width="800"
         />
         <p
@@ -135,7 +135,7 @@ exports[`BitcoinPaymentCard > matches snapshot when geo-blocked 1`] = `
           alt="Lime Pubky coins representing Bitcoin payments"
           class="max-w-full size-48"
           height="600"
-          src="/images/bitcoin-payment.png"
+          src="/images/bitcoin-payment.webp"
           width="800"
         />
         <p
