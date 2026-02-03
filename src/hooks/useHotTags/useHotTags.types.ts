@@ -10,7 +10,7 @@ export interface UseHotTagsParams {
   limit?: number;
   /** Reach filter (e.g., 'followers', 'following'). Default: undefined (all) */
   reach?: Core.UserStreamReach;
-  /** Timeframe filter. Default: TODAY */
+  /** Timeframe filter. Default: THIS_MONTH */
   timeframe?: Core.UserStreamTimeframe;
   /** Whether to return raw NexusHotTag data instead of simplified HotTag. Default: false */
   raw?: boolean;
