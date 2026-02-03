@@ -180,7 +180,7 @@ function RecoveryStep2({ handleClose }: { handleClose: () => void }) {
 
       <Atoms.Container>
         <Atoms.Container className="flex w-full items-center justify-center rounded-md bg-card p-12">
-          <Image src="/images/check.png" alt="Backup Complete" width={180} height={180} className="h-48 w-48" />
+          <Image src="/images/check.webp" alt="Backup Complete" width={180} height={180} className="h-48 w-48" />
         </Atoms.Container>
       </Atoms.Container>
 

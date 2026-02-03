@@ -69,7 +69,7 @@ export function DialogBackupExport({ mnemonic, children }: DialogBackupExportPro
           <Atoms.Container className="items-start justify-between">
             <Atoms.Container className="flex-row gap-8">
               <Atoms.Container>
-                <Image src="/images/pubky-ring-phone.png" alt="App preview" width={250} height={430} />
+                <Image src="/images/pubky-ring-phone.webp" alt="App preview" width={250} height={430} />
               </Atoms.Container>
 
               <Atoms.Container className="gap-6">
@@ -85,10 +85,10 @@ export function DialogBackupExport({ mnemonic, children }: DialogBackupExportPro
                 </Atoms.Container>
                 <Atoms.Container className="gap-4">
                   <Atoms.Link href={Config.APP_STORE_URL} target="_blank">
-                    <Image src="/images/badge-apple.png" alt="App Store" width={120} height={40} />
+                    <Image src="/images/badge-apple.webp" alt="App Store" width={120} height={40} />
                   </Atoms.Link>
                   <Atoms.Link href={Config.PLAY_STORE_URL} target="_blank">
-                    <Image src="/images/badge-android.png" alt="Google Play" width={135} height={40} />
+                    <Image src="/images/badge-android.webp" alt="Google Play" width={135} height={40} />
                   </Atoms.Link>
                 </Atoms.Container>
               </Atoms.Container>
