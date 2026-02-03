@@ -150,4 +150,15 @@ export class StreamPostsController {
   static async prepareStreamForInitialLoad(params: Core.TStreamIdParams): Promise<void> {
     await Core.PostStreamApplication.prepareStreamForInitialLoad(params);
   }
+
+  /**
+   * Filter out deleted posts from a list of post IDs.
+   * Posts without details in cache are kept (fail-open semantics).
+   *
+   * @param postIds - Array of post IDs to filter
+   * @returns Array of post IDs that are not deleted
+   */
+  static async filterDeletedPosts(postIds: string[]): Promise<string[]> {
+    return Core.PostStreamApplication.filterDeletedPosts(postIds);
+  }
 }

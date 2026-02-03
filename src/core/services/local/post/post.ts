@@ -15,6 +15,17 @@ export class LocalPostService {
   }
 
   /**
+   * Filter out deleted posts from a list of post IDs.
+   * Posts without details in cache are kept (fail-open semantics).
+   *
+   * @param postIds - Array of post IDs to filter
+   * @returns Array of post IDs that are not deleted
+   */
+  static async filterDeletedPosts(postIds: string[]): Promise<string[]> {
+    return Core.PostDetailsModel.filterDeleted(postIds);
+  }
+
+  /**
    * Reads post counts for a specific post
    *
    * @param postId - Composite post ID (author:postId)

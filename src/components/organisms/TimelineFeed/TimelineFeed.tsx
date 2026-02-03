@@ -150,7 +150,7 @@ function TimelineFeedContent({
 
       // Filter out deleted posts before prepending to prevent ghost posts
       // This handles race conditions where posts were deleted after being added to unread stream
-      const existingPosts = await Core.PostDetailsModel.filterDeleted(actualNewPostIds);
+      const existingPosts = await Core.StreamPostsController.filterDeletedPosts(actualNewPostIds);
       const displayedPostIdsSet = new Set(postIds);
       const postsToAdd = existingPosts.filter((id) => !displayedPostIdsSet.has(id));
 
