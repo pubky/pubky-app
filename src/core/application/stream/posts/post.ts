@@ -70,6 +70,17 @@ export class PostStreamApplication {
   }
 
   /**
+   * Filter out deleted posts from a list of post IDs.
+   * Posts without details in cache are kept (fail-open semantics).
+   *
+   * @param postIds - Array of post IDs to filter
+   * @returns Array of post IDs that are not deleted
+   */
+  static async filterDeletedPosts(postIds: string[]): Promise<string[]> {
+    return Core.LocalPostService.filterDeletedPosts(postIds);
+  }
+
+  /**
    * Prepares the stream for initial load by performing cleanup operations.
    *
    * This method should be called before fetching the initial stream slice to ensure
@@ -192,7 +203,7 @@ export class PostStreamApplication {
       filter: async (posts) => {
         // First filter muted users (sync), then filter deleted posts (async)
         const afterMuteFilter = MuteFilter.filterPosts(posts, mutedUserIds);
-        return Core.PostDetailsModel.filterDeleted(afterMuteFilter);
+        return Core.LocalPostService.filterDeletedPosts(afterMuteFilter);
       },
       fetch: async (cursor) => {
         // Continue reading from cache using lastReturnedPostId to track position
