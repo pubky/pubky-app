@@ -82,6 +82,11 @@ export function usePostInput({
   } = Hooks.usePost();
   const timelineFeed = useTimelineFeedContext();
   const { toast } = Molecules.useToast();
+  const { deletePost } = Hooks.useDeletePost();
+
+  // Get original post author's name for repost toast message
+  const originalPostAuthorId = originalPostId ? originalPostId.split(':')[0] : null;
+  const { userDetails: originalPostAuthor } = Hooks.useUserDetails(originalPostAuthorId);
 
   // Handle mention selection - inserts pubky{userId} into content
   const handleMentionSelect = useCallback(
@@ -180,7 +185,12 @@ export function usePostInput({
         await reply({ postId: postId!, onSuccess: handleSuccess });
         break;
       case POST_INPUT_VARIANT.REPOST:
-        await repost({ originalPostId: originalPostId!, onSuccess: handleSuccess });
+        await repost({
+          originalPostId: originalPostId!,
+          originalAuthorName: originalPostAuthor?.name,
+          onSuccess: handleSuccess,
+          onUndo: deletePost,
+        });
         break;
       case POST_INPUT_VARIANT.EDIT:
         await edit({ editPostId: editPostId!, onSuccess: handleSuccess });
@@ -198,6 +208,7 @@ export function usePostInput({
     variant,
     postId,
     originalPostId,
+    originalPostAuthor,
     reply,
     post,
     repost,
@@ -206,6 +217,7 @@ export function usePostInput({
     isSubmitting,
     onSuccess,
     timelineFeed,
+    deletePost,
   ]);
 
   // Handle textarea change with validation

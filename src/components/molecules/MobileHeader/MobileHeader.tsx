@@ -10,6 +10,7 @@ export interface MobileHeaderProps {
   onRightIconClick?: () => void;
   showLeftButton?: boolean;
   showRightButton?: boolean;
+  hasGradientBackground?: boolean;
 }
 
 const Placeholder = () => <Atoms.Container overrideDefaults className="w-10" />;
@@ -19,6 +20,7 @@ export function MobileHeader({
   onRightIconClick,
   showLeftButton = true,
   showRightButton = true,
+  hasGradientBackground = true,
 }: MobileHeaderProps) {
   const isAuthenticated = Core.useAuthStore((state) => Boolean(state.currentUserPubky));
   const setShowSignInDialog = Core.useAuthStore((state) => state.setShowSignInDialog);
@@ -28,7 +30,12 @@ export function MobileHeader({
   return (
     <Atoms.Container
       overrideDefaults
-      className="sticky top-0 z-(--z-mobile-menu) bg-linear-to-b from-(--background) from-65% to-transparent lg:hidden"
+      className={Libs.cn(
+        'sticky top-0 z-(--z-mobile-menu) lg:hidden',
+        hasGradientBackground
+          ? 'bg-linear-to-b from-(--background) from-65% to-transparent'
+          : 'bg-background shadow-xs-dark',
+      )}
     >
       <Atoms.Container overrideDefaults className="px-6 pt-6 pb-0">
         <Atoms.Container overrideDefaults className="flex items-center justify-between py-3">

@@ -22,7 +22,6 @@ export function PostMain({ postId, onClick, className, isReply = false, isLastRe
   const { postDetails } = Hooks.usePostDetails(postId);
   const isDeleted = Libs.isPostDeleted(postDetails?.content);
 
-  const { deletePost, isDeleting } = Hooks.useDeletePost(postId);
   const { showRepostHeader, shouldShowPostHeader } = Hooks.usePostHeaderVisibility(postId);
 
   const [replyDialogOpen, setReplyDialogOpen] = useState(false);
@@ -66,7 +65,7 @@ export function PostMain({ postId, onClick, className, isReply = false, isLastRe
             <Molecules.PostDeleted />
           ) : (
             <>
-              {showRepostHeader && <Molecules.RepostHeader onUndo={deletePost} isUndoing={isDeleting} />}
+              {showRepostHeader && <Molecules.RepostHeader />}
               <Atoms.CardContent className="flex min-w-0 flex-col gap-4 p-6">
                 {shouldShowPostHeader && <Organisms.PostHeader postId={postId} />}
                 <Organisms.PostContent postId={postId} />

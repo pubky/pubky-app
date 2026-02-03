@@ -9,7 +9,7 @@ export function NotificationsEmpty() {
 
   return (
     <Molecules.ProfilePageEmptyState
-      imageSrc="/images/notifications-empty-state.png"
+      imageSrc="/images/notifications-empty-state.webp"
       imageAlt={t('alt')}
       icon={Frown}
       title={t('title')}

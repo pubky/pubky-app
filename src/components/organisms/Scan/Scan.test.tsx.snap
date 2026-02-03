@@ -40,7 +40,7 @@ exports[`Scan Components - Snapshots > ScanContent - Snapshots > matches snapsho
           alt="Pubky Ring"
           data-testid="next-image"
           height="220"
-          src="/images/pubky-ring-qr-example.png"
+          src="/images/pubky-ring-qr-example.webp"
           width="220"
         />
         <img
