@@ -26,9 +26,15 @@ interface PostInputBaseProps {
   onArticleModeChange?: (isArticle: boolean) => void;
   /** Data Cy for the post input */
   dataCy?: string;
-  /** Initial content to pre-fill (e.g. from OS share target) */
+  /**
+   * Initial content to pre-fill (e.g. from OS share target).
+   * Note: Only applied on mount, subsequent prop changes are ignored.
+   */
   initialContent?: string;
-  /** Initial file attachments to pre-fill (e.g. from OS share target) */
+  /**
+   * Initial file attachments to pre-fill (e.g. from OS share target).
+   * Note: Only applied on mount, subsequent prop changes are ignored.
+   */
   initialAttachments?: File[];
 }
 

@@ -1,0 +1,103 @@
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
+
+exports[`ShareTarget - Snapshots > matches snapshot for content state 1`] = `
+<div>
+  <div
+    data-testid="content-layout"
+  >
+    <div
+      class="mx-auto w-full max-w-2xl gap-4 p-4"
+      data-testid="container"
+    >
+      <div
+        class="flex-row items-center justify-between"
+        data-testid="container"
+      >
+        <h2
+          data-testid="typography"
+        >
+          Share to Pubky
+        </h2>
+        <button
+          data-size="sm"
+          data-testid="button"
+          data-variant="ghost"
+        >
+          Cancel
+        </button>
+      </div>
+      <div
+        data-cy="share-target-post-input"
+        data-expanded="true"
+        data-initial-content="Shared content from another app"
+        data-testid="post-input"
+        data-variant="post"
+      >
+        <button
+          data-testid="post-submit"
+        >
+          Submit
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+`;
+
+exports[`ShareTarget - Snapshots > matches snapshot for loading state 1`] = `
+<div>
+  <div
+    class="flex min-h-[50vh] items-center justify-center"
+  >
+    <div
+      data-testid="spinner"
+    >
+      Loading...
+    </div>
+  </div>
+</div>
+`;
+
+exports[`ShareTarget - Snapshots > matches snapshot with text content only 1`] = `
+<div>
+  <div
+    data-testid="content-layout"
+  >
+    <div
+      class="mx-auto w-full max-w-2xl gap-4 p-4"
+      data-testid="container"
+    >
+      <div
+        class="flex-row items-center justify-between"
+        data-testid="container"
+      >
+        <h2
+          data-testid="typography"
+        >
+          Share to Pubky
+        </h2>
+        <button
+          data-size="sm"
+          data-testid="button"
+          data-variant="ghost"
+        >
+          Cancel
+        </button>
+      </div>
+      <div
+        data-cy="share-target-post-input"
+        data-expanded="true"
+        data-initial-content="Just some text"
+        data-testid="post-input"
+        data-variant="post"
+      >
+        <button
+          data-testid="post-submit"
+        >
+          Submit
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+`;

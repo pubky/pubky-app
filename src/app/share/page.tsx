@@ -1,4 +1,5 @@
 import { Suspense } from 'react';
+import * as Atoms from '@/atoms';
 import * as Molecules from '@/molecules';
 import * as Templates from '@/templates';
 
@@ -8,9 +9,17 @@ export const metadata = Molecules.Metadata({
   robots: false,
 });
 
+function ShareLoadingFallback() {
+  return (
+    <Atoms.Container className="flex min-h-[50vh] items-center justify-center">
+      <Atoms.Spinner />
+    </Atoms.Container>
+  );
+}
+
 export default function SharePage() {
   return (
-    <Suspense>
+    <Suspense fallback={<ShareLoadingFallback />}>
       <Templates.ShareTarget />
     </Suspense>
   );
