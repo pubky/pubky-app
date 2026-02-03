@@ -21,7 +21,7 @@ export const HeaderContainer = ({ children, className }: HeaderContainerProps) =
       overrideDefaults
       as="header"
       className={Libs.cn(
-        'sticky top-0 z-(--z-sticky-header) w-full bg-linear-to-b from-(--background) from-50% to-transparent py-6',
+        'pointer-events-none sticky top-0 z-(--z-sticky-header) w-full bg-linear-to-b from-(--background) from-50% to-transparent py-6',
         className,
       )}
     >
@@ -34,7 +34,7 @@ export const HeaderContainer = ({ children, className }: HeaderContainerProps) =
       >
         <Atoms.Container
           as="nav"
-          className="flex w-full flex-row flex-wrap items-center gap-4 sm:flex-nowrap sm:items-center sm:gap-6"
+          className="pointer-events-auto flex w-full flex-row flex-wrap items-center gap-4 sm:flex-nowrap sm:items-center sm:gap-6"
         >
           {children}
         </Atoms.Container>
