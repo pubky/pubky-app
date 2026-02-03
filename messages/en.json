@@ -1112,5 +1112,9 @@
       "q14": "How does Pubky differ from Nostr?",
       "a14": "Pubky uses Ed25519 keys for compatibility and avoids centralized relays. Instead, it uses a Distributed Hash Table (DHT) for decentralized lookup and identity resolution."
     }
+  },
+  "share": {
+    "title": "Share to Pubky",
+    "cancel": "Cancel"
   }
 }

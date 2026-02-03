@@ -1112,5 +1112,9 @@
       "q14": "En quoi Pubky differe-t-il de Nostr ?",
       "a14": "Pubky utilise des cles Ed25519 pour la compatibilite et evite les relais centralises. Au lieu de cela, il utilise une Table de Hachage Distribuee (DHT) pour la recherche decentralisee et la resolution d'identite."
     }
+  },
+  "share": {
+    "title": "Partager sur Pubky",
+    "cancel": "Annuler"
   }
 }

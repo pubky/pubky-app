@@ -1112,5 +1112,9 @@
       "q14": "Wie unterscheidet sich Pubky von Nostr?",
       "a14": "Pubky verwendet Ed25519-Schlüssel für Kompatibilitaet und vermeidet zentralisierte Relays. Stattdessen wird eine Distributed Hash Table (DHT) für dezentralisierte Suche und Identitätsaufloesung verwendet."
     }
+  },
+  "share": {
+    "title": "Auf Pubky teilen",
+    "cancel": "Abbrechen"
   }
 }

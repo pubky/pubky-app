@@ -1112,5 +1112,9 @@
       "q14": "Como difiere Pubky de Nostr?",
       "a14": "Pubky usa claves Ed25519 para compatibilidad y evita relays centralizados. En su lugar, usa una Tabla Hash Distribuida (DHT) para búsqueda descentralizada y resolucion de identidad."
     }
+  },
+  "share": {
+    "title": "Compartir en Pubky",
+    "cancel": "Cancelar"
   }
 }
