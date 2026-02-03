@@ -379,23 +379,19 @@ describe('posts', () => {
     });
   });
 
-  // todo: will need changing once undo is moved to toast, see https://github.com/pubky/franky/issues/711
-  it('can repost without content then delete the repost', () => {
+  it('can repost without content then undo via toast', () => {
     const postContent = `This post will be reposted without content! ${Date.now()}`;
     createQuickPost(postContent);
 
     repostPost({ filterText: postContent });
 
-    cy.findFirstPostInFeed(CheckForNewPosts.Yes).within(() => {
-      cy.contains('You reposted').should('be.visible');
-      cy.get('[data-testid="repost-undo-button"]').should('be.visible');
-      cy.get('[data-cy="post-text"]').should('have.length', 1);
+    // After repost, the toast should appear with "Reposted!" and an Undo button
+    cy.contains('[role="status"]', 'Reposted!').should('be.visible');
+    cy.contains('[role="status"]', 'Reposted!').within(() => {
+      cy.contains('button', 'Undo').click();
     });
 
-    cy.findFirstPostInFeed().within(() => {
-      cy.get('[data-testid="repost-undo-button"]').click();
-    });
-
+    // After clicking Undo, the repost should be removed from the feed
     cy.findFirstPostInFeed().within(() => {
       cy.contains('You reposted').should('not.exist');
       cy.contains('[data-cy="post-text"]', postContent).should('be.visible');
