@@ -27,7 +27,7 @@ export type HotStore = HotState & HotActions;
 // Initial state
 export const hotInitialState: HotState = {
   reach: REACH.ALL,
-  timeframe: TIMEFRAME.TODAY,
+  timeframe: TIMEFRAME.THIS_MONTH,
 };
 
 // Action types for DevTools

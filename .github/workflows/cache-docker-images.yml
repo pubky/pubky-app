@@ -8,7 +8,7 @@ jobs:
   cache-docker:
     runs-on: ubuntu-latest
     env:
-      PUBKY_STACK_REF: ce44db8342d7e0673eba8f6862ba11e163a1ff9b
+      PUBKY_STACK_REF: 10349036a70c79deedaa8c7278548958cd8f707c
 
     steps:
       - name: Checkout pubky-stack
@@ -36,7 +36,7 @@ jobs:
         with:
           context: pubky-stack/pubky-nexus
           load: true
-          tags: nexusd:latest
+          tags: local/pubky-nexus:latest
           cache-from: type=local,src=/tmp/.buildx-cache-nexus
           cache-to: type=local,dest=/tmp/.buildx-cache-nexus-new,mode=max
 
@@ -45,7 +45,7 @@ jobs:
         with:
           context: pubky-stack/pubky-core
           load: true
-          tags: homeserver:latest
+          tags: local/homeserver:latest
           cache-from: type=local,src=/tmp/.buildx-cache-homeserver
           cache-to: type=local,dest=/tmp/.buildx-cache-homeserver-new,mode=max
 

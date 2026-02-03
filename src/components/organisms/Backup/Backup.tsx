@@ -2,46 +2,20 @@
 
 import { useRouter } from 'next/navigation';
 import { useTranslations } from 'next-intl';
+import { useState } from 'react';
 
 import * as Atoms from '@/atoms';
 import * as Molecules from '@/molecules';
-import * as Libs from '@/libs';
 import * as App from '@/app';
-import * as Core from '@/core';
-import { useState } from 'react';
-import { useToast } from '@/molecules';
 
 export const BackupNavigation = () => {
   const router = useRouter();
   const [loading, setLoading] = useState(false);
-  const { toast } = useToast();
-  const t = useTranslations('onboarding.backup');
-  const { secretKey, inviteCode } = Core.useOnboardingStore();
-  const onHandleContinueButton = async () => {
+
+  const onHandleContinueButton = () => {
     setLoading(true);
-    try {
-      await Core.AuthController.signUp({ secretKey: secretKey!, signupToken: inviteCode });
-      router.push(App.ONBOARDING_ROUTES.PROFILE);
-    } catch (error) {
-      let description = t('signUpError');
-
-      if (Libs.isAppError(error)) {
-        // Auth errors during signup typically mean invalid/expired invite code
-        if (Libs.isAuthError(error)) {
-          description = t('invalidInvite');
-        } else if (error.message) {
-          description = error.message;
-        }
-      }
-
-      toast({
-        title: t('signUpFailed'),
-        description,
-      });
-      console.error('Failed to sign up', error);
-    } finally {
-      setLoading(false);
-    }
+    // Signup already happened at the invite code step; just navigate to profile
+    router.push(App.ONBOARDING_ROUTES.PROFILE);
   };
 
   const onHandleBackButton = () => {

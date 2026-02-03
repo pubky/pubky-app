@@ -30,6 +30,8 @@ export function PostInput({
   onArticleModeChange,
   editContent,
   editIsArticle,
+  initialContent,
+  initialAttachments,
 }: PostInputProps) {
   const t = useTranslations('post');
   const tCommon = useTranslations('common');
@@ -128,6 +130,22 @@ export function PostInput({
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps -- toast is an external side-effect, not a dependency
   }, [variant, editContent, editIsArticle]);
+
+  // Pre-fill content from share target or other external sources
+  React.useEffect(() => {
+    if (initialContent && !isEdit) {
+      setContent(initialContent);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- only run on mount
+  }, []);
+
+  // Pre-fill attachments from share target or other external sources
+  React.useEffect(() => {
+    if (initialAttachments && initialAttachments.length > 0 && !isEdit) {
+      handleFilesAdded(initialAttachments);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- only run on mount
+  }, []);
 
   return (
     <Atoms.Container
