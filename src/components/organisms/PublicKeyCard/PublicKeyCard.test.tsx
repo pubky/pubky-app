@@ -232,7 +232,7 @@ describe('PublicKeyCard', () => {
     expect(screen.getByTestId('content-card')).toBeInTheDocument();
 
     const image = screen.getByTestId('content-card-image');
-    expect(image).toHaveAttribute('src', '/images/key.png');
+    expect(image).toHaveAttribute('src', '/images/key.webp');
     expect(image).toHaveAttribute('alt', 'Key');
   });
 

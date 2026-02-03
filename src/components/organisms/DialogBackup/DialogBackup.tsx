@@ -69,19 +69,19 @@ export function DialogBackup({ open, onOpenChange }: DialogBackupProps = {}) {
         <Atoms.Container className="flex-col gap-3 md:flex-row">
           <BackupMethodCard
             title={t('recoveryPhrase')}
-            imageSrc="/images/note.png"
+            imageSrc="/images/note.webp"
             imageAlt={t('note')}
             dialog={<Organisms.DialogBackupPhrase />}
           />
           <BackupMethodCard
             title={t('encryptedFile')}
-            imageSrc="/images/folder.png"
+            imageSrc="/images/folder.webp"
             imageAlt={t('folder')}
             dialog={<Organisms.DialogBackupEncrypted />}
           />
           <BackupMethodCard
             title={t('exportRing')}
-            imageSrc="/images/keyring.png"
+            imageSrc="/images/keyring.webp"
             imageAlt={t('keys')}
             dialog={<Organisms.DialogBackupExport mnemonic={mnemonic} />}
           />

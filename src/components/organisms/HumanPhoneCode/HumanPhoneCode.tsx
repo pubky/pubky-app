@@ -74,7 +74,7 @@ export const HumanPhoneCode = ({ phoneNumber, onBack, onSuccess }: HumanPhoneCod
           <Atoms.Container className="flex hidden h-full w-full items-center lg:block lg:w-auto">
             <Atoms.Image
               priority={true}
-              src="/images/sms-verification-phone.png"
+              src="/images/sms-verification-phone.webp"
               alt="Pubky phone representing phone verification"
               className="h-auto w-[192px] max-w-full"
             />

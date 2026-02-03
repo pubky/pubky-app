@@ -17,7 +17,7 @@ export const InstallCard = () => {
   return (
     <Molecules.ContentCard
       image={{
-        src: '/images/keyring.png',
+        src: '/images/keyring.webp',
         alt: 'Keyring',
         width: 192,
         height: 192,

@@ -15,7 +15,7 @@ export function SearchEmptyState() {
 
   return (
     <Molecules.ProfilePageEmptyState
-      imageSrc="/images/tagged-empty-state.png"
+      imageSrc="/images/tagged-empty-state.webp"
       imageAlt={t('alt')}
       icon={Libs.Search}
       title={t('title')}
