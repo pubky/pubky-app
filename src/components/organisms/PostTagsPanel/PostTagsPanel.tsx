@@ -1,6 +1,5 @@
 'use client';
 
-import { useMemo } from 'react';
 import { useTranslations } from 'next-intl';
 import * as Atoms from '@/atoms';
 import * as Molecules from '@/molecules';
@@ -30,33 +29,33 @@ export function PostTagsPanel({ postId, className }: PostTagsPanelProps) {
     Hooks.usePostTags(postId);
 
   // Collect all unique tagger IDs from tags for bulk user details lookup
-  const allTaggerIds = useMemo(() => {
+  const allTaggerIds = (() => {
     const ids = new Set<Core.Pubky>();
     for (const tag of tags) {
       for (const tagger of tag.taggers) {
-        ids.add(tagger.id as Core.Pubky);
+        ids.add(tagger.id);
       }
     }
     return Array.from(ids);
-  }, [tags]);
+  })();
 
   // Get user details (name, avatarUrl) for all taggers
-  const { usersMap } = Hooks.useBulkUserAvatars(allTaggerIds);
+  const { usersMap, isLoading: isLoadingUsers } = Hooks.useBulkUserAvatars(allTaggerIds);
 
   // Enrich tags with user details for proper avatar fallbacks
-  const enrichedTags = useMemo(() => {
-    return tags.map((tag) => ({
-      ...tag,
-      taggers: tag.taggers.map((tagger) => {
-        const userDetails = usersMap.get(tagger.id as Core.Pubky);
-        return {
-          ...tagger,
-          name: userDetails?.name ?? tagger.name,
-          avatarUrl: userDetails?.avatarUrl,
-        };
-      }),
-    }));
-  }, [tags, usersMap]);
+  const enrichedTags = tags.map((tag) => ({
+    ...tag,
+    taggers: tag.taggers.map((tagger) => {
+      const userDetails = usersMap.get(tagger.id);
+      return {
+        ...tagger,
+        name: userDetails?.name ?? tagger.name,
+        // During loading: use existing avatarUrl (prevents flash for users with avatars)
+        // After loading: use verified avatarUrl (undefined if user has no avatar)
+        avatarUrl: isLoadingUsers ? tagger.avatarUrl : userDetails?.avatarUrl,
+      };
+    }),
+  }));
 
   // Auth requirement for tag actions
   const { isAuthenticated, requireAuth } = Hooks.useRequireAuth();
