@@ -1,7 +1,7 @@
 'use client';
 
-import { useMemo } from 'react';
 import { useRouter } from 'next/navigation';
+import { useTranslations } from 'next-intl';
 import * as Atoms from '@/atoms';
 import * as Molecules from '@/molecules';
 import * as Hooks from '@/hooks';
@@ -23,30 +23,28 @@ export function WhoTaggedExpandedList({
   isLoadingTaggers,
   'data-testid': dataTestId,
 }: WhoTaggedExpandedListProps) {
+  const t = useTranslations('common');
   const router = useRouter();
   const { toggleFollow, isUserLoading } = Hooks.useFollowUser();
   const { requireAuth } = Hooks.useRequireAuth();
   const { currentUserPubky } = Core.useAuthStore();
   const { getUsersWithAvatars, isLoading } = Hooks.useBulkUserAvatars(taggerIds);
 
-  const fallbackMap = useMemo(() => {
-    const map = new Map<string, TaggerWithAvatar>();
-    (fallbackTaggers ?? []).forEach((tagger) => {
-      map.set(tagger.id, tagger);
-    });
-    return map;
-  }, [fallbackTaggers]);
+  // Build fallback map for user data not yet in IndexedDB
+  const fallbackMap = new Map<string, TaggerWithAvatar>();
+  (fallbackTaggers ?? []).forEach((tagger) => {
+    fallbackMap.set(tagger.id, tagger);
+  });
 
-  const taggers = useMemo(() => {
-    return getUsersWithAvatars(taggerIds).map((tagger) => {
-      const fallback = fallbackMap.get(tagger.id);
-      return {
-        id: tagger.id,
-        name: tagger.name ?? fallback?.name,
-        avatarUrl: tagger.avatarUrl ?? fallback?.avatarUrl ?? '',
-      };
-    });
-  }, [getUsersWithAvatars, taggerIds, fallbackMap]);
+  // Merge user data from IndexedDB with fallback data
+  const taggers = getUsersWithAvatars(taggerIds).map((tagger) => {
+    const fallback = fallbackMap.get(tagger.id);
+    return {
+      id: tagger.id,
+      name: tagger.name ?? fallback?.name,
+      avatarUrl: tagger.avatarUrl ?? fallback?.avatarUrl ?? '',
+    };
+  });
 
   const handleFollowClick = async (userId: string, isFollowing: boolean) => {
     requireAuth(() => toggleFollow(userId, isFollowing));
@@ -72,7 +70,7 @@ export function WhoTaggedExpandedList({
         <Atoms.Container overrideDefaults className="flex items-center gap-2">
           <Atoms.Spinner size="sm" />
           <Atoms.Typography as="p" className="text-sm text-muted-foreground">
-            Loading taggers...
+            {t('loadingTaggers')}
           </Atoms.Typography>
         </Atoms.Container>
       )}

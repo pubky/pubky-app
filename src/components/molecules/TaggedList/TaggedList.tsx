@@ -47,7 +47,7 @@ export function TaggedList({
     if (!expandedTagLabel || !shouldFetchTaggers) return;
     const selectedTag = tagsRef.current.find((tag) => tag.label === expandedTagLabel);
     if (!selectedTag) return;
-    const initialIds = selectedTag.taggers.map((tagger) => tagger.id) as Core.Pubky[];
+    const initialIds = selectedTag.taggers.map((tagger) => tagger.id);
     void fetchAllTaggers(expandedTagLabel, initialIds, selectedTag.taggers_count);
   }, [expandedTagLabel, shouldFetchTaggers, fetchAllTaggers]);
 

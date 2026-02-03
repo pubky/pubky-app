@@ -7,8 +7,16 @@ import { TAGGERS_PAGE_SIZE } from './usePostTaggers.constants';
 import type { TaggersStateMap, UsePostTaggersResult } from './usePostTaggers.types';
 
 /**
- * Fetch full tagger lists for post tags on demand.
- * Keeps results in-memory per hook instance.
+ * Hook to fetch and cache full tagger lists for post tags on demand.
+ *
+ * Features:
+ * - Lazy loading: Taggers are only fetched when explicitly requested
+ * - Pagination: Automatically fetches all pages of taggers
+ * - Caching: Results are cached per tag label to avoid re-fetching
+ * - Deduplication: Handles duplicate tagger IDs across pages
+ *
+ * @param postId - The composite post ID (author:postId format). Pass null/undefined to disable fetching.
+ * @returns Object containing tagger data and fetch function
  */
 export function usePostTaggers(postId?: string | null): UsePostTaggersResult {
   const [taggerStates, setTaggerStates] = useState<TaggersStateMap>(new Map());
@@ -23,6 +31,13 @@ export function usePostTaggers(postId?: string | null): UsePostTaggersResult {
     setTaggerStates(new Map());
   }, [postId]);
 
+  /**
+   * Fetches all taggers for a specific tag label with pagination.
+   *
+   * @param label - The tag label to fetch taggers for (case-insensitive)
+   * @param initialIds - Initial tagger IDs already known from the tag response
+   * @param totalCount - Expected total count of taggers (used for pagination control)
+   */
   const fetchAllTaggers = useCallback(
     async (label: string, initialIds: Core.Pubky[], totalCount?: number) => {
       if (!postId) return;
@@ -46,10 +61,14 @@ export function usePostTaggers(postId?: string | null): UsePostTaggersResult {
       });
 
       try {
+        const MAX_ITERATIONS = 100; // Safeguard against infinite loops
         let skip = initialIds.length;
         let collectedIds = [...initialIds];
         let hasMore = true;
-        while (hasMore) {
+        let iterations = 0;
+
+        while (hasMore && iterations < MAX_ITERATIONS) {
+          iterations++;
           const response = await Core.PostController.fetchTaggers({
             compositeId: postId,
             label,
@@ -57,14 +76,16 @@ export function usePostTaggers(postId?: string | null): UsePostTaggersResult {
             limit: TAGGERS_PAGE_SIZE,
           });
 
-          const normalized = Array.isArray(response) ? response : [response];
-          const pageTaggers = normalized.flatMap((entry) => entry.users ?? []) as Core.Pubky[];
+          // Response is NexusTaggers[] - extract user IDs from all entries
+          const pageTaggers = response.flatMap((entry) => entry.users ?? []);
           if (pageTaggers.length === 0) break;
 
           const uniqueBefore = new Set(collectedIds).size;
           collectedIds = Array.from(new Set([...collectedIds, ...pageTaggers])) as Core.Pubky[];
           const uniqueAfter = new Set(collectedIds).size;
-          if (uniqueAfter === uniqueBefore) break;
+
+          // Only break on duplicates if we don't have a reliable totalCount
+          if (uniqueAfter === uniqueBefore && totalCount === undefined) break;
 
           skip += pageTaggers.length;
 
