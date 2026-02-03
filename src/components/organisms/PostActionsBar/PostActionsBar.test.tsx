@@ -102,7 +102,7 @@ describe('PostActionsBar', () => {
 
   it('renders all action buttons with counts and aria labels', () => {
     mockUsePostCounts.mockReturnValue({
-      postCounts: { tags: 3, replies: 5, reposts: 2 },
+      postCounts: { tags: 3, unique_tags: 3, replies: 5, reposts: 2 },
       isLoading: false,
     });
 
@@ -117,7 +117,7 @@ describe('PostActionsBar', () => {
 
   it('invokes callbacks when buttons are clicked', () => {
     mockUsePostCounts.mockReturnValue({
-      postCounts: { tags: 1, replies: 1, reposts: 1 },
+      postCounts: { tags: 1, unique_tags: 1, replies: 1, reposts: 1 },
       isLoading: false,
     });
 
@@ -145,7 +145,7 @@ describe('PostActionsBar', () => {
 
   it('calls toggle when bookmark button is clicked', () => {
     mockUsePostCounts.mockReturnValue({
-      postCounts: { tags: 1, replies: 1, reposts: 1 },
+      postCounts: { tags: 1, unique_tags: 1, replies: 1, reposts: 1 },
       isLoading: false,
     });
     const mockToggle = vi.fn();
@@ -175,7 +175,7 @@ describe('PostActionsBar - Snapshots', () => {
 
   it('matches snapshot with counts', () => {
     mockUsePostCounts.mockReturnValue({
-      postCounts: { tags: 7, replies: 8, reposts: 9 },
+      postCounts: { tags: 7, unique_tags: 3, replies: 8, reposts: 9 },
       isLoading: false,
     });
 
