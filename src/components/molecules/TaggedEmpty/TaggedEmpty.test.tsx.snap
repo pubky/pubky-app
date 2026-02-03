@@ -6,7 +6,7 @@ exports[`TaggedEmpty - Snapshots > matches snapshot 1`] = `
 >
   <div
     data-alt="Tagged - Empty state"
-    data-src="/images/tagged-empty-state.png"
+    data-src="/images/tagged-empty-state.webp"
     data-testid="image"
   />
   <svg

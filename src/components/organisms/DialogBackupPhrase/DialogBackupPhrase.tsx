@@ -262,7 +262,7 @@ function RecoveryStep3({ handleClose }: { handleClose: () => void }) {
       </Atoms.DialogHeader>
 
       <Atoms.Container className="flex w-full items-center justify-center rounded-md bg-card p-12">
-        <Image src="/images/check.png" alt={t('completeTitle')} width={180} height={180} className="h-48 w-48" />
+        <Image src="/images/check.webp" alt={t('completeTitle')} width={180} height={180} className="h-48 w-48" />
       </Atoms.Container>
 
       <Atoms.DialogFooter className="flex-col gap-3">
