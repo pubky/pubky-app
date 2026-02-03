@@ -2,7 +2,6 @@ import React from 'react';
 import { describe, it, expect, vi } from 'vitest';
 import { render, screen } from '@testing-library/react';
 import { Language } from './Language';
-import { normaliseRadixIds } from '@/libs/utils/utils';
 
 // Mock Next.js router
 vi.mock('next/navigation', () => ({
@@ -35,13 +34,9 @@ describe('Language', () => {
   });
 });
 
-// Note: Radix UI generates incremental IDs (radix-«r0», radix-«r1», etc.) for aria-controls attributes.
-// These IDs can vary between test runs depending on test execution order.
-// Use normaliseRadixIds to ensure the snapshots are consistent.
 describe('Language - Snapshots', () => {
   it('matches snapshot', () => {
     const { container } = render(<Language />);
-    const normalizedContainer = normaliseRadixIds(container);
-    expect(normalizedContainer.firstChild).toMatchSnapshot();
+    expect(container.firstChild).toMatchSnapshot();
   });
 });

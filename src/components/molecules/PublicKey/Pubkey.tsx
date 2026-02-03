@@ -32,6 +32,7 @@ export const PublicKeyNavigation = () => {
 
   const onHandleContinueButton = () => {
     setLoading(true);
+    // Signup already happened at invite code entry; just navigate to backup
     router.push(App.ONBOARDING_ROUTES.BACKUP);
   };
 

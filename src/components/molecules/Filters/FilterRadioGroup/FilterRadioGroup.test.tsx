@@ -1,7 +1,6 @@
 import { render, screen, fireEvent } from '@testing-library/react';
 import { describe, it, expect, vi } from 'vitest';
 import { FilterRadioGroup } from './FilterRadioGroup';
-import { normaliseRadixIds } from '@/libs/utils/utils';
 
 // Mock icon components for testing
 const MockIcon1 = () => <svg data-testid="mock-icon-1" />;
@@ -274,25 +273,21 @@ describe('FilterRadioGroup', () => {
 describe('FilterRadioGroup - Snapshots', () => {
   it('matches snapshot with default props', () => {
     const { container } = render(<FilterRadioGroup title="Test Filter" items={mockItems} />);
-    const normalisedContainer = normaliseRadixIds(container);
-    expect(normalisedContainer.firstChild).toMatchSnapshot();
+    expect(container.firstChild).toMatchSnapshot();
   });
 
   it('matches snapshot with selected value', () => {
     const { container } = render(<FilterRadioGroup title="Test Filter" items={mockItems} selectedValue="option2" />);
-    const normalisedContainer = normaliseRadixIds(container);
-    expect(normalisedContainer.firstChild).toMatchSnapshot();
+    expect(container.firstChild).toMatchSnapshot();
   });
 
   it('matches snapshot with disabled item', () => {
     const { container } = render(<FilterRadioGroup title="Test Filter" items={mockItemsWithDisabled} />);
-    const normalisedContainer = normaliseRadixIds(container);
-    expect(normalisedContainer.firstChild).toMatchSnapshot();
+    expect(container.firstChild).toMatchSnapshot();
   });
 
   it('matches snapshot with default value', () => {
     const { container } = render(<FilterRadioGroup title="Test Filter" items={mockItems} defaultValue="option1" />);
-    const normalisedContainer = normaliseRadixIds(container);
-    expect(normalisedContainer.firstChild).toMatchSnapshot();
+    expect(container.firstChild).toMatchSnapshot();
   });
 });

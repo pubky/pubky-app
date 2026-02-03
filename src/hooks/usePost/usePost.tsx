@@ -12,6 +12,7 @@ import type {
   UsePostPostOptions,
   UsePostRepostOptions,
   UsePostEditOptions,
+  UsePostReturn,
 } from './usePost.types';
 
 /**
@@ -36,7 +37,7 @@ import type {
  * const handleSubmit = edit({ editPostId: 'post-123', onSuccess: () => {} });
  * ```
  */
-export function usePost() {
+export function usePost(): UsePostReturn {
   const [content, setContent] = useState('');
   const [tags, setTags] = useState<string[]>([]);
   const [attachments, setAttachments] = useState<File[]>([]);
@@ -136,9 +137,11 @@ export function usePost() {
         content: content.trim(),
         authorId: currentUserId,
         tags: tags.length > 0 ? tags : undefined,
+        attachments: attachments.length > 0 ? attachments : undefined,
       });
       setContent('');
       setTags([]);
+      setAttachments([]);
 
       const toastInstance = toast({
         title: tToast('repostSuccess'),

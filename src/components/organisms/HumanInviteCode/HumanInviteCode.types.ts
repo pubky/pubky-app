@@ -1,4 +1,5 @@
 export interface HumanInviteCodeProps {
   onBack: () => void;
-  onSuccess: (inviteCode: string) => void;
+  /** Called when user submits invite code. May be async; throws on validation failure. */
+  onSuccess: (inviteCode: string) => void | Promise<void>;
 }

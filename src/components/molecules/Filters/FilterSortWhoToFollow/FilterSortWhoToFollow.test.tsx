@@ -1,7 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { render, screen } from '@testing-library/react';
 import { FilterSortWhoToFollow } from './FilterSortWhoToFollow';
-import { normaliseRadixIds } from '@/libs/utils/utils';
 
 describe('FilterSortWhoToFollow', () => {
   it('renders sort title', () => {
@@ -40,7 +39,6 @@ describe('FilterSortWhoToFollow', () => {
 describe('FilterSortWhoToFollow - Snapshots', () => {
   it('matches snapshot', () => {
     const { container } = render(<FilterSortWhoToFollow />);
-    const normalizedContainer = normaliseRadixIds(container);
-    expect(normalizedContainer.firstChild).toMatchSnapshot();
+    expect(container.firstChild).toMatchSnapshot();
   });
 });

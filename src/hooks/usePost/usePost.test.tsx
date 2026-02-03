@@ -960,11 +960,73 @@ describe('usePost', () => {
         content: 'This is great!',
         authorId: 'test-user-id',
         tags: ['tag1'],
+        attachments: undefined,
       });
       expect(result.current.content).toBe('');
       expect(result.current.tags).toEqual([]);
+      expect(result.current.attachments).toEqual([]);
       expect(mockOnSuccess).toHaveBeenCalled();
       expect(result.current.isSubmitting).toBe(false);
+    });
+
+    it('should create a repost successfully with attachments', async () => {
+      const { result } = renderHook(() => usePost());
+      const mockOnSuccess = vi.fn();
+      const mockFile = new File(['test'], 'test.png', { type: 'image/png' });
+
+      act(() => {
+        result.current.setContent('Quote repost');
+        result.current.setAttachments([mockFile]);
+      });
+
+      await act(async () => {
+        await result.current.repost({
+          originalPostId: 'test-post-123',
+          onSuccess: mockOnSuccess,
+          onUndo: vi.fn(),
+        });
+      });
+
+      expect(mockPostControllerCreate).toHaveBeenCalledWith({
+        originalPostId: 'test-post-123',
+        content: 'Quote repost',
+        authorId: 'test-user-id',
+        tags: undefined,
+        attachments: [mockFile],
+      });
+      expect(result.current.content).toBe('');
+      expect(result.current.tags).toEqual([]);
+      expect(result.current.attachments).toEqual([]);
+      expect(mockOnSuccess).toHaveBeenCalled();
+      expect(result.current.isSubmitting).toBe(false);
+    });
+
+    it('should create a repost with attachments but no content', async () => {
+      const { result } = renderHook(() => usePost());
+      const mockOnSuccess = vi.fn();
+      const mockFile = new File(['test'], 'test.png', { type: 'image/png' });
+
+      act(() => {
+        result.current.setAttachments([mockFile]);
+      });
+
+      await act(async () => {
+        await result.current.repost({
+          originalPostId: 'test-post-123',
+          onSuccess: mockOnSuccess,
+          onUndo: vi.fn(),
+        });
+      });
+
+      expect(mockPostControllerCreate).toHaveBeenCalledWith({
+        originalPostId: 'test-post-123',
+        content: '',
+        authorId: 'test-user-id',
+        tags: undefined,
+        attachments: [mockFile],
+      });
+      expect(result.current.attachments).toEqual([]);
+      expect(mockOnSuccess).toHaveBeenCalled();
     });
 
     it('should create a repost successfully without content (simple repost)', async () => {
@@ -988,9 +1050,11 @@ describe('usePost', () => {
         content: '',
         authorId: 'test-user-id',
         tags: undefined,
+        attachments: undefined,
       });
       expect(result.current.content).toBe('');
       expect(result.current.tags).toEqual([]);
+      expect(result.current.attachments).toEqual([]);
       expect(mockOnSuccess).toHaveBeenCalled();
       expect(result.current.isSubmitting).toBe(false);
     });
@@ -1015,6 +1079,7 @@ describe('usePost', () => {
         content: 'Repost comment',
         authorId: 'test-user-id',
         tags: undefined,
+        attachments: undefined,
       });
     });
 
@@ -1134,6 +1199,7 @@ describe('usePost', () => {
         content: 'Trimmed repost content',
         authorId: 'test-user-id',
         tags: undefined,
+        attachments: undefined,
       });
     });
 

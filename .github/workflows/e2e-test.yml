@@ -11,7 +11,7 @@ jobs:
     runs-on: ubuntu-latest
     env:
       # https://github.com/pubky/pubky-stack
-      PUBKY_STACK_REF: fc32a86b072715c2261a553e50509acf68b19091
+      PUBKY_STACK_REF: 10349036a70c79deedaa8c7278548958cd8f707c
     strategy:
       fail-fast: false
       matrix:
@@ -71,6 +71,11 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-nextjs-
 
+      - name: Increase watcher sleep in Nexus config
+        working-directory: pubky-stack/docker
+        run: |
+          sed -i 's/watcher_sleep = 100/watcher_sleep = 500/' pubky-nexus-config-testnet.toml
+
       # reduce neo4j memory to prevent
       # ERROR Invalid memory configuration - exceeds physical memory. Check the configured values for server.memory.pagecache.size and server.memory.heap.max_size
       - name: Modify neo4j.env
@@ -101,8 +106,7 @@ jobs:
         with:
           context: pubky-stack/pubky-nexus
           load: true
-          tags: |
-            nexusd:latest
+          tags: local/pubky-nexus:latest
           cache-from: type=local,src=/tmp/.buildx-cache-nexus
           cache-to: type=local,dest=/tmp/.buildx-cache-nexus-new,mode=max
 
@@ -111,7 +115,7 @@ jobs:
         with:
           context: pubky-stack/pubky-core
           load: true
-          tags: homeserver:latest
+          tags: local/homeserver:latest
           cache-from: type=local,src=/tmp/.buildx-cache-homeserver
           cache-to: type=local,dest=/tmp/.buildx-cache-homeserver-new,mode=max
 
@@ -125,19 +129,36 @@ jobs:
 
       - name: Run pubky-stack
         working-directory: pubky-stack/docker
+        env:
+          REGISTRY: local
         run: docker compose up -d nexusd nexus-redis nexus-neo4j homeserver
 
       - name: Build Franky frontend
         working-directory: franky
         run: |
           cat > .env << EOF
-          NEXT_PUBLIC_DB_VERSION=1
-          NEXT_PUBLIC_SYNC_TTL=300000
+          NEXT_PUBLIC_DB_NAME=franky
+          NEXT_PUBLIC_DB_VERSION=2
           NEXT_PUBLIC_DEBUG_MODE=false
-          NEXT_PUBLIC_TTL_POST_MS=4000
-          NEXT_PUBLIC_TTL_USER_MS=600000
+          NEXT_PUBLIC_SYNC_TTL=5000
+          NEXT_PUBLIC_NOTIFICATION_POLL_INTERVAL_MS=6000
+          NEXT_PUBLIC_NOTIFICATION_POLL_ON_START=false
+          NEXT_PUBLIC_NOTIFICATION_RESPECT_PAGE_VISIBILITY=true
+          NEXT_PUBLIC_STREAM_POLL_INTERVAL_MS=6000
+          NEXT_PUBLIC_STREAM_POLL_ON_START=false
+          NEXT_PUBLIC_STREAM_RESPECT_PAGE_VISIBILITY=true
+          NEXT_PUBLIC_STREAM_FETCH_LIMIT=10
+          NEXT_PUBLIC_STREAM_CACHE_MAX_AGE_MS=5000
+          NEXT_MAX_STREAM_TAGS=5
+          NEXT_PUBLIC_TTL_POST_MS=2000
+          NEXT_PUBLIC_TTL_USER_MS=3000
+          NEXT_PUBLIC_TTL_BATCH_INTERVAL_MS=5000
+          NEXT_PUBLIC_TTL_POST_MAX_BATCH_SIZE=20
+          NEXT_PUBLIC_TTL_USER_MAX_BATCH_SIZE=20
+          NEXT_PUBLIC_TTL_RETRY_DELAY_MS=10000
           NEXT_PUBLIC_HOMESERVER=8pinxxgqs41n4aididenw5apqp1urfmzdztr8jt4abrkdn435ewo
           NEXT_PUBLIC_NEXUS_URL=http://localhost:8080
+          NEXT_PUBLIC_CDN_URL=http://localhost:8080/static
           NEXT_PUBLIC_TESTNET=true
           NEXT_PUBLIC_DEFAULT_HTTP_RELAY=http://localhost:15412/link/
           NEXT_PUBLIC_MODERATION_ID=euwmq57zefw5ynnkhh37b3gcmhs7g3cptdbw1doaxj1pbmzp3wro

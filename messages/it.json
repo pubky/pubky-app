@@ -321,7 +321,10 @@
       "shareUnavailable": "Condivisione non disponibile",
       "shareUnavailableDescription": "Abbiamo copiato il tuo pubky cosi puoi incollarlo nella tua app preferita.",
       "shareFailed": "Condivisione fallita",
-      "shareFailedDescription": "Impossibile condividere al momento. Riprova."
+      "shareFailedDescription": "Impossibile condividere al momento. Riprova.",
+      "signUpFailed": "Errore - Registrazione fallita",
+      "signUpError": "Qualcosa e andato storto. Riprova.",
+      "invalidInvite": "Codice invito non valido o scaduto. Ottieni o richiedi un nuovo codice invito."
     },
     "backupMethod": {
       "title": "Scegli il metodo di backup",
@@ -1112,5 +1115,9 @@
       "q14": "In cosa Pubky differisce da Nostr?",
       "a14": "Pubky usa chiavi Ed25519 per compatibilita e evita relay centralizzati. Invece, usa una Distributed Hash Table (DHT) per ricerca decentralizzata e risoluzione identità."
     }
+  },
+  "share": {
+    "title": "Condividi su Pubky",
+    "cancel": "Annulla"
   }
 }

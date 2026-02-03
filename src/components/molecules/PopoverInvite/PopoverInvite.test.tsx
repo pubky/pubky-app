@@ -2,7 +2,6 @@ import { describe, it, expect, vi } from 'vitest';
 import { render, screen, fireEvent } from '@testing-library/react';
 import { PopoverInvite } from './PopoverInvite';
 import { EMAIL_URL, TWITTER_URL, TELEGRAM_URL } from '@/config';
-import { normaliseRadixIds } from '@/libs/utils/utils';
 
 // Mock @/libs to intercept all icons and utilities
 // Mock libs - use actual utility functions and icons from lucide-react
@@ -80,13 +79,11 @@ describe('InvitePopover', () => {
 describe('PopoverInvite - Snapshots', () => {
   it('matches snapshot for default PopoverInvite', () => {
     const { container } = render(<PopoverInvite />);
-    const normalizedContainer = normaliseRadixIds(container);
-    expect(normalizedContainer.firstChild).toMatchSnapshot();
+    expect(container.firstChild).toMatchSnapshot();
   });
 
   it('matches snapshot for PopoverInvite with custom className', () => {
     const { container } = render(<PopoverInvite className="custom-invite-style" />);
-    const normalizedContainer = normaliseRadixIds(container);
-    expect(normalizedContainer.firstChild).toMatchSnapshot();
+    expect(container.firstChild).toMatchSnapshot();
   });
 });

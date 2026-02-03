@@ -28,6 +28,35 @@ export function PostTagsPanel({ postId, className }: PostTagsPanelProps) {
   const { tags, isLoading, handleTagAdd, handleTagToggle, hasMore, isLoadingMore, loadMore } =
     Hooks.usePostTags(postId);
 
+  // Collect all unique tagger IDs from tags for bulk user details lookup
+  const allTaggerIds = (() => {
+    const ids = new Set<Core.Pubky>();
+    for (const tag of tags) {
+      for (const tagger of tag.taggers) {
+        ids.add(tagger.id);
+      }
+    }
+    return Array.from(ids);
+  })();
+
+  // Get user details (name, avatarUrl) for all taggers
+  const { usersMap, isLoading: isLoadingUsers } = Hooks.useBulkUserAvatars(allTaggerIds);
+
+  // Enrich tags with user details for proper avatar fallbacks
+  const enrichedTags = tags.map((tag) => ({
+    ...tag,
+    taggers: tag.taggers.map((tagger) => {
+      const userDetails = usersMap.get(tagger.id);
+      return {
+        ...tagger,
+        name: userDetails?.name ?? tagger.name,
+        // During loading: use existing avatarUrl (prevents flash for users with avatars)
+        // After loading: use verified avatarUrl (undefined if user has no avatar)
+        avatarUrl: isLoadingUsers ? tagger.avatarUrl : userDetails?.avatarUrl,
+      };
+    }),
+  }));
+
   // Auth requirement for tag actions
   const { isAuthenticated, requireAuth } = Hooks.useRequireAuth();
   const setShowSignInDialog = Core.useAuthStore((state) => state.setShowSignInDialog);
@@ -77,7 +106,7 @@ export function PostTagsPanel({ postId, className }: PostTagsPanelProps) {
       {tags.length > 0 && (
         <Atoms.Container overrideDefaults className="max-h-80 overflow-x-hidden overflow-y-auto pr-1">
           <Molecules.TaggedList
-            tags={tags}
+            tags={enrichedTags}
             hasMore={hasMore}
             isLoadingMore={isLoadingMore}
             onLoadMore={loadMore}

@@ -14,7 +14,7 @@ describe('HotStore', () => {
       const state = useHotStore.getState();
 
       expect(state.reach).toBe(REACH.ALL);
-      expect(state.timeframe).toBe(TIMEFRAME.TODAY);
+      expect(state.timeframe).toBe(TIMEFRAME.THIS_MONTH);
     });
 
     it('should match hotInitialState', () => {
