@@ -15,7 +15,7 @@ npm run dev
 '''
 
 [[actions]]
-name = "start"
+name = "start-multi-line"
 icon = "run"
 command = '''
 npm run clean
@@ -24,6 +24,6 @@ npm run start
 '''
 
 [[actions]]
-name = "start"
+name = "start-single-line"
 icon = "tool"
 command = "npm run clean && npm run build && npm run start"
