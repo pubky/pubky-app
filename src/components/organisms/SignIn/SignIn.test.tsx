@@ -23,7 +23,13 @@ vi.mock('next/image', () => ({
 // Mock QRCodeSVG
 vi.mock('qrcode.react', () => ({
   QRCodeSVG: ({ size }: { size: number }) => (
-    <img data-testid="next-image" src="/images/pubky-ring-qr-example.png" alt="Pubky Ring" width={size} height={size} />
+    <img
+      data-testid="next-image"
+      src="/images/pubky-ring-qr-example.webp"
+      alt="Pubky Ring"
+      width={size}
+      height={size}
+    />
   ),
 }));
 
@@ -252,12 +258,12 @@ describe('SignInContent', () => {
     // Wait for the component to finish loading and show QR code
     await waitFor(() => {
       const images = screen.getAllByTestId('next-image');
-      const qrImage = images.find((img) => img.getAttribute('src') === '/images/pubky-ring-qr-example.png');
+      const qrImage = images.find((img) => img.getAttribute('src') === '/images/pubky-ring-qr-example.webp');
       expect(qrImage).toBeInTheDocument();
     });
 
     const images = screen.getAllByTestId('next-image');
-    const qrImage = images.find((img) => img.getAttribute('src') === '/images/pubky-ring-qr-example.png');
+    const qrImage = images.find((img) => img.getAttribute('src') === '/images/pubky-ring-qr-example.webp');
 
     expect(qrImage).toHaveAttribute('alt', 'Pubky Ring');
     expect(qrImage).toHaveAttribute('width', '220');

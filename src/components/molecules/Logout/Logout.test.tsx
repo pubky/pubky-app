@@ -61,7 +61,7 @@ describe('LogoutContent', () => {
   it('displays the tag image correctly', () => {
     render(<LogoutContent />);
     const image = screen.getByTestId('next-image');
-    expect(image).toHaveAttribute('src', '/images/tag.png');
+    expect(image).toHaveAttribute('src', '/images/tag.webp');
     expect(image).toHaveAttribute('alt', 'Pubky Ring');
     expect(image).toHaveAttribute('width', '192');
     expect(image).toHaveAttribute('height', '192');

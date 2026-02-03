@@ -6,7 +6,7 @@ exports[`NotificationsEmpty - Snapshots > matches snapshot with default props 1`
 >
   <div
     data-alt="Notifications - Empty state"
-    data-src="/images/notifications-empty-state.png"
+    data-src="/images/notifications-empty-state.webp"
     data-testid="image"
   />
   <svg
