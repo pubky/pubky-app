@@ -103,7 +103,7 @@ exports[`HumanInviteCode - Snapshots > matches snapshot for complete code state 
         decoding="async"
         height="192"
         loading="lazy"
-        src="/images/gift.png"
+        src="/images/gift.webp"
         style="color: transparent;"
         width="192"
       />
@@ -454,7 +454,7 @@ exports[`HumanInviteCode - Snapshots > matches snapshot for empty state 1`] = `
         decoding="async"
         height="192"
         loading="lazy"
-        src="/images/gift.png"
+        src="/images/gift.webp"
         style="color: transparent;"
         width="192"
       />

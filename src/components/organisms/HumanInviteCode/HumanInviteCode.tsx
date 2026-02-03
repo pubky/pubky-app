@@ -69,7 +69,7 @@ export const HumanInviteCode = ({ onBack, onSuccess }: HumanInviteCodeProps) => 
         {/* Gift Image */}
         <Atoms.Container className="hidden shrink-0 lg:flex lg:h-48 lg:w-48">
           <Atoms.Image
-            src="/images/gift.png"
+            src="/images/gift.webp"
             alt="Gift"
             width={192}
             height={192}
