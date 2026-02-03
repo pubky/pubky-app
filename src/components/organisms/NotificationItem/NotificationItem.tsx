@@ -28,6 +28,7 @@ export function NotificationItem({ notification, isUnread }: NotificationItemPro
   const t = useTranslations('notifications.actions');
   const tCommon = useTranslations('common');
   const tProfile = useTranslations('profile');
+  const tPost = useTranslations('post');
   const router = useRouter();
   const { toast } = Molecules.useToast();
 
@@ -62,7 +63,9 @@ export function NotificationItem({ notification, isUnread }: NotificationItemPro
     Core.PostController.getOrFetchDetails({ compositeId: postCompositeId, viewerId })
       .then((post) => {
         if (!isCancelled && post?.content) {
-          if (post.kind === 'long') {
+          if (Libs.isPostDeleted(post.content)) {
+            setPostContent(tPost('deleted'));
+          } else if (post.kind === 'long') {
             try {
               const parsed = JSON.parse(post.content) as ArticleJSON;
               setPostContent(parsed.title || '');

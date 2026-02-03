@@ -24,7 +24,13 @@ vi.mock('next/image', () => ({
 // Mock QRCodeSVG
 vi.mock('qrcode.react', () => ({
   QRCodeSVG: ({ size }: { size: number }) => (
-    <img data-testid="next-image" src="/images/pubky-ring-qr-example.png" alt="Pubky Ring" width={size} height={size} />
+    <img
+      data-testid="next-image"
+      src="/images/pubky-ring-qr-example.webp"
+      alt="Pubky Ring"
+      width={size}
+      height={size}
+    />
   ),
 }));
 

@@ -1,5 +1,5 @@
 import { backupDownloadFilePath } from '../support/auth';
-import { createQuickPost, replyToPost, repostPost, deletePost } from '../support/posts';
+import { createQuickPost, replyToPost, repostPost, deletePost, editPost } from '../support/posts';
 import { slowCypressDown } from 'cypress-slow-down';
 import 'cypress-slow-down/commands';
 import { searchAndFollowProfile, searchForProfileByPubky } from '../support/contacts';
@@ -297,11 +297,66 @@ describe('notifications', () => {
     // * profile 2 checks for absence of notifications
   });
 
-  // blocked by inability to edit, see https://github.com/pubky/franky/issues/751
-  it('can be notified for a post being edited that you replied to');
+  it('can be notified for a post being edited that you replied to', () => {
+    // * profile 1 creates a post (1) that will be replied to and then edited
+    const postContent = `The one who replies to this post will be notified when it is edited! ${Date.now()}`;
+    const editedContent = `This post has been edited! ${Date.now()}`;
+    createQuickPost(postContent);
 
-  // blocked by inability to edit, see https://github.com/pubky/franky/issues/751
-  it('can be notified for a post being edited that you reposted');
+    // * profile 2 replies to profile 1's post (1)
+    cy.signOut(HasBackedUp.Yes);
+    cy.signInWithEncryptedFile(backupDownloadFilePath(profile2.username));
+    replyToPost({ replyContent: 'I replied to your post!', filterText: postContent });
+
+    // * profile 1 edits own post (1)
+    cy.signOut(HasBackedUp.Yes);
+    cy.signInWithEncryptedFile(backupDownloadFilePath(profile1.username));
+    goToProfilePageFromHeader();
+    cy.get('[data-cy="profile-filter-item-posts"]').click();
+    cy.get('[data-cy="profile-filter-item-posts"]').closest('[data-selected="true"]').should('exist');
+    editPost({ newPostContent: editedContent, postIdx: 0, filterText: postContent });
+
+    // * profile 2 checks for notification for post (1) being edited
+    cy.signOut(HasBackedUp.Yes);
+    cy.signInWithEncryptedFile(backupDownloadFilePath(profile2.username));
+    verifyNotificationCounter(1);
+    goToProfilePageFromHeader();
+    verifyNotificationCounter(1);
+    checkLatestNotification([profile1.username, 'edited a post']);
+    causeLastReadToBeUpdated();
+    verifyNotificationCounter(0);
+  });
+
+  it('can be notified for a post being edited that you reposted', () => {
+    // * profile 1 creates a post (1) that will be reposted and then edited
+    const postContent = `The one who reposts this post will be notified when it is edited! ${Date.now()}`;
+    const editedContent = `This post has been edited! ${Date.now()}`;
+    createQuickPost(postContent);
+
+    // * profile 2 reposts profile 1's post
+    cy.signOut(HasBackedUp.Yes);
+    cy.signInWithEncryptedFile(backupDownloadFilePath(profile2.username));
+    cy.findFirstPostInFeed().innerTextContains(postContent);
+    repostPost({ repostContent: 'I reposted your post!', filterText: postContent });
+
+    // * profile 1 edits own post (1)
+    cy.signOut(HasBackedUp.Yes);
+    cy.signInWithEncryptedFile(backupDownloadFilePath(profile1.username));
+    goToProfilePageFromHeader();
+    cy.get('[data-cy="profile-filter-item-posts"]').click();
+    cy.get('[data-cy="profile-filter-item-posts"]').closest('[data-selected="true"]').should('exist');
+    editPost({ newPostContent: editedContent, postIdx: 0, filterText: postContent });
+
+    // * profile 2 checks for notification for post being edited
+    cy.signOut(HasBackedUp.Yes);
+    cy.signInWithEncryptedFile(backupDownloadFilePath(profile2.username));
+    verifyNotificationCounter(1);
+    goToProfilePageFromHeader();
+    verifyNotificationCounter(1);
+    checkLatestNotification([profile1.username, 'edited a post']);
+    causeLastReadToBeUpdated();
+    verifyNotificationCounter(0);
+  });
 
   it('can display counter for multiple new notifications');
 });

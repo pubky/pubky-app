@@ -9,10 +9,14 @@ exports[`SinglePostContent - Snapshots > matches snapshot with deleted parent po
     PostPageHeader
   </div>
   <div
-    data-post-id="author:post123"
-    data-testid="single-post-card"
+    data-class-name="rounded-md py-0"
+    data-testid="card"
   >
-    SinglePostCard
+    <div
+      data-testid="post-deleted"
+    >
+      Post deleted
+    </div>
   </div>
   <div
     data-class-name="flex gap-6"

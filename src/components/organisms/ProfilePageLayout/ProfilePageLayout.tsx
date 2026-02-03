@@ -64,7 +64,7 @@ export function ProfilePageLayout({
 
   return (
     <>
-      <Molecules.MobileHeader showLeftButton={false} showRightButton={false} />
+      <Molecules.MobileHeader hasGradientBackground={false} showLeftButton={false} showRightButton={false} />
 
       <Molecules.ProfilePageMobileMenu
         activePage={activePage}

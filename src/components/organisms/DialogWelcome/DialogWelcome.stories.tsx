@@ -103,7 +103,7 @@ export const Default: Story = {
 
 export const WithAvatar: Story = {
   args: {
-    avatarUrl: '/images/shield.png',
+    avatarUrl: '/images/shield.webp',
   },
 };
 

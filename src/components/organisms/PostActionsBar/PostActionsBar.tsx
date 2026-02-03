@@ -34,13 +34,14 @@ export function PostActionsBar({ postId, onTagClick, onReplyClick, onRepostClick
     className: 'border-none shadow-xs-dark',
   };
 
+  const tagCount = postCounts.unique_tags ?? 0;
   const actionButtons: ActionButtonConfig[] = [
     {
       id: 'tag',
       icon: Libs.Tag,
-      count: postCounts.tags,
+      count: tagCount,
       onClick: () => requireAuth(() => onTagClick?.()),
-      ariaLabel: `Tag post (${postCounts.tags})`,
+      ariaLabel: `Tag post (${tagCount})`,
     },
     {
       id: 'reply',
