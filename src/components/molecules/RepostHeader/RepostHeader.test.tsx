@@ -1,5 +1,5 @@
 import { describe, it, expect, vi } from 'vitest';
-import { render, screen, fireEvent } from '@testing-library/react';
+import { render, screen } from '@testing-library/react';
 import { RepostHeader } from './RepostHeader';
 
 vi.mock('@/atoms', () => ({
@@ -31,31 +31,6 @@ vi.mock('@/atoms', () => ({
       {children}
     </span>
   ),
-  Button: ({
-    children,
-    onClick,
-    disabled,
-    className,
-    'aria-label': ariaLabel,
-    ['data-testid']: dataTestId,
-  }: {
-    children: React.ReactNode;
-    onClick?: () => void;
-    disabled?: boolean;
-    className?: string;
-    'aria-label'?: string;
-    'data-testid'?: string;
-  }) => (
-    <button
-      data-testid={dataTestId ?? 'button'}
-      onClick={onClick}
-      disabled={disabled}
-      className={className}
-      aria-label={ariaLabel}
-    >
-      {children}
-    </button>
-  ),
 }));
 
 vi.mock('@/libs', async () => {
@@ -67,36 +42,23 @@ vi.mock('@/libs', async () => {
 
 describe('RepostHeader', () => {
   it('renders text and icon', () => {
-    render(<RepostHeader onUndo={vi.fn()} />);
+    render(<RepostHeader />);
 
     expect(screen.getByTestId('repost-header')).toBeInTheDocument();
     expect(screen.getByText('You reposted')).toBeInTheDocument();
   });
 
-  it('calls onUndo when undo button clicked', () => {
-    const onUndo = vi.fn();
-    render(<RepostHeader onUndo={onUndo} />);
+  it('does not render an undo button', () => {
+    render(<RepostHeader />);
 
-    fireEvent.click(screen.getByRole('button', { name: 'Undo repost' }));
-    expect(onUndo).toHaveBeenCalledTimes(1);
-  });
-
-  it('disables undo button when undoing', () => {
-    render(<RepostHeader onUndo={vi.fn()} isUndoing={true} />);
-
-    const button = screen.getByRole('button', { name: 'Undoing repost...' });
-    expect(button).toBeDisabled();
+    // The undo button has been moved to the toast notification
+    expect(screen.queryByRole('button')).not.toBeInTheDocument();
   });
 });
 
 describe('RepostHeader - Snapshots', () => {
-  it('matches snapshot with default props', () => {
-    const { container } = render(<RepostHeader onUndo={vi.fn()} />);
-    expect(container.firstChild).toMatchSnapshot();
-  });
-
-  it('matches snapshot when undoing', () => {
-    const { container } = render(<RepostHeader onUndo={vi.fn()} isUndoing={true} />);
+  it('matches snapshot', () => {
+    const { container } = render(<RepostHeader />);
     expect(container.firstChild).toMatchSnapshot();
   });
 });

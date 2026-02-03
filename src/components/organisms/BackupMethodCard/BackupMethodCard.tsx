@@ -13,7 +13,7 @@ export const BackupMethodCard = () => {
   return (
     <Molecules.ContentCard
       image={{
-        src: '/images/shield.png',
+        src: '/images/shield.webp',
         alt: 'Shield',
         width: 192,
         height: 192,

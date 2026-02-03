@@ -22,7 +22,7 @@ exports[`SmsVerificationCard > matches snapshot 1`] = `
           alt="Lime Pubky phone representing SMS verification"
           class="max-w-full size-48"
           height="600"
-          src="/images/sms-verification-phone.png"
+          src="/images/sms-verification-phone.webp"
           width="800"
         />
       </div>
@@ -131,7 +131,7 @@ exports[`SmsVerificationCard > matches snapshot when geoblocked 1`] = `
           alt="Lime Pubky phone representing SMS verification"
           class="max-w-full size-48"
           height="600"
-          src="/images/sms-verification-phone.png"
+          src="/images/sms-verification-phone.webp"
           width="800"
         />
       </div>
