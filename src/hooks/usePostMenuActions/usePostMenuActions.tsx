@@ -43,7 +43,7 @@ export function usePostMenuActions(postId: string, options: UsePostMenuActionsOp
   const { toggleFollow, isLoading: isFollowLoading, isUserLoading } = Hooks.useFollowUser();
   const { toggleMute, isLoading: isMuteLoading, isUserLoading: isMuteUserLoading } = Hooks.useMuteUser();
   const { isMuted } = Hooks.useMutedUsers();
-  const { deletePost, isDeleting } = Hooks.useDeletePost(postId);
+  const { deletePost, isDeleting } = Hooks.useDeletePost();
   const { copyToClipboard: copyPubky } = Hooks.useCopyToClipboard({
     successTitle: tCopy('pubkyCopied'),
   });
@@ -182,7 +182,7 @@ export function usePostMenuActions(postId: string, options: UsePostMenuActionsOp
       id: POST_MENU_ACTION_IDS.DELETE,
       label: t('deletePost'),
       icon: Libs.Trash,
-      onClick: deletePost,
+      onClick: () => deletePost(postId),
       variant: POST_MENU_ACTION_VARIANTS.DESTRUCTIVE,
       disabled: isDeleting,
     });
