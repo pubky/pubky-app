@@ -33,6 +33,11 @@ function parseArticleTitle(content: string): string | null {
   }
 }
 
+// Reuse a single Segmenter instance across requests.
+// 'en' locale is fine — grapheme segmentation follows Unicode rules (UAX #29)
+// which are language-agnostic, so the locale has no practical effect.
+const graphemeSegmenter = new Intl.Segmenter('en', { granularity: 'grapheme' });
+
 export async function generateMetadata({ params }: PostPageProps): Promise<NextMetadata> {
   try {
     const { userId, postId } = await params;
@@ -51,7 +56,15 @@ export async function generateMetadata({ params }: PostPageProps): Promise<NextM
 
     const isArticle = kind === 'long';
     const postPreview = isArticle ? (parseArticleTitle(content) ?? content) : content;
-    const postPreviewTruncated = postPreview.length > 100 ? `${postPreview.slice(0, 100)}...` : postPreview;
+    // Use Intl.Segmenter to truncate by grapheme clusters, avoiding broken emojis.
+    const segments = [...graphemeSegmenter.segment(postPreview)];
+    const postPreviewTruncated =
+      segments.length > 200
+        ? `${segments
+            .slice(0, 200)
+            .map((s) => s.segment)
+            .join('')}...`
+        : postPreview;
 
     const title = `${username} on Pubky`;
     const description = postPreviewTruncated;
