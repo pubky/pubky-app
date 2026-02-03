@@ -52,7 +52,7 @@ describe('NotificationsEmpty', () => {
     render(<NotificationsEmpty />);
     const image = screen.getByTestId('image');
     expect(image).toBeInTheDocument();
-    expect(image).toHaveAttribute('data-src', '/images/notifications-empty-state.png');
+    expect(image).toHaveAttribute('data-src', '/images/notifications-empty-state.webp');
     expect(image).toHaveAttribute('data-alt', 'Notifications - Empty state');
   });
 });

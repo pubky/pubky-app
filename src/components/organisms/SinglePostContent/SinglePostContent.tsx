@@ -42,7 +42,7 @@ export function SinglePostContent({ postId }: SinglePostContentProps) {
 
   // Check if parent post is deleted to determine replyability
   const { postDetails } = Hooks.usePostDetails(postId);
-  const isParentDeleted = Libs.isPostDeleted(postDetails?.content);
+  const isDeleted = Libs.isPostDeleted(postDetails?.content);
 
   // Infinite scroll hook (only active if authenticated)
   const { sentinelRef } = Hooks.useInfiniteScroll({
@@ -64,7 +64,11 @@ export function SinglePostContent({ postId }: SinglePostContentProps) {
       <PostPageHeader postId={postId} />
 
       {/* Main post - FULL WIDTH - always visible */}
-      {isArticle ? (
+      {isDeleted ? (
+        <Atoms.Card className="rounded-md py-0">
+          <Molecules.PostDeleted />
+        </Atoms.Card>
+      ) : isArticle ? (
         <SinglePostArticle
           postId={postId}
           content={postDetails.content}
@@ -81,7 +85,7 @@ export function SinglePostContent({ postId }: SinglePostContentProps) {
           {/* Left column - QuickReply and Replies thread connected to main post (larger) */}
           <Atoms.Container className="w-full min-w-0 flex-1 gap-0 overflow-hidden">
             {/* QuickReply directly under main post (if parent not deleted) */}
-            {!isParentDeleted && (
+            {!isDeleted && (
               <Atoms.Container overrideDefaults className="ml-3">
                 <Atoms.PostThreadSpacer />
                 <QuickReply

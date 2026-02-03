@@ -15,7 +15,7 @@ exports[`PostActionsBar - Snapshots > matches snapshot with counts 1`] = `
   data-testid="actions-container"
 >
   <button
-    aria-label="Tag post (7)"
+    aria-label="Tag post (3)"
     class="border-none shadow-xs-dark"
     data-size="sm"
     data-variant="secondary"
@@ -47,7 +47,7 @@ exports[`PostActionsBar - Snapshots > matches snapshot with counts 1`] = `
       class="text-xs leading-4 font-bold text-muted-foreground"
       data-testid="typography"
     >
-      7
+      3
     </span>
   </button>
   <button

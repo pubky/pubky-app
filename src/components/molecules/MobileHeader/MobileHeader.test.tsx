@@ -56,6 +56,20 @@ describe('MobileHeader', () => {
     );
   });
 
+  it('renders with solid background when hasGradientBackground is false', () => {
+    const { container } = render(<MobileHeader hasGradientBackground={false} />);
+    const outerContainer = container.firstChild as HTMLElement;
+    expect(outerContainer).toHaveClass(
+      'sticky',
+      'top-0',
+      'z-(--z-mobile-menu)',
+      'lg:hidden',
+      'bg-background',
+      'shadow-xs-dark',
+    );
+    expect(outerContainer).not.toHaveClass('bg-linear-to-b');
+  });
+
   it('renders with custom onLeftIconClick', () => {
     const mockOnLeftIconClick = vi.fn();
     render(<MobileHeader onLeftIconClick={mockOnLeftIconClick} />);
@@ -139,6 +153,11 @@ describe('MobileHeader', () => {
 describe('MobileHeader - Snapshots', () => {
   it('matches snapshot with default props', () => {
     const { container } = render(<MobileHeader />);
+    expect(container.firstChild).toMatchSnapshot();
+  });
+
+  it('matches snapshot with solid background (hasGradientBackground=false)', () => {
+    const { container } = render(<MobileHeader hasGradientBackground={false} />);
     expect(container.firstChild).toMatchSnapshot();
   });
 

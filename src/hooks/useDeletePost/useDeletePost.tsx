@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useCallback } from 'react';
+import { useState } from 'react';
 import * as Core from '@/core';
 import * as Molecules from '@/molecules';
 import * as Organisms from '@/organisms';
@@ -16,24 +16,23 @@ import type { UseDeletePostResult } from './useDeletePost.types';
  * - Local-first write handling (handles cases where local DB deletion succeeds but sync fails)
  * - User feedback via toast notifications
  *
- * @param postId - Composite post ID in format "authorId:postId"
  * @returns Object with isDeleting state and deletePost function
  *
  * @example
  * ```tsx
- * const { deletePost, isDeleting } = useDeletePost(postId);
+ * const { deletePost, isDeleting } = useDeletePost();
  *
- * <button onClick={deletePost} disabled={isDeleting}>
+ * <button onClick={() => deletePost(postId)} disabled={isDeleting}>
  *   {isDeleting ? 'Deleting...' : 'Delete Post'}
  * </button>
  * ```
  */
-export function useDeletePost(postId: string): UseDeletePostResult {
+export function useDeletePost(): UseDeletePostResult {
   const [isDeleting, setIsDeleting] = useState(false);
   const { toast } = Molecules.useToast();
   const timelineFeed = Organisms.useTimelineFeedContext();
 
-  const deletePost = useCallback(async () => {
+  const deletePost = async (postId: string) => {
     if (isDeleting) {
       Libs.Logger.warn('[useDeletePost] Delete already in progress, ignoring request', { postId });
       return;
@@ -111,7 +110,7 @@ export function useDeletePost(postId: string): UseDeletePostResult {
     } finally {
       setIsDeleting(false);
     }
-  }, [postId, isDeleting, toast, timelineFeed]);
+  };
 
   return {
     isDeleting,

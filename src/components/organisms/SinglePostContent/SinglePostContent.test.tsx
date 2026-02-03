@@ -92,6 +92,11 @@ vi.mock('@/atoms', () => ({
       {children}
     </div>
   ),
+  Card: ({ children, className }: { children: React.ReactNode; className?: string }) => (
+    <div data-testid="card" data-class-name={className}>
+      {children}
+    </div>
+  ),
   Spinner: ({ size }: { size?: string }) => (
     <div data-testid="spinner" data-size={size}>
       Loading...
@@ -114,6 +119,7 @@ vi.mock('@/molecules', () => ({
   TimelineError: ({ message }: { message: string }) => <div data-testid="timeline-error">{message}</div>,
   TimelineLoadingMore: () => <div data-testid="timeline-loading-more">Loading more...</div>,
   TimelineEndMessage: () => <div data-testid="timeline-end-message">End of replies</div>,
+  PostDeleted: () => <div data-testid="post-deleted">Post deleted</div>,
 }));
 
 // Mock organisms used by SinglePostContent
@@ -273,6 +279,16 @@ describe('SinglePostContent', () => {
       render(<SinglePostContent postId={mockPostId} />);
 
       expect(screen.queryByTestId('quick-reply')).not.toBeInTheDocument();
+    });
+
+    it('renders PostDeleted component instead of post content when post is deleted', () => {
+      mockIsPostDeleted.mockReturnValue(true);
+
+      render(<SinglePostContent postId={mockPostId} />);
+
+      expect(screen.getByTestId('post-deleted')).toBeInTheDocument();
+      expect(screen.queryByTestId('single-post-card')).not.toBeInTheDocument();
+      expect(screen.queryByTestId('single-post-article')).not.toBeInTheDocument();
     });
 
     it('renders SinglePostParticipants sidebar', () => {

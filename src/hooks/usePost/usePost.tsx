@@ -1,38 +1,40 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import { useTranslations } from 'next-intl';
+import * as Atoms from '@/atoms';
 import * as Core from '@/core';
 import * as Libs from '@/libs';
 import * as Molecules from '@/molecules';
 import { PubkyAppPostKind } from 'pubky-app-specs';
 import type {
-  UsePostEditOptions,
-  UsePostPostOptions,
   UsePostReplyOptions,
+  UsePostPostOptions,
   UsePostRepostOptions,
+  UsePostEditOptions,
   UsePostReturn,
 } from './usePost.types';
 
 /**
- * Hook for creating and editing posts: replies, reposts, root posts, and edits.
+ * Custom hook to handle post creation or edits (replies, reposts, and root posts)
  *
- * @returns UsePostReturn - Content and attachment state, setters, and methods: reply, post, repost, edit. Also isSubmitting.
+ * @returns Object containing content state, setContent function, tags state, setTags function, attachments state, setAttachments function, isArticle state, setIsArticle function, articleTitle state, setArticleTitle function, reply method, post method, repost method, isSubmitting state, and error state
  *
  * @example
  * ```tsx
- * const { content, setContent, tags, setTags, attachments, setAttachments, reply, post, repost, edit, isSubmitting } = usePost();
+ * const { content, setContent, tags, setTags, attachments, setAttachments, reply, post, repost, isSubmitting, error } = usePost();
  *
- * // Reply to a post
- * await reply({ postId: 'author:postId', onSuccess: (id) => {} });
+ * // For replies:
+ * const handleSubmit = reply({ postId: 'post-123', onSuccess: () => {} });
  *
- * // Repost (quote or with attachments)
- * await repost({ originalPostId: 'author:postId', onSuccess: (id) => {} });
+ * // For reposts:
+ * const handleSubmit = repost({ originalPostId: 'post-123', onSuccess: () => {} });
  *
- * // Create root post
- * await post({ onSuccess: (id) => {} });
+ * // For root posts:
+ * const handleSubmit = post({ onSuccess: () => {} });
  *
- * // Edit existing post
- * await edit({ editPostId: 'author:postId', onSuccess: (id) => {} });
+ * // For edits:
+ * const handleSubmit = edit({ editPostId: 'post-123', onSuccess: () => {} });
  * ```
  */
 export function usePost(): UsePostReturn {
@@ -42,29 +44,33 @@ export function usePost(): UsePostReturn {
   const [isArticle, setIsArticle] = useState(false);
   const [articleTitle, setArticleTitle] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
-  // selectCurrentUserPubky() throws when not authenticated; use currentUserPubky for null
+  // selectCurrentUserPubky() throws an error when user is not authenticated;
+  // access currentUserPubky directly to get null instead (post actions return early if null)
   const currentUserId = Core.useAuthStore((state) => state.currentUserPubky);
   const { toast } = Molecules.useToast();
+  const tToast = useTranslations('toast.post');
 
-  function showErrorToast(description: string) {
+  const showErrorToast = (description: string) => {
     toast({
       title: 'Error',
       description,
       className: 'destructive border-destructive bg-destructive text-destructive-foreground',
     });
-  }
+  };
 
-  function showSuccessToast(title: string, description: string) {
+  const showSuccessToast = (title: string, description: string) => {
     toast({
       title,
       description,
     });
-  }
+  };
 
-  async function reply({ postId, onSuccess }: UsePostReplyOptions) {
+  const reply = async ({ postId, onSuccess }: UsePostReplyOptions) => {
+    // allow empty content and attachments
     if ((!content.trim() && attachments.length === 0) || !postId || !currentUserId) return;
 
     setIsSubmitting(true);
+
     try {
       const createdPostId = await Core.PostController.commitCreate({
         parentPostId: postId,
@@ -84,9 +90,10 @@ export function usePost(): UsePostReturn {
     } finally {
       setIsSubmitting(false);
     }
-  }
+  };
 
-  async function post({ onSuccess }: UsePostPostOptions) {
+  const post = async ({ onSuccess }: UsePostPostOptions) => {
+    // allow empty content and attachments if not article
     if (
       (!content.trim() && attachments.length === 0) ||
       (isArticle && (!content.trim() || !articleTitle.trim())) ||
@@ -95,6 +102,7 @@ export function usePost(): UsePostReturn {
       return;
 
     setIsSubmitting(true);
+
     try {
       const createdPostId = await Core.PostController.commitCreate({
         content: isArticle ? JSON.stringify({ title: articleTitle.trim(), body: content.trim() }) : content.trim(),
@@ -116,12 +124,13 @@ export function usePost(): UsePostReturn {
     } finally {
       setIsSubmitting(false);
     }
-  }
+  };
 
-  async function repost({ originalPostId, onSuccess }: UsePostRepostOptions) {
+  const repost = async ({ originalPostId, originalAuthorName, onSuccess, onUndo }: UsePostRepostOptions) => {
     if (!originalPostId || !currentUserId) return;
 
     setIsSubmitting(true);
+
     try {
       const createdPostId = await Core.PostController.commitCreate({
         originalPostId,
@@ -133,21 +142,41 @@ export function usePost(): UsePostReturn {
       setContent('');
       setTags([]);
       setAttachments([]);
-      showSuccessToast('Repost successful', 'Your repost has been created successfully.');
+
+      const toastInstance = toast({
+        title: tToast('repostSuccess'),
+        description: originalAuthorName
+          ? tToast('repostSuccessDesc', { author: originalAuthorName })
+          : tToast('repostSuccessDescFallback'),
+        action: (
+          <Atoms.ToastAction
+            altText={tToast('repostUndo')}
+            onClick={() => {
+              toastInstance.dismiss();
+              onUndo(createdPostId);
+            }}
+          >
+            {tToast('repostUndo')}
+          </Atoms.ToastAction>
+        ),
+      });
+
       onSuccess?.(createdPostId);
     } catch (err) {
       Libs.Logger.error('[usePost] Failed to repost:', err);
-      showErrorToast('Failed to repost. Please try again.');
+      showErrorToast(tToast('repostFailed'));
     } finally {
       setIsSubmitting(false);
     }
-  }
+  };
 
-  async function edit({ editPostId, onSuccess }: UsePostEditOptions) {
+  const edit = async ({ editPostId, onSuccess }: UsePostEditOptions) => {
+    // requires content if normal edit and title if article
     if (!content.trim() || (isArticle && (!content.trim() || !articleTitle.trim())) || !editPostId || !currentUserId)
       return;
 
     setIsSubmitting(true);
+
     try {
       await Core.PostController.commitEdit({
         compositePostId: editPostId,
@@ -164,8 +193,9 @@ export function usePost(): UsePostReturn {
     } finally {
       setIsSubmitting(false);
     }
-  }
+  };
 
+  // Clear attachments when switching to article mode
   useEffect(() => {
     if (isArticle && attachments.length > 0) {
       toast({

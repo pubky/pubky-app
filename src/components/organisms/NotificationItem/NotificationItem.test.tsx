@@ -5,6 +5,11 @@ import { NotificationType } from '@/core/models/notification/notification.types'
 import * as Core from '@/core';
 import * as Libs from '@/libs';
 
+// Hoisted mocks for isPostDeleted
+const { mockIsPostDeleted } = vi.hoisted(() => ({
+  mockIsPostDeleted: vi.fn(() => false),
+}));
+
 // Mock next/navigation
 const mockPush = vi.fn();
 vi.mock('next/navigation', () => ({
@@ -37,6 +42,7 @@ vi.mock('@/libs', async () => {
       if (diffMins < 60) return `${diffMins}m`;
       return '1h';
     }),
+    isPostDeleted: mockIsPostDeleted,
     Logger: {
       warn: vi.fn(),
       error: vi.fn(),
@@ -134,6 +140,7 @@ describe('NotificationItem', () => {
     mockToast.mockClear();
     mockGetOrFetchDetails.mockClear();
     mockGetOrFetchDetails.mockResolvedValue(null);
+    mockIsPostDeleted.mockReturnValue(false);
   });
 
   const baseNotification = {
@@ -356,6 +363,31 @@ describe('NotificationItem', () => {
     // formatPreviewText wraps content in single quotes and truncates to 20 chars
     await vi.waitFor(() => {
       expect(screen.getByText("'This is a short post...'")).toBeInTheDocument();
+    });
+  });
+
+  it('shows deleted message when post is deleted', async () => {
+    mockIsPostDeleted.mockReturnValue(true);
+    mockGetOrFetchDetails.mockResolvedValue({
+      kind: 'short',
+      content: '[DELETED]',
+    });
+
+    const mentionNotification = {
+      id: 'mention:123:user1',
+      type: NotificationType.Mention,
+      timestamp: Date.now() - 1000 * 60 * 30,
+      mentioned_by: 'user1',
+      post_uri: 'pubky://user1/pub/pubky.app/posts/post123',
+    } as Core.FlatNotification;
+
+    render(<NotificationItem notification={mentionNotification} isUnread={false} />);
+
+    // Wait for the async post fetch to complete
+    // The component should show the translated 'post.deleted' message from en.json:
+    // "This post has been deleted by its author." truncated to 20 chars and wrapped in quotes
+    await vi.waitFor(() => {
+      expect(screen.getByText("'This post has been d...'")).toBeInTheDocument();
     });
   });
 

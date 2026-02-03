@@ -102,13 +102,13 @@ describe('DialogDownloadPubkyRing', () => {
     const { rerender } = render(<DialogDownloadPubkyRing store="apple" />);
 
     let images = screen.getAllByTestId('next-image');
-    const appleBadge = images.find((img) => img.getAttribute('src') === '/images/badge-apple.png');
+    const appleBadge = images.find((img) => img.getAttribute('src') === '/images/badge-apple.webp');
     expect(appleBadge).toBeInTheDocument();
 
     rerender(<DialogDownloadPubkyRing store="android" />);
 
     images = screen.getAllByTestId('next-image');
-    const androidBadge = images.find((img) => img.getAttribute('src') === '/images/badge-android.png');
+    const androidBadge = images.find((img) => img.getAttribute('src') === '/images/badge-android.webp');
     expect(androidBadge).toBeInTheDocument();
   });
 });

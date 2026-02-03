@@ -951,6 +951,7 @@ describe('usePost', () => {
         await result.current.repost({
           originalPostId: 'test-post-123',
           onSuccess: mockOnSuccess,
+          onUndo: vi.fn(),
         });
       });
 
@@ -982,6 +983,7 @@ describe('usePost', () => {
         await result.current.repost({
           originalPostId: 'test-post-123',
           onSuccess: mockOnSuccess,
+          onUndo: vi.fn(),
         });
       });
 
@@ -1012,6 +1014,7 @@ describe('usePost', () => {
         await result.current.repost({
           originalPostId: 'test-post-123',
           onSuccess: mockOnSuccess,
+          onUndo: vi.fn(),
         });
       });
 
@@ -1038,6 +1041,7 @@ describe('usePost', () => {
         await result.current.repost({
           originalPostId: 'test-post-123',
           onSuccess: mockOnSuccess,
+          onUndo: vi.fn(),
         });
       });
 
@@ -1066,6 +1070,7 @@ describe('usePost', () => {
         await result.current.repost({
           originalPostId: 'test-post-123',
           onSuccess: vi.fn(),
+          onUndo: vi.fn(),
         });
       });
 
@@ -1089,6 +1094,7 @@ describe('usePost', () => {
         await result.current.repost({
           originalPostId: '',
           onSuccess: vi.fn(),
+          onUndo: vi.fn(),
         });
       });
 
@@ -1107,6 +1113,7 @@ describe('usePost', () => {
         await result.current.repost({
           originalPostId: 'test-post-123',
           onSuccess: vi.fn(),
+          onUndo: vi.fn(),
         });
       });
 
@@ -1126,6 +1133,7 @@ describe('usePost', () => {
         await result.current.repost({
           originalPostId: 'test-post-123',
           onSuccess: vi.fn(),
+          onUndo: vi.fn(),
         });
       });
 
@@ -1157,6 +1165,7 @@ describe('usePost', () => {
         result.current.repost({
           originalPostId: 'test-post-123',
           onSuccess: vi.fn(),
+          onUndo: vi.fn(),
         });
       });
 
@@ -1181,6 +1190,7 @@ describe('usePost', () => {
         await result.current.repost({
           originalPostId: 'test-post-123',
           onSuccess: vi.fn(),
+          onUndo: vi.fn(),
         });
       });
 
@@ -1191,6 +1201,64 @@ describe('usePost', () => {
         tags: undefined,
         attachments: undefined,
       });
+    });
+
+    it('should show toast with author name when originalAuthorName is provided', async () => {
+      const { result } = renderHook(() => usePost());
+
+      await act(async () => {
+        await result.current.repost({
+          originalPostId: 'test-post-123',
+          originalAuthorName: 'John Doe',
+          onSuccess: vi.fn(),
+          onUndo: vi.fn(),
+        });
+      });
+
+      expect(mockToast).toHaveBeenCalledWith(
+        expect.objectContaining({
+          title: 'Reposted!',
+          description: 'You successfully reposted a post by John Doe!',
+        }),
+      );
+    });
+
+    it('should show toast with fallback message when originalAuthorName is not provided', async () => {
+      const { result } = renderHook(() => usePost());
+
+      await act(async () => {
+        await result.current.repost({
+          originalPostId: 'test-post-123',
+          onSuccess: vi.fn(),
+          onUndo: vi.fn(),
+        });
+      });
+
+      expect(mockToast).toHaveBeenCalledWith(
+        expect.objectContaining({
+          title: 'Reposted!',
+          description: 'Your repost has been created successfully.',
+        }),
+      );
+    });
+
+    it('should include ToastAction with onUndo', async () => {
+      const { result } = renderHook(() => usePost());
+      const mockOnUndo = vi.fn();
+
+      await act(async () => {
+        await result.current.repost({
+          originalPostId: 'test-post-123',
+          onUndo: mockOnUndo,
+          onSuccess: vi.fn(),
+        });
+      });
+
+      expect(mockToast).toHaveBeenCalledWith(
+        expect.objectContaining({
+          action: expect.anything(),
+        }),
+      );
     });
 
     describe('edit method', () => {

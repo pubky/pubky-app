@@ -62,7 +62,7 @@ exports[`DialogBackup - Snapshots > matches snapshot for trigger button 1`] = `
               class="h-full w-full object-cover"
               data-alt="Note"
               data-height="192"
-              data-src="/images/note.png"
+              data-src="/images/note.webp"
               data-testid="image"
               data-width="192"
             >
@@ -106,7 +106,7 @@ exports[`DialogBackup - Snapshots > matches snapshot for trigger button 1`] = `
               class="h-full w-full object-cover"
               data-alt="Folder"
               data-height="192"
-              data-src="/images/folder.png"
+              data-src="/images/folder.webp"
               data-testid="image"
               data-width="192"
             >
@@ -150,7 +150,7 @@ exports[`DialogBackup - Snapshots > matches snapshot for trigger button 1`] = `
               class="h-full w-full object-cover"
               data-alt="Keys"
               data-height="192"
-              data-src="/images/keyring.png"
+              data-src="/images/keyring.webp"
               data-testid="image"
               data-width="192"
             >

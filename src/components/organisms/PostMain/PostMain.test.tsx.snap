@@ -11,14 +11,9 @@ exports[`PostMain - Snapshots > matches snapshot for quote repost by current use
     data-testid="card"
   >
     <div
-      data-is-undoing="false"
       data-testid="repost-header"
     >
-      <button
-        data-testid="repost-undo"
-      >
-        Undo repost
-      </button>
+      You reposted
     </div>
     <div
       data-class-name="flex min-w-0 flex-col gap-4 p-6"
@@ -147,14 +142,9 @@ exports[`PostMain - Snapshots > matches snapshot for simple repost by current us
     data-testid="card"
   >
     <div
-      data-is-undoing="false"
       data-testid="repost-header"
     >
-      <button
-        data-testid="repost-undo"
-      >
-        Undo repost
-      </button>
+      You reposted
     </div>
     <div
       data-class-name="flex min-w-0 flex-col gap-4 p-6"
