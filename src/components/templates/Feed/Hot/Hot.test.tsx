@@ -7,7 +7,7 @@ vi.mock('@/core', () => ({
   useHotStore: vi.fn(() => ({
     reach: 'all',
     setReach: vi.fn(),
-    timeframe: 'today',
+    timeframe: 'this_month',
     setTimeframe: vi.fn(),
   })),
 }));

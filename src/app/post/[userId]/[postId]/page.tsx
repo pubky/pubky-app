@@ -3,7 +3,7 @@ import type { ArticleJSON } from '@/hooks/usePostArticle/usePostArticle.types';
 import * as Templates from '@/templates';
 import * as Core from '@/core';
 import { Metadata } from '@/molecules/Metadata/Metadata';
-import { httpResponseToError, ErrorService } from '@/libs';
+import { httpResponseToError, ErrorService, isPostDeleted } from '@/libs';
 
 export interface PostPageProps {
   params: Promise<{
@@ -54,8 +54,14 @@ export async function generateMetadata({ params }: PostPageProps): Promise<NextM
     const username = user.name;
     const { content, kind } = post;
 
+    const isDeleted = isPostDeleted(content);
     const isArticle = kind === 'long';
-    const postPreview = isArticle ? (parseArticleTitle(content) ?? content) : content;
+
+    const postPreview = isDeleted
+      ? 'This post has been deleted by its author.'
+      : isArticle
+        ? (parseArticleTitle(content) ?? content)
+        : content;
     // Use Intl.Segmenter to truncate by grapheme clusters, avoiding broken emojis.
     const segments = [...graphemeSegmenter.segment(postPreview)];
     const postPreviewTruncated =
