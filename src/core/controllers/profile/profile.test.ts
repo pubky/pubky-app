@@ -238,6 +238,31 @@ describe('ProfileController', () => {
     });
   });
 
+  describe('generateSecretsForSignUp', () => {
+    it('generates secrets and sets them only in onboarding store', () => {
+      const mockSetSecrets = vi.fn();
+
+      mockOnboardingStore.getState.mockReturnValue({
+        setSecrets: mockSetSecrets,
+        selectSecretKey: vi.fn(() => 'test-secret-key'),
+      });
+      mockIdentity.generateSecrets.mockReturnValue({
+        secretKey: 'generated-secret-key',
+        mnemonic: 'generated mnemonic',
+      });
+
+      ProfileController.generateSecretsForSignUp();
+
+      expect(mockIdentity.generateSecrets).toHaveBeenCalledTimes(1);
+      expect(mockSetSecrets).toHaveBeenCalledWith({
+        secretKey: 'generated-secret-key',
+        mnemonic: 'generated mnemonic',
+      });
+      expect(mockIdentity.z32FromSecret).not.toHaveBeenCalled();
+      expect(mockAuthStore.getState).not.toHaveBeenCalled();
+    });
+  });
+
   describe('createRecoveryFile', () => {
     it('creates recovery file from secret key', () => {
       const mockSelectSecretKey = vi.fn(() => 'test-secret-key');

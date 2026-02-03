@@ -13,8 +13,9 @@ import type { HumanInviteCodeProps } from './HumanInviteCode.types';
 
 /**
  * Component for entering an invite code for homeserver during onboarding.
+ * The parent validates the code with the homeserver before navigating; onSuccess may throw on invalid code.
  * @param onBack - Function to call when the user clicks the back button.
- * @param onSuccess - Function to call when the user successfully enters the invite code.
+ * @param onSuccess - Called with the trimmed invite code; may be async. Throws on validation failure.
  */
 export const HumanInviteCode = ({ onBack, onSuccess }: HumanInviteCodeProps) => {
   const t = useTranslations('onboarding.inviteCode');
@@ -24,13 +25,17 @@ export const HumanInviteCode = ({ onBack, onSuccess }: HumanInviteCodeProps) => 
   const trimmedInviteCode = inviteCode.trim();
   const isInviteCodeEntered = trimmedInviteCode.length === 14;
 
-  function handleSubmit() {
+  async function handleSubmit() {
     if (!isInviteCodeEntered || isSubmitting) {
       return;
     }
 
     setIsSubmitting(true);
-    onSuccess(trimmedInviteCode);
+    try {
+      await onSuccess(trimmedInviteCode);
+    } catch {
+      setIsSubmitting(false);
+    }
   }
 
   // generate an invite code and put it in console log if you are in development mode
