@@ -20,7 +20,7 @@ interface FilterTimeframeProps {
  *
  * Filter component for selecting timeframe (Today, This Month, All Time).
  */
-export function FilterTimeframe({ selectedTab = Core.TIMEFRAME.TODAY, onTabChange }: FilterTimeframeProps) {
+export function FilterTimeframe({ selectedTab = Core.TIMEFRAME.THIS_MONTH, onTabChange }: FilterTimeframeProps) {
   const t = useTranslations('filters.timeframe');
 
   const timeframeTabs: { key: Core.TimeframeType; label: string; icon: React.ComponentType<{ className?: string }> }[] =

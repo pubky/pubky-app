@@ -15,7 +15,7 @@ import { DEFAULT_LIMIT } from './useHotTags.constants';
  * @param params - Hook parameters
  * @param params.limit - Maximum number of tags to fetch (default: 5)
  * @param params.reach - Reach filter (e.g., 'followers', 'following')
- * @param params.timeframe - Timeframe filter (default: TODAY)
+ * @param params.timeframe - Timeframe filter (default: THIS_MONTH)
  * @returns Hot tags array, loading state, error state, and refetch function
  *
  * @example
@@ -34,7 +34,7 @@ import { DEFAULT_LIMIT } from './useHotTags.constants';
 export function useHotTags({
   limit = DEFAULT_LIMIT,
   reach,
-  timeframe = Core.UserStreamTimeframe.TODAY,
+  timeframe = Core.UserStreamTimeframe.THIS_MONTH,
 }: UseHotTagsParams = {}): UseHotTagsResult {
   const [tags, setTags] = useState<HotTag[]>([]);
   const [rawTags, setRawTags] = useState<Core.NexusHotTag[]>([]);

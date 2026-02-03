@@ -1,8 +1,123 @@
 // Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
 
-exports[`InstallCard > matches snapshot 1`] = `"<div data-slot=\\"card\\" data-testid=\\"card\\" class=\\"flex flex-col gap-6 rounded-xl bg-card text-card-foreground shadow-sm p-6 md:p-12\\"><div data-testid=\\"container\\" class=\\"mx-auto w-full flex gap-12 flex-col lg:flex-row\\"><div class=\\"hidden lg:flex\\" style=\\"width: 192px; height: 192px;\\"><img alt=\\"Keyring\\" data-testid=\\"content-image\\" height=\\"192\\" width=\\"192\\" class=\\"\\" style=\\"object-fit: contain;\\" src=\\"/images/keyring.webp\\"></div><div data-testid=\\"container\\" class=\\"mx-auto flex-col flex w-full justify-start gap-4\\"><div data-testid=\\"container\\" class=\\"mx-auto w-full flex-col flex gap-3\\"><div data-testid=\\"container\\" class=\\"mx-auto w-full flex flex-col items-center sm:items-start\\"><img alt=\\"Pubky Ring\\" class=\\"w-[137px] sm:w-auto\\" width=\\"220\\" height=\\"48\\" src=\\"/images/logo-pubky-ring-blue.svg\\"></div><p data-testid=\\"typography\\" class=\\"text-base font-medium text-secondary-foreground opacity-80\\">Download and install the mobile app. Then continue to the next step.</p></div><div data-testid=\\"container\\" class=\\"mx-auto w-full flex flex-row justify-around gap-4 sm:justify-start\\"><a href=\\"https://apps.apple.com/app/pubky-ring/id6739356756\\" class=\\"cursor-pointer hover:text-brand/80 transition-colors text-brand text-sm block sm:hidden\\" target=\\"_blank\\" rel=\\"noopener noreferrer\\"><img alt=\\"App Store\\" width=\\"192\\" height=\\"40\\" src=\\"/images/badge-apple.webp\\"></a><img alt=\\"App Store\\" width=\\"120\\" height=\\"40\\" type=\\"button\\" aria-haspopup=\\"dialog\\" aria-expanded=\\"false\\" aria-controls=\\"radix-_r_0_\\" data-state=\\"closed\\" data-slot=\\"dialog-trigger\\" data-testid=\\"dialog-trigger\\" data-as-child=\\"true\\" class=\\"hidden cursor-pointer sm:block\\" src=\\"/images/badge-apple.webp\\"><a href=\\"https://play.google.com/store/apps/details?id=to.pubky.ring&amp;pcampaignid=web_share\\" class=\\"cursor-pointer hover:text-brand/80 transition-colors text-brand text-sm block sm:hidden\\" target=\\"_blank\\" rel=\\"noopener noreferrer\\"><img alt=\\"Google Play\\" width=\\"210\\" height=\\"40\\" src=\\"/images/badge-android.webp\\"></a><img alt=\\"Google Play\\" width=\\"135\\" height=\\"40\\" type=\\"button\\" aria-haspopup=\\"dialog\\" aria-expanded=\\"false\\" aria-controls=\\"radix-_r_3_\\" data-state=\\"closed\\" data-slot=\\"dialog-trigger\\" data-testid=\\"dialog-trigger\\" data-as-child=\\"true\\" class=\\"hidden cursor-pointer sm:block\\" src=\\"/images/badge-android.webp\\"></div></div></div></div>"`;
+exports[`InstallCard - Snapshots > matches snapshot 1`] = `
+<div
+  class="flex flex-col gap-6 rounded-xl bg-card text-card-foreground shadow-sm p-6 md:p-12"
+  data-slot="card"
+  data-testid="card"
+>
+  <div
+    class="mx-auto w-full flex gap-12 flex-col lg:flex-row"
+    data-testid="container"
+  >
+    <div
+      class="hidden lg:flex"
+      style="width: 192px; height: 192px;"
+    >
+      <img
+        alt="Keyring"
+        class=""
+        data-testid="content-image"
+        height="192"
+        src="/images/keyring.webp"
+        style="object-fit: contain;"
+        width="192"
+      />
+    </div>
+    <div
+      class="mx-auto flex-col flex w-full justify-start gap-4"
+      data-testid="container"
+    >
+      <div
+        class="mx-auto w-full flex-col flex gap-3"
+        data-testid="container"
+      >
+        <div
+          class="mx-auto w-full flex flex-col items-center sm:items-start"
+          data-testid="container"
+        >
+          <img
+            alt="Pubky Ring"
+            class="w-[137px] sm:w-auto"
+            height="48"
+            src="/images/logo-pubky-ring-blue.svg"
+            width="220"
+          />
+        </div>
+        <p
+          class="text-base font-medium text-secondary-foreground opacity-80"
+          data-testid="typography"
+        >
+          Download and install the mobile app. Then continue to the next step.
+        </p>
+      </div>
+      <div
+        class="mx-auto w-full flex flex-row justify-around gap-4 sm:justify-start"
+        data-testid="container"
+      >
+        <a
+          class="cursor-pointer hover:text-brand/80 transition-colors text-brand text-sm block sm:hidden"
+          href="https://apps.apple.com/app/pubky-ring/id6739356756"
+          rel="noopener noreferrer"
+          target="_blank"
+        >
+          <img
+            alt="App Store"
+            height="40"
+            src="/images/badge-apple.webp"
+            width="192"
+          />
+        </a>
+        <img
+          alt="App Store"
+          aria-controls="radix-normalized"
+          aria-expanded="false"
+          aria-haspopup="dialog"
+          class="hidden cursor-pointer sm:block"
+          data-as-child="true"
+          data-slot="dialog-trigger"
+          data-state="closed"
+          data-testid="dialog-trigger"
+          height="40"
+          src="/images/badge-apple.webp"
+          type="button"
+          width="120"
+        />
+        <a
+          class="cursor-pointer hover:text-brand/80 transition-colors text-brand text-sm block sm:hidden"
+          href="https://play.google.com/store/apps/details?id=to.pubky.ring&pcampaignid=web_share"
+          rel="noopener noreferrer"
+          target="_blank"
+        >
+          <img
+            alt="Google Play"
+            height="40"
+            src="/images/badge-android.webp"
+            width="210"
+          />
+        </a>
+        <img
+          alt="Google Play"
+          aria-controls="radix-normalized"
+          aria-expanded="false"
+          aria-haspopup="dialog"
+          class="hidden cursor-pointer sm:block"
+          data-as-child="true"
+          data-slot="dialog-trigger"
+          data-state="closed"
+          data-testid="dialog-trigger"
+          height="40"
+          src="/images/badge-android.webp"
+          type="button"
+          width="135"
+        />
+      </div>
+    </div>
+  </div>
+</div>
+`;
 
-exports[`InstallHeader > matches snapshot 1`] = `
+exports[`InstallHeader - Snapshots > matches snapshot 1`] = `
 <div
   class="mx-auto w-full flex-col flex gap-3 pt-2 pb-6"
   data-testid="container"
@@ -30,8 +145,341 @@ exports[`InstallHeader > matches snapshot 1`] = `
 </div>
 `;
 
-exports[`InstallNavigation > matches snapshot 1`] = `"<div data-testid=\\"container\\" class=\\"mx-auto w-full flex flex-col-reverse gap-3 md:flex-row lg:gap-6\\"><div data-testid=\\"container\\" class=\\"mx-auto w-full flex flex-row items-center gap-1\\"><button class=\\"inline-flex items-center justify-center whitespace-nowrap text-sm transition-all disabled:pointer-events-none disabled:opacity-50 [&amp;_svg]:pointer-events-none [&amp;_svg:not([class*=&quot;size-&quot;])]:size-4 [&amp;_svg]:shrink-0 outline-none focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[3px] aria-invalid:ring-destructive/40 aria-invalid:border-destructive font-semibold cursor-pointer border shadow-xs hover:text-accent-foreground bg-input/30 border-input hover:bg-input/50 h-10 gap-1 px-4 py-2 has-[>svg]:px-4 flex-1 rounded-full md:flex-none\\" data-slot=\\"button\\" data-variant=\\"outline\\" id=\\"create-keys-in-browser-btn\\"><svg xmlns=\\"http://www.w3.org/2000/svg\\" width=\\"24\\" height=\\"24\\" viewBox=\\"0 0 24 24\\" fill=\\"none\\" stroke=\\"currentColor\\" stroke-width=\\"2\\" stroke-linecap=\\"round\\" stroke-linejoin=\\"round\\" class=\\"lucide lucide-app-window mr-2 h-4 w-4\\" aria-hidden=\\"true\\"><rect x=\\"2\\" y=\\"4\\" width=\\"20\\" height=\\"16\\" rx=\\"2\\"></rect><path d=\\"M10 4v4\\"></path><path d=\\"M2 8h20\\"></path><path d=\\"M6 4v4\\"></path></svg>Create keys in browser</button><button class=\\"inline-flex items-center justify-center gap-2 whitespace-nowrap text-sm transition-all disabled:pointer-events-none disabled:opacity-50 [&amp;_svg]:pointer-events-none [&amp;_svg:not([class*=&quot;size-&quot;])]:size-4 shrink-0 [&amp;_svg]:shrink-0 outline-none focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[3px] aria-invalid:ring-destructive/40 aria-invalid:border-destructive font-semibold cursor-pointer border shadow-xs hover:text-accent-foreground hover:bg-accent/50 border-none size-9 rounded-full\\" data-slot=\\"popover-trigger\\" data-variant=\\"ghost\\" data-size=\\"icon\\" type=\\"button\\" aria-haspopup=\\"dialog\\" aria-expanded=\\"false\\" aria-controls=\\"radix-_r_6_\\" data-state=\\"closed\\" data-testid=\\"popover-trigger\\" data-as-child=\\"true\\"><svg xmlns=\\"http://www.w3.org/2000/svg\\" width=\\"24\\" height=\\"24\\" viewBox=\\"0 0 24 24\\" fill=\\"none\\" stroke=\\"currentColor\\" stroke-width=\\"2\\" stroke-linecap=\\"round\\" stroke-linejoin=\\"round\\" class=\\"lucide lucide-triangle-alert h-4 w-4\\" aria-hidden=\\"true\\" data-testid=\\"alert-triangle-icon\\"><path d=\\"m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3\\"></path><path d=\\"M12 9v4\\"></path><path d=\\"M12 17h.01\\"></path></svg></button></div><button class=\\"inline-flex items-center justify-center whitespace-nowrap transition-all disabled:pointer-events-none disabled:opacity-50 [&amp;_svg]:pointer-events-none [&amp;_svg:not([class*=&quot;size-&quot;])]:size-4 shrink-0 [&amp;_svg]:shrink-0 outline-none focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[3px] aria-invalid:ring-destructive/40 aria-invalid:border-destructive cursor-pointer border shadow-xs bg-brand/16 text-brand hover:!bg-brand/30 border-brand h-auto gap-2 px-4 py-2.5 sm:px-8 sm:py-5 text-sm font-bold leading-normal rounded-full\\" data-slot=\\"button\\" data-size=\\"lg\\" id=\\"continue-with-pubky-ring-btn\\"><svg xmlns=\\"http://www.w3.org/2000/svg\\" width=\\"24\\" height=\\"24\\" viewBox=\\"0 0 24 24\\" fill=\\"none\\" stroke=\\"currentColor\\" stroke-width=\\"2\\" stroke-linecap=\\"round\\" stroke-linejoin=\\"round\\" class=\\"lucide lucide-arrow-right mr-2 h-4 w-4\\" aria-hidden=\\"true\\"><path d=\\"M5 12h14\\"></path><path d=\\"m12 5 7 7-7 7\\"></path></svg>Continue with Pubky Ring</button></div>"`;
+exports[`InstallNavigation - Snapshots > matches snapshot 1`] = `
+<div
+  class="mx-auto w-full flex flex-col-reverse gap-3 md:flex-row lg:gap-6"
+  data-testid="container"
+>
+  <div
+    class="mx-auto w-full flex flex-row items-center gap-1"
+    data-testid="container"
+  >
+    <button
+      class="inline-flex items-center justify-center whitespace-nowrap text-sm transition-all disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg:not([class*=\\"size-\\"])]:size-4 [&_svg]:shrink-0 outline-none focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[3px] aria-invalid:ring-destructive/40 aria-invalid:border-destructive font-semibold cursor-pointer border shadow-xs hover:text-accent-foreground bg-input/30 border-input hover:bg-input/50 h-10 gap-1 px-4 py-2 has-[>svg]:px-4 flex-1 rounded-full md:flex-none"
+      data-slot="button"
+      data-variant="outline"
+      id="create-keys-in-browser-btn"
+    >
+      <svg
+        aria-hidden="true"
+        class="lucide lucide-app-window mr-2 h-4 w-4"
+        fill="none"
+        height="24"
+        stroke="currentColor"
+        stroke-linecap="round"
+        stroke-linejoin="round"
+        stroke-width="2"
+        viewBox="0 0 24 24"
+        width="24"
+        xmlns="http://www.w3.org/2000/svg"
+      >
+        <rect
+          height="16"
+          rx="2"
+          width="20"
+          x="2"
+          y="4"
+        />
+        <path
+          d="M10 4v4"
+        />
+        <path
+          d="M2 8h20"
+        />
+        <path
+          d="M6 4v4"
+        />
+      </svg>
+      Create keys in browser
+    </button>
+    <button
+      aria-controls="radix-normalized"
+      aria-expanded="false"
+      aria-haspopup="dialog"
+      class="inline-flex items-center justify-center gap-2 whitespace-nowrap text-sm transition-all disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg:not([class*=\\"size-\\"])]:size-4 shrink-0 [&_svg]:shrink-0 outline-none focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[3px] aria-invalid:ring-destructive/40 aria-invalid:border-destructive font-semibold cursor-pointer border shadow-xs hover:text-accent-foreground hover:bg-accent/50 border-none size-9 rounded-full"
+      data-as-child="true"
+      data-size="icon"
+      data-slot="popover-trigger"
+      data-state="closed"
+      data-testid="popover-trigger"
+      data-variant="ghost"
+      type="button"
+    >
+      <svg
+        aria-hidden="true"
+        class="lucide lucide-triangle-alert h-4 w-4"
+        data-testid="alert-triangle-icon"
+        fill="none"
+        height="24"
+        stroke="currentColor"
+        stroke-linecap="round"
+        stroke-linejoin="round"
+        stroke-width="2"
+        viewBox="0 0 24 24"
+        width="24"
+        xmlns="http://www.w3.org/2000/svg"
+      >
+        <path
+          d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3"
+        />
+        <path
+          d="M12 9v4"
+        />
+        <path
+          d="M12 17h.01"
+        />
+      </svg>
+    </button>
+  </div>
+  <button
+    class="inline-flex items-center justify-center whitespace-nowrap transition-all disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg:not([class*=\\"size-\\"])]:size-4 shrink-0 [&_svg]:shrink-0 outline-none focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[3px] aria-invalid:ring-destructive/40 aria-invalid:border-destructive cursor-pointer border shadow-xs bg-brand/16 text-brand hover:!bg-brand/30 border-brand h-auto gap-2 px-4 py-2.5 sm:px-8 sm:py-5 text-sm font-bold leading-normal rounded-full"
+    data-size="lg"
+    data-slot="button"
+    id="continue-with-pubky-ring-btn"
+  >
+    <svg
+      aria-hidden="true"
+      class="lucide lucide-arrow-right mr-2 h-4 w-4"
+      fill="none"
+      height="24"
+      stroke="currentColor"
+      stroke-linecap="round"
+      stroke-linejoin="round"
+      stroke-width="2"
+      viewBox="0 0 24 24"
+      width="24"
+      xmlns="http://www.w3.org/2000/svg"
+    >
+      <path
+        d="M5 12h14"
+      />
+      <path
+        d="m12 5 7 7-7 7"
+      />
+    </svg>
+    Continue with Pubky Ring
+  </button>
+</div>
+`;
 
-exports[`InstallNavigation > matches snapshot when continue button is loading 1`] = `"<div data-testid=\\"container\\" class=\\"mx-auto w-full flex flex-col-reverse gap-3 md:flex-row lg:gap-6\\"><div data-testid=\\"container\\" class=\\"mx-auto w-full flex flex-row items-center gap-1\\"><button class=\\"inline-flex items-center justify-center whitespace-nowrap text-sm transition-all disabled:pointer-events-none disabled:opacity-50 [&amp;_svg]:pointer-events-none [&amp;_svg:not([class*=&quot;size-&quot;])]:size-4 [&amp;_svg]:shrink-0 outline-none focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[3px] aria-invalid:ring-destructive/40 aria-invalid:border-destructive font-semibold cursor-pointer border shadow-xs hover:text-accent-foreground bg-input/30 border-input hover:bg-input/50 h-10 gap-1 px-4 py-2 has-[>svg]:px-4 flex-1 rounded-full md:flex-none\\" data-slot=\\"button\\" data-variant=\\"outline\\" id=\\"create-keys-in-browser-btn\\" disabled=\\"\\"><svg xmlns=\\"http://www.w3.org/2000/svg\\" width=\\"24\\" height=\\"24\\" viewBox=\\"0 0 24 24\\" fill=\\"none\\" stroke=\\"currentColor\\" stroke-width=\\"2\\" stroke-linecap=\\"round\\" stroke-linejoin=\\"round\\" class=\\"lucide lucide-app-window mr-2 h-4 w-4\\" aria-hidden=\\"true\\"><rect x=\\"2\\" y=\\"4\\" width=\\"20\\" height=\\"16\\" rx=\\"2\\"></rect><path d=\\"M10 4v4\\"></path><path d=\\"M2 8h20\\"></path><path d=\\"M6 4v4\\"></path></svg>Create keys in browser</button><button class=\\"inline-flex items-center justify-center gap-2 whitespace-nowrap text-sm transition-all disabled:pointer-events-none disabled:opacity-50 [&amp;_svg]:pointer-events-none [&amp;_svg:not([class*=&quot;size-&quot;])]:size-4 shrink-0 [&amp;_svg]:shrink-0 outline-none focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[3px] aria-invalid:ring-destructive/40 aria-invalid:border-destructive font-semibold cursor-pointer border shadow-xs hover:text-accent-foreground hover:bg-accent/50 border-none size-9 rounded-full\\" data-slot=\\"popover-trigger\\" data-variant=\\"ghost\\" data-size=\\"icon\\" type=\\"button\\" aria-haspopup=\\"dialog\\" aria-expanded=\\"false\\" aria-controls=\\"radix-_r_c_\\" data-state=\\"closed\\" data-testid=\\"popover-trigger\\" data-as-child=\\"true\\"><svg xmlns=\\"http://www.w3.org/2000/svg\\" width=\\"24\\" height=\\"24\\" viewBox=\\"0 0 24 24\\" fill=\\"none\\" stroke=\\"currentColor\\" stroke-width=\\"2\\" stroke-linecap=\\"round\\" stroke-linejoin=\\"round\\" class=\\"lucide lucide-triangle-alert h-4 w-4\\" aria-hidden=\\"true\\" data-testid=\\"alert-triangle-icon\\"><path d=\\"m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3\\"></path><path d=\\"M12 9v4\\"></path><path d=\\"M12 17h.01\\"></path></svg></button></div><button class=\\"inline-flex items-center justify-center whitespace-nowrap transition-all disabled:pointer-events-none disabled:opacity-50 [&amp;_svg]:pointer-events-none [&amp;_svg:not([class*=&quot;size-&quot;])]:size-4 shrink-0 [&amp;_svg]:shrink-0 outline-none focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[3px] aria-invalid:ring-destructive/40 aria-invalid:border-destructive cursor-pointer border shadow-xs bg-brand/16 text-brand hover:!bg-brand/30 border-brand h-auto gap-2 px-4 py-2.5 sm:px-8 sm:py-5 text-sm font-bold leading-normal rounded-full\\" data-slot=\\"button\\" data-size=\\"lg\\" id=\\"continue-with-pubky-ring-btn\\" disabled=\\"\\"><svg xmlns=\\"http://www.w3.org/2000/svg\\" width=\\"24\\" height=\\"24\\" viewBox=\\"0 0 24 24\\" fill=\\"none\\" stroke=\\"currentColor\\" stroke-width=\\"2\\" stroke-linecap=\\"round\\" stroke-linejoin=\\"round\\" class=\\"lucide lucide-loader-circle mr-2 h-4 w-4 animate-spin\\" aria-hidden=\\"true\\"><path d=\\"M21 12a9 9 0 1 1-6.219-8.56\\"></path></svg>Continue with Pubky Ring</button></div>"`;
+exports[`InstallNavigation - Snapshots > matches snapshot when continue button is loading 1`] = `
+<div
+  class="mx-auto w-full flex flex-col-reverse gap-3 md:flex-row lg:gap-6"
+  data-testid="container"
+>
+  <div
+    class="mx-auto w-full flex flex-row items-center gap-1"
+    data-testid="container"
+  >
+    <button
+      class="inline-flex items-center justify-center whitespace-nowrap text-sm transition-all disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg:not([class*=\\"size-\\"])]:size-4 [&_svg]:shrink-0 outline-none focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[3px] aria-invalid:ring-destructive/40 aria-invalid:border-destructive font-semibold cursor-pointer border shadow-xs hover:text-accent-foreground bg-input/30 border-input hover:bg-input/50 h-10 gap-1 px-4 py-2 has-[>svg]:px-4 flex-1 rounded-full md:flex-none"
+      data-slot="button"
+      data-variant="outline"
+      disabled=""
+      id="create-keys-in-browser-btn"
+    >
+      <svg
+        aria-hidden="true"
+        class="lucide lucide-app-window mr-2 h-4 w-4"
+        fill="none"
+        height="24"
+        stroke="currentColor"
+        stroke-linecap="round"
+        stroke-linejoin="round"
+        stroke-width="2"
+        viewBox="0 0 24 24"
+        width="24"
+        xmlns="http://www.w3.org/2000/svg"
+      >
+        <rect
+          height="16"
+          rx="2"
+          width="20"
+          x="2"
+          y="4"
+        />
+        <path
+          d="M10 4v4"
+        />
+        <path
+          d="M2 8h20"
+        />
+        <path
+          d="M6 4v4"
+        />
+      </svg>
+      Create keys in browser
+    </button>
+    <button
+      aria-controls="radix-normalized"
+      aria-expanded="false"
+      aria-haspopup="dialog"
+      class="inline-flex items-center justify-center gap-2 whitespace-nowrap text-sm transition-all disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg:not([class*=\\"size-\\"])]:size-4 shrink-0 [&_svg]:shrink-0 outline-none focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[3px] aria-invalid:ring-destructive/40 aria-invalid:border-destructive font-semibold cursor-pointer border shadow-xs hover:text-accent-foreground hover:bg-accent/50 border-none size-9 rounded-full"
+      data-as-child="true"
+      data-size="icon"
+      data-slot="popover-trigger"
+      data-state="closed"
+      data-testid="popover-trigger"
+      data-variant="ghost"
+      type="button"
+    >
+      <svg
+        aria-hidden="true"
+        class="lucide lucide-triangle-alert h-4 w-4"
+        data-testid="alert-triangle-icon"
+        fill="none"
+        height="24"
+        stroke="currentColor"
+        stroke-linecap="round"
+        stroke-linejoin="round"
+        stroke-width="2"
+        viewBox="0 0 24 24"
+        width="24"
+        xmlns="http://www.w3.org/2000/svg"
+      >
+        <path
+          d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3"
+        />
+        <path
+          d="M12 9v4"
+        />
+        <path
+          d="M12 17h.01"
+        />
+      </svg>
+    </button>
+  </div>
+  <button
+    class="inline-flex items-center justify-center whitespace-nowrap transition-all disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg:not([class*=\\"size-\\"])]:size-4 shrink-0 [&_svg]:shrink-0 outline-none focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[3px] aria-invalid:ring-destructive/40 aria-invalid:border-destructive cursor-pointer border shadow-xs bg-brand/16 text-brand hover:!bg-brand/30 border-brand h-auto gap-2 px-4 py-2.5 sm:px-8 sm:py-5 text-sm font-bold leading-normal rounded-full"
+    data-size="lg"
+    data-slot="button"
+    disabled=""
+    id="continue-with-pubky-ring-btn"
+  >
+    <svg
+      aria-hidden="true"
+      class="lucide lucide-loader-circle mr-2 h-4 w-4 animate-spin"
+      fill="none"
+      height="24"
+      stroke="currentColor"
+      stroke-linecap="round"
+      stroke-linejoin="round"
+      stroke-width="2"
+      viewBox="0 0 24 24"
+      width="24"
+      xmlns="http://www.w3.org/2000/svg"
+    >
+      <path
+        d="M21 12a9 9 0 1 1-6.219-8.56"
+      />
+    </svg>
+    Continue with Pubky Ring
+  </button>
+</div>
+`;
 
-exports[`InstallNavigation > matches snapshot when create button is loading 1`] = `"<div data-testid=\\"container\\" class=\\"mx-auto w-full flex flex-col-reverse gap-3 md:flex-row lg:gap-6\\"><div data-testid=\\"container\\" class=\\"mx-auto w-full flex flex-row items-center gap-1\\"><button class=\\"inline-flex items-center justify-center whitespace-nowrap text-sm transition-all disabled:pointer-events-none disabled:opacity-50 [&amp;_svg]:pointer-events-none [&amp;_svg:not([class*=&quot;size-&quot;])]:size-4 [&amp;_svg]:shrink-0 outline-none focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[3px] aria-invalid:ring-destructive/40 aria-invalid:border-destructive font-semibold cursor-pointer border shadow-xs hover:text-accent-foreground bg-input/30 border-input hover:bg-input/50 h-10 gap-1 px-4 py-2 has-[>svg]:px-4 flex-1 rounded-full md:flex-none\\" data-slot=\\"button\\" data-variant=\\"outline\\" id=\\"create-keys-in-browser-btn\\" disabled=\\"\\"><svg xmlns=\\"http://www.w3.org/2000/svg\\" width=\\"24\\" height=\\"24\\" viewBox=\\"0 0 24 24\\" fill=\\"none\\" stroke=\\"currentColor\\" stroke-width=\\"2\\" stroke-linecap=\\"round\\" stroke-linejoin=\\"round\\" class=\\"lucide lucide-loader-circle mr-2 h-4 w-4 animate-spin\\" aria-hidden=\\"true\\"><path d=\\"M21 12a9 9 0 1 1-6.219-8.56\\"></path></svg>Create keys in browser</button><button class=\\"inline-flex items-center justify-center gap-2 whitespace-nowrap text-sm transition-all disabled:pointer-events-none disabled:opacity-50 [&amp;_svg]:pointer-events-none [&amp;_svg:not([class*=&quot;size-&quot;])]:size-4 shrink-0 [&amp;_svg]:shrink-0 outline-none focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[3px] aria-invalid:ring-destructive/40 aria-invalid:border-destructive font-semibold cursor-pointer border shadow-xs hover:text-accent-foreground hover:bg-accent/50 border-none size-9 rounded-full\\" data-slot=\\"popover-trigger\\" data-variant=\\"ghost\\" data-size=\\"icon\\" type=\\"button\\" aria-haspopup=\\"dialog\\" aria-expanded=\\"false\\" aria-controls=\\"radix-_r_b_\\" data-state=\\"closed\\" data-testid=\\"popover-trigger\\" data-as-child=\\"true\\"><svg xmlns=\\"http://www.w3.org/2000/svg\\" width=\\"24\\" height=\\"24\\" viewBox=\\"0 0 24 24\\" fill=\\"none\\" stroke=\\"currentColor\\" stroke-width=\\"2\\" stroke-linecap=\\"round\\" stroke-linejoin=\\"round\\" class=\\"lucide lucide-triangle-alert h-4 w-4\\" aria-hidden=\\"true\\" data-testid=\\"alert-triangle-icon\\"><path d=\\"m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3\\"></path><path d=\\"M12 9v4\\"></path><path d=\\"M12 17h.01\\"></path></svg></button></div><button class=\\"inline-flex items-center justify-center whitespace-nowrap transition-all disabled:pointer-events-none disabled:opacity-50 [&amp;_svg]:pointer-events-none [&amp;_svg:not([class*=&quot;size-&quot;])]:size-4 shrink-0 [&amp;_svg]:shrink-0 outline-none focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[3px] aria-invalid:ring-destructive/40 aria-invalid:border-destructive cursor-pointer border shadow-xs bg-brand/16 text-brand hover:!bg-brand/30 border-brand h-auto gap-2 px-4 py-2.5 sm:px-8 sm:py-5 text-sm font-bold leading-normal rounded-full\\" data-slot=\\"button\\" data-size=\\"lg\\" id=\\"continue-with-pubky-ring-btn\\" disabled=\\"\\"><svg xmlns=\\"http://www.w3.org/2000/svg\\" width=\\"24\\" height=\\"24\\" viewBox=\\"0 0 24 24\\" fill=\\"none\\" stroke=\\"currentColor\\" stroke-width=\\"2\\" stroke-linecap=\\"round\\" stroke-linejoin=\\"round\\" class=\\"lucide lucide-arrow-right mr-2 h-4 w-4\\" aria-hidden=\\"true\\"><path d=\\"M5 12h14\\"></path><path d=\\"m12 5 7 7-7 7\\"></path></svg>Continue with Pubky Ring</button></div>"`;
+exports[`InstallNavigation - Snapshots > matches snapshot when create button is loading 1`] = `
+<div
+  class="mx-auto w-full flex flex-col-reverse gap-3 md:flex-row lg:gap-6"
+  data-testid="container"
+>
+  <div
+    class="mx-auto w-full flex flex-row items-center gap-1"
+    data-testid="container"
+  >
+    <button
+      class="inline-flex items-center justify-center whitespace-nowrap text-sm transition-all disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg:not([class*=\\"size-\\"])]:size-4 [&_svg]:shrink-0 outline-none focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[3px] aria-invalid:ring-destructive/40 aria-invalid:border-destructive font-semibold cursor-pointer border shadow-xs hover:text-accent-foreground bg-input/30 border-input hover:bg-input/50 h-10 gap-1 px-4 py-2 has-[>svg]:px-4 flex-1 rounded-full md:flex-none"
+      data-slot="button"
+      data-variant="outline"
+      disabled=""
+      id="create-keys-in-browser-btn"
+    >
+      <svg
+        aria-hidden="true"
+        class="lucide lucide-loader-circle mr-2 h-4 w-4 animate-spin"
+        fill="none"
+        height="24"
+        stroke="currentColor"
+        stroke-linecap="round"
+        stroke-linejoin="round"
+        stroke-width="2"
+        viewBox="0 0 24 24"
+        width="24"
+        xmlns="http://www.w3.org/2000/svg"
+      >
+        <path
+          d="M21 12a9 9 0 1 1-6.219-8.56"
+        />
+      </svg>
+      Create keys in browser
+    </button>
+    <button
+      aria-controls="radix-normalized"
+      aria-expanded="false"
+      aria-haspopup="dialog"
+      class="inline-flex items-center justify-center gap-2 whitespace-nowrap text-sm transition-all disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg:not([class*=\\"size-\\"])]:size-4 shrink-0 [&_svg]:shrink-0 outline-none focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[3px] aria-invalid:ring-destructive/40 aria-invalid:border-destructive font-semibold cursor-pointer border shadow-xs hover:text-accent-foreground hover:bg-accent/50 border-none size-9 rounded-full"
+      data-as-child="true"
+      data-size="icon"
+      data-slot="popover-trigger"
+      data-state="closed"
+      data-testid="popover-trigger"
+      data-variant="ghost"
+      type="button"
+    >
+      <svg
+        aria-hidden="true"
+        class="lucide lucide-triangle-alert h-4 w-4"
+        data-testid="alert-triangle-icon"
+        fill="none"
+        height="24"
+        stroke="currentColor"
+        stroke-linecap="round"
+        stroke-linejoin="round"
+        stroke-width="2"
+        viewBox="0 0 24 24"
+        width="24"
+        xmlns="http://www.w3.org/2000/svg"
+      >
+        <path
+          d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3"
+        />
+        <path
+          d="M12 9v4"
+        />
+        <path
+          d="M12 17h.01"
+        />
+      </svg>
+    </button>
+  </div>
+  <button
+    class="inline-flex items-center justify-center whitespace-nowrap transition-all disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg:not([class*=\\"size-\\"])]:size-4 shrink-0 [&_svg]:shrink-0 outline-none focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[3px] aria-invalid:ring-destructive/40 aria-invalid:border-destructive cursor-pointer border shadow-xs bg-brand/16 text-brand hover:!bg-brand/30 border-brand h-auto gap-2 px-4 py-2.5 sm:px-8 sm:py-5 text-sm font-bold leading-normal rounded-full"
+    data-size="lg"
+    data-slot="button"
+    disabled=""
+    id="continue-with-pubky-ring-btn"
+  >
+    <svg
+      aria-hidden="true"
+      class="lucide lucide-arrow-right mr-2 h-4 w-4"
+      fill="none"
+      height="24"
+      stroke="currentColor"
+      stroke-linecap="round"
+      stroke-linejoin="round"
+      stroke-width="2"
+      viewBox="0 0 24 24"
+      width="24"
+      xmlns="http://www.w3.org/2000/svg"
+    >
+      <path
+        d="M5 12h14"
+      />
+      <path
+        d="m12 5 7 7-7 7"
+      />
+    </svg>
+    Continue with Pubky Ring
+  </button>
+</div>
+`;

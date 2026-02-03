@@ -1,7 +1,6 @@
 import { describe, it, expect, vi } from 'vitest';
 import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { normaliseRadixIds } from '@/libs/utils/utils';
 
 // Mock @/libs - use actual implementations
 vi.mock('@/libs', async () => {
@@ -62,7 +61,6 @@ describe('Dialog', () => {
   });
 });
 
-// Use normaliseRadixIds to ensure the snapshots are consistent.
 describe('Dialog - Snapshots', () => {
   it('matches snapshot for Dialog with default props', () => {
     const { container } = render(
@@ -70,8 +68,7 @@ describe('Dialog - Snapshots', () => {
         <div>Dialog Content</div>
       </Dialog>,
     );
-    const normalizedContainer = normaliseRadixIds(container);
-    expect(normalizedContainer.firstChild).toMatchSnapshot();
+    expect(container.firstChild).toMatchSnapshot();
   });
 
   it('matches snapshot for DialogTrigger with default props', () => {
@@ -80,8 +77,7 @@ describe('Dialog - Snapshots', () => {
         <DialogTrigger>Open Dialog</DialogTrigger>
       </Dialog>,
     );
-    const normalizedContainer = normaliseRadixIds(container);
-    expect(normalizedContainer.firstChild).toMatchSnapshot();
+    expect(container.firstChild).toMatchSnapshot();
   });
 
   it('matches snapshot for DialogTrigger with asChild', () => {
@@ -92,8 +88,7 @@ describe('Dialog - Snapshots', () => {
         </DialogTrigger>
       </Dialog>,
     );
-    const normalizedContainer = normaliseRadixIds(container);
-    expect(normalizedContainer.firstChild).toMatchSnapshot();
+    expect(container.firstChild).toMatchSnapshot();
   });
 
   it('matches snapshot for DialogContent with default props', () => {
@@ -105,8 +100,7 @@ describe('Dialog - Snapshots', () => {
       </Dialog>,
     );
     const dialogContent = screen.getByTestId('dialog-content');
-    const normalizedContainer = normaliseRadixIds(dialogContent.parentElement as HTMLElement);
-    expect(normalizedContainer).toMatchSnapshot();
+    expect(dialogContent.parentElement).toMatchSnapshot();
   });
 
   it('matches snapshot for DialogContent with close button', () => {
@@ -118,8 +112,7 @@ describe('Dialog - Snapshots', () => {
       </Dialog>,
     );
     const dialogContent = screen.getByTestId('dialog-content');
-    const normalizedContainer = normaliseRadixIds(dialogContent.parentElement as HTMLElement);
-    expect(normalizedContainer).toMatchSnapshot();
+    expect(dialogContent.parentElement).toMatchSnapshot();
   });
 
   it('matches snapshot for DialogContent without close button', () => {
@@ -131,8 +124,7 @@ describe('Dialog - Snapshots', () => {
       </Dialog>,
     );
     const dialogContent = screen.getByTestId('dialog-content');
-    const normalizedContainer = normaliseRadixIds(dialogContent.parentElement as HTMLElement);
-    expect(normalizedContainer).toMatchSnapshot();
+    expect(dialogContent.parentElement).toMatchSnapshot();
   });
 
   it('matches snapshot for DialogContent with overrideDefaults', () => {
@@ -147,8 +139,7 @@ describe('Dialog - Snapshots', () => {
       </Dialog>,
     );
     const dialogContent = screen.getByTestId('dialog-content');
-    const normalizedContainer = normaliseRadixIds(dialogContent.parentElement as HTMLElement);
-    expect(normalizedContainer).toMatchSnapshot();
+    expect(dialogContent.parentElement).toMatchSnapshot();
   });
 
   it('matches snapshot for DialogContent without overrideDefaults', () => {
@@ -163,8 +154,7 @@ describe('Dialog - Snapshots', () => {
       </Dialog>,
     );
     const dialogContent = screen.getByTestId('dialog-content');
-    const normalizedContainer = normaliseRadixIds(dialogContent.parentElement as HTMLElement);
-    expect(normalizedContainer).toMatchSnapshot();
+    expect(dialogContent.parentElement).toMatchSnapshot();
   });
 
   it('matches snapshot for DialogHeader', () => {
@@ -179,8 +169,7 @@ describe('Dialog - Snapshots', () => {
       </Dialog>,
     );
     const dialogHeader = screen.getByTestId('dialog-header');
-    const normalizedContainer = normaliseRadixIds(dialogHeader);
-    expect(normalizedContainer).toMatchSnapshot();
+    expect(dialogHeader).toMatchSnapshot();
   });
 
   it('matches snapshot for DialogFooter', () => {
@@ -196,8 +185,7 @@ describe('Dialog - Snapshots', () => {
     );
     const dialogContent = screen.getByTestId('dialog-content');
     const footer = dialogContent.querySelector('[data-slot="dialog-footer"]');
-    const normalizedContainer = normaliseRadixIds(footer as HTMLElement);
-    expect(normalizedContainer).toMatchSnapshot();
+    expect(footer).toMatchSnapshot();
   });
 
   it('matches snapshot for complete dialog structure', () => {
@@ -218,7 +206,6 @@ describe('Dialog - Snapshots', () => {
       </Dialog>,
     );
     const dialogContent = screen.getByTestId('dialog-content');
-    const normalizedContainer = normaliseRadixIds(dialogContent.parentElement as HTMLElement);
-    expect(normalizedContainer).toMatchSnapshot();
+    expect(dialogContent.parentElement).toMatchSnapshot();
   });
 });

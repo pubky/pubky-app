@@ -1,7 +1,6 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { render, screen, fireEvent, act } from '@testing-library/react';
 import { Popover, PopoverTrigger, PopoverContent } from './Popover';
-import { normaliseRadixIds } from '@/libs/utils/utils';
 import * as Hooks from '@/hooks';
 
 describe('Popover', () => {
@@ -228,9 +227,6 @@ describe('Popover - Hover behavior', () => {
   });
 });
 
-// Note: Radix UI generates incremental IDs (radix-«r0», radix-«r1», etc.) for aria-controls attributes.
-// These IDs are deterministic within an identical test suite run but may change when a subset of tests are run or are run in a different order.
-// Use normaliseRadixIds to ensure the snapshots are consistent.
 describe('Popover - Snapshots', () => {
   it('matches snapshot for PopoverTrigger with default props', () => {
     const { container } = render(
@@ -238,8 +234,7 @@ describe('Popover - Snapshots', () => {
         <PopoverTrigger>Open Popover</PopoverTrigger>
       </Popover>,
     );
-    const normalizedContainer = normaliseRadixIds(container);
-    expect(normalizedContainer.firstChild).toMatchSnapshot();
+    expect(container.firstChild).toMatchSnapshot();
   });
 
   it('matches snapshot for PopoverTrigger with asChild', () => {
@@ -250,8 +245,7 @@ describe('Popover - Snapshots', () => {
         </PopoverTrigger>
       </Popover>,
     );
-    const normalizedContainer = normaliseRadixIds(container);
-    expect(normalizedContainer.firstChild).toMatchSnapshot();
+    expect(container.firstChild).toMatchSnapshot();
   });
 
   it('matches snapshot for popover trigger in open state', () => {
@@ -265,7 +259,6 @@ describe('Popover - Snapshots', () => {
         </PopoverContent>
       </Popover>,
     );
-    const normalizedContainer = normaliseRadixIds(container);
-    expect(normalizedContainer.firstChild).toMatchSnapshot();
+    expect(container.firstChild).toMatchSnapshot();
   });
 });

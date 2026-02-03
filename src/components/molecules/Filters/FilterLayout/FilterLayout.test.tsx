@@ -2,7 +2,6 @@ import { render, screen, fireEvent } from '@testing-library/react';
 import { describe, it, expect, vi } from 'vitest';
 import { FilterLayout } from './FilterLayout';
 import { LAYOUT, type LayoutType } from '@/core/stores/home/home.types';
-import { normaliseRadixIds } from '@/libs/utils/utils';
 
 // Mock libs - use actual utility functions and icons from lucide-react
 vi.mock('@/libs', async () => {
@@ -54,19 +53,16 @@ describe('FilterLayout', () => {
 describe('FilterLayout - Snapshots', () => {
   it('matches snapshot with default props', () => {
     const { container } = render(<FilterLayout />);
-    const normalisedContainer = normaliseRadixIds(container);
-    expect(normalisedContainer.firstChild).toMatchSnapshot();
+    expect(container.firstChild).toMatchSnapshot();
   });
 
   it('matches snapshot with Columns selected tab', () => {
     const { container } = render(<FilterLayout selectedTab={LAYOUT.COLUMNS} />);
-    const normalisedContainer = normaliseRadixIds(container);
-    expect(normalisedContainer.firstChild).toMatchSnapshot();
+    expect(container.firstChild).toMatchSnapshot();
   });
 
   it('matches snapshot with Wide selected tab', () => {
     const { container } = render(<FilterLayout selectedTab={LAYOUT.WIDE} />);
-    const normalisedContainer = normaliseRadixIds(container);
-    expect(normalisedContainer.firstChild).toMatchSnapshot();
+    expect(container.firstChild).toMatchSnapshot();
   });
 });

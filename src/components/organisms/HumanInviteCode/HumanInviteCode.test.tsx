@@ -1,8 +1,6 @@
 import { describe, it, expect, vi } from 'vitest';
 import { render, screen, fireEvent } from '@testing-library/react';
 
-import { normaliseRadixIds } from '@/libs/utils/utils';
-
 import { HumanInviteCode } from './HumanInviteCode';
 
 vi.mock('@/molecules', async () => {
@@ -186,21 +184,16 @@ describe('HumanInviteCode', () => {
   });
 });
 
-// Note: Radix UI generates incremental IDs (radix-«r0», radix-«r1», etc.) for aria-controls attributes.
-// These IDs are deterministic within an identical test suite run but may change when a subset of tests are run or are run in a different order.
-// Use normaliseRadixIds to ensure the snapshots are consistent.
 describe('HumanInviteCode - Snapshots', () => {
   it('matches snapshot for empty state', () => {
     const { container } = render(<HumanInviteCode onBack={() => {}} onSuccess={() => {}} />);
-    const normalizedContainer = normaliseRadixIds(container);
-    expect(normalizedContainer).toMatchSnapshot();
+    expect(container).toMatchSnapshot();
   });
 
   it('matches snapshot for complete code state', () => {
     const { container } = render(<HumanInviteCode onBack={() => {}} onSuccess={() => {}} />);
     const input = screen.getByPlaceholderText('XXXX-XXXX-XXXX');
     fireEvent.change(input, { target: { value: 'N76QG32NC0RG' } });
-    const normalizedContainer = normaliseRadixIds(container);
-    expect(normalizedContainer).toMatchSnapshot();
+    expect(container).toMatchSnapshot();
   });
 });

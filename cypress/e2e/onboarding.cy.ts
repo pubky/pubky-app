@@ -69,4 +69,34 @@ describe('Onboarding', () => {
     // sign up as second user
     cy.onboardAsNewUser(secondProfileName);
   });
+
+  it('cannot proceed with unauthorised invite code', () => {
+    // Intercept the signup request to the homeserver (POST .../signup?signup_token=...)
+    cy.intercept('POST', '**/signup*').as('signupRequest');
+
+    // Start onboarding flow
+    cy.get('#create-account-btn').click();
+    cy.location('pathname').should('eq', '/onboarding/human');
+
+    // Click 'enter invite code' button
+    cy.get('[data-testid="human-dev-invite-code-btn"]').should('exist').click();
+
+    // Enter invalid invite code
+    cy.get('[data-cy="human-invite-code-input"]').type('abcd-efgh-ijkl');
+
+    // Click continue button
+    cy.get('[data-cy="human-invite-code-continue-btn"]').click();
+
+    // Wait for the signup request and verify 401 Unauthorised response
+    cy.wait('@signupRequest').its('response.statusCode').should('eq', 401);
+
+    // Assert error toast is shown with appropriate message
+    cy.get('[data-cy="toast"]').should('be.visible').and('contain', 'Invalid or expired invite code');
+
+    // Assert still on onboarding/human page (user cannot proceed)
+    cy.location('pathname').should('eq', '/onboarding/human');
+
+    // Verify the continue button is enabled again (not stuck in loading state)
+    cy.get('[data-cy="human-invite-code-continue-btn"]').should('not.be.disabled');
+  });
 });

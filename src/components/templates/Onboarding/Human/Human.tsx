@@ -4,10 +4,10 @@ import * as Molecules from '@/molecules';
 import * as Organisms from '@/organisms';
 import * as Core from '@/core';
 import * as Libs from '@/libs';
-import { useState } from 'react';
+import * as Hooks from '@/hooks';
+import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { ONBOARDING_ROUTES } from '@/app';
-import React from 'react';
 
 enum States {
   Selection = 'selection',
@@ -22,12 +22,14 @@ export function Human() {
   const [phoneNumber, setPhoneNumber] = useState<string>('');
   const { setInviteCode, reset } = Core.useOnboardingStore();
   const router = useRouter();
+  const { validateAndSignUp } = Hooks.useInviteCodeSignUp();
 
-  React.useEffect(() => {
+  useEffect(() => {
     reset();
   }, [reset]);
 
-  function onSuccess(inviteCode: string) {
+  async function onSuccess(inviteCode: string) {
+    await validateAndSignUp(inviteCode);
     setInviteCode(inviteCode);
     router.push(ONBOARDING_ROUTES.INSTALL);
   }
@@ -49,9 +51,9 @@ export function Human() {
             } else if (variant === 'skip') {
               try {
                 const code = await Core.AuthController.generateSignupToken();
-                onSuccess(code);
+                await onSuccess(code);
               } catch (error) {
-                Libs.Logger.error('[Human] Failed to generate signup token:', error);
+                Libs.Logger.error('[Human] Dev skip failed (generate token or signup):', error);
               }
             }
           }}

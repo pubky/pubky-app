@@ -1,6 +1,5 @@
 import { render, screen, fireEvent } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { normaliseRadixIds } from '@/libs/utils/utils';
 import { PostPageBreadcrumb } from './PostPageBreadcrumb';
 import type { Ancestor } from '@/hooks/usePostAncestors/usePostAncestors.types';
 
@@ -133,9 +132,6 @@ describe('PostPageBreadcrumb', () => {
   });
 });
 
-// Note: Radix UI generates incremental IDs (radix-«r0», radix-«r1», etc.) for aria-controls attributes.
-// These IDs are deterministic within an identical test suite run but may change when a subset of tests are run or are run in a different order.
-// Use normaliseRadixIds to ensure the snapshots are consistent.
 describe('PostPageBreadcrumb - Snapshots', () => {
   const mockOnNavigate = vi.fn();
 
@@ -163,8 +159,7 @@ describe('PostPageBreadcrumb - Snapshots', () => {
       <PostPageBreadcrumb ancestors={ancestors} userDetailsMap={userDetailsMap} onNavigate={mockOnNavigate} />,
     );
 
-    const normalizedContainer = normaliseRadixIds(container);
-    expect(normalizedContainer).toMatchSnapshot();
+    expect(container).toMatchSnapshot();
   });
 
   it('matches snapshot for non-truncated state (3 items)', () => {
@@ -175,8 +170,7 @@ describe('PostPageBreadcrumb - Snapshots', () => {
       <PostPageBreadcrumb ancestors={ancestors} userDetailsMap={userDetailsMap} onNavigate={mockOnNavigate} />,
     );
 
-    const normalizedContainer = normaliseRadixIds(container);
-    expect(normalizedContainer).toMatchSnapshot();
+    expect(container).toMatchSnapshot();
   });
 
   it('matches snapshot for truncated state (5 items)', () => {
@@ -187,8 +181,7 @@ describe('PostPageBreadcrumb - Snapshots', () => {
       <PostPageBreadcrumb ancestors={ancestors} userDetailsMap={userDetailsMap} onNavigate={mockOnNavigate} />,
     );
 
-    const normalizedContainer = normaliseRadixIds(container);
-    expect(normalizedContainer).toMatchSnapshot();
+    expect(container).toMatchSnapshot();
   });
 
   it('matches snapshot for truncated state (6 items)', () => {
@@ -199,7 +192,6 @@ describe('PostPageBreadcrumb - Snapshots', () => {
       <PostPageBreadcrumb ancestors={ancestors} userDetailsMap={userDetailsMap} onNavigate={mockOnNavigate} />,
     );
 
-    const normalizedContainer = normaliseRadixIds(container);
-    expect(normalizedContainer).toMatchSnapshot();
+    expect(container).toMatchSnapshot();
   });
 });
