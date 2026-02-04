@@ -91,7 +91,7 @@ jobs:
   build_image:
     name: "Build image for ${{ inputs.env }}"
     needs: [check_image]
-    if: ${{ needs.check_image.outputs.image_exists != true }}
+    if: ${{ needs.check_image.outputs.image_exists != 'true' }}
     runs-on: ["ubuntu-latest"]
     steps:
       - name: Checkout repository
