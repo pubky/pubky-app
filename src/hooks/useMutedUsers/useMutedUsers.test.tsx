@@ -47,4 +47,18 @@ describe('useMutedUsers', () => {
     expect(result.current.isMuted('user-1')).toBe(true);
     expect(result.current.isMuted('user-3')).toBe(false);
   });
+
+  it('normalizes prefixed user IDs in isMuted lookup', () => {
+    // Stored IDs are without prefix (normalized during mute)
+    const rawPubky = '68rkfi1d78baobycj6w4b7dga43o8qtnuhubban5at6qywrieb5y';
+    mockUseLiveQuery.mockReturnValue({ stream: [rawPubky] });
+
+    const { result } = renderHook(() => useMutedUsers());
+
+    // Should match regardless of prefix format
+    // PUBKY_PREFIX is 'pubky' (no colon), LEGACY_PUBKY_PREFIX is 'pk:'
+    expect(result.current.isMuted(rawPubky)).toBe(true);
+    expect(result.current.isMuted(`pubky${rawPubky}`)).toBe(true);
+    expect(result.current.isMuted(`pk:${rawPubky}`)).toBe(true);
+  });
 });
