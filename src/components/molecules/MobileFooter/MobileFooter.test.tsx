@@ -24,7 +24,19 @@ vi.mock('@/organisms', () => ({
     alt?: string;
   }) => (
     <div data-testid="avatar-with-fallback" className={className} data-size={size}>
-      <img data-testid="avatar-image" src={avatarUrl} alt={alt || name} />
+      {avatarUrl ? (
+        <img data-testid="avatar-image" src={avatarUrl} alt={alt || name} />
+      ) : (
+        <span data-testid="avatar-fallback">
+          {name
+            .trim()
+            .split(/\s+/)
+            .filter(Boolean)
+            .slice(0, 2)
+            .map((part) => part[0]?.toUpperCase())
+            .join('') || 'U'}
+        </span>
+      )}
       <span data-testid="avatar-name">{name}</span>
     </div>
   ),
@@ -90,6 +102,7 @@ vi.mock('@/core', async () => {
 
 describe('MobileFooter', () => {
   beforeEach(() => {
+    vi.clearAllMocks();
     vi.mocked(usePathname).mockReturnValue('/home');
     mockSelectUnread.mockReturnValue(0);
   });
@@ -160,12 +173,13 @@ describe('MobileFooter', () => {
 
     const { FileController } = await import('@/core');
     expect(vi.mocked(FileController.getAvatarUrl)).not.toHaveBeenCalled();
-    expect(screen.getByTestId('avatar-image').getAttribute('src')).toBe(null);
+    expect(screen.queryByTestId('avatar-image')).not.toBeInTheDocument();
+    expect(screen.getByTestId('avatar-fallback')).toHaveTextContent('TU');
   });
 
   it('requests avatar URL when user has an avatar set', async () => {
     const { useCurrentUserProfile } = await import('@/hooks');
-    vi.mocked(useCurrentUserProfile).mockReturnValue({
+    vi.mocked(useCurrentUserProfile).mockReturnValueOnce({
       userDetails: { name: 'Test User', image: 'has-avatar', indexed_at: 456 },
       currentUserPubky: 'pk:test-user-pubky',
     });
@@ -244,6 +258,7 @@ describe('MobileFooter', () => {
 
 describe('MobileFooter - Snapshots', () => {
   beforeEach(() => {
+    vi.clearAllMocks();
     vi.mocked(usePathname).mockReturnValue('/home');
   });
 
