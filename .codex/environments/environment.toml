@@ -6,24 +6,6 @@ name = "franky"
 script = ""
 
 [[actions]]
-name = "Run"
-icon = "run"
-command = '''
-npm run clean
-npm run build
-npm run dev
-'''
-
-[[actions]]
-name = "start-multi-line"
-icon = "run"
-command = '''
-npm run clean
-npm run build
-npm run start
-'''
-
-[[actions]]
-name = "start-single-line"
+name = "start"
 icon = "tool"
 command = "npm run clean && npm run build && npm run start"
