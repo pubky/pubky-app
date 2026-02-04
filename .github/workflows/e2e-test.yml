@@ -76,12 +76,25 @@ jobs:
           platforms: ${{ env.platforms }}
         if: ${{ steps.check_image.outputs.exists != 'true' }}
 
+  set_vars_franky:
+    name: Set vars for Franky
+    runs-on: ubuntu-latest
+    outputs:
+      env: ${{ steps.set_vars.outputs.env }}
+      platforms: ${{ steps.set_vars.outputs.platforms }}
+    steps:
+      - name: Set Vars
+        id: set_vars
+        run: |
+          echo env=${{ env.franky_env }} >> $GITHUB_OUTPUT
+          echo platforms=${{ env.platforms }} >> $GITHUB_OUTPUT
 
   rebuild_franky:
+    needs: [ set_vars_franky ]
     uses: ./.github/workflows/build-docker-image.yml
     with:
-      platforms: ${{ needs.check_franky.outputs.franky_platforms }}
-      env: ${{ needs.check_franky.outputs.franky_env }}
+      platforms: ${{ needs.set_vars_franky.outputs.platforms }}
+      env: ${{ needs.check_franky.outputs.env }}
     secrets: inherit
 
   e2e-test:

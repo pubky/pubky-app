@@ -84,7 +84,7 @@ jobs:
         uses: pubky/ci-workflows/.github/actions/docker/check_if_image_exists@main
         id: check_image
         with:
-          image: ${{ env.registry }}/franky-{{ inputs.env }}
+          image: ${{ env.registry }}/franky-${{ inputs.env }}
           tag: ${{ steps.sha_tag.outputs.hash }}
           arch: ${{ inputs.platforms }}
 
@@ -145,4 +145,4 @@ jobs:
             SUPPORT_API_ACCESS_TOKEN=your_token_here
             SUPPORT_ACCOUNT_ID=123
             SUPPORT_FEEDBACK_INBOX_ID=26
-        if: ${{ inputs.env }} == 'testnet'
+        if: ${{ inputs.env == 'testnet' }}
