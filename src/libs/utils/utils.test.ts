@@ -10,7 +10,6 @@ import {
   generateRandomColor,
   hexToRgba,
   extractInitials,
-  normaliseRadixIds,
   truncateString,
   minutesAgo,
   hoursAgo,
@@ -21,14 +20,61 @@ import {
   shouldBypassLinkConfirmation,
   getCharacterCount,
   sanitizeTagInput,
-  TAG_BANNED_CHARS,
   canSubmitPost,
   formatUSDate,
   generateRandomUsername,
   stripPubkyPrefix,
+  radixIdSerializer,
 } from './utils';
+import { RADIX_ID_TEST_REGEX, RADIX_ID_REGEX, TAG_BANNED_CHARS } from './utils.constants';
 
 describe('Utils', () => {
+  describe('radixIdSerializer', () => {
+    describe('regex patterns', () => {
+      it('RADIX_ID_TEST_REGEX matches Radix IDs', () => {
+        expect(RADIX_ID_TEST_REGEX.test('radix-_r_12345')).toBe(true);
+        expect(RADIX_ID_TEST_REGEX.test('_r_12345')).toBe(true);
+        expect(RADIX_ID_TEST_REGEX.test('class="radix-_r_12345"')).toBe(true);
+      });
+
+      it('RADIX_ID_TEST_REGEX does not match other strings', () => {
+        expect(RADIX_ID_TEST_REGEX.test('normal-id')).toBe(false);
+        expect(RADIX_ID_TEST_REGEX.test('radical')).toBe(false);
+      });
+
+      it('RADIX_ID_REGEX matches all occurrences globally', () => {
+        const input = 'id="radix-_r_1" and id="radix-_r_2"';
+        const matches = input.match(RADIX_ID_REGEX);
+        expect(matches).toHaveLength(2);
+        expect(matches).toEqual(['radix-_r_1', 'radix-_r_2']);
+      });
+    });
+
+    describe('test function', () => {
+      it('returns true for strings containing Radix IDs', () => {
+        expect(radixIdSerializer.test('some content with radix-_r_12345 inside')).toBe(true);
+      });
+
+      it('returns false for strings without Radix IDs', () => {
+        expect(radixIdSerializer.test('some content without special ids')).toBe(false);
+      });
+
+      it('returns false for non-string values', () => {
+        expect(radixIdSerializer.test(123)).toBe(false);
+        expect(radixIdSerializer.test(null)).toBe(false);
+        expect(radixIdSerializer.test({})).toBe(false);
+      });
+
+      it('does not have stateful issues with multiple calls (g flag check)', () => {
+        const input = 'radix-_r_123';
+        // If the regex had 'g' flag and was reused, subsequent calls might fail
+        expect(radixIdSerializer.test(input)).toBe(true);
+        expect(radixIdSerializer.test(input)).toBe(true);
+        expect(radixIdSerializer.test(input)).toBe(true);
+      });
+    });
+  });
+
   describe('cn', () => {
     it('should combine multiple class names', () => {
       const result = cn('class1', 'class2', 'class3');
@@ -554,125 +600,6 @@ describe('Utils', () => {
 
     it('should handle names with numbers', () => {
       expect(extractInitials({ name: 'John2 Doe3' })).toBe('JD');
-    });
-  });
-
-  describe('normaliseRadixIds', () => {
-    let mockContainer: HTMLElement;
-
-    beforeEach(() => {
-      mockContainer = document.createElement('div');
-    });
-
-    it('should normalize radix IDs in aria-controls attributes', () => {
-      const element1 = document.createElement('button');
-      element1.setAttribute('aria-controls', 'radix-_r_1_');
-      mockContainer.appendChild(element1);
-
-      const element2 = document.createElement('button');
-      element2.setAttribute('aria-controls', 'radix-_r_2_');
-      mockContainer.appendChild(element2);
-
-      const normalized = normaliseRadixIds(mockContainer);
-      const buttons = normalized.querySelectorAll('button');
-
-      expect(buttons[0].getAttribute('aria-controls')).toBe('radix-normalized');
-      expect(buttons[1].getAttribute('aria-controls')).toBe('radix-normalized');
-    });
-
-    it('should not modify non-radix aria-controls attributes', () => {
-      const element = document.createElement('button');
-      element.setAttribute('aria-controls', 'custom-id');
-      mockContainer.appendChild(element);
-
-      const normalized = normaliseRadixIds(mockContainer);
-      const button = normalized.querySelector('button');
-
-      expect(button?.getAttribute('aria-controls')).toBe('custom-id');
-    });
-
-    it('should not modify elements without aria-controls', () => {
-      const element = document.createElement('div');
-      element.textContent = 'No aria-controls';
-      mockContainer.appendChild(element);
-
-      const normalized = normaliseRadixIds(mockContainer);
-      const div = normalized.querySelector('div');
-
-      expect(div?.textContent).toBe('No aria-controls');
-      expect(div?.hasAttribute('aria-controls')).toBe(false);
-    });
-
-    it('should handle mixed radix and non-radix elements', () => {
-      const radixElement = document.createElement('button');
-      radixElement.setAttribute('aria-controls', 'radix-_r_5_');
-      mockContainer.appendChild(radixElement);
-
-      const normalElement = document.createElement('button');
-      normalElement.setAttribute('aria-controls', 'normal-id');
-      mockContainer.appendChild(normalElement);
-
-      const normalized = normaliseRadixIds(mockContainer);
-      const buttons = normalized.querySelectorAll('button');
-
-      expect(buttons[0].getAttribute('aria-controls')).toBe('radix-normalized');
-      expect(buttons[1].getAttribute('aria-controls')).toBe('normal-id');
-    });
-
-    it('should normalise shorthand radix IDs without the radix prefix', () => {
-      const element = document.createElement('div');
-      element.setAttribute('id', '_r_a_');
-      element.setAttribute('aria-controls', '_r_b_');
-      element.setAttribute('aria-labelledby', '_r_c_');
-      mockContainer.appendChild(element);
-
-      const normalized = normaliseRadixIds(mockContainer);
-      const div = normalized.querySelector('div');
-
-      expect(div?.getAttribute('id')).toBe('radix-normalized');
-      expect(div?.getAttribute('aria-controls')).toBe('radix-normalized');
-      expect(div?.getAttribute('aria-labelledby')).toBe('radix-normalized');
-    });
-
-    it('should normalize radix IDs in aria-describedby attributes', () => {
-      const element = document.createElement('div');
-      element.setAttribute('aria-describedby', 'radix-_r_1u_');
-      mockContainer.appendChild(element);
-
-      const normalized = normaliseRadixIds(mockContainer);
-      const div = normalized.querySelector('div');
-
-      expect(div?.getAttribute('aria-describedby')).toBe('radix-normalized');
-    });
-
-    it('should return a cloned container', () => {
-      const element = document.createElement('div');
-      element.textContent = 'Original';
-      mockContainer.appendChild(element);
-
-      const normalized = normaliseRadixIds(mockContainer);
-
-      expect(normalized).not.toBe(mockContainer);
-      expect(normalized.textContent).toBe('Original');
-    });
-
-    it('should handle empty container', () => {
-      const normalized = normaliseRadixIds(mockContainer);
-      expect(normalized).toBeDefined();
-      expect(normalized.children.length).toBe(0);
-    });
-
-    it('should normalize radix IDs on the root container element itself', () => {
-      // This tests the case where the container element has radix attributes directly,
-      // not just its descendants (querySelectorAll only finds descendants)
-      const element = document.createElement('h2');
-      element.setAttribute('id', 'radix-_r_s_');
-      element.textContent = 'Title';
-
-      const normalized = normaliseRadixIds(element);
-
-      expect(normalized.getAttribute('id')).toBe('radix-normalized');
-      expect(normalized.textContent).toBe('Title');
     });
   });
 

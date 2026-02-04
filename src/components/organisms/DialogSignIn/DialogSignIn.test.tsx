@@ -1,6 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen, fireEvent } from '@testing-library/react';
-import { normaliseRadixIds } from '@/libs/utils/utils';
 import { DialogSignIn } from './DialogSignIn';
 
 const mockShowSignInDialog = vi.hoisted(() => ({ value: false }));
@@ -139,8 +138,7 @@ describe('DialogSignIn - Snapshots', () => {
     render(<DialogSignIn />);
 
     const dialog = document.querySelector('[role="dialog"]');
-    const normalizedContainer = normaliseRadixIds(dialog?.parentElement as HTMLElement);
-    expect(normalizedContainer).toMatchSnapshot();
+    expect(dialog?.parentElement).toMatchSnapshot();
   });
 
   it('matches snapshot when closed', () => {

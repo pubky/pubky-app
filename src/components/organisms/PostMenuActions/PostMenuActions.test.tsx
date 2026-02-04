@@ -2,7 +2,6 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { PostMenuActions } from './PostMenuActions';
-import { normaliseRadixIds } from '@/libs/utils/utils';
 
 const mockUseIsMobile = vi.fn(() => false);
 const mockUsePostMenuActions = vi.fn((_postId: string) => ({
@@ -247,15 +246,13 @@ describe('PostMenuActions - Snapshots', () => {
   it('matches snapshot for desktop dropdown', () => {
     const trigger = <button>Menu</button>;
     const { container } = render(<PostMenuActions postId="pk:test123:post456" trigger={trigger} />);
-    const normalizedContainer = normaliseRadixIds(container);
-    expect(normalizedContainer.firstChild).toMatchSnapshot();
+    expect(container.firstChild).toMatchSnapshot();
   });
 
   it('matches snapshot for mobile sheet', () => {
     mockUseIsMobile.mockReturnValue(true);
     const trigger = <button>Menu</button>;
     const { container } = render(<PostMenuActions postId="pk:test123:post456" trigger={trigger} />);
-    const normalizedContainer = normaliseRadixIds(container);
-    expect(normalizedContainer.firstChild).toMatchSnapshot();
+    expect(container.firstChild).toMatchSnapshot();
   });
 });

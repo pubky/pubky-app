@@ -39,7 +39,7 @@ exports[`NotificationItem - Snapshots > matches snapshot for Follow notification
         </a>
          
         <a
-          class="text-muted-foreground hover:underline"
+          class="text-foreground hover:underline"
           href="/profile/user1"
         >
           followed you
@@ -113,7 +113,7 @@ exports[`NotificationItem - Snapshots > matches snapshot for Mention notificatio
         </a>
          
         <a
-          class="text-muted-foreground hover:underline"
+          class="text-foreground hover:underline"
           href="/post/user1/post123"
         >
           mentioned you in post
@@ -187,7 +187,7 @@ exports[`NotificationItem - Snapshots > matches snapshot for TagPost notificatio
         </a>
          
         <a
-          class="text-muted-foreground hover:underline"
+          class="text-foreground hover:underline"
           href="/post/user1/post123"
         >
           tagged your post

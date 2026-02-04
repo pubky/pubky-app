@@ -2,7 +2,6 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen } from '@testing-library/react';
 import { MENU_VARIANT } from '@/config/ui';
 import { PostMenuActionsContent } from './PostMenuActionsContent';
-import { normaliseRadixIds } from '@/libs/utils/utils';
 import {
   POST_MENU_ACTION_IDS,
   POST_MENU_ACTION_VARIANTS,
@@ -353,8 +352,7 @@ describe('PostMenuActionsContent - Snapshots', () => {
         onEditClick={vi.fn()}
       />,
     );
-    const normalizedContainer = normaliseRadixIds(container);
-    expect(normalizedContainer.firstChild).toMatchSnapshot();
+    expect(container.firstChild).toMatchSnapshot();
   });
 
   it('matches snapshot for own post menu items', async () => {
@@ -409,8 +407,7 @@ describe('PostMenuActionsContent - Snapshots', () => {
         onEditClick={vi.fn()}
       />,
     );
-    const normalizedContainer = normaliseRadixIds(container);
-    expect(normalizedContainer.firstChild).toMatchSnapshot();
+    expect(container.firstChild).toMatchSnapshot();
   });
 
   it('matches snapshot for mobile sheet variant', async () => {
@@ -472,7 +469,6 @@ describe('PostMenuActionsContent - Snapshots', () => {
         onEditClick={vi.fn()}
       />,
     );
-    const normalizedContainer = normaliseRadixIds(container);
-    expect(normalizedContainer.firstChild).toMatchSnapshot();
+    expect(container.firstChild).toMatchSnapshot();
   });
 });
