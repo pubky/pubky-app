@@ -180,6 +180,16 @@ jobs:
           cache: 'npm'
           cache-dependency-path: 'franky/package-lock.json'
 
+      - name: Cache node modules
+        uses: actions/cache@v4
+        with:
+          path: |
+            franky/node_modules
+            franky/.next/cache
+          key: ${{ runner.os }}-node-${{ hashFiles('franky/package-lock.json') }}
+          restore-keys: |
+            ${{ runner.os }}-node-
+
       - name: Install Cypress dependencies
         working-directory: franky
         run: npm ci
