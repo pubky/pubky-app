@@ -2,7 +2,7 @@
 
 exports[`ProfilePageMobileMenu - Snapshots > matches snapshot with default props 1`] = `
 <div
-  class="sticky top-(--header-height-mobile) z-(--z-mobile-menu) bg-background lg:hidden"
+  class="sticky top-(--header-height-mobile) z-(--z-mobile-menu) bg-background lg:hidden mobile-menu-gradient-fade"
   data-testid="profile-page-mobile-menu"
 >
   <div

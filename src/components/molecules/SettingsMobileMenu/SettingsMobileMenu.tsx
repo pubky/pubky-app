@@ -34,7 +34,7 @@ export function SettingsMobileMenu({ className }: SettingsMobileMenuProps) {
       overrideDefaults
       data-testid="settings-mobile-menu"
       className={Libs.cn(
-        'fixed top-(--header-height-mobile) right-0 left-0 z-(--z-sticky-header) bg-background shadow-xl',
+        'fixed top-(--header-height-mobile) right-0 left-0 z-(--z-sticky-header) bg-background mobile-menu-gradient-fade',
         className,
       )}
     >
