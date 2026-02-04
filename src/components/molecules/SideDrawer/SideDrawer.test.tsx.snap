@@ -10,7 +10,7 @@ exports[`SideDrawer - Snapshots > matches snapshot with complex children 1`] = `
     class="absolute inset-0 transition-opacity duration-300 bg-opacity-0"
   />
   <div
-    class="fixed top-0 z-50 h-full bg-background p-4 shadow-xl sm:p-4 md:p-12 transition-transform duration-300 ease-in-out w-[228px] sm:w-[228px] md:w-[385px] left-0 border-r border-white -translate-x-full"
+    class="fixed top-0 z-50 h-full bg-background p-4 shadow-xl sm:p-4 md:p-12 transition-transform duration-300 ease-in-out w-[228px] sm:w-[228px] md:w-[385px] left-0 border-r border-border -translate-x-full"
   >
     <div
       class="h-full overflow-y-auto"
@@ -41,7 +41,7 @@ exports[`SideDrawer - Snapshots > matches snapshot with left position 1`] = `
     class="absolute inset-0 transition-opacity duration-300 bg-opacity-0"
   />
   <div
-    class="fixed top-0 z-50 h-full bg-background p-4 shadow-xl sm:p-4 md:p-12 transition-transform duration-300 ease-in-out w-[228px] sm:w-[228px] md:w-[385px] left-0 border-r border-white -translate-x-full"
+    class="fixed top-0 z-50 h-full bg-background p-4 shadow-xl sm:p-4 md:p-12 transition-transform duration-300 ease-in-out w-[228px] sm:w-[228px] md:w-[385px] left-0 border-r border-border -translate-x-full"
   >
     <div
       class="h-full overflow-y-auto"
@@ -62,7 +62,7 @@ exports[`SideDrawer - Snapshots > matches snapshot with right position 1`] = `
     class="absolute inset-0 transition-opacity duration-300 bg-opacity-0"
   />
   <div
-    class="fixed top-0 z-50 h-full bg-background p-4 shadow-xl sm:p-4 md:p-12 transition-transform duration-300 ease-in-out w-[280px] sm:w-[280px] md:w-[385px] right-0 border-l border-white translate-x-full"
+    class="fixed top-0 z-50 h-full bg-background p-4 shadow-xl sm:p-4 md:p-12 transition-transform duration-300 ease-in-out w-[280px] sm:w-[280px] md:w-[385px] right-0 border-l border-border translate-x-full"
   >
     <div
       class="h-full overflow-y-auto"
