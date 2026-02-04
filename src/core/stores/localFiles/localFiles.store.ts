@@ -51,7 +51,7 @@ export const useLocalFilesStore = create<LocalFilesStore>()(
         revokeBlobUrl(state.profile);
         Object.values(state.posts)
           .flat()
-          .forEach((a) => revokeBlobUrl(a.urls.main));
+          .forEach((a) => revokeBlobUrl(a?.urls.main));
         set(localFilesInitialState, false, LocalFilesActionTypes.RESET);
       },
     }),
