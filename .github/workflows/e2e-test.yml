@@ -84,7 +84,7 @@ jobs:
           image: ${{ matrix.image }}
           context: ${{ matrix.submodule_dir }}
           platforms: ${{ env.platforms }}
-        if: ${{ steps.check_image.outputs.exists != 'true' &&  matrix.workflow_path == "" }}
+        if: ${{ steps.check_image.outputs.exists != 'true' &&  matrix.workflow_path == '' }}
 
       - name: Rebuild using ${{ matrix.workflow_path }}
         uses: ${{ matrix.workflow_path }}
@@ -92,7 +92,7 @@ jobs:
           platforms: ${{ env.platforms }}
           env: ${{ env.pubky_stack_ref }}
         secrets: inherit
-        if: ${{ steps.check_image.outputs.exists != 'true' && matrix.workflow_path != "" }}
+        if: ${{ steps.check_image.outputs.exists != 'true' && matrix.workflow_path != '' }}
 
 
   e2e-test:
