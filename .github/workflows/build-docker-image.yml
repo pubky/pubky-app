@@ -32,10 +32,7 @@ on:
       env:
         description: 'Env for image'
         required: true
-        type: choice
-        options:
-        - production
-        - staging
+        type: string
 
       latest:
         description: 'Use latest tag'
@@ -44,14 +41,8 @@ on:
         type: boolean
 
       platforms:
-        description: 'Platforms'
         required: true
-        type: choice
-        options:
-        - linux/arm64/v8
-        - linux/arm64/v7
-        - linux/arm64
-        - linux/amd64
+        type: string
 
 env:
   registry: "europe-west6-docker.pkg.dev/infra-464608/synonym-private-repo"
