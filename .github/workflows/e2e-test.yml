@@ -173,6 +173,17 @@ jobs:
         with:
           path: franky
 
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version-file: 'franky/.nvmrc'
+          cache: 'npm'
+          cache-dependency-path: 'franky/package-lock.json'
+
+      - name: Install Cypress dependencies
+        working-directory: franky
+        run: npm ci
+
       - name: Login to registry
         uses: pubky/ci-workflows/.github/actions/docker/registry_login@main
         with:
@@ -185,6 +196,11 @@ jobs:
           sed -i 's/NEO4J_server_memory_pagecache_size=2G/NEO4J_server_memory_pagecache_size=1G/' neo4j.env
           sed -i 's/NEO4J_server_memory_heap_initial__size=4G/NEO4J_server_memory_heap_initial__size=1G/' neo4j.env
           sed -i 's/NEO4J_server_memory_heap_max__size=8G/NEO4J_server_memory_heap_max__size=2G/' neo4j.env
+
+      - name: Increase watcher sleep in Nexus config
+        working-directory: pubky-stack/docker
+        run: |
+          sed -i 's/watcher_sleep = 100/watcher_sleep = 500/' pubky-nexus-config-testnet.toml
 
       - name: Prepare pubky-stack .env
         working-directory: pubky-stack/docker
