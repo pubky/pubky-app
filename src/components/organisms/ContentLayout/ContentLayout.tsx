@@ -110,6 +110,7 @@ export function ContentLayout({
       </Atoms.Container>
 
       {/* Mobile footer navigation */}
+      <Molecules.ScrollToTopFab />
       <Molecules.MobileFooter />
 
       {/* Drawer for left sidebar - slides in from left */}

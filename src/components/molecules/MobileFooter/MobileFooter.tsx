@@ -50,11 +50,21 @@ export function MobileFooter({ className }: MobileFooterProps) {
       <div className="fixed bottom-0 z-40 flex w-full max-w-[380px] items-center justify-between overflow-x-auto bg-gradient-to-t from-background via-background/95 to-transparent px-3 py-4 sm:max-w-[600px] md:max-w-[720px]">
         {navItems.map((item) => {
           const Icon = item.icon;
+          const isHome = item.href === App.APP_ROUTES.HOME;
+          const isHomeActive = isHome && isActive(item.href);
+
           return (
             <Link
               key={item.href}
               href={item.href}
               aria-label={item.label}
+              onClick={(event) => {
+                if (!isHomeActive) return;
+                // Don't hijack modified clicks (new tab/window, etc.)
+                if (event.metaKey || event.ctrlKey || event.shiftKey || event.altKey || event.button !== 0) return;
+                event.preventDefault();
+                window.scrollTo({ top: 0, behavior: 'smooth' });
+              }}
               className={Libs.cn(
                 'rounded-full p-3 backdrop-blur-sm transition-all',
                 isActive(item.href) ? 'bg-secondary/30' : 'bg-secondary/20 hover:bg-secondary/25',

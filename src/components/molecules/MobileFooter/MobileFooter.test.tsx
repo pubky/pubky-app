@@ -1,4 +1,4 @@
-import { render, screen } from '@testing-library/react';
+import { render, screen, fireEvent } from '@testing-library/react';
 import { describe, it, expect, vi } from 'vitest';
 import { usePathname } from 'next/navigation';
 import { MobileFooter } from './MobileFooter';
@@ -210,6 +210,30 @@ describe('MobileFooter', () => {
     render(<MobileFooter />);
 
     expect(document.querySelector('.lucide-house')).toBeInTheDocument();
+  });
+
+  it('scrolls to top when clicking Home while already on /home', () => {
+    vi.mocked(usePathname).mockReturnValue('/home');
+    Object.defineProperty(window, 'scrollTo', { value: vi.fn(), writable: true });
+
+    render(<MobileFooter />);
+    const homeLink = document.querySelector('.lucide-house')?.closest('a');
+    expect(homeLink).toBeTruthy();
+
+    fireEvent.click(homeLink!);
+    expect(window.scrollTo).toHaveBeenCalledWith({ top: 0, behavior: 'smooth' });
+  });
+
+  it('does not scroll to top when clicking Home from another page', () => {
+    vi.mocked(usePathname).mockReturnValue('/search');
+    Object.defineProperty(window, 'scrollTo', { value: vi.fn(), writable: true });
+
+    render(<MobileFooter />);
+    const homeLink = document.querySelector('.lucide-house')?.closest('a');
+    expect(homeLink).toBeTruthy();
+
+    fireEvent.click(homeLink!);
+    expect(window.scrollTo).not.toHaveBeenCalled();
   });
 });
 

@@ -1,4 +1,7 @@
+'use client';
+
 import Image from 'next/image';
+import { usePathname } from 'next/navigation';
 
 import * as Libs from '@/libs';
 import * as Atoms from '@/atoms';
@@ -15,9 +18,23 @@ export function Logo({
   noLink = false,
   ...props
 }: LogoProps & React.HTMLAttributes<HTMLAnchorElement>) {
+  const pathname = usePathname();
+  const isHome = pathname === '/home';
+
   return !noLink ? (
     <Atoms.Link
       href="/home"
+      onClick={(event) => {
+        props.onClick?.(event);
+        if (event.defaultPrevented) return;
+
+        if (isHome) {
+          // Don't hijack modified clicks (new tab/window, etc.)
+          if (event.metaKey || event.ctrlKey || event.shiftKey || event.altKey || event.button !== 0) return;
+          event.preventDefault();
+          window.scrollTo({ top: 0, behavior: 'smooth' });
+        }
+      }}
       className={Libs.cn(`flex items-center min-w-[${width}px] min-h-[${height}px]`, props.className)}
     >
       <LogoImage width={width} height={height} />
