@@ -94,7 +94,7 @@ jobs:
     uses: ./.github/workflows/build-docker-image.yml
     with:
       platforms: ${{ needs.set_vars_franky.outputs.platforms }}
-      env: ${{ needs.check_franky.outputs.env }}
+      env: ${{ needs.set_vars.outputs.env }}
     secrets: inherit
 
   e2e-test:
