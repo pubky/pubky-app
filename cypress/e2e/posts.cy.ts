@@ -386,10 +386,13 @@ describe('posts', () => {
     repostPost({ filterText: postContent });
 
     // After repost, the toast should appear with "Reposted!" and an Undo button
-    cy.contains('[role="status"]', 'Reposted!').should('be.visible');
-    cy.contains('[role="status"]', 'Reposted!').within(() => {
-      cy.contains('button', 'Undo').click();
-    });
+    cy.get('[data-cy="toast"]')
+      .should('be.visible')
+      .and('contain', 'Reposted!')
+      .and('contain', 'Undo')
+      .within(() => {
+        cy.contains('button', 'Undo').click();
+      });
 
     // After clicking Undo, the repost should be removed from the feed
     cy.findFirstPostInFeed().within(() => {
