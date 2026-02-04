@@ -116,8 +116,8 @@ jobs:
     needs: [check_franky]
     uses: ./.github/workflows/build-docker-image.yml
     with:
-      platforms: ${{ env.platforms }}
-      env: ${{ env.pubky_stack_ref }}
+      platforms: ${{ vars.platforms }}
+      env: ${{ vars.pubky_stack_ref }}
     if: ${{ steps.check_franky.outputs.franky_image_exists != 'true' }}
     secrets: inherit
 
