@@ -127,7 +127,7 @@ jobs:
     needs: [rebuild_images, rebuild_franky, check_franky]
     env:
       HOMESERVER_TAG: ${{ needs.rebuild_images.outputs.homeserver_tag }}
-      FRANKY_TAG: ${{ needs.rebuild_franky.outputs.franky-testnet_tag }}
+      FRANKY_TAG: ${{ needs.check_franky.outputs.franky-testnet_tag }}
       PUBKY_NEXUS_TAG: ${{ needs.rebuild_images.outputs.pubky-nexus_tag }}
     permissions:
       contents: read
