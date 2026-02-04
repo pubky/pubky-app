@@ -103,4 +103,4 @@ jobs:
             SUPPORT_API_ACCESS_TOKEN=your_token_here
             SUPPORT_ACCOUNT_ID=123
             SUPPORT_FEEDBACK_INBOX_ID=26
-        if: ${{ inputs.env }} == staging
+        if: ${{ inputs.env }} == 'staging'
