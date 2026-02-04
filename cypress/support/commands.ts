@@ -472,17 +472,16 @@ Cypress.Commands.add('findPostInFeed', (postIdx = 0, filterText?, checkForNewPos
   return findPostInFeed(postIdx, filterText, checkForNewPosts);
 });
 
-// useful for finding a specific post by text in search results
+// useful for finding a specific post card by text in search results
 Cypress.Commands.add('findPostInSearchResults', (filterText?: string, postIdx = 0) => {
   return cy
     .get('[data-cy="post-search-results"]')
-    .find('[data-cy="timeline-posts"]')
-    .children()
-    .then(($posts) => {
-      const filteredPosts = filterText
-        ? $posts.filter((_idx, element) => element.innerText.includes(filterText))
-        : $posts;
-      return cy.wrap(filteredPosts).eq(postIdx);
+    .find('[data-cy="post-card"]')
+    .then(($postCards) => {
+      const filtered = filterText
+        ? $postCards.filter((_idx, element) => element.innerText.includes(filterText))
+        : $postCards;
+      return cy.wrap(filtered).eq(postIdx);
     });
 });
 

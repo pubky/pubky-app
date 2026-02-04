@@ -99,7 +99,7 @@ describe('posts', () => {
     const fillerLength = Math.max(0, MAX_POST_LENGTH - prefix.length);
     const postContent = `${prefix}${'o'.repeat(fillerLength)}`;
 
-    createQuickPost(postContent, MAX_POST_LENGTH);
+    createQuickPost(postContent, [], MAX_POST_LENGTH);
 
     cy.findFirstPostInFeed().within(() => {
       cy.get('[data-cy="post-text"]').should('contain.text', prefix.trim());
@@ -111,7 +111,7 @@ describe('posts', () => {
     const postContent = `🥋🗾⛩️ I can post with emojis! ${Date.now()}`;
     const expectedLength = Array.from(postContent).length;
 
-    createQuickPost(postContent, expectedLength);
+    createQuickPost(postContent, []);
 
     latestPostInFeedContentEq(postContent);
   });

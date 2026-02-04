@@ -110,48 +110,30 @@ export const latestPostInFeedContentEq = (postContent: string) => {
 //   checkNumberOfImagesInPost(expectedNumberOfImages, 0);
 // };
 
-export const createQuickPost = (postContent: string, expectedPostLength?: number) => {
-  cy.get('[data-cy="home-post-input"]')
-    .should('be.visible')
-    .within(() => {
-      // input post content within quick post area
-      cy.get('textarea').should('have.value', '').get('textarea').type(postContent);
-      // verify displayed content length
-      cy.log('postContent.length: ', postContent.length);
-      cy.get('[data-cy="post-header-character-count"]').then((counter) => {
-        expectedPostLength
-          ? expect(counter.text()).to.eq(`${expectedPostLength}/${MAX_POST_LENGTH}`)
-          : expect(counter.text()).to.eq(`${postContent.length}/${MAX_POST_LENGTH}`);
-      });
-      // submit
-      cy.get('[data-cy="post-input-action-bar-post"]').click();
-      // verify textarea is empty
-      cy.get('textarea').should('have.value', '');
-      // verify displayed content length
-      cy.get('[data-cy="post-header-character-count"]').innerTextShouldEq(`0/${MAX_POST_LENGTH}`);
-    });
-};
-
-export const createQuickPostWithTags = (postContent: string, tags: string[], expectedPostLength?: number) => {
+export const createQuickPost = (postContent: string, tags?: string[], expectedPostLength?: number) => {
   cy.get('[data-cy="home-post-input"]')
     .should('be.visible')
     .within(() => {
       // input post content within quick post area
       cy.get('textarea').should('have.value', '').type(postContent);
 
-      // add tags to the post
-      tags.forEach((tag) => {
+      // Add tags if provided
+      if (tags) {
         // Click the add tag button to show the input
         cy.get('[data-cy="post-tag-add-button"]').click();
-        // Type the tag and press Enter to submit
-        cy.get('[data-cy="add-tag-input"]').type(`${tag}{enter}`);
-      });
+
+        // add tags to the post
+        tags.forEach((tag) => {
+          // Type the tag and press Enter to submit
+          cy.get('[data-cy="add-tag-input"]').type(`${tag}{enter}`);
+        });
+      }
 
       // verify displayed content length
       cy.get('[data-cy="post-header-character-count"]').then((counter) => {
         expectedPostLength
           ? expect(counter.text()).to.eq(`${expectedPostLength}/${MAX_POST_LENGTH}`)
-          : expect(counter.text()).to.eq(`${postContent.length}/${MAX_POST_LENGTH}`);
+          : expect(counter.text()).to.eq(`${Array.from(postContent).length}/${MAX_POST_LENGTH}`);
       });
 
       // submit the post
