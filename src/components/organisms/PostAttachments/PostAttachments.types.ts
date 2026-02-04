@@ -2,6 +2,7 @@ import type { PostDetailsModel } from '@/core';
 
 export type PostAttachmentsProps = {
   attachments: PostDetailsModel['attachments'];
+  localAttachments: AttachmentConstructed[] | undefined;
 };
 
 export type AttachmentConstructed = {
