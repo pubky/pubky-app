@@ -16,7 +16,6 @@ jobs:
     runs-on: ubuntu-latest
     outputs:
       homeserver_tag: ${{ steps.set_tag.outputs.homeserver_tag }}
-      franky-testnet_tag: ${{ steps.set_tag.outputs.franky-testnet_tag }}
       pubky-nexus_tag: ${{ steps.set_tag.outputs.pubky-nexus_tag }}
     strategy:
       matrix:
@@ -25,21 +24,11 @@ jobs:
             submodule_dir: "pubky-stack/pubky-nexus/"
             image: "pubky-nexus"
 
-          - app: "franky"
-            submodule_dir: "franky/"
-            image: "franky-testnet"
-            workflow_path: 'franky/.github/workflows/build-docker-image.yml'
-
           - app: "homeserver"
             submodule_dir: "pubky-stack/pubky-core/"
             image: "homeserver"
 
     steps:
-      - name: Checkout this repository
-        uses: actions/checkout@v4
-        with:
-          path: franky
-
       - name: Checkout pubky-stack
         uses: actions/checkout@v4
         with:
@@ -84,24 +73,59 @@ jobs:
           image: ${{ matrix.image }}
           context: ${{ matrix.submodule_dir }}
           platforms: ${{ env.platforms }}
-        if: ${{ steps.check_image.outputs.exists != 'true' &&  matrix.workflow_path == '' }}
+        if: ${{ steps.check_image.outputs.exists != 'true' }}
 
-      - name: Rebuild using ${{ matrix.workflow_path }}
-        uses: ${{ matrix.workflow_path }}
+
+  rebuild_franky:
+    name: Validate and rebuild Franky
+    outputs:
+      franky-testnet_tag: ${{ steps.set_tag.outputs.franky_tag }}
+    runs-on: ubuntu-latest
+    steps:
+
+      - name: Checkout this repository
+        uses: actions/checkout@v4
+
+      - name: Set HEAD commit hash
+        id: sha_tag
+        uses: pubky/ci-workflows/.github/actions/docker/get_head_commit_hash@main
+        with:
+          path: "."
+
+      - name: Set Current Tag as Output
+        id: set_tag
+        run: |
+          echo franky_tag=${{ steps.sha_tag.outputs.hash }} >> $GITHUB_OUTPUT
+
+      - name: Login to registry
+        uses: pubky/ci-workflows/.github/actions/docker/registry_login@main
+        with:
+          registry: ${{ env.registry }}
+          gcp_service_account_key: ${{ secrets.GCR_JSON_KEY }}
+
+      - name: Check if image needs to be rebuild
+        uses: pubky/ci-workflows/.github/actions/docker/check_if_image_exists@main
+        id: check_image
+        with:
+          image: ${{ env.registry }}/franky-testnet
+          tag: ${{ steps.sha_tag.outputs.hash }}
+          arch: ${{ env.platforms }}
+
+      - name: Rebuild Franky
+        uses: 'franky/.github/workflows/build-docker-image.yml'
         with:
           platforms: ${{ env.platforms }}
           env: ${{ env.pubky_stack_ref }}
         secrets: inherit
-        if: ${{ steps.check_image.outputs.exists != 'true' && matrix.workflow_path != '' }}
-
+        if: ${{ steps.check_images.outputs.exists != 'true' }}
 
   e2e-test:
     name: End-to-End Tests
     runs-on: ubuntu-latest
-    needs: [rebuild_images]
+    needs: [rebuild_images, rebuild_franky]
     env:
       HOMESERVER_TAG: ${{ needs.rebuild_images.outputs.homeserver_tag }}
-      FRANKY_TAG: ${{ needs.rebuild_images.outputs.franky-testnet_tag }}
+      FRANKY_TAG: ${{ needs.rebuild_franky.outputs.franky-testnet_tag }}
       PUBKY_NEXUS_TAG: ${{ needs.rebuild_images.outputs.pubky-nexus_tag }}
     permissions:
       contents: read
@@ -141,6 +165,11 @@ jobs:
           # cannot use ssh-key (deploy key) for private submodules due to the
           # limitation where only a single key can be used per repo checkout
           # see https://github.com/actions/checkout/issues/183
+
+      - name: Checkout this repository
+        uses: actions/checkout@v4
+        with:
+          path: franky
 
       - name: Login to registry
         uses: pubky/ci-workflows/.github/actions/docker/registry_login@main
