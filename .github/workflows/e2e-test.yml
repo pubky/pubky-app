@@ -76,10 +76,11 @@ jobs:
         if: ${{ steps.check_image.outputs.exists != 'true' }}
 
 
-  rebuild_franky:
+  check_franky:
     name: Validate and rebuild Franky
     outputs:
       franky-testnet_tag: ${{ steps.set_tag.outputs.franky_tag }}
+      franky_image_exists: ${{ steps.check_image.outputs.exists }}
     runs-on: ubuntu-latest
     steps:
 
@@ -111,16 +112,19 @@ jobs:
           tag: ${{ steps.sha_tag.outputs.hash }}
           arch: ${{ env.platforms }}
 
-      - uses: ./.github/workflows/build-docker-image.yml
-        with:
-          platforms: ${{ env.platforms }}
-          env: ${{ env.pubky_stack_ref }}
-        if: ${{ steps.check_images.outputs.exists != 'true' }}
+  rebuild_franky:
+    needs: [check_franky]
+    uses: ./.github/workflows/build-docker-image.yml
+    with:
+      platforms: ${{ env.platforms }}
+      env: ${{ env.pubky_stack_ref }}
+    if: ${{ steps.check_franky.outputs.franky_image_exists != 'true' }}
+    secrets: inherit
 
   e2e-test:
     name: End-to-End Tests
     runs-on: ubuntu-latest
-    needs: [rebuild_images, rebuild_franky]
+    needs: [rebuild_images, rebuild_franky, check_franky]
     env:
       HOMESERVER_TAG: ${{ needs.rebuild_images.outputs.homeserver_tag }}
       FRANKY_TAG: ${{ needs.rebuild_franky.outputs.franky-testnet_tag }}
