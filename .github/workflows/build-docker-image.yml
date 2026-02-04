@@ -64,7 +64,7 @@ jobs:
       - name: Build and push image pubky-app (testnet)
         uses: pubky/ci-workflows/.github/actions/docker/build_and_push@main
         with:
-          image: 'pubky-app-testnet'
+          image: 'franky-testnet'
           context: '.'
           registry: ${{ env.registry }}
           platforms: ${{ inputs.platforms }}
