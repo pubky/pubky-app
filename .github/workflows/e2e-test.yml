@@ -3,7 +3,7 @@ env:
   pubky_stack_ref: 'production'
   platforms: 'linux/amd64'
   registry: 'europe-west6-docker.pkg.dev/infra-464608/synonym-private-repo'
-  fanky_env: 'staging'
+  franky_env: 'testnet'
 
 on:
   workflow_dispatch:
@@ -77,66 +77,20 @@ jobs:
         if: ${{ steps.check_image.outputs.exists != 'true' }}
 
 
-  check_franky:
-    name: Validate and rebuild Franky
-    outputs:
-      franky-testnet_tag: ${{ steps.set_tag.outputs.franky_tag }}
-      franky_image_exists: ${{ steps.check_image.outputs.exists }}
-      franky_env: ${{ steps.set_vars.outputs.franky_env }}
-      franky_platforms: ${{ steps.set_vars.outputs.franky_platforms }}
-    runs-on: ubuntu-latest
-    steps:
-
-      - name: Checkout this repository
-        uses: actions/checkout@v4
-
-      - name: Set HEAD commit hash
-        id: sha_tag
-        uses: pubky/ci-workflows/.github/actions/docker/get_head_commit_hash@main
-        with:
-          path: "."
-
-      - name: Set Current Tag as Output
-        id: set_tag
-        run: |
-          echo franky_tag=${{ steps.sha_tag.outputs.hash }} >> $GITHUB_OUTPUT
-
-      - name: Set Franky vars
-        id: set_vars
-        run: |
-          echo franky_env=${{ env.franky_env }} >> $GITHUB_OUTPUT
-          echo franky_platforms=${{ env.platforms }} >> $GITHUB_OUTPUT
-
-      - name: Login to registry
-        uses: pubky/ci-workflows/.github/actions/docker/registry_login@main
-        with:
-          registry: ${{ env.registry }}
-          gcp_service_account_key: ${{ secrets.GCR_JSON_KEY }}
-
-      - name: Check if image needs to be rebuild
-        uses: pubky/ci-workflows/.github/actions/docker/check_if_image_exists@main
-        id: check_image
-        with:
-          image: ${{ env.registry }}/franky-testnet
-          tag: ${{ steps.sha_tag.outputs.hash }}
-          arch: ${{ env.platforms }}
-
   rebuild_franky:
-    needs: [check_franky]
     uses: ./.github/workflows/build-docker-image.yml
     with:
       platforms: ${{ needs.check_franky.outputs.franky_platforms }}
       env: ${{ needs.check_franky.outputs.franky_env }}
-    if: ${{ needs.check_franky.outputs.franky_image_exists != 'true' }}
     secrets: inherit
 
   e2e-test:
     name: End-to-End Tests
     runs-on: ubuntu-latest
-    needs: [rebuild_images, rebuild_franky, check_franky]
+    needs: [rebuild_images, rebuild_franky]
     env:
       HOMESERVER_TAG: ${{ needs.rebuild_images.outputs.homeserver_tag }}
-      FRANKY_TAG: ${{ needs.check_franky.outputs.franky-testnet_tag }}
+      FRANKY_TAG: ${{ needs.rebuild_franky.outputs.image_tag }}
       PUBKY_NEXUS_TAG: ${{ needs.rebuild_images.outputs.pubky-nexus_tag }}
     permissions:
       contents: read

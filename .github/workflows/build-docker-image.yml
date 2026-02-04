@@ -28,6 +28,10 @@ on:
         - linux/amd64
 
   workflow_call:
+    outputs:
+      image_tag:
+        description: 'Image tag'
+        value: ${{ jobs.check_image.outputs.image_tag }}
     inputs:
       env:
         description: 'Env for image'
@@ -48,8 +52,46 @@ env:
   registry: "europe-west6-docker.pkg.dev/infra-464608/synonym-private-repo"
 
 jobs:
+  check_image:
+    name: Validate and rebuild Franky
+    outputs:
+      image_tag: ${{ steps.set_tag.outputs.image_tag }}
+      image_exists: ${{ steps.check_image.outputs.exists }}
+    runs-on: ubuntu-latest
+    steps:
+
+      - name: Checkout this repository
+        uses: actions/checkout@v4
+
+      - name: Set HEAD commit hash
+        id: sha_tag
+        uses: pubky/ci-workflows/.github/actions/docker/get_head_commit_hash@main
+        with:
+          path: "."
+
+      - name: Set Current Tag as Output
+        id: set_tag
+        run: |
+          echo image_tag=${{ steps.sha_tag.outputs.hash }} >> $GITHUB_OUTPUT
+
+      - name: Login to registry
+        uses: pubky/ci-workflows/.github/actions/docker/registry_login@main
+        with:
+          registry: ${{ env.registry }}
+          gcp_service_account_key: ${{ secrets.GCR_JSON_KEY }}
+
+      - name: Check if image needs to be rebuild
+        uses: pubky/ci-workflows/.github/actions/docker/check_if_image_exists@main
+        id: check_image
+        with:
+          image: ${{ env.registry }}/franky-{{ inputs.env }}
+          tag: ${{ steps.sha_tag.outputs.hash }}
+          arch: ${{ inputs.platforms }}
+
   build_image:
     name: "Build image for ${{ inputs.env }}"
+    needs: [check_image]
+    if: ${{ needs.check_image.outputs.image_exists != true }}
     runs-on: ["ubuntu-latest"]
     steps:
       - name: Checkout repository
@@ -103,4 +145,4 @@ jobs:
             SUPPORT_API_ACCESS_TOKEN=your_token_here
             SUPPORT_ACCOUNT_ID=123
             SUPPORT_FEEDBACK_INBOX_ID=26
-        if: ${{ inputs.env }} == 'staging'
+        if: ${{ inputs.env }} == 'testnet'
