@@ -151,11 +151,11 @@ export function NotificationItem({ notification, isUnread }: NotificationItemPro
             )}{' '}
             {/* Action text - links to notification target (post or profile) */}
             {notificationLink ? (
-              <Link href={notificationLink} className="text-muted-foreground hover:underline">
+              <Link href={notificationLink} className="text-foreground hover:underline">
                 {actionText}
               </Link>
             ) : (
-              <span className="text-muted-foreground">{actionText}</span>
+              <span className="text-foreground">{actionText}</span>
             )}
           </Atoms.Typography>
 
