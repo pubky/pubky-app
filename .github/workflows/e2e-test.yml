@@ -111,7 +111,7 @@ jobs:
           tag: ${{ steps.sha_tag.outputs.hash }}
           arch: ${{ env.platforms }}
 
-      - uses: 'franky/.github/workflows/build-docker-image.yml'
+      - uses: ./franky/.github/workflows/build-docker-image.yml
         with:
           platforms: ${{ env.platforms }}
           env: ${{ env.pubky_stack_ref }}
