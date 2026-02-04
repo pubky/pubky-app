@@ -118,7 +118,7 @@ jobs:
     with:
       platforms: ${{ vars.platforms }}
       env: ${{ vars.pubky_stack_ref }}
-    if: ${{ steps.check_franky.outputs.franky_image_exists != 'true' }}
+    if: ${{ needs.check_franky.outputs.franky_image_exists != 'true' }}
     secrets: inherit
 
   e2e-test:
