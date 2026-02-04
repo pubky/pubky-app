@@ -115,7 +115,6 @@ jobs:
         with:
           platforms: ${{ env.platforms }}
           env: ${{ env.pubky_stack_ref }}
-        secrets: inherit
         if: ${{ steps.check_images.outputs.exists != 'true' }}
 
   e2e-test:
