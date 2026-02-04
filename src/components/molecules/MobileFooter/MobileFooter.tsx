@@ -25,6 +25,7 @@ export function MobileFooter({ className }: MobileFooterProps) {
   const { isPublicRoute } = Hooks.usePublicRoute();
   const { userDetails, currentUserPubky } = Hooks.useCurrentUserProfile();
   const unreadNotifications = Core.useNotificationStore((state) => state.selectUnread());
+  const localAvatarUrl = Core.useLocalFilesStore((state) => state.profile);
 
   const isActive = (path: string) => pathname === path;
 
@@ -34,7 +35,11 @@ export function MobileFooter({ className }: MobileFooterProps) {
   }
 
   // Get avatar URL and fallback initial - same logic as desktop header
-  const avatarUrl = currentUserPubky ? Core.FileController.getAvatarUrl(currentUserPubky) : undefined;
+  const avatarUrl =
+    localAvatarUrl ??
+    (currentUserPubky && userDetails?.image
+      ? Core.FileController.getAvatarUrl(currentUserPubky, userDetails.indexed_at)
+      : undefined);
   const avatarName = userDetails?.name || 'U';
 
   const navItems = [

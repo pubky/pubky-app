@@ -57,7 +57,7 @@ vi.mock('@/app', async () => {
 // Mock Hooks
 vi.mock('@/hooks', () => ({
   useCurrentUserProfile: vi.fn(() => ({
-    userDetails: { name: 'Test User' },
+    userDetails: { name: 'Test User', image: null, indexed_at: 123 },
     currentUserPubky: 'pk:test-user-pubky',
   })),
   usePublicRoute: vi.fn(() => ({
@@ -72,10 +72,15 @@ vi.mock('@/core', async () => {
   return {
     ...actual,
     FileController: {
-      getAvatarUrl: vi.fn((pubky: string) => `https://example.com/avatar/${pubky}`),
+      getAvatarUrl: vi.fn((pubky: string, version?: string | number) =>
+        version ? `https://example.com/avatar/${pubky}?v=${version}` : `https://example.com/avatar/${pubky}`,
+      ),
     },
     useAuthStore: vi.fn((selector: (state: { currentUserPubky: string | null }) => unknown) =>
       selector({ currentUserPubky: 'pk:test-user-pubky' }),
+    ),
+    useLocalFilesStore: vi.fn((selector: (state: { profile: string | null }) => unknown) =>
+      selector({ profile: null }),
     ),
     useNotificationStore: vi.fn((selector: (state: { selectUnread: () => number }) => unknown) =>
       selector({ selectUnread: mockSelectUnread }),
@@ -148,6 +153,30 @@ describe('MobileFooter', () => {
     const avatarName = screen.getByTestId('avatar-name');
     expect(avatarName).toBeInTheDocument();
     expect(avatarName).toHaveTextContent('Test User');
+  });
+
+  it('does not request avatar URL when user has no avatar set', async () => {
+    render(<MobileFooter />);
+
+    const { FileController } = await import('@/core');
+    expect(vi.mocked(FileController.getAvatarUrl)).not.toHaveBeenCalled();
+    expect(screen.getByTestId('avatar-image').getAttribute('src')).toBe(null);
+  });
+
+  it('requests avatar URL when user has an avatar set', async () => {
+    const { useCurrentUserProfile } = await import('@/hooks');
+    vi.mocked(useCurrentUserProfile).mockReturnValue({
+      userDetails: { name: 'Test User', image: 'has-avatar', indexed_at: 456 },
+      currentUserPubky: 'pk:test-user-pubky',
+    });
+
+    render(<MobileFooter />);
+
+    const { FileController } = await import('@/core');
+    expect(vi.mocked(FileController.getAvatarUrl)).toHaveBeenCalledWith('pk:test-user-pubky', 456);
+    expect(screen.getByTestId('avatar-image').getAttribute('src')).toBe(
+      'https://example.com/avatar/pk:test-user-pubky?v=456',
+    );
   });
 
   it('applies correct icon classes', () => {
