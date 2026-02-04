@@ -255,7 +255,6 @@ jobs:
           headed: false
           summary-title: ${{ matrix.browser }} - Desktop
           install: false
-          start: npm run start
           wait-on: 'http://localhost:3000'
           wait-on-timeout: 180
 
