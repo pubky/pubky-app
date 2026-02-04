@@ -27,34 +27,34 @@ export function ButtonsNavigation({
   loadingContinueButton = false,
 }: ButtonsNavigationProps) {
   return (
-    <Atoms.Container className={Libs.cn('flex-row justify-between gap-3 lg:gap-6', className)}>
+    <Atoms.Container className={Libs.cn('gap-3 md:flex-row md:justify-between lg:gap-6', className)}>
       <Atoms.Button
         id={`${id}-back-btn`}
         size="lg"
-        className="w-full flex-1 rounded-full md:flex-0"
+        className="w-full rounded-full md:w-auto md:flex-1"
         variant={'secondary'}
         onClick={onHandleBackButton}
         disabled={backButtonDisabled}
       >
-        <Libs.ArrowLeft className="mr-2 h-4 w-4" />
+        <Libs.ArrowLeft className="mr-1.5 h-4 w-4" />
         {backText}
       </Atoms.Button>
       {!hiddenContinueButton && (
         <Atoms.Button
           id={`${id}-continue-btn`}
           size="lg"
-          className="w-full flex-1 rounded-full md:flex-0"
+          className="w-full rounded-full md:w-auto md:flex-1"
           onClick={onHandleContinueButton}
           disabled={loadingContinueButton || continueButtonDisabled}
         >
           {loadingContinueButton ? (
             <>
-              <Libs.Loader2 className="mr-2 h-4 w-4 animate-spin" />
+              <Libs.Loader2 className="mr-1.5 h-4 w-4 animate-spin" />
               {continueText}
             </>
           ) : (
             <>
-              <Libs.ArrowRight className="mr-2 h-4 w-4" />
+              <Libs.ArrowRight className="mr-1.5 h-4 w-4" />
               {continueText}
             </>
           )}
