@@ -1119,5 +1119,10 @@
   "share": {
     "title": "Compartir en Pubky",
     "cancel": "Cancelar"
+  },
+  "pullToRefresh": {
+    "pullToRefresh": "Desliza para actualizar",
+    "releaseToRefresh": "Suelta para actualizar",
+    "refreshing": "Actualizando..."
   }
 }
