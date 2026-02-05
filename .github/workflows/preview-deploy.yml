@@ -1,0 +1,183 @@
+name: PR Preview Deployment
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened]
+  pull_request_target:
+    types: [closed]
+  workflow_dispatch:
+    inputs:
+      pr_number:
+        description: 'PR number (use 9999 for testing)'
+        required: true
+        default: '9999'
+      action:
+        description: 'Action'
+        required: true
+        type: choice
+        options:
+          - deploy
+          - cleanup
+
+env:
+  REGISTRY: europe-west6-docker.pkg.dev/infra-464608/synonym-private-repo
+  REGION: europe-west6
+  PROJECT_ID: infra-464608
+  SERVICE_BASE_NAME: franky-preview
+
+concurrency:
+  group: preview-${{ github.event.pull_request.number || github.event.inputs.pr_number }}
+  cancel-in-progress: true
+
+jobs:
+  deploy-preview:
+    name: Deploy Preview
+    if: |
+      (github.event_name == 'pull_request' && github.event.action != 'closed') ||
+      (github.event_name == 'workflow_dispatch' && github.event.inputs.action == 'deploy')
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pull-requests: write
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set variables
+        id: vars
+        run: |
+          if [ "${{ github.event_name }}" == "workflow_dispatch" ]; then
+            PR_NUMBER="${{ github.event.inputs.pr_number }}"
+          else
+            PR_NUMBER="${{ github.event.pull_request.number }}"
+          fi
+          SERVICE_NAME="${{ env.SERVICE_BASE_NAME }}-pr-${PR_NUMBER}"
+          echo "pr_number=${PR_NUMBER}" >> $GITHUB_OUTPUT
+          echo "service_name=${SERVICE_NAME}" >> $GITHUB_OUTPUT
+          echo "short_sha=$(echo ${{ github.sha }} | cut -c1-7)" >> $GITHUB_OUTPUT
+
+      - name: Login to registry
+        uses: pubky/ci-workflows/.github/actions/docker/registry_login@main
+        with:
+          registry: ${{ env.REGISTRY }}
+          gcp_service_account_key: ${{ secrets.GCR_JSON_KEY }}
+
+      - name: Build and push image
+        uses: pubky/ci-workflows/.github/actions/docker/build_and_push@main
+        with:
+          image: ${{ steps.vars.outputs.service_name }}
+          context: '.'
+          registry: ${{ env.REGISTRY }}
+          platforms: linux/amd64
+          latest: false
+          sha_tag: true
+          build_args: |
+            NEXT_PUBLIC_DB_VERSION=2
+            NEXT_PUBLIC_DB_NAME=franky-preview-${{ steps.vars.outputs.pr_number }}
+            NEXT_PUBLIC_DEBUG_MODE=true
+            NEXT_PUBLIC_SYNC_TTL=300000
+            NEXT_PUBLIC_NOTIFICATION_POLL_INTERVAL_MS=8888
+            NEXT_PUBLIC_NOTIFICATION_POLL_ON_START=false
+            NEXT_PUBLIC_NOTIFICATION_RESPECT_PAGE_VISIBILITY=true
+            NEXT_PUBLIC_STREAM_POLL_INTERVAL_MS=8888
+            NEXT_PUBLIC_STREAM_POLL_ON_START=false
+            NEXT_PUBLIC_STREAM_RESPECT_PAGE_VISIBILITY=true
+            NEXT_PUBLIC_STREAM_FETCH_LIMIT=10
+            NEXT_PUBLIC_STREAM_CACHE_MAX_AGE_MS=300000
+            NEXT_MAX_STREAM_TAGS=5
+            NEXT_PUBLIC_TTL_POST_MS=300000
+            NEXT_PUBLIC_TTL_USER_MS=600000
+            NEXT_PUBLIC_TTL_BATCH_INTERVAL_MS=5000
+            NEXT_PUBLIC_TTL_POST_MAX_BATCH_SIZE=20
+            NEXT_PUBLIC_TTL_USER_MAX_BATCH_SIZE=20
+            NEXT_PUBLIC_TTL_RETRY_DELAY_MS=60000
+            NEXT_PUBLIC_HOMESERVER=ufibwbmed6jeq9k4p583go95wofakh9fwpp4k734trq79pd9u1uy
+            NEXT_PUBLIC_NEXUS_URL=https://nexus.staging.pubky.app
+            NEXT_PUBLIC_CDN_URL=https://nexus.staging.pubky.app/static
+            NEXT_PUBLIC_TESTNET=false
+            NEXT_PUBLIC_PKARR_RELAYS=["https://pkarr.pubky.app","https://pkarr.pubky.org"]
+            NEXT_PUBLIC_DEFAULT_HTTP_RELAY=https://httprelay.staging.pubky.app
+            NEXT_PUBLIC_EXCHANGE_RATE_API=https://api1.blocktank.to/api/fx/rates/btc
+            NEXT_PUBLIC_HOMEGATE_URL=https://homegate.staging.pubky.app
+            NEXT_PUBLIC_MODERATION_ID=euwmq57zefw5ynnkhh37b3gcmhs7g3cptdbw1doaxj1pbmzp3wro
+            NEXT_PUBLIC_MODERATED_TAGS=["nudity"]
+
+      - name: Authenticate to GCP
+        uses: google-github-actions/auth@v2
+        with:
+          credentials_json: ${{ secrets.GCR_JSON_KEY }}
+
+      - name: Deploy to Cloud Run
+        id: deploy
+        uses: google-github-actions/deploy-cloudrun@v2
+        with:
+          service: ${{ steps.vars.outputs.service_name }}
+          region: ${{ env.REGION }}
+          image: ${{ env.REGISTRY }}/${{ steps.vars.outputs.service_name }}:${{ github.sha }}
+          flags: |
+            --allow-unauthenticated
+            --memory=512Mi
+            --cpu=1
+            --min-instances=0
+            --max-instances=2
+            --port=3000
+            --cpu-throttling
+
+      - name: Find existing comment
+        if: github.event_name == 'pull_request'
+        uses: peter-evans/find-comment@v3
+        id: find-comment
+        with:
+          issue-number: ${{ github.event.pull_request.number }}
+          comment-author: 'github-actions[bot]'
+          body-includes: '🚀 Preview'
+
+      - name: Comment on PR
+        if: github.event_name == 'pull_request'
+        uses: peter-evans/create-or-update-comment@v4
+        with:
+          comment-id: ${{ steps.find-comment.outputs.comment-id }}
+          issue-number: ${{ github.event.pull_request.number }}
+          edit-mode: replace
+          body: |
+            ## 🚀 Preview Deployment
+
+            **URL:** ${{ steps.deploy.outputs.url }}
+
+            `${{ steps.vars.outputs.service_name }}` • `${{ steps.vars.outputs.short_sha }}`
+
+  cleanup-preview:
+    name: Cleanup Preview
+    if: |
+      (github.event_name == 'pull_request_target' && github.event.action == 'closed') ||
+      (github.event_name == 'workflow_dispatch' && github.event.inputs.action == 'cleanup')
+    runs-on: ubuntu-latest
+    steps:
+      - name: Set variables
+        id: vars
+        run: |
+          if [ "${{ github.event_name }}" == "workflow_dispatch" ]; then
+            PR_NUMBER="${{ github.event.inputs.pr_number }}"
+          else
+            PR_NUMBER="${{ github.event.pull_request.number }}"
+          fi
+          echo "service_name=${{ env.SERVICE_BASE_NAME }}-pr-${PR_NUMBER}" >> $GITHUB_OUTPUT
+
+      - name: Authenticate to GCP
+        uses: google-github-actions/auth@v2
+        with:
+          credentials_json: ${{ secrets.GCR_JSON_KEY }}
+
+      - name: Setup gcloud
+        uses: google-github-actions/setup-gcloud@v2
+
+      - name: Delete service and images
+        run: |
+          gcloud run services delete ${{ steps.vars.outputs.service_name }} \
+            --region=${{ env.REGION }} --quiet || true
+
+          gcloud artifacts docker images list \
+            ${{ env.REGISTRY }}/${{ steps.vars.outputs.service_name }} \
+            --format="value(package)" 2>/dev/null | \
+          xargs -I {} gcloud artifacts docker images delete {} --quiet --delete-tags || true
