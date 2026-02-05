@@ -28,7 +28,7 @@ export function WhoTaggedExpandedList({
   const { toggleFollow, isUserLoading } = Hooks.useFollowUser();
   const { requireAuth } = Hooks.useRequireAuth();
   const { currentUserPubky } = Core.useAuthStore();
-  const { getUsersWithAvatars, isLoading } = Hooks.useBulkUserAvatars(taggerIds);
+  const { getUsersWithAvatars } = Hooks.useBulkUserAvatars(taggerIds);
 
   // Build fallback map for user data not yet in IndexedDB
   const fallbackMap = new Map<string, TaggerWithAvatar>();
@@ -66,7 +66,7 @@ export function WhoTaggedExpandedList({
       className="flex max-h-(--who-tagged-expanded-list-max-height) w-full max-w-(--who-tagged-expanded-list-width) flex-col gap-2 overflow-y-auto rounded-md border border-border bg-popover p-4 shadow-2xl"
       data-testid={dataTestId || 'who-tagged-expanded-list'}
     >
-      {(isLoadingTaggers || isLoading) && (
+      {isLoadingTaggers && (
         <Atoms.Container overrideDefaults className="flex items-center gap-2">
           <Atoms.Spinner size="sm" />
           <Atoms.Typography as="p" className="text-sm text-muted-foreground">
