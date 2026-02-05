@@ -8,20 +8,14 @@ body:
     attributes:
       value: |
         Thanks for suggesting a feature! 🚀
-        
-        Help us understand what you need and why it would be valuable.
 
   - type: textarea
     id: problem
     attributes:
       label: Problem Statement
-      description: |
-        What problem does this feature solve? Why is it needed?
-        A clear problem statement helps us prioritize and design the right solution.
+      description: What problem does this feature solve?
       placeholder: |
         As a user, I want to [do something] so that [benefit].
-        
-        Currently, I have to [workaround], which is [frustrating/slow/impossible].
     validations:
       required: true
 
@@ -29,90 +23,14 @@ body:
     id: solution
     attributes:
       label: Proposed Solution
-      description: Describe what you'd like to happen. Be as specific as possible.
-      placeholder: |
-        I would like a button that...
-        When I click it, it should...
-        The result should show...
-    validations:
-      required: true
-
-  - type: dropdown
-    id: area
-    attributes:
-      label: Feature Area
-      description: Which part of the app would this affect?
-      options:
-        - Feed / Timeline
-        - Post Creation / Editing
-        - Profile / User
-        - Authentication / Login
-        - Notifications
-        - Search
-        - Tags
-        - Bookmarks
-        - Settings
-        - Navigation
-        - Media (images/videos)
-        - New Feature Area
-    validations:
-      required: true
-
-  - type: dropdown
-    id: type
-    attributes:
-      label: Feature Type
-      description: What kind of feature is this?
-      options:
-        - New Feature (doesn't exist yet)
-        - Enhancement (improve existing feature)
-        - UX Improvement (better user experience)
-        - Performance (make something faster)
-        - Accessibility (make it more accessible)
-    validations:
-      required: true
-
-  - type: textarea
-    id: acceptance
-    attributes:
-      label: Acceptance Criteria
       description: |
-        How will we know this feature is complete? List specific, testable criteria.
+        Describe what you'd like to happen. Include links to design (Figma, mockups, etc.) if you have them.
       placeholder: |
-        - [ ] User can see a "Save Draft" button when composing a post
-        - [ ] Clicking the button saves the post locally
-        - [ ] Draft appears in a "Drafts" section
-        - [ ] User can resume editing the draft
-        - [ ] Draft is deleted after publishing
-    validations:
-      required: false
-
-  - type: textarea
-    id: design
-    attributes:
-      label: Design / Mockups
-      description: |
-        Do you have any visual ideas? Figma links, sketches, or screenshots of similar features in other apps.
-      placeholder: |
-        Figma: https://www.figma.com/...
+        I would like...
         
-        Or describe the UI:
-        - Button should be in the top-right of the compose modal
-        - Should match the existing button style (secondary variant)
+        Design: [link to Figma, sketch, or similar]
     validations:
-      required: false
-
-  - type: textarea
-    id: alternatives
-    attributes:
-      label: Alternatives Considered
-      description: Have you thought of other ways to solve this problem?
-      placeholder: |
-        I also considered:
-        1. Auto-saving every 30 seconds (but this might be confusing)
-        2. Storing in browser localStorage (but loses sync across devices)
-    validations:
-      required: false
+      required: true
 
   - type: dropdown
     id: priority
@@ -123,17 +41,5 @@ body:
         - Nice to have (would be cool)
         - Important (would use frequently)
         - Critical (can't use app effectively without it)
-    validations:
-      required: false
-
-  - type: textarea
-    id: context
-    attributes:
-      label: Additional Context
-      description: Any other information that might help us understand or implement this feature.
-      placeholder: |
-        - Similar feature in Twitter/Mastodon works like...
-        - This would help with accessibility because...
-        - Related to issue #123
     validations:
       required: false

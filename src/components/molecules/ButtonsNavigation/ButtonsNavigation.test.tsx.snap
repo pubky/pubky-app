@@ -2,11 +2,11 @@
 
 exports[`ButtonsNavigation - Snapshots > matches snapshot with back button disabled 1`] = `
 <div
-  class="mx-auto w-full flex flex-row justify-between gap-3 lg:gap-6"
+  class="mx-auto w-full flex-col flex gap-3 md:flex-row md:justify-between lg:gap-6"
   data-testid="container"
 >
   <button
-    class="inline-flex items-center justify-center whitespace-nowrap transition-all disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg:not([class*=\\"size-\\"])]:size-4 [&_svg]:shrink-0 outline-none focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[3px] aria-invalid:ring-destructive/40 aria-invalid:border-destructive cursor-pointer border shadow-xs bg-secondary text-secondary-foreground hover:bg-secondary/80 h-auto gap-2 px-4 py-2.5 sm:px-8 sm:py-5 text-sm font-bold leading-normal w-full flex-1 rounded-full md:flex-0"
+    class="inline-flex items-center justify-center whitespace-nowrap transition-all disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg:not([class*=\\"size-\\"])]:size-4 shrink-0 [&_svg]:shrink-0 outline-none focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[3px] aria-invalid:ring-destructive/40 aria-invalid:border-destructive cursor-pointer border shadow-xs bg-secondary text-secondary-foreground hover:bg-secondary/80 h-auto gap-2 px-4 py-2.5 sm:px-8 sm:py-5 text-sm font-bold leading-normal w-full rounded-full md:w-auto md:flex-1"
     data-size="lg"
     data-slot="button"
     data-variant="secondary"
@@ -15,7 +15,7 @@ exports[`ButtonsNavigation - Snapshots > matches snapshot with back button disab
   >
     <svg
       aria-hidden="true"
-      class="lucide lucide-arrow-left mr-2 h-4 w-4"
+      class="lucide lucide-arrow-left mr-1.5 h-4 w-4"
       fill="none"
       height="24"
       stroke="currentColor"
@@ -36,14 +36,14 @@ exports[`ButtonsNavigation - Snapshots > matches snapshot with back button disab
     Back
   </button>
   <button
-    class="inline-flex items-center justify-center whitespace-nowrap transition-all disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg:not([class*=\\"size-\\"])]:size-4 [&_svg]:shrink-0 outline-none focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[3px] aria-invalid:ring-destructive/40 aria-invalid:border-destructive cursor-pointer border shadow-xs bg-brand/16 text-brand hover:!bg-brand/30 border-brand h-auto gap-2 px-4 py-2.5 sm:px-8 sm:py-5 text-sm font-bold leading-normal w-full flex-1 rounded-full md:flex-0"
+    class="inline-flex items-center justify-center whitespace-nowrap transition-all disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg:not([class*=\\"size-\\"])]:size-4 shrink-0 [&_svg]:shrink-0 outline-none focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[3px] aria-invalid:ring-destructive/40 aria-invalid:border-destructive cursor-pointer border shadow-xs bg-brand/16 text-brand hover:!bg-brand/30 border-brand h-auto gap-2 px-4 py-2.5 sm:px-8 sm:py-5 text-sm font-bold leading-normal w-full rounded-full md:w-auto md:flex-1"
     data-size="lg"
     data-slot="button"
     id="undefined-continue-btn"
   >
     <svg
       aria-hidden="true"
-      class="lucide lucide-arrow-right mr-2 h-4 w-4"
+      class="lucide lucide-arrow-right mr-1.5 h-4 w-4"
       fill="none"
       height="24"
       stroke="currentColor"
@@ -68,11 +68,11 @@ exports[`ButtonsNavigation - Snapshots > matches snapshot with back button disab
 
 exports[`ButtonsNavigation - Snapshots > matches snapshot with back callback only 1`] = `
 <div
-  class="mx-auto w-full flex flex-row justify-between gap-3 lg:gap-6"
+  class="mx-auto w-full flex-col flex gap-3 md:flex-row md:justify-between lg:gap-6"
   data-testid="container"
 >
   <button
-    class="inline-flex items-center justify-center whitespace-nowrap transition-all disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg:not([class*=\\"size-\\"])]:size-4 [&_svg]:shrink-0 outline-none focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[3px] aria-invalid:ring-destructive/40 aria-invalid:border-destructive cursor-pointer border shadow-xs bg-secondary text-secondary-foreground hover:bg-secondary/80 h-auto gap-2 px-4 py-2.5 sm:px-8 sm:py-5 text-sm font-bold leading-normal w-full flex-1 rounded-full md:flex-0"
+    class="inline-flex items-center justify-center whitespace-nowrap transition-all disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg:not([class*=\\"size-\\"])]:size-4 shrink-0 [&_svg]:shrink-0 outline-none focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[3px] aria-invalid:ring-destructive/40 aria-invalid:border-destructive cursor-pointer border shadow-xs bg-secondary text-secondary-foreground hover:bg-secondary/80 h-auto gap-2 px-4 py-2.5 sm:px-8 sm:py-5 text-sm font-bold leading-normal w-full rounded-full md:w-auto md:flex-1"
     data-size="lg"
     data-slot="button"
     data-variant="secondary"
@@ -80,7 +80,7 @@ exports[`ButtonsNavigation - Snapshots > matches snapshot with back callback onl
   >
     <svg
       aria-hidden="true"
-      class="lucide lucide-arrow-left mr-2 h-4 w-4"
+      class="lucide lucide-arrow-left mr-1.5 h-4 w-4"
       fill="none"
       height="24"
       stroke="currentColor"
@@ -101,14 +101,14 @@ exports[`ButtonsNavigation - Snapshots > matches snapshot with back callback onl
     Back
   </button>
   <button
-    class="inline-flex items-center justify-center whitespace-nowrap transition-all disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg:not([class*=\\"size-\\"])]:size-4 [&_svg]:shrink-0 outline-none focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[3px] aria-invalid:ring-destructive/40 aria-invalid:border-destructive cursor-pointer border shadow-xs bg-brand/16 text-brand hover:!bg-brand/30 border-brand h-auto gap-2 px-4 py-2.5 sm:px-8 sm:py-5 text-sm font-bold leading-normal w-full flex-1 rounded-full md:flex-0"
+    class="inline-flex items-center justify-center whitespace-nowrap transition-all disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg:not([class*=\\"size-\\"])]:size-4 shrink-0 [&_svg]:shrink-0 outline-none focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[3px] aria-invalid:ring-destructive/40 aria-invalid:border-destructive cursor-pointer border shadow-xs bg-brand/16 text-brand hover:!bg-brand/30 border-brand h-auto gap-2 px-4 py-2.5 sm:px-8 sm:py-5 text-sm font-bold leading-normal w-full rounded-full md:w-auto md:flex-1"
     data-size="lg"
     data-slot="button"
     id="undefined-continue-btn"
   >
     <svg
       aria-hidden="true"
-      class="lucide lucide-arrow-right mr-2 h-4 w-4"
+      class="lucide lucide-arrow-right mr-1.5 h-4 w-4"
       fill="none"
       height="24"
       stroke="currentColor"
@@ -133,11 +133,11 @@ exports[`ButtonsNavigation - Snapshots > matches snapshot with back callback onl
 
 exports[`ButtonsNavigation - Snapshots > matches snapshot with both buttons disabled 1`] = `
 <div
-  class="mx-auto w-full flex flex-row justify-between gap-3 lg:gap-6"
+  class="mx-auto w-full flex-col flex gap-3 md:flex-row md:justify-between lg:gap-6"
   data-testid="container"
 >
   <button
-    class="inline-flex items-center justify-center whitespace-nowrap transition-all disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg:not([class*=\\"size-\\"])]:size-4 [&_svg]:shrink-0 outline-none focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[3px] aria-invalid:ring-destructive/40 aria-invalid:border-destructive cursor-pointer border shadow-xs bg-secondary text-secondary-foreground hover:bg-secondary/80 h-auto gap-2 px-4 py-2.5 sm:px-8 sm:py-5 text-sm font-bold leading-normal w-full flex-1 rounded-full md:flex-0"
+    class="inline-flex items-center justify-center whitespace-nowrap transition-all disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg:not([class*=\\"size-\\"])]:size-4 shrink-0 [&_svg]:shrink-0 outline-none focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[3px] aria-invalid:ring-destructive/40 aria-invalid:border-destructive cursor-pointer border shadow-xs bg-secondary text-secondary-foreground hover:bg-secondary/80 h-auto gap-2 px-4 py-2.5 sm:px-8 sm:py-5 text-sm font-bold leading-normal w-full rounded-full md:w-auto md:flex-1"
     data-size="lg"
     data-slot="button"
     data-variant="secondary"
@@ -146,7 +146,7 @@ exports[`ButtonsNavigation - Snapshots > matches snapshot with both buttons disa
   >
     <svg
       aria-hidden="true"
-      class="lucide lucide-arrow-left mr-2 h-4 w-4"
+      class="lucide lucide-arrow-left mr-1.5 h-4 w-4"
       fill="none"
       height="24"
       stroke="currentColor"
@@ -167,7 +167,7 @@ exports[`ButtonsNavigation - Snapshots > matches snapshot with both buttons disa
     Back
   </button>
   <button
-    class="inline-flex items-center justify-center whitespace-nowrap transition-all disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg:not([class*=\\"size-\\"])]:size-4 [&_svg]:shrink-0 outline-none focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[3px] aria-invalid:ring-destructive/40 aria-invalid:border-destructive cursor-pointer border shadow-xs bg-brand/16 text-brand hover:!bg-brand/30 border-brand h-auto gap-2 px-4 py-2.5 sm:px-8 sm:py-5 text-sm font-bold leading-normal w-full flex-1 rounded-full md:flex-0"
+    class="inline-flex items-center justify-center whitespace-nowrap transition-all disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg:not([class*=\\"size-\\"])]:size-4 shrink-0 [&_svg]:shrink-0 outline-none focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[3px] aria-invalid:ring-destructive/40 aria-invalid:border-destructive cursor-pointer border shadow-xs bg-brand/16 text-brand hover:!bg-brand/30 border-brand h-auto gap-2 px-4 py-2.5 sm:px-8 sm:py-5 text-sm font-bold leading-normal w-full rounded-full md:w-auto md:flex-1"
     data-size="lg"
     data-slot="button"
     disabled=""
@@ -175,7 +175,7 @@ exports[`ButtonsNavigation - Snapshots > matches snapshot with both buttons disa
   >
     <svg
       aria-hidden="true"
-      class="lucide lucide-arrow-right mr-2 h-4 w-4"
+      class="lucide lucide-arrow-right mr-1.5 h-4 w-4"
       fill="none"
       height="24"
       stroke="currentColor"
@@ -200,11 +200,11 @@ exports[`ButtonsNavigation - Snapshots > matches snapshot with both buttons disa
 
 exports[`ButtonsNavigation - Snapshots > matches snapshot with both callbacks 1`] = `
 <div
-  class="mx-auto w-full flex flex-row justify-between gap-3 lg:gap-6"
+  class="mx-auto w-full flex-col flex gap-3 md:flex-row md:justify-between lg:gap-6"
   data-testid="container"
 >
   <button
-    class="inline-flex items-center justify-center whitespace-nowrap transition-all disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg:not([class*=\\"size-\\"])]:size-4 [&_svg]:shrink-0 outline-none focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[3px] aria-invalid:ring-destructive/40 aria-invalid:border-destructive cursor-pointer border shadow-xs bg-secondary text-secondary-foreground hover:bg-secondary/80 h-auto gap-2 px-4 py-2.5 sm:px-8 sm:py-5 text-sm font-bold leading-normal w-full flex-1 rounded-full md:flex-0"
+    class="inline-flex items-center justify-center whitespace-nowrap transition-all disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg:not([class*=\\"size-\\"])]:size-4 shrink-0 [&_svg]:shrink-0 outline-none focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[3px] aria-invalid:ring-destructive/40 aria-invalid:border-destructive cursor-pointer border shadow-xs bg-secondary text-secondary-foreground hover:bg-secondary/80 h-auto gap-2 px-4 py-2.5 sm:px-8 sm:py-5 text-sm font-bold leading-normal w-full rounded-full md:w-auto md:flex-1"
     data-size="lg"
     data-slot="button"
     data-variant="secondary"
@@ -212,7 +212,7 @@ exports[`ButtonsNavigation - Snapshots > matches snapshot with both callbacks 1`
   >
     <svg
       aria-hidden="true"
-      class="lucide lucide-arrow-left mr-2 h-4 w-4"
+      class="lucide lucide-arrow-left mr-1.5 h-4 w-4"
       fill="none"
       height="24"
       stroke="currentColor"
@@ -233,14 +233,14 @@ exports[`ButtonsNavigation - Snapshots > matches snapshot with both callbacks 1`
     Back
   </button>
   <button
-    class="inline-flex items-center justify-center whitespace-nowrap transition-all disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg:not([class*=\\"size-\\"])]:size-4 [&_svg]:shrink-0 outline-none focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[3px] aria-invalid:ring-destructive/40 aria-invalid:border-destructive cursor-pointer border shadow-xs bg-brand/16 text-brand hover:!bg-brand/30 border-brand h-auto gap-2 px-4 py-2.5 sm:px-8 sm:py-5 text-sm font-bold leading-normal w-full flex-1 rounded-full md:flex-0"
+    class="inline-flex items-center justify-center whitespace-nowrap transition-all disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg:not([class*=\\"size-\\"])]:size-4 shrink-0 [&_svg]:shrink-0 outline-none focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[3px] aria-invalid:ring-destructive/40 aria-invalid:border-destructive cursor-pointer border shadow-xs bg-brand/16 text-brand hover:!bg-brand/30 border-brand h-auto gap-2 px-4 py-2.5 sm:px-8 sm:py-5 text-sm font-bold leading-normal w-full rounded-full md:w-auto md:flex-1"
     data-size="lg"
     data-slot="button"
     id="undefined-continue-btn"
   >
     <svg
       aria-hidden="true"
-      class="lucide lucide-arrow-right mr-2 h-4 w-4"
+      class="lucide lucide-arrow-right mr-1.5 h-4 w-4"
       fill="none"
       height="24"
       stroke="currentColor"
@@ -265,11 +265,11 @@ exports[`ButtonsNavigation - Snapshots > matches snapshot with both callbacks 1`
 
 exports[`ButtonsNavigation - Snapshots > matches snapshot with continue button disabled 1`] = `
 <div
-  class="mx-auto w-full flex flex-row justify-between gap-3 lg:gap-6"
+  class="mx-auto w-full flex-col flex gap-3 md:flex-row md:justify-between lg:gap-6"
   data-testid="container"
 >
   <button
-    class="inline-flex items-center justify-center whitespace-nowrap transition-all disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg:not([class*=\\"size-\\"])]:size-4 [&_svg]:shrink-0 outline-none focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[3px] aria-invalid:ring-destructive/40 aria-invalid:border-destructive cursor-pointer border shadow-xs bg-secondary text-secondary-foreground hover:bg-secondary/80 h-auto gap-2 px-4 py-2.5 sm:px-8 sm:py-5 text-sm font-bold leading-normal w-full flex-1 rounded-full md:flex-0"
+    class="inline-flex items-center justify-center whitespace-nowrap transition-all disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg:not([class*=\\"size-\\"])]:size-4 shrink-0 [&_svg]:shrink-0 outline-none focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[3px] aria-invalid:ring-destructive/40 aria-invalid:border-destructive cursor-pointer border shadow-xs bg-secondary text-secondary-foreground hover:bg-secondary/80 h-auto gap-2 px-4 py-2.5 sm:px-8 sm:py-5 text-sm font-bold leading-normal w-full rounded-full md:w-auto md:flex-1"
     data-size="lg"
     data-slot="button"
     data-variant="secondary"
@@ -277,7 +277,7 @@ exports[`ButtonsNavigation - Snapshots > matches snapshot with continue button d
   >
     <svg
       aria-hidden="true"
-      class="lucide lucide-arrow-left mr-2 h-4 w-4"
+      class="lucide lucide-arrow-left mr-1.5 h-4 w-4"
       fill="none"
       height="24"
       stroke="currentColor"
@@ -298,7 +298,7 @@ exports[`ButtonsNavigation - Snapshots > matches snapshot with continue button d
     Back
   </button>
   <button
-    class="inline-flex items-center justify-center whitespace-nowrap transition-all disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg:not([class*=\\"size-\\"])]:size-4 [&_svg]:shrink-0 outline-none focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[3px] aria-invalid:ring-destructive/40 aria-invalid:border-destructive cursor-pointer border shadow-xs bg-brand/16 text-brand hover:!bg-brand/30 border-brand h-auto gap-2 px-4 py-2.5 sm:px-8 sm:py-5 text-sm font-bold leading-normal w-full flex-1 rounded-full md:flex-0"
+    class="inline-flex items-center justify-center whitespace-nowrap transition-all disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg:not([class*=\\"size-\\"])]:size-4 shrink-0 [&_svg]:shrink-0 outline-none focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[3px] aria-invalid:ring-destructive/40 aria-invalid:border-destructive cursor-pointer border shadow-xs bg-brand/16 text-brand hover:!bg-brand/30 border-brand h-auto gap-2 px-4 py-2.5 sm:px-8 sm:py-5 text-sm font-bold leading-normal w-full rounded-full md:w-auto md:flex-1"
     data-size="lg"
     data-slot="button"
     disabled=""
@@ -306,7 +306,7 @@ exports[`ButtonsNavigation - Snapshots > matches snapshot with continue button d
   >
     <svg
       aria-hidden="true"
-      class="lucide lucide-arrow-right mr-2 h-4 w-4"
+      class="lucide lucide-arrow-right mr-1.5 h-4 w-4"
       fill="none"
       height="24"
       stroke="currentColor"
@@ -331,11 +331,11 @@ exports[`ButtonsNavigation - Snapshots > matches snapshot with continue button d
 
 exports[`ButtonsNavigation - Snapshots > matches snapshot with continue callback only 1`] = `
 <div
-  class="mx-auto w-full flex flex-row justify-between gap-3 lg:gap-6"
+  class="mx-auto w-full flex-col flex gap-3 md:flex-row md:justify-between lg:gap-6"
   data-testid="container"
 >
   <button
-    class="inline-flex items-center justify-center whitespace-nowrap transition-all disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg:not([class*=\\"size-\\"])]:size-4 [&_svg]:shrink-0 outline-none focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[3px] aria-invalid:ring-destructive/40 aria-invalid:border-destructive cursor-pointer border shadow-xs bg-secondary text-secondary-foreground hover:bg-secondary/80 h-auto gap-2 px-4 py-2.5 sm:px-8 sm:py-5 text-sm font-bold leading-normal w-full flex-1 rounded-full md:flex-0"
+    class="inline-flex items-center justify-center whitespace-nowrap transition-all disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg:not([class*=\\"size-\\"])]:size-4 shrink-0 [&_svg]:shrink-0 outline-none focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[3px] aria-invalid:ring-destructive/40 aria-invalid:border-destructive cursor-pointer border shadow-xs bg-secondary text-secondary-foreground hover:bg-secondary/80 h-auto gap-2 px-4 py-2.5 sm:px-8 sm:py-5 text-sm font-bold leading-normal w-full rounded-full md:w-auto md:flex-1"
     data-size="lg"
     data-slot="button"
     data-variant="secondary"
@@ -343,7 +343,7 @@ exports[`ButtonsNavigation - Snapshots > matches snapshot with continue callback
   >
     <svg
       aria-hidden="true"
-      class="lucide lucide-arrow-left mr-2 h-4 w-4"
+      class="lucide lucide-arrow-left mr-1.5 h-4 w-4"
       fill="none"
       height="24"
       stroke="currentColor"
@@ -364,14 +364,14 @@ exports[`ButtonsNavigation - Snapshots > matches snapshot with continue callback
     Back
   </button>
   <button
-    class="inline-flex items-center justify-center whitespace-nowrap transition-all disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg:not([class*=\\"size-\\"])]:size-4 [&_svg]:shrink-0 outline-none focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[3px] aria-invalid:ring-destructive/40 aria-invalid:border-destructive cursor-pointer border shadow-xs bg-brand/16 text-brand hover:!bg-brand/30 border-brand h-auto gap-2 px-4 py-2.5 sm:px-8 sm:py-5 text-sm font-bold leading-normal w-full flex-1 rounded-full md:flex-0"
+    class="inline-flex items-center justify-center whitespace-nowrap transition-all disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg:not([class*=\\"size-\\"])]:size-4 shrink-0 [&_svg]:shrink-0 outline-none focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[3px] aria-invalid:ring-destructive/40 aria-invalid:border-destructive cursor-pointer border shadow-xs bg-brand/16 text-brand hover:!bg-brand/30 border-brand h-auto gap-2 px-4 py-2.5 sm:px-8 sm:py-5 text-sm font-bold leading-normal w-full rounded-full md:w-auto md:flex-1"
     data-size="lg"
     data-slot="button"
     id="undefined-continue-btn"
   >
     <svg
       aria-hidden="true"
-      class="lucide lucide-arrow-right mr-2 h-4 w-4"
+      class="lucide lucide-arrow-right mr-1.5 h-4 w-4"
       fill="none"
       height="24"
       stroke="currentColor"
@@ -396,11 +396,11 @@ exports[`ButtonsNavigation - Snapshots > matches snapshot with continue callback
 
 exports[`ButtonsNavigation - Snapshots > matches snapshot with custom className 1`] = `
 <div
-  class="mx-auto w-full flex flex-row justify-between gap-3 lg:gap-6 custom-navigation-class"
+  class="mx-auto w-full flex-col flex gap-3 md:flex-row md:justify-between lg:gap-6 custom-navigation-class"
   data-testid="container"
 >
   <button
-    class="inline-flex items-center justify-center whitespace-nowrap transition-all disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg:not([class*=\\"size-\\"])]:size-4 [&_svg]:shrink-0 outline-none focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[3px] aria-invalid:ring-destructive/40 aria-invalid:border-destructive cursor-pointer border shadow-xs bg-secondary text-secondary-foreground hover:bg-secondary/80 h-auto gap-2 px-4 py-2.5 sm:px-8 sm:py-5 text-sm font-bold leading-normal w-full flex-1 rounded-full md:flex-0"
+    class="inline-flex items-center justify-center whitespace-nowrap transition-all disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg:not([class*=\\"size-\\"])]:size-4 shrink-0 [&_svg]:shrink-0 outline-none focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[3px] aria-invalid:ring-destructive/40 aria-invalid:border-destructive cursor-pointer border shadow-xs bg-secondary text-secondary-foreground hover:bg-secondary/80 h-auto gap-2 px-4 py-2.5 sm:px-8 sm:py-5 text-sm font-bold leading-normal w-full rounded-full md:w-auto md:flex-1"
     data-size="lg"
     data-slot="button"
     data-variant="secondary"
@@ -408,7 +408,7 @@ exports[`ButtonsNavigation - Snapshots > matches snapshot with custom className 
   >
     <svg
       aria-hidden="true"
-      class="lucide lucide-arrow-left mr-2 h-4 w-4"
+      class="lucide lucide-arrow-left mr-1.5 h-4 w-4"
       fill="none"
       height="24"
       stroke="currentColor"
@@ -429,14 +429,14 @@ exports[`ButtonsNavigation - Snapshots > matches snapshot with custom className 
     Back
   </button>
   <button
-    class="inline-flex items-center justify-center whitespace-nowrap transition-all disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg:not([class*=\\"size-\\"])]:size-4 [&_svg]:shrink-0 outline-none focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[3px] aria-invalid:ring-destructive/40 aria-invalid:border-destructive cursor-pointer border shadow-xs bg-brand/16 text-brand hover:!bg-brand/30 border-brand h-auto gap-2 px-4 py-2.5 sm:px-8 sm:py-5 text-sm font-bold leading-normal w-full flex-1 rounded-full md:flex-0"
+    class="inline-flex items-center justify-center whitespace-nowrap transition-all disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg:not([class*=\\"size-\\"])]:size-4 shrink-0 [&_svg]:shrink-0 outline-none focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[3px] aria-invalid:ring-destructive/40 aria-invalid:border-destructive cursor-pointer border shadow-xs bg-brand/16 text-brand hover:!bg-brand/30 border-brand h-auto gap-2 px-4 py-2.5 sm:px-8 sm:py-5 text-sm font-bold leading-normal w-full rounded-full md:w-auto md:flex-1"
     data-size="lg"
     data-slot="button"
     id="undefined-continue-btn"
   >
     <svg
       aria-hidden="true"
-      class="lucide lucide-arrow-right mr-2 h-4 w-4"
+      class="lucide lucide-arrow-right mr-1.5 h-4 w-4"
       fill="none"
       height="24"
       stroke="currentColor"
@@ -461,11 +461,11 @@ exports[`ButtonsNavigation - Snapshots > matches snapshot with custom className 
 
 exports[`ButtonsNavigation - Snapshots > matches snapshot with custom text 1`] = `
 <div
-  class="mx-auto w-full flex flex-row justify-between gap-3 lg:gap-6"
+  class="mx-auto w-full flex-col flex gap-3 md:flex-row md:justify-between lg:gap-6"
   data-testid="container"
 >
   <button
-    class="inline-flex items-center justify-center whitespace-nowrap transition-all disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg:not([class*=\\"size-\\"])]:size-4 [&_svg]:shrink-0 outline-none focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[3px] aria-invalid:ring-destructive/40 aria-invalid:border-destructive cursor-pointer border shadow-xs bg-secondary text-secondary-foreground hover:bg-secondary/80 h-auto gap-2 px-4 py-2.5 sm:px-8 sm:py-5 text-sm font-bold leading-normal w-full flex-1 rounded-full md:flex-0"
+    class="inline-flex items-center justify-center whitespace-nowrap transition-all disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg:not([class*=\\"size-\\"])]:size-4 shrink-0 [&_svg]:shrink-0 outline-none focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[3px] aria-invalid:ring-destructive/40 aria-invalid:border-destructive cursor-pointer border shadow-xs bg-secondary text-secondary-foreground hover:bg-secondary/80 h-auto gap-2 px-4 py-2.5 sm:px-8 sm:py-5 text-sm font-bold leading-normal w-full rounded-full md:w-auto md:flex-1"
     data-size="lg"
     data-slot="button"
     data-variant="secondary"
@@ -473,7 +473,7 @@ exports[`ButtonsNavigation - Snapshots > matches snapshot with custom text 1`] =
   >
     <svg
       aria-hidden="true"
-      class="lucide lucide-arrow-left mr-2 h-4 w-4"
+      class="lucide lucide-arrow-left mr-1.5 h-4 w-4"
       fill="none"
       height="24"
       stroke="currentColor"
@@ -494,14 +494,14 @@ exports[`ButtonsNavigation - Snapshots > matches snapshot with custom text 1`] =
     Go Back
   </button>
   <button
-    class="inline-flex items-center justify-center whitespace-nowrap transition-all disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg:not([class*=\\"size-\\"])]:size-4 [&_svg]:shrink-0 outline-none focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[3px] aria-invalid:ring-destructive/40 aria-invalid:border-destructive cursor-pointer border shadow-xs bg-brand/16 text-brand hover:!bg-brand/30 border-brand h-auto gap-2 px-4 py-2.5 sm:px-8 sm:py-5 text-sm font-bold leading-normal w-full flex-1 rounded-full md:flex-0"
+    class="inline-flex items-center justify-center whitespace-nowrap transition-all disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg:not([class*=\\"size-\\"])]:size-4 shrink-0 [&_svg]:shrink-0 outline-none focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[3px] aria-invalid:ring-destructive/40 aria-invalid:border-destructive cursor-pointer border shadow-xs bg-brand/16 text-brand hover:!bg-brand/30 border-brand h-auto gap-2 px-4 py-2.5 sm:px-8 sm:py-5 text-sm font-bold leading-normal w-full rounded-full md:w-auto md:flex-1"
     data-size="lg"
     data-slot="button"
     id="undefined-continue-btn"
   >
     <svg
       aria-hidden="true"
-      class="lucide lucide-arrow-right mr-2 h-4 w-4"
+      class="lucide lucide-arrow-right mr-1.5 h-4 w-4"
       fill="none"
       height="24"
       stroke="currentColor"
@@ -526,11 +526,11 @@ exports[`ButtonsNavigation - Snapshots > matches snapshot with custom text 1`] =
 
 exports[`ButtonsNavigation - Snapshots > matches snapshot with default props 1`] = `
 <div
-  class="mx-auto w-full flex flex-row justify-between gap-3 lg:gap-6"
+  class="mx-auto w-full flex-col flex gap-3 md:flex-row md:justify-between lg:gap-6"
   data-testid="container"
 >
   <button
-    class="inline-flex items-center justify-center whitespace-nowrap transition-all disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg:not([class*=\\"size-\\"])]:size-4 [&_svg]:shrink-0 outline-none focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[3px] aria-invalid:ring-destructive/40 aria-invalid:border-destructive cursor-pointer border shadow-xs bg-secondary text-secondary-foreground hover:bg-secondary/80 h-auto gap-2 px-4 py-2.5 sm:px-8 sm:py-5 text-sm font-bold leading-normal w-full flex-1 rounded-full md:flex-0"
+    class="inline-flex items-center justify-center whitespace-nowrap transition-all disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg:not([class*=\\"size-\\"])]:size-4 shrink-0 [&_svg]:shrink-0 outline-none focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[3px] aria-invalid:ring-destructive/40 aria-invalid:border-destructive cursor-pointer border shadow-xs bg-secondary text-secondary-foreground hover:bg-secondary/80 h-auto gap-2 px-4 py-2.5 sm:px-8 sm:py-5 text-sm font-bold leading-normal w-full rounded-full md:w-auto md:flex-1"
     data-size="lg"
     data-slot="button"
     data-variant="secondary"
@@ -538,7 +538,7 @@ exports[`ButtonsNavigation - Snapshots > matches snapshot with default props 1`]
   >
     <svg
       aria-hidden="true"
-      class="lucide lucide-arrow-left mr-2 h-4 w-4"
+      class="lucide lucide-arrow-left mr-1.5 h-4 w-4"
       fill="none"
       height="24"
       stroke="currentColor"
@@ -559,14 +559,14 @@ exports[`ButtonsNavigation - Snapshots > matches snapshot with default props 1`]
     Back
   </button>
   <button
-    class="inline-flex items-center justify-center whitespace-nowrap transition-all disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg:not([class*=\\"size-\\"])]:size-4 [&_svg]:shrink-0 outline-none focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[3px] aria-invalid:ring-destructive/40 aria-invalid:border-destructive cursor-pointer border shadow-xs bg-brand/16 text-brand hover:!bg-brand/30 border-brand h-auto gap-2 px-4 py-2.5 sm:px-8 sm:py-5 text-sm font-bold leading-normal w-full flex-1 rounded-full md:flex-0"
+    class="inline-flex items-center justify-center whitespace-nowrap transition-all disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg:not([class*=\\"size-\\"])]:size-4 shrink-0 [&_svg]:shrink-0 outline-none focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[3px] aria-invalid:ring-destructive/40 aria-invalid:border-destructive cursor-pointer border shadow-xs bg-brand/16 text-brand hover:!bg-brand/30 border-brand h-auto gap-2 px-4 py-2.5 sm:px-8 sm:py-5 text-sm font-bold leading-normal w-full rounded-full md:w-auto md:flex-1"
     data-size="lg"
     data-slot="button"
     id="undefined-continue-btn"
   >
     <svg
       aria-hidden="true"
-      class="lucide lucide-arrow-right mr-2 h-4 w-4"
+      class="lucide lucide-arrow-right mr-1.5 h-4 w-4"
       fill="none"
       height="24"
       stroke="currentColor"

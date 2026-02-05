@@ -321,7 +321,10 @@
       "shareUnavailable": "Compartir no disponible",
       "shareUnavailableDescription": "Copiamos tu pubky para que puedas pegarlo en tu app favorita.",
       "shareFailed": "Error al compartir",
-      "shareFailedDescription": "No se puede compartir ahora. Por favor intenta de nuevo."
+      "shareFailedDescription": "No se puede compartir ahora. Por favor intenta de nuevo.",
+      "signUpFailed": "Error - Fallo en el registro",
+      "signUpError": "Algo salió mal. Por favor intenta de nuevo.",
+      "invalidInvite": "Código de invitación inválido o expirado. Por favor obtén o solicita un nuevo código de invitación."
     },
     "backupMethod": {
       "title": "Elige el metodo de respaldo",
@@ -414,6 +417,7 @@
     "addArticle": "Agregar articulo",
     "posting": "Publicando...",
     "viewOriginal": "Ver publicación original",
+    "youReposted": "Republicaste",
     "newPostsSingular": "Ver {count} nueva publicación",
     "newPostsPlural": "Ver {count} nuevas publicaciónes"
   },
@@ -821,8 +825,10 @@
       "postCreated": "Publicacion creada",
       "postCreatedDesc": "Tu publicación ha sido creada exitosamente.",
       "postFailed": "Error al crear publicación. Por favor intenta de nuevo.",
-      "repostSuccess": "Republicación exitosa",
-      "repostSuccessDesc": "Tu republicación ha sido creada exitosamente.",
+      "repostSuccess": "¡Republicado!",
+      "repostSuccessDesc": "¡Has republicado exitosamente una publicación de {author}!",
+      "repostSuccessDescFallback": "Tu republicación ha sido creada exitosamente.",
+      "repostUndo": "Deshacer",
       "repostFailed": "Error al republicar. Por favor intenta de nuevo.",
       "postEdited": "Publicacion editada",
       "postEditedDesc": "Tu publicación ha sido editada exitosamente.",
@@ -1109,5 +1115,9 @@
       "q14": "Como difiere Pubky de Nostr?",
       "a14": "Pubky usa claves Ed25519 para compatibilidad y evita relays centralizados. En su lugar, usa una Tabla Hash Distribuida (DHT) para búsqueda descentralizada y resolucion de identidad."
     }
+  },
+  "share": {
+    "title": "Compartir en Pubky",
+    "cancel": "Cancelar"
   }
 }

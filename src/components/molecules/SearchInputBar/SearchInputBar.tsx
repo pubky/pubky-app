@@ -26,6 +26,7 @@ export function SearchInputBar({
   return (
     <Atoms.Container
       data-testid="search-input-bar"
+      data-cy="header-search"
       className={Libs.cn(
         'relative flex h-12 items-center gap-3 border border-border px-6 py-3',
         isFocused ? 'rounded-t-2xl rounded-b-none border-b-transparent' : 'rounded-full',

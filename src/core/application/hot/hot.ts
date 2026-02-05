@@ -22,7 +22,7 @@ export class HotApplication {
   static async getOrFetch(params: Core.TTagHotParams): Promise<Core.NexusHotTag[]> {
     try {
       // Build composite ID from params: timeframe:reach
-      const timeframe = params.timeframe || Core.UserStreamTimeframe.TODAY;
+      const timeframe = params.timeframe || Core.UserStreamTimeframe.THIS_MONTH;
       const reach = params.reach || 'all';
 
       const id = Core.buildHotTagsId(timeframe, reach);

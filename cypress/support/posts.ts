@@ -110,25 +110,36 @@ export const latestPostInFeedContentEq = (postContent: string) => {
 //   checkNumberOfImagesInPost(expectedNumberOfImages, 0);
 // };
 
-export const createQuickPost = (postContent: string, expectedPostLength?: number) => {
+export const createQuickPost = (postContent: string, tags?: string[], expectedPostLength?: number) => {
   cy.get('[data-cy="home-post-input"]')
     .should('be.visible')
     .within(() => {
       // input post content within quick post area
-      cy.get('textarea').should('have.value', '').get('textarea').type(postContent);
+      cy.get('textarea').should('have.value', '').type(postContent);
+
+      // Add tags if provided
+      if (tags) {
+        // Click the add tag button to show the input
+        cy.get('[data-cy="post-tag-add-button"]').click();
+
+        // add tags to the post
+        tags.forEach((tag) => {
+          // Type the tag and press Enter to submit
+          cy.get('[data-cy="add-tag-input"]').type(`${tag}{enter}`);
+        });
+      }
+
       // verify displayed content length
-      cy.log('postContent.length: ', postContent.length);
       cy.get('[data-cy="post-header-character-count"]').then((counter) => {
         expectedPostLength
           ? expect(counter.text()).to.eq(`${expectedPostLength}/${MAX_POST_LENGTH}`)
-          : expect(counter.text()).to.eq(`${postContent.length}/${MAX_POST_LENGTH}`);
+          : expect(counter.text()).to.eq(`${Array.from(postContent).length}/${MAX_POST_LENGTH}`);
       });
-      // submit
+
+      // submit the post
       cy.get('[data-cy="post-input-action-bar-post"]').click();
       // verify textarea is empty
       cy.get('textarea').should('have.value', '');
-      // verify displayed content length
-      cy.get('[data-cy="post-header-character-count"]').innerTextShouldEq(`0/${MAX_POST_LENGTH}`);
     });
 };
 
@@ -301,6 +312,34 @@ export const fastTagPost = (tags: string[]) => {
 //       cy.get('#post-btn').click();
 //     });
 // };
+
+// edit any post in the feed that contains the filterText by index
+export const editPost = ({
+  newPostContent,
+  filterText,
+  postIdx = 0,
+  type = PostOrReply.Post,
+}: {
+  newPostContent: string;
+  filterText?: string;
+  postIdx?: number;
+  type?: PostOrReply;
+}) => {
+  cy.findPostInFeed(postIdx, filterText, CheckForNewPosts.Yes).within(() => {
+    cy.get('[data-cy="post-more-btn"]').eq(type).should('be.visible').click();
+  });
+
+  cy.get('[data-cy="post-menu-action-edit"]').should('be.visible').click();
+
+  cy.get('[data-cy="edit-post-input"]')
+    .should('be.visible')
+    .within(() => {
+      cy.get('textarea').clear().type(newPostContent);
+      cy.get('[data-cy="post-input-action-bar-edit"]').click();
+    });
+
+  cy.get('[data-cy="edit-post-input"]').should('not.exist');
+};
 
 // delete any post or reply in the feed that contains the filterText by index
 // type: PostOrReply.Post (0) for original post, PostOrReply.Reply (1) for reply

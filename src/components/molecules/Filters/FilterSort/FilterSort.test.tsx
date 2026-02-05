@@ -2,7 +2,6 @@ import { render, screen, fireEvent } from '@testing-library/react';
 import { describe, it, expect, vi } from 'vitest';
 import { FilterSort } from './FilterSort';
 import { SORT, type SortType } from '@/core/stores/home/home.types';
-import { normaliseRadixIds } from '@/libs/utils/utils';
 
 // Mock libs - use actual utility functions and icons from lucide-react
 vi.mock('@/libs', async () => {
@@ -76,19 +75,16 @@ describe('FilterSort', () => {
 describe('FilterSort - Snapshots', () => {
   it('matches snapshot with default props', () => {
     const { container } = render(<FilterSort />);
-    const normalisedContainer = normaliseRadixIds(container);
-    expect(normalisedContainer.firstChild).toMatchSnapshot();
+    expect(container.firstChild).toMatchSnapshot();
   });
 
   it('matches snapshot with Recent content selected tab', () => {
     const { container } = render(<FilterSort selectedTab={SORT.TIMELINE} />);
-    const normalisedContainer = normaliseRadixIds(container);
-    expect(normalisedContainer.firstChild).toMatchSnapshot();
+    expect(container.firstChild).toMatchSnapshot();
   });
 
   it('matches snapshot with Popularity content selected tab', () => {
     const { container } = render(<FilterSort selectedTab={SORT.ENGAGEMENT} />);
-    const normalisedContainer = normaliseRadixIds(container);
-    expect(normalisedContainer.firstChild).toMatchSnapshot();
+    expect(container.firstChild).toMatchSnapshot();
   });
 });

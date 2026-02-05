@@ -104,5 +104,34 @@
       "protocol": "web+pubkyring",
       "url": "/invite/%s"
     }
-  ]
+  ],
+  "share_target": {
+    "action": "/share",
+    "method": "POST",
+    "enctype": "multipart/form-data",
+    "params": {
+      "title": "title",
+      "text": "text",
+      "url": "url",
+      "files": [
+        {
+          "name": "media",
+          "accept": [
+            "image/png",
+            "image/jpeg",
+            "image/gif",
+            "image/webp",
+            "image/svg+xml",
+            "audio/mpeg",
+            "audio/ogg",
+            "audio/wav",
+            "audio/webm",
+            "video/mp4",
+            "video/webm",
+            "video/ogg"
+          ]
+        }
+      ]
+    }
+  }
 }

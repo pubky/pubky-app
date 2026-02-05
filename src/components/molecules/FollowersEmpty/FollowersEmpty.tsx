@@ -12,7 +12,7 @@ export function FollowersEmpty() {
     <Atoms.Container data-cy="profile-followers-empty" className="relative items-center gap-6 px-0 py-6">
       {/* Background image */}
       <Image
-        src="/images/connections-empty-state.png"
+        src="/images/connections-empty-state.webp"
         alt={t('alt')}
         fill
         className="pointer-events-none object-contain object-center"

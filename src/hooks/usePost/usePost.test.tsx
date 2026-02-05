@@ -951,6 +951,7 @@ describe('usePost', () => {
         await result.current.repost({
           originalPostId: 'test-post-123',
           onSuccess: mockOnSuccess,
+          onUndo: vi.fn(),
         });
       });
 
@@ -959,11 +960,73 @@ describe('usePost', () => {
         content: 'This is great!',
         authorId: 'test-user-id',
         tags: ['tag1'],
+        attachments: undefined,
       });
       expect(result.current.content).toBe('');
       expect(result.current.tags).toEqual([]);
+      expect(result.current.attachments).toEqual([]);
       expect(mockOnSuccess).toHaveBeenCalled();
       expect(result.current.isSubmitting).toBe(false);
+    });
+
+    it('should create a repost successfully with attachments', async () => {
+      const { result } = renderHook(() => usePost());
+      const mockOnSuccess = vi.fn();
+      const mockFile = new File(['test'], 'test.png', { type: 'image/png' });
+
+      act(() => {
+        result.current.setContent('Quote repost');
+        result.current.setAttachments([mockFile]);
+      });
+
+      await act(async () => {
+        await result.current.repost({
+          originalPostId: 'test-post-123',
+          onSuccess: mockOnSuccess,
+          onUndo: vi.fn(),
+        });
+      });
+
+      expect(mockPostControllerCreate).toHaveBeenCalledWith({
+        originalPostId: 'test-post-123',
+        content: 'Quote repost',
+        authorId: 'test-user-id',
+        tags: undefined,
+        attachments: [mockFile],
+      });
+      expect(result.current.content).toBe('');
+      expect(result.current.tags).toEqual([]);
+      expect(result.current.attachments).toEqual([]);
+      expect(mockOnSuccess).toHaveBeenCalled();
+      expect(result.current.isSubmitting).toBe(false);
+    });
+
+    it('should create a repost with attachments but no content', async () => {
+      const { result } = renderHook(() => usePost());
+      const mockOnSuccess = vi.fn();
+      const mockFile = new File(['test'], 'test.png', { type: 'image/png' });
+
+      act(() => {
+        result.current.setAttachments([mockFile]);
+      });
+
+      await act(async () => {
+        await result.current.repost({
+          originalPostId: 'test-post-123',
+          onSuccess: mockOnSuccess,
+          onUndo: vi.fn(),
+        });
+      });
+
+      expect(mockPostControllerCreate).toHaveBeenCalledWith({
+        originalPostId: 'test-post-123',
+        content: '',
+        authorId: 'test-user-id',
+        tags: undefined,
+        attachments: [mockFile],
+      });
+      expect(result.current.attachments).toEqual([]);
+      expect(mockOnSuccess).toHaveBeenCalled();
     });
 
     it('should create a repost successfully without content (simple repost)', async () => {
@@ -978,6 +1041,7 @@ describe('usePost', () => {
         await result.current.repost({
           originalPostId: 'test-post-123',
           onSuccess: mockOnSuccess,
+          onUndo: vi.fn(),
         });
       });
 
@@ -986,9 +1050,11 @@ describe('usePost', () => {
         content: '',
         authorId: 'test-user-id',
         tags: undefined,
+        attachments: undefined,
       });
       expect(result.current.content).toBe('');
       expect(result.current.tags).toEqual([]);
+      expect(result.current.attachments).toEqual([]);
       expect(mockOnSuccess).toHaveBeenCalled();
       expect(result.current.isSubmitting).toBe(false);
     });
@@ -1004,6 +1070,7 @@ describe('usePost', () => {
         await result.current.repost({
           originalPostId: 'test-post-123',
           onSuccess: vi.fn(),
+          onUndo: vi.fn(),
         });
       });
 
@@ -1012,6 +1079,7 @@ describe('usePost', () => {
         content: 'Repost comment',
         authorId: 'test-user-id',
         tags: undefined,
+        attachments: undefined,
       });
     });
 
@@ -1026,6 +1094,7 @@ describe('usePost', () => {
         await result.current.repost({
           originalPostId: '',
           onSuccess: vi.fn(),
+          onUndo: vi.fn(),
         });
       });
 
@@ -1044,6 +1113,7 @@ describe('usePost', () => {
         await result.current.repost({
           originalPostId: 'test-post-123',
           onSuccess: vi.fn(),
+          onUndo: vi.fn(),
         });
       });
 
@@ -1063,6 +1133,7 @@ describe('usePost', () => {
         await result.current.repost({
           originalPostId: 'test-post-123',
           onSuccess: vi.fn(),
+          onUndo: vi.fn(),
         });
       });
 
@@ -1094,6 +1165,7 @@ describe('usePost', () => {
         result.current.repost({
           originalPostId: 'test-post-123',
           onSuccess: vi.fn(),
+          onUndo: vi.fn(),
         });
       });
 
@@ -1118,6 +1190,7 @@ describe('usePost', () => {
         await result.current.repost({
           originalPostId: 'test-post-123',
           onSuccess: vi.fn(),
+          onUndo: vi.fn(),
         });
       });
 
@@ -1126,7 +1199,66 @@ describe('usePost', () => {
         content: 'Trimmed repost content',
         authorId: 'test-user-id',
         tags: undefined,
+        attachments: undefined,
       });
+    });
+
+    it('should show toast with author name when originalAuthorName is provided', async () => {
+      const { result } = renderHook(() => usePost());
+
+      await act(async () => {
+        await result.current.repost({
+          originalPostId: 'test-post-123',
+          originalAuthorName: 'John Doe',
+          onSuccess: vi.fn(),
+          onUndo: vi.fn(),
+        });
+      });
+
+      expect(mockToast).toHaveBeenCalledWith(
+        expect.objectContaining({
+          title: 'Reposted!',
+          description: 'You successfully reposted a post by John Doe!',
+        }),
+      );
+    });
+
+    it('should show toast with fallback message when originalAuthorName is not provided', async () => {
+      const { result } = renderHook(() => usePost());
+
+      await act(async () => {
+        await result.current.repost({
+          originalPostId: 'test-post-123',
+          onSuccess: vi.fn(),
+          onUndo: vi.fn(),
+        });
+      });
+
+      expect(mockToast).toHaveBeenCalledWith(
+        expect.objectContaining({
+          title: 'Reposted!',
+          description: 'Your repost has been created successfully.',
+        }),
+      );
+    });
+
+    it('should include ToastAction with onUndo', async () => {
+      const { result } = renderHook(() => usePost());
+      const mockOnUndo = vi.fn();
+
+      await act(async () => {
+        await result.current.repost({
+          originalPostId: 'test-post-123',
+          onUndo: mockOnUndo,
+          onSuccess: vi.fn(),
+        });
+      });
+
+      expect(mockToast).toHaveBeenCalledWith(
+        expect.objectContaining({
+          action: expect.anything(),
+        }),
+      );
     });
 
     describe('edit method', () => {

@@ -35,7 +35,7 @@ export function SideDrawer({ open, onOpenChangeAction, children, position = 'lef
 
   if (!isVisible) return null;
 
-  const positionClasses = position === 'left' ? 'left-0 border-r border-white' : 'right-0 border-l border-white';
+  const positionClasses = position === 'left' ? 'left-0 border-r border-border' : 'right-0 border-l border-border';
 
   const widthClasses =
     position === 'left' ? 'w-[228px] sm:w-[228px] md:w-[385px]' : 'w-[280px] sm:w-[280px] md:w-[385px]';

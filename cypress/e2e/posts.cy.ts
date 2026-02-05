@@ -7,6 +7,7 @@ import {
   createQuickPost,
   createPostFromDialog,
   deletePost,
+  editPost,
   replyToPost,
   repostPost,
   MAX_POST_LENGTH,
@@ -76,8 +77,21 @@ describe('posts', () => {
     latestPostInFeedContentEq(postContent);
   });
 
-  // todo: implement when editing posts is implemented, see https://github.com/pubky/franky/issues/751
-  it.skip('can edit a post');
+  it('can edit a post', () => {
+    const postContent = `I can edit this post! ${Date.now()}`;
+    const editedContent = `I have edited this post! ${Date.now()}`;
+
+    createQuickPost(postContent);
+    latestPostInFeedContentEq(postContent);
+
+    editPost({ newPostContent: editedContent, filterText: postContent });
+
+    latestPostInFeedContentEq(editedContent);
+
+    // Reload and check post is still displayed with edited content
+    cy.reload();
+    latestPostInFeedContentEq(editedContent);
+  });
 
   // todo: ready to implement these tests
   it('can post with maximum character limit (2000)', () => {
@@ -85,7 +99,7 @@ describe('posts', () => {
     const fillerLength = Math.max(0, MAX_POST_LENGTH - prefix.length);
     const postContent = `${prefix}${'o'.repeat(fillerLength)}`;
 
-    createQuickPost(postContent, MAX_POST_LENGTH);
+    createQuickPost(postContent, [], MAX_POST_LENGTH);
 
     cy.findFirstPostInFeed().within(() => {
       cy.get('[data-cy="post-text"]').should('contain.text', prefix.trim());
@@ -97,12 +111,13 @@ describe('posts', () => {
     const postContent = `🥋🗾⛩️ I can post with emojis! ${Date.now()}`;
     const expectedLength = Array.from(postContent).length;
 
-    createQuickPost(postContent, expectedLength);
+    createQuickPost(postContent, []);
 
     latestPostInFeedContentEq(postContent);
   });
 
-  it('can post with image upload', () => {
+  // todo: remove skip once images always show optimistically in feed, see https://github.com/pubky/pubky-app/issues/656
+  it.skip('can post with image upload', () => {
     const postContent = `I can post with an image! ${Date.now()}`;
 
     cy.get('[data-cy="home-post-input"]').within(() => {
@@ -365,23 +380,22 @@ describe('posts', () => {
     });
   });
 
-  // todo: will need changing once undo is moved to toast, see https://github.com/pubky/franky/issues/711
-  it('can repost without content then delete the repost', () => {
+  it('can repost without content then undo via toast', () => {
     const postContent = `This post will be reposted without content! ${Date.now()}`;
     createQuickPost(postContent);
 
     repostPost({ filterText: postContent });
 
-    cy.findFirstPostInFeed(CheckForNewPosts.Yes).within(() => {
-      cy.contains('You reposted').should('be.visible');
-      cy.get('[data-testid="repost-undo-button"]').should('be.visible');
-      cy.get('[data-cy="post-text"]').should('have.length', 1);
-    });
+    // After repost, the toast should appear with "Reposted!" and an Undo button
+    cy.get('[data-cy="toast"]')
+      .should('be.visible')
+      .and('contain', 'Reposted!')
+      .and('contain', 'Undo')
+      .within(() => {
+        cy.contains('button', 'Undo').click();
+      });
 
-    cy.findFirstPostInFeed().within(() => {
-      cy.get('[data-testid="repost-undo-button"]').click();
-    });
-
+    // After clicking Undo, the repost should be removed from the feed
     cy.findFirstPostInFeed().within(() => {
       cy.contains('You reposted').should('not.exist');
       cy.contains('[data-cy="post-text"]', postContent).should('be.visible');

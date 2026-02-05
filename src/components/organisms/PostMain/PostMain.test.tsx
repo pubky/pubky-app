@@ -151,13 +151,7 @@ vi.mock('@/organisms', () => ({
 vi.mock('@/molecules', () => ({
   PostTagsList: ({ postId }: { postId: string }) => <div data-testid="post-tags-list">PostTagsList {postId}</div>,
   PostDeleted: () => <div data-testid="post-deleted">PostDeleted</div>,
-  RepostHeader: ({ onUndo, isUndoing }: { onUndo: () => void; isUndoing?: boolean }) => (
-    <div data-testid="repost-header" data-is-undoing={isUndoing}>
-      <button data-testid="repost-undo" onClick={onUndo}>
-        Undo repost
-      </button>
-    </div>
-  ),
+  RepostHeader: () => <div data-testid="repost-header">You reposted</div>,
 }));
 
 // Mock hooks
@@ -185,10 +179,6 @@ vi.mock('@/hooks', () => ({
     originalPostId: null,
     isLoading: false,
     hasError: false,
-  })),
-  useDeletePost: vi.fn(() => ({
-    deletePost: vi.fn(),
-    isDeleting: false,
   })),
   usePostHeaderVisibility: vi.fn(() => ({
     showRepostHeader: false,

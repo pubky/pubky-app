@@ -321,7 +321,10 @@
       "shareUnavailable": "共有が利用できません",
       "shareUnavailableDescription": "pubkyをコピーしました。お気に入りのアプリに貼り付けできます。",
       "shareFailed": "共有に失敗しました",
-      "shareFailedDescription": "現在共有できません。再試行してください。"
+      "shareFailedDescription": "現在共有できません。再試行してください。",
+      "signUpFailed": "エラー - サインアップに失敗しました",
+      "signUpError": "問題が発生しました。再試行してください。",
+      "invalidInvite": "無効または期限切れの招待コードです。新しい招待コードを取得またはリクエストしてください。"
     },
     "backupMethod": {
       "title": "バックアップ方法を選択",
@@ -414,6 +417,7 @@
     "addArticle": "記事を追加",
     "posting": "投稿中...",
     "viewOriginal": "元の投稿を見る",
+    "youReposted": "リポストしました",
     "newPostsSingular": "{count}件の新しい投稿を見る",
     "newPostsPlural": "{count}件の新しい投稿を見る"
   },
@@ -821,8 +825,10 @@
       "postCreated": "投稿を作成しました",
       "postCreatedDesc": "投稿が正常に作成されました。",
       "postFailed": "投稿の作成に失敗しました。再試行してください。",
-      "repostSuccess": "リポスト成功",
-      "repostSuccessDesc": "リポストが正常に作成されました。",
+      "repostSuccess": "リポストしました！",
+      "repostSuccessDesc": "{author}さんの投稿をリポストしました！",
+      "repostSuccessDescFallback": "リポストが正常に作成されました。",
+      "repostUndo": "元に戻す",
       "repostFailed": "リポストに失敗しました。再試行してください。",
       "postEdited": "投稿を編集しました",
       "postEditedDesc": "投稿が正常に編集されました。",
@@ -1109,5 +1115,9 @@
       "q14": "PubkyはNostrとどう違う？",
       "a14": "Pubkyは互換性のためにEd25519キーを使用し、中央集権的なリレーを避けています。代わりに、分散ハッシュテーブル（DHT）を使用して分散型ルックアップとID解決を行います。"
     }
+  },
+  "share": {
+    "title": "Pubkyに共有",
+    "cancel": "キャンセル"
   }
 }

@@ -15,6 +15,17 @@ export class LocalPostService {
   }
 
   /**
+   * Filter out deleted posts from a list of post IDs.
+   * Posts without details in cache are kept (fail-open semantics).
+   *
+   * @param postIds - Array of post IDs to filter
+   * @returns Array of post IDs that are not deleted
+   */
+  static async filterDeletedPosts(postIds: string[]): Promise<string[]> {
+    return Core.PostDetailsModel.filterDeleted(postIds);
+  }
+
+  /**
    * Reads post counts for a specific post
    *
    * @param postId - Composite post ID (author:postId)
@@ -251,6 +262,7 @@ export class LocalPostService {
           Core.PostTagsModel.table,
           Core.UserCountsModel.table,
           Core.PostStreamModel.table,
+          Core.UnreadPostStreamModel.table,
         ],
         async () => {
           await Promise.all([
@@ -278,7 +290,7 @@ export class LocalPostService {
             }),
           );
 
-          // Remove post from streams
+          // Remove post from streams (including unread streams)
           this.updatePostStream({ compositePostId, kind, parentUri, ops, action: HttpMethod.DELETE });
 
           await Promise.all(ops);
@@ -314,6 +326,15 @@ export class LocalPostService {
       }
     };
 
+    // Helper to remove from unread streams when deleting
+    // This prevents ghost posts when a post is deleted while still in the unread stream
+    const removeFromUnreadStream = (streamId: Core.PostStreamId, items: string[]) => {
+      if (action === HttpMethod.DELETE) {
+        return Core.UnreadPostStreamModel.removeItems(streamId, items);
+      }
+      return Promise.resolve();
+    };
+
     if (parentUri) {
       const parentCompositeId = Core.buildCompositeIdFromPubkyUri({
         uri: parentUri,
@@ -329,6 +350,17 @@ export class LocalPostService {
       ops.push(updateStream(Core.PostStreamTypes.TIMELINE_FRIENDS_ALL, [compositePostId]));
       ops.push(updateStream(`timeline:friends:${kind}` as Core.PostStreamId, [compositePostId]));
       ops.push(updateStream(`author:${authorId}`, [compositePostId]));
+
+      // Also remove from unread streams when deleting to prevent ghost posts
+      // This handles the case where a post was polled and added to unread stream before deletion
+      // Clean both the "all" streams and kind-specific streams since the user may have
+      // been viewing a filtered feed (e.g., timeline:all:short) when the post was polled
+      ops.push(removeFromUnreadStream(Core.PostStreamTypes.TIMELINE_ALL_ALL, [compositePostId]));
+      ops.push(removeFromUnreadStream(`timeline:all:${kind}` as Core.PostStreamId, [compositePostId]));
+      ops.push(removeFromUnreadStream(Core.PostStreamTypes.TIMELINE_FOLLOWING_ALL, [compositePostId]));
+      ops.push(removeFromUnreadStream(`timeline:following:${kind}` as Core.PostStreamId, [compositePostId]));
+      ops.push(removeFromUnreadStream(Core.PostStreamTypes.TIMELINE_FRIENDS_ALL, [compositePostId]));
+      ops.push(removeFromUnreadStream(`timeline:friends:${kind}` as Core.PostStreamId, [compositePostId]));
     }
   }
 

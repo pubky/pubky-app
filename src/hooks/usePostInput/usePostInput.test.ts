@@ -35,6 +35,8 @@ let mockIsArticle = false;
 let mockArticleTitle = '';
 let mockIsSubmitting = false;
 
+const mockDeletePost = vi.fn();
+
 vi.mock('@/hooks', () => ({
   useCurrentUserProfile: vi.fn(() => ({
     currentUserPubky: 'test-user-pubky',
@@ -57,6 +59,14 @@ vi.mock('@/hooks', () => ({
     isSubmitting: mockIsSubmitting,
   })),
   useEmojiInsert: vi.fn(() => vi.fn()),
+  useUserDetails: vi.fn(() => ({
+    userDetails: { name: 'Test Author' },
+    isLoading: false,
+  })),
+  useDeletePost: vi.fn(() => ({
+    deletePost: mockDeletePost,
+    isDeleting: false,
+  })),
 }));
 
 // Mock TimelineFeed context
@@ -338,7 +348,9 @@ describe('usePostInput', () => {
 
       expect(mockRepost).toHaveBeenCalledWith({
         originalPostId: 'original-post-id',
+        originalAuthorName: 'Test Author',
         onSuccess: expect.any(Function),
+        onUndo: expect.any(Function),
       });
       expect(mockPost).not.toHaveBeenCalled();
       expect(mockReply).not.toHaveBeenCalled();
@@ -422,7 +434,9 @@ describe('usePostInput', () => {
 
       expect(mockRepost).toHaveBeenCalledWith({
         originalPostId: 'original-post-id',
+        originalAuthorName: 'Test Author',
         onSuccess: expect.any(Function),
+        onUndo: expect.any(Function),
       });
     });
 

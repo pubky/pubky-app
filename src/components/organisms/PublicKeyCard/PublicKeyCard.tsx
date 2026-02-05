@@ -94,7 +94,7 @@ export function PublicKeyCard() {
   return (
     <Molecules.ContentCard
       image={{
-        src: '/images/key.png',
+        src: '/images/key.webp',
         alt: 'Key',
         width: 192,
         height: 192,

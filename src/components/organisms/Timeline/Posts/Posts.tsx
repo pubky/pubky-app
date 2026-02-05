@@ -29,7 +29,7 @@ export function TimelinePosts({ postIds, loading, loadingMore, error, hasMore, l
       <Atoms.Container data-cy="timeline-container">
         <Atoms.Container data-cy="timeline-posts" overrideDefaults className="space-y-4">
           {postIds.map((postId) => (
-            <Atoms.Container key={`main_${postId}`}>
+            <Atoms.Container key={`main_${postId}`} data-cy="post-card">
               <Organisms.PostMain postId={postId} onClick={() => navigateToPost(postId)} isReply={false} />
               <Organisms.TimelinePostReplies postId={postId} onPostClick={navigateToPost} />
             </Atoms.Container>

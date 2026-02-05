@@ -232,14 +232,12 @@ describe('ProfilePageHeader', () => {
 
     expect(onAvatarClick).toHaveBeenCalledTimes(1);
   });
+});
 
+describe('ProfilePageHeader - Snapshots', () => {
   it('matches snapshot', () => {
     const { container } = render(<ProfilePageHeader {...mockProps} />);
-    // Normalize Radix UI IDs for consistent snapshots
-    const normalizedHtml = container.innerHTML.replace(/radix-[_a-z0-9]+/gi, 'radix-[id]');
-    const normalizedContainer = document.createElement('div');
-    normalizedContainer.innerHTML = normalizedHtml;
-    expect(normalizedContainer).toMatchSnapshot();
+    expect(container.firstChild).toMatchSnapshot();
   });
 });
 

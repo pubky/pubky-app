@@ -321,7 +321,10 @@
       "shareUnavailable": "المشاركة غير متاحة",
       "shareUnavailableDescription": "قمنا بنسخ البوبكي الخاص بك حتى تتمكن من لصقه في تطبيقك المفضل.",
       "shareFailed": "فشلت المشاركة",
-      "shareFailedDescription": "تعذرت المشاركة الان. يرجى المحاولة مرة اخرى."
+      "shareFailedDescription": "تعذرت المشاركة الان. يرجى المحاولة مرة اخرى.",
+      "signUpFailed": "خطأ - فشل التسجيل",
+      "signUpError": "حدث خطأ ما. يرجى المحاولة مرة اخرى.",
+      "invalidInvite": "رمز الدعوة غير صالح او منتهي الصلاحية. يرجى الحصول على رمز دعوة جديد."
     },
     "backupMethod": {
       "title": "اختر طريقة النسخ الاحتياطي",
@@ -414,6 +417,7 @@
     "addArticle": "اضافة مقال",
     "posting": "جاري النشر...",
     "viewOriginal": "عرض المنشور الاصلي",
+    "youReposted": "أعدت النشر",
     "newPostsSingular": "عرض {count} منشور جديد",
     "newPostsPlural": "عرض {count} منشورات جديدة"
   },
@@ -821,8 +825,10 @@
       "postCreated": "تم انشاء المنشور",
       "postCreatedDesc": "تم انشاء منشورك بنجاح.",
       "postFailed": "فشل انشاء المنشور. يرجى المحاولة مرة اخرى.",
-      "repostSuccess": "نجحت اعادة النشر",
-      "repostSuccessDesc": "تمت اعادة نشر منشورك بنجاح.",
+      "repostSuccess": "تمت إعادة النشر!",
+      "repostSuccessDesc": "لقد أعدت نشر منشور {author} بنجاح!",
+      "repostSuccessDescFallback": "تمت إعادة نشر منشورك بنجاح.",
+      "repostUndo": "تراجع",
       "repostFailed": "فشلت اعادة النشر. يرجى المحاولة مرة اخرى.",
       "postEdited": "تم تعديل المنشور",
       "postEditedDesc": "تم تعديل منشورك بنجاح.",
@@ -1103,5 +1109,9 @@
       "q14": "كيف يختلف Pubky عن Nostr؟",
       "a14": "يستخدم Pubky مفاتيح Ed25519 للتوافق ويتجنب المرحلات المركزية. بدلا من ذلك، يستخدم جدول تجزئة موزع (DHT) للبحث اللامركزي وحل الهوية."
     }
+  },
+  "share": {
+    "title": "مشاركة في Pubky",
+    "cancel": "إلغاء"
   }
 }

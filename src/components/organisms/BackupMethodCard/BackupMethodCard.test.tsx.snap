@@ -3,7 +3,7 @@
 exports[`BackupMethodCard - Snapshots > matches snapshot for default BackupMethodCard 1`] = `
 <div
   data-image-alt="Shield"
-  data-image-src="/images/shield.png"
+  data-image-src="/images/shield.webp"
   data-testid="content-card"
 >
   <div

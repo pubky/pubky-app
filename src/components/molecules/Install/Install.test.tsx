@@ -3,21 +3,6 @@ import { render, screen, fireEvent } from '@testing-library/react';
 import { InstallCard, InstallHeader, InstallNavigation } from './Install';
 import * as App from '@/app';
 
-// Helper function to normalize Radix UI IDs for snapshot testing
-const normalizeRadixIds = (html: string): string => {
-  // Create a map to track ID replacements
-  const idMap = new Map<string, string>();
-  let counter = 0;
-
-  return html.replace(/radix-«r[0-9a-z]+»/gi, (match) => {
-    if (!idMap.has(match)) {
-      idMap.set(match, `radix-«r${counter}»`);
-      counter++;
-    }
-    return idMap.get(match)!;
-  });
-};
-
 // Mock Next.js Image
 vi.mock('next/image', () => ({
   __esModule: true,
@@ -46,15 +31,14 @@ vi.mock('@/core', async (importOriginal) => {
   };
 });
 
-describe('InstallCard', () => {
+describe('InstallCard - Snapshots', () => {
   it('matches snapshot', () => {
     const { container } = render(<InstallCard />);
-    const normalizedHtml = normalizeRadixIds(container.innerHTML);
-    expect(normalizedHtml).toMatchSnapshot();
+    expect(container.firstChild).toMatchSnapshot();
   });
 });
 
-describe('InstallHeader', () => {
+describe('InstallHeader - Snapshots', () => {
   it('matches snapshot', () => {
     const { container } = render(<InstallHeader />);
     expect(container.firstChild).toMatchSnapshot();
@@ -64,12 +48,6 @@ describe('InstallHeader', () => {
 describe('InstallNavigation', () => {
   beforeEach(() => {
     vi.clearAllMocks();
-  });
-
-  it('matches snapshot', () => {
-    const { container } = render(<InstallNavigation />);
-    const normalizedHtml = normalizeRadixIds(container.innerHTML);
-    expect(normalizedHtml).toMatchSnapshot();
   });
 
   it('handles create button click', () => {
@@ -119,6 +97,13 @@ describe('InstallNavigation', () => {
     expect(createButton).toBeDisabled();
     expect(continueButton).toBeDisabled();
   });
+});
+
+describe('InstallNavigation - Snapshots', () => {
+  it('matches snapshot', () => {
+    const { container } = render(<InstallNavigation />);
+    expect(container.firstChild).toMatchSnapshot();
+  });
 
   it('matches snapshot when create button is loading', () => {
     const { container } = render(<InstallNavigation />);
@@ -126,8 +111,7 @@ describe('InstallNavigation', () => {
     const createButton = screen.getByRole('button', { name: /Create keys in browser/i });
     fireEvent.click(createButton);
 
-    const normalizedHtml = normalizeRadixIds(container.innerHTML);
-    expect(normalizedHtml).toMatchSnapshot();
+    expect(container.firstChild).toMatchSnapshot();
   });
 
   it('matches snapshot when continue button is loading', () => {
@@ -136,7 +120,6 @@ describe('InstallNavigation', () => {
     const continueButton = screen.getByRole('button', { name: /Continue with Pubky Ring/i });
     fireEvent.click(continueButton);
 
-    const normalizedHtml = normalizeRadixIds(container.innerHTML);
-    expect(normalizedHtml).toMatchSnapshot();
+    expect(container.firstChild).toMatchSnapshot();
   });
 });

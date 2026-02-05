@@ -2,7 +2,6 @@ import React from 'react';
 import { describe, it, expect } from 'vitest';
 import { render, screen } from '@testing-library/react';
 import { Help } from './Help';
-import { normaliseRadixIds } from '@/libs/utils/utils';
 
 describe('Help', () => {
   it('renders with default props', () => {
@@ -42,7 +41,6 @@ describe('Help', () => {
 describe('Help - Snapshots', () => {
   it('matches snapshot with default props', () => {
     const { container } = render(<Help />);
-    const normalisedContainer = normaliseRadixIds(container);
-    expect(normalisedContainer.innerHTML).toMatchSnapshot();
+    expect(container.innerHTML).toMatchSnapshot();
   });
 });

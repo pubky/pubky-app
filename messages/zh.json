@@ -321,7 +321,10 @@
       "shareUnavailable": "分享不可用",
       "shareUnavailableDescription": "我们已复制您的 pubky，您可以将其粘贴到您喜欢的应用中。",
       "shareFailed": "分享失败",
-      "shareFailedDescription": "当前无法分享。请重试。"
+      "shareFailedDescription": "当前无法分享。请重试。",
+      "signUpFailed": "错误 - 注册失败",
+      "signUpError": "出了点问题。请重试。",
+      "invalidInvite": "无效或已过期的邀请码。请获取或申请新的邀请码。"
     },
     "backupMethod": {
       "title": "选择备份方式",
@@ -414,6 +417,7 @@
     "addArticle": "添加文章",
     "posting": "发布中...",
     "viewOriginal": "查看原帖",
+    "youReposted": "你转发了",
     "newPostsSingular": "查看 {count} 条新帖子",
     "newPostsPlural": "查看 {count} 条新帖子"
   },
@@ -821,8 +825,10 @@
       "postCreated": "帖子已创建",
       "postCreatedDesc": "您的帖子已成功创建。",
       "postFailed": "帖子创建失败。请重试。",
-      "repostSuccess": "转发成功",
-      "repostSuccessDesc": "您的转发已成功创建。",
+      "repostSuccess": "已转发！",
+      "repostSuccessDesc": "您成功转发了{author}的帖子！",
+      "repostSuccessDescFallback": "您的转发已成功创建。",
+      "repostUndo": "撤销",
       "repostFailed": "转发失败。请重试。",
       "postEdited": "帖子已编辑",
       "postEditedDesc": "您的帖子已成功编辑。",
@@ -1103,5 +1109,9 @@
       "q14": "Pubky 与 Nostr 有何不同？",
       "a14": "Pubky 使用 Ed25519 密钥以实现兼容性，并避免中心化中继。相反，它使用分布式哈希表（DHT）进行去中心化查找和身份解析。"
     }
+  },
+  "share": {
+    "title": "分享到 Pubky",
+    "cancel": "取消"
   }
 }

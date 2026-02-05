@@ -3,12 +3,53 @@ import '@testing-library/jest-dom/vitest';
 import 'fake-indexeddb/auto';
 
 import React from 'react';
-import { vi } from 'vitest';
+import { vi, expect } from 'vitest';
 import { cleanup } from '@testing-library/react';
 import { beforeAll, afterAll, afterEach, beforeEach } from 'vitest';
 
 // Import English messages for i18n mock
 import enMessages from '../../messages/en.json';
+
+// =============================================================================
+// IMPORTANT: Set environment variables BEFORE importing any app code
+// =============================================================================
+// The Env singleton in @/libs/env is parsed at module load time.
+// If we import from @/libs/utils before setting process.env, the import chain
+// (@/libs/utils -> @/config -> @/libs/env) will initialize Env with wrong values.
+// See: https://github.com/pubky/pubky-app/issues/1101
+
+process.env.NEXT_PUBLIC_DB_VERSION = '1';
+process.env.NEXT_PUBLIC_DEBUG_MODE = 'false';
+process.env.NEXT_PUBLIC_NEXUS_URL = 'https://nexus.staging.pubky.app';
+process.env.NEXT_PUBLIC_CDN_URL = 'https://nexus.staging.pubky.app/static';
+process.env.NEXT_PUBLIC_SYNC_TTL = '300000';
+// Server-side only admin credentials (not exposed to client)
+process.env.HOMESERVER_ADMIN_URL = 'http://localhost:6288/generate_signup_token';
+process.env.HOMESERVER_ADMIN_PASSWORD = 'admin';
+process.env.NEXT_PUBLIC_TESTNET = 'true';
+process.env.NEXT_PUBLIC_PKARR_RELAYS = '["http://localhost:8080"]';
+process.env.NEXT_PUBLIC_HOMESERVER = 'test-homeserver-key';
+process.env.NEXT_PUBLIC_MODERATION_ID = 'euwmq57zefw5ynnkhh37b3gcmhs7g3cptdbw1doaxj1pbmzp3wro';
+process.env.NEXT_PUBLIC_MODERATED_TAGS = '["nudity"]';
+process.env.NEXT_PUBLIC_EXCHANGE_RATE_API = 'https://api1.blocktank.to/api/fx/rates/btc';
+process.env.NEXT_PUBLIC_HOMEGATE_URL = 'https://localhost:5000/';
+process.env.NEXT_PUBLIC_DEFAULT_HTTP_RELAY = 'http://localhost:15412/link/';
+
+// Chatwoot configuration (required for feedback feature)
+process.env.BASE_URL_SUPPORT = 'https://chatwoot.example.com';
+process.env.SUPPORT_API_ACCESS_TOKEN = 'test-token';
+process.env.SUPPORT_ACCOUNT_ID = '123';
+process.env.SUPPORT_FEEDBACK_INBOX_ID = '26';
+
+// =============================================================================
+// NOW we can safely import app code that depends on Env
+// =============================================================================
+
+// Global snapshot serializer to normalize Radix UI generated IDs
+// This ensures snapshot tests are consistent across test runs
+// See: https://github.com/pubky/pubky-app/issues/1101
+const { radixIdSerializer } = await import('@/libs/utils');
+expect.addSnapshotSerializer(radixIdSerializer);
 
 /**
  * Get a nested value from an object using a dot-separated key path.
@@ -242,29 +283,6 @@ vi.mock('next/font/google', () => ({
     className: 'inter-tight',
   })),
 }));
-
-process.env.NEXT_PUBLIC_DB_VERSION = '1';
-process.env.NEXT_PUBLIC_DEBUG_MODE = 'false';
-process.env.NEXT_PUBLIC_NEXUS_URL = 'https://nexus.staging.pubky.app';
-process.env.NEXT_PUBLIC_CDN_URL = 'https://nexus.staging.pubky.app/static';
-process.env.NEXT_PUBLIC_SYNC_TTL = '300000';
-// Server-side only admin credentials (not exposed to client)
-process.env.HOMESERVER_ADMIN_URL = 'http://localhost:6288/generate_signup_token';
-process.env.HOMESERVER_ADMIN_PASSWORD = 'admin';
-process.env.NEXT_PUBLIC_TESTNET = 'true';
-process.env.NEXT_PUBLIC_PKARR_RELAYS = '["http://localhost:8080"]';
-process.env.NEXT_PUBLIC_HOMESERVER = 'test-homeserver-key';
-process.env.NEXT_PUBLIC_MODERATION_ID = 'euwmq57zefw5ynnkhh37b3gcmhs7g3cptdbw1doaxj1pbmzp3wro';
-process.env.NEXT_PUBLIC_MODERATED_TAGS = '["nudity"]';
-process.env.NEXT_PUBLIC_EXCHANGE_RATE_API = 'https://api1.blocktank.to/api/fx/rates/btc';
-process.env.NEXT_PUBLIC_HOMEGATE_URL = 'https://localhost:5000/';
-process.env.NEXT_PUBLIC_DEFAULT_HTTP_RELAY = 'http://localhost:15412/link/';
-
-// Chatwoot configuration (required for feedback feature)
-process.env.BASE_URL_SUPPORT = 'https://chatwoot.example.com';
-process.env.SUPPORT_API_ACCESS_TOKEN = 'test-token';
-process.env.SUPPORT_ACCOUNT_ID = '123';
-process.env.SUPPORT_FEEDBACK_INBOX_ID = '26';
 
 const { db } = await import('@/core');
 

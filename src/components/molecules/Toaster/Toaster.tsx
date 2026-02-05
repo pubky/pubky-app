@@ -12,6 +12,7 @@ export function Toaster() {
         return (
           <Toast
             key={id}
+            data-cy="toast"
             className="flex items-center justify-between gap-2 rounded-lg border border-brand/32 bg-brand/8 p-6 shadow-lg backdrop-blur-[10px]"
             {...props}
           >
