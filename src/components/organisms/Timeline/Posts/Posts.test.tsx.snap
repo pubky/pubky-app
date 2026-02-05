@@ -43,6 +43,7 @@ exports[`TimelinePosts - Snapshots > should match snapshot with posts 1`] = `
       data-testid="container"
     >
       <div
+        data-cy="post-card"
         data-testid="container"
       >
         <div
@@ -53,6 +54,7 @@ exports[`TimelinePosts - Snapshots > should match snapshot with posts 1`] = `
         />
       </div>
       <div
+        data-cy="post-card"
         data-testid="container"
       >
         <div
@@ -63,6 +65,7 @@ exports[`TimelinePosts - Snapshots > should match snapshot with posts 1`] = `
         />
       </div>
       <div
+        data-cy="post-card"
         data-testid="container"
       >
         <div
