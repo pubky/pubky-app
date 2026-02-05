@@ -32,6 +32,7 @@ export * from './MarkdownEditor';
 export * from './Metadata';
 export * from './NewPostCTA';
 export * from './NewPostsButton';
+export * from './PullToRefreshIndicator';
 export * from './Logout';
 export * from './MobileFooter';
 export * from './NotificationIcon';

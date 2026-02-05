@@ -1113,5 +1113,10 @@
   "share": {
     "title": "分享到 Pubky",
     "cancel": "取消"
+  },
+  "pullToRefresh": {
+    "pullToRefresh": "下拉刷新",
+    "releaseToRefresh": "释放刷新",
+    "refreshing": "刷新中..."
   }
 }
