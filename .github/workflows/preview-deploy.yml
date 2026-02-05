@@ -1,6 +1,10 @@
 name: PR Preview Deployment
 
 on:
+  # TODO: Remove this push trigger before merging to master
+  push:
+    branches:
+      - infra/preview-deployments-for-each-pr
   pull_request:
     types: [opened, synchronize, reopened]
   pull_request_target:
