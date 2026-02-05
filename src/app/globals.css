@@ -410,6 +410,11 @@ body {
     box-shadow: var(--shadow-xs-dark);
   }
 
+  /* Gradient fade effect for mobile tab menus (Profile, Settings) */
+  .mobile-menu-gradient-fade::after {
+    @apply pointer-events-none absolute top-full right-0 left-0 h-6 bg-linear-to-b from-background to-transparent content-[''];
+  }
+
   /* Thicker white caret for focused inputs (used by PostTagInput) */
   .caret-white {
     caret-color: white;

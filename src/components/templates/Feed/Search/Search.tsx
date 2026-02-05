@@ -47,7 +47,9 @@ export function Search() {
         {hasTags ? (
           <>
             <Molecules.SearchHeader tags={tags} />
-            <Organisms.TimelineFeed variant={TIMELINE_FEED_VARIANT.SEARCH} />
+            <Atoms.Container data-cy="post-search-results" overrideDefaults>
+              <Organisms.TimelineFeed variant={TIMELINE_FEED_VARIANT.SEARCH} />
+            </Atoms.Container>
           </>
         ) : (
           <Molecules.SearchEmptyState />
