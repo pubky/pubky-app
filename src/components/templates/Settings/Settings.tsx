@@ -21,10 +21,14 @@ export function Settings({ children }: SettingsProps) {
 
   return (
     <>
+      {/* Mobile header - rendered here for control over hasGradientBackground */}
+      <Molecules.MobileHeader hasGradientBackground={false} showLeftButton={false} showRightButton={false} />
+
       {/* Mobile tab navigation - visible only on mobile (< lg) */}
       <Molecules.SettingsMobileMenu className="lg:hidden" />
 
       <Organisms.ContentLayout
+        renderMobileHeader={false}
         showLeftMobileButton={false}
         showRightMobileButton={false}
         leftSidebarContent={<Molecules.SettingsMenu />}
