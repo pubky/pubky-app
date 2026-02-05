@@ -197,6 +197,26 @@ describe('ContentLayout', () => {
 
     expect(screen.getByText('Test Content')).toBeInTheDocument();
   });
+
+  it('renders MobileHeader by default', () => {
+    render(
+      <ContentLayout>
+        <div>Test Content</div>
+      </ContentLayout>,
+    );
+
+    expect(screen.getByTestId('mobile-header')).toBeInTheDocument();
+  });
+
+  it('does not render MobileHeader when renderMobileHeader is false', () => {
+    render(
+      <ContentLayout renderMobileHeader={false}>
+        <div>Test Content</div>
+      </ContentLayout>,
+    );
+
+    expect(screen.queryByTestId('mobile-header')).not.toBeInTheDocument();
+  });
 });
 
 describe('ContentLayout - Snapshots', () => {
@@ -253,6 +273,15 @@ describe('ContentLayout - Snapshots', () => {
           <p>Description</p>
           <button>Action</button>
         </div>
+      </ContentLayout>,
+    );
+    expect(container.firstChild).toMatchSnapshot();
+  });
+
+  it('matches snapshot with renderMobileHeader false', () => {
+    const { container } = render(
+      <ContentLayout renderMobileHeader={false}>
+        <div>Test Content</div>
       </ContentLayout>,
     );
     expect(container.firstChild).toMatchSnapshot();
