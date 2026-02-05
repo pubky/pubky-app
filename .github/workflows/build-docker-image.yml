@@ -10,6 +10,7 @@ on:
         options:
         - production
         - staging
+        - testnet
 
       latest:
         description: 'Use latest tag'
