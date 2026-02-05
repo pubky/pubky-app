@@ -34,7 +34,7 @@ jobs:
         uses: actions/checkout@v4
         with:
           repository: pubky/pubky-stack
-          ref: production
+          ref: ${{ env.pubky_stack_ref }}
           path: pubky-stack
           submodules: true
           token: ${{ secrets.READ_REPOS }}
