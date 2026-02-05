@@ -66,7 +66,7 @@ export function ProfilePageMobileMenu({
   return (
     <Atoms.Container
       overrideDefaults={true}
-      className="sticky top-(--header-height-mobile) z-(--z-mobile-menu) bg-background lg:hidden"
+      className="mobile-menu-gradient-fade sticky top-(--header-height-mobile) z-(--z-mobile-menu) bg-background lg:hidden"
       data-testid="profile-page-mobile-menu"
     >
       <Atoms.Container overrideDefaults={true} className="flex w-full" data-testid="profile-page-mobile-menu-items">
