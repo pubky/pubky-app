@@ -1,4 +1,9 @@
 name: e2e-test
+env:
+  pubky_stack_ref: 'production'
+  platforms: 'linux/amd64'
+  registry: 'europe-west6-docker.pkg.dev/infra-464608/synonym-private-repo'
+  franky_env: 'testnet'
 
 on:
   workflow_dispatch:
@@ -7,17 +12,138 @@ on:
       - master
 
 jobs:
-  test:
+  rebuild_images:
+    name: Getting images to rebuild
     runs-on: ubuntu-latest
+    outputs:
+      homeserver_tag: ${{ steps.set_tag.outputs.homeserver_tag }}
+      pubky-nexus_tag: ${{ steps.set_tag.outputs.pubky-nexus_tag }}
+    strategy:
+      matrix:
+        include:
+          - app: "pubky-nexus"
+            submodule_dir: "pubky-stack/pubky-nexus/"
+            image: "pubky-nexus"
+
+          - app: "homeserver"
+            submodule_dir: "pubky-stack/pubky-core/"
+            image: "homeserver"
+
+    steps:
+      - name: Checkout pubky-stack
+        uses: actions/checkout@v4
+        with:
+          repository: pubky/pubky-stack
+          ref: ${{ env.pubky_stack_ref }}
+          path: pubky-stack
+          submodules: true
+          token: ${{ secrets.READ_REPOS }}
+          # cannot use ssh-key (deploy key) for private submodules due to the
+          # limitation where only a single key can be used per repo checkout
+          # see https://github.com/actions/checkout/issues/183
+
+      - name: Set HEAD commit hash
+        id: sha_tag
+        uses: pubky/ci-workflows/.github/actions/docker/get_head_commit_hash@main
+        with:
+          path: ${{ matrix.submodule_dir }}
+
+      - name: Set Current Tag as Output
+        id: set_tag
+        run: |
+          echo ${{ matrix.image }}_tag=${{ steps.sha_tag.outputs.hash }} >> $GITHUB_OUTPUT
+
+      - name: Login to registry
+        uses: pubky/ci-workflows/.github/actions/docker/registry_login@main
+        with:
+          registry: ${{ env.registry }}
+          gcp_service_account_key: ${{ secrets.GCR_JSON_KEY }}
+
+      - name: Check if image needs to be rebuild
+        uses: pubky/ci-workflows/.github/actions/docker/check_if_image_exists@main
+        id: check_image
+        with:
+          image: ${{ env.registry }}/${{ matrix.image }}
+          tag: ${{ steps.sha_tag.outputs.hash }}
+          arch: ${{ env.platforms }}
+
+      - name: Rebuild the images if needed
+        uses: pubky/ci-workflows/.github/actions/docker/build_and_push@main
+        with:
+          registry: ${{ env.registry }}
+          image: ${{ matrix.image }}
+          context: ${{ matrix.submodule_dir }}
+          platforms: ${{ env.platforms }}
+        if: ${{ steps.check_image.outputs.exists != 'true' }}
+
+  set_vars_franky:
+    name: Set vars for Franky
+    runs-on: ubuntu-latest
+    outputs:
+      env: ${{ steps.set_vars.outputs.env }}
+      platforms: ${{ steps.set_vars.outputs.platforms }}
+    steps:
+      - name: Set Vars
+        id: set_vars
+        run: |
+          echo env=${{ env.franky_env }} >> $GITHUB_OUTPUT
+          echo platforms=${{ env.platforms }} >> $GITHUB_OUTPUT
+
+  rebuild_franky:
+    needs: [ set_vars_franky ]
+    uses: ./.github/workflows/build-docker-image.yml
+    with:
+      platforms: ${{ needs.set_vars_franky.outputs.platforms }}
+      env: ${{ needs.set_vars_franky.outputs.env }}
+    secrets: inherit
+
+  e2e-test:
+    name: End-to-End Tests
+    runs-on: ubuntu-latest
+    needs: [rebuild_images, rebuild_franky]
     env:
-      # https://github.com/pubky/pubky-stack
-      PUBKY_STACK_REF: 10349036a70c79deedaa8c7278548958cd8f707c
+      HOMESERVER_TAG: ${{ needs.rebuild_images.outputs.homeserver_tag }}
+      FRANKY_TAG: ${{ needs.rebuild_franky.outputs.image_tag }}
+      PUBKY_NEXUS_TAG: ${{ needs.rebuild_images.outputs.pubky-nexus_tag }}
+    permissions:
+      contents: read
+      statuses: write
     strategy:
       fail-fast: false
       matrix:
-        browser: [chrome] # [chrome, firefox, webkit]
+        browser: [chrome]
+        spec: ["contacts.cy.ts", "notifications.cy.ts", "onboarding.cy.ts", "posts.cy.ts", "search.cy.ts"]
 
     steps:
+      - name: Validate envs from rebuild_images job
+        run: |
+          if [ -z "${{ env.HOMESERVER_TAG }}" ]; then
+            echo "Error: env HOMESERVER_TAG is empty!"
+            exit 1
+          fi
+
+          if [ -z "${{ env.FRANKY_TAG }}" ]; then
+            echo "Error: env FRANKY_TAG is empty!"
+            exit 1
+          fi
+
+          if [ -z "${{ env.PUBKY_NEXUS_TAG }}" ]; then
+            echo "Error: env PUBKY_NEXUS_TAG is empty!"
+            exit 1
+          fi
+
+      - name: Checkout pubky-stack
+        uses: actions/checkout@v4
+        with:
+          repository: pubky/pubky-stack
+          ref: ${{ env.pubky_stack_ref }}
+          path: pubky-stack
+          submodules: true
+          token: ${{ secrets.READ_REPOS }}
+          # cannot use ssh-key (deploy key) for private submodules due to the
+          # limitation where only a single key can be used per repo checkout
+          # see https://github.com/actions/checkout/issues/183
+
       - name: Checkout this repository
         uses: actions/checkout@v4
         with:
@@ -30,18 +156,6 @@ jobs:
           cache: 'npm'
           cache-dependency-path: 'franky/package-lock.json'
 
-      - name: Checkout pubky-stack
-        uses: actions/checkout@v4
-        with:
-          repository: pubky/pubky-stack
-          ref: ${{ env.PUBKY_STACK_REF }}
-          path: pubky-stack
-          submodules: true
-          token: ${{ secrets.READ_REPOS }}
-          # cannot use ssh-key (deploy key) for private submodules due to the
-          # limitation where only a single key can be used per repo checkout
-          # see https://github.com/actions/checkout/issues/183
-
       - name: Cache node modules
         uses: actions/cache@v4
         with:
@@ -52,32 +166,16 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-node-
 
-      - name: Cache Playwright browsers
-        if: ${{ matrix.browser == 'webkit' }}
-        uses: actions/cache@v4
+      - name: Install Cypress dependencies
+        working-directory: franky
+        run: npm ci
+
+      - name: Login to registry
+        uses: pubky/ci-workflows/.github/actions/docker/registry_login@main
         with:
-          path: |
-            ~/.cache/ms-playwright
-          key: ${{ runner.os }}-playwright-${{ hashFiles('franky/package-lock.json') }}
-          restore-keys: |
-            ${{ runner.os }}-playwright-
+          registry: ${{ env.registry }}
+          gcp_service_account_key: ${{ secrets.GCR_JSON_KEY }}
 
-      - name: Cache Next.js build
-        uses: actions/cache@v4
-        with:
-          path: |
-            franky/.next
-          key: ${{ runner.os }}-nextjs-${{ hashFiles('franky/package-lock.json', 'franky/src/**/*.{js,jsx,ts,tsx}', 'franky/public/**', 'franky/next.config.ts', 'franky/tailwind.config.*', 'franky/postcss.config.*') }}
-          restore-keys: |
-            ${{ runner.os }}-nextjs-
-
-      - name: Increase watcher sleep in Nexus config
-        working-directory: pubky-stack/docker
-        run: |
-          sed -i 's/watcher_sleep = 100/watcher_sleep = 500/' pubky-nexus-config-testnet.toml
-
-      # reduce neo4j memory to prevent
-      # ERROR Invalid memory configuration - exceeds physical memory. Check the configured values for server.memory.pagecache.size and server.memory.heap.max_size
       - name: Modify neo4j.env
         working-directory: pubky-stack/docker
         run: |
@@ -85,100 +183,21 @@ jobs:
           sed -i 's/NEO4J_server_memory_heap_initial__size=4G/NEO4J_server_memory_heap_initial__size=1G/' neo4j.env
           sed -i 's/NEO4J_server_memory_heap_max__size=8G/NEO4J_server_memory_heap_max__size=2G/' neo4j.env
 
+      - name: Increase watcher sleep in Nexus config
+        working-directory: pubky-stack/docker
+        run: |
+          sed -i 's/watcher_sleep = 100/watcher_sleep = 500/' pubky-nexus-config-testnet.toml
+
       - name: Prepare pubky-stack .env
         working-directory: pubky-stack/docker
         run: |
           cp .env-sample .env
 
-      - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v3
-
-      - name: Docker layer caching
-        uses: actions/cache@v4
-        with:
-          path: |
-            /tmp/.buildx-cache-nexus
-            /tmp/.buildx-cache-homeserver
-          key: ${{ runner.os }}-pubky-stack-${{ env.PUBKY_STACK_REF }}
-
-      - name: Build pubky-nexus
-        uses: docker/build-push-action@v5
-        with:
-          context: pubky-stack/pubky-nexus
-          load: true
-          tags: local/pubky-nexus:latest
-          cache-from: type=local,src=/tmp/.buildx-cache-nexus
-          cache-to: type=local,dest=/tmp/.buildx-cache-nexus-new,mode=max
-
-      - name: Build homeserver
-        uses: docker/build-push-action@v5
-        with:
-          context: pubky-stack/pubky-core
-          load: true
-          tags: local/homeserver:latest
-          cache-from: type=local,src=/tmp/.buildx-cache-homeserver
-          cache-to: type=local,dest=/tmp/.buildx-cache-homeserver-new,mode=max
-
-      # Overwrite old cache to prevent growing size, see https://github.com/docker/build-push-action/issues/252
-      - name: Overwrite old cache
-        run: |
-          rm -rf /tmp/.buildx-cache-nexus
-          mv /tmp/.buildx-cache-nexus-new /tmp/.buildx-cache-nexus
-          rm -rf /tmp/.buildx-cache-homeserver
-          mv /tmp/.buildx-cache-homeserver-new /tmp/.buildx-cache-homeserver
-
       - name: Run pubky-stack
         working-directory: pubky-stack/docker
+        run: docker compose up -d --no-build homeserver nexusd nexus-neo4j nexus-redis franky postgres
         env:
-          REGISTRY: local
-        run: docker compose up -d nexusd nexus-redis nexus-neo4j homeserver
-
-      - name: Build Franky frontend
-        working-directory: franky
-        run: |
-          cat > .env << EOF
-          NEXT_PUBLIC_DB_NAME=franky
-          NEXT_PUBLIC_DB_VERSION=2
-          NEXT_PUBLIC_DEBUG_MODE=false
-          NEXT_PUBLIC_SYNC_TTL=5000
-          NEXT_PUBLIC_NOTIFICATION_POLL_INTERVAL_MS=6000
-          NEXT_PUBLIC_NOTIFICATION_POLL_ON_START=false
-          NEXT_PUBLIC_NOTIFICATION_RESPECT_PAGE_VISIBILITY=true
-          NEXT_PUBLIC_STREAM_POLL_INTERVAL_MS=6000
-          NEXT_PUBLIC_STREAM_POLL_ON_START=false
-          NEXT_PUBLIC_STREAM_RESPECT_PAGE_VISIBILITY=true
-          NEXT_PUBLIC_STREAM_FETCH_LIMIT=10
-          NEXT_PUBLIC_STREAM_CACHE_MAX_AGE_MS=5000
-          NEXT_MAX_STREAM_TAGS=5
-          NEXT_PUBLIC_TTL_POST_MS=2000
-          NEXT_PUBLIC_TTL_USER_MS=3000
-          NEXT_PUBLIC_TTL_BATCH_INTERVAL_MS=5000
-          NEXT_PUBLIC_TTL_POST_MAX_BATCH_SIZE=20
-          NEXT_PUBLIC_TTL_USER_MAX_BATCH_SIZE=20
-          NEXT_PUBLIC_TTL_RETRY_DELAY_MS=10000
-          NEXT_PUBLIC_HOMESERVER=8pinxxgqs41n4aididenw5apqp1urfmzdztr8jt4abrkdn435ewo
-          NEXT_PUBLIC_NEXUS_URL=http://localhost:8080
-          NEXT_PUBLIC_CDN_URL=http://localhost:8080/static
-          NEXT_PUBLIC_TESTNET=true
-          NEXT_PUBLIC_DEFAULT_HTTP_RELAY=http://localhost:15412/link/
-          NEXT_PUBLIC_MODERATION_ID=euwmq57zefw5ynnkhh37b3gcmhs7g3cptdbw1doaxj1pbmzp3wro
-          NEXT_PUBLIC_MODERATED_TAGS=["nudity"]
-          HOMESERVER_ADMIN_URL=http://localhost:6288/generate_signup_token
-          HOMESERVER_ADMIN_PASSWORD=admin
-          BASE_URL_SUPPORT=${{ secrets.BASE_URL_SUPPORT }}
-          SUPPORT_API_ACCESS_TOKEN=${{ secrets.SUPPORT_API_ACCESS_TOKEN }}
-          SUPPORT_ACCOUNT_ID=1
-          SUPPORT_FEEDBACK_INBOX_ID=${{ secrets.SUPPORT_FEEDBACK_INBOX_ID }}
-          EOF
-          npm ci
-          npm run build
-
-      - name: Install WebKit for Safari testing
-        if: ${{ matrix.browser == 'webkit' }}
-        run: |
-          npm install playwright-webkit --save-dev
-          npx playwright install webkit
-          npx playwright install-deps webkit
+          REGISTRY: ${{ env.registry }}
 
       - name: Wait for dockerised pubky-stack to start
         run: |
@@ -199,7 +218,7 @@ jobs:
 
           echo "Service is ready."
 
-      - name: Run e2e tests - Desktop (${{ matrix.browser }})
+      - name: Run e2e tests - Desktop (${{ matrix.browser }}) - Spec (${{matrix.spec}})
         id: test-desktop
         uses: cypress-io/github-action@v6
         env:
@@ -207,12 +226,11 @@ jobs:
         with:
           working-directory: franky/cypress
           config-file: cypress.config.ts
-          spec: e2e/**/*.cy.ts
+          spec: e2e/${{ matrix.spec }}
           browser: ${{ matrix.browser }}
           headed: false
           summary-title: ${{ matrix.browser }} - Desktop
           install: false
-          start: npm run start
           wait-on: 'http://localhost:3000'
           wait-on-timeout: 180
 
@@ -220,44 +238,17 @@ jobs:
         if: ${{ always() }}
         uses: actions/upload-artifact@v4
         with:
-          name: screenshots-${{ matrix.browser }}-desktop
+          name: screenshots-${{ matrix.browser }}-${{ matrix.spec }}-desktop
           path: franky/cypress/screenshots
           if-no-files-found: ignore
 
-      - name: Upload video for onboarding test - ${{ matrix.browser }} - Desktop
+      - name: Upload video for ${{ matrix.spec }} test - ${{ matrix.browser }} - Desktop
         if: always() && steps.test-desktop.outcome == 'failure'
         uses: actions/upload-artifact@v4
         continue-on-error: true
         with:
-          name: video-${{ matrix.browser }}-desktop-onboarding
-          path: franky/cypress/videos/onboarding.cy.ts.mp4
-          if-no-files-found: ignore
-
-      - name: Upload video for contacts test - ${{ matrix.browser }} - Desktop
-        if: always() && steps.test-desktop.outcome == 'failure'
-        uses: actions/upload-artifact@v4
-        continue-on-error: true
-        with:
-          name: video-${{ matrix.browser }}-desktop-contacts
-          path: franky/cypress/videos/contacts.cy.ts.mp4
-          if-no-files-found: ignore
-
-      - name: Upload video for posts test - ${{ matrix.browser }} - Desktop
-        if: always() && steps.test-desktop.outcome == 'failure'
-        uses: actions/upload-artifact@v4
-        continue-on-error: true
-        with:
-          name: video-${{ matrix.browser }}-desktop-posts
-          path: franky/cypress/videos/posts.cy.ts.mp4
-          if-no-files-found: ignore
-
-      - name: Upload video for notifications test - ${{ matrix.browser }} - Desktop
-        if: always() && steps.test-desktop.outcome == 'failure'
-        uses: actions/upload-artifact@v4
-        continue-on-error: true
-        with:
-          name: video-${{ matrix.browser }}-desktop-notifications
-          path: franky/cypress/videos/notifications.cy.ts.mp4
+          name: video-${{ matrix.browser }}-${{ matrix.spec }}-desktop-onboarding
+          path: franky/cypress/videos/${{ matrix.spec }}.mp4
           if-no-files-found: ignore
 
       # TODO: Skipped due to bug https://github.com/pubky/franky/issues/372
@@ -282,44 +273,17 @@ jobs:
         if: ${{ always() }}
         uses: actions/upload-artifact@v4
         with:
-          name: screenshots-${{ matrix.browser }}-mobile
+          name: screenshots-${{ matrix.browser }}-${{ matrix.spec }}-mobile
           path: franky/cypress/screenshots/mobile
           if-no-files-found: ignore
 
-      - name: Upload video for onboarding test - ${{ matrix.browser }} - Mobile
+      - name: Upload video for ${{ matrix.spec }} test - ${{ matrix.browser }} - Mobile
         if: always() && steps.test-mobile.outcome == 'failure'
         uses: actions/upload-artifact@v4
         continue-on-error: true
         with:
-          name: video-${{ matrix.browser }}-mobile-onboarding
-          path: franky/cypress/videos/mobile/onboarding.cy.ts.mp4
-          if-no-files-found: ignore
-
-      - name: Upload video for contacts test - ${{ matrix.browser }} - Mobile
-        if: always() && steps.test-mobile.outcome == 'failure'
-        uses: actions/upload-artifact@v4
-        continue-on-error: true
-        with:
-          name: video-${{ matrix.browser }}-mobile-contacts
-          path: franky/cypress/videos/mobile/contacts.cy.ts.mp4
-          if-no-files-found: ignore
-
-      - name: Upload video for posts test - ${{ matrix.browser }} - Mobile
-        if: always() && steps.test-mobile.outcome == 'failure'
-        uses: actions/upload-artifact@v4
-        continue-on-error: true
-        with:
-          name: video-${{ matrix.browser }}-mobile-posts
-          path: franky/cypress/videos/mobile/posts.cy.ts.mp4
-          if-no-files-found: ignore
-
-      - name: Upload video for notifications test - ${{ matrix.browser }} - Mobile
-        if: always() && steps.test-mobile.outcome == 'failure'
-        uses: actions/upload-artifact@v4
-        continue-on-error: true
-        with:
-          name: video-${{ matrix.browser }}-mobile-notifications
-          path: franky/cypress/videos/mobile/notifications.cy.ts.mp4
+          name: video-${{ matrix.browser }}-${{ matrix.spec }}-mobile-onboarding
+          path: franky/cypress/videos/mobile/${{ matrix.spec }}.mp4
           if-no-files-found: ignore
 
       - name: Upload cypress.log
@@ -327,7 +291,7 @@ jobs:
         uses: actions/upload-artifact@v4
         continue-on-error: true
         with:
-          name: cypress-log-${{ matrix.browser }}
+          name: cypress-log-${{ matrix.browser }}-${{ matrix.spec }}
           path: franky/cypress/cypress.log
           if-no-files-found: ignore
 
