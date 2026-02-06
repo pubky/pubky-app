@@ -9,6 +9,7 @@ body {
   overflow-x: hidden;
   width: 100%;
   touch-action: pan-x pan-y;
+  overscroll-behavior-y: contain;
 }
 
 @theme {
@@ -185,7 +186,7 @@ body {
    * Popover bio max height
    * - Maximum height for bio text in user info popovers before scrolling
    * - Applied to: PostHeaderUserInfoPopoverContent bio section
-   * 
+   *
    * Rationale for 150px:
    * - Displays approximately 5-6 lines of bio text (at 16px font, 24px line-height)
    * - Balances showing meaningful content vs keeping popover compact
@@ -199,7 +200,7 @@ body {
    * Mention popover width
    * - Width for user suggestion popover in post input
    * - Applied to: MentionPopover component
-   * 
+   *
    * Rationale for 300px:
    * - Provides adequate space for user avatar, name, and truncated ID
    * - Consistent with other popover widths in the app
@@ -210,7 +211,7 @@ body {
    * Mention popover max height
    * - Maximum height for mention suggestions before scrolling
    * - Applied to: MentionPopover component
-   * 
+   *
    * Rationale for 200px:
    * - Shows approximately 4-5 user suggestions at once
    * - Prevents popover from obscuring too much of the textarea
@@ -222,7 +223,7 @@ body {
    * Who tagged expanded list width
    * - Width for the expanded list of users who tagged a post/content
    * - Applied to: WhoTaggedExpandedList component
-   * 
+   *
    * Rationale for 320px:
    * - Provides adequate space for user avatar, name, and follow button
    * - Consistent with other popover/list widths in the app
@@ -234,7 +235,7 @@ body {
    * Who tagged expanded list max height
    * - Maximum height for the expanded list before scrolling
    * - Applied to: WhoTaggedExpandedList component
-   * 
+   *
    * Rationale for 300px:
    * - Shows approximately 5-6 user items at once
    * - Prevents list from obscuring too much content
