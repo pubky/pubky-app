@@ -32,7 +32,7 @@ vi.mock('@/hooks', async (importOriginal) => {
 
 // Mock useSearchStreamId hook
 vi.mock('@/hooks/useSearchStreamId', () => ({
-  useSearchStreamId: vi.fn(() => undefined),
+  useSearchStreamId: vi.fn(() => 'tags:test' as Core.PostStreamId),
   useSearchTags: vi.fn(() => []),
 }));
 
@@ -43,6 +43,17 @@ vi.mock('@/hooks/useUnreadPosts', () => ({
 
 vi.mock('@/hooks/useIsScrolledFromTop', () => ({
   useIsScrolledFromTop: vi.fn(() => false),
+}));
+
+const { mockUsePullToRefresh } = vi.hoisted(() => ({
+  mockUsePullToRefresh: vi.fn(() => ({
+    state: 'idle' as const,
+    pullDistance: 0,
+  })),
+}));
+
+vi.mock('@/hooks/usePullToRefresh', () => ({
+  usePullToRefresh: mockUsePullToRefresh,
 }));
 
 vi.mock('@/providers', async (importOriginal) => {
@@ -65,6 +76,8 @@ vi.mock('@/molecules', () => ({
     visible: boolean;
     isScrolled?: boolean;
   }) => (visible && count > 0 ? <div data-testid="new-posts-button">{count} new posts</div> : null),
+  PullToRefreshIndicator: ({ state }: { state: string; pullDistance: number }) =>
+    state !== 'idle' ? <div data-testid="pull-to-refresh-indicator">{state}</div> : null,
 }));
 
 vi.mock('@/organisms', () => ({
@@ -118,6 +131,11 @@ describe('TimelineFeed', () => {
     mockUseStreamIdFromFilters.mockReturnValue(Core.PostStreamTypes.TIMELINE_ALL_ALL);
     mockUseBookmarksStreamId.mockReturnValue(Core.PostStreamTypes.TIMELINE_BOOKMARKS_ALL);
     mockUseStreamPagination.mockReturnValue(defaultPaginationResult);
+    // Reset pull-to-refresh mock to idle state
+    mockUsePullToRefresh.mockReturnValue({
+      state: 'idle' as const,
+      pullDistance: 0,
+    });
   });
 
   describe('Home Variant', () => {
@@ -151,6 +169,16 @@ describe('TimelineFeed', () => {
       expect(screen.getByTestId('timeline-posts')).toBeInTheDocument();
     });
 
+    it('should enable pull-to-refresh for home variant', () => {
+      render(<TimelineFeed variant={TIMELINE_FEED_VARIANT.HOME} />);
+
+      expect(mockUsePullToRefresh).toHaveBeenCalledWith(
+        expect.objectContaining({
+          disabled: false,
+        }),
+      );
+    });
+
     it('should pass correct props to TimelinePosts', () => {
       render(<TimelineFeed variant={TIMELINE_FEED_VARIANT.HOME} />);
 
@@ -170,6 +198,97 @@ describe('TimelineFeed', () => {
       expect(mockUseStreamPagination).toHaveBeenCalledWith({
         streamId: Core.PostStreamTypes.TIMELINE_BOOKMARKS_ALL,
       });
+    });
+
+    it('should disable pull-to-refresh for bookmarks variant', () => {
+      render(<TimelineFeed variant={TIMELINE_FEED_VARIANT.BOOKMARKS} />);
+
+      expect(mockUsePullToRefresh).toHaveBeenCalledWith(
+        expect.objectContaining({
+          disabled: true,
+        }),
+      );
+    });
+  });
+
+  describe('Hot Variant', () => {
+    it('should enable pull-to-refresh for hot variant', () => {
+      render(<TimelineFeed variant={TIMELINE_FEED_VARIANT.HOT} />);
+
+      expect(mockUsePullToRefresh).toHaveBeenCalledWith(
+        expect.objectContaining({
+          disabled: false,
+        }),
+      );
+    });
+  });
+
+  describe('Search Variant', () => {
+    it('should disable pull-to-refresh for search variant', () => {
+      render(<TimelineFeed variant={TIMELINE_FEED_VARIANT.SEARCH} />);
+
+      expect(mockUsePullToRefresh).toHaveBeenCalledWith(
+        expect.objectContaining({
+          disabled: true,
+        }),
+      );
+    });
+  });
+
+  describe('Pull to Refresh', () => {
+    it('should show pull-to-refresh indicator when pulling on home variant', () => {
+      mockUsePullToRefresh.mockReturnValue({
+        state: 'pulling' as const,
+        pullDistance: 50,
+      });
+
+      render(<TimelineFeed variant={TIMELINE_FEED_VARIANT.HOME} />);
+
+      expect(screen.getByTestId('pull-to-refresh-indicator')).toBeInTheDocument();
+    });
+
+    it('should show pull-to-refresh indicator when refreshing', () => {
+      mockUsePullToRefresh.mockReturnValue({
+        state: 'refreshing' as const,
+        pullDistance: 56,
+      });
+
+      render(<TimelineFeed variant={TIMELINE_FEED_VARIANT.HOME} />);
+
+      expect(screen.getByTestId('pull-to-refresh-indicator')).toBeInTheDocument();
+      expect(screen.getByTestId('pull-to-refresh-indicator')).toHaveTextContent('refreshing');
+    });
+
+    it('should not show pull-to-refresh indicator when idle', () => {
+      mockUsePullToRefresh.mockReturnValue({
+        state: 'idle' as const,
+        pullDistance: 0,
+      });
+
+      render(<TimelineFeed variant={TIMELINE_FEED_VARIANT.HOME} />);
+
+      expect(screen.queryByTestId('pull-to-refresh-indicator')).not.toBeInTheDocument();
+    });
+
+    it('should not render pull-to-refresh indicator for disabled variants', () => {
+      mockUsePullToRefresh.mockReturnValue({
+        state: 'pulling' as const,
+        pullDistance: 50,
+      });
+
+      render(<TimelineFeed variant={TIMELINE_FEED_VARIANT.BOOKMARKS} />);
+
+      expect(screen.queryByTestId('pull-to-refresh-indicator')).not.toBeInTheDocument();
+    });
+
+    it('should pass refresh function to usePullToRefresh', () => {
+      render(<TimelineFeed variant={TIMELINE_FEED_VARIANT.HOME} />);
+
+      expect(mockUsePullToRefresh).toHaveBeenCalledWith(
+        expect.objectContaining({
+          onRefresh: mockRefresh,
+        }),
+      );
     });
   });
 
@@ -294,6 +413,11 @@ describe('TimelineFeed - Snapshots', () => {
     mockUseStreamIdFromFilters.mockReturnValue(Core.PostStreamTypes.TIMELINE_ALL_ALL);
     mockUseBookmarksStreamId.mockReturnValue(Core.PostStreamTypes.TIMELINE_BOOKMARKS_ALL);
     mockUseStreamPagination.mockReturnValue(defaultPaginationResult);
+    // Reset pull-to-refresh mock to idle state for snapshots
+    mockUsePullToRefresh.mockReturnValue({
+      state: 'idle' as const,
+      pullDistance: 0,
+    });
   });
 
   it('should match snapshot for home variant', () => {

@@ -1,0 +1,114 @@
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
+
+exports[`PullToRefreshIndicator - Snapshots > matches snapshot in pulling state 1`] = `
+<div>
+  <div
+    aria-hidden="false"
+    class="pointer-events-none absolute right-0 left-0 z-50 flex justify-center"
+    data-testid="pull-to-refresh-indicator"
+    style="top: 2px;"
+  >
+    <div
+      class="inline-flex items-center gap-2.5 rounded-full border border-brand/35 bg-background/75 px-3.5 py-2.5 text-sm text-brand shadow-lg backdrop-blur-md"
+      data-testid="pull-to-refresh-pill"
+    >
+      <svg
+        aria-hidden="true"
+        class="lucide lucide-chevron-down size-4 transition-transform duration-150"
+        data-testid="pull-to-refresh-arrow"
+        fill="none"
+        height="24"
+        stroke="currentColor"
+        stroke-linecap="round"
+        stroke-linejoin="round"
+        stroke-width="2"
+        viewBox="0 0 24 24"
+        width="24"
+        xmlns="http://www.w3.org/2000/svg"
+      >
+        <path
+          d="m6 9 6 6 6-6"
+        />
+      </svg>
+      <span
+        class="font-medium text-brand"
+        data-testid="pull-to-refresh-label"
+      >
+        Pull to refresh
+      </span>
+    </div>
+  </div>
+</div>
+`;
+
+exports[`PullToRefreshIndicator - Snapshots > matches snapshot in ready state 1`] = `
+<div>
+  <div
+    aria-hidden="false"
+    class="pointer-events-none absolute right-0 left-0 z-50 flex justify-center"
+    data-testid="pull-to-refresh-indicator"
+    style="top: 32px;"
+  >
+    <div
+      class="inline-flex items-center gap-2.5 rounded-full border border-brand/35 bg-background/75 px-3.5 py-2.5 text-sm text-brand shadow-lg backdrop-blur-md"
+      data-testid="pull-to-refresh-pill"
+    >
+      <svg
+        aria-hidden="true"
+        class="lucide lucide-chevron-down size-4 transition-transform duration-150 rotate-180"
+        data-testid="pull-to-refresh-arrow"
+        fill="none"
+        height="24"
+        stroke="currentColor"
+        stroke-linecap="round"
+        stroke-linejoin="round"
+        stroke-width="2"
+        viewBox="0 0 24 24"
+        width="24"
+        xmlns="http://www.w3.org/2000/svg"
+      >
+        <path
+          d="m6 9 6 6 6-6"
+        />
+      </svg>
+      <span
+        class="font-medium text-brand"
+        data-testid="pull-to-refresh-label"
+      >
+        Release to refresh
+      </span>
+    </div>
+  </div>
+</div>
+`;
+
+exports[`PullToRefreshIndicator - Snapshots > matches snapshot in refreshing state 1`] = `
+<div>
+  <div
+    aria-hidden="false"
+    class="pointer-events-none absolute right-0 left-0 z-50 flex justify-center transition-[top] duration-200 ease-out"
+    data-testid="pull-to-refresh-indicator"
+    style="top: 8px;"
+  >
+    <div
+      class="inline-flex items-center gap-2.5 rounded-full border border-brand/35 bg-background/75 px-3.5 py-2.5 text-sm text-brand shadow-lg backdrop-blur-md"
+      data-testid="pull-to-refresh-pill"
+    >
+      <div
+        aria-label="Loading"
+        class="animate-spin rounded-full border-b-2 border-brand h-4 w-4"
+        data-testid="pull-to-refresh-spinner"
+        role="status"
+      />
+      <span
+        class="font-medium text-brand"
+        data-testid="pull-to-refresh-label"
+      >
+        Refreshing...
+      </span>
+    </div>
+  </div>
+</div>
+`;
+
+exports[`PullToRefreshIndicator - Snapshots > matches snapshot when idle (returns null) 1`] = `<div />`;
