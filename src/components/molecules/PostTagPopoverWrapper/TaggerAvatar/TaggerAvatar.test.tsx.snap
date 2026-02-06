@@ -1,0 +1,61 @@
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
+
+exports[`TaggerAvatar - Snapshots > matches snapshot (closed state, index 0) 1`] = `
+<button
+  aria-controls="radix-normalized"
+  aria-expanded="false"
+  aria-haspopup="dialog"
+  class="cursor-pointer rounded-full transition-opacity hover:opacity-80 ml-0 z-[4]"
+  data-as-child="true"
+  data-slot="popover-trigger"
+  data-state="closed"
+  data-testid="popover-trigger"
+  type="button"
+>
+  <div
+    data-testid="avatar-Alice"
+  >
+    Avatar
+  </div>
+</button>
+`;
+
+exports[`TaggerAvatar - Snapshots > matches snapshot (closed state, index 1) 1`] = `
+<button
+  aria-controls="radix-normalized"
+  aria-expanded="false"
+  aria-haspopup="dialog"
+  class="cursor-pointer rounded-full transition-opacity hover:opacity-80 -ml-2 z-[3]"
+  data-as-child="true"
+  data-slot="popover-trigger"
+  data-state="closed"
+  data-testid="popover-trigger"
+  type="button"
+>
+  <div
+    data-testid="avatar-Alice"
+  >
+    Avatar
+  </div>
+</button>
+`;
+
+exports[`TaggerAvatar - Snapshots > matches snapshot (open state) 1`] = `
+<button
+  aria-controls="radix-normalized"
+  aria-expanded="true"
+  aria-haspopup="dialog"
+  class="cursor-pointer rounded-full transition-opacity hover:opacity-80 ml-0 z-[4]"
+  data-as-child="true"
+  data-slot="popover-trigger"
+  data-state="open"
+  data-testid="popover-trigger"
+  type="button"
+>
+  <div
+    data-testid="avatar-Alice"
+  >
+    Avatar
+  </div>
+</button>
+`;

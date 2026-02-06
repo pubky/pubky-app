@@ -1,0 +1,37 @@
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
+
+exports[`PostTagPopoverWrapper - Snapshots > matches snapshot with no taggers 1`] = `
+<button>
+  Tag
+</button>
+`;
+
+exports[`PostTagPopoverWrapper - Snapshots > matches snapshot with taggers (open state: avatars + overflow) 1`] = `
+<button
+  aria-controls="radix-normalized"
+  aria-expanded="true"
+  aria-haspopup="dialog"
+  data-as-child="true"
+  data-slot="popover-trigger"
+  data-state="open"
+  data-testid="trigger"
+  type="button"
+>
+  Tag
+</button>
+`;
+
+exports[`PostTagPopoverWrapper - Snapshots > matches snapshot with taggers (trigger only, closed state) 1`] = `
+<button
+  aria-controls="radix-normalized"
+  aria-expanded="false"
+  aria-haspopup="dialog"
+  data-as-child="true"
+  data-slot="popover-trigger"
+  data-state="closed"
+  data-testid="popover-trigger"
+  type="button"
+>
+  Tag
+</button>
+`;
