@@ -85,8 +85,10 @@ export class PostStreamQueue {
         latestTimestamp = result.timestamp;
       }
 
-      // Stop if we've reached end of stream (Nexus returned fewer posts than limit)
-      if (result.nextPageIds.length < limit) {
+      // Stop if we've reached end of stream (propagated from Nexus response)
+      // Use the reachedEnd flag from the fetch result rather than calculating from length,
+      // since deduplication in partialCacheHit can reduce the array size without reaching the end
+      if (result.reachedEnd) {
         reachedEnd = true;
         break;
       }

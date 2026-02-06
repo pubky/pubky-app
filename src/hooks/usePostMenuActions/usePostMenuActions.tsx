@@ -33,7 +33,9 @@ export function usePostMenuActions(postId: string, options: UsePostMenuActionsOp
 
   const { onReportClick, onEditClick } = options;
   const parsedId = Core.parseCompositeId(postId);
-  const postAuthorId = parsedId.pubky;
+  // Normalize author ID to ensure consistent format (strip pubky: or pk: prefix)
+  // This is necessary because composite IDs may contain prefixed pubky IDs
+  const postAuthorId = Libs.stripPubkyPrefix(parsedId.pubky) as Core.Pubky;
 
   const { currentUserPubky } = Hooks.useCurrentUserProfile();
   const { postDetails, isLoading: isPostLoading } = Hooks.usePostDetails(postId);
@@ -42,7 +44,7 @@ export function usePostMenuActions(postId: string, options: UsePostMenuActionsOp
 
   const { toggleFollow, isLoading: isFollowLoading, isUserLoading } = Hooks.useFollowUser();
   const { toggleMute, isLoading: isMuteLoading, isUserLoading: isMuteUserLoading } = Hooks.useMuteUser();
-  const { isMuted } = Hooks.useMutedUsers();
+  const { isMuted, isLoading: isMutedUsersLoading } = Hooks.useMutedUsers();
   const { deletePost, isDeleting } = Hooks.useDeletePost();
   const { copyToClipboard: copyPubky } = Hooks.useCopyToClipboard({
     successTitle: tCopy('pubkyCopied'),
@@ -59,7 +61,7 @@ export function usePostMenuActions(postId: string, options: UsePostMenuActionsOp
   const rawUsername = authorProfile?.name || postAuthorId;
   const username = Libs.truncateString(rawUsername, 15);
   const isArticle = postDetails?.kind === 'long';
-  const isLoading = isPostLoading || isAuthorLoading || isFollowingLoading;
+  const isLoading = isPostLoading || isAuthorLoading || isFollowingLoading || isMutedUsersLoading;
   const postUrl = `${typeof window !== 'undefined' ? window.location.origin : ''}${POST_ROUTES.POST}/${parsedId.pubky}/${parsedId.id}`;
 
   const menuItems: PostMenuActionItem[] = [];
