@@ -23,7 +23,7 @@ export function PostInputActionBar({
     () => ({
       variant: 'secondary' as const,
       size: 'sm' as const,
-      className: 'h-8 px-3 py-2 rounded-full border-none shadow-xs-dark',
+      className: 'h-8 px-3 py-2 rounded-full border-none shadow-xs',
     }),
     [],
   );
