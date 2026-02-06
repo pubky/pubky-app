@@ -31,8 +31,16 @@ export function PostTagPopoverWrapper({ taggers, taggersCount, children }: PostT
   const visibleTaggers = taggers.slice(0, MAX_VISIBLE_AVATARS);
   const overflowCount = Math.max(0, taggersCount - visibleTaggers.length);
 
+  const handleOpenChange = (newOpen: boolean) => {
+    setOpen(newOpen);
+    // When hover popover closes, also close the "all taggers" dropdown
+    if (!newOpen) {
+      setShowAllTaggers(false);
+    }
+  };
+
   return (
-    <Atoms.Popover hover hoverDelay={POPOVER_HOVER_DELAY} open={open} onOpenChange={setOpen}>
+    <Atoms.Popover hover hoverDelay={POPOVER_HOVER_DELAY} open={open} onOpenChange={handleOpenChange}>
       <Atoms.PopoverTrigger asChild>{children}</Atoms.PopoverTrigger>
       <Atoms.PopoverContent
         side="bottom"
