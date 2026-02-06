@@ -290,7 +290,7 @@ export class PostStreamApplication {
         if (cachedStreamChunk.length === limit) {
           const lastCachedPostId = cachedStreamChunk[cachedStreamChunk.length - 1];
           const timestamp = await this.getPostTimestamp(lastCachedPostId);
-          return { nextPageIds: cachedStreamChunk, cacheMissPostIds: [], timestamp };
+          return { nextPageIds: cachedStreamChunk, cacheMissPostIds: [], timestamp, reachedEnd: false };
         }
 
         // Partial cache hit, fetch missing posts from Nexus and combine
@@ -418,7 +418,7 @@ export class PostStreamApplication {
     const nextStreamTail = (await this.getPostTimestamp(lastCachedPostId)) ?? streamTail;
 
     // Fetch remaining posts from Nexus
-    const { nextPageIds, cacheMissPostIds, timestamp } = await this.fetchStreamFromNexus({
+    const { nextPageIds, cacheMissPostIds, timestamp, reachedEnd } = await this.fetchStreamFromNexus({
       streamId,
       limit: remainingLimit,
       streamTail: nextStreamTail,
@@ -434,7 +434,8 @@ export class PostStreamApplication {
       nextPageIds: uniquePostIds,
       cacheMissPostIds,
       timestamp,
-      reachedEnd: false,
+      // Propagate reachedEnd from Nexus - don't recalculate from deduped length
+      reachedEnd: reachedEnd ?? false,
     };
   }
 
@@ -485,7 +486,8 @@ export class PostStreamApplication {
 
     const cacheMissPostIds = await this.getNotPersistedPostsInCache(compositePostIds);
 
-    return { nextPageIds: compositePostIds, cacheMissPostIds, timestamp };
+    // reachedEnd is true when Nexus returned fewer posts than requested (actual end of stream)
+    return { nextPageIds: compositePostIds, cacheMissPostIds, timestamp, reachedEnd: compositePostIds.length < limit };
   }
 
   // Delegate to service for cache miss detection
