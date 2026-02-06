@@ -53,7 +53,6 @@ exports[`SearchInput > SearchInput - Snapshots > matches snapshot - focused with
     autocompleteusers=""
     data-testid="search-suggestions"
     id="search-suggestions"
-    inputvalue=""
     recenttags=""
     recentusers=""
   >
