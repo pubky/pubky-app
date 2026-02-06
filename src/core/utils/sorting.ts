@@ -45,10 +45,11 @@ export async function sortPostIdsByTimestamp(postIds: string[]): Promise<string[
       }
     }
 
-    // Infer timestamp based on available surrounding timestamps
-    // The input is assumed to be in descending order (newest first), so:
-    // - prevTimestamp should be >= the inferred timestamp
-    // - nextTimestamp should be <= the inferred timestamp
+  // Infer timestamp based on available surrounding timestamps
+  // IMPORTANT: This algorithm assumes input is pre-sorted in descending order (newest first)
+  // If input order doesn't match timestamp order, interpolation will be incorrect
+  // - prevTimestamp should be >= the inferred timestamp
+  // - nextTimestamp should be <= the inferred timestamp
     if (prevTimestamp !== null && nextTimestamp !== null) {
       // Between two known timestamps: use midpoint
       timestampedPosts[i].timestamp = Math.floor((prevTimestamp + nextTimestamp) / 2);
