@@ -1110,6 +1110,13 @@
       "a14": "يستخدم Pubky مفاتيح Ed25519 للتوافق ويتجنب المرحلات المركزية. بدلا من ذلك، يستخدم جدول تجزئة موزع (DHT) للبحث اللامركزي وحل الهوية."
     }
   },
+  "repost": {
+    "you": "أنت",
+    "youAndOthersReposted": "{name} و{count, plural, one {شخص آخر #} other {# آخرون}} أعادوا نشر هذا",
+    "mobileReposted": "{name}، آخرون أعادوا النشر",
+    "singleReposted": "{name} أعاد النشر",
+    "reposters": "المعيدون للنشر"
+  },
   "share": {
     "title": "مشاركة في Pubky",
     "cancel": "إلغاء"

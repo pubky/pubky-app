@@ -1116,6 +1116,13 @@
       "a14": "Pubkyは互換性のためにEd25519キーを使用し、中央集権的なリレーを避けています。代わりに、分散ハッシュテーブル（DHT）を使用して分散型ルックアップとID解決を行います。"
     }
   },
+  "repost": {
+    "you": "あなた",
+    "youAndOthersReposted": "{name}と{count, plural, one {# 人} other {# 人}}がリポストしました",
+    "mobileReposted": "{name}、他の人がリポスト",
+    "singleReposted": "{name}がリポストしました",
+    "reposters": "リポストした人"
+  },
   "share": {
     "title": "Pubkyに共有",
     "cancel": "キャンセル"

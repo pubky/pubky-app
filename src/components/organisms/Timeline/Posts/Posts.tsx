@@ -4,16 +4,19 @@ import * as Atoms from '@/atoms';
 import * as Molecules from '@/molecules';
 import * as Organisms from '@/organisms';
 import * as Hooks from '@/hooks';
-import * as Types from './Posts.types';
+import { TIMELINE_ITEM_TYPE } from './Posts.constants';
+import type { TimelinePostsProps } from './Posts.types';
 
 /**
  * TimelinePosts
  *
  * Presentational component that displays posts in a timeline with infinite scroll.
  * Receives all data and handlers from a parent component.
+ * Groups plain reposts of the same original post into a single card.
  */
-export function TimelinePosts({ postIds, loading, loadingMore, error, hasMore, loadMore }: Types.TimelinePostsProps) {
+export function TimelinePosts({ postIds, loading, loadingMore, error, hasMore, loadMore }: TimelinePostsProps) {
   const { navigateToPost } = Hooks.usePostNavigation();
+  const { items, isGrouping } = Hooks.useRepostGrouping({ postIds });
 
   // Infinite scroll hook
   const { sentinelRef } = Hooks.useInfiniteScroll({
@@ -25,15 +28,36 @@ export function TimelinePosts({ postIds, loading, loadingMore, error, hasMore, l
   });
 
   return (
-    <Molecules.TimelineStateWrapper loading={loading} error={error} hasItems={postIds.length > 0}>
+    <Molecules.TimelineStateWrapper loading={loading || isGrouping} error={error} hasItems={postIds.length > 0}>
       <Atoms.Container data-cy="timeline-container">
         <Atoms.Container data-cy="timeline-posts" overrideDefaults className="space-y-4">
-          {postIds.map((postId) => (
-            <Atoms.Container key={`main_${postId}`} data-cy="post-card">
-              <Organisms.PostMain postId={postId} onClick={() => navigateToPost(postId)} isReply={false} />
-              <Organisms.TimelinePostReplies postId={postId} onPostClick={navigateToPost} />
-            </Atoms.Container>
-          ))}
+          {items.map((item) => {
+            if (item.type === TIMELINE_ITEM_TYPE.SINGLE) {
+              return (
+                <Atoms.Container key={`main_${item.postId}`} data-cy="post-card">
+                  <Organisms.PostMain
+                    postId={item.postId}
+                    onClick={() => navigateToPost(item.postId)}
+                    isReply={false}
+                  />
+                  <Organisms.TimelinePostReplies postId={item.postId} onPostClick={navigateToPost} />
+                </Atoms.Container>
+              );
+            }
+
+            // Repost group - display original post with grouped header
+            return (
+              <Atoms.Container key={`group_${item.originalPostId}_${item.repostPostIds[0]}`} data-cy="post-card">
+                <Organisms.PostMain
+                  postId={item.originalPostId}
+                  repostGroup={item}
+                  onClick={() => navigateToPost(item.originalPostId)}
+                  isReply={false}
+                />
+                <Organisms.TimelinePostReplies postId={item.originalPostId} onPostClick={navigateToPost} />
+              </Atoms.Container>
+            );
+          })}
 
           {/* Loading More Indicator */}
           {loadingMore && <Molecules.TimelineLoadingMore />}

@@ -1110,6 +1110,13 @@
       "a14": "Pubky 使用 Ed25519 密钥以实现兼容性，并避免中心化中继。相反，它使用分布式哈希表（DHT）进行去中心化查找和身份解析。"
     }
   },
+  "repost": {
+    "you": "你",
+    "youAndOthersReposted": "{name} 和 {count, plural, one {# 人} other {# 人}} 转发了此内容",
+    "mobileReposted": "{name}，其他人转发了",
+    "singleReposted": "{name} 转发了",
+    "reposters": "转发者"
+  },
   "share": {
     "title": "分享到 Pubky",
     "cancel": "取消"

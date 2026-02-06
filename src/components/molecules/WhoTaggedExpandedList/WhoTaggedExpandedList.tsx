@@ -4,18 +4,22 @@ import * as Atoms from '@/atoms';
 import * as Molecules from '@/molecules';
 import * as Hooks from '@/hooks';
 import * as Core from '@/core';
+import * as Libs from '@/libs';
 import { useRouter } from 'next/navigation';
 import { APP_ROUTES } from '@/app/routes';
 import type { WhoTaggedExpandedListProps } from './WhoTaggedExpandedList.types';
 
+const DEFAULT_CLASSNAME =
+  'flex max-h-(--who-tagged-expanded-list-max-height) w-full max-w-(--who-tagged-expanded-list-width) flex-col gap-2 overflow-y-auto rounded-md border border-border bg-popover p-4 shadow-2xl';
+
 /**
  * WhoTaggedExpandedList
  *
- * Displays an expandable list of users who tagged a post/content.
+ * Displays an expandable list of users (taggers, reposters, etc).
  * Shows each user with their avatar, name, pubky, and a follow/unfollow button.
- * Max height of 300px with scroll for overflow.
+ * Max height with scroll for overflow.
  */
-export function WhoTaggedExpandedList({ taggers, 'data-testid': dataTestId }: WhoTaggedExpandedListProps) {
+export function WhoTaggedExpandedList({ taggers, className, 'data-testid': dataTestId }: WhoTaggedExpandedListProps) {
   const router = useRouter();
   const { toggleFollow, isUserLoading } = Hooks.useFollowUser();
   const { requireAuth } = Hooks.useRequireAuth();
@@ -35,10 +39,10 @@ export function WhoTaggedExpandedList({ taggers, 'data-testid': dataTestId }: Wh
 
   return (
     <Atoms.Container
-      aria-label="Who tagged expanded list"
+      aria-label="Users expanded list"
       role="list"
       overrideDefaults
-      className="flex max-h-(--who-tagged-expanded-list-max-height) w-full max-w-(--who-tagged-expanded-list-width) flex-col gap-2 overflow-y-auto rounded-md border border-border bg-popover p-4 shadow-2xl"
+      className={Libs.cn(DEFAULT_CLASSNAME, className)}
       data-testid={dataTestId || 'who-tagged-expanded-list'}
     >
       {taggers.map((tagger) => (

@@ -14,6 +14,10 @@ vi.mock('@/hooks', async (importOriginal) => {
     ...actual,
     useInfiniteScroll: vi.fn(),
     usePostNavigation: vi.fn(),
+    useRepostGrouping: vi.fn(({ postIds }: { postIds: string[] }) => ({
+      items: postIds.map((id) => ({ type: 'single' as const, postId: id })),
+      isGrouping: false,
+    })),
   };
 });
 vi.mock('@/libs', async () => {

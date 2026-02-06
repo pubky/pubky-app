@@ -1063,6 +1063,13 @@
     "browserBased": "Génération de clés dans le navigateur",
     "suboptimalSignIn": "Expérience de connexion non optimale"
   },
+  "repost": {
+    "you": "Vous",
+    "youAndOthersReposted": "{name} et {count, plural, one {# autre} other {# autres}} ont repartagé ceci",
+    "mobileReposted": "{name}, d'autres ont repartagé",
+    "singleReposted": "{name} a repartagé",
+    "reposters": "Repartageurs"
+  },
   "help": {
     "faq": "FAQ",
     "faqDescription": "Questions frequemment posees par les utilisateurs de Pubky",

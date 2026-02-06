@@ -9,6 +9,7 @@ import * as Molecules from '@/molecules';
 import * as Organisms from '@/organisms';
 import { POST_TAGS_MAX_COUNT, POST_TAGS_MAX_LENGTH, POST_TAGS_MAX_TOTAL_CHARS } from '@/config';
 import { POST_THREAD_CONNECTOR_VARIANTS } from '@/atoms';
+import type { RepostGroup } from '@/organisms/Timeline/Posts/Posts.types';
 
 export interface PostMainProps {
   postId: string;
@@ -16,9 +17,18 @@ export interface PostMainProps {
   className?: string;
   isReply?: boolean;
   isLastReply?: boolean;
+  /** Optional repost group data when this post is displayed as part of a grouped repost */
+  repostGroup?: RepostGroup;
 }
 
-export function PostMain({ postId, onClick, className, isReply = false, isLastReply = false }: PostMainProps) {
+export function PostMain({
+  postId,
+  onClick,
+  className,
+  isReply = false,
+  isLastReply = false,
+  repostGroup,
+}: PostMainProps) {
   const { postDetails } = Hooks.usePostDetails(postId);
   const isDeleted = Libs.isPostDeleted(postDetails?.content);
 
@@ -27,6 +37,7 @@ export function PostMain({ postId, onClick, className, isReply = false, isLastRe
   const [replyDialogOpen, setReplyDialogOpen] = useState(false);
   const [repostDialogOpen, setRepostDialogOpen] = useState(false);
   const [tagsExpanded, setTagsExpanded] = useState(false);
+  const [repostersExpanded, setRepostersExpanded] = useState(false);
 
   // Get post height for thread connector
   const { ref: cardRef, height: postHeight } = Hooks.useElementHeight();
@@ -39,6 +50,10 @@ export function PostMain({ postId, onClick, className, isReply = false, isLastRe
 
   // Determine thread connector variant based on reply status
   const connectorVariant = isLastReply ? POST_THREAD_CONNECTOR_VARIANTS.LAST : POST_THREAD_CONNECTOR_VARIANTS.REGULAR;
+
+  // Determine which header to show
+  const showGroupedHeader = !!repostGroup;
+  const showSingleRepostHeader = !repostGroup && showRepostHeader;
 
   const handleReplyClick = () => {
     setReplyDialogOpen(true);
@@ -65,7 +80,16 @@ export function PostMain({ postId, onClick, className, isReply = false, isLastRe
             <Molecules.PostDeleted />
           ) : (
             <>
-              {showRepostHeader && <Molecules.RepostHeader />}
+              {showGroupedHeader && (
+                <Molecules.GroupedRepostHeader
+                  reposterIds={repostGroup.reposterIds}
+                  includesCurrentUser={repostGroup.includesCurrentUser}
+                  earliestTimestamp={repostGroup.earliestTimestamp}
+                  isExpanded={repostersExpanded}
+                  onExpandToggle={() => setRepostersExpanded((prev) => !prev)}
+                />
+              )}
+              {showSingleRepostHeader && <Molecules.RepostHeader />}
               <Atoms.CardContent className="flex min-w-0 flex-col gap-4 p-6">
                 {shouldShowPostHeader && <Organisms.PostHeader postId={postId} />}
                 <Organisms.PostContent postId={postId} />

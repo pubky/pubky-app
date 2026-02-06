@@ -1063,6 +1063,13 @@
     "browserBased": "Generación de claves en el navegador",
     "suboptimalSignIn": "Experiencia de inicio de sesión no óptima"
   },
+  "repost": {
+    "you": "Tú",
+    "youAndOthersReposted": "{name} y {count, plural, one {# otro} other {# otros}} republicaron esto",
+    "mobileReposted": "{name}, otros republicaron",
+    "singleReposted": "{name} republicó",
+    "reposters": "Republicadores"
+  },
   "help": {
     "faq": "Preguntas frecuentes",
     "faqDescription": "Preguntas frecuentes de usuarios de Pubky",

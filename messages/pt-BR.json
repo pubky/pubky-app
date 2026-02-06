@@ -1116,6 +1116,13 @@
       "a14": "O Pubky usa chaves Ed25519 para compatibilidade e evita relays centralizados. Em vez disso, usa uma Tabela Hash Distribuida (DHT) para busca descentralizada e resolucao de identidade."
     }
   },
+  "repost": {
+    "you": "Você",
+    "youAndOthersReposted": "{name} e {count, plural, one {# outro} other {# outros}} repostaram isto",
+    "mobileReposted": "{name}, outros repostaram",
+    "singleReposted": "{name} repostou",
+    "reposters": "Repostadores"
+  },
   "share": {
     "title": "Compartilhar no Pubky",
     "cancel": "Cancelar"

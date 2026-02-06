@@ -1,0 +1,129 @@
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
+
+exports[`RepostersOverlay - Snapshots > matches snapshot for dialog variant when closed 1`] = `
+<div
+  data-open="false"
+  data-testid="dialog"
+>
+  <div
+    class="max-w-md"
+    data-testid="dialog-content"
+  >
+    <div
+      data-testid="dialog-header"
+    >
+      <h2
+        data-testid="dialog-title"
+      >
+        Reposters
+      </h2>
+    </div>
+    <div
+      class="border-0 p-0"
+      data-count="2"
+      data-testid="reposter-expanded-list"
+    >
+      User List (
+      2
+       users)
+    </div>
+  </div>
+</div>
+`;
+
+exports[`RepostersOverlay - Snapshots > matches snapshot for dialog variant when open 1`] = `
+<div
+  data-open="true"
+  data-testid="dialog"
+>
+  <div
+    class="max-w-md"
+    data-testid="dialog-content"
+  >
+    <div
+      data-testid="dialog-header"
+    >
+      <h2
+        data-testid="dialog-title"
+      >
+        Reposters
+      </h2>
+    </div>
+    <div
+      class="border-0 p-0"
+      data-count="2"
+      data-testid="reposter-expanded-list"
+    >
+      User List (
+      2
+       users)
+    </div>
+  </div>
+</div>
+`;
+
+exports[`RepostersOverlay - Snapshots > matches snapshot for sheet variant when closed 1`] = `
+<div
+  data-open="false"
+  data-testid="sheet"
+>
+  <div
+    class="rounded-t-2xl pb-8"
+    data-side="bottom"
+    data-testid="sheet-content"
+  >
+    <div
+      class="mb-4"
+      data-testid="sheet-header"
+    >
+      <h2
+        data-testid="sheet-title"
+      >
+        Reposters
+      </h2>
+    </div>
+    <div
+      class="max-w-full border-0 p-0"
+      data-count="2"
+      data-testid="reposter-expanded-list"
+    >
+      User List (
+      2
+       users)
+    </div>
+  </div>
+</div>
+`;
+
+exports[`RepostersOverlay - Snapshots > matches snapshot for sheet variant when open 1`] = `
+<div
+  data-open="true"
+  data-testid="sheet"
+>
+  <div
+    class="rounded-t-2xl pb-8"
+    data-side="bottom"
+    data-testid="sheet-content"
+  >
+    <div
+      class="mb-4"
+      data-testid="sheet-header"
+    >
+      <h2
+        data-testid="sheet-title"
+      >
+        Reposters
+      </h2>
+    </div>
+    <div
+      class="max-w-full border-0 p-0"
+      data-count="2"
+      data-testid="reposter-expanded-list"
+    >
+      User List (
+      2
+       users)
+    </div>
+  </div>
+</div>
+`;

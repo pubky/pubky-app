@@ -1063,6 +1063,13 @@
     "browserBased": "Browser-basierte Schlüsselgenerierung",
     "suboptimalSignIn": "Suboptimale Anmeldeerfahrung"
   },
+  "repost": {
+    "you": "Du",
+    "youAndOthersReposted": "{name} und {count, plural, one {# anderer} other {# andere}} haben dies geteilt",
+    "mobileReposted": "{name}, andere haben geteilt",
+    "singleReposted": "{name} hat geteilt",
+    "reposters": "Reposter"
+  },
   "help": {
     "faq": "FAQ",
     "faqDescription": "Häufig gestellte Fragen von Pubky-Benutzern",

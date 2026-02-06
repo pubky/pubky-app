@@ -4,7 +4,7 @@ exports[`WhoTaggedExpandedList - Snapshots > matches snapshot with empty taggers
 
 exports[`WhoTaggedExpandedList - Snapshots > matches snapshot with multiple users 1`] = `
 <div
-  aria-label="Who tagged expanded list"
+  aria-label="Users expanded list"
   class="flex max-h-(--who-tagged-expanded-list-max-height) w-full max-w-(--who-tagged-expanded-list-width) flex-col gap-2 overflow-y-auto rounded-md border border-border bg-popover p-4 shadow-2xl"
   data-testid="who-tagged-expanded-list"
   role="list"
@@ -71,7 +71,7 @@ exports[`WhoTaggedExpandedList - Snapshots > matches snapshot with multiple user
 
 exports[`WhoTaggedExpandedList - Snapshots > matches snapshot with single user 1`] = `
 <div
-  aria-label="Who tagged expanded list"
+  aria-label="Users expanded list"
   class="flex max-h-(--who-tagged-expanded-list-max-height) w-full max-w-(--who-tagged-expanded-list-width) flex-col gap-2 overflow-y-auto rounded-md border border-border bg-popover p-4 shadow-2xl"
   data-testid="who-tagged-expanded-list"
   role="list"
