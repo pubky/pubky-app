@@ -8,6 +8,7 @@ import * as Libs from '@/libs';
 import * as App from '@/app';
 import * as Core from '@/core';
 import * as Hooks from '@/hooks';
+import { useTranslations } from 'next-intl';
 
 export interface MobileFooterProps {
   className?: string;
@@ -21,6 +22,8 @@ export interface MobileFooterProps {
  */
 export function MobileFooter({ className }: MobileFooterProps) {
   const pathname = usePathname();
+  const tCommon = useTranslations('common');
+
   const isAuthenticated = Core.useAuthStore((state) => Boolean(state.currentUserPubky));
   const { isPublicRoute } = Hooks.usePublicRoute();
   const { userDetails, currentUserPubky } = Hooks.useCurrentUserProfile();
@@ -34,7 +37,10 @@ export function MobileFooter({ className }: MobileFooterProps) {
   }
 
   // Get avatar URL and fallback initial - same logic as desktop header
-  const avatarUrl = currentUserPubky ? Core.FileController.getAvatarUrl(currentUserPubky) : undefined;
+  const avatarUrl =
+    currentUserPubky && userDetails?.image
+      ? Core.FileController.getAvatarUrl(currentUserPubky, userDetails.indexed_at)
+      : undefined;
   const avatarName = userDetails?.name || 'U';
 
   const navItems = [
@@ -67,15 +73,15 @@ export function MobileFooter({ className }: MobileFooterProps) {
         <Link
           data-cy="footer-nav-profile-btn"
           href={App.APP_ROUTES.PROFILE}
-          aria-label="Profile"
-          className="relative flex-shrink-0"
+          aria-label={tCommon('profile')}
+          className="relative shrink-0"
         >
           <Organisms.AvatarWithFallback
             avatarUrl={avatarUrl}
             name={avatarName}
             size="lg"
-            className={Libs.cn(isActive(App.APP_ROUTES.PROFILE) && 'ring-2 ring-primary')}
-            alt="Profile"
+            className="cursor-pointer"
+            alt={tCommon('profile')}
           />
           {unreadNotifications > 0 && (
             <Atoms.Badge
