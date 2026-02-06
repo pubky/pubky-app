@@ -515,4 +515,8 @@ body {
       animation: accordion-up 0.2s ease-out;
     }
   }
+
+  .max-width-profile-page-header {
+    max-width: calc(100vw - 6rem);
+  }
 }
