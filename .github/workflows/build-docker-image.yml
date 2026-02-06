@@ -1,0 +1,149 @@
+name: Build Pubky Docker Image
+
+on:
+  workflow_dispatch:
+    inputs:
+      env:
+        description: 'Env for image'
+        required: true
+        type: choice
+        options:
+        - production
+        - staging
+        - testnet
+
+      latest:
+        description: 'Use latest tag'
+        required: false
+        default: false
+        type: boolean
+
+      platforms:
+        description: 'Platforms'
+        required: true
+        type: choice
+        options:
+        - linux/arm64/v8
+        - linux/arm64/v7
+        - linux/arm64
+        - linux/amd64
+
+  workflow_call:
+    outputs:
+      image_tag:
+        description: 'Image tag'
+        value: ${{ jobs.check_image.outputs.image_tag }}
+    inputs:
+      env:
+        description: 'Env for image'
+        required: true
+        type: string
+
+      latest:
+        description: 'Use latest tag'
+        required: false
+        default: false
+        type: boolean
+
+      platforms:
+        required: true
+        type: string
+
+env:
+  registry: "europe-west6-docker.pkg.dev/infra-464608/synonym-private-repo"
+
+jobs:
+  check_image:
+    name: Validate and rebuild Franky
+    outputs:
+      image_tag: ${{ steps.set_tag.outputs.image_tag }}
+      image_exists: ${{ steps.check_image.outputs.exists }}
+    runs-on: ubuntu-latest
+    steps:
+
+      - name: Checkout this repository
+        uses: actions/checkout@v4
+
+      - name: Set HEAD commit hash
+        id: sha_tag
+        uses: pubky/ci-workflows/.github/actions/docker/get_head_commit_hash@main
+        with:
+          path: "."
+
+      - name: Set Current Tag as Output
+        id: set_tag
+        run: |
+          echo image_tag=${{ steps.sha_tag.outputs.hash }} >> $GITHUB_OUTPUT
+
+      - name: Login to registry
+        uses: pubky/ci-workflows/.github/actions/docker/registry_login@main
+        with:
+          registry: ${{ env.registry }}
+          gcp_service_account_key: ${{ secrets.GCR_JSON_KEY }}
+
+      - name: Check if image needs to be rebuild
+        uses: pubky/ci-workflows/.github/actions/docker/check_if_image_exists@main
+        id: check_image
+        with:
+          image: ${{ env.registry }}/franky-${{ inputs.env }}
+          tag: ${{ steps.sha_tag.outputs.hash }}
+          arch: ${{ inputs.platforms }}
+
+  build_image:
+    name: "Build image for ${{ inputs.env }}"
+    needs: [check_image]
+    if: ${{ needs.check_image.outputs.image_exists != 'true' }}
+    runs-on: ["ubuntu-latest"]
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Login to registry
+        uses: pubky/ci-workflows/.github/actions/docker/registry_login@main
+        with:
+          registry: ${{ env.registry }}
+          gcp_service_account_key: ${{ secrets.GCR_JSON_KEY }}
+
+      - name: Build and push image pubky-app (testnet)
+        uses: pubky/ci-workflows/.github/actions/docker/build_and_push@main
+        with:
+          image: 'franky-testnet'
+          context: '.'
+          registry: ${{ env.registry }}
+          platforms: ${{ inputs.platforms }}
+          latest: ${{ inputs.latest }}
+          build_args: |
+            NEXT_PUBLIC_DB_VERSION=2
+            NEXT_PUBLIC_DB_NAME=franky
+            NEXT_PUBLIC_DEBUG_MODE=false
+            NEXT_PUBLIC_SYNC_TTL=300000
+            NEXT_PUBLIC_NOTIFICATION_POLL_INTERVAL_MS=8888
+            NEXT_PUBLIC_NOTIFICATION_POLL_ON_START=false
+            NEXT_PUBLIC_NOTIFICATION_RESPECT_PAGE_VISIBILITY=true
+            NEXT_PUBLIC_STREAM_POLL_INTERVAL_MS=8888
+            NEXT_PUBLIC_STREAM_POLL_ON_START=false
+            NEXT_PUBLIC_STREAM_RESPECT_PAGE_VISIBILITY=true
+            NEXT_PUBLIC_STREAM_FETCH_LIMIT=10
+            NEXT_PUBLIC_STREAM_CACHE_MAX_AGE_MS=300000
+            NEXT_MAX_STREAM_TAGS=5
+            NEXT_PUBLIC_TTL_POST_MS=300000
+            NEXT_PUBLIC_TTL_USER_MS=600000
+            NEXT_PUBLIC_TTL_BATCH_INTERVAL_MS=5000
+            NEXT_PUBLIC_TTL_POST_MAX_BATCH_SIZE=20
+            NEXT_PUBLIC_TTL_USER_MAX_BATCH_SIZE=20
+            NEXT_PUBLIC_TTL_RETRY_DELAY_MS=60000
+            NEXT_PUBLIC_HOMESERVER=8pinxxgqs41n4aididenw5apqp1urfmzdztr8jt4abrkdn435ewo
+            NEXT_PUBLIC_NEXUS_URL=http://localhost:8080
+            NEXT_PUBLIC_CDN_URL=http://localhost:8080/static
+            NEXT_PUBLIC_TESTNET=true
+            NEXT_PUBLIC_PKARR_RELAYS=["https://pkarr.pubky.app","https://pkarr.pubky.org"]
+            NEXT_PUBLIC_DEFAULT_HTTP_RELAY=http://localhost:15412/link/
+            NEXT_PUBLIC_EXCHANGE_RATE_API=https://api1.blocktank.to/api/fx/rates/btc
+            NEXT_PUBLIC_HOMEGATE_URL=https://homegate.staging.pubky.app
+            NEXT_PUBLIC_MODERATION_ID=euwmq57zefw5ynnkhh37b3gcmhs7g3cptdbw1doaxj1pbmzp3wro
+            NEXT_PUBLIC_MODERATED_TAGS=["nudity"]
+            BASE_URL_SUPPORT=https://chatwoot.example.com
+            SUPPORT_API_ACCESS_TOKEN=your_token_here
+            SUPPORT_ACCOUNT_ID=123
+            SUPPORT_FEEDBACK_INBOX_ID=26
+        if: ${{ inputs.env == 'testnet' }}

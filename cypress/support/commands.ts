@@ -472,14 +472,17 @@ Cypress.Commands.add('findPostInFeed', (postIdx = 0, filterText?, checkForNewPos
   return findPostInFeed(postIdx, filterText, checkForNewPosts);
 });
 
-// useful for finding a specific post by text in search results
+// useful for finding a specific post card by text in search results
 Cypress.Commands.add('findPostInSearchResults', (filterText?: string, postIdx = 0) => {
-  cy.get('#post-search-results')
-    .children()
-    .then(($posts) => {
-      return filterText ? $posts.filter((_idx, element) => element.innerText.includes(filterText)) : $posts;
-    })
-    .eq(postIdx);
+  return cy
+    .get('[data-cy="post-search-results"]')
+    .find('[data-cy="post-card"]')
+    .then(($postCards) => {
+      const filtered = filterText
+        ? $postCards.filter((_idx, element) => element.innerText.includes(filterText))
+        : $postCards;
+      return cy.wrap(filtered).eq(postIdx);
+    });
 });
 
 // To prevent Cypress from failing the test when running pubky-app with dev build:

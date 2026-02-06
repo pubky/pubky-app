@@ -10,6 +10,8 @@ export interface ContentLayoutProps {
   showRightSidebar?: boolean;
   showLeftMobileButton?: boolean;
   showRightMobileButton?: boolean;
+  /** Whether to render the MobileHeader. Set to false when rendering MobileHeader externally (e.g., Settings page). Defaults to true. */
+  renderMobileHeader?: boolean;
   className?: string;
 }
 

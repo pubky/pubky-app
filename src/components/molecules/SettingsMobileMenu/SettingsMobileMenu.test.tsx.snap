@@ -2,7 +2,7 @@
 
 exports[`SettingsMobileMenu - Snapshots > matches snapshot with custom className 1`] = `
 <div
-  class="fixed top-(--header-height-mobile) right-0 left-0 z-(--z-sticky-header) bg-background shadow-xl custom-menu"
+  class="mobile-menu-gradient-fade fixed top-(--header-height-mobile) right-0 left-0 z-(--z-sticky-header) bg-background custom-menu"
   data-testid="settings-mobile-menu"
 >
   <div
@@ -220,7 +220,7 @@ exports[`SettingsMobileMenu - Snapshots > matches snapshot with custom className
 
 exports[`SettingsMobileMenu - Snapshots > matches snapshot with default props 1`] = `
 <div
-  class="fixed top-(--header-height-mobile) right-0 left-0 z-(--z-sticky-header) bg-background shadow-xl"
+  class="mobile-menu-gradient-fade fixed top-(--header-height-mobile) right-0 left-0 z-(--z-sticky-header) bg-background"
   data-testid="settings-mobile-menu"
 >
   <div
