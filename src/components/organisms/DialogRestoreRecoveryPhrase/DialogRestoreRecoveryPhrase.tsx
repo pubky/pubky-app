@@ -57,8 +57,17 @@ export function DialogRestoreRecoveryPhrase({ onRestore }: DialogRestoreRecovery
     }
   };
 
+  const handleOpenChange = (open: boolean) => {
+    if (!open) {
+      setUserWords(Array(12).fill(''));
+      setErrors(Array(12).fill(false));
+      setTouched(Array(12).fill(false));
+      setIsRestoring(false);
+    }
+  };
+
   return (
-    <Atoms.Dialog>
+    <Atoms.Dialog onOpenChange={handleOpenChange}>
       <Atoms.DialogTrigger asChild>
         <Atoms.Button id="restore-recovery-phrase-btn" variant="outline" className="w-auto rounded-full md:flex-none">
           <Libs.FileText className="mr-2 h-4 w-4" />
