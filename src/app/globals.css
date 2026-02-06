@@ -62,7 +62,6 @@ body {
   --breakpoint-xsm: 23.4375rem;
   --shadow-2xs: 0 1px 0 0 rgba(5, 5, 10, 0.2);
   --shadow-xs: 0 1px 2px 0 rgba(5, 5, 10, 0.2);
-  --shadow-xs-dark: 0px 1px 2px 0px rgba(5, 5, 10, 0.2);
   --shadow-sm: 0 1px 3px 0 rgba(5, 5, 10, 0.25), 0 1px 2px 0px rgba(5, 5, 10, 0.25);
   --shadow-md: 0 4px 6px 0px rgba(5, 5, 10, 0.25), 0 2px 4px 0px rgba(5, 5, 10, 0.25);
   --shadow-lg: 0 10px 15px 0px rgba(5, 5, 10, 0.25), 0 4px 6px 0px rgba(5, 5, 10, 0.25);
@@ -407,9 +406,6 @@ body {
 
 @layer utilities {
   /* Shadow utilities */
-  .shadow-xs-dark {
-    box-shadow: var(--shadow-xs-dark);
-  }
 
   /* Gradient fade effect for mobile tab menus (Profile, Settings) */
   .mobile-menu-gradient-fade::after {

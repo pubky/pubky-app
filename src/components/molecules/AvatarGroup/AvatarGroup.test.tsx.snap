@@ -6,7 +6,7 @@ exports[`AvatarGroup - Snapshots > matches snapshot with basic items 1`] = `
   data-testid="container"
 >
   <div
-    class="relative rounded-full shadow-xs-dark"
+    class="relative rounded-full shadow-xs"
     data-testid="container"
     style="margin-left: 0px; z-index: 2;"
   >
@@ -15,7 +15,7 @@ exports[`AvatarGroup - Snapshots > matches snapshot with basic items 1`] = `
     />
   </div>
   <div
-    class="relative rounded-full shadow-xs-dark"
+    class="relative rounded-full shadow-xs"
     data-testid="container"
     style="margin-left: -8px; z-index: 1;"
   >
@@ -32,7 +32,7 @@ exports[`AvatarGroup - Snapshots > matches snapshot with custom maxAvatars 1`] =
   data-testid="container"
 >
   <div
-    class="relative rounded-full shadow-xs-dark"
+    class="relative rounded-full shadow-xs"
     data-testid="container"
     style="margin-left: 0px; z-index: 3;"
   >
@@ -47,7 +47,7 @@ exports[`AvatarGroup - Snapshots > matches snapshot with custom maxAvatars 1`] =
     </span>
   </div>
   <div
-    class="relative rounded-full shadow-xs-dark"
+    class="relative rounded-full shadow-xs"
     data-testid="container"
     style="margin-left: -8px; z-index: 2;"
   >
@@ -62,7 +62,7 @@ exports[`AvatarGroup - Snapshots > matches snapshot with custom maxAvatars 1`] =
     </span>
   </div>
   <div
-    class="relative rounded-full shadow-xs-dark"
+    class="relative rounded-full shadow-xs"
     data-testid="container"
     style="margin-left: -8px; z-index: 1;"
   >
@@ -77,7 +77,7 @@ exports[`AvatarGroup - Snapshots > matches snapshot with custom maxAvatars 1`] =
     </span>
   </div>
   <div
-    class="relative flex size-8 items-center justify-center rounded-full border border-muted-foreground bg-background text-sm font-medium shadow-xs-dark"
+    class="relative flex size-8 items-center justify-center rounded-full border border-muted-foreground bg-background text-sm font-medium shadow-xs"
     data-testid="container"
     style="margin-left: -8px; z-index: 0;"
   >
@@ -92,7 +92,7 @@ exports[`AvatarGroup - Snapshots > matches snapshot with items without avatarUrl
   data-testid="container"
 >
   <div
-    class="relative rounded-full shadow-xs-dark"
+    class="relative rounded-full shadow-xs"
     data-testid="container"
     style="margin-left: 0px; z-index: 2;"
   >
@@ -107,7 +107,7 @@ exports[`AvatarGroup - Snapshots > matches snapshot with items without avatarUrl
     </span>
   </div>
   <div
-    class="relative rounded-full shadow-xs-dark"
+    class="relative rounded-full shadow-xs"
     data-testid="container"
     style="margin-left: -8px; z-index: 1;"
   >
@@ -130,7 +130,7 @@ exports[`AvatarGroup - Snapshots > matches snapshot with max overflow (+99) 1`] 
   data-testid="container"
 >
   <div
-    class="relative rounded-full shadow-xs-dark"
+    class="relative rounded-full shadow-xs"
     data-testid="container"
     style="margin-left: 0px; z-index: 6;"
   >
@@ -145,7 +145,7 @@ exports[`AvatarGroup - Snapshots > matches snapshot with max overflow (+99) 1`] 
     </span>
   </div>
   <div
-    class="relative rounded-full shadow-xs-dark"
+    class="relative rounded-full shadow-xs"
     data-testid="container"
     style="margin-left: -8px; z-index: 5;"
   >
@@ -160,7 +160,7 @@ exports[`AvatarGroup - Snapshots > matches snapshot with max overflow (+99) 1`] 
     </span>
   </div>
   <div
-    class="relative rounded-full shadow-xs-dark"
+    class="relative rounded-full shadow-xs"
     data-testid="container"
     style="margin-left: -8px; z-index: 4;"
   >
@@ -175,7 +175,7 @@ exports[`AvatarGroup - Snapshots > matches snapshot with max overflow (+99) 1`] 
     </span>
   </div>
   <div
-    class="relative rounded-full shadow-xs-dark"
+    class="relative rounded-full shadow-xs"
     data-testid="container"
     style="margin-left: -8px; z-index: 3;"
   >
@@ -190,7 +190,7 @@ exports[`AvatarGroup - Snapshots > matches snapshot with max overflow (+99) 1`] 
     </span>
   </div>
   <div
-    class="relative rounded-full shadow-xs-dark"
+    class="relative rounded-full shadow-xs"
     data-testid="container"
     style="margin-left: -8px; z-index: 2;"
   >
@@ -205,7 +205,7 @@ exports[`AvatarGroup - Snapshots > matches snapshot with max overflow (+99) 1`] 
     </span>
   </div>
   <div
-    class="relative rounded-full shadow-xs-dark"
+    class="relative rounded-full shadow-xs"
     data-testid="container"
     style="margin-left: -8px; z-index: 1;"
   >
@@ -220,7 +220,7 @@ exports[`AvatarGroup - Snapshots > matches snapshot with max overflow (+99) 1`] 
     </span>
   </div>
   <div
-    class="relative flex size-8 items-center justify-center rounded-full border border-muted-foreground bg-background text-sm font-medium shadow-xs-dark"
+    class="relative flex size-8 items-center justify-center rounded-full border border-muted-foreground bg-background text-sm font-medium shadow-xs"
     data-testid="container"
     style="margin-left: -8px; z-index: 0;"
   >
@@ -235,7 +235,7 @@ exports[`AvatarGroup - Snapshots > matches snapshot with overflow 1`] = `
   data-testid="container"
 >
   <div
-    class="relative rounded-full shadow-xs-dark"
+    class="relative rounded-full shadow-xs"
     data-testid="container"
     style="margin-left: 0px; z-index: 6;"
   >
@@ -250,7 +250,7 @@ exports[`AvatarGroup - Snapshots > matches snapshot with overflow 1`] = `
     </span>
   </div>
   <div
-    class="relative rounded-full shadow-xs-dark"
+    class="relative rounded-full shadow-xs"
     data-testid="container"
     style="margin-left: -8px; z-index: 5;"
   >
@@ -265,7 +265,7 @@ exports[`AvatarGroup - Snapshots > matches snapshot with overflow 1`] = `
     </span>
   </div>
   <div
-    class="relative rounded-full shadow-xs-dark"
+    class="relative rounded-full shadow-xs"
     data-testid="container"
     style="margin-left: -8px; z-index: 4;"
   >
@@ -280,7 +280,7 @@ exports[`AvatarGroup - Snapshots > matches snapshot with overflow 1`] = `
     </span>
   </div>
   <div
-    class="relative rounded-full shadow-xs-dark"
+    class="relative rounded-full shadow-xs"
     data-testid="container"
     style="margin-left: -8px; z-index: 3;"
   >
@@ -295,7 +295,7 @@ exports[`AvatarGroup - Snapshots > matches snapshot with overflow 1`] = `
     </span>
   </div>
   <div
-    class="relative rounded-full shadow-xs-dark"
+    class="relative rounded-full shadow-xs"
     data-testid="container"
     style="margin-left: -8px; z-index: 2;"
   >
@@ -310,7 +310,7 @@ exports[`AvatarGroup - Snapshots > matches snapshot with overflow 1`] = `
     </span>
   </div>
   <div
-    class="relative rounded-full shadow-xs-dark"
+    class="relative rounded-full shadow-xs"
     data-testid="container"
     style="margin-left: -8px; z-index: 1;"
   >
@@ -325,7 +325,7 @@ exports[`AvatarGroup - Snapshots > matches snapshot with overflow 1`] = `
     </span>
   </div>
   <div
-    class="relative flex size-8 items-center justify-center rounded-full border border-muted-foreground bg-background text-sm font-medium shadow-xs-dark"
+    class="relative flex size-8 items-center justify-center rounded-full border border-muted-foreground bg-background text-sm font-medium shadow-xs"
     data-testid="container"
     style="margin-left: -8px; z-index: 0;"
   >
