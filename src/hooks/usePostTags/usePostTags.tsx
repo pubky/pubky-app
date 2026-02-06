@@ -116,12 +116,13 @@ export function usePostTags(postId: string | null | undefined, options: UsePostT
     return allTagsWithIndex.map((item) => item.tag);
   }, [localTags, zeroTaggerTags, tagOrder]);
 
-  // Update loaded count when tags change
+  // Initialize loadedCountRef when initial data is available from IndexedDB
+  // This ensures skip starts from the correct value on first loadMore call
   useEffect(() => {
-    if (allTags.length > loadedCountRef.current) {
-      loadedCountRef.current = allTags.length;
+    if (!isLoading && loadedCountRef.current === 0 && localTags.length > 0) {
+      loadedCountRef.current = localTags.length;
     }
-  }, [allTags.length]);
+  }, [isLoading, localTags.length]);
 
   // Transform tags with avatar data and relationship status
   const tagsWithAvatars = useMemo(() => transformTagsForViewer(allTags, viewerId), [allTags, viewerId]);
@@ -139,11 +140,13 @@ export function usePostTags(postId: string | null | undefined, options: UsePostT
         limit: TAGS_PER_PAGE,
       });
 
+      // IMPORTANT: Increment by fetched count, not by unique tags in UI.
+      // This ensures skip always progresses even if tags are deduplicated during merge.
+      loadedCountRef.current += newTags.length;
+
       if (newTags.length < TAGS_PER_PAGE) {
         setHasMore(false);
       }
-
-      // loadedCountRef will be updated by the effect when tags change
     } catch {
       toast({
         title: 'Failed to load more tags',
