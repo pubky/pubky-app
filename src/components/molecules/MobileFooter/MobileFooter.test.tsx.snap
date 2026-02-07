@@ -41,11 +41,11 @@ exports[`MobileFooter - Snapshots > matches snapshot for profile link 1`] = `
     data-size="lg"
     data-testid="avatar-with-fallback"
   >
-    <img
-      alt="Profile"
-      data-testid="avatar-image"
-      src="https://example.com/avatar/pk:test-user-pubky"
-    />
+    <span
+      data-testid="avatar-fallback"
+    >
+      TU
+    </span>
     <span
       data-testid="avatar-name"
     >
@@ -201,11 +201,11 @@ exports[`MobileFooter - Snapshots > matches snapshot with custom className 1`] =
         data-size="lg"
         data-testid="avatar-with-fallback"
       >
-        <img
-          alt="Profile"
-          data-testid="avatar-image"
-          src="https://example.com/avatar/pk:test-user-pubky"
-        />
+        <span
+          data-testid="avatar-fallback"
+        >
+          TU
+        </span>
         <span
           data-testid="avatar-name"
         >
@@ -363,11 +363,11 @@ exports[`MobileFooter - Snapshots > matches snapshot with default props 1`] = `
         data-size="lg"
         data-testid="avatar-with-fallback"
       >
-        <img
-          alt="Profile"
-          data-testid="avatar-image"
-          src="https://example.com/avatar/pk:test-user-pubky"
-        />
+        <span
+          data-testid="avatar-fallback"
+        >
+          TU
+        </span>
         <span
           data-testid="avatar-name"
         >
@@ -525,11 +525,11 @@ exports[`MobileFooter - Snapshots > matches snapshot with different active path 
         data-size="lg"
         data-testid="avatar-with-fallback"
       >
-        <img
-          alt="Profile"
-          data-testid="avatar-image"
-          src="https://example.com/avatar/pk:test-user-pubky"
-        />
+        <span
+          data-testid="avatar-fallback"
+        >
+          TU
+        </span>
         <span
           data-testid="avatar-name"
         >
