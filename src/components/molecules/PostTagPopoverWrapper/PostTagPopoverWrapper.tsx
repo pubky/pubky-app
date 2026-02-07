@@ -71,7 +71,12 @@ export function PostTagPopoverWrapper({ taggers, taggersCount, children }: PostT
                 className="w-auto p-0"
                 onOpenAutoFocus={(e) => e.preventDefault()}
               >
-                {showAllTaggers && <Molecules.WhoTaggedExpandedList taggers={taggers} />}
+                {showAllTaggers && (
+                  <Molecules.WhoTaggedExpandedList
+                    taggerIds={taggers.map((tagger) => tagger.id)}
+                    fallbackTaggers={taggers}
+                  />
+                )}
               </Atoms.PopoverContent>
             </Atoms.Popover>
           )}
