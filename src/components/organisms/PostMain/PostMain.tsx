@@ -77,7 +77,7 @@ export function PostMain({ postId, onClick, className, isReply = false, isLastRe
                   )}
                 >
                   {tagsExpanded ? (
-                    <Organisms.PostTagsPanel postId={postId} className="flex-1" />
+                    <Organisms.PostTagsPanel postId={postId} widthMode="fit" className="flex-1" />
                   ) : (
                     <Organisms.ClickableTagsList
                       taggedId={postId}

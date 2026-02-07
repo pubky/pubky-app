@@ -69,6 +69,15 @@ export class PostApplication {
   }
 
   /**
+   * Fetch taggers for a specific tag label on a post from Nexus API
+   * @param params - Parameters containing composite post ID, label, and pagination options
+   * @returns Tagger payload for the label ({ users, relationship })
+   */
+  static async fetchTaggers(params: Core.TFetchPostTaggersParams): Promise<Core.NexusTaggers> {
+    return await Core.NexusPostService.getPostTaggers(params);
+  }
+
+  /**
    * Reads or fetches a post - reads from local DB first, fetches from Nexus if not found
    * Also fetches and persists related data: counts, relationships, tags, and author
    * @param compositeId - Composite post ID in format "authorId:postId"

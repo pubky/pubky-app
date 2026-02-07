@@ -23,7 +23,7 @@ import type { PostTagsPanelProps } from './PostTagsPanel.types';
  *
  * Uses the same TaggedSection pattern as ProfileTagged but adapted for posts.
  */
-export function PostTagsPanel({ postId, className }: PostTagsPanelProps) {
+export function PostTagsPanel({ postId, widthMode = 'fit', className }: PostTagsPanelProps) {
   const t = useTranslations('common');
   const { tags, isLoading, handleTagAdd, handleTagToggle, hasMore, isLoadingMore, loadMore } =
     Hooks.usePostTags(postId);
@@ -91,29 +91,36 @@ export function PostTagsPanel({ postId, className }: PostTagsPanelProps) {
 
   return (
     <Atoms.Container data-cy="post-tags-panel" className={Libs.cn('gap-2', className)}>
-      {/* TagInput visible for all users - clicking opens sign-in for unauthenticated */}
-      <Molecules.TagInput
-        onTagAdd={handleTagAddWithAuth}
-        existingTags={tags}
-        viewerTags={viewerTags}
-        disabled={!isAuthenticated}
-        onClick={handleInputClick}
-        enableApiSuggestions
-        excludeFromApiSuggestions={tags.map((t) => t.label)}
-        addOnSuggestionClick
-      />
+      <Atoms.Container
+        overrideDefaults
+        className={Libs.cn('flex flex-col gap-2', widthMode === 'fit' ? 'w-fit max-w-full' : 'w-full')}
+      >
+        {/* TagInput visible for all users - clicking opens sign-in for unauthenticated */}
+        <Molecules.TagInput
+          onTagAdd={handleTagAddWithAuth}
+          existingTags={tags}
+          viewerTags={viewerTags}
+          disabled={!isAuthenticated}
+          onClick={handleInputClick}
+          enableApiSuggestions
+          excludeFromApiSuggestions={tags.map((t) => t.label)}
+          addOnSuggestionClick
+        />
 
-      {tags.length > 0 && (
-        <Atoms.Container overrideDefaults className="max-h-80 overflow-x-hidden overflow-y-auto pr-1">
-          <Molecules.TaggedList
-            tags={enrichedTags}
-            hasMore={hasMore}
-            isLoadingMore={isLoadingMore}
-            onLoadMore={loadMore}
-            onTagToggle={handleTagToggleWithAuth}
-          />
-        </Atoms.Container>
-      )}
+        {tags.length > 0 && (
+          <Atoms.Container overrideDefaults className="max-h-80 overflow-x-hidden overflow-y-auto pr-1">
+            <Molecules.TaggedList
+              tags={enrichedTags}
+              taggedId={postId}
+              taggedKind={Core.TagKind.POST}
+              hasMore={hasMore}
+              isLoadingMore={isLoadingMore}
+              onLoadMore={loadMore}
+              onTagToggle={handleTagToggleWithAuth}
+            />
+          </Atoms.Container>
+        )}
+      </Atoms.Container>
     </Atoms.Container>
   );
 }

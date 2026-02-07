@@ -82,6 +82,15 @@ export class PostController {
   }
 
   /**
+   * Fetch taggers for a specific tag label on a post from Nexus API
+   * @param params - Parameters containing composite post ID, label, and pagination options
+   * @returns Tagger payload for the label ({ users, relationship })
+   */
+  static async fetchTaggers(params: Core.TFetchPostTaggersParams): Promise<Core.NexusTaggers> {
+    return await Core.PostApplication.fetchTaggers(params);
+  }
+
+  /**
    * Create a post (including replies and reposts)
    * @param params - Parameters object
    * @param params.authorId - ID of the user creating the post

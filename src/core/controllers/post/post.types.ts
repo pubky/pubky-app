@@ -33,3 +33,10 @@ export interface TFetchMorePostTagsParams extends Core.TCompositeId {
   skip?: number;
   limit?: number;
 }
+
+export interface TFetchPostTaggersParams extends Core.TCompositeId {
+  label: string;
+  skip?: number;
+  limit?: number;
+  viewerId?: Core.Pubky;
+}
