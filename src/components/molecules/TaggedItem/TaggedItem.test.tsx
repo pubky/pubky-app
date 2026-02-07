@@ -66,8 +66,8 @@ vi.mock('@/molecules', async (importOriginal) => {
   const actual = await importOriginal<typeof import('@/molecules')>();
   return {
     ...actual,
-    WhoTaggedExpandedList: ({ taggers }: { taggers: Array<{ id: string }> }) => (
-      <div data-testid="who-tagged-expanded-list">Expanded List ({taggers.length} users)</div>
+    WhoTaggedExpandedList: ({ taggerIds }: { taggerIds: Array<string> }) => (
+      <div data-testid="who-tagged-expanded-list">Expanded List ({taggerIds.length} users)</div>
     ),
   };
 });

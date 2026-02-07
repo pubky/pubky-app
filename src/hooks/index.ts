@@ -53,6 +53,7 @@ export * from './useConfirmableDialog';
 export * from './useFeedback';
 export * from './usePostInput';
 export * from './usePostTags';
+export * from './usePostTaggers';
 export * from './usePostParticipants';
 export * from './usePostReplies';
 export * from './usePostCounts';
