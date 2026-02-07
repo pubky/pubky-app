@@ -5,14 +5,39 @@ import { POPOVER_HOVER_DELAY } from './PostTagPopoverWrapper.constants';
 import { DEFAULT_HOVER_CLOSE_DELAY } from '@/atoms/Popover/Popover.constants';
 import type { TaggerWithAvatar } from '@/molecules/TaggedItem/TaggedItem.types';
 
+const mockRouterPush = vi.fn();
+const mockFetchAllTaggers = vi.fn();
+let mockTaggersByLabel = new Map<string, string[]>();
+let mockTaggerStates = new Map<
+  string,
+  { ids: string[]; skip: number; isLoading: boolean; hasMore: boolean; totalCount?: number }
+>();
+
+vi.mock('next/navigation', () => ({
+  useRouter: () => ({ push: mockRouterPush }),
+}));
+
 vi.mock('@/hooks', async (importOriginal) => {
   const actual = await importOriginal<typeof import('@/hooks')>();
-  return { ...actual, useIsTouchDevice: () => false, useIsMobile: () => false };
+  return {
+    ...actual,
+    useIsTouchDevice: () => false,
+    useIsMobile: () => false,
+    usePostTaggers: () => ({
+      taggersByLabel: mockTaggersByLabel,
+      taggerStates: mockTaggerStates,
+      fetchAllTaggers: mockFetchAllTaggers,
+    }),
+  };
 });
 
-vi.mock('@/organisms', () => ({
-  AvatarWithFallback: ({ name }: { name: string }) => <div data-testid={`avatar-${name}`}>Avatar</div>,
-}));
+vi.mock('@/organisms', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('@/organisms')>();
+  return {
+    ...actual,
+    AvatarWithFallback: ({ name }: { name: string }) => <div data-testid={`avatar-${name}`}>Avatar</div>,
+  };
+});
 
 vi.mock('../PostHeaderUserInfoPopoverWrapper', async (importOriginal) => {
   const actual = await importOriginal<typeof import('../PostHeaderUserInfoPopoverWrapper')>();
@@ -37,6 +62,8 @@ describe('PostTagPopoverWrapper', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     vi.useFakeTimers();
+    mockTaggersByLabel = new Map();
+    mockTaggerStates = new Map();
   });
 
   afterEach(() => {
@@ -106,6 +133,26 @@ describe('PostTagPopoverWrapper', () => {
     });
 
     expect(screen.queryByTestId('avatar-Alice')).not.toBeInTheDocument();
+  });
+
+  it('fetches all taggers when overflow popover opens for post tags', async () => {
+    render(
+      <PostTagPopoverWrapper taggers={mockTaggers} taggersCount={10} postId="author:post-id" tagLabel="bitcoin">
+        <button data-testid="trigger">Tag</button>
+      </PostTagPopoverWrapper>,
+    );
+
+    fireEvent.mouseEnter(screen.getByTestId('trigger'));
+    await act(async () => {
+      vi.advanceTimersByTime(POPOVER_HOVER_DELAY);
+    });
+
+    fireEvent.click(screen.getByText('+7'));
+    await act(async () => {
+      await Promise.resolve();
+    });
+
+    expect(mockFetchAllTaggers).toHaveBeenCalledWith('bitcoin', ['user1', 'user2', 'user3'], 10);
   });
 });
 
