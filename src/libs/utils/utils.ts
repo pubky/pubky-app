@@ -2,7 +2,6 @@ import { clsx, type ClassValue } from 'clsx';
 import { twMerge } from 'tailwind-merge';
 import { formatDistanceToNow } from 'date-fns';
 import type { SnapshotSerializer } from 'vitest';
-import validationLimits from 'pubky-app-specs/validationLimits.json';
 import type {
   ExtractInitialsProps,
   CopyToClipboardProps,
@@ -11,7 +10,7 @@ import type {
 } from './utils.types';
 import type { PostInputVariant } from '@/organisms';
 import * as Config from '@/config';
-import { RADIX_ID_REGEX, RADIX_ID_TEST_REGEX } from './utils.constants';
+import { RADIX_ID_REGEX, RADIX_ID_TEST_REGEX, TAG_BANNED_CHARS } from './utils.constants';
 
 export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs));
@@ -562,28 +561,6 @@ export function shouldBypassLinkConfirmation(url: string): boolean {
 export function getCharacterCount(text: string): number {
   return Array.from(text).length;
 }
-
-/**
- * Banned characters for tags per pubky-app-specs
- * Colons, commas, spaces, tabs, and newlines are not allowed in tags
- */
-const escapeTagCharForRegex = (char: string) => {
-  switch (char) {
-    case '\t':
-      return '\\t';
-    case '\n':
-      return '\\n';
-    case '\r':
-      return '\\r';
-    default:
-      return char.replace(/[\\\-\]\^]/g, '\\$&');
-  }
-};
-
-export const TAG_BANNED_CHARS = new RegExp(
-  `[${validationLimits.tagInvalidChars.map(escapeTagCharForRegex).join('')}]`,
-  'g',
-);
 
 /**
  * Remove banned characters from tag input
