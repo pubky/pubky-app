@@ -102,7 +102,6 @@ export function ProfilePageLayout({
         </Atoms.Container>
       </Molecules.ProfilePageLayoutWrapper>
 
-      <Molecules.ScrollToTopFab />
       <Molecules.MobileFooter />
 
       <Molecules.AvatarZoomModal
