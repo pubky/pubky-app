@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import * as Atoms from '@/atoms';
 import * as Molecules from '@/molecules';
 import * as Hooks from '@/hooks';
@@ -18,18 +18,22 @@ import { TaggerAvatar } from './TaggerAvatar/TaggerAvatar';
  * Note: Hover tooltip is desktop-only to avoid unintended
  * popover activation on mobile tap interactions.
  */
-export function PostTagPopoverWrapper({ taggers, taggersCount, children }: PostTagPopoverWrapperProps) {
+export function PostTagPopoverWrapper({
+  taggers,
+  taggersCount,
+  postId,
+  tagLabel,
+  children,
+}: PostTagPopoverWrapperProps) {
   const [open, setOpen] = useState(false);
   const [showAllTaggers, setShowAllTaggers] = useState(false);
   const isMobile = Hooks.useIsMobile();
-
-  // On mobile or when no taggers, just render children without popover
-  if (isMobile || (taggers.length === 0 && taggersCount === 0)) {
-    return <>{children}</>;
-  }
-
-  const visibleTaggers = taggers.slice(0, MAX_VISIBLE_AVATARS);
-  const overflowCount = Math.max(0, taggersCount - visibleTaggers.length);
+  const shouldFetchTaggers = Boolean(postId && tagLabel);
+  const { taggersByLabel, taggerStates, fetchAllTaggers } = Hooks.usePostTaggers(shouldFetchTaggers ? postId : null);
+  const initialTaggerIds = useMemo(() => taggers.map((tagger) => tagger.id), [taggers]);
+  const labelKey = tagLabel?.toLowerCase();
+  const expandedTaggerIds = labelKey ? taggersByLabel.get(labelKey) : undefined;
+  const isLoadingTaggers = labelKey ? (taggerStates.get(labelKey)?.isLoading ?? false) : false;
 
   const handleOpenChange = (newOpen: boolean) => {
     setOpen(newOpen);
@@ -38,6 +42,19 @@ export function PostTagPopoverWrapper({ taggers, taggersCount, children }: PostT
       setShowAllTaggers(false);
     }
   };
+
+  useEffect(() => {
+    if (!showAllTaggers || !shouldFetchTaggers || !tagLabel) return;
+    void fetchAllTaggers(tagLabel, initialTaggerIds, taggersCount);
+  }, [showAllTaggers, shouldFetchTaggers, tagLabel, initialTaggerIds, taggersCount, fetchAllTaggers]);
+
+  // On mobile or when no taggers, just render children without popover
+  if (isMobile || (taggers.length === 0 && taggersCount === 0)) {
+    return <>{children}</>;
+  }
+
+  const visibleTaggers = taggers.slice(0, MAX_VISIBLE_AVATARS);
+  const overflowCount = Math.max(0, taggersCount - visibleTaggers.length);
 
   return (
     <Atoms.Popover hover hoverDelay={POPOVER_HOVER_DELAY} open={open} onOpenChange={handleOpenChange}>
@@ -73,8 +90,9 @@ export function PostTagPopoverWrapper({ taggers, taggersCount, children }: PostT
               >
                 {showAllTaggers && (
                   <Molecules.WhoTaggedExpandedList
-                    taggerIds={taggers.map((tagger) => tagger.id)}
+                    taggerIds={expandedTaggerIds ?? initialTaggerIds}
                     fallbackTaggers={taggers}
+                    isLoadingTaggers={isLoadingTaggers}
                   />
                 )}
               </Atoms.PopoverContent>

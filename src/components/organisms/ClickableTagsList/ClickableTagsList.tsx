@@ -141,6 +141,8 @@ export function ClickableTagsList({
           key={`${taggedId}-${tag.label}`}
           taggers={tag.taggers}
           taggersCount={tag.taggers_count}
+          postId={taggedKind === Core.TagKind.POST ? taggedId : null}
+          tagLabel={tag.label}
         >
           <Molecules.PostTag
             label={tag.label}
