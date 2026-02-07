@@ -33,6 +33,7 @@ export * from './Metadata';
 export * from './NewPostCTA';
 export * from './NewPostsButton';
 export * from './ScrollToTopFab';
+export * from './PullToRefreshIndicator';
 export * from './Logout';
 export * from './MobileFooter';
 export * from './NotificationIcon';

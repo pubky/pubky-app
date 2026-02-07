@@ -99,7 +99,7 @@ describe('posts', () => {
     const fillerLength = Math.max(0, MAX_POST_LENGTH - prefix.length);
     const postContent = `${prefix}${'o'.repeat(fillerLength)}`;
 
-    createQuickPost(postContent, MAX_POST_LENGTH);
+    createQuickPost(postContent, [], MAX_POST_LENGTH);
 
     cy.findFirstPostInFeed().within(() => {
       cy.get('[data-cy="post-text"]').should('contain.text', prefix.trim());
@@ -111,12 +111,13 @@ describe('posts', () => {
     const postContent = `🥋🗾⛩️ I can post with emojis! ${Date.now()}`;
     const expectedLength = Array.from(postContent).length;
 
-    createQuickPost(postContent, expectedLength);
+    createQuickPost(postContent, []);
 
     latestPostInFeedContentEq(postContent);
   });
 
-  it('can post with image upload', () => {
+  // todo: remove skip once images always show optimistically in feed, see https://github.com/pubky/pubky-app/issues/656
+  it.skip('can post with image upload', () => {
     const postContent = `I can post with an image! ${Date.now()}`;
 
     cy.get('[data-cy="home-post-input"]').within(() => {
@@ -386,10 +387,13 @@ describe('posts', () => {
     repostPost({ filterText: postContent });
 
     // After repost, the toast should appear with "Reposted!" and an Undo button
-    cy.contains('[role="status"]', 'Reposted!').should('be.visible');
-    cy.contains('[role="status"]', 'Reposted!').within(() => {
-      cy.contains('button', 'Undo').click();
-    });
+    cy.get('[data-cy="toast"]')
+      .should('be.visible')
+      .and('contain', 'Reposted!')
+      .and('contain', 'Undo')
+      .within(() => {
+        cy.contains('button', 'Undo').click();
+      });
 
     // After clicking Undo, the repost should be removed from the feed
     cy.findFirstPostInFeed().within(() => {

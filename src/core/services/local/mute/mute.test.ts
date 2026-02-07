@@ -233,5 +233,38 @@ describe('LocalMuteService', () => {
       // Unmute should not throw even if stream doesn't exist
       await expect(Core.LocalMuteService.delete({ muter, mutee })).resolves.not.toThrow();
     });
+
+    it('should clear post stream queue when mute status changes', async () => {
+      const clearSpy = vi.spyOn(Core.postStreamQueue, 'clear');
+
+      // Mute should clear queue
+      await Core.LocalMuteService.create({ muter, mutee });
+      expect(clearSpy).toHaveBeenCalledTimes(1);
+
+      // Unmute should also clear queue
+      await Core.LocalMuteService.delete({ muter, mutee });
+      expect(clearSpy).toHaveBeenCalledTimes(2);
+
+      clearSpy.mockRestore();
+    });
+
+    it('should not clear post stream queue when mute status does not change', async () => {
+      // Already muted
+      await Core.UserRelationshipsModel.create({
+        id: mutee,
+        following: false,
+        followed_by: false,
+        muted: true,
+      });
+
+      const clearSpy = vi.spyOn(Core.postStreamQueue, 'clear');
+
+      // Mute again (no-op since already muted)
+      await Core.LocalMuteService.create({ muter, mutee });
+
+      // Queue should not be cleared since status didn't change
+      expect(clearSpy).not.toHaveBeenCalled();
+      clearSpy.mockRestore();
+    });
   });
 });

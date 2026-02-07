@@ -49,6 +49,7 @@ export function ContentLayout({
   showRightSidebar = true,
   showLeftMobileButton = true,
   showRightMobileButton = true,
+  renderMobileHeader = true,
   className,
 }: Types.ContentLayoutProps) {
   const { layout } = Core.useHomeStore();
@@ -68,12 +69,14 @@ export function ContentLayout({
   return (
     <>
       {/* Mobile header with drawer icons - hidden on desktop */}
-      <Molecules.MobileHeader
-        onLeftIconClick={showLeftMobileButton ? () => setDrawerFilterOpen(true) : undefined}
-        onRightIconClick={showRightMobileButton ? () => setDrawerRightOpen(true) : undefined}
-        showLeftButton={showLeftMobileButton}
-        showRightButton={showRightMobileButton}
-      />
+      {renderMobileHeader && (
+        <Molecules.MobileHeader
+          onLeftIconClick={showLeftMobileButton ? () => setDrawerFilterOpen(true) : undefined}
+          onRightIconClick={showRightMobileButton ? () => setDrawerRightOpen(true) : undefined}
+          showLeftButton={showLeftMobileButton}
+          showRightButton={showRightMobileButton}
+        />
+      )}
 
       {/* Buttons to open drawers - visible on desktop when in wide layout */}
       {layout === Core.LAYOUT.WIDE && showLeftSidebar && leftDrawerContent && (

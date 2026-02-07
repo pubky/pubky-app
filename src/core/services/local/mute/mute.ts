@@ -60,6 +60,10 @@ export class LocalMuteService {
       // Update muted stream if status changed (outside transaction)
       if (statusChanged) {
         await this.updateUserStreams(mutee, isMuting);
+
+        // Clear post stream queue so next scroll uses updated mute list
+        // The queue may contain posts filtered with the old mute state
+        Core.postStreamQueue.clear();
       }
 
       Logger.debug(isMuting ? 'Mute created successfully' : 'Unmute completed successfully', { muter, mutee });

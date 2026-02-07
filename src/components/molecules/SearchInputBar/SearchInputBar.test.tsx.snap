@@ -3,6 +3,7 @@
 exports[`SearchInputBar > SearchInputBar - Snapshots > matches snapshot - default state 1`] = `
 <div
   class="relative flex h-12 items-center gap-3 border border-border px-6 py-3 rounded-full"
+  data-cy="header-search"
   data-testid="search-input-bar"
   style="background: linear-gradient(180deg, rgb(7, 4, 10) 0%, rgb(27, 24, 32) 100%);"
 >
@@ -44,6 +45,7 @@ exports[`SearchInputBar > SearchInputBar - Snapshots > matches snapshot - defaul
 exports[`SearchInputBar > SearchInputBar - Snapshots > matches snapshot - focused state 1`] = `
 <div
   class="relative flex h-12 items-center gap-3 border border-border px-6 py-3 rounded-t-2xl rounded-b-none border-b-transparent"
+  data-cy="header-search"
   data-testid="search-input-bar"
   style="background: linear-gradient(180deg, var(--background) 0%, var(--background) 100%);"
 >
@@ -85,6 +87,7 @@ exports[`SearchInputBar > SearchInputBar - Snapshots > matches snapshot - focuse
 exports[`SearchInputBar > SearchInputBar - Snapshots > matches snapshot - with active tags 1`] = `
 <div
   class="relative flex h-12 items-center gap-3 border border-border px-6 py-3 rounded-full"
+  data-cy="header-search"
   data-testid="search-input-bar"
   style="background: linear-gradient(180deg, rgb(7, 4, 10) 0%, rgb(27, 24, 32) 100%);"
 >
@@ -152,6 +155,7 @@ exports[`SearchInputBar > SearchInputBar - Snapshots > matches snapshot - with a
 exports[`SearchInputBar > SearchInputBar - Snapshots > matches snapshot - with input value 1`] = `
 <div
   class="relative flex h-12 items-center gap-3 border border-border px-6 py-3 rounded-full"
+  data-cy="header-search"
   data-testid="search-input-bar"
   style="background: linear-gradient(180deg, rgb(7, 4, 10) 0%, rgb(27, 24, 32) 100%);"
 >

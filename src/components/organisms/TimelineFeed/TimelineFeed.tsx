@@ -92,6 +92,7 @@ function TimelineFeedContent({
     error,
     hasMore,
     loadMore,
+    refresh,
     prependPosts,
     removePosts,
   } = Hooks.useStreamPagination({
@@ -107,6 +108,13 @@ function TimelineFeedContent({
 
   // Track scroll position to show/hide new posts button
   const isScrolled = Hooks.useIsScrolledFromTop();
+
+  // Pull-to-refresh - enabled for home and hot variants on touch devices
+  const enablePullToRefresh = variant === TIMELINE_FEED_VARIANT.HOME || variant === TIMELINE_FEED_VARIANT.HOT;
+  const { state: pullState, pullDistance } = Hooks.usePullToRefresh({
+    onRefresh: refresh,
+    disabled: !enablePullToRefresh,
+  });
 
   // Filter out posts that are already displayed in the timeline
   // This prevents showing "See new posts" for posts the user just created
@@ -176,6 +184,8 @@ function TimelineFeedContent({
 
   return (
     <TimelineFeedContext.Provider value={contextValue}>
+      {/* Pull-to-refresh indicator - only shown for home & hot variants */}
+      {enablePullToRefresh && <Molecules.PullToRefreshIndicator state={pullState} pullDistance={pullDistance} />}
       {children}
       <Molecules.NewPostsButton
         count={actualNewCount}
