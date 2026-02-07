@@ -49,7 +49,6 @@ vi.mock('@/molecules', () => ({
   ProfilePageLayoutWrapper: ({ children }: { children: React.ReactNode }) => (
     <div data-testid="profile-page-layout-wrapper">{children}</div>
   ),
-  ScrollToTopFab: () => <div data-testid="scroll-to-top-fab" />,
   MobileFooter: () => <div data-testid="mobile-footer">Footer</div>,
   AvatarZoomModal: ({
     open,

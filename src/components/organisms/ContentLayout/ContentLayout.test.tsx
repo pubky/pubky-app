@@ -41,7 +41,6 @@ vi.mock('@/molecules', () => ({
     </button>
   ),
   MobileFooter: () => <div data-testid="mobile-footer">Mobile Footer</div>,
-  ScrollToTopFab: () => <div data-testid="scroll-to-top-fab" />,
   SideDrawer: ({
     open,
     onOpenChangeAction,
