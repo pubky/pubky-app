@@ -24,7 +24,19 @@ vi.mock('@/organisms', () => ({
     alt?: string;
   }) => (
     <div data-testid="avatar-with-fallback" className={className} data-size={size}>
-      <img data-testid="avatar-image" src={avatarUrl} alt={alt || name} />
+      {avatarUrl ? (
+        <img data-testid="avatar-image" src={avatarUrl} alt={alt || name} />
+      ) : (
+        <span data-testid="avatar-fallback">
+          {name
+            .trim()
+            .split(/\s+/)
+            .filter(Boolean)
+            .slice(0, 2)
+            .map((part) => part[0]?.toUpperCase())
+            .join('') || 'U'}
+        </span>
+      )}
       <span data-testid="avatar-name">{name}</span>
     </div>
   ),
@@ -57,7 +69,7 @@ vi.mock('@/app', async () => {
 // Mock Hooks
 vi.mock('@/hooks', () => ({
   useCurrentUserProfile: vi.fn(() => ({
-    userDetails: { name: 'Test User' },
+    userDetails: { name: 'Test User', image: null, indexed_at: 123 },
     currentUserPubky: 'pk:test-user-pubky',
   })),
   usePublicRoute: vi.fn(() => ({
@@ -72,10 +84,15 @@ vi.mock('@/core', async () => {
   return {
     ...actual,
     FileController: {
-      getAvatarUrl: vi.fn((pubky: string) => `https://example.com/avatar/${pubky}`),
+      getAvatarUrl: vi.fn((pubky: string, version?: string | number) =>
+        version ? `https://example.com/avatar/${pubky}?v=${version}` : `https://example.com/avatar/${pubky}`,
+      ),
     },
     useAuthStore: vi.fn((selector: (state: { currentUserPubky: string | null }) => unknown) =>
       selector({ currentUserPubky: 'pk:test-user-pubky' }),
+    ),
+    useLocalFilesStore: vi.fn((selector: (state: { profile: string | null }) => unknown) =>
+      selector({ profile: null }),
     ),
     useNotificationStore: vi.fn((selector: (state: { selectUnread: () => number }) => unknown) =>
       selector({ selectUnread: mockSelectUnread }),
@@ -85,6 +102,7 @@ vi.mock('@/core', async () => {
 
 describe('MobileFooter', () => {
   beforeEach(() => {
+    vi.clearAllMocks();
     vi.mocked(usePathname).mockReturnValue('/home');
     mockSelectUnread.mockReturnValue(0);
   });
@@ -148,6 +166,31 @@ describe('MobileFooter', () => {
     const avatarName = screen.getByTestId('avatar-name');
     expect(avatarName).toBeInTheDocument();
     expect(avatarName).toHaveTextContent('Test User');
+  });
+
+  it('does not request avatar URL when user has no avatar set', async () => {
+    render(<MobileFooter />);
+
+    const { FileController } = await import('@/core');
+    expect(vi.mocked(FileController.getAvatarUrl)).not.toHaveBeenCalled();
+    expect(screen.queryByTestId('avatar-image')).not.toBeInTheDocument();
+    expect(screen.getByTestId('avatar-fallback')).toHaveTextContent('TU');
+  });
+
+  it('requests avatar URL when user has an avatar set', async () => {
+    const { useCurrentUserProfile } = await import('@/hooks');
+    vi.mocked(useCurrentUserProfile).mockReturnValueOnce({
+      userDetails: { name: 'Test User', image: 'has-avatar', indexed_at: 456 },
+      currentUserPubky: 'pk:test-user-pubky',
+    });
+
+    render(<MobileFooter />);
+
+    const { FileController } = await import('@/core');
+    expect(vi.mocked(FileController.getAvatarUrl)).toHaveBeenCalledWith('pk:test-user-pubky', 456);
+    expect(screen.getByTestId('avatar-image').getAttribute('src')).toBe(
+      'https://example.com/avatar/pk:test-user-pubky?v=456',
+    );
   });
 
   it('applies correct icon classes', () => {
@@ -239,6 +282,7 @@ describe('MobileFooter', () => {
 
 describe('MobileFooter - Snapshots', () => {
   beforeEach(() => {
+    vi.clearAllMocks();
     vi.mocked(usePathname).mockReturnValue('/home');
   });
 
