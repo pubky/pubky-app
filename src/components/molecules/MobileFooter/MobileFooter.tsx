@@ -13,6 +13,8 @@ export interface MobileFooterProps {
   className?: string;
 }
 
+const FORCE_HOME_SCROLL_TOP_KEY = 'pubky:force-home-scroll-top';
+
 /**
  * MobileFooter - Bottom navigation for mobile devices
  *
@@ -64,11 +66,22 @@ export function MobileFooter({ className }: MobileFooterProps) {
               href={item.href}
               aria-label={item.label}
               onClick={(event) => {
-                if (!isHomeActive) return;
                 // Don't hijack modified clicks (new tab/window, etc.)
                 if (event.metaKey || event.ctrlKey || event.shiftKey || event.altKey || event.button !== 0) return;
-                event.preventDefault();
-                window.scrollTo({ top: 0, behavior: 'smooth' });
+                if (!isHome) return;
+
+                if (isHomeActive) {
+                  event.preventDefault();
+                  window.scrollTo({ top: 0, behavior: 'smooth' });
+                  return;
+                }
+
+                // Home feed is kept mounted to preserve scroll; mark explicit intent to reset to top on enter.
+                try {
+                  window.sessionStorage.setItem(FORCE_HOME_SCROLL_TOP_KEY, '1');
+                } catch {
+                  // Ignore storage errors and keep default navigation behavior.
+                }
               }}
               className={Libs.cn(
                 'rounded-full p-3 backdrop-blur-sm transition-all',

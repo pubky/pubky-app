@@ -24,6 +24,8 @@ vi.mock('next/navigation', () => ({
   usePathname: vi.fn(),
 }));
 
+const FORCE_HOME_SCROLL_TOP_KEY = 'pubky:force-home-scroll-top';
+
 describe('Logo', () => {
   it('renders with default src', () => {
     vi.mocked(usePathname).mockReturnValue('/home');
@@ -55,6 +57,7 @@ describe('Logo', () => {
     vi.mocked(usePathname).mockReturnValue('/hot');
 
     Object.defineProperty(window, 'scrollTo', { value: vi.fn(), writable: true });
+    const setItemSpy = vi.spyOn(Storage.prototype, 'setItem');
 
     render(<Logo />);
     const link = screen.getByTestId('logo-image').closest('a');
@@ -62,6 +65,7 @@ describe('Logo', () => {
 
     fireEvent.click(link!);
     expect(window.scrollTo).not.toHaveBeenCalled();
+    expect(setItemSpy).toHaveBeenCalledWith(FORCE_HOME_SCROLL_TOP_KEY, '1');
   });
 });
 
