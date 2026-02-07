@@ -455,6 +455,53 @@ describe('PostController', () => {
     });
   });
 
+  describe('fetchTaggers', () => {
+    it('should call PostApplication.fetchTaggers and return result', async () => {
+      const { PostController } = await import('./post');
+      const ApplicationModule = await import('@/core/application');
+      const params: Core.TFetchPostTaggersParams = {
+        compositeId: testData.fullPostId,
+        label: 'bitcoin',
+        skip: 0,
+        limit: 20,
+      };
+      const mockTaggers: Core.NexusTaggers = { relationship: false, users: ['user1' as Core.Pubky] };
+
+      const fetchTaggersSpy = vi
+        .spyOn(ApplicationModule.PostApplication, 'fetchTaggers')
+        .mockResolvedValue(mockTaggers);
+
+      try {
+        const result = await PostController.fetchTaggers(params);
+
+        expect(fetchTaggersSpy).toHaveBeenCalledWith(params);
+        expect(result).toEqual(mockTaggers);
+      } finally {
+        fetchTaggersSpy.mockRestore();
+      }
+    });
+
+    it('should propagate errors from PostApplication.fetchTaggers', async () => {
+      const { PostController } = await import('./post');
+      const ApplicationModule = await import('@/core/application');
+      const params: Core.TFetchPostTaggersParams = {
+        compositeId: testData.fullPostId,
+        label: 'bitcoin',
+      };
+
+      const fetchTaggersSpy = vi
+        .spyOn(ApplicationModule.PostApplication, 'fetchTaggers')
+        .mockRejectedValue(new Error('Nexus failed'));
+
+      try {
+        await expect(PostController.fetchTaggers(params)).rejects.toThrow('Nexus failed');
+        expect(fetchTaggersSpy).toHaveBeenCalledWith(params);
+      } finally {
+        fetchTaggersSpy.mockRestore();
+      }
+    });
+  });
+
   describe('getRelationships', () => {
     it('should return post relationships when they exist', async () => {
       await setupExistingPost();

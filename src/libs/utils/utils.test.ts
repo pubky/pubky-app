@@ -1235,9 +1235,14 @@ describe('Utils', () => {
       expect(sanitizeTagInput('tag with spaces')).toBe('tagwithspaces');
     });
 
+    it('should remove tabs and newlines from input', () => {
+      expect(sanitizeTagInput('hello\tworld')).toBe('helloworld');
+      expect(sanitizeTagInput('tag\nwith\rbreaks')).toBe('tagwithbreaks');
+    });
+
     it('should remove all banned characters at once', () => {
-      expect(sanitizeTagInput('hello: world, test')).toBe('helloworldtest');
-      expect(sanitizeTagInput(':, mixed:, chars')).toBe('mixedchars');
+      expect(sanitizeTagInput('hello:\t world,\n test')).toBe('helloworldtest');
+      expect(sanitizeTagInput(':\n,\r mixed:\t, chars')).toBe('mixedchars');
     });
 
     it('should preserve valid characters', () => {
@@ -1253,7 +1258,7 @@ describe('Utils', () => {
 
     it('should handle string with only banned characters', () => {
       expect(sanitizeTagInput(': , :')).toBe('');
-      expect(sanitizeTagInput('   ')).toBe('');
+      expect(sanitizeTagInput(' \t\r\n ')).toBe('');
     });
 
     it('should handle Unicode characters', () => {
@@ -1281,6 +1286,12 @@ describe('Utils', () => {
 
     it('should match spaces', () => {
       expect(' '.match(TAG_BANNED_CHARS)).not.toBeNull();
+    });
+
+    it('should match tabs and newlines', () => {
+      expect('\t'.match(TAG_BANNED_CHARS)).not.toBeNull();
+      expect('\n'.match(TAG_BANNED_CHARS)).not.toBeNull();
+      expect('\r'.match(TAG_BANNED_CHARS)).not.toBeNull();
     });
 
     it('should not match valid characters', () => {

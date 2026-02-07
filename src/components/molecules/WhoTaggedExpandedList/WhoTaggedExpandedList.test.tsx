@@ -26,6 +26,10 @@ vi.mock('@/hooks', async (importOriginal) => {
       isAuthenticated: true,
       requireAuth: vi.fn((action: () => void) => action()),
     })),
+    useBulkUserAvatars: vi.fn((ids: string[]) => ({
+      getUsersWithAvatars: () => ids.map((id) => ({ id, name: id, avatarUrl: '' })),
+      isLoading: false,
+    })),
   };
 });
 
@@ -76,6 +80,7 @@ const mockTaggers: TaggerWithAvatar[] = [
   { id: 'user2', avatarUrl: 'https://cdn.example.com/avatar/user2', name: 'Bob' },
   { id: 'user3', avatarUrl: 'https://cdn.example.com/avatar/user3' },
 ];
+const mockTaggerIds = mockTaggers.map((tagger) => tagger.id);
 
 describe('WhoTaggedExpandedList', () => {
   beforeEach(() => {
@@ -84,36 +89,36 @@ describe('WhoTaggedExpandedList', () => {
   });
 
   it('renders with default props', () => {
-    render(<WhoTaggedExpandedList taggers={mockTaggers} />);
+    render(<WhoTaggedExpandedList taggerIds={mockTaggerIds} />);
     expect(screen.getByTestId('who-tagged-expanded-list')).toBeInTheDocument();
   });
 
   it('renders all taggers as UserListItems', () => {
-    render(<WhoTaggedExpandedList taggers={mockTaggers} />);
+    render(<WhoTaggedExpandedList taggerIds={mockTaggerIds} />);
     expect(screen.getByTestId('user-list-item-user1')).toBeInTheDocument();
     expect(screen.getByTestId('user-list-item-user2')).toBeInTheDocument();
     expect(screen.getByTestId('user-list-item-user3')).toBeInTheDocument();
   });
 
   it('returns null when taggers array is empty', () => {
-    const { container } = render(<WhoTaggedExpandedList taggers={[]} />);
+    const { container } = render(<WhoTaggedExpandedList taggerIds={[]} />);
     expect(container.firstChild).toBeNull();
   });
 
   it('navigates to user profile when user is clicked', () => {
-    render(<WhoTaggedExpandedList taggers={mockTaggers} />);
+    render(<WhoTaggedExpandedList taggerIds={mockTaggerIds} />);
     fireEvent.click(screen.getByTestId('user-click-user1'));
     expect(mockPush).toHaveBeenCalledWith('/profile/user1');
   });
 
   it('calls toggleFollow when follow button is clicked', () => {
-    render(<WhoTaggedExpandedList taggers={mockTaggers} />);
+    render(<WhoTaggedExpandedList taggerIds={mockTaggerIds} />);
     fireEvent.click(screen.getByTestId('follow-click-user1'));
     expect(mockToggleFollow).toHaveBeenCalledWith('user1', false);
   });
 
   it('applies custom data-testid', () => {
-    render(<WhoTaggedExpandedList taggers={mockTaggers} data-testid="custom-test-id" />);
+    render(<WhoTaggedExpandedList taggerIds={mockTaggerIds} data-testid="custom-test-id" />);
     expect(screen.getByTestId('custom-test-id')).toBeInTheDocument();
   });
 });
@@ -124,20 +129,17 @@ describe('WhoTaggedExpandedList - Snapshots', () => {
   });
 
   it('matches snapshot with single user', () => {
-    const singleTagger: TaggerWithAvatar[] = [
-      { id: 'user1', avatarUrl: 'https://cdn.example.com/avatar/user1', name: 'Alice' },
-    ];
-    const { container } = render(<WhoTaggedExpandedList taggers={singleTagger} />);
+    const { container } = render(<WhoTaggedExpandedList taggerIds={['user1']} />);
     expect(container.firstChild).toMatchSnapshot();
   });
 
   it('matches snapshot with multiple users', () => {
-    const { container } = render(<WhoTaggedExpandedList taggers={mockTaggers} />);
+    const { container } = render(<WhoTaggedExpandedList taggerIds={mockTaggerIds} />);
     expect(container.firstChild).toMatchSnapshot();
   });
 
   it('matches snapshot with empty taggers', () => {
-    const { container } = render(<WhoTaggedExpandedList taggers={[]} />);
+    const { container } = render(<WhoTaggedExpandedList taggerIds={[]} />);
     expect(container.firstChild).toMatchSnapshot();
   });
 });

@@ -65,12 +65,15 @@ export function ClickableTagsList({
     handleTagAdd,
   } = Hooks.useEntityTags(taggedId, taggedKind, { providedTags });
 
+  // Enrich tags with user details for proper avatar fallbacks
+  const { enrichedTags } = Hooks.useEnrichedTags(fetchedTags);
+
   // Determine if input should be shown
   const hasInput = showInput || isAdding;
 
   // Get viewer's own tags for duplicate checking
   // This allows adding a tag that others have used but the viewer hasn't
-  const viewerTags = fetchedTags.filter((t) => isViewerTagger(t));
+  const viewerTags = enrichedTags.filter((t) => isViewerTagger(t));
 
   // Handle tag add from input
   const handleTagAddFromInput = (label: string) => {
@@ -85,7 +88,7 @@ export function ClickableTagsList({
   };
 
   // Handle tag click with auth requirement (toggle or custom handler)
-  const handleTagClick = (tag: (typeof fetchedTags)[number], index: number, e: React.MouseEvent) => {
+  const handleTagClick = (tag: (typeof enrichedTags)[number], index: number, e: React.MouseEvent) => {
     requireAuth(() => {
       if (onTagClick) {
         onTagClick(tag, index, e);
@@ -101,13 +104,13 @@ export function ClickableTagsList({
   };
 
   // Apply smart limiting based on character budget
-  const tagLabels = fetchedTags.map((tag) => tag.label);
+  const tagLabels = enrichedTags.map((tag) => tag.label);
   const displayLabels = Libs.getDisplayTags(tagLabels, {
     maxTagLength,
     maxTotalChars,
     maxCount: maxTags,
   });
-  const visibleTags = fetchedTags.filter((tag) => displayLabels.includes(tag.label));
+  const visibleTags = enrichedTags.filter((tag) => displayLabels.includes(tag.label));
 
   // Check if we should render anything
   const hasVisibleTags = visibleTags.length > 0;
@@ -132,28 +135,35 @@ export function ClickableTagsList({
       data-cy="clickable-tags-list"
       className={Libs.cn('flex flex-wrap items-center gap-2', className)}
     >
-      {/* Render existing tags */}
+      {/* Render existing tags with hover popover for tagger avatars */}
       {visibleTags.map((tag, index) => (
-        <Molecules.PostTag
+        <Molecules.PostTagPopoverWrapper
           key={`${taggedId}-${tag.label}`}
-          label={tag.label}
-          count={showCount ? tag.taggers_count : undefined}
-          color={Libs.generateRandomColor(tag.label)}
-          selected={isViewerTagger(tag)}
-          showClose={showTagClose}
-          onClick={(e) => handleTagClick(tag, index, e)}
-          onClose={(e) => onTagClose?.(tag, index, e)}
-        />
+          taggers={tag.taggers}
+          taggersCount={tag.taggers_count}
+          postId={taggedKind === Core.TagKind.POST ? taggedId : null}
+          tagLabel={tag.label}
+        >
+          <Molecules.PostTag
+            label={tag.label}
+            count={showCount ? tag.taggers_count : undefined}
+            color={Libs.generateRandomColor(tag.label)}
+            selected={isViewerTagger(tag)}
+            showClose={showTagClose}
+            onClick={(e) => handleTagClick(tag, index, e)}
+            onClose={(e) => onTagClose?.(tag, index, e)}
+          />
+        </Molecules.PostTagPopoverWrapper>
       ))}
 
       {/* Add tag input - visible to all, clicks open dialog for unauthenticated */}
       {hasInput && (
         <Molecules.TagInput
           onTagAdd={handleTagAddFromInput}
-          existingTags={fetchedTags}
+          existingTags={enrichedTags}
           viewerTags={viewerTags}
           enableApiSuggestions={isAuthenticated}
-          excludeFromApiSuggestions={fetchedTags.map((t) => t.label)}
+          excludeFromApiSuggestions={enrichedTags.map((t) => t.label)}
           addOnSuggestionClick={true}
           className="w-32 shrink-0"
           autoFocus={isAuthenticated && isAdding}

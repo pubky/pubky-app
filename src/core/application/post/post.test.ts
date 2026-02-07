@@ -931,4 +931,33 @@ describe('Post Application', () => {
       expect(result).toBeNull();
     });
   });
+
+  describe('fetchTaggers', () => {
+    it('should delegate to NexusPostService.getPostTaggers', async () => {
+      const params: Core.TFetchPostTaggersParams = {
+        compositeId: 'author:post123',
+        label: 'bitcoin',
+        skip: 10,
+        limit: 20,
+      };
+      const mockTaggers: Core.NexusTaggers = { relationship: false, users: ['user1' as Core.Pubky] };
+      const taggersSpy = vi.spyOn(Core.NexusPostService, 'getPostTaggers').mockResolvedValue(mockTaggers);
+
+      const result = await Core.PostApplication.fetchTaggers(params);
+
+      expect(taggersSpy).toHaveBeenCalledWith(params);
+      expect(result).toEqual(mockTaggers);
+    });
+
+    it('should propagate errors from NexusPostService.getPostTaggers', async () => {
+      const params: Core.TFetchPostTaggersParams = {
+        compositeId: 'author:post123',
+        label: 'bitcoin',
+      };
+      const taggersSpy = vi.spyOn(Core.NexusPostService, 'getPostTaggers').mockRejectedValue(new Error('Nexus failed'));
+
+      await expect(Core.PostApplication.fetchTaggers(params)).rejects.toThrow('Nexus failed');
+      expect(taggersSpy).toHaveBeenCalledWith(params);
+    });
+  });
 });

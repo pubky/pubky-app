@@ -1,6 +1,7 @@
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { postApi } from './post.api';
 import { type TPostViewParams, type TPostBase, type TPostTaggersParams, type TPostTagsParams } from './post.types';
+import * as Core from '@/core';
 import * as Config from '@/config';
 
 const pubky = 'qr3xqyz3e5cyf9npgxc5zfp15ehhcis6gqsxob4une7bwwazekry';
@@ -226,6 +227,34 @@ describe('Post API', () => {
       expect(endpointKeys).toContain('details');
       expect(endpointKeys).toContain('taggers');
       expect(endpointKeys).toContain('tags');
+    });
+  });
+});
+
+describe('NexusPostService', () => {
+  const testViewerId = 'viewer123' as Core.Pubky;
+
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  describe('getPostTaggers', () => {
+    it('should construct correct URL and return queryNexus response', async () => {
+      const mockTaggers: Core.NexusTaggers = { relationship: false, users: ['user1' as Core.Pubky] };
+      const queryNexusSpy = vi.spyOn(Core, 'queryNexus').mockResolvedValue(mockTaggers);
+
+      const result = await Core.NexusPostService.getPostTaggers({
+        compositeId: `${pubky}:${postId}`,
+        label: 'rust & wasm',
+        skip: 10,
+        limit: 5,
+        viewerId: testViewerId,
+      });
+
+      expect(result).toEqual(mockTaggers);
+      expect(queryNexusSpy).toHaveBeenCalledWith({
+        url: `${Config.NEXUS_URL}/v0/post/${pubky}/${postId}/taggers/rust%20%26%20wasm?skip=10&limit=5&viewer_id=${testViewerId}`,
+      });
     });
   });
 });

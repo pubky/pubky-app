@@ -3,6 +3,7 @@
 import { useMemo, useCallback } from 'react';
 import { useLiveQuery } from 'dexie-react-hooks';
 import * as Core from '@/core';
+import * as Libs from '@/libs';
 import type { UseMutedUsersResult } from './useMutedUsers.types';
 
 const EMPTY_ARRAY: Core.Pubky[] = [];
@@ -27,7 +28,11 @@ export function useMutedUsers(): UseMutedUsersResult {
   const mutedUserIdSet = useMemo(() => new Set(mutedUserIds), [mutedUserIds]);
 
   // Memoize the callback to maintain referential stability.
-  const isMuted = useCallback((userId: Core.Pubky) => mutedUserIdSet.has(userId), [mutedUserIdSet]);
+  // Normalize userId to handle both prefixed (pubky:xxx, pk:xxx) and raw formats
+  const isMuted = useCallback(
+    (userId: Core.Pubky) => mutedUserIdSet.has(Libs.stripPubkyPrefix(userId) as Core.Pubky),
+    [mutedUserIdSet],
+  );
 
   return {
     mutedUserIds,
