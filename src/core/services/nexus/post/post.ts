@@ -39,7 +39,7 @@ export class NexusPostService {
    * @param skip - Number of taggers to skip (pagination)
    * @param limit - Maximum number of taggers to return
    * @param viewerId - Optional viewer ID for relationship data
-   * @returns Array of tagger IDs for the label
+   * @returns Tagger payload for the label ({ users, relationship })
    */
   static async getPostTaggers({
     compositeId,
@@ -47,7 +47,7 @@ export class NexusPostService {
     skip,
     limit,
     viewerId,
-  }: Core.TFetchPostTaggersParams): Promise<Core.NexusTaggers[]> {
+  }: Core.TFetchPostTaggersParams): Promise<Core.NexusTaggers> {
     const { pubky: author_id, id: post_id } = Core.parseCompositeId(compositeId);
 
     const url = Core.postApi.taggers({
@@ -58,6 +58,6 @@ export class NexusPostService {
       limit,
       viewer_id: viewerId,
     });
-    return await Core.queryNexus<Core.NexusTaggers[]>({ url });
+    return await Core.queryNexus<Core.NexusTaggers>({ url });
   }
 }

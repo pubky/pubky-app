@@ -1,0 +1,15 @@
+{
+  "details": {
+    "content": "badger",
+    "id": "0034MAJR54STG",
+    "indexed_at": 1770395589065,
+    "author": "w4ampkga5d9z8548sixhx8sdooqo5aebehcw4467g4urm8af7icy",
+    "kind": "short",
+    "uri": "pubky://w4ampkga5d9z8548sixhx8sdooqo5aebehcw4467g4urm8af7icy/pub/pubky.app/posts/0034MAJR54STG",
+    "attachments": []
+  },
+  "counts": { "tags": 0, "unique_tags": 0, "replies": 0, "reposts": 0 },
+  "tags": [],
+  "relationships": { "replied": null, "reposted": null, "mentioned": [] },
+  "bookmark": null
+}

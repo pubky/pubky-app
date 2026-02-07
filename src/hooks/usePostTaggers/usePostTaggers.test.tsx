@@ -20,14 +20,25 @@ describe('usePostTaggers', () => {
     expect(result.current.taggerStates.size).toBe(0);
   });
 
+  it('keeps fetchAllTaggers callback stable across rerenders for the same postId', () => {
+    const { result, rerender } = renderHook(({ postId }: { postId: string }) => usePostTaggers(postId), {
+      initialProps: { postId: 'author:post123' },
+    });
+
+    const firstCallback = result.current.fetchAllTaggers;
+    rerender({ postId: 'author:post123' });
+
+    expect(result.current.fetchAllTaggers).toBe(firstCallback);
+  });
+
   it('fetches all taggers across pages', async () => {
     const Core = await import('@/core');
     const fetchTaggers = vi.mocked(Core.PostController.fetchTaggers);
 
     fetchTaggers
-      .mockResolvedValueOnce([{ users: ['a', 'b'] }])
-      .mockResolvedValueOnce([{ users: ['c', 'd'] }])
-      .mockResolvedValueOnce([{ users: [] }]);
+      .mockResolvedValueOnce({ users: ['a', 'b'], relationship: false })
+      .mockResolvedValueOnce({ users: ['c', 'd'], relationship: false })
+      .mockResolvedValueOnce({ users: [], relationship: false });
 
     const { result } = renderHook(() => usePostTaggers('author:post123'));
 
