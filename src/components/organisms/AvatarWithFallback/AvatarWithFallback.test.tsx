@@ -142,7 +142,8 @@ describe('AvatarWithFallback', () => {
 
     // Image should be shown immediately without waiting for moderation status
     expect(screen.getByTestId('avatar-image')).toBeInTheDocument();
-    expect(screen.queryByTestId('avatar-fallback')).not.toBeInTheDocument();
+    // Fallback is always rendered (Radix handles visibility)
+    expect(screen.getByTestId('avatar-fallback')).toBeInTheDocument();
     // No blur applied while loading
     expect(screen.getByTestId('avatar-image')).not.toHaveClass('blur-xs');
   });
@@ -208,14 +209,15 @@ describe('AvatarWithFallback', () => {
     it('falls back to initials when image fails to load', () => {
       render(<AvatarWithFallback {...mockProps} avatarUrl={validAvatarUrl} />);
 
-      // Initially should show the image
+      // Initially should show both image and fallback (Radix handles visibility)
       const avatarImage = screen.getByTestId('avatar-image');
       expect(avatarImage).toBeInTheDocument();
+      expect(screen.getByTestId('avatar-fallback')).toBeInTheDocument();
 
       // Simulate image load error
       fireEvent.error(avatarImage);
 
-      // Should now show fallback with initials
+      // After error, image element is removed and fallback remains
       expect(screen.queryByTestId('avatar-image')).not.toBeInTheDocument();
       expect(screen.getByTestId('avatar-fallback')).toBeInTheDocument();
       expect(screen.getByText('JD')).toBeInTheDocument();
@@ -256,7 +258,7 @@ describe('AvatarWithFallback', () => {
       // Rerender with same props
       rerender(<AvatarWithFallback {...mockProps} avatarUrl={validAvatarUrl} />);
 
-      // Should still show fallback
+      // Should still show fallback (image removed due to error)
       expect(screen.queryByTestId('avatar-image')).not.toBeInTheDocument();
       expect(screen.getByTestId('avatar-fallback')).toBeInTheDocument();
     });
@@ -268,16 +270,16 @@ describe('AvatarWithFallback', () => {
       const firstImage = screen.getByTestId('avatar-image');
       fireEvent.error(firstImage);
 
-      // Should show fallback
+      // Should show fallback (image removed due to error)
       expect(screen.queryByTestId('avatar-image')).not.toBeInTheDocument();
       expect(screen.getByTestId('avatar-fallback')).toBeInTheDocument();
 
       // Rerender with new avatarUrl
       rerender(<AvatarWithFallback {...mockProps} avatarUrl={newAvatarUrl} />);
 
-      // Should try new image
+      // Should try new image (both image and fallback rendered, Radix handles visibility)
       expect(screen.getByTestId('avatar-image')).toBeInTheDocument();
-      expect(screen.queryByTestId('avatar-fallback')).not.toBeInTheDocument();
+      expect(screen.getByTestId('avatar-fallback')).toBeInTheDocument();
     });
   });
 
@@ -355,7 +357,7 @@ describe('AvatarWithFallback', () => {
       const avatarImage = screen.getByTestId('avatar-image');
       fireEvent.error(avatarImage);
 
-      // Should show fallback
+      // Should show fallback (image removed due to error)
       expect(screen.queryByTestId('avatar-image')).not.toBeInTheDocument();
       expect(screen.getByTestId('avatar-fallback')).toBeInTheDocument();
 
@@ -364,9 +366,10 @@ describe('AvatarWithFallback', () => {
 
       rerender(<AvatarWithFallback {...mockProps} avatarUrl={validAvatarUrl} />);
 
-      // Error should be reset, image should be shown with local URL
+      // Error should be reset, image should be shown with local URL (fallback always rendered)
       expect(screen.getByTestId('avatar-image')).toBeInTheDocument();
       expect(screen.getByTestId('avatar-image')).toHaveAttribute('src', localBlobUrl);
+      expect(screen.getByTestId('avatar-fallback')).toBeInTheDocument();
     });
 
     it('shows fallback when no avatarUrl and no local profile', () => {
@@ -375,6 +378,7 @@ describe('AvatarWithFallback', () => {
 
       render(<AvatarWithFallback {...mockProps} />);
 
+      // No image when no URL, fallback always rendered
       expect(screen.queryByTestId('avatar-image')).not.toBeInTheDocument();
       expect(screen.getByTestId('avatar-fallback')).toBeInTheDocument();
     });

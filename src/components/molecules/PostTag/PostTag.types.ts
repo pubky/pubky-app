@@ -1,6 +1,6 @@
-import type { MouseEvent } from 'react';
+import type { MouseEvent, HTMLAttributes } from 'react';
 
-export interface PostTagProps {
+export interface PostTagProps extends Omit<HTMLAttributes<HTMLButtonElement>, 'onClick' | 'color'> {
   /** Tag label text */
   label: string;
   /** Number of posts with this tag (optional) */
@@ -15,6 +15,4 @@ export interface PostTagProps {
   onClose?: (e: MouseEvent) => void;
   /** Custom color (hex) for the tag - if not provided, generates from label */
   color?: string;
-  /** Additional className */
-  className?: string;
 }
