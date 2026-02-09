@@ -33,8 +33,9 @@ jobs:
   set-vars:
     name: Set Variables
     if: |
-      (github.event_name == 'pull_request' && github.event.action != 'closed') ||
-      (github.event_name == 'workflow_dispatch' && github.event.inputs.action == 'deploy')
+      (github.event_name == 'workflow_dispatch' && github.event.inputs.action == 'deploy') ||
+      (github.event_name == 'pull_request' && github.event.action != 'closed' &&
+       github.event.pull_request.head.repo.full_name == github.repository)
     runs-on: ubuntu-latest
     outputs:
       pr_number: ${{ steps.vars.outputs.pr_number }}
