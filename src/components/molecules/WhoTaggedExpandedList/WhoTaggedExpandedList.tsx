@@ -1,12 +1,14 @@
 'use client';
 
+import { useRouter } from 'next/navigation';
+import { useTranslations } from 'next-intl';
 import * as Atoms from '@/atoms';
 import * as Molecules from '@/molecules';
 import * as Hooks from '@/hooks';
 import * as Core from '@/core';
 import * as Libs from '@/libs';
-import { useRouter } from 'next/navigation';
 import { APP_ROUTES } from '@/app/routes';
+import type { TaggerWithAvatar } from '@/molecules/TaggedItem/TaggedItem.types';
 import type { WhoTaggedExpandedListProps } from './WhoTaggedExpandedList.types';
 
 const DEFAULT_CLASSNAME =
@@ -19,11 +21,35 @@ const DEFAULT_CLASSNAME =
  * Shows each user with their avatar, name, pubky, and a follow/unfollow button.
  * Max height with scroll for overflow.
  */
-export function WhoTaggedExpandedList({ taggers, className, 'data-testid': dataTestId }: WhoTaggedExpandedListProps) {
+export function WhoTaggedExpandedList({
+  taggerIds,
+  fallbackTaggers,
+  isLoadingTaggers,
+  className,
+  'data-testid': dataTestId,
+}: WhoTaggedExpandedListProps) {
+  const t = useTranslations('common');
   const router = useRouter();
   const { toggleFollow, isUserLoading } = Hooks.useFollowUser();
   const { requireAuth } = Hooks.useRequireAuth();
   const { currentUserPubky } = Core.useAuthStore();
+  const { getUsersWithAvatars } = Hooks.useBulkUserAvatars(taggerIds);
+
+  // Build fallback map for user data not yet in IndexedDB
+  const fallbackMap = new Map<string, TaggerWithAvatar>();
+  (fallbackTaggers ?? []).forEach((tagger) => {
+    fallbackMap.set(tagger.id, tagger);
+  });
+
+  // Merge user data from IndexedDB with fallback data
+  const taggers = getUsersWithAvatars(taggerIds).map((tagger) => {
+    const fallback = fallbackMap.get(tagger.id);
+    return {
+      id: tagger.id,
+      name: tagger.name ?? fallback?.name,
+      avatarUrl: tagger.avatarUrl ?? fallback?.avatarUrl ?? '',
+    };
+  });
 
   const handleFollowClick = async (userId: string, isFollowing: boolean) => {
     requireAuth(() => toggleFollow(userId, isFollowing));
@@ -33,7 +59,7 @@ export function WhoTaggedExpandedList({ taggers, className, 'data-testid': dataT
     router.push(`${APP_ROUTES.PROFILE}/${userId}`);
   };
 
-  if (taggers.length === 0) {
+  if (taggerIds.length === 0) {
     return null;
   }
 
@@ -45,6 +71,14 @@ export function WhoTaggedExpandedList({ taggers, className, 'data-testid': dataT
       className={Libs.cn(DEFAULT_CLASSNAME, className)}
       data-testid={dataTestId || 'who-tagged-expanded-list'}
     >
+      {isLoadingTaggers && (
+        <Atoms.Container overrideDefaults className="flex items-center gap-2">
+          <Atoms.Spinner size="sm" />
+          <Atoms.Typography as="p" className="text-sm text-muted-foreground">
+            {t('loadingTaggers')}
+          </Atoms.Typography>
+        </Atoms.Container>
+      )}
       {taggers.map((tagger) => (
         <Molecules.TaggerUserRow
           key={tagger.id}

@@ -1,4 +1,5 @@
 import { getValidMimeTypes } from 'pubky-app-specs';
+import validationLimits from 'pubky-app-specs/validationLimits.json';
 
 /** Public key display length */
 export const DEFAULT_DISPLAY_PUBLIC_KEY_LENGTH = 8;
@@ -8,19 +9,20 @@ export const DEFAULT_DISPLAY_PUBLIC_KEY_LENGTH = 8;
  */
 
 /** Maximum number of tags allowed per post */
-export const POST_MAX_TAGS = 5;
+export const POST_MAX_TAGS = validationLimits.feedTagsMaxCount;
 
 /** Maximum character length for post content */
-export const POST_MAX_CHARACTER_LENGTH = 2000;
+export const POST_MAX_CHARACTER_LENGTH = validationLimits.postShortContentMaxLength;
 
 /** Maximum character length for article title */
 export const ARTICLE_TITLE_MAX_CHARACTER_LENGTH = 100;
 
 /** Maximum character length for article content (22 characters reserved for JSON string) */
-export const ARTICLE_MAX_CHARACTER_LENGTH = 50000 - ARTICLE_TITLE_MAX_CHARACTER_LENGTH - 22;
+export const ARTICLE_MAX_CHARACTER_LENGTH =
+  validationLimits.postLongContentMaxLength - ARTICLE_TITLE_MAX_CHARACTER_LENGTH - 22;
 
 /** Maximum character length for a tag */
-export const TAG_MAX_LENGTH = 20;
+export const TAG_MAX_LENGTH = validationLimits.tagLabelMaxLength;
 
 /** Maximum character length for feedback comments */
 export const FEEDBACK_MAX_CHARACTER_LENGTH = 1000;
@@ -43,11 +45,11 @@ export const ARTICLE_ATTACHMENT_ACCEPT_STRING = ARTICLE_SUPPORTED_ATTACHMENT_MIM
 /** Maximum file size for images (5MB) */
 export const ATTACHMENT_MAX_IMAGE_SIZE = 5 * 1024 * 1024;
 
-/** Maximum file size for non-image files (20MB) */
-export const ATTACHMENT_MAX_OTHER_SIZE = 20 * 1024 * 1024;
+/** Maximum file size for non-image files (spec) */
+export const ATTACHMENT_MAX_OTHER_SIZE = validationLimits.maxFileSizeBytes;
 
 /** Maximum number of attachments per post */
-export const POST_ATTACHMENT_MAX_FILES = 3;
+export const POST_ATTACHMENT_MAX_FILES = validationLimits.postAttachmentsMaxCount;
 
 /** Maximum number of attachments per article */
 export const ARTICLE_ATTACHMENT_MAX_FILES = 1;

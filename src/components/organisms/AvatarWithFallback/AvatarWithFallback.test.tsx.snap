@@ -25,6 +25,11 @@ exports[`AvatarWithFallback - Snapshots > matches snapshot when avatarUrl is pro
     data-testid="avatar-image"
     src="https://cdn.example.com/avatar/6mfxozzqmb36rc9rgy3rykoyfghfao74n8igt5tf1boehproahoy"
   />
+  <div
+    data-testid="avatar-fallback"
+  >
+    JD
+  </div>
 </div>
 `;
 
@@ -51,6 +56,11 @@ exports[`AvatarWithFallback - Snapshots > matches snapshot when image is blurred
       data-testid="eye-off-icon"
     />
   </div>
+  <div
+    data-testid="avatar-fallback"
+  >
+    JD
+  </div>
 </div>
 `;
 
@@ -65,6 +75,11 @@ exports[`AvatarWithFallback - Snapshots > matches snapshot with custom alt text 
     data-testid="avatar-image"
     src="https://cdn.example.com/avatar/6mfxozzqmb36rc9rgy3rykoyfghfao74n8igt5tf1boehproahoy"
   />
+  <div
+    data-testid="avatar-fallback"
+  >
+    JD
+  </div>
 </div>
 `;
 
@@ -79,5 +94,10 @@ exports[`AvatarWithFallback - Snapshots > matches snapshot with custom data-test
     data-testid="avatar-image"
     src="https://cdn.example.com/avatar/6mfxozzqmb36rc9rgy3rykoyfghfao74n8igt5tf1boehproahoy"
   />
+  <div
+    data-testid="avatar-fallback"
+  >
+    JD
+  </div>
 </div>
 `;

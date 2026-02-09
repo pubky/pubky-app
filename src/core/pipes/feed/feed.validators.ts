@@ -1,8 +1,9 @@
+import validationLimits from 'pubky-app-specs/validationLimits.json';
 import * as Core from '@/core';
 import { Err, ErrorService, ValidationErrorCode } from '@/libs';
 
 const MIN_TAGS = 1;
-const MAX_TAGS = 5;
+const MAX_TAGS = validationLimits.feedTagsMaxCount;
 
 export class FeedValidators {
   private constructor() {}

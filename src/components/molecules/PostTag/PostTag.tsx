@@ -12,6 +12,7 @@ export function PostTag({
   onClose,
   color,
   className,
+  ...rest
 }: PostTagProps) {
   const tagColor = color || Libs.generateRandomColor(label);
   const backgroundGradient = `linear-gradient(90deg, ${Libs.hexToRgba(COLORS.background, 0.7)} 0%, ${Libs.hexToRgba(COLORS.background, 0.7)} 100%), linear-gradient(90deg, ${tagColor} 0%, ${tagColor} 100%)`;
@@ -23,6 +24,7 @@ export function PostTag({
 
   return (
     <Atoms.Toggle
+      {...rest}
       pressed={selected}
       onClick={(e) => {
         e.stopPropagation();

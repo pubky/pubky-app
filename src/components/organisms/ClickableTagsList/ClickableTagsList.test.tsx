@@ -26,6 +26,10 @@ vi.mock('@/hooks', () => ({
     isAuthenticated: true,
     requireAuth: <T,>(action: () => T) => action(),
   }),
+  useEnrichedTags: vi.fn((tags) => ({
+    enrichedTags: tags,
+    isLoading: false,
+  })),
 }));
 
 // Mock atoms
@@ -83,6 +87,7 @@ vi.mock('@/molecules', () => ({
       Add
     </button>
   ),
+  PostTagPopoverWrapper: ({ children }: { children: React.ReactNode }) => <>{children}</>,
 }));
 
 // Mock libs - use actual implementations
