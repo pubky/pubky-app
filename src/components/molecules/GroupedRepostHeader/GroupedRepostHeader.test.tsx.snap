@@ -7,7 +7,7 @@ exports[`GroupedRepostHeader - Snapshots > matches snapshot with current user in
   data-testid="grouped-repost-header"
 >
   <div
-    class="flex min-w-0 flex-1 items-center gap-3"
+    class="flex min-w-0 flex-1 items-center gap-3 pr-3"
     data-override-defaults="true"
     data-testid="container"
   >
@@ -15,32 +15,65 @@ exports[`GroupedRepostHeader - Snapshots > matches snapshot with current user in
       class="size-5 shrink-0 text-muted-foreground"
       data-testid="repeat-icon"
     />
-    <span
-      class="hidden text-base leading-6 font-bold text-foreground md:inline"
-      data-testid="grouped-repost-text"
-    >
-      You and 1 others reposted this
-    </span>
     <button
       aria-label="Reposters"
-      class="hidden cursor-pointer items-center pr-2 transition-opacity hover:opacity-80 md:flex"
+      class="flex min-w-0 flex-1 items-center text-base leading-6 font-bold text-foreground cursor-pointer overflow-hidden bg-transparent p-0 hidden gap-2 md:inline-flex"
       data-override-defaults="true"
-      data-testid="grouped-repost-avatars"
+      data-testid="grouped-repost-text"
     >
-      <div
-        data-items="3"
-        data-max="4"
-        data-testid="avatar-group"
-        data-total="2"
+      <span
+        class="flex min-w-0 items-center hover:underline"
+        data-testid="typography"
       >
-        Avatar Group (
-        3
-         avatars)
+        <span
+          data-testid="repost-text"
+        >
+          <span
+            data-testid="repost-text-name"
+          >
+            You
+          </span>
+           
+          and 1 others reposted this
+        </span>
+      </span>
+      <div
+        class="shrink-0 transition-opacity hover:opacity-80"
+        data-override-defaults="true"
+        data-testid="grouped-repost-avatars"
+      >
+        <div
+          data-items="3"
+          data-max="4"
+          data-testid="avatar-group"
+          data-total="2"
+        >
+          Avatar Group (
+          3
+           avatars)
+        </div>
       </div>
+    </button>
+    <button
+      aria-label="Reposters"
+      class="flex min-w-0 flex-1 items-center text-base leading-6 font-bold text-foreground cursor-pointer overflow-hidden bg-transparent p-0 inline-flex text-left md:hidden"
+      data-override-defaults="true"
+      data-testid="grouped-repost-text-mobile"
+    >
+      <span
+        data-testid="repost-text"
+      >
+        <span
+          data-testid="repost-text-name"
+        >
+          You
+        </span>
+        , others reposted
+      </span>
     </button>
   </div>
   <div
-    class="flex shrink-0 items-center gap-1"
+    class="flex flex-shrink-0 items-center gap-1"
     data-override-defaults="true"
     data-testid="container"
   >
@@ -49,7 +82,7 @@ exports[`GroupedRepostHeader - Snapshots > matches snapshot with current user in
       data-testid="clock-icon"
     />
     <span
-      class="text-xs leading-4 font-medium tracking-[1.2px] whitespace-nowrap text-muted-foreground"
+      class="text-xs leading-4 font-medium tracking-[0.075rem] whitespace-nowrap text-muted-foreground"
       data-testid="typography"
     >
       2h
@@ -65,7 +98,7 @@ exports[`GroupedRepostHeader - Snapshots > matches snapshot with multiple repost
   data-testid="grouped-repost-header"
 >
   <div
-    class="flex min-w-0 flex-1 items-center gap-3"
+    class="flex min-w-0 flex-1 items-center gap-3 pr-3"
     data-override-defaults="true"
     data-testid="container"
   >
@@ -73,32 +106,65 @@ exports[`GroupedRepostHeader - Snapshots > matches snapshot with multiple repost
       class="size-5 shrink-0 text-muted-foreground"
       data-testid="repeat-icon"
     />
-    <span
-      class="hidden text-base leading-6 font-bold text-foreground md:inline"
-      data-testid="grouped-repost-text"
-    >
-      Alice and 2 others reposted this
-    </span>
     <button
       aria-label="Reposters"
-      class="hidden cursor-pointer items-center pr-2 transition-opacity hover:opacity-80 md:flex"
+      class="flex min-w-0 flex-1 items-center text-base leading-6 font-bold text-foreground cursor-pointer overflow-hidden bg-transparent p-0 hidden gap-2 md:inline-flex"
       data-override-defaults="true"
-      data-testid="grouped-repost-avatars"
+      data-testid="grouped-repost-text"
     >
-      <div
-        data-items="3"
-        data-max="4"
-        data-testid="avatar-group"
-        data-total="3"
+      <span
+        class="flex min-w-0 items-center hover:underline"
+        data-testid="typography"
       >
-        Avatar Group (
-        3
-         avatars)
+        <span
+          data-testid="repost-text"
+        >
+          <span
+            data-testid="repost-text-name"
+          >
+            Alice
+          </span>
+           
+          and 2 others reposted this
+        </span>
+      </span>
+      <div
+        class="shrink-0 transition-opacity hover:opacity-80"
+        data-override-defaults="true"
+        data-testid="grouped-repost-avatars"
+      >
+        <div
+          data-items="3"
+          data-max="4"
+          data-testid="avatar-group"
+          data-total="3"
+        >
+          Avatar Group (
+          3
+           avatars)
+        </div>
       </div>
+    </button>
+    <button
+      aria-label="Reposters"
+      class="flex min-w-0 flex-1 items-center text-base leading-6 font-bold text-foreground cursor-pointer overflow-hidden bg-transparent p-0 inline-flex text-left md:hidden"
+      data-override-defaults="true"
+      data-testid="grouped-repost-text-mobile"
+    >
+      <span
+        data-testid="repost-text"
+      >
+        <span
+          data-testid="repost-text-name"
+        >
+          Alice
+        </span>
+        , others reposted
+      </span>
     </button>
   </div>
   <div
-    class="flex shrink-0 items-center gap-1"
+    class="flex flex-shrink-0 items-center gap-1"
     data-override-defaults="true"
     data-testid="container"
   >
@@ -107,7 +173,7 @@ exports[`GroupedRepostHeader - Snapshots > matches snapshot with multiple repost
       data-testid="clock-icon"
     />
     <span
-      class="text-xs leading-4 font-medium tracking-[1.2px] whitespace-nowrap text-muted-foreground"
+      class="text-xs leading-4 font-medium tracking-[0.075rem] whitespace-nowrap text-muted-foreground"
       data-testid="typography"
     >
       2h
@@ -123,7 +189,7 @@ exports[`GroupedRepostHeader - Snapshots > matches snapshot with multiple repost
   data-testid="grouped-repost-header"
 >
   <div
-    class="flex min-w-0 flex-1 items-center gap-3"
+    class="flex min-w-0 flex-1 items-center gap-3 pr-3"
     data-override-defaults="true"
     data-testid="container"
   >
@@ -131,32 +197,65 @@ exports[`GroupedRepostHeader - Snapshots > matches snapshot with multiple repost
       class="size-5 shrink-0 text-muted-foreground"
       data-testid="repeat-icon"
     />
-    <span
-      class="hidden text-base leading-6 font-bold text-foreground md:inline"
-      data-testid="grouped-repost-text"
-    >
-      Alice and 2 others reposted this
-    </span>
     <button
       aria-label="Reposters"
-      class="hidden cursor-pointer items-center pr-2 transition-opacity hover:opacity-80 md:flex"
+      class="flex min-w-0 flex-1 items-center text-base leading-6 font-bold text-foreground cursor-pointer overflow-hidden bg-transparent p-0 hidden gap-2 md:inline-flex"
       data-override-defaults="true"
-      data-testid="grouped-repost-avatars"
+      data-testid="grouped-repost-text"
     >
-      <div
-        data-items="3"
-        data-max="4"
-        data-testid="avatar-group"
-        data-total="3"
+      <span
+        class="flex min-w-0 items-center hover:underline"
+        data-testid="typography"
       >
-        Avatar Group (
-        3
-         avatars)
+        <span
+          data-testid="repost-text"
+        >
+          <span
+            data-testid="repost-text-name"
+          >
+            Alice
+          </span>
+           
+          and 2 others reposted this
+        </span>
+      </span>
+      <div
+        class="shrink-0 transition-opacity hover:opacity-80"
+        data-override-defaults="true"
+        data-testid="grouped-repost-avatars"
+      >
+        <div
+          data-items="3"
+          data-max="4"
+          data-testid="avatar-group"
+          data-total="3"
+        >
+          Avatar Group (
+          3
+           avatars)
+        </div>
       </div>
+    </button>
+    <button
+      aria-label="Reposters"
+      class="flex min-w-0 flex-1 items-center text-base leading-6 font-bold text-foreground cursor-pointer overflow-hidden bg-transparent p-0 inline-flex text-left md:hidden"
+      data-override-defaults="true"
+      data-testid="grouped-repost-text-mobile"
+    >
+      <span
+        data-testid="repost-text"
+      >
+        <span
+          data-testid="repost-text-name"
+        >
+          Alice
+        </span>
+        , others reposted
+      </span>
     </button>
   </div>
   <div
-    class="flex shrink-0 items-center gap-1"
+    class="flex flex-shrink-0 items-center gap-1"
     data-override-defaults="true"
     data-testid="container"
   >
@@ -165,7 +264,7 @@ exports[`GroupedRepostHeader - Snapshots > matches snapshot with multiple repost
       data-testid="clock-icon"
     />
     <span
-      class="text-xs leading-4 font-medium tracking-[1.2px] whitespace-nowrap text-muted-foreground"
+      class="text-xs leading-4 font-medium tracking-[0.075rem] whitespace-nowrap text-muted-foreground"
       data-testid="typography"
     >
       2h
@@ -181,7 +280,7 @@ exports[`GroupedRepostHeader - Snapshots > matches snapshot with single reposter
   data-testid="grouped-repost-header"
 >
   <div
-    class="flex min-w-0 flex-1 items-center gap-3"
+    class="flex min-w-0 flex-1 items-center gap-3 pr-3"
     data-override-defaults="true"
     data-testid="container"
   >
@@ -190,14 +289,23 @@ exports[`GroupedRepostHeader - Snapshots > matches snapshot with single reposter
       data-testid="repeat-icon"
     />
     <span
-      class="text-base leading-6 font-bold text-foreground"
+      class="flex min-w-0 flex-1 items-center text-base leading-6 font-bold text-foreground"
       data-testid="grouped-repost-text"
     >
-      Alice reposted
+      <span
+        data-testid="repost-text"
+      >
+        <span
+          data-testid="repost-text-name"
+        >
+          Alice
+        </span>
+        reposted
+      </span>
     </span>
   </div>
   <div
-    class="flex shrink-0 items-center gap-1"
+    class="flex flex-shrink-0 items-center gap-1"
     data-override-defaults="true"
     data-testid="container"
   >
@@ -206,7 +314,7 @@ exports[`GroupedRepostHeader - Snapshots > matches snapshot with single reposter
       data-testid="clock-icon"
     />
     <span
-      class="text-xs leading-4 font-medium tracking-[1.2px] whitespace-nowrap text-muted-foreground"
+      class="text-xs leading-4 font-medium tracking-[0.075rem] whitespace-nowrap text-muted-foreground"
       data-testid="typography"
     >
       2h

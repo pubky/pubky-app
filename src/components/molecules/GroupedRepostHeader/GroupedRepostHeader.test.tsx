@@ -71,6 +71,19 @@ vi.mock('@/atoms', () => ({
       {children}
     </button>
   ),
+  RepostText: ({ template, name, preserveSpace }: { template: string; name: string; preserveSpace?: boolean }) => {
+    const TOKEN = '__REPOSTER_NAME__';
+    const [prefix = '', suffix = ''] = template.split(TOKEN);
+    return (
+      <span data-testid="repost-text">
+        {prefix}
+        <span data-testid="repost-text-name">{name}</span>
+        {preserveSpace && '\u00A0'}
+        {suffix.trimStart()}
+      </span>
+    );
+  },
+  NAME_TOKEN: '__REPOSTER_NAME__',
 }));
 
 // Mock molecules
@@ -229,7 +242,7 @@ describe('GroupedRepostHeader', () => {
   it('shows single reposter format when only one reposter', () => {
     render(<GroupedRepostHeader {...defaultProps} reposterIds={['user1']} />);
 
-    expect(screen.getByTestId('grouped-repost-text')).toHaveTextContent('Alice reposted');
+    expect(screen.getByTestId('grouped-repost-text')).toHaveTextContent('Alicereposted');
   });
 });
 

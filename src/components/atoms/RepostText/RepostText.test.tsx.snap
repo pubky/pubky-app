@@ -1,0 +1,63 @@
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
+
+exports[`RepostText - Snapshots > matches snapshot for desktop format with preserveSpace 1`] = `
+<div>
+  <span
+    class="min-w-0 truncate"
+    data-testid="repost-text-name"
+  >
+    Charlie
+  </span>
+   
+  and 3 others reposted this
+</div>
+`;
+
+exports[`RepostText - Snapshots > matches snapshot for mobile format with comma 1`] = `
+<div>
+  <span
+    class="min-w-0 truncate"
+    data-testid="repost-text-name"
+  >
+    Bob
+  </span>
+  , others reposted
+</div>
+`;
+
+exports[`RepostText - Snapshots > matches snapshot for simple repost 1`] = `
+<div>
+  <span
+    class="min-w-0 truncate"
+    data-testid="repost-text-name"
+  >
+    Alice
+  </span>
+  reposted
+</div>
+`;
+
+exports[`RepostText - Snapshots > matches snapshot with "You" as name 1`] = `
+<div>
+  <span
+    class="min-w-0 truncate"
+    data-testid="repost-text-name"
+  >
+    You
+  </span>
+   
+  and 2 others reposted this
+</div>
+`;
+
+exports[`RepostText - Snapshots > matches snapshot with long name 1`] = `
+<div>
+  <span
+    class="min-w-0 truncate"
+    data-testid="repost-text-name"
+  >
+    VeryLongUsernameT...
+  </span>
+  reposted
+</div>
+`;

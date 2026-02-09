@@ -18,5 +18,10 @@ export function getFirstReposterName({
   if (isFirstReposterLoading) {
     return '...';
   }
-  return firstReposterProfile?.name || Libs.formatPublicKey({ key: firstReposterId });
+  // In this header we want the *rest of the sentence* ("and N others reposted this")
+  // to remain visible even with very long usernames, so we truncate the username itself.
+  if (firstReposterProfile?.name) {
+    return Libs.truncateString(firstReposterProfile.name, 15);
+  }
+  return Libs.formatPublicKey({ key: firstReposterId });
 }

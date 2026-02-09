@@ -5,10 +5,16 @@ import * as Atoms from '@/atoms';
 import * as Molecules from '@/molecules';
 import * as Hooks from '@/hooks';
 import * as Libs from '@/libs';
+import { NAME_TOKEN } from '@/atoms';
 import { MAX_VISIBLE_AVATARS } from './GroupedRepostHeader.constants';
 import { getFirstReposterName } from './GroupedRepostHeader.utils';
 import { RepostersOverlay } from './RepostersOverlay';
+import { PostHeaderTimestamp } from '../PostHeaderTimestamp';
 import type { GroupedRepostHeaderProps } from './GroupedRepostHeader.types';
+
+const HEADER_CLASS = 'flex h-12 items-center justify-between overflow-hidden rounded-t-md bg-muted px-6 py-3 md:h-14';
+const TEXT_BASE_CLASS = 'flex min-w-0 flex-1 items-center text-base leading-6 font-bold text-foreground';
+const BUTTON_BASE_CLASS = `${TEXT_BASE_CLASS} cursor-pointer overflow-hidden bg-transparent p-0`;
 
 /**
  * GroupedRepostHeader
@@ -31,32 +37,25 @@ export function GroupedRepostHeader({
   const isMobile = Hooks.useIsMobile();
 
   const isSingleReposter = reposterIds.length === 1;
+  const firstReposterId = reposterIds[0] ?? '';
+  const timeAgo = formatRelativeTime(new Date(earliestTimestamp));
 
-  // Get first reposter's profile (skip if current user is first - we'll show "You")
-  const firstReposterIdToFetch = includesCurrentUser ? '' : reposterIds[0] || '';
-  const { profile: firstReposter, isLoading: isFirstReposterLoading } = Hooks.useUserProfile(firstReposterIdToFetch);
-
-  // Get user details for avatars and expanded list (skip for single reposter - not needed)
+  const { profile: firstReposter, isLoading: isFirstReposterLoading } = Hooks.useUserProfile(
+    includesCurrentUser ? '' : firstReposterId,
+  );
   const { users: reposterUsers, isLoading: isUsersLoading } = Hooks.useUserDetailsFromIds({
     userIds: isSingleReposter ? [] : reposterIds,
   });
 
-  const timeAgo = formatRelativeTime(new Date(earliestTimestamp));
-  const othersCount = reposterIds.length - 1;
+  const isLoading = isFirstReposterLoading || (!isSingleReposter && isUsersLoading);
 
   const firstName = getFirstReposterName({
     includesCurrentUser,
     isFirstReposterLoading,
     firstReposterProfile: firstReposter,
-    firstReposterId: reposterIds[0] || '',
+    firstReposterId,
     youLabel: t('you'),
   });
-
-  const handleOpenChange = (open: boolean) => {
-    if (open !== isExpanded) {
-      onExpandToggle?.();
-    }
-  };
 
   const handleTriggerClick = (e: React.MouseEvent) => {
     e.stopPropagation();
@@ -64,15 +63,9 @@ export function GroupedRepostHeader({
     onExpandToggle?.();
   };
 
-  const isLoading = isFirstReposterLoading || (!isSingleReposter && isUsersLoading);
-
   if (isLoading && !includesCurrentUser) {
     return (
-      <Atoms.Container
-        className="flex h-12 items-center justify-between overflow-hidden rounded-t-md bg-muted px-6 py-3 md:h-14"
-        overrideDefaults
-        data-testid="grouped-repost-header"
-      >
+      <Atoms.Container className={HEADER_CLASS} overrideDefaults data-testid="grouped-repost-header">
         <Atoms.Container className="flex items-center gap-3" overrideDefaults>
           <Libs.Repeat className="size-5 shrink-0 text-muted-foreground" aria-hidden="true" />
           <Atoms.Container overrideDefaults className="h-6 w-32 animate-pulse rounded bg-muted-foreground/20" />
@@ -81,111 +74,70 @@ export function GroupedRepostHeader({
     );
   }
 
-  // Single reposter: simple static header without interactive elements
-  if (isSingleReposter) {
-    return (
-      <Atoms.Container
-        overrideDefaults
-        className="flex h-12 items-center justify-between overflow-hidden rounded-t-md bg-muted px-6 py-3 md:h-14"
-        data-testid="grouped-repost-header"
-      >
-        <Atoms.Container className="flex min-w-0 flex-1 items-center gap-3" overrideDefaults>
-          <Libs.Repeat className="size-5 shrink-0 text-muted-foreground" aria-hidden="true" />
-          <Atoms.Typography
-            as="span"
-            className="text-base leading-6 font-bold text-foreground"
-            overrideDefaults
-            data-testid="grouped-repost-text"
-          >
-            {t('singleReposted', { name: firstName })}
-          </Atoms.Typography>
-        </Atoms.Container>
-
-        <Atoms.Container className="flex shrink-0 items-center gap-1" overrideDefaults>
-          <Libs.Clock className="size-4 text-muted-foreground" aria-hidden="true" />
-          <Atoms.Typography
-            as="span"
-            className="text-xs leading-4 font-medium tracking-[1.2px] whitespace-nowrap text-muted-foreground"
-            overrideDefaults
-          >
-            {timeAgo}
-          </Atoms.Typography>
-        </Atoms.Container>
-      </Atoms.Container>
-    );
-  }
-
   return (
     <>
-      <Atoms.Container
-        overrideDefaults
-        className="flex h-12 items-center justify-between overflow-hidden rounded-t-md bg-muted px-6 py-3 md:h-14"
-        data-testid="grouped-repost-header"
-      >
-        {/* Left section: icon + text + avatars */}
-        <Atoms.Container className="flex min-w-0 flex-1 items-center gap-3" overrideDefaults>
+      <Atoms.Container className={HEADER_CLASS} overrideDefaults data-testid="grouped-repost-header">
+        <Atoms.Container className="flex min-w-0 flex-1 items-center gap-3 pr-3" overrideDefaults>
           <Libs.Repeat className="size-5 shrink-0 text-muted-foreground" aria-hidden="true" />
 
-          {/* Desktop: Static text */}
-          <Atoms.Typography
-            as="span"
-            className="hidden text-base leading-6 font-bold text-foreground md:inline"
-            overrideDefaults
-            data-testid="grouped-repost-text"
-          >
-            {t('youAndOthersReposted', { name: firstName, count: othersCount })}
-          </Atoms.Typography>
+          {isSingleReposter ? (
+            <Atoms.Typography as="span" className={TEXT_BASE_CLASS} overrideDefaults data-testid="grouped-repost-text">
+              <Atoms.RepostText template={t('singleReposted', { name: NAME_TOKEN })} name={firstName} />
+            </Atoms.Typography>
+          ) : (
+            <>
+              {/* Desktop */}
+              <Atoms.Button
+                overrideDefaults
+                onClick={handleTriggerClick}
+                className={`${BUTTON_BASE_CLASS} hidden gap-2 md:inline-flex`}
+                aria-label={t('reposters')}
+                data-testid="grouped-repost-text"
+              >
+                <Atoms.Typography as="span" className="flex min-w-0 items-center hover:underline" overrideDefaults>
+                  <Atoms.RepostText
+                    template={t('youAndOthersReposted', { name: NAME_TOKEN, count: reposterIds.length - 1 })}
+                    name={firstName}
+                    preserveSpace
+                  />
+                </Atoms.Typography>
+                {reposterUsers.length > 0 && (
+                  <Atoms.Container
+                    className="shrink-0 transition-opacity hover:opacity-80"
+                    overrideDefaults
+                    data-testid="grouped-repost-avatars"
+                  >
+                    <Molecules.AvatarGroup
+                      items={reposterUsers}
+                      totalCount={reposterIds.length}
+                      maxAvatars={MAX_VISIBLE_AVATARS}
+                    />
+                  </Atoms.Container>
+                )}
+              </Atoms.Button>
 
-          {/* Desktop: Clickable avatar group */}
-          {!isMobile && reposterUsers.length > 0 && (
-            <Atoms.Button
-              overrideDefaults
-              onClick={handleTriggerClick}
-              className="hidden cursor-pointer items-center pr-2 transition-opacity hover:opacity-80 md:flex"
-              aria-label={t('reposters')}
-              data-testid="grouped-repost-avatars"
-            >
-              <Molecules.AvatarGroup
-                items={reposterUsers}
-                totalCount={reposterIds.length}
-                maxAvatars={MAX_VISIBLE_AVATARS}
-              />
-            </Atoms.Button>
-          )}
-
-          {/* Mobile: Clickable text */}
-          {isMobile && (
-            <Atoms.Button
-              overrideDefaults
-              onClick={handleTriggerClick}
-              className="flex-1 cursor-pointer text-left text-base leading-6 font-bold text-foreground md:hidden"
-              aria-label={t('reposters')}
-              data-testid="grouped-repost-text-mobile"
-            >
-              {t('mobileReposted', { name: firstName })}
-            </Atoms.Button>
+              {/* Mobile */}
+              <Atoms.Button
+                overrideDefaults
+                onClick={handleTriggerClick}
+                className={`${BUTTON_BASE_CLASS} inline-flex text-left md:hidden`}
+                aria-label={t('reposters')}
+                data-testid="grouped-repost-text-mobile"
+              >
+                <Atoms.RepostText template={t('mobileReposted', { name: NAME_TOKEN })} name={firstName} />
+              </Atoms.Button>
+            </>
           )}
         </Atoms.Container>
 
-        {/* Right section: timestamp */}
-        <Atoms.Container className="flex shrink-0 items-center gap-1" overrideDefaults>
-          <Libs.Clock className="size-4 text-muted-foreground" aria-hidden="true" />
-          <Atoms.Typography
-            as="span"
-            className="text-xs leading-4 font-medium tracking-[1.2px] whitespace-nowrap text-muted-foreground"
-            overrideDefaults
-          >
-            {timeAgo}
-          </Atoms.Typography>
-        </Atoms.Container>
+        <PostHeaderTimestamp timeAgo={timeAgo} />
       </Atoms.Container>
 
-      {/* Lazy load overlay - only render when expanded */}
-      {isExpanded && (
+      {isExpanded && !isSingleReposter && (
         <RepostersOverlay
           variant={isMobile ? 'sheet' : 'dialog'}
           open={isExpanded}
-          onOpenChange={handleOpenChange}
+          onOpenChange={(open) => !open && onExpandToggle?.()}
           reposters={reposterUsers}
         />
       )}
