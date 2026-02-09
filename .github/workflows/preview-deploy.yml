@@ -1,10 +1,6 @@
 name: PR Preview Deployment
 
 on:
-  # TODO: Remove this push trigger before merging to master
-  push:
-    branches:
-      - infra/preview-deployments-for-each-pr
   pull_request:
     types: [opened, synchronize, reopened]
   pull_request_target:
@@ -38,7 +34,6 @@ jobs:
     name: Set Variables
     if: |
       (github.event_name == 'pull_request' && github.event.action != 'closed') ||
-      (github.event_name == 'push') ||
       (github.event_name == 'workflow_dispatch' && github.event.inputs.action == 'deploy')
     runs-on: ubuntu-latest
     outputs:
@@ -52,8 +47,6 @@ jobs:
         run: |
           if [ "${{ github.event_name }}" == "workflow_dispatch" ]; then
             PR_NUMBER="${{ github.event.inputs.pr_number }}"
-          elif [ "${{ github.event_name }}" == "push" ]; then
-            PR_NUMBER="0"
           else
             PR_NUMBER="${{ github.event.pull_request.number }}"
           fi
