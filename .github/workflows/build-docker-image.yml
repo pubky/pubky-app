@@ -11,6 +11,7 @@ on:
         - production
         - staging
         - testnet
+        - preview
 
       latest:
         description: 'Use latest tag'
@@ -28,11 +29,19 @@ on:
         - linux/arm64
         - linux/amd64
 
+      pr_number:
+        description: 'PR number (used for preview env)'
+        required: false
+        type: string
+
   workflow_call:
     outputs:
       image_tag:
         description: 'Image tag'
         value: ${{ jobs.check_image.outputs.image_tag }}
+      image_name:
+        description: 'Image name used for the build'
+        value: ${{ jobs.check_image.outputs.image_name }}
     inputs:
       env:
         description: 'Env for image'
@@ -49,6 +58,11 @@ on:
         required: true
         type: string
 
+      pr_number:
+        description: 'PR number (used for preview env)'
+        required: false
+        type: string
+
 env:
   registry: "europe-west6-docker.pkg.dev/infra-464608/synonym-private-repo"
 
@@ -57,6 +71,7 @@ jobs:
     name: Validate and rebuild Franky
     outputs:
       image_tag: ${{ steps.set_tag.outputs.image_tag }}
+      image_name: ${{ steps.set_tag.outputs.image_name }}
       image_exists: ${{ steps.check_image.outputs.exists }}
     runs-on: ubuntu-latest
     steps:
@@ -74,6 +89,7 @@ jobs:
         id: set_tag
         run: |
           echo image_tag=${{ steps.sha_tag.outputs.hash }} >> $GITHUB_OUTPUT
+          echo image_name=${{ format('franky-{0}', inputs.env) }} >> $GITHUB_OUTPUT
 
       - name: Login to registry
         uses: pubky/ci-workflows/.github/actions/docker/registry_login@main
@@ -85,7 +101,7 @@ jobs:
         uses: pubky/ci-workflows/.github/actions/docker/check_if_image_exists@main
         id: check_image
         with:
-          image: ${{ env.registry }}/franky-${{ inputs.env }}
+          image: ${{ env.registry }}/${{ format('franky-{0}', inputs.env) }}
           tag: ${{ steps.sha_tag.outputs.hash }}
           arch: ${{ inputs.platforms }}
 
@@ -147,3 +163,46 @@ jobs:
             SUPPORT_ACCOUNT_ID=123
             SUPPORT_FEEDBACK_INBOX_ID=26
         if: ${{ inputs.env == 'testnet' }}
+
+      - name: Build and push image pubky-app (preview)
+        uses: pubky/ci-workflows/.github/actions/docker/build_and_push@main
+        with:
+          image: franky-preview
+          context: '.'
+          registry: ${{ env.registry }}
+          platforms: ${{ inputs.platforms }}
+          latest: false
+          sha_tag: true
+          tags: |
+            type=raw,value=pr-${{ inputs.pr_number }}
+          build_args: |
+            NEXT_PUBLIC_DB_VERSION=2
+            NEXT_PUBLIC_DB_NAME=franky-preview-${{ inputs.pr_number }}
+            NEXT_PUBLIC_DEBUG_MODE=true
+            NEXT_PUBLIC_SYNC_TTL=3000
+            NEXT_PUBLIC_NOTIFICATION_POLL_INTERVAL_MS=8888
+            NEXT_PUBLIC_NOTIFICATION_POLL_ON_START=false
+            NEXT_PUBLIC_NOTIFICATION_RESPECT_PAGE_VISIBILITY=true
+            NEXT_PUBLIC_STREAM_POLL_INTERVAL_MS=8888
+            NEXT_PUBLIC_STREAM_POLL_ON_START=false
+            NEXT_PUBLIC_STREAM_RESPECT_PAGE_VISIBILITY=true
+            NEXT_PUBLIC_STREAM_FETCH_LIMIT=10
+            NEXT_PUBLIC_STREAM_CACHE_MAX_AGE_MS=300000
+            NEXT_MAX_STREAM_TAGS=5
+            NEXT_PUBLIC_TTL_POST_MS=30000
+            NEXT_PUBLIC_TTL_USER_MS=60000
+            NEXT_PUBLIC_TTL_BATCH_INTERVAL_MS=5000
+            NEXT_PUBLIC_TTL_POST_MAX_BATCH_SIZE=20
+            NEXT_PUBLIC_TTL_USER_MAX_BATCH_SIZE=20
+            NEXT_PUBLIC_TTL_RETRY_DELAY_MS=60000
+            NEXT_PUBLIC_HOMESERVER=ufibwbmed6jeq9k4p583go95wofakh9fwpp4k734trq79pd9u1uy
+            NEXT_PUBLIC_NEXUS_URL=https://nexus.staging.pubky.app
+            NEXT_PUBLIC_CDN_URL=https://nexus.staging.pubky.app/static
+            NEXT_PUBLIC_TESTNET=false
+            NEXT_PUBLIC_PKARR_RELAYS=["https://pkarr.pubky.app","https://pkarr.pubky.org"]
+            NEXT_PUBLIC_DEFAULT_HTTP_RELAY=https://httprelay.staging.pubky.app
+            NEXT_PUBLIC_EXCHANGE_RATE_API=https://api1.blocktank.to/api/fx/rates/btc
+            NEXT_PUBLIC_HOMEGATE_URL=https://homegate.staging.pubky.app
+            NEXT_PUBLIC_MODERATION_ID=euwmq57zefw5ynnkhh37b3gcmhs7g3cptdbw1doaxj1pbmzp3wro
+            NEXT_PUBLIC_MODERATED_TAGS=["nudity"]
+        if: ${{ inputs.env == 'preview' }}
