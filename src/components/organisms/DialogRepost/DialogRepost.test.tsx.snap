@@ -3,89 +3,35 @@
 exports[`DialogRepost - Snapshots > matches snapshot with default props 1`] = `
 <div
   data-open="false"
-  data-testid="dialog"
+  data-testid="dialog-confirm-discard"
 >
-  <div
-    aria-label="Repost"
-    class="w-3xl"
-    data-testid="dialog-content"
+  <button
+    data-testid="confirm-discard-cancel"
   >
-    <div
-      data-testid="dialog-header"
-    >
-      <h2
-        data-testid="dialog-title"
-      >
-        Repost
-      </h2>
-      <p
-        data-testid="dialog-description"
-      >
-        Repost dialog
-      </p>
-    </div>
-    <div
-      class="gap-3"
-      data-testid="container"
-    >
-      <div
-        data-original-post-id="snapshot-post-id"
-        data-show-thread="false"
-        data-testid="post-input"
-        data-variant="repost"
-      >
-        <button
-          data-testid="mock-success-btn"
-        >
-          Success
-        </button>
-      </div>
-    </div>
-  </div>
+    Cancel
+  </button>
+  <button
+    data-testid="confirm-discard-confirm"
+  >
+    Discard
+  </button>
 </div>
 `;
 
 exports[`DialogRepost - Snapshots > matches snapshot with open prop 1`] = `
 <div
-  data-open="true"
-  data-testid="dialog"
+  data-open="false"
+  data-testid="dialog-confirm-discard"
 >
-  <div
-    aria-label="Repost"
-    class="w-3xl"
-    data-testid="dialog-content"
+  <button
+    data-testid="confirm-discard-cancel"
   >
-    <div
-      data-testid="dialog-header"
-    >
-      <h2
-        data-testid="dialog-title"
-      >
-        Repost
-      </h2>
-      <p
-        data-testid="dialog-description"
-      >
-        Repost dialog
-      </p>
-    </div>
-    <div
-      class="gap-3"
-      data-testid="container"
-    >
-      <div
-        data-original-post-id="snapshot-post-id"
-        data-show-thread="false"
-        data-testid="post-input"
-        data-variant="repost"
-      >
-        <button
-          data-testid="mock-success-btn"
-        >
-          Success
-        </button>
-      </div>
-    </div>
-  </div>
+    Cancel
+  </button>
+  <button
+    data-testid="confirm-discard-confirm"
+  >
+    Discard
+  </button>
 </div>
 `;
