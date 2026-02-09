@@ -43,6 +43,7 @@
     "loadingParticipants": "Teilnehmer werden geladen...",
     "loadingTags": "Tags werden geladen...",
     "loadingMoreTags": "Weitere Tags werden geladen...",
+    "loadingTaggers": "Tagger werden geladen...",
     "loadingPosts": "Beiträge werden geladen...",
     "loadingMorePosts": "Weitere Beiträge werden geladen...",
     "loadingPreview": "Vorschau wird geladen...",
@@ -1119,5 +1120,10 @@
   "share": {
     "title": "Auf Pubky teilen",
     "cancel": "Abbrechen"
+  },
+  "pullToRefresh": {
+    "pullToRefresh": "Zum Aktualisieren ziehen",
+    "releaseToRefresh": "Loslassen zum Aktualisieren",
+    "refreshing": "Aktualisiere..."
   }
 }

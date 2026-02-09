@@ -43,7 +43,7 @@ export function SinglePostCard({ postId, className }: SinglePostCardProps) {
               <Atoms.Container overrideDefaults className="flex-1" />
 
               {/* Tags on mobile - always visible */}
-              <Organisms.PostTagsPanel postId={postId} className="lg:hidden" />
+              <Organisms.PostTagsPanel postId={postId} widthMode="full" className="lg:hidden" />
 
               <Organisms.PostActionsBar
                 postId={postId}
@@ -53,7 +53,7 @@ export function SinglePostCard({ postId, className }: SinglePostCardProps) {
             </Atoms.Container>
 
             {/* Right column - Tags (desktop only) */}
-            <Organisms.PostTagsPanel postId={postId} className="hidden lg:flex" />
+            <Organisms.PostTagsPanel postId={postId} widthMode="full" className="hidden lg:flex" />
           </Atoms.Container>
         </Atoms.CardContent>
       </Atoms.Card>

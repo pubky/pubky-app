@@ -43,6 +43,7 @@
     "loadingParticipants": "Loading participants...",
     "loadingTags": "Loading tags...",
     "loadingMoreTags": "Loading more tags...",
+    "loadingTaggers": "Loading taggers...",
     "loadingPosts": "Loading posts...",
     "loadingMorePosts": "Loading more posts...",
     "loadingPreview": "Loading preview...",
@@ -1119,5 +1120,10 @@
   "share": {
     "title": "Share to Pubky",
     "cancel": "Cancel"
+  },
+  "pullToRefresh": {
+    "pullToRefresh": "Pull to refresh",
+    "releaseToRefresh": "Release to refresh",
+    "refreshing": "Refreshing..."
   }
 }

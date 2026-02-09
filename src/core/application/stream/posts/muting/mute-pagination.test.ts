@@ -256,9 +256,10 @@ describe('Mute filtering with stream pagination', () => {
             nextPageIds: ['author:post-1', 'author:post-2', 'author:post-3'],
             cacheMissPostIds: [],
             timestamp: BASE_TIMESTAMP + 3,
+            reachedEnd: true, // Nexus returned 3 posts when we asked for 10
           };
         }
-        return { nextPageIds: [], cacheMissPostIds: [], timestamp: undefined };
+        return { nextPageIds: [], cacheMissPostIds: [], timestamp: undefined, reachedEnd: true };
       });
 
       const result = await queue.collect(streamId, {
@@ -278,6 +279,7 @@ describe('Mute filtering with stream pagination', () => {
         nextPageIds: Array.from({ length: 10 }, (_, i) => `author:post-${i}`),
         cacheMissPostIds: [],
         timestamp: BASE_TIMESTAMP + 10,
+        reachedEnd: false, // Returned exactly limit, more posts may exist
       }));
 
       const result = await queue.collect(streamId, {

@@ -43,6 +43,7 @@
     "loadingParticipants": "Cargando participantes...",
     "loadingTags": "Cargando etiquetas...",
     "loadingMoreTags": "Cargando más etiquetas...",
+    "loadingTaggers": "Cargando etiquetadores...",
     "loadingPosts": "Cargando publicaciónes...",
     "loadingMorePosts": "Cargando más publicaciónes...",
     "loadingPreview": "Cargando vista previa...",
@@ -1119,5 +1120,10 @@
   "share": {
     "title": "Compartir en Pubky",
     "cancel": "Cancelar"
+  },
+  "pullToRefresh": {
+    "pullToRefresh": "Desliza para actualizar",
+    "releaseToRefresh": "Suelta para actualizar",
+    "refreshing": "Actualizando..."
   }
 }

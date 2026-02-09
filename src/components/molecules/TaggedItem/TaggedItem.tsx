@@ -17,11 +17,14 @@ export function TaggedItem({
   hideAvatars = false,
   isExpanded = false,
   onExpandToggle,
+  expandedTaggerIds,
+  isLoadingTaggers,
 }: TaggedItemProps) {
   const router = useRouter();
   const { requireAuth } = Hooks.useRequireAuth();
   const visibleTaggers = tag.taggers.slice(0, MAX_VISIBLE_AVATARS);
-  const overflowCount = tag.taggers.length - MAX_VISIBLE_AVATARS;
+  const totalTaggersCount = tag.taggers_count ?? tag.taggers.length;
+  const overflowCount = Math.max(0, totalTaggersCount - MAX_VISIBLE_AVATARS);
 
   const handleTagClick = () => {
     onTagClick(tag);
@@ -97,7 +100,13 @@ export function TaggedItem({
       </Atoms.Container>
 
       {/* Expanded user list */}
-      {isExpanded && !hideAvatars && <Molecules.WhoTaggedExpandedList taggers={tag.taggers} />}
+      {isExpanded && !hideAvatars && (
+        <Molecules.WhoTaggedExpandedList
+          taggerIds={expandedTaggerIds ?? tag.taggers.map((tagger) => tagger.id)}
+          fallbackTaggers={tag.taggers}
+          isLoadingTaggers={isLoadingTaggers}
+        />
+      )}
     </Atoms.Container>
   );
 }

@@ -43,6 +43,7 @@
     "loadingParticipants": "加载参与者...",
     "loadingTags": "加载标签...",
     "loadingMoreTags": "加载更多标签...",
+    "loadingTaggers": "加载标记者...",
     "loadingPosts": "加载帖子...",
     "loadingMorePosts": "加载更多帖子...",
     "loadingPreview": "加载预览...",
@@ -1113,5 +1114,10 @@
   "share": {
     "title": "分享到 Pubky",
     "cancel": "取消"
+  },
+  "pullToRefresh": {
+    "pullToRefresh": "下拉刷新",
+    "releaseToRefresh": "释放刷新",
+    "refreshing": "刷新中..."
   }
 }

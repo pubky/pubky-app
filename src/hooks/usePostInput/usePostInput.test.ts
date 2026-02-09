@@ -7,6 +7,7 @@ import {
   ARTICLE_TITLE_MAX_CHARACTER_LENGTH,
   POST_ATTACHMENT_MAX_FILES,
   ARTICLE_ATTACHMENT_MAX_FILES,
+  ATTACHMENT_MAX_OTHER_SIZE,
 } from '@/config';
 
 // next-intl is mocked globally in src/config/test.ts
@@ -1530,16 +1531,19 @@ describe('usePostInput', () => {
       });
     });
 
-    it('rejects non-image files exceeding 20MB and shows toast', () => {
+    it('rejects non-image files exceeding the max size and shows toast', () => {
       const { result } = renderHook(() =>
         usePostInput({
           variant: 'post',
         }),
       );
 
-      // Create a video file with size > 20MB
+      const maxOtherSizeMb = Math.round(ATTACHMENT_MAX_OTHER_SIZE / (1024 * 1024));
+      const maxOtherSizeLabel = `${maxOtherSizeMb}MB`;
+
+      // Create a video file with size > max other size
       const largeFile = new File(['test'], 'large.mp4', { type: 'video/mp4' });
-      Object.defineProperty(largeFile, 'size', { value: 21 * 1024 * 1024 });
+      Object.defineProperty(largeFile, 'size', { value: ATTACHMENT_MAX_OTHER_SIZE + 1 });
 
       act(() => {
         result.current.handleFilesAdded([largeFile]);
@@ -1548,7 +1552,7 @@ describe('usePostInput', () => {
       expect(mockSetAttachments).not.toHaveBeenCalled();
       expect(mockToast).toHaveBeenCalledWith({
         title: 'Error',
-        description: expect.stringContaining('exceeds the maximum size of 20MB'),
+        description: expect.stringContaining(`exceeds the maximum size of ${maxOtherSizeLabel}`),
       });
     });
 
