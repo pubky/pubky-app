@@ -268,7 +268,7 @@ describe('DialogReply - Snapshots', () => {
     const { container } = render(
       <DialogReply postId="snapshot-post-id" open={false} onOpenChangeAction={onOpenChangeAction} />,
     );
-    expect(container.firstChild).toMatchSnapshot();
+    expect(container).toMatchSnapshot();
   });
 
   it('matches snapshot with open prop', () => {
@@ -276,6 +276,6 @@ describe('DialogReply - Snapshots', () => {
     const { container } = render(
       <DialogReply postId="snapshot-post-id" open={true} onOpenChangeAction={onOpenChangeAction} />,
     );
-    expect(container.firstChild).toMatchSnapshot();
+    expect(container).toMatchSnapshot();
   });
 });

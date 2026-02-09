@@ -242,7 +242,7 @@ describe('DialogRepost - Snapshots', () => {
     const { container } = render(
       <DialogRepost postId="snapshot-post-id" open={false} onOpenChangeAction={onOpenChangeAction} />,
     );
-    expect(container.firstChild).toMatchSnapshot();
+    expect(container).toMatchSnapshot();
   });
 
   it('matches snapshot with open prop', () => {
@@ -250,6 +250,6 @@ describe('DialogRepost - Snapshots', () => {
     const { container } = render(
       <DialogRepost postId="snapshot-post-id" open={true} onOpenChangeAction={onOpenChangeAction} />,
     );
-    expect(container.firstChild).toMatchSnapshot();
+    expect(container).toMatchSnapshot();
   });
 });

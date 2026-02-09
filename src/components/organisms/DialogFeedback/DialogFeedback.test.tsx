@@ -365,7 +365,7 @@ describe('DialogFeedback - Snapshots', () => {
     });
 
     const { container } = render(<DialogFeedback open={true} onOpenChange={mockOnOpenChange} />);
-    expect(container.firstChild).toMatchSnapshot();
+    expect(container).toMatchSnapshot();
   });
 
   it('matches snapshot with feedback content', () => {
@@ -380,7 +380,7 @@ describe('DialogFeedback - Snapshots', () => {
     });
 
     const { container } = render(<DialogFeedback open={true} onOpenChange={mockOnOpenChange} />);
-    expect(container.firstChild).toMatchSnapshot();
+    expect(container).toMatchSnapshot();
   });
 
   it('matches snapshot when submitting', () => {
@@ -395,7 +395,7 @@ describe('DialogFeedback - Snapshots', () => {
     });
 
     const { container } = render(<DialogFeedback open={true} onOpenChange={mockOnOpenChange} />);
-    expect(container.firstChild).toMatchSnapshot();
+    expect(container).toMatchSnapshot();
   });
 
   it('matches snapshot for success state', () => {
@@ -410,7 +410,7 @@ describe('DialogFeedback - Snapshots', () => {
     });
 
     const { container } = render(<DialogFeedback open={true} onOpenChange={mockOnOpenChange} />);
-    expect(container.firstChild).toMatchSnapshot();
+    expect(container).toMatchSnapshot();
   });
 
   it('matches snapshot for closed state', () => {
@@ -425,6 +425,6 @@ describe('DialogFeedback - Snapshots', () => {
     });
 
     const { container } = render(<DialogFeedback open={false} onOpenChange={mockOnOpenChange} />);
-    expect(container.firstChild).toMatchSnapshot();
+    expect(container).toMatchSnapshot();
   });
 });
