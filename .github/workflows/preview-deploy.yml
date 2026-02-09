@@ -44,7 +44,6 @@ jobs:
     outputs:
       pr_number: ${{ steps.vars.outputs.pr_number }}
       service_name: ${{ steps.vars.outputs.service_name }}
-      image_name: ${{ steps.vars.outputs.image_name }}
       short_sha: ${{ steps.vars.outputs.short_sha }}
       platforms: ${{ steps.vars.outputs.platforms }}
     steps:
@@ -60,7 +59,6 @@ jobs:
           fi
           echo "pr_number=${PR_NUMBER}" >> $GITHUB_OUTPUT
           echo "service_name=${{ env.SERVICE_BASE_NAME }}-pr-${PR_NUMBER}" >> $GITHUB_OUTPUT
-          echo "image_name=${{ env.SERVICE_BASE_NAME }}" >> $GITHUB_OUTPUT
           echo "short_sha=$(echo ${{ github.sha }} | cut -c1-7)" >> $GITHUB_OUTPUT
           echo "platforms=linux/amd64" >> $GITHUB_OUTPUT
 
@@ -93,7 +91,7 @@ jobs:
         with:
           service: ${{ needs.set-vars.outputs.service_name }}
           region: ${{ env.REGION }}
-          image: ${{ env.REGISTRY }}/${{ needs.set-vars.outputs.image_name }}:${{ needs.build-preview.outputs.image_tag }}
+          image: ${{ env.REGISTRY }}/${{ needs.build-preview.outputs.image_name }}:${{ needs.build-preview.outputs.image_tag }}
           flags: |
             --allow-unauthenticated
             --memory=512Mi

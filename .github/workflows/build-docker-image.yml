@@ -39,6 +39,9 @@ on:
       image_tag:
         description: 'Image tag'
         value: ${{ jobs.check_image.outputs.image_tag }}
+      image_name:
+        description: 'Image name used for the build'
+        value: ${{ jobs.check_image.outputs.image_name }}
     inputs:
       env:
         description: 'Env for image'
@@ -73,6 +76,7 @@ jobs:
     name: Validate and rebuild Franky
     outputs:
       image_tag: ${{ steps.set_tag.outputs.image_tag }}
+      image_name: ${{ steps.set_tag.outputs.image_name }}
       image_exists: ${{ steps.check_image.outputs.exists }}
     runs-on: ubuntu-latest
     steps:
@@ -90,6 +94,7 @@ jobs:
         id: set_tag
         run: |
           echo image_tag=${{ steps.sha_tag.outputs.hash }} >> $GITHUB_OUTPUT
+          echo image_name=${{ inputs.image_name || format('franky-{0}', inputs.env) }} >> $GITHUB_OUTPUT
 
       - name: Login to registry
         uses: pubky/ci-workflows/.github/actions/docker/registry_login@main
