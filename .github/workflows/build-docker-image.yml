@@ -11,6 +11,7 @@ on:
         - production
         - staging
         - testnet
+        - preview
 
       latest:
         description: 'Use latest tag'
@@ -166,12 +167,14 @@ jobs:
       - name: Build and push image pubky-app (preview)
         uses: pubky/ci-workflows/.github/actions/docker/build_and_push@main
         with:
-          image: ${{ inputs.image_name || 'franky-preview' }}
+          image: franky-preview
           context: '.'
           registry: ${{ env.registry }}
           platforms: ${{ inputs.platforms }}
           latest: false
           sha_tag: true
+          tags: |
+            type=raw,value=pr-${{ inputs.pr_number }}
           build_args: |
             NEXT_PUBLIC_DB_VERSION=2
             NEXT_PUBLIC_DB_NAME=franky-preview-${{ inputs.pr_number }}
