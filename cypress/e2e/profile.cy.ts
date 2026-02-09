@@ -134,7 +134,7 @@ describe('profile', () => {
     cy.get('[data-cy="profile-tagged-section"]').contains('them-2');
   });
 
-  // todo: enable once bug is fixed, see TBD
+  // todo: enable once decided on correct behaviour for searching using pubky of non-existent user
   it.skip('should not add non-existent user to recent history when visiting their profile', () => {
     // search for a non-existent user
     const nonExistentUser = 'pk:gujx6qd8ksydh1makdphd3bxu351d9b8waqka8hfg6q7hnqkxexo';
