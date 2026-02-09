@@ -16,10 +16,10 @@ export const searchForProfileByPubky = (pubky: string, profileName: string) => {
 
 export const searchForProfileByName = (profileName: string) => {
   // type profile name into  search bar
-  cy.get('#header-search-input').type(`${profileName}`);
+  cy.get('[data-cy="header-search-input"]').type(`${profileName}`);
 
   // click on profile found in search results
-  cy.get('#user-0').should('be.visible').click();
+  cy.get('[data-cy="search-users-section"]').contains('div', profileName).first().click();
 
   // check that profile page is displayed
   cy.get('[data-cy="profile-username-header"]').should('have.text', profileName);
