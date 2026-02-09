@@ -29,8 +29,8 @@ on:
         - linux/arm64
         - linux/amd64
 
-      image_name:
-        description: 'Override image name (default: franky-{env})'
+      pr_number:
+        description: 'PR number (used for preview env)'
         required: false
         type: string
 
@@ -56,11 +56,6 @@ on:
 
       platforms:
         required: true
-        type: string
-
-      image_name:
-        description: 'Override image name (default: franky-{env})'
-        required: false
         type: string
 
       pr_number:
@@ -94,7 +89,7 @@ jobs:
         id: set_tag
         run: |
           echo image_tag=${{ steps.sha_tag.outputs.hash }} >> $GITHUB_OUTPUT
-          echo image_name=${{ inputs.image_name || format('franky-{0}', inputs.env) }} >> $GITHUB_OUTPUT
+          echo image_name=${{ format('franky-{0}', inputs.env) }} >> $GITHUB_OUTPUT
 
       - name: Login to registry
         uses: pubky/ci-workflows/.github/actions/docker/registry_login@main
@@ -106,7 +101,7 @@ jobs:
         uses: pubky/ci-workflows/.github/actions/docker/check_if_image_exists@main
         id: check_image
         with:
-          image: ${{ env.registry }}/${{ inputs.image_name || format('franky-{0}', inputs.env) }}
+          image: ${{ env.registry }}/${{ format('franky-{0}', inputs.env) }}
           tag: ${{ steps.sha_tag.outputs.hash }}
           arch: ${{ inputs.platforms }}
 
@@ -128,7 +123,7 @@ jobs:
       - name: Build and push image pubky-app (testnet)
         uses: pubky/ci-workflows/.github/actions/docker/build_and_push@main
         with:
-          image: ${{ inputs.image_name || 'franky-testnet' }}
+          image: 'franky-testnet'
           context: '.'
           registry: ${{ env.registry }}
           platforms: ${{ inputs.platforms }}
