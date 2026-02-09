@@ -47,7 +47,7 @@ export function TimelinePosts({ postIds, loading, loadingMore, error, hasMore, l
 
             // Repost group - display original post with grouped header
             return (
-              <Atoms.Container key={`group_${item.originalPostId}_${item.repostPostIds[0]}`} data-cy="post-card">
+              <Atoms.Container key={`group_${item.originalPostId}`} data-cy="post-card">
                 <Organisms.PostMain
                   postId={item.originalPostId}
                   repostGroup={item}

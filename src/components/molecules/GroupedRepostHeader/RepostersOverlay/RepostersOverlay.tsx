@@ -18,6 +18,9 @@ export function RepostersOverlay({ variant, open, onOpenChange, reposters }: Rep
     e.stopPropagation();
   };
 
+  // Extract IDs for WhoTaggedExpandedList and pass reposters as fallback data
+  const reposterIds = reposters.map((r) => r.id);
+
   if (variant === 'sheet') {
     return (
       <Atoms.Sheet open={open} onOpenChange={onOpenChange}>
@@ -26,7 +29,8 @@ export function RepostersOverlay({ variant, open, onOpenChange, reposters }: Rep
             <Atoms.SheetTitle>{t('reposters')}</Atoms.SheetTitle>
           </Atoms.SheetHeader>
           <Molecules.WhoTaggedExpandedList
-            taggers={reposters}
+            taggerIds={reposterIds}
+            fallbackTaggers={reposters}
             className="max-w-full border-0 p-0"
             data-testid="reposter-expanded-list"
           />
@@ -42,7 +46,8 @@ export function RepostersOverlay({ variant, open, onOpenChange, reposters }: Rep
           <Atoms.DialogTitle>{t('reposters')}</Atoms.DialogTitle>
         </Atoms.DialogHeader>
         <Molecules.WhoTaggedExpandedList
-          taggers={reposters}
+          taggerIds={reposterIds}
+          fallbackTaggers={reposters}
           className="border-0 p-0"
           data-testid="reposter-expanded-list"
         />

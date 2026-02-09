@@ -196,18 +196,24 @@ describe('GroupedRepostHeader', () => {
     expect(onExpandToggle).toHaveBeenCalledTimes(1);
   });
 
-  it('renders RepostersOverlay with dialog variant for desktop', () => {
-    render(<GroupedRepostHeader {...defaultProps} />);
+  it('renders RepostersOverlay with dialog variant for desktop when expanded', () => {
+    render(<GroupedRepostHeader {...defaultProps} isExpanded={true} />);
 
     const overlay = screen.getByTestId('reposters-overlay');
     expect(overlay).toBeInTheDocument();
     expect(overlay).toHaveAttribute('data-variant', 'dialog');
   });
 
-  it('passes isExpanded to RepostersOverlay', () => {
+  it('does not render RepostersOverlay when collapsed (lazy loading)', () => {
+    render(<GroupedRepostHeader {...defaultProps} isExpanded={false} />);
+
+    expect(screen.queryByTestId('reposters-overlay')).not.toBeInTheDocument();
+  });
+
+  it('renders RepostersOverlay when expanded', () => {
     const { rerender } = render(<GroupedRepostHeader {...defaultProps} isExpanded={false} />);
 
-    expect(screen.getByTestId('reposters-overlay')).toHaveAttribute('data-open', 'false');
+    expect(screen.queryByTestId('reposters-overlay')).not.toBeInTheDocument();
 
     rerender(<GroupedRepostHeader {...defaultProps} isExpanded={true} />);
     expect(screen.getByTestId('reposters-overlay')).toHaveAttribute('data-open', 'true');

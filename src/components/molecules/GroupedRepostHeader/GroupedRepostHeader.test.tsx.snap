@@ -190,28 +190,11 @@ exports[`GroupedRepostHeader - Snapshots > matches snapshot with single reposter
       data-testid="repeat-icon"
     />
     <span
-      class="hidden text-base leading-6 font-bold text-foreground md:inline"
+      class="text-base leading-6 font-bold text-foreground"
       data-testid="grouped-repost-text"
     >
       Alice reposted
     </span>
-    <button
-      aria-label="Reposters"
-      class="hidden cursor-pointer items-center pr-2 transition-opacity hover:opacity-80 md:flex"
-      data-override-defaults="true"
-      data-testid="grouped-repost-avatars"
-    >
-      <div
-        data-items="3"
-        data-max="4"
-        data-testid="avatar-group"
-        data-total="1"
-      >
-        Avatar Group (
-        3
-         avatars)
-      </div>
-    </button>
   </div>
   <div
     class="flex shrink-0 items-center gap-1"

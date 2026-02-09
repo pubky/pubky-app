@@ -81,16 +81,17 @@ vi.mock('@/atoms', () => ({
 // Mock molecules
 vi.mock('@/molecules', () => ({
   WhoTaggedExpandedList: ({
-    taggers,
+    taggerIds,
     className,
     'data-testid': dataTestId,
   }: {
-    taggers: Array<{ id: string; name?: string; avatarUrl?: string }>;
+    taggerIds: string[];
+    fallbackTaggers?: Array<{ id: string; name?: string; avatarUrl?: string }>;
     className?: string;
     'data-testid'?: string;
   }) => (
-    <div data-testid={dataTestId || 'who-tagged-expanded-list'} data-count={taggers.length} className={className}>
-      User List ({taggers.length} users)
+    <div data-testid={dataTestId || 'who-tagged-expanded-list'} data-count={taggerIds.length} className={className}>
+      User List ({taggerIds.length} users)
     </div>
   ),
 }));

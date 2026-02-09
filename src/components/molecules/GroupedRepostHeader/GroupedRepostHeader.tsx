@@ -16,6 +16,8 @@ import type { GroupedRepostHeaderProps } from './GroupedRepostHeader.types';
  * Header bar displayed on top of grouped reposts showing multiple reposters.
  * Desktop: "[Name] and N others reposted this" with clickable avatar group → opens Dialog
  * Mobile: "[Name], others reposted" (clickable text) → opens Sheet
+ *
+ * For single reposter: displays a simple static header without interactive elements.
  */
 export function GroupedRepostHeader({
   reposterIds,
@@ -28,13 +30,15 @@ export function GroupedRepostHeader({
   const { formatRelativeTime } = Hooks.useRelativeTime();
   const isMobile = Hooks.useIsMobile();
 
+  const isSingleReposter = reposterIds.length === 1;
+
   // Get first reposter's profile (skip if current user is first - we'll show "You")
   const firstReposterIdToFetch = includesCurrentUser ? '' : reposterIds[0] || '';
   const { profile: firstReposter, isLoading: isFirstReposterLoading } = Hooks.useUserProfile(firstReposterIdToFetch);
 
-  // Get user details for avatars and expanded list
+  // Get user details for avatars and expanded list (skip for single reposter - not needed)
   const { users: reposterUsers, isLoading: isUsersLoading } = Hooks.useUserDetailsFromIds({
-    userIds: reposterIds,
+    userIds: isSingleReposter ? [] : reposterIds,
   });
 
   const timeAgo = formatRelativeTime(new Date(earliestTimestamp));
@@ -60,7 +64,7 @@ export function GroupedRepostHeader({
     onExpandToggle?.();
   };
 
-  const isLoading = isFirstReposterLoading || isUsersLoading;
+  const isLoading = isFirstReposterLoading || (!isSingleReposter && isUsersLoading);
 
   if (isLoading && !includesCurrentUser) {
     return (
@@ -72,6 +76,40 @@ export function GroupedRepostHeader({
         <Atoms.Container className="flex items-center gap-3" overrideDefaults>
           <Libs.Repeat className="size-5 shrink-0 text-muted-foreground" aria-hidden="true" />
           <Atoms.Container overrideDefaults className="h-6 w-32 animate-pulse rounded bg-muted-foreground/20" />
+        </Atoms.Container>
+      </Atoms.Container>
+    );
+  }
+
+  // Single reposter: simple static header without interactive elements
+  if (isSingleReposter) {
+    return (
+      <Atoms.Container
+        overrideDefaults
+        className="flex h-12 items-center justify-between overflow-hidden rounded-t-md bg-muted px-6 py-3 md:h-14"
+        data-testid="grouped-repost-header"
+      >
+        <Atoms.Container className="flex min-w-0 flex-1 items-center gap-3" overrideDefaults>
+          <Libs.Repeat className="size-5 shrink-0 text-muted-foreground" aria-hidden="true" />
+          <Atoms.Typography
+            as="span"
+            className="text-base leading-6 font-bold text-foreground"
+            overrideDefaults
+            data-testid="grouped-repost-text"
+          >
+            {t('singleReposted', { name: firstName })}
+          </Atoms.Typography>
+        </Atoms.Container>
+
+        <Atoms.Container className="flex shrink-0 items-center gap-1" overrideDefaults>
+          <Libs.Clock className="size-4 text-muted-foreground" aria-hidden="true" />
+          <Atoms.Typography
+            as="span"
+            className="text-xs leading-4 font-medium tracking-[1.2px] whitespace-nowrap text-muted-foreground"
+            overrideDefaults
+          >
+            {timeAgo}
+          </Atoms.Typography>
         </Atoms.Container>
       </Atoms.Container>
     );
@@ -95,9 +133,7 @@ export function GroupedRepostHeader({
             overrideDefaults
             data-testid="grouped-repost-text"
           >
-            {othersCount > 0
-              ? t('youAndOthersReposted', { name: firstName, count: othersCount })
-              : t('singleReposted', { name: firstName })}
+            {t('youAndOthersReposted', { name: firstName, count: othersCount })}
           </Atoms.Typography>
 
           {/* Desktop: Clickable avatar group */}
@@ -126,7 +162,7 @@ export function GroupedRepostHeader({
               aria-label={t('reposters')}
               data-testid="grouped-repost-text-mobile"
             >
-              {othersCount > 0 ? t('mobileReposted', { name: firstName }) : t('singleReposted', { name: firstName })}
+              {t('mobileReposted', { name: firstName })}
             </Atoms.Button>
           )}
         </Atoms.Container>
@@ -144,12 +180,15 @@ export function GroupedRepostHeader({
         </Atoms.Container>
       </Atoms.Container>
 
-      <RepostersOverlay
-        variant={isMobile ? 'sheet' : 'dialog'}
-        open={isExpanded}
-        onOpenChange={handleOpenChange}
-        reposters={reposterUsers}
-      />
+      {/* Lazy load overlay - only render when expanded */}
+      {isExpanded && (
+        <RepostersOverlay
+          variant={isMobile ? 'sheet' : 'dialog'}
+          open={isExpanded}
+          onOpenChange={handleOpenChange}
+          reposters={reposterUsers}
+        />
+      )}
     </>
   );
 }
