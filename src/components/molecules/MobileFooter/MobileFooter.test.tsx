@@ -210,7 +210,7 @@ describe('MobileFooter', () => {
     render(<MobileFooter />);
 
     const homeLink = document.querySelector('.lucide-house')?.closest('a');
-    expect(homeLink).toHaveClass('bg-secondary/30');
+    expect(homeLink).toHaveClass('bg-secondary');
   });
 
   it('handles inactive state correctly', () => {
