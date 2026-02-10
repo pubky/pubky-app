@@ -5,6 +5,7 @@ import createNextIntlPlugin from 'next-intl/plugin';
 const withNextIntl = createNextIntlPlugin('./src/i18n/request.ts');
 
 const nextConfig: NextConfig = {
+  trailingSlash: false, 
   reactCompiler: true,
   // Only use standalone output when building for Docker (set NEXT_STANDALONE=true)
   ...(process.env.NEXT_STANDALONE === 'true' && { output: 'standalone' }),
@@ -16,8 +17,8 @@ const nextConfig: NextConfig = {
     config.experiments = {
       ...config.experiments,
       asyncWebAssembly: true,
+      skipMiddlewareUrlNormalize: true,
     };
-
     return config;
   },
   // Turbopack config for WebAssembly dependencies
