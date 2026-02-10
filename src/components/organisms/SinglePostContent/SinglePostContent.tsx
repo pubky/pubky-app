@@ -9,7 +9,7 @@ import { SinglePostArticle } from '../SinglePostArticle';
 import { SinglePostCard } from '../SinglePostCard';
 import { SinglePostParticipants } from '../SinglePostParticipants';
 import { QuickReply } from '../QuickReply';
-import { PostMain } from '../PostMain';
+import { ThreadTree } from '../ThreadTree';
 import { PostPageHeader } from '../PostPageHeader';
 import type { SinglePostContentProps } from './SinglePostContent.types';
 
@@ -33,25 +33,13 @@ export function SinglePostContent({ postId }: SinglePostContentProps) {
   // Check authentication status - unauthenticated users see limited view
   const { isAuthenticated } = Hooks.useRequireAuth();
 
-  // Use the dedicated hook for fetching replies (only fetch if authenticated)
-  const { replyIds, loading, loadingMore, error, hasMore, loadMore, prependReply } = Hooks.usePostReplies(
-    isAuthenticated ? postId : null,
-  );
-
-  const { navigateToPost } = Hooks.usePostNavigation();
-
   // Check if parent post is deleted to determine replyability
   const { postDetails } = Hooks.usePostDetails(postId);
   const isDeleted = Libs.isPostDeleted(postDetails?.content);
 
-  // Infinite scroll hook (only active if authenticated)
-  const { sentinelRef } = Hooks.useInfiniteScroll({
-    onLoadMore: loadMore,
-    hasMore: isAuthenticated && hasMore,
-    isLoading: loadingMore,
-    threshold: 3000,
-    debounceMs: 20,
-  });
+  // Check reply count to determine QuickReply connector variant
+  const { postCounts } = Hooks.usePostCounts(isAuthenticated ? postId : null);
+  const hasReplies = (postCounts?.replies ?? 0) > 0;
 
   // TODO - Add loading skeleton
   if (!postDetails) return t('loadingPost');
@@ -91,53 +79,18 @@ export function SinglePostContent({ postId }: SinglePostContentProps) {
                 <QuickReply
                   parentPostId={postId}
                   connectorVariant={
-                    replyIds.length > 0 || (hasMore && !loading)
+                    hasReplies
                       ? Atoms.POST_THREAD_CONNECTOR_VARIANTS.REGULAR
                       : Atoms.POST_THREAD_CONNECTOR_VARIANTS.LAST
                   }
-                  onReplySubmitted={prependReply}
                 />
               </Atoms.Container>
             )}
 
-            {/* Initial loading state */}
-            {loading && (
-              <Atoms.Container className="flex items-center justify-center gap-3 py-8">
-                <Atoms.Spinner size="md" />
-                <Atoms.Typography as="p" className="text-muted-foreground">
-                  {t('loadingReplies')}
-                </Atoms.Typography>
-              </Atoms.Container>
-            )}
-
-            {/* Error state */}
-            {error && !loading && <Molecules.TimelineError message={error} />}
-
-            {/* Replies list with thread connectors (after QuickReply) */}
-            {!loading && replyIds.length > 0 && (
-              <Atoms.Container overrideDefaults className="ml-3">
-                {replyIds.map((replyId, index) => (
-                  <Atoms.Container key={`reply_${replyId}`} overrideDefaults>
-                    <Atoms.PostThreadSpacer />
-                    <PostMain
-                      postId={replyId}
-                      isReply={true}
-                      onClick={() => navigateToPost(replyId)}
-                      isLastReply={index === replyIds.length - 1 && !hasMore}
-                    />
-                  </Atoms.Container>
-                ))}
-
-                {/* Loading more indicator */}
-                {loadingMore && <Molecules.TimelineLoadingMore />}
-
-                {/* Sentinel for infinite scroll */}
-                <div ref={sentinelRef} className="h-1" />
-
-                {/* End of replies message */}
-                {!hasMore && replyIds.length > 0 && <Molecules.TimelineEndMessage />}
-              </Atoms.Container>
-            )}
+            {/* Thread tree: Level 1 replies with nested Level 2 */}
+            <Atoms.Container overrideDefaults className="ml-3">
+              <ThreadTree postId={postId} showQuickReply={false} />
+            </Atoms.Container>
           </Atoms.Container>
 
           {/* Right column - Participants sidebar (desktop only) */}
@@ -145,6 +98,7 @@ export function SinglePostContent({ postId }: SinglePostContentProps) {
             overrideDefaults
             className={Libs.cn(
               'sticky hidden flex-col items-start justify-start gap-6 self-start pt-6 lg:flex',
+              // Aligns sticky sidebar below the fixed page header stack on desktop.
               'top-[147px]',
               'w-full max-w-xs',
             )}

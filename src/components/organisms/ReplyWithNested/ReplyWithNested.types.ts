@@ -11,4 +11,6 @@ export interface ReplyWithNestedProps {
   depth?: number;
   /** Maximum nesting depth allowed */
   maxDepth?: number;
+  /** Whether to show the global expand/collapse toggle on the connector line */
+  showExpandToggle?: boolean;
 }

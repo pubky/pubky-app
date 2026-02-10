@@ -33,4 +33,12 @@ export interface UseNestedRepliesResult {
    * Total count of replies (from post counts)
    */
   replyCount: number;
+  /**
+   * Whether all replies are being shown (showAll mode)
+   */
+  showAll: boolean;
+  /**
+   * Expand to show all remaining nested replies inline
+   */
+  expandAll: () => void;
 }
