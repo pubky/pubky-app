@@ -1,18 +1,6 @@
 import * as Atoms from '@/atoms';
 import * as Libs from '@/libs';
-
-interface ButtonsNavigationProps {
-  id?: string;
-  className?: React.HTMLAttributes<HTMLDivElement>['className'];
-  onHandleBackButton?: () => void;
-  onHandleContinueButton?: () => void;
-  backText?: string;
-  continueText?: string;
-  backButtonDisabled?: boolean;
-  continueButtonDisabled?: boolean;
-  hiddenContinueButton?: boolean;
-  loadingContinueButton?: boolean;
-}
+import * as Types from './ButtonsNavigation.types';
 
 export function ButtonsNavigation({
   id,
@@ -25,13 +13,15 @@ export function ButtonsNavigation({
   continueButtonDisabled = false,
   hiddenContinueButton = false,
   loadingContinueButton = false,
-}: ButtonsNavigationProps) {
+  backButtonClassName,
+  continueButtonClassName,
+}: Types.ButtonsNavigationProps) {
   return (
     <Atoms.Container className={Libs.cn('gap-3 md:flex-row md:justify-between lg:gap-6', className)}>
       <Atoms.Button
         id={`${id}-back-btn`}
         size="lg"
-        className="w-full rounded-full md:w-auto md:flex-1"
+        className={Libs.cn('w-full rounded-full md:w-auto md:flex-1', backButtonClassName)}
         variant={'secondary'}
         onClick={onHandleBackButton}
         disabled={backButtonDisabled}
@@ -43,7 +33,7 @@ export function ButtonsNavigation({
         <Atoms.Button
           id={`${id}-continue-btn`}
           size="lg"
-          className="w-full rounded-full md:w-auto md:flex-1"
+          className={Libs.cn('w-full rounded-full md:w-auto md:flex-1', continueButtonClassName)}
           onClick={onHandleContinueButton}
           disabled={loadingContinueButton || continueButtonDisabled}
         >

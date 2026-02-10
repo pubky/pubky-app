@@ -90,6 +90,34 @@ describe('ButtonsNavigation', () => {
     const continueButton = screen.getByRole('button', { name: /continue/i });
     expect(continueButton).toBeDisabled();
   });
+
+  it('applies custom className to back button', () => {
+    const customClass = 'custom-back-button-class';
+    render(<ButtonsNavigation backButtonClassName={customClass} />);
+
+    const backButton = screen.getByRole('button', { name: /back/i });
+    expect(backButton).toHaveClass(customClass);
+  });
+
+  it('applies custom className to continue button', () => {
+    const customClass = 'custom-continue-button-class';
+    render(<ButtonsNavigation continueButtonClassName={customClass} />);
+
+    const continueButton = screen.getByRole('button', { name: /continue/i });
+    expect(continueButton).toHaveClass(customClass);
+  });
+
+  it('applies custom classNames to both buttons', () => {
+    const backCustomClass = 'custom-back-class';
+    const continueCustomClass = 'custom-continue-class';
+    render(<ButtonsNavigation backButtonClassName={backCustomClass} continueButtonClassName={continueCustomClass} />);
+
+    const backButton = screen.getByRole('button', { name: /back/i });
+    const continueButton = screen.getByRole('button', { name: /continue/i });
+
+    expect(backButton).toHaveClass(backCustomClass);
+    expect(continueButton).toHaveClass(continueCustomClass);
+  });
 });
 
 describe('ButtonsNavigation - Snapshots', () => {
@@ -144,6 +172,23 @@ describe('ButtonsNavigation - Snapshots', () => {
     const mockContinueHandler = vi.fn();
 
     const { container } = render(<ButtonsNavigation onHandleContinueButton={mockContinueHandler} />);
+    expect(container.firstChild).toMatchSnapshot();
+  });
+
+  it('matches snapshot with custom backButtonClassName', () => {
+    const { container } = render(<ButtonsNavigation backButtonClassName="custom-back-class" />);
+    expect(container.firstChild).toMatchSnapshot();
+  });
+
+  it('matches snapshot with custom continueButtonClassName', () => {
+    const { container } = render(<ButtonsNavigation continueButtonClassName="custom-continue-class" />);
+    expect(container.firstChild).toMatchSnapshot();
+  });
+
+  it('matches snapshot with both custom button classNames', () => {
+    const { container } = render(
+      <ButtonsNavigation backButtonClassName="custom-back-class" continueButtonClassName="custom-continue-class" />,
+    );
     expect(container.firstChild).toMatchSnapshot();
   });
 });
