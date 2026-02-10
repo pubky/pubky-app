@@ -27,10 +27,7 @@ export const HeaderContainer = ({ children, className }: HeaderContainerProps) =
     >
       <Atoms.Container
         size="container"
-        className={Libs.cn(
-          'flex flex-row flex-wrap items-center justify-between gap-4 sm:gap-6',
-          'px-4 py-4 sm:px-6 sm:py-6',
-        )}
+        className={Libs.cn('flex flex-row flex-wrap items-center justify-between gap-4 sm:gap-6')}
       >
         <Atoms.Container
           as="nav"

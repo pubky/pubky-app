@@ -241,10 +241,6 @@ describe('Header Components', () => {
         'justify-between',
         'gap-4',
         'sm:gap-6',
-        'px-4',
-        'sm:px-6',
-        'py-4',
-        'sm:py-6',
       );
     });
 
@@ -323,17 +319,17 @@ describe('Header Components', () => {
   });
 
   describe('HeaderButtonSignIn', () => {
-    it('renders sign in button', () => {
+    it('renders new here button', () => {
       render(<HeaderButtonSignIn />);
 
-      const button = screen.getByText('Sign in');
+      const button = screen.getByText('New here?');
       expect(button).toBeInTheDocument();
     });
 
     it('handles click events', () => {
       render(<HeaderButtonSignIn />);
 
-      const button = screen.getByText('Sign in');
+      const button = screen.getByText('New here?');
       fireEvent.click(button);
 
       expect(mockPush).toHaveBeenCalledWith('/sign-in');
@@ -342,14 +338,14 @@ describe('Header Components', () => {
     it('applies correct classes', () => {
       render(<HeaderButtonSignIn />);
 
-      const button = screen.getByText('Sign in');
+      const button = screen.getByText('New here?');
       expect(button).toHaveAttribute('data-variant', 'secondary');
     });
 
     it('renders with login icon', () => {
       render(<HeaderButtonSignIn />);
 
-      expect(document.querySelector('.lucide-log-in')).toBeInTheDocument();
+      expect(document.querySelector('.lucide-user-round-plus')).toBeInTheDocument();
     });
   });
 
@@ -359,7 +355,7 @@ describe('Header Components', () => {
 
       expect(screen.getByTestId('header-social-links')).toBeInTheDocument();
       // The component now renders the actual button instead of a mock
-      expect(screen.getByText('Sign in')).toBeInTheDocument();
+      expect(screen.getByText('New here?')).toBeInTheDocument();
     });
 
     it('applies correct classes', () => {
