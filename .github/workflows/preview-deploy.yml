@@ -95,6 +95,7 @@ jobs:
             --port=3000
             --cpu-throttling
             --session-affinity
+            --no-default-url
 
       - name: Find existing comment
         if: github.event_name == 'pull_request'

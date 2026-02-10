@@ -5,9 +5,7 @@ import createNextIntlPlugin from 'next-intl/plugin';
 const withNextIntl = createNextIntlPlugin('./src/i18n/request.ts');
 
 const nextConfig: NextConfig = {
-  trailingSlash: false, 
   reactCompiler: true,
-  skipMiddlewareUrlNormalize: true,
   // Only use standalone output when building for Docker (set NEXT_STANDALONE=true)
   ...(process.env.NEXT_STANDALONE === 'true' && { output: 'standalone' }),
   webpack: (config, { isServer }) => {
