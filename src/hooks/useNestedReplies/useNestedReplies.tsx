@@ -69,7 +69,7 @@ export function useNestedReplies(
         if (!replyId || depth >= maxDepth) return [];
 
         const streamId = Core.buildPostReplyStreamId(replyId);
-        const stream = await Core.StreamPostsController.getLocalStream({ streamId });
+        const stream = await Core.LocalStreamPostsService.read({ streamId });
 
         if (!stream || stream.stream.length === 0) return [];
 
@@ -97,8 +97,9 @@ export function useNestedReplies(
   const mutedRepliesCount = useLiveQuery(
     async () => {
       if (!replyId) return 0;
+      if (mutedUserIdSet.size === 0) return 0;
       const streamId = Core.buildPostReplyStreamId(replyId);
-      const stream = await Core.StreamPostsController.getLocalStream({ streamId });
+      const stream = await Core.LocalStreamPostsService.read({ streamId });
       if (!stream || stream.stream.length === 0) return 0;
       // Count how many replies are from muted users
       return stream.stream.filter((id) => Core.MuteFilter.isPostMuted(id, mutedUserIdSet)).length;

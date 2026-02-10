@@ -53,7 +53,7 @@ export function useThreadReplies(
         if (!postId) return [];
 
         const streamId = Core.buildPostReplyStreamId(postId);
-        const stream = await Core.StreamPostsController.getLocalStream({ streamId });
+        const stream = await Core.LocalStreamPostsService.read({ streamId });
 
         if (!stream || stream.stream.length === 0) return [];
 
@@ -78,8 +78,9 @@ export function useThreadReplies(
   const mutedRepliesCount = useLiveQuery(
     async () => {
       if (!postId) return 0;
+      if (mutedUserIdSet.size === 0) return 0;
       const streamId = Core.buildPostReplyStreamId(postId);
-      const stream = await Core.StreamPostsController.getLocalStream({ streamId });
+      const stream = await Core.LocalStreamPostsService.read({ streamId });
       if (!stream || stream.stream.length === 0) return 0;
       return stream.stream.filter((id) => Core.MuteFilter.isPostMuted(id, mutedUserIdSet)).length;
     },
@@ -93,11 +94,8 @@ export function useThreadReplies(
       try {
         if (!postId || replyIds.length === 0) return false;
 
-        for (const replyId of replyIds) {
-          const counts = await Core.PostController.getCounts({ compositeId: replyId });
-          if (counts && counts.replies > 0) return true;
-        }
-        return false;
+        const replyCounts = await Core.PostCountsModel.findByIds(replyIds);
+        return replyCounts.some((counts) => counts.replies > 0);
       } catch {
         return false;
       }
