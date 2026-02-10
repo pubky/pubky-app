@@ -4,6 +4,7 @@ exports[`Header Components - Snapshots > matches snapshot for HeaderButtonSignIn
 <button
   class="inline-flex items-center justify-center whitespace-nowrap text-sm transition-all disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg:not([class*=\\"size-\\"])]:size-4 shrink-0 [&_svg]:shrink-0 outline-none focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[3px] aria-invalid:ring-destructive/40 aria-invalid:border-destructive font-semibold cursor-pointer rounded-full border shadow-xs bg-secondary text-secondary-foreground hover:bg-secondary/80 h-10 px-4 py-2 has-[>svg]:px-4 gap-2"
   data-slot="button"
+  data-testid="header-sign-in-btn"
   data-variant="secondary"
   id="header-sign-in-btn"
 >
@@ -155,6 +156,7 @@ exports[`Header Components - Snapshots > matches snapshot for HeaderHome 1`] = `
   <button
     class="inline-flex items-center justify-center whitespace-nowrap text-sm transition-all disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg:not([class*=\\"size-\\"])]:size-4 shrink-0 [&_svg]:shrink-0 outline-none focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[3px] aria-invalid:ring-destructive/40 aria-invalid:border-destructive font-semibold cursor-pointer rounded-full border shadow-xs bg-secondary text-secondary-foreground hover:bg-secondary/80 h-10 px-4 py-2 has-[>svg]:px-4 gap-2"
     data-slot="button"
+    data-testid="header-sign-in-btn"
     data-variant="secondary"
     id="header-sign-in-btn"
   >
