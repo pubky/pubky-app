@@ -1,6 +1,6 @@
 'use client';
 
-import { usePathname, useRouter } from 'next/navigation';
+import { useRouter } from 'next/navigation';
 import { useTranslations } from 'next-intl';
 
 import * as React from 'react';
@@ -17,13 +17,7 @@ export function HeaderButtonSignIn({ ...props }: React.HTMLAttributes<HTMLButton
   };
 
   return (
-    <Atoms.Button
-      id="header-sign-in-btn"
-      variant="secondary"
-      className="hidden sm:flex"
-      onClick={handleSignIn}
-      {...props}
-    >
+    <Atoms.Button id="header-sign-in-btn" variant="secondary" onClick={handleSignIn} {...props}>
       <Libs.LogIn className="mr-2 h-4 w-4" />
       {t('signIn')}
     </Atoms.Button>
