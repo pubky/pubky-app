@@ -1,3 +1,5 @@
+import validationLimits from 'pubky-app-specs/validationLimits.json';
+
 /**
  * Regex pattern to match Radix UI generated IDs globally.
  * Used for replacing all occurrences in snapshot serialization.
@@ -35,6 +37,22 @@ export const HMS_TIMESTAMP_REGEX = /^(?:(\d+)h)?(?:(\d+)m)?(?:(\d+)s?)?$/;
 
 /**
  * Banned characters for tags per pubky-app-specs.
- * Colons, commas, and spaces are not allowed in tags.
+ * Colons, commas, spaces, tabs, and newlines are not allowed in tags.
  */
-export const TAG_BANNED_CHARS = /[:, ]/g;
+const escapeTagCharForRegex = (char: string) => {
+  switch (char) {
+    case '\t':
+      return '\\t';
+    case '\n':
+      return '\\n';
+    case '\r':
+      return '\\r';
+    default:
+      return char.replace(/[\\\-\]\^]/g, '\\$&');
+  }
+};
+
+export const TAG_BANNED_CHARS = new RegExp(
+  `[${validationLimits.tagInvalidChars.map(escapeTagCharForRegex).join('')}]`,
+  'g',
+);

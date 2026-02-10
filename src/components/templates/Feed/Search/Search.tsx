@@ -41,7 +41,7 @@ export function Search() {
       >
         {/* Mobile search input - hidden on desktop (shown in header there) */}
         <Atoms.Container className="lg:hidden">
-          <Organisms.SearchInput />
+          <Organisms.SearchInput autoFocus={!hasTags} />
         </Atoms.Container>
 
         {hasTags ? (

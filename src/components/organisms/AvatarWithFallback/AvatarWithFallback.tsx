@@ -67,7 +67,7 @@ export function AvatarWithFallback({
 
   return (
     <Atoms.Avatar size={size} className={className} data-testid={dataTestId}>
-      {resolvedAvatarUrl && !imageError ? (
+      {resolvedAvatarUrl && !imageError && (
         <>
           <Atoms.AvatarImage
             src={resolvedAvatarUrl}
@@ -99,9 +99,9 @@ export function AvatarWithFallback({
             </Atoms.Container>
           )}
         </>
-      ) : (
-        <Atoms.AvatarFallback className={fallbackClassName}>{Libs.extractInitials({ name })}</Atoms.AvatarFallback>
       )}
+      {/* Always render fallback - Radix shows it while image loads or if image fails */}
+      <Atoms.AvatarFallback className={fallbackClassName}>{Libs.extractInitials({ name })}</Atoms.AvatarFallback>
     </Atoms.Avatar>
   );
 }

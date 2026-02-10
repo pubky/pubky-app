@@ -23,11 +23,11 @@ export const useLocalFilesStore = create<LocalFilesStore>()(
         set({ profile: blobUrl }, false, LocalFilesActionTypes.SET_PROFILE);
       },
 
-      setPostAttachments: (postId, blobUrls) => {
+      setPostAttachments: (postId, attachments) => {
         const prev = get().posts[postId];
-        prev?.forEach(revokeBlobUrl);
+        prev?.forEach((a) => revokeBlobUrl(a.urls.main));
 
-        if (blobUrls.length === 0) {
+        if (attachments.length === 0) {
           // Remove key if empty array
           set(
             (state) => {
@@ -39,7 +39,7 @@ export const useLocalFilesStore = create<LocalFilesStore>()(
           );
         } else {
           set(
-            (state) => ({ posts: { ...state.posts, [postId]: blobUrls } }),
+            (state) => ({ posts: { ...state.posts, [postId]: attachments } }),
             false,
             LocalFilesActionTypes.SET_POST_ATTACHMENTS,
           );
@@ -49,7 +49,9 @@ export const useLocalFilesStore = create<LocalFilesStore>()(
       reset: () => {
         const state = get();
         revokeBlobUrl(state.profile);
-        Object.values(state.posts).flat().forEach(revokeBlobUrl);
+        Object.values(state.posts)
+          .flat()
+          .forEach((a) => revokeBlobUrl(a?.urls.main));
         set(localFilesInitialState, false, LocalFilesActionTypes.RESET);
       },
     }),

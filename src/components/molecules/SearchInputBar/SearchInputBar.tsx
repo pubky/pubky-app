@@ -19,6 +19,7 @@ export function SearchInputBar({
   onInputChange,
   onKeyDown,
   onFocus,
+  autoFocus,
 }: SearchInputBarProps) {
   const t = useTranslations('search');
   const hasActiveTags = activeTags.length > 0;
@@ -55,6 +56,7 @@ export function SearchInputBar({
         onChange={onInputChange}
         onKeyDown={onKeyDown}
         onFocus={onFocus}
+        autoFocus={autoFocus}
         readOnly={isReadOnly}
         data-cy="header-search-input"
         aria-label={t('inputLabel')}

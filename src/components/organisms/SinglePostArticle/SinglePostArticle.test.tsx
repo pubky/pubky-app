@@ -2,6 +2,8 @@ import { render, screen, fireEvent } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { SinglePostArticle } from './SinglePostArticle';
 import * as Hooks from '@/hooks';
+import * as Core from '@/core';
+import type { AttachmentConstructed } from '../PostAttachments/PostAttachments.types';
 
 // Mock hooks
 vi.mock('@/hooks', async (importOriginal) => {
@@ -126,7 +128,19 @@ vi.mock('@/core', async (importOriginal) => {
   const actual = await importOriginal<typeof import('@/core')>();
   return {
     ...actual,
+    useLocalFilesStore: vi.fn(),
   };
+});
+
+const mockUseLocalFilesStore = vi.mocked(Core.useLocalFilesStore);
+
+// Helper to create a mock LocalFilesStore state with required actions
+const createMockLocalFilesStore = (posts: Record<string, AttachmentConstructed[] | undefined> = {}) => ({
+  profile: null,
+  posts,
+  setProfile: vi.fn(),
+  setPostAttachments: vi.fn(),
+  reset: vi.fn(),
 });
 
 // Use real libs
@@ -152,6 +166,8 @@ describe('SinglePostArticle', () => {
       body: 'Test article body content',
       coverImage: null,
     });
+    // Default: no local attachments
+    mockUseLocalFilesStore.mockImplementation((selector) => selector(createMockLocalFilesStore()));
   });
 
   it('renders with required props', () => {
@@ -257,6 +273,149 @@ describe('SinglePostArticle', () => {
           alt: 'Cover image',
         },
       });
+
+      render(<SinglePostArticle {...defaultProps} isBlurred={true} />);
+
+      expect(screen.queryByTestId('cover-image')).not.toBeInTheDocument();
+    });
+
+    it('renders local cover image when available', () => {
+      mockUsePostArticle.mockReturnValue({
+        title: 'Test Title',
+        body: 'Test body',
+        coverImage: null,
+      });
+
+      mockUseLocalFilesStore.mockImplementation((selector) =>
+        selector(
+          createMockLocalFilesStore({
+            'user123:post456': [
+              {
+                type: 'image/jpeg',
+                name: 'local-cover.jpg',
+                urls: { main: 'blob:http://localhost/local-cover' },
+              },
+            ],
+          }),
+        ),
+      );
+
+      render(<SinglePostArticle {...defaultProps} />);
+
+      const coverImage = screen.getByTestId('cover-image');
+      expect(coverImage).toBeInTheDocument();
+      expect(coverImage).toHaveAttribute('src', 'blob:http://localhost/local-cover');
+      expect(coverImage).toHaveAttribute('alt', 'local-cover.jpg');
+    });
+
+    it('prefers local cover image over remote cover image', () => {
+      mockUsePostArticle.mockReturnValue({
+        title: 'Test Title',
+        body: 'Test body',
+        coverImage: {
+          src: 'https://example.com/remote-image.jpg',
+          alt: 'Remote cover',
+        },
+      });
+
+      mockUseLocalFilesStore.mockImplementation((selector) =>
+        selector(
+          createMockLocalFilesStore({
+            'user123:post456': [
+              {
+                type: 'image/png',
+                name: 'local-priority.png',
+                urls: { main: 'blob:http://localhost/local-priority' },
+              },
+            ],
+          }),
+        ),
+      );
+
+      render(<SinglePostArticle {...defaultProps} />);
+
+      const coverImage = screen.getByTestId('cover-image');
+      expect(coverImage).toHaveAttribute('src', 'blob:http://localhost/local-priority');
+      expect(coverImage).toHaveAttribute('alt', 'local-priority.png');
+    });
+
+    it('does not render local cover image when first attachment is not an image', () => {
+      mockUsePostArticle.mockReturnValue({
+        title: 'Test Title',
+        body: 'Test body',
+        coverImage: null,
+      });
+
+      mockUseLocalFilesStore.mockImplementation((selector) =>
+        selector(
+          createMockLocalFilesStore({
+            'user123:post456': [
+              {
+                type: 'video/mp4',
+                name: 'video.mp4',
+                urls: { main: 'blob:http://localhost/video' },
+              },
+            ],
+          }),
+        ),
+      );
+
+      render(<SinglePostArticle {...defaultProps} />);
+
+      expect(screen.queryByTestId('cover-image')).not.toBeInTheDocument();
+    });
+
+    it('falls back to remote cover image when local attachment is not an image', () => {
+      mockUsePostArticle.mockReturnValue({
+        title: 'Test Title',
+        body: 'Test body',
+        coverImage: {
+          src: 'https://example.com/remote.jpg',
+          alt: 'Remote fallback',
+        },
+      });
+
+      mockUseLocalFilesStore.mockImplementation((selector) =>
+        selector(
+          createMockLocalFilesStore({
+            'user123:post456': [
+              {
+                type: 'application/pdf',
+                name: 'document.pdf',
+                urls: { main: 'blob:http://localhost/document' },
+              },
+            ],
+          }),
+        ),
+      );
+
+      render(<SinglePostArticle {...defaultProps} />);
+
+      const coverImage = screen.getByTestId('cover-image');
+      expect(coverImage).toHaveAttribute('src', 'https://example.com/remote.jpg');
+      expect(coverImage).toHaveAttribute('alt', 'Remote fallback');
+    });
+
+    it('does not render local cover image when content is blurred', () => {
+      mockUsePostArticle.mockReturnValue({
+        title: 'Test Title',
+        body: 'Test body',
+        coverImage: null,
+      });
+
+      mockUseLocalFilesStore.mockImplementation((selector) =>
+        selector(
+          createMockLocalFilesStore({
+            'user123:post456': [
+              {
+                type: 'image/jpeg',
+                name: 'local.jpg',
+                urls: { main: 'blob:http://localhost/local' },
+              },
+            ],
+          }),
+        ),
+      );
 
       render(<SinglePostArticle {...defaultProps} isBlurred={true} />);
 
@@ -379,6 +538,8 @@ describe('SinglePostArticle', () => {
 describe('SinglePostArticle - Snapshots', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    // Default: no local attachments for snapshots
+    mockUseLocalFilesStore.mockImplementation((selector) => selector(createMockLocalFilesStore()));
   });
 
   it('matches snapshot with default props (no cover image, not blurred)', () => {

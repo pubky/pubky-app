@@ -9,8 +9,9 @@ import * as Core from '@/core';
 import { APP_ROUTES } from '@/app/routes';
 import { CLICKABLE_TAGS_DEFAULT_MAX_LENGTH } from '@/config/tags';
 import { parseTagsFromUrl } from './SearchInput.utils';
+import { SearchInputProps } from './SearchInput.types';
 
-export function SearchInput() {
+export function SearchInput({ autoFocus = false }: SearchInputProps) {
   const router = useRouter();
   const searchParams = useSearchParams();
   const pathname = usePathname();
@@ -86,6 +87,7 @@ export function SearchInput() {
         onInputChange={handleInputChange}
         onKeyDown={handleKeyDown}
         onFocus={handleFocus}
+        autoFocus={autoFocus}
       />
 
       {/* Suggestions dropdown */}
@@ -94,7 +96,6 @@ export function SearchInput() {
           id={suggestionsId}
           aria-label="Search suggestions"
           hotTags={hotTags}
-          inputValue={inputValue}
           hasInput={hasInput}
           autocompleteTags={autocompleteTags}
           autocompleteUsers={autocompleteUserData}
@@ -102,7 +103,6 @@ export function SearchInput() {
           recentTags={recentTags}
           onTagClick={handleTagClick}
           onUserClick={handleUserClick}
-          onSearchAsTagClick={handleTagClick}
           onClearRecentSearches={clearRecentSearches}
         />
       )}
