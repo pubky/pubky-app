@@ -1,3 +1,5 @@
+import type { AttachmentConstructed } from '@/organisms/PostAttachments/PostAttachments.types';
+
 export interface LocalFilesState {
   /**
    * Current user's profile avatar blob URL.
@@ -7,15 +9,20 @@ export interface LocalFilesState {
 
   /**
    * Post attachments keyed by compositePostId.
-   * Each post can have multiple attachments (array of blob URLs).
+   * Each post can have multiple attachments (array of AttachmentConstructed).
    *
    * @example
    * {
-   *   "pk:abc123/posts/xyz789": ["blob:...", "blob:..."],
-   *   "pk:abc123/posts/def456": ["blob:..."]
+   *   "pk:abc123/posts/xyz789": [
+   *     { type: "image", name: "photo.jpg", urls: { main: "blob:...", feed: "blob:..." } },
+   *     { type: "video", name: "clip.mp4", urls: { main: "blob:..." } }
+   *   ],
+   *   "pk:abc123/posts/def456": [
+   *     { type: "image", name: "avatar.png", urls: { main: "blob:..." } }
+   *   ]
    * }
    */
-  posts: Record<string, string[]>;
+  posts: Record<string, AttachmentConstructed[] | undefined>;
 }
 
 export interface LocalFilesActions {
@@ -29,7 +36,7 @@ export interface LocalFilesActions {
    * Set attachments for a post. Pass empty array to clear.
    * Automatically revokes previous blob URLs to prevent memory leaks.
    */
-  setPostAttachments: (postId: string, blobUrls: string[]) => void;
+  setPostAttachments: (postId: string, attachments: AttachmentConstructed[]) => void;
 
   /**
    * Reset all state and revoke all blob URLs.

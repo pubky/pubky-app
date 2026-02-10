@@ -6,6 +6,7 @@ import * as Molecules from '@/molecules';
 import * as Organisms from '@/organisms';
 import * as Libs from '@/libs';
 import * as Hooks from '@/hooks';
+import * as Core from '@/core';
 import type { PostContentBaseProps } from './PostContentBase.types';
 
 /**
@@ -15,6 +16,8 @@ import type { PostContentBaseProps } from './PostContentBase.types';
  */
 export function PostContentBase({ postId, className }: PostContentBaseProps) {
   const t = useTranslations('common');
+
+  const localAttachments = Core.useLocalFilesStore((s) => s.posts[postId]);
 
   // Fetch post details for content
   const { postDetails } = Hooks.usePostDetails(postId);
@@ -38,6 +41,7 @@ export function PostContentBase({ postId, className }: PostContentBaseProps) {
       <Organisms.PostArticle
         content={postDetails.content}
         attachments={postDetails.attachments}
+        localAttachments={localAttachments}
         className={className}
       />
     );
@@ -51,7 +55,7 @@ export function PostContentBase({ postId, className }: PostContentBaseProps) {
       {hasContent && <Molecules.PostLinkEmbeds content={postDetails.content} />}
 
       {/* Attachments on this post */}
-      <Organisms.PostAttachments attachments={postDetails.attachments ?? null} />
+      <Organisms.PostAttachments attachments={postDetails.attachments} localAttachments={localAttachments} />
     </Atoms.Container>
   );
 }

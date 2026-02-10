@@ -44,7 +44,53 @@ exports[`PostAttachments - Snapshots > matches snapshot with images only 1`] = `
 </div>
 `;
 
+exports[`PostAttachments - Snapshots > matches snapshot with local attachments only 1`] = `
+<div
+  class="gap-3"
+  data-testid="container"
+>
+  <div
+    data-count="1"
+    data-testid="post-attachments-images-and-videos"
+  >
+    ImagesAndVideos
+  </div>
+  <div
+    data-count="1"
+    data-testid="post-attachments-audios"
+  >
+    Audios
+  </div>
+</div>
+`;
+
 exports[`PostAttachments - Snapshots > matches snapshot with mixed attachment types 1`] = `
+<div
+  class="gap-3"
+  data-testid="container"
+>
+  <div
+    data-count="2"
+    data-testid="post-attachments-images-and-videos"
+  >
+    ImagesAndVideos
+  </div>
+  <div
+    data-count="1"
+    data-testid="post-attachments-audios"
+  >
+    Audios
+  </div>
+  <div
+    data-count="1"
+    data-testid="post-attachments-generic-files"
+  >
+    GenericFiles
+  </div>
+</div>
+`;
+
+exports[`PostAttachments - Snapshots > matches snapshot with mixed local attachment types 1`] = `
 <div
   class="gap-3"
   data-testid="container"
