@@ -1,0 +1,149 @@
+name: PR Preview Deployment
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened]
+  pull_request_target:
+    types: [closed]
+  workflow_dispatch:
+    inputs:
+      pr_number:
+        description: 'PR number (use 9999 for testing)'
+        required: true
+        default: '9999'
+      action:
+        description: 'Action'
+        required: true
+        type: choice
+        options:
+          - deploy
+          - cleanup
+
+env:
+  REGISTRY: europe-west6-docker.pkg.dev/infra-464608/synonym-private-repo
+  REGION: europe-west6
+  PROJECT_ID: infra-464608
+  SERVICE_BASE_NAME: franky-preview
+
+concurrency:
+  group: preview-${{ github.event.pull_request.number || github.event.inputs.pr_number || '0' }}
+  cancel-in-progress: true
+
+jobs:
+  set-vars:
+    name: Set Variables
+    if: |
+      (github.event_name == 'workflow_dispatch' && github.event.inputs.action == 'deploy') ||
+      (github.event_name == 'pull_request' && github.event.action != 'closed' &&
+       github.event.pull_request.head.repo.full_name == github.repository)
+    runs-on: ubuntu-latest
+    outputs:
+      pr_number: ${{ steps.vars.outputs.pr_number }}
+      service_name: ${{ steps.vars.outputs.service_name }}
+      short_sha: ${{ steps.vars.outputs.short_sha }}
+      platforms: ${{ steps.vars.outputs.platforms }}
+    steps:
+      - name: Set variables
+        id: vars
+        run: |
+          if [ "${{ github.event_name }}" == "workflow_dispatch" ]; then
+            PR_NUMBER="${{ github.event.inputs.pr_number }}"
+          else
+            PR_NUMBER="${{ github.event.pull_request.number }}"
+          fi
+          echo "pr_number=${PR_NUMBER}" >> $GITHUB_OUTPUT
+          echo "service_name=${{ env.SERVICE_BASE_NAME }}-pr-${PR_NUMBER}" >> $GITHUB_OUTPUT
+          echo "short_sha=$(echo ${{ github.sha }} | cut -c1-7)" >> $GITHUB_OUTPUT
+          echo "platforms=linux/amd64" >> $GITHUB_OUTPUT
+
+  build-preview:
+    name: Build Preview Image
+    needs: [set-vars]
+    uses: ./.github/workflows/build-docker-image.yml
+    with:
+      env: preview
+      platforms: ${{ needs.set-vars.outputs.platforms }}
+      pr_number: ${{ needs.set-vars.outputs.pr_number }}
+    secrets: inherit
+
+  deploy-preview:
+    name: Deploy Preview
+    needs: [set-vars, build-preview]
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pull-requests: write
+    steps:
+      - name: Authenticate to GCP
+        uses: google-github-actions/auth@v2
+        with:
+          credentials_json: ${{ secrets.CLOUD_RUN_SA_KEY }}
+
+      - name: Deploy to Cloud Run
+        id: deploy
+        uses: google-github-actions/deploy-cloudrun@v2
+        with:
+          service: ${{ needs.set-vars.outputs.service_name }}
+          region: ${{ env.REGION }}
+          image: ${{ env.REGISTRY }}/${{ needs.build-preview.outputs.image_name }}:${{ needs.build-preview.outputs.image_tag }}
+          flags: |
+            --allow-unauthenticated
+            --memory=512Mi
+            --cpu=1
+            --min-instances=0
+            --max-instances=2
+            --port=3000
+            --cpu-throttling
+
+      - name: Find existing comment
+        if: github.event_name == 'pull_request'
+        uses: peter-evans/find-comment@v3
+        id: find-comment
+        with:
+          issue-number: ${{ github.event.pull_request.number }}
+          comment-author: 'github-actions[bot]'
+          body-includes: '🚀 Preview'
+
+      - name: Comment on PR
+        if: github.event_name == 'pull_request'
+        uses: peter-evans/create-or-update-comment@v4
+        with:
+          comment-id: ${{ steps.find-comment.outputs.comment-id }}
+          issue-number: ${{ github.event.pull_request.number }}
+          edit-mode: replace
+          body: |
+            ## 🚀 Preview Deployment
+
+            **URL:** ${{ steps.deploy.outputs.url }}
+
+            `${{ needs.set-vars.outputs.service_name }}` • `${{ needs.set-vars.outputs.short_sha }}`
+
+  cleanup-preview:
+    name: Cleanup Preview
+    if: |
+      (github.event_name == 'pull_request_target' && github.event.action == 'closed') ||
+      (github.event_name == 'workflow_dispatch' && github.event.inputs.action == 'cleanup')
+    runs-on: ubuntu-latest
+    steps:
+      - name: Set variables
+        id: vars
+        run: |
+          if [ "${{ github.event_name }}" == "workflow_dispatch" ]; then
+            PR_NUMBER="${{ github.event.inputs.pr_number }}"
+          else
+            PR_NUMBER="${{ github.event.pull_request.number }}"
+          fi
+          echo "service_name=${{ env.SERVICE_BASE_NAME }}-pr-${PR_NUMBER}" >> $GITHUB_OUTPUT
+
+      - name: Authenticate to GCP
+        uses: google-github-actions/auth@v2
+        with:
+          credentials_json: ${{ secrets.CLOUD_RUN_SA_KEY }}
+
+      - name: Setup gcloud
+        uses: google-github-actions/setup-gcloud@v2
+
+      - name: Delete Cloud Run service
+        run: |
+          gcloud run services delete ${{ steps.vars.outputs.service_name }} \
+            --region=${{ env.REGION }} --quiet || true

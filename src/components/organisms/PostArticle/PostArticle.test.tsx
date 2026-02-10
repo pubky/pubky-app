@@ -1,6 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen } from '@testing-library/react';
 import { PostArticle } from './PostArticle';
+import type { AttachmentConstructed } from '../PostAttachments/PostAttachments.types';
 import * as Core from '@/core';
 
 // Mock hooks
@@ -57,7 +58,24 @@ describe('PostArticle', () => {
   const defaultProps = {
     content: '{"title":"Test Article Title","body":"This is the article body content."}',
     attachments: ['pubky://user/pub/pubky.app/files/file-123'],
+    localAttachments: undefined,
   };
+
+  const mockLocalImageAttachment: AttachmentConstructed = {
+    type: 'image/png',
+    name: 'Local Cover Image',
+    urls: {
+      main: 'blob:http://localhost/local-cover-image',
+    },
+  } as AttachmentConstructed;
+
+  const mockLocalVideoAttachment: AttachmentConstructed = {
+    type: 'video/mp4',
+    name: 'Local Video',
+    urls: {
+      main: 'blob:http://localhost/local-video',
+    },
+  } as AttachmentConstructed;
 
   const mockHookReturnWithImage = {
     title: 'Test Article Title',
@@ -147,7 +165,7 @@ describe('PostArticle', () => {
     });
 
     it('calls usePostArticle with empty attachments', () => {
-      render(<PostArticle content={defaultProps.content} attachments={[]} />);
+      render(<PostArticle content={defaultProps.content} attachments={[]} localAttachments={undefined} />);
 
       expect(mockUsePostArticle).toHaveBeenCalledWith({
         content: defaultProps.content,
@@ -162,13 +180,71 @@ describe('PostArticle', () => {
         'pubky://user/pub/pubky.app/files/file-456',
       ];
 
-      render(<PostArticle content={defaultProps.content} attachments={multipleAttachments} />);
+      render(
+        <PostArticle content={defaultProps.content} attachments={multipleAttachments} localAttachments={undefined} />,
+      );
 
       expect(mockUsePostArticle).toHaveBeenCalledWith({
         content: defaultProps.content,
         attachments: multipleAttachments,
         coverImageVariant: Core.FileVariant.FEED,
       });
+    });
+  });
+
+  describe('Local Attachments', () => {
+    it('renders local cover image when localAttachments has an image', () => {
+      render(<PostArticle {...defaultProps} localAttachments={[mockLocalImageAttachment]} />);
+
+      const image = screen.getByTestId('cover-image');
+      expect(image).toBeInTheDocument();
+      expect(image).toHaveAttribute('src', 'blob:http://localhost/local-cover-image');
+      expect(image).toHaveAttribute('alt', 'Local Cover Image');
+    });
+
+    it('prioritizes local cover image over hook cover image', () => {
+      mockUsePostArticle.mockReturnValue(mockHookReturnWithImage);
+
+      render(<PostArticle {...defaultProps} localAttachments={[mockLocalImageAttachment]} />);
+
+      const image = screen.getByTestId('cover-image');
+      expect(image).toHaveAttribute('src', 'blob:http://localhost/local-cover-image');
+      expect(image).not.toHaveAttribute('src', 'https://example.com/cover-image.jpg');
+    });
+
+    it('falls back to hook cover image when localAttachments is not an image', () => {
+      mockUsePostArticle.mockReturnValue(mockHookReturnWithImage);
+
+      render(<PostArticle {...defaultProps} localAttachments={[mockLocalVideoAttachment]} />);
+
+      const image = screen.getByTestId('cover-image');
+      expect(image).toHaveAttribute('src', 'https://example.com/cover-image.jpg');
+    });
+
+    it('does not render cover image when localAttachments is not an image and hook has no image', () => {
+      mockUsePostArticle.mockReturnValue(mockHookReturnWithoutImage);
+
+      render(<PostArticle {...defaultProps} localAttachments={[mockLocalVideoAttachment]} />);
+
+      expect(screen.queryByTestId('cover-image')).not.toBeInTheDocument();
+    });
+
+    it('renders hook cover image when localAttachments is undefined', () => {
+      mockUsePostArticle.mockReturnValue(mockHookReturnWithImage);
+
+      render(<PostArticle {...defaultProps} localAttachments={undefined} />);
+
+      const image = screen.getByTestId('cover-image');
+      expect(image).toHaveAttribute('src', 'https://example.com/cover-image.jpg');
+    });
+
+    it('renders hook cover image when localAttachments is empty array', () => {
+      mockUsePostArticle.mockReturnValue(mockHookReturnWithImage);
+
+      render(<PostArticle {...defaultProps} localAttachments={[]} />);
+
+      const image = screen.getByTestId('cover-image');
+      expect(image).toHaveAttribute('src', 'https://example.com/cover-image.jpg');
     });
   });
 
@@ -222,6 +298,20 @@ describe('PostArticle', () => {
       });
 
       const { container } = render(<PostArticle {...defaultProps} />);
+
+      expect(container).toMatchSnapshot();
+    });
+
+    it('matches snapshot with local cover image', () => {
+      const { container } = render(<PostArticle {...defaultProps} localAttachments={[mockLocalImageAttachment]} />);
+
+      expect(container).toMatchSnapshot();
+    });
+
+    it('matches snapshot with local video attachment falling back to hook image', () => {
+      mockUsePostArticle.mockReturnValue(mockHookReturnWithImage);
+
+      const { container } = render(<PostArticle {...defaultProps} localAttachments={[mockLocalVideoAttachment]} />);
 
       expect(container).toMatchSnapshot();
     });

@@ -11,8 +11,7 @@ export interface SearchSuggestionsProps {
   'aria-label'?: string;
   /** Hot tags to display (only when input is empty) */
   hotTags: HotTag[];
-  /** Current input value */
-  inputValue: string;
+
   /** Whether input has content */
   hasInput: boolean;
   /** Autocomplete tag suggestions */
@@ -27,8 +26,6 @@ export interface SearchSuggestionsProps {
   onTagClick: (tag: string) => void;
   /** Callback when a user is clicked */
   onUserClick: (userId: Pubky) => void;
-  /** Callback when "Search as tag" link is clicked */
-  onSearchAsTagClick?: (query: string) => void;
   /** Callback to clear all recent searches */
   onClearRecentSearches?: () => void;
   /** Whether inside a wrapper that handles gradient (no absolute positioning) */
