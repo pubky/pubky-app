@@ -54,7 +54,7 @@ exports[`ContentLayout - Snapshots > matches snapshot with default props 1`] = `
 
 exports[`ContentLayout - Snapshots > matches snapshot with renderMobileHeader false 1`] = `
 <div
-  class="max-w-sm sm:max-w-xl md:max-w-3xl lg:max-w-5xl xl:max-w-6xl m-auto w-full px-6 pb-12 xl:px-0 pt-0"
+  class="sm:max-w-xl md:max-w-3xl lg:max-w-5xl xl:max-w-6xl w-full px-6 pb-12 sm:m-auto xl:px-0 pt-0"
   data-testid="container"
 >
   <div
