@@ -90,8 +90,8 @@ export function ContentLayout({
       <Atoms.Container
         overrideDefaults
         className={Libs.cn(
-          'max-w-sm sm:max-w-xl md:max-w-3xl lg:max-w-5xl xl:max-w-6xl',
-          'm-auto w-full px-6 pb-12 xl:px-0',
+          'sm:max-w-xl md:max-w-3xl lg:max-w-5xl xl:max-w-6xl',
+          'w-full px-6 pb-12 sm:m-auto xl:px-0',
           'pt-0',
           className,
         )}

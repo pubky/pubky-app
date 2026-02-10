@@ -54,7 +54,7 @@ export function MobileFooter({ className }: MobileFooterProps) {
 
   return (
     <div className={Libs.cn('flex justify-center pb-20 lg:hidden', className)}>
-      <div className="fixed bottom-0 z-40 flex w-full max-w-[380px] items-center justify-between overflow-x-auto bg-gradient-to-t from-background via-background/95 to-transparent px-3 py-4 sm:max-w-[600px] md:max-w-[720px]">
+      <div className="fixed bottom-0 z-40 flex w-full max-w-[380px] items-center justify-between overflow-x-auto bg-linear-to-t from-background via-background/15 to-transparent px-3 py-4 sm:max-w-[600px] md:max-w-[720px]">
         {navItems.map((item) => {
           const Icon = item.icon;
           const isHome = item.href === App.APP_ROUTES.HOME;
@@ -84,8 +84,10 @@ export function MobileFooter({ className }: MobileFooterProps) {
                 }
               }}
               className={Libs.cn(
-                'rounded-full p-3 backdrop-blur-sm transition-all',
-                isActive(item.href) ? 'bg-secondary/30' : 'bg-secondary/20 hover:bg-secondary/25',
+                'rounded-full p-3 transition-all',
+                isActive(item.href)
+                  ? 'bg-secondary'
+                  : 'border border-border bg-secondary/20 backdrop-blur-sm hover:bg-secondary/25',
               )}
             >
               <Icon className="h-6 w-6" />

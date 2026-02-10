@@ -46,6 +46,7 @@ export function PostContentBase({ postId, className }: PostContentBaseProps) {
       />
     );
 
+  if (!hasContent) return null;
   return (
     <Atoms.Container className={Libs.cn('min-w-0 gap-3', className)}>
       {/* Post text */}

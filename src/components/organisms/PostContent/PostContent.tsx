@@ -21,11 +21,6 @@ export function PostContent({ postId, className }: PostContentOrganismProps) {
   // Get repost information
   const { isRepost, originalPostId } = Hooks.useRepostInfo(postId);
 
-  // Get post details to check if repost has content (for spacing between quote and preview).
-  // Note: Reposts can be plain reposts (no content) or quote reposts (with content).
-  const { postDetails } = Hooks.usePostDetails(postId);
-  const hasContent = (postDetails?.content?.trim().length ?? 0) > 0;
-
   // Determine if we should render the repost preview
   const shouldRenderRepostPreview = isRepost && !!originalPostId;
 
@@ -36,7 +31,7 @@ export function PostContent({ postId, className }: PostContentOrganismProps) {
 
       {/* Show original post preview for reposts */}
       {shouldRenderRepostPreview && (
-        <Molecules.PostPreviewCard postId={originalPostId} className={Libs.cn('bg-muted', hasContent && 'mt-4')} />
+        <Molecules.PostPreviewCard postId={originalPostId} className={Libs.cn('bg-muted')} />
       )}
     </>
   );
