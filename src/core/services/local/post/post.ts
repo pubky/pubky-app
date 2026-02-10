@@ -200,6 +200,15 @@ export class LocalPostService {
           }
           if (repostedUri) {
             ops.push(this.updatePostCount(repostedUri, 'reposts', 1));
+            // Touch reposted post TTL so the coordinator considers it fresh
+            // and doesn't overwrite the updated repost count from Nexus
+            const repostedPostId = Core.buildCompositeIdFromPubkyUri({
+              uri: repostedUri,
+              domain: Core.CompositeIdDomain.POSTS,
+            });
+            if (repostedPostId) {
+              ops.push(Core.PostTtlModel.upsert({ id: repostedPostId, lastUpdatedAt: Date.now() }));
+            }
           }
 
           // Touch TTL for the new post
@@ -303,6 +312,15 @@ export class LocalPostService {
           }
           if (repostedUri) {
             ops.push(this.updatePostCount(repostedUri, 'reposts', -1));
+            // Touch reposted post TTL so the coordinator considers it fresh
+            // and doesn't overwrite the updated repost count from Nexus
+            const repostedPostId = Core.buildCompositeIdFromPubkyUri({
+              uri: repostedUri,
+              domain: Core.CompositeIdDomain.POSTS,
+            });
+            if (repostedPostId) {
+              ops.push(Core.PostTtlModel.upsert({ id: repostedPostId, lastUpdatedAt: Date.now() }));
+            }
           }
 
           // Update author's user counts in a single operation

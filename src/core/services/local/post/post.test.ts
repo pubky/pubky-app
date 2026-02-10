@@ -353,6 +353,41 @@ describe('LocalPostService', () => {
       expect(originalCounts!.reposts).toBe(1);
     });
 
+    it('should touch TTL for both repost and original post when creating a repost', async () => {
+      const originalPostId = 'original:post123';
+      const originalUri = `pubky://original/pub/pubky.app/posts/post123`;
+
+      await setupExistingPost(originalPostId, 'Original post');
+      await setupUserCounts(testData.authorPubky);
+
+      const saveParams: Core.TLocalSavePostParams = {
+        compositePostId: testData.fullPostId1,
+        post: new PubkyAppPost(
+          '',
+          PubkyAppPostKind.Short,
+          undefined,
+          new PubkyAppPostEmbed(originalUri, PubkyAppPostKind.Short),
+          undefined,
+        ),
+      };
+
+      const beforeTimestamp = Date.now();
+      await Core.LocalPostService.create(saveParams);
+      const afterTimestamp = Date.now();
+
+      // Repost TTL should be touched
+      const repostTtl = await getPostTtl(testData.fullPostId1);
+      expect(repostTtl).toBeTruthy();
+      expect(repostTtl!.lastUpdatedAt).toBeGreaterThanOrEqual(beforeTimestamp);
+      expect(repostTtl!.lastUpdatedAt).toBeLessThanOrEqual(afterTimestamp);
+
+      // Original post TTL should be touched
+      const originalTtl = await getPostTtl(originalPostId);
+      expect(originalTtl).toBeTruthy();
+      expect(originalTtl!.lastUpdatedAt).toBeGreaterThanOrEqual(beforeTimestamp);
+      expect(originalTtl!.lastUpdatedAt).toBeLessThanOrEqual(afterTimestamp);
+    });
+
     it('should create repost with content for quote reposts', async () => {
       const originalPostId = 'original:post123';
       const repostId = testData.fullPostId1;
@@ -512,6 +547,31 @@ describe('LocalPostService', () => {
       expect(parentTtl).toBeTruthy();
       expect(parentTtl!.lastUpdatedAt).toBeGreaterThanOrEqual(beforeTimestamp);
       expect(parentTtl!.lastUpdatedAt).toBeLessThanOrEqual(afterTimestamp);
+    });
+
+    it('should touch original post TTL when deleting a repost', async () => {
+      const originalPostId = 'original:post123';
+      const repostId = testData.fullPostId1;
+      const originalUri = `pubky://original/pub/pubky.app/posts/post123`;
+
+      // Setup original post
+      await setupExistingPost(originalPostId, 'Original post');
+      await Core.PostCountsModel.update(originalPostId, { reposts: 1 });
+
+      // Setup repost
+      await setupExistingPost(repostId, '');
+      await Core.PostRelationshipsModel.update(repostId, { reposted: originalUri });
+      await setupUserCounts(testData.authorPubky);
+
+      const beforeTimestamp = Date.now();
+      await Core.LocalPostService.delete({ compositePostId: repostId });
+      const afterTimestamp = Date.now();
+
+      // Original post TTL should be touched
+      const originalTtl = await getPostTtl(originalPostId);
+      expect(originalTtl).toBeTruthy();
+      expect(originalTtl!.lastUpdatedAt).toBeGreaterThanOrEqual(beforeTimestamp);
+      expect(originalTtl!.lastUpdatedAt).toBeLessThanOrEqual(afterTimestamp);
     });
 
     it('should not decrement counts below zero', async () => {
