@@ -33,6 +33,7 @@ export function useThreadReplies(
   const [hasFetched, setHasFetched] = useState(false);
   const [showAll, setShowAll] = useState(false);
   const [streamExhausted, setStreamExhausted] = useState(false);
+  const [isExpandingAll, setIsExpandingAll] = useState(false);
   const isMountedRef = useRef(true);
 
   useEffect(() => {
@@ -155,8 +156,10 @@ export function useThreadReplies(
    * Nexus API returns fewer items than requested due to server-side page limits.
    */
   const expandAll = useCallback(async () => {
-    if (!postId || streamExhausted || isFetchingAllRef.current) return;
+    if (!postId || streamExhausted || isExpandingAll || isFetchingAllRef.current) return;
     isFetchingAllRef.current = true;
+    setIsExpandingAll(true);
+    setShowAll(true);
     let completed = false;
     let reachedEnd = false;
 
@@ -196,6 +199,7 @@ export function useThreadReplies(
         if (result.timestamp && result.timestamp !== cursor) {
           cursor = result.timestamp;
         } else {
+          reachedEnd = true;
           break; // No cursor advancement — stop to avoid infinite loop
         }
       }
@@ -204,11 +208,13 @@ export function useThreadReplies(
       Libs.Logger.error('[useThreadReplies] Failed to fetch all replies:', error);
     } finally {
       isFetchingAllRef.current = false;
+      if (isMountedRef.current) {
+        setIsExpandingAll(false);
+      }
     }
     if (!isMountedRef.current || !completed) return;
-    setShowAll(true);
     setStreamExhausted(reachedEnd);
-  }, [postId, streamExhausted]);
+  }, [isExpandingAll, postId, streamExhausted]);
 
   // Reactively prune muted replies
   const adjustedTotalCount = Math.max(0, totalReplyCount - mutedRepliesCount);
@@ -222,6 +228,7 @@ export function useThreadReplies(
     totalCount: adjustedTotalCount,
     hasMore,
     showAll,
+    isExpandingAll,
     expandAll,
     loading,
     hasAnyNestedReplies: hasAnyNestedReplies ?? false,

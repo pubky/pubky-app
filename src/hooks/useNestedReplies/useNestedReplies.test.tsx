@@ -59,7 +59,7 @@ describe('useNestedReplies', () => {
     vi.mocked(useLiveQuery).mockImplementation(() => {
       const index = liveQueryCall % 2;
       liveQueryCall += 1;
-      if (index === 0) return ['author:nested-1', 'author:nested-2'];
+      if (index === 0) return ['author:nested-1', 'author:nested-2', 'author:nested-3'];
       return 0;
     });
 
@@ -84,6 +84,37 @@ describe('useNestedReplies', () => {
     });
 
     expect(getOrFetchSpy).toHaveBeenCalledTimes(2);
+    expect(result.current.showAll).toBe(true);
+    expect(result.current.hasMoreReplies).toBe(false);
+  });
+
+  it('marks nested stream exhausted when pagination cursor does not advance', async () => {
+    vi.mocked(usePostCounts).mockReturnValue({
+      postCounts: { replies: 20 },
+    } as ReturnType<typeof usePostCounts>);
+
+    let liveQueryCall = 0;
+    vi.mocked(useLiveQuery).mockImplementation(() => {
+      const index = liveQueryCall % 2;
+      liveQueryCall += 1;
+      if (index === 0) return ['author:nested-1', 'author:nested-2'];
+      return 0;
+    });
+
+    vi.spyOn(Core, 'buildPostReplyStreamId').mockReturnValue('stream:author:reply-1');
+    const getOrFetchSpy = vi.spyOn(Core.StreamPostsController, 'getOrFetchStreamSlice').mockResolvedValue({
+      nextPageIds: Array.from({ length: 10 }, (_, index) => `author:nested-${index + 3}`),
+      timestamp: 0,
+      reachedEnd: false,
+    });
+
+    const { result } = renderHook(() => useNestedReplies('author:reply-1'));
+
+    await act(async () => {
+      await result.current.expandAll();
+    });
+
+    expect(getOrFetchSpy).toHaveBeenCalled();
     expect(result.current.showAll).toBe(true);
     expect(result.current.hasMoreReplies).toBe(false);
   });

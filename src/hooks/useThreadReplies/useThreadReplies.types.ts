@@ -15,8 +15,10 @@ export interface UseThreadRepliesResult {
   hasMore: boolean;
   /** Whether the hook is in "show all" mode */
   showAll: boolean;
+  /** Whether expand-all pagination is currently running */
+  isExpandingAll: boolean;
   /** Expand to show all remaining replies inline */
-  expandAll: () => void;
+  expandAll: () => Promise<void>;
   /** Whether initial data is loading */
   loading: boolean;
   /** Whether any Level 1 reply has sub-replies (used to decide whether to show the global toggle) */

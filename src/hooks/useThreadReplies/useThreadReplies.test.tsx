@@ -51,7 +51,7 @@ describe('useThreadReplies', () => {
     vi.mocked(useLiveQuery).mockImplementation(() => {
       const index = liveQueryCall % 3;
       liveQueryCall += 1;
-      if (index === 0) return ['author:reply-1', 'author:reply-2'];
+      if (index === 0) return ['author:reply-1', 'author:reply-2', 'author:reply-3'];
       if (index === 1) return 0;
       return false;
     });
@@ -77,6 +77,38 @@ describe('useThreadReplies', () => {
     });
 
     expect(getOrFetchSpy).toHaveBeenCalledTimes(2);
+    expect(result.current.showAll).toBe(true);
+    expect(result.current.hasMore).toBe(false);
+  });
+
+  it('marks stream exhausted when pagination cursor does not advance', async () => {
+    vi.mocked(usePostCounts).mockReturnValue({
+      postCounts: { replies: 20 },
+    } as ReturnType<typeof usePostCounts>);
+
+    let liveQueryCall = 0;
+    vi.mocked(useLiveQuery).mockImplementation(() => {
+      const index = liveQueryCall % 3;
+      liveQueryCall += 1;
+      if (index === 0) return ['author:reply-1', 'author:reply-2'];
+      if (index === 1) return 0;
+      return false;
+    });
+
+    vi.spyOn(Core, 'buildPostReplyStreamId').mockReturnValue('stream:author:post-1');
+    const getOrFetchSpy = vi.spyOn(Core.StreamPostsController, 'getOrFetchStreamSlice').mockResolvedValue({
+      nextPageIds: Array.from({ length: 10 }, (_, index) => `author:reply-${index + 3}`),
+      timestamp: 0,
+      reachedEnd: false,
+    });
+
+    const { result } = renderHook(() => useThreadReplies('author:post-1'));
+
+    await act(async () => {
+      await result.current.expandAll();
+    });
+
+    expect(getOrFetchSpy).toHaveBeenCalled();
     expect(result.current.showAll).toBe(true);
     expect(result.current.hasMore).toBe(false);
   });

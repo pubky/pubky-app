@@ -62,7 +62,8 @@ describe('ThreadTree', () => {
       totalCount: 0,
       hasMore: false,
       showAll: false,
-      expandAll: vi.fn(),
+      isExpandingAll: false,
+      expandAll: vi.fn(async () => {}),
       loading: false,
       hasAnyNestedReplies: false,
     });
@@ -82,7 +83,8 @@ describe('ThreadTree', () => {
       totalCount: 0,
       hasMore: false,
       showAll: false,
-      expandAll: vi.fn(),
+      isExpandingAll: false,
+      expandAll: vi.fn(async () => {}),
       loading: false,
       hasAnyNestedReplies: false,
     });
@@ -102,7 +104,8 @@ describe('ThreadTree', () => {
       totalCount: 5,
       hasMore: true,
       showAll: false,
-      expandAll: vi.fn(),
+      isExpandingAll: false,
+      expandAll: vi.fn(async () => {}),
       loading: false,
       hasAnyNestedReplies: true,
     });
@@ -119,7 +122,7 @@ describe('ThreadTree', () => {
   });
 
   it('calls expandAll when show-more is clicked', () => {
-    const expandAll = vi.fn();
+    const expandAll = vi.fn(async () => {});
     vi.spyOn(Hooks, 'usePostNavigation').mockReturnValue({
       navigateToPost: vi.fn(),
     });
@@ -128,6 +131,7 @@ describe('ThreadTree', () => {
       totalCount: 2,
       hasMore: true,
       showAll: false,
+      isExpandingAll: false,
       expandAll,
       loading: false,
       hasAnyNestedReplies: false,
@@ -137,6 +141,26 @@ describe('ThreadTree', () => {
     fireEvent.click(screen.getByTestId('show-more-replies'));
 
     expect(expandAll).toHaveBeenCalledTimes(1);
+  });
+
+  it('hides show-more button while expand-all is in progress', () => {
+    vi.spyOn(Hooks, 'usePostNavigation').mockReturnValue({
+      navigateToPost: vi.fn(),
+    });
+    vi.spyOn(Hooks, 'useThreadReplies').mockReturnValue({
+      replyIds: ['author:reply-1'],
+      totalCount: 2,
+      hasMore: true,
+      showAll: true,
+      isExpandingAll: true,
+      expandAll: vi.fn(async () => {}),
+      loading: false,
+      hasAnyNestedReplies: false,
+    });
+
+    render(<ThreadTree postId="author:post-1" showQuickReply={false} />);
+
+    expect(screen.queryByTestId('show-more-replies')).not.toBeInTheDocument();
   });
 });
 
@@ -150,7 +174,8 @@ describe('ThreadTree - Snapshots', () => {
       totalCount: 2,
       hasMore: true,
       showAll: false,
-      expandAll: vi.fn(),
+      isExpandingAll: false,
+      expandAll: vi.fn(async () => {}),
       loading: false,
       hasAnyNestedReplies: false,
     });

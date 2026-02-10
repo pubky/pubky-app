@@ -17,7 +17,8 @@ import type { ThreadTreeProps } from './ThreadTree.types';
  */
 export function ThreadTree({ postId, showQuickReply = true }: ThreadTreeProps) {
   const { navigateToPost } = Hooks.usePostNavigation();
-  const { replyIds, hasMore, totalCount, expandAll, hasAnyNestedReplies } = Hooks.useThreadReplies(postId);
+  const { replyIds, hasMore, totalCount, isExpandingAll, expandAll, hasAnyNestedReplies } =
+    Hooks.useThreadReplies(postId);
 
   if (replyIds.length === 0 && !hasMore) {
     // No replies -- only show quick reply if enabled
@@ -51,7 +52,9 @@ export function ThreadTree({ postId, showQuickReply = true }: ThreadTreeProps) {
         })}
 
         {/* "+N more replies" button for Level 1 */}
-        {hasMore && <Molecules.ShowMoreReplies count={remaining} onClick={expandAll} isLast={!showQuickReply} />}
+        {hasMore && !isExpandingAll && (
+          <Molecules.ShowMoreReplies count={remaining} onClick={expandAll} isLast={!showQuickReply} />
+        )}
 
         {/* Quick reply at the end */}
         {showQuickReply && (

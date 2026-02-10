@@ -29,11 +29,12 @@ export function ReplyWithNested({
 }: ReplyWithNestedProps) {
   const { allLevel2Expanded } = Hooks.useThreadTreeContext();
 
-  const { nestedReplyIds, hasMoreReplies, hasNestedReplies, replyCount, expandAll } = Hooks.useNestedReplies(replyId, {
-    maxNestedReplies,
-    depth,
-    maxDepth,
-  });
+  const { nestedReplyIds, hasMoreReplies, hasNestedReplies, replyCount, isExpandingAll, expandAll } =
+    Hooks.useNestedReplies(replyId, {
+      maxNestedReplies,
+      depth,
+      maxDepth,
+    });
 
   // Level 2 section is visible when the global toggle is expanded AND there are nested replies
   const showNestedSection = allLevel2Expanded && hasNestedReplies;
@@ -85,7 +86,7 @@ export function ReplyWithNested({
             })}
 
             {/* Show "+N more replies" if there are more nested replies */}
-            {hasMoreReplies && (
+            {hasMoreReplies && !isExpandingAll && (
               <Molecules.ShowMoreReplies count={replyCount - nestedReplyIds.length} onClick={expandAll} isLast={true} />
             )}
           </Atoms.Container>

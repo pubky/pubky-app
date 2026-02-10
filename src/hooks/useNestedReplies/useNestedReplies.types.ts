@@ -38,7 +38,11 @@ export interface UseNestedRepliesResult {
    */
   showAll: boolean;
   /**
+   * Whether expand-all pagination is currently running
+   */
+  isExpandingAll: boolean;
+  /**
    * Expand to show all remaining nested replies inline
    */
-  expandAll: () => void;
+  expandAll: () => Promise<void>;
 }
