@@ -1,0 +1,313 @@
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
+
+exports[`ShowMoreReplies - Snapshots > matches snapshot with count of 1 1`] = `
+<div
+  class=""
+  data-testid="container"
+>
+  <div
+    class="flex h-3"
+    data-testid="container"
+  >
+    <div
+      class="w-3 border-l border-border"
+      data-testid="container"
+    />
+    <div
+      class="flex-1"
+      data-testid="container"
+    />
+  </div>
+  <div
+    class="relative flex min-w-0"
+    data-testid="container"
+  >
+    <div
+      class="flex w-3 shrink-0 flex-col items-start border-l border-border"
+      data-testid="container"
+      data-variant="regular"
+    >
+      <div
+        class="flex min-h-px min-w-3 shrink-0 grow basis-0 flex-col items-start"
+        data-testid="container"
+      >
+        <div
+          class="min-h-px w-full min-w-px shrink-0 grow basis-0"
+          data-testid="container"
+        />
+        <div
+          class="relative size-3 shrink-0"
+          data-testid="container"
+        >
+          <svg
+            class="block size-full fill-secondary"
+            fill="none"
+            height="12"
+            preserveAspectRatio="none"
+            viewBox="0 0 12 12"
+            width="12"
+            xmlns="http://www.w3.org/2000/svg"
+          >
+            <path
+              d="M1 0C1 6.07513 5.92487 11 12 11V12C5.37258 12 0 6.62742 0 0H1Z"
+            />
+          </svg>
+        </div>
+      </div>
+      <div
+        class="min-h-px w-3 min-w-px shrink-0 grow basis-0"
+        data-testid="container"
+      />
+    </div>
+    <div
+      class="flex-1"
+      data-testid="container"
+    >
+      <button
+        class="inline-flex items-center justify-center whitespace-nowrap transition-all disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg:not([class*=\\"size-\\"])]:size-4 shrink-0 [&_svg]:shrink-0 outline-none focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[3px] aria-invalid:ring-destructive/40 aria-invalid:border-destructive cursor-pointer border shadow-xs hover:text-accent-foreground hover:bg-accent/50 border-none h-8 has-[>svg]:px-2.5 gap-2 rounded-full px-3.5 py-2 text-xs font-bold text-foreground"
+        data-size="sm"
+        data-slot="button"
+        data-variant="ghost"
+        type="button"
+      >
+        <svg
+          aria-hidden="true"
+          class="lucide lucide-circle-plus size-6"
+          fill="none"
+          height="24"
+          stroke="currentColor"
+          stroke-linecap="round"
+          stroke-linejoin="round"
+          stroke-width="2"
+          viewBox="0 0 24 24"
+          width="24"
+          xmlns="http://www.w3.org/2000/svg"
+        >
+          <circle
+            cx="12"
+            cy="12"
+            r="10"
+          />
+          <path
+            d="M8 12h8"
+          />
+          <path
+            d="M12 8v8"
+          />
+        </svg>
+        <span>
+          {count, plural, one {# more reply} other {# more replies}}
+        </span>
+      </button>
+    </div>
+  </div>
+</div>
+`;
+
+exports[`ShowMoreReplies - Snapshots > matches snapshot with count of 5 1`] = `
+<div
+  class=""
+  data-testid="container"
+>
+  <div
+    class="flex h-3"
+    data-testid="container"
+  >
+    <div
+      class="w-3 border-l border-border"
+      data-testid="container"
+    />
+    <div
+      class="flex-1"
+      data-testid="container"
+    />
+  </div>
+  <div
+    class="relative flex min-w-0"
+    data-testid="container"
+  >
+    <div
+      class="flex w-3 shrink-0 flex-col items-start border-l border-border"
+      data-testid="container"
+      data-variant="regular"
+    >
+      <div
+        class="flex min-h-px min-w-3 shrink-0 grow basis-0 flex-col items-start"
+        data-testid="container"
+      >
+        <div
+          class="min-h-px w-full min-w-px shrink-0 grow basis-0"
+          data-testid="container"
+        />
+        <div
+          class="relative size-3 shrink-0"
+          data-testid="container"
+        >
+          <svg
+            class="block size-full fill-secondary"
+            fill="none"
+            height="12"
+            preserveAspectRatio="none"
+            viewBox="0 0 12 12"
+            width="12"
+            xmlns="http://www.w3.org/2000/svg"
+          >
+            <path
+              d="M1 0C1 6.07513 5.92487 11 12 11V12C5.37258 12 0 6.62742 0 0H1Z"
+            />
+          </svg>
+        </div>
+      </div>
+      <div
+        class="min-h-px w-3 min-w-px shrink-0 grow basis-0"
+        data-testid="container"
+      />
+    </div>
+    <div
+      class="flex-1"
+      data-testid="container"
+    >
+      <button
+        class="inline-flex items-center justify-center whitespace-nowrap transition-all disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg:not([class*=\\"size-\\"])]:size-4 shrink-0 [&_svg]:shrink-0 outline-none focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[3px] aria-invalid:ring-destructive/40 aria-invalid:border-destructive cursor-pointer border shadow-xs hover:text-accent-foreground hover:bg-accent/50 border-none h-8 has-[>svg]:px-2.5 gap-2 rounded-full px-3.5 py-2 text-xs font-bold text-foreground"
+        data-size="sm"
+        data-slot="button"
+        data-variant="ghost"
+        type="button"
+      >
+        <svg
+          aria-hidden="true"
+          class="lucide lucide-circle-plus size-6"
+          fill="none"
+          height="24"
+          stroke="currentColor"
+          stroke-linecap="round"
+          stroke-linejoin="round"
+          stroke-width="2"
+          viewBox="0 0 24 24"
+          width="24"
+          xmlns="http://www.w3.org/2000/svg"
+        >
+          <circle
+            cx="12"
+            cy="12"
+            r="10"
+          />
+          <path
+            d="M8 12h8"
+          />
+          <path
+            d="M12 8v8"
+          />
+        </svg>
+        <span>
+          {count, plural, one {# more reply} other {# more replies}}
+        </span>
+      </button>
+    </div>
+  </div>
+</div>
+`;
+
+exports[`ShowMoreReplies - Snapshots > matches snapshot with isLast=true 1`] = `
+<div
+  class=""
+  data-testid="container"
+>
+  <div
+    class="flex h-3"
+    data-testid="container"
+  >
+    <div
+      class="w-3 border-l border-border"
+      data-testid="container"
+    />
+    <div
+      class="flex-1"
+      data-testid="container"
+    />
+  </div>
+  <div
+    class="relative flex min-w-0"
+    data-testid="container"
+  >
+    <div
+      class="flex w-3 shrink-0 flex-col items-start"
+      data-testid="container"
+      data-variant="last"
+    >
+      <div
+        class="flex min-h-px w-full min-w-px shrink-0 grow basis-0 flex-col items-start"
+        data-testid="container"
+      >
+        <div
+          class="min-h-px w-full min-w-px shrink-0 grow basis-0 border-l border-border"
+          data-testid="container"
+        />
+        <div
+          class="relative size-3 shrink-0"
+          data-testid="container"
+        >
+          <svg
+            class="block size-full fill-secondary"
+            fill="none"
+            height="12"
+            preserveAspectRatio="none"
+            viewBox="0 0 12 12"
+            width="12"
+            xmlns="http://www.w3.org/2000/svg"
+          >
+            <path
+              d="M1 0C1 6.07513 5.92487 11 12 11V12C5.37258 12 0 6.62742 0 0H1Z"
+            />
+          </svg>
+        </div>
+      </div>
+      <div
+        class="min-h-px w-3 min-w-px shrink-0 grow basis-0"
+        data-testid="container"
+      />
+    </div>
+    <div
+      class="flex-1"
+      data-testid="container"
+    >
+      <button
+        class="inline-flex items-center justify-center whitespace-nowrap transition-all disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg:not([class*=\\"size-\\"])]:size-4 shrink-0 [&_svg]:shrink-0 outline-none focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[3px] aria-invalid:ring-destructive/40 aria-invalid:border-destructive cursor-pointer border shadow-xs hover:text-accent-foreground hover:bg-accent/50 border-none h-8 has-[>svg]:px-2.5 gap-2 rounded-full px-3.5 py-2 text-xs font-bold text-foreground"
+        data-size="sm"
+        data-slot="button"
+        data-variant="ghost"
+        type="button"
+      >
+        <svg
+          aria-hidden="true"
+          class="lucide lucide-circle-plus size-6"
+          fill="none"
+          height="24"
+          stroke="currentColor"
+          stroke-linecap="round"
+          stroke-linejoin="round"
+          stroke-width="2"
+          viewBox="0 0 24 24"
+          width="24"
+          xmlns="http://www.w3.org/2000/svg"
+        >
+          <circle
+            cx="12"
+            cy="12"
+            r="10"
+          />
+          <path
+            d="M8 12h8"
+          />
+          <path
+            d="M12 8v8"
+          />
+        </svg>
+        <span>
+          {count, plural, one {# more reply} other {# more replies}}
+        </span>
+      </button>
+    </div>
+  </div>
+</div>
+`;

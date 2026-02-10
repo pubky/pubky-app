@@ -75,7 +75,12 @@
     "links": "リンク",
     "tags": "タグ",
     "posts": "投稿",
-    "avatar": "アバター"
+    "avatar": "アバター",
+    "threadTree": {
+      "expandAllReplies": "すべての返信を展開",
+      "collapseAllReplies": "すべての返信を折りたたむ",
+      "moreReplies": "さらに{count}件の返信"
+    }
   },
   "header": {
     "home": "ホーム",
