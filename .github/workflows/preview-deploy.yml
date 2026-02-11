@@ -96,9 +96,6 @@ jobs:
         with:
           region: europe-west6
           metadata: preview-deploy-service-file.yml
-          flags: |
-            --allow-unauthenticated
-            --session-affinity
 
       - name: Find existing comment
         if: github.event_name == 'pull_request'
