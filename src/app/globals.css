@@ -313,6 +313,23 @@ body {
 }
 
 @layer components {
+  .preview-build-badge {
+    position: fixed;
+    right: 12px;
+    bottom: 12px;
+    z-index: 70;
+    border-radius: 9999px;
+    border: 1px solid color-mix(in oklab, var(--brand) 45%, white 55%);
+    background: color-mix(in oklab, var(--background) 85%, black 15%);
+    color: var(--brand);
+    padding: 6px 10px;
+    font-size: 12px;
+    font-weight: 700;
+    letter-spacing: 0.02em;
+    box-shadow: var(--shadow-md);
+    backdrop-filter: blur(3px);
+  }
+
   .bg-brand {
     background-color: var(--brand);
   }
