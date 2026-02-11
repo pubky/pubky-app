@@ -17,6 +17,7 @@ const nextConfig: NextConfig = {
       ...config.experiments,
       asyncWebAssembly: true,
     };
+
     return config;
   },
   // Turbopack config for WebAssembly dependencies

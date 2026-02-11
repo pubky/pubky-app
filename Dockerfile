@@ -65,7 +65,7 @@ ENV NEXT_STANDALONE=true
 RUN npm run build
 
 # Stage 3: Runner
-FROM node:lts-bookworm AS runner
+FROM node:lts-alpine AS runner
 
 WORKDIR /app
 
