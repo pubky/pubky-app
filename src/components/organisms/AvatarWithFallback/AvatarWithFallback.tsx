@@ -117,12 +117,13 @@ export function AvatarWithFallback({
         </>
       )}
       {/* Always render fallback - Radix shows it while image loads or if image fails */}
-      <Atoms.AvatarFallback className={fallbackClassName}>
+      <Atoms.AvatarFallback className={Libs.cn('overflow-hidden border-none', fallbackClassName)}>
         <Facehash
           name={resolvedFallbackSeed}
           size="100%"
           showInitial={false}
           colors={FACEHASH_AVATAR_COLORS}
+          enableBlink
           className="h-full w-full rounded-full"
           onRenderMouth={() => (
             <span data-testid="avatar-fallback-initial" style={{ fontSize: '26cqw', lineHeight: 1 }}>

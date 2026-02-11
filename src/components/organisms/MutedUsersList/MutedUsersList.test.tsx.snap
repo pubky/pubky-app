@@ -31,7 +31,7 @@ exports[`MutedUsersList - Snapshots > matches snapshot - with muted users 1`] = 
         class="relative flex shrink-0 overflow-hidden rounded-full h-10 w-10"
       >
         <span
-          class="flex h-full w-full items-center justify-center rounded-full border border-muted-foreground bg-muted overflow-hidden"
+          class="flex h-full w-full items-center justify-center rounded-full border border-muted-foreground bg-muted overflow-hidden border-none"
         >
           <div
             data-name="user-1"
@@ -108,7 +108,7 @@ exports[`MutedUsersList - Snapshots > matches snapshot - with muted users 1`] = 
         class="relative flex shrink-0 overflow-hidden rounded-full h-10 w-10"
       >
         <span
-          class="flex h-full w-full items-center justify-center rounded-full border border-muted-foreground bg-muted overflow-hidden"
+          class="flex h-full w-full items-center justify-center rounded-full border border-muted-foreground bg-muted overflow-hidden border-none"
         >
           <div
             data-name="user-2"
@@ -185,7 +185,7 @@ exports[`MutedUsersList - Snapshots > matches snapshot - with muted users 1`] = 
         class="relative flex shrink-0 overflow-hidden rounded-full h-10 w-10"
       >
         <span
-          class="flex h-full w-full items-center justify-center rounded-full border border-muted-foreground bg-muted overflow-hidden"
+          class="flex h-full w-full items-center justify-center rounded-full border border-muted-foreground bg-muted overflow-hidden border-none"
         >
           <div
             data-name="user-3"

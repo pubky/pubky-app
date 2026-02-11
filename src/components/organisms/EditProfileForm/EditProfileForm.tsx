@@ -148,12 +148,13 @@ export const EditProfileForm = () => {
                     }
                   />
                 ) : (
-                  <Atoms.AvatarFallback className="overflow-hidden text-4xl">
+                  <Atoms.AvatarFallback className="overflow-hidden border-none text-4xl">
                     <Facehash
                       name={avatarFallbackSeed}
                       size="100%"
                       showInitial={false}
                       colors={FACEHASH_AVATAR_COLORS}
+                      enableBlink
                       className="h-full w-full rounded-full"
                       onRenderMouth={() => (
                         <span style={{ fontSize: '26cqw', lineHeight: 1 }}>{avatarFallbackInitial}</span>

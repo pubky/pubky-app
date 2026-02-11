@@ -96,12 +96,13 @@ export function MutedUsersList() {
                   {mutedUser?.avatar && (
                     <Atoms.AvatarImage src={mutedUser.avatar} alt={mutedUser?.name ?? tCommon('user')} />
                   )}
-                  <Atoms.AvatarFallback className="overflow-hidden">
+                  <Atoms.AvatarFallback className="overflow-hidden border-none">
                     <Facehash
                       name={mutedUser?.id || mutedUser?.name || 'user'}
                       size="100%"
                       showInitial={false}
                       colors={FACEHASH_AVATAR_COLORS}
+                      enableBlink
                       className="h-full w-full rounded-full"
                       onRenderMouth={() => (
                         <span style={{ fontSize: '26cqw', lineHeight: 1 }}>

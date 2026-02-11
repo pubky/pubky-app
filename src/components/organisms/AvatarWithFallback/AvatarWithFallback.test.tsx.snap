@@ -6,7 +6,7 @@ exports[`AvatarWithFallback - Snapshots > matches snapshot when avatarUrl is not
   data-testid="avatar"
 >
   <div
-    class="text-2xl"
+    class="overflow-hidden border-none text-2xl"
     data-testid="avatar-fallback"
   >
     <div
@@ -37,6 +37,7 @@ exports[`AvatarWithFallback - Snapshots > matches snapshot when avatarUrl is pro
     src="https://cdn.example.com/avatar/6mfxozzqmb36rc9rgy3rykoyfghfao74n8igt5tf1boehproahoy"
   />
   <div
+    class="overflow-hidden border-none"
     data-testid="avatar-fallback"
   >
     <div
@@ -79,6 +80,7 @@ exports[`AvatarWithFallback - Snapshots > matches snapshot when image is blurred
     />
   </div>
   <div
+    class="overflow-hidden border-none"
     data-testid="avatar-fallback"
   >
     <div
@@ -109,6 +111,7 @@ exports[`AvatarWithFallback - Snapshots > matches snapshot with custom alt text 
     src="https://cdn.example.com/avatar/6mfxozzqmb36rc9rgy3rykoyfghfao74n8igt5tf1boehproahoy"
   />
   <div
+    class="overflow-hidden border-none"
     data-testid="avatar-fallback"
   >
     <div
@@ -139,6 +142,7 @@ exports[`AvatarWithFallback - Snapshots > matches snapshot with custom data-test
     src="https://cdn.example.com/avatar/6mfxozzqmb36rc9rgy3rykoyfghfao74n8igt5tf1boehproahoy"
   />
   <div
+    class="overflow-hidden border-none"
     data-testid="avatar-fallback"
   >
     <div
