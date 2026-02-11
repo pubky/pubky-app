@@ -6,6 +6,21 @@ import * as Config from '@/config';
  */
 const USER_ID_PATTERN = /^[a-z0-9]{52}$/;
 
+/**
+ * Shared palette used for all fallback facehash avatars across the app.
+ * The selected color remains deterministic per seed.
+ */
+export const FACEHASH_AVATAR_COLORS = [
+  '#ec4899',
+  '#f59e0b',
+  '#3b82f6',
+  '#f97316',
+  '#10b981',
+  '#8b5cf6',
+  '#ef4444',
+  '#14b8a6',
+];
+
 interface ResolveAvatarFallbackSeedProps {
   fallbackSeed?: string | null;
   avatarUrl?: string | null;

@@ -7,6 +7,7 @@ import * as Atoms from '@/atoms';
 import * as Libs from '@/libs';
 import * as Core from '@/core';
 import {
+  FACEHASH_AVATAR_COLORS,
   extractUserIdFromAvatarUrl,
   resolveAvatarFallbackSeed,
   resolveAvatarFallbackInitial,
@@ -121,6 +122,7 @@ export function AvatarWithFallback({
           name={resolvedFallbackSeed}
           size="100%"
           showInitial={false}
+          colors={FACEHASH_AVATAR_COLORS}
           className="h-full w-full rounded-full"
           onRenderMouth={() => (
             <span data-testid="avatar-fallback-initial" style={{ fontSize: '26cqw', lineHeight: 1 }}>

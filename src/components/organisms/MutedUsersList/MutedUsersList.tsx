@@ -8,6 +8,7 @@ import * as Libs from '@/libs';
 import * as Hooks from '@/hooks';
 import * as Molecules from '@/molecules';
 import { mapUserIdsToMutedUsers } from './MutedUsersList.utils';
+import { FACEHASH_AVATAR_COLORS } from '@/organisms/AvatarWithFallback/AvatarWithFallback.utils';
 
 export function MutedUsersList() {
   const t = useTranslations('mutedUsers');
@@ -100,6 +101,7 @@ export function MutedUsersList() {
                       name={mutedUser?.id || mutedUser?.name || 'user'}
                       size="100%"
                       showInitial={false}
+                      colors={FACEHASH_AVATAR_COLORS}
                       className="h-full w-full rounded-full"
                       onRenderMouth={() => (
                         <span style={{ fontSize: '26cqw', lineHeight: 1 }}>

@@ -9,6 +9,7 @@ import * as Hooks from '@/hooks';
 import * as Core from '@/core';
 import * as Config from '@/config';
 import { useTranslations } from 'next-intl';
+import { FACEHASH_AVATAR_COLORS } from '@/organisms/AvatarWithFallback/AvatarWithFallback.utils';
 
 export const CreateProfileForm = () => {
   const t = useTranslations('forms.profile');
@@ -148,6 +149,7 @@ export const CreateProfileForm = () => {
                       name={avatarFallbackSeed}
                       size="100%"
                       showInitial={false}
+                      colors={FACEHASH_AVATAR_COLORS}
                       className="h-full w-full rounded-full"
                       onRenderMouth={() => <span style={{ fontSize: '26cqw', lineHeight: 1 }}>{avatarFallbackInitial}</span>}
                     />
