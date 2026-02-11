@@ -404,36 +404,13 @@ export const checkPostIsNotAtTopOfFeed = ({
     });
 };
 
-// export const checkPostIsAtIndexInFeed = (postContent: string, index: number) => {
-//   cy.get('#posts-feed')
-//     .find('#timeline')
-//     .children()
-//     .should('have.length.gte', 1)
-//     .eq(index)
-//     .within(() => {
-//       cy.get('#post-content-text').innerTextShouldEq(postContent);
-//     });
-// };
-
-// TODO: revert to simpler implementation so we don't miss bugs with "Show n new posts" button appearing
 export const checkPostIsAtIndexInFeed = (postContent: string, index: number) => {
   cy.get('[data-cy="timeline-posts"]')
-    .should('have.descendants', '*')
     .children()
-    .then(($posts) => {
-      // Filter out "Show new posts" element
-      const actualPosts = $posts.filter((_, el) => {
-        const text = Cypress.$(el).text();
-        // Match "Show n new posts" or "n new post" patterns where n is a number
-        return !/\d+\s+new\s+posts?/i.test(text);
-      });
-
-      // Use the filtered collection to get the correct post
-      cy.wrap(actualPosts)
-        .eq(index)
-        .within(() => {
-          cy.get('[data-cy="post-text"]').innerTextShouldEq(postContent);
-        });
+    .should('have.length.gte', 1)
+    .eq(index)
+    .within(() => {
+      cy.get('[data-cy="post-text"]').innerTextShouldEq(postContent);
     });
 };
 

@@ -8,6 +8,7 @@ import {
   createPostFromDialog,
   deletePost,
   editPost,
+  fastTagPostInFeed,
   replyToPost,
   repostPost,
   MAX_POST_LENGTH,
@@ -252,11 +253,8 @@ describe('posts', () => {
 
     createQuickPost(postContent);
 
+    fastTagPostInFeed([tag1, tag2, tag3], postContent);
     cy.findFirstPostInFeedFiltered(postContent, CheckForNewPosts.No, WaitForNewPosts.Yes).within(() => {
-      cy.get('[data-cy="post-tag-add-button"]').click();
-      [tag1, tag2, tag3].forEach((tag) => {
-        cy.get('[data-cy="add-tag-input"]').type(`${tag}{enter}`);
-      });
       [tag1, tag2, tag3].forEach((tag) => {
         cy.contains('button', tag).should('be.visible').find('[data-cy="post-tag-count"]').should('have.text', '1');
       });
