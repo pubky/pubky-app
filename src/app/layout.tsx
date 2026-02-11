@@ -34,9 +34,6 @@ export default async function RootLayout({ children }: { children: React.ReactNo
         <Providers.ErrorBoundaryProvider>
           <Providers.DatabaseProvider>
             <Providers.RouteGuardProvider>
-              <div className="preview-build-badge" data-testid="preview-build-badge">
-                Preview marker (remove before merge)
-              </div>
               <Organisms.CoordinatorsManager />
               <Organisms.Header />
               {children}
