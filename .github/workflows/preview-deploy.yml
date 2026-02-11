@@ -74,6 +74,9 @@ jobs:
       contents: read
       pull-requests: write
     steps:
+      - name: Checkout this repository
+        uses: actions/checkout@v4
+
       - name: Authenticate to GCP
         uses: google-github-actions/auth@v2
         with:
@@ -83,14 +86,14 @@ jobs:
         run: |
           IMAGE_FULL_PATH=${{ env.REGISTRY }}/${{ needs.build-preview.outputs.image_name }}:${{ needs.build-preview.outputs.image_tag }}
           SERVICE=${{ needs.set-vars.outputs.service_name }}
-          yq -i '.metadata.name = env(SERVICE)' .github/workflows/preview-deploy-service-file.yml
-          yq -i '.spec.template.spec.containers[1].image = env(IMAGE_FULL_PATH)' .github/workflows/preview-deploy-service-file.yml
+          yq -i '.metadata.name = env(SERVICE)' preview-deploy-service-file.yml
+          yq -i '.spec.template.spec.containers[1].image = env(IMAGE_FULL_PATH)' preview-deploy-service-file.yml
 
       - name: Deploy to Cloud Run
         id: deploy
         uses: google-github-actions/deploy-cloudrun@v2
         with:
-          metadata: ./preview-deploy-service-file.yml
+          metadata: preview-deploy-service-file.yml
 
       - name: Find existing comment
         if: github.event_name == 'pull_request'
