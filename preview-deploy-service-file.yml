@@ -6,6 +6,8 @@ metadata:
     cloud.googleapis.com/location: europe-west6
     run.googleapis.com/satisfiesPzs: 'true'
     managed-by: github-actions
+  annotations:
+    run.googleapis.com/maxScale: '25'
 
 spec:
   template:
@@ -14,10 +16,11 @@ spec:
         run.googleapis.com/startupProbeType: Default
       annotations:
         autoscaling.knative.dev/maxScale: '2'
-        run.googleapis.com/sessionAffinity: 'true'
+        run.googleapis.com/invoker-iam-disabled: 'true'
         run.googleapis.com/container-dependencies: '{"nginx":["franky-preview-1"]}'
         run.googleapis.com/cpu-throttling: 'true'
         run.googleapis.com/startup-cpu-boost: 'true'
+        run.googleapis.com/sessionAffinity: 'true'
     spec:
       containerConcurrency: 80
       timeoutSeconds: 300
