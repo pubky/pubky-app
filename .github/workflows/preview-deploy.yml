@@ -94,6 +94,7 @@ jobs:
             --max-instances=2
             --port=3000
             --cpu-throttling
+            --session-affinity
 
       - name: Find existing comment
         if: github.event_name == 'pull_request'
