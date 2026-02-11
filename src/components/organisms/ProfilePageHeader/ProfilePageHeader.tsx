@@ -94,7 +94,13 @@ export function ProfilePageHeader({ profile, actions, isOwnProfile = true, userI
                 <Icons.Pencil className="size-4" />
                 {t('edit')}
               </Atoms.Button>
-              <Atoms.Button className="uppercase" variant="secondary" size="sm" onClick={onCopyPublicKey}>
+              <Atoms.Button
+                data-cy="profile-copy-pubkey-btn"
+                className="uppercase"
+                variant="secondary"
+                size="sm"
+                onClick={onCopyPublicKey}
+              >
                 <Icons.KeyRound className="size-4" />
                 {formattedPublicKey}
               </Atoms.Button>
@@ -163,7 +169,13 @@ export function ProfilePageHeader({ profile, actions, isOwnProfile = true, userI
                   )}
                 </Atoms.Button>
               )}
-              <Atoms.Button className="uppercase" variant="secondary" size="sm" onClick={onCopyPublicKey}>
+              <Atoms.Button
+                data-cy="profile-copy-pubkey-btn"
+                className="uppercase"
+                variant="secondary"
+                size="sm"
+                onClick={onCopyPublicKey}
+              >
                 <Icons.KeyRound className="size-4" />
                 {formattedPublicKey}
               </Atoms.Button>
@@ -175,7 +187,7 @@ export function ProfilePageHeader({ profile, actions, isOwnProfile = true, userI
               <Organisms.ProfileMenuActions
                 userId={publicKey}
                 trigger={
-                  <Atoms.Button variant="secondary" size="sm" aria-label="Profile actions">
+                  <Atoms.Button data-cy="profile-menu-btn" variant="secondary" size="sm" aria-label="Profile actions">
                     <Libs.Ellipsis className="size-4" />
                   </Atoms.Button>
                 }

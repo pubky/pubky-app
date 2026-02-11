@@ -188,6 +188,7 @@ exports[`Header Components - Snapshots > matches snapshot for HeaderNavigationBu
 >
   <a
     class="cursor-pointer hover:text-brand/80 transition-colors text-brand text-sm"
+    data-cy="header-home-btn"
     href="/home"
   >
     <button
@@ -221,6 +222,7 @@ exports[`Header Components - Snapshots > matches snapshot for HeaderNavigationBu
   </a>
   <a
     class="cursor-pointer hover:text-brand/80 transition-colors text-brand text-sm"
+    data-cy="header-hot-btn"
     href="/hot"
   >
     <button
@@ -251,6 +253,7 @@ exports[`Header Components - Snapshots > matches snapshot for HeaderNavigationBu
   </a>
   <a
     class="cursor-pointer hover:text-brand/80 transition-colors text-brand text-sm"
+    data-cy="header-bookmarks-btn"
     href="/bookmarks"
   >
     <button
@@ -281,6 +284,7 @@ exports[`Header Components - Snapshots > matches snapshot for HeaderNavigationBu
   </a>
   <a
     class="cursor-pointer hover:text-brand/80 transition-colors text-brand text-sm"
+    data-cy="header-settings-btn"
     href="/settings/account"
   >
     <button
@@ -338,6 +342,7 @@ exports[`Header Components - Snapshots > matches snapshot for HeaderNavigationBu
 >
   <a
     class="cursor-pointer hover:text-brand/80 transition-colors text-brand text-sm"
+    data-cy="header-home-btn"
     href="/home"
   >
     <button
@@ -371,6 +376,7 @@ exports[`Header Components - Snapshots > matches snapshot for HeaderNavigationBu
   </a>
   <a
     class="cursor-pointer hover:text-brand/80 transition-colors text-brand text-sm"
+    data-cy="header-hot-btn"
     href="/hot"
   >
     <button
@@ -401,6 +407,7 @@ exports[`Header Components - Snapshots > matches snapshot for HeaderNavigationBu
   </a>
   <a
     class="cursor-pointer hover:text-brand/80 transition-colors text-brand text-sm"
+    data-cy="header-bookmarks-btn"
     href="/bookmarks"
   >
     <button
@@ -431,6 +438,7 @@ exports[`Header Components - Snapshots > matches snapshot for HeaderNavigationBu
   </a>
   <a
     class="cursor-pointer hover:text-brand/80 transition-colors text-brand text-sm"
+    data-cy="header-settings-btn"
     href="/settings/account"
   >
     <button
@@ -520,6 +528,7 @@ exports[`Header Components - Snapshots > matches snapshot for HeaderSignIn 1`] =
   >
     <a
       class="cursor-pointer hover:text-brand/80 transition-colors text-brand text-sm"
+      data-cy="header-home-btn"
       href="/home"
     >
       <button
@@ -553,6 +562,7 @@ exports[`Header Components - Snapshots > matches snapshot for HeaderSignIn 1`] =
     </a>
     <a
       class="cursor-pointer hover:text-brand/80 transition-colors text-brand text-sm"
+      data-cy="header-hot-btn"
       href="/hot"
     >
       <button
@@ -583,6 +593,7 @@ exports[`Header Components - Snapshots > matches snapshot for HeaderSignIn 1`] =
     </a>
     <a
       class="cursor-pointer hover:text-brand/80 transition-colors text-brand text-sm"
+      data-cy="header-bookmarks-btn"
       href="/bookmarks"
     >
       <button
@@ -613,6 +624,7 @@ exports[`Header Components - Snapshots > matches snapshot for HeaderSignIn 1`] =
     </a>
     <a
       class="cursor-pointer hover:text-brand/80 transition-colors text-brand text-sm"
+      data-cy="header-settings-btn"
       href="/settings/account"
     >
       <button

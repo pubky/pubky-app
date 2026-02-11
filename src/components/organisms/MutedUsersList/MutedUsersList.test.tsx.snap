@@ -3,6 +3,7 @@
 exports[`MutedUsersList - Snapshots > matches snapshot - empty state 1`] = `
 <div
   class="inline-flex w-full flex-col gap-6"
+  data-cy="muted-users-root"
   data-testid="container"
 >
   <p
@@ -17,6 +18,7 @@ exports[`MutedUsersList - Snapshots > matches snapshot - empty state 1`] = `
 exports[`MutedUsersList - Snapshots > matches snapshot - with muted users 1`] = `
 <div
   class="inline-flex w-full flex-col gap-6"
+  data-cy="muted-users-root"
   data-testid="container"
 >
   <div
