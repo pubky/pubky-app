@@ -87,6 +87,20 @@ vi.mock('@/molecules', () => ({
   })),
 }));
 
+// Mock Core.useLocalFilesStore
+const mockSetPostAttachments = vi.fn();
+vi.mock('@/core', () => ({
+  useLocalFilesStore: {
+    getState: vi.fn(() => ({
+      setPostAttachments: mockSetPostAttachments,
+    })),
+  },
+}));
+
+// Mock URL.createObjectURL
+const mockCreateObjectURL = vi.fn((file: File) => `blob:${file.name}`);
+global.URL.createObjectURL = mockCreateObjectURL;
+
 describe('usePostInput', () => {
   beforeEach(() => {
     vi.clearAllMocks();
@@ -98,6 +112,8 @@ describe('usePostInput', () => {
     mockIsSubmitting = false;
     mockRepost.mockClear();
     mockEdit.mockClear();
+    mockSetPostAttachments.mockClear();
+    mockCreateObjectURL.mockClear();
   });
 
   describe('initial state', () => {
@@ -586,6 +602,69 @@ describe('usePostInput', () => {
       });
 
       expect(mockPrependPosts).toHaveBeenCalledWith('created-post-id');
+      expect(mockOnSuccess).toHaveBeenCalledWith('created-post-id');
+    });
+
+    it('stores local attachments when submission succeeds with attachments', async () => {
+      mockContent = 'Test content with attachments';
+      const imageFile = new File(['image content'], 'test-image.png', { type: 'image/png' });
+      const videoFile = new File(['video content'], 'test-video.mp4', { type: 'video/mp4' });
+      mockAttachments = [imageFile, videoFile];
+
+      mockPost.mockImplementation(async ({ onSuccess }) => {
+        onSuccess('created-post-id');
+      });
+
+      const mockOnSuccess = vi.fn();
+      const { result } = renderHook(() =>
+        usePostInput({
+          variant: 'post',
+          onSuccess: mockOnSuccess,
+        }),
+      );
+
+      await act(async () => {
+        await result.current.handleSubmit();
+      });
+
+      expect(mockCreateObjectURL).toHaveBeenCalledTimes(2);
+      expect(mockSetPostAttachments).toHaveBeenCalledWith('created-post-id', [
+        {
+          type: 'image/png',
+          name: 'test-image.png',
+          urls: { main: 'blob:test-image.png', feed: 'blob:test-image.png' },
+        },
+        {
+          type: 'video/mp4',
+          name: 'test-video.mp4',
+          urls: { main: 'blob:test-video.mp4', feed: undefined },
+        },
+      ]);
+      expect(mockOnSuccess).toHaveBeenCalledWith('created-post-id');
+    });
+
+    it('does not store local attachments when submission succeeds without attachments', async () => {
+      mockContent = 'Test content without attachments';
+      mockAttachments = [];
+
+      mockPost.mockImplementation(async ({ onSuccess }) => {
+        onSuccess('created-post-id');
+      });
+
+      const mockOnSuccess = vi.fn();
+      const { result } = renderHook(() =>
+        usePostInput({
+          variant: 'post',
+          onSuccess: mockOnSuccess,
+        }),
+      );
+
+      await act(async () => {
+        await result.current.handleSubmit();
+      });
+
+      expect(mockCreateObjectURL).not.toHaveBeenCalled();
+      expect(mockSetPostAttachments).not.toHaveBeenCalled();
       expect(mockOnSuccess).toHaveBeenCalledWith('created-post-id');
     });
 

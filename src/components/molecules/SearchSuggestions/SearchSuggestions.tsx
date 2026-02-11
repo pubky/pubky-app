@@ -11,7 +11,6 @@ export function SearchSuggestions({
   id,
   'aria-label': ariaLabel,
   hotTags,
-  inputValue,
   hasInput,
   autocompleteTags = [],
   autocompleteUsers = [],
@@ -19,7 +18,6 @@ export function SearchSuggestions({
   recentTags = [],
   onTagClick,
   onUserClick,
-  onSearchAsTagClick,
   onClearRecentSearches,
 }: SearchSuggestionsProps) {
   const t = useTranslations('search.sections');
@@ -29,7 +27,6 @@ export function SearchSuggestions({
   const displayRecentTags = hasInput ? [] : (recentTags || []).slice(0, MAX_RECENT_SEARCHES);
 
   // Derive boolean flags for readability
-  const hasSearchQuery = hasInput && inputValue.trim().length > 0;
   const hasAutocompleteTags = hasInput && autocompleteTags.length > 0;
   const hasAutocompleteUsers = hasInput && autocompleteUsers.length > 0;
   const hasRecentUsers = !hasInput && displayRecentUsers.length > 0;
@@ -42,9 +39,6 @@ export function SearchSuggestions({
 
     return (
       <>
-        {hasSearchQuery && onSearchAsTagClick && (
-          <Molecules.SearchAsTagLink query={inputValue} onClick={onSearchAsTagClick} />
-        )}
         {hasAutocompleteTags && (
           <Molecules.SearchTagSection title={t('tags')} tags={autocompleteTags} onTagClick={onTagClick} />
         )}

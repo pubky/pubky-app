@@ -84,7 +84,6 @@ export * from './SearchUsersSection';
 export * from './SearchRecentItem';
 export * from './SearchRecentUserItem';
 export * from './SearchRecentSection';
-export * from './SearchAsTagLink';
 export * from './SearchSuggestions';
 export * from './SearchInputBar';
 export * from './SettingsDivider';

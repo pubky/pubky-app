@@ -6,6 +6,7 @@ import { useDebounceCallback } from 'usehooks-ts';
 import { useTranslations } from 'next-intl';
 import * as Hooks from '@/hooks';
 import * as Molecules from '@/molecules';
+import * as Core from '@/core';
 import {
   POST_MAX_CHARACTER_LENGTH,
   ATTACHMENT_MAX_IMAGE_SIZE,
@@ -172,6 +173,16 @@ export function usePostInput({
 
     // Wrapper that prepends to timeline and calls original onSuccess
     const handleSuccess = (createdPostId: string) => {
+      if (attachments.length) {
+        const localAttachments = attachments.map((a) => {
+          const url = URL.createObjectURL(a);
+          const isImage = a.type.startsWith('image');
+          return { type: a.type, name: a.name, urls: { main: url, feed: isImage ? url : undefined } };
+        });
+
+        Core.useLocalFilesStore.getState().setPostAttachments(createdPostId, localAttachments);
+      }
+
       // Only prepend to timeline for posts and reposts, not replies or edits
       if (variant !== POST_INPUT_VARIANT.REPLY && variant !== POST_INPUT_VARIANT.EDIT) {
         timelineFeed?.prependPosts(createdPostId);
