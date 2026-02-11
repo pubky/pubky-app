@@ -64,7 +64,12 @@ vi.mock('@/molecules', () => ({
     fallbackSeed?: string;
   }) =>
     open ? (
-      <div data-testid="avatar-zoom-modal" data-avatar-url={avatarUrl} data-name={name} data-fallback-seed={fallbackSeed}>
+      <div
+        data-testid="avatar-zoom-modal"
+        data-avatar-url={avatarUrl}
+        data-name={name}
+        data-fallback-seed={fallbackSeed}
+      >
         <button data-testid="modal-close" onClick={onClose}>
           Close
         </button>

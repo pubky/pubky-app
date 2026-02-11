@@ -3,13 +3,7 @@ import { render, screen, fireEvent, act, waitFor } from '@testing-library/react'
 import { MutedUsersList } from './MutedUsersList';
 
 vi.mock('facehash', () => ({
-  Facehash: ({
-    name,
-    onRenderMouth,
-  }: {
-    name: string;
-    onRenderMouth?: () => React.ReactNode;
-  }) => (
+  Facehash: ({ name, onRenderMouth }: { name: string; onRenderMouth?: () => React.ReactNode }) => (
     <div data-testid="facehash" data-name={name}>
       {onRenderMouth?.()}
     </div>

@@ -5,13 +5,7 @@ import { CreateProfileForm } from './CreateProfileForm';
 import * as App from '@/app';
 
 vi.mock('facehash', () => ({
-  Facehash: ({
-    name,
-    onRenderMouth,
-  }: {
-    name: string;
-    onRenderMouth?: () => React.ReactNode;
-  }) => (
+  Facehash: ({ name, onRenderMouth }: { name: string; onRenderMouth?: () => React.ReactNode }) => (
     <div data-testid="facehash" data-name={name}>
       {onRenderMouth?.()}
     </div>
