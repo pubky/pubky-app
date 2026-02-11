@@ -2,7 +2,6 @@ apiVersion: serving.knative.dev/v1
 kind: Service
 metadata:
   name: SHOULD_BE_CHANGED
-  generation: 2
   labels:
     cloud.googleapis.com/location: europe-west6
     run.googleapis.com/satisfiesPzs: 'true'
