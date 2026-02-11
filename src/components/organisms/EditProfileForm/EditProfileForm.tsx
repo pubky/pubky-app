@@ -155,7 +155,7 @@ export const EditProfileForm = () => {
                       showInitial={false}
                       colors={FACEHASH_AVATAR_COLORS}
                       enableBlink
-                      className="h-full w-full rounded-full"
+                      className="h-full w-full rounded-full text-background"
                       onRenderMouth={() => (
                         <span style={{ fontSize: '26cqw', lineHeight: 1 }}>{avatarFallbackInitial}</span>
                       )}

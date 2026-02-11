@@ -103,7 +103,7 @@ export function MutedUsersList() {
                       showInitial={false}
                       colors={FACEHASH_AVATAR_COLORS}
                       enableBlink
-                      className="h-full w-full rounded-full"
+                      className="h-full w-full rounded-full text-background"
                       onRenderMouth={() => (
                         <span style={{ fontSize: '26cqw', lineHeight: 1 }}>
                           {Libs.extractInitials({ name: mutedUser?.name || '', maxLength: 1 }) ||

@@ -10,7 +10,7 @@ exports[`AvatarWithFallback - Snapshots > matches snapshot when avatarUrl is not
     data-testid="avatar-fallback"
   >
     <div
-      class="h-full w-full rounded-full"
+      class="h-full w-full rounded-full text-background"
       data-name="Jane Smith"
       data-testid="facehash"
     >
@@ -41,7 +41,7 @@ exports[`AvatarWithFallback - Snapshots > matches snapshot when avatarUrl is pro
     data-testid="avatar-fallback"
   >
     <div
-      class="h-full w-full rounded-full"
+      class="h-full w-full rounded-full text-background"
       data-name="6mfxozzqmb36rc9rgy3rykoyfghfao74n8igt5tf1boehproahoy"
       data-testid="facehash"
     >
@@ -84,7 +84,7 @@ exports[`AvatarWithFallback - Snapshots > matches snapshot when image is blurred
     data-testid="avatar-fallback"
   >
     <div
-      class="h-full w-full rounded-full"
+      class="h-full w-full rounded-full text-background"
       data-name="6mfxozzqmb36rc9rgy3rykoyfghfao74n8igt5tf1boehproahoy"
       data-testid="facehash"
     >
@@ -115,7 +115,7 @@ exports[`AvatarWithFallback - Snapshots > matches snapshot with custom alt text 
     data-testid="avatar-fallback"
   >
     <div
-      class="h-full w-full rounded-full"
+      class="h-full w-full rounded-full text-background"
       data-name="6mfxozzqmb36rc9rgy3rykoyfghfao74n8igt5tf1boehproahoy"
       data-testid="facehash"
     >
@@ -146,7 +146,7 @@ exports[`AvatarWithFallback - Snapshots > matches snapshot with custom data-test
     data-testid="avatar-fallback"
   >
     <div
-      class="h-full w-full rounded-full"
+      class="h-full w-full rounded-full text-background"
       data-name="6mfxozzqmb36rc9rgy3rykoyfghfao74n8igt5tf1boehproahoy"
       data-testid="facehash"
     >
