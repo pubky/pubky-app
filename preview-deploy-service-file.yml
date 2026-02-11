@@ -2,15 +2,19 @@ apiVersion: serving.knative.dev/v1
 kind: Service
 metadata:
   name: SHOULD_BE_CHANGED
+  generation: 2
+  labels:
+    cloud.googleapis.com/location: europe-west6
+    run.googleapis.com/satisfiesPzs: 'true'
+    managed-by: github-actions
+
 spec:
   template:
     metadata:
       labels:
         run.googleapis.com/startupProbeType: Default
-        cloud.googleapis.com/location: europe-west6
       annotations:
         autoscaling.knative.dev/maxScale: '2'
-        run.googleapis.com/client-name: gcloud
         run.googleapis.com/sessionAffinity: 'true'
         run.googleapis.com/container-dependencies: '{"nginx":["franky-preview-1"]}'
         run.googleapis.com/cpu-throttling: 'true'
@@ -18,7 +22,6 @@ spec:
     spec:
       containerConcurrency: 80
       timeoutSeconds: 300
-      serviceAccountName: 327398728432-compute@developer.gserviceaccount.com
       containers:
         - name: nginx
           image: >-
@@ -48,6 +51,3 @@ spec:
             failureThreshold: 1
             tcpSocket:
               port: 3000
-  traffic:
-    - percent: 100
-      latestRevision: true
