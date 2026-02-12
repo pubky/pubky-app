@@ -62,6 +62,7 @@ exports[`MutedUsers - Snapshots > matches snapshot with loading state 1`] = `
   >
     <div
       class="inline-flex w-full flex-col gap-6"
+      data-cy="muted-users-root"
       data-testid="container"
     >
       <div
@@ -142,6 +143,7 @@ exports[`MutedUsers - Snapshots > matches snapshot with muted users 1`] = `
   >
     <div
       class="inline-flex w-full flex-col gap-6"
+      data-cy="muted-users-root"
       data-testid="container"
     >
       <div
@@ -378,6 +380,7 @@ exports[`MutedUsers - Snapshots > matches snapshot with no muted users 1`] = `
   >
     <div
       class="inline-flex w-full flex-col gap-6"
+      data-cy="muted-users-root"
       data-testid="container"
     >
       <p

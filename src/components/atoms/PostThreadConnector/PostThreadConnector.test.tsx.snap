@@ -47,7 +47,7 @@ exports[`PostThreadConnector > Snapshots > matches snapshot with large height 1`
       data-override-defaults="true"
     />
     <div
-      class="relative size-3 shrink-0"
+      class="relative -ml-px size-3 shrink-0"
       data-override-defaults="true"
     >
       <svg
@@ -129,7 +129,7 @@ exports[`PostThreadConnector > Snapshots > matches snapshot with regular variant
       data-override-defaults="true"
     />
     <div
-      class="relative size-3 shrink-0"
+      class="relative -ml-px size-3 shrink-0"
       data-override-defaults="true"
     >
       <svg
@@ -170,7 +170,7 @@ exports[`PostThreadConnector > Snapshots > matches snapshot with small height 1`
       data-override-defaults="true"
     />
     <div
-      class="relative size-3 shrink-0"
+      class="relative -ml-px size-3 shrink-0"
       data-override-defaults="true"
     >
       <svg

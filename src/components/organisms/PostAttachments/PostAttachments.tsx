@@ -6,7 +6,7 @@ import * as Molecules from '@/molecules';
 import { useEffect, useState } from 'react';
 import type { AttachmentConstructed, PostAttachmentsProps } from './PostAttachments.types';
 
-export const PostAttachments = ({ attachments }: PostAttachmentsProps) => {
+export const PostAttachments = ({ attachments, localAttachments }: PostAttachmentsProps) => {
   const [imagesAndVideos, setImagesAndVideos] = useState<AttachmentConstructed[]>([]);
   const [audios, setAudios] = useState<AttachmentConstructed[]>([]);
   const [genericFiles, setGenericFiles] = useState<AttachmentConstructed[]>([]);
@@ -68,8 +68,39 @@ export const PostAttachments = ({ attachments }: PostAttachmentsProps) => {
       }
     };
 
-    constructAttachments();
-  }, [attachments, toast]);
+    const constructLocalAttachments = () => {
+      if (!localAttachments?.length) return;
+
+      const imagesAndVideos: AttachmentConstructed[] = [];
+      const audios: AttachmentConstructed[] = [];
+      const genericFiles: AttachmentConstructed[] = [];
+
+      localAttachments.forEach((a) => {
+        const isImage = a.type.startsWith('image');
+        const isVideo = a.type.startsWith('video');
+        const isAudio = a.type.startsWith('audio');
+
+        if (isImage || isVideo) {
+          imagesAndVideos.push(a);
+        } else if (isAudio) {
+          audios.push(a);
+        } else {
+          genericFiles.push(a);
+        }
+      });
+
+      setImagesAndVideos(imagesAndVideos);
+      setAudios(audios);
+      setGenericFiles(genericFiles);
+    };
+
+    if (localAttachments) {
+      constructLocalAttachments();
+    } else {
+      constructAttachments();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- toast is an external side-effect, not a dependency
+  }, [attachments, localAttachments]);
 
   if (!imagesAndVideos.length && !audios.length && !genericFiles.length) return null;
 

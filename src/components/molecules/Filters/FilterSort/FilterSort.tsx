@@ -28,6 +28,7 @@ export function FilterSort({
       selectedValue={selectedTab}
       defaultValue={defaultSelectedTab}
       onChange={onTabChange}
+      dataCy="filter-sort-radiogroup"
     />
   );
 }

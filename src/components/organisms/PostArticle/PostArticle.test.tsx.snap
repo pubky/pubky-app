@@ -74,6 +74,80 @@ exports[`PostArticle > Snapshots > matches snapshot with custom className 1`] = 
 </div>
 `;
 
+exports[`PostArticle > Snapshots > matches snapshot with local cover image 1`] = `
+<div>
+  <div
+    class="justify-between gap-6 lg:flex-row"
+    data-testid="container"
+  >
+    <div
+      class="gap-y-1"
+      data-testid="container"
+    >
+      <span
+        class="wrap-anywhere hyphens-auto"
+        data-size="lg"
+        data-testid="typography"
+      >
+        Test Article Title
+      </span>
+      <div
+        class="text-muted-foreground"
+        data-is-article="true"
+        data-testid="post-text"
+      >
+        This is the article body content.
+      </div>
+    </div>
+    <img
+      alt="Local Cover Image"
+      class="h-25 w-45 rounded-md object-cover object-center"
+      data-testid="cover-image"
+      height="100"
+      src="blob:http://localhost/local-cover-image"
+      width="180"
+    />
+  </div>
+</div>
+`;
+
+exports[`PostArticle > Snapshots > matches snapshot with local video attachment falling back to hook image 1`] = `
+<div>
+  <div
+    class="justify-between gap-6 lg:flex-row"
+    data-testid="container"
+  >
+    <div
+      class="gap-y-1"
+      data-testid="container"
+    >
+      <span
+        class="wrap-anywhere hyphens-auto"
+        data-size="lg"
+        data-testid="typography"
+      >
+        Test Article Title
+      </span>
+      <div
+        class="text-muted-foreground"
+        data-is-article="true"
+        data-testid="post-text"
+      >
+        This is the article body content.
+      </div>
+    </div>
+    <img
+      alt="Cover Image"
+      class="h-25 w-45 rounded-md object-cover object-center"
+      data-testid="cover-image"
+      height="100"
+      src="https://example.com/cover-image.jpg"
+      width="180"
+    />
+  </div>
+</div>
+`;
+
 exports[`PostArticle > Snapshots > matches snapshot with long title and body 1`] = `
 <div>
   <div

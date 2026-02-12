@@ -1,6 +1,7 @@
 'use client';
 
 import type { PostDetailsModel } from '@/core';
+import type { AttachmentConstructed } from '../PostAttachments/PostAttachments.types';
 import * as Atoms from '@/atoms';
 import * as Molecules from '@/molecules';
 import * as Core from '@/core';
@@ -10,15 +11,22 @@ import * as Hooks from '@/hooks';
 interface PostArticleProps {
   content: string;
   attachments: PostDetailsModel['attachments'];
+  localAttachments: AttachmentConstructed[] | undefined;
   className?: string;
 }
 
-export const PostArticle = ({ content, attachments, className }: PostArticleProps) => {
+export const PostArticle = ({ content, attachments, localAttachments, className }: PostArticleProps) => {
   const { title, body, coverImage } = Hooks.usePostArticle({
     content,
     attachments,
     coverImageVariant: Core.FileVariant.FEED,
   });
+
+  const localCoverImage = localAttachments?.[0]?.type.startsWith('image')
+    ? { src: localAttachments[0].urls.main, alt: localAttachments[0].name }
+    : null;
+
+  const finalCoverImage = localCoverImage || coverImage;
 
   return (
     <Atoms.Container className={Libs.cn('justify-between gap-6 lg:flex-row', className)}>
@@ -30,10 +38,10 @@ export const PostArticle = ({ content, attachments, className }: PostArticleProp
         <Molecules.PostText content={body} isArticle className="text-muted-foreground" />
       </Atoms.Container>
 
-      {coverImage && (
+      {finalCoverImage && (
         <Atoms.Image
-          src={coverImage.src}
-          alt={coverImage.alt}
+          src={finalCoverImage.src}
+          alt={finalCoverImage.alt}
           className="h-25 w-45 rounded-md object-cover object-center"
           width={180}
           height={100}

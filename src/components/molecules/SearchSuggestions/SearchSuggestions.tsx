@@ -27,7 +27,6 @@ export function SearchSuggestions({
   const displayRecentTags = hasInput ? [] : (recentTags || []).slice(0, MAX_RECENT_SEARCHES);
 
   // Derive boolean flags for readability
-
   const hasAutocompleteTags = hasInput && autocompleteTags.length > 0;
   const hasAutocompleteUsers = hasInput && autocompleteUsers.length > 0;
   const hasRecentUsers = !hasInput && displayRecentUsers.length > 0;

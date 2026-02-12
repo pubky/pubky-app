@@ -38,6 +38,14 @@ export const SinglePostArticle = ({ postId, content, attachments, isBlurred }: S
     coverImageVariant: Core.FileVariant.MAIN,
   });
 
+  const localAttachments = Core.useLocalFilesStore((s) => s.posts[postId]);
+
+  const localCoverImage = localAttachments?.[0]?.type.startsWith('image')
+    ? { src: localAttachments[0].urls.main, alt: localAttachments[0].name }
+    : null;
+
+  const finalCoverImage = localCoverImage || coverImage;
+
   return (
     <>
       <Atoms.Container className="mb-6 grid grid-cols-1 gap-6 lg:grid-cols-3">
@@ -60,8 +68,8 @@ export const SinglePostArticle = ({ postId, content, attachments, isBlurred }: S
             <Organisms.PostContentBlurred postId={postId} />
           ) : (
             <>
-              {coverImage && (
-                <Atoms.Image src={coverImage.src} alt={coverImage.alt} className="mb-6 w-full rounded-md" />
+              {finalCoverImage && (
+                <Atoms.Image src={finalCoverImage.src} alt={finalCoverImage.alt} className="mb-6 w-full rounded-md" />
               )}
 
               <Molecules.PostText content={body} isArticle />
@@ -69,11 +77,11 @@ export const SinglePostArticle = ({ postId, content, attachments, isBlurred }: S
           )}
 
           {/* Tags on mobile */}
-          <Organisms.PostTagsPanel postId={postId} className="mt-6 flex lg:hidden" />
+          <Organisms.PostTagsPanel postId={postId} widthMode="full" className="mt-6 flex lg:hidden" />
         </Atoms.Container>
 
         {/* Right column - Tags (desktop only) */}
-        <Organisms.PostTagsPanel postId={postId} className="hidden lg:flex" />
+        <Organisms.PostTagsPanel postId={postId} widthMode="full" className="hidden lg:flex" />
       </Atoms.Container>
 
       <Organisms.DialogReply postId={postId} open={replyDialogOpen} onOpenChangeAction={setReplyDialogOpen} />

@@ -12,6 +12,7 @@ export interface FilterRadioGroupProps<T = string> {
   defaultValue?: T;
   onChange?: (value: T) => void;
   onClose?: () => void;
+  dataCy?: string;
   testId?: string;
 }
 
@@ -22,6 +23,7 @@ export function FilterRadioGroup<T extends string = string>({
   defaultValue,
   onChange,
   onClose,
+  dataCy,
   testId,
 }: FilterRadioGroupProps<T>) {
   const headerId = React.useId();
@@ -62,6 +64,7 @@ export function FilterRadioGroup<T extends string = string>({
         ref={listRef}
         role="radiogroup"
         aria-labelledby={headerId}
+        data-cy={dataCy}
         data-testid={testId || `filter-${title.toLowerCase()}-radiogroup`}
       >
         <Atoms.FilterList>

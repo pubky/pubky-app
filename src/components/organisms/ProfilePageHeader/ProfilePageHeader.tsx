@@ -72,7 +72,7 @@ export function ProfilePageHeader({ profile, actions, isOwnProfile = true, userI
             data-cy="profile-username-header"
             as="h1"
             size="lg"
-            className="truncate leading-normal text-white lg:text-6xl lg:leading-normal"
+            className="max-width-profile-page-header w-full truncate leading-normal text-white sm:max-w-xl lg:max-w-full lg:text-6xl lg:leading-normal"
           >
             {name}
           </Atoms.Typography>
@@ -90,11 +90,17 @@ export function ProfilePageHeader({ profile, actions, isOwnProfile = true, userI
           {/* Own profile actions */}
           {isOwnProfile && (
             <>
-              <Atoms.Button variant="secondary" size="sm" onClick={onEdit}>
+              <Atoms.Button data-cy="profile-edit-btn" variant="secondary" size="sm" onClick={onEdit}>
                 <Icons.Pencil className="size-4" />
                 {t('edit')}
               </Atoms.Button>
-              <Atoms.Button className="uppercase" variant="secondary" size="sm" onClick={onCopyPublicKey}>
+              <Atoms.Button
+                data-cy="profile-copy-pubkey-btn"
+                className="uppercase"
+                variant="secondary"
+                size="sm"
+                onClick={onCopyPublicKey}
+              >
                 <Icons.KeyRound className="size-4" />
                 {formattedPublicKey}
               </Atoms.Button>
@@ -163,7 +169,13 @@ export function ProfilePageHeader({ profile, actions, isOwnProfile = true, userI
                   )}
                 </Atoms.Button>
               )}
-              <Atoms.Button className="uppercase" variant="secondary" size="sm" onClick={onCopyPublicKey}>
+              <Atoms.Button
+                data-cy="profile-copy-pubkey-btn"
+                className="uppercase"
+                variant="secondary"
+                size="sm"
+                onClick={onCopyPublicKey}
+              >
                 <Icons.KeyRound className="size-4" />
                 {formattedPublicKey}
               </Atoms.Button>
@@ -175,7 +187,7 @@ export function ProfilePageHeader({ profile, actions, isOwnProfile = true, userI
               <Organisms.ProfileMenuActions
                 userId={publicKey}
                 trigger={
-                  <Atoms.Button variant="secondary" size="sm" aria-label="Profile actions">
+                  <Atoms.Button data-cy="profile-menu-btn" variant="secondary" size="sm" aria-label="Profile actions">
                     <Libs.Ellipsis className="size-4" />
                   </Atoms.Button>
                 }

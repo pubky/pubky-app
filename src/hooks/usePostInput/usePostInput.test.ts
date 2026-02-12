@@ -7,6 +7,7 @@ import {
   ARTICLE_TITLE_MAX_CHARACTER_LENGTH,
   POST_ATTACHMENT_MAX_FILES,
   ARTICLE_ATTACHMENT_MAX_FILES,
+  ATTACHMENT_MAX_OTHER_SIZE,
 } from '@/config';
 
 // next-intl is mocked globally in src/config/test.ts
@@ -86,6 +87,20 @@ vi.mock('@/molecules', () => ({
   })),
 }));
 
+// Mock Core.useLocalFilesStore
+const mockSetPostAttachments = vi.fn();
+vi.mock('@/core', () => ({
+  useLocalFilesStore: {
+    getState: vi.fn(() => ({
+      setPostAttachments: mockSetPostAttachments,
+    })),
+  },
+}));
+
+// Mock URL.createObjectURL
+const mockCreateObjectURL = vi.fn((file: File) => `blob:${file.name}`);
+global.URL.createObjectURL = mockCreateObjectURL;
+
 describe('usePostInput', () => {
   beforeEach(() => {
     vi.clearAllMocks();
@@ -97,6 +112,8 @@ describe('usePostInput', () => {
     mockIsSubmitting = false;
     mockRepost.mockClear();
     mockEdit.mockClear();
+    mockSetPostAttachments.mockClear();
+    mockCreateObjectURL.mockClear();
   });
 
   describe('initial state', () => {
@@ -585,6 +602,69 @@ describe('usePostInput', () => {
       });
 
       expect(mockPrependPosts).toHaveBeenCalledWith('created-post-id');
+      expect(mockOnSuccess).toHaveBeenCalledWith('created-post-id');
+    });
+
+    it('stores local attachments when submission succeeds with attachments', async () => {
+      mockContent = 'Test content with attachments';
+      const imageFile = new File(['image content'], 'test-image.png', { type: 'image/png' });
+      const videoFile = new File(['video content'], 'test-video.mp4', { type: 'video/mp4' });
+      mockAttachments = [imageFile, videoFile];
+
+      mockPost.mockImplementation(async ({ onSuccess }) => {
+        onSuccess('created-post-id');
+      });
+
+      const mockOnSuccess = vi.fn();
+      const { result } = renderHook(() =>
+        usePostInput({
+          variant: 'post',
+          onSuccess: mockOnSuccess,
+        }),
+      );
+
+      await act(async () => {
+        await result.current.handleSubmit();
+      });
+
+      expect(mockCreateObjectURL).toHaveBeenCalledTimes(2);
+      expect(mockSetPostAttachments).toHaveBeenCalledWith('created-post-id', [
+        {
+          type: 'image/png',
+          name: 'test-image.png',
+          urls: { main: 'blob:test-image.png', feed: 'blob:test-image.png' },
+        },
+        {
+          type: 'video/mp4',
+          name: 'test-video.mp4',
+          urls: { main: 'blob:test-video.mp4', feed: undefined },
+        },
+      ]);
+      expect(mockOnSuccess).toHaveBeenCalledWith('created-post-id');
+    });
+
+    it('does not store local attachments when submission succeeds without attachments', async () => {
+      mockContent = 'Test content without attachments';
+      mockAttachments = [];
+
+      mockPost.mockImplementation(async ({ onSuccess }) => {
+        onSuccess('created-post-id');
+      });
+
+      const mockOnSuccess = vi.fn();
+      const { result } = renderHook(() =>
+        usePostInput({
+          variant: 'post',
+          onSuccess: mockOnSuccess,
+        }),
+      );
+
+      await act(async () => {
+        await result.current.handleSubmit();
+      });
+
+      expect(mockCreateObjectURL).not.toHaveBeenCalled();
+      expect(mockSetPostAttachments).not.toHaveBeenCalled();
       expect(mockOnSuccess).toHaveBeenCalledWith('created-post-id');
     });
 
@@ -1530,16 +1610,19 @@ describe('usePostInput', () => {
       });
     });
 
-    it('rejects non-image files exceeding 20MB and shows toast', () => {
+    it('rejects non-image files exceeding the max size and shows toast', () => {
       const { result } = renderHook(() =>
         usePostInput({
           variant: 'post',
         }),
       );
 
-      // Create a video file with size > 20MB
+      const maxOtherSizeMb = Math.round(ATTACHMENT_MAX_OTHER_SIZE / (1024 * 1024));
+      const maxOtherSizeLabel = `${maxOtherSizeMb}MB`;
+
+      // Create a video file with size > max other size
       const largeFile = new File(['test'], 'large.mp4', { type: 'video/mp4' });
-      Object.defineProperty(largeFile, 'size', { value: 21 * 1024 * 1024 });
+      Object.defineProperty(largeFile, 'size', { value: ATTACHMENT_MAX_OTHER_SIZE + 1 });
 
       act(() => {
         result.current.handleFilesAdded([largeFile]);
@@ -1548,7 +1631,7 @@ describe('usePostInput', () => {
       expect(mockSetAttachments).not.toHaveBeenCalled();
       expect(mockToast).toHaveBeenCalledWith({
         title: 'Error',
-        description: expect.stringContaining('exceeds the maximum size of 20MB'),
+        description: expect.stringContaining(`exceeds the maximum size of ${maxOtherSizeLabel}`),
       });
     });
 

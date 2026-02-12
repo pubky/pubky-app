@@ -5,12 +5,24 @@
 
 import * as Atoms from '@/atoms';
 import { useSelectedLayoutSegments } from 'next/navigation';
+import { useEffect } from 'react';
+
+const FORCE_HOME_SCROLL_TOP_KEY = 'pubky:force-home-scroll-top';
 
 export default function HomeLayout({ post, children }: { post: React.ReactNode; children: React.ReactNode }) {
   const segments = useSelectedLayoutSegments('post');
 
   // Post is active only when the intercepted route (..)post is in segments
   const isPostActive = segments.includes('(..)post');
+
+  useEffect(() => {
+    if (window.sessionStorage.getItem(FORCE_HOME_SCROLL_TOP_KEY) !== '1') return;
+
+    window.sessionStorage.removeItem(FORCE_HOME_SCROLL_TOP_KEY);
+    window.requestAnimationFrame(() => {
+      window.scrollTo({ top: 0, behavior: 'auto' });
+    });
+  }, []);
 
   return (
     <>

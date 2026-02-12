@@ -228,7 +228,7 @@ body {
    * - Consistent with other popover/list widths in the app
    * - Balances readability with efficient use of space
    */
-  --who-tagged-expanded-list-width: 320px;
+  --who-tagged-expanded-list-width: 260px;
 
   /**
    * Who tagged expanded list max height
@@ -510,5 +510,9 @@ body {
     .animate-accordion-up {
       animation: accordion-up 0.2s ease-out;
     }
+  }
+
+  .max-width-profile-page-header {
+    max-width: calc(100vw - 6rem);
   }
 }

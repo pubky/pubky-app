@@ -4,6 +4,7 @@ import { PostContentBase } from './PostContentBase';
 import * as Molecules from '@/molecules';
 import * as Organisms from '@/organisms';
 import * as Hooks from '@/hooks';
+import * as Core from '@/core';
 
 // Mock next/navigation for usePathname used by PostText
 vi.mock('next/navigation', () => ({
@@ -16,6 +17,15 @@ vi.mock('@/hooks', async (importOriginal) => {
   return {
     ...actual,
     usePostDetails: vi.fn(),
+  };
+});
+
+// Mock core - useLocalFilesStore
+vi.mock('@/core', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('@/core')>();
+  return {
+    ...actual,
+    useLocalFilesStore: vi.fn(),
   };
 });
 
@@ -42,6 +52,7 @@ vi.mock('@/organisms', () => ({
 }));
 
 const mockUsePostDetails = vi.mocked(Hooks.usePostDetails);
+const mockUseLocalFilesStore = vi.mocked(Core.useLocalFilesStore);
 const mockPostAttachments = vi.mocked(Organisms.PostAttachments);
 const mockPostContentBlurred = vi.mocked(Organisms.PostContentBlurred);
 const mockPostArticle = vi.mocked(Organisms.PostArticle);
@@ -72,6 +83,7 @@ describe('PostContentBase', () => {
       postDetails: createMockPostDetails(),
       isLoading: false,
     });
+    mockUseLocalFilesStore.mockReturnValue(undefined);
   });
 
   it('renders content when postDetails are available', () => {
@@ -89,7 +101,10 @@ describe('PostContentBase', () => {
 
     render(<PostContentBase postId="post-123" />);
 
-    expect(mockPostAttachments).toHaveBeenCalledWith({ attachments: mockAttachments }, undefined);
+    expect(mockPostAttachments).toHaveBeenCalledWith(
+      { attachments: mockAttachments, localAttachments: undefined },
+      undefined,
+    );
   });
 
   it('calls PostAttachments with null when no attachments', () => {
@@ -100,7 +115,7 @@ describe('PostContentBase', () => {
 
     render(<PostContentBase postId="post-123" />);
 
-    expect(mockPostAttachments).toHaveBeenCalledWith({ attachments: null }, undefined);
+    expect(mockPostAttachments).toHaveBeenCalledWith({ attachments: null, localAttachments: undefined }, undefined);
   });
 
   it('calls PostAttachments with empty array', () => {
@@ -111,7 +126,23 @@ describe('PostContentBase', () => {
 
     render(<PostContentBase postId="post-123" />);
 
-    expect(mockPostAttachments).toHaveBeenCalledWith({ attachments: [] }, undefined);
+    expect(mockPostAttachments).toHaveBeenCalledWith({ attachments: [], localAttachments: undefined }, undefined);
+  });
+
+  it('calls PostAttachments with localAttachments from store', () => {
+    const mockLocalAttachments = [{ id: 'local-1', blob: new Blob() }];
+    mockUseLocalFilesStore.mockReturnValue(mockLocalAttachments);
+    mockUsePostDetails.mockReturnValue({
+      postDetails: createMockPostDetails({ content: 'Test content', attachments: ['file-id-1'] }),
+      isLoading: false,
+    });
+
+    render(<PostContentBase postId="post-123" />);
+
+    expect(mockPostAttachments).toHaveBeenCalledWith(
+      { attachments: ['file-id-1'], localAttachments: mockLocalAttachments },
+      undefined,
+    );
   });
 
   it('renders PostContentBlurred when is_blurred is true', () => {
@@ -157,11 +188,37 @@ describe('PostContentBase', () => {
       {
         content: '{"title":"Article Title","body":"Article body content"}',
         attachments: mockAttachments,
+        localAttachments: undefined,
         className: 'custom-class',
       },
       undefined,
     );
     expect(mockPostAttachments).not.toHaveBeenCalled();
+  });
+
+  it('calls PostArticle with localAttachments from store', () => {
+    const mockLocalAttachments = [{ id: 'local-1', blob: new Blob() }];
+    mockUseLocalFilesStore.mockReturnValue(mockLocalAttachments);
+    mockUsePostDetails.mockReturnValue({
+      postDetails: createMockPostDetails({
+        content: '{"title":"Article Title","body":"Article body content"}',
+        attachments: ['file-id-1'],
+        kind: 'long',
+      }),
+      isLoading: false,
+    });
+
+    render(<PostContentBase postId="post-123" className="custom-class" />);
+
+    expect(mockPostArticle).toHaveBeenCalledWith(
+      {
+        content: '{"title":"Article Title","body":"Article body content"}',
+        attachments: ['file-id-1'],
+        localAttachments: mockLocalAttachments,
+        className: 'custom-class',
+      },
+      undefined,
+    );
   });
 
   it('renders PostArticle instead of normal content for long posts', () => {
@@ -201,6 +258,7 @@ describe('PostContentBase - Snapshots', () => {
   // PostAttachments remains mocked to avoid useToast dependency chain
   beforeEach(async () => {
     vi.clearAllMocks();
+    mockUseLocalFilesStore.mockReturnValue(undefined);
     const actualMolecules = await vi.importActual<typeof import('@/molecules')>('@/molecules');
     // Replace the mock implementations with real ones for snapshots
     // PostText is wrapped with React.memo(), so we need to access the underlying function via .type

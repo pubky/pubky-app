@@ -15,7 +15,7 @@ exports[`WhoTaggedExpandedList - Snapshots > matches snapshot with multiple user
     data-testid="user-list-item-user1"
   >
     <span>
-      Alice
+      user1
     </span>
     <button
       data-testid="user-click-user1"
@@ -34,7 +34,7 @@ exports[`WhoTaggedExpandedList - Snapshots > matches snapshot with multiple user
     data-testid="user-list-item-user2"
   >
     <span>
-      Bob
+      user2
     </span>
     <button
       data-testid="user-click-user2"
@@ -82,7 +82,7 @@ exports[`WhoTaggedExpandedList - Snapshots > matches snapshot with single user 1
     data-testid="user-list-item-user1"
   >
     <span>
-      Alice
+      user1
     </span>
     <button
       data-testid="user-click-user1"
