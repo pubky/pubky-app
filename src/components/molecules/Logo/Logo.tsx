@@ -26,6 +26,7 @@ export function Logo({
   return !noLink ? (
     <Atoms.Link
       href="/home"
+      data-cy="header-logo"
       onClick={(event) => {
         props.onClick?.(event);
         if (event.defaultPrevented) return;

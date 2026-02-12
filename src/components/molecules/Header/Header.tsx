@@ -80,6 +80,7 @@ type NavigationItemConfig = {
   href: string;
   icon: React.ComponentType<{ className?: string }>;
   labelKey: string;
+  dataCy?: string;
 };
 
 type HeaderNavigationButtonsProps = {
@@ -89,10 +90,10 @@ type HeaderNavigationButtonsProps = {
 };
 
 const NAVIGATION_ITEMS: NavigationItemConfig[] = [
-  { href: App.APP_ROUTES.HOME, icon: Libs.Home, labelKey: 'home' },
-  { href: App.APP_ROUTES.HOT, icon: Libs.Flame, labelKey: 'hot' },
-  { href: App.APP_ROUTES.BOOKMARKS, icon: Libs.Bookmark, labelKey: 'bookmarks' },
-  { href: App.SETTINGS_ROUTES.ACCOUNT, icon: Libs.Settings, labelKey: 'settings' },
+  { href: App.APP_ROUTES.HOME, icon: Libs.Home, labelKey: 'home', dataCy: 'header-home-btn' },
+  { href: App.APP_ROUTES.HOT, icon: Libs.Flame, labelKey: 'hot', dataCy: 'header-hot-btn' },
+  { href: App.APP_ROUTES.BOOKMARKS, icon: Libs.Bookmark, labelKey: 'bookmarks', dataCy: 'header-bookmarks-btn' },
+  { href: App.SETTINGS_ROUTES.ACCOUNT, icon: Libs.Settings, labelKey: 'settings', dataCy: 'header-settings-btn' },
 ];
 
 type NavigationButtonProps = {
@@ -100,10 +101,11 @@ type NavigationButtonProps = {
   icon: React.ComponentType<{ className?: string }>;
   label: string;
   isActive: boolean;
+  dataCy?: string;
 };
 
-const NavigationButton = ({ href, icon: Icon, label, isActive }: NavigationButtonProps) => (
-  <Atoms.Link href={href}>
+const NavigationButton = ({ href, icon: Icon, label, isActive, dataCy }: NavigationButtonProps) => (
+  <Atoms.Link href={href} data-cy={dataCy}>
     <Atoms.Button
       className={Libs.cn('h-12 w-12 backdrop-blur-md', isActive ? '' : 'border bg-white/5')}
       variant="secondary"
@@ -130,6 +132,7 @@ export function HeaderNavigationButtons({ counter = 0, avatarImage, avatarName =
           icon={item.icon}
           label={t(item.labelKey)}
           isActive={pathname === item.href}
+          dataCy={item.dataCy}
         />
       ))}
 
