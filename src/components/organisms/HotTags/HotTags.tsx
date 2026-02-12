@@ -44,11 +44,12 @@ export function HotTags({ className }: HotTagsProps) {
       footerTestId="see-all-button"
       className={className}
       data-testid="hot-tags"
+      dataCy="hot-tags"
     >
       {displayTags.length === 0 ? (
         <Atoms.Typography className="font-light text-muted-foreground">{t('noTags')}</Atoms.Typography>
       ) : (
-        <Atoms.Container overrideDefaults className="flex w-full flex-col gap-2">
+        <Atoms.Container overrideDefaults className="flex w-full flex-col gap-2" data-cy="hot-tags-list">
           {displayTags.map((tag, index) => (
             <Atoms.Tag
               key={tag.name}
