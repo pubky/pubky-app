@@ -21,12 +21,14 @@ export function SidebarSection({
   onFooterClick,
   footerTestId,
   className,
+  dataCy,
   'data-testid': dataTestId,
 }: SidebarSectionProps) {
   return (
     <Atoms.Container
       overrideDefaults
       className={Libs.cn('flex w-full min-w-0 flex-col gap-2', className)}
+      data-cy={dataCy}
       data-testid={dataTestId}
     >
       {/* Header */}
