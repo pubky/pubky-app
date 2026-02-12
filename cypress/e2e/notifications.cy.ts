@@ -1,5 +1,5 @@
 import { backupDownloadFilePath } from '../support/auth';
-import { createQuickPost, replyToPost, repostPost, deletePost, editPost } from '../support/posts';
+import { createQuickPost, replyToPost, repostPost, deletePost, editPost, fastTagPostInFeed } from '../support/posts';
 import { slowCypressDown } from 'cypress-slow-down';
 import 'cypress-slow-down/commands';
 import { searchAndFollowProfile, searchForProfileByPubky } from '../support/contacts';
@@ -90,7 +90,8 @@ describe('notifications', () => {
 
   it('can be notified for tagged post and profile', () => {
     // * profile 1 creates a post
-    createQuickPost(`I will be notified when this post is tagged! ${Date.now()}`);
+    const postContent = `I will be notified when this post is tagged! ${Date.now()}`;
+    createQuickPost(postContent);
 
     // * profile 1 tags profile 2's profile
     cy.get(`@${profile2.pubkyAlias}`).then((pubky) => {
@@ -126,16 +127,8 @@ describe('notifications', () => {
     cy.get('[data-cy="profile-filter-item-posts"]').click();
     cy.get('[data-cy="profile-filter-item-posts"]').closest('[data-selected="true"]').should('exist');
     const postTag = 'ilike';
-    // check profile 1 has at least 1 post and tag the first post
-    cy.get('[data-cy="timeline-posts"]')
-      .children()
-      .should('have.length.at.least', 1)
-      .first()
-      .within(() => {
-        // Click the add tag button to show the input, then type and submit
-        cy.get('[data-cy="post-tag-add-button"]').click();
-        cy.get('[data-cy="add-tag-input"]').type(`${postTag}{enter}`);
-      });
+    // tag the first post on profile 1's profile
+    fastTagPostInFeed([postTag], postContent);
 
     // * profile 1 checks for notification for tagged post
     cy.signOut(HasBackedUp.Yes);

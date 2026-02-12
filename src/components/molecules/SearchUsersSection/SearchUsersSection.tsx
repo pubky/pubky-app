@@ -16,7 +16,7 @@ export function SearchUsersSection({ title, users, onUserClick }: SearchUsersSec
       <Atoms.Typography size="xs" className="tracking-widest text-muted-foreground uppercase">
         {title}
       </Atoms.Typography>
-      <Atoms.Container overrideDefaults className="flex flex-wrap gap-3">
+      <Atoms.Container data-cy="search-users-section" overrideDefaults className="flex flex-wrap gap-3">
         {users.map((user) => (
           <Molecules.SearchUserSuggestion key={user.id} user={user} onClick={onUserClick} />
         ))}

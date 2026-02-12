@@ -21,6 +21,8 @@ export interface SidebarSectionProps {
   footerTestId?: string;
   /** Custom className */
   className?: string;
+  /** For Cypress E2E tests */
+  dataCy?: string;
   /** Test ID */
   'data-testid'?: string;
 }
