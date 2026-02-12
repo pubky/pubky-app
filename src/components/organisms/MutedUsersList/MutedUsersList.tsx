@@ -70,7 +70,7 @@ export function MutedUsersList() {
   };
 
   return (
-    <Atoms.Container overrideDefaults className="inline-flex w-full flex-col gap-6">
+    <Atoms.Container data-cy="muted-users-root" overrideDefaults className="inline-flex w-full flex-col gap-6">
       {isLoading ? (
         <Atoms.Container overrideDefaults className="w-full">
           <Atoms.Typography as="span" overrideDefaults className="text-base font-medium text-muted-foreground">

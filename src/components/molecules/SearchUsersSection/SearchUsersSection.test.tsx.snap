@@ -14,6 +14,7 @@ exports[`SearchUsersSection > SearchUsersSection - Snapshots > matches snapshot 
   </span>
   <div
     class="flex flex-wrap gap-3"
+    data-cy="search-users-section"
   >
     <div
       data-testid="user-pk:user1"

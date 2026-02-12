@@ -39,7 +39,7 @@ export function SettingsMenu({ className }: SettingsMenuProps) {
           const Icon = item.icon;
           const isSelected = pathname === item.path;
           return (
-            <Link key={item.labelKey} href={item.path}>
+            <Link key={item.labelKey} href={item.path} data-cy={`settings-menu-item-${item.labelKey}`}>
               <Atoms.FilterItem isSelected={isSelected} onClick={() => {}}>
                 <Atoms.FilterItemIcon icon={Icon} />
                 <Atoms.FilterItemLabel>{t(`menu.${item.labelKey}`)}</Atoms.FilterItemLabel>
