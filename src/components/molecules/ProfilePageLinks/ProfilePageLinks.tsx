@@ -61,6 +61,7 @@ export function ProfilePageLinks({ links, isOwnProfile = false }: ProfilePageLin
               <a
                 key={index}
                 href={link.url}
+                data-cy={`profile-link-${link.label.toLowerCase()}`}
                 onClick={(e) => handleLinkClick(link.url, e)}
                 className="flex cursor-pointer items-center gap-2.5 py-1"
               >

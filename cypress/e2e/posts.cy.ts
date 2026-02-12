@@ -8,6 +8,7 @@ import {
   createPostFromDialog,
   deletePost,
   editPost,
+  fastTagPostInFeed,
   replyToPost,
   repostPost,
   MAX_POST_LENGTH,
@@ -252,11 +253,18 @@ describe('posts', () => {
 
     createQuickPost(postContent);
 
+    // scroll to top (to aid visual debugging)
+    cy.get('[data-cy="header-logo"]').filter(':visible').click();
+
+    fastTagPostInFeed([tag1, tag2, tag3], postContent);
+
+    // scroll to top (to aid visual debugging)
+    cy.get('[data-cy="header-logo"]').filter(':visible').click();
+
+    // todo: remove wait workaround once bug is fixed, see https://github.com/pubky/pubky-app/issues/805
+    cy.wait(Cypress.expose('ci') ? 3_000 : 500);
+
     cy.findFirstPostInFeedFiltered(postContent, CheckForNewPosts.No, WaitForNewPosts.Yes).within(() => {
-      cy.get('[data-cy="post-tag-add-button"]').click();
-      [tag1, tag2, tag3].forEach((tag) => {
-        cy.get('[data-cy="add-tag-input"]').type(`${tag}{enter}`);
-      });
       [tag1, tag2, tag3].forEach((tag) => {
         cy.contains('button', tag).should('be.visible').find('[data-cy="post-tag-count"]').should('have.text', '1');
       });
