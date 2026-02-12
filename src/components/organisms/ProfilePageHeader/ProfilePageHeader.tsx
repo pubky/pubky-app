@@ -90,7 +90,7 @@ export function ProfilePageHeader({ profile, actions, isOwnProfile = true, userI
           {/* Own profile actions */}
           {isOwnProfile && (
             <>
-              <Atoms.Button variant="secondary" size="sm" onClick={onEdit}>
+              <Atoms.Button data-cy="profile-edit-btn" variant="secondary" size="sm" onClick={onEdit}>
                 <Icons.Pencil className="size-4" />
                 {t('edit')}
               </Atoms.Button>

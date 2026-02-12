@@ -81,7 +81,7 @@ export function DialogAddLink({ onSave, disabled = false }: DialogAddLinkProps) 
   return (
     <Atoms.Dialog>
       <Atoms.DialogTrigger asChild>
-        <Atoms.Button variant="secondary" size="sm" className="w-fit rounded-full">
+        <Atoms.Button data-cy="edit-profile-add-link-btn" variant="secondary" size="sm" className="w-fit rounded-full">
           <Libs.Link className="h-4 w-4" />
           <span>{t('title')}</span>
         </Atoms.Button>
@@ -100,6 +100,7 @@ export function DialogAddLink({ onSave, disabled = false }: DialogAddLinkProps) 
               {t('labelField')}
             </Atoms.Label>
             <Molecules.InputField
+              dataCy="add-profile-link-label-input"
               placeholder={t('labelPlaceholder')}
               variant="dashed"
               value={label}
@@ -121,6 +122,7 @@ export function DialogAddLink({ onSave, disabled = false }: DialogAddLinkProps) 
               {t('urlField')}
             </Atoms.Label>
             <Molecules.InputField
+              dataCy="add-profile-link-url-input"
               placeholder={t('urlPlaceholder')}
               variant="dashed"
               value={url}
@@ -157,6 +159,7 @@ export function DialogAddLink({ onSave, disabled = false }: DialogAddLinkProps) 
           </Atoms.DialogClose>
           <Atoms.DialogClose asChild>
             <Atoms.Button
+              data-cy="add-profile-link-submit-btn"
               size="lg"
               className="sm:size-default flex-1 rounded-full border-brand text-brand"
               onClick={handleSave}

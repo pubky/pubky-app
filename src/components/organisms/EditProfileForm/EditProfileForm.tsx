@@ -92,6 +92,7 @@ export const EditProfileForm = () => {
                   </Atoms.Label>
                   <Molecules.InputField
                     id={`profile-links-input-${index}`}
+                    dataCy={`edit-profile-link-${link.label.toLowerCase()}-input`}
                     placeholder={link.label.toUpperCase().includes('TWITTER') ? '@user' : 'https://'}
                     value={link.url}
                     variant="dashed"
@@ -193,6 +194,7 @@ export const EditProfileForm = () => {
             onClick={handlers.handleCancel}
             disabled={state.isSaving}
             className="rounded-full px-8"
+            data-cy="edit-profile-cancel-btn"
           >
             {tCommon('cancel')}
           </Atoms.Button>
@@ -201,6 +203,7 @@ export const EditProfileForm = () => {
             onClick={handlers.handleSubmit}
             disabled={isSubmitDisabled}
             data-testid="save-profile-button"
+            data-cy="edit-profile-save-btn"
             className="rounded-full px-8"
           >
             {state.isSaving && <Atoms.Spinner size="sm" className="mr-2" />}
