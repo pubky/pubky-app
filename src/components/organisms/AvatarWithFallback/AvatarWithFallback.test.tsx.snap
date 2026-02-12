@@ -16,7 +16,6 @@ exports[`AvatarWithFallback - Snapshots > matches snapshot when avatarUrl is not
     >
       <span
         data-testid="avatar-fallback-initial"
-        style="font-size: 26cqw; line-height: 1;"
       >
         J
       </span>
@@ -47,7 +46,6 @@ exports[`AvatarWithFallback - Snapshots > matches snapshot when avatarUrl is pro
     >
       <span
         data-testid="avatar-fallback-initial"
-        style="font-size: 26cqw; line-height: 1;"
       >
         J
       </span>
@@ -90,7 +88,6 @@ exports[`AvatarWithFallback - Snapshots > matches snapshot when image is blurred
     >
       <span
         data-testid="avatar-fallback-initial"
-        style="font-size: 26cqw; line-height: 1;"
       >
         J
       </span>
@@ -121,7 +118,6 @@ exports[`AvatarWithFallback - Snapshots > matches snapshot with custom alt text 
     >
       <span
         data-testid="avatar-fallback-initial"
-        style="font-size: 26cqw; line-height: 1;"
       >
         J
       </span>
@@ -152,7 +148,6 @@ exports[`AvatarWithFallback - Snapshots > matches snapshot with custom data-test
     >
       <span
         data-testid="avatar-fallback-initial"
-        style="font-size: 26cqw; line-height: 1;"
       >
         J
       </span>

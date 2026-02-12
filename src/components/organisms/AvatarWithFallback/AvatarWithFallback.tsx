@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect } from 'react';
 import { Facehash } from 'facehash';
 import { useLiveQuery } from 'dexie-react-hooks';
 import * as Atoms from '@/atoms';
@@ -37,15 +37,9 @@ export function AvatarWithFallback({
   const [imageError, setImageError] = useState(false);
 
   // Extract userId from CDN URL for moderation and local avatar resolution
-  const userId = useMemo(() => extractUserIdFromAvatarUrl(avatarUrl), [avatarUrl]);
-  const resolvedFallbackSeed = useMemo(
-    () => resolveAvatarFallbackSeed({ fallbackSeed, avatarUrl, name }),
-    [fallbackSeed, avatarUrl, name],
-  );
-  const fallbackInitial = useMemo(
-    () => resolveAvatarFallbackInitial({ name, seed: resolvedFallbackSeed }),
-    [name, resolvedFallbackSeed],
-  );
+  const userId = extractUserIdFromAvatarUrl(avatarUrl);
+  const resolvedFallbackSeed = resolveAvatarFallbackSeed({ fallbackSeed, avatarUrl, name });
+  const fallbackInitial = resolveAvatarFallbackInitial({ name, seed: resolvedFallbackSeed });
 
   // Check if this avatar belongs to the current user
   const currentUserPubky = Core.useAuthStore((s) => s.currentUserPubky);
@@ -126,9 +120,14 @@ export function AvatarWithFallback({
           enableBlink
           className="h-full w-full rounded-full text-background"
           onRenderMouth={() => (
-            <span data-testid="avatar-fallback-initial" style={{ fontSize: '26cqw', lineHeight: 1 }}>
+            <Atoms.Typography
+              as="span"
+              overrideDefaults
+              data-testid="avatar-fallback-initial"
+              style={{ fontSize: '26cqw', lineHeight: 1 }}
+            >
               {fallbackInitial}
-            </span>
+            </Atoms.Typography>
           )}
         />
       </Atoms.AvatarFallback>

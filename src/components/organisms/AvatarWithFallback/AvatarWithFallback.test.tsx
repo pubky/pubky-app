@@ -107,6 +107,23 @@ vi.mock('@/atoms', () => ({
       {children}
     </div>
   ),
+  Typography: ({
+    as: Tag = 'p',
+    children,
+    className,
+    'data-testid': dataTestId,
+  }: {
+    as?: React.ElementType;
+    children: React.ReactNode;
+    className?: string;
+    'data-testid'?: string;
+    overrideDefaults?: boolean;
+    style?: React.CSSProperties;
+  }) => (
+    <Tag data-testid={dataTestId} className={className}>
+      {children}
+    </Tag>
+  ),
 }));
 
 // Mock libs - use real extractInitials and cn
