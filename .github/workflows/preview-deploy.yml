@@ -74,27 +74,28 @@ jobs:
       contents: read
       pull-requests: write
     steps:
+      - name: Checkout this repository
+        uses: actions/checkout@v4
+
       - name: Authenticate to GCP
         uses: google-github-actions/auth@v2
         with:
           credentials_json: ${{ secrets.CLOUD_RUN_SA_KEY }}
 
+      - name: Updating the deploy file
+        run: |
+          yq -i '.metadata.name = env(SERVICE)' preview-deploy-service-file.yml
+          yq -i '.spec.template.spec.containers[1].image = env(IMAGE_FULL_PATH)' preview-deploy-service-file.yml
+        env:
+          IMAGE_FULL_PATH: ${{ env.REGISTRY }}/${{ needs.build-preview.outputs.image_name }}:${{ needs.build-preview.outputs.image_tag }}
+          SERVICE: ${{ needs.set-vars.outputs.service_name }}
+
       - name: Deploy to Cloud Run
         id: deploy
         uses: google-github-actions/deploy-cloudrun@v2
         with:
-          service: ${{ needs.set-vars.outputs.service_name }}
-          region: ${{ env.REGION }}
-          image: ${{ env.REGISTRY }}/${{ needs.build-preview.outputs.image_name }}:${{ needs.build-preview.outputs.image_tag }}
-          flags: |
-            --allow-unauthenticated
-            --memory=512Mi
-            --cpu=1
-            --min-instances=0
-            --max-instances=2
-            --port=3000
-            --cpu-throttling
-            --session-affinity
+          region: europe-west6
+          metadata: preview-deploy-service-file.yml
 
       - name: Find existing comment
         if: github.event_name == 'pull_request'
@@ -118,6 +119,7 @@ jobs:
             **URL:** ${{ steps.deploy.outputs.url }}
 
             `${{ needs.set-vars.outputs.service_name }}` • `${{ needs.set-vars.outputs.short_sha }}`
+
 
   cleanup-preview:
     name: Cleanup Preview

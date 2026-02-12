@@ -22,6 +22,7 @@ exports[`FilterReach - Snapshots > matches snapshot in uncontrolled mode with de
   <div
     aria-labelledby="radix-normalized"
     class=""
+    data-cy="filter-reach-radiogroup"
     data-testid="filter-reach-radiogroup"
     role="radiogroup"
   >
@@ -175,6 +176,7 @@ exports[`FilterReach - Snapshots > matches snapshot with All selected tab 1`] = 
   <div
     aria-labelledby="radix-normalized"
     class=""
+    data-cy="filter-reach-radiogroup"
     data-testid="filter-reach-radiogroup"
     role="radiogroup"
   >
@@ -328,6 +330,7 @@ exports[`FilterReach - Snapshots > matches snapshot with Following selected 1`] 
   <div
     aria-labelledby="radix-normalized"
     class=""
+    data-cy="filter-reach-radiogroup"
     data-testid="filter-reach-radiogroup"
     role="radiogroup"
   >
@@ -481,6 +484,7 @@ exports[`FilterReach - Snapshots > matches snapshot with Friends selected 1`] = 
   <div
     aria-labelledby="radix-normalized"
     class=""
+    data-cy="filter-reach-radiogroup"
     data-testid="filter-reach-radiogroup"
     role="radiogroup"
   >
@@ -634,6 +638,7 @@ exports[`FilterReach - Snapshots > matches snapshot with default props (All sele
   <div
     aria-labelledby="radix-normalized"
     class=""
+    data-cy="filter-reach-radiogroup"
     data-testid="filter-reach-radiogroup"
     role="radiogroup"
   >

@@ -22,6 +22,7 @@ exports[`FilterSort - Snapshots > matches snapshot with Popularity content selec
   <div
     aria-labelledby="radix-normalized"
     class=""
+    data-cy="filter-sort-radiogroup"
     data-testid="filter-sort-radiogroup"
     role="radiogroup"
   >
@@ -140,6 +141,7 @@ exports[`FilterSort - Snapshots > matches snapshot with Recent content selected 
   <div
     aria-labelledby="radix-normalized"
     class=""
+    data-cy="filter-sort-radiogroup"
     data-testid="filter-sort-radiogroup"
     role="radiogroup"
   >
@@ -258,6 +260,7 @@ exports[`FilterSort - Snapshots > matches snapshot with default props 1`] = `
   <div
     aria-labelledby="radix-normalized"
     class=""
+    data-cy="filter-sort-radiogroup"
     data-testid="filter-sort-radiogroup"
     role="radiogroup"
   >

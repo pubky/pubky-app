@@ -20,7 +20,7 @@ export function ProfilePageTaggedAs({ tags, isLoading = false, onTagClick, pubky
   };
 
   return (
-    <Atoms.Container overrideDefaults={true} className="flex flex-col gap-2">
+    <Atoms.Container data-cy="profile-tagged-section" overrideDefaults={true} className="flex flex-col gap-2">
       <Atoms.Heading level={2} size="lg" className="font-light text-muted-foreground">
         {t('taggedAs')}
       </Atoms.Heading>

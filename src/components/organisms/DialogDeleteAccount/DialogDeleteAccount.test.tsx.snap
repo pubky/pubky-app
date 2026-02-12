@@ -40,6 +40,7 @@ exports[`DialogDeleteAccount - Snapshots > matches snapshot for default DialogDe
         data-size="lg"
         data-testid="button-destructive"
         data-variant="destructive"
+        id="delete-account-confirm-btn"
       >
         <svg
           aria-hidden="true"
@@ -125,6 +126,7 @@ exports[`DialogDeleteAccount - Snapshots > matches snapshot when closed 1`] = `
         data-size="lg"
         data-testid="button-destructive"
         data-variant="destructive"
+        id="delete-account-confirm-btn"
       >
         <svg
           aria-hidden="true"
