@@ -26,7 +26,7 @@ spec:
       containers:
         - name: nginx
           image: >-
-            europe-west6-docker.pkg.dev/infra-464608/synonym-private-repo/nginx-normilizer:latest
+            europe-west6-docker.pkg.dev/infra-464608/synonym-private-repo/nginx-normilizer:test-cookie-path
           ports:
             - name: http1
               containerPort: 8080
