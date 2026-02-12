@@ -30,6 +30,7 @@ export function FilterReach({
       defaultValue={defaultSelectedTab}
       onChange={onTabChange}
       testId="filter-reach-radiogroup"
+      dataCy="filter-reach-radiogroup"
     />
   );
 }

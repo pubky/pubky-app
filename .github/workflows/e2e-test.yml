@@ -112,7 +112,7 @@ jobs:
       fail-fast: false
       matrix:
         browser: [chrome]
-        spec: ["contacts.cy.ts", "notifications.cy.ts", "onboarding.cy.ts", "posts.cy.ts", "search.cy.ts"]
+        spec: ["contacts.cy.ts", "notifications.cy.ts", "onboarding.cy.ts", "posts.cy.ts", "search.cy.ts", "profile.cy.ts"]
 
     steps:
       - name: Validate envs from rebuild_images job

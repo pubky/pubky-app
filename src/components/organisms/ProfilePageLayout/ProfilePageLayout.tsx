@@ -95,7 +95,7 @@ export function ProfilePageLayout({
             isOwnProfile={isOwnProfile}
           />
 
-          <Atoms.Container overrideDefaults={true} className="min-w-0 flex-1">
+          <Atoms.Container data-cy="profile-tab-content" overrideDefaults={true} className="min-w-0 flex-1">
             {children}
           </Atoms.Container>
           <Organisms.ProfilePageSidebar />

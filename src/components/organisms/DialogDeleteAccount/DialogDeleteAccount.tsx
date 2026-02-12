@@ -28,7 +28,13 @@ export function DialogDeleteAccount({ isOpen, onOpenChangeAction }: DialogDelete
           Are you sure? Your account information cannot be recovered.
         </Atoms.Typography>
         <Atoms.DialogFooter>
-          <Atoms.Button variant="destructive" size="lg" onClick={handleDeleteAccount} className="order-1 sm:order-2">
+          <Atoms.Button
+            id="delete-account-confirm-btn"
+            variant="destructive"
+            size="lg"
+            onClick={handleDeleteAccount}
+            className="order-1 sm:order-2"
+          >
             <Libs.Trash2 className="h-4 w-4" />
             Delete Account
           </Atoms.Button>
