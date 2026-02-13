@@ -30,10 +30,17 @@ export const HumanLightningPayment = ({ onBack, onSuccess }: HumanLightningPayme
         verification.abort();
       }
       const onPaymentConfirmed = async (signupCode: string, homeserverPubky: string) => {
-        toast({
-          title: t('paymentSuccess'),
-        });
-        onSuccess(signupCode, homeserverPubky);
+        try {
+          await onSuccess(signupCode, homeserverPubky);
+          toast({
+            title: t('paymentSuccess'),
+          });
+        } catch (error) {
+          toast({
+            title: tCommon('error'),
+            description: Libs.isAppError(error) ? error.message : t('requestFailedDescription'),
+          });
+        }
       };
       const onPaymentExpired = () => {
         setIsPaymentExpired(true);
@@ -41,7 +48,14 @@ export const HumanLightningPayment = ({ onBack, onSuccess }: HumanLightningPayme
           title: t('paymentExpired'),
         });
       };
-      const client = await VerificationHandler.create(onPaymentConfirmed, onPaymentExpired);
+      const onVerificationError = (error: unknown) => {
+        toast({
+          title: tCommon('error'),
+          description: Libs.isAppError(error) ? error.message : t('requestFailedDescription'),
+        });
+      };
+
+      const client = await VerificationHandler.create(onPaymentConfirmed, onPaymentExpired, onVerificationError);
       setVerification(client);
       setIsPaymentExpired(false);
     } catch {

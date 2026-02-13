@@ -59,10 +59,17 @@ export class HomegateApplication {
    * Long-polling endpoint that waits for payment to be confirmed.
    *
    * @param verificationId - The verification ID from createLnVerification
+   * @param signal - Optional abort signal for canceling an in-flight long-poll request
    * @returns The verification result
    * @throws AppError if awaiting fails
    */
-  static async awaitLnVerification(verificationId: string): Promise<Types.THomegateAwaitLnVerificationResult> {
+  static async awaitLnVerification(
+    verificationId: string,
+    signal?: AbortSignal,
+  ): Promise<Types.THomegateAwaitLnVerificationResult> {
+    if (signal) {
+      return Core.HomegateService.awaitLnVerification(verificationId, signal);
+    }
     return Core.HomegateService.awaitLnVerification(verificationId);
   }
 

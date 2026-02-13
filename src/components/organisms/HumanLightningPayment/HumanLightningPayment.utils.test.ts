@@ -14,6 +14,12 @@ vi.mock('@/core', async () => {
 });
 
 describe('VerificationHandler', () => {
+  const flushMicrotasks = async (iterations = 5) => {
+    for (let i = 0; i < iterations; i += 1) {
+      await Promise.resolve();
+    }
+  };
+
   const mockCreateLnVerification = HomegateController.createLnVerification as ReturnType<typeof vi.fn>;
   const mockAwaitLnVerification = HomegateController.awaitLnVerification as ReturnType<typeof vi.fn>;
 
@@ -33,43 +39,15 @@ describe('VerificationHandler', () => {
   });
 
   describe('visibility change handling (mobile background/foreground)', () => {
-    it('should re-check payment status when tab becomes visible after being in background', async () => {
-      // Simulate: long-polling hangs indefinitely (simulating browser throttling in background)
-      // The ONLY way to detect payment is via visibility change check
-
-      let isVisibilityCheck = false;
-
-      mockAwaitLnVerification.mockImplementation(async () => {
-        if (isVisibilityCheck) {
-          // Visibility check: payment confirmed
-          return {
-            success: true,
-            data: {
-              isPaid: true,
-              signupCode: 'signup-code-123',
-              homeserverPubky: 'homeserver-pubky-456',
-            },
-          };
-        }
-        // Long-poll: hang forever (simulate browser background throttling)
-        return new Promise(() => {});
-      });
+    it('should avoid sending a second request when visibility check fires during an in-flight poll', async () => {
+      mockAwaitLnVerification.mockImplementation(async () => new Promise(() => {}));
 
       const onPaymentConfirmed = vi.fn();
       const onPaymentExpired = vi.fn();
 
-      const handler = await VerificationHandler.create(onPaymentConfirmed, onPaymentExpired);
+      const handler = await VerificationHandler.create(onPaymentConfirmed, onPaymentExpired, vi.fn());
 
-      // Wait a tick for the polling to start (and hang)
-      await new Promise((resolve) => setTimeout(resolve, 10));
-
-      // At this point, onPaymentConfirmed should NOT have been called
-      // because the long-poll is hanging
-      expect(onPaymentConfirmed).not.toHaveBeenCalled();
-
-      // Now simulate: user returns to the tab (visibility change)
-      // Mark that the next call is from visibility check
-      isVisibilityCheck = true;
+      await flushMicrotasks();
 
       Object.defineProperty(document, 'visibilityState', {
         value: 'visible',
@@ -78,14 +56,77 @@ describe('VerificationHandler', () => {
       });
       document.dispatchEvent(new Event('visibilitychange'));
 
-      // Wait for the visibility check to complete
-      await new Promise((resolve) => setTimeout(resolve, 50));
-
-      // The payment should be confirmed via the visibility change check
-      // This will FAIL without the fix because there's no visibility listener
-      expect(onPaymentConfirmed).toHaveBeenCalledWith('signup-code-123', 'homeserver-pubky-456');
+      await flushMicrotasks();
+      expect(mockAwaitLnVerification).toHaveBeenCalledTimes(1);
+      expect(onPaymentConfirmed).not.toHaveBeenCalled();
 
       handler.abort();
+    });
+
+    it('retries when await endpoint is rate limited and eventually confirms payment', async () => {
+      vi.useFakeTimers();
+      try {
+        mockAwaitLnVerification
+          .mockResolvedValueOnce({
+            success: false,
+            rateLimited: true,
+            retryAfter: 1,
+          })
+          .mockResolvedValueOnce({
+            success: true,
+            data: {
+              isPaid: true,
+              signupCode: 'signup-code-123',
+              homeserverPubky: 'homeserver-pubky-456',
+            },
+          });
+
+        const onPaymentConfirmed = vi.fn();
+        const handler = await VerificationHandler.create(onPaymentConfirmed, vi.fn(), vi.fn());
+
+        await vi.advanceTimersByTimeAsync(1000);
+        await flushMicrotasks();
+
+        expect(onPaymentConfirmed).toHaveBeenCalledWith('signup-code-123', 'homeserver-pubky-456');
+        handler.abort();
+      } finally {
+        vi.useRealTimers();
+      }
+    });
+
+    it('uses jittered exponential backoff when rate-limited without retryAfter', async () => {
+      vi.useFakeTimers();
+      const randomSpy = vi.spyOn(Math, 'random').mockReturnValue(0);
+      try {
+        mockAwaitLnVerification
+          .mockResolvedValueOnce({
+            success: false,
+            rateLimited: true,
+          })
+          .mockResolvedValueOnce({
+            success: true,
+            data: {
+              isPaid: true,
+              signupCode: 'signup-code-123',
+              homeserverPubky: 'homeserver-pubky-456',
+            },
+          });
+
+        const onPaymentConfirmed = vi.fn();
+        const handler = await VerificationHandler.create(onPaymentConfirmed, vi.fn(), vi.fn());
+
+        await vi.advanceTimersByTimeAsync(249);
+        expect(onPaymentConfirmed).not.toHaveBeenCalled();
+
+        await vi.advanceTimersByTimeAsync(1);
+        await flushMicrotasks();
+        expect(onPaymentConfirmed).toHaveBeenCalledWith('signup-code-123', 'homeserver-pubky-456');
+
+        handler.abort();
+      } finally {
+        randomSpy.mockRestore();
+        vi.useRealTimers();
+      }
     });
 
     it('should only call onPaymentConfirmed once even if both polling and visibility check detect payment', async () => {
@@ -112,8 +153,7 @@ describe('VerificationHandler', () => {
       });
       document.dispatchEvent(new Event('visibilitychange'));
 
-      // Wait for both to potentially complete
-      await new Promise((resolve) => setTimeout(resolve, 100));
+      await flushMicrotasks();
 
       // Should only be called once, not twice
       expect(onPaymentConfirmed).toHaveBeenCalledTimes(1);
@@ -121,14 +161,31 @@ describe('VerificationHandler', () => {
       handler.abort();
     });
 
+    it('surfaces non-retryable await errors through onError callback', async () => {
+      const fatalError = new Error('fatal await failure');
+      mockAwaitLnVerification.mockRejectedValue(fatalError);
+
+      const onError = vi.fn();
+      const handler = await VerificationHandler.create(vi.fn(), vi.fn(), onError);
+
+      await flushMicrotasks();
+
+      expect(onError).toHaveBeenCalledWith(fatalError);
+      expect(handler.aborted).toBe(true);
+    });
+
     it('should clean up visibility listener on abort', async () => {
-      mockAwaitLnVerification.mockResolvedValue({ success: false, timeout: true });
+      mockAwaitLnVerification.mockImplementation(async () => new Promise(() => {}));
 
       const removeEventListenerSpy = vi.spyOn(document, 'removeEventListener');
 
       const handler = await VerificationHandler.create(vi.fn(), vi.fn());
+      await flushMicrotasks();
+
+      const signal = mockAwaitLnVerification.mock.calls[0]?.[1] as AbortSignal | undefined;
       handler.abort();
 
+      expect(signal?.aborted).toBe(true);
       expect(removeEventListenerSpy).toHaveBeenCalledWith('visibilitychange', expect.any(Function));
     });
   });
