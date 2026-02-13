@@ -1,5 +1,5 @@
 import { HomegateController, THomegateAwaitLnVerificationResult, THomegateCreateLnVerificationResult } from '@/core';
-import { getRetryAfter, isAppError, isRetryable } from '@/libs';
+import { getRetryAfter, isAppError, isRetryable, TimeoutErrorCode } from '@/libs';
 
 /**
  * Simple verification handler that manages the verification process and payment confirmation.
@@ -9,6 +9,7 @@ export class VerificationHandler {
   private static readonly RETRY_MAX_DELAY_MS = 5000;
   private static readonly RETRY_JITTER_FACTOR = 0.5;
   private static readonly VISIBILITY_CHECK_MAX_RETRIES = 2;
+  private static readonly VISIBILITY_RECOVERY_DEBOUNCE_MS = 750;
 
   public aborted = false;
   private paymentConfirmed = false;
@@ -17,12 +18,17 @@ export class VerificationHandler {
   private awaitLnVerificationPromise: Promise<THomegateAwaitLnVerificationResult> | null = null;
   private awaitLnVerificationAbortController: AbortController | null = null;
   private retryAttempt = 0;
+  private sleepTimer: NodeJS.Timeout | null = null;
+  private sleepResolve: (() => void) | null = null;
+  private ignoreNextAbortError = false;
+  private visibilityRecoveryInProgress = false;
+  private lastVisibilityRecoveryAt = 0;
 
   private constructor(
-    public data: THomegateCreateLnVerificationResult,
-    public onPaymentConfirmed: (signupCode: string, homeserverPubky: string) => void,
-    public onPaymentExpired: () => void,
-    public onError?: (error: unknown) => void,
+    public readonly data: THomegateCreateLnVerificationResult,
+    private readonly onPaymentConfirmed: (signupCode: string, homeserverPubky: string) => void,
+    private readonly onPaymentExpired: () => void,
+    private readonly onError?: (error: unknown) => void,
   ) {}
 
   /**
@@ -62,6 +68,13 @@ export class VerificationHandler {
     }
     if (this.paymentExpiredTimeout) {
       clearTimeout(this.paymentExpiredTimeout);
+      this.paymentExpiredTimeout = null;
+    }
+    if (this.sleepTimer) {
+      clearTimeout(this.sleepTimer);
+      this.sleepTimer = null;
+      this.sleepResolve?.();
+      this.sleepResolve = null;
     }
     if (this.visibilityHandler) {
       document.removeEventListener('visibilitychange', this.visibilityHandler);
@@ -77,6 +90,17 @@ export class VerificationHandler {
     if (this.paymentConfirmed || this.aborted) return false;
     this.paymentConfirmed = true;
     this.retryAttempt = 0;
+
+    // Clean up: stop expiry timeout and visibility listener after confirmation.
+    if (this.paymentExpiredTimeout) {
+      clearTimeout(this.paymentExpiredTimeout);
+      this.paymentExpiredTimeout = null;
+    }
+    if (this.visibilityHandler) {
+      document.removeEventListener('visibilitychange', this.visibilityHandler);
+      this.visibilityHandler = null;
+    }
+
     this.onPaymentConfirmed?.(signupCode, homeserverPubky);
     return true;
   }
@@ -100,7 +124,14 @@ export class VerificationHandler {
   }
 
   private async sleep(ms: number): Promise<void> {
-    await new Promise((resolve) => setTimeout(resolve, ms));
+    await new Promise<void>((resolve) => {
+      this.sleepResolve = resolve;
+      this.sleepTimer = setTimeout(() => {
+        this.sleepTimer = null;
+        this.sleepResolve = null;
+        resolve();
+      }, ms);
+    });
   }
 
   private resetRetryState(): void {
@@ -126,8 +157,32 @@ export class VerificationHandler {
     return this.awaitLnVerificationPromise;
   }
 
+  private async abortInFlightAwait(forVisibilityRecovery: boolean): Promise<void> {
+    if (!this.awaitLnVerificationPromise || !this.awaitLnVerificationAbortController) {
+      return;
+    }
+
+    if (forVisibilityRecovery) {
+      this.ignoreNextAbortError = true;
+    }
+
+    const inFlightPromise = this.awaitLnVerificationPromise;
+    this.awaitLnVerificationAbortController.abort();
+
+    try {
+      await inFlightPromise;
+    } catch {
+      // Expected when aborting an in-flight long poll.
+    }
+  }
+
   private async handleAwaitError(error: unknown): Promise<boolean> {
     if (this.aborted) return false;
+
+    if (isAppError(error) && error.code === TimeoutErrorCode.REQUEST_ABORTED && this.ignoreNextAbortError) {
+      this.ignoreNextAbortError = false;
+      return true;
+    }
 
     if (isAppError(error) && isRetryable(error)) {
       await this.retryWithBackoff(getRetryAfter(error));
@@ -148,6 +203,7 @@ export class VerificationHandler {
     }
 
     this.paymentExpiredTimeout = setTimeout(() => {
+      if (this.paymentConfirmed || this.aborted) return;
       this.onPaymentExpired?.();
     }, this.data.expiresAt - Date.now());
   }
@@ -186,6 +242,10 @@ export class VerificationHandler {
           // Verification not found - stop polling (this shouldn't happen in normal flow)
           return undefined;
         }
+
+        // Fallthrough: unrecognized result or success with isPaid: false.
+        // Apply backoff to prevent tight-loop hammering the server.
+        await this.retryWithBackoff();
       } catch (error) {
         const shouldRetry = await this.handleAwaitError(error);
         if (!shouldRetry) {
@@ -204,18 +264,34 @@ export class VerificationHandler {
     if (typeof document === 'undefined') return;
 
     this.visibilityHandler = () => {
-      // If long-polling is currently in-flight, skip this extra check to avoid request bursts.
-      if (
-        document.visibilityState === 'visible' &&
-        !this.aborted &&
-        !this.isExpired &&
-        !this.awaitLnVerificationPromise
-      ) {
-        this.checkPaymentStatus();
+      if (document.visibilityState === 'visible' && !this.aborted && !this.isExpired) {
+        void this.recoverFromVisibility();
       }
     };
 
     document.addEventListener('visibilitychange', this.visibilityHandler);
+  }
+
+  private async recoverFromVisibility(): Promise<void> {
+    if (this.aborted || this.isExpired || this.paymentConfirmed) return;
+
+    const now = Date.now();
+    const isDebounced = now - this.lastVisibilityRecoveryAt < VerificationHandler.VISIBILITY_RECOVERY_DEBOUNCE_MS;
+    if (this.visibilityRecoveryInProgress || isDebounced) {
+      return;
+    }
+
+    this.visibilityRecoveryInProgress = true;
+    this.lastVisibilityRecoveryAt = now;
+
+    try {
+      // Force-refresh status on foreground by canceling stale in-flight poll first.
+      await this.abortInFlightAwait(true);
+      await this.checkPaymentStatus();
+    } finally {
+      this.visibilityRecoveryInProgress = false;
+      this.ignoreNextAbortError = false; // Ensure flag never leaks across recovery cycles
+    }
   }
 
   /**
