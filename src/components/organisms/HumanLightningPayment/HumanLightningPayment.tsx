@@ -15,6 +15,8 @@ export const HumanLightningPayment = ({ onBack, onSuccess }: HumanLightningPayme
   const t = useTranslations('onboarding.lightning');
   const tCommon = useTranslations('common');
   const [verification, setVerification] = useState<VerificationHandler | null>(null);
+  const verificationRef = React.useRef<VerificationHandler | null>(null);
+  const initTimeoutRef = React.useRef<number | null>(null);
   const rate = useBtcRate();
   const [isLoading, setIsLoading] = useState(true);
   const [isPaymentExpired, setIsPaymentExpired] = useState(false);
@@ -26,9 +28,10 @@ export const HumanLightningPayment = ({ onBack, onSuccess }: HumanLightningPayme
   const requestLightningInvoice = async () => {
     try {
       setIsLoading(true);
-      if (verification) {
-        verification.abort();
+      if (verificationRef.current) {
+        verificationRef.current.abort();
       }
+
       const onPaymentConfirmed = async (signupCode: string, homeserverPubky: string) => {
         try {
           await onSuccess(signupCode, homeserverPubky);
@@ -56,6 +59,7 @@ export const HumanLightningPayment = ({ onBack, onSuccess }: HumanLightningPayme
       };
 
       const client = await VerificationHandler.create(onPaymentConfirmed, onPaymentExpired, onVerificationError);
+      verificationRef.current = client;
       setVerification(client);
       setIsPaymentExpired(false);
     } catch {
@@ -70,17 +74,25 @@ export const HumanLightningPayment = ({ onBack, onSuccess }: HumanLightningPayme
 
   React.useEffect(() => {
     if (typeof window === 'undefined') return; // No SSR
-    if (!verification || verification.isExpired) {
-      requestLightningInvoice();
-    }
+
+    // In React Strict Mode (dev), the first mount is intentionally thrown away.
+    // Delay side effects to the next tick so cleanup can cancel that throwaway run.
+    initTimeoutRef.current = window.setTimeout(() => {
+      void requestLightningInvoice();
+    }, 0);
 
     // Cleanup: abort verification polling when component unmounts
     return () => {
-      if (verification) {
-        verification.abort();
+      if (initTimeoutRef.current !== null) {
+        window.clearTimeout(initTimeoutRef.current);
+        initTimeoutRef.current = null;
+      }
+      if (verificationRef.current) {
+        verificationRef.current.abort();
+        verificationRef.current = null;
       }
     };
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- intentionally run only on mount
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- run once on mount
   }, []);
 
   async function copyToClipboard(text: string) {
