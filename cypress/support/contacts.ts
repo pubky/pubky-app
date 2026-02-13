@@ -9,7 +9,7 @@ import { CheckForNewPosts } from './types/enums';
  * @param filterText - Text content to identify the post in the feed
  * @param postIdx - Index of the post among those matching filterText (0 = first match)
  */
-export const followFromPostMenu = (filterText: string, postIdx: number, ) => {
+export const followFromPostMenu = (filterText: string, postIdx: number) => {
   cy.findPostInFeed(postIdx, filterText, CheckForNewPosts.No).within(() => {
     cy.get('[data-cy="post-more-btn"]').click();
   });
