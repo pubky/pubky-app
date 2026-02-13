@@ -1006,6 +1006,7 @@
     "trendingPosts": "トレンド投稿",
     "postsCount": "{count}件の投稿",
     "failedToLoadUsers": "ユーザーの読み込みに失敗しました",
+    "failedToLoadTags": "タグの読み込みに失敗しました",
     "noUsersToShow": "表示するユーザーがいません"
   },
   "privacy": {
