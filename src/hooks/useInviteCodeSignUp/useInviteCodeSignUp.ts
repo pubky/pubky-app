@@ -13,23 +13,23 @@ const SIGN_UP_RETRY_BASE_DELAY_MS = 500;
 const SIGN_UP_RETRY_MAX_DELAY_MS = 5000;
 
 /**
- * Validates an invite code by generating keys and attempting signup.
+ * Validates an invite code by using existing keys (or generating new ones) and attempting signup.
  * There is no "validate only" API; the homeserver validates during signup.
  *
  * Only the onboarding store is written until signup succeeds; the auth store is updated
  * only when AuthController.signUp succeeds (session, currentUserPubky, hasProfile).
  *
- * On success the generated keys become the user's real keys (used on /onboarding/pubky).
+ * On success the keys in the onboarding store become the user's real keys.
  * On non-retryable failure clears onboarding secrets; on retryable failure keeps secrets so users can retry safely.
  * In both failure paths it shows a toast and throws so the caller can keep the user on the form.
  *
  * @example
  * const { validateAndSignUp } = useInviteCodeSignUp();
- * async function onSuccess(inviteCode: string) {
+ * const onContinue = async () => {
+ *   const inviteCode = Core.useOnboardingStore.getState().inviteCode;
  *   await validateAndSignUp(inviteCode);
- *   setInviteCode(inviteCode);
- *   router.push(ONBOARDING_ROUTES.INSTALL);
- * }
+ *   router.push(ONBOARDING_ROUTES.BACKUP);
+ * };
  */
 export function useInviteCodeSignUp(): UseInviteCodeSignUpResult {
   const { toast } = Molecules.useToast();
