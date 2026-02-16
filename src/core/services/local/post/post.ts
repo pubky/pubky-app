@@ -173,6 +173,7 @@ export class LocalPostService {
           Core.PostTagsModel.table,
           Core.UserCountsModel.table,
           Core.PostStreamModel.table,
+          Core.PostTtlModel.table,
         ],
         async () => {
           await Promise.all([
@@ -187,10 +188,31 @@ export class LocalPostService {
           // Update related post counts
           if (parentUri) {
             ops.push(this.updatePostCount(parentUri, 'replies', 1));
+            // Touch parent post TTL so the coordinator considers it fresh
+            // and doesn't overwrite the updated reply count from Nexus
+            const parentPostId = Core.buildCompositeIdFromPubkyUri({
+              uri: parentUri,
+              domain: Core.CompositeIdDomain.POSTS,
+            });
+            if (parentPostId) {
+              ops.push(Core.PostTtlModel.upsert({ id: parentPostId, lastUpdatedAt: Date.now() }));
+            }
           }
           if (repostedUri) {
             ops.push(this.updatePostCount(repostedUri, 'reposts', 1));
+            // Touch reposted post TTL so the coordinator considers it fresh
+            // and doesn't overwrite the updated repost count from Nexus
+            const repostedPostId = Core.buildCompositeIdFromPubkyUri({
+              uri: repostedUri,
+              domain: Core.CompositeIdDomain.POSTS,
+            });
+            if (repostedPostId) {
+              ops.push(Core.PostTtlModel.upsert({ id: repostedPostId, lastUpdatedAt: Date.now() }));
+            }
           }
+
+          // Touch TTL for the new post
+          ops.push(Core.PostTtlModel.upsert({ id: compositePostId, lastUpdatedAt: Date.now() }));
 
           // Update author's user counts in a single operation
           ops.push(
@@ -263,6 +285,7 @@ export class LocalPostService {
           Core.UserCountsModel.table,
           Core.PostStreamModel.table,
           Core.UnreadPostStreamModel.table,
+          Core.PostTtlModel.table,
         ],
         async () => {
           await Promise.all([
@@ -277,9 +300,27 @@ export class LocalPostService {
           // Decrement related post counts
           if (parentUri) {
             ops.push(this.updatePostCount(parentUri, 'replies', -1));
+            // Touch parent post TTL so the coordinator considers it fresh
+            // and doesn't overwrite the updated reply count from Nexus
+            const parentPostId = Core.buildCompositeIdFromPubkyUri({
+              uri: parentUri,
+              domain: Core.CompositeIdDomain.POSTS,
+            });
+            if (parentPostId) {
+              ops.push(Core.PostTtlModel.upsert({ id: parentPostId, lastUpdatedAt: Date.now() }));
+            }
           }
           if (repostedUri) {
             ops.push(this.updatePostCount(repostedUri, 'reposts', -1));
+            // Touch reposted post TTL so the coordinator considers it fresh
+            // and doesn't overwrite the updated repost count from Nexus
+            const repostedPostId = Core.buildCompositeIdFromPubkyUri({
+              uri: repostedUri,
+              domain: Core.CompositeIdDomain.POSTS,
+            });
+            if (repostedPostId) {
+              ops.push(Core.PostTtlModel.upsert({ id: repostedPostId, lastUpdatedAt: Date.now() }));
+            }
           }
 
           // Update author's user counts in a single operation

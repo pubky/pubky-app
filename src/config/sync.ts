@@ -1,3 +1,8 @@
 import { Env } from '@/libs/env';
 
-export const SYNC_TTL = Env.NEXT_PUBLIC_SYNC_TTL; // Default to 1 hour in seconds
+// TTL Coordinator configuration
+export const TTL_POST_MS = Env.NEXT_PUBLIC_TTL_POST_MS;
+export const TTL_USER_MS = Env.NEXT_PUBLIC_TTL_USER_MS;
+export const TTL_BATCH_INTERVAL_MS = Env.NEXT_PUBLIC_TTL_BATCH_INTERVAL_MS;
+export const TTL_POST_MAX_BATCH_SIZE = Env.NEXT_PUBLIC_TTL_POST_MAX_BATCH_SIZE;
+export const TTL_USER_MAX_BATCH_SIZE = Env.NEXT_PUBLIC_TTL_USER_MAX_BATCH_SIZE;
