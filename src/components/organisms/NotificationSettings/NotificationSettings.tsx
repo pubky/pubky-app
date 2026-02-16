@@ -3,10 +3,8 @@
 import { useTranslations } from 'next-intl';
 import * as Molecules from '@/molecules';
 import * as Core from '@/core';
-import type { NotificationPreferences } from '@/core';
 import { NOTIFICATION_LABEL_KEYS } from './NotificationSettings.constants';
-
-type NotificationType = keyof NotificationPreferences;
+import type { NotificationType } from './NotificationSettings.types';
 
 export function NotificationSettings() {
   const t = useTranslations('notifications.settings');

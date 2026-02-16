@@ -7,10 +7,7 @@ import * as Libs from '@/libs';
 import * as Organisms from '@/organisms';
 import * as App from '@/app';
 import type { SettingsInfoProps } from './SettingsInfo.types';
-
-const FAQ_QUESTION_KEYS = ['updateProfile', 'deletePost', 'muteSomeone', 'restoreAccount', 'pubkyDifferent'] as const;
-
-const COPYRIGHT_TEXT = '© 2026 Synonym Software, S.A. DE C.V.';
+import { FAQ_QUESTION_KEYS, COPYRIGHT_TEXT } from './SettingsInfo.constants';
 
 export function SettingsInfo({ className, hideFAQ = false }: SettingsInfoProps) {
   const t = useTranslations('settingsInfo');

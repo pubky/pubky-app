@@ -24,20 +24,15 @@ describe('SettingsMobileMenu', () => {
     expect(screen.getByLabelText('Help')).toBeInTheDocument();
   });
 
-  it('applies custom className', () => {
-    const { container } = render(<SettingsMobileMenu className="custom-menu" />);
-    expect(container.firstChild).toHaveClass('custom-menu');
+  it('includes lg:hidden class by default', () => {
+    const { container } = render(<SettingsMobileMenu />);
+    expect(container.firstChild).toHaveClass('lg:hidden');
   });
 });
 
 describe('SettingsMobileMenu - Snapshots', () => {
-  it('matches snapshot with default props', () => {
+  it('matches snapshot', () => {
     const { container } = render(<SettingsMobileMenu />);
-    expect(container.firstChild).toMatchSnapshot();
-  });
-
-  it('matches snapshot with custom className', () => {
-    const { container } = render(<SettingsMobileMenu className="custom-menu" />);
     expect(container.firstChild).toMatchSnapshot();
   });
 });

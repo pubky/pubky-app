@@ -4,34 +4,14 @@ import { usePathname } from 'next/navigation';
 import { useTranslations } from 'next-intl';
 import Link from 'next/link';
 import * as Atoms from '@/atoms';
-import * as Libs from '@/libs';
-import { SETTINGS_ROUTES } from '@/app';
+import { SETTINGS_MENU_ITEMS } from './SettingsMenu.constants';
 
-export interface SettingsMenuItem {
-  icon: React.ComponentType<{ size?: number; className?: string }>;
-  labelKey: string;
-  path: string;
-}
-
-const SETTINGS_MENU_ITEMS: SettingsMenuItem[] = [
-  { icon: Libs.UserRound, labelKey: 'account', path: SETTINGS_ROUTES.ACCOUNT },
-  { icon: Libs.Bell, labelKey: 'notifications', path: SETTINGS_ROUTES.NOTIFICATIONS },
-  { icon: Libs.Shield, labelKey: 'privacySafety', path: SETTINGS_ROUTES.PRIVACY_SAFETY },
-  { icon: Libs.MegaphoneOff, labelKey: 'mutedUsers', path: SETTINGS_ROUTES.MUTED_USERS },
-  { icon: Libs.Globe, labelKey: 'language', path: SETTINGS_ROUTES.LANGUAGE },
-  { icon: Libs.CircleHelp, labelKey: 'help', path: SETTINGS_ROUTES.HELP },
-];
-
-export interface SettingsMenuProps {
-  className?: string;
-}
-
-export function SettingsMenu({ className }: SettingsMenuProps) {
+export function SettingsMenu() {
   const pathname = usePathname();
   const t = useTranslations('settings');
 
   return (
-    <Atoms.FilterRoot className={className}>
+    <Atoms.FilterRoot>
       <Atoms.FilterHeader title={t('title')} />
 
       <Atoms.FilterList>

@@ -1,2 +1,1 @@
-export * from './SettingsSectionCard';
-export * from './SettingsSectionCard.types';
+export { SettingsSectionCard } from './SettingsSectionCard';

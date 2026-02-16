@@ -1,2 +1,1 @@
-export * from './SettingsSwitchItem';
-export * from './SettingsSwitchItem.types';
+export { SettingsSwitchItem } from './SettingsSwitchItem';

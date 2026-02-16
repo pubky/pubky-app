@@ -1,0 +1,208 @@
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
+
+exports[`EditProfileForm - Snapshots > matches snapshot 1`] = `
+<div
+  class="mx-auto flex w-full flex-1 flex-col gap-6 lg:flex-none"
+  data-testid="edit-profile-form"
+>
+  <div
+    class="flex flex-col gap-6 text-card-foreground shadow-sm rounded-md bg-card p-6 md:p-12 lg:flex lg:flex-row lg:gap-12"
+    data-slot="card"
+    data-testid="card"
+  >
+    <div
+      class="mx-auto flex-col flex w-full gap-6"
+      data-testid="container"
+    >
+      <div
+        class="mx-auto w-full flex-col flex gap-3"
+        data-testid="container"
+      >
+        <h3
+          class="font-bold text-foreground text-2xl"
+          data-testid="heading-3"
+        >
+          Profile
+        </h3>
+      </div>
+      <div
+        class="mx-auto w-full flex-col flex gap-6"
+        data-testid="container"
+      >
+        <div
+          class="mx-auto w-full flex-col flex gap-2"
+          data-testid="container"
+        >
+          <label
+            class="flex items-center gap-2 select-none group-data-[disabled=true]:pointer-events-none group-data-[disabled=true]:opacity-50 peer-disabled:cursor-not-allowed peer-disabled:opacity-50 text-xs font-medium tracking-wide text-muted-foreground"
+            data-slot="label"
+          >
+            NAME*
+          </label>
+          <div
+            class="flex !bg-alpha-90/10 mx-0 mb-2 w-full cursor-pointer flex-row items-center gap-0 rounded-md border bg-transparent pl-2 border-dashed h-12 text-base"
+            data-testid="container"
+          >
+            <input
+              aria-invalid="false"
+              class="file:text-foreground placeholder:text-muted-foreground selection:bg-primary selection:text-primary-foreground border-input flex h-9 min-w-0 rounded-md border bg-transparent px-3 py-1 text-base shadow-xs transition-[color,box-shadow] outline-none file:inline-flex file:h-7 file:border-0 file:bg-transparent file:text-sm file:font-medium disabled:pointer-events-none disabled:cursor-not-allowed disabled:opacity-50 aria-invalid:ring-destructive/40 aria-invalid:border-destructive focus:outline-none hover:outline-none hover:ring-0 focus:ring-0 focus:ring-offset-0 w-full border-none !bg-transparent"
+              data-testid="input"
+              id="profile-name-input"
+              placeholder="Enter your name"
+              type="text"
+              value="Test User"
+            />
+          </div>
+        </div>
+        <div
+          class="mx-auto w-full flex-col flex gap-2"
+          data-testid="container"
+        >
+          <label
+            class="flex items-center gap-2 select-none group-data-[disabled=true]:pointer-events-none group-data-[disabled=true]:opacity-50 peer-disabled:cursor-not-allowed peer-disabled:opacity-50 text-xs font-medium tracking-wide text-muted-foreground"
+            data-slot="label"
+          >
+            BIO
+          </label>
+          <div
+            class="mx-auto flex flex-1 cursor-pointer w-full items-center flex-row border gap-0 rounded-md font-medium border-dashed !bg-alpha-90/10"
+            data-testid="container"
+          >
+            <textarea
+              aria-invalid="false"
+              class="flex field-sizing-content min-h-16 rounded-md border border-input bg-transparent text-base wrap-anywhere shadow-xs transition-[color,box-shadow] outline-none placeholder:text-muted-foreground focus-visible:border-ring focus-visible:ring-ring/50 disabled:cursor-not-allowed disabled:opacity-50 aria-invalid:border-destructive aria-invalid:ring-destructive/40 w-full border-none resize-none px-5 py-4 h-25 !bg-transparent"
+              data-slot="textarea"
+              id="profile-bio-input"
+              placeholder="Tell a bit about yourself."
+              rows="40"
+            >
+              Test bio
+            </textarea>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div
+      class="mx-auto flex-col flex mt-6 w-full gap-6 lg:mt-0"
+      data-testid="container"
+    >
+      <div
+        class="mx-auto w-full flex-col flex gap-3"
+        data-testid="container"
+      >
+        <h3
+          class="font-bold text-foreground text-2xl"
+          data-testid="heading-3"
+        >
+          Links
+        </h3>
+      </div>
+      <div
+        class="mx-auto w-full flex-col flex gap-6"
+        data-testid="container"
+      >
+        <div
+          data-testid="dialog-add-link"
+        />
+      </div>
+    </div>
+    <div
+      class="mx-auto flex-col flex mt-6 w-full gap-6 lg:mt-0"
+      data-testid="container"
+    >
+      <div
+        class="mx-auto w-full flex-col flex gap-3 md:text-center"
+        data-testid="container"
+      >
+        <h3
+          class="font-bold text-foreground text-2xl"
+          data-testid="heading-3"
+        >
+          Avatar
+        </h3>
+      </div>
+      <div
+        class="mx-auto w-full flex flex-row justify-center"
+        data-testid="container"
+      >
+        <span
+          aria-label="Choose avatar image"
+          class="relative flex shrink-0 overflow-hidden rounded-full h-48 w-48 cursor-pointer bg-muted"
+          role="button"
+        >
+          <span
+            class="flex h-full w-full items-center justify-center rounded-full border border-muted-foreground bg-muted text-4xl"
+          >
+            TE
+          </span>
+        </span>
+      </div>
+      <div
+        class="mx-auto w-full flex-col flex justify-center"
+        data-testid="container"
+      >
+        <input
+          accept="image/*"
+          class="hidden"
+          type="file"
+        />
+        <button
+          class="inline-flex items-center justify-center whitespace-nowrap text-sm transition-all disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg:not([class*=\\"size-\\"])]:size-4 shrink-0 [&_svg]:shrink-0 outline-none focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[3px] aria-invalid:ring-destructive/40 aria-invalid:border-destructive font-semibold cursor-pointer border shadow-xs bg-secondary text-secondary-foreground hover:bg-secondary/80 h-8 gap-1.5 px-3 has-[>svg]:px-2.5 mx-auto rounded-full"
+          data-size="sm"
+          data-slot="button"
+          data-variant="secondary"
+        >
+          <svg
+            aria-hidden="true"
+            class="lucide lucide-file h-4 w-4"
+            fill="none"
+            height="24"
+            stroke="currentColor"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+            stroke-width="2"
+            viewBox="0 0 24 24"
+            width="24"
+            xmlns="http://www.w3.org/2000/svg"
+          >
+            <path
+              d="M6 22a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h8a2.4 2.4 0 0 1 1.704.706l3.588 3.588A2.4 2.4 0 0 1 20 8v12a2 2 0 0 1-2 2z"
+            />
+            <path
+              d="M14 2v5a1 1 0 0 0 1 1h5"
+            />
+          </svg>
+          <span
+            data-testid="typography"
+          >
+            Choose file
+          </span>
+        </button>
+      </div>
+    </div>
+  </div>
+  <div
+    class="mx-auto w-full flex mt-auto flex-row justify-between"
+    data-testid="container"
+  >
+    <button
+      class="inline-flex items-center justify-center whitespace-nowrap transition-all disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg:not([class*=\\"size-\\"])]:size-4 shrink-0 [&_svg]:shrink-0 outline-none focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[3px] aria-invalid:ring-destructive/40 aria-invalid:border-destructive cursor-pointer border shadow-xs hover:text-accent-foreground bg-input/30 border-input hover:bg-input/50 h-auto gap-2 py-2.5 sm:px-8 sm:py-5 text-sm font-bold leading-normal rounded-full px-8"
+      data-cy="edit-profile-cancel-btn"
+      data-size="lg"
+      data-slot="button"
+      data-variant="outline"
+    >
+      Cancel
+    </button>
+    <button
+      class="inline-flex items-center justify-center whitespace-nowrap transition-all disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg:not([class*=\\"size-\\"])]:size-4 shrink-0 [&_svg]:shrink-0 outline-none focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[3px] aria-invalid:ring-destructive/40 aria-invalid:border-destructive cursor-pointer border shadow-xs bg-brand/16 text-brand hover:!bg-brand/30 border-brand h-auto gap-2 py-2.5 sm:px-8 sm:py-5 text-sm font-bold leading-normal rounded-full px-8"
+      data-cy="edit-profile-save-btn"
+      data-size="lg"
+      data-slot="button"
+      data-testid="save-profile-button"
+    >
+      save
+    </button>
+  </div>
+</div>
+`;

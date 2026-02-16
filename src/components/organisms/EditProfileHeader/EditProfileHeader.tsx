@@ -24,7 +24,10 @@ export const EditProfileHeader = () => {
   return (
     <Atoms.PageHeader>
       <Molecules.PageTitle size="large">
-        {t('title')} <span className="text-brand">{t('titleHighlight')}</span>
+        {t('title')}{' '}
+        <Atoms.Typography as="span" overrideDefaults className="text-brand">
+          {t('titleHighlight')}
+        </Atoms.Typography>
       </Molecules.PageTitle>
       <Atoms.Container className="m-0 w-auto flex-col gap-4 md:flex-row md:items-center">
         <Atoms.PageSubtitle>{t('subtitle')}</Atoms.PageSubtitle>

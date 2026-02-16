@@ -1,6 +1,4 @@
-import type { NotificationPreferences } from '@/core';
-
-type NotificationType = keyof NotificationPreferences;
+import type { NotificationType } from './NotificationSettings.types';
 
 /**
  * Translation keys for notification settings labels

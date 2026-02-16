@@ -3,28 +3,16 @@
 import { usePathname, useRouter } from 'next/navigation';
 import { useTranslations } from 'next-intl';
 import * as Libs from '@/libs';
-import { SETTINGS_ROUTES } from '@/app';
 import * as Atoms from '@/atoms';
-
-const SETTINGS_MOBILE_ITEMS = [
-  { icon: Libs.UserRound, labelKey: 'account', path: SETTINGS_ROUTES.ACCOUNT },
-  { icon: Libs.Bell, labelKey: 'notifications', path: SETTINGS_ROUTES.NOTIFICATIONS },
-  { icon: Libs.Shield, labelKey: 'privacySafety', path: SETTINGS_ROUTES.PRIVACY_SAFETY },
-  { icon: Libs.MegaphoneOff, labelKey: 'mutedUsers', path: SETTINGS_ROUTES.MUTED_USERS },
-  { icon: Libs.Globe, labelKey: 'language', path: SETTINGS_ROUTES.LANGUAGE },
-  { icon: Libs.CircleHelp, labelKey: 'help', path: SETTINGS_ROUTES.HELP },
-];
-
-export interface SettingsMobileMenuProps {
-  className?: string;
-}
+import { SETTINGS_MOBILE_ITEMS } from './SettingsMobileMenu.constants';
 
 /**
  * Mobile settings navigation menu.
  * Follows same pattern as ProfilePageMobileMenu.
  * Uses --header-height-mobile CSS var for consistent positioning.
+ * Only visible on mobile (< lg breakpoint).
  */
-export function SettingsMobileMenu({ className }: SettingsMobileMenuProps) {
+export function SettingsMobileMenu() {
   const pathname = usePathname();
   const router = useRouter();
   const t = useTranslations('settings.menu');
@@ -33,10 +21,7 @@ export function SettingsMobileMenu({ className }: SettingsMobileMenuProps) {
     <Atoms.Container
       overrideDefaults
       data-testid="settings-mobile-menu"
-      className={Libs.cn(
-        'mobile-menu-gradient-fade fixed top-(--header-height-mobile) right-0 left-0 z-(--z-sticky-header) bg-background',
-        className,
-      )}
+      className="mobile-menu-gradient-fade fixed top-(--header-height-mobile) right-0 left-0 z-(--z-sticky-header) bg-background lg:hidden"
     >
       <Atoms.Container overrideDefaults className="flex w-full">
         {SETTINGS_MOBILE_ITEMS.map((item) => {

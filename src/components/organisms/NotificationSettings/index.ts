@@ -1,2 +1,1 @@
-export * from './NotificationSettings';
-export * from './NotificationSettings.constants';
+export { NotificationSettings } from './NotificationSettings';

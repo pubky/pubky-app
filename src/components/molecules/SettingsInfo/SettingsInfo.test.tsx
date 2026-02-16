@@ -22,7 +22,7 @@ describe('SettingsInfo', () => {
 
   it('renders copyright text', () => {
     render(<SettingsInfo />);
-    expect(screen.getByText(/© 2026 Synonym Software/)).toBeInTheDocument();
+    expect(screen.getByText(new RegExp(`© ${new Date().getFullYear()} Synonym Software`))).toBeInTheDocument();
   });
 });
 

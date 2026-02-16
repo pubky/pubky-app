@@ -1,2 +1,1 @@
-export * from './SettingsSwitchGroup';
-export * from './SettingsSwitchGroup.types';
+export { SettingsSwitchGroup } from './SettingsSwitchGroup';

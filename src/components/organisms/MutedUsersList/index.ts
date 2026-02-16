@@ -1,2 +1,1 @@
-export * from './MutedUsersList';
-export * from './MutedUsersList.types';
+export { MutedUsersList } from './MutedUsersList';

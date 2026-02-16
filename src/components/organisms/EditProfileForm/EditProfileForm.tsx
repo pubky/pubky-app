@@ -168,12 +168,16 @@ export const EditProfileForm = () => {
                 {state.avatarPreview ? (
                   <>
                     <Libs.Trash2 className="h-4 w-4" />
-                    <span>{tCommon('delete')}</span>
+                    <Atoms.Typography as="span" overrideDefaults>
+                      {tCommon('delete')}
+                    </Atoms.Typography>
                   </>
                 ) : (
                   <>
                     <Libs.File className="h-4 w-4" />
-                    <span>{t('chooseFile')}</span>
+                    <Atoms.Typography as="span" overrideDefaults>
+                      {t('chooseFile')}
+                    </Atoms.Typography>
                   </>
                 )}
               </Atoms.Button>
