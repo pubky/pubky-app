@@ -1,4 +1,4 @@
-import type { FAQAccordionItem } from '../FAQAccordion/FAQAccordion.types';
+import type { FAQAccordionItem } from '../../FAQAccordion/FAQAccordion.types';
 
 export type FAQSection = {
   id: string;
