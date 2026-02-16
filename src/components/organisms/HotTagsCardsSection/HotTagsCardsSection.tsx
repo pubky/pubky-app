@@ -80,10 +80,6 @@ export function HotTagsCardsSection({ className }: HotTagsCardsSectionProps) {
     );
   }
 
-  if (featuredTags.length === 0) {
-    return null;
-  }
-
   return (
     <Atoms.Container
       overrideDefaults
@@ -93,19 +89,23 @@ export function HotTagsCardsSection({ className }: HotTagsCardsSectionProps) {
       <Atoms.Heading level={5} size="lg" className="font-light text-muted-foreground">
         {t('hotTags')}
       </Atoms.Heading>
-      <Atoms.Container overrideDefaults className="flex flex-col gap-3 sm:flex-row">
-        {featuredTags.map((tag, index) => (
-          <Molecules.HotTagCard
-            key={tag.label}
-            rank={index + 1}
-            tagName={tag.label}
-            postCount={tag.tagged_count}
-            taggers={getUsersWithAvatars(tag.taggers_id)}
-            maxAvatars={maxAvatars}
-            onClick={handleTagClick}
-          />
-        ))}
-      </Atoms.Container>
+      {featuredTags.length === 0 ? (
+        <Atoms.Typography className="font-light text-muted-foreground">{t('noTagsToShow')}</Atoms.Typography>
+      ) : (
+        <Atoms.Container overrideDefaults className="flex flex-col gap-3 sm:flex-row">
+          {featuredTags.map((tag, index) => (
+            <Molecules.HotTagCard
+              key={tag.label}
+              rank={index + 1}
+              tagName={tag.label}
+              postCount={tag.tagged_count}
+              taggers={getUsersWithAvatars(tag.taggers_id)}
+              maxAvatars={maxAvatars}
+              onClick={handleTagClick}
+            />
+          ))}
+        </Atoms.Container>
+      )}
     </Atoms.Container>
   );
 }
