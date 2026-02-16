@@ -50,17 +50,21 @@ export function WhoToFollow({ className }: WhoToFollowProps) {
       className={className}
       data-testid="who-to-follow"
     >
-      {users.map((user) => (
-        <Organisms.UserListItem
-          key={user.id}
-          user={user}
-          variant="compact"
-          isLoading={isUserLoading(user.id)}
-          isStatusLoading={isStreamLoading}
-          onUserClick={handleUserClick}
-          onFollowClick={handleFollowClick}
-        />
-      ))}
+      {isStreamLoading
+        ? Array.from({ length: 3 }).map((_, index) => (
+            <Organisms.UserListItemSkeleton key={`who-to-follow-skeleton-${index}`} variant="compact" />
+          ))
+        : users.map((user) => (
+            <Organisms.UserListItem
+              key={user.id}
+              user={user}
+              variant="compact"
+              isLoading={isUserLoading(user.id)}
+              isStatusLoading={isStreamLoading}
+              onUserClick={handleUserClick}
+              onFollowClick={handleFollowClick}
+            />
+          ))}
     </Molecules.SidebarSection>
   );
 }

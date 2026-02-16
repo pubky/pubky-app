@@ -1,6 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen, waitFor } from '@testing-library/react';
 import * as Core from '@/core';
+import * as Hooks from '@/hooks';
 import { ActiveUsers } from './ActiveUsers';
 
 // Mock next/navigation
@@ -28,6 +29,25 @@ describe('ActiveUsers', () => {
   });
 
   describe('Data Flow - Issue #967', () => {
+    it('shows loading skeletons while stream is loading', () => {
+      const streamSpy = vi.spyOn(Hooks, 'useUserStream').mockReturnValue({
+        users: [],
+        userIds: [],
+        isLoading: true,
+        isLoadingMore: false,
+        hasMore: false,
+        error: null,
+        loadMore: vi.fn(),
+        refetch: vi.fn(),
+      } as unknown as ReturnType<typeof Hooks.useUserStream>);
+
+      render(<ActiveUsers />);
+
+      expect(screen.getAllByTestId('user-list-item-skeleton-compact')).toHaveLength(3);
+      expect(screen.queryByText('No users to show')).not.toBeInTheDocument();
+      streamSpy.mockRestore();
+    });
+
     it('should display users when stream returns user IDs and user details exist in cache', async () => {
       const mockUserIds: Core.Pubky[] = ['user-1', 'user-2', 'user-3'];
       const mockUserDetails: Core.NexusUserDetails[] = [

@@ -52,7 +52,11 @@ export function ActiveUsers({ className }: ActiveUsersProps) {
       className={className}
       data-testid="active-users"
     >
-      {users.length === 0 ? (
+      {isStreamLoading ? (
+        Array.from({ length: 3 }).map((_, index) => (
+          <Organisms.UserListItemSkeleton key={`active-users-skeleton-${index}`} variant="compact" />
+        ))
+      ) : users.length === 0 ? (
         <Atoms.Typography className="font-light text-muted-foreground">{t('noUsers')}</Atoms.Typography>
       ) : (
         users.map((user) => (

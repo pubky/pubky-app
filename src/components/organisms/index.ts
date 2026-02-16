@@ -99,6 +99,7 @@ export * from './NotificationSettings';
 export * from './NotificationsContainer';
 export * from './NotificationsList';
 export * from './UserListItem';
+export * from './UserListItemSkeleton';
 export * from './WhoToFollow';
 export * from './WhoToFollowPage';
 export * from './SearchInput';
