@@ -18,6 +18,7 @@ export function SearchInput({ autoFocus = false }: SearchInputProps) {
 
   const { addTagToSearch, removeTagFromSearch, activeTags, isReadOnly } = Hooks.useTagSearch();
   const { setActiveTags, recentUsers, recentTags, addUser, clearRecentSearches } = Core.useSearchStore();
+  const isMobile = Hooks.useIsMobile();
 
   const handleEnter = (value: string) => {
     addTagToSearch(value, { addToRecent: true });
@@ -62,6 +63,9 @@ export function SearchInput({ autoFocus = false }: SearchInputProps) {
   const handleTagClick = (tag: string) => {
     addTagToSearch(tag, { addToRecent: true });
     clearInputValue();
+    if (isMobile) {
+      setFocus(false);
+    }
     if (pathname !== APP_ROUTES.SEARCH) {
       setFocus(false);
     }
