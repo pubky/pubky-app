@@ -5,7 +5,6 @@ import * as Core from '@/core';
 import * as Libs from '@/libs';
 
 const {
-  mockGenerateSecrets,
   mockSignUp,
   mockClearSecrets,
   mockSetCurrentUserPubky,
@@ -15,7 +14,6 @@ const {
   mockIsAppError,
   mockIsAuthError,
 } = vi.hoisted(() => ({
-  mockGenerateSecrets: vi.fn(),
   mockSignUp: vi.fn(),
   mockClearSecrets: vi.fn(),
   mockSetCurrentUserPubky: vi.fn(),
@@ -27,7 +25,6 @@ const {
 }));
 
 vi.mock('@/core', () => ({
-  ProfileController: { generateSecretsForSignUp: mockGenerateSecrets },
   AuthController: { signUp: mockSignUp },
   useOnboardingStore: { getState: mockOnboardingGetState },
   useAuthStore: { getState: mockAuthGetState },
@@ -81,7 +78,7 @@ describe('useInviteCodeSignUp', () => {
     expect(typeof result.current.validateAndSignUp).toBe('function');
   });
 
-  it('calls generateSecretsForSignUp and signUp on validateAndSignUp', async () => {
+  it('calls signUp with secret key from onboarding store', async () => {
     mockSignUp.mockResolvedValue(undefined);
 
     const { result } = renderHook(() => useInviteCodeSignUp());
@@ -90,7 +87,6 @@ describe('useInviteCodeSignUp', () => {
       await result.current.validateAndSignUp(inviteCode);
     });
 
-    expect(mockGenerateSecrets).toHaveBeenCalled();
     expect(Core.AuthController.signUp).toHaveBeenCalledWith({
       secretKey: mockSecretKey,
       signupToken: inviteCode,
