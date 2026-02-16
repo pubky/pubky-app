@@ -125,7 +125,8 @@ export type TLnVerificationStatus = {
 export type TAwaitLnVerificationResult =
   | { success: true; data: TLnVerificationStatus }
   | { success: false; timeout: true }
-  | { success: false; notFound: true };
+  | { success: false; notFound: true }
+  | { success: false; rateLimited: true; retryAfter?: number };
 
 import { SmsCodeErrorType } from './homegate.constants';
 
