@@ -2,6 +2,7 @@ import { renderHook, act } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { useInviteCodeSignUp } from './useInviteCodeSignUp';
 import * as Core from '@/core';
+import * as Libs from '@/libs';
 
 const {
   mockGenerateSecrets,
@@ -159,6 +160,55 @@ describe('useInviteCodeSignUp', () => {
     expect(mockToast).toHaveBeenCalledWith({
       title: 'Error - Failed to sign up',
       description: 'Invalid or expired invite code.',
+    });
+  });
+
+  it('retries transient signup failures and succeeds without clearing secrets', async () => {
+    const transientError = Libs.Err.network(Libs.NetworkErrorCode.CONNECTION_FAILED, 'Network down', {
+      service: Libs.ErrorService.Local,
+      operation: 'validateAndSignUp',
+      context: { retryAfter: 0.001 },
+    });
+
+    mockSignUp.mockRejectedValueOnce(transientError).mockResolvedValueOnce(undefined);
+    mockIsAppError.mockReturnValue(true);
+    mockIsAuthError.mockReturnValue(false);
+
+    const { result } = renderHook(() => useInviteCodeSignUp());
+
+    await result.current.validateAndSignUp(inviteCode);
+
+    expect(mockSignUp).toHaveBeenCalledTimes(2);
+    expect(mockClearSecrets).not.toHaveBeenCalled();
+    expect(mockToast).not.toHaveBeenCalled();
+  });
+
+  it('keeps secrets after exhausted retryable failures to allow retrying paid signup', async () => {
+    const transientError = Libs.Err.network(Libs.NetworkErrorCode.CONNECTION_FAILED, 'Network down', {
+      service: Libs.ErrorService.Local,
+      operation: 'validateAndSignUp',
+      context: { retryAfter: 0.001 },
+    });
+
+    mockSignUp.mockRejectedValue(transientError);
+    mockIsAppError.mockReturnValue(true);
+    mockIsAuthError.mockReturnValue(false);
+
+    const { result } = renderHook(() => useInviteCodeSignUp());
+
+    let caughtError: unknown;
+    try {
+      await result.current.validateAndSignUp(inviteCode);
+    } catch (error) {
+      caughtError = error;
+    }
+
+    expect(caughtError).toEqual(transientError);
+    expect(mockSignUp).toHaveBeenCalledTimes(4);
+    expect(mockClearSecrets).not.toHaveBeenCalled();
+    expect(mockToast).toHaveBeenCalledWith({
+      title: 'Error - Failed to sign up',
+      description: 'Network down',
     });
   });
 });
