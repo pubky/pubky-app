@@ -2,7 +2,7 @@
 
 ## Status
 
-Created — 2025-12-14
+Accepted — 2025-12-14
 
 ## Summary
 
