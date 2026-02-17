@@ -65,10 +65,7 @@ export function HotTagCard({
               {rank}
             </Atoms.Typography>
           </Atoms.Container>
-          <Atoms.Typography
-            size="lg"
-            className="max-w-[calc(100vw-10rem)] truncate sm:max-w-[calc(100vw-32rem)] lg:max-w-40 lg:leading-normal"
-          >
+          <Atoms.Typography size="lg" className="truncate lg:leading-normal">
             {tagName}
           </Atoms.Typography>
         </Atoms.Container>
