@@ -4,21 +4,6 @@ exports[`DialogRepost - Snapshots > matches snapshot with default props 1`] = `
 <div>
   <div
     data-open="false"
-    data-testid="dialog-confirm-discard"
-  >
-    <button
-      data-testid="confirm-discard-cancel"
-    >
-      Cancel
-    </button>
-    <button
-      data-testid="confirm-discard-confirm"
-    >
-      Discard
-    </button>
-  </div>
-  <div
-    data-open="false"
     data-testid="dialog"
   >
     <div
@@ -58,6 +43,21 @@ exports[`DialogRepost - Snapshots > matches snapshot with default props 1`] = `
           </button>
         </div>
       </div>
+      <div
+        data-open="false"
+        data-testid="dialog-confirm-discard"
+      >
+        <button
+          data-testid="confirm-discard-cancel"
+        >
+          Cancel
+        </button>
+        <button
+          data-testid="confirm-discard-confirm"
+        >
+          Discard
+        </button>
+      </div>
     </div>
   </div>
 </div>
@@ -65,21 +65,6 @@ exports[`DialogRepost - Snapshots > matches snapshot with default props 1`] = `
 
 exports[`DialogRepost - Snapshots > matches snapshot with open prop 1`] = `
 <div>
-  <div
-    data-open="false"
-    data-testid="dialog-confirm-discard"
-  >
-    <button
-      data-testid="confirm-discard-cancel"
-    >
-      Cancel
-    </button>
-    <button
-      data-testid="confirm-discard-confirm"
-    >
-      Discard
-    </button>
-  </div>
   <div
     data-open="true"
     data-testid="dialog"
@@ -120,6 +105,21 @@ exports[`DialogRepost - Snapshots > matches snapshot with open prop 1`] = `
             Success
           </button>
         </div>
+      </div>
+      <div
+        data-open="false"
+        data-testid="dialog-confirm-discard"
+      >
+        <button
+          data-testid="confirm-discard-cancel"
+        >
+          Cancel
+        </button>
+        <button
+          data-testid="confirm-discard-confirm"
+        >
+          Discard
+        </button>
       </div>
     </div>
   </div>

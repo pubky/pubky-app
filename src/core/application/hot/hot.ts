@@ -56,9 +56,12 @@ export class HotApplication {
         return tags;
       }
 
-      // Cache miss - fetch from Nexus
+      // Cache miss - fetch from Nexus without limit so the full tag set is cached.
+      // This prevents cache pollution when multiple consumers with different limits
+      // share the same cache entry (e.g., HotTagsCardsSection with limit=5 vs HotTagsOverview with limit=50).
       Libs.Logger.debug('Hot tags cache miss, fetching from Nexus', { id });
-      const tags = await Core.NexusHotService.fetch(params);
+      const { limit, ...fetchParams } = params;
+      const tags = await Core.NexusHotService.fetch(fetchParams);
 
       if (tags.length > 0) {
         // Fetch and persist users first, then persist hot tags.
@@ -67,7 +70,8 @@ export class HotApplication {
         await Core.LocalHotService.upsert(id, tags);
       }
 
-      return tags;
+      // Apply caller's limit only on return, not on what gets cached
+      return limit ? tags.slice(0, limit) : tags;
     } catch (error) {
       Libs.Logger.error('Error in HotApplication.getOrFetch:', error);
       return [];
@@ -85,9 +89,13 @@ export class HotApplication {
    */
   private static async refreshCacheInBackground(id: string, params: Core.TTagHotParams) {
     try {
+      // Strip limit so the full tag set is fetched and cached, preventing cache pollution
+      // when different consumers request different limits for the same cache entry.
+      const { limit: _limit, ...fetchParams } = params;
+
       // Fetch and persist users first, then persist hot tags (blocking within this background task)
       // This prevents excessive rerender where liveQuery triggers before users are cached
-      const tags = await Core.NexusHotService.fetch(params);
+      const tags = await Core.NexusHotService.fetch(fetchParams);
       if (tags.length > 0) {
         await this.fetchUsersForTags(tags.slice(0, TOP_TAGS_TO_FETCH_USERS), params.user_id);
         await Core.LocalHotService.upsert(id, tags);
