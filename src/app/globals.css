@@ -60,13 +60,12 @@ body {
   --radius-3xl: 2rem;
   --radius-4xl: 3rem;
   --breakpoint-xsm: 23.4375rem;
-  --shadow-2xs: 0 1px 0 0 oklch(0.118 0.014 284.115 / 0.05);
-  --shadow-xs: 0 1px 2px 0 oklch(0.118 0.014 284.115 / 0.05);
-  --shadow-xs-dark: 0px 1px 2px 0px rgba(5, 5, 10, 0.2);
-  --shadow-sm: 0 1px 3px 0 oklch(0.118 0.014 284.115 / 0.1), 0 1px 2px -1px oklch(0.118 0.014 284.115 / 0.1);
-  --shadow-md: 0 4px 6px -1px oklch(0.118 0.014 284.115 / 0.1), 0 2px 4px -2px oklch(0.118 0.014 284.115 / 0.1);
-  --shadow-lg: 0 10px 15px -3px oklch(0.118 0.014 284.115 / 0.1), 0 4px 6px -4px oklch(0.118 0.014 284.115 / 0.1);
-  --shadow-xl: 0 20px 25px -5px oklch(0.118 0.014 284.115 / 0.1), 0 8px 10px -6px oklch(0.118 0.014 284.115 / 0.1);
+  --shadow-2xs: 0 1px 0 0 rgba(5, 5, 10, 0.2);
+  --shadow-xs: 0 1px 2px 0 rgba(5, 5, 10, 0.2);
+  --shadow-sm: 0 1px 3px 0 rgba(5, 5, 10, 0.25), 0 1px 2px 0px rgba(5, 5, 10, 0.25);
+  --shadow-md: 0 4px 6px 0px rgba(5, 5, 10, 0.25), 0 2px 4px 0px rgba(5, 5, 10, 0.25);
+  --shadow-lg: 0 10px 15px 0px rgba(5, 5, 10, 0.25), 0 4px 6px 0px rgba(5, 5, 10, 0.25);
+  --shadow-xl: 0 20px 25px 0px rgba(5, 5, 10, 0.25), 0 8px 10px 0px rgba(5, 5, 10, 0.25);
 }
 
 :root {
@@ -407,9 +406,6 @@ body {
 
 @layer utilities {
   /* Shadow utilities */
-  .shadow-xs-dark {
-    box-shadow: var(--shadow-xs-dark);
-  }
 
   /* Gradient fade effect for mobile tab menus (Profile, Settings) */
   .mobile-menu-gradient-fade::after {

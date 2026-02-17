@@ -11,7 +11,6 @@ export interface SearchSuggestionsProps {
   'aria-label'?: string;
   /** Hot tags to display (only when input is empty) */
   hotTags: HotTag[];
-
   /** Whether input has content */
   hasInput: boolean;
   /** Autocomplete tag suggestions */
