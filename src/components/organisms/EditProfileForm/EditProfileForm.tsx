@@ -1,6 +1,5 @@
 'use client';
 
-import { Facehash } from 'facehash';
 import * as Molecules from '@/molecules';
 import * as Organisms from '@/organisms';
 import * as Libs from '@/libs';
@@ -8,7 +7,6 @@ import * as Atoms from '@/atoms';
 import * as Hooks from '@/hooks';
 import * as Config from '@/config';
 import { useTranslations } from 'next-intl';
-import { FACEHASH_AVATAR_COLORS } from '@/organisms/AvatarWithFallback/AvatarWithFallback.utils';
 
 export const EditProfileForm = () => {
   const t = useTranslations('forms.profile');
@@ -150,17 +148,7 @@ export const EditProfileForm = () => {
                   />
                 ) : (
                   <Atoms.AvatarFallback className="overflow-hidden border-none text-4xl">
-                    <Facehash
-                      name={avatarFallbackSeed}
-                      size="100%"
-                      showInitial={false}
-                      colors={FACEHASH_AVATAR_COLORS}
-                      enableBlink
-                      className="h-full w-full rounded-full text-background"
-                      onRenderMouth={() => (
-                        <span style={{ fontSize: '26cqw', lineHeight: 1 }}>{avatarFallbackInitial}</span>
-                      )}
-                    />
+                    <Molecules.FacehashAvatar seed={avatarFallbackSeed} initial={avatarFallbackInitial} />
                   </Atoms.AvatarFallback>
                 )}
               </Atoms.Avatar>

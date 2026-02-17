@@ -1,29 +1,12 @@
 import * as Config from '@/config';
+import * as Libs from '@/libs';
+import type { ResolveAvatarFallbackSeedProps, ResolveAvatarFallbackInitialProps } from './AvatarWithFallback.types';
 
 /**
  * Regex pattern for validating userId format.
  * Must be exactly 52 alphanumeric characters (lowercase letters and digits).
  */
 const USER_ID_PATTERN = /^[a-z0-9]{52}$/;
-
-/**
- * Shared palette used for all fallback facehash avatars across the app.
- * The selected color remains deterministic per seed.
- */
-export const FACEHASH_AVATAR_COLORS = ['#C8FF00', '#B4E500', '#A0CC00', '#789900'];
-
-interface ResolveAvatarFallbackSeedProps {
-  fallbackSeed?: string | null;
-  avatarUrl?: string | null;
-  name?: string | null;
-  defaultSeed?: string;
-}
-
-interface ResolveAvatarFallbackInitialProps {
-  name?: string | null;
-  seed?: string | null;
-  defaultInitial?: string;
-}
 
 /**
  * Extracts the userId from an avatar URL.
@@ -58,15 +41,14 @@ export function extractUserIdFromAvatarUrl(avatarUrl: string | undefined | null)
 
 export function resolveAvatarFallbackSeed({
   fallbackSeed,
-  avatarUrl,
+  userId,
   name,
   defaultSeed = 'user',
 }: ResolveAvatarFallbackSeedProps): string {
   const normalizedFallbackSeed = fallbackSeed?.trim();
   if (normalizedFallbackSeed) return normalizedFallbackSeed;
 
-  const userIdFromAvatarUrl = extractUserIdFromAvatarUrl(avatarUrl);
-  if (userIdFromAvatarUrl) return userIdFromAvatarUrl;
+  if (userId) return userId;
 
   const normalizedName = name?.trim();
   if (normalizedName) return normalizedName;
@@ -79,15 +61,7 @@ export function resolveAvatarFallbackInitial({
   seed,
   defaultInitial = 'U',
 }: ResolveAvatarFallbackInitialProps): string {
-  const normalizedName = typeof name === 'string' ? name.trim() : '';
-  const nameInitial = normalizedName
-    .split(/\s+/)
-    .filter((word) => word.length > 0)
-    .map((word) => word.charAt(0))
-    .join('')
-    .toUpperCase()
-    .slice(0, 1);
-
+  const nameInitial = Libs.extractInitials({ name: name ?? '', maxLength: 1 });
   if (nameInitial) return nameInitial;
 
   const seedInitial = seed?.trim().charAt(0).toUpperCase();

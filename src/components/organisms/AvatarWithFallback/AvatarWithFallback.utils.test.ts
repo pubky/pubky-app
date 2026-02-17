@@ -182,40 +182,37 @@ describe('extractUserIdFromAvatarUrl', () => {
 
 describe('resolveAvatarFallbackSeed', () => {
   const validUserId = '6mfxozzqmb36rc9rgy3rykoyfghfao74n8igt5tf1boehproahoy';
-  const validAvatarUrl = `https://nexus.staging.pubky.app/static/avatar/${validUserId}`;
 
   it('uses explicit fallbackSeed first', () => {
     expect(
       resolveAvatarFallbackSeed({
         fallbackSeed: 'explicit-seed',
-        avatarUrl: validAvatarUrl,
+        userId: validUserId,
         name: 'John Doe',
       }),
     ).toBe('explicit-seed');
   });
 
-  it('uses userId extracted from avatarUrl when fallbackSeed is missing', () => {
+  it('uses userId when fallbackSeed is missing', () => {
     expect(
       resolveAvatarFallbackSeed({
-        avatarUrl: validAvatarUrl,
+        userId: validUserId,
         name: 'John Doe',
       }),
     ).toBe(validUserId);
   });
 
-  it('uses name when fallbackSeed and avatarUrl userId are missing', () => {
+  it('uses name when fallbackSeed and userId are missing', () => {
     expect(
       resolveAvatarFallbackSeed({
-        avatarUrl: 'https://example.com/avatar.jpg',
         name: 'Jane Doe',
       }),
     ).toBe('Jane Doe');
   });
 
-  it('falls back to default seed when no fallbackSeed, no valid avatarUrl userId, and no name', () => {
+  it('falls back to default seed when no fallbackSeed, no userId, and no name', () => {
     expect(
       resolveAvatarFallbackSeed({
-        avatarUrl: 'https://example.com/avatar.jpg',
         name: '',
       }),
     ).toBe('user');

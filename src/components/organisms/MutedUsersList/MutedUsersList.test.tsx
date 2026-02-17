@@ -25,6 +25,11 @@ vi.mock('@/hooks', () => ({
 
 vi.mock('@/molecules', () => ({
   toast: (props: unknown) => mockToast(props),
+  FacehashAvatar: ({ seed, initial }: { seed: string; initial: string }) => (
+    <div data-testid="facehash-avatar" data-seed={seed}>
+      {initial}
+    </div>
+  ),
 }));
 
 describe('MutedUsersList', () => {
@@ -64,7 +69,7 @@ describe('MutedUsersList', () => {
     render(<MutedUsersList />);
     expect(screen.getByText('Unknown User')).toBeInTheDocument();
     expect(screen.getByText('user-123')).toBeInTheDocument();
-    expect(screen.getByTestId('facehash')).toHaveAttribute('data-name', 'user-123');
+    expect(screen.getByTestId('facehash-avatar')).toHaveAttribute('data-seed', 'user-123');
     expect(screen.getByText('Unmute')).toBeInTheDocument();
   });
 

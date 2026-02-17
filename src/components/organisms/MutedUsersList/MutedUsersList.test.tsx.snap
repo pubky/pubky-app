@@ -36,14 +36,10 @@ exports[`MutedUsersList - Snapshots > matches snapshot - with muted users 1`] = 
           class="flex h-full w-full items-center justify-center rounded-full border border-muted-foreground bg-muted overflow-hidden border-none"
         >
           <div
-            data-name="user-1"
-            data-testid="facehash"
+            data-seed="user-1"
+            data-testid="facehash-avatar"
           >
-            <span
-              style="font-size: 26cqw; line-height: 1;"
-            >
-              U
-            </span>
+            U
           </div>
         </span>
       </span>
@@ -113,14 +109,10 @@ exports[`MutedUsersList - Snapshots > matches snapshot - with muted users 1`] = 
           class="flex h-full w-full items-center justify-center rounded-full border border-muted-foreground bg-muted overflow-hidden border-none"
         >
           <div
-            data-name="user-2"
-            data-testid="facehash"
+            data-seed="user-2"
+            data-testid="facehash-avatar"
           >
-            <span
-              style="font-size: 26cqw; line-height: 1;"
-            >
-              U
-            </span>
+            U
           </div>
         </span>
       </span>
@@ -190,14 +182,10 @@ exports[`MutedUsersList - Snapshots > matches snapshot - with muted users 1`] = 
           class="flex h-full w-full items-center justify-center rounded-full border border-muted-foreground bg-muted overflow-hidden border-none"
         >
           <div
-            data-name="user-3"
-            data-testid="facehash"
+            data-seed="user-3"
+            data-testid="facehash-avatar"
           >
-            <span
-              style="font-size: 26cqw; line-height: 1;"
-            >
-              U
-            </span>
+            U
           </div>
         </span>
       </span>

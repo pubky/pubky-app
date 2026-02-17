@@ -1,6 +1,5 @@
 'use client';
 
-import { Facehash } from 'facehash';
 import * as React from 'react';
 import { useTranslations } from 'next-intl';
 import * as Atoms from '@/atoms';
@@ -8,7 +7,6 @@ import * as Libs from '@/libs';
 import * as Hooks from '@/hooks';
 import * as Molecules from '@/molecules';
 import { mapUserIdsToMutedUsers } from './MutedUsersList.utils';
-import { FACEHASH_AVATAR_COLORS } from '@/organisms/AvatarWithFallback/AvatarWithFallback.utils';
 
 export function MutedUsersList() {
   const t = useTranslations('mutedUsers');
@@ -97,20 +95,13 @@ export function MutedUsersList() {
                     <Atoms.AvatarImage src={mutedUser.avatar} alt={mutedUser?.name ?? tCommon('user')} />
                   )}
                   <Atoms.AvatarFallback className="overflow-hidden border-none">
-                    <Facehash
-                      name={mutedUser?.id || mutedUser?.name || 'user'}
-                      size="100%"
-                      showInitial={false}
-                      colors={FACEHASH_AVATAR_COLORS}
-                      enableBlink
-                      className="h-full w-full rounded-full text-background"
-                      onRenderMouth={() => (
-                        <span style={{ fontSize: '26cqw', lineHeight: 1 }}>
-                          {Libs.extractInitials({ name: mutedUser?.name || '', maxLength: 1 }) ||
-                            mutedUser?.id?.charAt(0).toUpperCase() ||
-                            'U'}
-                        </span>
-                      )}
+                    <Molecules.FacehashAvatar
+                      seed={mutedUser?.id || mutedUser?.name || 'user'}
+                      initial={
+                        Libs.extractInitials({ name: mutedUser?.name || '', maxLength: 1 }) ||
+                        mutedUser?.id?.charAt(0).toUpperCase() ||
+                        'U'
+                      }
                     />
                   </Atoms.AvatarFallback>
                 </Atoms.Avatar>

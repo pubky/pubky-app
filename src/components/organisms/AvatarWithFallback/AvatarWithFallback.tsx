@@ -1,28 +1,19 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { Facehash } from 'facehash';
 import { useLiveQuery } from 'dexie-react-hooks';
 import * as Atoms from '@/atoms';
 import * as Libs from '@/libs';
 import * as Core from '@/core';
+import { FacehashAvatar } from '@/molecules/FacehashAvatar';
 import {
-  FACEHASH_AVATAR_COLORS,
   extractUserIdFromAvatarUrl,
   resolveAvatarFallbackSeed,
   resolveAvatarFallbackInitial,
 } from './AvatarWithFallback.utils';
+import type { AvatarWithFallbackProps } from './AvatarWithFallback.types';
 
-export interface AvatarWithFallbackProps {
-  avatarUrl?: string;
-  name: string;
-  fallbackSeed?: string;
-  size?: Atoms.AvatarSize;
-  className?: string;
-  fallbackClassName?: string;
-  alt?: string;
-  'data-testid'?: string;
-}
+export type { AvatarWithFallbackProps };
 
 export function AvatarWithFallback({
   avatarUrl,
@@ -38,7 +29,7 @@ export function AvatarWithFallback({
 
   // Extract userId from CDN URL for moderation and local avatar resolution
   const userId = extractUserIdFromAvatarUrl(avatarUrl);
-  const resolvedFallbackSeed = resolveAvatarFallbackSeed({ fallbackSeed, avatarUrl, name });
+  const resolvedFallbackSeed = resolveAvatarFallbackSeed({ fallbackSeed, userId, name });
   const fallbackInitial = resolveAvatarFallbackInitial({ name, seed: resolvedFallbackSeed });
 
   // Check if this avatar belongs to the current user
@@ -112,24 +103,7 @@ export function AvatarWithFallback({
       )}
       {/* Always render fallback - Radix shows it while image loads or if image fails */}
       <Atoms.AvatarFallback className={Libs.cn('overflow-hidden border-none', fallbackClassName)}>
-        <Facehash
-          name={resolvedFallbackSeed}
-          size="100%"
-          showInitial={false}
-          colors={FACEHASH_AVATAR_COLORS}
-          enableBlink
-          className="h-full w-full rounded-full text-background"
-          onRenderMouth={() => (
-            <Atoms.Typography
-              as="span"
-              overrideDefaults
-              data-testid="avatar-fallback-initial"
-              style={{ fontSize: '26cqw', lineHeight: 1 }}
-            >
-              {fallbackInitial}
-            </Atoms.Typography>
-          )}
-        />
+        <FacehashAvatar seed={resolvedFallbackSeed} initial={fallbackInitial} />
       </Atoms.AvatarFallback>
     </Atoms.Avatar>
   );

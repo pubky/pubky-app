@@ -203,6 +203,7 @@ exports[`MutedUsers - Snapshots > matches snapshot with muted users 1`] = `
                     style="margin-top: 8%; display: flex; align-items: center; justify-content: center;"
                   >
                     <span
+                      data-testid="avatar-fallback-initial"
                       style="font-size: 26cqw; line-height: 1;"
                     >
                       T
@@ -320,6 +321,7 @@ exports[`MutedUsers - Snapshots > matches snapshot with muted users 1`] = `
                     style="margin-top: 8%; display: flex; align-items: center; justify-content: center;"
                   >
                     <span
+                      data-testid="avatar-fallback-initial"
                       style="font-size: 26cqw; line-height: 1;"
                     >
                       T
