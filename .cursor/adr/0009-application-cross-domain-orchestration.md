@@ -126,7 +126,7 @@ class FileApplication {
 1. **Code Reviews**: Reviewers MUST check for:
    - Circular dependencies
    - Excessive call depth (max depth 1)
-   - **Orchestration privilege violations** (only PostApplication/UserApplication can call other Applications)
+   - **Orchestration privilege violations** (only PostApplication/UserApplication/NotificationApplication can call other Applications)
 2. **Documentation**: This ADR as the source of truth
 3. **Testing**: Integration tests to catch violations at runtime
 4. **Code Comments**: Developers MUST document cross-Application calls with ADR reference
