@@ -1,8 +1,8 @@
-# ADR 0016: Service Worker for Local File Cache (TBD - MVP)
+# ADR 0016: Service Worker for Local File Cache (MVP)
 
 ## Status
 
-Proposed — 2026-01-27
+Accepted — 2026-01-27
 
 ## Context
 
