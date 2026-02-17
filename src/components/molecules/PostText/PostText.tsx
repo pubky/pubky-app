@@ -202,7 +202,7 @@ export const PostText = memo(function PostText({ content, isArticle, className }
         <Atoms.Button
           overrideDefaults
           aria-label="Show full post content"
-          className={Libs.cn(className, 'mt-4 cursor-pointer text-brand transition-colors hover:text-brand/80')}
+          className="mt-4 cursor-pointer text-brand transition-colors hover:text-brand/80"
         >
           Show more
         </Atoms.Button>
