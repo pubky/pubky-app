@@ -8,10 +8,9 @@ on:
         required: true
         type: choice
         options:
-        - production
-        - staging
-        - testnet
-        - preview
+          - production
+          - staging
+          - testnet
 
       latest:
         description: 'Use latest tag'
@@ -24,10 +23,10 @@ on:
         required: true
         type: choice
         options:
-        - linux/arm64/v8
-        - linux/arm64/v7
-        - linux/arm64
-        - linux/amd64
+          - linux/arm64/v8
+          - linux/arm64/v7
+          - linux/arm64
+          - linux/amd64
 
       pr_number:
         description: 'PR number (used for preview env)'
@@ -64,7 +63,7 @@ on:
         type: string
 
 env:
-  registry: "europe-west6-docker.pkg.dev/infra-464608/synonym-private-repo"
+  registry: 'europe-west6-docker.pkg.dev/infra-464608/synonym-private-repo'
 
 jobs:
   check_image:
@@ -75,7 +74,6 @@ jobs:
       image_exists: ${{ steps.check_image.outputs.exists }}
     runs-on: ubuntu-latest
     steps:
-
       - name: Checkout this repository
         uses: actions/checkout@v4
 
@@ -83,7 +81,7 @@ jobs:
         id: sha_tag
         uses: pubky/ci-workflows/.github/actions/docker/get_head_commit_hash@main
         with:
-          path: "."
+          path: '.'
 
       - name: Set Current Tag as Output
         id: set_tag
@@ -106,10 +104,10 @@ jobs:
           arch: ${{ inputs.platforms }}
 
   build_image:
-    name: "Build image for ${{ inputs.env }}"
+    name: 'Build image for ${{ inputs.env }}'
     needs: [check_image]
     if: ${{ needs.check_image.outputs.image_exists != 'true' }}
-    runs-on: ["ubuntu-latest"]
+    runs-on: ['ubuntu-latest']
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -132,7 +130,6 @@ jobs:
             NEXT_PUBLIC_DB_VERSION=2
             NEXT_PUBLIC_DB_NAME=franky
             NEXT_PUBLIC_DEBUG_MODE=false
-            NEXT_PUBLIC_SYNC_TTL=300000
             NEXT_PUBLIC_NOTIFICATION_POLL_INTERVAL_MS=8888
             NEXT_PUBLIC_NOTIFICATION_POLL_ON_START=false
             NEXT_PUBLIC_NOTIFICATION_RESPECT_PAGE_VISIBILITY=true
@@ -142,9 +139,9 @@ jobs:
             NEXT_PUBLIC_STREAM_FETCH_LIMIT=10
             NEXT_PUBLIC_STREAM_CACHE_MAX_AGE_MS=300000
             NEXT_MAX_STREAM_TAGS=5
-            NEXT_PUBLIC_TTL_POST_MS=300000
-            NEXT_PUBLIC_TTL_USER_MS=600000
-            NEXT_PUBLIC_TTL_BATCH_INTERVAL_MS=5000
+            NEXT_PUBLIC_TTL_POST_MS=120000
+            NEXT_PUBLIC_TTL_USER_MS=300000
+            NEXT_PUBLIC_TTL_BATCH_INTERVAL_MS=10000
             NEXT_PUBLIC_TTL_POST_MAX_BATCH_SIZE=20
             NEXT_PUBLIC_TTL_USER_MAX_BATCH_SIZE=20
             NEXT_PUBLIC_TTL_RETRY_DELAY_MS=60000
