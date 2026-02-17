@@ -1,56 +1,74 @@
 // Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
 
 exports[`DialogReply - Snapshots > matches snapshot with default props 1`] = `
-<div
-  data-open="false"
-  data-testid="dialog"
->
+<div>
   <div
-    aria-label="Reply to post"
-    class="w-3xl"
-    data-testid="dialog-content"
+    data-open="false"
+    data-testid="dialog-confirm-discard"
+  >
+    <button
+      data-testid="confirm-discard-cancel"
+    >
+      Cancel
+    </button>
+    <button
+      data-testid="confirm-discard-confirm"
+    >
+      Discard
+    </button>
+  </div>
+  <div
+    data-open="false"
+    data-testid="dialog"
   >
     <div
-      data-testid="dialog-header"
-    >
-      <h2
-        data-testid="dialog-title"
-      >
-        Reply
-      </h2>
-      <p
-        data-testid="dialog-description"
-      >
-        Reply dialog
-      </p>
-    </div>
-    <div
-      class="gap-3"
-      data-testid="container"
+      aria-label="Reply to post"
+      class="w-3xl"
+      data-testid="dialog-content"
     >
       <div
-        data-post-id="snapshot-post-id"
-        data-testid="post-preview-card"
+        data-testid="dialog-header"
       >
-        PostPreviewCard 
-        snapshot-post-id
+        <h2
+          data-testid="dialog-title"
+        >
+          Reply
+        </h2>
+        <p
+          data-testid="dialog-description"
+        >
+          Reply dialog
+        </p>
       </div>
       <div
-        class="relative pl-6"
-        data-override-defaults="true"
+        class="gap-3"
         data-testid="container"
       >
         <div
           data-post-id="snapshot-post-id"
-          data-show-thread="true"
-          data-testid="post-input"
-          data-variant="reply"
+          data-testid="post-preview-card"
         >
-          <button
-            data-testid="mock-success-btn"
+          PostPreviewCard 
+          snapshot-post-id
+        </div>
+        <div
+          class="relative pl-6"
+          data-override-defaults="true"
+          data-testid="container"
+        >
+          <div
+            data-has-content-change="true"
+            data-post-id="snapshot-post-id"
+            data-show-thread="true"
+            data-testid="post-input"
+            data-variant="reply"
           >
-            Success
-          </button>
+            <button
+              data-testid="mock-success-btn"
+            >
+              Success
+            </button>
+          </div>
         </div>
       </div>
     </div>
@@ -59,56 +77,74 @@ exports[`DialogReply - Snapshots > matches snapshot with default props 1`] = `
 `;
 
 exports[`DialogReply - Snapshots > matches snapshot with open prop 1`] = `
-<div
-  data-open="true"
-  data-testid="dialog"
->
+<div>
   <div
-    aria-label="Reply to post"
-    class="w-3xl"
-    data-testid="dialog-content"
+    data-open="false"
+    data-testid="dialog-confirm-discard"
+  >
+    <button
+      data-testid="confirm-discard-cancel"
+    >
+      Cancel
+    </button>
+    <button
+      data-testid="confirm-discard-confirm"
+    >
+      Discard
+    </button>
+  </div>
+  <div
+    data-open="true"
+    data-testid="dialog"
   >
     <div
-      data-testid="dialog-header"
-    >
-      <h2
-        data-testid="dialog-title"
-      >
-        Reply
-      </h2>
-      <p
-        data-testid="dialog-description"
-      >
-        Reply dialog
-      </p>
-    </div>
-    <div
-      class="gap-3"
-      data-testid="container"
+      aria-label="Reply to post"
+      class="w-3xl"
+      data-testid="dialog-content"
     >
       <div
-        data-post-id="snapshot-post-id"
-        data-testid="post-preview-card"
+        data-testid="dialog-header"
       >
-        PostPreviewCard 
-        snapshot-post-id
+        <h2
+          data-testid="dialog-title"
+        >
+          Reply
+        </h2>
+        <p
+          data-testid="dialog-description"
+        >
+          Reply dialog
+        </p>
       </div>
       <div
-        class="relative pl-6"
-        data-override-defaults="true"
+        class="gap-3"
         data-testid="container"
       >
         <div
           data-post-id="snapshot-post-id"
-          data-show-thread="true"
-          data-testid="post-input"
-          data-variant="reply"
+          data-testid="post-preview-card"
         >
-          <button
-            data-testid="mock-success-btn"
+          PostPreviewCard 
+          snapshot-post-id
+        </div>
+        <div
+          class="relative pl-6"
+          data-override-defaults="true"
+          data-testid="container"
+        >
+          <div
+            data-has-content-change="true"
+            data-post-id="snapshot-post-id"
+            data-show-thread="true"
+            data-testid="post-input"
+            data-variant="reply"
           >
-            Success
-          </button>
+            <button
+              data-testid="mock-success-btn"
+            >
+              Success
+            </button>
+          </div>
         </div>
       </div>
     </div>

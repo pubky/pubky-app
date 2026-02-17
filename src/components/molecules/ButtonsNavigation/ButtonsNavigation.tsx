@@ -58,7 +58,7 @@ export function ButtonsNavigation({
             </>
           ) : (
             <>
-              <Libs.ArrowRight className="mr-1.5 h-4 w-4" />
+              <Libs.LogIn className="mr-1.5 h-4 w-4" />
               {continueText}
             </>
           )}

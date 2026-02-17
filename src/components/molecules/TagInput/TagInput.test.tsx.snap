@@ -16,7 +16,7 @@ exports[`TagInput - Snapshots > matches snapshot 1`] = `
   />
   <button
     aria-label="Open emoji picker"
-    class="inline-flex size-5 cursor-pointer items-center justify-center rounded-full p-1 shadow-xs-dark hover:shadow-xs-dark"
+    class="inline-flex size-5 cursor-pointer items-center justify-center rounded-full p-1 shadow-xs hover:shadow-xs"
     data-slot="button"
   >
     <svg

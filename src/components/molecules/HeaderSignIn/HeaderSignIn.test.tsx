@@ -40,16 +40,19 @@ vi.mock('@/molecules', () => ({
   HeaderNavigationButtons: ({
     avatarImage,
     avatarName,
+    avatarSeed,
     counter,
   }: {
     avatarImage?: string;
     avatarName?: string;
+    avatarSeed?: string;
     counter?: number;
   }) => (
     <div
       data-testid="header-navigation-buttons"
       data-avatar-image={avatarImage}
       data-avatar-name={avatarName}
+      data-avatar-seed={avatarSeed}
       data-counter={counter?.toString()}
     >
       Navigation Buttons
@@ -88,6 +91,7 @@ describe('HeaderSignIn', () => {
     const navButtons = screen.getByTestId('header-navigation-buttons');
     expect(navButtons).toHaveAttribute('data-avatar-image', 'https://cdn.example.com/avatar/test-pubky-123');
     expect(navButtons).toHaveAttribute('data-avatar-name', 'Test User');
+    expect(navButtons).toHaveAttribute('data-avatar-seed', 'test-pubky-123');
   });
 
   it('passes notification counter to navigation buttons', () => {
