@@ -258,6 +258,38 @@ describe('ProfilePageHeader - Other User Profile', () => {
     expect(screen.getByText('Following')).toBeInTheDocument();
   });
 
+  it('shows Following... while follow action is loading even if isFollowing has updated', () => {
+    const props = {
+      ...mockOtherUserProps,
+      actions: {
+        ...mockOtherUserProps.actions,
+        isFollowing: true,
+        isFollowLoading: true,
+        followLoadingAction: 'follow' as const,
+      },
+    };
+    render(<ProfilePageHeader {...props} />);
+
+    expect(screen.getByText('Following...')).toBeInTheDocument();
+    expect(screen.queryByText('Unfollowing...')).not.toBeInTheDocument();
+  });
+
+  it('shows Unfollowing... while unfollow action is loading even if isFollowing has updated', () => {
+    const props = {
+      ...mockOtherUserProps,
+      actions: {
+        ...mockOtherUserProps.actions,
+        isFollowing: false,
+        isFollowLoading: true,
+        followLoadingAction: 'unfollow' as const,
+      },
+    };
+    render(<ProfilePageHeader {...props} />);
+
+    expect(screen.getByText('Unfollowing...')).toBeInTheDocument();
+    expect(screen.queryByText('Following...')).not.toBeInTheDocument();
+  });
+
   it('hides Edit, Sign out buttons when viewing other user', () => {
     render(<ProfilePageHeader {...mockOtherUserProps} />);
 

@@ -12,6 +12,8 @@ export interface ProfilePageLayoutActions {
   onFollowToggle?: () => void;
   /** Whether the follow action is in progress */
   isFollowLoading?: boolean;
+  /** Which follow action is currently in progress */
+  followLoadingAction?: 'follow' | 'unfollow';
   /** Whether the current user is following this profile */
   isFollowing?: boolean;
 }

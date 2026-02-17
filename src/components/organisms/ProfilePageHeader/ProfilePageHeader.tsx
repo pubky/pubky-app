@@ -32,6 +32,7 @@ export function ProfilePageHeader({ profile, actions, isOwnProfile = true, userI
     isLoggingOut,
     onFollowToggle,
     isFollowLoading,
+    followLoadingAction,
     isFollowing,
   } = actions;
 
@@ -44,6 +45,19 @@ export function ProfilePageHeader({ profile, actions, isOwnProfile = true, userI
 
   const formattedPublicKey = Libs.formatPublicKey({ key: publicKey });
   const displayEmoji = Libs.extractEmojiFromStatus(status || '', emoji);
+  const getLoadingFollowText = () => {
+    if (followLoadingAction === 'unfollow') {
+      return t('unfollowing');
+    }
+
+    if (followLoadingAction === 'follow') {
+      return t('followingProgress');
+    }
+
+    // Defensive fallback: if action is temporarily unavailable, match the current
+    // UI state to avoid reversed copy during optimistic updates.
+    return isFollowing ? t('followingProgress') : t('unfollowing');
+  };
 
   return (
     <Atoms.Container
@@ -151,7 +165,7 @@ export function ProfilePageHeader({ profile, actions, isOwnProfile = true, userI
                   {isFollowLoading ? (
                     <>
                       <Icons.Loader2 className="size-4 animate-spin" />
-                      {isFollowing ? t('unfollowing') : t('followingProgress')}
+                      {getLoadingFollowText()}
                     </>
                   ) : (
                     <>
