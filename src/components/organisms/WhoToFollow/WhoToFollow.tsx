@@ -52,7 +52,7 @@ export function WhoToFollow({ className }: WhoToFollowProps) {
     >
       {isStreamLoading
         ? Array.from({ length: 3 }).map((_, index) => (
-            <Organisms.UserListItemSkeleton key={`who-to-follow-skeleton-${index}`} variant="compact" />
+            <Organisms.CompactUserListItemSkeleton key={`who-to-follow-skeleton-${index}`} />
           ))
         : users.map((user) => (
             <Organisms.UserListItem

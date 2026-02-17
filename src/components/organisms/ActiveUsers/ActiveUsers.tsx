@@ -54,7 +54,7 @@ export function ActiveUsers({ className }: ActiveUsersProps) {
     >
       {isStreamLoading ? (
         Array.from({ length: 3 }).map((_, index) => (
-          <Organisms.UserListItemSkeleton key={`active-users-skeleton-${index}`} variant="compact" />
+          <Organisms.CompactUserListItemSkeleton key={`active-users-skeleton-${index}`} />
         ))
       ) : users.length === 0 ? (
         <Atoms.Typography className="font-light text-muted-foreground">{t('noUsers')}</Atoms.Typography>

@@ -44,7 +44,7 @@ export function WhoToFollowPageMain() {
       <Atoms.Container className="mt-6 gap-4 lg:mt-0">
         <Atoms.Container className="gap-3.5 rounded-md bg-transparent p-0 lg:gap-3 lg:bg-card lg:p-6">
           {Array.from({ length: USERS_PER_PAGE }).map((_, index) => (
-            <Organisms.UserListItemSkeleton key={`who-to-follow-page-skeleton-${index}`} variant="full" />
+            <Organisms.FullUserListItemSkeleton key={`who-to-follow-page-skeleton-${index}`} />
           ))}
         </Atoms.Container>
       </Atoms.Container>

@@ -77,7 +77,7 @@ export function HotActiveUsers({ limit = DEFAULT_USERS_LIMIT, className }: HotAc
       ) : isLoading ? (
         <Atoms.Container className="gap-3.5 rounded-md py-2 lg:gap-3">
           {Array.from({ length: limit }).map((_, index) => (
-            <Organisms.UserListItemSkeleton key={`hot-active-users-skeleton-${index}`} variant="full" />
+            <Organisms.FullUserListItemSkeleton key={`hot-active-users-skeleton-${index}`} />
           ))}
         </Atoms.Container>
       ) : users.length === 0 ? (

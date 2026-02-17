@@ -80,7 +80,7 @@ vi.mock('@/organisms', () => ({
       User item
     </div>
   ),
-  UserListItemSkeleton: () => <div data-testid="user-list-item-skeleton-full">Skeleton item</div>,
+  FullUserListItemSkeleton: () => <div data-testid="user-list-item-skeleton-full">Skeleton item</div>,
 }));
 
 const mockUsers = [

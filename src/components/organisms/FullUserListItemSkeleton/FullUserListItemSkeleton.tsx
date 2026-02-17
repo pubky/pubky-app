@@ -1,36 +1,10 @@
 import * as Atoms from '@/atoms';
-import * as Libs from '@/libs';
-import type { UserListItemSkeletonProps } from './UserListItemSkeleton.types';
 
-function CompactUserListItemSkeleton({
-  className,
-  'data-testid': dataTestId,
-}: Omit<UserListItemSkeletonProps, 'variant'>) {
+export function FullUserListItemSkeleton() {
   return (
     <Atoms.Container
-      overrideDefaults
-      className={Libs.cn('flex w-full items-center gap-3', className)}
-      data-testid={dataTestId || 'user-list-item-skeleton-compact'}
-    >
-      <Atoms.Skeleton className="size-10 shrink-0 rounded-full" />
-
-      <Atoms.Container overrideDefaults className="flex min-w-0 flex-1 flex-col gap-2">
-        <Atoms.Skeleton className="h-4 w-full max-w-[150px] rounded-md" />
-
-        <Atoms.Skeleton className="h-4 w-full max-w-[130px] rounded-md" />
-      </Atoms.Container>
-    </Atoms.Container>
-  );
-}
-
-function FullUserListItemSkeleton({
-  className,
-  'data-testid': dataTestId,
-}: Omit<UserListItemSkeletonProps, 'variant'>) {
-  return (
-    <Atoms.Container
-      className={Libs.cn('gap-3 rounded-md bg-card p-6 lg:bg-transparent lg:p-0', className)}
-      data-testid={dataTestId || 'user-list-item-skeleton-full'}
+      className="gap-3 rounded-md bg-card p-6 lg:bg-transparent lg:p-0"
+      data-testid="user-list-item-skeleton-full"
     >
       <Atoms.Container overrideDefaults className="flex flex-wrap items-center justify-between gap-6 lg:flex-nowrap">
         <Atoms.Container overrideDefaults className="flex min-w-0 flex-1 items-center gap-2">
@@ -63,16 +37,4 @@ function FullUserListItemSkeleton({
       </Atoms.Container>
     </Atoms.Container>
   );
-}
-
-export function UserListItemSkeleton({
-  variant = 'compact',
-  className,
-  'data-testid': dataTestId,
-}: UserListItemSkeletonProps) {
-  if (variant === 'full') {
-    return <FullUserListItemSkeleton className={className} data-testid={dataTestId} />;
-  }
-
-  return <CompactUserListItemSkeleton className={className} data-testid={dataTestId} />;
 }
