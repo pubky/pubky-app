@@ -63,10 +63,8 @@ export function SearchInput({ autoFocus = false }: SearchInputProps) {
   const handleTagClick = (tag: string) => {
     addTagToSearch(tag, { addToRecent: true });
     clearInputValue();
-    if (isMobile) {
-      setFocus(false);
-    }
-    if (pathname !== APP_ROUTES.SEARCH) {
+
+    if (isMobile || pathname !== APP_ROUTES.SEARCH) {
       setFocus(false);
     }
   };
