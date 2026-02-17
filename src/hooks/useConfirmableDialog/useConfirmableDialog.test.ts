@@ -279,3 +279,99 @@ describe('useConfirmableDialog', () => {
     expect(result.current.resetKey).toBe(3);
   });
 });
+
+describe('useConfirmableDialog with external hasContent', () => {
+  const mockOnClose = vi.fn();
+
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  it('uses external hasContent callback instead of internal tracking', () => {
+    const externalHasContent = vi.fn(() => true);
+
+    const { result } = renderHook(() =>
+      useConfirmableDialog({
+        onClose: mockOnClose,
+        hasContent: externalHasContent,
+      }),
+    );
+
+    act(() => {
+      result.current.handleOpenChange(false);
+    });
+
+    expect(externalHasContent).toHaveBeenCalled();
+    expect(mockOnClose).not.toHaveBeenCalled();
+    expect(result.current.showConfirmDialog).toBe(true);
+  });
+
+  it('closes directly when external hasContent returns false', () => {
+    const externalHasContent = vi.fn(() => false);
+
+    const { result } = renderHook(() =>
+      useConfirmableDialog({
+        onClose: mockOnClose,
+        hasContent: externalHasContent,
+      }),
+    );
+
+    act(() => {
+      result.current.handleOpenChange(false);
+    });
+
+    expect(externalHasContent).toHaveBeenCalled();
+    expect(mockOnClose).toHaveBeenCalledTimes(1);
+    expect(result.current.showConfirmDialog).toBe(false);
+  });
+
+  it('ignores internal content tracking when external hasContent is provided', () => {
+    const externalHasContent = vi.fn(() => false);
+
+    const { result } = renderHook(() =>
+      useConfirmableDialog({
+        onClose: mockOnClose,
+        hasContent: externalHasContent,
+      }),
+    );
+
+    // Add content via internal tracking — should be ignored
+    act(() => {
+      result.current.handleContentChange('Some content', ['tag'], [], '');
+    });
+
+    act(() => {
+      result.current.handleOpenChange(false);
+    });
+
+    // External says no content, so should close directly
+    expect(mockOnClose).toHaveBeenCalledTimes(1);
+    expect(result.current.showConfirmDialog).toBe(false);
+  });
+
+  it('handleDiscard works the same with external hasContent', () => {
+    const externalHasContent = vi.fn(() => true);
+
+    const { result } = renderHook(() =>
+      useConfirmableDialog({
+        onClose: mockOnClose,
+        hasContent: externalHasContent,
+      }),
+    );
+
+    // Trigger confirm dialog
+    act(() => {
+      result.current.handleOpenChange(false);
+    });
+    expect(result.current.showConfirmDialog).toBe(true);
+
+    // Discard
+    act(() => {
+      result.current.handleDiscard();
+    });
+
+    expect(result.current.showConfirmDialog).toBe(false);
+    expect(result.current.resetKey).toBe(1);
+    expect(mockOnClose).toHaveBeenCalledTimes(1);
+  });
+});

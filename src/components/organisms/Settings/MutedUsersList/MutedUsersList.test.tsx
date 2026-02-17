@@ -2,6 +2,14 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen, fireEvent, act, waitFor } from '@testing-library/react';
 import { MutedUsersList } from './MutedUsersList';
 
+vi.mock('facehash', () => ({
+  Facehash: ({ name, onRenderMouth }: { name: string; onRenderMouth?: () => React.ReactNode }) => (
+    <div data-testid="facehash" data-name={name}>
+      {onRenderMouth?.()}
+    </div>
+  ),
+}));
+
 const { mockUseMutedUsers, mockUseBulkUserAvatars, mockUseMuteUser, mockToast } = vi.hoisted(() => ({
   mockUseMutedUsers: vi.fn(),
   mockUseBulkUserAvatars: vi.fn(),
@@ -17,6 +25,11 @@ vi.mock('@/hooks', () => ({
 
 vi.mock('@/molecules', () => ({
   toast: (props: unknown) => mockToast(props),
+  FacehashAvatar: ({ seed, initial }: { seed: string; initial: string }) => (
+    <div data-testid="facehash-avatar" data-seed={seed}>
+      {initial}
+    </div>
+  ),
 }));
 
 describe('MutedUsersList', () => {
@@ -56,6 +69,7 @@ describe('MutedUsersList', () => {
     render(<MutedUsersList />);
     expect(screen.getByText('Unknown User')).toBeInTheDocument();
     expect(screen.getByText('user-123')).toBeInTheDocument();
+    expect(screen.getByTestId('facehash-avatar')).toHaveAttribute('data-seed', 'user-123');
     expect(screen.getByText('Unmute')).toBeInTheDocument();
   });
 

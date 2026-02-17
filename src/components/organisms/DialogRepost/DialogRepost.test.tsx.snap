@@ -1,44 +1,62 @@
 // Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
 
 exports[`DialogRepost - Snapshots > matches snapshot with default props 1`] = `
-<div
-  data-open="false"
-  data-testid="dialog"
->
+<div>
   <div
-    aria-label="Repost"
-    class="w-3xl"
-    data-testid="dialog-content"
+    data-open="false"
+    data-testid="dialog-confirm-discard"
+  >
+    <button
+      data-testid="confirm-discard-cancel"
+    >
+      Cancel
+    </button>
+    <button
+      data-testid="confirm-discard-confirm"
+    >
+      Discard
+    </button>
+  </div>
+  <div
+    data-open="false"
+    data-testid="dialog"
   >
     <div
-      data-testid="dialog-header"
-    >
-      <h2
-        data-testid="dialog-title"
-      >
-        Repost
-      </h2>
-      <p
-        data-testid="dialog-description"
-      >
-        Repost dialog
-      </p>
-    </div>
-    <div
-      class="gap-3"
-      data-testid="container"
+      aria-label="Repost"
+      class="w-3xl"
+      data-testid="dialog-content"
     >
       <div
-        data-original-post-id="snapshot-post-id"
-        data-show-thread="false"
-        data-testid="post-input"
-        data-variant="repost"
+        data-testid="dialog-header"
       >
-        <button
-          data-testid="mock-success-btn"
+        <h2
+          data-testid="dialog-title"
         >
-          Success
-        </button>
+          Repost
+        </h2>
+        <p
+          data-testid="dialog-description"
+        >
+          Repost dialog
+        </p>
+      </div>
+      <div
+        class="gap-3"
+        data-testid="container"
+      >
+        <div
+          data-has-content-change="true"
+          data-original-post-id="snapshot-post-id"
+          data-show-thread="false"
+          data-testid="post-input"
+          data-variant="repost"
+        >
+          <button
+            data-testid="mock-success-btn"
+          >
+            Success
+          </button>
+        </div>
       </div>
     </div>
   </div>
@@ -46,44 +64,62 @@ exports[`DialogRepost - Snapshots > matches snapshot with default props 1`] = `
 `;
 
 exports[`DialogRepost - Snapshots > matches snapshot with open prop 1`] = `
-<div
-  data-open="true"
-  data-testid="dialog"
->
+<div>
   <div
-    aria-label="Repost"
-    class="w-3xl"
-    data-testid="dialog-content"
+    data-open="false"
+    data-testid="dialog-confirm-discard"
+  >
+    <button
+      data-testid="confirm-discard-cancel"
+    >
+      Cancel
+    </button>
+    <button
+      data-testid="confirm-discard-confirm"
+    >
+      Discard
+    </button>
+  </div>
+  <div
+    data-open="true"
+    data-testid="dialog"
   >
     <div
-      data-testid="dialog-header"
-    >
-      <h2
-        data-testid="dialog-title"
-      >
-        Repost
-      </h2>
-      <p
-        data-testid="dialog-description"
-      >
-        Repost dialog
-      </p>
-    </div>
-    <div
-      class="gap-3"
-      data-testid="container"
+      aria-label="Repost"
+      class="w-3xl"
+      data-testid="dialog-content"
     >
       <div
-        data-original-post-id="snapshot-post-id"
-        data-show-thread="false"
-        data-testid="post-input"
-        data-variant="repost"
+        data-testid="dialog-header"
       >
-        <button
-          data-testid="mock-success-btn"
+        <h2
+          data-testid="dialog-title"
         >
-          Success
-        </button>
+          Repost
+        </h2>
+        <p
+          data-testid="dialog-description"
+        >
+          Repost dialog
+        </p>
+      </div>
+      <div
+        class="gap-3"
+        data-testid="container"
+      >
+        <div
+          data-has-content-change="true"
+          data-original-post-id="snapshot-post-id"
+          data-show-thread="false"
+          data-testid="post-input"
+          data-variant="repost"
+        >
+          <button
+            data-testid="mock-success-btn"
+          >
+            Success
+          </button>
+        </div>
       </div>
     </div>
   </div>

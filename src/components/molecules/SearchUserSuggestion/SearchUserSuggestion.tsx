@@ -19,7 +19,13 @@ export function SearchUserSuggestion({ user, onClick }: SearchUserSuggestionProp
       data-testid={`search-user-suggestion-${user.id}`}
       aria-label={`User ${user.name} (${formattedPubky})`}
     >
-      <Organisms.AvatarWithFallback avatarUrl={user.avatarUrl} name={user.name} size="default" className="shrink-0" />
+      <Organisms.AvatarWithFallback
+        avatarUrl={user.avatarUrl}
+        name={user.name}
+        fallbackSeed={user.id}
+        size="default"
+        className="shrink-0"
+      />
       <Atoms.Container overrideDefaults className="min-w-0 flex-1 flex-col items-start">
         <Atoms.Typography
           className="block max-w-full truncate text-sm font-bold text-foreground"

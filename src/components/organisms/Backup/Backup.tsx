@@ -14,19 +14,15 @@ export const BackupNavigation = () => {
 
   const onHandleContinueButton = () => {
     setLoading(true);
-    // Signup already happened at the invite code step; just navigate to profile
+    // Signup already happened at the pubky step; just navigate to profile
     router.push(App.ONBOARDING_ROUTES.PROFILE);
-  };
-
-  const onHandleBackButton = () => {
-    router.push(App.ONBOARDING_ROUTES.PUBKY);
   };
 
   return (
     <Molecules.ButtonsNavigation
       id="backup-navigation"
       className="py-6"
-      onHandleBackButton={onHandleBackButton}
+      hiddenBackButton={true}
       loadingContinueButton={loading}
       onHandleContinueButton={onHandleContinueButton}
     />
