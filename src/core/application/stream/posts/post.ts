@@ -386,6 +386,7 @@ export class PostStreamApplication {
       const originalPosts = await Core.NexusPostStreamService.fetchByIds({
         post_ids: missingOriginalPostIds,
         viewer_id: viewerId ?? undefined,
+        include_attachment_metadata: true,
       });
       const { postAttachments } = await Core.LocalStreamPostsService.persistPosts({ posts: originalPosts });
       await Core.FileApplication.fetchFiles(postAttachments);

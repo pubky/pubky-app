@@ -52,6 +52,7 @@ export class TtlApplication {
     const postBatch = await Core.NexusPostStreamService.fetchByIds({
       post_ids: uniqueIds,
       viewer_id: params.viewerId,
+      include_attachment_metadata: true,
     });
 
     Logger.debug('TtlApplication: Fetched posts from Nexus', {

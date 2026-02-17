@@ -228,6 +228,11 @@ export type NexusPostsKeyStream = {
   last_post_score: number;
 };
 
+/** Post with attachment metadata */
+export type NexusPostWithAttachmentMetadata = NexusPost & {
+  attachments_metadata?: NexusFileDetails[];
+};
+
 // =============================================================================
 // Response Types - Notification
 // =============================================================================
