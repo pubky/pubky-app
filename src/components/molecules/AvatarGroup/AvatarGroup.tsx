@@ -49,7 +49,12 @@ export function AvatarGroup({
           className="relative rounded-full shadow-xs"
           style={{ marginLeft: index === 0 ? 0 : '-8px', zIndex: visibleItems.length - index }}
         >
-          <Organisms.AvatarWithFallback avatarUrl={item.avatarUrl} name={item.name || 'User'} size="md" />
+          <Organisms.AvatarWithFallback
+            avatarUrl={item.avatarUrl}
+            name={item.name || 'User'}
+            fallbackSeed={item.id}
+            size="md"
+          />
         </Atoms.Container>
       ))}
       {overflowCount > 0 && (

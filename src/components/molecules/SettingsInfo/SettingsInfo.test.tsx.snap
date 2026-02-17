@@ -395,9 +395,59 @@ exports[`SettingsInfo - Snapshots > matches snapshot 1`] = `
               class="relative flex shrink-0 overflow-hidden rounded-full h-12 w-12"
             >
               <span
-                class="flex h-full w-full items-center justify-center rounded-full border border-muted-foreground bg-muted text-sm"
+                class="flex h-full w-full items-center justify-center rounded-full border border-muted-foreground bg-muted overflow-hidden border-none text-sm"
               >
-                YN
+                <div
+                  class="facehash h-full w-full rounded-full text-background"
+                  data-facehash=""
+                  data-interactive="true"
+                  style="width: 100%; height: 100%; position: relative; display: flex; align-items: center; justify-content: center; overflow: hidden; container-type: size; perspective: 300px; transform-style: preserve-3d; background-color: rgb(200, 255, 0);"
+                >
+                  <div
+                    data-facehash-gradient=""
+                    style="position: absolute; inset: 0; pointer-events: none; z-index: 1; background: radial-gradient(100% 100% at 50% 50%, rgba(255, 255, 255, 0.15) 0%, transparent 60%);"
+                  />
+                  <div
+                    data-facehash-face=""
+                    style="position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; z-index: 2; transform: rotateX(-15deg) rotateY(15deg) translateZ(12px); transform-style: preserve-3d; transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);"
+                  >
+                    <svg
+                      aria-hidden="true"
+                      fill="none"
+                      style="width: 60%; height: auto; max-width: 90%; max-height: 40%;"
+                      viewBox="0 0 63 15"
+                      xmlns="http://www.w3.org/2000/svg"
+                    >
+                      <g
+                        style="animation: facehash-blink 5.2s ease-in-out 3.2s infinite; transform-origin: center center;"
+                      >
+                        <path
+                          d="M62.4 7.2C62.4 11.1765 59.1765 14.4 55.2 14.4C51.2236 14.4 48 11.1765 48 7.2C48 3.22355 51.2236 0 55.2 0C59.1765 0 62.4 3.22355 62.4 7.2Z"
+                          fill="currentColor"
+                        />
+                      </g>
+                      <g
+                        style="animation: facehash-blink 5.2s ease-in-out 3.2s infinite; transform-origin: center center;"
+                      >
+                        <path
+                          d="M14.4 7.2C14.4 11.1765 11.1765 14.4 7.2 14.4C3.22355 14.4 0 11.1765 0 7.2C0 3.22355 3.22355 0 7.2 0C11.1765 0 14.4 3.22355 14.4 7.2Z"
+                          fill="currentColor"
+                        />
+                      </g>
+                    </svg>
+                    <div
+                      data-facehash-mouth=""
+                      style="margin-top: 8%; display: flex; align-items: center; justify-content: center;"
+                    >
+                      <span
+                        data-testid="avatar-fallback-initial"
+                        style="font-size: 26cqw; line-height: 1;"
+                      >
+                        Y
+                      </span>
+                    </div>
+                  </div>
+                </div>
               </span>
             </span>
           </div>

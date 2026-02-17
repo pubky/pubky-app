@@ -158,9 +158,59 @@ exports[`MutedUsers - Snapshots > matches snapshot with muted users 1`] = `
             class="relative flex shrink-0 overflow-hidden rounded-full h-10 w-10"
           >
             <span
-              class="flex h-full w-full items-center justify-center rounded-full border border-muted-foreground bg-muted"
+              class="flex h-full w-full items-center justify-center rounded-full border border-muted-foreground bg-muted overflow-hidden border-none"
             >
-              T
+              <div
+                class="facehash h-full w-full rounded-full text-background"
+                data-facehash=""
+                data-interactive="true"
+                style="width: 100%; height: 100%; position: relative; display: flex; align-items: center; justify-content: center; overflow: hidden; container-type: size; perspective: 300px; transform-style: preserve-3d; background-color: rgb(180, 229, 0);"
+              >
+                <div
+                  data-facehash-gradient=""
+                  style="position: absolute; inset: 0; pointer-events: none; z-index: 1; background: radial-gradient(100% 100% at 50% 50%, rgba(255, 255, 255, 0.15) 0%, transparent 60%);"
+                />
+                <div
+                  data-facehash-face=""
+                  style="position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; z-index: 2; transform: rotateX(-15deg) rotateY(15deg) translateZ(12px); transform-style: preserve-3d; transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);"
+                >
+                  <svg
+                    aria-hidden="true"
+                    fill="none"
+                    style="width: 60%; height: auto; max-width: 90%; max-height: 40%;"
+                    viewBox="0 0 71 23"
+                    xmlns="http://www.w3.org/2000/svg"
+                  >
+                    <g
+                      style="animation: facehash-blink 3.5s ease-in-out 1.5s infinite; transform-origin: center center;"
+                    >
+                      <path
+                        d="M11.5 0C12.9411 0 13.6619 0.000460386 14.1748 0.354492C14.3742 0.49213 14.547 0.664882 14.6846 0.864258C15.0384 1.37711 15.0391 2.09739 15.0391 3.53809V7.96094H19.4619C20.9027 7.96094 21.6229 7.9615 22.1357 8.31543C22.3352 8.45308 22.5079 8.62578 22.6455 8.8252C22.9995 9.3381 23 10.0589 23 11.5C23 12.9408 22.9995 13.661 22.6455 14.1738C22.5079 14.3733 22.3352 14.5459 22.1357 14.6836C21.6229 15.0375 20.9027 15.0381 19.4619 15.0381H15.0391V19.4619C15.0391 20.9026 15.0384 21.6229 14.6846 22.1357C14.547 22.3351 14.3742 22.5079 14.1748 22.6455C13.6619 22.9995 12.9411 23 11.5 23C10.0592 23 9.33903 22.9994 8.82617 22.6455C8.62674 22.5079 8.45309 22.3352 8.31543 22.1357C7.96175 21.6229 7.96191 20.9024 7.96191 19.4619V15.0381H3.53809C2.0973 15.0381 1.37711 15.0375 0.864258 14.6836C0.664834 14.5459 0.492147 14.3733 0.354492 14.1738C0.000498831 13.661 -5.88036e-08 12.9408 0 11.5C6.2999e-08 10.0589 0.000460356 9.3381 0.354492 8.8252C0.492144 8.62578 0.664842 8.45308 0.864258 8.31543C1.37711 7.9615 2.09731 7.96094 3.53809 7.96094H7.96191V3.53809C7.96191 2.09765 7.96175 1.37709 8.31543 0.864258C8.45309 0.664828 8.62674 0.492149 8.82617 0.354492C9.33903 0.000555366 10.0592 1.62347e-09 11.5 0Z"
+                        fill="currentColor"
+                      />
+                    </g>
+                    <g
+                      style="animation: facehash-blink 3.5s ease-in-out 1.5s infinite; transform-origin: center center;"
+                    >
+                      <path
+                        d="M58.7695 0C60.2107 0 60.9314 0.000460386 61.4443 0.354492C61.6437 0.49213 61.8165 0.664882 61.9541 0.864258C62.308 1.37711 62.3086 2.09739 62.3086 3.53809V7.96094H66.7314C68.1722 7.96094 68.8924 7.9615 69.4053 8.31543C69.6047 8.45308 69.7774 8.62578 69.915 8.8252C70.2691 9.3381 70.2695 10.0589 70.2695 11.5C70.2695 12.9408 70.269 13.661 69.915 14.1738C69.7774 14.3733 69.6047 14.5459 69.4053 14.6836C68.8924 15.0375 68.1722 15.0381 66.7314 15.0381H62.3086V19.4619C62.3086 20.9026 62.308 21.6229 61.9541 22.1357C61.8165 22.3351 61.6437 22.5079 61.4443 22.6455C60.9314 22.9995 60.2107 23 58.7695 23C57.3287 23 56.6086 22.9994 56.0957 22.6455C55.8963 22.5079 55.7226 22.3352 55.585 22.1357C55.2313 21.6229 55.2314 20.9024 55.2314 19.4619V15.0381H50.8076C49.3668 15.0381 48.6466 15.0375 48.1338 14.6836C47.9344 14.5459 47.7617 14.3733 47.624 14.1738C47.27 13.661 47.2695 12.9408 47.2695 11.5C47.2695 10.0589 47.27 9.3381 47.624 8.8252C47.7617 8.62578 47.9344 8.45308 48.1338 8.31543C48.6466 7.9615 49.3668 7.96094 50.8076 7.96094H55.2314V3.53809C55.2314 2.09765 55.2313 1.37709 55.585 0.864258C55.7226 0.664828 55.8963 0.492149 56.0957 0.354492C56.6086 0.000555366 57.3287 1.62347e-09 58.7695 0Z"
+                        fill="currentColor"
+                      />
+                    </g>
+                  </svg>
+                  <div
+                    data-facehash-mouth=""
+                    style="margin-top: 8%; display: flex; align-items: center; justify-content: center;"
+                  >
+                    <span
+                      data-testid="avatar-fallback-initial"
+                      style="font-size: 26cqw; line-height: 1;"
+                    >
+                      T
+                    </span>
+                  </div>
+                </div>
+              </div>
             </span>
           </span>
           <div
@@ -226,9 +276,59 @@ exports[`MutedUsers - Snapshots > matches snapshot with muted users 1`] = `
             class="relative flex shrink-0 overflow-hidden rounded-full h-10 w-10"
           >
             <span
-              class="flex h-full w-full items-center justify-center rounded-full border border-muted-foreground bg-muted"
+              class="flex h-full w-full items-center justify-center rounded-full border border-muted-foreground bg-muted overflow-hidden border-none"
             >
-              T
+              <div
+                class="facehash h-full w-full rounded-full text-background"
+                data-facehash=""
+                data-interactive="true"
+                style="width: 100%; height: 100%; position: relative; display: flex; align-items: center; justify-content: center; overflow: hidden; container-type: size; perspective: 300px; transform-style: preserve-3d; background-color: rgb(200, 255, 0);"
+              >
+                <div
+                  data-facehash-gradient=""
+                  style="position: absolute; inset: 0; pointer-events: none; z-index: 1; background: radial-gradient(100% 100% at 50% 50%, rgba(255, 255, 255, 0.15) 0%, transparent 60%);"
+                />
+                <div
+                  data-facehash-face=""
+                  style="position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; z-index: 2; transform: rotateX(15deg) rotateY(-15deg) translateZ(12px); transform-style: preserve-3d; transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);"
+                >
+                  <svg
+                    aria-hidden="true"
+                    fill="none"
+                    style="width: 60%; height: auto; max-width: 90%; max-height: 40%;"
+                    viewBox="0 0 63 15"
+                    xmlns="http://www.w3.org/2000/svg"
+                  >
+                    <g
+                      style="animation: facehash-blink 4.4s ease-in-out 2.4s infinite; transform-origin: center center;"
+                    >
+                      <path
+                        d="M62.4 7.2C62.4 11.1765 59.1765 14.4 55.2 14.4C51.2236 14.4 48 11.1765 48 7.2C48 3.22355 51.2236 0 55.2 0C59.1765 0 62.4 3.22355 62.4 7.2Z"
+                        fill="currentColor"
+                      />
+                    </g>
+                    <g
+                      style="animation: facehash-blink 4.4s ease-in-out 2.4s infinite; transform-origin: center center;"
+                    >
+                      <path
+                        d="M14.4 7.2C14.4 11.1765 11.1765 14.4 7.2 14.4C3.22355 14.4 0 11.1765 0 7.2C0 3.22355 3.22355 0 7.2 0C11.1765 0 14.4 3.22355 14.4 7.2Z"
+                        fill="currentColor"
+                      />
+                    </g>
+                  </svg>
+                  <div
+                    data-facehash-mouth=""
+                    style="margin-top: 8%; display: flex; align-items: center; justify-content: center;"
+                  >
+                    <span
+                      data-testid="avatar-fallback-initial"
+                      style="font-size: 26cqw; line-height: 1;"
+                    >
+                      T
+                    </span>
+                  </div>
+                </div>
+              </div>
             </span>
           </span>
           <div
