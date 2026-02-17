@@ -10,6 +10,7 @@ import * as Molecules from '@/molecules';
 import * as Organisms from '@/organisms';
 import { APP_ROUTES } from '@/app/routes';
 import type { ActiveUsersProps } from './ActiveUsers.types';
+import { USERS_LIMIT } from './ActiveUsers.constants';
 
 /**
  * ActiveUsers
@@ -25,7 +26,7 @@ export function ActiveUsers({ className }: ActiveUsersProps) {
   const router = useRouter();
   const { users, isLoading: isStreamLoading } = Hooks.useUserStream({
     streamId: Core.UserStreamTypes.TODAY_INFLUENCERS_ALL,
-    limit: 3,
+    limit: USERS_LIMIT,
     includeCounts: true,
     includeRelationships: true,
   });
@@ -53,7 +54,7 @@ export function ActiveUsers({ className }: ActiveUsersProps) {
       data-testid="active-users"
     >
       {isStreamLoading ? (
-        Array.from({ length: 3 }).map((_, index) => (
+        Array.from({ length: USERS_LIMIT }).map((_, index) => (
           <Organisms.CompactUserListItemSkeleton key={`active-users-skeleton-${index}`} />
         ))
       ) : users.length === 0 ? (
