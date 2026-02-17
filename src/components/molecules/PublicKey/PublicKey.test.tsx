@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { render, screen, fireEvent } from '@testing-library/react';
+import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import { PublicKeyHeader, PublicKeyNavigation } from './Pubkey';
 import * as App from '@/app';
 
@@ -8,6 +8,23 @@ const mockPush = vi.fn();
 vi.mock('next/navigation', () => ({
   useRouter: () => ({
     push: mockPush,
+  }),
+}));
+
+// Mock useInviteCodeSignUp hook
+const mockValidateAndSignUp = vi.fn();
+vi.mock('@/hooks', () => ({
+  useInviteCodeSignUp: () => ({
+    validateAndSignUp: mockValidateAndSignUp,
+  }),
+}));
+
+// Mock onboarding store
+vi.mock('@/core', () => ({
+  useOnboardingStore: Object.assign(() => ({}), {
+    getState: () => ({
+      inviteCode: 'TEST-CODE-123',
+    }),
   }),
 }));
 
@@ -62,6 +79,7 @@ describe('PublicKeyHeader', () => {
 describe('PublicKeyNavigation', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    mockValidateAndSignUp.mockResolvedValue(undefined);
   });
 
   it('renders buttons navigation component', () => {
@@ -81,13 +99,16 @@ describe('PublicKeyNavigation', () => {
     expect(mockPush).toHaveBeenCalledWith(App.ONBOARDING_ROUTES.INSTALL);
   });
 
-  it('handles continue button click', () => {
+  it('handles continue button click - signs up then navigates to backup', async () => {
     render(<PublicKeyNavigation />);
 
     const continueButton = screen.getByTestId('continue-button');
     fireEvent.click(continueButton);
 
-    expect(mockPush).toHaveBeenCalledWith(App.ONBOARDING_ROUTES.BACKUP);
+    await waitFor(() => {
+      expect(mockValidateAndSignUp).toHaveBeenCalledWith('TEST-CODE-123');
+      expect(mockPush).toHaveBeenCalledWith(App.ONBOARDING_ROUTES.BACKUP);
+    });
   });
 
   it('shows loading state after clicking continue button', () => {
@@ -101,6 +122,22 @@ describe('PublicKeyNavigation', () => {
 
     expect(continueButton).toBeDisabled();
     expect(continueButton).toHaveAttribute('data-loading', 'true');
+  });
+
+  it('resets loading state when signup fails', async () => {
+    mockValidateAndSignUp.mockRejectedValue(new Error('Signup failed'));
+
+    render(<PublicKeyNavigation />);
+
+    const continueButton = screen.getByTestId('continue-button');
+    fireEvent.click(continueButton);
+
+    await waitFor(() => {
+      expect(continueButton).not.toBeDisabled();
+      expect(continueButton).toHaveAttribute('data-loading', 'false');
+    });
+
+    expect(mockPush).not.toHaveBeenCalledWith(App.ONBOARDING_ROUTES.BACKUP);
   });
 });
 

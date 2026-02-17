@@ -4,6 +4,7 @@ import { useEffect } from 'react';
 
 import * as Atoms from '@/atoms';
 import * as Hooks from '@/hooks';
+import * as Molecules from '@/molecules';
 import { DialogFeedbackContent } from './DialogFeedbackContent';
 import { DialogFeedbackSuccess } from './DialogFeedbackSuccess';
 import type { DialogFeedbackProps } from './DialogFeedback.types';
@@ -11,9 +12,12 @@ import type { DialogFeedbackProps } from './DialogFeedback.types';
 export function DialogFeedback({ open, onOpenChange }: DialogFeedbackProps) {
   const { currentUserPubky } = Hooks.useCurrentUserProfile();
   const { feedback, handleChange, submit, isSubmitting, isSuccess, hasContent, reset } = Hooks.useFeedback();
+  const { showConfirmDialog, setShowConfirmDialog, handleOpenChange, handleDiscard } = Hooks.useConfirmableDialog({
+    onClose: () => onOpenChange(false),
+    hasContent: () => hasContent && !isSuccess,
+  });
 
   // Reset state when the dialog closes
-  // We can also add - "Are you sure you want to close?" prompt if we want to be extra careful about this, e.g. "You have unsaved changes. Are you sure you want to close?"
   useEffect(() => {
     if (!open) {
       reset();
@@ -26,21 +30,28 @@ export function DialogFeedback({ open, onOpenChange }: DialogFeedbackProps) {
   }
 
   return (
-    <Atoms.Dialog open={open} onOpenChange={onOpenChange}>
-      <Atoms.DialogContent className="w-2xl" hiddenTitle="Provide Feedback">
-        {isSuccess ? (
-          <DialogFeedbackSuccess onOpenChange={onOpenChange} />
-        ) : (
-          <DialogFeedbackContent
-            feedback={feedback}
-            handleChange={handleChange}
-            submit={submit}
-            isSubmitting={isSubmitting}
-            hasContent={hasContent}
-            currentUserPubky={currentUserPubky}
-          />
-        )}
-      </Atoms.DialogContent>
-    </Atoms.Dialog>
+    <>
+      <Molecules.DialogConfirmDiscard
+        open={showConfirmDialog}
+        onOpenChange={() => setShowConfirmDialog(false)}
+        onConfirm={handleDiscard}
+      />
+      <Atoms.Dialog open={open} onOpenChange={handleOpenChange}>
+        <Atoms.DialogContent className="w-2xl" hiddenTitle="Provide Feedback">
+          {isSuccess ? (
+            <DialogFeedbackSuccess onOpenChange={onOpenChange} />
+          ) : (
+            <DialogFeedbackContent
+              feedback={feedback}
+              handleChange={handleChange}
+              submit={submit}
+              isSubmitting={isSubmitting}
+              hasContent={hasContent}
+              currentUserPubky={currentUserPubky}
+            />
+          )}
+        </Atoms.DialogContent>
+      </Atoms.Dialog>
+    </>
   );
 }

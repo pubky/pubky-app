@@ -2,7 +2,7 @@
 
 exports[`MutedUsers - Snapshots > matches snapshot with loading state 1`] = `
 <div
-  class="flex w-full flex-col items-start gap-8 rounded-md bg-card px-6 py-8 md:p-12"
+  class="flex w-full flex-col items-start gap-8 rounded-md bg-card px-6 py-8 shadow-lg md:p-12"
   data-testid="container"
 >
   <div
@@ -83,7 +83,7 @@ exports[`MutedUsers - Snapshots > matches snapshot with loading state 1`] = `
 
 exports[`MutedUsers - Snapshots > matches snapshot with muted users 1`] = `
 <div
-  class="flex w-full flex-col items-start gap-8 rounded-md bg-card px-6 py-8 md:p-12"
+  class="flex w-full flex-col items-start gap-8 rounded-md bg-card px-6 py-8 shadow-lg md:p-12"
   data-testid="container"
 >
   <div
@@ -320,7 +320,7 @@ exports[`MutedUsers - Snapshots > matches snapshot with muted users 1`] = `
 
 exports[`MutedUsers - Snapshots > matches snapshot with no muted users 1`] = `
 <div
-  class="flex w-full flex-col items-start gap-8 rounded-md bg-card px-6 py-8 md:p-12"
+  class="flex w-full flex-col items-start gap-8 rounded-md bg-card px-6 py-8 shadow-lg md:p-12"
   data-testid="container"
 >
   <div

@@ -32,12 +32,12 @@ exports[`MobileFooter - Snapshots > matches snapshot for navigation links 1`] = 
 exports[`MobileFooter - Snapshots > matches snapshot for profile link 1`] = `
 <a
   aria-label="Profile"
-  class="relative flex-shrink-0"
+  class="relative shrink-0"
   data-cy="footer-nav-profile-btn"
   href="/profile"
 >
   <div
-    class=""
+    class="cursor-pointer"
     data-size="lg"
     data-testid="avatar-with-fallback"
   >
@@ -192,12 +192,12 @@ exports[`MobileFooter - Snapshots > matches snapshot with custom className 1`] =
     </a>
     <a
       aria-label="Profile"
-      class="relative flex-shrink-0"
+      class="relative shrink-0"
       data-cy="footer-nav-profile-btn"
       href="/profile"
     >
       <div
-        class=""
+        class="cursor-pointer"
         data-size="lg"
         data-testid="avatar-with-fallback"
       >
@@ -354,12 +354,12 @@ exports[`MobileFooter - Snapshots > matches snapshot with default props 1`] = `
     </a>
     <a
       aria-label="Profile"
-      class="relative flex-shrink-0"
+      class="relative shrink-0"
       data-cy="footer-nav-profile-btn"
       href="/profile"
     >
       <div
-        class=""
+        class="cursor-pointer"
         data-size="lg"
         data-testid="avatar-with-fallback"
       >
@@ -516,12 +516,12 @@ exports[`MobileFooter - Snapshots > matches snapshot with different active path 
     </a>
     <a
       aria-label="Profile"
-      class="relative flex-shrink-0"
+      class="relative shrink-0"
       data-cy="footer-nav-profile-btn"
       href="/profile"
     >
       <div
-        class=""
+        class="cursor-pointer"
         data-size="lg"
         data-testid="avatar-with-fallback"
       >

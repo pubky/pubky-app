@@ -6,6 +6,8 @@ import { useTranslations } from 'next-intl';
 
 import * as Molecules from '@/molecules';
 import * as Atoms from '@/atoms';
+import * as Core from '@/core';
+import * as Hooks from '@/hooks';
 import * as App from '@/app';
 
 export const PublicKeyHeader = () => {
@@ -25,15 +27,23 @@ export const PublicKeyHeader = () => {
 export const PublicKeyNavigation = () => {
   const router = useRouter();
   const [loading, setLoading] = useState(false);
+  const { validateAndSignUp } = Hooks.useInviteCodeSignUp();
 
   const onHandleBackButton = () => {
     router.push(App.ONBOARDING_ROUTES.INSTALL);
   };
 
-  const onHandleContinueButton = () => {
+  const onHandleContinueButton = async () => {
     setLoading(true);
-    // Signup already happened at invite code entry; just navigate to backup
-    router.push(App.ONBOARDING_ROUTES.BACKUP);
+    try {
+      // Signup happens here after the user has created their browser keypair.
+      // The invite code was saved in the onboarding store during the human verification step.
+      const inviteCode = Core.useOnboardingStore.getState().inviteCode;
+      await validateAndSignUp(inviteCode);
+      router.push(App.ONBOARDING_ROUTES.BACKUP);
+    } catch {
+      setLoading(false);
+    }
   };
 
   return (

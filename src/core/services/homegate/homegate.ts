@@ -23,6 +23,7 @@ import {
   Err,
   ValidationErrorCode,
   HttpMethod,
+  parseRetryAfterHeader,
 } from '@/libs';
 
 /** Regex for validating UUID format strings (verification ID format) */
@@ -120,7 +121,7 @@ export class HomegateService {
 
       // Rate limited - differentiate between temporary and permanent limits
       if (response.status === HttpStatusCode.TOO_MANY_REQUESTS) {
-        const retryAfter = response.headers.get('retry-after');
+        const retryAfter = parseRetryAfterHeader(response.headers.get('retry-after'));
 
         // Parse the response body to determine the specific rate limit type
         let responseBody: { error?: string } | undefined;
@@ -155,7 +156,7 @@ export class HomegateService {
         return {
           success: false,
           errorType: SmsCodeErrorType.RATE_LIMITED_TEMPORARY,
-          retryAfter: retryAfter ? parseInt(retryAfter) : undefined,
+          retryAfter,
         };
       }
 
@@ -287,19 +288,32 @@ export class HomegateService {
    * @param verificationId - The verification ID (UUID format) from createLnVerification.
    * @returns The result of awaiting the verification.
    */
-  static async awaitLnVerification(verificationId: string): Promise<TAwaitLnVerificationResult> {
+  static async awaitLnVerification(verificationId: string, signal?: AbortSignal): Promise<TAwaitLnVerificationResult> {
     assertValidVerificationId({ verificationId, operation: 'awaitLnVerification' });
     const url = homegateApi.awaitLnVerification(verificationId);
-    const response = await safeFetch(url, { method: HttpMethod.GET }, ErrorService.Homegate, 'awaitLnVerification');
+    const response = await safeFetch(
+      url,
+      { method: HttpMethod.GET, signal },
+      ErrorService.Homegate,
+      'awaitLnVerification',
+    );
 
     if (!response.ok) {
-      // Domain-specific handling: 408 timeout and 404 not found return result objects
+      // Domain-specific handling: 408 timeout, 404 not found and 429 rate-limited return result objects
       if (response.status === HttpStatusCode.REQUEST_TIMEOUT) {
         return { success: false, timeout: true };
       }
 
       if (response.status === HttpStatusCode.NOT_FOUND) {
         return { success: false, notFound: true };
+      }
+
+      if (response.status === HttpStatusCode.TOO_MANY_REQUESTS) {
+        return {
+          success: false,
+          rateLimited: true,
+          retryAfter: parseRetryAfterHeader(response.headers.get('retry-after')),
+        };
       }
 
       throw httpResponseToError(response, ErrorService.Homegate, 'awaitLnVerification', url);
