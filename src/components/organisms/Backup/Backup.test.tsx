@@ -55,6 +55,7 @@ vi.mock('@/molecules', () => ({
     onHandleBackButton,
     onHandleContinueButton,
     loadingContinueButton,
+    hiddenBackButton,
     backText,
     continueText,
   }: {
@@ -62,13 +63,16 @@ vi.mock('@/molecules', () => ({
     onHandleBackButton?: () => void;
     onHandleContinueButton?: () => void;
     loadingContinueButton?: boolean;
+    hiddenBackButton?: boolean;
     backText?: string;
     continueText?: string;
   }) => (
     <div data-testid="buttons-navigation" className={className}>
-      <button data-testid="back-button" onClick={onHandleBackButton}>
-        {backText}
-      </button>
+      {!hiddenBackButton && (
+        <button data-testid="back-button" onClick={onHandleBackButton}>
+          {backText}
+        </button>
+      )}
       <button
         data-testid="continue-button"
         onClick={onHandleContinueButton}
@@ -105,11 +109,11 @@ describe('BackupNavigation', () => {
     expect(container.firstChild).toMatchSnapshot();
   });
 
-  it('renders buttons navigation component', () => {
+  it('renders buttons navigation component without back button', () => {
     render(<BackupNavigation />);
 
     expect(screen.getByTestId('buttons-navigation')).toBeInTheDocument();
-    expect(screen.getByTestId('back-button')).toBeInTheDocument();
+    expect(screen.queryByTestId('back-button')).not.toBeInTheDocument();
     expect(screen.getByTestId('continue-button')).toBeInTheDocument();
   });
 
@@ -133,13 +137,10 @@ describe('BackupNavigation', () => {
     expect(mockPush).toHaveBeenCalledWith('/profile');
   });
 
-  it('navigates to pubky on back button click', () => {
+  it('does not render back button', () => {
     render(<BackupNavigation />);
 
-    const backButton = screen.getByTestId('back-button');
-    fireEvent.click(backButton);
-
-    expect(mockPush).toHaveBeenCalledWith('/pubky');
+    expect(screen.queryByTestId('back-button')).not.toBeInTheDocument();
   });
 });
 

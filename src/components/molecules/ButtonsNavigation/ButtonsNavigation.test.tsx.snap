@@ -43,7 +43,7 @@ exports[`ButtonsNavigation - Snapshots > matches snapshot with back button disab
   >
     <svg
       aria-hidden="true"
-      class="lucide lucide-arrow-right mr-1.5 h-4 w-4"
+      class="lucide lucide-log-in mr-1.5 h-4 w-4"
       fill="none"
       height="24"
       stroke="currentColor"
@@ -55,10 +55,13 @@ exports[`ButtonsNavigation - Snapshots > matches snapshot with back button disab
       xmlns="http://www.w3.org/2000/svg"
     >
       <path
-        d="M5 12h14"
+        d="m10 17 5-5-5-5"
       />
       <path
-        d="m12 5 7 7-7 7"
+        d="M15 12H3"
+      />
+      <path
+        d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4"
       />
     </svg>
     Continue
@@ -108,7 +111,7 @@ exports[`ButtonsNavigation - Snapshots > matches snapshot with back callback onl
   >
     <svg
       aria-hidden="true"
-      class="lucide lucide-arrow-right mr-1.5 h-4 w-4"
+      class="lucide lucide-log-in mr-1.5 h-4 w-4"
       fill="none"
       height="24"
       stroke="currentColor"
@@ -120,10 +123,13 @@ exports[`ButtonsNavigation - Snapshots > matches snapshot with back callback onl
       xmlns="http://www.w3.org/2000/svg"
     >
       <path
-        d="M5 12h14"
+        d="m10 17 5-5-5-5"
       />
       <path
-        d="m12 5 7 7-7 7"
+        d="M15 12H3"
+      />
+      <path
+        d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4"
       />
     </svg>
     Continue
@@ -175,7 +181,7 @@ exports[`ButtonsNavigation - Snapshots > matches snapshot with both buttons disa
   >
     <svg
       aria-hidden="true"
-      class="lucide lucide-arrow-right mr-1.5 h-4 w-4"
+      class="lucide lucide-log-in mr-1.5 h-4 w-4"
       fill="none"
       height="24"
       stroke="currentColor"
@@ -187,10 +193,13 @@ exports[`ButtonsNavigation - Snapshots > matches snapshot with both buttons disa
       xmlns="http://www.w3.org/2000/svg"
     >
       <path
-        d="M5 12h14"
+        d="m10 17 5-5-5-5"
       />
       <path
-        d="m12 5 7 7-7 7"
+        d="M15 12H3"
+      />
+      <path
+        d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4"
       />
     </svg>
     Continue
@@ -240,7 +249,7 @@ exports[`ButtonsNavigation - Snapshots > matches snapshot with both callbacks 1`
   >
     <svg
       aria-hidden="true"
-      class="lucide lucide-arrow-right mr-1.5 h-4 w-4"
+      class="lucide lucide-log-in mr-1.5 h-4 w-4"
       fill="none"
       height="24"
       stroke="currentColor"
@@ -252,10 +261,13 @@ exports[`ButtonsNavigation - Snapshots > matches snapshot with both callbacks 1`
       xmlns="http://www.w3.org/2000/svg"
     >
       <path
-        d="M5 12h14"
+        d="m10 17 5-5-5-5"
       />
       <path
-        d="m12 5 7 7-7 7"
+        d="M15 12H3"
+      />
+      <path
+        d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4"
       />
     </svg>
     Continue
@@ -306,7 +318,7 @@ exports[`ButtonsNavigation - Snapshots > matches snapshot with continue button d
   >
     <svg
       aria-hidden="true"
-      class="lucide lucide-arrow-right mr-1.5 h-4 w-4"
+      class="lucide lucide-log-in mr-1.5 h-4 w-4"
       fill="none"
       height="24"
       stroke="currentColor"
@@ -318,10 +330,13 @@ exports[`ButtonsNavigation - Snapshots > matches snapshot with continue button d
       xmlns="http://www.w3.org/2000/svg"
     >
       <path
-        d="M5 12h14"
+        d="m10 17 5-5-5-5"
       />
       <path
-        d="m12 5 7 7-7 7"
+        d="M15 12H3"
+      />
+      <path
+        d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4"
       />
     </svg>
     Continue
@@ -371,7 +386,7 @@ exports[`ButtonsNavigation - Snapshots > matches snapshot with continue callback
   >
     <svg
       aria-hidden="true"
-      class="lucide lucide-arrow-right mr-1.5 h-4 w-4"
+      class="lucide lucide-log-in mr-1.5 h-4 w-4"
       fill="none"
       height="24"
       stroke="currentColor"
@@ -383,10 +398,13 @@ exports[`ButtonsNavigation - Snapshots > matches snapshot with continue callback
       xmlns="http://www.w3.org/2000/svg"
     >
       <path
-        d="M5 12h14"
+        d="m10 17 5-5-5-5"
       />
       <path
-        d="m12 5 7 7-7 7"
+        d="M15 12H3"
+      />
+      <path
+        d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4"
       />
     </svg>
     Continue
@@ -436,7 +454,7 @@ exports[`ButtonsNavigation - Snapshots > matches snapshot with custom className 
   >
     <svg
       aria-hidden="true"
-      class="lucide lucide-arrow-right mr-1.5 h-4 w-4"
+      class="lucide lucide-log-in mr-1.5 h-4 w-4"
       fill="none"
       height="24"
       stroke="currentColor"
@@ -448,10 +466,13 @@ exports[`ButtonsNavigation - Snapshots > matches snapshot with custom className 
       xmlns="http://www.w3.org/2000/svg"
     >
       <path
-        d="M5 12h14"
+        d="m10 17 5-5-5-5"
       />
       <path
-        d="m12 5 7 7-7 7"
+        d="M15 12H3"
+      />
+      <path
+        d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4"
       />
     </svg>
     Continue
@@ -501,7 +522,7 @@ exports[`ButtonsNavigation - Snapshots > matches snapshot with custom text 1`] =
   >
     <svg
       aria-hidden="true"
-      class="lucide lucide-arrow-right mr-1.5 h-4 w-4"
+      class="lucide lucide-log-in mr-1.5 h-4 w-4"
       fill="none"
       height="24"
       stroke="currentColor"
@@ -513,10 +534,13 @@ exports[`ButtonsNavigation - Snapshots > matches snapshot with custom text 1`] =
       xmlns="http://www.w3.org/2000/svg"
     >
       <path
-        d="M5 12h14"
+        d="m10 17 5-5-5-5"
       />
       <path
-        d="m12 5 7 7-7 7"
+        d="M15 12H3"
+      />
+      <path
+        d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4"
       />
     </svg>
     Next Step
@@ -566,7 +590,7 @@ exports[`ButtonsNavigation - Snapshots > matches snapshot with default props 1`]
   >
     <svg
       aria-hidden="true"
-      class="lucide lucide-arrow-right mr-1.5 h-4 w-4"
+      class="lucide lucide-log-in mr-1.5 h-4 w-4"
       fill="none"
       height="24"
       stroke="currentColor"
@@ -578,10 +602,13 @@ exports[`ButtonsNavigation - Snapshots > matches snapshot with default props 1`]
       xmlns="http://www.w3.org/2000/svg"
     >
       <path
-        d="M5 12h14"
+        d="m10 17 5-5-5-5"
       />
       <path
-        d="m12 5 7 7-7 7"
+        d="M15 12H3"
+      />
+      <path
+        d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4"
       />
     </svg>
     Continue

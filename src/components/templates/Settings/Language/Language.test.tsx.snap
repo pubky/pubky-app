@@ -2,7 +2,7 @@
 
 exports[`Language - Snapshots > matches snapshot 1`] = `
 <div
-  class="flex w-full flex-col items-start gap-8 rounded-md bg-card px-6 py-8 md:p-12"
+  class="flex w-full flex-col items-start gap-8 rounded-md bg-card px-6 py-8 shadow-lg md:p-12"
   data-testid="container"
 >
   <div

@@ -41,6 +41,7 @@ export function User({
       <Organisms.AvatarWithFallback
         avatarUrl={user.avatar}
         name={user.name}
+        fallbackSeed={user.id}
         size="md"
         alt={user.name}
         data-testid="user-avatar"

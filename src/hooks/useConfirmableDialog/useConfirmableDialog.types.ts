@@ -1,6 +1,8 @@
 export interface UseConfirmableDialogOptions {
   /** Callback to close the main dialog */
   onClose: () => void;
+  /** Optional external content check — when provided, used instead of internal tracking */
+  hasContent?: () => boolean;
 }
 
 export interface UseConfirmableDialogReturn {

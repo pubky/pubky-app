@@ -39,13 +39,6 @@ All environment variables are validated in `src/libs/env/env.ts` using Zod schem
   - Must be a valid URL
   - Allows switching to a CDN or dedicated file server without changing Nexus API calls
 
-### Sync Configuration
-
-- `NEXT_PUBLIC_SYNC_TTL` (default: `300000`)
-  - Time-to-live for sync operations in milliseconds
-  - Must be a positive integer
-  - Default is 5 minutes (300,000ms)
-
 ### Node Environment
 
 - `NODE_ENV` (default: `"development"`)
@@ -87,8 +80,6 @@ NEXT_PUBLIC_NEXUS_URL=http://localhost:3001
 # Serve static assets locally
 NEXT_PUBLIC_CDN_URL=http://localhost:3001/static
 
-# Shorter sync TTL for development
-NEXT_PUBLIC_SYNC_TTL=60000
 ```
 
 ## Validation Errors
@@ -115,7 +106,6 @@ In development mode with `NEXT_PUBLIC_DEBUG_MODE=true`, the environment configur
 │ DEBUG_MODE  │                  true                   │
 │ NEXUS_URL   │     'https://nexus.staging.pubky.app'   │
 │  CDN_URL    │ 'https://nexus.staging.pubky.app/static'│
-│  SYNC_TTL   │            '300000ms (300s)'            │
 └─────────────┴─────────────────────────────────────────┘
 ```
 

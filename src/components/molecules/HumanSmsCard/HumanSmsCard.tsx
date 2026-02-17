@@ -67,7 +67,7 @@ export const HumanSmsCard = ({ onClick }: HumanSmsCardProps) => {
             <Atoms.Button
               data-testid="human-sms-card-receive-sms-btn"
               variant={Atoms.ButtonVariant.SECONDARY}
-              className="h-10 rounded-full px-4 text-sm font-semibold shadow-xs-dark"
+              className="h-10 rounded-full px-4 text-sm font-semibold shadow-xs"
               onClick={onClick}
               disabled={isUnavailable}
             >

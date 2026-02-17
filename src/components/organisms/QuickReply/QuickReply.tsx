@@ -28,7 +28,7 @@ export function QuickReply({
   const [promptIndex] = React.useState(() => Math.floor(Math.random() * prompts.length));
   const prompt = prompts[promptIndex] || prompts[0];
 
-  const { userDetails } = Hooks.useCurrentUserProfile();
+  const { userDetails, currentUserPubky } = Hooks.useCurrentUserProfile();
   const avatarUrl = Hooks.useAvatarUrl(userDetails);
 
   const {
@@ -126,7 +126,12 @@ export function QuickReply({
         <Atoms.Container ref={cardRef} className="gap-2" overrideDefaults>
           {/* Collapsed header row (avatar + input) */}
           <Atoms.Container className="flex items-center gap-4" overrideDefaults>
-            <Organisms.AvatarWithFallback avatarUrl={avatarUrl} name={userDetails?.name || ''} size="default" />
+            <Organisms.AvatarWithFallback
+              avatarUrl={avatarUrl}
+              name={userDetails?.name || ''}
+              fallbackSeed={currentUserPubky || userDetails?.name || 'user'}
+              size="default"
+            />
 
             <Atoms.Container overrideDefaults className="relative flex-1">
               <Atoms.Textarea
