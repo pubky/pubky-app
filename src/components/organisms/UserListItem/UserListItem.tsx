@@ -234,7 +234,13 @@ function CompactVariant({
         className="flex min-w-0 flex-1 cursor-pointer items-center gap-3 text-left transition-opacity hover:opacity-80"
         aria-label={`View ${displayName}'s profile`}
       >
-        <Organisms.AvatarWithFallback avatarUrl={avatarUrl} name={displayName} size="md" className="shrink-0" />
+        <Organisms.AvatarWithFallback
+          avatarUrl={avatarUrl}
+          name={displayName}
+          fallbackSeed={user.id}
+          size="md"
+          className="shrink-0"
+        />
 
         <Atoms.Container overrideDefaults className="flex min-w-0 flex-1 flex-col">
           <Atoms.Typography as="span" overrideDefaults className="truncate text-base font-bold text-foreground">
@@ -296,7 +302,7 @@ function FullVariant({
       <Atoms.Container overrideDefaults className="flex flex-wrap items-center justify-between gap-6 lg:flex-nowrap">
         {/* User info */}
         <Atoms.Link href={`/profile/${user.id}`} className="flex min-w-0 flex-1 items-center gap-2">
-          <Organisms.AvatarWithFallback avatarUrl={avatarUrl} name={displayName} size="md" />
+          <Organisms.AvatarWithFallback avatarUrl={avatarUrl} name={displayName} fallbackSeed={user.id} size="md" />
           <Atoms.Container overrideDefaults>
             <Atoms.Typography data-cy="profile-follower-item-name" size="sm" className="truncate font-bold">
               {displayName}

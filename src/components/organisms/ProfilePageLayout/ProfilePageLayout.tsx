@@ -109,6 +109,7 @@ export function ProfilePageLayout({
         onClose={handleCloseAvatarZoom}
         avatarUrl={profile.avatarUrl}
         name={profile.name}
+        fallbackSeed={userId}
       />
     </>
   );

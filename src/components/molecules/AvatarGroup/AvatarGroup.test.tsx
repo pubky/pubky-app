@@ -31,7 +31,7 @@ describe('AvatarGroup', () => {
     const { container } = render(<AvatarGroup items={manyItems} totalCount={100} maxAvatars={3} />);
 
     // Should only show 3 avatars + overflow indicator
-    const avatarWrappers = container.querySelectorAll('.rounded-full.shadow-xs-dark');
+    const avatarWrappers = container.querySelectorAll('.rounded-full.shadow-xs');
     // 3 visible avatars + 1 overflow indicator
     expect(avatarWrappers.length).toBe(4);
   });
@@ -93,7 +93,7 @@ describe('AvatarGroup', () => {
     const { container } = render(<AvatarGroup items={items} totalCount={100} />);
 
     // Should show 6 avatars + overflow indicator (7 rounded-full elements)
-    const avatarWrappers = container.querySelectorAll('.rounded-full.shadow-xs-dark');
+    const avatarWrappers = container.querySelectorAll('.rounded-full.shadow-xs');
     expect(avatarWrappers.length).toBe(7);
   });
 
@@ -119,7 +119,7 @@ describe('AvatarGroup', () => {
     const { container } = render(<AvatarGroup items={itemsWithoutAvatar} totalCount={2} />);
 
     // Should still render avatars (with fallback initials)
-    const avatarWrappers = container.querySelectorAll('.rounded-full.shadow-xs-dark');
+    const avatarWrappers = container.querySelectorAll('.rounded-full.shadow-xs');
     expect(avatarWrappers.length).toBe(2);
   });
 

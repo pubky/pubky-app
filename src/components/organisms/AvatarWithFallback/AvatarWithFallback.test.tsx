@@ -2,6 +2,22 @@ import { render, screen, fireEvent } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { AvatarWithFallback } from './AvatarWithFallback';
 
+vi.mock('facehash', () => ({
+  Facehash: ({
+    name,
+    onRenderMouth,
+    className,
+  }: {
+    name: string;
+    onRenderMouth?: () => React.ReactNode;
+    className?: string;
+  }) => (
+    <div data-testid="facehash" data-name={name} className={className}>
+      {onRenderMouth?.()}
+    </div>
+  ),
+}));
+
 // Mock dexie-react-hooks
 const mockUseLiveQuery = vi.fn();
 vi.mock('dexie-react-hooks', () => ({
@@ -91,6 +107,23 @@ vi.mock('@/atoms', () => ({
       {children}
     </div>
   ),
+  Typography: ({
+    as: Tag = 'p',
+    children,
+    className,
+    'data-testid': dataTestId,
+  }: {
+    as?: React.ElementType;
+    children: React.ReactNode;
+    className?: string;
+    'data-testid'?: string;
+    overrideDefaults?: boolean;
+    style?: React.CSSProperties;
+  }) => (
+    <Tag data-testid={dataTestId} className={className}>
+      {children}
+    </Tag>
+  ),
 }));
 
 // Mock libs - use real extractInitials and cn
@@ -131,7 +164,8 @@ describe('AvatarWithFallback', () => {
   it('renders avatar fallback when avatarUrl is not provided', () => {
     render(<AvatarWithFallback {...mockProps} />);
 
-    expect(screen.getByText('JD')).toBeInTheDocument();
+    expect(screen.getByTestId('facehash')).toHaveAttribute('data-name', 'John Doe');
+    expect(screen.getByTestId('avatar-fallback-initial')).toHaveTextContent('J');
     expect(screen.getByTestId('avatar-fallback')).toBeInTheDocument();
   });
 
@@ -176,10 +210,30 @@ describe('AvatarWithFallback', () => {
     expect(fallback).toHaveClass('fallback-class');
   });
 
-  it('uses extractInitials for fallback when no avatarUrl', () => {
+  it('uses first character initial for fallback when no avatarUrl', () => {
     render(<AvatarWithFallback {...mockProps} name="Alice Bob" />);
 
-    expect(screen.getByText('AB')).toBeInTheDocument();
+    expect(screen.getByTestId('avatar-fallback-initial')).toHaveTextContent('A');
+  });
+
+  it('uses explicit fallbackSeed when provided', () => {
+    render(<AvatarWithFallback {...mockProps} fallbackSeed="explicit-seed" />);
+    expect(screen.getByTestId('facehash')).toHaveAttribute('data-name', 'explicit-seed');
+  });
+
+  it('uses extracted userId from avatarUrl as fallback seed when fallbackSeed is not provided', () => {
+    render(<AvatarWithFallback {...mockProps} avatarUrl={validAvatarUrl} />);
+    expect(screen.getByTestId('facehash')).toHaveAttribute('data-name', validUserId);
+  });
+
+  it('uses default fallback seed when no seed sources are available', () => {
+    render(<AvatarWithFallback name="" />);
+    expect(screen.getByTestId('facehash')).toHaveAttribute('data-name', 'user');
+  });
+
+  it('uses seed initial when name is empty', () => {
+    render(<AvatarWithFallback name="" fallbackSeed="seed-value" />);
+    expect(screen.getByTestId('avatar-fallback-initial')).toHaveTextContent('S');
   });
 
   it('renders with both className and fallbackClassName', () => {
@@ -206,7 +260,7 @@ describe('AvatarWithFallback', () => {
   });
 
   describe('Image Error Handling', () => {
-    it('falls back to initials when image fails to load', () => {
+    it('falls back to facehash when image fails to load', () => {
       render(<AvatarWithFallback {...mockProps} avatarUrl={validAvatarUrl} />);
 
       // Initially should show both image and fallback (Radix handles visibility)
@@ -220,7 +274,7 @@ describe('AvatarWithFallback', () => {
       // After error, image element is removed and fallback remains
       expect(screen.queryByTestId('avatar-image')).not.toBeInTheDocument();
       expect(screen.getByTestId('avatar-fallback')).toBeInTheDocument();
-      expect(screen.getByText('JD')).toBeInTheDocument();
+      expect(screen.getByTestId('avatar-fallback-initial')).toHaveTextContent('J');
     });
 
     it('handles error with custom fallbackClassName', () => {
@@ -233,13 +287,13 @@ describe('AvatarWithFallback', () => {
       expect(fallback).toHaveClass('error-fallback');
     });
 
-    it('uses extractInitials correctly after image error', () => {
+    it('uses name initial correctly after image error', () => {
       render(<AvatarWithFallback name="Alice Bob Charlie" avatarUrl={validAvatarUrl} />);
 
       const avatarImage = screen.getByTestId('avatar-image');
       fireEvent.error(avatarImage);
 
-      expect(screen.getByText('AB')).toBeInTheDocument();
+      expect(screen.getByTestId('avatar-fallback-initial')).toHaveTextContent('A');
     });
 
     it('does not show image when avatarUrl is empty string', () => {

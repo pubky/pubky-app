@@ -65,7 +65,7 @@ describe('MobileHeader', () => {
       'z-(--z-mobile-menu)',
       'lg:hidden',
       'bg-background',
-      'shadow-xs-dark',
+      'shadow-xs',
     );
     expect(outerContainer).not.toHaveClass('bg-linear-to-b');
   });

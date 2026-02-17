@@ -4,6 +4,7 @@ import { fn } from 'storybook/test';
 import * as Atoms from '@/atoms';
 import * as Organisms from '@/organisms';
 import * as Libs from '@/libs';
+import type { DialogWelcomeStoryProps } from './DialogWelcome.types';
 
 /**
  * DialogWelcome Story
@@ -12,15 +13,6 @@ import * as Libs from '@/libs';
  * we create a presentational version for Storybook that accepts props.
  */
 
-interface DialogWelcomeStoryProps {
-  open: boolean;
-  onOpenChange: (open: boolean) => void;
-  userName: string;
-  userBio: string;
-  displayPublicKey: string;
-  avatarUrl?: string;
-}
-
 function DialogWelcomeStory({
   open,
   onOpenChange,
@@ -28,6 +20,7 @@ function DialogWelcomeStory({
   userBio,
   displayPublicKey,
   avatarUrl,
+  fallbackSeed,
 }: DialogWelcomeStoryProps) {
   return (
     <Atoms.Dialog open={open} onOpenChange={onOpenChange}>
@@ -44,6 +37,7 @@ function DialogWelcomeStory({
               <Organisms.AvatarWithFallback
                 avatarUrl={avatarUrl}
                 name={userName}
+                fallbackSeed={fallbackSeed}
                 className="h-24 w-24"
                 fallbackClassName="text-4xl"
               />
@@ -83,6 +77,7 @@ const meta = {
     userBio: { control: 'text' },
     displayPublicKey: { control: 'text' },
     avatarUrl: { control: 'text' },
+    fallbackSeed: { control: 'text' },
   },
   args: {
     open: true,
@@ -91,6 +86,7 @@ const meta = {
     userBio: 'Chancellor on brink of second bailout for banks.',
     displayPublicKey: 'pk1abc...xyz9',
     avatarUrl: '',
+    fallbackSeed: 'pk1abc...xyz9',
   },
 } satisfies Meta<typeof DialogWelcomeStory>;
 
