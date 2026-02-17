@@ -21,6 +21,9 @@ export const CreateProfileForm = () => {
     pubky,
     setShowWelcomeDialog,
   });
+  const avatarFallbackSeed = pubky || state.name || 'user';
+  const avatarFallbackInitial =
+    Libs.extractInitials({ name: state.name, maxLength: 1 }) || avatarFallbackSeed.charAt(0).toUpperCase() || 'U';
 
   return (
     <>
@@ -139,7 +142,9 @@ export const CreateProfileForm = () => {
                     }
                   />
                 ) : (
-                  <Atoms.AvatarFallback className="text-4xl">SN</Atoms.AvatarFallback>
+                  <Atoms.AvatarFallback className="overflow-hidden border-none text-4xl">
+                    <Molecules.FacehashAvatar seed={avatarFallbackSeed} initial={avatarFallbackInitial} />
+                  </Atoms.AvatarFallback>
                 )}
               </Atoms.Avatar>
             </Atoms.Container>

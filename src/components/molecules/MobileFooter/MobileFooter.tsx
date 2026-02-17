@@ -104,6 +104,7 @@ export function MobileFooter({ className }: MobileFooterProps) {
           <Organisms.AvatarWithFallback
             avatarUrl={avatarUrl}
             name={avatarName}
+            fallbackSeed={currentUserPubky || avatarName}
             size="lg"
             className="cursor-pointer"
             alt={tCommon('profile')}

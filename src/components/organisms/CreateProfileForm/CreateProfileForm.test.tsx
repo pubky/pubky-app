@@ -4,6 +4,14 @@ import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import { CreateProfileForm } from './CreateProfileForm';
 import * as App from '@/app';
 
+vi.mock('facehash', () => ({
+  Facehash: ({ name, onRenderMouth }: { name: string; onRenderMouth?: () => React.ReactNode }) => (
+    <div data-testid="facehash" data-name={name}>
+      {onRenderMouth?.()}
+    </div>
+  ),
+}));
+
 vi.mock('@/core', async (importOriginal) => {
   const actual = await importOriginal<typeof import('@/core')>();
   return {
@@ -445,8 +453,10 @@ describe('CreateProfileForm', () => {
     render(<CreateProfileForm />);
 
     const avatarFallback = screen.getByTestId('avatar-fallback');
+    const facehash = screen.getByTestId('facehash');
     expect(avatarFallback).toBeInTheDocument();
-    expect(avatarFallback).toHaveTextContent('SN');
+    expect(facehash).toHaveAttribute('data-name', mockPubky);
+    expect(avatarFallback).toHaveTextContent(/[A-Z0-9]/);
     expect(avatarFallback).toHaveClass('text-4xl');
   });
 
