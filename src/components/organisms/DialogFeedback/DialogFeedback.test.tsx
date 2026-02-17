@@ -5,6 +5,7 @@ import { DialogFeedback } from './DialogFeedback';
 // Mock hooks
 const mockUseCurrentUserProfile = vi.fn();
 const mockUseFeedback = vi.fn();
+const mockUseConfirmableDialog = vi.fn();
 
 vi.mock('@/hooks', async (importOriginal) => {
   const actual = await importOriginal<typeof import('@/hooks')>();
@@ -12,6 +13,7 @@ vi.mock('@/hooks', async (importOriginal) => {
     ...actual,
     useCurrentUserProfile: () => mockUseCurrentUserProfile(),
     useFeedback: () => mockUseFeedback(),
+    useConfirmableDialog: (opts: unknown) => mockUseConfirmableDialog(opts),
   };
 });
 
@@ -175,6 +177,22 @@ vi.mock('@/atoms', () => ({
   ),
 }));
 
+// Mock molecules
+vi.mock('@/molecules', () => ({
+  DialogConfirmDiscard: vi.fn(
+    ({ open, onOpenChange, onConfirm }: { open: boolean; onOpenChange: () => void; onConfirm: () => void }) => (
+      <div data-testid="dialog-confirm-discard" data-open={open}>
+        <button data-testid="confirm-discard-cancel" onClick={onOpenChange}>
+          Cancel
+        </button>
+        <button data-testid="confirm-discard-confirm" onClick={onConfirm}>
+          Discard
+        </button>
+      </div>
+    ),
+  ),
+}));
+
 // Mock libs
 vi.mock('@/libs', async () => {
   const actual = await vi.importActual('@/libs');
@@ -186,6 +204,9 @@ describe('DialogFeedback', () => {
   const mockHandleChange = vi.fn();
   const mockSubmit = vi.fn();
   const mockReset = vi.fn();
+  const mockHandleOpenChange = vi.fn();
+  const mockHandleDiscard = vi.fn();
+  const mockSetShowConfirmDialog = vi.fn();
 
   beforeEach(() => {
     vi.clearAllMocks();
@@ -200,6 +221,14 @@ describe('DialogFeedback', () => {
       isSuccess: false,
       hasContent: false,
       reset: mockReset,
+    });
+    mockUseConfirmableDialog.mockReturnValue({
+      showConfirmDialog: false,
+      setShowConfirmDialog: mockSetShowConfirmDialog,
+      resetKey: 0,
+      handleContentChange: vi.fn(),
+      handleOpenChange: mockHandleOpenChange,
+      handleDiscard: mockHandleDiscard,
     });
   });
 
@@ -305,11 +334,22 @@ describe('DialogFeedback - Snapshots', () => {
   const mockHandleChange = vi.fn();
   const mockSubmit = vi.fn();
   const mockReset = vi.fn();
+  const mockHandleOpenChange = vi.fn();
+  const mockHandleDiscard = vi.fn();
+  const mockSetShowConfirmDialog = vi.fn();
 
   beforeEach(() => {
     vi.clearAllMocks();
     mockUseCurrentUserProfile.mockReturnValue({
       currentUserPubky: 'test-user-123',
+    });
+    mockUseConfirmableDialog.mockReturnValue({
+      showConfirmDialog: false,
+      setShowConfirmDialog: mockSetShowConfirmDialog,
+      resetKey: 0,
+      handleContentChange: vi.fn(),
+      handleOpenChange: mockHandleOpenChange,
+      handleDiscard: mockHandleDiscard,
     });
   });
 
@@ -325,7 +365,7 @@ describe('DialogFeedback - Snapshots', () => {
     });
 
     const { container } = render(<DialogFeedback open={true} onOpenChange={mockOnOpenChange} />);
-    expect(container.firstChild).toMatchSnapshot();
+    expect(container).toMatchSnapshot();
   });
 
   it('matches snapshot with feedback content', () => {
@@ -340,7 +380,7 @@ describe('DialogFeedback - Snapshots', () => {
     });
 
     const { container } = render(<DialogFeedback open={true} onOpenChange={mockOnOpenChange} />);
-    expect(container.firstChild).toMatchSnapshot();
+    expect(container).toMatchSnapshot();
   });
 
   it('matches snapshot when submitting', () => {
@@ -355,7 +395,7 @@ describe('DialogFeedback - Snapshots', () => {
     });
 
     const { container } = render(<DialogFeedback open={true} onOpenChange={mockOnOpenChange} />);
-    expect(container.firstChild).toMatchSnapshot();
+    expect(container).toMatchSnapshot();
   });
 
   it('matches snapshot for success state', () => {
@@ -370,11 +410,21 @@ describe('DialogFeedback - Snapshots', () => {
     });
 
     const { container } = render(<DialogFeedback open={true} onOpenChange={mockOnOpenChange} />);
-    expect(container.firstChild).toMatchSnapshot();
+    expect(container).toMatchSnapshot();
   });
 
   it('matches snapshot for closed state', () => {
+    mockUseFeedback.mockReturnValue({
+      feedback: '',
+      handleChange: mockHandleChange,
+      submit: mockSubmit,
+      isSubmitting: false,
+      isSuccess: false,
+      hasContent: false,
+      reset: mockReset,
+    });
+
     const { container } = render(<DialogFeedback open={false} onOpenChange={mockOnOpenChange} />);
-    expect(container.firstChild).toMatchSnapshot();
+    expect(container).toMatchSnapshot();
   });
 });

@@ -25,7 +25,7 @@ export function PostHeaderUserInfoPopoverHeader({
   return (
     <Atoms.Container className="flex min-w-0 items-center gap-2" overrideDefaults>
       <Atoms.Link href={profileUrl} onClick={handleProfileNavigation} className="shrink-0" overrideDefaults>
-        <Organisms.AvatarWithFallback avatarUrl={avatarUrl} name={userName} size="md" />
+        <Organisms.AvatarWithFallback avatarUrl={avatarUrl} name={userName} fallbackSeed={userId} size="md" />
       </Atoms.Link>
       <Atoms.Container className="min-w-0 flex-1 items-start overflow-hidden">
         <Atoms.Link href={profileUrl} onClick={handleProfileNavigation} overrideDefaults>

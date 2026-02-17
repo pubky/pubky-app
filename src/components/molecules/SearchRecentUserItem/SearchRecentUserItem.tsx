@@ -32,6 +32,7 @@ export function SearchRecentUserItem({ user, onClick }: SearchRecentUserItemProp
       <Organisms.AvatarWithFallback
         avatarUrl={avatarUrl}
         name={userDetails?.name || ''}
+        fallbackSeed={user.id}
         size="default"
         className="shrink-0"
       />
