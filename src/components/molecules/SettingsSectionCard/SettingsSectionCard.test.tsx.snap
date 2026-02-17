@@ -2,7 +2,7 @@
 
 exports[`SettingsSectionCard - Snapshots > matches snapshot with custom className 1`] = `
 <div
-  class="flex w-full flex-col items-start gap-8 rounded-md bg-card px-6 py-8 md:p-12 custom-section"
+  class="flex w-full flex-col items-start gap-8 rounded-md bg-card px-6 py-8 shadow-lg md:p-12 custom-section"
   data-testid="container"
 >
   <div
@@ -56,7 +56,7 @@ exports[`SettingsSectionCard - Snapshots > matches snapshot with custom classNam
 
 exports[`SettingsSectionCard - Snapshots > matches snapshot with description 1`] = `
 <div
-  class="flex w-full flex-col items-start gap-8 rounded-md bg-card px-6 py-8 md:p-12"
+  class="flex w-full flex-col items-start gap-8 rounded-md bg-card px-6 py-8 shadow-lg md:p-12"
   data-testid="container"
 >
   <div
@@ -116,7 +116,7 @@ exports[`SettingsSectionCard - Snapshots > matches snapshot with description 1`]
 
 exports[`SettingsSectionCard - Snapshots > matches snapshot with icon and title 1`] = `
 <div
-  class="flex w-full flex-col items-start gap-8 rounded-md bg-card px-6 py-8 md:p-12"
+  class="flex w-full flex-col items-start gap-8 rounded-md bg-card px-6 py-8 shadow-lg md:p-12"
   data-testid="container"
 >
   <div
@@ -170,7 +170,7 @@ exports[`SettingsSectionCard - Snapshots > matches snapshot with icon and title 
 
 exports[`SettingsSectionCard - Snapshots > matches snapshot without icon and title 1`] = `
 <div
-  class="flex w-full flex-col items-start gap-8 rounded-md bg-card px-6 py-8 md:p-12"
+  class="flex w-full flex-col items-start gap-8 rounded-md bg-card px-6 py-8 shadow-lg md:p-12"
   data-testid="container"
 >
   <div

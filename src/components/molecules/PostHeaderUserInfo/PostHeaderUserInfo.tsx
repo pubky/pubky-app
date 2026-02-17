@@ -33,6 +33,7 @@ export function PostHeaderUserInfo({
         <Organisms.AvatarWithFallback
           avatarUrl={avatarUrl}
           name={userName}
+          fallbackSeed={userId}
           size={size === 'large' ? 'xl' : 'default'}
         />
       </Atoms.Link>
