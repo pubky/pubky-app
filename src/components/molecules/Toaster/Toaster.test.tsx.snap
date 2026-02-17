@@ -33,7 +33,7 @@ exports[`Toaster - Snapshots > matches snapshot for Toaster with multiple toasts
           First Toast
         </div>
         <div
-          class="text-sm text-muted-foreground truncate"
+          class="text-sm text-muted-foreground"
         >
           First description
         </div>
@@ -57,7 +57,7 @@ exports[`Toaster - Snapshots > matches snapshot for Toaster with multiple toasts
           Second Toast
         </div>
         <div
-          class="text-sm text-muted-foreground truncate"
+          class="text-sm text-muted-foreground"
         >
           Second description
         </div>
@@ -104,7 +104,7 @@ exports[`Toaster - Snapshots > matches snapshot for Toaster with single toast 1`
           Test Toast
         </div>
         <div
-          class="text-sm text-muted-foreground truncate"
+          class="text-sm text-muted-foreground"
         >
           This is a test toast message
         </div>
@@ -193,7 +193,7 @@ exports[`Toaster - Snapshots > matches snapshot for Toaster with toast action 1`
           Toast with Action
         </div>
         <div
-          class="text-sm text-muted-foreground truncate"
+          class="text-sm text-muted-foreground"
         >
           This toast has an action button
         </div>
@@ -247,7 +247,7 @@ exports[`Toaster - Snapshots > matches snapshot for Toaster with toast with acti
           Toast with Action
         </div>
         <div
-          class="text-sm text-muted-foreground truncate"
+          class="text-sm text-muted-foreground"
         >
           This toast has an action button
         </div>
