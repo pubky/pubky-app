@@ -1000,6 +1000,7 @@
     "trendingPosts": "المنشورات الرائجة",
     "postsCount": "{count} منشور",
     "failedToLoadUsers": "فشل تحميل المستخدمين",
+    "failedToLoadTags": "فشل تحميل الوسوم",
     "noUsersToShow": "لا يوجد مستخدمون للعرض"
   },
   "privacy": {

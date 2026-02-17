@@ -1006,6 +1006,7 @@
     "trendingPosts": "Publicaciones en tendencia",
     "postsCount": "{count} publicaciónes",
     "failedToLoadUsers": "Error al cargar usuarios",
+    "failedToLoadTags": "Error al cargar etiquetas",
     "noUsersToShow": "No hay usuarios para mostrar"
   },
   "privacy": {

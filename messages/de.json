@@ -1006,6 +1006,7 @@
     "trendingPosts": "Trendende Beiträge",
     "postsCount": "{count} Beiträge",
     "failedToLoadUsers": "Benutzer konnten nicht geladen werden",
+    "failedToLoadTags": "Tags konnten nicht geladen werden",
     "noUsersToShow": "Keine Benutzer anzuzeigen"
   },
   "privacy": {

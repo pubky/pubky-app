@@ -1006,6 +1006,7 @@
     "trendingPosts": "Post di tendenza",
     "postsCount": "{count} post",
     "failedToLoadUsers": "Caricamento utenti fallito",
+    "failedToLoadTags": "Caricamento tag fallito",
     "noUsersToShow": "Nessun utente da mostrare"
   },
   "privacy": {
