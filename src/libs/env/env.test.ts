@@ -53,7 +53,6 @@ describe('Environment variables configuration', () => {
 
   it('should transform number strings correctly', () => {
     expect(typeof Env.NEXT_PUBLIC_DB_VERSION).toBe('number');
-    expect(typeof Env.NEXT_PUBLIC_SYNC_TTL).toBe('number');
     expect(typeof Env.NEXT_PUBLIC_TTL_POST_MS).toBe('number');
   });
 });

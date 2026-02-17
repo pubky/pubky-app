@@ -55,7 +55,7 @@ export function SideDrawer({ open, onOpenChangeAction, children, position = 'lef
       <div
         className={Libs.cn(
           'absolute inset-0 bg-black transition-opacity duration-300',
-          isAnimating ? 'bg-opacity-50' : 'bg-opacity-0',
+          isAnimating ? 'opacity-70' : 'opacity-0',
         )}
         onClick={() => onOpenChangeAction(false)}
       />

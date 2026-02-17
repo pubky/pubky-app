@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useRef, useCallback } from 'react';
+import { useState, useRef } from 'react';
 import type { UseConfirmableDialogOptions, UseConfirmableDialogReturn } from './useConfirmableDialog.types';
 
 /**
@@ -28,51 +28,49 @@ import type { UseConfirmableDialogOptions, UseConfirmableDialogReturn } from './
  * });
  * ```
  */
-export function useConfirmableDialog({ onClose }: UseConfirmableDialogOptions): UseConfirmableDialogReturn {
+export function useConfirmableDialog({
+  onClose,
+  hasContent: externalHasContent,
+}: UseConfirmableDialogOptions): UseConfirmableDialogReturn {
   const [showConfirmDialog, setShowConfirmDialog] = useState(false);
   const [resetKey, setResetKey] = useState(0);
   const contentRef = useRef({ content: '', tags: [] as string[], attachments: [] as File[], articleTitle: '' });
 
-  const hasContent = useCallback(() => {
+  const internalHasContent = () => {
     return (
       contentRef.current.content.trim().length > 0 ||
       contentRef.current.tags.length > 0 ||
       contentRef.current.attachments.length > 0 ||
       contentRef.current.articleTitle.trim().length > 0
     );
-  }, []);
+  };
 
-  const handleContentChange = useCallback(
-    (content: string, tags: string[], attachments: File[], articleTitle: string) => {
-      contentRef.current = { content, tags, attachments, articleTitle };
-    },
-    [],
-  );
+  const handleContentChange = (content: string, tags: string[], attachments: File[], articleTitle: string) => {
+    contentRef.current = { content, tags, attachments, articleTitle };
+  };
 
-  const handleOpenChange = useCallback(
-    (newOpen: boolean) => {
-      if (newOpen) {
-        setShowConfirmDialog(false);
-        contentRef.current = { content: '', tags: [], attachments: [], articleTitle: '' };
+  const handleOpenChange = (newOpen: boolean) => {
+    if (newOpen) {
+      setShowConfirmDialog(false);
+      contentRef.current = { content: '', tags: [], attachments: [], articleTitle: '' };
+    } else {
+      const contentExists = externalHasContent ? externalHasContent() : internalHasContent();
+      // The !showConfirmDialog guard is defensive: prevents redundant state updates
+      // if this fires while confirm dialog is open. In practice unlikely since the
+      // modal confirm dialog captures Escape/click-outside before they reach here.
+      if (contentExists && !showConfirmDialog) {
+        setShowConfirmDialog(true);
       } else {
-        // The !showConfirmDialog guard is defensive: prevents redundant state updates
-        // if this fires while confirm dialog is open. In practice unlikely since the
-        // modal confirm dialog captures Escape/click-outside before they reach here.
-        if (hasContent() && !showConfirmDialog) {
-          setShowConfirmDialog(true);
-        } else {
-          onClose();
-        }
+        onClose();
       }
-    },
-    [hasContent, showConfirmDialog, onClose],
-  );
+    }
+  };
 
-  const handleDiscard = useCallback(() => {
+  const handleDiscard = () => {
     setResetKey((prev) => prev + 1);
     setShowConfirmDialog(false);
     onClose();
-  }, [onClose]);
+  };
 
   return {
     showConfirmDialog,

@@ -26,7 +26,7 @@ export function HotTagsOverview({ limit = DEFAULT_TAGS_LIMIT, className }: HotTa
   const { reach, timeframe } = Core.useHotStore();
 
   // Fetch hot tags using the hook
-  const { rawTags, isLoading } = Hooks.useHotTags({
+  const { rawTags, isLoading, error } = Hooks.useHotTags({
     reach: reach === 'all' ? undefined : (reach as Core.UserStreamReach),
     timeframe,
     limit,
@@ -39,8 +39,8 @@ export function HotTagsOverview({ limit = DEFAULT_TAGS_LIMIT, className }: HotTa
     router.push(`${APP_ROUTES.SEARCH}?tags=${encodeURIComponent(tagName)}`);
   };
 
-  // Don't render if no tags after skipping featured ones
-  if (!isLoading && tags.length === 0) {
+  // Don't render on error or empty results
+  if (error || (!isLoading && tags.length === 0)) {
     return null;
   }
 

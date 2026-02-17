@@ -26,7 +26,7 @@ export function HotTagsCardsSection({ className }: HotTagsCardsSectionProps) {
   const { reach, timeframe } = Core.useHotStore();
 
   // Fetch hot tags using the hook (no limit - get all from endpoint)
-  const { rawTags, isLoading } = Hooks.useHotTags({
+  const { rawTags, isLoading, error } = Hooks.useHotTags({
     reach: reach === 'all' ? undefined : (reach as Core.UserStreamReach),
     timeframe,
   });
@@ -57,6 +57,17 @@ export function HotTagsCardsSection({ className }: HotTagsCardsSectionProps) {
   const handleTagClick = (tagName: string) => {
     router.push(`${APP_ROUTES.SEARCH}?tags=${encodeURIComponent(tagName)}`);
   };
+
+  if (error) {
+    return (
+      <Atoms.Container overrideDefaults className={Libs.cn('flex w-full flex-col gap-2', className)}>
+        <Atoms.Heading level={5} size="lg" className="font-light text-muted-foreground">
+          {t('hotTags')}
+        </Atoms.Heading>
+        <Atoms.Typography className="text-destructive">{t('failedToLoadTags')}</Atoms.Typography>
+      </Atoms.Container>
+    );
+  }
 
   // TODO: Replace with Skeleton component
   if (isLoading) {

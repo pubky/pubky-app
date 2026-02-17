@@ -79,6 +79,7 @@ export function TaggedItem({
                 key={tagger.id}
                 name={tagger.name || Libs.formatPublicKey({ key: tagger.id })}
                 avatarUrl={tagger.avatarUrl}
+                fallbackSeed={tagger.id}
                 size="md"
                 className={Libs.cn('shrink-0', index > 0 && '-ml-2')}
               />

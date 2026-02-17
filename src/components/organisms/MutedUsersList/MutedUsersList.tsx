@@ -94,7 +94,16 @@ export function MutedUsersList() {
                   {mutedUser?.avatar && (
                     <Atoms.AvatarImage src={mutedUser.avatar} alt={mutedUser?.name ?? tCommon('user')} />
                   )}
-                  <Atoms.AvatarFallback>{mutedUser?.name?.[0] || 'U'}</Atoms.AvatarFallback>
+                  <Atoms.AvatarFallback className="overflow-hidden border-none">
+                    <Molecules.FacehashAvatar
+                      seed={mutedUser?.id || mutedUser?.name || 'user'}
+                      initial={
+                        Libs.extractInitials({ name: mutedUser?.name || '', maxLength: 1 }) ||
+                        mutedUser?.id?.charAt(0).toUpperCase() ||
+                        'U'
+                      }
+                    />
+                  </Atoms.AvatarFallback>
                 </Atoms.Avatar>
                 <Atoms.Container overrideDefaults className="inline-flex flex-col items-start">
                   <Atoms.Typography as="span" overrideDefaults className="text-base font-bold">
