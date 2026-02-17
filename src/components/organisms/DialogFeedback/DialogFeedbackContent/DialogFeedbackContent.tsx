@@ -57,7 +57,7 @@ export function DialogFeedbackContent({
                 size="sm"
                 onClick={submit}
                 disabled={!hasContent || isSubmitting}
-                className="h-8 rounded-full border-none px-3 py-2 shadow-xs-dark"
+                className="h-8 rounded-full border-none px-3 py-2 shadow-xs"
               >
                 {isSubmitting ? (
                   <Libs.Loader2 className="size-4 animate-spin text-secondary-foreground" strokeWidth={2} />

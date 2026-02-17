@@ -1,101 +1,188 @@
 // Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
 
 exports[`DialogFeedback - Snapshots > matches snapshot for closed state 1`] = `
-<div
-  data-open="false"
-  data-testid="dialog"
->
+<div>
   <div
-    aria-label="Provide Feedback"
-    class="w-2xl"
-    data-testid="dialog-content"
+    data-open="false"
+    data-testid="dialog-confirm-discard"
+  >
+    <button
+      data-testid="confirm-discard-cancel"
+    >
+      Cancel
+    </button>
+    <button
+      data-testid="confirm-discard-confirm"
+    >
+      Discard
+    </button>
+  </div>
+  <div
+    data-open="false"
+    data-testid="dialog"
   >
     <div
-      data-testid="dialog-feedback-success"
+      aria-label="Provide Feedback"
+      class="w-2xl"
+      data-testid="dialog-content"
     >
-      DialogFeedbackSuccess
+      <div
+        data-feedback=""
+        data-testid="dialog-feedback-content"
+        data-user="test-user-123"
+      >
+        DialogFeedbackContent
+      </div>
     </div>
   </div>
 </div>
 `;
 
 exports[`DialogFeedback - Snapshots > matches snapshot for default state 1`] = `
-<div
-  data-open="true"
-  data-testid="dialog"
->
+<div>
   <div
-    aria-label="Provide Feedback"
-    class="w-2xl"
-    data-testid="dialog-content"
+    data-open="false"
+    data-testid="dialog-confirm-discard"
+  >
+    <button
+      data-testid="confirm-discard-cancel"
+    >
+      Cancel
+    </button>
+    <button
+      data-testid="confirm-discard-confirm"
+    >
+      Discard
+    </button>
+  </div>
+  <div
+    data-open="true"
+    data-testid="dialog"
   >
     <div
-      data-feedback=""
-      data-testid="dialog-feedback-content"
-      data-user="test-user-123"
+      aria-label="Provide Feedback"
+      class="w-2xl"
+      data-testid="dialog-content"
     >
-      DialogFeedbackContent
+      <div
+        data-feedback=""
+        data-testid="dialog-feedback-content"
+        data-user="test-user-123"
+      >
+        DialogFeedbackContent
+      </div>
     </div>
   </div>
 </div>
 `;
 
 exports[`DialogFeedback - Snapshots > matches snapshot for success state 1`] = `
-<div
-  data-open="true"
-  data-testid="dialog"
->
+<div>
   <div
-    aria-label="Provide Feedback"
-    class="w-2xl"
-    data-testid="dialog-content"
+    data-open="false"
+    data-testid="dialog-confirm-discard"
+  >
+    <button
+      data-testid="confirm-discard-cancel"
+    >
+      Cancel
+    </button>
+    <button
+      data-testid="confirm-discard-confirm"
+    >
+      Discard
+    </button>
+  </div>
+  <div
+    data-open="true"
+    data-testid="dialog"
   >
     <div
-      data-testid="dialog-feedback-success"
+      aria-label="Provide Feedback"
+      class="w-2xl"
+      data-testid="dialog-content"
     >
-      DialogFeedbackSuccess
+      <div
+        data-testid="dialog-feedback-success"
+      >
+        DialogFeedbackSuccess
+      </div>
     </div>
   </div>
 </div>
 `;
 
 exports[`DialogFeedback - Snapshots > matches snapshot when submitting 1`] = `
-<div
-  data-open="true"
-  data-testid="dialog"
->
+<div>
   <div
-    aria-label="Provide Feedback"
-    class="w-2xl"
-    data-testid="dialog-content"
+    data-open="false"
+    data-testid="dialog-confirm-discard"
+  >
+    <button
+      data-testid="confirm-discard-cancel"
+    >
+      Cancel
+    </button>
+    <button
+      data-testid="confirm-discard-confirm"
+    >
+      Discard
+    </button>
+  </div>
+  <div
+    data-open="true"
+    data-testid="dialog"
   >
     <div
-      data-feedback="This is test feedback"
-      data-testid="dialog-feedback-content"
-      data-user="test-user-123"
+      aria-label="Provide Feedback"
+      class="w-2xl"
+      data-testid="dialog-content"
     >
-      DialogFeedbackContent
+      <div
+        data-feedback="This is test feedback"
+        data-testid="dialog-feedback-content"
+        data-user="test-user-123"
+      >
+        DialogFeedbackContent
+      </div>
     </div>
   </div>
 </div>
 `;
 
 exports[`DialogFeedback - Snapshots > matches snapshot with feedback content 1`] = `
-<div
-  data-open="true"
-  data-testid="dialog"
->
+<div>
   <div
-    aria-label="Provide Feedback"
-    class="w-2xl"
-    data-testid="dialog-content"
+    data-open="false"
+    data-testid="dialog-confirm-discard"
+  >
+    <button
+      data-testid="confirm-discard-cancel"
+    >
+      Cancel
+    </button>
+    <button
+      data-testid="confirm-discard-confirm"
+    >
+      Discard
+    </button>
+  </div>
+  <div
+    data-open="true"
+    data-testid="dialog"
   >
     <div
-      data-feedback="This is test feedback"
-      data-testid="dialog-feedback-content"
-      data-user="test-user-123"
+      aria-label="Provide Feedback"
+      class="w-2xl"
+      data-testid="dialog-content"
     >
-      DialogFeedbackContent
+      <div
+        data-feedback="This is test feedback"
+        data-testid="dialog-feedback-content"
+        data-user="test-user-123"
+      >
+        DialogFeedbackContent
+      </div>
     </div>
   </div>
 </div>

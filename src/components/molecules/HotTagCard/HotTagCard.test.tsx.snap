@@ -94,7 +94,7 @@ exports[`HotTagCard - Snapshots > matches snapshot with overflow taggers 1`] = `
       data-testid="container"
     >
       <div
-        class="relative rounded-full shadow-xs-dark"
+        class="relative rounded-full shadow-xs"
         data-testid="container"
         style="margin-left: 0px; z-index: 6;"
       >
@@ -159,7 +159,7 @@ exports[`HotTagCard - Snapshots > matches snapshot with overflow taggers 1`] = `
         </span>
       </div>
       <div
-        class="relative rounded-full shadow-xs-dark"
+        class="relative rounded-full shadow-xs"
         data-testid="container"
         style="margin-left: -8px; z-index: 5;"
       >
@@ -224,7 +224,7 @@ exports[`HotTagCard - Snapshots > matches snapshot with overflow taggers 1`] = `
         </span>
       </div>
       <div
-        class="relative rounded-full shadow-xs-dark"
+        class="relative rounded-full shadow-xs"
         data-testid="container"
         style="margin-left: -8px; z-index: 4;"
       >
@@ -297,7 +297,7 @@ exports[`HotTagCard - Snapshots > matches snapshot with overflow taggers 1`] = `
         </span>
       </div>
       <div
-        class="relative rounded-full shadow-xs-dark"
+        class="relative rounded-full shadow-xs"
         data-testid="container"
         style="margin-left: -8px; z-index: 3;"
       >
@@ -362,7 +362,7 @@ exports[`HotTagCard - Snapshots > matches snapshot with overflow taggers 1`] = `
         </span>
       </div>
       <div
-        class="relative rounded-full shadow-xs-dark"
+        class="relative rounded-full shadow-xs"
         data-testid="container"
         style="margin-left: -8px; z-index: 2;"
       >
@@ -427,7 +427,7 @@ exports[`HotTagCard - Snapshots > matches snapshot with overflow taggers 1`] = `
         </span>
       </div>
       <div
-        class="relative rounded-full shadow-xs-dark"
+        class="relative rounded-full shadow-xs"
         data-testid="container"
         style="margin-left: -8px; z-index: 1;"
       >
@@ -492,7 +492,7 @@ exports[`HotTagCard - Snapshots > matches snapshot with overflow taggers 1`] = `
         </span>
       </div>
       <div
-        class="relative flex size-8 items-center justify-center rounded-full border border-muted-foreground bg-background text-sm font-medium shadow-xs-dark"
+        class="relative flex size-8 items-center justify-center rounded-full border border-muted-foreground bg-background text-sm font-medium shadow-xs"
         data-testid="container"
         style="margin-left: -8px; z-index: 0;"
       >
@@ -597,7 +597,7 @@ exports[`HotTagCard - Snapshots > matches snapshot with taggers 1`] = `
       data-testid="container"
     >
       <div
-        class="relative rounded-full shadow-xs-dark"
+        class="relative rounded-full shadow-xs"
         data-testid="container"
         style="margin-left: 0px; z-index: 2;"
       >
@@ -662,7 +662,7 @@ exports[`HotTagCard - Snapshots > matches snapshot with taggers 1`] = `
         </span>
       </div>
       <div
-        class="relative rounded-full shadow-xs-dark"
+        class="relative rounded-full shadow-xs"
         data-testid="container"
         style="margin-left: -8px; z-index: 1;"
       >
@@ -735,7 +735,7 @@ exports[`HotTagCard - Snapshots > matches snapshot with taggers 1`] = `
         </span>
       </div>
       <div
-        class="relative flex size-8 items-center justify-center rounded-full border border-muted-foreground bg-background text-sm font-medium shadow-xs-dark"
+        class="relative flex size-8 items-center justify-center rounded-full border border-muted-foreground bg-background text-sm font-medium shadow-xs"
         data-testid="container"
         style="margin-left: -8px; z-index: 0;"
       >

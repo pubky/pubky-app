@@ -34,6 +34,10 @@ const getUserCounts = async (userId: Core.Pubky) => {
   return await Core.UserCountsModel.table.get(userId);
 };
 
+const getPostTtl = async () => {
+  return await Core.PostTtlModel.findById(testData.postId);
+};
+
 const createTagRecord = (label: string, taggers: Core.Pubky[], relationship: boolean) => ({
   label,
   taggers,
@@ -78,11 +82,12 @@ describe('LocalTagService', () => {
     await Core.db.initialize();
     await Core.db.transaction(
       'rw',
-      [Core.PostTagsModel.table, Core.PostCountsModel.table, Core.UserCountsModel.table],
+      [Core.PostTagsModel.table, Core.PostCountsModel.table, Core.UserCountsModel.table, Core.PostTtlModel.table],
       async () => {
         await Core.PostTagsModel.table.clear();
         await Core.PostCountsModel.table.clear();
         await Core.UserCountsModel.table.clear();
+        await Core.PostTtlModel.table.clear();
       },
     );
   });
@@ -171,6 +176,17 @@ describe('LocalTagService', () => {
       expect(savedCounts!.unique_tags).toBe(1); // Should remain unchanged
       expect(userCounts!.tagged).toBe(1); // Should remain unchanged
     });
+
+    it('should touch post TTL when creating a tag', async () => {
+      const beforeTimestamp = Date.now();
+      await Core.LocalPostTagService.create(createTagParams('javascript'));
+      const afterTimestamp = Date.now();
+
+      const postTtl = await getPostTtl();
+      expect(postTtl).toBeTruthy();
+      expect(postTtl!.lastUpdatedAt).toBeGreaterThanOrEqual(beforeTimestamp);
+      expect(postTtl!.lastUpdatedAt).toBeLessThanOrEqual(afterTimestamp);
+    });
   });
 
   describe('remove', () => {
@@ -236,6 +252,17 @@ describe('LocalTagService', () => {
       expect(savedTags!.tags[0].relationship).toBe(false);
       expect(savedTags!.tags[0].taggers).toContain(testData.anotherTaggerPubky);
       expect(savedTags!.tags[0].taggers).not.toContain(testData.taggerPubky);
+    });
+
+    it('should touch post TTL when deleting a tag', async () => {
+      const beforeTimestamp = Date.now();
+      await Core.LocalPostTagService.delete(createRemoveParams('javascript'));
+      const afterTimestamp = Date.now();
+
+      const postTtl = await getPostTtl();
+      expect(postTtl).toBeTruthy();
+      expect(postTtl!.lastUpdatedAt).toBeGreaterThanOrEqual(beforeTimestamp);
+      expect(postTtl!.lastUpdatedAt).toBeLessThanOrEqual(afterTimestamp);
     });
   });
 });

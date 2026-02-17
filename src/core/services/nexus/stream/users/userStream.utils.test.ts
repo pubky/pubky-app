@@ -186,6 +186,42 @@ describe('createUserStreamParams', () => {
       expect(result.apiParams).not.toHaveProperty('reach');
     });
 
+    it('should include user_id from viewer_id when influencers reach is not "all"', () => {
+      const streamId = 'influencers:today:following' as Core.UserStreamId;
+      const paramsWithViewer: Core.TUserStreamBase = {
+        skip: 0,
+        limit: 20,
+        viewer_id: 'viewer-abc' as Core.Pubky,
+      };
+
+      const result = createUserStreamParams(streamId, paramsWithViewer);
+
+      expect(result.reach).toBe('influencers');
+      expect(result.apiParams).toEqual({
+        skip: 0,
+        limit: 20,
+        viewer_id: 'viewer-abc',
+        timeframe: 'today',
+        reach: 'following',
+        user_id: 'viewer-abc',
+      });
+    });
+
+    it('should not include user_id for influencers when reach is "all" even with viewer_id', () => {
+      const streamId = 'influencers:today:all' as Core.UserStreamId;
+      const paramsWithViewer: Core.TUserStreamBase = {
+        skip: 0,
+        limit: 20,
+        viewer_id: 'viewer-abc' as Core.Pubky,
+      };
+
+      const result = createUserStreamParams(streamId, paramsWithViewer);
+
+      expect(result.reach).toBe('influencers');
+      expect(result.apiParams).not.toHaveProperty('user_id');
+      expect(result.apiParams).not.toHaveProperty('reach');
+    });
+
     it('should handle 3-part non-influencers format without viewer_id', () => {
       const streamId = 'recommended:all:all' as Core.UserStreamId;
 
