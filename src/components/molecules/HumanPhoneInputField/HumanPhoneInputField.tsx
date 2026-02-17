@@ -40,7 +40,7 @@ export const HumanPhoneInputField = ({
           <Atoms.Container className="gap-2">
             <Atoms.Container
               data-testid="human-phone-input-wrapper"
-              className="ml-0 flex max-w-128 flex-row items-center rounded-md border border-dashed border-brand px-5 py-2 shadow-xs-dark"
+              className="ml-0 flex max-w-128 flex-row items-center rounded-md border border-dashed border-brand px-5 py-2 shadow-xs"
             >
               <Atoms.Input
                 data-testid="human-phone-input"

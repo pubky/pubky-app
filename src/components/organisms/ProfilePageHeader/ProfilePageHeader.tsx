@@ -56,6 +56,7 @@ export function ProfilePageHeader({ profile, actions, isOwnProfile = true, userI
         <Organisms.AvatarWithFallback
           avatarUrl={avatarUrl}
           name={name}
+          fallbackSeed={userId}
           className="size-16 lg:size-36"
           fallbackClassName="text-2xl lg:text-4xl"
           alt={name}
