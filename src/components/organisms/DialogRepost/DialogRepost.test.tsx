@@ -4,6 +4,17 @@ import { DialogRepost } from './DialogRepost';
 import * as Organisms from '@/organisms';
 import { POST_INPUT_VARIANT } from '@/organisms/PostInput/PostInput.constants';
 
+// Mock hooks
+const mockUseConfirmableDialog = vi.fn();
+
+vi.mock('@/hooks', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('@/hooks')>();
+  return {
+    ...actual,
+    useConfirmableDialog: (opts: unknown) => mockUseConfirmableDialog(opts),
+  };
+});
+
 // Mock organisms
 vi.mock('@/organisms', () => ({
   PostHeader: vi.fn(({ postId }: { postId: string }) => (
@@ -22,17 +33,20 @@ vi.mock('@/organisms', () => ({
       originalPostId,
       onSuccess,
       showThreadConnector,
+      onContentChange,
     }: {
       variant: string;
       originalPostId: string;
       onSuccess?: () => void;
       showThreadConnector?: boolean;
+      onContentChange?: (content: string, tags: string[], attachments: File[], articleTitle: string) => void;
     }) => (
       <div
         data-testid="post-input"
         data-variant={variant}
         data-original-post-id={originalPostId}
         data-show-thread={showThreadConnector}
+        data-has-content-change={!!onContentChange}
       >
         <button data-testid="mock-success-btn" onClick={onSuccess}>
           Success
@@ -110,6 +124,22 @@ vi.mock('@/atoms', () => ({
   ),
 }));
 
+// Mock molecules
+vi.mock('@/molecules', () => ({
+  DialogConfirmDiscard: vi.fn(
+    ({ open, onOpenChange, onConfirm }: { open: boolean; onOpenChange: () => void; onConfirm: () => void }) => (
+      <div data-testid="dialog-confirm-discard" data-open={open}>
+        <button data-testid="confirm-discard-cancel" onClick={onOpenChange}>
+          Cancel
+        </button>
+        <button data-testid="confirm-discard-confirm" onClick={onConfirm}>
+          Discard
+        </button>
+      </div>
+    ),
+  ),
+}));
+
 // Use real libs - use actual implementations
 vi.mock('@/libs', async () => {
   const actual = await vi.importActual('@/libs');
@@ -117,8 +147,21 @@ vi.mock('@/libs', async () => {
 });
 
 describe('DialogRepost', () => {
+  const mockHandleContentChange = vi.fn();
+  const mockHandleOpenChange = vi.fn();
+  const mockHandleDiscard = vi.fn();
+  const mockSetShowConfirmDialog = vi.fn();
+
   beforeEach(() => {
     vi.clearAllMocks();
+    mockUseConfirmableDialog.mockReturnValue({
+      showConfirmDialog: false,
+      setShowConfirmDialog: mockSetShowConfirmDialog,
+      resetKey: 0,
+      handleContentChange: mockHandleContentChange,
+      handleOpenChange: mockHandleOpenChange,
+      handleDiscard: mockHandleDiscard,
+    });
   });
 
   it('renders with required props', () => {
@@ -143,6 +186,7 @@ describe('DialogRepost', () => {
         onSuccess: expect.any(Function),
         showThreadConnector: false,
         expanded: true,
+        onContentChange: mockHandleContentChange,
       },
       undefined,
     );
@@ -176,8 +220,21 @@ describe('DialogRepost', () => {
 });
 
 describe('DialogRepost - Snapshots', () => {
+  const mockHandleContentChange = vi.fn();
+  const mockHandleOpenChange = vi.fn();
+  const mockHandleDiscard = vi.fn();
+  const mockSetShowConfirmDialog = vi.fn();
+
   beforeEach(() => {
     vi.clearAllMocks();
+    mockUseConfirmableDialog.mockReturnValue({
+      showConfirmDialog: false,
+      setShowConfirmDialog: mockSetShowConfirmDialog,
+      resetKey: 0,
+      handleContentChange: mockHandleContentChange,
+      handleOpenChange: mockHandleOpenChange,
+      handleDiscard: mockHandleDiscard,
+    });
   });
 
   it('matches snapshot with default props', () => {
@@ -185,7 +242,7 @@ describe('DialogRepost - Snapshots', () => {
     const { container } = render(
       <DialogRepost postId="snapshot-post-id" open={false} onOpenChangeAction={onOpenChangeAction} />,
     );
-    expect(container.firstChild).toMatchSnapshot();
+    expect(container).toMatchSnapshot();
   });
 
   it('matches snapshot with open prop', () => {
@@ -193,6 +250,6 @@ describe('DialogRepost - Snapshots', () => {
     const { container } = render(
       <DialogRepost postId="snapshot-post-id" open={true} onOpenChangeAction={onOpenChangeAction} />,
     );
-    expect(container.firstChild).toMatchSnapshot();
+    expect(container).toMatchSnapshot();
   });
 });

@@ -9,7 +9,7 @@ import * as Hooks from '@/hooks';
 
 export function FeedbackCard() {
   const t = useTranslations('feedback');
-  const { userDetails } = Hooks.useCurrentUserProfile();
+  const { userDetails, currentUserPubky } = Hooks.useCurrentUserProfile();
   const [isDialogOpen, setIsDialogOpen] = useState(false);
 
   const name = userDetails?.name || t('defaultName');
@@ -39,6 +39,7 @@ export function FeedbackCard() {
               <Organisms.AvatarWithFallback
                 avatarUrl={avatarUrl}
                 name={name}
+                fallbackSeed={currentUserPubky || name}
                 className="h-12 w-12"
                 fallbackClassName="text-sm"
               />

@@ -39,3 +39,31 @@ export async function parseResponseOrThrow<T>(
     });
   }
 }
+
+/**
+ * Parses Retry-After header into delay seconds.
+ * Supports either delta-seconds ("120") or HTTP-date format.
+ *
+ * @param retryAfterHeader - Header value from response
+ * @param nowMs - Reference time in milliseconds (for testability)
+ * @returns Delay in seconds, or undefined when invalid/missing
+ */
+export function parseRetryAfterHeader(retryAfterHeader: string | null, nowMs: number = Date.now()): number | undefined {
+  if (!retryAfterHeader) return undefined;
+
+  const value = retryAfterHeader.trim();
+  if (!value) return undefined;
+
+  // Retry-After: <delay-seconds>
+  if (/^\d+$/.test(value)) {
+    return Number.parseInt(value, 10);
+  }
+
+  // Retry-After: <http-date>
+  const retryAtMs = Date.parse(value);
+  if (Number.isNaN(retryAtMs)) {
+    return undefined;
+  }
+
+  return Math.max(0, Math.ceil((retryAtMs - nowMs) / 1000));
+}

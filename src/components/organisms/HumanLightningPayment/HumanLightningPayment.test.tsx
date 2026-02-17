@@ -17,12 +17,9 @@ vi.mock('@/core', async () => {
         id: 'mock-id',
         bolt11Invoice: 'mock-invoice',
         amountSat: 1000,
-        expiresAt: Date.now() - 1000, // Already expired so polling loop exits immediately
+        expiresAt: Date.now() + 600000,
       }),
-      awaitLnVerification: vi.fn().mockResolvedValue({
-        success: false,
-        timeout: true, // Return timeout so polling continues but exits due to expiration
-      }),
+      awaitLnVerification: vi.fn().mockImplementation(async () => new Promise(() => {})),
     },
   };
 });
@@ -53,8 +50,11 @@ describe('HumanLightningPayment', () => {
     });
   });
 
-  it('matches snapshot', () => {
+  it('matches snapshot', async () => {
     const { container } = render(<HumanLightningPayment onBack={() => {}} onSuccess={() => {}} />);
+    await waitFor(() => {
+      expect(HomegateController.createLnVerification).toHaveBeenCalledTimes(1);
+    });
     expect(container.firstChild).toMatchSnapshot();
   });
 });

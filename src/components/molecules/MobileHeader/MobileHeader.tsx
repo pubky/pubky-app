@@ -34,7 +34,7 @@ export function MobileHeader({
         'sticky top-0 z-(--z-mobile-menu) lg:hidden',
         hasGradientBackground
           ? 'bg-linear-to-b from-(--background) from-65% to-transparent'
-          : 'bg-background shadow-xs-dark',
+          : 'bg-background shadow-xs',
       )}
     >
       <Atoms.Container overrideDefaults className="px-6 pt-6 pb-0">

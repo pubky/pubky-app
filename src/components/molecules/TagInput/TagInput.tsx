@@ -189,7 +189,7 @@ export function TagInput({
               onMouseDown={preventBlur}
               onClick={() => setShowEmojiPicker(true)}
               className={Libs.cn(
-                'inline-flex size-5 cursor-pointer items-center justify-center rounded-full p-1 shadow-xs-dark hover:shadow-xs-dark',
+                'shadow-xs-dark hover:shadow-xs-dark inline-flex size-5 cursor-pointer items-center justify-center rounded-full p-1',
                 isDisabled && onClick && 'pointer-events-none',
               )}
               aria-label="Open emoji picker"
