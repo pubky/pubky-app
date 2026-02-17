@@ -1,5 +1,6 @@
 import * as Core from '@/core';
 import { HttpMethod, Err, ClientErrorCode, ErrorService } from '@/libs';
+import { postUriBuilder } from 'pubky-app-specs';
 
 export class PostApplication {
   /**
@@ -47,7 +48,14 @@ export class PostApplication {
    * @returns Array of post relationships that replied to this post
    */
   static async getReplies({ compositeId }: Core.TCompositeId): Promise<Core.PostRelationshipsModelSchema[]> {
-    return await Core.LocalPostService.readReplies(compositeId);
+    try {
+      const { pubky: authorId, id: postId } = Core.parseCompositeId(compositeId);
+      const parentPostUri = postUriBuilder(authorId, postId);
+      return await Core.LocalPostService.readReplies(parentPostUri);
+    } catch {
+      // Keep fail-open behavior if a malformed composite ID reaches this layer.
+      return await Core.LocalPostService.readReplies(compositeId);
+    }
   }
 
   /**
