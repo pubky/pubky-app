@@ -45,8 +45,7 @@ describe('MobileHeader', () => {
     const { container } = render(<MobileHeader />);
     const outerContainer = container.firstChild as HTMLElement;
     expect(outerContainer).toHaveClass(
-      'fixed',
-      'left-0',
+      'sticky',
       'top-0',
       'z-(--z-mobile-menu)',
       'bg-linear-to-b',
@@ -61,8 +60,7 @@ describe('MobileHeader', () => {
     const { container } = render(<MobileHeader hasGradientBackground={false} />);
     const outerContainer = container.firstChild as HTMLElement;
     expect(outerContainer).toHaveClass(
-      'fixed',
-      'left-0',
+      'sticky',
       'top-0',
       'z-(--z-mobile-menu)',
       'lg:hidden',
@@ -70,6 +68,13 @@ describe('MobileHeader', () => {
       'shadow-xs',
     );
     expect(outerContainer).not.toHaveClass('bg-linear-to-b');
+  });
+
+  it('uses fixed positioning when fixed prop is true', () => {
+    const { container } = render(<MobileHeader fixed />);
+    const outerContainer = container.firstChild as HTMLElement;
+    expect(outerContainer).toHaveClass('fixed', 'right-0', 'left-0');
+    expect(outerContainer).not.toHaveClass('sticky');
   });
 
   it('renders with custom onLeftIconClick', () => {
