@@ -9,6 +9,7 @@ import * as Hooks from '@/hooks';
 import { APP_ROUTES } from '@/app/routes';
 import { MAX_TAGS } from './HotTags.constants';
 import type { HotTagsProps } from './HotTags.types';
+import { HotTagsSkeleton } from './HotTags.skeleton';
 
 /**
  * HotTags
@@ -47,11 +48,7 @@ export function HotTags({ className }: HotTagsProps) {
       dataCy="hot-tags"
     >
       {isLoading ? (
-        <Atoms.Container overrideDefaults className="flex w-full flex-col gap-2" data-cy="hot-tags-skeleton-list">
-          {Array.from({ length: MAX_TAGS }).map((_, index) => (
-            <Atoms.Skeleton key={`hot-tag-skeleton-${index}`} className="h-8 w-full rounded-md" />
-          ))}
-        </Atoms.Container>
+        <HotTagsSkeleton />
       ) : displayTags.length === 0 ? (
         <Atoms.Typography className="font-light text-muted-foreground">{t('noTags')}</Atoms.Typography>
       ) : (
