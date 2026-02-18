@@ -45,7 +45,8 @@ describe('MobileHeader', () => {
     const { container } = render(<MobileHeader />);
     const outerContainer = container.firstChild as HTMLElement;
     expect(outerContainer).toHaveClass(
-      'sticky',
+      'fixed',
+      'left-0',
       'top-0',
       'z-(--z-mobile-menu)',
       'bg-linear-to-b',
@@ -60,7 +61,8 @@ describe('MobileHeader', () => {
     const { container } = render(<MobileHeader hasGradientBackground={false} />);
     const outerContainer = container.firstChild as HTMLElement;
     expect(outerContainer).toHaveClass(
-      'sticky',
+      'fixed',
+      'left-0',
       'top-0',
       'z-(--z-mobile-menu)',
       'lg:hidden',

@@ -35,7 +35,7 @@ export function Settings({ children }: SettingsProps) {
         rightSidebarContent={<Molecules.SettingsInfo hideFAQ={isOnHelpPage} />}
         leftDrawerContent={<Molecules.SettingsMenu />}
         rightDrawerContent={<Molecules.SettingsInfo hideFAQ={isOnHelpPage} />}
-        className="pt-18 lg:pt-0"
+        className="pt-18 pt-40 lg:pt-0"
       >
         {children}
       </Organisms.ContentLayout>
