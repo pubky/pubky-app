@@ -2,7 +2,19 @@ import * as Core from '@/core';
 
 export type TNotificationApplicationNotificationsParams = {
   userId: Core.Pubky;
+  lastPolledTimestamp: number;
   lastRead: number;
+};
+
+/**
+ * Result from fetchNotifications containing unread count and the newest notification timestamp.
+ *
+ * @property unread - Number of unread notifications (those newer than lastRead)
+ * @property newestTimestamp - Timestamp of the newest notification fetched, undefined if none
+ */
+export type TFetchNotificationsResult = {
+  unread: number;
+  newestTimestamp: number | undefined;
 };
 
 export type TNotificationsPartialCacheHitParams = {

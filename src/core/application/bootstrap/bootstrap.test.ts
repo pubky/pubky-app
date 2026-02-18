@@ -288,7 +288,9 @@ describe('BootstrapApplication', () => {
       const result = await BootstrapApplication.initialize(getBootstrapParams(TEST_PUBKY), onProgress);
 
       assertCommonCalls(mocks, bootstrapData, notifications);
-      expect(result).toEqual({ notification: { unread: 1, lastRead: MOCK_LAST_READ } });
+      expect(result).toEqual({
+        notification: { unread: 1, lastRead: MOCK_LAST_READ, lastPolledTimestamp: expect.any(Number) },
+      });
 
       // Verify progress callback is called with correct steps (Controller handles store updates)
       expect(onProgress).toHaveBeenCalledWith('bootstrapFetched');
@@ -305,7 +307,9 @@ describe('BootstrapApplication', () => {
       const result = await BootstrapApplication.initialize(getBootstrapParams(TEST_PUBKY));
 
       assertCommonCalls(mocks, bootstrapData, notifications);
-      expect(result).toEqual({ notification: { unread: 1, lastRead: MOCK_LAST_READ } });
+      expect(result).toEqual({
+        notification: { unread: 1, lastRead: MOCK_LAST_READ, lastPolledTimestamp: expect.any(Number) },
+      });
     });
 
     it('should throw error when NexusBootstrapService fails', async () => {
@@ -333,7 +337,7 @@ describe('BootstrapApplication', () => {
       const result = await BootstrapApplication.initialize(getBootstrapParams(TEST_PUBKY));
 
       assertCommonCalls(mocks, bootstrapData, []);
-      expect(result).toEqual({ notification: { unread: 0, lastRead: MOCK_LAST_READ } });
+      expect(result).toEqual({ notification: { unread: 0, lastRead: MOCK_LAST_READ, lastPolledTimestamp: 0 } });
     });
 
     it('should handle 404 homeserver error gracefully and create new lastRead', async () => {
@@ -399,7 +403,7 @@ describe('BootstrapApplication', () => {
 
       // Verify result has empty notification list and normalized timestamp
       expect(result).toEqual({
-        notification: { unread: 0, lastRead: MOCK_NORMALIZED_TIMESTAMP },
+        notification: { unread: 0, lastRead: MOCK_NORMALIZED_TIMESTAMP, lastPolledTimestamp: 0 },
       });
     });
 
@@ -617,7 +621,9 @@ describe('BootstrapApplication', () => {
       // Verify files were persisted
       expect(mocks.persistFiles).toHaveBeenCalledWith(mockAttachments);
       // Verify result doesn't include filesUris
-      expect(result).toEqual({ notification: { unread: 1, lastRead: MOCK_LAST_READ } });
+      expect(result).toEqual({
+        notification: { unread: 1, lastRead: MOCK_LAST_READ, lastPolledTimestamp: expect.any(Number) },
+      });
     });
 
     it('should persist muted users from bootstrap response', async () => {
@@ -631,7 +637,9 @@ describe('BootstrapApplication', () => {
 
       // Verify muted users from bootstrap response were persisted
       assertCommonCalls(mocks, bootstrapData, notifications);
-      expect(result).toEqual({ notification: { unread: 1, lastRead: MOCK_LAST_READ } });
+      expect(result).toEqual({
+        notification: { unread: 1, lastRead: MOCK_LAST_READ, lastPolledTimestamp: expect.any(Number) },
+      });
     });
 
     it('should handle empty muted users list in bootstrap response', async () => {
@@ -645,7 +653,7 @@ describe('BootstrapApplication', () => {
         streamId: Core.UserStreamTypes.MUTED,
         stream: [],
       });
-      expect(result).toEqual({ notification: { unread: 0, lastRead: MOCK_LAST_READ } });
+      expect(result).toEqual({ notification: { unread: 0, lastRead: MOCK_LAST_READ, lastPolledTimestamp: 0 } });
     });
   });
 
@@ -772,7 +780,7 @@ describe('BootstrapApplication', () => {
       // Bootstrap should still succeed
       const result = await BootstrapApplication.initialize(getBootstrapParams(TEST_PUBKY));
 
-      expect(result).toEqual({ notification: { unread: 0, lastRead: MOCK_LAST_READ } });
+      expect(result).toEqual({ notification: { unread: 0, lastRead: MOCK_LAST_READ, lastPolledTimestamp: 0 } });
       expect(loggerErrorSpy).toHaveBeenCalledWith('Failed to initialize settings during bootstrap', expect.any(Object));
       expect(mocks.initializeSettings).toHaveBeenCalledWith(TEST_PUBKY);
     });

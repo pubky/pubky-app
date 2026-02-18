@@ -48,6 +48,15 @@ export class LocalNotificationService {
   }
 
   /**
+   * Counts unread notifications by querying IndexedDB for entries newer than lastRead.
+   * @param lastRead - Timestamp of the last read notification
+   * @returns Promise resolving to the total number of unread notifications
+   */
+  static async countUnreadSince(lastRead: number): Promise<number> {
+    return await Core.NotificationModel.countNewerThan(lastRead);
+  }
+
+  /**
    * Parses notifications to extract post and user references.
    * @param flatNotifications - Array of flat notifications to extract post and user references from
    * @returns Object containing related post IDs and user IDs

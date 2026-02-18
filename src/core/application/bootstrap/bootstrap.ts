@@ -144,6 +144,7 @@ export class BootstrapApplication {
       }
     }
 
+    // Get the lastest notifications
     const notificationList = await Core.NexusUserService.notifications({
       user_id: pubky,
       limit: Config.NEXUS_NOTIFICATIONS_LIMIT,
@@ -159,6 +160,8 @@ export class BootstrapApplication {
       flatNotifications,
       lastRead: userLastRead,
     });
-    return { unread, lastRead: userLastRead };
+    // We add 1 to the newest timestamp to avoid fetching the same notification again
+    const lastPolledTimestamp = notificationList.length > 0 ? notificationList[0].timestamp + 1 : 0;
+    return { unread, lastRead: userLastRead, lastPolledTimestamp };
   }
 }
