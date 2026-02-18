@@ -24,6 +24,7 @@ exports[`HumanSelection > matches snapshot 1`] = `
        
       <button
         class="inline cursor-pointer text-brand transition-all hover:font-bold"
+        data-cy="invite-code-link"
         data-slot="button"
         data-testid="invite-code-link"
       >
