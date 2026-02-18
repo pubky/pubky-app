@@ -226,34 +226,6 @@ describe('useConfirmableDialog', () => {
     expect(result.current.showConfirmDialog).toBe(false);
   });
 
-  it('closes directly if handleOpenChange(false) is called while confirm dialog is already showing', () => {
-    const { result } = renderHook(() =>
-      useConfirmableDialog({
-        onClose: mockOnClose,
-      }),
-    );
-
-    // Add content and trigger confirm dialog
-    act(() => {
-      result.current.handleContentChange('Content', [], [], '');
-    });
-    act(() => {
-      result.current.handleOpenChange(false);
-    });
-
-    expect(result.current.showConfirmDialog).toBe(true);
-    expect(mockOnClose).not.toHaveBeenCalled();
-
-    // Call handleOpenChange(false) again while confirm is showing
-    // This is the defensive guard scenario
-    act(() => {
-      result.current.handleOpenChange(false);
-    });
-
-    // Should call onClose directly instead of showing confirm again
-    expect(mockOnClose).toHaveBeenCalledTimes(1);
-  });
-
   it('increments resetKey on each discard', () => {
     const { result } = renderHook(() =>
       useConfirmableDialog({

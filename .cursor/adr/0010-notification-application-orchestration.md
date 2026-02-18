@@ -19,6 +19,8 @@ ADR-0009 restricts orchestration privilege to `PostApplication` and `UserApplica
 
 **Extend the orchestration privilege (ADR-0009) to include `NotificationApplication`.**
 
+This ADR amends ADR-0009 rule #4 with a scoped exception: `NotificationApplication` is an allowed orchestrator only for pre-persistence read hydration.
+
 `NotificationApplication` MAY call:
 
 - `PostStreamApplication.fetchMissingPostsFromNexus()`
