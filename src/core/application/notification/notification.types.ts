@@ -7,14 +7,14 @@ export type TNotificationApplicationNotificationsParams = {
 };
 
 /**
- * Result from fetchNotifications containing unread count and the newest notification timestamp.
+ * Result from fetchNotifications containing unread count and the next poll cursor.
  *
  * @property unread - Number of unread notifications (those newer than lastRead)
- * @property newestTimestamp - Timestamp of the newest notification fetched, undefined if none
+ * @property nextPollCursor - Next polling cursor (newest timestamp + 1 to avoid refetch), undefined if no notifications
  */
 export type TFetchNotificationsResult = {
   unread: number;
-  newestTimestamp: number | undefined;
+  nextPollCursor: number | undefined;
 };
 
 export type TNotificationsPartialCacheHitParams = {

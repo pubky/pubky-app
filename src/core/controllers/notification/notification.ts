@@ -17,7 +17,7 @@ export class NotificationController {
     const lastPolledTimestamp = notificationStore.selectLastPolledTimestamp();
     const lastRead = notificationStore.selectLastRead();
 
-    const { unread, newestTimestamp } = await Core.NotificationApplication.fetchNotifications({
+    const { unread, nextPollCursor } = await Core.NotificationApplication.fetchNotifications({
       userId,
       lastPolledTimestamp,
       lastRead,
@@ -25,8 +25,8 @@ export class NotificationController {
 
     notificationStore.setUnread(unread);
 
-    if (newestTimestamp !== undefined && newestTimestamp > notificationStore.selectLastPolledTimestamp()) {
-      notificationStore.setLastPolledTimestamp(newestTimestamp);
+    if (nextPollCursor !== undefined && nextPollCursor > notificationStore.selectLastPolledTimestamp()) {
+      notificationStore.setLastPolledTimestamp(nextPollCursor);
     }
   }
 

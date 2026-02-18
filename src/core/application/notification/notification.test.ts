@@ -56,7 +56,7 @@ describe('NotificationApplication.fetchNotifications', () => {
     expect(nexusSpy).toHaveBeenCalledWith({ user_id: userId, end: lastPolledTimestamp });
     expect(bulkSaveSpy).toHaveBeenCalledWith({ flatNotifications });
     expect(countSpy).toHaveBeenCalledWith(lastRead);
-    expect(result).toEqual({ unread: 1, newestTimestamp: 2001 });
+    expect(result).toEqual({ unread: 1, nextPollCursor: 2001 });
   });
 
   it('should use lastPolledTimestamp as Nexus end param, not lastRead', async () => {
@@ -71,7 +71,7 @@ describe('NotificationApplication.fetchNotifications', () => {
     expect(nexusSpy).toHaveBeenCalledWith({ user_id: userId, end: lastPolledTimestamp });
   });
 
-  it('should return newestTimestamp undefined when Nexus returns empty array', async () => {
+  it('should return nextPollCursor undefined when Nexus returns empty array', async () => {
     vi.spyOn(Core.NexusUserService, 'notifications').mockResolvedValue([]);
     vi.spyOn(Core.LocalNotificationService, 'bulkSave').mockResolvedValue(undefined);
     vi.spyOn(Core.LocalNotificationService, 'countUnreadSince').mockResolvedValue(0);
@@ -80,7 +80,7 @@ describe('NotificationApplication.fetchNotifications', () => {
 
     const result = await NotificationApplication.fetchNotifications({ userId, lastPolledTimestamp, lastRead });
 
-    expect(result).toEqual({ unread: 0, newestTimestamp: undefined });
+    expect(result).toEqual({ unread: 0, nextPollCursor: undefined });
   });
 
   it('should bubble Nexus errors without persisting', async () => {

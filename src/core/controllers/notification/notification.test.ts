@@ -40,7 +40,7 @@ describe('NotificationController', () => {
       const store = setupNotificationStore({ lastRead: 1234, lastPolledTimestamp: 500 });
       const appSpy = vi.spyOn(Core.NotificationApplication, 'fetchNotifications').mockResolvedValue({
         unread: 5,
-        newestTimestamp: 3000,
+        nextPollCursor: 3000,
       });
 
       await NotificationController.fetchNotifications({ userId: mockUserId });
@@ -54,7 +54,7 @@ describe('NotificationController', () => {
       setupNotificationStore({ lastRead: 9000, lastPolledTimestamp: 2000 });
       const appSpy = vi.spyOn(Core.NotificationApplication, 'fetchNotifications').mockResolvedValue({
         unread: 0,
-        newestTimestamp: undefined,
+        nextPollCursor: undefined,
       });
 
       await NotificationController.fetchNotifications({ userId: mockUserId });
@@ -62,11 +62,11 @@ describe('NotificationController', () => {
       expect(appSpy).toHaveBeenCalledWith(expect.objectContaining({ lastPolledTimestamp: 2000, lastRead: 9000 }));
     });
 
-    it('should not call setLastPolledTimestamp when newestTimestamp is undefined', async () => {
+    it('should not call setLastPolledTimestamp when nextPollCursor is undefined', async () => {
       const store = setupNotificationStore({ lastRead: 1234, lastPolledTimestamp: 500 });
       vi.spyOn(Core.NotificationApplication, 'fetchNotifications').mockResolvedValue({
         unread: 0,
-        newestTimestamp: undefined,
+        nextPollCursor: undefined,
       });
 
       await NotificationController.fetchNotifications({ userId: mockUserId });
@@ -93,7 +93,7 @@ describe('NotificationController', () => {
       const appSpy = vi.spyOn(Core.NotificationApplication, 'fetchNotifications');
 
       // Poll 1: 2 new unread notifications
-      appSpy.mockResolvedValueOnce({ unread: 2, newestTimestamp: 3000 });
+      appSpy.mockResolvedValueOnce({ unread: 2, nextPollCursor: 3000 });
       await NotificationController.fetchNotifications({ userId: mockUserId });
 
       expect(appSpy).toHaveBeenCalledWith({ userId: mockUserId, lastPolledTimestamp: 0, lastRead: 1000 });
@@ -101,7 +101,7 @@ describe('NotificationController', () => {
       expect(setLastPolledTimestamp).toHaveBeenCalledWith(3000);
 
       // Poll 2: IndexedDB now has 4 total unread (2 old + 2 new)
-      appSpy.mockResolvedValueOnce({ unread: 4, newestTimestamp: 5000 });
+      appSpy.mockResolvedValueOnce({ unread: 4, nextPollCursor: 5000 });
       await NotificationController.fetchNotifications({ userId: mockUserId });
 
       expect(appSpy).toHaveBeenCalledWith({ userId: mockUserId, lastPolledTimestamp: 3000, lastRead: 1000 });
@@ -127,8 +127,8 @@ describe('NotificationController', () => {
 
       // Simulate two overlapping polls: poll A (slow) and poll B (fast).
       // Poll B resolves first with a newer timestamp, then poll A resolves with an older one.
-      appSpy.mockResolvedValueOnce({ unread: 3, newestTimestamp: 5000 }); // poll A (older result)
-      appSpy.mockResolvedValueOnce({ unread: 5, newestTimestamp: 8000 }); // poll B (newer result)
+      appSpy.mockResolvedValueOnce({ unread: 3, nextPollCursor: 5000 }); // poll A (older result)
+      appSpy.mockResolvedValueOnce({ unread: 5, nextPollCursor: 8000 }); // poll B (newer result)
 
       // Poll B resolves first
       const pollA = NotificationController.fetchNotifications({ userId: mockUserId });

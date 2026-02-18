@@ -144,7 +144,7 @@ export class BootstrapApplication {
       }
     }
 
-    // Get the lastest notifications
+    // Get the latest notifications
     const notificationList = await Core.NexusUserService.notifications({
       user_id: pubky,
       limit: Config.NEXUS_NOTIFICATIONS_LIMIT,

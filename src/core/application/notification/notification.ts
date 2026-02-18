@@ -23,9 +23,8 @@ export class NotificationApplication {
     const flatNotifications = await this.fetchMissingEntities({ notifications, viewerId: userId });
     await Core.LocalNotificationService.bulkSave({ flatNotifications });
     const unread = await Core.LocalNotificationService.countUnreadSince(lastRead);
-    // Add +1 to avoid re-fetching the same notification on the next poll
-    const newestTimestamp = notifications.length > 0 ? notifications[0].timestamp + 1 : undefined;
-    return { unread, newestTimestamp };
+    const nextPollCursor = notifications.length > 0 ? notifications[0].timestamp + 1 : undefined;
+    return { unread, nextPollCursor };
   }
   /**
    * Updates the lastRead timestamp on the homeserver to mark all notifications as read.
