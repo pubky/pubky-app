@@ -47,7 +47,7 @@ describe('NotificationController', () => {
 
       expect(appSpy).toHaveBeenCalledWith({ userId: mockUserId, lastPolledTimestamp: 500, lastRead: 1234 });
       expect(store.setUnread).toHaveBeenCalledWith(5);
-      expect(store.setLastPolledTimestamp).toHaveBeenCalledWith(3001);
+      expect(store.setLastPolledTimestamp).toHaveBeenCalledWith(3000);
     });
 
     it('should pass lastPolledTimestamp (not lastRead) to application', async () => {
@@ -98,15 +98,15 @@ describe('NotificationController', () => {
 
       expect(appSpy).toHaveBeenCalledWith({ userId: mockUserId, lastPolledTimestamp: 0, lastRead: 1000 });
       expect(setUnread).toHaveBeenCalledWith(2);
-      expect(setLastPolledTimestamp).toHaveBeenCalledWith(3001);
+      expect(setLastPolledTimestamp).toHaveBeenCalledWith(3000);
 
       // Poll 2: IndexedDB now has 4 total unread (2 old + 2 new)
       appSpy.mockResolvedValueOnce({ unread: 4, newestTimestamp: 5000 });
       await NotificationController.fetchNotifications({ userId: mockUserId });
 
-      expect(appSpy).toHaveBeenCalledWith({ userId: mockUserId, lastPolledTimestamp: 3001, lastRead: 1000 });
+      expect(appSpy).toHaveBeenCalledWith({ userId: mockUserId, lastPolledTimestamp: 3000, lastRead: 1000 });
       expect(setUnread).toHaveBeenCalledWith(4);
-      expect(setLastPolledTimestamp).toHaveBeenCalledWith(5001);
+      expect(setLastPolledTimestamp).toHaveBeenCalledWith(5000);
     });
 
     it('should bubble errors and not update store', async () => {

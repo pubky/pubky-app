@@ -26,8 +26,7 @@ export class NotificationController {
     notificationStore.setUnread(unread);
 
     if (newestTimestamp !== undefined) {
-      // We add 1 to the newest timestamp to avoid fetching the same notification again
-      notificationStore.setLastPolledTimestamp(newestTimestamp + 1);
+      notificationStore.setLastPolledTimestamp(newestTimestamp);
     }
   }
 

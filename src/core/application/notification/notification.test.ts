@@ -56,7 +56,7 @@ describe('NotificationApplication.fetchNotifications', () => {
     expect(nexusSpy).toHaveBeenCalledWith({ user_id: userId, end: lastPolledTimestamp });
     expect(bulkSaveSpy).toHaveBeenCalledWith({ flatNotifications });
     expect(countSpy).toHaveBeenCalledWith(lastRead);
-    expect(result).toEqual({ unread: 1, newestTimestamp: 2000 });
+    expect(result).toEqual({ unread: 1, newestTimestamp: 2001 });
   });
 
   it('should use lastPolledTimestamp as Nexus end param, not lastRead', async () => {
