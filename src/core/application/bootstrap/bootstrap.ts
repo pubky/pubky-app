@@ -156,10 +156,8 @@ export class BootstrapApplication {
       notifications: notificationList,
       viewerId: pubky,
     });
-    const unread = await Core.LocalNotificationService.persistAndGetUnreadCount({
-      flatNotifications,
-      lastRead: userLastRead,
-    });
+    await Core.LocalNotificationService.bulkSave({ flatNotifications });
+    const unread = await Core.LocalNotificationService.countUnreadSince(userLastRead);
     // We add 1 to the newest timestamp to avoid fetching the same notification again
     const lastPolledTimestamp = notificationList.length > 0 ? notificationList[0].timestamp + 1 : 0;
     return { unread, lastRead: userLastRead, lastPolledTimestamp };

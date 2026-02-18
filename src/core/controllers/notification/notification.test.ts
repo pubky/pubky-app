@@ -109,6 +109,38 @@ describe('NotificationController', () => {
       expect(setLastPolledTimestamp).toHaveBeenCalledWith(5000);
     });
 
+    it('should not regress lastPolledTimestamp when an older poll resolves after a newer one', async () => {
+      let currentLastPolledTimestamp = 0;
+      const selectLastPolledTimestamp = vi.fn(() => currentLastPolledTimestamp);
+      const setUnread = vi.fn();
+      const setLastPolledTimestamp = vi.fn((ts: number) => {
+        currentLastPolledTimestamp = ts;
+      });
+      vi.spyOn(Core.useNotificationStore, 'getState').mockReturnValue({
+        selectLastRead: vi.fn(() => 1000),
+        selectLastPolledTimestamp,
+        setUnread,
+        setLastPolledTimestamp,
+      } as unknown as Core.NotificationStore);
+
+      const appSpy = vi.spyOn(Core.NotificationApplication, 'fetchNotifications');
+
+      // Simulate two overlapping polls: poll A (slow) and poll B (fast).
+      // Poll B resolves first with a newer timestamp, then poll A resolves with an older one.
+      appSpy.mockResolvedValueOnce({ unread: 3, newestTimestamp: 5000 }); // poll A (older result)
+      appSpy.mockResolvedValueOnce({ unread: 5, newestTimestamp: 8000 }); // poll B (newer result)
+
+      // Poll B resolves first
+      const pollA = NotificationController.fetchNotifications({ userId: mockUserId });
+      // Simulate poll B finishing and advancing the cursor before poll A
+      currentLastPolledTimestamp = 8000;
+
+      await pollA;
+
+      // Poll A should NOT have regressed the cursor from 8000 back to 5000
+      expect(setLastPolledTimestamp).not.toHaveBeenCalled();
+    });
+
     it('should bubble errors and not update store', async () => {
       const store = setupNotificationStore({ lastRead: 1234, lastPolledTimestamp: 500 });
       vi.spyOn(Core.NotificationApplication, 'fetchNotifications').mockRejectedValue(new Error('poll-fail'));
