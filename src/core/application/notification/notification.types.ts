@@ -52,6 +52,12 @@ export type TGetOrFetchNotificationsResponse = TFlatNotifications & {
   olderThan: number | undefined;
 };
 
+export type TPersistAndSummarizeParams = {
+  notifications: Core.NexusNotification[];
+  flatNotifications: Core.TFlatNotificationList;
+  lastRead: number;
+};
+
 export type TFetchMissingEntitiesParams = {
   notifications: Core.NexusNotification[];
   viewerId: Core.Pubky;

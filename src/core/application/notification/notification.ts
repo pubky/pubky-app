@@ -21,10 +21,7 @@ export class NotificationApplication {
   }: Core.TNotificationApplicationNotificationsParams): Promise<Core.TFetchNotificationsResult> {
     const notifications = await Core.NexusUserService.notifications({ user_id: userId, end: lastPolledTimestamp });
     const flatNotifications = await this.fetchMissingEntities({ notifications, viewerId: userId });
-    await Core.LocalNotificationService.bulkSave({ flatNotifications });
-    const unread = await Core.LocalNotificationService.countUnreadSince(lastRead);
-    const nextPollCursor = notifications.length > 0 ? notifications[0].timestamp + 1 : undefined;
-    return { unread, nextPollCursor };
+    return this.persistAndSummarize({ notifications, flatNotifications, lastRead });
   }
   /**
    * Updates the lastRead timestamp on the homeserver to mark all notifications as read.
@@ -82,6 +79,21 @@ export class NotificationApplication {
 
     // Cache miss - fetch all from Nexus
     return await this.fetchFromNexus({ userId, olderThan, limit });
+  }
+
+  /**
+   * Persists flat notifications to IndexedDB, counts unread, and computes the
+   * next poll cursor
+   */
+  static async persistAndSummarize({
+    notifications,
+    flatNotifications,
+    lastRead,
+  }: Core.TPersistAndSummarizeParams): Promise<Core.TFetchNotificationsResult> {
+    await Core.LocalNotificationService.bulkSave({ flatNotifications });
+    const unread = await Core.LocalNotificationService.countUnreadSince(lastRead);
+    const nextPollCursor = notifications.length > 0 ? notifications[0].timestamp + 1 : undefined;
+    return { unread, nextPollCursor };
   }
 
   // ============================================================================
