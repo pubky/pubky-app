@@ -26,6 +26,15 @@ const CACHE_HEADERS = {
   },
 };
 
+function buildFallbackMetadata(url: string) {
+  return {
+    url: truncateMiddle(url, 40),
+    title: null,
+    image: null,
+    type: 'website' as const,
+  };
+}
+
 export async function GET(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url);
@@ -131,6 +140,8 @@ export async function GET(request: NextRequest) {
           'User-Agent':
             'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36',
           Accept: 'text/html, image/*, video/*, audio/*',
+          'Accept-Language': 'en-US,en;q=0.9',
+          'Upgrade-Insecure-Requests': '1',
         },
         redirect: 'follow',
       });
@@ -146,6 +157,10 @@ export async function GET(request: NextRequest) {
 
     // 9. Validate response status
     if (!response.ok) {
+      if (response.status === 403) {
+        return NextResponse.json(buildFallbackMetadata(url), CACHE_HEADERS);
+      }
+
       return NextResponse.json({ error: 'Fetch failed' }, { status: response.status });
     }
 
