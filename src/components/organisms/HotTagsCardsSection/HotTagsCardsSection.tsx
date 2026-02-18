@@ -13,8 +13,6 @@ import { HOT_TAGS_FEATURED_COUNT } from '@/config';
 import type { HotTagsCardsSectionProps } from './HotTagsCardsSection.types';
 import { MAX_AVATARS_MOBILE, MAX_AVATARS_DEFAULT, MAX_AVATARS_XL } from './HotTagsCardsSection.constants';
 
-const FEATURED_TAGS_SKELETON_COUNT = 3;
-
 /**
  * HotTagsCardsSection
  *
@@ -77,7 +75,7 @@ export function HotTagsCardsSection({ className }: HotTagsCardsSectionProps) {
           {t('hotTags')}
         </Atoms.Heading>
         <Atoms.Container overrideDefaults className="flex flex-col gap-3 sm:flex-row">
-          {Array.from({ length: FEATURED_TAGS_SKELETON_COUNT }).map((_, index) => (
+          {Array.from({ length: HOT_TAGS_FEATURED_COUNT }).map((_, index) => (
             <Atoms.Container
               key={`hot-tags-cards-skeleton-${index}`}
               overrideDefaults
