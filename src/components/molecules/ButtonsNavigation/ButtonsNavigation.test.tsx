@@ -2,38 +2,6 @@ import { describe, it, expect, vi } from 'vitest';
 import { render, screen, fireEvent } from '@testing-library/react';
 import { ButtonsNavigation } from './ButtonsNavigation';
 
-// Mock libs - use actual utility functions and icons from lucide-react
-vi.mock('@/libs', async () => {
-  const actual = await vi.importActual('@/libs');
-  return { ...actual };
-});
-
-// Mock UI components
-vi.mock('@/components/ui', () => ({
-  Button: ({
-    children,
-    variant,
-    className,
-    onClick,
-    disabled,
-  }: {
-    children: React.ReactNode;
-    variant?: string;
-    className?: string;
-    onClick?: () => void;
-    disabled?: boolean;
-  }) => (
-    <button data-slot="button" data-variant={variant} className={className} onClick={onClick} disabled={disabled}>
-      {children}
-    </button>
-  ),
-  Container: ({ children, className }: { children: React.ReactNode; className?: string }) => (
-    <div data-testid="container" className={className}>
-      {children}
-    </div>
-  ),
-}));
-
 describe('ButtonsNavigation', () => {
   it('renders with default props', () => {
     render(<ButtonsNavigation />);
@@ -43,26 +11,20 @@ describe('ButtonsNavigation', () => {
 
     expect(backButton).toBeInTheDocument();
     expect(continueButton).toBeInTheDocument();
-    expect(backButton).toHaveTextContent('Back');
-    expect(continueButton).toHaveTextContent('Continue');
   });
 
   it('renders with custom text props', () => {
     render(<ButtonsNavigation backText="Go Back" continueText="Next Step" />);
 
-    const backButton = screen.getByRole('button', { name: /go back/i });
-    const continueButton = screen.getByRole('button', { name: /next step/i });
-
-    expect(backButton).toHaveTextContent('Go Back');
-    expect(continueButton).toHaveTextContent('Next Step');
+    expect(screen.getByRole('button', { name: /go back/i })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /next step/i })).toBeInTheDocument();
   });
 
   it('handles back button click', () => {
     const handleBackButton = vi.fn();
     render(<ButtonsNavigation onHandleBackButton={handleBackButton} />);
 
-    const backButton = screen.getByRole('button', { name: /back/i });
-    fireEvent.click(backButton);
+    fireEvent.click(screen.getByRole('button', { name: /back/i }));
 
     expect(handleBackButton).toHaveBeenCalledTimes(1);
   });
@@ -71,8 +33,7 @@ describe('ButtonsNavigation', () => {
     const handleContinueButton = vi.fn();
     render(<ButtonsNavigation onHandleContinueButton={handleContinueButton} />);
 
-    const continueButton = screen.getByRole('button', { name: /continue/i });
-    fireEvent.click(continueButton);
+    fireEvent.click(screen.getByRole('button', { name: /continue/i }));
 
     expect(handleContinueButton).toHaveBeenCalledTimes(1);
   });
@@ -80,15 +41,33 @@ describe('ButtonsNavigation', () => {
   it('disables back button when backButtonDisabled is true', () => {
     render(<ButtonsNavigation backButtonDisabled={true} />);
 
-    const backButton = screen.getByRole('button', { name: /back/i });
-    expect(backButton).toBeDisabled();
+    expect(screen.getByRole('button', { name: /back/i })).toBeDisabled();
   });
 
   it('disables continue button when continueButtonDisabled is true', () => {
     render(<ButtonsNavigation continueButtonDisabled={true} />);
 
-    const continueButton = screen.getByRole('button', { name: /continue/i });
-    expect(continueButton).toBeDisabled();
+    expect(screen.getByRole('button', { name: /continue/i })).toBeDisabled();
+  });
+
+  it('hides back button when hiddenBackButton is true', () => {
+    render(<ButtonsNavigation hiddenBackButton={true} />);
+
+    expect(screen.queryByRole('button', { name: /back/i })).not.toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /continue/i })).toBeInTheDocument();
+  });
+
+  it('hides continue button when hiddenContinueButton is true', () => {
+    render(<ButtonsNavigation hiddenContinueButton={true} />);
+
+    expect(screen.getByRole('button', { name: /back/i })).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /continue/i })).not.toBeInTheDocument();
+  });
+
+  it('disables continue button when loadingContinueButton is true', () => {
+    render(<ButtonsNavigation loadingContinueButton={true} />);
+
+    expect(screen.getByRole('button', { name: /continue/i })).toBeDisabled();
   });
 
   it('buttons stretch full width on mobile and size to content on desktop', () => {
@@ -125,6 +104,11 @@ describe('ButtonsNavigation - Snapshots', () => {
     expect(container.firstChild).toMatchSnapshot();
   });
 
+  it('matches snapshot with id prop', () => {
+    const { container } = render(<ButtonsNavigation id="signup" />);
+    expect(container.firstChild).toMatchSnapshot();
+  });
+
   it('matches snapshot with back button disabled', () => {
     const { container } = render(<ButtonsNavigation backButtonDisabled={true} />);
     expect(container.firstChild).toMatchSnapshot();
@@ -140,27 +124,18 @@ describe('ButtonsNavigation - Snapshots', () => {
     expect(container.firstChild).toMatchSnapshot();
   });
 
-  it('matches snapshot with both callbacks', () => {
-    const mockBackHandler = vi.fn();
-    const mockContinueHandler = vi.fn();
-
-    const { container } = render(
-      <ButtonsNavigation onHandleBackButton={mockBackHandler} onHandleContinueButton={mockContinueHandler} />,
-    );
+  it('matches snapshot with hidden back button', () => {
+    const { container } = render(<ButtonsNavigation hiddenBackButton={true} />);
     expect(container.firstChild).toMatchSnapshot();
   });
 
-  it('matches snapshot with back callback only', () => {
-    const mockBackHandler = vi.fn();
-
-    const { container } = render(<ButtonsNavigation onHandleBackButton={mockBackHandler} />);
+  it('matches snapshot with hidden continue button', () => {
+    const { container } = render(<ButtonsNavigation hiddenContinueButton={true} />);
     expect(container.firstChild).toMatchSnapshot();
   });
 
-  it('matches snapshot with continue callback only', () => {
-    const mockContinueHandler = vi.fn();
-
-    const { container } = render(<ButtonsNavigation onHandleContinueButton={mockContinueHandler} />);
+  it('matches snapshot with loading continue button', () => {
+    const { container } = render(<ButtonsNavigation loadingContinueButton={true} />);
     expect(container.firstChild).toMatchSnapshot();
   });
 });
