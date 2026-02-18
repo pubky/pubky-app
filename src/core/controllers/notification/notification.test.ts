@@ -77,7 +77,7 @@ describe('NotificationController', () => {
 
     it('should handle two sequential polls with accumulating unread from IndexedDB', async () => {
       const selectLastRead = vi.fn(() => 1000);
-      let currentLastPolledTimestamp = 0;
+      let currentLastPolledTimestamp: number | undefined = undefined;
       const selectLastPolledTimestamp = vi.fn(() => currentLastPolledTimestamp);
       const setUnread = vi.fn();
       const setLastPolledTimestamp = vi.fn((ts: number) => {
@@ -96,7 +96,7 @@ describe('NotificationController', () => {
       appSpy.mockResolvedValueOnce({ unread: 2, nextPollCursor: 3000 });
       await NotificationController.fetchNotifications({ userId: mockUserId });
 
-      expect(appSpy).toHaveBeenCalledWith({ userId: mockUserId, lastPolledTimestamp: 0, lastRead: 1000 });
+      expect(appSpy).toHaveBeenCalledWith({ userId: mockUserId, lastPolledTimestamp: undefined, lastRead: 1000 });
       expect(setUnread).toHaveBeenCalledWith(2);
       expect(setLastPolledTimestamp).toHaveBeenCalledWith(3000);
 
@@ -110,7 +110,7 @@ describe('NotificationController', () => {
     });
 
     it('should not regress lastPolledTimestamp when an older poll resolves after a newer one', async () => {
-      let currentLastPolledTimestamp = 0;
+      let currentLastPolledTimestamp: number | undefined = undefined;
       const selectLastPolledTimestamp = vi.fn(() => currentLastPolledTimestamp);
       const setUnread = vi.fn();
       const setLastPolledTimestamp = vi.fn((ts: number) => {

@@ -1,20 +1,20 @@
 export interface NotificationState {
   lastRead: number;
-  lastPolledTimestamp: number;
+  lastPolledTimestamp: number | undefined;
   unread: number;
 }
 
 export interface NotificationActions {
   setState: (state: NotificationState) => void;
   setLastRead: (lastRead: number) => void;
-  setLastPolledTimestamp: (lastPolledTimestamp: number) => void;
+  setLastPolledTimestamp: (lastPolledTimestamp: number | undefined) => void;
   setUnread: (unread: number) => void;
   reset: () => void;
 }
 
 export interface NotificationSelectors {
   selectLastRead: () => number;
-  selectLastPolledTimestamp: () => number;
+  selectLastPolledTimestamp: () => number | undefined;
   selectUnread: () => number;
 }
 
@@ -22,7 +22,7 @@ export type NotificationStore = NotificationState & NotificationActions & Notifi
 
 export const notificationInitialState: NotificationState = {
   lastRead: 0,
-  lastPolledTimestamp: 0,
+  lastPolledTimestamp: undefined,
   unread: 0,
 };
 

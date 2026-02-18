@@ -25,7 +25,8 @@ export class NotificationController {
 
     notificationStore.setUnread(unread);
 
-    if (nextPollCursor !== undefined && nextPollCursor > notificationStore.selectLastPolledTimestamp()) {
+    const currentCursor = notificationStore.selectLastPolledTimestamp();
+    if (nextPollCursor !== undefined && (currentCursor === undefined || nextPollCursor > currentCursor)) {
       notificationStore.setLastPolledTimestamp(nextPollCursor);
     }
   }

@@ -172,7 +172,7 @@ describe('AuthController', () => {
     });
 
     it('should wait 5 seconds, initialize bootstrap, and setState notification store', async () => {
-      const notification: Core.NotificationState = { unread: 2, lastRead: 123, lastPolledTimestamp: 0 };
+      const notification: Core.NotificationState = { unread: 2, lastRead: 123, lastPolledTimestamp: undefined };
       const bootstrapResponse = { notification };
       const initializeSpy = vi.spyOn(Core.BootstrapApplication, 'initialize').mockResolvedValue(bootstrapResponse);
       const sleepSpy = vi.spyOn(Libs, 'sleep').mockResolvedValue(undefined);

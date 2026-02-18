@@ -71,6 +71,18 @@ describe('NotificationApplication.fetchNotifications', () => {
     expect(nexusSpy).toHaveBeenCalledWith({ user_id: userId, end: lastPolledTimestamp });
   });
 
+  it('should omit end param when lastPolledTimestamp is undefined (first poll after bootstrap with no notifications)', async () => {
+    const nexusSpy = vi.spyOn(Core.NexusUserService, 'notifications').mockResolvedValue([]);
+    vi.spyOn(Core.LocalNotificationService, 'bulkSave').mockResolvedValue(undefined);
+    vi.spyOn(Core.LocalNotificationService, 'countUnreadSince').mockResolvedValue(0);
+    mockNormalizer();
+    mockFetchMissingEntities();
+
+    await NotificationApplication.fetchNotifications({ userId, lastPolledTimestamp: undefined, lastRead });
+
+    expect(nexusSpy).toHaveBeenCalledWith({ user_id: userId, end: undefined });
+  });
+
   it('should return nextPollCursor undefined when Nexus returns empty array', async () => {
     vi.spyOn(Core.NexusUserService, 'notifications').mockResolvedValue([]);
     vi.spyOn(Core.LocalNotificationService, 'bulkSave').mockResolvedValue(undefined);

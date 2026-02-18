@@ -342,7 +342,7 @@ describe('BootstrapApplication', () => {
       const result = await BootstrapApplication.initialize(getBootstrapParams(TEST_PUBKY));
 
       assertCommonCalls(mocks, bootstrapData, []);
-      expect(result).toEqual({ notification: { unread: 0, lastRead: MOCK_LAST_READ, lastPolledTimestamp: 0 } });
+      expect(result).toEqual({ notification: { unread: 0, lastRead: MOCK_LAST_READ, lastPolledTimestamp: undefined } });
     });
 
     it('should handle 404 homeserver error gracefully and create new lastRead', async () => {
@@ -408,7 +408,7 @@ describe('BootstrapApplication', () => {
 
       // Verify result has empty notification list and normalized timestamp
       expect(result).toEqual({
-        notification: { unread: 0, lastRead: MOCK_NORMALIZED_TIMESTAMP, lastPolledTimestamp: 0 },
+        notification: { unread: 0, lastRead: MOCK_NORMALIZED_TIMESTAMP, lastPolledTimestamp: undefined },
       });
     });
 
@@ -673,7 +673,7 @@ describe('BootstrapApplication', () => {
         streamId: Core.UserStreamTypes.MUTED,
         stream: [],
       });
-      expect(result).toEqual({ notification: { unread: 0, lastRead: MOCK_LAST_READ, lastPolledTimestamp: 0 } });
+      expect(result).toEqual({ notification: { unread: 0, lastRead: MOCK_LAST_READ, lastPolledTimestamp: undefined } });
     });
   });
 
@@ -800,7 +800,7 @@ describe('BootstrapApplication', () => {
       // Bootstrap should still succeed
       const result = await BootstrapApplication.initialize(getBootstrapParams(TEST_PUBKY));
 
-      expect(result).toEqual({ notification: { unread: 0, lastRead: MOCK_LAST_READ, lastPolledTimestamp: 0 } });
+      expect(result).toEqual({ notification: { unread: 0, lastRead: MOCK_LAST_READ, lastPolledTimestamp: undefined } });
       expect(loggerErrorSpy).toHaveBeenCalledWith('Failed to initialize settings during bootstrap', expect.any(Object));
       expect(mocks.initializeSettings).toHaveBeenCalledWith(TEST_PUBKY);
     });

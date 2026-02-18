@@ -2,7 +2,7 @@ import * as Core from '@/core';
 
 export type TNotificationApplicationNotificationsParams = {
   userId: Core.Pubky;
-  lastPolledTimestamp: number;
+  lastPolledTimestamp: number | undefined;
   lastRead: number;
 };
 
