@@ -13,6 +13,8 @@ import { HOT_TAGS_FEATURED_COUNT } from '@/config';
 import type { HotTagsCardsSectionProps } from './HotTagsCardsSection.types';
 import { MAX_AVATARS_MOBILE, MAX_AVATARS_DEFAULT, MAX_AVATARS_XL } from './HotTagsCardsSection.constants';
 
+const FEATURED_TAGS_SKELETON_COUNT = 3;
+
 /**
  * HotTagsCardsSection
  *
@@ -21,7 +23,6 @@ import { MAX_AVATARS_MOBILE, MAX_AVATARS_DEFAULT, MAX_AVATARS_XL } from './HotTa
  */
 export function HotTagsCardsSection({ className }: HotTagsCardsSectionProps) {
   const t = useTranslations('hot');
-  const tCommon = useTranslations('common');
   const router = useRouter();
   const { reach, timeframe } = Core.useHotStore();
 
@@ -69,14 +70,38 @@ export function HotTagsCardsSection({ className }: HotTagsCardsSectionProps) {
     );
   }
 
-  // TODO: Replace with Skeleton component
   if (isLoading) {
     return (
       <Atoms.Container overrideDefaults className={Libs.cn('flex w-full flex-col gap-2', className)}>
         <Atoms.Heading level={5} size="lg" className="font-light text-muted-foreground">
           {t('hotTags')}
         </Atoms.Heading>
-        <Atoms.Typography className="font-light text-muted-foreground">{tCommon('loading')}</Atoms.Typography>
+        <Atoms.Container overrideDefaults className="flex flex-col gap-3 sm:flex-row">
+          {Array.from({ length: FEATURED_TAGS_SKELETON_COUNT }).map((_, index) => (
+            <Atoms.Container
+              key={`hot-tags-cards-skeleton-${index}`}
+              overrideDefaults
+              className="flex min-h-[148px] min-w-0 flex-1 flex-col justify-between gap-4 rounded-md bg-card px-6 py-6 shadow-sm"
+              data-testid={`hot-tags-card-skeleton-${index}`}
+            >
+              <Atoms.Container overrideDefaults className="flex flex-col gap-2.5">
+                <Atoms.Container overrideDefaults className="flex items-center gap-3">
+                  <Atoms.Skeleton className="size-6 rounded-full" />
+                  <Atoms.Skeleton className="h-6 w-28 rounded-md" />
+                </Atoms.Container>
+                <Atoms.Skeleton className="h-5 w-20 rounded-md" />
+              </Atoms.Container>
+              <Atoms.Container overrideDefaults className="flex items-center gap-1.5">
+                {Array.from({ length: 4 }).map((__, avatarIndex) => (
+                  <Atoms.Skeleton
+                    key={`hot-tags-cards-skeleton-avatar-${index}-${avatarIndex}`}
+                    className="size-7 rounded-full"
+                  />
+                ))}
+              </Atoms.Container>
+            </Atoms.Container>
+          ))}
+        </Atoms.Container>
       </Atoms.Container>
     );
   }

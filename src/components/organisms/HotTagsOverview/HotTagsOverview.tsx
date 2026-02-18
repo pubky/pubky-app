@@ -2,7 +2,6 @@
 
 import { useMemo } from 'react';
 import { useRouter } from 'next/navigation';
-import { useTranslations } from 'next-intl';
 import * as Atoms from '@/atoms';
 import * as Hooks from '@/hooks';
 import * as Core from '@/core';
@@ -12,6 +11,20 @@ import { HOT_TAGS_FEATURED_COUNT } from '@/config';
 import type { HotTagsOverviewProps } from './HotTagsOverview.types';
 
 const DEFAULT_TAGS_LIMIT = 50;
+const TAGS_OVERVIEW_SKELETON_WIDTHS = [
+  'w-20',
+  'w-28',
+  'w-24',
+  'w-32',
+  'w-20',
+  'w-36',
+  'w-24',
+  'w-28',
+  'w-20',
+  'w-32',
+  'w-28',
+  'w-24',
+];
 
 /**
  * HotTagsOverview
@@ -21,7 +34,6 @@ const DEFAULT_TAGS_LIMIT = 50;
  * Fetches hot tags based on reach and timeframe filters from the hot store.
  */
 export function HotTagsOverview({ limit = DEFAULT_TAGS_LIMIT, className }: HotTagsOverviewProps) {
-  const t = useTranslations('common');
   const router = useRouter();
   const { reach, timeframe } = Core.useHotStore();
 
@@ -51,8 +63,15 @@ export function HotTagsOverview({ limit = DEFAULT_TAGS_LIMIT, className }: HotTa
       data-testid="hot-tags-overview"
     >
       {isLoading ? (
-        // TODO: Replace with Skeleton component
-        <Atoms.Typography className="font-light text-muted-foreground">{t('loading')}</Atoms.Typography>
+        <Atoms.Container overrideDefaults className="flex flex-wrap content-start gap-2">
+          {TAGS_OVERVIEW_SKELETON_WIDTHS.map((widthClass, index) => (
+            <Atoms.Skeleton
+              key={`hot-tags-overview-skeleton-${index}`}
+              className={Libs.cn('h-8 rounded-md', widthClass)}
+              data-testid={`hot-tags-overview-skeleton-${index}`}
+            />
+          ))}
+        </Atoms.Container>
       ) : (
         <Atoms.Container overrideDefaults className="flex flex-wrap content-start gap-2">
           {tags.map((tag) => (
