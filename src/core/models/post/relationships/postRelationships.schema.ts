@@ -4,10 +4,8 @@ export interface PostRelationshipsModelSchema extends Core.NexusPostRelationship
   id: string;
 }
 
-// Primary and compound indexes for Dexie
+// Keep the reply index for "get replies by parent post" queries.
 export const postRelationshipsTableSchema = `
   &id,
-  replied,
-  reposted,
-  mentioned
+  replied
 `;

@@ -3,8 +3,7 @@ import { TtlModelSchema } from '@/core/models/shared';
 
 export type UserTtlModelSchema = TtlModelSchema<Core.Pubky>;
 
-// Primary and compound indexes for Dexie
+// Keep only the primary key index. TTL is checked by id lists.
 export const userTtlTableSchema = `
-  &id,
-  lastUpdatedAt
+  &id
 `;
