@@ -26,7 +26,7 @@ export const InstallCard = () => {
       <Atoms.Container className="gap-3">
         <Atoms.Container className="flex-col items-center sm:items-start">
           <Image
-            src="/images/logo-pubky-ring-blue.svg"
+            src="/images/logo-pubky-ring.svg"
             alt="Pubky Ring"
             className="w-[137px] sm:w-auto"
             width={220}
