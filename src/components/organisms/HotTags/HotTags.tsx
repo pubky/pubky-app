@@ -23,7 +23,7 @@ export function HotTags({ className }: HotTagsProps) {
   const t = useTranslations('sidebar');
   const tCommon = useTranslations('common');
   const router = useRouter();
-  const { tags } = Hooks.useHotTags();
+  const { tags, isLoading } = Hooks.useHotTags();
 
   const displayTags = tags.slice(0, MAX_TAGS);
 
@@ -46,7 +46,13 @@ export function HotTags({ className }: HotTagsProps) {
       data-testid="hot-tags"
       dataCy="hot-tags"
     >
-      {displayTags.length === 0 ? (
+      {isLoading ? (
+        <Atoms.Container overrideDefaults className="flex w-full flex-col gap-2" data-cy="hot-tags-skeleton-list">
+          {Array.from({ length: MAX_TAGS }).map((_, index) => (
+            <Atoms.Skeleton key={`hot-tag-skeleton-${index}`} className="h-8 w-full rounded-md" />
+          ))}
+        </Atoms.Container>
+      ) : displayTags.length === 0 ? (
         <Atoms.Typography className="font-light text-muted-foreground">{t('noTags')}</Atoms.Typography>
       ) : (
         <Atoms.Container overrideDefaults className="flex w-full flex-col gap-2" data-cy="hot-tags-list">
