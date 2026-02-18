@@ -1,0 +1,70 @@
+---
+description: Skeleton component architecture and consistency rules
+globs: src/components/**/*
+alwaysApply: false
+---
+
+# Skeleton Architecture Rules
+
+Use a hybrid structure for skeleton loaders to balance reuse and locality.
+
+## Placement Model
+
+### Reusable skeletons
+
+Use a standalone component folder when the skeleton is reused by multiple parents or represents a generic UI pattern.
+
+Example:
+
+```
+src/components/organisms/FullUserListItemSkeleton/
+├── FullUserListItemSkeleton.tsx
+├── FullUserListItemSkeleton.test.tsx
+└── index.ts
+```
+
+### Feature-private skeletons
+
+Use a colocated file for loading states owned by a single component.
+
+Example:
+
+```
+src/components/organisms/HotTagsCardsSection/
+├── HotTagsCardsSection.tsx
+├── HotTagsCardsSection.skeleton.tsx
+└── ...
+```
+
+## Promotion Rule
+
+- If a colocated `*.skeleton.tsx` is used by 2 or more parent components, promote it to a standalone reusable skeleton component folder.
+- If a skeleton remains single-owner, keep it colocated.
+
+## Naming and Exports
+
+- Component name: `XxxSkeleton`.
+- Private file name: `Xxx.skeleton.tsx`.
+- Reusable file name: `XxxSkeleton.tsx` in its own folder.
+- Export reusable skeletons from relevant barrel files.
+- Do not export feature-private skeletons from global barrels (`src/components/organisms/index.ts`, etc.).
+
+## Implementation Rules
+
+- Build loaders with shared `Atoms.Skeleton` (Shadcn-based) primitives.
+- Avoid ad-hoc placeholder markup that bypasses `Atoms.Skeleton`.
+- Keep skeleton layout aligned with the loaded UI structure (spacing, responsive behavior, hierarchy).
+
+## Testing Rules
+
+- Reusable skeleton components should have direct unit/snapshot tests.
+- Feature-private skeletons should be validated through the parent component loading-state tests.
+- Use stable `data-testid` values for key loading elements when parent tests rely on them.
+
+## Quick Checklist
+
+- [ ] Is this skeleton reused by multiple parents? If yes, standalone component.
+- [ ] If single-owner, is it colocated as `*.skeleton.tsx`?
+- [ ] Does it use `Atoms.Skeleton` consistently?
+- [ ] Are exports limited to reusable skeletons only?
+- [ ] Are loading states covered by tests (direct or parent-level)?

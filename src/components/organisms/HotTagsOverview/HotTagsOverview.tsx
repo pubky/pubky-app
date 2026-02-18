@@ -9,7 +9,8 @@ import * as Libs from '@/libs';
 import { APP_ROUTES } from '@/app/routes';
 import { HOT_TAGS_FEATURED_COUNT } from '@/config';
 import type { HotTagsOverviewProps } from './HotTagsOverview.types';
-import { DEFAULT_TAGS_LIMIT, TAGS_OVERVIEW_SKELETON_WIDTHS } from './HotTagsOverview.constants';
+import { DEFAULT_TAGS_LIMIT } from './HotTagsOverview.constants';
+import { HotTagsOverviewSkeleton } from './HotTagsOverview.skeleton';
 
 /**
  * HotTagsOverview
@@ -48,15 +49,7 @@ export function HotTagsOverview({ limit = DEFAULT_TAGS_LIMIT, className }: HotTa
       data-testid="hot-tags-overview"
     >
       {isLoading ? (
-        <Atoms.Container overrideDefaults className="flex flex-wrap content-start gap-2">
-          {TAGS_OVERVIEW_SKELETON_WIDTHS.map((widthClass, index) => (
-            <Atoms.Skeleton
-              key={`hot-tags-overview-skeleton-${index}`}
-              className={Libs.cn('h-8 rounded-md', widthClass)}
-              data-testid={`hot-tags-overview-skeleton-${index}`}
-            />
-          ))}
-        </Atoms.Container>
+        <HotTagsOverviewSkeleton />
       ) : (
         <Atoms.Container overrideDefaults className="flex flex-wrap content-start gap-2">
           {tags.map((tag) => (
