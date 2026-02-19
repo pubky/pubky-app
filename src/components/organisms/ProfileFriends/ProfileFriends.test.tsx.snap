@@ -3,13 +3,68 @@
 exports[`ProfileFriends - Snapshots > matches snapshot when loading 1`] = `
 <div>
   <div
-    class="mt-6 flex min-h-[200px] items-center justify-center lg:mt-0"
+    class="mt-6 gap-4 lg:mt-0"
     data-testid="container"
   >
-    <div
-      data-testid="spinner"
+    <h5
+      data-testid="heading"
     >
-      Loading...
+      Friends
+    </h5>
+    <div
+      class="gap-3.5 rounded-md bg-transparent p-0 lg:gap-3 lg:bg-card lg:p-6"
+      data-testid="container"
+    >
+      <div
+        data-testid="user-list-item-skeleton-full"
+      >
+        Skeleton
+      </div>
+      <div
+        data-testid="user-list-item-skeleton-full"
+      >
+        Skeleton
+      </div>
+      <div
+        data-testid="user-list-item-skeleton-full"
+      >
+        Skeleton
+      </div>
+      <div
+        data-testid="user-list-item-skeleton-full"
+      >
+        Skeleton
+      </div>
+      <div
+        data-testid="user-list-item-skeleton-full"
+      >
+        Skeleton
+      </div>
+      <div
+        data-testid="user-list-item-skeleton-full"
+      >
+        Skeleton
+      </div>
+      <div
+        data-testid="user-list-item-skeleton-full"
+      >
+        Skeleton
+      </div>
+      <div
+        data-testid="user-list-item-skeleton-full"
+      >
+        Skeleton
+      </div>
+      <div
+        data-testid="user-list-item-skeleton-full"
+      >
+        Skeleton
+      </div>
+      <div
+        data-testid="user-list-item-skeleton-full"
+      >
+        Skeleton
+      </div>
     </div>
   </div>
 </div>

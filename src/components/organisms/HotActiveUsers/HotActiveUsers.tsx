@@ -41,7 +41,6 @@ function useActiveUsersStreamId(): Core.UserStreamId {
  */
 export function HotActiveUsers({ limit = DEFAULT_USERS_LIMIT, className }: HotActiveUsersProps) {
   const t = useTranslations('hot');
-  const tCommon = useTranslations('common');
   const router = useRouter();
   const currentUserPubky = Core.useAuthStore((state) => state.currentUserPubky);
   const streamId = useActiveUsersStreamId();
@@ -76,8 +75,11 @@ export function HotActiveUsers({ limit = DEFAULT_USERS_LIMIT, className }: HotAc
       {error ? (
         <Atoms.Typography className="text-destructive">{t('failedToLoadUsers')}</Atoms.Typography>
       ) : isLoading ? (
-        // TODO: Replace with Skeleton component
-        <Atoms.Typography className="font-light text-muted-foreground">{tCommon('loading')}</Atoms.Typography>
+        <Atoms.Container className="gap-3.5 rounded-md py-2 lg:gap-3">
+          {Array.from({ length: limit }).map((_, index) => (
+            <Organisms.FullUserListItemSkeleton key={`hot-active-users-skeleton-${index}`} />
+          ))}
+        </Atoms.Container>
       ) : users.length === 0 ? (
         <Atoms.Typography className="font-light text-muted-foreground">{t('noUsersToShow')}</Atoms.Typography>
       ) : (
