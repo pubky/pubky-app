@@ -81,11 +81,22 @@ describe('Onboarding', () => {
     // Click 'enter invite code' button
     cy.get('[data-testid="human-dev-invite-code-btn"]').should('exist').click();
 
-    // Enter invalid invite code
+    // Enter invalid invite code (code is stored but not validated until pubky step)
     cy.get('[data-cy="human-invite-code-input"]').type('abcd-efgh-ijkl');
 
-    // Click continue button
+    // Click continue button - navigates to install page (no signup request yet)
     cy.get('[data-cy="human-invite-code-continue-btn"]').click();
+    cy.location('pathname').should('eq', '/onboarding/install');
+
+    // Choose to create keys in browser
+    cy.get('#create-keys-in-browser-btn').click();
+    cy.location('pathname').should('eq', '/onboarding/pubky');
+
+    // Verify pubky display is visible
+    cy.get('[data-cy="pubky-display"]').should('be.visible');
+
+    // Click continue on pubky page - this triggers the actual signup request with the invalid invite code
+    cy.get('#public-key-navigation-continue-btn').click();
 
     // Wait for the signup request and verify 401 Unauthorised response
     cy.wait('@signupRequest').its('response.statusCode').should('eq', 401);
@@ -93,10 +104,10 @@ describe('Onboarding', () => {
     // Assert error toast is shown with appropriate message
     cy.get('[data-cy="toast"]').should('be.visible').and('contain', 'Invalid or expired invite code');
 
-    // Assert still on onboarding/human page (user cannot proceed)
-    cy.location('pathname').should('eq', '/onboarding/human');
+    // Assert still on onboarding/pubky page (user cannot proceed)
+    cy.location('pathname').should('eq', '/onboarding/pubky');
 
     // Verify the continue button is enabled again (not stuck in loading state)
-    cy.get('[data-cy="human-invite-code-continue-btn"]').should('not.be.disabled');
+    cy.get('#public-key-navigation-continue-btn').should('not.be.disabled');
   });
 });

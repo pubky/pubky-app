@@ -90,7 +90,7 @@ Changes:
 - Add conflict resolution strategy
 
 Refs: #123
-See-also: docs/adr/0001-local-first-writes.md
+See-also: .cursor/adr/0001-local-first-writes.md
 ```
 
 ## Breaking Changes
@@ -103,7 +103,7 @@ feat(api)!: change post ID format to composite
 BREAKING CHANGE: Post IDs now use author:postId format instead of
 simple postId. This affects all post-related APIs and database schemas.
 
-Migration guide available in docs/adr/0002-composite-post-ids.md
+Migration guide available in .cursor/adr/0002-composite-post-ids.md
 ```
 
 ## Common Patterns

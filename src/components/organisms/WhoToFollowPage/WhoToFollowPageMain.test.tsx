@@ -1,5 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen } from '@testing-library/react';
+import type { ElementType, ReactNode } from 'react';
 import { WhoToFollowPageMain } from './WhoToFollowPageMain';
 import * as Hooks from '@/hooks';
 import * as Core from '@/core';
@@ -51,7 +52,7 @@ vi.mock('@/atoms', () => ({
     className,
     'data-testid': dataTestId,
   }: {
-    children: React.ReactNode;
+    children: ReactNode;
     className?: string;
     'data-testid'?: string;
   }) => (
@@ -59,11 +60,12 @@ vi.mock('@/atoms', () => ({
       {children}
     </div>
   ),
-  Heading: ({ children }: { children: React.ReactNode }) => <h5 data-testid="heading">{children}</h5>,
+  Heading: ({ children }: { children: ReactNode }) => <h5 data-testid="heading">{children}</h5>,
   Spinner: () => <div data-testid="spinner">Loading...</div>,
-  Typography: ({ children, as: Tag = 'p' }: { children: React.ReactNode; as?: keyof JSX.IntrinsicElements }) => (
-    <Tag>{children}</Tag>
-  ),
+  Typography: ({ children, as: Tag = 'p' }: { children: ReactNode; as?: ElementType }) => {
+    const Component = Tag;
+    return <Component>{children}</Component>;
+  },
 }));
 
 // Mock Libs
@@ -78,6 +80,7 @@ vi.mock('@/organisms', () => ({
       User item
     </div>
   ),
+  FullUserListItemSkeleton: () => <div data-testid="user-list-item-skeleton-full">Skeleton item</div>,
 }));
 
 const mockUsers = [
@@ -145,7 +148,7 @@ describe('WhoToFollowPageMain', () => {
   it('renders loading state when isLoading is true', () => {
     vi.mocked(Hooks.useUserStream).mockReturnValue(mockLoadingResult);
     render(<WhoToFollowPageMain />);
-    expect(screen.getByTestId('spinner')).toBeInTheDocument();
+    expect(screen.getAllByTestId('user-list-item-skeleton-full')).toHaveLength(30);
   });
 
   it('renders users when there are items', () => {

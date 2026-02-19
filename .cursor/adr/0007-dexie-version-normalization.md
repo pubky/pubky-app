@@ -1,4 +1,4 @@
-# ADR 0007: Dexie Version Normalization (TBD)
+# ADR 0007: Dexie Version Normalization
 
 ## Status
 

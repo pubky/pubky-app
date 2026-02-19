@@ -33,6 +33,7 @@ function TaggerAvatar({ tagger, index }: TaggerAvatarProps) {
           <Organisms.AvatarWithFallback
             name={tagger.name ?? tagger.id}
             avatarUrl={tagger.avatarUrl}
+            fallbackSeed={tagger.id}
             size="md"
             className="shrink-0 border-2 border-background shadow-sm"
           />

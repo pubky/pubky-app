@@ -18,6 +18,9 @@ export const EditProfileForm = () => {
     pubky: currentUserPubky,
     userDetails,
   });
+  const avatarFallbackSeed = currentUserPubky || state.name || 'user';
+  const avatarFallbackInitial =
+    Libs.extractInitials({ name: state.name, maxLength: 1 }) || avatarFallbackSeed.charAt(0).toUpperCase() || 'U';
 
   if (state.isLoading) {
     return (
@@ -144,8 +147,8 @@ export const EditProfileForm = () => {
                     }
                   />
                 ) : (
-                  <Atoms.AvatarFallback className="text-4xl">
-                    {state.name ? state.name.substring(0, 2).toUpperCase() : 'SN'}
+                  <Atoms.AvatarFallback className="overflow-hidden border-none text-4xl">
+                    <Molecules.FacehashAvatar seed={avatarFallbackSeed} initial={avatarFallbackInitial} />
                   </Atoms.AvatarFallback>
                 )}
               </Atoms.Avatar>
