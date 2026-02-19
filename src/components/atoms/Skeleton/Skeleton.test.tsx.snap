@@ -1,0 +1,15 @@
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
+
+exports[`Skeleton - Snapshots > matches snapshot with custom className 1`] = `
+<div
+  class="animate-pulse bg-muted h-4 w-24 rounded-full"
+  data-slot="skeleton"
+/>
+`;
+
+exports[`Skeleton - Snapshots > matches snapshot with default props 1`] = `
+<div
+  class="animate-pulse rounded-md bg-muted"
+  data-slot="skeleton"
+/>
+`;
