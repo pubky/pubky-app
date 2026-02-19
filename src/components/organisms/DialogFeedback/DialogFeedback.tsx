@@ -30,28 +30,27 @@ export function DialogFeedback({ open, onOpenChange }: DialogFeedbackProps) {
   }
 
   return (
-    <>
-      <Molecules.DialogConfirmDiscard
-        open={showConfirmDialog}
-        onOpenChange={() => setShowConfirmDialog(false)}
-        onConfirm={handleDiscard}
-      />
-      <Atoms.Dialog open={open} onOpenChange={handleOpenChange}>
-        <Atoms.DialogContent className="w-2xl" hiddenTitle="Provide Feedback">
-          {isSuccess ? (
-            <DialogFeedbackSuccess onOpenChange={onOpenChange} />
-          ) : (
-            <DialogFeedbackContent
-              feedback={feedback}
-              handleChange={handleChange}
-              submit={submit}
-              isSubmitting={isSubmitting}
-              hasContent={hasContent}
-              currentUserPubky={currentUserPubky}
-            />
-          )}
-        </Atoms.DialogContent>
-      </Atoms.Dialog>
-    </>
+    <Atoms.Dialog open={open} onOpenChange={handleOpenChange}>
+      <Atoms.DialogContent className="w-2xl" hiddenTitle="Provide Feedback">
+        {isSuccess ? (
+          <DialogFeedbackSuccess onOpenChange={onOpenChange} />
+        ) : (
+          <DialogFeedbackContent
+            feedback={feedback}
+            handleChange={handleChange}
+            submit={submit}
+            isSubmitting={isSubmitting}
+            hasContent={hasContent}
+            currentUserPubky={currentUserPubky}
+          />
+        )}
+        {/* Nested inside parent dialog to avoid mobile touch event issues with sibling portals */}
+        <Molecules.DialogConfirmDiscard
+          open={showConfirmDialog}
+          onOpenChange={() => setShowConfirmDialog(false)}
+          onConfirm={handleDiscard}
+        />
+      </Atoms.DialogContent>
+    </Atoms.Dialog>
   );
 }

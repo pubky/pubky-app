@@ -4,21 +4,6 @@ exports[`DialogNewPost - Snapshots > matches snapshot with default props 1`] = `
 <div>
   <div
     data-open="false"
-    data-testid="dialog-confirm-discard"
-  >
-    <button
-      data-testid="mock-confirm-btn"
-    >
-      Confirm
-    </button>
-    <button
-      data-testid="mock-cancel-btn"
-    >
-      Cancel
-    </button>
-  </div>
-  <div
-    data-open="false"
     data-testid="dialog"
   >
     <div
@@ -71,6 +56,21 @@ exports[`DialogNewPost - Snapshots > matches snapshot with default props 1`] = `
           </button>
         </div>
       </div>
+      <div
+        data-open="false"
+        data-testid="dialog-confirm-discard"
+      >
+        <button
+          data-testid="mock-confirm-btn"
+        >
+          Confirm
+        </button>
+        <button
+          data-testid="mock-cancel-btn"
+        >
+          Cancel
+        </button>
+      </div>
     </div>
   </div>
 </div>
@@ -78,21 +78,6 @@ exports[`DialogNewPost - Snapshots > matches snapshot with default props 1`] = `
 
 exports[`DialogNewPost - Snapshots > matches snapshot with open prop 1`] = `
 <div>
-  <div
-    data-open="false"
-    data-testid="dialog-confirm-discard"
-  >
-    <button
-      data-testid="mock-confirm-btn"
-    >
-      Confirm
-    </button>
-    <button
-      data-testid="mock-cancel-btn"
-    >
-      Cancel
-    </button>
-  </div>
   <div
     data-open="true"
     data-testid="dialog"
@@ -146,6 +131,21 @@ exports[`DialogNewPost - Snapshots > matches snapshot with open prop 1`] = `
             Disable Article Mode
           </button>
         </div>
+      </div>
+      <div
+        data-open="false"
+        data-testid="dialog-confirm-discard"
+      >
+        <button
+          data-testid="mock-confirm-btn"
+        >
+          Confirm
+        </button>
+        <button
+          data-testid="mock-cancel-btn"
+        >
+          Cancel
+        </button>
       </div>
     </div>
   </div>
