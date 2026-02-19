@@ -21,7 +21,7 @@ exports[`Toaster - Snapshots > matches snapshot for Toaster with multiple toasts
       data-radix-collection-item=""
       data-state="open"
       data-swipe-direction="right"
-      style="user-select: none;"
+      style="user-select: none; touch-action: none;"
       tabindex="0"
     >
       <div
@@ -45,7 +45,7 @@ exports[`Toaster - Snapshots > matches snapshot for Toaster with multiple toasts
       data-radix-collection-item=""
       data-state="open"
       data-swipe-direction="right"
-      style="user-select: none;"
+      style="user-select: none; touch-action: none;"
       tabindex="0"
     >
       <div
@@ -92,7 +92,7 @@ exports[`Toaster - Snapshots > matches snapshot for Toaster with single toast 1`
       data-radix-collection-item=""
       data-state="open"
       data-swipe-direction="right"
-      style="user-select: none;"
+      style="user-select: none; touch-action: none;"
       tabindex="0"
     >
       <div
@@ -139,7 +139,7 @@ exports[`Toaster - Snapshots > matches snapshot for Toaster with title-only toas
       data-radix-collection-item=""
       data-state="open"
       data-swipe-direction="right"
-      style="user-select: none;"
+      style="user-select: none; touch-action: none;"
       tabindex="0"
     >
       <div
@@ -181,7 +181,7 @@ exports[`Toaster - Snapshots > matches snapshot for Toaster with toast action 1`
       data-radix-collection-item=""
       data-state="open"
       data-swipe-direction="right"
-      style="user-select: none;"
+      style="user-select: none; touch-action: none;"
       tabindex="0"
     >
       <div
@@ -235,7 +235,7 @@ exports[`Toaster - Snapshots > matches snapshot for Toaster with toast with acti
       data-radix-collection-item=""
       data-state="open"
       data-swipe-direction="right"
-      style="user-select: none;"
+      style="user-select: none; touch-action: none;"
       tabindex="0"
     >
       <div
