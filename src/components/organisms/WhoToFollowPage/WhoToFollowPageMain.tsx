@@ -41,8 +41,12 @@ export function WhoToFollowPageMain() {
 
   if (isLoading) {
     return (
-      <Atoms.Container className="mt-6 min-h-50 items-center justify-center lg:mt-0">
-        <Atoms.Spinner />
+      <Atoms.Container className="mt-6 gap-4 lg:mt-0">
+        <Atoms.Container className="gap-3.5 rounded-md bg-transparent p-0 lg:gap-3 lg:bg-card lg:p-6">
+          {Array.from({ length: USERS_PER_PAGE }).map((_, index) => (
+            <Organisms.FullUserListItemSkeleton key={`who-to-follow-page-skeleton-${index}`} />
+          ))}
+        </Atoms.Container>
       </Atoms.Container>
     );
   }

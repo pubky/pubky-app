@@ -26,6 +26,7 @@ export function Search() {
 
   // Get tags from URL query params
   const tags = useSearchTags();
+  const isMobile = Hooks.useIsMobile();
   const hasTags = tags.length > 0;
 
   return (
@@ -41,7 +42,7 @@ export function Search() {
       >
         {/* Mobile search input - hidden on desktop (shown in header there) */}
         <Atoms.Container className="lg:hidden">
-          <Organisms.SearchInput autoFocus={!hasTags} />
+          <Organisms.SearchInput autoFocus={!hasTags || isMobile} />
         </Atoms.Container>
 
         {hasTags ? (
