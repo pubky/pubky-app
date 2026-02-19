@@ -2,8 +2,7 @@
 
 import * as Atoms from '@/atoms';
 import * as Libs from '@/libs';
-
-const TAG_ROW_COUNT = 4;
+import { TAGS_PER_PAGE } from '@/hooks/usePostTags/usePostTags.constants';
 
 export interface PostTagsPanelSkeletonProps {
   widthMode?: 'fit' | 'full';
@@ -26,7 +25,7 @@ export function PostTagsPanelSkeleton({ widthMode = 'fit', className }: PostTags
 
         {/* Scrollable list of tag rows */}
         <Atoms.Container overrideDefaults className="max-h-80 overflow-x-hidden overflow-y-auto pr-1">
-          {Array.from({ length: TAG_ROW_COUNT }).map((_, index) => (
+          {Array.from({ length: TAGS_PER_PAGE }).map((_, index) => (
             <Atoms.Container
               key={`post-tags-panel-skeleton-row-${index}`}
               overrideDefaults
