@@ -20,6 +20,10 @@ export const createNotificationActions = (set: ZustandSet<NotificationStore>): N
     set({ lastRead }, false, NotificationActionTypes.SET_LAST_READ);
   },
 
+  setLastPolledTimestamp: (lastPolledTimestamp: number | undefined) => {
+    set({ lastPolledTimestamp }, false, NotificationActionTypes.SET_LAST_POLLED_TIMESTAMP);
+  },
+
   setUnread: (unread: number) => {
     // Ensure unread count is never negative
     const validUnread = Math.max(0, unread);
