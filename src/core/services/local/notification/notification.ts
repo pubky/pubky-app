@@ -3,30 +3,6 @@ import * as Core from '@/core';
 export class LocalNotificationService {
   private constructor() {}
 
-  /**
-   * Persists notifications to indexed db and returns the count of unread notifications.
-   * Transforms nexus notifications into flat notifications, counts those newer than lastRead,
-   * and bulk saves them to the database.
-   * @param notificationList - Array of notifications from the nexus service
-   * @param lastRead - Timestamp of the last read notification
-   * @returns Promise resolving to the number of unread notifications
-   */
-  static async persistAndGetUnreadCount({
-    flatNotifications,
-    lastRead,
-  }: Core.TPersistAndGetUnreadCountParams): Promise<number> {
-    let unreadCount = 0;
-
-    for (const flatNotification of flatNotifications) {
-      if (flatNotification.timestamp > lastRead) {
-        unreadCount++;
-      }
-    }
-
-    await Core.NotificationModel.bulkSave(flatNotifications);
-    return unreadCount;
-  }
-
   static async getOlderThan({ olderThan, limit }: Core.TOlderThanQueryParams): Promise<Core.TFlatNotificationList> {
     return await Core.NotificationModel.getOlderThan(olderThan, limit);
   }
@@ -45,6 +21,15 @@ export class LocalNotificationService {
    */
   static async bulkSave({ flatNotifications }: Core.TFlatNotifications): Promise<void> {
     await Core.NotificationModel.bulkSave(flatNotifications);
+  }
+
+  /**
+   * Counts unread notifications by querying IndexedDB for entries newer than lastRead.
+   * @param lastRead - Timestamp of the last read notification
+   * @returns Promise resolving to the total number of unread notifications
+   */
+  static async countUnreadSince(lastRead: number): Promise<number> {
+    return await Core.NotificationModel.countNewerThan(lastRead);
   }
 
   /**
