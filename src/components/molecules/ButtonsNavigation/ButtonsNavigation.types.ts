@@ -8,6 +8,7 @@ export interface ButtonsNavigationProps {
   backButtonDisabled?: boolean;
   continueButtonDisabled?: boolean;
   hiddenContinueButton?: boolean;
+  hiddenBackButton?: boolean;
   loadingContinueButton?: boolean;
   backButtonClassName?: React.HTMLAttributes<HTMLButtonElement>['className'];
   continueButtonClassName?: React.HTMLAttributes<HTMLButtonElement>['className'];
