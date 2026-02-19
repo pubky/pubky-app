@@ -16,40 +16,39 @@ export function DialogReply({ postId, open, onOpenChangeAction }: DialogReplyPro
     });
 
   return (
-    <>
-      <Molecules.DialogConfirmDiscard
-        open={showConfirmDialog}
-        onOpenChange={() => setShowConfirmDialog(false)}
-        onConfirm={handleDiscard}
-      />
-      <Atoms.Dialog open={open} onOpenChange={handleOpenChange}>
-        <Atoms.DialogContent className="w-3xl" hiddenTitle={t('hiddenTitle')}>
-          <Atoms.DialogHeader>
-            <Atoms.DialogTitle>{t('title')}</Atoms.DialogTitle>
-            <Atoms.DialogDescription className="sr-only">{t('description')}</Atoms.DialogDescription>
-          </Atoms.DialogHeader>
-          <Atoms.Container className="gap-3">
-            {/* Post being replied to */}
-            <Molecules.PostPreviewCard postId={postId} />
+    <Atoms.Dialog open={open} onOpenChange={handleOpenChange}>
+      <Atoms.DialogContent className="w-3xl" hiddenTitle={t('hiddenTitle')}>
+        <Atoms.DialogHeader>
+          <Atoms.DialogTitle>{t('title')}</Atoms.DialogTitle>
+          <Atoms.DialogDescription className="sr-only">{t('description')}</Atoms.DialogDescription>
+        </Atoms.DialogHeader>
+        <Atoms.Container className="gap-3">
+          {/* Post being replied to */}
+          <Molecules.PostPreviewCard postId={postId} />
 
-            {/* Reply input */}
-            <Atoms.Container className="relative pl-6" overrideDefaults>
-              <Organisms.PostInput
-                dataCy="reply-post-input"
-                key={resetKey}
-                variant={POST_INPUT_VARIANT.REPLY}
-                postId={postId}
-                onSuccess={() => {
-                  onOpenChangeAction(false);
-                }}
-                showThreadConnector={true}
-                expanded={true}
-                onContentChange={handleContentChange}
-              />
-            </Atoms.Container>
+          {/* Reply input */}
+          <Atoms.Container className="relative pl-6" overrideDefaults>
+            <Organisms.PostInput
+              dataCy="reply-post-input"
+              key={resetKey}
+              variant={POST_INPUT_VARIANT.REPLY}
+              postId={postId}
+              onSuccess={() => {
+                onOpenChangeAction(false);
+              }}
+              showThreadConnector={true}
+              expanded={true}
+              onContentChange={handleContentChange}
+            />
           </Atoms.Container>
-        </Atoms.DialogContent>
-      </Atoms.Dialog>
-    </>
+        </Atoms.Container>
+        {/* Nested inside parent dialog to avoid mobile touch event issues with sibling portals */}
+        <Molecules.DialogConfirmDiscard
+          open={showConfirmDialog}
+          onOpenChange={() => setShowConfirmDialog(false)}
+          onConfirm={handleDiscard}
+        />
+      </Atoms.DialogContent>
+    </Atoms.Dialog>
   );
 }
