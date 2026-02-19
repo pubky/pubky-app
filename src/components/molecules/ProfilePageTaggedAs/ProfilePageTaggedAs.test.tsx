@@ -88,6 +88,11 @@ describe('ProfilePageTaggedAs', () => {
     render(<ProfilePageTaggedAs tags={defaultTags} onTagClick={mockOnTagClick} />);
     expect(screen.queryByText('No tags added yet.')).not.toBeInTheDocument();
   });
+
+  it('renders skeleton when isLoading', () => {
+    render(<ProfilePageTaggedAs tags={[]} onTagClick={mockOnTagClick} isLoading />);
+    expect(screen.getByTestId('profile-tagged-skeleton')).toBeInTheDocument();
+  });
 });
 
 describe('ProfilePageTaggedAs - Snapshots', () => {
