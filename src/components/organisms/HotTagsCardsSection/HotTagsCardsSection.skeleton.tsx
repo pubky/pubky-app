@@ -1,7 +1,8 @@
 import * as Atoms from '@/atoms';
 import { HOT_TAGS_FEATURED_COUNT } from '@/config';
+import { MAX_AVATARS_DEFAULT } from './HotTagsCardsSection.constants';
 
-export function HotTagsCardsSectionSkeleton() {
+export function HotTagsCardsSectionSkeleton({ maxAvatars = MAX_AVATARS_DEFAULT }: { maxAvatars?: number }) {
   return (
     <Atoms.Container overrideDefaults className="flex flex-col gap-3 sm:flex-row">
       {Array.from({ length: HOT_TAGS_FEATURED_COUNT }).map((_, index) => (
@@ -19,7 +20,7 @@ export function HotTagsCardsSectionSkeleton() {
             <Atoms.Skeleton className="h-5 w-20 rounded-md" />
           </Atoms.Container>
           <Atoms.Container overrideDefaults className="flex items-center gap-1.5">
-            {Array.from({ length: 4 }).map((__, avatarIndex) => (
+            {Array.from({ length: maxAvatars }).map((__, avatarIndex) => (
               <Atoms.Skeleton
                 key={`hot-tags-cards-skeleton-avatar-${index}-${avatarIndex}`}
                 className="size-7 rounded-full"

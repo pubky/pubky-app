@@ -55,7 +55,9 @@ vi.mock('@/atoms', () => ({
   Container: ({ children, className }: { children: React.ReactNode; className?: string }) => (
     <div className={className}>{children}</div>
   ),
-  Skeleton: ({ className }: { className?: string }) => <div data-testid="hot-tag-skeleton" className={className} />,
+  Skeleton: ({ className, 'data-testid': testId }: { className?: string; 'data-testid'?: string }) => (
+    <div data-testid={testId} className={className} />
+  ),
   Typography: ({ children }: { children: React.ReactNode }) => <p>{children}</p>,
   Tag: ({
     name,
