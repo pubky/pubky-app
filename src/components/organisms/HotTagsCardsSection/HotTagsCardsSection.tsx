@@ -10,6 +10,7 @@ import * as Core from '@/core';
 import * as Libs from '@/libs';
 import { APP_ROUTES } from '@/app/routes';
 import { HOT_TAGS_FEATURED_COUNT } from '@/config';
+import { HotTagsCardsSectionSkeleton } from './HotTagsCardsSection.skeleton';
 import type { HotTagsCardsSectionProps } from './HotTagsCardsSection.types';
 import { MAX_AVATARS_MOBILE, MAX_AVATARS_DEFAULT, MAX_AVATARS_XL } from './HotTagsCardsSection.constants';
 
@@ -21,12 +22,11 @@ import { MAX_AVATARS_MOBILE, MAX_AVATARS_DEFAULT, MAX_AVATARS_XL } from './HotTa
  */
 export function HotTagsCardsSection({ className }: HotTagsCardsSectionProps) {
   const t = useTranslations('hot');
-  const tCommon = useTranslations('common');
   const router = useRouter();
   const { reach, timeframe } = Core.useHotStore();
 
   // Fetch hot tags using the hook (no limit - get all from endpoint)
-  const { rawTags, isLoading } = Hooks.useHotTags({
+  const { rawTags, isLoading, error } = Hooks.useHotTags({
     reach: reach === 'all' ? undefined : (reach as Core.UserStreamReach),
     timeframe,
   });
@@ -58,14 +58,24 @@ export function HotTagsCardsSection({ className }: HotTagsCardsSectionProps) {
     router.push(`${APP_ROUTES.SEARCH}?tags=${encodeURIComponent(tagName)}`);
   };
 
-  // TODO: Replace with Skeleton component
+  if (error) {
+    return (
+      <Atoms.Container overrideDefaults className={Libs.cn('flex w-full flex-col gap-2', className)}>
+        <Atoms.Heading level={5} size="lg" className="font-light text-muted-foreground">
+          {t('hotTags')}
+        </Atoms.Heading>
+        <Atoms.Typography className="text-destructive">{t('failedToLoadTags')}</Atoms.Typography>
+      </Atoms.Container>
+    );
+  }
+
   if (isLoading) {
     return (
       <Atoms.Container overrideDefaults className={Libs.cn('flex w-full flex-col gap-2', className)}>
         <Atoms.Heading level={5} size="lg" className="font-light text-muted-foreground">
           {t('hotTags')}
         </Atoms.Heading>
-        <Atoms.Typography className="font-light text-muted-foreground">{tCommon('loading')}</Atoms.Typography>
+        <HotTagsCardsSectionSkeleton maxAvatars={maxAvatars} />
       </Atoms.Container>
     );
   }

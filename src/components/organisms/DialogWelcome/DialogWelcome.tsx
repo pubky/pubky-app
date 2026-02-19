@@ -67,6 +67,7 @@ export function DialogWelcome() {
               <Organisms.AvatarWithFallback
                 avatarUrl={avatarImage}
                 name={userDetails.name}
+                fallbackSeed={currentUserPubky}
                 className="h-24 w-24"
                 fallbackClassName="text-4xl"
               />

@@ -7,17 +7,21 @@ export class NotificationApplication {
 
   /**
    * Retrieves notifications from the nexus service and persists them locally,
-   * then returns the count of unread notifications.
-   * @param params - Parameters containing user ID and last read timestamp
-   * @returns Promise resolving to the number of unread notifications
+   * then returns the count of unread notifications and the newest notification timestamp.
+   *
+   * @param params.userId - The user ID to fetch notifications for
+   * @param params.lastPolledTimestamp - Polling cursor passed as `end` to Nexus (advances after each poll)
+   * @param params.lastRead - Read/unread boundary used to count unread notifications
+   * @returns Promise resolving to unread count and the newest notification timestamp
    */
   static async fetchNotifications({
     userId,
+    lastPolledTimestamp,
     lastRead,
-  }: Core.TNotificationApplicationNotificationsParams): Promise<number> {
-    const notifications = await Core.NexusUserService.notifications({ user_id: userId, end: lastRead });
+  }: Core.TNotificationApplicationNotificationsParams): Promise<Core.TFetchNotificationsResult> {
+    const notifications = await Core.NexusUserService.notifications({ user_id: userId, end: lastPolledTimestamp });
     const flatNotifications = await this.fetchMissingEntities({ notifications, viewerId: userId });
-    return await Core.LocalNotificationService.persistAndGetUnreadCount({ flatNotifications, lastRead });
+    return this.persistAndSummarize({ notifications, flatNotifications, lastRead });
   }
   /**
    * Updates the lastRead timestamp on the homeserver to mark all notifications as read.
@@ -75,6 +79,21 @@ export class NotificationApplication {
 
     // Cache miss - fetch all from Nexus
     return await this.fetchFromNexus({ userId, olderThan, limit });
+  }
+
+  /**
+   * Persists flat notifications to IndexedDB, counts unread, and computes the
+   * next poll cursor
+   */
+  static async persistAndSummarize({
+    notifications,
+    flatNotifications,
+    lastRead,
+  }: Core.TPersistAndSummarizeParams): Promise<Core.TFetchNotificationsResult> {
+    await Core.LocalNotificationService.bulkSave({ flatNotifications });
+    const unread = await Core.LocalNotificationService.countUnreadSince(lastRead);
+    const nextPollCursor = notifications.length > 0 ? notifications[0].timestamp + 1 : undefined;
+    return { unread, nextPollCursor };
   }
 
   // ============================================================================

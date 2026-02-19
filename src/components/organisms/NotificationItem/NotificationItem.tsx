@@ -125,12 +125,19 @@ export function NotificationItem({ notification, isUnread }: NotificationItemPro
         {/* Avatar - links to user profile */}
         {userProfileLink ? (
           <Link href={userProfileLink} className="shrink-0 transition-opacity hover:opacity-80">
-            <Organisms.AvatarWithFallback avatarUrl={avatarUrl} name={userName} size="sm" className="lg:size-8" />
+            <Organisms.AvatarWithFallback
+              avatarUrl={avatarUrl}
+              name={userName}
+              fallbackSeed={actorUserId || userName}
+              size="sm"
+              className="lg:size-8"
+            />
           </Link>
         ) : (
           <Organisms.AvatarWithFallback
             avatarUrl={avatarUrl}
             name={userName}
+            fallbackSeed={actorUserId || userName}
             size="sm"
             className="shrink-0 lg:size-8"
           />

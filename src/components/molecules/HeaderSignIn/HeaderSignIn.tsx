@@ -21,6 +21,7 @@ export const HeaderSignIn = ({ ...props }: React.HTMLAttributes<HTMLDivElement>)
             : undefined
         }
         avatarName={userDetails?.name}
+        avatarSeed={currentUserPubky || userDetails?.name || 'user'}
         counter={unreadNotifications}
       />
     </Atoms.Container>

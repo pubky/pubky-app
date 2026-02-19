@@ -143,6 +143,46 @@ describe('NotificationModel', () => {
     });
   });
 
+  describe('countNewerThan', () => {
+    it('should count only notifications with timestamp strictly above the given value', async () => {
+      await NotificationModel.bulkSave([1000, 2000, 3000].map((t) => createNotification(t)));
+
+      const count = await NotificationModel.countNewerThan(1500);
+
+      expect(count).toBe(2);
+    });
+
+    it('should exclude notifications at exact timestamp boundary', async () => {
+      await NotificationModel.bulkSave([1000, 2000, 3000].map((t) => createNotification(t)));
+
+      const count = await NotificationModel.countNewerThan(2000);
+
+      expect(count).toBe(1);
+    });
+
+    it('should return 0 when no notifications are newer', async () => {
+      await NotificationModel.bulkSave([1000, 2000].map((t) => createNotification(t)));
+
+      const count = await NotificationModel.countNewerThan(5000);
+
+      expect(count).toBe(0);
+    });
+
+    it('should return full count when threshold is 0', async () => {
+      await NotificationModel.bulkSave([1000, 2000, 3000].map((t) => createNotification(t)));
+
+      const count = await NotificationModel.countNewerThan(0);
+
+      expect(count).toBe(3);
+    });
+
+    it('should return 0 on empty table', async () => {
+      const count = await NotificationModel.countNewerThan(0);
+
+      expect(count).toBe(0);
+    });
+  });
+
   describe('clear', () => {
     it('should remove all notifications', async () => {
       await NotificationModel.bulkSave([createNotification(1000), createNotification(2000)]);

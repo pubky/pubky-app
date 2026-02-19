@@ -11,7 +11,7 @@ import {
   repostPost,
   waitForFeedToLoad,
 } from '../support/posts';
-import { searchAndFollowProfile } from '../support/contacts';
+import { followFromPostMenu, searchAndFollowProfile } from '../support/contacts';
 import { BackupType, HasBackedUp } from '../support/types/enums';
 
 // Profile 1 follows Profile 2 and is friends with Profile 2. Profile 1 also follows Profile 3 and Profile 4.
@@ -61,10 +61,8 @@ describe('feed and filters', () => {
     createQuickPost(profile2.postText);
     // find Profile 1's latest post and repost it
     repostPost({ repostContent: profile2.repostText, filterText: profile1.postText2 });
-    // follow Profile 1
-    cy.get(`@${profile1.pubkyAlias}`).then((pubky) => {
-      searchAndFollowProfile(`${pubky}`, profile1.username);
-    });
+    // follow Profile 1 from post menu (postIdx 1 = Profile 1's original; 0 = Profile 2's repost)
+    followFromPostMenu(profile1.postText2, 1);
     cy.signOut(HasBackedUp.Yes);
 
     // * create profile 3 of 4, post and follow profile 2

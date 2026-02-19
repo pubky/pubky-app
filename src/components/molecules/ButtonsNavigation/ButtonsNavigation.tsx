@@ -11,6 +11,7 @@ export function ButtonsNavigation({
   continueText = 'Continue',
   backButtonDisabled = false,
   continueButtonDisabled = false,
+  hiddenBackButton = false,
   hiddenContinueButton = false,
   loadingContinueButton = false,
   backButtonClassName,
@@ -18,17 +19,19 @@ export function ButtonsNavigation({
 }: Types.ButtonsNavigationProps) {
   return (
     <Atoms.Container className={Libs.cn('gap-3 md:flex-row md:justify-between lg:gap-6', className)}>
-      <Atoms.Button
-        id={`${id}-back-btn`}
-        size="lg"
-        className={Libs.cn('w-full rounded-full md:w-auto md:flex-1', backButtonClassName)}
-        variant={'secondary'}
-        onClick={onHandleBackButton}
-        disabled={backButtonDisabled}
-      >
-        <Libs.ArrowLeft className="mr-1.5 h-4 w-4" />
-        {backText}
-      </Atoms.Button>
+      {!hiddenBackButton && (
+        <Atoms.Button
+          id={`${id}-back-btn`}
+          size="lg"
+          className={Libs.cn('w-full rounded-full md:w-auto md:flex-1', backButtonClassName)}
+          variant={'secondary'}
+          onClick={onHandleBackButton}
+          disabled={backButtonDisabled}
+        >
+          <Libs.ArrowLeft className="mr-1.5 h-4 w-4" />
+          {backText}
+        </Atoms.Button>
+      )}
       {!hiddenContinueButton && (
         <Atoms.Button
           id={`${id}-continue-btn`}
@@ -44,7 +47,7 @@ export function ButtonsNavigation({
             </>
           ) : (
             <>
-              <Libs.ArrowRight className="mr-1.5 h-4 w-4" />
+              <Libs.LogIn className="mr-1.5 h-4 w-4" />
               {continueText}
             </>
           )}

@@ -25,6 +25,7 @@ export const HumanSelection = ({ onClick, onInviteCodeClick, onDevMode }: HumanS
             onClick={onInviteCodeClick}
             className="inline cursor-pointer text-brand transition-all hover:font-bold"
             data-testid="invite-code-link"
+            data-cy="invite-code-link"
           >
             {t('inviteCode')}
           </Atoms.Button>

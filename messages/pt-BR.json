@@ -1006,6 +1006,7 @@
     "trendingPosts": "Posts em alta",
     "postsCount": "{count} posts",
     "failedToLoadUsers": "Falha ao carregar usuarios",
+    "failedToLoadTags": "Falha ao carregar tags",
     "noUsersToShow": "Nenhum usuario para mostrar"
   },
   "privacy": {

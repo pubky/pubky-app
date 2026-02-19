@@ -2,6 +2,7 @@
 
 import { useTranslations } from 'next-intl';
 import * as Atoms from '@/atoms';
+import * as Hooks from '@/hooks';
 import * as Molecules from '@/molecules';
 import * as Organisms from '@/organisms';
 import { POST_INPUT_VARIANT } from '@/organisms/PostInput/PostInput.constants';
@@ -9,9 +10,13 @@ import type { DialogReplyProps } from './DialogReply.types';
 
 export function DialogReply({ postId, open, onOpenChangeAction }: DialogReplyProps) {
   const t = useTranslations('dialogs.reply');
+  const { showConfirmDialog, setShowConfirmDialog, resetKey, handleContentChange, handleOpenChange, handleDiscard } =
+    Hooks.useConfirmableDialog({
+      onClose: () => onOpenChangeAction(false),
+    });
 
   return (
-    <Atoms.Dialog open={open} onOpenChange={onOpenChangeAction}>
+    <Atoms.Dialog open={open} onOpenChange={handleOpenChange}>
       <Atoms.DialogContent className="w-3xl" hiddenTitle={t('hiddenTitle')}>
         <Atoms.DialogHeader>
           <Atoms.DialogTitle>{t('title')}</Atoms.DialogTitle>
@@ -25,6 +30,7 @@ export function DialogReply({ postId, open, onOpenChangeAction }: DialogReplyPro
           <Atoms.Container className="relative pl-6" overrideDefaults>
             <Organisms.PostInput
               dataCy="reply-post-input"
+              key={resetKey}
               variant={POST_INPUT_VARIANT.REPLY}
               postId={postId}
               onSuccess={() => {
@@ -32,9 +38,16 @@ export function DialogReply({ postId, open, onOpenChangeAction }: DialogReplyPro
               }}
               showThreadConnector={true}
               expanded={true}
+              onContentChange={handleContentChange}
             />
           </Atoms.Container>
         </Atoms.Container>
+        {/* Nested inside parent dialog to avoid mobile touch event issues with sibling portals */}
+        <Molecules.DialogConfirmDiscard
+          open={showConfirmDialog}
+          onOpenChange={() => setShowConfirmDialog(false)}
+          onConfirm={handleDiscard}
+        />
       </Atoms.DialogContent>
     </Atoms.Dialog>
   );

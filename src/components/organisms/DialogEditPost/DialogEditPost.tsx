@@ -27,42 +27,40 @@ export function DialogEditPost({ open, onOpenChangeAction, postId }: DialogEditP
   const title = isArticle ? 'Edit Article' : 'Edit Post';
 
   return (
-    <>
-      <Molecules.DialogConfirmDiscard
-        open={showConfirmDialog}
-        onOpenChange={() => setShowConfirmDialog(false)}
-        onConfirm={handleDiscard}
-      />
+    <Atoms.Dialog open={open} onOpenChange={handleOpenChange}>
+      <Atoms.DialogContent
+        className="w-3xl"
+        hiddenTitle={title}
+        onOpenAutoFocus={(e) => {
+          if (isArticle) {
+            e.preventDefault();
+          }
+        }}
+      >
+        <Atoms.DialogHeader>
+          <Atoms.DialogTitle>{title}</Atoms.DialogTitle>
 
-      <Atoms.Dialog open={open} onOpenChange={handleOpenChange}>
-        <Atoms.DialogContent
-          className="w-3xl"
-          hiddenTitle={title}
-          onOpenAutoFocus={(e) => {
-            if (isArticle) {
-              e.preventDefault();
-            }
-          }}
-        >
-          <Atoms.DialogHeader>
-            <Atoms.DialogTitle>{title}</Atoms.DialogTitle>
+          <Atoms.DialogDescription className="sr-only">{title} dialog</Atoms.DialogDescription>
+        </Atoms.DialogHeader>
 
-            <Atoms.DialogDescription className="sr-only">{title} dialog</Atoms.DialogDescription>
-          </Atoms.DialogHeader>
-
-          <Organisms.PostInput
-            dataCy="edit-post-input"
-            key={resetKey}
-            variant={POST_INPUT_VARIANT.EDIT}
-            onSuccess={() => onOpenChangeAction(false)}
-            expanded={true}
-            onContentChange={handleContentChange}
-            editPostId={postDetails.id}
-            editContent={postDetails.content}
-            editIsArticle={isArticle}
-          />
-        </Atoms.DialogContent>
-      </Atoms.Dialog>
-    </>
+        <Organisms.PostInput
+          dataCy="edit-post-input"
+          key={resetKey}
+          variant={POST_INPUT_VARIANT.EDIT}
+          onSuccess={() => onOpenChangeAction(false)}
+          expanded={true}
+          onContentChange={handleContentChange}
+          editPostId={postDetails.id}
+          editContent={postDetails.content}
+          editIsArticle={isArticle}
+        />
+        {/* Nested inside parent dialog to avoid mobile touch event issues with sibling portals */}
+        <Molecules.DialogConfirmDiscard
+          open={showConfirmDialog}
+          onOpenChange={() => setShowConfirmDialog(false)}
+          onConfirm={handleDiscard}
+        />
+      </Atoms.DialogContent>
+    </Atoms.Dialog>
   );
 }
