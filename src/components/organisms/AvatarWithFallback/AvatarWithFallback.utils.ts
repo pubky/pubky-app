@@ -1,4 +1,6 @@
 import * as Config from '@/config';
+import * as Libs from '@/libs';
+import type { ResolveAvatarFallbackSeedProps, ResolveAvatarFallbackInitialProps } from './AvatarWithFallback.types';
 
 /**
  * Regex pattern for validating userId format.
@@ -23,7 +25,6 @@ const USER_ID_PATTERN = /^[a-z0-9]{52}$/;
  */
 export function extractUserIdFromAvatarUrl(avatarUrl: string | undefined | null): string | null {
   if (!avatarUrl) return null;
-  if (!avatarUrl) return null;
 
   const expectedPrefix = `${Config.CDN_URL}/avatar/`;
 
@@ -36,4 +37,35 @@ export function extractUserIdFromAvatarUrl(avatarUrl: string | undefined | null)
   if (!USER_ID_PATTERN.test(userId)) return null;
 
   return userId;
+}
+
+export function resolveAvatarFallbackSeed({
+  fallbackSeed,
+  userId,
+  name,
+  defaultSeed = 'user',
+}: ResolveAvatarFallbackSeedProps): string {
+  const normalizedFallbackSeed = fallbackSeed?.trim();
+  if (normalizedFallbackSeed) return normalizedFallbackSeed;
+
+  if (userId) return userId;
+
+  const normalizedName = name?.trim();
+  if (normalizedName) return normalizedName;
+
+  return defaultSeed;
+}
+
+export function resolveAvatarFallbackInitial({
+  name,
+  seed,
+  defaultInitial = 'U',
+}: ResolveAvatarFallbackInitialProps): string {
+  const nameInitial = Libs.extractInitials({ name: name ?? '', maxLength: 1 });
+  if (nameInitial) return nameInitial;
+
+  const seedInitial = seed?.trim().charAt(0).toUpperCase();
+  if (seedInitial) return seedInitial;
+
+  return defaultInitial;
 }

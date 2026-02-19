@@ -64,7 +64,6 @@ export class BootstrapApplication {
       // Both features: hot tags and tag streams
       Core.LocalHotService.upsert(Core.buildHotTagsId(Core.UserStreamTimeframe.TODAY, 'all'), data.ids.hot_tags),
       Core.LocalStreamTagsService.upsert(Core.TagStreamTypes.TODAY_ALL, data.ids.hot_tags),
-      // Core.LocalNotificationService.persistAndGetUnreadCount({ flatNotifications, lastRead }),
     ]);
     onProgress?.('dataPersisted'); // Step 4 complete (80%)
 
@@ -144,6 +143,7 @@ export class BootstrapApplication {
       }
     }
 
+    // Get the latest notifications
     const notificationList = await Core.NexusUserService.notifications({
       user_id: pubky,
       limit: Config.NEXUS_NOTIFICATIONS_LIMIT,
@@ -155,10 +155,11 @@ export class BootstrapApplication {
       notifications: notificationList,
       viewerId: pubky,
     });
-    const unread = await Core.LocalNotificationService.persistAndGetUnreadCount({
+    const { unread, nextPollCursor } = await Core.NotificationApplication.persistAndSummarize({
+      notifications: notificationList,
       flatNotifications,
       lastRead: userLastRead,
     });
-    return { unread, lastRead: userLastRead };
+    return { unread, lastRead: userLastRead, lastPolledTimestamp: nextPollCursor };
   }
 }

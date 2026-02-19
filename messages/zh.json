@@ -1000,6 +1000,7 @@
     "trendingPosts": "热门帖子",
     "postsCount": "{count} 条帖子",
     "failedToLoadUsers": "加载用户失败",
+    "failedToLoadTags": "加载标签失败",
     "noUsersToShow": "暂无用户显示"
   },
   "privacy": {

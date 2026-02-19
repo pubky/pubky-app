@@ -40,7 +40,7 @@ exports[`InstallCard - Snapshots > matches snapshot 1`] = `
             alt="Pubky Ring"
             class="w-[137px] sm:w-auto"
             height="48"
-            src="/images/logo-pubky-ring-blue.svg"
+            src="/images/logo-pubky-ring.svg"
             width="220"
           />
         </div>

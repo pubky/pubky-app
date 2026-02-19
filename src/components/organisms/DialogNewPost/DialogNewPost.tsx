@@ -23,41 +23,40 @@ export function DialogNewPost({ open, onOpenChangeAction }: DialogNewPostProps) 
   const { isKeyboardVisible, keyboardOffset } = Hooks.useKeyboardOffset({ offsetAdjustment: 200 });
 
   return (
-    <>
-      <Molecules.DialogConfirmDiscard
-        open={showConfirmDialog}
-        onOpenChange={() => setShowConfirmDialog(false)}
-        onConfirm={handleDiscard}
-      />
-      <Atoms.Dialog open={open} onOpenChange={handleOpenChange}>
-        <Atoms.DialogContent
-          className={Libs.cn('w-3xl', isKeyboardVisible && 'transition-transform duration-75')}
-          style={
-            isKeyboardVisible && keyboardOffset > 0
-              ? {
-                  transform: `translateY(-${keyboardOffset}px)`,
-                }
-              : undefined
-          }
-          hiddenTitle={title}
-        >
-          <Atoms.DialogHeader>
-            <Atoms.DialogTitle>{title}</Atoms.DialogTitle>
-            <Atoms.DialogDescription className="sr-only">{t('description', { title })}</Atoms.DialogDescription>
-          </Atoms.DialogHeader>
-          <Atoms.Container className="gap-3">
-            <Organisms.PostInput
-              dataCy="new-post-input"
-              key={resetKey}
-              variant={POST_INPUT_VARIANT.POST}
-              onSuccess={() => onOpenChangeAction(false)}
-              expanded={true}
-              onContentChange={handleContentChange}
-              onArticleModeChange={setIsArticle}
-            />
-          </Atoms.Container>
-        </Atoms.DialogContent>
-      </Atoms.Dialog>
-    </>
+    <Atoms.Dialog open={open} onOpenChange={handleOpenChange}>
+      <Atoms.DialogContent
+        className={Libs.cn('w-3xl', isKeyboardVisible && 'transition-transform duration-75')}
+        style={
+          isKeyboardVisible && keyboardOffset > 0
+            ? {
+                transform: `translateY(-${keyboardOffset}px)`,
+              }
+            : undefined
+        }
+        hiddenTitle={title}
+      >
+        <Atoms.DialogHeader>
+          <Atoms.DialogTitle>{title}</Atoms.DialogTitle>
+          <Atoms.DialogDescription className="sr-only">{t('description', { title })}</Atoms.DialogDescription>
+        </Atoms.DialogHeader>
+        <Atoms.Container className="gap-3">
+          <Organisms.PostInput
+            dataCy="new-post-input"
+            key={resetKey}
+            variant={POST_INPUT_VARIANT.POST}
+            onSuccess={() => onOpenChangeAction(false)}
+            expanded={true}
+            onContentChange={handleContentChange}
+            onArticleModeChange={setIsArticle}
+          />
+        </Atoms.Container>
+        {/* Nested inside parent dialog to avoid mobile touch event issues with sibling portals */}
+        <Molecules.DialogConfirmDiscard
+          open={showConfirmDialog}
+          onOpenChange={() => setShowConfirmDialog(false)}
+          onConfirm={handleDiscard}
+        />
+      </Atoms.DialogContent>
+    </Atoms.Dialog>
   );
 }

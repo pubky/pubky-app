@@ -40,12 +40,6 @@ const envSchema = z.object({
   /** CDN URL for static assets */
   NEXT_PUBLIC_CDN_URL: z.string().url().default('https://nexus.staging.pubky.app/static'),
 
-  NEXT_PUBLIC_SYNC_TTL: z
-    .string()
-    .default('300000') // 5 minutes in milliseconds
-    .transform((val) => parseInt(val, 10))
-    .pipe(z.number().int().positive()),
-
   NEXT_PUBLIC_NOTIFICATION_POLL_INTERVAL_MS: z
     .string()
     .default('8888') // 8888 milliseconds
@@ -298,7 +292,6 @@ function parseEnv(): z.infer<typeof envSchema> {
     NEXT_PUBLIC_DEBUG_MODE: process.env.NEXT_PUBLIC_DEBUG_MODE,
     NEXT_PUBLIC_NEXUS_URL: process.env.NEXT_PUBLIC_NEXUS_URL,
     NEXT_PUBLIC_CDN_URL: process.env.NEXT_PUBLIC_CDN_URL,
-    NEXT_PUBLIC_SYNC_TTL: process.env.NEXT_PUBLIC_SYNC_TTL,
     NEXT_PUBLIC_NOTIFICATION_POLL_INTERVAL_MS: process.env.NEXT_PUBLIC_NOTIFICATION_POLL_INTERVAL_MS,
     NEXT_PUBLIC_NOTIFICATION_POLL_ON_START: process.env.NEXT_PUBLIC_NOTIFICATION_POLL_ON_START,
     NEXT_PUBLIC_NOTIFICATION_RESPECT_PAGE_VISIBILITY: process.env.NEXT_PUBLIC_NOTIFICATION_RESPECT_PAGE_VISIBILITY,

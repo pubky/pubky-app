@@ -63,15 +63,6 @@ export class ProfileController {
   }
 
   /**
-   * Generates secrets and sets them only in the onboarding store.
-   * Use when validating invite code via signUp; auth store is updated only after signUp succeeds (AuthController.signUp).
-   */
-  static generateSecretsForSignUp() {
-    const secrets = Libs.Identity.generateSecrets();
-    Core.useOnboardingStore.getState().setSecrets(secrets);
-  }
-
-  /**
    * Creates a recovery file for the keypair
    * @param passphrase - The passphrase to use to create the recovery file
    */

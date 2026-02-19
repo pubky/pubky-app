@@ -1,25 +1,24 @@
 'use client';
 
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect } from 'react';
 import { useLiveQuery } from 'dexie-react-hooks';
 import * as Atoms from '@/atoms';
 import * as Libs from '@/libs';
 import * as Core from '@/core';
-import { extractUserIdFromAvatarUrl } from './AvatarWithFallback.utils';
+import { FacehashAvatar } from '@/molecules/FacehashAvatar';
+import {
+  extractUserIdFromAvatarUrl,
+  resolveAvatarFallbackSeed,
+  resolveAvatarFallbackInitial,
+} from './AvatarWithFallback.utils';
+import type { AvatarWithFallbackProps } from './AvatarWithFallback.types';
 
-export interface AvatarWithFallbackProps {
-  avatarUrl?: string;
-  name: string;
-  size?: Atoms.AvatarSize;
-  className?: string;
-  fallbackClassName?: string;
-  alt?: string;
-  'data-testid'?: string;
-}
+export type { AvatarWithFallbackProps };
 
 export function AvatarWithFallback({
   avatarUrl,
   name,
+  fallbackSeed,
   size = 'default',
   className,
   fallbackClassName,
@@ -29,7 +28,9 @@ export function AvatarWithFallback({
   const [imageError, setImageError] = useState(false);
 
   // Extract userId from CDN URL for moderation and local avatar resolution
-  const userId = useMemo(() => extractUserIdFromAvatarUrl(avatarUrl), [avatarUrl]);
+  const userId = extractUserIdFromAvatarUrl(avatarUrl);
+  const resolvedFallbackSeed = resolveAvatarFallbackSeed({ fallbackSeed, userId, name });
+  const fallbackInitial = resolveAvatarFallbackInitial({ name, seed: resolvedFallbackSeed });
 
   // Check if this avatar belongs to the current user
   const currentUserPubky = Core.useAuthStore((s) => s.currentUserPubky);
@@ -101,7 +102,9 @@ export function AvatarWithFallback({
         </>
       )}
       {/* Always render fallback - Radix shows it while image loads or if image fails */}
-      <Atoms.AvatarFallback className={fallbackClassName}>{Libs.extractInitials({ name })}</Atoms.AvatarFallback>
+      <Atoms.AvatarFallback className={Libs.cn('overflow-hidden border-none', fallbackClassName)}>
+        <FacehashAvatar seed={resolvedFallbackSeed} initial={fallbackInitial} />
+      </Atoms.AvatarFallback>
     </Atoms.Avatar>
   );
 }

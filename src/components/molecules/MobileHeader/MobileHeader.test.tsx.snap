@@ -368,7 +368,7 @@ exports[`MobileHeader - Snapshots > matches snapshot with padding container 1`] 
 
 exports[`MobileHeader - Snapshots > matches snapshot with solid background (hasGradientBackground=false) 1`] = `
 <div
-  class="sticky top-0 z-(--z-mobile-menu) lg:hidden bg-background shadow-xs-dark"
+  class="sticky top-0 z-(--z-mobile-menu) lg:hidden bg-background shadow-xs"
   data-testid="container"
 >
   <div
