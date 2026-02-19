@@ -2,55 +2,196 @@
 
 exports[`DialogEditPost - Snapshots > matches snapshot for long post (Edit Article) 1`] = `
 <div
-  data-open="false"
-  data-testid="dialog-confirm-discard"
+  data-open="true"
+  data-testid="dialog"
 >
-  <button
-    data-testid="mock-confirm-btn"
+  <div
+    aria-label="Edit Article"
+    class="w-3xl"
+    data-testid="dialog-content"
   >
-    Confirm
-  </button>
-  <button
-    data-testid="mock-cancel-btn"
-  >
-    Cancel
-  </button>
+    <div
+      data-testid="dialog-header"
+    >
+      <h2
+        data-testid="dialog-title"
+      >
+        Edit Article
+      </h2>
+      <p
+        class="sr-only"
+        data-testid="dialog-description"
+      >
+        Edit Article
+         dialog
+      </p>
+    </div>
+    <div
+      data-cy="edit-post-input"
+      data-edit-content="Snapshot article content"
+      data-edit-is-article="true"
+      data-edit-post-id="snapshot-article-id"
+      data-expanded="true"
+      data-testid="post-input"
+      data-variant="edit"
+    >
+      <button
+        data-testid="mock-success-btn"
+      >
+        Success
+      </button>
+      <button
+        data-testid="mock-content-change-btn"
+      >
+        Change Content
+      </button>
+    </div>
+    <div
+      data-open="false"
+      data-testid="dialog-confirm-discard"
+    >
+      <button
+        data-testid="mock-confirm-btn"
+      >
+        Confirm
+      </button>
+      <button
+        data-testid="mock-cancel-btn"
+      >
+        Cancel
+      </button>
+    </div>
+  </div>
 </div>
 `;
 
 exports[`DialogEditPost - Snapshots > matches snapshot for short post (Edit Post) 1`] = `
 <div
-  data-open="false"
-  data-testid="dialog-confirm-discard"
+  data-open="true"
+  data-testid="dialog"
 >
-  <button
-    data-testid="mock-confirm-btn"
+  <div
+    aria-label="Edit Post"
+    class="w-3xl"
+    data-testid="dialog-content"
   >
-    Confirm
-  </button>
-  <button
-    data-testid="mock-cancel-btn"
-  >
-    Cancel
-  </button>
+    <div
+      data-testid="dialog-header"
+    >
+      <h2
+        data-testid="dialog-title"
+      >
+        Edit Post
+      </h2>
+      <p
+        class="sr-only"
+        data-testid="dialog-description"
+      >
+        Edit Post
+         dialog
+      </p>
+    </div>
+    <div
+      data-cy="edit-post-input"
+      data-edit-content="Snapshot post content"
+      data-edit-is-article="false"
+      data-edit-post-id="snapshot-post-id"
+      data-expanded="true"
+      data-testid="post-input"
+      data-variant="edit"
+    >
+      <button
+        data-testid="mock-success-btn"
+      >
+        Success
+      </button>
+      <button
+        data-testid="mock-content-change-btn"
+      >
+        Change Content
+      </button>
+    </div>
+    <div
+      data-open="false"
+      data-testid="dialog-confirm-discard"
+    >
+      <button
+        data-testid="mock-confirm-btn"
+      >
+        Confirm
+      </button>
+      <button
+        data-testid="mock-cancel-btn"
+      >
+        Cancel
+      </button>
+    </div>
+  </div>
 </div>
 `;
 
 exports[`DialogEditPost - Snapshots > matches snapshot when dialog is closed 1`] = `
 <div
   data-open="false"
-  data-testid="dialog-confirm-discard"
+  data-testid="dialog"
 >
-  <button
-    data-testid="mock-confirm-btn"
+  <div
+    aria-label="Edit Post"
+    class="w-3xl"
+    data-testid="dialog-content"
   >
-    Confirm
-  </button>
-  <button
-    data-testid="mock-cancel-btn"
-  >
-    Cancel
-  </button>
+    <div
+      data-testid="dialog-header"
+    >
+      <h2
+        data-testid="dialog-title"
+      >
+        Edit Post
+      </h2>
+      <p
+        class="sr-only"
+        data-testid="dialog-description"
+      >
+        Edit Post
+         dialog
+      </p>
+    </div>
+    <div
+      data-cy="edit-post-input"
+      data-edit-content="Snapshot post content"
+      data-edit-is-article="false"
+      data-edit-post-id="snapshot-post-id"
+      data-expanded="true"
+      data-testid="post-input"
+      data-variant="edit"
+    >
+      <button
+        data-testid="mock-success-btn"
+      >
+        Success
+      </button>
+      <button
+        data-testid="mock-content-change-btn"
+      >
+        Change Content
+      </button>
+    </div>
+    <div
+      data-open="false"
+      data-testid="dialog-confirm-discard"
+    >
+      <button
+        data-testid="mock-confirm-btn"
+      >
+        Confirm
+      </button>
+      <button
+        data-testid="mock-cancel-btn"
+      >
+        Cancel
+      </button>
+    </div>
+  </div>
 </div>
 `;
 

@@ -6,14 +6,29 @@ export class NotificationController {
 
   /**
    * Refreshes unread notifications for the current user.
+   * Uses lastPolledTimestamp as the Nexus polling cursor and lastRead as the read/unread boundary.
+   * After fetching, advances lastPolledTimestamp to the newest notification timestamp.
+   *
    * @param userId - The user ID to fetch notifications for
    * @returns Promise resolving when notifications are updated
    */
   static async fetchNotifications({ userId }: Core.TReadProfileParams) {
     const notificationStore = Core.useNotificationStore.getState();
+    const lastPolledTimestamp = notificationStore.selectLastPolledTimestamp();
     const lastRead = notificationStore.selectLastRead();
-    const unread = await Core.NotificationApplication.fetchNotifications({ userId, lastRead });
+
+    const { unread, nextPollCursor } = await Core.NotificationApplication.fetchNotifications({
+      userId,
+      lastPolledTimestamp,
+      lastRead,
+    });
+
     notificationStore.setUnread(unread);
+
+    const currentCursor = notificationStore.selectLastPolledTimestamp();
+    if (nextPollCursor !== undefined && (currentCursor === undefined || nextPollCursor > currentCursor)) {
+      notificationStore.setLastPolledTimestamp(nextPollCursor);
+    }
   }
 
   /**

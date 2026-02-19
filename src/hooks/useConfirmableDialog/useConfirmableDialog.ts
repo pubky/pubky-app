@@ -55,10 +55,7 @@ export function useConfirmableDialog({
       contentRef.current = { content: '', tags: [], attachments: [], articleTitle: '' };
     } else {
       const contentExists = externalHasContent ? externalHasContent() : internalHasContent();
-      // The !showConfirmDialog guard is defensive: prevents redundant state updates
-      // if this fires while confirm dialog is open. In practice unlikely since the
-      // modal confirm dialog captures Escape/click-outside before they reach here.
-      if (contentExists && !showConfirmDialog) {
+      if (contentExists) {
         setShowConfirmDialog(true);
       } else {
         onClose();
