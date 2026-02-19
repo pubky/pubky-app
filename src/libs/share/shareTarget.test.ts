@@ -1,6 +1,13 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { getSharedFiles, composeShareContent } from './shareTarget';
 
+function createMockResponse(blob: Blob, headers: Headers): Response {
+  return {
+    blob: () => Promise.resolve(blob),
+    headers,
+  } as unknown as Response;
+}
+
 // Store original caches
 const originalCaches = global.caches;
 
@@ -54,7 +61,7 @@ describe('shareTarget utilities', () => {
         'X-Share-Filename': 'test-image.png',
         'Content-Type': 'image/png',
       });
-      const mockResponse = new Response(mockBlob, { headers: mockHeaders });
+      const mockResponse = createMockResponse(mockBlob, mockHeaders);
 
       mockCacheKeys.mockResolvedValue([mockRequest]);
       mockCacheMatch.mockResolvedValue(mockResponse);
@@ -73,7 +80,7 @@ describe('shareTarget utilities', () => {
       const mockHeaders = new Headers({
         'Content-Type': 'image/jpeg',
       });
-      const mockResponse = new Response(mockBlob, { headers: mockHeaders });
+      const mockResponse = createMockResponse(mockBlob, mockHeaders);
 
       mockCacheKeys.mockResolvedValue([mockRequest]);
       mockCacheMatch.mockResolvedValue(mockResponse);
@@ -121,12 +128,14 @@ describe('shareTarget utilities', () => {
       const mockBlob1 = new Blob(['image content'], { type: 'image/png' });
       const mockBlob2 = new Blob(['video content'], { type: 'video/mp4' });
 
-      const mockResponse1 = new Response(mockBlob1, {
-        headers: new Headers({ 'X-Share-Filename': 'image.png', 'Content-Type': 'image/png' }),
-      });
-      const mockResponse2 = new Response(mockBlob2, {
-        headers: new Headers({ 'X-Share-Filename': 'video.mp4', 'Content-Type': 'video/mp4' }),
-      });
+      const mockResponse1 = createMockResponse(
+        mockBlob1,
+        new Headers({ 'X-Share-Filename': 'image.png', 'Content-Type': 'image/png' }),
+      );
+      const mockResponse2 = createMockResponse(
+        mockBlob2,
+        new Headers({ 'X-Share-Filename': 'video.mp4', 'Content-Type': 'video/mp4' }),
+      );
 
       mockCacheKeys.mockResolvedValue([mockRequest1, mockRequest2]);
       mockCacheMatch.mockResolvedValueOnce(mockResponse1).mockResolvedValueOnce(mockResponse2);
@@ -143,9 +152,10 @@ describe('shareTarget utilities', () => {
       const mockRequest2 = new Request('http://localhost/file-1');
 
       const mockBlob = new Blob(['content'], { type: 'image/png' });
-      const mockResponse = new Response(mockBlob, {
-        headers: new Headers({ 'X-Share-Filename': 'valid.png', 'Content-Type': 'image/png' }),
-      });
+      const mockResponse = createMockResponse(
+        mockBlob,
+        new Headers({ 'X-Share-Filename': 'valid.png', 'Content-Type': 'image/png' }),
+      );
 
       mockCacheKeys.mockResolvedValue([mockRequest1, mockRequest2]);
       mockCacheMatch
@@ -161,9 +171,10 @@ describe('shareTarget utilities', () => {
     it('clears cache after retrieval', async () => {
       const mockRequest = new Request('http://localhost/file-0');
       const mockBlob = new Blob(['content'], { type: 'image/png' });
-      const mockResponse = new Response(mockBlob, {
-        headers: new Headers({ 'X-Share-Filename': 'test.png', 'Content-Type': 'image/png' }),
-      });
+      const mockResponse = createMockResponse(
+        mockBlob,
+        new Headers({ 'X-Share-Filename': 'test.png', 'Content-Type': 'image/png' }),
+      );
 
       mockCacheKeys.mockResolvedValue([mockRequest]);
       mockCacheMatch.mockResolvedValue(mockResponse);
