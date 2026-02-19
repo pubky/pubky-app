@@ -18,6 +18,7 @@ export const useNotificationStore = create<NotificationStore>()(
         // Only persist essential data
         partialize: (state) => ({
           lastRead: state.lastRead,
+          lastPolledTimestamp: state.lastPolledTimestamp,
           unread: state.unread,
         }),
       },
