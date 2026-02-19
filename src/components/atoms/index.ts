@@ -27,6 +27,7 @@ export * from './PostThreadSpacer';
 export * from './ReplyLine';
 export * from './Sheet';
 export * from './SidebarButton';
+export * from './Skeleton';
 export * from './Spinner';
 export * from './Textarea';
 export * from './Toast';

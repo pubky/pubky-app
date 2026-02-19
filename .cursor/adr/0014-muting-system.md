@@ -139,9 +139,9 @@ await UserController.commitMute('unmute', { muter: currentUserId, mutee: targetU
 **Checking mute status** for UI display (e.g., showing "Muted" badge):
 
 ```typescript
-import { UserApplication } from '@/core/application/user/user';
+import { UserController } from '@/core/controllers/user/user';
 
-const relationship = await UserApplication.getRelationships({ userId: targetUserId });
+const relationship = await UserController.getRelationships({ userId: targetUserId });
 const isMuted = relationship?.muted ?? false;
 ```
 

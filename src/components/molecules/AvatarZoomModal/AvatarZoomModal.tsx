@@ -10,6 +10,7 @@ export interface AvatarZoomModalProps {
   onClose: () => void;
   avatarUrl?: string;
   name: string;
+  fallbackSeed?: string;
 }
 
 /**
@@ -21,7 +22,7 @@ export interface AvatarZoomModalProps {
  * @param avatarUrl - Optional URL to avatar image
  * @param name - User's name for fallback initials and alt text
  */
-export function AvatarZoomModal({ open, onClose, avatarUrl, name }: AvatarZoomModalProps) {
+export function AvatarZoomModal({ open, onClose, avatarUrl, name, fallbackSeed }: AvatarZoomModalProps) {
   const modalRef = useRef<HTMLDivElement>(null);
   const onCloseRef = useRef(onClose);
 
@@ -79,6 +80,7 @@ export function AvatarZoomModal({ open, onClose, avatarUrl, name }: AvatarZoomMo
         <Organisms.AvatarWithFallback
           avatarUrl={avatarUrl}
           name={name}
+          fallbackSeed={fallbackSeed}
           className="size-(--avatar-zoom-size) transition-transform hover:scale-105"
           fallbackClassName="text-6xl"
           alt={`${name}'s avatar`}

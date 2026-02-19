@@ -45,7 +45,7 @@ The fundamental issue: **Where does cross-domain orchestration belong?**
 1. **Horizontal calls permitted**: Application classes MAY call other Application classes within the same layer
 2. **Acyclic dependency graph**: Circular dependencies between Application classes are FORBIDDEN
 3. **Maximum call depth of 1**: If Application A calls Application B, then B MUST NOT call any other Application class within that execution flow
-4. **Orchestration privilege**: ONLY `PostApplication` and `UserApplication` are permitted to call other Application classes. All other Application classes (FileApplication, TagApplication, BookmarkApplication, etc.) MUST NOT call other Application classes, including PostApplication or UserApplication. This ensures that core domain entities (posts and users) can orchestrate specialized domains, but specialized domains remain independent and cannot create reverse dependencies on core entities.
+4. **Orchestration privilege**: `PostApplication` and `UserApplication` are permitted to call other Application classes. `NotificationApplication` is also permitted as a scoped exception defined by ADR-0010 (read-only hydration before notification persistence). All other Application classes (FileApplication, TagApplication, BookmarkApplication, etc.) MUST NOT call other Application classes, including PostApplication, UserApplication, or NotificationApplication. This ensures orchestrators can coordinate cross-domain workflows while specialized domains remain independent and cannot create reverse dependencies on core entities.
 
 ### Example
 
@@ -126,7 +126,7 @@ class FileApplication {
 1. **Code Reviews**: Reviewers MUST check for:
    - Circular dependencies
    - Excessive call depth (max depth 1)
-   - **Orchestration privilege violations** (only PostApplication/UserApplication can call other Applications)
+   - **Orchestration privilege violations** (only PostApplication/UserApplication/NotificationApplication can call other Applications)
 2. **Documentation**: This ADR as the source of truth
 3. **Testing**: Integration tests to catch violations at runtime
 4. **Code Comments**: Developers MUST document cross-Application calls with ADR reference
@@ -144,14 +144,14 @@ class FileApplication {
 - ✅ Single user action requires multi-domain coordination
 - ✅ Complex workflow with ordering/transactional requirements
 - ✅ Avoiding code duplication of orchestration logic
-- ✅ **Only from PostApplication or UserApplication** (core domain orchestrators)
+- ✅ **Only from PostApplication, UserApplication, or NotificationApplication** (NotificationApplication is constrained by ADR-0010)
 
 **When NOT to use:**
 
 - ❌ Simple read operations (use services directly)
 - ❌ Single-domain workflows (stay within one Application)
 - ❌ Deep processing chains (refactor to flatten)
-- ❌ **From specialized Application classes** (FileApplication, TagApplication, BookmarkApplication, etc.) - these must remain independent and cannot depend on PostApplication or UserApplication
+- ❌ **From specialized Application classes** (FileApplication, TagApplication, BookmarkApplication, etc.) - these must remain independent and cannot depend on PostApplication, UserApplication, or NotificationApplication
 
 ## Consequences
 
@@ -291,3 +291,8 @@ class PostApplication {
 - Code bloat
 
 **Why not chosen**: The maintenance burden and inconsistency risk outweigh the benefits of independence. Orchestration logic should be reusable.
+
+## Related Decisions
+
+- **ADR-0004: Layering and Dependency Rules** — Establishes base layer flow that this ADR extends.
+- **ADR-0010: Notification Application Cross-Domain Orchestration Privilege** — Adds a constrained exception for `NotificationApplication` orchestration.

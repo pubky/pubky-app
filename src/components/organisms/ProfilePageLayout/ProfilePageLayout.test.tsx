@@ -55,14 +55,21 @@ vi.mock('@/molecules', () => ({
     onClose,
     avatarUrl,
     name,
+    fallbackSeed,
   }: {
     open: boolean;
     onClose: () => void;
     avatarUrl?: string;
     name: string;
+    fallbackSeed?: string;
   }) =>
     open ? (
-      <div data-testid="avatar-zoom-modal" data-avatar-url={avatarUrl} data-name={name}>
+      <div
+        data-testid="avatar-zoom-modal"
+        data-avatar-url={avatarUrl}
+        data-name={name}
+        data-fallback-seed={fallbackSeed}
+      >
         <button data-testid="modal-close" onClick={onClose}>
           Close
         </button>
@@ -270,6 +277,7 @@ describe('ProfilePageLayout', () => {
       const modal = screen.getByTestId('avatar-zoom-modal');
       expect(modal).toHaveAttribute('data-avatar-url', mockProfile.avatarUrl);
       expect(modal).toHaveAttribute('data-name', mockProfile.name);
+      expect(modal).toHaveAttribute('data-fallback-seed', defaultProps.userId);
     });
 
     it('passes onAvatarClick action to ProfilePageHeader', () => {

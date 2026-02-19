@@ -4,21 +4,6 @@ exports[`DialogFeedback - Snapshots > matches snapshot for closed state 1`] = `
 <div>
   <div
     data-open="false"
-    data-testid="dialog-confirm-discard"
-  >
-    <button
-      data-testid="confirm-discard-cancel"
-    >
-      Cancel
-    </button>
-    <button
-      data-testid="confirm-discard-confirm"
-    >
-      Discard
-    </button>
-  </div>
-  <div
-    data-open="false"
     data-testid="dialog"
   >
     <div
@@ -33,6 +18,21 @@ exports[`DialogFeedback - Snapshots > matches snapshot for closed state 1`] = `
       >
         DialogFeedbackContent
       </div>
+      <div
+        data-open="false"
+        data-testid="dialog-confirm-discard"
+      >
+        <button
+          data-testid="confirm-discard-cancel"
+        >
+          Cancel
+        </button>
+        <button
+          data-testid="confirm-discard-confirm"
+        >
+          Discard
+        </button>
+      </div>
     </div>
   </div>
 </div>
@@ -40,21 +40,6 @@ exports[`DialogFeedback - Snapshots > matches snapshot for closed state 1`] = `
 
 exports[`DialogFeedback - Snapshots > matches snapshot for default state 1`] = `
 <div>
-  <div
-    data-open="false"
-    data-testid="dialog-confirm-discard"
-  >
-    <button
-      data-testid="confirm-discard-cancel"
-    >
-      Cancel
-    </button>
-    <button
-      data-testid="confirm-discard-confirm"
-    >
-      Discard
-    </button>
-  </div>
   <div
     data-open="true"
     data-testid="dialog"
@@ -71,6 +56,21 @@ exports[`DialogFeedback - Snapshots > matches snapshot for default state 1`] = `
       >
         DialogFeedbackContent
       </div>
+      <div
+        data-open="false"
+        data-testid="dialog-confirm-discard"
+      >
+        <button
+          data-testid="confirm-discard-cancel"
+        >
+          Cancel
+        </button>
+        <button
+          data-testid="confirm-discard-confirm"
+        >
+          Discard
+        </button>
+      </div>
     </div>
   </div>
 </div>
@@ -78,21 +78,6 @@ exports[`DialogFeedback - Snapshots > matches snapshot for default state 1`] = `
 
 exports[`DialogFeedback - Snapshots > matches snapshot for success state 1`] = `
 <div>
-  <div
-    data-open="false"
-    data-testid="dialog-confirm-discard"
-  >
-    <button
-      data-testid="confirm-discard-cancel"
-    >
-      Cancel
-    </button>
-    <button
-      data-testid="confirm-discard-confirm"
-    >
-      Discard
-    </button>
-  </div>
   <div
     data-open="true"
     data-testid="dialog"
@@ -107,6 +92,21 @@ exports[`DialogFeedback - Snapshots > matches snapshot for success state 1`] = `
       >
         DialogFeedbackSuccess
       </div>
+      <div
+        data-open="false"
+        data-testid="dialog-confirm-discard"
+      >
+        <button
+          data-testid="confirm-discard-cancel"
+        >
+          Cancel
+        </button>
+        <button
+          data-testid="confirm-discard-confirm"
+        >
+          Discard
+        </button>
+      </div>
     </div>
   </div>
 </div>
@@ -114,21 +114,6 @@ exports[`DialogFeedback - Snapshots > matches snapshot for success state 1`] = `
 
 exports[`DialogFeedback - Snapshots > matches snapshot when submitting 1`] = `
 <div>
-  <div
-    data-open="false"
-    data-testid="dialog-confirm-discard"
-  >
-    <button
-      data-testid="confirm-discard-cancel"
-    >
-      Cancel
-    </button>
-    <button
-      data-testid="confirm-discard-confirm"
-    >
-      Discard
-    </button>
-  </div>
   <div
     data-open="true"
     data-testid="dialog"
@@ -145,6 +130,21 @@ exports[`DialogFeedback - Snapshots > matches snapshot when submitting 1`] = `
       >
         DialogFeedbackContent
       </div>
+      <div
+        data-open="false"
+        data-testid="dialog-confirm-discard"
+      >
+        <button
+          data-testid="confirm-discard-cancel"
+        >
+          Cancel
+        </button>
+        <button
+          data-testid="confirm-discard-confirm"
+        >
+          Discard
+        </button>
+      </div>
     </div>
   </div>
 </div>
@@ -152,21 +152,6 @@ exports[`DialogFeedback - Snapshots > matches snapshot when submitting 1`] = `
 
 exports[`DialogFeedback - Snapshots > matches snapshot with feedback content 1`] = `
 <div>
-  <div
-    data-open="false"
-    data-testid="dialog-confirm-discard"
-  >
-    <button
-      data-testid="confirm-discard-cancel"
-    >
-      Cancel
-    </button>
-    <button
-      data-testid="confirm-discard-confirm"
-    >
-      Discard
-    </button>
-  </div>
   <div
     data-open="true"
     data-testid="dialog"
@@ -182,6 +167,21 @@ exports[`DialogFeedback - Snapshots > matches snapshot with feedback content 1`]
         data-user="test-user-123"
       >
         DialogFeedbackContent
+      </div>
+      <div
+        data-open="false"
+        data-testid="dialog-confirm-discard"
+      >
+        <button
+          data-testid="confirm-discard-cancel"
+        >
+          Cancel
+        </button>
+        <button
+          data-testid="confirm-discard-confirm"
+        >
+          Discard
+        </button>
       </div>
     </div>
   </div>
