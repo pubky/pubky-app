@@ -6,6 +6,7 @@ export class LocalPostTagService {
     Core.PostTagsModel.table,
     Core.PostCountsModel.table,
     Core.UserCountsModel.table,
+    Core.PostTtlModel.table,
   ] as const;
   /**
    * Adds a tag to a post and updates all related counts.
@@ -34,6 +35,7 @@ export class LocalPostTagService {
           this.savePostTagsModel(postId, postTagsModel),
           this.updatePostCounts(postId, postTagsModel),
           Core.UserCountsModel.updateCounts({ userId: taggerId, countChanges: { tagged: 1 } }),
+          Core.PostTtlModel.upsert({ id: postId, lastUpdatedAt: Date.now() }),
         ]);
       });
     } catch (error) {
@@ -80,6 +82,7 @@ export class LocalPostTagService {
         await this.savePostTagsModel(postId, postTagsModel);
         await this.updatePostCounts(postId, postTagsModel);
         await Core.UserCountsModel.updateCounts({ userId: taggerId, countChanges: { tagged: -1 } });
+        await Core.PostTtlModel.upsert({ id: postId, lastUpdatedAt: Date.now() });
       });
       return true;
     } catch (error) {

@@ -87,6 +87,7 @@ type HeaderNavigationButtonsProps = {
   counter?: number;
   avatarImage?: string;
   avatarName?: string;
+  avatarSeed?: string;
 };
 
 const NAVIGATION_ITEMS: NavigationItemConfig[] = [
@@ -117,7 +118,12 @@ const NavigationButton = ({ href, icon: Icon, label, isActive, dataCy }: Navigat
   </Atoms.Link>
 );
 
-export function HeaderNavigationButtons({ counter = 0, avatarImage, avatarName = 'U' }: HeaderNavigationButtonsProps) {
+export function HeaderNavigationButtons({
+  counter = 0,
+  avatarImage,
+  avatarName = 'U',
+  avatarSeed,
+}: HeaderNavigationButtonsProps) {
   const pathname = usePathname();
   const t = useTranslations('header');
   const tCommon = useTranslations('common');
@@ -140,6 +146,7 @@ export function HeaderNavigationButtons({ counter = 0, avatarImage, avatarName =
         <Organisms.AvatarWithFallback
           avatarUrl={avatarImage}
           name={avatarName}
+          fallbackSeed={avatarSeed || avatarName}
           size="lg"
           className="cursor-pointer"
           alt={tCommon('profile')}

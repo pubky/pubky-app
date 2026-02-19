@@ -6,9 +6,6 @@ exports[`BackupNavigation > matches snapshot for default BackupNavigation 1`] = 
   data-testid="buttons-navigation"
 >
   <button
-    data-testid="back-button"
-  />
-  <button
     data-loading="false"
     data-testid="continue-button"
   />

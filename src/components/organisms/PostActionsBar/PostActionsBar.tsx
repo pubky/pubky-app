@@ -31,7 +31,7 @@ export function PostActionsBar({ postId, onTagClick, onReplyClick, onRepostClick
   const commonButtonProps = {
     variant: 'secondary' as const,
     size: 'sm' as const,
-    className: 'border-none shadow-xs-dark',
+    className: 'border-none shadow-xs',
   };
 
   const tagCount = postCounts.unique_tags ?? 0;

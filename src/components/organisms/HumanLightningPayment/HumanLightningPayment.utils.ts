@@ -1,17 +1,34 @@
-import { HomegateController, THomegateCreateLnVerificationResult } from '@/core';
+import { HomegateController, THomegateAwaitLnVerificationResult, THomegateCreateLnVerificationResult } from '@/core';
+import { getRetryAfter, isAppError, isRetryable, TimeoutErrorCode } from '@/libs';
 
 /**
  * Simple verification handler that manages the verification process and payment confirmation.
  */
 export class VerificationHandler {
+  private static readonly RETRY_BASE_DELAY_MS = 500;
+  private static readonly RETRY_MAX_DELAY_MS = 5000;
+  private static readonly RETRY_JITTER_FACTOR = 0.5;
+  private static readonly VISIBILITY_CHECK_MAX_RETRIES = 2;
+  private static readonly VISIBILITY_RECOVERY_DEBOUNCE_MS = 750;
+
   public aborted = false;
   private paymentConfirmed = false;
   private paymentExpiredTimeout: NodeJS.Timeout | null = null;
   private visibilityHandler: (() => void) | null = null;
+  private awaitLnVerificationPromise: Promise<THomegateAwaitLnVerificationResult> | null = null;
+  private awaitLnVerificationAbortController: AbortController | null = null;
+  private retryAttempt = 0;
+  private sleepTimer: NodeJS.Timeout | null = null;
+  private sleepResolve: (() => void) | null = null;
+  private ignoreNextAbortError = false;
+  private visibilityRecoveryInProgress = false;
+  private lastVisibilityRecoveryAt = 0;
+
   private constructor(
-    public data: THomegateCreateLnVerificationResult,
-    public onPaymentConfirmed: (signupCode: string, homeserverPubky: string) => void,
-    public onPaymentExpired: () => void,
+    public readonly data: THomegateCreateLnVerificationResult,
+    private readonly onPaymentConfirmed: (signupCode: string, homeserverPubky: string) => void,
+    private readonly onPaymentExpired: () => void,
+    private readonly onError?: (error: unknown) => void,
   ) {}
 
   /**
@@ -23,9 +40,10 @@ export class VerificationHandler {
   public static async create(
     onPaymentConfirmed: (signupCode: string, homeserverPubky: string) => void,
     onPaymentExpired: () => void,
+    onError?: (error: unknown) => void,
   ): Promise<VerificationHandler> {
     const result = await HomegateController.createLnVerification();
-    const client = new VerificationHandler(result, onPaymentConfirmed, onPaymentExpired);
+    const client = new VerificationHandler(result, onPaymentConfirmed, onPaymentExpired, onError);
     client.listenPaymentConfirmed(); // Fire and forget
     client.listenPaymentExpired(); // Fire and forget
     client.listenVisibilityChange(); // Re-check payment when tab becomes visible
@@ -44,8 +62,19 @@ export class VerificationHandler {
    */
   public abort(): void {
     this.aborted = true;
+    if (this.awaitLnVerificationAbortController) {
+      this.awaitLnVerificationAbortController.abort();
+      this.awaitLnVerificationAbortController = null;
+    }
     if (this.paymentExpiredTimeout) {
       clearTimeout(this.paymentExpiredTimeout);
+      this.paymentExpiredTimeout = null;
+    }
+    if (this.sleepTimer) {
+      clearTimeout(this.sleepTimer);
+      this.sleepTimer = null;
+      this.sleepResolve?.();
+      this.sleepResolve = null;
     }
     if (this.visibilityHandler) {
       document.removeEventListener('visibilitychange', this.visibilityHandler);
@@ -60,8 +89,109 @@ export class VerificationHandler {
   private confirmPayment(signupCode: string, homeserverPubky: string): boolean {
     if (this.paymentConfirmed || this.aborted) return false;
     this.paymentConfirmed = true;
+    this.retryAttempt = 0;
+
+    // Clean up: stop expiry timeout and visibility listener after confirmation.
+    if (this.paymentExpiredTimeout) {
+      clearTimeout(this.paymentExpiredTimeout);
+      this.paymentExpiredTimeout = null;
+    }
+    if (this.visibilityHandler) {
+      document.removeEventListener('visibilitychange', this.visibilityHandler);
+      this.visibilityHandler = null;
+    }
+
     this.onPaymentConfirmed?.(signupCode, homeserverPubky);
     return true;
+  }
+
+  private getRetryDelayMs(retryAfterSeconds?: number): number {
+    if (typeof retryAfterSeconds === 'number' && Number.isFinite(retryAfterSeconds) && retryAfterSeconds > 0) {
+      return Math.min(retryAfterSeconds * 1000, VerificationHandler.RETRY_MAX_DELAY_MS);
+    }
+
+    const exponentialDelay = Math.min(
+      VerificationHandler.RETRY_BASE_DELAY_MS * 2 ** this.retryAttempt,
+      VerificationHandler.RETRY_MAX_DELAY_MS,
+    );
+    this.retryAttempt += 1;
+
+    // Spread retries to reduce synchronized request bursts after rate limiting.
+    const jitterFloor = exponentialDelay * VerificationHandler.RETRY_JITTER_FACTOR;
+    const jitterRange = exponentialDelay - jitterFloor;
+    const jitteredDelay = jitterFloor + Math.random() * jitterRange;
+    return Math.max(1, Math.floor(jitteredDelay));
+  }
+
+  private async sleep(ms: number): Promise<void> {
+    await new Promise<void>((resolve) => {
+      this.sleepResolve = resolve;
+      this.sleepTimer = setTimeout(() => {
+        this.sleepTimer = null;
+        this.sleepResolve = null;
+        resolve();
+      }, ms);
+    });
+  }
+
+  private resetRetryState(): void {
+    this.retryAttempt = 0;
+  }
+
+  private async retryWithBackoff(retryAfterSeconds?: number): Promise<void> {
+    if (this.aborted) return;
+    await this.sleep(this.getRetryDelayMs(retryAfterSeconds));
+  }
+
+  private async awaitVerificationStatus(): Promise<THomegateAwaitLnVerificationResult> {
+    if (!this.awaitLnVerificationPromise) {
+      this.awaitLnVerificationAbortController = new AbortController();
+      this.awaitLnVerificationPromise = HomegateController.awaitLnVerification(
+        this.data.id,
+        this.awaitLnVerificationAbortController.signal,
+      ).finally(() => {
+        this.awaitLnVerificationPromise = null;
+        this.awaitLnVerificationAbortController = null;
+      });
+    }
+    return this.awaitLnVerificationPromise;
+  }
+
+  private async abortInFlightAwait(forVisibilityRecovery: boolean): Promise<void> {
+    if (!this.awaitLnVerificationPromise || !this.awaitLnVerificationAbortController) {
+      return;
+    }
+
+    if (forVisibilityRecovery) {
+      this.ignoreNextAbortError = true;
+    }
+
+    const inFlightPromise = this.awaitLnVerificationPromise;
+    this.awaitLnVerificationAbortController.abort();
+
+    try {
+      await inFlightPromise;
+    } catch {
+      // Expected when aborting an in-flight long poll.
+    }
+  }
+
+  private async handleAwaitError(error: unknown): Promise<boolean> {
+    if (this.aborted) return false;
+
+    if (isAppError(error) && error.code === TimeoutErrorCode.REQUEST_ABORTED && this.ignoreNextAbortError) {
+      this.ignoreNextAbortError = false;
+      return true;
+    }
+
+    if (isAppError(error) && isRetryable(error)) {
+      await this.retryWithBackoff(getRetryAfter(error));
+      return true;
+    }
+
+    this.abort();
+    this.onError?.(error);
+    return false;
   }
 
   /**
@@ -73,6 +203,7 @@ export class VerificationHandler {
     }
 
     this.paymentExpiredTimeout = setTimeout(() => {
+      if (this.paymentConfirmed || this.aborted) return;
       this.onPaymentExpired?.();
     }, this.data.expiresAt - Date.now());
   }
@@ -87,19 +218,39 @@ export class VerificationHandler {
       if (this.isExpired) {
         return undefined;
       }
-      const result = await HomegateController.awaitLnVerification(this.data.id);
-      if (result.success && result.data.isPaid && result.data.signupCode) {
-        if (this.confirmPayment(result.data.signupCode, result.data.homeserverPubky)) {
-          return;
+
+      try {
+        const result = await this.awaitVerificationStatus();
+        if (result.success && result.data.isPaid && result.data.signupCode) {
+          if (this.confirmPayment(result.data.signupCode, result.data.homeserverPubky)) {
+            return;
+          }
+          continue;
         }
-      }
-      if ('timeout' in result && result.timeout) {
-        // Try again
-        continue;
-      }
-      if ('notFound' in result && result.notFound) {
-        // Verification not found - stop polling (this shouldn't happen in normal flow)
-        return undefined;
+
+        if ('timeout' in result && result.timeout) {
+          this.resetRetryState();
+          continue;
+        }
+
+        if ('rateLimited' in result && result.rateLimited) {
+          await this.retryWithBackoff(result.retryAfter);
+          continue;
+        }
+
+        if ('notFound' in result && result.notFound) {
+          // Verification not found - stop polling (this shouldn't happen in normal flow)
+          return undefined;
+        }
+
+        // Fallthrough: unrecognized result or success with isPaid: false.
+        // Apply backoff to prevent tight-loop hammering the server.
+        await this.retryWithBackoff();
+      } catch (error) {
+        const shouldRetry = await this.handleAwaitError(error);
+        if (!shouldRetry) {
+          return undefined;
+        }
       }
     }
     return undefined;
@@ -114,11 +265,33 @@ export class VerificationHandler {
 
     this.visibilityHandler = () => {
       if (document.visibilityState === 'visible' && !this.aborted && !this.isExpired) {
-        this.checkPaymentStatus();
+        void this.recoverFromVisibility();
       }
     };
 
     document.addEventListener('visibilitychange', this.visibilityHandler);
+  }
+
+  private async recoverFromVisibility(): Promise<void> {
+    if (this.aborted || this.isExpired || this.paymentConfirmed) return;
+
+    const now = Date.now();
+    const isDebounced = now - this.lastVisibilityRecoveryAt < VerificationHandler.VISIBILITY_RECOVERY_DEBOUNCE_MS;
+    if (this.visibilityRecoveryInProgress || isDebounced) {
+      return;
+    }
+
+    this.visibilityRecoveryInProgress = true;
+    this.lastVisibilityRecoveryAt = now;
+
+    try {
+      // Force-refresh status on foreground by canceling stale in-flight poll first.
+      await this.abortInFlightAwait(true);
+      await this.checkPaymentStatus();
+    } finally {
+      this.visibilityRecoveryInProgress = false;
+      this.ignoreNextAbortError = false; // Ensure flag never leaks across recovery cycles
+    }
   }
 
   /**
@@ -128,9 +301,31 @@ export class VerificationHandler {
   private async checkPaymentStatus() {
     if (this.aborted || this.isExpired || this.paymentConfirmed) return;
 
-    const result = await HomegateController.awaitLnVerification(this.data.id);
-    if (result.success && result.data.isPaid && result.data.signupCode) {
-      this.confirmPayment(result.data.signupCode, result.data.homeserverPubky);
+    for (let attempt = 0; attempt <= VerificationHandler.VISIBILITY_CHECK_MAX_RETRIES; attempt += 1) {
+      if (this.aborted || this.isExpired || this.paymentConfirmed) return;
+
+      try {
+        const result = await this.awaitVerificationStatus();
+        if (result.success && result.data.isPaid && result.data.signupCode) {
+          this.confirmPayment(result.data.signupCode, result.data.homeserverPubky);
+          return;
+        }
+
+        if ('rateLimited' in result && result.rateLimited) {
+          await this.retryWithBackoff(result.retryAfter);
+          continue;
+        }
+
+        if ('timeout' in result && result.timeout) {
+          this.resetRetryState();
+        }
+        return;
+      } catch (error) {
+        const shouldRetry = await this.handleAwaitError(error);
+        if (!shouldRetry) {
+          return;
+        }
+      }
     }
   }
 }

@@ -19,31 +19,30 @@ export function DialogNewPost({ open, onOpenChangeAction }: DialogNewPostProps) 
     });
 
   return (
-    <>
-      <Molecules.DialogConfirmDiscard
-        open={showConfirmDialog}
-        onOpenChange={() => setShowConfirmDialog(false)}
-        onConfirm={handleDiscard}
-      />
-      <Atoms.Dialog open={open} onOpenChange={handleOpenChange}>
-        <Atoms.DialogContent className="w-3xl" hiddenTitle={title}>
-          <Atoms.DialogHeader>
-            <Atoms.DialogTitle>{title}</Atoms.DialogTitle>
-            <Atoms.DialogDescription className="sr-only">{t('description', { title })}</Atoms.DialogDescription>
-          </Atoms.DialogHeader>
-          <Atoms.Container className="gap-3">
-            <Organisms.PostInput
-              dataCy="new-post-input"
-              key={resetKey}
-              variant={POST_INPUT_VARIANT.POST}
-              onSuccess={() => onOpenChangeAction(false)}
-              expanded={true}
-              onContentChange={handleContentChange}
-              onArticleModeChange={setIsArticle}
-            />
-          </Atoms.Container>
-        </Atoms.DialogContent>
-      </Atoms.Dialog>
-    </>
+    <Atoms.Dialog open={open} onOpenChange={handleOpenChange}>
+      <Atoms.DialogContent className="w-3xl" hiddenTitle={title}>
+        <Atoms.DialogHeader>
+          <Atoms.DialogTitle>{title}</Atoms.DialogTitle>
+          <Atoms.DialogDescription className="sr-only">{t('description', { title })}</Atoms.DialogDescription>
+        </Atoms.DialogHeader>
+        <Atoms.Container className="gap-3">
+          <Organisms.PostInput
+            dataCy="new-post-input"
+            key={resetKey}
+            variant={POST_INPUT_VARIANT.POST}
+            onSuccess={() => onOpenChangeAction(false)}
+            expanded={true}
+            onContentChange={handleContentChange}
+            onArticleModeChange={setIsArticle}
+          />
+        </Atoms.Container>
+        {/* Nested inside parent dialog to avoid mobile touch event issues with sibling portals */}
+        <Molecules.DialogConfirmDiscard
+          open={showConfirmDialog}
+          onOpenChange={() => setShowConfirmDialog(false)}
+          onConfirm={handleDiscard}
+        />
+      </Atoms.DialogContent>
+    </Atoms.Dialog>
   );
 }

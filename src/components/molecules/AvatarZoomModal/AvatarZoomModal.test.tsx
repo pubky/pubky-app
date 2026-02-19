@@ -45,17 +45,19 @@ vi.mock('@/organisms', async (importOriginal) => {
     AvatarWithFallback: ({
       avatarUrl,
       name,
+      fallbackSeed,
       className,
       fallbackClassName,
       alt,
     }: {
       avatarUrl?: string;
       name: string;
+      fallbackSeed?: string;
       className?: string;
       fallbackClassName?: string;
       alt?: string;
     }) => (
-      <div data-testid="avatar" className={className}>
+      <div data-testid="avatar" data-fallback-seed={fallbackSeed} className={className}>
         {avatarUrl ? (
           <img data-testid="avatar-image" src={avatarUrl} alt={alt || name} />
         ) : (
@@ -149,6 +151,11 @@ describe('AvatarZoomModal', () => {
     render(<AvatarZoomModal {...mockProps} avatarUrl={undefined} name="Alice Bob" />);
 
     expect(screen.getByText('AB')).toBeInTheDocument();
+  });
+
+  it('passes fallbackSeed to AvatarWithFallback', () => {
+    render(<AvatarZoomModal {...mockProps} avatarUrl={undefined} fallbackSeed="pk:test-seed" />);
+    expect(screen.getByTestId('avatar')).toHaveAttribute('data-fallback-seed', 'pk:test-seed');
   });
 
   it('calls useBodyScrollLock with open prop', async () => {

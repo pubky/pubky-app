@@ -9,7 +9,7 @@ import {
   NetworkErrorCode,
 } from './error.codes';
 import { Err } from './error.factories';
-import { HttpStatusCode } from '../http';
+import { HttpStatusCode, parseRetryAfterHeader } from '../http';
 
 /**
  * Creates appropriate AppError from HTTP status code.
@@ -132,8 +132,7 @@ export function httpResponseToError(
   endpoint: string,
 ): AppError {
   const { status, statusText } = response;
-  const retryAfterHeader = response.headers.get('retry-after');
-  const retryAfter = retryAfterHeader ? parseInt(retryAfterHeader) : undefined;
+  const retryAfter = parseRetryAfterHeader(response.headers.get('retry-after'));
 
   return httpStatusCodeToError(status, statusText || 'Request failed', service, operation, endpoint, retryAfter);
 }

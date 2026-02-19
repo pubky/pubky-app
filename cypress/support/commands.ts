@@ -32,7 +32,7 @@ Cypress.Commands.add(
     cy.location('pathname').should('eq', '/onboarding/human');
 
     // Click 'enter invite code' button
-    cy.get('[data-testid="human-dev-invite-code-btn"]').should('exist').click();
+    cy.get('[data-cy="invite-code-link"]').should('exist').click();
 
     // use cy.request to get the invite code from the HOMESERVER_ADMIN_URL using the HOMESERVER_ADMIN_PASSWORD
     cy.request({
