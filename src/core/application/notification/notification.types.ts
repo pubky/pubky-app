@@ -2,7 +2,19 @@ import * as Core from '@/core';
 
 export type TNotificationApplicationNotificationsParams = {
   userId: Core.Pubky;
+  lastPolledTimestamp: number | undefined;
   lastRead: number;
+};
+
+/**
+ * Result from fetchNotifications containing unread count and the next poll cursor.
+ *
+ * @property unread - Number of unread notifications (those newer than lastRead)
+ * @property nextPollCursor - Next polling cursor (newest timestamp + 1 to avoid refetch), undefined if no notifications
+ */
+export type TFetchNotificationsResult = {
+  unread: number;
+  nextPollCursor: number | undefined;
 };
 
 export type TNotificationsPartialCacheHitParams = {
@@ -38,6 +50,12 @@ export type TFlatNotifications = {
  */
 export type TGetOrFetchNotificationsResponse = TFlatNotifications & {
   olderThan: number | undefined;
+};
+
+export type TPersistAndSummarizeParams = {
+  notifications: Core.NexusNotification[];
+  flatNotifications: Core.TFlatNotificationList;
+  lastRead: number;
 };
 
 export type TFetchMissingEntitiesParams = {
