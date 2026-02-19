@@ -120,7 +120,7 @@ export class FileApplication {
       });
       return {
         ...file,
-        urls: JSON.parse(file.urls as unknown as string) as Core.NexusFileUrls,
+        urls: typeof file.urls === 'string' ? (JSON.parse(file.urls) as Core.NexusFileUrls) : file.urls,
         id: compositeId,
       };
     });
