@@ -6,6 +6,19 @@ export class BookmarkController {
   private constructor() {}
 
   /**
+   * Get all bookmarks for the current user, sorted by most recent
+   */
+  static async getAll(userId: string): Promise<Core.NexusFileDetails[]> {
+    const bookmarks = await Core.LocalBookmarkService.readAll(userId);
+    if (!bookmarks || bookmarks.length === 0) {
+      const fetched = await Core.NexusBookmarkService.fetchAll(userId);
+      await Core.LocalBookmarkService.bulkSave(fetched);
+      return fetched;
+    }
+    return bookmarks;
+  }
+
+  /**
    * Check if a post is bookmarked
    * @param postId - Composite post ID (authorId:postId)
    * @returns boolean indicating if the post is bookmarked

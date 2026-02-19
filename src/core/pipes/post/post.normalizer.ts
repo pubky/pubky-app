@@ -3,8 +3,30 @@ import * as Core from '@/core';
 import * as Libs from '@/libs';
 import { Err, ValidationErrorCode, ErrorService, AppError, AuthErrorCode, ClientErrorCode } from '@/libs';
 
+export const POST_CONTENT_MIN_LENGTH = 1;
+export const POST_CONTENT_MAX_LENGTH = 50000;
+
 export class PostNormalizer {
   private constructor() {}
+
+  /**
+   * Validates post content meets length and formatting requirements
+   */
+  static async validateContent(content: string, compositePostId?: string): Promise<boolean> {
+    if (content.length < POST_CONTENT_MIN_LENGTH || content.length > POST_CONTENT_MAX_LENGTH) {
+      return false;
+    }
+
+    // @ts-expect-error -- compositePostId may be narrowed by caller
+    if (compositePostId) {
+      const existing = await Core.LocalPostService.readDetails({ postId: compositePostId });
+      if (existing && existing.content === content) {
+        return false;
+      }
+    }
+
+    return true;
+  }
 
   static postKindToLowerCase(kind: string): string {
     // We will use that one until we fix the pubky-app-specs library

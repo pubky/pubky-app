@@ -1,10 +1,17 @@
 'use client';
 
+import * as React from 'react';
 import { useTranslations } from 'next-intl';
 import * as Atoms from '@/atoms';
 import * as Hooks from '@/hooks';
 import * as Molecules from '@/molecules';
 import type { PostHeaderProps } from './PostHeader.types';
+
+const ENABLE_VERIFIED_BADGES = true;
+
+export function formatPostTimestamp(date: Date): string {
+  return date.toISOString();
+}
 
 export function PostHeader({
   postId,
@@ -16,20 +23,20 @@ export function PostHeader({
 }: PostHeaderProps) {
   const t = useTranslations('common');
 
-  // Extract userId from postId (format: userId:postId or just userId if isReplyInput is true)
   const userId = isReplyInput ? postId : postId.split(':')[0];
 
-  // When isReplyInput is true, skip fetching post details since there's no post yet
   const { postDetails } = Hooks.usePostDetails(isReplyInput ? null : postId);
 
-  // Fetch user details for avatar and name
   const { userDetails } = Hooks.useUserDetails(userId);
 
-  // Compute avatar URL from user details (only if the user has an image)
   const avatarUrl = Hooks.useAvatarUrl(userDetails);
 
-  // Format relative time with localization support
   const { formatRelativeTime } = Hooks.useRelativeTime();
+
+  const displayName = React.useMemo(() => {
+    if (!userDetails) return '';
+    return userDetails.name || userId.slice(0, 8);
+  }, [userDetails, userId]);
 
   const isLoading = !userDetails || (!isReplyInput && !postDetails);
 
@@ -41,13 +48,15 @@ export function PostHeader({
     );
   }
 
+  const isVerified = ENABLE_VERIFIED_BADGES ? userDetails?.name !== undefined : false;
+
   const timeAgo = !isReplyInput && postDetails ? formatRelativeTime(new Date(postDetails.indexed_at)) : null;
 
   return (
     <Atoms.Container className="flex min-w-0 items-start justify-between gap-3" overrideDefaults>
       <Molecules.PostHeaderUserInfo
         userId={userId}
-        userName={userDetails.name || ''}
+        userName={isVerified ? displayName : displayName}
         avatarUrl={avatarUrl}
         characterLimit={characterLimit}
         showPopover={showPopover}

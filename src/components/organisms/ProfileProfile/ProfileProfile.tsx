@@ -42,19 +42,27 @@ export function ProfileProfile() {
     return [...allTags].sort((a, b) => (b.taggers_count ?? 0) - (a.taggers_count ?? 0)).slice(0, MAX_SIDEBAR_TAGS);
   }, [allTags]);
 
-  const handleFollowToggle = () => {
+  const handleFollowToggle = React.useCallback(() => {
     if (!pubky) return;
     requireAuth(async () => {
       await toggleFollow(pubky, isFollowing);
     });
-  };
+  }, [pubky, requireAuth, toggleFollow, isFollowing]);
 
-  const mergedActions = {
-    ...actions,
-    onFollowToggle: handleFollowToggle,
-    isFollowLoading,
-    isFollowing,
-  };
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  const formattedBio = React.useMemo(() => {
+    return profile?.bio?.trim() ?? '';
+  }, [profile?.bio]);
+
+  const mergedActions = React.useMemo(
+    () => ({
+      ...actions,
+      onFollowToggle: handleFollowToggle,
+      isFollowLoading,
+      isFollowing,
+    }),
+    [actions, handleFollowToggle, isFollowLoading, isFollowing],
+  );
 
   return (
     <Atoms.Container

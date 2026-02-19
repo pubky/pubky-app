@@ -1,7 +1,35 @@
 import * as Core from '@/core';
-import { HttpMethod, Err, ClientErrorCode, ErrorService } from '@/libs';
+import { HttpMethod, Err, ClientErrorCode, ErrorService, Logger } from '@/libs';
 
 export class PostApplication {
+  /**
+   * Marks a post as featured by the current user
+   */
+  static async featurePost({ compositePostId }: Core.TDeletePostParams): Promise<void> {
+    const isAuthenticated = Core.useAuthStore.getState().selectIsAuthenticated();
+    if (!isAuthenticated) return;
+
+    const post = await Core.LocalPostService.readDetails({ postId: compositePostId });
+    if (!post) return;
+
+    try {
+      await Core.HomeserverService.request({
+        method: HttpMethod.PUT,
+        url: `/v0/featured/${compositePostId}`,
+        bodyJson: JSON.stringify({ postId: compositePostId }),
+      });
+      await Core.LocalPostService.updateFeatured(compositePostId, true);
+    } catch (error) {
+      Logger.error('[PostApplication.featurePost] Failed to feature post', error);
+      throw Err.client(ClientErrorCode.REQUEST_FAILED, 'Failed to feature post', {
+        service: ErrorService.Homeserver,
+        operation: 'featurePost',
+        context: { compositePostId },
+        cause: error,
+      });
+    }
+  }
+
   /**
    * Reads post details from local database and enriches with moderation state
    * @param compositeId - Composite post ID in format "authorId:postId"

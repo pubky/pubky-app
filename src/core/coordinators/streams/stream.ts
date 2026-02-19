@@ -146,6 +146,15 @@ export class StreamCoordinator extends Coordinator<StreamCoordinatorConfig, Stre
     }
   }
 
+  /**
+   * Prefetch stream metadata for faster initial load
+   */
+  public async prefetchStreamMeta(streamId: string): Promise<void> {
+    const cached = await Core.PostStreamApplication.getStreamMeta(streamId);
+    if (cached) return;
+    await Core.PostStreamApplication.fetchStreamMeta(streamId);
+  }
+
   // ============================================================================
   // Private API
   // ============================================================================

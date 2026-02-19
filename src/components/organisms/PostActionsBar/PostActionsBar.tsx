@@ -1,5 +1,6 @@
 'use client';
 
+import * as React from 'react';
 import { useTranslations } from 'next-intl';
 import * as Atoms from '@/atoms';
 import * as Libs from '@/libs';
@@ -18,7 +19,14 @@ export function PostActionsBar({ postId, onTagClick, onReplyClick, onRepostClick
   } = Hooks.useBookmark(postId);
   const { requireAuth } = Hooks.useRequireAuth();
 
-  const isBookmarkBusy = isBookmarkLoading || isBookmarkToggling;
+  const isBookmarkBusy = React.useMemo(
+    () => isBookmarkLoading || isBookmarkToggling,
+    [isBookmarkLoading, isBookmarkToggling],
+  );
+
+  const handleBookmarkToggle = React.useCallback(() => {
+    requireAuth(() => toggleBookmark());
+  }, [requireAuth, toggleBookmark]);
 
   if (isCountsLoading || !postCounts) {
     return (
@@ -60,7 +68,7 @@ export function PostActionsBar({ postId, onTagClick, onReplyClick, onRepostClick
     {
       id: 'bookmark',
       icon: isBookmarkBusy ? Libs.Loader2 : Libs.Bookmark,
-      onClick: () => requireAuth(() => toggleBookmark()),
+      onClick: handleBookmarkToggle,
       ariaLabel: isBookmarkBusy ? t('loadingBookmark') : isBookmarked ? t('removeBookmark') : t('addBookmark'),
       className: 'w-10',
       iconProps: {
