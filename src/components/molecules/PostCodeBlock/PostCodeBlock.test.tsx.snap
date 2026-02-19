@@ -37,7 +37,7 @@ exports[`PostCodeBlock - Snapshots > matches snapshot for JavaScript code block 
     </button>
   </div>
   <div
-    style="background: rgb(40, 44, 52); color: rgb(171, 178, 191); text-shadow: 0 1px rgba(0, 0, 0, 0.3); font-family: \\"Fira Code\\", \\"Fira Mono\\", Menlo, Consolas, \\"DejaVu Sans Mono\\", monospace; direction: ltr; text-align: left; white-space: pre; word-spacing: normal; word-break: normal; line-height: 1.5; tab-size: 2; hyphens: none; padding: 1em; margin: 0px; overflow: auto; border-radius: 0;"
+    style="background: rgb(40, 44, 52); color: rgb(171, 178, 191); text-shadow: 0 1px rgba(0, 0, 0, 0.3); font-family: \\"Fira Code\\", \\"Fira Mono\\", Menlo, Consolas, \\"DejaVu Sans Mono\\", monospace; direction: ltr; text-align: left; white-space: pre; word-spacing: normal; word-break: normal; line-height: 1.5; tab-size: 2; hyphens: none; padding: 1em; margin: 0px; overflow: auto; border-radius: 0px;"
   >
     <code
       class="language-javascript"
@@ -159,7 +159,7 @@ exports[`PostCodeBlock - Snapshots > matches snapshot for Python code block 1`] 
     </button>
   </div>
   <div
-    style="background: rgb(40, 44, 52); color: rgb(171, 178, 191); text-shadow: 0 1px rgba(0, 0, 0, 0.3); font-family: \\"Fira Code\\", \\"Fira Mono\\", Menlo, Consolas, \\"DejaVu Sans Mono\\", monospace; direction: ltr; text-align: left; white-space: pre; word-spacing: normal; word-break: normal; line-height: 1.5; tab-size: 2; hyphens: none; padding: 1em; margin: 0px; overflow: auto; border-radius: 0;"
+    style="background: rgb(40, 44, 52); color: rgb(171, 178, 191); text-shadow: 0 1px rgba(0, 0, 0, 0.3); font-family: \\"Fira Code\\", \\"Fira Mono\\", Menlo, Consolas, \\"DejaVu Sans Mono\\", monospace; direction: ltr; text-align: left; white-space: pre; word-spacing: normal; word-break: normal; line-height: 1.5; tab-size: 2; hyphens: none; padding: 1em; margin: 0px; overflow: auto; border-radius: 0px;"
   >
     <code
       class="language-python"
@@ -293,7 +293,7 @@ exports[`PostCodeBlock - Snapshots > matches snapshot for TypeScript code block 
     </button>
   </div>
   <div
-    style="background: rgb(40, 44, 52); color: rgb(171, 178, 191); text-shadow: 0 1px rgba(0, 0, 0, 0.3); font-family: \\"Fira Code\\", \\"Fira Mono\\", Menlo, Consolas, \\"DejaVu Sans Mono\\", monospace; direction: ltr; text-align: left; white-space: pre; word-spacing: normal; word-break: normal; line-height: 1.5; tab-size: 2; hyphens: none; padding: 1em; margin: 0px; overflow: auto; border-radius: 0;"
+    style="background: rgb(40, 44, 52); color: rgb(171, 178, 191); text-shadow: 0 1px rgba(0, 0, 0, 0.3); font-family: \\"Fira Code\\", \\"Fira Mono\\", Menlo, Consolas, \\"DejaVu Sans Mono\\", monospace; direction: ltr; text-align: left; white-space: pre; word-spacing: normal; word-break: normal; line-height: 1.5; tab-size: 2; hyphens: none; padding: 1em; margin: 0px; overflow: auto; border-radius: 0px;"
   >
     <code
       class="language-typescript"
@@ -432,7 +432,7 @@ exports[`PostCodeBlock - Snapshots > matches snapshot for code block with single
     </button>
   </div>
   <div
-    style="background: rgb(40, 44, 52); color: rgb(171, 178, 191); text-shadow: 0 1px rgba(0, 0, 0, 0.3); font-family: \\"Fira Code\\", \\"Fira Mono\\", Menlo, Consolas, \\"DejaVu Sans Mono\\", monospace; direction: ltr; text-align: left; white-space: pre; word-spacing: normal; word-break: normal; line-height: 1.5; tab-size: 2; hyphens: none; padding: 1em; margin: 0px; overflow: auto; border-radius: 0;"
+    style="background: rgb(40, 44, 52); color: rgb(171, 178, 191); text-shadow: 0 1px rgba(0, 0, 0, 0.3); font-family: \\"Fira Code\\", \\"Fira Mono\\", Menlo, Consolas, \\"DejaVu Sans Mono\\", monospace; direction: ltr; text-align: left; white-space: pre; word-spacing: normal; word-break: normal; line-height: 1.5; tab-size: 2; hyphens: none; padding: 1em; margin: 0px; overflow: auto; border-radius: 0px;"
   >
     <code
       class="language-rust"
@@ -510,7 +510,7 @@ exports[`PostCodeBlock - Snapshots > matches snapshot for code block with traili
     </button>
   </div>
   <div
-    style="background: rgb(40, 44, 52); color: rgb(171, 178, 191); text-shadow: 0 1px rgba(0, 0, 0, 0.3); font-family: \\"Fira Code\\", \\"Fira Mono\\", Menlo, Consolas, \\"DejaVu Sans Mono\\", monospace; direction: ltr; text-align: left; white-space: pre; word-spacing: normal; word-break: normal; line-height: 1.5; tab-size: 2; hyphens: none; padding: 1em; margin: 0px; overflow: auto; border-radius: 0;"
+    style="background: rgb(40, 44, 52); color: rgb(171, 178, 191); text-shadow: 0 1px rgba(0, 0, 0, 0.3); font-family: \\"Fira Code\\", \\"Fira Mono\\", Menlo, Consolas, \\"DejaVu Sans Mono\\", monospace; direction: ltr; text-align: left; white-space: pre; word-spacing: normal; word-break: normal; line-height: 1.5; tab-size: 2; hyphens: none; padding: 1em; margin: 0px; overflow: auto; border-radius: 0px;"
   >
     <code
       class="language-go"
@@ -567,7 +567,7 @@ exports[`PostCodeBlock - Snapshots > matches snapshot for code with special char
     </button>
   </div>
   <div
-    style="background: rgb(40, 44, 52); color: rgb(171, 178, 191); text-shadow: 0 1px rgba(0, 0, 0, 0.3); font-family: \\"Fira Code\\", \\"Fira Mono\\", Menlo, Consolas, \\"DejaVu Sans Mono\\", monospace; direction: ltr; text-align: left; white-space: pre; word-spacing: normal; word-break: normal; line-height: 1.5; tab-size: 2; hyphens: none; padding: 1em; margin: 0px; overflow: auto; border-radius: 0;"
+    style="background: rgb(40, 44, 52); color: rgb(171, 178, 191); text-shadow: 0 1px rgba(0, 0, 0, 0.3); font-family: \\"Fira Code\\", \\"Fira Mono\\", Menlo, Consolas, \\"DejaVu Sans Mono\\", monospace; direction: ltr; text-align: left; white-space: pre; word-spacing: normal; word-break: normal; line-height: 1.5; tab-size: 2; hyphens: none; padding: 1em; margin: 0px; overflow: auto; border-radius: 0px;"
   >
     <code
       class="language-html"
@@ -693,7 +693,7 @@ exports[`PostCodeBlock - Snapshots > matches snapshot for empty code block 1`] =
     </button>
   </div>
   <div
-    style="background: rgb(40, 44, 52); color: rgb(171, 178, 191); text-shadow: 0 1px rgba(0, 0, 0, 0.3); font-family: \\"Fira Code\\", \\"Fira Mono\\", Menlo, Consolas, \\"DejaVu Sans Mono\\", monospace; direction: ltr; text-align: left; white-space: pre; word-spacing: normal; word-break: normal; line-height: 1.5; tab-size: 2; hyphens: none; padding: 1em; margin: 0px; overflow: auto; border-radius: 0;"
+    style="background: rgb(40, 44, 52); color: rgb(171, 178, 191); text-shadow: 0 1px rgba(0, 0, 0, 0.3); font-family: \\"Fira Code\\", \\"Fira Mono\\", Menlo, Consolas, \\"DejaVu Sans Mono\\", monospace; direction: ltr; text-align: left; white-space: pre; word-spacing: normal; word-break: normal; line-height: 1.5; tab-size: 2; hyphens: none; padding: 1em; margin: 0px; overflow: auto; border-radius: 0px;"
   >
     <code
       class="language-javascript"
