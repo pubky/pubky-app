@@ -16,33 +16,138 @@ describe('NotificationController', () => {
   afterEach(() => vi.restoreAllMocks());
 
   describe('fetchNotifications', () => {
-    const setupNotificationStore = (lastRead: number) => {
+    const setupNotificationStore = ({
+      lastRead,
+      lastPolledTimestamp,
+    }: {
+      lastRead: number;
+      lastPolledTimestamp: number;
+    }) => {
       const selectLastRead = vi.fn(() => lastRead);
+      const selectLastPolledTimestamp = vi.fn(() => lastPolledTimestamp);
       const setUnread = vi.fn();
+      const setLastPolledTimestamp = vi.fn();
       vi.spyOn(Core.useNotificationStore, 'getState').mockReturnValue({
         selectLastRead,
+        selectLastPolledTimestamp,
         setUnread,
+        setLastPolledTimestamp,
       } as unknown as Core.NotificationStore);
-      return { selectLastRead, setUnread };
+      return { selectLastRead, selectLastPolledTimestamp, setUnread, setLastPolledTimestamp };
     };
 
-    it('should poll notifications and update store with unread count', async () => {
-      const { selectLastRead, setUnread } = setupNotificationStore(1234);
-      const notificationsSpy = vi.spyOn(Core.NotificationApplication, 'fetchNotifications').mockResolvedValue(5);
+    it('should poll notifications, update unread count, and advance lastPolledTimestamp', async () => {
+      const store = setupNotificationStore({ lastRead: 1234, lastPolledTimestamp: 500 });
+      const appSpy = vi.spyOn(Core.NotificationApplication, 'fetchNotifications').mockResolvedValue({
+        unread: 5,
+        nextPollCursor: 3000,
+      });
 
       await NotificationController.fetchNotifications({ userId: mockUserId });
 
-      expect(selectLastRead).toHaveBeenCalled();
-      expect(notificationsSpy).toHaveBeenCalledWith({ userId: mockUserId, lastRead: 1234 });
-      expect(setUnread).toHaveBeenCalledWith(5);
+      expect(appSpy).toHaveBeenCalledWith({ userId: mockUserId, lastPolledTimestamp: 500, lastRead: 1234 });
+      expect(store.setUnread).toHaveBeenCalledWith(5);
+      expect(store.setLastPolledTimestamp).toHaveBeenCalledWith(3000);
+    });
+
+    it('should pass lastPolledTimestamp (not lastRead) to application', async () => {
+      setupNotificationStore({ lastRead: 9000, lastPolledTimestamp: 2000 });
+      const appSpy = vi.spyOn(Core.NotificationApplication, 'fetchNotifications').mockResolvedValue({
+        unread: 0,
+        nextPollCursor: undefined,
+      });
+
+      await NotificationController.fetchNotifications({ userId: mockUserId });
+
+      expect(appSpy).toHaveBeenCalledWith(expect.objectContaining({ lastPolledTimestamp: 2000, lastRead: 9000 }));
+    });
+
+    it('should not call setLastPolledTimestamp when nextPollCursor is undefined', async () => {
+      const store = setupNotificationStore({ lastRead: 1234, lastPolledTimestamp: 500 });
+      vi.spyOn(Core.NotificationApplication, 'fetchNotifications').mockResolvedValue({
+        unread: 0,
+        nextPollCursor: undefined,
+      });
+
+      await NotificationController.fetchNotifications({ userId: mockUserId });
+
+      expect(store.setUnread).toHaveBeenCalledWith(0);
+      expect(store.setLastPolledTimestamp).not.toHaveBeenCalled();
+    });
+
+    it('should handle two sequential polls with accumulating unread from IndexedDB', async () => {
+      const selectLastRead = vi.fn(() => 1000);
+      let currentLastPolledTimestamp: number | undefined = undefined;
+      const selectLastPolledTimestamp = vi.fn(() => currentLastPolledTimestamp);
+      const setUnread = vi.fn();
+      const setLastPolledTimestamp = vi.fn((ts: number) => {
+        currentLastPolledTimestamp = ts;
+      });
+      vi.spyOn(Core.useNotificationStore, 'getState').mockReturnValue({
+        selectLastRead,
+        selectLastPolledTimestamp,
+        setUnread,
+        setLastPolledTimestamp,
+      } as unknown as Core.NotificationStore);
+
+      const appSpy = vi.spyOn(Core.NotificationApplication, 'fetchNotifications');
+
+      // Poll 1: 2 new unread notifications
+      appSpy.mockResolvedValueOnce({ unread: 2, nextPollCursor: 3000 });
+      await NotificationController.fetchNotifications({ userId: mockUserId });
+
+      expect(appSpy).toHaveBeenCalledWith({ userId: mockUserId, lastPolledTimestamp: undefined, lastRead: 1000 });
+      expect(setUnread).toHaveBeenCalledWith(2);
+      expect(setLastPolledTimestamp).toHaveBeenCalledWith(3000);
+
+      // Poll 2: IndexedDB now has 4 total unread (2 old + 2 new)
+      appSpy.mockResolvedValueOnce({ unread: 4, nextPollCursor: 5000 });
+      await NotificationController.fetchNotifications({ userId: mockUserId });
+
+      expect(appSpy).toHaveBeenCalledWith({ userId: mockUserId, lastPolledTimestamp: 3000, lastRead: 1000 });
+      expect(setUnread).toHaveBeenCalledWith(4);
+      expect(setLastPolledTimestamp).toHaveBeenCalledWith(5000);
+    });
+
+    it('should not regress lastPolledTimestamp when an older poll resolves after a newer one', async () => {
+      let currentLastPolledTimestamp: number | undefined = undefined;
+      const selectLastPolledTimestamp = vi.fn(() => currentLastPolledTimestamp);
+      const setUnread = vi.fn();
+      const setLastPolledTimestamp = vi.fn((ts: number) => {
+        currentLastPolledTimestamp = ts;
+      });
+      vi.spyOn(Core.useNotificationStore, 'getState').mockReturnValue({
+        selectLastRead: vi.fn(() => 1000),
+        selectLastPolledTimestamp,
+        setUnread,
+        setLastPolledTimestamp,
+      } as unknown as Core.NotificationStore);
+
+      const appSpy = vi.spyOn(Core.NotificationApplication, 'fetchNotifications');
+
+      // Simulate two overlapping polls: poll A (slow) and poll B (fast).
+      // Poll B resolves first with a newer timestamp, then poll A resolves with an older one.
+      appSpy.mockResolvedValueOnce({ unread: 3, nextPollCursor: 5000 }); // poll A (older result)
+      appSpy.mockResolvedValueOnce({ unread: 5, nextPollCursor: 8000 }); // poll B (newer result)
+
+      // Poll B resolves first
+      const pollA = NotificationController.fetchNotifications({ userId: mockUserId });
+      // Simulate poll B finishing and advancing the cursor before poll A
+      currentLastPolledTimestamp = 8000;
+
+      await pollA;
+
+      // Poll A should NOT have regressed the cursor from 8000 back to 5000
+      expect(setLastPolledTimestamp).not.toHaveBeenCalled();
     });
 
     it('should bubble errors and not update store', async () => {
-      const { setUnread } = setupNotificationStore(1234);
+      const store = setupNotificationStore({ lastRead: 1234, lastPolledTimestamp: 500 });
       vi.spyOn(Core.NotificationApplication, 'fetchNotifications').mockRejectedValue(new Error('poll-fail'));
 
       await expect(NotificationController.fetchNotifications({ userId: mockUserId })).rejects.toThrow('poll-fail');
-      expect(setUnread).not.toHaveBeenCalled();
+      expect(store.setUnread).not.toHaveBeenCalled();
+      expect(store.setLastPolledTimestamp).not.toHaveBeenCalled();
     });
   });
 

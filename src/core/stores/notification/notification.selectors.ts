@@ -7,6 +7,10 @@ export const createNotificationSelectors = (get: ZustandGet<NotificationStore>) 
     return get().lastRead;
   },
 
+  selectLastPolledTimestamp: () => {
+    return get().lastPolledTimestamp;
+  },
+
   selectUnread: () => {
     return get().unread;
   },

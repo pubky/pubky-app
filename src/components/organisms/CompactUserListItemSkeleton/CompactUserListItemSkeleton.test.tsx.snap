@@ -1,0 +1,26 @@
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
+
+exports[`CompactUserListItemSkeleton - Snapshots > matches snapshot for compact variant 1`] = `
+<div
+  class="flex w-full items-center gap-3"
+  data-testid="user-list-item-skeleton-compact"
+>
+  <div
+    class="animate-pulse bg-muted size-10 shrink-0 rounded-full"
+    data-slot="skeleton"
+  />
+  <div
+    class="flex min-w-0 flex-1 flex-col gap-2"
+    data-testid="container"
+  >
+    <div
+      class="animate-pulse bg-muted h-4 w-full max-w-[150px] rounded-md"
+      data-slot="skeleton"
+    />
+    <div
+      class="animate-pulse bg-muted h-4 w-full max-w-[130px] rounded-md"
+      data-slot="skeleton"
+    />
+  </div>
+</div>
+`;

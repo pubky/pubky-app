@@ -9,6 +9,7 @@ import * as Molecules from '@/molecules';
 import * as Organisms from '@/organisms';
 import { APP_ROUTES } from '@/app/routes';
 import type { WhoToFollowProps } from './WhoToFollow.types';
+import { USERS_LIMIT } from './WhoToFollow.constants';
 
 /**
  * WhoToFollow
@@ -24,7 +25,7 @@ export function WhoToFollow({ className }: WhoToFollowProps) {
   const router = useRouter();
   const { users, isLoading: isStreamLoading } = Hooks.useUserStream({
     streamId: Core.UserStreamTypes.RECOMMENDED,
-    limit: 3,
+    limit: USERS_LIMIT,
     includeRelationships: true,
   });
   const { toggleFollow, isUserLoading } = Hooks.useFollowUser();
@@ -50,17 +51,21 @@ export function WhoToFollow({ className }: WhoToFollowProps) {
       className={className}
       data-testid="who-to-follow"
     >
-      {users.map((user) => (
-        <Organisms.UserListItem
-          key={user.id}
-          user={user}
-          variant="compact"
-          isLoading={isUserLoading(user.id)}
-          isStatusLoading={isStreamLoading}
-          onUserClick={handleUserClick}
-          onFollowClick={handleFollowClick}
-        />
-      ))}
+      {isStreamLoading
+        ? Array.from({ length: USERS_LIMIT }).map((_, index) => (
+            <Organisms.CompactUserListItemSkeleton key={`who-to-follow-skeleton-${index}`} />
+          ))
+        : users.map((user) => (
+            <Organisms.UserListItem
+              key={user.id}
+              user={user}
+              variant="compact"
+              isLoading={isUserLoading(user.id)}
+              isStatusLoading={isStreamLoading}
+              onUserClick={handleUserClick}
+              onFollowClick={handleFollowClick}
+            />
+          ))}
     </Molecules.SidebarSection>
   );
 }
