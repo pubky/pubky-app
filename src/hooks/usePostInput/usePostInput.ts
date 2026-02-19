@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useRef, useCallback, useEffect } from 'react';
+import { useState, useRef, useCallback, useEffect, useLayoutEffect } from 'react';
 import { type MDXEditorProps, type MDXEditorMethods } from '@mdxeditor/editor';
 import { useDebounceCallback } from 'usehooks-ts';
 import { useTranslations } from 'next-intl';
@@ -158,6 +158,19 @@ export function usePostInput({
       setIsExpanded(true);
     }
   }, [isExpanded]);
+
+  const resizeTextarea = useCallback(() => {
+    const textarea = textareaRef.current;
+    if (!textarea) return;
+    textarea.style.height = 'auto';
+    textarea.style.height = `${textarea.scrollHeight}px`;
+  }, []);
+
+  // Autosize textarea height (Safari doesn't support `field-sizing: content` yet)
+  useLayoutEffect(() => {
+    if (isArticle) return;
+    resizeTextarea();
+  }, [content, isArticle, resizeTextarea]);
 
   // Handle submit using reply, repost, post, or edit method from hook
   const handleSubmit = useCallback(async () => {
