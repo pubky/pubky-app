@@ -75,7 +75,7 @@ export function HotTagsCardsSection({ className }: HotTagsCardsSectionProps) {
         <Atoms.Heading level={5} size="lg" className="font-light text-muted-foreground">
           {t('hotTags')}
         </Atoms.Heading>
-        <HotTagsCardsSectionSkeleton />
+        <HotTagsCardsSectionSkeleton maxAvatars={maxAvatars} />
       </Atoms.Container>
     );
   }

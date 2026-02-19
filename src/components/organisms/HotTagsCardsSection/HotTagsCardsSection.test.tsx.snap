@@ -61,6 +61,14 @@ exports[`HotTagsCardsSection - Snapshots > matches snapshot while loading 1`] = 
           class="animate-pulse bg-muted size-7 rounded-full"
           data-slot="skeleton"
         />
+        <div
+          class="animate-pulse bg-muted size-7 rounded-full"
+          data-slot="skeleton"
+        />
+        <div
+          class="animate-pulse bg-muted size-7 rounded-full"
+          data-slot="skeleton"
+        />
       </div>
     </div>
     <div
@@ -109,6 +117,14 @@ exports[`HotTagsCardsSection - Snapshots > matches snapshot while loading 1`] = 
           class="animate-pulse bg-muted size-7 rounded-full"
           data-slot="skeleton"
         />
+        <div
+          class="animate-pulse bg-muted size-7 rounded-full"
+          data-slot="skeleton"
+        />
+        <div
+          class="animate-pulse bg-muted size-7 rounded-full"
+          data-slot="skeleton"
+        />
       </div>
     </div>
     <div
@@ -141,6 +157,14 @@ exports[`HotTagsCardsSection - Snapshots > matches snapshot while loading 1`] = 
         class="flex items-center gap-1.5"
         data-testid="container"
       >
+        <div
+          class="animate-pulse bg-muted size-7 rounded-full"
+          data-slot="skeleton"
+        />
+        <div
+          class="animate-pulse bg-muted size-7 rounded-full"
+          data-slot="skeleton"
+        />
         <div
           class="animate-pulse bg-muted size-7 rounded-full"
           data-slot="skeleton"
