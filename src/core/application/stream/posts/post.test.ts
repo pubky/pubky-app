@@ -1009,8 +1009,32 @@ describe('PostStreamApplication', () => {
     it('should handle error gracefully when file persistence fails', async () => {
       const { cacheMissPostIds, mockNexusPosts } = createTestData(1);
       const mockAttachments: Core.NexusFileDetails[] = [
-        { id: 'file-1', name: 'file-1', src: '', content_type: 'image/png', size: 100, created_at: 0, indexed_at: 0, metadata: {}, owner_id: 'user-1', uri: 'pubky://user-1/pub/pubky.app/files/file-1', urls: {} as Core.NexusFileUrls },
-        { id: 'file-2', name: 'file-2', src: '', content_type: 'image/png', size: 200, created_at: 0, indexed_at: 0, metadata: {}, owner_id: 'user-1', uri: 'pubky://user-1/pub/pubky.app/files/file-2', urls: {} as Core.NexusFileUrls },
+        {
+          id: 'file-1',
+          name: 'file-1',
+          src: '',
+          content_type: 'image/png',
+          size: 100,
+          created_at: 0,
+          indexed_at: 0,
+          metadata: {},
+          owner_id: 'user-1',
+          uri: 'pubky://user-1/pub/pubky.app/files/file-1',
+          urls: {} as Core.NexusFileUrls,
+        },
+        {
+          id: 'file-2',
+          name: 'file-2',
+          src: '',
+          content_type: 'image/png',
+          size: 200,
+          created_at: 0,
+          indexed_at: 0,
+          metadata: {},
+          owner_id: 'user-1',
+          uri: 'pubky://user-1/pub/pubky.app/files/file-2',
+          urls: {} as Core.NexusFileUrls,
+        },
       ];
 
       const fetchPostsByIdsSpy = vi.spyOn(Core.NexusPostStreamService, 'fetchByIds').mockResolvedValue(mockNexusPosts);

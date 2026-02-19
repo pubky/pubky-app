@@ -42,7 +42,7 @@ export class BootstrapApplication {
       // Subscribe to TTL coordinator for periodic staleness checks
       Core.TtlCoordinator.getInstance().subscribeUser({ pubky: params.pubky });
     }
-    const results = await Promise.all([
+    await Promise.all([
       Core.LocalStreamUsersService.persistUsers(data.users),
       Core.LocalStreamPostsService.persistPosts({ posts: data.posts }),
       Core.LocalStreamPostsService.upsert({

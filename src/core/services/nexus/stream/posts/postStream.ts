@@ -15,7 +15,11 @@ export class NexusPostStreamService {
    */
   static async fetchByIds(params: Core.TStreamPostsByIdsParams): Promise<Core.NexusPostWithAttachmentMetadata[]> {
     const { url, body } = Core.postStreamApi.postsByIds(params);
-    return await Core.queryNexus<Core.NexusPostWithAttachmentMetadata[]>({ url, method: HttpMethod.POST, body: JSON.stringify(body) });
+    return await Core.queryNexus<Core.NexusPostWithAttachmentMetadata[]>({
+      url,
+      method: HttpMethod.POST,
+      body: JSON.stringify(body),
+    });
   }
 
   /**

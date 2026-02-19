@@ -375,8 +375,17 @@ describe('LocalStreamPostsService', () => {
 
     it('should collect and return attachments_metadata from posts', async () => {
       const fileMetadata = (id: string, uri: string): Core.NexusFileDetails => ({
-        id, name: id, src: '', content_type: 'image/png', size: 100,
-        created_at: 0, indexed_at: 0, metadata: {}, owner_id: 'user-1', uri, urls: {} as Core.NexusFileUrls,
+        id,
+        name: id,
+        src: '',
+        content_type: 'image/png',
+        size: 100,
+        created_at: 0,
+        indexed_at: 0,
+        metadata: {},
+        owner_id: 'user-1',
+        uri,
+        urls: {} as Core.NexusFileUrls,
       });
 
       const meta1 = fileMetadata('file-1', 'pubky://user-1/pub/pubky.app/files/file-1');
@@ -397,9 +406,7 @@ describe('LocalStreamPostsService', () => {
     });
 
     it('should handle posts without attachments_metadata', async () => {
-      const mockPosts: Core.NexusPostWithAttachmentMetadata[] = [
-        { ...createMockNexusPost('post-1', 'user-1') },
-      ];
+      const mockPosts: Core.NexusPostWithAttachmentMetadata[] = [{ ...createMockNexusPost('post-1', 'user-1') }];
 
       const result = await Core.LocalStreamPostsService.persistPosts({ posts: mockPosts });
 

@@ -316,7 +316,11 @@ export class PostStreamApplication {
    * @param streamHead - Detects if the call is coming from the streamCoordinator.
    * @param streamId - ID of the stream. If not provided, it means that it is a single post operation.
    */
-  static async fetchMissingPostsFromNexus({ cacheMissPostIds, viewerId, includeAttachmentMetadata }: Core.TMissingPostsParams) {
+  static async fetchMissingPostsFromNexus({
+    cacheMissPostIds,
+    viewerId,
+    includeAttachmentMetadata,
+  }: Core.TMissingPostsParams) {
     try {
       const postBatch = await Core.NexusPostStreamService.fetchByIds({
         post_ids: cacheMissPostIds,

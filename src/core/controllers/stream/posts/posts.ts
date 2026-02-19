@@ -67,7 +67,11 @@ export class StreamPostsController {
     // Query nexus to get the cacheMissPostIds
     if (cacheMissPostIds.length > 0) {
       // TODO: When TTL is implemented, we can return to void
-      await Core.PostStreamApplication.fetchMissingPostsFromNexus({ cacheMissPostIds, viewerId, includeAttachmentMetadata: true });
+      await Core.PostStreamApplication.fetchMissingPostsFromNexus({
+        cacheMissPostIds,
+        viewerId,
+        includeAttachmentMetadata: true,
+      });
     }
     return { nextPageIds, timestamp, reachedEnd };
   }
