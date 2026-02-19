@@ -185,6 +185,7 @@ export const ScanNavigation = () => {
       continueButtonDisabled={true}
       hiddenContinueButton={true}
       onHandleBackButton={onHandleBackButton}
+      backButtonClassName="w-full md:flex-0"
     />
   );
 };

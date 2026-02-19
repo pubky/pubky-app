@@ -2,7 +2,7 @@
 
 exports[`ButtonsNavigation - Snapshots > matches snapshot with back button disabled 1`] = `
 <div
-  class="mx-auto w-full flex-col flex gap-3 md:flex-row md:justify-between lg:gap-6"
+  class="mx-auto w-full flex-col flex justify-between gap-3 md:flex-row lg:gap-6"
   data-testid="container"
 >
   <button
@@ -71,7 +71,7 @@ exports[`ButtonsNavigation - Snapshots > matches snapshot with back button disab
 
 exports[`ButtonsNavigation - Snapshots > matches snapshot with back callback only 1`] = `
 <div
-  class="mx-auto w-full flex-col flex gap-3 md:flex-row md:justify-between lg:gap-6"
+  class="mx-auto w-full flex-col flex justify-between gap-3 md:flex-row lg:gap-6"
   data-testid="container"
 >
   <button
@@ -139,7 +139,7 @@ exports[`ButtonsNavigation - Snapshots > matches snapshot with back callback onl
 
 exports[`ButtonsNavigation - Snapshots > matches snapshot with both buttons disabled 1`] = `
 <div
-  class="mx-auto w-full flex-col flex gap-3 md:flex-row md:justify-between lg:gap-6"
+  class="mx-auto w-full flex-col flex justify-between gap-3 md:flex-row lg:gap-6"
   data-testid="container"
 >
   <button
@@ -209,7 +209,7 @@ exports[`ButtonsNavigation - Snapshots > matches snapshot with both buttons disa
 
 exports[`ButtonsNavigation - Snapshots > matches snapshot with both callbacks 1`] = `
 <div
-  class="mx-auto w-full flex-col flex gap-3 md:flex-row md:justify-between lg:gap-6"
+  class="mx-auto w-full flex-col flex justify-between gap-3 md:flex-row lg:gap-6"
   data-testid="container"
 >
   <button
@@ -277,7 +277,7 @@ exports[`ButtonsNavigation - Snapshots > matches snapshot with both callbacks 1`
 
 exports[`ButtonsNavigation - Snapshots > matches snapshot with both custom button classNames 1`] = `
 <div
-  class="mx-auto w-full flex-col flex gap-3 md:flex-row md:justify-between lg:gap-6"
+  class="mx-auto w-full flex-col flex justify-between gap-3 md:flex-row lg:gap-6"
   data-testid="container"
 >
   <button
@@ -317,7 +317,7 @@ exports[`ButtonsNavigation - Snapshots > matches snapshot with both custom butto
   >
     <svg
       aria-hidden="true"
-      class="lucide lucide-arrow-right mr-1.5 h-4 w-4"
+      class="lucide lucide-log-in mr-1.5 h-4 w-4"
       fill="none"
       height="24"
       stroke="currentColor"
@@ -329,10 +329,13 @@ exports[`ButtonsNavigation - Snapshots > matches snapshot with both custom butto
       xmlns="http://www.w3.org/2000/svg"
     >
       <path
-        d="M5 12h14"
+        d="m10 17 5-5-5-5"
       />
       <path
-        d="m12 5 7 7-7 7"
+        d="M15 12H3"
+      />
+      <path
+        d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4"
       />
     </svg>
     Continue
@@ -342,7 +345,7 @@ exports[`ButtonsNavigation - Snapshots > matches snapshot with both custom butto
 
 exports[`ButtonsNavigation - Snapshots > matches snapshot with continue button disabled 1`] = `
 <div
-  class="mx-auto w-full flex-col flex gap-3 md:flex-row md:justify-between lg:gap-6"
+  class="mx-auto w-full flex-col flex justify-between gap-3 md:flex-row lg:gap-6"
   data-testid="container"
 >
   <button
@@ -411,7 +414,7 @@ exports[`ButtonsNavigation - Snapshots > matches snapshot with continue button d
 
 exports[`ButtonsNavigation - Snapshots > matches snapshot with continue callback only 1`] = `
 <div
-  class="mx-auto w-full flex-col flex gap-3 md:flex-row md:justify-between lg:gap-6"
+  class="mx-auto w-full flex-col flex justify-between gap-3 md:flex-row lg:gap-6"
   data-testid="container"
 >
   <button
@@ -479,7 +482,7 @@ exports[`ButtonsNavigation - Snapshots > matches snapshot with continue callback
 
 exports[`ButtonsNavigation - Snapshots > matches snapshot with custom backButtonClassName 1`] = `
 <div
-  class="mx-auto w-full flex-col flex gap-3 md:flex-row md:justify-between lg:gap-6"
+  class="mx-auto w-full flex-col flex justify-between gap-3 md:flex-row lg:gap-6"
   data-testid="container"
 >
   <button
@@ -519,7 +522,7 @@ exports[`ButtonsNavigation - Snapshots > matches snapshot with custom backButton
   >
     <svg
       aria-hidden="true"
-      class="lucide lucide-arrow-right mr-1.5 h-4 w-4"
+      class="lucide lucide-log-in mr-1.5 h-4 w-4"
       fill="none"
       height="24"
       stroke="currentColor"
@@ -531,10 +534,13 @@ exports[`ButtonsNavigation - Snapshots > matches snapshot with custom backButton
       xmlns="http://www.w3.org/2000/svg"
     >
       <path
-        d="M5 12h14"
+        d="m10 17 5-5-5-5"
       />
       <path
-        d="m12 5 7 7-7 7"
+        d="M15 12H3"
+      />
+      <path
+        d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4"
       />
     </svg>
     Continue
@@ -544,7 +550,7 @@ exports[`ButtonsNavigation - Snapshots > matches snapshot with custom backButton
 
 exports[`ButtonsNavigation - Snapshots > matches snapshot with custom className 1`] = `
 <div
-  class="mx-auto w-full flex-col flex gap-3 md:flex-row md:justify-between lg:gap-6 custom-navigation-class"
+  class="mx-auto w-full flex-col flex justify-between gap-3 md:flex-row lg:gap-6 custom-navigation-class"
   data-testid="container"
 >
   <button
@@ -612,7 +618,7 @@ exports[`ButtonsNavigation - Snapshots > matches snapshot with custom className 
 
 exports[`ButtonsNavigation - Snapshots > matches snapshot with custom continueButtonClassName 1`] = `
 <div
-  class="mx-auto w-full flex-col flex gap-3 md:flex-row md:justify-between lg:gap-6"
+  class="mx-auto w-full flex-col flex justify-between gap-3 md:flex-row lg:gap-6"
   data-testid="container"
 >
   <button
@@ -652,7 +658,7 @@ exports[`ButtonsNavigation - Snapshots > matches snapshot with custom continueBu
   >
     <svg
       aria-hidden="true"
-      class="lucide lucide-arrow-right mr-1.5 h-4 w-4"
+      class="lucide lucide-log-in mr-1.5 h-4 w-4"
       fill="none"
       height="24"
       stroke="currentColor"
@@ -664,10 +670,13 @@ exports[`ButtonsNavigation - Snapshots > matches snapshot with custom continueBu
       xmlns="http://www.w3.org/2000/svg"
     >
       <path
-        d="M5 12h14"
+        d="m10 17 5-5-5-5"
       />
       <path
-        d="m12 5 7 7-7 7"
+        d="M15 12H3"
+      />
+      <path
+        d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4"
       />
     </svg>
     Continue
@@ -677,7 +686,7 @@ exports[`ButtonsNavigation - Snapshots > matches snapshot with custom continueBu
 
 exports[`ButtonsNavigation - Snapshots > matches snapshot with custom text 1`] = `
 <div
-  class="mx-auto w-full flex-col flex gap-3 md:flex-row md:justify-between lg:gap-6"
+  class="mx-auto w-full flex-col flex justify-between gap-3 md:flex-row lg:gap-6"
   data-testid="container"
 >
   <button
@@ -745,7 +754,7 @@ exports[`ButtonsNavigation - Snapshots > matches snapshot with custom text 1`] =
 
 exports[`ButtonsNavigation - Snapshots > matches snapshot with default props 1`] = `
 <div
-  class="mx-auto w-full flex-col flex gap-3 md:flex-row md:justify-between lg:gap-6"
+  class="mx-auto w-full flex-col flex justify-between gap-3 md:flex-row lg:gap-6"
   data-testid="container"
 >
   <button

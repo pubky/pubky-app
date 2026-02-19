@@ -49,6 +49,8 @@ export const HomeserverNavigation = ({
       onHandleContinueButton={onHandleContinueButton}
       continueButtonDisabled={continueButtonDisabled}
       continueText={continueText}
+      backButtonClassName="w-full md:flex-0"
+      continueButtonClassName="w-full md:flex-0"
     />
   );
 };
