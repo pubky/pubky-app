@@ -75,7 +75,7 @@ describe('TtlApplication', () => {
         .mockResolvedValue({ postAttachments: [] } as unknown as Awaited<
           ReturnType<typeof Core.LocalStreamPostsService.persistPosts>
         >);
-      const fetchFilesSpy = vi.spyOn(Core.FileApplication, 'fetchFiles').mockResolvedValue(undefined);
+      const persistFilesSpy = vi.spyOn(Core.FileApplication, 'persistFiles').mockResolvedValue(undefined);
       vi.spyOn(Core.LocalStreamUsersService, 'getNotPersistedUsersInCache').mockResolvedValue([]);
 
       await Core.TtlApplication.forceRefreshPostsByIds({ postIds, viewerId });
@@ -87,7 +87,7 @@ describe('TtlApplication', () => {
       });
       // persistPosts handles TTL updates internally
       expect(persistPostsSpy).toHaveBeenCalledWith({ posts: nexusPosts });
-      expect(fetchFilesSpy).toHaveBeenCalledWith([]);
+      expect(persistFilesSpy).toHaveBeenCalledWith([]);
     });
 
     it('does not persist when fetch fails', async () => {
@@ -140,7 +140,7 @@ describe('TtlApplication', () => {
       vi.spyOn(Core.LocalStreamPostsService, 'persistPosts').mockResolvedValue({
         postAttachments: [],
       } as unknown as Awaited<ReturnType<typeof Core.LocalStreamPostsService.persistPosts>>);
-      vi.spyOn(Core.FileApplication, 'fetchFiles').mockResolvedValue(undefined);
+      vi.spyOn(Core.FileApplication, 'persistFiles').mockResolvedValue(undefined);
       vi.spyOn(Core.LocalStreamUsersService, 'getNotPersistedUsersInCache').mockResolvedValue([]);
 
       // Mock the shared helper to verify it's called with correct URIs
@@ -185,7 +185,7 @@ describe('TtlApplication', () => {
       vi.spyOn(Core.LocalStreamPostsService, 'persistPosts').mockResolvedValue({
         postAttachments: [],
       } as unknown as Awaited<ReturnType<typeof Core.LocalStreamPostsService.persistPosts>>);
-      vi.spyOn(Core.FileApplication, 'fetchFiles').mockResolvedValue(undefined);
+      vi.spyOn(Core.FileApplication, 'persistFiles').mockResolvedValue(undefined);
       vi.spyOn(Core.LocalStreamUsersService, 'getNotPersistedUsersInCache').mockResolvedValue([]);
 
       const fetchOriginalsSpy = vi

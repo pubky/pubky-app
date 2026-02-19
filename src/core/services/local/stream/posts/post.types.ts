@@ -34,11 +34,11 @@ export interface THandleNotCommonStreamParamsParams {
 }
 
 export interface TPersistPostsParams {
-  posts: Core.NexusPost[];
+  posts: Core.NexusPostWithAttachmentMetadata[];
 }
 
 export interface TPostStreamPersistResult {
-  postAttachments: string[];
+  postAttachments: Core.NexusFileDetails[];
 }
 
 export interface TSetStreamPaginationParams {

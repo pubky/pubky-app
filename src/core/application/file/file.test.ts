@@ -440,7 +440,7 @@ describe('FileApplication', () => {
       await FileApplication.fetchFiles([uri]);
 
       expect(Core.NexusFileService.fetchFiles).toHaveBeenCalledWith([uri]);
-      expect(createManySpy).toHaveBeenCalledWith({ files: [] });
+      expect(createManySpy).not.toHaveBeenCalled();
     });
 
     it('propagates errors from NexusFileService', async () => {

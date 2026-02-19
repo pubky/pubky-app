@@ -81,6 +81,7 @@ describe('StreamPostsController', () => {
       expect(fetchMissingPostsSpy).toHaveBeenCalledWith({
         cacheMissPostIds,
         viewerId,
+        includeAttachmentMetadata: true,
       });
       expect(result).toEqual({
         nextPageIds,
@@ -276,6 +277,7 @@ describe('StreamPostsController', () => {
       expect(fetchMissingPostsSpy).toHaveBeenCalledWith({
         cacheMissPostIds,
         viewerId,
+        includeAttachmentMetadata: true,
       });
     });
 

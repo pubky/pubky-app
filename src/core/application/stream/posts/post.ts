@@ -316,16 +316,16 @@ export class PostStreamApplication {
    * @param streamHead - Detects if the call is coming from the streamCoordinator.
    * @param streamId - ID of the stream. If not provided, it means that it is a single post operation.
    */
-  static async fetchMissingPostsFromNexus({ cacheMissPostIds, viewerId }: Core.TMissingPostsParams) {
+  static async fetchMissingPostsFromNexus({ cacheMissPostIds, viewerId, includeAttachmentMetadata }: Core.TMissingPostsParams) {
     try {
       const postBatch = await Core.NexusPostStreamService.fetchByIds({
         post_ids: cacheMissPostIds,
         // Only pass viewer_id if it's a valid string (not null/undefined)
         ...(viewerId ? { viewer_id: viewerId } : {}),
+        ...(includeAttachmentMetadata ? { include_attachment_metadata: true } : {}),
       });
       const { postAttachments } = await Core.LocalStreamPostsService.persistPosts({ posts: postBatch });
-      // Persist the post attachments metadata
-      await Core.FileApplication.fetchFiles(postAttachments);
+      await Core.FileApplication.persistFiles(postAttachments);
       // Persist the missing authors of the posts
       await this.fetchMissingUsersFromNexus({ posts: postBatch, viewerId });
       // Fetch original posts for any reposts (to display embedded repost content)
@@ -389,7 +389,7 @@ export class PostStreamApplication {
         include_attachment_metadata: true,
       });
       const { postAttachments } = await Core.LocalStreamPostsService.persistPosts({ posts: originalPosts });
-      await Core.FileApplication.fetchFiles(postAttachments);
+      await Core.FileApplication.persistFiles(postAttachments);
       await this.fetchMissingUsersFromNexus({ posts: originalPosts, viewerId });
     } catch (error) {
       Libs.Logger.warn('Failed to fetch original posts for reposts', { missingOriginalPostIds, error });

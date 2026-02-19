@@ -285,6 +285,32 @@ describe('Stream API URL Generation', () => {
       expect(request.body.post_ids).toHaveLength(100);
       expect(request.body.viewer_id).toBe(mockViewerId);
     });
+
+    it('should include include_attachment_metadata when true', () => {
+      const request = postStreamApi.postsByIds({
+        post_ids: mockPostIds,
+        viewer_id: mockViewerId,
+        include_attachment_metadata: true,
+      });
+
+      expect(request.url).toMatch(/\/stream\/posts\/by_ids$/);
+      expect(request.body).toEqual({
+        post_ids: mockPostIds,
+        viewer_id: mockViewerId,
+        include_attachment_metadata: true,
+      });
+    });
+
+    it('should omit include_attachment_metadata when not provided', () => {
+      const request = postStreamApi.postsByIds({
+        post_ids: mockPostIds,
+      });
+
+      expect(request.body).toEqual({
+        post_ids: mockPostIds,
+      });
+      expect(request.body).not.toHaveProperty('include_attachment_metadata');
+    });
   });
 
   describe('API contract validation', () => {

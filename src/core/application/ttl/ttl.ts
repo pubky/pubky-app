@@ -60,7 +60,7 @@ export class TtlApplication {
     });
 
     const { postAttachments } = await Core.LocalStreamPostsService.persistPosts({ posts: postBatch });
-    await Core.FileApplication.fetchFiles(postAttachments);
+    await Core.FileApplication.persistFiles(postAttachments);
 
     // Opportunistic cache warm: fetch missing authors
     await this.fetchAndPersistMissingAuthors({ posts: postBatch, viewerId: params.viewerId });

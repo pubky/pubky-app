@@ -40,6 +40,7 @@ export interface TMissingPostsParams {
   cacheMissPostIds: string[];
   /** Optional viewer ID for relationship data. Null/undefined for unauthenticated views. */
   viewerId?: Core.Pubky | null;
+  includeAttachmentMetadata?: boolean;
 }
 
 export interface TCacheStreamParams {

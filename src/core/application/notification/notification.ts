@@ -178,7 +178,7 @@ export class NotificationApplication {
     const notPersistedUserIds = await Core.LocalStreamUsersService.getNotPersistedUsersInCache(relatedUserIds);
 
     if (notPersistedPostIds.length > 0) {
-      await Core.PostStreamApplication.fetchMissingPostsFromNexus({ cacheMissPostIds: notPersistedPostIds, viewerId });
+      await Core.PostStreamApplication.fetchMissingPostsFromNexus({ cacheMissPostIds: notPersistedPostIds, viewerId, includeAttachmentMetadata: true });
     }
 
     if (notPersistedUserIds.length > 0) {
