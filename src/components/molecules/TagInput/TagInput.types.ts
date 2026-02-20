@@ -33,6 +33,6 @@ export interface TagInputProps {
   addOnSuggestionClick?: boolean;
   /** Whether to auto-focus the input on mount */
   autoFocus?: boolean;
-  /** Additional className for the container (useful for width override) */
+  /** Additional className for the container */
   className?: string;
 }

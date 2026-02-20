@@ -276,6 +276,101 @@ exports[`MobileHeader - Snapshots > matches snapshot with default props 1`] = `
 </div>
 `;
 
+exports[`MobileHeader - Snapshots > matches snapshot with fixed positioning 1`] = `
+<div
+  class="fixed right-0 left-0 top-0 z-(--z-mobile-menu) lg:hidden bg-linear-to-b from-(--background) from-65% to-transparent"
+  data-testid="container"
+>
+  <div
+    class="px-6 pt-6 pb-0"
+    data-testid="container"
+  >
+    <div
+      class="flex items-center justify-between py-3"
+      data-testid="container"
+    >
+      <button
+        class="inline-flex items-center justify-center gap-2 whitespace-nowrap text-sm transition-all disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg:not([class*=\\"size-\\"])]:size-4 shrink-0 [&_svg]:shrink-0 outline-none focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[3px] aria-invalid:ring-destructive/40 aria-invalid:border-destructive font-semibold cursor-pointer rounded-full border shadow-xs hover:text-accent-foreground hover:bg-accent/50 border-none size-9"
+        data-size="icon"
+        data-slot="button"
+        data-variant="ghost"
+      >
+        <svg
+          aria-hidden="true"
+          class="lucide lucide-sliders-horizontal size-6"
+          fill="none"
+          height="24"
+          stroke="currentColor"
+          stroke-linecap="round"
+          stroke-linejoin="round"
+          stroke-width="2"
+          viewBox="0 0 24 24"
+          width="24"
+          xmlns="http://www.w3.org/2000/svg"
+        >
+          <path
+            d="M10 5H3"
+          />
+          <path
+            d="M12 19H3"
+          />
+          <path
+            d="M14 3v4"
+          />
+          <path
+            d="M16 17v4"
+          />
+          <path
+            d="M21 12h-9"
+          />
+          <path
+            d="M21 19h-5"
+          />
+          <path
+            d="M21 5h-7"
+          />
+          <path
+            d="M8 10v4"
+          />
+          <path
+            d="M8 12H3"
+          />
+        </svg>
+      </button>
+      <div
+        data-testid="logo"
+      >
+        Logo
+      </div>
+      <button
+        class="inline-flex items-center justify-center gap-2 whitespace-nowrap text-sm transition-all disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg:not([class*=\\"size-\\"])]:size-4 shrink-0 [&_svg]:shrink-0 outline-none focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[3px] aria-invalid:ring-destructive/40 aria-invalid:border-destructive font-semibold cursor-pointer rounded-full border shadow-xs hover:text-accent-foreground hover:bg-accent/50 border-none size-9"
+        data-size="icon"
+        data-slot="button"
+        data-variant="ghost"
+      >
+        <svg
+          aria-hidden="true"
+          class="lucide lucide-activity size-6"
+          fill="none"
+          height="24"
+          stroke="currentColor"
+          stroke-linecap="round"
+          stroke-linejoin="round"
+          stroke-width="2"
+          viewBox="0 0 24 24"
+          width="24"
+          xmlns="http://www.w3.org/2000/svg"
+        >
+          <path
+            d="M22 12h-2.48a2 2 0 0 0-1.93 1.46l-2.35 8.36a.25.25 0 0 1-.48 0L9.24 2.18a.25.25 0 0 0-.48 0l-2.35 8.36A2 2 0 0 1 4.49 12H2"
+          />
+        </svg>
+      </button>
+    </div>
+  </div>
+</div>
+`;
+
 exports[`MobileHeader - Snapshots > matches snapshot with padding container 1`] = `
 <div
   class="px-6 pt-6 pb-0"

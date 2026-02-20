@@ -10,6 +10,7 @@ import * as Core from '@/core';
 import * as Libs from '@/libs';
 import { APP_ROUTES } from '@/app/routes';
 import { HOT_TAGS_FEATURED_COUNT } from '@/config';
+import { HotTagsCardsSectionSkeleton } from './HotTagsCardsSection.skeleton';
 import type { HotTagsCardsSectionProps } from './HotTagsCardsSection.types';
 import { MAX_AVATARS_MOBILE, MAX_AVATARS_DEFAULT, MAX_AVATARS_XL } from './HotTagsCardsSection.constants';
 
@@ -21,7 +22,6 @@ import { MAX_AVATARS_MOBILE, MAX_AVATARS_DEFAULT, MAX_AVATARS_XL } from './HotTa
  */
 export function HotTagsCardsSection({ className }: HotTagsCardsSectionProps) {
   const t = useTranslations('hot');
-  const tCommon = useTranslations('common');
   const router = useRouter();
   const { reach, timeframe } = Core.useHotStore();
 
@@ -69,20 +69,15 @@ export function HotTagsCardsSection({ className }: HotTagsCardsSectionProps) {
     );
   }
 
-  // TODO: Replace with Skeleton component
   if (isLoading) {
     return (
       <Atoms.Container overrideDefaults className={Libs.cn('flex w-full flex-col gap-2', className)}>
         <Atoms.Heading level={5} size="lg" className="font-light text-muted-foreground">
           {t('hotTags')}
         </Atoms.Heading>
-        <Atoms.Typography className="font-light text-muted-foreground">{tCommon('loading')}</Atoms.Typography>
+        <HotTagsCardsSectionSkeleton maxAvatars={maxAvatars} />
       </Atoms.Container>
     );
-  }
-
-  if (featuredTags.length === 0) {
-    return null;
   }
 
   return (
@@ -94,19 +89,23 @@ export function HotTagsCardsSection({ className }: HotTagsCardsSectionProps) {
       <Atoms.Heading level={5} size="lg" className="font-light text-muted-foreground">
         {t('hotTags')}
       </Atoms.Heading>
-      <Atoms.Container overrideDefaults className="flex flex-col gap-3 sm:flex-row">
-        {featuredTags.map((tag, index) => (
-          <Molecules.HotTagCard
-            key={tag.label}
-            rank={index + 1}
-            tagName={tag.label}
-            postCount={tag.tagged_count}
-            taggers={getUsersWithAvatars(tag.taggers_id)}
-            maxAvatars={maxAvatars}
-            onClick={handleTagClick}
-          />
-        ))}
-      </Atoms.Container>
+      {featuredTags.length === 0 ? (
+        <Atoms.Typography className="font-light text-muted-foreground">{t('noTagsToShow')}</Atoms.Typography>
+      ) : (
+        <Atoms.Container overrideDefaults className="flex flex-col gap-3 sm:flex-row">
+          {featuredTags.map((tag, index) => (
+            <Molecules.HotTagCard
+              key={tag.label}
+              rank={index + 1}
+              tagName={tag.label}
+              postCount={tag.tagged_count}
+              taggers={getUsersWithAvatars(tag.taggers_id)}
+              maxAvatars={maxAvatars}
+              onClick={handleTagClick}
+            />
+          ))}
+        </Atoms.Container>
+      )}
     </Atoms.Container>
   );
 }

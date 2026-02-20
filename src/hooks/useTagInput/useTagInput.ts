@@ -2,19 +2,18 @@
 
 import { useState, useRef } from 'react';
 import { useEmojiInsert } from '../useEmojiInsert';
-import { useListboxNavigation } from '../useListboxNavigation';
 import { filterSuggestions } from './useTagInput.utils';
 import * as Libs from '@/libs';
 import { TAG_MAX_LENGTH } from '@/config';
 import type { UseTagInputOptions, UseTagInputReturn } from './useTagInput.types';
 
 /**
- * Hook for managing tag input state, suggestions, and keyboard navigation.
+ * Hook for managing tag input state and local suggestions.
  *
  * Features:
  * - Input value management with sanitization
  * - Emoji picker integration
- * - Suggestions filtering and keyboard navigation (↑/↓/Enter/Escape)
+ * - Suggestions filtering
  * - Duplicate tag prevention
  * - Paste handling with character limit
  *
@@ -27,7 +26,6 @@ import type { UseTagInputOptions, UseTagInputReturn } from './useTagInput.types'
  *   setShowEmojiPicker,
  *   suggestions,
  *   handleInputChange,
- *   handleKeyDown,
  *   handleTagSubmit,
  *   handleEmojiSelect,
  *   handlePaste,
@@ -46,31 +44,9 @@ export function useTagInput({ onTagAdd, existingTags = [], allTags = [] }: UseTa
 
   const filteredSuggestions = filterSuggestions(allTags, inputValue);
 
-  // Keyboard navigation for suggestions
-  const {
-    selectedIndex: selectedSuggestionIndex,
-    setSelectedIndex: setSelectedSuggestionIndex,
-    handleKeyDown: handleListboxKeyDown,
-    resetSelection,
-  } = useListboxNavigation({
-    items: filteredSuggestions,
-    isOpen: showSuggestions && filteredSuggestions.length > 0,
-    onSelect: (item) => {
-      setInputValue(item.label.toLowerCase());
-      setShowSuggestions(false);
-      resetSelection();
-      inputRef.current?.focus();
-    },
-    onClose: () => {
-      setShowSuggestions(false);
-      resetSelection();
-    },
-  });
-
   const clearInput = () => {
     setInputValue('');
     setShowSuggestions(false);
-    resetSelection();
   };
 
   const handleTagSubmit = async () => {
@@ -101,24 +77,11 @@ export function useTagInput({ onTagAdd, existingTags = [], allTags = [] }: UseTa
     const value = sanitized.toLowerCase();
     setInputValue(value);
     setShowSuggestions(value.trim().length > 0);
-    resetSelection();
   };
 
   const handleInputFocus = () => {
     if (inputValue.trim()) {
       setShowSuggestions(true);
-    }
-  };
-
-  const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
-    // First, let listbox navigation handle it
-    const handled = handleListboxKeyDown(e);
-    if (handled) return;
-
-    // Default Enter behavior - submit tag
-    if (e.key === 'Enter' && inputValue.trim()) {
-      e.preventDefault();
-      handleTagSubmit();
     }
   };
 
@@ -159,7 +122,6 @@ export function useTagInput({ onTagAdd, existingTags = [], allTags = [] }: UseTa
   const setSanitizedInputValue = (value: string) => {
     const sanitized = Libs.sanitizeTagInput(value).toLowerCase();
     setInputValue(sanitized);
-    resetSelection();
   };
 
   return {
@@ -172,13 +134,9 @@ export function useTagInput({ onTagAdd, existingTags = [], allTags = [] }: UseTa
     showSuggestions,
     setShowSuggestions,
     suggestions: filteredSuggestions,
-    selectedSuggestionIndex,
-    setSelectedSuggestionIndex,
-    resetSelection,
     // Handlers
     handleInputChange,
     handleInputFocus,
-    handleKeyDown,
     handleTagSubmit,
     handleEmojiSelect,
     handlePaste,
