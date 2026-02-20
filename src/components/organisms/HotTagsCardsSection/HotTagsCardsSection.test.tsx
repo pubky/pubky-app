@@ -38,6 +38,9 @@ vi.mock('@/atoms', () => ({
   Typography: ({ children, className }: { children: React.ReactNode; className?: string }) => (
     <p className={className}>{children}</p>
   ),
+  Skeleton: ({ className, ...props }: { className?: string; [key: string]: unknown }) => (
+    <div className={className} data-slot="skeleton" {...props} />
+  ),
 }));
 
 vi.mock('@/molecules', () => ({
@@ -96,7 +99,7 @@ describe('HotTagsCardsSection', () => {
     expect(screen.getByText('Failed to load tags')).toBeInTheDocument();
   });
 
-  it('renders loading state with heading', () => {
+  it('renders loading state with heading and skeleton', () => {
     mockUseHotTags.mockReturnValue({
       rawTags: [],
       isLoading: true,
@@ -106,6 +109,8 @@ describe('HotTagsCardsSection', () => {
     render(<HotTagsCardsSection />);
 
     expect(screen.getByText('Hot tags')).toBeInTheDocument();
-    expect(screen.getByText('Loading...')).toBeInTheDocument();
+    expect(screen.getByTestId('hot-tags-card-skeleton-0')).toBeInTheDocument();
+    expect(screen.getByTestId('hot-tags-card-skeleton-1')).toBeInTheDocument();
+    expect(screen.getByTestId('hot-tags-card-skeleton-2')).toBeInTheDocument();
   });
 });
