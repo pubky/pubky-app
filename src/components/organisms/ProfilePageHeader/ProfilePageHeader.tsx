@@ -186,7 +186,7 @@ export function ProfilePageHeader({ profile, actions, isOwnProfile = true, userI
               </Atoms.Button>
               {/* Three-dot menu with additional profile actions */}
               <Organisms.ProfileMenuActions
-                userId={publicKey}
+                userId={userId}
                 trigger={
                   <Atoms.Button data-cy="profile-menu-btn" variant="secondary" size="sm" aria-label="Profile actions">
                     <Libs.Ellipsis className="size-4" />
