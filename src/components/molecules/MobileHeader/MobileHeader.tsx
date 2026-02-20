@@ -40,7 +40,7 @@ export function MobileHeader({
           : 'bg-background shadow-xs',
       )}
     >
-      <Atoms.Container overrideDefaults className="px-6 pt-6 pb-0">
+      <Atoms.Container overrideDefaults className="p-6">
         <Atoms.Container overrideDefaults className="flex items-center justify-between py-3">
           {/* Left icon - filters (authenticated only) */}
           {showLeftIcon ? (
