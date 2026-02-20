@@ -54,9 +54,9 @@ export function HotTagCard({
       data-testid={dataTestId || `hot-tag-card-${rank}`}
     >
       {/* Card Content */}
-      <Atoms.Container overrideDefaults className="flex flex-col gap-2.5 px-6">
+      <Atoms.Container overrideDefaults className="flex w-full flex-col gap-2.5 px-6">
         {/* Rank and Tag Name */}
-        <Atoms.Container overrideDefaults className="flex items-center gap-3">
+        <Atoms.Container overrideDefaults className="flex w-full items-center gap-3">
           <Atoms.Container
             overrideDefaults
             className="flex size-6 shrink-0 items-center justify-center rounded-full border border-accent-foreground"
@@ -65,7 +65,7 @@ export function HotTagCard({
               {rank}
             </Atoms.Typography>
           </Atoms.Container>
-          <Atoms.Typography size="lg" className="truncate">
+          <Atoms.Typography size="lg" className="truncate lg:leading-normal">
             {tagName}
           </Atoms.Typography>
         </Atoms.Container>
