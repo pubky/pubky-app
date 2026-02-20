@@ -6,5 +6,9 @@ export interface PostCountsModelSchema extends Core.NexusPostCounts {
 
 // Keep only the primary key index. Count fields are read/updated by id.
 export const postCountsTableSchema = `
-  &id
+  &id,
+  tags,
+  unique_tags,
+  reposts,
+  replies
 `;

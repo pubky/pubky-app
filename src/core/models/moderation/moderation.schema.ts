@@ -36,5 +36,6 @@ export interface ModerationModelSchema {
  * - Primary key: id
  */
 export const moderationTableSchema = `
-  &id
+  &id,
+  type
 `;
