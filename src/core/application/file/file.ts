@@ -127,19 +127,4 @@ export class FileApplication {
 
     await Core.LocalFileService.createMany({ files: filesWithCompositeIds as Core.NexusFileDetails[] });
   }
-
-  /**
-   * Fetches file metadata from nexus by URIs and persists them locally.
-   * Used by bootstrap where file metadata is not available inline.
-   *
-   * @param fileUris - Array of file URIs to fetch and persist
-   */
-  static async fetchFiles(fileUris: string[]) {
-    if (fileUris.length === 0) {
-      return;
-    }
-
-    const nexusFiles = await Core.NexusFileService.fetchFiles(fileUris);
-    await this.persistFiles(nexusFiles);
-  }
 }

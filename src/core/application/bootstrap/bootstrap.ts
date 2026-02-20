@@ -57,21 +57,19 @@ export class BootstrapApplication {
         streamId: Core.UserStreamTypes.RECOMMENDED,
         stream: data.ids.recommended,
       }),
-      Core.LocalStreamUsersService.upsert({
-        streamId: Core.UserStreamTypes.MUTED,
-        stream: data.ids.muted,
-      }),
+      Core.FileApplication.persistFiles(data.files),
+      // Core.LocalStreamUsersService.upsert({
+      //   streamId: Core.UserStreamTypes.MUTED,
+      //   stream: data.ids.muted,
+      // }),
       // Both features: hot tags and tag streams
       Core.LocalHotService.upsert(Core.buildHotTagsId(Core.UserStreamTimeframe.TODAY, 'all'), data.ids.hot_tags),
       Core.LocalStreamTagsService.upsert(Core.TagStreamTypes.TODAY_ALL, data.ids.hot_tags),
     ]);
     onProgress?.('dataPersisted'); // Step 4 complete (80%)
 
-    // Bootstrap posts don't include attachments_metadata, so collect URIs and fetch separately
-    const fileUris = data.posts.flatMap((post) => post.details.attachments ?? []);
-
-    const [_, notification] = await Promise.all([
-      Core.FileApplication.fetchFiles(fileUris),
+    const [notification] = await Promise.all([
+      // TODO: We alredy have notifications in the bootstrap data, so we don't need to fetch them again
       this.fetchNotifications(params),
       // Initialize settings from homeserver (non-blocking, errors are logged but don't fail bootstrap)
       this.initializeSettings(params.pubky),
