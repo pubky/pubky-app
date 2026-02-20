@@ -2,7 +2,6 @@
 
 import { useMemo } from 'react';
 import { useRouter } from 'next/navigation';
-import { useTranslations } from 'next-intl';
 import * as Atoms from '@/atoms';
 import * as Hooks from '@/hooks';
 import * as Core from '@/core';
@@ -10,8 +9,8 @@ import * as Libs from '@/libs';
 import { APP_ROUTES } from '@/app/routes';
 import { HOT_TAGS_FEATURED_COUNT } from '@/config';
 import type { HotTagsOverviewProps } from './HotTagsOverview.types';
-
-const DEFAULT_TAGS_LIMIT = 50;
+import { DEFAULT_TAGS_LIMIT } from './HotTagsOverview.constants';
+import { HotTagsOverviewSkeleton } from './HotTagsOverview.skeleton';
 
 /**
  * HotTagsOverview
@@ -21,7 +20,6 @@ const DEFAULT_TAGS_LIMIT = 50;
  * Fetches hot tags based on reach and timeframe filters from the hot store.
  */
 export function HotTagsOverview({ limit = DEFAULT_TAGS_LIMIT, className }: HotTagsOverviewProps) {
-  const t = useTranslations('common');
   const router = useRouter();
   const { reach, timeframe } = Core.useHotStore();
 
@@ -39,7 +37,7 @@ export function HotTagsOverview({ limit = DEFAULT_TAGS_LIMIT, className }: HotTa
     router.push(`${APP_ROUTES.SEARCH}?tags=${encodeURIComponent(tagName)}`);
   };
 
-  // Don't render on error or empty results
+  // Don't render on error or empty results (tags after the featured cards)
   if (error || (!isLoading && tags.length === 0)) {
     return null;
   }
@@ -51,8 +49,7 @@ export function HotTagsOverview({ limit = DEFAULT_TAGS_LIMIT, className }: HotTa
       data-testid="hot-tags-overview"
     >
       {isLoading ? (
-        // TODO: Replace with Skeleton component
-        <Atoms.Typography className="font-light text-muted-foreground">{t('loading')}</Atoms.Typography>
+        <HotTagsOverviewSkeleton />
       ) : (
         <Atoms.Container overrideDefaults className="flex flex-wrap content-start gap-2">
           {tags.map((tag) => (

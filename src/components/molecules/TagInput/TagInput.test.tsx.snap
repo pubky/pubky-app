@@ -3,6 +3,7 @@
 exports[`TagInput - Snapshots > matches snapshot 1`] = `
 <div
   class="relative flex h-8 w-full items-center gap-1 rounded-md border border-dashed border-input pr-1 pl-3 shadow-sm"
+  data-slot="popover-anchor"
   data-testid="container"
 >
   <input
@@ -16,7 +17,7 @@ exports[`TagInput - Snapshots > matches snapshot 1`] = `
   />
   <button
     aria-label="Open emoji picker"
-    class="inline-flex size-5 cursor-pointer items-center justify-center rounded-full p-1 shadow-xs hover:shadow-xs"
+    class="shadow-xs-dark hover:shadow-xs-dark inline-flex size-5 cursor-pointer items-center justify-center rounded-full p-1"
     data-slot="button"
   >
     <svg

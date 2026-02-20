@@ -8,7 +8,6 @@ import {
   remarkHashtags,
   remarkMentions,
   remarkPlaintextCodeblock,
-  remarkShowMoreButton,
   truncateAtWordBoundary,
 } from './PostText.utils';
 import { PostTextProps, RemarkAnchorProps } from './PostText.types';
@@ -45,18 +44,13 @@ export const PostText = memo(function PostText({ content, isArticle, className }
       ? truncateAtWordBoundary(content, TRUNCATION_LIMIT)
       : null;
 
-  // Memoize plugins array to avoid recreation on every render
-  const remarkPlugins = useMemo(
-    () => [
-      remarkGfm,
-      remarkDisallowMarkdownLinks,
-      remarkPlaintextCodeblock,
-      remarkHashtags,
-      remarkMentions,
-      ...(contentTruncated && !isArticle ? [remarkShowMoreButton] : []),
-    ],
-    [isArticle, contentTruncated],
-  );
+  const remarkPlugins = [
+    remarkGfm,
+    remarkDisallowMarkdownLinks,
+    remarkPlaintextCodeblock,
+    remarkHashtags,
+    remarkMentions,
+  ];
 
   // Memoize allowed elements array to avoid recreation on every render
   const allowedElements = useMemo(
@@ -98,26 +92,6 @@ export const PostText = memo(function PostText({ content, isArticle, className }
 
             if (dataType === 'hashtag') return <Molecules.PostHashtags {...props} />;
             if (dataType === 'mention') return <Organisms.PostMentions {...props} />;
-
-            // No stopPropagation on this element therefore click takes user to post via parent element
-            // Using span with role='button' instead of button to avoid invalid HTML (button inside p)
-            if (dataType === 'show-more-button')
-              return (
-                <span
-                  role="button"
-                  tabIndex={0}
-                  aria-label="Show full post content"
-                  className={Libs.cn(className, 'cursor-pointer text-brand transition-colors hover:text-brand/80')}
-                  onKeyDown={(e) => {
-                    if (e.key === 'Enter' || e.key === ' ') {
-                      e.preventDefault(); // Prevent scroll on space
-                      e.currentTarget.click();
-                    }
-                  }}
-                >
-                  {children}
-                </span>
-              );
 
             return (
               <a
@@ -222,6 +196,17 @@ export const PostText = memo(function PostText({ content, isArticle, className }
       >
         {contentTruncated || content}
       </Markdown>
+
+      {/* No stopPropagation on this element therefore click takes user to post via parent element */}
+      {contentTruncated && !isArticle && (
+        <Atoms.Button
+          overrideDefaults
+          aria-label="Show full post content"
+          className="mt-4 cursor-pointer text-brand transition-colors hover:text-brand/80"
+        >
+          Show more
+        </Atoms.Button>
+      )}
     </Atoms.Container>
   );
 });
