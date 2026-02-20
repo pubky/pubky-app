@@ -1,0 +1,74 @@
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
+
+exports[`HotTagsOverview - Snapshots > matches snapshot while loading 1`] = `
+<div
+  class="flex w-full flex-col gap-2"
+  data-testid="hot-tags-overview"
+>
+  <div
+    class="flex flex-wrap content-start gap-2"
+    data-testid="container"
+  >
+    <div
+      class="animate-pulse bg-muted h-8 rounded-md w-20"
+      data-slot="skeleton"
+      data-testid="hot-tags-overview-skeleton-0"
+    />
+    <div
+      class="animate-pulse bg-muted h-8 rounded-md w-28"
+      data-slot="skeleton"
+      data-testid="hot-tags-overview-skeleton-1"
+    />
+    <div
+      class="animate-pulse bg-muted h-8 rounded-md w-24"
+      data-slot="skeleton"
+      data-testid="hot-tags-overview-skeleton-2"
+    />
+    <div
+      class="animate-pulse bg-muted h-8 rounded-md w-32"
+      data-slot="skeleton"
+      data-testid="hot-tags-overview-skeleton-3"
+    />
+    <div
+      class="animate-pulse bg-muted h-8 rounded-md w-20"
+      data-slot="skeleton"
+      data-testid="hot-tags-overview-skeleton-4"
+    />
+    <div
+      class="animate-pulse bg-muted h-8 rounded-md w-36"
+      data-slot="skeleton"
+      data-testid="hot-tags-overview-skeleton-5"
+    />
+    <div
+      class="animate-pulse bg-muted h-8 rounded-md w-24"
+      data-slot="skeleton"
+      data-testid="hot-tags-overview-skeleton-6"
+    />
+    <div
+      class="animate-pulse bg-muted h-8 rounded-md w-28"
+      data-slot="skeleton"
+      data-testid="hot-tags-overview-skeleton-7"
+    />
+    <div
+      class="animate-pulse bg-muted h-8 rounded-md w-20"
+      data-slot="skeleton"
+      data-testid="hot-tags-overview-skeleton-8"
+    />
+    <div
+      class="animate-pulse bg-muted h-8 rounded-md w-32"
+      data-slot="skeleton"
+      data-testid="hot-tags-overview-skeleton-9"
+    />
+    <div
+      class="animate-pulse bg-muted h-8 rounded-md w-28"
+      data-slot="skeleton"
+      data-testid="hot-tags-overview-skeleton-10"
+    />
+    <div
+      class="animate-pulse bg-muted h-8 rounded-md w-24"
+      data-slot="skeleton"
+      data-testid="hot-tags-overview-skeleton-11"
+    />
+  </div>
+</div>
+`;

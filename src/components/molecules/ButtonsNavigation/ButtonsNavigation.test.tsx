@@ -90,6 +90,23 @@ describe('ButtonsNavigation', () => {
     const continueButton = screen.getByRole('button', { name: /continue/i });
     expect(continueButton).toBeDisabled();
   });
+
+  it('buttons stretch full width on mobile and size to content on desktop', () => {
+    render(<ButtonsNavigation />);
+
+    const container = screen.getByTestId('container');
+    // flex-col stretches children to full width on mobile
+    expect(container.className).toContain('flex-col');
+    // md:flex-row makes children size to content on desktop
+    expect(container.className).toContain('md:flex-row');
+
+    // buttons should not be forced to full width on desktop
+    const backButton = screen.getByRole('button', { name: /back/i });
+    expect(backButton.className).not.toContain('w-full');
+
+    const continueButton = screen.getByRole('button', { name: /continue/i });
+    expect(continueButton.className).not.toContain('w-full');
+  });
 });
 
 describe('ButtonsNavigation - Snapshots', () => {

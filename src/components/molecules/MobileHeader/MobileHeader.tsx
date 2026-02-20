@@ -11,6 +11,7 @@ export interface MobileHeaderProps {
   showLeftButton?: boolean;
   showRightButton?: boolean;
   hasGradientBackground?: boolean;
+  fixed?: boolean;
 }
 
 const Placeholder = () => <Atoms.Container overrideDefaults className="w-10" />;
@@ -21,6 +22,7 @@ export function MobileHeader({
   showLeftButton = true,
   showRightButton = true,
   hasGradientBackground = true,
+  fixed = false,
 }: MobileHeaderProps) {
   const isAuthenticated = Core.useAuthStore((state) => Boolean(state.currentUserPubky));
   const setShowSignInDialog = Core.useAuthStore((state) => state.setShowSignInDialog);
@@ -31,7 +33,8 @@ export function MobileHeader({
     <Atoms.Container
       overrideDefaults
       className={Libs.cn(
-        'sticky top-0 z-(--z-mobile-menu) lg:hidden',
+        fixed ? 'fixed right-0 left-0' : 'sticky',
+        'top-0 z-(--z-mobile-menu) lg:hidden',
         hasGradientBackground
           ? 'bg-linear-to-b from-(--background) from-65% to-transparent'
           : 'bg-background shadow-xs',

@@ -19,11 +19,10 @@ const mockTags = [
   { name: 'satoshi', count: 45 },
   { name: 'ethereum', count: 32 },
 ];
+const mockUseHotTags = vi.fn();
 
 vi.mock('@/hooks', () => ({
-  useHotTags: vi.fn(() => ({
-    tags: mockTags,
-  })),
+  useHotTags: () => mockUseHotTags(),
 }));
 
 // Mock molecules
@@ -56,6 +55,10 @@ vi.mock('@/atoms', () => ({
   Container: ({ children, className }: { children: React.ReactNode; className?: string }) => (
     <div className={className}>{children}</div>
   ),
+  Skeleton: ({ className, 'data-testid': testId }: { className?: string; 'data-testid'?: string }) => (
+    <div data-testid={testId} className={className} />
+  ),
+  Typography: ({ children }: { children: React.ReactNode }) => <p>{children}</p>,
   Tag: ({
     name,
     count,
@@ -77,6 +80,10 @@ vi.mock('@/atoms', () => ({
 describe('HotTags', () => {
   beforeEach(() => {
     mockPush.mockClear();
+    mockUseHotTags.mockReturnValue({
+      tags: mockTags,
+      isLoading: false,
+    });
   });
 
   it('renders the component with title', () => {
@@ -134,5 +141,17 @@ describe('HotTags', () => {
     expect(screen.getByTestId('tag-0')).toBeInTheDocument();
     expect(screen.getByTestId('tag-1')).toBeInTheDocument();
     expect(screen.getByTestId('tag-2')).toBeInTheDocument();
+  });
+
+  it('renders skeleton list while loading', () => {
+    mockUseHotTags.mockReturnValue({
+      tags: [],
+      isLoading: true,
+    });
+
+    render(<HotTags />);
+
+    expect(screen.getAllByTestId('hot-tag-skeleton')).toHaveLength(5);
+    expect(screen.queryByTestId('tag-0')).not.toBeInTheDocument();
   });
 });
