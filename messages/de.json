@@ -1007,7 +1007,8 @@
     "postsCount": "{count} Beiträge",
     "failedToLoadUsers": "Benutzer konnten nicht geladen werden",
     "failedToLoadTags": "Tags konnten nicht geladen werden",
-    "noUsersToShow": "Keine Benutzer anzuzeigen"
+    "noUsersToShow": "Keine Benutzer anzuzeigen",
+    "noTagsToShow": "Keine Tags anzuzeigen"
   },
   "privacy": {
     "showConfirmation": "Bestaetigung vor Weiterleitung anzeigen",
