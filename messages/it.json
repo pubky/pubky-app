@@ -1007,7 +1007,8 @@
     "postsCount": "{count} post",
     "failedToLoadUsers": "Caricamento utenti fallito",
     "failedToLoadTags": "Caricamento tag fallito",
-    "noUsersToShow": "Nessun utente da mostrare"
+    "noUsersToShow": "Nessun utente da mostrare",
+    "noTagsToShow": "Nessun tag da mostrare"
   },
   "privacy": {
     "showConfirmation": "Mostra conferma prima del reindirizzamento",
