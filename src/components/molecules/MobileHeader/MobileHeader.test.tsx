@@ -174,6 +174,11 @@ describe('MobileHeader - Snapshots', () => {
     expect(paddingContainer).toMatchSnapshot();
   });
 
+  it('matches snapshot with fixed positioning', () => {
+    const { container } = render(<MobileHeader fixed />);
+    expect(container.firstChild).toMatchSnapshot();
+  });
+
   it('matches snapshot with custom onLeftIconClick', () => {
     const mockOnLeftIconClick = vi.fn();
     const { container } = render(<MobileHeader onLeftIconClick={mockOnLeftIconClick} />);

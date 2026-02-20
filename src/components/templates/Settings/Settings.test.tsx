@@ -33,13 +33,33 @@ vi.mock('@/organisms', () => ({
 }));
 
 describe('Settings', () => {
+  it('renders without errors', () => {
+    render(
+      <Settings>
+        <div />
+      </Settings>,
+    );
+    expect(screen.getByTestId('mobile-header')).toBeInTheDocument();
+    expect(screen.getByTestId('settings-mobile-menu')).toBeInTheDocument();
+    expect(screen.getByTestId('content-layout')).toBeInTheDocument();
+  });
+
+  it('passes fixed prop to MobileHeader', () => {
+    render(
+      <Settings>
+        <div />
+      </Settings>,
+    );
+    expect(screen.getByTestId('mobile-header')).toHaveAttribute('data-fixed', 'true');
+  });
+
   it('applies correct padding to ContentLayout', () => {
     render(
       <Settings>
         <div />
       </Settings>,
     );
-    expect(screen.getByTestId('content-layout')).toHaveClass('pt-40', 'lg:pt-0');
+    expect(screen.getByTestId('content-layout')).toHaveClass('lg:pt-0');
   });
 });
 
