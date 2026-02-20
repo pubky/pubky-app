@@ -23,7 +23,7 @@ export function ButtonsNavigation({
         <Atoms.Button
           id={`${id}-back-btn`}
           size="lg"
-          className={Libs.cn('w-full rounded-full md:w-auto md:flex-1', backButtonClassName)}
+          className={Libs.cn('rounded-full', backButtonClassName)}
           variant={'secondary'}
           onClick={onHandleBackButton}
           disabled={backButtonDisabled}
@@ -36,7 +36,7 @@ export function ButtonsNavigation({
         <Atoms.Button
           id={`${id}-continue-btn`}
           size="lg"
-          className={Libs.cn('w-full rounded-full md:w-auto md:flex-1', continueButtonClassName)}
+          className={Libs.cn('rounded-full', continueButtonClassName)}
           onClick={onHandleContinueButton}
           disabled={loadingContinueButton || continueButtonDisabled}
         >
@@ -47,7 +47,7 @@ export function ButtonsNavigation({
             </>
           ) : (
             <>
-              <Libs.LogIn className="mr-1.5 h-4 w-4" />
+              <Libs.ArrowRight className="mr-1.5 h-4 w-4" />
               {continueText}
             </>
           )}

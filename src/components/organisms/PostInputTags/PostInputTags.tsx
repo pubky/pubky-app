@@ -43,6 +43,7 @@ export function PostInputTags({ tags, onTagsChange, maxTags = POST_MAX_TAGS, dis
             enableApiSuggestions
             excludeFromApiSuggestions={tags}
             addOnSuggestionClick
+            className="w-32 shrink-0"
           />
         )}
 
