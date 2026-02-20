@@ -4,6 +4,7 @@ on:
   push:
     branches:
       - master
+      - dev
   pull_request:
     branches:
       - '**' # Run on PRs targeting any branch

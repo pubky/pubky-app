@@ -1,12 +1,12 @@
 'use client';
 
-import { useTranslations } from 'next-intl';
 import * as Atoms from '@/atoms';
 import * as Molecules from '@/molecules';
 import * as Hooks from '@/hooks';
 import * as Libs from '@/libs';
 import * as Core from '@/core';
 import type { PostTagsPanelProps } from './PostTagsPanel.types';
+import { PostTagsPanelSkeleton } from './PostTagsPanel.skeleton';
 
 /**
  * PostTagsPanel Organism
@@ -24,7 +24,6 @@ import type { PostTagsPanelProps } from './PostTagsPanel.types';
  * Uses the same TaggedSection pattern as ProfileTagged but adapted for posts.
  */
 export function PostTagsPanel({ postId, widthMode = 'fit', className }: PostTagsPanelProps) {
-  const t = useTranslations('common');
   const { tags, isLoading, handleTagAdd, handleTagToggle, hasMore, isLoadingMore, loadMore } =
     Hooks.usePostTags(postId);
 
@@ -48,16 +47,9 @@ export function PostTagsPanel({ postId, widthMode = 'fit', className }: PostTags
   // For unauthenticated users, clicking input opens sign-in dialog
   const handleInputClick = !isAuthenticated ? () => setShowSignInDialog(true) : undefined;
 
-  // Show loading state while fetching initial data
+  // Show skeleton while fetching initial data
   if (isLoading) {
-    return (
-      <Atoms.Container className={Libs.cn('flex items-center justify-center gap-3', className)}>
-        <Atoms.Spinner size="md" />
-        <Atoms.Typography as="p" className="text-muted-foreground">
-          {t('loadingTags')}
-        </Atoms.Typography>
-      </Atoms.Container>
-    );
+    return <PostTagsPanelSkeleton className={className} widthMode={widthMode} />;
   }
 
   // Filter to get only viewer's tags for duplicate checking
