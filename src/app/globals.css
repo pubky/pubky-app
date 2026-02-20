@@ -443,7 +443,7 @@ body {
   }
 
   *::-webkit-scrollbar-thumb {
-    background-color: var(--border);
+    background-color: var(--muted-foreground);
     border: 1px solid transparent;
     border-radius: 9999px;
     background-clip: content-box;
