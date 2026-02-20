@@ -37,7 +37,7 @@ export function HotTagsOverview({ limit = DEFAULT_TAGS_LIMIT, className }: HotTa
     router.push(`${APP_ROUTES.SEARCH}?tags=${encodeURIComponent(tagName)}`);
   };
 
-  // Don't render on error or empty results
+  // Don't render on error or empty results (tags after the featured cards)
   if (error || (!isLoading && tags.length === 0)) {
     return null;
   }
