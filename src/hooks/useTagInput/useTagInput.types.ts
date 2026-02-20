@@ -31,18 +31,10 @@ export interface UseTagInputReturn {
   setShowSuggestions: (show: boolean) => void;
   /** Filtered suggestions based on input */
   suggestions: readonly TagLabel[];
-  /** Currently selected suggestion index (null if none) */
-  selectedSuggestionIndex: number | null;
-  /** Set selected suggestion index (for mouse hover) */
-  setSelectedSuggestionIndex: React.Dispatch<React.SetStateAction<number | null>>;
-  /** Reset selection to initial state */
-  resetSelection: () => void;
   /** Handle input change with sanitization */
   handleInputChange: (e: React.ChangeEvent<HTMLInputElement>) => void;
   /** Handle input focus */
   handleInputFocus: () => void;
-  /** Handle keyboard events (arrows, enter, escape) */
-  handleKeyDown: (e: React.KeyboardEvent<HTMLInputElement>) => void;
   /** Handle tag submission */
   handleTagSubmit: () => Promise<unknown>;
   /** Handle emoji selection */

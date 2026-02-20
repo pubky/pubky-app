@@ -1007,7 +1007,8 @@
     "postsCount": "{count} publicaciónes",
     "failedToLoadUsers": "Error al cargar usuarios",
     "failedToLoadTags": "Error al cargar etiquetas",
-    "noUsersToShow": "No hay usuarios para mostrar"
+    "noUsersToShow": "No hay usuarios para mostrar",
+    "noTagsToShow": "No hay tags para mostrar"
   },
   "privacy": {
     "showConfirmation": "Mostrar confirmacion antes de redirigir",

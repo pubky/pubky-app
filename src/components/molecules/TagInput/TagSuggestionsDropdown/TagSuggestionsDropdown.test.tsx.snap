@@ -1,0 +1,83 @@
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
+
+exports[`TagSuggestionsDropdown - Snapshots > matches snapshot with selected index 1`] = `
+<div
+  class="rounded-md border border-border bg-popover"
+  data-testid="tag-suggestions-dropdown"
+>
+  <div
+    class="cursor-pointer px-3 py-2 hover:rounded-md hover:bg-accent rounded-md bg-accent"
+    data-testid="container"
+  >
+    <span
+      class="text-sm font-medium text-popover-foreground"
+      data-testid="typography"
+    >
+      bitcoin
+    </span>
+  </div>
+  <div
+    class="cursor-pointer px-3 py-2 hover:rounded-md hover:bg-accent"
+    data-testid="container"
+  >
+    <span
+      class="text-sm font-medium text-popover-foreground"
+      data-testid="typography"
+    >
+      btc
+    </span>
+  </div>
+  <div
+    class="cursor-pointer px-3 py-2 hover:rounded-md hover:bg-accent"
+    data-testid="container"
+  >
+    <span
+      class="text-sm font-medium text-popover-foreground"
+      data-testid="typography"
+    >
+      lightning
+    </span>
+  </div>
+</div>
+`;
+
+exports[`TagSuggestionsDropdown - Snapshots > matches snapshot with suggestions 1`] = `
+<div
+  class="rounded-md border border-border bg-popover"
+  data-testid="tag-suggestions-dropdown"
+>
+  <div
+    class="cursor-pointer px-3 py-2 hover:rounded-md hover:bg-accent"
+    data-testid="container"
+  >
+    <span
+      class="text-sm font-medium text-popover-foreground"
+      data-testid="typography"
+    >
+      bitcoin
+    </span>
+  </div>
+  <div
+    class="cursor-pointer px-3 py-2 hover:rounded-md hover:bg-accent"
+    data-testid="container"
+  >
+    <span
+      class="text-sm font-medium text-popover-foreground"
+      data-testid="typography"
+    >
+      btc
+    </span>
+  </div>
+  <div
+    class="cursor-pointer px-3 py-2 hover:rounded-md hover:bg-accent"
+    data-testid="container"
+  >
+    <span
+      class="text-sm font-medium text-popover-foreground"
+      data-testid="typography"
+    >
+      lightning
+    </span>
+  </div>
+</div>
+`;

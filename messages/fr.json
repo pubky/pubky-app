@@ -1007,7 +1007,8 @@
     "postsCount": "{count} publications",
     "failedToLoadUsers": "Échec du chargement des utilisateurs",
     "failedToLoadTags": "Échec du chargement des tags",
-    "noUsersToShow": "Aucun utilisateur a afficher"
+    "noUsersToShow": "Aucun utilisateur a afficher",
+    "noTagsToShow": "Aucun tag a afficher"
   },
   "privacy": {
     "showConfirmation": "Afficher la confirmation avant la redirection",

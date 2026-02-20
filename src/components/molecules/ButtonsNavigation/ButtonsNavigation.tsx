@@ -34,7 +34,7 @@ export function ButtonsNavigation({
         <Atoms.Button
           id={`${id}-back-btn`}
           size="lg"
-          className="w-full rounded-full md:w-auto md:flex-1"
+          className="rounded-full"
           variant={'secondary'}
           onClick={onHandleBackButton}
           disabled={backButtonDisabled}
@@ -47,7 +47,7 @@ export function ButtonsNavigation({
         <Atoms.Button
           id={`${id}-continue-btn`}
           size="lg"
-          className="w-full rounded-full md:w-auto md:flex-1"
+          className="rounded-full"
           onClick={onHandleContinueButton}
           disabled={loadingContinueButton || continueButtonDisabled}
         >
@@ -58,7 +58,7 @@ export function ButtonsNavigation({
             </>
           ) : (
             <>
-              <Libs.LogIn className="mr-1.5 h-4 w-4" />
+              <Libs.ArrowRight className="mr-1.5 h-4 w-4" />
               {continueText}
             </>
           )}

@@ -1007,7 +1007,8 @@
     "postsCount": "{count}件の投稿",
     "failedToLoadUsers": "ユーザーの読み込みに失敗しました",
     "failedToLoadTags": "タグの読み込みに失敗しました",
-    "noUsersToShow": "表示するユーザーがいません"
+    "noUsersToShow": "表示するユーザーがいません",
+    "noTagsToShow": "表示するタグがありません"
   },
   "privacy": {
     "showConfirmation": "リダイレクト前に確認を表示",

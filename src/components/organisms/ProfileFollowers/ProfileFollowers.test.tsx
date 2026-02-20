@@ -78,6 +78,7 @@ vi.mock('@/organisms', () => ({
       User item
     </div>
   ),
+  FullUserListItemSkeleton: () => <div data-testid="user-list-item-skeleton-full">Skeleton</div>,
 }));
 
 const mockConnections = [
@@ -147,10 +148,13 @@ describe('ProfileFollowers', () => {
     expect(screen.getByTestId('followers-empty')).toBeInTheDocument();
   });
 
-  it('renders loading state when isLoading is true', () => {
+  it('renders loading state with skeleton list when isLoading is true', () => {
     vi.mocked(Hooks.useProfileConnections).mockReturnValue(mockLoadingConnectionsResult);
     render(<ProfileFollowers />);
-    expect(screen.getByTestId('spinner')).toBeInTheDocument();
+    expect(screen.queryByTestId('spinner')).not.toBeInTheDocument();
+    expect(screen.getByTestId('heading')).toHaveTextContent('Followers');
+    const skeletons = screen.getAllByTestId('user-list-item-skeleton-full');
+    expect(skeletons.length).toBeGreaterThan(0);
   });
 
   it('renders connections when there are items', () => {
