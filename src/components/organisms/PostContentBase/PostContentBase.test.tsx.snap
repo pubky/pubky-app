@@ -95,15 +95,14 @@ exports[`PostContentBase - Snapshots > matches snapshot with very long content 1
   >
     <p>
       AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA... 
-      <span
-        aria-label="Show full post content"
-        class="cursor-pointer text-brand transition-colors hover:text-brand/80"
-        role="button"
-        tabindex="0"
-      >
-        Show more
-      </span>
     </p>
+    <button
+      aria-label="Show full post content"
+      class="mt-4 cursor-pointer text-brand transition-colors hover:text-brand/80"
+      data-testid="button"
+    >
+      Show more
+    </button>
   </div>
   <div
     data-testid="post-attachments"
