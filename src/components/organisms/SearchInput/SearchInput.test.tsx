@@ -13,6 +13,7 @@ vi.mock('next/navigation', () => ({
   }),
   useSearchParams: () => mockSearchParams,
   usePathname: () => mockPathname(),
+  useIsMobile: () => false,
 }));
 
 // Mock hooks
@@ -46,6 +47,7 @@ vi.mock('@/hooks', () => ({
     activeTags: [],
     isReadOnly: false,
   })),
+  useIsMobile: () => false,
 }));
 
 // Mock core

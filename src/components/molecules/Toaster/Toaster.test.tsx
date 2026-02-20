@@ -47,6 +47,27 @@ describe('Toaster', () => {
     expect(screen.getByText('Just a description')).toBeInTheDocument();
   });
 
+  it('should not truncate long description text', () => {
+    const longDescription =
+      'The file you are trying to upload exceeds the maximum allowed size of 100MB. Please reduce the file size and try again.';
+
+    mockUseToast.mockReturnValue({
+      toasts: [
+        {
+          id: 'long-desc',
+          title: 'Upload Error',
+          description: longDescription,
+          open: true,
+        },
+      ],
+    });
+
+    render(<Toaster />);
+
+    const descriptionElement = screen.getByText(longDescription);
+    expect(descriptionElement).not.toHaveClass('truncate');
+  });
+
   it('should handle complex toast with action button click', () => {
     const handleActionClick = vi.fn();
     const mockAction = (

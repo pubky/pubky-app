@@ -23,6 +23,21 @@ vi.mock('@/atoms', () => ({
       {children}
     </div>
   ),
+  Button: ({
+    children,
+    className,
+    'aria-label': ariaLabel,
+    overrideDefaults,
+  }: {
+    children: React.ReactNode;
+    className?: string;
+    'aria-label'?: string;
+    overrideDefaults?: boolean;
+  }) => (
+    <button data-override-defaults={overrideDefaults} className={className} aria-label={ariaLabel}>
+      {children}
+    </button>
+  ),
 }));
 
 // Mock @/molecules
@@ -685,6 +700,7 @@ describe('PostText', () => {
       const showMoreButton = screen.getByRole('button', { name: 'Show full post content' });
       expect(showMoreButton).toHaveClass('cursor-pointer');
       expect(showMoreButton).toHaveClass('text-brand');
+      expect(showMoreButton).toHaveClass('mt-4');
     });
 
     it('does not stop event propagation on "Show more" button click', () => {

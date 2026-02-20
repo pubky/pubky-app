@@ -7,7 +7,6 @@ const validPubkyKey = 'o1gg96ewuojmopcjbz8895478wdtxtzzber7aezq6ror5a91j7dy';
 
 const mockUseUserProfile = vi.fn();
 
-// Mock @/atoms
 vi.mock('@/atoms', () => ({
   Link: ({
     children,
@@ -30,6 +29,15 @@ vi.mock('@/atoms', () => ({
 vi.mock('@/hooks', () => ({
   useUserProfile: (userId: string) => mockUseUserProfile(userId),
 }));
+
+// Mock PostHeaderUserInfoPopoverWrapper to avoid Next.js router and popover dependencies
+vi.mock('@/molecules', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('@/molecules')>();
+  return {
+    ...actual,
+    PostHeaderUserInfoPopoverWrapper: ({ children }: { children: React.ReactNode }) => <>{children}</>,
+  };
+});
 
 describe('PostMentions', () => {
   beforeEach(() => {

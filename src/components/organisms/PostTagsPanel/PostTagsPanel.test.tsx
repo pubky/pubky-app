@@ -26,13 +26,18 @@ vi.mock('@/molecules', () => ({
 
 // Mock atoms
 vi.mock('@/atoms', () => ({
-  Container: ({ children, className }: { children: React.ReactNode; className?: string }) => (
-    <div className={className}>{children}</div>
+  Container: ({ children, className, ...props }: { children: React.ReactNode; className?: string }) => (
+    <div className={className} {...props}>
+      {children}
+    </div>
   ),
   Typography: ({ children, as: Tag = 'span' }: { children: React.ReactNode; as?: React.ElementType }) => {
     return <Tag>{children}</Tag>;
   },
   Spinner: ({ size }: { size: string }) => <div data-testid="spinner" data-size={size} />,
+  Skeleton: ({ className, ...props }: { className?: string; children?: React.ReactNode }) => (
+    <div data-slot="skeleton" className={className} {...props} />
+  ),
 }));
 
 // Mock libs - use actual implementations
@@ -47,7 +52,7 @@ describe('PostTagsPanel', () => {
   });
 
   describe('loading state', () => {
-    it('should render loading spinner when isLoading is true', () => {
+    it('should render skeleton when isLoading is true', () => {
       mockUsePostTags.mockReturnValue({
         tags: [],
         isLoading: true,
@@ -60,8 +65,7 @@ describe('PostTagsPanel', () => {
 
       render(<PostTagsPanel postId="author:post123" />);
 
-      expect(screen.getByTestId('spinner')).toBeInTheDocument();
-      expect(screen.getByText('Loading tags...')).toBeInTheDocument();
+      expect(screen.getByTestId('post-tags-panel-skeleton')).toBeInTheDocument();
     });
   });
 

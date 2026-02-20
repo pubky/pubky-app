@@ -427,19 +427,30 @@ body {
     caret-color: #fff;
   }
 
+  /* Native scrollbar styles (global) */
+  * {
+    scrollbar-width: thin;
+    scrollbar-color: var(--muted-foreground) transparent;
+  }
+
   *::-webkit-scrollbar {
-    width: 6px;
-    height: auto;
+    width: 8px;
+    height: 8px;
   }
 
   *::-webkit-scrollbar-track {
-    background: var(--muted);
-    border-radius: 4px;
+    background: transparent;
   }
 
   *::-webkit-scrollbar-thumb {
     background-color: var(--muted-foreground);
-    border-radius: 4px;
+    border: 1px solid transparent;
+    border-radius: 9999px;
+    background-clip: content-box;
+  }
+
+  .scrollbar-none {
+    scrollbar-width: none;
   }
 
   .scrollbar-none::-webkit-scrollbar {
