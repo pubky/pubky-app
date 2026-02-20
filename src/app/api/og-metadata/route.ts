@@ -4,6 +4,7 @@ import { isIP } from 'net';
 import { truncateString, truncateMiddle, decodeHtmlEntities } from '@/libs/utils';
 import { isIpSafe } from '@/libs/network';
 import { OG_PATTERNS, extractFromHtml } from '@/libs/html';
+import { URL_TRUNCATE_LENGTH } from '@/config';
 
 /**
  * API Route for secure OpenGraph metadata fetching
@@ -26,9 +27,9 @@ const CACHE_HEADERS = {
   },
 };
 
-function buildFallbackMetadata(url: string) {
+function buildFallbackMetadata(url: string, maxLength = URL_TRUNCATE_LENGTH) {
   return {
-    url: truncateMiddle(url, 40),
+    url: truncateMiddle(url, maxLength),
     title: null,
     image: null,
     type: 'website' as const,

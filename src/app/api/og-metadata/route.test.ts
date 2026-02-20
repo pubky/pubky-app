@@ -1073,5 +1073,29 @@ describe('API Route: /api/og-metadata', () => {
         type: 'website',
       });
     });
+
+    it('should truncate long URLs in fallback metadata when upstream responds with 403', async () => {
+      vi.mocked(dns.resolve4).mockResolvedValue(['1.1.1.1']);
+
+      global.fetch = vi.fn().mockResolvedValue({
+        ok: false,
+        status: 403,
+        headers: new Headers({ 'content-type': 'text/html' }),
+      });
+
+      const longUrl =
+        'https://ra.co/events/2363466/super/long/path/that/definitely/exceeds/the/fallback/truncation/limit';
+      const request = createRequest(longUrl);
+      const response = await GET(request);
+      const data = await response.json();
+
+      expect(response.status).toBe(200);
+      expect(data).toEqual({
+        url: 'https://ra.co/events/236...llback/truncation/limit',
+        title: null,
+        image: null,
+        type: 'website',
+      });
+    });
   });
 });
