@@ -94,7 +94,6 @@ export class PostApplication {
     await Core.PostStreamApplication.fetchMissingPostsFromNexus({
       cacheMissPostIds: [compositeId],
       viewerId,
-      includeAttachmentMetadata: true,
     });
 
     // Return the persisted post details

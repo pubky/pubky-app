@@ -52,15 +52,14 @@ export class TtlApplication {
     const postBatch = await Core.NexusPostStreamService.fetchByIds({
       post_ids: uniqueIds,
       viewer_id: params.viewerId,
-      include_attachment_metadata: true,
     });
 
     Logger.debug('TtlApplication: Fetched posts from Nexus', {
       postCount: postBatch.length,
     });
 
-    const { postAttachments } = await Core.LocalStreamPostsService.persistPosts({ posts: postBatch });
-    await Core.FileApplication.persistFiles(postAttachments);
+    const { attachmentMetadata } = await Core.LocalStreamPostsService.persistPosts({ posts: postBatch });
+    await Core.FileApplication.persistFiles(attachmentMetadata);
 
     // Opportunistic cache warm: fetch missing authors
     await this.fetchAndPersistMissingAuthors({ posts: postBatch, viewerId: params.viewerId });

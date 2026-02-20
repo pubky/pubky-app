@@ -179,7 +179,7 @@ const setupMocks = (config: MockConfig = {}): ServiceMocks => {
     persistPosts: vi
       .spyOn(Core.LocalStreamPostsService, 'persistPosts')
       .mockImplementation(
-        persistPostsError ? () => Promise.reject(persistPostsError) : () => Promise.resolve({ postAttachments: [] }),
+        persistPostsError ? () => Promise.reject(persistPostsError) : () => Promise.resolve({ attachmentMetadata: [] }),
       ),
     persistFiles: vi
       .spyOn(Core.FileApplication, 'fetchFiles')

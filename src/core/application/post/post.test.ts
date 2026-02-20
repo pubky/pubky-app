@@ -805,7 +805,6 @@ describe('Post Application', () => {
       expect(fetchMissingSpy).toHaveBeenCalledWith({
         cacheMissPostIds: ['author:post123'],
         viewerId: mockViewerId,
-        includeAttachmentMetadata: true,
       });
       expect(readSpySecond).toHaveBeenCalledWith({ postId: 'author:post123' });
       expect(result).toEqual(mockPostDetails);
@@ -828,7 +827,6 @@ describe('Post Application', () => {
       expect(fetchMissingSpy).toHaveBeenCalledWith({
         cacheMissPostIds: ['author:post123'],
         viewerId: mockViewerId,
-        includeAttachmentMetadata: true,
       });
       expect(readSpySecond).toHaveBeenCalledWith({ postId: 'author:post123' });
       expect(result).toBeNull();

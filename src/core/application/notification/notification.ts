@@ -200,7 +200,6 @@ export class NotificationApplication {
       await Core.PostStreamApplication.fetchMissingPostsFromNexus({
         cacheMissPostIds: notPersistedPostIds,
         viewerId,
-        includeAttachmentMetadata: true,
       });
     }
 

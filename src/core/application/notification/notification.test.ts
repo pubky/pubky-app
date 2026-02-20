@@ -431,7 +431,6 @@ describe('NotificationApplication.fetchMissingEntities', () => {
     expect(fetchPostsSpy).toHaveBeenCalledWith({
       cacheMissPostIds: [relatedPostId],
       viewerId,
-      includeAttachmentMetadata: true,
     });
   });
 

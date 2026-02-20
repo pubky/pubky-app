@@ -70,7 +70,6 @@ export class StreamPostsController {
       await Core.PostStreamApplication.fetchMissingPostsFromNexus({
         cacheMissPostIds,
         viewerId,
-        includeAttachmentMetadata: true,
       });
     }
     return { nextPageIds, timestamp, reachedEnd };

@@ -150,7 +150,7 @@ describe('PostStreamApplication', () => {
   });
 
   const setupDefaultMocks = () => ({
-    persistPosts: vi.spyOn(Core.LocalStreamPostsService, 'persistPosts').mockResolvedValue({ postAttachments: [] }),
+    persistPosts: vi.spyOn(Core.LocalStreamPostsService, 'persistPosts').mockResolvedValue({ attachmentMetadata: [] }),
     persistFiles: vi.spyOn(Core.FileApplication, 'persistFiles').mockResolvedValue(undefined),
     getUserDetails: vi.spyOn(Core.UserDetailsModel, 'findByIdsPreserveOrder'),
   });
@@ -1039,7 +1039,7 @@ describe('PostStreamApplication', () => {
 
       const fetchPostsByIdsSpy = vi.spyOn(Core.NexusPostStreamService, 'fetchByIds').mockResolvedValue(mockNexusPosts);
       vi.spyOn(Core.LocalStreamPostsService, 'persistPosts').mockResolvedValue({
-        postAttachments: mockAttachments,
+        attachmentMetadata: mockAttachments,
       });
       const persistFilesSpy = vi
         .spyOn(Core.FileApplication, 'persistFiles')

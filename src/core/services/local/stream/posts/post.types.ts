@@ -38,7 +38,7 @@ export interface TPersistPostsParams {
 }
 
 export interface TPostStreamPersistResult {
-  postAttachments: Core.NexusFileDetails[];
+  attachmentMetadata: Core.NexusFileDetails[];
 }
 
 export interface TSetStreamPaginationParams {

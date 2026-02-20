@@ -95,7 +95,7 @@ describe('LocalStreamPostsService', () => {
     const result = await Core.LocalStreamPostsService.persistPosts({ posts: [mockPost] });
 
     const expectedAttachments = mockPost.details.attachments || [];
-    expect(result).toEqual({ postAttachments: expectedAttachments });
+    expect(result).toEqual({ attachmentMetadata: expectedAttachments });
     return { compositeId, mockPost };
   };
 
@@ -236,7 +236,7 @@ describe('LocalStreamPostsService', () => {
 
       const result = await Core.LocalStreamPostsService.persistPosts({ posts: mockPosts });
 
-      expect(result).toEqual({ postAttachments: [] });
+      expect(result).toEqual({ attachmentMetadata: [] });
       await verifyPostPersisted(buildCompositeId({ pubky: 'user-1', id: 'post-1' }), 'Post post-1 content');
       await verifyPostPersisted(buildCompositeId({ pubky: 'user-2', id: 'post-2' }), 'Post post-2 content');
     });
@@ -288,7 +288,7 @@ describe('LocalStreamPostsService', () => {
     it('should handle empty array', async () => {
       const result = await Core.LocalStreamPostsService.persistPosts({ posts: [] });
 
-      expect(result).toEqual({ postAttachments: [] });
+      expect(result).toEqual({ attachmentMetadata: [] });
     });
 
     it('should handle posts with empty tags array', async () => {
@@ -365,7 +365,7 @@ describe('LocalStreamPostsService', () => {
 
       const result = await Core.LocalStreamPostsService.persistPosts({ posts: mockPosts });
 
-      expect(result).toEqual({ postAttachments: [] });
+      expect(result).toEqual({ attachmentMetadata: [] });
 
       // Verify all posts were persisted
       await verifyPostPersisted(buildCompositeId({ pubky: 'author-1', id: 'post-1' }), 'Post post-1 content');
@@ -401,7 +401,7 @@ describe('LocalStreamPostsService', () => {
       const result = await Core.LocalStreamPostsService.persistPosts({ posts: mockPosts });
 
       expect(result).toEqual({
-        postAttachments: [meta1, meta2, meta3],
+        attachmentMetadata: [meta1, meta2, meta3],
       });
     });
 
@@ -410,7 +410,7 @@ describe('LocalStreamPostsService', () => {
 
       const result = await Core.LocalStreamPostsService.persistPosts({ posts: mockPosts });
 
-      expect(result).toEqual({ postAttachments: [] });
+      expect(result).toEqual({ attachmentMetadata: [] });
     });
   });
 

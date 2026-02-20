@@ -72,14 +72,11 @@ export const postStreamApi = {
 export function buildPostStreamBodyUrl(params: Core.TStreamPostsByIdsParams): Core.TStreamPostsByIdsParams {
   const body: Core.TStreamPostsByIdsParams = {
     post_ids: params.post_ids,
+    include_attachment_metadata: params.include_attachment_metadata ?? true,
   };
 
   if (params.viewer_id) {
     body.viewer_id = params.viewer_id;
-  }
-
-  if (params.include_attachment_metadata) {
-    body.include_attachment_metadata = params.include_attachment_metadata;
   }
 
   return body;

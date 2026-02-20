@@ -72,7 +72,7 @@ describe('TtlApplication', () => {
       const queryNexusSpy = vi.spyOn(Core, 'queryNexus').mockResolvedValue(nexusPosts);
       const persistPostsSpy = vi
         .spyOn(Core.LocalStreamPostsService, 'persistPosts')
-        .mockResolvedValue({ postAttachments: [] } as unknown as Awaited<
+        .mockResolvedValue({ attachmentMetadata: [] } as unknown as Awaited<
           ReturnType<typeof Core.LocalStreamPostsService.persistPosts>
         >);
       const persistFilesSpy = vi.spyOn(Core.FileApplication, 'persistFiles').mockResolvedValue(undefined);
@@ -100,7 +100,7 @@ describe('TtlApplication', () => {
       vi.spyOn(Core, 'queryNexus').mockRejectedValue(new Error('Network down'));
       const persistPostsSpy = vi
         .spyOn(Core.LocalStreamPostsService, 'persistPosts')
-        .mockResolvedValue({ postAttachments: [] });
+        .mockResolvedValue({ attachmentMetadata: [] });
 
       await expect(Core.TtlApplication.forceRefreshPostsByIds({ postIds: ['alice:1'], viewerId })).rejects.toThrow(
         'Network down',
@@ -138,7 +138,7 @@ describe('TtlApplication', () => {
 
       vi.spyOn(Core, 'queryNexus').mockResolvedValue([repostNexusPost]);
       vi.spyOn(Core.LocalStreamPostsService, 'persistPosts').mockResolvedValue({
-        postAttachments: [],
+        attachmentMetadata: [],
       } as unknown as Awaited<ReturnType<typeof Core.LocalStreamPostsService.persistPosts>>);
       vi.spyOn(Core.FileApplication, 'persistFiles').mockResolvedValue(undefined);
       vi.spyOn(Core.LocalStreamUsersService, 'getNotPersistedUsersInCache').mockResolvedValue([]);
@@ -183,7 +183,7 @@ describe('TtlApplication', () => {
 
       vi.spyOn(Core, 'queryNexus').mockResolvedValue([regularPost]);
       vi.spyOn(Core.LocalStreamPostsService, 'persistPosts').mockResolvedValue({
-        postAttachments: [],
+        attachmentMetadata: [],
       } as unknown as Awaited<ReturnType<typeof Core.LocalStreamPostsService.persistPosts>>);
       vi.spyOn(Core.FileApplication, 'persistFiles').mockResolvedValue(undefined);
       vi.spyOn(Core.LocalStreamUsersService, 'getNotPersistedUsersInCache').mockResolvedValue([]);
