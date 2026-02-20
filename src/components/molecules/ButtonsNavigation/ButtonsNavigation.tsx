@@ -18,7 +18,7 @@ export function ButtonsNavigation({
   continueButtonClassName,
 }: Types.ButtonsNavigationProps) {
   return (
-    <Atoms.Container className={Libs.cn('justify-between gap-3 md:flex-row lg:gap-6', className)}>
+    <Atoms.Container className={Libs.cn('justify-between gap-3 py-6 md:flex-row lg:gap-6', className)}>
       {!hiddenBackButton && (
         <Atoms.Button
           id={`${id}-back-btn`}

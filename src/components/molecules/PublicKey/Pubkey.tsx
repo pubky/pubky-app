@@ -52,8 +52,6 @@ export const PublicKeyNavigation = () => {
       onHandleBackButton={onHandleBackButton}
       onHandleContinueButton={onHandleContinueButton}
       loadingContinueButton={loading}
-      backButtonClassName="w-full md:flex-0"
-      continueButtonClassName="w-full md:flex-0"
     />
   );
 };

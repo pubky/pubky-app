@@ -55,8 +55,6 @@ export const LogoutNavigation = () => {
       continueText={t('signBackIn')}
       onHandleContinueButton={onHandleContinueButton}
       onHandleBackButton={onHandleBackButton}
-      backButtonClassName="w-full md:flex-0"
-      continueButtonClassName="w-full md:flex-0"
     />
   );
 };
