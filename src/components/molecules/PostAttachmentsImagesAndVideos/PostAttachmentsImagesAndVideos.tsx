@@ -8,6 +8,19 @@ import type { AttachmentConstructed } from '@/organisms/PostAttachments/PostAtta
 import type { CarouselApi } from '@/components/atoms/Carousel';
 import { useEffect, useState } from 'react';
 
+/** Returns proxy URL for Nexus video (fixes Content-Type for iOS Safari). Remove when Nexus serves video/mp4. */
+function getVideoSrc(url: string): string {
+  try {
+    const parsed = new URL(url);
+    if (/^nexus\.[a-z0-9-]+\.[a-z0-9.-]+$/i.test(parsed.hostname) && parsed.protocol === 'https:') {
+      return `/api/video-proxy?url=${encodeURIComponent(url)}`;
+    }
+  } catch {
+    /* invalid URL, use as-is */
+  }
+  return url;
+}
+
 type PostAttachmentsImagesAndVideosProps = {
   imagesAndVideos: AttachmentConstructed[];
 };
@@ -29,6 +42,54 @@ export const PostAttachmentsImagesAndVideos = ({ imagesAndVideos }: PostAttachme
         toast({ title: 'Error attempting to enable fullscreen', description: error });
       });
     }
+  };
+
+  const handleVideoError = (e: React.SyntheticEvent<HTMLVideoElement>) => {
+    const video = e.currentTarget;
+    const error = video.error;
+    const src = video.src;
+
+    const MEDIA_ERR_CODES: Record<number, string> = {
+      1: 'MEDIA_ERR_ABORTED (user aborted)',
+      2: 'MEDIA_ERR_NETWORK (network error)',
+      3: 'MEDIA_ERR_DECODE (decoding error)',
+      4: 'MEDIA_ERR_SRC_NOT_SUPPORTED (format/codec not supported)',
+    };
+
+    const codeLabel = error ? MEDIA_ERR_CODES[error.code] ?? `Unknown (${error.code})` : 'No error object';
+    const message = error?.message ?? 'No message';
+
+    // H.264 codec strings for canPlayType probe (profile+level)
+    const CODEC_PROBES: Array<{ label: string; mime: string }> = [
+      { label: 'Baseline 3.0', mime: 'video/mp4; codecs="avc1.42E01E"' },
+      { label: 'Baseline 3.1', mime: 'video/mp4; codecs="avc1.42E01F"' },
+      { label: 'Main 3.1', mime: 'video/mp4; codecs="avc1.4D401F"' },
+      { label: 'High 3.1', mime: 'video/mp4; codecs="avc1.64001F"' },
+      { label: 'High 4.0', mime: 'video/mp4; codecs="avc1.640028"' },
+      { label: 'High 4.1', mime: 'video/mp4; codecs="avc1.640029"' },
+    ];
+
+    const canPlayResults = CODEC_PROBES.map(
+      (p) => `${p.label}: ${video.canPlayType(p.mime) || '(empty)'}`,
+    ).join(', ');
+
+    const diagnostics = {
+      code: codeLabel,
+      message,
+      src,
+      userAgent: typeof navigator !== 'undefined' ? navigator.userAgent : 'N/A',
+      networkState: video.networkState,
+      readyState: video.readyState,
+      videoWidth: video.videoWidth,
+      videoHeight: video.videoHeight,
+      canPlayType: canPlayResults,
+    };
+
+    toast({
+      title: 'Video failed to load',
+      description: JSON.stringify(diagnostics, null, 2),
+    });
+    console.error('[Video playback failed]', diagnostics);
   };
 
   useEffect(() => {
@@ -91,9 +152,10 @@ export const PostAttachmentsImagesAndVideos = ({ imagesAndVideos }: PostAttachme
               onClick={(e) => {
                 e.stopPropagation();
               }}
-              src={media.urls.main}
+              src={getVideoSrc(media.urls.main)}
               pauseVideo={open}
-              className="h-52 w-full cursor-auto only:h-auto only:max-h-96 only:w-fit sm:last:odd:col-span-2"
+              onError={handleVideoError}
+              className="h-52 w-full cursor-auto only:h-auto only:min-w-32 only:max-h-96 only:w-fit only:object-contain sm:last:odd:col-span-2"
             />
           ),
         )}
@@ -131,8 +193,9 @@ export const PostAttachmentsImagesAndVideos = ({ imagesAndVideos }: PostAttachme
                 ) : (
                   <Atoms.Video
                     id={`media-item-${i}`}
-                    src={media.urls.main}
+                    src={getVideoSrc(media.urls.main)}
                     pauseVideo={currentIndex !== i}
+                    onError={handleVideoError}
                     className="max-h-[75dvh] w-full"
                   />
                 )}
