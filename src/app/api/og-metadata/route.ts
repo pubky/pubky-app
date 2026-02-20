@@ -4,6 +4,7 @@ import { isIP } from 'net';
 import { truncateString, truncateMiddle, decodeHtmlEntities } from '@/libs/utils';
 import { isIpSafe } from '@/libs/network';
 import { OG_PATTERNS, extractFromHtml } from '@/libs/html';
+import { URL_TRUNCATE_LENGTH } from '@/config';
 
 /**
  * API Route for secure OpenGraph metadata fetching
@@ -25,6 +26,15 @@ const CACHE_HEADERS = {
     'Cache-Control': 'public, s-maxage=3600, stale-while-revalidate=86400',
   },
 };
+
+function buildFallbackMetadata(url: string, maxLength = URL_TRUNCATE_LENGTH) {
+  return {
+    url: truncateMiddle(url, maxLength),
+    title: null,
+    image: null,
+    type: 'website' as const,
+  };
+}
 
 export async function GET(request: NextRequest) {
   try {
@@ -131,6 +141,8 @@ export async function GET(request: NextRequest) {
           'User-Agent':
             'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36',
           Accept: 'text/html, image/*, video/*, audio/*',
+          'Accept-Language': 'en-US,en;q=0.9',
+          'Upgrade-Insecure-Requests': '1',
         },
         redirect: 'follow',
       });
@@ -146,6 +158,10 @@ export async function GET(request: NextRequest) {
 
     // 9. Validate response status
     if (!response.ok) {
+      if (response.status === 403) {
+        return NextResponse.json(buildFallbackMetadata(url), CACHE_HEADERS);
+      }
+
       return NextResponse.json({ error: 'Fetch failed' }, { status: response.status });
     }
 
