@@ -457,34 +457,6 @@ body {
     display: none;
   }
 
-  /* Compatibility utilities for class-based native scrollbar styling */
-  .scrollbar-thin {
-    scrollbar-width: thin;
-  }
-
-  .scrollbar-thin::-webkit-scrollbar {
-    width: 8px;
-    height: 8px;
-  }
-
-  .scrollbar-track-transparent::-webkit-scrollbar-track {
-    background: transparent;
-  }
-
-  .scrollbar-thumb-rounded-full::-webkit-scrollbar-thumb {
-    border: 1px solid transparent;
-    border-radius: 9999px;
-    background-clip: content-box;
-  }
-
-  .scrollbar-thumb-border {
-    scrollbar-color: var(--border) transparent;
-  }
-
-  .scrollbar-thumb-border::-webkit-scrollbar-thumb {
-    background-color: var(--border);
-  }
-
   /**
    * Fullscreen image display
    * - Ensures images maintain aspect ratio when viewed in fullscreen mode
