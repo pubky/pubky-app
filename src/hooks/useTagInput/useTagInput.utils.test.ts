@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { filterSuggestions } from './useTagInput.utils';
+import { filterSuggestions, mergeTagSuggestions } from './useTagInput.utils';
 import { TAG_INPUT_MAX_SUGGESTIONS } from './useTagInput.constants';
 
 describe('filterSuggestions', () => {
@@ -79,5 +79,47 @@ describe('filterSuggestions', () => {
     ];
     const result = filterSuggestions(tagsWithExtra, 'btc');
     expect(result).toEqual([{ label: 'btcpay', count: 50 }]);
+  });
+});
+
+describe('mergeTagSuggestions', () => {
+  it('returns local only when API disabled', () => {
+    const local = [{ label: 'bitcoin' }, { label: 'btc' }];
+    const api = ['ethereum', 'eth'];
+    expect(mergeTagSuggestions(local, api, false)).toEqual(local);
+  });
+
+  it('returns local only when API empty', () => {
+    const local = [{ label: 'bitcoin' }];
+    expect(mergeTagSuggestions(local, [], true)).toEqual(local);
+  });
+
+  it('merges local first, then API (deduplicated)', () => {
+    const local = [{ label: 'bitcoin' }, { label: 'btc' }];
+    const api = ['ethereum', 'eth', 'bitcoin'];
+    expect(mergeTagSuggestions(local, api, true)).toEqual([
+      { label: 'bitcoin' },
+      { label: 'btc' },
+      { label: 'ethereum' },
+      { label: 'eth' },
+    ]);
+  });
+
+  it('deduplicates case-insensitively', () => {
+    const local = [{ label: 'Bitcoin' }];
+    const api = ['bitcoin', 'btc'];
+    expect(mergeTagSuggestions(local, api, true)).toEqual([{ label: 'Bitcoin' }, { label: 'btc' }]);
+  });
+
+  it('caps at limit (default 5)', () => {
+    const local = [{ label: 'a' }, { label: 'b' }, { label: 'c' }];
+    const api = ['d', 'e', 'f', 'g'];
+    expect(mergeTagSuggestions(local, api, true).length).toBe(5);
+  });
+
+  it('respects custom limit', () => {
+    const local = [{ label: 'a' }, { label: 'b' }];
+    const api = ['c', 'd', 'e'];
+    expect(mergeTagSuggestions(local, api, true, 3)).toEqual([{ label: 'a' }, { label: 'b' }, { label: 'c' }]);
   });
 });

@@ -239,4 +239,50 @@ describe('TagInput - API Suggestions', () => {
     // Input should be cleared
     expect(input.value).toBe('');
   });
+
+  it('selects API suggestion with keyboard and adds it', async () => {
+    mockUseTagSuggestions.mockReturnValue({
+      suggestions: ['bitcoin', 'bitconnect'],
+      isLoading: false,
+    });
+
+    render(<TagInput onTagAdd={mockOnTagAdd} enableApiSuggestions={true} addOnSuggestionClick={true} />);
+
+    const input = screen.getByPlaceholderText('add tag') as HTMLInputElement;
+    fireEvent.change(input, { target: { value: 'bit' } });
+    fireEvent.focus(input);
+
+    await waitFor(() => {
+      expect(screen.getByText('bitcoin')).toBeInTheDocument();
+      expect(screen.getByText('bitconnect')).toBeInTheDocument();
+    });
+
+    fireEvent.keyDown(input, { key: 'ArrowDown' });
+    fireEvent.keyDown(input, { key: 'Enter' });
+
+    expect(mockOnTagAdd).toHaveBeenCalledWith('bitcoin');
+    expect(input.value).toBe('');
+  });
+
+  it('submits typed tag on Enter when no suggestion is selected', async () => {
+    mockUseTagSuggestions.mockReturnValue({
+      suggestions: ['bitcoin'],
+      isLoading: false,
+    });
+
+    render(<TagInput onTagAdd={mockOnTagAdd} enableApiSuggestions={true} addOnSuggestionClick={true} />);
+
+    const input = screen.getByPlaceholderText('add tag') as HTMLInputElement;
+    fireEvent.change(input, { target: { value: 'bit' } });
+    fireEvent.focus(input);
+
+    await waitFor(() => {
+      expect(screen.getByText('bitcoin')).toBeInTheDocument();
+    });
+
+    fireEvent.keyDown(input, { key: 'Enter' });
+
+    await new Promise((resolve) => setTimeout(resolve, 0));
+    expect(mockOnTagAdd).toHaveBeenCalledWith('bit');
+  });
 });

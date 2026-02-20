@@ -42,6 +42,10 @@ export const WordSlot = (props: Types.WordSlotProps) => {
             onBlur={() => onValidate(index, word)}
             onKeyDown={onKeyDown}
             disabled={isRestoring}
+            autoComplete="off"
+            autoCorrect="off"
+            autoCapitalize="off"
+            spellCheck={false}
           />
         </Atoms.Container>
       </Atoms.Container>
