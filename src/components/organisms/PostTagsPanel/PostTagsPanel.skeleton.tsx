@@ -3,11 +3,9 @@
 import * as Atoms from '@/atoms';
 import * as Libs from '@/libs';
 import { TAGS_PER_PAGE } from '@/hooks/usePostTags/usePostTags.constants';
+import type { PostTagsPanelProps } from './PostTagsPanel.types';
 
-export interface PostTagsPanelSkeletonProps {
-  widthMode?: 'fit' | 'full';
-  className?: string;
-}
+type PostTagsPanelSkeletonProps = Omit<PostTagsPanelProps, 'postId'>;
 
 export function PostTagsPanelSkeleton({ widthMode = 'fit', className }: PostTagsPanelSkeletonProps) {
   return (

@@ -1,8 +1,7 @@
 'use client';
 
 import * as Atoms from '@/atoms';
-
-const ROW_COUNT = 4;
+import { TAGS_PER_PAGE } from '@/hooks/usePostTags/usePostTags.constants';
 
 export function WhoTaggedExpandedListSkeleton() {
   return (
@@ -13,7 +12,7 @@ export function WhoTaggedExpandedListSkeleton() {
       className="flex max-h-(--who-tagged-expanded-list-max-height) w-full max-w-(--who-tagged-expanded-list-width) flex-col gap-2 overflow-y-auto rounded-md border border-border bg-popover p-4 shadow-2xl"
       data-testid="who-tagged-expanded-list-skeleton"
     >
-      {Array.from({ length: ROW_COUNT }).map((_, index) => (
+      {Array.from({ length: TAGS_PER_PAGE }).map((_, index) => (
         <Atoms.Container
           key={`who-tagged-expanded-list-skeleton-row-${index}`}
           overrideDefaults
