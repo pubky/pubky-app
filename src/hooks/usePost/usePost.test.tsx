@@ -508,7 +508,7 @@ describe('usePost', () => {
         authorId: 'test-user-id',
         tags: ['tag1'],
         attachments: undefined,
-        isArticle: undefined,
+        isArticle: false,
       });
       expect(result.current.content).toBe('');
       expect(result.current.tags).toEqual([]);
@@ -541,7 +541,7 @@ describe('usePost', () => {
         authorId: 'test-user-id',
         tags: undefined,
         attachments: undefined,
-        isArticle: undefined,
+        isArticle: false,
       });
     });
 
@@ -567,7 +567,7 @@ describe('usePost', () => {
         authorId: 'test-user-id',
         tags: undefined,
         attachments: [mockFile1, mockFile2],
-        isArticle: undefined,
+        isArticle: false,
       });
       expect(result.current.attachments).toEqual([]);
       expect(mockOnSuccess).toHaveBeenCalled();
@@ -622,7 +622,7 @@ describe('usePost', () => {
         authorId: 'test-user-id',
         tags: undefined,
         attachments: [mockFile],
-        isArticle: undefined,
+        isArticle: false,
       });
       expect(result.current.attachments).toEqual([]);
       expect(result.current.content).toBe('');
@@ -723,7 +723,7 @@ describe('usePost', () => {
         authorId: 'test-user-id',
         tags: undefined,
         attachments: undefined,
-        isArticle: undefined,
+        isArticle: false,
       });
     });
 

@@ -108,7 +108,7 @@ export function usePost(): UsePostReturn {
         authorId: currentUserId,
         tags: tags.length > 0 ? tags : undefined,
         attachments: attachments.length > 0 ? attachments : undefined,
-        isArticle: isArticle || undefined,
+        isArticle,
       });
       setContent('');
       setTags([]);
