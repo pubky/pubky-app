@@ -29,7 +29,7 @@ export interface ProfileHeaderActions {
   /** Whether the follow action is in progress */
   isFollowLoading?: boolean;
   /** Which follow action is currently in progress */
-  followLoadingAction: FollowAction;
+  followLoadingAction: FollowAction | null;
   /** Whether the current user is following this profile */
   isFollowing?: boolean;
 }
