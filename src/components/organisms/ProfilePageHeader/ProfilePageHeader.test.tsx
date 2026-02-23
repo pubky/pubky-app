@@ -2,6 +2,7 @@ import { render, screen, fireEvent } from '@testing-library/react';
 import { describe, it, expect, vi } from 'vitest';
 import { ProfilePageHeader } from './ProfilePageHeader';
 import { ProfilePageHeaderProps } from './ProfilePageHeader.types';
+import { FOLLOW_ACTIONS } from '@/hooks/useFollowUser/useFollowUser.types';
 
 // Mock Molecules components
 vi.mock('@/molecules', async (importOriginal) => {
@@ -267,7 +268,7 @@ describe('ProfilePageHeader - Other User Profile', () => {
         ...mockOtherUserProps.actions,
         isFollowing: true,
         isFollowLoading: true,
-        followLoadingAction: 'follow' as const,
+        followLoadingAction: FOLLOW_ACTIONS.FOLLOW,
       },
     };
     render(<ProfilePageHeader {...props} />);
@@ -283,7 +284,7 @@ describe('ProfilePageHeader - Other User Profile', () => {
         ...mockOtherUserProps.actions,
         isFollowing: false,
         isFollowLoading: true,
-        followLoadingAction: 'unfollow' as const,
+        followLoadingAction: FOLLOW_ACTIONS.UNFOLLOW,
       },
     };
     render(<ProfilePageHeader {...props} />);

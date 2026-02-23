@@ -1,5 +1,6 @@
 import { ProfileStats } from '@/hooks/useProfileHeader/useProfileHeader';
 import { ProfilePageType, FilterBarPageType } from '@/app/profile/types';
+import { FollowAction } from '@/hooks/useFollowUser/useFollowUser.types';
 
 export interface ProfilePageLayoutActions {
   onEdit: () => void;
@@ -13,7 +14,7 @@ export interface ProfilePageLayoutActions {
   /** Whether the follow action is in progress */
   isFollowLoading?: boolean;
   /** Which follow action is currently in progress */
-  followLoadingAction: 'follow' | 'unfollow' | null;
+  followLoadingAction: FollowAction;
   /** Whether the current user is following this profile */
   isFollowing?: boolean;
 }

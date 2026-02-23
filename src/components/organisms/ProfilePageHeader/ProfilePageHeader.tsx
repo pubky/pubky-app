@@ -8,6 +8,7 @@ import * as Organisms from '@/organisms';
 import * as Icons from '@/libs/icons';
 import * as Libs from '@/libs';
 import * as Types from './ProfilePageHeader.types';
+import { FOLLOW_ACTIONS } from '@/hooks/useFollowUser/useFollowUser.types';
 
 /**
  * ProfilePageHeader
@@ -46,17 +47,15 @@ export function ProfilePageHeader({ profile, actions, isOwnProfile = true, userI
   const formattedPublicKey = Libs.formatPublicKey({ key: publicKey });
   const displayEmoji = Libs.extractEmojiFromStatus(status || '', emoji);
   const getLoadingFollowText = () => {
-    if (followLoadingAction === 'unfollow') {
+    if (followLoadingAction === FOLLOW_ACTIONS.UNFOLLOW) {
       return t('unfollowing');
     }
 
-    if (followLoadingAction === 'follow') {
+    if (followLoadingAction === FOLLOW_ACTIONS.FOLLOW) {
       return t('followingProgress');
     }
 
-    // Defensive fallback: if action is temporarily unavailable, match the current
-    // UI state to avoid reversed copy during optimistic updates.
-    return isFollowing ? t('followingProgress') : t('unfollowing');
+    return t('loading');
   };
 
   return (

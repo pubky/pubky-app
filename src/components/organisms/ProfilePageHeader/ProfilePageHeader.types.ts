@@ -1,3 +1,5 @@
+import { FollowAction } from '@/hooks/useFollowUser/useFollowUser.types';
+
 /**
  * Profile data for the header
  */
@@ -27,7 +29,7 @@ export interface ProfileHeaderActions {
   /** Whether the follow action is in progress */
   isFollowLoading?: boolean;
   /** Which follow action is currently in progress */
-  followLoadingAction: 'follow' | 'unfollow' | null;
+  followLoadingAction: FollowAction;
   /** Whether the current user is following this profile */
   isFollowing?: boolean;
 }

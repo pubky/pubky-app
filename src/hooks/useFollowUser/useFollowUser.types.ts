@@ -1,6 +1,11 @@
 import type { Pubky } from '@/core';
 
-export type FollowAction = 'follow' | 'unfollow';
+export const FOLLOW_ACTIONS = {
+  FOLLOW: 'follow',
+  UNFOLLOW: 'unfollow',
+} as const;
+
+export type FollowAction = (typeof FOLLOW_ACTIONS)[keyof typeof FOLLOW_ACTIONS];
 
 export interface UseFollowUserResult {
   /** Toggles follow status for a user */
