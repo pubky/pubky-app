@@ -371,16 +371,15 @@ exports[`SettingsInfo - Snapshots > matches snapshot 1`] = `
     </div>
     <div
       class="flex w-full max-w-(--filter-bar-width) flex-col gap-2"
-      data-testid="feedback-card"
+      data-testid="feedback-card-skeleton"
     >
-      <h2
-        class="text-2xl font-light text-muted-foreground"
-        data-testid="heading-2"
-      >
-        Feedback
-      </h2>
       <div
-        class="flex w-full min-w-0 cursor-pointer flex-col gap-4 rounded-lg border border-dashed border-input p-6"
+        class="animate-pulse bg-muted h-8 w-32 rounded-md"
+        data-slot="skeleton"
+        data-testid="feedback-card-skeleton-heading"
+      />
+      <div
+        class="flex w-full min-w-0 flex-col gap-4 rounded-lg border border-dashed border-input p-6"
         data-testid="container"
       >
         <div
@@ -388,86 +387,20 @@ exports[`SettingsInfo - Snapshots > matches snapshot 1`] = `
           data-testid="container"
         >
           <div
-            class="flex size-12 shrink-0 items-center justify-center rounded-md p-2 shadow-xs"
-            data-testid="container"
-          >
-            <span
-              class="relative flex shrink-0 overflow-hidden rounded-full h-12 w-12"
-            >
-              <span
-                class="flex h-full w-full items-center justify-center rounded-full border border-muted-foreground bg-muted overflow-hidden border-none text-sm"
-              >
-                <div
-                  class="facehash h-full w-full rounded-full text-background"
-                  data-facehash=""
-                  data-interactive="true"
-                  style="width: 100%; height: 100%; position: relative; display: flex; align-items: center; justify-content: center; overflow: hidden; container-type: size; perspective: 300px; transform-style: preserve-3d; background-color: rgb(0, 255, 93);"
-                >
-                  <div
-                    data-facehash-gradient=""
-                    style="position: absolute; inset: 0px; pointer-events: none; z-index: 1; background: radial-gradient(100% 100% at 50% 50%, rgba(255, 255, 255, 0.15) 0%, transparent 60%);"
-                  />
-                  <div
-                    data-facehash-face=""
-                    style="position: absolute; inset: 0px; display: flex; flex-direction: column; align-items: center; justify-content: center; z-index: 2; transform: rotateX(-15deg) rotateY(15deg) translateZ(12px); transform-style: preserve-3d; transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);"
-                  >
-                    <svg
-                      aria-hidden="true"
-                      fill="none"
-                      style="width: 60%; height: auto; max-width: 90%; max-height: 40%;"
-                      viewBox="0 0 63 15"
-                      xmlns="http://www.w3.org/2000/svg"
-                    >
-                      <g
-                        style="animation: facehash-blink 5.2s ease-in-out 3.2s infinite; transform-origin: center center;"
-                      >
-                        <circle
-                          cx="55.2"
-                          cy="7.2"
-                          fill="currentColor"
-                          r="7.2"
-                        />
-                      </g>
-                      <g
-                        style="animation: facehash-blink 5.2s ease-in-out 3.2s infinite; transform-origin: center center;"
-                      >
-                        <circle
-                          cx="7.2"
-                          cy="7.2"
-                          fill="currentColor"
-                          r="7.2"
-                        />
-                      </g>
-                    </svg>
-                    <div
-                      data-facehash-mouth=""
-                      style="margin-top: 8%; display: flex; align-items: center; justify-content: center;"
-                    >
-                      <span
-                        data-testid="avatar-fallback-initial"
-                        style="font-size: 26cqw; line-height: 1;"
-                      >
-                        Y
-                      </span>
-                    </div>
-                  </div>
-                </div>
-              </span>
-            </span>
-          </div>
+            class="animate-pulse bg-muted h-12 w-12 shrink-0 rounded-md"
+            data-slot="skeleton"
+            data-testid="feedback-card-skeleton-avatar"
+          />
           <div
-            class="min-w-0 flex-1 truncate text-base font-bold text-foreground"
-            data-testid="container"
-          >
-            Your Name
-          </div>
+            class="animate-pulse bg-muted h-6 w-40 max-w-full rounded-md"
+            data-slot="skeleton"
+          />
         </div>
-        <button
-          class="w-full cursor-pointer text-left text-base leading-normal font-medium break-words text-muted-foreground"
-          data-slot="button"
-        >
-          What do you think about Pubky?
-        </button>
+        <div
+          class="animate-pulse bg-muted h-12 w-full rounded-md"
+          data-slot="skeleton"
+          data-testid="feedback-card-skeleton-button"
+        />
       </div>
     </div>
     <div
