@@ -1,5 +1,6 @@
 import * as Core from '@/core';
 import { HttpMethod, Err, ClientErrorCode, ErrorService } from '@/libs';
+import { postUriBuilder } from 'pubky-app-specs';
 
 export class PostApplication {
   /**
@@ -47,7 +48,9 @@ export class PostApplication {
    * @returns Array of post relationships that replied to this post
    */
   static async getReplies({ compositeId }: Core.TCompositeId): Promise<Core.PostRelationshipsModelSchema[]> {
-    return await Core.LocalPostService.readReplies(compositeId);
+    const { pubky, id } = Core.parseCompositeId(compositeId);
+    const parentPostUri = postUriBuilder(pubky, id);
+    return await Core.LocalPostService.readReplies(parentPostUri);
   }
 
   /**
