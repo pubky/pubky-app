@@ -68,13 +68,22 @@ describe('inferPostKindForCreate', () => {
     expect(kind).toBe(PubkyAppPostKind.Short);
   });
 
-  it('prioritizes attachments over link content', () => {
+  it('prioritizes link over attachments', () => {
     const kind = Core.inferPostKindForCreate({
       content: 'Watch https://pubky.app/video',
       attachments: [new File(['video-content'], 'clip.mp4', { type: 'video/mp4' })],
     });
 
-    expect(kind).toBe(PubkyAppPostKind.Video);
+    expect(kind).toBe(PubkyAppPostKind.Link);
+  });
+
+  it('prioritizes link over image attachments', () => {
+    const kind = Core.inferPostKindForCreate({
+      content: 'Check https://pubky.app',
+      attachments: [new File(['image-content'], 'photo.png', { type: 'image/png' })],
+    });
+
+    expect(kind).toBe(PubkyAppPostKind.Link);
   });
 
   it('returns long when isArticle is true', () => {

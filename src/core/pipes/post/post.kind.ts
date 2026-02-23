@@ -45,15 +45,15 @@ export const inferPostKindForCreate = ({ content, attachments, isArticle }: TInf
     return PubkyAppPostKind.Long;
   }
 
+  if (hasSupportedUrl(content)) {
+    return PubkyAppPostKind.Link;
+  }
+
   const files = attachments ?? [];
   const attachmentKind = getAttachmentKind(files);
 
   if (attachmentKind !== null) {
     return attachmentKind;
-  }
-
-  if (hasSupportedUrl(content)) {
-    return PubkyAppPostKind.Link;
   }
 
   return PubkyAppPostKind.Short;
