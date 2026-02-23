@@ -1,10 +1,9 @@
 import * as Core from '@/core';
-import { PubkyAppPostKind } from 'pubky-app-specs';
 
 export interface TCreatePostParams {
   authorId: Core.Pubky;
   content: string;
-  kind?: PubkyAppPostKind;
+  isArticle?: boolean;
   tags?: string[];
   attachments?: File[];
   parentPostId?: string;
