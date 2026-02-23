@@ -209,6 +209,41 @@ describe('PostController', () => {
     });
   });
 
+  describe('getReplies', () => {
+    it('should return replies for a post when relationships store parent as URI', async () => {
+      const { PostController } = await import('./post');
+
+      const parentUri = `pubky://${testData.authorPubky}/pub/pubky.app/posts/${testData.postId}`;
+      const replyOneId = Core.buildCompositeId({ pubky: 'reply-author-1' as Core.Pubky, id: 'reply-1' });
+      const replyTwoId = Core.buildCompositeId({ pubky: 'reply-author-2' as Core.Pubky, id: 'reply-2' });
+
+      await Core.PostRelationshipsModel.table.bulkAdd([
+        { id: replyOneId, replied: parentUri, reposted: null, mentioned: [] },
+        { id: replyTwoId, replied: parentUri, reposted: null, mentioned: [] },
+        {
+          id: Core.buildCompositeId({ pubky: 'reply-author-3' as Core.Pubky, id: 'reply-3' }),
+          replied: 'pubky://someone/pub/pubky.app/posts/another-parent',
+          reposted: null,
+          mentioned: [],
+        },
+      ]);
+
+      const replies = await PostController.getReplies({ compositeId: testData.fullPostId });
+
+      expect(replies).toHaveLength(2);
+      expect(replies.map((reply) => reply.id)).toEqual(expect.arrayContaining([replyOneId, replyTwoId]));
+      expect(replies.every((reply) => reply.replied === parentUri)).toBe(true);
+    });
+
+    it('should return empty array when a post has no replies', async () => {
+      const { PostController } = await import('./post');
+
+      const replies = await PostController.getReplies({ compositeId: testData.fullPostId });
+
+      expect(replies).toEqual([]);
+    });
+  });
+
   describe('commitCreate', () => {
     it('should create a post and sync to homeserver', async () => {
       const { PostController } = await import('./post');
