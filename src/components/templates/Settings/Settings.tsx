@@ -22,7 +22,7 @@ export function Settings({ children }: SettingsProps) {
   return (
     <>
       {/* Mobile header - rendered here for control over hasGradientBackground */}
-      <Molecules.MobileHeader hasGradientBackground={false} showLeftButton={false} showRightButton={false} />
+      <Molecules.MobileHeader hasGradientBackground={false} showLeftButton={false} showRightButton={false} fixed />
 
       {/* Mobile tab navigation - visible only on mobile (< lg) */}
       <Molecules.SettingsMobileMenu className="lg:hidden" />
@@ -35,7 +35,7 @@ export function Settings({ children }: SettingsProps) {
         rightSidebarContent={<Molecules.SettingsInfo hideFAQ={isOnHelpPage} />}
         leftDrawerContent={<Molecules.SettingsMenu />}
         rightDrawerContent={<Molecules.SettingsInfo hideFAQ={isOnHelpPage} />}
-        className="pt-18 lg:pt-0"
+        className="pt-[calc(var(--header-height-mobile)+5rem)] lg:pt-0"
       >
         {children}
       </Organisms.ContentLayout>
