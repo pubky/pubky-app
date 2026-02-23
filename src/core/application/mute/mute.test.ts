@@ -1,9 +1,13 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import * as Core from '@/core';
 import { HttpMethod } from '@/libs';
-import { UserApplication } from './user';
+import { MuteApplication } from './mute';
 
-describe('UserApplication.commitMute', () => {
+vi.mock('pubky-app-specs', () => ({
+  baseUriBuilder: (pubky: string) => `pubky://${pubky}/pub/pubky.app/`,
+}));
+
+describe('MuteApplication.commitMute', () => {
   const muter = 'pubky_muter' as Core.Pubky;
   const mutee = 'pubky_mutee' as Core.Pubky;
   const muteUrl = 'pubky://muter/pub/pubky.app/mutes/mutee';
@@ -35,7 +39,7 @@ describe('UserApplication.commitMute', () => {
     it(`should ${action} when stream is empty`, async () => {
       const requestSpy = vi.spyOn(Core.HomeserverService, 'request').mockResolvedValue(undefined as unknown as void);
 
-      await UserApplication.commitMute({
+      await MuteApplication.commitMute({
         eventType: homeserverAction,
         muteUrl,
         muteJson,
@@ -57,7 +61,7 @@ describe('UserApplication.commitMute', () => {
 
       const requestSpy = vi.spyOn(Core.HomeserverService, 'request').mockResolvedValue(undefined as unknown as void);
 
-      await UserApplication.commitMute({
+      await MuteApplication.commitMute({
         eventType: homeserverAction,
         muteUrl,
         muteJson,
@@ -85,7 +89,7 @@ describe('UserApplication.commitMute', () => {
       const removeSpy = vi.spyOn(Core.LocalStreamUsersService, 'removeFromStream');
       const requestSpy = vi.spyOn(Core.HomeserverService, 'request').mockResolvedValue(undefined as unknown as void);
 
-      await UserApplication.commitMute({
+      await MuteApplication.commitMute({
         eventType: homeserverAction,
         muteUrl,
         muteJson,
@@ -108,7 +112,7 @@ describe('UserApplication.commitMute', () => {
       const createSpy = vi.spyOn(Core.LocalMuteService, 'create');
       const requestSpy = vi.spyOn(Core.HomeserverService, 'request').mockResolvedValue(undefined as unknown as void);
 
-      await UserApplication.commitMute({
+      await MuteApplication.commitMute({
         eventType: HttpMethod.PUT,
         muteUrl,
         muteJson,
@@ -123,7 +127,7 @@ describe('UserApplication.commitMute', () => {
       const deleteSpy = vi.spyOn(Core.LocalMuteService, 'delete');
       const requestSpy = vi.spyOn(Core.HomeserverService, 'request').mockResolvedValue(undefined as unknown as void);
 
-      await UserApplication.commitMute({
+      await MuteApplication.commitMute({
         eventType: HttpMethod.DELETE,
         muteUrl,
         muteJson,
@@ -142,7 +146,7 @@ describe('UserApplication.commitMute', () => {
 
       try {
         await expect(
-          UserApplication.commitMute({
+          MuteApplication.commitMute({
             eventType: HttpMethod.PUT,
             muteUrl,
             muteJson,
@@ -161,7 +165,7 @@ describe('UserApplication.commitMute', () => {
       const requestSpy = vi.spyOn(Core.HomeserverService, 'request').mockRejectedValue(new Error('homeserver-fail'));
 
       await expect(
-        UserApplication.commitMute({
+        MuteApplication.commitMute({
           eventType: HttpMethod.PUT,
           muteUrl,
           muteJson,
@@ -181,7 +185,7 @@ describe('UserApplication.commitMute', () => {
 
       try {
         await expect(
-          UserApplication.commitMute({
+          MuteApplication.commitMute({
             eventType: HttpMethod.PUT,
             muteUrl,
             muteJson,
@@ -201,7 +205,7 @@ describe('UserApplication.commitMute', () => {
       const requestSpy = vi.spyOn(Core.HomeserverService, 'request').mockRejectedValue(new Error('homeserver-fail'));
 
       await expect(
-        UserApplication.commitMute({
+        MuteApplication.commitMute({
           eventType: HttpMethod.PUT,
           muteUrl,
           muteJson,
@@ -219,7 +223,7 @@ describe('UserApplication.commitMute', () => {
     it('should handle invalid event types gracefully', async () => {
       const requestSpy = vi.spyOn(Core.HomeserverService, 'request').mockResolvedValue(undefined as unknown as void);
 
-      await UserApplication.commitMute({
+      await MuteApplication.commitMute({
         eventType: 'INVALID' as unknown as HttpMethod,
         muteUrl,
         muteJson,
@@ -233,7 +237,7 @@ describe('UserApplication.commitMute', () => {
     it('should handle undefined return values correctly', async () => {
       const requestSpy = vi.spyOn(Core.HomeserverService, 'request').mockResolvedValue(undefined as unknown as void);
 
-      const result = await UserApplication.commitMute({
+      const result = await MuteApplication.commitMute({
         eventType: HttpMethod.DELETE,
         muteUrl,
         muteJson,
@@ -244,5 +248,57 @@ describe('UserApplication.commitMute', () => {
       expect(result).toBeUndefined();
       expect(requestSpy).toHaveBeenCalled();
     });
+  });
+});
+
+describe('MuteApplication.fetchMutedUsers', () => {
+  const pubky = 'testpubky123' as Core.Pubky;
+
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  it('should return extracted pubkeys from homeserver list response', async () => {
+    const muteUris = [
+      `pubky://${pubky}/pub/pubky.app/mutes/mutee_aaa`,
+      `pubky://${pubky}/pub/pubky.app/mutes/mutee_bbb`,
+      `pubky://${pubky}/pub/pubky.app/mutes/mutee_ccc`,
+    ];
+
+    const listSpy = vi.spyOn(Core.HomeserverService, 'list').mockResolvedValue(muteUris);
+
+    const result = await MuteApplication.fetchMutedUsers(pubky);
+
+    expect(listSpy).toHaveBeenCalledWith({
+      baseDirectory: `pubky://${pubky}/pub/pubky.app/mutes/`,
+    });
+    expect(result).toEqual(['mutee_aaa', 'mutee_bbb', 'mutee_ccc']);
+  });
+
+  it('should return empty array when no muted users', async () => {
+    const listSpy = vi.spyOn(Core.HomeserverService, 'list').mockResolvedValue([]);
+
+    const result = await MuteApplication.fetchMutedUsers(pubky);
+
+    expect(listSpy).toHaveBeenCalledWith({
+      baseDirectory: `pubky://${pubky}/pub/pubky.app/mutes/`,
+    });
+    expect(result).toEqual([]);
+  });
+
+  it('should build correct mutes directory URL using baseUriBuilder', async () => {
+    const listSpy = vi.spyOn(Core.HomeserverService, 'list').mockResolvedValue([]);
+
+    await MuteApplication.fetchMutedUsers(pubky);
+
+    expect(listSpy).toHaveBeenCalledWith({
+      baseDirectory: `pubky://${pubky}/pub/pubky.app/mutes/`,
+    });
+  });
+
+  it('should propagate errors from HomeserverService.list', async () => {
+    vi.spyOn(Core.HomeserverService, 'list').mockRejectedValue(new Error('list-fail'));
+
+    await expect(MuteApplication.fetchMutedUsers(pubky)).rejects.toThrow('list-fail');
   });
 });

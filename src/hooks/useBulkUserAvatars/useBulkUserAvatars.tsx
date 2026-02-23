@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback, useMemo } from 'react';
+import { useCallback, useEffect, useMemo } from 'react';
 import { useLiveQuery } from 'dexie-react-hooks';
 import * as Core from '@/core';
 import * as Libs from '@/libs';
@@ -39,6 +39,13 @@ export function useBulkUserAvatars(userIds: Core.Pubky[]): UseBulkUserAvatarsRes
     [uniqueUserIds],
     new Map<Core.Pubky, Core.NexusUserDetails>(),
   );
+
+  // Fetch missing user details from Nexus (persists to IndexedDB, triggering liveQuery update)
+  useEffect(() => {
+    if (uniqueUserIds.length > 0) {
+      Core.StreamUserController.getOrFetchUsers({ userIds: uniqueUserIds });
+    }
+  }, [uniqueUserIds]);
 
   // Build map of users with computed avatar URLs
   const usersMap = useMemo(() => {

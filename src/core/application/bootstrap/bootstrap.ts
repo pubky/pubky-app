@@ -26,25 +26,27 @@ export class BootstrapApplication {
     params: Core.TBootstrapParams,
     onProgress?: BootstrapProgressCallback,
   ): Promise<Core.TBootstrapResponse> {
-    const [bootstrapData, userLastRead] = await Promise.all([
-      Core.NexusBootstrapService.fetch(params.pubky),
+    const pubky = params.pubky;
+    const [bootstrapData, userLastRead, mutedUsers] = await Promise.all([
+      Core.NexusBootstrapService.fetch(pubky),
       this.fetchOrPutLastRead(params),
+      Core.MuteApplication.fetchMutedUsers(pubky),
       // Initialize settings from homeserver (non-blocking, errors are logged but don't fail bootstrap)
-      this.initializeSettings(params.pubky),
+      this.initializeSettings(pubky),
     ]);
     onProgress?.('bootstrapFetched'); // Step 3 complete (60%)
 
     if (!bootstrapData.indexed) {
       Logger.warn('User is not indexed in Nexus. Scheduling TTL retry', {
-        pubky: params.pubky,
+        pubky,
         retryDelayMs: Env.NEXT_PUBLIC_TTL_RETRY_DELAY_MS,
       });
 
       // Write TTL record to become stale after configured retry delay
-      await Core.LocalUserService.upsertTtlWithDelay(params.pubky, Env.NEXT_PUBLIC_TTL_RETRY_DELAY_MS);
+      await Core.LocalUserService.upsertTtlWithDelay(pubky, Env.NEXT_PUBLIC_TTL_RETRY_DELAY_MS);
 
       // Subscribe to TTL coordinator for periodic staleness checks
-      Core.TtlCoordinator.getInstance().subscribeUser({ pubky: params.pubky });
+      Core.TtlCoordinator.getInstance().subscribeUser({ pubky });
     }
     const [{ unread, nextPollCursor }] = await Promise.all([
       Core.NotificationApplication.persistAndSummarize({
@@ -53,6 +55,10 @@ export class BootstrapApplication {
       }),
       Core.LocalStreamUsersService.persistUsers(bootstrapData.users),
       Core.LocalStreamPostsService.persistPosts({ posts: bootstrapData.posts }),
+      Core.LocalStreamUsersService.upsert({
+        streamId: Core.UserStreamTypes.MUTED,
+        stream: mutedUsers,
+      }),
       Core.LocalStreamPostsService.upsert({
         streamId: Core.PostStreamTypes.TIMELINE_ALL_ALL,
         stream: bootstrapData.ids.stream,
@@ -74,7 +80,7 @@ export class BootstrapApplication {
       Core.LocalStreamTagsService.upsert(Core.TagStreamTypes.TODAY_ALL, bootstrapData.ids.hot_tags),
     ]);
     onProgress?.('dataPersisted'); // Step 4 complete (80%)
-    // TODO: Mutes list fectch also
+    // TODO: We will not have that step, but we will add HomeserverSignIn step before step 1 to catch errors
     onProgress?.('homeserverSynced'); // Step 5 complete (100%)
 
     const notification = { unread, lastRead: userLastRead, lastPolledTimestamp: nextPollCursor };

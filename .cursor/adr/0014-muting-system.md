@@ -127,13 +127,16 @@ const { posts } = await postStreamQueue.collect(streamId, {
 
 ```typescript
 // From a React component, use the controller layer:
-import { UserController } from '@/core/controllers/user/user';
+import { MuteController } from '@/core/controllers/mute/mute';
 
 // Mute a user
-await UserController.commitMute('mute', { muter: currentUserId, mutee: targetUserId });
+await MuteController.commitMute('mute', { muter: currentUserId, mutee: targetUserId });
 
 // Unmute a user
-await UserController.commitMute('unmute', { muter: currentUserId, mutee: targetUserId });
+await MuteController.commitMute('unmute', { muter: currentUserId, mutee: targetUserId });
+
+// Get all muted user IDs
+const mutedUsers = await MuteController.getMutedUsers();
 ```
 
 **Checking mute status** for UI display (e.g., showing "Muted" badge):
@@ -214,6 +217,7 @@ const mutedUsers = useSettingsStore((state) => state.muted);
 
 ## Implementation Notes
 
+- Mute controller: `src/core/controllers/mute/mute.ts`
 - Mute service: `src/core/services/local/mute/mute.ts`
 - Mute normalizer: `src/core/pipes/mute/mute.normalizer.ts`
 - Mute filter: `src/core/application/stream/posts/muting/mute-filter.ts`

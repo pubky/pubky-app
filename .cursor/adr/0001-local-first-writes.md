@@ -18,10 +18,10 @@ Write operations commit to the local Dexie store first, updating UI-observable s
 Controller method names encode IO behavior and delivery guarantees:
 
 - **Read operations**
-  - **`fetch*`** — Nexus API reads (network only, no cache)
+  - **`fetch*`** — Nexus API reads (network only, no cache), homeserver, ...
   - **`get*`** — IndexedDB reads (local cache only, no network)
   - **`getMany*`** — Bulk IndexedDB reads (returns `Map<Pubky, T>`)
-  - **`getOrFetch*`** — IndexedDB first, fallback to Nexus API
+  - **`getOrFetch*`** — IndexedDB first, fallback to Nexus API, homeserver, ...
   - **`getManyOrFetch*`** — Bulk IndexedDB first, fetch missing from Nexus
 
 - **Write operations**

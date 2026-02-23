@@ -112,11 +112,14 @@ type MockConfig = {
   countUnreadError?: Error;
   settingsInitError?: Error;
   remoteSettings?: Core.SettingsState | null;
+  mutedUsers?: Core.Pubky[];
+  fetchMutedUsersError?: Error;
 };
 
 type ServiceMocks = {
   nexusFetch: unknown;
   homeserverRequest: unknown;
+  fetchMutedUsers: unknown;
   persistUsers: unknown;
   persistPosts: unknown;
   persistFiles: unknown;
@@ -145,6 +148,8 @@ const setupMocks = (config: MockConfig = {}): ServiceMocks => {
     countUnreadError,
     settingsInitError,
     remoteSettings = null,
+    mutedUsers = [],
+    fetchMutedUsersError,
   } = config;
 
   vi.clearAllMocks();
@@ -161,6 +166,11 @@ const setupMocks = (config: MockConfig = {}): ServiceMocks => {
       .spyOn(Core.HomeserverService, 'request')
       .mockImplementation(
         homeserverError ? () => Promise.reject(homeserverError) : () => Promise.resolve({ timestamp: MOCK_LAST_READ }),
+      ),
+    fetchMutedUsers: vi
+      .spyOn(Core.MuteApplication, 'fetchMutedUsers')
+      .mockImplementation(
+        fetchMutedUsersError ? () => Promise.reject(fetchMutedUsersError) : () => Promise.resolve(mutedUsers),
       ),
     persistUsers: vi
       .spyOn(Core.LocalStreamUsersService, 'persistUsers')
@@ -206,8 +216,13 @@ const setupMocks = (config: MockConfig = {}): ServiceMocks => {
 const assertCommonCalls = (mocks: ServiceMocks, bootstrapData: Core.NexusBootstrapResponse) => {
   expect(mocks.nexusFetch).toHaveBeenCalledWith(TEST_PUBKY);
   expect(mocks.homeserverRequest).toHaveBeenCalledWith({ method: Libs.HttpMethod.GET, url: MOCK_LAST_READ_URL });
+  expect(mocks.fetchMutedUsers).toHaveBeenCalledWith(TEST_PUBKY);
   expect(mocks.persistUsers).toHaveBeenCalledWith(bootstrapData.users);
   expect(mocks.persistPosts).toHaveBeenCalledWith({ posts: bootstrapData.posts });
+  expect(mocks.upsertInfluencersStream).toHaveBeenCalledWith({
+    streamId: Core.UserStreamTypes.MUTED,
+    stream: [],
+  });
   expect(mocks.upsertPostsStream).toHaveBeenCalledWith({
     streamId: Core.PostStreamTypes.TIMELINE_ALL_ALL,
     stream: bootstrapData.ids.stream,
@@ -530,11 +545,45 @@ describe('BootstrapApplication', () => {
 
     it('should handle empty muted users list in bootstrap response', async () => {
       const bootstrapData = emptyBootstrap();
-      setupMocks({ bootstrapData });
+      const mocks = setupMocks({ bootstrapData });
 
       const result = await BootstrapApplication.initialize(getBootstrapParams(TEST_PUBKY));
 
+      expect(mocks.fetchMutedUsers).toHaveBeenCalledWith(TEST_PUBKY);
+      expect(mocks.upsertInfluencersStream).toHaveBeenCalledWith({
+        streamId: Core.UserStreamTypes.MUTED,
+        stream: [],
+      });
       expect(result).toEqual({ notification: { unread: 0, lastRead: MOCK_LAST_READ, lastPolledTimestamp: undefined } });
+    });
+
+    it('should fetch and persist muted users during bootstrap', async () => {
+      const bootstrapData = emptyBootstrap();
+      const mutedUsers = ['muted-user-1', 'muted-user-2'] as Core.Pubky[];
+      const mocks = setupMocks({ bootstrapData, mutedUsers });
+
+      const result = await BootstrapApplication.initialize(getBootstrapParams(TEST_PUBKY));
+
+      expect(mocks.fetchMutedUsers).toHaveBeenCalledWith(TEST_PUBKY);
+      expect(mocks.upsertInfluencersStream).toHaveBeenCalledWith({
+        streamId: Core.UserStreamTypes.MUTED,
+        stream: mutedUsers,
+      });
+      expect(result).toEqual({ notification: { unread: 0, lastRead: MOCK_LAST_READ, lastPolledTimestamp: undefined } });
+    });
+
+    it('should throw error when MuteApplication.fetchMutedUsers fails', async () => {
+      const bootstrapData = emptyBootstrap();
+      const mocks = setupMocks({
+        bootstrapData,
+        fetchMutedUsersError: new Error('Mute fetch error'),
+      });
+
+      await expect(BootstrapApplication.initialize(getBootstrapParams(TEST_PUBKY))).rejects.toThrow('Mute fetch error');
+
+      expect(mocks.fetchMutedUsers).toHaveBeenCalledWith(TEST_PUBKY);
+      // fetchMutedUsers fails in the first Promise.all, so persistence is never reached
+      expect(mocks.persistUsers).not.toHaveBeenCalled();
     });
   });
 
