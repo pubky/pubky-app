@@ -33,6 +33,8 @@ export class MuteApplication {
   static async fetchMutedUsers(pubky: Core.Pubky): Promise<Core.Pubky[]> {
     const mutesDirectory = `${baseUriBuilder(pubky)}mutes/`;
     const muteUris = await Core.HomeserverService.list({ baseDirectory: mutesDirectory });
-    return muteUris.map((uri) => uri.split('/').pop() as Core.Pubky);
+    return muteUris
+      .map((uri) => uri.split('/').pop())
+      .filter((id): id is string => !!id) as Core.Pubky[];
   }
 }

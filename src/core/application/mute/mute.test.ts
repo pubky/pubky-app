@@ -296,6 +296,18 @@ describe('MuteApplication.fetchMutedUsers', () => {
     });
   });
 
+  it('should filter out empty strings from URIs with trailing slashes', async () => {
+    const muteUris = [
+      `pubky://${pubky}/pub/pubky.app/mutes/mutee_aaa`,
+      `pubky://${pubky}/pub/pubky.app/mutes/`,
+    ];
+    vi.spyOn(Core.HomeserverService, 'list').mockResolvedValue(muteUris);
+
+    const result = await MuteApplication.fetchMutedUsers(pubky);
+
+    expect(result).toEqual(['mutee_aaa']);
+  });
+
   it('should propagate errors from HomeserverService.list', async () => {
     vi.spyOn(Core.HomeserverService, 'list').mockRejectedValue(new Error('list-fail'));
 

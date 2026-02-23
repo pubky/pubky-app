@@ -32,7 +32,7 @@ export class BootstrapApplication {
       this.fetchOrPutLastRead(params),
       Core.MuteApplication.fetchMutedUsers(pubky),
       // Initialize settings from homeserver (non-blocking, errors are logged but don't fail bootstrap)
-      this.initializeSettings(pubky),
+      this.syncSettings(pubky),
     ]);
     onProgress?.('bootstrapFetched'); // Step 3 complete (60%)
 
@@ -89,15 +89,15 @@ export class BootstrapApplication {
   }
 
   /**
-   * Initializes user settings from homeserver.
+   * Syncs user settings with the homeserver.
    * If remote settings are newer, updates the local store.
-   * If local settings are newer, syncs to homeserver.
-   * Errors are logged but don't fail bootstrap.
+   * If local settings are newer, pushes to homeserver.
+   * Caller is responsible for error handling (e.g. `.catch()` to avoid blocking bootstrap).
    *
    * @private
-   * @param pubky, The user's public key identifier
+   * @param pubky - The user's public key identifier
    */
-  private static async initializeSettings(pubky: Core.Pubky): Promise<void> {
+  private static async syncSettings(pubky: Core.Pubky): Promise<void> {
     try {
       const remoteSettings = await Core.SettingsApplication.initializeSettings(pubky);
 

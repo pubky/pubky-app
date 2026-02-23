@@ -40,12 +40,14 @@ export function useBulkUserAvatars(userIds: Core.Pubky[]): UseBulkUserAvatarsRes
     new Map<Core.Pubky, Core.NexusUserDetails>(),
   );
 
-  // Fetch missing user details from Nexus (persists to IndexedDB, triggering liveQuery update)
+  // Stable string key to avoid unnecessary re-fetches when array content is identical
+  const userIdsKey = uniqueUserIds.join(',');
+
   useEffect(() => {
     if (uniqueUserIds.length > 0) {
       Core.StreamUserController.getOrFetchUsers({ userIds: uniqueUserIds });
     }
-  }, [uniqueUserIds]);
+  }, [userIdsKey]);
 
   // Build map of users with computed avatar URLs
   const usersMap = useMemo(() => {
