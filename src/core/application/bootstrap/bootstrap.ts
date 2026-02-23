@@ -3,7 +3,6 @@ import { Logger } from '@/libs/logger';
 import { AppError } from '@/libs/error';
 import { HttpMethod, HttpStatusCode } from '@/libs/http';
 import * as Core from '@/core';
-import * as Config from '@/config';
 
 /**
  * Callback type for reporting bootstrap progress to the Controller layer.
@@ -27,10 +26,15 @@ export class BootstrapApplication {
     params: Core.TBootstrapParams,
     onProgress?: BootstrapProgressCallback,
   ): Promise<Core.TBootstrapResponse> {
-    const data = await Core.NexusBootstrapService.fetch(params.pubky);
+    const [bootstrapData, userLastRead] = await Promise.all([
+      Core.NexusBootstrapService.fetch(params.pubky),
+      this.fetchOrPutLastRead(params),
+      // Initialize settings from homeserver (non-blocking, errors are logged but don't fail bootstrap)
+      this.initializeSettings(params.pubky),
+    ]);
     onProgress?.('bootstrapFetched'); // Step 3 complete (60%)
 
-    if (!data.indexed) {
+    if (!bootstrapData.indexed) {
       Logger.warn('User is not indexed in Nexus. Scheduling TTL retry', {
         pubky: params.pubky,
         retryDelayMs: Env.NEXT_PUBLIC_TTL_RETRY_DELAY_MS,
@@ -42,39 +46,38 @@ export class BootstrapApplication {
       // Subscribe to TTL coordinator for periodic staleness checks
       Core.TtlCoordinator.getInstance().subscribeUser({ pubky: params.pubky });
     }
-    await Promise.all([
-      Core.LocalStreamUsersService.persistUsers(data.users),
-      Core.LocalStreamPostsService.persistPosts({ posts: data.posts }),
+    const [{ unread, nextPollCursor }] = await Promise.all([
+      Core.NotificationApplication.persistAndSummarize({
+        notifications: bootstrapData.notifications,
+        lastRead: userLastRead,
+      }),
+      Core.LocalStreamUsersService.persistUsers(bootstrapData.users),
+      Core.LocalStreamPostsService.persistPosts({ posts: bootstrapData.posts }),
       Core.LocalStreamPostsService.upsert({
         streamId: Core.PostStreamTypes.TIMELINE_ALL_ALL,
-        stream: data.ids.stream,
+        stream: bootstrapData.ids.stream,
       }),
       Core.LocalStreamUsersService.upsert({
         streamId: Core.UserStreamTypes.TODAY_INFLUENCERS_ALL,
-        stream: data.ids.influencers,
+        stream: bootstrapData.ids.influencers,
       }),
       Core.LocalStreamUsersService.upsert({
         streamId: Core.UserStreamTypes.RECOMMENDED,
-        stream: data.ids.recommended,
+        stream: bootstrapData.ids.recommended,
       }),
-      Core.FileApplication.persistFiles(data.files),
-      // Core.LocalStreamUsersService.upsert({
-      //   streamId: Core.UserStreamTypes.MUTED,
-      //   stream: data.ids.muted,
-      // }),
+      Core.FileApplication.persistFiles(bootstrapData.files),
       // Both features: hot tags and tag streams
-      Core.LocalHotService.upsert(Core.buildHotTagsId(Core.UserStreamTimeframe.TODAY, 'all'), data.ids.hot_tags),
-      Core.LocalStreamTagsService.upsert(Core.TagStreamTypes.TODAY_ALL, data.ids.hot_tags),
+      Core.LocalHotService.upsert(
+        Core.buildHotTagsId(Core.UserStreamTimeframe.TODAY, 'all'),
+        bootstrapData.ids.hot_tags,
+      ),
+      Core.LocalStreamTagsService.upsert(Core.TagStreamTypes.TODAY_ALL, bootstrapData.ids.hot_tags),
     ]);
     onProgress?.('dataPersisted'); // Step 4 complete (80%)
-
-    const [notification] = await Promise.all([
-      // TODO: We alredy have notifications in the bootstrap data, so we don't need to fetch them again
-      this.fetchNotifications(params),
-      // Initialize settings from homeserver (non-blocking, errors are logged but don't fail bootstrap)
-      this.initializeSettings(params.pubky),
-    ]);
+    // TODO: Mutes list fectch also
     onProgress?.('homeserverSynced'); // Step 5 complete (100%)
+
+    const notification = { unread, lastRead: userLastRead, lastPolledTimestamp: nextPollCursor };
 
     return { notification };
   }
@@ -113,17 +116,13 @@ export class BootstrapApplication {
    * @param params.lastReadUrl, URL to fetch user's last read timestamp from homeserver
    * @returns Promise resolving to notification list and last read timestamp
    */
-  private static async fetchNotifications({
-    pubky,
-    lastReadUrl,
-  }: Core.TBootstrapParams): Promise<Core.NotificationState> {
-    let userLastRead: number;
+  private static async fetchOrPutLastRead({ pubky, lastReadUrl }: Core.TBootstrapParams): Promise<number> {
     try {
       const { timestamp } = await Core.HomeserverService.request<{ timestamp: number }>({
         method: HttpMethod.GET,
         url: lastReadUrl,
       });
-      userLastRead = timestamp;
+      return timestamp;
     } catch (error) {
       // Only handle 404 errors (resource not found), rethrow everything else
       if (error instanceof AppError && error.context?.statusCode === HttpStatusCode.NOT_FOUND) {
@@ -134,7 +133,7 @@ export class BootstrapApplication {
           url: lastRead.meta.url,
           bodyJson: lastRead.last_read.toJson(),
         });
-        userLastRead = Number(lastRead.last_read.timestamp);
+        return Number(lastRead.last_read.timestamp);
       } else {
         // Network errors, timeouts, server errors, etc. should bubble up
         Logger.error('Failed to fetch last read timestamp', error);
@@ -142,24 +141,5 @@ export class BootstrapApplication {
         throw error;
       }
     }
-
-    // Get the latest notifications
-    const notificationList = await Core.NexusUserService.notifications({
-      user_id: pubky,
-      limit: Config.NEXUS_NOTIFICATIONS_LIMIT,
-    });
-
-    // TODO: Temporal fix.This is an anti-pattern, we should fetch notifications also from nexus, like this we just need to persist and get the unread count.
-    // Nexus will manage which parts of notifications are missings like Users and Posts.
-    const flatNotifications = await Core.NotificationApplication.fetchMissingEntities({
-      notifications: notificationList,
-      viewerId: pubky,
-    });
-    const { unread, nextPollCursor } = await Core.NotificationApplication.persistAndSummarize({
-      notifications: notificationList,
-      flatNotifications,
-      lastRead: userLastRead,
-    });
-    return { unread, lastRead: userLastRead, lastPolledTimestamp: nextPollCursor };
   }
 }
