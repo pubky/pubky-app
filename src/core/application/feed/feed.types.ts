@@ -20,21 +20,21 @@ export interface FeedPutParams {
 export interface PersistAndSyncParams {
   userId: string;
   feedSchema: Core.FeedModelSchema;
-  normalizedFeed: { feed: { toJson: () => Record<string, unknown> } };
+  normalizedFeed: FeedResult;
 }
 
 export type TFeedPersistCreateParams = {
   feed: FeedResult;
-  existingId?: number;
+  existingId?: string;
 };
 
 export type TFeedPersistUpdateParams = {
-  feedId: number;
+  feedId: string;
   changes: Partial<Omit<Core.TFeedCreateParams, 'name'>>;
 };
 
 export type TFeedPersistDeleteParams = {
-  feedId: number;
+  feedId: string;
 };
 
 export type TFeedPersistParams = TFeedPersistCreateParams | TFeedPersistUpdateParams | TFeedPersistDeleteParams;

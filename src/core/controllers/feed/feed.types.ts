@@ -14,5 +14,5 @@ export type TFeedUpdateParams = {
 } & TFeedIdParam;
 
 export type TFeedIdParam = {
-  feedId: number;
+  feedId: string;
 };

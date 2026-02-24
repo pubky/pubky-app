@@ -15,34 +15,41 @@ export class FeedApplication {
   }
 
   static async persist({ userId, params }: FeedPutParams): Promise<Core.FeedModelSchema> {
-    const { feed, existingId } = params as Core.TFeedPersistCreateParams;
-    const feedData = feed.feed;
-    const feedConfig = feedData.feed;
+    const { feed: normalizedFeed, existingId } = params as Core.TFeedPersistCreateParams;
+    const { feed, meta } = normalizedFeed;
+    const newId = meta.id;
+    const idChanged = existingId != null && existingId !== newId;
 
     const now = Date.now();
     const createdAt = existingId
       ? (await Core.LocalFeedService.read({ feedId: existingId }).catch(() => ({ created_at: now }))).created_at
       : now;
 
-    // For auto-incrementing IDs: use 0 for new feeds (Dexie will auto-generate), existing ID for updates
+    const { tags, reach, sort, content, layout } = feed.feed;
+
     const feedSchema: Core.FeedModelSchema = {
-      id: existingId ?? 0,
-      name: feedData.name,
-      tags: feedConfig.tags ?? [],
-      reach: feedConfig.reach,
-      sort: feedConfig.sort,
-      content: feedConfig.content ?? null,
-      layout: feedConfig.layout,
+      id: newId,
+      name: feed.name,
+      tags: tags ?? [],
+      reach,
+      sort,
+      content: content ?? null,
+      layout,
       created_at: createdAt,
       updated_at: now,
     };
 
-    return this.commit({ userId, feedSchema, normalizedFeed: feed });
+    // When config fields (tags, reach, layout, sort, content) change, the HashId-derived
+    // ID changes too. The old resource must be removed before creating the new one.
+    if (idChanged) {
+      await this.commitDelete({ userId, params: { feedId: existingId } });
+    }
+
+    return this.commit({ userId, feedSchema, normalizedFeed });
   }
 
   static async commitDelete({ userId, params }: FeedDeleteParams): Promise<void> {
-    // Convert numeric ID to string for URI builder
-    const feedUrl = feedUriBuilder(userId, String((params as Core.TFeedPersistDeleteParams).feedId));
+    const feedUrl = feedUriBuilder(userId, (params as Core.TFeedPersistDeleteParams).feedId);
 
     await Promise.all([
       Core.LocalFeedService.delete({ feedId: (params as Core.TFeedPersistDeleteParams).feedId }),
@@ -50,6 +57,12 @@ export class FeedApplication {
     ]);
   }
 
+  /**
+   * Merges partial update changes with the existing feed to produce a full TFeedCreateParams.
+   * Fields present in `changes` override the existing values; omitted fields keep their current value.
+   * The result is passed to FeedNormalizer which recomputes the HashId — if any config field
+   * (tags, reach, sort, content, layout) changed, the feed will get a new ID.
+   */
   static async prepareUpdateParams({ feedId, changes }: Core.TFeedUpdateParams): Promise<Core.TFeedCreateParams> {
     const existing = await Core.LocalFeedService.read({ feedId });
 
@@ -72,12 +85,11 @@ export class FeedApplication {
     feedSchema,
     normalizedFeed,
   }: PersistAndSyncParams): Promise<Core.FeedModelSchema> {
-    // Dexie auto-generates ID when id is 0, returns feed with actual ID
+    
     const persistedFeed = await Core.LocalFeedService.createOrUpdate(feedSchema);
 
-    // URI builder requires string IDs, but we store numeric IDs locally
-    const feedUrl = feedUriBuilder(userId, String(persistedFeed.id));
-    const feedJson = normalizedFeed.feed.toJson() as Record<string, unknown>;
+    const feedUrl = feedUriBuilder(userId, persistedFeed.id);
+    const feedJson: Record<string, unknown> = normalizedFeed.feed.toJson();
 
     await Core.HomeserverService.request({ method: HttpMethod.PUT, url: feedUrl, bodyJson: feedJson });
 

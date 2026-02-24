@@ -60,13 +60,25 @@ export class FeedController {
       changes: params.changes,
     });
 
+    // Normalizing produces a new FeedResult whose ID is derived from the feed config
+    // (tags, reach, layout, sort, content) via HashId — a blake3 hash of the serialized
+    // PubkyAppFeedConfig. Changing any of those fields yields a different ID, which means
+    // the homeserver path changes. The `name` and `created_at` fields are NOT part of the
+    // hash, so renaming a feed keeps the same ID.
     const normalizedFeed = Core.FeedNormalizer.to({ params: mergedParams, userId });
 
-    Core.FeedValidators.validatePutParams({ feed: normalizedFeed, existingId: params.feedId });
+    const persistParams: Core.TFeedPersistCreateParams = {
+      feed: normalizedFeed,
+      existingId: params.feedId,
+    };
 
+    Core.FeedValidators.validatePutParams(persistParams);
+
+    // When the config-derived ID differs from existingId, persist handles the
+    // delete-old + create-new cycle on the homeserver automatically.
     const feed = await Core.FeedApplication.persist({
       userId,
-      params: { feed: normalizedFeed, existingId: params.feedId },
+      params: persistParams,
     });
 
     return feed!;

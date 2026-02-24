@@ -61,7 +61,7 @@ describe('FeedApplication', () => {
   });
 
   const createMockDeleteParams = (): Core.TFeedPersistDeleteParams => ({
-    feedId: 123,
+    feedId: 'feed123',
   });
 
   // Helper functions
@@ -84,7 +84,7 @@ describe('FeedApplication', () => {
       const { createOrUpdateSpy, requestSpy } = setupMocks();
 
       const mockPersistedFeed: Core.FeedModelSchema = {
-        id: 1,
+        id: 'feed123',
         name: 'Bitcoin News',
         tags: ['bitcoin', 'lightning'],
         reach: PubkyAppFeedReach.All,
@@ -101,7 +101,7 @@ describe('FeedApplication', () => {
 
       expect(createOrUpdateSpy).toHaveBeenCalledWith(
         expect.objectContaining({
-          id: 0,
+          id: 'feed123',
           name: 'Bitcoin News',
           tags: ['bitcoin', 'lightning'],
         }),
@@ -112,18 +112,18 @@ describe('FeedApplication', () => {
         bodyJson: expect.any(Object),
       });
       expect(result).toBeTruthy();
-      expect(result!.id).toBe(1);
+      expect(result!.id).toBe('feed123');
     });
 
     it('should preserve existing ID when updating', async () => {
       const mockParams: Core.TFeedPersistCreateParams = {
         feed: createMockFeedResult(),
-        existingId: 42,
+        existingId: 'feed-existing',
       };
       const { createOrUpdateSpy, readSpy, requestSpy } = setupMocks();
 
       const existingFeed: Core.FeedModelSchema = {
-        id: 42,
+        id: 'feed-existing',
         name: 'Existing Feed',
         tags: ['bitcoin'],
         reach: PubkyAppFeedReach.All,
@@ -139,7 +139,7 @@ describe('FeedApplication', () => {
 
       const result = await FeedApplication.persist({ userId: testUserId, params: mockParams });
 
-      expect(result!.id).toBe(42);
+      expect(result!.id).toBe('feed-existing');
       expect(result!.created_at).toBe(1000000);
     });
 
@@ -159,7 +159,7 @@ describe('FeedApplication', () => {
       const { createOrUpdateSpy, requestSpy } = setupMocks();
 
       const mockPersistedFeed: Core.FeedModelSchema = {
-        id: 1,
+        id: 'feed123',
         name: 'Bitcoin News',
         tags: ['bitcoin', 'lightning'],
         reach: PubkyAppFeedReach.All,
@@ -188,7 +188,7 @@ describe('FeedApplication', () => {
 
       const result = await FeedApplication.commitDelete({ userId: testUserId, params: mockParams });
 
-      expect(deleteSpy).toHaveBeenCalledWith({ feedId: 123 });
+      expect(deleteSpy).toHaveBeenCalledWith({ feedId: 'feed123' });
       expect(requestSpy).toHaveBeenCalledWith({
         method: HttpMethod.DELETE,
         url: expect.stringContaining('pubky://'),
