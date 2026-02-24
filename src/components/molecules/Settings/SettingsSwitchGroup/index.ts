@@ -1,0 +1,1 @@
+export { SettingsSwitchGroup } from './SettingsSwitchGroup';

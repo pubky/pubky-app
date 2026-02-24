@@ -1,7 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { renderHook, waitFor, act } from '@testing-library/react';
 import { usePost } from './usePost';
-import { PubkyAppPostKind } from 'pubky-app-specs';
 
 // Hoist mock data and functions
 const {
@@ -509,7 +508,7 @@ describe('usePost', () => {
         authorId: 'test-user-id',
         tags: ['tag1'],
         attachments: undefined,
-        kind: PubkyAppPostKind.Short,
+        isArticle: false,
       });
       expect(result.current.content).toBe('');
       expect(result.current.tags).toEqual([]);
@@ -542,7 +541,7 @@ describe('usePost', () => {
         authorId: 'test-user-id',
         tags: undefined,
         attachments: undefined,
-        kind: PubkyAppPostKind.Short,
+        isArticle: false,
       });
     });
 
@@ -568,7 +567,7 @@ describe('usePost', () => {
         authorId: 'test-user-id',
         tags: undefined,
         attachments: [mockFile1, mockFile2],
-        kind: PubkyAppPostKind.Short,
+        isArticle: false,
       });
       expect(result.current.attachments).toEqual([]);
       expect(mockOnSuccess).toHaveBeenCalled();
@@ -623,7 +622,7 @@ describe('usePost', () => {
         authorId: 'test-user-id',
         tags: undefined,
         attachments: [mockFile],
-        kind: PubkyAppPostKind.Short,
+        isArticle: false,
       });
       expect(result.current.attachments).toEqual([]);
       expect(result.current.content).toBe('');
@@ -724,7 +723,7 @@ describe('usePost', () => {
         authorId: 'test-user-id',
         tags: undefined,
         attachments: undefined,
-        kind: PubkyAppPostKind.Short,
+        isArticle: false,
       });
     });
 
@@ -750,7 +749,7 @@ describe('usePost', () => {
         authorId: 'test-user-id',
         tags: ['article', 'test'],
         attachments: undefined,
-        kind: PubkyAppPostKind.Long,
+        isArticle: true,
       });
       expect(result.current.content).toBe('');
       expect(result.current.tags).toEqual([]);
@@ -837,7 +836,7 @@ describe('usePost', () => {
         authorId: 'test-user-id',
         tags: undefined,
         attachments: undefined,
-        kind: PubkyAppPostKind.Long,
+        isArticle: true,
       });
     });
   });
