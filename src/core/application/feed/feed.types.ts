@@ -45,6 +45,23 @@ export type TFeedPersistInput = {
   params: TFeedPersistParams;
 };
 
+export interface RemoteFeedParams {
+  userId: Core.Pubky;
+  remoteFeed: HomeserverFeedJson;
+}
+
+export interface HomeserverFeedJson {
+  name: string;
+  feed: {
+    tags?: string[];
+    reach: string;
+    layout: string;
+    sort: string;
+    content: string | null;
+  };
+  created_at: number;
+}
+
 export function isFeedDeleteParams(params: TFeedPersistParams): params is TFeedPersistDeleteParams {
   return 'feedId' in params && !('changes' in params) && !('feed' in params);
 }

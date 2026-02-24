@@ -138,6 +138,47 @@ describe('LocalFeedService', () => {
     });
   });
 
+  describe('createOrUpdateMany', () => {
+    it('should persist multiple feeds in a single transaction', async () => {
+      const feeds = [
+        createFeedSchema({ id: 'feed-batch-1', name: 'Feed 1' }),
+        createFeedSchema({ id: 'feed-batch-2', name: 'Feed 2' }),
+        createFeedSchema({ id: 'feed-batch-3', name: 'Feed 3' }),
+      ];
+
+      const result = await Core.LocalFeedService.createOrUpdateMany(feeds);
+
+      expect(result).toHaveLength(3);
+      expect(result[0].id).toBe('feed-batch-1');
+      expect(result[1].id).toBe('feed-batch-2');
+      expect(result[2].id).toBe('feed-batch-3');
+
+      const saved = await Core.LocalFeedService.readAll();
+      expect(saved).toHaveLength(3);
+    });
+
+    it('should upsert existing feeds by ID', async () => {
+      await Core.LocalFeedService.createOrUpdate(createFeedSchema({ id: 'feed-upsert', name: 'Original' }));
+
+      await Core.LocalFeedService.createOrUpdateMany([
+        createFeedSchema({ id: 'feed-upsert', name: 'Updated' }),
+        createFeedSchema({ id: 'feed-new', name: 'New' }),
+      ]);
+
+      const upserted = await Core.LocalFeedService.read({ feedId: 'feed-upsert' });
+      expect(upserted.name).toBe('Updated');
+
+      const all = await Core.LocalFeedService.readAll();
+      expect(all).toHaveLength(2);
+    });
+
+    it('should return empty array when given empty input', async () => {
+      const result = await Core.LocalFeedService.createOrUpdateMany([]);
+
+      expect(result).toEqual([]);
+    });
+  });
+
   describe('transaction safety', () => {
     it('should handle multiple concurrent persists', async () => {
       const feeds = Array.from({ length: 5 }, (_, i) =>

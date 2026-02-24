@@ -1,7 +1,13 @@
-import { feedUriBuilder } from 'pubky-app-specs';
+import { baseUriBuilder, feedUriBuilder } from 'pubky-app-specs';
 import * as Core from '@/core';
-import type { FeedDeleteParams, FeedPutParams, PersistAndSyncParams } from './feed.types';
-import { HttpMethod } from '@/libs';
+import type {
+  FeedDeleteParams,
+  FeedPutParams,
+  PersistAndSyncParams,
+  HomeserverFeedJson,
+  RemoteFeedParams,
+} from './feed.types';
+import { Err, ErrorService, HttpMethod, Logger, ValidationErrorCode } from '@/libs';
 
 export class FeedApplication {
   private constructor() {}
@@ -49,11 +55,21 @@ export class FeedApplication {
   }
 
   static async commitDelete({ userId, params }: FeedDeleteParams): Promise<void> {
-    const feedUrl = feedUriBuilder(userId, (params as Core.TFeedPersistDeleteParams).feedId);
+    const feedId = (params as Core.TFeedPersistDeleteParams).feedId;
+    const feedUrl = feedUriBuilder(userId, feedId);
+
+    const feed = await Core.LocalFeedService.read({ feedId }).catch(() => null);
+    const streamId = feed ? Core.buildFeedStreamId(feed) : null;
 
     await Promise.all([
-      Core.LocalFeedService.delete({ feedId: (params as Core.TFeedPersistDeleteParams).feedId }),
+      Core.LocalFeedService.delete({ feedId }),
       Core.HomeserverService.request({ method: HttpMethod.DELETE, url: feedUrl }),
+      ...(streamId
+        ? [
+            Core.LocalStreamPostsService.deleteById({ streamId }),
+            Core.LocalStreamPostsService.clearUnreadStream({ streamId }),
+          ]
+        : []),
     ]);
   }
 
@@ -77,6 +93,80 @@ export class FeedApplication {
   }
 
   /**
+   * Fetch all feeds from the homeserver and persist them locally.
+   * Used during bootstrap to hydrate the local feed cache.
+   */
+  static async fetchFeeds(userId: Core.Pubky): Promise<Core.FeedModelSchema[]> {
+    const feedsDirectory = `${baseUriBuilder(userId)}feeds/`;
+    const feedUris = await Core.HomeserverService.list({ baseDirectory: feedsDirectory });
+    const validFeeds: Core.FeedModelSchema[] = [];
+
+    for (const feedUri of feedUris) {
+      const remoteFeed = await Core.HomeserverService.request<HomeserverFeedJson>({
+        method: HttpMethod.GET,
+        url: feedUri,
+      });
+
+      const normalizedFeed = this.normalizeRemoteFeed({ userId, remoteFeed });
+      if (!normalizedFeed) continue;
+
+      validFeeds.push({
+        ...normalizedFeed,
+      });
+    }
+
+    if (validFeeds.length === 0) return [];
+    return Core.LocalFeedService.createOrUpdateMany(validFeeds);
+  }
+
+  /**
+   * Validates and transforms a single remote feed into a FeedModelSchema.
+   * Returns null if the feed is invalid, logging a warning instead of throwing.
+   */
+  private static normalizeRemoteFeed({ userId, remoteFeed }: RemoteFeedParams): Core.FeedModelSchema | null {
+    try {
+      const { feed, meta: feedMeta } = this.validateRemoteFeedWithSpecs({ userId, remoteFeed });
+      const { tags, reach, sort, layout, content } = feed.feed;
+
+      return {
+        id: feedMeta.id,
+        name: feed.name,
+        tags: tags ?? [],
+        reach,
+        sort,
+        content: content ?? null,
+        layout,
+        created_at: Number(feed.created_at),
+        updated_at: Number(feed.created_at),
+      };
+    } catch (error) {
+      Logger.warn('Skipping invalid feed during bootstrap fetch', error);
+      return null;
+    }
+  }
+
+  /**
+   * Guards required fields on a remote feed payload and delegates to
+   * PubkySpecsBuilder.createFeed to produce a validated FeedResult
+   * with the correct HashId.
+   */
+  private static validateRemoteFeedWithSpecs({ userId, remoteFeed }: RemoteFeedParams) {
+    if (!remoteFeed?.name || !remoteFeed?.feed) {
+      throw Err.validation(ValidationErrorCode.INVALID_INPUT, 'Invalid remote feed payload', {
+        service: ErrorService.Homeserver,
+        operation: 'validateRemoteFeedWithSpecs',
+        context: { userId, remoteFeed },
+      });
+    }
+
+    const builder = Core.PubkySpecsSingleton.get(userId);
+
+    const { tags, reach, layout, sort, content } = remoteFeed.feed;
+    const normalizedTags = Array.isArray(tags) ? tags : [];
+    return builder.createFeed(normalizedTags, reach, layout, sort, content, remoteFeed.name);
+  }
+
+  /**
    * Persist feed locally and sync to homeserver
    * Extracted to avoid duplication between handlePut and handleUpdate
    */
@@ -85,7 +175,6 @@ export class FeedApplication {
     feedSchema,
     normalizedFeed,
   }: PersistAndSyncParams): Promise<Core.FeedModelSchema> {
-    
     const persistedFeed = await Core.LocalFeedService.createOrUpdate(feedSchema);
 
     const feedUrl = feedUriBuilder(userId, persistedFeed.id);

@@ -16,6 +16,17 @@ export class LocalFeedService {
     });
   }
 
+  /**
+   * Persist multiple feeds in a single transaction.
+   * Uses bulkPut semantics: inserts new feeds and replaces existing ones by ID.
+   */
+  static async createOrUpdateMany(feeds: Core.FeedModelSchema[]): Promise<Core.FeedModelSchema[]> {
+    return await Core.db.transaction('rw', FEED_TABLES, async () => {
+      await Core.FeedModel.bulkSave(feeds);
+      return feeds;
+    });
+  }
+
   static async delete({ feedId }: Core.TFeedIdParam) {
     await Core.db.transaction('rw', FEED_TABLES, async () => {
       await Core.FeedModel.deleteById(feedId);

@@ -21,6 +21,15 @@ export class FeedController {
   }
 
   /**
+   * Fetch all feeds from the homeserver and persist them locally.
+   * @returns The list of persisted feeds
+   */
+  static async fetchFeeds(): Promise<Core.FeedModelSchema[]> {
+    const userId = Core.useAuthStore.getState().selectCurrentUserPubky();
+    return Core.FeedApplication.fetchFeeds(userId);
+  }
+
+  /**
    * Commit the create feed operation, this will persist the feed to the local database and sync to the homeserver.
    * @param params - The parameters object
    * @param params.tags - The tags for the feed
