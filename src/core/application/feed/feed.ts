@@ -11,6 +11,7 @@ import { Err, ErrorService, HttpMethod, Logger, ValidationErrorCode } from '@/li
 
 export class FeedApplication {
   private constructor() {}
+  private static readonly FETCH_FEEDS_BATCH_SIZE = 10;
 
   static async getList(): Promise<Core.FeedModelSchema[]> {
     return Core.LocalFeedService.readAll();
@@ -48,7 +49,32 @@ export class FeedApplication {
     // When config fields (tags, reach, layout, sort, content) change, the HashId-derived
     // ID changes too. The old resource must be removed before creating the new one.
     if (idChanged) {
-      await this.commitDelete({ userId, params: { feedId: existingId } });
+      let persistedNewFeed: Core.FeedModelSchema;
+
+      try {
+        persistedNewFeed = await this.commit({ userId, feedSchema, normalizedFeed });
+      } catch (error) {
+        // Compensation: best-effort rollback of the new local record if create/sync fails.
+        await Core.LocalFeedService.delete({ feedId: newId }).catch((rollbackError) => {
+          Logger.warn('Failed to rollback new feed after update migration failure', {
+            oldFeedId: existingId,
+            newFeedId: newId,
+            rollbackError,
+          });
+        });
+        throw error;
+      }
+
+      // Best-effort cleanup of old feed. Keep the new feed as source of truth if cleanup fails.
+      await this.commitDelete({ userId, params: { feedId: existingId } }).catch((cleanupError) => {
+        Logger.warn('Failed to cleanup old feed after successful migration to new feed ID', {
+          oldFeedId: existingId,
+          newFeedId: newId,
+          cleanupError,
+        });
+      });
+
+      return persistedNewFeed;
     }
 
     return this.commit({ userId, feedSchema, normalizedFeed });
@@ -101,17 +127,32 @@ export class FeedApplication {
     const feedUris = await Core.HomeserverService.list({ baseDirectory: feedsDirectory });
     const validFeeds: Core.FeedModelSchema[] = [];
 
-    for (const feedUri of feedUris) {
-      const remoteFeed = await Core.HomeserverService.request<HomeserverFeedJson>({
-        method: HttpMethod.GET,
-        url: feedUri,
-      });
+    for (let index = 0; index < feedUris.length; index += this.FETCH_FEEDS_BATCH_SIZE) {
+      const batch = feedUris.slice(index, index + this.FETCH_FEEDS_BATCH_SIZE);
+      const batchResults = await Promise.allSettled(
+        batch.map(async (feedUri) => {
+          const remoteFeed = await Core.HomeserverService.request<HomeserverFeedJson>({
+            method: HttpMethod.GET,
+            url: feedUri,
+          });
 
-      const normalizedFeed = this.normalizeRemoteFeed({ userId, remoteFeed });
-      if (!normalizedFeed) continue;
+          return this.normalizeRemoteFeed({ userId, remoteFeed });
+        }),
+      );
 
-      validFeeds.push({
-        ...normalizedFeed,
+      batchResults.forEach((result, batchIndex) => {
+        const feedUri = batch[batchIndex];
+        if (result.status === 'rejected') {
+          Logger.warn('Skipping feed during bootstrap fetch due to request failure', {
+            feedUri,
+            error: result.reason,
+          });
+          return;
+        }
+
+        if (result.value) {
+          validFeeds.push(result.value);
+        }
       });
     }
 

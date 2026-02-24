@@ -149,12 +149,12 @@ describe('FeedApplication', () => {
       expect(result!.id).toBe('feed123');
     });
 
-    it('should preserve existing ID when updating', async () => {
+    it('should migrate to new ID and preserve created_at when updating config', async () => {
       const mockParams: Core.TFeedPersistCreateParams = {
         feed: createMockFeedResult(),
         existingId: 'feed-existing',
       };
-      const { createOrUpdateSpy, readSpy, requestSpy } = setupMocks();
+      const { createOrUpdateSpy, deleteSpy, readSpy, requestSpy } = setupMocks();
 
       const existingFeed: Core.FeedModelSchema = {
         id: 'feed-existing',
@@ -168,13 +168,23 @@ describe('FeedApplication', () => {
         updated_at: 1000000,
       };
       readSpy.mockResolvedValue(existingFeed);
-      createOrUpdateSpy.mockResolvedValue(existingFeed);
+      createOrUpdateSpy.mockResolvedValue(createMockFeedSchema({ id: 'feed123', created_at: 1000000 }));
+      deleteSpy.mockResolvedValue(undefined);
       requestSpy.mockResolvedValue(undefined);
 
       const result = await FeedApplication.persist({ userId: testUserId, params: mockParams });
 
-      expect(result!.id).toBe('feed-existing');
+      expect(result!.id).toBe('feed123');
       expect(result!.created_at).toBe(1000000);
+      expect(requestSpy).toHaveBeenNthCalledWith(
+        1,
+        expect.objectContaining({ method: HttpMethod.PUT, url: expect.stringContaining('/feed123') }),
+      );
+      expect(requestSpy).toHaveBeenNthCalledWith(
+        2,
+        expect.objectContaining({ method: HttpMethod.DELETE, url: expect.stringContaining('/feed-existing') }),
+      );
+      expect(deleteSpy).toHaveBeenCalledWith({ feedId: 'feed-existing' });
     });
 
     it('should throw when local save fails', async () => {
@@ -209,6 +219,30 @@ describe('FeedApplication', () => {
       await expect(FeedApplication.persist({ userId: testUserId, params: mockParams })).rejects.toThrow(
         'Failed to PUT to homeserver: 500',
       );
+    });
+
+    it('should rollback new local feed and keep old feed when migration PUT fails', async () => {
+      const mockParams: Core.TFeedPersistCreateParams = {
+        feed: createMockFeedResult(),
+        existingId: 'feed-existing',
+      };
+      const { createOrUpdateSpy, deleteSpy, readSpy, requestSpy } = setupMocks();
+
+      readSpy.mockResolvedValue(createMockFeedSchema({ id: 'feed-existing', created_at: 1000000 }));
+      createOrUpdateSpy.mockResolvedValue(createMockFeedSchema({ id: 'feed123', created_at: 1000000 }));
+      deleteSpy.mockResolvedValue(undefined);
+      requestSpy.mockRejectedValueOnce(new Error('Failed to PUT to homeserver: 500'));
+
+      await expect(FeedApplication.persist({ userId: testUserId, params: mockParams })).rejects.toThrow(
+        'Failed to PUT to homeserver: 500',
+      );
+
+      expect(requestSpy).toHaveBeenCalledTimes(1);
+      expect(requestSpy).toHaveBeenCalledWith(
+        expect.objectContaining({ method: HttpMethod.PUT, url: expect.stringContaining('/feed123') }),
+      );
+      expect(deleteSpy).toHaveBeenCalledTimes(1);
+      expect(deleteSpy).toHaveBeenCalledWith({ feedId: 'feed123' });
     });
   });
 
@@ -362,6 +396,44 @@ describe('FeedApplication', () => {
         expect.arrayContaining([expect.any(Object), expect.any(Object)]),
       );
       expect(result).toHaveLength(2);
+    });
+
+    it('should continue when one feed request fails', async () => {
+      const { listSpy, requestSpy, createOrUpdateManySpy } = setupFetchMocks();
+
+      listSpy.mockResolvedValue([feedUri1, feedUri2]);
+      requestSpy
+        .mockRejectedValueOnce(new Error('network error'))
+        .mockResolvedValueOnce(createRemoteFeedJson('Feed 2', ['lightning']));
+      createOrUpdateManySpy.mockImplementation((feeds) => Promise.resolve(feeds));
+
+      const result = await FeedApplication.fetchFeeds(testUserId);
+
+      expect(requestSpy).toHaveBeenCalledTimes(2);
+      expect(createOrUpdateManySpy).toHaveBeenCalledWith(expect.arrayContaining([expect.any(Object)]));
+      expect(result).toHaveLength(1);
+    });
+
+    it('should process large feed lists and persist all valid feeds', async () => {
+      const { listSpy, requestSpy, createOrUpdateManySpy } = setupFetchMocks();
+
+      const feedUris = Array.from(
+        { length: 12 },
+        (_, i) => `pubky://${testUserId}/pub/pubky.app/feeds/feed-${i.toString().padStart(2, '0')}`,
+      );
+
+      listSpy.mockResolvedValue(feedUris);
+      requestSpy.mockImplementation((params) => {
+        const feedId = String(params.url).split('/').pop() ?? 'feed';
+        return Promise.resolve(createRemoteFeedJson(`Feed ${feedId}`));
+      });
+      createOrUpdateManySpy.mockImplementation((feeds) => Promise.resolve(feeds));
+
+      const result = await FeedApplication.fetchFeeds(testUserId);
+
+      expect(requestSpy).toHaveBeenCalledTimes(12);
+      expect(createOrUpdateManySpy).toHaveBeenCalledWith(expect.arrayContaining(Array(12).fill(expect.any(Object))));
+      expect(result).toHaveLength(12);
     });
 
     it('should return empty array when no feeds exist on homeserver', async () => {
