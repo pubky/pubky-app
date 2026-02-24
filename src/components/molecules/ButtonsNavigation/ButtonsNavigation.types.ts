@@ -1,5 +1,5 @@
 export interface ButtonsNavigationProps {
-  id?: string;
+  id: string;
   className?: React.HTMLAttributes<HTMLDivElement>['className'];
   onHandleBackButton?: () => void;
   onHandleContinueButton?: () => void;
