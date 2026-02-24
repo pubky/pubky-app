@@ -276,8 +276,8 @@ describe('ProfilePageHeader - Other User Profile', () => {
     expect(button).toHaveClass('group');
 
     // Verify CSS classes that swap visibility on hover
-    expect(followingText.closest('span')).toHaveClass('group-hover:hidden');
-    expect(unfollowText.closest('span')).toHaveClass('group-hover:flex');
+    expect(followingText.closest('div')).toHaveClass('group-hover:hidden');
+    expect(unfollowText.closest('div')).toHaveClass('group-hover:flex');
   });
 
   it('hides Edit, Sign out buttons when viewing other user', () => {

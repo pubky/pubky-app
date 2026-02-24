@@ -96,7 +96,7 @@ function FollowButton({ isFollowing, isLoading, isStatusLoading, displayName, va
  * MeButton
  * Disabled button shown when viewing own profile
  */
-function MeButton({ variant = 'iconWithText', className }: { variant?: 'iconWithText' | 'icon'; className?: string }) {
+function MeButton({ variant = 'icon', className }: { variant?: 'iconWithText' | 'icon'; className?: string }) {
   const t = useTranslations('userList');
   const tProfile = useTranslations('profile.actions');
 

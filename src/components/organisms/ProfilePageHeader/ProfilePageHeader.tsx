@@ -156,14 +156,14 @@ export function ProfilePageHeader({ profile, actions, isOwnProfile = true, userI
                     </>
                   ) : isFollowing ? (
                     <>
-                      <span className="flex items-center gap-1.5 group-hover:hidden">
+                      <Atoms.Container overrideDefaults className="flex items-center gap-1.5 group-hover:hidden">
                         <Icons.Check className="size-4" />
                         {t('followingButton')}
-                      </span>
-                      <span className="hidden items-center gap-1.5 group-hover:flex">
+                      </Atoms.Container>
+                      <Atoms.Container overrideDefaults className="hidden items-center gap-1.5 group-hover:flex">
                         <Icons.UserMinus className="size-4" />
                         {t('unfollow')}
-                      </span>
+                      </Atoms.Container>
                     </>
                   ) : (
                     <>
