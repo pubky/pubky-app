@@ -162,6 +162,73 @@ function buildPostCountsRows(rows: number) {
   return out;
 }
 
+function buildUserCountsRows(rows: number) {
+  const out = [];
+  for (let i = 0; i < rows; i++) {
+    out.push({
+      id: `pubky-user-${i}`,
+      tagged: i % 80,
+      tags: i % 60,
+      unique_tags: i % 35,
+      posts: i % 120,
+      replies: i % 90,
+      following: i % 500,
+      followers: i % 700,
+      friends: i % 300,
+      bookmarks: i % 200,
+    });
+  }
+  return out;
+}
+
+function buildUserDetailsRows(rows: number) {
+  const out = [];
+  const now = Date.now();
+  for (let i = 0; i < rows; i++) {
+    out.push({
+      id: `pubky-user-${i}`,
+      name: `User ${i}`,
+      bio: `Bio for user ${i} with some profile text`,
+      image: i % 4 === 0 ? null : `https://cdn.example.com/avatar/${i}.jpg`,
+      indexed_at: now - i * 1000,
+      links:
+        i % 3 === 0
+          ? null
+          : [
+              { title: 'Website', url: `https://example.com/u/${i}` },
+              ...(i % 5 === 0 ? [{ title: 'GitHub', url: `https://github.com/user-${i}` }] : []),
+            ],
+      status: i % 6 === 0 ? null : i % 2 === 0 ? 'online' : 'offline',
+    });
+  }
+  return out;
+}
+
+function buildUserRelationshipsRows(rows: number) {
+  const out = [];
+  for (let i = 0; i < rows; i++) {
+    out.push({
+      id: `pubky-user-${i}`,
+      following: i % 2 === 0,
+      followed_by: i % 3 === 0,
+      muted: i % 7 === 0,
+    });
+  }
+  return out;
+}
+
+function buildUserTtlRows(rows: number) {
+  const out = [];
+  const now = Date.now();
+  for (let i = 0; i < rows; i++) {
+    out.push({
+      id: `pubky-user-${i}`,
+      lastUpdatedAt: i % 3 === 0 ? now - 5 * 60 * 1000 - i : now - (i % 45) * 1000,
+    });
+  }
+  return out;
+}
+
 function buildPostTtlRows(rows: number) {
   const out = [];
   const now = Date.now();
@@ -170,6 +237,25 @@ function buildPostTtlRows(rows: number) {
       id: `author-${i % 200}:post-${i}`,
       // Mix fresh and stale entries to emulate TTL checks.
       lastUpdatedAt: i % 3 === 0 ? now - 5 * 60 * 1000 - i : now - (i % 45) * 1000,
+    });
+  }
+  return out;
+}
+
+function buildUserConnectionsRows(rows: number) {
+  const out = [];
+  for (let i = 0; i < rows; i++) {
+    const following = [];
+    const followers = [];
+    const count = 4 + (i % 6);
+    for (let j = 0; j < count; j++) {
+      following.push(`pubky-following-${(i * 7 + j) % (rows * 2)}`);
+      followers.push(`pubky-follower-${(i * 11 + j) % (rows * 2)}`);
+    }
+    out.push({
+      id: `pubky-user-${i}`,
+      following,
+      followers,
     });
   }
   return out;
@@ -357,6 +443,472 @@ function buildPostRelationshipsWorkloads({
   );
 
   return workloads;
+}
+
+function buildUserConnectionsWorkloads({
+  table,
+  rows,
+  config,
+}: {
+  table: Table<any, any>;
+  rows: any[];
+  config: BenchConfig;
+}): WorkloadDef[] {
+  return [
+    {
+      key: 'bulkInsert',
+      label: 'bulkInsert',
+      run: async () => {
+        await seedTable(table, rows, 'bulkPut');
+        await table.clear();
+      },
+    },
+    {
+      key: 'bulkUpsertBatch',
+      label: 'bulkUpsertBatch',
+      run: async () => {
+        const limit = Math.min(config.updateRows, config.rows);
+        const updates = [];
+        for (let i = 0; i < limit; i++) {
+          const row = rows[i];
+          updates.push({
+            id: row.id,
+            following: [`pubky-new-following-${i}`, ...row.following.slice(0, 7)],
+            followers: row.followers.slice(1).concat(`pubky-new-follower-${i}`),
+          });
+        }
+        await table.bulkPut(updates);
+      },
+    },
+    {
+      key: 'createConnectionFollowing',
+      label: 'createConnectionFollowing (modify)',
+      run: async () => {
+        const limit = Math.min(config.updateRows, config.rows);
+        for (let i = 0; i < limit; i++) {
+          const id = `pubky-user-${i}`;
+          const to = `pubky-target-${i}`;
+          await table
+            .where('id')
+            .equals(id)
+            .modify((row: any) => {
+              const list = row.following ?? [];
+              if (!list.includes(to)) {
+                row.following = [...list, to];
+              }
+            });
+        }
+      },
+    },
+    {
+      key: 'deleteConnectionFollowers',
+      label: 'deleteConnectionFollowers (modify)',
+      run: async () => {
+        const limit = Math.min(config.updateRows, config.rows);
+        for (let i = 0; i < limit; i++) {
+          const id = `pubky-user-${i}`;
+          await table
+            .where('id')
+            .equals(id)
+            .modify((row: any) => {
+              const list = row.followers ?? [];
+              if (list.length > 0) {
+                row.followers = list.slice(1);
+              }
+            });
+        }
+      },
+    },
+    {
+      key: 'findById',
+      label: 'findById',
+      run: async () => {
+        for (let i = 0; i < config.lookups; i++) {
+          const n = (i * 17) % config.rows;
+          await table.get(`pubky-user-${n}`);
+        }
+      },
+    },
+    {
+      key: 'findByIdsAnyOf',
+      label: 'findByIdsAnyOf',
+      run: async () => {
+        const ids: string[] = [];
+        const width = Math.min(200, config.rows);
+        for (let i = 0; i < width; i++) {
+          const n = (i * 13) % config.rows;
+          ids.push(`pubky-user-${n}`);
+        }
+        await table.where('id').anyOf(ids).toArray();
+      },
+    },
+  ];
+}
+
+function buildUserCountsWorkloads({
+  table,
+  rows,
+  config,
+}: {
+  table: Table<any, any>;
+  rows: any[];
+  config: BenchConfig;
+}): WorkloadDef[] {
+  return [
+    {
+      key: 'bulkInsert',
+      label: 'bulkInsert',
+      run: async () => {
+        await seedTable(table, rows, 'bulkPut');
+        await table.clear();
+      },
+    },
+    {
+      key: 'bulkUpsertBatch',
+      label: 'bulkUpsertBatch',
+      run: async () => {
+        const updates = [];
+        const limit = Math.min(config.updateRows, config.rows);
+        for (let i = 0; i < limit; i++) {
+          const row = rows[i];
+          updates.push({
+            ...row,
+            tagged: (row.tagged + 1) % 200,
+            tags: (row.tags + 2) % 200,
+            unique_tags: (row.unique_tags + 1) % 100,
+            posts: (row.posts + 1) % 300,
+            replies: (row.replies + 1) % 200,
+            following: (row.following + 1) % 1000,
+            followers: (row.followers + 2) % 1200,
+            friends: (row.friends + 1) % 600,
+            bookmarks: (row.bookmarks + 1) % 400,
+          });
+        }
+        await table.bulkPut(updates);
+      },
+    },
+    {
+      key: 'updateCountsLikeFlow',
+      label: 'updateCountsLikeFlow (update)',
+      run: async () => {
+        const limit = Math.min(config.updateRows, config.rows);
+        for (let i = 0; i < limit; i++) {
+          const id = `pubky-user-${i}`;
+          await table.update(id, {
+            following: (i + 1) % 1000,
+            followers: (i + 2) % 1200,
+            friends: i % 600,
+            bookmarks: (i + 3) % 400,
+          });
+        }
+      },
+    },
+    {
+      key: 'followCountersPairUpdates',
+      label: 'followCountersPairUpdates (2 users)',
+      run: async () => {
+        const limit = Math.min(config.updateRows, config.rows - 1);
+        for (let i = 0; i < limit; i++) {
+          await table.update(`pubky-user-${i}`, { following: (i + 5) % 1000, friends: (i + 7) % 600 });
+          await table.update(`pubky-user-${i + 1}`, { followers: (i + 9) % 1200, friends: (i + 11) % 600 });
+        }
+      },
+    },
+    {
+      key: 'findById',
+      label: 'findById',
+      run: async () => {
+        for (let i = 0; i < config.lookups; i++) {
+          const n = (i * 19) % config.rows;
+          await table.get(`pubky-user-${n}`);
+        }
+      },
+    },
+    {
+      key: 'findByIdsAnyOf',
+      label: 'findByIdsAnyOf',
+      run: async () => {
+        const ids: string[] = [];
+        const width = Math.min(200, config.rows);
+        for (let i = 0; i < width; i++) {
+          const n = (i * 11) % config.rows;
+          ids.push(`pubky-user-${n}`);
+        }
+        await table.where('id').anyOf(ids).toArray();
+      },
+    },
+  ];
+}
+
+function buildUserDetailsWorkloads({
+  table,
+  rows,
+  config,
+}: {
+  table: Table<any, any>;
+  rows: any[];
+  config: BenchConfig;
+}): WorkloadDef[] {
+  return [
+    {
+      key: 'bulkInsert',
+      label: 'bulkInsert',
+      run: async () => {
+        await seedTable(table, rows, 'bulkPut');
+        await table.clear();
+      },
+    },
+    {
+      key: 'bulkUpsertBatch',
+      label: 'bulkUpsertBatch',
+      run: async () => {
+        const updates = [];
+        const limit = Math.min(config.updateRows, config.rows);
+        for (let i = 0; i < limit; i++) {
+          const row = rows[i];
+          updates.push({
+            ...row,
+            name: `${row.name}*`,
+            indexed_at: Date.now() + i,
+            status: i % 3 === 0 ? 'away' : row.status,
+          });
+        }
+        await table.bulkPut(updates);
+      },
+    },
+    {
+      key: 'updateProfileFields',
+      label: 'updateProfileFields (update)',
+      run: async () => {
+        const limit = Math.min(config.updateRows, config.rows);
+        for (let i = 0; i < limit; i++) {
+          await table.update(`pubky-user-${i}`, {
+            name: `Renamed ${i}`,
+            bio: `Updated bio ${i}`,
+            indexed_at: Date.now() + i,
+            status: i % 2 === 0 ? 'online' : 'offline',
+          });
+        }
+      },
+    },
+    {
+      key: 'updateLinksStatus',
+      label: 'updateLinksStatus (update)',
+      run: async () => {
+        const limit = Math.min(config.updateRows, config.rows);
+        for (let i = 0; i < limit; i++) {
+          await table.update(`pubky-user-${i}`, {
+            links: [{ title: 'App', url: `https://app.example.com/${i}` }],
+            status: i % 4 === 0 ? null : 'online',
+          });
+        }
+      },
+    },
+    {
+      key: 'findById',
+      label: 'findById',
+      run: async () => {
+        for (let i = 0; i < config.lookups; i++) {
+          const n = (i * 19) % config.rows;
+          await table.get(`pubky-user-${n}`);
+        }
+      },
+    },
+    {
+      key: 'findByIdsAnyOf',
+      label: 'findByIdsAnyOf',
+      run: async () => {
+        const ids: string[] = [];
+        const width = Math.min(200, config.rows);
+        for (let i = 0; i < width; i++) {
+          const n = (i * 7) % config.rows;
+          ids.push(`pubky-user-${n}`);
+        }
+        await table.where('id').anyOf(ids).toArray();
+      },
+    },
+  ];
+}
+
+function buildUserRelationshipsWorkloads({
+  table,
+  rows,
+  config,
+}: {
+  table: Table<any, any>;
+  rows: any[];
+  config: BenchConfig;
+}): WorkloadDef[] {
+  return [
+    {
+      key: 'bulkInsert',
+      label: 'bulkInsert',
+      run: async () => {
+        await seedTable(table, rows, 'bulkPut');
+        await table.clear();
+      },
+    },
+    {
+      key: 'bulkUpsertBatch',
+      label: 'bulkUpsertBatch',
+      run: async () => {
+        const updates = [];
+        const limit = Math.min(config.updateRows, config.rows);
+        for (let i = 0; i < limit; i++) {
+          const row = rows[i];
+          updates.push({
+            ...row,
+            following: !row.following,
+            followed_by: i % 4 === 0 ? !row.followed_by : row.followed_by,
+            muted: i % 5 === 0 ? !row.muted : row.muted,
+          });
+        }
+        await table.bulkPut(updates);
+      },
+    },
+    {
+      key: 'updateFollowFlag',
+      label: 'updateFollowFlag (update)',
+      run: async () => {
+        const limit = Math.min(config.updateRows, config.rows);
+        for (let i = 0; i < limit; i++) {
+          await table.update(`pubky-user-${i}`, { following: i % 2 === 0, followed_by: i % 3 === 0 });
+        }
+      },
+    },
+    {
+      key: 'toggleMuted',
+      label: 'toggleMuted (update)',
+      run: async () => {
+        const limit = Math.min(config.updateRows, config.rows);
+        for (let i = 0; i < limit; i++) {
+          await table.update(`pubky-user-${i}`, { muted: i % 2 === 1 });
+        }
+      },
+    },
+    {
+      key: 'findById',
+      label: 'findById',
+      run: async () => {
+        for (let i = 0; i < config.lookups; i++) {
+          const n = (i * 17) % config.rows;
+          await table.get(`pubky-user-${n}`);
+        }
+      },
+    },
+    {
+      key: 'findByIdsAnyOf',
+      label: 'findByIdsAnyOf',
+      run: async () => {
+        const ids: string[] = [];
+        const width = Math.min(200, config.rows);
+        for (let i = 0; i < width; i++) {
+          const n = (i * 9) % config.rows;
+          ids.push(`pubky-user-${n}`);
+        }
+        await table.where('id').anyOf(ids).toArray();
+      },
+    },
+    {
+      key: 'mutedScan',
+      label: 'mutedScan',
+      run: async () => {
+        for (let i = 0; i < config.lookups; i++) {
+          const matches = await table.filter((row: any) => row.muted === (i % 2 === 0)).toArray();
+          matches.slice(0, 100);
+        }
+      },
+    },
+  ];
+}
+
+function buildUserTtlWorkloads({
+  table,
+  rows,
+  config,
+}: {
+  table: Table<any, any>;
+  rows: any[];
+  config: BenchConfig;
+}): WorkloadDef[] {
+  return [
+    {
+      key: 'bulkInsert',
+      label: 'bulkInsert',
+      run: async () => {
+        await seedTable(table, rows, 'bulkPut');
+        await table.clear();
+      },
+    },
+    {
+      key: 'bulkSaveBatch',
+      label: 'bulkSaveBatch (bulkPut)',
+      run: async () => {
+        const updates = [];
+        const limit = Math.min(config.updateRows, config.rows);
+        const now = Date.now();
+        for (let i = 0; i < limit; i++) {
+          updates.push({ id: rows[i].id, lastUpdatedAt: now + i });
+        }
+        await table.bulkPut(updates);
+      },
+    },
+    {
+      key: 'touchUpserts',
+      label: 'touchUpserts (put)',
+      run: async () => {
+        const limit = Math.min(config.updateRows, config.rows);
+        const now = Date.now();
+        for (let i = 0; i < limit; i++) {
+          await table.put({ id: rows[i].id, lastUpdatedAt: now + i });
+        }
+      },
+    },
+    {
+      key: 'findById',
+      label: 'findById',
+      run: async () => {
+        for (let i = 0; i < config.lookups; i++) {
+          const n = (i * 19) % config.rows;
+          await table.get(`pubky-user-${n}`);
+        }
+      },
+    },
+    {
+      key: 'findByIdsAnyOf',
+      label: 'findByIdsAnyOf',
+      run: async () => {
+        const ids: string[] = [];
+        const width = Math.min(300, config.rows);
+        for (let i = 0; i < width; i++) {
+          const n = (i * 9) % config.rows;
+          ids.push(`pubky-user-${n}`);
+        }
+        await table.where('id').anyOf(ids).toArray();
+      },
+    },
+    {
+      key: 'findStaleByIds',
+      label: 'findStaleByIds (TTL flow)',
+      run: async () => {
+        const ids: string[] = [];
+        const width = Math.min(300, config.rows);
+        for (let i = 0; i < width; i++) {
+          const n = (i * 13) % config.rows;
+          ids.push(`pubky-user-${n}`);
+        }
+        const uniqueIds = [...new Set(ids)];
+        const ttlRecords = await table.where('id').anyOf(uniqueIds).toArray();
+        const ttlMap = new Map(ttlRecords.map((r) => [r.id, r.lastUpdatedAt]));
+        const now = Date.now();
+        const ttlMs = 60 * 1000;
+        uniqueIds.filter((id) => {
+          const lastUpdatedAt = ttlMap.get(id);
+          return lastUpdatedAt === undefined || now - lastUpdatedAt > ttlMs;
+        });
+      },
+    },
+  ];
 }
 
 function buildTagCollectionWorkloads({
@@ -806,6 +1358,102 @@ const BENCH_SUITES: SuiteDef[] = [
     ],
   },
   {
+    key: 'userCounts',
+    title: 'userCounts.schema.ts',
+    tableName: 'user_counts',
+    baseline: {
+      label: 'legacy (&id, tagged, tags, unique_tags, posts, replies, following, followers, friends, bookmarks)',
+      schema: normalizeSchema(`
+        &id,
+        tagged,
+        tags,
+        unique_tags,
+        posts,
+        replies,
+        following,
+        followers,
+        friends,
+        bookmarks
+      `),
+      flags: {},
+    },
+    current: {
+      label: 'current userCountsTableSchema (&id)',
+      schema: normalizeSchema('&id'),
+      flags: {},
+    },
+    buildRows: buildUserCountsRows,
+    seedMethod: 'bulkPut',
+    workloads: ({ table, rows, config }) => buildUserCountsWorkloads({ table, rows, config }),
+  },
+  {
+    key: 'userDetails',
+    title: 'userDetails.schema.ts',
+    tableName: 'user_details',
+    baseline: {
+      label: 'legacy (&id, name, bio, image, indexed_at, links, status)',
+      schema: normalizeSchema(`
+        &id,
+        name,
+        bio,
+        image,
+        indexed_at,
+        links,
+        status
+      `),
+      flags: {},
+    },
+    current: {
+      label: 'current userDetailsTableSchema (&id)',
+      schema: normalizeSchema('&id'),
+      flags: {},
+    },
+    buildRows: buildUserDetailsRows,
+    seedMethod: 'bulkPut',
+    workloads: ({ table, rows, config }) => buildUserDetailsWorkloads({ table, rows, config }),
+  },
+  {
+    key: 'userRelationships',
+    title: 'userRelationships.schema.ts',
+    tableName: 'user_relationships',
+    baseline: {
+      label: 'legacy (&id, following, followed_by, muted)',
+      schema: normalizeSchema(`
+        &id,
+        following,
+        followed_by,
+        muted
+      `),
+      flags: {},
+    },
+    current: {
+      label: 'current userRelationshipsTableSchema (&id)',
+      schema: normalizeSchema('&id'),
+      flags: {},
+    },
+    buildRows: buildUserRelationshipsRows,
+    seedMethod: 'bulkPut',
+    workloads: ({ table, rows, config }) => buildUserRelationshipsWorkloads({ table, rows, config }),
+  },
+  {
+    key: 'userTtl',
+    title: 'userTtl.schema.ts',
+    tableName: 'user_ttl',
+    baseline: {
+      label: 'legacy ttlTableSchema (&id, lastUpdatedAt)',
+      schema: normalizeSchema('&id, lastUpdatedAt'),
+      flags: {},
+    },
+    current: {
+      label: 'current userTtlTableSchema (&id)',
+      schema: normalizeSchema('&id'),
+      flags: {},
+    },
+    buildRows: buildUserTtlRows,
+    seedMethod: 'bulkPut',
+    workloads: ({ table, rows, config }) => buildUserTtlWorkloads({ table, rows, config }),
+  },
+  {
     key: 'postTtl',
     title: 'postTtl.schema.ts',
     tableName: 'post_ttl',
@@ -899,6 +1547,24 @@ const BENCH_SUITES: SuiteDef[] = [
         },
       },
     ],
+  },
+  {
+    key: 'userConnections',
+    title: 'userConnections.schema.ts',
+    tableName: 'user_connections',
+    baseline: {
+      label: 'legacy (&id, followers, following)',
+      schema: normalizeSchema('&id, followers, following'),
+      flags: {},
+    },
+    current: {
+      label: 'current userConnectionsTableSchema (&id)',
+      schema: normalizeSchema('&id'),
+      flags: {},
+    },
+    buildRows: buildUserConnectionsRows,
+    seedMethod: 'bulkPut',
+    workloads: ({ table, rows, config }) => buildUserConnectionsWorkloads({ table, rows, config }),
   },
   {
     key: 'tagCollection',
