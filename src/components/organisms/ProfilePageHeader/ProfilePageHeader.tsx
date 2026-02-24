@@ -196,13 +196,15 @@ export function ProfilePageHeader({ profile, actions, isOwnProfile = true, userI
               {/* Status display inline with buttons */}
               {status && (
                 <Atoms.Container overrideDefaults={true} className="flex h-8 items-center gap-1">
-                  <span className="text-base leading-6">{displayEmoji}</span>
-                  <span className="text-base leading-6 font-bold text-white">
+                  <Atoms.Typography as="span" overrideDefaults className="text-base leading-6">
+                    {displayEmoji}
+                  </Atoms.Typography>
+                  <Atoms.Typography as="span" overrideDefaults className="text-base leading-6 font-bold text-white">
                     {(() => {
                       const parsed = Libs.parseStatus(status);
                       return parsed.key ? tStatus(parsed.key as Parameters<typeof tStatus>[0]) : parsed.text;
                     })()}
-                  </span>
+                  </Atoms.Typography>
                 </Atoms.Container>
               )}
             </>
