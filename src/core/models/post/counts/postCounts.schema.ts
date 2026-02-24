@@ -4,7 +4,8 @@ export interface PostCountsModelSchema extends Core.NexusPostCounts {
   id: string;
 }
 
-// Keep only the primary key index. Count fields are read/updated by id.
+//  Primary and compound indexes for Dexie
+// All the indexes are being used in queries
 export const postCountsTableSchema = `
   &id,
   tags,

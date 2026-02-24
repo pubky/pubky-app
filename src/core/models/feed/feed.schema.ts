@@ -16,4 +16,5 @@ export interface FeedModelSchema {
 // - ++id: Auto-incrementing primary key (like notifications)
 // - name: Used for indexed name lookup
 // - created_at: For sorting feeds by creation time
-export const feedTableSchema = '++id, name, created_at';
+// - updated_at: For sorting feeds by most recently modified
+export const feedTableSchema = '++id, name, created_at, updated_at';
