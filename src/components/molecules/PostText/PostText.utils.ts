@@ -162,42 +162,6 @@ export const remarkMentions = createPatternPlugin({
   dataType: 'mention',
 });
 
-// Add a "Show more" button element inside the last paragraph for inline display.
-// Uses a Link node with data-type="show-more-button" so it can be rendered as a
-// button via react-markdown's components prop (same pattern as hashtags/mentions).
-// Placed inside the last paragraph to appear inline after text, but not inside
-// styled elements like code blocks, blockquotes, etc.
-export const remarkShowMoreButton = () => (tree: Root) => {
-  // Find the last paragraph in the document
-  const lastParagraph = tree.children.findLast((child) => child.type === 'paragraph');
-
-  // Create a link node with data-type for component routing in react-markdown
-  // Using href="#" as a placeholder since it will be rendered as a button
-  const showMoreNode: Link = {
-    type: 'link',
-    url: '#',
-    data: {
-      hProperties: {
-        'data-type': 'show-more-button',
-      },
-    },
-    children: [{ type: 'text', value: 'Show more' } as Text],
-  };
-
-  if (lastParagraph) {
-    // Append inside the last paragraph for inline display
-    lastParagraph.children.push(showMoreNode);
-  } else {
-    // Fallback: No paragraph found, wrap in a new paragraph
-    const newParagraph: Paragraph = {
-      type: 'paragraph',
-      children: [showMoreNode],
-    };
-
-    tree.children.push(newParagraph);
-  }
-};
-
 // Extract text safely - children from remark is typically a text node
 export const extractTextFromChildren = (children: ReactNode) =>
   typeof children === 'string'

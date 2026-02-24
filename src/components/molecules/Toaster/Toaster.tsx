@@ -18,7 +18,7 @@ export function Toaster() {
           >
             <div className="flex min-w-0 flex-1 flex-col gap-0.5">
               {title && <ToastTitle>{title}</ToastTitle>}
-              {description && <ToastDescription className="truncate">{description}</ToastDescription>}
+              {description && <ToastDescription>{description}</ToastDescription>}
             </div>
             {action && <div className="shrink-0">{action}</div>}
           </Toast>

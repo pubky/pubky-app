@@ -1,4 +1,26 @@
 import { TAG_INPUT_MAX_SUGGESTIONS } from './useTagInput.constants';
+import { TAG_SUGGESTIONS_DEFAULT_LIMIT } from '../useTagSuggestions/useTagSuggestions.constants';
+import type { TagLabel } from './useTagInput.types';
+
+/**
+ * Merge local tag suggestions with API suggestions (local first, deduplicated, capped).
+ *
+ * @param local - Suggestions from local/hook filtering
+ * @param api - Suggestions from API (string labels)
+ * @param enabled - Whether to include API suggestions
+ * @param limit - Max combined suggestions (default: TAG_SUGGESTIONS_DEFAULT_LIMIT)
+ */
+export function mergeTagSuggestions(
+  local: readonly TagLabel[],
+  api: readonly string[],
+  enabled: boolean,
+  limit = TAG_SUGGESTIONS_DEFAULT_LIMIT,
+): TagLabel[] {
+  if (!enabled || api.length === 0) return [...local];
+  const localSet = new Set(local.map((t) => t.label.toLowerCase()));
+  const apiTagsToAdd = api.filter((label) => !localSet.has(label.toLowerCase())).map((label) => ({ label }));
+  return [...local, ...apiTagsToAdd].slice(0, limit);
+}
 
 /**
  * Filter tags for autocomplete suggestions based on input text.

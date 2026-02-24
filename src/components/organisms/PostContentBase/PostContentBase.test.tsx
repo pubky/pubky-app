@@ -36,6 +36,21 @@ vi.mock('@/atoms', () => ({
       {children}
     </div>
   ),
+  Button: ({
+    children,
+    className,
+    overrideDefaults: _overrideDefaults,
+    ...props
+  }: {
+    children: React.ReactNode;
+    className?: string;
+    overrideDefaults?: boolean;
+    [key: string]: unknown;
+  }) => (
+    <button data-testid="button" className={className} {...props}>
+      {children}
+    </button>
+  ),
 }));
 
 // Mock molecules - PostText, PostLinkEmbeds

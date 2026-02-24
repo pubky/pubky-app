@@ -350,6 +350,20 @@ describe('FeedbackCard', () => {
   });
 
   describe('UI Structure', () => {
+    it('renders skeleton while user profile is loading', async () => {
+      mockUseAuthStore.mockReturnValue({ currentUserPubky: mockPubky } as never);
+      mockUseLiveQuery.mockReturnValue(undefined as never);
+
+      render(<FeedbackCard />);
+
+      await waitFor(() => {
+        expect(screen.getByTestId('feedback-card-skeleton')).toBeInTheDocument();
+      });
+
+      expect(screen.queryByTestId('feedback-card')).not.toBeInTheDocument();
+      expect(screen.queryByTestId('avatar-with-fallback')).not.toBeInTheDocument();
+    });
+
     it('renders feedback heading correctly', async () => {
       mockUseAuthStore.mockReturnValue({ currentUserPubky: null } as never);
       mockUseLiveQuery.mockReturnValue(null as never);
@@ -501,6 +515,19 @@ describe('FeedbackCard - Snapshots', () => {
 
     await waitFor(() => {
       expect(screen.getByTestId('avatar-fallback')).toBeInTheDocument();
+    });
+
+    expect(container.firstChild).toMatchSnapshot();
+  });
+
+  it('matches snapshot when loading', async () => {
+    mockUseAuthStore.mockReturnValue({ currentUserPubky: mockPubky } as never);
+    mockUseLiveQuery.mockReturnValue(undefined as never);
+
+    const { container } = render(<FeedbackCard />);
+
+    await waitFor(() => {
+      expect(screen.getByTestId('feedback-card-skeleton')).toBeInTheDocument();
     });
 
     expect(container.firstChild).toMatchSnapshot();
