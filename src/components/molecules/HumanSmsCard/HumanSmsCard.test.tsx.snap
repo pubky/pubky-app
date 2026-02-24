@@ -277,8 +277,8 @@ exports[`SmsVerificationCard > matches snapshot when loading 1`] = `
         data-testid="container"
       >
         <div
-          class="size-48 animate-pulse rounded bg-muted"
-          data-testid="container"
+          class="animate-pulse bg-muted size-48 rounded"
+          data-slot="skeleton"
         />
       </div>
       <div
@@ -290,34 +290,34 @@ exports[`SmsVerificationCard > matches snapshot when loading 1`] = `
           data-testid="container"
         >
           <div
-            class="h-8 w-48 animate-pulse rounded bg-muted"
-            data-testid="container"
+            class="animate-pulse bg-muted h-8 w-48 rounded"
+            data-slot="skeleton"
           />
           <div
-            class="h-12 w-20 animate-pulse rounded bg-muted lg:h-15"
-            data-testid="container"
+            class="animate-pulse bg-muted h-12 w-20 rounded lg:h-15"
+            data-slot="skeleton"
           />
           <div
-            class="h-4 w-44 animate-pulse rounded bg-muted"
-            data-testid="container"
+            class="animate-pulse bg-muted h-4 w-44 rounded"
+            data-slot="skeleton"
           />
           <div
             class="mx-auto w-full flex-col flex gap-1"
             data-testid="container"
           >
             <div
-              class="h-6 w-24 animate-pulse rounded bg-muted"
-              data-testid="container"
+              class="animate-pulse bg-muted h-6 w-24 rounded"
+              data-slot="skeleton"
             />
             <div
-              class="h-6 w-32 animate-pulse rounded bg-muted"
-              data-testid="container"
+              class="animate-pulse bg-muted h-6 w-32 rounded"
+              data-slot="skeleton"
             />
           </div>
         </div>
         <div
-          class="h-10 w-36 animate-pulse rounded-full bg-muted"
-          data-testid="container"
+          class="animate-pulse bg-muted h-10 w-36 rounded-full"
+          data-slot="skeleton"
         />
       </div>
     </div>

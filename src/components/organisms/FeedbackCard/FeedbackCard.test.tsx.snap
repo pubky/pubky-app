@@ -1,5 +1,42 @@
 // Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
 
+exports[`FeedbackCard - Snapshots > matches snapshot when loading 1`] = `
+<div
+  class="flex w-full max-w-(--filter-bar-width) flex-col gap-2"
+  data-testid="feedback-card-skeleton"
+>
+  <div
+    class="animate-pulse bg-muted h-8 w-32 rounded-md"
+    data-slot="skeleton"
+    data-testid="feedback-card-skeleton-heading"
+  />
+  <div
+    class="flex w-full min-w-0 flex-col gap-4 rounded-lg border border-dashed border-input p-6"
+    data-testid="container"
+  >
+    <div
+      class="flex w-full min-w-0 items-center gap-2"
+      data-testid="container"
+    >
+      <div
+        class="animate-pulse bg-muted h-12 w-12 shrink-0 rounded-md"
+        data-slot="skeleton"
+        data-testid="feedback-card-skeleton-avatar"
+      />
+      <div
+        class="animate-pulse bg-muted h-6 w-40 max-w-full rounded-md"
+        data-slot="skeleton"
+      />
+    </div>
+    <div
+      class="animate-pulse bg-muted h-12 w-full rounded-md"
+      data-slot="skeleton"
+      data-testid="feedback-card-skeleton-button"
+    />
+  </div>
+</div>
+`;
+
 exports[`FeedbackCard - Snapshots > matches snapshot with authenticated user with avatar 1`] = `
 <div
   class="flex w-full max-w-(--filter-bar-width) flex-col gap-2"
