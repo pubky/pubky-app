@@ -4,6 +4,7 @@ import type {
   FeedDeleteParams,
   FeedPutParams,
   PersistAndSyncParams,
+  LocalFeedMigrationParams,
   HomeserverFeedJson,
   RemoteFeedParams,
 } from './feed.types';
@@ -47,27 +48,22 @@ export class FeedApplication {
     };
 
     // When config fields (tags, reach, layout, sort, content) change, the HashId-derived
-    // ID changes too. The old resource must be removed before creating the new one.
+    // ID changes too. Migration flow is:
+    // 1) create new homeserver resource, 2) atomically swap local feed records,
+    // 3) best-effort delete old homeserver resource.
     if (idChanged) {
-      let persistedNewFeed: Core.FeedModelSchema;
+      const oldFeed = await Core.LocalFeedService.read({ feedId: existingId }).catch(() => null);
+      const newFeedUrl = feedUriBuilder(userId, newId);
+      const newFeedJson: Record<string, unknown> = normalizedFeed.feed.toJson();
 
-      try {
-        persistedNewFeed = await this.commit({ userId, feedSchema, normalizedFeed });
-      } catch (error) {
-        // Compensation: best-effort rollback of the new local record if create/sync fails.
-        await Core.LocalFeedService.delete({ feedId: newId }).catch((rollbackError) => {
-          Logger.warn('Failed to rollback new feed after update migration failure', {
-            oldFeedId: existingId,
-            newFeedId: newId,
-            rollbackError,
-          });
-        });
-        throw error;
-      }
+      await Core.HomeserverService.request({ method: HttpMethod.PUT, url: newFeedUrl, bodyJson: newFeedJson });
 
-      // Best-effort cleanup of old feed. Keep the new feed as source of truth if cleanup fails.
-      await this.commitDelete({ userId, params: { feedId: existingId } }).catch((cleanupError) => {
-        Logger.warn('Failed to cleanup old feed after successful migration to new feed ID', {
+      const persistedNewFeed = await this.migrateLocalFeedAtomically({ existingId, feedSchema, oldFeed });
+
+      // Best-effort cleanup of old homeserver feed. Keep local new feed as source of truth if cleanup fails.
+      const oldFeedUrl = feedUriBuilder(userId, existingId);
+      await Core.HomeserverService.request({ method: HttpMethod.DELETE, url: oldFeedUrl }).catch((cleanupError) => {
+        Logger.warn('Failed to cleanup old homeserver feed after successful migration to new feed ID', {
           oldFeedId: existingId,
           newFeedId: newId,
           cleanupError,
@@ -109,7 +105,7 @@ export class FeedApplication {
     const existing = await Core.LocalFeedService.read({ feedId });
 
     return {
-      name: existing.name,
+      name: changes.name ?? existing.name,
       tags: changes.tags ?? existing.tags,
       reach: changes.reach ?? existing.reach,
       sort: changes.sort ?? existing.sort,
@@ -177,8 +173,8 @@ export class FeedApplication {
         sort,
         content: content ?? null,
         layout,
-        created_at: Number(feed.created_at),
-        updated_at: Number(feed.created_at),
+        created_at: Number(remoteFeed.created_at),
+        updated_at: Number(remoteFeed.created_at),
       };
     } catch (error) {
       Logger.warn('Skipping invalid feed during bootstrap fetch', error);
@@ -224,5 +220,32 @@ export class FeedApplication {
     await Core.HomeserverService.request({ method: HttpMethod.PUT, url: feedUrl, bodyJson: feedJson });
 
     return persistedFeed;
+  }
+
+  /**
+   * Atomically migrate local feed state from existingId -> new hash-derived ID.
+   * This prevents transient duplicate/empty states in reactive local queries.
+   */
+  private static async migrateLocalFeedAtomically({
+    existingId,
+    feedSchema,
+    oldFeed,
+  }: LocalFeedMigrationParams): Promise<Core.FeedModelSchema> {
+    return Core.db.transaction(
+      'rw',
+      [Core.FeedModel.table, Core.PostStreamModel.table, Core.UnreadPostStreamModel.table],
+      async () => {
+        await Core.FeedModel.upsert(feedSchema);
+        await Core.FeedModel.deleteById(existingId);
+
+        if (oldFeed) {
+          const oldStreamId = Core.buildFeedStreamId(oldFeed);
+          await Core.PostStreamModel.deleteById(oldStreamId);
+          await Core.UnreadPostStreamModel.deleteById(oldStreamId);
+        }
+
+        return Core.FeedModel.findByIdOrThrow(feedSchema.id);
+      },
+    );
   }
 }
