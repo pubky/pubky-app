@@ -6,7 +6,6 @@ import * as Atoms from '@/atoms';
 import * as Core from '@/core';
 import * as Libs from '@/libs';
 import * as Molecules from '@/molecules';
-import { PubkyAppPostKind } from 'pubky-app-specs';
 import type {
   UsePostReplyOptions,
   UsePostPostOptions,
@@ -109,7 +108,7 @@ export function usePost(): UsePostReturn {
         authorId: currentUserId,
         tags: tags.length > 0 ? tags : undefined,
         attachments: attachments.length > 0 ? attachments : undefined,
-        kind: isArticle ? PubkyAppPostKind.Long : PubkyAppPostKind.Short,
+        isArticle,
       });
       setContent('');
       setTags([]);

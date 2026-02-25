@@ -35,13 +35,16 @@ function FollowButton({ isFollowing, isLoading, isStatusLoading, displayName, va
         size="icon"
         onClick={onClick}
         disabled={showLoading}
-        className="size-8 shrink-0 rounded-full"
+        className="group size-8 shrink-0 rounded-full"
         aria-label={isFollowing ? `${t('unfollow')} ${displayName}` : `${t('follow')} ${displayName}`}
       >
         {showLoading ? (
           <Libs.Loader2 className="size-5 animate-spin" />
         ) : isFollowing ? (
-          <Libs.Check className="size-5" />
+          <>
+            <Libs.Check className="size-5 group-hover:hidden" />
+            <Libs.UserMinus className="hidden size-5 group-hover:block" />
+          </>
         ) : (
           <Libs.UserPlus className="size-5" />
         )}
@@ -49,7 +52,7 @@ function FollowButton({ isFollowing, isLoading, isStatusLoading, displayName, va
     );
   }
 
-  // Text variant with hover states
+  // iconWithText variant with hover states
   return (
     <Atoms.Button
       data-cy="profile-follower-item-follow-toggle-btn"
@@ -93,7 +96,7 @@ function FollowButton({ isFollowing, isLoading, isStatusLoading, displayName, va
  * MeButton
  * Disabled button shown when viewing own profile
  */
-function MeButton({ variant = 'text', className }: { variant?: 'text' | 'icon'; className?: string }) {
+function MeButton({ variant = 'icon', className }: { variant?: 'iconWithText' | 'icon'; className?: string }) {
   const t = useTranslations('userList');
   const tProfile = useTranslations('profile.actions');
 
@@ -214,6 +217,7 @@ function CompactVariant({
   isStatusLoading,
   isCurrentUser,
   showStats,
+  followButtonVariant,
   className,
   dataTestId,
   onUserClick,
@@ -258,14 +262,14 @@ function CompactVariant({
 
       {/* Follow button or Me button */}
       {isCurrentUser ? (
-        <MeButton variant="icon" />
+        <MeButton variant={followButtonVariant} />
       ) : (
         <FollowButton
           isFollowing={isFollowing}
           isLoading={isLoading}
           isStatusLoading={isStatusLoading}
           displayName={displayName}
-          variant="icon"
+          variant={followButtonVariant}
           onClick={onFollowClick}
         />
       )}
@@ -287,6 +291,7 @@ function FullVariant({
   isLoading,
   isStatusLoading,
   isCurrentUser,
+  followButtonVariant,
   className,
   dataTestId,
   onFollowClick,
@@ -321,7 +326,7 @@ function FullVariant({
 
         {/* Desktop: Follow Button */}
         {isCurrentUser ? (
-          <MeButton className="hidden lg:flex" />
+          <MeButton variant={followButtonVariant} className="hidden lg:flex" />
         ) : (
           <Atoms.Container overrideDefaults className="hidden lg:flex">
             <FollowButton
@@ -329,7 +334,7 @@ function FullVariant({
               isLoading={isLoading}
               isStatusLoading={isStatusLoading}
               displayName={displayName}
-              variant="text"
+              variant={followButtonVariant}
               onClick={onFollowClick}
             />
           </Atoms.Container>
@@ -340,14 +345,14 @@ function FullVariant({
       <Atoms.Container overrideDefaults className="flex flex-wrap items-center justify-between gap-3 lg:hidden">
         <TagsList userId={user.id} className="flex-1" />
         {isCurrentUser ? (
-          <MeButton />
+          <MeButton variant={followButtonVariant} />
         ) : (
           <FollowButton
             isFollowing={isFollowing}
             isLoading={isLoading}
             isStatusLoading={isStatusLoading}
             displayName={displayName}
-            variant="text"
+            variant={followButtonVariant}
             onClick={onFollowClick}
           />
         )}
@@ -380,6 +385,7 @@ export function UserListItem({
   isStatusLoading = false,
   isCurrentUser = false,
   showStats = false,
+  followButtonVariant: followButtonVariantProp,
   onUserClick,
   onFollowClick,
   className,
@@ -428,6 +434,7 @@ export function UserListItem({
     className,
     dataTestId,
     onUserClick: handleUserClick,
+    followButtonVariant: followButtonVariantProp ?? 'icon',
     onFollowClick: handleFollowClick,
     ttlRef,
   };

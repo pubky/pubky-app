@@ -1,3 +1,7 @@
 // Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
 
-exports[`Settings - Snapshots > matches snapshot 1`] = `"<div data-testid=\\"mobile-header\\" data-fixed=\\"true\\"></div><div data-testid=\\"settings-mobile-menu\\"></div><div data-testid=\\"content-layout\\" class=\\"pt-[calc(var(--header-height-mobile)+5rem)] lg:pt-0\\"><div>Settings content</div><div data-testid=\\"settings-info\\" data-hide-faq=\\"false\\"></div><div data-testid=\\"settings-info\\" data-hide-faq=\\"false\\"></div></div>"`;
+exports[`Settings - Snapshots > matches snapshot 1`] = `
+<div
+  data-testid="mobile-header"
+/>
+`;
