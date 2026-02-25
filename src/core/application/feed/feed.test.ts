@@ -8,7 +8,7 @@ import {
 } from 'pubky-app-specs';
 import { FeedApplication } from './feed';
 import * as Core from '@/core';
-import { HttpMethod } from '@/libs';
+import { HttpMethod, Logger } from '@/libs';
 
 // Mock the LocalFeedService
 vi.mock('@/core/services/local/feed', () => ({
@@ -105,6 +105,13 @@ describe('FeedApplication', () => {
       listSpy: vi.spyOn(Core.HomeserverService, 'list'),
       streamDeleteSpy: vi.spyOn(Core.LocalStreamPostsService, 'deleteById'),
       streamClearUnreadSpy: vi.spyOn(Core.LocalStreamPostsService, 'clearUnreadStream'),
+      dbTransactionSpy: vi.spyOn(Core.db, 'transaction'),
+      feedUpsertSpy: vi.spyOn(Core.FeedModel, 'upsert'),
+      feedDeleteByIdSpy: vi.spyOn(Core.FeedModel, 'deleteById'),
+      feedFindByIdOrThrowSpy: vi.spyOn(Core.FeedModel, 'findByIdOrThrow'),
+      postStreamDeleteByIdSpy: vi.spyOn(Core.PostStreamModel, 'deleteById'),
+      unreadPostStreamDeleteByIdSpy: vi.spyOn(Core.UnreadPostStreamModel, 'deleteById'),
+      loggerWarnSpy: vi.spyOn(Logger, 'warn'),
     };
   };
 
@@ -154,7 +161,16 @@ describe('FeedApplication', () => {
         feed: createMockFeedResult(),
         existingId: 'feed-existing',
       };
-      const { createOrUpdateSpy, deleteSpy, readSpy, requestSpy } = setupMocks();
+      const {
+        readSpy,
+        requestSpy,
+        dbTransactionSpy,
+        feedUpsertSpy,
+        feedDeleteByIdSpy,
+        feedFindByIdOrThrowSpy,
+        postStreamDeleteByIdSpy,
+        unreadPostStreamDeleteByIdSpy,
+      } = setupMocks();
 
       const existingFeed: Core.FeedModelSchema = {
         id: 'feed-existing',
@@ -168,8 +184,13 @@ describe('FeedApplication', () => {
         updated_at: 1000000,
       };
       readSpy.mockResolvedValue(existingFeed);
-      createOrUpdateSpy.mockResolvedValue(createMockFeedSchema({ id: 'feed123', created_at: 1000000 }));
-      deleteSpy.mockResolvedValue(undefined);
+      dbTransactionSpy.mockImplementation(((...args: unknown[]) =>
+        (args[args.length - 1] as () => Promise<unknown>)()) as never);
+      feedUpsertSpy.mockResolvedValue(undefined);
+      feedDeleteByIdSpy.mockResolvedValue(undefined);
+      postStreamDeleteByIdSpy.mockResolvedValue(undefined);
+      unreadPostStreamDeleteByIdSpy.mockResolvedValue(undefined);
+      feedFindByIdOrThrowSpy.mockResolvedValue(createMockFeedSchema({ id: 'feed123', created_at: 1000000 }));
       requestSpy.mockResolvedValue(undefined);
 
       const result = await FeedApplication.persist({ userId: testUserId, params: mockParams });
@@ -184,7 +205,12 @@ describe('FeedApplication', () => {
         2,
         expect.objectContaining({ method: HttpMethod.DELETE, url: expect.stringContaining('/feed-existing') }),
       );
-      expect(deleteSpy).toHaveBeenCalledWith({ feedId: 'feed-existing' });
+      expect(dbTransactionSpy).toHaveBeenCalledTimes(1);
+      expect(feedUpsertSpy).toHaveBeenCalledWith(expect.objectContaining({ id: 'feed123' }));
+      expect(feedDeleteByIdSpy).toHaveBeenCalledWith('feed-existing');
+      const oldStreamId = Core.buildFeedStreamId(existingFeed);
+      expect(postStreamDeleteByIdSpy).toHaveBeenCalledWith(oldStreamId);
+      expect(unreadPostStreamDeleteByIdSpy).toHaveBeenCalledWith(oldStreamId);
     });
 
     it('should throw when local save fails', async () => {
@@ -221,16 +247,14 @@ describe('FeedApplication', () => {
       );
     });
 
-    it('should rollback new local feed and keep old feed when migration PUT fails', async () => {
+    it('should not mutate local state when migration PUT fails', async () => {
       const mockParams: Core.TFeedPersistCreateParams = {
         feed: createMockFeedResult(),
         existingId: 'feed-existing',
       };
-      const { createOrUpdateSpy, deleteSpy, readSpy, requestSpy } = setupMocks();
+      const { readSpy, requestSpy, dbTransactionSpy, feedUpsertSpy, feedDeleteByIdSpy } = setupMocks();
 
       readSpy.mockResolvedValue(createMockFeedSchema({ id: 'feed-existing', created_at: 1000000 }));
-      createOrUpdateSpy.mockResolvedValue(createMockFeedSchema({ id: 'feed123', created_at: 1000000 }));
-      deleteSpy.mockResolvedValue(undefined);
       requestSpy.mockRejectedValueOnce(new Error('Failed to PUT to homeserver: 500'));
 
       await expect(FeedApplication.persist({ userId: testUserId, params: mockParams })).rejects.toThrow(
@@ -241,8 +265,60 @@ describe('FeedApplication', () => {
       expect(requestSpy).toHaveBeenCalledWith(
         expect.objectContaining({ method: HttpMethod.PUT, url: expect.stringContaining('/feed123') }),
       );
-      expect(deleteSpy).toHaveBeenCalledTimes(1);
-      expect(deleteSpy).toHaveBeenCalledWith({ feedId: 'feed123' });
+      expect(dbTransactionSpy).not.toHaveBeenCalled();
+      expect(feedUpsertSpy).not.toHaveBeenCalled();
+      expect(feedDeleteByIdSpy).not.toHaveBeenCalled();
+    });
+
+    it('should keep local migration committed when old homeserver delete fails', async () => {
+      const mockParams: Core.TFeedPersistCreateParams = {
+        feed: createMockFeedResult(),
+        existingId: 'feed-existing',
+      };
+      const {
+        readSpy,
+        requestSpy,
+        dbTransactionSpy,
+        feedUpsertSpy,
+        feedDeleteByIdSpy,
+        feedFindByIdOrThrowSpy,
+        postStreamDeleteByIdSpy,
+        unreadPostStreamDeleteByIdSpy,
+        loggerWarnSpy,
+      } = setupMocks();
+
+      const existingFeed = createMockFeedSchema({ id: 'feed-existing', created_at: 1000000 });
+      readSpy.mockResolvedValue(existingFeed);
+      dbTransactionSpy.mockImplementation(((...args: unknown[]) =>
+        (args[args.length - 1] as () => Promise<unknown>)()) as never);
+      feedUpsertSpy.mockResolvedValue(undefined);
+      feedDeleteByIdSpy.mockResolvedValue(undefined);
+      postStreamDeleteByIdSpy.mockResolvedValue(undefined);
+      unreadPostStreamDeleteByIdSpy.mockResolvedValue(undefined);
+      feedFindByIdOrThrowSpy.mockResolvedValue(createMockFeedSchema({ id: 'feed123', created_at: 1000000 }));
+      requestSpy.mockResolvedValueOnce(undefined).mockRejectedValueOnce(new Error('Failed to DELETE old feed: 500'));
+
+      const result = await FeedApplication.persist({ userId: testUserId, params: mockParams });
+
+      expect(result.id).toBe('feed123');
+      expect(requestSpy).toHaveBeenNthCalledWith(
+        1,
+        expect.objectContaining({ method: HttpMethod.PUT, url: expect.stringContaining('/feed123') }),
+      );
+      expect(requestSpy).toHaveBeenNthCalledWith(
+        2,
+        expect.objectContaining({ method: HttpMethod.DELETE, url: expect.stringContaining('/feed-existing') }),
+      );
+      expect(dbTransactionSpy).toHaveBeenCalledTimes(1);
+      expect(feedUpsertSpy).toHaveBeenCalledWith(expect.objectContaining({ id: 'feed123' }));
+      expect(feedDeleteByIdSpy).toHaveBeenCalledWith('feed-existing');
+      const oldStreamId = Core.buildFeedStreamId(existingFeed);
+      expect(postStreamDeleteByIdSpy).toHaveBeenCalledWith(oldStreamId);
+      expect(unreadPostStreamDeleteByIdSpy).toHaveBeenCalledWith(oldStreamId);
+      expect(loggerWarnSpy).toHaveBeenCalledWith(
+        'Failed to cleanup old homeserver feed after successful migration to new feed ID',
+        expect.objectContaining({ oldFeedId: 'feed-existing', newFeedId: 'feed123' }),
+      );
     });
   });
 

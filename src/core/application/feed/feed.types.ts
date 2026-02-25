@@ -23,6 +23,12 @@ export interface PersistAndSyncParams {
   normalizedFeed: FeedResult;
 }
 
+export interface LocalFeedMigrationParams {
+  existingId: string;
+  feedSchema: Core.FeedModelSchema;
+  oldFeed: Core.FeedModelSchema | null;
+}
+
 export type TFeedPersistCreateParams = {
   feed: FeedResult;
   existingId?: string;
