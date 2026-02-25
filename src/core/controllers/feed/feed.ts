@@ -84,7 +84,7 @@ export class FeedController {
     Core.FeedValidators.validatePutParams(persistParams);
 
     // When the config-derived ID differs from existingId, persist handles the
-    // delete-old + create-new cycle on the homeserver automatically.
+    // create-new + delete-old cycle on the homeserver automatically.
     const feed = await Core.FeedApplication.persist({
       userId,
       params: persistParams,
