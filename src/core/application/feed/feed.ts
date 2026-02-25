@@ -173,8 +173,8 @@ export class FeedApplication {
         sort,
         content: content ?? null,
         layout,
-        created_at: Number(feed.created_at),
-        updated_at: Number(feed.created_at),
+        created_at: Number(remoteFeed.created_at),
+        updated_at: Number(remoteFeed.created_at),
       };
     } catch (error) {
       Logger.warn('Skipping invalid feed during bootstrap fetch', error);

@@ -479,7 +479,13 @@ describe('FeedApplication', () => {
         'Bitcoin News',
       );
       expect(createOrUpdateManySpy).toHaveBeenCalledWith(
-        expect.arrayContaining([expect.objectContaining({ id: 'feed123' })]),
+        expect.arrayContaining([
+          expect.objectContaining({
+            id: 'feed123',
+            created_at: 1700000000,
+            updated_at: 1700000000,
+          }),
+        ]),
       );
       expect(result).toHaveLength(1);
     });
