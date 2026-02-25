@@ -5,4 +5,4 @@ import { BaseStreamModelSchema } from '@/core/models/shared/stream/stream.type';
 export type TagStreamModelSchema = BaseStreamModelSchema<TagStreamTypes, NexusHotTag>;
 
 // Schema for Dexie table
-export const tagStreamTableSchema = '&id';
+export const tagStreamTableSchema = '&id, *stream';

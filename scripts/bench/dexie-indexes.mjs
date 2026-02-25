@@ -236,6 +236,47 @@ function buildPostStreamRows(rows) {
   return out;
 }
 
+function buildUserStreamRows(rows) {
+  const out = [];
+  for (let i = 0; i < rows; i++) {
+    const stream = [];
+    const len = 8 + (i % 5);
+    for (let j = 0; j < len; j++) {
+      if (j === 0) {
+        stream.push(`shared-user-${i % 150}`);
+      } else {
+        stream.push(`pubky-user-${(i * 10 + j) % (rows * 2)}`);
+      }
+    }
+    out.push({
+      id: `user-stream-${i}`,
+      stream,
+    });
+  }
+  return out;
+}
+
+function buildTagStreamRows(rows) {
+  const out = [];
+  for (let i = 0; i < rows; i++) {
+    const stream = [];
+    const len = 6 + (i % 4);
+    for (let j = 0; j < len; j++) {
+      stream.push({
+        label: `tag-${(i * 5 + j) % 200}`,
+        taggers_id: [`pubky-${(i + j) % 400}`],
+        tagged_count: (i + j) % 1000,
+        taggers_count: ((i + j) % 20) + 1,
+      });
+    }
+    out.push({
+      id: `tag-stream-${i}`,
+      stream,
+    });
+  }
+  return out;
+}
+
 function buildPostRelationshipsRows(rows) {
   const out = [];
   for (let i = 0; i < rows; i++) {
@@ -961,6 +1002,185 @@ function buildPostStreamWorkloads({ table, rows, config, flags }) {
   ];
 }
 
+function buildUserStreamWorkloads({ table, rows, config, flags }) {
+  return [
+    {
+      key: 'bulkInsert',
+      label: 'bulkInsert',
+      run: async () => {
+        await seedTable(table, rows, 'bulkPut');
+        await table.clear();
+      },
+    },
+    {
+      key: 'bulkUpsertStreams',
+      label: 'bulkUpsertStreams (bulkPut)',
+      run: async () => {
+        const updates = [];
+        const limit = Math.min(config.updateRows, config.rows);
+        for (let i = 0; i < limit; i++) {
+          const row = rows[i];
+          updates.push({
+            id: row.id,
+            stream: [`pubky-new-head-${i}`, ...row.stream.slice(0, 9)],
+          });
+        }
+        await table.bulkPut(updates);
+      },
+    },
+    {
+      key: 'prependItemsLikeFlow',
+      label: 'prependItemsLikeFlow',
+      run: async () => {
+        const limit = Math.min(config.updateRows, config.rows);
+        for (let i = 0; i < limit; i++) {
+          const id = `user-stream-${i}`;
+          const items = [`pubky-prepend-${i}`, `shared-user-${i % 150}`];
+          const existing = await table.get(id);
+          if (!existing) {
+            await table.put({ id, stream: items });
+            continue;
+          }
+          await table
+            .where('id')
+            .equals(id)
+            .modify((row) => {
+              const next = items.filter((item) => !row.stream.includes(item));
+              if (next.length) row.stream.unshift(...next);
+            });
+        }
+      },
+    },
+    {
+      key: 'findById',
+      label: 'findById',
+      run: async () => {
+        for (let i = 0; i < config.lookups; i++) {
+          const n = (i * 13) % config.rows;
+          await table.get(`user-stream-${n}`);
+        }
+      },
+    },
+    {
+      key: 'getStreamHead',
+      label: 'getStreamHead',
+      run: async () => {
+        for (let i = 0; i < config.lookups; i++) {
+          const n = (i * 7) % config.rows;
+          const row = await table.get(`user-stream-${n}`);
+          row?.stream?.[0] ?? null;
+        }
+      },
+    },
+    {
+      key: 'containsUserQuery',
+      label: 'containsUserQuery (*stream index vs scan)',
+      run: async () => {
+        for (let i = 0; i < config.lookups; i++) {
+          const target = `shared-user-${(i * 5) % 150}`;
+          if (flags.streamIndex) {
+            await table.where('stream').equals(target).toArray();
+          } else {
+            const matches = await table.filter((row) => Array.isArray(row.stream) && row.stream.includes(target)).toArray();
+            matches.slice(0, 100);
+          }
+        }
+      },
+    },
+  ];
+}
+
+function buildTagStreamWorkloads({ table, rows, config }) {
+  return [
+    {
+      key: 'bulkInsert',
+      label: 'bulkInsert',
+      run: async () => {
+        await seedTable(table, rows, 'bulkPut');
+        await table.clear();
+      },
+    },
+    {
+      key: 'bulkUpsertStreams',
+      label: 'bulkUpsertStreams (bulkPut)',
+      run: async () => {
+        const updates = [];
+        const limit = Math.min(config.updateRows, config.rows);
+        for (let i = 0; i < limit; i++) {
+          const row = rows[i];
+          updates.push({
+            id: row.id,
+            stream: [
+              {
+                label: `tag-new-${i}`,
+                taggers_id: [`pubky-new-${i}`],
+                tagged_count: i % 1000,
+                taggers_count: (i % 30) + 1,
+              },
+              ...row.stream.slice(0, 7),
+            ],
+          });
+        }
+        await table.bulkPut(updates);
+      },
+    },
+    {
+      key: 'replaceStreamUpserts',
+      label: 'replaceStreamUpserts (put)',
+      run: async () => {
+        const limit = Math.min(config.updateRows, config.rows);
+        for (let i = 0; i < limit; i++) {
+          await table.put({
+            id: `tag-stream-${i}`,
+            stream: [
+              {
+                label: `tag-replace-${i}`,
+                taggers_id: [`pubky-r-${i}`],
+                tagged_count: i,
+                taggers_count: 1,
+              },
+            ],
+          });
+        }
+      },
+    },
+    {
+      key: 'findById',
+      label: 'findById',
+      run: async () => {
+        for (let i = 0; i < config.lookups; i++) {
+          const n = (i * 13) % config.rows;
+          await table.get(`tag-stream-${n}`);
+        }
+      },
+    },
+    {
+      key: 'getStreamHead',
+      label: 'getStreamHead',
+      run: async () => {
+        for (let i = 0; i < config.lookups; i++) {
+          const n = (i * 7) % config.rows;
+          const row = await table.get(`tag-stream-${n}`);
+          row?.stream?.[0] ?? null;
+        }
+      },
+    },
+    {
+      key: 'findLabelInStreamScan',
+      label: 'findLabelInStreamScan',
+      run: async () => {
+        for (let i = 0; i < config.lookups; i++) {
+          const target = `tag-${(i * 5) % 200}`;
+          const matches = await table
+            .filter((row) => Array.isArray(row.stream) && row.stream.some((tag) => tag?.label === target))
+            .toArray();
+          matches.slice(0, 100);
+        }
+      },
+    },
+  ];
+}
+
 const kindCycle = ['short', 'long', 'image', 'video', 'link'];
 const deletedContent = '[deleted]';
 
@@ -1444,6 +1664,42 @@ const benchSuites = [
     buildRows: buildPostStreamRows,
     seedMethod: 'bulkPut',
     workloads: ({ table, rows, config, flags }) => buildPostStreamWorkloads({ table, rows, config, flags }),
+  },
+  {
+    key: 'userStream',
+    title: 'userStream.schema.ts',
+    tableName: 'user_streams',
+    baseline: {
+      label: 'id-only (&id)',
+      schema: normalizeSchema('&id'),
+      flags: { streamIndex: false },
+    },
+    current: {
+      label: 'current userStreamTableSchema (&id, *stream)',
+      schema: normalizeSchema('&id, *stream'),
+      flags: { streamIndex: true },
+    },
+    buildRows: buildUserStreamRows,
+    seedMethod: 'bulkPut',
+    workloads: ({ table, rows, config, flags }) => buildUserStreamWorkloads({ table, rows, config, flags }),
+  },
+  {
+    key: 'tagStream',
+    title: 'tagStream.schema.ts',
+    tableName: 'tag_streams',
+    baseline: {
+      label: 'current tagStreamTableSchema (&id, *stream)',
+      schema: normalizeSchema('&id, *stream'),
+      flags: {},
+    },
+    current: {
+      label: 'candidate id-only (&id)',
+      schema: normalizeSchema('&id'),
+      flags: {},
+    },
+    buildRows: buildTagStreamRows,
+    seedMethod: 'bulkPut',
+    workloads: ({ table, rows, config }) => buildTagStreamWorkloads({ table, rows, config }),
   },
   {
     key: 'postRelationships',

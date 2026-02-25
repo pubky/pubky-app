@@ -1,0 +1,484 @@
+Running suite: feed (baseline)
+  feed/baseline: bulkInsert
+  feed/baseline: updateUpdatedAt
+  feed/baseline: nameLookupIndexed
+  feed/baseline: createdSort
+  feed/baseline: updatedSort
+Running suite: feed (current)
+  feed/current: bulkInsert
+  feed/current: updateUpdatedAt
+  feed/current: nameLookupIndexed
+  feed/current: createdSort
+  feed/current: updatedSort
+
+feed.schema.ts (feeds)
+baseline: without updated_at index -> ++id, name, created_at
+current : current feedTableSchema (+updated_at) -> ++id, name, created_at, updated_at
+Rows=2000, Updates=500, Lookups=150, Rounds=2
+-----------------------------------------------------------------------
+Workload                         baseline      current       delta
+-----------------------------------------------------------------------
+bulkInsert                     55.87ms      51.32ms      -8.2%
+updateUpdatedAt                743.78ms     1133.26ms    +52.4%
+nameLookupIndexed              77.47ms      79.78ms      +3.0%
+createdSort                    6.89ms       5.57ms       -19.2%
+updatedSort (index vs scan)    3.46ms       5.76ms       +66.5%
+-----------------------------------------------------------------------
+Running suite: moderation (baseline)
+  moderation/baseline: bulkInsert
+  moderation/baseline: toggleBlur
+  moderation/baseline: typeQuery
+  moderation/baseline: blurredQuery
+  moderation/baseline: idLookup
+Running suite: moderation (current)
+  moderation/current: bulkInsert
+  moderation/current: toggleBlur
+  moderation/current: typeQuery
+  moderation/current: blurredQuery
+  moderation/current: idLookup
+
+moderation.schema.ts (moderation)
+baseline: baseline (&id, type, created_at) -> &id, type, created_at
+current : current moderationTableSchema -> &id, type
+Rows=2000, Updates=500, Lookups=150, Rounds=2
+-----------------------------------------------------------------------
+Workload                         baseline      current       delta
+-----------------------------------------------------------------------
+bulkInsert                     43.42ms      39.40ms      -9.2%
+toggleBlur                     520.28ms     271.96ms     -47.7%
+typeQuery (index vs scan)      22.67ms      20.10ms      -11.4%
+blurredQuery (scan)            6042.09ms    5941.02ms    -1.7%
+idLookup                       5.87ms       5.84ms       -0.4%
+-----------------------------------------------------------------------
+Running suite: postCounts (baseline)
+  postCounts/baseline: bulkInsert
+  postCounts/baseline: updateCounters
+  postCounts/baseline: repliesRange
+  postCounts/baseline: topReposts
+  postCounts/baseline: idLookup
+Running suite: postCounts (current)
+  postCounts/current: bulkInsert
+  postCounts/current: updateCounters
+  postCounts/current: repliesRange
+  postCounts/current: topReposts
+  postCounts/current: idLookup
+
+postCounts.schema.ts (post_counts)
+baseline: baseline (all fields indexed) -> &id, tags, unique_tags, reposts, replies
+current : current postCountsTableSchema -> &id, tags, unique_tags, reposts, replies
+Rows=2000, Updates=500, Lookups=150, Rounds=2
+-----------------------------------------------------------------------
+Workload                         baseline      current       delta
+-----------------------------------------------------------------------
+bulkInsert                     53.23ms      46.75ms      -12.2%
+updateCounters                 1672.82ms    1692.40ms    +1.2%
+repliesRange (index vs scan)   42.53ms      40.83ms      -4.0%
+topReposts (index vs scan)     3.95ms       3.46ms       -12.4%
+idLookup                       3.58ms       3.96ms       +10.4%
+-----------------------------------------------------------------------
+Running suite: userCounts (baseline)
+  userCounts/baseline: bulkInsert
+  userCounts/baseline: bulkUpsertBatch
+  userCounts/baseline: updateCountsLikeFlow
+  userCounts/baseline: followCountersPairUpdates
+  userCounts/baseline: findById
+  userCounts/baseline: findByIdsAnyOf
+Running suite: userCounts (current)
+  userCounts/current: bulkInsert
+  userCounts/current: bulkUpsertBatch
+  userCounts/current: updateCountsLikeFlow
+  userCounts/current: followCountersPairUpdates
+  userCounts/current: findById
+  userCounts/current: findByIdsAnyOf
+
+userCounts.schema.ts (user_counts)
+baseline: legacy (&id, tagged, tags, unique_tags, posts, replies, following, followers, friends, bookmarks) -> &id, tagged, tags, unique_tags, posts, replies, following, followers, friends, bookmarks
+current : current userCountsTableSchema (&id) -> &id
+Rows=2000, Updates=500, Lookups=150, Rounds=2
+-----------------------------------------------------------------------
+Workload                         baseline      current       delta
+-----------------------------------------------------------------------
+bulkInsert                     55.09ms      34.03ms      -38.2%
+bulkUpsertBatch                3631.04ms    8.58ms       -99.8%
+updateCountsLikeFlow (update)  3576.44ms    53.08ms      -98.5%
+followCountersPairUpdates (2 users) 7427.10ms    187.25ms     -97.5%
+findById                       5.89ms       6.09ms       +3.5%
+findByIdsAnyOf                 162.53ms     180.73ms     +11.2%
+-----------------------------------------------------------------------
+Running suite: userDetails (baseline)
+  userDetails/baseline: bulkInsert
+  userDetails/baseline: bulkUpsertBatch
+  userDetails/baseline: updateProfileFields
+  userDetails/baseline: updateLinksStatus
+  userDetails/baseline: findById
+  userDetails/baseline: findByIdsAnyOf
+Running suite: userDetails (current)
+  userDetails/current: bulkInsert
+  userDetails/current: bulkUpsertBatch
+  userDetails/current: updateProfileFields
+  userDetails/current: updateLinksStatus
+  userDetails/current: findById
+  userDetails/current: findByIdsAnyOf
+
+userDetails.schema.ts (user_details)
+baseline: legacy (&id, name, bio, image, indexed_at, links, status) -> &id, name, bio, image, indexed_at, links, status
+current : current userDetailsTableSchema (&id) -> &id
+Rows=2000, Updates=500, Lookups=150, Rounds=2
+-----------------------------------------------------------------------
+Workload                         baseline      current       delta
+-----------------------------------------------------------------------
+bulkInsert                     70.71ms      38.21ms      -46.0%
+bulkUpsertBatch                1913.87ms    10.30ms      -99.5%
+updateProfileFields (update)   2008.93ms    61.78ms      -96.9%
+updateLinksStatus (update)     1889.06ms    69.84ms      -96.3%
+findById                       4.01ms       5.72ms       +42.7%
+findByIdsAnyOf                 206.28ms     201.59ms     -2.3%
+-----------------------------------------------------------------------
+Running suite: userRelationships (baseline)
+  userRelationships/baseline: bulkInsert
+  userRelationships/baseline: bulkUpsertBatch
+  userRelationships/baseline: updateFollowFlag
+  userRelationships/baseline: toggleMuted
+  userRelationships/baseline: findById
+  userRelationships/baseline: findByIdsAnyOf
+  userRelationships/baseline: mutedScan
+Running suite: userRelationships (current)
+  userRelationships/current: bulkInsert
+  userRelationships/current: bulkUpsertBatch
+  userRelationships/current: updateFollowFlag
+  userRelationships/current: toggleMuted
+  userRelationships/current: findById
+  userRelationships/current: findByIdsAnyOf
+  userRelationships/current: mutedScan
+
+userRelationships.schema.ts (user_relationships)
+baseline: legacy (&id, following, followed_by, muted) -> &id, following, followed_by, muted
+current : current userRelationshipsTableSchema (&id) -> &id
+Rows=2000, Updates=500, Lookups=150, Rounds=2
+-----------------------------------------------------------------------
+Workload                         baseline      current       delta
+-----------------------------------------------------------------------
+bulkInsert                     61.95ms      34.26ms      -44.7%
+bulkUpsertBatch                17.31ms      1.77ms       -89.8%
+updateFollowFlag (update)      50.66ms      52.12ms      +2.9%
+toggleMuted (update)           63.36ms      66.62ms      +5.1%
+findById                       4.75ms       5.05ms       +6.4%
+findByIdsAnyOf                 192.39ms     228.29ms     +18.7%
+mutedScan                      5966.70ms    5949.55ms    -0.3%
+-----------------------------------------------------------------------
+Running suite: userTtl (baseline)
+  userTtl/baseline: bulkInsert
+  userTtl/baseline: bulkSaveBatch
+  userTtl/baseline: touchUpserts
+  userTtl/baseline: findById
+  userTtl/baseline: findByIdsAnyOf
+  userTtl/baseline: findStaleByIds
+Running suite: userTtl (current)
+  userTtl/current: bulkInsert
+  userTtl/current: bulkSaveBatch
+  userTtl/current: touchUpserts
+  userTtl/current: findById
+  userTtl/current: findByIdsAnyOf
+  userTtl/current: findStaleByIds
+
+userTtl.schema.ts (user_ttl)
+baseline: legacy ttlTableSchema (&id, lastUpdatedAt) -> &id, lastUpdatedAt
+current : current userTtlTableSchema (&id) -> &id
+Rows=2000, Updates=500, Lookups=150, Rounds=2
+-----------------------------------------------------------------------
+Workload                         baseline      current       delta
+-----------------------------------------------------------------------
+bulkInsert                     40.43ms      37.02ms      -8.4%
+bulkSaveBatch (bulkPut)        466.85ms     8.31ms       -98.2%
+touchUpserts (put)             446.83ms     30.12ms      -93.3%
+findById                       3.59ms       3.29ms       -8.5%
+findByIdsAnyOf                 299.56ms     269.53ms     -10.0%
+findStaleByIds (TTL flow)      281.73ms     286.86ms     +1.8%
+-----------------------------------------------------------------------
+Running suite: postTtl (baseline)
+  postTtl/baseline: bulkInsert
+  postTtl/baseline: bulkSaveBatch
+  postTtl/baseline: touchUpserts
+  postTtl/baseline: findById
+  postTtl/baseline: findByIdsAnyOf
+  postTtl/baseline: findStaleByIds
+Running suite: postTtl (current)
+  postTtl/current: bulkInsert
+  postTtl/current: bulkSaveBatch
+  postTtl/current: touchUpserts
+  postTtl/current: findById
+  postTtl/current: findByIdsAnyOf
+  postTtl/current: findStaleByIds
+
+postTtl.schema.ts (post_ttl)
+baseline: legacy ttlTableSchema (&id, lastUpdatedAt) -> &id, lastUpdatedAt
+current : current postTtlTableSchema (&id) -> &id
+Rows=2000, Updates=500, Lookups=150, Rounds=2
+-----------------------------------------------------------------------
+Workload                         baseline      current       delta
+-----------------------------------------------------------------------
+bulkInsert                     38.29ms      34.17ms      -10.8%
+bulkSaveBatch (bulkPut)        449.47ms     8.09ms       -98.2%
+touchUpserts (put)             496.32ms     27.93ms      -94.4%
+findById                       3.57ms       3.46ms       -3.0%
+findByIdsAnyOf                 265.58ms     259.46ms     -2.3%
+findStaleByIds (TTL flow)      279.94ms     284.26ms     +1.5%
+-----------------------------------------------------------------------
+Running suite: userConnections (baseline)
+  userConnections/baseline: bulkInsert
+  userConnections/baseline: bulkUpsertBatch
+  userConnections/baseline: createConnectionFollowing
+  userConnections/baseline: deleteConnectionFollowers
+  userConnections/baseline: findById
+  userConnections/baseline: findByIdsAnyOf
+Running suite: userConnections (current)
+  userConnections/current: bulkInsert
+  userConnections/current: bulkUpsertBatch
+  userConnections/current: createConnectionFollowing
+  userConnections/current: deleteConnectionFollowers
+  userConnections/current: findById
+  userConnections/current: findByIdsAnyOf
+
+userConnections.schema.ts (user_connections)
+baseline: legacy (&id, followers, following) -> &id, followers, following
+current : current userConnectionsTableSchema (&id) -> &id
+Rows=2000, Updates=500, Lookups=150, Rounds=2
+-----------------------------------------------------------------------
+Workload                         baseline      current       delta
+-----------------------------------------------------------------------
+bulkInsert                     86.90ms      38.74ms      -55.4%
+bulkUpsertBatch                891.40ms     10.85ms      -98.8%
+createConnectionFollowing (modify) 910.93ms     69.45ms      -92.4%
+deleteConnectionFollowers (modify) 919.29ms     64.04ms      -93.0%
+findById                       5.12ms       4.71ms       -8.0%
+findByIdsAnyOf                 197.35ms     179.20ms     -9.2%
+-----------------------------------------------------------------------
+Running suite: tagCollection (baseline)
+  tagCollection/baseline: bulkInsert
+  tagCollection/baseline: bulkSaveBatch
+  tagCollection/baseline: touchTagCollections
+  tagCollection/baseline: findById
+  tagCollection/baseline: findByIdsAnyOf
+Running suite: tagCollection (current)
+  tagCollection/current: bulkInsert
+  tagCollection/current: bulkSaveBatch
+  tagCollection/current: touchTagCollections
+  tagCollection/current: findById
+  tagCollection/current: findByIdsAnyOf
+
+tag.schema.ts (tag_collections)
+baseline: legacy tagCollectionTableSchema (&id, tags) -> &id, tags
+current : current tagCollectionTableSchema (&id) -> &id
+Rows=2000, Updates=500, Lookups=150, Rounds=2
+-----------------------------------------------------------------------
+Workload                         baseline      current       delta
+-----------------------------------------------------------------------
+bulkInsert                     47.93ms      38.30ms      -20.1%
+bulkSaveBatch (bulkPut)        72.39ms      9.67ms       -86.6%
+touchTagCollections (put)      110.03ms     35.78ms      -67.5%
+findById                       4.65ms       5.66ms       +21.7%
+findByIdsAnyOf                 195.81ms     197.34ms     +0.8%
+-----------------------------------------------------------------------
+Running suite: postStream (baseline)
+  postStream/baseline: bulkInsert
+  postStream/baseline: bulkUpsertStreams
+  postStream/baseline: prependItemsLikeFlow
+  postStream/baseline: findById
+  postStream/baseline: getStreamHead
+  postStream/baseline: containsPostQuery
+Running suite: postStream (current)
+  postStream/current: bulkInsert
+  postStream/current: bulkUpsertStreams
+  postStream/current: prependItemsLikeFlow
+  postStream/current: findById
+  postStream/current: getStreamHead
+  postStream/current: containsPostQuery
+
+postStream.schema.ts (post_streams)
+baseline: id-only (&id) -> &id
+current : current postStreamTableSchema (&id, *stream) -> &id, *stream
+Rows=2000, Updates=500, Lookups=150, Rounds=2
+-----------------------------------------------------------------------
+Workload                         baseline      current       delta
+-----------------------------------------------------------------------
+bulkInsert                     38.43ms      62.01ms      +61.4%
+bulkUpsertStreams (bulkPut)    8.71ms       4581.35ms    +52470.8%
+prependItemsLikeFlow           90.47ms      4896.14ms    +5311.8%
+findById                       4.31ms       3.99ms       -7.4%
+getStreamHead                  3.49ms       4.08ms       +16.8%
+containsPostQuery (*stream index vs scan) 6176.36ms    12.12ms      -99.8%
+-----------------------------------------------------------------------
+Running suite: userStream (baseline)
+  userStream/baseline: bulkInsert
+  userStream/baseline: bulkUpsertStreams
+  userStream/baseline: prependItemsLikeFlow
+  userStream/baseline: findById
+  userStream/baseline: getStreamHead
+  userStream/baseline: containsUserQuery
+Running suite: userStream (current)
+  userStream/current: bulkInsert
+  userStream/current: bulkUpsertStreams
+  userStream/current: prependItemsLikeFlow
+  userStream/current: findById
+  userStream/current: getStreamHead
+  userStream/current: containsUserQuery
+
+userStream.schema.ts (user_streams)
+baseline: id-only (&id) -> &id
+current : current userStreamTableSchema (&id, *stream) -> &id, *stream
+Rows=2000, Updates=500, Lookups=150, Rounds=2
+-----------------------------------------------------------------------
+Workload                         baseline      current       delta
+-----------------------------------------------------------------------
+bulkInsert                     32.88ms      70.55ms      +114.6%
+bulkUpsertStreams (bulkPut)    8.70ms       4667.11ms    +53528.5%
+prependItemsLikeFlow           98.90ms      4903.63ms    +4858.0%
+findById                       4.64ms       7.23ms       +55.7%
+getStreamHead                  4.04ms       6.99ms       +72.9%
+containsUserQuery (*stream index vs scan) 6141.74ms    12.55ms      -99.8%
+-----------------------------------------------------------------------
+Running suite: tagStream (baseline)
+  tagStream/baseline: bulkInsert
+  tagStream/baseline: bulkUpsertStreams
+  tagStream/baseline: replaceStreamUpserts
+  tagStream/baseline: findById
+  tagStream/baseline: getStreamHead
+  tagStream/baseline: findLabelInStreamScan
+Running suite: tagStream (current)
+  tagStream/current: bulkInsert
+  tagStream/current: bulkUpsertStreams
+  tagStream/current: replaceStreamUpserts
+  tagStream/current: findById
+  tagStream/current: getStreamHead
+  tagStream/current: findLabelInStreamScan
+
+tagStream.schema.ts (tag_streams)
+baseline: current tagStreamTableSchema (&id, *stream) -> &id, *stream
+current : candidate id-only (&id) -> &id
+Rows=2000, Updates=500, Lookups=150, Rounds=2
+-----------------------------------------------------------------------
+Workload                         baseline      current       delta
+-----------------------------------------------------------------------
+bulkInsert                     137.37ms     42.94ms      -68.7%
+bulkUpsertStreams (bulkPut)    31.53ms      11.19ms      -64.5%
+replaceStreamUpserts (put)     31.33ms      28.37ms      -9.5%
+findById                       3.65ms       5.00ms       +37.2%
+getStreamHead                  3.83ms       4.90ms       +27.9%
+findLabelInStreamScan          7418.75ms    7444.54ms    +0.3%
+-----------------------------------------------------------------------
+Running suite: postRelationships (baseline)
+  postRelationships/baseline: bulkInsert
+  postRelationships/baseline: bulkUpsertBatch
+  postRelationships/baseline: replyQuery
+  postRelationships/baseline: repostedQuery
+  postRelationships/baseline: findById
+  postRelationships/baseline: readRelationshipsByIds
+Running suite: postRelationships (current)
+  postRelationships/current: bulkInsert
+  postRelationships/current: bulkUpsertBatch
+  postRelationships/current: replyQuery
+  postRelationships/current: repostedQuery
+  postRelationships/current: findById
+  postRelationships/current: readRelationshipsByIds
+
+postRelationships.schema.ts (post_relationships)
+baseline: legacy (&id, replied, reposted, mentioned) -> &id, replied, reposted, mentioned
+current : current postRelationshipsTableSchema (&id, replied, reposted) -> &id, replied, reposted
+Rows=2000, Updates=500, Lookups=150, Rounds=2
+-----------------------------------------------------------------------
+Workload                         baseline      current       delta
+-----------------------------------------------------------------------
+bulkInsert                     65.18ms      52.84ms      -18.9%
+bulkUpsertBatch                780.17ms     383.52ms     -50.8%
+replyQuery (index vs scan)     2.32ms       3.58ms       +54.5%
+repostedQuery (index vs scan)  2.75ms       2.60ms       -5.4%
+findById                       2.01ms       2.22ms       +10.4%
+readRelationshipsByIds (bulkGet) 4.13ms       4.38ms       +6.0%
+-----------------------------------------------------------------------
+Running suite: postRelationshipsReposted (baseline)
+  postRelationshipsReposted/baseline: bulkInsert
+  postRelationshipsReposted/baseline: bulkUpsertBatch
+  postRelationshipsReposted/baseline: replyQuery
+  postRelationshipsReposted/baseline: repostedQuery
+  postRelationshipsReposted/baseline: findById
+  postRelationshipsReposted/baseline: readRelationshipsByIds
+Running suite: postRelationshipsReposted (current)
+  postRelationshipsReposted/current: bulkInsert
+  postRelationshipsReposted/current: bulkUpsertBatch
+  postRelationshipsReposted/current: replyQuery
+  postRelationshipsReposted/current: repostedQuery
+  postRelationshipsReposted/current: findById
+  postRelationshipsReposted/current: readRelationshipsByIds
+
+postRelationships.schema.ts (reposted index) (post_relationships)
+baseline: minimal-safe (&id, replied) -> &id, replied
+current : with reposted (&id, replied, reposted) -> &id, replied, reposted
+Rows=2000, Updates=500, Lookups=150, Rounds=2
+-----------------------------------------------------------------------
+Workload                         baseline      current       delta
+-----------------------------------------------------------------------
+bulkInsert                     42.72ms      47.46ms      +11.1%
+bulkUpsertBatch                303.46ms     347.17ms     +14.4%
+replyQuery (index vs scan)     2.55ms       2.37ms       -7.0%
+repostedQuery (index vs scan)  5849.57ms    2.01ms       -100.0%
+findById                       2.53ms       1.93ms       -23.6%
+readRelationshipsByIds (bulkGet) 3.78ms       4.53ms       +19.7%
+-----------------------------------------------------------------------
+Running suite: postRelationshipsMentioned (baseline)
+  postRelationshipsMentioned/baseline: bulkInsert
+  postRelationshipsMentioned/baseline: bulkUpsertBatch
+  postRelationshipsMentioned/baseline: replyQuery
+  postRelationshipsMentioned/baseline: mentionedQuery
+  postRelationshipsMentioned/baseline: findById
+  postRelationshipsMentioned/baseline: readRelationshipsByIds
+Running suite: postRelationshipsMentioned (current)
+  postRelationshipsMentioned/current: bulkInsert
+  postRelationshipsMentioned/current: bulkUpsertBatch
+  postRelationshipsMentioned/current: replyQuery
+  postRelationshipsMentioned/current: mentionedQuery
+  postRelationshipsMentioned/current: findById
+  postRelationshipsMentioned/current: readRelationshipsByIds
+
+postRelationships.schema.ts (*mentioned index) (post_relationships)
+baseline: minimal-safe (&id, replied) -> &id, replied
+current : with *mentioned (&id, replied, *mentioned) -> &id, replied, *mentioned
+Rows=2000, Updates=500, Lookups=150, Rounds=2
+-----------------------------------------------------------------------
+Workload                         baseline      current       delta
+-----------------------------------------------------------------------
+bulkInsert                     45.27ms      41.61ms      -8.1%
+bulkUpsertBatch                337.34ms     449.29ms     +33.2%
+replyQuery (index vs scan)     2.34ms       2.56ms       +9.5%
+mentionedQuery (index vs scan) 5960.54ms    5.17ms       -99.9%
+findById                       3.08ms       2.56ms       -16.9%
+readRelationshipsByIds (bulkGet) 3.88ms       4.31ms       +11.1%
+-----------------------------------------------------------------------
+Running suite: postDetails (baseline)
+  postDetails/baseline: bulkInsert
+  postDetails/baseline: bulkUpsertBatch
+  postDetails/baseline: updateContent
+  postDetails/baseline: findById
+  postDetails/baseline: bulkGetByIds
+  postDetails/baseline: filterDeletedByIds
+Running suite: postDetails (current)
+  postDetails/current: bulkInsert
+  postDetails/current: bulkUpsertBatch
+  postDetails/current: updateContent
+  postDetails/current: findById
+  postDetails/current: bulkGetByIds
+  postDetails/current: filterDeletedByIds
+
+postDetails.schema.ts (post_details)
+baseline: legacy (many secondary indexes) -> &id, content, indexed_at, kind, uri, attachments
+current : current postDetailsTableSchema -> &id
+Rows=2000, Updates=500, Lookups=150, Rounds=2
+-----------------------------------------------------------------------
+Workload                         baseline      current       delta
+-----------------------------------------------------------------------
+bulkInsert                     53.87ms      35.56ms      -34.0%
+bulkUpsertBatch                1684.74ms    9.03ms       -99.5%
+updateContent                  518.64ms     16.84ms      -96.8%
+findById                       2.29ms       1.86ms       -19.0%
+bulkGetByIds                   4.15ms       4.03ms       -2.7%
+filterDeletedByIds (bulkGet-style) 3.83ms       3.75ms       -2.1%
+-----------------------------------------------------------------------
