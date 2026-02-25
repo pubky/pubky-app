@@ -200,6 +200,8 @@ jobs:
             NEXT_PUBLIC_DEFAULT_HTTP_RELAY=https://httprelay.staging.pubky.app/link
             NEXT_PUBLIC_EXCHANGE_RATE_API=https://bitkit.stag0.blocktank.to/fx/rates/btc
             NEXT_PUBLIC_HOMEGATE_URL=https://homegate.staging.pubky.app
+            NEXT_PUBLIC_SENTRY_DSN=https://eba463f14570a9ce3b3bd831d3d7fa34@o4510935258234880.ingest.de.sentry.io/4510935265640528
             NEXT_PUBLIC_MODERATION_ID=euwmq57zefw5ynnkhh37b3gcmhs7g3cptdbw1doaxj1pbmzp3wro
             NEXT_PUBLIC_MODERATED_TAGS=["nudity"]
+            SENTRY_AUTH_TOKEN=${{ secrets.SENTRY_AUTH_TOKEN }}
         if: ${{ inputs.env == 'preview' }}

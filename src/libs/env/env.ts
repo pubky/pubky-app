@@ -167,6 +167,9 @@ const envSchema = z.object({
   NEXT_PUBLIC_EXCHANGE_RATE_API: z.url().default('https://api1.blocktank.to/api/fx/rates/btc'),
   /** Homegate authentication service URL */
   NEXT_PUBLIC_HOMEGATE_URL: z.url().default('https://homegate.staging.pubky.app'),
+  NEXT_PUBLIC_SENTRY_DSN: z
+    .url()
+    .default('https://eba463f14570a9ce3b3bd831d3d7fa34@o4510935258234880.ingest.de.sentry.io/4510935265640528'),
 
   // Test environment variable (optional)
   VITEST: z.string().optional(),
@@ -183,6 +186,7 @@ const envSchema = z.object({
     .optional()
     .default('26')
     .transform((val) => parseInt(val, 10)),
+  SENTRY_AUTH_TOKEN: z.string().min(1).optional(),
 
   NEXT_PUBLIC_PREVIEW_IMAGE: z.string().optional().default('/preview.webp'),
   NEXT_PUBLIC_SITE_NAME: z.string().optional().default('Pubky App'),
@@ -317,11 +321,13 @@ function parseEnv(): z.infer<typeof envSchema> {
     NEXT_PUBLIC_MODERATED_TAGS: process.env.NEXT_PUBLIC_MODERATED_TAGS,
     NEXT_PUBLIC_EXCHANGE_RATE_API: process.env.NEXT_PUBLIC_EXCHANGE_RATE_API,
     NEXT_PUBLIC_HOMEGATE_URL: process.env.NEXT_PUBLIC_HOMEGATE_URL,
+    NEXT_PUBLIC_SENTRY_DSN: process.env.NEXT_PUBLIC_SENTRY_DSN,
     VITEST: process.env.VITEST,
     BASE_URL_SUPPORT: process.env.BASE_URL_SUPPORT,
     SUPPORT_API_ACCESS_TOKEN: process.env.SUPPORT_API_ACCESS_TOKEN,
     SUPPORT_ACCOUNT_ID: process.env.SUPPORT_ACCOUNT_ID,
     SUPPORT_FEEDBACK_INBOX_ID: process.env.SUPPORT_FEEDBACK_INBOX_ID,
+    SENTRY_AUTH_TOKEN: process.env.SENTRY_AUTH_TOKEN,
     NEXT_PUBLIC_PREVIEW_IMAGE: process.env.NEXT_PUBLIC_PREVIEW_IMAGE,
     NEXT_PUBLIC_DEFAULT_URL: process.env.NEXT_PUBLIC_DEFAULT_URL,
     NEXT_PUBLIC_LOCALE: process.env.NEXT_PUBLIC_LOCALE,
