@@ -141,7 +141,14 @@ export function HeaderNavigationButtons({
           dataCy={item.dataCy}
         />
       ))}
-
+      {/* REMOVE THIS BEFORE PRODUCTION */}
+      <Atoms.Button
+        onClick={() => {
+          throw new Error('Test error from header');
+        }}
+      >
+        Test Error
+      </Atoms.Button>
       <Atoms.Link data-cy="header-nav-profile-btn" className="relative" href={App.APP_ROUTES.PROFILE}>
         <Organisms.AvatarWithFallback
           avatarUrl={avatarImage}
