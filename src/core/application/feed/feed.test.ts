@@ -246,6 +246,34 @@ describe('FeedApplication', () => {
     });
   });
 
+  describe('prepareUpdateParams', () => {
+    it('should override name when provided in changes', async () => {
+      const { readSpy } = setupMocks();
+      readSpy.mockResolvedValue(createMockFeedSchema({ name: 'Original Name' }));
+
+      const result = await FeedApplication.prepareUpdateParams({
+        feedId: 'feed123',
+        changes: { name: 'Updated Name' },
+      });
+
+      expect(result.name).toBe('Updated Name');
+      expect(result.tags).toEqual(['bitcoin', 'lightning']);
+    });
+
+    it('should keep existing name when not provided in changes', async () => {
+      const { readSpy } = setupMocks();
+      readSpy.mockResolvedValue(createMockFeedSchema({ name: 'Original Name' }));
+
+      const result = await FeedApplication.prepareUpdateParams({
+        feedId: 'feed123',
+        changes: { tags: ['new-tag'] },
+      });
+
+      expect(result.name).toBe('Original Name');
+      expect(result.tags).toEqual(['new-tag']);
+    });
+  });
+
   describe('persist with DELETE action', () => {
     it('should delete locally and sync to homeserver successfully', async () => {
       const mockParams = createMockDeleteParams();

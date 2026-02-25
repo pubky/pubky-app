@@ -130,6 +130,33 @@ describe('FeedController', () => {
       await expect(FeedController.commitUpdate(updateParams)).rejects.toThrow('Feed not found');
     });
 
+    it('should pass name change to application layer for persistence', async () => {
+      const persistSpy = vi.spyOn(Core.FeedApplication, 'persist');
+      const prepareSpy = vi
+        .spyOn(Core.FeedApplication, 'prepareUpdateParams')
+        .mockResolvedValue(createFeedParams({ name: 'Renamed Feed' }));
+
+      const updateParams: TFeedUpdateParams = {
+        feedId: 'feed-abc123',
+        changes: { name: 'Renamed Feed' },
+      };
+
+      const result = await FeedController.commitUpdate(updateParams);
+
+      expect(prepareSpy).toHaveBeenCalledWith({
+        feedId: 'feed-abc123',
+        changes: { name: 'Renamed Feed' },
+      });
+      expect(persistSpy).toHaveBeenCalledWith({
+        userId: testData.userPubky,
+        params: {
+          feed: expect.any(Object),
+          existingId: 'feed-abc123',
+        },
+      });
+      expect(result).toBeTruthy();
+    });
+
     it('should throw when user is not authenticated (via application layer)', async () => {
       vi.spyOn(Core.FeedApplication, 'prepareUpdateParams').mockResolvedValue(createFeedParams({ tags: ['new'] }));
       vi.spyOn(Core.FeedApplication, 'persist').mockRejectedValue(new Error('User not authenticated'));

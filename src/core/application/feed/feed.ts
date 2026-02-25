@@ -109,7 +109,7 @@ export class FeedApplication {
     const existing = await Core.LocalFeedService.read({ feedId });
 
     return {
-      name: existing.name,
+      name: changes.name ?? existing.name,
       tags: changes.tags ?? existing.tags,
       reach: changes.reach ?? existing.reach,
       sort: changes.sort ?? existing.sort,
