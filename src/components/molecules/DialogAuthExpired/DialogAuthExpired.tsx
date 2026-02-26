@@ -6,7 +6,7 @@ import * as Atoms from '@/atoms';
 import * as Libs from '@/libs';
 import type { DialogAuthExpiredProps } from './DialogAuthExpired.types';
 
-export function DialogAuthExpired({ open, onRefresh }: DialogAuthExpiredProps) {
+export function DialogAuthExpired({ open, onRefresh, isLoading = false }: DialogAuthExpiredProps) {
   const t = useTranslations('onboarding.authExpired');
 
   return (
@@ -15,10 +15,11 @@ export function DialogAuthExpired({ open, onRefresh }: DialogAuthExpiredProps) {
         <Atoms.DialogHeader>
           <Atoms.DialogTitle>{t('title')}</Atoms.DialogTitle>
         </Atoms.DialogHeader>
+        <Atoms.DialogDescription className="sr-only">{t('description')}</Atoms.DialogDescription>
         <Atoms.Typography className="text-base tracking-wide text-white/80">{t('description')}</Atoms.Typography>
         <Atoms.DialogFooter>
-          <Atoms.Button size="lg" onClick={onRefresh}>
-            <Libs.RefreshCw className="mr-2 h-4 w-4" />
+          <Atoms.Button size="lg" onClick={onRefresh} disabled={isLoading}>
+            <Libs.RefreshCw className="size-4" />
             {t('refresh')}
           </Atoms.Button>
         </Atoms.DialogFooter>

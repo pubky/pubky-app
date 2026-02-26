@@ -36,14 +36,6 @@ vi.mock('qrcode.react', () => ({
 
 // Mock Core modules
 vi.mock('@/core', () => ({
-  AuthController: {
-    getAuthUrl: vi.fn().mockResolvedValue({
-      authorizationUrl: 'pubkyauth://',
-      awaitApproval: Promise.resolve({ mockKeypair: true }),
-    }),
-    initializeAuthenticatedSession: vi.fn().mockResolvedValue({}),
-    loginWithAuthUrl: vi.fn().mockResolvedValue({}),
-  },
   useOnboardingStore: vi.fn((selector) => {
     const state = { inviteCode: 'A9KM-7MJP-ERM9' };
     return selector ? selector(state) : state;
@@ -52,14 +44,14 @@ vi.mock('@/core', () => ({
 
 // Mock useAuthUrl hook
 const mockFetchUrl = vi.fn();
+const mockCopyAuthUrl = vi.fn().mockResolvedValue(undefined);
 vi.mock('@/hooks', () => ({
   useAuthUrl: vi.fn(() => ({
     url: 'mock-auth-url',
     isLoading: false,
     isExpired: false,
-    isGenerating: false,
     fetchUrl: mockFetchUrl,
-    retryCount: 0,
+    copyAuthUrl: mockCopyAuthUrl,
   })),
 }));
 
@@ -102,9 +94,17 @@ vi.mock('@/molecules', () => ({
     </div>
   ),
   toast: vi.fn(),
-  DialogAuthExpired: ({ open, onRefresh }: { open: boolean; onRefresh: () => void }) => (
+  DialogAuthExpired: ({
+    open,
+    onRefresh,
+    isLoading,
+  }: {
+    open: boolean;
+    onRefresh: () => void;
+    isLoading?: boolean;
+  }) => (
     <div data-testid="dialog-auth-expired" data-open={open}>
-      <button data-testid="dialog-auth-expired-refresh" onClick={onRefresh}>
+      <button data-testid="dialog-auth-expired-refresh" onClick={onRefresh} disabled={isLoading}>
         Refresh
       </button>
     </div>
@@ -243,7 +243,7 @@ describe('ScanContent', () => {
       fireEvent.click(authorizeButton);
     });
 
-    expect(mockCopyToClipboard).toHaveBeenCalledWith({ text: 'mock-auth-url' });
+    expect(mockCopyAuthUrl).toHaveBeenCalled();
     expect(window.open).toHaveBeenCalledWith('mock-auth-url', '_blank');
   });
 
@@ -254,6 +254,7 @@ describe('ScanContent', () => {
       isLoading: false,
       isExpired: true,
       fetchUrl: mockFetchUrl,
+      copyAuthUrl: mockCopyAuthUrl,
     });
 
     await act(async () => {
@@ -271,6 +272,7 @@ describe('ScanContent', () => {
       isLoading: false,
       isExpired: true,
       fetchUrl: mockFetchUrl,
+      copyAuthUrl: mockCopyAuthUrl,
     });
 
     await act(async () => {

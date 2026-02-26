@@ -1,5 +1,16 @@
 import * as Core from '@/core';
-import { HttpMethod, Logger, Err, ValidationErrorCode, ErrorService } from '@/libs';
+import {
+  HttpMethod,
+  Logger,
+  Err,
+  ValidationErrorCode,
+  ErrorService,
+  AuthErrorCode,
+  toAppError,
+  isAppError,
+  isNotFound,
+  isAuthError,
+} from '@/libs';
 import { userUriBuilder } from 'pubky-app-specs';
 
 export class AuthApplication {
@@ -135,9 +146,11 @@ export class AuthApplication {
     try {
       await Core.HomeserverService.request({ method: HttpMethod.GET, url: userUriBuilder(pubky) });
       return true;
-    } catch {
-      Logger.error('User profile.json missing in homeserver. Please PUT that file first.', { pubky });
-      return false;
+    } catch (error) {
+      const appError = isAppError(error) ? error : toAppError(error, ErrorService.Homeserver, 'userIsSignedUp');
+      if (isNotFound(appError)) return false;
+      if (isAuthError(appError) && appError.code === AuthErrorCode.UNAUTHORIZED) return false;
+      throw appError;
     }
   }
 }

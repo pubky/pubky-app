@@ -199,7 +199,33 @@ export class AuthController {
    */
   static async getSignupAuthUrl(inviteCode: string): Promise<Core.TGenerateAuthUrlResult> {
     await Core.clearDatabase();
-    return await Core.AuthApplication.generateSignupAuthUrl(inviteCode);
+    // Track active flow so useAuthUrl can cancel it on unmount and we can detect stale requests
+    // (e.g. React StrictMode double-mount). Without this, a cancelled signup would keep polling.
+    const token = Symbol('auth-flow');
+    this.cancelActiveAuthFlow();
+    this.activeAuthFlow = { token, cancel: null };
+    const { authorizationUrl, awaitApproval, cancelAuthFlow } =
+      await Core.AuthApplication.generateSignupAuthUrl(inviteCode);
+
+    if (!this.activeAuthFlow || this.activeAuthFlow.token !== token) {
+      cancelAuthFlow();
+      return {
+        authorizationUrl,
+        awaitApproval,
+        cancelAuthFlow,
+      };
+    }
+
+    this.activeAuthFlow.cancel = cancelAuthFlow;
+
+    const wrappedAwaitApproval = awaitApproval.finally(() => {
+      if (this.activeAuthFlow?.token === token) {
+        this.activeAuthFlow = null;
+      }
+      cancelAuthFlow();
+    });
+
+    return { authorizationUrl, awaitApproval: wrappedAwaitApproval, cancelAuthFlow };
   }
 
   /**

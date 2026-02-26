@@ -2,7 +2,6 @@ import { describe, it, expect, vi, beforeAll, afterAll, beforeEach } from 'vites
 import { render, screen, waitFor, act, fireEvent } from '@testing-library/react';
 import React from 'react';
 import { SignInContent, SignInFooter } from './SignIn';
-import type { PublicKey } from '@synonymdev/pubky';
 
 // Mock Next.js router
 const mockPush = vi.fn();
@@ -56,22 +55,6 @@ const resetMockSignInState = () => {
 
 // Mock Core modules
 vi.mock('@/core', () => ({
-  AuthController: {
-    getAuthUrl: vi.fn().mockResolvedValue({
-      authorizationUrl: 'mock-auth-url',
-      awaitApproval: Promise.resolve({} as unknown as PublicKey),
-    }),
-    initializeAuthenticatedSession: vi.fn().mockResolvedValue({}),
-    loginWithAuthUrl: vi.fn().mockResolvedValue({}),
-  },
-  BootstrapController: {
-    run: vi.fn().mockResolvedValue({}),
-  },
-  useAuthStore: {
-    getState: vi.fn().mockReturnValue({
-      currentUserPubky: 'mock-user-pubkey-123',
-    }),
-  },
   useOnboardingStore: {
     getState: vi.fn().mockReturnValue({
       reset: vi.fn(),
@@ -87,14 +70,14 @@ vi.mock('@/core', () => ({
 
 // Mock useAuthUrl hook
 const mockFetchUrl = vi.fn();
+const mockCopyAuthUrl = vi.fn().mockResolvedValue(undefined);
 vi.mock('@/hooks', () => ({
   useAuthUrl: vi.fn(() => ({
     url: 'mock-auth-url',
     isLoading: false,
     isExpired: false,
-    isGenerating: false,
     fetchUrl: mockFetchUrl,
-    retryCount: 0,
+    copyAuthUrl: mockCopyAuthUrl,
   })),
 }));
 
@@ -116,9 +99,17 @@ vi.mock('@/molecules', () => ({
       {children}
     </div>
   ),
-  DialogAuthExpired: ({ open, onRefresh }: { open: boolean; onRefresh: () => void }) => (
+  DialogAuthExpired: ({
+    open,
+    onRefresh,
+    isLoading,
+  }: {
+    open: boolean;
+    onRefresh: () => void;
+    isLoading?: boolean;
+  }) => (
     <div data-testid="dialog-auth-expired" data-open={open}>
-      <button data-testid="dialog-auth-expired-refresh" onClick={onRefresh}>
+      <button data-testid="dialog-auth-expired-refresh" onClick={onRefresh} disabled={isLoading}>
         Refresh
       </button>
     </div>
@@ -223,6 +214,7 @@ describe('SignInContent', () => {
     window.location.href = '';
     clipboardMock.writeText.mockClear();
     mockCopyToClipboard.mockClear();
+    mockCopyAuthUrl.mockClear();
     resetMockSignInState();
   });
 
@@ -313,7 +305,7 @@ describe('SignInContent', () => {
       fireEvent.click(authorizeButton);
     });
 
-    expect(mockCopyToClipboard).toHaveBeenCalledWith({ text: 'mock-auth-url' });
+    expect(mockCopyAuthUrl).toHaveBeenCalled();
     expect(window.open).toHaveBeenCalledWith('mock-auth-url', '_blank');
   });
 
@@ -330,6 +322,7 @@ describe('SignInContent', () => {
       isLoading: true,
       isExpired: false,
       fetchUrl: mockFetchUrl,
+      copyAuthUrl: mockCopyAuthUrl,
     });
 
     await act(async () => {
@@ -361,6 +354,7 @@ describe('SignInContent', () => {
       isLoading: false,
       isExpired: false,
       fetchUrl: mockFetchUrl,
+      copyAuthUrl: mockCopyAuthUrl,
     });
 
     const Molecules = await import('@/molecules');
@@ -375,7 +369,7 @@ describe('SignInContent', () => {
       fireEvent.click(qrButton);
     });
 
-    expect(mockCopyToClipboard).toHaveBeenCalledWith({ text: 'mock-auth-url' });
+    expect(mockCopyAuthUrl).toHaveBeenCalled();
     expect(Molecules.toast).toHaveBeenCalledWith({
       title: 'Link copied',
       description: 'Authentication link copied to clipboard.',
@@ -389,6 +383,7 @@ describe('SignInContent', () => {
       isLoading: false,
       isExpired: true,
       fetchUrl: mockFetchUrl,
+      copyAuthUrl: mockCopyAuthUrl,
     });
 
     await act(async () => {
@@ -406,6 +401,7 @@ describe('SignInContent', () => {
       isLoading: false,
       isExpired: true,
       fetchUrl: mockFetchUrl,
+      copyAuthUrl: mockCopyAuthUrl,
     });
 
     await act(async () => {

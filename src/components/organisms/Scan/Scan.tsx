@@ -3,6 +3,7 @@
 import Image from 'next/image';
 import { QRCodeSVG } from 'qrcode.react';
 import { useRouter } from 'next/navigation';
+import { useEffect, useRef } from 'react';
 import { useTranslations } from 'next-intl';
 
 import * as Atoms from '@/atoms';
@@ -16,20 +17,21 @@ import * as Core from '@/core';
 export const ScanContent = () => {
   const t = useTranslations('onboarding.scan');
   const inviteCode = Core.useOnboardingStore((state) => state.inviteCode);
-  const { url, isLoading, isExpired, fetchUrl } = Hooks.useAuthUrl({ type: 'signup', inviteCode });
+  const { url, isLoading, isExpired, fetchUrl, copyAuthUrl } = Hooks.useAuthUrl(
+    inviteCode ? { type: 'signup', inviteCode } : {},
+  );
+  /** Stores the 2s fallback redirect timer so we can clear it on unmount and avoid redirecting after the user has left. */
+  const fallbackTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const isIOS = typeof navigator !== 'undefined' && /iPhone|iPad|iPod/i.test(navigator.userAgent);
   const fallbackUrl = isIOS ? Config.APP_STORE_URL : Config.PLAY_STORE_URL;
 
-  const copyAuthUrlToClipboard = async () => {
-    if (!url) return;
-
-    try {
-      await Libs.copyToClipboard({ text: url });
-    } catch (error) {
-      Libs.Logger.error('Failed to copy auth URL to clipboard:', error);
-    }
-  };
+  useEffect(
+    () => () => {
+      if (fallbackTimerRef.current) clearTimeout(fallbackTimerRef.current);
+    },
+    [],
+  );
 
   const handleMobileAuth = async () => {
     if (isLoading) return;
@@ -39,7 +41,7 @@ export const ScanContent = () => {
       return;
     }
 
-    await copyAuthUrlToClipboard();
+    await copyAuthUrl();
 
     try {
       const openedWindow = window.open(url, '_blank');
@@ -49,7 +51,8 @@ export const ScanContent = () => {
         return;
       }
 
-      setTimeout(() => {
+      fallbackTimerRef.current = setTimeout(() => {
+        fallbackTimerRef.current = null;
         try {
           openedWindow.location.href = fallbackUrl;
         } catch (error) {
@@ -151,7 +154,7 @@ export const ScanContent = () => {
         </Molecules.ContentCard>
       </Atoms.Container>
 
-      <Molecules.DialogAuthExpired open={isExpired} onRefresh={fetchUrl} />
+      <Molecules.DialogAuthExpired open={isExpired} onRefresh={fetchUrl} isLoading={isLoading} />
     </>
   );
 };

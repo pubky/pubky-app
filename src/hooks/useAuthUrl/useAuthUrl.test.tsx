@@ -7,6 +7,7 @@ import { useAuthUrl } from './useAuthUrl';
 // Mock dependencies
 const mockToast = vi.fn();
 const mockLoggerError = vi.fn();
+const mockCopyToClipboard = vi.fn().mockResolvedValue(undefined);
 const mockGetAuthUrl = vi.fn();
 const mockGetSignupAuthUrl = vi.fn();
 const mockInitializeAuthenticatedSession = vi.fn();
@@ -39,6 +40,7 @@ vi.mock('@/libs', async () => {
       ...actual.Logger,
       error: (...args: unknown[]) => mockLoggerError(...args),
     },
+    copyToClipboard: (...args: unknown[]) => mockCopyToClipboard(...args),
   };
 });
 
@@ -53,6 +55,7 @@ vi.mock('@/core', () => ({
     const state = { session: null };
     return selector ? selector(state) : state;
   },
+  AUTH_FLOW_CANCELED_ERROR_NAME: 'AuthFlowCanceled',
 }));
 
 describe('useAuthUrl', () => {
@@ -193,6 +196,41 @@ describe('useAuthUrl', () => {
     expect(mockToast).not.toHaveBeenCalled();
   });
 
+  it('marks flow as expired when SESSION_EXPIRED AppError rejects', async () => {
+    let rejectApproval: (error: unknown) => void;
+    const mockAwaitApproval = new Promise<Session>((_, reject) => {
+      rejectApproval = reject;
+    });
+
+    mockGetAuthUrl.mockResolvedValue({
+      authorizationUrl: 'pubkyring://authorize?token=session-expired',
+      awaitApproval: mockAwaitApproval,
+      cancelAuthFlow: createCancelAuthFlow(),
+    });
+
+    const { result } = renderHook(() => useAuthUrl());
+
+    await waitFor(() => {
+      expect(mockGetAuthUrl).toHaveBeenCalled();
+    });
+
+    rejectApproval!(
+      new Libs.AppError({
+        category: Libs.ErrorCategory.Auth,
+        code: Libs.AuthErrorCode.SESSION_EXPIRED,
+        message: 'Session expired',
+        service: Libs.ErrorService.Homeserver,
+        operation: 'awaitApproval',
+      }),
+    );
+
+    await waitFor(() => {
+      expect(result.current.isExpired).toBe(true);
+      expect(result.current.url).toBe('');
+    });
+    expect(mockToast).not.toHaveBeenCalled();
+  });
+
   it('marks flow as expired only for timeout-like AppError rejections', async () => {
     let rejectApproval: (error: unknown) => void;
     const mockAwaitApproval = new Promise<Session>((_, reject) => {
@@ -310,22 +348,33 @@ describe('useAuthUrl', () => {
     expect(mockGetAuthUrl).not.toHaveBeenCalled();
   });
 
-  it('falls back to AuthController.getAuthUrl when type is signup but inviteCode is missing', async () => {
-    const mockAuthUrl = 'pubkyring://authorize?token=fallback';
-
+  it('copyAuthUrl copies url to clipboard', async () => {
     mockGetAuthUrl.mockResolvedValue({
-      authorizationUrl: mockAuthUrl,
+      authorizationUrl: 'pubkyring://authorize?token=copy',
       awaitApproval: new Promise<Session>(() => {}),
       cancelAuthFlow: createCancelAuthFlow(),
     });
 
-    const { result } = renderHook(() => useAuthUrl({ type: 'signup' }));
+    const { result } = renderHook(() => useAuthUrl());
 
     await waitFor(() => {
-      expect(result.current.url).toBe(mockAuthUrl);
+      expect(result.current.url).toBe('pubkyring://authorize?token=copy');
     });
 
-    expect(mockGetAuthUrl).toHaveBeenCalledTimes(1);
-    expect(mockGetSignupAuthUrl).not.toHaveBeenCalled();
+    await act(async () => {
+      await result.current.copyAuthUrl();
+    });
+
+    expect(mockCopyToClipboard).toHaveBeenCalledWith({ text: 'pubkyring://authorize?token=copy' });
+  });
+
+  it('copyAuthUrl does nothing when url is empty', async () => {
+    const { result } = renderHook(() => useAuthUrl({ autoFetch: false }));
+
+    await act(async () => {
+      await result.current.copyAuthUrl();
+    });
+
+    expect(mockCopyToClipboard).not.toHaveBeenCalled();
   });
 });

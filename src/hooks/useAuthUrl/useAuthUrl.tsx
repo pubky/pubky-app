@@ -20,7 +20,9 @@ const isAuthFlowExpiredError = (error: unknown): boolean => {
  * Manages the authentication URL lifecycle for Pubky Ring authorization.
  */
 export function useAuthUrl(options: UseAuthUrlOptions = {}): UseAuthUrlReturn {
-  const { autoFetch = true, type = 'signin', inviteCode } = options;
+  const autoFetch = options.autoFetch ?? true;
+  const type = options.type ?? 'signin';
+  const inviteCode = options.type === 'signup' ? options.inviteCode : undefined;
   const t = useTranslations('onboarding.signIn');
 
   const [url, setUrl] = useState('');
@@ -59,7 +61,7 @@ export function useAuthUrl(options: UseAuthUrlOptions = {}): UseAuthUrlReturn {
             typeof error === 'object' &&
             error !== null &&
             'name' in error &&
-            (error as { name?: unknown }).name === 'AuthFlowCanceled'
+            (error as { name?: unknown }).name === Core.AUTH_FLOW_CANCELED_ERROR_NAME
           ) {
             return;
           }
@@ -95,6 +97,15 @@ export function useAuthUrl(options: UseAuthUrlOptions = {}): UseAuthUrlReturn {
     }
   }, [type, inviteCode, t]);
 
+  const copyAuthUrl = useCallback(async (): Promise<void> => {
+    if (!url) return;
+    try {
+      await Libs.copyToClipboard({ text: url });
+    } catch (error) {
+      Libs.Logger.error('Failed to copy auth URL to clipboard', error);
+    }
+  }, [url]);
+
   useEffect(() => {
     isMountedRef.current = true;
 
@@ -114,5 +125,6 @@ export function useAuthUrl(options: UseAuthUrlOptions = {}): UseAuthUrlReturn {
     isLoading,
     isExpired,
     fetchUrl,
+    copyAuthUrl,
   };
 }
