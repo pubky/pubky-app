@@ -79,6 +79,7 @@ export function ProfileFollowers() {
             key={connection.id}
             user={connection}
             variant="full"
+            followButtonVariant="iconWithText"
             isLoading={isUserLoading(connection.id)}
             isStatusLoading={isLoading}
             isCurrentUser={currentUserPubky === connection.id}
