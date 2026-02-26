@@ -166,7 +166,7 @@ export const SignInContent = () => {
       <Atoms.Container size="container" className="hidden md:flex">
         <SignInHeader />
         <Molecules.ContentCard layout="column">
-          <Atoms.Container className="items-center justify-center">
+          <Atoms.Container className="items-center justify-center gap-3">
             <button
               type="button"
               className="relative flex h-[220px] w-[220px] cursor-pointer items-center justify-center rounded-lg bg-foreground p-4 transition-opacity hover:opacity-90 active:opacity-80"
@@ -194,6 +194,26 @@ export const SignInContent = () => {
                 </>
               )}
             </button>
+            <Atoms.Container className="flex-row items-center justify-center gap-3">
+              <Atoms.Link href={'https://apps.apple.com/us/app/pubky-ring/id6739356756'}>
+                <Image
+                  src="/images/apple-store-button.svg"
+                  alt="Apple Store Button PubKey"
+                  className="h-7"
+                  width={94.5}
+                  height={28}
+                />
+              </Atoms.Link>
+              <Atoms.Link href="https://play.google.com/store/apps/details?id=to.pubky.ring">
+                <Image
+                  src="/images/google-store-button.svg"
+                  className="h-7"
+                  alt="Google Store Pubkey Link"
+                  width={94.5}
+                  height={28}
+                />
+              </Atoms.Link>
+            </Atoms.Container>
           </Atoms.Container>
         </Molecules.ContentCard>
       </Atoms.Container>
