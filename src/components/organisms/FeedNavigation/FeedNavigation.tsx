@@ -9,6 +9,10 @@ import * as Organisms from '@/organisms';
 import { APP_ROUTES } from '@/app/routes';
 import { usePathname } from 'next/navigation';
 
+// Module-level cache: survives remounts within the session so that
+// navigating between /home and /feed/[id] doesn't flash empty tabs.
+let cachedFeeds: Core.FeedModelSchema[] = [];
+
 export const FeedNavigation = () => {
   const pathname = usePathname();
   const tHeader = useTranslations('header');
@@ -17,14 +21,16 @@ export const FeedNavigation = () => {
   const customFeeds = useLiveQuery(
     async () => {
       try {
-        return await Core.FeedController.getList();
+        const result = await Core.FeedController.getList();
+        cachedFeeds = result;
+        return result;
       } catch (error) {
         Libs.Logger.error('[FeedNavigation] Failed to query custom feeds', { error });
         return [] as Core.FeedModelSchema[];
       }
     },
     [],
-    [] as Core.FeedModelSchema[],
+    cachedFeeds,
   );
 
   const customFeedsMapped = customFeeds.map((f) => ({
