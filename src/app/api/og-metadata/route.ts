@@ -268,7 +268,8 @@ export async function GET(request: NextRequest) {
       CACHE_HEADERS,
     );
   } catch (error) {
-    Libs.Logger.error('OG metadata fetch error:', error);
-    return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
+    return Libs.handleApiError(error, 'api.og-metadata.GET', {
+      unknownErrorMessage: 'Internal server error',
+    });
   }
 }

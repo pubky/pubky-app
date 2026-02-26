@@ -11,7 +11,7 @@ async function getErrorMessage(response: Response): Promise<string> {
   return `Request failed with status ${response.status}`;
 }
 
-export async function postJson<TResponse = void>(url: string, body: unknown): Promise<TResponse> {
+export async function postJson<TResponse = void>(url: string, body: unknown): Promise<TResponse | undefined> {
   const response = await fetch(url, {
     method: HttpMethod.POST,
     headers: JSON_HEADERS,
@@ -23,12 +23,12 @@ export async function postJson<TResponse = void>(url: string, body: unknown): Pr
   }
 
   if (response.status === 204) {
-    return undefined as TResponse;
+    return undefined;
   }
 
   try {
     return (await response.json()) as TResponse;
   } catch {
-    return undefined as TResponse;
+    return undefined;
   }
 }
