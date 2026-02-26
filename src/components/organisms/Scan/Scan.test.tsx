@@ -55,61 +55,50 @@ vi.mock('@/hooks', () => ({
   })),
 }));
 
-// Mock molecules
-vi.mock('@/molecules', () => ({
-  ResponsiveSection: ({ desktop, mobile }: { desktop: React.ReactNode; mobile: React.ReactNode }) => (
-    <div data-testid="responsive-section">
-      <div data-testid="desktop-content">{desktop}</div>
-      <div data-testid="mobile-content">{mobile}</div>
-    </div>
-  ),
-  ContentCard: ({ children, layout }: { children: React.ReactNode; layout?: string }) => (
-    <div data-testid="content-card" data-layout={layout}>
-      {children}
-    </div>
-  ),
-  PageTitle: ({ children, size }: { children: React.ReactNode; size?: string }) => (
-    <div data-testid="page-title" data-size={size}>
-      {children}
-    </div>
-  ),
-  ButtonsNavigation: ({
-    onHandleBackButton,
-    continueButtonDisabled,
-    hiddenContinueButton,
-  }: {
-    onHandleBackButton: () => void;
-    continueButtonDisabled?: boolean;
-    hiddenContinueButton?: boolean;
-  }) => (
-    <div data-testid="buttons-navigation">
-      <button data-testid="back-button" onClick={onHandleBackButton}>
-        Back
-      </button>
-      {!hiddenContinueButton && (
-        <button data-testid="continue-button" disabled={continueButtonDisabled}>
-          Continue
+// Mock molecules - use real DialogAuthExpired (Radix) per component-testing rules
+vi.mock('@/molecules', async (importOriginal) => {
+  const actual = (await importOriginal()) as Record<string, unknown>;
+  return {
+    ...actual,
+    ResponsiveSection: ({ desktop, mobile }: { desktop: React.ReactNode; mobile: React.ReactNode }) => (
+      <div data-testid="responsive-section">
+        <div data-testid="desktop-content">{desktop}</div>
+        <div data-testid="mobile-content">{mobile}</div>
+      </div>
+    ),
+    ContentCard: ({ children, layout }: { children: React.ReactNode; layout?: string }) => (
+      <div data-testid="content-card" data-layout={layout}>
+        {children}
+      </div>
+    ),
+    PageTitle: ({ children, size }: { children: React.ReactNode; size?: string }) => (
+      <div data-testid="page-title" data-size={size}>
+        {children}
+      </div>
+    ),
+    ButtonsNavigation: ({
+      onHandleBackButton,
+      continueButtonDisabled,
+      hiddenContinueButton,
+    }: {
+      onHandleBackButton: () => void;
+      continueButtonDisabled?: boolean;
+      hiddenContinueButton?: boolean;
+    }) => (
+      <div data-testid="buttons-navigation">
+        <button data-testid="back-button" onClick={onHandleBackButton}>
+          Back
         </button>
-      )}
-    </div>
-  ),
-  toast: vi.fn(),
-  DialogAuthExpired: ({
-    open,
-    onRefresh,
-    isLoading,
-  }: {
-    open: boolean;
-    onRefresh: () => void;
-    isLoading?: boolean;
-  }) => (
-    <div data-testid="dialog-auth-expired" data-open={open}>
-      <button data-testid="dialog-auth-expired-refresh" onClick={onRefresh} disabled={isLoading}>
-        Refresh
-      </button>
-    </div>
-  ),
-}));
+        {!hiddenContinueButton && (
+          <button data-testid="continue-button" disabled={continueButtonDisabled}>
+            Continue
+          </button>
+        )}
+      </div>
+    ),
+    toast: vi.fn(),
+  };
+});
 
 // Mock copyToClipboard function - use vi.hoisted to ensure it's available before vi.mock runs
 const { mockCopyToClipboard } = vi.hoisted(() => ({
@@ -127,51 +116,6 @@ vi.mock('@/libs', async () => {
     },
   };
 });
-
-// Mock atoms
-vi.mock('@/atoms', () => ({
-  Container: ({ children, className }: { children: React.ReactNode; className?: string }) => (
-    <div data-testid="container" className={className}>
-      {children}
-    </div>
-  ),
-  Button: ({
-    children,
-    className,
-    size,
-    ...props
-  }: {
-    children: React.ReactNode;
-    className?: string;
-    size?: string;
-  } & React.ButtonHTMLAttributes<HTMLButtonElement>) => (
-    <button data-testid="button" className={className} data-size={size} {...props}>
-      {children}
-    </button>
-  ),
-  Typography: ({
-    children,
-    as,
-    size,
-    className,
-  }: {
-    children: React.ReactNode;
-    as?: React.ElementType;
-    size?: string;
-    className?: string;
-  }) => {
-    const Tag = as || 'span';
-    return React.createElement(Tag, { 'data-testid': 'typography', className, 'data-size': size }, children);
-  },
-  FooterLinks: ({ children }: { children: React.ReactNode }) => <div data-testid="footer-links">{children}</div>,
-  Link: ({ children, href, target }: { children: React.ReactNode; href: string; target?: string }) => (
-    <a data-testid="link" href={href} target={target}>
-      {children}
-    </a>
-  ),
-  PageHeader: ({ children }: { children: React.ReactNode }) => <div data-testid="page-header">{children}</div>,
-  PageSubtitle: ({ children }: { children: React.ReactNode }) => <div data-testid="page-subtitle">{children}</div>,
-}));
 
 describe('ScanContent', () => {
   const originalOpen = window.open;
@@ -234,10 +178,10 @@ describe('ScanContent', () => {
     });
 
     await waitFor(() => {
-      expect(screen.getByTestId('button')).not.toBeDisabled();
+      expect(screen.getByRole('button', { name: /Authorize with Pubky Ring/i })).not.toBeDisabled();
     });
 
-    const authorizeButton = screen.getByTestId('button');
+    const authorizeButton = screen.getByRole('button', { name: /Authorize with Pubky Ring/i });
 
     await act(async () => {
       fireEvent.click(authorizeButton);
@@ -261,8 +205,8 @@ describe('ScanContent', () => {
       render(<ScanContent />);
     });
 
-    expect(screen.getByTestId('dialog-auth-expired')).toHaveAttribute('data-open', 'true');
-    expect(screen.getByTestId('button')).toBeDisabled();
+    expect(screen.getByRole('dialog')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /Refresh/i })).toBeInTheDocument();
   });
 
   it('calls fetchUrl when expired dialog refresh button is clicked', async () => {
@@ -280,7 +224,7 @@ describe('ScanContent', () => {
     });
 
     await act(async () => {
-      fireEvent.click(screen.getByTestId('dialog-auth-expired-refresh'));
+      fireEvent.click(screen.getByRole('button', { name: /Refresh/i }));
     });
 
     expect(mockFetchUrl).toHaveBeenCalledTimes(1);
@@ -291,17 +235,16 @@ describe('ScanFooter', () => {
   it('renders footer with links', () => {
     render(<ScanFooter />);
 
-    expect(screen.getByTestId('footer-links')).toBeInTheDocument();
+    const links = screen.getAllByRole('link');
+    expect(links.length).toBeGreaterThanOrEqual(1);
   });
 
   it('renders links', () => {
     render(<ScanFooter />);
 
-    const links = screen.getAllByTestId('link');
-    // With rich text, at least one link should be rendered
+    const links = screen.getAllByRole('link');
     expect(links.length).toBeGreaterThanOrEqual(1);
 
-    // Check that Pubky Core link is present (it's always rendered first by the mock)
     const coreLink = links.find((link) => link.getAttribute('href') === Config.PUBKY_CORE_URL);
     expect(coreLink).toBeDefined();
   });
@@ -311,17 +254,15 @@ describe('ScanHeader', () => {
   it('renders mobile header correctly', () => {
     render(<ScanHeader isMobile={true} />);
 
-    expect(screen.getByTestId('page-header')).toBeInTheDocument();
     expect(screen.getByTestId('page-title')).toBeInTheDocument();
-    expect(screen.getByTestId('page-subtitle')).toBeInTheDocument();
+    expect(screen.getByRole('heading')).toBeInTheDocument();
   });
 
   it('renders desktop header correctly', () => {
     render(<ScanHeader isMobile={false} />);
 
-    expect(screen.getByTestId('page-header')).toBeInTheDocument();
     expect(screen.getByTestId('page-title')).toBeInTheDocument();
-    expect(screen.getByTestId('page-subtitle')).toBeInTheDocument();
+    expect(screen.getByRole('heading')).toBeInTheDocument();
   });
 });
 

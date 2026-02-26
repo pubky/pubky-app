@@ -2,11 +2,12 @@
 
 exports[`Scan Components - Snapshots > ScanContent - Snapshots > matches snapshot for default ScanContent 1`] = `
 <div
-  class="hidden md:flex"
+  class="mx-auto w-full flex-col container hidden md:flex"
   data-testid="container"
 >
   <div
-    data-testid="page-header"
+    class="mx-auto w-full flex-col flex gap-3 pt-2 pb-6"
+    data-testid="container"
   >
     <div
       data-size="large"
@@ -19,25 +20,25 @@ exports[`Scan Components - Snapshots > ScanContent - Snapshots > matches snapsho
         QR Code.
       </span>
     </div>
-    <div
-      data-testid="page-subtitle"
+    <h2
+      class="text-xl leading-normal font-light text-muted-foreground lg:text-2xl"
     >
       Open Pubky Ring, create a pubky, and scan the QR.
-    </div>
+    </h2>
   </div>
   <div
     data-layout="column"
     data-testid="content-card"
   >
     <div
-      class="items-center justify-center gap-4"
+      class="mx-auto w-full flex-col flex items-center justify-center gap-4"
       data-testid="container"
     >
       <div
         class="relative flex h-[220px] w-[220px] items-center justify-center rounded-lg bg-foreground p-4"
       >
         <div
-          class="items-center gap-2"
+          class="mx-auto w-full flex-col flex items-center gap-2"
           data-testid="container"
         >
           <svg
@@ -103,8 +104,7 @@ exports[`Scan Components - Snapshots > ScanContent - Snapshots > matches snapsho
             />
           </svg>
           <small
-            class="text-muted-foreground"
-            data-size="sm"
+            class="text-sm font-semibold text-muted-foreground"
             data-testid="typography"
           >
             Expired
@@ -123,24 +123,27 @@ exports[`Scan Components - Snapshots > ScanContent - Snapshots > matches snapsho
 `;
 
 exports[`Scan Components - Snapshots > ScanFooter - Snapshots > matches snapshot for default ScanFooter 1`] = `
-<div
-  data-testid="footer-links"
+<p
+  class="leading-light text-sm font-medium text-muted-foreground opacity-80 py-6"
+  data-testid="typography"
 >
   Use ,[object Object], or any other 
   <a
-    data-testid="link"
+    class="cursor-pointer hover:text-brand/80 transition-colors text-brand text-sm"
     href="https://pubky.org"
+    rel="noopener noreferrer"
     target="_blank"
   >
     Pubky Core
   </a>
   –powered keychain.
-</div>
+</p>
 `;
 
 exports[`Scan Components - Snapshots > ScanHeader - Snapshots > matches snapshot for desktop ScanHeader 1`] = `
 <div
-  data-testid="page-header"
+  class="mx-auto w-full flex-col flex gap-3 pt-2 pb-6"
+  data-testid="container"
 >
   <div
     data-size="large"
@@ -153,17 +156,18 @@ exports[`Scan Components - Snapshots > ScanHeader - Snapshots > matches snapshot
       QR Code.
     </span>
   </div>
-  <div
-    data-testid="page-subtitle"
+  <h2
+    class="text-xl leading-normal font-light text-muted-foreground lg:text-2xl"
   >
     Open Pubky Ring, create a pubky, and scan the QR.
-  </div>
+  </h2>
 </div>
 `;
 
 exports[`Scan Components - Snapshots > ScanHeader - Snapshots > matches snapshot for mobile ScanHeader 1`] = `
 <div
-  data-testid="page-header"
+  class="mx-auto w-full flex-col flex gap-3 pt-2 pb-6"
+  data-testid="container"
 >
   <div
     data-size="large"
@@ -176,11 +180,11 @@ exports[`Scan Components - Snapshots > ScanHeader - Snapshots > matches snapshot
       Authorize.
     </span>
   </div>
-  <div
-    data-testid="page-subtitle"
+  <h2
+    class="text-xl leading-normal font-light text-muted-foreground lg:text-2xl"
   >
     Open Pubky Ring, create a pubky, and scan the QR.
-  </div>
+  </h2>
 </div>
 `;
 
