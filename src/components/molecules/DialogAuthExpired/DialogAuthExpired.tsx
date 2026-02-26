@@ -6,6 +6,7 @@ import * as Atoms from '@/atoms';
 import * as Libs from '@/libs';
 import type { DialogAuthExpiredProps } from './DialogAuthExpired.types';
 
+/** Non-dismissible dialog shown when the QR auth session has expired, with a Refresh action. */
 export function DialogAuthExpired({ open, onRefresh, isLoading = false }: DialogAuthExpiredProps) {
   const t = useTranslations('onboarding.authExpired');
 

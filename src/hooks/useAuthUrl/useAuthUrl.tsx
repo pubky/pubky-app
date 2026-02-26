@@ -10,6 +10,7 @@ import * as Molecules from '@/molecules';
 
 import type { UseAuthUrlOptions, UseAuthUrlReturn } from './useAuthUrl.types';
 
+/** Returns true if the error indicates the auth flow has expired (timeout or SESSION_EXPIRED). */
 const isAuthFlowExpiredError = (error: unknown): boolean => {
   if (!Libs.isAppError(error)) return false;
   if (Libs.isTimeoutError(error)) return true;
@@ -18,6 +19,8 @@ const isAuthFlowExpiredError = (error: unknown): boolean => {
 
 /**
  * Manages the authentication URL lifecycle for Pubky Ring authorization.
+ * @param options - Configuration for auth URL generation (autoFetch, type, inviteCode for signup)
+ * @returns URL state, loading/expired flags, and fetch/copy actions
  */
 export function useAuthUrl(options: UseAuthUrlOptions = {}): UseAuthUrlReturn {
   const autoFetch = options.autoFetch ?? true;

@@ -174,7 +174,7 @@ export const SignInContent = () => {
               disabled={isLoading || isExpired || !url}
               aria-label="Copy authentication link"
             >
-              {isLoading ? (
+              {isLoading || (!url && !isExpired) ? (
                 <Atoms.Container className="items-center gap-2">
                   <Libs.Loader2 className="h-8 w-8 animate-spin text-background" />
                   <Atoms.Typography as="small" size="sm" className="text-background">
@@ -188,7 +188,7 @@ export const SignInContent = () => {
                     {t('expired')}
                   </Atoms.Typography>
                 </Atoms.Container>
-              ) : url ? (
+              ) : (
                 <>
                   <QRCodeSVG value={url} size={220} />
                   <Image
@@ -199,13 +199,6 @@ export const SignInContent = () => {
                     className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2"
                   />
                 </>
-              ) : (
-                <Atoms.Container className="items-center gap-2">
-                  <Libs.Loader2 className="h-8 w-8 animate-spin text-background" />
-                  <Atoms.Typography as="small" size="sm" className="text-background">
-                    {t('generating')}
-                  </Atoms.Typography>
-                </Atoms.Container>
               )}
             </button>
           </Atoms.Container>
