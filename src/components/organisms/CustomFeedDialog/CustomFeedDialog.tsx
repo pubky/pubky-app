@@ -121,7 +121,7 @@ export const CustomFeedDialog = ({ mode, children }: CustomFeedDialogProps) => {
         setLoading(true);
         const feed = await Core.FeedController.commitUpdate({
           feedId: customFeed.id,
-          changes: { reach, sort, layout, content: content === 'ALL' ? null : content, tags },
+          changes: { name, reach, sort, layout, content: content === 'ALL' ? null : content, tags },
         });
 
         setOpen(false);
@@ -170,7 +170,14 @@ export const CustomFeedDialog = ({ mode, children }: CustomFeedDialogProps) => {
         {children}
       </Atoms.DialogTrigger>
 
-      <Atoms.DialogContent className="w-3xl" data-testid="custom-feed-dialog-content">
+      <Atoms.DialogContent
+        onOpenAutoFocus={(e) => {
+          if (mode === 'edit') e.preventDefault();
+        }}
+        onCloseAutoFocus={(e) => e.preventDefault()}
+        className="w-3xl"
+        data-testid="custom-feed-dialog-content"
+      >
         <Atoms.DialogHeader>
           <Atoms.DialogTitle>
             <Atoms.Typography overrideDefaults as="span" className="capitalize">
@@ -188,7 +195,7 @@ export const CustomFeedDialog = ({ mode, children }: CustomFeedDialogProps) => {
             placeholder="Not your keys..."
             value={name}
             onChange={(e) => setName(e.target.value)}
-            disabled={disabled || mode === 'edit'}
+            disabled={disabled}
             className="h-14 border-dashed"
             data-testid="feed-name-input"
           />

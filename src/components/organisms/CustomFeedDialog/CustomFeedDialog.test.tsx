@@ -121,10 +121,14 @@ vi.mock('@/atoms', () => ({
   DialogContent: ({
     children,
     className,
+    _onOpenAutoFocus,
+    _onCloseAutoFocus,
     'data-testid': dataTestId,
   }: {
     children: React.ReactNode;
     className?: string;
+    _onOpenAutoFocus?: (e: Event) => void;
+    _onCloseAutoFocus?: (e: Event) => void;
     'data-testid'?: string;
   }) => (
     <div data-testid={dataTestId ?? 'dialog-content'} className={className}>
@@ -366,9 +370,22 @@ describe('CustomFeedDialog', () => {
     expect(input).toHaveAttribute('placeholder', 'Not your keys...');
   });
 
-  it('renders feed name input as disabled in edit mode', () => {
+  it('renders feed name input as enabled in edit mode when customFeed is defined', () => {
     const mockFeed = createMockFeed();
     mockUseCustomFeed.mockReturnValue(mockFeed);
+
+    render(
+      <CustomFeedDialog mode="edit">
+        <button>Edit Feed</button>
+      </CustomFeedDialog>,
+    );
+
+    const input = screen.getByTestId('feed-name-input');
+    expect(input).not.toBeDisabled();
+  });
+
+  it('renders feed name input as disabled in edit mode when customFeed is undefined', () => {
+    mockUseCustomFeed.mockReturnValue(undefined);
 
     render(
       <CustomFeedDialog mode="edit">
@@ -871,6 +888,7 @@ describe('CustomFeedDialog', () => {
       expect(mockCommitUpdate).toHaveBeenCalledWith({
         feedId: 'feed-abc123',
         changes: {
+          name: 'Bitcoin News',
           reach: PubkyAppFeedReach.Following,
           sort: PubkyAppFeedSort.Popularity,
           layout: PubkyAppFeedLayout.Wide,

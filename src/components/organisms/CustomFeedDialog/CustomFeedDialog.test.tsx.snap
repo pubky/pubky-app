@@ -828,7 +828,6 @@ exports[`CustomFeedDialog - Snapshots > matches snapshot for edit mode with cust
       <input
         class="h-14 border-dashed"
         data-testid="feed-name-input"
-        disabled=""
         placeholder="Not your keys..."
         required=""
         value="Bitcoin News"
@@ -1266,7 +1265,6 @@ exports[`CustomFeedDialog - Snapshots > matches snapshot for edit mode with null
       <input
         class="h-14 border-dashed"
         data-testid="feed-name-input"
-        disabled=""
         placeholder="Not your keys..."
         required=""
         value="Bitcoin News"
