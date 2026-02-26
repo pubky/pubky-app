@@ -8,6 +8,7 @@ metadata:
     managed-by: github-actions
   annotations:
     run.googleapis.com/invoker-iam-disabled: 'true'
+    run.googleapis.com/iap-enabled: 'true'
 
 spec:
   template:
