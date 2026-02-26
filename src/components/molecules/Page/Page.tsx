@@ -17,7 +17,7 @@ interface PageTitleProps extends React.HTMLAttributes<HTMLHeadingElement> {
 
 export function PageContainer({ as: Component = 'div', size = 'default', ...props }: PageContainerProps) {
   const sizeClasses = {
-    default: 'container mx-auto max-w-[1200px]',
+    default: 'w-full mx-auto',
     narrow: 'container mx-auto max-w-[588px]',
   };
 
