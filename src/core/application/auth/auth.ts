@@ -1,16 +1,5 @@
 import * as Core from '@/core';
-import {
-  HttpMethod,
-  Logger,
-  Err,
-  ValidationErrorCode,
-  ErrorService,
-  AuthErrorCode,
-  toAppError,
-  isAppError,
-  isNotFound,
-  isAuthError,
-} from '@/libs';
+import { HttpMethod, Logger, Err, ValidationErrorCode, ErrorService, toAppError, isAppError, isNotFound } from '@/libs';
 import { userUriBuilder } from 'pubky-app-specs';
 
 export class AuthApplication {
@@ -149,7 +138,6 @@ export class AuthApplication {
     } catch (error) {
       const appError = isAppError(error) ? error : toAppError(error, ErrorService.Homeserver, 'userIsSignedUp');
       if (isNotFound(appError)) return false;
-      if (isAuthError(appError) && appError.code === AuthErrorCode.UNAUTHORIZED) return false;
       throw appError;
     }
   }
