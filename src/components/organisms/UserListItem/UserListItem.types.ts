@@ -44,6 +44,8 @@ export interface UserListItemProps {
   isCurrentUser?: boolean;
   /** Show stats with icons in compact variant (for ActiveUsers) */
   showStats?: boolean;
+  /** Override the follow button style (defaults to 'icon') */
+  followButtonVariant?: 'icon' | 'iconWithText';
   /** Callback when user area is clicked */
   onUserClick?: (id: Pubky) => void;
   /** Callback when follow button is clicked */
@@ -63,7 +65,7 @@ export interface FollowButtonProps {
   isLoading: boolean;
   isStatusLoading: boolean;
   displayName: string;
-  variant: 'icon' | 'text';
+  variant: 'icon' | 'iconWithText';
   onClick: (e: React.MouseEvent) => void;
 }
 
@@ -89,6 +91,7 @@ export interface VariantProps {
   isStatusLoading: boolean;
   isCurrentUser: boolean;
   showStats: boolean;
+  followButtonVariant: 'icon' | 'iconWithText';
   className?: string;
   dataTestId?: string;
   onUserClick: () => void;

@@ -69,15 +69,19 @@ vi.mock('@/app', async () => {
 });
 
 // Mock Hooks
-vi.mock('@/hooks', () => ({
-  useCurrentUserProfile: vi.fn(() => ({
-    userDetails: { name: 'Test User', image: null, indexed_at: 123 },
-    currentUserPubky: 'pk:test-user-pubky',
-  })),
-  usePublicRoute: vi.fn(() => ({
-    isPublicRoute: false,
-  })),
-}));
+vi.mock('@/hooks', () => {
+  const mockUseKeyboardOffset = vi.fn(() => ({ isKeyboardVisible: false, keyboardOffset: 0 }));
+  return {
+    useCurrentUserProfile: vi.fn(() => ({
+      userDetails: { name: 'Test User', image: null, indexed_at: 123 },
+      currentUserPubky: 'pk:test-user-pubky',
+    })),
+    usePublicRoute: vi.fn(() => ({
+      isPublicRoute: false,
+    })),
+    useKeyboardOffset: mockUseKeyboardOffset,
+  };
+});
 
 // Track notification store mock for per-test overrides
 const mockSelectUnread = vi.fn(() => 0);
@@ -103,10 +107,14 @@ vi.mock('@/core', async () => {
 });
 
 describe('MobileFooter', () => {
-  beforeEach(() => {
+  beforeEach(async () => {
     vi.clearAllMocks();
     vi.mocked(usePathname).mockReturnValue('/home');
     mockSelectUnread.mockReturnValue(0);
+
+    // Reset keyboard offset mock
+    const { useKeyboardOffset } = await import('@/hooks');
+    vi.mocked(useKeyboardOffset).mockReturnValue({ isKeyboardVisible: false, keyboardOffset: 0 });
   });
 
   it('renders with default props', () => {
@@ -283,6 +291,44 @@ describe('MobileFooter', () => {
     fireEvent.click(homeLink!);
     expect(window.scrollTo).not.toHaveBeenCalled();
     expect(setItemSpy).toHaveBeenCalledWith(FORCE_HOME_SCROLL_TOP_KEY, '1');
+  });
+
+  it('applies transform when keyboard is visible', async () => {
+    const { useKeyboardOffset } = await import('@/hooks');
+    vi.mocked(useKeyboardOffset).mockReturnValue({ isKeyboardVisible: true, keyboardOffset: 300 });
+
+    const { container } = render(<MobileFooter />);
+    const footerContainer = container.querySelector('.fixed');
+
+    expect(footerContainer).toBeInTheDocument();
+    expect(footerContainer?.getAttribute('style')).toContain('translateY(-300px)');
+  });
+
+  it('does not apply transform when keyboard is not visible', async () => {
+    const { useKeyboardOffset } = await import('@/hooks');
+    vi.mocked(useKeyboardOffset).mockReturnValue({ isKeyboardVisible: false, keyboardOffset: 0 });
+
+    const { container } = render(<MobileFooter />);
+    const footerContainer = container.querySelector('.fixed');
+
+    expect(footerContainer).toBeInTheDocument();
+    expect(footerContainer?.getAttribute('style')).toBeFalsy();
+  });
+
+  it('adds transition class only when keyboard is visible', async () => {
+    const { useKeyboardOffset } = await import('@/hooks');
+
+    // When keyboard is not visible, no transition
+    vi.mocked(useKeyboardOffset).mockReturnValue({ isKeyboardVisible: false, keyboardOffset: 0 });
+    const { container, rerender } = render(<MobileFooter />);
+    let footerContainer = container.querySelector('.fixed');
+    expect(footerContainer).not.toHaveClass('transition-transform');
+
+    // When keyboard is visible, add transition for smooth opening
+    vi.mocked(useKeyboardOffset).mockReturnValue({ isKeyboardVisible: true, keyboardOffset: 300 });
+    rerender(<MobileFooter />);
+    footerContainer = container.querySelector('.fixed');
+    expect(footerContainer).toHaveClass('transition-transform', 'duration-75');
   });
 });
 

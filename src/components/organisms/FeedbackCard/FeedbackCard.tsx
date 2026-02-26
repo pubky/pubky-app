@@ -6,14 +6,19 @@ import { useTranslations } from 'next-intl';
 import * as Atoms from '@/atoms';
 import * as Organisms from '@/organisms';
 import * as Hooks from '@/hooks';
+import { FeedbackCardSkeleton } from './FeedbackCard.skeleton';
 
 export function FeedbackCard() {
   const t = useTranslations('feedback');
   const { userDetails, currentUserPubky } = Hooks.useCurrentUserProfile();
   const [isDialogOpen, setIsDialogOpen] = useState(false);
+  const avatarUrl = Hooks.useAvatarUrl(userDetails);
+
+  if (userDetails === undefined) {
+    return <FeedbackCardSkeleton />;
+  }
 
   const name = userDetails?.name || t('defaultName');
-  const avatarUrl = Hooks.useAvatarUrl(userDetails);
 
   return (
     <>

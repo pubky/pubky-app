@@ -25,7 +25,7 @@ export function Settings({ children }: SettingsProps) {
       <Molecules.MobileHeader hasGradientBackground={false} showLeftButton={false} showRightButton={false} fixed />
 
       {/* Mobile tab navigation - visible only on mobile (< lg) */}
-      <Molecules.SettingsMobileMenu className="lg:hidden" />
+      <Molecules.SettingsMobileMenu />
 
       <Organisms.ContentLayout
         renderMobileHeader={false}

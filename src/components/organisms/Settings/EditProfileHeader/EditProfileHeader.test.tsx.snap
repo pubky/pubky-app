@@ -1,0 +1,73 @@
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
+
+exports[`EditProfileHeader - Snapshots > matches snapshot 1`] = `
+<div
+  class="mx-auto w-full flex-col flex gap-3 pt-2 pb-6"
+  data-testid="container"
+>
+  <h1
+    data-size="large"
+    data-testid="page-title"
+  >
+    Edit your
+     
+    <span
+      class="text-brand"
+      data-testid="typography"
+    >
+      profile.
+    </span>
+  </h1>
+  <div
+    class="flex m-0 w-auto flex-col gap-4 md:flex-row md:items-center"
+    data-testid="container"
+  >
+    <h2
+      class="text-xl leading-normal font-light text-muted-foreground lg:text-2xl"
+    >
+      Update your name, bio, links, and avatar.
+    </h2>
+    <div
+      class="flex mx-0 w-auto flex-row items-center gap-2"
+      data-testid="container"
+    >
+      <button
+        class="inline-flex items-center justify-center whitespace-nowrap text-sm transition-all disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg:not([class*=\\"size-\\"])]:size-4 shrink-0 [&_svg]:shrink-0 outline-none focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[3px] aria-invalid:ring-destructive/40 aria-invalid:border-destructive font-semibold cursor-pointer border shadow-xs bg-secondary text-secondary-foreground hover:bg-secondary/80 px-4 py-2 has-[>svg]:px-4 h-8 w-fit gap-2 rounded-full uppercase"
+        data-slot="button"
+        data-variant="secondary"
+      >
+        <svg
+          aria-hidden="true"
+          class="lucide lucide-key h-4 w-4"
+          fill="none"
+          height="24"
+          stroke="currentColor"
+          stroke-linecap="round"
+          stroke-linejoin="round"
+          stroke-width="2"
+          viewBox="0 0 24 24"
+          width="24"
+          xmlns="http://www.w3.org/2000/svg"
+        >
+          <path
+            d="m15.5 7.5 2.3 2.3a1 1 0 0 0 1.4 0l2.1-2.1a1 1 0 0 0 0-1.4L19 4"
+          />
+          <path
+            d="m21 2-9.6 9.6"
+          />
+          <circle
+            cx="7.5"
+            cy="15.5"
+            r="5.5"
+          />
+        </svg>
+        abc1...i789
+      </button>
+      <div
+        class="-ml-1"
+        data-testid="popover-public-key"
+      />
+    </div>
+  </div>
+</div>
+`;
