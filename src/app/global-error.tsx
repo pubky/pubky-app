@@ -1,36 +1,22 @@
 'use client';
-import { Inter_Tight } from 'next/font/google';
 import './globals.css';
 
-import { useEffect } from 'react';
-import * as Atoms from '@/atoms';
-import { Logger } from '@/libs';
-
-const interTight = Inter_Tight({
-  variable: '--font-geist-sans',
-  subsets: ['latin'],
-});
-
 export default function GlobalError({ error, reset }: { error: Error & { digest?: string }; reset: () => void }) {
-  useEffect(() => {
-    Logger.error('[app/global-error] Root render error', error);
-  }, [error]);
-
   return (
-    <Atoms.Container as="html" lang="en" dir="ltr">
-      <Atoms.Container as="body" className={`${interTight.variable} antialiased`}>
-        <Atoms.Container className="flex min-h-[50vh] flex-col items-center justify-center p-8 text-center">
-          <Atoms.Typography as="h2" size="lg">
-            Something went wrong
-          </Atoms.Typography>
-          <Atoms.Typography size="md" className="mt-2 text-destructive">
-            {error.message || 'An unexpected error occurred'}
-          </Atoms.Typography>
-          <Atoms.Button type="button" className="mt-4" variant="brand" onClick={() => reset()}>
+    <html lang="en" dir="ltr">
+      <body className="bg-background text-foreground antialiased">
+        <main className="mx-auto flex min-h-screen w-full max-w-[640px] flex-col items-center justify-center p-6 text-center">
+          <h1 className="m-0 text-[28px] leading-[1.2] font-semibold">Something went wrong</h1>
+          <p className="mt-3 mb-0 text-destructive">{error.message || 'An unexpected error occurred'}</p>
+          <button
+            type="button"
+            onClick={() => reset()}
+            className="mt-5 cursor-pointer rounded-full border border-border bg-secondary px-4 py-2 font-semibold text-foreground"
+          >
             Try again
-          </Atoms.Button>
-        </Atoms.Container>
-      </Atoms.Container>
-    </Atoms.Container>
+          </button>
+        </main>
+      </body>
+    </html>
   );
 }
