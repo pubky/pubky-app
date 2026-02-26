@@ -145,6 +145,7 @@ export function ProfilePageHeader({ profile, actions, isOwnProfile = true, userI
                   data-cy="profile-follow-toggle-btn"
                   variant="secondary"
                   size="sm"
+                  className="group w-[110px] justify-center"
                   onClick={onFollowToggle}
                   disabled={isFollowLoading}
                 >
@@ -153,19 +154,21 @@ export function ProfilePageHeader({ profile, actions, isOwnProfile = true, userI
                       <Icons.Loader2 className="size-4 animate-spin" />
                       {isFollowing ? t('unfollowing') : t('followingProgress')}
                     </>
+                  ) : isFollowing ? (
+                    <>
+                      <Atoms.Container overrideDefaults className="flex items-center gap-1.5 group-hover:hidden">
+                        <Icons.Check className="size-4" />
+                        {t('followingButton')}
+                      </Atoms.Container>
+                      <Atoms.Container overrideDefaults className="hidden items-center gap-1.5 group-hover:flex">
+                        <Icons.UserMinus className="size-4" />
+                        {t('unfollow')}
+                      </Atoms.Container>
+                    </>
                   ) : (
                     <>
-                      {isFollowing ? (
-                        <>
-                          <Icons.Check className="size-4" />
-                          {t('followingButton')}
-                        </>
-                      ) : (
-                        <>
-                          <Icons.UserPlus className="size-4" />
-                          {t('follow')}
-                        </>
-                      )}
+                      <Icons.UserPlus className="size-4" />
+                      {t('follow')}
                     </>
                   )}
                 </Atoms.Button>
@@ -186,7 +189,7 @@ export function ProfilePageHeader({ profile, actions, isOwnProfile = true, userI
               </Atoms.Button>
               {/* Three-dot menu with additional profile actions */}
               <Organisms.ProfileMenuActions
-                userId={publicKey}
+                userId={userId}
                 trigger={
                   <Atoms.Button data-cy="profile-menu-btn" variant="secondary" size="sm" aria-label="Profile actions">
                     <Libs.Ellipsis className="size-4" />
@@ -196,13 +199,15 @@ export function ProfilePageHeader({ profile, actions, isOwnProfile = true, userI
               {/* Status display inline with buttons */}
               {status && (
                 <Atoms.Container overrideDefaults={true} className="flex h-8 items-center gap-1">
-                  <span className="text-base leading-6">{displayEmoji}</span>
-                  <span className="text-base leading-6 font-bold text-white">
+                  <Atoms.Typography as="span" overrideDefaults className="text-base leading-6">
+                    {displayEmoji}
+                  </Atoms.Typography>
+                  <Atoms.Typography as="span" overrideDefaults className="text-base leading-6 font-bold text-white">
                     {(() => {
                       const parsed = Libs.parseStatus(status);
                       return parsed.key ? tStatus(parsed.key as Parameters<typeof tStatus>[0]) : parsed.text;
                     })()}
-                  </span>
+                  </Atoms.Typography>
                 </Atoms.Container>
               )}
             </>

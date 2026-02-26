@@ -141,6 +141,27 @@ export class NotificationModel {
   }
 
   /**
+   * Counts notifications with a timestamp strictly greater than the given value.
+   * Used to get the total unread count by passing the lastRead timestamp.
+   */
+  static async countNewerThan(timestamp: number): Promise<number> {
+    try {
+      return await this.table.where('timestamp').above(timestamp).count();
+    } catch (error) {
+      throw Err.database(
+        DatabaseErrorCode.QUERY_FAILED,
+        `Failed to count notifications newer than ${timestamp} from ${this.table.name}`,
+        {
+          service: ErrorService.Local,
+          operation: 'countNewerThan',
+          context: { table: this.table.name, timestamp },
+          cause: error,
+        },
+      );
+    }
+  }
+
+  /**
    * Retrieves notifications older than a given timestamp, ordered by timestamp descending.
    * Used for timestamp-based pagination.
    *

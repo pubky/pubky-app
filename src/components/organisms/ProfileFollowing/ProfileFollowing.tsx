@@ -6,6 +6,7 @@ import * as Organisms from '@/organisms';
 import * as Hooks from '@/hooks';
 import * as Core from '@/core';
 import * as Providers from '@/providers';
+import { NEXUS_USERS_PER_PAGE } from '@/config';
 
 /**
  * ProfileFollowing
@@ -40,8 +41,18 @@ export function ProfileFollowing() {
 
   if (isLoading) {
     return (
-      <Atoms.Container className="mt-6 flex min-h-[200px] items-center justify-center lg:mt-0">
-        <Atoms.Spinner />
+      <Atoms.Container className="mt-6 gap-4 lg:mt-0">
+        <Atoms.Heading level={5} size="lg" className="leading-normal font-light text-muted-foreground lg:hidden">
+          Following
+        </Atoms.Heading>
+        <Atoms.Container
+          data-cy="profile-connections-list"
+          className="gap-3.5 rounded-md bg-transparent p-0 lg:gap-3 lg:bg-card lg:p-6"
+        >
+          {Array.from({ length: NEXUS_USERS_PER_PAGE }).map((_, index) => (
+            <Organisms.FullUserListItemSkeleton key={`profile-following-skeleton-${index}`} />
+          ))}
+        </Atoms.Container>
       </Atoms.Container>
     );
   }
@@ -68,6 +79,7 @@ export function ProfileFollowing() {
             key={connection.id}
             user={connection}
             variant="full"
+            followButtonVariant="iconWithText"
             isLoading={isUserLoading(connection.id)}
             isStatusLoading={isLoading}
             isCurrentUser={currentUserPubky === connection.id}

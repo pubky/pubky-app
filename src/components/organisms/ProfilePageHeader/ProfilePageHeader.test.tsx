@@ -258,6 +258,28 @@ describe('ProfilePageHeader - Other User Profile', () => {
     expect(screen.getByText('Following')).toBeInTheDocument();
   });
 
+  it('renders Unfollow text for hover state when following', () => {
+    const props = {
+      ...mockOtherUserProps,
+      actions: { ...mockOtherUserProps.actions, isFollowing: true },
+    };
+    render(<ProfilePageHeader {...props} />);
+
+    // Both "Following" and "Unfollow" are in the DOM (CSS group-hover swaps visibility)
+    const followingText = screen.getByText('Following');
+    const unfollowText = screen.getByText('Unfollow');
+    expect(followingText).toBeInTheDocument();
+    expect(unfollowText).toBeInTheDocument();
+
+    // Verify the button has "group" class to enable group-hover for children
+    const button = followingText.closest('button');
+    expect(button).toHaveClass('group');
+
+    // Verify CSS classes that swap visibility on hover
+    expect(followingText.closest('div')).toHaveClass('group-hover:hidden');
+    expect(unfollowText.closest('div')).toHaveClass('group-hover:flex');
+  });
+
   it('hides Edit, Sign out buttons when viewing other user', () => {
     render(<ProfilePageHeader {...mockOtherUserProps} />);
 

@@ -7,16 +7,6 @@ vi.mock('../useEmojiInsert', () => ({
   useEmojiInsert: vi.fn(() => vi.fn()),
 }));
 
-// Mock useListboxNavigation
-vi.mock('../useListboxNavigation', () => ({
-  useListboxNavigation: vi.fn(() => ({
-    selectedIndex: null,
-    setSelectedIndex: vi.fn(),
-    handleKeyDown: vi.fn(() => false),
-    resetSelection: vi.fn(),
-  })),
-}));
-
 describe('useTagInput', () => {
   const mockOnTagAdd = vi.fn();
 

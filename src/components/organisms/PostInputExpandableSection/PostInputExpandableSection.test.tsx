@@ -296,6 +296,14 @@ describe('PostInputExpandableSection', () => {
     expect(expandableContainer).toHaveClass('opacity-0');
   });
 
+  it('uses overflow-hidden to keep collapse animation behavior', () => {
+    const { container } = render(<PostInputExpandableSection {...defaultProps} isExpanded={false} />);
+
+    const containers = container.querySelectorAll('[data-testid="container"]');
+    const contentWrapper = containers[1];
+    expect(contentWrapper).toHaveClass('overflow-hidden');
+  });
+
   it('shows article button when submitMode is POST and not an article', () => {
     render(<PostInputExpandableSection {...defaultProps} submitMode={POST_INPUT_VARIANT.POST} isArticle={false} />);
 
