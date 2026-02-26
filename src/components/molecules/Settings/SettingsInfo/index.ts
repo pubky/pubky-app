@@ -1,0 +1,1 @@
+export { SettingsInfo } from './SettingsInfo';

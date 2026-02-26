@@ -87,12 +87,14 @@ exports[`ProfileFollowers - Snapshots > matches snapshot with connections 1`] = 
       data-testid="container"
     >
       <div
+        data-follow-button-variant="iconWithText"
         data-testid="user-list-item"
         data-user-id="user-1"
       >
         User item
       </div>
       <div
+        data-follow-button-variant="iconWithText"
         data-testid="user-list-item"
         data-user-id="user-2"
       >

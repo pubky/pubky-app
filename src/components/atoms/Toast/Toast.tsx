@@ -38,7 +38,7 @@ const Toast = React.forwardRef<
         'data-[state=closed]:animate-out',
         'data-[swipe=end]:animate-out',
         'data-[state=closed]:fade-out-80',
-        'data-[state=closed]:slide-out-to-right-full',
+        'data-[state=closed]:slide-out-to-bottom-full',
         'data-[state=open]:slide-in-from-bottom-full',
         'data-[state=open]:sm:slide-in-from-bottom-full',
         className,

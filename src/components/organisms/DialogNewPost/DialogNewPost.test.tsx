@@ -122,9 +122,37 @@ vi.mock('@/libs', async () => {
   return { ...actual };
 });
 
+// Mock Hooks
+vi.mock('@/hooks', () => {
+  const mockUseKeyboardOffset = vi.fn((options) => {
+    // Mock behavior: if offsetAdjustment is provided, subtract it from a base offset
+    const baseOffset = 300;
+    const adjustment = options?.offsetAdjustment || 0;
+    return {
+      isKeyboardVisible: false,
+      keyboardOffset: Math.max(0, baseOffset - adjustment),
+    };
+  });
+  return {
+    useConfirmableDialog: vi.fn(() => ({
+      showConfirmDialog: false,
+      setShowConfirmDialog: vi.fn(),
+      resetKey: 'test-key',
+      handleContentChange: vi.fn(),
+      handleOpenChange: vi.fn(),
+      handleDiscard: vi.fn(),
+    })),
+    useKeyboardOffset: mockUseKeyboardOffset,
+  };
+});
+
 describe('DialogNewPost', () => {
-  beforeEach(() => {
+  beforeEach(async () => {
     vi.clearAllMocks();
+
+    // Reset keyboard offset mock
+    const { useKeyboardOffset } = await import('@/hooks');
+    vi.mocked(useKeyboardOffset).mockReturnValue({ isKeyboardVisible: false, keyboardOffset: 0 });
   });
 
   it('renders with required props', () => {
@@ -200,6 +228,59 @@ describe('DialogNewPost', () => {
       expect(screen.getByTestId('dialog-title')).toHaveTextContent('New Post');
       expect(screen.getByTestId('dialog-description')).toHaveTextContent('New Post dialog');
     });
+  });
+
+  it('applies transform when keyboard is visible with offsetAdjustment', async () => {
+    const { useKeyboardOffset } = await import('@/hooks');
+    // Mock returns offset with adjustment already applied (300 - 200 = 100)
+    vi.mocked(useKeyboardOffset).mockReturnValue({ isKeyboardVisible: true, keyboardOffset: 100 });
+
+    const onOpenChangeAction = vi.fn();
+    render(<DialogNewPost open={true} onOpenChangeAction={onOpenChangeAction} />);
+
+    const dialogContent = screen.getByTestId('dialog-content');
+    expect(dialogContent).toBeInTheDocument();
+    // Should use the adjusted offset (100px, not 300px)
+    expect(dialogContent.getAttribute('style')).toContain('translateY(-100px)');
+  });
+
+  it('does not apply transform when keyboard is not visible', async () => {
+    const { useKeyboardOffset } = await import('@/hooks');
+    vi.mocked(useKeyboardOffset).mockReturnValue({ isKeyboardVisible: false, keyboardOffset: 0 });
+
+    const onOpenChangeAction = vi.fn();
+    render(<DialogNewPost open={true} onOpenChangeAction={onOpenChangeAction} />);
+
+    const dialogContent = screen.getByTestId('dialog-content');
+    expect(dialogContent).toBeInTheDocument();
+    expect(dialogContent.getAttribute('style')).toBeFalsy();
+  });
+
+  it('adds transition class only when keyboard is visible', async () => {
+    const { useKeyboardOffset } = await import('@/hooks');
+
+    // When keyboard is not visible, no transition
+    vi.mocked(useKeyboardOffset).mockReturnValue({ isKeyboardVisible: false, keyboardOffset: 0 });
+    const onOpenChangeAction = vi.fn();
+    const { container, rerender } = render(<DialogNewPost open={true} onOpenChangeAction={onOpenChangeAction} />);
+    let dialogContent = container.querySelector('[data-testid="dialog-content"]');
+    expect(dialogContent).not.toHaveClass('transition-transform');
+
+    // When keyboard is visible, add transition for smooth opening (with adjusted offset)
+    vi.mocked(useKeyboardOffset).mockReturnValue({ isKeyboardVisible: true, keyboardOffset: 100 });
+    rerender(<DialogNewPost open={true} onOpenChangeAction={onOpenChangeAction} />);
+    dialogContent = container.querySelector('[data-testid="dialog-content"]');
+    expect(dialogContent).toHaveClass('transition-transform', 'duration-75');
+  });
+
+  it('calls useKeyboardOffset with offsetAdjustment of 200', async () => {
+    const { useKeyboardOffset } = await import('@/hooks');
+    const onOpenChangeAction = vi.fn();
+
+    render(<DialogNewPost open={true} onOpenChangeAction={onOpenChangeAction} />);
+
+    // Verify that useKeyboardOffset was called with offsetAdjustment: 200
+    expect(useKeyboardOffset).toHaveBeenCalledWith({ offsetAdjustment: 200 });
   });
 });
 

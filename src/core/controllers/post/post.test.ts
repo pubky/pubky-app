@@ -28,10 +28,18 @@ vi.mock('@/core/application/tag', () => ({
 vi.mock('pubky-app-specs', () => ({
   PubkySpecsBuilder: class {
     createPost(content: string, kind: number) {
+      const kindMap: Record<number, string> = {
+        0: 'short',
+        1: 'long',
+        2: 'image',
+        3: 'video',
+        4: 'link',
+        5: 'file',
+      };
       return {
         post: {
           content,
-          kind: kind === 0 ? 'short' : kind === 1 ? 'long' : 'short',
+          kind: kindMap[kind] ?? 'short',
           attachments: null,
           toJson: () => ({ content, kind }),
         },
@@ -45,6 +53,10 @@ vi.mock('pubky-app-specs', () => ({
   PubkyAppPostKind: {
     Short: 0,
     Long: 1,
+    Image: 2,
+    Video: 3,
+    Link: 4,
+    File: 5,
   },
   PubkyAppPostEmbed: class {
     constructor(
@@ -117,6 +129,7 @@ describe('PostController', () => {
 
     // Mock HomeserverService.request to resolve successfully
     vi.spyOn(Core.HomeserverService, 'request').mockResolvedValue(undefined);
+    vi.spyOn(Core.FileApplication, 'commitCreate').mockResolvedValue(undefined);
 
     // Initialize database and clear tables
     await Core.db.initialize();
@@ -283,6 +296,108 @@ describe('PostController', () => {
         url: expect.stringContaining('pubky://'),
         bodyJson: expect.any(Object),
       });
+    });
+
+    it('should infer image kind when attachments contain image files', async () => {
+      const { PostController } = await import('./post');
+      const imageFile = new File(['image-content'], 'photo.png', { type: 'image/png' });
+
+      await PostController.commitCreate({
+        content: 'A post with image',
+        authorId: testData.authorPubky,
+        attachments: [imageFile],
+      });
+
+      const allPosts = await Core.PostDetailsModel.table.toArray();
+      const savedPost = allPosts.find((p) => p.content === 'A post with image');
+
+      expect(savedPost?.kind).toBe('image');
+      expect(Core.HomeserverService.request).toHaveBeenCalledWith(
+        expect.objectContaining({
+          bodyJson: expect.objectContaining({ kind: 'image' }),
+        }),
+      );
+    });
+
+    it('should infer video kind when attachments contain video files', async () => {
+      const { PostController } = await import('./post');
+      const videoFile = new File(['video-content'], 'clip.mp4', { type: 'video/mp4' });
+
+      await PostController.commitCreate({
+        content: 'A post with video',
+        authorId: testData.authorPubky,
+        attachments: [videoFile],
+      });
+
+      const allPosts = await Core.PostDetailsModel.table.toArray();
+      const savedPost = allPosts.find((p) => p.content === 'A post with video');
+
+      expect(savedPost?.kind).toBe('video');
+      expect(Core.HomeserverService.request).toHaveBeenCalledWith(
+        expect.objectContaining({
+          bodyJson: expect.objectContaining({ kind: 'video' }),
+        }),
+      );
+    });
+
+    it('should infer file kind when attachments are non-image and non-video', async () => {
+      const { PostController } = await import('./post');
+      const pdfFile = new File(['pdf-content'], 'doc.pdf', { type: 'application/pdf' });
+
+      await PostController.commitCreate({
+        content: 'A post with file',
+        authorId: testData.authorPubky,
+        attachments: [pdfFile],
+      });
+
+      const allPosts = await Core.PostDetailsModel.table.toArray();
+      const savedPost = allPosts.find((p) => p.content === 'A post with file');
+
+      expect(savedPost?.kind).toBe('file');
+      expect(Core.HomeserverService.request).toHaveBeenCalledWith(
+        expect.objectContaining({
+          bodyJson: expect.objectContaining({ kind: 'file' }),
+        }),
+      );
+    });
+
+    it('should infer link kind when content has URL and no attachments', async () => {
+      const { PostController } = await import('./post');
+
+      await PostController.commitCreate({
+        content: 'Visit https://pubky.app for details',
+        authorId: testData.authorPubky,
+      });
+
+      const allPosts = await Core.PostDetailsModel.table.toArray();
+      const savedPost = allPosts.find((p) => p.content === 'Visit https://pubky.app for details');
+
+      expect(savedPost?.kind).toBe('link');
+      expect(Core.HomeserverService.request).toHaveBeenCalledWith(
+        expect.objectContaining({
+          bodyJson: expect.objectContaining({ kind: 'link' }),
+        }),
+      );
+    });
+
+    it('should use long kind when isArticle is true', async () => {
+      const { PostController } = await import('./post');
+
+      await PostController.commitCreate({
+        content: JSON.stringify({ title: 'My Article', body: 'Article body' }),
+        authorId: testData.authorPubky,
+        isArticle: true,
+      });
+
+      const allPosts = await Core.PostDetailsModel.table.toArray();
+      const savedPost = allPosts.find((p) => p.content.includes('My Article'));
+
+      expect(savedPost?.kind).toBe('long');
+      expect(Core.HomeserverService.request).toHaveBeenCalledWith(
+        expect.objectContaining({
+          bodyJson: expect.objectContaining({ kind: 'long' }),
+        }),
+      );
     });
 
     it('should throw error when parent post not found', async () => {

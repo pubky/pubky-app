@@ -31,6 +31,7 @@ export function MobileFooter({ className }: MobileFooterProps) {
   const { userDetails, currentUserPubky } = Hooks.useCurrentUserProfile();
   const unreadNotifications = Core.useNotificationStore((state) => state.selectUnread());
   const localAvatarUrl = Core.useLocalFilesStore((state) => state.profile);
+  const { isKeyboardVisible, keyboardOffset } = Hooks.useKeyboardOffset();
 
   const isActive = (path: string) => pathname === path;
 
@@ -57,7 +58,19 @@ export function MobileFooter({ className }: MobileFooterProps) {
 
   return (
     <div className={Libs.cn('flex justify-center pb-20 lg:hidden', className)}>
-      <div className="fixed bottom-0 z-40 flex w-full max-w-[380px] items-center justify-between overflow-x-auto bg-gradient-to-t from-background via-background/95 to-transparent px-3 py-4 sm:max-w-[600px] md:max-w-[720px]">
+      <div
+        className={Libs.cn(
+          'fixed bottom-0 z-40 flex w-full max-w-[380px] items-center justify-between overflow-x-auto bg-gradient-to-t from-background via-background/95 to-transparent px-3 py-4 sm:max-w-[600px] md:max-w-[720px]',
+          isKeyboardVisible && 'transition-transform duration-75',
+        )}
+        style={
+          isKeyboardVisible && keyboardOffset > 0
+            ? {
+                transform: `translateY(-${keyboardOffset}px)`,
+              }
+            : undefined
+        }
+      >
         {navItems.map((item) => {
           const Icon = item.icon;
           const isHome = item.href === App.APP_ROUTES.HOME;

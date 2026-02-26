@@ -1,6 +1,5 @@
 /// <reference lib="webworker" />
 
-import { defaultCache } from '@serwist/next/worker';
 import type { PrecacheEntry, SerwistGlobalConfig } from 'serwist';
 import { Serwist, NetworkFirst, ExpirationPlugin } from 'serwist';
 
@@ -94,8 +93,7 @@ const serwist = new Serwist({
         ],
       }),
     },
-    // Use default caching strategies for everything else
-    ...defaultCache,
+    // Do not use `defaultCache` to prevent other origin services such as pkarr, homeserver and httprelay from being cached
   ],
   fallbacks: {
     entries: [

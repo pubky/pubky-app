@@ -75,8 +75,8 @@ vi.mock('@/libs', () => ({
 
 // Mock Organisms
 vi.mock('@/organisms', () => ({
-  UserListItem: ({ user }: { user: { id: string } }) => (
-    <div data-testid="user-list-item" data-user-id={user.id}>
+  UserListItem: ({ user, followButtonVariant = 'icon' }: { user: { id: string }; followButtonVariant?: string }) => (
+    <div data-testid="user-list-item" data-user-id={user.id} data-follow-button-variant={followButtonVariant}>
       User item
     </div>
   ),
@@ -159,6 +159,17 @@ describe('WhoToFollowPageMain', () => {
     expect(userItems).toHaveLength(2);
     expect(userItems[0]).toHaveAttribute('data-user-id', 'user-1');
     expect(userItems[1]).toHaveAttribute('data-user-id', 'user-2');
+  });
+
+  it('uses default icon followButtonVariant for UserListItem', () => {
+    vi.mocked(Hooks.useUserStream).mockReturnValue(mockUsersResult);
+
+    render(<WhoToFollowPageMain />);
+    const userItems = screen.getAllByTestId('user-list-item');
+    userItems.forEach((item) => {
+      // should default to icon only without text
+      expect(item).toHaveAttribute('data-follow-button-variant', 'icon');
+    });
   });
 
   it('calls useUserStream with correct params', () => {
