@@ -20,7 +20,9 @@ export const CustomFeedDialog = ({ mode, children }: CustomFeedDialogProps) => {
   const router = useRouter();
   const { toast } = Molecules.useToast();
   const customFeed = Hooks.useCustomFeed();
-  const t = useTranslations('filters');
+  const tFilter = useTranslations('filters');
+  const tDialog = useTranslations('dialogs.customFeed');
+  const tToast = useTranslations('toast');
 
   const [open, setOpen] = useState(false);
   const [name, setName] = useState('');
@@ -60,29 +62,29 @@ export const CustomFeedDialog = ({ mode, children }: CustomFeedDialogProps) => {
   }, [open, mode, customFeed]);
 
   const reachFilters = [
-    { value: PubkyAppFeedReach.All, label: t('reach.all'), icon: Libs.Radio },
-    { value: PubkyAppFeedReach.Following, label: t('reach.following'), icon: Libs.UsersRound2 },
-    { value: PubkyAppFeedReach.Friends, label: t('reach.friends'), icon: Libs.HeartHandshake },
+    { value: PubkyAppFeedReach.All, label: tFilter('reach.all'), icon: Libs.Radio },
+    { value: PubkyAppFeedReach.Following, label: tFilter('reach.following'), icon: Libs.UsersRound2 },
+    { value: PubkyAppFeedReach.Friends, label: tFilter('reach.friends'), icon: Libs.HeartHandshake },
   ];
 
   const sortFilters = [
-    { value: PubkyAppFeedSort.Recent, label: t('sort.recent'), icon: Libs.SquareAsterisk },
-    { value: PubkyAppFeedSort.Popularity, label: t('sort.popularity'), icon: Libs.Flame },
+    { value: PubkyAppFeedSort.Recent, label: tFilter('sort.recent'), icon: Libs.SquareAsterisk },
+    { value: PubkyAppFeedSort.Popularity, label: tFilter('sort.popularity'), icon: Libs.Flame },
   ];
 
   const layoutFilters = [
-    { value: PubkyAppFeedLayout.Columns, label: t('layout.columns'), icon: Libs.Columns3 },
-    { value: PubkyAppFeedLayout.Wide, label: t('layout.wide'), icon: Libs.Menu },
+    { value: PubkyAppFeedLayout.Columns, label: tFilter('layout.columns'), icon: Libs.Columns3 },
+    { value: PubkyAppFeedLayout.Wide, label: tFilter('layout.wide'), icon: Libs.Menu },
   ];
 
   const contentFilters = [
-    { value: 'ALL', label: t('content.all'), icon: Libs.Layers },
-    { value: PubkyAppPostKind.Short, label: t('content.posts'), icon: Libs.StickyNote },
-    { value: PubkyAppPostKind.Long, label: t('content.articles'), icon: Libs.Newspaper },
-    { value: PubkyAppPostKind.Image, label: t('content.images'), icon: Libs.Image },
-    { value: PubkyAppPostKind.Video, label: t('content.videos'), icon: Libs.CirclePlay },
-    { value: PubkyAppPostKind.Link, label: t('content.links'), icon: Libs.Link },
-    { value: PubkyAppPostKind.File, label: t('content.files'), icon: Libs.Download },
+    { value: 'ALL', label: tFilter('content.all'), icon: Libs.Layers },
+    { value: PubkyAppPostKind.Short, label: tFilter('content.posts'), icon: Libs.StickyNote },
+    { value: PubkyAppPostKind.Long, label: tFilter('content.articles'), icon: Libs.Newspaper },
+    { value: PubkyAppPostKind.Image, label: tFilter('content.images'), icon: Libs.Image },
+    { value: PubkyAppPostKind.Video, label: tFilter('content.videos'), icon: Libs.CirclePlay },
+    { value: PubkyAppPostKind.Link, label: tFilter('content.links'), icon: Libs.Link },
+    { value: PubkyAppPostKind.File, label: tFilter('content.files'), icon: Libs.Download },
   ];
 
   const handleSaveFeed = async () => {
@@ -102,14 +104,14 @@ export const CustomFeedDialog = ({ mode, children }: CustomFeedDialogProps) => {
 
         setOpen(false);
         toast({
-          title: 'Success',
-          description: `Feed ${feed.name} created!`,
+          title: tToast('success'),
+          description: tDialog('feedCreated', { name: feed.name }),
         });
         router.push(`${APP_ROUTES.FEED}/${feed.id}`);
       } catch {
         toast({
-          title: 'Error',
-          description: 'Could not create feed, please try again or reach out to support.',
+          title: tToast('error'),
+          description: tDialog('feedCreateError'),
         });
       } finally {
         setLoading(false);
@@ -126,14 +128,14 @@ export const CustomFeedDialog = ({ mode, children }: CustomFeedDialogProps) => {
 
         setOpen(false);
         toast({
-          title: 'Success',
-          description: `Feed ${feed.name} edited!`,
+          title: tToast('success'),
+          description: tDialog('feedEdited', { name: feed.name }),
         });
         router.push(`${APP_ROUTES.FEED}/${feed.id}`);
       } catch {
         toast({
-          title: 'Error',
-          description: 'Could not edit feed, please try again or reach out to support.',
+          title: tToast('error'),
+          description: tDialog('feedEditError'),
         });
       } finally {
         setLoading(false);
@@ -150,14 +152,14 @@ export const CustomFeedDialog = ({ mode, children }: CustomFeedDialogProps) => {
 
       setOpen(false);
       toast({
-        title: 'Success',
-        description: `Feed ${customFeed.name} deleted!`,
+        title: tToast('success'),
+        description: tDialog('feedDeleted', { name: customFeed.name }),
       });
       router.push(APP_ROUTES.HOME);
     } catch {
       toast({
-        title: 'Error',
-        description: 'Could not delete feed, please try again or reach out to support.',
+        title: tToast('error'),
+        description: tDialog('feedDeleteError'),
       });
     } finally {
       setLoading(false);
@@ -179,20 +181,17 @@ export const CustomFeedDialog = ({ mode, children }: CustomFeedDialogProps) => {
         data-testid="custom-feed-dialog-content"
       >
         <Atoms.DialogHeader>
-          <Atoms.DialogTitle>
-            <Atoms.Typography overrideDefaults as="span" className="capitalize">
-              {mode}
-            </Atoms.Typography>{' '}
-            Feed
-          </Atoms.DialogTitle>
+          <Atoms.DialogTitle>{mode === 'create' ? tDialog('createTitle') : tDialog('editTitle')}</Atoms.DialogTitle>
         </Atoms.DialogHeader>
 
         <Atoms.Container className="gap-y-2">
-          <Atoms.Label className="text-xs tracking-wide text-muted-foreground uppercase">FEED NAME</Atoms.Label>
+          <Atoms.Label className="text-xs tracking-wide text-muted-foreground uppercase">
+            {tDialog('feedName')}
+          </Atoms.Label>
 
           <Atoms.Input
             required
-            placeholder="Not your keys..."
+            placeholder={tDialog('feedNamePlaceholder')}
             value={name}
             onChange={(e) => setName(e.target.value)}
             disabled={disabled}
@@ -203,7 +202,9 @@ export const CustomFeedDialog = ({ mode, children }: CustomFeedDialogProps) => {
 
         <Atoms.Container className="flex-wrap gap-x-8 gap-y-4 sm:flex-row">
           <Atoms.Container overrideDefaults className="flex flex-col gap-y-2" data-testid="reach-filter-section">
-            <Atoms.Label className="text-xs tracking-wide text-muted-foreground uppercase">REACH</Atoms.Label>
+            <Atoms.Label className="text-xs tracking-wide text-muted-foreground uppercase">
+              {tDialog('reach')}
+            </Atoms.Label>
 
             <Atoms.Select
               value={reach === undefined ? reach : String(reach)}
@@ -212,7 +213,7 @@ export const CustomFeedDialog = ({ mode, children }: CustomFeedDialogProps) => {
               data-testid="reach-select"
             >
               <Atoms.SelectTrigger className="w-full sm:w-fit">
-                <Atoms.SelectValue placeholder="Select a reach" />
+                <Atoms.SelectValue placeholder={tDialog('reachPlaceholder')} />
               </Atoms.SelectTrigger>
 
               <Atoms.SelectContent>
@@ -226,7 +227,9 @@ export const CustomFeedDialog = ({ mode, children }: CustomFeedDialogProps) => {
           </Atoms.Container>
 
           <Atoms.Container overrideDefaults className="flex flex-col gap-y-2" data-testid="sort-filter-section">
-            <Atoms.Label className="text-xs tracking-wide text-muted-foreground uppercase">SORT</Atoms.Label>
+            <Atoms.Label className="text-xs tracking-wide text-muted-foreground uppercase">
+              {tDialog('sort')}
+            </Atoms.Label>
 
             <Atoms.Select
               value={sort === undefined ? sort : String(sort)}
@@ -235,7 +238,7 @@ export const CustomFeedDialog = ({ mode, children }: CustomFeedDialogProps) => {
               data-testid="sort-select"
             >
               <Atoms.SelectTrigger className="w-full sm:w-fit">
-                <Atoms.SelectValue placeholder="Select a sort" />
+                <Atoms.SelectValue placeholder={tDialog('sortPlaceholder')} />
               </Atoms.SelectTrigger>
 
               <Atoms.SelectContent>
@@ -249,7 +252,9 @@ export const CustomFeedDialog = ({ mode, children }: CustomFeedDialogProps) => {
           </Atoms.Container>
 
           <Atoms.Container overrideDefaults className="flex flex-col gap-y-2" data-testid="layout-filter-section">
-            <Atoms.Label className="text-xs tracking-wide text-muted-foreground uppercase">LAYOUT</Atoms.Label>
+            <Atoms.Label className="text-xs tracking-wide text-muted-foreground uppercase">
+              {tDialog('layout')}
+            </Atoms.Label>
 
             <Atoms.Select
               value={layout === undefined ? layout : String(layout)}
@@ -258,7 +263,7 @@ export const CustomFeedDialog = ({ mode, children }: CustomFeedDialogProps) => {
               data-testid="layout-select"
             >
               <Atoms.SelectTrigger className="w-full sm:w-fit">
-                <Atoms.SelectValue placeholder="Select a layout" />
+                <Atoms.SelectValue placeholder={tDialog('layoutPlaceholder')} />
               </Atoms.SelectTrigger>
 
               <Atoms.SelectContent>
@@ -272,7 +277,9 @@ export const CustomFeedDialog = ({ mode, children }: CustomFeedDialogProps) => {
           </Atoms.Container>
 
           <Atoms.Container overrideDefaults className="flex flex-col gap-y-2" data-testid="content-filter-section">
-            <Atoms.Label className="text-xs tracking-wide text-muted-foreground uppercase">CONTENT</Atoms.Label>
+            <Atoms.Label className="text-xs tracking-wide text-muted-foreground uppercase">
+              {tDialog('content')}
+            </Atoms.Label>
 
             <Atoms.Select
               value={content === undefined ? content : String(content)}
@@ -281,7 +288,7 @@ export const CustomFeedDialog = ({ mode, children }: CustomFeedDialogProps) => {
               data-testid="content-select"
             >
               <Atoms.SelectTrigger className="w-full sm:w-fit">
-                <Atoms.SelectValue placeholder="Select a content" />
+                <Atoms.SelectValue placeholder={tDialog('contentPlaceholder')} />
               </Atoms.SelectTrigger>
 
               <Atoms.SelectContent>
@@ -297,7 +304,7 @@ export const CustomFeedDialog = ({ mode, children }: CustomFeedDialogProps) => {
 
         <Atoms.Container className="gap-y-2">
           <Atoms.Label className="text-xs tracking-wide text-muted-foreground uppercase">
-            FILTER ON CONTENT TAGS
+            {tDialog('filterTags')}
           </Atoms.Label>
 
           <Molecules.TagInput
@@ -338,7 +345,7 @@ export const CustomFeedDialog = ({ mode, children }: CustomFeedDialogProps) => {
             data-testid="save-feed-button"
           >
             <Libs.Activity className="size-4" />
-            Save Feed
+            {tDialog('saveFeed')}
           </Atoms.Button>
 
           {mode === 'edit' && (
@@ -351,7 +358,7 @@ export const CustomFeedDialog = ({ mode, children }: CustomFeedDialogProps) => {
               data-testid="delete-feed-button"
             >
               <Libs.Delete className="size-4" />
-              Delete Feed
+              {tDialog('deleteFeed')}
             </Atoms.Button>
           )}
         </Atoms.DialogFooter>

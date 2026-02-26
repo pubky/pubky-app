@@ -1,6 +1,7 @@
 'use client';
 
 import { useLiveQuery } from 'dexie-react-hooks';
+import { useTranslations } from 'next-intl';
 import * as Core from '@/core';
 import * as Libs from '@/libs';
 import * as Atoms from '@/atoms';
@@ -10,6 +11,8 @@ import { usePathname } from 'next/navigation';
 
 export const FeedNavigation = () => {
   const pathname = usePathname();
+  const tHeader = useTranslations('header');
+  const tDialog = useTranslations('dialogs.customFeed');
 
   const customFeeds = useLiveQuery(
     async () => {
@@ -30,7 +33,10 @@ export const FeedNavigation = () => {
     href: APP_ROUTES.FEED + '/' + f.id,
   }));
 
-  const feeds = [{ name: 'Home', icon: <Libs.Home className="size-5" />, href: APP_ROUTES.HOME }, ...customFeedsMapped];
+  const feeds = [
+    { name: tHeader('home'), icon: <Libs.Home className="size-5" />, href: APP_ROUTES.HOME },
+    ...customFeedsMapped,
+  ];
 
   return (
     <Atoms.Container className="flex-row overflow-x-auto">
@@ -68,7 +74,7 @@ export const FeedNavigation = () => {
           <Libs.PlusCircle className="size-5" />
 
           <Atoms.Typography overrideDefaults className="text-sm font-medium">
-            Create Feed
+            {tDialog('createTitle')}
           </Atoms.Typography>
         </Atoms.Button>
       </Organisms.CustomFeedDialog>
