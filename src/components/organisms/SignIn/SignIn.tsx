@@ -103,7 +103,7 @@ export const SignInContent = () => {
     <>
       <Libs.Loader2 className="mr-2 h-4 w-4 animate-spin" />
       <Atoms.Typography as="span" overrideDefaults aria-live="polite">
-        {isOpeningRing ? 'Opening Pubky Ring...' : t('generatingShort')}
+        {isOpeningRing ? t('openingRing') : t('generatingShort')}
       </Atoms.Typography>
     </>
   ) : (

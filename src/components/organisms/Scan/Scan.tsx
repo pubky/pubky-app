@@ -25,7 +25,7 @@ export const ScanContent = () => {
   const mobileAuthorizeContent = isMobileLaunching ? (
     <>
       <Libs.Loader2 className="mr-2 h-4 w-4 animate-spin" />
-      {isOpeningRing ? 'Opening Pubky Ring...' : t('generatingShort')}
+      {isOpeningRing ? t('openingRing') : t('generatingShort')}
     </>
   ) : (
     <>

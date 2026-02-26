@@ -146,6 +146,35 @@ describe('useMobileAuth', () => {
     vi.useRealTimers();
   });
 
+  it('cleans up pending fallback timer on unmount', () => {
+    vi.useFakeTimers();
+    const originalLocation = window.location;
+    const mockLocation = { ...originalLocation, href: '' };
+    Object.defineProperty(window, 'location', { configurable: true, value: mockLocation });
+
+    Object.defineProperty(navigator, 'userAgent', {
+      configurable: true,
+      value: 'Mozilla/5.0 (Linux; Android 14) Chrome/121.0',
+    });
+
+    const { result, unmount } = renderHook(() => useMobileAuth());
+
+    act(() => {
+      result.current.onAuthorizeClick();
+    });
+    expect(mockLocation.href).toBe('pubkyauth://signin?token=test123');
+
+    unmount();
+
+    act(() => {
+      vi.advanceTimersByTime(4100);
+    });
+    expect(mockLocation.href).toBe('pubkyauth://signin?token=test123');
+
+    Object.defineProperty(window, 'location', { configurable: true, value: originalLocation });
+    vi.useRealTimers();
+  });
+
   it('passes options through to useAuthUrl', () => {
     renderHook(() => useMobileAuth({ type: 'signup', inviteCode: 'ABC-123' }));
 
