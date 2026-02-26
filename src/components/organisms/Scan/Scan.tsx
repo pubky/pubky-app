@@ -16,15 +16,21 @@ import * as Core from '@/core';
 
 export const ScanContent = () => {
   const t = useTranslations('onboarding.scan');
+  const router = useRouter();
   const inviteCode = Core.useOnboardingStore((state) => state.inviteCode);
+  const hasInviteCode = inviteCode.trim().length > 0;
+
   useEffect(() => {
-    if (!inviteCode) {
-      Libs.Logger.warn('[Scan] Missing inviteCode on signup screen; falling back to signin auth URL');
+    if (!hasInviteCode) {
+      Libs.Logger.warn('[Scan] Missing inviteCode on signup screen; redirecting to invite flow');
+      router.replace(App.ONBOARDING_ROUTES.HUMAN);
     }
-  }, [inviteCode]);
+  }, [hasInviteCode, router]);
+
   const { url, isLoading, isExpired, fetchUrl, copyAuthUrl } = Hooks.useAuthUrl(
-    inviteCode ? { type: 'signup', inviteCode } : {},
+    hasInviteCode ? { type: 'signup', inviteCode } : { autoFetch: false },
   );
+
   /** Stores the 2s fallback redirect timer so we can clear it on unmount and avoid redirecting after the user has left. */
   const fallbackTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
@@ -37,6 +43,8 @@ export const ScanContent = () => {
     },
     [],
   );
+
+  if (!hasInviteCode) return null;
 
   const handleMobileAuth = async () => {
     if (isLoading) return;

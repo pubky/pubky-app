@@ -25,7 +25,7 @@ const isAuthFlowExpiredError = (error: unknown): boolean => {
 export function useAuthUrl(options: UseAuthUrlOptions = {}): UseAuthUrlReturn {
   const autoFetch = options.autoFetch ?? true;
   const type = options.type ?? 'signin';
-  const inviteCode = options.type === 'signup' ? options.inviteCode : undefined;
+  const inviteCode = options.type === 'signup' ? options.inviteCode : '';
   const t = useTranslations('onboarding.signIn');
 
   const [url, setUrl] = useState('');
@@ -41,7 +41,7 @@ export function useAuthUrl(options: UseAuthUrlOptions = {}): UseAuthUrlReturn {
     try {
       // Request auth URL from controller
       const { authorizationUrl, awaitApproval } =
-        type === 'signup' && inviteCode
+        type === 'signup'
           ? await Core.AuthController.getSignupAuthUrl(inviteCode)
           : await Core.AuthController.getAuthUrl();
 

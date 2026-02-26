@@ -7,9 +7,11 @@ import * as App from '@/app';
 
 // Mock Next.js router
 const mockPush = vi.fn();
+const mockReplace = vi.fn();
 vi.mock('next/navigation', () => ({
   useRouter: () => ({
     push: mockPush,
+    replace: mockReplace,
   }),
 }));
 
@@ -35,10 +37,13 @@ vi.mock('qrcode.react', () => ({
 }));
 
 // Mock Core modules
+const { onboardingState } = vi.hoisted(() => ({
+  onboardingState: { inviteCode: 'A9KM-7MJP-ERM9' },
+}));
+
 vi.mock('@/core', () => ({
   useOnboardingStore: vi.fn((selector) => {
-    const state = { inviteCode: 'A9KM-7MJP-ERM9' };
-    return selector ? selector(state) : state;
+    return selector ? selector(onboardingState) : onboardingState;
   }),
 }));
 
@@ -113,6 +118,7 @@ vi.mock('@/libs', async () => {
     copyToClipboard: mockCopyToClipboard,
     Logger: {
       error: vi.fn(),
+      warn: vi.fn(),
     },
   };
 });
@@ -130,6 +136,7 @@ describe('ScanContent', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     mockCopyToClipboard.mockClear();
+    onboardingState.inviteCode = 'A9KM-7MJP-ERM9';
   });
 
   afterAll(() => {
@@ -229,6 +236,18 @@ describe('ScanContent', () => {
 
     expect(mockFetchUrl).toHaveBeenCalledTimes(1);
   });
+
+  it('redirects to human onboarding when invite code is missing', async () => {
+    onboardingState.inviteCode = '';
+
+    await act(async () => {
+      render(<ScanContent />);
+    });
+
+    await waitFor(() => {
+      expect(mockReplace).toHaveBeenCalledWith(App.ONBOARDING_ROUTES.HUMAN);
+    });
+  });
 });
 
 describe('ScanFooter', () => {
@@ -290,6 +309,10 @@ describe('ScanNavigation', () => {
 });
 
 describe('Scan Components - Snapshots', () => {
+  beforeEach(() => {
+    onboardingState.inviteCode = 'A9KM-7MJP-ERM9';
+  });
+
   describe('ScanContent - Snapshots', () => {
     it('matches snapshot for default ScanContent', () => {
       const { container } = render(<ScanContent />);
