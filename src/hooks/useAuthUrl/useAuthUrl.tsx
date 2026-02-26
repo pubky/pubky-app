@@ -17,10 +17,12 @@ export function useAuthUrl(options: UseAuthUrlOptions = {}): UseAuthUrlReturn {
 
   const [url, setUrl] = useState('');
   const [isLoading, setIsLoading] = useState(autoFetch);
+  const [isExpired, setIsExpired] = useState(false);
   const isMountedRef = useRef(true);
 
   const fetchUrl = useCallback(async (): Promise<void> => {
     setIsLoading(true);
+    setIsExpired(false);
     setUrl('');
 
     try {
@@ -57,10 +59,8 @@ export function useAuthUrl(options: UseAuthUrlOptions = {}): UseAuthUrlReturn {
           Libs.Logger.error('Authorization promise rejected:', error);
           if (!isMountedRef.current) return;
 
-          Molecules.toast({
-            title: 'Authorization was not completed',
-            description: 'The signer did not complete authorization. Please try again.',
-          });
+          setUrl('');
+          setIsExpired(true);
         });
 
       if (!isMountedRef.current) return;
@@ -96,6 +96,7 @@ export function useAuthUrl(options: UseAuthUrlOptions = {}): UseAuthUrlReturn {
   return {
     url,
     isLoading,
+    isExpired,
     fetchUrl,
   };
 }

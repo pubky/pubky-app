@@ -16,7 +16,7 @@ import * as Core from '@/core';
 export const ScanContent = () => {
   const t = useTranslations('onboarding.scan');
   const inviteCode = Core.useOnboardingStore((state) => state.inviteCode);
-  const { url, isLoading, fetchUrl } = Hooks.useAuthUrl({ type: 'signup', inviteCode });
+  const { url, isLoading, isExpired, fetchUrl } = Hooks.useAuthUrl({ type: 'signup', inviteCode });
 
   const isIOS = typeof navigator !== 'undefined' && /iPhone|iPad|iPod/i.test(navigator.userAgent);
   const fallbackUrl = isIOS ? Config.APP_STORE_URL : Config.PLAY_STORE_URL;
@@ -75,14 +75,21 @@ export const ScanContent = () => {
         <Molecules.ContentCard layout="column">
           <Atoms.Container className="items-center justify-center gap-4">
             <div className="relative flex h-[220px] w-[220px] items-center justify-center rounded-lg bg-foreground p-4">
-              {isLoading || !url ? (
+              {isLoading ? (
                 <Atoms.Container className="items-center gap-2">
                   <Libs.Loader2 className="h-8 w-8 animate-spin text-background" />
                   <Atoms.Typography as="small" size="sm" className="text-background">
                     {t('generating')}
                   </Atoms.Typography>
                 </Atoms.Container>
-              ) : (
+              ) : isExpired ? (
+                <Atoms.Container className="items-center gap-2">
+                  <Libs.TimerOff className="h-8 w-8 text-muted-foreground" />
+                  <Atoms.Typography as="small" size="sm" className="text-muted-foreground">
+                    {t('timedOut')}
+                  </Atoms.Typography>
+                </Atoms.Container>
+              ) : url ? (
                 <>
                   <QRCodeSVG value={url} size={220} />
                   <Image
@@ -93,6 +100,13 @@ export const ScanContent = () => {
                     className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2"
                   />
                 </>
+              ) : (
+                <Atoms.Container className="items-center gap-2">
+                  <Libs.Loader2 className="h-8 w-8 animate-spin text-background" />
+                  <Atoms.Typography as="small" size="sm" className="text-background">
+                    {t('generating')}
+                  </Atoms.Typography>
+                </Atoms.Container>
               )}
             </div>
             {inviteCode && (
@@ -114,12 +128,17 @@ export const ScanContent = () => {
               className="h-[60px] w-full rounded-full"
               size="lg"
               onClick={handleMobileAuth}
-              disabled={isLoading || !url}
+              disabled={isLoading || isExpired || !url}
             >
               {isLoading ? (
                 <>
                   <Libs.Loader2 className="mr-2 h-4 w-4 animate-spin" />
                   {t('generatingShort')}
+                </>
+              ) : isExpired ? (
+                <>
+                  <Libs.TimerOff className="mr-2 h-4 w-4" />
+                  {t('timedOut')}
                 </>
               ) : (
                 <>
@@ -131,6 +150,8 @@ export const ScanContent = () => {
           </Atoms.Container>
         </Molecules.ContentCard>
       </Atoms.Container>
+
+      <Molecules.DialogAuthExpired open={isExpired} onRefresh={fetchUrl} />
     </>
   );
 };

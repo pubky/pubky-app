@@ -77,7 +77,7 @@ const SignInProgress = () => {
 
 export const SignInContent = () => {
   const t = useTranslations('onboarding.signIn');
-  const { url, isLoading, fetchUrl } = Hooks.useAuthUrl();
+  const { url, isLoading, isExpired, fetchUrl } = Hooks.useAuthUrl();
   const authUrlResolved = Core.useSignInStore((state) => state.authUrlResolved);
 
   const isIOS = typeof navigator !== 'undefined' && /iPhone|iPad|iPod/i.test(navigator.userAgent);
@@ -171,17 +171,24 @@ export const SignInContent = () => {
               type="button"
               className="relative flex h-[220px] w-[220px] cursor-pointer items-center justify-center rounded-lg bg-foreground p-4 transition-opacity hover:opacity-90 active:opacity-80"
               onClick={handleQRClick}
-              disabled={isLoading || !url}
+              disabled={isLoading || isExpired || !url}
               aria-label="Copy authentication link"
             >
-              {isLoading || !url ? (
+              {isLoading ? (
                 <Atoms.Container className="items-center gap-2">
                   <Libs.Loader2 className="h-8 w-8 animate-spin text-background" />
                   <Atoms.Typography as="small" size="sm" className="text-background">
                     {t('generating')}
                   </Atoms.Typography>
                 </Atoms.Container>
-              ) : (
+              ) : isExpired ? (
+                <Atoms.Container className="items-center gap-2">
+                  <Libs.TimerOff className="h-8 w-8 text-muted-foreground" />
+                  <Atoms.Typography as="small" size="sm" className="text-muted-foreground">
+                    {t('timedOut')}
+                  </Atoms.Typography>
+                </Atoms.Container>
+              ) : url ? (
                 <>
                   <QRCodeSVG value={url} size={220} />
                   <Image
@@ -192,6 +199,13 @@ export const SignInContent = () => {
                     className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2"
                   />
                 </>
+              ) : (
+                <Atoms.Container className="items-center gap-2">
+                  <Libs.Loader2 className="h-8 w-8 animate-spin text-background" />
+                  <Atoms.Typography as="small" size="sm" className="text-background">
+                    {t('generating')}
+                  </Atoms.Typography>
+                </Atoms.Container>
               )}
             </button>
           </Atoms.Container>
@@ -208,13 +222,18 @@ export const SignInContent = () => {
               className="h-[60px] w-full rounded-full"
               size="lg"
               onClick={handleAuthorizeClick}
-              disabled={isLoading || !url}
+              disabled={isLoading || isExpired || !url}
               aria-busy={isLoading}
             >
               {isLoading ? (
                 <>
                   <Libs.Loader2 className="mr-2 h-4 w-4 animate-spin" />
                   <span aria-live="polite">{t('generatingShort')}</span>
+                </>
+              ) : isExpired ? (
+                <>
+                  <Libs.TimerOff className="mr-2 h-4 w-4" />
+                  {t('timedOut')}
                 </>
               ) : (
                 <>
@@ -226,6 +245,8 @@ export const SignInContent = () => {
           </Atoms.Container>
         </Molecules.ContentCard>
       </Atoms.Container>
+
+      <Molecules.DialogAuthExpired open={isExpired} onRefresh={fetchUrl} />
     </>
   );
 };

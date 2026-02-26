@@ -20,6 +20,8 @@ export interface UseAuthUrlReturn {
   url: string;
   /** Whether the auth URL is currently being generated */
   isLoading: boolean;
+  /** Whether the relay connection has expired (polls exhausted or rejected) */
+  isExpired: boolean;
   /** Manually trigger auth URL generation */
   fetchUrl: () => Promise<void>;
 }
