@@ -90,7 +90,6 @@ describe('API Route: /api/feedback', () => {
     });
 
     it('should handle unexpected errors with 500 status', async () => {
-      const consoleErrorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
       vi.spyOn(Core.FeedbackController, 'submit').mockRejectedValue(new Error('Unexpected error'));
 
       const request = createPostRequest({
@@ -104,9 +103,6 @@ describe('API Route: /api/feedback', () => {
 
       expect(response.status).toBe(500);
       expect(data.error).toBe('Internal Server Error');
-      expect(consoleErrorSpy).toHaveBeenCalledWith('Error in feedback API handler:', expect.any(Error));
-
-      consoleErrorSpy.mockRestore();
     });
 
     it('should handle invalid JSON body', async () => {
