@@ -3,16 +3,18 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import { MutedUsers } from './MutedUsers';
 
-const { mockUseMutedUsers, mockUseBulkUserAvatars, mockUseMuteUser } = vi.hoisted(() => ({
+const { mockUseMutedUsers, mockUseBulkUserAvatars, mockUseMuteUser, mockUseIsMobile } = vi.hoisted(() => ({
   mockUseMutedUsers: vi.fn(),
   mockUseBulkUserAvatars: vi.fn(),
   mockUseMuteUser: vi.fn(),
+  mockUseIsMobile: vi.fn(() => false),
 }));
 
 vi.mock('@/hooks', () => ({
   useMutedUsers: () => mockUseMutedUsers(),
   useBulkUserAvatars: (ids: string[]) => mockUseBulkUserAvatars(ids),
   useMuteUser: () => mockUseMuteUser(),
+  useIsMobile: () => mockUseIsMobile(),
 }));
 
 describe('MutedUsers', () => {
