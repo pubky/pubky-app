@@ -172,8 +172,7 @@ describe('FeedbackCard', () => {
       expect(avatarWithFallback).toHaveAttribute('data-avatar-url', `https://cdn.example.com/avatar/${mockPubky}`);
       expect(avatarWithFallback).toHaveAttribute('data-name', 'Miguel Medeiros');
 
-      // Full name is displayed (CSS truncation handles visual truncation)
-      expect(screen.getByText('Miguel Medeiros')).toBeInTheDocument();
+      expect(screen.getByTestId('avatar-image')).toHaveAttribute('alt', 'Miguel Medeiros');
     });
 
     it('renders with authenticated user without avatar image', async () => {
@@ -217,8 +216,8 @@ describe('FeedbackCard', () => {
     });
   });
 
-  describe('Name Display with CSS Truncation', () => {
-    it('displays full name with CSS truncation classes for long names', async () => {
+  describe('Avatar Name Handling', () => {
+    it('passes the full name to the avatar for long names', async () => {
       mockUseAuthStore.mockReturnValue({ currentUserPubky: mockPubky } as never);
       mockUseLiveQuery.mockReturnValue({
         name: 'VeryLongUserName',
@@ -228,16 +227,13 @@ describe('FeedbackCard', () => {
       render(<FeedbackCard />);
 
       await waitFor(() => {
-        // Avatar receives full name
         const avatarWithFallback = screen.getByTestId('avatar-with-fallback');
         expect(avatarWithFallback).toHaveAttribute('data-name', 'VeryLongUserName');
-
-        // Full name is rendered (CSS handles visual truncation)
-        expect(screen.getByText('VeryLongUserName')).toBeInTheDocument();
+        expect(screen.getByTestId('avatar-fallback')).toHaveTextContent('V');
       });
     });
 
-    it('displays short names correctly', async () => {
+    it('passes short names to the avatar and renders the correct fallback initial', async () => {
       mockUseAuthStore.mockReturnValue({ currentUserPubky: mockPubky } as never);
       mockUseLiveQuery.mockReturnValue({
         name: 'John',
@@ -249,11 +245,11 @@ describe('FeedbackCard', () => {
       await waitFor(() => {
         const avatarWithFallback = screen.getByTestId('avatar-with-fallback');
         expect(avatarWithFallback).toHaveAttribute('data-name', 'John');
-        expect(screen.getByText('John')).toBeInTheDocument();
+        expect(screen.getByTestId('avatar-fallback')).toHaveTextContent('J');
       });
     });
 
-    it('displays medium length names correctly', async () => {
+    it('passes medium length names to the avatar and renders the correct fallback initial', async () => {
       mockUseAuthStore.mockReturnValue({ currentUserPubky: mockPubky } as never);
       mockUseLiveQuery.mockReturnValue({
         name: '1234567890',
@@ -265,7 +261,7 @@ describe('FeedbackCard', () => {
       await waitFor(() => {
         const avatarWithFallback = screen.getByTestId('avatar-with-fallback');
         expect(avatarWithFallback).toHaveAttribute('data-name', '1234567890');
-        expect(screen.getByText('1234567890')).toBeInTheDocument();
+        expect(screen.getByTestId('avatar-fallback')).toHaveTextContent('1');
       });
     });
   });
