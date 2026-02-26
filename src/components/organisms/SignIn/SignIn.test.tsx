@@ -96,7 +96,6 @@ const { defaultUseMobileAuthReturn, mockOnAuthorizeClick } = vi.hoisted(() => {
       url: 'pubkyring://authorize?token=test123',
       isLoading: false,
       fetchUrl: mockFetchUrl,
-      isIOS: false,
       onAuthorizeClick: mockOnAuthorizeClick,
     },
   };
