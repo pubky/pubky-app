@@ -26,21 +26,28 @@ export class LocalMuteService {
     const isMuting = action === 'mute';
 
     try {
-      // Check current muted stream for idempotency
-      const mutedStream = await Core.LocalStreamUsersService.findById(Core.UserStreamTypes.MUTED);
-      const isCurrentlyMuted = mutedStream?.stream.includes(mutee) ?? false;
+      let statusChanged = false;
 
-      if (isMuting === isCurrentlyMuted) {
-        Logger.debug(isMuting ? 'Mute created successfully' : 'Unmute completed successfully', { muter, mutee });
-        return;
+      await Core.db.transaction('rw', [Core.UserStreamModel.table], async () => {
+        // Check current muted stream for idempotency (read + write atomic to avoid race when two mute/unmute run at once)
+        const mutedStream = await Core.LocalStreamUsersService.findById(Core.UserStreamTypes.MUTED);
+        const isCurrentlyMuted = mutedStream?.stream.includes(mutee) ?? false;
+
+        statusChanged = isMuting !== isCurrentlyMuted;
+        if (!statusChanged) {
+          Logger.debug(isMuting ? 'Mute created successfully' : 'Unmute completed successfully', { muter, mutee });
+          return;
+        }
+
+        // Update muted stream (must stay inside transaction for atomicity)
+        await this.updateUserStreams(mutee, isMuting);
+      });
+
+      if (statusChanged) {
+        // Clear post stream queue so next scroll uses updated mute list
+        // The queue may contain posts filtered with the old mute state
+        Core.postStreamQueue.clear();
       }
-
-      // Update muted stream
-      await this.updateUserStreams(mutee, isMuting);
-
-      // Clear post stream queue so next scroll uses updated mute list
-      // The queue may contain posts filtered with the old mute state
-      Core.postStreamQueue.clear();
 
       Logger.debug(isMuting ? 'Mute created successfully' : 'Unmute completed successfully', { muter, mutee });
     } catch (error) {
