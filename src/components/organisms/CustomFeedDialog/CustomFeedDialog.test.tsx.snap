@@ -24,15 +24,7 @@ exports[`CustomFeedDialog - Snapshots > matches snapshot for create mode default
       <h2
         data-testid="dialog-title"
       >
-        <span
-          class="capitalize"
-          data-override-defaults="true"
-          data-testid="typography"
-        >
-          create
-        </span>
-         
-        Feed
+        Create Feed
       </h2>
     </div>
     <div
@@ -43,7 +35,7 @@ exports[`CustomFeedDialog - Snapshots > matches snapshot for create mode default
         class="text-xs tracking-wide text-muted-foreground uppercase"
         data-testid="label"
       >
-        FEED NAME
+        Feed Name
       </label>
       <input
         class="h-14 border-dashed"
@@ -66,7 +58,7 @@ exports[`CustomFeedDialog - Snapshots > matches snapshot for create mode default
           class="text-xs tracking-wide text-muted-foreground uppercase"
           data-testid="label"
         >
-          REACH
+          Reach
         </label>
         <div
           data-disabled="false"
@@ -133,7 +125,7 @@ exports[`CustomFeedDialog - Snapshots > matches snapshot for create mode default
           class="text-xs tracking-wide text-muted-foreground uppercase"
           data-testid="label"
         >
-          SORT
+          Sort
         </label>
         <div
           data-disabled="false"
@@ -190,7 +182,7 @@ exports[`CustomFeedDialog - Snapshots > matches snapshot for create mode default
           class="text-xs tracking-wide text-muted-foreground uppercase"
           data-testid="label"
         >
-          LAYOUT
+          Layout
         </label>
         <div
           data-disabled="false"
@@ -247,7 +239,7 @@ exports[`CustomFeedDialog - Snapshots > matches snapshot for create mode default
           class="text-xs tracking-wide text-muted-foreground uppercase"
           data-testid="label"
         >
-          CONTENT
+          Content
         </label>
         <div
           data-disabled="false"
@@ -261,7 +253,7 @@ exports[`CustomFeedDialog - Snapshots > matches snapshot for create mode default
             <span
               data-testid="select-value"
             >
-              Select a content
+              Select content
             </span>
           </div>
           <div
@@ -354,7 +346,7 @@ exports[`CustomFeedDialog - Snapshots > matches snapshot for create mode default
         class="text-xs tracking-wide text-muted-foreground uppercase"
         data-testid="label"
       >
-        FILTER ON CONTENT TAGS
+        Filter on Content Tags
       </label>
       <div
         class="w-48"
@@ -415,15 +407,7 @@ exports[`CustomFeedDialog - Snapshots > matches snapshot for create mode with di
       <h2
         data-testid="dialog-title"
       >
-        <span
-          class="capitalize"
-          data-override-defaults="true"
-          data-testid="typography"
-        >
-          create
-        </span>
-         
-        Feed
+        Create Feed
       </h2>
     </div>
     <div
@@ -434,7 +418,7 @@ exports[`CustomFeedDialog - Snapshots > matches snapshot for create mode with di
         class="text-xs tracking-wide text-muted-foreground uppercase"
         data-testid="label"
       >
-        FEED NAME
+        Feed Name
       </label>
       <input
         class="h-14 border-dashed"
@@ -457,7 +441,7 @@ exports[`CustomFeedDialog - Snapshots > matches snapshot for create mode with di
           class="text-xs tracking-wide text-muted-foreground uppercase"
           data-testid="label"
         >
-          REACH
+          Reach
         </label>
         <div
           data-disabled="false"
@@ -524,7 +508,7 @@ exports[`CustomFeedDialog - Snapshots > matches snapshot for create mode with di
           class="text-xs tracking-wide text-muted-foreground uppercase"
           data-testid="label"
         >
-          SORT
+          Sort
         </label>
         <div
           data-disabled="false"
@@ -581,7 +565,7 @@ exports[`CustomFeedDialog - Snapshots > matches snapshot for create mode with di
           class="text-xs tracking-wide text-muted-foreground uppercase"
           data-testid="label"
         >
-          LAYOUT
+          Layout
         </label>
         <div
           data-disabled="false"
@@ -638,7 +622,7 @@ exports[`CustomFeedDialog - Snapshots > matches snapshot for create mode with di
           class="text-xs tracking-wide text-muted-foreground uppercase"
           data-testid="label"
         >
-          CONTENT
+          Content
         </label>
         <div
           data-disabled="false"
@@ -652,7 +636,7 @@ exports[`CustomFeedDialog - Snapshots > matches snapshot for create mode with di
             <span
               data-testid="select-value"
             >
-              Select a content
+              Select content
             </span>
           </div>
           <div
@@ -745,7 +729,7 @@ exports[`CustomFeedDialog - Snapshots > matches snapshot for create mode with di
         class="text-xs tracking-wide text-muted-foreground uppercase"
         data-testid="label"
       >
-        FILTER ON CONTENT TAGS
+        Filter on Content Tags
       </label>
       <div
         class="w-48"
@@ -804,15 +788,7 @@ exports[`CustomFeedDialog - Snapshots > matches snapshot for edit mode with cust
       <h2
         data-testid="dialog-title"
       >
-        <span
-          class="capitalize"
-          data-override-defaults="true"
-          data-testid="typography"
-        >
-          edit
-        </span>
-         
-        Feed
+        Edit Feed
       </h2>
     </div>
     <div
@@ -823,7 +799,7 @@ exports[`CustomFeedDialog - Snapshots > matches snapshot for edit mode with cust
         class="text-xs tracking-wide text-muted-foreground uppercase"
         data-testid="label"
       >
-        FEED NAME
+        Feed Name
       </label>
       <input
         class="h-14 border-dashed"
@@ -846,7 +822,7 @@ exports[`CustomFeedDialog - Snapshots > matches snapshot for edit mode with cust
           class="text-xs tracking-wide text-muted-foreground uppercase"
           data-testid="label"
         >
-          REACH
+          Reach
         </label>
         <div
           data-disabled="false"
@@ -913,7 +889,7 @@ exports[`CustomFeedDialog - Snapshots > matches snapshot for edit mode with cust
           class="text-xs tracking-wide text-muted-foreground uppercase"
           data-testid="label"
         >
-          SORT
+          Sort
         </label>
         <div
           data-disabled="false"
@@ -970,7 +946,7 @@ exports[`CustomFeedDialog - Snapshots > matches snapshot for edit mode with cust
           class="text-xs tracking-wide text-muted-foreground uppercase"
           data-testid="label"
         >
-          LAYOUT
+          Layout
         </label>
         <div
           data-disabled="false"
@@ -1027,7 +1003,7 @@ exports[`CustomFeedDialog - Snapshots > matches snapshot for edit mode with cust
           class="text-xs tracking-wide text-muted-foreground uppercase"
           data-testid="label"
         >
-          CONTENT
+          Content
         </label>
         <div
           data-disabled="false"
@@ -1041,7 +1017,7 @@ exports[`CustomFeedDialog - Snapshots > matches snapshot for edit mode with cust
             <span
               data-testid="select-value"
             >
-              Select a content
+              Select content
             </span>
           </div>
           <div
@@ -1134,7 +1110,7 @@ exports[`CustomFeedDialog - Snapshots > matches snapshot for edit mode with cust
         class="text-xs tracking-wide text-muted-foreground uppercase"
         data-testid="label"
       >
-        FILTER ON CONTENT TAGS
+        Filter on Content Tags
       </label>
       <div
         class="w-48"
@@ -1241,15 +1217,7 @@ exports[`CustomFeedDialog - Snapshots > matches snapshot for edit mode with null
       <h2
         data-testid="dialog-title"
       >
-        <span
-          class="capitalize"
-          data-override-defaults="true"
-          data-testid="typography"
-        >
-          edit
-        </span>
-         
-        Feed
+        Edit Feed
       </h2>
     </div>
     <div
@@ -1260,7 +1228,7 @@ exports[`CustomFeedDialog - Snapshots > matches snapshot for edit mode with null
         class="text-xs tracking-wide text-muted-foreground uppercase"
         data-testid="label"
       >
-        FEED NAME
+        Feed Name
       </label>
       <input
         class="h-14 border-dashed"
@@ -1283,7 +1251,7 @@ exports[`CustomFeedDialog - Snapshots > matches snapshot for edit mode with null
           class="text-xs tracking-wide text-muted-foreground uppercase"
           data-testid="label"
         >
-          REACH
+          Reach
         </label>
         <div
           data-disabled="false"
@@ -1350,7 +1318,7 @@ exports[`CustomFeedDialog - Snapshots > matches snapshot for edit mode with null
           class="text-xs tracking-wide text-muted-foreground uppercase"
           data-testid="label"
         >
-          SORT
+          Sort
         </label>
         <div
           data-disabled="false"
@@ -1407,7 +1375,7 @@ exports[`CustomFeedDialog - Snapshots > matches snapshot for edit mode with null
           class="text-xs tracking-wide text-muted-foreground uppercase"
           data-testid="label"
         >
-          LAYOUT
+          Layout
         </label>
         <div
           data-disabled="false"
@@ -1464,7 +1432,7 @@ exports[`CustomFeedDialog - Snapshots > matches snapshot for edit mode with null
           class="text-xs tracking-wide text-muted-foreground uppercase"
           data-testid="label"
         >
-          CONTENT
+          Content
         </label>
         <div
           data-disabled="false"
@@ -1478,7 +1446,7 @@ exports[`CustomFeedDialog - Snapshots > matches snapshot for edit mode with null
             <span
               data-testid="select-value"
             >
-              Select a content
+              Select content
             </span>
           </div>
           <div
@@ -1571,7 +1539,7 @@ exports[`CustomFeedDialog - Snapshots > matches snapshot for edit mode with null
         class="text-xs tracking-wide text-muted-foreground uppercase"
         data-testid="label"
       >
-        FILTER ON CONTENT TAGS
+        Filter on Content Tags
       </label>
       <div
         class="w-48"
@@ -1662,15 +1630,7 @@ exports[`CustomFeedDialog - Snapshots > matches snapshot for edit mode without c
       <h2
         data-testid="dialog-title"
       >
-        <span
-          class="capitalize"
-          data-override-defaults="true"
-          data-testid="typography"
-        >
-          edit
-        </span>
-         
-        Feed
+        Edit Feed
       </h2>
     </div>
     <div
@@ -1681,7 +1641,7 @@ exports[`CustomFeedDialog - Snapshots > matches snapshot for edit mode without c
         class="text-xs tracking-wide text-muted-foreground uppercase"
         data-testid="label"
       >
-        FEED NAME
+        Feed Name
       </label>
       <input
         class="h-14 border-dashed"
@@ -1705,7 +1665,7 @@ exports[`CustomFeedDialog - Snapshots > matches snapshot for edit mode without c
           class="text-xs tracking-wide text-muted-foreground uppercase"
           data-testid="label"
         >
-          REACH
+          Reach
         </label>
         <div
           data-disabled="true"
@@ -1771,7 +1731,7 @@ exports[`CustomFeedDialog - Snapshots > matches snapshot for edit mode without c
           class="text-xs tracking-wide text-muted-foreground uppercase"
           data-testid="label"
         >
-          SORT
+          Sort
         </label>
         <div
           data-disabled="true"
@@ -1827,7 +1787,7 @@ exports[`CustomFeedDialog - Snapshots > matches snapshot for edit mode without c
           class="text-xs tracking-wide text-muted-foreground uppercase"
           data-testid="label"
         >
-          LAYOUT
+          Layout
         </label>
         <div
           data-disabled="true"
@@ -1883,7 +1843,7 @@ exports[`CustomFeedDialog - Snapshots > matches snapshot for edit mode without c
           class="text-xs tracking-wide text-muted-foreground uppercase"
           data-testid="label"
         >
-          CONTENT
+          Content
         </label>
         <div
           data-disabled="true"
@@ -1896,7 +1856,7 @@ exports[`CustomFeedDialog - Snapshots > matches snapshot for edit mode without c
             <span
               data-testid="select-value"
             >
-              Select a content
+              Select content
             </span>
           </div>
           <div
@@ -1989,7 +1949,7 @@ exports[`CustomFeedDialog - Snapshots > matches snapshot for edit mode without c
         class="text-xs tracking-wide text-muted-foreground uppercase"
         data-testid="label"
       >
-        FILTER ON CONTENT TAGS
+        Filter on Content Tags
       </label>
       <div
         class="w-48"

@@ -328,23 +328,22 @@ describe('CustomFeedDialog', () => {
 
     expect(screen.getByTestId('dialog')).toBeInTheDocument();
     expect(screen.getByTestId('custom-feed-dialog-trigger')).toBeInTheDocument();
-    expect(screen.getByText('Create Feed')).toBeInTheDocument();
+    expect(within(screen.getByTestId('custom-feed-dialog-trigger')).getByText('Create Feed')).toBeInTheDocument();
   });
 
-  it('renders dialog title with capitalized mode for create', () => {
+  it('renders dialog title with translated title for create', () => {
     render(
       <CustomFeedDialog mode="create">
         <button>Create Feed</button>
       </CustomFeedDialog>,
     );
 
-    expect(screen.getByTestId('dialog-title')).toBeInTheDocument();
-    const typography = screen.getByTestId('typography');
-    expect(typography).toHaveTextContent('create');
-    expect(typography).toHaveClass('capitalize');
+    const title = screen.getByTestId('dialog-title');
+    expect(title).toBeInTheDocument();
+    expect(title).toHaveTextContent('Create Feed');
   });
 
-  it('renders dialog title with capitalized mode for edit', () => {
+  it('renders dialog title with translated title for edit', () => {
     const mockFeed = createMockFeed();
     mockUseCustomFeed.mockReturnValue(mockFeed);
 
@@ -354,8 +353,8 @@ describe('CustomFeedDialog', () => {
       </CustomFeedDialog>,
     );
 
-    const typography = screen.getByTestId('typography');
-    expect(typography).toHaveTextContent('edit');
+    const title = screen.getByTestId('dialog-title');
+    expect(title).toHaveTextContent('Edit Feed');
   });
 
   it('renders feed name input with placeholder', () => {
