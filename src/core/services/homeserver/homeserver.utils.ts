@@ -36,7 +36,7 @@ const PUBKY_HOSTNAME_PREFIX = '_pubky.';
 /** Default interval between auth flow polls in milliseconds */
 const AUTH_POLL_INTERVAL_MS = 1_00;
 /** Maximum auth poll attempts (3000 × 100ms = 5 minutes max wait) */
-const AUTH_POLL_MAX_ATTEMPTS = 3_0;
+const AUTH_POLL_MAX_ATTEMPTS = 3_000;
 
 /**
  * Checks if a URL is an HTTP or HTTPS URL
@@ -204,8 +204,7 @@ export const createCancelableAuthApproval = (
         }
         throw error;
       }
-
-      console.log('sleeping for', pollIntervalMs, 'ms');
+      
       await sleep(pollIntervalMs);
     }
   })();

@@ -56,6 +56,7 @@ vi.mock('@/hooks', () => ({
   useAuthUrl: vi.fn(() => ({
     url: 'mock-auth-url',
     isLoading: false,
+    isExpired: false,
     isGenerating: false,
     fetchUrl: mockFetchUrl,
     retryCount: 0,
@@ -101,13 +102,30 @@ vi.mock('@/molecules', () => ({
     </div>
   ),
   toast: vi.fn(),
+  DialogAuthExpired: ({ open, onRefresh }: { open: boolean; onRefresh: () => void }) => (
+    <div data-testid="dialog-auth-expired" data-open={open}>
+      <button data-testid="dialog-auth-expired-refresh" onClick={onRefresh}>
+        Refresh
+      </button>
+    </div>
+  ),
 }));
 
-// Mock libs
-// Mock libs - use actual utility functions and icons from lucide-react
+// Mock copyToClipboard function - use vi.hoisted to ensure it's available before vi.mock runs
+const { mockCopyToClipboard } = vi.hoisted(() => ({
+  mockCopyToClipboard: vi.fn().mockResolvedValue(undefined),
+}));
+
+// Mock libs - use actual utility functions and icons, override clipboard + logger
 vi.mock('@/libs', async () => {
   const actual = await vi.importActual('@/libs');
-  return { ...actual };
+  return {
+    ...actual,
+    copyToClipboard: mockCopyToClipboard,
+    Logger: {
+      error: vi.fn(),
+    },
+  };
 });
 
 // Mock atoms
@@ -157,32 +175,23 @@ vi.mock('@/atoms', () => ({
 
 describe('ScanContent', () => {
   const originalOpen = window.open;
-  const clipboardMock = { writeText: vi.fn().mockResolvedValue(undefined) };
 
   beforeAll(() => {
     Object.defineProperty(window, 'open', {
       configurable: true,
       value: vi.fn(() => ({ location: { href: '' } })) as unknown as typeof window.open,
     });
-    Object.defineProperty(navigator, 'clipboard', {
-      configurable: true,
-      value: clipboardMock,
-    });
   });
 
   beforeEach(() => {
     vi.clearAllMocks();
-    clipboardMock.writeText.mockClear();
+    mockCopyToClipboard.mockClear();
   });
 
   afterAll(() => {
     Object.defineProperty(window, 'open', {
       configurable: true,
       value: originalOpen,
-    });
-    Object.defineProperty(navigator, 'clipboard', {
-      configurable: true,
-      value: undefined,
     });
   });
 
@@ -234,8 +243,45 @@ describe('ScanContent', () => {
       fireEvent.click(authorizeButton);
     });
 
-    expect(clipboardMock.writeText).toHaveBeenCalledWith('mock-auth-url');
+    expect(mockCopyToClipboard).toHaveBeenCalledWith({ text: 'mock-auth-url' });
     expect(window.open).toHaveBeenCalledWith('mock-auth-url', '_blank');
+  });
+
+  it('opens expired dialog when auth flow is expired', async () => {
+    const Hooks = await import('@/hooks');
+    vi.mocked(Hooks.useAuthUrl).mockReturnValue({
+      url: '',
+      isLoading: false,
+      isExpired: true,
+      fetchUrl: mockFetchUrl,
+    });
+
+    await act(async () => {
+      render(<ScanContent />);
+    });
+
+    expect(screen.getByTestId('dialog-auth-expired')).toHaveAttribute('data-open', 'true');
+    expect(screen.getByTestId('button')).toBeDisabled();
+  });
+
+  it('calls fetchUrl when expired dialog refresh button is clicked', async () => {
+    const Hooks = await import('@/hooks');
+    vi.mocked(Hooks.useAuthUrl).mockReturnValue({
+      url: '',
+      isLoading: false,
+      isExpired: true,
+      fetchUrl: mockFetchUrl,
+    });
+
+    await act(async () => {
+      render(<ScanContent />);
+    });
+
+    await act(async () => {
+      fireEvent.click(screen.getByTestId('dialog-auth-expired-refresh'));
+    });
+
+    expect(mockFetchUrl).toHaveBeenCalledTimes(1);
   });
 });
 

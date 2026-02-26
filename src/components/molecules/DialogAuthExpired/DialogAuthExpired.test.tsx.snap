@@ -1,0 +1,129 @@
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
+
+exports[`DialogAuthExpired - Snapshots > matches snapshot when closed 1`] = `
+<div
+  data-open="false"
+  data-testid="dialog"
+>
+  <div
+    data-close="false"
+    data-hidden-title="QR code expired"
+    data-testid="dialog-content"
+  >
+    <div
+      data-testid="dialog-header"
+    >
+      <h2
+        data-testid="dialog-title"
+      >
+        QR code expired
+      </h2>
+    </div>
+    <p
+      data-testid="dialog-description"
+    >
+      This QR code is no longer active. Refresh to get a new one.
+    </p>
+    <div
+      data-testid="dialog-footer"
+    >
+      <button
+        data-size="lg"
+        data-testid="refresh-button"
+      >
+        <svg
+          aria-hidden="true"
+          class="lucide lucide-refresh-cw mr-2 h-4 w-4"
+          fill="none"
+          height="24"
+          stroke="currentColor"
+          stroke-linecap="round"
+          stroke-linejoin="round"
+          stroke-width="2"
+          viewBox="0 0 24 24"
+          width="24"
+          xmlns="http://www.w3.org/2000/svg"
+        >
+          <path
+            d="M3 12a9 9 0 0 1 9-9 9.75 9.75 0 0 1 6.74 2.74L21 8"
+          />
+          <path
+            d="M21 3v5h-5"
+          />
+          <path
+            d="M21 12a9 9 0 0 1-9 9 9.75 9.75 0 0 1-6.74-2.74L3 16"
+          />
+          <path
+            d="M8 16H3v5"
+          />
+        </svg>
+        Refresh
+      </button>
+    </div>
+  </div>
+</div>
+`;
+
+exports[`DialogAuthExpired - Snapshots > matches snapshot when open 1`] = `
+<div
+  data-open="true"
+  data-testid="dialog"
+>
+  <div
+    data-close="false"
+    data-hidden-title="QR code expired"
+    data-testid="dialog-content"
+  >
+    <div
+      data-testid="dialog-header"
+    >
+      <h2
+        data-testid="dialog-title"
+      >
+        QR code expired
+      </h2>
+    </div>
+    <p
+      data-testid="dialog-description"
+    >
+      This QR code is no longer active. Refresh to get a new one.
+    </p>
+    <div
+      data-testid="dialog-footer"
+    >
+      <button
+        data-size="lg"
+        data-testid="refresh-button"
+      >
+        <svg
+          aria-hidden="true"
+          class="lucide lucide-refresh-cw mr-2 h-4 w-4"
+          fill="none"
+          height="24"
+          stroke="currentColor"
+          stroke-linecap="round"
+          stroke-linejoin="round"
+          stroke-width="2"
+          viewBox="0 0 24 24"
+          width="24"
+          xmlns="http://www.w3.org/2000/svg"
+        >
+          <path
+            d="M3 12a9 9 0 0 1 9-9 9.75 9.75 0 0 1 6.74 2.74L21 8"
+          />
+          <path
+            d="M21 3v5h-5"
+          />
+          <path
+            d="M21 12a9 9 0 0 1-9 9 9.75 9.75 0 0 1-6.74-2.74L3 16"
+          />
+          <path
+            d="M8 16H3v5"
+          />
+        </svg>
+        Refresh
+      </button>
+    </div>
+  </div>
+</div>
+`;

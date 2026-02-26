@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState } from 'react';
 import type { Session } from '@synonymdev/pubky';
+import { useTranslations } from 'next-intl';
 
 import * as Core from '@/core';
 import * as Libs from '@/libs';
@@ -9,11 +10,18 @@ import * as Molecules from '@/molecules';
 
 import type { UseAuthUrlOptions, UseAuthUrlReturn } from './useAuthUrl.types';
 
+const isAuthFlowExpiredError = (error: unknown): boolean => {
+  if (!Libs.isAppError(error)) return false;
+  if (Libs.isTimeoutError(error)) return true;
+  return Libs.isAuthError(error) && error.code === Libs.AuthErrorCode.SESSION_EXPIRED;
+};
+
 /**
  * Manages the authentication URL lifecycle for Pubky Ring authorization.
  */
 export function useAuthUrl(options: UseAuthUrlOptions = {}): UseAuthUrlReturn {
   const { autoFetch = true, type = 'signin', inviteCode } = options;
+  const t = useTranslations('onboarding.signIn');
 
   const [url, setUrl] = useState('');
   const [isLoading, setIsLoading] = useState(autoFetch);
@@ -41,8 +49,8 @@ export function useAuthUrl(options: UseAuthUrlOptions = {}): UseAuthUrlReturn {
             Libs.Logger.error('Failed to persist session and check profile:', error);
             if (!isMountedRef.current) return;
             Molecules.toast({
-              title: 'Sign in failed. Please try again.',
-              description: 'Unable to complete authorization with Pubky Ring. Please try again.',
+              title: t('authInitFailedTitle'),
+              description: t('authInitFailedDescription'),
             });
           }
         })
@@ -59,8 +67,16 @@ export function useAuthUrl(options: UseAuthUrlOptions = {}): UseAuthUrlReturn {
           Libs.Logger.error('Authorization promise rejected:', error);
           if (!isMountedRef.current) return;
 
-          setUrl('');
-          setIsExpired(true);
+          if (isAuthFlowExpiredError(error)) {
+            setUrl('');
+            setIsExpired(true);
+            return;
+          }
+
+          Molecules.toast({
+            title: t('authNotCompletedTitle'),
+            description: t('authNotCompletedDescription'),
+          });
         });
 
       if (!isMountedRef.current) return;
@@ -69,15 +85,15 @@ export function useAuthUrl(options: UseAuthUrlOptions = {}): UseAuthUrlReturn {
       Libs.Logger.error('Failed to generate auth URL:', error);
       if (!isMountedRef.current) return;
       Molecules.toast({
-        title: 'QR code generation failed',
-        description: 'Unable to generate sign-in QR code. Please refresh and try again.',
+        title: t('qrGenerationFailedTitle'),
+        description: t('qrGenerationFailedDescription'),
       });
     } finally {
       if (isMountedRef.current) {
         setIsLoading(false);
       }
     }
-  }, [type, inviteCode]);
+  }, [type, inviteCode, t]);
 
   useEffect(() => {
     isMountedRef.current = true;

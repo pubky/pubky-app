@@ -91,6 +91,7 @@ vi.mock('@/hooks', () => ({
   useAuthUrl: vi.fn(() => ({
     url: 'mock-auth-url',
     isLoading: false,
+    isExpired: false,
     isGenerating: false,
     fetchUrl: mockFetchUrl,
     retryCount: 0,
@@ -113,6 +114,13 @@ vi.mock('@/molecules', () => ({
   PageTitle: ({ children, size }: { children: React.ReactNode; size?: string }) => (
     <div data-testid="page-title" data-size={size}>
       {children}
+    </div>
+  ),
+  DialogAuthExpired: ({ open, onRefresh }: { open: boolean; onRefresh: () => void }) => (
+    <div data-testid="dialog-auth-expired" data-open={open}>
+      <button data-testid="dialog-auth-expired-refresh" onClick={onRefresh}>
+        Refresh
+      </button>
     </div>
   ),
   toast: vi.fn(),
@@ -320,6 +328,7 @@ describe('SignInContent', () => {
     vi.mocked(Hooks.useAuthUrl).mockReturnValue({
       url: '',
       isLoading: true,
+      isExpired: false,
       fetchUrl: mockFetchUrl,
     });
 
@@ -350,6 +359,7 @@ describe('SignInContent', () => {
     vi.mocked(Hooks.useAuthUrl).mockReturnValue({
       url: 'mock-auth-url',
       isLoading: false,
+      isExpired: false,
       fetchUrl: mockFetchUrl,
     });
 
@@ -370,6 +380,43 @@ describe('SignInContent', () => {
       title: 'Link copied',
       description: 'Authentication link copied to clipboard.',
     });
+  });
+
+  it('opens expired dialog and disables authorize action when auth flow is expired', async () => {
+    const Hooks = await import('@/hooks');
+    vi.mocked(Hooks.useAuthUrl).mockReturnValue({
+      url: '',
+      isLoading: false,
+      isExpired: true,
+      fetchUrl: mockFetchUrl,
+    });
+
+    await act(async () => {
+      render(<SignInContent />);
+    });
+
+    expect(screen.getByTestId('dialog-auth-expired')).toHaveAttribute('data-open', 'true');
+    expect(screen.getByTestId('button')).toBeDisabled();
+  });
+
+  it('calls fetchUrl when expired dialog refresh button is clicked', async () => {
+    const Hooks = await import('@/hooks');
+    vi.mocked(Hooks.useAuthUrl).mockReturnValue({
+      url: '',
+      isLoading: false,
+      isExpired: true,
+      fetchUrl: mockFetchUrl,
+    });
+
+    await act(async () => {
+      render(<SignInContent />);
+    });
+
+    await act(async () => {
+      fireEvent.click(screen.getByTestId('dialog-auth-expired-refresh'));
+    });
+
+    expect(mockFetchUrl).toHaveBeenCalledTimes(1);
   });
 });
 
@@ -402,34 +449,59 @@ describe('SignInContent - Progress View', () => {
     expect(screen.getByText('Syncing settings')).toBeInTheDocument();
   });
 
-  it('shows correct step states - first step running when none completed', async () => {
+  it('shows first step as running and remaining as pending when none completed', async () => {
     mockSignInState.authUrlResolved = true;
-    // All other steps are false, so first step should be "running"
 
     await act(async () => {
       render(<SignInContent />);
     });
 
-    // Verify step labels are present
-    const steps = screen.getAllByTestId('typography');
-    expect(steps.length).toBeGreaterThan(0);
+    const verifyingLabel = screen.getByText('Verifying account');
+    const loadingLabel = screen.getByText('Loading your data');
+    const buildingLabel = screen.getByText('Building your feed');
+    const syncingLabel = screen.getByText('Syncing settings');
+
+    // First step: running (spinner icon + text-foreground)
+    expect(verifyingLabel.className).toContain('text-foreground');
+    expect(verifyingLabel.closest('div')?.querySelector('.lucide-loader-circle')).toBeInTheDocument();
+
+    // Remaining steps: pending (circle icon + text-muted-foreground)
+    expect(loadingLabel.className).toContain('text-muted-foreground');
+    expect(loadingLabel.closest('div')?.querySelector('.lucide-circle')).toBeInTheDocument();
+
+    expect(buildingLabel.className).toContain('text-muted-foreground');
+    expect(syncingLabel.className).toContain('text-muted-foreground');
   });
 
-  it('shows completed state for finished steps', async () => {
+  it('shows completed steps with check icon and currently running step with spinner', async () => {
     mockSignInState.authUrlResolved = true;
     mockSignInState.profileChecked = true;
     mockSignInState.bootstrapFetched = true;
-    // dataPersisted and homeserverSynced are still false
 
     await act(async () => {
       render(<SignInContent />);
     });
 
-    // All 4 step labels should be visible
-    expect(screen.getByText('Verifying account')).toBeInTheDocument();
-    expect(screen.getByText('Loading your data')).toBeInTheDocument();
-    expect(screen.getByText('Building your feed')).toBeInTheDocument();
-    expect(screen.getByText('Syncing settings')).toBeInTheDocument();
+    const verifyingLabel = screen.getByText('Verifying account');
+    const loadingLabel = screen.getByText('Loading your data');
+    const buildingLabel = screen.getByText('Building your feed');
+    const syncingLabel = screen.getByText('Syncing settings');
+
+    // First two steps: completed (check icon + font-bold)
+    expect(verifyingLabel.className).toContain('font-bold');
+    expect(verifyingLabel.closest('div')?.querySelector('.lucide-circle-check-big')).toBeInTheDocument();
+
+    expect(loadingLabel.className).toContain('font-bold');
+    expect(loadingLabel.closest('div')?.querySelector('.lucide-circle-check-big')).toBeInTheDocument();
+
+    // Third step: running (spinner)
+    expect(buildingLabel.className).toContain('text-foreground');
+    expect(buildingLabel.className).not.toContain('font-bold');
+    expect(buildingLabel.closest('div')?.querySelector('.lucide-loader-circle')).toBeInTheDocument();
+
+    // Fourth step: pending
+    expect(syncingLabel.className).toContain('text-muted-foreground');
+    expect(syncingLabel.closest('div')?.querySelector('.lucide-circle')).toBeInTheDocument();
   });
 
   it('does not render QR code or mobile button when showing progress', async () => {
