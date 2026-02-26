@@ -205,6 +205,7 @@ export const createCancelableAuthApproval = (
         throw error;
       }
 
+      console.log('sleeping for', pollIntervalMs, 'ms');
       await sleep(pollIntervalMs);
     }
   })();

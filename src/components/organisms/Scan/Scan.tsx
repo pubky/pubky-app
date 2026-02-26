@@ -84,9 +84,9 @@ export const ScanContent = () => {
                 </Atoms.Container>
               ) : isExpired ? (
                 <Atoms.Container className="items-center gap-2">
-                  <Libs.TimerOff className="h-8 w-8 text-muted-foreground" />
+                  <Libs.QrCode className="h-8 w-8 text-muted-foreground" />
                   <Atoms.Typography as="small" size="sm" className="text-muted-foreground">
-                    {t('timedOut')}
+                    {t('expired')}
                   </Atoms.Typography>
                 </Atoms.Container>
               ) : url ? (
@@ -137,8 +137,8 @@ export const ScanContent = () => {
                 </>
               ) : isExpired ? (
                 <>
-                  <Libs.TimerOff className="mr-2 h-4 w-4" />
-                  {t('timedOut')}
+                  <Libs.QrCode className="mr-2 h-4 w-4" />
+                  {t('expired')}
                 </>
               ) : (
                 <>

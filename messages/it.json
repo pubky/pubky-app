@@ -259,16 +259,23 @@
       "subtitle": "Apri Pubky Ring, crea un pubky e scansiona il QR.",
       "generating": "Generazione codice QR...",
       "generatingShort": "Generazione...",
+      "expired": "Scaduto",
       "authorize": "Autorizza con Pubky Ring",
       "authorizeSub": "Usa <pubkyRing>Pubky Ring</pubkyRing> o qualsiasi altro portachiavi alimentato da <pubkyCore>Pubky Core</pubkyCore>.",
       "linkFailed": "Impossibile collegarsi all'applicazione Pubky Ring",
       "tryAgain": "Riprova."
+    },
+    "authExpired": {
+      "title": "Codice QR scaduto",
+      "description": "Questo codice QR non è più attivo. Aggiorna per ottenerne uno nuovo.",
+      "refresh": "Aggiorna"
     },
     "signIn": {
       "title": "Accedi a <highlight>Pubky.</highlight>",
       "subtitle": "Autorizza con Pubky Ring per accedere.",
       "generating": "Generazione codice QR...",
       "generatingShort": "Generazione...",
+      "expired": "Scaduto",
       "authorize": "Autorizza con Pubky Ring",
       "linkCopied": "Link copiato",
       "linkCopiedDescription": "Link di autenticazione copiato negli appunti.",

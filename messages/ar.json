@@ -259,16 +259,23 @@
       "subtitle": "افتح Pubky Ring، انشئ pubky وامسح رمز QR.",
       "generating": "جاري انشاء رمز QR...",
       "generatingShort": "جاري الانشاء...",
+      "expired": "منتهي الصلاحية",
       "authorize": "تفويض باستخدام Pubky Ring",
       "authorizeSub": "استخدم <pubkyRing>Pubky Ring</pubkyRing> او اي سلسلة مفاتيح اخرى مدعومة من <pubkyCore>Pubky Core</pubkyCore>.",
       "linkFailed": "تعذر الاتصال بتطبيق التوقيع Pubky Ring",
       "tryAgain": "يرجى المحاولة مرة اخرى."
+    },
+    "authExpired": {
+      "title": "انتهت صلاحية رمز QR",
+      "description": "رمز QR هذا لم يعد نشطاً. قم بالتحديث للحصول على رمز جديد.",
+      "refresh": "تحديث"
     },
     "signIn": {
       "title": "تسجيل الدخول الى <highlight>Pubky.</highlight>",
       "subtitle": "قم بالتفويض باستخدام Pubky Ring لتسجيل الدخول.",
       "generating": "جاري انشاء رمز QR...",
       "generatingShort": "جاري الانشاء...",
+      "expired": "منتهي الصلاحية",
       "authorize": "تفويض باستخدام Pubky Ring",
       "linkCopied": "تم نسخ الرابط",
       "linkCopiedDescription": "تم نسخ رابط المصادقة الى الحافظة.",

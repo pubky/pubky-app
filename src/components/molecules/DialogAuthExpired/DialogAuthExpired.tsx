@@ -1,23 +1,27 @@
 'use client';
 
+import { useTranslations } from 'next-intl';
+
 import * as Atoms from '@/atoms';
 import * as Libs from '@/libs';
 import type { DialogAuthExpiredProps } from './DialogAuthExpired.types';
 
 export function DialogAuthExpired({ open, onRefresh }: DialogAuthExpiredProps) {
+  const t = useTranslations('onboarding.authExpired');
+
   return (
     <Atoms.Dialog open={open}>
-      <Atoms.DialogContent showCloseButton={false} hiddenTitle="Connection expired">
+      <Atoms.DialogContent showCloseButton={false} hiddenTitle={t('title')}>
         <Atoms.DialogHeader>
-          <Atoms.DialogTitle>Connection expired</Atoms.DialogTitle>
+          <Atoms.DialogTitle>{t('title')}</Atoms.DialogTitle>
         </Atoms.DialogHeader>
         <Atoms.Typography className="text-base tracking-wide text-white/80">
-          The relay connection timed out. Refresh to generate a new QR code.
+          {t('description')}
         </Atoms.Typography>
         <Atoms.DialogFooter>
           <Atoms.Button size="lg" onClick={onRefresh}>
             <Libs.RefreshCw className="mr-2 h-4 w-4" />
-            Refresh
+            {t('refresh')}
           </Atoms.Button>
         </Atoms.DialogFooter>
       </Atoms.DialogContent>

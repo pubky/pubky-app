@@ -259,16 +259,23 @@
       "subtitle": "Pubky Ringを開き、pubkyを作成してQRをスキャンしてください。",
       "generating": "QRコード生成中...",
       "generatingShort": "生成中...",
+      "expired": "期限切れ",
       "authorize": "Pubky Ringで認証",
       "authorizeSub": "<pubkyRing>Pubky Ring</pubkyRing>または<pubkyCore>Pubky Core</pubkyCore>搭載の他のキーチェーンを使用してください。",
       "linkFailed": "Pubky Ring署名アプリへの接続に失敗しました",
       "tryAgain": "再試行してください。"
+    },
+    "authExpired": {
+      "title": "QRコードの有効期限切れ",
+      "description": "このQRコードは無効になりました。更新して新しいQRコードを取得してください。",
+      "refresh": "更新"
     },
     "signIn": {
       "title": "<highlight>Pubky</highlight>にログイン。",
       "subtitle": "Pubky Ringで認証してログインしてください。",
       "generating": "QRコード生成中...",
       "generatingShort": "生成中...",
+      "expired": "期限切れ",
       "authorize": "Pubky Ringで認証",
       "linkCopied": "リンクをコピーしました",
       "linkCopiedDescription": "認証リンクをクリップボードにコピーしました。",

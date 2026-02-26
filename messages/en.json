@@ -259,18 +259,23 @@
       "subtitle": "Open Pubky Ring, create a pubky, and scan the QR.",
       "generating": "Generating QR Code...",
       "generatingShort": "Generating...",
-      "timedOut": "Timed out",
+      "expired": "Expired",
       "authorize": "Authorize with Pubky Ring",
       "authorizeSub": "Use <pubkyRing>Pubky Ring</pubkyRing> or any other <pubkyCore>Pubky Core</pubkyCore>–powered keychain.",
       "linkFailed": "Unable to link to signer application Pubky Ring",
       "tryAgain": "Please try again."
+    },
+    "authExpired": {
+      "title": "QR code expired",
+      "description": "This QR code is no longer active. Refresh to get a new one.",
+      "refresh": "Refresh"
     },
     "signIn": {
       "title": "Sign in to <highlight>Pubky.</highlight>",
       "subtitle": "Authorize with Pubky Ring to sign in.",
       "generating": "Generating QR Code...",
       "generatingShort": "Generating...",
-      "timedOut": "Timed out",
+      "expired": "Expired",
       "authorize": "Authorize with Pubky Ring",
       "linkCopied": "Link copied",
       "linkCopiedDescription": "Authentication link copied to clipboard.",
