@@ -51,9 +51,14 @@ jobs:
           else
             PR_NUMBER="${{ github.event.pull_request.number }}"
           fi
+          if [ "${{ github.event_name }}" == "pull_request" ]; then
+            COMMIT_SHA="${{ github.event.pull_request.head.sha }}"
+          else
+            COMMIT_SHA="${{ github.sha }}"
+          fi
           echo "pr_number=${PR_NUMBER}" >> $GITHUB_OUTPUT
           echo "service_name=${{ env.SERVICE_BASE_NAME }}-pr-${PR_NUMBER}" >> $GITHUB_OUTPUT
-          echo "short_sha=$(echo ${{ github.sha }} | cut -c1-7)" >> $GITHUB_OUTPUT
+          echo "short_sha=$(echo ${COMMIT_SHA} | cut -c1-7)" >> $GITHUB_OUTPUT
           echo "platforms=linux/amd64" >> $GITHUB_OUTPUT
 
   build-preview:
@@ -64,6 +69,7 @@ jobs:
       env: preview
       platforms: ${{ needs.set-vars.outputs.platforms }}
       pr_number: ${{ needs.set-vars.outputs.pr_number }}
+      commit_sha: ${{ github.event.pull_request.head.sha || github.sha }}
     secrets: inherit
 
   deploy-preview:
