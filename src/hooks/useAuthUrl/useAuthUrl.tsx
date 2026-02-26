@@ -37,7 +37,7 @@ export function useAuthUrl(options: UseAuthUrlOptions = {}): UseAuthUrlReturn {
       // Request auth URL from controller
       const { authorizationUrl, awaitApproval } =
         type === 'signup' && inviteCode
-          ? await Core.HomegateController.getSignupAuthUrl(inviteCode)
+          ? await Core.AuthController.getSignupAuthUrl(inviteCode)
           : await Core.AuthController.getAuthUrl();
 
       awaitApproval

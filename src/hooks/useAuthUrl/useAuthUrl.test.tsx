@@ -45,11 +45,9 @@ vi.mock('@/libs', async () => {
 vi.mock('@/core', () => ({
   AuthController: {
     getAuthUrl: (...args: unknown[]) => mockGetAuthUrl(...args),
+    getSignupAuthUrl: (...args: unknown[]) => mockGetSignupAuthUrl(...args),
     initializeAuthenticatedSession: (...args: unknown[]) => mockInitializeAuthenticatedSession(...args),
     cancelActiveAuthFlow: (...args: unknown[]) => mockCancelActiveAuthFlow(...args),
-  },
-  HomegateController: {
-    getSignupAuthUrl: (...args: unknown[]) => mockGetSignupAuthUrl(...args),
   },
   useAuthStore: (selector?: (state: { session: Session | null }) => unknown) => {
     const state = { session: null };
@@ -292,7 +290,7 @@ describe('useAuthUrl', () => {
     expect(mockCancelActiveAuthFlow).toHaveBeenCalledTimes(1);
   });
 
-  it('calls HomegateController.getSignupAuthUrl when type is signup with inviteCode', async () => {
+  it('calls AuthController.getSignupAuthUrl when type is signup with inviteCode', async () => {
     const mockAuthUrl = 'pubkyring://authorize?token=signup';
 
     mockGetSignupAuthUrl.mockResolvedValue({

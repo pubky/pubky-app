@@ -37,15 +37,7 @@ vi.mock('@/atoms', () => ({
   DialogTitle: ({ children }: { children: React.ReactNode }) => <h2 data-testid="dialog-title">{children}</h2>,
   Typography: ({ children }: { children: React.ReactNode }) => <p data-testid="dialog-description">{children}</p>,
   DialogFooter: ({ children }: { children: React.ReactNode }) => <div data-testid="dialog-footer">{children}</div>,
-  Button: ({
-    children,
-    onClick,
-    size,
-  }: {
-    children: React.ReactNode;
-    onClick?: () => void;
-    size?: string;
-  }) => (
+  Button: ({ children, onClick, size }: { children: React.ReactNode; onClick?: () => void; size?: string }) => (
     <button data-testid="refresh-button" data-size={size} onClick={onClick}>
       {children}
     </button>

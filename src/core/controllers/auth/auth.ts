@@ -192,6 +192,17 @@ export class AuthController {
   }
 
   /**
+   * Generates a signup authentication URL for Pubky Ring authorization.
+   * Decorates a standard auth URL with homeserver address and invite code metadata.
+   * @param inviteCode - The invite code for signup
+   * @returns Promise resolving to the generated signup authentication URL
+   */
+  static async getSignupAuthUrl(inviteCode: string): Promise<Core.TGenerateAuthUrlResult> {
+    await Core.clearDatabase();
+    return await Core.AuthApplication.generateSignupAuthUrl(inviteCode);
+  }
+
+  /**
    * Logs out the current user from both the homeserver and local application state.
    */
   static async logout() {

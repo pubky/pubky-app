@@ -15,9 +15,7 @@ export function DialogAuthExpired({ open, onRefresh }: DialogAuthExpiredProps) {
         <Atoms.DialogHeader>
           <Atoms.DialogTitle>{t('title')}</Atoms.DialogTitle>
         </Atoms.DialogHeader>
-        <Atoms.Typography className="text-base tracking-wide text-white/80">
-          {t('description')}
-        </Atoms.Typography>
+        <Atoms.Typography className="text-base tracking-wide text-white/80">{t('description')}</Atoms.Typography>
         <Atoms.DialogFooter>
           <Atoms.Button size="lg" onClick={onRefresh}>
             <Libs.RefreshCw className="mr-2 h-4 w-4" />

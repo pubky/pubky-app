@@ -85,12 +85,21 @@ export class AuthApplication {
   /**
    * Generates an authentication URL for Pubky Ring App
    *
-   * @param params - Parameters containing the secret key
-   * @param params.secretKey - Secret key for homeserver service
-   * @returns Authentication URL and promise to the generated authentication URL
+   * @returns Authentication URL and approval promise
    */
   static async generateAuthUrl(): Promise<Core.TGenerateAuthUrlResult> {
     return await Core.HomeserverService.generateAuthUrl();
+  }
+
+  /**
+   * Generates a signup authentication URL for Pubky Ring App.
+   * Decorates a standard auth URL with homeserver address and invite code metadata.
+   *
+   * @param inviteCode - The invite code for signup
+   * @returns Authentication URL and approval promise
+   */
+  static async generateSignupAuthUrl(inviteCode: string): Promise<Core.TGenerateAuthUrlResult> {
+    return await Core.HomeserverService.generateSignupAuthUrl({ inviteCode });
   }
 
   /**

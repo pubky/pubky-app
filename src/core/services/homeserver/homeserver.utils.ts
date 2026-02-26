@@ -204,7 +204,7 @@ export const createCancelableAuthApproval = (
         }
         throw error;
       }
-      
+
       await sleep(pollIntervalMs);
     }
   })();
