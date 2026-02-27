@@ -297,10 +297,7 @@ describe('MuteApplication.fetchMutedUsers', () => {
   });
 
   it('should filter out empty strings from URIs with trailing slashes', async () => {
-    const muteUris = [
-      `pubky://${pubky}/pub/pubky.app/mutes/mutee_aaa`,
-      `pubky://${pubky}/pub/pubky.app/mutes/`,
-    ];
+    const muteUris = [`pubky://${pubky}/pub/pubky.app/mutes/mutee_aaa`, `pubky://${pubky}/pub/pubky.app/mutes/`];
     vi.spyOn(Core.HomeserverService, 'list').mockResolvedValue(muteUris);
 
     const result = await MuteApplication.fetchMutedUsers(pubky);

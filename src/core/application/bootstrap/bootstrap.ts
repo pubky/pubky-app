@@ -31,6 +31,7 @@ export class BootstrapApplication {
       Core.NexusBootstrapService.fetch(pubky),
       this.fetchOrPutLastRead(params),
       Core.MuteApplication.fetchMutedUsers(pubky),
+      Core.FeedApplication.fetchFeeds(pubky),
       // Initialize settings from homeserver (non-blocking, errors are logged but don't fail bootstrap)
       this.syncSettings(pubky),
     ]);

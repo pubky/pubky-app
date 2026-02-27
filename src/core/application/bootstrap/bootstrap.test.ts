@@ -114,12 +114,14 @@ type MockConfig = {
   remoteSettings?: Core.SettingsState | null;
   mutedUsers?: Core.Pubky[];
   fetchMutedUsersError?: Error;
+  fetchFeedsError?: Error;
 };
 
 type ServiceMocks = {
   nexusFetch: unknown;
   homeserverRequest: unknown;
   fetchMutedUsers: unknown;
+  fetchFeeds: unknown;
   persistUsers: unknown;
   persistPosts: unknown;
   persistFiles: unknown;
@@ -150,6 +152,7 @@ const setupMocks = (config: MockConfig = {}): ServiceMocks => {
     remoteSettings = null,
     mutedUsers = [],
     fetchMutedUsersError,
+    fetchFeedsError,
   } = config;
 
   vi.clearAllMocks();
@@ -172,6 +175,9 @@ const setupMocks = (config: MockConfig = {}): ServiceMocks => {
       .mockImplementation(
         fetchMutedUsersError ? () => Promise.reject(fetchMutedUsersError) : () => Promise.resolve(mutedUsers),
       ),
+    fetchFeeds: vi
+      .spyOn(Core.FeedApplication, 'fetchFeeds')
+      .mockImplementation(fetchFeedsError ? () => Promise.reject(fetchFeedsError) : () => Promise.resolve([])),
     persistUsers: vi
       .spyOn(Core.LocalStreamUsersService, 'persistUsers')
       .mockImplementation(persistUsersError ? () => Promise.reject(persistUsersError) : () => Promise.resolve([])),
@@ -217,6 +223,7 @@ const assertCommonCalls = (mocks: ServiceMocks, bootstrapData: Core.NexusBootstr
   expect(mocks.nexusFetch).toHaveBeenCalledWith(TEST_PUBKY);
   expect(mocks.homeserverRequest).toHaveBeenCalledWith({ method: Libs.HttpMethod.GET, url: MOCK_LAST_READ_URL });
   expect(mocks.fetchMutedUsers).toHaveBeenCalledWith(TEST_PUBKY);
+  expect(mocks.fetchFeeds).toHaveBeenCalledWith(TEST_PUBKY);
   expect(mocks.persistUsers).toHaveBeenCalledWith(bootstrapData.users);
   expect(mocks.persistPosts).toHaveBeenCalledWith({ posts: bootstrapData.posts });
   expect(mocks.upsertInfluencersStream).toHaveBeenCalledWith({
