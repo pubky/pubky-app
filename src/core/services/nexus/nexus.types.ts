@@ -129,7 +129,6 @@ export type NexusUserCounts = {
 export type NexusUserRelationship = {
   following: boolean;
   followed_by: boolean;
-  muted: boolean;
 };
 
 // =============================================================================

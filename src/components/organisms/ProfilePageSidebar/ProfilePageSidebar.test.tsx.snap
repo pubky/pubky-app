@@ -204,12 +204,6 @@ exports[`ProfilePageSidebar - Snapshots > matches snapshot with default state 1`
             </span>
           </span>
         </div>
-        <div
-          class="min-w-0 flex-1 truncate text-base font-bold text-foreground"
-          data-testid="container"
-        >
-          Your Name
-        </div>
       </div>
       <button
         class="w-full cursor-pointer text-left text-base leading-normal font-medium break-words text-muted-foreground"

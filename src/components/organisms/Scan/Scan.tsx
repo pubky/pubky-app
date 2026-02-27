@@ -16,56 +16,33 @@ import * as Core from '@/core';
 export const ScanContent = () => {
   const t = useTranslations('onboarding.scan');
   const inviteCode = Core.useOnboardingStore((state) => state.inviteCode);
-  const { url, isLoading, fetchUrl } = Hooks.useAuthUrl({ type: 'signup', inviteCode });
+  const { url, isLoading, isOpeningRing, onAuthorizeClick } = Hooks.useMobileAuth({
+    type: 'signup',
+    inviteCode,
+  });
 
-  const isIOS = typeof navigator !== 'undefined' && /iPhone|iPad|iPod/i.test(navigator.userAgent);
-  const fallbackUrl = isIOS ? Config.APP_STORE_URL : Config.PLAY_STORE_URL;
-
-  const copyAuthUrlToClipboard = async () => {
-    if (!url) return;
-
-    try {
-      await Libs.copyToClipboard({ text: url });
-    } catch (error) {
-      Libs.Logger.error('Failed to copy auth URL to clipboard:', error);
-    }
-  };
-
-  const handleMobileAuth = async () => {
-    if (isLoading) return;
-
-    if (!url) {
-      void fetchUrl();
-      return;
-    }
-
-    await copyAuthUrlToClipboard();
-
-    try {
-      const openedWindow = window.open(url, '_blank');
-
-      if (!openedWindow) {
-        window.location.href = url;
-        return;
-      }
-
-      setTimeout(() => {
-        try {
-          openedWindow.location.href = fallbackUrl;
-        } catch (error) {
-          Libs.Logger.error('Failed to redirect to store after deeplink attempt:', error);
-          window.location.href = fallbackUrl;
-        }
-      }, 2000);
-    } catch (error) {
-      Libs.Logger.error('Failed to open Pubky Ring deeplink:', error);
-      Molecules.toast({
-        title: t('linkFailed'),
-        description: t('tryAgain'),
-      });
-      window.location.href = fallbackUrl;
-    }
-  };
+  const isMobileLaunching = isLoading || isOpeningRing;
+  const mobileAuthorizeContent = isMobileLaunching ? (
+    <>
+      <Libs.Loader2 className="mr-2 h-4 w-4 animate-spin" />
+      {isOpeningRing ? t('openingRing') : t('generatingShort')}
+    </>
+  ) : (
+    <>
+      <Libs.Key className="mr-2 h-4 w-4" />
+      {t('authorize')}
+    </>
+  );
+  const mobileAuthorizeButton =
+    isMobileLaunching || !url ? (
+      <Atoms.Button className="h-[60px] w-full rounded-full" size="lg" disabled>
+        {mobileAuthorizeContent}
+      </Atoms.Button>
+    ) : (
+      <Atoms.Button className="h-[60px] w-full rounded-full" size="lg" onClick={onAuthorizeClick} data-testid="button">
+        {mobileAuthorizeContent}
+      </Atoms.Button>
+    );
 
   return (
     <>
@@ -110,24 +87,7 @@ export const ScanContent = () => {
         <Molecules.ContentCard layout="column">
           <Atoms.Container className="flex-col items-center justify-center gap-12 lg:flex-row">
             <Image src="/images/logo-pubky-ring.svg" alt="Pubky Ring" width={137} height={30} />
-            <Atoms.Button
-              className="h-[60px] w-full rounded-full"
-              size="lg"
-              onClick={handleMobileAuth}
-              disabled={isLoading || !url}
-            >
-              {isLoading ? (
-                <>
-                  <Libs.Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  {t('generatingShort')}
-                </>
-              ) : (
-                <>
-                  <Libs.Key className="mr-2 h-4 w-4" />
-                  {t('authorize')}
-                </>
-              )}
-            </Atoms.Button>
+            {mobileAuthorizeButton}
           </Atoms.Container>
         </Molecules.ContentCard>
       </Atoms.Container>

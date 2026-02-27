@@ -50,17 +50,28 @@ vi.mock('@/core', () => ({
   }),
 }));
 
-// Mock useAuthUrl hook
-const mockFetchUrl = vi.fn();
-vi.mock('@/hooks', () => ({
-  useAuthUrl: vi.fn(() => ({
-    url: 'mock-auth-url',
-    isLoading: false,
-    isGenerating: false,
-    fetchUrl: mockFetchUrl,
-    retryCount: 0,
-  })),
-}));
+// Mock useMobileAuth hook - use vi.hoisted so values are available in vi.mock
+const { defaultUseMobileAuthReturn, mockOnAuthorizeClick } = vi.hoisted(() => {
+  const mockFetchUrl = vi.fn();
+  const mockOnAuthorizeClick = vi.fn();
+  return {
+    mockFetchUrl,
+    mockOnAuthorizeClick,
+    defaultUseMobileAuthReturn: {
+      url: 'pubkyring://authorize?token=test123',
+      isLoading: false,
+      fetchUrl: mockFetchUrl,
+      onAuthorizeClick: mockOnAuthorizeClick,
+    },
+  };
+});
+vi.mock('@/hooks', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('@/hooks')>();
+  return {
+    ...actual,
+    useMobileAuth: vi.fn(() => defaultUseMobileAuthReturn),
+  };
+});
 
 // Mock molecules
 vi.mock('@/molecules', () => ({
@@ -118,19 +129,30 @@ vi.mock('@/atoms', () => ({
     </div>
   ),
   Button: ({
+    asChild,
     children,
     className,
     size,
     ...props
   }: {
+    asChild?: boolean;
     children: React.ReactNode;
     className?: string;
     size?: string;
-  } & React.ButtonHTMLAttributes<HTMLButtonElement>) => (
-    <button data-testid="button" className={className} data-size={size} {...props}>
-      {children}
-    </button>
-  ),
+  } & React.ButtonHTMLAttributes<HTMLButtonElement>) => {
+    if (asChild && React.isValidElement(children)) {
+      return React.cloneElement(children, {
+        ...props,
+        'data-testid': 'button',
+        className: [className, (children.props as { className?: string }).className].filter(Boolean).join(' '),
+      } as Record<string, unknown>);
+    }
+    return (
+      <button data-testid="button" className={className} data-size={size} {...props}>
+        {children}
+      </button>
+    );
+  },
   Typography: ({
     children,
     as,
@@ -156,13 +178,13 @@ vi.mock('@/atoms', () => ({
 }));
 
 describe('ScanContent', () => {
-  const originalOpen = window.open;
+  const originalLocation = window.location;
   const clipboardMock = { writeText: vi.fn().mockResolvedValue(undefined) };
 
   beforeAll(() => {
-    Object.defineProperty(window, 'open', {
+    Object.defineProperty(window, 'location', {
       configurable: true,
-      value: vi.fn(() => ({ location: { href: '' } })) as unknown as typeof window.open,
+      value: { ...(originalLocation as unknown as object), href: '' } as unknown as Location,
     });
     Object.defineProperty(navigator, 'clipboard', {
       configurable: true,
@@ -172,13 +194,14 @@ describe('ScanContent', () => {
 
   beforeEach(() => {
     vi.clearAllMocks();
+    window.location.href = '';
     clipboardMock.writeText.mockClear();
   });
 
   afterAll(() => {
-    Object.defineProperty(window, 'open', {
+    Object.defineProperty(window, 'location', {
       configurable: true,
-      value: originalOpen,
+      value: originalLocation,
     });
     Object.defineProperty(navigator, 'clipboard', {
       configurable: true,
@@ -219,7 +242,7 @@ describe('ScanContent', () => {
     expect(logoImage).toBeInTheDocument();
   });
 
-  it('opens the Pubky Ring deeplink when the mobile authorize button is tapped', async () => {
+  it('calls mobile authorize handler when the mobile authorize button is tapped', async () => {
     await act(async () => {
       render(<ScanContent />);
     });
@@ -233,9 +256,7 @@ describe('ScanContent', () => {
     await act(async () => {
       fireEvent.click(authorizeButton);
     });
-
-    expect(clipboardMock.writeText).toHaveBeenCalledWith('mock-auth-url');
-    expect(window.open).toHaveBeenCalledWith('mock-auth-url', '_blank');
+    expect(mockOnAuthorizeClick).toHaveBeenCalled();
   });
 });
 

@@ -6,20 +6,24 @@ export class LocalFeedService {
   private constructor() {}
 
   /**
-   * Persist a feed to local storage and return the persisted feed with the actual ID
-   * Uses table.add() for new feeds (id = 0) to trigger Dexie auto-increment, upsert() for updates
+   * Persist a feed to local storage.
+   * The ID is always a HashId-derived string provided upfront, so this is a plain upsert.
    */
   static async createOrUpdate(feed: Core.FeedModelSchema): Promise<Core.FeedModelSchema> {
     return await Core.db.transaction('rw', FEED_TABLES, async () => {
-      if (feed.id === 0) {
-        // For new records: omit id to trigger Dexie auto-increment (++id schema)
-        // eslint-disable-next-line @typescript-eslint/no-unused-vars
-        const { id, ...feedWithoutId } = feed;
-        return Core.FeedModel.createAndGet(feedWithoutId as Core.FeedModelSchema);
-      }
-
       await Core.FeedModel.upsert(feed);
       return Core.FeedModel.findByIdOrThrow(feed.id);
+    });
+  }
+
+  /**
+   * Persist multiple feeds in a single transaction.
+   * Uses bulkPut semantics: inserts new feeds and replaces existing ones by ID.
+   */
+  static async createOrUpdateMany(feeds: Core.FeedModelSchema[]): Promise<Core.FeedModelSchema[]> {
+    return await Core.db.transaction('rw', FEED_TABLES, async () => {
+      await Core.FeedModel.bulkSave(feeds);
+      return feeds;
     });
   }
 
