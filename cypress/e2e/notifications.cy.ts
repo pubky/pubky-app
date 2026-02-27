@@ -8,7 +8,6 @@ import {
   checkLatestNotification,
   addProfileTags,
   waitForNotificationDotsToDisappear,
-  causeLastReadToBeUpdated,
 } from '../support/profile';
 import { BackupType, CheckForNewPosts, HasBackedUp, WaitForNewPosts } from '../support/types/enums';
 import { verifyNotificationCounter } from '../support/common';
@@ -57,7 +56,7 @@ describe('notifications', () => {
     cy.signInWithEncryptedFile(backupDownloadFilePath(profile2.username));
     verifyNotificationCounter(1);
     goToProfilePageFromHeader();
-    verifyNotificationCounter(1);
+    verifyNotificationCounter(0);
     // check latest notification on profile page and navigate to profile 1 profile page
     checkLatestNotification([profile1.username, 'followed you'], profile1.username);
 
@@ -70,14 +69,9 @@ describe('notifications', () => {
     cy.signInWithEncryptedFile(backupDownloadFilePath(profile1.username));
     verifyNotificationCounter(1);
     goToProfilePageFromHeader();
-    verifyNotificationCounter(1);
+    verifyNotificationCounter(0);
     // check latest notification on profile page
     checkLatestNotification([profile2.username, 'is now your friend']);
-
-    // * check that toggling profile page tabs clears notification counter for new notification
-    causeLastReadToBeUpdated();
-    verifyNotificationCounter(0);
-    waitForNotificationDotsToDisappear();
 
     // TODO: add checks for disabled notifications
     // * profile 1 disables follow notifications
@@ -109,7 +103,7 @@ describe('notifications', () => {
     cy.signInWithEncryptedFile(backupDownloadFilePath(profile2.username));
     verifyNotificationCounter(1);
     goToProfilePageFromHeader();
-    verifyNotificationCounter(1);
+    verifyNotificationCounter(0);
     // check latest notification on profile page
     checkLatestNotification([profile1.username, 'tagged your profile', profileTag]);
 
@@ -136,10 +130,8 @@ describe('notifications', () => {
     cy.signInWithEncryptedFile(backupDownloadFilePath(profile1.username));
     verifyNotificationCounter(1);
     goToProfilePageFromHeader();
-    verifyNotificationCounter(1);
-    checkLatestNotification([profile2.username, 'tagged your post', postTag]);
-    causeLastReadToBeUpdated();
     verifyNotificationCounter(0);
+    checkLatestNotification([profile2.username, 'tagged your post', postTag]);
 
     // TODO: add checks for disabled notifications
     // * profile 1 disables notifications for tagged profile
@@ -171,10 +163,8 @@ describe('notifications', () => {
     cy.signInWithEncryptedFile(backupDownloadFilePath(profile1.username));
     verifyNotificationCounter(1);
     goToProfilePageFromHeader();
-    verifyNotificationCounter(1);
-    checkLatestNotification([profile2.username, 'replied to your post']);
-    causeLastReadToBeUpdated();
     verifyNotificationCounter(0);
+    checkLatestNotification([profile2.username, 'replied to your post']);
 
     // cause last_read to be updated
 
@@ -202,10 +192,8 @@ describe('notifications', () => {
     cy.signInWithEncryptedFile(backupDownloadFilePath(profile1.username));
     verifyNotificationCounter(1);
     goToProfilePageFromHeader();
-    verifyNotificationCounter(1);
-    checkLatestNotification([profile2.username, 'reposted your post']);
-    causeLastReadToBeUpdated();
     verifyNotificationCounter(0);
+    checkLatestNotification([profile2.username, 'reposted your post']);
 
     // TODO: add checks for disabled notifications
     // * profile 1 disables notifications for being reposted
@@ -239,10 +227,8 @@ describe('notifications', () => {
     cy.signInWithEncryptedFile(backupDownloadFilePath(profile2.username));
     verifyNotificationCounter(1);
     goToProfilePageFromHeader();
-    verifyNotificationCounter(1);
-    checkLatestNotification([profile1.username, 'deleted a post']);
-    causeLastReadToBeUpdated();
     verifyNotificationCounter(0);
+    checkLatestNotification([profile1.username, 'deleted a post']);
 
     // TODO: add checks for disabled notifications
     // * profile 2 disables notifications for being replied to
@@ -277,10 +263,8 @@ describe('notifications', () => {
     cy.signInWithEncryptedFile(backupDownloadFilePath(profile2.username));
     verifyNotificationCounter(1);
     goToProfilePageFromHeader();
-    verifyNotificationCounter(1);
-    checkLatestNotification([profile1.username, 'deleted a post']);
-    causeLastReadToBeUpdated();
     verifyNotificationCounter(0);
+    checkLatestNotification([profile1.username, 'deleted a post']);
 
     // TODO: add checks for disabled notifications
     // * profile 2 disables notifications for post being deleted that you reposted
@@ -314,10 +298,8 @@ describe('notifications', () => {
     cy.signInWithEncryptedFile(backupDownloadFilePath(profile2.username));
     verifyNotificationCounter(1);
     goToProfilePageFromHeader();
-    verifyNotificationCounter(1);
-    checkLatestNotification([profile1.username, 'edited a post']);
-    causeLastReadToBeUpdated();
     verifyNotificationCounter(0);
+    checkLatestNotification([profile1.username, 'edited a post']);
   });
 
   it('can be notified for a post being edited that you reposted', () => {
@@ -345,10 +327,8 @@ describe('notifications', () => {
     cy.signInWithEncryptedFile(backupDownloadFilePath(profile2.username));
     verifyNotificationCounter(1);
     goToProfilePageFromHeader();
-    verifyNotificationCounter(1);
-    checkLatestNotification([profile1.username, 'edited a post']);
-    causeLastReadToBeUpdated();
     verifyNotificationCounter(0);
+    checkLatestNotification([profile1.username, 'edited a post']);
   });
 
   it('can display counter for multiple new notifications');
