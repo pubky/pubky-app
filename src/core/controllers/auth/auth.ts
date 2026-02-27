@@ -19,7 +19,10 @@ export class AuthController {
   static async restorePersistedSession(): Promise<boolean> {
     const authStore = Core.useAuthStore.getState();
     const result = await Core.AuthApplication.restorePersistedSession({ authStore });
-    if (!result) return false;
+    if (!result) {
+      await this.cleanupLocalState();
+      return false;
+    }
     const { session } = result;
     const initialState = {
       session,
@@ -192,12 +195,57 @@ export class AuthController {
   }
 
   /**
+   * Centralizes all local state cleanup: resets every Zustand store, clears cookies,
+   * IndexedDB, query cache, singletons, and persisted localStorage keys.
+   * Used by both logout() and restorePersistedSession() on failure.
+   */
+  private static async cleanupLocalState() {
+    // Reset singletons
+    Core.PubkySpecsSingleton.reset();
+    Core.TtlCoordinator.resetInstance();
+    Core.StreamCoordinator.resetInstance();
+    Core.NotificationCoordinator.resetInstance();
+
+    // Cancel active auth flows
+    this.cancelActiveAuthFlow();
+
+    // Cancel all pending Nexus API queries to prevent retries after sign-out
+    Core.nexusQueryClient.cancelQueries();
+    Core.nexusQueryClient.clear();
+
+    // Reset ALL Zustand stores
+    Core.useOnboardingStore.getState().reset();
+    Core.useAuthStore.getState().reset();
+    Core.useSignInStore.getState().reset();
+    Core.useLocalFilesStore.getState().reset();
+    Core.useHomeStore.getState().reset();
+    Core.useHotStore.getState().reset();
+    Core.useSearchStore.getState().reset();
+    Core.useNotificationStore.getState().reset();
+    Core.useSettingsStore.getState().reset();
+
+    // Clear cookies, database, and persisted localStorage keys
+    Libs.clearCookies();
+    await Core.clearDatabase();
+
+    // TODO: Extract persist keys to each store if this list is needed elsewhere
+    const persistedKeys = [
+      'auth-store',
+      'onboarding-storage',
+      'notification-store',
+      'search-store',
+      'home-store',
+      'hot-store',
+      'settings-storage',
+    ];
+    persistedKeys.forEach((key) => localStorage.removeItem(key));
+  }
+
+  /**
    * Logs out the current user from both the homeserver and local application state.
    */
   static async logout() {
     const authStore = Core.useAuthStore.getState();
-    const onboardingStore = Core.useOnboardingStore.getState();
-    const signInStore = Core.useSignInStore.getState();
 
     // Set logging out flag immediately to prevent flash of weird states in UI
     authStore.setIsLoggingOut(true);
@@ -209,22 +257,8 @@ export class AuthController {
         Libs.Logger.warn('Homeserver logout failed, clearing local state anyway', { error });
       }
     }
-    // Reset PubkySpecsSingleton here to ensure it's always called even when homeserver logout fails.
-    // This allows users to sign out even when their profile pubky cannot be resolved (issue #538).
-    Core.PubkySpecsSingleton.reset();
-    this.cancelActiveAuthFlow();
 
-    // Cancel all pending Nexus API queries to prevent retries after logout
-    // This stops the React Query client from retrying 404s for user data that no longer exists
-    Core.nexusQueryClient.cancelQueries();
-    Core.nexusQueryClient.clear();
-
-    onboardingStore.reset();
-    authStore.reset();
-    signInStore.reset();
-    Core.useLocalFilesStore.getState().reset();
-    Libs.clearCookies();
-    await Core.clearDatabase();
+    await this.cleanupLocalState();
   }
 
   /**
