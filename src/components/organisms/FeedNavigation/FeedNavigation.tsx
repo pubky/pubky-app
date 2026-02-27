@@ -56,7 +56,7 @@ export const FeedNavigation = () => {
             pathname === f.href ? 'border-white text-white' : 'border-muted-foreground text-muted-foreground',
           )}
         >
-          {f.name !== 'Home' && f.href === pathname ? (
+          {f.href !== APP_ROUTES.HOME && f.href === pathname ? (
             <Organisms.CustomFeedDialog mode="edit">
               <Atoms.Button variant="ghost" size="icon" className="size-9">
                 {f.icon}
