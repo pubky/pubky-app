@@ -43,7 +43,7 @@ const createMockBootstrapData = (): Core.NexusBootstrapResponse => ({
         friends: 0,
         bookmarks: 0,
       },
-      relationship: { following: false, followed_by: false, muted: false },
+      relationship: { following: false, followed_by: false },
       tags: [],
     },
   ],

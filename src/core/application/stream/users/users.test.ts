@@ -40,7 +40,6 @@ describe('UserStreamApplication', () => {
     relationship: {
       following: false,
       followed_by: false,
-      muted: false,
       ...overrides?.relationship,
     },
     ...overrides,
