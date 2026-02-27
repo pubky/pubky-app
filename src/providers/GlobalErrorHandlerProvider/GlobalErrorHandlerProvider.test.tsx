@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { act, render } from '@testing-library/react';
 import { GlobalErrorHandlerProvider } from './GlobalErrorHandlerProvider';
 import * as Libs from '@/libs';
@@ -28,6 +28,11 @@ vi.mock('@/molecules', async (importOriginal) => {
 describe('GlobalErrorHandlerProvider', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    vi.useRealTimers();
+  });
+
+  afterEach(() => {
+    vi.useRealTimers();
   });
 
   it('renders children', () => {
@@ -72,5 +77,31 @@ describe('GlobalErrorHandlerProvider', () => {
     expect(Libs.toAppError).toHaveBeenCalled();
     expect(Libs.Logger.error).toHaveBeenCalled();
     expect(Molecules.showErrorToast).toHaveBeenCalledWith({ description: 'Something went wrong' });
+  });
+
+  it('throttles duplicate error toasts within the cooldown window', () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date('2026-02-27T10:00:00.000Z'));
+
+    render(
+      <GlobalErrorHandlerProvider>
+        <div>child</div>
+      </GlobalErrorHandlerProvider>,
+    );
+
+    act(() => {
+      window.dispatchEvent(new ErrorEvent('error', { error: new Error('boom'), message: 'boom' }));
+      window.dispatchEvent(new ErrorEvent('error', { error: new Error('boom'), message: 'boom' }));
+    });
+
+    expect(Libs.Logger.error).toHaveBeenCalledTimes(2);
+    expect(Molecules.showErrorToast).toHaveBeenCalledTimes(1);
+
+    act(() => {
+      vi.advanceTimersByTime(3001);
+      window.dispatchEvent(new ErrorEvent('error', { error: new Error('boom'), message: 'boom' }));
+    });
+
+    expect(Molecules.showErrorToast).toHaveBeenCalledTimes(2);
   });
 });
