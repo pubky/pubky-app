@@ -47,21 +47,24 @@ vi.mock('@/core', () => ({
   }),
 }));
 
-// Mock useAuthUrl hook - use vi.hoisted so values are available in vi.mock
-const { mockFetchUrl, mockCopyAuthUrl } = vi.hoisted(() => ({
+// Mock useMobileAuth hook - use vi.hoisted so values are available in vi.mock
+const { mockFetchUrl, mockCopyAuthUrl, mockOnAuthorizeClick } = vi.hoisted(() => ({
   mockFetchUrl: vi.fn(),
   mockCopyAuthUrl: vi.fn().mockResolvedValue(undefined),
+  mockOnAuthorizeClick: vi.fn(),
 }));
 vi.mock('@/hooks', async (importOriginal) => {
   const actual = await importOriginal<typeof import('@/hooks')>();
   return {
     ...actual,
-    useAuthUrl: vi.fn(() => ({
+    useMobileAuth: vi.fn(() => ({
       url: 'mock-auth-url',
       isLoading: false,
       isExpired: false,
       fetchUrl: mockFetchUrl,
       copyAuthUrl: mockCopyAuthUrl,
+      isOpeningRing: false,
+      onAuthorizeClick: mockOnAuthorizeClick,
     })),
   };
 });
@@ -274,17 +277,19 @@ describe('ScanContent', () => {
       fireEvent.click(authorizeButton);
     });
 
-    expect(mockCopyAuthUrl).toHaveBeenCalled();
+    expect(mockOnAuthorizeClick).toHaveBeenCalledTimes(1);
   });
 
   it('opens expired dialog when auth flow is expired', async () => {
     const Hooks = await import('@/hooks');
-    vi.mocked(Hooks.useAuthUrl).mockReturnValue({
+    vi.mocked(Hooks.useMobileAuth).mockReturnValue({
       url: '',
       isLoading: false,
       isExpired: true,
       fetchUrl: mockFetchUrl,
       copyAuthUrl: mockCopyAuthUrl,
+      isOpeningRing: false,
+      onAuthorizeClick: mockOnAuthorizeClick,
     });
 
     await act(async () => {
@@ -297,12 +302,14 @@ describe('ScanContent', () => {
 
   it('calls fetchUrl when expired dialog refresh button is clicked', async () => {
     const Hooks = await import('@/hooks');
-    vi.mocked(Hooks.useAuthUrl).mockReturnValue({
+    vi.mocked(Hooks.useMobileAuth).mockReturnValue({
       url: '',
       isLoading: false,
       isExpired: true,
       fetchUrl: mockFetchUrl,
       copyAuthUrl: mockCopyAuthUrl,
+      isOpeningRing: false,
+      onAuthorizeClick: mockOnAuthorizeClick,
     });
 
     await act(async () => {

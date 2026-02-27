@@ -42,7 +42,7 @@ exports[`Scan Components - Snapshots > ScanContent - Snapshots > matches snapsho
         >
           <svg
             aria-hidden="true"
-            class="lucide lucide-qr-code h-8 w-8 text-muted-foreground"
+            class="lucide lucide-qr-code size-8 text-muted-foreground"
             fill="none"
             height="24"
             stroke="currentColor"

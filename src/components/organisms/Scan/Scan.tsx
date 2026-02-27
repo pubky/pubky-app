@@ -3,7 +3,7 @@
 import Image from 'next/image';
 import { QRCodeSVG } from 'qrcode.react';
 import { useRouter } from 'next/navigation';
-import { useEffect, useState } from 'react';
+import { useEffect } from 'react';
 import { useTranslations } from 'next-intl';
 
 import * as Atoms from '@/atoms';
@@ -27,54 +27,28 @@ export const ScanContent = () => {
     }
   }, [hasInviteCode, router]);
 
-  const { url, isLoading, isExpired, fetchUrl, copyAuthUrl } = Hooks.useAuthUrl(
+  const { url, isLoading, isExpired, fetchUrl, isOpeningRing, onAuthorizeClick } = Hooks.useMobileAuth(
     hasInviteCode ? { type: 'signup', inviteCode } : { autoFetch: false },
   );
 
-  const [isOpeningRing, setIsOpeningRing] = useState(false);
-
-  const isIOS = typeof navigator !== 'undefined' && /iPhone|iPad|iPod/i.test(navigator.userAgent);
-  const fallbackUrl = isIOS ? Config.APP_STORE_URL : Config.PLAY_STORE_URL;
-
   if (!hasInviteCode) return null;
-
-  const handleMobileAuth = async () => {
-    if (isLoading || isExpired) return;
-
-    if (!url) {
-      void fetchUrl();
-      return;
-    }
-
-    setIsOpeningRing(true);
-    await copyAuthUrl();
-
-    try {
-      window.location.href = url;
-    } catch (error) {
-      Libs.Logger.error('Failed to open Pubky Ring deeplink:', error);
-      Molecules.toast({
-        title: t('linkFailed'),
-        description: t('tryAgain'),
-      });
-      window.location.href = fallbackUrl;
-    }
-  };
 
   const isMobileLaunching = isLoading || isOpeningRing;
   const mobileAuthorizeContent = isMobileLaunching ? (
     <>
-      <Libs.Loader2 className="mr-2 h-4 w-4 animate-spin" />
-      {isOpeningRing ? t('openingRing') : t('generatingShort')}
+      <Libs.Loader2 className="mr-2 size-4 animate-spin" />
+      <Atoms.Typography as="span" overrideDefaults aria-live="polite">
+        {isOpeningRing ? t('openingRing') : t('generatingShort')}
+      </Atoms.Typography>
     </>
   ) : isExpired ? (
     <>
-      <Libs.QrCode className="mr-2 h-4 w-4" />
+      <Libs.QrCode className="mr-2 size-4" />
       {t('expired')}
     </>
   ) : (
     <>
-      <Libs.Key className="mr-2 h-4 w-4" />
+      <Libs.Key className="mr-2 size-4" />
       {t('authorize')}
     </>
   );
@@ -89,14 +63,14 @@ export const ScanContent = () => {
             <div className="relative flex h-[220px] w-[220px] items-center justify-center rounded-lg bg-foreground p-4">
               {isLoading || (!url && !isExpired) ? (
                 <Atoms.Container className="items-center gap-2">
-                  <Libs.Loader2 className="h-8 w-8 animate-spin text-background" />
+                  <Libs.Loader2 className="size-8 animate-spin text-background" />
                   <Atoms.Typography as="small" size="sm" className="text-background">
                     {t('generating')}
                   </Atoms.Typography>
                 </Atoms.Container>
               ) : isExpired ? (
                 <Atoms.Container className="items-center gap-2">
-                  <Libs.QrCode className="h-8 w-8 text-muted-foreground" />
+                  <Libs.QrCode className="size-8 text-muted-foreground" />
                   <Atoms.Typography as="small" size="sm" className="text-muted-foreground">
                     {t('expired')}
                   </Atoms.Typography>
@@ -130,10 +104,11 @@ export const ScanContent = () => {
           <Atoms.Container className="flex-col items-center justify-center gap-12 lg:flex-row">
             <Image src="/images/logo-pubky-ring.svg" alt="Pubky Ring" width={137} height={30} />
             <Atoms.Button
-              className="h-[60px] w-full rounded-full"
+              className="w-full"
               size="lg"
-              onClick={handleMobileAuth}
+              onClick={onAuthorizeClick}
               disabled={isMobileLaunching || isExpired || !url}
+              aria-busy={isMobileLaunching}
               data-testid="button"
             >
               {mobileAuthorizeContent}
