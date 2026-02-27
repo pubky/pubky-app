@@ -9,7 +9,6 @@ import * as Atoms from '@/atoms';
 import * as Libs from '@/libs';
 import * as Molecules from '@/molecules';
 import * as Core from '@/core';
-import * as Config from '@/config';
 import * as Hooks from '@/hooks';
 
 // Step configuration for the progress display (labels are translation keys)
@@ -77,26 +76,13 @@ const SignInProgress = () => {
 
 export const SignInContent = () => {
   const t = useTranslations('onboarding.signIn');
-  const { url, isLoading, fetchUrl } = Hooks.useAuthUrl();
+  const { url, isLoading, isOpeningRing, onAuthorizeClick } = Hooks.useMobileAuth();
   const authUrlResolved = Core.useSignInStore((state) => state.authUrlResolved);
-
-  const isIOS = typeof navigator !== 'undefined' && /iPhone|iPad|iPod/i.test(navigator.userAgent);
-  const fallbackUrl = isIOS ? Config.APP_STORE_URL : Config.PLAY_STORE_URL;
 
   useEffect(() => {
     // Clear onboarding storage when sign-in flow begins to prevent backup reminders from showing for existing users
     Core.useOnboardingStore.getState().reset();
   }, []);
-
-  const copyAuthUrlToClipboard = async () => {
-    if (!url) return;
-
-    try {
-      await Libs.copyToClipboard({ text: url });
-    } catch (error) {
-      Libs.Logger.error('Failed to copy auth URL to clipboard:', error);
-    }
-  };
 
   const handleQRClick = async () => {
     if (!url) return;
@@ -112,41 +98,30 @@ export const SignInContent = () => {
     }
   };
 
-  const handleAuthorizeClick = async () => {
-    if (isLoading) return;
-
-    if (!url) {
-      void fetchUrl();
-      return;
-    }
-
-    await copyAuthUrlToClipboard();
-
-    try {
-      const openedWindow = window.open(url, '_blank');
-
-      if (!openedWindow) {
-        window.location.href = url;
-        return;
-      }
-
-      setTimeout(() => {
-        try {
-          openedWindow.location.href = fallbackUrl;
-        } catch (error) {
-          Libs.Logger.error('Failed to redirect to store after deeplink attempt:', error);
-          window.location.href = fallbackUrl;
-        }
-      }, 2000);
-    } catch (error) {
-      Libs.Logger.error('Failed to open Pubky Ring deeplink:', error);
-      Molecules.toast({
-        title: t('linkFailed'),
-        description: t('tryAgain'),
-      });
-      window.location.href = fallbackUrl;
-    }
-  };
+  const isMobileLaunching = isLoading || isOpeningRing;
+  const mobileAuthorizeContent = isMobileLaunching ? (
+    <>
+      <Libs.Loader2 className="mr-2 h-4 w-4 animate-spin" />
+      <Atoms.Typography as="span" overrideDefaults aria-live="polite">
+        {isOpeningRing ? t('openingRing') : t('generatingShort')}
+      </Atoms.Typography>
+    </>
+  ) : (
+    <>
+      <Libs.Key className="mr-2 h-4 w-4" />
+      {t('authorize')}
+    </>
+  );
+  const mobileAuthorizeButton =
+    isMobileLaunching || !url ? (
+      <Atoms.Button className="h-[60px] w-full rounded-full" size="lg" disabled aria-busy={isMobileLaunching}>
+        {mobileAuthorizeContent}
+      </Atoms.Button>
+    ) : (
+      <Atoms.Button className="h-[60px] w-full rounded-full" size="lg" onClick={onAuthorizeClick} data-testid="button">
+        {mobileAuthorizeContent}
+      </Atoms.Button>
+    );
 
   // Show progress steps once auth URL is resolved
   if (authUrlResolved) {
@@ -204,25 +179,7 @@ export const SignInContent = () => {
         <Molecules.ContentCard layout="column">
           <Atoms.Container className="flex-col items-center justify-center gap-12 lg:flex-row">
             <Image src="/images/logo-pubky-ring.svg" alt="Pubky Ring" width={137} height={30} />
-            <Atoms.Button
-              className="h-[60px] w-full rounded-full"
-              size="lg"
-              onClick={handleAuthorizeClick}
-              disabled={isLoading || !url}
-              aria-busy={isLoading}
-            >
-              {isLoading ? (
-                <>
-                  <Libs.Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  <span aria-live="polite">{t('generatingShort')}</span>
-                </>
-              ) : (
-                <>
-                  <Libs.Key className="mr-2 h-4 w-4" />
-                  {t('authorize')}
-                </>
-              )}
-            </Atoms.Button>
+            {mobileAuthorizeButton}
           </Atoms.Container>
         </Molecules.ContentCard>
       </Atoms.Container>
