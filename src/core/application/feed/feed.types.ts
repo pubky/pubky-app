@@ -20,21 +20,27 @@ export interface FeedPutParams {
 export interface PersistAndSyncParams {
   userId: string;
   feedSchema: Core.FeedModelSchema;
-  normalizedFeed: { feed: { toJson: () => Record<string, unknown> } };
+  normalizedFeed: FeedResult;
+}
+
+export interface LocalFeedMigrationParams {
+  existingId: string;
+  feedSchema: Core.FeedModelSchema;
+  oldFeed: Core.FeedModelSchema | null;
 }
 
 export type TFeedPersistCreateParams = {
   feed: FeedResult;
-  existingId?: number;
+  existingId?: string;
 };
 
 export type TFeedPersistUpdateParams = {
-  feedId: number;
+  feedId: string;
   changes: Partial<Omit<Core.TFeedCreateParams, 'name'>>;
 };
 
 export type TFeedPersistDeleteParams = {
-  feedId: number;
+  feedId: string;
 };
 
 export type TFeedPersistParams = TFeedPersistCreateParams | TFeedPersistUpdateParams | TFeedPersistDeleteParams;
@@ -44,6 +50,23 @@ export type TFeedPersistInput = {
   userId: Core.Pubky;
   params: TFeedPersistParams;
 };
+
+export interface RemoteFeedParams {
+  userId: Core.Pubky;
+  remoteFeed: HomeserverFeedJson;
+}
+
+export interface HomeserverFeedJson {
+  name: string;
+  feed: {
+    tags?: string[];
+    reach: string;
+    layout: string;
+    sort: string;
+    content: string | null;
+  };
+  created_at: number;
+}
 
 export function isFeedDeleteParams(params: TFeedPersistParams): params is TFeedPersistDeleteParams {
   return 'feedId' in params && !('changes' in params) && !('feed' in params);
