@@ -39,7 +39,6 @@ describe('LocalStreamUsersService', () => {
     relationship: {
       following: false,
       followed_by: false,
-      muted: false,
       ...overrides?.relationship,
     },
     ...overrides,
@@ -250,7 +249,6 @@ describe('LocalStreamUsersService', () => {
       const mockRelationship = {
         following: true,
         followed_by: true,
-        muted: false,
       };
 
       await persistAndVerifyUser(userId, { relationship: mockRelationship });
@@ -259,7 +257,6 @@ describe('LocalStreamUsersService', () => {
       expect(savedRelationship).toBeTruthy();
       expect(savedRelationship!.following).toBe(true);
       expect(savedRelationship!.followed_by).toBe(true);
-      expect(savedRelationship!.muted).toBe(false);
     });
 
     it('should convert NexusTag format correctly', async () => {
