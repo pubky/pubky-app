@@ -24,8 +24,8 @@ export function NotificationsContainer() {
     isLoading: isLoadingMore,
   });
 
-  // Mark all notifications as read when leaving the notifications page
-  // This allows the tab counter to show accurate unread count while viewing
+  // Mark all notifications as read when entering the notifications page
+  // This allows the tab counter to show 0 while viewing notifications
   useEffect(() => {
     markAllAsRead();
   }, [markAllAsRead]);
