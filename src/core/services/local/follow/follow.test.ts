@@ -157,7 +157,7 @@ describe('LocalFollowService.create', () => {
 
   it('increments friends only on first follow when followed_by=true', async () => {
     // Relationship snapshot says B follows A already
-    await Core.UserRelationshipsModel.create({ id: userB, following: false, followed_by: true, muted: false });
+    await Core.UserRelationshipsModel.create({ id: userB, following: false, followed_by: true });
 
     // First follow should create following and bump friends for both
     await Core.LocalFollowService.create({ follower: userA, followee: userB });
@@ -183,7 +183,7 @@ describe('LocalFollowService.create', () => {
   });
 
   it('does not upsert friends counts when rows are missing (still updates connections)', async () => {
-    await Core.UserRelationshipsModel.create({ id: userB, following: false, followed_by: true, muted: false });
+    await Core.UserRelationshipsModel.create({ id: userB, following: false, followed_by: true });
 
     // Ensure no counts rows exist
     await Core.db.transaction('rw', [Core.UserCountsModel.table], async () => {
@@ -219,7 +219,7 @@ describe('LocalFollowService.create', () => {
   });
 
   it('updates existing relationship to following=true without changing followed_by', async () => {
-    await Core.UserRelationshipsModel.create({ id: userB, following: false, followed_by: true, muted: false });
+    await Core.UserRelationshipsModel.create({ id: userB, following: false, followed_by: true });
 
     await Core.LocalFollowService.create({ follower: userA, followee: userB });
 
@@ -306,7 +306,7 @@ describe('LocalFollowService.delete', () => {
     });
 
     // Seed relationships showing mutual follow (friends)
-    await Core.UserRelationshipsModel.create({ id: userB, following: true, followed_by: true, muted: false });
+    await Core.UserRelationshipsModel.create({ id: userB, following: true, followed_by: true });
 
     // Add additional connections
     await Core.db.transaction('rw', [Core.UserConnectionsModel.table], async () => {
@@ -449,7 +449,7 @@ describe('LocalFollowService - Stream Updates', () => {
 
     it('adds both users to friends streams when becoming friends', async () => {
       // Setup: B already follows A
-      await Core.UserRelationshipsModel.create({ id: userB, following: false, followed_by: true, muted: false });
+      await Core.UserRelationshipsModel.create({ id: userB, following: false, followed_by: true });
 
       await Core.LocalFollowService.create({ follower: userA, followee: userB });
 
@@ -519,7 +519,7 @@ describe('LocalFollowService - Stream Updates', () => {
 
     it('removes both users from friends streams when breaking friendship', async () => {
       // Setup mutual follow (friends)
-      await Core.UserRelationshipsModel.create({ id: userB, following: true, followed_by: true, muted: false });
+      await Core.UserRelationshipsModel.create({ id: userB, following: true, followed_by: true });
       await Core.db.transaction('rw', [Core.UserStreamModel.table, Core.UserCountsModel.table], async () => {
         await Core.UserStreamModel.upsert(`${userA}:friends`, [userB]);
         await Core.UserStreamModel.upsert(`${userB}:friends`, [userA]);
@@ -601,7 +601,7 @@ describe('LocalFollowService - Stream Updates', () => {
 
     it('invalidates both following and friends streams when becoming friends', async () => {
       // Setup: B already follows A
-      await Core.UserRelationshipsModel.create({ id: userB, following: false, followed_by: true, muted: false });
+      await Core.UserRelationshipsModel.create({ id: userB, following: false, followed_by: true });
 
       await Core.LocalFollowService.create({ follower: userA, followee: userB });
 
@@ -642,7 +642,7 @@ describe('LocalFollowService - Stream Updates', () => {
 
     it('invalidates both following and friends streams when breaking friendship', async () => {
       // Setup mutual follow (friends)
-      await Core.UserRelationshipsModel.create({ id: userB, following: true, followed_by: true, muted: false });
+      await Core.UserRelationshipsModel.create({ id: userB, following: true, followed_by: true });
       await Core.db.transaction('rw', [Core.UserConnectionsModel.table, Core.UserCountsModel.table], async () => {
         await Core.UserConnectionsModel.create({ id: userA, following: [userB], followers: [] });
         await Core.UserConnectionsModel.create({ id: userB, following: [], followers: [userA] });
@@ -695,7 +695,6 @@ describe('Bug regression: Nexus-synced data without connections', () => {
         id: userB,
         following: true,
         followed_by: true,
-        muted: false,
       });
 
       // Counts reflect the existing relationship
@@ -744,7 +743,6 @@ describe('Bug regression: Nexus-synced data without connections', () => {
         id: userB,
         following: true,
         followed_by: false,
-        muted: false,
       });
       await Core.UserCountsModel.table.bulkAdd([
         { id: userA, ...DEFAULT_USER_COUNTS, following: 1 },
