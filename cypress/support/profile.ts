@@ -1,4 +1,5 @@
 import { goToProfilePageFromHeader } from './header';
+import { LatestNotificationReadState } from './types/enums';
 
 interface ProfileField {
   editSelector: string;
@@ -74,7 +75,7 @@ export const editProfileAndVerify = (profileData: Partial<Record<keyof typeof pr
 export const clickFollowButton = () => {
   cy.get('[data-cy="profile-follow-toggle-btn"]').should('be.visible').and('have.text', 'Follow').click();
   // Check follow button is now unfollow
-  cy.get('[data-cy="profile-follow-toggle-btn"]').should('be.visible').and('have.text', 'Following');
+  cy.get('[data-cy="profile-follow-toggle-btn"]').should('be.visible').and('have.text', 'FollowingUnfollow');
 };
 
 export const clickUnfollowButton = () => {
@@ -105,7 +106,11 @@ export const waitForNotificationDotsToDisappear = () => {
   cy.get('[data-cy="notifications-list"]').find('[data-cy="notification-unread-dot"]').should('not.exist');
 };
 
-export const checkLatestNotification = (expectedContent: string[], profileToNavigateTo?: string) => {
+export const checkLatestNotification = (
+  expectedContent: string[],
+  readState: LatestNotificationReadState,
+  profileToNavigateTo?: string,
+) => {
   cy.location('pathname').should('eq', '/profile');
   waitForNotificationsToLoad();
   // assert that each expected string is present in the first notification listed
@@ -118,6 +123,14 @@ export const checkLatestNotification = (expectedContent: string[], profileToNavi
       expectedContent.forEach((content) => {
         expect($firstNotif).to.contain(content);
       });
+    })
+    .should(($firstNotif) => {
+      const dot = $firstNotif.find('[data-cy="notification-unread-dot"]');
+      if (readState === LatestNotificationReadState.Unread) {
+        expect(dot.length).to.be.greaterThan(0);
+      } else {
+        expect(dot.length).to.equal(0);
+      }
     });
   // if profile name is provided, navigate to it in the notification
   if (profileToNavigateTo) {
@@ -173,14 +186,9 @@ export const waitForPutLastRead = () => {
 };
 
 // cause last_read to be updated by clicking posts and notifications tabs
-export const causeLastReadToBeUpdated = () => {
-  cy.intercept({
-    method: 'PUT',
-    url: '/pub/pubky.app/last_read',
-  }).as('putLastRead');
+export const causeNotificationsToBeRead = () => {
   cy.get('[data-cy="profile-filter-item-posts"]').click();
   // Wait for posts filter item to become active before clicking notifications
   cy.get('[data-cy="profile-filter-item-posts"]').closest('[data-selected="true"]').should('exist');
-  cy.wait('@putLastRead').should('have.property', 'response').its('statusCode').should('eq', 201);
   cy.get('[data-cy="profile-filter-item-notifications"]').click();
 };

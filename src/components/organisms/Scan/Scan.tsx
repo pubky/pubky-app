@@ -3,7 +3,7 @@
 import Image from 'next/image';
 import { QRCodeSVG } from 'qrcode.react';
 import { useRouter } from 'next/navigation';
-import { useEffect, useRef } from 'react';
+import { useEffect, useState } from 'react';
 import { useTranslations } from 'next-intl';
 
 import * as Atoms from '@/atoms';
@@ -31,48 +31,26 @@ export const ScanContent = () => {
     hasInviteCode ? { type: 'signup', inviteCode } : { autoFetch: false },
   );
 
-  /** Stores the 2s fallback redirect timer so we can clear it on unmount and avoid redirecting after the user has left. */
-  const fallbackTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const [isOpeningRing, setIsOpeningRing] = useState(false);
 
   const isIOS = typeof navigator !== 'undefined' && /iPhone|iPad|iPod/i.test(navigator.userAgent);
   const fallbackUrl = isIOS ? Config.APP_STORE_URL : Config.PLAY_STORE_URL;
 
-  useEffect(
-    () => () => {
-      if (fallbackTimerRef.current) clearTimeout(fallbackTimerRef.current);
-    },
-    [],
-  );
-
   if (!hasInviteCode) return null;
 
   const handleMobileAuth = async () => {
-    if (isLoading) return;
+    if (isLoading || isExpired) return;
 
     if (!url) {
       void fetchUrl();
       return;
     }
 
+    setIsOpeningRing(true);
     await copyAuthUrl();
 
     try {
-      const openedWindow = window.open(url, '_blank');
-
-      if (!openedWindow) {
-        window.location.href = url;
-        return;
-      }
-
-      fallbackTimerRef.current = setTimeout(() => {
-        fallbackTimerRef.current = null;
-        try {
-          openedWindow.location.href = fallbackUrl;
-        } catch (error) {
-          Libs.Logger.error('Failed to redirect to store after deeplink attempt:', error);
-          window.location.href = fallbackUrl;
-        }
-      }, 2000);
+      window.location.href = url;
     } catch (error) {
       Libs.Logger.error('Failed to open Pubky Ring deeplink:', error);
       Molecules.toast({
@@ -82,6 +60,24 @@ export const ScanContent = () => {
       window.location.href = fallbackUrl;
     }
   };
+
+  const isMobileLaunching = isLoading || isOpeningRing;
+  const mobileAuthorizeContent = isMobileLaunching ? (
+    <>
+      <Libs.Loader2 className="mr-2 h-4 w-4 animate-spin" />
+      {isOpeningRing ? t('openingRing') : t('generatingShort')}
+    </>
+  ) : isExpired ? (
+    <>
+      <Libs.QrCode className="mr-2 h-4 w-4" />
+      {t('expired')}
+    </>
+  ) : (
+    <>
+      <Libs.Key className="mr-2 h-4 w-4" />
+      {t('authorize')}
+    </>
+  );
 
   return (
     <>
@@ -137,24 +133,10 @@ export const ScanContent = () => {
               className="h-[60px] w-full rounded-full"
               size="lg"
               onClick={handleMobileAuth}
-              disabled={isLoading || isExpired || !url}
+              disabled={isMobileLaunching || isExpired || !url}
+              data-testid="button"
             >
-              {isLoading ? (
-                <>
-                  <Libs.Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  {t('generatingShort')}
-                </>
-              ) : isExpired ? (
-                <>
-                  <Libs.QrCode className="mr-2 h-4 w-4" />
-                  {t('expired')}
-                </>
-              ) : (
-                <>
-                  <Libs.Key className="mr-2 h-4 w-4" />
-                  {t('authorize')}
-                </>
-              )}
+              {mobileAuthorizeContent}
             </Atoms.Button>
           </Atoms.Container>
         </Molecules.ContentCard>

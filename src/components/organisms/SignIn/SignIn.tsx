@@ -2,14 +2,13 @@
 
 import Image from 'next/image';
 import { QRCodeSVG } from 'qrcode.react';
-import { useEffect, useRef } from 'react';
+import { useEffect, useState } from 'react';
 import { useTranslations } from 'next-intl';
 
 import * as Atoms from '@/atoms';
 import * as Libs from '@/libs';
 import * as Molecules from '@/molecules';
 import * as Core from '@/core';
-import * as Config from '@/config';
 import * as Hooks from '@/hooks';
 
 // Step configuration for the progress display (labels are translation keys)
@@ -79,23 +78,12 @@ export const SignInContent = () => {
   const t = useTranslations('onboarding.signIn');
   const { url, isLoading, isExpired, fetchUrl, copyAuthUrl } = Hooks.useAuthUrl();
   const authUrlResolved = Core.useSignInStore((state) => state.authUrlResolved);
-  /** Stores the 2s fallback redirect timer so we can clear it on unmount and avoid redirecting after the user has left. */
-  const fallbackTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-
-  const isIOS = typeof navigator !== 'undefined' && /iPhone|iPad|iPod/i.test(navigator.userAgent);
-  const fallbackUrl = isIOS ? Config.APP_STORE_URL : Config.PLAY_STORE_URL;
+  const [isOpeningRing, setIsOpeningRing] = useState(false);
 
   useEffect(() => {
     // Clear onboarding storage when sign-in flow begins to prevent backup reminders from showing for existing users
     Core.useOnboardingStore.getState().reset();
   }, []);
-
-  useEffect(
-    () => () => {
-      if (fallbackTimerRef.current) clearTimeout(fallbackTimerRef.current);
-    },
-    [],
-  );
 
   const handleQRClick = async () => {
     if (!url) return;
@@ -112,41 +100,46 @@ export const SignInContent = () => {
   };
 
   const handleAuthorizeClick = async () => {
-    if (isLoading) return;
+    if (isLoading || isExpired) return;
 
     if (!url) {
       void fetchUrl();
       return;
     }
 
+    setIsOpeningRing(true);
     await copyAuthUrl();
 
     try {
-      const openedWindow = window.open(url, '_blank');
-
-      if (!openedWindow) {
-        window.location.href = url;
-        return;
-      }
-
-      fallbackTimerRef.current = setTimeout(() => {
-        fallbackTimerRef.current = null;
-        try {
-          openedWindow.location.href = fallbackUrl;
-        } catch (error) {
-          Libs.Logger.error('Failed to redirect to store after deeplink attempt:', error);
-          window.location.href = fallbackUrl;
-        }
-      }, 2000);
+      window.location.href = url;
     } catch (error) {
       Libs.Logger.error('Failed to open Pubky Ring deeplink:', error);
       Molecules.toast({
         title: t('linkFailed'),
         description: t('tryAgain'),
       });
-      window.location.href = fallbackUrl;
     }
   };
+
+  const isMobileLaunching = isLoading || isOpeningRing;
+  const mobileAuthorizeContent = isMobileLaunching ? (
+    <>
+      <Libs.Loader2 className="mr-2 h-4 w-4 animate-spin" />
+      <Atoms.Typography as="span" overrideDefaults aria-live="polite">
+        {isOpeningRing ? t('openingRing') : t('generatingShort')}
+      </Atoms.Typography>
+    </>
+  ) : isExpired ? (
+    <>
+      <Libs.QrCode className="mr-2 h-4 w-4" />
+      {t('expired')}
+    </>
+  ) : (
+    <>
+      <Libs.Key className="mr-2 h-4 w-4" />
+      {t('authorize')}
+    </>
+  );
 
   // Show progress steps once auth URL is resolved
   if (authUrlResolved) {
@@ -215,25 +208,11 @@ export const SignInContent = () => {
               className="h-[60px] w-full rounded-full"
               size="lg"
               onClick={handleAuthorizeClick}
-              disabled={isLoading || isExpired || !url}
-              aria-busy={isLoading}
+              disabled={isMobileLaunching || isExpired || !url}
+              aria-busy={isMobileLaunching}
+              data-testid="button"
             >
-              {isLoading ? (
-                <>
-                  <Libs.Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  <span aria-live="polite">{t('generatingShort')}</span>
-                </>
-              ) : isExpired ? (
-                <>
-                  <Libs.QrCode className="mr-2 h-4 w-4" />
-                  {t('expired')}
-                </>
-              ) : (
-                <>
-                  <Libs.Key className="mr-2 h-4 w-4" />
-                  {t('authorize')}
-                </>
-              )}
+              {mobileAuthorizeContent}
             </Atoms.Button>
           </Atoms.Container>
         </Molecules.ContentCard>

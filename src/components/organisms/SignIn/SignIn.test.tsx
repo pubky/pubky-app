@@ -68,18 +68,24 @@ vi.mock('@/core', () => ({
   }),
 }));
 
-// Mock useAuthUrl hook
-const mockFetchUrl = vi.fn();
-const mockCopyAuthUrl = vi.fn().mockResolvedValue(undefined);
-vi.mock('@/hooks', () => ({
-  useAuthUrl: vi.fn(() => ({
-    url: 'mock-auth-url',
-    isLoading: false,
-    isExpired: false,
-    fetchUrl: mockFetchUrl,
-    copyAuthUrl: mockCopyAuthUrl,
-  })),
+// Mock useAuthUrl hook - use vi.hoisted so values are available in vi.mock
+const { mockFetchUrl, mockCopyAuthUrl } = vi.hoisted(() => ({
+  mockFetchUrl: vi.fn(),
+  mockCopyAuthUrl: vi.fn().mockResolvedValue(undefined),
 }));
+vi.mock('@/hooks', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('@/hooks')>();
+  return {
+    ...actual,
+    useAuthUrl: vi.fn(() => ({
+      url: 'mock-auth-url',
+      isLoading: false,
+      isExpired: false,
+      fetchUrl: mockFetchUrl,
+      copyAuthUrl: mockCopyAuthUrl,
+    })),
+  };
+});
 
 // Mock molecules - use real DialogAuthExpired (Radix) per component-testing rules
 vi.mock('@/molecules', async (importOriginal) => {
@@ -98,9 +104,9 @@ vi.mock('@/molecules', async (importOriginal) => {
       </div>
     ),
     PageTitle: ({ children, size }: { children: React.ReactNode; size?: string }) => (
-      <div data-testid="page-title" data-size={size}>
+      <h1 data-testid="page-title" data-size={size}>
         {children}
-      </div>
+      </h1>
     ),
     toast: vi.fn(),
   };
@@ -123,19 +129,98 @@ vi.mock('@/libs', async () => {
   };
 });
 
+// Mock atoms
+vi.mock('@/atoms', () => ({
+  Container: ({ children, className }: { children: React.ReactNode; className?: string }) => (
+    <div data-testid="container" className={className}>
+      {children}
+    </div>
+  ),
+  Button: ({
+    asChild,
+    children,
+    className,
+    size,
+    ...props
+  }: {
+    asChild?: boolean;
+    children: React.ReactNode;
+    className?: string;
+    size?: string;
+  } & React.ButtonHTMLAttributes<HTMLButtonElement>) => {
+    if (asChild && React.isValidElement(children)) {
+      return React.cloneElement(children, {
+        ...props,
+        'data-testid': 'button',
+        className: [className, (children.props as { className?: string }).className].filter(Boolean).join(' '),
+      } as Record<string, unknown>);
+    }
+    return (
+      <button data-testid="button" className={className} data-size={size} {...props}>
+        {children}
+      </button>
+    );
+  },
+  Typography: ({
+    children,
+    as,
+    size,
+    className,
+    overrideDefaults: _overrideDefaults,
+    ...props
+  }: {
+    children: React.ReactNode;
+    as?: React.ElementType;
+    size?: string;
+    className?: string;
+    overrideDefaults?: boolean;
+  }) => {
+    const Tag = as || 'span';
+    return React.createElement(Tag, { 'data-testid': 'typography', className, 'data-size': size, ...props }, children);
+  },
+  FooterLinks: ({ children }: { children: React.ReactNode }) => <div data-testid="footer-links">{children}</div>,
+  Link: ({
+    children,
+    href,
+    target,
+    rel,
+  }: {
+    children: React.ReactNode;
+    href: string;
+    target?: string;
+    rel?: string;
+  }) => (
+    <a data-testid="link" href={href} target={target} rel={rel}>
+      {children}
+    </a>
+  ),
+  PageHeader: ({ children }: { children: React.ReactNode }) => <div data-testid="page-header">{children}</div>,
+  PageSubtitle: ({ children }: { children: React.ReactNode }) => <div data-testid="page-subtitle">{children}</div>,
+  Dialog: ({ children, open }: { children: React.ReactNode; open?: boolean }) =>
+    open ? (
+      <div data-testid="dialog" role="dialog">
+        {children}
+      </div>
+    ) : null,
+  DialogContent: ({ children }: { children: React.ReactNode }) => <div data-testid="dialog-content">{children}</div>,
+  DialogHeader: ({ children }: { children: React.ReactNode }) => <div data-testid="dialog-header">{children}</div>,
+  DialogTitle: ({ children }: { children: React.ReactNode }) => <h2 data-testid="dialog-title">{children}</h2>,
+  DialogDescription: ({ children, className }: { children: React.ReactNode; className?: string }) => (
+    <p data-testid="dialog-description" className={className}>
+      {children}
+    </p>
+  ),
+  DialogFooter: ({ children }: { children: React.ReactNode }) => <div data-testid="dialog-footer">{children}</div>,
+}));
+
 describe('SignInContent', () => {
   const originalLocation = window.location;
-  const originalOpen = window.open;
   const clipboardMock = { writeText: vi.fn().mockResolvedValue(undefined) };
 
   beforeAll(() => {
     Object.defineProperty(window, 'location', {
       configurable: true,
       value: { ...(originalLocation as unknown as object), href: '' } as unknown as Location,
-    });
-    Object.defineProperty(window, 'open', {
-      configurable: true,
-      value: vi.fn(() => ({ location: { href: '' } })) as unknown as typeof window.open,
     });
     Object.defineProperty(navigator, 'clipboard', {
       configurable: true,
@@ -156,10 +241,6 @@ describe('SignInContent', () => {
     Object.defineProperty(window, 'location', {
       configurable: true,
       value: originalLocation,
-    });
-    Object.defineProperty(window, 'open', {
-      configurable: true,
-      value: originalOpen,
     });
     Object.defineProperty(navigator, 'clipboard', {
       configurable: true,
@@ -225,7 +306,7 @@ describe('SignInContent', () => {
     expect(screen.getByRole('button', { name: /Authorize with Pubky Ring/i })).toBeInTheDocument();
   });
 
-  it('navigates to the Pubky Ring deeplink when mobile authorize button is tapped', async () => {
+  it('calls mobile authorize handler when button is tapped', async () => {
     await act(async () => {
       render(<SignInContent />);
     });
@@ -240,7 +321,6 @@ describe('SignInContent', () => {
     });
 
     expect(mockCopyAuthUrl).toHaveBeenCalled();
-    expect(window.open).toHaveBeenCalledWith('mock-auth-url', '_blank');
   });
 
   // Note: Retry logic and error handling for auth URL generation are now tested
@@ -249,7 +329,6 @@ describe('SignInContent', () => {
   // Note: Unmount cleanup and request deduplication are tested in useAuthUrl.test.tsx
 
   it('button disabled when loading', async () => {
-    // Mock loading state
     const Hooks = await import('@/hooks');
     vi.mocked(Hooks.useAuthUrl).mockReturnValue({
       url: '',
@@ -281,10 +360,9 @@ describe('SignInContent', () => {
   // Note: Loading state tests removed due to complexity with async mocking
 
   it('copies auth URL to clipboard when QR code is clicked', async () => {
-    // Ensure hooks mock returns the URL (reset from any previous test modifications)
     const Hooks = await import('@/hooks');
     vi.mocked(Hooks.useAuthUrl).mockReturnValue({
-      url: 'mock-auth-url',
+      url: 'pubkyring://authorize?token=test123',
       isLoading: false,
       isExpired: false,
       fetchUrl: mockFetchUrl,

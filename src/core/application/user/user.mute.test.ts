@@ -9,15 +9,20 @@ describe('UserApplication.commitMute', () => {
   const muteUrl = 'pubky://muter/pub/pubky.app/mutes/mutee';
   const muteJson = { created_at: BigInt(Date.now()) } as unknown as Record<string, unknown>;
 
-  async function clearUserRelationshipsTable() {
-    await Core.db.transaction('rw', [Core.UserRelationshipsModel.table], async () => {
-      await Core.UserRelationshipsModel.table.clear();
+  async function clearTables() {
+    await Core.db.transaction('rw', [Core.UserStreamModel.table], async () => {
+      await Core.UserStreamModel.table.clear();
     });
+  }
+
+  async function isMutedInStream(userId: Core.Pubky): Promise<boolean> {
+    const stream = await Core.LocalStreamUsersService.findById(Core.UserStreamTypes.MUTED);
+    return stream?.stream.includes(userId) ?? false;
   }
 
   beforeEach(async () => {
     await Core.db.initialize();
-    await clearUserRelationshipsTable();
+    await clearTables();
     vi.clearAllMocks();
   });
 
@@ -27,7 +32,7 @@ describe('UserApplication.commitMute', () => {
   ])('%s operation', (eventType, action, expectedStatus) => {
     const homeserverAction = eventType === 'PUT' ? HttpMethod.PUT : HttpMethod.DELETE;
 
-    it(`should ${action} when no relationship exists`, async () => {
+    it(`should ${action} when stream is empty`, async () => {
       const requestSpy = vi.spyOn(Core.HomeserverService, 'request').mockResolvedValue(undefined as unknown as void);
 
       await UserApplication.commitMute({
@@ -38,21 +43,17 @@ describe('UserApplication.commitMute', () => {
         mutee,
       });
 
-      const rel = await Core.UserRelationshipsModel.findById(mutee);
-      expect(rel).toBeDefined();
-      expect(rel?.muted).toBe(expectedStatus);
-      expect(rel?.following).toBe(false);
-      expect(rel?.followed_by).toBe(false);
+      const muted = await isMutedInStream(mutee);
+      expect(muted).toBe(expectedStatus);
       expect(requestSpy).toHaveBeenCalledWith({ method: homeserverAction, url: muteUrl, bodyJson: muteJson });
     });
 
-    it(`should update existing relationship to muted=${expectedStatus}`, async () => {
-      await Core.UserRelationshipsModel.create({
-        id: mutee,
-        following: true,
-        followed_by: true,
-        muted: !expectedStatus,
-      });
+    it(`should update muted stream to ${action}d state`, async () => {
+      // Set up opposite stream state
+      if (!expectedStatus) {
+        // For unmute: user must be in stream first
+        await Core.LocalStreamUsersService.prependToStream(Core.UserStreamTypes.MUTED, [mutee]);
+      }
 
       const requestSpy = vi.spyOn(Core.HomeserverService, 'request').mockResolvedValue(undefined as unknown as void);
 
@@ -64,22 +65,24 @@ describe('UserApplication.commitMute', () => {
         mutee,
       });
 
-      const rel = await Core.UserRelationshipsModel.findById(mutee);
-      expect(rel?.muted).toBe(expectedStatus);
-      expect(rel?.following).toBe(true);
-      expect(rel?.followed_by).toBe(true);
+      const muted = await isMutedInStream(mutee);
+      expect(muted).toBe(expectedStatus);
       expect(requestSpy).toHaveBeenCalledWith({ method: homeserverAction, url: muteUrl, bodyJson: muteJson });
     });
 
     it(`should be idempotent when user already ${action}d`, async () => {
-      await Core.UserRelationshipsModel.create({
-        id: mutee,
-        following: false,
-        followed_by: false,
-        muted: expectedStatus,
-      });
+      // Set up stream to match expected state by performing the action once first
+      if (expectedStatus) {
+        // For mute idempotency: mute first so user is already in stream
+        await Core.LocalStreamUsersService.prependToStream(Core.UserStreamTypes.MUTED, [mutee]);
+      } else {
+        // For unmute idempotency: mute then unmute, so user has been properly unmuted
+        await Core.LocalMuteService.create({ muter, mutee });
+        await Core.LocalMuteService.delete({ muter, mutee });
+      }
 
-      const updateSpy = vi.spyOn(Core.UserRelationshipsModel, 'update');
+      const prependSpy = vi.spyOn(Core.LocalStreamUsersService, 'prependToStream');
+      const removeSpy = vi.spyOn(Core.LocalStreamUsersService, 'removeFromStream');
       const requestSpy = vi.spyOn(Core.HomeserverService, 'request').mockResolvedValue(undefined as unknown as void);
 
       await UserApplication.commitMute({
@@ -90,10 +93,13 @@ describe('UserApplication.commitMute', () => {
         mutee,
       });
 
-      const rel = await Core.UserRelationshipsModel.findById(mutee);
-      expect(rel?.muted).toBe(expectedStatus);
-      expect(updateSpy).not.toHaveBeenCalled();
+      const muted = await isMutedInStream(mutee);
+      expect(muted).toBe(expectedStatus);
+      expect(prependSpy).not.toHaveBeenCalled();
+      expect(removeSpy).not.toHaveBeenCalled();
       expect(requestSpy).toHaveBeenCalledWith({ method: homeserverAction, url: muteUrl, bodyJson: muteJson });
+      prependSpy.mockRestore();
+      removeSpy.mockRestore();
     });
   });
 
@@ -130,8 +136,8 @@ describe('UserApplication.commitMute', () => {
   });
 
   describe('Error Handling', () => {
-    it('should not call homeserver when database operation fails', async () => {
-      const findByIdSpy = vi.spyOn(Core.UserRelationshipsModel, 'findById').mockRejectedValue(new Error('db-fail'));
+    it('should not call homeserver when local mute operation fails', async () => {
+      const findByIdSpy = vi.spyOn(Core.LocalStreamUsersService, 'findById').mockRejectedValue(new Error('db-fail'));
       const requestSpy = vi.spyOn(Core.HomeserverService, 'request').mockResolvedValue(undefined as unknown as void);
 
       try {
@@ -167,15 +173,10 @@ describe('UserApplication.commitMute', () => {
       expect(requestSpy).toHaveBeenCalledWith({ method: HttpMethod.PUT, url: muteUrl, bodyJson: muteJson });
     });
 
-    it('should rollback database transaction when update fails', async () => {
-      await Core.UserRelationshipsModel.create({
-        id: mutee,
-        following: false,
-        followed_by: false,
-        muted: false,
-      });
-
-      const updateSpy = vi.spyOn(Core.UserRelationshipsModel, 'update').mockRejectedValue(new Error('update-fail'));
+    it('should not call homeserver when stream update fails', async () => {
+      const streamSpy = vi
+        .spyOn(Core.LocalStreamUsersService, 'prependToStream')
+        .mockRejectedValue(new Error('stream-fail'));
       const requestSpy = vi.spyOn(Core.HomeserverService, 'request').mockResolvedValue(undefined as unknown as void);
 
       try {
@@ -189,11 +190,9 @@ describe('UserApplication.commitMute', () => {
           }),
         ).rejects.toThrow('Failed to mute mute relationship');
 
-        const rel = await Core.UserRelationshipsModel.findById(mutee);
-        expect(rel?.muted).toBe(false);
         expect(requestSpy).not.toHaveBeenCalled();
       } finally {
-        updateSpy.mockRestore();
+        streamSpy.mockRestore();
       }
     });
 

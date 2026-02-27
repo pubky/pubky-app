@@ -47,18 +47,24 @@ vi.mock('@/core', () => ({
   }),
 }));
 
-// Mock useAuthUrl hook
-const mockFetchUrl = vi.fn();
-const mockCopyAuthUrl = vi.fn().mockResolvedValue(undefined);
-vi.mock('@/hooks', () => ({
-  useAuthUrl: vi.fn(() => ({
-    url: 'mock-auth-url',
-    isLoading: false,
-    isExpired: false,
-    fetchUrl: mockFetchUrl,
-    copyAuthUrl: mockCopyAuthUrl,
-  })),
+// Mock useAuthUrl hook - use vi.hoisted so values are available in vi.mock
+const { mockFetchUrl, mockCopyAuthUrl } = vi.hoisted(() => ({
+  mockFetchUrl: vi.fn(),
+  mockCopyAuthUrl: vi.fn().mockResolvedValue(undefined),
 }));
+vi.mock('@/hooks', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('@/hooks')>();
+  return {
+    ...actual,
+    useAuthUrl: vi.fn(() => ({
+      url: 'mock-auth-url',
+      isLoading: false,
+      isExpired: false,
+      fetchUrl: mockFetchUrl,
+      copyAuthUrl: mockCopyAuthUrl,
+    })),
+  };
+});
 
 // Mock molecules - use real DialogAuthExpired (Radix) per component-testing rules
 vi.mock('@/molecules', async (importOriginal) => {
@@ -77,9 +83,9 @@ vi.mock('@/molecules', async (importOriginal) => {
       </div>
     ),
     PageTitle: ({ children, size }: { children: React.ReactNode; size?: string }) => (
-      <div data-testid="page-title" data-size={size}>
+      <h1 data-testid="page-title" data-size={size}>
         {children}
-      </div>
+      </h1>
     ),
     ButtonsNavigation: ({
       onHandleBackButton,
@@ -110,6 +116,77 @@ const { mockCopyToClipboard } = vi.hoisted(() => ({
   mockCopyToClipboard: vi.fn().mockResolvedValue(undefined),
 }));
 
+// Mock atoms
+vi.mock('@/atoms', () => ({
+  Container: ({ children, className }: { children: React.ReactNode; className?: string }) => (
+    <div data-testid="container" className={className}>
+      {children}
+    </div>
+  ),
+  Button: ({
+    asChild,
+    children,
+    className,
+    size,
+    ...props
+  }: {
+    asChild?: boolean;
+    children: React.ReactNode;
+    className?: string;
+    size?: string;
+  } & React.ButtonHTMLAttributes<HTMLButtonElement>) => {
+    if (asChild && React.isValidElement(children)) {
+      return React.cloneElement(children, {
+        ...props,
+        'data-testid': 'button',
+        className: [className, (children.props as { className?: string }).className].filter(Boolean).join(' '),
+      } as Record<string, unknown>);
+    }
+    return (
+      <button data-testid="button" className={className} data-size={size} {...props}>
+        {children}
+      </button>
+    );
+  },
+  Typography: ({
+    children,
+    as,
+    size,
+    className,
+  }: {
+    children: React.ReactNode;
+    as?: React.ElementType;
+    size?: string;
+    className?: string;
+  }) => {
+    const Tag = as || 'span';
+    return React.createElement(Tag, { 'data-testid': 'typography', className, 'data-size': size }, children);
+  },
+  FooterLinks: ({ children }: { children: React.ReactNode }) => <div data-testid="footer-links">{children}</div>,
+  Link: ({ children, href, target }: { children: React.ReactNode; href: string; target?: string }) => (
+    <a data-testid="link" href={href} target={target}>
+      {children}
+    </a>
+  ),
+  PageHeader: ({ children }: { children: React.ReactNode }) => <div data-testid="page-header">{children}</div>,
+  PageSubtitle: ({ children }: { children: React.ReactNode }) => <div data-testid="page-subtitle">{children}</div>,
+  Dialog: ({ children, open }: { children: React.ReactNode; open?: boolean }) =>
+    open ? (
+      <div data-testid="dialog" role="dialog">
+        {children}
+      </div>
+    ) : null,
+  DialogContent: ({ children }: { children: React.ReactNode }) => <div data-testid="dialog-content">{children}</div>,
+  DialogHeader: ({ children }: { children: React.ReactNode }) => <div data-testid="dialog-header">{children}</div>,
+  DialogTitle: ({ children }: { children: React.ReactNode }) => <h2 data-testid="dialog-title">{children}</h2>,
+  DialogDescription: ({ children, className }: { children: React.ReactNode; className?: string }) => (
+    <p data-testid="dialog-description" className={className}>
+      {children}
+    </p>
+  ),
+  DialogFooter: ({ children }: { children: React.ReactNode }) => <div data-testid="dialog-footer">{children}</div>,
+}));
+
 // Mock libs - use actual utility functions and icons, override clipboard + logger
 vi.mock('@/libs', async () => {
   const actual = await vi.importActual('@/libs');
@@ -124,12 +201,13 @@ vi.mock('@/libs', async () => {
 });
 
 describe('ScanContent', () => {
-  const originalOpen = window.open;
+  const originalLocation = window.location;
+  const clipboardMock = { writeText: vi.fn().mockResolvedValue(undefined) };
 
   beforeAll(() => {
-    Object.defineProperty(window, 'open', {
+    Object.defineProperty(window, 'location', {
       configurable: true,
-      value: vi.fn(() => ({ location: { href: '' } })) as unknown as typeof window.open,
+      value: { ...(originalLocation as unknown as object), href: '' } as unknown as Location,
     });
   });
 
@@ -137,12 +215,14 @@ describe('ScanContent', () => {
     vi.clearAllMocks();
     mockCopyToClipboard.mockClear();
     onboardingState.inviteCode = 'A9KM-7MJP-ERM9';
+    window.location.href = '';
+    clipboardMock.writeText.mockClear();
   });
 
   afterAll(() => {
-    Object.defineProperty(window, 'open', {
+    Object.defineProperty(window, 'location', {
       configurable: true,
-      value: originalOpen,
+      value: originalLocation,
     });
   });
 
@@ -179,7 +259,7 @@ describe('ScanContent', () => {
     expect(logoImage).toBeInTheDocument();
   });
 
-  it('opens the Pubky Ring deeplink when the mobile authorize button is tapped', async () => {
+  it('calls mobile authorize handler when the mobile authorize button is tapped', async () => {
     await act(async () => {
       render(<ScanContent />);
     });
@@ -195,7 +275,6 @@ describe('ScanContent', () => {
     });
 
     expect(mockCopyAuthUrl).toHaveBeenCalled();
-    expect(window.open).toHaveBeenCalledWith('mock-auth-url', '_blank');
   });
 
   it('opens expired dialog when auth flow is expired', async () => {

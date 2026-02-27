@@ -311,7 +311,7 @@ describe('useAuthUrl', () => {
     });
   });
 
-  it('cancels active auth flow on unmount', async () => {
+  it('does not cancel active auth flow on unmount', async () => {
     mockGetAuthUrl.mockResolvedValue({
       authorizationUrl: 'pubkyring://authorize?token=unmount',
       awaitApproval: new Promise<Session>(() => {}),
@@ -325,7 +325,35 @@ describe('useAuthUrl', () => {
     });
 
     unmount();
-    expect(mockCancelActiveAuthFlow).toHaveBeenCalledTimes(1);
+    expect(mockCancelActiveAuthFlow).not.toHaveBeenCalled();
+  });
+
+  it('initializes session even after component unmounts', async () => {
+    const mockSession = { token: 'test-token' } as unknown as Session;
+
+    let resolveApproval: (session: Session) => void;
+    const mockAwaitApproval = new Promise<Session>((resolve) => {
+      resolveApproval = resolve;
+    });
+
+    mockGetAuthUrl.mockResolvedValue({
+      authorizationUrl: 'pubkyring://authorize?token=post-unmount',
+      awaitApproval: mockAwaitApproval,
+      cancelAuthFlow: createCancelAuthFlow(),
+    });
+
+    const { unmount } = renderHook(() => useAuthUrl());
+
+    await waitFor(() => {
+      expect(mockGetAuthUrl).toHaveBeenCalled();
+    });
+
+    unmount();
+    resolveApproval!(mockSession);
+
+    await waitFor(() => {
+      expect(mockInitializeAuthenticatedSession).toHaveBeenCalledWith({ session: mockSession });
+    });
   });
 
   it('calls AuthController.getSignupAuthUrl when type is signup with inviteCode', async () => {
