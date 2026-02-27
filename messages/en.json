@@ -267,8 +267,10 @@
       "tryAgain": "Please try again."
     },
     "authExpired": {
-      "title": "QR code expired",
-      "description": "This QR code is no longer active. Refresh to get a new one.",
+      "titleDesktop": "QR code expired",
+      "descriptionDesktop": "This QR code is no longer active. Refresh to get a new one.",
+      "titleMobile": "Authorization session expired",
+      "descriptionMobile": "Your authorization session is no longer active. Refresh to generate a new one and continue.",
       "refresh": "Refresh"
     },
     "signIn": {

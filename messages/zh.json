@@ -270,8 +270,10 @@
       "tryAgain": "请重试。"
     },
     "authExpired": {
-      "title": "二维码已过期",
-      "description": "此二维码已失效。刷新以获取新的二维码。",
+      "titleDesktop": "二维码已过期",
+      "descriptionDesktop": "此二维码已失效。刷新以获取新的二维码。",
+      "titleMobile": "授权会话已过期",
+      "descriptionMobile": "你的授权会话已失效。请刷新以生成新的会话并继续。",
       "refresh": "刷新"
     },
     "signIn": {

@@ -270,8 +270,10 @@
       "tryAgain": "Por favor intenta de nuevo."
     },
     "authExpired": {
-      "title": "Código QR expirado",
-      "description": "Este código QR ya no está activo. Actualiza para obtener uno nuevo.",
+      "titleDesktop": "Código QR expirado",
+      "descriptionDesktop": "Este código QR ya no está activo. Actualiza para obtener uno nuevo.",
+      "titleMobile": "La sesión de autorización expiró",
+      "descriptionMobile": "Tu sesión de autorización ya no está activa. Actualiza para generar una nueva y continuar.",
       "refresh": "Actualizar"
     },
     "signIn": {

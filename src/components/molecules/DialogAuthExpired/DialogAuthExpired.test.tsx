@@ -5,12 +5,18 @@ import { DialogAuthExpired } from './DialogAuthExpired';
 vi.mock('next-intl', () => ({
   useTranslations: () => (key: string) => {
     const t: Record<string, string> = {
-      title: 'QR code expired',
-      description: 'This QR code is no longer active. Refresh to get a new one.',
+      titleDesktop: 'QR code expired',
+      descriptionDesktop: 'This QR code is no longer active. Refresh to get a new one.',
+      titleMobile: 'Authorization session expired',
+      descriptionMobile: 'Your authorization session is no longer active. Refresh to generate a new one and continue.',
       refresh: 'Refresh',
     };
     return t[key] ?? key;
   },
+}));
+
+vi.mock('@/hooks', () => ({
+  useIsMobile: vi.fn(() => false),
 }));
 
 describe('DialogAuthExpired', () => {

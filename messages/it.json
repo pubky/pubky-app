@@ -270,8 +270,10 @@
       "tryAgain": "Riprova."
     },
     "authExpired": {
-      "title": "Codice QR scaduto",
-      "description": "Questo codice QR non è più attivo. Aggiorna per ottenerne uno nuovo.",
+      "titleDesktop": "Codice QR scaduto",
+      "descriptionDesktop": "Questo codice QR non è più attivo. Aggiorna per ottenerne uno nuovo.",
+      "titleMobile": "Sessione di autorizzazione scaduta",
+      "descriptionMobile": "La tua sessione di autorizzazione non è più attiva. Aggiorna per generarne una nuova e continuare.",
       "refresh": "Aggiorna"
     },
     "signIn": {

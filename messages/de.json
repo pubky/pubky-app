@@ -270,8 +270,10 @@
       "tryAgain": "Bitte versuchen Sie es erneut."
     },
     "authExpired": {
-      "title": "QR-Code abgelaufen",
-      "description": "Dieser QR-Code ist nicht mehr aktiv. Aktualisieren Sie, um einen neuen zu erhalten.",
+      "titleDesktop": "QR-Code abgelaufen",
+      "descriptionDesktop": "Dieser QR-Code ist nicht mehr aktiv. Aktualisieren Sie, um einen neuen zu erhalten.",
+      "titleMobile": "Autorisierungssitzung abgelaufen",
+      "descriptionMobile": "Ihre Autorisierungssitzung ist nicht mehr aktiv. Aktualisieren Sie, um eine neue Sitzung zu erzeugen und fortzufahren.",
       "refresh": "Aktualisieren"
     },
     "signIn": {

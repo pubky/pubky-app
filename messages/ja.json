@@ -270,8 +270,10 @@
       "tryAgain": "再試行してください。"
     },
     "authExpired": {
-      "title": "QRコードの有効期限切れ",
-      "description": "このQRコードは無効になりました。更新して新しいQRコードを取得してください。",
+      "titleDesktop": "QRコードの有効期限切れ",
+      "descriptionDesktop": "このQRコードは無効になりました。更新して新しいQRコードを取得してください。",
+      "titleMobile": "認証セッションの有効期限が切れました",
+      "descriptionMobile": "認証セッションは現在無効です。更新して新しいセッションを生成し、続行してください。",
       "refresh": "更新"
     },
     "signIn": {
