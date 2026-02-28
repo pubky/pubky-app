@@ -23,6 +23,11 @@ export enum WaitForNewPosts {
   Yes = 1,
 }
 
+export enum LatestNotificationReadState {
+  Unread = 'unread',
+  Read = 'read',
+}
+
 // can use only one of RecoveryPhraseWithConfirmation or RecoveryPhraseWithoutConfirmation
 export enum BackupType {
   EncryptedFile = 'encryptedFile',

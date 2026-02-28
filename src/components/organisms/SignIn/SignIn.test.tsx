@@ -58,7 +58,7 @@ const resetMockSignInState = () => {
 vi.mock('@/core', () => ({
   AuthController: {
     getAuthUrl: vi.fn().mockResolvedValue({
-      authorizationUrl: 'mock-auth-url',
+      authorizationUrl: 'pubkyring://authorize?token=test123',
       awaitApproval: Promise.resolve({} as unknown as PublicKey),
     }),
     initializeAuthenticatedSession: vi.fn().mockResolvedValue({}),
@@ -85,17 +85,28 @@ vi.mock('@/core', () => ({
   }),
 }));
 
-// Mock useAuthUrl hook
-const mockFetchUrl = vi.fn();
-vi.mock('@/hooks', () => ({
-  useAuthUrl: vi.fn(() => ({
-    url: 'mock-auth-url',
-    isLoading: false,
-    isGenerating: false,
-    fetchUrl: mockFetchUrl,
-    retryCount: 0,
-  })),
-}));
+// Mock useMobileAuth hook - use vi.hoisted so values are available in vi.mock
+const { defaultUseMobileAuthReturn, mockOnAuthorizeClick } = vi.hoisted(() => {
+  const mockFetchUrl = vi.fn();
+  const mockOnAuthorizeClick = vi.fn();
+  return {
+    mockFetchUrl,
+    mockOnAuthorizeClick,
+    defaultUseMobileAuthReturn: {
+      url: 'pubkyring://authorize?token=test123',
+      isLoading: false,
+      fetchUrl: mockFetchUrl,
+      onAuthorizeClick: mockOnAuthorizeClick,
+    },
+  };
+});
+vi.mock('@/hooks', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('@/hooks')>();
+  return {
+    ...actual,
+    useMobileAuth: vi.fn(() => defaultUseMobileAuthReturn),
+  };
+});
 
 // Mock molecules
 vi.mock('@/molecules', () => ({
@@ -143,19 +154,30 @@ vi.mock('@/atoms', () => ({
     </div>
   ),
   Button: ({
+    asChild,
     children,
     className,
     size,
     ...props
   }: {
+    asChild?: boolean;
     children: React.ReactNode;
     className?: string;
     size?: string;
-  } & React.ButtonHTMLAttributes<HTMLButtonElement>) => (
-    <button data-testid="button" className={className} data-size={size} {...props}>
-      {children}
-    </button>
-  ),
+  } & React.ButtonHTMLAttributes<HTMLButtonElement>) => {
+    if (asChild && React.isValidElement(children)) {
+      return React.cloneElement(children, {
+        ...props,
+        'data-testid': 'button',
+        className: [className, (children.props as { className?: string }).className].filter(Boolean).join(' '),
+      } as Record<string, unknown>);
+    }
+    return (
+      <button data-testid="button" className={className} data-size={size} {...props}>
+        {children}
+      </button>
+    );
+  },
   Typography: ({
     children,
     as,
@@ -192,17 +214,12 @@ vi.mock('@/atoms', () => ({
 
 describe('SignInContent', () => {
   const originalLocation = window.location;
-  const originalOpen = window.open;
   const clipboardMock = { writeText: vi.fn().mockResolvedValue(undefined) };
 
   beforeAll(() => {
     Object.defineProperty(window, 'location', {
       configurable: true,
       value: { ...(originalLocation as unknown as object), href: '' } as unknown as Location,
-    });
-    Object.defineProperty(window, 'open', {
-      configurable: true,
-      value: vi.fn(() => ({ location: { href: '' } })) as unknown as typeof window.open,
     });
     Object.defineProperty(navigator, 'clipboard', {
       configurable: true,
@@ -222,10 +239,6 @@ describe('SignInContent', () => {
     Object.defineProperty(window, 'location', {
       configurable: true,
       value: originalLocation,
-    });
-    Object.defineProperty(window, 'open', {
-      configurable: true,
-      value: originalOpen,
     });
     Object.defineProperty(navigator, 'clipboard', {
       configurable: true,
@@ -291,7 +304,7 @@ describe('SignInContent', () => {
     expect(screen.getByTestId('button')).toBeInTheDocument();
   });
 
-  it('navigates to the Pubky Ring deeplink when mobile authorize button is tapped', async () => {
+  it('calls mobile authorize handler when button is tapped', async () => {
     await act(async () => {
       render(<SignInContent />);
     });
@@ -301,12 +314,11 @@ describe('SignInContent', () => {
     });
 
     const authorizeButton = screen.getByTestId('button');
+
     await act(async () => {
       fireEvent.click(authorizeButton);
     });
-
-    expect(mockCopyToClipboard).toHaveBeenCalledWith({ text: 'mock-auth-url' });
-    expect(window.open).toHaveBeenCalledWith('mock-auth-url', '_blank');
+    expect(mockOnAuthorizeClick).toHaveBeenCalled();
   });
 
   // Note: Retry logic and error handling for auth URL generation are now tested
@@ -315,12 +327,11 @@ describe('SignInContent', () => {
   // Note: Unmount cleanup and request deduplication are tested in useAuthUrl.test.tsx
 
   it('button disabled when loading', async () => {
-    // Mock loading state
     const Hooks = await import('@/hooks');
-    vi.mocked(Hooks.useAuthUrl).mockReturnValue({
+    vi.mocked(Hooks.useMobileAuth).mockReturnValue({
+      ...defaultUseMobileAuthReturn,
       url: '',
       isLoading: true,
-      fetchUrl: mockFetchUrl,
     });
 
     await act(async () => {
@@ -345,12 +356,11 @@ describe('SignInContent', () => {
   // Note: Loading state tests removed due to complexity with async mocking
 
   it('copies auth URL to clipboard when QR code is clicked', async () => {
-    // Ensure hooks mock returns the URL (reset from any previous test modifications)
     const Hooks = await import('@/hooks');
-    vi.mocked(Hooks.useAuthUrl).mockReturnValue({
-      url: 'mock-auth-url',
+    vi.mocked(Hooks.useMobileAuth).mockReturnValue({
+      ...defaultUseMobileAuthReturn,
+      url: 'pubkyring://authorize?token=test123',
       isLoading: false,
-      fetchUrl: mockFetchUrl,
     });
 
     const Molecules = await import('@/molecules');
@@ -365,7 +375,7 @@ describe('SignInContent', () => {
       fireEvent.click(qrButton);
     });
 
-    expect(mockCopyToClipboard).toHaveBeenCalledWith({ text: 'mock-auth-url' });
+    expect(mockCopyToClipboard).toHaveBeenCalledWith({ text: 'pubkyring://authorize?token=test123' });
     expect(Molecules.toast).toHaveBeenCalledWith({
       title: 'Link copied',
       description: 'Authentication link copied to clipboard.',
