@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, type ForwardedRef } from 'react';
+import { useState, useRef, type ForwardedRef } from 'react';
 import {
   BlockTypeSelect,
   BoldItalicUnderlineToggles,
@@ -32,6 +32,7 @@ import * as Atoms from '@/atoms';
 import * as Molecules from '@/molecules';
 import * as Icons from '@/libs/icons';
 import * as Utils from '@/libs/utils';
+import * as Hooks from '@/hooks';
 
 /**
  * Common programming languages for code blocks in the Markdown editor.
@@ -98,19 +99,132 @@ function preloadLanguages() {
 // Start preloading languages when this module is imported
 preloadLanguages();
 
+type EditorMode = 'richtext' | 'markdown';
+
 // Only import this to MarkdownEditor.tsx
 export default function InitializedMDXEditor({
   editorRef,
+  readOnly,
   ...props
 }: { editorRef: ForwardedRef<MDXEditorMethods> | null } & MDXEditorProps) {
   const [showEmojiPicker, setShowEmojiPicker] = useState(false);
   const [maxLengthWarning, setMaxLengthWarning] = useState<null | 'approaching' | 'reached'>(null);
+  const [mode, setMode] = useState<EditorMode>('richtext');
+  const [markdownText, setMarkdownText] = useState('');
+  const textareaRef = useRef<HTMLTextAreaElement>(null);
+
+  const switchToMarkdownMode = () => {
+    if (editorRef && 'current' in editorRef) {
+      const markdown = editorRef.current?.getMarkdown() ?? '';
+      setMarkdownText(markdown);
+      setMode('markdown');
+    }
+  };
+
+  const switchToRichTextMode = () => {
+    if (editorRef && 'current' in editorRef) {
+      editorRef.current?.setMarkdown(markdownText);
+      setMode('richtext');
+    }
+  };
+
+  const updateMaxLengthWarning = (text: string) => {
+    const remaining = ARTICLE_MAX_CHARACTER_LENGTH - text.length;
+
+    switch (true) {
+      case remaining === 0:
+        setMaxLengthWarning('reached');
+        break;
+      case remaining < 100:
+        setMaxLengthWarning('approaching');
+        break;
+      default:
+        setMaxLengthWarning(null);
+    }
+  };
+
+  const handleMarkdownTextChange = (newText: string) => {
+    if (newText.length > ARTICLE_MAX_CHARACTER_LENGTH) return;
+    setMarkdownText(newText);
+    updateMaxLengthWarning(newText);
+    props.onChange?.(newText, false);
+  };
+
+  const handleMarkdownEmojiSelect = Hooks.useEmojiInsert({
+    inputRef: textareaRef,
+    value: markdownText,
+    onChange: handleMarkdownTextChange,
+  });
+
+  const handleEmojiSelect = (emoji: { native: string }) => {
+    if (mode === 'markdown') {
+      handleMarkdownEmojiSelect(emoji);
+    } else {
+      if (editorRef && 'current' in editorRef) {
+        editorRef.current?.focus();
+        editorRef.current?.insertMarkdown(emoji.native);
+        editorRef.current?.focus();
+      }
+    }
+  };
 
   return (
     <Atoms.Container className="gap-4">
-      <MDXEditor
+      {/* Markdown mode: custom toolbar + textarea — hidden via CSS in rich text mode */}
+      <Atoms.Container
+        overrideDefaults
+        className={Utils.cn(
+          'flex min-h-10.75 cursor-auto flex-wrap items-center gap-2 rounded-md border bg-background px-2.5 py-1.5',
+          mode === 'richtext' && 'hidden',
+        )}
+        role="toolbar"
+        aria-label="Markdown editing toolbar"
+        data-testid="markdown-toolbar"
+      >
+        <Atoms.Button
+          variant="ghost"
+          size="icon"
+          title="Emoji"
+          onClick={() => setShowEmojiPicker(true)}
+          disabled={readOnly}
+          className="size-7 rounded"
+          data-testid="markdown-emoji-button"
+        >
+          <Icons.Smile className="size-6" />
+        </Atoms.Button>
+
+        <Atoms.Button
+          variant="ghost"
+          size="icon"
+          title="Rich Text"
+          onClick={switchToRichTextMode}
+          disabled={readOnly}
+          className="size-7 rounded"
+          data-testid="markdown-richtext-button"
+        >
+          <Icons.Type className="size-6" />
+        </Atoms.Button>
+      </Atoms.Container>
+
+      <Atoms.Textarea
+        ref={textareaRef}
+        value={markdownText}
+        onChange={(e) => handleMarkdownTextChange(e.target.value)}
+        readOnly={readOnly}
         placeholder="Start writing your masterpiece"
-        className="dark-theme cursor-auto"
+        maxLength={ARTICLE_MAX_CHARACTER_LENGTH}
+        className={Utils.cn(
+          'max-h-[60dvh] min-h-7 resize-none rounded-none border-none p-0 shadow-none outline-none placeholder:text-muted-foreground/70 focus-visible:border-none focus-visible:ring-0',
+          mode === 'richtext' && 'hidden',
+        )}
+        data-testid="markdown-textarea"
+      />
+
+      {/* Rich text mode: MDXEditor (includes its own toolbar) — hidden via CSS in markdown mode */}
+      <MDXEditor
+        readOnly={readOnly}
+        placeholder="Start writing your masterpiece"
+        className={Utils.cn('dark-theme cursor-auto', mode === 'markdown' && 'hidden')}
         contentEditableClassName="prose prose-neutral prose-invert prose-code:before:content-none prose-code:after:content-none max-w-none px-0! pb-0! pt-4! max-h-[60dvh] overflow-y-auto"
         plugins={[
           toolbarPlugin({
@@ -127,6 +241,9 @@ export default function InitializedMDXEditor({
                 <InsertCodeBlock />
                 <ButtonWithTooltip title="Emoji" onClick={() => setShowEmojiPicker(true)}>
                   <Icons.Smile className="size-6" />
+                </ButtonWithTooltip>
+                <ButtonWithTooltip title="Markdown" onClick={switchToMarkdownMode}>
+                  <Icons.MarkdownMark className="size-6" />
                 </ButtonWithTooltip>
               </>
             ),
@@ -145,19 +262,7 @@ export default function InitializedMDXEditor({
         ]}
         {...props}
         onChange={(markdown, initialMarkdownNormalize) => {
-          const remaining = ARTICLE_MAX_CHARACTER_LENGTH - markdown.length;
-
-          switch (true) {
-            case remaining === 0:
-              setMaxLengthWarning('reached');
-              break;
-            case remaining < 100:
-              setMaxLengthWarning('approaching');
-              break;
-            default:
-              setMaxLengthWarning(null);
-          }
-
+          updateMaxLengthWarning(markdown);
           props.onChange?.(markdown, initialMarkdownNormalize);
         }}
         ref={editorRef}
@@ -166,13 +271,7 @@ export default function InitializedMDXEditor({
       <Molecules.EmojiPickerDialog
         open={showEmojiPicker}
         onOpenChange={setShowEmojiPicker}
-        onEmojiSelect={(emoji) => {
-          if (editorRef && 'current' in editorRef) {
-            editorRef.current?.focus();
-            editorRef.current?.insertMarkdown(emoji.native);
-            editorRef.current?.focus();
-          }
-        }}
+        onEmojiSelect={handleEmojiSelect}
       />
 
       {maxLengthWarning && (
