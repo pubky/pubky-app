@@ -32,7 +32,9 @@ export function useAuthUrl(options: UseAuthUrlOptions = {}): UseAuthUrlReturn {
 
       awaitApproval
         .then(async (session: Session) => {
-          if (!isMountedRef.current) return;
+          // No isMountedRef guard here: initializeAuthenticatedSession updates global stores
+          // and must run even if the component unmounted (e.g., mobile deeplink handoff where
+          // the browser may unmount/remount the page while Pubky Ring is open).
           try {
             await Core.AuthController.initializeAuthenticatedSession({ session });
           } catch (error) {
@@ -82,8 +84,12 @@ export function useAuthUrl(options: UseAuthUrlOptions = {}): UseAuthUrlReturn {
   useEffect(() => {
     isMountedRef.current = true;
 
+    // We intentionally do NOT cancel the auth flow on unmount. The polling must survive
+    // component lifecycle changes (e.g., mobile deeplink handoff where the browser may
+    // unmount/remount the component while the user is in Pubky Ring). The AuthController
+    // already self-manages flow lifetime: it cancels stale flows when a new one starts
+    // (getAuthUrl), on successful session init, and on sign-out.
     return () => {
-      Core.AuthController.cancelActiveAuthFlow();
       isMountedRef.current = false;
     };
   }, []);

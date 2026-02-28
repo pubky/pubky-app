@@ -8,6 +8,5 @@ export interface UserRelationshipsModelSchema extends Core.NexusUserRelationship
 export const userRelationshipsTableSchema = `
   &id,
   following,
-  followed_by,
-  muted
+  followed_by
 `;
