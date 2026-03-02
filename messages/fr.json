@@ -821,6 +821,7 @@
     "success": "Succes",
     "error": "Erreur",
     "errors": "Erreurs",
+    "genericErrorTitle": "Oups! Une erreur s'est produite!",
     "post": {
       "replyPosted": "Réponse publiee",
       "replyPostedDesc": "Votre réponse a ete publiee avec succes.",

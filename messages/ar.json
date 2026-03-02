@@ -821,6 +821,7 @@
     "success": "نجاح",
     "error": "خطا",
     "errors": "اخطاء",
+    "genericErrorTitle": "عذرا! حدث خطا ما!",
     "post": {
       "replyPosted": "تم نشر الرد",
       "replyPostedDesc": "تم نشر ردك بنجاح.",

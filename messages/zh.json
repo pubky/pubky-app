@@ -821,6 +821,7 @@
     "success": "成功",
     "error": "错误",
     "errors": "错误",
+    "genericErrorTitle": "糟糕！出了点问题！",
     "post": {
       "replyPosted": "回复已发布",
       "replyPostedDesc": "您的回复已成功发布。",

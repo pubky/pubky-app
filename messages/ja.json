@@ -821,6 +821,7 @@
     "success": "成功",
     "error": "エラー",
     "errors": "エラー",
+    "genericErrorTitle": "おっと！問題が発生しました。",
     "post": {
       "replyPosted": "返信を投稿しました",
       "replyPostedDesc": "返信が正常に投稿されました。",

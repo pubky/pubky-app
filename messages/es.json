@@ -821,6 +821,7 @@
     "success": "Exito",
     "error": "Error",
     "errors": "Errores",
+    "genericErrorTitle": "¡Ups! Algo salio mal!",
     "post": {
       "replyPosted": "Respuesta publicada",
       "replyPostedDesc": "Tu respuesta ha sido publicada exitosamente.",

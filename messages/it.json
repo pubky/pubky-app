@@ -821,6 +821,7 @@
     "success": "Successo",
     "error": "Errore",
     "errors": "Errori",
+    "genericErrorTitle": "Ops! Qualcosa e andato storto!",
     "post": {
       "replyPosted": "Risposta pubblicata",
       "replyPostedDesc": "La tua risposta e stata pubblicata con successo.",

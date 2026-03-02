@@ -58,7 +58,7 @@ export function ProfilePageContainer({ children }: ProfilePageContainerProps) {
 
   // Business logic: Handle follow/unfollow for other users' profiles (with auth check)
   const { requireAuth } = Hooks.useRequireAuth();
-  const { toggleFollow, isLoading: isFollowLoading } = Hooks.useFollowUser();
+  const { toggleFollow, isLoading: isFollowLoading, loadingAction: followLoadingAction } = Hooks.useFollowUser();
   const { isFollowing } = Hooks.useIsFollowing(pubky ?? '');
 
   const handleFollowToggle = () => {
@@ -72,6 +72,7 @@ export function ProfilePageContainer({ children }: ProfilePageContainerProps) {
     ...actions,
     onFollowToggle: handleFollowToggle,
     isFollowLoading,
+    followLoadingAction,
     isFollowing,
   };
 

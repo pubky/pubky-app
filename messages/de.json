@@ -821,6 +821,7 @@
     "success": "Erfolg",
     "error": "Fehler",
     "errors": "Fehler",
+    "genericErrorTitle": "Hoppla! Etwas ist schiefgelaufen!",
     "post": {
       "replyPosted": "Antwort gepostet",
       "replyPostedDesc": "Ihre Antwort wurde erfolgreich gepostet.",
