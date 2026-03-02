@@ -259,23 +259,44 @@
       "subtitle": "打开 Pubky Ring，创建一个 pubky，然后扫描二维码。",
       "generating": "正在生成二维码...",
       "generatingShort": "生成中...",
+
+      "expired": "已过期",
+
       "openingRing": "正在打开 Pubky Ring...",
+
       "authorize": "使用 Pubky Ring 授权",
       "authorizeSub": "使用 <pubkyRing>Pubky Ring</pubkyRing> 或任何其他由 <pubkyCore>Pubky Core</pubkyCore> 驱动的密钥链。",
       "linkFailed": "无法连接到 Pubky Ring 签名应用",
       "tryAgain": "请重试。"
+    },
+    "authExpired": {
+      "titleDesktop": "二维码已过期",
+      "descriptionDesktop": "此二维码已失效。刷新以获取新的二维码。",
+      "titleMobile": "授权会话已过期",
+      "descriptionMobile": "你的授权会话已失效。请刷新以生成新的会话并继续。",
+      "refresh": "刷新"
     },
     "signIn": {
       "title": "登录 <highlight>Pubky。</highlight>",
       "subtitle": "使用 Pubky Ring 授权登录。",
       "generating": "正在生成二维码...",
       "generatingShort": "生成中...",
+
+      "expired": "已过期",
+
       "openingRing": "正在打开 Pubky Ring...",
+
       "authorize": "使用 Pubky Ring 授权",
       "linkCopied": "链接已复制",
       "linkCopiedDescription": "认证链接已复制到剪贴板。",
       "linkFailed": "无法连接到 Pubky Ring 签名应用",
       "tryAgain": "请重试。",
+      "authInitFailedTitle": "登录失败，请重试。",
+      "authInitFailedDescription": "无法完成 Pubky Ring 授权，请重试。",
+      "authNotCompletedTitle": "授权未完成",
+      "authNotCompletedDescription": "签名器未完成授权，请重试。",
+      "qrGenerationFailedTitle": "二维码生成失败",
+      "qrGenerationFailedDescription": "无法生成登录二维码。请刷新后重试。",
       "recoveryHint": "无法使用 <pubkyRing>Pubky Ring</pubkyRing> 登录？使用恢复短语或加密文件恢复您的账户。",
       "verifyingAccount": "验证账户",
       "loadingData": "加载您的数据",

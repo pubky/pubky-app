@@ -259,23 +259,44 @@
       "subtitle": "Abre Pubky Ring, crea un pubky y escanea el QR.",
       "generating": "Generando código QR...",
       "generatingShort": "Generando...",
+
+      "expired": "Expirado",
+
       "openingRing": "Abriendo Pubky Ring...",
+
       "authorize": "Autorizar con Pubky Ring",
       "authorizeSub": "Usa <pubkyRing>Pubky Ring</pubkyRing> o cualquier otro llavero impulsado por <pubkyCore>Pubky Core</pubkyCore>.",
       "linkFailed": "No se pudo conectar a la aplicacion firmante Pubky Ring",
       "tryAgain": "Por favor intenta de nuevo."
+    },
+    "authExpired": {
+      "titleDesktop": "Código QR expirado",
+      "descriptionDesktop": "Este código QR ya no está activo. Actualiza para obtener uno nuevo.",
+      "titleMobile": "La sesión de autorización expiró",
+      "descriptionMobile": "Tu sesión de autorización ya no está activa. Actualiza para generar una nueva y continuar.",
+      "refresh": "Actualizar"
     },
     "signIn": {
       "title": "Inicia sesión en <highlight>Pubky.</highlight>",
       "subtitle": "Autoriza con Pubky Ring para iniciar sesión.",
       "generating": "Generando código QR...",
       "generatingShort": "Generando...",
+
+      "expired": "Expirado",
+
       "openingRing": "Abriendo Pubky Ring...",
+
       "authorize": "Autorizar con Pubky Ring",
       "linkCopied": "Enlace copiado",
       "linkCopiedDescription": "Enlace de autenticacion copiado al portapapeles.",
       "linkFailed": "No se pudo conectar a la aplicacion firmante Pubky Ring",
       "tryAgain": "Por favor intenta de nuevo.",
+      "authInitFailedTitle": "Error al iniciar sesión. Por favor intenta de nuevo.",
+      "authInitFailedDescription": "No se pudo completar la autorización con Pubky Ring. Por favor intenta de nuevo.",
+      "authNotCompletedTitle": "La autorización no se completó",
+      "authNotCompletedDescription": "El firmante no completó la autorización. Por favor intenta de nuevo.",
+      "qrGenerationFailedTitle": "Error al generar el código QR",
+      "qrGenerationFailedDescription": "No se pudo generar el código QR de inicio de sesión. Actualiza e inténtalo de nuevo.",
       "recoveryHint": "No puedes iniciar sesión con <pubkyRing>Pubky Ring</pubkyRing>? Usa la frase de recuperación o el archivo encriptado para restaurar tu cuenta.",
       "verifyingAccount": "Verificando cuenta",
       "loadingData": "Cargando tus datos",

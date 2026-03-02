@@ -1,11 +1,22 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import * as Core from '@/core';
-import { AppError, ErrorCategory, NetworkErrorCode, AuthErrorCode, ErrorService } from '@/libs';
+import {
+  AppError,
+  ErrorCategory,
+  NetworkErrorCode,
+  AuthErrorCode,
+  Err,
+  ClientErrorCode,
+  ErrorService,
+  HttpMethod,
+  ServerErrorCode,
+} from '@/libs';
 import * as libs from '@/libs';
 import type { Session, Keypair } from '@synonymdev/pubky';
 
 vi.mock('pubky-app-specs', () => ({
   default: vi.fn(() => Promise.resolve()),
+  userUriBuilder: (pubky: string) => `pubky://${pubky}/pub/pubky.app/profile.json`,
 }));
 
 describe('AuthApplication', () => {
@@ -282,6 +293,46 @@ describe('AuthApplication', () => {
 
       expect(authStore.setIsRestoringSession).toHaveBeenCalledWith(true);
       expect(authStore.setIsRestoringSession).toHaveBeenLastCalledWith(false);
+    });
+  });
+
+  describe('userIsSignedUp', () => {
+    const testPubky = 'test-pubky' as Core.Pubky;
+
+    it('should return true when profile.json exists', async () => {
+      const requestSpy = vi.spyOn(Core.HomeserverService, 'request').mockResolvedValue({ name: 'Test' });
+
+      const result = await Core.AuthApplication.userIsSignedUp({ pubky: testPubky });
+
+      expect(result).toBe(true);
+      expect(requestSpy).toHaveBeenCalledWith({
+        method: HttpMethod.GET,
+        url: `pubky://${testPubky}/pub/pubky.app/profile.json`,
+      });
+    });
+
+    it('should return false when profile.json is not found (404)', async () => {
+      const notFoundError = Err.client(ClientErrorCode.NOT_FOUND, 'Profile not found', {
+        service: ErrorService.Homeserver,
+        operation: 'userIsSignedUp',
+      });
+      vi.spyOn(Core.HomeserverService, 'request').mockRejectedValue(notFoundError);
+
+      const result = await Core.AuthApplication.userIsSignedUp({ pubky: testPubky });
+
+      expect(result).toBe(false);
+    });
+
+    it('should throw when request fails with non-404 error', async () => {
+      const serverError = Err.server(ServerErrorCode.INTERNAL_ERROR, 'Server error', {
+        service: ErrorService.Homeserver,
+        operation: 'userIsSignedUp',
+      });
+      vi.spyOn(Core.HomeserverService, 'request').mockRejectedValue(serverError);
+
+      await expect(Core.AuthApplication.userIsSignedUp({ pubky: testPubky })).rejects.toMatchObject({
+        code: ServerErrorCode.INTERNAL_ERROR,
+      });
     });
   });
 });

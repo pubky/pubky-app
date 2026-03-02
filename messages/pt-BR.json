@@ -259,23 +259,44 @@
       "subtitle": "Abra o Pubky Ring, crie um pubky e escaneie o QR.",
       "generating": "Gerando Código QR...",
       "generatingShort": "Gerando...",
+
+      "expired": "Expirado",
+
       "openingRing": "Abrindo Pubky Ring...",
+
       "authorize": "Autorizar com Pubky Ring",
       "authorizeSub": "Use o <pubkyRing>Pubky Ring</pubkyRing> ou qualquer outro chaveiro alimentado pelo <pubkyCore>Pubky Core</pubkyCore>.",
       "linkFailed": "Nao foi possivel conectar ao aplicativo Pubky Ring",
       "tryAgain": "Por favor, tente novamente."
+    },
+    "authExpired": {
+      "titleDesktop": "Código QR expirado",
+      "descriptionDesktop": "Este código QR não está mais ativo. Atualize para obter um novo.",
+      "titleMobile": "Sessão de autorização expirada",
+      "descriptionMobile": "Sua sessão de autorização não está mais ativa. Atualize para gerar uma nova e continuar.",
+      "refresh": "Atualizar"
     },
     "signIn": {
       "title": "Entre no <highlight>Pubky.</highlight>",
       "subtitle": "Autorize com o Pubky Ring para entrar.",
       "generating": "Gerando Código QR...",
       "generatingShort": "Gerando...",
+
+      "expired": "Expirado",
+
       "openingRing": "Abrindo Pubky Ring...",
+
       "authorize": "Autorizar com Pubky Ring",
       "linkCopied": "Link copiado",
       "linkCopiedDescription": "Link de autenticação copiado para a área de transferência.",
       "linkFailed": "Nao foi possivel conectar ao aplicativo Pubky Ring",
       "tryAgain": "Por favor, tente novamente.",
+      "authInitFailedTitle": "Falha ao entrar. Por favor, tente novamente.",
+      "authInitFailedDescription": "Nao foi possível concluir a autorização com o Pubky Ring. Por favor, tente novamente.",
+      "authNotCompletedTitle": "A autorização não foi concluída",
+      "authNotCompletedDescription": "O assinador não concluiu a autorização. Por favor, tente novamente.",
+      "qrGenerationFailedTitle": "Falha ao gerar o código QR",
+      "qrGenerationFailedDescription": "Não foi possível gerar o código QR de entrada. Atualize e tente novamente.",
       "recoveryHint": "Nao consegue entrar com o <pubkyRing>Pubky Ring</pubkyRing>? Use a frase de recuperação ou arquivo criptografado para restaurar sua conta.",
       "verifyingAccount": "Verificando conta",
       "loadingData": "Carregando seus dados",

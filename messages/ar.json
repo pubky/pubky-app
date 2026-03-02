@@ -259,23 +259,44 @@
       "subtitle": "افتح Pubky Ring، انشئ pubky وامسح رمز QR.",
       "generating": "جاري انشاء رمز QR...",
       "generatingShort": "جاري الانشاء...",
+
+      "expired": "منتهي الصلاحية",
+
       "openingRing": "جارٍ فتح Pubky Ring...",
+
       "authorize": "تفويض باستخدام Pubky Ring",
       "authorizeSub": "استخدم <pubkyRing>Pubky Ring</pubkyRing> او اي سلسلة مفاتيح اخرى مدعومة من <pubkyCore>Pubky Core</pubkyCore>.",
       "linkFailed": "تعذر الاتصال بتطبيق التوقيع Pubky Ring",
       "tryAgain": "يرجى المحاولة مرة اخرى."
+    },
+    "authExpired": {
+      "titleDesktop": "انتهت صلاحية رمز QR",
+      "descriptionDesktop": "رمز QR هذا لم يعد نشطاً. قم بالتحديث للحصول على رمز جديد.",
+      "titleMobile": "انتهت صلاحية جلسة التفويض",
+      "descriptionMobile": "جلسة التفويض لم تعد نشطة. حدّث لإنشاء جلسة جديدة والمتابعة.",
+      "refresh": "تحديث"
     },
     "signIn": {
       "title": "تسجيل الدخول الى <highlight>Pubky.</highlight>",
       "subtitle": "قم بالتفويض باستخدام Pubky Ring لتسجيل الدخول.",
       "generating": "جاري انشاء رمز QR...",
       "generatingShort": "جاري الانشاء...",
+
+      "expired": "منتهي الصلاحية",
+
       "openingRing": "جارٍ فتح Pubky Ring...",
+
       "authorize": "تفويض باستخدام Pubky Ring",
       "linkCopied": "تم نسخ الرابط",
       "linkCopiedDescription": "تم نسخ رابط المصادقة الى الحافظة.",
       "linkFailed": "تعذر الاتصال بتطبيق التوقيع Pubky Ring",
       "tryAgain": "يرجى المحاولة مرة اخرى.",
+      "authInitFailedTitle": "فشل تسجيل الدخول. يرجى المحاولة مرة اخرى.",
+      "authInitFailedDescription": "تعذر اكمال التفويض باستخدام Pubky Ring. يرجى المحاولة مرة اخرى.",
+      "authNotCompletedTitle": "لم يكتمل التفويض",
+      "authNotCompletedDescription": "لم يكمل تطبيق التوقيع عملية التفويض. يرجى المحاولة مرة اخرى.",
+      "qrGenerationFailedTitle": "فشل انشاء رمز QR",
+      "qrGenerationFailedDescription": "تعذر انشاء رمز QR لتسجيل الدخول. يرجى التحديث والمحاولة مرة اخرى.",
       "recoveryHint": "لا تستطيع تسجيل الدخول باستخدام <pubkyRing>Pubky Ring</pubkyRing>؟ استخدم عبارة الاسترداد او الملف المشفر لاستعادة حسابك.",
       "verifyingAccount": "جاري التحقق من الحساب",
       "loadingData": "جاري تحميل بياناتك",

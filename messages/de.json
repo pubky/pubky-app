@@ -259,23 +259,44 @@
       "subtitle": "Oeffnen Sie Pubky Ring, erstellen Sie einen Pubky und scannen Sie den QR.",
       "generating": "QR-Code wird generiert...",
       "generatingShort": "Generieren...",
+
+      "expired": "Abgelaufen",
+
       "openingRing": "Pubky Ring wird geöffnet...",
+
       "authorize": "Mit Pubky Ring autorisieren",
       "authorizeSub": "Verwenden Sie <pubkyRing>Pubky Ring</pubkyRing> oder einen anderen von <pubkyCore>Pubky Core</pubkyCore> betriebenen Schlüsselbund.",
       "linkFailed": "Verbindung zur Signer-Anwendung Pubky Ring nicht möglich",
       "tryAgain": "Bitte versuchen Sie es erneut."
+    },
+    "authExpired": {
+      "titleDesktop": "QR-Code abgelaufen",
+      "descriptionDesktop": "Dieser QR-Code ist nicht mehr aktiv. Aktualisieren Sie, um einen neuen zu erhalten.",
+      "titleMobile": "Autorisierungssitzung abgelaufen",
+      "descriptionMobile": "Ihre Autorisierungssitzung ist nicht mehr aktiv. Aktualisieren Sie, um eine neue Sitzung zu erzeugen und fortzufahren.",
+      "refresh": "Aktualisieren"
     },
     "signIn": {
       "title": "Bei <highlight>Pubky</highlight> anmelden.",
       "subtitle": "Autorisieren Sie mit Pubky Ring, um sich anzumelden.",
       "generating": "QR-Code wird generiert...",
       "generatingShort": "Generieren...",
+
+      "expired": "Abgelaufen",
+
       "openingRing": "Pubky Ring wird geöffnet...",
+
       "authorize": "Mit Pubky Ring autorisieren",
       "linkCopied": "Link kopiert",
       "linkCopiedDescription": "Authentifizierungslink in die Zwischenablage kopiert.",
       "linkFailed": "Verbindung zur Signer-Anwendung Pubky Ring nicht möglich",
       "tryAgain": "Bitte versuchen Sie es erneut.",
+      "authInitFailedTitle": "Anmeldung fehlgeschlagen. Bitte versuchen Sie es erneut.",
+      "authInitFailedDescription": "Autorisierung mit Pubky Ring konnte nicht abgeschlossen werden. Bitte versuchen Sie es erneut.",
+      "authNotCompletedTitle": "Autorisierung wurde nicht abgeschlossen",
+      "authNotCompletedDescription": "Der Signer hat die Autorisierung nicht abgeschlossen. Bitte versuchen Sie es erneut.",
+      "qrGenerationFailedTitle": "QR-Code-Generierung fehlgeschlagen",
+      "qrGenerationFailedDescription": "Anmelde-QR-Code konnte nicht generiert werden. Bitte aktualisieren Sie und versuchen Sie es erneut.",
       "recoveryHint": "Können Sie sich nicht mit <pubkyRing>Pubky Ring</pubkyRing> anmelden? Verwenden Sie die Wiederherstellungsphrase oder die verschlüsselte Datei, um Ihr Konto wiederherzustellen.",
       "verifyingAccount": "Konto wird verifiziert",
       "loadingData": "Ihre Daten werden geladen",

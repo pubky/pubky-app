@@ -259,23 +259,44 @@
       "subtitle": "Ouvrez Pubky Ring, crééz un pubky et scannez le QR.",
       "generating": "Génération du code QR...",
       "generatingShort": "Génération...",
+
+      "expired": "Expiré",
+
       "openingRing": "Ouverture de Pubky Ring...",
+
       "authorize": "Autoriser avec Pubky Ring",
       "authorizeSub": "Utilisez <pubkyRing>Pubky Ring</pubkyRing> ou tout autre trousseau alimente par <pubkyCore>Pubky Core</pubkyCore>.",
       "linkFailed": "Impossible de se connecter a l'application Pubky Ring",
       "tryAgain": "Veuillez réessayer."
+    },
+    "authExpired": {
+      "titleDesktop": "Code QR expiré",
+      "descriptionDesktop": "Ce code QR n'est plus actif. Actualisez pour en obtenir un nouveau.",
+      "titleMobile": "Session d'autorisation expirée",
+      "descriptionMobile": "Votre session d'autorisation n'est plus active. Actualisez pour en générer une nouvelle et continuer.",
+      "refresh": "Actualiser"
     },
     "signIn": {
       "title": "Connectez-vous a <highlight>Pubky.</highlight>",
       "subtitle": "Autorisez avec Pubky Ring pour vous connecter.",
       "generating": "Génération du code QR...",
       "generatingShort": "Génération...",
+
+      "expired": "Expiré",
+
       "openingRing": "Ouverture de Pubky Ring...",
+
       "authorize": "Autoriser avec Pubky Ring",
       "linkCopied": "Lien copie",
       "linkCopiedDescription": "Lien d'authentification copie dans le presse-papiers.",
       "linkFailed": "Impossible de se connecter a l'application Pubky Ring",
       "tryAgain": "Veuillez réessayer.",
+      "authInitFailedTitle": "Échec de la connexion. Veuillez réessayer.",
+      "authInitFailedDescription": "Impossible de terminer l'autorisation avec Pubky Ring. Veuillez réessayer.",
+      "authNotCompletedTitle": "L'autorisation n'a pas été terminée",
+      "authNotCompletedDescription": "Le signataire n'a pas terminé l'autorisation. Veuillez réessayer.",
+      "qrGenerationFailedTitle": "Échec de la génération du code QR",
+      "qrGenerationFailedDescription": "Impossible de générer le code QR de connexion. Actualisez et réessayez.",
       "recoveryHint": "Vous ne pouvez pas vous connecter avec <pubkyRing>Pubky Ring</pubkyRing> ? Utilisez la phrase de récupération ou le fichier chiffre pour restaurer votre compte.",
       "verifyingAccount": "Vérification du compte",
       "loadingData": "Chargement de vos donnees",
