@@ -31,18 +31,20 @@ export default async function RootLayout({ children }: { children: React.ReactNo
   return (
     <Molecules.RootContainer locale={locale}>
       <Providers.IntlProvider locale={locale} messages={messages}>
-        <Providers.ErrorBoundaryProvider>
-          <Providers.DatabaseProvider>
-            <Providers.RouteGuardProvider>
-              <Organisms.CoordinatorsManager />
-              <Organisms.Header />
-              {children}
-              <Molecules.NewPostCTA />
-              <Molecules.Toaster />
-              <Organisms.DialogSignIn />
-            </Providers.RouteGuardProvider>
-          </Providers.DatabaseProvider>
-        </Providers.ErrorBoundaryProvider>
+        <Providers.GlobalErrorHandlerProvider>
+          <Providers.ErrorBoundaryProvider>
+            <Providers.DatabaseProvider>
+              <Providers.RouteGuardProvider>
+                <Organisms.CoordinatorsManager />
+                <Organisms.Header />
+                {children}
+                <Molecules.NewPostCTA />
+                <Molecules.Toaster />
+                <Organisms.DialogSignIn />
+              </Providers.RouteGuardProvider>
+            </Providers.DatabaseProvider>
+          </Providers.ErrorBoundaryProvider>
+        </Providers.GlobalErrorHandlerProvider>
       </Providers.IntlProvider>
     </Molecules.RootContainer>
   );

@@ -13,14 +13,16 @@ vi.mock('@/libs', async (importOriginal) => {
 });
 
 // Mock @/molecules
-const mockToast = vi.fn();
+const { mockToast, mockShowErrorToast } = vi.hoisted(() => ({
+  mockToast: vi.fn(),
+  mockShowErrorToast: vi.fn(),
+}));
 vi.mock('@/molecules', async (importOriginal) => {
   const actual = await importOriginal<typeof import('@/molecules')>();
   return {
     ...actual,
-    useToast: () => ({
-      toast: mockToast,
-    }),
+    toast: mockToast,
+    showErrorToast: mockShowErrorToast,
   };
 });
 
@@ -274,10 +276,8 @@ describe('CopyrightForm', () => {
     await user.click(submitButton);
 
     await waitFor(() => {
-      expect(mockToast).toHaveBeenCalledWith({
-        title: 'Error',
+      expect(mockShowErrorToast).toHaveBeenCalledWith({
         description: 'Validation failed',
-        className: 'destructive border-destructive bg-destructive text-destructive-foreground',
       });
     });
   });
