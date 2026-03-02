@@ -2,7 +2,6 @@ import { describe, it, expect, vi, beforeAll, afterAll, beforeEach } from 'vites
 import { render, screen, waitFor, act, fireEvent } from '@testing-library/react';
 import React from 'react';
 import { SignInContent, SignInFooter } from './SignIn';
-import type { PublicKey } from '@synonymdev/pubky';
 
 // Mock Next.js router
 const mockPush = vi.fn();
@@ -56,22 +55,6 @@ const resetMockSignInState = () => {
 
 // Mock Core modules
 vi.mock('@/core', () => ({
-  AuthController: {
-    getAuthUrl: vi.fn().mockResolvedValue({
-      authorizationUrl: 'pubkyring://authorize?token=test123',
-      awaitApproval: Promise.resolve({} as unknown as PublicKey),
-    }),
-    initializeAuthenticatedSession: vi.fn().mockResolvedValue({}),
-    loginWithAuthUrl: vi.fn().mockResolvedValue({}),
-  },
-  BootstrapController: {
-    run: vi.fn().mockResolvedValue({}),
-  },
-  useAuthStore: {
-    getState: vi.fn().mockReturnValue({
-      currentUserPubky: 'mock-user-pubkey-123',
-    }),
-  },
   useOnboardingStore: {
     getState: vi.fn().mockReturnValue({
       reset: vi.fn(),
@@ -86,48 +69,51 @@ vi.mock('@/core', () => ({
 }));
 
 // Mock useMobileAuth hook - use vi.hoisted so values are available in vi.mock
-const { defaultUseMobileAuthReturn, mockOnAuthorizeClick } = vi.hoisted(() => {
-  const mockFetchUrl = vi.fn();
-  const mockOnAuthorizeClick = vi.fn();
-  return {
-    mockFetchUrl,
-    mockOnAuthorizeClick,
-    defaultUseMobileAuthReturn: {
-      url: 'pubkyring://authorize?token=test123',
-      isLoading: false,
-      fetchUrl: mockFetchUrl,
-      onAuthorizeClick: mockOnAuthorizeClick,
-    },
-  };
-});
+const { mockFetchUrl, mockCopyAuthUrl, mockOnAuthorizeClick } = vi.hoisted(() => ({
+  mockFetchUrl: vi.fn(),
+  mockCopyAuthUrl: vi.fn().mockResolvedValue(undefined),
+  mockOnAuthorizeClick: vi.fn(),
+}));
 vi.mock('@/hooks', async (importOriginal) => {
   const actual = await importOriginal<typeof import('@/hooks')>();
   return {
     ...actual,
-    useMobileAuth: vi.fn(() => defaultUseMobileAuthReturn),
+    useMobileAuth: vi.fn(() => ({
+      url: 'mock-auth-url',
+      isLoading: false,
+      isExpired: false,
+      fetchUrl: mockFetchUrl,
+      copyAuthUrl: mockCopyAuthUrl,
+      isOpeningRing: false,
+      onAuthorizeClick: mockOnAuthorizeClick,
+    })),
   };
 });
 
-// Mock molecules
-vi.mock('@/molecules', () => ({
-  ResponsiveSection: ({ desktop, mobile }: { desktop: React.ReactNode; mobile: React.ReactNode }) => (
-    <div data-testid="responsive-section">
-      <div data-testid="desktop-content">{desktop}</div>
-      <div data-testid="mobile-content">{mobile}</div>
-    </div>
-  ),
-  ContentCard: ({ children, layout }: { children: React.ReactNode; layout?: string }) => (
-    <div data-testid="content-card" data-layout={layout}>
-      {children}
-    </div>
-  ),
-  PageTitle: ({ children, size }: { children: React.ReactNode; size?: string }) => (
-    <div data-testid="page-title" data-size={size}>
-      {children}
-    </div>
-  ),
-  toast: vi.fn(),
-}));
+// Mock molecules - use real DialogAuthExpired (Radix) per component-testing rules
+vi.mock('@/molecules', async (importOriginal) => {
+  const actual = (await importOriginal()) as Record<string, unknown>;
+  return {
+    ...actual,
+    ResponsiveSection: ({ desktop, mobile }: { desktop: React.ReactNode; mobile: React.ReactNode }) => (
+      <div data-testid="responsive-section">
+        <div data-testid="desktop-content">{desktop}</div>
+        <div data-testid="mobile-content">{mobile}</div>
+      </div>
+    ),
+    ContentCard: ({ children, layout }: { children: React.ReactNode; layout?: string }) => (
+      <div data-testid="content-card" data-layout={layout}>
+        {children}
+      </div>
+    ),
+    PageTitle: ({ children, size }: { children: React.ReactNode; size?: string }) => (
+      <h1 data-testid="page-title" data-size={size}>
+        {children}
+      </h1>
+    ),
+    toast: vi.fn(),
+  };
+});
 
 // Mock copyToClipboard function - use vi.hoisted to ensure it's available before vi.mock runs
 const { mockCopyToClipboard } = vi.hoisted(() => ({
@@ -183,14 +169,17 @@ vi.mock('@/atoms', () => ({
     as,
     size,
     className,
+    overrideDefaults: _overrideDefaults,
+    ...props
   }: {
     children: React.ReactNode;
     as?: React.ElementType;
     size?: string;
     className?: string;
+    overrideDefaults?: boolean;
   }) => {
     const Tag = as || 'span';
-    return React.createElement(Tag, { 'data-testid': 'typography', className, 'data-size': size }, children);
+    return React.createElement(Tag, { 'data-testid': 'typography', className, 'data-size': size, ...props }, children);
   },
   FooterLinks: ({ children }: { children: React.ReactNode }) => <div data-testid="footer-links">{children}</div>,
   Link: ({
@@ -210,6 +199,21 @@ vi.mock('@/atoms', () => ({
   ),
   PageHeader: ({ children }: { children: React.ReactNode }) => <div data-testid="page-header">{children}</div>,
   PageSubtitle: ({ children }: { children: React.ReactNode }) => <div data-testid="page-subtitle">{children}</div>,
+  Dialog: ({ children, open }: { children: React.ReactNode; open?: boolean }) =>
+    open ? (
+      <div data-testid="dialog" role="dialog">
+        {children}
+      </div>
+    ) : null,
+  DialogContent: ({ children }: { children: React.ReactNode }) => <div data-testid="dialog-content">{children}</div>,
+  DialogHeader: ({ children }: { children: React.ReactNode }) => <div data-testid="dialog-header">{children}</div>,
+  DialogTitle: ({ children }: { children: React.ReactNode }) => <h2 data-testid="dialog-title">{children}</h2>,
+  DialogDescription: ({ children, className }: { children: React.ReactNode; className?: string }) => (
+    <p data-testid="dialog-description" className={className}>
+      {children}
+    </p>
+  ),
+  DialogFooter: ({ children }: { children: React.ReactNode }) => <div data-testid="dialog-footer">{children}</div>,
 }));
 
 describe('SignInContent', () => {
@@ -232,6 +236,7 @@ describe('SignInContent', () => {
     window.location.href = '';
     clipboardMock.writeText.mockClear();
     mockCopyToClipboard.mockClear();
+    mockCopyAuthUrl.mockClear();
     resetMockSignInState();
   });
 
@@ -301,7 +306,7 @@ describe('SignInContent', () => {
     expect(logoImage).toHaveAttribute('width', '137');
     expect(logoImage).toHaveAttribute('height', '30');
 
-    expect(screen.getByTestId('button')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /Authorize with Pubky Ring/i })).toBeInTheDocument();
   });
 
   it('calls mobile authorize handler when button is tapped', async () => {
@@ -310,15 +315,15 @@ describe('SignInContent', () => {
     });
 
     await waitFor(() => {
-      expect(screen.getByTestId('button')).not.toBeDisabled();
+      expect(screen.getByRole('button', { name: /Authorize with Pubky Ring/i })).not.toBeDisabled();
     });
 
-    const authorizeButton = screen.getByTestId('button');
-
+    const authorizeButton = screen.getByRole('button', { name: /Authorize with Pubky Ring/i });
     await act(async () => {
       fireEvent.click(authorizeButton);
     });
-    expect(mockOnAuthorizeClick).toHaveBeenCalled();
+
+    expect(mockOnAuthorizeClick).toHaveBeenCalledTimes(1);
   });
 
   // Note: Retry logic and error handling for auth URL generation are now tested
@@ -329,16 +334,20 @@ describe('SignInContent', () => {
   it('button disabled when loading', async () => {
     const Hooks = await import('@/hooks');
     vi.mocked(Hooks.useMobileAuth).mockReturnValue({
-      ...defaultUseMobileAuthReturn,
       url: '',
       isLoading: true,
+      isExpired: false,
+      fetchUrl: mockFetchUrl,
+      copyAuthUrl: mockCopyAuthUrl,
+      isOpeningRing: false,
+      onAuthorizeClick: mockOnAuthorizeClick,
     });
 
     await act(async () => {
       render(<SignInContent />);
     });
 
-    const button = screen.getByTestId('button');
+    const button = screen.getByRole('button', { name: /Generating/i });
     expect(button).toBeDisabled();
   });
 
@@ -358,9 +367,13 @@ describe('SignInContent', () => {
   it('copies auth URL to clipboard when QR code is clicked', async () => {
     const Hooks = await import('@/hooks');
     vi.mocked(Hooks.useMobileAuth).mockReturnValue({
-      ...defaultUseMobileAuthReturn,
       url: 'pubkyring://authorize?token=test123',
       isLoading: false,
+      isExpired: false,
+      fetchUrl: mockFetchUrl,
+      copyAuthUrl: mockCopyAuthUrl,
+      isOpeningRing: false,
+      onAuthorizeClick: mockOnAuthorizeClick,
     });
 
     const Molecules = await import('@/molecules');
@@ -375,11 +388,54 @@ describe('SignInContent', () => {
       fireEvent.click(qrButton);
     });
 
-    expect(mockCopyToClipboard).toHaveBeenCalledWith({ text: 'pubkyring://authorize?token=test123' });
+    expect(mockCopyAuthUrl).toHaveBeenCalled();
     expect(Molecules.toast).toHaveBeenCalledWith({
       title: 'Link copied',
       description: 'Authentication link copied to clipboard.',
     });
+  });
+
+  it('opens expired dialog and disables authorize action when auth flow is expired', async () => {
+    const Hooks = await import('@/hooks');
+    vi.mocked(Hooks.useMobileAuth).mockReturnValue({
+      url: '',
+      isLoading: false,
+      isExpired: true,
+      fetchUrl: mockFetchUrl,
+      copyAuthUrl: mockCopyAuthUrl,
+      isOpeningRing: false,
+      onAuthorizeClick: mockOnAuthorizeClick,
+    });
+
+    await act(async () => {
+      render(<SignInContent />);
+    });
+
+    expect(screen.getByRole('dialog')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /Refresh/i })).toBeInTheDocument();
+  });
+
+  it('calls fetchUrl when expired dialog refresh button is clicked', async () => {
+    const Hooks = await import('@/hooks');
+    vi.mocked(Hooks.useMobileAuth).mockReturnValue({
+      url: '',
+      isLoading: false,
+      isExpired: true,
+      fetchUrl: mockFetchUrl,
+      copyAuthUrl: mockCopyAuthUrl,
+      isOpeningRing: false,
+      onAuthorizeClick: mockOnAuthorizeClick,
+    });
+
+    await act(async () => {
+      render(<SignInContent />);
+    });
+
+    await act(async () => {
+      fireEvent.click(screen.getByRole('button', { name: /Refresh/i }));
+    });
+
+    expect(mockFetchUrl).toHaveBeenCalledTimes(1);
   });
 });
 
@@ -412,34 +468,59 @@ describe('SignInContent - Progress View', () => {
     expect(screen.getByText('Syncing settings')).toBeInTheDocument();
   });
 
-  it('shows correct step states - first step running when none completed', async () => {
+  it('shows first step as running and remaining as pending when none completed', async () => {
     mockSignInState.authUrlResolved = true;
-    // All other steps are false, so first step should be "running"
 
     await act(async () => {
       render(<SignInContent />);
     });
 
-    // Verify step labels are present
-    const steps = screen.getAllByTestId('typography');
-    expect(steps.length).toBeGreaterThan(0);
+    const verifyingLabel = screen.getByText('Verifying account');
+    const loadingLabel = screen.getByText('Loading your data');
+    const buildingLabel = screen.getByText('Building your feed');
+    const syncingLabel = screen.getByText('Syncing settings');
+
+    // First step: running (spinner icon + text-foreground)
+    expect(verifyingLabel.className).toContain('text-foreground');
+    expect(verifyingLabel.closest('div')?.querySelector('.lucide-loader-circle')).toBeInTheDocument();
+
+    // Remaining steps: pending (circle icon + text-muted-foreground)
+    expect(loadingLabel.className).toContain('text-muted-foreground');
+    expect(loadingLabel.closest('div')?.querySelector('.lucide-circle')).toBeInTheDocument();
+
+    expect(buildingLabel.className).toContain('text-muted-foreground');
+    expect(syncingLabel.className).toContain('text-muted-foreground');
   });
 
-  it('shows completed state for finished steps', async () => {
+  it('shows completed steps with check icon and currently running step with spinner', async () => {
     mockSignInState.authUrlResolved = true;
     mockSignInState.profileChecked = true;
     mockSignInState.bootstrapFetched = true;
-    // dataPersisted and homeserverSynced are still false
 
     await act(async () => {
       render(<SignInContent />);
     });
 
-    // All 4 step labels should be visible
-    expect(screen.getByText('Verifying account')).toBeInTheDocument();
-    expect(screen.getByText('Loading your data')).toBeInTheDocument();
-    expect(screen.getByText('Building your feed')).toBeInTheDocument();
-    expect(screen.getByText('Syncing settings')).toBeInTheDocument();
+    const verifyingLabel = screen.getByText('Verifying account');
+    const loadingLabel = screen.getByText('Loading your data');
+    const buildingLabel = screen.getByText('Building your feed');
+    const syncingLabel = screen.getByText('Syncing settings');
+
+    // First two steps: completed (check icon + font-bold)
+    expect(verifyingLabel.className).toContain('font-bold');
+    expect(verifyingLabel.closest('div')?.querySelector('.lucide-circle-check-big')).toBeInTheDocument();
+
+    expect(loadingLabel.className).toContain('font-bold');
+    expect(loadingLabel.closest('div')?.querySelector('.lucide-circle-check-big')).toBeInTheDocument();
+
+    // Third step: running (spinner)
+    expect(buildingLabel.className).toContain('text-foreground');
+    expect(buildingLabel.className).not.toContain('font-bold');
+    expect(buildingLabel.closest('div')?.querySelector('.lucide-loader-circle')).toBeInTheDocument();
+
+    // Fourth step: pending
+    expect(syncingLabel.className).toContain('text-muted-foreground');
+    expect(syncingLabel.closest('div')?.querySelector('.lucide-circle')).toBeInTheDocument();
   });
 
   it('does not render QR code or mobile button when showing progress', async () => {
@@ -465,7 +546,7 @@ describe('SignInFooter', () => {
   it('renders footer with recovery message', () => {
     render(<SignInFooter />);
 
-    expect(screen.getByTestId('footer-links')).toBeInTheDocument();
+    expect(screen.getAllByRole('link').length).toBeGreaterThanOrEqual(1);
     expect(screen.getByText('Not able to sign in with', { exact: false })).toBeInTheDocument();
     expect(
       screen.getByText('? Use the recovery phrase or encrypted file to restore your account.', { exact: false }),
@@ -475,7 +556,7 @@ describe('SignInFooter', () => {
   it('renders Pubky Ring link', () => {
     render(<SignInFooter />);
 
-    const link = screen.getByTestId('link');
+    const link = screen.getByRole('link', { name: /Pubky Ring/i });
 
     expect(link).toHaveAttribute('href', 'https://pubkyring.app/');
     expect(link).toHaveAttribute('target', '_blank');

@@ -17,14 +17,6 @@ const createMockKeypair = () =>
     free: vi.fn(),
   }) as unknown as import('@synonymdev/pubky').Keypair;
 
-const _createMockPublicKey = () =>
-  ({
-    z32: () => TEST_PUBKY,
-    free: () => {},
-    to_uint8array: () => new Uint8Array(),
-    toUint8Array: () => new Uint8Array(),
-  }) as unknown as import('@synonymdev/pubky').PublicKey;
-
 const createMockEncryptedFile = () =>
   new File([new Uint8Array([1, 2, 3, 4, 5])], 'recovery.bin', { type: 'application/octet-stream' });
 
@@ -570,6 +562,82 @@ describe('AuthController', () => {
       const secondCall = AuthController.getAuthUrl();
 
       // Resolve the first call after the second call already started.
+      resolveFirst!({
+        authorizationUrl: 'https://example.com/auth?token=A',
+        awaitApproval: new Promise(() => {}),
+        cancelAuthFlow: cancelAuthFlowA,
+      });
+
+      await secondCall;
+      await firstCall;
+
+      expect(cancelAuthFlowA).toHaveBeenCalled();
+      expect(cancelAuthFlowB).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('getSignupAuthUrl', () => {
+    beforeEach(() => {
+      setupOnboardingStore();
+    });
+
+    it('should generate signup auth URL successfully with activeAuthFlow tracking', async () => {
+      const cancelAuthFlow = vi.fn();
+      const mockAuthUrl = {
+        authorizationUrl: 'https://example.com/auth?token=signup123',
+        awaitApproval: Promise.resolve({} as unknown as import('@synonymdev/pubky').Session),
+        cancelAuthFlow,
+      };
+      const generateSignupAuthUrlSpy = vi
+        .spyOn(Core.AuthApplication, 'generateSignupAuthUrl')
+        .mockResolvedValue(mockAuthUrl);
+      const clearDatabaseSpy = vi.spyOn(Core, 'clearDatabase').mockResolvedValue(undefined);
+
+      const result = await AuthController.getSignupAuthUrl('A9KM-7MJP-ERM9');
+
+      expect(clearDatabaseSpy).toHaveBeenCalled();
+      expect(generateSignupAuthUrlSpy).toHaveBeenCalledWith('A9KM-7MJP-ERM9');
+      expect(result.authorizationUrl).toEqual(mockAuthUrl.authorizationUrl);
+      expect(result.awaitApproval).toBeInstanceOf(Promise);
+      expect(result.cancelAuthFlow).toBe(cancelAuthFlow);
+    });
+
+    it('should throw error when signup auth URL generation fails', async () => {
+      const generateSignupAuthUrlSpy = vi
+        .spyOn(Core.AuthApplication, 'generateSignupAuthUrl')
+        .mockRejectedValue(new Error('Failed to generate signup auth URL'));
+      vi.spyOn(Core, 'clearDatabase').mockResolvedValue(undefined);
+
+      await expect(AuthController.getSignupAuthUrl('INVITE-CODE')).rejects.toThrow(
+        'Failed to generate signup auth URL',
+      );
+      expect(generateSignupAuthUrlSpy).toHaveBeenCalledWith('INVITE-CODE');
+    });
+
+    it('should free stale auth flows when multiple requests overlap (StrictMode)', async () => {
+      vi.spyOn(Core, 'clearDatabase').mockResolvedValue(undefined);
+
+      const cancelAuthFlowA = vi.fn();
+      const cancelAuthFlowB = vi.fn();
+
+      type GenerateSignupAuthUrlResult = Awaited<ReturnType<typeof Core.AuthApplication.generateSignupAuthUrl>>;
+
+      let resolveFirst!: (value: GenerateSignupAuthUrlResult) => void;
+      const first = new Promise<GenerateSignupAuthUrlResult>((resolve) => {
+        resolveFirst = resolve;
+      });
+
+      vi.spyOn(Core.AuthApplication, 'generateSignupAuthUrl')
+        .mockImplementationOnce(() => first)
+        .mockResolvedValueOnce({
+          authorizationUrl: 'https://example.com/auth?token=B',
+          awaitApproval: new Promise(() => {}),
+          cancelAuthFlow: cancelAuthFlowB,
+        });
+
+      const firstCall = AuthController.getSignupAuthUrl('CODE-A');
+      const secondCall = AuthController.getSignupAuthUrl('CODE-B');
+
       resolveFirst!({
         authorizationUrl: 'https://example.com/auth?token=A',
         awaitApproval: new Promise(() => {}),
