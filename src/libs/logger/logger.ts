@@ -1,11 +1,10 @@
-import { IS_DEBUG, IS_TEST } from '@/config';
-import { Env } from '@/libs/env';
 import type { LogLevel } from './logger.type';
 
 export class Logger {
   private constructor() {}
 
-  private static isDebugMode = Env.NEXT_PUBLIC_DEBUG_MODE;
+  private static isDebugMode = process.env.NEXT_PUBLIC_DEBUG_MODE === 'true';
+  private static isTestEnvironment = process.env.NODE_ENV === 'test' || Boolean(process.env.VITEST);
   private static isInitialized = false;
 
   private static readonly COLORS = {
@@ -32,33 +31,16 @@ export class Logger {
 
   private static initialize() {
     if (this.isInitialized) return;
-
-    if (typeof window !== 'undefined') {
-      // Prevent default error logging
-      window.addEventListener('error', (event) => {
-        event.preventDefault();
-        return false;
-      });
-
-      // Prevent default unhandled rejection logging
-      window.addEventListener('unhandledrejection', (event) => {
-        event.preventDefault();
-        return false;
-      });
-    }
-
     this.isInitialized = true;
   }
 
   static shouldLog(level: LogLevel): boolean {
-    if (IS_TEST) return false; // Don't log during tests unless explicitly enabled
-
-    // Don't log during build process (SSR/SSG)
-    if (typeof window === 'undefined') return false;
+    if (this.isTestEnvironment) return false; // Don't log during tests unless explicitly enabled
 
     if (level === 'error') return true; // Always log errors in non-test environments
     if (level === 'warn') return true; // Always log warnings in non-test environments
-    return IS_DEBUG; // Only log debug and info in debug mode
+    if (typeof window === 'undefined') return false; // Suppress debug/info on server and during SSR/SSG
+    return this.isDebugMode; // Only log debug and info in debug mode
   }
 
   private static formatTitle(firstArg: unknown): string {
@@ -81,8 +63,13 @@ export class Logger {
   ): void {
     if (args.length === 0) return;
     if (!this.shouldLog(level as LogLevel)) return;
-    if (level === 'debug' && !this.isDebugMode) return;
     if (level === 'error') this.initialize();
+
+    // Server/runtime-safe path: use plain console output, no browser grouping/styles.
+    if (typeof window === 'undefined') {
+      fallbackFn('[' + level.toUpperCase() + ']', ...args);
+      return;
+    }
 
     try {
       const stack = this.getStack();

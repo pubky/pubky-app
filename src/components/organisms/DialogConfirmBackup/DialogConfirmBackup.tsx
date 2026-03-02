@@ -54,7 +54,7 @@ export function DialogConfirmBackup({ onConfirm }: DialogConfirmBackupProps) {
               <Atoms.Typography
                 id="backup-done-warning-text"
                 size="sm"
-                className="text-destructive-foreground font-bold"
+                className="font-bold text-destructive-foreground"
               >
                 After confirming, your seed will be deleted from the browser (!)
               </Atoms.Typography>

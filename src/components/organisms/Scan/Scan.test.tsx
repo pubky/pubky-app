@@ -7,9 +7,11 @@ import * as App from '@/app';
 
 // Mock Next.js router
 const mockPush = vi.fn();
+const mockReplace = vi.fn();
 vi.mock('next/navigation', () => ({
   useRouter: () => ({
     push: mockPush,
+    replace: mockReplace,
   }),
 }));
 
@@ -35,91 +37,87 @@ vi.mock('qrcode.react', () => ({
 }));
 
 // Mock Core modules
+const { onboardingState } = vi.hoisted(() => ({
+  onboardingState: { inviteCode: 'A9KM-7MJP-ERM9' },
+}));
+
 vi.mock('@/core', () => ({
-  AuthController: {
-    getAuthUrl: vi.fn().mockResolvedValue({
-      authorizationUrl: 'pubkyauth://',
-      awaitApproval: Promise.resolve({ mockKeypair: true }),
-    }),
-    initializeAuthenticatedSession: vi.fn().mockResolvedValue({}),
-    loginWithAuthUrl: vi.fn().mockResolvedValue({}),
-  },
   useOnboardingStore: vi.fn((selector) => {
-    const state = { inviteCode: 'A9KM-7MJP-ERM9' };
-    return selector ? selector(state) : state;
+    return selector ? selector(onboardingState) : onboardingState;
   }),
 }));
 
 // Mock useMobileAuth hook - use vi.hoisted so values are available in vi.mock
-const { defaultUseMobileAuthReturn, mockOnAuthorizeClick } = vi.hoisted(() => {
-  const mockFetchUrl = vi.fn();
-  const mockOnAuthorizeClick = vi.fn();
-  return {
-    mockFetchUrl,
-    mockOnAuthorizeClick,
-    defaultUseMobileAuthReturn: {
-      url: 'pubkyring://authorize?token=test123',
-      isLoading: false,
-      fetchUrl: mockFetchUrl,
-      onAuthorizeClick: mockOnAuthorizeClick,
-    },
-  };
-});
+const { mockFetchUrl, mockCopyAuthUrl, mockOnAuthorizeClick } = vi.hoisted(() => ({
+  mockFetchUrl: vi.fn(),
+  mockCopyAuthUrl: vi.fn().mockResolvedValue(undefined),
+  mockOnAuthorizeClick: vi.fn(),
+}));
 vi.mock('@/hooks', async (importOriginal) => {
   const actual = await importOriginal<typeof import('@/hooks')>();
   return {
     ...actual,
-    useMobileAuth: vi.fn(() => defaultUseMobileAuthReturn),
+    useMobileAuth: vi.fn(() => ({
+      url: 'mock-auth-url',
+      isLoading: false,
+      isExpired: false,
+      fetchUrl: mockFetchUrl,
+      copyAuthUrl: mockCopyAuthUrl,
+      isOpeningRing: false,
+      onAuthorizeClick: mockOnAuthorizeClick,
+    })),
   };
 });
 
-// Mock molecules
-vi.mock('@/molecules', () => ({
-  ResponsiveSection: ({ desktop, mobile }: { desktop: React.ReactNode; mobile: React.ReactNode }) => (
-    <div data-testid="responsive-section">
-      <div data-testid="desktop-content">{desktop}</div>
-      <div data-testid="mobile-content">{mobile}</div>
-    </div>
-  ),
-  ContentCard: ({ children, layout }: { children: React.ReactNode; layout?: string }) => (
-    <div data-testid="content-card" data-layout={layout}>
-      {children}
-    </div>
-  ),
-  PageTitle: ({ children, size }: { children: React.ReactNode; size?: string }) => (
-    <div data-testid="page-title" data-size={size}>
-      {children}
-    </div>
-  ),
-  ButtonsNavigation: ({
-    onHandleBackButton,
-    continueButtonDisabled,
-    hiddenContinueButton,
-  }: {
-    onHandleBackButton: () => void;
-    continueButtonDisabled?: boolean;
-    hiddenContinueButton?: boolean;
-  }) => (
-    <div data-testid="buttons-navigation">
-      <button data-testid="back-button" onClick={onHandleBackButton}>
-        Back
-      </button>
-      {!hiddenContinueButton && (
-        <button data-testid="continue-button" disabled={continueButtonDisabled}>
-          Continue
+// Mock molecules - use real DialogAuthExpired (Radix) per component-testing rules
+vi.mock('@/molecules', async (importOriginal) => {
+  const actual = (await importOriginal()) as Record<string, unknown>;
+  return {
+    ...actual,
+    ResponsiveSection: ({ desktop, mobile }: { desktop: React.ReactNode; mobile: React.ReactNode }) => (
+      <div data-testid="responsive-section">
+        <div data-testid="desktop-content">{desktop}</div>
+        <div data-testid="mobile-content">{mobile}</div>
+      </div>
+    ),
+    ContentCard: ({ children, layout }: { children: React.ReactNode; layout?: string }) => (
+      <div data-testid="content-card" data-layout={layout}>
+        {children}
+      </div>
+    ),
+    PageTitle: ({ children, size }: { children: React.ReactNode; size?: string }) => (
+      <h1 data-testid="page-title" data-size={size}>
+        {children}
+      </h1>
+    ),
+    ButtonsNavigation: ({
+      onHandleBackButton,
+      continueButtonDisabled,
+      hiddenContinueButton,
+    }: {
+      onHandleBackButton: () => void;
+      continueButtonDisabled?: boolean;
+      hiddenContinueButton?: boolean;
+    }) => (
+      <div data-testid="buttons-navigation">
+        <button data-testid="back-button" onClick={onHandleBackButton}>
+          Back
         </button>
-      )}
-    </div>
-  ),
-  toast: vi.fn(),
-}));
-
-// Mock libs
-// Mock libs - use actual utility functions and icons from lucide-react
-vi.mock('@/libs', async () => {
-  const actual = await vi.importActual('@/libs');
-  return { ...actual };
+        {!hiddenContinueButton && (
+          <button data-testid="continue-button" disabled={continueButtonDisabled}>
+            Continue
+          </button>
+        )}
+      </div>
+    ),
+    toast: vi.fn(),
+  };
 });
+
+// Mock copyToClipboard function - use vi.hoisted to ensure it's available before vi.mock runs
+const { mockCopyToClipboard } = vi.hoisted(() => ({
+  mockCopyToClipboard: vi.fn().mockResolvedValue(undefined),
+}));
 
 // Mock atoms
 vi.mock('@/atoms', () => ({
@@ -175,7 +173,35 @@ vi.mock('@/atoms', () => ({
   ),
   PageHeader: ({ children }: { children: React.ReactNode }) => <div data-testid="page-header">{children}</div>,
   PageSubtitle: ({ children }: { children: React.ReactNode }) => <div data-testid="page-subtitle">{children}</div>,
+  Dialog: ({ children, open }: { children: React.ReactNode; open?: boolean }) =>
+    open ? (
+      <div data-testid="dialog" role="dialog">
+        {children}
+      </div>
+    ) : null,
+  DialogContent: ({ children }: { children: React.ReactNode }) => <div data-testid="dialog-content">{children}</div>,
+  DialogHeader: ({ children }: { children: React.ReactNode }) => <div data-testid="dialog-header">{children}</div>,
+  DialogTitle: ({ children }: { children: React.ReactNode }) => <h2 data-testid="dialog-title">{children}</h2>,
+  DialogDescription: ({ children, className }: { children: React.ReactNode; className?: string }) => (
+    <p data-testid="dialog-description" className={className}>
+      {children}
+    </p>
+  ),
+  DialogFooter: ({ children }: { children: React.ReactNode }) => <div data-testid="dialog-footer">{children}</div>,
 }));
+
+// Mock libs - use actual utility functions and icons, override clipboard + logger
+vi.mock('@/libs', async () => {
+  const actual = await vi.importActual('@/libs');
+  return {
+    ...actual,
+    copyToClipboard: mockCopyToClipboard,
+    Logger: {
+      error: vi.fn(),
+      warn: vi.fn(),
+    },
+  };
+});
 
 describe('ScanContent', () => {
   const originalLocation = window.location;
@@ -186,14 +212,12 @@ describe('ScanContent', () => {
       configurable: true,
       value: { ...(originalLocation as unknown as object), href: '' } as unknown as Location,
     });
-    Object.defineProperty(navigator, 'clipboard', {
-      configurable: true,
-      value: clipboardMock,
-    });
   });
 
   beforeEach(() => {
     vi.clearAllMocks();
+    mockCopyToClipboard.mockClear();
+    onboardingState.inviteCode = 'A9KM-7MJP-ERM9';
     window.location.href = '';
     clipboardMock.writeText.mockClear();
   });
@@ -202,10 +226,6 @@ describe('ScanContent', () => {
     Object.defineProperty(window, 'location', {
       configurable: true,
       value: originalLocation,
-    });
-    Object.defineProperty(navigator, 'clipboard', {
-      configurable: true,
-      value: undefined,
     });
   });
 
@@ -248,15 +268,71 @@ describe('ScanContent', () => {
     });
 
     await waitFor(() => {
-      expect(screen.getByTestId('button')).not.toBeDisabled();
+      expect(screen.getByRole('button', { name: /Authorize with Pubky Ring/i })).not.toBeDisabled();
     });
 
-    const authorizeButton = screen.getByTestId('button');
+    const authorizeButton = screen.getByRole('button', { name: /Authorize with Pubky Ring/i });
 
     await act(async () => {
       fireEvent.click(authorizeButton);
     });
-    expect(mockOnAuthorizeClick).toHaveBeenCalled();
+
+    expect(mockOnAuthorizeClick).toHaveBeenCalledTimes(1);
+  });
+
+  it('opens expired dialog when auth flow is expired', async () => {
+    const Hooks = await import('@/hooks');
+    vi.mocked(Hooks.useMobileAuth).mockReturnValue({
+      url: '',
+      isLoading: false,
+      isExpired: true,
+      fetchUrl: mockFetchUrl,
+      copyAuthUrl: mockCopyAuthUrl,
+      isOpeningRing: false,
+      onAuthorizeClick: mockOnAuthorizeClick,
+    });
+
+    await act(async () => {
+      render(<ScanContent />);
+    });
+
+    expect(screen.getByRole('dialog')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /Refresh/i })).toBeInTheDocument();
+  });
+
+  it('calls fetchUrl when expired dialog refresh button is clicked', async () => {
+    const Hooks = await import('@/hooks');
+    vi.mocked(Hooks.useMobileAuth).mockReturnValue({
+      url: '',
+      isLoading: false,
+      isExpired: true,
+      fetchUrl: mockFetchUrl,
+      copyAuthUrl: mockCopyAuthUrl,
+      isOpeningRing: false,
+      onAuthorizeClick: mockOnAuthorizeClick,
+    });
+
+    await act(async () => {
+      render(<ScanContent />);
+    });
+
+    await act(async () => {
+      fireEvent.click(screen.getByRole('button', { name: /Refresh/i }));
+    });
+
+    expect(mockFetchUrl).toHaveBeenCalledTimes(1);
+  });
+
+  it('redirects to human onboarding when invite code is missing', async () => {
+    onboardingState.inviteCode = '';
+
+    await act(async () => {
+      render(<ScanContent />);
+    });
+
+    await waitFor(() => {
+      expect(mockReplace).toHaveBeenCalledWith(App.ONBOARDING_ROUTES.HUMAN);
+    });
   });
 });
 
@@ -264,17 +340,16 @@ describe('ScanFooter', () => {
   it('renders footer with links', () => {
     render(<ScanFooter />);
 
-    expect(screen.getByTestId('footer-links')).toBeInTheDocument();
+    const links = screen.getAllByRole('link');
+    expect(links.length).toBeGreaterThanOrEqual(1);
   });
 
   it('renders links', () => {
     render(<ScanFooter />);
 
-    const links = screen.getAllByTestId('link');
-    // With rich text, at least one link should be rendered
+    const links = screen.getAllByRole('link');
     expect(links.length).toBeGreaterThanOrEqual(1);
 
-    // Check that Pubky Core link is present (it's always rendered first by the mock)
     const coreLink = links.find((link) => link.getAttribute('href') === Config.PUBKY_CORE_URL);
     expect(coreLink).toBeDefined();
   });
@@ -284,17 +359,15 @@ describe('ScanHeader', () => {
   it('renders mobile header correctly', () => {
     render(<ScanHeader isMobile={true} />);
 
-    expect(screen.getByTestId('page-header')).toBeInTheDocument();
     expect(screen.getByTestId('page-title')).toBeInTheDocument();
-    expect(screen.getByTestId('page-subtitle')).toBeInTheDocument();
+    expect(screen.getByRole('heading')).toBeInTheDocument();
   });
 
   it('renders desktop header correctly', () => {
     render(<ScanHeader isMobile={false} />);
 
-    expect(screen.getByTestId('page-header')).toBeInTheDocument();
     expect(screen.getByTestId('page-title')).toBeInTheDocument();
-    expect(screen.getByTestId('page-subtitle')).toBeInTheDocument();
+    expect(screen.getByRole('heading')).toBeInTheDocument();
   });
 });
 
@@ -322,6 +395,10 @@ describe('ScanNavigation', () => {
 });
 
 describe('Scan Components - Snapshots', () => {
+  beforeEach(() => {
+    onboardingState.inviteCode = 'A9KM-7MJP-ERM9';
+  });
+
   describe('ScanContent - Snapshots', () => {
     it('matches snapshot for default ScanContent', () => {
       const { container } = render(<ScanContent />);

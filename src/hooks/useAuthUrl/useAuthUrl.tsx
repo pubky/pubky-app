@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState } from 'react';
 import type { Session } from '@synonymdev/pubky';
+import { useTranslations } from 'next-intl';
 
 import * as Core from '@/core';
 import * as Libs from '@/libs';
@@ -9,25 +10,39 @@ import * as Molecules from '@/molecules';
 
 import type { UseAuthUrlOptions, UseAuthUrlReturn } from './useAuthUrl.types';
 
+/** Returns true if the error indicates the auth flow has expired (timeout or SESSION_EXPIRED). */
+const isAuthFlowExpiredError = (error: unknown): boolean => {
+  if (!Libs.isAppError(error)) return false;
+  if (Libs.isTimeoutError(error)) return true;
+  return Libs.isAuthError(error) && error.code === Libs.AuthErrorCode.SESSION_EXPIRED;
+};
+
 /**
  * Manages the authentication URL lifecycle for Pubky Ring authorization.
+ * @param options - Configuration for auth URL generation (autoFetch, type, inviteCode for signup)
+ * @returns URL state, loading/expired flags, and fetch/copy actions
  */
 export function useAuthUrl(options: UseAuthUrlOptions = {}): UseAuthUrlReturn {
-  const { autoFetch = true, type = 'signin', inviteCode } = options;
+  const autoFetch = options.autoFetch ?? true;
+  const type = options.type ?? 'signin';
+  const inviteCode = options.type === 'signup' ? options.inviteCode : '';
+  const t = useTranslations('onboarding.signIn');
 
   const [url, setUrl] = useState('');
   const [isLoading, setIsLoading] = useState(autoFetch);
+  const [isExpired, setIsExpired] = useState(false);
   const isMountedRef = useRef(true);
 
   const fetchUrl = useCallback(async (): Promise<void> => {
     setIsLoading(true);
+    setIsExpired(false);
     setUrl('');
 
     try {
       // Request auth URL from controller
       const { authorizationUrl, awaitApproval } =
-        type === 'signup' && inviteCode
-          ? await Core.HomegateController.getSignupAuthUrl(inviteCode)
+        type === 'signup'
+          ? await Core.AuthController.getSignupAuthUrl(inviteCode)
           : await Core.AuthController.getAuthUrl();
 
       awaitApproval
@@ -41,8 +56,8 @@ export function useAuthUrl(options: UseAuthUrlOptions = {}): UseAuthUrlReturn {
             Libs.Logger.error('Failed to persist session and check profile:', error);
             if (!isMountedRef.current) return;
             Molecules.toast({
-              title: 'Sign in failed. Please try again.',
-              description: 'Unable to complete authorization with Pubky Ring. Please try again.',
+              title: t('authInitFailedTitle'),
+              description: t('authInitFailedDescription'),
             });
           }
         })
@@ -51,7 +66,7 @@ export function useAuthUrl(options: UseAuthUrlOptions = {}): UseAuthUrlReturn {
             typeof error === 'object' &&
             error !== null &&
             'name' in error &&
-            (error as { name?: unknown }).name === 'AuthFlowCanceled'
+            (error as { name?: unknown }).name === Core.AUTH_FLOW_CANCELED_ERROR_NAME
           ) {
             return;
           }
@@ -59,9 +74,15 @@ export function useAuthUrl(options: UseAuthUrlOptions = {}): UseAuthUrlReturn {
           Libs.Logger.error('Authorization promise rejected:', error);
           if (!isMountedRef.current) return;
 
+          if (isAuthFlowExpiredError(error)) {
+            setUrl('');
+            setIsExpired(true);
+            return;
+          }
+
           Molecules.toast({
-            title: 'Authorization was not completed',
-            description: 'The signer did not complete authorization. Please try again.',
+            title: t('authNotCompletedTitle'),
+            description: t('authNotCompletedDescription'),
           });
         });
 
@@ -71,15 +92,24 @@ export function useAuthUrl(options: UseAuthUrlOptions = {}): UseAuthUrlReturn {
       Libs.Logger.error('Failed to generate auth URL:', error);
       if (!isMountedRef.current) return;
       Molecules.toast({
-        title: 'QR code generation failed',
-        description: 'Unable to generate sign-in QR code. Please refresh and try again.',
+        title: t('qrGenerationFailedTitle'),
+        description: t('qrGenerationFailedDescription'),
       });
     } finally {
       if (isMountedRef.current) {
         setIsLoading(false);
       }
     }
-  }, [type, inviteCode]);
+  }, [type, inviteCode, t]);
+
+  const copyAuthUrl = useCallback(async (): Promise<void> => {
+    if (!url) return;
+    try {
+      await Libs.copyToClipboard({ text: url });
+    } catch (error) {
+      Libs.Logger.error('Failed to copy auth URL to clipboard', error);
+    }
+  }, [url]);
 
   useEffect(() => {
     isMountedRef.current = true;
@@ -102,6 +132,8 @@ export function useAuthUrl(options: UseAuthUrlOptions = {}): UseAuthUrlReturn {
   return {
     url,
     isLoading,
+    isExpired,
     fetchUrl,
+    copyAuthUrl,
   };
 }
