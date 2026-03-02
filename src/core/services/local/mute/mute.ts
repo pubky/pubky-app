@@ -4,11 +4,6 @@ import { DatabaseErrorCode, Err, ErrorService, Logger } from '@/libs';
 type MuteAction = 'mute' | 'unmute';
 
 export class LocalMuteService {
-  private static readonly DEFAULT_RELATIONSHIP = {
-    following: false,
-    followed_by: false,
-  } as const;
-
   /**
    * Creates a mute relationship between users
    */
@@ -24,7 +19,7 @@ export class LocalMuteService {
   }
 
   /**
-   * Updates the mute status for a user relationship
+   * Updates the mute status using the muted stream as source of truth
    * @private
    */
   private static async updateMuteStatus({ muter, mutee }: Core.TMuteParams, action: MuteAction): Promise<void> {
@@ -33,34 +28,22 @@ export class LocalMuteService {
     try {
       let statusChanged = false;
 
-      await Core.db.transaction('rw', [Core.UserRelationshipsModel.table], async () => {
-        const existingRelationship = await Core.UserRelationshipsModel.findById(mutee);
+      await Core.db.transaction('rw', [Core.UserStreamModel.table], async () => {
+        // Check current muted stream for idempotency (read + write atomic to avoid race when two mute/unmute run at once)
+        const mutedStream = await Core.LocalStreamUsersService.findById(Core.UserStreamTypes.MUTED);
+        const isCurrentlyMuted = mutedStream?.stream.includes(mutee) ?? false;
 
-        if (existingRelationship) {
-          // If the relationship already has the desired mute status, no action needed
-          if (existingRelationship.muted === isMuting) {
-            return;
-          }
-
-          // Update the existing relationship
-          await Core.UserRelationshipsModel.update(mutee, { muted: isMuting });
-          statusChanged = true;
+        statusChanged = isMuting !== isCurrentlyMuted;
+        if (!statusChanged) {
+          Logger.debug(isMuting ? 'Mute created successfully' : 'Unmute completed successfully', { muter, mutee });
           return;
         }
 
-        // Create a new relationship with the desired mute status
-        await Core.UserRelationshipsModel.create({
-          id: mutee,
-          ...this.DEFAULT_RELATIONSHIP,
-          muted: isMuting,
-        });
-        statusChanged = true;
+        // Update muted stream (must stay inside transaction for atomicity)
+        await this.updateUserStreams(mutee, isMuting);
       });
 
-      // Update muted stream if status changed (outside transaction)
       if (statusChanged) {
-        await this.updateUserStreams(mutee, isMuting);
-
         // Clear post stream queue so next scroll uses updated mute list
         // The queue may contain posts filtered with the old mute state
         Core.postStreamQueue.clear();

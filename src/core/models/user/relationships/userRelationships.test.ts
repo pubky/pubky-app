@@ -12,7 +12,6 @@ describe('UserRelationshipsModel', () => {
   const MOCK_NEXUS_USER_RELATIONSHIP: Omit<Core.NexusUserRelationship, 'id'> = {
     following: true,
     followed_by: false,
-    muted: false,
   };
 
   describe('Constructor', () => {
@@ -27,7 +26,6 @@ describe('UserRelationshipsModel', () => {
       expect(userRelationships.id).toBe(mockUserRelationshipsData.id);
       expect(userRelationships.following).toBe(mockUserRelationshipsData.following);
       expect(userRelationships.followed_by).toBe(mockUserRelationshipsData.followed_by);
-      expect(userRelationships.muted).toBe(mockUserRelationshipsData.muted);
     });
   });
 
@@ -56,7 +54,6 @@ describe('UserRelationshipsModel', () => {
       expect(result!.id).toBe(testUserId1);
       expect(result!.following).toBe(MOCK_NEXUS_USER_RELATIONSHIP.following);
       expect(result!.followed_by).toBe(MOCK_NEXUS_USER_RELATIONSHIP.followed_by);
-      expect(result!.muted).toBe(MOCK_NEXUS_USER_RELATIONSHIP.muted);
     });
 
     it('should return null for non-existent user relationships', async () => {
@@ -68,7 +65,7 @@ describe('UserRelationshipsModel', () => {
     it('should bulk save user relationships from tuples', async () => {
       const mockNexusModelTuples: Core.NexusModelTuple<Core.NexusUserRelationship>[] = [
         [testUserId1, MOCK_NEXUS_USER_RELATIONSHIP],
-        [testUserId2, { following: false, followed_by: true, muted: true }],
+        [testUserId2, { following: false, followed_by: true }],
       ];
 
       const result = await Core.UserRelationshipsModel.bulkSave(mockNexusModelTuples);
@@ -82,10 +79,8 @@ describe('UserRelationshipsModel', () => {
       expect(userRelationships2).not.toBeNull();
       expect(userRelationships1!.following).toBe(true);
       expect(userRelationships1!.followed_by).toBe(false);
-      expect(userRelationships1!.muted).toBe(false);
       expect(userRelationships2!.following).toBe(false);
       expect(userRelationships2!.followed_by).toBe(true);
-      expect(userRelationships2!.muted).toBe(true);
     });
 
     it('should handle empty array in bulk save', async () => {
@@ -96,8 +91,8 @@ describe('UserRelationshipsModel', () => {
 
     it('should handle multiple tuples with different relationship states', async () => {
       const mockTuples: Core.NexusModelTuple<Core.NexusUserRelationship>[] = [
-        [testUserId1, { following: true, followed_by: true, muted: false }],
-        [testUserId2, { following: false, followed_by: false, muted: true }],
+        [testUserId1, { following: true, followed_by: true }],
+        [testUserId2, { following: false, followed_by: false }],
       ];
 
       await Core.UserRelationshipsModel.bulkSave(mockTuples);
@@ -105,17 +100,15 @@ describe('UserRelationshipsModel', () => {
       const userRelationships1 = await Core.UserRelationshipsModel.findById(testUserId1);
       const userRelationships2 = await Core.UserRelationshipsModel.findById(testUserId2);
 
-      // User 1: mutual following, not muted
+      // User 1: mutual following
       expect(userRelationships1).not.toBeNull();
       expect(userRelationships1!.following).toBe(true);
       expect(userRelationships1!.followed_by).toBe(true);
-      expect(userRelationships1!.muted).toBe(false);
 
-      // User 2: no following relationship, but muted
+      // User 2: no following relationship
       expect(userRelationships2).not.toBeNull();
       expect(userRelationships2!.following).toBe(false);
       expect(userRelationships2!.followed_by).toBe(false);
-      expect(userRelationships2!.muted).toBe(true);
     });
   });
 });

@@ -233,7 +233,7 @@ describe('TtlApplication', () => {
             bookmarks: 0,
           },
           tags: [],
-          relationship: { following: false, followed_by: false, muted: false },
+          relationship: { following: false, followed_by: false },
         },
         {
           details: {
@@ -257,7 +257,7 @@ describe('TtlApplication', () => {
             bookmarks: 0,
           },
           tags: [],
-          relationship: { following: false, followed_by: false, muted: false },
+          relationship: { following: false, followed_by: false },
         },
       ];
 
