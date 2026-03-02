@@ -10,7 +10,7 @@ export default function GlobalError({ error, reset }: { error: Error & { digest?
           <p className="mt-3 mb-0 text-destructive">{error.message || 'An unexpected error occurred'}</p>
           <button
             type="button"
-            onClick={() => reset()}
+            onClick={reset}
             className="mt-5 cursor-pointer rounded-full border border-border bg-secondary px-4 py-2 font-semibold text-foreground"
           >
             Try again

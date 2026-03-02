@@ -17,7 +17,7 @@ export default function Error({ error, reset }: { error: Error & { digest?: stri
       <Atoms.Typography size="md" className="mt-2 text-destructive">
         {error.message || 'An unexpected error occurred'}
       </Atoms.Typography>
-      <Atoms.Button type="button" className="mt-4" variant="brand" onClick={() => reset()}>
+      <Atoms.Button type="button" className="mt-4" variant="brand" onClick={reset}>
         Try again
       </Atoms.Button>
     </Atoms.Container>
