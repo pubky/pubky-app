@@ -15,16 +15,6 @@ export class HomegateApplication {
   private constructor() {}
 
   /**
-   * Generates a signup authentication URL for Pubky Ring App
-   *
-   * @param inviteCode - The invite code for signup
-   * @returns Authentication URL and promise to the generated authentication URL
-   */
-  static async generateSignupAuthUrl(inviteCode: string): Promise<Core.TGenerateAuthUrlResult> {
-    return Core.HomeserverService.generateSignupAuthUrl({ inviteCode });
-  }
-
-  /**
    * Get SMS verification availability info.
    *
    * @returns The availability status

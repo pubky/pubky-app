@@ -157,30 +157,27 @@ export class AuthController {
   }
 
   /**
-   * Generates an authentication URL for external authentication flows.
-   * @returns Promise resolving to the generated authentication URL
+   * Wraps auth URL generation with flow tracking so useAuthUrl can cancel on unmount
+   * and we detect stale requests (e.g. React StrictMode double-mount).
+   * @param generateFn - Async function that returns the auth URL result
+   * @returns Promise resolving to the generated authentication URL with wrapped approval
    */
-  static async getAuthUrl(): Promise<Core.TGenerateAuthUrlResult> {
+  private static async wrapAuthFlow(
+    generateFn: () => Promise<Core.TGenerateAuthUrlResult>,
+  ): Promise<Core.TGenerateAuthUrlResult> {
     await Core.clearDatabase();
     const token = Symbol('auth-flow');
     this.cancelActiveAuthFlow();
     this.activeAuthFlow = { token, cancel: null };
-    const { authorizationUrl, awaitApproval, cancelAuthFlow } = await Core.AuthApplication.generateAuthUrl();
+    const { authorizationUrl, awaitApproval, cancelAuthFlow } = await generateFn();
 
     if (!this.activeAuthFlow || this.activeAuthFlow.token !== token) {
-      // Stale request (e.g. React StrictMode overlap): cancel immediately so we don't keep polling forever.
       cancelAuthFlow();
-      return {
-        authorizationUrl,
-        awaitApproval,
-        cancelAuthFlow,
-      };
+      return { authorizationUrl, awaitApproval, cancelAuthFlow };
     }
 
     this.activeAuthFlow.cancel = cancelAuthFlow;
 
-    // Ensure the polling flow is always dropped once the promise resolves/rejects,
-    // even if the caller forgets to free it.
     const wrappedAwaitApproval = awaitApproval.finally(() => {
       if (this.activeAuthFlow?.token === token) {
         this.activeAuthFlow = null;
@@ -189,6 +186,24 @@ export class AuthController {
     });
 
     return { authorizationUrl, awaitApproval: wrappedAwaitApproval, cancelAuthFlow };
+  }
+
+  /**
+   * Generates an authentication URL for external authentication flows.
+   * @returns Promise resolving to the generated authentication URL
+   */
+  static async getAuthUrl(): Promise<Core.TGenerateAuthUrlResult> {
+    return this.wrapAuthFlow(() => Core.AuthApplication.generateAuthUrl());
+  }
+
+  /**
+   * Generates a signup authentication URL for Pubky Ring authorization.
+   * Decorates a standard auth URL with homeserver address and invite code metadata.
+   * @param inviteCode - The invite code for signup
+   * @returns Promise resolving to the generated signup authentication URL
+   */
+  static async getSignupAuthUrl(inviteCode: string): Promise<Core.TGenerateAuthUrlResult> {
+    return this.wrapAuthFlow(() => Core.AuthApplication.generateSignupAuthUrl(inviteCode));
   }
 
   /**
