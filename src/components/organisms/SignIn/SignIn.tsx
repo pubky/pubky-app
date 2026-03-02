@@ -198,7 +198,7 @@ export const SignInContent = () => {
               <Atoms.Link href="https://apps.apple.com/us/app/pubky-ring/id6739356756">
                 <Image
                   src="/images/apple-store-button.svg"
-                  alt="Apple Store Button PubKey Ring"
+                  alt="Apple Store Button PubKy Ring"
                   className="h-7"
                   width={94.5}
                   height={28}
@@ -208,7 +208,7 @@ export const SignInContent = () => {
                 <Image
                   src="/images/google-store-button.svg"
                   className="h-7"
-                  alt="Google Store Button PubKey Ring"
+                  alt="Google Store Button PubKy Ring"
                   width={94.5}
                   height={28}
                 />
