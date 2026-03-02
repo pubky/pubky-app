@@ -228,17 +228,7 @@ export class AuthController {
     Libs.clearCookies();
     await Core.clearDatabase();
 
-    // TODO: Extract persist keys to each store if this list is needed elsewhere
-    const persistedKeys = [
-      'auth-store',
-      'onboarding-storage',
-      'notification-store',
-      'search-store',
-      'home-store',
-      'hot-store',
-      'settings-storage',
-    ];
-    persistedKeys.forEach((key) => localStorage.removeItem(key));
+    Core.PERSISTED_STORE_KEYS.forEach((key) => localStorage.removeItem(key));
   }
 
   /**
