@@ -836,6 +836,7 @@
     "success": "Success",
     "error": "Error",
     "errors": "Errors",
+    "genericErrorTitle": "Uh oh! Something went wrong!",
     "post": {
       "replyPosted": "Reply posted",
       "replyPostedDesc": "Your reply has been posted successfully.",
