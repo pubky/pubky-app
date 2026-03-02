@@ -87,7 +87,7 @@
     "intersection-observer": "npm:empty-module@*",
     "source-map@0.8.0-beta.0": "0.7.4",
     "glob": "13.0.1",
-    "rollup": "4.59.0"
+    "rollup": "^4.59.0"
   },
   "devDependencies": {
     "@chromatic-com/storybook": "5.0.1",
