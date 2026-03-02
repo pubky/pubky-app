@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server';
+import { handleApiError } from '@/libs/api';
 
 /**
  * DEV/TEST ONLY: Generates a signup token from the homeserver admin endpoint.
@@ -58,9 +59,8 @@ export async function GET() {
 
     return NextResponse.json({ token });
   } catch (error) {
-    return NextResponse.json(
-      { error: `Failed to connect to homeserver admin: ${error instanceof Error ? error.message : String(error)}` },
-      { status: 500 },
-    );
+    return handleApiError(error, 'api.dev.signup-token.GET', {
+      unknownErrorMessage: `Failed to connect to homeserver admin: ${error instanceof Error ? error.message : String(error)}`,
+    });
   }
 }

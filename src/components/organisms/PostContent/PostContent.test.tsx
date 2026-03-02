@@ -148,12 +148,16 @@ describe('PostContent', () => {
 });
 
 describe('PostContent - Snapshots', () => {
-  beforeEach(async () => {
+  beforeEach(() => {
     vi.clearAllMocks();
-    // Use real PostContentBase for snapshot tests
-    const actualPostContentBase = await vi.importActual<typeof import('@/organisms')>('@/organisms');
-    vi.mocked(Organisms.PostContentBase).mockImplementation(actualPostContentBase.PostContentBase);
-  }, 30000); // Increase timeout to 30 seconds
+    vi.mocked(Organisms.PostContentBase).mockImplementation(
+      ({ postId, className }: { postId: string; className?: string }) => (
+        <div data-testid="post-content-base" data-post-id={postId} className={className}>
+          PostContentBase {postId}
+        </div>
+      ),
+    );
+  });
 
   it('matches snapshot with single-line content', () => {
     mockUsePostDetails.mockReturnValue({

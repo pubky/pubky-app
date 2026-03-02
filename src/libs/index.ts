@@ -1,3 +1,4 @@
+export * from './api';
 export * from './deeplink';
 export * from './env';
 export * from './error';

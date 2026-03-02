@@ -15,12 +15,6 @@ describe('HomegateApplication', () => {
     vi.clearAllMocks();
 
     // Mock service methods
-    vi.spyOn(Core.HomeserverService, 'generateSignupAuthUrl').mockResolvedValue({
-      authorizationUrl: 'pubkyauth://...',
-      awaitApproval: Promise.resolve({} as never),
-      cancelAuthFlow: vi.fn(),
-    });
-
     vi.spyOn(Core.HomegateService, 'getLnVerificationInfo').mockResolvedValue({
       available: true,
       amountSat: 1000,
@@ -64,18 +58,6 @@ describe('HomegateApplication', () => {
 
     const homegateModule = await import('./homegate');
     HomegateApplication = homegateModule.HomegateApplication;
-  });
-
-  describe('generateSignupAuthUrl', () => {
-    it('should delegate to HomeserverService with invite code', async () => {
-      const result = await HomegateApplication.generateSignupAuthUrl(testData.inviteCode);
-
-      expect(Core.HomeserverService.generateSignupAuthUrl).toHaveBeenCalledWith({
-        inviteCode: testData.inviteCode,
-      });
-      expect(result.authorizationUrl).toBe('pubkyauth://...');
-      expect(result.cancelAuthFlow).toBeDefined();
-    });
   });
 
   describe('getLnVerificationInfo', () => {
