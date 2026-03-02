@@ -79,6 +79,7 @@ Only these Applications can call other Applications:
 - `PostApplication`
 - `UserApplication`
 - `NotificationApplication`
+- `BootstrapApplication` (root-node orchestrator — in-degree 0 in the dependency DAG; no Application may call into it)
 
 ### Restrictions
 ```typescript
