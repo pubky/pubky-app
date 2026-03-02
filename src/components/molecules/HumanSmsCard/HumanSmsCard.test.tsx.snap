@@ -226,7 +226,7 @@ exports[`SmsVerificationCard > matches snapshot when geoblocked 1`] = `
     >
       <svg
         aria-hidden="true"
-        class="lucide lucide-triangle-alert text-destructive-foreground size-4"
+        class="lucide lucide-triangle-alert size-4 text-destructive-foreground"
         fill="none"
         height="24"
         stroke="currentColor"
@@ -249,7 +249,7 @@ exports[`SmsVerificationCard > matches snapshot when geoblocked 1`] = `
       </svg>
     </div>
     <p
-      class="text-destructive-foreground text-sm font-semibold whitespace-nowrap"
+      class="text-sm font-semibold whitespace-nowrap text-destructive-foreground"
       data-testid="typography"
     >
       Currently not available in your country

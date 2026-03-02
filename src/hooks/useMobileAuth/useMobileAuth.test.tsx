@@ -3,6 +3,7 @@ import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { useMobileAuth } from './useMobileAuth';
 
 const mockFetchUrl = vi.fn();
+const mockCopyAuthUrl = vi.fn();
 const mockUseAuthUrl = vi.fn();
 
 vi.mock('../useAuthUrl', () => ({
@@ -13,7 +14,9 @@ describe('useMobileAuth', () => {
   const defaultAuthUrlReturn = {
     url: 'pubkyauth://signin?token=test123',
     isLoading: false,
+    isExpired: false,
     fetchUrl: mockFetchUrl,
+    copyAuthUrl: mockCopyAuthUrl,
   };
 
   beforeEach(() => {
@@ -26,7 +29,9 @@ describe('useMobileAuth', () => {
 
     expect(result.current.url).toBe('pubkyauth://signin?token=test123');
     expect(result.current.isLoading).toBe(false);
+    expect(result.current.isExpired).toBe(false);
     expect(result.current.fetchUrl).toBe(mockFetchUrl);
+    expect(result.current.copyAuthUrl).toBe(mockCopyAuthUrl);
     expect(result.current.isOpeningRing).toBe(false);
     expect(result.current.onAuthorizeClick).toBeInstanceOf(Function);
   });
