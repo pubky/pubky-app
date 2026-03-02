@@ -140,7 +140,9 @@ describe('TagController', () => {
       });
 
       it('should rollback post tag when homeserver create fails', async () => {
-        vi.spyOn(Core.HomeserverService, 'request').mockRejectedValueOnce(new Error('Failed to PUT to homeserver: 403'));
+        vi.spyOn(Core.HomeserverService, 'request').mockRejectedValueOnce(
+          new Error('Failed to PUT to homeserver: 403'),
+        );
 
         await expect(TagController.commitCreate(createTagParams('javascript', Core.TagKind.POST))).rejects.toThrow(
           'Failed to PUT to homeserver: 403',
@@ -183,7 +185,9 @@ describe('TagController', () => {
       });
 
       it('should rollback user tag when homeserver create fails', async () => {
-        vi.spyOn(Core.HomeserverService, 'request').mockRejectedValueOnce(new Error('Failed to PUT to homeserver: 403'));
+        vi.spyOn(Core.HomeserverService, 'request').mockRejectedValueOnce(
+          new Error('Failed to PUT to homeserver: 403'),
+        );
 
         await expect(TagController.commitCreate(createTagParams('developer', Core.TagKind.USER))).rejects.toThrow(
           'Failed to PUT to homeserver: 403',
