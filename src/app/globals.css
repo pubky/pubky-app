@@ -108,7 +108,7 @@ body {
   --brand: oklch(0.928 0.23 123.978);
   --transparent: oklch(0.118 0.014 284.115 / 0);
   --scrollbar-size: 10px;
-  --scrollbar-radius: 9999px;
+  --scrollbar-radius: 100%;
   --scrollbar-thumb-color: var(--muted-foreground);
   --scrollbar-track-color: transparent;
 
