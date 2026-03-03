@@ -8,6 +8,8 @@ import type { ReportIssueType } from './report.types';
  * Validates and normalizes report submission inputs.
  * Follows the same pattern as FeedbackValidators.
  */
+// TODO: These validators run on the Next.js API server, not the client.
+// Update ErrorService.Local → ErrorService.NextJsApi (#1408)
 export class ReportValidators {
   private constructor() {}
 

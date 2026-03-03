@@ -7,6 +7,8 @@ import { Err, ValidationErrorCode, ErrorService } from '@/libs';
  * Validates and normalizes copyright/DMCA takedown request form inputs.
  * Follows the same pattern as ReportValidators.
  */
+// TODO: These validators run on the Next.js API server, not the client.
+// Update ErrorService.Local → ErrorService.NextJsApi (#1408)
 export class CopyrightValidators {
   private constructor() {}
 

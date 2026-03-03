@@ -2,6 +2,8 @@ import * as Config from '@/config';
 import { Err, ValidationErrorCode, ErrorService } from '@/libs';
 import * as Core from '@/core';
 
+// TODO: These validators run on the Next.js API server, not the client.
+// Update ErrorService.Local → ErrorService.NextJsApi (#1408)
 export class FeedbackValidators {
   private constructor() {}
 
