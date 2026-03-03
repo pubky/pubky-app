@@ -1,0 +1,423 @@
+import { render, screen } from '@testing-library/react';
+import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { CustomFeedFilters } from './CustomFeedFilters';
+import { PubkyAppFeedLayout, PubkyAppFeedReach, PubkyAppFeedSort, PubkyAppPostKind } from 'pubky-app-specs';
+import type { FeedModelSchema } from '@/core/models/feed/feed.schema';
+
+// Mock hooks
+const mockUseCustomFeed = vi.fn();
+vi.mock('@/hooks', () => ({
+  useCustomFeed: () => mockUseCustomFeed(),
+}));
+
+// Mock core — provide constants and mapper functions
+vi.mock('@/core', () => ({
+  REACH: {
+    ALL: 'all',
+    FOLLOWING: 'following',
+    FRIENDS: 'friends',
+  },
+  SORT: {
+    TIMELINE: 'timeline',
+    ENGAGEMENT: 'total_engagement',
+  },
+  LAYOUT: {
+    COLUMNS: 'columns',
+    WIDE: 'wide',
+    VISUAL: 'visual',
+  },
+  CONTENT: {
+    ALL: 'all',
+    SHORT: 'short',
+    LONG: 'long',
+    IMAGES: 'images',
+    VIDEOS: 'videos',
+    LINKS: 'links',
+    FILES: 'files',
+  },
+  pubkyReachToHomeReach: vi.fn((reach: PubkyAppFeedReach) => {
+    const map: Record<number, string> = {
+      [PubkyAppFeedReach.All]: 'all',
+      [PubkyAppFeedReach.Following]: 'following',
+      [PubkyAppFeedReach.Friends]: 'friends',
+    };
+    return map[reach];
+  }),
+  pubkySortToHomeSort: vi.fn((sort: PubkyAppFeedSort) => {
+    const map: Record<number, string> = {
+      [PubkyAppFeedSort.Recent]: 'timeline',
+      [PubkyAppFeedSort.Popularity]: 'total_engagement',
+    };
+    return map[sort];
+  }),
+  pubkyLayoutToHomeLayout: vi.fn((layout: PubkyAppFeedLayout) => {
+    const map: Record<number, string> = {
+      [PubkyAppFeedLayout.Columns]: 'columns',
+      [PubkyAppFeedLayout.Wide]: 'wide',
+      [PubkyAppFeedLayout.Visual]: 'visual',
+    };
+    return map[layout];
+  }),
+  pubkyPostKindToHomeContent: vi.fn((postKind: PubkyAppPostKind) => {
+    const map: Record<number, string> = {
+      [PubkyAppPostKind.Short]: 'short',
+      [PubkyAppPostKind.Long]: 'long',
+      [PubkyAppPostKind.Image]: 'images',
+      [PubkyAppPostKind.Video]: 'videos',
+      [PubkyAppPostKind.Link]: 'links',
+      [PubkyAppPostKind.File]: 'files',
+    };
+    return map[postKind];
+  }),
+}));
+
+// Mock atoms
+vi.mock('@/atoms', () => ({
+  Container: ({
+    children,
+    className,
+    'data-testid': dataTestId,
+  }: {
+    children: React.ReactNode;
+    overrideDefaults?: boolean;
+    className?: string;
+    'data-testid'?: string;
+  }) => (
+    <div data-testid={dataTestId ?? 'container'} className={className}>
+      {children}
+    </div>
+  ),
+}));
+
+// Mock molecules — filter components capture their props for assertion
+vi.mock('@/molecules', () => ({
+  FilterReach: ({
+    selectedTab,
+    defaultSelectedTab,
+    disabled,
+  }: {
+    selectedTab?: string;
+    defaultSelectedTab?: string;
+    disabled?: boolean;
+  }) => (
+    <div
+      data-testid="filter-reach"
+      data-selected-tab={selectedTab ?? ''}
+      data-default-selected-tab={defaultSelectedTab ?? ''}
+      data-disabled={disabled}
+    >
+      FilterReach
+    </div>
+  ),
+  FilterSort: ({
+    selectedTab,
+    defaultSelectedTab,
+    disabled,
+  }: {
+    selectedTab?: string;
+    defaultSelectedTab?: string;
+    disabled?: boolean;
+  }) => (
+    <div
+      data-testid="filter-sort"
+      data-selected-tab={selectedTab ?? ''}
+      data-default-selected-tab={defaultSelectedTab ?? ''}
+      data-disabled={disabled}
+    >
+      FilterSort
+    </div>
+  ),
+  FilterLayout: ({
+    selectedTab,
+    defaultSelectedTab,
+    disabled,
+  }: {
+    selectedTab?: string;
+    defaultSelectedTab?: string;
+    disabled?: boolean;
+  }) => (
+    <div
+      data-testid="filter-layout"
+      data-selected-tab={selectedTab ?? ''}
+      data-default-selected-tab={defaultSelectedTab ?? ''}
+      data-disabled={disabled}
+    >
+      FilterLayout
+    </div>
+  ),
+  FilterContent: ({
+    selectedTab,
+    defaultSelectedTab,
+    disabled,
+  }: {
+    selectedTab?: string;
+    defaultSelectedTab?: string;
+    disabled?: boolean;
+  }) => (
+    <div
+      data-testid="filter-content"
+      data-selected-tab={selectedTab ?? ''}
+      data-default-selected-tab={defaultSelectedTab ?? ''}
+      data-disabled={disabled}
+    >
+      FilterContent
+    </div>
+  ),
+}));
+
+// Mock libs — use actual implementations
+vi.mock('@/libs', async () => {
+  const actual = await vi.importActual('@/libs');
+  return {
+    ...actual,
+  };
+});
+
+const createMockFeed = (overrides?: Partial<FeedModelSchema>): FeedModelSchema => ({
+  id: 'feed-1',
+  name: 'Test Feed',
+  tags: ['tag1', 'tag2'],
+  reach: PubkyAppFeedReach.All,
+  sort: PubkyAppFeedSort.Recent,
+  content: PubkyAppPostKind.Short,
+  layout: PubkyAppFeedLayout.Columns,
+  created_at: 1700000000,
+  updated_at: 1700000000,
+  ...overrides,
+});
+
+describe('CustomFeedFilters', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    mockUseCustomFeed.mockReturnValue(undefined);
+  });
+
+  // ── Sanity / Rendering ─────────────────────────────────────────────
+
+  it('renders all four filter components for sidebar variant', () => {
+    render(<CustomFeedFilters variant="sidebar" />);
+
+    expect(screen.getByTestId('filter-reach')).toBeInTheDocument();
+    expect(screen.getByTestId('filter-sort')).toBeInTheDocument();
+    expect(screen.getByTestId('filter-layout')).toBeInTheDocument();
+    expect(screen.getByTestId('filter-content')).toBeInTheDocument();
+  });
+
+  it('renders all four filter components for drawer variant', () => {
+    render(<CustomFeedFilters variant="drawer" />);
+
+    expect(screen.getByTestId('filter-reach')).toBeInTheDocument();
+    expect(screen.getByTestId('filter-sort')).toBeInTheDocument();
+    expect(screen.getByTestId('filter-layout')).toBeInTheDocument();
+    expect(screen.getByTestId('filter-content')).toBeInTheDocument();
+  });
+
+  // ── Disabled State ─────────────────────────────────────────────────
+
+  it('renders all filters as disabled', () => {
+    render(<CustomFeedFilters variant="sidebar" />);
+
+    expect(screen.getByTestId('filter-reach')).toHaveAttribute('data-disabled', 'true');
+    expect(screen.getByTestId('filter-sort')).toHaveAttribute('data-disabled', 'true');
+    expect(screen.getByTestId('filter-layout')).toHaveAttribute('data-disabled', 'true');
+    expect(screen.getByTestId('filter-content')).toHaveAttribute('data-disabled', 'true');
+  });
+
+  // ── No Custom Feed (undefined) ────────────────────────────────────
+
+  it('passes undefined selectedTab to all filters when customFeed is undefined', () => {
+    mockUseCustomFeed.mockReturnValue(undefined);
+    render(<CustomFeedFilters variant="sidebar" />);
+
+    expect(screen.getByTestId('filter-reach')).toHaveAttribute('data-selected-tab', '');
+    expect(screen.getByTestId('filter-sort')).toHaveAttribute('data-selected-tab', '');
+    expect(screen.getByTestId('filter-layout')).toHaveAttribute('data-selected-tab', '');
+    expect(screen.getByTestId('filter-content')).toHaveAttribute('data-selected-tab', '');
+  });
+
+  it('passes undefined defaultSelectedTab to all filters', () => {
+    render(<CustomFeedFilters variant="sidebar" />);
+
+    expect(screen.getByTestId('filter-reach')).toHaveAttribute('data-default-selected-tab', '');
+    expect(screen.getByTestId('filter-sort')).toHaveAttribute('data-default-selected-tab', '');
+    expect(screen.getByTestId('filter-layout')).toHaveAttribute('data-default-selected-tab', '');
+    expect(screen.getByTestId('filter-content')).toHaveAttribute('data-default-selected-tab', '');
+  });
+
+  // ── With Custom Feed Data ─────────────────────────────────────────
+
+  it('maps customFeed reach to filter selectedTab', () => {
+    mockUseCustomFeed.mockReturnValue(createMockFeed({ reach: PubkyAppFeedReach.Following }));
+    render(<CustomFeedFilters variant="sidebar" />);
+
+    expect(screen.getByTestId('filter-reach')).toHaveAttribute('data-selected-tab', 'following');
+  });
+
+  it('maps customFeed sort to filter selectedTab', () => {
+    mockUseCustomFeed.mockReturnValue(createMockFeed({ sort: PubkyAppFeedSort.Popularity }));
+    render(<CustomFeedFilters variant="sidebar" />);
+
+    expect(screen.getByTestId('filter-sort')).toHaveAttribute('data-selected-tab', 'total_engagement');
+  });
+
+  it('maps customFeed layout to filter selectedTab', () => {
+    mockUseCustomFeed.mockReturnValue(createMockFeed({ layout: PubkyAppFeedLayout.Wide }));
+    render(<CustomFeedFilters variant="sidebar" />);
+
+    expect(screen.getByTestId('filter-layout')).toHaveAttribute('data-selected-tab', 'wide');
+  });
+
+  it('maps customFeed content to filter selectedTab', () => {
+    mockUseCustomFeed.mockReturnValue(createMockFeed({ content: PubkyAppPostKind.Image }));
+    render(<CustomFeedFilters variant="sidebar" />);
+
+    expect(screen.getByTestId('filter-content')).toHaveAttribute('data-selected-tab', 'images');
+  });
+
+  it('maps null content to CONTENT.ALL', () => {
+    mockUseCustomFeed.mockReturnValue(createMockFeed({ content: null }));
+    render(<CustomFeedFilters variant="sidebar" />);
+
+    expect(screen.getByTestId('filter-content')).toHaveAttribute('data-selected-tab', 'all');
+  });
+
+  // ── Variant-specific Layout ────────────────────────────────────────
+
+  it('wraps FilterLayout and FilterContent in a sticky container for sidebar variant', () => {
+    const { container } = render(<CustomFeedFilters variant="sidebar" />);
+
+    const stickyContainer = container.querySelector('.sticky');
+    expect(stickyContainer).toBeInTheDocument();
+    expect(stickyContainer).toHaveClass('top-[100px]');
+    expect(stickyContainer).toHaveClass('flex');
+    expect(stickyContainer).toHaveClass('w-full');
+    expect(stickyContainer).toHaveClass('flex-col');
+    expect(stickyContainer).toHaveClass('gap-6');
+    expect(stickyContainer).toHaveClass('self-start');
+  });
+
+  it('does not have a sticky container for drawer variant', () => {
+    const { container } = render(<CustomFeedFilters variant="drawer" />);
+
+    const stickyContainer = container.querySelector('.sticky');
+    expect(stickyContainer).not.toBeInTheDocument();
+  });
+
+  // ── All Mapper Combinations ────────────────────────────────────────
+
+  it('maps all reach values correctly', () => {
+    mockUseCustomFeed.mockReturnValue(createMockFeed({ reach: PubkyAppFeedReach.Friends }));
+    render(<CustomFeedFilters variant="sidebar" />);
+
+    expect(screen.getByTestId('filter-reach')).toHaveAttribute('data-selected-tab', 'friends');
+  });
+
+  it('maps PubkyAppFeedReach.All correctly', () => {
+    mockUseCustomFeed.mockReturnValue(createMockFeed({ reach: PubkyAppFeedReach.All }));
+    render(<CustomFeedFilters variant="drawer" />);
+
+    expect(screen.getByTestId('filter-reach')).toHaveAttribute('data-selected-tab', 'all');
+  });
+
+  it('maps PubkyAppFeedSort.Recent to timeline', () => {
+    mockUseCustomFeed.mockReturnValue(createMockFeed({ sort: PubkyAppFeedSort.Recent }));
+    render(<CustomFeedFilters variant="drawer" />);
+
+    expect(screen.getByTestId('filter-sort')).toHaveAttribute('data-selected-tab', 'timeline');
+  });
+
+  it('maps PubkyAppFeedLayout.Visual correctly', () => {
+    mockUseCustomFeed.mockReturnValue(createMockFeed({ layout: PubkyAppFeedLayout.Visual }));
+    render(<CustomFeedFilters variant="drawer" />);
+
+    expect(screen.getByTestId('filter-layout')).toHaveAttribute('data-selected-tab', 'visual');
+  });
+
+  it('maps PubkyAppPostKind.Video to videos', () => {
+    mockUseCustomFeed.mockReturnValue(createMockFeed({ content: PubkyAppPostKind.Video }));
+    render(<CustomFeedFilters variant="drawer" />);
+
+    expect(screen.getByTestId('filter-content')).toHaveAttribute('data-selected-tab', 'videos');
+  });
+
+  it('maps PubkyAppPostKind.Link to links', () => {
+    mockUseCustomFeed.mockReturnValue(createMockFeed({ content: PubkyAppPostKind.Link }));
+    render(<CustomFeedFilters variant="sidebar" />);
+
+    expect(screen.getByTestId('filter-content')).toHaveAttribute('data-selected-tab', 'links');
+  });
+
+  it('maps PubkyAppPostKind.Long to long', () => {
+    mockUseCustomFeed.mockReturnValue(createMockFeed({ content: PubkyAppPostKind.Long }));
+    render(<CustomFeedFilters variant="sidebar" />);
+
+    expect(screen.getByTestId('filter-content')).toHaveAttribute('data-selected-tab', 'long');
+  });
+
+  // ── Zero-value Enum Handling ───────────────────────────────────────
+  // The component uses `!== undefined` checks so enum values equal to 0
+  // are correctly passed through to the mapper functions.
+
+  it('correctly maps zero-value enum PubkyAppFeedReach.Following', () => {
+    mockUseCustomFeed.mockReturnValue(createMockFeed({ reach: PubkyAppFeedReach.Following }));
+    render(<CustomFeedFilters variant="sidebar" />);
+
+    expect(screen.getByTestId('filter-reach')).toHaveAttribute('data-selected-tab', 'following');
+  });
+
+  it('correctly maps zero-value enum PubkyAppFeedSort.Recent', () => {
+    mockUseCustomFeed.mockReturnValue(createMockFeed({ sort: PubkyAppFeedSort.Recent }));
+    render(<CustomFeedFilters variant="sidebar" />);
+
+    expect(screen.getByTestId('filter-sort')).toHaveAttribute('data-selected-tab', 'timeline');
+  });
+});
+
+describe('CustomFeedFilters - Snapshots', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    mockUseCustomFeed.mockReturnValue(undefined);
+  });
+
+  it('matches snapshot for sidebar variant without custom feed', () => {
+    const { container } = render(<CustomFeedFilters variant="sidebar" />);
+    expect(container.firstChild).toMatchSnapshot();
+  });
+
+  it('matches snapshot for drawer variant without custom feed', () => {
+    const { container } = render(<CustomFeedFilters variant="drawer" />);
+    expect(container.firstChild).toMatchSnapshot();
+  });
+
+  it('matches snapshot for sidebar variant with custom feed', () => {
+    mockUseCustomFeed.mockReturnValue(
+      createMockFeed({
+        reach: PubkyAppFeedReach.Following,
+        sort: PubkyAppFeedSort.Popularity,
+        layout: PubkyAppFeedLayout.Wide,
+        content: PubkyAppPostKind.Image,
+      }),
+    );
+    const { container } = render(<CustomFeedFilters variant="sidebar" />);
+    expect(container.firstChild).toMatchSnapshot();
+  });
+
+  it('matches snapshot for drawer variant with custom feed', () => {
+    mockUseCustomFeed.mockReturnValue(
+      createMockFeed({
+        reach: PubkyAppFeedReach.Friends,
+        sort: PubkyAppFeedSort.Recent,
+        layout: PubkyAppFeedLayout.Columns,
+        content: PubkyAppPostKind.Long,
+      }),
+    );
+    const { container } = render(<CustomFeedFilters variant="drawer" />);
+    expect(container.firstChild).toMatchSnapshot();
+  });
+
+  it('matches snapshot for sidebar variant with null content', () => {
+    mockUseCustomFeed.mockReturnValue(createMockFeed({ content: null }));
+    const { container } = render(<CustomFeedFilters variant="sidebar" />);
+    expect(container.firstChild).toMatchSnapshot();
+  });
+});
