@@ -3,6 +3,7 @@
 import { createContext, useContext, useCallback, useEffect, useMemo } from 'react';
 import { useTranslations } from 'next-intl';
 import * as Core from '@/core';
+import * as Libs from '@/libs';
 import * as Molecules from '@/molecules';
 import * as Organisms from '@/organisms';
 import * as Hooks from '@/hooks';
@@ -109,8 +110,11 @@ function TimelineFeedContent({
   // Track scroll position to show/hide new posts button
   const isScrolled = Hooks.useIsScrolledFromTop();
 
-  // Pull-to-refresh - enabled for home and hot variants on touch devices
-  const enablePullToRefresh = variant === TIMELINE_FEED_VARIANT.HOME || variant === TIMELINE_FEED_VARIANT.HOT;
+  // Pull-to-refresh - enabled for home, custom and hot variants on touch devices
+  const enablePullToRefresh =
+    variant === TIMELINE_FEED_VARIANT.HOME ||
+    variant === TIMELINE_FEED_VARIANT.CUSTOM ||
+    variant === TIMELINE_FEED_VARIANT.HOT;
   const { state: pullState, pullDistance } = Hooks.usePullToRefresh({
     onRefresh: refresh,
     disabled: !enablePullToRefresh,
@@ -169,8 +173,8 @@ function TimelineFeedContent({
       // Scroll to top smoothly
       window.scrollTo({ top: 0, behavior: 'smooth' });
     } catch (error) {
-      console.error('Failed to load new posts:', error);
-      Molecules.toast({
+      Libs.Logger.error('Failed to load new posts:', error);
+      Molecules.showErrorToast({
         title: t('failedToLoadPosts'),
         description: t('failedToLoadPostsDesc'),
       });

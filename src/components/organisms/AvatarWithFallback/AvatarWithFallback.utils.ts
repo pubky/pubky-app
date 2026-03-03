@@ -45,12 +45,12 @@ export function resolveAvatarFallbackSeed({
   name,
   defaultSeed = 'user',
 }: ResolveAvatarFallbackSeedProps): string {
-  const normalizedFallbackSeed = fallbackSeed?.trim();
+  const normalizedFallbackSeed = typeof fallbackSeed === 'string' ? fallbackSeed.trim() : '';
   if (normalizedFallbackSeed) return normalizedFallbackSeed;
 
   if (userId) return userId;
 
-  const normalizedName = name?.trim();
+  const normalizedName = typeof name === 'string' ? name.trim() : '';
   if (normalizedName) return normalizedName;
 
   return defaultSeed;
@@ -64,7 +64,7 @@ export function resolveAvatarFallbackInitial({
   const nameInitial = Libs.extractInitials({ name: name ?? '', maxLength: 1 });
   if (nameInitial) return nameInitial;
 
-  const seedInitial = seed?.trim().charAt(0).toUpperCase();
+  const seedInitial = typeof seed === 'string' ? seed.trim().charAt(0).toUpperCase() : '';
   if (seedInitial) return seedInitial;
 
   return defaultInitial;

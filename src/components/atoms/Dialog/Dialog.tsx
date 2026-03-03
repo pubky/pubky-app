@@ -34,14 +34,24 @@ DialogClose.displayName = 'DialogClose';
 function DialogOverlay({
   className,
   onCloseRef,
+  contentRef,
   ...props
 }: React.ComponentProps<typeof DialogPrimitive.Overlay> & {
   onCloseRef?: React.RefObject<HTMLButtonElement | null>;
+  contentRef?: React.RefObject<HTMLDivElement | null>;
 }) {
   return (
     <DialogPrimitive.Overlay
       data-slot="dialog-overlay"
       onClick={(e) => {
+        // Skip closing the dialog if a Select inside this dialog is currently open,
+        // otherwise the dismiss click propagates through and closes the parent dialog.
+        // We check the trigger (not the portaled dropdown) because it stays in the
+        // dialog DOM and Radix sets data-state="open" on it when the dropdown is visible.
+        // This must run before stopPropagation so the event still reaches
+        // the Select's own dismiss listener and closes the dropdown.
+        const hasOpenSelect = contentRef?.current?.querySelector('[data-slot="select-trigger"][data-state="open"]');
+        if (hasOpenSelect) return;
         e.stopPropagation();
         onCloseRef?.current?.click();
       }}
@@ -67,12 +77,14 @@ function DialogContent({
   overrideDefaults?: boolean;
 }) {
   const closeRef = React.useRef<HTMLButtonElement>(null);
+  const contentRef = React.useRef<HTMLDivElement>(null);
 
   return (
     <DialogPortal data-slot="dialog-portal">
-      <DialogOverlay onCloseRef={closeRef} />
+      <DialogOverlay onCloseRef={closeRef} contentRef={contentRef} />
       <div className="fixed inset-0 z-50 flex items-center justify-center">
         <DialogPrimitive.Content
+          ref={contentRef}
           aria-describedby={undefined}
           data-cy="dialog-content"
           data-slot="dialog-content"
