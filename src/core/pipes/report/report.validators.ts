@@ -8,8 +8,6 @@ import type { ReportIssueType } from './report.types';
  * Validates and normalizes report submission inputs.
  * Follows the same pattern as FeedbackValidators.
  */
-// TODO: These validators run on the Next.js API server, not the client.
-// Update ErrorService.Local → ErrorService.NextJsApi (#1408)
 export class ReportValidators {
   private constructor() {}
 
@@ -23,7 +21,7 @@ export class ReportValidators {
   static validatePostUrl(postUrl: string | undefined | null): string {
     if (!postUrl || postUrl.trim() === '') {
       throw Err.validation(ValidationErrorCode.MISSING_FIELD, 'Post URL is required and must be a non-empty string', {
-        service: ErrorService.Local,
+        service: ErrorService.NextJsApi,
         operation: 'validatePostUrl',
         context: { field: 'postUrl' },
       });
@@ -35,7 +33,7 @@ export class ReportValidators {
       new URL(trimmedUrl);
     } catch {
       throw Err.validation(ValidationErrorCode.FORMAT_ERROR, 'Post URL must be a valid URL', {
-        service: ErrorService.Local,
+        service: ErrorService.NextJsApi,
         operation: 'validatePostUrl',
         context: { field: 'postUrl', value: trimmedUrl },
       });
@@ -54,7 +52,7 @@ export class ReportValidators {
   static validateIssueType(issueType: string | undefined | null): ReportIssueType {
     if (!issueType || issueType.trim() === '') {
       throw Err.validation(ValidationErrorCode.MISSING_FIELD, 'Issue type is required and must be a non-empty string', {
-        service: ErrorService.Local,
+        service: ErrorService.NextJsApi,
         operation: 'validateIssueType',
         context: { field: 'issueType' },
       });
@@ -67,7 +65,7 @@ export class ReportValidators {
         ValidationErrorCode.INVALID_INPUT,
         `Invalid issue type. Must be one of: ${REPORT_ISSUE_TYPE_VALUES.join(', ')}`,
         {
-          service: ErrorService.Local,
+          service: ErrorService.NextJsApi,
           operation: 'validateIssueType',
           context: { field: 'issueType', value: trimmedIssueType, allowedValues: REPORT_ISSUE_TYPE_VALUES },
         },
@@ -87,7 +85,7 @@ export class ReportValidators {
   static validateReason(reason: string | undefined | null): string {
     if (!reason || reason.trim() === '') {
       throw Err.validation(ValidationErrorCode.MISSING_FIELD, 'Reason is required and must be a non-empty string', {
-        service: ErrorService.Local,
+        service: ErrorService.NextJsApi,
         operation: 'validateReason',
         context: { field: 'reason' },
       });
@@ -100,7 +98,7 @@ export class ReportValidators {
         ValidationErrorCode.INVALID_INPUT,
         `Reason must be no more than ${REPORT_REASON_MAX_LENGTH} characters`,
         {
-          service: ErrorService.Local,
+          service: ErrorService.NextJsApi,
           operation: 'validateReason',
           context: { field: 'reason', maxLength: REPORT_REASON_MAX_LENGTH, actualLength: trimmedReason.length },
         },
@@ -120,7 +118,7 @@ export class ReportValidators {
   static validatePubky(pubky: string | undefined | null): string {
     if (!pubky || pubky.trim() === '') {
       throw Err.validation(ValidationErrorCode.MISSING_FIELD, 'Pubky is required and must be a non-empty string', {
-        service: ErrorService.Local,
+        service: ErrorService.NextJsApi,
         operation: 'validatePubky',
         context: { field: 'pubky' },
       });
@@ -138,7 +136,7 @@ export class ReportValidators {
   static validateName(name: string | undefined | null): string {
     if (!name || name.trim() === '') {
       throw Err.validation(ValidationErrorCode.MISSING_FIELD, 'Name is required and must be a non-empty string', {
-        service: ErrorService.Local,
+        service: ErrorService.NextJsApi,
         operation: 'validateName',
         context: { field: 'name' },
       });

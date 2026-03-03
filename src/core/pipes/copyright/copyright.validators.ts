@@ -7,8 +7,6 @@ import { Err, ValidationErrorCode, ErrorService } from '@/libs';
  * Validates and normalizes copyright/DMCA takedown request form inputs.
  * Follows the same pattern as ReportValidators.
  */
-// TODO: These validators run on the Next.js API server, not the client.
-// Update ErrorService.Local → ErrorService.NextJsApi (#1408)
 export class CopyrightValidators {
   private constructor() {}
 
@@ -22,7 +20,7 @@ export class CopyrightValidators {
   private static validateEmailFormat(email: string): string {
     if (!Config.VALIDATION_PATTERNS.EMAIL.test(email)) {
       throw Err.validation(ValidationErrorCode.FORMAT_ERROR, Config.VALIDATION_MESSAGES.INVALID_EMAIL, {
-        service: ErrorService.Local,
+        service: ErrorService.NextJsApi,
         operation: 'validateEmailFormat',
         context: { field: 'email', value: email },
       });
@@ -46,7 +44,7 @@ export class CopyrightValidators {
   ): string {
     if (!value || value.trim() === '') {
       throw Err.validation(ValidationErrorCode.MISSING_FIELD, `${fieldName} is required`, {
-        service: ErrorService.Local,
+        service: ErrorService.NextJsApi,
         operation,
         context: { field: fieldName },
       });
@@ -64,7 +62,7 @@ export class CopyrightValidators {
   private static validatePhoneNumberFormat(phoneNumber: string): string {
     if (!Config.VALIDATION_PATTERNS.PHONE.test(phoneNumber)) {
       throw Err.validation(ValidationErrorCode.FORMAT_ERROR, Config.VALIDATION_MESSAGES.INVALID_PHONE, {
-        service: ErrorService.Local,
+        service: ErrorService.NextJsApi,
         operation: 'validatePhoneNumberFormat',
         context: { field: 'phoneNumber', value: phoneNumber },
       });
@@ -86,7 +84,7 @@ export class CopyrightValidators {
       return url.trim();
     } catch {
       throw Err.validation(ValidationErrorCode.FORMAT_ERROR, `${fieldName} must be a valid URL`, {
-        service: ErrorService.Local,
+        service: ErrorService.NextJsApi,
         operation: 'validateUrlFormat',
         context: { field: fieldName, value: url },
       });
@@ -207,7 +205,7 @@ export class CopyrightValidators {
   ): void {
     if (!isRightsOwner && !isReportingOnBehalf) {
       throw Err.validation(ValidationErrorCode.MISSING_FIELD, Config.VALIDATION_MESSAGES.ROLE_REQUIRED, {
-        service: ErrorService.Local,
+        service: ErrorService.NextJsApi,
         operation: 'validateRole',
         context: { field: 'role', isRightsOwner, isReportingOnBehalf },
       });

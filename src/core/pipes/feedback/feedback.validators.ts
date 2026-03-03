@@ -2,8 +2,6 @@ import * as Config from '@/config';
 import { Err, ValidationErrorCode, ErrorService } from '@/libs';
 import * as Core from '@/core';
 
-// TODO: These validators run on the Next.js API server, not the client.
-// Update ErrorService.Local → ErrorService.NextJsApi (#1408)
 export class FeedbackValidators {
   private constructor() {}
 
@@ -18,7 +16,7 @@ export class FeedbackValidators {
   static validatePubky(pubky: string | undefined | null): Core.Pubky {
     if (!pubky || pubky.trim() === '') {
       throw Err.validation(ValidationErrorCode.MISSING_FIELD, 'Pubky is required and must be a non-empty string', {
-        service: ErrorService.Local,
+        service: ErrorService.NextJsApi,
         operation: 'validatePubky',
         context: { field: 'pubky' },
       });
@@ -37,7 +35,7 @@ export class FeedbackValidators {
   static validateComment(comment: string | undefined | null): string {
     if (!comment || comment.trim() === '') {
       throw Err.validation(ValidationErrorCode.MISSING_FIELD, 'Comment is required and must be a non-empty string', {
-        service: ErrorService.Local,
+        service: ErrorService.NextJsApi,
         operation: 'validateComment',
         context: { field: 'comment' },
       });
@@ -48,7 +46,7 @@ export class FeedbackValidators {
         ValidationErrorCode.INVALID_INPUT,
         `Comment must be no more than ${Config.FEEDBACK_MAX_CHARACTER_LENGTH} characters`,
         {
-          service: ErrorService.Local,
+          service: ErrorService.NextJsApi,
           operation: 'validateComment',
           context: { field: 'comment', maxLength: Config.FEEDBACK_MAX_CHARACTER_LENGTH, actualLength: comment.length },
         },
@@ -69,7 +67,7 @@ export class FeedbackValidators {
   static validateName(name: string | undefined | null): string {
     if (!name || name.trim() === '') {
       throw Err.validation(ValidationErrorCode.MISSING_FIELD, 'Name is required and must be a non-empty string', {
-        service: ErrorService.Local,
+        service: ErrorService.NextJsApi,
         operation: 'validateName',
         context: { field: 'name' },
       });
