@@ -487,6 +487,57 @@ describe('OgMetadataApplication', () => {
     });
   });
 
+  describe('query client integration', () => {
+    it('should return cached result on second call without re-fetching', async () => {
+      const fetchSpy = vi
+        .spyOn(Core.NextJsApiService, 'fetch')
+        .mockResolvedValue(createHtmlResponse(simpleHtml('Cached Title')) as unknown as Response);
+
+      const url = new URL('https://example.com/cached');
+
+      const result1 = await OgMetadataApplication.fetch(url);
+      const result2 = await OgMetadataApplication.fetch(url);
+
+      expect(result1).toEqual(result2);
+      // Second call hits the query client cache (1h staleTime), so queryFn is not re-executed —
+      // neither the HTTP fetch nor DNS resolution should fire again.
+      expect(fetchSpy).toHaveBeenCalledTimes(1);
+      expect(mockResolve4).toHaveBeenCalledTimes(1);
+    });
+
+    it('should fetch separately for different URLs', async () => {
+      const fetchSpy = vi.spyOn(Core.NextJsApiService, 'fetch');
+
+      fetchSpy
+        .mockResolvedValueOnce(createHtmlResponse(simpleHtml('Page A')) as unknown as Response)
+        .mockResolvedValueOnce(createHtmlResponse(simpleHtml('Page B')) as unknown as Response);
+
+      const resultA = await OgMetadataApplication.fetch(new URL('https://example.com/a'));
+      const resultB = await OgMetadataApplication.fetch(new URL('https://example.com/b'));
+
+      expect(resultA.title).toBe('Page A');
+      expect(resultB.title).toBe('Page B');
+      expect(fetchSpy).toHaveBeenCalledTimes(2);
+    });
+
+    // When multiple callers fetch the same URL at once, only one network request runs; all share that result.
+    it('should deduplicate concurrent requests for the same URL', async () => {
+      const fetchSpy = vi
+        .spyOn(Core.NextJsApiService, 'fetch')
+        .mockResolvedValue(createHtmlResponse(simpleHtml('Deduped')) as unknown as Response);
+
+      const url = new URL('https://example.com/dedup');
+
+      const [result1, result2] = await Promise.all([
+        OgMetadataApplication.fetch(url),
+        OgMetadataApplication.fetch(url),
+      ]);
+
+      expect(result1).toEqual(result2);
+      expect(fetchSpy).toHaveBeenCalledTimes(1);
+    });
+  });
+
   describe('error wrapping', () => {
     it('should wrap unexpected errors in AppError', async () => {
       vi.spyOn(Core.NextJsApiService, 'fetch').mockRejectedValue(new TypeError('unexpected'));
