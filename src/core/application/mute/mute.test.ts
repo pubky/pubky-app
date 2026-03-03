@@ -1,6 +1,14 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import * as Core from '@/core';
-import { HttpMethod } from '@/libs';
+import {
+  HttpMethod,
+  AppError,
+  ErrorCategory,
+  ErrorService,
+  ClientErrorCode,
+  ServerErrorCode,
+  HttpStatusCode,
+} from '@/libs';
 import { MuteApplication } from './mute';
 
 vi.mock('pubky-app-specs', () => ({
@@ -305,9 +313,39 @@ describe('MuteApplication.fetchMutedUsers', () => {
     expect(result).toEqual(['mutee_aaa']);
   });
 
-  it('should propagate errors from HomeserverService.list', async () => {
-    vi.spyOn(Core.HomeserverService, 'list').mockRejectedValue(new Error('list-fail'));
+  it('should return empty array when homeserver returns 404', async () => {
+    const notFoundError = new AppError({
+      category: ErrorCategory.Client,
+      code: ClientErrorCode.NOT_FOUND,
+      message: 'Not found',
+      service: ErrorService.Homeserver,
+      operation: 'list',
+      context: { statusCode: HttpStatusCode.NOT_FOUND },
+    });
+    vi.spyOn(Core.HomeserverService, 'list').mockRejectedValue(notFoundError);
 
-    await expect(MuteApplication.fetchMutedUsers(pubky)).rejects.toThrow('list-fail');
+    const result = await MuteApplication.fetchMutedUsers(pubky);
+
+    expect(result).toEqual([]);
+  });
+
+  it('should propagate non-404 AppError from HomeserverService.list', async () => {
+    const serverError = new AppError({
+      category: ErrorCategory.Server,
+      code: ServerErrorCode.INTERNAL_ERROR,
+      message: 'Server error',
+      service: ErrorService.Homeserver,
+      operation: 'list',
+      context: { statusCode: 500 },
+    });
+    vi.spyOn(Core.HomeserverService, 'list').mockRejectedValue(serverError);
+
+    await expect(MuteApplication.fetchMutedUsers(pubky)).rejects.toThrow('Server error');
+  });
+
+  it('should propagate non-AppError exceptions', async () => {
+    vi.spyOn(Core.HomeserverService, 'list').mockRejectedValue(new Error('network-fail'));
+
+    await expect(MuteApplication.fetchMutedUsers(pubky)).rejects.toThrow('network-fail');
   });
 });

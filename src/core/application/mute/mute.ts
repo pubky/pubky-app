@@ -1,6 +1,6 @@
 import * as Core from '@/core';
 import { baseUriBuilder } from 'pubky-app-specs';
-import { HttpMethod } from '@/libs';
+import { HttpMethod, Logger, AppError, HttpStatusCode } from '@/libs';
 
 export class MuteApplication {
   private constructor() {}
@@ -31,8 +31,16 @@ export class MuteApplication {
    * @returns Array of muted user pubkeys
    */
   static async fetchMutedUsers(pubky: Core.Pubky): Promise<Core.Pubky[]> {
-    const mutesDirectory = `${baseUriBuilder(pubky)}mutes/`;
-    const muteUris = await Core.HomeserverService.list({ baseDirectory: mutesDirectory });
-    return muteUris.map((uri) => uri.split('/').pop()).filter((id): id is string => !!id) as Core.Pubky[];
+    try {
+      const mutesDirectory = `${baseUriBuilder(pubky)}mutes/`;
+      const muteUris = await Core.HomeserverService.list({ baseDirectory: mutesDirectory });
+      return muteUris.map((uri) => uri.split('/').pop()).filter((id): id is string => !!id) as Core.Pubky[];
+    } catch (error) {
+      if (error instanceof AppError && error.context?.statusCode === HttpStatusCode.NOT_FOUND) {
+        Logger.info('Mutes directory not found, defaulting to empty list', { pubky });
+        return [];
+      }
+      throw error;
+    }
   }
 }
