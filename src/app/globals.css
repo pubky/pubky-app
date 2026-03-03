@@ -429,9 +429,13 @@ body {
     caret-color: #fff;
   }
 
-  /* Native scrollbar styles (global) */
+  /* Native scrollbar styles (global) — auto-hide until hover */
   * {
     scrollbar-width: thin;
+    scrollbar-color: transparent transparent;
+  }
+
+  *:hover {
     scrollbar-color: var(--muted-foreground) transparent;
   }
 
@@ -445,10 +449,14 @@ body {
   }
 
   *::-webkit-scrollbar-thumb {
-    background-color: var(--muted-foreground);
+    background-color: transparent;
     border: 1px solid transparent;
     border-radius: 9999px;
     background-clip: content-box;
+  }
+
+  *:hover::-webkit-scrollbar-thumb {
+    background-color: var(--muted-foreground);
   }
 
   .scrollbar-none {
