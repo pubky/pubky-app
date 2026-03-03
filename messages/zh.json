@@ -82,7 +82,8 @@
     "hot": "热门",
     "bookmarks": "书签",
     "settings": "设置",
-    "signIn": "登录"
+    "signIn": "登录",
+    "feed": "动态"
   },
   "settings": {
     "title": "设置",

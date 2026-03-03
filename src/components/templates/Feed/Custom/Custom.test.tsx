@@ -11,7 +11,7 @@ vi.mock('@/organisms', () => ({
     leftDrawerContent,
     rightDrawerContent,
     leftDrawerContentMobile,
-    showRightMobileButton,
+    rightDrawerContentMobile,
   }: {
     children: React.ReactNode;
     leftSidebarContent: React.ReactNode;
@@ -19,14 +19,15 @@ vi.mock('@/organisms', () => ({
     leftDrawerContent: React.ReactNode;
     rightDrawerContent: React.ReactNode;
     leftDrawerContentMobile: React.ReactNode;
-    showRightMobileButton: boolean;
+    rightDrawerContentMobile: React.ReactNode;
   }) => (
-    <div data-testid="content-layout" data-show-right-mobile-button={showRightMobileButton}>
+    <div data-testid="content-layout">
       <div data-testid="left-sidebar">{leftSidebarContent}</div>
       <div data-testid="right-sidebar">{rightSidebarContent}</div>
       <div data-testid="left-drawer">{leftDrawerContent}</div>
       <div data-testid="right-drawer">{rightDrawerContent}</div>
       <div data-testid="left-drawer-mobile">{leftDrawerContentMobile}</div>
+      <div data-testid="right-drawer-mobile">{rightDrawerContentMobile}</div>
       {children}
     </div>
   ),
@@ -38,7 +39,11 @@ vi.mock('@/organisms', () => ({
   HomeFeedRightSidebar: () => <div data-testid="home-feed-right-sidebar">HomeFeedRightSidebar</div>,
   HomeFeedRightDrawer: () => <div data-testid="home-feed-right-drawer">HomeFeedRightDrawer</div>,
   AlertBackup: () => <div data-testid="alert-backup">AlertBackup</div>,
-  FeedNavigation: () => <div data-testid="feed-navigation">FeedNavigation</div>,
+  FeedNavigation: ({ className }: { className?: string }) => (
+    <div data-testid="feed-navigation" data-classname={className}>
+      FeedNavigation
+    </div>
+  ),
   TimelineFeed: ({ children, variant }: { children: React.ReactNode; variant: string }) => (
     <div data-testid="timeline-feed" data-variant={variant}>
       {children}
@@ -70,9 +75,9 @@ describe('Custom', () => {
     expect(screen.getByTestId('content-layout')).toBeInTheDocument();
   });
 
-  it('renders ContentLayout with showRightMobileButton set to false', () => {
+  it('renders ContentLayout without showRightMobileButton', () => {
     render(<Custom />);
-    expect(screen.getByTestId('content-layout')).toHaveAttribute('data-show-right-mobile-button', 'false');
+    expect(screen.getByTestId('content-layout')).not.toHaveAttribute('data-show-right-mobile-button');
   });
 
   it('renders CustomFeedFilters with sidebar variant in left sidebar', () => {
@@ -111,14 +116,25 @@ describe('Custom', () => {
     expect(filters).toHaveAttribute('data-variant', 'drawer');
   });
 
+  it('renders FeedNavigation with lg:hidden className in right drawer mobile', () => {
+    render(<Custom />);
+    const rightDrawerMobile = screen.getByTestId('right-drawer-mobile');
+    const feedNav = rightDrawerMobile.querySelector('[data-testid="feed-navigation"]');
+    expect(feedNav).toBeInTheDocument();
+    expect(feedNav).toHaveAttribute('data-classname', 'lg:hidden');
+  });
+
   it('renders AlertBackup', () => {
     render(<Custom />);
     expect(screen.getByTestId('alert-backup')).toBeInTheDocument();
   });
 
-  it('renders FeedNavigation', () => {
+  it('renders FeedNavigation with hidden lg:flex className in main content', () => {
     render(<Custom />);
-    expect(screen.getByTestId('feed-navigation')).toBeInTheDocument();
+    const contentLayout = screen.getByTestId('content-layout');
+    const feedNavs = contentLayout.querySelectorAll('[data-testid="feed-navigation"]');
+    const mainFeedNav = Array.from(feedNavs).find((el) => el.getAttribute('data-classname') === 'hidden lg:flex');
+    expect(mainFeedNav).toBeInTheDocument();
   });
 
   it('renders TimelineFeed with CUSTOM variant', () => {

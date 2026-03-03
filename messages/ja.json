@@ -82,7 +82,8 @@
     "hot": "人気",
     "bookmarks": "ブックマーク",
     "settings": "設定",
-    "signIn": "ログイン"
+    "signIn": "ログイン",
+    "feed": "フィード"
   },
   "settings": {
     "title": "設定",

@@ -82,7 +82,8 @@
     "hot": "Tendances",
     "bookmarks": "Favoris",
     "settings": "Paramètres",
-    "signIn": "Se connecter"
+    "signIn": "Se connecter",
+    "feed": "Fil"
   },
   "settings": {
     "title": "Paramètres",
