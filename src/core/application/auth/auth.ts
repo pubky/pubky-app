@@ -74,9 +74,6 @@ export class AuthApplication {
             await sleep(this.RESTORE_RETRY_DELAY_MS);
           }
         }
-
-        const initialState = { session: null, currentUserPubky: null, hasProfile: false };
-        authStore.init(initialState);
         return null;
       } finally {
         authStore.setIsRestoringSession(false);
