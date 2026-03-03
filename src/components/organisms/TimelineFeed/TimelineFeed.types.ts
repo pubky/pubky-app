@@ -2,6 +2,7 @@ import type { ReactNode } from 'react';
 
 export const TIMELINE_FEED_VARIANT = {
   HOME: 'home',
+  CUSTOM: 'custom',
   BOOKMARKS: 'bookmarks',
   PROFILE: 'profile',
   HOT: 'hot',
@@ -14,6 +15,7 @@ export interface TimelineFeedProps {
   /**
    * Variant determines which stream to fetch
    * - 'home': Uses global filters (sort, reach, content)
+   * - 'custom': Uses custom filters (sort, reach, layout, content, tags)
    * - 'bookmarks': Uses bookmarks stream with sort/content filters
    * - 'profile': Uses author stream from ProfileContext
    * - 'hot': Uses engagement sorting with reach from hot store
