@@ -29,8 +29,8 @@ export const HeaderContainer = ({ children, className }: HeaderContainerProps) =
         as="nav"
         size="container"
         className={Libs.cn(
-          'pointer-events-auto flex w-full max-w-[1200px] flex-row flex-wrap items-center justify-between gap-4 sm:flex-nowrap sm:gap-6',
-          'px-4 py-4 sm:px-6 sm:py-6',
+          'pointer-events-auto flex w-full flex-row flex-wrap items-center justify-between gap-4 sm:flex-nowrap sm:gap-6 xl:max-w-[1240px]',
+          'px-6 py-4 sm:py-6 xl:px-0',
         )}
       >
         {children}
