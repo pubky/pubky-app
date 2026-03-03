@@ -107,6 +107,10 @@ body {
   --sidebar-ring: oklch(0.472 0.007 274.863);
   --brand: oklch(0.928 0.23 123.978);
   --transparent: oklch(0.118 0.014 284.115 / 0);
+  --scrollbar-size: 10px;
+  --scrollbar-radius: 9999px;
+  --scrollbar-thumb-color: var(--muted-foreground);
+  --scrollbar-track-color: transparent;
 
   /* ==================================================================
    * LAYOUT DIMENSIONS
@@ -429,42 +433,128 @@ body {
     caret-color: #fff;
   }
 
-  /* Native scrollbar styles (global) — auto-hide until hover */
-  * {
+  /* Native scrollbar styles for the page and managed scroll containers */
+  html,
+  body,
+  :where(
+    .scrollbar-custom,
+    .overflow-auto,
+    .overflow-x-auto,
+    .overflow-y-auto,
+    .overflow-scroll,
+    .mdxeditor-popup-container .mdxeditor-select-content
+  ):not(.scrollbar-none) {
     scrollbar-width: thin;
     scrollbar-color: transparent transparent;
   }
 
-  *:hover {
-    scrollbar-color: var(--muted-foreground) transparent;
+  html:is(:hover, :focus-within),
+  body:is(:hover, :focus-within),
+  :where(
+      .scrollbar-custom,
+      .overflow-auto,
+      .overflow-x-auto,
+      .overflow-y-auto,
+      .overflow-scroll,
+      .mdxeditor-popup-container .mdxeditor-select-content
+    ):not(.scrollbar-none):is(:hover, :focus-within) {
+    scrollbar-color: var(--scrollbar-thumb-color) var(--scrollbar-track-color);
   }
 
-  *::-webkit-scrollbar {
-    width: 8px;
-    height: 8px;
+  html::-webkit-scrollbar,
+  body::-webkit-scrollbar,
+  :where(
+      .scrollbar-custom,
+      .overflow-auto,
+      .overflow-x-auto,
+      .overflow-y-auto,
+      .overflow-scroll,
+      .mdxeditor-popup-container .mdxeditor-select-content
+    ):not(.scrollbar-none)::-webkit-scrollbar {
+    width: var(--scrollbar-size);
+    height: var(--scrollbar-size);
   }
 
-  *::-webkit-scrollbar-track {
-    background: transparent;
+  html::-webkit-scrollbar-track,
+  body::-webkit-scrollbar-track,
+  :where(
+      .scrollbar-custom,
+      .overflow-auto,
+      .overflow-x-auto,
+      .overflow-y-auto,
+      .overflow-scroll,
+      .mdxeditor-popup-container .mdxeditor-select-content
+    ):not(.scrollbar-none)::-webkit-scrollbar-track {
+    background: var(--scrollbar-track-color);
   }
 
-  *::-webkit-scrollbar-thumb {
+  html::-webkit-scrollbar-thumb,
+  body::-webkit-scrollbar-thumb,
+  :where(
+      .scrollbar-custom,
+      .overflow-auto,
+      .overflow-x-auto,
+      .overflow-y-auto,
+      .overflow-scroll,
+      .mdxeditor-popup-container .mdxeditor-select-content
+    ):not(.scrollbar-none)::-webkit-scrollbar-thumb {
     background-color: transparent;
-    border: 1px solid transparent;
-    border-radius: 9999px;
+    border: 2px solid transparent;
+    border-radius: var(--scrollbar-radius);
     background-clip: content-box;
+    transition: background-color 160ms ease;
+    min-height: 24px;
   }
 
-  *:hover::-webkit-scrollbar-thumb {
-    background-color: var(--muted-foreground);
+  html:is(:hover, :focus-within)::-webkit-scrollbar-thumb,
+  body:is(:hover, :focus-within)::-webkit-scrollbar-thumb,
+  :where(
+      .scrollbar-custom,
+      .overflow-auto,
+      .overflow-x-auto,
+      .overflow-y-auto,
+      .overflow-scroll,
+      .mdxeditor-popup-container .mdxeditor-select-content
+    ):not(.scrollbar-none):is(:hover, :focus-within)::-webkit-scrollbar-thumb {
+    background-color: var(--scrollbar-thumb-color);
   }
 
   .scrollbar-none {
-    scrollbar-width: none;
+    scrollbar-width: none !important;
   }
 
   .scrollbar-none::-webkit-scrollbar {
-    display: none;
+    display: none !important;
+  }
+
+  @media (forced-colors: active) {
+    html,
+    body,
+    :where(
+      .scrollbar-custom,
+      .overflow-auto,
+      .overflow-x-auto,
+      .overflow-y-auto,
+      .overflow-scroll,
+      .mdxeditor-popup-container .mdxeditor-select-content
+    ):not(.scrollbar-none) {
+      scrollbar-width: auto;
+      scrollbar-color: auto;
+    }
+
+    html::-webkit-scrollbar-thumb,
+    body::-webkit-scrollbar-thumb,
+    :where(
+        .scrollbar-custom,
+        .overflow-auto,
+        .overflow-x-auto,
+        .overflow-y-auto,
+        .overflow-scroll,
+        .mdxeditor-popup-container .mdxeditor-select-content
+      ):not(.scrollbar-none)::-webkit-scrollbar-thumb {
+      background-color: ButtonText;
+      border-color: Canvas;
+    }
   }
 
   /**
