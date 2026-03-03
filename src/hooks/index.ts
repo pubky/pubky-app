@@ -87,3 +87,5 @@ export * from './usePullToRefresh';
 export * from './useKeyboardVisible';
 export * from './useKeyboardOffset';
 export * from './useSignOut';
+export * from './useCustomFeed';
+export * from './useCustomStreamId';

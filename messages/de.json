@@ -621,6 +621,29 @@
       "urlField": "URL",
       "urlPlaceholder": "https://twitter.com/satoshi",
       "saveButton": "Link speichern"
+    },
+    "customFeed": {
+      "createTitle": "Feed erstellen",
+      "editTitle": "Feed bearbeiten",
+      "feedName": "Feed-Name",
+      "feedNamePlaceholder": "Nicht deine Schlüssel...",
+      "reach": "Reichweite",
+      "reachPlaceholder": "Reichweite auswählen",
+      "sort": "Sortierung",
+      "sortPlaceholder": "Sortierung auswählen",
+      "layout": "Layout",
+      "layoutPlaceholder": "Layout auswählen",
+      "content": "Inhalt",
+      "contentPlaceholder": "Inhalt auswählen",
+      "filterTags": "Nach Inhalts-Tags filtern",
+      "saveFeed": "Feed speichern",
+      "deleteFeed": "Feed löschen",
+      "feedCreated": "Feed {name} erstellt!",
+      "feedCreatedError": "Feed konnte nicht erstellt werden. Bitte versuche es erneut oder wende dich an den Support.",
+      "feedEdited": "Feed {name} bearbeitet!",
+      "feedEditedError": "Feed konnte nicht bearbeitet werden. Bitte versuche es erneut oder wende dich an den Support.",
+      "feedDeleted": "Feed {name} gelöscht!",
+      "feedDeletedError": "Feed konnte nicht gelöscht werden. Bitte versuche es erneut oder wende dich an den Support."
     }
   },
   "sidebar": {

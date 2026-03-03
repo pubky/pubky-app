@@ -15,6 +15,7 @@ export function Home() {
         leftDrawerContentMobile={<Organisms.HomeFeedDrawerMobile />}
       >
         <Organisms.AlertBackup />
+        <Organisms.FeedNavigation />
         <Organisms.TimelineFeed variant={TIMELINE_FEED_VARIANT.HOME}>
           <Organisms.PostInput dataCy="home-post-input" variant={POST_INPUT_VARIANT.POST} />
         </Organisms.TimelineFeed>

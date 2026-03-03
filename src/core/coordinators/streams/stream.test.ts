@@ -3,6 +3,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import * as Core from '@/core';
 import type { PollingServiceConfig } from '@/core/coordinators/base';
 import { APP_ROUTES, POST_ROUTES } from '@/app/routes';
+import { PubkyAppFeedReach, PubkyAppFeedSort, PubkyAppFeedLayout } from 'pubky-app-specs';
 
 // =============================================================================
 // Test Helpers
@@ -1086,6 +1087,278 @@ describe('StreamCoordinator', () => {
 
       // Stop and ensure no more polls happen
       coordinator.stop();
+      vi.advanceTimersByTime(5_000);
+      expect(getOrFetchStreamSliceSpy.mock.calls.length).toBe(callCount);
+    });
+  });
+
+  describe('Feed Route Polling', () => {
+    const mockFeed: Core.FeedModelSchema = {
+      id: 'feed123',
+      name: 'Test Feed',
+      tags: ['bitcoin'],
+      reach: PubkyAppFeedReach.All,
+      sort: PubkyAppFeedSort.Recent,
+      content: null,
+      layout: PubkyAppFeedLayout.Wide,
+      created_at: 1000,
+      updated_at: 1000,
+    };
+
+    function setupFeedControllerSpy(feed?: Core.FeedModelSchema) {
+      return vi.spyOn(Core.FeedController, 'get').mockResolvedValue(feed);
+    }
+
+    it('polls on /feed route when feed is resolved', async () => {
+      const { getOrFetchStreamSliceSpy, coordinator } = setupIntegrationTest();
+      setupFeedControllerSpy(mockFeed);
+      coordinator.configure({ pollOnStart: false, intervalMs: 1_000 } as Partial<CoordinatorConfigWithBase>);
+      coordinator.setRoute('/feed/feed123');
+      coordinator.start();
+
+      // Flush to let async feed resolution complete and re-trigger polling
+      await flushPromises();
+      await flushPromises();
+
+      vi.advanceTimersByTime(1_000);
+      await flushPromises();
+
+      expect(getOrFetchStreamSliceSpy).toHaveBeenCalled();
+    });
+
+    it('does not poll when feed ID is missing from route', async () => {
+      const { getOrFetchStreamSliceSpy, coordinator } = setupIntegrationTest();
+      const feedGetSpy = setupFeedControllerSpy(mockFeed);
+      coordinator.configure({ pollOnStart: true, intervalMs: 1_000 } as Partial<CoordinatorConfigWithBase>);
+      coordinator.setRoute('/feed'); // no ID segment
+      coordinator.start();
+
+      await flushPromises();
+      await flushPromises();
+
+      expect(feedGetSpy).not.toHaveBeenCalled();
+      expect(getOrFetchStreamSliceSpy).not.toHaveBeenCalled();
+    });
+
+    it('does not poll when feed is not found in local DB', async () => {
+      const { getOrFetchStreamSliceSpy, coordinator } = setupIntegrationTest();
+      setupFeedControllerSpy();
+      coordinator.configure({ pollOnStart: true, intervalMs: 1_000 } as Partial<CoordinatorConfigWithBase>);
+      coordinator.setRoute('/feed/unknown-feed');
+      coordinator.start();
+
+      await flushPromises();
+      await flushPromises();
+      vi.advanceTimersByTime(5_000);
+      await flushPromises();
+
+      expect(getOrFetchStreamSliceSpy).not.toHaveBeenCalled();
+    });
+
+    it('builds correct stream ID from feed details', async () => {
+      const { getOrFetchStreamSliceSpy, coordinator } = setupIntegrationTest();
+      setupFeedControllerSpy(mockFeed);
+      coordinator.configure({ pollOnStart: false, intervalMs: 1_000 } as Partial<CoordinatorConfigWithBase>);
+      coordinator.setRoute('/feed/feed123');
+      coordinator.start();
+
+      await flushPromises();
+      await flushPromises();
+
+      vi.advanceTimersByTime(1_000);
+      await flushPromises();
+
+      expect(getOrFetchStreamSliceSpy).toHaveBeenCalledWith(
+        expect.objectContaining({
+          streamId: 'timeline:all:all:bitcoin',
+        }),
+      );
+    });
+
+    it('switches stream when navigating between different feeds', async () => {
+      const { getOrFetchStreamSliceSpy, coordinator } = setupIntegrationTest();
+      const feedGetSpy = setupFeedControllerSpy(mockFeed);
+      coordinator.configure({ pollOnStart: false, intervalMs: 1_000 } as Partial<CoordinatorConfigWithBase>);
+      coordinator.setRoute('/feed/feed123');
+      coordinator.start();
+
+      await flushPromises();
+      await flushPromises();
+      vi.advanceTimersByTime(1_000);
+      await flushPromises();
+
+      const callsOnFirstFeed = getOrFetchStreamSliceSpy.mock.calls.length;
+      expect(callsOnFirstFeed).toBeGreaterThan(0);
+
+      // Navigate to a different feed
+      const secondFeed: Core.FeedModelSchema = {
+        ...mockFeed,
+        id: 'feed456',
+        tags: ['lightning', 'tech'],
+      };
+      feedGetSpy.mockResolvedValue(secondFeed);
+      coordinator.setRoute('/feed/feed456');
+
+      await flushPromises();
+      await flushPromises();
+      vi.advanceTimersByTime(1_000);
+      await flushPromises();
+
+      expect(getOrFetchStreamSliceSpy.mock.calls.length).toBeGreaterThan(callsOnFirstFeed);
+      // Last call should use the new feed's stream ID
+      const lastCall = getOrFetchStreamSliceSpy.mock.calls[getOrFetchStreamSliceSpy.mock.calls.length - 1];
+      expect(lastCall[0]).toEqual(expect.objectContaining({ streamId: 'timeline:all:all:lightning,tech' }));
+    });
+
+    it('resolves feed B when rapid /feed/A → /feed/B navigation occurs while A is resolving', async () => {
+      const { getOrFetchStreamSliceSpy, coordinator } = setupIntegrationTest();
+
+      // Feed A resolves slowly — we control when it resolves via the spy
+      const feedA: Core.FeedModelSchema = { ...mockFeed, id: 'feedA', tags: ['alpha'] };
+      const feedB: Core.FeedModelSchema = { ...mockFeed, id: 'feedB', tags: ['beta'] };
+
+      const feedGetSpy = vi.spyOn(Core.FeedController, 'get').mockResolvedValue(feedA);
+      coordinator.configure({ pollOnStart: false, intervalMs: 1_000 } as Partial<CoordinatorConfigWithBase>);
+      coordinator.setRoute('/feed/feedA');
+      coordinator.start();
+
+      // Before A's async resolution completes, navigate to feed B
+      feedGetSpy.mockResolvedValue(feedB);
+      coordinator.setRoute('/feed/feedB');
+
+      // Flush: A's resolution completes → stale-route guard discards it → re-evaluates → B's resolution kicks off
+      await flushPromises();
+      await flushPromises();
+      // Flush again for B's resolution to complete and re-evaluate
+      await flushPromises();
+      await flushPromises();
+
+      vi.advanceTimersByTime(1_000);
+      await flushPromises();
+
+      expect(getOrFetchStreamSliceSpy).toHaveBeenCalled();
+      const lastCall = getOrFetchStreamSliceSpy.mock.calls[getOrFetchStreamSliceSpy.mock.calls.length - 1];
+      expect(lastCall[0]).toEqual(expect.objectContaining({ streamId: 'timeline:all:all:beta' }));
+    });
+
+    it('resumes polling when navigating from non-enabled route to /feed', async () => {
+      const { getOrFetchStreamSliceSpy, coordinator } = setupIntegrationTest();
+      setupFeedControllerSpy(mockFeed);
+      coordinator.configure({ pollOnStart: false, intervalMs: 1_000 } as Partial<CoordinatorConfigWithBase>);
+      coordinator.setRoute('/profile');
+      coordinator.start();
+
+      await flushPromises();
+      vi.advanceTimersByTime(2_000);
+      expect(getOrFetchStreamSliceSpy).not.toHaveBeenCalled();
+
+      // Navigate to /feed
+      coordinator.setRoute('/feed/feed123');
+
+      await flushPromises();
+      await flushPromises();
+      vi.advanceTimersByTime(1_000);
+      await flushPromises();
+
+      expect(getOrFetchStreamSliceSpy).toHaveBeenCalled();
+    });
+
+    it('does not get stuck when FeedController.get throws an error', async () => {
+      const { getOrFetchStreamSliceSpy, coordinator } = setupIntegrationTest();
+      vi.spyOn(Core.FeedController, 'get').mockRejectedValue(new Error('Dexie read failed'));
+      coordinator.configure({ pollOnStart: false, intervalMs: 1_000 } as Partial<CoordinatorConfigWithBase>);
+      coordinator.setRoute('/feed/feed123');
+      coordinator.start();
+
+      // Flush to let the rejected promise settle
+      await flushPromises();
+      await flushPromises();
+      vi.advanceTimersByTime(5_000);
+      await flushPromises();
+
+      // Should not poll — resolution failed
+      expect(getOrFetchStreamSliceSpy).not.toHaveBeenCalled();
+
+      // Now fix the mock and trigger a re-evaluation via a visibility change
+      const feedGetSpy = vi.spyOn(Core.FeedController, 'get').mockResolvedValue(mockFeed);
+      coordinator.configure({ respectPageVisibility: true } as Partial<CoordinatorConfigWithBase>);
+      // Simulate visibility change to re-trigger evaluation
+      Object.defineProperty(document, 'visibilityState', { configurable: true, get: () => 'hidden' });
+      document.dispatchEvent(new Event('visibilitychange'));
+      Object.defineProperty(document, 'visibilityState', { configurable: true, get: () => 'visible' });
+      document.dispatchEvent(new Event('visibilitychange'));
+
+      await flushPromises();
+      await flushPromises();
+      vi.advanceTimersByTime(1_000);
+      await flushPromises();
+
+      // Should now poll — pendingFeedResolution was properly reset, allowing retry
+      expect(feedGetSpy).toHaveBeenCalledWith({ feedId: 'feed123' });
+      expect(getOrFetchStreamSliceSpy).toHaveBeenCalled();
+    });
+
+    it('uses cached stream ID when navigating back to the same feed (no redundant Dexie read)', async () => {
+      const { getOrFetchStreamSliceSpy, coordinator } = setupIntegrationTest();
+      const feedGetSpy = setupFeedControllerSpy(mockFeed);
+      coordinator.configure({ pollOnStart: false, intervalMs: 1_000 } as Partial<CoordinatorConfigWithBase>);
+      coordinator.setRoute('/feed/feed123');
+      coordinator.start();
+
+      // Let async resolution complete and start polling
+      await flushPromises();
+      await flushPromises();
+      vi.advanceTimersByTime(1_000);
+      await flushPromises();
+
+      expect(getOrFetchStreamSliceSpy).toHaveBeenCalled();
+      expect(feedGetSpy).toHaveBeenCalledTimes(1); // One Dexie read for initial resolution
+
+      // Navigate away to /home
+      coordinator.setRoute(APP_ROUTES.HOME);
+      await flushPromises();
+      vi.advanceTimersByTime(1_000);
+      await flushPromises();
+
+      const callsAfterHome = getOrFetchStreamSliceSpy.mock.calls.length;
+      // Verify polling switched to home stream (timeline:all:all, no tags)
+      const homeCall = getOrFetchStreamSliceSpy.mock.calls[getOrFetchStreamSliceSpy.mock.calls.length - 1];
+      expect(homeCall[0]).toEqual(expect.objectContaining({ streamId: 'timeline:all:all' }));
+
+      // Navigate back to /feed/feed123
+      feedGetSpy.mockClear();
+      coordinator.setRoute('/feed/feed123');
+
+      // No need for extra flushes — cache hit is synchronous
+      vi.advanceTimersByTime(1_000);
+      await flushPromises();
+
+      // Should poll with the feed stream again
+      expect(getOrFetchStreamSliceSpy.mock.calls.length).toBeGreaterThan(callsAfterHome);
+      const feedCall = getOrFetchStreamSliceSpy.mock.calls[getOrFetchStreamSliceSpy.mock.calls.length - 1];
+      expect(feedCall[0]).toEqual(expect.objectContaining({ streamId: 'timeline:all:all:bitcoin' }));
+
+      // FeedController.get should NOT have been called again — cache hit
+      expect(feedGetSpy).not.toHaveBeenCalled();
+    });
+
+    it('stops polling when navigating from /feed to non-enabled route', async () => {
+      const { getOrFetchStreamSliceSpy, coordinator } = setupIntegrationTest();
+      setupFeedControllerSpy(mockFeed);
+      coordinator.configure({ pollOnStart: false, intervalMs: 1_000 } as Partial<CoordinatorConfigWithBase>);
+      coordinator.setRoute('/feed/feed123');
+      coordinator.start();
+
+      await flushPromises();
+      await flushPromises();
+      vi.advanceTimersByTime(1_000);
+      await flushPromises();
+      expect(getOrFetchStreamSliceSpy.mock.calls.length).toBeGreaterThan(0);
+
+      // Navigate away
+      coordinator.setRoute('/profile');
+      const callCount = getOrFetchStreamSliceSpy.mock.calls.length;
+
       vi.advanceTimersByTime(5_000);
       expect(getOrFetchStreamSliceSpy.mock.calls.length).toBe(callCount);
     });
