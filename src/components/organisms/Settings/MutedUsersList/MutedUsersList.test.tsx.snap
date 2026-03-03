@@ -44,7 +44,7 @@ exports[`MutedUsersList - Snapshots > matches snapshot - with muted users 1`] = 
         </span>
       </span>
       <div
-        class="flex min-w-0 flex-1 flex-col items-start"
+        class="flex min-w-0 flex-1 flex-col items-start overflow-hidden"
         data-testid="container"
       >
         <span
@@ -117,7 +117,7 @@ exports[`MutedUsersList - Snapshots > matches snapshot - with muted users 1`] = 
         </span>
       </span>
       <div
-        class="flex min-w-0 flex-1 flex-col items-start"
+        class="flex min-w-0 flex-1 flex-col items-start overflow-hidden"
         data-testid="container"
       >
         <span
@@ -190,7 +190,7 @@ exports[`MutedUsersList - Snapshots > matches snapshot - with muted users 1`] = 
         </span>
       </span>
       <div
-        class="flex min-w-0 flex-1 flex-col items-start"
+        class="flex min-w-0 flex-1 flex-col items-start overflow-hidden"
         data-testid="container"
       >
         <span

@@ -105,7 +105,7 @@ export function MutedUsersList() {
                     />
                   </Atoms.AvatarFallback>
                 </Atoms.Avatar>
-                <Atoms.Container overrideDefaults className="flex min-w-0 flex-1 flex-col items-start">
+                <Atoms.Container overrideDefaults className="flex min-w-0 flex-1 flex-col items-start overflow-hidden">
                   <Atoms.Typography
                     as="span"
                     overrideDefaults
