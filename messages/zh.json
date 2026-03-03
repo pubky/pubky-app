@@ -621,6 +621,29 @@
       "urlField": "网址",
       "urlPlaceholder": "https://twitter.com/satoshi",
       "saveButton": "保存链接"
+    },
+    "customFeed": {
+      "createTitle": "创建信息流",
+      "editTitle": "编辑信息流",
+      "feedName": "信息流名称",
+      "feedNamePlaceholder": "不是你的密钥...",
+      "reach": "范围",
+      "reachPlaceholder": "选择范围",
+      "sort": "排序",
+      "sortPlaceholder": "选择排序方式",
+      "layout": "布局",
+      "layoutPlaceholder": "选择布局",
+      "content": "内容",
+      "contentPlaceholder": "选择内容类型",
+      "filterTags": "按内容标签筛选",
+      "saveFeed": "保存信息流",
+      "deleteFeed": "删除信息流",
+      "feedCreated": "信息流 {name} 已创建！",
+      "feedCreateError": "无法创建信息流，请重试或联系支持。",
+      "feedEdited": "信息流 {name} 已编辑！",
+      "feedEditError": "无法编辑信息流，请重试或联系支持。",
+      "feedDeleted": "信息流 {name} 已删除！",
+      "feedDeleteError": "无法删除信息流，请重试或联系支持。"
     }
   },
   "sidebar": {
