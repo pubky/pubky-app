@@ -25,6 +25,7 @@ export * from './Popover';
 export * from './PostThreadConnector';
 export * from './PostThreadSpacer';
 export * from './ReplyLine';
+export * from './Select';
 export * from './Sheet';
 export * from './SidebarButton';
 export * from './Skeleton';

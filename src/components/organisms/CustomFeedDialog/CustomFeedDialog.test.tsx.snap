@@ -1,0 +1,1998 @@
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
+
+exports[`CustomFeedDialog - Snapshots > matches snapshot for create mode default state 1`] = `
+<div
+  data-open="false"
+  data-testid="dialog"
+>
+  <div
+    data-as-child="true"
+    data-disabled="false"
+    data-testid="custom-feed-dialog-trigger"
+  >
+    <button>
+      Create Feed
+    </button>
+  </div>
+  <div
+    class="w-3xl"
+    data-testid="custom-feed-dialog-content"
+  >
+    <div
+      data-testid="dialog-header"
+    >
+      <h2
+        data-testid="dialog-title"
+      >
+        Create Feed
+      </h2>
+    </div>
+    <div
+      class="gap-y-2"
+      data-testid="container"
+    >
+      <label
+        class="text-xs tracking-wide text-muted-foreground uppercase"
+        data-testid="label"
+      >
+        Feed Name
+      </label>
+      <input
+        class="h-14 border-dashed"
+        data-testid="feed-name-input"
+        placeholder="Not your keys..."
+        required=""
+        value=""
+      />
+    </div>
+    <div
+      class="flex-wrap gap-x-8 gap-y-4 sm:flex-row"
+      data-testid="container"
+    >
+      <div
+        class="flex flex-col gap-y-2"
+        data-override-defaults="true"
+        data-testid="reach-filter-section"
+      >
+        <label
+          class="text-xs tracking-wide text-muted-foreground uppercase"
+          data-testid="label"
+        >
+          Reach
+        </label>
+        <div
+          data-disabled="false"
+          data-testid="reach-select"
+          data-value="3"
+        >
+          <div
+            class="w-full sm:w-fit"
+            data-testid="select-trigger"
+          >
+            <span
+              data-testid="select-value"
+            >
+              Select a reach
+            </span>
+          </div>
+          <div
+            data-testid="select-content"
+          >
+            <div
+              data-testid="select-item-3"
+              data-value="3"
+            >
+              <svg
+                data-testid="icon"
+              />
+               
+              All
+            </div>
+            <div
+              data-testid="select-item-0"
+              data-value="0"
+            >
+              <svg
+                data-testid="icon"
+              />
+               
+              Following
+            </div>
+            <div
+              data-testid="select-item-2"
+              data-value="2"
+            >
+              <svg
+                data-testid="icon"
+              />
+               
+              Friends
+            </div>
+          </div>
+          <input
+            data-testid="reach-select-hidden-input"
+            type="hidden"
+            value="3"
+          />
+        </div>
+      </div>
+      <div
+        class="flex flex-col gap-y-2"
+        data-override-defaults="true"
+        data-testid="sort-filter-section"
+      >
+        <label
+          class="text-xs tracking-wide text-muted-foreground uppercase"
+          data-testid="label"
+        >
+          Sort
+        </label>
+        <div
+          data-disabled="false"
+          data-testid="sort-select"
+          data-value="0"
+        >
+          <div
+            class="w-full sm:w-fit"
+            data-testid="select-trigger"
+          >
+            <span
+              data-testid="select-value"
+            >
+              Select a sort
+            </span>
+          </div>
+          <div
+            data-testid="select-content"
+          >
+            <div
+              data-testid="select-item-0"
+              data-value="0"
+            >
+              <svg
+                data-testid="icon"
+              />
+               
+              Recent
+            </div>
+            <div
+              data-testid="select-item-1"
+              data-value="1"
+            >
+              <svg
+                data-testid="icon"
+              />
+               
+              Popularity
+            </div>
+          </div>
+          <input
+            data-testid="sort-select-hidden-input"
+            type="hidden"
+            value="0"
+          />
+        </div>
+      </div>
+      <div
+        class="flex flex-col gap-y-2"
+        data-override-defaults="true"
+        data-testid="layout-filter-section"
+      >
+        <label
+          class="text-xs tracking-wide text-muted-foreground uppercase"
+          data-testid="label"
+        >
+          Layout
+        </label>
+        <div
+          data-disabled="false"
+          data-testid="layout-select"
+          data-value="0"
+        >
+          <div
+            class="w-full sm:w-fit"
+            data-testid="select-trigger"
+          >
+            <span
+              data-testid="select-value"
+            >
+              Select a layout
+            </span>
+          </div>
+          <div
+            data-testid="select-content"
+          >
+            <div
+              data-testid="select-item-0"
+              data-value="0"
+            >
+              <svg
+                data-testid="icon"
+              />
+               
+              Columns
+            </div>
+            <div
+              data-testid="select-item-1"
+              data-value="1"
+            >
+              <svg
+                data-testid="icon"
+              />
+               
+              Wide
+            </div>
+          </div>
+          <input
+            data-testid="layout-select-hidden-input"
+            type="hidden"
+            value="0"
+          />
+        </div>
+      </div>
+      <div
+        class="flex flex-col gap-y-2"
+        data-override-defaults="true"
+        data-testid="content-filter-section"
+      >
+        <label
+          class="text-xs tracking-wide text-muted-foreground uppercase"
+          data-testid="label"
+        >
+          Content
+        </label>
+        <div
+          data-disabled="false"
+          data-testid="content-select"
+          data-value="ALL"
+        >
+          <div
+            class="w-full sm:w-fit"
+            data-testid="select-trigger"
+          >
+            <span
+              data-testid="select-value"
+            >
+              Select content
+            </span>
+          </div>
+          <div
+            data-testid="select-content"
+          >
+            <div
+              data-testid="select-item-ALL"
+              data-value="ALL"
+            >
+              <svg
+                data-testid="icon"
+              />
+               
+              All
+            </div>
+            <div
+              data-testid="select-item-0"
+              data-value="0"
+            >
+              <svg
+                data-testid="icon"
+              />
+               
+              Posts
+            </div>
+            <div
+              data-testid="select-item-1"
+              data-value="1"
+            >
+              <svg
+                data-testid="icon"
+              />
+               
+              Articles
+            </div>
+            <div
+              data-testid="select-item-2"
+              data-value="2"
+            >
+              <svg
+                data-testid="icon"
+              />
+               
+              Images
+            </div>
+            <div
+              data-testid="select-item-3"
+              data-value="3"
+            >
+              <svg
+                data-testid="icon"
+              />
+               
+              Videos
+            </div>
+            <div
+              data-testid="select-item-4"
+              data-value="4"
+            >
+              <svg
+                data-testid="icon"
+              />
+               
+              Links
+            </div>
+            <div
+              data-testid="select-item-5"
+              data-value="5"
+            >
+              <svg
+                data-testid="icon"
+              />
+               
+              Files
+            </div>
+          </div>
+          <input
+            data-testid="content-select-hidden-input"
+            type="hidden"
+            value="ALL"
+          />
+        </div>
+      </div>
+    </div>
+    <div
+      class="gap-y-2"
+      data-testid="container"
+    >
+      <label
+        class="text-xs tracking-wide text-muted-foreground uppercase"
+        data-testid="label"
+      >
+        Filter on Content Tags
+      </label>
+      <div
+        class="w-48"
+        data-current-tags-count="0"
+        data-disabled="false"
+        data-max-tags="5"
+        data-testid="feed-tag-input"
+      >
+        <input
+          data-testid="tag-input-field"
+        />
+      </div>
+    </div>
+    <div
+      data-testid="dialog-footer"
+    >
+      <button
+        class="h-15 w-full"
+        data-size="lg"
+        data-testid="save-feed-button"
+        data-variant="secondary"
+        disabled=""
+      >
+        <svg
+          class="size-4"
+          data-testid="icon"
+        />
+        Save Feed
+      </button>
+    </div>
+  </div>
+</div>
+`;
+
+exports[`CustomFeedDialog - Snapshots > matches snapshot for create mode with different trigger child 1`] = `
+<div
+  data-open="false"
+  data-testid="dialog"
+>
+  <div
+    data-as-child="true"
+    data-disabled="false"
+    data-testid="custom-feed-dialog-trigger"
+  >
+    <span
+      class="custom-trigger"
+    >
+      + New Feed
+    </span>
+  </div>
+  <div
+    class="w-3xl"
+    data-testid="custom-feed-dialog-content"
+  >
+    <div
+      data-testid="dialog-header"
+    >
+      <h2
+        data-testid="dialog-title"
+      >
+        Create Feed
+      </h2>
+    </div>
+    <div
+      class="gap-y-2"
+      data-testid="container"
+    >
+      <label
+        class="text-xs tracking-wide text-muted-foreground uppercase"
+        data-testid="label"
+      >
+        Feed Name
+      </label>
+      <input
+        class="h-14 border-dashed"
+        data-testid="feed-name-input"
+        placeholder="Not your keys..."
+        required=""
+        value=""
+      />
+    </div>
+    <div
+      class="flex-wrap gap-x-8 gap-y-4 sm:flex-row"
+      data-testid="container"
+    >
+      <div
+        class="flex flex-col gap-y-2"
+        data-override-defaults="true"
+        data-testid="reach-filter-section"
+      >
+        <label
+          class="text-xs tracking-wide text-muted-foreground uppercase"
+          data-testid="label"
+        >
+          Reach
+        </label>
+        <div
+          data-disabled="false"
+          data-testid="reach-select"
+          data-value="3"
+        >
+          <div
+            class="w-full sm:w-fit"
+            data-testid="select-trigger"
+          >
+            <span
+              data-testid="select-value"
+            >
+              Select a reach
+            </span>
+          </div>
+          <div
+            data-testid="select-content"
+          >
+            <div
+              data-testid="select-item-3"
+              data-value="3"
+            >
+              <svg
+                data-testid="icon"
+              />
+               
+              All
+            </div>
+            <div
+              data-testid="select-item-0"
+              data-value="0"
+            >
+              <svg
+                data-testid="icon"
+              />
+               
+              Following
+            </div>
+            <div
+              data-testid="select-item-2"
+              data-value="2"
+            >
+              <svg
+                data-testid="icon"
+              />
+               
+              Friends
+            </div>
+          </div>
+          <input
+            data-testid="reach-select-hidden-input"
+            type="hidden"
+            value="3"
+          />
+        </div>
+      </div>
+      <div
+        class="flex flex-col gap-y-2"
+        data-override-defaults="true"
+        data-testid="sort-filter-section"
+      >
+        <label
+          class="text-xs tracking-wide text-muted-foreground uppercase"
+          data-testid="label"
+        >
+          Sort
+        </label>
+        <div
+          data-disabled="false"
+          data-testid="sort-select"
+          data-value="0"
+        >
+          <div
+            class="w-full sm:w-fit"
+            data-testid="select-trigger"
+          >
+            <span
+              data-testid="select-value"
+            >
+              Select a sort
+            </span>
+          </div>
+          <div
+            data-testid="select-content"
+          >
+            <div
+              data-testid="select-item-0"
+              data-value="0"
+            >
+              <svg
+                data-testid="icon"
+              />
+               
+              Recent
+            </div>
+            <div
+              data-testid="select-item-1"
+              data-value="1"
+            >
+              <svg
+                data-testid="icon"
+              />
+               
+              Popularity
+            </div>
+          </div>
+          <input
+            data-testid="sort-select-hidden-input"
+            type="hidden"
+            value="0"
+          />
+        </div>
+      </div>
+      <div
+        class="flex flex-col gap-y-2"
+        data-override-defaults="true"
+        data-testid="layout-filter-section"
+      >
+        <label
+          class="text-xs tracking-wide text-muted-foreground uppercase"
+          data-testid="label"
+        >
+          Layout
+        </label>
+        <div
+          data-disabled="false"
+          data-testid="layout-select"
+          data-value="0"
+        >
+          <div
+            class="w-full sm:w-fit"
+            data-testid="select-trigger"
+          >
+            <span
+              data-testid="select-value"
+            >
+              Select a layout
+            </span>
+          </div>
+          <div
+            data-testid="select-content"
+          >
+            <div
+              data-testid="select-item-0"
+              data-value="0"
+            >
+              <svg
+                data-testid="icon"
+              />
+               
+              Columns
+            </div>
+            <div
+              data-testid="select-item-1"
+              data-value="1"
+            >
+              <svg
+                data-testid="icon"
+              />
+               
+              Wide
+            </div>
+          </div>
+          <input
+            data-testid="layout-select-hidden-input"
+            type="hidden"
+            value="0"
+          />
+        </div>
+      </div>
+      <div
+        class="flex flex-col gap-y-2"
+        data-override-defaults="true"
+        data-testid="content-filter-section"
+      >
+        <label
+          class="text-xs tracking-wide text-muted-foreground uppercase"
+          data-testid="label"
+        >
+          Content
+        </label>
+        <div
+          data-disabled="false"
+          data-testid="content-select"
+          data-value="ALL"
+        >
+          <div
+            class="w-full sm:w-fit"
+            data-testid="select-trigger"
+          >
+            <span
+              data-testid="select-value"
+            >
+              Select content
+            </span>
+          </div>
+          <div
+            data-testid="select-content"
+          >
+            <div
+              data-testid="select-item-ALL"
+              data-value="ALL"
+            >
+              <svg
+                data-testid="icon"
+              />
+               
+              All
+            </div>
+            <div
+              data-testid="select-item-0"
+              data-value="0"
+            >
+              <svg
+                data-testid="icon"
+              />
+               
+              Posts
+            </div>
+            <div
+              data-testid="select-item-1"
+              data-value="1"
+            >
+              <svg
+                data-testid="icon"
+              />
+               
+              Articles
+            </div>
+            <div
+              data-testid="select-item-2"
+              data-value="2"
+            >
+              <svg
+                data-testid="icon"
+              />
+               
+              Images
+            </div>
+            <div
+              data-testid="select-item-3"
+              data-value="3"
+            >
+              <svg
+                data-testid="icon"
+              />
+               
+              Videos
+            </div>
+            <div
+              data-testid="select-item-4"
+              data-value="4"
+            >
+              <svg
+                data-testid="icon"
+              />
+               
+              Links
+            </div>
+            <div
+              data-testid="select-item-5"
+              data-value="5"
+            >
+              <svg
+                data-testid="icon"
+              />
+               
+              Files
+            </div>
+          </div>
+          <input
+            data-testid="content-select-hidden-input"
+            type="hidden"
+            value="ALL"
+          />
+        </div>
+      </div>
+    </div>
+    <div
+      class="gap-y-2"
+      data-testid="container"
+    >
+      <label
+        class="text-xs tracking-wide text-muted-foreground uppercase"
+        data-testid="label"
+      >
+        Filter on Content Tags
+      </label>
+      <div
+        class="w-48"
+        data-current-tags-count="0"
+        data-disabled="false"
+        data-max-tags="5"
+        data-testid="feed-tag-input"
+      >
+        <input
+          data-testid="tag-input-field"
+        />
+      </div>
+    </div>
+    <div
+      data-testid="dialog-footer"
+    >
+      <button
+        class="h-15 w-full"
+        data-size="lg"
+        data-testid="save-feed-button"
+        data-variant="secondary"
+        disabled=""
+      >
+        <svg
+          class="size-4"
+          data-testid="icon"
+        />
+        Save Feed
+      </button>
+    </div>
+  </div>
+</div>
+`;
+
+exports[`CustomFeedDialog - Snapshots > matches snapshot for edit mode with custom feed 1`] = `
+<div
+  data-open="false"
+  data-testid="dialog"
+>
+  <div
+    data-as-child="true"
+    data-disabled="false"
+    data-testid="custom-feed-dialog-trigger"
+  >
+    <button>
+      Edit Feed
+    </button>
+  </div>
+  <div
+    class="w-3xl"
+    data-testid="custom-feed-dialog-content"
+  >
+    <div
+      data-testid="dialog-header"
+    >
+      <h2
+        data-testid="dialog-title"
+      >
+        Edit Feed
+      </h2>
+    </div>
+    <div
+      class="gap-y-2"
+      data-testid="container"
+    >
+      <label
+        class="text-xs tracking-wide text-muted-foreground uppercase"
+        data-testid="label"
+      >
+        Feed Name
+      </label>
+      <input
+        class="h-14 border-dashed"
+        data-testid="feed-name-input"
+        placeholder="Not your keys..."
+        required=""
+        value="Bitcoin News"
+      />
+    </div>
+    <div
+      class="flex-wrap gap-x-8 gap-y-4 sm:flex-row"
+      data-testid="container"
+    >
+      <div
+        class="flex flex-col gap-y-2"
+        data-override-defaults="true"
+        data-testid="reach-filter-section"
+      >
+        <label
+          class="text-xs tracking-wide text-muted-foreground uppercase"
+          data-testid="label"
+        >
+          Reach
+        </label>
+        <div
+          data-disabled="false"
+          data-testid="reach-select"
+          data-value="0"
+        >
+          <div
+            class="w-full sm:w-fit"
+            data-testid="select-trigger"
+          >
+            <span
+              data-testid="select-value"
+            >
+              Select a reach
+            </span>
+          </div>
+          <div
+            data-testid="select-content"
+          >
+            <div
+              data-testid="select-item-3"
+              data-value="3"
+            >
+              <svg
+                data-testid="icon"
+              />
+               
+              All
+            </div>
+            <div
+              data-testid="select-item-0"
+              data-value="0"
+            >
+              <svg
+                data-testid="icon"
+              />
+               
+              Following
+            </div>
+            <div
+              data-testid="select-item-2"
+              data-value="2"
+            >
+              <svg
+                data-testid="icon"
+              />
+               
+              Friends
+            </div>
+          </div>
+          <input
+            data-testid="reach-select-hidden-input"
+            type="hidden"
+            value="0"
+          />
+        </div>
+      </div>
+      <div
+        class="flex flex-col gap-y-2"
+        data-override-defaults="true"
+        data-testid="sort-filter-section"
+      >
+        <label
+          class="text-xs tracking-wide text-muted-foreground uppercase"
+          data-testid="label"
+        >
+          Sort
+        </label>
+        <div
+          data-disabled="false"
+          data-testid="sort-select"
+          data-value="1"
+        >
+          <div
+            class="w-full sm:w-fit"
+            data-testid="select-trigger"
+          >
+            <span
+              data-testid="select-value"
+            >
+              Select a sort
+            </span>
+          </div>
+          <div
+            data-testid="select-content"
+          >
+            <div
+              data-testid="select-item-0"
+              data-value="0"
+            >
+              <svg
+                data-testid="icon"
+              />
+               
+              Recent
+            </div>
+            <div
+              data-testid="select-item-1"
+              data-value="1"
+            >
+              <svg
+                data-testid="icon"
+              />
+               
+              Popularity
+            </div>
+          </div>
+          <input
+            data-testid="sort-select-hidden-input"
+            type="hidden"
+            value="1"
+          />
+        </div>
+      </div>
+      <div
+        class="flex flex-col gap-y-2"
+        data-override-defaults="true"
+        data-testid="layout-filter-section"
+      >
+        <label
+          class="text-xs tracking-wide text-muted-foreground uppercase"
+          data-testid="label"
+        >
+          Layout
+        </label>
+        <div
+          data-disabled="false"
+          data-testid="layout-select"
+          data-value="1"
+        >
+          <div
+            class="w-full sm:w-fit"
+            data-testid="select-trigger"
+          >
+            <span
+              data-testid="select-value"
+            >
+              Select a layout
+            </span>
+          </div>
+          <div
+            data-testid="select-content"
+          >
+            <div
+              data-testid="select-item-0"
+              data-value="0"
+            >
+              <svg
+                data-testid="icon"
+              />
+               
+              Columns
+            </div>
+            <div
+              data-testid="select-item-1"
+              data-value="1"
+            >
+              <svg
+                data-testid="icon"
+              />
+               
+              Wide
+            </div>
+          </div>
+          <input
+            data-testid="layout-select-hidden-input"
+            type="hidden"
+            value="1"
+          />
+        </div>
+      </div>
+      <div
+        class="flex flex-col gap-y-2"
+        data-override-defaults="true"
+        data-testid="content-filter-section"
+      >
+        <label
+          class="text-xs tracking-wide text-muted-foreground uppercase"
+          data-testid="label"
+        >
+          Content
+        </label>
+        <div
+          data-disabled="false"
+          data-testid="content-select"
+          data-value="0"
+        >
+          <div
+            class="w-full sm:w-fit"
+            data-testid="select-trigger"
+          >
+            <span
+              data-testid="select-value"
+            >
+              Select content
+            </span>
+          </div>
+          <div
+            data-testid="select-content"
+          >
+            <div
+              data-testid="select-item-ALL"
+              data-value="ALL"
+            >
+              <svg
+                data-testid="icon"
+              />
+               
+              All
+            </div>
+            <div
+              data-testid="select-item-0"
+              data-value="0"
+            >
+              <svg
+                data-testid="icon"
+              />
+               
+              Posts
+            </div>
+            <div
+              data-testid="select-item-1"
+              data-value="1"
+            >
+              <svg
+                data-testid="icon"
+              />
+               
+              Articles
+            </div>
+            <div
+              data-testid="select-item-2"
+              data-value="2"
+            >
+              <svg
+                data-testid="icon"
+              />
+               
+              Images
+            </div>
+            <div
+              data-testid="select-item-3"
+              data-value="3"
+            >
+              <svg
+                data-testid="icon"
+              />
+               
+              Videos
+            </div>
+            <div
+              data-testid="select-item-4"
+              data-value="4"
+            >
+              <svg
+                data-testid="icon"
+              />
+               
+              Links
+            </div>
+            <div
+              data-testid="select-item-5"
+              data-value="5"
+            >
+              <svg
+                data-testid="icon"
+              />
+               
+              Files
+            </div>
+          </div>
+          <input
+            data-testid="content-select-hidden-input"
+            type="hidden"
+            value="0"
+          />
+        </div>
+      </div>
+    </div>
+    <div
+      class="gap-y-2"
+      data-testid="container"
+    >
+      <label
+        class="text-xs tracking-wide text-muted-foreground uppercase"
+        data-testid="label"
+      >
+        Filter on Content Tags
+      </label>
+      <div
+        class="w-48"
+        data-current-tags-count="2"
+        data-disabled="false"
+        data-max-tags="5"
+        data-testid="feed-tag-input"
+      >
+        <input
+          data-testid="tag-input-field"
+        />
+        <span
+          data-testid="existing-tag-0"
+        >
+          bitcoin
+        </span>
+        <span
+          data-testid="existing-tag-1"
+        >
+          lightning
+        </span>
+      </div>
+      <div
+        class="flex-row flex-wrap gap-2"
+        data-testid="container"
+      >
+        <span
+          data-show-close="true"
+          data-testid="post-tag-bitcoin"
+        >
+          bitcoin
+          <button
+            data-testid="remove-tag-bitcoin"
+          >
+            ×
+          </button>
+        </span>
+        <span
+          data-show-close="true"
+          data-testid="post-tag-lightning"
+        >
+          lightning
+          <button
+            data-testid="remove-tag-lightning"
+          >
+            ×
+          </button>
+        </span>
+      </div>
+    </div>
+    <div
+      data-testid="dialog-footer"
+    >
+      <button
+        class="h-15 w-full"
+        data-size="lg"
+        data-testid="save-feed-button"
+        data-variant="secondary"
+      >
+        <svg
+          class="size-4"
+          data-testid="icon"
+        />
+        Save Feed
+      </button>
+      <button
+        class="h-15 w-full"
+        data-size="lg"
+        data-testid="delete-feed-button"
+        data-variant="destructive"
+      >
+        <svg
+          class="size-4"
+          data-testid="icon"
+        />
+        Delete Feed
+      </button>
+    </div>
+  </div>
+</div>
+`;
+
+exports[`CustomFeedDialog - Snapshots > matches snapshot for edit mode with null content feed 1`] = `
+<div
+  data-open="false"
+  data-testid="dialog"
+>
+  <div
+    data-as-child="true"
+    data-disabled="false"
+    data-testid="custom-feed-dialog-trigger"
+  >
+    <button>
+      Edit Feed
+    </button>
+  </div>
+  <div
+    class="w-3xl"
+    data-testid="custom-feed-dialog-content"
+  >
+    <div
+      data-testid="dialog-header"
+    >
+      <h2
+        data-testid="dialog-title"
+      >
+        Edit Feed
+      </h2>
+    </div>
+    <div
+      class="gap-y-2"
+      data-testid="container"
+    >
+      <label
+        class="text-xs tracking-wide text-muted-foreground uppercase"
+        data-testid="label"
+      >
+        Feed Name
+      </label>
+      <input
+        class="h-14 border-dashed"
+        data-testid="feed-name-input"
+        placeholder="Not your keys..."
+        required=""
+        value="Bitcoin News"
+      />
+    </div>
+    <div
+      class="flex-wrap gap-x-8 gap-y-4 sm:flex-row"
+      data-testid="container"
+    >
+      <div
+        class="flex flex-col gap-y-2"
+        data-override-defaults="true"
+        data-testid="reach-filter-section"
+      >
+        <label
+          class="text-xs tracking-wide text-muted-foreground uppercase"
+          data-testid="label"
+        >
+          Reach
+        </label>
+        <div
+          data-disabled="false"
+          data-testid="reach-select"
+          data-value="0"
+        >
+          <div
+            class="w-full sm:w-fit"
+            data-testid="select-trigger"
+          >
+            <span
+              data-testid="select-value"
+            >
+              Select a reach
+            </span>
+          </div>
+          <div
+            data-testid="select-content"
+          >
+            <div
+              data-testid="select-item-3"
+              data-value="3"
+            >
+              <svg
+                data-testid="icon"
+              />
+               
+              All
+            </div>
+            <div
+              data-testid="select-item-0"
+              data-value="0"
+            >
+              <svg
+                data-testid="icon"
+              />
+               
+              Following
+            </div>
+            <div
+              data-testid="select-item-2"
+              data-value="2"
+            >
+              <svg
+                data-testid="icon"
+              />
+               
+              Friends
+            </div>
+          </div>
+          <input
+            data-testid="reach-select-hidden-input"
+            type="hidden"
+            value="0"
+          />
+        </div>
+      </div>
+      <div
+        class="flex flex-col gap-y-2"
+        data-override-defaults="true"
+        data-testid="sort-filter-section"
+      >
+        <label
+          class="text-xs tracking-wide text-muted-foreground uppercase"
+          data-testid="label"
+        >
+          Sort
+        </label>
+        <div
+          data-disabled="false"
+          data-testid="sort-select"
+          data-value="1"
+        >
+          <div
+            class="w-full sm:w-fit"
+            data-testid="select-trigger"
+          >
+            <span
+              data-testid="select-value"
+            >
+              Select a sort
+            </span>
+          </div>
+          <div
+            data-testid="select-content"
+          >
+            <div
+              data-testid="select-item-0"
+              data-value="0"
+            >
+              <svg
+                data-testid="icon"
+              />
+               
+              Recent
+            </div>
+            <div
+              data-testid="select-item-1"
+              data-value="1"
+            >
+              <svg
+                data-testid="icon"
+              />
+               
+              Popularity
+            </div>
+          </div>
+          <input
+            data-testid="sort-select-hidden-input"
+            type="hidden"
+            value="1"
+          />
+        </div>
+      </div>
+      <div
+        class="flex flex-col gap-y-2"
+        data-override-defaults="true"
+        data-testid="layout-filter-section"
+      >
+        <label
+          class="text-xs tracking-wide text-muted-foreground uppercase"
+          data-testid="label"
+        >
+          Layout
+        </label>
+        <div
+          data-disabled="false"
+          data-testid="layout-select"
+          data-value="1"
+        >
+          <div
+            class="w-full sm:w-fit"
+            data-testid="select-trigger"
+          >
+            <span
+              data-testid="select-value"
+            >
+              Select a layout
+            </span>
+          </div>
+          <div
+            data-testid="select-content"
+          >
+            <div
+              data-testid="select-item-0"
+              data-value="0"
+            >
+              <svg
+                data-testid="icon"
+              />
+               
+              Columns
+            </div>
+            <div
+              data-testid="select-item-1"
+              data-value="1"
+            >
+              <svg
+                data-testid="icon"
+              />
+               
+              Wide
+            </div>
+          </div>
+          <input
+            data-testid="layout-select-hidden-input"
+            type="hidden"
+            value="1"
+          />
+        </div>
+      </div>
+      <div
+        class="flex flex-col gap-y-2"
+        data-override-defaults="true"
+        data-testid="content-filter-section"
+      >
+        <label
+          class="text-xs tracking-wide text-muted-foreground uppercase"
+          data-testid="label"
+        >
+          Content
+        </label>
+        <div
+          data-disabled="false"
+          data-testid="content-select"
+          data-value="ALL"
+        >
+          <div
+            class="w-full sm:w-fit"
+            data-testid="select-trigger"
+          >
+            <span
+              data-testid="select-value"
+            >
+              Select content
+            </span>
+          </div>
+          <div
+            data-testid="select-content"
+          >
+            <div
+              data-testid="select-item-ALL"
+              data-value="ALL"
+            >
+              <svg
+                data-testid="icon"
+              />
+               
+              All
+            </div>
+            <div
+              data-testid="select-item-0"
+              data-value="0"
+            >
+              <svg
+                data-testid="icon"
+              />
+               
+              Posts
+            </div>
+            <div
+              data-testid="select-item-1"
+              data-value="1"
+            >
+              <svg
+                data-testid="icon"
+              />
+               
+              Articles
+            </div>
+            <div
+              data-testid="select-item-2"
+              data-value="2"
+            >
+              <svg
+                data-testid="icon"
+              />
+               
+              Images
+            </div>
+            <div
+              data-testid="select-item-3"
+              data-value="3"
+            >
+              <svg
+                data-testid="icon"
+              />
+               
+              Videos
+            </div>
+            <div
+              data-testid="select-item-4"
+              data-value="4"
+            >
+              <svg
+                data-testid="icon"
+              />
+               
+              Links
+            </div>
+            <div
+              data-testid="select-item-5"
+              data-value="5"
+            >
+              <svg
+                data-testid="icon"
+              />
+               
+              Files
+            </div>
+          </div>
+          <input
+            data-testid="content-select-hidden-input"
+            type="hidden"
+            value="ALL"
+          />
+        </div>
+      </div>
+    </div>
+    <div
+      class="gap-y-2"
+      data-testid="container"
+    >
+      <label
+        class="text-xs tracking-wide text-muted-foreground uppercase"
+        data-testid="label"
+      >
+        Filter on Content Tags
+      </label>
+      <div
+        class="w-48"
+        data-current-tags-count="1"
+        data-disabled="false"
+        data-max-tags="5"
+        data-testid="feed-tag-input"
+      >
+        <input
+          data-testid="tag-input-field"
+        />
+        <span
+          data-testid="existing-tag-0"
+        >
+          bitcoin
+        </span>
+      </div>
+      <div
+        class="flex-row flex-wrap gap-2"
+        data-testid="container"
+      >
+        <span
+          data-show-close="true"
+          data-testid="post-tag-bitcoin"
+        >
+          bitcoin
+          <button
+            data-testid="remove-tag-bitcoin"
+          >
+            ×
+          </button>
+        </span>
+      </div>
+    </div>
+    <div
+      data-testid="dialog-footer"
+    >
+      <button
+        class="h-15 w-full"
+        data-size="lg"
+        data-testid="save-feed-button"
+        data-variant="secondary"
+      >
+        <svg
+          class="size-4"
+          data-testid="icon"
+        />
+        Save Feed
+      </button>
+      <button
+        class="h-15 w-full"
+        data-size="lg"
+        data-testid="delete-feed-button"
+        data-variant="destructive"
+      >
+        <svg
+          class="size-4"
+          data-testid="icon"
+        />
+        Delete Feed
+      </button>
+    </div>
+  </div>
+</div>
+`;
+
+exports[`CustomFeedDialog - Snapshots > matches snapshot for edit mode without custom feed (disabled) 1`] = `
+<div
+  data-open="false"
+  data-testid="dialog"
+>
+  <div
+    data-as-child="true"
+    data-disabled="true"
+    data-testid="custom-feed-dialog-trigger"
+  >
+    <button>
+      Edit Feed
+    </button>
+  </div>
+  <div
+    class="w-3xl"
+    data-testid="custom-feed-dialog-content"
+  >
+    <div
+      data-testid="dialog-header"
+    >
+      <h2
+        data-testid="dialog-title"
+      >
+        Edit Feed
+      </h2>
+    </div>
+    <div
+      class="gap-y-2"
+      data-testid="container"
+    >
+      <label
+        class="text-xs tracking-wide text-muted-foreground uppercase"
+        data-testid="label"
+      >
+        Feed Name
+      </label>
+      <input
+        class="h-14 border-dashed"
+        data-testid="feed-name-input"
+        disabled=""
+        placeholder="Not your keys..."
+        required=""
+        value=""
+      />
+    </div>
+    <div
+      class="flex-wrap gap-x-8 gap-y-4 sm:flex-row"
+      data-testid="container"
+    >
+      <div
+        class="flex flex-col gap-y-2"
+        data-override-defaults="true"
+        data-testid="reach-filter-section"
+      >
+        <label
+          class="text-xs tracking-wide text-muted-foreground uppercase"
+          data-testid="label"
+        >
+          Reach
+        </label>
+        <div
+          data-disabled="true"
+          data-testid="reach-select"
+        >
+          <div
+            class="w-full sm:w-fit"
+            data-testid="select-trigger"
+          >
+            <span
+              data-testid="select-value"
+            >
+              Select a reach
+            </span>
+          </div>
+          <div
+            data-testid="select-content"
+          >
+            <div
+              data-testid="select-item-3"
+              data-value="3"
+            >
+              <svg
+                data-testid="icon"
+              />
+               
+              All
+            </div>
+            <div
+              data-testid="select-item-0"
+              data-value="0"
+            >
+              <svg
+                data-testid="icon"
+              />
+               
+              Following
+            </div>
+            <div
+              data-testid="select-item-2"
+              data-value="2"
+            >
+              <svg
+                data-testid="icon"
+              />
+               
+              Friends
+            </div>
+          </div>
+          <input
+            data-testid="reach-select-hidden-input"
+            type="hidden"
+            value=""
+          />
+        </div>
+      </div>
+      <div
+        class="flex flex-col gap-y-2"
+        data-override-defaults="true"
+        data-testid="sort-filter-section"
+      >
+        <label
+          class="text-xs tracking-wide text-muted-foreground uppercase"
+          data-testid="label"
+        >
+          Sort
+        </label>
+        <div
+          data-disabled="true"
+          data-testid="sort-select"
+        >
+          <div
+            class="w-full sm:w-fit"
+            data-testid="select-trigger"
+          >
+            <span
+              data-testid="select-value"
+            >
+              Select a sort
+            </span>
+          </div>
+          <div
+            data-testid="select-content"
+          >
+            <div
+              data-testid="select-item-0"
+              data-value="0"
+            >
+              <svg
+                data-testid="icon"
+              />
+               
+              Recent
+            </div>
+            <div
+              data-testid="select-item-1"
+              data-value="1"
+            >
+              <svg
+                data-testid="icon"
+              />
+               
+              Popularity
+            </div>
+          </div>
+          <input
+            data-testid="sort-select-hidden-input"
+            type="hidden"
+            value=""
+          />
+        </div>
+      </div>
+      <div
+        class="flex flex-col gap-y-2"
+        data-override-defaults="true"
+        data-testid="layout-filter-section"
+      >
+        <label
+          class="text-xs tracking-wide text-muted-foreground uppercase"
+          data-testid="label"
+        >
+          Layout
+        </label>
+        <div
+          data-disabled="true"
+          data-testid="layout-select"
+        >
+          <div
+            class="w-full sm:w-fit"
+            data-testid="select-trigger"
+          >
+            <span
+              data-testid="select-value"
+            >
+              Select a layout
+            </span>
+          </div>
+          <div
+            data-testid="select-content"
+          >
+            <div
+              data-testid="select-item-0"
+              data-value="0"
+            >
+              <svg
+                data-testid="icon"
+              />
+               
+              Columns
+            </div>
+            <div
+              data-testid="select-item-1"
+              data-value="1"
+            >
+              <svg
+                data-testid="icon"
+              />
+               
+              Wide
+            </div>
+          </div>
+          <input
+            data-testid="layout-select-hidden-input"
+            type="hidden"
+            value=""
+          />
+        </div>
+      </div>
+      <div
+        class="flex flex-col gap-y-2"
+        data-override-defaults="true"
+        data-testid="content-filter-section"
+      >
+        <label
+          class="text-xs tracking-wide text-muted-foreground uppercase"
+          data-testid="label"
+        >
+          Content
+        </label>
+        <div
+          data-disabled="true"
+          data-testid="content-select"
+        >
+          <div
+            class="w-full sm:w-fit"
+            data-testid="select-trigger"
+          >
+            <span
+              data-testid="select-value"
+            >
+              Select content
+            </span>
+          </div>
+          <div
+            data-testid="select-content"
+          >
+            <div
+              data-testid="select-item-ALL"
+              data-value="ALL"
+            >
+              <svg
+                data-testid="icon"
+              />
+               
+              All
+            </div>
+            <div
+              data-testid="select-item-0"
+              data-value="0"
+            >
+              <svg
+                data-testid="icon"
+              />
+               
+              Posts
+            </div>
+            <div
+              data-testid="select-item-1"
+              data-value="1"
+            >
+              <svg
+                data-testid="icon"
+              />
+               
+              Articles
+            </div>
+            <div
+              data-testid="select-item-2"
+              data-value="2"
+            >
+              <svg
+                data-testid="icon"
+              />
+               
+              Images
+            </div>
+            <div
+              data-testid="select-item-3"
+              data-value="3"
+            >
+              <svg
+                data-testid="icon"
+              />
+               
+              Videos
+            </div>
+            <div
+              data-testid="select-item-4"
+              data-value="4"
+            >
+              <svg
+                data-testid="icon"
+              />
+               
+              Links
+            </div>
+            <div
+              data-testid="select-item-5"
+              data-value="5"
+            >
+              <svg
+                data-testid="icon"
+              />
+               
+              Files
+            </div>
+          </div>
+          <input
+            data-testid="content-select-hidden-input"
+            type="hidden"
+            value=""
+          />
+        </div>
+      </div>
+    </div>
+    <div
+      class="gap-y-2"
+      data-testid="container"
+    >
+      <label
+        class="text-xs tracking-wide text-muted-foreground uppercase"
+        data-testid="label"
+      >
+        Filter on Content Tags
+      </label>
+      <div
+        class="w-48"
+        data-current-tags-count="0"
+        data-disabled="true"
+        data-max-tags="5"
+        data-testid="feed-tag-input"
+      >
+        <input
+          data-testid="tag-input-field"
+        />
+      </div>
+    </div>
+    <div
+      data-testid="dialog-footer"
+    >
+      <button
+        class="h-15 w-full"
+        data-size="lg"
+        data-testid="save-feed-button"
+        data-variant="secondary"
+        disabled=""
+      >
+        <svg
+          class="size-4"
+          data-testid="icon"
+        />
+        Save Feed
+      </button>
+      <button
+        class="h-15 w-full"
+        data-size="lg"
+        data-testid="delete-feed-button"
+        data-variant="destructive"
+        disabled=""
+      >
+        <svg
+          class="size-4"
+          data-testid="icon"
+        />
+        Delete Feed
+      </button>
+    </div>
+  </div>
+</div>
+`;

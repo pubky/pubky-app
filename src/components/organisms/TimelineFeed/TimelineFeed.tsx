@@ -110,8 +110,11 @@ function TimelineFeedContent({
   // Track scroll position to show/hide new posts button
   const isScrolled = Hooks.useIsScrolledFromTop();
 
-  // Pull-to-refresh - enabled for home and hot variants on touch devices
-  const enablePullToRefresh = variant === TIMELINE_FEED_VARIANT.HOME || variant === TIMELINE_FEED_VARIANT.HOT;
+  // Pull-to-refresh - enabled for home, custom and hot variants on touch devices
+  const enablePullToRefresh =
+    variant === TIMELINE_FEED_VARIANT.HOME ||
+    variant === TIMELINE_FEED_VARIANT.CUSTOM ||
+    variant === TIMELINE_FEED_VARIANT.HOT;
   const { state: pullState, pullDistance } = Hooks.usePullToRefresh({
     onRefresh: refresh,
     disabled: !enablePullToRefresh,

@@ -621,6 +621,29 @@
       "urlField": "الرابط",
       "urlPlaceholder": "https://twitter.com/satoshi",
       "saveButton": "حفظ الرابط"
+    },
+    "customFeed": {
+      "createTitle": "إنشاء خلاصة",
+      "editTitle": "تعديل الخلاصة",
+      "feedName": "اسم الخلاصة",
+      "feedNamePlaceholder": "ليست مفاتيحك...",
+      "reach": "النطاق",
+      "reachPlaceholder": "اختر نطاقاً",
+      "sort": "الترتيب",
+      "sortPlaceholder": "اختر ترتيباً",
+      "layout": "التخطيط",
+      "layoutPlaceholder": "اختر تخطيطاً",
+      "content": "المحتوى",
+      "contentPlaceholder": "اختر محتوى",
+      "filterTags": "تصفية حسب وسوم المحتوى",
+      "saveFeed": "حفظ الخلاصة",
+      "deleteFeed": "حذف الخلاصة",
+      "feedCreated": "تم إنشاء الخلاصة {name}!",
+      "feedCreateError": "تعذر إنشاء الخلاصة، يرجى المحاولة مرة أخرى أو التواصل مع الدعم.",
+      "feedEdited": "تم تعديل الخلاصة {name}!",
+      "feedEditError": "تعذر تعديل الخلاصة، يرجى المحاولة مرة أخرى أو التواصل مع الدعم.",
+      "feedDeleted": "تم حذف الخلاصة {name}!",
+      "feedDeleteError": "تعذر حذف الخلاصة، يرجى المحاولة مرة أخرى أو التواصل مع الدعم."
     }
   },
   "sidebar": {
