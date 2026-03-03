@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { URL_TRUNCATE_LENGTH } from '@/config';
+import { URL_TRUNCATE_LENGTH, TITLE_TRUNCATE_LENGTH } from '@/config';
 
 // Create stable mock references via vi.hoisted so they're shared
 // between the vi.mock factories and the test assertions
@@ -384,7 +384,7 @@ describe('OgMetadataApplication', () => {
       const result = await OgMetadataApplication.fetch(new URL('http://example.com'));
 
       expect(result.title).toContain('...');
-      expect(result.title!.length).toBe(URL_TRUNCATE_LENGTH + '...'.length);
+      expect(result.title!.length).toBe(TITLE_TRUNCATE_LENGTH + '...'.length);
       expect(result.title!.endsWith('...')).toBe(true);
     });
 

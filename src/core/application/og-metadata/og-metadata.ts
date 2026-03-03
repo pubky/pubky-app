@@ -5,7 +5,7 @@ import * as Libs from '@/libs';
 import { truncateString, truncateMiddle, decodeHtmlEntities } from '@/libs/utils';
 import { isIpSafe } from '@/libs/network';
 import { OG_PATTERNS, extractFromHtml } from '@/libs/html';
-import { URL_TRUNCATE_LENGTH } from '@/config';
+import { URL_TRUNCATE_LENGTH, TITLE_TRUNCATE_LENGTH } from '@/config';
 
 const MAX_RESPONSE_SIZE = 5 * 1024 * 1024; // 5MB
 const MEDIA_TYPES = ['image', 'video', 'audio'] as const;
@@ -220,7 +220,7 @@ export class OgMetadataApplication {
 
     return {
       url: truncateMiddle(url, URL_TRUNCATE_LENGTH),
-      title: title ? truncateString(title.trim(), 50) : null,
+      title: title ? truncateString(title.trim(), TITLE_TRUNCATE_LENGTH) : null,
       image: normalizedImage,
       type: 'website',
     };
