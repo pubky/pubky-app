@@ -7,6 +7,7 @@ import { isIpSafe } from '@/libs/network';
 import { OG_PATTERNS, extractFromHtml } from '@/libs/html';
 import { URL_TRUNCATE_LENGTH, TITLE_TRUNCATE_LENGTH } from '@/config';
 
+const MAX_REDIRECTS = 5;
 const MAX_RESPONSE_SIZE = 5 * 1024 * 1024; // 5MB
 const MEDIA_TYPES = ['image', 'video', 'audio'] as const;
 
@@ -37,8 +38,8 @@ export class OgMetadataApplication {
       // 1. Resolve DNS and validate IP (prevents SSRF via DNS rebinding)
       await this.validateDns(validatedUrl.hostname);
 
-      // 2. Fetch via service layer
-      const response = await Core.NextJsApiService.fetch(url);
+      // 2. Fetch via service layer (follows redirects with DNS validation on each hop)
+      const response = await this.fetchWithRedirects(url);
 
       // 3. Handle non-OK responses
       if (!response.ok) {
@@ -119,6 +120,47 @@ export class OgMetadataApplication {
         context: { hostname, statusCode: 403 },
       });
     }
+  }
+
+  /**
+   * Follows redirects manually, validating DNS on each hop to prevent SSRF via open redirects.
+   */
+  private static async fetchWithRedirects(url: string): Promise<Response> {
+    let currentUrl = url;
+
+    for (let i = 0; i < MAX_REDIRECTS; i++) {
+      const response = await Core.NextJsApiService.fetch(currentUrl);
+
+      if (response.status < 300 || response.status >= 400) {
+        return response;
+      }
+
+      const location = response.headers.get('location');
+      // 3xx without Location is invalid/malformed; we cannot resolve the next URL, so treat this as the final response.
+      if (!location) {
+        return response;
+      }
+
+      const redirectUrl = new URL(location, currentUrl);
+      // Must be HTTP or HTTPS to prevent SSRF via redirect to non-HTTP protocols.
+      if (!['http:', 'https:'].includes(redirectUrl.protocol)) {
+        throw Libs.Err.auth(Libs.AuthErrorCode.FORBIDDEN, 'Blocked redirect to non-HTTP protocol', {
+          service: Libs.ErrorService.NextJsApi,
+          operation: 'fetchWithRedirects',
+          context: { protocol: redirectUrl.protocol, statusCode: 403 },
+        });
+      }
+
+      await this.validateDns(redirectUrl.hostname);
+
+      currentUrl = redirectUrl.toString();
+    }
+
+    throw Libs.Err.network(Libs.NetworkErrorCode.CONNECTION_FAILED, 'Too many redirects', {
+      service: Libs.ErrorService.NextJsApi,
+      operation: 'fetchWithRedirects',
+      context: { url, statusCode: 400 },
+    });
   }
 
   /**

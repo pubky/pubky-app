@@ -35,7 +35,8 @@ export class NextJsApiService {
       const response = await fetch(url, {
         signal: controller.signal,
         headers: FETCH_HEADERS,
-        redirect: 'follow',
+        // Manual redirects so the application layer can validate DNS on each hop (SSRF protection).
+        redirect: 'manual',
       });
 
       return response;
