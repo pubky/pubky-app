@@ -1,13 +1,22 @@
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, vi } from 'vitest';
 import { OgMetadataValidators } from './og-metadata.validators';
 import { AppError, ErrorCategory, ValidationErrorCode, ErrorService } from '@/libs';
+
+vi.mock('net', () => ({
+  isIP: vi.fn((hostname: string) => {
+    // Match Node.js isIP: returns 4 for IPv4, 6 for IPv6, 0 for non-IP
+    if (/^\d{1,3}(\.\d{1,3}){3}$/.test(hostname)) return 4;
+    if (hostname.includes(':')) return 6;
+    return 0;
+  }),
+}));
 
 describe('OgMetadataValidators', () => {
   describe('validate', () => {
     describe('missing/empty URL', () => {
-      it('should throw AppError with MISSING_FIELD for empty string', () => {
+      it('should throw AppError with MISSING_FIELD for empty string', async () => {
         try {
-          OgMetadataValidators.validate('');
+          await OgMetadataValidators.validate('');
           expect.fail('Should have thrown');
         } catch (error) {
           expect(error).toBeInstanceOf(AppError);
@@ -21,10 +30,10 @@ describe('OgMetadataValidators', () => {
         }
       });
 
-      it('should throw AppError with MISSING_FIELD for null', () => {
-        expect(() => OgMetadataValidators.validate(null)).toThrow(AppError);
+      it('should throw AppError with MISSING_FIELD for null', async () => {
+        await expect(OgMetadataValidators.validate(null)).rejects.toThrow(AppError);
         try {
-          OgMetadataValidators.validate(null);
+          await OgMetadataValidators.validate(null);
         } catch (error) {
           const appError = error as AppError;
           // No need to test all but relevant field
@@ -34,9 +43,9 @@ describe('OgMetadataValidators', () => {
     });
 
     describe('malformed URL', () => {
-      it('should throw AppError with FORMAT_ERROR for unparseable URL', () => {
+      it('should throw AppError with FORMAT_ERROR for unparseable URL', async () => {
         try {
-          OgMetadataValidators.validate('not-a-valid-url');
+          await OgMetadataValidators.validate('not-a-valid-url');
           expect.fail('Should have thrown');
         } catch (error) {
           expect(error).toBeInstanceOf(AppError);
@@ -52,9 +61,9 @@ describe('OgMetadataValidators', () => {
     });
 
     describe('invalid protocol', () => {
-      it('should throw AppError with INVALID_INPUT for file:// protocol', () => {
+      it('should throw AppError with INVALID_INPUT for file:// protocol', async () => {
         try {
-          OgMetadataValidators.validate('file:///etc/passwd');
+          await OgMetadataValidators.validate('file:///etc/passwd');
           expect.fail('Should have thrown');
         } catch (error) {
           expect(error).toBeInstanceOf(AppError);
@@ -67,10 +76,10 @@ describe('OgMetadataValidators', () => {
         }
       });
 
-      it('should throw AppError with INVALID_INPUT for ftp:// protocol', () => {
-        expect(() => OgMetadataValidators.validate('ftp://example.com')).toThrow(AppError);
+      it('should throw AppError with INVALID_INPUT for ftp:// protocol', async () => {
+        await expect(OgMetadataValidators.validate('ftp://example.com')).rejects.toThrow(AppError);
         try {
-          OgMetadataValidators.validate('ftp://example.com');
+          await OgMetadataValidators.validate('ftp://example.com');
         } catch (error) {
           const appError = error as AppError;
           expect(appError.code).toBe(ValidationErrorCode.INVALID_INPUT);
@@ -78,15 +87,15 @@ describe('OgMetadataValidators', () => {
         }
       });
 
-      it('should throw AppError with INVALID_INPUT for javascript: protocol', () => {
-        expect(() => OgMetadataValidators.validate('javascript:alert(1)')).toThrow(AppError);
+      it('should throw AppError with INVALID_INPUT for javascript: protocol', async () => {
+        await expect(OgMetadataValidators.validate('javascript:alert(1)')).rejects.toThrow(AppError);
       });
     });
 
     describe('invalid hostname', () => {
-      it('should throw FORMAT_ERROR for trailing dot hostname', () => {
+      it('should throw FORMAT_ERROR for trailing dot hostname', async () => {
         try {
-          OgMetadataValidators.validate('https://example.com.');
+          await OgMetadataValidators.validate('https://example.com.');
           expect.fail('Should have thrown');
         } catch (error) {
           expect(error).toBeInstanceOf(AppError);
@@ -98,9 +107,9 @@ describe('OgMetadataValidators', () => {
         }
       });
 
-      it('should throw FORMAT_ERROR for single-part hostname', () => {
+      it('should throw FORMAT_ERROR for single-part hostname', async () => {
         try {
-          OgMetadataValidators.validate('https://invalid');
+          await OgMetadataValidators.validate('https://invalid');
           expect.fail('Should have thrown');
         } catch (error) {
           const appError = error as AppError;
@@ -109,9 +118,9 @@ describe('OgMetadataValidators', () => {
         }
       });
 
-      it('should throw FORMAT_ERROR for TLD less than 2 characters', () => {
+      it('should throw FORMAT_ERROR for TLD less than 2 characters', async () => {
         try {
-          OgMetadataValidators.validate('https://example.c');
+          await OgMetadataValidators.validate('https://example.c');
           expect.fail('Should have thrown');
         } catch (error) {
           const appError = error as AppError;
@@ -120,9 +129,9 @@ describe('OgMetadataValidators', () => {
         }
       });
 
-      it('should throw FORMAT_ERROR for www. with no TLD', () => {
+      it('should throw FORMAT_ERROR for www. with no TLD', async () => {
         try {
-          OgMetadataValidators.validate('https://www.');
+          await OgMetadataValidators.validate('https://www.');
           expect.fail('Should have thrown');
         } catch (error) {
           const appError = error as AppError;
@@ -132,9 +141,9 @@ describe('OgMetadataValidators', () => {
     });
 
     describe('.onion addresses', () => {
-      it('should throw INVALID_INPUT for .onion address', () => {
+      it('should throw INVALID_INPUT for .onion address', async () => {
         try {
-          OgMetadataValidators.validate('https://duckduckgogg42xjoc72x3sjasowoarfbgcmvfimaftt6twagswzczad.onion');
+          await OgMetadataValidators.validate('https://duckduckgogg42xjoc72x3sjasowoarfbgcmvfimaftt6twagswzczad.onion');
           expect.fail('Should have thrown');
         } catch (error) {
           expect(error).toBeInstanceOf(AppError);
@@ -149,26 +158,26 @@ describe('OgMetadataValidators', () => {
     });
 
     describe('valid URLs', () => {
-      it('should return URL object for valid domain', () => {
-        const result = OgMetadataValidators.validate('https://www.example.com');
+      it('should return URL object for valid domain', async () => {
+        const result = await OgMetadataValidators.validate('https://www.example.com');
         expect(result).toBeInstanceOf(URL);
         expect(result.hostname).toBe('www.example.com');
       });
 
-      it('should return URL object for IP address (skips TLD checks)', () => {
-        const result = OgMetadataValidators.validate('http://1.1.1.1');
+      it('should return URL object for IP address (skips TLD checks)', async () => {
+        const result = await OgMetadataValidators.validate('http://1.1.1.1');
         expect(result).toBeInstanceOf(URL);
         expect(result.hostname).toBe('1.1.1.1');
       });
 
-      it('should return URL object for localhost (skips TLD checks)', () => {
-        const result = OgMetadataValidators.validate('http://localhost');
+      it('should return URL object for localhost (skips TLD checks)', async () => {
+        const result = await OgMetadataValidators.validate('http://localhost');
         expect(result).toBeInstanceOf(URL);
         expect(result.hostname).toBe('localhost');
       });
 
-      it('should return URL object for subdomain with valid TLD', () => {
-        const result = OgMetadataValidators.validate('https://subdomain.example.co.uk');
+      it('should return URL object for subdomain with valid TLD', async () => {
+        const result = await OgMetadataValidators.validate('https://subdomain.example.co.uk');
         expect(result).toBeInstanceOf(URL);
         expect(result.hostname).toBe('subdomain.example.co.uk');
       });

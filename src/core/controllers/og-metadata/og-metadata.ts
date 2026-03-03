@@ -20,7 +20,7 @@ export class OgMetadataController {
    */
   static async fetch(params: Types.TOgMetadataParams): Promise<Types.TOgMetadataResult> {
     // Validate and parse URL using pipes layer
-    const validatedUrl = Core.OgMetadataValidators.validate(params.url);
+    const validatedUrl = await Core.OgMetadataValidators.validate(params.url);
 
     // Delegate to application layer
     return Core.OgMetadataApplication.fetch(validatedUrl);

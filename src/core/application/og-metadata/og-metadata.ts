@@ -1,5 +1,3 @@
-import dns from 'dns/promises';
-import { isIP } from 'net';
 import * as Core from '@/core';
 import * as Libs from '@/libs';
 import { truncateString, truncateMiddle, decodeHtmlEntities } from '@/libs/utils';
@@ -84,6 +82,11 @@ export class OgMetadataApplication {
    * Prevents SSRF attacks by checking IP before the actual fetch.
    */
   private static async validateDns(hostname: string): Promise<void> {
+    // webpack bundles Node.js ONLY modules into client code via barrel imports
+    // (e.g., FilterContent.tsx's `import * as Core from '@/core'`). See #1435.
+    const { isIP } = await import(/* webpackIgnore: true */ 'net');
+    const dns = await import(/* webpackIgnore: true */ 'dns/promises');
+
     let resolvedIp: string;
 
     try {
@@ -281,6 +284,10 @@ export class OgMetadataApplication {
       }
 
       // Resolve and validate image hostname DNS
+      // webpack bundles Node.js ONLY modules into client code via barrel imports
+      // (e.g., FilterContent.tsx's `import * as Core from '@/core'`). See #1435.
+      const { isIP } = await import(/* webpackIgnore: true */ 'net');
+      const dns = await import(/* webpackIgnore: true */ 'dns/promises');
       const imageHostname = imageUrl.hostname.toLowerCase();
       let imageIp: string;
 

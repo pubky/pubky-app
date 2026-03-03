@@ -1,4 +1,3 @@
-import { isIP } from 'net';
 import { Err, ValidationErrorCode, ErrorService } from '@/libs';
 
 /**
@@ -24,7 +23,7 @@ export class OgMetadataValidators {
    * @returns Validated and parsed URL object
    * @throws AppError if any validation step fails
    */
-  static validate(url: string | null): URL {
+  static async validate(url: string | null): Promise<URL> {
     if (!url || typeof url !== 'string') {
       throw Err.validation(ValidationErrorCode.MISSING_FIELD, 'Invalid URL', {
         service: ErrorService.NextJsApi,
@@ -45,7 +44,7 @@ export class OgMetadataValidators {
     }
 
     this.validateProtocol(parsed);
-    this.validateHostname(parsed);
+    await this.validateHostname(parsed);
     this.validateNotOnion(parsed);
 
     return parsed;
@@ -68,7 +67,7 @@ export class OgMetadataValidators {
    * Validates hostname structure: non-empty, valid TLD, non-empty domain.
    * IP addresses and localhost are allowed without TLD checks.
    */
-  private static validateHostname(parsed: URL): void {
+  private static async validateHostname(parsed: URL): Promise<void> {
     const hostname = parsed.hostname.toLowerCase();
 
     // Empty hostname (e.g., "http:///path")
@@ -81,6 +80,9 @@ export class OgMetadataValidators {
     }
 
     // IP addresses and localhost skip domain structure checks
+    // webpack bundles Node.js ONLY modules into client code via barrel imports
+    // (e.g., FilterContent.tsx's `import * as Core from '@/core'`). See #1435.
+    const { isIP } = await import(/* webpackIgnore: true */ 'net');
     if (isIP(hostname) || hostname === 'localhost') {
       return;
     }

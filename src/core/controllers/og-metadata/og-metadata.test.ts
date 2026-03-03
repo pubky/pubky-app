@@ -27,7 +27,7 @@ describe('OgMetadataController', () => {
     vi.clearAllMocks();
 
     // Mock validators and application layer
-    vi.spyOn(Core.OgMetadataValidators, 'validate').mockReturnValue(testData.parsedUrl);
+    vi.spyOn(Core.OgMetadataValidators, 'validate').mockResolvedValue(testData.parsedUrl);
     vi.spyOn(Core.OgMetadataApplication, 'fetch').mockResolvedValue(createMockResult());
 
     const controllerModule = await import('./og-metadata');
