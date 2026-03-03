@@ -453,6 +453,29 @@ describe('OgMetadataApplication', () => {
       await expect(OgMetadataApplication.fetch(new URL('https://example.com'))).rejects.toThrow('Too many redirects');
     });
 
+    it('should succeed when the last allowed fetch returns a valid response', async () => {
+      const fetchSpy = vi.spyOn(Core.NextJsApiService, 'fetch');
+
+      // 4 redirects followed by a valid HTML response on the 5th (final) fetch
+      for (let i = 0; i < 4; i++) {
+        fetchSpy.mockResolvedValueOnce(
+          createRedirectResponse(302, `https://example.org/redirect${i}`) as unknown as Response,
+        );
+      }
+      // And the 5th fetch returns a valid HTML response
+      fetchSpy.mockResolvedValueOnce(createHtmlResponse(simpleHtml('Final Page')) as unknown as Response);
+
+      const result = await OgMetadataApplication.fetch(new URL('https://example.com'));
+
+      expect(fetchSpy).toHaveBeenCalledTimes(5);
+      expect(fetchSpy).toHaveBeenNthCalledWith(1, 'https://example.com/');
+      expect(fetchSpy).toHaveBeenNthCalledWith(2, 'https://example.org/redirect0');
+      expect(fetchSpy).toHaveBeenNthCalledWith(3, 'https://example.org/redirect1');
+      expect(fetchSpy).toHaveBeenNthCalledWith(4, 'https://example.org/redirect2');
+      expect(fetchSpy).toHaveBeenNthCalledWith(5, 'https://example.org/redirect3');
+      expect(result.title).toBe('Final Page');
+    });
+
     it('should block non-HTTP redirect protocols', async () => {
       vi.spyOn(Core.NextJsApiService, 'fetch').mockResolvedValueOnce(
         createRedirectResponse(302, 'ftp://example.net/data') as unknown as Response,
