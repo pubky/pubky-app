@@ -1,7 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import * as Core from '@/core';
 import * as Libs from '@/libs';
-import type { TOgMetadataParams } from './og-metadata.types';
+import type { TOgMetadataParams } from '@/core';
 
 const testData = {
   validUrl: 'https://example.com',
