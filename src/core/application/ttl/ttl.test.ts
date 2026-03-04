@@ -72,10 +72,10 @@ describe('TtlApplication', () => {
       const queryNexusSpy = vi.spyOn(Core, 'queryNexus').mockResolvedValue(nexusPosts);
       const persistPostsSpy = vi
         .spyOn(Core.LocalStreamPostsService, 'persistPosts')
-        .mockResolvedValue({ postAttachments: [] } as unknown as Awaited<
+        .mockResolvedValue({ attachmentMetadata: [] } as unknown as Awaited<
           ReturnType<typeof Core.LocalStreamPostsService.persistPosts>
         >);
-      const fetchFilesSpy = vi.spyOn(Core.FileApplication, 'fetchFiles').mockResolvedValue(undefined);
+      const persistFilesSpy = vi.spyOn(Core.FileApplication, 'persistFiles').mockResolvedValue(undefined);
       vi.spyOn(Core.LocalStreamUsersService, 'getNotPersistedUsersInCache').mockResolvedValue([]);
 
       await Core.TtlApplication.forceRefreshPostsByIds({ postIds, viewerId });
@@ -87,7 +87,7 @@ describe('TtlApplication', () => {
       });
       // persistPosts handles TTL updates internally
       expect(persistPostsSpy).toHaveBeenCalledWith({ posts: nexusPosts });
-      expect(fetchFilesSpy).toHaveBeenCalledWith([]);
+      expect(persistFilesSpy).toHaveBeenCalledWith([]);
     });
 
     it('does not persist when fetch fails', async () => {
@@ -100,7 +100,7 @@ describe('TtlApplication', () => {
       vi.spyOn(Core, 'queryNexus').mockRejectedValue(new Error('Network down'));
       const persistPostsSpy = vi
         .spyOn(Core.LocalStreamPostsService, 'persistPosts')
-        .mockResolvedValue({ postAttachments: [] });
+        .mockResolvedValue({ attachmentMetadata: [] });
 
       await expect(Core.TtlApplication.forceRefreshPostsByIds({ postIds: ['alice:1'], viewerId })).rejects.toThrow(
         'Network down',
@@ -138,9 +138,9 @@ describe('TtlApplication', () => {
 
       vi.spyOn(Core, 'queryNexus').mockResolvedValue([repostNexusPost]);
       vi.spyOn(Core.LocalStreamPostsService, 'persistPosts').mockResolvedValue({
-        postAttachments: [],
+        attachmentMetadata: [],
       } as unknown as Awaited<ReturnType<typeof Core.LocalStreamPostsService.persistPosts>>);
-      vi.spyOn(Core.FileApplication, 'fetchFiles').mockResolvedValue(undefined);
+      vi.spyOn(Core.FileApplication, 'persistFiles').mockResolvedValue(undefined);
       vi.spyOn(Core.LocalStreamUsersService, 'getNotPersistedUsersInCache').mockResolvedValue([]);
 
       // Mock the shared helper to verify it's called with correct URIs
@@ -183,9 +183,9 @@ describe('TtlApplication', () => {
 
       vi.spyOn(Core, 'queryNexus').mockResolvedValue([regularPost]);
       vi.spyOn(Core.LocalStreamPostsService, 'persistPosts').mockResolvedValue({
-        postAttachments: [],
+        attachmentMetadata: [],
       } as unknown as Awaited<ReturnType<typeof Core.LocalStreamPostsService.persistPosts>>);
-      vi.spyOn(Core.FileApplication, 'fetchFiles').mockResolvedValue(undefined);
+      vi.spyOn(Core.FileApplication, 'persistFiles').mockResolvedValue(undefined);
       vi.spyOn(Core.LocalStreamUsersService, 'getNotPersistedUsersInCache').mockResolvedValue([]);
 
       const fetchOriginalsSpy = vi
@@ -233,7 +233,7 @@ describe('TtlApplication', () => {
             bookmarks: 0,
           },
           tags: [],
-          relationship: { following: false, followed_by: false, muted: false },
+          relationship: { following: false, followed_by: false },
         },
         {
           details: {
@@ -257,7 +257,7 @@ describe('TtlApplication', () => {
             bookmarks: 0,
           },
           tags: [],
-          relationship: { following: false, followed_by: false, muted: false },
+          relationship: { following: false, followed_by: false },
         },
       ];
 

@@ -34,6 +34,40 @@ exports[`TimelineFeed - Snapshots > should match snapshot for bookmarks variant 
 </div>
 `;
 
+exports[`TimelineFeed - Snapshots > should match snapshot for custom variant 1`] = `
+<div>
+  <div
+    data-testid="timeline-posts"
+  >
+    <span
+      data-testid="post-count"
+    >
+      3
+    </span>
+    <span
+      data-testid="loading"
+    >
+      false
+    </span>
+    <span
+      data-testid="loading-more"
+    >
+      false
+    </span>
+    <span
+      data-testid="error"
+    >
+      none
+    </span>
+    <span
+      data-testid="has-more"
+    >
+      true
+    </span>
+  </div>
+</div>
+`;
+
 exports[`TimelineFeed - Snapshots > should match snapshot for empty state 1`] = `
 <div>
   <div

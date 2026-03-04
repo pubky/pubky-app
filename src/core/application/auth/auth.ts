@@ -1,5 +1,16 @@
 import * as Core from '@/core';
-import { HttpMethod, Logger, Err, ValidationErrorCode, ErrorService } from '@/libs';
+import {
+  HttpMethod,
+  Logger,
+  Err,
+  ValidationErrorCode,
+  ErrorService,
+  toAppError,
+  isAppError,
+  isNotFound,
+  isRetryable,
+  sleep,
+} from '@/libs';
 import { userUriBuilder } from 'pubky-app-specs';
 
 export class AuthApplication {
@@ -7,9 +18,20 @@ export class AuthApplication {
 
   private static restoreSessionPromise: Core.TRestoreSessionResult | null = null;
 
+  /** Max attempts before falling back to sign-out (~30 s with a 3 s delay between each) */
+  private static readonly RESTORE_MAX_ATTEMPTS = 10;
+  /** Fixed delay between retry attempts */
+  private static readonly RESTORE_RETRY_DELAY_MS = 3000;
+
   /**
    * Restores a session from a persisted session export.
    * Prevents concurrent restoration attempts by managing a singleton promise.
+   *
+   * Retries on transient errors (network, timeout, server) to handle scenarios
+   * like ERR_NETWORK_CHANGED when the browser tab is resumed or the device
+   * reconnects. Non-retryable errors (e.g. genuinely expired session) bail out
+   * immediately. After all attempts are exhausted the session is cleared so the
+   * user is signed out rather than left on a loading spinner.
    *
    * @param authStore - The auth store object containing state and actions needed for restoration
    * @returns The restored session, or null if restoration failed
@@ -29,14 +51,29 @@ export class AuthApplication {
     // Start restoration and store the promise so concurrent calls can await the same one
     this.restoreSessionPromise = (async () => {
       authStore.setIsRestoringSession(true);
+
       try {
-        const session = await Core.HomeserverService.restoreSession({ sessionExport: authStore.sessionExport! });
-        Logger.info('Session restored successfully');
-        return { session };
-      } catch (error) {
-        Logger.error('Failed to restore session from persisted export', error);
-        const initialState = { session: null, currentUserPubky: null, hasProfile: false };
-        authStore.init(initialState);
+        for (let attempt = 1; attempt <= this.RESTORE_MAX_ATTEMPTS; attempt++) {
+          try {
+            const session = await Core.HomeserverService.restoreSession({
+              sessionExport: authStore.sessionExport!,
+            });
+            Logger.info('Session restored successfully');
+            return { session };
+          } catch (error) {
+            const canRetry = isAppError(error) && isRetryable(error) && attempt < this.RESTORE_MAX_ATTEMPTS;
+            if (!canRetry) {
+              Logger.error('Failed to restore session from persisted export', error);
+              break;
+            }
+
+            Logger.warn(
+              `Session restore attempt ${attempt}/${this.RESTORE_MAX_ATTEMPTS} failed with transient error, retrying in ${this.RESTORE_RETRY_DELAY_MS}ms`,
+              { error },
+            );
+            await sleep(this.RESTORE_RETRY_DELAY_MS);
+          }
+        }
         return null;
       } finally {
         authStore.setIsRestoringSession(false);
@@ -85,12 +122,21 @@ export class AuthApplication {
   /**
    * Generates an authentication URL for Pubky Ring App
    *
-   * @param params - Parameters containing the secret key
-   * @param params.secretKey - Secret key for homeserver service
-   * @returns Authentication URL and promise to the generated authentication URL
+   * @returns Authentication URL and approval promise
    */
   static async generateAuthUrl(): Promise<Core.TGenerateAuthUrlResult> {
     return await Core.HomeserverService.generateAuthUrl();
+  }
+
+  /**
+   * Generates a signup authentication URL for Pubky Ring App.
+   * Decorates a standard auth URL with homeserver address and invite code metadata.
+   *
+   * @param inviteCode - The invite code for signup
+   * @returns Authentication URL and approval promise
+   */
+  static async generateSignupAuthUrl(inviteCode: string): Promise<Core.TGenerateAuthUrlResult> {
+    return await Core.HomeserverService.generateSignupAuthUrl({ inviteCode });
   }
 
   /**
@@ -126,9 +172,10 @@ export class AuthApplication {
     try {
       await Core.HomeserverService.request({ method: HttpMethod.GET, url: userUriBuilder(pubky) });
       return true;
-    } catch {
-      Logger.error('User profile.json missing in homeserver. Please PUT that file first.', { pubky });
-      return false;
+    } catch (error) {
+      const appError = isAppError(error) ? error : toAppError(error, ErrorService.Homeserver, 'userIsSignedUp');
+      if (isNotFound(appError)) return false;
+      throw appError;
     }
   }
 }

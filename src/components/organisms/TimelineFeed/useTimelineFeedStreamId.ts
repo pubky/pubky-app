@@ -16,6 +16,7 @@ export function useTimelineFeedStreamId(variant: TimelineFeedVariant): Core.Post
   // Get stream IDs from respective hooks
   // All hooks are called unconditionally to respect React's rules
   const homeStreamId = Hooks.useStreamIdFromFilters();
+  const customStreamId = Hooks.useCustomStreamId();
   const bookmarksStreamId = Hooks.useBookmarksStreamId();
   const hotStreamId = Hooks.useHotStreamId();
   const searchStreamId = useSearchStreamId();
@@ -30,6 +31,8 @@ export function useTimelineFeedStreamId(variant: TimelineFeedVariant): Core.Post
   switch (variant) {
     case TIMELINE_FEED_VARIANT.HOME:
       return homeStreamId;
+    case TIMELINE_FEED_VARIANT.CUSTOM:
+      return customStreamId;
     case TIMELINE_FEED_VARIANT.BOOKMARKS:
       return bookmarksStreamId;
     case TIMELINE_FEED_VARIANT.PROFILE:

@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import dns from 'dns/promises';
 import { isIP } from 'net';
+import * as Libs from '@/libs';
 import { truncateString, truncateMiddle, decodeHtmlEntities } from '@/libs/utils';
 import { isIpSafe } from '@/libs/network';
 import { OG_PATTERNS, extractFromHtml } from '@/libs/html';
@@ -120,7 +121,7 @@ export async function GET(request: NextRequest) {
         resolvedIp = addresses[0];
       }
     } catch (error) {
-      console.error('DNS resolution failed:', error);
+      Libs.Logger.error('DNS resolution failed:', error);
       return NextResponse.json({ error: 'DNS resolution failed' }, { status: 400 });
     }
 
@@ -203,7 +204,7 @@ export async function GET(request: NextRequest) {
         chunks.push(value);
       }
     } catch (error) {
-      console.error('Failed to read response body:', error);
+      Libs.Logger.error('Failed to read response body:', error);
       return NextResponse.json({ error: 'Failed to read response body' }, { status: 500 });
     }
 
@@ -267,7 +268,8 @@ export async function GET(request: NextRequest) {
       CACHE_HEADERS,
     );
   } catch (error) {
-    console.error('OG metadata fetch error:', error);
-    return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
+    return Libs.handleApiError(error, 'api.og-metadata.GET', {
+      unknownErrorMessage: 'Internal server error',
+    });
   }
 }
