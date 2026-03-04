@@ -5,59 +5,63 @@ exports[`InitializedMDXEditor - Snapshots > matches snapshot in markdown mode 1`
   class="gap-4"
 >
   <div
-    aria-label="Markdown editing toolbar"
-    class="flex min-h-10.75 cursor-auto flex-wrap items-center gap-2 rounded-md border bg-background px-2.5 py-1.5"
+    class=""
     data-override-defaults="true"
-    data-testid="markdown-toolbar"
-    role="toolbar"
   >
-    <button
-      class="size-7 rounded"
-      data-size="icon"
-      data-testid="markdown-emoji-button"
-      data-variant="ghost"
-      title="Emoji"
+    <div
+      aria-label="Markdown editing toolbar"
+      class="flex min-h-10.75 cursor-auto flex-wrap items-center gap-2 rounded-md border bg-background px-2.5 py-1.5"
+      data-override-defaults="true"
+      data-testid="markdown-toolbar"
+      role="toolbar"
     >
-      <svg
-        class="size-6"
-        data-testid="smile-icon"
+      <button
+        class="size-7 cursor-default rounded"
+        data-size="icon"
+        data-testid="markdown-emoji-button"
+        data-variant="ghost"
+        title="Emoji"
       >
-        <title>
-          Smile
-        </title>
-      </svg>
-    </button>
-    <button
-      class="size-7 rounded"
-      data-size="icon"
-      data-testid="markdown-richtext-button"
-      data-variant="ghost"
-      title="Rich Text"
-    >
-      <svg
-        class="size-6"
-        data-testid="type-icon"
+        <svg
+          class="size-6"
+          data-testid="smile-icon"
+        >
+          <title>
+            Smile
+          </title>
+        </svg>
+      </button>
+      <button
+        class="size-7 cursor-default rounded disabled:pointer-events-auto"
+        data-size="icon"
+        data-testid="markdown-richtext-button"
+        data-variant="ghost"
+        title="Rich Text"
       >
-        <title>
-          Type
-        </title>
-      </svg>
-    </button>
+        <svg
+          class="size-6"
+          data-testid="type-icon"
+        >
+          <title>
+            Type
+          </title>
+        </svg>
+      </button>
+    </div>
+    <textarea
+      class="max-h-[60dvh] min-h-11 resize-none rounded-none border-none p-0 pt-4 shadow-none outline-none placeholder:text-muted-foreground/70 focus-visible:border-none focus-visible:ring-0"
+      data-testid="markdown-textarea"
+      maxlength="1000"
+      placeholder="Start writing your masterpiece"
+    />
   </div>
-  <textarea
-    class="max-h-[60dvh] min-h-7 resize-none rounded-none border-none p-0 shadow-none outline-none placeholder:text-muted-foreground/70 focus-visible:border-none focus-visible:ring-0"
-    data-testid="markdown-textarea"
-    maxlength="1000"
-    placeholder="Start writing your masterpiece"
-  >
-    # Hello
-  </textarea>
   <div
     class="dark-theme cursor-auto hidden"
     data-content-editable-class="prose prose-neutral prose-invert prose-code:before:content-none prose-code:after:content-none max-w-none px-0! pb-0! pt-4! max-h-[60dvh] overflow-y-auto"
     data-placeholder="Start writing your masterpiece"
     data-plugins-count="9"
     data-testid="mdx-editor"
+    markdown=""
   >
     <div
       data-testid="toolbar"
@@ -116,6 +120,7 @@ exports[`InitializedMDXEditor - Snapshots > matches snapshot in markdown mode 1`
         </svg>
       </button>
       <button
+        class=""
         data-testid="button-with-tooltip-markdown"
         title="Markdown"
       >
@@ -144,57 +149,63 @@ exports[`InitializedMDXEditor - Snapshots > matches snapshot with approaching ma
     class="gap-4"
   >
     <div
-      aria-label="Markdown editing toolbar"
-      class="flex min-h-10.75 cursor-auto flex-wrap items-center gap-2 rounded-md border bg-background px-2.5 py-1.5 hidden"
+      class="hidden"
       data-override-defaults="true"
-      data-testid="markdown-toolbar"
-      role="toolbar"
     >
-      <button
-        class="size-7 rounded"
-        data-size="icon"
-        data-testid="markdown-emoji-button"
-        data-variant="ghost"
-        title="Emoji"
+      <div
+        aria-label="Markdown editing toolbar"
+        class="flex min-h-10.75 cursor-auto flex-wrap items-center gap-2 rounded-md border bg-background px-2.5 py-1.5"
+        data-override-defaults="true"
+        data-testid="markdown-toolbar"
+        role="toolbar"
       >
-        <svg
-          class="size-6"
-          data-testid="smile-icon"
+        <button
+          class="size-7 cursor-default rounded"
+          data-size="icon"
+          data-testid="markdown-emoji-button"
+          data-variant="ghost"
+          title="Emoji"
         >
-          <title>
-            Smile
-          </title>
-        </svg>
-      </button>
-      <button
-        class="size-7 rounded"
-        data-size="icon"
-        data-testid="markdown-richtext-button"
-        data-variant="ghost"
-        title="Rich Text"
-      >
-        <svg
-          class="size-6"
-          data-testid="type-icon"
+          <svg
+            class="size-6"
+            data-testid="smile-icon"
+          >
+            <title>
+              Smile
+            </title>
+          </svg>
+        </button>
+        <button
+          class="size-7 cursor-default rounded disabled:pointer-events-auto"
+          data-size="icon"
+          data-testid="markdown-richtext-button"
+          data-variant="ghost"
+          title="Rich Text"
         >
-          <title>
-            Type
-          </title>
-        </svg>
-      </button>
+          <svg
+            class="size-6"
+            data-testid="type-icon"
+          >
+            <title>
+              Type
+            </title>
+          </svg>
+        </button>
+      </div>
+      <textarea
+        class="max-h-[60dvh] min-h-11 resize-none rounded-none border-none p-0 pt-4 shadow-none outline-none placeholder:text-muted-foreground/70 focus-visible:border-none focus-visible:ring-0"
+        data-testid="markdown-textarea"
+        maxlength="1000"
+        placeholder="Start writing your masterpiece"
+      />
     </div>
-    <textarea
-      class="max-h-[60dvh] min-h-7 resize-none rounded-none border-none p-0 shadow-none outline-none placeholder:text-muted-foreground/70 focus-visible:border-none focus-visible:ring-0 hidden"
-      data-testid="markdown-textarea"
-      maxlength="1000"
-      placeholder="Start writing your masterpiece"
-    />
     <div
       class="dark-theme cursor-auto"
       data-content-editable-class="prose prose-neutral prose-invert prose-code:before:content-none prose-code:after:content-none max-w-none px-0! pb-0! pt-4! max-h-[60dvh] overflow-y-auto"
       data-placeholder="Start writing your masterpiece"
       data-plugins-count="9"
       data-testid="mdx-editor"
+      markdown=""
     >
       <div
         data-testid="toolbar"
@@ -253,8 +264,10 @@ exports[`InitializedMDXEditor - Snapshots > matches snapshot with approaching ma
           </svg>
         </button>
         <button
-          data-testid="button-with-tooltip-markdown"
-          title="Markdown"
+          class="opacity-50!"
+          data-testid="button-with-tooltip-clear content to switch modes"
+          disabled=""
+          title="Clear content to switch modes"
         >
           <svg
             class="size-6"
@@ -300,57 +313,63 @@ exports[`InitializedMDXEditor - Snapshots > matches snapshot with custom classNa
   class="gap-4"
 >
   <div
-    aria-label="Markdown editing toolbar"
-    class="flex min-h-10.75 cursor-auto flex-wrap items-center gap-2 rounded-md border bg-background px-2.5 py-1.5 hidden"
+    class="hidden"
     data-override-defaults="true"
-    data-testid="markdown-toolbar"
-    role="toolbar"
   >
-    <button
-      class="size-7 rounded"
-      data-size="icon"
-      data-testid="markdown-emoji-button"
-      data-variant="ghost"
-      title="Emoji"
+    <div
+      aria-label="Markdown editing toolbar"
+      class="flex min-h-10.75 cursor-auto flex-wrap items-center gap-2 rounded-md border bg-background px-2.5 py-1.5"
+      data-override-defaults="true"
+      data-testid="markdown-toolbar"
+      role="toolbar"
     >
-      <svg
-        class="size-6"
-        data-testid="smile-icon"
+      <button
+        class="size-7 cursor-default rounded"
+        data-size="icon"
+        data-testid="markdown-emoji-button"
+        data-variant="ghost"
+        title="Emoji"
       >
-        <title>
-          Smile
-        </title>
-      </svg>
-    </button>
-    <button
-      class="size-7 rounded"
-      data-size="icon"
-      data-testid="markdown-richtext-button"
-      data-variant="ghost"
-      title="Rich Text"
-    >
-      <svg
-        class="size-6"
-        data-testid="type-icon"
+        <svg
+          class="size-6"
+          data-testid="smile-icon"
+        >
+          <title>
+            Smile
+          </title>
+        </svg>
+      </button>
+      <button
+        class="size-7 cursor-default rounded disabled:pointer-events-auto"
+        data-size="icon"
+        data-testid="markdown-richtext-button"
+        data-variant="ghost"
+        title="Rich Text"
       >
-        <title>
-          Type
-        </title>
-      </svg>
-    </button>
+        <svg
+          class="size-6"
+          data-testid="type-icon"
+        >
+          <title>
+            Type
+          </title>
+        </svg>
+      </button>
+    </div>
+    <textarea
+      class="max-h-[60dvh] min-h-11 resize-none rounded-none border-none p-0 pt-4 shadow-none outline-none placeholder:text-muted-foreground/70 focus-visible:border-none focus-visible:ring-0"
+      data-testid="markdown-textarea"
+      maxlength="1000"
+      placeholder="Start writing your masterpiece"
+    />
   </div>
-  <textarea
-    class="max-h-[60dvh] min-h-7 resize-none rounded-none border-none p-0 shadow-none outline-none placeholder:text-muted-foreground/70 focus-visible:border-none focus-visible:ring-0 hidden"
-    data-testid="markdown-textarea"
-    maxlength="1000"
-    placeholder="Start writing your masterpiece"
-  />
   <div
     class="custom-editor-class"
     data-content-editable-class="prose prose-neutral prose-invert prose-code:before:content-none prose-code:after:content-none max-w-none px-0! pb-0! pt-4! max-h-[60dvh] overflow-y-auto"
     data-placeholder="Start writing your masterpiece"
     data-plugins-count="9"
     data-testid="mdx-editor"
+    markdown=""
   >
     <div
       data-testid="toolbar"
@@ -409,6 +428,7 @@ exports[`InitializedMDXEditor - Snapshots > matches snapshot with custom classNa
         </svg>
       </button>
       <button
+        class=""
         data-testid="button-with-tooltip-markdown"
         title="Markdown"
       >
@@ -436,57 +456,63 @@ exports[`InitializedMDXEditor - Snapshots > matches snapshot with default props 
   class="gap-4"
 >
   <div
-    aria-label="Markdown editing toolbar"
-    class="flex min-h-10.75 cursor-auto flex-wrap items-center gap-2 rounded-md border bg-background px-2.5 py-1.5 hidden"
+    class="hidden"
     data-override-defaults="true"
-    data-testid="markdown-toolbar"
-    role="toolbar"
   >
-    <button
-      class="size-7 rounded"
-      data-size="icon"
-      data-testid="markdown-emoji-button"
-      data-variant="ghost"
-      title="Emoji"
+    <div
+      aria-label="Markdown editing toolbar"
+      class="flex min-h-10.75 cursor-auto flex-wrap items-center gap-2 rounded-md border bg-background px-2.5 py-1.5"
+      data-override-defaults="true"
+      data-testid="markdown-toolbar"
+      role="toolbar"
     >
-      <svg
-        class="size-6"
-        data-testid="smile-icon"
+      <button
+        class="size-7 cursor-default rounded"
+        data-size="icon"
+        data-testid="markdown-emoji-button"
+        data-variant="ghost"
+        title="Emoji"
       >
-        <title>
-          Smile
-        </title>
-      </svg>
-    </button>
-    <button
-      class="size-7 rounded"
-      data-size="icon"
-      data-testid="markdown-richtext-button"
-      data-variant="ghost"
-      title="Rich Text"
-    >
-      <svg
-        class="size-6"
-        data-testid="type-icon"
+        <svg
+          class="size-6"
+          data-testid="smile-icon"
+        >
+          <title>
+            Smile
+          </title>
+        </svg>
+      </button>
+      <button
+        class="size-7 cursor-default rounded disabled:pointer-events-auto"
+        data-size="icon"
+        data-testid="markdown-richtext-button"
+        data-variant="ghost"
+        title="Rich Text"
       >
-        <title>
-          Type
-        </title>
-      </svg>
-    </button>
+        <svg
+          class="size-6"
+          data-testid="type-icon"
+        >
+          <title>
+            Type
+          </title>
+        </svg>
+      </button>
+    </div>
+    <textarea
+      class="max-h-[60dvh] min-h-11 resize-none rounded-none border-none p-0 pt-4 shadow-none outline-none placeholder:text-muted-foreground/70 focus-visible:border-none focus-visible:ring-0"
+      data-testid="markdown-textarea"
+      maxlength="1000"
+      placeholder="Start writing your masterpiece"
+    />
   </div>
-  <textarea
-    class="max-h-[60dvh] min-h-7 resize-none rounded-none border-none p-0 shadow-none outline-none placeholder:text-muted-foreground/70 focus-visible:border-none focus-visible:ring-0 hidden"
-    data-testid="markdown-textarea"
-    maxlength="1000"
-    placeholder="Start writing your masterpiece"
-  />
   <div
     class="dark-theme cursor-auto"
     data-content-editable-class="prose prose-neutral prose-invert prose-code:before:content-none prose-code:after:content-none max-w-none px-0! pb-0! pt-4! max-h-[60dvh] overflow-y-auto"
     data-placeholder="Start writing your masterpiece"
     data-plugins-count="9"
     data-testid="mdx-editor"
+    markdown=""
   >
     <div
       data-testid="toolbar"
@@ -545,6 +571,7 @@ exports[`InitializedMDXEditor - Snapshots > matches snapshot with default props 
         </svg>
       </button>
       <button
+        class=""
         data-testid="button-with-tooltip-markdown"
         title="Markdown"
       >
@@ -572,57 +599,63 @@ exports[`InitializedMDXEditor - Snapshots > matches snapshot with emoji picker o
   class="gap-4"
 >
   <div
-    aria-label="Markdown editing toolbar"
-    class="flex min-h-10.75 cursor-auto flex-wrap items-center gap-2 rounded-md border bg-background px-2.5 py-1.5 hidden"
+    class="hidden"
     data-override-defaults="true"
-    data-testid="markdown-toolbar"
-    role="toolbar"
   >
-    <button
-      class="size-7 rounded"
-      data-size="icon"
-      data-testid="markdown-emoji-button"
-      data-variant="ghost"
-      title="Emoji"
+    <div
+      aria-label="Markdown editing toolbar"
+      class="flex min-h-10.75 cursor-auto flex-wrap items-center gap-2 rounded-md border bg-background px-2.5 py-1.5"
+      data-override-defaults="true"
+      data-testid="markdown-toolbar"
+      role="toolbar"
     >
-      <svg
-        class="size-6"
-        data-testid="smile-icon"
+      <button
+        class="size-7 cursor-default rounded"
+        data-size="icon"
+        data-testid="markdown-emoji-button"
+        data-variant="ghost"
+        title="Emoji"
       >
-        <title>
-          Smile
-        </title>
-      </svg>
-    </button>
-    <button
-      class="size-7 rounded"
-      data-size="icon"
-      data-testid="markdown-richtext-button"
-      data-variant="ghost"
-      title="Rich Text"
-    >
-      <svg
-        class="size-6"
-        data-testid="type-icon"
+        <svg
+          class="size-6"
+          data-testid="smile-icon"
+        >
+          <title>
+            Smile
+          </title>
+        </svg>
+      </button>
+      <button
+        class="size-7 cursor-default rounded disabled:pointer-events-auto"
+        data-size="icon"
+        data-testid="markdown-richtext-button"
+        data-variant="ghost"
+        title="Rich Text"
       >
-        <title>
-          Type
-        </title>
-      </svg>
-    </button>
+        <svg
+          class="size-6"
+          data-testid="type-icon"
+        >
+          <title>
+            Type
+          </title>
+        </svg>
+      </button>
+    </div>
+    <textarea
+      class="max-h-[60dvh] min-h-11 resize-none rounded-none border-none p-0 pt-4 shadow-none outline-none placeholder:text-muted-foreground/70 focus-visible:border-none focus-visible:ring-0"
+      data-testid="markdown-textarea"
+      maxlength="1000"
+      placeholder="Start writing your masterpiece"
+    />
   </div>
-  <textarea
-    class="max-h-[60dvh] min-h-7 resize-none rounded-none border-none p-0 shadow-none outline-none placeholder:text-muted-foreground/70 focus-visible:border-none focus-visible:ring-0 hidden"
-    data-testid="markdown-textarea"
-    maxlength="1000"
-    placeholder="Start writing your masterpiece"
-  />
   <div
     class="dark-theme cursor-auto"
     data-content-editable-class="prose prose-neutral prose-invert prose-code:before:content-none prose-code:after:content-none max-w-none px-0! pb-0! pt-4! max-h-[60dvh] overflow-y-auto"
     data-placeholder="Start writing your masterpiece"
     data-plugins-count="9"
     data-testid="mdx-editor"
+    markdown=""
   >
     <div
       data-testid="toolbar"
@@ -681,6 +714,7 @@ exports[`InitializedMDXEditor - Snapshots > matches snapshot with emoji picker o
         </svg>
       </button>
       <button
+        class=""
         data-testid="button-with-tooltip-markdown"
         title="Markdown"
       >
@@ -717,51 +751,56 @@ exports[`InitializedMDXEditor - Snapshots > matches snapshot with markdown conte
   class="gap-4"
 >
   <div
-    aria-label="Markdown editing toolbar"
-    class="flex min-h-10.75 cursor-auto flex-wrap items-center gap-2 rounded-md border bg-background px-2.5 py-1.5 hidden"
+    class="hidden"
     data-override-defaults="true"
-    data-testid="markdown-toolbar"
-    role="toolbar"
   >
-    <button
-      class="size-7 rounded"
-      data-size="icon"
-      data-testid="markdown-emoji-button"
-      data-variant="ghost"
-      title="Emoji"
+    <div
+      aria-label="Markdown editing toolbar"
+      class="flex min-h-10.75 cursor-auto flex-wrap items-center gap-2 rounded-md border bg-background px-2.5 py-1.5"
+      data-override-defaults="true"
+      data-testid="markdown-toolbar"
+      role="toolbar"
     >
-      <svg
-        class="size-6"
-        data-testid="smile-icon"
+      <button
+        class="size-7 cursor-default rounded"
+        data-size="icon"
+        data-testid="markdown-emoji-button"
+        data-variant="ghost"
+        title="Emoji"
       >
-        <title>
-          Smile
-        </title>
-      </svg>
-    </button>
-    <button
-      class="size-7 rounded"
-      data-size="icon"
-      data-testid="markdown-richtext-button"
-      data-variant="ghost"
-      title="Rich Text"
-    >
-      <svg
-        class="size-6"
-        data-testid="type-icon"
+        <svg
+          class="size-6"
+          data-testid="smile-icon"
+        >
+          <title>
+            Smile
+          </title>
+        </svg>
+      </button>
+      <button
+        class="size-7 cursor-default rounded disabled:pointer-events-auto"
+        data-size="icon"
+        data-testid="markdown-richtext-button"
+        data-variant="ghost"
+        title="Rich Text"
       >
-        <title>
-          Type
-        </title>
-      </svg>
-    </button>
+        <svg
+          class="size-6"
+          data-testid="type-icon"
+        >
+          <title>
+            Type
+          </title>
+        </svg>
+      </button>
+    </div>
+    <textarea
+      class="max-h-[60dvh] min-h-11 resize-none rounded-none border-none p-0 pt-4 shadow-none outline-none placeholder:text-muted-foreground/70 focus-visible:border-none focus-visible:ring-0"
+      data-testid="markdown-textarea"
+      maxlength="1000"
+      placeholder="Start writing your masterpiece"
+    />
   </div>
-  <textarea
-    class="max-h-[60dvh] min-h-7 resize-none rounded-none border-none p-0 shadow-none outline-none placeholder:text-muted-foreground/70 focus-visible:border-none focus-visible:ring-0 hidden"
-    data-testid="markdown-textarea"
-    maxlength="1000"
-    placeholder="Start writing your masterpiece"
-  />
   <div
     class="dark-theme cursor-auto"
     data-content-editable-class="prose prose-neutral prose-invert prose-code:before:content-none prose-code:after:content-none max-w-none px-0! pb-0! pt-4! max-h-[60dvh] overflow-y-auto"
@@ -827,8 +866,10 @@ exports[`InitializedMDXEditor - Snapshots > matches snapshot with markdown conte
         </svg>
       </button>
       <button
-        data-testid="button-with-tooltip-markdown"
-        title="Markdown"
+        class="opacity-50!"
+        data-testid="button-with-tooltip-clear content to switch modes"
+        disabled=""
+        title="Clear content to switch modes"
       >
         <svg
           class="size-6"
@@ -855,57 +896,63 @@ exports[`InitializedMDXEditor - Snapshots > matches snapshot with reached max le
     class="gap-4"
   >
     <div
-      aria-label="Markdown editing toolbar"
-      class="flex min-h-10.75 cursor-auto flex-wrap items-center gap-2 rounded-md border bg-background px-2.5 py-1.5 hidden"
+      class="hidden"
       data-override-defaults="true"
-      data-testid="markdown-toolbar"
-      role="toolbar"
     >
-      <button
-        class="size-7 rounded"
-        data-size="icon"
-        data-testid="markdown-emoji-button"
-        data-variant="ghost"
-        title="Emoji"
+      <div
+        aria-label="Markdown editing toolbar"
+        class="flex min-h-10.75 cursor-auto flex-wrap items-center gap-2 rounded-md border bg-background px-2.5 py-1.5"
+        data-override-defaults="true"
+        data-testid="markdown-toolbar"
+        role="toolbar"
       >
-        <svg
-          class="size-6"
-          data-testid="smile-icon"
+        <button
+          class="size-7 cursor-default rounded"
+          data-size="icon"
+          data-testid="markdown-emoji-button"
+          data-variant="ghost"
+          title="Emoji"
         >
-          <title>
-            Smile
-          </title>
-        </svg>
-      </button>
-      <button
-        class="size-7 rounded"
-        data-size="icon"
-        data-testid="markdown-richtext-button"
-        data-variant="ghost"
-        title="Rich Text"
-      >
-        <svg
-          class="size-6"
-          data-testid="type-icon"
+          <svg
+            class="size-6"
+            data-testid="smile-icon"
+          >
+            <title>
+              Smile
+            </title>
+          </svg>
+        </button>
+        <button
+          class="size-7 cursor-default rounded disabled:pointer-events-auto"
+          data-size="icon"
+          data-testid="markdown-richtext-button"
+          data-variant="ghost"
+          title="Rich Text"
         >
-          <title>
-            Type
-          </title>
-        </svg>
-      </button>
+          <svg
+            class="size-6"
+            data-testid="type-icon"
+          >
+            <title>
+              Type
+            </title>
+          </svg>
+        </button>
+      </div>
+      <textarea
+        class="max-h-[60dvh] min-h-11 resize-none rounded-none border-none p-0 pt-4 shadow-none outline-none placeholder:text-muted-foreground/70 focus-visible:border-none focus-visible:ring-0"
+        data-testid="markdown-textarea"
+        maxlength="1000"
+        placeholder="Start writing your masterpiece"
+      />
     </div>
-    <textarea
-      class="max-h-[60dvh] min-h-7 resize-none rounded-none border-none p-0 shadow-none outline-none placeholder:text-muted-foreground/70 focus-visible:border-none focus-visible:ring-0 hidden"
-      data-testid="markdown-textarea"
-      maxlength="1000"
-      placeholder="Start writing your masterpiece"
-    />
     <div
       class="dark-theme cursor-auto"
       data-content-editable-class="prose prose-neutral prose-invert prose-code:before:content-none prose-code:after:content-none max-w-none px-0! pb-0! pt-4! max-h-[60dvh] overflow-y-auto"
       data-placeholder="Start writing your masterpiece"
       data-plugins-count="9"
       data-testid="mdx-editor"
+      markdown=""
     >
       <div
         data-testid="toolbar"
@@ -964,8 +1011,10 @@ exports[`InitializedMDXEditor - Snapshots > matches snapshot with reached max le
           </svg>
         </button>
         <button
-          data-testid="button-with-tooltip-markdown"
-          title="Markdown"
+          class="opacity-50!"
+          data-testid="button-with-tooltip-clear content to switch modes"
+          disabled=""
+          title="Clear content to switch modes"
         >
           <svg
             class="size-6"
@@ -1011,54 +1060,59 @@ exports[`InitializedMDXEditor - Snapshots > matches snapshot with readOnly prop 
   class="gap-4"
 >
   <div
-    aria-label="Markdown editing toolbar"
-    class="flex min-h-10.75 cursor-auto flex-wrap items-center gap-2 rounded-md border bg-background px-2.5 py-1.5 hidden"
+    class="hidden"
     data-override-defaults="true"
-    data-testid="markdown-toolbar"
-    role="toolbar"
   >
-    <button
-      class="size-7 rounded"
-      data-size="icon"
-      data-testid="markdown-emoji-button"
-      data-variant="ghost"
-      disabled=""
-      title="Emoji"
+    <div
+      aria-label="Markdown editing toolbar"
+      class="flex min-h-10.75 cursor-auto flex-wrap items-center gap-2 rounded-md border bg-background px-2.5 py-1.5"
+      data-override-defaults="true"
+      data-testid="markdown-toolbar"
+      role="toolbar"
     >
-      <svg
-        class="size-6"
-        data-testid="smile-icon"
+      <button
+        class="size-7 cursor-default rounded"
+        data-size="icon"
+        data-testid="markdown-emoji-button"
+        data-variant="ghost"
+        disabled=""
+        title="Emoji"
       >
-        <title>
-          Smile
-        </title>
-      </svg>
-    </button>
-    <button
-      class="size-7 rounded"
-      data-size="icon"
-      data-testid="markdown-richtext-button"
-      data-variant="ghost"
-      disabled=""
-      title="Rich Text"
-    >
-      <svg
-        class="size-6"
-        data-testid="type-icon"
+        <svg
+          class="size-6"
+          data-testid="smile-icon"
+        >
+          <title>
+            Smile
+          </title>
+        </svg>
+      </button>
+      <button
+        class="size-7 cursor-default rounded disabled:pointer-events-auto"
+        data-size="icon"
+        data-testid="markdown-richtext-button"
+        data-variant="ghost"
+        disabled=""
+        title="Rich Text"
       >
-        <title>
-          Type
-        </title>
-      </svg>
-    </button>
+        <svg
+          class="size-6"
+          data-testid="type-icon"
+        >
+          <title>
+            Type
+          </title>
+        </svg>
+      </button>
+    </div>
+    <textarea
+      class="max-h-[60dvh] min-h-11 resize-none rounded-none border-none p-0 pt-4 shadow-none outline-none placeholder:text-muted-foreground/70 focus-visible:border-none focus-visible:ring-0"
+      data-testid="markdown-textarea"
+      maxlength="1000"
+      placeholder="Start writing your masterpiece"
+      readonly=""
+    />
   </div>
-  <textarea
-    class="max-h-[60dvh] min-h-7 resize-none rounded-none border-none p-0 shadow-none outline-none placeholder:text-muted-foreground/70 focus-visible:border-none focus-visible:ring-0 hidden"
-    data-testid="markdown-textarea"
-    maxlength="1000"
-    placeholder="Start writing your masterpiece"
-    readonly=""
-  />
   <div
     class="dark-theme cursor-auto"
     data-content-editable-class="prose prose-neutral prose-invert prose-code:before:content-none prose-code:after:content-none max-w-none px-0! pb-0! pt-4! max-h-[60dvh] overflow-y-auto"
@@ -1066,6 +1120,7 @@ exports[`InitializedMDXEditor - Snapshots > matches snapshot with readOnly prop 
     data-plugins-count="9"
     data-readonly="true"
     data-testid="mdx-editor"
+    markdown=""
   >
     <div
       data-testid="toolbar"
@@ -1124,6 +1179,7 @@ exports[`InitializedMDXEditor - Snapshots > matches snapshot with readOnly prop 
         </svg>
       </button>
       <button
+        class=""
         data-testid="button-with-tooltip-markdown"
         title="Markdown"
       >

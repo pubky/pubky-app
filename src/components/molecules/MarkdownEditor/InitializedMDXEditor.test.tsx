@@ -71,12 +71,22 @@ vi.mock('@mdxeditor/editor', () => {
       children,
       title,
       onClick,
+      disabled,
+      className,
     }: {
       children: React.ReactNode;
       title: string;
       onClick: () => void;
+      disabled?: boolean;
+      className?: string;
     }) => (
-      <button data-testid={`button-with-tooltip-${title.toLowerCase()}`} title={title} onClick={onClick}>
+      <button
+        data-testid={`button-with-tooltip-${title.toLowerCase()}`}
+        title={title}
+        onClick={onClick}
+        disabled={disabled}
+        className={className}
+      >
         {children}
       </button>
     ),
@@ -238,20 +248,20 @@ describe('InitializedMDXEditor', () => {
 
   describe('Rich Text Mode (default)', () => {
     it('renders the MDXEditor component', () => {
-      render(<InitializedMDXEditor editorRef={null} />);
+      render(<InitializedMDXEditor editorRef={null} markdown="" />);
 
       expect(screen.getByTestId('mdx-editor')).toBeInTheDocument();
     });
 
     it('renders with correct placeholder text', () => {
-      render(<InitializedMDXEditor editorRef={null} />);
+      render(<InitializedMDXEditor editorRef={null} markdown="" />);
 
       const editor = screen.getByTestId('mdx-editor');
       expect(editor).toHaveAttribute('data-placeholder', 'Start writing your masterpiece');
     });
 
     it('renders with correct CSS classes including dark-theme and cursor-auto', () => {
-      render(<InitializedMDXEditor editorRef={null} />);
+      render(<InitializedMDXEditor editorRef={null} markdown="" />);
 
       const editor = screen.getByTestId('mdx-editor');
       expect(editor).toHaveClass('dark-theme');
@@ -259,14 +269,14 @@ describe('InitializedMDXEditor', () => {
     });
 
     it('does not apply hidden class to MDXEditor in richtext mode', () => {
-      render(<InitializedMDXEditor editorRef={null} />);
+      render(<InitializedMDXEditor editorRef={null} markdown="" />);
 
       const editor = screen.getByTestId('mdx-editor');
       expect(editor.className).not.toContain('hidden');
     });
 
     it('applies contentEditableClassName with prose styles', () => {
-      render(<InitializedMDXEditor editorRef={null} />);
+      render(<InitializedMDXEditor editorRef={null} markdown="" />);
 
       const editor = screen.getByTestId('mdx-editor');
       const contentEditableClass = editor.getAttribute('data-content-editable-class');
@@ -276,7 +286,7 @@ describe('InitializedMDXEditor', () => {
     });
 
     it('configures plugins correctly', () => {
-      render(<InitializedMDXEditor editorRef={null} />);
+      render(<InitializedMDXEditor editorRef={null} markdown="" />);
 
       const editor = screen.getByTestId('mdx-editor');
       // The editor should have 9 plugins configured
@@ -291,14 +301,14 @@ describe('InitializedMDXEditor', () => {
     });
 
     it('passes readOnly prop to MDXEditor', () => {
-      render(<InitializedMDXEditor editorRef={null} readOnly />);
+      render(<InitializedMDXEditor editorRef={null} markdown="" readOnly />);
 
       const editor = screen.getByTestId('mdx-editor');
       expect(editor).toHaveAttribute('data-readonly', 'true');
     });
 
     it('renders toolbar with all controls', () => {
-      render(<InitializedMDXEditor editorRef={null} />);
+      render(<InitializedMDXEditor editorRef={null} markdown="" />);
 
       expect(screen.getByTestId('toolbar')).toBeInTheDocument();
       expect(screen.getByTestId('undo-redo')).toBeInTheDocument();
@@ -312,7 +322,7 @@ describe('InitializedMDXEditor', () => {
     });
 
     it('renders emoji button with tooltip in toolbar', () => {
-      render(<InitializedMDXEditor editorRef={null} />);
+      render(<InitializedMDXEditor editorRef={null} markdown="" />);
 
       const emojiButton = screen.getByTestId('button-with-tooltip-emoji');
       expect(emojiButton).toBeInTheDocument();
@@ -320,7 +330,7 @@ describe('InitializedMDXEditor', () => {
     });
 
     it('renders markdown toggle button with tooltip in toolbar', () => {
-      render(<InitializedMDXEditor editorRef={null} />);
+      render(<InitializedMDXEditor editorRef={null} markdown="" />);
 
       const markdownButton = screen.getByTestId('button-with-tooltip-markdown');
       expect(markdownButton).toBeInTheDocument();
@@ -328,7 +338,7 @@ describe('InitializedMDXEditor', () => {
     });
 
     it('renders smile icons in emoji buttons', () => {
-      render(<InitializedMDXEditor editorRef={null} />);
+      render(<InitializedMDXEditor editorRef={null} markdown="" />);
 
       const smileIcons = screen.getAllByTestId('smile-icon');
       // One in the markdown toolbar, one in the rich text toolbar
@@ -339,7 +349,7 @@ describe('InitializedMDXEditor', () => {
     });
 
     it('renders markdown mark icon in markdown button', () => {
-      render(<InitializedMDXEditor editorRef={null} />);
+      render(<InitializedMDXEditor editorRef={null} markdown="" />);
 
       const markdownIcon = screen.getByTestId('markdown-mark-icon');
       expect(markdownIcon).toBeInTheDocument();
@@ -347,13 +357,13 @@ describe('InitializedMDXEditor', () => {
     });
 
     it('does not show emoji picker dialog initially', () => {
-      render(<InitializedMDXEditor editorRef={null} />);
+      render(<InitializedMDXEditor editorRef={null} markdown="" />);
 
       expect(screen.queryByTestId('emoji-picker-dialog')).not.toBeInTheDocument();
     });
 
     it('opens emoji picker dialog when emoji button is clicked', () => {
-      render(<InitializedMDXEditor editorRef={null} />);
+      render(<InitializedMDXEditor editorRef={null} markdown="" />);
 
       const emojiButton = screen.getByTestId('button-with-tooltip-emoji');
       fireEvent.click(emojiButton);
@@ -362,7 +372,7 @@ describe('InitializedMDXEditor', () => {
     });
 
     it('provides onEmojiSelect callback to EmojiPickerDialog', () => {
-      render(<InitializedMDXEditor editorRef={null} />);
+      render(<InitializedMDXEditor editorRef={null} markdown="" />);
 
       // Open emoji picker to trigger the callback capture
       const emojiButton = screen.getByTestId('button-with-tooltip-emoji');
@@ -374,7 +384,7 @@ describe('InitializedMDXEditor', () => {
     });
 
     it('closes emoji picker dialog after selecting emoji', () => {
-      render(<InitializedMDXEditor editorRef={null} />);
+      render(<InitializedMDXEditor editorRef={null} markdown="" />);
 
       // Open emoji picker
       const emojiButton = screen.getByTestId('button-with-tooltip-emoji');
@@ -391,7 +401,7 @@ describe('InitializedMDXEditor', () => {
 
     it('accepts a ref for editor methods', () => {
       const editorRef = createRef<MDXEditorMethods>();
-      render(<InitializedMDXEditor editorRef={editorRef} />);
+      render(<InitializedMDXEditor editorRef={editorRef} markdown="" />);
 
       expect(screen.getByTestId('mdx-editor')).toBeInTheDocument();
     });
@@ -399,23 +409,25 @@ describe('InitializedMDXEditor', () => {
 
   describe('Markdown Mode Toolbar and Textarea', () => {
     it('renders markdown toolbar hidden by default in richtext mode', () => {
-      render(<InitializedMDXEditor editorRef={null} />);
+      render(<InitializedMDXEditor editorRef={null} markdown="" />);
 
       const markdownToolbar = screen.getByTestId('markdown-toolbar');
       expect(markdownToolbar).toBeInTheDocument();
-      expect(markdownToolbar.className).toContain('hidden');
+      // Hidden class is on the parent wrapper container, not on the toolbar itself
+      expect(markdownToolbar.parentElement?.className).toContain('hidden');
     });
 
     it('renders markdown textarea hidden by default in richtext mode', () => {
-      render(<InitializedMDXEditor editorRef={null} />);
+      render(<InitializedMDXEditor editorRef={null} markdown="" />);
 
       const markdownTextarea = screen.getByTestId('markdown-textarea');
       expect(markdownTextarea).toBeInTheDocument();
-      expect(markdownTextarea.className).toContain('hidden');
+      // Hidden class is on the parent wrapper container, not on the textarea itself
+      expect(markdownTextarea.closest('[class*="hidden"]')).not.toBeNull();
     });
 
     it('renders markdown toolbar with correct aria attributes', () => {
-      render(<InitializedMDXEditor editorRef={null} />);
+      render(<InitializedMDXEditor editorRef={null} markdown="" />);
 
       const markdownToolbar = screen.getByTestId('markdown-toolbar');
       expect(markdownToolbar).toHaveAttribute('role', 'toolbar');
@@ -423,7 +435,7 @@ describe('InitializedMDXEditor', () => {
     });
 
     it('renders emoji button in markdown toolbar', () => {
-      render(<InitializedMDXEditor editorRef={null} />);
+      render(<InitializedMDXEditor editorRef={null} markdown="" />);
 
       const emojiButton = screen.getByTestId('markdown-emoji-button');
       expect(emojiButton).toBeInTheDocument();
@@ -431,7 +443,7 @@ describe('InitializedMDXEditor', () => {
     });
 
     it('renders rich text button in markdown toolbar', () => {
-      render(<InitializedMDXEditor editorRef={null} />);
+      render(<InitializedMDXEditor editorRef={null} markdown="" />);
 
       const richTextButton = screen.getByTestId('markdown-richtext-button');
       expect(richTextButton).toBeInTheDocument();
@@ -439,13 +451,13 @@ describe('InitializedMDXEditor', () => {
     });
 
     it('renders type icon in rich text mode switch button', () => {
-      render(<InitializedMDXEditor editorRef={null} />);
+      render(<InitializedMDXEditor editorRef={null} markdown="" />);
 
       expect(screen.getByTestId('type-icon')).toBeInTheDocument();
     });
 
     it('disables markdown toolbar buttons when readOnly', () => {
-      render(<InitializedMDXEditor editorRef={null} readOnly />);
+      render(<InitializedMDXEditor editorRef={null} markdown="" readOnly />);
 
       const emojiButton = screen.getByTestId('markdown-emoji-button');
       const richTextButton = screen.getByTestId('markdown-richtext-button');
@@ -454,7 +466,7 @@ describe('InitializedMDXEditor', () => {
     });
 
     it('renders markdown textarea with correct placeholder', () => {
-      render(<InitializedMDXEditor editorRef={null} />);
+      render(<InitializedMDXEditor editorRef={null} markdown="" />);
 
       const textarea = screen.getByTestId('markdown-textarea');
       expect(textarea).toHaveAttribute('placeholder', 'Start writing your masterpiece');
@@ -462,18 +474,8 @@ describe('InitializedMDXEditor', () => {
   });
 
   describe('Mode Switching', () => {
-    it('switches to markdown mode when markdown button is clicked', () => {
-      const mockGetMarkdown = vi.fn().mockReturnValue('# Hello');
-      const editorRef = {
-        current: {
-          getMarkdown: mockGetMarkdown,
-          setMarkdown: vi.fn(),
-          focus: vi.fn(),
-          insertMarkdown: vi.fn(),
-        },
-      } as unknown as React.RefObject<MDXEditorMethods>;
-
-      render(<InitializedMDXEditor editorRef={editorRef} />);
+    it('switches to markdown mode when markdown button is clicked (empty content)', () => {
+      render(<InitializedMDXEditor editorRef={null} markdown="" />);
 
       const markdownButton = screen.getByTestId('button-with-tooltip-markdown');
       fireEvent.click(markdownButton);
@@ -482,53 +484,50 @@ describe('InitializedMDXEditor', () => {
       const mdxEditor = screen.getByTestId('mdx-editor');
       expect(mdxEditor.className).toContain('hidden');
 
-      // Markdown toolbar should no longer have hidden class
+      // Markdown toolbar should be visible (parent wrapper should not have hidden)
       const markdownToolbar = screen.getByTestId('markdown-toolbar');
-      expect(markdownToolbar.className).not.toContain('hidden');
+      expect(markdownToolbar.parentElement?.className).not.toContain('hidden');
 
-      // Markdown textarea should no longer have hidden class
+      // Markdown textarea should be visible
       const textarea = screen.getByTestId('markdown-textarea');
-      expect(textarea.className).not.toContain('hidden');
+      expect(textarea).toBeInTheDocument();
     });
 
-    it('populates textarea with editor content when switching to markdown mode', () => {
-      const mockGetMarkdown = vi.fn().mockReturnValue('# Hello from editor');
-      const editorRef = {
-        current: {
-          getMarkdown: mockGetMarkdown,
-          setMarkdown: vi.fn(),
-          focus: vi.fn(),
-          insertMarkdown: vi.fn(),
-        },
-      } as unknown as React.RefObject<MDXEditorMethods>;
+    it('does not switch to markdown mode when rich text has content', () => {
+      render(<InitializedMDXEditor editorRef={null} markdown="# Hello" />);
 
-      render(<InitializedMDXEditor editorRef={editorRef} />);
-
-      const markdownButton = screen.getByTestId('button-with-tooltip-markdown');
+      // Markdown button should show disabled tooltip text
+      const markdownButton = screen.getByTestId('button-with-tooltip-clear content to switch modes');
+      expect(markdownButton).toBeDisabled();
       fireEvent.click(markdownButton);
 
-      const textarea = screen.getByTestId('markdown-textarea');
-      expect(textarea).toHaveValue('# Hello from editor');
+      // MDXEditor should NOT have hidden class (still in richtext mode)
+      const mdxEditor = screen.getByTestId('mdx-editor');
+      expect(mdxEditor.className).not.toContain('hidden');
     });
 
-    it('switches back to richtext mode when rich text button is clicked', () => {
-      const mockSetMarkdown = vi.fn();
-      const editorRef = {
-        current: {
-          getMarkdown: vi.fn().mockReturnValue('# Test'),
-          setMarkdown: mockSetMarkdown,
-          focus: vi.fn(),
-          insertMarkdown: vi.fn(),
-        },
-      } as unknown as React.RefObject<MDXEditorMethods>;
+    it('markdown button shows conditional title based on content', () => {
+      // With empty content, title is "Markdown"
+      const { unmount } = render(<InitializedMDXEditor editorRef={null} markdown="" />);
+      expect(screen.getByTestId('button-with-tooltip-markdown')).toHaveAttribute('title', 'Markdown');
+      unmount();
 
-      render(<InitializedMDXEditor editorRef={editorRef} />);
+      // With content, title is "Clear content to switch modes"
+      render(<InitializedMDXEditor editorRef={null} markdown="# Content" />);
+      expect(screen.getByTestId('button-with-tooltip-clear content to switch modes')).toHaveAttribute(
+        'title',
+        'Clear content to switch modes',
+      );
+    });
+
+    it('switches back to richtext mode when rich text button is clicked (empty markdown)', () => {
+      render(<InitializedMDXEditor editorRef={null} markdown="" />);
 
       // Switch to markdown mode first
       const markdownButton = screen.getByTestId('button-with-tooltip-markdown');
       fireEvent.click(markdownButton);
 
-      // Then switch back to richtext mode
+      // Then switch back to richtext mode (markdown text is empty)
       const richTextButton = screen.getByTestId('markdown-richtext-button');
       fireEvent.click(richTextButton);
 
@@ -536,27 +535,37 @@ describe('InitializedMDXEditor', () => {
       const mdxEditor = screen.getByTestId('mdx-editor');
       expect(mdxEditor.className).not.toContain('hidden');
 
-      // Markdown toolbar should have hidden class
+      // Markdown toolbar parent should have hidden class
       const markdownToolbar = screen.getByTestId('markdown-toolbar');
-      expect(markdownToolbar.className).toContain('hidden');
+      expect(markdownToolbar.parentElement?.className).toContain('hidden');
+    });
 
-      // setMarkdown should have been called on the editor ref
-      expect(mockSetMarkdown).toHaveBeenCalled();
+    it('does not switch back to richtext mode when markdown text has content', () => {
+      render(<InitializedMDXEditor editorRef={null} markdown="" />);
+
+      // Switch to markdown mode
+      const markdownButton = screen.getByTestId('button-with-tooltip-markdown');
+      fireEvent.click(markdownButton);
+
+      // Type content in markdown textarea
+      const textarea = screen.getByTestId('markdown-textarea');
+      fireEvent.change(textarea, { target: { value: '# Some content' } });
+
+      // Rich text button should now show disabled tooltip and be disabled
+      const richTextButton = screen.getByTestId('markdown-richtext-button');
+      expect(richTextButton).toHaveAttribute('title', 'Clear content to switch modes');
+      expect(richTextButton).toBeDisabled();
+      fireEvent.click(richTextButton);
+
+      // Should still be in markdown mode - MDXEditor should still have hidden class
+      const mdxEditor = screen.getByTestId('mdx-editor');
+      expect(mdxEditor.className).toContain('hidden');
     });
   });
 
   describe('Markdown Mode Text Editing', () => {
     it('updates textarea value when typing in markdown mode', () => {
-      const editorRef = {
-        current: {
-          getMarkdown: vi.fn().mockReturnValue(''),
-          setMarkdown: vi.fn(),
-          focus: vi.fn(),
-          insertMarkdown: vi.fn(),
-        },
-      } as unknown as React.RefObject<MDXEditorMethods>;
-
-      render(<InitializedMDXEditor editorRef={editorRef} />);
+      render(<InitializedMDXEditor editorRef={null} markdown="" />);
 
       // Switch to markdown mode
       fireEvent.click(screen.getByTestId('button-with-tooltip-markdown'));
@@ -568,16 +577,7 @@ describe('InitializedMDXEditor', () => {
     });
 
     it('does not update textarea value when exceeding max length', () => {
-      const editorRef = {
-        current: {
-          getMarkdown: vi.fn().mockReturnValue(''),
-          setMarkdown: vi.fn(),
-          focus: vi.fn(),
-          insertMarkdown: vi.fn(),
-        },
-      } as unknown as React.RefObject<MDXEditorMethods>;
-
-      render(<InitializedMDXEditor editorRef={editorRef} />);
+      render(<InitializedMDXEditor editorRef={null} markdown="" />);
 
       // Switch to markdown mode
       fireEvent.click(screen.getByTestId('button-with-tooltip-markdown'));
@@ -592,16 +592,8 @@ describe('InitializedMDXEditor', () => {
 
     it('calls props.onChange when typing in markdown mode', () => {
       const mockOnChange = vi.fn();
-      const editorRef = {
-        current: {
-          getMarkdown: vi.fn().mockReturnValue(''),
-          setMarkdown: vi.fn(),
-          focus: vi.fn(),
-          insertMarkdown: vi.fn(),
-        },
-      } as unknown as React.RefObject<MDXEditorMethods>;
 
-      render(<InitializedMDXEditor editorRef={editorRef} onChange={mockOnChange} />);
+      render(<InitializedMDXEditor editorRef={null} markdown="" onChange={mockOnChange} />);
 
       // Switch to markdown mode
       fireEvent.click(screen.getByTestId('button-with-tooltip-markdown'));
@@ -613,7 +605,7 @@ describe('InitializedMDXEditor', () => {
     });
 
     it('opens emoji picker from markdown toolbar emoji button', () => {
-      render(<InitializedMDXEditor editorRef={null} />);
+      render(<InitializedMDXEditor editorRef={null} markdown="" />);
 
       const markdownEmojiButton = screen.getByTestId('markdown-emoji-button');
       fireEvent.click(markdownEmojiButton);
@@ -624,13 +616,13 @@ describe('InitializedMDXEditor', () => {
 
   describe('Max Length Warning (Rich Text Mode)', () => {
     it('does not show max length warning initially', () => {
-      render(<InitializedMDXEditor editorRef={null} />);
+      render(<InitializedMDXEditor editorRef={null} markdown="" />);
 
       expect(screen.queryByTestId('max-length-warning')).not.toBeInTheDocument();
     });
 
     it('shows approaching warning when less than 100 characters remaining', () => {
-      render(<InitializedMDXEditor editorRef={null} />);
+      render(<InitializedMDXEditor editorRef={null} markdown="" />);
 
       // Simulate typing content that leaves 99 characters remaining
       const contentLength = MOCK_MAX_LENGTH - 99;
@@ -646,7 +638,7 @@ describe('InitializedMDXEditor', () => {
     });
 
     it('shows reached warning when at maximum length', () => {
-      render(<InitializedMDXEditor editorRef={null} />);
+      render(<InitializedMDXEditor editorRef={null} markdown="" />);
 
       // Simulate typing content that reaches exactly the max length
       act(() => {
@@ -661,7 +653,7 @@ describe('InitializedMDXEditor', () => {
     });
 
     it('clears warning when content is reduced below threshold', () => {
-      render(<InitializedMDXEditor editorRef={null} />);
+      render(<InitializedMDXEditor editorRef={null} markdown="" />);
 
       // First, trigger the warning
       act(() => {
@@ -678,7 +670,7 @@ describe('InitializedMDXEditor', () => {
 
     it('calls props.onChange when provided', () => {
       const mockOnChange = vi.fn();
-      render(<InitializedMDXEditor editorRef={null} onChange={mockOnChange} />);
+      render(<InitializedMDXEditor editorRef={null} markdown="" onChange={mockOnChange} />);
 
       const testMarkdown = '# Test content';
       act(() => {
@@ -689,7 +681,7 @@ describe('InitializedMDXEditor', () => {
     });
 
     it('renders alert triangle icon in max length warning', () => {
-      render(<InitializedMDXEditor editorRef={null} />);
+      render(<InitializedMDXEditor editorRef={null} markdown="" />);
 
       // Trigger the warning
       act(() => {
@@ -705,16 +697,7 @@ describe('InitializedMDXEditor', () => {
 
   describe('Max Length Warning (Markdown Mode)', () => {
     it('shows approaching warning in markdown mode when less than 100 chars remaining', () => {
-      const editorRef = {
-        current: {
-          getMarkdown: vi.fn().mockReturnValue(''),
-          setMarkdown: vi.fn(),
-          focus: vi.fn(),
-          insertMarkdown: vi.fn(),
-        },
-      } as unknown as React.RefObject<MDXEditorMethods>;
-
-      render(<InitializedMDXEditor editorRef={editorRef} />);
+      render(<InitializedMDXEditor editorRef={null} markdown="" />);
 
       // Switch to markdown mode
       fireEvent.click(screen.getByTestId('button-with-tooltip-markdown'));
@@ -730,16 +713,7 @@ describe('InitializedMDXEditor', () => {
     });
 
     it('shows reached warning in markdown mode when at max length', () => {
-      const editorRef = {
-        current: {
-          getMarkdown: vi.fn().mockReturnValue(''),
-          setMarkdown: vi.fn(),
-          focus: vi.fn(),
-          insertMarkdown: vi.fn(),
-        },
-      } as unknown as React.RefObject<MDXEditorMethods>;
-
-      render(<InitializedMDXEditor editorRef={editorRef} />);
+      render(<InitializedMDXEditor editorRef={null} markdown="" />);
 
       // Switch to markdown mode
       fireEvent.click(screen.getByTestId('button-with-tooltip-markdown'));
@@ -764,7 +738,7 @@ describe('InitializedMDXEditor - Snapshots', () => {
   });
 
   it('matches snapshot with default props', () => {
-    const { container } = render(<InitializedMDXEditor editorRef={null} />);
+    const { container } = render(<InitializedMDXEditor editorRef={null} markdown="" />);
     expect(container.firstChild).toMatchSnapshot();
   });
 
@@ -774,7 +748,7 @@ describe('InitializedMDXEditor - Snapshots', () => {
   });
 
   it('matches snapshot with emoji picker open', () => {
-    const { container } = render(<InitializedMDXEditor editorRef={null} />);
+    const { container } = render(<InitializedMDXEditor editorRef={null} markdown="" />);
 
     const emojiButton = screen.getByTestId('button-with-tooltip-emoji');
     fireEvent.click(emojiButton);
@@ -783,12 +757,12 @@ describe('InitializedMDXEditor - Snapshots', () => {
   });
 
   it('matches snapshot with custom className', () => {
-    const { container } = render(<InitializedMDXEditor editorRef={null} className="custom-editor-class" />);
+    const { container } = render(<InitializedMDXEditor editorRef={null} markdown="" className="custom-editor-class" />);
     expect(container.firstChild).toMatchSnapshot();
   });
 
   it('matches snapshot with approaching max length warning', () => {
-    const { container } = render(<InitializedMDXEditor editorRef={null} />);
+    const { container } = render(<InitializedMDXEditor editorRef={null} markdown="" />);
 
     // Trigger approaching warning
     act(() => {
@@ -799,7 +773,7 @@ describe('InitializedMDXEditor - Snapshots', () => {
   });
 
   it('matches snapshot with reached max length warning', () => {
-    const { container } = render(<InitializedMDXEditor editorRef={null} />);
+    const { container } = render(<InitializedMDXEditor editorRef={null} markdown="" />);
 
     // Trigger reached warning
     act(() => {
@@ -810,16 +784,7 @@ describe('InitializedMDXEditor - Snapshots', () => {
   });
 
   it('matches snapshot in markdown mode', () => {
-    const editorRef = {
-      current: {
-        getMarkdown: vi.fn().mockReturnValue('# Hello'),
-        setMarkdown: vi.fn(),
-        focus: vi.fn(),
-        insertMarkdown: vi.fn(),
-      },
-    } as unknown as React.RefObject<MDXEditorMethods>;
-
-    const { container } = render(<InitializedMDXEditor editorRef={editorRef} />);
+    const { container } = render(<InitializedMDXEditor editorRef={null} markdown="" />);
 
     // Switch to markdown mode
     fireEvent.click(screen.getByTestId('button-with-tooltip-markdown'));
@@ -828,7 +793,7 @@ describe('InitializedMDXEditor - Snapshots', () => {
   });
 
   it('matches snapshot with readOnly prop', () => {
-    const { container } = render(<InitializedMDXEditor editorRef={null} readOnly />);
+    const { container } = render(<InitializedMDXEditor editorRef={null} markdown="" readOnly />);
     expect(container.firstChild).toMatchSnapshot();
   });
 });

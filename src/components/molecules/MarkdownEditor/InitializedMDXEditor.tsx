@@ -110,22 +110,21 @@ export default function InitializedMDXEditor({
   const [showEmojiPicker, setShowEmojiPicker] = useState(false);
   const [maxLengthWarning, setMaxLengthWarning] = useState<null | 'approaching' | 'reached'>(null);
   const [mode, setMode] = useState<EditorMode>('richtext');
+  const [richText, setRichText] = useState(props.markdown);
   const [markdownText, setMarkdownText] = useState('');
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
+  const isRichTextEmpty = richText.trim() === '';
+  const isMarkdownEmpty = markdownText.trim() === '';
+
   const switchToMarkdownMode = () => {
-    if (editorRef && 'current' in editorRef) {
-      const markdown = editorRef.current?.getMarkdown() ?? '';
-      setMarkdownText(markdown);
-      setMode('markdown');
-    }
+    if (!isRichTextEmpty) return;
+    setMode('markdown');
   };
 
   const switchToRichTextMode = () => {
-    if (editorRef && 'current' in editorRef) {
-      editorRef.current?.setMarkdown(markdownText);
-      setMode('richtext');
-    }
+    if (!isMarkdownEmpty) return;
+    setMode('richtext');
   };
 
   const updateMaxLengthWarning = (text: string) => {
@@ -171,54 +170,50 @@ export default function InitializedMDXEditor({
   return (
     <Atoms.Container className="gap-4">
       {/* Markdown mode: custom toolbar + textarea — hidden via CSS in rich text mode */}
-      <Atoms.Container
-        overrideDefaults
-        className={Utils.cn(
-          'flex min-h-10.75 cursor-auto flex-wrap items-center gap-2 rounded-md border bg-background px-2.5 py-1.5',
-          mode === 'richtext' && 'hidden',
-        )}
-        role="toolbar"
-        aria-label="Markdown editing toolbar"
-        data-testid="markdown-toolbar"
-      >
-        <Atoms.Button
-          variant="ghost"
-          size="icon"
-          title="Emoji"
-          onClick={() => setShowEmojiPicker(true)}
-          disabled={readOnly}
-          className="size-7 rounded"
-          data-testid="markdown-emoji-button"
+      <Atoms.Container overrideDefaults className={Utils.cn(mode === 'richtext' && 'hidden')}>
+        <Atoms.Container
+          overrideDefaults
+          className="flex min-h-10.75 cursor-auto flex-wrap items-center gap-2 rounded-md border bg-background px-2.5 py-1.5"
+          role="toolbar"
+          aria-label="Markdown editing toolbar"
+          data-testid="markdown-toolbar"
         >
-          <Icons.Smile className="size-6" />
-        </Atoms.Button>
+          <Atoms.Button
+            variant="ghost"
+            size="icon"
+            title="Emoji"
+            onClick={() => setShowEmojiPicker(true)}
+            disabled={readOnly}
+            className="size-7 cursor-default rounded"
+            data-testid="markdown-emoji-button"
+          >
+            <Icons.Smile className="size-6" />
+          </Atoms.Button>
 
-        <Atoms.Button
-          variant="ghost"
-          size="icon"
-          title="Rich Text"
-          onClick={switchToRichTextMode}
-          disabled={readOnly}
-          className="size-7 rounded"
-          data-testid="markdown-richtext-button"
-        >
-          <Icons.Type className="size-6" />
-        </Atoms.Button>
+          <Atoms.Button
+            variant="ghost"
+            size="icon"
+            title={isMarkdownEmpty ? 'Rich Text' : 'Clear content to switch modes'}
+            onClick={switchToRichTextMode}
+            disabled={readOnly || !isMarkdownEmpty}
+            className="size-7 cursor-default rounded disabled:pointer-events-auto"
+            data-testid="markdown-richtext-button"
+          >
+            <Icons.Type className="size-6" />
+          </Atoms.Button>
+        </Atoms.Container>
+
+        <Atoms.Textarea
+          ref={textareaRef}
+          value={markdownText}
+          onChange={(e) => handleMarkdownTextChange(e.target.value)}
+          readOnly={readOnly}
+          placeholder="Start writing your masterpiece"
+          maxLength={ARTICLE_MAX_CHARACTER_LENGTH}
+          className="max-h-[60dvh] min-h-11 resize-none rounded-none border-none p-0 pt-4 shadow-none outline-none placeholder:text-muted-foreground/70 focus-visible:border-none focus-visible:ring-0"
+          data-testid="markdown-textarea"
+        />
       </Atoms.Container>
-
-      <Atoms.Textarea
-        ref={textareaRef}
-        value={markdownText}
-        onChange={(e) => handleMarkdownTextChange(e.target.value)}
-        readOnly={readOnly}
-        placeholder="Start writing your masterpiece"
-        maxLength={ARTICLE_MAX_CHARACTER_LENGTH}
-        className={Utils.cn(
-          'max-h-[60dvh] min-h-7 resize-none rounded-none border-none p-0 shadow-none outline-none placeholder:text-muted-foreground/70 focus-visible:border-none focus-visible:ring-0',
-          mode === 'richtext' && 'hidden',
-        )}
-        data-testid="markdown-textarea"
-      />
 
       {/* Rich text mode: MDXEditor (includes its own toolbar) — hidden via CSS in markdown mode */}
       <MDXEditor
@@ -242,7 +237,12 @@ export default function InitializedMDXEditor({
                 <ButtonWithTooltip title="Emoji" onClick={() => setShowEmojiPicker(true)}>
                   <Icons.Smile className="size-6" />
                 </ButtonWithTooltip>
-                <ButtonWithTooltip title="Markdown" onClick={switchToMarkdownMode}>
+                <ButtonWithTooltip
+                  title={isRichTextEmpty ? 'Markdown' : 'Clear content to switch modes'}
+                  onClick={switchToMarkdownMode}
+                  disabled={!isRichTextEmpty}
+                  className={Utils.cn(!isRichTextEmpty && 'opacity-50!')}
+                >
                   <Icons.MarkdownMark className="size-6" />
                 </ButtonWithTooltip>
               </>
@@ -262,6 +262,7 @@ export default function InitializedMDXEditor({
         ]}
         {...props}
         onChange={(markdown, initialMarkdownNormalize) => {
+          setRichText(markdown);
           updateMaxLengthWarning(markdown);
           props.onChange?.(markdown, initialMarkdownNormalize);
         }}
