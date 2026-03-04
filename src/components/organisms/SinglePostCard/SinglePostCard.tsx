@@ -1,9 +1,10 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useRef, useState } from 'react';
 import * as Libs from '@/libs';
 import * as Atoms from '@/atoms';
 import * as Organisms from '@/organisms';
+import type { PostTagsPanelHandle } from '@/organisms';
 import type { SinglePostCardProps } from './SinglePostCard.types';
 
 /**
@@ -19,6 +20,13 @@ import type { SinglePostCardProps } from './SinglePostCard.types';
 export function SinglePostCard({ postId, className }: SinglePostCardProps) {
   const [replyDialogOpen, setReplyDialogOpen] = useState(false);
   const [repostDialogOpen, setRepostDialogOpen] = useState(false);
+  const mobileTagsPanelRef = useRef<PostTagsPanelHandle>(null);
+  const desktopTagsPanelRef = useRef<PostTagsPanelHandle>(null);
+
+  const handleTagClick = () => {
+    mobileTagsPanelRef.current?.focus();
+    desktopTagsPanelRef.current?.focus();
+  };
 
   const handleReplyClick = () => {
     setReplyDialogOpen(true);
@@ -43,17 +51,28 @@ export function SinglePostCard({ postId, className }: SinglePostCardProps) {
               <Atoms.Container overrideDefaults className="flex-1" />
 
               {/* Tags on mobile - always visible */}
-              <Organisms.PostTagsPanel postId={postId} widthMode="full" className="lg:hidden" />
+              <Organisms.PostTagsPanel
+                ref={mobileTagsPanelRef}
+                postId={postId}
+                widthMode="full"
+                className="lg:hidden"
+              />
 
               <Organisms.PostActionsBar
                 postId={postId}
+                onTagClick={handleTagClick}
                 onReplyClick={handleReplyClick}
                 onRepostClick={handleRepostClick}
               />
             </Atoms.Container>
 
             {/* Right column - Tags (desktop only) */}
-            <Organisms.PostTagsPanel postId={postId} widthMode="full" className="hidden lg:flex" />
+            <Organisms.PostTagsPanel
+              ref={desktopTagsPanelRef}
+              postId={postId}
+              widthMode="full"
+              className="hidden lg:flex"
+            />
           </Atoms.Container>
         </Atoms.CardContent>
       </Atoms.Card>
