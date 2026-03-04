@@ -1,7 +1,7 @@
 'use client';
 
 import * as React from 'react';
-import { Slot } from '@radix-ui/react-slot';
+import { Slot } from 'radix-ui';
 import { cva, type VariantProps } from 'class-variance-authority';
 
 import { cn } from '@/libs';
@@ -31,7 +31,7 @@ const Badge = React.forwardRef<
       asChild?: boolean;
     }
 >(({ className, variant, asChild = false, ...props }, ref) => {
-  const Comp = asChild ? Slot : 'div';
+  const Comp = asChild ? Slot.Root : 'div';
 
   return (
     <Comp
