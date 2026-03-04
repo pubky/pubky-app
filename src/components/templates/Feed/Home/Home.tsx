@@ -7,15 +7,15 @@ export function Home() {
     <>
       <Organisms.DialogWelcome />
       <Organisms.ContentLayout
-        showRightMobileButton={false}
         leftSidebarContent={<Organisms.HomeFeedSidebar />}
         rightSidebarContent={<Organisms.HomeFeedRightSidebar />}
         leftDrawerContent={<Organisms.HomeFeedDrawer />}
         rightDrawerContent={<Organisms.HomeFeedRightDrawer />}
         leftDrawerContentMobile={<Organisms.HomeFeedDrawerMobile />}
+        rightDrawerContentMobile={<Organisms.FeedNavigation className="lg:hidden" />}
       >
         <Organisms.AlertBackup />
-        <Organisms.FeedNavigation />
+        <Organisms.FeedNavigation className="hidden lg:flex" />
         <Organisms.TimelineFeed variant={TIMELINE_FEED_VARIANT.HOME}>
           <Organisms.PostInput dataCy="home-post-input" variant={POST_INPUT_VARIANT.POST} />
         </Organisms.TimelineFeed>

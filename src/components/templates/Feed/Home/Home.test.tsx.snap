@@ -8,7 +8,6 @@ exports[`Home - Snapshots > matches snapshot 1`] = `
     DialogWelcome
   </div>
   <div
-    data-show-right-mobile-button="false"
     data-testid="content-layout"
   >
     <div
@@ -57,11 +56,22 @@ exports[`Home - Snapshots > matches snapshot 1`] = `
       </div>
     </div>
     <div
+      data-testid="right-drawer-mobile"
+    >
+      <div
+        data-classname="lg:hidden"
+        data-testid="feed-navigation"
+      >
+        FeedNavigation
+      </div>
+    </div>
+    <div
       data-testid="alert-backup"
     >
       AlertBackup
     </div>
     <div
+      data-classname="hidden lg:flex"
       data-testid="feed-navigation"
     >
       FeedNavigation

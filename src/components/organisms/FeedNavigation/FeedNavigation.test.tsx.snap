@@ -2,18 +2,26 @@
 
 exports[`FeedNavigation - Snapshots > matches snapshot with custom feed active (showing edit dialog) 1`] = `
 <div
-  class="flex-row overflow-x-auto"
+  class="overflow-x-auto lg:flex-row"
   data-testid="container"
 >
+  <div
+    class="mb-2 font-light text-muted-foreground lg:hidden"
+    data-level="2"
+    data-size="lg"
+    data-testid="heading"
+  >
+    Feed
+  </div>
   <a
-    class="flex h-12 w-full min-w-40 items-center justify-center gap-x-2 border-b transition-colors hover:text-white border-muted-foreground text-muted-foreground"
+    class="flex min-h-12 w-full min-w-40 items-center gap-x-2 border-b transition-colors hover:text-white lg:justify-center border-muted-foreground text-muted-foreground"
     data-override-defaults="true"
     data-testid="link"
     href="/home"
   >
     <svg
       aria-hidden="true"
-      class="lucide lucide-house size-5"
+      class="lucide lucide-house size-5 shrink-0"
       fill="none"
       height="24"
       stroke="currentColor"
@@ -32,7 +40,7 @@ exports[`FeedNavigation - Snapshots > matches snapshot with custom feed active (
       />
     </svg>
     <span
-      class="text-sm font-medium"
+      class="font-medium lg:text-sm"
       data-override-defaults="true"
       data-testid="typography"
     >
@@ -40,7 +48,7 @@ exports[`FeedNavigation - Snapshots > matches snapshot with custom feed active (
     </span>
   </a>
   <a
-    class="flex h-12 w-full min-w-40 items-center justify-center gap-x-2 border-b transition-colors hover:text-white border-white text-white"
+    class="flex min-h-12 w-full min-w-40 items-center gap-x-2 border-b transition-colors hover:text-white lg:justify-center border-white text-white"
     data-override-defaults="true"
     data-testid="link"
     href="/feed/feed-active"
@@ -49,14 +57,13 @@ exports[`FeedNavigation - Snapshots > matches snapshot with custom feed active (
       data-testid="custom-feed-dialog-edit"
     >
       <button
-        class="size-9"
-        data-size="icon"
+        class="cursor-pointer"
+        data-override-defaults="true"
         data-testid="button"
-        data-variant="ghost"
       >
         <svg
           aria-hidden="true"
-          class="lucide lucide-pencil size-5"
+          class="lucide lucide-pencil size-5 shrink-0"
           fill="none"
           height="24"
           stroke="currentColor"
@@ -77,7 +84,7 @@ exports[`FeedNavigation - Snapshots > matches snapshot with custom feed active (
       </button>
     </div>
     <span
-      class="text-sm font-medium"
+      class="font-medium lg:text-sm"
       data-override-defaults="true"
       data-testid="typography"
     >
@@ -88,13 +95,13 @@ exports[`FeedNavigation - Snapshots > matches snapshot with custom feed active (
     data-testid="custom-feed-dialog-create"
   >
     <button
-      class="flex h-12 w-full min-w-40 cursor-pointer items-center justify-center gap-x-2 border-b border-muted-foreground text-muted-foreground transition-colors hover:text-white"
+      class="flex min-h-12 w-full min-w-40 cursor-pointer items-center gap-x-2 border-b border-muted-foreground text-muted-foreground transition-colors hover:text-white lg:justify-center"
       data-override-defaults="true"
       data-testid="button"
     >
       <svg
         aria-hidden="true"
-        class="lucide lucide-circle-plus size-5"
+        class="lucide lucide-circle-plus size-5 shrink-0"
         fill="none"
         height="24"
         stroke="currentColor"
@@ -118,7 +125,7 @@ exports[`FeedNavigation - Snapshots > matches snapshot with custom feed active (
         />
       </svg>
       <span
-        class="text-sm font-medium"
+        class="font-medium lg:text-sm"
         data-override-defaults="true"
         data-testid="typography"
       >
@@ -131,18 +138,26 @@ exports[`FeedNavigation - Snapshots > matches snapshot with custom feed active (
 
 exports[`FeedNavigation - Snapshots > matches snapshot with custom feeds and Home active 1`] = `
 <div
-  class="flex-row overflow-x-auto"
+  class="overflow-x-auto lg:flex-row"
   data-testid="container"
 >
+  <div
+    class="mb-2 font-light text-muted-foreground lg:hidden"
+    data-level="2"
+    data-size="lg"
+    data-testid="heading"
+  >
+    Feed
+  </div>
   <a
-    class="flex h-12 w-full min-w-40 items-center justify-center gap-x-2 border-b transition-colors hover:text-white border-white text-white"
+    class="flex min-h-12 w-full min-w-40 items-center gap-x-2 border-b transition-colors hover:text-white lg:justify-center border-white text-white"
     data-override-defaults="true"
     data-testid="link"
     href="/home"
   >
     <svg
       aria-hidden="true"
-      class="lucide lucide-house size-5"
+      class="lucide lucide-house size-5 shrink-0"
       fill="none"
       height="24"
       stroke="currentColor"
@@ -161,7 +176,7 @@ exports[`FeedNavigation - Snapshots > matches snapshot with custom feeds and Hom
       />
     </svg>
     <span
-      class="text-sm font-medium"
+      class="font-medium lg:text-sm"
       data-override-defaults="true"
       data-testid="typography"
     >
@@ -169,14 +184,14 @@ exports[`FeedNavigation - Snapshots > matches snapshot with custom feeds and Hom
     </span>
   </a>
   <a
-    class="flex h-12 w-full min-w-40 items-center justify-center gap-x-2 border-b transition-colors hover:text-white border-muted-foreground text-muted-foreground"
+    class="flex min-h-12 w-full min-w-40 items-center gap-x-2 border-b transition-colors hover:text-white lg:justify-center border-muted-foreground text-muted-foreground"
     data-override-defaults="true"
     data-testid="link"
     href="/feed/feed-1"
   >
     <svg
       aria-hidden="true"
-      class="lucide lucide-pencil size-5"
+      class="lucide lucide-pencil size-5 shrink-0"
       fill="none"
       height="24"
       stroke="currentColor"
@@ -195,7 +210,7 @@ exports[`FeedNavigation - Snapshots > matches snapshot with custom feeds and Hom
       />
     </svg>
     <span
-      class="text-sm font-medium"
+      class="font-medium lg:text-sm"
       data-override-defaults="true"
       data-testid="typography"
     >
@@ -203,14 +218,14 @@ exports[`FeedNavigation - Snapshots > matches snapshot with custom feeds and Hom
     </span>
   </a>
   <a
-    class="flex h-12 w-full min-w-40 items-center justify-center gap-x-2 border-b transition-colors hover:text-white border-muted-foreground text-muted-foreground"
+    class="flex min-h-12 w-full min-w-40 items-center gap-x-2 border-b transition-colors hover:text-white lg:justify-center border-muted-foreground text-muted-foreground"
     data-override-defaults="true"
     data-testid="link"
     href="/feed/feed-2"
   >
     <svg
       aria-hidden="true"
-      class="lucide lucide-pencil size-5"
+      class="lucide lucide-pencil size-5 shrink-0"
       fill="none"
       height="24"
       stroke="currentColor"
@@ -229,7 +244,7 @@ exports[`FeedNavigation - Snapshots > matches snapshot with custom feeds and Hom
       />
     </svg>
     <span
-      class="text-sm font-medium"
+      class="font-medium lg:text-sm"
       data-override-defaults="true"
       data-testid="typography"
     >
@@ -240,13 +255,13 @@ exports[`FeedNavigation - Snapshots > matches snapshot with custom feeds and Hom
     data-testid="custom-feed-dialog-create"
   >
     <button
-      class="flex h-12 w-full min-w-40 cursor-pointer items-center justify-center gap-x-2 border-b border-muted-foreground text-muted-foreground transition-colors hover:text-white"
+      class="flex min-h-12 w-full min-w-40 cursor-pointer items-center gap-x-2 border-b border-muted-foreground text-muted-foreground transition-colors hover:text-white lg:justify-center"
       data-override-defaults="true"
       data-testid="button"
     >
       <svg
         aria-hidden="true"
-        class="lucide lucide-circle-plus size-5"
+        class="lucide lucide-circle-plus size-5 shrink-0"
         fill="none"
         height="24"
         stroke="currentColor"
@@ -270,7 +285,7 @@ exports[`FeedNavigation - Snapshots > matches snapshot with custom feeds and Hom
         />
       </svg>
       <span
-        class="text-sm font-medium"
+        class="font-medium lg:text-sm"
         data-override-defaults="true"
         data-testid="typography"
       >
@@ -283,18 +298,26 @@ exports[`FeedNavigation - Snapshots > matches snapshot with custom feeds and Hom
 
 exports[`FeedNavigation - Snapshots > matches snapshot with multiple custom feeds and one active 1`] = `
 <div
-  class="flex-row overflow-x-auto"
+  class="overflow-x-auto lg:flex-row"
   data-testid="container"
 >
+  <div
+    class="mb-2 font-light text-muted-foreground lg:hidden"
+    data-level="2"
+    data-size="lg"
+    data-testid="heading"
+  >
+    Feed
+  </div>
   <a
-    class="flex h-12 w-full min-w-40 items-center justify-center gap-x-2 border-b transition-colors hover:text-white border-muted-foreground text-muted-foreground"
+    class="flex min-h-12 w-full min-w-40 items-center gap-x-2 border-b transition-colors hover:text-white lg:justify-center border-muted-foreground text-muted-foreground"
     data-override-defaults="true"
     data-testid="link"
     href="/home"
   >
     <svg
       aria-hidden="true"
-      class="lucide lucide-house size-5"
+      class="lucide lucide-house size-5 shrink-0"
       fill="none"
       height="24"
       stroke="currentColor"
@@ -313,7 +336,7 @@ exports[`FeedNavigation - Snapshots > matches snapshot with multiple custom feed
       />
     </svg>
     <span
-      class="text-sm font-medium"
+      class="font-medium lg:text-sm"
       data-override-defaults="true"
       data-testid="typography"
     >
@@ -321,14 +344,14 @@ exports[`FeedNavigation - Snapshots > matches snapshot with multiple custom feed
     </span>
   </a>
   <a
-    class="flex h-12 w-full min-w-40 items-center justify-center gap-x-2 border-b transition-colors hover:text-white border-muted-foreground text-muted-foreground"
+    class="flex min-h-12 w-full min-w-40 items-center gap-x-2 border-b transition-colors hover:text-white lg:justify-center border-muted-foreground text-muted-foreground"
     data-override-defaults="true"
     data-testid="link"
     href="/feed/feed-1"
   >
     <svg
       aria-hidden="true"
-      class="lucide lucide-pencil size-5"
+      class="lucide lucide-pencil size-5 shrink-0"
       fill="none"
       height="24"
       stroke="currentColor"
@@ -347,7 +370,7 @@ exports[`FeedNavigation - Snapshots > matches snapshot with multiple custom feed
       />
     </svg>
     <span
-      class="text-sm font-medium"
+      class="font-medium lg:text-sm"
       data-override-defaults="true"
       data-testid="typography"
     >
@@ -355,7 +378,7 @@ exports[`FeedNavigation - Snapshots > matches snapshot with multiple custom feed
     </span>
   </a>
   <a
-    class="flex h-12 w-full min-w-40 items-center justify-center gap-x-2 border-b transition-colors hover:text-white border-white text-white"
+    class="flex min-h-12 w-full min-w-40 items-center gap-x-2 border-b transition-colors hover:text-white lg:justify-center border-white text-white"
     data-override-defaults="true"
     data-testid="link"
     href="/feed/feed-2"
@@ -364,14 +387,13 @@ exports[`FeedNavigation - Snapshots > matches snapshot with multiple custom feed
       data-testid="custom-feed-dialog-edit"
     >
       <button
-        class="size-9"
-        data-size="icon"
+        class="cursor-pointer"
+        data-override-defaults="true"
         data-testid="button"
-        data-variant="ghost"
       >
         <svg
           aria-hidden="true"
-          class="lucide lucide-pencil size-5"
+          class="lucide lucide-pencil size-5 shrink-0"
           fill="none"
           height="24"
           stroke="currentColor"
@@ -392,7 +414,7 @@ exports[`FeedNavigation - Snapshots > matches snapshot with multiple custom feed
       </button>
     </div>
     <span
-      class="text-sm font-medium"
+      class="font-medium lg:text-sm"
       data-override-defaults="true"
       data-testid="typography"
     >
@@ -400,14 +422,14 @@ exports[`FeedNavigation - Snapshots > matches snapshot with multiple custom feed
     </span>
   </a>
   <a
-    class="flex h-12 w-full min-w-40 items-center justify-center gap-x-2 border-b transition-colors hover:text-white border-muted-foreground text-muted-foreground"
+    class="flex min-h-12 w-full min-w-40 items-center gap-x-2 border-b transition-colors hover:text-white lg:justify-center border-muted-foreground text-muted-foreground"
     data-override-defaults="true"
     data-testid="link"
     href="/feed/feed-3"
   >
     <svg
       aria-hidden="true"
-      class="lucide lucide-pencil size-5"
+      class="lucide lucide-pencil size-5 shrink-0"
       fill="none"
       height="24"
       stroke="currentColor"
@@ -426,7 +448,7 @@ exports[`FeedNavigation - Snapshots > matches snapshot with multiple custom feed
       />
     </svg>
     <span
-      class="text-sm font-medium"
+      class="font-medium lg:text-sm"
       data-override-defaults="true"
       data-testid="typography"
     >
@@ -437,13 +459,13 @@ exports[`FeedNavigation - Snapshots > matches snapshot with multiple custom feed
     data-testid="custom-feed-dialog-create"
   >
     <button
-      class="flex h-12 w-full min-w-40 cursor-pointer items-center justify-center gap-x-2 border-b border-muted-foreground text-muted-foreground transition-colors hover:text-white"
+      class="flex min-h-12 w-full min-w-40 cursor-pointer items-center gap-x-2 border-b border-muted-foreground text-muted-foreground transition-colors hover:text-white lg:justify-center"
       data-override-defaults="true"
       data-testid="button"
     >
       <svg
         aria-hidden="true"
-        class="lucide lucide-circle-plus size-5"
+        class="lucide lucide-circle-plus size-5 shrink-0"
         fill="none"
         height="24"
         stroke="currentColor"
@@ -467,7 +489,7 @@ exports[`FeedNavigation - Snapshots > matches snapshot with multiple custom feed
         />
       </svg>
       <span
-        class="text-sm font-medium"
+        class="font-medium lg:text-sm"
         data-override-defaults="true"
         data-testid="typography"
       >
@@ -480,18 +502,26 @@ exports[`FeedNavigation - Snapshots > matches snapshot with multiple custom feed
 
 exports[`FeedNavigation - Snapshots > matches snapshot with no custom feeds and Home active 1`] = `
 <div
-  class="flex-row overflow-x-auto"
+  class="overflow-x-auto lg:flex-row"
   data-testid="container"
 >
+  <div
+    class="mb-2 font-light text-muted-foreground lg:hidden"
+    data-level="2"
+    data-size="lg"
+    data-testid="heading"
+  >
+    Feed
+  </div>
   <a
-    class="flex h-12 w-full min-w-40 items-center justify-center gap-x-2 border-b transition-colors hover:text-white border-white text-white"
+    class="flex min-h-12 w-full min-w-40 items-center gap-x-2 border-b transition-colors hover:text-white lg:justify-center border-white text-white"
     data-override-defaults="true"
     data-testid="link"
     href="/home"
   >
     <svg
       aria-hidden="true"
-      class="lucide lucide-house size-5"
+      class="lucide lucide-house size-5 shrink-0"
       fill="none"
       height="24"
       stroke="currentColor"
@@ -510,7 +540,7 @@ exports[`FeedNavigation - Snapshots > matches snapshot with no custom feeds and 
       />
     </svg>
     <span
-      class="text-sm font-medium"
+      class="font-medium lg:text-sm"
       data-override-defaults="true"
       data-testid="typography"
     >
@@ -521,13 +551,13 @@ exports[`FeedNavigation - Snapshots > matches snapshot with no custom feeds and 
     data-testid="custom-feed-dialog-create"
   >
     <button
-      class="flex h-12 w-full min-w-40 cursor-pointer items-center justify-center gap-x-2 border-b border-muted-foreground text-muted-foreground transition-colors hover:text-white"
+      class="flex min-h-12 w-full min-w-40 cursor-pointer items-center gap-x-2 border-b border-muted-foreground text-muted-foreground transition-colors hover:text-white lg:justify-center"
       data-override-defaults="true"
       data-testid="button"
     >
       <svg
         aria-hidden="true"
-        class="lucide lucide-circle-plus size-5"
+        class="lucide lucide-circle-plus size-5 shrink-0"
         fill="none"
         height="24"
         stroke="currentColor"
@@ -551,7 +581,7 @@ exports[`FeedNavigation - Snapshots > matches snapshot with no custom feeds and 
         />
       </svg>
       <span
-        class="text-sm font-medium"
+        class="font-medium lg:text-sm"
         data-override-defaults="true"
         data-testid="typography"
       >
