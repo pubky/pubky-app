@@ -577,6 +577,11 @@ describe('InitializedMDXEditor', () => {
     });
 
     it('does not update textarea value when exceeding max length', () => {
+      // Note: This tests a JSDOM-only path. In a real browser, the native
+      // maxLength attribute truncates pasted content before firing onChange,
+      // so the handler would never receive more than ARTICLE_MAX_CHARACTER_LENGTH
+      // characters. JSDOM does not enforce maxLength, allowing us to verify
+      // the JS guard works as a defense-in-depth measure.
       render(<InitializedMDXEditor editorRef={null} markdown="" />);
 
       // Switch to markdown mode
@@ -588,6 +593,20 @@ describe('InitializedMDXEditor', () => {
 
       // Should remain empty since input exceeds max
       expect(textarea).toHaveValue('');
+    });
+
+    it('accepts content at exactly the max character length', () => {
+      render(<InitializedMDXEditor editorRef={null} markdown="" />);
+
+      // Switch to markdown mode
+      fireEvent.click(screen.getByTestId('button-with-tooltip-markdown'));
+
+      const textarea = screen.getByTestId('markdown-textarea');
+      const exactLimitContent = 'a'.repeat(MOCK_MAX_LENGTH);
+      fireEvent.change(textarea, { target: { value: exactLimitContent } });
+
+      // Content at exactly the limit should be accepted
+      expect(textarea).toHaveValue(exactLimitContent);
     });
 
     it('calls props.onChange when typing in markdown mode', () => {
