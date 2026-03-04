@@ -114,8 +114,8 @@ describe('FileApplication', () => {
       const blobResult = createMockBlobResult();
       const fileResult = createMockFileResult(undefined, fileJson);
 
-      const putBlobSpy = vi.spyOn(Core.HomeserverService, 'putBlob').mockResolvedValue(undefined as unknown as void);
-      const requestSpy = vi.spyOn(Core.HomeserverService, 'request').mockResolvedValue(undefined as unknown as void);
+      const putBlobSpy = vi.spyOn(Core.HomeserverService, 'putBlob').mockResolvedValue(undefined);
+      const requestSpy = vi.spyOn(Core.HomeserverService, 'request').mockResolvedValue(undefined);
       const createSpy = vi.spyOn(Core.LocalFileService, 'create').mockResolvedValue(undefined);
 
       await FileApplication.commitCreate({ fileAttachments: [{ blobResult, fileResult }] });
@@ -159,7 +159,7 @@ describe('FileApplication', () => {
       const blobResult = createMockBlobResult();
       const fileResult = createMockFileResult(undefined, fileJson);
 
-      const putBlobSpy = vi.spyOn(Core.HomeserverService, 'putBlob').mockResolvedValue(undefined as unknown as void);
+      const putBlobSpy = vi.spyOn(Core.HomeserverService, 'putBlob').mockResolvedValue(undefined);
       const requestSpy = vi
         .spyOn(Core.HomeserverService, 'request')
         .mockRejectedValueOnce(new Error('file record upload failed'));
@@ -182,8 +182,8 @@ describe('FileApplication', () => {
       const fileResult1 = createMockFileResult('pubky://user/pub/pubky.app/files/file1', fileJson1);
       const fileResult2 = createMockFileResult('pubky://user/pub/pubky.app/files/file2', fileJson2);
 
-      const putBlobSpy = vi.spyOn(Core.HomeserverService, 'putBlob').mockResolvedValue(undefined as unknown as void);
-      const requestSpy = vi.spyOn(Core.HomeserverService, 'request').mockResolvedValue(undefined as unknown as void);
+      const putBlobSpy = vi.spyOn(Core.HomeserverService, 'putBlob').mockResolvedValue(undefined);
+      const requestSpy = vi.spyOn(Core.HomeserverService, 'request').mockResolvedValue(undefined);
       const createSpy = vi.spyOn(Core.LocalFileService, 'create').mockResolvedValue(undefined);
 
       await FileApplication.commitCreate({
@@ -223,8 +223,8 @@ describe('FileApplication', () => {
       const fileResult = createMockFileResult(undefined, fileJson);
 
       const error = new Error('Local persistence failed');
-      const putBlobSpy = vi.spyOn(Core.HomeserverService, 'putBlob').mockResolvedValue(undefined as unknown as void);
-      const requestSpy = vi.spyOn(Core.HomeserverService, 'request').mockResolvedValue(undefined as unknown as void);
+      const putBlobSpy = vi.spyOn(Core.HomeserverService, 'putBlob').mockResolvedValue(undefined);
+      const requestSpy = vi.spyOn(Core.HomeserverService, 'request').mockResolvedValue(undefined);
       const createSpy = vi.spyOn(Core.LocalFileService, 'create').mockRejectedValue(error);
 
       await expect(FileApplication.commitCreate({ fileAttachments: [{ blobResult, fileResult }] })).rejects.toThrow(
@@ -440,7 +440,7 @@ describe('FileApplication', () => {
       await FileApplication.fetchFiles([uri]);
 
       expect(Core.NexusFileService.fetchFiles).toHaveBeenCalledWith([uri]);
-      expect(createManySpy).toHaveBeenCalledWith({ files: [] });
+      expect(createManySpy).not.toHaveBeenCalled();
     });
 
     it('propagates errors from NexusFileService', async () => {
@@ -475,6 +475,59 @@ describe('FileApplication', () => {
 
       await expect(FileApplication.fetchFiles([uri])).rejects.toThrow('Database save failed');
       expect(Core.LocalFileService.createMany).toHaveBeenCalledWith({ files: expectedFilesWithIds });
+    });
+  });
+
+  describe('persistFiles', () => {
+    it('returns early when fileAttachments is empty', async () => {
+      const createManySpy = vi.spyOn(Core.LocalFileService, 'createMany');
+
+      await FileApplication.persistFiles([]);
+
+      expect(createManySpy).not.toHaveBeenCalled();
+    });
+
+    it('handles urls as JSON string (from file details endpoint)', async () => {
+      const fileId = 'file-123';
+      const uri = createFileUri(fileId);
+      const compositeId = Core.buildCompositeIdFromPubkyUri({ uri, domain: Core.CompositeIdDomain.FILES });
+
+      const fileAttachments = [
+        {
+          ...createMockFile('', 'file1.jpg', uri),
+          urls: createMockUrls('feed1', 'main1', 'small1'),
+        },
+      ];
+
+      const createManySpy = vi.spyOn(Core.LocalFileService, 'createMany').mockResolvedValue(undefined);
+
+      await FileApplication.persistFiles(fileAttachments as unknown as NexusFileDetails[]);
+
+      expect(createManySpy).toHaveBeenCalledWith({
+        files: [{ ...fileAttachments[0], id: compositeId, urls: { feed: 'feed1', main: 'main1', small: 'small1' } }],
+      });
+    });
+
+    it('handles urls as parsed object (from inline attachments_metadata)', async () => {
+      const fileId = 'file-456';
+      const uri = createFileUri(fileId);
+      const compositeId = Core.buildCompositeIdFromPubkyUri({ uri, domain: Core.CompositeIdDomain.FILES });
+
+      const urlsObject = { feed: 'feed-url', main: 'main-url', small: 'small-url' };
+      const fileAttachments: NexusFileDetails[] = [
+        {
+          ...createMockFile('', 'file2.png', uri),
+          urls: urlsObject,
+        },
+      ];
+
+      const createManySpy = vi.spyOn(Core.LocalFileService, 'createMany').mockResolvedValue(undefined);
+
+      await FileApplication.persistFiles(fileAttachments);
+
+      expect(createManySpy).toHaveBeenCalledWith({
+        files: [{ ...fileAttachments[0], id: compositeId, urls: urlsObject }],
+      });
     });
   });
 
