@@ -31,12 +31,11 @@ describe('OgMetadataValidators', () => {
       });
 
       it('should throw AppError with MISSING_FIELD for null', async () => {
-        await expect(OgMetadataValidators.validate(null)).rejects.toThrow(AppError);
         try {
           await OgMetadataValidators.validate(null);
+          expect.fail('Should have thrown');
         } catch (error) {
           const appError = error as AppError;
-          // No need to test all but relevant field
           expect(appError.code).toBe(ValidationErrorCode.MISSING_FIELD);
         }
       });
@@ -77,9 +76,9 @@ describe('OgMetadataValidators', () => {
       });
 
       it('should throw AppError with INVALID_INPUT for ftp:// protocol', async () => {
-        await expect(OgMetadataValidators.validate('ftp://example.com')).rejects.toThrow(AppError);
         try {
           await OgMetadataValidators.validate('ftp://example.com');
+          expect.fail('Should have thrown');
         } catch (error) {
           const appError = error as AppError;
           expect(appError.code).toBe(ValidationErrorCode.INVALID_INPUT);
