@@ -1174,5 +1174,15 @@
     "pullToRefresh": "Scorri per aggiornare",
     "releaseToRefresh": "Rilascia per aggiornare",
     "refreshing": "Aggiornamento..."
+  },
+  "markdownEditor": {
+    "emoji": "Emoji",
+    "richText": "Testo formattato",
+    "markdown": "Markdown",
+    "clearToSwitch": "Cancella il contenuto per cambiare modalità",
+    "placeholder": "Inizia a scrivere il tuo capolavoro",
+    "toolbarAriaLabel": "Barra degli strumenti per la modifica Markdown",
+    "warningApproaching": "Ti stai avvicinando al limite massimo di caratteri.",
+    "warningReached": "Hai raggiunto il limite massimo di caratteri."
   }
 }
