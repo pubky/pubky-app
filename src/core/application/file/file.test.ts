@@ -410,6 +410,59 @@ describe('FileApplication', () => {
     });
   });
 
+  describe('persistFiles', () => {
+    it('returns early when fileAttachments is empty', async () => {
+      const createManySpy = vi.spyOn(Core.LocalFileService, 'createMany');
+
+      await FileApplication.persistFiles([]);
+
+      expect(createManySpy).not.toHaveBeenCalled();
+    });
+
+    it('handles urls as JSON string (from file details endpoint)', async () => {
+      const fileId = 'file-123';
+      const uri = createFileUri(fileId);
+      const compositeId = Core.buildCompositeIdFromPubkyUri({ uri, domain: Core.CompositeIdDomain.FILES });
+
+      const fileAttachments = [
+        {
+          ...createMockFile('', 'file1.jpg', uri),
+          urls: createMockUrls('feed1', 'main1', 'small1'),
+        },
+      ];
+
+      const createManySpy = vi.spyOn(Core.LocalFileService, 'createMany').mockResolvedValue(undefined);
+
+      await FileApplication.persistFiles(fileAttachments as unknown as NexusFileDetails[]);
+
+      expect(createManySpy).toHaveBeenCalledWith({
+        files: [{ ...fileAttachments[0], id: compositeId, urls: { feed: 'feed1', main: 'main1', small: 'small1' } }],
+      });
+    });
+
+    it('handles urls as parsed object (from inline attachments_metadata)', async () => {
+      const fileId = 'file-456';
+      const uri = createFileUri(fileId);
+      const compositeId = Core.buildCompositeIdFromPubkyUri({ uri, domain: Core.CompositeIdDomain.FILES });
+
+      const urlsObject = { feed: 'feed-url', main: 'main-url', small: 'small-url' };
+      const fileAttachments: NexusFileDetails[] = [
+        {
+          ...createMockFile('', 'file2.png', uri),
+          urls: urlsObject,
+        },
+      ];
+
+      const createManySpy = vi.spyOn(Core.LocalFileService, 'createMany').mockResolvedValue(undefined);
+
+      await FileApplication.persistFiles(fileAttachments);
+
+      expect(createManySpy).toHaveBeenCalledWith({
+        files: [{ ...fileAttachments[0], id: compositeId, urls: urlsObject }],
+      });
+    });
+  });
+
   describe('commitDelete', () => {
     it('deletes file metadata, blob, and local record when file exists locally', async () => {
       const fileId = 'file-123';
