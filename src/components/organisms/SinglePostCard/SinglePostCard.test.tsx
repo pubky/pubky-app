@@ -1,5 +1,6 @@
 import { render, screen, fireEvent } from '@testing-library/react';
 import { vi, describe, it, expect, beforeEach } from 'vitest';
+import { forwardRef, useImperativeHandle, useRef } from 'react';
 import { SinglePostCard } from './SinglePostCard';
 
 // Mock organisms
@@ -8,14 +9,19 @@ vi.mock('@/organisms', () => ({
   PostContent: ({ postId }: { postId: string }) => <div data-testid="post-content">Content: {postId}</div>,
   PostActionsBar: ({
     postId,
+    onTagClick,
     onReplyClick,
     onRepostClick,
   }: {
     postId: string;
+    onTagClick?: () => void;
     onReplyClick?: () => void;
     onRepostClick?: () => void;
   }) => (
     <div data-testid="post-actions-bar">
+      <button data-testid="tag-action" onClick={onTagClick}>
+        Tag
+      </button>
       <button data-testid="reply-action" onClick={onReplyClick}>
         Reply
       </button>
@@ -25,11 +31,25 @@ vi.mock('@/organisms', () => ({
       Actions: {postId}
     </div>
   ),
-  PostTagsPanel: ({ postId, className }: { postId: string; className?: string }) => (
-    <div data-testid="post-tags-panel" data-class-name={className}>
-      Tags: {postId}
-    </div>
-  ),
+  PostTagsPanel: forwardRef<{ focus: () => void }, { postId: string; className?: string }>(function MockPostTagsPanel(
+    { postId, className },
+    ref,
+  ) {
+    const inputRef = useRef<HTMLInputElement>(null);
+
+    useImperativeHandle(ref, () => ({
+      focus: () => inputRef.current?.focus(),
+    }));
+
+    const panelType = className?.includes('hidden lg:flex') ? 'desktop' : 'mobile';
+
+    return (
+      <div data-testid="post-tags-panel" data-class-name={className}>
+        <input ref={inputRef} data-testid={`tag-input-${panelType}`} />
+        Tags: {postId}
+      </div>
+    );
+  }),
   DialogReply: ({ postId, open }: { postId: string; open: boolean }) => (
     <div data-testid="dialog-reply" data-open={open}>
       Reply Dialog: {postId}
@@ -116,6 +136,17 @@ describe('SinglePostCard', () => {
   });
 
   describe('interactions', () => {
+    it('should focus desktop tag input when tag action is clicked', () => {
+      render(<SinglePostCard postId={mockPostId} />);
+
+      const desktopTagInput = screen.getByTestId('tag-input-desktop');
+      expect(desktopTagInput).not.toHaveFocus();
+
+      fireEvent.click(screen.getByTestId('tag-action'));
+
+      expect(desktopTagInput).toHaveFocus();
+    });
+
     it('should open reply dialog when reply action is clicked', () => {
       render(<SinglePostCard postId={mockPostId} />);
 

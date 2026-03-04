@@ -1,11 +1,13 @@
 'use client';
 
+import { forwardRef, useImperativeHandle, useRef } from 'react';
 import * as Atoms from '@/atoms';
 import * as Molecules from '@/molecules';
 import * as Hooks from '@/hooks';
 import * as Libs from '@/libs';
 import * as Core from '@/core';
-import type { PostTagsPanelProps } from './PostTagsPanel.types';
+import type { TagInputHandle } from '@/molecules';
+import type { PostTagsPanelProps, PostTagsPanelHandle } from './PostTagsPanel.types';
 import { PostTagsPanelSkeleton } from './PostTagsPanel.skeleton';
 
 /**
@@ -23,7 +25,16 @@ import { PostTagsPanelSkeleton } from './PostTagsPanel.skeleton';
  *
  * Uses the same TaggedSection pattern as ProfileTagged but adapted for posts.
  */
-export function PostTagsPanel({ postId, widthMode = 'fit', className }: PostTagsPanelProps) {
+export const PostTagsPanel = forwardRef<PostTagsPanelHandle, PostTagsPanelProps>(function PostTagsPanel(
+  { postId, widthMode = 'fit', autoFocusInput, className },
+  ref,
+) {
+  const tagInputRef = useRef<TagInputHandle>(null);
+
+  useImperativeHandle(ref, () => ({
+    focus: () => tagInputRef.current?.focus(),
+  }));
+
   const { tags, isLoading, handleTagAdd, handleTagToggle, hasMore, isLoadingMore, loadMore } =
     Hooks.usePostTags(postId);
 
@@ -63,6 +74,7 @@ export function PostTagsPanel({ postId, widthMode = 'fit', className }: PostTags
       >
         {/* TagInput visible for all users - clicking opens sign-in for unauthenticated */}
         <Molecules.TagInput
+          ref={tagInputRef}
           onTagAdd={handleTagAddWithAuth}
           existingTags={tags}
           viewerTags={viewerTags}
@@ -71,6 +83,7 @@ export function PostTagsPanel({ postId, widthMode = 'fit', className }: PostTags
           enableApiSuggestions
           excludeFromApiSuggestions={tags.map((t) => t.label)}
           addOnSuggestionClick
+          autoFocus={autoFocusInput}
         />
 
         {tags.length > 0 && (
@@ -89,4 +102,4 @@ export function PostTagsPanel({ postId, widthMode = 'fit', className }: PostTags
       </Atoms.Container>
     </Atoms.Container>
   );
-}
+});
