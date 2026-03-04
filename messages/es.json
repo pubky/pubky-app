@@ -82,7 +82,9 @@
     "hot": "Tendencias",
     "bookmarks": "Favoritos",
     "settings": "Configuración",
-    "newHere": "Nuevo aquí?"
+    "newHere": "Nuevo aquí?",
+    "signIn": "Iniciar sesión",
+    "feed": "Feed"
   },
   "settings": {
     "title": "Configuración",
@@ -1174,5 +1176,15 @@
     "pullToRefresh": "Desliza para actualizar",
     "releaseToRefresh": "Suelta para actualizar",
     "refreshing": "Actualizando..."
+  },
+  "markdownEditor": {
+    "emoji": "Emoji",
+    "richText": "Texto enriquecido",
+    "markdown": "Markdown",
+    "clearToSwitch": "Borra el contenido para cambiar de modo",
+    "placeholder": "Empieza a escribir tu obra maestra",
+    "toolbarAriaLabel": "Barra de herramientas de edición Markdown",
+    "warningApproaching": "Te estás acercando al límite máximo de caracteres.",
+    "warningReached": "Has alcanzado el límite máximo de caracteres."
   }
 }

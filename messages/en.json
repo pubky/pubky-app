@@ -82,7 +82,9 @@
     "hot": "Hot",
     "bookmarks": "Bookmarks",
     "settings": "Settings",
-    "newHere": "New here?"
+    "newHere": "New here?",
+    "signIn": "Sign in",
+    "feed": "Feed"
   },
   "settings": {
     "title": "Settings",
@@ -1168,5 +1170,15 @@
     "pullToRefresh": "Pull to refresh",
     "releaseToRefresh": "Release to refresh",
     "refreshing": "Refreshing..."
+  },
+  "markdownEditor": {
+    "emoji": "Emoji",
+    "richText": "Rich Text",
+    "markdown": "Markdown",
+    "clearToSwitch": "Clear content to switch modes",
+    "placeholder": "Start writing your masterpiece",
+    "toolbarAriaLabel": "Markdown editing toolbar",
+    "warningApproaching": "You're approaching the maximum character limit.",
+    "warningReached": "You've reached the maximum character limit."
   }
 }

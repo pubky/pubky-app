@@ -240,7 +240,15 @@ describe('Header Components', () => {
         'items-center',
         'justify-between',
         'gap-4',
+        'container',
+        'h-24',
+        'w-full',
+        'pointer-events-auto',
+        'sm:flex-nowrap',
         'sm:gap-6',
+        'px-6',
+        'py-4',
+        'sm:py-6',
       );
     });
 
