@@ -17,6 +17,7 @@ exports[`TaggedItem > matches snapshot 1`] = `
       (3)
     </div>
     <button
+      class="size-8"
       data-testid="search-button"
       variant="secondary"
     >
