@@ -168,12 +168,6 @@ describe('MobileHeader - Snapshots', () => {
     expect(container.firstChild).toMatchSnapshot();
   });
 
-  it('matches snapshot with padding container', () => {
-    const { container } = render(<MobileHeader />);
-    const paddingContainer = container.querySelector('.px-6');
-    expect(paddingContainer).toMatchSnapshot();
-  });
-
   it('matches snapshot with fixed positioning', () => {
     const { container } = render(<MobileHeader fixed />);
     expect(container.firstChild).toMatchSnapshot();

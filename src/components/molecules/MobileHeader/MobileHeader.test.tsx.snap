@@ -371,8 +371,6 @@ exports[`MobileHeader - Snapshots > matches snapshot with fixed positioning 1`] 
 </div>
 `;
 
-exports[`MobileHeader - Snapshots > matches snapshot with padding container 1`] = `null`;
-
 exports[`MobileHeader - Snapshots > matches snapshot with solid background (hasGradientBackground=false) 1`] = `
 <div
   class="sticky top-0 z-(--z-mobile-menu) lg:hidden bg-background shadow-xs"
