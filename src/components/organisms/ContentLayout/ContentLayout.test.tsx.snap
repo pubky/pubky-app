@@ -182,7 +182,7 @@ exports[`ContentLayout - Snapshots > matches snapshot with default props 1`] = `
 
 exports[`ContentLayout - Snapshots > matches snapshot with renderMobileHeader false 1`] = `
 <div
-  class="container m-auto w-full px-6 pb-12 xl:px-0 pt-0"
+  class="container max-w-[1200px] m-auto w-full px-6 pb-12 xl:px-0 pt-0"
   data-testid="container"
 >
   <div
