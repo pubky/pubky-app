@@ -13,9 +13,10 @@ import * as App from '@/app';
 export interface HeaderContainerProps {
   children: React.ReactNode;
   className?: string;
+  classNameNav?: string;
 }
 
-export const HeaderContainer = ({ children, className }: HeaderContainerProps) => {
+export const HeaderContainer = ({ children, className, classNameNav }: HeaderContainerProps) => {
   return (
     <Atoms.Container
       overrideDefaults
@@ -29,8 +30,9 @@ export const HeaderContainer = ({ children, className }: HeaderContainerProps) =
         as="nav"
         size="container"
         className={Libs.cn(
-          'pointer-events-auto flex w-full flex-row flex-wrap items-center justify-between gap-4 sm:flex-nowrap sm:gap-6 xl:max-w-[1240px]',
-          'px-6 py-4 sm:py-6 xl:px-0',
+          'pointer-events-auto container flex h-24 w-full flex-row flex-wrap items-center justify-between gap-4 sm:flex-nowrap sm:gap-6',
+          'px-6 py-4 sm:py-6',
+          classNameNav,
         )}
       >
         {children}
