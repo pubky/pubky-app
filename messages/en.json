@@ -82,7 +82,8 @@
     "hot": "Hot",
     "bookmarks": "Bookmarks",
     "settings": "Settings",
-    "signIn": "Sign in"
+    "signIn": "Sign in",
+    "feed": "Feed"
   },
   "settings": {
     "title": "Settings",

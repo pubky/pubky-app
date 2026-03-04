@@ -323,9 +323,8 @@ export class PostStreamApplication {
         // Only pass viewer_id if it's a valid string (not null/undefined)
         ...(viewerId ? { viewer_id: viewerId } : {}),
       });
-      const { postAttachments } = await Core.LocalStreamPostsService.persistPosts({ posts: postBatch });
-      // Persist the post attachments metadata
-      await Core.FileApplication.fetchFiles(postAttachments);
+      const { attachmentMetadata } = await Core.LocalStreamPostsService.persistPosts({ posts: postBatch });
+      await Core.FileApplication.persistFiles(attachmentMetadata);
       // Persist the missing authors of the posts
       await this.fetchMissingUsersFromNexus({ posts: postBatch, viewerId });
       // Fetch original posts for any reposts (to display embedded repost content)
@@ -387,8 +386,8 @@ export class PostStreamApplication {
         post_ids: missingOriginalPostIds,
         viewer_id: viewerId ?? undefined,
       });
-      const { postAttachments } = await Core.LocalStreamPostsService.persistPosts({ posts: originalPosts });
-      await Core.FileApplication.fetchFiles(postAttachments);
+      const { attachmentMetadata } = await Core.LocalStreamPostsService.persistPosts({ posts: originalPosts });
+      await Core.FileApplication.persistFiles(attachmentMetadata);
       await this.fetchMissingUsersFromNexus({ posts: originalPosts, viewerId });
     } catch (error) {
       Libs.Logger.warn('Failed to fetch original posts for reposts', { missingOriginalPostIds, error });
