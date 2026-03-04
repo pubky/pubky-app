@@ -179,7 +179,7 @@ const setupMocks = (config: MockConfig = {}): ServiceMocks => {
     persistPosts: vi
       .spyOn(Core.LocalStreamPostsService, 'persistPosts')
       .mockImplementation(
-        persistPostsError ? () => Promise.reject(persistPostsError) : () => Promise.resolve({ postAttachments: [] }),
+        persistPostsError ? () => Promise.reject(persistPostsError) : () => Promise.resolve({ attachmentMetadata: [] }),
       ),
     persistFiles: vi
       .spyOn(Core.FileApplication, 'fetchFiles')
@@ -623,23 +623,19 @@ describe('BootstrapApplication', () => {
 
     it('should persist files from post attachments but not return them', async () => {
       const bootstrapData = createMockBootstrapData();
-      const notifications = [createMockNotification()];
-      const mockAttachments = [
+      const mockAttachmentUris = [
         'pubky://user-1/pub/pubky.app/files/file-1',
         'pubky://user-1/pub/pubky.app/files/file-2',
       ];
+      bootstrapData.posts[0].details.attachments = mockAttachmentUris;
+      const notifications = [createMockNotification()];
 
       const mocks = setupMocks({ bootstrapData, notifications, unreadCount: 1 });
-      // Override persistPosts mock to return specific attachments
-      const persistPostsSpy = vi.spyOn(Core.LocalStreamPostsService, 'persistPosts').mockResolvedValue({
-        postAttachments: mockAttachments,
-      });
-      mocks.persistPosts = persistPostsSpy;
 
       const result = await BootstrapApplication.initialize(getBootstrapParams(TEST_PUBKY));
 
-      // Verify files were persisted
-      expect(mocks.persistFiles).toHaveBeenCalledWith(mockAttachments);
+      // Verify files were fetched using URIs collected from bootstrap post data
+      expect(mocks.persistFiles).toHaveBeenCalledWith(mockAttachmentUris);
       // Verify result doesn't include filesUris
       expect(result).toEqual({
         notification: { unread: 1, lastRead: MOCK_LAST_READ, lastPolledTimestamp: expect.any(Number) },

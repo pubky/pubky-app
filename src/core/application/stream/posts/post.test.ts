@@ -149,8 +149,8 @@ describe('PostStreamApplication', () => {
   });
 
   const setupDefaultMocks = () => ({
-    persistPosts: vi.spyOn(Core.LocalStreamPostsService, 'persistPosts').mockResolvedValue({ postAttachments: [] }),
-    fetchFiles: vi.spyOn(Core.FileApplication, 'fetchFiles').mockResolvedValue(undefined),
+    persistPosts: vi.spyOn(Core.LocalStreamPostsService, 'persistPosts').mockResolvedValue({ attachmentMetadata: [] }),
+    persistFiles: vi.spyOn(Core.FileApplication, 'persistFiles').mockResolvedValue(undefined),
     getUserDetails: vi.spyOn(Core.UserDetailsModel, 'findByIdsPreserveOrder'),
   });
 
@@ -868,7 +868,7 @@ describe('PostStreamApplication', () => {
         viewer_id: viewerId,
       });
       expect(mocks.persistPosts).toHaveBeenCalledWith({ posts: mockNexusPosts });
-      expect(mocks.fetchFiles).toHaveBeenCalledWith([]);
+      expect(mocks.persistFiles).toHaveBeenCalledWith([]);
     });
 
     it('should fetch and persist users when cacheMissUserIds exist', async () => {
@@ -1007,17 +1007,41 @@ describe('PostStreamApplication', () => {
 
     it('should handle error gracefully when file persistence fails', async () => {
       const { cacheMissPostIds, mockNexusPosts } = createTestData(1);
-      const mockAttachments = [
-        'pubky://user-1/pub/pubky.app/files/file-1',
-        'pubky://user-1/pub/pubky.app/files/file-2',
+      const mockAttachments: Core.NexusFileDetails[] = [
+        {
+          id: 'file-1',
+          name: 'file-1',
+          src: '',
+          content_type: 'image/png',
+          size: 100,
+          created_at: 0,
+          indexed_at: 0,
+          metadata: {},
+          owner_id: 'user-1',
+          uri: 'pubky://user-1/pub/pubky.app/files/file-1',
+          urls: {} as Core.NexusFileUrls,
+        },
+        {
+          id: 'file-2',
+          name: 'file-2',
+          src: '',
+          content_type: 'image/png',
+          size: 200,
+          created_at: 0,
+          indexed_at: 0,
+          metadata: {},
+          owner_id: 'user-1',
+          uri: 'pubky://user-1/pub/pubky.app/files/file-2',
+          urls: {} as Core.NexusFileUrls,
+        },
       ];
 
       const fetchPostsByIdsSpy = vi.spyOn(Core.NexusPostStreamService, 'fetchByIds').mockResolvedValue(mockNexusPosts);
       vi.spyOn(Core.LocalStreamPostsService, 'persistPosts').mockResolvedValue({
-        postAttachments: mockAttachments,
+        attachmentMetadata: mockAttachments,
       });
-      const fetchFilesSpy = vi
-        .spyOn(Core.FileApplication, 'fetchFiles')
+      const persistFilesSpy = vi
+        .spyOn(Core.FileApplication, 'persistFiles')
         .mockRejectedValue(new Error('Failed to persist files'));
 
       const getUserDetailsSpy = vi.spyOn(Core.UserDetailsModel, 'findByIdsPreserveOrder');
@@ -1028,7 +1052,7 @@ describe('PostStreamApplication', () => {
         viewerId,
       });
 
-      expect(fetchFilesSpy).toHaveBeenCalledWith(mockAttachments);
+      expect(persistFilesSpy).toHaveBeenCalledWith(mockAttachments);
       expect(fetchPostsByIdsSpy).toHaveBeenCalledTimes(1);
       expect(getUserDetailsSpy).not.toHaveBeenCalled();
       expect(persistUsersSpy).not.toHaveBeenCalled();
