@@ -19,7 +19,10 @@ export class AuthController {
   static async restorePersistedSession(): Promise<boolean> {
     const authStore = Core.useAuthStore.getState();
     const result = await Core.AuthApplication.restorePersistedSession({ authStore });
-    if (!result) return false;
+    if (!result) {
+      await this.cleanupLocalState();
+      return false;
+    }
     const { session } = result;
     const initialState = {
       session,
@@ -157,30 +160,27 @@ export class AuthController {
   }
 
   /**
-   * Generates an authentication URL for external authentication flows.
-   * @returns Promise resolving to the generated authentication URL
+   * Wraps auth URL generation with flow tracking so useAuthUrl can cancel on unmount
+   * and we detect stale requests (e.g. React StrictMode double-mount).
+   * @param generateFn - Async function that returns the auth URL result
+   * @returns Promise resolving to the generated authentication URL with wrapped approval
    */
-  static async getAuthUrl(): Promise<Core.TGenerateAuthUrlResult> {
+  private static async wrapAuthFlow(
+    generateFn: () => Promise<Core.TGenerateAuthUrlResult>,
+  ): Promise<Core.TGenerateAuthUrlResult> {
     await Core.clearDatabase();
     const token = Symbol('auth-flow');
     this.cancelActiveAuthFlow();
     this.activeAuthFlow = { token, cancel: null };
-    const { authorizationUrl, awaitApproval, cancelAuthFlow } = await Core.AuthApplication.generateAuthUrl();
+    const { authorizationUrl, awaitApproval, cancelAuthFlow } = await generateFn();
 
     if (!this.activeAuthFlow || this.activeAuthFlow.token !== token) {
-      // Stale request (e.g. React StrictMode overlap): cancel immediately so we don't keep polling forever.
       cancelAuthFlow();
-      return {
-        authorizationUrl,
-        awaitApproval,
-        cancelAuthFlow,
-      };
+      return { authorizationUrl, awaitApproval, cancelAuthFlow };
     }
 
     this.activeAuthFlow.cancel = cancelAuthFlow;
 
-    // Ensure the polling flow is always dropped once the promise resolves/rejects,
-    // even if the caller forgets to free it.
     const wrappedAwaitApproval = awaitApproval.finally(() => {
       if (this.activeAuthFlow?.token === token) {
         this.activeAuthFlow = null;
@@ -192,12 +192,65 @@ export class AuthController {
   }
 
   /**
+   * Centralizes all local state cleanup: resets every Zustand store, clears cookies,
+   * IndexedDB, query cache, singletons, and persisted localStorage keys.
+   * Used by both logout() and restorePersistedSession() on failure.
+   */
+  private static async cleanupLocalState() {
+    // Reset singletons
+    Core.PubkySpecsSingleton.reset();
+    Core.TtlCoordinator.resetInstance();
+    Core.StreamCoordinator.resetInstance();
+    Core.NotificationCoordinator.resetInstance();
+
+    // Cancel active auth flows
+    this.cancelActiveAuthFlow();
+
+    // Cancel all pending Nexus API queries to prevent retries after sign-out
+    Core.nexusQueryClient.cancelQueries();
+    Core.nexusQueryClient.clear();
+
+    // Reset ALL Zustand stores
+    Core.useOnboardingStore.getState().reset();
+    Core.useAuthStore.getState().reset();
+    Core.useSignInStore.getState().reset();
+    Core.useLocalFilesStore.getState().reset();
+    Core.useHomeStore.getState().reset();
+    Core.useHotStore.getState().reset();
+    Core.useSearchStore.getState().reset();
+    Core.useNotificationStore.getState().reset();
+    Core.useSettingsStore.getState().reset();
+
+    // Clear cookies, database, and persisted localStorage keys
+    Libs.clearCookies();
+    await Core.clearDatabase();
+
+    Core.PERSISTED_STORE_KEYS.forEach((key) => localStorage.removeItem(key));
+  }
+
+  /**
+   * Generates an authentication URL for external authentication flows.
+   * @returns Promise resolving to the generated authentication URL
+   */
+  static async getAuthUrl(): Promise<Core.TGenerateAuthUrlResult> {
+    return this.wrapAuthFlow(() => Core.AuthApplication.generateAuthUrl());
+  }
+
+  /**
+   * Generates a signup authentication URL for Pubky Ring authorization.
+   * Decorates a standard auth URL with homeserver address and invite code metadata.
+   * @param inviteCode - The invite code for signup
+   * @returns Promise resolving to the generated signup authentication URL
+   */
+  static async getSignupAuthUrl(inviteCode: string): Promise<Core.TGenerateAuthUrlResult> {
+    return this.wrapAuthFlow(() => Core.AuthApplication.generateSignupAuthUrl(inviteCode));
+  }
+
+  /**
    * Logs out the current user from both the homeserver and local application state.
    */
   static async logout() {
     const authStore = Core.useAuthStore.getState();
-    const onboardingStore = Core.useOnboardingStore.getState();
-    const signInStore = Core.useSignInStore.getState();
 
     // Set logging out flag immediately to prevent flash of weird states in UI
     authStore.setIsLoggingOut(true);
@@ -209,22 +262,8 @@ export class AuthController {
         Libs.Logger.warn('Homeserver logout failed, clearing local state anyway', { error });
       }
     }
-    // Reset PubkySpecsSingleton here to ensure it's always called even when homeserver logout fails.
-    // This allows users to sign out even when their profile pubky cannot be resolved (issue #538).
-    Core.PubkySpecsSingleton.reset();
-    this.cancelActiveAuthFlow();
 
-    // Cancel all pending Nexus API queries to prevent retries after logout
-    // This stops the React Query client from retrying 404s for user data that no longer exists
-    Core.nexusQueryClient.cancelQueries();
-    Core.nexusQueryClient.clear();
-
-    onboardingStore.reset();
-    authStore.reset();
-    signInStore.reset();
-    Core.useLocalFilesStore.getState().reset();
-    Libs.clearCookies();
-    await Core.clearDatabase();
+    await this.cleanupLocalState();
   }
 
   /**

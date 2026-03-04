@@ -19,6 +19,7 @@ vi.mock('@/hooks', async (importOriginal) => {
   return {
     ...actual,
     useStreamIdFromFilters: vi.fn(),
+    useCustomStreamId: vi.fn(),
     useBookmarksStreamId: vi.fn(),
     useStreamPagination: vi.fn(),
     useMutedUsers: vi.fn(() => ({
@@ -105,6 +106,7 @@ vi.mock('@/organisms', () => ({
 }));
 
 const mockUseStreamIdFromFilters = vi.mocked(Hooks.useStreamIdFromFilters);
+const mockUseCustomStreamId = vi.mocked(Hooks.useCustomStreamId);
 const mockUseBookmarksStreamId = vi.mocked(Hooks.useBookmarksStreamId);
 const mockUseStreamPagination = vi.mocked(Hooks.useStreamPagination);
 
@@ -129,6 +131,7 @@ describe('TimelineFeed', () => {
 
     // Default mock implementations
     mockUseStreamIdFromFilters.mockReturnValue(Core.PostStreamTypes.TIMELINE_ALL_ALL);
+    mockUseCustomStreamId.mockReturnValue('custom:all:all:all' as Core.PostStreamId);
     mockUseBookmarksStreamId.mockReturnValue(Core.PostStreamTypes.TIMELINE_BOOKMARKS_ALL);
     mockUseStreamPagination.mockReturnValue(defaultPaginationResult);
     // Reset pull-to-refresh mock to idle state
@@ -206,6 +209,27 @@ describe('TimelineFeed', () => {
       expect(mockUsePullToRefresh).toHaveBeenCalledWith(
         expect.objectContaining({
           disabled: true,
+        }),
+      );
+    });
+  });
+
+  describe('Custom Variant', () => {
+    it('should render timeline with custom stream', () => {
+      render(<TimelineFeed variant={TIMELINE_FEED_VARIANT.CUSTOM} />);
+
+      expect(screen.getByTestId('timeline-posts')).toBeInTheDocument();
+      expect(mockUseStreamPagination).toHaveBeenCalledWith({
+        streamId: 'custom:all:all:all',
+      });
+    });
+
+    it('should enable pull-to-refresh for custom variant', () => {
+      render(<TimelineFeed variant={TIMELINE_FEED_VARIANT.CUSTOM} />);
+
+      expect(mockUsePullToRefresh).toHaveBeenCalledWith(
+        expect.objectContaining({
+          disabled: false,
         }),
       );
     });
@@ -411,6 +435,7 @@ describe('TimelineFeed - Snapshots', () => {
     // (In CI we run the full suite, not just testNamePattern="Snapshots".)
     vi.clearAllMocks();
     mockUseStreamIdFromFilters.mockReturnValue(Core.PostStreamTypes.TIMELINE_ALL_ALL);
+    mockUseCustomStreamId.mockReturnValue('custom:all:all:all' as Core.PostStreamId);
     mockUseBookmarksStreamId.mockReturnValue(Core.PostStreamTypes.TIMELINE_BOOKMARKS_ALL);
     mockUseStreamPagination.mockReturnValue(defaultPaginationResult);
     // Reset pull-to-refresh mock to idle state for snapshots
@@ -422,6 +447,11 @@ describe('TimelineFeed - Snapshots', () => {
 
   it('should match snapshot for home variant', () => {
     const { container } = render(<TimelineFeed variant={TIMELINE_FEED_VARIANT.HOME} />);
+    expect(container).toMatchSnapshot();
+  });
+
+  it('should match snapshot for custom variant', () => {
+    const { container } = render(<TimelineFeed variant={TIMELINE_FEED_VARIANT.CUSTOM} />);
     expect(container).toMatchSnapshot();
   });
 
