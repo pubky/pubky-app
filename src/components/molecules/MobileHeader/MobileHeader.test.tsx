@@ -50,7 +50,7 @@ describe('MobileHeader', () => {
       'z-(--z-mobile-menu)',
       'bg-linear-to-b',
       'from-(--background)',
-      'from-65%',
+      'from-35%',
       'to-transparent',
       'lg:hidden',
     );
