@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useRef, type ForwardedRef } from 'react';
+import { useTranslations } from 'next-intl';
 import {
   BlockTypeSelect,
   BoldItalicUnderlineToggles,
@@ -107,6 +108,8 @@ export default function InitializedMDXEditor({
   readOnly,
   ...props
 }: { editorRef: ForwardedRef<MDXEditorMethods> | null } & MDXEditorProps) {
+  const t = useTranslations('markdownEditor');
+
   const [showEmojiPicker, setShowEmojiPicker] = useState(false);
   const [maxLengthWarning, setMaxLengthWarning] = useState<null | 'approaching' | 'reached'>(null);
   const [mode, setMode] = useState<EditorMode>('richtext');
@@ -175,13 +178,13 @@ export default function InitializedMDXEditor({
           overrideDefaults
           className="flex min-h-10.75 cursor-auto flex-wrap items-center gap-2 rounded-md border bg-background px-2.5 py-1.5"
           role="toolbar"
-          aria-label="Markdown editing toolbar"
+          aria-label={t('toolbarAriaLabel')}
           data-testid="markdown-toolbar"
         >
           <Atoms.Button
             variant="ghost"
             size="icon"
-            title="Emoji"
+            title={t('emoji')}
             onClick={() => setShowEmojiPicker(true)}
             disabled={readOnly}
             className="size-7 cursor-default rounded"
@@ -193,7 +196,7 @@ export default function InitializedMDXEditor({
           <Atoms.Button
             variant="ghost"
             size="icon"
-            title={isMarkdownEmpty ? 'Rich Text' : 'Clear content to switch modes'}
+            title={isMarkdownEmpty ? t('richText') : t('clearToSwitch')}
             onClick={switchToRichTextMode}
             disabled={readOnly || !isMarkdownEmpty}
             className="size-7 cursor-default rounded disabled:pointer-events-auto"
@@ -208,7 +211,7 @@ export default function InitializedMDXEditor({
           value={markdownText}
           onChange={(e) => handleMarkdownTextChange(e.target.value)}
           readOnly={readOnly}
-          placeholder="Start writing your masterpiece"
+          placeholder={t('placeholder')}
           maxLength={ARTICLE_MAX_CHARACTER_LENGTH}
           className="max-h-[60dvh] min-h-11 resize-none rounded-none border-none p-0 pt-4 shadow-none outline-none placeholder:text-muted-foreground/70 focus-visible:border-none focus-visible:ring-0"
           data-testid="markdown-textarea"
@@ -218,7 +221,7 @@ export default function InitializedMDXEditor({
       {/* Rich text mode: MDXEditor (includes its own toolbar) — hidden via CSS in markdown mode */}
       <MDXEditor
         readOnly={readOnly}
-        placeholder="Start writing your masterpiece"
+        placeholder={t('placeholder')}
         className={Utils.cn('dark-theme cursor-auto', mode === 'markdown' && 'hidden')}
         contentEditableClassName="prose prose-neutral prose-invert prose-code:before:content-none prose-code:after:content-none max-w-none px-0! pb-0! pt-4! max-h-[60dvh] overflow-y-auto"
         plugins={[
@@ -234,11 +237,11 @@ export default function InitializedMDXEditor({
                 <InsertThematicBreak />
                 <CodeToggle />
                 <InsertCodeBlock />
-                <ButtonWithTooltip title="Emoji" onClick={() => setShowEmojiPicker(true)}>
+                <ButtonWithTooltip title={t('emoji')} onClick={() => setShowEmojiPicker(true)}>
                   <Icons.Smile className="size-6" />
                 </ButtonWithTooltip>
                 <ButtonWithTooltip
-                  title={isRichTextEmpty ? 'Markdown' : 'Clear content to switch modes'}
+                  title={isRichTextEmpty ? t('markdown') : t('clearToSwitch')}
                   onClick={switchToMarkdownMode}
                   disabled={!isRichTextEmpty}
                   className={Utils.cn(!isRichTextEmpty && 'opacity-50!')}
@@ -287,8 +290,8 @@ export default function InitializedMDXEditor({
           <Icons.AlertTriangle className="size-4 shrink-0" />
 
           <Atoms.Typography overrideDefaults className="text-sm">
-            {maxLengthWarning === 'approaching' && `You're approaching the maximum character limit.`}
-            {maxLengthWarning === 'reached' && `You've reached the maximum character limit.`}
+            {maxLengthWarning === 'approaching' && t('warningApproaching')}
+            {maxLengthWarning === 'reached' && t('warningReached')}
           </Atoms.Typography>
         </Atoms.Container>
       )}

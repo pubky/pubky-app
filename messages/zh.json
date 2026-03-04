@@ -1168,5 +1168,15 @@
     "pullToRefresh": "下拉刷新",
     "releaseToRefresh": "释放刷新",
     "refreshing": "刷新中..."
+  },
+  "markdownEditor": {
+    "emoji": "表情",
+    "richText": "富文本",
+    "markdown": "Markdown",
+    "clearToSwitch": "清除内容以切换模式",
+    "placeholder": "开始创作你的杰作",
+    "toolbarAriaLabel": "Markdown 编辑工具栏",
+    "warningApproaching": "您即将达到最大字符数限制。",
+    "warningReached": "您已达到最大字符数限制。"
   }
 }
