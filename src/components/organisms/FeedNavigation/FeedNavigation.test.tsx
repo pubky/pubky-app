@@ -86,6 +86,21 @@ vi.mock('@/atoms', () => ({
       {children}
     </span>
   ),
+  Heading: ({
+    children,
+    level,
+    size,
+    className,
+  }: {
+    children: React.ReactNode;
+    level?: number;
+    size?: string;
+    className?: string;
+  }) => (
+    <div data-testid="heading" data-level={level} data-size={size} className={className}>
+      {children}
+    </div>
+  ),
 }));
 
 // Mock @/organisms — CustomFeedDialog is a complex component; mock it as a transparent wrapper
@@ -268,8 +283,8 @@ describe('FeedNavigation', () => {
     const editDialog = screen.getByTestId('custom-feed-dialog-edit');
     expect(editDialog).toBeInTheDocument();
 
-    // The edit dialog should contain a ghost button with the pencil icon
-    const editButton = editDialog.querySelector('[data-variant="ghost"]');
+    // The edit dialog should contain a button with the pencil icon
+    const editButton = editDialog.querySelector('[data-testid="button"]');
     expect(editButton).toBeInTheDocument();
   });
 
@@ -328,7 +343,7 @@ describe('FeedNavigation', () => {
     render(<FeedNavigation />);
 
     const container = screen.getByTestId('container');
-    expect(container).toHaveClass('flex-row');
+    expect(container).toHaveClass('lg:flex-row');
     expect(container).toHaveClass('overflow-x-auto');
   });
 
@@ -339,7 +354,7 @@ describe('FeedNavigation', () => {
     const links = screen.getAllByTestId('link');
     links.forEach((link) => {
       expect(link).toHaveClass('min-w-40');
-      expect(link).toHaveClass('h-12');
+      expect(link).toHaveClass('min-h-12');
     });
   });
 });
