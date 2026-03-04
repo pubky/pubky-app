@@ -39,7 +39,7 @@ vi.mock('@/organisms', () => ({
   HomeFeedDrawerMobile: () => <div data-testid="home-feed-drawer-mobile">HomeFeedDrawerMobile</div>,
   AlertBackup: () => <div data-testid="alert-backup">AlertBackup</div>,
   FeedNavigation: ({ className }: { className?: string }) => (
-    <div data-testid="feed-navigation" className={className}>
+    <div data-testid="feed-navigation" data-classname={className}>
       FeedNavigation
     </div>
   ),
@@ -111,18 +111,18 @@ describe('Home', () => {
 
   it('renders FeedNavigation in right drawer mobile with lg:hidden class', () => {
     render(<Home />);
-    const feedNavigations = screen.getAllByTestId('feed-navigation');
-    const mobileFeedNav = feedNavigations.find((el) => el.className === 'lg:hidden');
-    expect(mobileFeedNav).toBeDefined();
-    expect(screen.getByTestId('right-drawer-mobile')).toContainElement(mobileFeedNav!);
+    const rightDrawerMobile = screen.getByTestId('right-drawer-mobile');
+    const feedNav = rightDrawerMobile.querySelector('[data-testid="feed-navigation"]');
+    expect(feedNav).toBeInTheDocument();
+    expect(feedNav).toHaveAttribute('data-classname', 'lg:hidden');
   });
 
   it('renders FeedNavigation in main content with hidden lg:flex class', () => {
     render(<Home />);
-    const feedNavigations = screen.getAllByTestId('feed-navigation');
-    const desktopFeedNav = feedNavigations.find((el) => el.className === 'hidden lg:flex');
-    expect(desktopFeedNav).toBeDefined();
-    expect(screen.getByTestId('content-layout')).toContainElement(desktopFeedNav!);
+    const contentLayout = screen.getByTestId('content-layout');
+    const feedNavs = contentLayout.querySelectorAll('[data-testid="feed-navigation"]');
+    const mainFeedNav = Array.from(feedNavs).find((el) => el.getAttribute('data-classname') === 'hidden lg:flex');
+    expect(mainFeedNav).toBeInTheDocument();
   });
 
   it('renders AlertBackup', () => {

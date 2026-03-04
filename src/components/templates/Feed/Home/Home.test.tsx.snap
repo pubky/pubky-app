@@ -59,7 +59,7 @@ exports[`Home - Snapshots > matches snapshot 1`] = `
       data-testid="right-drawer-mobile"
     >
       <div
-        class="lg:hidden"
+        data-classname="lg:hidden"
         data-testid="feed-navigation"
       >
         FeedNavigation
@@ -71,7 +71,7 @@ exports[`Home - Snapshots > matches snapshot 1`] = `
       AlertBackup
     </div>
     <div
-      class="hidden lg:flex"
+      data-classname="hidden lg:flex"
       data-testid="feed-navigation"
     >
       FeedNavigation
