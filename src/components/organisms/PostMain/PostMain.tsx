@@ -1,12 +1,13 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useRef, useState } from 'react';
 import * as Libs from '@/libs';
 import * as Core from '@/core';
 import * as Hooks from '@/hooks';
 import * as Atoms from '@/atoms';
 import * as Molecules from '@/molecules';
 import * as Organisms from '@/organisms';
+import type { PostTagsPanelHandle } from '@/organisms';
 import { POST_TAGS_MAX_COUNT, POST_TAGS_MAX_LENGTH, POST_TAGS_MAX_TOTAL_CHARS } from '@/config';
 import { POST_THREAD_CONNECTOR_VARIANTS } from '@/atoms';
 
@@ -28,6 +29,9 @@ export function PostMain({
   const [replyDialogOpen, setReplyDialogOpen] = useState(false);
   const [repostDialogOpen, setRepostDialogOpen] = useState(false);
   const [tagsExpanded, setTagsExpanded] = useState(false);
+
+  const mobileTagsPanelRef = useRef<PostTagsPanelHandle>(null);
+  const desktopTagsPanelRef = useRef<PostTagsPanelHandle>(null);
 
   // Get post height for thread connector
   const { ref: cardRef, height: postHeight } = Hooks.useElementHeight();
@@ -79,16 +83,20 @@ export function PostMain({
                       {shouldShowPostHeader && <Organisms.PostHeader postId={postId} />}
                       <Organisms.PostContent postId={postId} />
                       <Atoms.Container overrideDefaults onClick={handleFooterClick} className="flex flex-col gap-4">
-                        <Organisms.PostTagsPanel postId={postId} widthMode="full" className="lg:hidden" />
+                        <Organisms.PostTagsPanel ref={mobileTagsPanelRef} postId={postId} widthMode="full" className="lg:hidden" />
                         <Organisms.PostActionsBar
                           postId={postId}
+                          onTagClick={() => {
+                            mobileTagsPanelRef.current?.focus();
+                            desktopTagsPanelRef.current?.focus();
+                          }}
                           onReplyClick={handleReplyClick}
                           onRepostClick={handleRepostClick}
                         />
                       </Atoms.Container>
                     </Atoms.Container>
                     <Atoms.Container overrideDefaults onClick={handleFooterClick} className="hidden lg:flex">
-                      <Organisms.PostTagsPanel postId={postId} widthMode="full" />
+                      <Organisms.PostTagsPanel ref={desktopTagsPanelRef} postId={postId} widthMode="full" />
                     </Atoms.Container>
                   </Atoms.Container>
                 ) : (
@@ -103,7 +111,7 @@ export function PostMain({
                       )}
                     >
                       {tagsExpanded ? (
-                        <Organisms.PostTagsPanel postId={postId} widthMode="fit" className="flex-1" />
+                        <Organisms.PostTagsPanel postId={postId} widthMode="fit" autoFocusInput className="flex-1" />
                       ) : (
                         <Organisms.ClickableTagsList
                           taggedId={postId}

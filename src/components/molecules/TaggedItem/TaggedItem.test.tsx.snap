@@ -89,6 +89,7 @@ exports[`TaggedItem - Snapshots > matches snapshot when expanded 1`] = `
       (3)
     </div>
     <button
+      class="size-8"
       data-testid="search-button"
       variant="secondary"
     >
@@ -168,6 +169,7 @@ exports[`TaggedItem - Snapshots > matches snapshot with hideAvatars 1`] = `
       (3)
     </div>
     <button
+      class="size-8"
       data-testid="search-button"
       variant="secondary"
     >
