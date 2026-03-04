@@ -21,29 +21,43 @@ vi.mock('@/core/services/homeserver', () => ({
 
 describe('Tag Application', () => {
   // Test data factory
-  const createMockTagData = (): TCreateTagInput => ({
-    taggedId: 'author:post123',
+  const createMockTagData = (taggedKind: Core.TagKind = Core.TagKind.POST): TCreateTagInput => ({
+    taggedId: taggedKind === Core.TagKind.POST ? 'author:post123' : ('tagged-user-123' as Core.Pubky),
     label: 'test-tag',
     taggerId: 'tagger123' as Core.Pubky,
     tagUrl: 'pubky://tagger123/pub/pubky.app/tags/test-tag',
     tagJson: { label: 'test-tag' },
-    taggedKind: Core.TagKind.POST,
+    taggedKind,
   });
 
-  const createMockDeleteData = (): TDeleteTagInput => ({
-    taggedId: 'author:post123',
+  const createMockTagBatch = (labels: string[], taggedKind: Core.TagKind = Core.TagKind.POST): TCreateTagInput[] =>
+    labels.map((label, index) => ({
+      taggedId: taggedKind === Core.TagKind.POST ? 'author:post123' : ('tagged-user-123' as Core.Pubky),
+      label,
+      taggerId: `tagger${index + 1}` as Core.Pubky,
+      tagUrl: `pubky://tagger${index + 1}/pub/pubky.app/tags/${label}`,
+      tagJson: { label },
+      taggedKind,
+    }));
+
+  const createMockDeleteData = (taggedKind: Core.TagKind = Core.TagKind.POST): TDeleteTagInput => ({
+    taggedId: taggedKind === Core.TagKind.POST ? 'author:post123' : ('tagged-user-123' as Core.Pubky),
     label: 'test-tag',
     taggerId: 'tagger123' as Core.Pubky,
     tagUrl: 'pubky://tagger123/pub/pubky.app/tags/test-tag',
-    taggedKind: Core.TagKind.POST,
+    taggedKind,
   });
 
   // Helper functions
-  const setupMocks = () => ({
-    createSpy: vi.spyOn(Core.LocalPostTagService, 'create'),
-    deleteSpy: vi.spyOn(Core.LocalPostTagService, 'delete'),
-    requestSpy: vi.spyOn(Core.HomeserverService, 'request'),
-  });
+  const setupMocks = (taggedKind: Core.TagKind = Core.TagKind.POST) => {
+    const localTagService = taggedKind === Core.TagKind.POST ? Core.LocalPostTagService : Core.LocalUserTagService;
+
+    return {
+      createSpy: vi.spyOn(localTagService, 'create'),
+      deleteSpy: vi.spyOn(localTagService, 'delete'),
+      requestSpy: vi.spyOn(Core.HomeserverService, 'request'),
+    };
+  };
 
   beforeEach(() => {
     vi.clearAllMocks();
@@ -101,6 +115,62 @@ describe('Tag Application', () => {
         taggerId: mockData.taggerId,
       });
     });
+
+    it('should rollback local create for user tags when homeserver sync fails', async () => {
+      const mockData = createMockTagData(Core.TagKind.USER);
+      const { createSpy, deleteSpy, requestSpy } = setupMocks(Core.TagKind.USER);
+
+      createSpy.mockResolvedValue(true);
+      deleteSpy.mockResolvedValue(true);
+      requestSpy.mockRejectedValue(new Error('Failed to PUT to homeserver: 500'));
+
+      await expect(TagApplication.commitCreate({ tagList: [mockData] })).rejects.toThrow(
+        'Failed to PUT to homeserver: 500',
+      );
+      expect(createSpy).toHaveBeenCalledWith({
+        taggedId: mockData.taggedId,
+        label: mockData.label,
+        taggerId: mockData.taggerId,
+      });
+      expect(requestSpy).toHaveBeenCalledOnce();
+      expect(deleteSpy).toHaveBeenCalledWith({
+        taggedId: mockData.taggedId,
+        label: mockData.label,
+        taggerId: mockData.taggerId,
+      });
+    });
+
+    it('should stop processing later tags after an earlier create failure', async () => {
+      const mockData = createMockTagBatch(['first-tag', 'second-tag']);
+      const { createSpy, deleteSpy, requestSpy } = setupMocks();
+
+      createSpy.mockResolvedValue(true);
+      deleteSpy.mockResolvedValue(true);
+      requestSpy.mockRejectedValueOnce(new Error('Failed to PUT to homeserver: 500'));
+
+      await expect(TagApplication.commitCreate({ tagList: mockData })).rejects.toThrow(
+        'Failed to PUT to homeserver: 500',
+      );
+
+      expect(createSpy).toHaveBeenCalledTimes(1);
+      expect(createSpy).toHaveBeenCalledWith({
+        taggedId: mockData[0].taggedId,
+        label: mockData[0].label,
+        taggerId: mockData[0].taggerId,
+      });
+      expect(requestSpy).toHaveBeenCalledTimes(1);
+      expect(requestSpy).toHaveBeenCalledWith({
+        method: HttpMethod.PUT,
+        url: mockData[0].tagUrl,
+        bodyJson: mockData[0].tagJson,
+      });
+      expect(deleteSpy).toHaveBeenCalledTimes(1);
+      expect(deleteSpy).toHaveBeenCalledWith({
+        taggedId: mockData[0].taggedId,
+        label: mockData[0].label,
+        taggerId: mockData[0].taggerId,
+      });
+    });
   });
 
   describe('commitDelete', () => {
@@ -144,6 +214,28 @@ describe('Tag Application', () => {
 
       await expect(TagApplication.commitDelete(mockData)).rejects.toThrow('Failed to DELETE from homeserver: 404');
       expect(deleteSpy).toHaveBeenCalledOnce();
+      expect(requestSpy).toHaveBeenCalledOnce();
+      expect(createSpy).toHaveBeenCalledWith({
+        taggedId: mockData.taggedId,
+        label: mockData.label,
+        taggerId: mockData.taggerId,
+      });
+    });
+
+    it('should rollback local delete for user tags when homeserver sync fails', async () => {
+      const mockData = createMockDeleteData(Core.TagKind.USER);
+      const { createSpy, deleteSpy, requestSpy } = setupMocks(Core.TagKind.USER);
+
+      deleteSpy.mockResolvedValue(true);
+      createSpy.mockResolvedValue(true);
+      requestSpy.mockRejectedValue(new Error('Failed to DELETE from homeserver: 404'));
+
+      await expect(TagApplication.commitDelete(mockData)).rejects.toThrow('Failed to DELETE from homeserver: 404');
+      expect(deleteSpy).toHaveBeenCalledWith({
+        taggedId: mockData.taggedId,
+        label: mockData.label,
+        taggerId: mockData.taggerId,
+      });
       expect(requestSpy).toHaveBeenCalledOnce();
       expect(createSpy).toHaveBeenCalledWith({
         taggedId: mockData.taggedId,

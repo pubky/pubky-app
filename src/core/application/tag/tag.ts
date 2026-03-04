@@ -20,41 +20,41 @@ export class TagApplication {
    * @param tagList - The list of tags to create
    */
   static async commitCreate({ tagList }: Core.TCreateTagListInput) {
-    await Promise.all(
-      tagList.map(async ({ taggerId, taggedId, label, tagUrl, tagJson, taggedKind }: Core.TCreateTagInput) => {
-        let didCreateLocally = false;
+    // Process tags one at a time so callers never observe hidden in-flight work
+    // from later entries after an earlier tag fails.
+    for (const { taggerId, taggedId, label, tagUrl, tagJson, taggedKind } of tagList) {
+      let didCreateLocally = false;
 
-        if (taggedKind === Core.TagKind.POST) {
-          didCreateLocally = await Core.LocalPostTagService.create({ taggerId, taggedId, label });
-        } else {
-          didCreateLocally = await Core.LocalUserTagService.create({ taggerId, taggedId, label });
-        }
+      if (taggedKind === Core.TagKind.POST) {
+        didCreateLocally = await Core.LocalPostTagService.create({ taggerId, taggedId, label });
+      } else {
+        didCreateLocally = await Core.LocalUserTagService.create({ taggerId, taggedId, label });
+      }
 
-        try {
-          await Core.HomeserverService.request({ method: HttpMethod.PUT, url: tagUrl, bodyJson: tagJson });
-        } catch (error) {
-          if (didCreateLocally) {
-            try {
-              if (taggedKind === Core.TagKind.POST) {
-                await Core.LocalPostTagService.delete({ taggerId, taggedId, label });
-              } else {
-                await Core.LocalUserTagService.delete({ taggerId, taggedId, label });
-              }
-            } catch (rollbackError) {
-              Logger.error('[TagApplication.commitCreate] Failed to rollback local tag create', {
-                taggedId,
-                label,
-                taggerId,
-                taggedKind,
-                rollbackError,
-              });
+      try {
+        await Core.HomeserverService.request({ method: HttpMethod.PUT, url: tagUrl, bodyJson: tagJson });
+      } catch (error) {
+        if (didCreateLocally) {
+          try {
+            if (taggedKind === Core.TagKind.POST) {
+              await Core.LocalPostTagService.delete({ taggerId, taggedId, label });
+            } else {
+              await Core.LocalUserTagService.delete({ taggerId, taggedId, label });
             }
+          } catch (rollbackError) {
+            Logger.error('[TagApplication.commitCreate] Failed to rollback local tag create', {
+              taggedId,
+              label,
+              taggerId,
+              taggedKind,
+              rollbackError,
+            });
           }
-
-          throw error;
         }
-      }),
-    );
+
+        throw error;
+      }
+    }
   }
 
   /**
