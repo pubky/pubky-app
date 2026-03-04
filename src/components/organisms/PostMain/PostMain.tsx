@@ -83,7 +83,12 @@ export function PostMain({
                       {shouldShowPostHeader && <Organisms.PostHeader postId={postId} />}
                       <Organisms.PostContent postId={postId} />
                       <Atoms.Container overrideDefaults onClick={handleFooterClick} className="flex flex-col gap-4">
-                        <Organisms.PostTagsPanel ref={mobileTagsPanelRef} postId={postId} widthMode="full" className="lg:hidden" />
+                        <Organisms.PostTagsPanel
+                          ref={mobileTagsPanelRef}
+                          postId={postId}
+                          widthMode="full"
+                          className="lg:hidden"
+                        />
                         <Organisms.PostActionsBar
                           postId={postId}
                           onTagClick={() => {
