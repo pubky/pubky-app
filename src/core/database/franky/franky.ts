@@ -185,6 +185,7 @@ export class AppDatabase extends Dexie {
     }
 
     try {
+      // Note: expected new DB version is already set in the constructor this.version(Config.DB_VERSION)
       await this.open();
       Logger.info('Database recreated with new schema');
     } catch (error) {

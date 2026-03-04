@@ -10,15 +10,16 @@ export function FilterLayout({
   selectedTab,
   defaultSelectedTab = Core.LAYOUT.COLUMNS,
   onTabChange,
+  disabled,
 }: Molecules.BaseFilterProps<Core.LayoutType>) {
   const t = useTranslations('filters.layout');
 
   const items = React.useMemo(
     () => [
-      { key: Core.LAYOUT.COLUMNS, label: t('columns'), icon: Libs.Columns3 },
-      { key: Core.LAYOUT.WIDE, label: t('wide'), icon: Libs.Menu },
+      { key: Core.LAYOUT.COLUMNS, label: t('columns'), icon: Libs.Columns3, disabled },
+      { key: Core.LAYOUT.WIDE, label: t('wide'), icon: Libs.Menu, disabled },
     ],
-    [t],
+    [t, disabled],
   );
 
   return (

@@ -75,7 +75,7 @@ export function buildFeedStreamId(feed: Core.FeedModelSchema): Core.PostStreamId
   const sorting = sortToStreamSorting(feed.sort);
   const source = reachToStreamSource(feed.reach);
   const kind = contentToStreamKind(feed.content) ?? 'all';
-  const tags = feed.tags.join(',');
+  const tags = feed.tags.join(Core.POST_STREAM_TAG_DELIMITER);
 
   return `${sorting}:${source}:${kind}:${tags}` as Core.PostStreamId;
 }

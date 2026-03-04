@@ -1,0 +1,563 @@
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
+
+exports[`FeedNavigation - Snapshots > matches snapshot with custom feed active (showing edit dialog) 1`] = `
+<div
+  class="flex-row overflow-x-auto"
+  data-testid="container"
+>
+  <a
+    class="flex h-12 w-full min-w-40 items-center justify-center gap-x-2 border-b transition-colors hover:text-white border-muted-foreground text-muted-foreground"
+    data-override-defaults="true"
+    data-testid="link"
+    href="/home"
+  >
+    <svg
+      aria-hidden="true"
+      class="lucide lucide-house size-5"
+      fill="none"
+      height="24"
+      stroke="currentColor"
+      stroke-linecap="round"
+      stroke-linejoin="round"
+      stroke-width="2"
+      viewBox="0 0 24 24"
+      width="24"
+      xmlns="http://www.w3.org/2000/svg"
+    >
+      <path
+        d="M15 21v-8a1 1 0 0 0-1-1h-4a1 1 0 0 0-1 1v8"
+      />
+      <path
+        d="M3 10a2 2 0 0 1 .709-1.528l7-6a2 2 0 0 1 2.582 0l7 6A2 2 0 0 1 21 10v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"
+      />
+    </svg>
+    <span
+      class="text-sm font-medium"
+      data-override-defaults="true"
+      data-testid="typography"
+    >
+      Home
+    </span>
+  </a>
+  <a
+    class="flex h-12 w-full min-w-40 items-center justify-center gap-x-2 border-b transition-colors hover:text-white border-white text-white"
+    data-override-defaults="true"
+    data-testid="link"
+    href="/feed/feed-active"
+  >
+    <div
+      data-testid="custom-feed-dialog-edit"
+    >
+      <button
+        class="size-9"
+        data-size="icon"
+        data-testid="button"
+        data-variant="ghost"
+      >
+        <svg
+          aria-hidden="true"
+          class="lucide lucide-pencil size-5"
+          fill="none"
+          height="24"
+          stroke="currentColor"
+          stroke-linecap="round"
+          stroke-linejoin="round"
+          stroke-width="2"
+          viewBox="0 0 24 24"
+          width="24"
+          xmlns="http://www.w3.org/2000/svg"
+        >
+          <path
+            d="M21.174 6.812a1 1 0 0 0-3.986-3.987L3.842 16.174a2 2 0 0 0-.5.83l-1.321 4.352a.5.5 0 0 0 .623.622l4.353-1.32a2 2 0 0 0 .83-.497z"
+          />
+          <path
+            d="m15 5 4 4"
+          />
+        </svg>
+      </button>
+    </div>
+    <span
+      class="text-sm font-medium"
+      data-override-defaults="true"
+      data-testid="typography"
+    >
+      Active Feed
+    </span>
+  </a>
+  <div
+    data-testid="custom-feed-dialog-create"
+  >
+    <button
+      class="flex h-12 w-full min-w-40 cursor-pointer items-center justify-center gap-x-2 border-b border-muted-foreground text-muted-foreground transition-colors hover:text-white"
+      data-override-defaults="true"
+      data-testid="button"
+    >
+      <svg
+        aria-hidden="true"
+        class="lucide lucide-circle-plus size-5"
+        fill="none"
+        height="24"
+        stroke="currentColor"
+        stroke-linecap="round"
+        stroke-linejoin="round"
+        stroke-width="2"
+        viewBox="0 0 24 24"
+        width="24"
+        xmlns="http://www.w3.org/2000/svg"
+      >
+        <circle
+          cx="12"
+          cy="12"
+          r="10"
+        />
+        <path
+          d="M8 12h8"
+        />
+        <path
+          d="M12 8v8"
+        />
+      </svg>
+      <span
+        class="text-sm font-medium"
+        data-override-defaults="true"
+        data-testid="typography"
+      >
+        Create Feed
+      </span>
+    </button>
+  </div>
+</div>
+`;
+
+exports[`FeedNavigation - Snapshots > matches snapshot with custom feeds and Home active 1`] = `
+<div
+  class="flex-row overflow-x-auto"
+  data-testid="container"
+>
+  <a
+    class="flex h-12 w-full min-w-40 items-center justify-center gap-x-2 border-b transition-colors hover:text-white border-white text-white"
+    data-override-defaults="true"
+    data-testid="link"
+    href="/home"
+  >
+    <svg
+      aria-hidden="true"
+      class="lucide lucide-house size-5"
+      fill="none"
+      height="24"
+      stroke="currentColor"
+      stroke-linecap="round"
+      stroke-linejoin="round"
+      stroke-width="2"
+      viewBox="0 0 24 24"
+      width="24"
+      xmlns="http://www.w3.org/2000/svg"
+    >
+      <path
+        d="M15 21v-8a1 1 0 0 0-1-1h-4a1 1 0 0 0-1 1v8"
+      />
+      <path
+        d="M3 10a2 2 0 0 1 .709-1.528l7-6a2 2 0 0 1 2.582 0l7 6A2 2 0 0 1 21 10v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"
+      />
+    </svg>
+    <span
+      class="text-sm font-medium"
+      data-override-defaults="true"
+      data-testid="typography"
+    >
+      Home
+    </span>
+  </a>
+  <a
+    class="flex h-12 w-full min-w-40 items-center justify-center gap-x-2 border-b transition-colors hover:text-white border-muted-foreground text-muted-foreground"
+    data-override-defaults="true"
+    data-testid="link"
+    href="/feed/feed-1"
+  >
+    <svg
+      aria-hidden="true"
+      class="lucide lucide-pencil size-5"
+      fill="none"
+      height="24"
+      stroke="currentColor"
+      stroke-linecap="round"
+      stroke-linejoin="round"
+      stroke-width="2"
+      viewBox="0 0 24 24"
+      width="24"
+      xmlns="http://www.w3.org/2000/svg"
+    >
+      <path
+        d="M21.174 6.812a1 1 0 0 0-3.986-3.987L3.842 16.174a2 2 0 0 0-.5.83l-1.321 4.352a.5.5 0 0 0 .623.622l4.353-1.32a2 2 0 0 0 .83-.497z"
+      />
+      <path
+        d="m15 5 4 4"
+      />
+    </svg>
+    <span
+      class="text-sm font-medium"
+      data-override-defaults="true"
+      data-testid="typography"
+    >
+      Bitcoin News
+    </span>
+  </a>
+  <a
+    class="flex h-12 w-full min-w-40 items-center justify-center gap-x-2 border-b transition-colors hover:text-white border-muted-foreground text-muted-foreground"
+    data-override-defaults="true"
+    data-testid="link"
+    href="/feed/feed-2"
+  >
+    <svg
+      aria-hidden="true"
+      class="lucide lucide-pencil size-5"
+      fill="none"
+      height="24"
+      stroke="currentColor"
+      stroke-linecap="round"
+      stroke-linejoin="round"
+      stroke-width="2"
+      viewBox="0 0 24 24"
+      width="24"
+      xmlns="http://www.w3.org/2000/svg"
+    >
+      <path
+        d="M21.174 6.812a1 1 0 0 0-3.986-3.987L3.842 16.174a2 2 0 0 0-.5.83l-1.321 4.352a.5.5 0 0 0 .623.622l4.353-1.32a2 2 0 0 0 .83-.497z"
+      />
+      <path
+        d="m15 5 4 4"
+      />
+    </svg>
+    <span
+      class="text-sm font-medium"
+      data-override-defaults="true"
+      data-testid="typography"
+    >
+      Lightning Network
+    </span>
+  </a>
+  <div
+    data-testid="custom-feed-dialog-create"
+  >
+    <button
+      class="flex h-12 w-full min-w-40 cursor-pointer items-center justify-center gap-x-2 border-b border-muted-foreground text-muted-foreground transition-colors hover:text-white"
+      data-override-defaults="true"
+      data-testid="button"
+    >
+      <svg
+        aria-hidden="true"
+        class="lucide lucide-circle-plus size-5"
+        fill="none"
+        height="24"
+        stroke="currentColor"
+        stroke-linecap="round"
+        stroke-linejoin="round"
+        stroke-width="2"
+        viewBox="0 0 24 24"
+        width="24"
+        xmlns="http://www.w3.org/2000/svg"
+      >
+        <circle
+          cx="12"
+          cy="12"
+          r="10"
+        />
+        <path
+          d="M8 12h8"
+        />
+        <path
+          d="M12 8v8"
+        />
+      </svg>
+      <span
+        class="text-sm font-medium"
+        data-override-defaults="true"
+        data-testid="typography"
+      >
+        Create Feed
+      </span>
+    </button>
+  </div>
+</div>
+`;
+
+exports[`FeedNavigation - Snapshots > matches snapshot with multiple custom feeds and one active 1`] = `
+<div
+  class="flex-row overflow-x-auto"
+  data-testid="container"
+>
+  <a
+    class="flex h-12 w-full min-w-40 items-center justify-center gap-x-2 border-b transition-colors hover:text-white border-muted-foreground text-muted-foreground"
+    data-override-defaults="true"
+    data-testid="link"
+    href="/home"
+  >
+    <svg
+      aria-hidden="true"
+      class="lucide lucide-house size-5"
+      fill="none"
+      height="24"
+      stroke="currentColor"
+      stroke-linecap="round"
+      stroke-linejoin="round"
+      stroke-width="2"
+      viewBox="0 0 24 24"
+      width="24"
+      xmlns="http://www.w3.org/2000/svg"
+    >
+      <path
+        d="M15 21v-8a1 1 0 0 0-1-1h-4a1 1 0 0 0-1 1v8"
+      />
+      <path
+        d="M3 10a2 2 0 0 1 .709-1.528l7-6a2 2 0 0 1 2.582 0l7 6A2 2 0 0 1 21 10v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"
+      />
+    </svg>
+    <span
+      class="text-sm font-medium"
+      data-override-defaults="true"
+      data-testid="typography"
+    >
+      Home
+    </span>
+  </a>
+  <a
+    class="flex h-12 w-full min-w-40 items-center justify-center gap-x-2 border-b transition-colors hover:text-white border-muted-foreground text-muted-foreground"
+    data-override-defaults="true"
+    data-testid="link"
+    href="/feed/feed-1"
+  >
+    <svg
+      aria-hidden="true"
+      class="lucide lucide-pencil size-5"
+      fill="none"
+      height="24"
+      stroke="currentColor"
+      stroke-linecap="round"
+      stroke-linejoin="round"
+      stroke-width="2"
+      viewBox="0 0 24 24"
+      width="24"
+      xmlns="http://www.w3.org/2000/svg"
+    >
+      <path
+        d="M21.174 6.812a1 1 0 0 0-3.986-3.987L3.842 16.174a2 2 0 0 0-.5.83l-1.321 4.352a.5.5 0 0 0 .623.622l4.353-1.32a2 2 0 0 0 .83-.497z"
+      />
+      <path
+        d="m15 5 4 4"
+      />
+    </svg>
+    <span
+      class="text-sm font-medium"
+      data-override-defaults="true"
+      data-testid="typography"
+    >
+      Bitcoin
+    </span>
+  </a>
+  <a
+    class="flex h-12 w-full min-w-40 items-center justify-center gap-x-2 border-b transition-colors hover:text-white border-white text-white"
+    data-override-defaults="true"
+    data-testid="link"
+    href="/feed/feed-2"
+  >
+    <div
+      data-testid="custom-feed-dialog-edit"
+    >
+      <button
+        class="size-9"
+        data-size="icon"
+        data-testid="button"
+        data-variant="ghost"
+      >
+        <svg
+          aria-hidden="true"
+          class="lucide lucide-pencil size-5"
+          fill="none"
+          height="24"
+          stroke="currentColor"
+          stroke-linecap="round"
+          stroke-linejoin="round"
+          stroke-width="2"
+          viewBox="0 0 24 24"
+          width="24"
+          xmlns="http://www.w3.org/2000/svg"
+        >
+          <path
+            d="M21.174 6.812a1 1 0 0 0-3.986-3.987L3.842 16.174a2 2 0 0 0-.5.83l-1.321 4.352a.5.5 0 0 0 .623.622l4.353-1.32a2 2 0 0 0 .83-.497z"
+          />
+          <path
+            d="m15 5 4 4"
+          />
+        </svg>
+      </button>
+    </div>
+    <span
+      class="text-sm font-medium"
+      data-override-defaults="true"
+      data-testid="typography"
+    >
+      Lightning
+    </span>
+  </a>
+  <a
+    class="flex h-12 w-full min-w-40 items-center justify-center gap-x-2 border-b transition-colors hover:text-white border-muted-foreground text-muted-foreground"
+    data-override-defaults="true"
+    data-testid="link"
+    href="/feed/feed-3"
+  >
+    <svg
+      aria-hidden="true"
+      class="lucide lucide-pencil size-5"
+      fill="none"
+      height="24"
+      stroke="currentColor"
+      stroke-linecap="round"
+      stroke-linejoin="round"
+      stroke-width="2"
+      viewBox="0 0 24 24"
+      width="24"
+      xmlns="http://www.w3.org/2000/svg"
+    >
+      <path
+        d="M21.174 6.812a1 1 0 0 0-3.986-3.987L3.842 16.174a2 2 0 0 0-.5.83l-1.321 4.352a.5.5 0 0 0 .623.622l4.353-1.32a2 2 0 0 0 .83-.497z"
+      />
+      <path
+        d="m15 5 4 4"
+      />
+    </svg>
+    <span
+      class="text-sm font-medium"
+      data-override-defaults="true"
+      data-testid="typography"
+    >
+      Nostr
+    </span>
+  </a>
+  <div
+    data-testid="custom-feed-dialog-create"
+  >
+    <button
+      class="flex h-12 w-full min-w-40 cursor-pointer items-center justify-center gap-x-2 border-b border-muted-foreground text-muted-foreground transition-colors hover:text-white"
+      data-override-defaults="true"
+      data-testid="button"
+    >
+      <svg
+        aria-hidden="true"
+        class="lucide lucide-circle-plus size-5"
+        fill="none"
+        height="24"
+        stroke="currentColor"
+        stroke-linecap="round"
+        stroke-linejoin="round"
+        stroke-width="2"
+        viewBox="0 0 24 24"
+        width="24"
+        xmlns="http://www.w3.org/2000/svg"
+      >
+        <circle
+          cx="12"
+          cy="12"
+          r="10"
+        />
+        <path
+          d="M8 12h8"
+        />
+        <path
+          d="M12 8v8"
+        />
+      </svg>
+      <span
+        class="text-sm font-medium"
+        data-override-defaults="true"
+        data-testid="typography"
+      >
+        Create Feed
+      </span>
+    </button>
+  </div>
+</div>
+`;
+
+exports[`FeedNavigation - Snapshots > matches snapshot with no custom feeds and Home active 1`] = `
+<div
+  class="flex-row overflow-x-auto"
+  data-testid="container"
+>
+  <a
+    class="flex h-12 w-full min-w-40 items-center justify-center gap-x-2 border-b transition-colors hover:text-white border-white text-white"
+    data-override-defaults="true"
+    data-testid="link"
+    href="/home"
+  >
+    <svg
+      aria-hidden="true"
+      class="lucide lucide-house size-5"
+      fill="none"
+      height="24"
+      stroke="currentColor"
+      stroke-linecap="round"
+      stroke-linejoin="round"
+      stroke-width="2"
+      viewBox="0 0 24 24"
+      width="24"
+      xmlns="http://www.w3.org/2000/svg"
+    >
+      <path
+        d="M15 21v-8a1 1 0 0 0-1-1h-4a1 1 0 0 0-1 1v8"
+      />
+      <path
+        d="M3 10a2 2 0 0 1 .709-1.528l7-6a2 2 0 0 1 2.582 0l7 6A2 2 0 0 1 21 10v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"
+      />
+    </svg>
+    <span
+      class="text-sm font-medium"
+      data-override-defaults="true"
+      data-testid="typography"
+    >
+      Home
+    </span>
+  </a>
+  <div
+    data-testid="custom-feed-dialog-create"
+  >
+    <button
+      class="flex h-12 w-full min-w-40 cursor-pointer items-center justify-center gap-x-2 border-b border-muted-foreground text-muted-foreground transition-colors hover:text-white"
+      data-override-defaults="true"
+      data-testid="button"
+    >
+      <svg
+        aria-hidden="true"
+        class="lucide lucide-circle-plus size-5"
+        fill="none"
+        height="24"
+        stroke="currentColor"
+        stroke-linecap="round"
+        stroke-linejoin="round"
+        stroke-width="2"
+        viewBox="0 0 24 24"
+        width="24"
+        xmlns="http://www.w3.org/2000/svg"
+      >
+        <circle
+          cx="12"
+          cy="12"
+          r="10"
+        />
+        <path
+          d="M8 12h8"
+        />
+        <path
+          d="M12 8v8"
+        />
+      </svg>
+      <span
+        class="text-sm font-medium"
+        data-override-defaults="true"
+        data-testid="typography"
+      >
+        Create Feed
+      </span>
+    </button>
+  </div>
+</div>
+`;
