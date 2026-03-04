@@ -46,12 +46,16 @@ const createHtmlResponse = (html: string, headers: Record<string, string> = {}) 
   },
 });
 
-const createMediaResponse = (contentType: string) => ({
-  ok: true,
-  status: 200,
-  headers: new Headers({ 'content-type': contentType }),
-  body: { getReader: () => createMockReader([]) },
-});
+const createMediaResponse = (contentType: string) => {
+  const cancel = vi.fn().mockResolvedValue(undefined);
+  return {
+    ok: true,
+    status: 200,
+    headers: new Headers({ 'content-type': contentType }),
+    body: { getReader: () => createMockReader([]), cancel },
+    _cancel: cancel,
+  };
+};
 
 const createRedirectResponse = (status: number, location: string) => ({
   ok: false,
@@ -60,11 +64,16 @@ const createRedirectResponse = (status: number, location: string) => ({
   body: { getReader: () => createMockReader([]) },
 });
 
-const createErrorResponse = (status: number) => ({
-  ok: false,
-  status,
-  headers: new Headers({ 'content-type': 'text/html' }),
-});
+const createErrorResponse = (status: number) => {
+  const cancel = vi.fn().mockResolvedValue(undefined);
+  return {
+    ok: false,
+    status,
+    headers: new Headers({ 'content-type': 'text/html' }),
+    body: { cancel },
+    _cancel: cancel,
+  };
+};
 
 const simpleHtml = (title: string, image?: string) => {
   const imageTag = image ? `<meta property="og:image" content="${image}" />` : '';
@@ -162,7 +171,8 @@ describe('OgMetadataApplication', () => {
 
   describe('fetch error handling', () => {
     it('should return fallback metadata when upstream responds with 403', async () => {
-      vi.spyOn(Core.NextJsApiService, 'fetch').mockResolvedValue(createErrorResponse(403) as unknown as Response);
+      const mockResponse = createErrorResponse(403);
+      vi.spyOn(Core.NextJsApiService, 'fetch').mockResolvedValue(mockResponse as unknown as Response);
 
       const result = await OgMetadataApplication.fetch(new URL('https://example.com/events/123'));
 
@@ -172,58 +182,63 @@ describe('OgMetadataApplication', () => {
         image: null,
         type: 'website',
       });
+      expect(mockResponse._cancel).toHaveBeenCalled();
     });
 
     it('should throw for non-403 error status codes', async () => {
-      vi.spyOn(Core.NextJsApiService, 'fetch').mockResolvedValue(createErrorResponse(500) as unknown as Response);
+      const mockResponse = createErrorResponse(500);
+      vi.spyOn(Core.NextJsApiService, 'fetch').mockResolvedValue(mockResponse as unknown as Response);
 
       await expect(OgMetadataApplication.fetch(new URL('https://example.com'))).rejects.toThrow('Fetch failed');
+      expect(mockResponse._cancel).toHaveBeenCalled();
     });
 
     it('should throw for 404 status code', async () => {
-      vi.spyOn(Core.NextJsApiService, 'fetch').mockResolvedValue(createErrorResponse(404) as unknown as Response);
+      const mockResponse = createErrorResponse(404);
+      vi.spyOn(Core.NextJsApiService, 'fetch').mockResolvedValue(mockResponse as unknown as Response);
 
       await expect(OgMetadataApplication.fetch(new URL('https://example.com'))).rejects.toThrow('Fetch failed');
+      expect(mockResponse._cancel).toHaveBeenCalled();
     });
   });
 
   describe('content type detection', () => {
     it('should return type "image" for image content', async () => {
-      vi.spyOn(Core.NextJsApiService, 'fetch').mockResolvedValue(
-        createMediaResponse('image/png') as unknown as Response,
-      );
+      const mockResponse = createMediaResponse('image/png');
+      vi.spyOn(Core.NextJsApiService, 'fetch').mockResolvedValue(mockResponse as unknown as Response);
 
       const result = await OgMetadataApplication.fetch(new URL('http://example.com/image.png'));
 
       expect(result).toEqual({ url: 'http://example.com/image.png', type: 'image' });
+      expect(mockResponse._cancel).toHaveBeenCalled();
     });
 
     it('should return type "video" for video content', async () => {
-      vi.spyOn(Core.NextJsApiService, 'fetch').mockResolvedValue(
-        createMediaResponse('video/mp4') as unknown as Response,
-      );
+      const mockResponse = createMediaResponse('video/mp4');
+      vi.spyOn(Core.NextJsApiService, 'fetch').mockResolvedValue(mockResponse as unknown as Response);
 
       const result = await OgMetadataApplication.fetch(new URL('http://example.com/video.mp4'));
 
       expect(result).toEqual({ url: 'http://example.com/video.mp4', type: 'video' });
+      expect(mockResponse._cancel).toHaveBeenCalled();
     });
 
     it('should return type "audio" for audio content', async () => {
-      vi.spyOn(Core.NextJsApiService, 'fetch').mockResolvedValue(
-        createMediaResponse('audio/mpeg') as unknown as Response,
-      );
+      const mockResponse = createMediaResponse('audio/mpeg');
+      vi.spyOn(Core.NextJsApiService, 'fetch').mockResolvedValue(mockResponse as unknown as Response);
 
       const result = await OgMetadataApplication.fetch(new URL('http://example.com/audio.mp3'));
 
       expect(result).toEqual({ url: 'http://example.com/audio.mp3', type: 'audio' });
+      expect(mockResponse._cancel).toHaveBeenCalled();
     });
 
     it('should reject non-HTML content type', async () => {
-      vi.spyOn(Core.NextJsApiService, 'fetch').mockResolvedValue(
-        createMediaResponse('application/json') as unknown as Response,
-      );
+      const mockResponse = createMediaResponse('application/json');
+      vi.spyOn(Core.NextJsApiService, 'fetch').mockResolvedValue(mockResponse as unknown as Response);
 
       await expect(OgMetadataApplication.fetch(new URL('http://example.com/api'))).rejects.toThrow('Not HTML content');
+      expect(mockResponse._cancel).toHaveBeenCalled();
     });
 
     it('should accept text/html content type', async () => {

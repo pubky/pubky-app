@@ -56,16 +56,22 @@ export class OgMetadataApplication {
 
       // 3. Handle non-OK responses
       if (!response.ok) {
+        // Release the TCP connection back to the pool instead of waiting for GC
+        response.body?.cancel().catch(() => {});
         return this.handleErrorResponse(url, response.status);
       }
 
       // 4. Check for media content types (image/video/audio)
       const mediaResult = this.detectMediaType(url, response);
-      if (mediaResult) return mediaResult;
+      if (mediaResult) {
+        response.body?.cancel().catch(() => {});
+        return mediaResult;
+      }
 
       // 5. Validate HTML content type
       const contentType = response.headers.get('content-type');
       if (!contentType?.includes('text/html')) {
+        response.body?.cancel().catch(() => {});
         throw Libs.Err.validation(Libs.ValidationErrorCode.INVALID_INPUT, 'Not HTML content', {
           service: Libs.ErrorService.NextJsApi,
           operation: 'fetch',
