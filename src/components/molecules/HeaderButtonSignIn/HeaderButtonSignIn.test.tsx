@@ -36,7 +36,9 @@ vi.mock('@/libs', async () => {
   const actual = await vi.importActual('@/libs');
   return {
     ...actual,
-    LogIn: ({ className }: { className?: string }) => <span data-testid="log-in-icon" className={className} />,
+    UserRoundPlus: ({ className }: { className?: string }) => (
+      <span data-testid="user-round-plus-icon" className={className} />
+    ),
   };
 });
 
