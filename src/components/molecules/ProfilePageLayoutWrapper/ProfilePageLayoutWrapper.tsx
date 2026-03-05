@@ -6,7 +6,10 @@ export interface ProfilePageLayoutWrapperProps {
 
 export function ProfilePageLayoutWrapper({ children }: ProfilePageLayoutWrapperProps) {
   return (
-    <Atoms.Container overrideDefaults={true} className="mx-auto mt-6 w-full max-w-[1200px] px-6 pt-0 xl:px-0">
+    <Atoms.Container
+      overrideDefaults={true}
+      className="mx-auto mt-6 w-full max-w-(--container-max-width) px-6 pt-0 xl:px-0"
+    >
       {children}
     </Atoms.Container>
   );

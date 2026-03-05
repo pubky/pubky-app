@@ -19,7 +19,7 @@ describe('ProfilePageLayoutWrapper', () => {
       </ProfilePageLayoutWrapper>,
     );
     const wrapper = container.firstChild as HTMLElement;
-    expect(wrapper).toHaveClass('max-w-[1200px]');
+    expect(wrapper).toHaveClass('max-w-(--container-max-width)');
   });
 
   it('has correct layout classes', () => {
