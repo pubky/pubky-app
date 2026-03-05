@@ -89,7 +89,7 @@ describe('ButtonsNavigation', () => {
 
   it('applies custom className to back button', () => {
     const customClass = 'custom-back-button-class';
-    render(<ButtonsNavigation id="test-navigation" backButtonClassName={customClass} />);
+    render(<ButtonsNavigation id="test-nav-back-class" backButtonClassName={customClass} />);
 
     const backButton = screen.getByRole('button', { name: /back/i });
     expect(backButton).toHaveClass(customClass);
@@ -97,7 +97,7 @@ describe('ButtonsNavigation', () => {
 
   it('applies custom className to continue button', () => {
     const customClass = 'custom-continue-button-class';
-    render(<ButtonsNavigation id="test-navigation" continueButtonClassName={customClass} />);
+    render(<ButtonsNavigation id="test-nav-continue-class" continueButtonClassName={customClass} />);
 
     const continueButton = screen.getByRole('button', { name: /continue/i });
     expect(continueButton).toHaveClass(customClass);
@@ -108,7 +108,7 @@ describe('ButtonsNavigation', () => {
     const continueCustomClass = 'custom-continue-class';
     render(
       <ButtonsNavigation
-        id="test-navigation"
+        id="test-nav-both-class"
         backButtonClassName={backCustomClass}
         continueButtonClassName={continueCustomClass}
       />,
@@ -178,13 +178,15 @@ describe('ButtonsNavigation - Snapshots', () => {
   });
 
   it('matches snapshot with custom backButtonClassName', () => {
-    const { container } = render(<ButtonsNavigation id="test-navigation" backButtonClassName="custom-back-class" />);
+    const { container } = render(
+      <ButtonsNavigation id="test-nav-snapshot-back-class" backButtonClassName="custom-back-class" />,
+    );
     expect(container.firstChild).toMatchSnapshot();
   });
 
   it('matches snapshot with custom continueButtonClassName', () => {
     const { container } = render(
-      <ButtonsNavigation id="test-navigation" continueButtonClassName="custom-continue-class" />,
+      <ButtonsNavigation id="test-nav-snapshot-continue-class" continueButtonClassName="custom-continue-class" />,
     );
     expect(container.firstChild).toMatchSnapshot();
   });
@@ -192,7 +194,7 @@ describe('ButtonsNavigation - Snapshots', () => {
   it('matches snapshot with both custom button classNames', () => {
     const { container } = render(
       <ButtonsNavigation
-        id="test-navigation"
+        id="test-nav-snapshot-both-class"
         backButtonClassName="custom-back-class"
         continueButtonClassName="custom-continue-class"
       />,
