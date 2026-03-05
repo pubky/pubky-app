@@ -61,7 +61,7 @@ export function TaggedItem({
         />
 
         {/* Search button */}
-        <Atoms.Button variant="secondary" size="icon" onClick={handleSearchClick}>
+        <Atoms.Button variant="secondary" className="size-8" onClick={handleSearchClick}>
           <Libs.Search size={16} className="text-secondary-foreground" />
         </Atoms.Button>
 
@@ -88,9 +88,9 @@ export function TaggedItem({
               <Atoms.Container
                 overrideDefaults={true}
                 className={Libs.cn(
-                  'flex shrink-0 items-center justify-center rounded-full bg-background shadow-sm',
+                  'flex shrink-0 items-center justify-center rounded-full border border-muted-foreground bg-background shadow-sm',
                   'size-8 text-xs font-medium text-foreground',
-                  visibleTaggers.length > 0 && '-ml-2',
+                  visibleTaggers.length > 0 && 'z-10 -ml-2',
                 )}
               >
                 +{overflowCount}

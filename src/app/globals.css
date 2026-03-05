@@ -302,6 +302,14 @@ body {
    * - Desktop uses different layout without mobile menu
    */
   --z-mobile-menu: 30;
+
+  /**
+   * Container max width
+   * - Maximum width for the container
+   * - Applied to: Container component
+   * - Used for: Main content area
+   */
+  --container-max-width: 1200px;
 }
 
 @layer base {

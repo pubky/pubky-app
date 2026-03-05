@@ -19,7 +19,7 @@ import * as Types from './PostReplies.types';
  * Hidden for unauthenticated users following pubky-app pattern.
  */
 
-export function TimelinePostReplies({ postId, onPostClick }: Types.TimelinePostRepliesProps) {
+export function TimelinePostReplies({ postId, onPostClick, tagsLayout }: Types.TimelinePostRepliesProps) {
   const { isAuthenticated } = Hooks.useRequireAuth();
   const [replyIds, setReplyIds] = useState<string[]>([]);
   const { mutedUserIdSet } = Hooks.useMutedUsers();
@@ -111,6 +111,7 @@ export function TimelinePostReplies({ postId, onPostClick }: Types.TimelinePostR
             isReply={true}
             onClick={() => onPostClick(replyId)}
             isLastReply={index === replyIds.length - 1 && !shouldShowQuickReply}
+            tagsLayout={tagsLayout}
           />
         </React.Fragment>
       ))}

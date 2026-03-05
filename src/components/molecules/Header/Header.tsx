@@ -30,8 +30,8 @@ export const HeaderContainer = ({ children, className, classNameNav }: HeaderCon
         as="nav"
         size="container"
         className={Libs.cn(
-          'sm:p-auto pointer-events-auto flex h-24 w-full flex-row flex-wrap items-center justify-between gap-4 p-4 sm:flex-nowrap sm:gap-6',
-          'px-6 py-4 sm:py-6',
+          'pointer-events-auto mx-auto flex h-24 w-full flex-row flex-wrap items-center justify-between gap-4 sm:flex-nowrap sm:gap-6',
+          'sm:p-auto p-4',
           classNameNav,
         )}
       >
