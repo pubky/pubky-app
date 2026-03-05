@@ -46,7 +46,7 @@ exports[`Header Components - Snapshots > matches snapshot for HeaderContainer 1`
   data-testid="container"
 >
   <nav
-    class="container max-w-(--container-max-width) pointer-events-auto mx-auto flex h-24 w-full flex-row flex-wrap items-center justify-between gap-4 sm:flex-nowrap sm:gap-6 sm:p-auto p-4"
+    class="container max-w-(--container-max-width) pointer-events-auto mx-auto flex h-24 w-full flex-row flex-wrap items-center justify-between gap-4 sm:flex-nowrap sm:gap-6 p-4 sm:p-0"
     data-testid="container"
   >
     <div>

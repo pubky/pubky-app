@@ -31,7 +31,7 @@ export const HeaderContainer = ({ children, className, classNameNav }: HeaderCon
         size="container"
         className={Libs.cn(
           'pointer-events-auto mx-auto flex h-24 w-full flex-row flex-wrap items-center justify-between gap-4 sm:flex-nowrap sm:gap-6',
-          'sm:p-auto p-4',
+          'p-4 sm:p-0',
           classNameNav,
         )}
       >
