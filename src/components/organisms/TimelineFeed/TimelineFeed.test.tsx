@@ -11,6 +11,8 @@ vi.mock('next/navigation', () => ({
   useSearchParams: () => ({
     get: () => null,
   }),
+  usePathname: () => '/',
+  useParams: () => ({ id: '' }),
 }));
 
 // Mock dependencies

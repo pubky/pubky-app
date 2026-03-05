@@ -12,6 +12,7 @@ import {
   Bitkit,
   BTCIcon,
   Tether,
+  MarkdownMark,
   PubkyIcon,
 } from './icons';
 
@@ -520,6 +521,49 @@ describe('Custom Icons', () => {
       expect(paths.length).toBe(2);
       expect(paths[0]).toHaveAttribute('fill', '#53ae94');
       expect(paths[1]).toHaveAttribute('fill', '#fff');
+    });
+  });
+
+  describe('MarkdownMark', () => {
+    it('should render correctly with default props', () => {
+      const { container } = render(<MarkdownMark />);
+      const svg = container.querySelector('svg');
+
+      expect(svg).toBeInTheDocument();
+      expect(svg).toHaveAttribute('width', '24');
+      expect(svg).toHaveAttribute('height', '24');
+      expect(svg).toHaveAttribute('viewBox', '0 0 208 128');
+    });
+
+    it('should apply custom size', () => {
+      const { container } = render(<MarkdownMark size={32} />);
+      const svg = container.querySelector('svg');
+
+      expect(svg).toHaveAttribute('width', '32');
+      expect(svg).toHaveAttribute('height', '32');
+    });
+
+    it('should apply custom className', () => {
+      const { container } = render(<MarkdownMark className="custom-class" />);
+      const svg = container.querySelector('svg');
+
+      expect(svg).toHaveClass('custom-class');
+    });
+
+    it('should apply additional props', () => {
+      const { container } = render(<MarkdownMark data-testid="markdown-icon" />);
+      const svg = container.querySelector('svg');
+
+      expect(svg).toHaveAttribute('data-testid', 'markdown-icon');
+    });
+
+    it('should render the correct SVG content', () => {
+      const { container } = render(<MarkdownMark />);
+      const paths = container.querySelectorAll('path');
+
+      expect(paths.length).toBe(2);
+      expect(paths[0]).toHaveAttribute('fill', 'currentColor');
+      expect(paths[1]).toHaveAttribute('fill', 'currentColor');
     });
   });
 

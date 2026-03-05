@@ -7,6 +7,7 @@ import * as Libs from '@/libs';
 import * as Molecules from '@/molecules';
 import * as Organisms from '@/organisms';
 import * as Hooks from '@/hooks';
+import type { TagsLayout } from '../PostMain/PostMain.types';
 import type { TimelineFeedProps, TimelineFeedContextValue } from './TimelineFeed.types';
 import { TIMELINE_FEED_VARIANT } from './TimelineFeed.types';
 import { useTimelineFeedStreamId } from './useTimelineFeedStreamId';
@@ -86,6 +87,14 @@ function TimelineFeedContent({
   children?: TimelineFeedProps['children'];
 }) {
   const t = useTranslations('toast.post');
+
+  const { layout: homeLayout } = Core.useHomeStore();
+  const customFeed = Hooks.useCustomFeed();
+  const customFeedLayout =
+    customFeed?.layout !== undefined ? Core.pubkyLayoutToHomeLayout(customFeed.layout) : undefined;
+  const effectiveLayout = customFeedLayout ?? homeLayout;
+  const tagsLayout: TagsLayout = effectiveLayout === Core.LAYOUT.WIDE ? 'side' : 'inline';
+
   const {
     postIds: rawPostIds,
     loading,
@@ -204,6 +213,7 @@ function TimelineFeedContent({
         error={error}
         hasMore={hasMore}
         loadMore={loadMore}
+        tagsLayout={tagsLayout}
       />
     </TimelineFeedContext.Provider>
   );

@@ -1,3 +1,5 @@
+import type { TagsLayout } from '../../../organisms/PostMain/PostMain.types';
+
 export interface TimelinePostsProps {
   /**
    * Post IDs to display
@@ -23,4 +25,8 @@ export interface TimelinePostsProps {
    * Function to load more posts
    */
   loadMore: () => Promise<void>;
+  /**
+   * Tags layout for post cards: 'inline' (default toggle) or 'side' (two-column with tags on right)
+   */
+  tagsLayout?: TagsLayout;
 }

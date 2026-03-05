@@ -13,7 +13,11 @@ import { usePathname } from 'next/navigation';
 // navigating between /home and /feed/[id] doesn't flash empty tabs.
 let cachedFeeds: Core.FeedModelSchema[] = [];
 
-export const FeedNavigation = () => {
+interface FeedNavigationProps {
+  className?: string;
+}
+
+export const FeedNavigation = ({ className }: FeedNavigationProps) => {
   const pathname = usePathname();
   const tHeader = useTranslations('header');
   const tDialog = useTranslations('dialogs.customFeed');
@@ -35,30 +39,34 @@ export const FeedNavigation = () => {
 
   const customFeedsMapped = customFeeds.map((f) => ({
     name: f.name,
-    icon: <Libs.Pencil className="size-5" />,
+    icon: <Libs.Pencil className="size-5 shrink-0" />,
     href: APP_ROUTES.FEED + '/' + f.id,
   }));
 
   const feeds = [
-    { name: tHeader('home'), icon: <Libs.Home className="size-5" />, href: APP_ROUTES.HOME },
+    { name: tHeader('home'), icon: <Libs.Home className="size-5 shrink-0" />, href: APP_ROUTES.HOME },
     ...customFeedsMapped,
   ];
 
   return (
-    <Atoms.Container className="flex-row overflow-x-auto">
+    <Atoms.Container className={Libs.cn('overflow-x-auto lg:flex-row', className)}>
+      <Atoms.Heading level={2} size="lg" className="mb-2 font-light text-muted-foreground lg:hidden">
+        {tHeader('feed')}
+      </Atoms.Heading>
+
       {feeds.map((f) => (
         <Atoms.Link
           overrideDefaults
           key={f.href}
           href={f.href}
           className={Libs.cn(
-            'flex h-12 w-full min-w-40 items-center justify-center gap-x-2 border-b transition-colors hover:text-white',
+            'flex min-h-12 w-full min-w-40 items-center gap-x-2 border-b transition-colors hover:text-white lg:justify-center',
             pathname === f.href ? 'border-white text-white' : 'border-muted-foreground text-muted-foreground',
           )}
         >
           {f.href !== APP_ROUTES.HOME && f.href === pathname ? (
             <Organisms.CustomFeedDialog mode="edit">
-              <Atoms.Button variant="ghost" size="icon" className="size-9">
+              <Atoms.Button overrideDefaults className="cursor-pointer">
                 {f.icon}
               </Atoms.Button>
             </Organisms.CustomFeedDialog>
@@ -66,7 +74,7 @@ export const FeedNavigation = () => {
             f.icon
           )}
 
-          <Atoms.Typography overrideDefaults className="text-sm font-medium">
+          <Atoms.Typography overrideDefaults className="font-medium lg:text-sm">
             {f.name}
           </Atoms.Typography>
         </Atoms.Link>
@@ -75,11 +83,11 @@ export const FeedNavigation = () => {
       <Organisms.CustomFeedDialog mode="create">
         <Atoms.Button
           overrideDefaults
-          className="flex h-12 w-full min-w-40 cursor-pointer items-center justify-center gap-x-2 border-b border-muted-foreground text-muted-foreground transition-colors hover:text-white"
+          className="flex min-h-12 w-full min-w-40 cursor-pointer items-center gap-x-2 border-b border-muted-foreground text-muted-foreground transition-colors hover:text-white lg:justify-center"
         >
-          <Libs.PlusCircle className="size-5" />
+          <Libs.PlusCircle className="size-5 shrink-0" />
 
-          <Atoms.Typography overrideDefaults className="text-sm font-medium">
+          <Atoms.Typography overrideDefaults className="font-medium lg:text-sm">
             {tDialog('createTitle')}
           </Atoms.Typography>
         </Atoms.Button>
