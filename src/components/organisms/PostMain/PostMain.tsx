@@ -21,6 +21,8 @@ export function PostMain({
   isLastReply = false,
   tagsLayout = 'inline',
 }: PostMainProps) {
+  const isMobile = Hooks.useIsMobile();
+  const effectiveTagsLayout = tagsLayout === 'side' && isMobile ? 'inline' : tagsLayout;
   const { postDetails } = Hooks.usePostDetails(postId);
   const isDeleted = Libs.isPostDeleted(postDetails?.content);
 
@@ -77,10 +79,10 @@ export function PostMain({
             <>
               {showRepostHeader && <Molecules.RepostHeader />}
               <Atoms.CardContent className="flex min-w-0 flex-col gap-4 p-6">
-                {tagsLayout === 'side' ? (
+                {effectiveTagsLayout === 'side' ? (
                   <Atoms.Container className="grid min-w-0 grid-cols-1 gap-6 lg:grid-cols-3">
                     <Atoms.Container className="flex min-w-0 flex-col gap-4 lg:col-span-2">
-                      {shouldShowPostHeader && <Organisms.PostHeader postId={postId} />}
+                      {shouldShowPostHeader && <Organisms.PostHeader postId={postId} timeAgoPlacement="bottom-left" />}
                       <Organisms.PostContent postId={postId} />
                       <Atoms.Container overrideDefaults onClick={handleFooterClick} className="flex flex-col gap-4">
                         <Organisms.PostTagsPanel

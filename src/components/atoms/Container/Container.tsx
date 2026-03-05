@@ -29,7 +29,7 @@ export const Container = forwardRef<
     md: 'max-w-screen-md',
     lg: 'max-w-screen-lg',
     xl: 'max-w-screen-xl',
-    container: 'container',
+    container: 'container max-w-(--container-max-width)',
   };
 
   const containerClassName = overrideDefaults
