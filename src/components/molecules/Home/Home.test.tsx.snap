@@ -23,7 +23,7 @@ exports[`Home - Snapshots > matches snapshot for HomeFooter with default props 1
   data-testid="container"
 >
   <div
-    class="flex-row items-center gap-1"
+    class="flex-row items-center gap-1 pb-2"
     data-testid="container"
   >
     <a
@@ -97,7 +97,7 @@ exports[`Home - Snapshots > matches snapshot for HomeFooter with default props 1
     >
       Pubky Core
     </a>
-     and was built with love and dedication by Synonym Software, S.A. DE C.V. ©2025. All rights reserved.
+     and was built with love and dedication by Synonym Software, S.A. DE C.V. ©2026. All rights reserved.
   </div>
 </div>
 `;
