@@ -1,6 +1,6 @@
 'use client';
 
-import { useRef } from 'react';
+import { forwardRef, useImperativeHandle, useRef } from 'react';
 import { useTranslations } from 'next-intl';
 import * as Atoms from '@/atoms';
 import * as Molecules from '@/molecules';
@@ -9,28 +9,31 @@ import * as Libs from '@/libs';
 import * as Hooks from '@/hooks';
 import { mergeTagSuggestions, TAG_INPUT_BLUR_DELAY_MS } from '@/hooks/useTagInput';
 import { TAG_MAX_LENGTH } from '@/config';
-import type { TagInputProps } from './TagInput.types';
+import type { TagInputProps, TagInputHandle } from './TagInput.types';
 import { TagSuggestionsDropdown } from './TagSuggestionsDropdown';
 
-export function TagInput({
-  onTagAdd,
-  placeholder,
-  existingTags = [],
-  viewerTags,
-  showCloseButton = false,
-  onClose,
-  disabled = false,
-  maxTags,
-  currentTagsCount = 0,
-  limitReachedPlaceholder,
-  onBlur,
-  onClick,
-  enableApiSuggestions = false,
-  excludeFromApiSuggestions = [],
-  addOnSuggestionClick = false,
-  autoFocus = false,
-  className,
-}: TagInputProps) {
+export const TagInput = forwardRef<TagInputHandle, TagInputProps>(function TagInput(
+  {
+    onTagAdd,
+    placeholder,
+    existingTags = [],
+    viewerTags,
+    showCloseButton = false,
+    onClose,
+    disabled = false,
+    maxTags,
+    currentTagsCount = 0,
+    limitReachedPlaceholder,
+    onBlur,
+    onClick,
+    enableApiSuggestions = false,
+    excludeFromApiSuggestions = [],
+    addOnSuggestionClick = false,
+    autoFocus = false,
+    className,
+  },
+  ref,
+) {
   const t = useTranslations('post');
   const defaultPlaceholder = placeholder ?? t('addTag');
   const defaultLimitReachedPlaceholder = limitReachedPlaceholder ?? t('limitReached');
@@ -65,6 +68,10 @@ export function TagInput({
     existingTags: tagsForDuplicateCheck.map((t) => t.label),
     allTags: existingTags,
   });
+
+  useImperativeHandle(ref, () => ({
+    focus: () => inputRef.current?.focus(),
+  }));
 
   // Fetch API suggestions when enabled
   const { suggestions: apiSuggestions } = Hooks.useTagSuggestions({
@@ -260,4 +267,4 @@ export function TagInput({
       />
     </>
   );
-}
+});
