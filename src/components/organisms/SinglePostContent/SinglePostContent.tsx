@@ -124,6 +124,7 @@ export function SinglePostContent({ postId }: SinglePostContentProps) {
                       isReply={true}
                       onClick={() => navigateToPost(replyId)}
                       isLastReply={index === replyIds.length - 1 && !hasMore}
+                      tagsLayout="side"
                     />
                   </Atoms.Container>
                 ))}

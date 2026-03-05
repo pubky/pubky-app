@@ -1,12 +1,13 @@
 'use client';
 
+import { useRef, useState } from 'react';
 import type { PostDetailsModel } from '@/core';
 import * as Atoms from '@/atoms';
 import * as Molecules from '@/molecules';
 import * as Organisms from '@/organisms';
+import type { PostTagsPanelHandle } from '@/organisms';
 import * as Core from '@/core';
 import * as Hooks from '@/hooks';
-import { useState } from 'react';
 
 interface SinglePostArticleProps {
   postId: string;
@@ -23,6 +24,13 @@ interface SinglePostArticleProps {
 export const SinglePostArticle = ({ postId, content, attachments, isBlurred }: SinglePostArticleProps) => {
   const [replyDialogOpen, setReplyDialogOpen] = useState(false);
   const [repostDialogOpen, setRepostDialogOpen] = useState(false);
+  const mobileTagsPanelRef = useRef<PostTagsPanelHandle>(null);
+  const desktopTagsPanelRef = useRef<PostTagsPanelHandle>(null);
+
+  const handleTagClick = () => {
+    mobileTagsPanelRef.current?.focus();
+    desktopTagsPanelRef.current?.focus();
+  };
 
   const handleReplyClick = () => {
     setReplyDialogOpen(true);
@@ -59,6 +67,7 @@ export const SinglePostArticle = ({ postId, content, attachments, isBlurred }: S
 
           <Organisms.PostActionsBar
             postId={postId}
+            onTagClick={handleTagClick}
             onReplyClick={handleReplyClick}
             onRepostClick={handleRepostClick}
             className="mt-3 mb-6"
@@ -77,11 +86,21 @@ export const SinglePostArticle = ({ postId, content, attachments, isBlurred }: S
           )}
 
           {/* Tags on mobile */}
-          <Organisms.PostTagsPanel postId={postId} widthMode="full" className="mt-6 flex lg:hidden" />
+          <Organisms.PostTagsPanel
+            ref={mobileTagsPanelRef}
+            postId={postId}
+            widthMode="full"
+            className="mt-6 flex lg:hidden"
+          />
         </Atoms.Container>
 
         {/* Right column - Tags (desktop only) */}
-        <Organisms.PostTagsPanel postId={postId} widthMode="full" className="hidden lg:flex" />
+        <Organisms.PostTagsPanel
+          ref={desktopTagsPanelRef}
+          postId={postId}
+          widthMode="full"
+          className="hidden lg:flex"
+        />
       </Atoms.Container>
 
       <Organisms.DialogReply postId={postId} open={replyDialogOpen} onOpenChangeAction={setReplyDialogOpen} />

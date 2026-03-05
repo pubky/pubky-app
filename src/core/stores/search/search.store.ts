@@ -2,6 +2,7 @@ import { create } from 'zustand';
 import { persist, devtools } from 'zustand/middleware';
 import { SearchStore, searchInitialState } from './search.types';
 import { createSearchActions } from './search.actions';
+import { SEARCH_PERSIST_KEY } from '../persistedKeys';
 
 /**
  * Search Store
@@ -17,7 +18,7 @@ export const useSearchStore = create<SearchStore>()(
         ...createSearchActions(set),
       }),
       {
-        name: 'search-store',
+        name: SEARCH_PERSIST_KEY,
         // Persist all search state
         partialize: (state) => ({
           recentUsers: state.recentUsers,

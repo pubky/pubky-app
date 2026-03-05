@@ -1,6 +1,17 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import * as Core from '@/core';
-import { Err, ClientErrorCode, ErrorService, HttpMethod, ServerErrorCode } from '@/libs';
+import {
+  AppError,
+  ErrorCategory,
+  NetworkErrorCode,
+  AuthErrorCode,
+  Err,
+  ClientErrorCode,
+  ErrorService,
+  HttpMethod,
+  ServerErrorCode,
+} from '@/libs';
+import * as libs from '@/libs';
 import type { Session, Keypair } from '@synonymdev/pubky';
 
 vi.mock('pubky-app-specs', () => ({
@@ -155,6 +166,133 @@ describe('AuthApplication', () => {
 
       await expect(Core.AuthApplication.generateSignupToken()).rejects.toThrow('Failed to generate signup token');
       expect(generateSignupTokenSpy).toHaveBeenCalledOnce();
+    });
+  });
+
+  describe('restorePersistedSession', () => {
+    const createMockAuthStore = (sessionExport: string | null = 'mock-session-export') =>
+      ({
+        sessionExport,
+        isRestoringSession: false,
+        setIsRestoringSession: vi.fn(),
+        init: vi.fn(),
+      }) as unknown as Core.AuthStore;
+
+    const createNetworkError = () =>
+      new AppError({
+        category: ErrorCategory.Network,
+        code: NetworkErrorCode.CONNECTION_FAILED,
+        message: 'ERR_NETWORK_CHANGED',
+        service: ErrorService.Homeserver,
+        operation: 'restoreSession',
+      });
+
+    const createAuthError = () =>
+      new AppError({
+        category: ErrorCategory.Auth,
+        code: AuthErrorCode.SESSION_EXPIRED,
+        message: 'Session expired',
+        service: ErrorService.Homeserver,
+        operation: 'restoreSession',
+      });
+
+    let sleepSpy: ReturnType<typeof vi.spyOn>;
+
+    beforeEach(() => {
+      sleepSpy = vi.spyOn(libs, 'sleep').mockResolvedValue(undefined);
+    });
+
+    it('should restore session successfully on first attempt', async () => {
+      const authStore = createMockAuthStore();
+      const mockSession = { token: 'test-token' } as unknown as Session;
+      const restoreSpy = vi.spyOn(Core.HomeserverService, 'restoreSession').mockResolvedValue(mockSession);
+
+      const result = await Core.AuthApplication.restorePersistedSession({ authStore });
+
+      expect(restoreSpy).toHaveBeenCalledOnce();
+      expect(result).toEqual({ session: mockSession });
+      // Ensure loading state is toggled: true on start, false on finish (prevents stuck spinner)
+      expect(authStore.setIsRestoringSession).toHaveBeenCalledWith(true);
+      expect(authStore.setIsRestoringSession).toHaveBeenCalledWith(false);
+      // Ensure no sleep calls during restoration because session is restored immediately
+      expect(sleepSpy).not.toHaveBeenCalled();
+    });
+
+    it('should return null when sessionExport is missing', async () => {
+      const authStore = createMockAuthStore(null);
+
+      const result = await Core.AuthApplication.restorePersistedSession({ authStore });
+
+      expect(result).toBeNull();
+    });
+
+    it('should retry on retryable error and succeed on subsequent attempt', async () => {
+      const authStore = createMockAuthStore();
+      const mockSession = { token: 'test-token' } as unknown as Session;
+      // Simulate: 1st call fails (network), 2nd call fails (network), 3rd call succeeds
+      const restoreSpy = vi
+        .spyOn(Core.HomeserverService, 'restoreSession')
+        .mockRejectedValueOnce(createNetworkError())
+        .mockRejectedValueOnce(createNetworkError())
+        .mockResolvedValueOnce(mockSession);
+
+      const result = await Core.AuthApplication.restorePersistedSession({ authStore });
+
+      expect(restoreSpy).toHaveBeenCalledTimes(3);
+      expect(sleepSpy).toHaveBeenCalledTimes(2);
+      expect(result).toEqual({ session: mockSession });
+    });
+
+    // Errors like expired session (Auth category) are permanent — retrying won't help.
+    // Only transient errors (Network, Timeout, Server) should trigger retries.
+    it('should not retry on non-retryable AppError', async () => {
+      const authStore = createMockAuthStore();
+      const restoreSpy = vi.spyOn(Core.HomeserverService, 'restoreSession').mockRejectedValueOnce(createAuthError()); // Non-retryable error
+
+      const result = await Core.AuthApplication.restorePersistedSession({ authStore });
+
+      expect(restoreSpy).toHaveBeenCalledOnce();
+      expect(sleepSpy).not.toHaveBeenCalled();
+      expect(result).toBeNull();
+    });
+
+    it('should not retry on non-AppError (plain Error)', async () => {
+      const authStore = createMockAuthStore();
+      const restoreSpy = vi
+        .spyOn(Core.HomeserverService, 'restoreSession')
+        .mockRejectedValueOnce(new Error('Unknown error'));
+
+      const result = await Core.AuthApplication.restorePersistedSession({ authStore });
+
+      expect(restoreSpy).toHaveBeenCalledOnce();
+      expect(sleepSpy).not.toHaveBeenCalled();
+      expect(result).toBeNull();
+    });
+
+    it('should return null after exhausting all retry attempts', async () => {
+      const authStore = createMockAuthStore();
+      const restoreSpy = vi.spyOn(Core.HomeserverService, 'restoreSession').mockRejectedValue(createNetworkError());
+
+      const result = await Core.AuthApplication.restorePersistedSession({ authStore });
+
+      // 10 attempts total (RESTORE_MAX_ATTEMPTS)
+      expect(restoreSpy).toHaveBeenCalledTimes(10);
+      // 10 attempts but only 9 sleeps: on the 10th attempt, `attempt < MAX` is false so it breaks instead of sleeping
+      expect(sleepSpy).toHaveBeenCalledTimes(9);
+      expect(result).toBeNull();
+      expect(authStore.setIsRestoringSession).toHaveBeenCalledWith(false);
+    });
+
+    // Verifies the finally block always resets loading state, even when restoration fails.
+    // Without this, the UI would be stuck on a loading spinner after an error.
+    it('should always reset isRestoringSession to false even on failure', async () => {
+      const authStore = createMockAuthStore();
+      vi.spyOn(Core.HomeserverService, 'restoreSession').mockRejectedValue(createAuthError());
+
+      await Core.AuthApplication.restorePersistedSession({ authStore });
+
+      expect(authStore.setIsRestoringSession).toHaveBeenCalledWith(true);
+      expect(authStore.setIsRestoringSession).toHaveBeenLastCalledWith(false);
     });
   });
 

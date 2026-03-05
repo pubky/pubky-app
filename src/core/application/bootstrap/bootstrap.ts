@@ -42,7 +42,7 @@ export class BootstrapApplication {
       // Subscribe to TTL coordinator for periodic staleness checks
       Core.TtlCoordinator.getInstance().subscribeUser({ pubky: params.pubky });
     }
-    const results = await Promise.all([
+    await Promise.all([
       Core.LocalStreamUsersService.persistUsers(data.users),
       Core.LocalStreamPostsService.persistPosts({ posts: data.posts }),
       Core.LocalStreamPostsService.upsert({
@@ -67,9 +67,11 @@ export class BootstrapApplication {
     ]);
     onProgress?.('dataPersisted'); // Step 4 complete (80%)
 
+    // Bootstrap posts don't include attachments_metadata, so collect URIs and fetch separately
+    const fileUris = data.posts.flatMap((post) => post.details.attachments ?? []);
+
     const [_, notification] = await Promise.all([
-      // TODO: That data in the future will should come from the bootstrap data and we will persist directly in the Promise.all call
-      Core.FileApplication.fetchFiles(results[1].postAttachments),
+      Core.FileApplication.fetchFiles(fileUris),
       this.fetchNotifications(params),
       // Initialize settings from homeserver (non-blocking, errors are logged but don't fail bootstrap)
       this.initializeSettings(params.pubky),
