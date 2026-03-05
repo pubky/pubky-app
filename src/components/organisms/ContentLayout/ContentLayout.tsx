@@ -91,7 +91,12 @@ export function ContentLayout({
       {/* Main content grid with responsive max-widths */}
       <Atoms.Container
         overrideDefaults
-        className={Libs.cn('container', 'm-auto w-full px-6 pb-12 xl:px-0', 'pt-0', className)}
+        className={Libs.cn(
+          'container max-w-(--container-max-width)',
+          'm-auto w-full px-6 pb-12 xl:px-0',
+          'pt-0',
+          className,
+        )}
       >
         <Atoms.Container overrideDefaults className="flex gap-6">
           {/* Left sidebar - hidden on mobile (< lg) and in wide layout mode */}

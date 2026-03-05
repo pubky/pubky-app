@@ -19,11 +19,51 @@ exports[`Home - Snapshots > matches snapshot for HomeActions with default props 
 
 exports[`Home - Snapshots > matches snapshot for HomeFooter with default props 1`] = `
 <div
-  class="flex-1 flex-col items-start justify-end gap-1 pt-3 sm:pr-12"
+  class="flex-1 flex-col items-start justify-end gap-1 pt-3"
   data-testid="container"
 >
   <div
-    class="flex-row items-center gap-1"
+    data-testid="footer-links"
+  >
+    By creating a 
+    <span
+      class="text-brand"
+    >
+      Pubky
+    </span>
+     account, you agree to the
+     
+    <span
+      data-testid="dialog-terms"
+    >
+      Terms of Service
+    </span>
+    , 
+    <span
+      data-testid="dialog-privacy"
+    >
+      Privacy Policy
+    </span>
+    , and confirm you are
+     
+    <span
+      data-testid="dialog-age"
+    >
+      over 18 years old
+    </span>
+     
+    Pubky is powered by 
+    <a
+      data-testid="link"
+      href="https://github.com/pubky/pubky-core"
+      target="_blank"
+    >
+      Pubky Core
+    </a>
+     and was built with love and dedication by Synonym Software, S.A. DE C.V. ©2026. All rights reserved.
+  </div>
+  <div
+    class="flex-row items-center gap-1 pt-2"
     data-testid="container"
   >
     <a
@@ -56,13 +96,6 @@ exports[`Home - Snapshots > matches snapshot for HomeFooter with default props 1
        company
     </span>
   </div>
-  <span
-    class="font-normal text-muted-foreground"
-    data-size="sm"
-    data-testid="typography"
-  >
-    Synonym Software, S.A. DE C.V. ©2026. All rights reserved.
-  </span>
 </div>
 `;
 
