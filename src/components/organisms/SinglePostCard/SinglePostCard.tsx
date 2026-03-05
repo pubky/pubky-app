@@ -18,7 +18,6 @@ import type { SinglePostCardProps } from './SinglePostCard.types';
  * - Right column: PostTagsPanel (tags with avatars and search)
  *
  * This component is used on the single post page for the main post display.
- * Tags are always visible on both mobile and desktop (no toggle).
  */
 export function SinglePostCard({ postId, className }: SinglePostCardProps) {
   const isMobile = Hooks.useIsMobile();

@@ -97,9 +97,6 @@ describe('PostTagsPanel', () => {
 
   beforeEach(() => {
     vi.clearAllMocks();
-    mockLoadMore.mockClear();
-    mockHandleTagAdd.mockClear();
-    mockHandleTagToggle.mockClear();
   });
 
   describe('loading state', () => {
