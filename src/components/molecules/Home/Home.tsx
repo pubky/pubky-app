@@ -40,7 +40,21 @@ export const HomeFooter = ({ ...props }: React.HTMLAttributes<HTMLDivElement>) =
       className={Libs.cn('flex-1 flex-col items-start justify-end gap-1 pt-3', props.className)}
       {...props}
     >
-      <Atoms.Container className="flex-row items-center gap-1 pb-2">
+      <Atoms.FooterLinks>
+        {tFooter.rich('agreement', {
+          pubky: () => <span className="text-brand">Pubky</span>,
+        })}{' '}
+        <Organisms.DialogTerms />, <Organisms.DialogPrivacy />
+        {tFooter('andConfirmAge')} <Organisms.DialogAge />{' '}
+        {tFooter.rich('copyright', {
+          pubkyCore: (chunks) => (
+            <Atoms.Link href={Config.PUBKY_CORE_URL} target="_blank">
+              {chunks}
+            </Atoms.Link>
+          ),
+        })}
+      </Atoms.FooterLinks>
+      <Atoms.Container className="flex-row items-center gap-1 pt-2">
         <Atoms.Link href="https://synonym.to" target="_blank" className="block">
           <Atoms.Image src="/images/synonym-grey-logo.svg" alt="Synonym" width={95} height={24} />
         </Atoms.Link>
@@ -54,22 +68,6 @@ export const HomeFooter = ({ ...props }: React.HTMLAttributes<HTMLDivElement>) =
           })}
         </Atoms.Typography>
       </Atoms.Container>
-      <Atoms.FooterLinks>
-        {tFooter.rich('agreement', {
-          pubky: () => <span className="text-brand">Pubky</span>,
-        })}{' '}
-        <Organisms.DialogTerms />, <Organisms.DialogPrivacy />
-        {tFooter('andConfirmAge')} <Organisms.DialogAge />
-      </Atoms.FooterLinks>
-      <Atoms.FooterLinks>
-        {tFooter.rich('copyright', {
-          pubkyCore: (chunks) => (
-            <Atoms.Link href={Config.PUBKY_CORE_URL} target="_blank">
-              {chunks}
-            </Atoms.Link>
-          ),
-        })}
-      </Atoms.FooterLinks>
     </Atoms.Container>
   );
 };
