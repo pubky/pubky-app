@@ -6,7 +6,7 @@ Accepted — 2026-01-01
 
 ## Context
 
-ADR-0005 establishes a per-entity TTL strategy. Franky has TTL tables (`post_ttl`, `user_ttl`), but there is no mechanism to **proactively refresh stale data** that users are actively viewing. This ADR defines TTL rows using a `lastUpdatedAt` timestamp (when the entity was last refreshed) so staleness can be computed as `now - lastUpdatedAt > TTL_MS`. Current behavior:
+ADR-0005 establishes a per-entity TTL strategy. The app has TTL tables (`post_ttl`, `user_ttl`), but there is no mechanism to **proactively refresh stale data** that users are actively viewing. This ADR defines TTL rows using a `lastUpdatedAt` timestamp (when the entity was last refreshed) so staleness can be computed as `now - lastUpdatedAt > TTL_MS`. Current behavior:
 
 - **StreamCoordinator** polls for **new** posts in a stream
 - **No coordinator** refreshes **existing visible posts** when their TTL expires

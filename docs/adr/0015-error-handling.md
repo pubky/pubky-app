@@ -81,14 +81,14 @@ Categories drive retry decisions and UI routing. They are semantic, not service-
 ```typescript
 // src/libs/error/error.types.ts
 enum ErrorCategory {
-  Network    = 'network',     // Connection-level: DNS, offline, connection refused
-  Timeout    = 'timeout',     // Request/gateway timeout (408, 504, AbortSignal)
-  Server     = 'server',      // 5xx from ANY remote service
-  Client     = 'client',      // 4xx (400, 404, 409, 410, 413, 422)
-  Auth       = 'auth',        // Authentication failures (401, 403)
-  RateLimit  = 'rateLimit',   // 429 — special handling for retry-after
-  Validation = 'validation',  // Local validation before request
-  Database   = 'database',    // Dexie/IndexedDB failures
+  Network = 'network', // Connection-level: DNS, offline, connection refused
+  Timeout = 'timeout', // Request/gateway timeout (408, 504, AbortSignal)
+  Server = 'server', // 5xx from ANY remote service
+  Client = 'client', // 4xx (400, 404, 409, 410, 413, 422)
+  Auth = 'auth', // Authentication failures (401, 403)
+  RateLimit = 'rateLimit', // 429 — special handling for retry-after
+  Validation = 'validation', // Local validation before request
+  Database = 'database', // Dexie/IndexedDB failures
 }
 ```
 
@@ -98,14 +98,59 @@ Codes enable precise UI handling (e.g., NOT_FOUND → empty state, CONFLICT → 
 
 ```typescript
 // src/libs/error/error.codes.ts
-enum NetworkErrorCode    { OFFLINE, DNS_FAILED, CONNECTION_REFUSED, CONNECTION_RESET, CONNECTION_FAILED }
-enum TimeoutErrorCode    { REQUEST_TIMEOUT, GATEWAY_TIMEOUT, REQUEST_ABORTED }
-enum ServerErrorCode     { INTERNAL_ERROR, BAD_GATEWAY, SERVICE_UNAVAILABLE, UNKNOWN_ERROR, INVALID_RESPONSE }
-enum ClientErrorCode     { BAD_REQUEST, NOT_FOUND, CONFLICT, GONE, UNPROCESSABLE, PAYLOAD_TOO_LARGE }
-enum AuthErrorCode       { UNAUTHORIZED, FORBIDDEN, SESSION_EXPIRED, INVALID_TOKEN }
-enum RateLimitErrorCode  { RATE_LIMITED, BLOCKED }
-enum ValidationErrorCode { INVALID_INPUT, MISSING_FIELD, TYPE_ERROR, FORMAT_ERROR }
-enum DatabaseErrorCode   { QUERY_FAILED, WRITE_FAILED, DELETE_FAILED, RECORD_NOT_FOUND, TRANSACTION_FAILED, SCHEMA_ERROR, INIT_FAILED, INTEGRITY_ERROR }
+enum NetworkErrorCode {
+  OFFLINE,
+  DNS_FAILED,
+  CONNECTION_REFUSED,
+  CONNECTION_RESET,
+  CONNECTION_FAILED,
+}
+enum TimeoutErrorCode {
+  REQUEST_TIMEOUT,
+  GATEWAY_TIMEOUT,
+  REQUEST_ABORTED,
+}
+enum ServerErrorCode {
+  INTERNAL_ERROR,
+  BAD_GATEWAY,
+  SERVICE_UNAVAILABLE,
+  UNKNOWN_ERROR,
+  INVALID_RESPONSE,
+}
+enum ClientErrorCode {
+  BAD_REQUEST,
+  NOT_FOUND,
+  CONFLICT,
+  GONE,
+  UNPROCESSABLE,
+  PAYLOAD_TOO_LARGE,
+}
+enum AuthErrorCode {
+  UNAUTHORIZED,
+  FORBIDDEN,
+  SESSION_EXPIRED,
+  INVALID_TOKEN,
+}
+enum RateLimitErrorCode {
+  RATE_LIMITED,
+  BLOCKED,
+}
+enum ValidationErrorCode {
+  INVALID_INPUT,
+  MISSING_FIELD,
+  TYPE_ERROR,
+  FORMAT_ERROR,
+}
+enum DatabaseErrorCode {
+  QUERY_FAILED,
+  WRITE_FAILED,
+  DELETE_FAILED,
+  RECORD_NOT_FOUND,
+  TRANSACTION_FAILED,
+  SCHEMA_ERROR,
+  INIT_FAILED,
+  INTEGRITY_ERROR,
+}
 ```
 
 **Type Safety**: Category-code relationships are enforced at compile time via `ErrorCodeByCategory`:
@@ -124,12 +169,12 @@ Services are for logging/filtering, NOT for error handling decisions.
 
 ```typescript
 enum ErrorService {
-  Nexus        = 'nexus',
-  Homeserver   = 'homeserver',
-  Homegate     = 'homegate',
+  Nexus = 'nexus',
+  Homeserver = 'homeserver',
+  Homegate = 'homegate',
   Exchangerate = 'exchangerate',
-  Chatwoot     = 'chatwoot',
-  Local        = 'local',
+  Chatwoot = 'chatwoot',
+  Local = 'local',
   PubkyAppSpecs = 'pubky-app-specs',
 }
 ```
@@ -142,18 +187,18 @@ enum ErrorService {
 // src/libs/error/error.ts
 class AppError extends Error {
   // === IMMUTABLE CLASSIFICATION (set at creation, never changes) ===
-  readonly category?: ErrorCategory;        // Retry logic, routing (new system)
-  readonly code?: ErrorCode;                // Precise UI handling (new system)
-  readonly service?: ErrorService;          // Logging tags (new system)
-  readonly operation?: string;              // Code path tracing (new system)
+  readonly category?: ErrorCategory; // Retry logic, routing (new system)
+  readonly code?: ErrorCode; // Precise UI handling (new system)
+  readonly service?: ErrorService; // Logging tags (new system)
+  readonly operation?: string; // Code path tracing (new system)
   readonly context?: Record<string, unknown>; // statusCode, endpoint, table, retryAfter
-  readonly cause?: unknown;                // Original error for debugging
+  readonly cause?: unknown; // Original error for debugging
 
   // === MUTABLE OBSERVABILITY ===
-  traceId?: string;                        // Correlation ID (planned for Sentry)
+  traceId?: string; // Correlation ID (planned for Sentry)
 
   // === METHODS ===
-  setTraceId(id: string): this;            // Set correlation ID (rarely needed manually)
+  setTraceId(id: string): this; // Set correlation ID (rarely needed manually)
 }
 ```
 
@@ -174,7 +219,7 @@ Use `safeFetch` + `httpResponseToError` for all HTTP-based services.
 export class HomegateService {
   static async verifySmsCode(phoneNumber: string, code: string): Promise<TVerifySmsCodeResult> {
     const url = homegateApi.validateSmsCode();
-    
+
     // 1. safeFetch wraps fetch() and converts network errors to AppError
     const response = await safeFetch(
       url,
@@ -204,7 +249,7 @@ export class NexusPostService {
   static async getPost({ compositeId }: TCompositeId): Promise<NexusPost> {
     const { pubky: author_id, id: post_id } = parseCompositeId(compositeId);
     const url = postApi.view({ author_id, post_id });
-    
+
     // queryNexus handles: safeFetch → httpResponseToError → parseResponseOrThrow → retry
     return await queryNexus<NexusPost>({ url });
   }
@@ -277,7 +322,8 @@ export const handleError = (
   }
 
   // Map to HTTP status code
-  throw httpStatusCodeToError(resolvedStatusCode, error.message, ErrorService.Homeserver, ...);
+  const message = error instanceof Error ? error.message : String(error);
+  throw httpStatusCodeToError(resolvedStatusCode, message, ErrorService.Homeserver, ...);
 };
 ```
 
@@ -323,6 +369,7 @@ try {
 The error structure is designed for future Sentry integration. Today, **local logging is implemented** (via `Logger.error` inside `Err.*` factories), but Sentry capture, traceId generation/inheritance, and log de-duplication are still planned work.
 
 **Logging Ownership (current)**: Prefer logging via `Err.*` only. Avoid doing both:
+
 - `Logger.error(...)` inside a `catch`, and then
 - `throw Err.*(...)` for the same failure
 
@@ -359,11 +406,9 @@ Example pseudo-code for a `createAppError` factory that would implement all thre
 ```typescript
 function createAppError(category, code, message, params): AppError {
   const cause = params.cause;
-  
+
   // Inherit traceId from cause chain, or generate new one
-  const traceId = (isAppError(cause) && cause.traceId)
-    ? cause.traceId
-    : generateTraceId();
+  const traceId = isAppError(cause) && cause.traceId ? cause.traceId : generateTraceId();
 
   const error = new AppError({ category, code, message, ...params, traceId });
 
@@ -418,14 +463,14 @@ The application uses a root-level `ErrorBoundaryProvider` (via `react-error-boun
 
 React Error Boundaries **cannot catch** errors in:
 
-| Context | Why | Example in Franky |
-|---------|-----|-------------------|
-| **Async callbacks** | Errors occur outside React's synchronous render cycle | `useLiveQuery` callbacks (Dexie) |
-| **`useEffect` callbacks** | Effects run after render, outside error boundary scope | Data fetching, subscriptions |
-| **Event handlers** | User interactions are async by nature | `onClick`, `onSubmit` handlers |
-| **Promises** | Async resolution happens outside render | Any async operation |
+| Context                   | Why                                                    | Example in pubky-app             |
+| ------------------------- | ------------------------------------------------------ | -------------------------------- |
+| **Async callbacks**       | Errors occur outside React's synchronous render cycle  | `useLiveQuery` callbacks (Dexie) |
+| **`useEffect` callbacks** | Effects run after render, outside error boundary scope | Data fetching, subscriptions     |
+| **Event handlers**        | User interactions are async by nature                  | `onClick`, `onSubmit` handlers   |
+| **Promises**              | Async resolution happens outside render                | Any async operation              |
 
-#### 8.2 Impact on Franky's Local-First Architecture
+#### 8.2 Impact on pubky-app's Local-First Architecture
 
 1. **`useLiveQuery` is used extensively** (~40 hooks) — All Dexie database queries use async callbacks that won't be caught by error boundaries
 2. **Controller calls are often in `useEffect` or event handlers** — The try/catch requirement from Section 7 is critical
@@ -438,18 +483,15 @@ React Error Boundaries **cannot catch** errors in:
 Errors in `useLiveQuery` must be handled with manual try/catch:
 
 ```typescript
-const postDetails = useLiveQuery(
-  async () => {
-    try {
-      if (!compositeId) return null;
-      return await Core.PostController.getDetails({ compositeId });
-    } catch (error) {
-      Libs.Logger.error('[usePostDetails] Query failed', { compositeId, error });
-      return null; // or undefined, depending on desired behavior
-    }
-  },
-  [compositeId],
-);
+const postDetails = useLiveQuery(async () => {
+  try {
+    if (!compositeId) return null;
+    return await Core.PostController.getDetails({ compositeId });
+  } catch (error) {
+    Libs.Logger.error('[usePostDetails] Query failed', { compositeId, error });
+    return null; // or undefined, depending on desired behavior
+  }
+}, [compositeId]);
 ```
 
 This pattern must be repeated in every hook that uses `useLiveQuery` (~40 hooks).
@@ -494,11 +536,11 @@ export function useSafeLiveQuery<T>(
 }
 ```
 
-| Pros | Cons |
-|------|------|
-| Single abstraction, consistent interface | Migration effort (~40 hooks) |
-| Matches TanStack Query `{ data, error, isLoading }` pattern | Abstraction over Dexie |
-| Centralized logging | |
+| Pros                                                        | Cons                         |
+| ----------------------------------------------------------- | ---------------------------- |
+| Single abstraction, consistent interface                    | Migration effort (~40 hooks) |
+| Matches TanStack Query `{ data, error, isLoading }` pattern | Abstraction over Dexie       |
+| Centralized logging                                         |                              |
 
 **Status: Under Discussion**
 
@@ -533,6 +575,7 @@ export function useSafeLiveQuery<T>(
 **Priority:** Medium
 
 The ADR describes an end-state where:
+
 - `traceId` is generated once and inherited across error wrapping
 - errors are logged/reported **once per error chain**
 - expected errors are filtered from Sentry
@@ -544,6 +587,7 @@ This is not implemented yet (see `src/libs/error/error.factories.ts`, which curr
 **Priority:** Medium (implement if cancellation noise becomes a problem)
 
 Currently, `safeFetch` converts `AbortError` into an `AppError` with `TimeoutErrorCode.REQUEST_ABORTED`. This:
+
 - Triggers error handling paths (TanStack Query `onError`, error boundaries)
 - May cause retries (Timeout category is retryable)
 - Will create Sentry noise when integrated
@@ -569,6 +613,7 @@ Currently `context` is `Record<string, unknown>`. We identified 52 unique fields
 **Priority:** Low
 
 Current categories map well to HTTP errors. Local-first apps may need:
+
 - `StorageQuota` / `QuotaExceeded` — browser storage limits
 - `Serialization` / `ParseError` — data corruption
 - `Conflict` as semantic category — not just HTTP 409, but "local state diverged"
