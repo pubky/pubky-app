@@ -7,25 +7,26 @@ import * as Hooks from '@/hooks';
 import * as Libs from '@/libs';
 import * as Molecules from '@/molecules';
 import * as Organisms from '@/organisms';
-import { truncateAtWordBoundary } from '@/molecules/PostText/PostText.utils';
-import { VISUAL_TILE_ASPECT_RATIOS, VISUAL_TILE_COLUMN_SPANS } from './TimelineFeed.visual.helpers';
-import type { VisualRowCell, VisualTile } from './TimelineFeed.visual.types';
+import {
+  VISUAL_GRID_MAX_WIDTH_PX,
+  VISUAL_TILE_ASPECT_RATIOS,
+  VISUAL_TILE_COLUMN_SPANS,
+} from './TimelineFeed.visual.helpers';
+import type {
+  VisualTimelinePostsProps,
+  VisualTileImageProps,
+  VisualTimelineRowProps,
+  VisualTimelineTileOverlayProps,
+  VisualTimelineTileProps,
+  VisualTileVideoProps,
+} from './VisualTimelinePosts.types';
 import { useVisualFeedTiles } from './useVisualFeedTiles';
-
-interface VisualTimelinePostsProps {
-  postIds: string[];
-  loading: boolean;
-  loadingMore: boolean;
-  error: string | null;
-  hasMore: boolean;
-  loadMore: () => void;
-}
 
 function stopPropagation(event: React.SyntheticEvent) {
   event.stopPropagation();
 }
 
-function VisualTileVideo({ tile }: { tile: VisualTile }) {
+function VisualTileVideo({ tile }: VisualTileVideoProps) {
   const videoRef = React.useRef<HTMLVideoElement>(null);
   const { ref, isVisible } = Hooks.useViewportObserver({
     rootMargin: '300px 0px 300px 0px',
@@ -75,35 +76,28 @@ function VisualTileVideo({ tile }: { tile: VisualTile }) {
   );
 }
 
-function VisualTileImage({ tile }: { tile: VisualTile }) {
+function VisualTileImage({ tile }: VisualTileImageProps) {
   const [currentSrc, setCurrentSrc] = React.useState(tile.previewSrc);
+  const hasFallenBackToMainRef = React.useRef(tile.previewSrc === tile.mainSrc);
 
   React.useEffect(() => {
     setCurrentSrc(tile.previewSrc);
-  }, [tile.previewSrc]);
+    hasFallenBackToMainRef.current = tile.previewSrc === tile.mainSrc;
+  }, [tile.mainSrc, tile.previewSrc]);
 
   const handleError = React.useCallback(() => {
-    if (currentSrc === tile.mainSrc) {
+    if (hasFallenBackToMainRef.current || tile.previewSrc === tile.mainSrc) {
       return;
     }
 
+    hasFallenBackToMainRef.current = true;
     setCurrentSrc(tile.mainSrc);
-  }, [currentSrc, tile.mainSrc]);
+  }, [tile.mainSrc, tile.previewSrc]);
 
   return <Atoms.Image src={currentSrc} alt={tile.attachmentName} fill className="object-cover" onError={handleError} />;
 }
 
-function VisualTimelineTileOverlay({
-  tile,
-  size,
-  onReplyClick,
-  onRepostClick,
-}: {
-  tile: VisualTile;
-  size: NonNullable<VisualTile['rowSize']>;
-  onReplyClick: () => void;
-  onRepostClick: () => void;
-}) {
+function VisualTimelineTileOverlay({ tile, size, onReplyClick, onRepostClick }: VisualTimelineTileOverlayProps) {
   const userId = React.useMemo(() => Core.parseCompositeId(tile.postId).pubky, [tile.postId]);
   const { userDetails } = Hooks.useUserDetails(userId);
   const avatarUrl = Hooks.useAvatarUrl(userDetails);
@@ -118,7 +112,7 @@ function VisualTimelineTileOverlay({
     }
 
     const limit = isCompact ? 120 : size === 'wide' ? 260 : 180;
-    return truncateAtWordBoundary(trimmedContent, limit);
+    return Molecules.truncateAtWordBoundary(trimmedContent, limit);
   }, [isCompact, size, tile.content]);
 
   return (
@@ -212,15 +206,7 @@ function VisualTimelineTileOverlay({
   );
 }
 
-function VisualTimelineTile({
-  tile,
-  size,
-  onNavigate,
-}: {
-  tile: VisualTile;
-  size: NonNullable<VisualTile['rowSize']>;
-  onNavigate: (postId: string) => void;
-}) {
+function VisualTimelineTile({ tile, size, onNavigate }: VisualTimelineTileProps) {
   const isTouchDevice = Hooks.useIsTouchDevice();
   const [replyDialogOpen, setReplyDialogOpen] = React.useState(false);
   const [repostDialogOpen, setRepostDialogOpen] = React.useState(false);
@@ -278,7 +264,7 @@ function VisualTimelineTile({
   );
 }
 
-function VisualTimelineRow({ cell, onNavigate }: { cell: VisualRowCell; onNavigate: (postId: string) => void }) {
+function VisualTimelineRow({ cell, onNavigate }: VisualTimelineRowProps) {
   return (
     <Atoms.Container
       overrideDefaults
@@ -329,7 +315,11 @@ export function VisualTimelinePosts({
         <Molecules.TimelineEmpty />
       ) : (
         <Atoms.Container data-cy="visual-feed-container">
-          <Atoms.Container overrideDefaults className="mx-auto flex w-full max-w-[1200px] flex-col gap-6">
+          <Atoms.Container
+            overrideDefaults
+            className="mx-auto flex w-full flex-col gap-6"
+            style={{ maxWidth: `${VISUAL_GRID_MAX_WIDTH_PX}px` }}
+          >
             {rows.map((row) => (
               <Atoms.Container key={row.key} overrideDefaults className="grid grid-cols-12 gap-6">
                 {row.cells.map((cell) => (

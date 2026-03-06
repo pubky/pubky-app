@@ -5,11 +5,9 @@ import * as Atoms from '@/atoms';
 import * as Molecules from '@/molecules';
 import * as Core from '@/core';
 import * as Hooks from '@/hooks';
-import { resolveVisualFeedContent } from '../TimelineFeed/TimelineFeed.visual.helpers';
+import { resolveVisualFeedContent, VISUAL_DISABLED_CONTENT } from '../TimelineFeed/TimelineFeed.visual.helpers';
 import type { HomeFeedSidebarProps } from './HomeFeedSidebar.types';
 import { TIMELINE_FEED_VARIANT } from '../TimelineFeed/TimelineFeed.types';
-
-const VISUAL_DISABLED_CONTENT = [Core.CONTENT.SHORT, Core.CONTENT.LONG, Core.CONTENT.LINKS, Core.CONTENT.FILES];
 
 /**
  * HomeFeedFilters
@@ -35,13 +33,6 @@ function HomeFeedFilters({
     isVisualActive,
   });
 
-  React.useEffect(() => {
-    if (!allowVisualLayout) return;
-    if (resolvedContent === content) return;
-
-    setContent(resolvedContent);
-  }, [allowVisualLayout, content, resolvedContent, setContent]);
-
   const disabledContentTabs = isVisualActive ? VISUAL_DISABLED_CONTENT : [];
   const showVisualLayout = allowVisualLayout && !isPhoneViewport;
 
@@ -54,14 +45,22 @@ function HomeFeedFilters({
           {!hideLayoutFilter && (
             <Molecules.FilterLayout selectedTab={layout} onTabChange={setLayout} showVisual={showVisualLayout} />
           )}
-          <Molecules.FilterContent selectedTab={content} onTabChange={setContent} disabledTabs={disabledContentTabs} />
+          <Molecules.FilterContent
+            selectedTab={resolvedContent}
+            onTabChange={setContent}
+            disabledTabs={disabledContentTabs}
+          />
         </Atoms.Container>
       ) : (
         <>
           {!hideLayoutFilter && (
             <Molecules.FilterLayout selectedTab={layout} onTabChange={setLayout} showVisual={showVisualLayout} />
           )}
-          <Molecules.FilterContent selectedTab={content} onTabChange={setContent} disabledTabs={disabledContentTabs} />
+          <Molecules.FilterContent
+            selectedTab={resolvedContent}
+            onTabChange={setContent}
+            disabledTabs={disabledContentTabs}
+          />
         </>
       )}
     </Atoms.Container>

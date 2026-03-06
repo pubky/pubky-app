@@ -2,6 +2,7 @@ import { render, screen, fireEvent } from '@testing-library/react';
 import { describe, it, expect, vi } from 'vitest';
 import { FilterContent } from './FilterContent';
 import { CONTENT, type ContentType } from '@/core/stores/home/home.types';
+import { VISUAL_DISABLED_CONTENT } from '@/organisms/TimelineFeed/TimelineFeed.visual.helpers';
 
 // Mock libs - use actual utility functions and icons from lucide-react
 vi.mock('@/libs', async () => {
@@ -99,7 +100,7 @@ describe('FilterContent', () => {
   });
 
   it('disables only the requested tabs', () => {
-    render(<FilterContent disabledTabs={[CONTENT.SHORT, CONTENT.LONG, CONTENT.LINKS, CONTENT.FILES]} />);
+    render(<FilterContent disabledTabs={VISUAL_DISABLED_CONTENT} />);
 
     expect(screen.getByLabelText('Posts')).toHaveAttribute('aria-disabled', 'true');
     expect(screen.getByLabelText('Articles')).toHaveAttribute('aria-disabled', 'true');

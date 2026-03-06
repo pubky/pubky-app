@@ -257,6 +257,23 @@ describe('TimelineFeed', () => {
       });
     });
 
+    it('should persist visual content coercion from the timeline controller', async () => {
+      Core.useHomeStore.setState({ content: Core.CONTENT.SHORT });
+      mockUseFeedLayoutResolution.mockReturnValue({
+        requestedLayout: 'visual',
+        effectiveLayout: 'visual',
+        isVisualRequested: true,
+        isVisualActive: true,
+        isPhoneViewport: false,
+      });
+
+      render(<TimelineFeed variant={TIMELINE_FEED_VARIANT.HOME} />);
+
+      await waitFor(() => {
+        expect(Core.useHomeStore.getState().content).toBe(Core.CONTENT.ALL);
+      });
+    });
+
     it('should hide children while visual layout is active', () => {
       mockUseFeedLayoutResolution.mockReturnValue({
         requestedLayout: 'visual',

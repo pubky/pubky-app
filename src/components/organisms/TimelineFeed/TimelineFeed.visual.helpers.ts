@@ -8,6 +8,16 @@ export const VISUAL_GRID_MAX_WIDTH_PX = 1200;
 export const VISUAL_PENDING_TAIL_LIMIT = 3;
 export const VISUAL_SQUARE_MAX_RATIO = 1;
 export const VISUAL_WIDE_MIN_RATIO = 16 / 9;
+const VISUAL_ROW_PREFERRED_SIZE_SCORE = 3;
+const VISUAL_ROW_ALTERNATE_SIZE_SCORE = 1;
+const VISUAL_ROW_COMPLEX_PATTERN_BONUS = 5;
+
+export const VISUAL_DISABLED_CONTENT: Core.ContentType[] = [
+  Core.CONTENT.SHORT,
+  Core.CONTENT.LONG,
+  Core.CONTENT.LINKS,
+  Core.CONTENT.FILES,
+];
 
 const VISUAL_INTERACTIVE_CONTENT_VARIANTS = new Set<TimelineFeedVariant>([
   TIMELINE_FEED_VARIANT.HOME,
@@ -128,18 +138,18 @@ function supportsTileSize(tile: VisualTile | undefined, size: VisualTileSize): t
 function scoreCandidateRow(cells: Array<{ tile: VisualTile; size: VisualTileSize }>): number {
   const sizeMatchScore = cells.reduce((score, cell) => {
     if (cell.tile.preferredSize === cell.size) {
-      return score + 3;
+      return score + VISUAL_ROW_PREFERRED_SIZE_SCORE;
     }
 
-    return score + 1;
+    return score + VISUAL_ROW_ALTERNATE_SIZE_SCORE;
   }, 0);
 
   if (cells.length === 3) {
-    return sizeMatchScore + 5;
+    return sizeMatchScore + VISUAL_ROW_COMPLEX_PATTERN_BONUS;
   }
 
   if (cells.some((cell) => cell.size === 'wide' || cell.size === 'square')) {
-    return sizeMatchScore + 5;
+    return sizeMatchScore + VISUAL_ROW_COMPLEX_PATTERN_BONUS;
   }
 
   return sizeMatchScore;

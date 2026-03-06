@@ -1,11 +1,48 @@
 'use client';
 
 import { useTranslations } from 'next-intl';
+import { cva } from 'class-variance-authority';
 import * as Atoms from '@/atoms';
 import * as Libs from '@/libs';
 import * as Hooks from '@/hooks';
 import * as Organisms from '@/organisms';
 import type { PostActionsBarProps, ActionButtonConfig } from './PostActionsBar.types';
+
+const postActionsLoadingVariants = cva('', {
+  variants: {
+    variant: {
+      default: 'text-muted-foreground',
+      visual: 'text-white/70',
+    },
+  },
+  defaultVariants: {
+    variant: 'default',
+  },
+});
+
+const postActionsButtonVariants = cva('', {
+  variants: {
+    variant: {
+      default: 'border-none shadow-xs',
+      visual: 'border-white/10 bg-black/40 text-white shadow-none hover:bg-black/55',
+    },
+  },
+  defaultVariants: {
+    variant: 'default',
+  },
+});
+
+const postActionsCountVariants = cva('text-xs leading-4 font-bold', {
+  variants: {
+    variant: {
+      default: 'text-muted-foreground',
+      visual: 'text-white/80',
+    },
+  },
+  defaultVariants: {
+    variant: 'default',
+  },
+});
 
 export function PostActionsBar({
   postId,
@@ -26,22 +63,22 @@ export function PostActionsBar({
   const { requireAuth } = Hooks.useRequireAuth();
 
   const isBookmarkBusy = isBookmarkLoading || isBookmarkToggling;
+  const loadingClassName = postActionsLoadingVariants({ variant });
+  const buttonClassName = postActionsButtonVariants({ variant });
+  const countClassName = postActionsCountVariants({ variant });
 
   if (isCountsLoading || !postCounts) {
     return (
-      <Atoms.Container overrideDefaults className={variant === 'visual' ? 'text-white/70' : 'text-muted-foreground'}>
+      <Atoms.Container overrideDefaults className={loadingClassName}>
         {t('loadingActions')}
       </Atoms.Container>
     );
   }
 
-  const isVisual = variant === 'visual';
   const commonButtonProps = {
     variant: 'secondary' as const,
     size: 'sm' as const,
-    className: isVisual
-      ? 'border-white/10 bg-black/40 text-white shadow-none hover:bg-black/55'
-      : 'border-none shadow-xs',
+    className: buttonClassName,
   };
 
   const tagCount = postCounts.unique_tags ?? 0;
@@ -102,15 +139,7 @@ export function PostActionsBar({
           >
             <Icon {...iconProps} />
             {count !== undefined && (
-              <Atoms.Typography
-                as="span"
-                overrideDefaults
-                className={
-                  isVisual
-                    ? 'text-xs leading-4 font-bold text-white/80'
-                    : 'text-xs leading-4 font-bold text-muted-foreground'
-                }
-              >
+              <Atoms.Typography as="span" overrideDefaults className={countClassName}>
                 {count}
               </Atoms.Typography>
             )}

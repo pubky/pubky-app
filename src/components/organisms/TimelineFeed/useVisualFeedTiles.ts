@@ -14,113 +14,23 @@ import {
   resolveVisualTileSizeOptions,
   resolvePreferredVisualTileSize,
 } from './TimelineFeed.visual.helpers';
-import type { VisualTile, VisualTileProbeState } from './TimelineFeed.visual.types';
+import {
+  ensureVisualTileProbe,
+  getVisualTilePreferredSizeFallback,
+  getVisualTileProbeCacheEntry,
+  setVisualTilePreferredSizeFallback,
+} from './TimelineFeedVisualMedia.utils';
+import type { VisualTile } from './TimelineFeed.visual.types';
 
 type VisualFeedSnapshot = {
   tiles: VisualTile[];
   missingFileUris: string[];
 };
 
-type ProbeCacheEntry = {
-  status: VisualTileProbeState;
-  width?: number;
-  height?: number;
-  promise?: Promise<void>;
-};
-
 const EMPTY_SNAPSHOT: VisualFeedSnapshot = {
   tiles: [],
   missingFileUris: [],
 };
-
-const visualTileProbeCache = new Map<string, ProbeCacheEntry>();
-const visualTilePreferredSizeFallbackCache = new Map<string, NonNullable<VisualTile['preferredSize']>>();
-
-async function probeImageDimensions(src: string): Promise<{ width: number; height: number }> {
-  return await new Promise((resolve, reject) => {
-    const image = new window.Image();
-
-    image.onload = () => {
-      if (!image.naturalWidth || !image.naturalHeight) {
-        reject(new Error('Image metadata unavailable'));
-        return;
-      }
-
-      resolve({
-        width: image.naturalWidth,
-        height: image.naturalHeight,
-      });
-    };
-
-    image.onerror = () => reject(new Error('Failed to load image metadata'));
-    image.src = src;
-  });
-}
-
-async function probeVideoDimensions(src: string): Promise<{ width: number; height: number }> {
-  return await new Promise((resolve, reject) => {
-    const video = document.createElement('video');
-    video.preload = 'metadata';
-    video.muted = true;
-    video.playsInline = true;
-
-    video.onloadedmetadata = () => {
-      if (!video.videoWidth || !video.videoHeight) {
-        reject(new Error('Video metadata unavailable'));
-        return;
-      }
-
-      resolve({
-        width: video.videoWidth,
-        height: video.videoHeight,
-      });
-    };
-
-    video.onerror = () => reject(new Error('Failed to load video metadata'));
-    video.src = src;
-  });
-}
-
-function ensureProbe(tile: VisualTile): Promise<void> {
-  const existing = visualTileProbeCache.get(tile.id);
-
-  if (existing?.status === 'ready' || existing?.status === 'failed') {
-    return Promise.resolve();
-  }
-
-  if (existing?.promise) {
-    return existing.promise;
-  }
-
-  const promise = (
-    tile.mediaKind === 'video'
-      ? probeVideoDimensions(tile.mainSrc)
-      : probeImageDimensions(tile.previewSrc || tile.mainSrc)
-  )
-    .then(({ width, height }) => {
-      visualTileProbeCache.set(tile.id, {
-        status: 'ready',
-        width,
-        height,
-      });
-    })
-    .catch((error) => {
-      Libs.Logger.error('[VisualFeed] Failed to probe media dimensions', {
-        tileId: tile.id,
-        error,
-      });
-      visualTileProbeCache.set(tile.id, {
-        status: 'failed',
-      });
-    });
-
-  visualTileProbeCache.set(tile.id, {
-    status: 'pending',
-    promise,
-  });
-
-  return promise;
-}
 
 function buildLocalTile(
   post: Core.EnrichedPostDetails,
@@ -184,7 +94,7 @@ function buildRemoteTile(post: Core.EnrichedPostDetails, file: Core.FileDetailsM
 }
 
 function resolveTileProbeState(tile: VisualTile): VisualTile {
-  const cachedFallbackPreferredSize = visualTilePreferredSizeFallbackCache.get(tile.id);
+  const cachedFallbackPreferredSize = getVisualTilePreferredSizeFallback(tile.id);
 
   if (tile.metadataWidth && tile.metadataHeight) {
     const sizeOptions = resolveVisualTileSizeOptions(
@@ -207,7 +117,7 @@ function resolveTileProbeState(tile: VisualTile): VisualTile {
     };
   }
 
-  const cachedProbe = visualTileProbeCache.get(tile.id);
+  const cachedProbe = getVisualTileProbeCacheEntry(tile.id);
 
   if (cachedProbe?.status === 'ready' && cachedProbe.width && cachedProbe.height) {
     const sizeOptions = resolveVisualTileSizeOptions(
@@ -358,7 +268,7 @@ export function useVisualFeedTiles({ postIds, hasMore }: { postIds: string[]; ha
   React.useEffect(() => {
     if (!missingFileUris.length) return;
 
-    void Core.FileApplication.fetchFiles(missingFileUris).catch((error) => {
+    void Core.FileController.fetchFiles({ fileUris: missingFileUris }).catch((error) => {
       Libs.Logger.error('[VisualFeed] Failed to fetch missing file metadata', {
         fileUris: missingFileUris,
         error,
@@ -375,7 +285,7 @@ export function useVisualFeedTiles({ postIds, hasMore }: { postIds: string[]; ha
 
   React.useEffect(() => {
     pendingOverflowFallbackIds.forEach((tileId) => {
-      visualTilePreferredSizeFallbackCache.set(tileId, 'medium');
+      setVisualTilePreferredSizeFallback(tileId, 'medium');
     });
   }, [pendingOverflowFallbackIds]);
 
@@ -401,7 +311,7 @@ export function useVisualFeedTiles({ postIds, hasMore }: { postIds: string[]; ha
     );
 
     pendingTiles.forEach((tile) => {
-      void ensureProbe(tile).finally(() => {
+      void ensureVisualTileProbe(tile).finally(() => {
         if (isMounted) {
           forceProbeRefresh();
         }

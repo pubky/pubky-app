@@ -82,6 +82,13 @@ describe('FilterLayout', () => {
 
     expect(screen.getByText('Visual')).toBeInTheDocument();
   });
+
+  it('falls back to columns for display when visual is selected but hidden', () => {
+    render(<FilterLayout selectedTab={LAYOUT.VISUAL} showVisual={false} />);
+
+    expect(screen.getByLabelText('Columns')).toHaveAttribute('aria-checked', 'true');
+    expect(screen.queryByText('Visual')).not.toBeInTheDocument();
+  });
 });
 
 describe('FilterLayout - Snapshots', () => {
@@ -102,6 +109,11 @@ describe('FilterLayout - Snapshots', () => {
 
   it('matches snapshot with disabled state', () => {
     const { container } = render(<FilterLayout disabled />);
+    expect(container.firstChild).toMatchSnapshot();
+  });
+
+  it('matches snapshot with hidden visual selection normalized to columns', () => {
+    const { container } = render(<FilterLayout selectedTab={LAYOUT.VISUAL} showVisual={false} />);
     expect(container.firstChild).toMatchSnapshot();
   });
 });

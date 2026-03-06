@@ -55,6 +55,9 @@ vi.mock('@/molecules', () => ({
     <div data-testid="visual-overlay-timestamp">{timeAgo}</div>
   ),
   PostText: ({ content }: { content: string }) => <div data-testid="visual-overlay-text">{content}</div>,
+  truncateAtWordBoundary: (content: string, limit: number) => {
+    return content.length > limit ? `${content.slice(0, limit)}...` : content;
+  },
 }));
 
 vi.mock('@/organisms', () => ({
@@ -277,5 +280,72 @@ describe('VisualTimelinePosts', () => {
     );
 
     expect(screen.getByTestId('visual-overlay-content-stack')).toHaveClass('flex', 'flex-col', 'gap-4');
+  });
+});
+
+describe('VisualTimelinePosts - Snapshots', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    mockUseIsTouchDevice.mockReturnValue(false);
+    mockUseVisualFeedTiles.mockReturnValue({
+      rows: createRows(),
+      tail: [],
+      tiles: [],
+      hasPendingTiles: false,
+    });
+  });
+
+  it('matches snapshot for a populated visual feed', () => {
+    const { container } = render(
+      <VisualTimelinePosts
+        postIds={['author:post1']}
+        loading={false}
+        loadingMore={false}
+        error={null}
+        hasMore={false}
+        loadMore={vi.fn()}
+      />,
+    );
+
+    expect(container.firstChild).toMatchSnapshot();
+  });
+
+  it('matches snapshot for the filtered empty state', () => {
+    mockUseVisualFeedTiles.mockReturnValue({
+      rows: [],
+      tail: [],
+      tiles: [],
+      hasPendingTiles: false,
+    });
+
+    const { container } = render(
+      <VisualTimelinePosts
+        postIds={['author:post1']}
+        loading={false}
+        loadingMore={false}
+        error={null}
+        hasMore={false}
+        loadMore={vi.fn()}
+      />,
+    );
+
+    expect(container.firstChild).toMatchSnapshot();
+  });
+
+  it('matches snapshot for touch devices without the hover overlay', () => {
+    mockUseIsTouchDevice.mockReturnValue(true);
+
+    const { container } = render(
+      <VisualTimelinePosts
+        postIds={['author:post1']}
+        loading={false}
+        loadingMore={false}
+        error={null}
+        hasMore={false}
+        loadMore={vi.fn()}
+      />,
+    );
+
+    expect(container.firstChild).toMatchSnapshot();
   });
 });

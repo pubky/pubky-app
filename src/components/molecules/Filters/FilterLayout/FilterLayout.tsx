@@ -18,6 +18,7 @@ export function FilterLayout({
   showVisual = false,
 }: FilterLayoutProps) {
   const t = useTranslations('filters.layout');
+  const displaySelectedTab = !showVisual && selectedTab === Core.LAYOUT.VISUAL ? Core.LAYOUT.COLUMNS : selectedTab;
 
   const items = React.useMemo(
     () =>
@@ -33,7 +34,7 @@ export function FilterLayout({
     <Molecules.FilterRadioGroup
       title={t('title')}
       items={items}
-      selectedValue={selectedTab}
+      selectedValue={displaySelectedTab}
       defaultValue={defaultSelectedTab}
       onChange={onTabChange}
     />
