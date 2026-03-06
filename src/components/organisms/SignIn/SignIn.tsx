@@ -179,7 +179,7 @@ export const SignInContent = () => {
       <Atoms.Container size="container" className="md:hidden">
         <SignInHeader />
         <Molecules.ContentCard layout="column">
-          <Atoms.Container className="flex-col items-center justify-center gap-12 lg:flex-row">
+          <Atoms.Container className="flex-col items-center justify-center gap-6 lg:flex-row">
             <Image src="/images/logo-pubky-ring.svg" alt="Pubky Ring" width={137} height={30} />
             <Atoms.Button
               className="w-full"

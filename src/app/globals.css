@@ -155,6 +155,26 @@ body {
   --header-offset-main: 150px;
 
   /**
+   * Main content header offset
+   * - Vertical offset for auth pages, smaller header than normal
+   *
+   * Value rationale (120px):
+   * - Header container size: 120px
+   *
+   */
+  --header-offset-auth-pages: 120px;
+
+  /**
+   * Onboarding content header offset
+   * - Vertical offset for sticky below main header Different than others ones
+   *
+   * Value rationale (100px):
+   * - Header outer container: Smaller than auth pages due the header being 20px less pixels
+   *
+   */
+  --header-offset-onboarding: 100px;
+
+  /**
    * Sidebar and filter bar width
    * - Standard width for left/right sidebars and filter components
    * - Ensures consistent layout across different sidebar types
@@ -535,5 +555,12 @@ body {
 
   .max-width-profile-page-header {
     max-width: calc(100vw - 6rem);
+  }
+
+  .h-screen-without-page-header-auth-pages {
+    min-height: calc(100dvh - var(--header-offset-auth-pages));
+  }
+  .h-screen-without-page-header-onboarding {
+    min-height: calc(100dvh - var(--header-offset-onboarding));
   }
 }

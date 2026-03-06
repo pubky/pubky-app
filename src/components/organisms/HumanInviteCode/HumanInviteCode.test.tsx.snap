@@ -215,7 +215,7 @@ exports[`HumanInviteCode - Snapshots > matches snapshot for complete code state 
           </svg>
         </div>
         <div
-          class="mx-auto w-full flex flex-row items-center gap-4"
+          class="mx-auto w-full flex flex-col items-center gap-4 sm:flex-row"
           data-testid="container"
         >
           <button
@@ -544,7 +544,7 @@ exports[`HumanInviteCode - Snapshots > matches snapshot for empty state 1`] = `
           />
         </div>
         <div
-          class="mx-auto w-full flex flex-row items-center gap-4"
+          class="mx-auto w-full flex flex-col items-center gap-4 sm:flex-row"
           data-testid="container"
         >
           <button
