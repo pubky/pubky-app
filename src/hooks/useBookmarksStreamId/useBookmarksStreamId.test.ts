@@ -129,4 +129,17 @@ describe('useBookmarksStreamId', () => {
       expect(result.current).toBe(Core.PostStreamTypes.POPULARITY_BOOKMARKS_FILE);
     });
   });
+
+  it('prefers the provided content override over store content', () => {
+    act(() => {
+      Core.useHomeStore.setState({
+        sort: Core.SORT.TIMELINE,
+        content: Core.CONTENT.SHORT,
+      });
+    });
+
+    const { result } = renderHook(() => useBookmarksStreamId(Core.CONTENT.ALL));
+
+    expect(result.current).toBe(Core.PostStreamTypes.TIMELINE_BOOKMARKS_ALL);
+  });
 });

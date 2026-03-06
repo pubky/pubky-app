@@ -3,7 +3,6 @@
 import { useTranslations } from 'next-intl';
 import * as Atoms from '@/atoms';
 import * as Organisms from '@/organisms';
-import * as Hooks from '@/hooks';
 import { TIMELINE_FEED_VARIANT } from '@/organisms/TimelineFeed/TimelineFeed.types';
 
 /**
@@ -20,9 +19,6 @@ import { TIMELINE_FEED_VARIANT } from '@/organisms/TimelineFeed/TimelineFeed.typ
  */
 export function Hot() {
   const t = useTranslations('hot');
-
-  // Reset to column layout on mount (this page doesn't support wide)
-  Hooks.useLayoutReset();
 
   return (
     <Organisms.ContentLayout

@@ -7,10 +7,12 @@ import * as Libs from '@/libs';
 import * as Molecules from '@/molecules';
 import * as Organisms from '@/organisms';
 import * as Hooks from '@/hooks';
+import { resolveVisualFeedContent } from './TimelineFeed.visual.helpers';
 import type { TagsLayout } from '../PostMain/PostMain.types';
 import type { TimelineFeedProps, TimelineFeedContextValue } from './TimelineFeed.types';
 import { TIMELINE_FEED_VARIANT } from './TimelineFeed.types';
 import { useTimelineFeedStreamId } from './useTimelineFeedStreamId';
+import { VisualTimelinePosts } from './VisualTimelinePosts';
 
 /**
  * Context for timeline feed operations
@@ -59,7 +61,14 @@ export function useTimelineFeedContext(): TimelineFeedContextValue | null {
  * ```
  */
 export function TimelineFeed({ variant, children }: TimelineFeedProps) {
-  const streamId = useTimelineFeedStreamId(variant);
+  const content = Core.useHomeStore((state) => state.content);
+  const layoutResolution = Hooks.useFeedLayoutResolution(variant);
+  const resolvedContent = resolveVisualFeedContent({
+    content,
+    variant,
+    isVisualActive: layoutResolution.isVisualActive,
+  });
+  const streamId = useTimelineFeedStreamId(variant, resolvedContent);
 
   // Show loading state while waiting for stream ID (e.g., profile data loading)
   if (!streamId) {
@@ -67,7 +76,12 @@ export function TimelineFeed({ variant, children }: TimelineFeedProps) {
   }
 
   return (
-    <TimelineFeedContent streamId={streamId} variant={variant}>
+    <TimelineFeedContent
+      streamId={streamId}
+      variant={variant}
+      layoutResolution={layoutResolution}
+      resolvedContent={resolvedContent}
+    >
       {children}
     </TimelineFeedContent>
   );
@@ -80,19 +94,20 @@ export function TimelineFeed({ variant, children }: TimelineFeedProps) {
 function TimelineFeedContent({
   streamId,
   variant,
+  layoutResolution,
+  resolvedContent,
   children,
 }: {
   streamId: Core.PostStreamId;
   variant: TimelineFeedProps['variant'];
+  layoutResolution: Hooks.FeedLayoutResolution;
+  resolvedContent: Core.ContentType;
   children?: TimelineFeedProps['children'];
 }) {
   const t = useTranslations('toast.post');
 
-  const { layout: homeLayout } = Core.useHomeStore();
-  const customFeed = Hooks.useCustomFeed();
-  const customFeedLayout =
-    customFeed?.layout !== undefined ? Core.pubkyLayoutToHomeLayout(customFeed.layout) : undefined;
-  const effectiveLayout = customFeedLayout ?? homeLayout;
+  const { content, setContent } = Core.useHomeStore();
+  const { effectiveLayout, isVisualActive } = layoutResolution;
   const tagsLayout: TagsLayout = effectiveLayout === Core.LAYOUT.WIDE ? 'side' : 'inline';
 
   const {
@@ -155,6 +170,14 @@ function TimelineFeedContent({
 
   const actualNewCount = actualNewPostIds.length;
 
+  useEffect(() => {
+    if (resolvedContent === content) {
+      return;
+    }
+
+    setContent(resolvedContent);
+  }, [content, resolvedContent, setContent]);
+
   /**
    * Handle clicking the "New Posts" button
    * 1. Merge unread posts into the main post stream
@@ -199,22 +222,33 @@ function TimelineFeedContent({
     <TimelineFeedContext.Provider value={contextValue}>
       {/* Pull-to-refresh indicator - only shown for home & hot variants */}
       {enablePullToRefresh && <Molecules.PullToRefreshIndicator state={pullState} pullDistance={pullDistance} />}
-      {children}
+      {!isVisualActive ? children : null}
       <Molecules.NewPostsButton
         count={actualNewCount}
         onClick={handleNewPostsClick}
         visible={actualNewCount > 0 && !loading}
         isScrolled={isScrolled}
       />
-      <Organisms.TimelinePosts
-        postIds={postIds}
-        loading={loading}
-        loadingMore={loadingMore}
-        error={error}
-        hasMore={hasMore}
-        loadMore={loadMore}
-        tagsLayout={tagsLayout}
-      />
+      {isVisualActive ? (
+        <VisualTimelinePosts
+          postIds={postIds}
+          loading={loading}
+          loadingMore={loadingMore}
+          error={error}
+          hasMore={hasMore}
+          loadMore={loadMore}
+        />
+      ) : (
+        <Organisms.TimelinePosts
+          postIds={postIds}
+          loading={loading}
+          loadingMore={loadingMore}
+          error={error}
+          hasMore={hasMore}
+          loadMore={loadMore}
+          tagsLayout={tagsLayout}
+        />
+      )}
     </TimelineFeedContext.Provider>
   );
 }

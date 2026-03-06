@@ -76,6 +76,12 @@ describe('FilterLayout', () => {
       expect(screen.getByLabelText(label)).not.toHaveAttribute('aria-disabled', 'true');
     });
   });
+
+  it('renders visual layout when enabled', () => {
+    render(<FilterLayout showVisual />);
+
+    expect(screen.getByText('Visual')).toBeInTheDocument();
+  });
 });
 
 describe('FilterLayout - Snapshots', () => {

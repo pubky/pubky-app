@@ -29,13 +29,23 @@ export function CustomFeedFilters({ variant }: CustomFeedFiltersProps) {
 
       {variant === 'sidebar' ? (
         <Atoms.Container overrideDefaults className="sticky top-[100px] flex w-full flex-col gap-6 self-start">
-          <Molecules.FilterLayout selectedTab={layout} defaultSelectedTab={undefined} disabled />
+          <Molecules.FilterLayout
+            selectedTab={layout}
+            defaultSelectedTab={undefined}
+            disabled
+            showVisual={layout === Core.LAYOUT.VISUAL}
+          />
 
           <Molecules.FilterContent selectedTab={content} defaultSelectedTab={undefined} disabled />
         </Atoms.Container>
       ) : (
         <>
-          <Molecules.FilterLayout selectedTab={layout} defaultSelectedTab={undefined} disabled />
+          <Molecules.FilterLayout
+            selectedTab={layout}
+            defaultSelectedTab={undefined}
+            disabled
+            showVisual={layout === Core.LAYOUT.VISUAL}
+          />
 
           <Molecules.FilterContent selectedTab={content} defaultSelectedTab={undefined} disabled />
         </>

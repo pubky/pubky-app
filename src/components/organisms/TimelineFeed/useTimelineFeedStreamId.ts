@@ -12,12 +12,15 @@ import { useSearchStreamId } from '@/hooks/useSearchStreamId';
  * @param variant - The timeline feed variant
  * @returns The appropriate stream ID or undefined if loading
  */
-export function useTimelineFeedStreamId(variant: TimelineFeedVariant): Core.PostStreamId | undefined {
+export function useTimelineFeedStreamId(
+  variant: TimelineFeedVariant,
+  contentOverride?: Core.ContentType,
+): Core.PostStreamId | undefined {
   // Get stream IDs from respective hooks
   // All hooks are called unconditionally to respect React's rules
-  const homeStreamId = Hooks.useStreamIdFromFilters();
+  const homeStreamId = Hooks.useStreamIdFromFilters(contentOverride);
   const customStreamId = Hooks.useCustomStreamId();
-  const bookmarksStreamId = Hooks.useBookmarksStreamId();
+  const bookmarksStreamId = Hooks.useBookmarksStreamId(contentOverride);
   const hotStreamId = Hooks.useHotStreamId();
   const searchStreamId = useSearchStreamId();
 

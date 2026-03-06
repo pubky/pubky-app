@@ -7,11 +7,14 @@ export function Home() {
     <>
       <Organisms.DialogWelcome />
       <Organisms.ContentLayout
-        leftSidebarContent={<Organisms.HomeFeedSidebar />}
+        feedVariant={TIMELINE_FEED_VARIANT.HOME}
+        leftSidebarContent={<Organisms.HomeFeedSidebar allowVisualLayout feedVariant={TIMELINE_FEED_VARIANT.HOME} />}
         rightSidebarContent={<Organisms.HomeFeedRightSidebar />}
-        leftDrawerContent={<Organisms.HomeFeedDrawer />}
+        leftDrawerContent={<Organisms.HomeFeedDrawer allowVisualLayout feedVariant={TIMELINE_FEED_VARIANT.HOME} />}
         rightDrawerContent={<Organisms.HomeFeedRightDrawer />}
-        leftDrawerContentMobile={<Organisms.HomeFeedDrawerMobile />}
+        leftDrawerContentMobile={
+          <Organisms.HomeFeedDrawerMobile allowVisualLayout feedVariant={TIMELINE_FEED_VARIANT.HOME} />
+        }
         rightDrawerContentMobile={<Organisms.FeedNavigation className="lg:hidden" />}
       >
         <Organisms.AlertBackup />

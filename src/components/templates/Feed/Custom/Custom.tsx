@@ -6,6 +6,7 @@ export function Custom() {
   return (
     <>
       <Organisms.ContentLayout
+        feedVariant={TIMELINE_FEED_VARIANT.CUSTOM}
         leftSidebarContent={<Organisms.CustomFeedFilters variant="sidebar" />}
         rightSidebarContent={<Organisms.HomeFeedRightSidebar />}
         leftDrawerContent={<Organisms.CustomFeedFilters variant="drawer" />}

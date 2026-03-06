@@ -47,6 +47,7 @@ export * from './useUnreadPosts';
 export * from './useIsScrolledFromTop';
 export * from './useRepostInfo';
 export * from './useDeletePost';
+export * from './useFeedLayoutResolution';
 export * from './usePostHeaderVisibility';
 export * from './useBulkUserAvatars';
 export * from './useSearchStreamId';

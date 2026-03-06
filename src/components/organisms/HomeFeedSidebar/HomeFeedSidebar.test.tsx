@@ -1,19 +1,41 @@
-import { describe, it, expect, vi } from 'vitest';
+import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { render, screen } from '@testing-library/react';
 import { HomeFeedSidebar, HomeFeedDrawer, HomeFeedDrawerMobile } from './HomeFeedSidebar';
+import { TIMELINE_FEED_VARIANT } from '../TimelineFeed/TimelineFeed.types';
 
 // Mock Core.useHomeStore
 vi.mock('@/core', () => ({
+  CONTENT: {
+    ALL: 'all',
+    SHORT: 'short',
+    LONG: 'long',
+    IMAGES: 'images',
+    VIDEOS: 'videos',
+    LINKS: 'links',
+    FILES: 'files',
+  },
   useHomeStore: vi.fn(() => ({
-    layout: 'column',
+    layout: 'columns',
     setLayout: vi.fn(),
     reach: 'following',
     setReach: vi.fn(),
-    sort: 'recent',
+    sort: 'timeline',
     setSort: vi.fn(),
-    content: 'posts',
+    content: 'all',
     setContent: vi.fn(),
   })),
+}));
+
+const mockUseFeedLayoutResolution = vi.fn(() => ({
+  requestedLayout: 'columns',
+  effectiveLayout: 'columns',
+  isVisualRequested: false,
+  isVisualActive: false,
+  isPhoneViewport: false,
+}));
+
+vi.mock('@/hooks', () => ({
+  useFeedLayoutResolution: () => mockUseFeedLayoutResolution(),
 }));
 
 // Mock Atoms
@@ -29,9 +51,30 @@ vi.mock('@/atoms', () => ({
 vi.mock('@/molecules', () => ({
   FilterReach: () => <div data-testid="filter-reach">FilterReach</div>,
   FilterSort: () => <div data-testid="filter-sort">FilterSort</div>,
-  FilterContent: () => <div data-testid="filter-content">FilterContent</div>,
-  FilterLayout: () => <div data-testid="filter-layout">FilterLayout</div>,
+  FilterContent: ({ disabledTabs }: { disabledTabs?: string[] }) => (
+    <div
+      data-testid="filter-content"
+      data-disabled-tabs={(disabledTabs ?? []).length ? disabledTabs?.join(',') : undefined}
+    >
+      FilterContent
+    </div>
+  ),
+  FilterLayout: ({ showVisual }: { showVisual?: boolean }) => (
+    <div data-testid="filter-layout" data-show-visual={showVisual ? 'true' : undefined}>
+      FilterLayout
+    </div>
+  ),
 }));
+
+beforeEach(() => {
+  mockUseFeedLayoutResolution.mockReturnValue({
+    requestedLayout: 'columns',
+    effectiveLayout: 'columns',
+    isVisualRequested: false,
+    isVisualActive: false,
+    isPhoneViewport: false,
+  });
+});
 
 describe('HomeFeedSidebar', () => {
   it('renders all filter components', () => {
@@ -46,6 +89,26 @@ describe('HomeFeedSidebar', () => {
   it('matches snapshot', () => {
     const { container } = render(<HomeFeedSidebar />);
     expect(container).toMatchSnapshot();
+  });
+
+  it('shows visual layout when enabled on desktop/tablet', () => {
+    render(<HomeFeedSidebar allowVisualLayout feedVariant={TIMELINE_FEED_VARIANT.HOME} />);
+
+    expect(screen.getByTestId('filter-layout')).toHaveAttribute('data-show-visual', 'true');
+  });
+
+  it('disables unsupported content options while visual is active', () => {
+    mockUseFeedLayoutResolution.mockReturnValue({
+      requestedLayout: 'visual',
+      effectiveLayout: 'visual',
+      isVisualRequested: true,
+      isVisualActive: true,
+      isPhoneViewport: false,
+    });
+
+    render(<HomeFeedSidebar allowVisualLayout feedVariant={TIMELINE_FEED_VARIANT.HOME} />);
+
+    expect(screen.getByTestId('filter-content')).toHaveAttribute('data-disabled-tabs', 'short,long,links,files');
   });
 });
 

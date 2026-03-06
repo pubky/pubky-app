@@ -97,6 +97,18 @@ describe('FilterContent', () => {
       expect(screen.getByLabelText(label)).not.toHaveAttribute('aria-disabled', 'true');
     });
   });
+
+  it('disables only the requested tabs', () => {
+    render(<FilterContent disabledTabs={[CONTENT.SHORT, CONTENT.LONG, CONTENT.LINKS, CONTENT.FILES]} />);
+
+    expect(screen.getByLabelText('Posts')).toHaveAttribute('aria-disabled', 'true');
+    expect(screen.getByLabelText('Articles')).toHaveAttribute('aria-disabled', 'true');
+    expect(screen.getByLabelText('Links')).toHaveAttribute('aria-disabled', 'true');
+    expect(screen.getByLabelText('Files')).toHaveAttribute('aria-disabled', 'true');
+    expect(screen.getByLabelText('All')).not.toHaveAttribute('aria-disabled', 'true');
+    expect(screen.getByLabelText('Images')).not.toHaveAttribute('aria-disabled', 'true');
+    expect(screen.getByLabelText('Videos')).not.toHaveAttribute('aria-disabled', 'true');
+  });
 });
 
 describe('FilterContent - Snapshots', () => {

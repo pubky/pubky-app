@@ -7,7 +7,14 @@ import * as Hooks from '@/hooks';
 import * as Organisms from '@/organisms';
 import type { PostActionsBarProps, ActionButtonConfig } from './PostActionsBar.types';
 
-export function PostActionsBar({ postId, onTagClick, onReplyClick, onRepostClick, className }: PostActionsBarProps) {
+export function PostActionsBar({
+  postId,
+  onTagClick,
+  onReplyClick,
+  onRepostClick,
+  className,
+  variant = 'default',
+}: PostActionsBarProps) {
   const t = useTranslations('common');
   const { postCounts, isLoading: isCountsLoading } = Hooks.usePostCounts(postId);
   const {
@@ -22,16 +29,19 @@ export function PostActionsBar({ postId, onTagClick, onReplyClick, onRepostClick
 
   if (isCountsLoading || !postCounts) {
     return (
-      <Atoms.Container overrideDefaults className="text-muted-foreground">
+      <Atoms.Container overrideDefaults className={variant === 'visual' ? 'text-white/70' : 'text-muted-foreground'}>
         {t('loadingActions')}
       </Atoms.Container>
     );
   }
 
+  const isVisual = variant === 'visual';
   const commonButtonProps = {
     variant: 'secondary' as const,
     size: 'sm' as const,
-    className: 'border-none shadow-xs',
+    className: isVisual
+      ? 'border-white/10 bg-black/40 text-white shadow-none hover:bg-black/55'
+      : 'border-none shadow-xs',
   };
 
   const tagCount = postCounts.unique_tags ?? 0;
@@ -95,7 +105,11 @@ export function PostActionsBar({ postId, onTagClick, onReplyClick, onRepostClick
               <Atoms.Typography
                 as="span"
                 overrideDefaults
-                className="text-xs leading-4 font-bold text-muted-foreground"
+                className={
+                  isVisual
+                    ? 'text-xs leading-4 font-bold text-white/80'
+                    : 'text-xs leading-4 font-bold text-muted-foreground'
+                }
               >
                 {count}
               </Atoms.Typography>

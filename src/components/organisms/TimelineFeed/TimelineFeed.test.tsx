@@ -24,6 +24,13 @@ vi.mock('@/hooks', async (importOriginal) => {
     useCustomStreamId: vi.fn(),
     useBookmarksStreamId: vi.fn(),
     useStreamPagination: vi.fn(),
+    useFeedLayoutResolution: vi.fn(() => ({
+      requestedLayout: 'columns',
+      effectiveLayout: 'columns',
+      isVisualRequested: false,
+      isVisualActive: false,
+      isPhoneViewport: false,
+    })),
     useMutedUsers: vi.fn(() => ({
       mutedUserIds: [],
       mutedUserIdSet: new Set(),
@@ -107,10 +114,35 @@ vi.mock('@/organisms', () => ({
   ),
 }));
 
+vi.mock('./VisualTimelinePosts', () => ({
+  VisualTimelinePosts: ({
+    postIds,
+    loading,
+    loadingMore,
+    error,
+    hasMore,
+  }: {
+    postIds: string[];
+    loading: boolean;
+    loadingMore: boolean;
+    error: string | null;
+    hasMore: boolean;
+  }) => (
+    <div data-testid="visual-timeline-posts">
+      <span data-testid="visual-post-count">{postIds.length}</span>
+      <span data-testid="visual-loading">{loading.toString()}</span>
+      <span data-testid="visual-loading-more">{loadingMore.toString()}</span>
+      <span data-testid="visual-error">{error || 'none'}</span>
+      <span data-testid="visual-has-more">{hasMore.toString()}</span>
+    </div>
+  ),
+}));
+
 const mockUseStreamIdFromFilters = vi.mocked(Hooks.useStreamIdFromFilters);
 const mockUseCustomStreamId = vi.mocked(Hooks.useCustomStreamId);
 const mockUseBookmarksStreamId = vi.mocked(Hooks.useBookmarksStreamId);
 const mockUseStreamPagination = vi.mocked(Hooks.useStreamPagination);
+const mockUseFeedLayoutResolution = vi.mocked(Hooks.useFeedLayoutResolution);
 
 const mockPrependPosts = vi.fn();
 const mockLoadMore = vi.fn();
@@ -130,12 +162,25 @@ const defaultPaginationResult = {
 describe('TimelineFeed', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    Core.useHomeStore.setState({
+      layout: Core.LAYOUT.COLUMNS,
+      sort: Core.SORT.TIMELINE,
+      reach: Core.REACH.ALL,
+      content: Core.CONTENT.ALL,
+    });
 
     // Default mock implementations
     mockUseStreamIdFromFilters.mockReturnValue(Core.PostStreamTypes.TIMELINE_ALL_ALL);
     mockUseCustomStreamId.mockReturnValue('custom:all:all:all' as Core.PostStreamId);
     mockUseBookmarksStreamId.mockReturnValue(Core.PostStreamTypes.TIMELINE_BOOKMARKS_ALL);
     mockUseStreamPagination.mockReturnValue(defaultPaginationResult);
+    mockUseFeedLayoutResolution.mockReturnValue({
+      requestedLayout: 'columns',
+      effectiveLayout: 'columns',
+      isVisualRequested: false,
+      isVisualActive: false,
+      isPhoneViewport: false,
+    });
     // Reset pull-to-refresh mock to idle state
     mockUsePullToRefresh.mockReturnValue({
       state: 'idle' as const,
@@ -172,6 +217,62 @@ describe('TimelineFeed', () => {
 
       expect(screen.getByTestId('child-component')).toBeInTheDocument();
       expect(screen.getByTestId('timeline-posts')).toBeInTheDocument();
+    });
+
+    it('should render the visual renderer when visual layout is active', () => {
+      mockUseFeedLayoutResolution.mockReturnValue({
+        requestedLayout: 'visual',
+        effectiveLayout: 'visual',
+        isVisualRequested: true,
+        isVisualActive: true,
+        isPhoneViewport: false,
+      });
+
+      render(<TimelineFeed variant={TIMELINE_FEED_VARIANT.HOME} />);
+
+      expect(screen.getByTestId('visual-timeline-posts')).toBeInTheDocument();
+      expect(screen.queryByTestId('timeline-posts')).not.toBeInTheDocument();
+    });
+
+    it('should resolve the home stream against all content before persisting visual content coercion', () => {
+      Core.useHomeStore.setState({ content: Core.CONTENT.SHORT });
+      mockUseStreamIdFromFilters.mockImplementation((contentOverride?: Core.ContentType) => {
+        return contentOverride === Core.CONTENT.ALL
+          ? Core.PostStreamTypes.TIMELINE_ALL_ALL
+          : Core.PostStreamTypes.TIMELINE_ALL_SHORT;
+      });
+      mockUseFeedLayoutResolution.mockReturnValue({
+        requestedLayout: 'visual',
+        effectiveLayout: 'visual',
+        isVisualRequested: true,
+        isVisualActive: true,
+        isPhoneViewport: false,
+      });
+
+      render(<TimelineFeed variant={TIMELINE_FEED_VARIANT.HOME} />);
+
+      expect(mockUseStreamIdFromFilters).toHaveBeenCalledWith(Core.CONTENT.ALL);
+      expect(mockUseStreamPagination).toHaveBeenCalledWith({
+        streamId: Core.PostStreamTypes.TIMELINE_ALL_ALL,
+      });
+    });
+
+    it('should hide children while visual layout is active', () => {
+      mockUseFeedLayoutResolution.mockReturnValue({
+        requestedLayout: 'visual',
+        effectiveLayout: 'visual',
+        isVisualRequested: true,
+        isVisualActive: true,
+        isPhoneViewport: false,
+      });
+
+      render(
+        <TimelineFeed variant={TIMELINE_FEED_VARIANT.HOME}>
+          <div data-testid="child-component">Child Content</div>
+        </TimelineFeed>,
+      );
+
+      expect(screen.queryByTestId('child-component')).not.toBeInTheDocument();
     });
 
     it('should enable pull-to-refresh for home variant', () => {
@@ -440,6 +541,13 @@ describe('TimelineFeed - Snapshots', () => {
     mockUseCustomStreamId.mockReturnValue('custom:all:all:all' as Core.PostStreamId);
     mockUseBookmarksStreamId.mockReturnValue(Core.PostStreamTypes.TIMELINE_BOOKMARKS_ALL);
     mockUseStreamPagination.mockReturnValue(defaultPaginationResult);
+    mockUseFeedLayoutResolution.mockReturnValue({
+      requestedLayout: 'columns',
+      effectiveLayout: 'columns',
+      isVisualRequested: false,
+      isVisualActive: false,
+      isPhoneViewport: false,
+    });
     // Reset pull-to-refresh mock to idle state for snapshots
     mockUsePullToRefresh.mockReturnValue({
       state: 'idle' as const,
