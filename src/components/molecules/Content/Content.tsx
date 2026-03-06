@@ -53,7 +53,7 @@ export function ContentContainer({ children, className, maxWidth = 'lg', gap = '
   const maxWidthClasses = {
     sm: 'max-w-[588px]',
     md: 'max-w-[800px]',
-    lg: 'max-w-[1200px]',
+    lg: 'max-w-(--container-max-width)',
     xl: 'max-w-[1400px]',
   };
 
