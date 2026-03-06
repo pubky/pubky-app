@@ -169,6 +169,7 @@ export const ScanNavigation = () => {
 
   return (
     <Molecules.ButtonsNavigation
+      id="scan-navigation"
       continueButtonDisabled={true}
       hiddenContinueButton={true}
       onHandleBackButton={onHandleBackButton}

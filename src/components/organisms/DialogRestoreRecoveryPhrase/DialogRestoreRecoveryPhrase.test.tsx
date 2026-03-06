@@ -568,7 +568,7 @@ describe('DialogRestoreRecoveryPhrase', () => {
       expect(dialogContent).toHaveClass('gap-6', 'p-8');
 
       const triggerButton = screen.getByText('Use recovery phrase').closest('[data-testid="button"]');
-      expect(triggerButton).toHaveClass('rounded-full', 'w-auto', 'md:flex-none');
+      expect(triggerButton).toHaveClass('rounded-full', 'w-full', 'sm:w-auto', 'md:flex-none');
     });
 
     it('applies grid layout for word inputs', () => {
