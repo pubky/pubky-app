@@ -1,6 +1,7 @@
 'use client';
 
-import { useState, type ForwardedRef } from 'react';
+import { useState, useRef, type ForwardedRef } from 'react';
+import { useTranslations } from 'next-intl';
 import {
   BlockTypeSelect,
   BoldItalicUnderlineToggles,
@@ -32,6 +33,7 @@ import * as Atoms from '@/atoms';
 import * as Molecules from '@/molecules';
 import * as Icons from '@/libs/icons';
 import * as Utils from '@/libs/utils';
+import * as Hooks from '@/hooks';
 
 /**
  * Common programming languages for code blocks in the Markdown editor.
@@ -98,19 +100,129 @@ function preloadLanguages() {
 // Start preloading languages when this module is imported
 preloadLanguages();
 
+type EditorMode = 'richtext' | 'markdown';
+
 // Only import this to MarkdownEditor.tsx
 export default function InitializedMDXEditor({
   editorRef,
+  readOnly,
   ...props
 }: { editorRef: ForwardedRef<MDXEditorMethods> | null } & MDXEditorProps) {
+  const t = useTranslations('markdownEditor');
+
   const [showEmojiPicker, setShowEmojiPicker] = useState(false);
   const [maxLengthWarning, setMaxLengthWarning] = useState<null | 'approaching' | 'reached'>(null);
+  const [mode, setMode] = useState<EditorMode>('richtext');
+  const [richText, setRichText] = useState(props.markdown);
+  const [markdownText, setMarkdownText] = useState('');
+  const textareaRef = useRef<HTMLTextAreaElement>(null);
+
+  const isRichTextEmpty = richText.trim() === '';
+  const isMarkdownEmpty = markdownText.trim() === '';
+
+  const switchToMarkdownMode = () => {
+    if (!isRichTextEmpty) return;
+    setMode('markdown');
+  };
+
+  const switchToRichTextMode = () => {
+    if (!isMarkdownEmpty) return;
+    setMode('richtext');
+  };
+
+  const updateMaxLengthWarning = (text: string) => {
+    const remaining = ARTICLE_MAX_CHARACTER_LENGTH - text.length;
+
+    switch (true) {
+      case remaining === 0:
+        setMaxLengthWarning('reached');
+        break;
+      case remaining < 100:
+        setMaxLengthWarning('approaching');
+        break;
+      default:
+        setMaxLengthWarning(null);
+    }
+  };
+
+  const handleMarkdownTextChange = (newText: string) => {
+    if (newText.length > ARTICLE_MAX_CHARACTER_LENGTH) return;
+    setMarkdownText(newText);
+    updateMaxLengthWarning(newText);
+    props.onChange?.(newText, false);
+  };
+
+  const handleMarkdownEmojiSelect = Hooks.useEmojiInsert({
+    inputRef: textareaRef,
+    value: markdownText,
+    onChange: handleMarkdownTextChange,
+  });
+
+  const handleEmojiSelect = (emoji: { native: string }) => {
+    if (mode === 'markdown') {
+      handleMarkdownEmojiSelect(emoji);
+    } else {
+      if (editorRef && 'current' in editorRef) {
+        editorRef.current?.focus();
+        editorRef.current?.insertMarkdown(emoji.native);
+        editorRef.current?.focus();
+      }
+    }
+  };
 
   return (
     <Atoms.Container className="gap-4">
+      {/* Markdown mode: custom toolbar + textarea — hidden via CSS in rich text mode */}
+      <Atoms.Container overrideDefaults className={Utils.cn(mode === 'richtext' && 'hidden')}>
+        <Atoms.Container
+          overrideDefaults
+          className="flex min-h-10.75 cursor-auto flex-wrap items-center gap-2 rounded-md border bg-background px-2.5 py-1.5"
+          role="toolbar"
+          aria-label={t('toolbarAriaLabel')}
+          data-testid="markdown-toolbar"
+        >
+          <Atoms.Button
+            variant="ghost"
+            size="icon"
+            title={t('emoji')}
+            onClick={() => setShowEmojiPicker(true)}
+            disabled={readOnly}
+            className="size-7 cursor-default rounded"
+            data-testid="markdown-emoji-button"
+          >
+            <Icons.Smile className="size-6" />
+          </Atoms.Button>
+
+          <Atoms.Button
+            variant="ghost"
+            size="icon"
+            title={isMarkdownEmpty ? t('richText') : t('clearToSwitch')}
+            onClick={switchToRichTextMode}
+            disabled={readOnly || !isMarkdownEmpty}
+            className="size-7 cursor-default rounded disabled:pointer-events-auto"
+            data-testid="markdown-richtext-button"
+          >
+            <Icons.Type className="size-6" />
+          </Atoms.Button>
+        </Atoms.Container>
+
+        <Atoms.Textarea
+          ref={textareaRef}
+          value={markdownText}
+          onChange={(e) => handleMarkdownTextChange(e.target.value)}
+          readOnly={readOnly}
+          placeholder={t('placeholder')}
+          maxLength={ARTICLE_MAX_CHARACTER_LENGTH}
+          className="max-h-[60dvh] min-h-11 resize-none rounded-none border-none p-0 pt-4 shadow-none outline-none placeholder:text-muted-foreground/70 focus-visible:border-none focus-visible:ring-0"
+          data-testid="markdown-textarea"
+        />
+      </Atoms.Container>
+
+      {/* Rich text mode: MDXEditor (includes its own toolbar) — hidden via CSS in markdown mode */}
       <MDXEditor
-        placeholder="Start writing your masterpiece"
-        className="dark-theme cursor-auto"
+        readOnly={readOnly}
+        placeholder={t('placeholder')}
+        className={Utils.cn('dark-theme cursor-auto', mode === 'markdown' && 'hidden')}
         contentEditableClassName="prose prose-neutral prose-invert prose-code:before:content-none prose-code:after:content-none max-w-none px-0! pb-0! pt-4! max-h-[60dvh] overflow-y-auto"
         plugins={[
           toolbarPlugin({
@@ -125,8 +237,16 @@ export default function InitializedMDXEditor({
                 <InsertThematicBreak />
                 <CodeToggle />
                 <InsertCodeBlock />
-                <ButtonWithTooltip title="Emoji" onClick={() => setShowEmojiPicker(true)}>
+                <ButtonWithTooltip title={t('emoji')} onClick={() => setShowEmojiPicker(true)}>
                   <Icons.Smile className="size-6" />
+                </ButtonWithTooltip>
+                <ButtonWithTooltip
+                  title={isRichTextEmpty ? t('markdown') : t('clearToSwitch')}
+                  onClick={switchToMarkdownMode}
+                  disabled={!isRichTextEmpty}
+                  className={Utils.cn(!isRichTextEmpty && 'opacity-50!')}
+                >
+                  <Icons.MarkdownMark className="size-6" />
                 </ButtonWithTooltip>
               </>
             ),
@@ -145,19 +265,8 @@ export default function InitializedMDXEditor({
         ]}
         {...props}
         onChange={(markdown, initialMarkdownNormalize) => {
-          const remaining = ARTICLE_MAX_CHARACTER_LENGTH - markdown.length;
-
-          switch (true) {
-            case remaining === 0:
-              setMaxLengthWarning('reached');
-              break;
-            case remaining < 100:
-              setMaxLengthWarning('approaching');
-              break;
-            default:
-              setMaxLengthWarning(null);
-          }
-
+          setRichText(markdown);
+          updateMaxLengthWarning(markdown);
           props.onChange?.(markdown, initialMarkdownNormalize);
         }}
         ref={editorRef}
@@ -166,13 +275,7 @@ export default function InitializedMDXEditor({
       <Molecules.EmojiPickerDialog
         open={showEmojiPicker}
         onOpenChange={setShowEmojiPicker}
-        onEmojiSelect={(emoji) => {
-          if (editorRef && 'current' in editorRef) {
-            editorRef.current?.focus();
-            editorRef.current?.insertMarkdown(emoji.native);
-            editorRef.current?.focus();
-          }
-        }}
+        onEmojiSelect={handleEmojiSelect}
       />
 
       {maxLengthWarning && (
@@ -187,8 +290,8 @@ export default function InitializedMDXEditor({
           <Icons.AlertTriangle className="size-4 shrink-0" />
 
           <Atoms.Typography overrideDefaults className="text-sm">
-            {maxLengthWarning === 'approaching' && `You're approaching the maximum character limit.`}
-            {maxLengthWarning === 'reached' && `You've reached the maximum character limit.`}
+            {maxLengthWarning === 'approaching' && t('warningApproaching')}
+            {maxLengthWarning === 'reached' && t('warningReached')}
           </Atoms.Typography>
         </Atoms.Container>
       )}

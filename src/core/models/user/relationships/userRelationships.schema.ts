@@ -6,5 +6,7 @@ export interface UserRelationshipsModelSchema extends Core.NexusUserRelationship
 
 // Keep only the primary key index. Relationship flags are read by id.
 export const userRelationshipsTableSchema = `
-  &id
+  &id,
+  following,
+  followed_by
 `;

@@ -5,7 +5,9 @@ import { useTranslations } from 'next-intl';
 
 import * as Molecules from '@/molecules';
 import * as Atoms from '@/atoms';
+import * as Organisms from '@/organisms';
 import * as Libs from '@/libs';
+import * as Config from '@/config';
 import * as App from '@/app';
 
 export const HomeActions = () => {
@@ -32,12 +34,27 @@ export const HomeActions = () => {
 
 export const HomeFooter = ({ ...props }: React.HTMLAttributes<HTMLDivElement>) => {
   const t = useTranslations('landing');
+  const tFooter = useTranslations('onboarding.footer');
   return (
     <Atoms.Container
-      className={Libs.cn('flex-1 flex-col items-start justify-end gap-1 pt-3 sm:pr-12', props.className)}
+      className={Libs.cn('flex-1 flex-col items-start justify-end gap-1 pt-3', props.className)}
       {...props}
     >
-      <Atoms.Container className="flex-row items-center gap-1">
+      <Atoms.FooterLinks>
+        {tFooter.rich('agreement', {
+          pubky: () => <span className="text-brand">Pubky</span>,
+        })}{' '}
+        <Organisms.DialogTerms />, <Organisms.DialogPrivacy />
+        {tFooter('andConfirmAge')} <Organisms.DialogAge />{' '}
+        {tFooter.rich('copyright', {
+          pubkyCore: (chunks) => (
+            <Atoms.Link href={Config.PUBKY_CORE_URL} target="_blank">
+              {chunks}
+            </Atoms.Link>
+          ),
+        })}
+      </Atoms.FooterLinks>
+      <Atoms.Container className="flex-row items-center gap-1 pt-2">
         <Atoms.Link href="https://synonym.to" target="_blank" className="block">
           <Atoms.Image src="/images/synonym-grey-logo.svg" alt="Synonym" width={95} height={24} />
         </Atoms.Link>
@@ -51,9 +68,6 @@ export const HomeFooter = ({ ...props }: React.HTMLAttributes<HTMLDivElement>) =
           })}
         </Atoms.Typography>
       </Atoms.Container>
-      <Atoms.Typography as="span" size="sm" className="font-normal text-muted-foreground">
-        {t('copyright')}
-      </Atoms.Typography>
     </Atoms.Container>
   );
 };

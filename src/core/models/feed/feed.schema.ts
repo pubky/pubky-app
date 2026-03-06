@@ -1,7 +1,7 @@
 import { PubkyAppFeedLayout, PubkyAppFeedReach, PubkyAppFeedSort, PubkyAppPostKind } from 'pubky-app-specs';
 
 export interface FeedModelSchema {
-  id: number;
+  id: string;
   name: string;
   tags: string[];
   reach: PubkyAppFeedReach;
@@ -17,4 +17,4 @@ export interface FeedModelSchema {
 // - name: Used for indexed name lookup
 // - created_at: For sorting feeds by creation time
 // - updated_at: For sorting feeds by most recently modified
-export const feedTableSchema = '++id, name, created_at, updated_at';
+export const feedTableSchema = '&id, name, created_at, updated_at';

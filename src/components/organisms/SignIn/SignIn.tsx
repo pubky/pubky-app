@@ -9,7 +9,6 @@ import * as Atoms from '@/atoms';
 import * as Libs from '@/libs';
 import * as Molecules from '@/molecules';
 import * as Core from '@/core';
-import * as Config from '@/config';
 import * as Hooks from '@/hooks';
 
 // Step configuration for the progress display (labels are translation keys)
@@ -77,32 +76,19 @@ const SignInProgress = () => {
 
 export const SignInContent = () => {
   const t = useTranslations('onboarding.signIn');
-  const { url, isLoading, fetchUrl } = Hooks.useAuthUrl();
+  const { url, isLoading, isExpired, fetchUrl, copyAuthUrl, isOpeningRing, onAuthorizeClick } = Hooks.useMobileAuth();
   const authUrlResolved = Core.useSignInStore((state) => state.authUrlResolved);
-
-  const isIOS = typeof navigator !== 'undefined' && /iPhone|iPad|iPod/i.test(navigator.userAgent);
-  const fallbackUrl = isIOS ? Config.APP_STORE_URL : Config.PLAY_STORE_URL;
 
   useEffect(() => {
     // Clear onboarding storage when sign-in flow begins to prevent backup reminders from showing for existing users
     Core.useOnboardingStore.getState().reset();
   }, []);
 
-  const copyAuthUrlToClipboard = async () => {
-    if (!url) return;
-
-    try {
-      await Libs.copyToClipboard({ text: url });
-    } catch (error) {
-      Libs.Logger.error('Failed to copy auth URL to clipboard:', error);
-    }
-  };
-
   const handleQRClick = async () => {
     if (!url) return;
 
     try {
-      await Libs.copyToClipboard({ text: url });
+      await copyAuthUrl();
       Molecules.toast({
         title: t('linkCopied'),
         description: t('linkCopiedDescription'),
@@ -112,41 +98,25 @@ export const SignInContent = () => {
     }
   };
 
-  const handleAuthorizeClick = async () => {
-    if (isLoading) return;
-
-    if (!url) {
-      void fetchUrl();
-      return;
-    }
-
-    await copyAuthUrlToClipboard();
-
-    try {
-      const openedWindow = window.open(url, '_blank');
-
-      if (!openedWindow) {
-        window.location.href = url;
-        return;
-      }
-
-      setTimeout(() => {
-        try {
-          openedWindow.location.href = fallbackUrl;
-        } catch (error) {
-          Libs.Logger.error('Failed to redirect to store after deeplink attempt:', error);
-          window.location.href = fallbackUrl;
-        }
-      }, 2000);
-    } catch (error) {
-      Libs.Logger.error('Failed to open Pubky Ring deeplink:', error);
-      Molecules.toast({
-        title: t('linkFailed'),
-        description: t('tryAgain'),
-      });
-      window.location.href = fallbackUrl;
-    }
-  };
+  const isMobileLaunching = isLoading || isOpeningRing;
+  const mobileAuthorizeContent = isMobileLaunching ? (
+    <>
+      <Libs.Loader2 className="mr-2 size-4 animate-spin" />
+      <Atoms.Typography as="span" overrideDefaults aria-live="polite">
+        {isOpeningRing ? t('openingRing') : t('generatingShort')}
+      </Atoms.Typography>
+    </>
+  ) : isExpired ? (
+    <>
+      <Libs.QrCode className="mr-2 size-4" />
+      {t('expired')}
+    </>
+  ) : (
+    <>
+      <Libs.Key className="mr-2 size-4" />
+      {t('authorize')}
+    </>
+  );
 
   // Show progress steps once auth URL is resolved
   if (authUrlResolved) {
@@ -171,14 +141,21 @@ export const SignInContent = () => {
               type="button"
               className="relative flex h-[220px] w-[220px] cursor-pointer items-center justify-center rounded-lg bg-foreground p-4 transition-opacity hover:opacity-90 active:opacity-80"
               onClick={handleQRClick}
-              disabled={isLoading || !url}
+              disabled={isLoading || isExpired || !url}
               aria-label="Copy authentication link"
             >
-              {isLoading || !url ? (
+              {isLoading || (!url && !isExpired) ? (
                 <Atoms.Container className="items-center gap-2">
-                  <Libs.Loader2 className="h-8 w-8 animate-spin text-background" />
+                  <Libs.Loader2 className="size-8 animate-spin text-background" />
                   <Atoms.Typography as="small" size="sm" className="text-background">
                     {t('generating')}
+                  </Atoms.Typography>
+                </Atoms.Container>
+              ) : isExpired ? (
+                <Atoms.Container className="items-center gap-2">
+                  <Libs.QrCode className="size-8 text-muted-foreground" />
+                  <Atoms.Typography as="small" size="sm" className="text-muted-foreground">
+                    {t('expired')}
                   </Atoms.Typography>
                 </Atoms.Container>
               ) : (
@@ -205,27 +182,20 @@ export const SignInContent = () => {
           <Atoms.Container className="flex-col items-center justify-center gap-12 lg:flex-row">
             <Image src="/images/logo-pubky-ring.svg" alt="Pubky Ring" width={137} height={30} />
             <Atoms.Button
-              className="h-[60px] w-full rounded-full"
+              className="w-full"
               size="lg"
-              onClick={handleAuthorizeClick}
-              disabled={isLoading || !url}
-              aria-busy={isLoading}
+              onClick={onAuthorizeClick}
+              disabled={isMobileLaunching || isExpired || !url}
+              aria-busy={isMobileLaunching}
+              data-testid="button"
             >
-              {isLoading ? (
-                <>
-                  <Libs.Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  <span aria-live="polite">{t('generatingShort')}</span>
-                </>
-              ) : (
-                <>
-                  <Libs.Key className="mr-2 h-4 w-4" />
-                  {t('authorize')}
-                </>
-              )}
+              {mobileAuthorizeContent}
             </Atoms.Button>
           </Atoms.Container>
         </Molecules.ContentCard>
       </Atoms.Container>
+
+      <Molecules.DialogAuthExpired open={isExpired} onRefresh={fetchUrl} isLoading={isLoading} />
     </>
   );
 };

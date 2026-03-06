@@ -22,11 +22,11 @@ exports[`MutedUsersList - Snapshots > matches snapshot - with muted users 1`] = 
   data-testid="container"
 >
   <div
-    class="flex w-full items-center justify-between gap-4"
+    class="flex w-full items-center justify-between gap-3"
     data-testid="container"
   >
     <a
-      class="flex flex-1 items-center gap-3 hover:opacity-80"
+      class="flex min-w-0 flex-1 items-center gap-3 hover:opacity-80"
       href="/profile/user-1"
     >
       <span
@@ -44,11 +44,11 @@ exports[`MutedUsersList - Snapshots > matches snapshot - with muted users 1`] = 
         </span>
       </span>
       <div
-        class="inline-flex flex-col items-start"
+        class="flex min-w-0 flex-1 flex-col items-start"
         data-testid="container"
       >
         <span
-          class="text-base font-bold"
+          class="block max-w-full truncate text-base font-bold"
           data-testid="typography"
         >
           Unknown User
@@ -95,11 +95,11 @@ exports[`MutedUsersList - Snapshots > matches snapshot - with muted users 1`] = 
     </button>
   </div>
   <div
-    class="flex w-full items-center justify-between gap-4"
+    class="flex w-full items-center justify-between gap-3"
     data-testid="container"
   >
     <a
-      class="flex flex-1 items-center gap-3 hover:opacity-80"
+      class="flex min-w-0 flex-1 items-center gap-3 hover:opacity-80"
       href="/profile/user-2"
     >
       <span
@@ -117,11 +117,11 @@ exports[`MutedUsersList - Snapshots > matches snapshot - with muted users 1`] = 
         </span>
       </span>
       <div
-        class="inline-flex flex-col items-start"
+        class="flex min-w-0 flex-1 flex-col items-start"
         data-testid="container"
       >
         <span
-          class="text-base font-bold"
+          class="block max-w-full truncate text-base font-bold"
           data-testid="typography"
         >
           Unknown User
@@ -168,11 +168,11 @@ exports[`MutedUsersList - Snapshots > matches snapshot - with muted users 1`] = 
     </button>
   </div>
   <div
-    class="flex w-full items-center justify-between gap-4"
+    class="flex w-full items-center justify-between gap-3"
     data-testid="container"
   >
     <a
-      class="flex flex-1 items-center gap-3 hover:opacity-80"
+      class="flex min-w-0 flex-1 items-center gap-3 hover:opacity-80"
       href="/profile/user-3"
     >
       <span
@@ -190,11 +190,11 @@ exports[`MutedUsersList - Snapshots > matches snapshot - with muted users 1`] = 
         </span>
       </span>
       <div
-        class="inline-flex flex-col items-start"
+        class="flex min-w-0 flex-1 flex-col items-start"
         data-testid="container"
       >
         <span
-          class="text-base font-bold"
+          class="block max-w-full truncate text-base font-bold"
           data-testid="typography"
         >
           Unknown User

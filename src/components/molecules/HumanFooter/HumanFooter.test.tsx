@@ -67,7 +67,7 @@ describe('HumanFooter', () => {
     render(<HumanFooter />);
 
     expect(screen.getByText(/Synonym Software, S\.A\. DE C\.V\./)).toBeInTheDocument();
-    expect(screen.getByText(/©2025\. All rights reserved\./)).toBeInTheDocument();
+    expect(screen.getByText(/©2026\. All rights reserved\./)).toBeInTheDocument();
   });
 
   it('renders two separate footer link sections', () => {

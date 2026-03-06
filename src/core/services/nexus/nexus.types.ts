@@ -129,7 +129,6 @@ export type NexusUserCounts = {
 export type NexusUserRelationship = {
   following: boolean;
   followed_by: boolean;
-  muted: boolean;
 };
 
 // =============================================================================
@@ -226,6 +225,11 @@ export type NexusPostsKeyStream = {
   post_keys: string[];
   /** Score of the last post, used as cursor for next page */
   last_post_score: number;
+};
+
+/** Post with attachment metadata */
+export type NexusPostWithAttachmentMetadata = NexusPost & {
+  attachments_metadata?: NexusFileDetails[];
 };
 
 // =============================================================================
