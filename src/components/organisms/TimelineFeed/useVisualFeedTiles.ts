@@ -13,14 +13,14 @@ import {
   parseMediaDimension,
   resolveVisualTileSizeOptions,
   resolvePreferredVisualTileSize,
-} from './TimelineFeed.visual.helpers';
+} from './TimelineFeedVisual.helpers';
 import {
   ensureVisualTileProbe,
   getVisualTilePreferredSizeFallback,
   getVisualTileProbeCacheEntry,
   setVisualTilePreferredSizeFallback,
 } from './TimelineFeedVisualMedia.utils';
-import type { VisualTile } from './TimelineFeed.visual.types';
+import type { VisualTile } from './TimelineFeedVisual.types';
 
 type VisualFeedSnapshot = {
   tiles: VisualTile[];

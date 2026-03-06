@@ -5,7 +5,7 @@ import * as Atoms from '@/atoms';
 import * as Molecules from '@/molecules';
 import * as Core from '@/core';
 import * as Hooks from '@/hooks';
-import { resolveVisualFeedContent, VISUAL_DISABLED_CONTENT } from '../TimelineFeed/TimelineFeed.visual.helpers';
+import { resolveVisualFeedContent, VISUAL_DISABLED_CONTENT } from '../TimelineFeed/TimelineFeedVisual.helpers';
 import type { HomeFeedSidebarProps } from './HomeFeedSidebar.types';
 import { TIMELINE_FEED_VARIANT } from '../TimelineFeed/TimelineFeed.types';
 

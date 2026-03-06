@@ -1,5 +1,5 @@
-import * as Core from '@/core';
-import type { VisualRow, VisualTile, VisualTileSize } from './TimelineFeed.visual.types';
+import type { ContentType } from '@/core';
+import type { VisualRow, VisualTile, VisualTileSize } from './TimelineFeedVisual.types';
 import { TIMELINE_FEED_VARIANT } from './TimelineFeed.types';
 import type { TimelineFeedVariant } from './TimelineFeed.types';
 
@@ -11,12 +11,19 @@ export const VISUAL_WIDE_MIN_RATIO = 16 / 9;
 const VISUAL_ROW_PREFERRED_SIZE_SCORE = 3;
 const VISUAL_ROW_ALTERNATE_SIZE_SCORE = 1;
 const VISUAL_ROW_COMPLEX_PATTERN_BONUS = 5;
+const VISUAL_CONTENT_ALL = 'all' as ContentType;
+const VISUAL_CONTENT_IMAGES = 'images' as ContentType;
+const VISUAL_CONTENT_VIDEOS = 'videos' as ContentType;
+const VISUAL_CONTENT_SHORT = 'short' as ContentType;
+const VISUAL_CONTENT_LONG = 'long' as ContentType;
+const VISUAL_CONTENT_LINKS = 'links' as ContentType;
+const VISUAL_CONTENT_FILES = 'files' as ContentType;
 
-export const VISUAL_DISABLED_CONTENT: Core.ContentType[] = [
-  Core.CONTENT.SHORT,
-  Core.CONTENT.LONG,
-  Core.CONTENT.LINKS,
-  Core.CONTENT.FILES,
+export const VISUAL_DISABLED_CONTENT: ContentType[] = [
+  VISUAL_CONTENT_SHORT,
+  VISUAL_CONTENT_LONG,
+  VISUAL_CONTENT_LINKS,
+  VISUAL_CONTENT_FILES,
 ];
 
 const VISUAL_INTERACTIVE_CONTENT_VARIANTS = new Set<TimelineFeedVariant>([
@@ -36,8 +43,8 @@ export const VISUAL_TILE_ASPECT_RATIOS: Record<VisualTileSize, string> = {
   wide: '792 / 384',
 };
 
-export function isVisualContentSupported(content: Core.ContentType): boolean {
-  return content === Core.CONTENT.ALL || content === Core.CONTENT.IMAGES || content === Core.CONTENT.VIDEOS;
+export function isVisualContentSupported(content: ContentType): boolean {
+  return content === VISUAL_CONTENT_ALL || content === VISUAL_CONTENT_IMAGES || content === VISUAL_CONTENT_VIDEOS;
 }
 
 export function resolveVisualFeedContent({
@@ -45,10 +52,10 @@ export function resolveVisualFeedContent({
   variant,
   isVisualActive,
 }: {
-  content: Core.ContentType;
+  content: ContentType;
   variant: TimelineFeedVariant;
   isVisualActive: boolean;
-}): Core.ContentType {
+}): ContentType {
   if (!isVisualActive) {
     return content;
   }
@@ -57,7 +64,7 @@ export function resolveVisualFeedContent({
     return content;
   }
 
-  return isVisualContentSupported(content) ? content : Core.CONTENT.ALL;
+  return isVisualContentSupported(content) ? content : VISUAL_CONTENT_ALL;
 }
 
 export function isVisualMediaContentType(contentType: string): boolean {

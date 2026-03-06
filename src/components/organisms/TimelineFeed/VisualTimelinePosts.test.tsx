@@ -2,7 +2,7 @@ import * as React from 'react';
 import { fireEvent, render, screen } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { VisualTimelinePosts } from './VisualTimelinePosts';
-import type { VisualRow } from './TimelineFeed.visual.types';
+import type { VisualRow } from './TimelineFeedVisual.types';
 
 const mockNavigateToPost = vi.fn();
 const mockUseVisualFeedTiles = vi.fn();

@@ -5,8 +5,8 @@ import {
   resolveVisualFeedContent,
   resolvePreferredVisualTileSize,
   resolveVisualTileSizeOptions,
-} from './TimelineFeed.visual.helpers';
-import type { VisualTile } from './TimelineFeed.visual.types';
+} from './TimelineFeedVisual.helpers';
+import type { VisualTile } from './TimelineFeedVisual.types';
 import * as Core from '@/core';
 import { TIMELINE_FEED_VARIANT } from './TimelineFeed.types';
 

@@ -11,7 +11,7 @@ import {
   VISUAL_GRID_MAX_WIDTH_PX,
   VISUAL_TILE_ASPECT_RATIOS,
   VISUAL_TILE_COLUMN_SPANS,
-} from './TimelineFeed.visual.helpers';
+} from './TimelineFeedVisual.helpers';
 import type {
   VisualTimelinePostsProps,
   VisualTileImageProps,

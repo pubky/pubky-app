@@ -1,4 +1,4 @@
-import type { VisualRowCell, VisualTile } from './TimelineFeed.visual.types';
+import type { VisualRowCell, VisualTile } from './TimelineFeedVisual.types';
 
 export interface VisualTimelinePostsProps {
   postIds: string[];

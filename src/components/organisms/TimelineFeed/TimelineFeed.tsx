@@ -7,7 +7,7 @@ import * as Libs from '@/libs';
 import * as Molecules from '@/molecules';
 import * as Organisms from '@/organisms';
 import * as Hooks from '@/hooks';
-import { resolveVisualFeedContent } from './TimelineFeed.visual.helpers';
+import { resolveVisualFeedContent } from './TimelineFeedVisual.helpers';
 import type { TagsLayout } from '../PostMain/PostMain.types';
 import type { TimelineFeedProps, TimelineFeedContextValue } from './TimelineFeed.types';
 import { TIMELINE_FEED_VARIANT } from './TimelineFeed.types';
