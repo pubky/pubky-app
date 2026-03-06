@@ -36,7 +36,9 @@ vi.mock('@/libs', async () => {
   const actual = await vi.importActual('@/libs');
   return {
     ...actual,
-    LogIn: ({ className }: { className?: string }) => <span data-testid="log-in-icon" className={className} />,
+    UserRoundPlus: ({ className }: { className?: string }) => (
+      <span data-testid="user-round-plus-icon" className={className} />
+    ),
   };
 });
 
@@ -55,17 +57,17 @@ describe('HeaderButtonSignIn', () => {
   it('renders sign in button with icon and text', () => {
     render(<HeaderButtonSignIn />);
 
-    const button = screen.getByRole('button', { name: /sign in/i });
+    const button = screen.getByRole('button', { name: /New here?/i });
     expect(button).toBeInTheDocument();
     expect(button).toHaveAttribute('id', 'header-sign-in-btn');
     expect(button).toHaveAttribute('data-variant', 'secondary');
-    expect(screen.getByTestId('log-in-icon')).toBeInTheDocument();
+    expect(screen.getByTestId('header-sign-in-btn')).toBeInTheDocument();
   });
 
   it('navigates to sign in page when clicked', () => {
     render(<HeaderButtonSignIn />);
 
-    const button = screen.getByRole('button', { name: /sign in/i });
+    const button = screen.getByRole('button', { name: /New here?/i });
     button.click();
 
     expect(mockPush).toHaveBeenCalledWith('/sign-in');

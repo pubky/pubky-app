@@ -234,21 +234,22 @@ describe('Header Components', () => {
       expect(innerContainer).not.toBeNull();
       const inner = innerContainer as HTMLElement;
       expect(inner).toHaveClass(
+        'container',
+        'max-w-(--container-max-width)',
+        'pointer-events-auto',
+        'mx-auto',
         'flex',
+        'h-24',
+        'w-full',
         'flex-row',
         'flex-wrap',
         'items-center',
         'justify-between',
         'gap-4',
-        'container',
-        'h-24',
-        'w-full',
-        'pointer-events-auto',
         'sm:flex-nowrap',
         'sm:gap-6',
-        'px-6',
-        'py-4',
-        'sm:py-6',
+        'p-4',
+        'sm:p-0',
       );
     });
 
@@ -327,17 +328,17 @@ describe('Header Components', () => {
   });
 
   describe('HeaderButtonSignIn', () => {
-    it('renders sign in button', () => {
+    it('renders new here button', () => {
       render(<HeaderButtonSignIn />);
 
-      const button = screen.getByText('Sign in');
+      const button = screen.getByText('New here?');
       expect(button).toBeInTheDocument();
     });
 
     it('handles click events', () => {
       render(<HeaderButtonSignIn />);
 
-      const button = screen.getByText('Sign in');
+      const button = screen.getByText('New here?');
       fireEvent.click(button);
 
       expect(mockPush).toHaveBeenCalledWith('/sign-in');
@@ -346,14 +347,14 @@ describe('Header Components', () => {
     it('applies correct classes', () => {
       render(<HeaderButtonSignIn />);
 
-      const button = screen.getByText('Sign in');
+      const button = screen.getByText('New here?');
       expect(button).toHaveAttribute('data-variant', 'secondary');
     });
 
     it('renders with login icon', () => {
       render(<HeaderButtonSignIn />);
 
-      expect(document.querySelector('.lucide-log-in')).toBeInTheDocument();
+      expect(document.querySelector('.lucide-user-round-plus')).toBeInTheDocument();
     });
   });
 
@@ -363,7 +364,7 @@ describe('Header Components', () => {
 
       expect(screen.getByTestId('header-social-links')).toBeInTheDocument();
       // The component now renders the actual button instead of a mock
-      expect(screen.getByText('Sign in')).toBeInTheDocument();
+      expect(screen.getByText('New here?')).toBeInTheDocument();
     });
 
     it('applies correct classes', () => {
