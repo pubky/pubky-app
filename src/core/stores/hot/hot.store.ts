@@ -2,6 +2,7 @@ import { create } from 'zustand';
 import { persist, devtools } from 'zustand/middleware';
 import { HotStore, hotInitialState } from './hot.types';
 import { createHotActions } from './hot.actions';
+import { HOT_PERSIST_KEY } from '../persistedKeys';
 
 // Store creation
 export const useHotStore = create<HotStore>()(
@@ -12,7 +13,7 @@ export const useHotStore = create<HotStore>()(
         ...createHotActions(set),
       }),
       {
-        name: 'hot-store',
+        name: HOT_PERSIST_KEY,
         // Persist all hot states
         partialize: (state) => ({
           reach: state.reach,

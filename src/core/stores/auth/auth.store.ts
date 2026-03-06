@@ -3,6 +3,7 @@ import { persist, devtools } from 'zustand/middleware';
 import { AuthStore, authInitialState } from './auth.types';
 import { createAuthActions } from './auth.actions';
 import { createAuthSelectors } from './auth.selectors';
+import { AUTH_PERSIST_KEY } from '../persistedKeys';
 
 // Store creation
 export const useAuthStore = create<AuthStore>()(
@@ -14,7 +15,7 @@ export const useAuthStore = create<AuthStore>()(
         ...createAuthSelectors(get),
       }),
       {
-        name: 'auth-store',
+        name: AUTH_PERSIST_KEY,
         // Only persist essential data
         partialize: (state) => ({
           currentUserPubky: state.currentUserPubky,

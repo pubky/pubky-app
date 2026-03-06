@@ -68,6 +68,35 @@ describe('FilterContent', () => {
     expect(onTabChange).toHaveBeenNthCalledWith(2, 'videos');
     expect(onTabChange).toHaveBeenNthCalledWith(3, 'files');
   });
+
+  it('renders all items as disabled when disabled prop is true', () => {
+    render(<FilterContent disabled />);
+
+    const labels = ['All', 'Posts', 'Articles', 'Images', 'Videos', 'Links', 'Files'];
+    labels.forEach((label) => {
+      expect(screen.getByLabelText(label)).toHaveAttribute('aria-disabled', 'true');
+    });
+  });
+
+  it('does not call onTabChange when disabled', () => {
+    const onTabChange = vi.fn();
+    render(<FilterContent disabled onTabChange={onTabChange} />);
+
+    fireEvent.click(screen.getByText('Images'));
+    fireEvent.click(screen.getByText('Videos'));
+    fireEvent.click(screen.getByText('Files'));
+
+    expect(onTabChange).not.toHaveBeenCalled();
+  });
+
+  it('items are not disabled by default', () => {
+    render(<FilterContent />);
+
+    const labels = ['All', 'Posts', 'Articles', 'Images', 'Videos', 'Links', 'Files'];
+    labels.forEach((label) => {
+      expect(screen.getByLabelText(label)).not.toHaveAttribute('aria-disabled', 'true');
+    });
+  });
 });
 
 describe('FilterContent - Snapshots', () => {
@@ -108,6 +137,11 @@ describe('FilterContent - Snapshots', () => {
 
   it('matches snapshot with Files content selected tab', () => {
     const { container } = render(<FilterContent selectedTab={CONTENT.FILES} />);
+    expect(container.firstChild).toMatchSnapshot();
+  });
+
+  it('matches snapshot with disabled state', () => {
+    const { container } = render(<FilterContent disabled />);
     expect(container.firstChild).toMatchSnapshot();
   });
 });

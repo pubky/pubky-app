@@ -2,7 +2,7 @@
 
 exports[`Human template - Snapshots > matches snapshot 1`] = `
 <div
-  class="mx-auto w-full flex-col flex container items-stretch gap-0 px-6 pt-4 pb-0 lg:min-h-0 lg:items-start lg:pb-6"
+  class="mx-auto w-full flex-col flex container max-w-(--container-max-width) h-screen-without-page-header-onboarding items-stretch gap-0 px-6 pt-4 pb-0 lg:min-h-0 lg:items-start lg:pb-6"
   data-testid="container"
 >
   <div

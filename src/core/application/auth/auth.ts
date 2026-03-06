@@ -1,5 +1,16 @@
 import * as Core from '@/core';
-import { HttpMethod, Logger, Err, ValidationErrorCode, ErrorService, isAppError, isRetryable, sleep } from '@/libs';
+import {
+  HttpMethod,
+  Logger,
+  Err,
+  ValidationErrorCode,
+  ErrorService,
+  toAppError,
+  isAppError,
+  isNotFound,
+  isRetryable,
+  sleep,
+} from '@/libs';
 import { userUriBuilder } from 'pubky-app-specs';
 
 export class AuthApplication {
@@ -63,9 +74,6 @@ export class AuthApplication {
             await sleep(this.RESTORE_RETRY_DELAY_MS);
           }
         }
-
-        const initialState = { session: null, currentUserPubky: null, hasProfile: false };
-        authStore.init(initialState);
         return null;
       } finally {
         authStore.setIsRestoringSession(false);
@@ -114,12 +122,21 @@ export class AuthApplication {
   /**
    * Generates an authentication URL for Pubky Ring App
    *
-   * @param params - Parameters containing the secret key
-   * @param params.secretKey - Secret key for homeserver service
-   * @returns Authentication URL and promise to the generated authentication URL
+   * @returns Authentication URL and approval promise
    */
   static async generateAuthUrl(): Promise<Core.TGenerateAuthUrlResult> {
     return await Core.HomeserverService.generateAuthUrl();
+  }
+
+  /**
+   * Generates a signup authentication URL for Pubky Ring App.
+   * Decorates a standard auth URL with homeserver address and invite code metadata.
+   *
+   * @param inviteCode - The invite code for signup
+   * @returns Authentication URL and approval promise
+   */
+  static async generateSignupAuthUrl(inviteCode: string): Promise<Core.TGenerateAuthUrlResult> {
+    return await Core.HomeserverService.generateSignupAuthUrl({ inviteCode });
   }
 
   /**
@@ -155,9 +172,10 @@ export class AuthApplication {
     try {
       await Core.HomeserverService.request({ method: HttpMethod.GET, url: userUriBuilder(pubky) });
       return true;
-    } catch {
-      Logger.error('User profile.json missing in homeserver. Please PUT that file first.', { pubky });
-      return false;
+    } catch (error) {
+      const appError = isAppError(error) ? error : toAppError(error, ErrorService.Homeserver, 'userIsSignedUp');
+      if (isNotFound(appError)) return false;
+      throw appError;
     }
   }
 }

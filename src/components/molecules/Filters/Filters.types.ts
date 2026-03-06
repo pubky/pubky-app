@@ -30,6 +30,10 @@ export interface BaseFilterProps<T = string> {
    * Callback when selection changes
    */
   onTabChange?: (tab: T) => void;
+  /**
+   * Whether the filter is disabled
+   */
+  disabled?: boolean;
 }
 
 /**
