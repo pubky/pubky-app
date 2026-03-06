@@ -129,7 +129,7 @@ export const HumanInviteCode = ({ onBack, onSuccess }: HumanInviteCodeProps) => 
             </Atoms.Container>
 
             {/* Custom homeserver row */}
-            <Atoms.Container className="flex-row items-center gap-4">
+            <Atoms.Container className="flex-col items-center gap-4 sm:flex-row">
               <Atoms.Button
                 variant="secondary"
                 className="shrink-0 rounded-full opacity-40"

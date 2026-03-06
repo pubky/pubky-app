@@ -60,8 +60,7 @@ exports[`MobileFooter - Snapshots > matches snapshot with custom className 1`] =
   class="flex justify-center pb-20 lg:hidden custom-footer"
 >
   <div
-    class="fixed bottom-0 z-40 flex w-full max-w-[380px] items-center justify-between overflow-x-auto bg-gradient-to-t from-background via-background/95 to-transparent px-3 py-4 sm:max-w-[600px] md:max-w-[720px] transition-transform duration-75"
-    style="transform: translateY(-300px);"
+    class="fixed bottom-0 z-40 flex w-full max-w-[380px] items-center justify-between overflow-x-auto bg-gradient-to-t from-background via-background/95 to-transparent px-3 py-4 sm:max-w-[600px] md:max-w-[720px]"
   >
     <a
       aria-label="Home"
@@ -223,8 +222,7 @@ exports[`MobileFooter - Snapshots > matches snapshot with default props 1`] = `
   class="flex justify-center pb-20 lg:hidden"
 >
   <div
-    class="fixed bottom-0 z-40 flex w-full max-w-[380px] items-center justify-between overflow-x-auto bg-gradient-to-t from-background via-background/95 to-transparent px-3 py-4 sm:max-w-[600px] md:max-w-[720px] transition-transform duration-75"
-    style="transform: translateY(-300px);"
+    class="fixed bottom-0 z-40 flex w-full max-w-[380px] items-center justify-between overflow-x-auto bg-gradient-to-t from-background via-background/95 to-transparent px-3 py-4 sm:max-w-[600px] md:max-w-[720px]"
   >
     <a
       aria-label="Home"
@@ -386,8 +384,7 @@ exports[`MobileFooter - Snapshots > matches snapshot with different active path 
   class="flex justify-center pb-20 lg:hidden"
 >
   <div
-    class="fixed bottom-0 z-40 flex w-full max-w-[380px] items-center justify-between overflow-x-auto bg-gradient-to-t from-background via-background/95 to-transparent px-3 py-4 sm:max-w-[600px] md:max-w-[720px] transition-transform duration-75"
-    style="transform: translateY(-300px);"
+    class="fixed bottom-0 z-40 flex w-full max-w-[380px] items-center justify-between overflow-x-auto bg-gradient-to-t from-background via-background/95 to-transparent px-3 py-4 sm:max-w-[600px] md:max-w-[720px]"
   >
     <a
       aria-label="Home"

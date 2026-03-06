@@ -96,7 +96,11 @@ export function DialogRestoreEncryptedFile({ onRestore }: { onRestore: () => voi
   return (
     <Atoms.Dialog>
       <Atoms.DialogTrigger asChild>
-        <Atoms.Button id="restore-encrypted-file-btn" variant="outline" className="w-auto rounded-full md:flex-none">
+        <Atoms.Button
+          id="restore-encrypted-file-btn"
+          variant="outline"
+          className="w-full rounded-full sm:w-auto md:flex-none"
+        >
           <Libs.FileUp className="mr-2 h-4 w-4" />
           <span>{t('useEncryptedFile')}</span>
         </Atoms.Button>
