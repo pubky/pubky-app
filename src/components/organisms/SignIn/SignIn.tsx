@@ -173,22 +173,10 @@ export const SignInContent = () => {
             </button>
             <Atoms.Container className="w-56 flex-row items-center justify-between gap-5">
               <Atoms.Link href="https://apps.apple.com/us/app/pubky-ring/id6739356756">
-                <Image
-                  src="/images/badge-apple.webp"
-                  alt="Apple Store Button Pubky Ring"
-                  className="h-7"
-                  width={94.5}
-                  height={28}
-                />
+                <Image src="/images/badge-apple.webp" alt="Apple Store Button Pubky Ring" width={94.5} height={28} />
               </Atoms.Link>
               <Atoms.Link href="https://play.google.com/store/apps/details?id=to.pubky.ring">
-                <Image
-                  src="/images/badge-android.webp"
-                  className="h-7"
-                  alt="Google Store Button Pubky Ring"
-                  width={94.5}
-                  height={28}
-                />
+                <Image src="/images/badge-android.webp" alt="Google Store Button Pubky Ring" width={94.5} height={28} />
               </Atoms.Link>
             </Atoms.Container>
           </Atoms.Container>
