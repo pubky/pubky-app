@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { renderHook } from '@testing-library/react';
+import { renderHook, waitFor } from '@testing-library/react';
 import { useUserProfile } from './useUserProfile';
 import * as Core from '@/core';
 
@@ -73,14 +73,16 @@ describe('useUserProfile', () => {
       expect(result.current.isLoading).toBe(true);
     });
 
-    it('returns null profile and isLoading false when user not found (null)', () => {
+    it('returns null profile and isLoading false when user not found (null)', async () => {
       // null = query executed but user not found
       mockMocks.mockUserDetails.current = null;
       mockMocks.mockGetDetails.mockResolvedValue(null);
       const { result } = renderHook(() => useUserProfile('test-user-id'));
 
       expect(result.current.profile).toBeNull();
-      expect(result.current.isLoading).toBe(false);
+      await waitFor(() => {
+        expect(result.current.isLoading).toBe(false);
+      });
     });
 
     it('returns profile data when user exists', () => {
@@ -262,12 +264,14 @@ describe('useUserProfile', () => {
       expect(result.current.isLoading).toBe(true);
     });
 
-    it('isLoading is false when user not found (null)', () => {
+    it('isLoading is false when user not found (null)', async () => {
       mockMocks.mockUserDetails.current = null;
       mockMocks.mockGetDetails.mockResolvedValue(null);
       const { result } = renderHook(() => useUserProfile('test-user-id'));
 
-      expect(result.current.isLoading).toBe(false);
+      await waitFor(() => {
+        expect(result.current.isLoading).toBe(false);
+      });
     });
 
     it('isLoading is false when user details are available', () => {
