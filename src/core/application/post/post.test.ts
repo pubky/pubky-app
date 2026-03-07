@@ -765,7 +765,7 @@ describe('Post Application', () => {
     });
   });
 
-  describe('getOrFetchPost', () => {
+  describe('getOrFetch', () => {
     const mockPostDetails: Core.PostDetailsModelSchema = {
       id: 'author:post123',
       content: 'Test post',
@@ -779,7 +779,7 @@ describe('Post Application', () => {
       const mockViewerId = 'test-viewer-id' as Core.Pubky;
       const readSpy = vi.spyOn(Core.LocalPostService, 'readDetails').mockResolvedValue(mockPostDetails);
 
-      const result = await Core.PostApplication.getOrFetchDetails({
+      const result = await Core.PostApplication.getOrFetch({
         compositeId: 'author:post123',
         viewerId: mockViewerId,
       });
@@ -796,7 +796,7 @@ describe('Post Application', () => {
         .mockResolvedValue(undefined);
       const readSpySecond = vi.spyOn(Core.LocalPostService, 'readDetails').mockResolvedValueOnce(mockPostDetails);
 
-      const result = await Core.PostApplication.getOrFetchDetails({
+      const result = await Core.PostApplication.getOrFetch({
         compositeId: 'author:post123',
         viewerId: mockViewerId,
       });
@@ -818,7 +818,7 @@ describe('Post Application', () => {
         .mockResolvedValue(undefined);
       const readSpySecond = vi.spyOn(Core.LocalPostService, 'readDetails').mockResolvedValueOnce(null);
 
-      const result = await Core.PostApplication.getOrFetchDetails({
+      const result = await Core.PostApplication.getOrFetch({
         compositeId: 'author:post123',
         viewerId: mockViewerId,
       });

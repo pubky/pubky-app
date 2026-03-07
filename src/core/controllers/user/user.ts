@@ -98,6 +98,15 @@ export class UserController {
   }
 
   /**
+   * Get full user entity from local database or fetch from Nexus batch API.
+   * Persists details, counts, relationships, tags, TTL, and moderation.
+   * Preferred over `getOrFetchDetails` when the caller needs the full entity cached.
+   */
+  static async getOrFetch(params: Core.TReadProfileParams): Promise<Core.NexusUserDetails | null> {
+    return await Core.UserApplication.getOrFetch(params);
+  }
+
+  /**
    * Get user details from local database or fetch from Nexus API
    * This is a read-only operation that queries the local cache
    */

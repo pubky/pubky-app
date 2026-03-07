@@ -36,6 +36,42 @@ export class UserApplication {
   }
 
   /**
+   * Retrieves a full user entity (details, counts, relationships, tags, TTL, moderation) from local database.
+   * If not found locally, fetches from Nexus batch endpoint and persists everything via stream persistence.
+   *
+   * Preferred over `getOrFetchDetails` / `getOrFetchCounts` when the caller needs the full entity cached.
+   *
+   * @param params - Parameters containing user ID
+   * @returns Promise resolving to user details or null if not found
+   */
+  static async getOrFetch({ userId }: Core.TReadProfileParams): Promise<Core.NexusUserDetails | null> {
+    // 1. Check local cache first
+    const localDetails = await Core.LocalUserService.readDetails({ userId });
+    if (localDetails) {
+      return localDetails;
+    }
+
+    // 2. Fetch full user from Nexus batch endpoint
+    try {
+      const users = await Core.NexusUserStreamService.fetchByIds({ user_ids: [userId] });
+
+      if (!users || users.length === 0) {
+        Logger.warn('User not found on Nexus', { userId });
+        return null;
+      }
+
+      // 3. Persist full user entity (details, counts, relationships, tags, TTL, moderation)
+      await Core.LocalStreamUsersService.persistUsers(users);
+    } catch (error) {
+      Logger.warn('Failed to fetch user from Nexus', { userId, error });
+      return null;
+    }
+
+    // 4. Return from local cache (now populated)
+    return await Core.LocalUserService.readDetails({ userId });
+  }
+
+  /**
    * Retrieves user counts from local database.
    * Local-only read per ADR 0001 (get* methods don't call Nexus).
    * @param params - Parameters containing user ID

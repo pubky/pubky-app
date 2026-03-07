@@ -542,28 +542,28 @@ describe('PostController', () => {
     });
   });
 
-  describe('getOrFetchDetails', () => {
+  describe('getOrFetch', () => {
     const mockViewerId = 'test-viewer-id' as Core.Pubky;
 
     it('should return post from local database if exists', async () => {
       await setupExistingPost();
       const { PostController } = await import('./post');
 
-      const post = await PostController.getOrFetchDetails({ compositeId: testData.fullPostId, viewerId: mockViewerId });
+      const post = await PostController.getOrFetch({ compositeId: testData.fullPostId, viewerId: mockViewerId });
 
       expect(post).toBeTruthy();
       expect(post?.id).toBe(testData.fullPostId);
       expect(post?.content).toBe('Test post content');
     });
 
-    it('should return null when PostApplication.getOrFetchDetails returns null', async () => {
+    it('should return null when PostApplication.getOrFetch returns null', async () => {
       const { PostController } = await import('./post');
       const ApplicationModule = await import('@/core/application');
 
-      const getOrFetchSpy = vi.spyOn(ApplicationModule.PostApplication, 'getOrFetchDetails').mockResolvedValue(null);
+      const getOrFetchSpy = vi.spyOn(ApplicationModule.PostApplication, 'getOrFetch').mockResolvedValue(null);
 
       try {
-        const post = await PostController.getOrFetchDetails({
+        const post = await PostController.getOrFetch({
           compositeId: 'nonexistent:post',
           viewerId: mockViewerId,
         });
@@ -578,26 +578,26 @@ describe('PostController', () => {
       const ApplicationModule = await import('@/core/application');
 
       const getOrFetchSpy = vi
-        .spyOn(ApplicationModule.PostApplication, 'getOrFetchDetails')
+        .spyOn(ApplicationModule.PostApplication, 'getOrFetch')
         .mockRejectedValueOnce(new Error('Nexus error'));
 
       try {
-        await expect(
-          PostController.getOrFetchDetails({ compositeId: 'error:post', viewerId: mockViewerId }),
-        ).rejects.toThrow('Nexus error');
+        await expect(PostController.getOrFetch({ compositeId: 'error:post', viewerId: mockViewerId })).rejects.toThrow(
+          'Nexus error',
+        );
       } finally {
         getOrFetchSpy.mockRestore();
       }
     });
 
-    it('should call PostApplication.getOrFetchDetails with correct postId', async () => {
+    it('should call PostApplication.getOrFetch with correct postId', async () => {
       const { PostController } = await import('./post');
       const ApplicationModule = await import('@/core/application');
 
-      const getOrFetchSpy = vi.spyOn(ApplicationModule.PostApplication, 'getOrFetchDetails').mockResolvedValue(null);
+      const getOrFetchSpy = vi.spyOn(ApplicationModule.PostApplication, 'getOrFetch').mockResolvedValue(null);
 
       try {
-        await PostController.getOrFetchDetails({ compositeId: 'author:post123', viewerId: mockViewerId });
+        await PostController.getOrFetch({ compositeId: 'author:post123', viewerId: mockViewerId });
         expect(getOrFetchSpy).toHaveBeenCalledWith({ compositeId: 'author:post123', viewerId: mockViewerId });
       } finally {
         getOrFetchSpy.mockRestore();

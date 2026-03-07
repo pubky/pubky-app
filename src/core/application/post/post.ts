@@ -81,12 +81,13 @@ export class PostApplication {
   }
 
   /**
-   * Reads or fetches a post - reads from local DB first, fetches from Nexus if not found
-   * Also fetches and persists related data: counts, relationships, tags, and author
+   * Reads or fetches a full post entity from local database.
+   * If not found locally, fetches from Nexus and persists everything (details, counts, relationships, tags, author).
    * @param compositeId - Composite post ID in format "authorId:postId"
+   * @param viewerId - Optional viewer ID for relationship data
    * @returns Post details or null if not found
    */
-  static async getOrFetchDetails({
+  static async getOrFetch({
     compositeId,
     viewerId,
   }: Core.TGetOrFetchPostParams): Promise<Core.PostDetailsModelSchema | null> {

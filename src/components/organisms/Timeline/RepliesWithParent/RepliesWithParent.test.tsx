@@ -411,7 +411,7 @@ describe('TimelineRepliesWithParent', () => {
       const mockGetOrFetchDetails = vi.fn(
         (): Promise<Core.PostDetailsModelSchema | null> => new Promise(() => {}), // Never resolves
       );
-      vi.spyOn(Core.PostController, 'getOrFetchDetails').mockImplementation(mockGetOrFetchDetails);
+      vi.spyOn(Core.PostController, 'getOrFetch').mockImplementation(mockGetOrFetchDetails);
 
       mockUseStreamPagination.mockReturnValue({
         postIds: [mockReplyId],
