@@ -309,6 +309,21 @@ describe('SignInContent', () => {
     expect(screen.getByRole('button', { name: /Authorize with Pubky Ring/i })).toBeInTheDocument();
   });
 
+  it('renders store badge links with expected destinations', async () => {
+    await act(async () => {
+      render(<SignInContent />);
+    });
+
+    const appleStoreLink = screen.getByRole('link', { name: /Apple Store Button Pubky Ring/i });
+    const googlePlayLink = screen.getByRole('link', { name: /Google Store Button Pubky Ring/i });
+
+    expect(appleStoreLink).toHaveAttribute('href', 'https://apps.apple.com/us/app/pubky-ring/id6739356756');
+    expect(googlePlayLink).toHaveAttribute('href', 'https://play.google.com/store/apps/details?id=to.pubky.ring');
+
+    expect(screen.getByAltText('Apple Store Button Pubky Ring')).toHaveAttribute('src', '/images/badge-apple.webp');
+    expect(screen.getByAltText('Google Store Button Pubky Ring')).toHaveAttribute('src', '/images/badge-android.webp');
+  });
+
   it('calls mobile authorize handler when button is tapped', async () => {
     await act(async () => {
       render(<SignInContent />);
