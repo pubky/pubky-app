@@ -167,8 +167,8 @@ the purpose of local-first design.
 Example:
 
 ```
-- Local writes implemented in `LocalPostService.upsertPost()`
-- Background sync handled by `PostSyncApplication.syncPendingWrites()`
+- Local writes implemented in `LocalPostService.create()`
+- Homeserver sync handled by `PostApplication.commitCreate()`
 - Conflict resolution uses last-write-wins with server timestamp authority
 - Monitor metric: `sync.conflict_rate` (alert if > 1% of writes)
 ```
@@ -200,76 +200,4 @@ Example:
 
 ---
 
-## Guidelines for Writing ADRs
-
-### Numbering
-
-- Use sequential 4-digit numbering: 0001, 0002, etc.
-- Check `docs/adr/` for the next available number
-- Don't reuse numbers even if an ADR is deleted
-
-### File Naming
-
-- Format: `NNNN-title-in-kebab-case.md`
-- Example: `0008-event-sourcing-for-posts.md`
-- Keep titles concise but descriptive
-
-### When to Create an ADR
-
-Create an ADR when:
-
-- ✅ Decision has significant architectural impact
-- ✅ Decision affects multiple teams or systems
-- ✅ Decision involves trade-offs that need documentation
-- ✅ Decision might be questioned or revisited
-- ✅ Decision establishes a pattern others should follow
-
-Don't create an ADR for:
-
-- ❌ Implementation details within a single module
-- ❌ Routine technology choices (e.g., which logging library)
-- ❌ Decisions that can be easily reversed
-- ❌ Personal preferences without broader impact
-
-### Writing Tips
-
-1. **Write for future readers**: Assume they have no context about the current situation
-2. **Be specific**: Vague ADRs are useless ADRs
-3. **Include examples**: Code snippets, diagrams, or scenarios help understanding
-4. **Be honest about trade-offs**: Don't sugarcoat negative consequences
-5. **Keep it concise**: Aim for clarity, not length (most ADRs are 1-2 pages)
-6. **Update status**: ADRs are living documents in the status field only
-
-### Review Process
-
-Before merging an ADR:
-
-- [ ] Title is clear and descriptive
-- [ ] Context explains the problem adequately
-- [ ] Decision is specific and actionable
-- [ ] Consequences are honest and complete
-- [ ] Alternatives are documented with rationale
-- [ ] ADR number is sequential and unique
-- [ ] File name follows naming convention
-- [ ] Status is set appropriately
-- [ ] Date is included
-- [ ] Linked from `AGENTS.md` and `.cursor/core-context.md`
-
-### Updating Existing ADRs
-
-ADRs are mostly immutable once accepted. Changes should be:
-
-- **Status updates**: When deprecated or superseded
-- **Typo fixes**: Grammar and spelling only
-- **Clarifications**: Adding examples or details without changing the decision
-- **Links**: Adding references to new related ADRs
-
-If the decision itself needs to change:
-
-- Don't modify the original ADR's Decision or Alternatives sections
-- Create a new ADR that supersedes the old one
-- Update the old ADR's status to "Superseded" with a link to the new one
-
----
-
-**Delete this guidelines section when creating a new ADR from this template.**
+See [ADR Guidelines](../adr-guidelines.md) for when and how to write ADRs.
