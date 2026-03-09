@@ -22,7 +22,7 @@ Controller method names encode IO behavior and delivery guarantees:
   - **`get*`** — IndexedDB reads (local cache only, no network)
   - **`getMany*`** — Bulk IndexedDB reads (returns `Map<Pubky, T>`)
   - **`getOrFetch*`** — IndexedDB first, fallback to Nexus API
-  - **`getManyOrFetch*`** — Bulk IndexedDB first, fetch missing from Nexus
+  - **`getMany*OrFetch`** — Bulk IndexedDB first, fetch missing from Nexus (e.g., `getManyTagsOrFetch`)
 
 - **Write operations**
   - **`commit[Create|Update|Delete]*`** — Local-first writes with homeserver sync
