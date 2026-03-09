@@ -7,6 +7,7 @@ Accepted — 2025-01-12
 ## Context
 
 Users need the ability to hide content from specific accounts without unfollowing or blocking them. Muting should:
+
 - Take effect immediately in the UI (local-first)
 - Persist across sessions and sync to the homeserver
 - Filter posts from muted users across all feed types
@@ -19,6 +20,7 @@ Implement a **user-based muting system** with three storage layers and integrati
 ### Scope
 
 Only **users** can be muted. The system does not currently support muting:
+
 - Words or phrases
 - Threads
 - Hashtags
@@ -30,10 +32,10 @@ Mute state is stored in the `user_relationships` table alongside follow state:
 
 ```typescript
 interface UserRelationshipsModelSchema {
-  id: Pubky;              // The related user's ID
+  id: Pubky; // The related user's ID
   following: boolean;
   followed_by: boolean;
-  muted: boolean;         // Mute flag
+  muted: boolean; // Mute flag
 }
 ```
 
@@ -56,12 +58,12 @@ interface UserRelationshipsModelSchema {
 
 ```typescript
 // Create mute
-LocalMuteService.create({ muter, mutee })
+LocalMuteService.create({ muter, mutee });
 // 1. Upsert UserRelationshipsModel with muted: true
 // 2. Add mutee to MUTED stream
 
 // Delete mute
-LocalMuteService.delete({ muter, mutee })
+LocalMuteService.delete({ muter, mutee });
 // 1. Update UserRelationshipsModel with muted: false
 // 2. Remove mutee from MUTED stream
 ```
@@ -69,6 +71,7 @@ LocalMuteService.delete({ muter, mutee })
 ### Homeserver Sync
 
 Mutes sync to the homeserver for cross-device persistence:
+
 - **URL Pattern**: `pubky://{muter}/pub/pubky.app/mutes/{mutee}`
 - **Sequence**: Local database first (atomicity), then homeserver (durability)
 
@@ -122,6 +125,7 @@ const { posts } = await postStreamQueue.collect(streamId, {
 ### UI Usage
 
 **Muting a user** can be triggered from:
+
 - User profile page (mute button/menu option)
 - Post context menu (three-dot menu → "Mute user")
 
@@ -146,6 +150,7 @@ const isMuted = relationship?.muted ?? false;
 ```
 
 **Managing muted users** via settings:
+
 - Navigate to `/settings/muted-users`
 - Displays `MutedUsersList` component showing all muted users
 - Each entry has an unmute action
