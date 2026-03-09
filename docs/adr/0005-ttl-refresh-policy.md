@@ -1,4 +1,4 @@
-# ADR 0005: TTL Strategy
+# ADR 0005: TTL Refresh Policy
 
 ## Status
 

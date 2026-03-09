@@ -6,7 +6,7 @@ Accepted — 2026-01-27
 
 ## Context
 
-Franky aims to be **local-first**: user intent should reflect immediately in the UI, while remote persistence happens in the background.
+pubky-app aims to be **local-first**: user intent should reflect immediately in the UI, while remote persistence happens in the background.
 
 A concrete pain point is **avatar updates**:
 
@@ -24,9 +24,9 @@ We currently have a service worker implementation (`src/sw.ts`) via Serwist, use
 ### Desired UX and lifecycle
 
 ```
-┌──────────────────────────────────────────────────────────────────────────────────-──┐
-│                           SERVICE WORKER LIFECYCLE                                  │
-├──────────────────────────────────────────────────────────────────────────────────---┤
+┌────────────────────────────────────────────────────────────────────────────────────┐
+│                           SERVICE WORKER LIFECYCLE                                 │
+├────────────────────────────────────────────────────────────────────────────────────┤
 │                                                                                     │
 │   1. REGISTER           2. INSTALL             3. ACTIVATE            4. RUNNING    │
 │   ───────────────►      ───────────────►       ───────────────►       ─────────►    │
@@ -64,7 +64,7 @@ This approach substitutes the current/previous “local store approach” for im
 
 ### Key rules (addressing prior concerns)
 
-- **Invalid cache keys**: Use the *actual request URL* (`/avatar/{userId}` or whatever the UI uses) as the cache key, not ad-hoc keys.
+- **Invalid cache keys**: Use the _actual request URL_ (`/avatar/{userId}` or whatever the UI uses) as the cache key, not ad-hoc keys.
 - **Complex SW lookup**: Always resolve with `cache.match(event.request)` (exact request) in the fetch handler.
 - **Fragile memory state**: Cache name must be **user-scoped** (e.g. `avatar-cache:${viewerId}`) and cleared on logout.
 - **Controller / readiness timing**: App code that depends on the SW must wait for `navigator.serviceWorker.ready` before sending messages or assuming interception. (Note: `ready` does not guarantee the current tab is already controlled; interception may require `clients.claim()`/reload depending on registration timing.)
@@ -117,9 +117,11 @@ This approach substitutes the current/previous “local store approach” for im
 When a user selects an avatar, we create an object URL for the file and pass it through the UI so `<img>` can render immediately.
 
 **Strengths**:
+
 - Very simple, immediate rendering.
 
 **Limitations**:
+
 - Not persistent across reloads.
 - Requires extra plumbing through the UI/component tree.
 - Harder to align with “stable URL” semantics.
@@ -138,7 +140,7 @@ And add small, app-side helpers:
 
 ```
 src/
-  lib/
+  libs/
     serviceWorker/
       register.ts      # registration + readiness helpers (uses navigator.serviceWorker.ready)
       avatarCache.ts   # write/read/clear helpers for avatar blobs (Cache API)
@@ -179,4 +181,3 @@ The initial implementation should favor **correctness + privacy**:
 - ADR-0001: Local-first writes
 - ADR-0004: Layering and dependency rules
 - ADR-0015: Centralized error handling architecture
-

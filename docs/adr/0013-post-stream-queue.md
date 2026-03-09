@@ -9,6 +9,7 @@ Accepted — 2025-01-12
 Post streams require pagination with server-side filtering (e.g., excluding posts from muted users). When fetching posts from the API with a fixed batch size (e.g., 30 posts), applying filters client-side can result in fewer posts than needed for a page (e.g., only 15 valid posts remain after filtering out muted users, but 20 are needed).
 
 Without a buffering mechanism:
+
 - Pagination becomes inefficient with repeated API calls to fill gaps
 - Posts could be skipped or duplicated across pagination boundaries
 - Filter changes (e.g., unmuting a user) require complex reconciliation
@@ -26,18 +27,18 @@ Implement a **PostStreamQueue** as an in-memory buffer that stores overflow post
 
 ```typescript
 interface TQueueEntry {
-  posts: string[];    // Array of composite post IDs
-  cursor: number;     // Pagination cursor (timestamp)
+  posts: string[]; // Array of composite post IDs
+  cursor: number; // Pagination cursor (timestamp)
 }
 
 // FilterFn supports both sync and async filters
 type FilterFn = (posts: string[]) => string[] | Promise<string[]>;
 
 class PostStreamQueue {
-  collect(streamId, { limit, cursor, filter, fetch }): Promise<CollectResult>
-  get(streamId): TQueueEntry | undefined
-  remove(streamId): void
-  clear(): void
+  collect(streamId, { limit, cursor, filter, fetch }): Promise<CollectResult>;
+  get(streamId): TQueueEntry | undefined;
+  remove(streamId): void;
+  clear(): void;
 }
 ```
 
@@ -56,7 +57,7 @@ filter: async (posts) => {
   const afterMuteFilter = MuteFilter.filterPosts(posts, mutedUserIds);
   // Async: filter deleted posts (requires DB read)
   return PostDetailsModel.filterDeleted(afterMuteFilter);
-}
+};
 ```
 
 ### Collection Flow
@@ -84,6 +85,7 @@ When filtering removes posts, the queue may need multiple fetch iterations. To a
 3. **Exhaust cache first**: Only fetch from Nexus when local cache is exhausted
 
 This ensures that if cache has posts [A, B(deleted), C, D(deleted), E] and we need 3 posts:
+
 - First fetch returns [A, B, C], filters to [A, C] (2 posts)
 - Second fetch continues from C, returns [D, E], filters to [E] (1 post)
 - Total: [A, C, E] = 3 posts from cache, no unnecessary Nexus call
