@@ -33,6 +33,14 @@ Single source of truth for all project standards, conventions, and architectural
 
 Stored in `adr/`. See `architecture.md` for the full index.
 
+## AI and Editor Workflows
+
+This repository keeps documentation tool-agnostic, but some editor workflows are available for faster feedback loops.
+
+- Cursor local code review: `/review` (skill definition in `.cursor/skills/code-review/SKILL.md`)
+- Cross-tool AI entry point: see `../AGENTS.md`
+- Commit message format: see `commit-message.md`
+
 ## Keeping Documentation Updated
 
 When making significant changes to:
