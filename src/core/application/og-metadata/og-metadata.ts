@@ -4,7 +4,7 @@ import { truncateString, truncateMiddle, decodeHtmlEntities } from '@/libs/utils
 import { isIpSafe } from '@/libs/network';
 import { OG_PATTERNS, extractFromHtml } from '@/libs/html';
 import { URL_TRUNCATE_LENGTH, TITLE_TRUNCATE_LENGTH } from '@/config';
-import { nextjsApiQueryClient } from '@/core/services/nextjs-api/nextjs-api.query-client';
+import { nextjsApiQueryClient } from '@/core/services/nextjs/nextjs-api.query-client';
 
 const MAX_REDIRECTS = 5;
 const MAX_RESPONSE_SIZE = 5 * 1024 * 1024; // 5MB

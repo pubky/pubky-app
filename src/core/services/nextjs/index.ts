@@ -1,2 +1,2 @@
-export * from './nextjs-api';
+export * from './nextjs';
 export * from './nextjs-api.query-client';
