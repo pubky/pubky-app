@@ -4,6 +4,7 @@ export interface MigrationState {
 
 export interface MigrationActions {
   setWasDbReset: (value: boolean) => void;
+  reset: () => void;
 }
 
 export type MigrationStore = MigrationState & MigrationActions;

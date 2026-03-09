@@ -25,8 +25,8 @@ export class MuteApplication {
   }
 
   /**
-   * Fetches the list of muted user IDs from the homeserver.
-   * Lists all entries under the mutes directory and extracts the mutee pubkeys.
+   * Fetches the list of muted user IDs from the homeserver and persists them to the local MUTED stream.
+   * Callers do not need to persist the result; this method handles fetch + persist.
    * @param pubky - The user's pubky to fetch mutes for
    * @returns Array of muted user pubkeys
    */
@@ -34,10 +34,19 @@ export class MuteApplication {
     try {
       const mutesDirectory = `${baseUriBuilder(pubky)}mutes/`;
       const muteUris = await Core.HomeserverService.list({ baseDirectory: mutesDirectory });
-      return muteUris.map((uri) => uri.split('/').pop()).filter((id): id is string => !!id) as Core.Pubky[];
+      const stream = muteUris.map((uri) => uri.split('/').pop()).filter((id): id is string => !!id) as Core.Pubky[];
+      await Core.LocalStreamUsersService.upsert({
+        streamId: Core.UserStreamTypes.MUTED,
+        stream,
+      });
+      return stream;
     } catch (error) {
       if (error instanceof AppError && error.context?.statusCode === HttpStatusCode.NOT_FOUND) {
         Logger.info('Mutes directory not found, defaulting to empty list', { pubky });
+        await Core.LocalStreamUsersService.upsert({
+          streamId: Core.UserStreamTypes.MUTED,
+          stream: [],
+        });
         return [];
       }
       throw error;

@@ -43,7 +43,7 @@ export class AuthController {
     // Clear database before sign in to ensure clean state
     await Core.clearDatabase();
     // Skip post-migration resync — bootstrap runs if user has profile, otherwise no data to resync
-    Core.useMigrationStore.getState().setWasDbReset(false);
+    Core.useMigrationStore.getState().reset();
     const session = await Core.AuthApplication.signIn({ keypair });
     if (!session) {
       Libs.Logger.error('Failed to sign in. Please try again.', { keypair });
@@ -129,7 +129,7 @@ export class AuthController {
     // Clear database before sign up to ensure clean state
     await Core.clearDatabase();
     // Skip post-migration resync — new user has no homeserver data to resync
-    Core.useMigrationStore.getState().setWasDbReset(false);
+    Core.useMigrationStore.getState().reset();
     const keypair = Libs.Identity.keypairFromSecretKey(secretKey);
     const { session } = await Core.AuthApplication.signUp({ keypair, signupToken });
     const authStore = Core.useAuthStore.getState();
@@ -174,7 +174,7 @@ export class AuthController {
   ): Promise<Core.TGenerateAuthUrlResult> {
     await Core.clearDatabase();
     // Skip post-migration resync — full bootstrap below covers all data
-    Core.useMigrationStore.getState().setWasDbReset(false);
+    Core.useMigrationStore.getState().reset();
     const token = Symbol('auth-flow');
     this.cancelActiveAuthFlow();
     this.activeAuthFlow = { token, cancel: null };
@@ -231,7 +231,7 @@ export class AuthController {
     Libs.clearCookies();
     await Core.clearDatabase();
     // Skip post-migration resync — full cleanup resets all state
-    Core.useMigrationStore.getState().setWasDbReset(false);
+    Core.useMigrationStore.getState().reset();
 
     Core.PERSISTED_STORE_KEYS.forEach((key) => localStorage.removeItem(key));
   }

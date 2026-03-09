@@ -127,7 +127,7 @@ describe('DatabaseProvider', () => {
     vi.spyOn(db, 'wasDbReset', 'get').mockReturnValue(true);
     vi.spyOn(db, 'initialize').mockImplementation(async () => {});
 
-    useMigrationStore.getState().setWasDbReset(false);
+    useMigrationStore.getState().reset();
 
     render(
       <DatabaseProvider>
@@ -142,14 +142,14 @@ describe('DatabaseProvider', () => {
     expect(screen.getByText('Test Content')).toBeInTheDocument();
     expect(useMigrationStore.getState().wasDbReset).toBe(true);
 
-    useMigrationStore.getState().setWasDbReset(false);
+    useMigrationStore.getState().reset();
   });
 
   it('should not set useMigrationStore.wasDbReset when db.wasDbReset is false', async () => {
     vi.spyOn(db, 'wasDbReset', 'get').mockReturnValue(false);
     vi.spyOn(db, 'initialize').mockImplementation(async () => {});
 
-    useMigrationStore.getState().setWasDbReset(false);
+    useMigrationStore.getState().reset();
 
     render(
       <DatabaseProvider>

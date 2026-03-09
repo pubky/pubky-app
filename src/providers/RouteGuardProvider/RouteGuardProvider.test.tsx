@@ -6,12 +6,12 @@ import { render, screen, act } from '@testing-library/react';
 const mocks = vi.hoisted(() => {
   const mockRouterPush = vi.fn();
   const mockResync = vi.fn();
-  const setWasDbReset = vi.fn();
+  const resetMigrationStore = vi.fn();
 
   return {
     mockRouterPush,
     mockResync,
-    setWasDbReset,
+    resetMigrationStore,
     // Auth store state defaults
     hasHydrated: true,
     session: {} as unknown,
@@ -84,7 +84,7 @@ vi.mock('@/core', () => ({
   useMigrationStore: Object.assign(
     (selector: (state: Record<string, unknown>) => unknown) => selector({ wasDbReset: mocks.wasDbReset }),
     {
-      getState: () => ({ setWasDbReset: mocks.setWasDbReset, wasDbReset: mocks.wasDbReset }),
+      getState: () => ({ reset: mocks.resetMigrationStore, wasDbReset: mocks.wasDbReset }),
     },
   ),
   AuthController: {
@@ -112,7 +112,7 @@ describe('RouteGuardProvider — migration resync', () => {
     mocks.isLoading = false;
     mocks.pathname = '/feed';
     mocks.mockResync.mockReset();
-    mocks.setWasDbReset.mockReset();
+    mocks.resetMigrationStore.mockReset();
   });
 
   afterEach(() => {
@@ -164,7 +164,7 @@ describe('RouteGuardProvider — migration resync', () => {
       await vi.runAllTimersAsync();
     });
 
-    expect(mocks.setWasDbReset).toHaveBeenCalledWith(false);
+    expect(mocks.resetMigrationStore).toHaveBeenCalled();
   });
 
   it('handles resync errors gracefully — logs warning, does not throw, still resets flag', async () => {
@@ -193,7 +193,7 @@ describe('RouteGuardProvider — migration resync', () => {
     );
 
     // Flag should still be reset
-    expect(mocks.setWasDbReset).toHaveBeenCalledWith(false);
+    expect(mocks.resetMigrationStore).toHaveBeenCalled();
   });
 
   it('resync exceeding 10s times out without crashing', async () => {
@@ -223,7 +223,7 @@ describe('RouteGuardProvider — migration resync', () => {
     );
 
     // Flag should be reset in finally
-    expect(mocks.setWasDbReset).toHaveBeenCalledWith(false);
+    expect(mocks.resetMigrationStore).toHaveBeenCalled();
   });
 
   it('does NOT call resync when currentUserPubky is falsy', async () => {
@@ -242,7 +242,7 @@ describe('RouteGuardProvider — migration resync', () => {
 
     expect(mocks.mockResync).not.toHaveBeenCalled();
     // Should still reset wasDbReset since no user is logged in
-    expect(mocks.setWasDbReset).toHaveBeenCalledWith(false);
+    expect(mocks.resetMigrationStore).toHaveBeenCalled();
   });
 
   it('does NOT call resync when wasDbReset is false', async () => {
@@ -259,7 +259,7 @@ describe('RouteGuardProvider — migration resync', () => {
     });
 
     expect(mocks.mockResync).not.toHaveBeenCalled();
-    expect(mocks.setWasDbReset).not.toHaveBeenCalled();
+    expect(mocks.resetMigrationStore).not.toHaveBeenCalled();
   });
 
   it('does NOT call resync twice when effect re-fires via dependency change mid-resync', async () => {

@@ -27,10 +27,10 @@ export class BootstrapApplication {
     onProgress?: BootstrapProgressCallback,
   ): Promise<Core.TBootstrapResponse> {
     const pubky = params.pubky;
-    const [bootstrapData, userLastRead, mutedUsers] = await Promise.all([
+    const [bootstrapData, userLastRead] = await Promise.all([
       Core.NexusBootstrapService.fetch(pubky),
       this.fetchOrPutLastRead(params),
-      Core.MuteApplication.fetchMutedUsers(pubky),
+      Core.MuteApplication.fetchMutedUsers(pubky), // fetches and persists MUTED stream internally
       Core.FeedApplication.fetchFeeds(pubky),
       // Initialize settings from homeserver (non-blocking, errors are logged but don't fail bootstrap)
       this.syncSettings(pubky),
@@ -56,10 +56,6 @@ export class BootstrapApplication {
       }),
       Core.LocalStreamUsersService.persistUsers(bootstrapData.users),
       Core.LocalStreamPostsService.persistPosts({ posts: bootstrapData.posts }),
-      Core.LocalStreamUsersService.upsert({
-        streamId: Core.UserStreamTypes.MUTED,
-        stream: mutedUsers,
-      }),
       Core.LocalStreamPostsService.upsert({
         streamId: Core.PostStreamTypes.TIMELINE_ALL_ALL,
         stream: bootstrapData.ids.stream,

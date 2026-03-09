@@ -65,7 +65,7 @@ export function RouteGuardProvider({ children }: RouteGuardProviderProps) {
     if (isMigrationResyncRunningRef.current) return; // No need to resync if the resync is ALREADY running
     if (!currentUserPubky) {
       // No need to resync if the user is NOT logged in
-      Core.useMigrationStore.getState().setWasDbReset(false);
+      Core.useMigrationStore.getState().reset();
       return;
     }
 
@@ -100,7 +100,7 @@ export function RouteGuardProvider({ children }: RouteGuardProviderProps) {
         if (timeoutId !== undefined) {
           clearTimeout(timeoutId);
         }
-        Core.useMigrationStore.getState().setWasDbReset(false);
+        Core.useMigrationStore.getState().reset();
         isMigrationResyncRunningRef.current = false;
       }
     };

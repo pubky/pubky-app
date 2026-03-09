@@ -13,8 +13,7 @@ export class MigrationApplication {
 
   /**
    * Fetches critical homeserver data that is not automatically re-fetched after DB recreation.
-   * Calls MuteApplication, FeedApplication, and SettingsApplication in parallel,
-   * then persists muted users to the user_streams table.
+   * Calls MuteApplication, FeedApplication, and SettingsApplication in parallel.
    *
    * @returns Remote settings if available (for Controller to apply to Zustand store)
    */
@@ -22,19 +21,11 @@ export class MigrationApplication {
     Logger.info('Starting post-DB-recreation re-sync', { pubky });
 
     // ADR-0009: MigrationApplication → leaf Applications (depth 1)
-    const [mutedUsersResult, , remoteSettingsResult] = await Promise.allSettled([
+    const [, , remoteSettingsResult] = await Promise.allSettled([
       Core.MuteApplication.fetchMutedUsers(pubky),
       Core.FeedApplication.fetchFeeds(pubky),
       Core.SettingsApplication.initializeSettings(pubky),
     ]);
-
-    // Persist muted users to user_streams table
-    if (mutedUsersResult.status === 'fulfilled') {
-      await Core.LocalStreamUsersService.upsert({
-        streamId: Core.UserStreamTypes.MUTED,
-        stream: mutedUsersResult.value,
-      });
-    }
 
     Logger.info('Post-DB-recreation re-sync completed', { pubky });
 
