@@ -73,10 +73,11 @@ export function RouteGuardProvider({ children }: RouteGuardProviderProps) {
 
     const runResync = async () => {
       const startedAt = Date.now();
+      let timeoutId: ReturnType<typeof setTimeout> | undefined;
       try {
         // Bound how long we wait for the post-migration resync.
-        const timeoutPromise = new Promise<never>((_, reject) =>
-          setTimeout(
+        const timeoutPromise = new Promise<never>((_, reject) => {
+          timeoutId = setTimeout(
             () =>
               reject(
                 Libs.Err.timeout(Libs.TimeoutErrorCode.REQUEST_TIMEOUT, 'DB re-sync timed out', {
@@ -85,8 +86,8 @@ export function RouteGuardProvider({ children }: RouteGuardProviderProps) {
                 }),
               ),
             MIGRATION_RESYNC_TIMEOUT_MS,
-          ),
-        );
+          );
+        });
         // Unblock the app when either resync finishes or the timeout fires.
         await Promise.race([Core.MigrationController.resync(currentUserPubky), timeoutPromise]);
       } catch (error) {
@@ -96,6 +97,9 @@ export function RouteGuardProvider({ children }: RouteGuardProviderProps) {
           durationMs: Date.now() - startedAt,
         });
       } finally {
+        if (timeoutId !== undefined) {
+          clearTimeout(timeoutId);
+        }
         Core.useMigrationStore.getState().setWasDbReset(false);
         isMigrationResyncRunningRef.current = false;
       }
