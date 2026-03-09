@@ -1,6 +1,6 @@
 import * as Organisms from '@/organisms';
+import { TIMELINE_FEED_VARIANT } from '@/config';
 import { POST_INPUT_VARIANT } from '@/organisms/PostInput/PostInput.constants';
-import { TIMELINE_FEED_VARIANT } from '@/organisms/TimelineFeed/TimelineFeed.types';
 
 export function Custom() {
   return (

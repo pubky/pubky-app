@@ -1,7 +1,7 @@
 'use client';
 
 import * as Core from '@/core';
-import { TimelineFeedVariant, TIMELINE_FEED_VARIANT } from '@/organisms/TimelineFeed/TimelineFeed.types';
+import { TimelineFeedVariant, TIMELINE_FEED_VARIANT } from '@/config';
 import { useCustomFeed } from '../useCustomFeed';
 import { useIsMobile } from '../useIsMobile';
 

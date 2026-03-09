@@ -1,9 +1,8 @@
 import { useContext } from 'react';
+import { TIMELINE_FEED_VARIANT, type TimelineFeedVariant } from '@/config';
 import * as Core from '@/core';
 import * as Hooks from '@/hooks';
 import * as Providers from '@/providers';
-import type { TimelineFeedVariant } from './TimelineFeed.types';
-import { TIMELINE_FEED_VARIANT } from './TimelineFeed.types';
 import { useSearchStreamId } from '@/hooks/useSearchStreamId';
 
 /**

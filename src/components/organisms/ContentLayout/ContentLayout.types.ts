@@ -1,4 +1,4 @@
-import type { TimelineFeedVariant } from '../TimelineFeed/TimelineFeed.types';
+import type { TimelineFeedVariant } from '@/config';
 
 export interface ContentLayoutProps {
   children: React.ReactNode;

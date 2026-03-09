@@ -1,7 +1,7 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { render, screen, waitFor } from '@testing-library/react';
+import { TIMELINE_FEED_VARIANT } from '@/config';
 import { TimelineFeed, useTimelineFeedContext } from './TimelineFeed';
-import { TIMELINE_FEED_VARIANT } from './TimelineFeed.types';
 import * as Hooks from '@/hooks';
 import * as Providers from '@/providers';
 import * as Core from '@/core';

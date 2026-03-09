@@ -1,5 +1,5 @@
+import { TIMELINE_FEED_VARIANT } from '@/config';
 import * as Organisms from '@/organisms';
-import { TIMELINE_FEED_VARIANT } from '@/organisms/TimelineFeed/TimelineFeed.types';
 
 /**
  * Bookmarks Page Template

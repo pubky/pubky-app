@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import * as Core from '@/core';
-import { TIMELINE_FEED_VARIANT } from '@/organisms/TimelineFeed/TimelineFeed.types';
+import { TIMELINE_FEED_VARIANT } from '@/config';
 import { resolveFeedLayout } from './useFeedLayoutResolution';
 
 describe('resolveFeedLayout', () => {
