@@ -57,12 +57,16 @@ const createMediaResponse = (contentType: string) => {
   };
 };
 
-const createRedirectResponse = (status: number, location: string) => ({
-  ok: false,
-  status,
-  headers: new Headers({ location }),
-  body: { getReader: () => createMockReader([]) },
-});
+const createRedirectResponse = (status: number, location: string) => {
+  const cancel = vi.fn().mockResolvedValue(undefined);
+  return {
+    ok: false,
+    status,
+    headers: new Headers({ location }),
+    body: { getReader: () => createMockReader([]), cancel },
+    _cancel: cancel,
+  };
+};
 
 const createErrorResponse = (status: number) => {
   const cancel = vi.fn().mockResolvedValue(undefined);
@@ -424,9 +428,10 @@ describe('OgMetadataApplication', () => {
   describe('redirect handling', () => {
     it('should follow redirects with DNS validation on each hop', async () => {
       const fetchSpy = vi.spyOn(Core.NextJsApiService, 'fetch');
+      const redirectResponse = createRedirectResponse(302, 'https://example.org/page');
 
       fetchSpy
-        .mockResolvedValueOnce(createRedirectResponse(302, 'https://example.org/page') as unknown as Response)
+        .mockResolvedValueOnce(redirectResponse as unknown as Response)
         .mockResolvedValueOnce(createHtmlResponse(simpleHtml('Redirected Page')) as unknown as Response);
 
       // DNS calls: initial hostname + redirect hostname
@@ -437,6 +442,7 @@ describe('OgMetadataApplication', () => {
       expect(fetchSpy).toHaveBeenCalledTimes(2);
       expect(fetchSpy).toHaveBeenNthCalledWith(1, 'https://example.com/');
       expect(fetchSpy).toHaveBeenNthCalledWith(2, 'https://example.org/page');
+      expect(redirectResponse._cancel).toHaveBeenCalled();
       // validateDns called for initial URL + redirect hop
       expect(mockResolve4).toHaveBeenCalledWith('example.com');
       expect(mockResolve4).toHaveBeenCalledWith('example.org');
@@ -444,9 +450,8 @@ describe('OgMetadataApplication', () => {
     });
 
     it('should block redirects to private IPs (SSRF via open redirect)', async () => {
-      vi.spyOn(Core.NextJsApiService, 'fetch').mockResolvedValueOnce(
-        createRedirectResponse(302, 'http://169.254.169.254/metadata') as unknown as Response,
-      );
+      const redirectResponse = createRedirectResponse(302, 'http://169.254.169.254/metadata');
+      vi.spyOn(Core.NextJsApiService, 'fetch').mockResolvedValueOnce(redirectResponse as unknown as Response);
 
       // Initial URL resolves safely; redirect target resolves to private IP
       mockResolve4.mockResolvedValueOnce(['1.1.1.1']);
@@ -454,30 +459,35 @@ describe('OgMetadataApplication', () => {
       mockIsIpSafe.mockReturnValueOnce(true).mockReturnValueOnce(false);
 
       await expect(OgMetadataApplication.fetch(new URL('https://example.com'))).rejects.toThrow('Blocked IP range');
+      expect(redirectResponse._cancel).toHaveBeenCalled();
     });
 
     it('should throw on too many redirects', async () => {
       const fetchSpy = vi.spyOn(Core.NextJsApiService, 'fetch');
+      const redirectResponses: ReturnType<typeof createRedirectResponse>[] = [];
 
-      for (let i = 0; i < 6; i++) {
-        fetchSpy.mockResolvedValueOnce(
-          createRedirectResponse(302, `https://example.org/redirect${i}`) as unknown as Response,
-        );
+      // MAX_REDIRECTS=5: 5 redirects trigger the limit
+      for (let i = 0; i < 5; i++) {
+        const res = createRedirectResponse(302, `https://example.org/redirect${i}`);
+        redirectResponses.push(res);
+        fetchSpy.mockResolvedValueOnce(res as unknown as Response);
       }
 
       await expect(OgMetadataApplication.fetch(new URL('https://example.com'))).rejects.toThrow('Too many redirects');
+      for (let i = 0; i < redirectResponses.length; i++) {
+        expect(redirectResponses[i]._cancel).toHaveBeenCalled();
+      }
     });
 
     it('should succeed when the last allowed fetch returns a valid response', async () => {
       const fetchSpy = vi.spyOn(Core.NextJsApiService, 'fetch');
+      const redirectResponses: ReturnType<typeof createRedirectResponse>[] = [];
 
-      // 4 redirects followed by a valid HTML response on the 5th (final) fetch
       for (let i = 0; i < 4; i++) {
-        fetchSpy.mockResolvedValueOnce(
-          createRedirectResponse(302, `https://example.org/redirect${i}`) as unknown as Response,
-        );
+        const res = createRedirectResponse(302, `https://example.org/redirect${i}`);
+        redirectResponses.push(res);
+        fetchSpy.mockResolvedValueOnce(res as unknown as Response);
       }
-      // And the 5th fetch returns a valid HTML response
       fetchSpy.mockResolvedValueOnce(createHtmlResponse(simpleHtml('Final Page')) as unknown as Response);
 
       const result = await OgMetadataApplication.fetch(new URL('https://example.com'));
@@ -488,17 +498,20 @@ describe('OgMetadataApplication', () => {
       expect(fetchSpy).toHaveBeenNthCalledWith(3, 'https://example.org/redirect1');
       expect(fetchSpy).toHaveBeenNthCalledWith(4, 'https://example.org/redirect2');
       expect(fetchSpy).toHaveBeenNthCalledWith(5, 'https://example.org/redirect3');
+      for (let i = 0; i < redirectResponses.length; i++) {
+        expect(redirectResponses[i]._cancel).toHaveBeenCalled();
+      }
       expect(result.title).toBe('Final Page');
     });
 
     it('should block non-HTTP redirect protocols', async () => {
-      vi.spyOn(Core.NextJsApiService, 'fetch').mockResolvedValueOnce(
-        createRedirectResponse(302, 'ftp://example.net/data') as unknown as Response,
-      );
+      const redirectResponse = createRedirectResponse(302, 'ftp://example.net/data');
+      vi.spyOn(Core.NextJsApiService, 'fetch').mockResolvedValueOnce(redirectResponse as unknown as Response);
 
       await expect(OgMetadataApplication.fetch(new URL('https://example.com'))).rejects.toThrow(
         'Blocked redirect to non-HTTP protocol',
       );
+      expect(redirectResponse._cancel).toHaveBeenCalled();
     });
   });
 

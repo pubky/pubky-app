@@ -168,12 +168,17 @@ export class OgMetadataApplication {
       const redirectUrl = new URL(location, currentUrl);
       // Must be HTTP or HTTPS to prevent SSRF via redirect to non-HTTP protocols.
       if (!['http:', 'https:'].includes(redirectUrl.protocol)) {
+        // Release the response body before throwing so the TCP connection can be reused promptly.
+        response.body?.cancel().catch(() => {});
         throw Libs.Err.auth(Libs.AuthErrorCode.FORBIDDEN, 'Blocked redirect to non-HTTP protocol', {
           service: Libs.ErrorService.NextJsApi,
           operation: 'fetchWithRedirects',
           context: { protocol: redirectUrl.protocol, statusCode: Libs.HttpStatusCode.FORBIDDEN },
         });
       }
+
+      // Release the redirect response body before following the next hop so the TCP connection can be reused promptly.
+      response.body?.cancel().catch(() => {});
 
       await this.validateDns(redirectUrl.hostname);
 
