@@ -7,6 +7,7 @@ export const VISUAL_GRID_GAP_PX = 24;
 export const VISUAL_GRID_MAX_WIDTH_PX = 1200;
 export const VISUAL_PENDING_TAIL_LIMIT = 3;
 export const VISUAL_SQUARE_MAX_RATIO = 1;
+export const VISUAL_WIDE_ELIGIBLE_MIN_RATIO = 4 / 3;
 export const VISUAL_WIDE_MIN_RATIO = 16 / 9;
 const VISUAL_ROW_PREFERRED_SIZE_SCORE = 3;
 const VISUAL_ROW_ALTERNATE_SIZE_SCORE = 1;
@@ -105,6 +106,8 @@ export function resolveVisualTileSizeOptions(
   if (ratio <= VISUAL_SQUARE_MAX_RATIO) {
     options = hash % 2 === 0 ? ['square', 'medium'] : ['medium', 'square'];
   } else if (ratio >= VISUAL_WIDE_MIN_RATIO) {
+    options = ['wide', 'medium'];
+  } else if (ratio >= VISUAL_WIDE_ELIGIBLE_MIN_RATIO) {
     options = hash % 2 === 0 ? ['wide', 'medium'] : ['medium', 'wide'];
   } else {
     options = ['medium'];

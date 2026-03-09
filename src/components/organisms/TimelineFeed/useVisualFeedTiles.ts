@@ -171,10 +171,12 @@ export function useVisualFeedTiles({ postIds, hasMore }: { postIds: string[]; ha
   const [, forceProbeRefresh] = React.useReducer((count) => count + 1, 0);
 
   React.useEffect(() => {
-    if (postIds.length === 0) return;
+    if (!postIdsKey) return;
+
+    const requestedPostIds = postIdsKey.split('|');
 
     void Promise.all(
-      postIds.map(async (postId) => {
+      requestedPostIds.map(async (postId) => {
         try {
           await Core.PostController.getOrFetchDetails({ compositeId: postId });
         } catch (error) {
@@ -185,7 +187,7 @@ export function useVisualFeedTiles({ postIds, hasMore }: { postIds: string[]; ha
         }
       }),
     );
-  }, [postIds, postIdsKey]);
+  }, [postIdsKey]);
 
   const snapshot = useLiveQuery(
     async (): Promise<VisualFeedSnapshot> => {

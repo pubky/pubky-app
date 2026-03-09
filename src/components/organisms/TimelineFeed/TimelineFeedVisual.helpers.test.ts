@@ -33,6 +33,10 @@ describe('resolvePreferredVisualTileSize', () => {
     expect(resolvePreferredVisualTileSize('tile:mid', 1000, 800)).toBe('medium');
   });
 
+  it('treats ratios between 1:1 and 4:3 as medium only', () => {
+    expect(resolveVisualTileSizeOptions('tile:mid-only', 5, 4)).toEqual(['medium']);
+  });
+
   it('is deterministic for tall media', () => {
     const first = resolvePreferredVisualTileSize('tile:tall', 600, 1000);
     const second = resolvePreferredVisualTileSize('tile:tall', 600, 1000);
@@ -41,12 +45,19 @@ describe('resolvePreferredVisualTileSize', () => {
     expect(['square', 'medium']).toContain(first);
   });
 
-  it('is deterministic for wide media', () => {
-    const first = resolvePreferredVisualTileSize('tile:wide', 1920, 900);
-    const second = resolvePreferredVisualTileSize('tile:wide', 1920, 900);
+  it('keeps 16:9 media wide-preferred while still medium-capable', () => {
+    const options = resolveVisualTileSizeOptions('tile:wide', 1920, 900);
+    const preferred = resolvePreferredVisualTileSize('tile:wide', 1920, 900);
 
-    expect(first).toBe(second);
-    expect(['medium', 'wide']).toContain(first);
+    expect(options).toEqual(['wide', 'medium']);
+    expect(preferred).toBe('wide');
+  });
+
+  it('treats 4:3 media as wide-capable instead of medium-only', () => {
+    const options = resolveVisualTileSizeOptions('tile:four-three', 4, 3);
+
+    expect(options).toBeDefined();
+    expect(options).toEqual(expect.arrayContaining(['wide', 'medium']));
   });
 
   it('treats square images as square-capable instead of medium-only', () => {
