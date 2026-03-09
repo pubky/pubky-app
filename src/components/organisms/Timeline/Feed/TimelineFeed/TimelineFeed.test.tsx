@@ -1,5 +1,6 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { render, screen, waitFor } from '@testing-library/react';
+import { PubkyAppFeedLayout, PubkyAppFeedReach, PubkyAppFeedSort } from 'pubky-app-specs';
 import { TimelineFeed, useTimelineFeedContext } from './TimelineFeed';
 import { TIMELINE_FEED_VARIANT } from './TimelineFeed.types';
 import * as Hooks from '@/hooks';
@@ -21,8 +22,10 @@ vi.mock('@/hooks', async (importOriginal) => {
   return {
     ...actual,
     useStreamIdFromFilters: vi.fn(),
-    useCustomStreamId: vi.fn(),
     useBookmarksStreamId: vi.fn(),
+    useHotStreamId: vi.fn(() => 'total_engagement:all:all' as Core.PostStreamId),
+    useCustomFeed: vi.fn(),
+    useCustomStreamId: vi.fn(),
     useStreamPagination: vi.fn(),
     useMutedUsers: vi.fn(() => ({
       mutedUserIds: [],
@@ -108,6 +111,7 @@ vi.mock('@/organisms', () => ({
 }));
 
 const mockUseStreamIdFromFilters = vi.mocked(Hooks.useStreamIdFromFilters);
+const mockUseCustomFeed = vi.mocked(Hooks.useCustomFeed);
 const mockUseCustomStreamId = vi.mocked(Hooks.useCustomStreamId);
 const mockUseBookmarksStreamId = vi.mocked(Hooks.useBookmarksStreamId);
 const mockUseStreamPagination = vi.mocked(Hooks.useStreamPagination);
@@ -133,7 +137,18 @@ describe('TimelineFeed', () => {
 
     // Default mock implementations
     mockUseStreamIdFromFilters.mockReturnValue(Core.PostStreamTypes.TIMELINE_ALL_ALL);
-    mockUseCustomStreamId.mockReturnValue('custom:all:all:all' as Core.PostStreamId);
+    mockUseCustomFeed.mockReturnValue({
+      id: 'test-feed',
+      name: 'Test Feed',
+      tags: ['all'],
+      reach: PubkyAppFeedReach.All,
+      sort: PubkyAppFeedSort.Recent,
+      content: null,
+      layout: PubkyAppFeedLayout.Columns,
+      created_at: 0,
+      updated_at: 0,
+    });
+    mockUseCustomStreamId.mockReturnValue('timeline:all:all:all' as Core.PostStreamId);
     mockUseBookmarksStreamId.mockReturnValue(Core.PostStreamTypes.TIMELINE_BOOKMARKS_ALL);
     mockUseStreamPagination.mockReturnValue(defaultPaginationResult);
     // Reset pull-to-refresh mock to idle state
@@ -222,7 +237,7 @@ describe('TimelineFeed', () => {
 
       expect(screen.getByTestId('timeline-posts')).toBeInTheDocument();
       expect(mockUseStreamPagination).toHaveBeenCalledWith({
-        streamId: 'custom:all:all:all',
+        streamId: 'timeline:all:all:all',
       });
     });
 
@@ -437,7 +452,18 @@ describe('TimelineFeed - Snapshots', () => {
     // (In CI we run the full suite, not just testNamePattern="Snapshots".)
     vi.clearAllMocks();
     mockUseStreamIdFromFilters.mockReturnValue(Core.PostStreamTypes.TIMELINE_ALL_ALL);
-    mockUseCustomStreamId.mockReturnValue('custom:all:all:all' as Core.PostStreamId);
+    mockUseCustomFeed.mockReturnValue({
+      id: 'test-feed',
+      name: 'Test Feed',
+      tags: ['all'],
+      reach: PubkyAppFeedReach.All,
+      sort: PubkyAppFeedSort.Recent,
+      content: null,
+      layout: PubkyAppFeedLayout.Columns,
+      created_at: 0,
+      updated_at: 0,
+    });
+    mockUseCustomStreamId.mockReturnValue('timeline:all:all:all' as Core.PostStreamId);
     mockUseBookmarksStreamId.mockReturnValue(Core.PostStreamTypes.TIMELINE_BOOKMARKS_ALL);
     mockUseStreamPagination.mockReturnValue(defaultPaginationResult);
     // Reset pull-to-refresh mock to idle state for snapshots

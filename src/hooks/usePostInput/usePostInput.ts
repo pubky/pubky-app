@@ -19,7 +19,7 @@ import {
   ARTICLE_SUPPORTED_ATTACHMENT_MIME_TYPES,
   ARTICLE_TITLE_MAX_CHARACTER_LENGTH,
 } from '@/config';
-import { useTimelineFeedContext } from '@/organisms/TimelineFeed/TimelineFeed';
+import { useTimelineFeedContext } from '@/organisms/Timeline/Feed/TimelineFeed';
 import { POST_INPUT_VARIANT } from '@/organisms/PostInput/PostInput.constants';
 import { useMentionAutocomplete, getContentWithMention } from '@/hooks/useMentionAutocomplete';
 import type { UsePostInputOptions, UsePostInputReturn } from './usePostInput.types';
