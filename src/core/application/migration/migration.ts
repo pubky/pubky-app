@@ -22,20 +22,26 @@ export class MigrationApplication {
     Logger.info('Starting post-DB-recreation re-sync', { pubky });
 
     // ADR-0009: MigrationApplication → leaf Applications (depth 1)
-    const [mutedUsers, , remoteSettings] = await Promise.all([
+    const [mutedUsersResult, , remoteSettingsResult] = await Promise.allSettled([
       Core.MuteApplication.fetchMutedUsers(pubky),
       Core.FeedApplication.fetchFeeds(pubky),
       Core.SettingsApplication.initializeSettings(pubky),
     ]);
 
     // Persist muted users to user_streams table
-    await Core.LocalStreamUsersService.upsert({
-      streamId: Core.UserStreamTypes.MUTED,
-      stream: mutedUsers,
-    });
+    if (mutedUsersResult.status === 'fulfilled') {
+      await Core.LocalStreamUsersService.upsert({
+        streamId: Core.UserStreamTypes.MUTED,
+        stream: mutedUsersResult.value,
+      });
+    }
 
     Logger.info('Post-DB-recreation re-sync completed', { pubky });
 
-    return remoteSettings;
+    if (remoteSettingsResult.status === 'rejected') {
+      return null;
+    }
+
+    return remoteSettingsResult.value;
   }
 }

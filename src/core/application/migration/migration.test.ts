@@ -69,12 +69,35 @@ describe('MigrationApplication', () => {
       });
     });
 
-    it('should propagate errors from homeserver fetches', async () => {
+    it('should still persist muted users when feeds fetch fails', async () => {
+      const mockMutedUsers = ['muted-1'] as Core.Pubky[];
+
+      vi.spyOn(Core.MuteApplication, 'fetchMutedUsers').mockResolvedValue(mockMutedUsers);
+      vi.spyOn(Core.FeedApplication, 'fetchFeeds').mockRejectedValue(new Error('feeds-500'));
+      vi.spyOn(Core.SettingsApplication, 'initializeSettings').mockResolvedValue(null);
+      const upsertSpy = vi.spyOn(Core.LocalStreamUsersService, 'upsert').mockResolvedValue(undefined);
+
+      const result = await MigrationApplication.resync(TEST_PUBKY);
+
+      expect(upsertSpy).toHaveBeenCalledExactlyOnceWith({
+        streamId: Core.UserStreamTypes.MUTED,
+        stream: mockMutedUsers,
+      });
+      expect(result).toBeNull();
+    });
+
+    it('should not throw when muted users fetch fails, but still apply other successful results', async () => {
+      const mockSettings = { version: 2, updatedAt: 456 } as Core.SettingsState;
+
       vi.spyOn(Core.MuteApplication, 'fetchMutedUsers').mockRejectedValue(new Error('homeserver-down'));
       vi.spyOn(Core.FeedApplication, 'fetchFeeds').mockResolvedValue([]);
-      vi.spyOn(Core.SettingsApplication, 'initializeSettings').mockResolvedValue(null);
+      vi.spyOn(Core.SettingsApplication, 'initializeSettings').mockResolvedValue(mockSettings);
+      const upsertSpy = vi.spyOn(Core.LocalStreamUsersService, 'upsert').mockResolvedValue(undefined);
 
-      await expect(MigrationApplication.resync(TEST_PUBKY)).rejects.toThrow('homeserver-down');
+      const result = await MigrationApplication.resync(TEST_PUBKY);
+
+      expect(upsertSpy).not.toHaveBeenCalled();
+      expect(result).toBe(mockSettings);
     });
   });
 });
