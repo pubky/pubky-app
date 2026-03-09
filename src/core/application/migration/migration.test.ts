@@ -1,0 +1,80 @@
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
+import { MigrationApplication } from './migration';
+import * as Core from '@/core';
+
+vi.mock('pubky-app-specs', () => ({
+  baseUriBuilder: (pubky: string) => `pubky://${pubky}/pub/pubky.app/`,
+}));
+
+vi.mock('@/libs/logger', () => ({
+  Logger: { info: vi.fn(), debug: vi.fn(), warn: vi.fn(), error: vi.fn() },
+}));
+
+const TEST_PUBKY = 'o1gg96ewuojmopcjbz8895478wdtxtzzuxnfjjz8o8e77csa1ngo' as Core.Pubky;
+
+describe('MigrationApplication', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
+
+  describe('resync', () => {
+    it('should fetch muted users, feeds, and settings in parallel, persist mutes, and return settings', async () => {
+      const mockMutedUsers = ['muted-1', 'muted-2'] as Core.Pubky[];
+      const mockFeeds = [{ id: 'feed-1' }] as Core.FeedModelSchema[];
+      const mockSettings = { version: 1, updatedAt: 123 } as Core.SettingsState;
+
+      const fetchMutedSpy = vi.spyOn(Core.MuteApplication, 'fetchMutedUsers').mockResolvedValue(mockMutedUsers);
+      const fetchFeedsSpy = vi.spyOn(Core.FeedApplication, 'fetchFeeds').mockResolvedValue(mockFeeds);
+      const initSettingsSpy = vi.spyOn(Core.SettingsApplication, 'initializeSettings').mockResolvedValue(mockSettings);
+      const upsertSpy = vi.spyOn(Core.LocalStreamUsersService, 'upsert').mockResolvedValue(undefined);
+
+      const result = await MigrationApplication.resync(TEST_PUBKY);
+
+      expect(fetchMutedSpy).toHaveBeenCalledExactlyOnceWith(TEST_PUBKY);
+      expect(fetchFeedsSpy).toHaveBeenCalledExactlyOnceWith(TEST_PUBKY);
+      expect(initSettingsSpy).toHaveBeenCalledExactlyOnceWith(TEST_PUBKY);
+      expect(upsertSpy).toHaveBeenCalledExactlyOnceWith({
+        streamId: Core.UserStreamTypes.MUTED,
+        stream: mockMutedUsers,
+      });
+      expect(result).toBe(mockSettings);
+    });
+
+    it('should return null when initializeSettings returns null', async () => {
+      vi.spyOn(Core.MuteApplication, 'fetchMutedUsers').mockResolvedValue([]);
+      vi.spyOn(Core.FeedApplication, 'fetchFeeds').mockResolvedValue([]);
+      vi.spyOn(Core.SettingsApplication, 'initializeSettings').mockResolvedValue(null);
+      vi.spyOn(Core.LocalStreamUsersService, 'upsert').mockResolvedValue(undefined);
+
+      const result = await MigrationApplication.resync(TEST_PUBKY);
+
+      expect(result).toBeNull();
+    });
+
+    it('should persist muted users even when empty', async () => {
+      vi.spyOn(Core.MuteApplication, 'fetchMutedUsers').mockResolvedValue([]);
+      vi.spyOn(Core.FeedApplication, 'fetchFeeds').mockResolvedValue([]);
+      vi.spyOn(Core.SettingsApplication, 'initializeSettings').mockResolvedValue(null);
+      const upsertSpy = vi.spyOn(Core.LocalStreamUsersService, 'upsert').mockResolvedValue(undefined);
+
+      await MigrationApplication.resync(TEST_PUBKY);
+
+      expect(upsertSpy).toHaveBeenCalledExactlyOnceWith({
+        streamId: Core.UserStreamTypes.MUTED,
+        stream: [],
+      });
+    });
+
+    it('should propagate errors from homeserver fetches', async () => {
+      vi.spyOn(Core.MuteApplication, 'fetchMutedUsers').mockRejectedValue(new Error('homeserver-down'));
+      vi.spyOn(Core.FeedApplication, 'fetchFeeds').mockResolvedValue([]);
+      vi.spyOn(Core.SettingsApplication, 'initializeSettings').mockResolvedValue(null);
+
+      await expect(MigrationApplication.resync(TEST_PUBKY)).rejects.toThrow('homeserver-down');
+    });
+  });
+});

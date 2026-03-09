@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useMemo } from 'react';
+import { useEffect, useMemo, useRef } from 'react';
 import { useRouter, usePathname } from 'next/navigation';
 import { useTranslations } from 'next-intl';
 
@@ -10,6 +10,9 @@ import * as App from '@/app';
 import * as Atoms from '@/atoms';
 import * as Libs from '@/libs';
 import * as Core from '@/core';
+
+// Migration resync timeout in milliseconds
+const MIGRATION_RESYNC_TIMEOUT_MS = 10_000;
 
 interface RouteGuardProviderProps {
   children: React.ReactNode;
@@ -38,6 +41,12 @@ export function RouteGuardProvider({ children }: RouteGuardProviderProps) {
   const hasHydrated = Core.useAuthStore((state) => state.hasHydrated);
   const session = Core.useAuthStore((state) => state.session);
   const sessionExport = Core.useAuthStore((state) => state.sessionExport);
+  const currentUserPubky = Core.useAuthStore((state) => state.currentUserPubky);
+  const wasDbReset = Core.useMigrationStore((state) => state.wasDbReset);
+
+  // Prevents running resync more than once at a time (ex: React Strict Mode and effect re-fires mid-resync)
+  const isMigrationResyncRunningRef = useRef(false);
+
   // Attempt to restore an existing session snapshot on fresh loads.
   useEffect(() => {
     if (!hasHydrated) return;
@@ -47,6 +56,53 @@ export function RouteGuardProvider({ children }: RouteGuardProviderProps) {
       Libs.Logger.error('[RouteGuardProvider] Failed to restore persisted session', { error });
     });
   }, [hasHydrated, session, sessionExport]);
+
+  // Post-migration re-sync: fetch critical homeserver data after DB recreation
+  // TODO: Consider using BroadcastChannel to notify other browser tabs when DB was recreated / resync completed
+  useEffect(() => {
+    if (!wasDbReset) return; // No need to resync if the DB was NOT reset
+    if (!hasHydrated) return; // No need to resync if the app has NOT hydrated
+    if (isMigrationResyncRunningRef.current) return; // No need to resync if the resync is ALREADY running
+    if (!currentUserPubky) {
+      // No need to resync if the user is NOT logged in
+      Core.useMigrationStore.getState().setWasDbReset(false);
+      return;
+    }
+
+    isMigrationResyncRunningRef.current = true;
+
+    const runResync = async () => {
+      const startedAt = Date.now();
+      try {
+        // Bound how long we wait for the post-migration resync.
+        const timeoutPromise = new Promise<never>((_, reject) =>
+          setTimeout(
+            () =>
+              reject(
+                Libs.Err.timeout(Libs.TimeoutErrorCode.REQUEST_TIMEOUT, 'DB re-sync timed out', {
+                  service: Libs.ErrorService.Local,
+                  operation: 'migrationResync',
+                }),
+              ),
+            MIGRATION_RESYNC_TIMEOUT_MS,
+          ),
+        );
+        // Unblock the app when either resync finishes or the timeout fires.
+        await Promise.race([Core.MigrationController.resync(currentUserPubky), timeoutPromise]);
+      } catch (error) {
+        Libs.Logger.warn('Migration re-sync degraded', {
+          error,
+          pubky: currentUserPubky,
+          durationMs: Date.now() - startedAt,
+        });
+      } finally {
+        Core.useMigrationStore.getState().setWasDbReset(false);
+        isMigrationResyncRunningRef.current = false;
+      }
+    };
+
+    runResync();
+  }, [wasDbReset, hasHydrated, currentUserPubky]);
 
   // Determine if the current route is accessible based on authentication status
   const isRouteAccessible = useMemo(() => {
@@ -103,12 +159,13 @@ export function RouteGuardProvider({ children }: RouteGuardProviderProps) {
   // Show loading spinner while:
   // 1. Authentication status is being determined (isLoading = true)
   // 2. Route access check has completed but user doesn't have access (will trigger redirect)
-  if (!isRouteAccessible) {
+  // 3. Migration re-sync is in progress (wasDbReset = true)
+  if (!isRouteAccessible || wasDbReset) {
     return (
       <div className="flex min-h-screen items-center justify-center">
         <div className="text-center">
           <Atoms.Spinner className="mx-auto" />
-          <p className="mt-2 text-muted-foreground">{isLoading ? t('loading') : t('redirecting')}</p>
+          <p className="mt-2 text-muted-foreground">{isLoading || wasDbReset ? t('loading') : t('redirecting')}</p>
         </div>
       </div>
     );

@@ -26,6 +26,12 @@ import { moderationTableSchema } from '@/core/models/moderation/moderation.schem
 export class AppDatabase extends Dexie {
   private static readonly DEXIE_VERSION_MULTIPLIER = 10;
 
+  /** Indicates the database was freshly created or recreated during `initialize()` (e.g. first run or version-mismatch recovery). Used to trigger post-init flows like data migration. */
+  private _wasDbReset = false;
+  get wasDbReset(): boolean {
+    return this._wasDbReset;
+  }
+
   // User
   user_counts!: Dexie.Table<Core.UserCountsModelSchema>;
   user_details!: Dexie.Table<Core.UserDetailsModelSchema>;
@@ -187,6 +193,7 @@ export class AppDatabase extends Dexie {
     try {
       // Note: expected new DB version is already set in the constructor this.version(Config.DB_VERSION)
       await this.open();
+      this._wasDbReset = true;
       Logger.info('Database recreated with new schema');
     } catch (error) {
       throw Err.database(DatabaseErrorCode.INIT_FAILED, 'Failed to open database after recreation', {
@@ -203,6 +210,8 @@ export class AppDatabase extends Dexie {
   }
 
   async initialize() {
+    this._wasDbReset = false;
+
     try {
       if (typeof indexedDB === 'undefined') {
         Logger.warn('IndexedDB is not available in this environment. Skipping database initialization.');
@@ -213,6 +222,7 @@ export class AppDatabase extends Dexie {
 
       if (!dbExists) {
         Logger.info('Creating new database...');
+        this._wasDbReset = true;
         await this.open();
         return;
       }

@@ -1,7 +1,7 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { render, screen, act } from '@testing-library/react';
 import { DatabaseProvider, DatabaseContext, type DatabaseContextType } from '@/providers';
-import { db } from '@/core';
+import { db, useMigrationStore } from '@/core';
 import { Err, ErrorService, ErrorCategory, DatabaseErrorCode } from '@/libs';
 
 // Mock the database
@@ -121,6 +121,48 @@ describe('DatabaseProvider', () => {
     expect(updatedContext.error).toBeNull();
     expect(updatedContext.isReady).toBe(true);
     expect(initializeMock).toHaveBeenCalledTimes(2);
+  });
+
+  it('should set useMigrationStore.wasDbReset when db.wasDbReset is true', async () => {
+    vi.spyOn(db, 'wasDbReset', 'get').mockReturnValue(true);
+    vi.spyOn(db, 'initialize').mockImplementation(async () => {});
+
+    useMigrationStore.getState().setWasDbReset(false);
+
+    render(
+      <DatabaseProvider>
+        <div>Test Content</div>
+      </DatabaseProvider>,
+    );
+
+    await act(async () => {
+      await vi.runAllTimersAsync();
+    });
+
+    expect(screen.getByText('Test Content')).toBeInTheDocument();
+    expect(useMigrationStore.getState().wasDbReset).toBe(true);
+
+    useMigrationStore.getState().setWasDbReset(false);
+  });
+
+  it('should not set useMigrationStore.wasDbReset when db.wasDbReset is false', async () => {
+    vi.spyOn(db, 'wasDbReset', 'get').mockReturnValue(false);
+    vi.spyOn(db, 'initialize').mockImplementation(async () => {});
+
+    useMigrationStore.getState().setWasDbReset(false);
+
+    render(
+      <DatabaseProvider>
+        <div>Test Content</div>
+      </DatabaseProvider>,
+    );
+
+    await act(async () => {
+      await vi.runAllTimersAsync();
+    });
+
+    expect(screen.getByText('Test Content')).toBeInTheDocument();
+    expect(useMigrationStore.getState().wasDbReset).toBe(false);
   });
 
   it('should handle unexpected errors', async () => {
