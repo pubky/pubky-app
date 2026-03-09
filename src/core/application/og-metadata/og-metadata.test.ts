@@ -186,7 +186,7 @@ describe('OgMetadataApplication', () => {
     });
 
     it('should throw for non-403 error status codes', async () => {
-      const mockResponse = createErrorResponse(500);
+      const mockResponse = createErrorResponse(Libs.HttpStatusCode.INTERNAL_SERVER_ERROR);
       vi.spyOn(Core.NextJsApiService, 'fetch').mockResolvedValue(mockResponse as unknown as Response);
 
       await expect(OgMetadataApplication.fetch(new URL('https://example.com'))).rejects.toThrow('Fetch failed');
@@ -194,7 +194,7 @@ describe('OgMetadataApplication', () => {
     });
 
     it('should throw for 404 status code', async () => {
-      const mockResponse = createErrorResponse(404);
+      const mockResponse = createErrorResponse(Libs.HttpStatusCode.NOT_FOUND);
       vi.spyOn(Core.NextJsApiService, 'fetch').mockResolvedValue(mockResponse as unknown as Response);
 
       await expect(OgMetadataApplication.fetch(new URL('https://example.com'))).rejects.toThrow('Fetch failed');
@@ -268,7 +268,7 @@ describe('OgMetadataApplication', () => {
         expect(error).toBeInstanceOf(Libs.AppError);
         const appError = error as InstanceType<typeof Libs.AppError>;
         expect(appError.message).toContain('Response too large');
-        expect(appError.context?.statusCode).toBe(413);
+        expect(appError.context?.statusCode).toBe(Libs.HttpStatusCode.PAYLOAD_TOO_LARGE);
       }
     });
   });
@@ -565,7 +565,7 @@ describe('OgMetadataApplication', () => {
         const appError = error as InstanceType<typeof Libs.AppError>;
         expect(appError.message).toBe('Failed to fetch OG metadata');
         expect(appError.category).toBe(Libs.ErrorCategory.Server);
-        expect(appError.context?.statusCode).toBe(500);
+        expect(appError.context?.statusCode).toBe(Libs.HttpStatusCode.INTERNAL_SERVER_ERROR);
       }
     });
 
@@ -573,7 +573,7 @@ describe('OgMetadataApplication', () => {
       const originalError = Libs.Err.auth(Libs.AuthErrorCode.FORBIDDEN, 'Blocked IP range', {
         service: Libs.ErrorService.NextJsApi,
         operation: 'validateDns',
-        context: { statusCode: 403 },
+        context: { statusCode: Libs.HttpStatusCode.FORBIDDEN },
       });
       vi.spyOn(Core.NextJsApiService, 'fetch').mockRejectedValue(originalError);
 

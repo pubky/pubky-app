@@ -75,7 +75,7 @@ export class OgMetadataApplication {
         throw Libs.Err.validation(Libs.ValidationErrorCode.INVALID_INPUT, 'Not HTML content', {
           service: Libs.ErrorService.NextJsApi,
           operation: 'fetch',
-          context: { contentType, statusCode: 400 },
+          context: { contentType, statusCode: Libs.HttpStatusCode.BAD_REQUEST },
         });
       }
 
@@ -93,7 +93,7 @@ export class OgMetadataApplication {
         service: Libs.ErrorService.NextJsApi,
         operation: 'fetch',
         cause: error,
-        context: { url, statusCode: 500 },
+        context: { url, statusCode: Libs.HttpStatusCode.INTERNAL_SERVER_ERROR },
       });
     }
   }
@@ -120,7 +120,7 @@ export class OgMetadataApplication {
           throw Libs.Err.network(Libs.NetworkErrorCode.DNS_FAILED, 'DNS resolution failed', {
             service: Libs.ErrorService.NextJsApi,
             operation: 'validateDns',
-            context: { hostname, statusCode: 400 },
+            context: { hostname, statusCode: Libs.HttpStatusCode.BAD_REQUEST },
           });
         }
         resolvedIp = addresses[0];
@@ -132,7 +132,7 @@ export class OgMetadataApplication {
         service: Libs.ErrorService.NextJsApi,
         operation: 'validateDns',
         cause: error,
-        context: { hostname, statusCode: 400 },
+        context: { hostname, statusCode: Libs.HttpStatusCode.BAD_REQUEST },
       });
     }
 
@@ -141,7 +141,7 @@ export class OgMetadataApplication {
       throw Libs.Err.auth(Libs.AuthErrorCode.FORBIDDEN, 'Blocked IP range. Cannot fetch from private networks.', {
         service: Libs.ErrorService.NextJsApi,
         operation: 'validateDns',
-        context: { hostname, statusCode: 403 },
+        context: { hostname, statusCode: Libs.HttpStatusCode.FORBIDDEN },
       });
     }
   }
@@ -171,7 +171,7 @@ export class OgMetadataApplication {
         throw Libs.Err.auth(Libs.AuthErrorCode.FORBIDDEN, 'Blocked redirect to non-HTTP protocol', {
           service: Libs.ErrorService.NextJsApi,
           operation: 'fetchWithRedirects',
-          context: { protocol: redirectUrl.protocol, statusCode: 403 },
+          context: { protocol: redirectUrl.protocol, statusCode: Libs.HttpStatusCode.FORBIDDEN },
         });
       }
 
@@ -183,7 +183,7 @@ export class OgMetadataApplication {
     throw Libs.Err.network(Libs.NetworkErrorCode.CONNECTION_FAILED, 'Too many redirects', {
       service: Libs.ErrorService.NextJsApi,
       operation: 'fetchWithRedirects',
-      context: { url, statusCode: 400 },
+      context: { url, statusCode: Libs.HttpStatusCode.BAD_REQUEST },
     });
   }
 
@@ -230,7 +230,7 @@ export class OgMetadataApplication {
       throw Libs.Err.validation(Libs.ValidationErrorCode.INVALID_INPUT, 'No response body', {
         service: Libs.ErrorService.NextJsApi,
         operation: 'readResponseBody',
-        context: { statusCode: 400 },
+        context: { statusCode: Libs.HttpStatusCode.BAD_REQUEST },
       });
     }
 
@@ -248,7 +248,7 @@ export class OgMetadataApplication {
           throw Libs.Err.client(Libs.ClientErrorCode.PAYLOAD_TOO_LARGE, 'Response too large (max 5MB)', {
             service: Libs.ErrorService.NextJsApi,
             operation: 'readResponseBody',
-            context: { totalBytes, statusCode: 413 },
+            context: { totalBytes, statusCode: Libs.HttpStatusCode.PAYLOAD_TOO_LARGE },
           });
         }
 
@@ -261,7 +261,7 @@ export class OgMetadataApplication {
         service: Libs.ErrorService.NextJsApi,
         operation: 'readResponseBody',
         cause: error,
-        context: { statusCode: 500 },
+        context: { statusCode: Libs.HttpStatusCode.INTERNAL_SERVER_ERROR },
       });
     }
 

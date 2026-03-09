@@ -1,4 +1,4 @@
-import { Err, ValidationErrorCode, ErrorService } from '@/libs';
+import { Err, ValidationErrorCode, ErrorService, HttpStatusCode } from '@/libs';
 
 /**
  * OG metadata input validators.
@@ -28,18 +28,27 @@ export class OgMetadataValidators {
       throw Err.validation(ValidationErrorCode.MISSING_FIELD, 'Invalid URL', {
         service: ErrorService.NextJsApi,
         operation: 'validate',
-        context: { field: 'url', statusCode: 400 },
+        context: { field: 'url', statusCode: HttpStatusCode.BAD_REQUEST },
+      });
+    }
+
+    const normalized = url.trim();
+    if (!normalized) {
+      throw Err.validation(ValidationErrorCode.MISSING_FIELD, 'Invalid URL', {
+        service: ErrorService.NextJsApi,
+        operation: 'validate',
+        context: { field: 'url', statusCode: HttpStatusCode.BAD_REQUEST },
       });
     }
 
     let parsed: URL;
     try {
-      parsed = new URL(url);
+      parsed = new URL(normalized);
     } catch {
       throw Err.validation(ValidationErrorCode.FORMAT_ERROR, 'Malformed URL', {
         service: ErrorService.NextJsApi,
         operation: 'validate',
-        context: { field: 'url', statusCode: 400 },
+        context: { field: 'url', statusCode: HttpStatusCode.BAD_REQUEST },
       });
     }
 
@@ -47,6 +56,7 @@ export class OgMetadataValidators {
     await this.validateHostname(parsed);
     this.validateNotOnion(parsed);
 
+    // Format validation only; DNS/IP SSRF checks are enforced in OgMetadataApplication.
     return parsed;
   }
 
@@ -58,7 +68,7 @@ export class OgMetadataValidators {
       throw Err.validation(ValidationErrorCode.INVALID_INPUT, 'Invalid protocol. Only HTTP and HTTPS are allowed.', {
         service: ErrorService.NextJsApi,
         operation: 'validateProtocol',
-        context: { field: 'url', protocol: parsed.protocol, statusCode: 400 },
+        context: { field: 'url', protocol: parsed.protocol, statusCode: HttpStatusCode.BAD_REQUEST },
       });
     }
   }
@@ -75,7 +85,7 @@ export class OgMetadataValidators {
       throw Err.validation(ValidationErrorCode.INVALID_INPUT, 'Invalid hostname. URL must include a domain name.', {
         service: ErrorService.NextJsApi,
         operation: 'validateHostname',
-        context: { field: 'url', statusCode: 400 },
+        context: { field: 'url', statusCode: HttpStatusCode.BAD_REQUEST },
       });
     }
 
@@ -95,7 +105,7 @@ export class OgMetadataValidators {
         {
           service: ErrorService.NextJsApi,
           operation: 'validateHostname',
-          context: { field: 'url', hostname, statusCode: 400 },
+          context: { field: 'url', hostname, statusCode: HttpStatusCode.BAD_REQUEST },
         },
       );
     }
@@ -110,7 +120,7 @@ export class OgMetadataValidators {
         {
           service: ErrorService.NextJsApi,
           operation: 'validateHostname',
-          context: { field: 'url', hostname, statusCode: 400 },
+          context: { field: 'url', hostname, statusCode: HttpStatusCode.BAD_REQUEST },
         },
       );
     }
@@ -124,7 +134,7 @@ export class OgMetadataValidators {
         {
           service: ErrorService.NextJsApi,
           operation: 'validateHostname',
-          context: { field: 'url', hostname, tld, statusCode: 400 },
+          context: { field: 'url', hostname, tld, statusCode: HttpStatusCode.BAD_REQUEST },
         },
       );
     }
@@ -135,7 +145,7 @@ export class OgMetadataValidators {
       throw Err.validation(ValidationErrorCode.FORMAT_ERROR, 'Invalid hostname. Domain name cannot be empty.', {
         service: ErrorService.NextJsApi,
         operation: 'validateHostname',
-        context: { field: 'url', hostname, statusCode: 400 },
+        context: { field: 'url', hostname, statusCode: HttpStatusCode.BAD_REQUEST },
       });
     }
   }
@@ -148,7 +158,7 @@ export class OgMetadataValidators {
       throw Err.validation(ValidationErrorCode.INVALID_INPUT, 'Tor .onion addresses are not supported.', {
         service: ErrorService.NextJsApi,
         operation: 'validateNotOnion',
-        context: { field: 'url', hostname: parsed.hostname, statusCode: 400 },
+        context: { field: 'url', hostname: parsed.hostname, statusCode: HttpStatusCode.BAD_REQUEST },
       });
     }
   }

@@ -1,6 +1,6 @@
 import { describe, it, expect, vi } from 'vitest';
 import { OgMetadataValidators } from './og-metadata.validators';
-import { AppError, ErrorCategory, ValidationErrorCode, ErrorService } from '@/libs';
+import { AppError, ErrorCategory, ValidationErrorCode, ErrorService, HttpStatusCode } from '@/libs';
 
 vi.mock('net', () => ({
   isIP: vi.fn((hostname: string) => {
@@ -25,7 +25,7 @@ describe('OgMetadataValidators', () => {
           expect(appError.code).toBe(ValidationErrorCode.MISSING_FIELD);
           expect(appError.service).toBe(ErrorService.NextJsApi);
           expect(appError.operation).toBe('validate');
-          expect(appError.context).toEqual({ field: 'url', statusCode: 400 });
+          expect(appError.context).toEqual({ field: 'url', statusCode: HttpStatusCode.BAD_REQUEST });
           expect(appError.message).toBe('Invalid URL');
         }
       });
@@ -53,7 +53,7 @@ describe('OgMetadataValidators', () => {
           expect(appError.code).toBe(ValidationErrorCode.FORMAT_ERROR);
           expect(appError.service).toBe(ErrorService.NextJsApi);
           expect(appError.operation).toBe('validate');
-          expect(appError.context).toEqual({ field: 'url', statusCode: 400 });
+          expect(appError.context).toEqual({ field: 'url', statusCode: HttpStatusCode.BAD_REQUEST });
           expect(appError.message).toBe('Malformed URL');
         }
       });

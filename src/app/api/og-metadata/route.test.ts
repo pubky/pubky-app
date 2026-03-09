@@ -62,7 +62,7 @@ describe('API Route: /api/og-metadata', () => {
       const appError = Libs.Err.validation(Libs.ValidationErrorCode.MISSING_FIELD, 'Invalid URL', {
         service: Libs.ErrorService.NextJsApi,
         operation: 'validate',
-        context: { field: 'url', statusCode: 400 },
+        context: { field: 'url', statusCode: Libs.HttpStatusCode.BAD_REQUEST },
       });
       vi.spyOn(Core.OgMetadataController, 'fetch').mockRejectedValue(appError);
 
@@ -79,7 +79,7 @@ describe('API Route: /api/og-metadata', () => {
       const appError = Libs.Err.auth(Libs.AuthErrorCode.FORBIDDEN, 'Blocked IP range', {
         service: Libs.ErrorService.NextJsApi,
         operation: 'validateDns',
-        context: { statusCode: 403 },
+        context: { statusCode: Libs.HttpStatusCode.FORBIDDEN },
       });
       vi.spyOn(Core.OgMetadataController, 'fetch').mockRejectedValue(appError);
 
@@ -95,7 +95,7 @@ describe('API Route: /api/og-metadata', () => {
       const appError = Libs.Err.timeout(Libs.TimeoutErrorCode.REQUEST_TIMEOUT, 'Request timeout', {
         service: Libs.ErrorService.NextJsApi,
         operation: 'fetch',
-        context: { statusCode: 408 },
+        context: { statusCode: Libs.HttpStatusCode.REQUEST_TIMEOUT },
       });
       vi.spyOn(Core.OgMetadataController, 'fetch').mockRejectedValue(appError);
 
@@ -111,7 +111,7 @@ describe('API Route: /api/og-metadata', () => {
       const appError = Libs.Err.client(Libs.ClientErrorCode.PAYLOAD_TOO_LARGE, 'Response too large (max 5MB)', {
         service: Libs.ErrorService.NextJsApi,
         operation: 'readResponseBody',
-        context: { statusCode: 413 },
+        context: { statusCode: Libs.HttpStatusCode.PAYLOAD_TOO_LARGE },
       });
       vi.spyOn(Core.OgMetadataController, 'fetch').mockRejectedValue(appError);
 

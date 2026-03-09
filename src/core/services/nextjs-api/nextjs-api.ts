@@ -1,4 +1,4 @@
-import { Err, ErrorService, TimeoutErrorCode, ServerErrorCode } from '@/libs';
+import { Err, ErrorService, TimeoutErrorCode, ServerErrorCode, HttpStatusCode } from '@/libs';
 
 const FETCH_TIMEOUT_MS = 10_000;
 
@@ -45,7 +45,7 @@ export class NextJsApiService {
         throw Err.timeout(TimeoutErrorCode.REQUEST_TIMEOUT, 'Request timeout', {
           service: ErrorService.NextJsApi,
           operation: 'fetch',
-          context: { url, statusCode: 408 },
+          context: { url, statusCode: HttpStatusCode.REQUEST_TIMEOUT },
         });
       }
 
@@ -53,7 +53,7 @@ export class NextJsApiService {
         service: ErrorService.NextJsApi,
         operation: 'fetch',
         cause: error,
-        context: { url, statusCode: 500 },
+        context: { url, statusCode: HttpStatusCode.INTERNAL_SERVER_ERROR },
       });
     } finally {
       clearTimeout(timeoutId);

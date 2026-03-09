@@ -66,7 +66,7 @@ describe('OgMetadataController', () => {
       const validationError = Libs.Err.validation(Libs.ValidationErrorCode.MISSING_FIELD, 'Invalid URL', {
         service: Libs.ErrorService.NextJsApi,
         operation: 'validate',
-        context: { field: 'url', statusCode: 400 },
+        context: { field: 'url', statusCode: Libs.HttpStatusCode.BAD_REQUEST },
       });
       // NOTE: error-handling rules (.cursor/rules/error-handling.mdc) require that layers
       // re-throw existing AppError instances as-is (no re-wrapping / double-logging).
@@ -82,7 +82,7 @@ describe('OgMetadataController', () => {
       const appError = Libs.Err.network(Libs.NetworkErrorCode.DNS_FAILED, 'DNS resolution failed', {
         service: Libs.ErrorService.NextJsApi,
         operation: 'validateDns',
-        context: { hostname: 'example.com', statusCode: 400 },
+        context: { hostname: 'example.com', statusCode: Libs.HttpStatusCode.BAD_REQUEST },
       });
       // NOTE: According to the error-handling rules (.cursor/rules/error-handling.mdc),
       // the controller must re-throw AppError instances coming from the Application layer
