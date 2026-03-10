@@ -29,5 +29,5 @@ export enum ErrorService {
   Chatwoot = 'chatwoot',
   PubkyAppSpecs = 'pubky-app-specs',
   Local = 'local', // Client-side operations
-  NextJsApi = 'nextjs-api', // Server-side operations (API routes)
+  NextJsServer = 'nextjs-server', // Server-side operations
 }

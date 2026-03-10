@@ -64,7 +64,7 @@ describe('OgMetadataController', () => {
 
     it('should bubble up validation AppError from validators without wrapping', async () => {
       const validationError = Libs.Err.validation(Libs.ValidationErrorCode.MISSING_FIELD, 'Invalid URL', {
-        service: Libs.ErrorService.NextJsApi,
+        service: Libs.ErrorService.NextJsServer,
         operation: 'validate',
         context: { field: 'url', statusCode: Libs.HttpStatusCode.BAD_REQUEST },
       });
@@ -80,7 +80,7 @@ describe('OgMetadataController', () => {
 
     it('should bubble up AppError from application layer without wrapping', async () => {
       const appError = Libs.Err.network(Libs.NetworkErrorCode.DNS_FAILED, 'DNS resolution failed', {
-        service: Libs.ErrorService.NextJsApi,
+        service: Libs.ErrorService.NextJsServer,
         operation: 'validateDns',
         context: { hostname: 'example.com', statusCode: Libs.HttpStatusCode.BAD_REQUEST },
       });

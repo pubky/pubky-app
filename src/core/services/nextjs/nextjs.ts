@@ -43,14 +43,14 @@ export class NextJsApiService {
     } catch (error) {
       if (error instanceof Error && error.name === 'AbortError') {
         throw Err.timeout(TimeoutErrorCode.REQUEST_TIMEOUT, 'Request timeout', {
-          service: ErrorService.NextJsApi,
+          service: ErrorService.NextJsServer,
           operation: 'fetch',
           context: { url, statusCode: HttpStatusCode.REQUEST_TIMEOUT },
         });
       }
 
       throw Err.server(ServerErrorCode.UNKNOWN_ERROR, 'Fetch failed', {
-        service: ErrorService.NextJsApi,
+        service: ErrorService.NextJsServer,
         operation: 'fetch',
         cause: error,
         context: { url, statusCode: HttpStatusCode.INTERNAL_SERVER_ERROR },

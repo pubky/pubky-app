@@ -25,7 +25,7 @@ describe('ReportValidators', () => {
         const appError = error as AppError;
         expect(appError.category).toBe(ErrorCategory.Validation);
         expect(appError.code).toBe(ValidationErrorCode.MISSING_FIELD);
-        expect(appError.service).toBe(ErrorService.NextJsApi);
+        expect(appError.service).toBe(ErrorService.NextJsServer);
         expect(appError.operation).toBe('validatePostUrl');
         expect(appError.context).toEqual({ field: 'postUrl' });
         expect(appError.message).toBe('Post URL is required and must be a non-empty string');
@@ -53,7 +53,7 @@ describe('ReportValidators', () => {
         const appError = error as AppError;
         expect(appError.category).toBe(ErrorCategory.Validation);
         expect(appError.code).toBe(ValidationErrorCode.FORMAT_ERROR);
-        expect(appError.service).toBe(ErrorService.NextJsApi);
+        expect(appError.service).toBe(ErrorService.NextJsServer);
         expect(appError.operation).toBe('validatePostUrl');
         expect(appError.context).toEqual({ field: 'postUrl', value: 'not-a-valid-url' });
         expect(appError.message).toBe('Post URL must be a valid URL');
@@ -92,7 +92,7 @@ describe('ReportValidators', () => {
         const appError = error as AppError;
         expect(appError.category).toBe(ErrorCategory.Validation);
         expect(appError.code).toBe(ValidationErrorCode.MISSING_FIELD);
-        expect(appError.service).toBe(ErrorService.NextJsApi);
+        expect(appError.service).toBe(ErrorService.NextJsServer);
         expect(appError.operation).toBe('validateIssueType');
         expect(appError.context).toEqual({ field: 'issueType' });
         expect(appError.message).toBe('Issue type is required and must be a non-empty string');
@@ -120,7 +120,7 @@ describe('ReportValidators', () => {
         const appError = error as AppError;
         expect(appError.category).toBe(ErrorCategory.Validation);
         expect(appError.code).toBe(ValidationErrorCode.INVALID_INPUT);
-        expect(appError.service).toBe(ErrorService.NextJsApi);
+        expect(appError.service).toBe(ErrorService.NextJsServer);
         expect(appError.operation).toBe('validateIssueType');
         expect(appError.context).toEqual({
           field: 'issueType',
@@ -147,7 +147,7 @@ describe('ReportValidators', () => {
         const appError = error as AppError;
         expect(appError.category).toBe(ErrorCategory.Validation);
         expect(appError.code).toBe(ValidationErrorCode.MISSING_FIELD);
-        expect(appError.service).toBe(ErrorService.NextJsApi);
+        expect(appError.service).toBe(ErrorService.NextJsServer);
         expect(appError.operation).toBe('validateReason');
         expect(appError.context).toEqual({ field: 'reason' });
         expect(appError.message).toBe('Reason is required and must be a non-empty string');
@@ -182,7 +182,7 @@ describe('ReportValidators', () => {
         const appError = error as AppError;
         expect(appError.category).toBe(ErrorCategory.Validation);
         expect(appError.code).toBe(ValidationErrorCode.INVALID_INPUT);
-        expect(appError.service).toBe(ErrorService.NextJsApi);
+        expect(appError.service).toBe(ErrorService.NextJsServer);
         expect(appError.operation).toBe('validateReason');
         expect(appError.context).toEqual({
           field: 'reason',
@@ -216,7 +216,7 @@ describe('ReportValidators', () => {
         const appError = error as AppError;
         expect(appError.category).toBe(ErrorCategory.Validation);
         expect(appError.code).toBe(ValidationErrorCode.MISSING_FIELD);
-        expect(appError.service).toBe(ErrorService.NextJsApi);
+        expect(appError.service).toBe(ErrorService.NextJsServer);
         expect(appError.operation).toBe('validatePubky');
         expect(appError.context).toEqual({ field: 'pubky' });
         expect(appError.message).toBe('Pubky is required and must be a non-empty string');
@@ -251,7 +251,7 @@ describe('ReportValidators', () => {
         const appError = error as AppError;
         expect(appError.category).toBe(ErrorCategory.Validation);
         expect(appError.code).toBe(ValidationErrorCode.MISSING_FIELD);
-        expect(appError.service).toBe(ErrorService.NextJsApi);
+        expect(appError.service).toBe(ErrorService.NextJsServer);
         expect(appError.operation).toBe('validateName');
         expect(appError.context).toEqual({ field: 'name' });
         expect(appError.message).toBe('Name is required and must be a non-empty string');

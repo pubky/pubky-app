@@ -26,7 +26,7 @@ export class OgMetadataValidators {
   static async validate(url: string | null): Promise<URL> {
     if (!url || typeof url !== 'string') {
       throw Err.validation(ValidationErrorCode.MISSING_FIELD, 'Invalid URL', {
-        service: ErrorService.NextJsApi,
+        service: ErrorService.NextJsServer,
         operation: 'validate',
         context: { field: 'url', statusCode: HttpStatusCode.BAD_REQUEST },
       });
@@ -35,7 +35,7 @@ export class OgMetadataValidators {
     const normalized = url.trim();
     if (!normalized) {
       throw Err.validation(ValidationErrorCode.MISSING_FIELD, 'Invalid URL', {
-        service: ErrorService.NextJsApi,
+        service: ErrorService.NextJsServer,
         operation: 'validate',
         context: { field: 'url', statusCode: HttpStatusCode.BAD_REQUEST },
       });
@@ -46,7 +46,7 @@ export class OgMetadataValidators {
       parsed = new URL(normalized);
     } catch {
       throw Err.validation(ValidationErrorCode.FORMAT_ERROR, 'Malformed URL', {
-        service: ErrorService.NextJsApi,
+        service: ErrorService.NextJsServer,
         operation: 'validate',
         context: { field: 'url', statusCode: HttpStatusCode.BAD_REQUEST },
       });
@@ -66,7 +66,7 @@ export class OgMetadataValidators {
   private static validateProtocol(parsed: URL): void {
     if (!['http:', 'https:'].includes(parsed.protocol)) {
       throw Err.validation(ValidationErrorCode.INVALID_INPUT, 'Invalid protocol. Only HTTP and HTTPS are allowed.', {
-        service: ErrorService.NextJsApi,
+        service: ErrorService.NextJsServer,
         operation: 'validateProtocol',
         context: { field: 'url', protocol: parsed.protocol, statusCode: HttpStatusCode.BAD_REQUEST },
       });
@@ -83,7 +83,7 @@ export class OgMetadataValidators {
     // Empty hostname (e.g., "http:///path")
     if (!hostname || hostname.trim() === '') {
       throw Err.validation(ValidationErrorCode.INVALID_INPUT, 'Invalid hostname. URL must include a domain name.', {
-        service: ErrorService.NextJsApi,
+        service: ErrorService.NextJsServer,
         operation: 'validateHostname',
         context: { field: 'url', statusCode: HttpStatusCode.BAD_REQUEST },
       });
@@ -103,7 +103,7 @@ export class OgMetadataValidators {
         ValidationErrorCode.FORMAT_ERROR,
         'Invalid hostname. Domain must not end with a trailing dot.',
         {
-          service: ErrorService.NextJsApi,
+          service: ErrorService.NextJsServer,
           operation: 'validateHostname',
           context: { field: 'url', hostname, statusCode: HttpStatusCode.BAD_REQUEST },
         },
@@ -118,7 +118,7 @@ export class OgMetadataValidators {
         ValidationErrorCode.FORMAT_ERROR,
         'Invalid hostname. Domain must include a top-level domain (TLD).',
         {
-          service: ErrorService.NextJsApi,
+          service: ErrorService.NextJsServer,
           operation: 'validateHostname',
           context: { field: 'url', hostname, statusCode: HttpStatusCode.BAD_REQUEST },
         },
@@ -132,7 +132,7 @@ export class OgMetadataValidators {
         ValidationErrorCode.FORMAT_ERROR,
         'Invalid hostname. Top-level domain (TLD) must be at least 2 characters.',
         {
-          service: ErrorService.NextJsApi,
+          service: ErrorService.NextJsServer,
           operation: 'validateHostname',
           context: { field: 'url', hostname, tld, statusCode: HttpStatusCode.BAD_REQUEST },
         },
@@ -143,7 +143,7 @@ export class OgMetadataValidators {
     const domain = parts.slice(0, -1).join('.');
     if (!domain || domain.trim() === '') {
       throw Err.validation(ValidationErrorCode.FORMAT_ERROR, 'Invalid hostname. Domain name cannot be empty.', {
-        service: ErrorService.NextJsApi,
+        service: ErrorService.NextJsServer,
         operation: 'validateHostname',
         context: { field: 'url', hostname, statusCode: HttpStatusCode.BAD_REQUEST },
       });
@@ -156,7 +156,7 @@ export class OgMetadataValidators {
   private static validateNotOnion(parsed: URL): void {
     if (parsed.hostname.toLowerCase().endsWith('.onion')) {
       throw Err.validation(ValidationErrorCode.INVALID_INPUT, 'Tor .onion addresses are not supported.', {
-        service: ErrorService.NextJsApi,
+        service: ErrorService.NextJsServer,
         operation: 'validateNotOnion',
         context: { field: 'url', hostname: parsed.hostname, statusCode: HttpStatusCode.BAD_REQUEST },
       });

@@ -584,7 +584,7 @@ describe('OgMetadataApplication', () => {
 
     it('should re-throw AppErrors without wrapping', async () => {
       const originalError = Libs.Err.auth(Libs.AuthErrorCode.FORBIDDEN, 'Blocked IP range', {
-        service: Libs.ErrorService.NextJsApi,
+        service: Libs.ErrorService.NextJsServer,
         operation: 'validateDns',
         context: { statusCode: Libs.HttpStatusCode.FORBIDDEN },
       });

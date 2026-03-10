@@ -73,7 +73,7 @@ export class OgMetadataApplication {
       if (!contentType?.includes('text/html')) {
         response.body?.cancel().catch(() => {});
         throw Libs.Err.validation(Libs.ValidationErrorCode.INVALID_INPUT, 'Not HTML content', {
-          service: Libs.ErrorService.NextJsApi,
+          service: Libs.ErrorService.NextJsServer,
           operation: 'fetch',
           context: { contentType, statusCode: Libs.HttpStatusCode.BAD_REQUEST },
         });
@@ -90,7 +90,7 @@ export class OgMetadataApplication {
       }
 
       throw Libs.Err.server(Libs.ServerErrorCode.UNKNOWN_ERROR, 'Failed to fetch OG metadata', {
-        service: Libs.ErrorService.NextJsApi,
+        service: Libs.ErrorService.NextJsServer,
         operation: 'fetch',
         cause: error,
         context: { url, statusCode: Libs.HttpStatusCode.INTERNAL_SERVER_ERROR },
@@ -118,7 +118,7 @@ export class OgMetadataApplication {
         const addresses = await dns.resolve4(hostname);
         if (!addresses || addresses.length === 0) {
           throw Libs.Err.network(Libs.NetworkErrorCode.DNS_FAILED, 'DNS resolution failed', {
-            service: Libs.ErrorService.NextJsApi,
+            service: Libs.ErrorService.NextJsServer,
             operation: 'validateDns',
             context: { hostname, statusCode: Libs.HttpStatusCode.BAD_REQUEST },
           });
@@ -129,7 +129,7 @@ export class OgMetadataApplication {
       if (error instanceof Libs.AppError) throw error;
 
       throw Libs.Err.network(Libs.NetworkErrorCode.DNS_FAILED, 'DNS resolution failed', {
-        service: Libs.ErrorService.NextJsApi,
+        service: Libs.ErrorService.NextJsServer,
         operation: 'validateDns',
         cause: error,
         context: { hostname, statusCode: Libs.HttpStatusCode.BAD_REQUEST },
@@ -139,7 +139,7 @@ export class OgMetadataApplication {
     // Reject private/reserved IP ranges to prevent SSRF (e.g. localhost, 10.x, 192.168.x).
     if (!isIpSafe(resolvedIp)) {
       throw Libs.Err.auth(Libs.AuthErrorCode.FORBIDDEN, 'Blocked IP range. Cannot fetch from private networks.', {
-        service: Libs.ErrorService.NextJsApi,
+        service: Libs.ErrorService.NextJsServer,
         operation: 'validateDns',
         context: { hostname, statusCode: Libs.HttpStatusCode.FORBIDDEN },
       });
@@ -171,7 +171,7 @@ export class OgMetadataApplication {
         // Release the response body before throwing so the TCP connection can be reused promptly.
         response.body?.cancel().catch(() => {});
         throw Libs.Err.auth(Libs.AuthErrorCode.FORBIDDEN, 'Blocked redirect to non-HTTP protocol', {
-          service: Libs.ErrorService.NextJsApi,
+          service: Libs.ErrorService.NextJsServer,
           operation: 'fetchWithRedirects',
           context: { protocol: redirectUrl.protocol, statusCode: Libs.HttpStatusCode.FORBIDDEN },
         });
@@ -186,7 +186,7 @@ export class OgMetadataApplication {
     }
 
     throw Libs.Err.network(Libs.NetworkErrorCode.CONNECTION_FAILED, 'Too many redirects', {
-      service: Libs.ErrorService.NextJsApi,
+      service: Libs.ErrorService.NextJsServer,
       operation: 'fetchWithRedirects',
       context: { url, statusCode: Libs.HttpStatusCode.BAD_REQUEST },
     });
@@ -203,7 +203,7 @@ export class OgMetadataApplication {
     }
 
     throw Libs.Err.server(Libs.ServerErrorCode.UNKNOWN_ERROR, 'Fetch failed', {
-      service: Libs.ErrorService.NextJsApi,
+      service: Libs.ErrorService.NextJsServer,
       operation: 'fetch',
       context: { url, statusCode: status },
     });
@@ -233,7 +233,7 @@ export class OgMetadataApplication {
     const reader = response.body?.getReader();
     if (!reader) {
       throw Libs.Err.validation(Libs.ValidationErrorCode.INVALID_INPUT, 'No response body', {
-        service: Libs.ErrorService.NextJsApi,
+        service: Libs.ErrorService.NextJsServer,
         operation: 'readResponseBody',
         context: { statusCode: Libs.HttpStatusCode.BAD_REQUEST },
       });
@@ -251,7 +251,7 @@ export class OgMetadataApplication {
         if (totalBytes > MAX_RESPONSE_SIZE) {
           await reader.cancel();
           throw Libs.Err.client(Libs.ClientErrorCode.PAYLOAD_TOO_LARGE, 'Response too large (max 5MB)', {
-            service: Libs.ErrorService.NextJsApi,
+            service: Libs.ErrorService.NextJsServer,
             operation: 'readResponseBody',
             context: { totalBytes, statusCode: Libs.HttpStatusCode.PAYLOAD_TOO_LARGE },
           });
@@ -263,7 +263,7 @@ export class OgMetadataApplication {
       if (error instanceof Libs.AppError) throw error;
 
       throw Libs.Err.server(Libs.ServerErrorCode.UNKNOWN_ERROR, 'Failed to read response body', {
-        service: Libs.ErrorService.NextJsApi,
+        service: Libs.ErrorService.NextJsServer,
         operation: 'readResponseBody',
         cause: error,
         context: { statusCode: Libs.HttpStatusCode.INTERNAL_SERVER_ERROR },

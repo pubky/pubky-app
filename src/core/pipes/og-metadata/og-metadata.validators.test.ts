@@ -23,7 +23,7 @@ describe('OgMetadataValidators', () => {
           const appError = error as AppError;
           expect(appError.category).toBe(ErrorCategory.Validation);
           expect(appError.code).toBe(ValidationErrorCode.MISSING_FIELD);
-          expect(appError.service).toBe(ErrorService.NextJsApi);
+          expect(appError.service).toBe(ErrorService.NextJsServer);
           expect(appError.operation).toBe('validate');
           expect(appError.context).toEqual({ field: 'url', statusCode: HttpStatusCode.BAD_REQUEST });
           expect(appError.message).toBe('Invalid URL');
@@ -51,7 +51,7 @@ describe('OgMetadataValidators', () => {
           const appError = error as AppError;
           expect(appError.category).toBe(ErrorCategory.Validation);
           expect(appError.code).toBe(ValidationErrorCode.FORMAT_ERROR);
-          expect(appError.service).toBe(ErrorService.NextJsApi);
+          expect(appError.service).toBe(ErrorService.NextJsServer);
           expect(appError.operation).toBe('validate');
           expect(appError.context).toEqual({ field: 'url', statusCode: HttpStatusCode.BAD_REQUEST });
           expect(appError.message).toBe('Malformed URL');
@@ -69,7 +69,7 @@ describe('OgMetadataValidators', () => {
           const appError = error as AppError;
           expect(appError.category).toBe(ErrorCategory.Validation);
           expect(appError.code).toBe(ValidationErrorCode.INVALID_INPUT);
-          expect(appError.service).toBe(ErrorService.NextJsApi);
+          expect(appError.service).toBe(ErrorService.NextJsServer);
           expect(appError.operation).toBe('validateProtocol');
           expect(appError.message).toContain('Invalid protocol');
         }
@@ -100,7 +100,7 @@ describe('OgMetadataValidators', () => {
           expect(error).toBeInstanceOf(AppError);
           const appError = error as AppError;
           expect(appError.code).toBe(ValidationErrorCode.FORMAT_ERROR);
-          expect(appError.service).toBe(ErrorService.NextJsApi);
+          expect(appError.service).toBe(ErrorService.NextJsServer);
           expect(appError.operation).toBe('validateHostname');
           expect(appError.message).toContain('trailing dot');
         }
@@ -149,7 +149,7 @@ describe('OgMetadataValidators', () => {
           const appError = error as AppError;
           expect(appError.category).toBe(ErrorCategory.Validation);
           expect(appError.code).toBe(ValidationErrorCode.INVALID_INPUT);
-          expect(appError.service).toBe(ErrorService.NextJsApi);
+          expect(appError.service).toBe(ErrorService.NextJsServer);
           expect(appError.operation).toBe('validateNotOnion');
           expect(appError.message).toContain('Tor .onion addresses are not supported');
         }
