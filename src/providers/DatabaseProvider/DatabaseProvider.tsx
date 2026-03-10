@@ -28,8 +28,8 @@ export function DatabaseProvider({ children }: { children: ReactNode }) {
     isInitializingRef.current = true;
     try {
       setError(null);
-      await db.initialize();
-      if (db.wasDbReset) {
+      const { wasDbReset } = await db.initialize();
+      if (wasDbReset) {
         useMigrationStore.getState().setWasDbReset(true);
       }
       setIsReady(true);

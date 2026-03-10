@@ -205,19 +205,15 @@ describe('Database Initialization', () => {
     }
   });
 
-  it('defaults wasDbReset to false on a new AppDatabase instance', () => {
-    const testDb = new AppDatabase(`${DB_NAME}-wasDbReset-default`);
-    expect(testDb.wasDbReset).toBe(false);
-  });
-
-  it('sets wasDbReset to true after recreateDatabase runs (version mismatch)', async () => {
+  it('returns wasDbReset true after recreateDatabase runs (version mismatch)', async () => {
     const testDbName = `${DB_NAME}-wasDbReset-recreate`;
     const testDb = new AppDatabase(testDbName);
 
     await waitForDatabaseDeletion(testDbName, () => testDb.close());
 
     // Initialize normally first
-    await testDb.initialize();
+    const firstResult = await testDb.initialize();
+    expect(firstResult.wasDbReset).toBe(true); // new DB
 
     // Create version mismatch
     testDb.close();
@@ -233,24 +229,22 @@ describe('Database Initialization', () => {
     });
 
     // Re-initialize — should detect mismatch and recreate
-    await testDb.initialize();
-    expect(testDb.wasDbReset).toBe(true);
+    const result = await testDb.initialize();
+    expect(result.wasDbReset).toBe(true);
 
     // Clean up test database to avoid leaking into other tests
     await testDb.delete();
   });
 
-  it('sets wasDbReset to true when initialize creates a new database', async () => {
+  it('returns wasDbReset true when initialize creates a new database', async () => {
     const testDbName = `${DB_NAME}-wasDbReset-new`;
     const testDb = new AppDatabase(testDbName);
 
     await waitForDatabaseDeletion(testDbName, () => testDb.close());
 
-    expect(testDb.wasDbReset).toBe(false);
+    const result = await testDb.initialize();
 
-    await testDb.initialize();
-
-    expect(testDb.wasDbReset).toBe(true);
+    expect(result.wasDbReset).toBe(true);
 
     // Clean up test database to avoid leaking into other tests
     await testDb.delete();
