@@ -4,7 +4,7 @@ import { truncateString, truncateMiddle, decodeHtmlEntities } from '@/libs/utils
 import { isIpSafe } from '@/libs/network';
 import { OG_PATTERNS, extractFromHtml } from '@/libs/html';
 import { URL_TRUNCATE_LENGTH, TITLE_TRUNCATE_LENGTH } from '@/config';
-import { nextjsApiQueryClient } from '@/core/services/nextjs/nextjs-api.query-client';
+import { queryNextjs } from '@/core/services/nextjs/nextjs.utils';
 
 const MAX_REDIRECTS = 5;
 const MAX_RESPONSE_SIZE = 5 * 1024 * 1024; // 5MB
@@ -26,8 +26,7 @@ export class OgMetadataApplication {
   /**
    * Fetch and extract OG metadata from a validated URL.
    *
-   * Uses the NextJS API query client for request deduplication, caching (1h staleTime),
-   * and retry (server errors retried 2x with exponential backoff).
+   * Delegates caching, deduplication, and retry to the service layer via queryNextjs.
    *
    * @param validatedUrl - Parsed and validated URL from the pipes layer
    * @returns Normalized OG metadata result
@@ -36,7 +35,7 @@ export class OgMetadataApplication {
   static async fetch(validatedUrl: URL): Promise<Core.TOgMetadataResult> {
     const url = validatedUrl.toString();
 
-    return nextjsApiQueryClient.fetchQuery({
+    return queryNextjs({
       queryKey: ['nextjs-api', 'og-metadata', url],
       queryFn: () => this.fetchOgMetadata(url, validatedUrl.hostname),
     });
