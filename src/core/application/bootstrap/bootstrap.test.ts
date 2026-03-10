@@ -226,10 +226,6 @@ const assertCommonCalls = (mocks: ServiceMocks, bootstrapData: Core.NexusBootstr
   expect(mocks.fetchFeeds).toHaveBeenCalledWith(TEST_PUBKY);
   expect(mocks.persistUsers).toHaveBeenCalledWith(bootstrapData.users);
   expect(mocks.persistPosts).toHaveBeenCalledWith({ posts: bootstrapData.posts });
-  expect(mocks.upsertInfluencersStream).toHaveBeenCalledWith({
-    streamId: Core.UserStreamTypes.MUTED,
-    stream: [],
-  });
   expect(mocks.upsertPostsStream).toHaveBeenCalledWith({
     streamId: Core.PostStreamTypes.TIMELINE_ALL_ALL,
     stream: bootstrapData.ids.stream,
@@ -557,14 +553,10 @@ describe('BootstrapApplication', () => {
       const result = await BootstrapApplication.initialize(getBootstrapParams(TEST_PUBKY));
 
       expect(mocks.fetchMutedUsers).toHaveBeenCalledWith(TEST_PUBKY);
-      expect(mocks.upsertInfluencersStream).toHaveBeenCalledWith({
-        streamId: Core.UserStreamTypes.MUTED,
-        stream: [],
-      });
       expect(result).toEqual({ notification: { unread: 0, lastRead: MOCK_LAST_READ, lastPolledTimestamp: undefined } });
     });
 
-    it('should fetch and persist muted users during bootstrap', async () => {
+    it('should fetch muted users during bootstrap (persist is inside fetchMutedUsers)', async () => {
       const bootstrapData = emptyBootstrap();
       const mutedUsers = ['muted-user-1', 'muted-user-2'] as Core.Pubky[];
       const mocks = setupMocks({ bootstrapData, mutedUsers });
@@ -572,10 +564,6 @@ describe('BootstrapApplication', () => {
       const result = await BootstrapApplication.initialize(getBootstrapParams(TEST_PUBKY));
 
       expect(mocks.fetchMutedUsers).toHaveBeenCalledWith(TEST_PUBKY);
-      expect(mocks.upsertInfluencersStream).toHaveBeenCalledWith({
-        streamId: Core.UserStreamTypes.MUTED,
-        stream: mutedUsers,
-      });
       expect(result).toEqual({ notification: { unread: 0, lastRead: MOCK_LAST_READ, lastPolledTimestamp: undefined } });
     });
 

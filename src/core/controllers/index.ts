@@ -18,4 +18,5 @@ export * from './moderation';
 export * from './homegate';
 export * from './settings';
 export * from './ttl';
+export * from './migration';
 export * from './controllers.types';

@@ -66,6 +66,7 @@ const storeMocks = vi.hoisted(() => {
   const setAuthUrlResolved = vi.fn();
   const setProfileChecked = vi.fn();
   const setSignInError = vi.fn();
+  const resetMigrationStore = vi.fn();
 
   return {
     resetAuthStore,
@@ -82,6 +83,7 @@ const storeMocks = vi.hoisted(() => {
     setAuthUrlResolved,
     setProfileChecked,
     setSignInError,
+    resetMigrationStore,
     getAuthState: vi.fn(() => ({
       init: initAuthStore,
       setSession: vi.fn(),
@@ -159,6 +161,12 @@ vi.mock('@/core/stores', () => ({
   useSettingsStore: {
     getState: storeMocks.getSettingsState,
   },
+  useMigrationStore: {
+    getState: () => ({
+      reset: storeMocks.resetMigrationStore,
+      wasDbReset: false,
+    }),
+  },
 }));
 
 // Mock @synonymdev/pubky
@@ -187,6 +195,11 @@ vi.mock('@/libs/env', () => ({
 describe('AuthController', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    // Ensure migration store mock is always available
+    vi.spyOn(Core.useMigrationStore, 'getState').mockReturnValue({
+      reset: storeMocks.resetMigrationStore,
+      wasDbReset: false,
+    } as unknown as Core.MigrationStore);
   });
 
   afterEach(() => {
@@ -262,6 +275,8 @@ describe('AuthController', () => {
       const result = await AuthController.signUp({ secretKey: TEST_SECRET_KEY, signupToken });
 
       expect(clearDatabaseSpy).toHaveBeenCalled();
+      // Skip post-migration resync — new user has no homeserver data to resync
+      expect(storeMocks.resetMigrationStore).toHaveBeenCalled();
       expect(keypairFromSecretKeySpy).toHaveBeenCalledWith(TEST_SECRET_KEY);
       expect(signUpSpy).toHaveBeenCalledWith({
         keypair,
@@ -323,6 +338,8 @@ describe('AuthController', () => {
       const result = await AuthController.loginWithMnemonic({ mnemonic });
 
       expect(clearDatabaseSpy).toHaveBeenCalled();
+      // Skip post-migration resync — bootstrap runs if user has profile, otherwise no data to resync
+      expect(storeMocks.resetMigrationStore).toHaveBeenCalled();
       expect(keypairSpy).toHaveBeenCalledWith(mnemonic);
       expect(signInSpy).toHaveBeenCalledWith({ keypair: mockKeypair });
       expect(z32FromSessionSpy).toHaveBeenCalledWith({ session: mockSession });
@@ -555,6 +572,8 @@ describe('AuthController', () => {
       const result = await AuthController.getAuthUrl();
 
       expect(clearDatabaseSpy).toHaveBeenCalled();
+      // Skip post-migration resync — full bootstrap below covers all data
+      expect(storeMocks.resetMigrationStore).toHaveBeenCalled();
       expect(result.authorizationUrl).toEqual(mockAuthUrl.authorizationUrl);
       expect(result.awaitApproval).toBeInstanceOf(Promise);
       expect(result.cancelAuthFlow).toBe(cancelAuthFlow);
@@ -954,6 +973,9 @@ describe('AuthController', () => {
       // Cookies and database
       expect(clearCookiesSpy).toHaveBeenCalledOnce();
       expect(clearDatabaseSpy).toHaveBeenCalledOnce();
+
+      // Skip post-migration resync — full cleanup resets all state
+      expect(storeMocks.resetMigrationStore).toHaveBeenCalled();
 
       // Persisted localStorage keys
       expect(removeItemSpy).toHaveBeenCalledWith('auth-store');
