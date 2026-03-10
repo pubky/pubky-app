@@ -7,11 +7,14 @@
 
 /**
  * Parameters for querying via the NextJS API query client.
+ * The query key is built internally as ['nextjs-api', topic, url].
  * @see queryNextjs in nextjs.utils.ts
  */
 export type TQueryNextjsParams<T> = {
-  /** Cache key for deduplication and caching */
-  queryKey: readonly unknown[];
+  /** Topic identifier for cache key namespacing (e.g., 'og-metadata') */
+  topic: string;
+  /** The URL being queried, used as the cache key discriminator */
+  url: string;
   /** Function that performs the actual fetch */
   queryFn: () => Promise<T>;
 };
