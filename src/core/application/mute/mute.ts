@@ -31,25 +31,24 @@ export class MuteApplication {
    * @returns Array of muted user pubkeys
    */
   static async fetchMutedUsers(pubky: Core.Pubky): Promise<Core.Pubky[]> {
+    let stream: Core.Pubky[] = [];
     try {
       const mutesDirectory = `${baseUriBuilder(pubky)}mutes/`;
       const muteUris = await Core.HomeserverService.list({ baseDirectory: mutesDirectory });
-      const stream = muteUris.map((uri) => uri.split('/').pop()).filter((id): id is string => !!id) as Core.Pubky[];
-      await Core.LocalStreamUsersService.upsert({
-        streamId: Core.UserStreamTypes.MUTED,
-        stream,
-      });
-      return stream;
+      stream = muteUris.map((uri) => uri.split('/').pop()).filter((id): id is string => !!id) as Core.Pubky[];
     } catch (error) {
       if (error instanceof AppError && error.context?.statusCode === HttpStatusCode.NOT_FOUND) {
         Logger.info('Mutes directory not found, defaulting to empty list', { pubky });
-        await Core.LocalStreamUsersService.upsert({
-          streamId: Core.UserStreamTypes.MUTED,
-          stream: [],
-        });
-        return [];
+      } else {
+        throw error;
       }
-      throw error;
     }
+
+    // Persist the muted users to the local MUTED stream
+    await Core.LocalStreamUsersService.upsert({
+      streamId: Core.UserStreamTypes.MUTED,
+      stream,
+    });
+    return stream;
   }
 }
