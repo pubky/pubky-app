@@ -77,7 +77,7 @@ export function DialogWelcome() {
                 </Atoms.Typography>
                 <Atoms.Typography
                   size="sm"
-                  className="truncate text-center font-medium text-muted-foreground sm:text-left"
+                  className="w-full truncate text-center font-medium text-muted-foreground sm:text-left"
                 >
                   {userDetails.bio}
                 </Atoms.Typography>
