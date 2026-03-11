@@ -37,6 +37,7 @@ body {
   --color-input: var(--input);
   --color-border: var(--border);
   --color-destructive: var(--destructive);
+  --color-destructive-foreground: var(--destructive-foreground);
   --color-accent-foreground: var(--accent-foreground);
   --color-accent: var(--accent);
   --color-muted-foreground: var(--muted-foreground);
@@ -85,6 +86,7 @@ body {
   --accent: oklch(0.392 0.007 286.088);
   --accent-foreground: oklch(0.951 0.011 286.195);
   --destructive: oklch(0.628 0.258 29.234);
+  --destructive-foreground: oklch(0.971 0.013 17.38);
   --border: oklch(0.311 0.007 285.98);
   --input: #525252;
   --ring: oklch(0.55 0.008 286.145);
@@ -151,6 +153,26 @@ body {
    * Note: Profile pages use --header-height (146px) for ProfilePageHeader.
    */
   --header-offset-main: 150px;
+
+  /**
+   * Main content header offset
+   * - Vertical offset for auth pages, smaller header than normal
+   *
+   * Value rationale (120px):
+   * - Header container size: 120px
+   *
+   */
+  --header-offset-auth-pages: 120px;
+
+  /**
+   * Onboarding content header offset
+   * - Vertical offset for sticky below main header Different than others ones
+   *
+   * Value rationale (100px):
+   * - Header outer container: Smaller than auth pages due the header being 20px less pixels
+   *
+   */
+  --header-offset-onboarding: 100px;
 
   /**
    * Sidebar and filter bar width
@@ -300,6 +322,14 @@ body {
    * - Desktop uses different layout without mobile menu
    */
   --z-mobile-menu: 30;
+
+  /**
+   * Container max width
+   * - Maximum width for the container
+   * - Applied to: Container component
+   * - Used for: Main content area
+   */
+  --container-max-width: 1200px;
 }
 
 @layer base {
@@ -525,5 +555,12 @@ body {
 
   .max-width-profile-page-header {
     max-width: calc(100vw - 6rem);
+  }
+
+  .h-screen-without-page-header-auth-pages {
+    min-height: calc(100dvh - var(--header-offset-auth-pages));
+  }
+  .h-screen-without-page-header-onboarding {
+    min-height: calc(100dvh - var(--header-offset-onboarding));
   }
 }

@@ -21,15 +21,7 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json({ message: 'Success' });
   } catch (error) {
-    // Handle AppError from controller/application/service layers
-    if (error instanceof Libs.AppError) {
-      const statusCode = (error.context?.statusCode as number) ?? Libs.HttpStatusCode.INTERNAL_SERVER_ERROR;
-      return NextResponse.json({ error: error.message }, { status: statusCode });
-    }
-
-    // Handle unexpected errors
-    Libs.Logger.error('Error in report API handler:', error);
-    return NextResponse.json({ error: 'Internal Server Error' }, { status: Libs.HttpStatusCode.INTERNAL_SERVER_ERROR });
+    return Libs.handleApiError(error, 'api.report.POST');
   }
 }
 

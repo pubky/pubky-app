@@ -2,7 +2,7 @@
 
 exports[`Page Components - Snapshots > PageContainer - Snapshots > matches snapshot for PageContainer with different configurations 1`] = `
 <main
-  class="container mx-auto max-w-[588px] custom-page"
+  class="w-full mx-auto max-w-[588px] custom-page"
   data-testid="page-container"
 >
   <p>
@@ -13,7 +13,7 @@ exports[`Page Components - Snapshots > PageContainer - Snapshots > matches snaps
 
 exports[`Page Components - Snapshots > PageContainer - Snapshots > matches snapshot for default PageContainer 1`] = `
 <div
-  class="container mx-auto max-w-[1200px]"
+  class="w-full mx-auto"
   data-testid="page-container"
 >
   <div>

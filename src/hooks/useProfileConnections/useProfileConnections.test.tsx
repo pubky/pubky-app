@@ -245,8 +245,8 @@ describe('useProfileConnections', () => {
       ]);
 
       mockUserRelationshipsMap = new Map<Core.Pubky, Core.UserRelationshipsModelSchema>([
-        ['user-1', { id: 'user-1' as Core.Pubky, following: false, followed_by: false, muted: false }],
-        ['user-2', { id: 'user-2' as Core.Pubky, following: true, followed_by: false, muted: false }],
+        ['user-1', { id: 'user-1' as Core.Pubky, following: false, followed_by: false }],
+        ['user-2', { id: 'user-2' as Core.Pubky, following: true, followed_by: false }],
       ]);
 
       mockMocks.mockGetAvatarUrl.mockImplementation((id: Core.Pubky) => {

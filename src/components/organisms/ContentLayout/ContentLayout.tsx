@@ -49,7 +49,12 @@ export function ContentLayout({
   renderMobileHeader = true,
   className,
 }: Types.ContentLayoutProps) {
-  const { layout } = Core.useHomeStore();
+  const { layout: homeLayout } = Core.useHomeStore();
+  const customFeed = Hooks.useCustomFeed();
+  const customFeedLayout =
+    customFeed?.layout !== undefined ? Core.pubkyLayoutToHomeLayout(customFeed.layout) : undefined;
+  const layout = customFeedLayout ?? homeLayout;
+
   const [drawerFilterOpen, setDrawerFilterOpen] = useState(false);
   const [drawerRightOpen, setDrawerRightOpen] = useState(false);
   const isMobile = Hooks.useIsMobile();
@@ -87,8 +92,8 @@ export function ContentLayout({
       <Atoms.Container
         overrideDefaults
         className={Libs.cn(
-          'sm:max-w-xl md:max-w-3xl lg:max-w-5xl xl:max-w-6xl',
-          'w-full px-6 pb-12 sm:m-auto xl:px-0',
+          'container max-w-(--container-max-width)',
+          'm-auto w-full px-6 pb-12 xl:px-0',
           'pt-0',
           className,
         )}

@@ -333,9 +333,13 @@ describe('MobileFooter', () => {
 });
 
 describe('MobileFooter - Snapshots', () => {
-  beforeEach(() => {
+  beforeEach(async () => {
     vi.clearAllMocks();
     vi.mocked(usePathname).mockReturnValue('/home');
+    mockSelectUnread.mockReturnValue(0);
+
+    const { useKeyboardOffset } = await import('@/hooks');
+    vi.mocked(useKeyboardOffset).mockReturnValue({ isKeyboardVisible: false, keyboardOffset: 0 });
   });
 
   it('matches snapshot with default props', () => {

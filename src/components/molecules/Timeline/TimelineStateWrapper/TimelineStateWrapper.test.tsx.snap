@@ -1,0 +1,59 @@
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
+
+exports[`TimelineStateWrapper > Snapshots > should match snapshot for empty state 1`] = `
+<div>
+  <div
+    class="flex items-center justify-center py-8"
+    data-cy="timeline-container"
+  >
+    <span
+      class="text-muted-foreground"
+    >
+      noPosts
+    </span>
+  </div>
+</div>
+`;
+
+exports[`TimelineStateWrapper > Snapshots > should match snapshot for error state 1`] = `
+<div>
+  <div
+    class="flex items-center justify-center py-8"
+  >
+    <span
+      class="text-destructive"
+    >
+      Error: 
+      Network error
+    </span>
+  </div>
+</div>
+`;
+
+exports[`TimelineStateWrapper > Snapshots > should match snapshot for loading state 1`] = `
+<div>
+  <div
+    data-testid="default-loading"
+  >
+    Default Loading...
+  </div>
+</div>
+`;
+
+exports[`TimelineStateWrapper > Snapshots > should match snapshot for success state 1`] = `
+<div>
+  <div
+    data-testid="mock-children"
+  >
+    Children Content
+  </div>
+</div>
+`;
+
+exports[`TimelineStateWrapper > Snapshots > should match snapshot with custom components 1`] = `
+<div>
+  <div>
+    Custom Empty
+  </div>
+</div>
+`;

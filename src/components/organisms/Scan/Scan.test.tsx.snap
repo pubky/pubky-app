@@ -8,7 +8,7 @@ exports[`Scan Components - Snapshots > ScanContent - Snapshots > matches snapsho
   <div
     data-testid="page-header"
   >
-    <div
+    <h1
       data-size="large"
       data-testid="page-title"
     >
@@ -18,7 +18,7 @@ exports[`Scan Components - Snapshots > ScanContent - Snapshots > matches snapsho
       >
         QR Code.
       </span>
-    </div>
+    </h1>
     <div
       data-testid="page-subtitle"
     >
@@ -82,7 +82,7 @@ exports[`Scan Components - Snapshots > ScanHeader - Snapshots > matches snapshot
 <div
   data-testid="page-header"
 >
-  <div
+  <h1
     data-size="large"
     data-testid="page-title"
   >
@@ -92,7 +92,7 @@ exports[`Scan Components - Snapshots > ScanHeader - Snapshots > matches snapshot
     >
       QR Code.
     </span>
-  </div>
+  </h1>
   <div
     data-testid="page-subtitle"
   >
@@ -105,7 +105,7 @@ exports[`Scan Components - Snapshots > ScanHeader - Snapshots > matches snapshot
 <div
   data-testid="page-header"
 >
-  <div
+  <h1
     data-size="large"
     data-testid="page-title"
   >
@@ -115,7 +115,7 @@ exports[`Scan Components - Snapshots > ScanHeader - Snapshots > matches snapshot
     >
       Authorize.
     </span>
-  </div>
+  </h1>
   <div
     data-testid="page-subtitle"
   >

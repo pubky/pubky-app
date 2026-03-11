@@ -1,6 +1,6 @@
 'use client';
 
-import * as AccordionPrimitive from '@radix-ui/react-accordion';
+import { Accordion as AccordionPrimitive } from 'radix-ui';
 import Markdown from 'react-markdown';
 import * as Libs from '@/libs';
 import type { FAQAccordionProps } from './FAQAccordion.types';

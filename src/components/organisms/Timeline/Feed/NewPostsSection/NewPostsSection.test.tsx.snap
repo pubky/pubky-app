@@ -1,0 +1,16 @@
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
+
+exports[`NewPostsSection - Snapshots > matches snapshot when hidden 1`] = `<div />`;
+
+exports[`NewPostsSection - Snapshots > matches snapshot with new posts visible 1`] = `
+<div>
+  <button
+    data-count="3"
+    data-scrolled="false"
+    data-testid="new-posts-button"
+  >
+    3
+     new posts
+  </button>
+</div>
+`;

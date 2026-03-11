@@ -194,7 +194,7 @@ export class LocalStreamPostsService {
    */
   static async persistPosts({ posts }: Core.TPersistPostsParams): Promise<Core.TPostStreamPersistResult> {
     // Defensive check: if posts is empty or undefined, return early
-    if (!posts?.length) return { postAttachments: [] };
+    if (!posts?.length) return { attachmentMetadata: [] };
 
     const postCounts: Core.NexusModelTuple<Core.NexusPostCounts>[] = [];
     const postRelationships: Core.NexusModelTuple<Core.NexusPostRelationships>[] = [];
@@ -205,7 +205,7 @@ export class LocalStreamPostsService {
     const postTtl: Core.NexusModelTuple<{ lastUpdatedAt: number }>[] = [];
 
     const postReplies: Record<Core.ReplyStreamCompositeId, string[]> = {};
-    const postAttachments: string[] = [];
+    const attachmentMetadata: Core.NexusFileDetails[] = [];
     const now = Date.now();
 
     for (const post of posts) {
@@ -215,9 +215,9 @@ export class LocalStreamPostsService {
       postCounts.push([postId, post.counts]);
 
       postRelationships.push([postId, post.relationships]);
-      if (post.details.attachments) {
-        post.details.attachments.forEach((attachment) => {
-          postAttachments.push(attachment);
+      if (post.attachments_metadata) {
+        post.attachments_metadata.forEach((metadata) => {
+          attachmentMetadata.push(metadata);
         });
       }
 
@@ -283,7 +283,7 @@ export class LocalStreamPostsService {
         }),
       );
     }
-    return { postAttachments };
+    return { attachmentMetadata };
   }
 
   /**
