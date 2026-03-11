@@ -58,7 +58,7 @@ exports[`DialogWelcome - Snapshots > matches snapshot for default DialogWelcome 
               Test User
             </p>
             <p
-              class="truncate text-center font-medium text-muted-foreground sm:text-left"
+              class="w-full truncate text-center font-medium text-muted-foreground sm:text-left"
               data-size="sm"
               data-testid="typography"
             >
@@ -152,7 +152,7 @@ exports[`DialogWelcome - Snapshots > matches snapshot when user has no image 1`]
               Test User
             </p>
             <p
-              class="truncate text-center font-medium text-muted-foreground sm:text-left"
+              class="w-full truncate text-center font-medium text-muted-foreground sm:text-left"
               data-size="sm"
               data-testid="typography"
             >
