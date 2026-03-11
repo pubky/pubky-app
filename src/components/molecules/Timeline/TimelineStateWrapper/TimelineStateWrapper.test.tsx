@@ -2,13 +2,21 @@ import { describe, it, expect, vi } from 'vitest';
 import { render, screen } from '@testing-library/react';
 import { TimelineStateWrapper } from './TimelineStateWrapper';
 
-// Mock molecules
-vi.mock('@/molecules', () => ({
+vi.mock('next-intl', () => ({
+  useTranslations: () => (key: string) => key,
+}));
+
+vi.mock('../TimelineLoading', () => ({
   TimelineLoading: () => <div data-testid="default-loading">Default Loading...</div>,
-  TimelineInitialError: ({ message }: { message: string }) => (
-    <div data-testid="default-error">Default Error: {message}</div>
+}));
+
+vi.mock('@/atoms', () => ({
+  Container: ({ children, ...props }: { children?: React.ReactNode; [key: string]: unknown }) => (
+    <div {...props}>{children}</div>
   ),
-  TimelineEmpty: () => <div data-testid="default-empty">Default Empty</div>,
+  Typography: ({ children, ...props }: { children?: React.ReactNode; [key: string]: unknown }) => (
+    <span {...props}>{children}</span>
+  ),
 }));
 
 describe('TimelineStateWrapper', () => {
@@ -48,7 +56,7 @@ describe('TimelineStateWrapper', () => {
       );
 
       expect(screen.getByTestId('default-loading')).toBeInTheDocument();
-      expect(screen.queryByTestId('default-error')).not.toBeInTheDocument();
+      expect(screen.queryByText(/some error/i)).not.toBeInTheDocument();
     });
 
     it('should prioritize loading state over empty state', () => {
@@ -59,19 +67,18 @@ describe('TimelineStateWrapper', () => {
       );
 
       expect(screen.getByTestId('default-loading')).toBeInTheDocument();
-      expect(screen.queryByTestId('default-empty')).not.toBeInTheDocument();
+      expect(screen.queryByText('noPosts')).not.toBeInTheDocument();
     });
   });
 
   describe('Error State', () => {
-    it('should render default error component when error and no items', () => {
+    it('should render default error when error and no items', () => {
       render(
         <TimelineStateWrapper loading={false} error="Network error" hasItems={false}>
           {mockChildren}
         </TimelineStateWrapper>,
       );
 
-      expect(screen.getByTestId('default-error')).toBeInTheDocument();
       expect(screen.getByText(/network error/i)).toBeInTheDocument();
       expect(screen.queryByTestId('mock-children')).not.toBeInTheDocument();
     });
@@ -86,7 +93,6 @@ describe('TimelineStateWrapper', () => {
       );
 
       expect(screen.getByTestId('custom-error')).toBeInTheDocument();
-      expect(screen.queryByTestId('default-error')).not.toBeInTheDocument();
       expect(screen.queryByTestId('mock-children')).not.toBeInTheDocument();
     });
 
@@ -98,7 +104,6 @@ describe('TimelineStateWrapper', () => {
       );
 
       expect(screen.getByTestId('mock-children')).toBeInTheDocument();
-      expect(screen.queryByTestId('default-error')).not.toBeInTheDocument();
     });
 
     it('should prioritize error state over empty state', () => {
@@ -108,20 +113,20 @@ describe('TimelineStateWrapper', () => {
         </TimelineStateWrapper>,
       );
 
-      expect(screen.getByTestId('default-error')).toBeInTheDocument();
-      expect(screen.queryByTestId('default-empty')).not.toBeInTheDocument();
+      expect(screen.getByText(/some error/i)).toBeInTheDocument();
+      expect(screen.queryByText('noPosts')).not.toBeInTheDocument();
     });
   });
 
   describe('Empty State', () => {
-    it('should render default empty component when no items', () => {
+    it('should render default empty when no items', () => {
       render(
         <TimelineStateWrapper loading={false} error={null} hasItems={false}>
           {mockChildren}
         </TimelineStateWrapper>,
       );
 
-      expect(screen.getByTestId('default-empty')).toBeInTheDocument();
+      expect(screen.getByText('noPosts')).toBeInTheDocument();
       expect(screen.queryByTestId('mock-children')).not.toBeInTheDocument();
     });
 
@@ -135,7 +140,7 @@ describe('TimelineStateWrapper', () => {
       );
 
       expect(screen.getByTestId('custom-empty')).toBeInTheDocument();
-      expect(screen.queryByTestId('default-empty')).not.toBeInTheDocument();
+      expect(screen.queryByText('noPosts')).not.toBeInTheDocument();
       expect(screen.queryByTestId('mock-children')).not.toBeInTheDocument();
     });
   });
@@ -150,8 +155,7 @@ describe('TimelineStateWrapper', () => {
 
       expect(screen.getByTestId('mock-children')).toBeInTheDocument();
       expect(screen.queryByTestId('default-loading')).not.toBeInTheDocument();
-      expect(screen.queryByTestId('default-error')).not.toBeInTheDocument();
-      expect(screen.queryByTestId('default-empty')).not.toBeInTheDocument();
+      expect(screen.queryByText('noPosts')).not.toBeInTheDocument();
     });
 
     it('should render children when has items even with error', () => {
@@ -162,7 +166,6 @@ describe('TimelineStateWrapper', () => {
       );
 
       expect(screen.getByTestId('mock-children')).toBeInTheDocument();
-      expect(screen.queryByTestId('default-error')).not.toBeInTheDocument();
     });
   });
 
@@ -174,7 +177,7 @@ describe('TimelineStateWrapper', () => {
         </TimelineStateWrapper>,
       );
 
-      expect(screen.getByTestId('default-empty')).toBeInTheDocument();
+      expect(screen.getByText('noPosts')).toBeInTheDocument();
     });
 
     it('should handle empty string error', () => {
@@ -184,8 +187,7 @@ describe('TimelineStateWrapper', () => {
         </TimelineStateWrapper>,
       );
 
-      // Empty string is falsy, so should show empty state
-      expect(screen.getByTestId('default-empty')).toBeInTheDocument();
+      expect(screen.getByText('noPosts')).toBeInTheDocument();
     });
 
     it('should handle multiple children', () => {

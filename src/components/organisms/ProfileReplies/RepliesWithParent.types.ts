@@ -1,6 +1,6 @@
 import * as Core from '@/core';
 
-export interface TimelineRepliesWithParentProps {
+export interface RepliesWithParentProps {
   /**
    * Stream ID for the replies timeline
    */

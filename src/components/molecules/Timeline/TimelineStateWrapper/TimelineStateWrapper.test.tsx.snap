@@ -3,9 +3,14 @@
 exports[`TimelineStateWrapper > Snapshots > should match snapshot for empty state 1`] = `
 <div>
   <div
-    data-testid="default-empty"
+    class="flex items-center justify-center py-8"
+    data-cy="timeline-container"
   >
-    Default Empty
+    <span
+      class="text-muted-foreground"
+    >
+      noPosts
+    </span>
   </div>
 </div>
 `;
@@ -13,10 +18,14 @@ exports[`TimelineStateWrapper > Snapshots > should match snapshot for empty stat
 exports[`TimelineStateWrapper > Snapshots > should match snapshot for error state 1`] = `
 <div>
   <div
-    data-testid="default-error"
+    class="flex items-center justify-center py-8"
   >
-    Default Error: 
-    Network error
+    <span
+      class="text-destructive"
+    >
+      Error: 
+      Network error
+    </span>
   </div>
 </div>
 `;
