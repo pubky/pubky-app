@@ -1,12 +1,17 @@
 import { render, screen, fireEvent } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { PostInputActionBar } from './PostInputActionBar';
+import * as Hooks from '@/hooks';
 
 // Use real libs - use actual implementations
 vi.mock('@/libs', async () => {
   const actual = await vi.importActual('@/libs');
   return { ...actual };
 });
+
+vi.mock('@/hooks', () => ({
+  useIsMobile: vi.fn(() => false),
+}));
 
 // Minimal atoms used by PostInputActionBar
 vi.mock('@/atoms', () => ({
@@ -75,8 +80,11 @@ vi.mock('@/atoms', () => ({
 }));
 
 describe('PostInputActionBar', () => {
+  const mockUseIsMobile = vi.mocked(Hooks.useIsMobile);
+
   beforeEach(() => {
     vi.clearAllMocks();
+    mockUseIsMobile.mockReturnValue(false);
   });
 
   it('renders all action buttons with aria labels', () => {
@@ -187,6 +195,48 @@ describe('PostInputActionBar', () => {
     expect(screen.queryByRole('button', { name: 'Add article' })).not.toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Add emoji' })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Post' })).toBeInTheDocument();
+  });
+
+  it('does not render character limit when not provided', () => {
+    render(<PostInputActionBar />);
+
+    expect(screen.queryByText(/^\d+\/\d+$/)).not.toBeInTheDocument();
+  });
+
+  it('renders character limit when provided', () => {
+    render(<PostInputActionBar characterLimit={{ count: 45, max: 300 }} />);
+
+    expect(screen.getByText('45/300')).toBeInTheDocument();
+  });
+
+  it('uses desktop-only classes for character limit', () => {
+    render(<PostInputActionBar characterLimit={{ count: 45, max: 300 }} />);
+
+    expect(screen.getByText('45/300')).toHaveClass('hidden');
+    expect(screen.getByText('45/300')).toHaveClass('sm:block');
+  });
+
+  it('uses default size for post button on mobile', () => {
+    mockUseIsMobile.mockReturnValue(true);
+    render(<PostInputActionBar />);
+
+    expect(screen.getByRole('button', { name: 'Post' })).toHaveAttribute('data-size', 'default');
+  });
+
+  it('uses small size for post button on desktop', () => {
+    render(<PostInputActionBar />);
+
+    expect(screen.getByRole('button', { name: 'Post' })).toHaveAttribute('data-size', 'sm');
+  });
+
+  it('renders custom post icon when provided', () => {
+    const CustomIcon = ({ className }: { className?: string; strokeWidth?: number }) => (
+      <svg data-testid="custom-post-icon" className={className} />
+    );
+
+    render(<PostInputActionBar postButtonIcon={CustomIcon} />);
+
+    expect(screen.getByTestId('custom-post-icon')).toBeInTheDocument();
   });
 });
 

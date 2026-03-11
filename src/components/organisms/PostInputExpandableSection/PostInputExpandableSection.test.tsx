@@ -92,6 +92,7 @@ vi.mock('../PostInputActionBar', () => ({
     isArticle,
     isEdit,
     postButtonIcon,
+    characterLimit,
   }: {
     onPostClick?: () => void;
     onEmojiClick?: () => void;
@@ -102,6 +103,7 @@ vi.mock('../PostInputActionBar', () => ({
     isArticle?: boolean;
     isEdit?: boolean;
     postButtonIcon?: React.ComponentType;
+    characterLimit?: { count: number; max: number };
   }) => (
     <div
       data-testid="post-input-action-bar"
@@ -111,6 +113,8 @@ vi.mock('../PostInputActionBar', () => ({
       data-is-article={isArticle}
       data-is-edit={isEdit}
       data-has-post-button-icon={!!postButtonIcon}
+      data-character-count={characterLimit?.count}
+      data-character-max={characterLimit?.max}
     >
       <button data-testid="action-bar-post" onClick={onPostClick} disabled={isPostDisabled}>
         Post
@@ -193,6 +197,19 @@ describe('PostInputExpandableSection', () => {
     fireEvent.click(closeButton);
 
     expect(setTags).toHaveBeenCalled();
+  });
+
+  it('applies tag removal updater when closing a tag', () => {
+    const setTags = vi.fn();
+    render(
+      <PostInputExpandableSection {...defaultProps} tags={['tag1', 'tag2']} setTags={setTags} isDisabled={false} />,
+    );
+
+    fireEvent.click(screen.getByTestId('tag-close-tag1'));
+
+    const updater = setTags.mock.calls[0]?.[0] as (prevTags: string[]) => string[];
+    expect(updater).toBeTypeOf('function');
+    expect(updater(['tag1', 'tag2'])).toEqual(['tag2']);
   });
 
   it('does not show tag close button when disabled', () => {
@@ -384,6 +401,22 @@ describe('PostInputExpandableSection', () => {
     render(<PostInputExpandableSection {...defaultProps} submitMode={POST_INPUT_VARIANT.EDIT} isArticle={false} />);
 
     expect(screen.queryByTestId('action-bar-article')).not.toBeInTheDocument();
+  });
+
+  it('passes characterLimit to PostInputActionBar', () => {
+    render(<PostInputExpandableSection {...defaultProps} characterLimit={{ count: 123, max: 300 }} />);
+
+    const actionBar = screen.getByTestId('post-input-action-bar');
+    expect(actionBar).toHaveAttribute('data-character-count', '123');
+    expect(actionBar).toHaveAttribute('data-character-max', '300');
+  });
+
+  it('does not pass characterLimit when not provided', () => {
+    render(<PostInputExpandableSection {...defaultProps} />);
+
+    const actionBar = screen.getByTestId('post-input-action-bar');
+    expect(actionBar).not.toHaveAttribute('data-character-count');
+    expect(actionBar).not.toHaveAttribute('data-character-max');
   });
 });
 

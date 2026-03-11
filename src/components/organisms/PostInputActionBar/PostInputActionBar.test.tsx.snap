@@ -2,139 +2,99 @@
 
 exports[`PostInputActionBar - Snapshots > matches snapshot with all callbacks 1`] = `
 <div
-  class="flex items-center gap-2"
+  class="flex flex-col justify-between gap-4 sm:flex-row sm:items-center"
   data-override-defaults="true"
   data-testid="container"
 >
-  <button
-    aria-label="Add emoji"
-    class="h-8 px-3 py-2 rounded-full border-none shadow-xs"
-    data-size="sm"
-    data-variant="secondary"
+  <div
+    class="flex items-center gap-2"
+    data-override-defaults="true"
+    data-testid="container"
   >
-    <svg
-      aria-hidden="true"
-      class="lucide lucide-smile size-4 text-secondary-foreground"
-      fill="none"
-      height="24"
-      stroke="currentColor"
-      stroke-linecap="round"
-      stroke-linejoin="round"
-      stroke-width="2"
-      viewBox="0 0 24 24"
-      width="24"
-      xmlns="http://www.w3.org/2000/svg"
-    >
-      <circle
-        cx="12"
-        cy="12"
-        r="10"
-      />
-      <path
-        d="M8 14s1.5 2 4 2 4-2 4-2"
-      />
-      <line
-        x1="9"
-        x2="9.01"
-        y1="9"
-        y2="9"
-      />
-      <line
-        x1="15"
-        x2="15.01"
-        y1="9"
-        y2="9"
-      />
-    </svg>
-  </button>
-  <button
-    aria-label="Add image"
-    class="h-8 px-3 py-2 rounded-full border-none shadow-xs"
-    data-size="sm"
-    data-variant="secondary"
-  >
-    <svg
-      aria-hidden="true"
-      class="lucide lucide-image size-4 text-secondary-foreground"
-      fill="none"
-      height="24"
-      stroke="currentColor"
-      stroke-linecap="round"
-      stroke-linejoin="round"
-      stroke-width="2"
-      viewBox="0 0 24 24"
-      width="24"
-      xmlns="http://www.w3.org/2000/svg"
-    >
-      <rect
-        height="18"
-        rx="2"
-        ry="2"
-        width="18"
-        x="3"
-        y="3"
-      />
-      <circle
-        cx="9"
-        cy="9"
-        r="2"
-      />
-      <path
-        d="m21 15-3.086-3.086a2 2 0 0 0-2.828 0L6 21"
-      />
-    </svg>
-  </button>
-  <button
-    aria-label="Add article"
-    class="h-8 px-3 py-2 rounded-full border-none shadow-xs"
-    data-size="sm"
-    data-variant="secondary"
-  >
-    <svg
-      aria-hidden="true"
-      class="lucide lucide-newspaper size-4 text-secondary-foreground"
-      fill="none"
-      height="24"
-      stroke="currentColor"
-      stroke-linecap="round"
-      stroke-linejoin="round"
-      stroke-width="2"
-      viewBox="0 0 24 24"
-      width="24"
-      xmlns="http://www.w3.org/2000/svg"
-    >
-      <path
-        d="M15 18h-5"
-      />
-      <path
-        d="M18 14h-8"
-      />
-      <path
-        d="M4 22h16a2 2 0 0 0 2-2V4a2 2 0 0 0-2-2H8a2 2 0 0 0-2 2v16a2 2 0 0 1-4 0v-9a2 2 0 0 1 2-2h2"
-      />
-      <rect
-        height="4"
-        rx="1"
-        width="8"
-        x="10"
-        y="6"
-      />
-    </svg>
-  </button>
-  <button
-    aria-label="Post"
-    class="h-8 px-3 py-2 rounded-full border-none shadow-xs"
-    data-size="sm"
-    data-variant="secondary"
-  >
-    <div
-      class="flex items-center gap-2"
-      data-override-defaults="true"
-      data-testid="container"
+    <button
+      aria-label="Add emoji"
+      data-size="sm"
+      data-variant="secondary"
     >
       <svg
         aria-hidden="true"
-        class="lucide lucide-send size-4 text-secondary-foreground"
+        class="lucide lucide-smile size-4 text-secondary-foreground"
+        fill="none"
+        height="24"
+        stroke="currentColor"
+        stroke-linecap="round"
+        stroke-linejoin="round"
+        stroke-width="2"
+        viewBox="0 0 24 24"
+        width="24"
+        xmlns="http://www.w3.org/2000/svg"
+      >
+        <circle
+          cx="12"
+          cy="12"
+          r="10"
+        />
+        <path
+          d="M8 14s1.5 2 4 2 4-2 4-2"
+        />
+        <line
+          x1="9"
+          x2="9.01"
+          y1="9"
+          y2="9"
+        />
+        <line
+          x1="15"
+          x2="15.01"
+          y1="9"
+          y2="9"
+        />
+      </svg>
+    </button>
+    <button
+      aria-label="Add image"
+      data-size="sm"
+      data-variant="secondary"
+    >
+      <svg
+        aria-hidden="true"
+        class="lucide lucide-image size-4 text-secondary-foreground"
+        fill="none"
+        height="24"
+        stroke="currentColor"
+        stroke-linecap="round"
+        stroke-linejoin="round"
+        stroke-width="2"
+        viewBox="0 0 24 24"
+        width="24"
+        xmlns="http://www.w3.org/2000/svg"
+      >
+        <rect
+          height="18"
+          rx="2"
+          ry="2"
+          width="18"
+          x="3"
+          y="3"
+        />
+        <circle
+          cx="9"
+          cy="9"
+          r="2"
+        />
+        <path
+          d="m21 15-3.086-3.086a2 2 0 0 0-2.828 0L6 21"
+        />
+      </svg>
+    </button>
+    <button
+      aria-label="Add article"
+      data-size="sm"
+      data-variant="secondary"
+    >
+      <svg
+        aria-hidden="true"
+        class="lucide lucide-newspaper size-4 text-secondary-foreground"
         fill="none"
         height="24"
         stroke="currentColor"
@@ -146,164 +106,172 @@ exports[`PostInputActionBar - Snapshots > matches snapshot with all callbacks 1`
         xmlns="http://www.w3.org/2000/svg"
       >
         <path
-          d="M14.536 21.686a.5.5 0 0 0 .937-.024l6.5-19a.496.496 0 0 0-.635-.635l-19 6.5a.5.5 0 0 0-.024.937l7.93 3.18a2 2 0 0 1 1.112 1.11z"
+          d="M15 18h-5"
         />
         <path
-          d="m21.854 2.147-10.94 10.939"
+          d="M18 14h-8"
+        />
+        <path
+          d="M4 22h16a2 2 0 0 0 2-2V4a2 2 0 0 0-2-2H8a2 2 0 0 0-2 2v16a2 2 0 0 1-4 0v-9a2 2 0 0 1 2-2h2"
+        />
+        <rect
+          height="4"
+          rx="1"
+          width="8"
+          x="10"
+          y="6"
         />
       </svg>
-      <span
-        class="text-xs leading-4 font-bold text-secondary-foreground"
-        data-as="span"
-        data-size="sm"
-        data-testid="typography"
+    </button>
+  </div>
+  <div
+    class="flex items-center justify-end gap-2"
+    data-override-defaults="true"
+    data-testid="container"
+  >
+    <button
+      aria-label="Post"
+      class="w-full flex-1 sm:flex-auto"
+      data-size="sm"
+      data-variant="default"
+    >
+      <div
+        class="flex items-center gap-2"
+        data-override-defaults="true"
+        data-testid="container"
       >
-        Post
-      </span>
-    </div>
-  </button>
+        <svg
+          aria-hidden="true"
+          class="lucide lucide-send size-4 text-brand"
+          fill="none"
+          height="24"
+          stroke="currentColor"
+          stroke-linecap="round"
+          stroke-linejoin="round"
+          stroke-width="2"
+          viewBox="0 0 24 24"
+          width="24"
+          xmlns="http://www.w3.org/2000/svg"
+        >
+          <path
+            d="M14.536 21.686a.5.5 0 0 0 .937-.024l6.5-19a.496.496 0 0 0-.635-.635l-19 6.5a.5.5 0 0 0-.024.937l7.93 3.18a2 2 0 0 1 1.112 1.11z"
+          />
+          <path
+            d="m21.854 2.147-10.94 10.939"
+          />
+        </svg>
+        <span
+          class="text-brand"
+          data-as="span"
+          data-size="sm"
+          data-testid="typography"
+        >
+          Post
+        </span>
+      </div>
+    </button>
+  </div>
 </div>
 `;
 
 exports[`PostInputActionBar - Snapshots > matches snapshot with default props 1`] = `
 <div
-  class="flex items-center gap-2"
+  class="flex flex-col justify-between gap-4 sm:flex-row sm:items-center"
   data-override-defaults="true"
   data-testid="container"
 >
-  <button
-    aria-label="Add emoji"
-    class="h-8 px-3 py-2 rounded-full border-none shadow-xs"
-    data-size="sm"
-    data-variant="secondary"
-    disabled=""
+  <div
+    class="flex items-center gap-2"
+    data-override-defaults="true"
+    data-testid="container"
   >
-    <svg
-      aria-hidden="true"
-      class="lucide lucide-smile size-4 text-secondary-foreground"
-      fill="none"
-      height="24"
-      stroke="currentColor"
-      stroke-linecap="round"
-      stroke-linejoin="round"
-      stroke-width="2"
-      viewBox="0 0 24 24"
-      width="24"
-      xmlns="http://www.w3.org/2000/svg"
-    >
-      <circle
-        cx="12"
-        cy="12"
-        r="10"
-      />
-      <path
-        d="M8 14s1.5 2 4 2 4-2 4-2"
-      />
-      <line
-        x1="9"
-        x2="9.01"
-        y1="9"
-        y2="9"
-      />
-      <line
-        x1="15"
-        x2="15.01"
-        y1="9"
-        y2="9"
-      />
-    </svg>
-  </button>
-  <button
-    aria-label="Add image"
-    class="h-8 px-3 py-2 rounded-full border-none shadow-xs"
-    data-size="sm"
-    data-variant="secondary"
-    disabled=""
-  >
-    <svg
-      aria-hidden="true"
-      class="lucide lucide-image size-4 text-secondary-foreground"
-      fill="none"
-      height="24"
-      stroke="currentColor"
-      stroke-linecap="round"
-      stroke-linejoin="round"
-      stroke-width="2"
-      viewBox="0 0 24 24"
-      width="24"
-      xmlns="http://www.w3.org/2000/svg"
-    >
-      <rect
-        height="18"
-        rx="2"
-        ry="2"
-        width="18"
-        x="3"
-        y="3"
-      />
-      <circle
-        cx="9"
-        cy="9"
-        r="2"
-      />
-      <path
-        d="m21 15-3.086-3.086a2 2 0 0 0-2.828 0L6 21"
-      />
-    </svg>
-  </button>
-  <button
-    aria-label="Add article"
-    class="h-8 px-3 py-2 rounded-full border-none shadow-xs"
-    data-size="sm"
-    data-variant="secondary"
-    disabled=""
-  >
-    <svg
-      aria-hidden="true"
-      class="lucide lucide-newspaper size-4 text-secondary-foreground"
-      fill="none"
-      height="24"
-      stroke="currentColor"
-      stroke-linecap="round"
-      stroke-linejoin="round"
-      stroke-width="2"
-      viewBox="0 0 24 24"
-      width="24"
-      xmlns="http://www.w3.org/2000/svg"
-    >
-      <path
-        d="M15 18h-5"
-      />
-      <path
-        d="M18 14h-8"
-      />
-      <path
-        d="M4 22h16a2 2 0 0 0 2-2V4a2 2 0 0 0-2-2H8a2 2 0 0 0-2 2v16a2 2 0 0 1-4 0v-9a2 2 0 0 1 2-2h2"
-      />
-      <rect
-        height="4"
-        rx="1"
-        width="8"
-        x="10"
-        y="6"
-      />
-    </svg>
-  </button>
-  <button
-    aria-label="Post"
-    class="h-8 px-3 py-2 rounded-full border-none shadow-xs"
-    data-size="sm"
-    data-variant="secondary"
-    disabled=""
-  >
-    <div
-      class="flex items-center gap-2"
-      data-override-defaults="true"
-      data-testid="container"
+    <button
+      aria-label="Add emoji"
+      data-size="sm"
+      data-variant="secondary"
+      disabled=""
     >
       <svg
         aria-hidden="true"
-        class="lucide lucide-send size-4 text-secondary-foreground"
+        class="lucide lucide-smile size-4 text-secondary-foreground"
+        fill="none"
+        height="24"
+        stroke="currentColor"
+        stroke-linecap="round"
+        stroke-linejoin="round"
+        stroke-width="2"
+        viewBox="0 0 24 24"
+        width="24"
+        xmlns="http://www.w3.org/2000/svg"
+      >
+        <circle
+          cx="12"
+          cy="12"
+          r="10"
+        />
+        <path
+          d="M8 14s1.5 2 4 2 4-2 4-2"
+        />
+        <line
+          x1="9"
+          x2="9.01"
+          y1="9"
+          y2="9"
+        />
+        <line
+          x1="15"
+          x2="15.01"
+          y1="9"
+          y2="9"
+        />
+      </svg>
+    </button>
+    <button
+      aria-label="Add image"
+      data-size="sm"
+      data-variant="secondary"
+      disabled=""
+    >
+      <svg
+        aria-hidden="true"
+        class="lucide lucide-image size-4 text-secondary-foreground"
+        fill="none"
+        height="24"
+        stroke="currentColor"
+        stroke-linecap="round"
+        stroke-linejoin="round"
+        stroke-width="2"
+        viewBox="0 0 24 24"
+        width="24"
+        xmlns="http://www.w3.org/2000/svg"
+      >
+        <rect
+          height="18"
+          rx="2"
+          ry="2"
+          width="18"
+          x="3"
+          y="3"
+        />
+        <circle
+          cx="9"
+          cy="9"
+          r="2"
+        />
+        <path
+          d="m21 15-3.086-3.086a2 2 0 0 0-2.828 0L6 21"
+        />
+      </svg>
+    </button>
+    <button
+      aria-label="Add article"
+      data-size="sm"
+      data-variant="secondary"
+      disabled=""
+    >
+      <svg
+        aria-hidden="true"
+        class="lucide lucide-newspaper size-4 text-secondary-foreground"
         fill="none"
         height="24"
         stroke="currentColor"
@@ -315,164 +283,173 @@ exports[`PostInputActionBar - Snapshots > matches snapshot with default props 1`
         xmlns="http://www.w3.org/2000/svg"
       >
         <path
-          d="M14.536 21.686a.5.5 0 0 0 .937-.024l6.5-19a.496.496 0 0 0-.635-.635l-19 6.5a.5.5 0 0 0-.024.937l7.93 3.18a2 2 0 0 1 1.112 1.11z"
+          d="M15 18h-5"
         />
         <path
-          d="m21.854 2.147-10.94 10.939"
+          d="M18 14h-8"
+        />
+        <path
+          d="M4 22h16a2 2 0 0 0 2-2V4a2 2 0 0 0-2-2H8a2 2 0 0 0-2 2v16a2 2 0 0 1-4 0v-9a2 2 0 0 1 2-2h2"
+        />
+        <rect
+          height="4"
+          rx="1"
+          width="8"
+          x="10"
+          y="6"
         />
       </svg>
-      <span
-        class="text-xs leading-4 font-bold text-secondary-foreground"
-        data-as="span"
-        data-size="sm"
-        data-testid="typography"
+    </button>
+  </div>
+  <div
+    class="flex items-center justify-end gap-2"
+    data-override-defaults="true"
+    data-testid="container"
+  >
+    <button
+      aria-label="Post"
+      class="w-full flex-1 sm:flex-auto"
+      data-size="sm"
+      data-variant="default"
+      disabled=""
+    >
+      <div
+        class="flex items-center gap-2"
+        data-override-defaults="true"
+        data-testid="container"
       >
-        Post
-      </span>
-    </div>
-  </button>
+        <svg
+          aria-hidden="true"
+          class="lucide lucide-send size-4 text-brand"
+          fill="none"
+          height="24"
+          stroke="currentColor"
+          stroke-linecap="round"
+          stroke-linejoin="round"
+          stroke-width="2"
+          viewBox="0 0 24 24"
+          width="24"
+          xmlns="http://www.w3.org/2000/svg"
+        >
+          <path
+            d="M14.536 21.686a.5.5 0 0 0 .937-.024l6.5-19a.496.496 0 0 0-.635-.635l-19 6.5a.5.5 0 0 0-.024.937l7.93 3.18a2 2 0 0 1 1.112 1.11z"
+          />
+          <path
+            d="m21.854 2.147-10.94 10.939"
+          />
+        </svg>
+        <span
+          class="text-brand"
+          data-as="span"
+          data-size="sm"
+          data-testid="typography"
+        >
+          Post
+        </span>
+      </div>
+    </button>
+  </div>
 </div>
 `;
 
 exports[`PostInputActionBar - Snapshots > matches snapshot with disabled post button 1`] = `
 <div
-  class="flex items-center gap-2"
+  class="flex flex-col justify-between gap-4 sm:flex-row sm:items-center"
   data-override-defaults="true"
   data-testid="container"
 >
-  <button
-    aria-label="Add emoji"
-    class="h-8 px-3 py-2 rounded-full border-none shadow-xs"
-    data-size="sm"
-    data-variant="secondary"
-    disabled=""
+  <div
+    class="flex items-center gap-2"
+    data-override-defaults="true"
+    data-testid="container"
   >
-    <svg
-      aria-hidden="true"
-      class="lucide lucide-smile size-4 text-secondary-foreground"
-      fill="none"
-      height="24"
-      stroke="currentColor"
-      stroke-linecap="round"
-      stroke-linejoin="round"
-      stroke-width="2"
-      viewBox="0 0 24 24"
-      width="24"
-      xmlns="http://www.w3.org/2000/svg"
-    >
-      <circle
-        cx="12"
-        cy="12"
-        r="10"
-      />
-      <path
-        d="M8 14s1.5 2 4 2 4-2 4-2"
-      />
-      <line
-        x1="9"
-        x2="9.01"
-        y1="9"
-        y2="9"
-      />
-      <line
-        x1="15"
-        x2="15.01"
-        y1="9"
-        y2="9"
-      />
-    </svg>
-  </button>
-  <button
-    aria-label="Add image"
-    class="h-8 px-3 py-2 rounded-full border-none shadow-xs"
-    data-size="sm"
-    data-variant="secondary"
-    disabled=""
-  >
-    <svg
-      aria-hidden="true"
-      class="lucide lucide-image size-4 text-secondary-foreground"
-      fill="none"
-      height="24"
-      stroke="currentColor"
-      stroke-linecap="round"
-      stroke-linejoin="round"
-      stroke-width="2"
-      viewBox="0 0 24 24"
-      width="24"
-      xmlns="http://www.w3.org/2000/svg"
-    >
-      <rect
-        height="18"
-        rx="2"
-        ry="2"
-        width="18"
-        x="3"
-        y="3"
-      />
-      <circle
-        cx="9"
-        cy="9"
-        r="2"
-      />
-      <path
-        d="m21 15-3.086-3.086a2 2 0 0 0-2.828 0L6 21"
-      />
-    </svg>
-  </button>
-  <button
-    aria-label="Add article"
-    class="h-8 px-3 py-2 rounded-full border-none shadow-xs"
-    data-size="sm"
-    data-variant="secondary"
-    disabled=""
-  >
-    <svg
-      aria-hidden="true"
-      class="lucide lucide-newspaper size-4 text-secondary-foreground"
-      fill="none"
-      height="24"
-      stroke="currentColor"
-      stroke-linecap="round"
-      stroke-linejoin="round"
-      stroke-width="2"
-      viewBox="0 0 24 24"
-      width="24"
-      xmlns="http://www.w3.org/2000/svg"
-    >
-      <path
-        d="M15 18h-5"
-      />
-      <path
-        d="M18 14h-8"
-      />
-      <path
-        d="M4 22h16a2 2 0 0 0 2-2V4a2 2 0 0 0-2-2H8a2 2 0 0 0-2 2v16a2 2 0 0 1-4 0v-9a2 2 0 0 1 2-2h2"
-      />
-      <rect
-        height="4"
-        rx="1"
-        width="8"
-        x="10"
-        y="6"
-      />
-    </svg>
-  </button>
-  <button
-    aria-label="Post"
-    class="h-8 px-3 py-2 rounded-full border-none shadow-xs"
-    data-size="sm"
-    data-variant="secondary"
-    disabled=""
-  >
-    <div
-      class="flex items-center gap-2"
-      data-override-defaults="true"
-      data-testid="container"
+    <button
+      aria-label="Add emoji"
+      data-size="sm"
+      data-variant="secondary"
+      disabled=""
     >
       <svg
         aria-hidden="true"
-        class="lucide lucide-send size-4 text-secondary-foreground"
+        class="lucide lucide-smile size-4 text-secondary-foreground"
+        fill="none"
+        height="24"
+        stroke="currentColor"
+        stroke-linecap="round"
+        stroke-linejoin="round"
+        stroke-width="2"
+        viewBox="0 0 24 24"
+        width="24"
+        xmlns="http://www.w3.org/2000/svg"
+      >
+        <circle
+          cx="12"
+          cy="12"
+          r="10"
+        />
+        <path
+          d="M8 14s1.5 2 4 2 4-2 4-2"
+        />
+        <line
+          x1="9"
+          x2="9.01"
+          y1="9"
+          y2="9"
+        />
+        <line
+          x1="15"
+          x2="15.01"
+          y1="9"
+          y2="9"
+        />
+      </svg>
+    </button>
+    <button
+      aria-label="Add image"
+      data-size="sm"
+      data-variant="secondary"
+      disabled=""
+    >
+      <svg
+        aria-hidden="true"
+        class="lucide lucide-image size-4 text-secondary-foreground"
+        fill="none"
+        height="24"
+        stroke="currentColor"
+        stroke-linecap="round"
+        stroke-linejoin="round"
+        stroke-width="2"
+        viewBox="0 0 24 24"
+        width="24"
+        xmlns="http://www.w3.org/2000/svg"
+      >
+        <rect
+          height="18"
+          rx="2"
+          ry="2"
+          width="18"
+          x="3"
+          y="3"
+        />
+        <circle
+          cx="9"
+          cy="9"
+          r="2"
+        />
+        <path
+          d="m21 15-3.086-3.086a2 2 0 0 0-2.828 0L6 21"
+        />
+      </svg>
+    </button>
+    <button
+      aria-label="Add article"
+      data-size="sm"
+      data-variant="secondary"
+      disabled=""
+    >
+      <svg
+        aria-hidden="true"
+        class="lucide lucide-newspaper size-4 text-secondary-foreground"
         fill="none"
         height="24"
         stroke="currentColor"
@@ -484,126 +461,95 @@ exports[`PostInputActionBar - Snapshots > matches snapshot with disabled post bu
         xmlns="http://www.w3.org/2000/svg"
       >
         <path
-          d="M14.536 21.686a.5.5 0 0 0 .937-.024l6.5-19a.496.496 0 0 0-.635-.635l-19 6.5a.5.5 0 0 0-.024.937l7.93 3.18a2 2 0 0 1 1.112 1.11z"
+          d="M15 18h-5"
         />
         <path
-          d="m21.854 2.147-10.94 10.939"
+          d="M18 14h-8"
+        />
+        <path
+          d="M4 22h16a2 2 0 0 0 2-2V4a2 2 0 0 0-2-2H8a2 2 0 0 0-2 2v16a2 2 0 0 1-4 0v-9a2 2 0 0 1 2-2h2"
+        />
+        <rect
+          height="4"
+          rx="1"
+          width="8"
+          x="10"
+          y="6"
         />
       </svg>
-      <span
-        class="text-xs leading-4 font-bold text-secondary-foreground"
-        data-as="span"
-        data-size="sm"
-        data-testid="typography"
+    </button>
+  </div>
+  <div
+    class="flex items-center justify-end gap-2"
+    data-override-defaults="true"
+    data-testid="container"
+  >
+    <button
+      aria-label="Post"
+      class="w-full flex-1 sm:flex-auto"
+      data-size="sm"
+      data-variant="default"
+      disabled=""
+    >
+      <div
+        class="flex items-center gap-2"
+        data-override-defaults="true"
+        data-testid="container"
       >
-        Post
-      </span>
-    </div>
-  </button>
+        <svg
+          aria-hidden="true"
+          class="lucide lucide-send size-4 text-brand"
+          fill="none"
+          height="24"
+          stroke="currentColor"
+          stroke-linecap="round"
+          stroke-linejoin="round"
+          stroke-width="2"
+          viewBox="0 0 24 24"
+          width="24"
+          xmlns="http://www.w3.org/2000/svg"
+        >
+          <path
+            d="M14.536 21.686a.5.5 0 0 0 .937-.024l6.5-19a.496.496 0 0 0-.635-.635l-19 6.5a.5.5 0 0 0-.024.937l7.93 3.18a2 2 0 0 1 1.112 1.11z"
+          />
+          <path
+            d="m21.854 2.147-10.94 10.939"
+          />
+        </svg>
+        <span
+          class="text-brand"
+          data-as="span"
+          data-size="sm"
+          data-testid="typography"
+        >
+          Post
+        </span>
+      </div>
+    </button>
+  </div>
 </div>
 `;
 
 exports[`PostInputActionBar - Snapshots > matches snapshot with hideArticleButton prop 1`] = `
 <div
-  class="flex items-center gap-2"
+  class="flex flex-col justify-between gap-4 sm:flex-row sm:items-center"
   data-override-defaults="true"
   data-testid="container"
 >
-  <button
-    aria-label="Add emoji"
-    class="h-8 px-3 py-2 rounded-full border-none shadow-xs"
-    data-size="sm"
-    data-variant="secondary"
-    disabled=""
+  <div
+    class="flex items-center gap-2"
+    data-override-defaults="true"
+    data-testid="container"
   >
-    <svg
-      aria-hidden="true"
-      class="lucide lucide-smile size-4 text-secondary-foreground"
-      fill="none"
-      height="24"
-      stroke="currentColor"
-      stroke-linecap="round"
-      stroke-linejoin="round"
-      stroke-width="2"
-      viewBox="0 0 24 24"
-      width="24"
-      xmlns="http://www.w3.org/2000/svg"
-    >
-      <circle
-        cx="12"
-        cy="12"
-        r="10"
-      />
-      <path
-        d="M8 14s1.5 2 4 2 4-2 4-2"
-      />
-      <line
-        x1="9"
-        x2="9.01"
-        y1="9"
-        y2="9"
-      />
-      <line
-        x1="15"
-        x2="15.01"
-        y1="9"
-        y2="9"
-      />
-    </svg>
-  </button>
-  <button
-    aria-label="Add image"
-    class="h-8 px-3 py-2 rounded-full border-none shadow-xs"
-    data-size="sm"
-    data-variant="secondary"
-    disabled=""
-  >
-    <svg
-      aria-hidden="true"
-      class="lucide lucide-image size-4 text-secondary-foreground"
-      fill="none"
-      height="24"
-      stroke="currentColor"
-      stroke-linecap="round"
-      stroke-linejoin="round"
-      stroke-width="2"
-      viewBox="0 0 24 24"
-      width="24"
-      xmlns="http://www.w3.org/2000/svg"
-    >
-      <rect
-        height="18"
-        rx="2"
-        ry="2"
-        width="18"
-        x="3"
-        y="3"
-      />
-      <circle
-        cx="9"
-        cy="9"
-        r="2"
-      />
-      <path
-        d="m21 15-3.086-3.086a2 2 0 0 0-2.828 0L6 21"
-      />
-    </svg>
-  </button>
-  <button
-    aria-label="Post"
-    class="h-8 px-3 py-2 rounded-full border-none shadow-xs"
-    data-size="sm"
-    data-variant="secondary"
-    disabled=""
-  >
-    <div
-      class="flex items-center gap-2"
-      data-override-defaults="true"
-      data-testid="container"
+    <button
+      aria-label="Add emoji"
+      data-size="sm"
+      data-variant="secondary"
+      disabled=""
     >
       <svg
         aria-hidden="true"
-        class="lucide lucide-send size-4 text-secondary-foreground"
+        class="lucide lucide-smile size-4 text-secondary-foreground"
         fill="none"
         height="24"
         stroke="currentColor"
@@ -614,85 +560,137 @@ exports[`PostInputActionBar - Snapshots > matches snapshot with hideArticleButto
         width="24"
         xmlns="http://www.w3.org/2000/svg"
       >
-        <path
-          d="M14.536 21.686a.5.5 0 0 0 .937-.024l6.5-19a.496.496 0 0 0-.635-.635l-19 6.5a.5.5 0 0 0-.024.937l7.93 3.18a2 2 0 0 1 1.112 1.11z"
+        <circle
+          cx="12"
+          cy="12"
+          r="10"
         />
         <path
-          d="m21.854 2.147-10.94 10.939"
+          d="M8 14s1.5 2 4 2 4-2 4-2"
+        />
+        <line
+          x1="9"
+          x2="9.01"
+          y1="9"
+          y2="9"
+        />
+        <line
+          x1="15"
+          x2="15.01"
+          y1="9"
+          y2="9"
         />
       </svg>
-      <span
-        class="text-xs leading-4 font-bold text-secondary-foreground"
-        data-as="span"
-        data-size="sm"
-        data-testid="typography"
+    </button>
+    <button
+      aria-label="Add image"
+      data-size="sm"
+      data-variant="secondary"
+      disabled=""
+    >
+      <svg
+        aria-hidden="true"
+        class="lucide lucide-image size-4 text-secondary-foreground"
+        fill="none"
+        height="24"
+        stroke="currentColor"
+        stroke-linecap="round"
+        stroke-linejoin="round"
+        stroke-width="2"
+        viewBox="0 0 24 24"
+        width="24"
+        xmlns="http://www.w3.org/2000/svg"
       >
-        Post
-      </span>
-    </div>
-  </button>
+        <rect
+          height="18"
+          rx="2"
+          ry="2"
+          width="18"
+          x="3"
+          y="3"
+        />
+        <circle
+          cx="9"
+          cy="9"
+          r="2"
+        />
+        <path
+          d="m21 15-3.086-3.086a2 2 0 0 0-2.828 0L6 21"
+        />
+      </svg>
+    </button>
+  </div>
+  <div
+    class="flex items-center justify-end gap-2"
+    data-override-defaults="true"
+    data-testid="container"
+  >
+    <button
+      aria-label="Post"
+      class="w-full flex-1 sm:flex-auto"
+      data-size="sm"
+      data-variant="default"
+      disabled=""
+    >
+      <div
+        class="flex items-center gap-2"
+        data-override-defaults="true"
+        data-testid="container"
+      >
+        <svg
+          aria-hidden="true"
+          class="lucide lucide-send size-4 text-brand"
+          fill="none"
+          height="24"
+          stroke="currentColor"
+          stroke-linecap="round"
+          stroke-linejoin="round"
+          stroke-width="2"
+          viewBox="0 0 24 24"
+          width="24"
+          xmlns="http://www.w3.org/2000/svg"
+        >
+          <path
+            d="M14.536 21.686a.5.5 0 0 0 .937-.024l6.5-19a.496.496 0 0 0-.635-.635l-19 6.5a.5.5 0 0 0-.024.937l7.93 3.18a2 2 0 0 1 1.112 1.11z"
+          />
+          <path
+            d="m21.854 2.147-10.94 10.939"
+          />
+        </svg>
+        <span
+          class="text-brand"
+          data-as="span"
+          data-size="sm"
+          data-testid="typography"
+        >
+          Post
+        </span>
+      </div>
+    </button>
+  </div>
 </div>
 `;
 
 exports[`PostInputActionBar - Snapshots > matches snapshot with isArticle prop 1`] = `
 <div
-  class="flex items-center gap-2"
+  class="flex flex-col justify-between gap-4 sm:flex-row sm:items-center"
   data-override-defaults="true"
   data-testid="container"
 >
-  <button
-    aria-label="Add article"
-    class="h-8 px-3 py-2 rounded-full border-none shadow-xs"
-    data-size="sm"
-    data-variant="secondary"
-    disabled=""
+  <div
+    class="flex items-center gap-2"
+    data-override-defaults="true"
+    data-testid="container"
   >
-    <svg
-      aria-hidden="true"
-      class="lucide lucide-newspaper size-4 text-secondary-foreground"
-      fill="none"
-      height="24"
-      stroke="currentColor"
-      stroke-linecap="round"
-      stroke-linejoin="round"
-      stroke-width="2"
-      viewBox="0 0 24 24"
-      width="24"
-      xmlns="http://www.w3.org/2000/svg"
-    >
-      <path
-        d="M15 18h-5"
-      />
-      <path
-        d="M18 14h-8"
-      />
-      <path
-        d="M4 22h16a2 2 0 0 0 2-2V4a2 2 0 0 0-2-2H8a2 2 0 0 0-2 2v16a2 2 0 0 1-4 0v-9a2 2 0 0 1 2-2h2"
-      />
-      <rect
-        height="4"
-        rx="1"
-        width="8"
-        x="10"
-        y="6"
-      />
-    </svg>
-  </button>
-  <button
-    aria-label="Post"
-    class="h-8 px-3 py-2 rounded-full border-none shadow-xs"
-    data-size="sm"
-    data-variant="secondary"
-    disabled=""
-  >
-    <div
-      class="flex items-center gap-2"
-      data-override-defaults="true"
-      data-testid="container"
+    <button
+      aria-label="Add article"
+      data-size="sm"
+      data-variant="secondary"
+      disabled=""
     >
       <svg
         aria-hidden="true"
-        class="lucide lucide-send size-4 text-secondary-foreground"
+        class="lucide lucide-newspaper size-4 text-secondary-foreground"
         fill="none"
         height="24"
         stroke="currentColor"
@@ -704,126 +702,136 @@ exports[`PostInputActionBar - Snapshots > matches snapshot with isArticle prop 1
         xmlns="http://www.w3.org/2000/svg"
       >
         <path
-          d="M14.536 21.686a.5.5 0 0 0 .937-.024l6.5-19a.496.496 0 0 0-.635-.635l-19 6.5a.5.5 0 0 0-.024.937l7.93 3.18a2 2 0 0 1 1.112 1.11z"
+          d="M15 18h-5"
         />
         <path
-          d="m21.854 2.147-10.94 10.939"
+          d="M18 14h-8"
+        />
+        <path
+          d="M4 22h16a2 2 0 0 0 2-2V4a2 2 0 0 0-2-2H8a2 2 0 0 0-2 2v16a2 2 0 0 1-4 0v-9a2 2 0 0 1 2-2h2"
+        />
+        <rect
+          height="4"
+          rx="1"
+          width="8"
+          x="10"
+          y="6"
         />
       </svg>
-      <span
-        class="text-xs leading-4 font-bold text-secondary-foreground"
-        data-as="span"
-        data-size="sm"
-        data-testid="typography"
+    </button>
+  </div>
+  <div
+    class="flex items-center justify-end gap-2"
+    data-override-defaults="true"
+    data-testid="container"
+  >
+    <button
+      aria-label="Post"
+      class="w-full flex-1 sm:flex-auto"
+      data-size="sm"
+      data-variant="default"
+      disabled=""
+    >
+      <div
+        class="flex items-center gap-2"
+        data-override-defaults="true"
+        data-testid="container"
       >
-        Post
-      </span>
-    </div>
-  </button>
+        <svg
+          aria-hidden="true"
+          class="lucide lucide-send size-4 text-brand"
+          fill="none"
+          height="24"
+          stroke="currentColor"
+          stroke-linecap="round"
+          stroke-linejoin="round"
+          stroke-width="2"
+          viewBox="0 0 24 24"
+          width="24"
+          xmlns="http://www.w3.org/2000/svg"
+        >
+          <path
+            d="M14.536 21.686a.5.5 0 0 0 .937-.024l6.5-19a.496.496 0 0 0-.635-.635l-19 6.5a.5.5 0 0 0-.024.937l7.93 3.18a2 2 0 0 1 1.112 1.11z"
+          />
+          <path
+            d="m21.854 2.147-10.94 10.939"
+          />
+        </svg>
+        <span
+          class="text-brand"
+          data-as="span"
+          data-size="sm"
+          data-testid="typography"
+        >
+          Post
+        </span>
+      </div>
+    </button>
+  </div>
 </div>
 `;
 
 exports[`PostInputActionBar - Snapshots > matches snapshot with isEdit prop 1`] = `
 <div
-  class="flex items-center gap-2"
+  class="flex flex-col justify-between gap-4 sm:flex-row sm:items-center"
   data-override-defaults="true"
   data-testid="container"
 >
-  <button
-    aria-label="Add emoji"
-    class="h-8 px-3 py-2 rounded-full border-none shadow-xs"
-    data-size="sm"
-    data-variant="secondary"
-    disabled=""
+  <div
+    class="flex items-center gap-2"
+    data-override-defaults="true"
+    data-testid="container"
   >
-    <svg
-      aria-hidden="true"
-      class="lucide lucide-smile size-4 text-secondary-foreground"
-      fill="none"
-      height="24"
-      stroke="currentColor"
-      stroke-linecap="round"
-      stroke-linejoin="round"
-      stroke-width="2"
-      viewBox="0 0 24 24"
-      width="24"
-      xmlns="http://www.w3.org/2000/svg"
-    >
-      <circle
-        cx="12"
-        cy="12"
-        r="10"
-      />
-      <path
-        d="M8 14s1.5 2 4 2 4-2 4-2"
-      />
-      <line
-        x1="9"
-        x2="9.01"
-        y1="9"
-        y2="9"
-      />
-      <line
-        x1="15"
-        x2="15.01"
-        y1="9"
-        y2="9"
-      />
-    </svg>
-  </button>
-  <button
-    aria-label="Add article"
-    class="h-8 px-3 py-2 rounded-full border-none shadow-xs"
-    data-size="sm"
-    data-variant="secondary"
-    disabled=""
-  >
-    <svg
-      aria-hidden="true"
-      class="lucide lucide-newspaper size-4 text-secondary-foreground"
-      fill="none"
-      height="24"
-      stroke="currentColor"
-      stroke-linecap="round"
-      stroke-linejoin="round"
-      stroke-width="2"
-      viewBox="0 0 24 24"
-      width="24"
-      xmlns="http://www.w3.org/2000/svg"
-    >
-      <path
-        d="M15 18h-5"
-      />
-      <path
-        d="M18 14h-8"
-      />
-      <path
-        d="M4 22h16a2 2 0 0 0 2-2V4a2 2 0 0 0-2-2H8a2 2 0 0 0-2 2v16a2 2 0 0 1-4 0v-9a2 2 0 0 1 2-2h2"
-      />
-      <rect
-        height="4"
-        rx="1"
-        width="8"
-        x="10"
-        y="6"
-      />
-    </svg>
-  </button>
-  <button
-    aria-label="Post"
-    class="h-8 px-3 py-2 rounded-full border-none shadow-xs"
-    data-size="sm"
-    data-variant="secondary"
-    disabled=""
-  >
-    <div
-      class="flex items-center gap-2"
-      data-override-defaults="true"
-      data-testid="container"
+    <button
+      aria-label="Add emoji"
+      data-size="sm"
+      data-variant="secondary"
+      disabled=""
     >
       <svg
         aria-hidden="true"
-        class="lucide lucide-send size-4 text-secondary-foreground"
+        class="lucide lucide-smile size-4 text-secondary-foreground"
+        fill="none"
+        height="24"
+        stroke="currentColor"
+        stroke-linecap="round"
+        stroke-linejoin="round"
+        stroke-width="2"
+        viewBox="0 0 24 24"
+        width="24"
+        xmlns="http://www.w3.org/2000/svg"
+      >
+        <circle
+          cx="12"
+          cy="12"
+          r="10"
+        />
+        <path
+          d="M8 14s1.5 2 4 2 4-2 4-2"
+        />
+        <line
+          x1="9"
+          x2="9.01"
+          y1="9"
+          y2="9"
+        />
+        <line
+          x1="15"
+          x2="15.01"
+          y1="9"
+          y2="9"
+        />
+      </svg>
+    </button>
+    <button
+      aria-label="Add article"
+      data-size="sm"
+      data-variant="secondary"
+      disabled=""
+    >
+      <svg
+        aria-hidden="true"
+        class="lucide lucide-newspaper size-4 text-secondary-foreground"
         fill="none"
         height="24"
         stroke="currentColor"
@@ -835,21 +843,71 @@ exports[`PostInputActionBar - Snapshots > matches snapshot with isEdit prop 1`] 
         xmlns="http://www.w3.org/2000/svg"
       >
         <path
-          d="M14.536 21.686a.5.5 0 0 0 .937-.024l6.5-19a.496.496 0 0 0-.635-.635l-19 6.5a.5.5 0 0 0-.024.937l7.93 3.18a2 2 0 0 1 1.112 1.11z"
+          d="M15 18h-5"
         />
         <path
-          d="m21.854 2.147-10.94 10.939"
+          d="M18 14h-8"
+        />
+        <path
+          d="M4 22h16a2 2 0 0 0 2-2V4a2 2 0 0 0-2-2H8a2 2 0 0 0-2 2v16a2 2 0 0 1-4 0v-9a2 2 0 0 1 2-2h2"
+        />
+        <rect
+          height="4"
+          rx="1"
+          width="8"
+          x="10"
+          y="6"
         />
       </svg>
-      <span
-        class="text-xs leading-4 font-bold text-secondary-foreground"
-        data-as="span"
-        data-size="sm"
-        data-testid="typography"
+    </button>
+  </div>
+  <div
+    class="flex items-center justify-end gap-2"
+    data-override-defaults="true"
+    data-testid="container"
+  >
+    <button
+      aria-label="Post"
+      class="w-full flex-1 sm:flex-auto"
+      data-size="sm"
+      data-variant="default"
+      disabled=""
+    >
+      <div
+        class="flex items-center gap-2"
+        data-override-defaults="true"
+        data-testid="container"
       >
-        Post
-      </span>
-    </div>
-  </button>
+        <svg
+          aria-hidden="true"
+          class="lucide lucide-send size-4 text-brand"
+          fill="none"
+          height="24"
+          stroke="currentColor"
+          stroke-linecap="round"
+          stroke-linejoin="round"
+          stroke-width="2"
+          viewBox="0 0 24 24"
+          width="24"
+          xmlns="http://www.w3.org/2000/svg"
+        >
+          <path
+            d="M14.536 21.686a.5.5 0 0 0 .937-.024l6.5-19a.496.496 0 0 0-.635-.635l-19 6.5a.5.5 0 0 0-.024.937l7.93 3.18a2 2 0 0 1 1.112 1.11z"
+          />
+          <path
+            d="m21.854 2.147-10.94 10.939"
+          />
+        </svg>
+        <span
+          class="text-brand"
+          data-as="span"
+          data-size="sm"
+          data-testid="typography"
+        >
+          Post
+        </span>
+      </div>
+    </button>
+  </div>
 </div>
 `;

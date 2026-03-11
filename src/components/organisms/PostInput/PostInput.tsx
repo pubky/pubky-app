@@ -147,6 +147,10 @@ export function PostInput({
     // eslint-disable-next-line react-hooks/exhaustive-deps -- only run on mount
   }, []);
 
+  const characterLimit = isArticle
+    ? undefined
+    : { count: Libs.getCharacterCount(content), max: POST_MAX_CHARACTER_LENGTH };
+
   return (
     <Atoms.Container
       data-cy={dataCy}
@@ -188,9 +192,7 @@ export function PostInput({
           <Organisms.PostHeader
             postId={currentUserPubky}
             isReplyInput={true}
-            characterLimit={
-              isArticle ? undefined : { count: Libs.getCharacterCount(content), max: POST_MAX_CHARACTER_LENGTH }
-            }
+            characterLimit={characterLimit}
             showPopover={false}
           />
         )}
@@ -266,6 +268,7 @@ export function PostInput({
           onArticleClick={handleArticleClick}
           isPostDisabled={!isValid()}
           submitMode={variant}
+          characterLimit={characterLimit}
         />
       </Atoms.Container>
     </Atoms.Container>

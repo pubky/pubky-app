@@ -33,6 +33,7 @@ export function PostInputExpandableSection({
   onImageClick,
   onArticleClick,
   className,
+  characterLimit,
 }: PostInputExpandableSectionProps) {
   const hasContent = content.trim().length > 0;
   const isUiDisabled = isSubmitting || isDisabled;
@@ -71,7 +72,7 @@ export function PostInputExpandableSection({
               </Atoms.Container>
             )}
 
-            <Atoms.Container className="justify-between gap-4 md:flex-row md:gap-0">
+            <Atoms.Container className="justify-between gap-4">
               <PostInputTags tags={tags} onTagsChange={setTags} disabled={isUiDisabled || isEdit} />
 
               <PostInputActionBar
@@ -87,6 +88,7 @@ export function PostInputExpandableSection({
                 isArticle={isArticle}
                 isEdit={isEdit}
                 postButtonIcon={IconsButton[submitMode]}
+                characterLimit={characterLimit}
               />
             </Atoms.Container>
           </Atoms.Container>

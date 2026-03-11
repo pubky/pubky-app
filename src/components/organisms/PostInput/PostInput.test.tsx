@@ -3,8 +3,19 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { PostInput } from './PostInput';
 import { POST_INPUT_VARIANT } from './PostInput.constants';
 import { POST_THREAD_CONNECTOR_VARIANTS } from '@/components/atoms/PostThreadConnector/PostThreadConnector.constants';
+import { POST_MAX_CHARACTER_LENGTH } from '@/config';
+import * as Hooks from '@/hooks';
 
 // next-intl is mocked globally in src/config/test.ts
+
+const mockToast = vi.fn();
+const mockEnterSubmitHandler = vi.fn();
+const mockHandleMentionKeyDown = vi.fn(() => false);
+const mockHandleFilesAdded = vi.fn();
+const mockSetIsArticle = vi.fn();
+const mockSetArticleTitle = vi.fn();
+const mockSetMentionSelectedIndex = vi.fn();
+const mockHandleMentionSelect = vi.fn();
 
 vi.mock('@/atoms', async () => {
   const { POST_THREAD_CONNECTOR_VARIANTS } =
@@ -118,24 +129,30 @@ vi.mock('../PostInputTags', () => ({
 }));
 
 vi.mock('../PostInputActionBar', () => ({
-  PostInputActionBar: vi.fn(({ onPostClick, onEmojiClick, onImageClick, isPostDisabled, isSubmitting }) => (
-    <div data-testid="post-input-action-bar">
-      <button data-testid="emoji-button" onClick={onEmojiClick} aria-label="Add emoji">
-        Emoji
-      </button>
-      <button data-testid="image-button" onClick={onImageClick} aria-label="Add image">
-        Image
-      </button>
-      <button
-        data-testid="post-button"
-        onClick={onPostClick}
-        disabled={isPostDisabled}
-        aria-label={isSubmitting ? 'Posting...' : 'Post'}
+  PostInputActionBar: vi.fn(
+    ({ onPostClick, onEmojiClick, onImageClick, isPostDisabled, isSubmitting, characterLimit }) => (
+      <div
+        data-testid="post-input-action-bar"
+        data-character-count={characterLimit?.count}
+        data-character-max={characterLimit?.max}
       >
-        {isSubmitting ? 'Posting...' : 'Post'}
-      </button>
-    </div>
-  )),
+        <button data-testid="emoji-button" onClick={onEmojiClick} aria-label="Add emoji">
+          Emoji
+        </button>
+        <button data-testid="image-button" onClick={onImageClick} aria-label="Add image">
+          Image
+        </button>
+        <button
+          data-testid="post-button"
+          onClick={onPostClick}
+          disabled={isPostDisabled}
+          aria-label={isSubmitting ? 'Posting...' : 'Post'}
+        >
+          {isSubmitting ? 'Posting...' : 'Post'}
+        </button>
+      </div>
+    ),
+  ),
 }));
 
 vi.mock('@/molecules', () => ({
@@ -169,6 +186,19 @@ vi.mock('@/molecules', () => ({
     }
     return null;
   }),
+  MentionPopover: vi.fn(
+    ({
+      users,
+      selectedIndex,
+    }: {
+      users: Array<{ id: string; name: string; pubky: string }>;
+      selectedIndex: number;
+    }) => (
+      <div data-testid="mention-popover" data-users-count={users.length} data-selected-index={selectedIndex}>
+        Mention popover
+      </div>
+    ),
+  ),
   PostInputAttachments: vi.fn(
     ({
       attachments,
@@ -213,7 +243,7 @@ vi.mock('@/molecules', () => ({
         </div>
       ) : null,
   ),
-  useToast: vi.fn(() => ({ toast: vi.fn() })),
+  useToast: vi.fn(() => ({ toast: mockToast })),
 }));
 
 // Mock the direct import of PostInputAttachments
@@ -259,14 +289,11 @@ const mockUsePostReturn = {
   articleTitle: '',
 };
 
-vi.mock('@/hooks', () => ({
-  usePost: vi.fn(() => mockUsePostReturn),
-  useCurrentUserProfile: vi.fn(() => ({
-    currentUserPubky: 'test-user-id:pubkey',
-  })),
-  useEmojiInsert: vi.fn(() => vi.fn()),
-  useEnterSubmit: vi.fn(() => vi.fn()),
-  usePostInput: vi.fn((options: { variant: string; placeholder?: string }) => ({
+function createUsePostInputReturn(
+  options: { variant: string; placeholder?: string },
+  overrides: Record<string, unknown> = {},
+) {
+  return {
     textareaRef: { current: null },
     markdownEditorRef: { current: null },
     containerRef: { current: null },
@@ -278,10 +305,10 @@ vi.mock('@/hooks', () => ({
     attachments: mockUsePostReturn.attachments,
     setAttachments: mockUsePostReturn.setAttachments,
     isArticle: mockUsePostReturn.isArticle,
-    setIsArticle: vi.fn(),
+    setIsArticle: mockSetIsArticle,
     handleArticleClick: vi.fn(),
     articleTitle: mockUsePostReturn.articleTitle,
-    setArticleTitle: vi.fn(),
+    setArticleTitle: mockSetArticleTitle,
     handleArticleTitleChange: vi.fn(),
     handleArticleBodyChange: vi.fn(),
     isDragging: mockUsePostReturn.isDragging,
@@ -312,13 +339,31 @@ vi.mock('@/hooks', () => ({
       mockUsePostReturn.setContent(e.target.value);
     }),
     handleEmojiSelect: vi.fn(),
-    handleFilesAdded: vi.fn(),
+    handleFilesAdded: mockHandleFilesAdded,
     handleFileClick: vi.fn(),
     handleDragEnter: vi.fn(),
     handleDragLeave: vi.fn(),
     handleDragOver: vi.fn(),
     handleDrop: vi.fn(),
+    handlePaste: vi.fn(),
+    mentionUsers: [],
+    mentionIsOpen: false,
+    mentionSelectedIndex: 0,
+    setMentionSelectedIndex: mockSetMentionSelectedIndex,
+    handleMentionSelect: mockHandleMentionSelect,
+    handleMentionKeyDown: mockHandleMentionKeyDown,
+    ...overrides,
+  };
+}
+
+vi.mock('@/hooks', () => ({
+  usePost: vi.fn(() => mockUsePostReturn),
+  useCurrentUserProfile: vi.fn(() => ({
+    currentUserPubky: 'test-user-id:pubkey',
   })),
+  useEmojiInsert: vi.fn(() => vi.fn()),
+  useEnterSubmit: vi.fn(() => mockEnterSubmitHandler),
+  usePostInput: vi.fn((options: { variant: string; placeholder?: string }) => createUsePostInputReturn(options)),
 }));
 
 describe('PostInput', () => {
@@ -328,6 +373,8 @@ describe('PostInput', () => {
   const mockSetAttachments = vi.fn();
   const mockReply = vi.fn();
   const mockPost = vi.fn();
+  const mockUsePostInput = vi.mocked(Hooks.usePostInput);
+  const mockUseEnterSubmit = vi.mocked(Hooks.useEnterSubmit);
 
   beforeEach(() => {
     vi.clearAllMocks();
@@ -347,6 +394,21 @@ describe('PostInput', () => {
     mockUsePostReturn.setAttachments = mockSetAttachments;
     mockUsePostReturn.reply = mockReply;
     mockUsePostReturn.post = mockPost;
+
+    mockToast.mockReset();
+    mockEnterSubmitHandler.mockReset();
+    mockHandleMentionKeyDown.mockReset();
+    mockHandleMentionKeyDown.mockReturnValue(false);
+    mockHandleFilesAdded.mockReset();
+    mockSetIsArticle.mockReset();
+    mockSetArticleTitle.mockReset();
+    mockSetMentionSelectedIndex.mockReset();
+    mockHandleMentionSelect.mockReset();
+
+    mockUseEnterSubmit.mockImplementation(() => mockEnterSubmitHandler);
+    mockUsePostInput.mockImplementation((options: { variant: string; placeholder?: string }) =>
+      createUsePostInputReturn(options),
+    );
   });
 
   it('renders with post variant', () => {
@@ -355,6 +417,33 @@ describe('PostInput', () => {
     expect(screen.getByTestId('post-header')).toBeInTheDocument();
     expect(screen.getByTestId('textarea')).toBeInTheDocument();
     expect(screen.getByPlaceholderText("What's on your mind?")).toBeInTheDocument();
+  });
+
+  it('passes characterLimit to header and action bar for non-article mode', () => {
+    mockUsePostReturn.content = 'Hello world';
+    render(<PostInput variant={POST_INPUT_VARIANT.POST} />);
+
+    const postHeader = screen.getByTestId('post-header');
+    expect(postHeader).toHaveAttribute('data-count', '11');
+    expect(postHeader).toHaveAttribute('data-max', POST_MAX_CHARACTER_LENGTH.toString());
+
+    const actionBar = screen.getByTestId('post-input-action-bar');
+    expect(actionBar).toHaveAttribute('data-character-count', '11');
+    expect(actionBar).toHaveAttribute('data-character-max', POST_MAX_CHARACTER_LENGTH.toString());
+  });
+
+  it('does not pass characterLimit in article mode', () => {
+    mockUsePostReturn.isArticle = true;
+    mockUsePostReturn.content = 'Article body';
+    render(<PostInput variant={POST_INPUT_VARIANT.POST} />);
+
+    const postHeader = screen.getByTestId('post-header');
+    expect(postHeader).not.toHaveAttribute('data-count');
+    expect(postHeader).not.toHaveAttribute('data-max');
+
+    const actionBar = screen.getByTestId('post-input-action-bar');
+    expect(actionBar).not.toHaveAttribute('data-character-count');
+    expect(actionBar).not.toHaveAttribute('data-character-max');
   });
 
   it('renders with repost variant', () => {
@@ -394,6 +483,98 @@ describe('PostInput', () => {
     fireEvent.change(textarea, { target: { value: 'Test content' } });
 
     expect(mockSetContent).toHaveBeenCalledWith('Test content');
+  });
+
+  it('calls enter submit handler when mention keydown does not handle the key event', () => {
+    mockHandleMentionKeyDown.mockReturnValue(false);
+    render(<PostInput variant={POST_INPUT_VARIANT.POST} />);
+
+    fireEvent.keyDown(screen.getByTestId('textarea'), { key: 'Enter', metaKey: true });
+
+    expect(mockHandleMentionKeyDown).toHaveBeenCalledTimes(1);
+    expect(mockEnterSubmitHandler).toHaveBeenCalledTimes(1);
+  });
+
+  it('does not call enter submit handler when mention keydown handles the key event', () => {
+    mockHandleMentionKeyDown.mockReturnValue(true);
+    render(<PostInput variant={POST_INPUT_VARIANT.POST} />);
+
+    fireEvent.keyDown(screen.getByTestId('textarea'), { key: 'Enter', metaKey: true });
+
+    expect(mockHandleMentionKeyDown).toHaveBeenCalledTimes(1);
+    expect(mockEnterSubmitHandler).not.toHaveBeenCalled();
+  });
+
+  it('renders mention popover when mentionIsOpen is true', () => {
+    mockUsePostInput.mockImplementationOnce((options: { variant: string; placeholder?: string }) =>
+      createUsePostInputReturn(options, {
+        mentionIsOpen: true,
+        mentionUsers: [{ id: '1', name: 'Alice', pubky: 'alice' }],
+        mentionSelectedIndex: 0,
+      }),
+    );
+
+    render(<PostInput variant={POST_INPUT_VARIANT.POST} />);
+
+    expect(screen.getByTestId('mention-popover')).toBeInTheDocument();
+    expect(screen.getByTestId('mention-popover')).toHaveAttribute('data-users-count', '1');
+  });
+
+  it('prefills initial content and attachments in non-edit mode', () => {
+    const initialFile = new File(['test'], 'initial-image.png', { type: 'image/png' });
+
+    render(
+      <PostInput
+        variant={POST_INPUT_VARIANT.POST}
+        initialContent="Prefilled content"
+        initialAttachments={[initialFile]}
+      />,
+    );
+
+    expect(mockSetContent).toHaveBeenCalledWith('Prefilled content');
+    expect(mockHandleFilesAdded).toHaveBeenCalledWith([initialFile]);
+  });
+
+  it('parses edit article json content and updates article state', () => {
+    render(
+      <PostInput
+        variant={POST_INPUT_VARIANT.EDIT}
+        editPostId="test-post-123"
+        editContent='{"title":"Parsed title","body":"Parsed body"}'
+        editIsArticle={true}
+      />,
+    );
+
+    expect(mockSetIsArticle).toHaveBeenCalledWith(true);
+    expect(mockSetArticleTitle).toHaveBeenCalledWith('Parsed title');
+    expect(mockSetContent).toHaveBeenCalledWith('Parsed body');
+  });
+
+  it('shows toast when edit article content cannot be parsed', () => {
+    render(
+      <PostInput
+        variant={POST_INPUT_VARIANT.EDIT}
+        editPostId="test-post-123"
+        editContent="invalid-json"
+        editIsArticle={true}
+      />,
+    );
+
+    expect(mockToast).toHaveBeenCalledTimes(1);
+    expect(mockToast).toHaveBeenCalledWith(
+      expect.objectContaining({
+        title: expect.any(String),
+        description: expect.any(String),
+      }),
+    );
+  });
+
+  it('shows drag overlay and brand border when dragging', () => {
+    mockUsePostReturn.isDragging = true;
+    render(<PostInput variant={POST_INPUT_VARIANT.POST} />);
+
+    expect(screen.getByText('Drop files here')).toBeInTheDocument();
+    expect(screen.getAllByTestId('container')[0]).toHaveClass('border-brand');
   });
 
   it('handles post submission for post variant', async () => {
