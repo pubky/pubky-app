@@ -77,68 +77,67 @@ Because no edge points **into** these orchestrators, they structurally **cannot*
 - ✅ `MigrationApplication` MAY call other Application classes for post-migration re-sync.
 - ❌ No Application class MAY call `BootstrapApplication` or `MigrationApplication` (enforced by their root-node positions; adding such an edge would violate the acyclic graph rule).
 
-
 ### Example
 
 ```typescript
 // ✅ ALLOWED: PostApplication (orchestrator) calls helper applications
+// Real: src/core/application/post/post.ts
 class PostApplication {
-  static async createWithAttachments({ files, tags, post }) {
+  static async commitCreate({ postUrl, compositePostId, post, fileAttachments, tags }) {
     // Depth 0 → Depth 1
-    await FileApplication.upload(files); // OK (PostApplication can call others)
-    await PostApplication.create(post); // OK (same class)
-    await TagApplication.commitCreate(tags); // OK (PostApplication can call others)
+    await FileApplication.commitCreate({ fileAttachments }); // OK (PostApplication can call others)
+    await LocalPostService.create({ compositePostId, post }); // OK (own service call)
+    await TagApplication.commitCreate({ tagList: tags });      // OK (PostApplication can call others)
   }
 }
 
-// ✅ ALLOWED: UserApplication (orchestrator) calls helper applications
-class UserApplication {
-  static async createWithProfile({ user, avatar }) {
-    await FileApplication.upload([avatar]); // OK (UserApplication can call others)
-    await UserApplication.create(user); // OK (same class)
+// ✅ ALLOWED: BootstrapApplication (orchestrator) calls helper applications
+// Real: src/core/application/bootstrap/bootstrap.ts
+class BootstrapApplication {
+  static async run({ pubky }) {
+    await FileApplication.commitCreate({ ... });          // OK (BootstrapApplication can call others)
+    await SettingsApplication.fetchFromHomeserver(pubky);  // OK (BootstrapApplication can call others)
   }
 }
 
-// ❌ FORBIDDEN: Specialized applications cannot call other applications
+// ❌ FORBIDDEN: Helper applications cannot call other applications
 class FileApplication {
-  static async upload(files) {
-    // NOT ALLOWED: FileApplication cannot call other Application classes
-    await TagApplication.commitCreate(tags); // ❌ VIOLATION
-    await PostApplication.validate(); // ❌ VIOLATION
-    await UserApplication.getProfile(); // ❌ VIOLATION
+  static async commitCreate({ fileAttachments }) {
+    // FileApplication is NOT in the allowed list — cannot call other Applications
+    await TagApplication.commitCreate({ tagList }); // ❌ VIOLATION
+    await PostApplication.commitCreate({ ... });    // ❌ VIOLATION
   }
 }
 
-// ❌ FORBIDDEN: Specialized applications cannot call PostApplication or UserApplication
+// ❌ FORBIDDEN: Helper applications cannot call orchestrator applications
 class TagApplication {
-  static async create(tag) {
-    await PostApplication.getById(tag.postId); // ❌ VIOLATION
-    await UserApplication.getById(tag.userId); // ❌ VIOLATION
+  static async commitCreate({ tagList }) {
+    await PostApplication.commitCreate({ ... }); // ❌ VIOLATION
   }
 }
 
 // ❌ FORBIDDEN: Deep chains (even from orchestrators)
 class PostApplication {
-  static async createWithAttachments({ files, tags, post }) {
-    await FileApplication.upload(files); // OK (Depth 0 → 1)
+  static async commitCreate({ fileAttachments, ... }) {
+    await FileApplication.commitCreate({ fileAttachments }); // OK (Depth 0 → 1)
   }
 }
 class FileApplication {
-  static async upload(files) {
+  static async commitCreate({ fileAttachments }) {
     // Depth 1 → Depth 2 (violates max depth rule)
-    await ImageProcessorApplication.process(); // ❌ NOT ALLOWED (also violates rule 4)
+    await ImageProcessorApplication.process(); // ❌ NOT ALLOWED
   }
 }
 
 // ❌ FORBIDDEN: Circular dependencies
 class PostApplication {
-  static async create() {
-    await FileApplication.upload(); // A → B
+  static async commitCreate({ ... }) {
+    await FileApplication.commitCreate({ ... }); // A → B
   }
 }
 class FileApplication {
-  static async upload() {
-    await PostApplication.validate(); // B → A (circular! also violates rule 4)
+  static async commitCreate({ ... }) {
+    await PostApplication.commitCreate({ ... }); // B → A (circular!)
   }
 }
 ```
@@ -157,8 +156,11 @@ class FileApplication {
 1. **Code Reviews**: Reviewers MUST check for:
    - Circular dependencies
    - Excessive call depth (max depth 1)
+     <<<<<<< HEAD:.cursor/adr/0009-application-cross-domain-orchestration.md
    - **Orchestration privilege violations** (only PostApplication/UserApplication/NotificationApplication/BootstrapApplication/MigrationApplication can call other Applications)
-   - **Root-node invariant**: no Application class may add a dependency edge pointing into `BootstrapApplication` or `MigrationApplication`
+   - # **Root-node invariant**: no Application class may add a dependency edge pointing into `BootstrapApplication` or `MigrationApplication`
+   - **Orchestration privilege violations** (only PostApplication, NotificationApplication, BootstrapApplication, HotApplication, PostStreamApplication, TtlApplication can call other Applications)
+     > > > > > > > dev:docs/adr/0009-application-cross-domain-orchestration.md
 2. **Documentation**: This ADR as the source of truth
 3. **Testing**: Integration tests to catch violations at runtime
 4. **Code Comments**: Developers MUST document cross-Application calls with ADR reference
@@ -176,14 +178,20 @@ class FileApplication {
 - ✅ Single user action requires multi-domain coordination
 - ✅ Complex workflow with ordering/transactional requirements
 - ✅ Avoiding code duplication of orchestration logic
-- ✅ **Only from PostApplication, UserApplication, NotificationApplication, BootstrapApplication, or MigrationApplication** (NotificationApplication is constrained by ADR-0010; BootstrapApplication is constrained to startup hydration and MigrationApplication to post-migration re-sync as root-node orchestrators)
+  <<<<<<< HEAD:.cursor/adr/0009-application-cross-domain-orchestration.md
+- # ✅ **Only from PostApplication, UserApplication, NotificationApplication, BootstrapApplication, or MigrationApplication** (NotificationApplication is constrained by ADR-0010; BootstrapApplication is constrained to startup hydration and MigrationApplication to post-migration re-sync as root-node orchestrators)
+- ✅ **Only from approved orchestrators**: PostApplication, NotificationApplication, BootstrapApplication, HotApplication, PostStreamApplication, TtlApplication
+  > > > > > > > dev:docs/adr/0009-application-cross-domain-orchestration.md
 
 **When NOT to use:**
 
 - ❌ Simple read operations (use services directly)
 - ❌ Single-domain workflows (stay within one Application)
 - ❌ Deep processing chains (refactor to flatten)
-- ❌ **From specialized Application classes** (FileApplication, TagApplication, BookmarkApplication, etc.) - these must remain independent and cannot depend on PostApplication, UserApplication, NotificationApplication, BootstrapApplication, or MigrationApplication
+  <<<<<<< HEAD:.cursor/adr/0009-application-cross-domain-orchestration.md
+- # ❌ **From specialized Application classes** (FileApplication, TagApplication, BookmarkApplication, etc.) - these must remain independent and cannot depend on PostApplication, UserApplication, NotificationApplication, BootstrapApplication, or MigrationApplication
+- ❌ **From specialized Application classes** (FileApplication, TagApplication, BookmarkApplication, etc.) — these must remain independent and cannot call other Applications
+  > > > > > > > dev:docs/adr/0009-application-cross-domain-orchestration.md
 
 ## Consequences
 
@@ -288,15 +296,15 @@ const handlePostCreate = async () => {
 
 ```typescript
 class PostApplication {
-  static async create({ files, tags, post }) {
-    // Duplicate FileApplication.upload logic
-    for (const file of files) {
+  static async commitCreate({ fileAttachments, tags, post, ... }) {
+    // Duplicate FileApplication.commitCreate logic
+    for (const file of fileAttachments) {
       await HomeserverService.putBlob(...);
       await HomeserverService.request(...);
       await LocalFileService.create(...);
     }
 
-    // Duplicate TagApplication.create logic
+    // Duplicate TagApplication.commitCreate logic
     for (const tag of tags) {
       await LocalPostTagService.create(...);
       await HomeserverService.request(...);

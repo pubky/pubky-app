@@ -70,7 +70,7 @@ Coordinators   Workflows
 
 - Created: `src/core/coordinators/notifications/NotificationCoordinator`
 - Implemented: Polling lifecycle management (start/stop based on auth, visibility, routes)
-- Integrated: Calls `UserController.notifications()` to fetch notifications
+- Integrated: Calls `NotificationController.fetchNotifications()` to fetch notifications
 - UI Component: `CoordinatorsManager` manages coordinator lifecycle
 - Exported via: `src/core/index.ts`
 
