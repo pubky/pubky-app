@@ -39,10 +39,7 @@ export function PostInputActionBar({
     [],
   );
 
-  const getButtonDataCy = React.useCallback(
-    (ariaLabel: string) => `post-input-action-bar-${ariaLabel.toLowerCase().replace(' ', '-')}`,
-    [],
-  );
+  const getButtonDataCy = (ariaLabel: string) => `post-input-action-bar-${ariaLabel.toLowerCase().replace(' ', '-')}`;
 
   const PostButtonIconComponent = isSubmitting ? Libs.Loader2 : (postButtonIcon ?? Libs.Send);
   const postButtonAriaText = isSubmitting ? 'Posting...' : postButtonAriaLabel;
