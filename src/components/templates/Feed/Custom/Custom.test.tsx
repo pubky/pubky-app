@@ -63,7 +63,7 @@ vi.mock('@/organisms/PostInput/PostInput.constants', () => ({
   },
 }));
 
-vi.mock('@/organisms/TimelineFeed/TimelineFeed.types', () => ({
+vi.mock('@/organisms/Timeline/Feed/TimelineFeed/TimelineFeed.types', () => ({
   TIMELINE_FEED_VARIANT: {
     CUSTOM: 'custom',
   },

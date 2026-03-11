@@ -12,13 +12,13 @@ import * as Hooks from '@/hooks';
 import * as Types from './RepliesWithParent.types';
 
 /**
- * TimelineRepliesWithParent
+ * RepliesWithParent
  *
  * Similar to TimelinePosts, but specifically for replies:
  * - Shows the parent post first (without reply line)
  * - Shows the reply post with isReply={true} (with reply line)
  */
-export function TimelineRepliesWithParent({ streamId }: Types.TimelineRepliesWithParentProps) {
+export function RepliesWithParent({ streamId }: Types.RepliesWithParentProps) {
   const { postIds, loading, loadingMore, error, hasMore, loadMore } = Hooks.useStreamPagination({ streamId });
   const { navigateToPost } = Hooks.usePostNavigation();
 

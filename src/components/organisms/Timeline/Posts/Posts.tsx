@@ -4,7 +4,17 @@ import * as Atoms from '@/atoms';
 import * as Molecules from '@/molecules';
 import * as Organisms from '@/organisms';
 import * as Hooks from '@/hooks';
-import * as Types from './Posts.types';
+import type { TagsLayout } from '../../PostMain/PostMain.types';
+
+interface TimelinePostsProps {
+  postIds: string[];
+  loading: boolean;
+  loadingMore: boolean;
+  error: string | null;
+  hasMore: boolean;
+  loadMore: () => Promise<void>;
+  tagsLayout?: TagsLayout;
+}
 
 /**
  * TimelinePosts
@@ -20,7 +30,7 @@ export function TimelinePosts({
   hasMore,
   loadMore,
   tagsLayout,
-}: Types.TimelinePostsProps) {
+}: TimelinePostsProps) {
   const { navigateToPost } = Hooks.usePostNavigation();
 
   // Infinite scroll hook

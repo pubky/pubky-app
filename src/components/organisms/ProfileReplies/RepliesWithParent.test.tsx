@@ -1,7 +1,7 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { render, screen, waitFor } from '@testing-library/react';
 import { useLiveQuery } from 'dexie-react-hooks';
-import { TimelineRepliesWithParent } from './RepliesWithParent';
+import { RepliesWithParent } from './RepliesWithParent';
 import * as Core from '@/core';
 import * as Hooks from '@/hooks';
 
@@ -29,10 +29,6 @@ vi.mock('@/atoms', () => ({
 
 vi.mock('@/molecules', () => ({
   TimelineLoading: () => <div data-testid="timeline-loading">Loading...</div>,
-  TimelineInitialError: ({ message }: { message: string }) => (
-    <div data-testid="timeline-initial-error">Error: {message}</div>
-  ),
-  TimelineEmpty: () => <div data-testid="timeline-empty">No replies</div>,
   TimelineLoadingMore: () => <div data-testid="timeline-loading-more">Loading more...</div>,
   TimelineError: ({ message }: { message: string }) => <div data-testid="timeline-error">Error: {message}</div>,
   TimelineEndMessage: () => <div data-testid="timeline-end-message">End of replies</div>,
@@ -65,7 +61,7 @@ const mockUseStreamPagination = vi.mocked(Hooks.useStreamPagination);
 const mockUsePostNavigation = vi.mocked(Hooks.usePostNavigation);
 const mockUseInfiniteScroll = vi.mocked(Hooks.useInfiniteScroll);
 
-describe('TimelineRepliesWithParent', () => {
+describe('RepliesWithParent', () => {
   const mockStreamId = 'author_replies:test-user-id' as Core.PostStreamId;
   const mockNavigateToPost = vi.fn();
   const mockViewerId = 'test-viewer-id' as Core.Pubky;
@@ -119,7 +115,7 @@ describe('TimelineRepliesWithParent', () => {
         removePosts: vi.fn(),
       });
 
-      render(<TimelineRepliesWithParent streamId={mockStreamId} />);
+      render(<RepliesWithParent streamId={mockStreamId} />);
 
       expect(screen.getByTestId('timeline-loading')).toBeInTheDocument();
     });
@@ -137,7 +133,7 @@ describe('TimelineRepliesWithParent', () => {
         removePosts: vi.fn(),
       });
 
-      render(<TimelineRepliesWithParent streamId={mockStreamId} />);
+      render(<RepliesWithParent streamId={mockStreamId} />);
 
       expect(screen.getByTestId('timeline-loading-more')).toBeInTheDocument();
     });
@@ -157,7 +153,7 @@ describe('TimelineRepliesWithParent', () => {
         removePosts: vi.fn(),
       });
 
-      render(<TimelineRepliesWithParent streamId={mockStreamId} />);
+      render(<RepliesWithParent streamId={mockStreamId} />);
 
       expect(screen.getByTestId('timeline-empty')).toBeInTheDocument();
     });
@@ -175,7 +171,7 @@ describe('TimelineRepliesWithParent', () => {
         removePosts: vi.fn(),
       });
 
-      render(<TimelineRepliesWithParent streamId={mockStreamId} />);
+      render(<RepliesWithParent streamId={mockStreamId} />);
 
       expect(screen.getByTestId('timeline-end-message')).toBeInTheDocument();
     });
@@ -195,7 +191,7 @@ describe('TimelineRepliesWithParent', () => {
         removePosts: vi.fn(),
       });
 
-      render(<TimelineRepliesWithParent streamId={mockStreamId} />);
+      render(<RepliesWithParent streamId={mockStreamId} />);
 
       expect(screen.getByTestId('timeline-initial-error')).toBeInTheDocument();
       expect(screen.getByText(/network error/i)).toBeInTheDocument();
@@ -214,7 +210,7 @@ describe('TimelineRepliesWithParent', () => {
         removePosts: vi.fn(),
       });
 
-      render(<TimelineRepliesWithParent streamId={mockStreamId} />);
+      render(<RepliesWithParent streamId={mockStreamId} />);
 
       expect(screen.getByTestId('timeline-error')).toBeInTheDocument();
     });
@@ -239,7 +235,7 @@ describe('TimelineRepliesWithParent', () => {
       // Mock useLiveQuery to return null (no parent)
       mockUseLiveQuery.mockReturnValue(null);
 
-      render(<TimelineRepliesWithParent streamId={mockStreamId} />);
+      render(<RepliesWithParent streamId={mockStreamId} />);
 
       await waitFor(() => {
         mockReplyIds.forEach((replyId) => {
@@ -271,7 +267,7 @@ describe('TimelineRepliesWithParent', () => {
         .mockReturnValueOnce(mockParentId) // 1st: parentPostId
         .mockReturnValueOnce({ id: mockParentId }); // 2nd: parentPost
 
-      render(<TimelineRepliesWithParent streamId={mockStreamId} />);
+      render(<RepliesWithParent streamId={mockStreamId} />);
 
       await waitFor(() => {
         expect(screen.getByTestId(`post-${mockParentId}`)).toBeInTheDocument();
@@ -301,7 +297,7 @@ describe('TimelineRepliesWithParent', () => {
         .mockReturnValueOnce(null) // 1st: parentPostId
         .mockReturnValueOnce(null); // 2nd: parentPost
 
-      render(<TimelineRepliesWithParent streamId={mockStreamId} />);
+      render(<RepliesWithParent streamId={mockStreamId} />);
 
       await waitFor(() => {
         const replyPost = screen.getByTestId(`post-${mockReplyIds[0]}`);
@@ -332,7 +328,7 @@ describe('TimelineRepliesWithParent', () => {
         .mockReturnValueOnce(mockParentId) // 1st: parentPostId
         .mockReturnValueOnce({ id: mockParentId }); // 2nd: parentPost
 
-      render(<TimelineRepliesWithParent streamId={mockStreamId} />);
+      render(<RepliesWithParent streamId={mockStreamId} />);
 
       await waitFor(() => {
         const parentPost = screen.getByTestId(`post-${mockParentId}`);
@@ -364,7 +360,7 @@ describe('TimelineRepliesWithParent', () => {
         .mockReturnValueOnce(null) // 1st: parentPostId
         .mockReturnValueOnce(null); // 2nd: parentPost
 
-      render(<TimelineRepliesWithParent streamId={mockStreamId} />);
+      render(<RepliesWithParent streamId={mockStreamId} />);
 
       await waitFor(() => {
         const post = screen.getByTestId(`post-${mockReplyIds[0]}`);
@@ -390,7 +386,7 @@ describe('TimelineRepliesWithParent', () => {
         removePosts: vi.fn(),
       });
 
-      render(<TimelineRepliesWithParent streamId={mockStreamId} />);
+      render(<RepliesWithParent streamId={mockStreamId} />);
 
       expect(mockUseInfiniteScroll).toHaveBeenCalledWith({
         onLoadMore: mockLoadMore,
@@ -430,7 +426,7 @@ describe('TimelineRepliesWithParent', () => {
         .mockReturnValueOnce(mockParentId) // parentPostId
         .mockReturnValueOnce(null); // parentPost (missing, will trigger fetch)
 
-      const { unmount } = render(<TimelineRepliesWithParent streamId={mockStreamId} />);
+      const { unmount } = render(<RepliesWithParent streamId={mockStreamId} />);
 
       // Verify fetch was initiated
       expect(mockGetOrFetchDetails).toHaveBeenCalledWith({ compositeId: mockParentId, viewerId: mockViewerId });
@@ -462,7 +458,7 @@ describe('TimelineRepliesWithParent', () => {
         removePosts: vi.fn(),
       });
 
-      const { container } = render(<TimelineRepliesWithParent streamId={mockStreamId} />);
+      const { container } = render(<RepliesWithParent streamId={mockStreamId} />);
 
       expect(container).toMatchSnapshot();
     });
@@ -480,7 +476,7 @@ describe('TimelineRepliesWithParent', () => {
         removePosts: vi.fn(),
       });
 
-      const { container } = render(<TimelineRepliesWithParent streamId={mockStreamId} />);
+      const { container } = render(<RepliesWithParent streamId={mockStreamId} />);
 
       expect(container).toMatchSnapshot();
     });
@@ -498,7 +494,7 @@ describe('TimelineRepliesWithParent', () => {
         removePosts: vi.fn(),
       });
 
-      const { container } = render(<TimelineRepliesWithParent streamId={mockStreamId} />);
+      const { container } = render(<RepliesWithParent streamId={mockStreamId} />);
 
       expect(container).toMatchSnapshot();
     });
@@ -525,7 +521,7 @@ describe('TimelineRepliesWithParent', () => {
         .mockReturnValueOnce(null) // reply2: parentPostId
         .mockReturnValueOnce(null); // reply2: parentPost
 
-      const { container } = render(<TimelineRepliesWithParent streamId={mockStreamId} />);
+      const { container } = render(<RepliesWithParent streamId={mockStreamId} />);
 
       expect(container).toMatchSnapshot();
     });
@@ -555,7 +551,7 @@ describe('TimelineRepliesWithParent', () => {
         .mockReturnValueOnce(mockParentId2) // reply2: parentPostId
         .mockReturnValueOnce({ id: mockParentId2 }); // reply2: parentPost
 
-      const { container } = render(<TimelineRepliesWithParent streamId={mockStreamId} />);
+      const { container } = render(<RepliesWithParent streamId={mockStreamId} />);
 
       expect(container).toMatchSnapshot();
     });

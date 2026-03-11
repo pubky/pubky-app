@@ -7,19 +7,25 @@ import * as Atoms from '@/atoms';
 import * as Organisms from '@/organisms';
 import * as Hooks from '@/hooks';
 import * as Libs from '@/libs';
-import * as Types from './PostReplies.types';
+import type { TagsLayout } from '../../PostMain/PostMain.types';
+
+interface TimelinePostRepliesProps {
+  postId: string;
+  onPostClick: (postId: string) => void;
+  tagsLayout?: TagsLayout;
+}
 
 /**
  * TimelinePostReplies
  *
  * Renders replies for a specific post in the timeline with thread connectors (flat structure, 1 level).
  * This component shows a preview of up to 3 replies inline with the parent post.
- * It does NOT use pagination - for full replies view, see TimelineRepliesWithParent.
+ * It does NOT use pagination - for full replies view, see RepliesWithParent.
  *
  * Hidden for unauthenticated users following pubky-app pattern.
  */
 
-export function TimelinePostReplies({ postId, onPostClick, tagsLayout }: Types.TimelinePostRepliesProps) {
+export function TimelinePostReplies({ postId, onPostClick, tagsLayout }: TimelinePostRepliesProps) {
   const { isAuthenticated } = Hooks.useRequireAuth();
   const [replyIds, setReplyIds] = useState<string[]>([]);
   const { mutedUserIdSet } = Hooks.useMutedUsers();
