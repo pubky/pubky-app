@@ -1,6 +1,6 @@
 // Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
 
-exports[`TimelineRepliesWithParent > Snapshots > should match snapshot for empty state 1`] = `
+exports[`RepliesWithParent > Snapshots > should match snapshot for empty state 1`] = `
 <div>
   <div
     data-testid="timeline-empty"
@@ -10,7 +10,7 @@ exports[`TimelineRepliesWithParent > Snapshots > should match snapshot for empty
 </div>
 `;
 
-exports[`TimelineRepliesWithParent > Snapshots > should match snapshot for error state 1`] = `
+exports[`RepliesWithParent > Snapshots > should match snapshot for error state 1`] = `
 <div>
   <div
     data-testid="timeline-initial-error"
@@ -21,7 +21,7 @@ exports[`TimelineRepliesWithParent > Snapshots > should match snapshot for error
 </div>
 `;
 
-exports[`TimelineRepliesWithParent > Snapshots > should match snapshot for loading state 1`] = `
+exports[`RepliesWithParent > Snapshots > should match snapshot for loading state 1`] = `
 <div>
   <div
     data-testid="timeline-loading"
@@ -31,7 +31,7 @@ exports[`TimelineRepliesWithParent > Snapshots > should match snapshot for loadi
 </div>
 `;
 
-exports[`TimelineRepliesWithParent > Snapshots > should match snapshot with replies (no parents) 1`] = `
+exports[`RepliesWithParent > Snapshots > should match snapshot with replies (no parents) 1`] = `
 <div>
   <div
     data-testid="container"
@@ -77,7 +77,7 @@ exports[`TimelineRepliesWithParent > Snapshots > should match snapshot with repl
 </div>
 `;
 
-exports[`TimelineRepliesWithParent > Snapshots > should match snapshot with replies and parents 1`] = `
+exports[`RepliesWithParent > Snapshots > should match snapshot with replies and parents 1`] = `
 <div>
   <div
     data-testid="container"
