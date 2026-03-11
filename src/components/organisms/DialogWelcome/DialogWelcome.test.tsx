@@ -247,6 +247,17 @@ describe('DialogWelcome', () => {
 });
 
 describe('DialogWelcome - Snapshots', () => {
+  beforeEach(async () => {
+    vi.clearAllMocks();
+    const { useLiveQuery } = await import('dexie-react-hooks');
+    vi.mocked(useLiveQuery).mockReturnValue({
+      name: 'Test User',
+      bio: 'Test bio',
+      image: 'test-image.jpg',
+      indexed_at: 1234567890,
+    });
+  });
+
   it('matches snapshot for default DialogWelcome', () => {
     const { container } = render(<DialogWelcome />);
     expect(container.firstChild).toMatchSnapshot();

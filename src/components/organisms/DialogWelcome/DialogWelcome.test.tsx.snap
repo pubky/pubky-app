@@ -41,6 +41,7 @@ exports[`DialogWelcome - Snapshots > matches snapshot for default DialogWelcome 
         >
           <div
             class="h-24 w-24"
+            data-avatar-url="https://mocked.avatar/test-pubky-123"
             data-fallback-class="text-4xl"
             data-name="Test User"
             data-testid="avatar-with-fallback"
