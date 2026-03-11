@@ -1,34 +1,23 @@
-import * as Libs from '@/libs';
+import {
+  Err,
+  AppError,
+  NetworkErrorCode,
+  AuthErrorCode,
+  ValidationErrorCode,
+  ClientErrorCode,
+  ServerErrorCode,
+  ErrorService,
+  HttpStatusCode,
+} from '@/libs';
 import { isIpSafe } from '@/libs/network';
-import { nextjsApiQueryClient } from './nextjs-api.query-client';
-import type { TQueryNextjsParams } from './nextjs.utils.types';
 
-const MAX_REDIRECTS = 5;
 const MAX_RESPONSE_SIZE = 5 * 1024 * 1024; // 5MB
-const FETCH_TIMEOUT_MS = 10_000;
-
-const FETCH_HEADERS = {
-  'User-Agent':
-    'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36',
-  Accept: 'text/html, image/*, video/*, audio/*',
-  'Accept-Language': 'en-US,en;q=0.9',
-  'Upgrade-Insecure-Requests': '1',
-};
 
 /**
- * Queries via the NextJS API query client with caching, deduplication, and retry.
- * Builds the query key internally as ['nextjs-api', topic, url].
- *
- * @param topic - Topic identifier for cache key namespacing (e.g., 'og-metadata')
- * @param url - The URL being queried, used as the cache key discriminator
- * @param queryFn - Function that performs the actual fetch
- * @returns Cached or freshly fetched data
+ * Checks whether a URL uses HTTP or HTTPS protocol.
  */
-export async function queryNextjs<T>({ topic, url, queryFn }: TQueryNextjsParams<T>): Promise<T> {
-  return nextjsApiQueryClient.fetchQuery({
-    queryKey: ['nextjs-api', topic, url],
-    queryFn,
-  });
+export function isHttpProtocol(url: URL): boolean {
+  return url.protocol === 'http:' || url.protocol === 'https:';
 }
 
 /**
@@ -50,97 +39,33 @@ export async function validateDns(hostname: string): Promise<void> {
     } else {
       const addresses = await dns.resolve4(hostname);
       if (!addresses || addresses.length === 0) {
-        throw Libs.Err.network(Libs.NetworkErrorCode.DNS_FAILED, 'DNS resolution failed', {
-          service: Libs.ErrorService.NextJsServer,
+        throw Err.network(NetworkErrorCode.DNS_FAILED, 'DNS resolution failed', {
+          service: ErrorService.NextJsServer,
           operation: 'validateDns',
-          context: { hostname, statusCode: Libs.HttpStatusCode.BAD_REQUEST },
+          context: { hostname, statusCode: HttpStatusCode.BAD_REQUEST },
         });
       }
       resolvedIp = addresses[0];
     }
   } catch (error) {
-    if (error instanceof Libs.AppError) throw error;
+    if (error instanceof AppError) throw error;
 
-    throw Libs.Err.network(Libs.NetworkErrorCode.DNS_FAILED, 'DNS resolution failed', {
-      service: Libs.ErrorService.NextJsServer,
+    throw Err.network(NetworkErrorCode.DNS_FAILED, 'DNS resolution failed', {
+      service: ErrorService.NextJsServer,
       operation: 'validateDns',
       cause: error,
-      context: { hostname, statusCode: Libs.HttpStatusCode.BAD_REQUEST },
+      context: { hostname, statusCode: HttpStatusCode.BAD_REQUEST },
     });
   }
 
   // Reject private/reserved IP ranges to prevent SSRF (e.g. localhost, 10.x, 192.168.x).
   if (!isIpSafe(resolvedIp)) {
-    throw Libs.Err.auth(Libs.AuthErrorCode.FORBIDDEN, 'Blocked IP range. Cannot fetch from private networks.', {
-      service: Libs.ErrorService.NextJsServer,
+    throw Err.auth(AuthErrorCode.FORBIDDEN, 'Blocked IP range. Cannot fetch from private networks.', {
+      service: ErrorService.NextJsServer,
       operation: 'validateDns',
-      context: { hostname, statusCode: Libs.HttpStatusCode.FORBIDDEN },
+      context: { hostname, statusCode: HttpStatusCode.FORBIDDEN },
     });
   }
-}
-
-/**
- * Follows redirects manually, validating DNS on each hop to prevent SSRF via open redirects.
- * Uses safeFetch for standardized network error handling.
- */
-export async function fetchWithRedirects(url: string): Promise<Response> {
-  let currentUrl = url;
-
-  for (let i = 0; i < MAX_REDIRECTS; i++) {
-    const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), FETCH_TIMEOUT_MS);
-
-    let response: Response;
-    try {
-      response = await Libs.safeFetch(
-        currentUrl,
-        {
-          signal: controller.signal,
-          headers: FETCH_HEADERS,
-          redirect: 'manual', // Disable automatic redirects so we can validate each hop (DNS + protocol) ourselves
-        },
-        Libs.ErrorService.NextJsServer,
-        'fetch',
-      );
-    } finally {
-      clearTimeout(timeoutId);
-    }
-
-    if (response.status < 300 || response.status >= 400) {
-      // ex: 1xx, 2xx, 4xx, 5xx
-      return response;
-    }
-
-    const location = response.headers.get('location');
-    // 3xx without Location is invalid/malformed; we cannot resolve the next URL, so treat this as the final response.
-    if (!location) {
-      return response;
-    }
-
-    const redirectUrl = new URL(location, currentUrl);
-    // Must be HTTP or HTTPS to prevent SSRF via redirect to non-HTTP protocols.
-    if (!['http:', 'https:'].includes(redirectUrl.protocol)) {
-      response.body?.cancel().catch(() => {}); // cancel the response body to release the TCP connection back to the pool
-      throw Libs.Err.auth(Libs.AuthErrorCode.FORBIDDEN, 'Blocked redirect to non-HTTP protocol', {
-        service: Libs.ErrorService.NextJsServer,
-        operation: 'fetchWithRedirects',
-        context: { protocol: redirectUrl.protocol, statusCode: Libs.HttpStatusCode.FORBIDDEN },
-      });
-    }
-
-    // Release the redirect response body before following the next hop so the TCP connection can be reused promptly.
-    response.body?.cancel().catch(() => {});
-
-    await validateDns(redirectUrl.hostname);
-
-    currentUrl = redirectUrl.toString();
-  }
-
-  throw Libs.Err.network(Libs.NetworkErrorCode.CONNECTION_FAILED, 'Too many redirects', {
-    service: Libs.ErrorService.NextJsServer,
-    operation: 'fetchWithRedirects',
-    context: { url, statusCode: Libs.HttpStatusCode.BAD_REQUEST },
-  });
 }
 
 /**
@@ -150,10 +75,10 @@ export async function fetchWithRedirects(url: string): Promise<Response> {
 export async function readResponseBody(response: Response): Promise<string> {
   const reader = response.body?.getReader();
   if (!reader) {
-    throw Libs.Err.validation(Libs.ValidationErrorCode.INVALID_INPUT, 'No response body', {
-      service: Libs.ErrorService.NextJsServer,
+    throw Err.validation(ValidationErrorCode.INVALID_INPUT, 'No response body', {
+      service: ErrorService.NextJsServer,
       operation: 'readResponseBody',
-      context: { statusCode: Libs.HttpStatusCode.BAD_REQUEST },
+      context: { statusCode: HttpStatusCode.BAD_REQUEST },
     });
   }
 
@@ -168,23 +93,23 @@ export async function readResponseBody(response: Response): Promise<string> {
       totalBytes += value.byteLength;
       if (totalBytes > MAX_RESPONSE_SIZE) {
         await reader.cancel();
-        throw Libs.Err.client(Libs.ClientErrorCode.PAYLOAD_TOO_LARGE, 'Response too large (max 5MB)', {
-          service: Libs.ErrorService.NextJsServer,
+        throw Err.client(ClientErrorCode.PAYLOAD_TOO_LARGE, 'Response too large (max 5MB)', {
+          service: ErrorService.NextJsServer,
           operation: 'readResponseBody',
-          context: { totalBytes, statusCode: Libs.HttpStatusCode.PAYLOAD_TOO_LARGE },
+          context: { totalBytes, statusCode: HttpStatusCode.PAYLOAD_TOO_LARGE },
         });
       }
 
       chunks.push(value);
     }
   } catch (error) {
-    if (error instanceof Libs.AppError) throw error;
+    if (error instanceof AppError) throw error;
 
-    throw Libs.Err.server(Libs.ServerErrorCode.UNKNOWN_ERROR, 'Failed to read response body', {
-      service: Libs.ErrorService.NextJsServer,
+    throw Err.server(ServerErrorCode.UNKNOWN_ERROR, 'Failed to read response body', {
+      service: ErrorService.NextJsServer,
       operation: 'readResponseBody',
       cause: error,
-      context: { statusCode: Libs.HttpStatusCode.INTERNAL_SERVER_ERROR },
+      context: { statusCode: HttpStatusCode.INTERNAL_SERVER_ERROR },
     });
   }
 
@@ -199,7 +124,7 @@ export async function normalizeImageUrl(image: string, baseUrl: string): Promise
   try {
     const imageUrl = new URL(image, baseUrl);
 
-    if (!['http:', 'https:'].includes(imageUrl.protocol)) {
+    if (!isHttpProtocol(imageUrl)) {
       return null;
     }
 

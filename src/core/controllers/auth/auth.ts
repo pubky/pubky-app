@@ -211,8 +211,6 @@ export class AuthController {
     // so new query clients are automatically cancelled/cleared here.
     Core.nexusQueryClient.cancelQueries();
     Core.nexusQueryClient.clear();
-    Core.nextjsApiQueryClient.cancelQueries();
-    Core.nextjsApiQueryClient.clear();
 
     // Reset ALL Zustand stores
     Core.useOnboardingStore.getState().reset();

@@ -10,7 +10,7 @@ import {
   ServerErrorCode,
   HttpStatusCode,
 } from '@/libs';
-import { validateDns, readResponseBody, fetchWithRedirects, normalizeImageUrl } from './nextjs.utils';
+import { validateDns, readResponseBody, normalizeImageUrl } from './nextjs.utils';
 
 // ---------------------------------------------------------------------------
 // Mocks
@@ -198,96 +198,6 @@ describe('readResponseBody', () => {
       cause: streamError,
       service: ErrorService.NextJsServer,
     });
-  });
-});
-
-// ---------------------------------------------------------------------------
-// fetchWithRedirects
-// ---------------------------------------------------------------------------
-
-describe('fetchWithRedirects', () => {
-  const mockFetch = vi.fn();
-
-  beforeEach(() => {
-    vi.clearAllMocks();
-    global.fetch = mockFetch;
-    // Default: hostname resolves to safe public IP
-    mockIsIP.mockReturnValue(0);
-    mockResolve4.mockResolvedValue(['1.1.1.1']);
-    mockIsIpSafe.mockReturnValue(true);
-  });
-
-  it('should abort fetch when request exceeds timeout', async () => {
-    // Instead of fake timers, mock setTimeout to invoke the callback immediately.
-    // This avoids async timing issues with fake timers + AbortController.
-    vi.spyOn(globalThis, 'setTimeout').mockImplementation((fn: TimerHandler) => {
-      if (typeof fn === 'function') fn();
-      return 0 as unknown as ReturnType<typeof setTimeout>;
-    });
-
-    // fetch hangs until aborted via signal
-    mockFetch.mockImplementation((_url: string, _opts: RequestInit) => {
-      // Signal is already aborted because setTimeout fired synchronously
-      return Promise.reject(new DOMException('The operation was aborted', 'AbortError'));
-    });
-
-    await expect(fetchWithRedirects('https://slow.test/page')).rejects.toMatchObject({
-      category: ErrorCategory.Timeout,
-    });
-
-    vi.mocked(globalThis.setTimeout).mockRestore();
-  });
-
-  it('should clear timeout after successful fetch', async () => {
-    const clearTimeoutSpy = vi.spyOn(global, 'clearTimeout');
-    mockFetch.mockResolvedValue(new Response('ok', { status: 200 }));
-
-    await fetchWithRedirects('https://example.com/');
-
-    expect(clearTimeoutSpy).toHaveBeenCalled();
-    clearTimeoutSpy.mockRestore();
-  });
-
-  it('should block redirects to non-HTTP protocols', async () => {
-    mockFetch.mockResolvedValueOnce(
-      new Response(null, { status: 302, headers: { location: 'ftp://example.test/data' } }),
-    );
-
-    await expect(fetchWithRedirects('https://example.com/')).rejects.toMatchObject({
-      category: ErrorCategory.Auth,
-      code: AuthErrorCode.FORBIDDEN,
-      context: { protocol: 'ftp:', statusCode: HttpStatusCode.FORBIDDEN },
-    });
-  });
-
-  it('should throw when exceeding max redirects', async () => {
-    for (let i = 0; i < 5; i++) {
-      mockFetch.mockResolvedValueOnce(
-        new Response(null, { status: 302, headers: { location: `https://example.test/r${i}` } }),
-      );
-    }
-
-    await expect(fetchWithRedirects('https://example.com/')).rejects.toMatchObject({
-      category: ErrorCategory.Network,
-      code: NetworkErrorCode.CONNECTION_FAILED,
-      message: 'Too many redirects',
-    });
-  });
-
-  it('should return response for non-redirect status', async () => {
-    mockFetch.mockResolvedValue(new Response('ok', { status: 200 }));
-
-    const response = await fetchWithRedirects('https://example.com/');
-
-    expect(response.status).toBe(200);
-  });
-
-  it('should return response when redirect has no Location header', async () => {
-    mockFetch.mockResolvedValue(new Response(null, { status: 301 }));
-
-    const response = await fetchWithRedirects('https://example.com/');
-
-    expect(response.status).toBe(301);
   });
 });
 

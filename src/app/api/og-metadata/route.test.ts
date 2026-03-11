@@ -37,7 +37,18 @@ describe('API Route: /api/og-metadata', () => {
 
       expect(response.status).toBe(200);
       expect(data).toEqual(mockMetadata);
-      expect(response.headers.get('Cache-Control')).toBe('public, s-maxage=3600, stale-while-revalidate=86400');
+      expect(response.headers.get('Cache-Control')).toBe('public, s-maxage=300, stale-while-revalidate=1800');
+    });
+
+    it('should not cache for more than 1 hour — stale metadata will persist too long on CDN', async () => {
+      const request = createRequest('https://example.com');
+      const response = await GET(request);
+
+      const cacheControl = response.headers.get('Cache-Control') ?? '';
+      const match = cacheControl.match(/s-maxage=(\d+)/);
+      const sMaxAge = match ? Number(match[1]) : 0;
+
+      expect(sMaxAge).toBeLessThanOrEqual(3600);
     });
 
     it('should pass url search param to controller', async () => {

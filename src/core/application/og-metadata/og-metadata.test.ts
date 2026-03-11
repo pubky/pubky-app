@@ -148,33 +148,4 @@ describe('OgMetadataApplication (integration)', () => {
       await expect(OgMetadataApplication.fetch(new URL('https://example.com'))).rejects.toThrow('Too many redirects');
     });
   });
-
-  describe('query client integration', () => {
-    it('should return cached result on second call without re-fetching', async () => {
-      mockFetch.mockResolvedValue(createHtmlResponse(simpleHtml('Cached Title')));
-
-      const url = new URL('https://example.com/cached');
-
-      const result1 = await OgMetadataApplication.fetch(url);
-      const result2 = await OgMetadataApplication.fetch(url);
-
-      expect(result1).toEqual(result2);
-      expect(mockFetch).toHaveBeenCalledTimes(1);
-      expect(mockResolve4).toHaveBeenCalledTimes(1);
-    });
-
-    it('should deduplicate concurrent requests for the same URL', async () => {
-      mockFetch.mockResolvedValue(createHtmlResponse(simpleHtml('Deduped')));
-
-      const url = new URL('https://example.com/dedup');
-
-      const [result1, result2] = await Promise.all([
-        OgMetadataApplication.fetch(url),
-        OgMetadataApplication.fetch(url),
-      ]);
-
-      expect(result1).toEqual(result2);
-      expect(mockFetch).toHaveBeenCalledTimes(1);
-    });
-  });
 });
