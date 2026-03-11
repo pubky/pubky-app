@@ -245,3 +245,23 @@ describe('DialogWelcome', () => {
     expect(mockGetAvatarUrl).not.toHaveBeenCalled();
   });
 });
+
+describe('DialogWelcome - Snapshots', () => {
+  it('matches snapshot for default DialogWelcome', () => {
+    const { container } = render(<DialogWelcome />);
+    expect(container.firstChild).toMatchSnapshot();
+  });
+
+  it('matches snapshot when user has no image', async () => {
+    const { useLiveQuery } = await import('dexie-react-hooks');
+    vi.mocked(useLiveQuery).mockReturnValue({
+      name: 'Test User',
+      bio: 'Test bio',
+      image: null,
+      indexed_at: 1234567890,
+    });
+
+    const { container } = render(<DialogWelcome />);
+    expect(container.firstChild).toMatchSnapshot();
+  });
+});
