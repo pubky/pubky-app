@@ -16,8 +16,22 @@ vi.mock('@/core', async (importOriginal) => {
   const actual = await importOriginal<typeof import('@/core')>();
   return {
     ...actual,
-    useSettingsStore: () => ({
-      setLanguage: mockSetLanguage,
+    useSettingsStore: Object.assign(() => ({}), {
+      getState: () => ({
+        setLanguage: mockSetLanguage,
+      }),
+    }),
+  };
+});
+
+// Mock @/hooks
+const mockHookSetLanguage = vi.fn();
+vi.mock('@/hooks', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('@/hooks')>();
+  return {
+    ...actual,
+    useSettingsActions: () => ({
+      setLanguage: mockHookSetLanguage,
     }),
   };
 });
@@ -90,7 +104,7 @@ describe('LanguageSelector', () => {
 
     // Should set cookie and call refresh
     expect(document.cookie).toContain('locale=es');
-    expect(mockSetLanguage).toHaveBeenCalledWith('es');
+    expect(mockHookSetLanguage).toHaveBeenCalledWith('es');
     expect(mockRefresh).toHaveBeenCalled();
   });
 
