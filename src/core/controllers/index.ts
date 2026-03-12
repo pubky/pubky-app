@@ -19,4 +19,5 @@ export * from './homegate';
 export * from './settings';
 export * from './ttl';
 export * from './migration';
+export * from './og-metadata';
 export * from './controllers.types';
