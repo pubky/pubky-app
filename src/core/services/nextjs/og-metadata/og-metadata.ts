@@ -78,7 +78,7 @@ export class NextJsOgMetadataService {
 
       throw Err.server(ServerErrorCode.UNKNOWN_ERROR, 'Failed to fetch OG metadata', {
         service: ErrorService.NextJsServer,
-        operation: 'fetch',
+        operation: 'fetchOgMetadata',
         cause: error,
         context: { url, statusCode: HttpStatusCode.INTERNAL_SERVER_ERROR },
       });
@@ -97,7 +97,7 @@ function handleErrorResponse(response: Response, url: string): TOgMetadataResult
   if (response.status === HttpStatusCode.FORBIDDEN) {
     return buildFallbackMetadata(url);
   }
-  throw httpResponseToError(response, ErrorService.NextJsServer, 'fetch', url);
+  throw httpResponseToError(response, ErrorService.NextJsServer, 'fetchOgMetadata', url);
 }
 
 /**
@@ -110,7 +110,7 @@ function validateHtmlContentType(response: Response): void {
     response.body?.cancel().catch(() => {});
     throw Err.validation(ValidationErrorCode.INVALID_INPUT, 'Not HTML content', {
       service: ErrorService.NextJsServer,
-      operation: 'fetch',
+      operation: 'fetchOgMetadata',
       context: { contentType, statusCode: HttpStatusCode.BAD_REQUEST },
     });
   }
@@ -137,7 +137,7 @@ async function fetchWithRedirects(url: string): Promise<Response> {
           redirect: 'manual', // Disable automatic redirects so we can validate each hop (DNS + protocol) ourselves
         },
         ErrorService.NextJsServer,
-        'fetch',
+        'fetchOgMetadata',
       );
     } finally {
       clearTimeout(timeoutId);

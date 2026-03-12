@@ -105,7 +105,7 @@ describe('API Route: /api/og-metadata', () => {
     it('should return 408 for AppError with statusCode 408', async () => {
       const appError = Libs.Err.timeout(Libs.TimeoutErrorCode.REQUEST_TIMEOUT, 'Request timeout', {
         service: Libs.ErrorService.NextJsServer,
-        operation: 'fetch',
+        operation: 'fetchOgMetadata',
         context: { statusCode: Libs.HttpStatusCode.REQUEST_TIMEOUT },
       });
       vi.spyOn(Core.OgMetadataController, 'fetch').mockRejectedValue(appError);
