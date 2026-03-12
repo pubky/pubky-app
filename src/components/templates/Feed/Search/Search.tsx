@@ -4,7 +4,7 @@ import * as Molecules from '@/molecules';
 import * as Organisms from '@/organisms';
 import * as Atoms from '@/atoms';
 import * as Hooks from '@/hooks';
-import { TIMELINE_FEED_VARIANT } from '@/organisms/TimelineFeed/TimelineFeed.types';
+import { TIMELINE_FEED_VARIANT } from '@/organisms/Timeline/Feed/TimelineFeed/TimelineFeed.types';
 import { useSearchTags } from '@/hooks/useSearchStreamId';
 
 /**
