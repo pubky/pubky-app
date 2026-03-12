@@ -87,7 +87,6 @@ export * from './Scan';
 export * from './SignIn';
 export * from './SignInNavigation';
 export * from './Timeline';
-export * from './TimelineFeed';
 export * from './ProfilePageContainer';
 export * from './ProfilePageHeader';
 export * from './ProfilePageLayout';
