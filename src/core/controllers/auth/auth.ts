@@ -206,7 +206,9 @@ export class AuthController {
     // Cancel active auth flows
     this.cancelActiveAuthFlow();
 
-    // Cancel all pending Nexus API queries to prevent retries after sign-out
+    // Cancel all pending queries to prevent retries after sign-out
+    // TODO: Centralise query client cleanup via a registry in createQueryClient
+    // so new query clients are automatically cancelled/cleared here.
     Core.nexusQueryClient.cancelQueries();
     Core.nexusQueryClient.clear();
 
