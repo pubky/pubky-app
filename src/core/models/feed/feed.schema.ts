@@ -14,7 +14,5 @@ export interface FeedModelSchema {
 
 // Schema design rationale:
 // - ++id: Auto-incrementing primary key (like notifications)
-// - name: Used for indexed name lookup
 // - created_at: For sorting feeds by creation time
-// - updated_at: For sorting feeds by most recently modified
-export const feedTableSchema = '&id, name, created_at, updated_at';
+export const feedTableSchema = '&id, created_at';
