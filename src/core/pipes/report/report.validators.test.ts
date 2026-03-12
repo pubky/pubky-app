@@ -2,6 +2,7 @@ import { describe, it, expect } from 'vitest';
 import { ReportValidators } from './report.validators';
 import { REPORT_ISSUE_TYPES, REPORT_REASON_MAX_LENGTH, REPORT_ISSUE_TYPE_VALUES } from './report.constants';
 import * as Libs from '@/libs';
+import { AppError, ErrorCategory, ValidationErrorCode, ErrorService } from '@/libs';
 
 describe('ReportValidators', () => {
   describe('validatePostUrl', () => {
@@ -15,9 +16,20 @@ describe('ReportValidators', () => {
       expect(result).toBe('http://example.com/post/123');
     });
 
-    it('should throw AppError for empty string', () => {
-      expect(() => ReportValidators.validatePostUrl('')).toThrow(Libs.AppError);
-      expect(() => ReportValidators.validatePostUrl('')).toThrow('Post URL is required and must be a non-empty string');
+    it('should throw AppError with correct properties for empty string', () => {
+      try {
+        ReportValidators.validatePostUrl('');
+        expect.fail('Should have thrown');
+      } catch (error) {
+        expect(error).toBeInstanceOf(AppError);
+        const appError = error as AppError;
+        expect(appError.category).toBe(ErrorCategory.Validation);
+        expect(appError.code).toBe(ValidationErrorCode.MISSING_FIELD);
+        expect(appError.service).toBe(ErrorService.NextJsServer);
+        expect(appError.operation).toBe('validatePostUrl');
+        expect(appError.context).toEqual({ field: 'postUrl' });
+        expect(appError.message).toBe('Post URL is required and must be a non-empty string');
+      }
     });
 
     it('should throw AppError for whitespace-only string', () => {
@@ -32,14 +44,24 @@ describe('ReportValidators', () => {
       expect(() => ReportValidators.validatePostUrl(undefined)).toThrow(Libs.AppError);
     });
 
-    it('should throw AppError for invalid URL format', () => {
-      expect(() => ReportValidators.validatePostUrl('not-a-valid-url')).toThrow(Libs.AppError);
-      expect(() => ReportValidators.validatePostUrl('not-a-valid-url')).toThrow('Post URL must be a valid URL');
+    it('should throw AppError with FORMAT_ERROR for invalid URL', () => {
+      try {
+        ReportValidators.validatePostUrl('not-a-valid-url');
+        expect.fail('Should have thrown');
+      } catch (error) {
+        expect(error).toBeInstanceOf(AppError);
+        const appError = error as AppError;
+        expect(appError.category).toBe(ErrorCategory.Validation);
+        expect(appError.code).toBe(ValidationErrorCode.FORMAT_ERROR);
+        expect(appError.service).toBe(ErrorService.NextJsServer);
+        expect(appError.operation).toBe('validatePostUrl');
+        expect(appError.context).toEqual({ field: 'postUrl', value: 'not-a-valid-url' });
+        expect(appError.message).toBe('Post URL must be a valid URL');
+      }
     });
 
     it('should throw AppError for URL without protocol', () => {
       expect(() => ReportValidators.validatePostUrl('example.com/post/123')).toThrow(Libs.AppError);
-      expect(() => ReportValidators.validatePostUrl('example.com/post/123')).toThrow('Post URL must be a valid URL');
     });
   });
 
@@ -61,11 +83,20 @@ describe('ReportValidators', () => {
       expect(result).toBe(REPORT_ISSUE_TYPES.HATE_SPEECH);
     });
 
-    it('should throw AppError for empty string', () => {
-      expect(() => ReportValidators.validateIssueType('')).toThrow(Libs.AppError);
-      expect(() => ReportValidators.validateIssueType('')).toThrow(
-        'Issue type is required and must be a non-empty string',
-      );
+    it('should throw AppError with correct properties for empty string', () => {
+      try {
+        ReportValidators.validateIssueType('');
+        expect.fail('Should have thrown');
+      } catch (error) {
+        expect(error).toBeInstanceOf(AppError);
+        const appError = error as AppError;
+        expect(appError.category).toBe(ErrorCategory.Validation);
+        expect(appError.code).toBe(ValidationErrorCode.MISSING_FIELD);
+        expect(appError.service).toBe(ErrorService.NextJsServer);
+        expect(appError.operation).toBe('validateIssueType');
+        expect(appError.context).toEqual({ field: 'issueType' });
+        expect(appError.message).toBe('Issue type is required and must be a non-empty string');
+      }
     });
 
     it('should throw AppError for whitespace-only string', () => {
@@ -80,11 +111,24 @@ describe('ReportValidators', () => {
       expect(() => ReportValidators.validateIssueType(undefined)).toThrow(Libs.AppError);
     });
 
-    it('should throw AppError for invalid issue type', () => {
-      expect(() => ReportValidators.validateIssueType('invalid-type')).toThrow(Libs.AppError);
-      expect(() => ReportValidators.validateIssueType('invalid-type')).toThrow(
-        `Invalid issue type. Must be one of: ${REPORT_ISSUE_TYPE_VALUES.join(', ')}`,
-      );
+    it('should throw AppError with INVALID_INPUT for invalid issue type', () => {
+      try {
+        ReportValidators.validateIssueType('invalid-type');
+        expect.fail('Should have thrown');
+      } catch (error) {
+        expect(error).toBeInstanceOf(AppError);
+        const appError = error as AppError;
+        expect(appError.category).toBe(ErrorCategory.Validation);
+        expect(appError.code).toBe(ValidationErrorCode.INVALID_INPUT);
+        expect(appError.service).toBe(ErrorService.NextJsServer);
+        expect(appError.operation).toBe('validateIssueType');
+        expect(appError.context).toEqual({
+          field: 'issueType',
+          value: 'invalid-type',
+          allowedValues: REPORT_ISSUE_TYPE_VALUES,
+        });
+        expect(appError.message).toBe(`Invalid issue type. Must be one of: ${REPORT_ISSUE_TYPE_VALUES.join(', ')}`);
+      }
     });
   });
 
@@ -94,9 +138,20 @@ describe('ReportValidators', () => {
       expect(result).toBe('This post contains harmful content');
     });
 
-    it('should throw AppError for empty string', () => {
-      expect(() => ReportValidators.validateReason('')).toThrow(Libs.AppError);
-      expect(() => ReportValidators.validateReason('')).toThrow('Reason is required and must be a non-empty string');
+    it('should throw AppError with correct properties for empty string', () => {
+      try {
+        ReportValidators.validateReason('');
+        expect.fail('Should have thrown');
+      } catch (error) {
+        expect(error).toBeInstanceOf(AppError);
+        const appError = error as AppError;
+        expect(appError.category).toBe(ErrorCategory.Validation);
+        expect(appError.code).toBe(ValidationErrorCode.MISSING_FIELD);
+        expect(appError.service).toBe(ErrorService.NextJsServer);
+        expect(appError.operation).toBe('validateReason');
+        expect(appError.context).toEqual({ field: 'reason' });
+        expect(appError.message).toBe('Reason is required and must be a non-empty string');
+      }
     });
 
     it('should throw AppError for whitespace-only string', () => {
@@ -117,12 +172,25 @@ describe('ReportValidators', () => {
       expect(result).toBe(maxReason);
     });
 
-    it('should throw AppError for reason exceeding max length', () => {
+    it('should throw AppError with INVALID_INPUT for reason exceeding max length', () => {
       const longReason = 'a'.repeat(REPORT_REASON_MAX_LENGTH + 1);
-      expect(() => ReportValidators.validateReason(longReason)).toThrow(Libs.AppError);
-      expect(() => ReportValidators.validateReason(longReason)).toThrow(
-        `Reason must be no more than ${REPORT_REASON_MAX_LENGTH} characters`,
-      );
+      try {
+        ReportValidators.validateReason(longReason);
+        expect.fail('Should have thrown');
+      } catch (error) {
+        expect(error).toBeInstanceOf(AppError);
+        const appError = error as AppError;
+        expect(appError.category).toBe(ErrorCategory.Validation);
+        expect(appError.code).toBe(ValidationErrorCode.INVALID_INPUT);
+        expect(appError.service).toBe(ErrorService.NextJsServer);
+        expect(appError.operation).toBe('validateReason');
+        expect(appError.context).toEqual({
+          field: 'reason',
+          maxLength: REPORT_REASON_MAX_LENGTH,
+          actualLength: longReason.length,
+        });
+        expect(appError.message).toBe(`Reason must be no more than ${REPORT_REASON_MAX_LENGTH} characters`);
+      }
     });
 
     it('should accept reason with whitespace that is within limit after trimming', () => {
@@ -139,9 +207,20 @@ describe('ReportValidators', () => {
       expect(result).toBe('test-pubky');
     });
 
-    it('should throw AppError for empty string', () => {
-      expect(() => ReportValidators.validatePubky('')).toThrow(Libs.AppError);
-      expect(() => ReportValidators.validatePubky('')).toThrow('Pubky is required and must be a non-empty string');
+    it('should throw AppError with correct properties for empty string', () => {
+      try {
+        ReportValidators.validatePubky('');
+        expect.fail('Should have thrown');
+      } catch (error) {
+        expect(error).toBeInstanceOf(AppError);
+        const appError = error as AppError;
+        expect(appError.category).toBe(ErrorCategory.Validation);
+        expect(appError.code).toBe(ValidationErrorCode.MISSING_FIELD);
+        expect(appError.service).toBe(ErrorService.NextJsServer);
+        expect(appError.operation).toBe('validatePubky');
+        expect(appError.context).toEqual({ field: 'pubky' });
+        expect(appError.message).toBe('Pubky is required and must be a non-empty string');
+      }
     });
 
     it('should throw AppError for whitespace-only string', () => {
@@ -163,9 +242,20 @@ describe('ReportValidators', () => {
       expect(result).toBe('Test User');
     });
 
-    it('should throw AppError for empty string', () => {
-      expect(() => ReportValidators.validateName('')).toThrow(Libs.AppError);
-      expect(() => ReportValidators.validateName('')).toThrow('Name is required and must be a non-empty string');
+    it('should throw AppError with correct properties for empty string', () => {
+      try {
+        ReportValidators.validateName('');
+        expect.fail('Should have thrown');
+      } catch (error) {
+        expect(error).toBeInstanceOf(AppError);
+        const appError = error as AppError;
+        expect(appError.category).toBe(ErrorCategory.Validation);
+        expect(appError.code).toBe(ValidationErrorCode.MISSING_FIELD);
+        expect(appError.service).toBe(ErrorService.NextJsServer);
+        expect(appError.operation).toBe('validateName');
+        expect(appError.context).toEqual({ field: 'name' });
+        expect(appError.message).toBe('Name is required and must be a non-empty string');
+      }
     });
 
     it('should throw AppError for whitespace-only string', () => {
