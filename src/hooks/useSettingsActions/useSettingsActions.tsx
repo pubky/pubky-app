@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useCallback } from 'react';
+import { useState } from 'react';
 import { SettingsController, NotificationPreferences } from '@/core';
 import { isAppError } from '@/libs';
 import type { UseSettingsActionsResult } from './useSettingsActions.types';
@@ -10,6 +10,8 @@ import type { UseSettingsActionsResult } from './useSettingsActions.types';
  *
  * Hook for updating settings with homeserver sync.
  * Wraps SettingsController methods with error state management.
+ *
+ * No useCallback — React Compiler auto-memoizes (see next.config.ts reactCompiler: true).
  *
  * @example
  * ```tsx
@@ -23,7 +25,7 @@ import type { UseSettingsActionsResult } from './useSettingsActions.types';
 export function useSettingsActions(): UseSettingsActionsResult {
   const [error, setError] = useState<string | null>(null);
 
-  const run = useCallback(async (action: () => Promise<void>) => {
+  const run = async (action: () => Promise<void>) => {
     setError(null);
 
     try {
@@ -33,57 +35,34 @@ export function useSettingsActions(): UseSettingsActionsResult {
       setError(isAppError(err) ? err.message : 'Failed to update settings');
       throw err;
     }
-  }, []);
+  };
 
-  const setNotificationPreference = useCallback(
-    (type: keyof NotificationPreferences, enabled: boolean) =>
-      run(() => SettingsController.setNotificationPreference(type, enabled)),
-    [run],
-  );
+  const setNotificationPreference = (type: keyof NotificationPreferences, enabled: boolean) =>
+    run(() => SettingsController.setNotificationPreference(type, enabled));
 
-  const setShowConfirm = useCallback(
-    (showConfirm: boolean) => run(() => SettingsController.setShowConfirm(showConfirm)),
-    [run],
-  );
+  const setShowConfirm = (showConfirm: boolean) => run(() => SettingsController.setShowConfirm(showConfirm));
 
-  const setBlurCensored = useCallback(
-    (blurCensored: boolean) => run(() => SettingsController.setBlurCensored(blurCensored)),
-    [run],
-  );
+  const setBlurCensored = (blurCensored: boolean) => run(() => SettingsController.setBlurCensored(blurCensored));
 
-  const setSignOutInactive = useCallback(
-    (signOutInactive: boolean) => run(() => SettingsController.setSignOutInactive(signOutInactive)),
-    [run],
-  );
+  const setSignOutInactive = (signOutInactive: boolean) =>
+    run(() => SettingsController.setSignOutInactive(signOutInactive));
 
-  const setRequirePin = useCallback(
-    (requirePin: boolean) => run(() => SettingsController.setRequirePin(requirePin)),
-    [run],
-  );
+  const setRequirePin = (requirePin: boolean) => run(() => SettingsController.setRequirePin(requirePin));
 
-  const setHideWhoToFollow = useCallback(
-    (hideWhoToFollow: boolean) => run(() => SettingsController.setHideWhoToFollow(hideWhoToFollow)),
-    [run],
-  );
+  const setHideWhoToFollow = (hideWhoToFollow: boolean) =>
+    run(() => SettingsController.setHideWhoToFollow(hideWhoToFollow));
 
-  const setHideActiveFriends = useCallback(
-    (hideActiveFriends: boolean) => run(() => SettingsController.setHideActiveFriends(hideActiveFriends)),
-    [run],
-  );
+  const setHideActiveFriends = (hideActiveFriends: boolean) =>
+    run(() => SettingsController.setHideActiveFriends(hideActiveFriends));
 
-  const setHideSearch = useCallback(
-    (hideSearch: boolean) => run(() => SettingsController.setHideSearch(hideSearch)),
-    [run],
-  );
+  const setHideSearch = (hideSearch: boolean) => run(() => SettingsController.setHideSearch(hideSearch));
 
-  const setNeverShowPosts = useCallback(
-    (neverShowPosts: boolean) => run(() => SettingsController.setNeverShowPosts(neverShowPosts)),
-    [run],
-  );
+  const setNeverShowPosts = (neverShowPosts: boolean) =>
+    run(() => SettingsController.setNeverShowPosts(neverShowPosts));
 
-  const setLanguage = useCallback((language: string) => run(() => SettingsController.setLanguage(language)), [run]);
+  const setLanguage = (language: string) => run(() => SettingsController.setLanguage(language));
 
-  const reset = useCallback(() => run(() => SettingsController.reset()), [run]);
+  const reset = () => run(() => SettingsController.reset());
 
   return {
     setNotificationPreference,

@@ -47,7 +47,7 @@ describe('SettingsController', () => {
     vi.clearAllMocks();
 
     // Reset pendingCommit between tests to avoid chaining across tests
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any -- pendingCommit is private; cast needed to reset static state between tests
     (SettingsController as any).pendingCommit = Promise.resolve();
 
     vi.spyOn(Core.useSettingsStore, 'getState').mockReturnValue(mockStoreActions as unknown as Core.SettingsStore);
