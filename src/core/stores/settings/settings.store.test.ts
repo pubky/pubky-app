@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeEach, vi, afterEach } from 'vitest';
 import { useSettingsStore } from './settings.store';
-import { defaultNotificationPreferences, defaultPrivacyPreferences } from './settings.types';
+import { defaultNotificationPreferences, defaultPrivacyPreferences, settingsInitialState } from './settings.types';
 
 // Mock localStorage for testing
 const localStorageMock = {
@@ -264,22 +264,18 @@ describe('SettingsStore', () => {
       expect(useSettingsStore.getState().muted).toContain('user-123');
       expect(useSettingsStore.getState().language).toBe('es');
 
-      const beforeReset = useSettingsStore.getState();
-      const beforeResetVersion = beforeReset.version;
-      const beforeResetTimestamp = beforeReset.updatedAt;
-
       // Reset store
       store.reset();
 
       const afterReset = useSettingsStore.getState();
 
-      // Verify state is reset (except version)
+      // Verify state is fully reset to initial state
       expect(afterReset.notifications).toEqual(defaultNotificationPreferences);
       expect(afterReset.privacy).toEqual(defaultPrivacyPreferences);
       expect(afterReset.muted).toEqual([]);
       expect(afterReset.language).toBe('en');
-      expect(afterReset.version).toBe(beforeResetVersion); // Preserved
-      expect(afterReset.updatedAt).toBeGreaterThanOrEqual(beforeResetTimestamp); // Updated
+      expect(afterReset.version).toBe(1); // Reset to initial
+      expect(afterReset.updatedAt).toBe(settingsInitialState.updatedAt); // Reset to initial
     });
   });
 
@@ -301,25 +297,33 @@ describe('SettingsStore', () => {
       expect(useSettingsStore.getState().updatedAt).toBeGreaterThan(beforePrivacy);
     });
 
-    it('should preserve version during reset', () => {
+    it('should reset version to initial value on reset', () => {
       const store = useSettingsStore.getState();
-      const initialVersion = useSettingsStore.getState().version;
 
-      // Make some changes
-      store.setLanguage('es');
-      store.addMutedUser('user-1');
+      // Simulate version increments
+      store.incrementVersion();
+      store.incrementVersion();
+      expect(useSettingsStore.getState().version).toBe(3);
 
-      // Version should still be the same
-      expect(useSettingsStore.getState().version).toBe(initialVersion);
-
-      // Reset should preserve version
+      // Reset should return version to 1
       store.reset();
-      expect(useSettingsStore.getState().version).toBe(initialVersion);
+      expect(useSettingsStore.getState().version).toBe(1);
     });
 
     it('should have version 1 by default', () => {
       const state = useSettingsStore.getState();
       expect(state.version).toBe(1);
+    });
+
+    it('should increment version', () => {
+      const store = useSettingsStore.getState();
+      const initialVersion = store.version;
+
+      store.incrementVersion();
+      expect(useSettingsStore.getState().version).toBe(initialVersion + 1);
+
+      store.incrementVersion();
+      expect(useSettingsStore.getState().version).toBe(initialVersion + 2);
     });
   });
 

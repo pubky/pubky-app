@@ -184,14 +184,17 @@ export const createSettingsActions = (set: ZustandSet<SettingsStore>): SettingsA
 
   // General actions
   reset: () => {
+    set(settingsInitialState, false, SettingsActionTypes.RESET);
+  },
+
+  // Version management — called by SettingsController before pushing to homeserver
+  incrementVersion: () => {
     set(
       (state) => ({
-        ...settingsInitialState,
-        version: state.version, // Preserve version during reset
-        updatedAt: Date.now(), // Update timestamp on reset
+        version: state.version + 1,
       }),
       false,
-      SettingsActionTypes.RESET,
+      SettingsActionTypes.INCREMENT_VERSION,
     );
   },
 

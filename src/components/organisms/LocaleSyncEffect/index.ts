@@ -1,0 +1,1 @@
+export { LocaleSyncEffect } from './LocaleSyncEffect';

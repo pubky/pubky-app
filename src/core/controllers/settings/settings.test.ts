@@ -1,5 +1,6 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { SettingsController } from './settings';
+import * as i18n from '@/i18n';
 import * as Core from '@/core';
 import { defaultNotificationPreferences, defaultPrivacyPreferences } from '@/core/stores/settings/settings.types';
 
@@ -18,6 +19,7 @@ const mockStoreActions = {
   setNeverShowPosts: vi.fn(),
   setLanguage: vi.fn(),
   reset: vi.fn(),
+  incrementVersion: vi.fn(),
   addMutedUser: vi.fn(),
   removeMutedUser: vi.fn(),
   setMutedUsers: vi.fn(),
@@ -42,6 +44,7 @@ const mockSettingsState: Core.SettingsState = {
 describe('SettingsController', () => {
   let commitUpdateSpy: ReturnType<typeof vi.spyOn>;
   let extractStateSpy: ReturnType<typeof vi.spyOn>;
+  let setLocaleCookieSpy: ReturnType<typeof vi.spyOn>;
 
   beforeEach(() => {
     vi.clearAllMocks();
@@ -58,6 +61,7 @@ describe('SettingsController', () => {
 
     extractStateSpy = vi.spyOn(Core.SettingsNormalizer, 'extractState').mockReturnValue(mockSettingsState);
     commitUpdateSpy = vi.spyOn(Core.SettingsApplication, 'commitUpdate').mockResolvedValue(undefined);
+    setLocaleCookieSpy = vi.spyOn(i18n, 'setLocaleCookie').mockImplementation(() => {});
   });
 
   afterEach(() => {
@@ -93,10 +97,11 @@ describe('SettingsController', () => {
   });
 
   describe('setLanguage', () => {
-    it('should update zustand store and sync to homeserver', async () => {
+    it('should update zustand store, set locale cookie, and sync to homeserver', async () => {
       await SettingsController.setLanguage('es');
 
       expect(mockStoreActions.setLanguage).toHaveBeenCalledWith('es');
+      expect(setLocaleCookieSpy).toHaveBeenCalledWith('es');
       expect(commitUpdateSpy).toHaveBeenCalledWith(mockSettingsState, TEST_PUBKY);
     });
   });
@@ -130,6 +135,15 @@ describe('SettingsController', () => {
 
       expect(mockStoreActions.clearMutedUsers).toHaveBeenCalled();
       expect(commitUpdateSpy).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('version increment', () => {
+    it('should increment version before syncing to homeserver', async () => {
+      await SettingsController.setShowConfirm(false);
+
+      expect(mockStoreActions.incrementVersion).toHaveBeenCalledTimes(1);
+      expect(commitUpdateSpy).toHaveBeenCalledTimes(1);
     });
   });
 

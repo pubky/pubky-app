@@ -240,10 +240,11 @@ describe('AuthController', () => {
 
       expect(sleepSpy).toHaveBeenCalledWith(5000);
       expect(initializeSpy).toHaveBeenCalledWith(
-        {
+        expect.objectContaining({
           pubky: TEST_PUBKY,
           lastReadUrl: getLastReadUrl(TEST_PUBKY),
-        },
+          localSettings: expect.any(Object),
+        }),
         expect.any(Function), // onProgress callback
       );
       expect(storeMocks.notificationInit).toHaveBeenCalledWith(notification);
@@ -345,10 +346,11 @@ describe('AuthController', () => {
       expect(z32FromSessionSpy).toHaveBeenCalledWith({ session: mockSession });
       expect(userIsSignedUpSpy).toHaveBeenCalledWith({ pubky: mockPubky });
       expect(initializeSpy).toHaveBeenCalledWith(
-        {
+        expect.objectContaining({
           pubky: mockPubky,
           lastReadUrl: getLastReadUrl('test-pubky'),
-        },
+          localSettings: expect.any(Object),
+        }),
         expect.any(Function), // onProgress callback
       );
       expect(storeMocks.notificationInit).toHaveBeenCalledWith(mockNotification);
@@ -459,10 +461,11 @@ describe('AuthController', () => {
       expect(z32FromSessionSpy).toHaveBeenCalledWith({ session: mockSession });
       expect(userIsSignedUpSpy).toHaveBeenCalledWith({ pubky: mockPubky });
       expect(initializeSpy).toHaveBeenCalledWith(
-        {
+        expect.objectContaining({
           pubky: mockPubky,
           lastReadUrl: getLastReadUrl('test-pubky'),
-        },
+          localSettings: expect.any(Object),
+        }),
         expect.any(Function), // onProgress callback
       );
       expect(storeMocks.notificationInit).toHaveBeenCalledWith(mockNotification);
@@ -832,10 +835,11 @@ describe('AuthController', () => {
       expect(userIsSignedUpSpy).toHaveBeenCalledWith({ pubky: mockPubky });
       expect(signInStore.setProfileChecked).toHaveBeenCalledWith(true);
       expect(initializeSpy).toHaveBeenCalledWith(
-        {
+        expect.objectContaining({
           pubky: mockPubky,
           lastReadUrl: getLastReadUrl(TEST_PUBKY),
-        },
+          localSettings: expect.any(Object),
+        }),
         expect.any(Function), // onProgress callback
       );
       expect(storeMocks.notificationInit).toHaveBeenCalledWith(notification);

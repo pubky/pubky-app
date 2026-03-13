@@ -23,17 +23,17 @@ export class BootstrapApplication {
    * @returns Promise resolving to notification state with unread count and last read timestamp
    */
   static async initialize(
-    params: Core.TBootstrapParams,
+    params: Core.TBootstrapParams & { localSettings: Core.SettingsState },
     onProgress?: BootstrapProgressCallback,
   ): Promise<Core.TBootstrapResponse> {
     const pubky = params.pubky;
-    const [bootstrapData, userLastRead] = await Promise.all([
+    const [bootstrapData, userLastRead, , , remoteSettings] = await Promise.all([
       Core.NexusBootstrapService.fetch(pubky),
       this.fetchOrPutLastRead(params),
       Core.MuteApplication.fetchMutedUsers(pubky), // fetches and persists MUTED stream internally
       Core.FeedApplication.fetchFeeds(pubky),
       // Initialize settings from homeserver (non-blocking, errors are logged but don't fail bootstrap)
-      this.syncSettings(pubky),
+      this.syncSettings(pubky, params.localSettings),
     ]);
     onProgress?.('bootstrapFetched'); // Step 3 complete (60%)
 
@@ -82,30 +82,28 @@ export class BootstrapApplication {
 
     const notification = { unread, lastRead: userLastRead, lastPolledTimestamp: nextPollCursor };
 
-    return { notification };
+    return { notification, remoteSettings: remoteSettings ?? null };
   }
 
   /**
    * Syncs user settings with the homeserver.
-   * If remote settings are newer, updates the local store.
-   * If local settings are newer, pushes to homeserver.
-   * Caller is responsible for error handling (e.g. `.catch()` to avoid blocking bootstrap).
+   * Returns remote settings if newer, null otherwise.
+   * Errors are caught and logged — settings failure must not block bootstrap.
    *
    * @private
    * @param pubky - The user's public key identifier
+   * @param localSettings - Current local settings state (passed from Controller layer)
    */
-  private static async syncSettings(pubky: Core.Pubky): Promise<void> {
+  private static async syncSettings(
+    pubky: Core.Pubky,
+    localSettings: Core.SettingsState,
+  ): Promise<Core.SettingsState | null> {
     try {
-      const remoteSettings = await Core.SettingsApplication.initializeSettings(pubky);
-
-      // If remote settings were returned and are newer, update the local store
-      if (remoteSettings) {
-        Core.useSettingsStore.getState().loadFromHomeserver(remoteSettings);
-        Logger.info('Settings loaded from homeserver', { pubky });
-      }
+      return await Core.SettingsApplication.initializeSettings(pubky, localSettings);
     } catch (error) {
       // Log but don't throw, settings sync failure shouldn't block bootstrap
       Logger.error('Failed to initialize settings during bootstrap', { error, pubky });
+      return null;
     }
   }
 

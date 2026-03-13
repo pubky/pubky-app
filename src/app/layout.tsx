@@ -36,6 +36,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
             <Providers.DatabaseProvider>
               <Providers.RouteGuardProvider>
                 <Organisms.CoordinatorsManager />
+                <Organisms.LocaleSyncEffect />
                 <Organisms.Header />
                 {children}
                 <Molecules.NewPostCTA />

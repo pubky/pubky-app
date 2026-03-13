@@ -72,10 +72,11 @@ export class SettingsApplication {
    * @returns The remote settings if newer than local, or null if local is newer/equal
    * @throws If fetch or sync operations fail, caller should handle errors
    */
-  static async initializeSettings(pubky: Core.Pubky): Promise<Core.SettingsState | null> {
+  static async initializeSettings(
+    pubky: Core.Pubky,
+    localSettings: Core.SettingsState,
+  ): Promise<Core.SettingsState | null> {
     Logger.info('[Settings] Initializing settings sync');
-
-    const localSettings = Core.SettingsNormalizer.extractState(Core.useSettingsStore.getState());
     const remoteSettings = await this.fetchFromHomeserver(pubky);
 
     if (!remoteSettings) {

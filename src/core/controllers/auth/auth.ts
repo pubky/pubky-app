@@ -1,5 +1,6 @@
 import * as Core from '@/core';
 import * as Libs from '@/libs';
+import { setLocaleCookie } from '@/i18n';
 
 export class AuthController {
   private constructor() {} // Prevent instantiation
@@ -80,8 +81,19 @@ export class AuthController {
       }
     };
 
-    const { notification } = await Core.BootstrapApplication.initialize({ pubky, lastReadUrl: url }, onProgress);
+    const localSettings = Core.SettingsNormalizer.extractState(Core.useSettingsStore.getState());
+    const { notification, remoteSettings } = await Core.BootstrapApplication.initialize(
+      { pubky, lastReadUrl: url, localSettings },
+      onProgress,
+    );
     Core.useNotificationStore.getState().setState(notification);
+
+    // Apply remote settings to store + cookie (store mutation stays in Controller layer)
+    if (remoteSettings) {
+      Core.useSettingsStore.getState().loadFromHomeserver(remoteSettings);
+      setLocaleCookie(remoteSettings.language);
+      Libs.Logger.info('Settings loaded from homeserver', { pubky });
+    }
   }
 
   /**
@@ -218,6 +230,9 @@ export class AuthController {
     Core.nexusQueryClient.cancelQueries();
     Core.nexusQueryClient.clear();
 
+    // Preserve locale preference across logout (not sensitive data)
+    const currentLanguage = Core.useSettingsStore.getState().language;
+
     // Reset ALL Zustand stores
     Core.useOnboardingStore.getState().reset();
     Core.useAuthStore.getState().reset();
@@ -231,6 +246,15 @@ export class AuthController {
 
     // Clear cookies, database, and persisted localStorage keys
     Libs.clearCookies();
+
+    // Restore locale preference after cleanup so the /logout page stays in the user's
+    // chosen language. Both the cookie (for next-intl server rendering) and the store
+    // (to prevent RouteGuardProvider's locale sync effect from overwriting the cookie)
+    // must be restored.
+    if (currentLanguage) {
+      setLocaleCookie(currentLanguage);
+      Core.useSettingsStore.getState().setLanguage(currentLanguage);
+    }
     await Core.clearDatabase();
     // Skip post-migration resync — full cleanup resets all state
     Core.useMigrationStore.getState().reset();

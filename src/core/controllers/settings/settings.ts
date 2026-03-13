@@ -1,3 +1,4 @@
+import { setLocaleCookie } from '@/i18n';
 import * as Core from '@/core';
 
 /**
@@ -25,6 +26,7 @@ export class SettingsController {
     this.pendingCommit = this.pendingCommit
       .catch(() => {})
       .then(async () => {
+        Core.useSettingsStore.getState().incrementVersion();
         const pubky = Core.useAuthStore.getState().selectCurrentUserPubky();
         const settings = Core.SettingsNormalizer.extractState(Core.useSettingsStore.getState());
         await Core.SettingsApplication.commitUpdate(settings, pubky);
@@ -117,11 +119,13 @@ export class SettingsController {
    */
   static async setLanguage(language: string): Promise<void> {
     Core.useSettingsStore.getState().setLanguage(language);
+    setLocaleCookie(language);
     await this.commitUpdate();
   }
 
   /**
    * Resets settings to defaults and syncs to homeserver.
+   * NOTE: Currently not used in any UI component.
    */
   static async reset(): Promise<void> {
     Core.useSettingsStore.getState().reset();

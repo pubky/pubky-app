@@ -69,6 +69,7 @@ export * from './QuickReply';
 export * from './Settings/PrivacySettings';
 export * from './ProfilePageSidebar';
 export * from './CoordinatorsManager';
+export * from './LocaleSyncEffect';
 export * from './PostMain';
 export * from './PostMenuActions';
 export * from './ProfileMenuActions';
