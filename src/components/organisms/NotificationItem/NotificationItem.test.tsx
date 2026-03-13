@@ -411,6 +411,12 @@ describe('NotificationItem', () => {
     // Verify the href points to the PARENT post, not the reply
     expect(actionLink.closest('a')).toHaveAttribute('href', '/post/original-author/parent-post-id');
   });
+
+  it('does not underline the username link on hover', () => {
+    render(<NotificationItem notification={baseNotification} isUnread={false} />);
+
+    expect(screen.getByText('User').closest('a')).not.toHaveClass('hover:underline');
+  });
 });
 
 describe('NotificationItem - Snapshots', () => {

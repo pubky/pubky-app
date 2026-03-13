@@ -135,12 +135,7 @@ function VisualTimelineTileOverlay({ tile, size, onReplyClick, onRepostClick }: 
           <Atoms.Container overrideDefaults className="flex items-start justify-between gap-4">
             <Atoms.Container overrideDefaults className="min-w-0 flex-1">
               {userDetails ? (
-                <Molecules.PostHeaderUserInfo
-                  userId={userId}
-                  userName={userDetails.name || ''}
-                  avatarUrl={avatarUrl}
-                  showPopover={false}
-                />
+                <Molecules.PostHeaderUserInfo userId={userId} userName={userDetails.name || ''} avatarUrl={avatarUrl} />
               ) : (
                 <Atoms.Typography overrideDefaults className="text-sm text-white/70">
                   Loading...

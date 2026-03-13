@@ -7,6 +7,9 @@ import type { VisualRow } from './TimelineFeedVisual.types';
 const mockNavigateToPost = vi.fn();
 const mockUseVisualFeedTiles = vi.fn();
 const mockUseIsTouchDevice = vi.fn(() => false);
+const mockPostHeaderUserInfo = vi.fn(({ timeAgo }: { timeAgo?: string }) => (
+  <div data-testid="visual-overlay-header">{timeAgo ? `Header:${timeAgo}` : 'Header'}</div>
+));
 
 vi.mock('@/hooks', async (importOriginal) => {
   const actual = await importOriginal<typeof import('@/hooks')>();
@@ -64,9 +67,7 @@ vi.mock('@/molecules', () => ({
   TimelineLoadingMore: () => <div data-testid="timeline-loading-more">Loading more</div>,
   TimelineError: ({ message }: { message: string }) => <div data-testid="timeline-error">{message}</div>,
   TimelineEndMessage: () => <div data-testid="timeline-end">End</div>,
-  PostHeaderUserInfo: ({ timeAgo }: { timeAgo?: string }) => (
-    <div data-testid="visual-overlay-header">{timeAgo ? `Header:${timeAgo}` : 'Header'}</div>
-  ),
+  PostHeaderUserInfo: (...args: unknown[]) => mockPostHeaderUserInfo(...args),
   PostHeaderTimestamp: ({ timeAgo }: { timeAgo: string }) => (
     <div data-testid="visual-overlay-timestamp">{timeAgo}</div>
   ),
@@ -281,6 +282,29 @@ describe('VisualTimelinePosts', () => {
 
     expect(screen.getByTestId('visual-overlay-header')).toHaveTextContent('Header');
     expect(screen.getByTestId('visual-overlay-timestamp')).toHaveTextContent('1m');
+  });
+
+  it('keeps the user info popover enabled in visual mode', () => {
+    render(
+      <VisualTimelinePosts
+        postIds={['author:post1']}
+        loading={false}
+        loadingMore={false}
+        error={null}
+        hasMore={false}
+        loadMore={vi.fn()}
+      />,
+    );
+
+    expect(mockPostHeaderUserInfo).toHaveBeenCalledWith(
+      expect.objectContaining({
+        userId: 'author',
+        userName: 'Author',
+        avatarUrl: null,
+      }),
+      undefined,
+    );
+    expect(mockPostHeaderUserInfo.mock.calls[0][0]).not.toHaveProperty('showPopover', false);
   });
 
   it('renders the header and text inside a vertical stack with spacing', () => {
