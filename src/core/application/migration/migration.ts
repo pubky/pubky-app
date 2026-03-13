@@ -1,5 +1,6 @@
 import { Logger } from '@/libs/logger';
 import * as Core from '@/core';
+import { settingsInitialState } from '@/core/stores/settings/settings.types';
 
 /**
  * MigrationApplication orchestrates post-DB-recreation re-sync of critical homeserver data.
@@ -24,7 +25,7 @@ export class MigrationApplication {
     const [, , remoteSettingsResult] = await Promise.allSettled([
       Core.MuteApplication.fetchMutedUsers(pubky),
       Core.FeedApplication.fetchFeeds(pubky),
-      Core.SettingsApplication.initializeSettings(pubky),
+      Core.SettingsApplication.initializeSettings(pubky, settingsInitialState),
     ]);
 
     Logger.info('Post-DB-recreation re-sync completed', { pubky });
