@@ -14,9 +14,9 @@ import { TAGS_PER_PAGE } from './useTagged.constants';
  * Unified hook for fetching and managing user tags.
  * Uses useLiveQuery on IndexedDB for automatic reactivity across all instances.
  *
- * The TagController.commitCreate/commitDelete methods follow local-first pattern:
- * they update IndexedDB first, then sync to server.
- * This means useLiveQuery will react immediately to changes.
+ * The TagController.commitCreate/commitDelete methods use local-first writes with
+ * compensation rollback, so useLiveQuery reacts immediately and failed homeserver
+ * writes are reverted back out of IndexedDB.
  */
 export function useTagged(userId: string | null | undefined, options: UseTaggedOptions = {}): UseTaggedResult {
   const { enablePagination = true, enableStats = true, viewerId: customViewerId } = options;
@@ -152,8 +152,8 @@ export function useTagged(userId: string | null | undefined, options: UseTaggedO
       }
 
       try {
-        // TagController.commitCreate updates IndexedDB first (local-first), then syncs to server
-        // useLiveQuery will automatically react to the IndexedDB change
+        // TagController.commitCreate updates IndexedDB first and rolls back on homeserver failure.
+        // useLiveQuery will automatically react to the local change or rollback.
         await Core.TagController.commitCreate({
           taggedId: userId as Core.Pubky,
           label,
@@ -217,10 +217,10 @@ export function useTagged(userId: string | null | undefined, options: UseTaggedO
             });
           }
 
-          // TagController.commitDelete updates IndexedDB first (local-first), then syncs to server
+          // TagController.commitDelete updates IndexedDB first and rolls back on homeserver failure.
           await Core.TagController.commitDelete(params);
         } else {
-          // TagController.commitCreate updates IndexedDB first (local-first), then syncs to server
+          // TagController.commitCreate updates IndexedDB first and rolls back on homeserver failure.
           await Core.TagController.commitCreate(params);
 
           // Remove from zero-tagger list
