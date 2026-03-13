@@ -42,7 +42,7 @@ export function Typography({
   const sizeClasses = {
     xs: 'text-xs font-medium',
     sm: 'text-sm font-medium',
-    md: 'text-md font-medium',
+    md: 'text-base font-medium',
     lg: 'text-2xl font-bold',
     xl: 'text-4xl font-bold',
     '2xl': 'text-6xl font-bold',

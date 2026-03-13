@@ -38,7 +38,7 @@ exports[`HotTagCard - Snapshots > matches snapshot with default props 1`] = `
       </div>
     </div>
     <p
-      class="text-md font-medium text-secondary-foreground"
+      class="text-base font-medium text-secondary-foreground"
       data-testid="typography"
     >
       371 posts this month
@@ -567,7 +567,7 @@ exports[`HotTagCard - Snapshots > matches snapshot with overflow taggers 1`] = `
       </div>
     </div>
     <p
-      class="text-md font-medium text-secondary-foreground"
+      class="text-base font-medium text-secondary-foreground"
       data-testid="typography"
     >
       100 posts this month
@@ -614,7 +614,7 @@ exports[`HotTagCard - Snapshots > matches snapshot with small postCount 1`] = `
       </div>
     </div>
     <p
-      class="text-md font-medium text-secondary-foreground"
+      class="text-base font-medium text-secondary-foreground"
       data-testid="typography"
     >
       50 posts this month
@@ -851,7 +851,7 @@ exports[`HotTagCard - Snapshots > matches snapshot with taggers 1`] = `
       </div>
     </div>
     <p
-      class="text-md font-medium text-secondary-foreground"
+      class="text-base font-medium text-secondary-foreground"
       data-testid="typography"
     >
       250 posts this month

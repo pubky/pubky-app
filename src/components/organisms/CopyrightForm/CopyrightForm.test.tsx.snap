@@ -55,7 +55,7 @@ exports[`CopyrightForm - Snapshots > matches snapshot for default state 1`] = `
           </p>
         </div>
         <p
-          class="text-md font-medium text-foreground"
+          class="text-base font-medium text-foreground"
           data-testid="typography"
         >
           Rights Owner Information
@@ -283,7 +283,7 @@ exports[`CopyrightForm - Snapshots > matches snapshot for default state 1`] = `
           </p>
         </div>
         <p
-          class="text-md font-medium text-foreground"
+          class="text-base font-medium text-foreground"
           data-testid="typography"
         >
           Infringing work details
@@ -334,7 +334,7 @@ exports[`CopyrightForm - Snapshots > matches snapshot for default state 1`] = `
           </p>
         </div>
         <p
-          class="text-md font-medium text-foreground"
+          class="text-base font-medium text-foreground"
           data-testid="typography"
         >
           Contact Information
@@ -462,7 +462,7 @@ exports[`CopyrightForm - Snapshots > matches snapshot for default state 1`] = `
           </div>
         </div>
         <p
-          class="text-md font-medium text-foreground"
+          class="text-base font-medium text-foreground"
           data-testid="typography"
         >
           Address
@@ -623,7 +623,7 @@ exports[`CopyrightForm - Snapshots > matches snapshot for default state 1`] = `
           data-testid="container"
         />
         <h2
-          class="text-md font-medium text-foreground"
+          class="text-base font-medium text-foreground"
           data-testid="typography"
         >
           Signature

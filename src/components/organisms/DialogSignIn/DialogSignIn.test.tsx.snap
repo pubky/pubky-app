@@ -53,7 +53,7 @@ exports[`DialogSignIn - Snapshots > matches snapshot when open 1`] = `
           data-testid="container"
         >
           <h3
-            class="text-md text-foreground font-bold"
+            class="text-base text-foreground font-bold"
             data-testid="typography"
           >
             New here?
@@ -95,7 +95,7 @@ exports[`DialogSignIn - Snapshots > matches snapshot when open 1`] = `
           data-testid="container"
         >
           <h3
-            class="text-md text-foreground font-bold"
+            class="text-base text-foreground font-bold"
             data-testid="typography"
           >
             Already have an account?

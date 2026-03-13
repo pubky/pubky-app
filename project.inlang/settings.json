@@ -1,0 +1,6 @@
+{
+  "$schema": "https://inlang.com/schema/project-settings",
+  "baseLocale": "en",
+  "locales": ["en"],
+  "modules": []
+}
