@@ -1,6 +1,6 @@
 import * as Core from '@/core';
 import * as Libs from '@/libs';
-import { setLocaleCookie } from '@/i18n';
+import { setLocaleCookie } from '@/i18n/utils';
 
 export class AuthController {
   private constructor() {} // Prevent instantiation

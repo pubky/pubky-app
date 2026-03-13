@@ -1,5 +1,5 @@
-import { setLocaleCookie } from '@/i18n';
 import * as Core from '@/core';
+import { setLocaleCookie } from '@/i18n/utils';
 
 /**
  * Settings controller.

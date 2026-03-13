@@ -1,6 +1,6 @@
 import { Logger } from '@/libs/logger';
-import { setLocaleCookie } from '@/i18n';
 import * as Core from '@/core';
+import { setLocaleCookie } from '@/i18n/utils';
 
 export class MigrationController {
   private constructor() {}
