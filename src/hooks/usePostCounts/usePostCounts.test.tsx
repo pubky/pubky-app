@@ -44,7 +44,7 @@ describe('usePostCounts', () => {
     });
 
     it('returns isLoading true when counts not found in cache (null from DB)', () => {
-      // DB returns null → mock's ?? falls back to defaultValue (undefined)
+      // DB returns null (cache miss) → useLocalFirstQuery triggers fetchFn
       mockGetCounts.mockReturnValue(null);
 
       const { result } = renderHook(() => usePostCounts('user-123:post-456'));

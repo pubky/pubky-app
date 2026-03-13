@@ -181,24 +181,19 @@ describe('PostController', () => {
       const result = await PostController.getCounts({ compositeId: testData.fullPostId });
 
       expect(result).toBeDefined();
-      expect(result.id).toBe(testData.fullPostId);
-      expect(result.tags).toBe(0);
-      expect(result.unique_tags).toBe(0);
-      expect(result.replies).toBe(0);
-      expect(result.reposts).toBe(0);
+      expect(result!.id).toBe(testData.fullPostId);
+      expect(result!.tags).toBe(0);
+      expect(result!.unique_tags).toBe(0);
+      expect(result!.replies).toBe(0);
+      expect(result!.reposts).toBe(0);
     });
 
-    it('should return default counts when post not found', async () => {
+    it('should return null when post not found', async () => {
       const { PostController } = await import('./post');
 
       const result = await PostController.getCounts({ compositeId: 'nonexistent:post' });
 
-      expect(result).toBeDefined();
-      expect(result.id).toBe('nonexistent:post');
-      expect(result.tags).toBe(0);
-      expect(result.unique_tags).toBe(0);
-      expect(result.replies).toBe(0);
-      expect(result.reposts).toBe(0);
+      expect(result).toBeNull();
     });
 
     it('should include all count fields in response', async () => {
@@ -215,10 +210,10 @@ describe('PostController', () => {
       const { PostController } = await import('./post');
       const result = await PostController.getCounts({ compositeId: testData.fullPostId });
 
-      expect(result.tags).toBe(5);
-      expect(result.unique_tags).toBe(3);
-      expect(result.replies).toBe(10);
-      expect(result.reposts).toBe(2);
+      expect(result!.tags).toBe(5);
+      expect(result!.unique_tags).toBe(3);
+      expect(result!.replies).toBe(10);
+      expect(result!.reposts).toBe(2);
     });
   });
 

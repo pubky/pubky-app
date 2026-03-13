@@ -18,9 +18,9 @@ export class PostController {
    * Read post counts for a specific post
    * @param params - Parameters object
    * @param params.compositeId - Composite post ID in format "authorId:postId"
-   * @returns Post counts (with default values if not found)
+   * @returns Post counts or null if not found
    */
-  static async getCounts({ compositeId }: Core.TCompositeId) {
+  static async getCounts({ compositeId }: Core.TCompositeId): Promise<Core.PostCountsModelSchema | null> {
     return await Core.PostApplication.getCounts({ compositeId });
   }
 

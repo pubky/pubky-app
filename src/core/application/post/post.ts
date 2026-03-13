@@ -18,9 +18,9 @@ export class PostApplication {
   /**
    * Reads post counts for a specific post
    * @param compositeId - Composite post ID in format "authorId:postId"
-   * @returns Post counts (with default values if not found)
+   * @returns Post counts or null if not found
    */
-  static async getCounts({ compositeId }: Core.TCompositeId): Promise<Core.PostCountsModelSchema> {
+  static async getCounts({ compositeId }: Core.TCompositeId): Promise<Core.PostCountsModelSchema | null> {
     return await Core.LocalPostService.readCounts(compositeId);
   }
 
