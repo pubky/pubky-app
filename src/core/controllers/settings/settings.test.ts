@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { SettingsController } from './settings';
-import * as i18n from '@/i18n';
+import * as i18nUtils from '@/i18n/utils';
 import * as Core from '@/core';
 import { defaultNotificationPreferences, defaultPrivacyPreferences } from '@/core/stores/settings/settings.types';
 
@@ -61,7 +61,7 @@ describe('SettingsController', () => {
 
     extractStateSpy = vi.spyOn(Core.SettingsNormalizer, 'extractState').mockReturnValue(mockSettingsState);
     commitUpdateSpy = vi.spyOn(Core.SettingsApplication, 'commitUpdate').mockResolvedValue(undefined);
-    setLocaleCookieSpy = vi.spyOn(i18n, 'setLocaleCookie').mockImplementation(() => {});
+    setLocaleCookieSpy = vi.spyOn(i18nUtils, 'setLocaleCookie').mockImplementation(() => {});
   });
 
   afterEach(() => {

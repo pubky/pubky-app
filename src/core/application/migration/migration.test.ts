@@ -1,6 +1,7 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { MigrationApplication } from './migration';
 import * as Core from '@/core';
+import { settingsInitialState } from '@/core/stores/settings/settings.types';
 
 vi.mock('pubky-app-specs', () => ({
   baseUriBuilder: (pubky: string) => `pubky://${pubky}/pub/pubky.app/`,
@@ -35,7 +36,7 @@ describe('MigrationApplication', () => {
 
       expect(fetchMutedSpy).toHaveBeenCalledExactlyOnceWith(TEST_PUBKY);
       expect(fetchFeedsSpy).toHaveBeenCalledExactlyOnceWith(TEST_PUBKY);
-      expect(initSettingsSpy).toHaveBeenCalledExactlyOnceWith(TEST_PUBKY);
+      expect(initSettingsSpy).toHaveBeenCalledExactlyOnceWith(TEST_PUBKY, settingsInitialState);
       expect(result).toBe(mockSettings);
     });
 
