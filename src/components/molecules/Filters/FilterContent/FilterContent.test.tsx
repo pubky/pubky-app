@@ -2,7 +2,7 @@ import { render, screen, fireEvent } from '@testing-library/react';
 import { describe, it, expect, vi } from 'vitest';
 import { FilterContent } from './FilterContent';
 import { CONTENT, type ContentType } from '@/core/stores/home/home.types';
-import { VISUAL_DISABLED_CONTENT } from '@/organisms/TimelineFeed/TimelineFeedVisual.helpers';
+import { VISUAL_DISABLED_CONTENT } from '@/organisms/Timeline/Feed/TimelineFeed/TimelineFeedVisual.helpers';
 
 // Mock libs - use actual utility functions and icons from lucide-react
 vi.mock('@/libs', async () => {
