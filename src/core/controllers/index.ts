@@ -17,4 +17,5 @@ export * from './moderation';
 export * from './homegate';
 export * from './settings';
 export * from './ttl';
+export * from './og-metadata';
 export * from './controllers.types';
