@@ -31,7 +31,7 @@ interface LocalTraversalResult {
  *   When it encounters a post whose relationships are not cached, it reports
  *   its composite ID as `nextMissingPostId`.
  * - `useEffect` reacts to `nextMissingPostId` by calling
- *   `PostController.getOrFetch`, which fetches from Nexus and persists to
+ *   `PostController.fetch`, which fetches from Nexus and persists to
  *   IndexedDB. Dexie reactivity then re-fires `useLiveQuery`, extending the
  *   chain by one level. This iterates until the chain reaches a root post.
  *
@@ -55,7 +55,7 @@ interface LocalTraversalResult {
 export function usePostAncestors(postId: string | null | undefined): UsePostAncestorsResult {
   const [hasError, setHasError] = useState(false);
 
-  // Tracks the composite ID for which `getOrFetch` returned `null` (post not
+  // Tracks the composite ID for which `fetch` returned `null` (post not
   // found anywhere). Compared against `nextMissingPostId` to distinguish
   // "actively fetching" from "stalled at an unresolvable gap".
   const [stalledAtId, setStalledAtId] = useState<string | null>(null);
@@ -177,7 +177,7 @@ export function usePostAncestors(postId: string | null | undefined): UsePostAnce
 
     let cancelled = false;
 
-    Core.PostController.getOrFetch({ compositeId: nextMissingPostId })
+    Core.PostController.fetch({ compositeId: nextMissingPostId })
       .then((fetchedPost) => {
         if (cancelled) return;
         if (!fetchedPost) {

@@ -46,7 +46,7 @@ export function useRepostInfo(postId: string): UseRepostInfoResult {
   // Read relationships via controller using local-first pattern
   const { data: relationships, isLoading } = useLocalFirstQuery<Core.PostRelationshipsModelSchema>({
     queryFn: () => Core.PostController.getRelationships({ compositeId: postId }),
-    fetchFn: () => Core.PostController.getOrFetch({ compositeId: postId }),
+    fetchFn: () => Core.PostController.fetch({ compositeId: postId }),
     deps: [postId],
     enabled: !!postId,
   });

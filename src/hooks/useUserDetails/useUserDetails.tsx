@@ -25,7 +25,7 @@ import * as Types from './useUserDetails.types';
 export function useUserDetails(userId: string | null | undefined): Types.UseUserDetailsResult {
   const { data, isLoading } = useLocalFirstQuery<Core.NexusUserDetails>({
     queryFn: () => Core.UserController.getDetails({ userId: userId! }),
-    fetchFn: () => Core.UserController.getOrFetchDetails({ userId: userId! }),
+    fetchFn: () => Core.UserController.fetchDetails({ userId: userId! }),
     deps: [userId],
     enabled: !!userId,
   });

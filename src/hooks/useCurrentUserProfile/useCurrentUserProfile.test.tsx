@@ -10,11 +10,11 @@ const mockState = vi.hoisted(() => ({
 
 // Mock @/core
 const mockGetDetails = vi.fn();
-const mockGetOrFetchDetails = vi.fn().mockResolvedValue(undefined);
+const mockFetchDetails = vi.fn().mockResolvedValue(undefined);
 vi.mock('@/core', () => ({
   UserController: {
     getDetails: (params: { userId: string }) => mockGetDetails(params),
-    getOrFetchDetails: (params: { userId: string }) => mockGetOrFetchDetails(params),
+    fetchDetails: (params: { userId: string }) => mockFetchDetails(params),
   },
   useAuthStore: vi.fn((selector?: (state: { currentUserPubky: string | null }) => unknown) => {
     const state = { currentUserPubky: mockState.currentUserPubky };
@@ -113,21 +113,22 @@ describe('useCurrentUserProfile', () => {
   });
 
   describe('Controller integration', () => {
-    it('calls UserController.getOrFetchDetails to ensure data exists locally', () => {
+    it('does not call fetchDetails when data is already cached (cache hit optimization)', () => {
       mockState.currentUserPubky = 'test-user-pubky';
       mockGetDetails.mockReturnValue({ id: 'test-user-pubky', name: 'User' });
 
       renderHook(() => useCurrentUserProfile());
 
-      expect(mockGetOrFetchDetails).toHaveBeenCalledWith({ userId: 'test-user-pubky' });
+      // Phase 1 optimization: fetchFn is skipped when useLiveQuery returns non-null data
+      expect(mockFetchDetails).not.toHaveBeenCalled();
     });
 
-    it('does not call getOrFetchDetails when not logged in', () => {
+    it('does not call fetchDetails when not logged in', () => {
       mockState.currentUserPubky = null;
 
       renderHook(() => useCurrentUserProfile());
 
-      expect(mockGetOrFetchDetails).not.toHaveBeenCalled();
+      expect(mockFetchDetails).not.toHaveBeenCalled();
     });
   });
 

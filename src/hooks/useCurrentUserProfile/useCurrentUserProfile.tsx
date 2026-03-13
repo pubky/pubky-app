@@ -26,7 +26,7 @@ export function useCurrentUserProfile(): Types.UseCurrentUserProfileResult {
 
   const { data: userDetails } = useLocalFirstQuery<Core.NexusUserDetails>({
     queryFn: () => Core.UserController.getDetails({ userId: currentUserPubky! }),
-    fetchFn: () => Core.UserController.getOrFetchDetails({ userId: currentUserPubky! }),
+    fetchFn: () => Core.UserController.fetchDetails({ userId: currentUserPubky! }),
     deps: [currentUserPubky],
     enabled: !!currentUserPubky,
   });

@@ -29,11 +29,11 @@ vi.mock('dexie-react-hooks', () => ({
 
 // Mock Core
 const mockGetRelationships = vi.fn();
-const mockGetOrFetch = vi.fn().mockResolvedValue({ id: 'mock-post' });
+const mockFetch = vi.fn().mockResolvedValue({ id: 'mock-post' });
 vi.mock('@/core', () => ({
   PostController: {
     getRelationships: (params: { compositeId: string }) => mockGetRelationships(params),
-    getOrFetch: (params: { compositeId: string }) => mockGetOrFetch(params),
+    fetch: (params: { compositeId: string }) => mockFetch(params),
   },
   parseCompositeId: vi.fn(),
   buildCompositeIdFromPubkyUri: vi.fn(),
@@ -55,7 +55,7 @@ describe('usePostAncestors', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     setMockQueryResult(undefined);
-    mockGetOrFetch.mockResolvedValue({ id: 'mock-post' });
+    mockFetch.mockResolvedValue({ id: 'mock-post' });
   });
 
   describe('Loading state', () => {
@@ -99,20 +99,20 @@ describe('usePostAncestors', () => {
       expect(result.current.hasError).toBe(false);
     });
 
-    it('does not call getOrFetch when postId is null', () => {
+    it('does not call fetch when postId is null', () => {
       setMockQueryResult({ ancestors: [], nextMissingPostId: null });
 
       renderHook(() => usePostAncestors(null));
 
-      expect(mockGetOrFetch).not.toHaveBeenCalled();
+      expect(mockFetch).not.toHaveBeenCalled();
     });
 
-    it('does not call getOrFetch when postId is undefined', () => {
+    it('does not call fetch when postId is undefined', () => {
       setMockQueryResult({ ancestors: [], nextMissingPostId: null });
 
       renderHook(() => usePostAncestors(undefined));
 
-      expect(mockGetOrFetch).not.toHaveBeenCalled();
+      expect(mockFetch).not.toHaveBeenCalled();
     });
   });
 
@@ -149,7 +149,7 @@ describe('usePostAncestors', () => {
       expect(result.current.hasError).toBe(false);
     });
 
-    it('does not call getOrFetch when chain is complete', () => {
+    it('does not call fetch when chain is complete', () => {
       setMockQueryResult({
         ancestors: [{ postId: 'user1:post1', userId: 'user1' }],
         nextMissingPostId: null,
@@ -157,7 +157,7 @@ describe('usePostAncestors', () => {
 
       renderHook(() => usePostAncestors('user1:post1'));
 
-      expect(mockGetOrFetch).not.toHaveBeenCalled();
+      expect(mockFetch).not.toHaveBeenCalled();
     });
 
     it('handles deep reply chains', () => {
@@ -196,7 +196,7 @@ describe('usePostAncestors', () => {
   });
 
   describe('Fetch arm (missing ancestors)', () => {
-    it('calls getOrFetch when a missing ancestor is detected', () => {
+    it('calls fetch when a missing ancestor is detected', () => {
       setMockQueryResult({
         ancestors: [{ postId: 'user2:post2', userId: 'user2' }],
         nextMissingPostId: 'user1:post1',
@@ -204,7 +204,7 @@ describe('usePostAncestors', () => {
 
       renderHook(() => usePostAncestors(mockPostId));
 
-      expect(mockGetOrFetch).toHaveBeenCalledWith({ compositeId: 'user1:post1' });
+      expect(mockFetch).toHaveBeenCalledWith({ compositeId: 'user1:post1' });
     });
 
     it('buffers ancestors and stays in loading state while fetching', () => {
@@ -224,8 +224,8 @@ describe('usePostAncestors', () => {
       expect(result.current.hasError).toBe(false);
     });
 
-    it('sets hasError when getOrFetch rejects (network error)', async () => {
-      mockGetOrFetch.mockRejectedValue(new Error('Network error'));
+    it('sets hasError when fetch rejects (network error)', async () => {
+      mockFetch.mockRejectedValue(new Error('Network error'));
       setMockQueryResult({
         ancestors: [],
         nextMissingPostId: 'missing:post',
@@ -239,9 +239,9 @@ describe('usePostAncestors', () => {
       expect(result.current.isLoading).toBe(false);
     });
 
-    it('does not call getOrFetch again after hasError is set', async () => {
+    it('does not call fetch again after hasError is set', async () => {
       // First render: fetch rejects → hasError = true
-      mockGetOrFetch.mockRejectedValue(new Error('Network error'));
+      mockFetch.mockRejectedValue(new Error('Network error'));
       setMockQueryResult({
         ancestors: [],
         nextMissingPostId: 'missing:post',
@@ -254,14 +254,14 @@ describe('usePostAncestors', () => {
       });
 
       // Clear calls after error was set
-      mockGetOrFetch.mockClear();
+      mockFetch.mockClear();
 
       // The same nextMissingPostId is still present, but hasError guards the effect
-      expect(mockGetOrFetch).not.toHaveBeenCalled();
+      expect(mockFetch).not.toHaveBeenCalled();
     });
 
-    it('does not set hasError when getOrFetch resolves successfully', () => {
-      mockGetOrFetch.mockResolvedValue({ id: 'fetched-post' });
+    it('does not set hasError when fetch resolves successfully', () => {
+      mockFetch.mockResolvedValue({ id: 'fetched-post' });
       setMockQueryResult({
         ancestors: [{ postId: 'user2:post2', userId: 'user2' }],
         nextMissingPostId: 'user1:post1',
@@ -269,7 +269,7 @@ describe('usePostAncestors', () => {
 
       const { result } = renderHook(() => usePostAncestors(mockPostId));
 
-      expect(mockGetOrFetch).toHaveBeenCalledWith({ compositeId: 'user1:post1' });
+      expect(mockFetch).toHaveBeenCalledWith({ compositeId: 'user1:post1' });
       // Still resolving (Dexie would re-fire useLiveQuery after persist)
       expect(result.current.isLoading).toBe(true);
       expect(result.current.hasError).toBe(false);
@@ -277,8 +277,8 @@ describe('usePostAncestors', () => {
   });
 
   describe('Stalled chain (ancestor not found)', () => {
-    it('exposes partial ancestors after getOrFetch returns null', async () => {
-      mockGetOrFetch.mockResolvedValue(null);
+    it('exposes partial ancestors after fetch returns null', async () => {
+      mockFetch.mockResolvedValue(null);
       setMockQueryResult({
         ancestors: [
           { postId: 'user2:post2', userId: 'user2' },
@@ -301,8 +301,8 @@ describe('usePostAncestors', () => {
       expect(result.current.hasError).toBe(false);
     });
 
-    it('does not retry getOrFetch for the same stalled ID', async () => {
-      mockGetOrFetch.mockResolvedValue(null);
+    it('does not retry fetch for the same stalled ID', async () => {
+      mockFetch.mockResolvedValue(null);
       setMockQueryResult({
         ancestors: [],
         nextMissingPostId: 'missing:post',
@@ -314,9 +314,9 @@ describe('usePostAncestors', () => {
         expect(result.current.isLoading).toBe(false);
       });
 
-      // getOrFetch was called exactly once for this ID
-      expect(mockGetOrFetch).toHaveBeenCalledTimes(1);
-      expect(mockGetOrFetch).toHaveBeenCalledWith({ compositeId: 'missing:post' });
+      // fetch was called exactly once for this ID
+      expect(mockFetch).toHaveBeenCalledTimes(1);
+      expect(mockFetch).toHaveBeenCalledWith({ compositeId: 'missing:post' });
     });
   });
 
@@ -332,13 +332,13 @@ describe('usePostAncestors', () => {
       expect(result.current.hasError).toBe(true);
     });
 
-    it('does not call getOrFetch when traversal errors', () => {
+    it('does not call fetch when traversal errors', () => {
       setMockQueryResult(null);
 
       renderHook(() => usePostAncestors(mockPostId));
 
       // nextMissingPostId is null (from null?.nextMissingPostId ?? null), so no fetch
-      expect(mockGetOrFetch).not.toHaveBeenCalled();
+      expect(mockFetch).not.toHaveBeenCalled();
     });
 
     it('returns hasError true when postId is invalid (null from useLiveQuery)', () => {

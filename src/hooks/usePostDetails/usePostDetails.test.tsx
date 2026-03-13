@@ -4,11 +4,11 @@ import { usePostDetails } from './usePostDetails';
 
 // Mock @/core
 const mockReadPostDetails = vi.fn();
-const mockGetOrFetch = vi.fn().mockResolvedValue(undefined);
+const mockFetch = vi.fn().mockResolvedValue(undefined);
 vi.mock('@/core', () => ({
   PostController: {
     getDetails: (params: { compositeId: string }) => mockReadPostDetails(params),
-    getOrFetch: (params: { compositeId: string }) => mockGetOrFetch(params),
+    fetch: (params: { compositeId: string }) => mockFetch(params),
   },
 }));
 

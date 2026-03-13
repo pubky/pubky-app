@@ -605,6 +605,58 @@ describe('PostController', () => {
     });
   });
 
+  describe('fetch', () => {
+    const mockViewerId = 'test-viewer-id' as Core.Pubky;
+
+    it('should delegate to PostApplication.fetch', async () => {
+      const { PostController } = await import('./post');
+      const ApplicationModule = await import('@/core/application');
+
+      const fetchSpy = vi.spyOn(ApplicationModule.PostApplication, 'fetch').mockResolvedValue(null);
+
+      try {
+        await PostController.fetch({ compositeId: 'author:post123', viewerId: mockViewerId });
+        expect(fetchSpy).toHaveBeenCalledWith({ compositeId: 'author:post123', viewerId: mockViewerId });
+      } finally {
+        fetchSpy.mockRestore();
+      }
+    });
+
+    it('should return null when PostApplication.fetch returns null', async () => {
+      const { PostController } = await import('./post');
+      const ApplicationModule = await import('@/core/application');
+
+      const fetchSpy = vi.spyOn(ApplicationModule.PostApplication, 'fetch').mockResolvedValue(null);
+
+      try {
+        const post = await PostController.fetch({
+          compositeId: 'nonexistent:post',
+          viewerId: mockViewerId,
+        });
+        expect(post).toBeNull();
+      } finally {
+        fetchSpy.mockRestore();
+      }
+    });
+
+    it('should propagate error when PostApplication.fetch throws', async () => {
+      const { PostController } = await import('./post');
+      const ApplicationModule = await import('@/core/application');
+
+      const fetchSpy = vi
+        .spyOn(ApplicationModule.PostApplication, 'fetch')
+        .mockRejectedValueOnce(new Error('Nexus error'));
+
+      try {
+        await expect(PostController.fetch({ compositeId: 'error:post', viewerId: mockViewerId })).rejects.toThrow(
+          'Nexus error',
+        );
+      } finally {
+        fetchSpy.mockRestore();
+      }
+    });
+  });
+
   describe('fetchTaggers', () => {
     it('should call PostApplication.fetchTaggers and return result', async () => {
       const { PostController } = await import('./post');

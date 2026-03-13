@@ -67,6 +67,18 @@ export class PostController {
   }
 
   /**
+   * Fetch a post from Nexus and persist to local database (network-only, no local read).
+   * Use instead of `getOrFetch` when the caller already knows the post is not cached.
+   * @param params - Parameters object
+   * @param params.compositeId - Composite post ID in format "authorId:postId"
+   * @param params.viewerId - Optional viewer ID for relationship data
+   * @returns Post details or null if not found
+   */
+  static async fetch(params: Core.TGetOrFetchPostParams): Promise<Core.PostDetailsModelSchema | null> {
+    return await Core.PostApplication.fetch(params);
+  }
+
+  /**
    * Fetch more post tags from Nexus with pagination
    * @param params - Parameters object
    * @param params.compositeId - Composite post ID in format "authorId:postId"

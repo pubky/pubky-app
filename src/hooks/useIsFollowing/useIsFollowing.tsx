@@ -33,7 +33,7 @@ export function useIsFollowing(targetUserId: string): UseIsFollowingResult {
 
   const { data: relationship, isLoading } = useLocalFirstQuery<Core.NexusUserRelationship>({
     queryFn: () => Core.UserController.getRelationships({ userId: targetUserId }),
-    fetchFn: () => Core.UserController.getOrFetch({ userId: targetUserId }),
+    fetchFn: () => Core.UserController.fetch({ userId: targetUserId }),
     deps: [targetUserId, currentUserPubky],
     enabled,
   });

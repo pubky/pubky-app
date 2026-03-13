@@ -104,6 +104,26 @@ export class PostApplication {
     return await Core.LocalPostService.readDetails({ postId: compositeId });
   }
 
+  /**
+   * Fetches a post from Nexus and persists to local database (network-only, no local read).
+   * Use this instead of `getOrFetch` when the caller already knows the post is not in
+   * local DB (e.g. `useLocalFirstQuery` hook where `useLiveQuery` handles the local read).
+   * @param compositeId - Composite post ID in format "authorId:postId"
+   * @param viewerId - Optional viewer ID for relationship data
+   * @returns Post details or null if not found on Nexus
+   */
+  static async fetch({
+    compositeId,
+    viewerId,
+  }: Core.TGetOrFetchPostParams): Promise<Core.PostDetailsModelSchema | null> {
+    await Core.PostStreamApplication.fetchMissingPostsFromNexus({
+      cacheMissPostIds: [compositeId],
+      viewerId,
+    });
+
+    return await Core.LocalPostService.readDetails({ postId: compositeId });
+  }
+
   static async commitCreate({ postUrl, compositePostId, post, fileAttachments, tags }: Core.TCreatePostInput) {
     if (fileAttachments && fileAttachments.length > 0) {
       await Core.FileApplication.commitCreate({ fileAttachments });

@@ -23,7 +23,7 @@ export function useProfileStats(userId: string): UseProfileStatsResult {
   // Fetch user counts using local-first pattern — replaces manual useLiveQuery + buggy useEffect
   const { data: userCounts, isLoading } = useLocalFirstQuery<Core.NexusUserCounts>({
     queryFn: () => Core.UserController.getCounts({ userId }),
-    fetchFn: () => Core.UserController.getOrFetchCounts({ userId }),
+    fetchFn: () => Core.UserController.fetchCounts({ userId }),
     deps: [userId],
     enabled: !!userId,
   });

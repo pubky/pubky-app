@@ -39,7 +39,7 @@ export interface UseUserProfileResult {
 export function useUserProfile(userId: string): UseUserProfileResult {
   const { data: userDetails, isLoading } = useLocalFirstQuery<Core.NexusUserDetails>({
     queryFn: () => Core.UserController.getDetails({ userId }),
-    fetchFn: () => Core.UserController.getOrFetchDetails({ userId }),
+    fetchFn: () => Core.UserController.fetchDetails({ userId }),
     deps: [userId],
     enabled: !!userId,
   });

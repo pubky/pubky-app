@@ -9,8 +9,10 @@ import type { UseLocalFirstQueryParams, UseLocalFirstQueryResult } from './useLo
  * Shared hook that encapsulates the local-first query pattern (ADR-0011).
  *
  * - `queryFn` runs inside `useLiveQuery` — pure, read-only, local-only IndexedDB read
- * - `fetchFn` runs inside `useEffect` — calls a `getOrFetch*` controller method that
- *   fetches from Nexus and persists to IndexedDB
+ * - `fetchFn` runs inside `useEffect` — calls a `fetch*` controller method that
+ *   fetches from Nexus and persists to IndexedDB (network-only, no local read)
+ * - The effect skips `fetchFn` when `data` is already available locally (non-null),
+ *   avoiding a redundant network call
  * - When `fetchFn` writes to IndexedDB, `useLiveQuery` automatically re-fires and
  *   picks up the new data
  *
@@ -32,7 +34,7 @@ import type { UseLocalFirstQueryParams, UseLocalFirstQueryResult } from './useLo
  * ```tsx
  * const { data, isLoading } = useLocalFirstQuery({
  *   queryFn: () => PostController.getDetails({ compositeId }),
- *   fetchFn: () => PostController.getOrFetch({ compositeId }),
+ *   fetchFn: () => PostController.fetch({ compositeId }),
  *   deps: [compositeId],
  *   enabled: !!compositeId,
  * });
@@ -68,15 +70,38 @@ export function useLocalFirstQuery<T>({
   );
 
   // Fetch arm — ensures data exists in IndexedDB.
-  // The controller's `getOrFetch*` method checks local first and only hits
-  // the network if data is missing. When it writes to IndexedDB, the
-  // `useLiveQuery` above automatically picks up the change.
+  // The controller's `fetch*` method is network-only (no local read) — the
+  // local read is already handled by `useLiveQuery` above.
+  //
+  // Early-return logic avoids redundant fetches:
+  // - `data === undefined` → useLiveQuery hasn't resolved yet, wait
+  // - `data !== null` → cache hit, no fetch needed
+  // - `data === null` → cache miss, proceed with fetch
+  //
+  // No infinite loop on fetch failure: a failed fetch doesn't write to
+  // IndexedDB, so `data` stays `null`, deps don't change, and the effect
+  // does not re-run.
   useEffect(() => {
     if (!enabled) {
       setIsFetching(false);
       return;
     }
 
+    // Wait for useLiveQuery to resolve before deciding whether to fetch.
+    // `undefined` means the query hasn't completed its first read yet.
+    if (data === undefined) return;
+
+    // Cache hit — data is already in IndexedDB, no fetch needed.
+    // Reset `isFetching` to keep internal state consistent: if the previous
+    // effect's `.finally()` was cancelled (cleanup ran before it settled),
+    // `isFetching` would be stuck at `true`. While `isLoading` doesn't read
+    // `isFetching` when `data` is non-null, stale state is a latent bug.
+    if (data !== null) {
+      setIsFetching(false);
+      return;
+    }
+
+    // Cache miss (data === null) — fetch from network and persist.
     let cancelled = false;
     setIsFetching(true);
 
@@ -96,7 +121,7 @@ export function useLocalFirstQuery<T>({
       cancelled = true;
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [...deps, enabled]);
+  }, [...deps, enabled, data]);
 
   // `isLoading` is true when:
   // - `useLiveQuery` hasn't resolved yet (`data === undefined`), OR
