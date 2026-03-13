@@ -6,11 +6,9 @@ export interface UserConnectionsModelSchema {
   followers: Pubky[];
 }
 
-// Primary and compound indexes for Dexie
+// Keep only the primary key index. Connection arrays are read/modified by id.
 export const userConnectionsTableSchema = `
-  &id,
-  followers,
-  following
+  &id
 `;
 
 export enum UserConnectionsFields {
