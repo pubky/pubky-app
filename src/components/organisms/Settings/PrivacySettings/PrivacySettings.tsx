@@ -24,7 +24,7 @@ export function PrivacySettings() {
             id={`privacy-switch-${type}`}
             label={t(labelKey)}
             checked={privacy[type]}
-            onChange={actions[action] as (value: boolean) => void}
+            onChange={actions[action]}
             disabled={disabled}
           />
         );

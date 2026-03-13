@@ -1,9 +1,18 @@
 import type { PrivacyType } from './PrivacySettings.types';
-import type { UseSettingsActionsResult } from '@/hooks/useSettingsActions';
+
+type BooleanSettingsAction =
+  | 'setShowConfirm'
+  | 'setBlurCensored'
+  | 'setSignOutInactive'
+  | 'setRequirePin'
+  | 'setHideWhoToFollow'
+  | 'setHideActiveFriends'
+  | 'setHideSearch'
+  | 'setNeverShowPosts';
 
 interface PrivacySettingConfig {
   labelKey: string;
-  action: keyof UseSettingsActionsResult;
+  action: BooleanSettingsAction;
   disabled?: boolean;
 }
 
