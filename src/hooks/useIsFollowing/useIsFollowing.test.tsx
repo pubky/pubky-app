@@ -9,11 +9,11 @@ const mockState = vi.hoisted(() => ({
 
 // Mock @/core
 const mockGetRelationships = vi.fn();
-const mockGetOrFetch = vi.fn().mockResolvedValue(undefined);
+const mockFetch = vi.fn().mockResolvedValue(undefined);
 vi.mock('@/core', () => ({
   UserController: {
     getRelationships: (params: { userId: string }) => mockGetRelationships(params),
-    getOrFetch: (params: { userId: string }) => mockGetOrFetch(params),
+    fetch: (params: { userId: string }) => mockFetch(params),
   },
   useAuthStore: vi.fn((selector?: (state: { currentUserPubky: string | null }) => unknown) => {
     const state = { currentUserPubky: mockState.currentUserPubky };
@@ -107,7 +107,7 @@ describe('useIsFollowing', () => {
       renderHook(() => useIsFollowing('same-user'));
 
       // enabled=false → fetchFn not called
-      expect(mockGetOrFetch).not.toHaveBeenCalled();
+      expect(mockFetch).not.toHaveBeenCalled();
     });
   });
 
@@ -126,7 +126,7 @@ describe('useIsFollowing', () => {
 
       renderHook(() => useIsFollowing('target-user'));
 
-      expect(mockGetOrFetch).not.toHaveBeenCalled();
+      expect(mockFetch).not.toHaveBeenCalled();
     });
 
     it('does not query when targetUserId is empty string', () => {
@@ -139,7 +139,7 @@ describe('useIsFollowing', () => {
     it('does not fetch when targetUserId is empty string', () => {
       renderHook(() => useIsFollowing(''));
 
-      expect(mockGetOrFetch).not.toHaveBeenCalled();
+      expect(mockFetch).not.toHaveBeenCalled();
     });
 
     it('returns isFollowing false when not logged in', () => {
@@ -160,12 +160,13 @@ describe('useIsFollowing', () => {
       expect(mockGetRelationships).toHaveBeenCalledWith({ userId: 'target-user' });
     });
 
-    it('calls UserController.getOrFetch to ensure data exists locally', () => {
+    it('does not call UserController.fetch when data is cached (cache hit optimization)', () => {
       mockGetRelationships.mockReturnValue({ following: false });
 
       renderHook(() => useIsFollowing('target-user'));
 
-      expect(mockGetOrFetch).toHaveBeenCalledWith({ userId: 'target-user' });
+      // Phase 1 optimization: fetchFn is skipped when useLiveQuery returns non-null data
+      expect(mockFetch).not.toHaveBeenCalled();
     });
   });
 });

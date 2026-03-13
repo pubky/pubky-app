@@ -36,6 +36,19 @@ export class UserApplication {
   }
 
   /**
+   * Fetches user details from Nexus and persists to local database (network-only, no local read).
+   * Use instead of `getOrFetchDetails` when the caller already knows the user is not cached
+   * (e.g. `useLocalFirstQuery` hook where `useLiveQuery` handles the local read).
+   * @param params - Parameters containing user ID
+   * @returns Promise resolving to user details or null if not found
+   */
+  static async fetchDetails({ userId }: Core.TReadProfileParams) {
+    const nexusUserDetails = await Core.NexusUserService.details({ user_id: userId });
+    await Core.LocalProfileService.upsertDetails(nexusUserDetails);
+    return await Core.LocalUserService.readDetails({ userId });
+  }
+
+  /**
    * Retrieves a full user entity (details, counts, relationships, tags, TTL, moderation) from local database.
    * If not found locally, fetches from Nexus batch endpoint and persists everything via stream persistence.
    *
@@ -72,6 +85,32 @@ export class UserApplication {
   }
 
   /**
+   * Fetches a full user entity from Nexus batch endpoint and persists locally (network-only, no local read).
+   * Use instead of `getOrFetch` when the caller already knows the user is not cached
+   * (e.g. `useLocalFirstQuery` hook where `useLiveQuery` handles the local read).
+   *
+   * @param params - Parameters containing user ID
+   * @returns Promise resolving to user details or null if not found on Nexus
+   */
+  static async fetch({ userId }: Core.TReadProfileParams): Promise<Core.NexusUserDetails | null> {
+    try {
+      const users = await Core.NexusUserStreamService.fetchByIds({ user_ids: [userId] });
+
+      if (!users || users.length === 0) {
+        Logger.warn('User not found on Nexus', { userId });
+        return null;
+      }
+
+      await Core.LocalStreamUsersService.persistUsers(users);
+    } catch (error) {
+      Logger.warn('Failed to fetch user from Nexus', { userId, error });
+      return null;
+    }
+
+    return await Core.LocalUserService.readDetails({ userId });
+  }
+
+  /**
    * Retrieves user counts from local database.
    * Local-only read per ADR 0001 (get* methods don't call Nexus).
    * @param params - Parameters containing user ID
@@ -98,6 +137,24 @@ export class UserApplication {
       return nexusUserCounts;
     } catch (error) {
       // Return null if user counts cannot be fetched (e.g., user not indexed yet)
+      Logger.warn('Failed to fetch user counts from Nexus', { userId, error });
+      return null;
+    }
+  }
+
+  /**
+   * Fetches user counts from Nexus and persists to local database (network-only, no local read).
+   * Use instead of `getOrFetchCounts` when the caller already knows counts are not cached
+   * (e.g. `useLocalFirstQuery` hook where `useLiveQuery` handles the local read).
+   * @param params - Parameters containing user ID
+   * @returns Promise resolving to user counts or null if fetch fails
+   */
+  static async fetchCounts({ userId }: Core.TReadProfileParams): Promise<Core.NexusUserCounts | null> {
+    try {
+      const nexusUserCounts = await Core.NexusUserService.counts({ user_id: userId });
+      await Core.LocalProfileService.upsertCounts(userId, nexusUserCounts);
+      return nexusUserCounts;
+    } catch (error) {
       Logger.warn('Failed to fetch user counts from Nexus', { userId, error });
       return null;
     }

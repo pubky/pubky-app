@@ -25,7 +25,7 @@ import type { UsePostCountsResult } from './usePostCounts.types';
 export function usePostCounts(compositeId: string | null | undefined): UsePostCountsResult {
   const { data, isLoading } = useLocalFirstQuery<Core.PostCountsModelSchema>({
     queryFn: () => Core.PostController.getCounts({ compositeId: compositeId! }),
-    fetchFn: () => Core.PostController.getOrFetch({ compositeId: compositeId! }),
+    fetchFn: () => Core.PostController.fetch({ compositeId: compositeId! }),
     deps: [compositeId],
     enabled: !!compositeId,
   });

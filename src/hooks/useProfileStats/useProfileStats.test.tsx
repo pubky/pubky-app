@@ -96,7 +96,7 @@ vi.mock('@/core', async (importOriginal) => {
     ...actual,
     UserController: {
       getCounts: vi.fn().mockImplementation(() => Promise.resolve(mockUserCounts.current)),
-      getOrFetchCounts: vi.fn().mockImplementation(() => Promise.resolve(mockUserCounts.current)),
+      fetchCounts: vi.fn().mockImplementation(() => Promise.resolve(mockUserCounts.current)),
     },
     NotificationController: {
       getNotificationsCountsNow: vi.fn(() => mockNotificationsCount.current),
@@ -135,7 +135,7 @@ describe('useProfileStats', () => {
       setMockUserCounts(null);
       const { result } = renderHook(() => useProfileStats('test-user-id'));
 
-      // Wait for fetchFn (getOrFetchCounts) to settle — isLoading stays true
+      // Wait for fetchFn (fetchCounts) to settle — isLoading stays true
       // while the fetch is in-flight, then becomes false once it resolves.
       await waitFor(() => {
         expect(result.current.isLoading).toBe(false);
@@ -351,20 +351,20 @@ describe('useProfileStats', () => {
       expect(Core.UserController.getCounts).toHaveBeenCalledWith({ userId: 'test-user-id' });
     });
 
-    it('calls UserController.getOrFetchCounts to ensure data exists locally', () => {
+    it('does not call UserController.fetchCounts when data is cached (cache hit optimization)', () => {
+      // mockUserCounts.current is non-null by default → useLiveQuery returns non-null data
+      // → useLocalFirstQuery skips fetchFn (Phase 1 early-return optimization)
       renderHook(() => useProfileStats('test-user-id'));
 
-      // UserController.getOrFetchCounts should be called in useEffect (fetchFn)
-      // to ensure counts are cached locally
-      expect(Core.UserController.getOrFetchCounts).toHaveBeenCalledWith({ userId: 'test-user-id' });
+      expect(Core.UserController.fetchCounts).not.toHaveBeenCalled();
     });
 
-    it('does not call getOrFetchCounts when userId is empty', () => {
+    it('does not call fetchCounts when userId is empty', () => {
       setMockUserCounts(undefined);
       renderHook(() => useProfileStats(''));
 
       // enabled=false when userId is empty, so fetchFn should not fire
-      expect(Core.UserController.getOrFetchCounts).not.toHaveBeenCalled();
+      expect(Core.UserController.fetchCounts).not.toHaveBeenCalled();
     });
   });
 });

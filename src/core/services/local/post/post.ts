@@ -29,11 +29,10 @@ export class LocalPostService {
    * Reads post counts for a specific post
    *
    * @param postId - Composite post ID (author:postId)
-   * @returns Post counts or default zero counts if not found
+   * @returns Post counts or null if not found
    */
-  static async readCounts(postId: string): Promise<Core.PostCountsModelSchema> {
-    const counts = await Core.PostCountsModel.findById(postId);
-    return counts ?? ({ id: postId, tags: 0, unique_tags: 0, replies: 0, reposts: 0 } as Core.PostCountsModelSchema);
+  static async readCounts(postId: string): Promise<Core.PostCountsModelSchema | null> {
+    return (await Core.PostCountsModel.findById(postId)) ?? null;
   }
 
   /**

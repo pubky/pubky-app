@@ -4,11 +4,11 @@ import { useUserDetails } from './useUserDetails';
 
 // Mock @/core
 const mockGetDetails = vi.fn();
-const mockGetOrFetchDetails = vi.fn().mockResolvedValue(undefined);
+const mockFetchDetails = vi.fn().mockResolvedValue(undefined);
 vi.mock('@/core', () => ({
   UserController: {
     getDetails: (params: { userId: string }) => mockGetDetails(params),
-    getOrFetchDetails: (params: { userId: string }) => mockGetOrFetchDetails(params),
+    fetchDetails: (params: { userId: string }) => mockFetchDetails(params),
   },
 }));
 

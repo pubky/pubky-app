@@ -27,7 +27,7 @@ const { mockBuildCompositeIdFromPubkyUri, mockGetPostRelationships } = vi.hoiste
   mockGetPostRelationships: vi.fn(),
 }));
 
-const mockGetOrFetch = vi.hoisted(() => vi.fn().mockResolvedValue(undefined));
+const mockFetch = vi.hoisted(() => vi.fn().mockResolvedValue(undefined));
 
 vi.mock('@/core', async () => {
   const actual = await vi.importActual('@/core');
@@ -37,7 +37,7 @@ vi.mock('@/core', async () => {
       // Included for safety if the mocked useLiveQuery ever executes the queryFn.
       getPostRelationships: mockGetPostRelationships,
       getRelationships: mockGetPostRelationships,
-      getOrFetch: mockGetOrFetch,
+      fetch: mockFetch,
     },
     buildCompositeIdFromPubkyUri: mockBuildCompositeIdFromPubkyUri,
   };

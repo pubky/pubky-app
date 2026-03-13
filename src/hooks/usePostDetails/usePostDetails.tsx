@@ -15,7 +15,7 @@ import type { UsePostDetailsResult } from './usePostDetails.types';
 export function usePostDetails(compositeId: string | null | undefined): UsePostDetailsResult {
   const { data, isLoading } = useLocalFirstQuery<Core.EnrichedPostDetails>({
     queryFn: () => Core.PostController.getDetails({ compositeId: compositeId! }),
-    fetchFn: () => Core.PostController.getOrFetch({ compositeId: compositeId! }),
+    fetchFn: () => Core.PostController.fetch({ compositeId: compositeId! }),
     deps: [compositeId],
     enabled: !!compositeId,
   });

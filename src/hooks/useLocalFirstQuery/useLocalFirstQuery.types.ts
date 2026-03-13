@@ -12,10 +12,15 @@ export interface UseLocalFirstQueryParams<T> {
   queryFn: () => Promise<T | null>;
 
   /**
-   * Network fetch function — runs inside `useEffect`.
-   * Should call a `getOrFetch*` controller method that persists to IndexedDB.
+   * Network fetch function — runs inside `useEffect` only on cache miss (`data === null`).
+   * Should call a `fetch*` controller method — network-only, no local read — that
+   * fetches from Nexus and persists to IndexedDB.
    * The return value is ignored — the write to IndexedDB is what triggers
    * `useLiveQuery` to re-fire and pick up the new data.
+   *
+   * The hook skips calling this function when:
+   * - `data === undefined` (useLiveQuery hasn't resolved yet)
+   * - `data !== null` (cache hit — data already exists locally)
    */
   fetchFn: () => Promise<unknown>;
 

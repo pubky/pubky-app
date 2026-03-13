@@ -36,6 +36,14 @@ export class UserController {
   }
 
   /**
+   * Fetch user counts from Nexus and persist locally (network-only, no local read).
+   * Use instead of `getOrFetchCounts` when the caller already knows counts are not cached.
+   */
+  static async fetchCounts(params: Core.TReadProfileParams): Promise<Core.NexusUserCounts | null> {
+    return await Core.UserApplication.fetchCounts(params);
+  }
+
+  /**
    * Get multiple user counts from local database (bulk operation).
    * This is a read-only operation that queries the local cache.
    */
@@ -107,11 +115,27 @@ export class UserController {
   }
 
   /**
+   * Fetch full user entity from Nexus batch API and persist locally (network-only, no local read).
+   * Use instead of `getOrFetch` when the caller already knows the user is not cached.
+   */
+  static async fetch(params: Core.TReadProfileParams): Promise<Core.NexusUserDetails | null> {
+    return await Core.UserApplication.fetch(params);
+  }
+
+  /**
    * Get user details from local database or fetch from Nexus API
    * This is a read-only operation that queries the local cache
    */
   static async getOrFetchDetails(param: Core.TReadProfileParams): Promise<Core.NexusUserDetails | null> {
     return await Core.UserApplication.getOrFetchDetails(param);
+  }
+
+  /**
+   * Fetch user details from Nexus and persist locally (network-only, no local read).
+   * Use instead of `getOrFetchDetails` when the caller already knows the user is not cached.
+   */
+  static async fetchDetails(param: Core.TReadProfileParams): Promise<Core.NexusUserDetails | null> {
+    return await Core.UserApplication.fetchDetails(param);
   }
 
   /**
