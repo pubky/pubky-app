@@ -56,14 +56,14 @@ export function LanguageSelector() {
   const router = useRouter();
   // Use server locale as source of truth
   const serverLocale = useLocale();
-  const { setLanguage } = Core.useSettingsStore();
   const isMobile = Hooks.useIsMobile();
+  const { setLanguage } = Hooks.useSettingsActions();
   const [isOpen, setIsOpen] = React.useState(false);
 
   // Sync store with server locale on mount (one-way sync: server -> client)
   React.useEffect(() => {
-    setLanguage(serverLocale);
-  }, [serverLocale, setLanguage]);
+    Core.useSettingsStore.getState().setLanguage(serverLocale);
+  }, [serverLocale]);
 
   const handleSelect = (code: string) => {
     // Prevent same language click
