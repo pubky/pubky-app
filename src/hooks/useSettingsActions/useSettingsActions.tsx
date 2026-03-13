@@ -31,9 +31,11 @@ export function useSettingsActions(): UseSettingsActionsResult {
     try {
       await action();
     } catch (err) {
-      // No Logger.error in catch — already logged via: SettingsController -> HomeserverService -> Err.* -> Logger.error (libs/error/error.factories.ts)
+      // No rethrow — callers fire-and-forget, so rethrowing would cause unhandled rejections.
+      // No toast — local-first: settings are persisted locally (Zustand + localStorage) before
+      // homeserver sync, so the UI already reflects the change. Failed syncs retry on next bootstrap.
+      // Already logged upstream: SettingsController -> HomeserverService -> Err.* -> Logger.error
       setError(isAppError(err) ? err.message : 'Failed to update settings');
-      throw err;
     }
   };
 

@@ -83,7 +83,7 @@ describe('useSettingsActions', () => {
     expect(mockSettingsController.reset).toHaveBeenCalled();
   });
 
-  it('sets error and rethrows on failure', async () => {
+  it('sets error on failure with AppError message', async () => {
     const error = new Error('sync failed');
     mockSettingsController.setNotificationPreference.mockRejectedValue(error);
     mockIsAppError.mockReturnValue(true);
@@ -91,11 +91,7 @@ describe('useSettingsActions', () => {
     const { result } = renderHook(() => useSettingsActions());
 
     await act(async () => {
-      try {
-        await result.current.setNotificationPreference('follow', true);
-      } catch {
-        // swallow to allow state update assertions
-      }
+      await result.current.setNotificationPreference('follow', true);
     });
 
     await waitFor(() => {
@@ -110,11 +106,7 @@ describe('useSettingsActions', () => {
     const { result } = renderHook(() => useSettingsActions());
 
     await act(async () => {
-      try {
-        await result.current.setBlurCensored(true);
-      } catch {
-        // swallow
-      }
+      await result.current.setBlurCensored(true);
     });
 
     await waitFor(() => {
@@ -128,11 +120,7 @@ describe('useSettingsActions', () => {
     const { result } = renderHook(() => useSettingsActions());
 
     await act(async () => {
-      try {
-        await result.current.setShowConfirm(true);
-      } catch {
-        // swallow
-      }
+      await result.current.setShowConfirm(true);
     });
 
     await waitFor(() => {
