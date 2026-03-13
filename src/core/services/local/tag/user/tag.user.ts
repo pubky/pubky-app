@@ -4,15 +4,15 @@ import { DatabaseErrorCode, Err, ErrorService } from '@/libs';
 export class LocalUserTagService {
   private static readonly TAG_TABLES = [Core.UserTagsModel.table, Core.UserCountsModel.table] as const;
 
-  static async create({ taggerId, taggedId, label }: Core.TLocalTagParams) {
+  static async create({ taggerId, taggedId, label }: Core.TLocalTagParams): Promise<boolean> {
     try {
-      await Core.db.transaction('rw', this.TAG_TABLES, async () => {
+      return await Core.db.transaction('rw', this.TAG_TABLES, async () => {
         const userTagsModel = await Core.UserTagsModel.getOrCreate<Core.Pubky, Core.UserTagsModelSchema>(taggedId);
         const tagExists = userTagsModel.addTagger(label, taggerId);
 
         // Idempotent: user already tagged this user with this label
         if (tagExists === null) {
-          return;
+          return false;
         }
         await Promise.all([
           this.saveUserTagsModel(taggedId, userTagsModel),
@@ -22,6 +22,7 @@ export class LocalUserTagService {
             countChanges: { tags: 1, unique_tags: !tagExists ? 1 : undefined },
           }),
         ]);
+        return true;
       });
     } catch (error) {
       throw Err.database(DatabaseErrorCode.WRITE_FAILED, 'Failed to create user tag', {

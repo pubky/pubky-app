@@ -15,9 +15,9 @@ import { TAGS_PER_PAGE } from './usePostTags.constants';
  * On mount, fetches the first page of tags from Nexus and merges into IndexedDB
  * so that tags from other users are visible (not just locally-created ones).
  *
- * The TagController.commitCreate/commitDelete methods follow local-first pattern:
- * they update IndexedDB first, then sync to server.
- * This means useLiveQuery will react immediately to changes.
+ * The TagController.commitCreate/commitDelete methods use local-first writes with
+ * compensation rollback, so useLiveQuery reacts immediately and failed homeserver
+ * writes are reverted back out of IndexedDB.
  */
 export function usePostTags(postId: string | null | undefined, options: UsePostTagsOptions = {}): UsePostTagsResult {
   const { viewerId: customViewerId } = options;
