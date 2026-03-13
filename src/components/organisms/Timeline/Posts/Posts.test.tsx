@@ -37,10 +37,6 @@ vi.mock('@/atoms', () => ({
 
 vi.mock('@/molecules', () => ({
   TimelineLoading: () => <div data-testid="timeline-loading">Loading...</div>,
-  TimelineInitialError: ({ message }: { message: string }) => (
-    <div data-testid="timeline-initial-error">Error: {message}</div>
-  ),
-  TimelineEmpty: () => <div data-testid="timeline-empty">No posts</div>,
   TimelineLoadingMore: () => <div data-testid="timeline-loading-more">Loading more...</div>,
   TimelineError: ({ message }: { message: string }) => <div data-testid="timeline-error">Error: {message}</div>,
   TimelineEndMessage: () => <div data-testid="timeline-end-message">End of timeline</div>,

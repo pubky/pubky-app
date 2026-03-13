@@ -25,6 +25,12 @@ cp .env.example .env
 
 See [docs/environment.md](./docs/environment.md) for more details.
 
+## Common Workflows
+
+- Check architecture and coding conventions: [docs/README.md](./docs/README.md)
+- Run local code review workflow (Cursor): use `/review` (defined in `.cursor/skills/code-review/SKILL.md`)
+- Follow commit message format: [docs/commit-message.md](./docs/commit-message.md)
+
 ## License
 
 This project is licensed under the MIT License.  

@@ -19,7 +19,7 @@ describe('FeedbackValidators', () => {
         const appError = error as AppError;
         expect(appError.category).toBe(ErrorCategory.Validation);
         expect(appError.code).toBe(ValidationErrorCode.MISSING_FIELD);
-        expect(appError.service).toBe(ErrorService.Local);
+        expect(appError.service).toBe(ErrorService.NextJsServer);
         expect(appError.operation).toBe('validatePubky');
         expect(appError.context).toEqual({ field: 'pubky' });
         expect(appError.message).toBe('Pubky is required and must be a non-empty string');
@@ -54,7 +54,7 @@ describe('FeedbackValidators', () => {
         const appError = error as AppError;
         expect(appError.category).toBe(ErrorCategory.Validation);
         expect(appError.code).toBe(ValidationErrorCode.MISSING_FIELD);
-        expect(appError.service).toBe(ErrorService.Local);
+        expect(appError.service).toBe(ErrorService.NextJsServer);
         expect(appError.operation).toBe('validateComment');
         expect(appError.context).toEqual({ field: 'comment' });
         expect(appError.message).toBe('Comment is required and must be a non-empty string');
@@ -89,7 +89,7 @@ describe('FeedbackValidators', () => {
         const appError = error as AppError;
         expect(appError.category).toBe(ErrorCategory.Validation);
         expect(appError.code).toBe(ValidationErrorCode.INVALID_INPUT);
-        expect(appError.service).toBe(ErrorService.Local);
+        expect(appError.service).toBe(ErrorService.NextJsServer);
         expect(appError.operation).toBe('validateComment');
         expect(appError.context).toEqual({
           field: 'comment',
@@ -116,7 +116,7 @@ describe('FeedbackValidators', () => {
         const appError = error as AppError;
         expect(appError.category).toBe(ErrorCategory.Validation);
         expect(appError.code).toBe(ValidationErrorCode.MISSING_FIELD);
-        expect(appError.service).toBe(ErrorService.Local);
+        expect(appError.service).toBe(ErrorService.NextJsServer);
         expect(appError.operation).toBe('validateName');
         expect(appError.context).toEqual({ field: 'name' });
         expect(appError.message).toBe('Name is required and must be a non-empty string');
