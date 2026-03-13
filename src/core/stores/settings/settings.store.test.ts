@@ -275,7 +275,7 @@ describe('SettingsStore', () => {
       expect(afterReset.muted).toEqual([]);
       expect(afterReset.language).toBe('en');
       expect(afterReset.version).toBe(1); // Reset to initial
-      expect(afterReset.updatedAt).toBe(settingsInitialState.updatedAt); // Reset to initial
+      expect(afterReset.updatedAt).toBeGreaterThanOrEqual(settingsInitialState.updatedAt); // Fresh timestamp on reset
     });
   });
 
