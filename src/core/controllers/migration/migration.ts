@@ -11,7 +11,8 @@ export class MigrationController {
    * then applies settings to the Zustand store (state management stays in Controller layer).
    */
   static async resync(pubky: Core.Pubky): Promise<void> {
-    const remoteSettings = await Core.MigrationApplication.resync(pubky);
+    const localSettings = Core.SettingsNormalizer.extractState(Core.useSettingsStore.getState());
+    const remoteSettings = await Core.MigrationApplication.resync(pubky, localSettings);
 
     if (remoteSettings) {
       Core.useSettingsStore.getState().loadFromHomeserver(remoteSettings);

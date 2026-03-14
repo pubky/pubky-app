@@ -22,26 +22,30 @@ describe('MigrationController', () => {
   });
 
   describe('resync', () => {
-    it('should call MigrationApplication.resync and apply settings to store when settings exist', async () => {
-      const mockSettings = { version: 1, updatedAt: 123 } as Core.SettingsState;
-      const resyncSpy = vi.spyOn(Core.MigrationApplication, 'resync').mockResolvedValue(mockSettings);
+    it('should call MigrationApplication.resync with local settings and apply remote settings to store', async () => {
+      const mockLocalSettings = { version: 5, updatedAt: 500 } as Core.SettingsState;
+      const mockRemoteSettings = { version: 6, updatedAt: 600 } as Core.SettingsState;
+      const resyncSpy = vi.spyOn(Core.MigrationApplication, 'resync').mockResolvedValue(mockRemoteSettings);
       const loadFromHomeserverSpy = vi.fn();
       vi.spyOn(Core.useSettingsStore, 'getState').mockReturnValue({
         loadFromHomeserver: loadFromHomeserverSpy,
       } as unknown as ReturnType<typeof Core.useSettingsStore.getState>);
+      vi.spyOn(Core.SettingsNormalizer, 'extractState').mockReturnValue(mockLocalSettings);
 
       await MigrationController.resync(TEST_PUBKY);
 
-      expect(resyncSpy).toHaveBeenCalledExactlyOnceWith(TEST_PUBKY);
-      expect(loadFromHomeserverSpy).toHaveBeenCalledExactlyOnceWith(mockSettings);
+      expect(resyncSpy).toHaveBeenCalledExactlyOnceWith(TEST_PUBKY, mockLocalSettings);
+      expect(loadFromHomeserverSpy).toHaveBeenCalledExactlyOnceWith(mockRemoteSettings);
     });
 
     it('should not apply settings to store when MigrationApplication.resync returns null', async () => {
+      const mockLocalSettings = { version: 5, updatedAt: 500 } as Core.SettingsState;
       vi.spyOn(Core.MigrationApplication, 'resync').mockResolvedValue(null);
       const loadFromHomeserverSpy = vi.fn();
       vi.spyOn(Core.useSettingsStore, 'getState').mockReturnValue({
         loadFromHomeserver: loadFromHomeserverSpy,
       } as unknown as ReturnType<typeof Core.useSettingsStore.getState>);
+      vi.spyOn(Core.SettingsNormalizer, 'extractState').mockReturnValue(mockLocalSettings);
 
       await MigrationController.resync(TEST_PUBKY);
 

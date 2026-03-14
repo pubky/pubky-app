@@ -1,6 +1,5 @@
 import { Logger } from '@/libs/logger';
 import * as Core from '@/core';
-import { settingsInitialState } from '@/core/stores/settings/settings.types';
 
 /**
  * MigrationApplication orchestrates post-DB-recreation re-sync of critical homeserver data.
@@ -18,14 +17,14 @@ export class MigrationApplication {
    *
    * @returns Remote settings if available (for Controller to apply to Zustand store)
    */
-  static async resync(pubky: Core.Pubky): Promise<Core.SettingsState | null> {
+  static async resync(pubky: Core.Pubky, localSettings: Core.SettingsState): Promise<Core.SettingsState | null> {
     Logger.info('Starting post-DB-recreation re-sync', { pubky });
 
     // ADR-0009: MigrationApplication → leaf Applications (depth 1)
     const [, , remoteSettingsResult] = await Promise.allSettled([
       Core.MuteApplication.fetchMutedUsers(pubky),
       Core.FeedApplication.fetchFeeds(pubky),
-      Core.SettingsApplication.initializeSettings(pubky, settingsInitialState),
+      Core.SettingsApplication.initializeSettings(pubky, localSettings),
     ]);
 
     Logger.info('Post-DB-recreation re-sync completed', { pubky });
