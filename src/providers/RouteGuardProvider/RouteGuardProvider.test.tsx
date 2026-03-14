@@ -35,6 +35,7 @@ vi.mock('next/navigation', () => ({
 // Mock next-intl
 vi.mock('next-intl', () => ({
   useTranslations: () => (key: string) => key,
+  useLocale: () => 'en',
 }));
 
 // Mock @/hooks
@@ -87,6 +88,7 @@ vi.mock('@/core', () => ({
       getState: () => ({ reset: mocks.resetMigrationStore, wasDbReset: mocks.wasDbReset }),
     },
   ),
+  useSettingsStore: (selector: (state: Record<string, unknown>) => unknown) => selector({ language: 'en' }),
   AuthController: {
     restorePersistedSession: vi.fn().mockResolvedValue(true),
   },
