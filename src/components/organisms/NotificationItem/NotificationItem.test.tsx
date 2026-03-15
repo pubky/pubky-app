@@ -67,8 +67,8 @@ vi.mock('@/core', async (importOriginal) => {
       readPostDetails: vi.fn(() => Promise.resolve(null)),
     },
     PostController: {
-      get getOrFetchDetails() {
-        return mockGetOrFetchDetails;
+      get getOrFetch() {
+        return mockGetOrFetch;
       },
     },
     FileController: {
@@ -97,7 +97,7 @@ vi.mock('@/organisms', () => ({
 
 // Mock molecules
 const mockToast = vi.fn();
-const mockGetOrFetchDetails = vi.fn(() => Promise.resolve(null));
+const mockGetOrFetch = vi.fn(() => Promise.resolve(null));
 vi.mock('@/molecules', () => ({
   PostTag: ({ label, onClick }: { label: string; onClick?: (e: React.MouseEvent) => void }) => (
     <span data-testid="post-tag" onClick={onClick}>
@@ -138,8 +138,8 @@ describe('NotificationItem', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     mockToast.mockClear();
-    mockGetOrFetchDetails.mockClear();
-    mockGetOrFetchDetails.mockResolvedValue(null);
+    mockGetOrFetch.mockClear();
+    mockGetOrFetch.mockResolvedValue(null);
     mockIsPostDeleted.mockReturnValue(false);
   });
 
@@ -294,7 +294,7 @@ describe('NotificationItem', () => {
       body: '## Introduction\n\nArticle body content here in **Markdown** format.',
     });
 
-    mockGetOrFetchDetails.mockResolvedValue({
+    mockGetOrFetch.mockResolvedValue({
       kind: 'long',
       content: articleContent,
     });
@@ -319,7 +319,7 @@ describe('NotificationItem', () => {
   it('falls back to raw content and shows toast when article JSON parsing fails', async () => {
     const invalidJson = 'not valid json content';
 
-    mockGetOrFetchDetails.mockResolvedValue({
+    mockGetOrFetch.mockResolvedValue({
       kind: 'long',
       content: invalidJson,
     });
@@ -344,7 +344,7 @@ describe('NotificationItem', () => {
   });
 
   it('uses content directly for short posts', async () => {
-    mockGetOrFetchDetails.mockResolvedValue({
+    mockGetOrFetch.mockResolvedValue({
       kind: 'short',
       content: 'This is a short post content',
     });
@@ -368,7 +368,7 @@ describe('NotificationItem', () => {
 
   it('shows deleted message when post is deleted', async () => {
     mockIsPostDeleted.mockReturnValue(true);
-    mockGetOrFetchDetails.mockResolvedValue({
+    mockGetOrFetch.mockResolvedValue({
       kind: 'short',
       content: '[DELETED]',
     });
