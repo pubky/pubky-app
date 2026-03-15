@@ -174,6 +174,38 @@ describe('TimelineFeedContent', () => {
     });
   });
 
+  describe('Resolved content sync', () => {
+    it('syncs resolved content back to the home store for home feeds', () => {
+      Core.useHomeStore.setState({ content: Core.CONTENT.SHORT });
+
+      render(
+        <TimelineFeedWithStream
+          streamId={Core.PostStreamTypes.TIMELINE_ALL_ALL}
+          variant={TIMELINE_FEED_VARIANT.HOME}
+          tagsLayout="inline"
+          resolvedContent={Core.CONTENT.ALL}
+        />,
+      );
+
+      expect(Core.useHomeStore.getState().content).toBe(Core.CONTENT.ALL);
+    });
+
+    it('does not sync resolved content back to the home store for custom feeds', () => {
+      Core.useHomeStore.setState({ content: Core.CONTENT.SHORT });
+
+      render(
+        <TimelineFeedWithStream
+          streamId={'timeline:all:all:all' as Core.PostStreamId}
+          variant={TIMELINE_FEED_VARIANT.CUSTOM}
+          tagsLayout="inline"
+          resolvedContent={Core.CONTENT.ALL}
+        />,
+      );
+
+      expect(Core.useHomeStore.getState().content).toBe(Core.CONTENT.SHORT);
+    });
+  });
+
   describe('Pull to refresh', () => {
     it('enables pull-to-refresh for home variant', () => {
       render(

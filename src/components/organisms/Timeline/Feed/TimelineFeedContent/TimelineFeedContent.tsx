@@ -77,6 +77,8 @@ function TimelineFeedContent({
 }: TimelineFeedContentProps) {
   const { content, setContent } = Core.useHomeStore();
   const isVisualActive = layoutResolution?.isVisualActive ?? false;
+  const shouldSyncResolvedContent =
+    variant === TIMELINE_FEED_VARIANT.HOME || variant === TIMELINE_FEED_VARIANT.BOOKMARKS;
   const {
     postIds: rawPostIds,
     loading,
@@ -117,9 +119,10 @@ function TimelineFeedContent({
   }, [mutedUserIdSet, rawPostIds, removePosts, variant]);
 
   useEffect(() => {
+    if (!shouldSyncResolvedContent) return;
     if (resolvedContent === undefined || resolvedContent === content) return;
     setContent(resolvedContent);
-  }, [content, resolvedContent, setContent]);
+  }, [content, resolvedContent, setContent, shouldSyncResolvedContent]);
 
   const contextValue: TimelineFeedContextValue = {
     prependPosts,

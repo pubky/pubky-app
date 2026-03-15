@@ -66,14 +66,8 @@ function HomeTimelineFeed({ children }: { children?: TimelineFeedProps['children
 }
 
 function CustomTimelineFeed({ children }: { children?: TimelineFeedProps['children'] }) {
-  const content = Core.useHomeStore((state) => state.content);
   const streamId = Hooks.useCustomStreamId();
   const layoutResolution = Hooks.useFeedLayoutResolution(TIMELINE_FEED_VARIANT.CUSTOM);
-  const resolvedContent = resolveVisualFeedContent({
-    content,
-    variant: TIMELINE_FEED_VARIANT.CUSTOM,
-    isVisualActive: layoutResolution.isVisualActive,
-  });
   const tagsLayout = getTagsLayout(layoutResolution.effectiveLayout);
 
   return (
@@ -82,7 +76,6 @@ function CustomTimelineFeed({ children }: { children?: TimelineFeedProps['childr
       variant={TIMELINE_FEED_VARIANT.CUSTOM}
       tagsLayout={tagsLayout}
       layoutResolution={layoutResolution}
-      resolvedContent={resolvedContent}
     >
       {children}
     </TimelineFeedWithStream>
