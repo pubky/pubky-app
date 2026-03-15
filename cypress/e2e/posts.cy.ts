@@ -223,6 +223,51 @@ describe('posts', () => {
     cy.get('[data-cy="post-menu-action-delete"]').should('not.exist');
   });
 
+  it('can report a post', () => {
+    const canReportPostContent = `This post will be reported! ${Date.now()}`;
+    const cannotReportPostContent = `This post will not be reported! ${Date.now()}`;
+    const reportReason = 'E2e test report reason.';
+
+    createQuickPost(canReportPostContent);
+    cy.signOut(HasBackedUp.Yes);
+    cy.onboardAsNewUser('Reporter', 'I can report a post.', [BackupType.EncryptedFile]);
+
+    createQuickPost(cannotReportPostContent);
+
+    cy.findFirstPostInFeedFiltered(cannotReportPostContent, CheckForNewPosts.No, WaitForNewPosts.Yes).within(() => {
+      cy.get('[data-cy="post-more-btn"]').click();
+    });
+    cy.get('[data-cy="post-menu-action-report"]').should('not.exist');
+    // click copy link option to dismiss post menu
+    cy.get('[data-cy="post-menu-action-copy-link"]').click();
+
+    cy.findFirstPostInFeedFiltered(canReportPostContent, CheckForNewPosts.Yes).within(() => {
+      cy.get('[data-cy="post-more-btn"]').click();
+    });
+    cy.get('[data-cy="post-menu-action-report"]').click();
+
+    cy.get('[data-cy="dialog-content"]').should('be.visible');
+    cy.get('[data-cy="report-issue-harassment"]').click();
+    cy.get('[data-cy="report-issue-step-next"]').click();
+
+    cy.get('[data-cy="report-reason-input"]').type(reportReason);
+    cy.intercept('POST', '/api/report', { statusCode: 200 }).as('reportPost');
+    cy.get('[data-cy="report-reason-step-submit"]').click();
+
+    cy.wait('@reportPost');
+    cy.get('@reportPost').its('response.statusCode').should('eq', 200);
+
+    cy.get('[data-cy="dialog-content"]')
+      .should('be.visible')
+      .within(() => {
+        cy.contains('Report Sent').should('be.visible');
+        cy.contains('Your report will be reviewed soon. Thank you.').should('be.visible');
+      });
+
+    cy.get('[data-cy="report-success-close"]').click();
+    cy.get('[data-cy="dialog-content"]').should('not.exist');
+  });
+
   it('can tag whilst creating post', () => {
     const postContent = `I can post with tags! ${Date.now()}`;
     const tags = ['alpacas', 'llamas', 'vicuñas'];
