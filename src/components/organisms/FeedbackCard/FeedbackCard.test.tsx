@@ -21,6 +21,7 @@ vi.mock('@/core', async (importOriginal) => {
     },
     UserController: {
       getDetails: vi.fn().mockResolvedValue(null),
+      getOrFetchDetails: vi.fn().mockResolvedValue(null),
     },
     FileController: {
       getAvatarUrl: vi.fn((pubky: string) => `https://cdn.example.com/avatar/${pubky}`),
@@ -43,6 +44,7 @@ vi.mock('@/organisms', async (importOriginal) => {
   const actual = await importOriginal<typeof import('@/organisms')>();
   return {
     ...actual,
+    DialogFeedback: () => <div data-testid="dialog-feedback" />,
     AvatarWithFallback: ({
       avatarUrl,
       name,
