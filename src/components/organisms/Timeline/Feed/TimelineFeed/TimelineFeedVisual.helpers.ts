@@ -60,6 +60,8 @@ export function resolveVisualFeedContent({
     return content;
   }
 
+  // Only home-store-backed interactive feeds coerce unsupported content in visual mode.
+  // Custom feeds are read-only and must normalize their persisted config in their own path.
   if (!VISUAL_INTERACTIVE_CONTENT_VARIANTS.has(variant)) {
     return content;
   }

@@ -26,6 +26,7 @@ export * from './useTagged';
 export * from './useOgMetadata';
 export * from './useNotifications';
 export * from './useStreamPagination';
+export * from './useSyncInteractiveVisualContent';
 export * from './usePostMenuActions';
 export * from './useProfileMenuActions';
 export * from './usePostNavigation';

@@ -49,6 +49,7 @@ function HomeTimelineFeed({ children }: { children?: TimelineFeedProps['children
     variant: TIMELINE_FEED_VARIANT.HOME,
     isVisualActive: layoutResolution.isVisualActive,
   });
+  Hooks.useSyncInteractiveVisualContent(resolvedContent);
   const streamId = Hooks.useStreamIdFromFilters(resolvedContent);
   const tagsLayout = getTagsLayout(layoutResolution.effectiveLayout);
 
@@ -58,7 +59,6 @@ function HomeTimelineFeed({ children }: { children?: TimelineFeedProps['children
       variant={TIMELINE_FEED_VARIANT.HOME}
       tagsLayout={tagsLayout}
       layoutResolution={layoutResolution}
-      resolvedContent={resolvedContent}
     >
       {children}
     </TimelineFeedWithStream>
@@ -90,6 +90,7 @@ function BookmarksTimelineFeed({ children }: { children?: TimelineFeedProps['chi
     variant: TIMELINE_FEED_VARIANT.BOOKMARKS,
     isVisualActive: layoutResolution.isVisualActive,
   });
+  Hooks.useSyncInteractiveVisualContent(resolvedContent);
   const streamId = Hooks.useBookmarksStreamId(resolvedContent);
   const tagsLayout = getTagsLayout(layoutResolution.effectiveLayout);
 
@@ -99,7 +100,6 @@ function BookmarksTimelineFeed({ children }: { children?: TimelineFeedProps['chi
       variant={TIMELINE_FEED_VARIANT.BOOKMARKS}
       tagsLayout={tagsLayout}
       layoutResolution={layoutResolution}
-      resolvedContent={resolvedContent}
     >
       {children}
     </TimelineFeedWithStream>

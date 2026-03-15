@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useMemo } from 'react';
+import { useEffect } from 'react';
 import { TIMELINE_FEED_VARIANT } from '@/config';
 import * as Core from '@/core';
 import * as Molecules from '@/molecules';
@@ -17,7 +17,6 @@ interface TimelineFeedContentProps {
   variant: TimelineFeedProps['variant'];
   tagsLayout: TagsLayout;
   layoutResolution?: Hooks.FeedLayoutResolution;
-  resolvedContent?: Core.ContentType;
   children?: TimelineFeedProps['children'];
 }
 
@@ -26,7 +25,6 @@ interface TimelineFeedWithStreamProps {
   variant: TimelineFeedProps['variant'];
   tagsLayout: TagsLayout;
   layoutResolution?: Hooks.FeedLayoutResolution;
-  resolvedContent?: Core.ContentType;
   children?: TimelineFeedProps['children'];
 }
 
@@ -41,7 +39,6 @@ export function TimelineFeedWithStream({
   variant,
   tagsLayout,
   layoutResolution,
-  resolvedContent,
   children,
 }: TimelineFeedWithStreamProps) {
   if (!streamId) {
@@ -54,7 +51,6 @@ export function TimelineFeedWithStream({
       variant={variant}
       tagsLayout={tagsLayout}
       layoutResolution={layoutResolution}
-      resolvedContent={resolvedContent}
     >
       {children}
     </TimelineFeedContent>
@@ -67,18 +63,8 @@ export function TimelineFeedWithStream({
  * Core component that manages stream pagination, muting, pull-to-refresh,
  * and provides the TimelineFeedContext to children.
  */
-function TimelineFeedContent({
-  streamId,
-  variant,
-  tagsLayout,
-  layoutResolution,
-  resolvedContent,
-  children,
-}: TimelineFeedContentProps) {
-  const { content, setContent } = Core.useHomeStore();
+function TimelineFeedContent({ streamId, variant, tagsLayout, layoutResolution, children }: TimelineFeedContentProps) {
   const isVisualActive = layoutResolution?.isVisualActive ?? false;
-  const shouldSyncResolvedContent =
-    variant === TIMELINE_FEED_VARIANT.HOME || variant === TIMELINE_FEED_VARIANT.BOOKMARKS;
   const {
     postIds: rawPostIds,
     loading,
@@ -93,7 +79,7 @@ function TimelineFeedContent({
     streamId,
   });
 
-  const postIds = useMemo(() => [...new Set(rawPostIds)], [rawPostIds]);
+  const postIds = [...new Set(rawPostIds)];
 
   const { unreadPostIds } = Hooks.useUnreadPosts({ streamId });
   const { mutedUserIdSet } = Hooks.useMutedUsers();
@@ -117,12 +103,6 @@ function TimelineFeedContent({
       removePosts(postIdsToRemove);
     }
   }, [mutedUserIdSet, rawPostIds, removePosts, variant]);
-
-  useEffect(() => {
-    if (!shouldSyncResolvedContent) return;
-    if (resolvedContent === undefined || resolvedContent === content) return;
-    setContent(resolvedContent);
-  }, [content, resolvedContent, setContent, shouldSyncResolvedContent]);
 
   const contextValue: TimelineFeedContextValue = {
     prependPosts,

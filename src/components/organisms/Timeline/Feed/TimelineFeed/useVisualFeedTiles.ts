@@ -178,7 +178,7 @@ export function useVisualFeedTiles({ postIds, hasMore }: { postIds: string[]; ha
     void Promise.all(
       requestedPostIds.map(async (postId) => {
         try {
-          await Core.PostController.getOrFetchDetails({ compositeId: postId });
+          await Core.PostController.getOrFetch({ compositeId: postId });
         } catch (error) {
           Libs.Logger.error('[VisualFeed] Failed to ensure post details', {
             postId,

@@ -347,6 +347,30 @@ describe('TimelineFeed', () => {
         }),
       );
     });
+
+    it('should persist visual content coercion for bookmarks feeds', async () => {
+      Core.useHomeStore.setState({ content: Core.CONTENT.SHORT });
+      mockUseBookmarksStreamId.mockImplementation((contentOverride?: Core.ContentType) => {
+        return contentOverride === Core.CONTENT.ALL
+          ? Core.PostStreamTypes.TIMELINE_BOOKMARKS_ALL
+          : Core.PostStreamTypes.TIMELINE_BOOKMARKS_SHORT;
+      });
+      mockUseFeedLayoutResolution.mockReturnValue({
+        requestedLayout: 'visual',
+        effectiveLayout: 'visual',
+        isVisualRequested: true,
+        isVisualActive: true,
+        isPhoneViewport: false,
+      });
+
+      render(<TimelineFeed variant={TIMELINE_FEED_VARIANT.BOOKMARKS} />);
+
+      expect(mockUseBookmarksStreamId).toHaveBeenCalledWith(Core.CONTENT.ALL);
+
+      await waitFor(() => {
+        expect(Core.useHomeStore.getState().content).toBe(Core.CONTENT.ALL);
+      });
+    });
   });
 
   describe('Custom Variant', () => {
@@ -367,6 +391,23 @@ describe('TimelineFeed', () => {
           disabled: false,
         }),
       );
+    });
+
+    it('should not sync custom feeds into the home content store', async () => {
+      Core.useHomeStore.setState({ content: Core.CONTENT.SHORT });
+      mockUseFeedLayoutResolution.mockReturnValue({
+        requestedLayout: 'visual',
+        effectiveLayout: 'visual',
+        isVisualRequested: true,
+        isVisualActive: true,
+        isPhoneViewport: false,
+      });
+
+      render(<TimelineFeed variant={TIMELINE_FEED_VARIANT.CUSTOM} />);
+
+      await waitFor(() => {
+        expect(Core.useHomeStore.getState().content).toBe(Core.CONTENT.SHORT);
+      });
     });
   });
 

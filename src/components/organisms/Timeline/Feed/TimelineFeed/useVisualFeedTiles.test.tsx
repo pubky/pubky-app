@@ -5,10 +5,10 @@ import { resolvePreferredVisualTileSize } from './TimelineFeedVisual.helpers';
 import type { VisualTile } from './TimelineFeedVisual.types';
 import { resetVisualTileCaches } from './TimelineFeedVisualMedia.utils';
 
-const { mockUseLiveQuery, mockFetchFiles, mockGetOrFetchDetails } = vi.hoisted(() => ({
+const { mockUseLiveQuery, mockFetchFiles, mockGetOrFetch } = vi.hoisted(() => ({
   mockUseLiveQuery: vi.fn(),
   mockFetchFiles: vi.fn(),
-  mockGetOrFetchDetails: vi.fn(),
+  mockGetOrFetch: vi.fn(),
 }));
 
 function createPendingTile({
@@ -71,7 +71,7 @@ vi.mock('@/core', async () => {
     useLocalFilesStore: (selector: (state: { posts: Record<string, unknown[]> }) => unknown) => selector({ posts: {} }),
     PostController: {
       ...actual.PostController,
-      getOrFetchDetails: (...args: unknown[]) => mockGetOrFetchDetails(...args),
+      getOrFetch: (...args: unknown[]) => mockGetOrFetch(...args),
     },
     FileController: {
       ...actual.FileController,
@@ -100,7 +100,7 @@ describe('useVisualFeedTiles', () => {
       missingFileUris: [],
     });
     mockFetchFiles.mockResolvedValue(undefined);
-    mockGetOrFetchDetails.mockResolvedValue(undefined);
+    mockGetOrFetch.mockResolvedValue(undefined);
   });
 
   afterEach(() => {
@@ -126,7 +126,7 @@ describe('useVisualFeedTiles', () => {
     renderHook(() => useVisualFeedTiles({ postIds: ['author:post-1', 'author:post-2'], hasMore: false }));
 
     await waitFor(() => {
-      expect(mockGetOrFetchDetails).toHaveBeenCalledTimes(2);
+      expect(mockGetOrFetch).toHaveBeenCalledTimes(2);
     });
   });
 
