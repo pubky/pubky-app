@@ -1,7 +1,7 @@
 'use client';
 
 import * as React from 'react';
-import * as ToastPrimitives from '@radix-ui/react-toast';
+import { Toast as ToastPrimitives } from 'radix-ui';
 import * as Libs from '@/libs';
 
 const ToastProvider = ToastPrimitives.Provider;
@@ -38,7 +38,7 @@ const Toast = React.forwardRef<
         'data-[state=closed]:animate-out',
         'data-[swipe=end]:animate-out',
         'data-[state=closed]:fade-out-80',
-        'data-[state=closed]:slide-out-to-right-full',
+        'data-[state=closed]:slide-out-to-bottom-full',
         'data-[state=open]:slide-in-from-bottom-full',
         'data-[state=open]:sm:slide-in-from-bottom-full',
         className,
@@ -56,7 +56,7 @@ const ToastAction = React.forwardRef<
   <ToastPrimitives.Action
     ref={ref}
     className={Libs.cn(
-      'group-[.destructive]:hover:text-destructive-foreground inline-flex h-8 shrink-0 cursor-pointer items-center justify-center rounded-md border bg-transparent px-3 text-sm font-medium ring-offset-background transition-colors group-[.destructive]:border-muted/40 hover:bg-secondary group-[.destructive]:hover:border-destructive/30 group-[.destructive]:hover:bg-destructive focus:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 group-[.destructive]:focus-visible:ring-destructive disabled:pointer-events-none disabled:opacity-50',
+      'inline-flex h-8 shrink-0 cursor-pointer items-center justify-center rounded-md border bg-transparent px-3 text-sm font-medium ring-offset-background transition-colors group-[.destructive]:border-muted/40 hover:bg-secondary group-[.destructive]:hover:border-destructive/30 group-[.destructive]:hover:bg-destructive group-[.destructive]:hover:text-destructive-foreground focus:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 group-[.destructive]:focus-visible:ring-destructive disabled:pointer-events-none disabled:opacity-50',
       className,
     )}
     {...props}

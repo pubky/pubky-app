@@ -1,6 +1,8 @@
 import { render, screen } from '@testing-library/react';
-import { describe, it, expect, vi } from 'vitest';
+import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { ContentLayout } from './ContentLayout';
+
+const mockUseCustomFeed = vi.fn();
 
 // Mock the home store
 vi.mock('@/core', () => ({
@@ -19,6 +21,13 @@ vi.mock('@/core', () => ({
     WIDE: 'wide',
     VISUAL: 'visual',
   },
+  pubkyLayoutToHomeLayout: vi.fn((layout: string) => layout),
+}));
+
+// Mock the hooks
+vi.mock('@/hooks', () => ({
+  useCustomFeed: () => mockUseCustomFeed(),
+  useIsMobile: () => false,
 }));
 
 // Mock the molecules
@@ -104,6 +113,10 @@ vi.mock('@/libs', async () => {
 });
 
 describe('ContentLayout', () => {
+  beforeEach(() => {
+    mockUseCustomFeed.mockReturnValue(undefined);
+  });
+
   it('renders with default props', () => {
     render(
       <ContentLayout>
@@ -216,6 +229,157 @@ describe('ContentLayout', () => {
     );
 
     expect(screen.queryByTestId('mobile-header')).not.toBeInTheDocument();
+  });
+});
+
+describe('ContentLayout - Custom Feed Layout Override', () => {
+  beforeEach(() => {
+    mockUseCustomFeed.mockReturnValue(undefined);
+  });
+
+  it('hides sidebars when custom feed layout is wide', () => {
+    mockUseCustomFeed.mockReturnValue({ layout: 'wide' });
+
+    render(
+      <ContentLayout
+        showLeftSidebar={true}
+        leftSidebarContent={<div data-testid="left-sidebar-content">Left Sidebar</div>}
+        showRightSidebar={true}
+        rightSidebarContent={<div data-testid="right-sidebar-content">Right Sidebar</div>}
+      >
+        <div>Test Content</div>
+      </ContentLayout>,
+    );
+
+    // Sidebars should be hidden in wide layout
+    expect(screen.queryByText('Left Sidebar')).not.toBeInTheDocument();
+    expect(screen.queryByText('Right Sidebar')).not.toBeInTheDocument();
+  });
+
+  it('shows ButtonFilters when custom feed layout is wide and drawer content exists', () => {
+    mockUseCustomFeed.mockReturnValue({ layout: 'wide' });
+
+    render(
+      <ContentLayout
+        showLeftSidebar={true}
+        leftDrawerContent={<div>Left Drawer</div>}
+        showRightSidebar={true}
+        rightDrawerContent={<div>Right Drawer</div>}
+      >
+        <div>Test Content</div>
+      </ContentLayout>,
+    );
+
+    expect(screen.getByTestId('button-filters-left')).toBeInTheDocument();
+    expect(screen.getByTestId('button-filters-right')).toBeInTheDocument();
+  });
+
+  it('keeps sidebars visible when custom feed layout is columns', () => {
+    mockUseCustomFeed.mockReturnValue({ layout: 'columns' });
+
+    render(
+      <ContentLayout
+        showLeftSidebar={true}
+        leftSidebarContent={<div data-testid="left-sidebar-content">Left Sidebar</div>}
+        showRightSidebar={true}
+        rightSidebarContent={<div data-testid="right-sidebar-content">Right Sidebar</div>}
+      >
+        <div>Test Content</div>
+      </ContentLayout>,
+    );
+
+    const leftElements = screen.queryAllByText('Left Sidebar');
+    expect(leftElements.length).toBeGreaterThan(0);
+    const rightElements = screen.queryAllByText('Right Sidebar');
+    expect(rightElements.length).toBeGreaterThan(0);
+  });
+
+  it('custom feed wide layout overrides home store columns layout', () => {
+    // Home store is 'columns' by default in mock, custom feed overrides to 'wide'
+    mockUseCustomFeed.mockReturnValue({ layout: 'wide' });
+
+    render(
+      <ContentLayout
+        showLeftSidebar={true}
+        leftSidebarContent={<div data-testid="left-sidebar-content">Left Sidebar</div>}
+        leftDrawerContent={<div>Left Drawer</div>}
+      >
+        <div>Test Content</div>
+      </ContentLayout>,
+    );
+
+    // Sidebar hidden because custom feed says wide, even though home store says columns
+    expect(screen.queryByText('Left Sidebar')).not.toBeInTheDocument();
+    // ButtonFilters shown because layout is wide
+    expect(screen.getByTestId('button-filters-left')).toBeInTheDocument();
+  });
+
+  it('does not show ButtonFilters when custom feed layout is wide but no drawer content', () => {
+    mockUseCustomFeed.mockReturnValue({ layout: 'wide' });
+
+    render(
+      <ContentLayout showLeftSidebar={true} showRightSidebar={true}>
+        <div>Test Content</div>
+      </ContentLayout>,
+    );
+
+    expect(screen.queryByTestId('button-filters-left')).not.toBeInTheDocument();
+    expect(screen.queryByTestId('button-filters-right')).not.toBeInTheDocument();
+  });
+
+  it('matches snapshot when custom feed layout is wide', () => {
+    mockUseCustomFeed.mockReturnValue({ layout: 'wide' });
+
+    const { container } = render(
+      <ContentLayout
+        showLeftSidebar={true}
+        leftSidebarContent={<div>Left Sidebar</div>}
+        leftDrawerContent={<div>Left Drawer</div>}
+        showRightSidebar={true}
+        rightSidebarContent={<div>Right Sidebar</div>}
+        rightDrawerContent={<div>Right Drawer</div>}
+      >
+        <div>Test Content</div>
+      </ContentLayout>,
+    );
+    expect(container).toMatchSnapshot();
+  });
+
+  it('matches snapshot when custom feed layout is columns', () => {
+    mockUseCustomFeed.mockReturnValue({ layout: 'columns' });
+
+    const { container } = render(
+      <ContentLayout
+        showLeftSidebar={true}
+        leftSidebarContent={<div>Left Sidebar</div>}
+        showRightSidebar={true}
+        rightSidebarContent={<div>Right Sidebar</div>}
+      >
+        <div>Test Content</div>
+      </ContentLayout>,
+    );
+    expect(container).toMatchSnapshot();
+  });
+
+  it('falls back to home store layout when no custom feed exists', () => {
+    mockUseCustomFeed.mockReturnValue(undefined);
+
+    render(
+      <ContentLayout
+        showLeftSidebar={true}
+        leftSidebarContent={<div data-testid="left-sidebar-content">Left Sidebar</div>}
+        showRightSidebar={true}
+        rightSidebarContent={<div data-testid="right-sidebar-content">Right Sidebar</div>}
+      >
+        <div>Test Content</div>
+      </ContentLayout>,
+    );
+
+    // Home store layout is 'columns', so sidebars should be visible
+    const leftElements = screen.queryAllByText('Left Sidebar');
+    expect(leftElements.length).toBeGreaterThan(0);
+    const rightElements = screen.queryAllByText('Right Sidebar');
+    expect(rightElements.length).toBeGreaterThan(0);
   });
 });
 

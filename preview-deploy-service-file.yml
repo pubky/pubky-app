@@ -1,0 +1,54 @@
+apiVersion: serving.knative.dev/v1
+kind: Service
+metadata:
+  name: SHOULD_BE_CHANGED
+  labels:
+    cloud.googleapis.com/location: europe-west6
+    run.googleapis.com/satisfiesPzs: 'true'
+    managed-by: github-actions
+  annotations:
+    run.googleapis.com/invoker-iam-disabled: 'true'
+
+spec:
+  template:
+    metadata:
+      labels:
+        run.googleapis.com/startupProbeType: Default
+      annotations:
+        autoscaling.knative.dev/maxScale: '2'
+        run.googleapis.com/container-dependencies: '{"nginx":["franky-preview-1"]}'
+        run.googleapis.com/cpu-throttling: 'true'
+        run.googleapis.com/startup-cpu-boost: 'true'
+        run.googleapis.com/sessionAffinity: 'true'
+    spec:
+      containerConcurrency: 80
+      timeoutSeconds: 300
+      containers:
+        - name: nginx
+          image: >-
+            europe-west6-docker.pkg.dev/infra-464608/synonym-private-repo/nginx-normilizer:latest
+          ports:
+            - name: http1
+              containerPort: 8080
+          resources:
+            limits:
+              cpu: 500m
+              memory: 256Mi
+          startupProbe:
+            timeoutSeconds: 240
+            periodSeconds: 240
+            failureThreshold: 1
+            tcpSocket:
+              port: 8080
+        - name: franky-preview-1
+          image: SHOULD_BE_UPDATED
+          resources:
+            limits:
+              cpu: '1'
+              memory: 512Mi
+          startupProbe:
+            timeoutSeconds: 240
+            periodSeconds: 240
+            failureThreshold: 1
+            tcpSocket:
+              port: 3000

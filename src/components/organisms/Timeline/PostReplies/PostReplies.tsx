@@ -4,7 +4,10 @@ import * as Atoms from '@/atoms';
 import * as Organisms from '@/organisms';
 import * as Hooks from '@/hooks';
 import * as Libs from '@/libs';
-import * as Types from './PostReplies.types';
+
+interface TimelinePostRepliesProps {
+  postId: string;
+}
 
 /**
  * TimelinePostReplies
@@ -16,7 +19,7 @@ import * as Types from './PostReplies.types';
  * Hidden for unauthenticated users following pubky-app pattern.
  */
 
-export function TimelinePostReplies({ postId }: Types.TimelinePostRepliesProps) {
+export function TimelinePostReplies({ postId }: TimelinePostRepliesProps) {
   const { isAuthenticated } = Hooks.useRequireAuth();
 
   // Check if parent post is deleted to determine replyability

@@ -8,6 +8,7 @@ import * as Libs from '@/libs';
 import * as App from '@/app';
 import * as Core from '@/core';
 import * as Hooks from '@/hooks';
+import { useTranslations } from 'next-intl';
 
 export interface MobileFooterProps {
   className?: string;
@@ -23,11 +24,14 @@ const FORCE_HOME_SCROLL_TOP_KEY = 'pubky:force-home-scroll-top';
  */
 export function MobileFooter({ className }: MobileFooterProps) {
   const pathname = usePathname();
+  const tCommon = useTranslations('common');
+
   const isAuthenticated = Core.useAuthStore((state) => Boolean(state.currentUserPubky));
   const { isPublicRoute } = Hooks.usePublicRoute();
   const { userDetails, currentUserPubky } = Hooks.useCurrentUserProfile();
   const unreadNotifications = Core.useNotificationStore((state) => state.selectUnread());
   const localAvatarUrl = Core.useLocalFilesStore((state) => state.profile);
+  const { isKeyboardVisible, keyboardOffset } = Hooks.useKeyboardOffset();
 
   const isActive = (path: string) => pathname === path;
 
@@ -54,7 +58,19 @@ export function MobileFooter({ className }: MobileFooterProps) {
 
   return (
     <div className={Libs.cn('flex justify-center pb-20 lg:hidden', className)}>
-      <div className="fixed bottom-0 z-40 flex w-full max-w-[380px] items-center justify-between overflow-x-auto bg-gradient-to-t from-background via-background/95 to-transparent px-3 py-4 sm:max-w-[600px] md:max-w-[720px]">
+      <div
+        className={Libs.cn(
+          'fixed bottom-0 z-40 flex w-full max-w-[380px] items-center justify-between overflow-x-auto bg-gradient-to-t from-background via-background/95 to-transparent px-3 py-4 sm:max-w-[600px] md:max-w-[720px]',
+          isKeyboardVisible && 'transition-transform duration-75',
+        )}
+        style={
+          isKeyboardVisible && keyboardOffset > 0
+            ? {
+                transform: `translateY(-${keyboardOffset}px)`,
+              }
+            : undefined
+        }
+      >
         {navItems.map((item) => {
           const Icon = item.icon;
           const isHome = item.href === App.APP_ROUTES.HOME;
@@ -95,15 +111,16 @@ export function MobileFooter({ className }: MobileFooterProps) {
         <Link
           data-cy="footer-nav-profile-btn"
           href={App.APP_ROUTES.PROFILE}
-          aria-label="Profile"
-          className="relative flex-shrink-0"
+          aria-label={tCommon('profile')}
+          className="relative shrink-0"
         >
           <Organisms.AvatarWithFallback
             avatarUrl={avatarUrl}
             name={avatarName}
+            fallbackSeed={currentUserPubky || avatarName}
             size="lg"
-            className={Libs.cn(isActive(App.APP_ROUTES.PROFILE) && 'ring-2 ring-primary')}
-            alt="Profile"
+            className="cursor-pointer"
+            alt={tCommon('profile')}
           />
           {unreadNotifications > 0 && (
             <Atoms.Badge

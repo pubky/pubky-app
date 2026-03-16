@@ -12,25 +12,22 @@ import * as Types from './ContentLayout.types';
 
 /**
  * Reusable sticky sidebar component for left and right sidebars
- * Uses useStickyWhenFits to only apply sticky positioning when
- * the sidebar content fits within the available viewport height.
+ * Sidebars stay pinned below the main header and scroll independently
+ * from the center column when viewport height is limited.
  */
 function StickySidebar({ children }: Types.StickySidebarProps) {
-  const { ref, stickyTop } = Hooks.useStickyWhenFits({
-    topOffset: Config.LAYOUT.HEADER_OFFSET_MAIN,
-    bottomOffset: Config.LAYOUT.SIDEBAR_BOTTOM_OFFSET,
-  });
+  const stickyTop = Config.LAYOUT.HEADER_OFFSET_MAIN;
+  const sidebarMaxHeight = `calc(100svh - ${stickyTop}px - ${Config.LAYOUT.SIDEBAR_BOTTOM_OFFSET}px)`;
 
   return (
     <Atoms.Container
-      ref={ref}
       overrideDefaults
       className={Libs.cn(
         'hidden flex-col items-start justify-start gap-6 self-start lg:flex',
         'w-(--filter-bar-width) max-w-(--filter-bar-width) min-w-(--filter-bar-width) shrink-0',
-        'sticky',
+        'sticky overflow-y-auto overscroll-contain',
       )}
-      style={{ top: `${stickyTop}px` }}
+      style={{ top: `${stickyTop}px`, maxHeight: sidebarMaxHeight }}
     >
       {children}
     </Atoms.Container>
@@ -52,7 +49,12 @@ export function ContentLayout({
   renderMobileHeader = true,
   className,
 }: Types.ContentLayoutProps) {
-  const { layout } = Core.useHomeStore();
+  const { layout: homeLayout } = Core.useHomeStore();
+  const customFeed = Hooks.useCustomFeed();
+  const customFeedLayout =
+    customFeed?.layout !== undefined ? Core.pubkyLayoutToHomeLayout(customFeed.layout) : undefined;
+  const layout = customFeedLayout ?? homeLayout;
+
   const [drawerFilterOpen, setDrawerFilterOpen] = useState(false);
   const [drawerRightOpen, setDrawerRightOpen] = useState(false);
   const isMobile = Hooks.useIsMobile();
@@ -90,7 +92,7 @@ export function ContentLayout({
       <Atoms.Container
         overrideDefaults
         className={Libs.cn(
-          'max-w-sm sm:max-w-xl md:max-w-3xl lg:max-w-5xl xl:max-w-6xl',
+          'container max-w-(--container-max-width)',
           'm-auto w-full px-6 pb-12 xl:px-0',
           'pt-0',
           className,

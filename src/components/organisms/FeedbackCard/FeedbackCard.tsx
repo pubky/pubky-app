@@ -6,14 +6,19 @@ import { useTranslations } from 'next-intl';
 import * as Atoms from '@/atoms';
 import * as Organisms from '@/organisms';
 import * as Hooks from '@/hooks';
+import { FeedbackCardSkeleton } from './FeedbackCard.skeleton';
 
 export function FeedbackCard() {
   const t = useTranslations('feedback');
-  const { userDetails } = Hooks.useCurrentUserProfile();
+  const { userDetails, currentUserPubky } = Hooks.useCurrentUserProfile();
   const [isDialogOpen, setIsDialogOpen] = useState(false);
+  const avatarUrl = Hooks.useAvatarUrl(userDetails);
+
+  if (userDetails === undefined) {
+    return <FeedbackCardSkeleton />;
+  }
 
   const name = userDetails?.name || t('defaultName');
-  const avatarUrl = Hooks.useAvatarUrl(userDetails);
 
   return (
     <>
@@ -39,15 +44,10 @@ export function FeedbackCard() {
               <Organisms.AvatarWithFallback
                 avatarUrl={avatarUrl}
                 name={name}
+                fallbackSeed={currentUserPubky || name}
                 className="h-12 w-12"
                 fallbackClassName="text-sm"
               />
-            </Atoms.Container>
-            <Atoms.Container
-              overrideDefaults={true}
-              className="min-w-0 flex-1 truncate text-base font-bold text-foreground"
-            >
-              {name}
             </Atoms.Container>
           </Atoms.Container>
 

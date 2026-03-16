@@ -8,6 +8,7 @@ import * as Libs from '@/libs';
 import { useRouter } from 'next/navigation';
 import { PROFILE_ROUTES, getProfileRoute } from '@/app/routes';
 import type { ProfilePageTaggedAsProps } from './ProfilePageTaggedAs.types';
+import { ProfilePageTaggedAsSkeleton } from './ProfilePageTaggedAs.skeleton';
 
 export function ProfilePageTaggedAs({ tags, isLoading = false, onTagClick, pubky }: ProfilePageTaggedAsProps) {
   const t = useTranslations('profile.sidebar');
@@ -20,19 +21,14 @@ export function ProfilePageTaggedAs({ tags, isLoading = false, onTagClick, pubky
   };
 
   return (
-    <Atoms.Container overrideDefaults={true} className="flex flex-col gap-2">
+    <Atoms.Container data-cy="profile-tagged-section" overrideDefaults={true} className="flex flex-col gap-2">
       <Atoms.Heading level={2} size="lg" className="font-light text-muted-foreground">
         {t('taggedAs')}
       </Atoms.Heading>
 
       <Atoms.Container overrideDefaults={true} className="flex flex-col gap-2">
         {isLoading ? (
-          <Atoms.Container overrideDefaults={true} className="flex items-center gap-2">
-            <Atoms.Spinner size="sm" />
-            <Atoms.Typography as="span" className="text-sm font-medium text-muted-foreground">
-              {t('loadingTags')}
-            </Atoms.Typography>
-          </Atoms.Container>
+          <ProfilePageTaggedAsSkeleton />
         ) : (
           <>
             {tags.map((tag) => (

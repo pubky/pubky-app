@@ -1,4 +1,4 @@
-import type * as PopoverPrimitive from '@radix-ui/react-popover';
+import type { Popover as PopoverPrimitive } from 'radix-ui';
 
 export interface PopoverContextType {
   hover?: boolean;

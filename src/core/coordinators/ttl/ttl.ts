@@ -1,5 +1,12 @@
 import * as Core from '@/core';
-import { Env, Logger } from '@/libs';
+import {
+  TTL_POST_MS,
+  TTL_USER_MS,
+  TTL_BATCH_INTERVAL_MS,
+  TTL_POST_MAX_BATCH_SIZE,
+  TTL_USER_MAX_BATCH_SIZE,
+} from '@/config/sync';
+import { Logger } from '@/libs';
 import type {
   TtlCoordinatorConfig,
   TtlCoordinatorState,
@@ -30,18 +37,18 @@ import type {
  * User subscriptions are managed explicitly via subscribeUser/unsubscribeUser,
  * with reference counting to handle multiple subscribers to the same user.
  *
- * More info in the ADR: https://github.com/pubky/pubky/blob/main/.cursor/adr/0012-ttl-coordinator.md
+ * More info in the ADR: https://github.com/pubky/pubky-app/blob/dev/docs/adr/0012-ttl-coordinator.md
  */
 export class TtlCoordinator {
   private static instance: TtlCoordinator | null = null;
 
   // Configuration
   private config: TtlCoordinatorConfig = {
-    postTtlMs: Env.NEXT_PUBLIC_TTL_POST_MS,
-    userTtlMs: Env.NEXT_PUBLIC_TTL_USER_MS,
-    batchIntervalMs: Env.NEXT_PUBLIC_TTL_BATCH_INTERVAL_MS,
-    postMaxBatchSize: Env.NEXT_PUBLIC_TTL_POST_MAX_BATCH_SIZE,
-    userMaxBatchSize: Env.NEXT_PUBLIC_TTL_USER_MAX_BATCH_SIZE,
+    postTtlMs: TTL_POST_MS,
+    userTtlMs: TTL_USER_MS,
+    batchIntervalMs: TTL_BATCH_INTERVAL_MS,
+    postMaxBatchSize: TTL_POST_MAX_BATCH_SIZE,
+    userMaxBatchSize: TTL_USER_MAX_BATCH_SIZE,
   };
 
   // Internal state

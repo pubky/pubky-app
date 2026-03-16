@@ -15,6 +15,13 @@ export class HotController {
    * @returns Array of hot tags with metadata
    */
   static async getOrFetch(params: Core.TTagHotParams): Promise<Core.NexusHotTag[]> {
+    // API requires user_id and reach to be provided together
+    if (params.reach && !params.user_id) {
+      const currentUserPubky = Core.useAuthStore.getState().currentUserPubky;
+      if (currentUserPubky) {
+        return await Core.HotApplication.getOrFetch({ ...params, user_id: currentUserPubky });
+      }
+    }
     return await Core.HotApplication.getOrFetch(params);
   }
 }

@@ -1,0 +1,282 @@
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
+
+exports[`SettingsMenu - Snapshots > matches snapshot 1`] = `
+<div>
+  <div
+    class="w-full flex-col flex m-0 min-w-0 gap-2 bg-background p-0"
+    data-slot="filter-root"
+    data-testid="filter-root"
+  >
+    <div
+      class="m-0 gap-2 p-0"
+      data-slot="filter-header"
+      data-testid="filter-header"
+    >
+      <h2
+        class="text-2xl font-light text-muted-foreground"
+        data-testid="heading-2"
+      >
+        Settings
+      </h2>
+    </div>
+    <div
+      class="mx-auto w-full flex-col flex"
+      data-slot="filter-list"
+      data-testid="filter-list"
+    >
+      <a
+        data-cy="settings-menu-item-account"
+        href="/settings/account"
+      >
+        <button
+          aria-pressed="false"
+          class="flex cursor-pointer gap-2 text-base font-medium transition-colors border-0 bg-transparent p-0 text-left items-center justify-normal text-muted-foreground hover:text-foreground/80 m-0 h-full px-0 py-1"
+          data-selected="false"
+          data-slot="filter-item"
+          data-testid="filter-item"
+          type="button"
+        >
+          <svg
+            aria-hidden="true"
+            class="lucide lucide-user-round h-5 w-5"
+            fill="none"
+            height="24"
+            stroke="currentColor"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+            stroke-width="2"
+            viewBox="0 0 24 24"
+            width="24"
+            xmlns="http://www.w3.org/2000/svg"
+          >
+            <circle
+              cx="12"
+              cy="8"
+              r="5"
+            />
+            <path
+              d="M20 21a8 8 0 0 0-16 0"
+            />
+          </svg>
+          <span
+            class=""
+          >
+            Account
+          </span>
+        </button>
+      </a>
+      <a
+        data-cy="settings-menu-item-notifications"
+        href="/settings/notifications"
+      >
+        <button
+          aria-pressed="false"
+          class="flex cursor-pointer gap-2 text-base font-medium transition-colors border-0 bg-transparent p-0 text-left items-center justify-normal text-muted-foreground hover:text-foreground/80 m-0 h-full px-0 py-1"
+          data-selected="false"
+          data-slot="filter-item"
+          data-testid="filter-item"
+          type="button"
+        >
+          <svg
+            aria-hidden="true"
+            class="lucide lucide-bell h-5 w-5"
+            fill="none"
+            height="24"
+            stroke="currentColor"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+            stroke-width="2"
+            viewBox="0 0 24 24"
+            width="24"
+            xmlns="http://www.w3.org/2000/svg"
+          >
+            <path
+              d="M10.268 21a2 2 0 0 0 3.464 0"
+            />
+            <path
+              d="M3.262 15.326A1 1 0 0 0 4 17h16a1 1 0 0 0 .74-1.673C19.41 13.956 18 12.499 18 8A6 6 0 0 0 6 8c0 4.499-1.411 5.956-2.738 7.326"
+            />
+          </svg>
+          <span
+            class=""
+          >
+            Notifications
+          </span>
+        </button>
+      </a>
+      <a
+        data-cy="settings-menu-item-privacySafety"
+        href="/settings/privacy-safety"
+      >
+        <button
+          aria-pressed="false"
+          class="flex cursor-pointer gap-2 text-base font-medium transition-colors border-0 bg-transparent p-0 text-left items-center justify-normal text-muted-foreground hover:text-foreground/80 m-0 h-full px-0 py-1"
+          data-selected="false"
+          data-slot="filter-item"
+          data-testid="filter-item"
+          type="button"
+        >
+          <svg
+            aria-hidden="true"
+            class="lucide lucide-shield h-5 w-5"
+            fill="none"
+            height="24"
+            stroke="currentColor"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+            stroke-width="2"
+            viewBox="0 0 24 24"
+            width="24"
+            xmlns="http://www.w3.org/2000/svg"
+          >
+            <path
+              d="M20 13c0 5-3.5 7.5-7.66 8.95a1 1 0 0 1-.67-.01C7.5 20.5 4 18 4 13V6a1 1 0 0 1 1-1c2 0 4.5-1.2 6.24-2.72a1.17 1.17 0 0 1 1.52 0C14.51 3.81 17 5 19 5a1 1 0 0 1 1 1z"
+            />
+          </svg>
+          <span
+            class=""
+          >
+            Privacy & Safety
+          </span>
+        </button>
+      </a>
+      <a
+        data-cy="settings-menu-item-mutedUsers"
+        href="/settings/muted-users"
+      >
+        <button
+          aria-pressed="false"
+          class="flex cursor-pointer gap-2 text-base font-medium transition-colors border-0 bg-transparent p-0 text-left items-center justify-normal text-muted-foreground hover:text-foreground/80 m-0 h-full px-0 py-1"
+          data-selected="false"
+          data-slot="filter-item"
+          data-testid="filter-item"
+          type="button"
+        >
+          <svg
+            aria-hidden="true"
+            class="lucide lucide-megaphone-off h-5 w-5"
+            fill="none"
+            height="24"
+            stroke="currentColor"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+            stroke-width="2"
+            viewBox="0 0 24 24"
+            width="24"
+            xmlns="http://www.w3.org/2000/svg"
+          >
+            <path
+              d="M11.636 6A13 13 0 0 0 19.4 3.2 1 1 0 0 1 21 4v11.344"
+            />
+            <path
+              d="M14.378 14.357A13 13 0 0 0 11 14H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h1"
+            />
+            <path
+              d="m2 2 20 20"
+            />
+            <path
+              d="M6 14a12 12 0 0 0 2.4 7.2 2 2 0 0 0 3.2-2.4A8 8 0 0 1 10 14"
+            />
+            <path
+              d="M8 8v6"
+            />
+          </svg>
+          <span
+            class=""
+          >
+            Muted Users
+          </span>
+        </button>
+      </a>
+      <a
+        data-cy="settings-menu-item-language"
+        href="/settings/language"
+      >
+        <button
+          aria-pressed="false"
+          class="flex cursor-pointer gap-2 text-base font-medium transition-colors border-0 bg-transparent p-0 text-left items-center justify-normal text-muted-foreground hover:text-foreground/80 m-0 h-full px-0 py-1"
+          data-selected="false"
+          data-slot="filter-item"
+          data-testid="filter-item"
+          type="button"
+        >
+          <svg
+            aria-hidden="true"
+            class="lucide lucide-globe h-5 w-5"
+            fill="none"
+            height="24"
+            stroke="currentColor"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+            stroke-width="2"
+            viewBox="0 0 24 24"
+            width="24"
+            xmlns="http://www.w3.org/2000/svg"
+          >
+            <circle
+              cx="12"
+              cy="12"
+              r="10"
+            />
+            <path
+              d="M12 2a14.5 14.5 0 0 0 0 20 14.5 14.5 0 0 0 0-20"
+            />
+            <path
+              d="M2 12h20"
+            />
+          </svg>
+          <span
+            class=""
+          >
+            Language
+          </span>
+        </button>
+      </a>
+      <a
+        data-cy="settings-menu-item-help"
+        href="/settings/help"
+      >
+        <button
+          aria-pressed="false"
+          class="flex cursor-pointer gap-2 text-base font-medium transition-colors border-0 bg-transparent p-0 text-left items-center justify-normal text-muted-foreground hover:text-foreground/80 m-0 h-full px-0 py-1"
+          data-selected="false"
+          data-slot="filter-item"
+          data-testid="filter-item"
+          type="button"
+        >
+          <svg
+            aria-hidden="true"
+            class="lucide lucide-circle-question-mark h-5 w-5"
+            fill="none"
+            height="24"
+            stroke="currentColor"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+            stroke-width="2"
+            viewBox="0 0 24 24"
+            width="24"
+            xmlns="http://www.w3.org/2000/svg"
+          >
+            <circle
+              cx="12"
+              cy="12"
+              r="10"
+            />
+            <path
+              d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"
+            />
+            <path
+              d="M12 17h.01"
+            />
+          </svg>
+          <span
+            class=""
+          >
+            Help
+          </span>
+        </button>
+      </a>
+    </div>
+  </div>
+</div>
+`;

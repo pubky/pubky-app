@@ -1,0 +1,275 @@
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
+
+exports[`MutedUsersList - Snapshots > matches snapshot - empty state 1`] = `
+<div
+  class="inline-flex w-full flex-col gap-6"
+  data-cy="muted-users-root"
+  data-testid="container"
+>
+  <p
+    class="w-full py-4 text-center text-lg text-muted-foreground"
+    data-testid="typography"
+  >
+    No muted users yet
+  </p>
+</div>
+`;
+
+exports[`MutedUsersList - Snapshots > matches snapshot - with muted users 1`] = `
+<div
+  class="inline-flex w-full flex-col gap-6"
+  data-cy="muted-users-root"
+  data-testid="container"
+>
+  <div
+    class="flex w-full items-center justify-between gap-3"
+    data-testid="container"
+  >
+    <a
+      class="flex min-w-0 flex-1 items-center gap-3 hover:opacity-80"
+      href="/profile/user-1"
+    >
+      <span
+        class="relative flex shrink-0 overflow-hidden rounded-full h-10 w-10"
+      >
+        <span
+          class="flex h-full w-full items-center justify-center rounded-full border border-muted-foreground bg-muted overflow-hidden border-none"
+        >
+          <div
+            data-seed="user-1"
+            data-testid="facehash-avatar"
+          >
+            U
+          </div>
+        </span>
+      </span>
+      <div
+        class="flex min-w-0 flex-1 flex-col items-start"
+        data-testid="container"
+      >
+        <span
+          class="block max-w-full truncate text-base font-bold"
+          data-testid="typography"
+        >
+          Unknown User
+        </span>
+        <span
+          class="text-xs tracking-widest text-muted-foreground uppercase"
+          data-testid="typography"
+        >
+          user-1
+        </span>
+      </div>
+    </a>
+    <button
+      class="inline-flex items-center justify-center whitespace-nowrap text-sm transition-all disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg:not([class*=\\"size-\\"])]:size-4 shrink-0 [&_svg]:shrink-0 outline-none focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[3px] aria-invalid:ring-destructive/40 aria-invalid:border-destructive font-semibold cursor-pointer border shadow-xs bg-secondary text-secondary-foreground hover:bg-secondary/80 h-8 gap-1.5 px-3 has-[>svg]:px-2.5 rounded-full"
+      data-size="sm"
+      data-slot="button"
+      data-variant="secondary"
+      id="unmute-btn"
+    >
+      <svg
+        aria-hidden="true"
+        class="lucide lucide-megaphone"
+        fill="none"
+        height="16"
+        stroke="currentColor"
+        stroke-linecap="round"
+        stroke-linejoin="round"
+        stroke-width="2"
+        viewBox="0 0 24 24"
+        width="16"
+        xmlns="http://www.w3.org/2000/svg"
+      >
+        <path
+          d="M11 6a13 13 0 0 0 8.4-2.8A1 1 0 0 1 21 4v12a1 1 0 0 1-1.6.8A13 13 0 0 0 11 14H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2z"
+        />
+        <path
+          d="M6 14a12 12 0 0 0 2.4 7.2 2 2 0 0 0 3.2-2.4A8 8 0 0 1 10 14"
+        />
+        <path
+          d="M8 6v8"
+        />
+      </svg>
+      Unmute
+    </button>
+  </div>
+  <div
+    class="flex w-full items-center justify-between gap-3"
+    data-testid="container"
+  >
+    <a
+      class="flex min-w-0 flex-1 items-center gap-3 hover:opacity-80"
+      href="/profile/user-2"
+    >
+      <span
+        class="relative flex shrink-0 overflow-hidden rounded-full h-10 w-10"
+      >
+        <span
+          class="flex h-full w-full items-center justify-center rounded-full border border-muted-foreground bg-muted overflow-hidden border-none"
+        >
+          <div
+            data-seed="user-2"
+            data-testid="facehash-avatar"
+          >
+            U
+          </div>
+        </span>
+      </span>
+      <div
+        class="flex min-w-0 flex-1 flex-col items-start"
+        data-testid="container"
+      >
+        <span
+          class="block max-w-full truncate text-base font-bold"
+          data-testid="typography"
+        >
+          Unknown User
+        </span>
+        <span
+          class="text-xs tracking-widest text-muted-foreground uppercase"
+          data-testid="typography"
+        >
+          user-2
+        </span>
+      </div>
+    </a>
+    <button
+      class="inline-flex items-center justify-center whitespace-nowrap text-sm transition-all disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg:not([class*=\\"size-\\"])]:size-4 shrink-0 [&_svg]:shrink-0 outline-none focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[3px] aria-invalid:ring-destructive/40 aria-invalid:border-destructive font-semibold cursor-pointer border shadow-xs bg-secondary text-secondary-foreground hover:bg-secondary/80 h-8 gap-1.5 px-3 has-[>svg]:px-2.5 rounded-full"
+      data-size="sm"
+      data-slot="button"
+      data-variant="secondary"
+      id="unmute-btn"
+    >
+      <svg
+        aria-hidden="true"
+        class="lucide lucide-megaphone"
+        fill="none"
+        height="16"
+        stroke="currentColor"
+        stroke-linecap="round"
+        stroke-linejoin="round"
+        stroke-width="2"
+        viewBox="0 0 24 24"
+        width="16"
+        xmlns="http://www.w3.org/2000/svg"
+      >
+        <path
+          d="M11 6a13 13 0 0 0 8.4-2.8A1 1 0 0 1 21 4v12a1 1 0 0 1-1.6.8A13 13 0 0 0 11 14H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2z"
+        />
+        <path
+          d="M6 14a12 12 0 0 0 2.4 7.2 2 2 0 0 0 3.2-2.4A8 8 0 0 1 10 14"
+        />
+        <path
+          d="M8 6v8"
+        />
+      </svg>
+      Unmute
+    </button>
+  </div>
+  <div
+    class="flex w-full items-center justify-between gap-3"
+    data-testid="container"
+  >
+    <a
+      class="flex min-w-0 flex-1 items-center gap-3 hover:opacity-80"
+      href="/profile/user-3"
+    >
+      <span
+        class="relative flex shrink-0 overflow-hidden rounded-full h-10 w-10"
+      >
+        <span
+          class="flex h-full w-full items-center justify-center rounded-full border border-muted-foreground bg-muted overflow-hidden border-none"
+        >
+          <div
+            data-seed="user-3"
+            data-testid="facehash-avatar"
+          >
+            U
+          </div>
+        </span>
+      </span>
+      <div
+        class="flex min-w-0 flex-1 flex-col items-start"
+        data-testid="container"
+      >
+        <span
+          class="block max-w-full truncate text-base font-bold"
+          data-testid="typography"
+        >
+          Unknown User
+        </span>
+        <span
+          class="text-xs tracking-widest text-muted-foreground uppercase"
+          data-testid="typography"
+        >
+          user-3
+        </span>
+      </div>
+    </a>
+    <button
+      class="inline-flex items-center justify-center whitespace-nowrap text-sm transition-all disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg:not([class*=\\"size-\\"])]:size-4 shrink-0 [&_svg]:shrink-0 outline-none focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[3px] aria-invalid:ring-destructive/40 aria-invalid:border-destructive font-semibold cursor-pointer border shadow-xs bg-secondary text-secondary-foreground hover:bg-secondary/80 h-8 gap-1.5 px-3 has-[>svg]:px-2.5 rounded-full"
+      data-size="sm"
+      data-slot="button"
+      data-variant="secondary"
+      id="unmute-btn"
+    >
+      <svg
+        aria-hidden="true"
+        class="lucide lucide-megaphone"
+        fill="none"
+        height="16"
+        stroke="currentColor"
+        stroke-linecap="round"
+        stroke-linejoin="round"
+        stroke-width="2"
+        viewBox="0 0 24 24"
+        width="16"
+        xmlns="http://www.w3.org/2000/svg"
+      >
+        <path
+          d="M11 6a13 13 0 0 0 8.4-2.8A1 1 0 0 1 21 4v12a1 1 0 0 1-1.6.8A13 13 0 0 0 11 14H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2z"
+        />
+        <path
+          d="M6 14a12 12 0 0 0 2.4 7.2 2 2 0 0 0 3.2-2.4A8 8 0 0 1 10 14"
+        />
+        <path
+          d="M8 6v8"
+        />
+      </svg>
+      Unmute
+    </button>
+  </div>
+  <button
+    class="inline-flex items-center justify-center whitespace-nowrap transition-all disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg:not([class*=\\"size-\\"])]:size-4 shrink-0 [&_svg]:shrink-0 outline-none focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[3px] aria-invalid:ring-destructive/40 aria-invalid:border-destructive cursor-pointer border shadow-xs bg-secondary text-secondary-foreground hover:bg-secondary/80 h-auto gap-2 px-4 py-2.5 sm:px-8 sm:py-5 text-sm font-bold leading-normal rounded-full"
+    data-size="lg"
+    data-slot="button"
+    data-variant="secondary"
+  >
+    <svg
+      aria-hidden="true"
+      class="lucide lucide-megaphone"
+      fill="none"
+      height="16"
+      stroke="currentColor"
+      stroke-linecap="round"
+      stroke-linejoin="round"
+      stroke-width="2"
+      viewBox="0 0 24 24"
+      width="16"
+      xmlns="http://www.w3.org/2000/svg"
+    >
+      <path
+        d="M11 6a13 13 0 0 0 8.4-2.8A1 1 0 0 1 21 4v12a1 1 0 0 1-1.6.8A13 13 0 0 0 11 14H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2z"
+      />
+      <path
+        d="M6 14a12 12 0 0 0 2.4 7.2 2 2 0 0 0 3.2-2.4A8 8 0 0 1 10 14"
+      />
+      <path
+        d="M8 6v8"
+      />
+    </svg>
+    Unmute all users
+  </button>
+</div>
+`;

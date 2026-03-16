@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useRef, useCallback, useEffect } from 'react';
+import { useState, useRef, useCallback, useEffect, useLayoutEffect } from 'react';
 import { type MDXEditorProps, type MDXEditorMethods } from '@mdxeditor/editor';
 import { useDebounceCallback } from 'usehooks-ts';
 import { useTranslations } from 'next-intl';
@@ -19,7 +19,7 @@ import {
   ARTICLE_SUPPORTED_ATTACHMENT_MIME_TYPES,
   ARTICLE_TITLE_MAX_CHARACTER_LENGTH,
 } from '@/config';
-import { useTimelineFeedContext } from '@/organisms/TimelineFeed/TimelineFeed';
+import { useTimelineFeedContext } from '@/organisms/Timeline/Feed/TimelineFeed';
 import { POST_INPUT_VARIANT } from '@/organisms/PostInput/PostInput.constants';
 import { useMentionAutocomplete, getContentWithMention } from '@/hooks/useMentionAutocomplete';
 import type { UsePostInputOptions, UsePostInputReturn } from './usePostInput.types';
@@ -158,6 +158,19 @@ export function usePostInput({
       setIsExpanded(true);
     }
   }, [isExpanded]);
+
+  const resizeTextarea = useCallback(() => {
+    const textarea = textareaRef.current;
+    if (!textarea) return;
+    textarea.style.height = 'auto';
+    textarea.style.height = `${textarea.scrollHeight}px`;
+  }, []);
+
+  // Autosize textarea height (Safari doesn't support `field-sizing: content` yet)
+  useLayoutEffect(() => {
+    if (isArticle) return;
+    resizeTextarea();
+  }, [content, isArticle, resizeTextarea]);
 
   // Handle submit using reply, repost, post, or edit method from hook
   const handleSubmit = useCallback(async () => {

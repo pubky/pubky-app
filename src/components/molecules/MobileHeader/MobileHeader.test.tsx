@@ -50,7 +50,7 @@ describe('MobileHeader', () => {
       'z-(--z-mobile-menu)',
       'bg-linear-to-b',
       'from-(--background)',
-      'from-65%',
+      'from-35%',
       'to-transparent',
       'lg:hidden',
     );
@@ -65,9 +65,16 @@ describe('MobileHeader', () => {
       'z-(--z-mobile-menu)',
       'lg:hidden',
       'bg-background',
-      'shadow-xs-dark',
+      'shadow-xs',
     );
     expect(outerContainer).not.toHaveClass('bg-linear-to-b');
+  });
+
+  it('uses fixed positioning when fixed prop is true', () => {
+    const { container } = render(<MobileHeader fixed />);
+    const outerContainer = container.firstChild as HTMLElement;
+    expect(outerContainer).toHaveClass('fixed', 'right-0', 'left-0');
+    expect(outerContainer).not.toHaveClass('sticky');
   });
 
   it('renders with custom onLeftIconClick', () => {
@@ -161,10 +168,9 @@ describe('MobileHeader - Snapshots', () => {
     expect(container.firstChild).toMatchSnapshot();
   });
 
-  it('matches snapshot with padding container', () => {
-    const { container } = render(<MobileHeader />);
-    const paddingContainer = container.querySelector('.px-6');
-    expect(paddingContainer).toMatchSnapshot();
+  it('matches snapshot with fixed positioning', () => {
+    const { container } = render(<MobileHeader fixed />);
+    expect(container.firstChild).toMatchSnapshot();
   });
 
   it('matches snapshot with custom onLeftIconClick', () => {

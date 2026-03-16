@@ -93,11 +93,12 @@ export const PostThreadConnector = ({
     case POST_THREAD_CONNECTOR_VARIANTS.REGULAR:
     default:
       // Regular variant (default) - shows a rounded corner in the middle
+      // TODO: Remove -ml-px to have a seamless connection between the thread connector and the post card
       return (
         <Atoms.Container {...baseProps} className={Libs.cn(baseProps.className, 'border-l border-border')}>
           <InnerContainer className="min-w-3">
             <Atoms.Container className="min-h-px w-full min-w-px shrink-0 grow basis-0" overrideDefaults />
-            <Atoms.Container className="relative size-3 shrink-0" overrideDefaults>
+            <Atoms.Container className="relative -ml-px size-3 shrink-0" overrideDefaults>
               <Libs.RoundedCorner />
             </Atoms.Container>
           </InnerContainer>

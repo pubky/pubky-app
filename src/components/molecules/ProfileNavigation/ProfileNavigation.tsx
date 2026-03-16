@@ -11,6 +11,7 @@ export const ProfileNavigation = ({
   onHandleBackButton,
   backText = 'Back',
   backButtonDisabled,
+  hiddenBackButton,
   hiddenContinueButton,
   continueButtonLoading,
 }: {
@@ -21,6 +22,7 @@ export const ProfileNavigation = ({
   onHandleBackButton?: () => void;
   backText?: string;
   backButtonDisabled?: boolean;
+  hiddenBackButton?: boolean;
   hiddenContinueButton?: boolean;
   continueButtonLoading?: boolean;
 }) => {
@@ -30,21 +32,23 @@ export const ProfileNavigation = ({
 
   return (
     <Atoms.Container className={Libs.cn('flex-row justify-between gap-3 py-6 lg:gap-6', className)}>
-      <Atoms.Button
-        size="lg"
-        className="w-full flex-1 rounded-full md:flex-0"
-        variant={'secondary'}
-        onClick={onHandleBackButton}
-        disabled={backButtonDisabled}
-      >
-        <Libs.ArrowLeft className="mr-2 h-4 w-4" />
-        {backText}
-      </Atoms.Button>
+      {!hiddenBackButton && (
+        <Atoms.Button
+          size="lg"
+          className="rounded-full"
+          variant={'secondary'}
+          onClick={onHandleBackButton}
+          disabled={backButtonDisabled}
+        >
+          <Libs.ArrowLeft className="mr-2 h-4 w-4" />
+          {backText}
+        </Atoms.Button>
+      )}
       {!hiddenContinueButton && (
         <Atoms.Button
           id="profile-finish-btn"
           size="lg"
-          className="w-full flex-1 rounded-full md:flex-0"
+          className={Libs.cn('w-full rounded-full sm:w-auto')}
           onClick={onHandleContinueButton}
           disabled={continueButtonDisabled}
         >

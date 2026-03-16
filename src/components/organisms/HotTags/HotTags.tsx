@@ -9,6 +9,7 @@ import * as Hooks from '@/hooks';
 import { APP_ROUTES } from '@/app/routes';
 import { MAX_TAGS } from './HotTags.constants';
 import type { HotTagsProps } from './HotTags.types';
+import { HotTagsSkeleton } from './HotTags.skeleton';
 
 /**
  * HotTags
@@ -23,7 +24,7 @@ export function HotTags({ className }: HotTagsProps) {
   const t = useTranslations('sidebar');
   const tCommon = useTranslations('common');
   const router = useRouter();
-  const { tags } = Hooks.useHotTags();
+  const { tags, isLoading } = Hooks.useHotTags();
 
   const displayTags = tags.slice(0, MAX_TAGS);
 
@@ -44,11 +45,14 @@ export function HotTags({ className }: HotTagsProps) {
       footerTestId="see-all-button"
       className={className}
       data-testid="hot-tags"
+      dataCy="hot-tags"
     >
-      {displayTags.length === 0 ? (
+      {isLoading ? (
+        <HotTagsSkeleton />
+      ) : displayTags.length === 0 ? (
         <Atoms.Typography className="font-light text-muted-foreground">{t('noTags')}</Atoms.Typography>
       ) : (
-        <Atoms.Container overrideDefaults className="flex w-full flex-col gap-2">
+        <Atoms.Container overrideDefaults className="flex w-full flex-col gap-2" data-cy="hot-tags-list">
           {displayTags.map((tag, index) => (
             <Atoms.Tag
               key={tag.name}

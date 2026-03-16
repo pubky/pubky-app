@@ -246,11 +246,18 @@ export const repostPost = ({
 
 // tag a post by clicking the add button, typing the tag, and pressing Enter
 export const fastTagPost = (tags: string[]) => {
+  // Click the add tag button to show the input
+  cy.get('[data-cy="post-tag-add-button"]').first().click();
   tags.forEach((tag) => {
-    // Click the add tag button to show the input
-    cy.get('[data-cy="post-tag-add-button"]').first().click();
     // Type the tag and press Enter to submit
     cy.get('[data-cy="add-tag-input"]').first().type(`${tag}{enter}`);
+  });
+};
+
+// tag a post in feed with any number of tags, finding the post by its content
+export const fastTagPostInFeed = (tags: string[], postContent: string) => {
+  cy.findFirstPostInFeedFiltered(postContent).within(() => {
+    fastTagPost(tags);
   });
 };
 
@@ -268,15 +275,6 @@ export const fastTagPost = (tags: string[]) => {
 //   cy.get('#tags').children().should('have.length', tags.length);
 //   tags.forEach((tag, idx) => {
 //     cy.get('#tags').children().eq(idx).contains(tag);
-//   });
-// };
-
-// // tag a post in feed with any number of tags
-// export const fastTagPostInFeed = (tags: string[], postContent: string) => {
-//   cy.findFirstPostInFeedFiltered(postContent).within(() => {
-//     cy.get('#tags').within(() => {
-//       fastTagPost(tags);
-//     });
 //   });
 // };
 
@@ -406,37 +404,13 @@ export const checkPostIsNotAtTopOfFeed = ({
     });
 };
 
-// export const checkPostIsAtIndexInFeed = (postContent: string, index: number) => {
-//   cy.get('#posts-feed')
-//     .find('#timeline')
-//     .children()
-//     .should('have.length.gte', 1)
-//     .eq(index)
-//     .within(() => {
-//       cy.get('#post-content-text').innerTextShouldEq(postContent);
-//     });
-// };
-
-// TODO: revert to above implementation so we don't miss bugs with "Show n new posts" button appearing when bug is fixed, see https://github.com/pubky/pubky-app/issues/1393
 export const checkPostIsAtIndexInFeed = (postContent: string, index: number) => {
-  cy.get('#posts-feed')
-    .find('#timeline')
-    .should('have.descendants', '*')
+  cy.get('[data-cy="timeline-posts"]')
     .children()
-    .then(($posts) => {
-      // Filter out "Show new posts" element
-      const actualPosts = $posts.filter((_, el) => {
-        const text = Cypress.$(el).text();
-        // Match "Show n new posts" pattern where n is a number
-        return !/Show\s+\d+\s+new posts/i.test(text);
-      });
-
-      // Use the filtered collection to get the correct post
-      cy.wrap(actualPosts)
-        .eq(index)
-        .within(() => {
-          cy.get('#post-content-text').innerTextShouldEq(postContent);
-        });
+    .should('have.length.gte', 1)
+    .eq(index)
+    .within(() => {
+      cy.get('[data-cy="post-text"]').innerTextShouldEq(postContent);
     });
 };
 
@@ -499,33 +473,24 @@ export const waitForBookmarksToLoad = (seconds: number = 6) => {
   checkBookmarksRecursively(seconds);
 };
 
-// wait for 'show n new posts' button to be visible
-// check its counter displayes the correct number of new posts and click it
-export const clickShowNewPostsBtn = () => {
-  // TODO: uncomment original code once 'show n new posts' button is showing again after creating a new post
-  // cy.get('#show-new-posts-button', { timeout: Cypress.env('ci') ? 60_000 : 15_000 })
-  //   .scrollIntoView()
-  //   .should('be.visible')
-  //   .should('contain.text', ` ${expectedCounter} `)
-  //   .click();
-
-  // meanwhile, just refresh the page to show new posts
-  cy.wait(3_000);
-  cy.reload();
-  waitForFeedToLoad();
-};
-
 const findAndCountPostsInFeed = (filterText: string, expectedCount: number) => {
-  cy.get('#posts-feed')
-    .find('#timeline')
-    .children()
-    .then(($posts) => {
-      // Filter posts by text and assert none are found
-      const matchingPosts = $posts.filter((_idx, element) => element.innerText.includes(filterText));
+  cy.get('body').then(($body) => {
+    // If timeline-posts doesn't exist (empty feed state), assert expectedCount is 0
+    if ($body.find('[data-cy="timeline-posts"]').length === 0) {
+      expect(expectedCount, `Expected ${expectedCount} posts with "${filterText}" but timeline is empty`).to.eq(0);
+      return;
+    }
 
-      // Assert that the correct number of posts are found with the provided text
-      expect(matchingPosts).to.have.length(expectedCount);
-    });
+    cy.get('[data-cy="timeline-posts"]')
+      .children()
+      .then(($posts) => {
+        // Filter posts by text
+        const matchingPosts = $posts.filter((_idx, element) => element.innerText.includes(filterText));
+
+        // Assert that the correct number of posts are found with the provided text
+        expect(matchingPosts).to.have.length(expectedCount);
+      });
+  });
 };
 
 export const cannotFindPostInFeed = (filterText: string) => {

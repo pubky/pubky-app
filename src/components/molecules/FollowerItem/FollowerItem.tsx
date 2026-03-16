@@ -30,7 +30,7 @@ export function FollowerItem({ follower, isFollowing = false, onFollow, isCurren
         className="flex flex-wrap items-center justify-between gap-6 lg:flex-nowrap"
       >
         <Atoms.Link href={`/profile/${follower.id}`} className="flex min-w-0 flex-1 items-center gap-2">
-          <Organisms.AvatarWithFallback avatarUrl={avatarUrl} name={displayName} size="md" />
+          <Organisms.AvatarWithFallback avatarUrl={avatarUrl} name={displayName} fallbackSeed={follower.id} size="md" />
 
           <Atoms.Container overrideDefaults={true}>
             <Atoms.Typography data-cy="profile-follower-item-name" size="sm" className="truncate font-bold">

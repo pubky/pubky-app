@@ -1,5 +1,20 @@
 import { userIdFromPubky } from './common';
 import { clickFollowButton } from './profile';
+import { CheckForNewPosts } from './types/enums';
+
+/**
+ * Follow a user from the post menu on one of their posts in the feed.
+ * Use when the target user's post is visible in the feed (e.g. Reach All).
+ *
+ * @param filterText - Text content to identify the post in the feed
+ * @param postIdx - Index of the post among those matching filterText (0 = first match)
+ */
+export const followFromPostMenu = (filterText: string, postIdx: number) => {
+  cy.findPostInFeed(postIdx, filterText, CheckForNewPosts.No).within(() => {
+    cy.get('[data-cy="post-more-btn"]').click();
+  });
+  cy.get('[data-cy="post-menu-action-follow"]').should('be.visible').click();
+};
 
 export const searchForProfileByPubky = (pubky: string, profileName: string) => {
   // type pubky into search bar
@@ -16,10 +31,10 @@ export const searchForProfileByPubky = (pubky: string, profileName: string) => {
 
 export const searchForProfileByName = (profileName: string) => {
   // type profile name into  search bar
-  cy.get('#header-search-input').type(`${profileName}`);
+  cy.get('[data-cy="header-search-input"]').type(`${profileName}`);
 
   // click on profile found in search results
-  cy.get('#user-0').should('be.visible').click();
+  cy.get('[data-cy="search-users-section"]').contains('div', profileName).first().click();
 
   // check that profile page is displayed
   cy.get('[data-cy="profile-username-header"]').should('have.text', profileName);

@@ -48,6 +48,34 @@ describe('FilterLayout', () => {
     expect(columnsItem).toBeInTheDocument();
     expect(wideItem2).toBeInTheDocument();
   });
+
+  it('renders all items as disabled when disabled prop is true', () => {
+    render(<FilterLayout disabled />);
+
+    const labels = ['Columns', 'Wide'];
+    labels.forEach((label) => {
+      expect(screen.getByLabelText(label)).toHaveAttribute('aria-disabled', 'true');
+    });
+  });
+
+  it('does not call onTabChange when disabled', () => {
+    const onTabChange = vi.fn();
+    render(<FilterLayout disabled onTabChange={onTabChange} />);
+
+    fireEvent.click(screen.getByText('Columns'));
+    fireEvent.click(screen.getByText('Wide'));
+
+    expect(onTabChange).not.toHaveBeenCalled();
+  });
+
+  it('items are not disabled by default', () => {
+    render(<FilterLayout />);
+
+    const labels = ['Columns', 'Wide'];
+    labels.forEach((label) => {
+      expect(screen.getByLabelText(label)).not.toHaveAttribute('aria-disabled', 'true');
+    });
+  });
 });
 
 describe('FilterLayout - Snapshots', () => {
@@ -63,6 +91,11 @@ describe('FilterLayout - Snapshots', () => {
 
   it('matches snapshot with Wide selected tab', () => {
     const { container } = render(<FilterLayout selectedTab={LAYOUT.WIDE} />);
+    expect(container.firstChild).toMatchSnapshot();
+  });
+
+  it('matches snapshot with disabled state', () => {
+    const { container } = render(<FilterLayout disabled />);
     expect(container.firstChild).toMatchSnapshot();
   });
 });

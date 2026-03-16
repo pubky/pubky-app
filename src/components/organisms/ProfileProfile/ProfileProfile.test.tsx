@@ -57,6 +57,7 @@ vi.mock('@/hooks', async (importOriginal) => {
     useFollowUser: vi.fn(() => ({
       toggleFollow: vi.fn(),
       isLoading: false,
+      loadingAction: null,
     })),
     useIsFollowing: vi.fn(() => ({
       isFollowing: false,

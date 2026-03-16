@@ -28,10 +28,18 @@ vi.mock('@/core/application/tag', () => ({
 vi.mock('pubky-app-specs', () => ({
   PubkySpecsBuilder: class {
     createPost(content: string, kind: number) {
+      const kindMap: Record<number, string> = {
+        0: 'short',
+        1: 'long',
+        2: 'image',
+        3: 'video',
+        4: 'link',
+        5: 'file',
+      };
       return {
         post: {
           content,
-          kind: kind === 0 ? 'short' : kind === 1 ? 'long' : 'short',
+          kind: kindMap[kind] ?? 'short',
           attachments: null,
           toJson: () => ({ content, kind }),
         },
@@ -45,6 +53,10 @@ vi.mock('pubky-app-specs', () => ({
   PubkyAppPostKind: {
     Short: 0,
     Long: 1,
+    Image: 2,
+    Video: 3,
+    Link: 4,
+    File: 5,
   },
   PubkyAppPostEmbed: class {
     constructor(
@@ -117,6 +129,7 @@ describe('PostController', () => {
 
     // Mock HomeserverService.request to resolve successfully
     vi.spyOn(Core.HomeserverService, 'request').mockResolvedValue(undefined);
+    vi.spyOn(Core.FileApplication, 'commitCreate').mockResolvedValue(undefined);
 
     // Initialize database and clear tables
     await Core.db.initialize();
@@ -168,24 +181,19 @@ describe('PostController', () => {
       const result = await PostController.getCounts({ compositeId: testData.fullPostId });
 
       expect(result).toBeDefined();
-      expect(result.id).toBe(testData.fullPostId);
-      expect(result.tags).toBe(0);
-      expect(result.unique_tags).toBe(0);
-      expect(result.replies).toBe(0);
-      expect(result.reposts).toBe(0);
+      expect(result!.id).toBe(testData.fullPostId);
+      expect(result!.tags).toBe(0);
+      expect(result!.unique_tags).toBe(0);
+      expect(result!.replies).toBe(0);
+      expect(result!.reposts).toBe(0);
     });
 
-    it('should return default counts when post not found', async () => {
+    it('should return null when post not found', async () => {
       const { PostController } = await import('./post');
 
       const result = await PostController.getCounts({ compositeId: 'nonexistent:post' });
 
-      expect(result).toBeDefined();
-      expect(result.id).toBe('nonexistent:post');
-      expect(result.tags).toBe(0);
-      expect(result.unique_tags).toBe(0);
-      expect(result.replies).toBe(0);
-      expect(result.reposts).toBe(0);
+      expect(result).toBeNull();
     });
 
     it('should include all count fields in response', async () => {
@@ -202,10 +210,45 @@ describe('PostController', () => {
       const { PostController } = await import('./post');
       const result = await PostController.getCounts({ compositeId: testData.fullPostId });
 
-      expect(result.tags).toBe(5);
-      expect(result.unique_tags).toBe(3);
-      expect(result.replies).toBe(10);
-      expect(result.reposts).toBe(2);
+      expect(result!.tags).toBe(5);
+      expect(result!.unique_tags).toBe(3);
+      expect(result!.replies).toBe(10);
+      expect(result!.reposts).toBe(2);
+    });
+  });
+
+  describe('getReplies', () => {
+    it('should return replies for a post when relationships store parent as URI', async () => {
+      const { PostController } = await import('./post');
+
+      const parentUri = `pubky://${testData.authorPubky}/pub/pubky.app/posts/${testData.postId}`;
+      const replyOneId = Core.buildCompositeId({ pubky: 'reply-author-1' as Core.Pubky, id: 'reply-1' });
+      const replyTwoId = Core.buildCompositeId({ pubky: 'reply-author-2' as Core.Pubky, id: 'reply-2' });
+
+      await Core.PostRelationshipsModel.table.bulkAdd([
+        { id: replyOneId, replied: parentUri, reposted: null, mentioned: [] },
+        { id: replyTwoId, replied: parentUri, reposted: null, mentioned: [] },
+        {
+          id: Core.buildCompositeId({ pubky: 'reply-author-3' as Core.Pubky, id: 'reply-3' }),
+          replied: 'pubky://someone/pub/pubky.app/posts/another-parent',
+          reposted: null,
+          mentioned: [],
+        },
+      ]);
+
+      const replies = await PostController.getReplies({ compositeId: testData.fullPostId });
+
+      expect(replies).toHaveLength(2);
+      expect(replies.map((reply) => reply.id)).toEqual(expect.arrayContaining([replyOneId, replyTwoId]));
+      expect(replies.every((reply) => reply.replied === parentUri)).toBe(true);
+    });
+
+    it('should return empty array when a post has no replies', async () => {
+      const { PostController } = await import('./post');
+
+      const replies = await PostController.getReplies({ compositeId: testData.fullPostId });
+
+      expect(replies).toEqual([]);
     });
   });
 
@@ -248,6 +291,108 @@ describe('PostController', () => {
         url: expect.stringContaining('pubky://'),
         bodyJson: expect.any(Object),
       });
+    });
+
+    it('should infer image kind when attachments contain image files', async () => {
+      const { PostController } = await import('./post');
+      const imageFile = new File(['image-content'], 'photo.png', { type: 'image/png' });
+
+      await PostController.commitCreate({
+        content: 'A post with image',
+        authorId: testData.authorPubky,
+        attachments: [imageFile],
+      });
+
+      const allPosts = await Core.PostDetailsModel.table.toArray();
+      const savedPost = allPosts.find((p) => p.content === 'A post with image');
+
+      expect(savedPost?.kind).toBe('image');
+      expect(Core.HomeserverService.request).toHaveBeenCalledWith(
+        expect.objectContaining({
+          bodyJson: expect.objectContaining({ kind: 'image' }),
+        }),
+      );
+    });
+
+    it('should infer video kind when attachments contain video files', async () => {
+      const { PostController } = await import('./post');
+      const videoFile = new File(['video-content'], 'clip.mp4', { type: 'video/mp4' });
+
+      await PostController.commitCreate({
+        content: 'A post with video',
+        authorId: testData.authorPubky,
+        attachments: [videoFile],
+      });
+
+      const allPosts = await Core.PostDetailsModel.table.toArray();
+      const savedPost = allPosts.find((p) => p.content === 'A post with video');
+
+      expect(savedPost?.kind).toBe('video');
+      expect(Core.HomeserverService.request).toHaveBeenCalledWith(
+        expect.objectContaining({
+          bodyJson: expect.objectContaining({ kind: 'video' }),
+        }),
+      );
+    });
+
+    it('should infer file kind when attachments are non-image and non-video', async () => {
+      const { PostController } = await import('./post');
+      const pdfFile = new File(['pdf-content'], 'doc.pdf', { type: 'application/pdf' });
+
+      await PostController.commitCreate({
+        content: 'A post with file',
+        authorId: testData.authorPubky,
+        attachments: [pdfFile],
+      });
+
+      const allPosts = await Core.PostDetailsModel.table.toArray();
+      const savedPost = allPosts.find((p) => p.content === 'A post with file');
+
+      expect(savedPost?.kind).toBe('file');
+      expect(Core.HomeserverService.request).toHaveBeenCalledWith(
+        expect.objectContaining({
+          bodyJson: expect.objectContaining({ kind: 'file' }),
+        }),
+      );
+    });
+
+    it('should infer link kind when content has URL and no attachments', async () => {
+      const { PostController } = await import('./post');
+
+      await PostController.commitCreate({
+        content: 'Visit https://pubky.app for details',
+        authorId: testData.authorPubky,
+      });
+
+      const allPosts = await Core.PostDetailsModel.table.toArray();
+      const savedPost = allPosts.find((p) => p.content === 'Visit https://pubky.app for details');
+
+      expect(savedPost?.kind).toBe('link');
+      expect(Core.HomeserverService.request).toHaveBeenCalledWith(
+        expect.objectContaining({
+          bodyJson: expect.objectContaining({ kind: 'link' }),
+        }),
+      );
+    });
+
+    it('should use long kind when isArticle is true', async () => {
+      const { PostController } = await import('./post');
+
+      await PostController.commitCreate({
+        content: JSON.stringify({ title: 'My Article', body: 'Article body' }),
+        authorId: testData.authorPubky,
+        isArticle: true,
+      });
+
+      const allPosts = await Core.PostDetailsModel.table.toArray();
+      const savedPost = allPosts.find((p) => p.content.includes('My Article'));
+
+      expect(savedPost?.kind).toBe('long');
+      expect(Core.HomeserverService.request).toHaveBeenCalledWith(
+        expect.objectContaining({
+          bodyJson: expect.objectContaining({ kind: 'long' }),
+        }),
+      );
     });
 
     it('should throw error when parent post not found', async () => {
@@ -392,28 +537,28 @@ describe('PostController', () => {
     });
   });
 
-  describe('getOrFetchDetails', () => {
+  describe('getOrFetch', () => {
     const mockViewerId = 'test-viewer-id' as Core.Pubky;
 
     it('should return post from local database if exists', async () => {
       await setupExistingPost();
       const { PostController } = await import('./post');
 
-      const post = await PostController.getOrFetchDetails({ compositeId: testData.fullPostId, viewerId: mockViewerId });
+      const post = await PostController.getOrFetch({ compositeId: testData.fullPostId, viewerId: mockViewerId });
 
       expect(post).toBeTruthy();
       expect(post?.id).toBe(testData.fullPostId);
       expect(post?.content).toBe('Test post content');
     });
 
-    it('should return null when PostApplication.getOrFetchDetails returns null', async () => {
+    it('should return null when PostApplication.getOrFetch returns null', async () => {
       const { PostController } = await import('./post');
       const ApplicationModule = await import('@/core/application');
 
-      const getOrFetchSpy = vi.spyOn(ApplicationModule.PostApplication, 'getOrFetchDetails').mockResolvedValue(null);
+      const getOrFetchSpy = vi.spyOn(ApplicationModule.PostApplication, 'getOrFetch').mockResolvedValue(null);
 
       try {
-        const post = await PostController.getOrFetchDetails({
+        const post = await PostController.getOrFetch({
           compositeId: 'nonexistent:post',
           viewerId: mockViewerId,
         });
@@ -428,29 +573,81 @@ describe('PostController', () => {
       const ApplicationModule = await import('@/core/application');
 
       const getOrFetchSpy = vi
-        .spyOn(ApplicationModule.PostApplication, 'getOrFetchDetails')
+        .spyOn(ApplicationModule.PostApplication, 'getOrFetch')
         .mockRejectedValueOnce(new Error('Nexus error'));
 
       try {
-        await expect(
-          PostController.getOrFetchDetails({ compositeId: 'error:post', viewerId: mockViewerId }),
-        ).rejects.toThrow('Nexus error');
+        await expect(PostController.getOrFetch({ compositeId: 'error:post', viewerId: mockViewerId })).rejects.toThrow(
+          'Nexus error',
+        );
       } finally {
         getOrFetchSpy.mockRestore();
       }
     });
 
-    it('should call PostApplication.getOrFetchDetails with correct postId', async () => {
+    it('should call PostApplication.getOrFetch with correct postId', async () => {
       const { PostController } = await import('./post');
       const ApplicationModule = await import('@/core/application');
 
-      const getOrFetchSpy = vi.spyOn(ApplicationModule.PostApplication, 'getOrFetchDetails').mockResolvedValue(null);
+      const getOrFetchSpy = vi.spyOn(ApplicationModule.PostApplication, 'getOrFetch').mockResolvedValue(null);
 
       try {
-        await PostController.getOrFetchDetails({ compositeId: 'author:post123', viewerId: mockViewerId });
+        await PostController.getOrFetch({ compositeId: 'author:post123', viewerId: mockViewerId });
         expect(getOrFetchSpy).toHaveBeenCalledWith({ compositeId: 'author:post123', viewerId: mockViewerId });
       } finally {
         getOrFetchSpy.mockRestore();
+      }
+    });
+  });
+
+  describe('fetch', () => {
+    const mockViewerId = 'test-viewer-id' as Core.Pubky;
+
+    it('should delegate to PostApplication.fetch', async () => {
+      const { PostController } = await import('./post');
+      const ApplicationModule = await import('@/core/application');
+
+      const fetchSpy = vi.spyOn(ApplicationModule.PostApplication, 'fetch').mockResolvedValue(null);
+
+      try {
+        await PostController.fetch({ compositeId: 'author:post123', viewerId: mockViewerId });
+        expect(fetchSpy).toHaveBeenCalledWith({ compositeId: 'author:post123', viewerId: mockViewerId });
+      } finally {
+        fetchSpy.mockRestore();
+      }
+    });
+
+    it('should return null when PostApplication.fetch returns null', async () => {
+      const { PostController } = await import('./post');
+      const ApplicationModule = await import('@/core/application');
+
+      const fetchSpy = vi.spyOn(ApplicationModule.PostApplication, 'fetch').mockResolvedValue(null);
+
+      try {
+        const post = await PostController.fetch({
+          compositeId: 'nonexistent:post',
+          viewerId: mockViewerId,
+        });
+        expect(post).toBeNull();
+      } finally {
+        fetchSpy.mockRestore();
+      }
+    });
+
+    it('should propagate error when PostApplication.fetch throws', async () => {
+      const { PostController } = await import('./post');
+      const ApplicationModule = await import('@/core/application');
+
+      const fetchSpy = vi
+        .spyOn(ApplicationModule.PostApplication, 'fetch')
+        .mockRejectedValueOnce(new Error('Nexus error'));
+
+      try {
+        await expect(PostController.fetch({ compositeId: 'error:post', viewerId: mockViewerId })).rejects.toThrow(
+          'Nexus error',
+        );
+      } finally {
+        fetchSpy.mockRestore();
       }
     });
   });

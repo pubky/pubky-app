@@ -73,11 +73,12 @@ vi.mock('@/molecules', () => ({
 
 // Mock Organisms
 vi.mock('@/organisms', () => ({
-  UserListItem: ({ user }: { user: { id: string } }) => (
-    <div data-testid="user-list-item" data-user-id={user.id}>
+  UserListItem: ({ user, followButtonVariant }: { user: { id: string }; followButtonVariant?: string }) => (
+    <div data-testid="user-list-item" data-user-id={user.id} data-follow-button-variant={followButtonVariant}>
       User item
     </div>
   ),
+  FullUserListItemSkeleton: () => <div data-testid="user-list-item-skeleton-full">Skeleton</div>,
 }));
 
 const mockConnections = [
@@ -147,10 +148,13 @@ describe('ProfileFollowers', () => {
     expect(screen.getByTestId('followers-empty')).toBeInTheDocument();
   });
 
-  it('renders loading state when isLoading is true', () => {
+  it('renders loading state with skeleton list when isLoading is true', () => {
     vi.mocked(Hooks.useProfileConnections).mockReturnValue(mockLoadingConnectionsResult);
     render(<ProfileFollowers />);
-    expect(screen.getByTestId('spinner')).toBeInTheDocument();
+    expect(screen.queryByTestId('spinner')).not.toBeInTheDocument();
+    expect(screen.getByTestId('heading')).toHaveTextContent('Followers');
+    const skeletons = screen.getAllByTestId('user-list-item-skeleton-full');
+    expect(skeletons.length).toBeGreaterThan(0);
   });
 
   it('renders connections when there are items', () => {
@@ -161,6 +165,16 @@ describe('ProfileFollowers', () => {
     expect(userItems).toHaveLength(2);
     expect(userItems[0]).toHaveAttribute('data-user-id', 'user-1');
     expect(userItems[1]).toHaveAttribute('data-user-id', 'user-2');
+  });
+
+  it('passes followButtonVariant="iconWithText" to UserListItem', () => {
+    vi.mocked(Hooks.useProfileConnections).mockReturnValue(mockConnectionsResult);
+
+    render(<ProfileFollowers />);
+    const userItems = screen.getAllByTestId('user-list-item');
+    userItems.forEach((item) => {
+      expect(item).toHaveAttribute('data-follow-button-variant', 'iconWithText');
+    });
   });
 });
 

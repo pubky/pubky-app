@@ -1,18 +1,6 @@
 import * as Atoms from '@/atoms';
 import * as Libs from '@/libs';
-
-interface ButtonsNavigationProps {
-  id?: string;
-  className?: React.HTMLAttributes<HTMLDivElement>['className'];
-  onHandleBackButton?: () => void;
-  onHandleContinueButton?: () => void;
-  backText?: string;
-  continueText?: string;
-  backButtonDisabled?: boolean;
-  continueButtonDisabled?: boolean;
-  hiddenContinueButton?: boolean;
-  loadingContinueButton?: boolean;
-}
+import * as Types from './ButtonsNavigation.types';
 
 export function ButtonsNavigation({
   id,
@@ -23,27 +11,32 @@ export function ButtonsNavigation({
   continueText = 'Continue',
   backButtonDisabled = false,
   continueButtonDisabled = false,
+  hiddenBackButton = false,
   hiddenContinueButton = false,
   loadingContinueButton = false,
-}: ButtonsNavigationProps) {
+  backButtonClassName,
+  continueButtonClassName,
+}: Types.ButtonsNavigationProps) {
   return (
-    <Atoms.Container className={Libs.cn('gap-3 md:flex-row md:justify-between lg:gap-6', className)}>
-      <Atoms.Button
-        id={`${id}-back-btn`}
-        size="lg"
-        className="w-full rounded-full md:w-auto md:flex-1"
-        variant={'secondary'}
-        onClick={onHandleBackButton}
-        disabled={backButtonDisabled}
-      >
-        <Libs.ArrowLeft className="mr-1.5 h-4 w-4" />
-        {backText}
-      </Atoms.Button>
+    <Atoms.Container className={Libs.cn('justify-between gap-3 py-6 md:flex-row lg:gap-6', className)}>
+      {!hiddenBackButton && (
+        <Atoms.Button
+          id={`${id}-back-btn`}
+          size="lg"
+          className={Libs.cn('rounded-full', backButtonClassName)}
+          variant={'secondary'}
+          onClick={onHandleBackButton}
+          disabled={backButtonDisabled}
+        >
+          <Libs.ArrowLeft className="mr-1.5 h-4 w-4" />
+          {backText}
+        </Atoms.Button>
+      )}
       {!hiddenContinueButton && (
         <Atoms.Button
           id={`${id}-continue-btn`}
           size="lg"
-          className="w-full rounded-full md:w-auto md:flex-1"
+          className={Libs.cn('rounded-full', continueButtonClassName)}
           onClick={onHandleContinueButton}
           disabled={loadingContinueButton || continueButtonDisabled}
         >

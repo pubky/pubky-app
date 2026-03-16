@@ -362,3 +362,126 @@ exports[`FilterLayout - Snapshots > matches snapshot with default props 1`] = `
   </div>
 </div>
 `;
+
+exports[`FilterLayout - Snapshots > matches snapshot with disabled state 1`] = `
+<div
+  class="w-full flex-col flex m-0 min-w-0 gap-2 bg-background p-0"
+  data-slot="filter-root"
+  data-testid="filter-root"
+>
+  <div
+    class="m-0 gap-2 p-0"
+    data-slot="filter-header"
+    data-testid="filter-header"
+    id="radix-normalized"
+  >
+    <h2
+      class="text-2xl font-light text-muted-foreground"
+      data-testid="heading-2"
+    >
+      Layout
+    </h2>
+  </div>
+  <div
+    aria-labelledby="radix-normalized"
+    class=""
+    data-testid="filter-layout-radiogroup"
+    role="radiogroup"
+  >
+    <div
+      class="mx-auto w-full flex-col flex"
+      data-slot="filter-list"
+      data-testid="filter-list"
+    >
+      <button
+        aria-checked="true"
+        aria-disabled="true"
+        aria-label="Columns"
+        aria-pressed="true"
+        class="flex gap-2 text-base font-medium transition-colors border-0 bg-transparent p-0 text-left items-center justify-normal text-foreground m-0 h-full px-0 py-1 cursor-default opacity-20"
+        data-selected="true"
+        data-slot="filter-item"
+        data-testid="filter-item"
+        role="radio"
+        tabindex="0"
+        type="button"
+      >
+        <svg
+          aria-hidden="true"
+          class="lucide lucide-columns3 lucide-columns-3 h-5 w-5"
+          fill="none"
+          height="24"
+          stroke="currentColor"
+          stroke-linecap="round"
+          stroke-linejoin="round"
+          stroke-width="2"
+          viewBox="0 0 24 24"
+          width="24"
+          xmlns="http://www.w3.org/2000/svg"
+        >
+          <rect
+            height="18"
+            rx="2"
+            width="18"
+            x="3"
+            y="3"
+          />
+          <path
+            d="M9 3v18"
+          />
+          <path
+            d="M15 3v18"
+          />
+        </svg>
+        <span
+          class=""
+        >
+          Columns
+        </span>
+      </button>
+      <button
+        aria-checked="false"
+        aria-disabled="true"
+        aria-label="Wide"
+        aria-pressed="false"
+        class="flex gap-2 text-base font-medium transition-colors border-0 bg-transparent p-0 text-left items-center justify-normal text-muted-foreground hover:text-foreground/80 m-0 h-full px-0 py-1 cursor-default opacity-20"
+        data-selected="false"
+        data-slot="filter-item"
+        data-testid="filter-item"
+        role="radio"
+        tabindex="-1"
+        type="button"
+      >
+        <svg
+          aria-hidden="true"
+          class="lucide lucide-menu h-5 w-5"
+          fill="none"
+          height="24"
+          stroke="currentColor"
+          stroke-linecap="round"
+          stroke-linejoin="round"
+          stroke-width="2"
+          viewBox="0 0 24 24"
+          width="24"
+          xmlns="http://www.w3.org/2000/svg"
+        >
+          <path
+            d="M4 5h16"
+          />
+          <path
+            d="M4 12h16"
+          />
+          <path
+            d="M4 19h16"
+          />
+        </svg>
+        <span
+          class=""
+        >
+          Wide
+        </span>
+      </button>
+    </div>
+  </div>
+</div>
+`;

@@ -8,6 +8,7 @@ import * as Organisms from '@/organisms';
 import * as Icons from '@/libs/icons';
 import * as Libs from '@/libs';
 import * as Types from './ProfilePageHeader.types';
+import { FOLLOW_ACTIONS } from '@/hooks/useFollowUser/useFollowUser.types';
 
 /**
  * ProfilePageHeader
@@ -32,6 +33,7 @@ export function ProfilePageHeader({ profile, actions, isOwnProfile = true, userI
     isLoggingOut,
     onFollowToggle,
     isFollowLoading,
+    followLoadingAction,
     isFollowing,
   } = actions;
 
@@ -44,6 +46,17 @@ export function ProfilePageHeader({ profile, actions, isOwnProfile = true, userI
 
   const formattedPublicKey = Libs.formatPublicKey({ key: publicKey });
   const displayEmoji = Libs.extractEmojiFromStatus(status || '', emoji);
+  const getLoadingFollowText = () => {
+    if (followLoadingAction === FOLLOW_ACTIONS.UNFOLLOW) {
+      return t('unfollowing');
+    }
+
+    if (followLoadingAction === FOLLOW_ACTIONS.FOLLOW) {
+      return t('followingProgress');
+    }
+
+    return t('loading');
+  };
 
   return (
     <Atoms.Container
@@ -56,6 +69,7 @@ export function ProfilePageHeader({ profile, actions, isOwnProfile = true, userI
         <Organisms.AvatarWithFallback
           avatarUrl={avatarUrl}
           name={name}
+          fallbackSeed={userId}
           className="size-16 lg:size-36"
           fallbackClassName="text-2xl lg:text-4xl"
           alt={name}
@@ -90,11 +104,17 @@ export function ProfilePageHeader({ profile, actions, isOwnProfile = true, userI
           {/* Own profile actions */}
           {isOwnProfile && (
             <>
-              <Atoms.Button variant="secondary" size="sm" onClick={onEdit}>
+              <Atoms.Button data-cy="profile-edit-btn" variant="secondary" size="sm" onClick={onEdit}>
                 <Icons.Pencil className="size-4" />
                 {t('edit')}
               </Atoms.Button>
-              <Atoms.Button className="uppercase" variant="secondary" size="sm" onClick={onCopyPublicKey}>
+              <Atoms.Button
+                data-cy="profile-copy-pubkey-btn"
+                className="uppercase"
+                variant="secondary"
+                size="sm"
+                onClick={onCopyPublicKey}
+              >
                 <Icons.KeyRound className="size-4" />
                 {formattedPublicKey}
               </Atoms.Button>
@@ -138,32 +158,41 @@ export function ProfilePageHeader({ profile, actions, isOwnProfile = true, userI
                   data-cy="profile-follow-toggle-btn"
                   variant="secondary"
                   size="sm"
+                  className="group w-[110px] justify-center"
                   onClick={onFollowToggle}
                   disabled={isFollowLoading}
                 >
                   {isFollowLoading ? (
                     <>
                       <Icons.Loader2 className="size-4 animate-spin" />
-                      {isFollowing ? t('unfollowing') : t('followingProgress')}
+                      {getLoadingFollowText()}
+                    </>
+                  ) : isFollowing ? (
+                    <>
+                      <Atoms.Container overrideDefaults className="flex items-center gap-1.5 group-hover:hidden">
+                        <Icons.Check className="size-4" />
+                        {t('followingButton')}
+                      </Atoms.Container>
+                      <Atoms.Container overrideDefaults className="hidden items-center gap-1.5 group-hover:flex">
+                        <Icons.UserMinus className="size-4" />
+                        {t('unfollow')}
+                      </Atoms.Container>
                     </>
                   ) : (
                     <>
-                      {isFollowing ? (
-                        <>
-                          <Icons.Check className="size-4" />
-                          {t('followingButton')}
-                        </>
-                      ) : (
-                        <>
-                          <Icons.UserPlus className="size-4" />
-                          {t('follow')}
-                        </>
-                      )}
+                      <Icons.UserPlus className="size-4" />
+                      {t('follow')}
                     </>
                   )}
                 </Atoms.Button>
               )}
-              <Atoms.Button className="uppercase" variant="secondary" size="sm" onClick={onCopyPublicKey}>
+              <Atoms.Button
+                data-cy="profile-copy-pubkey-btn"
+                className="uppercase"
+                variant="secondary"
+                size="sm"
+                onClick={onCopyPublicKey}
+              >
                 <Icons.KeyRound className="size-4" />
                 {formattedPublicKey}
               </Atoms.Button>
@@ -173,9 +202,9 @@ export function ProfilePageHeader({ profile, actions, isOwnProfile = true, userI
               </Atoms.Button>
               {/* Three-dot menu with additional profile actions */}
               <Organisms.ProfileMenuActions
-                userId={publicKey}
+                userId={userId}
                 trigger={
-                  <Atoms.Button variant="secondary" size="sm" aria-label="Profile actions">
+                  <Atoms.Button data-cy="profile-menu-btn" variant="secondary" size="sm" aria-label="Profile actions">
                     <Libs.Ellipsis className="size-4" />
                   </Atoms.Button>
                 }
@@ -183,13 +212,15 @@ export function ProfilePageHeader({ profile, actions, isOwnProfile = true, userI
               {/* Status display inline with buttons */}
               {status && (
                 <Atoms.Container overrideDefaults={true} className="flex h-8 items-center gap-1">
-                  <span className="text-base leading-6">{displayEmoji}</span>
-                  <span className="text-base leading-6 font-bold text-white">
+                  <Atoms.Typography as="span" overrideDefaults className="text-base leading-6">
+                    {displayEmoji}
+                  </Atoms.Typography>
+                  <Atoms.Typography as="span" overrideDefaults className="text-base leading-6 font-bold text-white">
                     {(() => {
                       const parsed = Libs.parseStatus(status);
                       return parsed.key ? tStatus(parsed.key as Parameters<typeof tStatus>[0]) : parsed.text;
                     })()}
-                  </span>
+                  </Atoms.Typography>
                 </Atoms.Container>
               )}
             </>

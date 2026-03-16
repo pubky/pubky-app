@@ -2,9 +2,15 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import * as Core from '@/core';
 import { HotController } from './hot';
 
+const mockCurrentUserPubky = 'current-user-pubky' as Core.Pubky;
+
 describe('HotController', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    vi.spyOn(Core.useAuthStore, 'getState').mockReturnValue({
+      ...Core.useAuthStore.getState(),
+      currentUserPubky: mockCurrentUserPubky,
+    });
   });
 
   describe('getOrFetch', () => {
@@ -52,13 +58,14 @@ describe('HotController', () => {
 
       await HotController.getOrFetch(params);
 
-      expect(getOrFetchSpy).toHaveBeenCalledWith(params);
+      expect(getOrFetchSpy).toHaveBeenCalledWith({ ...params, user_id: mockCurrentUserPubky });
     });
 
     it('should bubble when HotApplication.getOrFetch fails', async () => {
       const params: Core.TTagHotParams = {
         reach: Core.UserStreamReach.FOLLOWING,
         timeframe: Core.UserStreamTimeframe.TODAY,
+        user_id: 'user-123',
       };
 
       vi.spyOn(Core.HotApplication, 'getOrFetch').mockRejectedValue(new Error('application-fail'));
@@ -214,6 +221,56 @@ describe('HotController', () => {
       await HotController.getOrFetch({ timeframe: Core.UserStreamTimeframe.TODAY });
 
       expect(getOrFetchSpy).toHaveBeenCalledTimes(3);
+      // reach calls should have user_id injected
+      expect(getOrFetchSpy).toHaveBeenNthCalledWith(1, {
+        reach: Core.UserStreamReach.FOLLOWING,
+        timeframe: Core.UserStreamTimeframe.TODAY,
+        user_id: mockCurrentUserPubky,
+      });
+      expect(getOrFetchSpy).toHaveBeenNthCalledWith(2, {
+        reach: Core.UserStreamReach.FRIENDS,
+        timeframe: Core.UserStreamTimeframe.TODAY,
+        user_id: mockCurrentUserPubky,
+      });
+      // No reach → no user_id injection
+      expect(getOrFetchSpy).toHaveBeenNthCalledWith(3, {
+        timeframe: Core.UserStreamTimeframe.TODAY,
+      });
+    });
+
+    it('should not inject user_id when user is not authenticated', async () => {
+      vi.spyOn(Core.useAuthStore, 'getState').mockReturnValue({
+        ...Core.useAuthStore.getState(),
+        currentUserPubky: null,
+      });
+
+      const mockHotTags = [] as Core.NexusHotTag[];
+      const params: Core.TTagHotParams = {
+        reach: Core.UserStreamReach.FOLLOWING,
+        timeframe: Core.UserStreamTimeframe.TODAY,
+      };
+
+      const getOrFetchSpy = vi.spyOn(Core.HotApplication, 'getOrFetch').mockResolvedValue(mockHotTags);
+
+      await HotController.getOrFetch(params);
+
+      expect(getOrFetchSpy).toHaveBeenCalledWith(params);
+    });
+
+    it('should not inject user_id when user_id is already provided', async () => {
+      const mockHotTags = [] as Core.NexusHotTag[];
+      const params: Core.TTagHotParams = {
+        reach: Core.UserStreamReach.FOLLOWING,
+        timeframe: Core.UserStreamTimeframe.TODAY,
+        user_id: 'explicit-user-id',
+      };
+
+      const getOrFetchSpy = vi.spyOn(Core.HotApplication, 'getOrFetch').mockResolvedValue(mockHotTags);
+
+      await HotController.getOrFetch(params);
+
+      // Should use the explicitly provided user_id, not inject from auth store
+      expect(getOrFetchSpy).toHaveBeenCalledWith(params);
     });
 
     it('should handle different timeframe values', async () => {

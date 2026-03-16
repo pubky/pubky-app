@@ -1,6 +1,5 @@
 import * as Core from '@/core';
 import { Err, ErrorService, ClientErrorCode } from '@/libs';
-import { PubkyAppPostKind } from 'pubky-app-specs';
 
 export class PostController {
   private constructor() {} // Prevent instantiation
@@ -19,9 +18,9 @@ export class PostController {
    * Read post counts for a specific post
    * @param params - Parameters object
    * @param params.compositeId - Composite post ID in format "authorId:postId"
-   * @returns Post counts (with default values if not found)
+   * @returns Post counts or null if not found
    */
-  static async getCounts({ compositeId }: Core.TCompositeId) {
+  static async getCounts({ compositeId }: Core.TCompositeId): Promise<Core.PostCountsModelSchema | null> {
     return await Core.PostApplication.getCounts({ compositeId });
   }
 
@@ -56,17 +55,27 @@ export class PostController {
   }
 
   /**
-   * Read or fetch a post - reads from local DB first, fetches from Nexus if not found
+   * Read or fetch a full post entity from local database or Nexus API.
+   * Persists details, counts, relationships, tags, and author.
    * @param params - Parameters object
    * @param params.compositeId - Composite post ID in format "authorId:postId"
    * @param params.viewerId - Optional viewer ID for relationship data
    * @returns Post details or null if not found
    */
-  static async getOrFetchDetails({
-    compositeId,
-    viewerId,
-  }: Core.TGetOrFetchPostParams): Promise<Core.PostDetailsModelSchema | null> {
-    return await Core.PostApplication.getOrFetchDetails({ compositeId, viewerId });
+  static async getOrFetch(params: Core.TGetOrFetchPostParams): Promise<Core.PostDetailsModelSchema | null> {
+    return await Core.PostApplication.getOrFetch(params);
+  }
+
+  /**
+   * Fetch a post from Nexus and persist to local database (network-only, no local read).
+   * Use instead of `getOrFetch` when the caller already knows the post is not cached.
+   * @param params - Parameters object
+   * @param params.compositeId - Composite post ID in format "authorId:postId"
+   * @param params.viewerId - Optional viewer ID for relationship data
+   * @returns Post details or null if not found
+   */
+  static async fetch(params: Core.TGetOrFetchPostParams): Promise<Core.PostDetailsModelSchema | null> {
+    return await Core.PostApplication.fetch(params);
   }
 
   /**
@@ -95,7 +104,7 @@ export class PostController {
    * @param params - Parameters object
    * @param params.authorId - ID of the user creating the post
    * @param params.content - Post content (can be empty for simple reposts)
-   * @param params.kind - Post kind (default: Short, automatically set to repost in storage if originalPostId is provided)
+   * @param params.isArticle - Whether the post is a long-form article
    * @param params.tags - Tags to add to the post (optional)
    * @param params.attachments - Attachments to add to the post (optional)
    * @param params.parentPostId - ID of the post being replied to (optional for root posts)
@@ -105,7 +114,7 @@ export class PostController {
   static async commitCreate({
     authorId,
     content,
-    kind = PubkyAppPostKind.Short,
+    isArticle,
     tags,
     attachments,
     parentPostId,
@@ -123,13 +132,15 @@ export class PostController {
       repostedUri = await Core.PostValidators.validatePostId({ postId: originalPostId, message: 'Original post' });
     }
 
+    const postKind = Core.inferPostKindForCreate({ content, attachments, isArticle });
+
     // TODO: In the future, we could decouple that action and do it asyncronously in the moment that we add a file to the post
     const fileAttachments = attachments ? await this.normalizeFileAttachments({ attachments, pubky: authorId }) : [];
 
     const { post, meta } = await Core.PostNormalizer.to(
       {
         content: content.trim(),
-        kind,
+        kind: postKind,
         parentUri,
         embed: repostedUri,
         attachments: fileAttachments,

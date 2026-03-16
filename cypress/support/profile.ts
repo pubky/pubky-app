@@ -1,38 +1,42 @@
 import { goToProfilePageFromHeader } from './header';
+import { LatestNotificationReadState } from './types/enums';
 
 interface ProfileField {
   editSelector: string;
   verifySelector: string;
+  verifyBy?: 'innerText' | 'href';
 }
 
 const profileFields: { [key: string]: ProfileField } = {
   name: {
-    editSelector: '#edit-profile-name-input',
-    verifySelector: '#profile-username-header',
+    editSelector: '#profile-name-input',
+    verifySelector: '[data-cy="profile-username-header"]',
   },
   bio: {
-    editSelector: '#edit-profile-bio-input',
-    verifySelector: '#profile-bio-content',
-  },
-  linkWebsite: {
-    editSelector: '#edit-profile-link-website-input',
-    verifySelector: '#profile-link-website',
+    editSelector: '#profile-bio-input',
+    verifySelector: '[data-cy="profile-bio-header"]',
   },
   linkBluesky: {
-    editSelector: '#edit-profile-link-bluesky-input',
-    verifySelector: '#profile-link-bluesky',
+    editSelector: '[data-cy="edit-profile-link-bluesky-input"]',
+    verifySelector: '[data-cy="profile-link-bluesky"]',
+    verifyBy: 'href',
+  },
+  linkGithub: {
+    editSelector: '[data-cy="edit-profile-link-github-input"]',
+    verifySelector: '[data-cy="profile-link-github"]',
+    verifyBy: 'href',
   },
 };
 
 // use on edit profile page
 export const addLinks = (links: { label: string; url: string }[]) => {
   links.forEach((link) => {
-    cy.get('#edit-profile-add-link-btn').click();
-    cy.get('#add-profile-link-header').should('be.visible');
-    cy.get('#add-profile-link-label-input').type(link.label);
-    cy.get('#add-profile-link-url-input').type(link.url);
-    cy.get('#add-profile-link-submit-btn').click();
-    cy.get(`#edit-profile-link-${link.label.toLowerCase()}-input`).should('be.visible');
+    cy.get('[data-cy="edit-profile-add-link-btn"]').click();
+    cy.get('[data-cy="dialog-content"]').should('be.visible');
+    cy.get('[data-cy="add-profile-link-label-input"]').type(link.label);
+    cy.get('[data-cy="add-profile-link-url-input"]').type(link.url);
+    cy.get('[data-cy="add-profile-link-submit-btn"]').click();
+    cy.get(`[data-cy="edit-profile-link-${link.label.toLowerCase()}-input"]`).should('be.visible');
   });
 };
 
@@ -47,31 +51,31 @@ export const editProfileAndVerify = (profileData: Partial<Record<keyof typeof pr
   });
 
   // Save the changes
-  cy.get('#edit-profile-save-btn').click();
+  cy.get('[data-cy="edit-profile-save-btn"]').click();
 
   // Verify redirection to the profile page
   cy.location('pathname').should('eq', '/profile');
 
   // Verify the changes for each field in profileData
   Object.entries(profileData).forEach(([field, value]) => {
-    const { verifySelector } = profileFields[field];
-    // if value begins with 'http://' or 'https://' remove it
-    const valueWithoutHttp = value?.replace(/^https?:\/\//, '') || '';
+    const { verifySelector, verifyBy } = profileFields[field];
 
-    // This approach fails for bio due to additional space inserted before final word.
-    // cy.get(verifySelector).should('have.text', value);
-
-    // This is the equivalent of Selenium's getText() method, which returns the innerText of a visible element.
-    cy.get(verifySelector).should(($elem) => {
-      expect($elem.get(0).innerText).to.eq(valueWithoutHttp);
-    });
+    if (verifyBy === 'href') {
+      cy.get(verifySelector).should('have.attr', 'href', value);
+    } else {
+      // This is the equivalent of Selenium's getText() method, which returns the innerText of a visible element.
+      // This approach is necessary for bio due to additional space inserted before final word.
+      cy.get(verifySelector).should(($elem) => {
+        expect($elem.get(0).innerText).to.eq(value);
+      });
+    }
   });
 };
 
 export const clickFollowButton = () => {
   cy.get('[data-cy="profile-follow-toggle-btn"]').should('be.visible').and('have.text', 'Follow').click();
   // Check follow button is now unfollow
-  cy.get('[data-cy="profile-follow-toggle-btn"]').should('be.visible').and('have.text', 'Following');
+  cy.get('[data-cy="profile-follow-toggle-btn"]').should('be.visible').and('have.text', 'FollowingUnfollow');
 };
 
 export const clickUnfollowButton = () => {
@@ -102,7 +106,11 @@ export const waitForNotificationDotsToDisappear = () => {
   cy.get('[data-cy="notifications-list"]').find('[data-cy="notification-unread-dot"]').should('not.exist');
 };
 
-export const checkLatestNotification = (expectedContent: string[], profileToNavigateTo?: string) => {
+export const checkLatestNotification = (
+  expectedContent: string[],
+  readState: LatestNotificationReadState,
+  profileToNavigateTo?: string,
+) => {
   cy.location('pathname').should('eq', '/profile');
   waitForNotificationsToLoad();
   // assert that each expected string is present in the first notification listed
@@ -115,6 +123,14 @@ export const checkLatestNotification = (expectedContent: string[], profileToNavi
       expectedContent.forEach((content) => {
         expect($firstNotif).to.contain(content);
       });
+    })
+    .should(($firstNotif) => {
+      const dot = $firstNotif.find('[data-cy="notification-unread-dot"]');
+      if (readState === LatestNotificationReadState.Unread) {
+        expect(dot.length).to.be.greaterThan(0);
+      } else {
+        expect(dot.length).to.equal(0);
+      }
     });
   // if profile name is provided, navigate to it in the notification
   if (profileToNavigateTo) {
@@ -170,14 +186,9 @@ export const waitForPutLastRead = () => {
 };
 
 // cause last_read to be updated by clicking posts and notifications tabs
-export const causeLastReadToBeUpdated = () => {
-  cy.intercept({
-    method: 'PUT',
-    url: '/pub/pubky.app/last_read',
-  }).as('putLastRead');
+export const causeNotificationsToBeRead = () => {
   cy.get('[data-cy="profile-filter-item-posts"]').click();
   // Wait for posts filter item to become active before clicking notifications
   cy.get('[data-cy="profile-filter-item-posts"]').closest('[data-selected="true"]').should('exist');
-  cy.wait('@putLastRead').should('have.property', 'response').its('statusCode').should('eq', 201);
   cy.get('[data-cy="profile-filter-item-notifications"]').click();
 };

@@ -8,16 +8,6 @@ export class HomegateController {
   private constructor() {}
 
   /**
-   * Generates a signup authentication URL for external authentication flows. It will generate enough metadata to signup a key in the homeserver with pubky ring app.
-   * @param inviteCode - The invite code for signup
-   * @returns Promise resolving to the generated signup authentication URL
-   */
-  static async getSignupAuthUrl(inviteCode: string): Promise<Core.TGenerateAuthUrlResult> {
-    await Core.clearDatabase();
-    return await Core.HomegateApplication.generateSignupAuthUrl(inviteCode);
-  }
-
-  /**
    * Get SMS verification availability info.
    *
    * @returns The availability status
@@ -52,10 +42,17 @@ export class HomegateController {
    * Long-polling endpoint that waits for payment to be confirmed.
    *
    * @param verificationId - The verification ID from createLnVerification
+   * @param signal - Optional abort signal for canceling an in-flight long-poll request
    * @returns The verification result
    * @throws AppError if awaiting fails
    */
-  static async awaitLnVerification(verificationId: string): Promise<Core.THomegateAwaitLnVerificationResult> {
+  static async awaitLnVerification(
+    verificationId: string,
+    signal?: AbortSignal,
+  ): Promise<Core.THomegateAwaitLnVerificationResult> {
+    if (signal) {
+      return await Core.HomegateApplication.awaitLnVerification(verificationId, signal);
+    }
     return await Core.HomegateApplication.awaitLnVerification(verificationId);
   }
 

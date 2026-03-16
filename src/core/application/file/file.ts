@@ -103,11 +103,36 @@ export class FileApplication {
   }
 
   /**
-   * Persists files to the local database.
-   * Fetches file metadata from nexus, extracts composite IDs from URIs, and saves them locally.
+   * Transforms and persists file metadata to the local database.
+   * Builds composite IDs from URIs, parses URL fields, and saves them locally.
+   *
+   * @param fileAttachments - Array of file metadata objects already available (no HTTP fetch needed)
+   */
+  static async persistFiles(fileAttachments: Core.NexusFileDetails[]) {
+    if (fileAttachments.length === 0) {
+      return;
+    }
+
+    const filesWithCompositeIds = fileAttachments.map((file) => {
+      const compositeId = Core.buildCompositeIdFromPubkyUri({
+        uri: file.uri,
+        domain: Core.CompositeIdDomain.FILES,
+      });
+      return {
+        ...file,
+        urls: typeof file.urls === 'string' ? (JSON.parse(file.urls) as Core.NexusFileUrls) : file.urls,
+        id: compositeId,
+      };
+    });
+
+    await Core.LocalFileService.createMany({ files: filesWithCompositeIds as Core.NexusFileDetails[] });
+  }
+
+  /**
+   * Fetches file metadata from nexus by URIs and persists them locally.
+   * Used by bootstrap where file metadata is not available inline.
    *
    * @param fileUris - Array of file URIs to fetch and persist
-   * @returns Promise that resolves when files are persisted
    */
   static async fetchFiles(fileUris: string[]) {
     if (fileUris.length === 0) {
@@ -115,18 +140,6 @@ export class FileApplication {
     }
 
     const nexusFiles = await Core.NexusFileService.fetchFiles(fileUris);
-    const filesWithCompositeIds = nexusFiles.map((file) => {
-      const compositeId = Core.buildCompositeIdFromPubkyUri({
-        uri: file.uri,
-        domain: Core.CompositeIdDomain.FILES,
-      });
-      return {
-        ...file,
-        urls: JSON.parse(file.urls as unknown as string) as Core.NexusFileUrls,
-        id: compositeId,
-      };
-    });
-
-    await Core.LocalFileService.createMany({ files: filesWithCompositeIds as Core.NexusFileDetails[] });
+    await this.persistFiles(nexusFiles);
   }
 }

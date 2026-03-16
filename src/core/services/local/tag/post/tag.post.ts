@@ -6,6 +6,7 @@ export class LocalPostTagService {
     Core.PostTagsModel.table,
     Core.PostCountsModel.table,
     Core.UserCountsModel.table,
+    Core.PostTtlModel.table,
   ] as const;
   /**
    * Adds a tag to a post and updates all related counts.
@@ -21,20 +22,22 @@ export class LocalPostTagService {
    * @throws {AppError} When user has already tagged this post with the same label
    * @throws {DatabaseError} When database operations fail
    */
-  static async create({ taggedId: postId, label, taggerId }: Core.TLocalTagParams) {
+  static async create({ taggedId: postId, label, taggerId }: Core.TLocalTagParams): Promise<boolean> {
     try {
-      await Core.db.transaction('rw', this.TAG_TABLES, async () => {
+      return await Core.db.transaction('rw', this.TAG_TABLES, async () => {
         const postTagsModel = await Core.PostTagsModel.getOrCreate<string, Core.PostTagsModelSchema>(postId);
         const status = postTagsModel.addTagger(label, taggerId);
         // Idempotent: user already tagged this post with this label
         if (status === null) {
-          return;
+          return false;
         }
         await Promise.all([
           this.savePostTagsModel(postId, postTagsModel),
           this.updatePostCounts(postId, postTagsModel),
           Core.UserCountsModel.updateCounts({ userId: taggerId, countChanges: { tagged: 1 } }),
+          Core.PostTtlModel.upsert({ id: postId, lastUpdatedAt: Date.now() }),
         ]);
+        return true;
       });
     } catch (error) {
       throw Err.database(DatabaseErrorCode.WRITE_FAILED, 'Failed to create post tag', {
@@ -80,6 +83,7 @@ export class LocalPostTagService {
         await this.savePostTagsModel(postId, postTagsModel);
         await this.updatePostCounts(postId, postTagsModel);
         await Core.UserCountsModel.updateCounts({ userId: taggerId, countChanges: { tagged: -1 } });
+        await Core.PostTtlModel.upsert({ id: postId, lastUpdatedAt: Date.now() });
       });
       return true;
     } catch (error) {

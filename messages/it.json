@@ -87,7 +87,9 @@
     "hot": "Tendenze",
     "bookmarks": "Segnalibri",
     "settings": "Impostazioni",
-    "signIn": "Accedi"
+    "newHere": "Nuovo qui?",
+    "signIn": "Accedi",
+    "feed": "Feed"
   },
   "settings": {
     "title": "Impostazioni",
@@ -256,7 +258,7 @@
     "footer": {
       "agreement": "Creando un account <pubky>Pubky</pubky>, accetti i",
       "andConfirmAge": ", e confermi di avere",
-      "copyright": "Pubky e alimentato da <pubkyCore>Pubky Core</pubkyCore> ed e stato costruito con amore e dedizione da Synonym Software, S.A. DE C.V. ©2025. Tutti i diritti riservati."
+      "copyright": "Pubky e alimentato da <pubkyCore>Pubky Core</pubkyCore> ed e stato costruito con amore e dedizione da Synonym Software, S.A. DE C.V. ©2026. Tutti i diritti riservati."
     },
     "scan": {
       "titleMobile": "Tocca per <highlight>autorizzare.</highlight>",
@@ -264,21 +266,44 @@
       "subtitle": "Apri Pubky Ring, crea un pubky e scansiona il QR.",
       "generating": "Generazione codice QR...",
       "generatingShort": "Generazione...",
+
+      "expired": "Scaduto",
+
+      "openingRing": "Apertura di Pubky Ring...",
+
       "authorize": "Autorizza con Pubky Ring",
       "authorizeSub": "Usa <pubkyRing>Pubky Ring</pubkyRing> o qualsiasi altro portachiavi alimentato da <pubkyCore>Pubky Core</pubkyCore>.",
       "linkFailed": "Impossibile collegarsi all'applicazione Pubky Ring",
       "tryAgain": "Riprova."
+    },
+    "authExpired": {
+      "titleDesktop": "Codice QR scaduto",
+      "descriptionDesktop": "Questo codice QR non è più attivo. Aggiorna per ottenerne uno nuovo.",
+      "titleMobile": "Sessione di autorizzazione scaduta",
+      "descriptionMobile": "La tua sessione di autorizzazione non è più attiva. Aggiorna per generarne una nuova e continuare.",
+      "refresh": "Aggiorna"
     },
     "signIn": {
       "title": "Accedi a <highlight>Pubky.</highlight>",
       "subtitle": "Autorizza con Pubky Ring per accedere.",
       "generating": "Generazione codice QR...",
       "generatingShort": "Generazione...",
+
+      "expired": "Scaduto",
+
+      "openingRing": "Apertura di Pubky Ring...",
+
       "authorize": "Autorizza con Pubky Ring",
       "linkCopied": "Link copiato",
       "linkCopiedDescription": "Link di autenticazione copiato negli appunti.",
       "linkFailed": "Impossibile collegarsi all'applicazione Pubky Ring",
       "tryAgain": "Riprova.",
+      "authInitFailedTitle": "Accesso non riuscito. Riprova.",
+      "authInitFailedDescription": "Impossibile completare l'autorizzazione con Pubky Ring. Riprova.",
+      "authNotCompletedTitle": "L'autorizzazione non è stata completata",
+      "authNotCompletedDescription": "Il firmatario non ha completato l'autorizzazione. Riprova.",
+      "qrGenerationFailedTitle": "Generazione del codice QR non riuscita",
+      "qrGenerationFailedDescription": "Impossibile generare il codice QR di accesso. Aggiorna e riprova.",
       "recoveryHint": "Non riesci ad accedere con <pubkyRing>Pubky Ring</pubkyRing>? Usa la frase di recupero o il file crittografato per ripristinare il tuo account.",
       "verifyingAccount": "Verifica account",
       "loadingData": "Caricamento dei tuoi dati",
@@ -603,6 +628,29 @@
       "urlField": "URL",
       "urlPlaceholder": "https://twitter.com/satoshi",
       "saveButton": "Salva link"
+    },
+    "customFeed": {
+      "createTitle": "Crea Feed",
+      "editTitle": "Modifica Feed",
+      "feedName": "Nome del Feed",
+      "feedNamePlaceholder": "Non le tue chiavi...",
+      "reach": "Portata",
+      "reachPlaceholder": "Seleziona una portata",
+      "sort": "Ordina",
+      "sortPlaceholder": "Seleziona un ordinamento",
+      "layout": "Layout",
+      "layoutPlaceholder": "Seleziona un layout",
+      "content": "Contenuto",
+      "contentPlaceholder": "Seleziona un contenuto",
+      "filterTags": "Filtra per tag di contenuto",
+      "saveFeed": "Salva Feed",
+      "deleteFeed": "Elimina Feed",
+      "feedCreated": "Feed {name} creato!",
+      "feedCreateError": "Impossibile creare il feed, riprova o contatta il supporto.",
+      "feedEdited": "Feed {name} modificato!",
+      "feedEditError": "Impossibile modificare il feed, riprova o contatta il supporto.",
+      "feedDeleted": "Feed {name} eliminato!",
+      "feedDeleteError": "Impossibile eliminare il feed, riprova o contatta il supporto."
     }
   },
   "sidebar": {
@@ -824,6 +872,7 @@
     "success": "Successo",
     "error": "Errore",
     "errors": "Errori",
+    "genericErrorTitle": "Ops! Qualcosa e andato storto!",
     "post": {
       "replyPosted": "Risposta pubblicata",
       "replyPostedDesc": "La tua risposta e stata pubblicata con successo.",
@@ -1011,7 +1060,9 @@
     "trendingPosts": "Post di tendenza",
     "postsCount": "{count} post",
     "failedToLoadUsers": "Caricamento utenti fallito",
-    "noUsersToShow": "Nessun utente da mostrare"
+    "failedToLoadTags": "Caricamento tag fallito",
+    "noUsersToShow": "Nessun utente da mostrare",
+    "noTagsToShow": "Nessun tag da mostrare"
   },
   "privacy": {
     "showConfirmation": "Mostra conferma prima del reindirizzamento",
@@ -1130,5 +1181,15 @@
     "pullToRefresh": "Scorri per aggiornare",
     "releaseToRefresh": "Rilascia per aggiornare",
     "refreshing": "Aggiornamento..."
+  },
+  "markdownEditor": {
+    "emoji": "Emoji",
+    "richText": "Testo formattato",
+    "markdown": "Markdown",
+    "clearToSwitch": "Cancella il contenuto per cambiare modalità",
+    "placeholder": "Inizia a scrivere il tuo capolavoro",
+    "toolbarAriaLabel": "Barra degli strumenti per la modifica Markdown",
+    "warningApproaching": "Ti stai avvicinando al limite massimo di caratteri.",
+    "warningReached": "Hai raggiunto il limite massimo di caratteri."
   }
 }

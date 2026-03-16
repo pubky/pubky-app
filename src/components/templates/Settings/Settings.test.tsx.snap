@@ -1,0 +1,7 @@
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
+
+exports[`Settings - Snapshots > matches snapshot 1`] = `
+<div
+  data-testid="mobile-header"
+/>
+`;

@@ -1,5 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen } from '@testing-library/react';
+import type { ElementType, ReactNode } from 'react';
 import { WhoToFollowPageMain } from './WhoToFollowPageMain';
 import * as Hooks from '@/hooks';
 import * as Core from '@/core';
@@ -51,7 +52,7 @@ vi.mock('@/atoms', () => ({
     className,
     'data-testid': dataTestId,
   }: {
-    children: React.ReactNode;
+    children: ReactNode;
     className?: string;
     'data-testid'?: string;
   }) => (
@@ -59,11 +60,12 @@ vi.mock('@/atoms', () => ({
       {children}
     </div>
   ),
-  Heading: ({ children }: { children: React.ReactNode }) => <h5 data-testid="heading">{children}</h5>,
+  Heading: ({ children }: { children: ReactNode }) => <h5 data-testid="heading">{children}</h5>,
   Spinner: () => <div data-testid="spinner">Loading...</div>,
-  Typography: ({ children, as: Tag = 'p' }: { children: React.ReactNode; as?: keyof JSX.IntrinsicElements }) => (
-    <Tag>{children}</Tag>
-  ),
+  Typography: ({ children, as: Tag = 'p' }: { children: ReactNode; as?: ElementType }) => {
+    const Component = Tag;
+    return <Component>{children}</Component>;
+  },
 }));
 
 // Mock Libs
@@ -73,11 +75,12 @@ vi.mock('@/libs', () => ({
 
 // Mock Organisms
 vi.mock('@/organisms', () => ({
-  UserListItem: ({ user }: { user: { id: string } }) => (
-    <div data-testid="user-list-item" data-user-id={user.id}>
+  UserListItem: ({ user, followButtonVariant = 'icon' }: { user: { id: string }; followButtonVariant?: string }) => (
+    <div data-testid="user-list-item" data-user-id={user.id} data-follow-button-variant={followButtonVariant}>
       User item
     </div>
   ),
+  FullUserListItemSkeleton: () => <div data-testid="user-list-item-skeleton-full">Skeleton item</div>,
 }));
 
 const mockUsers = [
@@ -145,7 +148,7 @@ describe('WhoToFollowPageMain', () => {
   it('renders loading state when isLoading is true', () => {
     vi.mocked(Hooks.useUserStream).mockReturnValue(mockLoadingResult);
     render(<WhoToFollowPageMain />);
-    expect(screen.getByTestId('spinner')).toBeInTheDocument();
+    expect(screen.getAllByTestId('user-list-item-skeleton-full')).toHaveLength(30);
   });
 
   it('renders users when there are items', () => {
@@ -156,6 +159,17 @@ describe('WhoToFollowPageMain', () => {
     expect(userItems).toHaveLength(2);
     expect(userItems[0]).toHaveAttribute('data-user-id', 'user-1');
     expect(userItems[1]).toHaveAttribute('data-user-id', 'user-2');
+  });
+
+  it('uses default icon followButtonVariant for UserListItem', () => {
+    vi.mocked(Hooks.useUserStream).mockReturnValue(mockUsersResult);
+
+    render(<WhoToFollowPageMain />);
+    const userItems = screen.getAllByTestId('user-list-item');
+    userItems.forEach((item) => {
+      // should default to icon only without text
+      expect(item).toHaveAttribute('data-follow-button-variant', 'icon');
+    });
   });
 
   it('calls useUserStream with correct params', () => {
