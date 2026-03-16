@@ -52,8 +52,6 @@ export interface SettingsActions {
   setLanguage: (language: string) => void;
   // General actions
   reset: () => void;
-  // Version management
-  incrementVersion: () => void;
   // Homeserver sync action, used by bootstrap to load remote settings
   loadFromHomeserver: (settings: SettingsState) => void;
 }
@@ -88,7 +86,7 @@ export const settingsInitialState: SettingsState = {
   privacy: defaultPrivacyPreferences,
   muted: [],
   language: 'en',
-  updatedAt: Date.now(),
+  updatedAt: 0,
   version: 1,
 };
 
@@ -109,6 +107,5 @@ export enum SettingsActionTypes {
   CLEAR_MUTED_USERS = 'CLEAR_MUTED_USERS',
   SET_LANGUAGE = 'SET_LANGUAGE',
   RESET = 'RESET',
-  INCREMENT_VERSION = 'INCREMENT_VERSION',
   LOAD_FROM_HOMESERVER = 'LOAD_FROM_HOMESERVER',
 }

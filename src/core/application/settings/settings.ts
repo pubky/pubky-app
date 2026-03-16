@@ -81,8 +81,10 @@ export class SettingsApplication {
 
     if (!remoteSettings) {
       Logger.info('[Settings] No remote settings, pushing local to homeserver');
-      await this.commitUpdate(localSettings, pubky);
-      return null;
+      // Stamp a real timestamp if updatedAt is 0 (initial default), so homeserver has a valid timestamp for future conflict resolution
+      const settingsWithTimestamp = { ...localSettings, updatedAt: localSettings.updatedAt || Date.now() };
+      await this.commitUpdate(settingsWithTimestamp, pubky);
+      return settingsWithTimestamp;
     }
 
     // Check if remote settings are newer (higher version or same version with newer timestamp)

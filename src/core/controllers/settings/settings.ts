@@ -26,7 +26,6 @@ export class SettingsController {
     this.pendingCommit = this.pendingCommit
       .catch(() => {})
       .then(async () => {
-        Core.useSettingsStore.getState().incrementVersion();
         const pubky = Core.useAuthStore.getState().selectCurrentUserPubky();
         const settings = Core.SettingsNormalizer.extractState(Core.useSettingsStore.getState());
         await Core.SettingsApplication.commitUpdate(settings, pubky);

@@ -167,20 +167,28 @@ describe('SettingsApplication', () => {
   });
 
   describe('initializeSettings', () => {
-    it('should create settings on homeserver when none exist remotely', async () => {
-      const localSettings = createMockSettingsState();
-      const normalizerResult = createMockNormalizerResult(localSettings);
+    it('should create settings on homeserver when none exist remotely and return timestamped settings', async () => {
+      const localSettings = createMockSettingsState({ updatedAt: 0 });
       const { requestSpy, normalizerBuildUrlSpy, normalizerToSpy } = setupMocks();
 
       normalizerBuildUrlSpy.mockReturnValue(`pubky://${testPubky}/pub/pubky.app/settings.json`);
       requestSpy.mockResolvedValueOnce(undefined); // fetchFromHomeserver returns null
-      normalizerToSpy.mockReturnValue(normalizerResult);
+      normalizerToSpy.mockReturnValue(createMockNormalizerResult(localSettings));
       requestSpy.mockResolvedValueOnce(undefined); // commitUpdate succeeds
 
+      const before = Date.now();
       const result = await SettingsApplication.initializeSettings(testPubky, localSettings);
+      const after = Date.now();
 
-      expect(result).toBeNull();
-      expect(normalizerToSpy).toHaveBeenCalledWith(localSettings, testPubky);
+      expect(result).not.toBeNull();
+      expect(result!.updatedAt).toBeGreaterThanOrEqual(before);
+      expect(result!.updatedAt).toBeLessThanOrEqual(after);
+      expect(normalizerToSpy).toHaveBeenCalledWith(
+        expect.objectContaining({ updatedAt: expect.any(Number) }),
+        testPubky,
+      );
+      // Should push local settings to homeserver (calling commitUpdate())
+      expect(requestSpy).toHaveBeenCalledWith(expect.objectContaining({ method: HttpMethod.PUT }));
     });
 
     it('should return remote settings when they are newer (higher version)', async () => {

@@ -19,7 +19,6 @@ const mockStoreActions = {
   setNeverShowPosts: vi.fn(),
   setLanguage: vi.fn(),
   reset: vi.fn(),
-  incrementVersion: vi.fn(),
   addMutedUser: vi.fn(),
   removeMutedUser: vi.fn(),
   setMutedUsers: vi.fn(),
@@ -135,15 +134,6 @@ describe('SettingsController', () => {
 
       expect(mockStoreActions.clearMutedUsers).toHaveBeenCalled();
       expect(commitUpdateSpy).not.toHaveBeenCalled();
-    });
-  });
-
-  describe('version increment', () => {
-    it('should increment version before syncing to homeserver', async () => {
-      await SettingsController.setShowConfirm(false);
-
-      expect(mockStoreActions.incrementVersion).toHaveBeenCalledTimes(1);
-      expect(commitUpdateSpy).toHaveBeenCalledTimes(1);
     });
   });
 

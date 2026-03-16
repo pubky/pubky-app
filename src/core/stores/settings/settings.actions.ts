@@ -187,17 +187,6 @@ export const createSettingsActions = (set: ZustandSet<SettingsStore>): SettingsA
     set({ ...settingsInitialState, updatedAt: Date.now() }, false, SettingsActionTypes.RESET);
   },
 
-  // Version management — called by SettingsController before pushing to homeserver
-  incrementVersion: () => {
-    set(
-      (state) => ({
-        version: state.version + 1,
-      }),
-      false,
-      SettingsActionTypes.INCREMENT_VERSION,
-    );
-  },
-
   // Homeserver sync action, used by bootstrap to load remote settings
   loadFromHomeserver: (settings: SettingsState) => {
     set(

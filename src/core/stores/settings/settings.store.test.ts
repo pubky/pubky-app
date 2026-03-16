@@ -296,35 +296,6 @@ describe('SettingsStore', () => {
       store.setShowConfirm(false);
       expect(useSettingsStore.getState().updatedAt).toBeGreaterThan(beforePrivacy);
     });
-
-    it('should reset version to initial value on reset', () => {
-      const store = useSettingsStore.getState();
-
-      // Simulate version increments
-      store.incrementVersion();
-      store.incrementVersion();
-      expect(useSettingsStore.getState().version).toBe(3);
-
-      // Reset should return version to 1
-      store.reset();
-      expect(useSettingsStore.getState().version).toBe(1);
-    });
-
-    it('should have version 1 by default', () => {
-      const state = useSettingsStore.getState();
-      expect(state.version).toBe(1);
-    });
-
-    it('should increment version', () => {
-      const store = useSettingsStore.getState();
-      const initialVersion = store.version;
-
-      store.incrementVersion();
-      expect(useSettingsStore.getState().version).toBe(initialVersion + 1);
-
-      store.incrementVersion();
-      expect(useSettingsStore.getState().version).toBe(initialVersion + 2);
-    });
   });
 
   describe('Integration', () => {
