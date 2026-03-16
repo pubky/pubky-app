@@ -276,7 +276,7 @@ export class LocalStreamPostsService {
     if (Object.keys(postReplies).length > 0) {
       await Promise.all(
         Object.entries(postReplies).map(async ([parentCompositePostId, postIds]) => {
-          await this.upsert({
+          await this.persistNewStreamChunk({
             streamId: parentCompositePostId as Core.PostStreamId,
             stream: postIds,
           });
