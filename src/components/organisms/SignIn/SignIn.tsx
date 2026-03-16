@@ -76,7 +76,7 @@ const SignInProgress = () => {
 
 export const SignInContent = () => {
   const t = useTranslations('onboarding.signIn');
-  const { url, isLoading, isOpeningRing, onAuthorizeClick } = Hooks.useMobileAuth();
+  const { url, isLoading, isExpired, fetchUrl, copyAuthUrl, isOpeningRing, onAuthorizeClick } = Hooks.useMobileAuth();
   const authUrlResolved = Core.useSignInStore((state) => state.authUrlResolved);
 
   useEffect(() => {
@@ -88,7 +88,7 @@ export const SignInContent = () => {
     if (!url) return;
 
     try {
-      await Libs.copyToClipboard({ text: url });
+      await copyAuthUrl();
       Molecules.toast({
         title: t('linkCopied'),
         description: t('linkCopiedDescription'),
@@ -101,27 +101,22 @@ export const SignInContent = () => {
   const isMobileLaunching = isLoading || isOpeningRing;
   const mobileAuthorizeContent = isMobileLaunching ? (
     <>
-      <Libs.Loader2 className="mr-2 h-4 w-4 animate-spin" />
+      <Libs.Loader2 className="mr-2 size-4 animate-spin" />
       <Atoms.Typography as="span" overrideDefaults aria-live="polite">
         {isOpeningRing ? t('openingRing') : t('generatingShort')}
       </Atoms.Typography>
     </>
+  ) : isExpired ? (
+    <>
+      <Libs.QrCode className="mr-2 size-4" />
+      {t('expired')}
+    </>
   ) : (
     <>
-      <Libs.Key className="mr-2 h-4 w-4" />
+      <Libs.Key className="mr-2 size-4" />
       {t('authorize')}
     </>
   );
-  const mobileAuthorizeButton =
-    isMobileLaunching || !url ? (
-      <Atoms.Button className="h-[60px] w-full rounded-full" size="lg" disabled aria-busy={isMobileLaunching}>
-        {mobileAuthorizeContent}
-      </Atoms.Button>
-    ) : (
-      <Atoms.Button className="h-[60px] w-full rounded-full" size="lg" onClick={onAuthorizeClick} data-testid="button">
-        {mobileAuthorizeContent}
-      </Atoms.Button>
-    );
 
   // Show progress steps once auth URL is resolved
   if (authUrlResolved) {
@@ -141,19 +136,26 @@ export const SignInContent = () => {
       <Atoms.Container size="container" className="hidden md:flex">
         <SignInHeader />
         <Molecules.ContentCard layout="column">
-          <Atoms.Container className="items-center justify-center">
+          <Atoms.Container className="items-center justify-center gap-3">
             <button
               type="button"
               className="relative flex h-[220px] w-[220px] cursor-pointer items-center justify-center rounded-lg bg-foreground p-4 transition-opacity hover:opacity-90 active:opacity-80"
               onClick={handleQRClick}
-              disabled={isLoading || !url}
+              disabled={isLoading || isExpired || !url}
               aria-label="Copy authentication link"
             >
-              {isLoading || !url ? (
+              {isLoading || (!url && !isExpired) ? (
                 <Atoms.Container className="items-center gap-2">
-                  <Libs.Loader2 className="h-8 w-8 animate-spin text-background" />
+                  <Libs.Loader2 className="size-8 animate-spin text-background" />
                   <Atoms.Typography as="small" size="sm" className="text-background">
                     {t('generating')}
+                  </Atoms.Typography>
+                </Atoms.Container>
+              ) : isExpired ? (
+                <Atoms.Container className="items-center gap-2">
+                  <Libs.QrCode className="size-8 text-muted-foreground" />
+                  <Atoms.Typography as="small" size="sm" className="text-muted-foreground">
+                    {t('expired')}
                   </Atoms.Typography>
                 </Atoms.Container>
               ) : (
@@ -169,6 +171,14 @@ export const SignInContent = () => {
                 </>
               )}
             </button>
+            <Atoms.Container className="w-56 flex-row items-center justify-between gap-5">
+              <Atoms.Link href="https://apps.apple.com/us/app/pubky-ring/id6739356756">
+                <Image src="/images/badge-apple.webp" alt="Apple Store Button Pubky Ring" width={94.5} height={28} />
+              </Atoms.Link>
+              <Atoms.Link href="https://play.google.com/store/apps/details?id=to.pubky.ring">
+                <Image src="/images/badge-android.webp" alt="Google Store Button Pubky Ring" width={94.5} height={28} />
+              </Atoms.Link>
+            </Atoms.Container>
           </Atoms.Container>
         </Molecules.ContentCard>
       </Atoms.Container>
@@ -177,12 +187,23 @@ export const SignInContent = () => {
       <Atoms.Container size="container" className="md:hidden">
         <SignInHeader />
         <Molecules.ContentCard layout="column">
-          <Atoms.Container className="flex-col items-center justify-center gap-12 lg:flex-row">
+          <Atoms.Container className="flex-col items-center justify-center gap-6 lg:flex-row">
             <Image src="/images/logo-pubky-ring.svg" alt="Pubky Ring" width={137} height={30} />
-            {mobileAuthorizeButton}
+            <Atoms.Button
+              className="w-full"
+              size="lg"
+              onClick={onAuthorizeClick}
+              disabled={isMobileLaunching || isExpired || !url}
+              aria-busy={isMobileLaunching}
+              data-testid="button"
+            >
+              {mobileAuthorizeContent}
+            </Atoms.Button>
           </Atoms.Container>
         </Molecules.ContentCard>
       </Atoms.Container>
+
+      <Molecules.DialogAuthExpired open={isExpired} onRefresh={fetchUrl} isLoading={isLoading} />
     </>
   );
 };

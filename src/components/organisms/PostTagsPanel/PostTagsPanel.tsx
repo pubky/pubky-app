@@ -1,12 +1,17 @@
 'use client';
 
+import { forwardRef, useImperativeHandle, useRef, useState } from 'react';
+import { useTranslations } from 'next-intl';
 import * as Atoms from '@/atoms';
 import * as Molecules from '@/molecules';
 import * as Hooks from '@/hooks';
 import * as Libs from '@/libs';
 import * as Core from '@/core';
-import type { PostTagsPanelProps } from './PostTagsPanel.types';
+import type { TagInputHandle } from '@/molecules';
+import type { PostTagsPanelProps, PostTagsPanelHandle } from './PostTagsPanel.types';
 import { PostTagsPanelSkeleton } from './PostTagsPanel.skeleton';
+
+const INITIAL_VISIBLE_TAGS = 3;
 
 /**
  * PostTagsPanel Organism
@@ -23,7 +28,18 @@ import { PostTagsPanelSkeleton } from './PostTagsPanel.skeleton';
  *
  * Uses the same TaggedSection pattern as ProfileTagged but adapted for posts.
  */
-export function PostTagsPanel({ postId, widthMode = 'fit', className }: PostTagsPanelProps) {
+export const PostTagsPanel = forwardRef<PostTagsPanelHandle, PostTagsPanelProps>(function PostTagsPanel(
+  { postId, widthMode = 'fit', autoFocusInput, className },
+  ref,
+) {
+  const t = useTranslations('common');
+  const tagInputRef = useRef<TagInputHandle>(null);
+  const [isExpanded, setIsExpanded] = useState(widthMode !== 'full');
+
+  useImperativeHandle(ref, () => ({
+    focus: () => tagInputRef.current?.focus(),
+  }));
+
   const { tags, isLoading, handleTagAdd, handleTagToggle, hasMore, isLoadingMore, loadMore } =
     Hooks.usePostTags(postId);
 
@@ -54,6 +70,12 @@ export function PostTagsPanel({ postId, widthMode = 'fit', className }: PostTags
 
   // Filter to get only viewer's tags for duplicate checking
   const viewerTags = tags.filter((t) => t.relationship);
+  const isCollapsedPreview = widthMode === 'full' && !isExpanded;
+  const visibleTags = isCollapsedPreview ? enrichedTags.slice(0, INITIAL_VISIBLE_TAGS) : enrichedTags;
+  const showSeeAllButton =
+    isCollapsedPreview &&
+    tags.length > 0 &&
+    (tags.length > INITIAL_VISIBLE_TAGS || (hasMore && tags.length >= INITIAL_VISIBLE_TAGS));
 
   return (
     <Atoms.Container data-cy="post-tags-panel" className={Libs.cn('gap-2', className)}>
@@ -63,6 +85,7 @@ export function PostTagsPanel({ postId, widthMode = 'fit', className }: PostTags
       >
         {/* TagInput visible for all users - clicking opens sign-in for unauthenticated */}
         <Molecules.TagInput
+          ref={tagInputRef}
           onTagAdd={handleTagAddWithAuth}
           existingTags={tags}
           viewerTags={viewerTags}
@@ -71,22 +94,33 @@ export function PostTagsPanel({ postId, widthMode = 'fit', className }: PostTags
           enableApiSuggestions
           excludeFromApiSuggestions={tags.map((t) => t.label)}
           addOnSuggestionClick
+          autoFocus={autoFocusInput}
         />
 
         {tags.length > 0 && (
           <Atoms.Container overrideDefaults className="max-h-80 overflow-x-hidden overflow-y-auto pr-1">
             <Molecules.TaggedList
-              tags={enrichedTags}
+              tags={visibleTags}
               taggedId={postId}
               taggedKind={Core.TagKind.POST}
-              hasMore={hasMore}
-              isLoadingMore={isLoadingMore}
-              onLoadMore={loadMore}
+              hasMore={isCollapsedPreview ? false : hasMore}
+              isLoadingMore={isCollapsedPreview ? false : isLoadingMore}
+              onLoadMore={isCollapsedPreview ? undefined : loadMore}
               onTagToggle={handleTagToggleWithAuth}
             />
           </Atoms.Container>
         )}
+        {showSeeAllButton && (
+          <Atoms.SidebarButton
+            icon={Libs.Tag}
+            onClick={() => setIsExpanded(true)}
+            data-testid="post-tags-panel-see-all"
+            aria-label={t('seeAll')}
+          >
+            {t('seeAll')}
+          </Atoms.SidebarButton>
+        )}
       </Atoms.Container>
     </Atoms.Container>
   );
-}
+});

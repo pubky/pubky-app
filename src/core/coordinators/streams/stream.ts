@@ -13,7 +13,7 @@ import {
  * StreamCoordinator
  *
  * Centralized coordinator for managing stream polling lifecycle.
- * Polls for new posts on /home and /post routes, updating the post_streams cache.
+ * Polls for new posts on /home, /post, and /feed routes, updating the post_streams cache.
  *
  * This is a singleton coordinator that should be accessed via getInstance().
  * Typically managed by CoordinatorsManager component in the app layout.
@@ -26,7 +26,7 @@ export class StreamCoordinator extends Coordinator<StreamCoordinatorConfig, Stre
 
   // Extended configuration
   private streamConfig: Required<Pick<StreamCoordinatorConfig, 'enabledRoutes' | 'fetchLimit'>> = {
-    enabledRoutes: [routeToRegex(APP_ROUTES.HOME), routeToRegex(POST_ROUTES.POST)],
+    enabledRoutes: [routeToRegex(APP_ROUTES.HOME), routeToRegex(POST_ROUTES.POST), routeToRegex(APP_ROUTES.FEED)],
     fetchLimit: Env.NEXT_PUBLIC_STREAM_FETCH_LIMIT,
   };
 
@@ -35,6 +35,10 @@ export class StreamCoordinator extends Coordinator<StreamCoordinatorConfig, Stre
     currentStreamId: null,
     streamHead: Core.SKIP_FETCH_NEW_POSTS,
   };
+
+  // Feed stream resolution cache (async Dexie lookup resolved once, then cached)
+  private feedStreamCache: { feedId: string; streamId: Core.PostStreamId } | null = null;
+  private pendingFeedResolution = false;
 
   /**
    * Unsubscribe function for home store subscription.
@@ -168,6 +172,11 @@ export class StreamCoordinator extends Coordinator<StreamCoordinatorConfig, Stre
     else if (this.state.currentRoute.startsWith(POST_ROUTES.POST)) {
       this.buildPostReplyStreamId();
       Logger.debug(`Built ${POST_ROUTES.POST} streamId`, { streamId: this.streamState.currentStreamId });
+    }
+    // Feed route: extract feed ID from URL, fetch feed details, and build stream ID
+    else if (this.state.currentRoute.startsWith(APP_ROUTES.FEED)) {
+      this.buildFeedStreamId();
+      Logger.debug(`Built ${APP_ROUTES.FEED} streamId`, { streamId: this.streamState.currentStreamId });
     } else {
       this.streamState.currentStreamId = null;
     }
@@ -240,6 +249,100 @@ export class StreamCoordinator extends Coordinator<StreamCoordinatorConfig, Stre
       Logger.error('Failed to build post reply stream ID', { error });
       this.streamState.currentStreamId = null;
     }
+  }
+
+  /**
+   * Build feed stream ID from current route.
+   *
+   * Feed details live in Dexie (async), so this uses a cache to keep
+   * resolveStreamId() synchronous. On a cache miss it kicks off an async
+   * resolution that, once complete, re-triggers evaluateAndStartPolling().
+   *
+   * Pattern: ${sorting}:${source}:${kind}:${tags}
+   */
+  private buildFeedStreamId() {
+    try {
+      const feedId = this.extractFeedId(this.state.currentRoute);
+      if (!feedId) {
+        Logger.warn('Failed to extract feed ID from route', { route: this.state.currentRoute });
+        this.streamState.currentStreamId = null;
+        return;
+      }
+
+      // Cache hit: use previously resolved stream ID
+      if (this.feedStreamCache?.feedId === feedId) {
+        this.streamState.currentStreamId = this.feedStreamCache.streamId;
+        return;
+      }
+
+      // Cache miss: kick off async resolution (only once per feed)
+      this.streamState.currentStreamId = null;
+      if (!this.pendingFeedResolution) {
+        this.pendingFeedResolution = true;
+        void this.resolveFeedStreamIdAsync(feedId);
+      }
+    } catch (error) {
+      Logger.error('Failed to build feed stream ID', { error });
+      this.streamState.currentStreamId = null;
+    }
+  }
+
+  /**
+   * Asynchronously fetch the feed from the local DB and cache its stream ID.
+   * Re-triggers evaluateAndStartPolling() so the coordinator picks up the resolved ID.
+   */
+  private async resolveFeedStreamIdAsync(feedId: string) {
+    // NOTE: pendingFeedResolution is reset explicitly in every exit path rather than
+    // in a `finally` block. This is intentional — the stale-route guard calls
+    // evaluateAndStartPolling() synchronously, which may set pendingFeedResolution=true
+    // for a NEW feed. A `finally` block would run after that and clobber it back to false.
+    try {
+      const feed = await Core.FeedController.get({ feedId });
+      if (!feed) {
+        Logger.warn('Feed not found for stream resolution', { feedId });
+        this.pendingFeedResolution = false;
+        return;
+      }
+
+      // Verify we're still on the same feed route before applying
+      const currentFeedId = this.extractFeedId(this.state.currentRoute);
+      if (currentFeedId !== feedId) {
+        Logger.debug('Route changed during feed stream resolution, discarding result', { feedId, currentFeedId });
+
+        // Reset before re-evaluating so the new feed can kick off its own resolution.
+        // This must happen before evaluateAndStartPolling() because that call chain
+        // reaches buildFeedStreamId() which skips async resolution while pending is true.
+        this.pendingFeedResolution = false;
+
+        // Re-evaluate so the new feed route gets a chance to resolve.
+        // Without this, rapid /feed/A → /feed/B navigation would leave B
+        // unresolved because its resolution was skipped while A was pending.
+        this.evaluateAndStartPolling();
+        return;
+      }
+
+      const streamId = Core.buildFeedStreamId(feed);
+      this.feedStreamCache = { feedId, streamId };
+      Logger.debug('Resolved feed stream ID', { feedId, streamId });
+
+      // Reset before re-evaluating — same rationale as the stale-route guard above.
+      this.pendingFeedResolution = false;
+
+      // Re-evaluate polling now that the stream ID is available
+      this.evaluateAndStartPolling();
+    } catch (error) {
+      Logger.error('Failed to resolve feed stream ID', { feedId, error });
+      this.pendingFeedResolution = false;
+    }
+  }
+
+  /**
+   * Extract feed ID from feed route
+   * Route pattern: /feed/[id]
+   */
+  private extractFeedId(route: string): string | null {
+    const match = route.match(/^\/feed\/([^\/]+)/);
+    return match ? match[1] : null;
   }
 
   /**
@@ -325,7 +428,11 @@ export class StreamCoordinator extends Coordinator<StreamCoordinatorConfig, Stre
 
     // Must be able to determine stream ID
     if (!this.streamState.currentStreamId) {
-      Logger.warn('Cannot poll: invalid stream ID');
+      // Suppress warning during expected transient state: feed route async resolution
+      // is in flight and will re-trigger evaluation once complete.
+      if (!this.pendingFeedResolution) {
+        Logger.warn('Cannot poll: invalid stream ID');
+      }
       return false;
     }
     return true;

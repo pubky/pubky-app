@@ -8,3 +8,4 @@ export * from './notification';
 export * from './search';
 export * from './settings';
 export * from './stores.types';
+export * from './persistedKeys';

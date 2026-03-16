@@ -764,24 +764,19 @@ describe('LocalPostService', () => {
       const counts = await Core.LocalPostService.readCounts(postId);
 
       expect(counts).toBeTruthy();
-      expect(counts.id).toBe(postId);
-      expect(counts.tags).toBe(5);
-      expect(counts.unique_tags).toBe(3);
-      expect(counts.replies).toBe(10);
-      expect(counts.reposts).toBe(2);
+      expect(counts!.id).toBe(postId);
+      expect(counts!.tags).toBe(5);
+      expect(counts!.unique_tags).toBe(3);
+      expect(counts!.replies).toBe(10);
+      expect(counts!.reposts).toBe(2);
     });
 
-    it('should return default counts when post does not exist', async () => {
+    it('should return null when post does not exist', async () => {
       const nonExistentPostId = 'nonexistent:post123';
 
       const counts = await Core.LocalPostService.readCounts(nonExistentPostId);
 
-      expect(counts).toBeTruthy();
-      expect(counts.id).toBe(nonExistentPostId);
-      expect(counts.tags).toBe(0);
-      expect(counts.unique_tags).toBe(0);
-      expect(counts.replies).toBe(0);
-      expect(counts.reposts).toBe(0);
+      expect(counts).toBeNull();
     });
 
     it('should propagate model errors on database failure', async () => {

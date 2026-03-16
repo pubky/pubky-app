@@ -3,6 +3,7 @@
 import Image from 'next/image';
 import { QRCodeSVG } from 'qrcode.react';
 import { useRouter } from 'next/navigation';
+import { useEffect } from 'react';
 import { useTranslations } from 'next-intl';
 
 import * as Atoms from '@/atoms';
@@ -15,34 +16,42 @@ import * as Core from '@/core';
 
 export const ScanContent = () => {
   const t = useTranslations('onboarding.scan');
+  const router = useRouter();
   const inviteCode = Core.useOnboardingStore((state) => state.inviteCode);
-  const { url, isLoading, isOpeningRing, onAuthorizeClick } = Hooks.useMobileAuth({
-    type: 'signup',
-    inviteCode,
-  });
+  const hasInviteCode = inviteCode.trim().length > 0;
+
+  useEffect(() => {
+    if (!hasInviteCode) {
+      Libs.Logger.warn('[Scan] Missing inviteCode on signup screen; redirecting to invite flow');
+      router.replace(App.ONBOARDING_ROUTES.HUMAN);
+    }
+  }, [hasInviteCode, router]);
+
+  const { url, isLoading, isExpired, fetchUrl, isOpeningRing, onAuthorizeClick } = Hooks.useMobileAuth(
+    hasInviteCode ? { type: 'signup', inviteCode } : { autoFetch: false },
+  );
+
+  if (!hasInviteCode) return null;
 
   const isMobileLaunching = isLoading || isOpeningRing;
   const mobileAuthorizeContent = isMobileLaunching ? (
     <>
-      <Libs.Loader2 className="mr-2 h-4 w-4 animate-spin" />
-      {isOpeningRing ? t('openingRing') : t('generatingShort')}
+      <Libs.Loader2 className="mr-2 size-4 animate-spin" />
+      <Atoms.Typography as="span" overrideDefaults aria-live="polite">
+        {isOpeningRing ? t('openingRing') : t('generatingShort')}
+      </Atoms.Typography>
+    </>
+  ) : isExpired ? (
+    <>
+      <Libs.QrCode className="mr-2 size-4" />
+      {t('expired')}
     </>
   ) : (
     <>
-      <Libs.Key className="mr-2 h-4 w-4" />
+      <Libs.Key className="mr-2 size-4" />
       {t('authorize')}
     </>
   );
-  const mobileAuthorizeButton =
-    isMobileLaunching || !url ? (
-      <Atoms.Button className="h-[60px] w-full rounded-full" size="lg" disabled>
-        {mobileAuthorizeContent}
-      </Atoms.Button>
-    ) : (
-      <Atoms.Button className="h-[60px] w-full rounded-full" size="lg" onClick={onAuthorizeClick} data-testid="button">
-        {mobileAuthorizeContent}
-      </Atoms.Button>
-    );
 
   return (
     <>
@@ -52,11 +61,18 @@ export const ScanContent = () => {
         <Molecules.ContentCard layout="column">
           <Atoms.Container className="items-center justify-center gap-4">
             <div className="relative flex h-[220px] w-[220px] items-center justify-center rounded-lg bg-foreground p-4">
-              {isLoading || !url ? (
+              {isLoading || (!url && !isExpired) ? (
                 <Atoms.Container className="items-center gap-2">
-                  <Libs.Loader2 className="h-8 w-8 animate-spin text-background" />
+                  <Libs.Loader2 className="size-8 animate-spin text-background" />
                   <Atoms.Typography as="small" size="sm" className="text-background">
                     {t('generating')}
+                  </Atoms.Typography>
+                </Atoms.Container>
+              ) : isExpired ? (
+                <Atoms.Container className="items-center gap-2">
+                  <Libs.QrCode className="size-8 text-muted-foreground" />
+                  <Atoms.Typography as="small" size="sm" className="text-muted-foreground">
+                    {t('expired')}
                   </Atoms.Typography>
                 </Atoms.Container>
               ) : (
@@ -87,10 +103,21 @@ export const ScanContent = () => {
         <Molecules.ContentCard layout="column">
           <Atoms.Container className="flex-col items-center justify-center gap-12 lg:flex-row">
             <Image src="/images/logo-pubky-ring.svg" alt="Pubky Ring" width={137} height={30} />
-            {mobileAuthorizeButton}
+            <Atoms.Button
+              className="w-full"
+              size="lg"
+              onClick={onAuthorizeClick}
+              disabled={isMobileLaunching || isExpired || !url}
+              aria-busy={isMobileLaunching}
+              data-testid="button"
+            >
+              {mobileAuthorizeContent}
+            </Atoms.Button>
           </Atoms.Container>
         </Molecules.ContentCard>
       </Atoms.Container>
+
+      <Molecules.DialogAuthExpired open={isExpired} onRefresh={fetchUrl} isLoading={isLoading} />
     </>
   );
 };
@@ -142,6 +169,7 @@ export const ScanNavigation = () => {
 
   return (
     <Molecules.ButtonsNavigation
+      id="scan-navigation"
       continueButtonDisabled={true}
       hiddenContinueButton={true}
       onHandleBackButton={onHandleBackButton}

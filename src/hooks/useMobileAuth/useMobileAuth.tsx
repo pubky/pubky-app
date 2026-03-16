@@ -5,14 +5,22 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import type { UseAuthUrlOptions } from '../useAuthUrl';
 import { useAuthUrl } from '../useAuthUrl';
 
-import type { UseMobileAuthReturn } from './useMobileAuth.types';
+type UseMobileAuthReturn = {
+  url: string;
+  isLoading: boolean;
+  isExpired: boolean;
+  fetchUrl: () => Promise<void>;
+  copyAuthUrl: () => Promise<void>;
+  isOpeningRing: boolean;
+  onAuthorizeClick: () => void;
+};
 
 /**
  * Manages mobile auth flow via deeplink navigation.
  * Resets the opening state when the page becomes hidden (app opened successfully).
  */
 export function useMobileAuth(options: UseAuthUrlOptions = {}): UseMobileAuthReturn {
-  const { url, isLoading, fetchUrl } = useAuthUrl(options);
+  const { url, isLoading, isExpired, fetchUrl, copyAuthUrl } = useAuthUrl(options);
   const [isOpeningRing, setIsOpeningRing] = useState(false);
   const visibilityHandlerRef = useRef<(() => void) | null>(null);
 
@@ -63,7 +71,9 @@ export function useMobileAuth(options: UseAuthUrlOptions = {}): UseMobileAuthRet
   return {
     url,
     isLoading,
+    isExpired,
     fetchUrl,
+    copyAuthUrl,
     isOpeningRing,
     onAuthorizeClick,
   };

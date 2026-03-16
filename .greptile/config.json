@@ -1,0 +1,94 @@
+{
+  "strictness": 2,
+  "commentTypes": ["logic", "syntax", "style"],
+  "triggerOnUpdates": false,
+  "ignorePatterns": "**/__snapshots__/**\n**/*.generated.*\ndist/**\nnode_modules/**\npublic/sw.js\npublic/sw.js.map\n**/*.snap",
+  "excludeAuthors": ["dependabot[bot]"],
+  "instructions": "This is a local-first decentralized social app using Dexie (IndexedDB), Zustand, Next.js, Tailwind CSS, Shadcn UI. Architecture enforcement is critical: check layer boundary violations (controllers->application->services->models). Review .greptile/rules.md for recurring patterns and docs/architecture.md for the full architecture reference.",
+  "rules": [
+    {
+      "id": "no-service-from-controller",
+      "rule": "Controllers must NOT import from services directly. All IO must go through the Application layer.",
+      "scope": ["src/core/controllers/**"],
+      "severity": "high"
+    },
+    {
+      "id": "no-app-from-coordinator",
+      "rule": "Coordinators must NOT call Application directly. They must go through Controllers.",
+      "scope": ["src/core/coordinators/**"],
+      "severity": "high"
+    },
+    {
+      "id": "no-store-from-application",
+      "rule": "Application layer must NOT access Zustand stores directly. Stores are managed by Controllers.",
+      "scope": ["src/core/application/**"],
+      "severity": "high"
+    },
+    {
+      "id": "no-io-in-pipes",
+      "rule": "Pipes must be pure functions. No IO, no database access, no network calls.",
+      "scope": ["src/core/pipes/**"],
+      "severity": "high"
+    },
+    {
+      "id": "err-factory-no-log",
+      "rule": "Do not log errors before throwing Err.* factories. Err.* factories log automatically. Logging then throwing causes double-logged errors.",
+      "scope": ["src/core/**"],
+      "severity": "medium"
+    },
+    {
+      "id": "cross-domain-app-restriction",
+      "rule": "Only PostApplication, NotificationApplication, BootstrapApplication, HotApplication, PostStreamApplication, and TtlApplication may call other Applications. Max call depth is 1. No circular dependencies.",
+      "scope": ["src/core/application/**"],
+      "severity": "high"
+    },
+    {
+      "id": "shadcn-first",
+      "rule": "Always check for Shadcn equivalent components before creating custom UI. Use Shadcn primitives as base.",
+      "scope": ["src/components/**"],
+      "severity": "medium"
+    },
+    {
+      "id": "skeleton-no-hardcoded-counts",
+      "rule": "Never hardcode counts or quantities in skeleton components. Source from constants or props.",
+      "scope": ["src/components/**/*skeleton*", "src/components/**/*Skeleton*"],
+      "severity": "medium"
+    },
+    {
+      "id": "no-barrel-reexports",
+      "rule": "Avoid barrel files (index.ts that only re-export) and re-exporting symbols through intermediate modules. They add indirection, confuse IDE go-to-definition, make circular deps harder to trace, and defeat tree-shaking. Import directly from the source module. Exception: src/components/atoms/index.ts barrel is intentional.",
+      "scope": ["src/**"],
+      "severity": "medium"
+    },
+    {
+      "id": "no-suppressed-lints",
+      "rule": "Every eslint-disable, eslint-disable-next-line, @ts-ignore, and @ts-expect-error must have an adjacent comment explaining WHY the suppression is needed. Bare suppressions hide real bugs. If a rule is wrong for the whole file, use a top-level eslint-disable with rationale rather than sprinkling inline ignores.",
+      "scope": ["src/**"],
+      "severity": "high"
+    },
+    {
+      "id": "no-dead-code",
+      "rule": "Remove unreachable branches, unused variables, commented-out blocks, and code guarded by conditions that are always true or false. Dead code misleads readers and inflates bundle size. Don't comment code out 'for later' — git preserves history. If a feature flag is permanently on/off, collapse the branch.",
+      "scope": ["src/**"],
+      "severity": "medium"
+    },
+    {
+      "id": "no-unused-exports",
+      "rule": "If a function, const, type, or class is exported but never imported by any other file, remove the export or demote to a local. Stale exports clutter the public API surface. Only exception: symbols consumed by external packages or test harnesses — add a comment like '// exported for integration tests'.",
+      "scope": ["src/**"],
+      "severity": "medium"
+    },
+    {
+      "id": "scrutinize-optional-params",
+      "rule": "When a function has 3+ optional parameters that change its behavior (not just defaults), it likely hides multiple responsibilities. Prefer an options object, explicit overloads, or separate functions. A single function with many optional params makes call sites ambiguous and testing harder.",
+      "scope": ["src/**"],
+      "severity": "low"
+    },
+    {
+      "id": "no-unnecessary-memo",
+      "rule": "This project uses the React Compiler which auto-memoizes renders and callbacks. Manual useCallback and useMemo are redundant in most cases and add visual noise. Flag them unless the author cites a specific reason the compiler can't handle it (e.g., ref-stable callback for a non-React subscriber, or profiler evidence of a hotspot).",
+      "scope": ["src/components/**", "src/hooks/**", "src/providers/**"],
+      "severity": "medium"
+    }
+  ]
+}

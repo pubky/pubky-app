@@ -1,0 +1,1 @@
+export { GlobalErrorHandlerProvider } from './GlobalErrorHandlerProvider';
