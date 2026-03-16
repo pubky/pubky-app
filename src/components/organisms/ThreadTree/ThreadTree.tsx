@@ -4,6 +4,7 @@ import * as Atoms from '@/atoms';
 import * as Molecules from '@/molecules';
 import * as Organisms from '@/organisms';
 import * as Hooks from '@/hooks';
+import { ThreadTreeProvider } from './ThreadTreeProvider';
 import type { ThreadTreeProps } from './ThreadTree.types';
 
 /**
@@ -30,10 +31,10 @@ export function ThreadTree({ postId, showQuickReply = true }: ThreadTreeProps) {
     ) : null;
   }
 
-  const remaining = totalCount - replyIds.length;
+  const remaining = Math.max(0, totalCount - replyIds.length);
 
   return (
-    <Hooks.ThreadTreeProvider>
+    <ThreadTreeProvider>
       <Atoms.Container overrideDefaults>
         {/* Level 1 replies */}
         {replyIds.map((replyId, index) => {
@@ -64,6 +65,6 @@ export function ThreadTree({ postId, showQuickReply = true }: ThreadTreeProps) {
           </>
         )}
       </Atoms.Container>
-    </Hooks.ThreadTreeProvider>
+    </ThreadTreeProvider>
   );
 }

@@ -1,6 +1,7 @@
 import { describe, it, expect, vi } from 'vitest';
 import { render, screen, fireEvent } from '@testing-library/react';
-import { ThreadTreeProvider, useThreadTreeContext } from './ThreadTreeContext';
+import { useThreadTreeContext } from './ThreadTreeContext';
+import { ThreadTreeProvider } from './ThreadTreeProvider';
 
 // Test consumer component
 function TestConsumer() {

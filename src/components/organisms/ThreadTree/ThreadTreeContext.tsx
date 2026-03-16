@@ -1,1 +1,1 @@
-export { ThreadTreeProvider, useThreadTreeContext } from '@/hooks/useThreadTreeContext';
+export { useThreadTreeContext } from '@/hooks/useThreadTreeContext';

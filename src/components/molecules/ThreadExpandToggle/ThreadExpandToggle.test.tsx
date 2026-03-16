@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import { render, screen, fireEvent } from '@testing-library/react';
 import { ThreadExpandToggle } from './ThreadExpandToggle';
-import { ThreadTreeProvider } from '@/hooks';
+import { ThreadTreeProvider } from '@/components/organisms/ThreadTree/ThreadTreeProvider';
 
 describe('ThreadExpandToggle', () => {
   it('renders with expand label when collapsed', () => {

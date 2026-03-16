@@ -73,7 +73,7 @@ export function ReplyWithNested({
             {nestedReplyIds.map((nestedId, index) => {
               const isLastNested = index === nestedReplyIds.length - 1 && !hasMoreReplies;
               return (
-                <Atoms.Container key={`nested_${nestedId}`} overrideDefaults>
+                <Atoms.Container key={nestedId} overrideDefaults>
                   <Atoms.PostThreadSpacer />
                   <Organisms.PostMain
                     postId={nestedId}
