@@ -121,13 +121,4 @@ export class SettingsController {
     setLocaleCookie(language);
     await this.commitUpdate();
   }
-
-  /**
-   * Resets settings to defaults and syncs to homeserver.
-   * NOTE: Currently not used in any UI component.
-   */
-  static async reset(): Promise<void> {
-    Core.useSettingsStore.getState().reset();
-    await this.commitUpdate();
-  }
 }

@@ -18,7 +18,6 @@ const mockStoreActions = {
   setHideSearch: vi.fn(),
   setNeverShowPosts: vi.fn(),
   setLanguage: vi.fn(),
-  reset: vi.fn(),
   addMutedUser: vi.fn(),
   removeMutedUser: vi.fn(),
   setMutedUsers: vi.fn(),
@@ -101,15 +100,6 @@ describe('SettingsController', () => {
 
       expect(mockStoreActions.setLanguage).toHaveBeenCalledWith('es');
       expect(setLocaleCookieSpy).toHaveBeenCalledWith('es');
-      expect(commitUpdateSpy).toHaveBeenCalledWith(mockSettingsState, TEST_PUBKY);
-    });
-  });
-
-  describe('reset', () => {
-    it('should reset zustand store and sync to homeserver', async () => {
-      await SettingsController.reset();
-
-      expect(mockStoreActions.reset).toHaveBeenCalled();
       expect(commitUpdateSpy).toHaveBeenCalledWith(mockSettingsState, TEST_PUBKY);
     });
   });
