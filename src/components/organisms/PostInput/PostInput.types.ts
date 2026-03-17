@@ -27,6 +27,11 @@ interface PostInputBaseProps {
   /** Data Cy for the post input */
   dataCy?: string;
   /**
+   * Auto-focus the active input element (textarea, article title input, or markdown editor) on mount.
+   * @default false
+   */
+  autoFocus?: boolean;
+  /**
    * Initial content to pre-fill (e.g. from OS share target).
    * Note: Only applied on mount, subsequent prop changes are ignored.
    */

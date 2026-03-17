@@ -210,6 +210,7 @@ describe('DialogEditPost', () => {
         dataCy: 'edit-post-input',
         variant: POST_INPUT_VARIANT.EDIT,
         expanded: true,
+        autoFocus: true,
         editPostId: 'test-post-123',
         editContent: 'Test post content',
         editIsArticle: false,

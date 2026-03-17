@@ -30,6 +30,7 @@ export function PostInput({
   onArticleModeChange,
   editContent,
   editIsArticle,
+  autoFocus = false,
   initialContent,
   initialAttachments,
 }: PostInputProps) {
@@ -144,6 +145,21 @@ export function PostInput({
     if (initialAttachments && initialAttachments.length > 0 && !isEdit) {
       handleFilesAdded(initialAttachments);
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- only run on mount
+  }, []);
+
+  // Auto-focus the active input element after dialog animation settles
+  // isArticle ? markdownEditorRef : textareaRef
+  React.useEffect(() => {
+    if (!autoFocus) return;
+    // need to wait for the dialog animation to settle
+    requestAnimationFrame(() => {
+      if (isArticle) {
+        markdownEditorRef.current?.focus();
+      } else {
+        textareaRef.current?.focus();
+      }
+    });
     // eslint-disable-next-line react-hooks/exhaustive-deps -- only run on mount
   }, []);
 

@@ -38,6 +38,7 @@ export function DialogReply({ postId, open, onOpenChangeAction }: DialogReplyPro
               }}
               showThreadConnector={true}
               expanded={true}
+              autoFocus
               onContentChange={handleContentChange}
             />
           </Atoms.Container>

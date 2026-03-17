@@ -1,3 +1,4 @@
+import { createRef } from 'react';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { PostInput } from './PostInput';
@@ -151,11 +152,10 @@ vi.mock('@/molecules', () => ({
       Original Post: {postId}
     </div>
   )),
-  MarkdownEditor: vi.fn(({ markdown, onChange, readOnly, ref }) => (
+  MarkdownEditor: vi.fn(({ markdown, onChange, readOnly }) => (
     <div
       data-testid="markdown-editor"
       data-readonly={readOnly}
-      ref={ref}
       contentEditable={!readOnly}
       onInput={(e) => onChange?.((e.target as HTMLDivElement).textContent || '')}
     >
@@ -243,6 +243,12 @@ vi.mock('@/molecules/PostInputAttachments/PostInputAttachments', () => ({
   ),
 }));
 
+// Shared refs so React populates them when mock components render
+const mockTextareaRef = createRef<HTMLTextAreaElement>();
+const mockMarkdownEditorRef = { current: null as { focus: ReturnType<typeof vi.fn> } | null };
+const mockContainerRef = createRef<HTMLDivElement>();
+const mockFileInputRef = createRef<HTMLInputElement>();
+
 // Mock the underlying hooks that usePostInput uses
 const mockUsePostReturn = {
   content: '',
@@ -267,10 +273,10 @@ vi.mock('@/hooks', () => ({
   useEmojiInsert: vi.fn(() => vi.fn()),
   useEnterSubmit: vi.fn(() => vi.fn()),
   usePostInput: vi.fn((options: { variant: string; placeholder?: string }) => ({
-    textareaRef: { current: null },
-    markdownEditorRef: { current: null },
-    containerRef: { current: null },
-    fileInputRef: { current: null },
+    textareaRef: mockTextareaRef,
+    markdownEditorRef: mockMarkdownEditorRef,
+    containerRef: mockContainerRef,
+    fileInputRef: mockFileInputRef,
     content: mockUsePostReturn.content,
     setContent: mockUsePostReturn.setContent,
     tags: mockUsePostReturn.tags,
@@ -493,7 +499,14 @@ describe('PostInput', () => {
   });
 
   it('renders with edit variant', () => {
-    render(<PostInput variant={POST_INPUT_VARIANT.EDIT} editPostId="test-post-123" editContent="Edit this content" />);
+    render(
+      <PostInput
+        variant={POST_INPUT_VARIANT.EDIT}
+        editPostId="test-post-123"
+        editContent="Edit this content"
+        editIsArticle={false}
+      />,
+    );
 
     expect(screen.getByTestId('post-header')).toBeInTheDocument();
     expect(screen.getByTestId('textarea')).toBeInTheDocument();
@@ -501,7 +514,14 @@ describe('PostInput', () => {
   });
 
   it('does not show PostInputAttachments for edit variant', () => {
-    render(<PostInput variant={POST_INPUT_VARIANT.EDIT} editPostId="test-post-123" editContent="Edit content" />);
+    render(
+      <PostInput
+        variant={POST_INPUT_VARIANT.EDIT}
+        editPostId="test-post-123"
+        editContent="Edit content"
+        editIsArticle={false}
+      />,
+    );
 
     expect(screen.queryByTestId('post-input-attachments')).not.toBeInTheDocument();
   });
@@ -513,7 +533,14 @@ describe('PostInput', () => {
   });
 
   it('does not trigger drag handlers in edit mode', () => {
-    render(<PostInput variant={POST_INPUT_VARIANT.EDIT} editPostId="test-post-123" editContent="Edit content" />);
+    render(
+      <PostInput
+        variant={POST_INPUT_VARIANT.EDIT}
+        editPostId="test-post-123"
+        editContent="Edit content"
+        editIsArticle={false}
+      />,
+    );
 
     const container = screen.getAllByTestId('container')[0];
 
@@ -522,6 +549,61 @@ describe('PostInput', () => {
 
     // Drag overlay should not appear since drag handlers are disabled in edit mode
     expect(screen.queryByText('Drop files here')).not.toBeInTheDocument();
+  });
+});
+
+describe('PostInput - autoFocus', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    mockUsePostReturn.content = '';
+    mockUsePostReturn.tags = [];
+    mockUsePostReturn.attachments = [];
+    mockUsePostReturn.isSubmitting = false;
+    mockUsePostReturn.isArticle = false;
+    mockUsePostReturn.articleTitle = '';
+    mockMarkdownEditorRef.current = null;
+    vi.spyOn(window, 'requestAnimationFrame').mockImplementation((cb) => {
+      cb(0);
+      return 0;
+    });
+  });
+
+  afterEach(() => {
+    vi.mocked(window.requestAnimationFrame).mockRestore();
+  });
+
+  it('focuses textarea when autoFocus is true and not article mode', () => {
+    render(<PostInput variant={POST_INPUT_VARIANT.POST} autoFocus />);
+
+    const textarea = screen.getByTestId('textarea');
+    expect(textarea).toHaveFocus();
+  });
+
+  it('does not focus textarea when autoFocus is false', () => {
+    render(<PostInput variant={POST_INPUT_VARIANT.POST} />);
+
+    const textarea = screen.getByTestId('textarea');
+    expect(textarea).not.toHaveFocus();
+  });
+
+  it('focuses MarkdownEditor when autoFocus is true and article mode', () => {
+    mockUsePostReturn.isArticle = true;
+    const mockFocus = vi.fn();
+    mockMarkdownEditorRef.current = { focus: mockFocus };
+
+    render(<PostInput variant={POST_INPUT_VARIANT.POST} autoFocus />);
+
+    expect(mockFocus).toHaveBeenCalled();
+  });
+
+  it('does not focus MarkdownEditor when autoFocus is false and article mode', () => {
+    mockUsePostReturn.isArticle = true;
+    const mockFocus = vi.fn();
+    mockMarkdownEditorRef.current = { focus: mockFocus };
+
+    render(<PostInput variant={POST_INPUT_VARIANT.POST} />);
+
+    expect(mockFocus).not.toHaveBeenCalled();
   });
 });
 
@@ -605,7 +687,12 @@ describe('PostInput - Snapshots', () => {
     mockUsePostReturn.content = 'Existing post content';
 
     const { container } = render(
-      <PostInput variant={POST_INPUT_VARIANT.EDIT} editPostId="test-post-123" editContent="Existing post content" />,
+      <PostInput
+        variant={POST_INPUT_VARIANT.EDIT}
+        editPostId="test-post-123"
+        editContent="Existing post content"
+        editIsArticle={false}
+      />,
     );
     expect(container.firstChild).toMatchSnapshot();
   });
