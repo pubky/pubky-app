@@ -434,6 +434,12 @@ describe('PostHeaderUserInfo - Navigation', () => {
       expect(link).toHaveAttribute('href', '/profile/testuser123');
     });
   });
+
+  it('does not underline the username on hover', () => {
+    render(<PostHeaderUserInfo userId="testuser123" userName="Test User" showPopover={false} />);
+
+    expect(screen.getByText('Test User')).not.toHaveClass('hover:underline');
+  });
 });
 
 describe('PostHeaderUserInfo - Snapshots', () => {
