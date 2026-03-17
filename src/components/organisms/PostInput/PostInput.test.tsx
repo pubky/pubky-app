@@ -112,7 +112,7 @@ vi.mock('@/organisms', () => ({
   )),
 }));
 
-vi.mock('../TimelineFeed/TimelineFeed', () => ({
+vi.mock('../Timeline/Feed/TimelineFeed', () => ({
   useTimelineFeedContext: vi.fn(() => null),
 }));
 

@@ -1,46 +1,32 @@
 'use client';
 
-import { useEffect } from 'react';
-import { useLiveQuery } from 'dexie-react-hooks';
 import * as Core from '@/core';
-import * as Libs from '@/libs';
+import { useLocalFirstQuery } from '@/hooks/useLocalFirstQuery';
 import { ProfileStats, UseProfileStatsResult } from './useProfileStats.types';
 
 /**
  * Hook for fetching and transforming user profile statistics.
  * Pure data fetching and transformation - no side effects or actions.
  *
+ * Uses the local-first query pattern (ADR-0011) via `useLocalFirstQuery`:
+ * 1. fetchFn (useEffect): Ensures data exists (fetch full entity from Nexus if missing)
+ * 2. queryFn (useLiveQuery): Reads current data reactively from local DB
+ *
+ * Previously had a buggy fetch condition (`userCounts !== null`) that was inverted —
+ * it fired prematurely when undefined and skipped when null. Now handled correctly
+ * by `useLocalFirstQuery` which gates both arms via `enabled`.
+ *
  * @param userId - The user ID to fetch stats for
  * @returns Profile statistics and loading state
  */
 export function useProfileStats(userId: string): UseProfileStatsResult {
-  // Fetch user counts from local database using live query
-  const userCounts = useLiveQuery(async () => {
-    try {
-      if (!userId) return null;
-      return await Core.UserController.getCounts({ userId });
-    } catch (error) {
-      Libs.Logger.error('[useProfileStats] Failed to query user counts', { userId, error });
-      return null;
-    }
-  }, [userId]);
-
-  // Fetch counts from Nexus if not in local cache
-  useEffect(() => {
-    if (!userId || userCounts !== null) return;
-
-    let cancelled = false;
-
-    Core.UserController.getOrFetchCounts({ userId }).catch((error) => {
-      if (!cancelled) {
-        Libs.Logger.error('Failed to fetch user counts:', { userId, error });
-      }
-    });
-
-    return () => {
-      cancelled = true;
-    };
-  }, [userId, userCounts]);
+  // Fetch user counts using local-first pattern — replaces manual useLiveQuery + buggy useEffect
+  const { data: userCounts, isLoading } = useLocalFirstQuery<Core.NexusUserCounts>({
+    queryFn: () => Core.UserController.getCounts({ userId }),
+    fetchFn: () => Core.UserController.fetchCounts({ userId }),
+    deps: [userId],
+    enabled: !!userId,
+  });
 
   // Get unread notifications count reactively from Zustand store
   const unreadNotificationsCount = Core.useNotificationStore((state) => state.selectUnread());
@@ -67,6 +53,6 @@ export function useProfileStats(userId: string): UseProfileStatsResult {
   // - object: query ran and found counts → loaded with data
   return {
     stats,
-    isLoading: userCounts === undefined,
+    isLoading,
   };
 }

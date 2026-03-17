@@ -27,7 +27,7 @@ exports[`PostHeaderUserInfoPopoverHeader - Snapshots > matches snapshot 1`] = `
       href="/profile/snapshotUser"
     >
       <p
-        class="max-w-full cursor-pointer truncate text-sm leading-5 font-bold text-foreground hover:underline"
+        class="max-w-full cursor-pointer truncate text-sm leading-5 font-bold text-foreground"
         data-testid="typography"
       >
         Snapshot User
