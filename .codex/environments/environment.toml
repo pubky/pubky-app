@@ -9,3 +9,8 @@ script = ""
 name = "start"
 icon = "tool"
 command = "npm run clean && npm run build && npm run start"
+
+[[actions]]
+name = "dev"
+icon = "tool"
+command = "npm run dev"

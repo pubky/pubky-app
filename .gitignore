@@ -70,3 +70,6 @@ public/sw.js.map
 
 # Development Containers
 .devcontainer
+
+# AI Context Plans
+.plans

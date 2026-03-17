@@ -161,6 +161,22 @@ describe('PostActionsBar', () => {
     fireEvent.click(screen.getByRole('button', { name: /bookmark/i }));
     expect(mockToggle).toHaveBeenCalledTimes(1);
   });
+
+  it('applies the visual variant classes to the action buttons', () => {
+    mockUsePostCounts.mockReturnValue({
+      postCounts: { tags: 2, unique_tags: 2, replies: 3, reposts: 4 },
+      isLoading: false,
+    });
+
+    render(<PostActionsBar postId="post-visual" variant="visual" />);
+
+    expect(screen.getByRole('button', { name: 'Tag post (2)' })).toHaveClass(
+      'border-white/10',
+      'bg-black/40',
+      'text-white',
+    );
+    expect(screen.getAllByTestId('typography')[0]).toHaveClass('text-white/80');
+  });
 });
 
 describe('PostActionsBar - Snapshots', () => {

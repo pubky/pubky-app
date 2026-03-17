@@ -1030,7 +1030,8 @@
     "layout": {
       "title": "Disposition",
       "columns": "Colonnes",
-      "wide": "Large"
+      "wide": "Large",
+      "visual": "Visuel"
     },
     "content": {
       "title": "Contenu",

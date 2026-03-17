@@ -1,10 +1,9 @@
 'use client';
 
-import { useEffect } from 'react';
-import { useLiveQuery } from 'dexie-react-hooks';
 import * as Core from '@/core';
 import * as Config from '@/config';
 import * as Libs from '@/libs';
+import { useLocalFirstQuery } from '@/hooks/useLocalFirstQuery';
 
 export interface UserProfile {
   name: string;
@@ -27,9 +26,9 @@ export interface UseUserProfileResult {
  * Hook for fetching and transforming user profile data.
  * Pure data fetching - no side effects or actions.
  *
- * Separates concerns:
- * 1. useEffect: Ensures data exists in local DB (fetch if missing)
- * 2. useLiveQuery: Reads current data reactively from local DB
+ * Uses the local-first query pattern (ADR-0011) via `useLocalFirstQuery`:
+ * 1. fetchFn (useEffect): Ensures data exists in local DB (fetch if missing)
+ * 2. queryFn (useLiveQuery): Reads current data reactively from local DB
  *
  * Note: Data freshness is managed by TTL Coordinator via useTtlSubscription
  * in the consuming component (e.g., ProfilePageHeader)
@@ -38,58 +37,15 @@ export interface UseUserProfileResult {
  * @returns Profile data and loading state
  */
 export function useUserProfile(userId: string): UseUserProfileResult {
-  // Separate concern: Fetch data if not in local database
-  // Uses getOrFetch pattern per ADR-0001 (local-first)
-  useEffect(() => {
-    if (!userId) return;
+  const { data: userDetails, isLoading } = useLocalFirstQuery<Core.NexusUserDetails>({
+    queryFn: () => Core.UserController.getDetails({ userId }),
+    fetchFn: () => Core.UserController.fetchDetails({ userId }),
+    deps: [userId],
+    enabled: !!userId,
+  });
 
-    // Track if the effect has been cleaned up to prevent stale API calls
-    // This prevents errors when navigating away (e.g., during logout)
-    let cancelled = false;
-
-    // Fetch details if not cached (local-first pattern)
-    // Freshness is managed by TTL Coordinator in ProfilePageHeader
-    Core.UserController.getOrFetchDetails({ userId }).catch((error) => {
-      // Only log errors if the effect hasn't been cleaned up
-      if (!cancelled) {
-        Libs.Logger.error('[useUserProfile] Failed to fetch user profile', { userId, error });
-      }
-    });
-
-    return () => {
-      cancelled = true;
-    };
-  }, [userId]);
-
-  // Separate concern: Read current data from local database
-  // This will reactively update when the database changes (e.g., after TTL refresh)
-  const userDetails = useLiveQuery(async () => {
-    try {
-      if (!userId) return null;
-      return await Core.UserController.getDetails({ userId });
-    } catch (error) {
-      Libs.Logger.error('[useUserProfile] Failed to query user details', { userId, error });
-      return null;
-    }
-  }, [userId]);
-
-  // Distinguish between:
-  // - undefined: query hasn't run yet → loading
-  // - null: query ran but user not found → loaded, no data
-  // - object: query ran and found user → loaded with data
-  if (userDetails === undefined) {
-    return {
-      profile: null,
-      isLoading: true,
-    };
-  }
-
-  // User not found (null) or empty - return default profile but mark as loaded
   if (!userDetails) {
-    return {
-      profile: null,
-      isLoading: false,
-    };
+    return { profile: null, isLoading };
   }
 
   const avatarUrl = userDetails.image
@@ -97,13 +53,12 @@ export function useUserProfile(userId: string): UseUserProfileResult {
     : undefined;
 
   // Build public key with proper format
-  const publicKey = userId ? Libs.withPubkyPrefix(userId) : '';
+  const publicKey = Libs.withPubkyPrefix(userId);
 
   // Build profile link using config (SSR-safe)
   // Use DEFAULT_URL from config to avoid window.location.origin which breaks SSR
-  const link = userId ? `${Config.DEFAULT_URL}/profile/${userId}` : '';
+  const link = `${Config.DEFAULT_URL}/profile/${userId}`;
 
-  // Build profile data object
   const profile: UserProfile = {
     name: userDetails.name ?? '',
     bio: userDetails.bio ?? '',
