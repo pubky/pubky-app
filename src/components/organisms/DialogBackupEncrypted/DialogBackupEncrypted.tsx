@@ -10,6 +10,9 @@ import { calculatePasswordStrength, getStrengthColor } from '@/libs';
 import * as Core from '@/core';
 import { useTranslations } from 'next-intl';
 
+const MIN_ENTROPY_CHARS = 16; // ~80 bits for typical passphrase
+const PASSPHRASE_LINK_URL = 'https://www.useapassphrase.com';
+
 interface DialogBackupEncryptedProps {
   children?: React.ReactNode;
 }
@@ -22,7 +25,8 @@ function RecoveryStep1({ setStep }: { setStep: (step: number) => void }) {
   const [confirmPassphrase, setConfirmPassphrase] = useState('');
 
   const passphraseStrength = calculatePasswordStrength(passphrase);
-  const passphraseMatch = passphrase === confirmPassphrase && passphrase !== '';
+  const passphraseMatch = passphrase === confirmPassphrase;
+  const showWeakWarning = passphrase.length > 0 && passphrase.length < MIN_ENTROPY_CHARS;
 
   const handleDownload = () => {
     Core.ProfileController.createRecoveryFile(passphrase);
@@ -30,7 +34,7 @@ function RecoveryStep1({ setStep }: { setStep: (step: number) => void }) {
   };
 
   const isFormValid = () => {
-    return Boolean(passphrase && passphraseMatch);
+    return passphraseMatch;
   };
 
   const handleKeyDown = Hooks.useEnterSubmit(isFormValid, handleDownload);
@@ -80,8 +84,24 @@ function RecoveryStep1({ setStep }: { setStep: (step: number) => void }) {
               size="sm"
               className="text-xs leading-none font-medium text-muted-foreground"
             >
-              {t('passwordHint')}
+              {t.rich('passwordHint', {
+                passphraseLink: (chunks) => (
+                  <Atoms.Link href={PASSPHRASE_LINK_URL} target="_blank" rel="noopener noreferrer">
+                    {chunks}
+                  </Atoms.Link>
+                ),
+              })}
             </Atoms.Typography>
+            {showWeakWarning && (
+              <Atoms.Typography
+                id="password-weak-warning"
+                size="sm"
+                className="pt-2 text-xs font-medium text-amber-600 dark:text-amber-500"
+                role="alert"
+              >
+                {t('passwordWeakWarning')}
+              </Atoms.Typography>
+            )}
           </Atoms.Container>
         </Atoms.Container>
 

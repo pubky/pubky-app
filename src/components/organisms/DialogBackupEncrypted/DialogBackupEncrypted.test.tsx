@@ -166,6 +166,21 @@ vi.mock('@/components/atoms', () => ({
       {children}
     </p>
   ),
+  Link: ({
+    href,
+    target,
+    rel,
+    children,
+  }: {
+    href: string;
+    target?: string;
+    rel?: string;
+    children: React.ReactNode;
+  }) => (
+    <a data-testid="link" href={href} target={target} rel={rel}>
+      {children}
+    </a>
+  ),
   DialogFooter: ({ children, className }: { children: React.ReactNode; className?: string }) => (
     <div data-testid="dialog-footer" className={className}>
       {children}
@@ -256,6 +271,31 @@ describe('DialogBackupEncrypted', () => {
     fireEvent.keyDown(passwordInput, { key: 'Enter', isComposing: true });
 
     expect(mockCreateRecoveryFile).not.toHaveBeenCalled();
+  });
+
+  it('allows download with empty password when both fields match', () => {
+    render(<DialogBackupEncrypted />);
+
+    const downloadButton = screen.getByRole('button', { name: /download file/i });
+
+    expect(downloadButton).not.toBeDisabled();
+    fireEvent.click(downloadButton);
+
+    expect(mockCreateRecoveryFile).toHaveBeenCalledWith('');
+  });
+
+  it('shows weak password warning when length is less than 16 characters', () => {
+    render(<DialogBackupEncrypted />);
+
+    const passwordInput = screen.getByPlaceholderText('Enter a strong password');
+
+    expect(screen.queryByText(/under 80 bits/i)).not.toBeInTheDocument();
+
+    fireEvent.change(passwordInput, { target: { value: 'short' } });
+    expect(screen.getByText(/under 80 bits/i)).toBeInTheDocument();
+
+    fireEvent.change(passwordInput, { target: { value: 'sixteenchars!!!!' } });
+    expect(screen.queryByText(/under 80 bits/i)).not.toBeInTheDocument();
   });
 });
 
