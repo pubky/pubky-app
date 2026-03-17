@@ -91,7 +91,7 @@ exports[`DialogBackupEncrypted - Snapshots > matches snapshot for default Dialog
             data-size="sm"
             data-testid="typography"
           >
-            We recommend using a passphrase (e.g. 
+            We recommend using a passphrase 
             <a
               data-testid="link"
               href="https://www.useapassphrase.com"
@@ -100,7 +100,6 @@ exports[`DialogBackupEncrypted - Snapshots > matches snapshot for default Dialog
             >
               useapassphrase.com
             </a>
-            ).
           </p>
         </div>
       </div>

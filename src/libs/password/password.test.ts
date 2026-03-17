@@ -91,6 +91,36 @@ describe('Password Utilities', () => {
       expect(result.checks.length).toBe(true);
     });
 
+    it('should rate long passphrases as strong (passphrase-first security)', () => {
+      const result = calculatePasswordStrength('logic finite eager ratio');
+      expect(result.strength).toBe(5);
+      expect(result.percentage).toBe(100);
+      expect(result.checks.length).toBe(true);
+    });
+
+    it('should rate 20–23 char passphrases as good', () => {
+      const result = calculatePasswordStrength('mergers decade labeled');
+      expect(result.strength).toBe(4);
+      expect(result.percentage).toBe(80);
+    });
+
+    it('should rate 16–19 char passphrases as fair', () => {
+      const result = calculatePasswordStrength('four word pass x');
+      expect(result.strength).toBe(3);
+    });
+
+    it('should treat long letter-only string without spaces as passphrase', () => {
+      const result = calculatePasswordStrength('mergersdecadelabeledmanager');
+      expect(result.strength).toBe(5);
+    });
+
+    it('should not treat short multi-word string as passphrase', () => {
+      const result = calculatePasswordStrength('word word');
+      expect(result.strength).toBe(2);
+      expect(result.checks.length).toBe(true);
+      expect(result.checks.lowercase).toBe(true);
+    });
+
     it('should handle passwords with only numbers', () => {
       const result = calculatePasswordStrength('12345678');
       expect(result.strength).toBe(2);
