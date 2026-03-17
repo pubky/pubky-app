@@ -30,7 +30,7 @@ export function PostHeaderUserInfoPopoverHeader({
       <Atoms.Container className="min-w-0 flex-1 items-start overflow-hidden">
         <Atoms.Link href={profileUrl} onClick={handleProfileNavigation} overrideDefaults>
           <Atoms.Typography
-            className="max-w-full cursor-pointer truncate text-sm leading-5 font-bold text-foreground hover:underline"
+            className="max-w-full cursor-pointer truncate text-sm leading-5 font-bold text-foreground"
             overrideDefaults
           >
             {userName}

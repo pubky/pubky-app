@@ -268,9 +268,13 @@ describe('posts', () => {
       [tag1, tag2, tag3].forEach((tag) => {
         cy.contains('button', tag).should('be.visible').find('[data-cy="post-tag-count"]').should('have.text', '1');
       });
+      cy.intercept('DELETE', '**/pub/pubky.app/tags/**', { statusCode: 204 }).as('deleteTag');
       cy.contains('button', tag2).click();
+      cy.wait('@deleteTag');
       cy.contains('button', tag2).should('be.visible').find('[data-cy="post-tag-count"]').should('have.text', '0');
+      cy.intercept('PUT', '**/pub/pubky.app/tags/**', { statusCode: 201 }).as('putTag');
       cy.contains('button', tag2).click();
+      cy.wait('@putTag');
       cy.contains('button', tag2).should('be.visible').find('[data-cy="post-tag-count"]').should('have.text', '1');
     });
 
@@ -313,8 +317,9 @@ describe('posts', () => {
               .should('have.text', '1');
           });
 
+          cy.intercept('DELETE', '**/pub/pubky.app/tags/**', { statusCode: 204 }).as('deleteTag');
           cy.contains('p', tag2).parent().click();
-          cy.wait(100); // short wait to ensure state has updated
+          cy.wait('@deleteTag');
           cy.contains('p', tag2)
             .should('be.visible')
             .parent()

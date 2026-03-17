@@ -1024,7 +1024,8 @@
     "layout": {
       "title": "Layout",
       "columns": "Columns",
-      "wide": "Wide"
+      "wide": "Wide",
+      "visual": "Visual"
     },
     "content": {
       "title": "Content",

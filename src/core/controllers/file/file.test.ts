@@ -11,6 +11,7 @@ const mockFileNormalizer = {
 
 const mockFileApplication = {
   commitCreate: vi.fn(),
+  fetchFiles: vi.fn(),
   getAvatarUrl: vi.fn(),
   getFileUrl: vi.fn(),
   getMetadata: vi.fn(),
@@ -80,6 +81,7 @@ describe('FileController', () => {
     mockFileNormalizer.toFile.mockReset();
     mockFileNormalizer.toFileAttachment.mockReset();
     mockFileApplication.commitCreate.mockReset();
+    mockFileApplication.fetchFiles.mockReset();
     mockFileApplication.getAvatarUrl.mockReset();
     mockFileApplication.getFileUrl.mockReset();
     mockFileApplication.getMetadata.mockReset();
@@ -150,6 +152,25 @@ describe('FileController', () => {
 
       expect(mockFileApplication.getAvatarUrl).toHaveBeenCalledWith(testPubky, undefined);
       expect(result).toBe(expectedUrl);
+    });
+  });
+
+  describe('fetchFiles', () => {
+    it('delegates to FileApplication.fetchFiles', async () => {
+      const fileUris = ['pubky://user1/pub/pubky.app/files/file1', 'pubky://user2/pub/pubky.app/files/file2'];
+      mockFileApplication.fetchFiles.mockResolvedValue(undefined);
+
+      await FileController.fetchFiles({ fileUris });
+
+      expect(mockFileApplication.fetchFiles).toHaveBeenCalledWith(fileUris);
+    });
+
+    it('passes through empty file uri arrays', async () => {
+      mockFileApplication.fetchFiles.mockResolvedValue(undefined);
+
+      await FileController.fetchFiles({ fileUris: [] });
+
+      expect(mockFileApplication.fetchFiles).toHaveBeenCalledWith([]);
     });
   });
 

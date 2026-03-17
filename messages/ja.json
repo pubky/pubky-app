@@ -1030,7 +1030,8 @@
     "layout": {
       "title": "レイアウト",
       "columns": "カラム",
-      "wide": "ワイド"
+      "wide": "ワイド",
+      "visual": "ビジュアル"
     },
     "content": {
       "title": "コンテンツ",
