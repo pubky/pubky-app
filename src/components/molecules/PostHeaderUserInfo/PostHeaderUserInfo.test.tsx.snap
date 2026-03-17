@@ -40,7 +40,7 @@ exports[`PostHeaderUserInfo - Snapshots > matches snapshot for current user (no 
           href="/profile/snapshotUserKey"
         >
           <p
-            class="block max-w-full cursor-pointer truncate leading-5 font-bold text-foreground hover:underline text-base"
+            class="block max-w-full cursor-pointer truncate leading-5 font-bold text-foreground text-base"
             data-testid="typography"
           >
             Snapshot User
@@ -124,7 +124,7 @@ exports[`PostHeaderUserInfo - Snapshots > matches snapshot when following 1`] = 
           href="/profile/otherUser123"
         >
           <p
-            class="block max-w-full cursor-pointer truncate leading-5 font-bold text-foreground hover:underline text-base"
+            class="block max-w-full cursor-pointer truncate leading-5 font-bold text-foreground text-base"
             data-testid="typography"
           >
             Other User
@@ -213,7 +213,7 @@ exports[`PostHeaderUserInfo - Snapshots > matches snapshot with all new props 1`
           href="/profile/snapshotUserKey"
         >
           <p
-            class="block max-w-full cursor-pointer truncate leading-5 font-bold text-foreground hover:underline text-2xl"
+            class="block max-w-full cursor-pointer truncate leading-5 font-bold text-foreground text-2xl"
             data-testid="typography"
           >
             Snapshot User
@@ -307,7 +307,7 @@ exports[`PostHeaderUserInfo - Snapshots > matches snapshot with all props 1`] = 
           href="/profile/snapshotUserKey"
         >
           <p
-            class="block max-w-full cursor-pointer truncate leading-5 font-bold text-foreground hover:underline text-base"
+            class="block max-w-full cursor-pointer truncate leading-5 font-bold text-foreground text-base"
             data-testid="typography"
           >
             Snapshot User
@@ -399,7 +399,7 @@ exports[`PostHeaderUserInfo - Snapshots > matches snapshot with bio 1`] = `
           href="/profile/snapshotUserKey"
         >
           <p
-            class="block max-w-full cursor-pointer truncate leading-5 font-bold text-foreground hover:underline text-base"
+            class="block max-w-full cursor-pointer truncate leading-5 font-bold text-foreground text-base"
             data-testid="typography"
           >
             Snapshot User
@@ -483,7 +483,7 @@ exports[`PostHeaderUserInfo - Snapshots > matches snapshot with large size 1`] =
           href="/profile/snapshotUserKey"
         >
           <p
-            class="block max-w-full cursor-pointer truncate leading-5 font-bold text-foreground hover:underline text-2xl"
+            class="block max-w-full cursor-pointer truncate leading-5 font-bold text-foreground text-2xl"
             data-testid="typography"
           >
             Snapshot User
@@ -567,7 +567,7 @@ exports[`PostHeaderUserInfo - Snapshots > matches snapshot with minimal props 1`
           href="/profile/user123"
         >
           <p
-            class="block max-w-full cursor-pointer truncate leading-5 font-bold text-foreground hover:underline text-base"
+            class="block max-w-full cursor-pointer truncate leading-5 font-bold text-foreground text-base"
             data-testid="typography"
           >
             Test User
@@ -651,7 +651,7 @@ exports[`PostHeaderUserInfo - Snapshots > matches snapshot with timeAgo 1`] = `
           href="/profile/snapshotUserKey"
         >
           <p
-            class="block max-w-full cursor-pointer truncate leading-5 font-bold text-foreground hover:underline text-base"
+            class="block max-w-full cursor-pointer truncate leading-5 font-bold text-foreground text-base"
             data-testid="typography"
           >
             Snapshot User
@@ -740,7 +740,7 @@ exports[`PostHeaderUserInfo - Snapshots > matches snapshot without avatarUrl 1`]
           href="/profile/snapshotUserKey"
         >
           <p
-            class="block max-w-full cursor-pointer truncate leading-5 font-bold text-foreground hover:underline text-base"
+            class="block max-w-full cursor-pointer truncate leading-5 font-bold text-foreground text-base"
             data-testid="typography"
           >
             Snapshot User
@@ -837,7 +837,7 @@ exports[`PostHeaderUserInfo - Snapshots > matches snapshot without character cou
           href="/profile/snapshotUserKey"
         >
           <p
-            class="block max-w-full cursor-pointer truncate leading-5 font-bold text-foreground hover:underline text-base"
+            class="block max-w-full cursor-pointer truncate leading-5 font-bold text-foreground text-base"
             data-testid="typography"
           >
             Snapshot User

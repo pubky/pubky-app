@@ -274,13 +274,19 @@ describe('PostContentBase - Snapshots', () => {
   beforeEach(async () => {
     vi.clearAllMocks();
     mockUseLocalFilesStore.mockReturnValue(undefined);
-    const actualMolecules = await vi.importActual<typeof import('@/molecules')>('@/molecules');
+    // Import specific modules directly to avoid barrel export timeout (loading all 70+ molecules)
+    const actualPostText = await vi.importActual<{ PostText: typeof Molecules.PostText }>(
+      '@/molecules/PostText/PostText',
+    );
+    const actualPostLinkEmbeds = await vi.importActual<{ PostLinkEmbeds: typeof Molecules.PostLinkEmbeds }>(
+      '@/molecules/PostLinkEmbeds/PostLinkEmbeds',
+    );
     // Replace the mock implementations with real ones for snapshots
     // PostText is wrapped with React.memo(), so we need to access the underlying function via .type
-    const PostTextComponent = (actualMolecules.PostText as React.MemoExoticComponent<React.FC>)
+    const PostTextComponent = (actualPostText.PostText as React.MemoExoticComponent<React.FC>)
       .type as typeof Molecules.PostText;
     vi.mocked(Molecules.PostText).mockImplementation(PostTextComponent);
-    vi.mocked(Molecules.PostLinkEmbeds).mockImplementation(actualMolecules.PostLinkEmbeds);
+    vi.mocked(Molecules.PostLinkEmbeds).mockImplementation(actualPostLinkEmbeds.PostLinkEmbeds);
     // PostAttachments stays mocked - it has its own test file
   }, 30000); // Increase timeout to 30 seconds
 

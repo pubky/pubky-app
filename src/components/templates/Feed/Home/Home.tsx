@@ -1,17 +1,20 @@
 import * as Organisms from '@/organisms';
+import { TIMELINE_FEED_VARIANT } from '@/config';
 import { POST_INPUT_VARIANT } from '@/organisms/PostInput/PostInput.constants';
-import { TIMELINE_FEED_VARIANT } from '@/organisms/Timeline/Feed/TimelineFeed/TimelineFeed.types';
 
 export function Home() {
   return (
     <>
       <Organisms.DialogWelcome />
       <Organisms.ContentLayout
-        leftSidebarContent={<Organisms.HomeFeedSidebar />}
+        feedVariant={TIMELINE_FEED_VARIANT.HOME}
+        leftSidebarContent={<Organisms.HomeFeedSidebar allowVisualLayout feedVariant={TIMELINE_FEED_VARIANT.HOME} />}
         rightSidebarContent={<Organisms.HomeFeedRightSidebar />}
-        leftDrawerContent={<Organisms.HomeFeedDrawer />}
+        leftDrawerContent={<Organisms.HomeFeedDrawer allowVisualLayout feedVariant={TIMELINE_FEED_VARIANT.HOME} />}
         rightDrawerContent={<Organisms.HomeFeedRightDrawer />}
-        leftDrawerContentMobile={<Organisms.HomeFeedDrawerMobile />}
+        leftDrawerContentMobile={
+          <Organisms.HomeFeedDrawerMobile allowVisualLayout feedVariant={TIMELINE_FEED_VARIANT.HOME} />
+        }
         rightDrawerContentMobile={<Organisms.FeedNavigation className="lg:hidden" />}
       >
         <Organisms.AlertBackup />

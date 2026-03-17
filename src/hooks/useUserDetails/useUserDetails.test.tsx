@@ -4,13 +4,15 @@ import { useUserDetails } from './useUserDetails';
 
 // Mock @/core
 const mockGetDetails = vi.fn();
+const mockFetchDetails = vi.fn().mockResolvedValue(undefined);
 vi.mock('@/core', () => ({
   UserController: {
     getDetails: (params: { userId: string }) => mockGetDetails(params),
+    fetchDetails: (params: { userId: string }) => mockFetchDetails(params),
   },
 }));
 
-// Mock dexie-react-hooks (same pattern as PostMentions.test.tsx)
+// Mock dexie-react-hooks (same pattern as usePostDetails.test.tsx)
 vi.mock('dexie-react-hooks', () => ({
   useLiveQuery: (queryFn: () => Promise<unknown>, _deps: unknown[], defaultValue: unknown) => {
     // Execute the query function to trigger it
@@ -30,8 +32,8 @@ describe('useUserDetails', () => {
   it('returns loading state initially when userId is null', () => {
     const { result } = renderHook(() => useUserDetails(null));
 
-    // When userId is null, the query returns null but mock returns undefined (default)
-    // This is the expected behavior since the hook defaults to undefined
+    // When userId is null, enabled=false so queryFn is not called,
+    // useLiveQuery returns undefined (defaultValue) → isLoading: true
     expect(result.current.isLoading).toBe(true);
   });
 
@@ -69,7 +71,14 @@ describe('useUserDetails', () => {
   it('does not call getDetails when userId is null', () => {
     renderHook(() => useUserDetails(null));
 
-    // The query function returns early with null, so getDetails is never called
+    // enabled=false so queryFn is not called, getDetails is never invoked
+    expect(mockGetDetails).not.toHaveBeenCalled();
+  });
+
+  it('does not call getDetails when userId is undefined', () => {
+    renderHook(() => useUserDetails(undefined));
+
+    // enabled=false so queryFn is not called, getDetails is never invoked
     expect(mockGetDetails).not.toHaveBeenCalled();
   });
 });
