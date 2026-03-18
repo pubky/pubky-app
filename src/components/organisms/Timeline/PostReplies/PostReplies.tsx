@@ -21,15 +21,17 @@ interface TimelinePostRepliesProps {
 
 export function TimelinePostReplies({ postId }: TimelinePostRepliesProps) {
   const { isAuthenticated } = Hooks.useRequireAuth();
+  const { postCounts } = Hooks.usePostCounts(postId);
 
   // Check if parent post is deleted to determine replyability
   const { postDetails } = Hooks.usePostDetails(postId);
   const isParentDeleted = Libs.isPostDeleted(postDetails?.content);
 
   const shouldShowQuickReply = !isParentDeleted;
+  const hasReplies = (postCounts?.replies ?? 0) > 0;
 
-  // Don't render for unauthenticated users (following pubky-app pattern)
-  if (!isAuthenticated) {
+  // Don't render for unauthenticated users or posts with no replies
+  if (!isAuthenticated || !hasReplies) {
     return null;
   }
 
