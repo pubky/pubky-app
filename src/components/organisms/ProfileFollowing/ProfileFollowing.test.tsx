@@ -167,13 +167,13 @@ describe('ProfileFollowing', () => {
     expect(userItems[1]).toHaveAttribute('data-user-id', 'user-2');
   });
 
-  it('passes followButtonVariant="iconWithText" to UserListItem', () => {
+  it('passes followButtonVariant="icon" to UserListItem', () => {
     vi.mocked(Hooks.useProfileConnections).mockReturnValue(mockConnectionsResult);
 
     render(<ProfileFollowing />);
     const userItems = screen.getAllByTestId('user-list-item');
     userItems.forEach((item) => {
-      expect(item).toHaveAttribute('data-follow-button-variant', 'iconWithText');
+      expect(item).toHaveAttribute('data-follow-button-variant', 'icon');
     });
   });
 });

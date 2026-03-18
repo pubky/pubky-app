@@ -81,7 +81,7 @@ export function ProfileFriends() {
             key={connection.id}
             user={connection}
             variant="full"
-            followButtonVariant="iconWithText"
+            followButtonVariant="icon"
             isLoading={isUserLoading(connection.id)}
             isStatusLoading={isLoading}
             isCurrentUser={currentUserPubky === connection.id}
