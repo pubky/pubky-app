@@ -31,15 +31,13 @@ describe('useThreadReplies', () => {
 
     vi.mocked(useLiveQuery)
       .mockReturnValueOnce(['author:reply-1', 'author:reply-2', 'author:reply-3'])
-      .mockReturnValueOnce(1)
-      .mockReturnValueOnce(true);
+      .mockReturnValueOnce(1);
 
     const { result } = renderHook(() => useThreadReplies('author:post-1'));
 
     expect(result.current.replyIds).toEqual(['author:reply-1', 'author:reply-2', 'author:reply-3']);
     expect(result.current.totalCount).toBe(4);
     expect(result.current.hasMore).toBe(true);
-    expect(result.current.hasAnyNestedReplies).toBe(true);
   });
 
   it('expandAll paginates until reachedEnd and marks stream as exhausted', async () => {
@@ -49,11 +47,10 @@ describe('useThreadReplies', () => {
 
     let liveQueryCall = 0;
     vi.mocked(useLiveQuery).mockImplementation(() => {
-      const index = liveQueryCall % 3;
+      const index = liveQueryCall % 2;
       liveQueryCall += 1;
       if (index === 0) return ['author:reply-1', 'author:reply-2', 'author:reply-3'];
-      if (index === 1) return 0;
-      return false;
+      return 0;
     });
 
     vi.spyOn(Core, 'buildPostReplyStreamId').mockReturnValue('stream:author:post-1');

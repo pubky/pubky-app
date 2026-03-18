@@ -85,7 +85,6 @@ export * from './useEnrichedTags';
 export * from './usePullToRefresh';
 export * from './useReplyStream';
 export * from './useThreadReplies';
-export * from './useThreadTreeContext';
 export * from './useKeyboardVisible';
 export * from './useKeyboardOffset';
 export * from './useSignOut';

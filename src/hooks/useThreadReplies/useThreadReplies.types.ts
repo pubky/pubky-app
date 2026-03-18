@@ -21,6 +21,4 @@ export interface UseThreadRepliesResult {
   expandAll: () => Promise<void>;
   /** Whether initial data is loading */
   loading: boolean;
-  /** Whether any Level 1 reply has sub-replies (used to decide whether to show the global toggle) */
-  hasAnyNestedReplies: boolean;
 }

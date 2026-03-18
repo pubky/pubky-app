@@ -3,149 +3,209 @@ import { fireEvent, render, screen } from '@testing-library/react';
 import { ReplyWithNested } from './ReplyWithNested';
 
 const mocks = vi.hoisted(() => ({
-  mockUseThreadTreeContext: vi.fn(),
   mockUseNestedReplies: vi.fn(),
   mockOnPostClick: vi.fn(),
 }));
 
-vi.mock('@/hooks', async () => {
-  const actual = await vi.importActual<typeof import('@/hooks')>('@/hooks');
-  return {
-    ...actual,
-    useThreadTreeContext: mocks.mockUseThreadTreeContext,
-    useNestedReplies: mocks.mockUseNestedReplies,
-  };
-});
+vi.mock('@/hooks', () => ({
+  DEFAULT_MAX_DEPTH: 3,
+  DEFAULT_MAX_NESTED: 10,
+  useNestedReplies: (...args: unknown[]) => {
+    // Depth-aware: only return nested replies at depth 0 to prevent infinite recursion
+    const options = args[1] as { depth?: number } | undefined;
+    if (options?.depth && options.depth > 0) {
+      return {
+        nestedReplyIds: [],
+        hasMoreReplies: false,
+        hasNestedReplies: false,
+        replyCount: 0,
+        showAll: false,
+        isExpandingAll: false,
+        expandAll: vi.fn(async () => {}),
+      };
+    }
+    return mocks.mockUseNestedReplies(...args);
+  },
+}));
 
-vi.mock('@/organisms', async () => {
-  const actual = await vi.importActual<typeof import('@/organisms')>('@/organisms');
-  return {
-    ...actual,
-    PostMain: ({ postId, isLastReply, onClick }: { postId: string; isLastReply: boolean; onClick: () => void }) => (
-      <button
-        type="button"
-        data-testid="post-main"
-        data-post-id={postId}
-        data-is-last-reply={String(isLastReply)}
-        onClick={onClick}
-      >
-        {postId}
-      </button>
-    ),
-  };
-});
+vi.mock('@/hooks/useNestedReplies/useNestedReplies.constants', () => ({
+  AUTO_COLLAPSE_THRESHOLD: 4,
+}));
 
-vi.mock('@/molecules', async () => {
-  const actual = await vi.importActual<typeof import('@/molecules')>('@/molecules');
-  return {
-    ...actual,
-    ThreadExpandToggle: () => <div data-testid="thread-expand-toggle" />,
-    ShowMoreReplies: ({ count, onClick }: { count: number; onClick: () => void }) => (
-      <button type="button" data-testid="show-more-nested" data-count={String(count)} onClick={onClick}>
-        show more
-      </button>
-    ),
-  };
-});
+vi.mock('@/atoms', () => ({
+  Container: ({ children, className }: { children?: React.ReactNode; className?: string }) => (
+    <div className={className}>{children}</div>
+  ),
+  PostThreadSpacer: () => <div data-testid="post-thread-spacer" />,
+}));
+
+vi.mock('@/organisms', () => ({
+  PostMain: ({ postId, isLastReply, onClick }: { postId: string; isLastReply: boolean; onClick: () => void }) => (
+    <button
+      type="button"
+      data-testid="post-main"
+      data-post-id={postId}
+      data-is-last-reply={String(isLastReply)}
+      onClick={onClick}
+    >
+      {postId}
+    </button>
+  ),
+}));
+
+vi.mock('@/molecules', () => ({
+  ThreadExpandToggle: ({ expanded, onToggle }: { expanded: boolean; onToggle: () => void }) => (
+    <button type="button" data-testid="thread-expand-toggle" data-expanded={String(expanded)} onClick={onToggle}>
+      toggle
+    </button>
+  ),
+  ShowMoreReplies: ({ count, onClick }: { count: number; onClick: () => void }) => (
+    <button type="button" data-testid="show-more-nested" data-count={String(count)} onClick={onClick}>
+      show more
+    </button>
+  ),
+}));
 
 describe('ReplyWithNested', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     mocks.mockOnPostClick.mockReset();
-    mocks.mockUseThreadTreeContext.mockReturnValue({
-      allLevel2Expanded: true,
-      toggleAllLevel2: vi.fn(),
-    });
     mocks.mockUseNestedReplies.mockReturnValue({
       nestedReplyIds: ['author:nested-1', 'author:nested-2'],
-      hasMoreReplies: true,
+      hasMoreReplies: false,
       hasNestedReplies: true,
-      replyCount: 5,
+      replyCount: 2,
       showAll: false,
       isExpandingAll: false,
       expandAll: vi.fn(async () => {}),
     });
   });
 
-  it('hides nested section when thread is collapsed', () => {
-    mocks.mockUseThreadTreeContext.mockReturnValue({
-      allLevel2Expanded: false,
-      toggleAllLevel2: vi.fn(),
+  it('auto-expands when replyCount <= 3', () => {
+    mocks.mockUseNestedReplies.mockReturnValue({
+      nestedReplyIds: ['author:nested-1', 'author:nested-2'],
+      hasMoreReplies: false,
+      hasNestedReplies: true,
+      replyCount: 2,
+      showAll: false,
+      isExpandingAll: false,
+      expandAll: vi.fn(async () => {}),
     });
 
     render(<ReplyWithNested replyId="author:reply-1" onPostClick={mocks.mockOnPostClick} />);
 
-    expect(screen.getByText('author:reply-1')).toBeInTheDocument();
+    expect(screen.getByText('author:nested-1')).toBeInTheDocument();
+    expect(screen.getByText('author:nested-2')).toBeInTheDocument();
+  });
+
+  it('auto-collapses when replyCount >= 4', () => {
+    mocks.mockUseNestedReplies.mockReturnValue({
+      nestedReplyIds: ['author:nested-1', 'author:nested-2', 'author:nested-3', 'author:nested-4'],
+      hasMoreReplies: false,
+      hasNestedReplies: true,
+      replyCount: 4,
+      showAll: false,
+      isExpandingAll: false,
+      expandAll: vi.fn(async () => {}),
+    });
+
+    render(<ReplyWithNested replyId="author:reply-1" onPostClick={mocks.mockOnPostClick} />);
+
     expect(screen.queryByText('author:nested-1')).not.toBeInTheDocument();
   });
 
-  it('renders nested replies and show-more count when expanded', () => {
+  it('toggles expand/collapse on toggle click', () => {
+    mocks.mockUseNestedReplies.mockReturnValue({
+      nestedReplyIds: ['author:nested-1', 'author:nested-2', 'author:nested-3', 'author:nested-4'],
+      hasMoreReplies: false,
+      hasNestedReplies: true,
+      replyCount: 4,
+      showAll: false,
+      isExpandingAll: false,
+      expandAll: vi.fn(async () => {}),
+    });
+
+    render(<ReplyWithNested replyId="author:reply-1" onPostClick={mocks.mockOnPostClick} />);
+
+    expect(screen.queryByText('author:nested-1')).not.toBeInTheDocument();
+
+    fireEvent.click(screen.getByTestId('thread-expand-toggle'));
+    expect(screen.getByText('author:nested-1')).toBeInTheDocument();
+
+    fireEvent.click(screen.getByTestId('thread-expand-toggle'));
+    expect(screen.queryByText('author:nested-1')).not.toBeInTheDocument();
+  });
+
+  it('shows expand toggle when reply has nested replies', () => {
+    render(<ReplyWithNested replyId="author:reply-1" onPostClick={mocks.mockOnPostClick} />);
+
+    expect(screen.getByTestId('thread-expand-toggle')).toBeInTheDocument();
+  });
+
+  it('does not show expand toggle when no nested replies', () => {
+    mocks.mockUseNestedReplies.mockReturnValue({
+      nestedReplyIds: [],
+      hasMoreReplies: false,
+      hasNestedReplies: false,
+      replyCount: 0,
+      showAll: false,
+      isExpandingAll: false,
+      expandAll: vi.fn(async () => {}),
+    });
+
+    render(<ReplyWithNested replyId="author:reply-1" onPostClick={mocks.mockOnPostClick} />);
+
+    expect(screen.queryByTestId('thread-expand-toggle')).not.toBeInTheDocument();
+  });
+
+  it('renders show-more count when expanded with more replies', () => {
     const expandAll = vi.fn(async () => {});
     mocks.mockUseNestedReplies.mockReturnValue({
       nestedReplyIds: ['author:nested-1', 'author:nested-2'],
       hasMoreReplies: true,
       hasNestedReplies: true,
-      replyCount: 4,
+      replyCount: 3,
       showAll: false,
       isExpandingAll: false,
       expandAll,
     });
 
-    render(<ReplyWithNested replyId="author:reply-1" onPostClick={mocks.mockOnPostClick} isLastReply={false} />);
+    render(<ReplyWithNested replyId="author:reply-1" onPostClick={mocks.mockOnPostClick} />);
 
-    expect(screen.getByText('author:nested-1')).toBeInTheDocument();
-    expect(screen.getByText('author:nested-2')).toBeInTheDocument();
-    expect(screen.getByTestId('show-more-nested')).toHaveAttribute('data-count', '2');
+    expect(screen.getByTestId('show-more-nested')).toHaveAttribute('data-count', '1');
     fireEvent.click(screen.getByTestId('show-more-nested'));
     expect(expandAll).toHaveBeenCalledTimes(1);
   });
 
-  it('hides nested show-more while expand-all is in progress', () => {
+  it('hides show-more while expand-all is in progress', () => {
     mocks.mockUseNestedReplies.mockReturnValue({
       nestedReplyIds: ['author:nested-1', 'author:nested-2'],
       hasMoreReplies: true,
       hasNestedReplies: true,
-      replyCount: 4,
+      replyCount: 3,
       showAll: true,
       isExpandingAll: true,
       expandAll: vi.fn(async () => {}),
     });
 
-    render(<ReplyWithNested replyId="author:reply-1" onPostClick={mocks.mockOnPostClick} isLastReply={false} />);
+    render(<ReplyWithNested replyId="author:reply-1" onPostClick={mocks.mockOnPostClick} />);
 
     expect(screen.queryByTestId('show-more-nested')).not.toBeInTheDocument();
   });
 
-  it('renders thread expand toggle when requested', () => {
-    render(<ReplyWithNested replyId="author:reply-1" onPostClick={mocks.mockOnPostClick} showExpandToggle={true} />);
-
-    expect(screen.getByTestId('thread-expand-toggle')).toBeInTheDocument();
-  });
-
-  it('wires onPostClick for main and nested posts', () => {
+  it('wires onPostClick for main post', () => {
     render(<ReplyWithNested replyId="author:reply-1" onPostClick={mocks.mockOnPostClick} />);
 
     fireEvent.click(screen.getByText('author:reply-1'));
-    fireEvent.click(screen.getByText('author:nested-1'));
-
     expect(mocks.mockOnPostClick).toHaveBeenCalledWith('author:reply-1');
-    expect(mocks.mockOnPostClick).toHaveBeenCalledWith('author:nested-1');
   });
 
   it('passes depth options to useNestedReplies', () => {
-    render(
-      <ReplyWithNested
-        replyId="author:reply-1"
-        onPostClick={mocks.mockOnPostClick}
-        maxNestedReplies={7}
-        depth={1}
-        maxDepth={2}
-      />,
-    );
+    // depth=0 so the mock wrapper passes through to mockUseNestedReplies
+    render(<ReplyWithNested replyId="author:reply-1" onPostClick={mocks.mockOnPostClick} depth={0} maxDepth={2} />);
 
     expect(mocks.mockUseNestedReplies).toHaveBeenCalledWith('author:reply-1', {
-      maxNestedReplies: 7,
-      depth: 1,
+      depth: 0,
       maxDepth: 2,
     });
   });
@@ -153,6 +213,16 @@ describe('ReplyWithNested', () => {
 
 describe('ReplyWithNested - Snapshots', () => {
   it('matches snapshot for expanded nested replies', () => {
+    mocks.mockUseNestedReplies.mockReturnValue({
+      nestedReplyIds: ['author:nested-1'],
+      hasMoreReplies: false,
+      hasNestedReplies: true,
+      replyCount: 1,
+      showAll: false,
+      isExpandingAll: false,
+      expandAll: vi.fn(async () => {}),
+    });
+
     const { container } = render(<ReplyWithNested replyId="author:reply-1" onPostClick={vi.fn()} />);
     expect(container.firstChild).toMatchSnapshot();
   });

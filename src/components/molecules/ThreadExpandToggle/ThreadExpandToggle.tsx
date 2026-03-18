@@ -1,32 +1,34 @@
 'use client';
 
 import * as Atoms from '@/atoms';
-import * as Hooks from '@/hooks';
 import * as Libs from '@/libs';
 import { useTranslations } from 'next-intl';
+
+interface ThreadExpandToggleProps {
+  expanded: boolean;
+  onToggle: () => void;
+}
 
 /**
  * ThreadExpandToggle Molecule
  *
- * A global +/- toggle button that controls the visibility of all Level 2
- * sub-reply sections within a ThreadTree.
+ * A +/- toggle button that controls the visibility of sub-replies
+ * for a single reply. Each reply with sub-replies gets its own toggle.
  *
  * Uses CirclePlus when collapsed and CircleMinus when expanded.
- * Reads and writes `allLevel2Expanded` from ThreadTreeContext.
  */
-export function ThreadExpandToggle() {
+export function ThreadExpandToggle({ expanded, onToggle }: ThreadExpandToggleProps) {
   const tThreadTree = useTranslations('common.threadTree');
-  const { allLevel2Expanded, toggleAllLevel2 } = Hooks.useThreadTreeContext();
 
-  const Icon = allLevel2Expanded ? Libs.CircleMinus : Libs.CirclePlus;
+  const Icon = expanded ? Libs.CircleMinus : Libs.CirclePlus;
 
   return (
     <Atoms.Button
       variant="ghost"
       size="icon"
-      onClick={toggleAllLevel2}
+      onClick={onToggle}
       className="size-5 rounded-full bg-background p-0 text-muted-foreground hover:text-foreground"
-      aria-label={allLevel2Expanded ? tThreadTree('collapseAllReplies') : tThreadTree('expandAllReplies')}
+      aria-label={expanded ? tThreadTree('collapseAllReplies') : tThreadTree('expandAllReplies')}
     >
       <Icon className="size-5" />
     </Atoms.Button>

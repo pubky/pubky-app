@@ -9,21 +9,8 @@ vi.mock('@/organisms', async () => {
     QuickReply: ({ parentPostId }: { parentPostId: string }) => (
       <div data-testid="quick-reply" data-parent-post-id={parentPostId} />
     ),
-    ReplyWithNested: ({
-      replyId,
-      isLastReply,
-      showExpandToggle,
-    }: {
-      replyId: string;
-      isLastReply: boolean;
-      showExpandToggle: boolean;
-    }) => (
-      <div
-        data-testid="reply-with-nested"
-        data-reply-id={replyId}
-        data-is-last-reply={String(isLastReply)}
-        data-show-expand-toggle={String(showExpandToggle)}
-      />
+    ReplyWithNested: ({ replyId, isLastReply }: { replyId: string; isLastReply: boolean }) => (
+      <div data-testid="reply-with-nested" data-reply-id={replyId} data-is-last-reply={String(isLastReply)} />
     ),
   };
 });
@@ -65,7 +52,6 @@ describe('ThreadTree', () => {
       isExpandingAll: false,
       expandAll: vi.fn(async () => {}),
       loading: false,
-      hasAnyNestedReplies: false,
     });
 
     render(<ThreadTree postId="author:post-1" showQuickReply={true} />);
@@ -86,7 +72,6 @@ describe('ThreadTree', () => {
       isExpandingAll: false,
       expandAll: vi.fn(async () => {}),
       loading: false,
-      hasAnyNestedReplies: false,
     });
 
     const { container } = render(<ThreadTree postId="author:post-1" showQuickReply={false} />);
@@ -107,7 +92,6 @@ describe('ThreadTree', () => {
       isExpandingAll: false,
       expandAll: vi.fn(async () => {}),
       loading: false,
-      hasAnyNestedReplies: true,
     });
 
     render(<ThreadTree postId="author:post-1" showQuickReply={false} />);
@@ -115,8 +99,7 @@ describe('ThreadTree', () => {
     const replies = screen.getAllByTestId('reply-with-nested');
     expect(replies).toHaveLength(2);
     expect(replies[0]).toHaveAttribute('data-reply-id', 'author:reply-1');
-    expect(replies[0]).toHaveAttribute('data-show-expand-toggle', 'true');
-    expect(replies[1]).toHaveAttribute('data-show-expand-toggle', 'false');
+    expect(replies[1]).toHaveAttribute('data-reply-id', 'author:reply-2');
     expect(screen.getByTestId('show-more-replies')).toHaveAttribute('data-count', '3');
     expect(screen.getByTestId('show-more-replies')).toHaveAttribute('data-is-last', 'true');
   });
@@ -134,7 +117,6 @@ describe('ThreadTree', () => {
       isExpandingAll: false,
       expandAll,
       loading: false,
-      hasAnyNestedReplies: false,
     });
 
     render(<ThreadTree postId="author:post-1" showQuickReply={false} />);
@@ -155,7 +137,6 @@ describe('ThreadTree', () => {
       isExpandingAll: true,
       expandAll: vi.fn(async () => {}),
       loading: false,
-      hasAnyNestedReplies: false,
     });
 
     render(<ThreadTree postId="author:post-1" showQuickReply={false} />);
@@ -177,7 +158,6 @@ describe('ThreadTree - Snapshots', () => {
       isExpandingAll: false,
       expandAll: vi.fn(async () => {}),
       loading: false,
-      hasAnyNestedReplies: false,
     });
 
     const { container } = render(<ThreadTree postId="author:post-1" showQuickReply={false} />);

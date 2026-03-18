@@ -1,26 +1,12 @@
 // Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
 
 exports[`ReplyWithNested - Snapshots > matches snapshot for expanded nested replies 1`] = `
-<div
-  class=""
-  data-testid="container"
->
+<div>
   <div
-    class="flex h-3"
-    data-testid="container"
-  >
-    <div
-      class="w-3 border-l border-border"
-      data-testid="container"
-    />
-    <div
-      class="flex-1"
-      data-testid="container"
-    />
-  </div>
+    data-testid="post-thread-spacer"
+  />
   <div
-    class=""
-    data-testid="container"
+    class="relative"
   >
     <button
       data-is-last-reply="false"
@@ -30,78 +16,42 @@ exports[`ReplyWithNested - Snapshots > matches snapshot for expanded nested repl
     >
       author:reply-1
     </button>
+    <div
+      class="absolute left-0 z-10 -translate-x-1/2"
+    >
+      <button
+        data-expanded="true"
+        data-testid="thread-expand-toggle"
+        type="button"
+      >
+        toggle
+      </button>
+    </div>
   </div>
   <div
     class="flex"
-    data-testid="container"
   >
     <div
       class="w-3 shrink-0 border-l border-border"
-      data-testid="container"
     />
     <div
       class="ml-3 flex-1"
-      data-testid="container"
     >
-      <div
-        class=""
-        data-testid="container"
-      >
+      <div>
         <div
-          class="flex h-3"
-          data-testid="container"
-        >
-          <div
-            class="w-3 border-l border-border"
-            data-testid="container"
-          />
-          <div
-            class="flex-1"
-            data-testid="container"
-          />
+          data-testid="post-thread-spacer"
+        />
+        <div>
+          <button
+            data-is-last-reply="true"
+            data-post-id="author:nested-1"
+            data-testid="post-main"
+            type="button"
+          >
+            author:nested-1
+          </button>
         </div>
-        <button
-          data-is-last-reply="false"
-          data-post-id="author:nested-1"
-          data-testid="post-main"
-          type="button"
-        >
-          author:nested-1
-        </button>
       </div>
-      <div
-        class=""
-        data-testid="container"
-      >
-        <div
-          class="flex h-3"
-          data-testid="container"
-        >
-          <div
-            class="w-3 border-l border-border"
-            data-testid="container"
-          />
-          <div
-            class="flex-1"
-            data-testid="container"
-          />
-        </div>
-        <button
-          data-is-last-reply="false"
-          data-post-id="author:nested-2"
-          data-testid="post-main"
-          type="button"
-        >
-          author:nested-2
-        </button>
-      </div>
-      <button
-        data-count="3"
-        data-testid="show-more-nested"
-        type="button"
-      >
-        show more
-      </button>
     </div>
   </div>
 </div>
