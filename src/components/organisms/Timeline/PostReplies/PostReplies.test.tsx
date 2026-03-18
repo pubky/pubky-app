@@ -23,6 +23,7 @@ vi.mock('@/hooks', async (importOriginal) => {
     ...actual,
     useRequireAuth: vi.fn(),
     usePostDetails: vi.fn(),
+    usePostCounts: vi.fn(),
   };
 });
 
@@ -61,6 +62,9 @@ describe('TimelinePostReplies', () => {
     mockIsPostDeleted.mockReturnValue(false);
     vi.mocked(Hooks.useRequireAuth).mockReturnValue(mockUseRequireAuth());
     vi.mocked(Hooks.usePostDetails).mockReturnValue(mockUsePostDetails());
+    vi.mocked(Hooks.usePostCounts).mockReturnValue({ postCounts: { replies: 3 } } as ReturnType<
+      typeof Hooks.usePostCounts
+    >);
   });
 
   it('renders ThreadTree with correct postId', () => {
@@ -98,6 +102,16 @@ describe('TimelinePostReplies', () => {
     expect(container.firstChild).toBeNull();
   });
 
+  it('renders nothing when post has no replies', () => {
+    vi.mocked(Hooks.usePostCounts).mockReturnValue({ postCounts: { replies: 0 } } as ReturnType<
+      typeof Hooks.usePostCounts
+    >);
+
+    const { container } = render(<TimelinePostReplies postId={mockPostId} />);
+
+    expect(container.firstChild).toBeNull();
+  });
+
   it('renders with ml-3 container styling', () => {
     render(<TimelinePostReplies postId={mockPostId} />);
 
@@ -114,6 +128,9 @@ describe('TimelinePostReplies - Snapshots', () => {
     mockIsPostDeleted.mockReturnValue(false);
     vi.mocked(Hooks.useRequireAuth).mockReturnValue(mockUseRequireAuth());
     vi.mocked(Hooks.usePostDetails).mockReturnValue(mockUsePostDetails());
+    vi.mocked(Hooks.usePostCounts).mockReturnValue({ postCounts: { replies: 3 } } as ReturnType<
+      typeof Hooks.usePostCounts
+    >);
   });
 
   it('matches snapshot when authenticated with non-deleted post', () => {
