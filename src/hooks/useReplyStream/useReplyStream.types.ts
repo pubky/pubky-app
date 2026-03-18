@@ -18,6 +18,4 @@ export interface UseReplyStreamResult {
   isExpandingAll: boolean;
   /** Expand to show all remaining replies inline */
   expandAll: () => Promise<void>;
-  /** Whether initial data is loading (no local data yet but replies exist) */
-  loading: boolean;
 }

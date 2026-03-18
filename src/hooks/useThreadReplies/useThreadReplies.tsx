@@ -20,10 +20,9 @@ export function useThreadReplies(
 ): UseThreadRepliesResult {
   const { maxReplies = DEFAULT_MAX_THREAD_REPLIES } = options;
 
-  const { replyIds, adjustedTotalCount, hasMore, showAll, isExpandingAll, expandAll, loading } = useReplyStream(
-    postId,
-    { maxReplies },
-  );
+  const { replyIds, adjustedTotalCount, hasMore, showAll, isExpandingAll, expandAll } = useReplyStream(postId, {
+    maxReplies,
+  });
 
   return {
     replyIds,
@@ -32,6 +31,5 @@ export function useThreadReplies(
     showAll,
     isExpandingAll,
     expandAll,
-    loading,
   };
 }

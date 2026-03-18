@@ -19,6 +19,4 @@ export interface UseThreadRepliesResult {
   isExpandingAll: boolean;
   /** Expand to show all remaining replies inline */
   expandAll: () => Promise<void>;
-  /** Whether initial data is loading */
-  loading: boolean;
 }

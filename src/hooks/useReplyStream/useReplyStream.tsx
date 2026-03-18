@@ -195,7 +195,6 @@ export function useReplyStream(
   // Don't show "+N more" if we've already exhausted the Nexus stream
   // (postCounts.replies may include deleted replies that Nexus no longer returns)
   const hasMore = !streamExhausted && adjustedTotalCount > replyIds.length;
-  const loading = !hasFetched && totalReplyCount > 0 && replyIds.length === 0;
 
   return {
     replyIds,
@@ -204,6 +203,5 @@ export function useReplyStream(
     showAll,
     isExpandingAll,
     expandAll,
-    loading,
   };
 }

@@ -51,7 +51,6 @@ describe('ThreadTree', () => {
       showAll: false,
       isExpandingAll: false,
       expandAll: vi.fn(async () => {}),
-      loading: false,
     });
 
     render(<ThreadTree postId="author:post-1" showQuickReply={true} />);
@@ -71,7 +70,6 @@ describe('ThreadTree', () => {
       showAll: false,
       isExpandingAll: false,
       expandAll: vi.fn(async () => {}),
-      loading: false,
     });
 
     const { container } = render(<ThreadTree postId="author:post-1" showQuickReply={false} />);
@@ -91,7 +89,6 @@ describe('ThreadTree', () => {
       showAll: false,
       isExpandingAll: false,
       expandAll: vi.fn(async () => {}),
-      loading: false,
     });
 
     render(<ThreadTree postId="author:post-1" showQuickReply={false} />);
@@ -116,7 +113,6 @@ describe('ThreadTree', () => {
       showAll: false,
       isExpandingAll: false,
       expandAll,
-      loading: false,
     });
 
     render(<ThreadTree postId="author:post-1" showQuickReply={false} />);
@@ -136,7 +132,6 @@ describe('ThreadTree', () => {
       showAll: true,
       isExpandingAll: true,
       expandAll: vi.fn(async () => {}),
-      loading: false,
     });
 
     render(<ThreadTree postId="author:post-1" showQuickReply={false} />);
@@ -157,7 +152,6 @@ describe('ThreadTree - Snapshots', () => {
       showAll: false,
       isExpandingAll: false,
       expandAll: vi.fn(async () => {}),
-      loading: false,
     });
 
     const { container } = render(<ThreadTree postId="author:post-1" showQuickReply={false} />);

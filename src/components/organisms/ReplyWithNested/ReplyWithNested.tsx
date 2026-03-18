@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useState } from 'react';
 import * as Atoms from '@/atoms';
 import * as Molecules from '@/molecules';
 import * as Organisms from '@/organisms';
@@ -28,16 +28,18 @@ export function ReplyWithNested({
   const { nestedReplyIds, hasMoreReplies, hasNestedReplies, replyCount, isExpandingAll, expandAll } =
     Hooks.useNestedReplies(replyId, { depth, maxDepth });
 
-  // Local expand/collapse state — set once when replyCount first becomes available
-  const hasSetInitialRef = useRef(false);
+  // Local expand/collapse state — set once when replyCount first becomes available.
+  // Until initialized, we skip rendering the nested section to avoid a flash
+  // (starting collapsed then immediately animating to expanded).
+  const [initialized, setInitialized] = useState(false);
   const [expanded, setExpanded] = useState(false);
 
   useEffect(() => {
-    if (!hasSetInitialRef.current && replyCount > 0) {
-      hasSetInitialRef.current = true;
+    if (!initialized && replyCount > 0) {
+      setInitialized(true);
       setExpanded(replyCount < AUTO_COLLAPSE_THRESHOLD);
     }
-  }, [replyCount]);
+  }, [initialized, replyCount]);
 
   const canShowToggle = hasNestedReplies && depth < maxDepth;
 
@@ -64,8 +66,8 @@ export function ReplyWithNested({
         )}
       </Atoms.Container>
 
-      {/* Nested sub-replies — animated expand/collapse */}
-      {hasNestedReplies && (
+      {/* Nested sub-replies — animated expand/collapse (skip until initial state is set) */}
+      {hasNestedReplies && initialized && (
         <Atoms.Container
           overrideDefaults
           className={`grid transition-all duration-300 ease-in-out ${
