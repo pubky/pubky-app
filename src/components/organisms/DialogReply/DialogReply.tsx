@@ -1,5 +1,6 @@
 'use client';
 
+import * as React from 'react';
 import { useTranslations } from 'next-intl';
 import * as Atoms from '@/atoms';
 import * as Hooks from '@/hooks';
@@ -14,10 +15,57 @@ export function DialogReply({ postId, open, onOpenChangeAction }: DialogReplyPro
     Hooks.useConfirmableDialog({
       onClose: () => onOpenChangeAction(false),
     });
+  const scrollReplyTextareaIntoView = React.useCallback((behavior: ScrollBehavior = 'auto') => {
+    const replyTextarea = document.querySelector<HTMLTextAreaElement>(
+      '[data-cy="reply-post-input"] [data-slot="textarea"]',
+    );
+
+    if (!replyTextarea) return;
+
+    replyTextarea.scrollIntoView({ block: 'center', inline: 'nearest', behavior });
+  }, []);
+
+  const handleOpenAutoFocus = React.useCallback(
+    (event: Event) => {
+      event.preventDefault();
+
+      const dialogContent = event.currentTarget as HTMLElement | null;
+      const replyTextarea = dialogContent?.querySelector<HTMLTextAreaElement>(
+        '[data-cy="reply-post-input"] [data-slot="textarea"]',
+      );
+
+      if (!replyTextarea) return;
+
+      replyTextarea.focus();
+      scrollReplyTextareaIntoView('auto');
+
+      // Mobile keyboards can shift viewport after focus; scroll again once it settles.
+      window.setTimeout(() => {
+        scrollReplyTextareaIntoView('smooth');
+      }, 200);
+    },
+    [scrollReplyTextareaIntoView],
+  );
+
+  React.useEffect(() => {
+    if (!open || typeof window === 'undefined') return;
+
+    const viewport = window.visualViewport;
+    if (!viewport) return;
+
+    const handleViewportResize = () => {
+      scrollReplyTextareaIntoView('auto');
+    };
+
+    viewport.addEventListener('resize', handleViewportResize);
+    return () => {
+      viewport.removeEventListener('resize', handleViewportResize);
+    };
+  }, [open, scrollReplyTextareaIntoView]);
 
   return (
     <Atoms.Dialog open={open} onOpenChange={handleOpenChange}>
-      <Atoms.DialogContent className="w-3xl" hiddenTitle={t('hiddenTitle')}>
+      <Atoms.DialogContent className="w-3xl" hiddenTitle={t('hiddenTitle')} onOpenAutoFocus={handleOpenAutoFocus}>
         <Atoms.DialogHeader>
           <Atoms.DialogTitle>{t('title')}</Atoms.DialogTitle>
           <Atoms.DialogDescription className="sr-only">{t('description')}</Atoms.DialogDescription>
