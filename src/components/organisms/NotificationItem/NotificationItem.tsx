@@ -148,9 +148,9 @@ export function NotificationItem({ notification, isUnread }: NotificationItemPro
             as="p"
             className="min-w-0 shrink truncate text-sm leading-none font-medium text-foreground lg:text-base lg:leading-normal"
           >
-            {/* Username - links to user profile with hover underline */}
+            {/* Username - links to user profile without underline on hover */}
             {userProfileLink ? (
-              <Link href={userProfileLink} className="hover:underline">
+              <Link href={userProfileLink} className="no-underline hover:no-underline">
                 {userName}
               </Link>
             ) : (

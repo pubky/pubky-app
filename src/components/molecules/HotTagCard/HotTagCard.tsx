@@ -57,17 +57,21 @@ export function HotTagCard({
       <Atoms.Container overrideDefaults className="flex w-full flex-col gap-2.5 px-6">
         {/* Rank and Tag Name */}
         <Atoms.Container overrideDefaults className="flex w-full items-center gap-3">
-          <Atoms.Container
-            overrideDefaults
-            className="flex size-6 shrink-0 items-center justify-center rounded-full border border-accent-foreground"
-          >
-            <Atoms.Typography size="sm" className="font-bold">
-              {rank}
+          <Atoms.Container overrideDefaults className="flex w-full items-center gap-3">
+            <Atoms.Container
+              overrideDefaults
+              className="flex size-6 shrink-0 items-center justify-center rounded-full border border-accent-foreground"
+            >
+              <Atoms.Typography size="sm" className="font-bold">
+                {rank}
+              </Atoms.Typography>
+            </Atoms.Container>
+            <Atoms.Typography as="h4" size="lg" className="max-w-48 truncate lg:leading-normal">
+              {tagName}
             </Atoms.Typography>
           </Atoms.Container>
-          <Atoms.Typography size="lg" className="truncate lg:leading-normal">
-            {tagName}
-          </Atoms.Typography>
+
+          <Molecules.AvatarGroup items={taggers} totalCount={postCount} maxAvatars={maxAvatars} />
         </Atoms.Container>
 
         {/* Post Count */}
@@ -77,9 +81,6 @@ export function HotTagCard({
       </Atoms.Container>
 
       {/* Card Footer - Avatar Group */}
-      <Atoms.Container overrideDefaults className="px-6">
-        <Molecules.AvatarGroup items={taggers} totalCount={postCount} maxAvatars={maxAvatars} />
-      </Atoms.Container>
     </Atoms.Container>
   );
 }

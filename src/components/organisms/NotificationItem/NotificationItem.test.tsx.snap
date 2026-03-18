@@ -32,7 +32,7 @@ exports[`NotificationItem - Snapshots > matches snapshot for Follow notification
         data-testid="typography"
       >
         <a
-          class="hover:underline"
+          class="no-underline hover:no-underline"
           href="/profile/user1"
         >
           User
@@ -106,7 +106,7 @@ exports[`NotificationItem - Snapshots > matches snapshot for Mention notificatio
         data-testid="typography"
       >
         <a
-          class="hover:underline"
+          class="no-underline hover:no-underline"
           href="/profile/user1"
         >
           User
@@ -180,7 +180,7 @@ exports[`NotificationItem - Snapshots > matches snapshot for TagPost notificatio
         data-testid="typography"
       >
         <a
-          class="hover:underline"
+          class="no-underline hover:no-underline"
           href="/profile/user1"
         >
           User
