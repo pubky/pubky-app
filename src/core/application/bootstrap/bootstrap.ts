@@ -27,13 +27,13 @@ export class BootstrapApplication {
     onProgress?: BootstrapProgressCallback,
   ): Promise<Core.TBootstrapResponse> {
     const pubky = params.pubky;
-    const [bootstrapData, userLastRead, , , remoteSettings] = await Promise.all([
+    const [bootstrapData, userLastRead, remoteSettings] = await Promise.all([
       Core.NexusBootstrapService.fetch(pubky),
       this.fetchOrPutLastRead(params),
-      Core.MuteApplication.fetchMutedUsers(pubky), // fetches and persists MUTED stream internally
-      Core.FeedApplication.fetchFeeds(pubky),
       // Initialize settings from homeserver (non-blocking, errors are logged but don't fail bootstrap)
       this.syncSettings(pubky, params.localSettings),
+      Core.MuteApplication.fetchMutedUsers(pubky), // fetches and persists MUTED stream internally
+      Core.FeedApplication.fetchFeeds(pubky),
     ]);
     onProgress?.('bootstrapFetched'); // Step 3 complete (60%)
 
