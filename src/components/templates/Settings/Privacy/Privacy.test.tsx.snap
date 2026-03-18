@@ -63,7 +63,7 @@ exports[`Privacy - Snapshots > matches snapshot 1`] = `
           <label
             class="text-sm text-foreground leading-5 font-medium"
             data-testid="typography"
-            for="show-confirmation-switch"
+            for="privacy-switch-showConfirm"
           >
             Show confirmation before redirecting
           </label>
@@ -72,7 +72,7 @@ exports[`Privacy - Snapshots > matches snapshot 1`] = `
           aria-checked="true"
           class="peer inline-flex h-5 w-9 shrink-0 cursor-pointer items-center rounded-full border-2 border-transparent px-0.5 transition-colors focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background focus-visible:outline-none disabled:cursor-not-allowed disabled:opacity-50 bg-muted data-[state=checked]:bg-brand"
           data-state="checked"
-          id="show-confirmation-switch"
+          id="privacy-switch-showConfirm"
           role="switch"
           type="button"
           value="on"
@@ -94,7 +94,7 @@ exports[`Privacy - Snapshots > matches snapshot 1`] = `
           <label
             class="text-sm text-foreground leading-5 font-medium"
             data-testid="typography"
-            for="blur-censored-switch"
+            for="privacy-switch-blurCensored"
           >
             Blur censored posts or profile pictures
           </label>
@@ -103,7 +103,7 @@ exports[`Privacy - Snapshots > matches snapshot 1`] = `
           aria-checked="true"
           class="peer inline-flex h-5 w-9 shrink-0 cursor-pointer items-center rounded-full border-2 border-transparent px-0.5 transition-colors focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background focus-visible:outline-none disabled:cursor-not-allowed disabled:opacity-50 bg-muted data-[state=checked]:bg-brand"
           data-state="checked"
-          id="blur-censored-switch"
+          id="privacy-switch-blurCensored"
           role="switch"
           type="button"
           value="on"
@@ -125,7 +125,7 @@ exports[`Privacy - Snapshots > matches snapshot 1`] = `
           <label
             class="text-sm text-foreground leading-5 font-medium"
             data-testid="typography"
-            for="sign-out-inactive-switch"
+            for="privacy-switch-signOutInactive"
           >
             Sign me out when inactive for 5 minutes
           </label>
@@ -136,7 +136,7 @@ exports[`Privacy - Snapshots > matches snapshot 1`] = `
           data-disabled=""
           data-state="unchecked"
           disabled=""
-          id="sign-out-inactive-switch"
+          id="privacy-switch-signOutInactive"
           role="switch"
           type="button"
           value="on"
@@ -159,7 +159,7 @@ exports[`Privacy - Snapshots > matches snapshot 1`] = `
           <label
             class="text-sm text-foreground leading-5 font-medium"
             data-testid="typography"
-            for="require-pin-switch"
+            for="privacy-switch-requirePin"
           >
             Require PIN when inactive for 5 minutes
           </label>
@@ -170,7 +170,7 @@ exports[`Privacy - Snapshots > matches snapshot 1`] = `
           data-disabled=""
           data-state="unchecked"
           disabled=""
-          id="require-pin-switch"
+          id="privacy-switch-requirePin"
           role="switch"
           type="button"
           value="on"
@@ -193,7 +193,7 @@ exports[`Privacy - Snapshots > matches snapshot 1`] = `
           <label
             class="text-sm text-foreground leading-5 font-medium"
             data-testid="typography"
-            for="hide-who-to-follow-switch"
+            for="privacy-switch-hideWhoToFollow"
           >
             Hide your profile in 'Who to Follow'
           </label>
@@ -204,7 +204,7 @@ exports[`Privacy - Snapshots > matches snapshot 1`] = `
           data-disabled=""
           data-state="unchecked"
           disabled=""
-          id="hide-who-to-follow-switch"
+          id="privacy-switch-hideWhoToFollow"
           role="switch"
           type="button"
           value="on"
@@ -227,7 +227,7 @@ exports[`Privacy - Snapshots > matches snapshot 1`] = `
           <label
             class="text-sm text-foreground leading-5 font-medium"
             data-testid="typography"
-            for="hide-active-friends-switch"
+            for="privacy-switch-hideActiveFriends"
           >
             Hide your profile in 'Active Friends'
           </label>
@@ -238,7 +238,7 @@ exports[`Privacy - Snapshots > matches snapshot 1`] = `
           data-disabled=""
           data-state="unchecked"
           disabled=""
-          id="hide-active-friends-switch"
+          id="privacy-switch-hideActiveFriends"
           role="switch"
           type="button"
           value="on"
@@ -261,7 +261,7 @@ exports[`Privacy - Snapshots > matches snapshot 1`] = `
           <label
             class="text-sm text-foreground leading-5 font-medium"
             data-testid="typography"
-            for="hide-search-switch"
+            for="privacy-switch-hideSearch"
           >
             Hide your profile in search results
           </label>
@@ -272,7 +272,7 @@ exports[`Privacy - Snapshots > matches snapshot 1`] = `
           data-disabled=""
           data-state="unchecked"
           disabled=""
-          id="hide-search-switch"
+          id="privacy-switch-hideSearch"
           role="switch"
           type="button"
           value="on"
@@ -295,7 +295,7 @@ exports[`Privacy - Snapshots > matches snapshot 1`] = `
           <label
             class="text-sm text-foreground leading-5 font-medium"
             data-testid="typography"
-            for="never-show-posts-switch"
+            for="privacy-switch-neverShowPosts"
           >
             Never show posts from people you don't follow
           </label>
@@ -306,7 +306,7 @@ exports[`Privacy - Snapshots > matches snapshot 1`] = `
           data-disabled=""
           data-state="unchecked"
           disabled=""
-          id="never-show-posts-switch"
+          id="privacy-switch-neverShowPosts"
           role="switch"
           type="button"
           value="on"

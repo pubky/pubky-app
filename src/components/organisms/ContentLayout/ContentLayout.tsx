@@ -48,25 +48,38 @@ export function ContentLayout({
   showRightMobileButton = true,
   renderMobileHeader = true,
   className,
+  feedVariant,
 }: Types.ContentLayoutProps) {
   const { layout: homeLayout } = Core.useHomeStore();
   const customFeed = Hooks.useCustomFeed();
   const customFeedLayout =
     customFeed?.layout !== undefined ? Core.pubkyLayoutToHomeLayout(customFeed.layout) : undefined;
-  const layout = customFeedLayout ?? homeLayout;
+  const requestedLayout = customFeedLayout ?? homeLayout;
 
   const [drawerFilterOpen, setDrawerFilterOpen] = useState(false);
   const [drawerRightOpen, setDrawerRightOpen] = useState(false);
   const isMobile = Hooks.useIsMobile();
+  const isPhoneViewport = Hooks.useIsMobile({ breakpoint: 'md' });
+  const { effectiveLayout } = feedVariant
+    ? Hooks.resolveFeedLayout({
+        requestedLayout,
+        variant: feedVariant,
+        isPhoneViewport,
+      })
+    : {
+        effectiveLayout: requestedLayout,
+      };
+  const usesWideShellLayout =
+    effectiveLayout === Core.LAYOUT.WIDE || (feedVariant !== undefined && effectiveLayout === Core.LAYOUT.VISUAL);
 
-  // Close drawers when switching from Wide to Columns mode on desktop
+  // Close drawers when switching from wide-shell to inline sidebars on desktop
   // This prevents the drawer from staying open when sidebars become visible inline
   useEffect(() => {
-    if (!isMobile && layout !== Core.LAYOUT.WIDE) {
+    if (!isMobile && !usesWideShellLayout) {
       setDrawerFilterOpen(false);
       setDrawerRightOpen(false);
     }
-  }, [layout, isMobile]);
+  }, [isMobile, usesWideShellLayout]);
 
   return (
     <>
@@ -80,11 +93,11 @@ export function ContentLayout({
         />
       )}
 
-      {/* Buttons to open drawers - visible on desktop when in wide layout */}
-      {layout === Core.LAYOUT.WIDE && showLeftSidebar && leftDrawerContent && (
+      {/* Buttons to open drawers - visible on desktop when using the wide shell */}
+      {usesWideShellLayout && showLeftSidebar && leftDrawerContent && (
         <Molecules.ButtonFilters onClick={() => setDrawerFilterOpen(true)} position="left" />
       )}
-      {layout === Core.LAYOUT.WIDE && showRightSidebar && rightDrawerContent && (
+      {usesWideShellLayout && showRightSidebar && rightDrawerContent && (
         <Molecules.ButtonFilters onClick={() => setDrawerRightOpen(true)} position="right" />
       )}
 
@@ -99,16 +112,16 @@ export function ContentLayout({
         )}
       >
         <Atoms.Container overrideDefaults className="flex gap-6">
-          {/* Left sidebar - hidden on mobile (< lg) and in wide layout mode */}
-          {showLeftSidebar && layout !== Core.LAYOUT.WIDE && leftSidebarContent && (
+          {/* Left sidebar - hidden on mobile (< lg) and in wide-shell layout mode */}
+          {showLeftSidebar && !usesWideShellLayout && leftSidebarContent && (
             <StickySidebar>{leftSidebarContent}</StickySidebar>
           )}
 
           {/* Main content area - grows to fill space, min-w-0 prevents flex overflow */}
           <Atoms.Container className="w-full min-w-0 flex-1 gap-6 lg:overflow-hidden">{children}</Atoms.Container>
 
-          {/* Right sidebar - hidden on mobile (< lg) and in wide layout mode */}
-          {showRightSidebar && layout !== Core.LAYOUT.WIDE && rightSidebarContent && (
+          {/* Right sidebar - hidden on mobile (< lg) and in wide-shell layout mode */}
+          {showRightSidebar && !usesWideShellLayout && rightSidebarContent && (
             <StickySidebar>{rightSidebarContent}</StickySidebar>
           )}
         </Atoms.Container>

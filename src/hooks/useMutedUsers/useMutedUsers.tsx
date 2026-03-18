@@ -18,6 +18,7 @@ const EMPTY_ARRAY: Core.Pubky[] = [];
  * This prevents infinite re-renders when components use these values as dependencies.
  */
 export function useMutedUsers(): UseMutedUsersResult {
+  // TODO: Use the controller instead of the service
   const mutedStream = useLiveQuery(async () => Core.LocalStreamUsersService.findById(Core.UserStreamTypes.MUTED), []);
 
   // Use stable empty array reference to avoid dependency instability

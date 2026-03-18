@@ -205,6 +205,51 @@ describe('Database Initialization', () => {
     }
   });
 
+  it('returns wasDbReset true after recreateDatabase runs (version mismatch)', async () => {
+    const testDbName = `${DB_NAME}-wasDbReset-recreate`;
+    const testDb = new AppDatabase(testDbName);
+
+    await waitForDatabaseDeletion(testDbName, () => testDb.close());
+
+    // Initialize normally first
+    const firstResult = await testDb.initialize();
+    expect(firstResult.wasDbReset).toBe(true); // new DB
+
+    // Create version mismatch
+    testDb.close();
+    const baselineVersion = await readNativeDatabaseVersion(testDbName);
+    const mismatchedVersion = baselineVersion + 10;
+    await openNativeDatabase(testDbName, {
+      version: mismatchedVersion,
+      upgrade: (nativeDb) => {
+        if (!nativeDb.objectStoreNames.contains('test_store')) {
+          nativeDb.createObjectStore('test_store', { keyPath: 'id' });
+        }
+      },
+    });
+
+    // Re-initialize — should detect mismatch and recreate
+    const result = await testDb.initialize();
+    expect(result.wasDbReset).toBe(true);
+
+    // Clean up test database to avoid leaking into other tests
+    await testDb.delete();
+  });
+
+  it('returns wasDbReset true when initialize creates a new database', async () => {
+    const testDbName = `${DB_NAME}-wasDbReset-new`;
+    const testDb = new AppDatabase(testDbName);
+
+    await waitForDatabaseDeletion(testDbName, () => testDb.close());
+
+    const result = await testDb.initialize();
+
+    expect(result.wasDbReset).toBe(true);
+
+    // Clean up test database to avoid leaking into other tests
+    await testDb.delete();
+  });
+
   it('gracefully handles unavailable indexedDB', async () => {
     const testDbName = `${DB_NAME}-no-indexeddb`;
     const testDb = new AppDatabase(testDbName);

@@ -1,3 +1,5 @@
+import type { TimelineFeedVariant } from '@/config';
+
 export interface ContentLayoutProps {
   children: React.ReactNode;
   leftSidebarContent?: React.ReactNode;
@@ -13,6 +15,7 @@ export interface ContentLayoutProps {
   /** Whether to render the MobileHeader. Set to false when rendering MobileHeader externally (e.g., Settings page). Defaults to true. */
   renderMobileHeader?: boolean;
   className?: string;
+  feedVariant?: TimelineFeedVariant;
 }
 
 export interface StickySidebarProps {

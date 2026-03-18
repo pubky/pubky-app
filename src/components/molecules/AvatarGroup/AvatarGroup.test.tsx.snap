@@ -97,7 +97,7 @@ exports[`AvatarGroup - Snapshots > matches snapshot with basic items 1`] = `
   <div
     class="relative rounded-full shadow-xs"
     data-testid="container"
-    style="margin-left: -8px; z-index: 1;"
+    style="margin-left: -8px; z-index: 3;"
   >
     <span
       class="relative flex shrink-0 overflow-hidden rounded-full h-8 w-8"
@@ -263,7 +263,7 @@ exports[`AvatarGroup - Snapshots > matches snapshot with custom maxAvatars 1`] =
   <div
     class="relative rounded-full shadow-xs"
     data-testid="container"
-    style="margin-left: -8px; z-index: 2;"
+    style="margin-left: -8px; z-index: 4;"
   >
     <span
       class="relative flex shrink-0 overflow-hidden rounded-full h-8 w-8"
@@ -352,7 +352,7 @@ exports[`AvatarGroup - Snapshots > matches snapshot with custom maxAvatars 1`] =
   <div
     class="relative rounded-full shadow-xs"
     data-testid="container"
-    style="margin-left: -8px; z-index: 1;"
+    style="margin-left: -8px; z-index: 5;"
   >
     <span
       class="relative flex shrink-0 overflow-hidden rounded-full h-8 w-8"
@@ -441,7 +441,7 @@ exports[`AvatarGroup - Snapshots > matches snapshot with custom maxAvatars 1`] =
   <div
     class="relative flex size-8 items-center justify-center rounded-full border border-muted-foreground bg-background text-sm font-medium shadow-xs"
     data-testid="container"
-    style="margin-left: -8px; z-index: 0;"
+    style="margin-left: -8px; z-index: 4;"
   >
     +47
   </div>
@@ -545,7 +545,7 @@ exports[`AvatarGroup - Snapshots > matches snapshot with items without avatarUrl
   <div
     class="relative rounded-full shadow-xs"
     data-testid="container"
-    style="margin-left: -8px; z-index: 1;"
+    style="margin-left: -8px; z-index: 3;"
   >
     <span
       class="relative flex shrink-0 overflow-hidden rounded-full h-8 w-8"
@@ -711,7 +711,7 @@ exports[`AvatarGroup - Snapshots > matches snapshot with max overflow (+99) 1`] 
   <div
     class="relative rounded-full shadow-xs"
     data-testid="container"
-    style="margin-left: -8px; z-index: 5;"
+    style="margin-left: -8px; z-index: 7;"
   >
     <span
       class="relative flex shrink-0 overflow-hidden rounded-full h-8 w-8"
@@ -800,7 +800,7 @@ exports[`AvatarGroup - Snapshots > matches snapshot with max overflow (+99) 1`] 
   <div
     class="relative rounded-full shadow-xs"
     data-testid="container"
-    style="margin-left: -8px; z-index: 4;"
+    style="margin-left: -8px; z-index: 8;"
   >
     <span
       class="relative flex shrink-0 overflow-hidden rounded-full h-8 w-8"
@@ -889,7 +889,7 @@ exports[`AvatarGroup - Snapshots > matches snapshot with max overflow (+99) 1`] 
   <div
     class="relative rounded-full shadow-xs"
     data-testid="container"
-    style="margin-left: -8px; z-index: 3;"
+    style="margin-left: -8px; z-index: 9;"
   >
     <span
       class="relative flex shrink-0 overflow-hidden rounded-full h-8 w-8"
@@ -954,7 +954,7 @@ exports[`AvatarGroup - Snapshots > matches snapshot with max overflow (+99) 1`] 
   <div
     class="relative rounded-full shadow-xs"
     data-testid="container"
-    style="margin-left: -8px; z-index: 2;"
+    style="margin-left: -8px; z-index: 10;"
   >
     <span
       class="relative flex shrink-0 overflow-hidden rounded-full h-8 w-8"
@@ -1023,7 +1023,7 @@ exports[`AvatarGroup - Snapshots > matches snapshot with max overflow (+99) 1`] 
   <div
     class="relative rounded-full shadow-xs"
     data-testid="container"
-    style="margin-left: -8px; z-index: 1;"
+    style="margin-left: -8px; z-index: 11;"
   >
     <span
       class="relative flex shrink-0 overflow-hidden rounded-full h-8 w-8"
@@ -1112,7 +1112,7 @@ exports[`AvatarGroup - Snapshots > matches snapshot with max overflow (+99) 1`] 
   <div
     class="relative flex size-8 items-center justify-center rounded-full border border-muted-foreground bg-background text-sm font-medium shadow-xs"
     data-testid="container"
-    style="margin-left: -8px; z-index: 0;"
+    style="margin-left: -8px; z-index: 7;"
   >
     +99
   </div>
@@ -1196,7 +1196,7 @@ exports[`AvatarGroup - Snapshots > matches snapshot with overflow 1`] = `
   <div
     class="relative rounded-full shadow-xs"
     data-testid="container"
-    style="margin-left: -8px; z-index: 5;"
+    style="margin-left: -8px; z-index: 7;"
   >
     <span
       class="relative flex shrink-0 overflow-hidden rounded-full h-8 w-8"
@@ -1285,7 +1285,7 @@ exports[`AvatarGroup - Snapshots > matches snapshot with overflow 1`] = `
   <div
     class="relative rounded-full shadow-xs"
     data-testid="container"
-    style="margin-left: -8px; z-index: 4;"
+    style="margin-left: -8px; z-index: 8;"
   >
     <span
       class="relative flex shrink-0 overflow-hidden rounded-full h-8 w-8"
@@ -1374,7 +1374,7 @@ exports[`AvatarGroup - Snapshots > matches snapshot with overflow 1`] = `
   <div
     class="relative rounded-full shadow-xs"
     data-testid="container"
-    style="margin-left: -8px; z-index: 3;"
+    style="margin-left: -8px; z-index: 9;"
   >
     <span
       class="relative flex shrink-0 overflow-hidden rounded-full h-8 w-8"
@@ -1439,7 +1439,7 @@ exports[`AvatarGroup - Snapshots > matches snapshot with overflow 1`] = `
   <div
     class="relative rounded-full shadow-xs"
     data-testid="container"
-    style="margin-left: -8px; z-index: 2;"
+    style="margin-left: -8px; z-index: 10;"
   >
     <span
       class="relative flex shrink-0 overflow-hidden rounded-full h-8 w-8"
@@ -1508,7 +1508,7 @@ exports[`AvatarGroup - Snapshots > matches snapshot with overflow 1`] = `
   <div
     class="relative rounded-full shadow-xs"
     data-testid="container"
-    style="margin-left: -8px; z-index: 1;"
+    style="margin-left: -8px; z-index: 11;"
   >
     <span
       class="relative flex shrink-0 overflow-hidden rounded-full h-8 w-8"
@@ -1597,7 +1597,7 @@ exports[`AvatarGroup - Snapshots > matches snapshot with overflow 1`] = `
   <div
     class="relative flex size-8 items-center justify-center rounded-full border border-muted-foreground bg-background text-sm font-medium shadow-xs"
     data-testid="container"
-    style="margin-left: -8px; z-index: 0;"
+    style="margin-left: -8px; z-index: 7;"
   >
     +94
   </div>

@@ -765,7 +765,7 @@ describe('Post Application', () => {
     });
   });
 
-  describe('getOrFetchPost', () => {
+  describe('getOrFetch', () => {
     const mockPostDetails: Core.PostDetailsModelSchema = {
       id: 'author:post123',
       content: 'Test post',
@@ -779,7 +779,7 @@ describe('Post Application', () => {
       const mockViewerId = 'test-viewer-id' as Core.Pubky;
       const readSpy = vi.spyOn(Core.LocalPostService, 'readDetails').mockResolvedValue(mockPostDetails);
 
-      const result = await Core.PostApplication.getOrFetchDetails({
+      const result = await Core.PostApplication.getOrFetch({
         compositeId: 'author:post123',
         viewerId: mockViewerId,
       });
@@ -796,7 +796,7 @@ describe('Post Application', () => {
         .mockResolvedValue(undefined);
       const readSpySecond = vi.spyOn(Core.LocalPostService, 'readDetails').mockResolvedValueOnce(mockPostDetails);
 
-      const result = await Core.PostApplication.getOrFetchDetails({
+      const result = await Core.PostApplication.getOrFetch({
         compositeId: 'author:post123',
         viewerId: mockViewerId,
       });
@@ -818,7 +818,7 @@ describe('Post Application', () => {
         .mockResolvedValue(undefined);
       const readSpySecond = vi.spyOn(Core.LocalPostService, 'readDetails').mockResolvedValueOnce(null);
 
-      const result = await Core.PostApplication.getOrFetchDetails({
+      const result = await Core.PostApplication.getOrFetch({
         compositeId: 'author:post123',
         viewerId: mockViewerId,
       });
@@ -830,6 +830,71 @@ describe('Post Application', () => {
       });
       expect(readSpySecond).toHaveBeenCalledWith({ postId: 'author:post123' });
       expect(result).toBeNull();
+    });
+  });
+
+  describe('fetch', () => {
+    const mockPostDetails: Core.PostDetailsModelSchema = {
+      id: 'author:post123',
+      content: 'Test post',
+      kind: 'short',
+      uri: 'pubky://author/pub/pubky.app/posts/post123',
+      indexed_at: Date.now(),
+      attachments: null,
+    };
+
+    it('should fetch post from Nexus and return persisted data', async () => {
+      const mockViewerId = 'test-viewer-id' as Core.Pubky;
+      const fetchMissingSpy = vi
+        .spyOn(Core.PostStreamApplication, 'fetchMissingPostsFromNexus')
+        .mockResolvedValue(undefined);
+      const readSpy = vi.spyOn(Core.LocalPostService, 'readDetails').mockResolvedValueOnce(mockPostDetails);
+
+      const result = await Core.PostApplication.fetch({
+        compositeId: 'author:post123',
+        viewerId: mockViewerId,
+      });
+
+      expect(fetchMissingSpy).toHaveBeenCalledWith({
+        cacheMissPostIds: ['author:post123'],
+        viewerId: mockViewerId,
+      });
+      expect(readSpy).toHaveBeenCalledTimes(1);
+      expect(readSpy).toHaveBeenCalledWith({ postId: 'author:post123' });
+      expect(result).toEqual(mockPostDetails);
+    });
+
+    it('should return null when post not found on Nexus', async () => {
+      const mockViewerId = 'test-viewer-id' as Core.Pubky;
+      const fetchMissingSpy = vi
+        .spyOn(Core.PostStreamApplication, 'fetchMissingPostsFromNexus')
+        .mockResolvedValue(undefined);
+      const readSpy = vi.spyOn(Core.LocalPostService, 'readDetails').mockResolvedValueOnce(null);
+
+      const result = await Core.PostApplication.fetch({
+        compositeId: 'author:post123',
+        viewerId: mockViewerId,
+      });
+
+      expect(fetchMissingSpy).toHaveBeenCalledWith({
+        cacheMissPostIds: ['author:post123'],
+        viewerId: mockViewerId,
+      });
+      expect(readSpy).toHaveBeenCalledTimes(1);
+      expect(readSpy).toHaveBeenCalledWith({ postId: 'author:post123' });
+      expect(result).toBeNull();
+    });
+
+    it('should propagate errors from PostStreamApplication', async () => {
+      const mockViewerId = 'test-viewer-id' as Core.Pubky;
+      vi.spyOn(Core.PostStreamApplication, 'fetchMissingPostsFromNexus').mockRejectedValue(new Error('Nexus error'));
+
+      await expect(
+        Core.PostApplication.fetch({
+          compositeId: 'author:post123',
+          viewerId: mockViewerId,
+        }),
+      ).rejects.toThrow('Nexus error');
     });
   });
 

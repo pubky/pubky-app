@@ -1,8 +1,8 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { render, screen } from '@testing-library/react';
+import { TIMELINE_FEED_VARIANT } from '@/config';
 import * as Core from '@/core';
 import { TimelineFeedWithStream } from './TimelineFeedContent';
-import { TIMELINE_FEED_VARIANT } from '../TimelineFeed/TimelineFeed.types';
 
 vi.mock('next-intl', () => ({
   useTranslations: () => (key: string) => key,
