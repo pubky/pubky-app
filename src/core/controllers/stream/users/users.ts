@@ -50,4 +50,19 @@ export class StreamUserController {
 
     return { nextPageIds, skip: nextSkip };
   }
+
+  /**
+   * Ensures user details are cached for the given IDs.
+   * Checks local cache and fetches any missing users from Nexus.
+   *
+   * @param userIds - Array of user IDs to ensure are cached
+   */
+  static async getOrFetchUsers({ userIds }: Pick<Core.TGetOrFetchUsersParams, 'userIds'>): Promise<void> {
+    const viewerId = Core.useAuthStore.getState().currentUserPubky;
+
+    await Core.UserStreamApplication.getOrFetchUsers({
+      userIds,
+      viewerId: viewerId ?? undefined,
+    });
+  }
 }

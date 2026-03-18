@@ -4,12 +4,7 @@ import * as Core from '@/core';
 // authorId:postId
 export type PostDetailsModelSchema = Omit<Core.NexusPostDetails, 'author'>;
 
-// Primary and compound indexes for Dexie
+// Keep only the primary key index. Post details are read by composite id.
 export const postDetailsTableSchema = `
-  &id,
-  content,
-  indexed_at,
-  kind,
-  uri,
-  attachments
+  &id
 `;
