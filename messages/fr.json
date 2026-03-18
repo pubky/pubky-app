@@ -1054,7 +1054,7 @@
     "hotTags": "Tags tendances",
     "activeUsers": "Utilisateurs actifs",
     "trendingPosts": "Publications tendances",
-    "postsCount": "{count} publications",
+    "postsCount": "{count} publications ce mois-ci",
     "failedToLoadUsers": "Échec du chargement des utilisateurs",
     "failedToLoadTags": "Échec du chargement des tags",
     "noUsersToShow": "Aucun utilisateur a afficher",

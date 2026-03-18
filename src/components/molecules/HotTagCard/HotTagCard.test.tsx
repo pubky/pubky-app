@@ -14,14 +14,14 @@ describe('HotTagCard', () => {
 
     expect(screen.getByText('1')).toBeInTheDocument();
     expect(screen.getByText('bitcoin')).toBeInTheDocument();
-    expect(screen.getByText('371 posts')).toBeInTheDocument();
+    expect(screen.getByText('371 posts this month')).toBeInTheDocument();
   });
 
   it('formats large post counts with locale separators', () => {
     render(<HotTagCard {...defaultProps} postCount={1234567} />);
 
     // Use regex to match formatted number (handles different locale separators)
-    expect(screen.getByText(/1[,.]234[,.]567 posts/)).toBeInTheDocument();
+    expect(screen.getByText(/1[,.]234[,.]567 posts this month/)).toBeInTheDocument();
   });
 
   it('calls onClick when clicked', () => {

@@ -1054,7 +1054,7 @@
     "hotTags": "Etiquetas populares",
     "activeUsers": "Usuarios activos",
     "trendingPosts": "Publicaciones en tendencia",
-    "postsCount": "{count} publicaciónes",
+    "postsCount": "{count} publicaciones este mes",
     "failedToLoadUsers": "Error al cargar usuarios",
     "failedToLoadTags": "Error al cargar etiquetas",
     "noUsersToShow": "No hay usuarios para mostrar",
