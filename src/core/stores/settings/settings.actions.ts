@@ -184,7 +184,14 @@ export const createSettingsActions = (set: ZustandSet<SettingsStore>): SettingsA
 
   // General actions
   reset: () => {
-    set({ ...settingsInitialState, updatedAt: Date.now() }, false, SettingsActionTypes.RESET);
+    set(
+      (state) => ({
+        ...settingsInitialState,
+        language: state.language, // device-level preference, not sensitive data
+      }),
+      false,
+      SettingsActionTypes.RESET,
+    );
   },
 
   // Homeserver sync action, used by bootstrap to load remote settings

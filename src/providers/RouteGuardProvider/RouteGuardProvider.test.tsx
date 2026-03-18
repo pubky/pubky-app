@@ -5,11 +5,13 @@ import { render, screen, act } from '@testing-library/react';
 // Hoisted mocks
 const mocks = vi.hoisted(() => {
   const mockRouterPush = vi.fn();
+  const mockRouterRefresh = vi.fn();
   const mockResync = vi.fn();
   const resetMigrationStore = vi.fn();
 
   return {
     mockRouterPush,
+    mockRouterRefresh,
     mockResync,
     resetMigrationStore,
     // Auth store state defaults
@@ -23,19 +25,22 @@ const mocks = vi.hoisted(() => {
     isLoading: false,
     // Route defaults
     pathname: '/feed',
+    // Locale defaults
+    serverLocale: 'en',
+    storeLanguage: 'en' as string | null,
   };
 });
 
 // Mock next/navigation
 vi.mock('next/navigation', () => ({
-  useRouter: () => ({ push: mocks.mockRouterPush }),
+  useRouter: () => ({ push: mocks.mockRouterPush, refresh: mocks.mockRouterRefresh }),
   usePathname: () => mocks.pathname,
 }));
 
 // Mock next-intl
 vi.mock('next-intl', () => ({
   useTranslations: () => (key: string) => key,
-  useLocale: () => 'en',
+  useLocale: () => mocks.serverLocale,
 }));
 
 // Mock @/hooks
@@ -88,7 +93,8 @@ vi.mock('@/core', () => ({
       getState: () => ({ reset: mocks.resetMigrationStore, wasDbReset: mocks.wasDbReset }),
     },
   ),
-  useSettingsStore: (selector: (state: Record<string, unknown>) => unknown) => selector({ language: 'en' }),
+  useSettingsStore: (selector: (state: Record<string, unknown>) => unknown) =>
+    selector({ language: mocks.storeLanguage }),
   AuthController: {
     restorePersistedSession: vi.fn().mockResolvedValue(true),
   },
@@ -113,7 +119,10 @@ describe('RouteGuardProvider — migration resync', () => {
     mocks.status = 'AUTHENTICATED';
     mocks.isLoading = false;
     mocks.pathname = '/feed';
+    mocks.serverLocale = 'en';
+    mocks.storeLanguage = 'en';
     mocks.mockResync.mockReset();
+    mocks.mockRouterRefresh.mockReset();
     mocks.resetMigrationStore.mockReset();
   });
 
@@ -340,5 +349,44 @@ describe('RouteGuardProvider — migration resync', () => {
     );
 
     expect(screen.getByText('redirecting')).toBeInTheDocument();
+  });
+
+  it('calls router.refresh() when storeLanguage differs from serverLocale', () => {
+    mocks.storeLanguage = 'es';
+    mocks.serverLocale = 'en';
+
+    render(
+      <RouteGuardProvider>
+        <div>Protected Content</div>
+      </RouteGuardProvider>,
+    );
+
+    expect(mocks.mockRouterRefresh).toHaveBeenCalled();
+  });
+
+  it('does NOT call router.refresh() when storeLanguage is null', () => {
+    mocks.storeLanguage = null;
+    mocks.serverLocale = 'en';
+
+    render(
+      <RouteGuardProvider>
+        <div>Protected Content</div>
+      </RouteGuardProvider>,
+    );
+
+    expect(mocks.mockRouterRefresh).not.toHaveBeenCalled();
+  });
+
+  it('does NOT call router.refresh() when storeLanguage matches serverLocale', () => {
+    mocks.storeLanguage = 'en';
+    mocks.serverLocale = 'en';
+
+    render(
+      <RouteGuardProvider>
+        <div>Protected Content</div>
+      </RouteGuardProvider>,
+    );
+
+    expect(mocks.mockRouterRefresh).not.toHaveBeenCalled();
   });
 });

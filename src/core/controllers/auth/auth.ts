@@ -230,10 +230,9 @@ export class AuthController {
     Core.nexusQueryClient.cancelQueries();
     Core.nexusQueryClient.clear();
 
-    // Preserve locale preference across logout (not sensitive data)
-    const currentLanguage = Core.useSettingsStore.getState().language;
-
-    // Reset ALL Zustand stores
+    // Reset all Zustand stores.
+    // Settings reset() keeps `language`,
+    // so the "/logout" page stays in the chosen language while remote settings still win on next login.
     Core.useOnboardingStore.getState().reset();
     Core.useAuthStore.getState().reset();
     Core.useSignInStore.getState().reset();
@@ -244,22 +243,12 @@ export class AuthController {
     Core.useNotificationStore.getState().reset();
     Core.useSettingsStore.getState().reset();
 
-    // Clear cookies, database, and persisted localStorage keys
-    Libs.clearCookies();
+    // Clear cookies (locale cookie excluded — device-level UI preference, not sensitive data)
+    Libs.clearCookies(['locale']);
 
-    // Restore locale preference after cleanup so the /logout page stays in the user's
-    // chosen language. Both the cookie (for next-intl server rendering) and the store
-    // (to prevent RouteGuardProvider's locale sync effect from overwriting the cookie)
-    // must be restored.
-    if (currentLanguage) {
-      setLocaleCookie(currentLanguage);
-      Core.useSettingsStore.getState().setLanguage(currentLanguage);
-    }
     await Core.clearDatabase();
     // Skip post-migration resync — full cleanup resets all state
     Core.useMigrationStore.getState().reset();
-
-    Core.PERSISTED_STORE_KEYS.forEach((key) => localStorage.removeItem(key));
   }
 
   /**

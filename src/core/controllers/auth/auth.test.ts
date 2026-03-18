@@ -927,7 +927,6 @@ describe('AuthController', () => {
       const resetTtlSpy = vi.spyOn(Core.TtlCoordinator, 'resetInstance');
       const resetStreamSpy = vi.spyOn(Core.StreamCoordinator, 'resetInstance');
       const resetNotifCoordSpy = vi.spyOn(Core.NotificationCoordinator, 'resetInstance');
-      const removeItemSpy = vi.spyOn(Storage.prototype, 'removeItem');
 
       const signInStore = createSignInStore();
       const localFilesStore = createLocalFilesStore();
@@ -974,21 +973,12 @@ describe('AuthController', () => {
       expect(notificationStore.reset).toHaveBeenCalledOnce();
       expect(settingsStore.reset).toHaveBeenCalledOnce();
 
-      // Cookies and database
-      expect(clearCookiesSpy).toHaveBeenCalledOnce();
+      // Cookies (with locale excluded) and database
+      expect(clearCookiesSpy).toHaveBeenCalledWith(['locale']);
       expect(clearDatabaseSpy).toHaveBeenCalledOnce();
 
       // Skip post-migration resync — full cleanup resets all state
       expect(storeMocks.resetMigrationStore).toHaveBeenCalled();
-
-      // Persisted localStorage keys
-      expect(removeItemSpy).toHaveBeenCalledWith('auth-store');
-      expect(removeItemSpy).toHaveBeenCalledWith('onboarding-storage');
-      expect(removeItemSpy).toHaveBeenCalledWith('notification-store');
-      expect(removeItemSpy).toHaveBeenCalledWith('search-store');
-      expect(removeItemSpy).toHaveBeenCalledWith('home-store');
-      expect(removeItemSpy).toHaveBeenCalledWith('hot-store');
-      expect(removeItemSpy).toHaveBeenCalledWith('settings-storage');
     });
 
     it('should log warning and clear local state even when homeserver logout fails', async () => {

@@ -269,13 +269,13 @@ describe('SettingsStore', () => {
 
       const afterReset = useSettingsStore.getState();
 
-      // Verify state is fully reset to initial state
+      // Verify state is reset to initial (except language which is preserved as device-level preference)
       expect(afterReset.notifications).toEqual(defaultNotificationPreferences);
       expect(afterReset.privacy).toEqual(defaultPrivacyPreferences);
       expect(afterReset.muted).toEqual([]);
-      expect(afterReset.language).toBe('en');
+      expect(afterReset.language).toBe('es'); // preserved across store.reset()
       expect(afterReset.version).toBe(1); // Reset to initial
-      expect(afterReset.updatedAt).toBeGreaterThanOrEqual(settingsInitialState.updatedAt); // Fresh timestamp on reset
+      expect(afterReset.updatedAt).toBe(settingsInitialState.updatedAt); // Reset to 0 so remote wins on next login
     });
   });
 
