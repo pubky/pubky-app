@@ -476,6 +476,9 @@ describe('SignInContent - Progress View', () => {
       render(<SignInContent />);
     });
 
+    expect(screen.getByText('Signing in.')).toBeInTheDocument();
+    expect(screen.getByText('Please wait while your Pubky experience loads.')).toBeInTheDocument();
+
     // Should show all 4 step labels
     expect(screen.getByText('Verifying account')).toBeInTheDocument();
     expect(screen.getByText('Loading your data')).toBeInTheDocument();
@@ -558,6 +561,10 @@ describe('SignInContent - Progress View', () => {
 });
 
 describe('SignInFooter', () => {
+  beforeEach(() => {
+    resetMockSignInState();
+  });
+
   it('renders footer with recovery message', () => {
     render(<SignInFooter />);
 
@@ -577,5 +584,13 @@ describe('SignInFooter', () => {
     expect(link).toHaveAttribute('target', '_blank');
     expect(link).toHaveAttribute('rel', 'noopener noreferrer');
     expect(link).toHaveTextContent('Pubky Ring');
+  });
+
+  it('does not render in progress view', () => {
+    mockSignInState.authUrlResolved = true;
+
+    render(<SignInFooter />);
+
+    expect(screen.queryByTestId('footer-links')).not.toBeInTheDocument();
   });
 });

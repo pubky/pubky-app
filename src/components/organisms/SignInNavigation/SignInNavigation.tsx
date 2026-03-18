@@ -5,9 +5,13 @@ import { useRouter } from 'next/navigation';
 import * as Atoms from '@/atoms';
 import * as Organisms from '@/organisms';
 import * as App from '@/app';
+import * as Core from '@/core';
 
 export const SignInNavigation = () => {
   const router = useRouter();
+  const authUrlResolved = Core.useSignInStore((state) => state.authUrlResolved);
+
+  if (authUrlResolved) return null;
 
   const handleRestore = () => {
     router.push(App.HOME_ROUTES.HOME);

@@ -19,6 +19,9 @@ const SIGN_IN_STEPS = [
   { key: 'homeserverSynced', labelKey: 'syncingSettings' },
 ] as const;
 
+const SIGN_IN_PROGRESS_TITLE = 'Signing in.';
+const SIGN_IN_PROGRESS_SUBTITLE = 'Please wait while your Pubky experience loads.';
+
 type StepKey = (typeof SIGN_IN_STEPS)[number]['key'];
 type StepStatus = 'completed' | 'running' | 'pending';
 
@@ -48,8 +51,8 @@ const SignInProgress = () => {
   const t = useTranslations('onboarding.signIn');
 
   return (
-    <Atoms.Container className="items-center justify-center">
-      <div className="flex flex-col gap-4">
+    <Atoms.Container className="items-start justify-center">
+      <div className="flex w-full max-w-sm flex-col gap-4">
         {SIGN_IN_STEPS.map((step) => {
           const status = getStepStatus(step.key, state);
           return (
@@ -122,7 +125,7 @@ export const SignInContent = () => {
   if (authUrlResolved) {
     return (
       <Atoms.Container size="container" className="flex flex-col">
-        <SignInHeader />
+        <SignInProgressHeader />
         <Molecules.ContentCard layout="column">
           <SignInProgress />
         </Molecules.ContentCard>
@@ -209,7 +212,11 @@ export const SignInContent = () => {
 };
 
 export const SignInFooter = () => {
+  const authUrlResolved = Core.useSignInStore((state) => state.authUrlResolved);
   const t = useTranslations('onboarding.signIn');
+
+  if (authUrlResolved) return null;
+
   return (
     <Atoms.FooterLinks className="py-6">
       {t.rich('recoveryHint', {
@@ -233,6 +240,15 @@ export const SignInHeader = () => {
         })}
       </Molecules.PageTitle>
       <Atoms.PageSubtitle>{t('subtitle')}</Atoms.PageSubtitle>
+    </Atoms.PageHeader>
+  );
+};
+
+const SignInProgressHeader = () => {
+  return (
+    <Atoms.PageHeader>
+      <Molecules.PageTitle size="large">{SIGN_IN_PROGRESS_TITLE}</Molecules.PageTitle>
+      <Atoms.PageSubtitle>{SIGN_IN_PROGRESS_SUBTITLE}</Atoms.PageSubtitle>
     </Atoms.PageHeader>
   );
 };
