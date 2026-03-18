@@ -39,7 +39,6 @@ export function ReplyWithNested({
     }
   }, [replyCount]);
 
-  const showNestedSection = expanded && hasNestedReplies;
   const canShowToggle = hasNestedReplies && depth < maxDepth;
 
   return (
@@ -65,32 +64,45 @@ export function ReplyWithNested({
         )}
       </Atoms.Container>
 
-      {/* Nested sub-replies — recursive */}
-      {showNestedSection && (
-        <Atoms.Container overrideDefaults className="flex">
-          {/* Continuation line (only when not the last sibling) */}
-          {!isLastReply && <Atoms.Container overrideDefaults className="w-3 shrink-0 border-l border-border" />}
+      {/* Nested sub-replies — animated expand/collapse */}
+      {hasNestedReplies && (
+        <Atoms.Container
+          overrideDefaults
+          className={`grid transition-all duration-300 ease-in-out ${
+            expanded ? 'grid-rows-[1fr] opacity-100' : 'grid-rows-[0fr] opacity-0'
+          }`}
+        >
+          <Atoms.Container overrideDefaults className="overflow-hidden">
+            <Atoms.Container overrideDefaults className="flex">
+              {/* Continuation line (only when not the last sibling) */}
+              {!isLastReply && <Atoms.Container overrideDefaults className="w-3 shrink-0 border-l border-border" />}
 
-          {/* Indented sub-replies */}
-          <Atoms.Container overrideDefaults className={isLastReply ? 'ml-6 flex-1' : 'ml-3 flex-1'}>
-            {nestedReplyIds.map((nestedId, index) => {
-              const isLastNested = index === nestedReplyIds.length - 1 && !hasMoreReplies;
-              return (
-                <ReplyWithNested
-                  key={nestedId}
-                  replyId={nestedId}
-                  isLastReply={isLastNested}
-                  onPostClick={onPostClick}
-                  depth={depth + 1}
-                  maxDepth={maxDepth}
-                />
-              );
-            })}
+              {/* Indented sub-replies */}
+              <Atoms.Container overrideDefaults className={isLastReply ? 'ml-6 flex-1' : 'ml-3 flex-1'}>
+                {nestedReplyIds.map((nestedId, index) => {
+                  const isLastNested = index === nestedReplyIds.length - 1 && !hasMoreReplies;
+                  return (
+                    <ReplyWithNested
+                      key={nestedId}
+                      replyId={nestedId}
+                      isLastReply={isLastNested}
+                      onPostClick={onPostClick}
+                      depth={depth + 1}
+                      maxDepth={maxDepth}
+                    />
+                  );
+                })}
 
-            {/* "+N more replies" if there are more nested replies */}
-            {hasMoreReplies && !isExpandingAll && (
-              <Molecules.ShowMoreReplies count={replyCount - nestedReplyIds.length} onClick={expandAll} isLast={true} />
-            )}
+                {/* "+N more replies" if there are more nested replies */}
+                {hasMoreReplies && !isExpandingAll && (
+                  <Molecules.ShowMoreReplies
+                    count={replyCount - nestedReplyIds.length}
+                    onClick={expandAll}
+                    isLast={true}
+                  />
+                )}
+              </Atoms.Container>
+            </Atoms.Container>
           </Atoms.Container>
         </Atoms.Container>
       )}
