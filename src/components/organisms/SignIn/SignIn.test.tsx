@@ -1,6 +1,7 @@
 import { describe, it, expect, vi, beforeAll, afterAll, beforeEach } from 'vitest';
 import { render, screen, waitFor, act, fireEvent } from '@testing-library/react';
 import React from 'react';
+import messages from '../../../../messages/en.json';
 import { SignInContent, SignInFooter } from './SignIn';
 
 // Mock Next.js router
@@ -476,8 +477,8 @@ describe('SignInContent - Progress View', () => {
       render(<SignInContent />);
     });
 
-    expect(screen.getByText('Signing in.')).toBeInTheDocument();
-    expect(screen.getByText('Please wait while your Pubky experience loads.')).toBeInTheDocument();
+    expect(screen.getByText(messages.onboarding.signIn.progressTitle)).toBeInTheDocument();
+    expect(screen.getByText(messages.onboarding.signIn.progressSubtitle)).toBeInTheDocument();
 
     // Should show all 4 step labels
     expect(screen.getByText('Verifying account')).toBeInTheDocument();

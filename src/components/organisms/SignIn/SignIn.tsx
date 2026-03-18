@@ -19,9 +19,6 @@ const SIGN_IN_STEPS = [
   { key: 'homeserverSynced', labelKey: 'syncingSettings' },
 ] as const;
 
-const SIGN_IN_PROGRESS_TITLE = 'Signing in.';
-const SIGN_IN_PROGRESS_SUBTITLE = 'Please wait while your Pubky experience loads.';
-
 type StepKey = (typeof SIGN_IN_STEPS)[number]['key'];
 type StepStatus = 'completed' | 'running' | 'pending';
 
@@ -245,10 +242,12 @@ export const SignInHeader = () => {
 };
 
 const SignInProgressHeader = () => {
+  const t = useTranslations('onboarding.signIn');
+
   return (
     <Atoms.PageHeader>
-      <Molecules.PageTitle size="large">{SIGN_IN_PROGRESS_TITLE}</Molecules.PageTitle>
-      <Atoms.PageSubtitle>{SIGN_IN_PROGRESS_SUBTITLE}</Atoms.PageSubtitle>
+      <Molecules.PageTitle size="large">{t('progressTitle')}</Molecules.PageTitle>
+      <Atoms.PageSubtitle>{t('progressSubtitle')}</Atoms.PageSubtitle>
     </Atoms.PageHeader>
   );
 };
