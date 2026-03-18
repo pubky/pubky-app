@@ -5,6 +5,15 @@ import { MobileFooter } from './MobileFooter';
 
 const FORCE_HOME_SCROLL_TOP_KEY = 'pubky:force-home-scroll-top';
 
+const createSessionStorageMock = () => ({
+  getItem: vi.fn(),
+  setItem: vi.fn(),
+  removeItem: vi.fn(),
+  clear: vi.fn(),
+  key: vi.fn(),
+  length: 0,
+});
+
 // Mock Next.js router
 vi.mock('next/navigation', () => ({
   usePathname: vi.fn(),
@@ -111,6 +120,10 @@ describe('MobileFooter', () => {
     vi.clearAllMocks();
     vi.mocked(usePathname).mockReturnValue('/home');
     mockSelectUnread.mockReturnValue(0);
+    Object.defineProperty(window, 'sessionStorage', {
+      configurable: true,
+      value: createSessionStorageMock(),
+    });
 
     // Reset keyboard offset mock
     const { useKeyboardOffset } = await import('@/hooks');
@@ -268,7 +281,7 @@ describe('MobileFooter', () => {
   it('scrolls to top when clicking Home while already on /home', () => {
     vi.mocked(usePathname).mockReturnValue('/home');
     Object.defineProperty(window, 'scrollTo', { value: vi.fn(), writable: true });
-    const setItemSpy = vi.spyOn(Storage.prototype, 'setItem');
+    const setItemSpy = vi.spyOn(window.sessionStorage, 'setItem');
 
     render(<MobileFooter />);
     const homeLink = document.querySelector('.lucide-house')?.closest('a');
@@ -282,7 +295,7 @@ describe('MobileFooter', () => {
   it('does not scroll to top when clicking Home from another page', () => {
     vi.mocked(usePathname).mockReturnValue('/search');
     Object.defineProperty(window, 'scrollTo', { value: vi.fn(), writable: true });
-    const setItemSpy = vi.spyOn(Storage.prototype, 'setItem');
+    const setItemSpy = vi.spyOn(window.sessionStorage, 'setItem');
 
     render(<MobileFooter />);
     const homeLink = document.querySelector('.lucide-house')?.closest('a');

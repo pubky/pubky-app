@@ -1048,7 +1048,7 @@
     "hotTags": "热门标签",
     "activeUsers": "活跃用户",
     "trendingPosts": "热门帖子",
-    "postsCount": "{count} 条帖子",
+    "postsCount": "本月 {count} 条帖子",
     "failedToLoadUsers": "加载用户失败",
     "failedToLoadTags": "加载标签失败",
     "noUsersToShow": "暂无用户显示",

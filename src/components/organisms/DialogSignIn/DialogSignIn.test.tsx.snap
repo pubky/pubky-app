@@ -53,13 +53,13 @@ exports[`DialogSignIn - Snapshots > matches snapshot when open 1`] = `
           data-testid="container"
         >
           <h3
-            class="text-xl text-foreground font-bold"
+            class="text-base text-foreground font-bold"
             data-testid="typography"
           >
             New here?
           </h3>
           <p
-            class="text-sm font-semibold text-muted-foreground"
+            class="text-sm font-medium text-muted-foreground"
             data-testid="typography"
           >
             Create your account and start exploring Pubky.
@@ -95,13 +95,13 @@ exports[`DialogSignIn - Snapshots > matches snapshot when open 1`] = `
           data-testid="container"
         >
           <h3
-            class="text-xl text-foreground font-bold"
+            class="text-base text-foreground font-bold"
             data-testid="typography"
           >
             Already have an account?
           </h3>
           <p
-            class="text-sm font-semibold text-muted-foreground"
+            class="text-sm font-medium text-muted-foreground"
             data-testid="typography"
           >
             Sign in to interact with posts and profiles.

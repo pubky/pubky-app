@@ -1054,7 +1054,7 @@
     "hotTags": "Tag di tendenza",
     "activeUsers": "Utenti attivi",
     "trendingPosts": "Post di tendenza",
-    "postsCount": "{count} post",
+    "postsCount": "{count} post questo mese",
     "failedToLoadUsers": "Caricamento utenti fallito",
     "failedToLoadTags": "Caricamento tag fallito",
     "noUsersToShow": "Nessun utente da mostrare",
