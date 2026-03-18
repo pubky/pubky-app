@@ -1,0 +1,1 @@
+export { useSyncInteractiveVisualContent } from './useSyncInteractiveVisualContent';

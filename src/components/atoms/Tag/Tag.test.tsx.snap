@@ -8,7 +8,7 @@ exports[`Tag - Snapshots > matches snapshot for long tag name 1`] = `
   title="very-long-tag-name-example"
 >
   <p
-    class="text-sm font-semibold text-foreground truncate"
+    class="text-sm font-medium text-foreground truncate"
     data-testid="tag-name"
   >
     very-long-tag-name-example
@@ -30,7 +30,7 @@ exports[`Tag - Snapshots > matches snapshot when clicked 1`] = `
   title="been clicked"
 >
   <p
-    class="text-sm font-semibold text-foreground truncate"
+    class="text-sm font-medium text-foreground truncate"
     data-testid="tag-name"
   >
     been clicked
@@ -46,7 +46,7 @@ exports[`Tag - Snapshots > matches snapshot with all props combined 1`] = `
   title="defi"
 >
   <p
-    class="text-sm font-semibold text-foreground truncate"
+    class="text-sm font-medium text-foreground truncate"
     data-testid="tag-name"
   >
     defi
@@ -68,7 +68,7 @@ exports[`Tag - Snapshots > matches snapshot with count 1`] = `
   title="sixteen count"
 >
   <p
-    class="text-sm font-semibold text-foreground truncate"
+    class="text-sm font-medium text-foreground truncate"
     data-testid="tag-name"
   >
     sixteen count
@@ -90,7 +90,7 @@ exports[`Tag - Snapshots > matches snapshot with custom className 1`] = `
   title="custom-class"
 >
   <p
-    class="text-sm font-semibold text-foreground truncate"
+    class="text-sm font-medium text-foreground truncate"
     data-testid="tag-name"
   >
     custom-class
@@ -106,7 +106,7 @@ exports[`Tag - Snapshots > matches snapshot with default props 1`] = `
   title="default props"
 >
   <p
-    class="text-sm font-semibold text-foreground truncate"
+    class="text-sm font-medium text-foreground truncate"
     data-testid="tag-name"
   >
     default props
@@ -122,7 +122,7 @@ exports[`Tag - Snapshots > matches snapshot with large count 1`] = `
   title="large count"
 >
   <p
-    class="text-sm font-semibold text-foreground truncate"
+    class="text-sm font-medium text-foreground truncate"
     data-testid="tag-name"
   >
     large count
@@ -144,7 +144,7 @@ exports[`Tag - Snapshots > matches snapshot with zero count 1`] = `
   title="zero count"
 >
   <p
-    class="text-sm font-semibold text-foreground truncate"
+    class="text-sm font-medium text-foreground truncate"
     data-testid="tag-name"
   >
     zero count
@@ -166,7 +166,7 @@ exports[`Tag - Snapshots > matches snapshot without clicked 1`] = `
   title="clicked false"
 >
   <p
-    class="text-sm font-semibold text-foreground truncate"
+    class="text-sm font-medium text-foreground truncate"
     data-testid="tag-name"
   >
     clicked false
