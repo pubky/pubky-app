@@ -991,10 +991,11 @@
     "couldNotFind": "No se pudo encontrar el recurso solicitado"
   },
   "password": {
-    "weak": "Contraseña debil",
-    "fair": "Contraseña aceptable",
-    "good": "Buena contraseña",
-    "strong": "Contraseña fuerte!"
+    "veryWeak": "Contrasena muy debil",
+    "weak": "Contrasena debil",
+    "moderate": "Contrasena moderada",
+    "strong": "Contrasena fuerte",
+    "veryStrong": "Contrasena muy fuerte"
   },
   "quickReply": {
     "prompts": [

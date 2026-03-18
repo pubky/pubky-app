@@ -154,29 +154,29 @@ describe('Password Utilities', () => {
       expect(getStrengthText(0)).toBe('');
     });
 
-    it('should return "Weak password" for strength 1', () => {
-      expect(getStrengthText(1)).toBe('Weak password');
+    it('should return "Very weak" for strength 1', () => {
+      expect(getStrengthText(1)).toBe('Very weak');
     });
 
-    it('should return "Weak password" for strength 2', () => {
-      expect(getStrengthText(2)).toBe('Weak password');
+    it('should return "Weak" for strength 2', () => {
+      expect(getStrengthText(2)).toBe('Weak');
     });
 
-    it('should return "Fair password" for strength 3', () => {
-      expect(getStrengthText(3)).toBe('Fair password');
+    it('should return "Moderate" for strength 3', () => {
+      expect(getStrengthText(3)).toBe('Moderate');
     });
 
-    it('should return "Good password" for strength 4', () => {
-      expect(getStrengthText(4)).toBe('Good password');
+    it('should return "Strong" for strength 4', () => {
+      expect(getStrengthText(4)).toBe('Strong');
     });
 
-    it('should return "Strong password!" for strength 5', () => {
-      expect(getStrengthText(5)).toBe('Strong password!');
+    it('should return "Very strong" for strength 5', () => {
+      expect(getStrengthText(5)).toBe('Very strong');
     });
 
-    it('should return "Strong password!" for strength greater than 5', () => {
-      expect(getStrengthText(6)).toBe('Strong password!');
-      expect(getStrengthText(10)).toBe('Strong password!');
+    it('should return "Very strong" for strength greater than 5', () => {
+      expect(getStrengthText(6)).toBe('Very strong');
+      expect(getStrengthText(10)).toBe('Very strong');
     });
   });
 
@@ -214,31 +214,31 @@ describe('Password Utilities', () => {
   describe('Integration tests', () => {
     it('should work together correctly for a weak password', () => {
       const strength = calculatePasswordStrength('short');
-      expect(getStrengthText(strength.strength)).toBe('Weak password');
+      expect(getStrengthText(strength.strength)).toBe('Very weak');
       expect(getStrengthColor(strength.strength)).toBe('text-red-400');
     });
 
     it('should work together correctly for a weak password with length', () => {
       const strength = calculatePasswordStrength('password');
-      expect(getStrengthText(strength.strength)).toBe('Weak password');
+      expect(getStrengthText(strength.strength)).toBe('Weak');
       expect(getStrengthColor(strength.strength)).toBe('text-red-400');
     });
 
     it('should work together correctly for a fair password', () => {
       const strength = calculatePasswordStrength('Password');
-      expect(getStrengthText(strength.strength)).toBe('Fair password');
+      expect(getStrengthText(strength.strength)).toBe('Moderate');
       expect(getStrengthColor(strength.strength)).toBe('text-yellow-400');
     });
 
     it('should work together correctly for a good password', () => {
       const strength = calculatePasswordStrength('Password1A');
-      expect(getStrengthText(strength.strength)).toBe('Good password');
+      expect(getStrengthText(strength.strength)).toBe('Strong');
       expect(getStrengthColor(strength.strength)).toBe('text-blue-400');
     });
 
     it('should work together correctly for a strong password', () => {
       const strength = calculatePasswordStrength('Password1!');
-      expect(getStrengthText(strength.strength)).toBe('Strong password!');
+      expect(getStrengthText(strength.strength)).toBe('Very strong');
       expect(getStrengthColor(strength.strength)).toBe('text-green-400');
     });
   });

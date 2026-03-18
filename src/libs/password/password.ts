@@ -70,10 +70,11 @@ export function calculatePasswordStrength(password: string): PasswordStrengthRes
 
 export function getStrengthText(strength: number): string {
   if (strength === 0) return '';
-  if (strength <= 2) return 'Weak password';
-  if (strength <= 3) return 'Fair password';
-  if (strength <= 4) return 'Good password';
-  return 'Strong password!';
+  if (strength === 1) return 'Very weak';
+  if (strength === 2) return 'Weak';
+  if (strength === 3) return 'Moderate';
+  if (strength === 4) return 'Strong';
+  return 'Very strong';
 }
 
 export function getStrengthColor(strength: number): string {

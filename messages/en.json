@@ -985,10 +985,11 @@
     "couldNotFind": "Could not find requested resource"
   },
   "password": {
-    "weak": "Weak password",
-    "fair": "Fair password",
-    "good": "Good password",
-    "strong": "Strong password!"
+    "veryWeak": "Very weak",
+    "weak": "Weak",
+    "moderate": "Moderate",
+    "strong": "Strong",
+    "veryStrong": "Very strong"
   },
   "quickReply": {
     "prompts": [

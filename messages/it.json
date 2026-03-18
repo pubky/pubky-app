@@ -991,10 +991,11 @@
     "couldNotFind": "Impossibile trovare la risorsa richiesta"
   },
   "password": {
+    "veryWeak": "Password molto debole",
     "weak": "Password debole",
-    "fair": "Password discreta",
-    "good": "Buona password",
-    "strong": "Password forte!"
+    "moderate": "Password moderata",
+    "strong": "Password forte",
+    "veryStrong": "Password molto forte"
   },
   "quickReply": {
     "prompts": [

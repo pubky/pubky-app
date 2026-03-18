@@ -41,10 +41,11 @@ function RecoveryStep1({ setStep }: { setStep: (step: number) => void }) {
 
   const getStrengthText = (strength: number): string => {
     if (strength === 0) return '';
-    if (strength <= 2) return tPassword('weak');
-    if (strength <= 3) return tPassword('fair');
-    if (strength <= 4) return tPassword('good');
-    return tPassword('strong');
+    if (strength === 1) return tPassword('veryWeak');
+    if (strength === 2) return tPassword('weak');
+    if (strength === 3) return tPassword('moderate');
+    if (strength === 4) return tPassword('strong');
+    return tPassword('veryStrong');
   };
 
   return (

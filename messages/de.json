@@ -991,10 +991,11 @@
     "couldNotFind": "Angeforderte Ressource konnte nicht gefunden werden"
   },
   "password": {
+    "veryWeak": "Sehr schwaches Passwort",
     "weak": "Schwaches Passwort",
-    "fair": "Maessiges Passwort",
-    "good": "Gutes Passwort",
-    "strong": "Starkes Passwort!"
+    "moderate": "Mittleres Passwort",
+    "strong": "Starkes Passwort",
+    "veryStrong": "Sehr starkes Passwort"
   },
   "quickReply": {
     "prompts": [
