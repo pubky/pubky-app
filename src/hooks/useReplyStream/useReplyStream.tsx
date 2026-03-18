@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useLiveQuery } from 'dexie-react-hooks';
 import * as Core from '@/core';
 import * as Config from '@/config';
@@ -47,45 +47,39 @@ export function useReplyStream(
   const { postCounts } = usePostCounts(enabled ? postId : null);
   const totalReplyCount = postCounts?.replies ?? 0;
 
-  // Get replies from local cache (chronological order - oldest first)
-  const replyIds = useLiveQuery(
+  // Get replies and muted count from local cache in a single read.
+  // Stream is stored newest-first; we reverse for chronological display.
+  // ADR-0004 temporary exception:
+  // We currently use MuteFilter directly from UI hooks for pure post-ID filtering.
+  // A follow-up should move this behind a controller/pipes facade.
+  const { replyIds, mutedRepliesCount } = useLiveQuery(
     async () => {
       try {
-        if (!postId || !enabled) return [];
+        if (!postId || !enabled) return { replyIds: [], mutedRepliesCount: 0 };
 
         const streamId = Core.buildPostReplyStreamId(postId);
-        const stream = await Core.LocalStreamPostsService.read({ streamId });
+        const stream = await Core.StreamPostsController.getLocalStream({ streamId });
 
-        if (!stream || stream.stream.length === 0) return [];
+        if (!stream || stream.stream.length === 0) return { replyIds: [], mutedRepliesCount: 0 };
 
-        // Stream is stored newest-first, reverse for chronological
         const chronological = [...stream.stream].reverse();
-        // ADR-0004 temporary exception:
-        // We currently use MuteFilter directly from UI hooks for pure post-ID filtering.
-        // A follow-up should move this behind a controller/pipes facade.
         const filtered = Core.MuteFilter.filterPostsSafe(chronological, mutedUserIdSet);
-        return showAll ? filtered : filtered.slice(0, maxReplies);
+        const mutedCount =
+          mutedUserIdSet.size > 0
+            ? stream.stream.filter((id) => Core.MuteFilter.isPostMuted(id, mutedUserIdSet)).length
+            : 0;
+
+        return {
+          replyIds: showAll ? filtered : filtered.slice(0, maxReplies),
+          mutedRepliesCount: mutedCount,
+        };
       } catch (error) {
         Libs.Logger.error('[useReplyStream] Failed to query replies', { postId, error });
-        return [];
+        return { replyIds: [], mutedRepliesCount: 0 };
       }
     },
     [postId, maxReplies, mutedUserIdSet, showAll, enabled],
-    [],
-  );
-
-  // Track muted replies count to adjust "show more" counter
-  const mutedRepliesCount = useLiveQuery(
-    async () => {
-      if (!postId || !enabled) return 0;
-      if (mutedUserIdSet.size === 0) return 0;
-      const streamId = Core.buildPostReplyStreamId(postId);
-      const stream = await Core.LocalStreamPostsService.read({ streamId });
-      if (!stream || stream.stream.length === 0) return 0;
-      return stream.stream.filter((id) => Core.MuteFilter.isPostMuted(id, mutedUserIdSet)).length;
-    },
-    [postId, mutedUserIdSet, enabled],
-    0,
+    { replyIds: [], mutedRepliesCount: 0 },
   );
 
   // Fetch initial replies from Nexus if not enough are cached locally.
@@ -138,7 +132,7 @@ export function useReplyStream(
    * Fetches all replies using paginated requests to handle cases where the
    * Nexus API returns fewer items than requested due to server-side page limits.
    */
-  const expandAll = useCallback(async () => {
+  async function expandAll() {
     if (!postId || streamExhausted || isFetchingAllRef.current) return;
     isFetchingAllRef.current = true;
     setIsExpandingAll(true);
@@ -194,7 +188,7 @@ export function useReplyStream(
     }
     if (!isMountedRef.current || !completed) return;
     setStreamExhausted(reachedEnd);
-  }, [postId, streamExhausted]);
+  }
 
   // Reactively prune muted replies
   const adjustedTotalCount = Math.max(0, totalReplyCount - mutedRepliesCount);

@@ -29,7 +29,10 @@ describe('useNestedReplies', () => {
       postCounts: { replies: 5 },
     } as ReturnType<typeof usePostCounts>);
 
-    vi.mocked(useLiveQuery).mockReturnValueOnce(['author:nested-1', 'author:nested-2']).mockReturnValueOnce(1);
+    vi.mocked(useLiveQuery).mockReturnValueOnce({
+      replyIds: ['author:nested-1', 'author:nested-2'],
+      mutedRepliesCount: 1,
+    });
 
     const { result } = renderHook(() => useNestedReplies('author:reply-1'));
 
@@ -43,7 +46,10 @@ describe('useNestedReplies', () => {
     vi.mocked(usePostCounts).mockReturnValue({
       postCounts: { replies: 0 },
     } as ReturnType<typeof usePostCounts>);
-    vi.mocked(useLiveQuery).mockReturnValueOnce([]).mockReturnValueOnce(0);
+    vi.mocked(useLiveQuery).mockReturnValueOnce({
+      replyIds: [],
+      mutedRepliesCount: 0,
+    });
 
     renderHook(() => useNestedReplies('author:reply-1', { depth: 1, maxDepth: 1 }));
 
@@ -55,12 +61,9 @@ describe('useNestedReplies', () => {
       postCounts: { replies: 2 },
     } as ReturnType<typeof usePostCounts>);
 
-    let liveQueryCall = 0;
-    vi.mocked(useLiveQuery).mockImplementation(() => {
-      const index = liveQueryCall % 2;
-      liveQueryCall += 1;
-      if (index === 0) return ['author:nested-1', 'author:nested-2', 'author:nested-3'];
-      return 0;
+    vi.mocked(useLiveQuery).mockReturnValue({
+      replyIds: ['author:nested-1', 'author:nested-2', 'author:nested-3'],
+      mutedRepliesCount: 0,
     });
 
     vi.spyOn(Core, 'buildPostReplyStreamId').mockReturnValue('stream:author:reply-1');
@@ -93,12 +96,9 @@ describe('useNestedReplies', () => {
       postCounts: { replies: 20 },
     } as ReturnType<typeof usePostCounts>);
 
-    let liveQueryCall = 0;
-    vi.mocked(useLiveQuery).mockImplementation(() => {
-      const index = liveQueryCall % 2;
-      liveQueryCall += 1;
-      if (index === 0) return ['author:nested-1', 'author:nested-2'];
-      return 0;
+    vi.mocked(useLiveQuery).mockReturnValue({
+      replyIds: ['author:nested-1', 'author:nested-2'],
+      mutedRepliesCount: 0,
     });
 
     vi.spyOn(Core, 'buildPostReplyStreamId').mockReturnValue('stream:author:reply-1');

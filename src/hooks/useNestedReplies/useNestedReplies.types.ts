@@ -1,7 +1,7 @@
 export interface UseNestedRepliesOptions {
   /**
    * Maximum number of nested replies to show
-   * @default 3
+   * @default 10
    */
   maxNestedReplies?: number;
   /**
@@ -11,7 +11,7 @@ export interface UseNestedRepliesOptions {
   depth?: number;
   /**
    * Maximum depth to fetch nested replies
-   * @default 1
+   * @default 3
    */
   maxDepth?: number;
 }
