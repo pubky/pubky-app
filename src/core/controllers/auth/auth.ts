@@ -1,5 +1,6 @@
 import * as Core from '@/core';
 import * as Libs from '@/libs';
+import { setLocaleCookie } from '@/i18n/utils';
 
 export class AuthController {
   private constructor() {} // Prevent instantiation
@@ -80,8 +81,19 @@ export class AuthController {
       }
     };
 
-    const { notification } = await Core.BootstrapApplication.initialize({ pubky, lastReadUrl: url }, onProgress);
+    const localSettings = Core.SettingsNormalizer.extractState(Core.useSettingsStore.getState());
+    const { notification, remoteSettings } = await Core.BootstrapApplication.initialize(
+      { pubky, lastReadUrl: url, localSettings },
+      onProgress,
+    );
     Core.useNotificationStore.getState().setState(notification);
+
+    // Apply remote settings to store + cookie (store mutation stays in Controller layer)
+    if (remoteSettings) {
+      Core.useSettingsStore.getState().loadFromHomeserver(remoteSettings);
+      setLocaleCookie(remoteSettings.language);
+      Libs.Logger.info('Settings loaded from homeserver', { pubky });
+    }
   }
 
   /**
@@ -218,7 +230,9 @@ export class AuthController {
     Core.nexusQueryClient.cancelQueries();
     Core.nexusQueryClient.clear();
 
-    // Reset ALL Zustand stores
+    // Reset all Zustand stores.
+    // Settings reset() keeps `language`,
+    // so the "/logout" page stays in the chosen language while remote settings still win on next login.
     Core.useOnboardingStore.getState().reset();
     Core.useAuthStore.getState().reset();
     Core.useSignInStore.getState().reset();
@@ -229,13 +243,12 @@ export class AuthController {
     Core.useNotificationStore.getState().reset();
     Core.useSettingsStore.getState().reset();
 
-    // Clear cookies, database, and persisted localStorage keys
-    Libs.clearCookies();
+    // Clear cookies (locale cookie excluded — device-level UI preference, not sensitive data)
+    Libs.clearCookies(['locale']);
+
     await Core.clearDatabase();
     // Skip post-migration resync — full cleanup resets all state
     Core.useMigrationStore.getState().reset();
-
-    Core.PERSISTED_STORE_KEYS.forEach((key) => localStorage.removeItem(key));
   }
 
   /**

@@ -90,11 +90,20 @@ const createFlatNotification = (timestamp: number): Core.FlatNotification =>
     followed_by: `user-${timestamp}`,
   }) as Core.FlatNotification;
 
-const getBootstrapParams = (pubky: string): Core.TBootstrapParams => {
+const MOCK_LOCAL_SETTINGS: Core.SettingsState = {
+  notifications: Core.defaultNotificationPreferences,
+  privacy: Core.defaultPrivacyPreferences,
+  muted: [],
+  language: 'en',
+  updatedAt: 0,
+  version: 1,
+};
+
+const getBootstrapParams = (pubky: string): Core.TBootstrapParams & { localSettings: Core.SettingsState } => {
   const {
     meta: { url },
   } = Core.NotificationNormalizer.to(pubky);
-  return { pubky, lastReadUrl: url };
+  return { pubky, lastReadUrl: url, localSettings: MOCK_LOCAL_SETTINGS };
 };
 
 type MockConfig = {
@@ -279,6 +288,7 @@ describe('BootstrapApplication', () => {
       assertCommonCalls(mocks, bootstrapData);
       expect(result).toEqual({
         notification: { unread: 1, lastRead: MOCK_LAST_READ, lastPolledTimestamp: expect.any(Number) },
+        remoteSettings: null,
       });
 
       expect(onProgress).toHaveBeenCalledWith('bootstrapFetched');
@@ -296,6 +306,7 @@ describe('BootstrapApplication', () => {
       assertCommonCalls(mocks, bootstrapData);
       expect(result).toEqual({
         notification: { unread: 1, lastRead: MOCK_LAST_READ, lastPolledTimestamp: expect.any(Number) },
+        remoteSettings: null,
       });
     });
 
@@ -324,7 +335,10 @@ describe('BootstrapApplication', () => {
       const result = await BootstrapApplication.initialize(getBootstrapParams(TEST_PUBKY));
 
       assertCommonCalls(mocks, bootstrapData);
-      expect(result).toEqual({ notification: { unread: 0, lastRead: MOCK_LAST_READ, lastPolledTimestamp: undefined } });
+      expect(result).toEqual({
+        notification: { unread: 0, lastRead: MOCK_LAST_READ, lastPolledTimestamp: undefined },
+        remoteSettings: null,
+      });
     });
 
     it('should handle 404 homeserver error gracefully and create new lastRead', async () => {
@@ -376,6 +390,7 @@ describe('BootstrapApplication', () => {
       expect(mocks.persistPosts).toHaveBeenCalledWith({ posts: bootstrapData.posts });
       expect(result).toEqual({
         notification: { unread: 0, lastRead: MOCK_NORMALIZED_TIMESTAMP, lastPolledTimestamp: undefined },
+        remoteSettings: null,
       });
     });
 
@@ -543,6 +558,7 @@ describe('BootstrapApplication', () => {
       expect(mocks.persistFiles).toHaveBeenCalledWith(mockFiles);
       expect(result).toEqual({
         notification: { unread: 1, lastRead: MOCK_LAST_READ, lastPolledTimestamp: expect.any(Number) },
+        remoteSettings: null,
       });
     });
 
@@ -553,7 +569,10 @@ describe('BootstrapApplication', () => {
       const result = await BootstrapApplication.initialize(getBootstrapParams(TEST_PUBKY));
 
       expect(mocks.fetchMutedUsers).toHaveBeenCalledWith(TEST_PUBKY);
-      expect(result).toEqual({ notification: { unread: 0, lastRead: MOCK_LAST_READ, lastPolledTimestamp: undefined } });
+      expect(result).toEqual({
+        notification: { unread: 0, lastRead: MOCK_LAST_READ, lastPolledTimestamp: undefined },
+        remoteSettings: null,
+      });
     });
 
     it('should fetch muted users during bootstrap (persist is inside fetchMutedUsers)', async () => {
@@ -564,7 +583,10 @@ describe('BootstrapApplication', () => {
       const result = await BootstrapApplication.initialize(getBootstrapParams(TEST_PUBKY));
 
       expect(mocks.fetchMutedUsers).toHaveBeenCalledWith(TEST_PUBKY);
-      expect(result).toEqual({ notification: { unread: 0, lastRead: MOCK_LAST_READ, lastPolledTimestamp: undefined } });
+      expect(result).toEqual({
+        notification: { unread: 0, lastRead: MOCK_LAST_READ, lastPolledTimestamp: undefined },
+        remoteSettings: null,
+      });
     });
 
     it('should throw error when MuteApplication.fetchMutedUsers fails', async () => {
@@ -640,10 +662,10 @@ describe('BootstrapApplication', () => {
 
       await BootstrapApplication.initialize(getBootstrapParams(TEST_PUBKY));
 
-      expect(mocks.initializeSettings).toHaveBeenCalledWith(TEST_PUBKY);
+      expect(mocks.initializeSettings).toHaveBeenCalledWith(TEST_PUBKY, MOCK_LOCAL_SETTINGS);
     });
 
-    it('should load settings from homeserver when remote settings are newer', async () => {
+    it('should return remote settings when remote settings are newer', async () => {
       const bootstrapData = emptyBootstrap();
       const remoteSettings: Core.SettingsState = {
         notifications: Core.defaultNotificationPreferences,
@@ -654,33 +676,21 @@ describe('BootstrapApplication', () => {
         version: 2,
       };
 
-      const mockLoadFromHomeserver = vi.fn();
-      vi.spyOn(Core.useSettingsStore, 'getState').mockReturnValue({
-        loadFromHomeserver: mockLoadFromHomeserver,
-      } as unknown as Core.SettingsStore);
-
-      const loggerInfoSpy = vi.spyOn(Libs.Logger, 'info').mockImplementation(() => {});
       setupMocks({ bootstrapData, remoteSettings });
 
-      await BootstrapApplication.initialize(getBootstrapParams(TEST_PUBKY));
+      const result = await BootstrapApplication.initialize(getBootstrapParams(TEST_PUBKY));
 
-      expect(mockLoadFromHomeserver).toHaveBeenCalledWith(remoteSettings);
-      expect(loggerInfoSpy).toHaveBeenCalledWith('Settings loaded from homeserver', { pubky: TEST_PUBKY });
+      expect(result.remoteSettings).toEqual(remoteSettings);
     });
 
-    it('should not load settings when remote returns null', async () => {
+    it('should return null remoteSettings when remote returns null', async () => {
       const bootstrapData = emptyBootstrap();
-
-      const mockLoadFromHomeserver = vi.fn();
-      vi.spyOn(Core.useSettingsStore, 'getState').mockReturnValue({
-        loadFromHomeserver: mockLoadFromHomeserver,
-      } as unknown as Core.SettingsStore);
 
       setupMocks({ bootstrapData, remoteSettings: null });
 
-      await BootstrapApplication.initialize(getBootstrapParams(TEST_PUBKY));
+      const result = await BootstrapApplication.initialize(getBootstrapParams(TEST_PUBKY));
 
-      expect(mockLoadFromHomeserver).not.toHaveBeenCalled();
+      expect(result.remoteSettings).toBeNull();
     });
 
     it('should not fail bootstrap when settings initialization fails', async () => {
@@ -692,9 +702,12 @@ describe('BootstrapApplication', () => {
 
       const result = await BootstrapApplication.initialize(getBootstrapParams(TEST_PUBKY));
 
-      expect(result).toEqual({ notification: { unread: 0, lastRead: MOCK_LAST_READ, lastPolledTimestamp: undefined } });
+      expect(result).toEqual({
+        notification: { unread: 0, lastRead: MOCK_LAST_READ, lastPolledTimestamp: undefined },
+        remoteSettings: null,
+      });
       expect(loggerErrorSpy).toHaveBeenCalledWith('Failed to initialize settings during bootstrap', expect.any(Object));
-      expect(mocks.initializeSettings).toHaveBeenCalledWith(TEST_PUBKY);
+      expect(mocks.initializeSettings).toHaveBeenCalledWith(TEST_PUBKY, MOCK_LOCAL_SETTINGS);
     });
 
     it('should initialize settings in parallel with bootstrap fetch', async () => {
@@ -703,7 +716,7 @@ describe('BootstrapApplication', () => {
 
       await BootstrapApplication.initialize(getBootstrapParams(TEST_PUBKY));
 
-      expect(mocks.initializeSettings).toHaveBeenCalledWith(TEST_PUBKY);
+      expect(mocks.initializeSettings).toHaveBeenCalledWith(TEST_PUBKY, MOCK_LOCAL_SETTINGS);
       expect(mocks.nexusFetch).toHaveBeenCalledWith(TEST_PUBKY);
     });
   });

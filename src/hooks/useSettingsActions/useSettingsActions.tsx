@@ -64,8 +64,6 @@ export function useSettingsActions(): UseSettingsActionsResult {
 
   const setLanguage = (language: string) => run(() => SettingsController.setLanguage(language));
 
-  const reset = () => run(() => SettingsController.reset());
-
   return {
     setNotificationPreference,
     setShowConfirm,
@@ -77,7 +75,6 @@ export function useSettingsActions(): UseSettingsActionsResult {
     setHideSearch,
     setNeverShowPosts,
     setLanguage,
-    reset,
     error,
   };
 }

@@ -1,5 +1,6 @@
 import { Logger } from '@/libs/logger';
 import * as Core from '@/core';
+import { setLocaleCookie } from '@/i18n/utils';
 
 export class MigrationController {
   private constructor() {}
@@ -10,10 +11,12 @@ export class MigrationController {
    * then applies settings to the Zustand store (state management stays in Controller layer).
    */
   static async resync(pubky: Core.Pubky): Promise<void> {
-    const remoteSettings = await Core.MigrationApplication.resync(pubky);
+    const localSettings = Core.SettingsNormalizer.extractState(Core.useSettingsStore.getState());
+    const remoteSettings = await Core.MigrationApplication.resync(pubky, localSettings);
 
     if (remoteSettings) {
       Core.useSettingsStore.getState().loadFromHomeserver(remoteSettings);
+      setLocaleCookie(remoteSettings.language);
       Logger.info('Settings loaded from homeserver during DB re-sync', { pubky });
     }
   }

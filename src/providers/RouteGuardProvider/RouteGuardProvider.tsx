@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useRef } from 'react';
 import { useRouter, usePathname } from 'next/navigation';
-import { useTranslations } from 'next-intl';
+import { useTranslations, useLocale } from 'next-intl';
 
 import * as Hooks from '@/hooks';
 import * as Providers from '@/providers';
@@ -43,6 +43,9 @@ export function RouteGuardProvider({ children }: RouteGuardProviderProps) {
   const sessionExport = Core.useAuthStore((state) => state.sessionExport);
   const currentUserPubky = Core.useAuthStore((state) => state.currentUserPubky);
   const wasDbReset = Core.useMigrationStore((state) => state.wasDbReset);
+  const serverLocale = useLocale();
+
+  const storeLanguage = Core.useSettingsStore((state) => state.language);
 
   // Prevents running resync more than once at a time (ex: React Strict Mode and effect re-fires mid-resync)
   const isMigrationResyncRunningRef = useRef(false);
@@ -107,6 +110,16 @@ export function RouteGuardProvider({ children }: RouteGuardProviderProps) {
 
     runResync();
   }, [wasDbReset, hasHydrated, currentUserPubky]);
+
+  // Refresh server components when store language diverges from server locale.
+  // Covers login bootstrap and migration resync loading a different language.
+  // pathname is included so the effect re-fires after post-login redirect lands,
+  // since the initial router.refresh() gets cancelled by the competing router.push().
+  useEffect(() => {
+    if (storeLanguage && storeLanguage !== serverLocale) {
+      router.refresh();
+    }
+  }, [storeLanguage, serverLocale, pathname, router]);
 
   // Determine if the current route is accessible based on authentication status
   const isRouteAccessible = useMemo(() => {

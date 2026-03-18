@@ -1,5 +1,6 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { SettingsController } from './settings';
+import * as i18nUtils from '@/i18n/utils';
 import * as Core from '@/core';
 import { defaultNotificationPreferences, defaultPrivacyPreferences } from '@/core/stores/settings/settings.types';
 
@@ -17,7 +18,6 @@ const mockStoreActions = {
   setHideSearch: vi.fn(),
   setNeverShowPosts: vi.fn(),
   setLanguage: vi.fn(),
-  reset: vi.fn(),
   addMutedUser: vi.fn(),
   removeMutedUser: vi.fn(),
   setMutedUsers: vi.fn(),
@@ -42,6 +42,7 @@ const mockSettingsState: Core.SettingsState = {
 describe('SettingsController', () => {
   let commitUpdateSpy: ReturnType<typeof vi.spyOn>;
   let extractStateSpy: ReturnType<typeof vi.spyOn>;
+  let setLocaleCookieSpy: ReturnType<typeof vi.spyOn>;
 
   beforeEach(() => {
     vi.clearAllMocks();
@@ -58,6 +59,7 @@ describe('SettingsController', () => {
 
     extractStateSpy = vi.spyOn(Core.SettingsNormalizer, 'extractState').mockReturnValue(mockSettingsState);
     commitUpdateSpy = vi.spyOn(Core.SettingsApplication, 'commitUpdate').mockResolvedValue(undefined);
+    setLocaleCookieSpy = vi.spyOn(i18nUtils, 'setLocaleCookie').mockImplementation(() => {});
   });
 
   afterEach(() => {
@@ -93,19 +95,11 @@ describe('SettingsController', () => {
   });
 
   describe('setLanguage', () => {
-    it('should update zustand store and sync to homeserver', async () => {
+    it('should update zustand store, set locale cookie, and sync to homeserver', async () => {
       await SettingsController.setLanguage('es');
 
       expect(mockStoreActions.setLanguage).toHaveBeenCalledWith('es');
-      expect(commitUpdateSpy).toHaveBeenCalledWith(mockSettingsState, TEST_PUBKY);
-    });
-  });
-
-  describe('reset', () => {
-    it('should reset zustand store and sync to homeserver', async () => {
-      await SettingsController.reset();
-
-      expect(mockStoreActions.reset).toHaveBeenCalled();
+      expect(setLocaleCookieSpy).toHaveBeenCalledWith('es');
       expect(commitUpdateSpy).toHaveBeenCalledWith(mockSettingsState, TEST_PUBKY);
     });
   });
