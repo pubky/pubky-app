@@ -25,27 +25,24 @@ export function DialogReply({ postId, open, onOpenChangeAction }: DialogReplyPro
     replyTextarea.scrollIntoView({ block: 'center', inline: 'nearest', behavior });
   }, []);
 
-  const handleOpenAutoFocus = React.useCallback(
-    (event: Event) => {
-      event.preventDefault();
+  const handleOpenAutoFocus = (event: Event) => {
+    event.preventDefault();
 
-      const dialogContent = event.currentTarget as HTMLElement | null;
-      const replyTextarea = dialogContent?.querySelector<HTMLTextAreaElement>(
-        '[data-cy="reply-post-input"] [data-slot="textarea"]',
-      );
+    const dialogContent = event.currentTarget as HTMLElement | null;
+    const replyTextarea = dialogContent?.querySelector<HTMLTextAreaElement>(
+      '[data-cy="reply-post-input"] [data-slot="textarea"]',
+    );
 
-      if (!replyTextarea) return;
+    if (!replyTextarea) return;
 
-      replyTextarea.focus();
-      scrollReplyTextareaIntoView('auto');
+    replyTextarea.focus();
+    scrollReplyTextareaIntoView('auto');
 
-      // Mobile keyboards can shift viewport after focus; scroll again once it settles.
-      window.setTimeout(() => {
-        scrollReplyTextareaIntoView('smooth');
-      }, 200);
-    },
-    [scrollReplyTextareaIntoView],
-  );
+    // Mobile keyboards can shift viewport after focus; scroll again once it settles.
+    window.setTimeout(() => {
+      scrollReplyTextareaIntoView('smooth');
+    }, 200);
+  };
 
   React.useEffect(() => {
     if (!open || typeof window === 'undefined') return;
