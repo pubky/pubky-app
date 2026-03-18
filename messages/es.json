@@ -1031,7 +1031,8 @@
     "layout": {
       "title": "Diseño",
       "columns": "Columnas",
-      "wide": "Ancho"
+      "wide": "Ancho",
+      "visual": "Visual"
     },
     "content": {
       "title": "Contenido",

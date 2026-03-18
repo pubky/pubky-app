@@ -1031,7 +1031,8 @@
     "layout": {
       "title": "Layout",
       "columns": "Spalten",
-      "wide": "Breit"
+      "wide": "Breit",
+      "visual": "Visuell"
     },
     "content": {
       "title": "Inhalt",

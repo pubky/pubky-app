@@ -60,4 +60,14 @@ export class FileController {
   static async getMetadata({ fileAttachments }: Core.TGetMetadataParams) {
     return await Core.FileApplication.getMetadata({ fileAttachments });
   }
+
+  /**
+   * Fetches missing file metadata from nexus and persists it locally.
+   *
+   * @param params - Parameters for fetching files
+   * @param params.fileUris - Array of file URIs to fetch and persist
+   */
+  static async fetchFiles({ fileUris }: Core.TFetchFilesParams) {
+    return await Core.FileApplication.fetchFiles(fileUris);
+  }
 }

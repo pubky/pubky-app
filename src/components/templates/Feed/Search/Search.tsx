@@ -4,7 +4,7 @@ import * as Molecules from '@/molecules';
 import * as Organisms from '@/organisms';
 import * as Atoms from '@/atoms';
 import * as Hooks from '@/hooks';
-import { TIMELINE_FEED_VARIANT } from '@/organisms/Timeline/Feed/TimelineFeed/TimelineFeed.types';
+import { TIMELINE_FEED_VARIANT } from '@/config';
 import { useSearchTags } from '@/hooks/useSearchStreamId';
 
 /**
@@ -21,7 +21,6 @@ import { useSearchTags } from '@/hooks/useSearchStreamId';
  * - Shows SearchInput on mobile (hidden on desktop where it's in the header)
  */
 export function Search() {
-  // Reset to column layout on mount (this page doesn't support wide)
   Hooks.useLayoutReset();
 
   // Get tags from URL query params
@@ -34,11 +33,13 @@ export function Search() {
       <Organisms.DialogWelcome />
       <Organisms.ContentLayout
         showRightMobileButton={false}
-        leftSidebarContent={<Organisms.HomeFeedSidebar hideReachFilter />}
+        leftSidebarContent={<Organisms.HomeFeedSidebar hideReachFilter feedVariant={TIMELINE_FEED_VARIANT.SEARCH} />}
         rightSidebarContent={<Organisms.HomeFeedRightSidebar />}
-        leftDrawerContent={<Organisms.HomeFeedDrawer hideReachFilter />}
+        leftDrawerContent={<Organisms.HomeFeedDrawer hideReachFilter feedVariant={TIMELINE_FEED_VARIANT.SEARCH} />}
         rightDrawerContent={<Organisms.HomeFeedRightDrawer />}
-        leftDrawerContentMobile={<Organisms.HomeFeedDrawerMobile hideReachFilter />}
+        leftDrawerContentMobile={
+          <Organisms.HomeFeedDrawerMobile hideReachFilter feedVariant={TIMELINE_FEED_VARIANT.SEARCH} />
+        }
       >
         {/* Mobile search input - hidden on desktop (shown in header there) */}
         <Atoms.Container className="lg:hidden">
