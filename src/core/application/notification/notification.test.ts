@@ -44,10 +44,11 @@ describe('NotificationApplication.persistAndSummarize', () => {
   it('should bulkSave, count unread, and return nextPollCursor', async () => {
     const notifications = [createNexus(2000), createNexus(1000)];
     const flatNotifications = [createFlat(2000), createFlat(1000)];
+    mockNormalizer();
     const bulkSaveSpy = vi.spyOn(Core.LocalNotificationService, 'bulkSave').mockResolvedValue(undefined);
     const countSpy = vi.spyOn(Core.LocalNotificationService, 'countUnreadSince').mockResolvedValue(1);
 
-    const result = await NotificationApplication.persistAndSummarize({ notifications, flatNotifications, lastRead });
+    const result = await NotificationApplication.persistAndSummarize({ notifications, lastRead });
 
     expect(bulkSaveSpy).toHaveBeenCalledWith({ flatNotifications });
     expect(countSpy).toHaveBeenCalledWith(lastRead);
@@ -55,12 +56,12 @@ describe('NotificationApplication.persistAndSummarize', () => {
   });
 
   it('should return nextPollCursor undefined when notifications are empty', async () => {
+    mockNormalizer();
     vi.spyOn(Core.LocalNotificationService, 'bulkSave').mockResolvedValue(undefined);
     vi.spyOn(Core.LocalNotificationService, 'countUnreadSince').mockResolvedValue(0);
 
     const result = await NotificationApplication.persistAndSummarize({
       notifications: [],
-      flatNotifications: [],
       lastRead,
     });
 
@@ -68,25 +69,25 @@ describe('NotificationApplication.persistAndSummarize', () => {
   });
 
   it('should bubble bulkSave errors', async () => {
+    mockNormalizer();
     vi.spyOn(Core.LocalNotificationService, 'bulkSave').mockRejectedValue(new Error('save-fail'));
 
     await expect(
       NotificationApplication.persistAndSummarize({
         notifications: [createNexus(1000)],
-        flatNotifications: [createFlat(1000)],
         lastRead,
       }),
     ).rejects.toThrow('save-fail');
   });
 
   it('should bubble countUnreadSince errors', async () => {
+    mockNormalizer();
     vi.spyOn(Core.LocalNotificationService, 'bulkSave').mockResolvedValue(undefined);
     vi.spyOn(Core.LocalNotificationService, 'countUnreadSince').mockRejectedValue(new Error('count-fail'));
 
     await expect(
       NotificationApplication.persistAndSummarize({
         notifications: [createNexus(1000)],
-        flatNotifications: [createFlat(1000)],
         lastRead,
       }),
     ).rejects.toThrow('count-fail');

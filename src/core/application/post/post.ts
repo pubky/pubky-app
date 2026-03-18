@@ -18,9 +18,9 @@ export class PostApplication {
   /**
    * Reads post counts for a specific post
    * @param compositeId - Composite post ID in format "authorId:postId"
-   * @returns Post counts (with default values if not found)
+   * @returns Post counts or null if not found
    */
-  static async getCounts({ compositeId }: Core.TCompositeId): Promise<Core.PostCountsModelSchema> {
+  static async getCounts({ compositeId }: Core.TCompositeId): Promise<Core.PostCountsModelSchema | null> {
     return await Core.LocalPostService.readCounts(compositeId);
   }
 
@@ -81,12 +81,13 @@ export class PostApplication {
   }
 
   /**
-   * Reads or fetches a post - reads from local DB first, fetches from Nexus if not found
-   * Also fetches and persists related data: counts, relationships, tags, and author
+   * Reads or fetches a full post entity from local database.
+   * If not found locally, fetches from Nexus and persists everything (details, counts, relationships, tags, author).
    * @param compositeId - Composite post ID in format "authorId:postId"
+   * @param viewerId - Optional viewer ID for relationship data
    * @returns Post details or null if not found
    */
-  static async getOrFetchDetails({
+  static async getOrFetch({
     compositeId,
     viewerId,
   }: Core.TGetOrFetchPostParams): Promise<Core.PostDetailsModelSchema | null> {
@@ -100,6 +101,26 @@ export class PostApplication {
     });
 
     // Return the persisted post details
+    return await Core.LocalPostService.readDetails({ postId: compositeId });
+  }
+
+  /**
+   * Fetches a post from Nexus and persists to local database (network-only, no local read).
+   * Use this instead of `getOrFetch` when the caller already knows the post is not in
+   * local DB (e.g. `useLocalFirstQuery` hook where `useLiveQuery` handles the local read).
+   * @param compositeId - Composite post ID in format "authorId:postId"
+   * @param viewerId - Optional viewer ID for relationship data
+   * @returns Post details or null if not found on Nexus
+   */
+  static async fetch({
+    compositeId,
+    viewerId,
+  }: Core.TGetOrFetchPostParams): Promise<Core.PostDetailsModelSchema | null> {
+    await Core.PostStreamApplication.fetchMissingPostsFromNexus({
+      cacheMissPostIds: [compositeId],
+      viewerId,
+    });
+
     return await Core.LocalPostService.readDetails({ postId: compositeId });
   }
 

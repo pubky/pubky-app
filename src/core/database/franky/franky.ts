@@ -202,19 +202,22 @@ export class AppDatabase extends Dexie {
     }
   }
 
-  async initialize() {
+  async initialize(): Promise<{ wasDbReset: boolean }> {
+    let wasDbReset = false;
+
     try {
       if (typeof indexedDB === 'undefined') {
         Logger.warn('IndexedDB is not available in this environment. Skipping database initialization.');
-        return;
+        return { wasDbReset };
       }
 
       const dbExists = await Dexie.exists(this.name);
 
       if (!dbExists) {
         Logger.info('Creating new database...');
+        wasDbReset = true;
         await this.open();
-        return;
+        return { wasDbReset };
       }
 
       let rawVersion: number | null = null;
@@ -232,7 +235,8 @@ export class AppDatabase extends Dexie {
       if (currentVersion === null) {
         Logger.warn('Unable to determine current database version. Recreating database...');
         await this.recreateDatabase(currentVersion, rawVersion);
-        return;
+        wasDbReset = true;
+        return { wasDbReset };
       }
 
       if (currentVersion !== Config.DB_VERSION) {
@@ -243,6 +247,7 @@ export class AppDatabase extends Dexie {
           expectedInternalVersion: Config.DB_VERSION * AppDatabase.DEXIE_VERSION_MULTIPLIER,
         });
         await this.recreateDatabase(currentVersion, rawVersion);
+        wasDbReset = true;
       } else {
         Logger.debug('Database version is current');
       }
@@ -255,6 +260,8 @@ export class AppDatabase extends Dexie {
         cause: error,
       });
     }
+
+    return { wasDbReset };
   }
 }
 

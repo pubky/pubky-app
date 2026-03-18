@@ -1,8 +1,15 @@
 'use client';
 
+import * as React from 'react';
 import * as Atoms from '@/atoms';
 import * as Molecules from '@/molecules';
 import * as Core from '@/core';
+import * as Hooks from '@/hooks';
+import { TIMELINE_FEED_VARIANT } from '@/config';
+import {
+  resolveVisualFeedContent,
+  VISUAL_DISABLED_CONTENT,
+} from '../Timeline/Feed/TimelineFeed/TimelineFeedVisual.helpers';
 import type { HomeFeedSidebarProps } from './HomeFeedSidebar.types';
 
 /**
@@ -17,9 +24,20 @@ import type { HomeFeedSidebarProps } from './HomeFeedSidebar.types';
 function HomeFeedFilters({
   hideReachFilter = false,
   hideLayoutFilter = false,
+  allowVisualLayout = false,
+  feedVariant = TIMELINE_FEED_VARIANT.HOME,
   variant = 'drawer',
 }: HomeFeedSidebarProps) {
   const { layout, setLayout, reach, setReach, sort, setSort, content, setContent } = Core.useHomeStore();
+  const { isPhoneViewport, isVisualActive } = Hooks.useFeedLayoutResolution(feedVariant);
+  const resolvedContent = resolveVisualFeedContent({
+    content,
+    variant: feedVariant,
+    isVisualActive,
+  });
+
+  const disabledContentTabs = isVisualActive ? VISUAL_DISABLED_CONTENT : [];
+  const showVisualLayout = allowVisualLayout && !isPhoneViewport;
 
   return (
     <Atoms.Container overrideDefaults className="flex flex-col gap-6">
@@ -27,13 +45,25 @@ function HomeFeedFilters({
       <Molecules.FilterSort selectedTab={sort} onTabChange={setSort} />
       {variant === 'sidebar' ? (
         <Atoms.Container overrideDefaults className="sticky top-[100px] flex w-full flex-col gap-6 self-start">
-          {!hideLayoutFilter && <Molecules.FilterLayout selectedTab={layout} onTabChange={setLayout} />}
-          <Molecules.FilterContent selectedTab={content} onTabChange={setContent} />
+          {!hideLayoutFilter && (
+            <Molecules.FilterLayout selectedTab={layout} onTabChange={setLayout} showVisual={showVisualLayout} />
+          )}
+          <Molecules.FilterContent
+            selectedTab={resolvedContent}
+            onTabChange={setContent}
+            disabledTabs={disabledContentTabs}
+          />
         </Atoms.Container>
       ) : (
         <>
-          {!hideLayoutFilter && <Molecules.FilterLayout selectedTab={layout} onTabChange={setLayout} />}
-          <Molecules.FilterContent selectedTab={content} onTabChange={setContent} />
+          {!hideLayoutFilter && (
+            <Molecules.FilterLayout selectedTab={layout} onTabChange={setLayout} showVisual={showVisualLayout} />
+          )}
+          <Molecules.FilterContent
+            selectedTab={resolvedContent}
+            onTabChange={setContent}
+            disabledTabs={disabledContentTabs}
+          />
         </>
       )}
     </Atoms.Container>
@@ -46,8 +76,19 @@ function HomeFeedFilters({
  * Left sidebar for Home feed (desktop) - manages filter state via Core.useHomeStore.
  * Desktop version with sticky positioning.
  */
-export function HomeFeedSidebar({ hideReachFilter = false }: HomeFeedSidebarProps) {
-  return <HomeFeedFilters hideReachFilter={hideReachFilter} variant="sidebar" />;
+export function HomeFeedSidebar({
+  hideReachFilter = false,
+  allowVisualLayout = false,
+  feedVariant = TIMELINE_FEED_VARIANT.HOME,
+}: HomeFeedSidebarProps) {
+  return (
+    <HomeFeedFilters
+      hideReachFilter={hideReachFilter}
+      allowVisualLayout={allowVisualLayout}
+      feedVariant={feedVariant}
+      variant="sidebar"
+    />
+  );
 }
 
 /**
@@ -55,8 +96,19 @@ export function HomeFeedSidebar({ hideReachFilter = false }: HomeFeedSidebarProp
  *
  * Left drawer for Home feed (tablet) - manages filter state via Core.useHomeStore.
  */
-export function HomeFeedDrawer({ hideReachFilter = false }: HomeFeedSidebarProps) {
-  return <HomeFeedFilters hideReachFilter={hideReachFilter} variant="drawer" />;
+export function HomeFeedDrawer({
+  hideReachFilter = false,
+  allowVisualLayout = false,
+  feedVariant = TIMELINE_FEED_VARIANT.HOME,
+}: HomeFeedSidebarProps) {
+  return (
+    <HomeFeedFilters
+      hideReachFilter={hideReachFilter}
+      allowVisualLayout={allowVisualLayout}
+      feedVariant={feedVariant}
+      variant="drawer"
+    />
+  );
 }
 
 /**
@@ -65,6 +117,18 @@ export function HomeFeedDrawer({ hideReachFilter = false }: HomeFeedSidebarProps
  * Left drawer for Home feed (mobile) - manages filter state via Core.useHomeStore.
  * Note: Mobile version doesn't show layout filter.
  */
-export function HomeFeedDrawerMobile({ hideReachFilter = false }: HomeFeedSidebarProps) {
-  return <HomeFeedFilters hideReachFilter={hideReachFilter} hideLayoutFilter variant="drawer" />;
+export function HomeFeedDrawerMobile({
+  hideReachFilter = false,
+  allowVisualLayout = false,
+  feedVariant = TIMELINE_FEED_VARIANT.HOME,
+}: HomeFeedSidebarProps) {
+  return (
+    <HomeFeedFilters
+      hideReachFilter={hideReachFilter}
+      hideLayoutFilter
+      allowVisualLayout={allowVisualLayout}
+      feedVariant={feedVariant}
+      variant="drawer"
+    />
+  );
 }

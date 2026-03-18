@@ -2,6 +2,7 @@ import { render, screen, fireEvent } from '@testing-library/react';
 import { describe, it, expect, vi } from 'vitest';
 import { FilterContent } from './FilterContent';
 import { CONTENT, type ContentType } from '@/core/stores/home/home.types';
+import { VISUAL_DISABLED_CONTENT } from '@/organisms/Timeline/Feed/TimelineFeed/TimelineFeedVisual.helpers';
 
 // Mock libs - use actual utility functions and icons from lucide-react
 vi.mock('@/libs', async () => {
@@ -96,6 +97,18 @@ describe('FilterContent', () => {
     labels.forEach((label) => {
       expect(screen.getByLabelText(label)).not.toHaveAttribute('aria-disabled', 'true');
     });
+  });
+
+  it('disables only the requested tabs', () => {
+    render(<FilterContent disabledTabs={VISUAL_DISABLED_CONTENT} />);
+
+    expect(screen.getByLabelText('Posts')).toHaveAttribute('aria-disabled', 'true');
+    expect(screen.getByLabelText('Articles')).toHaveAttribute('aria-disabled', 'true');
+    expect(screen.getByLabelText('Links')).toHaveAttribute('aria-disabled', 'true');
+    expect(screen.getByLabelText('Files')).toHaveAttribute('aria-disabled', 'true');
+    expect(screen.getByLabelText('All')).not.toHaveAttribute('aria-disabled', 'true');
+    expect(screen.getByLabelText('Images')).not.toHaveAttribute('aria-disabled', 'true');
+    expect(screen.getByLabelText('Videos')).not.toHaveAttribute('aria-disabled', 'true');
   });
 });
 

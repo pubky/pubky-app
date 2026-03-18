@@ -1,5 +1,5 @@
 import * as Organisms from '@/organisms';
-import { TIMELINE_FEED_VARIANT } from '@/organisms';
+import { TIMELINE_FEED_VARIANT } from '@/config';
 
 /**
  * ProfilePagePosts Template

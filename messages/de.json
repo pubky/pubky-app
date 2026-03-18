@@ -1030,7 +1030,8 @@
     "layout": {
       "title": "Layout",
       "columns": "Spalten",
-      "wide": "Breit"
+      "wide": "Breit",
+      "visual": "Visuell"
     },
     "content": {
       "title": "Inhalt",
@@ -1053,7 +1054,7 @@
     "hotTags": "Beliebte Tags",
     "activeUsers": "Aktive Benutzer",
     "trendingPosts": "Trendende Beiträge",
-    "postsCount": "{count} Beiträge",
+    "postsCount": "{count} Beiträge diesen Monat",
     "failedToLoadUsers": "Benutzer konnten nicht geladen werden",
     "failedToLoadTags": "Tags konnten nicht geladen werden",
     "noUsersToShow": "Keine Benutzer anzuzeigen",

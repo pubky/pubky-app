@@ -1024,7 +1024,8 @@
     "layout": {
       "title": "Layout",
       "columns": "Columns",
-      "wide": "Wide"
+      "wide": "Wide",
+      "visual": "Visual"
     },
     "content": {
       "title": "Content",
@@ -1047,7 +1048,7 @@
     "hotTags": "Hot tags",
     "activeUsers": "Active users",
     "trendingPosts": "Trending posts",
-    "postsCount": "{count} posts",
+    "postsCount": "{count} posts this month",
     "failedToLoadUsers": "Failed to load users",
     "failedToLoadTags": "Failed to load tags",
     "noUsersToShow": "No users to show",
