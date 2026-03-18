@@ -91,15 +91,11 @@ exports[`DialogBackupEncrypted - Snapshots > matches snapshot for default Dialog
             data-size="sm"
             data-testid="typography"
           >
-            We recommend using a passphrase 
-            <a
-              data-testid="link"
-              href="https://www.useapassphrase.com"
-              rel="noopener noreferrer"
-              target="_blank"
-            >
-              useapassphrase.com
-            </a>
+            We recommend using a long ,[object Object], 
+            <span>
+              over 16 characters
+            </span>
+             for better security.
           </p>
         </div>
       </div>

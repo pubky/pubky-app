@@ -284,18 +284,18 @@ describe('DialogBackupEncrypted', () => {
     expect(mockCreateRecoveryFile).toHaveBeenCalledWith('');
   });
 
-  it('shows weak password warning when length is less than 16 characters', () => {
+  it('renders "over 16 characters" in red when length is 1–15', () => {
     render(<DialogBackupEncrypted />);
 
     const passwordInput = screen.getByPlaceholderText('Enter a strong password');
 
-    expect(screen.queryByText(/under 80 bits/i)).not.toBeInTheDocument();
+    const minLenText = () => screen.getByText(/over 16 characters/i);
 
     fireEvent.change(passwordInput, { target: { value: 'short' } });
-    expect(screen.getByText(/under 80 bits/i)).toBeInTheDocument();
+    expect(minLenText()).toHaveClass('text-destructive');
 
     fireEvent.change(passwordInput, { target: { value: 'sixteenchars!!!!' } });
-    expect(screen.queryByText(/under 80 bits/i)).not.toBeInTheDocument();
+    expect(minLenText()).not.toHaveClass('text-destructive');
   });
 });
 

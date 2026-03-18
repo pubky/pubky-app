@@ -90,18 +90,9 @@ function RecoveryStep1({ setStep }: { setStep: (step: number) => void }) {
                     {chunks}
                   </Atoms.Link>
                 ),
+                minLen: (chunks) => <span className={showWeakWarning ? 'text-destructive' : undefined}>{chunks}</span>,
               })}
             </Atoms.Typography>
-            {showWeakWarning && (
-              <Atoms.Typography
-                id="password-weak-warning"
-                size="sm"
-                className="pt-2 text-xs font-medium text-amber-600 dark:text-amber-500"
-                role="alert"
-              >
-                {t('passwordWeakWarning')}
-              </Atoms.Typography>
-            )}
           </Atoms.Container>
         </Atoms.Container>
 
