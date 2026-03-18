@@ -109,9 +109,11 @@ describe('ReplyWithNested', () => {
       expandAll: vi.fn(async () => {}),
     });
 
-    render(<ReplyWithNested replyId="author:reply-1" onPostClick={mocks.mockOnPostClick} />);
+    const { container } = render(<ReplyWithNested replyId="author:reply-1" onPostClick={mocks.mockOnPostClick} />);
 
-    expect(screen.queryByText('author:nested-1')).not.toBeInTheDocument();
+    // Content is in the DOM but visually collapsed via CSS grid animation
+    const gridContainer = container.querySelector('.grid-rows-\\[0fr\\]');
+    expect(gridContainer).toBeInTheDocument();
   });
 
   it('toggles expand/collapse on toggle click', () => {
@@ -125,15 +127,18 @@ describe('ReplyWithNested', () => {
       expandAll: vi.fn(async () => {}),
     });
 
-    render(<ReplyWithNested replyId="author:reply-1" onPostClick={mocks.mockOnPostClick} />);
+    const { container } = render(<ReplyWithNested replyId="author:reply-1" onPostClick={mocks.mockOnPostClick} />);
 
-    expect(screen.queryByText('author:nested-1')).not.toBeInTheDocument();
+    // Starts collapsed
+    expect(container.querySelector('.grid-rows-\\[0fr\\]')).toBeInTheDocument();
 
+    // Click toggle to expand
     fireEvent.click(screen.getByTestId('thread-expand-toggle'));
-    expect(screen.getByText('author:nested-1')).toBeInTheDocument();
+    expect(container.querySelector('.grid-rows-\\[1fr\\]')).toBeInTheDocument();
 
+    // Click toggle to collapse again
     fireEvent.click(screen.getByTestId('thread-expand-toggle'));
-    expect(screen.queryByText('author:nested-1')).not.toBeInTheDocument();
+    expect(container.querySelector('.grid-rows-\\[0fr\\]')).toBeInTheDocument();
   });
 
   it('shows expand toggle when reply has nested replies', () => {

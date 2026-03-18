@@ -29,27 +29,35 @@ exports[`ReplyWithNested - Snapshots > matches snapshot for expanded nested repl
     </div>
   </div>
   <div
-    class="flex"
+    class="grid transition-all duration-300 ease-in-out grid-rows-[1fr] opacity-100"
   >
     <div
-      class="w-3 shrink-0 border-l border-border"
-    />
-    <div
-      class="ml-3 flex-1"
+      class="overflow-hidden"
     >
-      <div>
+      <div
+        class="flex"
+      >
         <div
-          data-testid="post-thread-spacer"
+          class="w-3 shrink-0 border-l border-border"
         />
-        <div>
-          <button
-            data-is-last-reply="true"
-            data-post-id="author:nested-1"
-            data-testid="post-main"
-            type="button"
-          >
-            author:nested-1
-          </button>
+        <div
+          class="ml-3 flex-1"
+        >
+          <div>
+            <div
+              data-testid="post-thread-spacer"
+            />
+            <div>
+              <button
+                data-is-last-reply="true"
+                data-post-id="author:nested-1"
+                data-testid="post-main"
+                type="button"
+              >
+                author:nested-1
+              </button>
+            </div>
+          </div>
         </div>
       </div>
     </div>
