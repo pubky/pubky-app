@@ -3,11 +3,13 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { ContentLayout } from './ContentLayout';
 
 const mockUseCustomFeed = vi.fn();
+const mockResolveFeedLayout = vi.fn();
+let mockHomeLayout = 'columns';
 
 // Mock the home store
 vi.mock('@/core', () => ({
   useHomeStore: () => ({
-    layout: 'columns',
+    layout: mockHomeLayout,
     setLayout: vi.fn(),
     reach: 'all',
     setReach: vi.fn(),
@@ -28,6 +30,7 @@ vi.mock('@/core', () => ({
 vi.mock('@/hooks', () => ({
   useCustomFeed: () => mockUseCustomFeed(),
   useIsMobile: () => false,
+  resolveFeedLayout: (...args: unknown[]) => mockResolveFeedLayout(...args),
 }));
 
 // Mock the molecules
@@ -115,6 +118,14 @@ vi.mock('@/libs', async () => {
 describe('ContentLayout', () => {
   beforeEach(() => {
     mockUseCustomFeed.mockReturnValue(undefined);
+    mockHomeLayout = 'columns';
+    mockResolveFeedLayout.mockImplementation(({ requestedLayout }: { requestedLayout: string }) => ({
+      requestedLayout,
+      effectiveLayout: requestedLayout,
+      isVisualRequested: requestedLayout === 'visual',
+      isVisualActive: requestedLayout === 'visual',
+      isPhoneViewport: false,
+    }));
   });
 
   it('renders with default props', () => {
@@ -229,6 +240,29 @@ describe('ContentLayout', () => {
     );
 
     expect(screen.queryByTestId('mobile-header')).not.toBeInTheDocument();
+  });
+
+  it('uses the wide shell for supported visual feed layouts', () => {
+    mockHomeLayout = 'visual';
+
+    render(
+      <ContentLayout
+        feedVariant="home"
+        showLeftSidebar={true}
+        leftSidebarContent={<div>Left Sidebar</div>}
+        leftDrawerContent={<div>Left Drawer</div>}
+        showRightSidebar={true}
+        rightSidebarContent={<div>Right Sidebar</div>}
+        rightDrawerContent={<div>Right Drawer</div>}
+      >
+        <div>Test Content</div>
+      </ContentLayout>,
+    );
+
+    expect(screen.queryByText('Left Sidebar')).not.toBeInTheDocument();
+    expect(screen.queryByText('Right Sidebar')).not.toBeInTheDocument();
+    expect(screen.getByTestId('button-filters-left')).toBeInTheDocument();
+    expect(screen.getByTestId('button-filters-right')).toBeInTheDocument();
   });
 });
 

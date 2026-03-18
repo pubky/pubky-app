@@ -1030,7 +1030,8 @@
     "layout": {
       "title": "Layout",
       "columns": "Colonne",
-      "wide": "Largo"
+      "wide": "Largo",
+      "visual": "Visuale"
     },
     "content": {
       "title": "Contenuto",

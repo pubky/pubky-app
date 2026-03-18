@@ -1024,7 +1024,8 @@
     "layout": {
       "title": "布局",
       "columns": "多列",
-      "wide": "宽屏"
+      "wide": "宽屏",
+      "visual": "视觉"
     },
     "content": {
       "title": "内容",

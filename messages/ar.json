@@ -1024,7 +1024,8 @@
     "layout": {
       "title": "التخطيط",
       "columns": "اعمدة",
-      "wide": "عريض"
+      "wide": "عريض",
+      "visual": "مرئي"
     },
     "content": {
       "title": "المحتوى",
