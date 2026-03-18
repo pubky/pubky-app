@@ -53,6 +53,15 @@ describe('useStreamIdFromFilters', () => {
     expect(result.current).toBe('timeline:all:image');
   });
 
+  it('should prefer the provided content override over store content', () => {
+    const { result: setContent } = renderHook(() => Core.useHomeStore((state) => state.setContent));
+
+    setContent.current(Core.CONTENT.SHORT);
+
+    const { result } = renderHook(() => useStreamIdFromFilters(Core.CONTENT.ALL));
+    expect(result.current).toBe(Core.PostStreamTypes.TIMELINE_ALL_ALL);
+  });
+
   it('should update with multiple filter changes', () => {
     const { result: setSort } = renderHook(() => Core.useHomeStore((state) => state.setSort));
     const { result: setReach } = renderHook(() => Core.useHomeStore((state) => state.setReach));
