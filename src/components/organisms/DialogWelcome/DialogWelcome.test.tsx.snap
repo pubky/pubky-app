@@ -1,0 +1,190 @@
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
+
+exports[`DialogWelcome - Snapshots > matches snapshot for default DialogWelcome 1`] = `
+<div
+  data-open="true"
+  data-testid="dialog"
+>
+  <div
+    class="sm:max-w-2xl"
+    data-hidden-title="Welcome to Pubky!"
+    data-testid="dialog-content"
+  >
+    <div
+      class="mb-3 gap-0 pr-6 text-left"
+      data-testid="dialog-header"
+    >
+      <h2
+        data-testid="dialog-title"
+        id="welcome-title"
+      >
+        Welcome to Pubky!
+      </h2>
+      <div
+        class="font-medium"
+        data-testid="dialog-description"
+      >
+        Your keys, your content, your rules.
+      </div>
+    </div>
+    <div
+      class="max-h-[420px] overflow-y-auto"
+      data-testid="container"
+    >
+      <div
+        class="flex flex-col gap-4"
+        data-testid="container"
+      >
+        <div
+          class="flex flex-col items-center justify-center gap-4 self-stretch overflow-hidden rounded-lg bg-card p-6 sm:flex-row sm:items-start sm:justify-start"
+          data-testid="card"
+        >
+          <div
+            class="h-24 w-24"
+            data-avatar-url="https://mocked.avatar/test-pubky-123"
+            data-fallback-class="text-4xl"
+            data-name="Test User"
+            data-testid="avatar-with-fallback"
+          />
+          <div
+            class="flex w-full min-w-0 flex-col items-center justify-center sm:items-start sm:justify-start"
+            data-testid="container"
+          >
+            <p
+              class="w-full truncate"
+              data-size="lg"
+              data-testid="typography"
+            >
+              Test User
+            </p>
+            <p
+              class="w-full truncate text-center font-medium text-muted-foreground sm:text-left"
+              data-size="sm"
+              data-testid="typography"
+            >
+              Test bio
+            </p>
+            <button
+              class="mt-2 h-8 w-fit gap-2 rounded-full uppercase"
+              data-testid="button-secondary"
+              data-variant="secondary"
+            >
+              <svg
+                class="h-4 w-4"
+                data-testid="key-icon"
+              />
+              test...test-pubky-123
+            </button>
+          </div>
+        </div>
+        <button
+          class="w-auto"
+          data-size="lg"
+          data-testid="button-primary"
+          id="welcome-explore-pubky-btn"
+        >
+          <svg
+            class="mr-2 h-4 w-4"
+            data-testid="arrow-right-icon"
+          />
+          Explore Pubky
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+`;
+
+exports[`DialogWelcome - Snapshots > matches snapshot when user has no image 1`] = `
+<div
+  data-open="true"
+  data-testid="dialog"
+>
+  <div
+    class="sm:max-w-2xl"
+    data-hidden-title="Welcome to Pubky!"
+    data-testid="dialog-content"
+  >
+    <div
+      class="mb-3 gap-0 pr-6 text-left"
+      data-testid="dialog-header"
+    >
+      <h2
+        data-testid="dialog-title"
+        id="welcome-title"
+      >
+        Welcome to Pubky!
+      </h2>
+      <div
+        class="font-medium"
+        data-testid="dialog-description"
+      >
+        Your keys, your content, your rules.
+      </div>
+    </div>
+    <div
+      class="max-h-[420px] overflow-y-auto"
+      data-testid="container"
+    >
+      <div
+        class="flex flex-col gap-4"
+        data-testid="container"
+      >
+        <div
+          class="flex flex-col items-center justify-center gap-4 self-stretch overflow-hidden rounded-lg bg-card p-6 sm:flex-row sm:items-start sm:justify-start"
+          data-testid="card"
+        >
+          <div
+            class="h-24 w-24"
+            data-fallback-class="text-4xl"
+            data-name="Test User"
+            data-testid="avatar-with-fallback"
+          />
+          <div
+            class="flex w-full min-w-0 flex-col items-center justify-center sm:items-start sm:justify-start"
+            data-testid="container"
+          >
+            <p
+              class="w-full truncate"
+              data-size="lg"
+              data-testid="typography"
+            >
+              Test User
+            </p>
+            <p
+              class="w-full truncate text-center font-medium text-muted-foreground sm:text-left"
+              data-size="sm"
+              data-testid="typography"
+            >
+              Test bio
+            </p>
+            <button
+              class="mt-2 h-8 w-fit gap-2 rounded-full uppercase"
+              data-testid="button-secondary"
+              data-variant="secondary"
+            >
+              <svg
+                class="h-4 w-4"
+                data-testid="key-icon"
+              />
+              test...test-pubky-123
+            </button>
+          </div>
+        </div>
+        <button
+          class="w-auto"
+          data-size="lg"
+          data-testid="button-primary"
+          id="welcome-explore-pubky-btn"
+        >
+          <svg
+            class="mr-2 h-4 w-4"
+            data-testid="arrow-right-icon"
+          />
+          Explore Pubky
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+`;

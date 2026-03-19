@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { renderHook } from '@testing-library/react';
+import { renderHook, waitFor } from '@testing-library/react';
 import { useUserProfile } from './useUserProfile';
 import * as Core from '@/core';
 
@@ -8,12 +8,12 @@ import * as Core from '@/core';
 const mockMocks = vi.hoisted(() => {
   const mockUserDetails = { current: undefined as Core.NexusUserDetails | null | undefined };
   const mockGetDetails = vi.fn();
-  const mockGetOrFetchDetails = vi.fn();
+  const mockFetchDetails = vi.fn();
   const mockGetAvatarUrl = vi.fn((userId: string) => `https://example.com/avatar/${userId}`);
   return {
     mockUserDetails,
     mockGetDetails,
-    mockGetOrFetchDetails,
+    mockFetchDetails,
     mockGetAvatarUrl,
   };
 });
@@ -36,7 +36,7 @@ vi.mock('@/core', async (importOriginal) => {
     ...actual,
     UserController: {
       getDetails: mockMocks.mockGetDetails,
-      getOrFetchDetails: mockMocks.mockGetOrFetchDetails,
+      fetchDetails: mockMocks.mockFetchDetails,
     },
     FileController: {
       getAvatarUrl: mockMocks.mockGetAvatarUrl,
@@ -59,7 +59,7 @@ describe('useUserProfile', () => {
     // Default to undefined (simulating query not yet executed)
     mockMocks.mockUserDetails.current = undefined;
     mockMocks.mockGetDetails.mockImplementation(() => Promise.resolve(mockMocks.mockUserDetails.current));
-    mockMocks.mockGetOrFetchDetails.mockResolvedValue(undefined);
+    mockMocks.mockFetchDetails.mockResolvedValue(undefined).mockClear();
   });
 
   describe('Profile data fetching', () => {
@@ -73,14 +73,16 @@ describe('useUserProfile', () => {
       expect(result.current.isLoading).toBe(true);
     });
 
-    it('returns null profile and isLoading false when user not found (null)', () => {
+    it('returns null profile and isLoading false when user not found (null)', async () => {
       // null = query executed but user not found
       mockMocks.mockUserDetails.current = null;
       mockMocks.mockGetDetails.mockResolvedValue(null);
       const { result } = renderHook(() => useUserProfile('test-user-id'));
 
       expect(result.current.profile).toBeNull();
-      expect(result.current.isLoading).toBe(false);
+      await waitFor(() => {
+        expect(result.current.isLoading).toBe(false);
+      });
     });
 
     it('returns profile data when user exists', () => {
@@ -262,12 +264,14 @@ describe('useUserProfile', () => {
       expect(result.current.isLoading).toBe(true);
     });
 
-    it('isLoading is false when user not found (null)', () => {
+    it('isLoading is false when user not found (null)', async () => {
       mockMocks.mockUserDetails.current = null;
       mockMocks.mockGetDetails.mockResolvedValue(null);
       const { result } = renderHook(() => useUserProfile('test-user-id'));
 
-      expect(result.current.isLoading).toBe(false);
+      await waitFor(() => {
+        expect(result.current.isLoading).toBe(false);
+      });
     });
 
     it('isLoading is false when user details are available', () => {
@@ -290,7 +294,7 @@ describe('useUserProfile', () => {
   });
 
   describe('Controller integration', () => {
-    it('triggers UserController.getOrFetchDetails to ensure data exists locally', () => {
+    it('does not call UserController.fetchDetails when data is cached (cache hit optimization)', () => {
       const mockUser: Core.NexusUserDetails = {
         id: 'test-user-id' as Core.Pubky,
         name: 'Test',
@@ -300,14 +304,15 @@ describe('useUserProfile', () => {
         links: null,
         indexed_at: Date.now(),
       };
+
       mockMocks.mockUserDetails.current = mockUser;
-      mockMocks.mockGetDetails.mockResolvedValue(mockUser);
+      mockMocks.mockGetDetails.mockImplementation(() => Promise.resolve(mockMocks.mockUserDetails.current));
 
       renderHook(() => useUserProfile('test-user-id'));
 
-      // UserController.getOrFetchDetails should be called in useEffect to ensure data is cached
-      // Freshness is managed by TTL Coordinator via useTtlSubscription in ProfilePageHeader
-      expect(mockMocks.mockGetOrFetchDetails).toHaveBeenCalledWith({ userId: 'test-user-id' });
+      // Phase 1 optimization: fetchFn is skipped when data is already cached (non-null).
+      // Freshness is managed by TTL Coordinator via useTtlSubscription in ProfilePageHeader.
+      expect(mockMocks.mockFetchDetails).not.toHaveBeenCalled();
     });
   });
 });

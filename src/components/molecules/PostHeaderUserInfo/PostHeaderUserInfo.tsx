@@ -41,7 +41,7 @@ export function PostHeaderUserInfo({
         <Atoms.Link href={profileUrl} onClick={handleLinkClick}>
           <Atoms.Typography
             className={Libs.cn(
-              'block max-w-full cursor-pointer truncate leading-5 font-bold text-foreground hover:underline',
+              'block max-w-full cursor-pointer truncate leading-5 font-bold text-foreground',
               size === 'large' ? 'text-2xl' : 'text-base',
             )}
             overrideDefaults

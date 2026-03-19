@@ -24,10 +24,11 @@ import * as Core from '@/core';
  * }
  * ```
  */
-export function useStreamIdFromFilters(): Core.PostStreamTypes {
+export function useStreamIdFromFilters(contentOverride?: Core.ContentType): Core.PostStreamTypes {
   const sort = Core.useHomeStore((state) => state.sort);
   const reach = Core.useHomeStore((state) => state.reach);
   const content = Core.useHomeStore((state) => state.content);
+  const effectiveContent = contentOverride ?? content;
 
-  return Core.getStreamId(sort, reach, content);
+  return Core.getStreamId(sort, reach, effectiveContent);
 }

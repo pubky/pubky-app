@@ -36,6 +36,14 @@ export class UserController {
   }
 
   /**
+   * Fetch user counts from Nexus and persist locally (network-only, no local read).
+   * Use instead of `getOrFetchCounts` when the caller already knows counts are not cached.
+   */
+  static async fetchCounts(params: Core.TReadProfileParams): Promise<Core.NexusUserCounts | null> {
+    return await Core.UserApplication.fetchCounts(params);
+  }
+
+  /**
    * Get multiple user counts from local database (bulk operation).
    * This is a read-only operation that queries the local cache.
    */
@@ -98,11 +106,36 @@ export class UserController {
   }
 
   /**
+   * Get full user entity from local database or fetch from Nexus batch API.
+   * Persists details, counts, relationships, tags, TTL, and moderation.
+   * Preferred over `getOrFetchDetails` when the caller needs the full entity cached.
+   */
+  static async getOrFetch(params: Core.TReadProfileParams): Promise<Core.NexusUserDetails | null> {
+    return await Core.UserApplication.getOrFetch(params);
+  }
+
+  /**
+   * Fetch full user entity from Nexus batch API and persist locally (network-only, no local read).
+   * Use instead of `getOrFetch` when the caller already knows the user is not cached.
+   */
+  static async fetch(params: Core.TReadProfileParams): Promise<Core.NexusUserDetails | null> {
+    return await Core.UserApplication.fetch(params);
+  }
+
+  /**
    * Get user details from local database or fetch from Nexus API
    * This is a read-only operation that queries the local cache
    */
   static async getOrFetchDetails(param: Core.TReadProfileParams): Promise<Core.NexusUserDetails | null> {
     return await Core.UserApplication.getOrFetchDetails(param);
+  }
+
+  /**
+   * Fetch user details from Nexus and persist locally (network-only, no local read).
+   * Use instead of `getOrFetchDetails` when the caller already knows the user is not cached.
+   */
+  static async fetchDetails(param: Core.TReadProfileParams): Promise<Core.NexusUserDetails | null> {
+    return await Core.UserApplication.fetchDetails(param);
   }
 
   /**
@@ -135,26 +168,6 @@ export class UserController {
       follower,
       followee: normalizedFollowee,
       activeStreamId,
-    });
-  }
-
-  /**
-   * Commit a mute action to indexeddb and the homeserver
-   * @param eventType - The event type (PUT or DELETE)
-   * @param muter - The muter user ID
-   * @param mutee - The mutee user ID
-   */
-  static async commitMute(eventType: HttpMethod, { muter, mutee }: Core.TMuteParams) {
-    // Normalize pubky IDs to ensure consistent format for storage and comparison
-    // This strips any prefix (pubky or pk:) to get the raw 52-character key
-    const normalizedMutee = stripPubkyPrefix(mutee) as Core.Pubky;
-    const { meta, mute } = Core.MuteNormalizer.to({ muter, mutee: normalizedMutee });
-    await Core.UserApplication.commitMute({
-      eventType,
-      muteUrl: meta.url,
-      muteJson: mute.toJson(),
-      muter,
-      mutee: normalizedMutee,
     });
   }
 

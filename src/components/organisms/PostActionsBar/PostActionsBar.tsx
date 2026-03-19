@@ -1,13 +1,57 @@
 'use client';
 
 import { useTranslations } from 'next-intl';
+import { cva } from 'class-variance-authority';
 import * as Atoms from '@/atoms';
 import * as Libs from '@/libs';
 import * as Hooks from '@/hooks';
 import * as Organisms from '@/organisms';
 import type { PostActionsBarProps, ActionButtonConfig } from './PostActionsBar.types';
 
-export function PostActionsBar({ postId, onTagClick, onReplyClick, onRepostClick, className }: PostActionsBarProps) {
+const postActionsLoadingVariants = cva('', {
+  variants: {
+    variant: {
+      default: 'text-muted-foreground',
+      visual: 'text-white/70',
+    },
+  },
+  defaultVariants: {
+    variant: 'default',
+  },
+});
+
+const postActionsButtonVariants = cva('', {
+  variants: {
+    variant: {
+      default: 'border-none shadow-xs',
+      visual: 'border-white/10 bg-black/40 text-white shadow-none hover:bg-black/55',
+    },
+  },
+  defaultVariants: {
+    variant: 'default',
+  },
+});
+
+const postActionsCountVariants = cva('text-xs leading-4 font-bold', {
+  variants: {
+    variant: {
+      default: 'text-muted-foreground',
+      visual: 'text-white/80',
+    },
+  },
+  defaultVariants: {
+    variant: 'default',
+  },
+});
+
+export function PostActionsBar({
+  postId,
+  onTagClick,
+  onReplyClick,
+  onRepostClick,
+  className,
+  variant = 'default',
+}: PostActionsBarProps) {
   const t = useTranslations('common');
   const { postCounts, isLoading: isCountsLoading } = Hooks.usePostCounts(postId);
   const {
@@ -19,10 +63,13 @@ export function PostActionsBar({ postId, onTagClick, onReplyClick, onRepostClick
   const { requireAuth } = Hooks.useRequireAuth();
 
   const isBookmarkBusy = isBookmarkLoading || isBookmarkToggling;
+  const loadingClassName = postActionsLoadingVariants({ variant });
+  const buttonClassName = postActionsButtonVariants({ variant });
+  const countClassName = postActionsCountVariants({ variant });
 
   if (isCountsLoading || !postCounts) {
     return (
-      <Atoms.Container overrideDefaults className="text-muted-foreground">
+      <Atoms.Container overrideDefaults className={loadingClassName}>
         {t('loadingActions')}
       </Atoms.Container>
     );
@@ -31,7 +78,7 @@ export function PostActionsBar({ postId, onTagClick, onReplyClick, onRepostClick
   const commonButtonProps = {
     variant: 'secondary' as const,
     size: 'sm' as const,
-    className: 'border-none shadow-xs',
+    className: buttonClassName,
   };
 
   const tagCount = postCounts.unique_tags ?? 0;
@@ -92,11 +139,7 @@ export function PostActionsBar({ postId, onTagClick, onReplyClick, onRepostClick
           >
             <Icon {...iconProps} />
             {count !== undefined && (
-              <Atoms.Typography
-                as="span"
-                overrideDefaults
-                className="text-xs leading-4 font-bold text-muted-foreground"
-              >
+              <Atoms.Typography as="span" overrideDefaults className={countClassName}>
                 {count}
               </Atoms.Typography>
             )}
