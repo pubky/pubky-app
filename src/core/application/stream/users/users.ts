@@ -132,6 +132,22 @@ export class UserStreamApplication {
   }
 
   /**
+   * Ensures user details are available in cache for the given IDs.
+   * Checks which users are missing from IndexedDB and fetches them from Nexus.
+   *
+   * @param userIds - Array of user IDs to ensure are cached
+   * @param viewerId - Optional viewer ID for relationship data
+   */
+  static async getOrFetchUsers({ userIds, viewerId }: Core.TGetOrFetchUsersParams): Promise<void> {
+    if (userIds.length === 0) return;
+
+    const cacheMissUserIds = await this.getNotPersistedUsersInCache(userIds);
+    if (cacheMissUserIds.length === 0) return;
+
+    await this.fetchMissingUsersFromNexus({ cacheMissUserIds, viewerId });
+  }
+
+  /**
    * Find which users are not yet persisted in cache
    * Used to identify missing user data that needs to be fetched
    *

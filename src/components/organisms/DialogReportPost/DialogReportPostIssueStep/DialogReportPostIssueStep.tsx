@@ -60,6 +60,7 @@ export function DialogReportPostIssueStep({
           return (
             <Atoms.Button
               key={issueType}
+              data-cy={`report-issue-${issueType}`}
               variant="ghost"
               role="option"
               aria-selected={isSelected}
@@ -81,10 +82,17 @@ export function DialogReportPostIssueStep({
       </Atoms.Container>
 
       <Atoms.DialogFooter>
-        <Atoms.Button variant="secondary" size="lg" onClick={onCancel} aria-label={tCommon('cancel')}>
+        <Atoms.Button
+          data-cy="report-issue-step-cancel"
+          variant="secondary"
+          size="lg"
+          onClick={onCancel}
+          aria-label={tCommon('cancel')}
+        >
           {tCommon('cancel')}
         </Atoms.Button>
         <Atoms.Button
+          data-cy="report-issue-step-next"
           variant="dark-outline"
           size="lg"
           onClick={handleNext}

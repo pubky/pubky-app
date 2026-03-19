@@ -31,19 +31,16 @@ export class PostDetailsModel
   static async filterDeleted(postIds: string[]): Promise<string[]> {
     if (postIds.length === 0) return [];
 
-    const results = await Promise.all(
-      postIds.map(async (postId) => {
-        try {
-          const details = await PostDetailsModel.findById(postId);
-          // Keep posts that don't have details (fail-open) or aren't deleted
-          return { postId, isValid: !details || details.content !== Core.DELETED };
-        } catch {
-          // Fail-open: keep posts we can't read
-          return { postId, isValid: true };
-        }
-      }),
-    );
-
-    return results.filter((r) => r.isValid).map((r) => r.postId);
+    try {
+      const detailsById = await PostDetailsModel.findByIdsPreserveOrder(postIds);
+      return postIds.filter((postId, index) => {
+        const details = detailsById[index];
+        // Keep posts that don't have details (fail-open) or aren't deleted
+        return !details || details.content !== Core.DELETED;
+      });
+    } catch {
+      // Fail-open: keep posts we can't read
+      return postIds;
+    }
   }
 }
