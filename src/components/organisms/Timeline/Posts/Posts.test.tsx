@@ -11,18 +11,20 @@ vi.mock('dexie-react-hooks');
 vi.mock('react-virtuoso', () => ({
   Virtuoso: ({
     data,
+    context,
     itemContent,
     components,
   }: {
     data: string[];
+    context?: Record<string, unknown>;
     itemContent: (index: number, item: string) => React.ReactNode;
-    components?: { Footer?: () => React.ReactNode };
+    components?: { Footer?: (props: { context?: Record<string, unknown> }) => React.ReactNode };
   }) => (
     <div data-testid="virtuoso">
       {data?.map((item, index) => (
         <div key={index}>{itemContent(index, item)}</div>
       ))}
-      {components?.Footer?.()}
+      {components?.Footer?.({ context })}
     </div>
   ),
 }));
@@ -52,6 +54,23 @@ vi.mock('@/atoms', () => ({
   ),
 }));
 
+vi.mock('@/components/molecules/Timeline/TimelineVirtuosoFooter', () => ({
+  TimelineVirtuosoFooter: ({
+    context,
+  }: {
+    context?: { loadingMore: boolean; error: string | null; hasMore: boolean; itemCount: number };
+  }) => {
+    if (!context) return null;
+    const { loadingMore, error, hasMore, itemCount } = context;
+    return (
+      <>
+        {loadingMore && <div data-testid="timeline-loading-more">Loading more...</div>}
+        {error && itemCount > 0 && <div data-testid="timeline-error">Error: {error}</div>}
+        {!hasMore && !loadingMore && itemCount > 0 && <div data-testid="timeline-end-message">End of timeline</div>}
+      </>
+    );
+  },
+}));
 vi.mock('@/molecules', () => ({
   TimelineLoading: () => <div data-testid="timeline-loading">Loading...</div>,
   TimelineLoadingMore: () => <div data-testid="timeline-loading-more">Loading more...</div>,

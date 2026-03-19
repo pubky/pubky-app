@@ -22,7 +22,13 @@ import type {
   VisualTimelineTileProps,
   VisualTileVideoProps,
 } from './VisualTimelinePosts.types';
+import {
+  TimelineVirtuosoFooter,
+  type TimelineVirtuosoContext,
+} from '@/components/molecules/Timeline/TimelineVirtuosoFooter';
 import { useVisualFeedTiles } from './useVisualFeedTiles';
+
+const visualVirtuosoComponents = { Footer: TimelineVirtuosoFooter };
 
 function stopPropagation(event: React.SyntheticEvent) {
   event.stopPropagation();
@@ -298,6 +304,13 @@ export function VisualTimelinePosts({
   const showFilteredEmptyState =
     !loading && !error && postIds.length > 0 && rows.length === 0 && !hasMore && !loadingMore && !hasPendingTiles;
 
+  const virtuosoContext: TimelineVirtuosoContext = {
+    loadingMore,
+    error,
+    hasMore,
+    itemCount: rows.length,
+  };
+
   return (
     <Molecules.TimelineStateWrapper
       loading={loading}
@@ -314,6 +327,7 @@ export function VisualTimelinePosts({
             <Virtuoso
               useWindowScroll
               data={rows}
+              context={virtuosoContext}
               overscan={TIMELINE_VIRTUOSO_OVERSCAN_PX}
               computeItemKey={(_index, row) => row.key}
               endReached={() => {
@@ -328,15 +342,7 @@ export function VisualTimelinePosts({
                   ))}
                 </Atoms.Container>
               )}
-              components={{
-                Footer: () => (
-                  <>
-                    {loadingMore && <Molecules.TimelineLoadingMore />}
-                    {error && postIds.length > 0 && <Molecules.TimelineError message={error} />}
-                    {!hasMore && !loadingMore && rows.length > 0 && <Molecules.TimelineEndMessage />}
-                  </>
-                ),
-              }}
+              components={visualVirtuosoComponents}
             />
           </Atoms.Container>
         </Atoms.Container>

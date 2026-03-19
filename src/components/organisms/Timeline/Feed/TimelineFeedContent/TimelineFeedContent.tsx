@@ -65,10 +65,21 @@ export function TimelineFeedWithStream({
  */
 function TimelineFeedContent({ streamId, variant, tagsLayout, layoutResolution, children }: TimelineFeedContentProps) {
   const isVisualActive = layoutResolution?.isVisualActive ?? false;
-  const { postIds, loading, loadingMore, error, hasMore, loadMore, refresh, prependPosts, removePosts } =
-    Hooks.useStreamPagination({
-      streamId,
-    });
+  const {
+    postIds: rawPostIds,
+    loading,
+    loadingMore,
+    error,
+    hasMore,
+    loadMore,
+    refresh,
+    prependPosts,
+    removePosts,
+  } = Hooks.useStreamPagination({
+    streamId,
+  });
+
+  const postIds = [...new Set(rawPostIds)];
 
   const { mutedUserIdSet } = Hooks.useMutedUsers();
 
@@ -85,12 +96,12 @@ function TimelineFeedContent({ streamId, variant, tagsLayout, layoutResolution, 
     if (variant === TIMELINE_FEED_VARIANT.PROFILE) return;
     if (mutedUserIdSet.size === 0) return;
 
-    const postIdsToRemove = postIds.filter((id) => Core.MuteFilter.isPostMuted(id, mutedUserIdSet));
+    const postIdsToRemove = rawPostIds.filter((id) => Core.MuteFilter.isPostMuted(id, mutedUserIdSet));
 
     if (postIdsToRemove.length > 0) {
       removePosts(postIdsToRemove);
     }
-  }, [mutedUserIdSet, postIds, removePosts, variant]);
+  }, [mutedUserIdSet, rawPostIds, removePosts, variant]);
 
   const contextValue: TimelineFeedContextValue = {
     prependPosts,

@@ -147,10 +147,10 @@ describe('TimelineFeedContent', () => {
       });
     });
 
-    it('passes postIds from useStreamPagination directly to TimelinePosts', () => {
+    it('deduplicates post IDs', () => {
       mockUseStreamPagination.mockReturnValue({
         ...defaultPaginationResult,
-        postIds: ['post1', 'post2', 'post3'],
+        postIds: ['post1', 'post2', 'post1'],
       });
       render(
         <TimelineFeedWithStream
@@ -159,7 +159,7 @@ describe('TimelineFeedContent', () => {
           tagsLayout="inline"
         />,
       );
-      expect(screen.getByTestId('post-count')).toHaveTextContent('3');
+      expect(screen.getByTestId('post-count')).toHaveTextContent('2');
     });
 
     it('passes post count to TimelinePosts', () => {

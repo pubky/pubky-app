@@ -14,18 +14,20 @@ const mockPostHeaderUserInfo = vi.fn(({ timeAgo }: { timeAgo?: string }) => (
 vi.mock('react-virtuoso', () => ({
   Virtuoso: ({
     data,
+    context,
     itemContent,
     components,
   }: {
     data: unknown[];
+    context?: Record<string, unknown>;
     itemContent: (index: number, item: unknown) => React.ReactNode;
-    components?: { Footer?: () => React.ReactNode };
+    components?: { Footer?: (props: { context?: Record<string, unknown> }) => React.ReactNode };
   }) => (
     <div data-testid="virtuoso">
       {data?.map((item, index) => (
         <div key={index}>{itemContent(index, item)}</div>
       ))}
-      {components?.Footer?.()}
+      {components?.Footer?.({ context })}
     </div>
   ),
 }));
@@ -62,6 +64,23 @@ vi.mock('@/atoms', () => ({
   Typography: (props: React.HTMLAttributes<HTMLElement>) => <span {...props} />,
 }));
 
+vi.mock('@/components/molecules/Timeline/TimelineVirtuosoFooter', () => ({
+  TimelineVirtuosoFooter: ({
+    context,
+  }: {
+    context?: { loadingMore: boolean; error: string | null; hasMore: boolean; itemCount: number };
+  }) => {
+    if (!context) return null;
+    const { loadingMore, error, hasMore, itemCount } = context;
+    return (
+      <>
+        {loadingMore && <div data-testid="timeline-loading-more">Loading more</div>}
+        {error && itemCount > 0 && <div data-testid="timeline-error">{error}</div>}
+        {!hasMore && !loadingMore && itemCount > 0 && <div data-testid="timeline-end">End</div>}
+      </>
+    );
+  },
+}));
 vi.mock('@/molecules', () => ({
   TimelineStateWrapper: ({
     children,

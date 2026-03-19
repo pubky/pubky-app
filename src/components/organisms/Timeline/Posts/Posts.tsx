@@ -6,6 +6,10 @@ import * as Atoms from '@/atoms';
 import * as Molecules from '@/molecules';
 import * as Organisms from '@/organisms';
 import * as Hooks from '@/hooks';
+import {
+  TimelineVirtuosoFooter,
+  type TimelineVirtuosoContext,
+} from '@/components/molecules/Timeline/TimelineVirtuosoFooter';
 import type { TagsLayout } from '../../PostMain/PostMain.types';
 
 interface TimelinePostsProps {
@@ -17,6 +21,8 @@ interface TimelinePostsProps {
   loadMore: () => Promise<void>;
   tagsLayout?: TagsLayout;
 }
+
+const virtuosoComponents = { Footer: TimelineVirtuosoFooter };
 
 /**
  * TimelinePosts
@@ -36,6 +42,13 @@ export function TimelinePosts({
 }: TimelinePostsProps) {
   const { navigateToPost } = Hooks.usePostNavigation();
 
+  const virtuosoContext: TimelineVirtuosoContext = {
+    loadingMore,
+    error,
+    hasMore,
+    itemCount: postIds.length,
+  };
+
   return (
     <Molecules.TimelineStateWrapper loading={loading} error={error} hasItems={postIds.length > 0}>
       <Atoms.Container data-cy="timeline-container">
@@ -43,6 +56,7 @@ export function TimelinePosts({
           <Virtuoso
             useWindowScroll
             data={postIds}
+            context={virtuosoContext}
             overscan={TIMELINE_VIRTUOSO_OVERSCAN_PX}
             computeItemKey={(_index, postId) => `main_${postId}`}
             endReached={() => {
@@ -61,15 +75,7 @@ export function TimelinePosts({
                 <Organisms.TimelinePostReplies postId={postId} onPostClick={navigateToPost} tagsLayout={tagsLayout} />
               </Atoms.Container>
             )}
-            components={{
-              Footer: () => (
-                <>
-                  {loadingMore && <Molecules.TimelineLoadingMore />}
-                  {error && postIds.length > 0 && <Molecules.TimelineError message={error} />}
-                  {!hasMore && !loadingMore && postIds.length > 0 && <Molecules.TimelineEndMessage />}
-                </>
-              ),
-            }}
+            components={virtuosoComponents}
           />
         </Atoms.Container>
       </Atoms.Container>
