@@ -1,6 +1,7 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import * as Core from '@/core';
+import * as Hooks from '@/hooks';
 import { NewPostsSection } from './NewPostsSection';
 
 vi.mock('next-intl', () => ({
@@ -10,6 +11,12 @@ vi.mock('next-intl', () => ({
 vi.mock('@/hooks/useIsScrolledFromTop', () => ({
   useIsScrolledFromTop: vi.fn(() => false),
 }));
+
+vi.mock('@/hooks/useUnreadPosts', () => ({
+  useUnreadPosts: vi.fn(() => ({ unreadPostIds: [], unreadCount: 0 })),
+}));
+
+const mockUseUnreadPosts = vi.mocked(Hooks.useUnreadPosts);
 
 vi.mock('@/molecules', () => ({
   NewPostsButton: ({
@@ -49,7 +56,6 @@ vi.mock('@/core', async (importOriginal) => {
 
 const defaultProps = {
   streamId: 'timeline:all:all' as Core.PostStreamId,
-  unreadPostIds: [] as string[],
   postIds: ['post1', 'post2'],
   mutedUserIdSet: new Set<string>(),
   loading: false,
@@ -59,6 +65,7 @@ const defaultProps = {
 describe('NewPostsSection', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    mockUseUnreadPosts.mockReturnValue({ unreadPostIds: [], unreadCount: 0 });
     window.scrollTo = vi.fn();
   });
 
@@ -68,30 +75,35 @@ describe('NewPostsSection', () => {
   });
 
   it('renders the new posts button when there are unread posts', () => {
-    render(<NewPostsSection {...defaultProps} unreadPostIds={['new1', 'new2']} />);
+    mockUseUnreadPosts.mockReturnValue({ unreadPostIds: ['new1', 'new2'], unreadCount: 2 });
+    render(<NewPostsSection {...defaultProps} />);
     expect(screen.getByTestId('new-posts-button')).toBeInTheDocument();
     expect(screen.getByTestId('new-posts-button')).toHaveAttribute('data-count', '2');
   });
 
   it('does not show button for already-displayed posts', () => {
-    render(<NewPostsSection {...defaultProps} unreadPostIds={['post1']} />);
+    mockUseUnreadPosts.mockReturnValue({ unreadPostIds: ['post1'], unreadCount: 1 });
+    render(<NewPostsSection {...defaultProps} />);
     expect(screen.queryByTestId('new-posts-button')).not.toBeInTheDocument();
   });
 
   it('hides the button while loading', () => {
-    render(<NewPostsSection {...defaultProps} unreadPostIds={['new1']} loading={true} />);
+    mockUseUnreadPosts.mockReturnValue({ unreadPostIds: ['new1'], unreadCount: 1 });
+    render(<NewPostsSection {...defaultProps} loading={true} />);
     expect(screen.queryByTestId('new-posts-button')).not.toBeInTheDocument();
   });
 
   it('filters muted users from new post count', () => {
+    mockUseUnreadPosts.mockReturnValue({ unreadPostIds: ['new1', 'muted1'], unreadCount: 2 });
     vi.mocked(Core.MuteFilter.filterPostsSafe).mockReturnValue(['new1']);
-    render(<NewPostsSection {...defaultProps} unreadPostIds={['new1', 'muted1']} />);
+    render(<NewPostsSection {...defaultProps} />);
     expect(screen.getByTestId('new-posts-button')).toHaveAttribute('data-count', '1');
   });
 
   it('calls stream controllers and prependPosts on click', async () => {
+    mockUseUnreadPosts.mockReturnValue({ unreadPostIds: ['new1'], unreadCount: 1 });
     const prependPosts = vi.fn();
-    render(<NewPostsSection {...defaultProps} unreadPostIds={['new1']} prependPosts={prependPosts} />);
+    render(<NewPostsSection {...defaultProps} prependPosts={prependPosts} />);
 
     fireEvent.click(screen.getByTestId('new-posts-button'));
 
@@ -107,7 +119,8 @@ describe('NewPostsSection', () => {
   });
 
   it('scrolls to top after loading new posts', async () => {
-    render(<NewPostsSection {...defaultProps} unreadPostIds={['new1']} />);
+    mockUseUnreadPosts.mockReturnValue({ unreadPostIds: ['new1'], unreadCount: 1 });
+    render(<NewPostsSection {...defaultProps} />);
 
     fireEvent.click(screen.getByTestId('new-posts-button'));
 
@@ -120,6 +133,7 @@ describe('NewPostsSection', () => {
 describe('NewPostsSection - Snapshots', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    mockUseUnreadPosts.mockReturnValue({ unreadPostIds: [], unreadCount: 0 });
     vi.mocked(Core.MuteFilter.filterPostsSafe).mockImplementation((ids: string[]) => ids);
   });
 
@@ -129,7 +143,8 @@ describe('NewPostsSection - Snapshots', () => {
   });
 
   it('matches snapshot with new posts visible', () => {
-    const { container } = render(<NewPostsSection {...defaultProps} unreadPostIds={['new1', 'new2', 'new3']} />);
+    mockUseUnreadPosts.mockReturnValue({ unreadPostIds: ['new1', 'new2', 'new3'], unreadCount: 3 });
+    const { container } = render(<NewPostsSection {...defaultProps} />);
     expect(container).toMatchSnapshot();
   });
 });

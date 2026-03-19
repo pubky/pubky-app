@@ -8,7 +8,6 @@ import * as Hooks from '@/hooks';
 
 interface NewPostsSectionProps {
   streamId: Core.PostStreamId;
-  unreadPostIds: string[];
   postIds: string[];
   mutedUserIdSet: Set<string>;
   loading: boolean;
@@ -19,16 +18,11 @@ interface NewPostsSectionProps {
  * NewPostsSection
  *
  * Isolated component for the "New Posts" button.
- * Owns useIsScrolledFromTop so scroll events don't rerender the post list.
+ * Owns useIsScrolledFromTop and useUnreadPosts so neither scroll events
+ * nor coordinator polls propagate re-renders to the parent feed content.
  */
-export function NewPostsSection({
-  streamId,
-  unreadPostIds,
-  postIds,
-  mutedUserIdSet,
-  loading,
-  prependPosts,
-}: NewPostsSectionProps) {
+export function NewPostsSection({ streamId, postIds, mutedUserIdSet, loading, prependPosts }: NewPostsSectionProps) {
+  const { unreadPostIds } = Hooks.useUnreadPosts({ streamId });
   const t = useTranslations('toast.post');
   const isScrolled = Hooks.useIsScrolledFromTop();
 

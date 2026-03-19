@@ -11,13 +11,30 @@ const mockPostHeaderUserInfo = vi.fn(({ timeAgo }: { timeAgo?: string }) => (
   <div data-testid="visual-overlay-header">{timeAgo ? `Header:${timeAgo}` : 'Header'}</div>
 ));
 
+vi.mock('react-virtuoso', () => ({
+  Virtuoso: ({
+    data,
+    itemContent,
+    components,
+  }: {
+    data: unknown[];
+    itemContent: (index: number, item: unknown) => React.ReactNode;
+    components?: { Footer?: () => React.ReactNode };
+  }) => (
+    <div data-testid="virtuoso">
+      {data?.map((item, index) => (
+        <div key={index}>{itemContent(index, item)}</div>
+      ))}
+      {components?.Footer?.()}
+    </div>
+  ),
+}));
 vi.mock('@/hooks', async (importOriginal) => {
   const actual = await importOriginal<typeof import('@/hooks')>();
   return {
     ...actual,
     useVisualFeedTiles: undefined,
     usePostNavigation: () => ({ navigateToPost: mockNavigateToPost }),
-    useInfiniteScroll: () => ({ sentinelRef: vi.fn() }),
     useIsTouchDevice: () => mockUseIsTouchDevice(),
     useViewportObserver: () => ({ ref: vi.fn(), isVisible: true }),
     useUserDetails: () => ({ userDetails: { id: 'author', name: 'Author', image: null } }),

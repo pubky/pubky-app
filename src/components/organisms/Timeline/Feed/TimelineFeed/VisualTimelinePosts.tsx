@@ -1,6 +1,8 @@
 'use client';
 
 import * as React from 'react';
+import { Virtuoso } from 'react-virtuoso';
+import { TIMELINE_VIRTUOSO_OVERSCAN_PX } from '@/config';
 import * as Atoms from '@/atoms';
 import * as Core from '@/core';
 import * as Hooks from '@/hooks';
@@ -293,14 +295,6 @@ export function VisualTimelinePosts({
   const { navigateToPost } = Hooks.usePostNavigation();
   const { rows, hasPendingTiles } = useVisualFeedTiles({ postIds, hasMore });
 
-  const { sentinelRef } = Hooks.useInfiniteScroll({
-    onLoadMore: loadMore,
-    hasMore,
-    isLoading: loadingMore,
-    threshold: 3000,
-    debounceMs: 20,
-  });
-
   const showFilteredEmptyState =
     !loading && !error && postIds.length > 0 && rows.length === 0 && !hasMore && !loadingMore && !hasPendingTiles;
 
@@ -314,24 +308,36 @@ export function VisualTimelinePosts({
         <Atoms.Container data-cy="visual-feed-container">
           <Atoms.Container
             overrideDefaults
-            className="mx-auto flex w-full flex-col gap-6"
+            className="mx-auto w-full"
             style={{ maxWidth: `${VISUAL_GRID_MAX_WIDTH_PX}px` }}
           >
-            {rows.map((row) => (
-              <Atoms.Container key={row.key} overrideDefaults className="grid grid-cols-12 gap-6">
-                {row.cells.map((cell) => (
-                  <VisualTimelineRow key={cell.key} cell={cell} onNavigate={navigateToPost} />
-                ))}
-              </Atoms.Container>
-            ))}
-
-            {loadingMore && <Molecules.TimelineLoadingMore />}
-
-            {error && postIds.length > 0 && <Molecules.TimelineError message={error} />}
-
-            {!hasMore && !loadingMore && rows.length > 0 && <Molecules.TimelineEndMessage />}
-
-            <Atoms.Container overrideDefaults className="h-5" ref={sentinelRef} />
+            <Virtuoso
+              useWindowScroll
+              data={rows}
+              overscan={TIMELINE_VIRTUOSO_OVERSCAN_PX}
+              computeItemKey={(_index, row) => row.key}
+              endReached={() => {
+                if (!loadingMore && hasMore) {
+                  void loadMore();
+                }
+              }}
+              itemContent={(_index, row) => (
+                <Atoms.Container overrideDefaults className="grid grid-cols-12 gap-6 pb-6">
+                  {row.cells.map((cell) => (
+                    <VisualTimelineRow key={cell.key} cell={cell} onNavigate={navigateToPost} />
+                  ))}
+                </Atoms.Container>
+              )}
+              components={{
+                Footer: () => (
+                  <>
+                    {loadingMore && <Molecules.TimelineLoadingMore />}
+                    {error && postIds.length > 0 && <Molecules.TimelineError message={error} />}
+                    {!hasMore && !loadingMore && rows.length > 0 && <Molecules.TimelineEndMessage />}
+                  </>
+                ),
+              }}
+            />
           </Atoms.Container>
         </Atoms.Container>
       ) : null}
