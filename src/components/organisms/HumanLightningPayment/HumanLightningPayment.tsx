@@ -143,7 +143,10 @@ export const HumanLightningPayment = ({ onBack, onSuccess }: HumanLightningPayme
       >
         {/* Payment QR code */}
 
-        <Atoms.Container overrideDefaults={true} className="flex h-full flex-col items-center justify-center">
+        <Atoms.Container
+          overrideDefaults={true}
+          className="flex h-full w-full flex-col items-center justify-center sm:w-auto"
+        >
           {isLoading && <QRCodeSkeleton />}
           {!isLoading &&
             verification &&
