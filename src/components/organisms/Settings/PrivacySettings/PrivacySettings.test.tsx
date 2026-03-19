@@ -3,7 +3,7 @@ import { render, screen, fireEvent } from '@testing-library/react';
 import { PrivacySettings } from './PrivacySettings';
 import { defaultPrivacyPreferences } from '@/core/stores/settings/settings.types';
 
-// Mock settings store
+// Mock settings store and hook
 const mockSetShowConfirm = vi.fn();
 const mockSetBlurCensored = vi.fn();
 const mockSetSignOutInactive = vi.fn();
@@ -22,11 +22,11 @@ vi.mock('@/core', async (importOriginal) => {
   };
 });
 
-describe('PrivacySettings', () => {
-  beforeEach(() => {
-    vi.clearAllMocks();
-    mockUseSettingsStore.mockReturnValue({
-      privacy: defaultPrivacyPreferences,
+vi.mock('@/hooks/useSettingsActions', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('@/hooks/useSettingsActions')>();
+  return {
+    ...actual,
+    useSettingsActions: () => ({
       setShowConfirm: mockSetShowConfirm,
       setBlurCensored: mockSetBlurCensored,
       setSignOutInactive: mockSetSignOutInactive,
@@ -35,6 +35,15 @@ describe('PrivacySettings', () => {
       setHideActiveFriends: mockSetHideActiveFriends,
       setHideSearch: mockSetHideSearch,
       setNeverShowPosts: mockSetNeverShowPosts,
+    }),
+  };
+});
+
+describe('PrivacySettings', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    mockUseSettingsStore.mockReturnValue({
+      privacy: defaultPrivacyPreferences,
     });
   });
 
@@ -54,7 +63,7 @@ describe('PrivacySettings', () => {
   it('calls setShowConfirm when toggling confirmation switch', () => {
     const { container } = render(<PrivacySettings />);
 
-    const confirmSwitch = container.querySelector('#show-confirmation-switch');
+    const confirmSwitch = container.querySelector('#privacy-switch-showConfirm');
     fireEvent.click(confirmSwitch!);
 
     expect(mockSetShowConfirm).toHaveBeenCalledWith(false);
@@ -63,7 +72,7 @@ describe('PrivacySettings', () => {
   it('calls setBlurCensored when toggling blur switch', () => {
     const { container } = render(<PrivacySettings />);
 
-    const blurSwitch = container.querySelector('#blur-censored-switch');
+    const blurSwitch = container.querySelector('#privacy-switch-blurCensored');
     fireEvent.click(blurSwitch!);
 
     expect(mockSetBlurCensored).toHaveBeenCalledWith(false);
@@ -76,20 +85,12 @@ describe('PrivacySettings', () => {
         showConfirm: false,
         blurCensored: false,
       },
-      setShowConfirm: mockSetShowConfirm,
-      setBlurCensored: mockSetBlurCensored,
-      setSignOutInactive: mockSetSignOutInactive,
-      setRequirePin: mockSetRequirePin,
-      setHideWhoToFollow: mockSetHideWhoToFollow,
-      setHideActiveFriends: mockSetHideActiveFriends,
-      setHideSearch: mockSetHideSearch,
-      setNeverShowPosts: mockSetNeverShowPosts,
     });
 
     const { container } = render(<PrivacySettings />);
 
-    const confirmSwitch = container.querySelector('#show-confirmation-switch');
-    const blurSwitch = container.querySelector('#blur-censored-switch');
+    const confirmSwitch = container.querySelector('#privacy-switch-showConfirm');
+    const blurSwitch = container.querySelector('#privacy-switch-blurCensored');
 
     expect(confirmSwitch).toHaveAttribute('aria-checked', 'false');
     expect(blurSwitch).toHaveAttribute('aria-checked', 'false');
@@ -101,19 +102,11 @@ describe('PrivacySettings', () => {
         ...defaultPrivacyPreferences,
         showConfirm: false,
       },
-      setShowConfirm: mockSetShowConfirm,
-      setBlurCensored: mockSetBlurCensored,
-      setSignOutInactive: mockSetSignOutInactive,
-      setRequirePin: mockSetRequirePin,
-      setHideWhoToFollow: mockSetHideWhoToFollow,
-      setHideActiveFriends: mockSetHideActiveFriends,
-      setHideSearch: mockSetHideSearch,
-      setNeverShowPosts: mockSetNeverShowPosts,
     });
 
     const { container } = render(<PrivacySettings />);
 
-    const confirmSwitch = container.querySelector('#show-confirmation-switch');
+    const confirmSwitch = container.querySelector('#privacy-switch-showConfirm');
     fireEvent.click(confirmSwitch!);
 
     expect(mockSetShowConfirm).toHaveBeenCalledWith(true);
@@ -125,14 +118,6 @@ describe('PrivacySettings - Snapshots', () => {
     vi.clearAllMocks();
     mockUseSettingsStore.mockReturnValue({
       privacy: defaultPrivacyPreferences,
-      setShowConfirm: mockSetShowConfirm,
-      setBlurCensored: mockSetBlurCensored,
-      setSignOutInactive: mockSetSignOutInactive,
-      setRequirePin: mockSetRequirePin,
-      setHideWhoToFollow: mockSetHideWhoToFollow,
-      setHideActiveFriends: mockSetHideActiveFriends,
-      setHideSearch: mockSetHideSearch,
-      setNeverShowPosts: mockSetNeverShowPosts,
     });
   });
 

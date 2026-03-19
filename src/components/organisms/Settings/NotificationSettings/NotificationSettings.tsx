@@ -2,13 +2,15 @@
 
 import { useTranslations } from 'next-intl';
 import * as Molecules from '@/molecules';
-import * as Core from '@/core';
+import { useSettingsStore } from '@/core';
+import { useSettingsActions } from '@/hooks/useSettingsActions';
 import { NOTIFICATION_LABEL_KEYS } from './NotificationSettings.constants';
 import type { NotificationType } from './NotificationSettings.types';
 
 export function NotificationSettings() {
   const t = useTranslations('notifications.settings');
-  const { notifications, setNotificationPreference } = Core.useSettingsStore();
+  const { notifications } = useSettingsStore();
+  const { setNotificationPreference } = useSettingsActions();
 
   const handleToggle = (type: NotificationType) => {
     setNotificationPreference(type, !notifications[type]);

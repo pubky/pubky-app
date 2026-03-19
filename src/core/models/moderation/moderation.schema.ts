@@ -34,13 +34,8 @@ export interface ModerationModelSchema {
 /**
  * Dexie table schema for moderation
  * - Primary key: id
- * - Indexed: type (for filtering by content type)
- * - Indexed: is_blurred (for filtering blurred items)
- * - Indexed: created_at (for sorting)
  */
 export const moderationTableSchema = `
   &id,
-  type,
-  is_blurred,
-  created_at
+  type
 `;
