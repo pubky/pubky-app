@@ -32,6 +32,7 @@ describe('useReplyStream', () => {
     vi.mocked(useLiveQuery).mockReturnValueOnce({
       replyIds: ['author:reply-1', 'author:reply-2'],
       mutedRepliesCount: 1,
+      localTotalCount: 2,
     });
 
     const { result } = renderHook(() => useReplyStream('author:post-1', { maxReplies: 3 }));
@@ -49,6 +50,7 @@ describe('useReplyStream', () => {
     vi.mocked(useLiveQuery).mockReturnValueOnce({
       replyIds: [],
       mutedRepliesCount: 0,
+      localTotalCount: 0,
     });
 
     const { result } = renderHook(() => useReplyStream('author:post-1', { maxReplies: 3, enabled: false }));
@@ -65,6 +67,7 @@ describe('useReplyStream', () => {
     vi.mocked(useLiveQuery).mockReturnValue({
       replyIds: ['author:reply-1', 'author:reply-2'],
       mutedRepliesCount: 0,
+      localTotalCount: 2,
     });
 
     vi.spyOn(Core, 'buildPostReplyStreamId').mockReturnValue('stream:author:post-1');
@@ -101,6 +104,7 @@ describe('useReplyStream', () => {
     vi.mocked(useLiveQuery).mockReturnValue({
       replyIds: ['author:reply-1', 'author:reply-2', 'author:reply-3'],
       mutedRepliesCount: 0,
+      localTotalCount: 3,
     });
 
     vi.spyOn(Core, 'buildPostReplyStreamId').mockReturnValue('stream:author:post-1');
@@ -132,6 +136,7 @@ describe('useReplyStream', () => {
     vi.mocked(useLiveQuery).mockReturnValue({
       replyIds: ['author:reply-1', 'author:reply-2', 'author:reply-3'],
       mutedRepliesCount: 0,
+      localTotalCount: 3,
     });
 
     vi.spyOn(Core, 'buildPostReplyStreamId').mockReturnValue('stream:author:post-1');
@@ -165,6 +170,7 @@ describe('useReplyStream', () => {
     vi.mocked(useLiveQuery).mockReturnValue({
       replyIds: ['author:reply-1', 'author:reply-2', 'author:reply-3'],
       mutedRepliesCount: 0,
+      localTotalCount: 3,
     });
 
     vi.spyOn(Core, 'buildPostReplyStreamId').mockReturnValue('stream:author:post-1');

@@ -77,7 +77,7 @@ export const PostThreadConnector = ({
 
   switch (variant) {
     case POST_THREAD_CONNECTOR_VARIANTS.LAST:
-      // Last variant - shows a rounded corner at the end
+      // Last variant - shows a rounded corner at the end, aligned with action buttons
       return (
         <Atoms.Container {...baseProps}>
           <InnerContainer>
@@ -86,7 +86,8 @@ export const PostThreadConnector = ({
               <Libs.RoundedCorner />
             </Atoms.Container>
           </InnerContainer>
-          <Spacer />
+          {/* Fixed spacer so the curve aligns with action buttons */}
+          <Atoms.Container className="h-[28px] w-3 shrink-0" overrideDefaults />
         </Atoms.Container>
       );
 

@@ -28,18 +28,21 @@ export function ReplyWithNested({
   const { nestedReplyIds, hasMoreReplies, hasNestedReplies, replyCount, isExpandingAll, expandAll } =
     Hooks.useNestedReplies(replyId, { depth, maxDepth });
 
-  // Local expand/collapse state — set once when replyCount first becomes available.
+  // Local expand/collapse state — set once when replies are first available.
   // Until initialized, we skip rendering the nested section to avoid a flash
   // (starting collapsed then immediately animating to expanded).
+  // Use replyCount (from postCounts) when available, otherwise fall back to the
+  // number of locally cached reply IDs — postCounts can lag behind the cache.
   const [initialized, setInitialized] = useState(false);
   const [expanded, setExpanded] = useState(false);
+  const effectiveReplyCount = replyCount > 0 ? replyCount : nestedReplyIds.length;
 
   useEffect(() => {
-    if (!initialized && replyCount > 0) {
+    if (!initialized && effectiveReplyCount > 0) {
       setInitialized(true);
-      setExpanded(replyCount < AUTO_COLLAPSE_THRESHOLD);
+      setExpanded(effectiveReplyCount < AUTO_COLLAPSE_THRESHOLD);
     }
-  }, [initialized, replyCount]);
+  }, [initialized, effectiveReplyCount]);
 
   const canShowToggle = hasNestedReplies && depth < maxDepth;
 
@@ -56,11 +59,7 @@ export function ReplyWithNested({
         />
         {/* Toggle on the connector line, just above the rounded corner */}
         {canShowToggle && (
-          <Atoms.Container
-            overrideDefaults
-            className="absolute left-0 z-10 -translate-x-1/2"
-            style={{ top: 'calc(50% - 50px)' }}
-          >
+          <Atoms.Container overrideDefaults className="absolute bottom-[24px] left-0 z-10 -translate-x-1/2">
             <Molecules.ThreadExpandToggle expanded={expanded} onToggle={() => setExpanded((prev) => !prev)} />
           </Atoms.Container>
         )}

@@ -8,7 +8,6 @@ import * as Libs from '@/libs';
 import { SinglePostArticle } from '../SinglePostArticle';
 import { SinglePostCard } from '../SinglePostCard';
 import { SinglePostParticipants } from '../SinglePostParticipants';
-import { QuickReply } from '../QuickReply';
 import { ThreadTree } from '../ThreadTree';
 import { PostPageHeader } from '../PostPageHeader';
 import type { SinglePostContentProps } from './SinglePostContent.types';
@@ -36,10 +35,6 @@ export function SinglePostContent({ postId }: SinglePostContentProps) {
   // Check if parent post is deleted to determine replyability
   const { postDetails } = Hooks.usePostDetails(postId);
   const isDeleted = Libs.isPostDeleted(postDetails?.content);
-
-  // Check reply count to determine QuickReply connector variant
-  const { postCounts } = Hooks.usePostCounts(isAuthenticated ? postId : null);
-  const hasReplies = (postCounts?.replies ?? 0) > 0;
 
   // TODO - Add loading skeleton
   if (!postDetails) return t('loadingPost');
@@ -70,26 +65,10 @@ export function SinglePostContent({ postId }: SinglePostContentProps) {
       {/* Replies section - only visible for authenticated users */}
       {isAuthenticated && (
         <Atoms.Container overrideDefaults className="flex gap-6">
-          {/* Left column - QuickReply and Replies thread connected to main post (larger) */}
+          {/* Left column - Replies thread with QuickReply at the end (larger) */}
           <Atoms.Container className="w-full min-w-0 flex-1 gap-0 overflow-hidden">
-            {/* QuickReply directly under main post (if parent not deleted) */}
-            {!isDeleted && (
-              <Atoms.Container overrideDefaults className="ml-3">
-                <Atoms.PostThreadSpacer />
-                <QuickReply
-                  parentPostId={postId}
-                  connectorVariant={
-                    hasReplies
-                      ? Atoms.POST_THREAD_CONNECTOR_VARIANTS.REGULAR
-                      : Atoms.POST_THREAD_CONNECTOR_VARIANTS.LAST
-                  }
-                />
-              </Atoms.Container>
-            )}
-
-            {/* Thread tree: Level 1 replies with nested Level 2 */}
             <Atoms.Container overrideDefaults className="ml-3">
-              <ThreadTree postId={postId} showQuickReply={false} />
+              <ThreadTree postId={postId} showQuickReply={!isDeleted} />
             </Atoms.Container>
           </Atoms.Container>
 

@@ -52,15 +52,15 @@ export function useReplyStream(
   // ADR-0004 temporary exception:
   // We currently use MuteFilter directly from UI hooks for pure post-ID filtering.
   // A follow-up should move this behind a controller/pipes facade.
-  const { replyIds, mutedRepliesCount } = useLiveQuery(
+  const { replyIds, mutedRepliesCount, localTotalCount } = useLiveQuery(
     async () => {
       try {
-        if (!postId || !enabled) return { replyIds: [], mutedRepliesCount: 0 };
+        if (!postId || !enabled) return { replyIds: [], mutedRepliesCount: 0, localTotalCount: 0 };
 
         const streamId = Core.buildPostReplyStreamId(postId);
         const stream = await Core.StreamPostsController.getLocalStream({ streamId });
 
-        if (!stream || stream.stream.length === 0) return { replyIds: [], mutedRepliesCount: 0 };
+        if (!stream || stream.stream.length === 0) return { replyIds: [], mutedRepliesCount: 0, localTotalCount: 0 };
 
         const chronological = [...stream.stream].reverse();
         const filtered = Core.MuteFilter.filterPostsSafe(chronological, mutedUserIdSet);
@@ -72,14 +72,15 @@ export function useReplyStream(
         return {
           replyIds: showAll ? filtered : filtered.slice(0, maxReplies),
           mutedRepliesCount: mutedCount,
+          localTotalCount: filtered.length,
         };
       } catch (error) {
         Libs.Logger.error('[useReplyStream] Failed to query replies', { postId, error });
-        return { replyIds: [], mutedRepliesCount: 0 };
+        return { replyIds: [], mutedRepliesCount: 0, localTotalCount: 0 };
       }
     },
     [postId, maxReplies, mutedUserIdSet, showAll, enabled],
-    { replyIds: [], mutedRepliesCount: 0 },
+    { replyIds: [], mutedRepliesCount: 0, localTotalCount: 0 },
   );
 
   // Fetch initial replies from Nexus if not enough are cached locally.
@@ -190,8 +191,11 @@ export function useReplyStream(
     setStreamExhausted(reachedEnd);
   }
 
-  // Reactively prune muted replies
-  const adjustedTotalCount = Math.max(0, totalReplyCount - mutedRepliesCount);
+  // Reactively prune muted replies.
+  // Use the higher of server count vs local cache count — postCounts can be stale
+  // (e.g. new replies added since last count sync).
+  const serverAdjusted = Math.max(0, totalReplyCount - mutedRepliesCount);
+  const adjustedTotalCount = Math.max(serverAdjusted, localTotalCount);
   // Don't show "+N more" if we've already exhausted the Nexus stream
   // (postCounts.replies may include deleted replies that Nexus no longer returns)
   const hasMore = !streamExhausted && adjustedTotalCount > replyIds.length;

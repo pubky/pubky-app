@@ -32,6 +32,7 @@ describe('useNestedReplies', () => {
     vi.mocked(useLiveQuery).mockReturnValueOnce({
       replyIds: ['author:nested-1', 'author:nested-2'],
       mutedRepliesCount: 1,
+      localTotalCount: 2,
     });
 
     const { result } = renderHook(() => useNestedReplies('author:reply-1'));
@@ -49,6 +50,7 @@ describe('useNestedReplies', () => {
     vi.mocked(useLiveQuery).mockReturnValueOnce({
       replyIds: [],
       mutedRepliesCount: 0,
+      localTotalCount: 0,
     });
 
     renderHook(() => useNestedReplies('author:reply-1', { depth: 1, maxDepth: 1 }));
@@ -64,6 +66,7 @@ describe('useNestedReplies', () => {
     vi.mocked(useLiveQuery).mockReturnValue({
       replyIds: ['author:nested-1', 'author:nested-2', 'author:nested-3'],
       mutedRepliesCount: 0,
+      localTotalCount: 3,
     });
 
     vi.spyOn(Core, 'buildPostReplyStreamId').mockReturnValue('stream:author:reply-1');
@@ -99,6 +102,7 @@ describe('useNestedReplies', () => {
     vi.mocked(useLiveQuery).mockReturnValue({
       replyIds: ['author:nested-1', 'author:nested-2'],
       mutedRepliesCount: 0,
+      localTotalCount: 2,
     });
 
     vi.spyOn(Core, 'buildPostReplyStreamId').mockReturnValue('stream:author:reply-1');

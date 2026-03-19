@@ -204,19 +204,20 @@ describe('SinglePostContent', () => {
       expect(screen.getByText('Loading post...')).toBeInTheDocument();
     });
 
-    it('renders QuickReply component when parent post is not deleted', () => {
+    it('renders ThreadTree with showQuickReply=true when parent post is not deleted', () => {
       render(<SinglePostContent postId={mockPostId} />);
 
-      expect(screen.getByTestId('quick-reply')).toBeInTheDocument();
-      expect(screen.getByTestId('quick-reply')).toHaveAttribute('data-parent-post-id', mockPostId);
+      const tree = screen.getByTestId('thread-tree');
+      expect(tree).toHaveAttribute('data-show-quick-reply', 'true');
     });
 
-    it('does not render QuickReply when parent post is deleted', () => {
+    it('renders ThreadTree with showQuickReply=false when parent post is deleted', () => {
       mockIsPostDeleted.mockReturnValue(true);
 
       render(<SinglePostContent postId={mockPostId} />);
 
-      expect(screen.queryByTestId('quick-reply')).not.toBeInTheDocument();
+      const tree = screen.getByTestId('thread-tree');
+      expect(tree).toHaveAttribute('data-show-quick-reply', 'false');
     });
 
     it('renders PostDeleted component instead of post content when post is deleted', () => {
@@ -236,37 +237,12 @@ describe('SinglePostContent', () => {
       expect(screen.getByTestId('single-post-participants')).toHaveAttribute('data-post-id', mockPostId);
     });
 
-    it('renders ThreadTree with showQuickReply=false', () => {
+    it('renders ThreadTree with correct postId', () => {
       render(<SinglePostContent postId={mockPostId} />);
 
       const tree = screen.getByTestId('thread-tree');
       expect(tree).toBeInTheDocument();
       expect(tree).toHaveAttribute('data-post-id', mockPostId);
-      expect(tree).toHaveAttribute('data-show-quick-reply', 'false');
-    });
-  });
-
-  describe('quick reply connector variant', () => {
-    it('uses REGULAR connector when there are replies', () => {
-      vi.mocked(Hooks.usePostCounts).mockReturnValue({
-        postCounts: { replies: 3, tags: 0, unique_tags: 0, reposts: 0 },
-        isLoading: false,
-      });
-
-      render(<SinglePostContent postId={mockPostId} />);
-
-      expect(screen.getByTestId('quick-reply')).toHaveAttribute('data-connector-variant', 'regular');
-    });
-
-    it('uses LAST connector when there are no replies', () => {
-      vi.mocked(Hooks.usePostCounts).mockReturnValue({
-        postCounts: { replies: 0, tags: 0, unique_tags: 0, reposts: 0 },
-        isLoading: false,
-      });
-
-      render(<SinglePostContent postId={mockPostId} />);
-
-      expect(screen.getByTestId('quick-reply')).toHaveAttribute('data-connector-variant', 'last');
     });
   });
 
@@ -283,17 +259,6 @@ describe('SinglePostContent', () => {
       expect(screen.queryByTestId('quick-reply')).not.toBeInTheDocument();
       expect(screen.queryByTestId('single-post-participants')).not.toBeInTheDocument();
     });
-
-    it('calls usePostCounts with null when not authenticated', () => {
-      vi.mocked(Hooks.useRequireAuth).mockReturnValue({
-        isAuthenticated: false,
-        requireAuth: vi.fn(),
-      });
-
-      render(<SinglePostContent postId={mockPostId} />);
-
-      expect(Hooks.usePostCounts).toHaveBeenCalledWith(null);
-    });
   });
 
   describe('hooks integration', () => {
@@ -301,12 +266,6 @@ describe('SinglePostContent', () => {
       render(<SinglePostContent postId={mockPostId} />);
 
       expect(Hooks.usePostDetails).toHaveBeenCalledWith(mockPostId);
-    });
-
-    it('calls usePostCounts with the correct postId when authenticated', () => {
-      render(<SinglePostContent postId={mockPostId} />);
-
-      expect(Hooks.usePostCounts).toHaveBeenCalledWith(mockPostId);
     });
   });
 });

@@ -107,24 +107,8 @@ Article content"
         data-testid="container"
       >
         <div
-          data-testid="post-thread-spacer"
-        />
-        <div
-          data-connector-variant="last"
-          data-parent-post-id="author:post123"
-          data-testid="quick-reply"
-        >
-          QuickReply
-        </div>
-      </div>
-      <div
-        data-class-name="ml-3"
-        data-override-defaults="true"
-        data-testid="container"
-      >
-        <div
           data-post-id="author:post123"
-          data-show-quick-reply="false"
+          data-show-quick-reply="true"
           data-testid="thread-tree"
         >
           ThreadTree
@@ -176,24 +160,8 @@ exports[`SinglePostContent - Snapshots > matches snapshot with short post and no
         data-testid="container"
       >
         <div
-          data-testid="post-thread-spacer"
-        />
-        <div
-          data-connector-variant="last"
-          data-parent-post-id="author:post123"
-          data-testid="quick-reply"
-        >
-          QuickReply
-        </div>
-      </div>
-      <div
-        data-class-name="ml-3"
-        data-override-defaults="true"
-        data-testid="container"
-      >
-        <div
           data-post-id="author:post123"
-          data-show-quick-reply="false"
+          data-show-quick-reply="true"
           data-testid="thread-tree"
         >
           ThreadTree

@@ -26,7 +26,10 @@ export function ThreadExpandToggle({ expanded, onToggle }: ThreadExpandTogglePro
     <Atoms.Button
       variant="ghost"
       size="icon"
-      onClick={onToggle}
+      onClick={(e) => {
+        e.stopPropagation();
+        onToggle();
+      }}
       className="size-5 rounded-full bg-background p-0 text-muted-foreground hover:text-foreground"
       aria-label={expanded ? tThreadTree('collapseAllReplies') : tThreadTree('expandAllReplies')}
     >

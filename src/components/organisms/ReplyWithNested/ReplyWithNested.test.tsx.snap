@@ -17,7 +17,7 @@ exports[`ReplyWithNested - Snapshots > matches snapshot for expanded nested repl
       author:reply-1
     </button>
     <div
-      class="absolute left-0 z-10 -translate-x-1/2"
+      class="absolute bottom-[24px] left-0 z-10 -translate-x-1/2"
     >
       <button
         data-expanded="true"

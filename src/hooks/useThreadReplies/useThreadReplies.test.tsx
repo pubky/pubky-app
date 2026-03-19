@@ -32,6 +32,7 @@ describe('useThreadReplies', () => {
     vi.mocked(useLiveQuery).mockReturnValueOnce({
       replyIds: ['author:reply-1', 'author:reply-2', 'author:reply-3'],
       mutedRepliesCount: 1,
+      localTotalCount: 3,
     });
 
     const { result } = renderHook(() => useThreadReplies('author:post-1'));
@@ -49,6 +50,7 @@ describe('useThreadReplies', () => {
     vi.mocked(useLiveQuery).mockReturnValue({
       replyIds: ['author:reply-1', 'author:reply-2', 'author:reply-3'],
       mutedRepliesCount: 0,
+      localTotalCount: 3,
     });
 
     vi.spyOn(Core, 'buildPostReplyStreamId').mockReturnValue('stream:author:post-1');
@@ -84,6 +86,7 @@ describe('useThreadReplies', () => {
     vi.mocked(useLiveQuery).mockReturnValue({
       replyIds: ['author:reply-1', 'author:reply-2'],
       mutedRepliesCount: 0,
+      localTotalCount: 2,
     });
 
     vi.spyOn(Core, 'buildPostReplyStreamId').mockReturnValue('stream:author:post-1');
