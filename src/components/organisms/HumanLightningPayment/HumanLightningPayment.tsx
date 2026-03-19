@@ -148,7 +148,12 @@ export const HumanLightningPayment = ({ onBack, onSuccess }: HumanLightningPayme
           {!isLoading &&
             verification &&
             (isMobile ? (
-              <Atoms.Button>Pay it now</Atoms.Button>
+              <Atoms.Button asChild className="w-full">
+                <a href={`lightning:${verification.data.bolt11Invoice}`}>
+                  <Libs.Wallet className="mr-2 size-4" />
+                  {t('payNow')}
+                </a>
+              </Atoms.Button>
             ) : (
               <React.Fragment>
                 {!isPaymentExpired && (
@@ -213,7 +218,7 @@ export const HumanLightningPayment = ({ onBack, onSuccess }: HumanLightningPayme
       </Atoms.Card>
 
       {/* Buttons container */}
-      <Atoms.Container className={Libs.cn('mt-6 flex-row justify-between gap-3 lg:gap-6')}>
+      <Atoms.Container className={Libs.cn('mt-6 justify-between gap-3 sm:flex-row lg:gap-6')}>
         <Atoms.Button
           id="human-phone-back-btn"
           size="lg"
@@ -228,7 +233,7 @@ export const HumanLightningPayment = ({ onBack, onSuccess }: HumanLightningPayme
           id="human-phone-send-code-btn"
           size="lg"
           className="w-full flex-1 rounded-full md:flex-0"
-          variant="default"
+          variant="secondary"
           disabled={!isDataAvailable}
           onClick={() => verification && copyToClipboard(verification.data.bolt11Invoice)}
         >

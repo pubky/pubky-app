@@ -56,6 +56,16 @@ describe('HumanLightningPayment', () => {
     expect(screen.getByText((_, element) => element?.textContent === 'Tap to Pay.')).toBeInTheDocument();
   });
 
+  it('adds lightning deeplink to pay now button on mobile', async () => {
+    mockUseIsMobile.mockReturnValue(true);
+
+    render(<HumanLightningPayment onBack={() => {}} onSuccess={() => {}} />);
+
+    await waitFor(() => {
+      expect(screen.getByRole('link', { name: 'Pay now' })).toHaveAttribute('href', 'lightning:mock-invoice');
+    });
+  });
+
   it('on back', async () => {
     let isBackClicked = false;
     const { container } = render(
