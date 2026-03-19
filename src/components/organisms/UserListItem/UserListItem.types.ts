@@ -44,6 +44,8 @@ export interface UserListItemProps {
   isCurrentUser?: boolean;
   /** Show stats with icons in compact variant (for ActiveUsers) */
   showStats?: boolean;
+  // TODO: followButtonVariant is currently unused only 'icon'. Consider removing this prop if we don't need to reuse 'iconWithText' variant in the future. (19 Mar 2026)
+  // Keeping the prop for potential reuse of 'iconWithText' variant in the future.
   /** Override the follow button style (defaults to 'icon') */
   followButtonVariant?: 'icon' | 'iconWithText';
   /** Callback when user area is clicked */
