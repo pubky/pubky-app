@@ -49,6 +49,8 @@ export function WhoToFollow({ className }: WhoToFollowProps) {
       footerText={tCommon('seeAll')}
       onFooterClick={handleSeeAll}
       className={className}
+      dataCy="who-to-follow"
+      footerDataCy="who-to-follow-see-all"
       data-testid="who-to-follow"
     >
       {isStreamLoading

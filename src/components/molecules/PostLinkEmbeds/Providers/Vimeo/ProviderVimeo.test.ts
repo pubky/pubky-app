@@ -1,5 +1,7 @@
 import { describe, it, expect } from 'vitest';
+import { render, screen } from '@testing-library/react';
 import { Vimeo } from './ProviderVimeo';
+import { VIDEO_EMBED_PROPS } from '../Provider.constants';
 
 describe('ProviderVimeo', () => {
   describe('domains', () => {
@@ -427,6 +429,20 @@ describe('ProviderVimeo', () => {
         // Should complete quickly even with edge cases
         expect(duration).toBeLessThan(50);
       });
+    });
+  });
+
+  describe('renderEmbed', () => {
+    it('adds allow-popups-to-escape-sandbox to iframe sandbox', () => {
+      render(
+        Vimeo.renderEmbed({
+          type: 'url',
+          value: 'https://player.vimeo.com/video/123456789',
+        }),
+      );
+
+      const iframe = screen.getByTestId('Vimeo video player');
+      expect(iframe).toHaveAttribute('sandbox', `${VIDEO_EMBED_PROPS.sandbox} allow-popups-to-escape-sandbox`);
     });
   });
 });

@@ -1,5 +1,7 @@
 import { describe, it, expect } from 'vitest';
+import { render, screen } from '@testing-library/react';
 import { Youtube } from './ProviderYoutube';
+import { VIDEO_EMBED_PROPS } from '../Provider.constants';
 
 describe('ProviderYoutube', () => {
   describe('domains', () => {
@@ -424,6 +426,20 @@ describe('ProviderYoutube', () => {
         type: 'url',
         value: 'https://www.youtube-nocookie.com/embed/dQw4w9WgXcQ',
       });
+    });
+  });
+
+  describe('renderEmbed', () => {
+    it('adds allow-popups-to-escape-sandbox to iframe sandbox', () => {
+      render(
+        Youtube.renderEmbed({
+          type: 'url',
+          value: 'https://www.youtube-nocookie.com/embed/dQw4w9WgXcQ',
+        }),
+      );
+
+      const iframe = screen.getByTestId('YouTube video player');
+      expect(iframe).toHaveAttribute('sandbox', `${VIDEO_EMBED_PROPS.sandbox} allow-popups-to-escape-sandbox`);
     });
   });
 });

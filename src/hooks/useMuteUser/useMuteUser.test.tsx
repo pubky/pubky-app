@@ -14,7 +14,7 @@ const { mockUseAuthStore, mockCommitMute, mockIsAppError, mockLogger } = vi.hois
 
 vi.mock('@/core', () => ({
   useAuthStore: () => mockUseAuthStore(),
-  UserController: {
+  MuteController: {
     commitMute: (...args: unknown[]) => mockCommitMute(...args),
   },
 }));

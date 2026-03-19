@@ -1048,7 +1048,7 @@
     "hotTags": "الوسوم الرائجة",
     "activeUsers": "المستخدمون النشطون",
     "trendingPosts": "المنشورات الرائجة",
-    "postsCount": "{count} منشور",
+    "postsCount": "{count} منشور هذا الشهر",
     "failedToLoadUsers": "فشل تحميل المستخدمين",
     "failedToLoadTags": "فشل تحميل الوسوم",
     "noUsersToShow": "لا يوجد مستخدمون للعرض",

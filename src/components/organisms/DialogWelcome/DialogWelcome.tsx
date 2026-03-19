@@ -71,9 +71,14 @@ export function DialogWelcome() {
                 className="h-24 w-24"
                 fallbackClassName="text-4xl"
               />
-              <Atoms.Container className="flex flex-col items-center justify-center sm:items-start sm:justify-start">
-                <Atoms.Typography size="lg">{userDetails.name}</Atoms.Typography>
-                <Atoms.Typography size="sm" className="text-center font-medium text-muted-foreground sm:text-left">
+              <Atoms.Container className="flex w-full min-w-0 flex-col items-center justify-center sm:items-start sm:justify-start">
+                <Atoms.Typography size="lg" className="w-full truncate">
+                  {userDetails.name}
+                </Atoms.Typography>
+                <Atoms.Typography
+                  size="sm"
+                  className="w-full truncate text-center font-medium text-muted-foreground sm:text-left"
+                >
                   {userDetails.bio}
                 </Atoms.Typography>
                 <Atoms.Button
