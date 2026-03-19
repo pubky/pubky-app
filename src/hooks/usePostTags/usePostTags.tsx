@@ -65,6 +65,7 @@ export function usePostTags(postId: string | null | undefined, options: UsePostT
   // PostApplication.fetchTags merges results into IndexedDB, so useLiveQuery reacts automatically.
   useEffect(() => {
     if (!postId || hasFetched) return;
+    let stale = false;
 
     const fetchInitialTags = async () => {
       try {
@@ -74,6 +75,7 @@ export function usePostTags(postId: string | null | undefined, options: UsePostT
           limit: TAGS_PER_PAGE,
         });
 
+        if (stale) return;
         loadedCountRef.current = Math.max(loadedCountRef.current, fetchedTags.length);
 
         if (fetchedTags.length < TAGS_PER_PAGE) {
@@ -82,11 +84,14 @@ export function usePostTags(postId: string | null | undefined, options: UsePostT
       } catch {
         // Silently fail — local tags (if any) are still shown via useLiveQuery
       } finally {
-        setHasFetched(true);
+        if (!stale) setHasFetched(true);
       }
     };
 
     fetchInitialTags();
+    return () => {
+      stale = true;
+    };
   }, [postId, hasFetched]);
 
   const isLoading = tagsCollection === undefined;
