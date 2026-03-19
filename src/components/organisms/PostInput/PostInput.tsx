@@ -152,9 +152,7 @@ export function PostInput({
   // use case: Auto-focus the specified input after dialog animation settles.
   // Uses requestAnimationFrame to wait for Radix Dialog's focus trap to finish before taking focus.
   React.useEffect(() => {
-    // 'markdown' is excluded — MarkdownEditor is lazy-loaded and its ref isn't ready
-    // on first mount, so it handles focus via its own autoFocus prop instead.
-    if (!autoFocusTarget || autoFocusTarget === 'markdown') return;
+    if (!autoFocusTarget) return;
     const refMap = { textarea: textareaRef, title: titleRef };
     requestAnimationFrame(() => {
       refMap[autoFocusTarget]?.current?.focus();
@@ -255,7 +253,7 @@ export function PostInput({
         {isArticle && (
           <Molecules.MarkdownEditor
             ref={markdownEditorRef}
-            autoFocus={autoFocusTarget === 'markdown'}
+            autoFocus
             markdown={content}
             onChange={handleArticleBodyChange}
             readOnly={isSubmitting}

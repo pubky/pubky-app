@@ -219,7 +219,7 @@ describe('DialogEditPost', () => {
     );
   });
 
-  it('renders PostInput with editIsArticle true and autoFocusTarget "markdown" for long posts', () => {
+  it('renders PostInput with editIsArticle true and no autoFocusTarget for long posts', () => {
     vi.mocked(Hooks.usePostDetails).mockReturnValue({
       postDetails: {
         id: 'test-article-123',
@@ -235,7 +235,7 @@ describe('DialogEditPost', () => {
     expect(Organisms.PostInput).toHaveBeenCalledWith(
       expect.objectContaining({
         editIsArticle: true,
-        autoFocusTarget: 'markdown',
+        autoFocusTarget: undefined,
       }),
       undefined,
     );

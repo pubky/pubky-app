@@ -42,7 +42,7 @@ export function DialogEditPost({ open, onOpenChangeAction, postId }: DialogEditP
           variant={POST_INPUT_VARIANT.EDIT}
           onSuccess={() => onOpenChangeAction(false)}
           expanded={true}
-          autoFocusTarget={isArticle ? 'markdown' : 'textarea'}
+          autoFocusTarget={isArticle ? undefined : 'textarea'}
           onContentChange={handleContentChange}
           editPostId={postDetails.id}
           editContent={postDetails.content}

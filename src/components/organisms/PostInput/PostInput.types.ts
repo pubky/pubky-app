@@ -29,10 +29,13 @@ interface PostInputBaseProps {
   /**
    * Which input element to auto-focus on mount.
    *
-   * PostInput renders different input elements depending on the mode:
+   * Controls ref-based focus for PostInput's own input elements:
    * - 'textarea': the short-form post textarea (replies, regular post edits)
    * - 'title': the article title input
-   * - 'markdown': the MarkdownEditor body (article edits)
+   *
+   * MarkdownEditor is not included here — it manages its own focus via its
+   * native autoFocus prop, since it is lazy-loaded and its ref isn't available
+   * on first mount.
    *
    * Uses requestAnimationFrame internally to wait for Radix Dialog's
    * focus trap to finish before taking focus — without this, the dialog's
@@ -40,7 +43,7 @@ interface PostInputBaseProps {
    *
    * Omit or leave undefined for no auto-focus.
    */
-  autoFocusTarget?: 'textarea' | 'title' | 'markdown';
+  autoFocusTarget?: 'textarea' | 'title';
   /**
    * Initial content to pre-fill (e.g. from OS share target).
    * Note: Only applied on mount, subsequent prop changes are ignored.
