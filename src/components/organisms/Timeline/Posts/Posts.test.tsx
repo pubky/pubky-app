@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach, vi, afterEach } from 'vitest';
-import { render, screen, waitFor } from '@testing-library/react';
+import { render, screen, waitFor, fireEvent } from '@testing-library/react';
 import { useRouter } from 'next/navigation';
 import { useLiveQuery } from 'dexie-react-hooks';
 import { TimelinePosts } from './Posts';
@@ -14,17 +14,20 @@ vi.mock('react-virtuoso', () => ({
     context,
     itemContent,
     components,
+    endReached,
   }: {
     data: string[];
     context?: Record<string, unknown>;
     itemContent: (index: number, item: string) => React.ReactNode;
     components?: { Footer?: (props: { context?: Record<string, unknown> }) => React.ReactNode };
+    endReached?: () => void;
   }) => (
     <div data-testid="virtuoso">
       {data?.map((item, index) => (
         <div key={index}>{itemContent(index, item)}</div>
       ))}
       {components?.Footer?.({ context })}
+      <button data-testid="virtuoso-end-reached" onClick={() => endReached?.()} />
     </div>
   ),
 }));
@@ -499,6 +502,57 @@ describe('TimelinePosts', () => {
           expect(screen.getByTestId(`post-${postId}`)).toBeInTheDocument();
         });
       });
+    });
+
+    it('should call loadMore via endReached when hasMore and not loading', async () => {
+      const mockLoadMore = vi.fn().mockResolvedValue(undefined);
+      render(
+        <TimelinePosts
+          postIds={mockPostIds}
+          loading={false}
+          loadingMore={false}
+          error={null}
+          hasMore={true}
+          loadMore={mockLoadMore}
+        />,
+      );
+
+      fireEvent.click(screen.getByTestId('virtuoso-end-reached'));
+      expect(mockLoadMore).toHaveBeenCalledOnce();
+    });
+
+    it('should not call loadMore via endReached when loadingMore is true', async () => {
+      const mockLoadMore = vi.fn().mockResolvedValue(undefined);
+      render(
+        <TimelinePosts
+          postIds={mockPostIds}
+          loading={false}
+          loadingMore={true}
+          error={null}
+          hasMore={true}
+          loadMore={mockLoadMore}
+        />,
+      );
+
+      fireEvent.click(screen.getByTestId('virtuoso-end-reached'));
+      expect(mockLoadMore).not.toHaveBeenCalled();
+    });
+
+    it('should not call loadMore via endReached when hasMore is false', async () => {
+      const mockLoadMore = vi.fn().mockResolvedValue(undefined);
+      render(
+        <TimelinePosts
+          postIds={mockPostIds}
+          loading={false}
+          loadingMore={false}
+          error={null}
+          hasMore={false}
+          loadMore={mockLoadMore}
+        />,
+      );
+
+      fireEvent.click(screen.getByTestId('virtuoso-end-reached'));
+      expect(mockLoadMore).not.toHaveBeenCalled();
     });
   });
 });

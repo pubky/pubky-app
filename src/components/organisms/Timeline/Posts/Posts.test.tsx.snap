@@ -86,6 +86,9 @@ exports[`TimelinePosts - Snapshots > should match snapshot with posts 1`] = `
             />
           </div>
         </div>
+        <button
+          data-testid="virtuoso-end-reached"
+        />
       </div>
     </div>
   </div>
