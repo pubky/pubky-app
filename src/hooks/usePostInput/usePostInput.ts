@@ -57,6 +57,7 @@ export function usePostInput({
   // Refs
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const markdownEditorRef = useRef<MDXEditorMethods>(null);
+  const titleRef = useRef<HTMLInputElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const dragCounterRef = useRef(0);
@@ -453,6 +454,7 @@ export function usePostInput({
     // Refs
     textareaRef,
     markdownEditorRef,
+    titleRef,
     containerRef,
     fileInputRef,
 

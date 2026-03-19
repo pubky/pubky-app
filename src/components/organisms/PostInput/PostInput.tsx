@@ -30,7 +30,7 @@ export function PostInput({
   onArticleModeChange,
   editContent,
   editIsArticle,
-  autoFocus = false,
+  autoFocusTarget,
   initialContent,
   initialAttachments,
 }: PostInputProps) {
@@ -40,6 +40,7 @@ export function PostInput({
   const {
     textareaRef,
     markdownEditorRef,
+    titleRef,
     containerRef,
     fileInputRef,
     content,
@@ -148,17 +149,15 @@ export function PostInput({
     // eslint-disable-next-line react-hooks/exhaustive-deps -- only run on mount
   }, []);
 
-  // Auto-focus the active input element after dialog animation settles
-  // isArticle ? markdownEditorRef : textareaRef
+  // use case: Auto-focus the specified input after dialog animation settles.
+  // Uses requestAnimationFrame to wait for Radix Dialog's focus trap to finish before taking focus.
   React.useEffect(() => {
-    if (!autoFocus) return;
-    // need to wait for the dialog animation to settle
+    // 'markdown' is excluded — MarkdownEditor is lazy-loaded and its ref isn't ready
+    // on first mount, so it handles focus via its own autoFocus prop instead.
+    if (!autoFocusTarget || autoFocusTarget === 'markdown') return;
+    const refMap = { textarea: textareaRef, title: titleRef };
     requestAnimationFrame(() => {
-      if (isArticle) {
-        markdownEditorRef.current?.focus();
-      } else {
-        textareaRef.current?.focus();
-      }
+      refMap[autoFocusTarget]?.current?.focus();
     });
     // eslint-disable-next-line react-hooks/exhaustive-deps -- only run on mount
   }, []);
@@ -191,6 +190,7 @@ export function PostInput({
       <Atoms.Container className="gap-4 contain-inline-size">
         {isArticle && (
           <Atoms.Input
+            ref={titleRef}
             placeholder={t('articleTitle')}
             defaultValue={articleTitle}
             onChange={handleArticleTitleChange}
@@ -255,7 +255,7 @@ export function PostInput({
         {isArticle && (
           <Molecules.MarkdownEditor
             ref={markdownEditorRef}
-            autoFocus
+            autoFocus={autoFocusTarget === 'markdown'}
             markdown={content}
             onChange={handleArticleBodyChange}
             readOnly={isSubmitting}

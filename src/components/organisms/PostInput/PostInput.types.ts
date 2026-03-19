@@ -27,10 +27,20 @@ interface PostInputBaseProps {
   /** Data Cy for the post input */
   dataCy?: string;
   /**
-   * Auto-focus the active input element (textarea, article title input, or markdown editor) on mount.
-   * @default false
+   * Which input element to auto-focus on mount.
+   *
+   * PostInput renders different input elements depending on the mode:
+   * - 'textarea': the short-form post textarea (replies, regular post edits)
+   * - 'title': the article title input
+   * - 'markdown': the MarkdownEditor body (article edits)
+   *
+   * Uses requestAnimationFrame internally to wait for Radix Dialog's
+   * focus trap to finish before taking focus — without this, the dialog's
+   * initial focus scan overrides the focus we set.
+   *
+   * Omit or leave undefined for no auto-focus.
    */
-  autoFocus?: boolean;
+  autoFocusTarget?: 'textarea' | 'title' | 'markdown';
   /**
    * Initial content to pre-fill (e.g. from OS share target).
    * Note: Only applied on mount, subsequent prop changes are ignored.

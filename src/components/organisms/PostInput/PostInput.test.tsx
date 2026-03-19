@@ -75,7 +75,7 @@ vi.mock('@/atoms', async () => {
         </Tag>
       );
     }),
-    Input: vi.fn(({ type, accept, multiple, onChange, ref, className, id }) => (
+    Input: vi.fn(({ type, accept, multiple, onChange, ref, className, id, placeholder, defaultValue, disabled }) => (
       <input
         ref={ref}
         type={type}
@@ -84,6 +84,9 @@ vi.mock('@/atoms', async () => {
         onChange={onChange}
         className={className}
         id={id}
+        placeholder={placeholder}
+        defaultValue={defaultValue}
+        disabled={disabled}
         data-testid="input"
       />
     )),
@@ -246,6 +249,7 @@ vi.mock('@/molecules/PostInputAttachments/PostInputAttachments', () => ({
 // Shared refs so React populates them when mock components render
 const mockTextareaRef = createRef<HTMLTextAreaElement>();
 const mockMarkdownEditorRef = { current: null as { focus: ReturnType<typeof vi.fn> } | null };
+const mockTitleRef = createRef<HTMLInputElement>();
 const mockContainerRef = createRef<HTMLDivElement>();
 const mockFileInputRef = createRef<HTMLInputElement>();
 
@@ -275,6 +279,7 @@ vi.mock('@/hooks', () => ({
   usePostInput: vi.fn((options: { variant: string; placeholder?: string }) => ({
     textareaRef: mockTextareaRef,
     markdownEditorRef: mockMarkdownEditorRef,
+    titleRef: mockTitleRef,
     containerRef: mockContainerRef,
     fileInputRef: mockFileInputRef,
     content: mockUsePostReturn.content,
@@ -552,7 +557,7 @@ describe('PostInput', () => {
   });
 });
 
-describe('PostInput - autoFocus', () => {
+describe('PostInput - autoFocusTarget', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     mockUsePostReturn.content = '';
@@ -572,38 +577,35 @@ describe('PostInput - autoFocus', () => {
     vi.mocked(window.requestAnimationFrame).mockRestore();
   });
 
-  it('focuses textarea when autoFocus is true and not article mode', () => {
-    render(<PostInput variant={POST_INPUT_VARIANT.POST} autoFocus />);
+  it('focuses textarea when autoFocusTarget is "textarea"', () => {
+    render(<PostInput variant={POST_INPUT_VARIANT.POST} autoFocusTarget="textarea" />);
 
     const textarea = screen.getByTestId('textarea');
     expect(textarea).toHaveFocus();
   });
 
-  it('does not focus textarea when autoFocus is false', () => {
+  it('does not focus any element when autoFocusTarget is omitted', () => {
     render(<PostInput variant={POST_INPUT_VARIANT.POST} />);
 
-    const textarea = screen.getByTestId('textarea');
-    expect(textarea).not.toHaveFocus();
+    expect(screen.getByTestId('textarea')).not.toHaveFocus();
   });
 
-  it('focuses MarkdownEditor when autoFocus is true and article mode', () => {
+  it('does not focus any element when autoFocusTarget is omitted in article mode', () => {
     mockUsePostReturn.isArticle = true;
-    const mockFocus = vi.fn();
-    mockMarkdownEditorRef.current = { focus: mockFocus };
-
-    render(<PostInput variant={POST_INPUT_VARIANT.POST} autoFocus />);
-
-    expect(mockFocus).toHaveBeenCalled();
-  });
-
-  it('does not focus MarkdownEditor when autoFocus is false and article mode', () => {
-    mockUsePostReturn.isArticle = true;
-    const mockFocus = vi.fn();
-    mockMarkdownEditorRef.current = { focus: mockFocus };
 
     render(<PostInput variant={POST_INPUT_VARIANT.POST} />);
 
-    expect(mockFocus).not.toHaveBeenCalled();
+    expect(screen.getByTestId('input')).not.toHaveFocus();
+    expect(screen.getByTestId('markdown-editor')).not.toHaveFocus();
+  });
+
+  it('focuses title input when autoFocusTarget is "title" in article mode', () => {
+    mockUsePostReturn.isArticle = true;
+
+    render(<PostInput variant={POST_INPUT_VARIANT.POST} autoFocusTarget="title" />);
+
+    const titleInput = screen.getByTestId('input');
+    expect(titleInput).toHaveFocus();
   });
 });
 
