@@ -208,6 +208,7 @@
     },
     "lightning": {
       "title": "Escaneie para <highlight>Pagar.</highlight>",
+      "title_mobile": "Toque para <highlight>Pagar.</highlight>",
       "subtitle": "Escaneie o código QR com sua carteira favorita.",
       "qrLabel": "Pagamento Bitcoin Lightning",
       "payAmount": "Pague ₿ {amount} para continuar.",

@@ -10,6 +10,7 @@ import { useTranslations } from 'next-intl';
 import { VerificationHandler } from './HumanLightningPayment.utils';
 import { QRCodeSkeleton, PriceSkeleton } from './HumanLightningPayment.skeleton';
 import type { HumanLightningPaymentProps } from './HumanLightningPayment.types';
+import { useIsMobile } from '@/hooks';
 
 export const HumanLightningPayment = ({ onBack, onSuccess }: HumanLightningPaymentProps) => {
   const t = useTranslations('onboarding.lightning');
@@ -17,6 +18,7 @@ export const HumanLightningPayment = ({ onBack, onSuccess }: HumanLightningPayme
   const [verification, setVerification] = useState<VerificationHandler | null>(null);
   const verificationRef = React.useRef<VerificationHandler | null>(null);
   const initTimeoutRef = React.useRef<number | null>(null);
+  const isMobile = useIsMobile();
   const rate = useBtcRate();
   const [isLoading, setIsLoading] = useState(true);
   const [isPaymentExpired, setIsPaymentExpired] = useState(false);
@@ -124,9 +126,13 @@ export const HumanLightningPayment = ({ onBack, onSuccess }: HumanLightningPayme
     <React.Fragment>
       <Atoms.PageHeader>
         <Molecules.PageTitle size="large">
-          {t.rich('title', {
-            highlight: (chunks) => <span className="text-brand">{chunks}</span>,
-          })}
+          {isMobile
+            ? t.rich('title_mobile', {
+                highlight: (chunks) => <span className="text-brand">{chunks}</span>,
+              })
+            : t.rich('title', {
+                highlight: (chunks) => <span className="text-brand">{chunks}</span>,
+              })}
         </Molecules.PageTitle>
         <Atoms.PageSubtitle>{t('subtitle')}</Atoms.PageSubtitle>
       </Atoms.PageHeader>

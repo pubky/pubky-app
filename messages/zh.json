@@ -208,6 +208,7 @@
     },
     "lightning": {
       "title": "扫码<highlight>支付。</highlight>",
+      "title_mobile": "点击<highlight>支付。</highlight>",
       "subtitle": "使用您喜欢的钱包扫描二维码。",
       "qrLabel": "比特币闪电网络支付",
       "payAmount": "支付 ₿ {amount} 以继续。",
