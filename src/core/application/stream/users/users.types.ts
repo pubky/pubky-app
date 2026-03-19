@@ -52,3 +52,12 @@ export type TMissingUsersParams = {
 export type TFetchStreamFromNexusParams = TFetchUserStreamChunkParams & {
   cachedStream?: { stream: Core.Pubky[] } | null;
 };
+
+/**
+ * Parameters for getOrFetchUsers (bulk user details by IDs)
+ * Used by controller (without viewerId) and application (with viewerId)
+ */
+export type TGetOrFetchUsersParams = {
+  userIds: Core.Pubky[];
+  viewerId?: Core.Pubky;
+};

@@ -15,12 +15,16 @@ import { followFromPostMenu, searchAndFollowProfile } from '../support/contacts'
 import { BackupType, HasBackedUp } from '../support/types/enums';
 
 // Profile 1 follows Profile 2 and is friends with Profile 2. Profile 1 also follows Profile 3 and Profile 4.
+// Needs 5 posts to be suggested in "who to follow"
 const profile1 = {
   username: 'Profile #1',
   bio: 'Follows Profile #2',
   pubkyAlias: 'pubky_1',
   postText1: `Profile 1's post ${Date.now()}`,
   postText2: `Profile 1's post to be reposted ${Date.now()}`,
+  postText3: `Profile 1's third post ${Date.now()}`,
+  postText4: `Profile 1's fourth post ${Date.now()}`,
+  postText5: `Profile 1's fifth post ${Date.now()}`,
 };
 // Profile 2 follows Profile 1 and is friends with Profile 1.
 const profile2 = {
@@ -54,6 +58,9 @@ describe('feed and filters', () => {
     cy.onboardAsNewUser(profile1.username, profile1.bio, [BackupType.EncryptedFile], profile1.pubkyAlias);
     createQuickPost(profile1.postText1);
     createQuickPost(profile1.postText2);
+    createQuickPost(profile1.postText3);
+    createQuickPost(profile1.postText4);
+    createQuickPost(profile1.postText5);
     cy.signOut(HasBackedUp.Yes);
 
     // * create profile 2 of 4, post and repost profile 1's post
@@ -102,6 +109,9 @@ describe('feed and filters', () => {
     // check all posts are visible
     cy.findFirstPostInFeedFiltered(profile1.postText1).should('be.visible');
     cy.findFirstPostInFeedFiltered(profile1.postText2).should('be.visible');
+    cy.findFirstPostInFeedFiltered(profile1.postText3).should('be.visible');
+    cy.findFirstPostInFeedFiltered(profile1.postText4).should('be.visible');
+    cy.findFirstPostInFeedFiltered(profile1.postText5).should('be.visible');
     cy.findFirstPostInFeedFiltered(profile2.postText).should('be.visible');
     cy.findFirstPostInFeedFiltered(profile2.repostText).should('be.visible');
     cy.findFirstPostInFeedFiltered(profile3.postText).should('be.visible');
@@ -112,8 +122,11 @@ describe('feed and filters', () => {
     checkPostIsAtIndexInFeed(profile3.postText, 1);
     checkPostIsAtIndexInFeed(profile2.repostText, 2);
     checkPostIsAtIndexInFeed(profile2.postText, 3);
-    checkPostIsAtIndexInFeed(profile1.postText2, 4);
-    checkPostIsAtIndexInFeed(profile1.postText1, 5);
+    checkPostIsAtIndexInFeed(profile1.postText5, 4);
+    checkPostIsAtIndexInFeed(profile1.postText4, 5);
+    checkPostIsAtIndexInFeed(profile1.postText3, 6);
+    checkPostIsAtIndexInFeed(profile1.postText2, 7);
+    checkPostIsAtIndexInFeed(profile1.postText1, 8);
 
     cy.signOut(HasBackedUp.Yes);
 
@@ -124,6 +137,9 @@ describe('feed and filters', () => {
     // check all posts are visible
     cy.findFirstPostInFeedFiltered(profile1.postText1).should('be.visible');
     cy.findFirstPostInFeedFiltered(profile1.postText2).should('be.visible');
+    cy.findFirstPostInFeedFiltered(profile1.postText3).should('be.visible');
+    cy.findFirstPostInFeedFiltered(profile1.postText4).should('be.visible');
+    cy.findFirstPostInFeedFiltered(profile1.postText5).should('be.visible');
     cy.findFirstPostInFeedFiltered(profile2.postText).should('be.visible');
     cy.findFirstPostInFeedFiltered(profile2.repostText).should('be.visible');
     cy.findFirstPostInFeedFiltered(profile3.postText).should('be.visible');
@@ -233,6 +249,42 @@ describe('feed and filters', () => {
     // cannot see own post when no one else's posts are seen in friends filter
     cannotFindPostInFeed(profile3.postText);
     cannotFindPostInFeed(profile4.postText);
+  });
+
+  it('"who to follow" does not suggest users you are already following', () => {
+    cy.signInWithEncryptedFile(backupDownloadFilePath(profile2.username));
+    waitForFeedToLoad();
+
+    cy.get('[data-cy="who-to-follow"]').within(() => {
+      cy.contains(profile1.username).should('not.exist');
+      cy.contains(profile2.username).should('not.exist');
+      cy.contains(profile3.username).should('not.exist');
+      cy.contains(profile4.username).should('not.exist');
+    });
+  });
+
+  it('who to follow sidebar and who-to-follow page suggested other profiles', () => {
+    cy.signInWithEncryptedFile(backupDownloadFilePath(profile3.username));
+    waitForFeedToLoad();
+
+    cy.get('[data-cy="who-to-follow"]').within(() => {
+      cy.contains(profile1.username).should('be.visible');
+      cy.contains(profile2.username).should('not.exist');
+      cy.contains(profile3.username).should('not.exist');
+      cy.contains(profile4.username).should('not.exist');
+    });
+
+    cy.get('[data-cy="who-to-follow-see-all"]').click();
+    cy.location('pathname').should('eq', '/who-to-follow');
+
+    cy.get('[data-cy="who-to-follow-page"]').within(() => {
+      cy.contains(profile1.username).should('be.visible');
+      cy.contains(profile2.username).should('not.exist');
+      cy.contains(profile3.username).should('not.exist');
+      cy.contains(profile4.username).should('not.exist');
+    });
+
+    cy.signOut(HasBackedUp.Yes);
   });
 
   it('can sort by popularity', () => {

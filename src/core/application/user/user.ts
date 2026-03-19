@@ -237,25 +237,6 @@ export class UserApplication {
   }
 
   /**
-   * Handles muting or unmuting a user.
-   * Performs local database operations and syncs with the homeserver.
-   * @param params - Parameters containing event type, URLs, JSON data, and user IDs
-   */
-  static async commitMute({ eventType, muteUrl, muteJson, muter, mutee }: Core.TUserApplicationMuteParams) {
-    if (eventType === HttpMethod.PUT) {
-      await Core.LocalMuteService.create({ muter, mutee });
-      await Core.HomeserverService.request({ method: eventType, url: muteUrl, bodyJson: muteJson });
-      return;
-    }
-
-    if (eventType === HttpMethod.DELETE) {
-      await Core.LocalMuteService.delete({ muter, mutee });
-      await Core.HomeserverService.request({ method: eventType, url: muteUrl, bodyJson: muteJson });
-      return;
-    }
-  }
-
-  /**
    * Retrieves taggers for a specific tag label on a user from the nexus service.
    * @param params - Parameters containing user ID, label, and pagination options
    * @returns Promise resolving to an array of users who tagged the user with the specified label
