@@ -435,6 +435,34 @@ describe('HomeserverService', () => {
         }
       });
 
+      it('should retry polling on 404 Not Found (relay may not have registered flow yet)', async () => {
+        vi.useFakeTimers();
+        try {
+          const session = createMockSession();
+          const tryPollOnce = vi
+            .fn()
+            .mockRejectedValueOnce({ name: 'RequestError', message: '404 Not Found', data: { statusCode: 404 } })
+            .mockResolvedValueOnce(session);
+          const free = vi.fn();
+          mockState.startAuthFlow.mockReturnValue({
+            authorizationUrl: 'https://auth.example.com/authorize',
+            tryPollOnce,
+            free,
+          });
+
+          const result = await HomeserverService.generateAuthUrl();
+          const approvalPromise = result.awaitApproval;
+
+          await vi.advanceTimersByTimeAsync(0);
+          await vi.advanceTimersByTimeAsync(2_000);
+
+          await expect(approvalPromise).resolves.toBe(session);
+          expect(tryPollOnce).toHaveBeenCalledTimes(2);
+        } finally {
+          vi.useRealTimers();
+        }
+      });
+
       it('should call startAuthFlow with default capabilities', async () => {
         await HomeserverService.generateAuthUrl();
 
