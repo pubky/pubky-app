@@ -18,6 +18,7 @@ export function DialogReportPostSuccess({ onOpenChange }: DialogReportPostSucces
       <Atoms.DialogFooter>
         <Atoms.DialogClose asChild>
           <Atoms.Button
+            data-cy="report-success-close"
             variant="dark-outline"
             size="lg"
             onClick={() => onOpenChange(false)}

@@ -91,4 +91,5 @@ export * from './useKeyboardOffset';
 export * from './useSignOut';
 export * from './useCustomFeed';
 export * from './useCustomStreamId';
+export * from './useSettingsActions';
 export * from './useLocalFirstQuery';
