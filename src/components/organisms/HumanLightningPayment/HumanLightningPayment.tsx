@@ -142,49 +142,54 @@ export const HumanLightningPayment = ({ onBack, onSuccess }: HumanLightningPayme
         className="flex flex-col-reverse items-start gap-6 p-6 md:flex-row lg:gap-12 lg:p-12"
       >
         {/* Payment QR code */}
+
         <Atoms.Container overrideDefaults={true} className="flex h-full flex-col items-center justify-center">
           {isLoading && <QRCodeSkeleton />}
-          {!isLoading && verification && (
-            <React.Fragment>
-              {!isPaymentExpired && (
-                <Atoms.Container
-                  overrideDefaults={true}
-                  className="relative flex cursor-pointer items-center justify-center rounded-[9px] bg-white p-[9px]"
-                  onClick={() => copyToClipboard(verification.data.bolt11Invoice)}
-                >
-                  <QRCodeSVG value={verification.data.bolt11Invoice} size={174} />
-                  <div className="pointer-events-none absolute inset-0 flex items-center justify-center">
-                    <Atoms.Image
-                      src="/images/bitcoin-logo.svg"
-                      alt="Bitcoin logo"
-                      width={45}
-                      height={45}
-                      className=""
-                    />
-                  </div>
-                </Atoms.Container>
-              )}
-              {isPaymentExpired && (
-                <Atoms.Container className="flex h-[192px] w-[192px] items-center justify-center rounded-[9px] bg-secondary p-[9px]">
-                  <Atoms.Typography
-                    as="p"
-                    className="mb-4 text-base leading-6 font-medium text-secondary-foreground/80"
+          {!isLoading &&
+            verification &&
+            (isMobile ? (
+              <Atoms.Button>Pay it now</Atoms.Button>
+            ) : (
+              <React.Fragment>
+                {!isPaymentExpired && (
+                  <Atoms.Container
+                    overrideDefaults={true}
+                    className="relative flex cursor-pointer items-center justify-center rounded-[9px] bg-white p-[9px]"
+                    onClick={() => copyToClipboard(verification.data.bolt11Invoice)}
                   >
-                    {t('expired')}
-                  </Atoms.Typography>
-                  <Atoms.Button
-                    size="sm"
-                    className="rounded-full font-bold"
-                    variant="default"
-                    onClick={requestLightningInvoice}
-                  >
-                    <Libs.RefreshCw className="mr-1.5 h-3.5 w-3.5" />
-                    {t('newInvoice')}
-                  </Atoms.Button>
-                </Atoms.Container>
-              )}
-            </React.Fragment>
-          )}
+                    <QRCodeSVG value={verification.data.bolt11Invoice} size={174} />
+                    <div className="pointer-events-none absolute inset-0 flex items-center justify-center">
+                      <Atoms.Image
+                        src="/images/bitcoin-logo.svg"
+                        alt="Bitcoin logo"
+                        width={45}
+                        height={45}
+                        className=""
+                      />
+                    </div>
+                  </Atoms.Container>
+                )}
+                {isPaymentExpired && (
+                  <Atoms.Container className="flex h-[192px] w-[192px] items-center justify-center rounded-[9px] bg-secondary p-[9px]">
+                    <Atoms.Typography
+                      as="p"
+                      className="mb-4 text-base leading-6 font-medium text-secondary-foreground/80"
+                    >
+                      {t('expired')}
+                    </Atoms.Typography>
+                    <Atoms.Button
+                      size="sm"
+                      className="rounded-full font-bold"
+                      variant="default"
+                      onClick={requestLightningInvoice}
+                    >
+                      <Libs.RefreshCw className="mr-1.5 h-3.5 w-3.5" />
+                      {t('newInvoice')}
+                    </Atoms.Button>
+                  </Atoms.Container>
+                )}
+              </React.Fragment>
+            ))}
         </Atoms.Container>
 
         {/* Description */}
