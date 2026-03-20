@@ -41,6 +41,8 @@ export class AuthController {
    * @returns Configured homeserver service instance
    */
   private static async signIn({ keypair }: Core.TKeypairParams): Promise<boolean> {
+    // Clear query clients to ensure no stale cache from previous session
+    Libs.clearAllQueryClients();
     // Clear database before sign in to ensure clean state
     await Core.clearDatabase();
     // Skip post-migration resync — bootstrap runs if user has profile, otherwise no data to resync
@@ -138,6 +140,8 @@ export class AuthController {
    * @param params.signupToken - Invitation code for user registration
    */
   static async signUp({ secretKey, signupToken }: Core.TSignUpParams) {
+    // Clear query clients to ensure no stale cache from previous session
+    Libs.clearAllQueryClients();
     // Clear database before sign up to ensure clean state
     await Core.clearDatabase();
     // Skip post-migration resync — new user has no homeserver data to resync

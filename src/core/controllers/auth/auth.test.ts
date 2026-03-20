@@ -269,12 +269,14 @@ describe('AuthController', () => {
       const keypairFromSecretKeySpy = vi.spyOn(Libs.Identity, 'keypairFromSecretKey').mockReturnValue(keypair);
       const z32FromSessionSpy = vi.spyOn(Libs.Identity, 'z32FromSession').mockReturnValue(mockPubky);
       const clearDatabaseSpy = vi.spyOn(Core, 'clearDatabase').mockResolvedValue(undefined);
+      const clearAllQueryClientsSpy = vi.spyOn(Libs, 'clearAllQueryClients').mockImplementation(() => {});
 
       const authStore = storeMocks.getAuthState();
       vi.spyOn(Core.useAuthStore, 'getState').mockReturnValue(authStore as unknown as Core.AuthStore);
 
       const result = await AuthController.signUp({ secretKey: TEST_SECRET_KEY, signupToken });
 
+      expect(clearAllQueryClientsSpy).toHaveBeenCalled();
       expect(clearDatabaseSpy).toHaveBeenCalled();
       // Skip post-migration resync — new user has no homeserver data to resync
       expect(storeMocks.resetMigrationStore).toHaveBeenCalled();
@@ -299,8 +301,10 @@ describe('AuthController', () => {
       const signUpSpy = vi.spyOn(Core.AuthApplication, 'signUp').mockRejectedValue(new Error('Signup failed'));
       const keypairFromSecretKeySpy = vi.spyOn(Libs.Identity, 'keypairFromSecretKey').mockReturnValue(keypair);
       const clearDatabaseSpy = vi.spyOn(Core, 'clearDatabase').mockResolvedValue(undefined);
+      const clearAllQueryClientsSpy = vi.spyOn(Libs, 'clearAllQueryClients').mockImplementation(() => {});
 
       await expect(AuthController.signUp({ secretKey: TEST_SECRET_KEY, signupToken })).rejects.toThrow('Signup failed');
+      expect(clearAllQueryClientsSpy).toHaveBeenCalled();
       expect(clearDatabaseSpy).toHaveBeenCalled();
       expect(keypairFromSecretKeySpy).toHaveBeenCalledWith(TEST_SECRET_KEY);
       expect(signUpSpy).toHaveBeenCalledWith({
@@ -333,11 +337,13 @@ describe('AuthController', () => {
       const userIsSignedUpSpy = vi.spyOn(Core.AuthApplication, 'userIsSignedUp').mockResolvedValue(true);
       const initializeSpy = vi.spyOn(Core.BootstrapApplication, 'initialize').mockResolvedValue(bootstrapResponse);
       const clearDatabaseSpy = vi.spyOn(Core, 'clearDatabase').mockResolvedValue(undefined);
+      const clearAllQueryClientsSpy = vi.spyOn(Libs, 'clearAllQueryClients').mockImplementation(() => {});
 
       const _authStore = setupAuthAndNotificationStores();
 
       const result = await AuthController.loginWithMnemonic({ mnemonic });
 
+      expect(clearAllQueryClientsSpy).toHaveBeenCalled();
       expect(clearDatabaseSpy).toHaveBeenCalled();
       // Skip post-migration resync — bootstrap runs if user has profile, otherwise no data to resync
       expect(storeMocks.resetMigrationStore).toHaveBeenCalled();
@@ -377,6 +383,7 @@ describe('AuthController', () => {
       const userIsSignedUpSpy = vi.spyOn(Core.AuthApplication, 'userIsSignedUp').mockResolvedValue(false);
       const initializeSpy = vi.spyOn(Core.BootstrapApplication, 'initialize');
       const clearDatabaseSpy = vi.spyOn(Core, 'clearDatabase').mockResolvedValue(undefined);
+      vi.spyOn(Libs, 'clearAllQueryClients').mockImplementation(() => {});
 
       const _authStore = setupAuthAndNotificationStores();
 
@@ -405,6 +412,7 @@ describe('AuthController', () => {
       vi.spyOn(Libs.Identity, 'keypairFromMnemonic').mockReturnValue(mockKeypair);
       vi.spyOn(Core.AuthApplication, 'signIn').mockResolvedValue(undefined);
       vi.spyOn(Core, 'clearDatabase').mockResolvedValue(undefined);
+      vi.spyOn(Libs, 'clearAllQueryClients').mockImplementation(() => {});
 
       const initializeSpy = vi.spyOn(Core.BootstrapApplication, 'initialize');
 
@@ -421,6 +429,7 @@ describe('AuthController', () => {
       vi.spyOn(Libs.Identity, 'keypairFromMnemonic').mockReturnValue(mockKeypair);
       vi.spyOn(Core.AuthApplication, 'signIn').mockRejectedValue(new Error('Authentication failed'));
       vi.spyOn(Core, 'clearDatabase').mockResolvedValue(undefined);
+      vi.spyOn(Libs, 'clearAllQueryClients').mockImplementation(() => {});
 
       await expect(AuthController.loginWithMnemonic({ mnemonic })).rejects.toThrow('Authentication failed');
     });
@@ -450,11 +459,13 @@ describe('AuthController', () => {
       const userIsSignedUpSpy = vi.spyOn(Core.AuthApplication, 'userIsSignedUp').mockResolvedValue(true);
       const initializeSpy = vi.spyOn(Core.BootstrapApplication, 'initialize').mockResolvedValue(bootstrapResponse);
       const clearDatabaseSpy = vi.spyOn(Core, 'clearDatabase').mockResolvedValue(undefined);
+      const clearAllQueryClientsSpy = vi.spyOn(Libs, 'clearAllQueryClients').mockImplementation(() => {});
 
       const _authStore = setupAuthAndNotificationStores();
 
       const result = await AuthController.loginWithEncryptedFile({ encryptedFile, password });
 
+      expect(clearAllQueryClientsSpy).toHaveBeenCalled();
       expect(clearDatabaseSpy).toHaveBeenCalled();
       expect(decryptSpy).toHaveBeenCalledWith({ encryptedFile, passphrase: password });
       expect(signInSpy).toHaveBeenCalledWith({ keypair: mockKeypair });
@@ -493,6 +504,7 @@ describe('AuthController', () => {
       const userIsSignedUpSpy = vi.spyOn(Core.AuthApplication, 'userIsSignedUp').mockResolvedValue(false);
       const initializeSpy = vi.spyOn(Core.BootstrapApplication, 'initialize');
       const clearDatabaseSpy = vi.spyOn(Core, 'clearDatabase').mockResolvedValue(undefined);
+      vi.spyOn(Libs, 'clearAllQueryClients').mockImplementation(() => {});
 
       const _authStore = setupAuthAndNotificationStores();
 
@@ -522,6 +534,7 @@ describe('AuthController', () => {
       vi.spyOn(Libs.Identity, 'decryptRecoveryFile').mockResolvedValue(mockKeypair);
       vi.spyOn(Core.AuthApplication, 'signIn').mockResolvedValue(undefined);
       vi.spyOn(Core, 'clearDatabase').mockResolvedValue(undefined);
+      vi.spyOn(Libs, 'clearAllQueryClients').mockImplementation(() => {});
 
       const initializeSpy = vi.spyOn(Core.BootstrapApplication, 'initialize');
 
@@ -550,6 +563,7 @@ describe('AuthController', () => {
       vi.spyOn(Libs.Identity, 'decryptRecoveryFile').mockResolvedValue(mockKeypair);
       vi.spyOn(Core.AuthApplication, 'signIn').mockRejectedValue(new Error('Authentication failed'));
       vi.spyOn(Core, 'clearDatabase').mockResolvedValue(undefined);
+      vi.spyOn(Libs, 'clearAllQueryClients').mockImplementation(() => {});
 
       await expect(AuthController.loginWithEncryptedFile({ encryptedFile, password })).rejects.toThrow(
         'Authentication failed',
