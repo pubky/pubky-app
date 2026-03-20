@@ -1,6 +1,6 @@
 name: e2e-test
 env:
-  pubky_stack_ref: 'production'
+  pubky_stack_ref: 'staging'
   platforms: 'linux/amd64'
   registry: 'europe-west6-docker.pkg.dev/infra-464608/synonym-private-repo'
   franky_env: 'testnet'
