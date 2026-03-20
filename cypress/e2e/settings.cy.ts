@@ -99,7 +99,7 @@ describe('settings', () => {
 
     // Check user 1's post is no longer seen in feed
     cy.get('[data-cy="header-home-btn"]').click();
-    cy.get('[data-cy="timeline-posts"]').should('not.contain.text', postContent);
+    cy.get('[data-cy="timeline-container"]').should('not.contain.text', postContent);
 
     // Confirm user 1 is now muted in settings page and unmute them
     cy.get('[data-cy="header-settings-btn"]').click();
