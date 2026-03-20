@@ -31,6 +31,7 @@ function FollowButton({ isFollowing, isLoading, isStatusLoading, displayName, va
   if (variant === 'icon') {
     return (
       <Atoms.Button
+        data-cy="user-list-item-follow-toggle-btn"
         variant="secondary"
         size="icon"
         onClick={onClick}
@@ -55,7 +56,7 @@ function FollowButton({ isFollowing, isLoading, isStatusLoading, displayName, va
   // iconWithText variant with hover states
   return (
     <Atoms.Button
-      data-cy="profile-follower-item-follow-toggle-btn"
+      data-cy="user-list-item-follow-toggle-btn"
       variant="secondary"
       size="sm"
       className="group w-[110px] justify-center"
@@ -103,6 +104,7 @@ function MeButton({ variant = 'icon', className }: { variant?: 'iconWithText' | 
   if (variant === 'icon') {
     return (
       <Atoms.Button
+        data-cy="user-list-item-me-btn"
         variant="secondary"
         size="icon"
         className={Libs.cn('size-8 shrink-0 cursor-not-allowed rounded-full opacity-50', className)}
@@ -116,7 +118,7 @@ function MeButton({ variant = 'icon', className }: { variant?: 'iconWithText' | 
 
   return (
     <Atoms.Button
-      data-cy="profile-follower-item-me-btn"
+      data-cy="user-list-item-me-btn"
       variant="secondary"
       size="sm"
       className={Libs.cn('w-[110px] cursor-not-allowed justify-center text-muted-foreground opacity-50', className)}
@@ -342,20 +344,22 @@ function FullVariant({
       </Atoms.Container>
 
       {/* Mobile: Bottom row */}
-      <Atoms.Container overrideDefaults className="flex flex-wrap items-center justify-between gap-3 lg:hidden">
+      <Atoms.Container overrideDefaults className="flex flex-wrap items-center gap-3 lg:hidden">
         <TagsList userId={user.id} className="flex-1" />
-        {isCurrentUser ? (
-          <MeButton variant={followButtonVariant} />
-        ) : (
-          <FollowButton
-            isFollowing={isFollowing}
-            isLoading={isLoading}
-            isStatusLoading={isStatusLoading}
-            displayName={displayName}
-            variant={followButtonVariant}
-            onClick={onFollowClick}
-          />
-        )}
+        <Atoms.Container overrideDefaults className="ml-auto">
+          {isCurrentUser ? (
+            <MeButton variant={followButtonVariant} />
+          ) : (
+            <FollowButton
+              isFollowing={isFollowing}
+              isLoading={isLoading}
+              isStatusLoading={isStatusLoading}
+              displayName={displayName}
+              variant={followButtonVariant}
+              onClick={onFollowClick}
+            />
+          )}
+        </Atoms.Container>
       </Atoms.Container>
     </Atoms.Container>
   );
