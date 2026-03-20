@@ -36,12 +36,24 @@ export function useReplyStream(
   const [streamExhausted, setStreamExhausted] = useState(false);
   const [isExpandingAll, setIsExpandingAll] = useState(false);
   const isMountedRef = useRef(true);
+  const isFetchingAllRef = useRef(false);
 
   useEffect(() => {
     return () => {
       isMountedRef.current = false;
     };
   }, []);
+
+  // Reset all local state when postId changes so stale flags from a
+  // previous post don't leak into the new one (defensive — the primary
+  // fix is key={postId} on <ThreadTree />, but this covers standalone usage).
+  useEffect(() => {
+    setHasFetched(false);
+    setShowAll(false);
+    setStreamExhausted(false);
+    setIsExpandingAll(false);
+    isFetchingAllRef.current = false;
+  }, [postId]);
 
   const { mutedUserIdSet } = useMutedUsers();
   const { postCounts } = usePostCounts(enabled ? postId : null);
@@ -64,10 +76,7 @@ export function useReplyStream(
 
         const chronological = [...stream.stream].reverse();
         const filtered = Core.MuteFilter.filterPostsSafe(chronological, mutedUserIdSet);
-        const mutedCount =
-          mutedUserIdSet.size > 0
-            ? stream.stream.filter((id) => Core.MuteFilter.isPostMuted(id, mutedUserIdSet)).length
-            : 0;
+        const mutedCount = chronological.length - filtered.length;
 
         return {
           replyIds: showAll ? filtered : filtered.slice(0, maxReplies),
@@ -123,9 +132,6 @@ export function useReplyStream(
       isCancelled = true;
     };
   }, [postId, totalReplyCount, replyIds.length, maxReplies, hasFetched, enabled]);
-
-  // Ref to prevent concurrent expandAll calls
-  const isFetchingAllRef = useRef(false);
 
   /**
    * Expand to show all remaining replies inline.

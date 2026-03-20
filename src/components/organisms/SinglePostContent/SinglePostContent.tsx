@@ -68,7 +68,7 @@ export function SinglePostContent({ postId }: SinglePostContentProps) {
           {/* Left column - Replies thread with QuickReply at the end (larger) */}
           <Atoms.Container className="w-full min-w-0 flex-1 gap-0 overflow-hidden">
             <Atoms.Container overrideDefaults className="ml-3">
-              <ThreadTree postId={postId} showQuickReply={!isDeleted} />
+              <ThreadTree key={postId} postId={postId} showQuickReply={!isDeleted} />
             </Atoms.Container>
           </Atoms.Container>
 

@@ -97,7 +97,7 @@ export function ReplyWithNested({
                 {/* "+N more replies" if there are more nested replies */}
                 {hasMoreReplies && !isExpandingAll && (
                   <Molecules.ShowMoreReplies
-                    count={replyCount - nestedReplyIds.length}
+                    count={Math.max(0, replyCount - nestedReplyIds.length)}
                     onClick={expandAll}
                     isLast={true}
                   />
