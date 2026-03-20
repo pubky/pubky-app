@@ -75,7 +75,12 @@
     "links": "Links",
     "tags": "Tags",
     "posts": "Posts",
-    "avatar": "Avatar"
+    "avatar": "Avatar",
+    "threadTree": {
+      "expandAllReplies": "Expandir todas as respostas",
+      "collapseAllReplies": "Recolher todas as respostas",
+      "moreReplies": "{count, plural, one {# resposta a mais} other {# respostas a mais}}"
+    }
   },
   "header": {
     "home": "Início",

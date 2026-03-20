@@ -107,7 +107,7 @@ exports[`PostThreadConnector > Snapshots > matches snapshot with last variant 1`
     </div>
   </div>
   <div
-    class="min-h-px w-3 min-w-px shrink-0 grow basis-0"
+    class="h-[28px] w-3 shrink-0"
     data-override-defaults="true"
   />
 </div>

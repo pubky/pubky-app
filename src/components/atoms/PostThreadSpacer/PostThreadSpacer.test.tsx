@@ -11,8 +11,8 @@ describe('PostThreadSpacer', () => {
       // Verify component renders
       expect(spacer).toBeInTheDocument();
 
-      // Verify correct height (matches timeline spacing of space-y-4)
-      expect(spacer).toHaveClass('h-4');
+      // Verify correct height (matches Figma spacing of 12px)
+      expect(spacer).toHaveClass('h-3');
 
       // Verify vertical line structure
       const borderLine = spacer?.firstChild as HTMLElement;
@@ -21,7 +21,7 @@ describe('PostThreadSpacer', () => {
     });
   });
 
-  describe('Snapshots', () => {
+  describe('PostThreadSpacer - Snapshots', () => {
     it('matches snapshot', () => {
       const { container } = render(<PostThreadSpacer />);
       expect(container.firstChild).toMatchSnapshot();

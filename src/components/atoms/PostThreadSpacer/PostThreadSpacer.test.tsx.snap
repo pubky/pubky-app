@@ -1,8 +1,8 @@
 // Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
 
-exports[`PostThreadSpacer > Snapshots > matches snapshot 1`] = `
+exports[`PostThreadSpacer > PostThreadSpacer - Snapshots > matches snapshot 1`] = `
 <div
-  class="flex h-4"
+  class="flex h-3"
   data-testid="container"
 >
   <div
@@ -16,9 +16,9 @@ exports[`PostThreadSpacer > Snapshots > matches snapshot 1`] = `
 </div>
 `;
 
-exports[`PostThreadSpacer > Snapshots > matches snapshot with data-testid 1`] = `
+exports[`PostThreadSpacer > PostThreadSpacer - Snapshots > matches snapshot with data-testid 1`] = `
 <div
-  class="flex h-4"
+  class="flex h-3"
   data-testid="spacer"
 >
   <div

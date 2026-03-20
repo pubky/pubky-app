@@ -1,0 +1,70 @@
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
+
+exports[`ThreadExpandToggle - Snapshots > matches snapshot in collapsed state 1`] = `
+<button
+  aria-label="Expand all replies"
+  class="inline-flex items-center justify-center gap-2 whitespace-nowrap text-sm transition-all disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg:not([class*=\\"size-\\"])]:size-4 shrink-0 [&_svg]:shrink-0 outline-none focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[3px] aria-invalid:ring-destructive/40 aria-invalid:border-destructive font-semibold cursor-pointer border shadow-xs hover:bg-accent/50 border-none size-5 rounded-full bg-background p-0 text-muted-foreground hover:text-foreground"
+  data-size="icon"
+  data-slot="button"
+  data-variant="ghost"
+>
+  <svg
+    aria-hidden="true"
+    class="lucide lucide-circle-plus size-5"
+    fill="none"
+    height="24"
+    stroke="currentColor"
+    stroke-linecap="round"
+    stroke-linejoin="round"
+    stroke-width="2"
+    viewBox="0 0 24 24"
+    width="24"
+    xmlns="http://www.w3.org/2000/svg"
+  >
+    <circle
+      cx="12"
+      cy="12"
+      r="10"
+    />
+    <path
+      d="M8 12h8"
+    />
+    <path
+      d="M12 8v8"
+    />
+  </svg>
+</button>
+`;
+
+exports[`ThreadExpandToggle - Snapshots > matches snapshot in expanded state 1`] = `
+<button
+  aria-label="Collapse all replies"
+  class="inline-flex items-center justify-center gap-2 whitespace-nowrap text-sm transition-all disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg:not([class*=\\"size-\\"])]:size-4 shrink-0 [&_svg]:shrink-0 outline-none focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[3px] aria-invalid:ring-destructive/40 aria-invalid:border-destructive font-semibold cursor-pointer border shadow-xs hover:bg-accent/50 border-none size-5 rounded-full bg-background p-0 text-muted-foreground hover:text-foreground"
+  data-size="icon"
+  data-slot="button"
+  data-variant="ghost"
+>
+  <svg
+    aria-hidden="true"
+    class="lucide lucide-circle-minus size-5"
+    fill="none"
+    height="24"
+    stroke="currentColor"
+    stroke-linecap="round"
+    stroke-linejoin="round"
+    stroke-width="2"
+    viewBox="0 0 24 24"
+    width="24"
+    xmlns="http://www.w3.org/2000/svg"
+  >
+    <circle
+      cx="12"
+      cy="12"
+      r="10"
+    />
+    <path
+      d="M8 12h8"
+    />
+  </svg>
+</button>
+`;
