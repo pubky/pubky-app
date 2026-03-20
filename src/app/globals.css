@@ -117,14 +117,6 @@ body {
    * ================================================================== */
 
   /**
-   * Tag badge maximum width
-   * - Constrains tag width to prevent layout overflow with long tag names
-   * - Enables text truncation with ellipsis for long tag labels
-   * - Applied: TaggedItem component
-   */
-  --tag-max-width: 10rem;
-
-  /**
    * Desktop header height (profile page header)
    * - Used for sticky positioning of filter bars and sidebars
    * - Matches ProfilePageHeader height on desktop (lg+)

@@ -328,16 +328,16 @@ describe('MobileFooter', () => {
     expect(footerContainer?.getAttribute('style')).toBeFalsy();
   });
 
-  it('adds transition class only when keyboard is visible', async () => {
+  it('always applies transition classes for smooth keyboard animation', async () => {
     const { useKeyboardOffset } = await import('@/hooks');
 
-    // When keyboard is not visible, no transition
+    // transition-transform and duration-75 are always present regardless of keyboard state
     vi.mocked(useKeyboardOffset).mockReturnValue({ isKeyboardVisible: false, keyboardOffset: 0 });
     const { container, rerender } = render(<MobileFooter />);
     let footerContainer = container.querySelector('.fixed');
-    expect(footerContainer).not.toHaveClass('transition-transform');
+    expect(footerContainer).toHaveClass('transition-transform', 'duration-75');
 
-    // When keyboard is visible, add transition for smooth opening
+    // Still present when keyboard is visible
     vi.mocked(useKeyboardOffset).mockReturnValue({ isKeyboardVisible: true, keyboardOffset: 300 });
     rerender(<MobileFooter />);
     footerContainer = container.querySelector('.fixed');
