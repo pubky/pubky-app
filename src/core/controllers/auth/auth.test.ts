@@ -927,6 +927,7 @@ describe('AuthController', () => {
       const resetTtlSpy = vi.spyOn(Core.TtlCoordinator, 'resetInstance');
       const resetStreamSpy = vi.spyOn(Core.StreamCoordinator, 'resetInstance');
       const resetNotifCoordSpy = vi.spyOn(Core.NotificationCoordinator, 'resetInstance');
+      const postStreamQueueClearSpy = vi.spyOn(Core.postStreamQueue, 'clear');
 
       const signInStore = createSignInStore();
       const localFilesStore = createLocalFilesStore();
@@ -961,6 +962,7 @@ describe('AuthController', () => {
       expect(resetTtlSpy).toHaveBeenCalledOnce();
       expect(resetStreamSpy).toHaveBeenCalledOnce();
       expect(resetNotifCoordSpy).toHaveBeenCalledOnce();
+      expect(postStreamQueueClearSpy).toHaveBeenCalledOnce();
 
       // Zustand stores
       expect(storeMocks.resetOnboardingStore).toHaveBeenCalledOnce();
