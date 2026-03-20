@@ -117,8 +117,7 @@ describe('posts', () => {
     latestPostInFeedContentEq(postContent);
   });
 
-  // todo: remove skip once images always show optimistically in feed, see https://github.com/pubky/pubky-app/issues/656
-  it.skip('can post with image upload', () => {
+  it('can post with image upload', () => {
     const postContent = `I can post with an image! ${Date.now()}`;
 
     cy.get('[data-cy="home-post-input"]').within(() => {
