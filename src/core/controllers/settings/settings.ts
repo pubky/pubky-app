@@ -1,4 +1,5 @@
 import * as Core from '@/core';
+import { setLocaleCookie } from '@/i18n/utils';
 
 /**
  * Settings controller.
@@ -117,14 +118,7 @@ export class SettingsController {
    */
   static async setLanguage(language: string): Promise<void> {
     Core.useSettingsStore.getState().setLanguage(language);
-    await this.commitUpdate();
-  }
-
-  /**
-   * Resets settings to defaults and syncs to homeserver.
-   */
-  static async reset(): Promise<void> {
-    Core.useSettingsStore.getState().reset();
+    setLocaleCookie(language);
     await this.commitUpdate();
   }
 }

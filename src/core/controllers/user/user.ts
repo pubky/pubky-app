@@ -172,26 +172,6 @@ export class UserController {
   }
 
   /**
-   * Commit a mute action to indexeddb and the homeserver
-   * @param eventType - The event type (PUT or DELETE)
-   * @param muter - The muter user ID
-   * @param mutee - The mutee user ID
-   */
-  static async commitMute(eventType: HttpMethod, { muter, mutee }: Core.TMuteParams) {
-    // Normalize pubky IDs to ensure consistent format for storage and comparison
-    // This strips any prefix (pubky or pk:) to get the raw 52-character key
-    const normalizedMutee = stripPubkyPrefix(mutee) as Core.Pubky;
-    const { meta, mute } = Core.MuteNormalizer.to({ muter, mutee: normalizedMutee });
-    await Core.UserApplication.commitMute({
-      eventType,
-      muteUrl: meta.url,
-      muteJson: mute.toJson(),
-      muter,
-      mutee: normalizedMutee,
-    });
-  }
-
-  /**
    * Gets the currently active stream ID from the home store if on /home route.
    * This is a controller responsibility - controllers can access UI state stores.
    *

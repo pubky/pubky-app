@@ -1,5 +1,6 @@
 import * as Core from '@/core';
 import * as Libs from '@/libs';
+import { setLocaleCookie } from '@/i18n/utils';
 
 export class AuthController {
   private constructor() {} // Prevent instantiation
@@ -42,6 +43,8 @@ export class AuthController {
   private static async signIn({ keypair }: Core.TKeypairParams): Promise<boolean> {
     // Clear database before sign in to ensure clean state
     await Core.clearDatabase();
+    // Skip post-migration resync — bootstrap runs if user has profile, otherwise no data to resync
+    Core.useMigrationStore.getState().reset();
     const session = await Core.AuthApplication.signIn({ keypair });
     if (!session) {
       Libs.Logger.error('Failed to sign in. Please try again.', { keypair });
@@ -78,8 +81,19 @@ export class AuthController {
       }
     };
 
-    const { notification } = await Core.BootstrapApplication.initialize({ pubky, lastReadUrl: url }, onProgress);
+    const localSettings = Core.SettingsNormalizer.extractState(Core.useSettingsStore.getState());
+    const { notification, remoteSettings } = await Core.BootstrapApplication.initialize(
+      { pubky, lastReadUrl: url, localSettings },
+      onProgress,
+    );
     Core.useNotificationStore.getState().setState(notification);
+
+    // Apply remote settings to store + cookie (store mutation stays in Controller layer)
+    if (remoteSettings) {
+      Core.useSettingsStore.getState().loadFromHomeserver(remoteSettings);
+      setLocaleCookie(remoteSettings.language);
+      Libs.Logger.info('Settings loaded from homeserver', { pubky });
+    }
   }
 
   /**
@@ -126,6 +140,8 @@ export class AuthController {
   static async signUp({ secretKey, signupToken }: Core.TSignUpParams) {
     // Clear database before sign up to ensure clean state
     await Core.clearDatabase();
+    // Skip post-migration resync — new user has no homeserver data to resync
+    Core.useMigrationStore.getState().reset();
     const keypair = Libs.Identity.keypairFromSecretKey(secretKey);
     const { session } = await Core.AuthApplication.signUp({ keypair, signupToken });
     const authStore = Core.useAuthStore.getState();
@@ -169,6 +185,8 @@ export class AuthController {
     generateFn: () => Promise<Core.TGenerateAuthUrlResult>,
   ): Promise<Core.TGenerateAuthUrlResult> {
     await Core.clearDatabase();
+    // Skip post-migration resync — full bootstrap below covers all data
+    Core.useMigrationStore.getState().reset();
     const token = Symbol('auth-flow');
     this.cancelActiveAuthFlow();
     this.activeAuthFlow = { token, cancel: null };
@@ -212,7 +230,9 @@ export class AuthController {
     Core.nexusQueryClient.cancelQueries();
     Core.nexusQueryClient.clear();
 
-    // Reset ALL Zustand stores
+    // Reset all Zustand stores.
+    // Settings reset() keeps `language`,
+    // so the "/logout" page stays in the chosen language while remote settings still win on next login.
     Core.useOnboardingStore.getState().reset();
     Core.useAuthStore.getState().reset();
     Core.useSignInStore.getState().reset();
@@ -223,11 +243,12 @@ export class AuthController {
     Core.useNotificationStore.getState().reset();
     Core.useSettingsStore.getState().reset();
 
-    // Clear cookies, database, and persisted localStorage keys
-    Libs.clearCookies();
-    await Core.clearDatabase();
+    // Clear cookies (locale cookie excluded — device-level UI preference, not sensitive data)
+    Libs.clearCookies(['locale']);
 
-    Core.PERSISTED_STORE_KEYS.forEach((key) => localStorage.removeItem(key));
+    await Core.clearDatabase();
+    // Skip post-migration resync — full cleanup resets all state
+    Core.useMigrationStore.getState().reset();
   }
 
   /**

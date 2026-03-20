@@ -75,7 +75,7 @@ export function WhoToFollowPageMain() {
   }
 
   return (
-    <Atoms.Container className="mt-6 gap-4 lg:mt-0">
+    <Atoms.Container data-cy="who-to-follow-page" className="mt-6 gap-4 lg:mt-0">
       <Atoms.Container className="gap-3.5 rounded-md bg-transparent p-0 lg:gap-3 lg:bg-card lg:p-6">
         {users.map((user) => (
           <Organisms.UserListItem

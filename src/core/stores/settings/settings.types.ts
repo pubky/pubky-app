@@ -86,7 +86,7 @@ export const settingsInitialState: SettingsState = {
   privacy: defaultPrivacyPreferences,
   muted: [],
   language: 'en',
-  updatedAt: Date.now(),
+  updatedAt: 0,
   version: 1,
 };
 

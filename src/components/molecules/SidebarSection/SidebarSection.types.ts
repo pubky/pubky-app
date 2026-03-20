@@ -19,6 +19,8 @@ export interface SidebarSectionProps {
   onFooterClick?: () => void;
   /** Test ID for footer button */
   footerTestId?: string;
+  /** data-cy for footer button (Cypress E2E) */
+  footerDataCy?: string;
   /** Custom className */
   className?: string;
   /** For Cypress E2E tests */

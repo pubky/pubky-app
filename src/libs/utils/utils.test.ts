@@ -473,6 +473,15 @@ describe('Utils', () => {
       // Should not throw error
       expect(() => clearCookies()).not.toThrow();
     });
+
+    it('should skip cookies in the exclude list', () => {
+      document.cookie = 'auth=token123; path=/';
+      document.cookie = 'locale=es; path=/';
+
+      clearCookies(['locale']);
+
+      expect(document.cookie).toContain('locale=es');
+    });
   });
 
   describe('generateRandomColor', () => {

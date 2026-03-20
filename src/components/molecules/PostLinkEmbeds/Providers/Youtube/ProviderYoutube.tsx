@@ -1,6 +1,6 @@
 import * as Atoms from '@/atoms';
 import * as ProviderTypes from '../Provider.types';
-import * as ProviderConstants from '../Provider.constants';
+import { VIDEO_EMBED_PROPS } from '../Provider.constants';
 import * as Libs from '@/libs';
 
 /**
@@ -152,7 +152,8 @@ export const Youtube: ProviderTypes.EmbedProvider = {
     return (
       <Atoms.Container data-testid="youtube-aspect-ratio-wrapper" className="relative pt-[56.25%]">
         <Atoms.Iframe
-          {...ProviderConstants.VIDEO_EMBED_PROPS}
+          {...VIDEO_EMBED_PROPS}
+          sandbox={`${VIDEO_EMBED_PROPS.sandbox} allow-popups-to-escape-sandbox`}
           src={embedUrl}
           title={`YouTube video ${videoId}`}
           data-testid="YouTube video player"

@@ -6,16 +6,7 @@ export interface UserCountsModelSchema extends Core.NexusUserCounts {
 
 export type TUserCountsFields = keyof Omit<UserCountsModelSchema, 'id'>;
 
-// Primary and compound indexes for Dexie
+// Keep only the primary key index. Other counters are read/updated by id.
 export const userCountsTableSchema = `
-  &id,
-  tagged,
-  tags,
-  unique_tags,
-  posts,
-  replies,
-  following,
-  followers,
-  friends,
-  bookmarks
+  &id
 `;

@@ -9,7 +9,7 @@ import type { UseMuteUserResult } from './useMuteUser.types';
  * useMuteUser
  *
  * Hook for muting/unmuting users.
- * Handles the mute action through the UserController, which manages
+ * Handles the mute action through the MuteController, which manages
  * local database updates and homeserver sync.
  */
 export function useMuteUser(): UseMuteUserResult {
@@ -37,7 +37,7 @@ export function useMuteUser(): UseMuteUserResult {
       try {
         const action = isCurrentlyMuted ? Libs.HttpMethod.DELETE : Libs.HttpMethod.PUT;
 
-        await Core.UserController.commitMute(action, {
+        await Core.MuteController.commitMute(action, {
           muter: currentUserPubky,
           mutee: userId,
         });

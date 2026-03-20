@@ -41,8 +41,8 @@ export function Typography({
 }: TypographyProps & React.HTMLAttributes<HTMLElement>) {
   const sizeClasses = {
     xs: 'text-xs font-medium',
-    sm: 'text-sm font-semibold',
-    md: 'text-xl font-semibold',
+    sm: 'text-sm font-medium',
+    md: 'text-base font-medium',
     lg: 'text-2xl font-bold',
     xl: 'text-4xl font-bold',
     '2xl': 'text-6xl font-bold',
