@@ -496,6 +496,38 @@ describe('posts', () => {
     cy.get('[data-cy="timeline-posts"]').should('not.contain.text', postContent);
   });
 
+  it('can edit a reply', () => {
+    const postContent = `This post will receive a reply! ${Date.now()}`;
+    const replyContent = `This reply will be edited! ${Date.now()}`;
+    const editedReplyContent = `This reply has been edited! ${Date.now()}`;
+
+    createQuickPost(postContent);
+    replyToPost({ replyContent, filterText: postContent });
+
+    cy.findFirstPostInFeedFiltered(replyContent, CheckForNewPosts.Yes).should('be.visible');
+    editPost({ newPostContent: editedReplyContent, filterText: replyContent, type: PostOrReply.Post });
+
+    cy.findFirstPostInFeedFiltered(editedReplyContent, CheckForNewPosts.Yes).should('be.visible');
+    cy.reload();
+    cy.findFirstPostInFeedFiltered(editedReplyContent, CheckForNewPosts.Yes).should('be.visible');
+  });
+
+  it('can edit a repost', () => {
+    const postContent = `This post will be reposted! ${Date.now()}`;
+    const repostContent = `This repost will be edited! ${Date.now()}`;
+    const editedRepostContent = `This repost has been edited! ${Date.now()}`;
+
+    createQuickPost(postContent);
+    repostPost({ repostContent, filterText: postContent });
+
+    cy.findFirstPostInFeedFiltered(repostContent, CheckForNewPosts.Yes).should('be.visible');
+    editPost({ newPostContent: editedRepostContent, filterText: repostContent, type: PostOrReply.Post });
+
+    cy.findFirstPostInFeedFiltered(editedRepostContent, CheckForNewPosts.Yes).should('be.visible');
+    cy.reload();
+    cy.findFirstPostInFeedFiltered(editedRepostContent, CheckForNewPosts.Yes).should('be.visible');
+  });
+
   // todo, covers bug https://github.com/pubky/franky/issues/993
   it('"see new posts" button does not appear after deleting new post that has a reply');
 

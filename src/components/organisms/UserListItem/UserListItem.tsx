@@ -342,20 +342,22 @@ function FullVariant({
       </Atoms.Container>
 
       {/* Mobile: Bottom row */}
-      <Atoms.Container overrideDefaults className="flex flex-wrap items-center justify-between gap-3 lg:hidden">
+      <Atoms.Container overrideDefaults className="flex flex-wrap items-center gap-3 lg:hidden">
         <TagsList userId={user.id} className="flex-1" />
-        {isCurrentUser ? (
-          <MeButton variant={followButtonVariant} />
-        ) : (
-          <FollowButton
-            isFollowing={isFollowing}
-            isLoading={isLoading}
-            isStatusLoading={isStatusLoading}
-            displayName={displayName}
-            variant={followButtonVariant}
-            onClick={onFollowClick}
-          />
-        )}
+        <Atoms.Container overrideDefaults className="ml-auto">
+          {isCurrentUser ? (
+            <MeButton variant={followButtonVariant} />
+          ) : (
+            <FollowButton
+              isFollowing={isFollowing}
+              isLoading={isLoading}
+              isStatusLoading={isStatusLoading}
+              displayName={displayName}
+              variant={followButtonVariant}
+              onClick={onFollowClick}
+            />
+          )}
+        </Atoms.Container>
       </Atoms.Container>
     </Atoms.Container>
   );
