@@ -211,7 +211,7 @@ export class AuthController {
 
   /**
    * Centralizes all local state cleanup: resets every Zustand store, clears cookies,
-   * IndexedDB, query cache, singletons, and persisted localStorage keys.
+   * IndexedDB, query cache, singletons, in-memory stream pagination queues, and persisted localStorage keys.
    * Used by both logout() and restorePersistedSession() on failure.
    */
   private static async cleanupLocalState() {
@@ -220,6 +220,9 @@ export class AuthController {
     Core.TtlCoordinator.resetInstance();
     Core.StreamCoordinator.resetInstance();
     Core.NotificationCoordinator.resetInstance();
+
+    // Clear in-memory feed stream queues
+    Core.postStreamQueue.clear();
 
     // Cancel active auth flows
     this.cancelActiveAuthFlow();

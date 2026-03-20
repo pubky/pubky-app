@@ -12,6 +12,9 @@ import { TAGS_PER_PAGE } from './usePostTags.constants';
  * Hook for fetching and managing post tags with pagination.
  * Uses useLiveQuery with PostController for automatic reactivity.
  *
+ * On mount, fetches the first page of tags from Nexus and merges into IndexedDB
+ * so that tags from other users are visible (not just locally-created ones).
+ *
  * The TagController.commitCreate/commitDelete methods use local-first writes with
  * compensation rollback, so useLiveQuery reacts immediately and failed homeserver
  * writes are reverted back out of IndexedDB.
@@ -28,6 +31,7 @@ export function usePostTags(postId: string | null | undefined, options: UsePostT
   const [hasMore, setHasMore] = useState(true);
   const loadedCountRef = useRef(0);
   const prevPostIdRef = useRef<string | null | undefined>(null);
+  const [hasFetched, setHasFetched] = useState(false);
 
   // Track zero-tagger tags with their original index for order preservation
   const [zeroTaggerTags, setZeroTaggerTags] = useState<Map<string, { tag: Core.NexusTag; index: number }>>(new Map());
@@ -43,6 +47,7 @@ export function usePostTags(postId: string | null | undefined, options: UsePostT
       prevPostIdRef.current = postId;
       setZeroTaggerTags(new Map());
       setTagOrder(new Map());
+      setHasFetched(false);
     }
   }, [postId]);
 
@@ -55,6 +60,39 @@ export function usePostTags(postId: string | null | undefined, options: UsePostT
     [postId],
     undefined,
   );
+
+  // Fetch first page of tags from Nexus on mount to ensure tags from other users are visible.
+  // PostApplication.fetchTags merges results into IndexedDB, so useLiveQuery reacts automatically.
+  useEffect(() => {
+    if (!postId || hasFetched) return;
+    let stale = false;
+
+    const fetchInitialTags = async () => {
+      try {
+        const fetchedTags = await Core.PostController.fetchTags({
+          compositeId: postId,
+          skip: 0,
+          limit: TAGS_PER_PAGE,
+        });
+
+        if (stale) return;
+        loadedCountRef.current = Math.max(loadedCountRef.current, fetchedTags.length);
+
+        if (fetchedTags.length < TAGS_PER_PAGE) {
+          setHasMore(false);
+        }
+      } catch {
+        // Silently fail — local tags (if any) are still shown via useLiveQuery
+      } finally {
+        if (!stale) setHasFetched(true);
+      }
+    };
+
+    fetchInitialTags();
+    return () => {
+      stale = true;
+    };
+  }, [postId, hasFetched]);
 
   const isLoading = tagsCollection === undefined;
 
