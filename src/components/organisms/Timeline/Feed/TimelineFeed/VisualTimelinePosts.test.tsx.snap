@@ -99,6 +99,10 @@ exports[`VisualTimelinePosts - Snapshots > matches snapshot for a populated visu
       >
         End
       </div>
+      <button
+        data-testid="virtuoso-end-reached"
+        type="button"
+      />
     </div>
   </div>
 </div>
@@ -153,6 +157,10 @@ exports[`VisualTimelinePosts - Snapshots > matches snapshot for touch devices wi
       >
         End
       </div>
+      <button
+        data-testid="virtuoso-end-reached"
+        type="button"
+      />
     </div>
   </div>
 </div>
