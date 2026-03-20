@@ -122,6 +122,53 @@ export const HumanLightningPayment = ({ onBack, onSuccess }: HumanLightningPayme
       : t('payAmount', { amount: amountFormatted });
   };
 
+  const renderExpiredState = (containerClassName: string) => (
+    <Atoms.Container className={containerClassName}>
+      <Atoms.Typography as="p" className="mb-4 text-base leading-6 font-medium text-secondary-foreground/80">
+        {t('expired')}
+      </Atoms.Typography>
+      <Atoms.Button size="sm" className="rounded-full font-bold" variant="default" onClick={requestLightningInvoice}>
+        <Libs.RefreshCw className="mr-1.5 h-3.5 w-3.5" />
+        {t('newInvoice')}
+      </Atoms.Button>
+    </Atoms.Container>
+  );
+
+  const renderPaymentAction = () => {
+    if (isLoading) return <QRCodeSkeleton />;
+    if (!verification) return null;
+
+    if (isPaymentExpired) {
+      return isMobile
+        ? renderExpiredState('flex h-[192px] w-full items-center justify-center rounded-[9px] bg-secondary p-[9px]')
+        : renderExpiredState('flex h-[192px] w-[192px] items-center justify-center rounded-[9px] bg-secondary p-[9px]');
+    }
+
+    if (isMobile) {
+      return (
+        <Atoms.Button asChild className="w-full">
+          <a href={`lightning:${verification.data.bolt11Invoice}`}>
+            <Libs.Wallet className="mr-2 size-4" />
+            {t('payNow')}
+          </a>
+        </Atoms.Button>
+      );
+    }
+
+    return (
+      <Atoms.Container
+        overrideDefaults={true}
+        className="relative flex cursor-pointer items-center justify-center rounded-[9px] bg-white p-[9px]"
+        onClick={() => copyToClipboard(verification.data.bolt11Invoice)}
+      >
+        <QRCodeSVG value={verification.data.bolt11Invoice} size={174} />
+        <div className="pointer-events-none absolute inset-0 flex items-center justify-center">
+          <Atoms.Image src="/images/bitcoin-logo.svg" alt="Bitcoin logo" width={45} height={45} className="" />
+        </div>
+      </Atoms.Container>
+    );
+  };
+
   return (
     <React.Fragment>
       <Atoms.PageHeader>
@@ -147,57 +194,7 @@ export const HumanLightningPayment = ({ onBack, onSuccess }: HumanLightningPayme
           overrideDefaults={true}
           className="flex h-full w-full flex-col items-center justify-center sm:w-auto"
         >
-          {isLoading && <QRCodeSkeleton />}
-          {!isLoading &&
-            verification &&
-            (isMobile ? (
-              <Atoms.Button asChild className="w-full">
-                <a href={`lightning:${verification.data.bolt11Invoice}`}>
-                  <Libs.Wallet className="mr-2 size-4" />
-                  {t('payNow')}
-                </a>
-              </Atoms.Button>
-            ) : (
-              <React.Fragment>
-                {!isPaymentExpired && (
-                  <Atoms.Container
-                    overrideDefaults={true}
-                    className="relative flex cursor-pointer items-center justify-center rounded-[9px] bg-white p-[9px]"
-                    onClick={() => copyToClipboard(verification.data.bolt11Invoice)}
-                  >
-                    <QRCodeSVG value={verification.data.bolt11Invoice} size={174} />
-                    <div className="pointer-events-none absolute inset-0 flex items-center justify-center">
-                      <Atoms.Image
-                        src="/images/bitcoin-logo.svg"
-                        alt="Bitcoin logo"
-                        width={45}
-                        height={45}
-                        className=""
-                      />
-                    </div>
-                  </Atoms.Container>
-                )}
-                {isPaymentExpired && (
-                  <Atoms.Container className="flex h-[192px] w-[192px] items-center justify-center rounded-[9px] bg-secondary p-[9px]">
-                    <Atoms.Typography
-                      as="p"
-                      className="mb-4 text-base leading-6 font-medium text-secondary-foreground/80"
-                    >
-                      {t('expired')}
-                    </Atoms.Typography>
-                    <Atoms.Button
-                      size="sm"
-                      className="rounded-full font-bold"
-                      variant="default"
-                      onClick={requestLightningInvoice}
-                    >
-                      <Libs.RefreshCw className="mr-1.5 h-3.5 w-3.5" />
-                      {t('newInvoice')}
-                    </Atoms.Button>
-                  </Atoms.Container>
-                )}
-              </React.Fragment>
-            ))}
+          {renderPaymentAction()}
         </Atoms.Container>
 
         {/* Description */}

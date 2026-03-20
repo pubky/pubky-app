@@ -66,6 +66,38 @@ describe('HumanLightningPayment', () => {
     });
   });
 
+  it('shows refresh action on mobile when invoice is expired', async () => {
+    mockUseIsMobile.mockReturnValue(true);
+
+    vi.mocked(HomegateController.createLnVerification)
+      .mockResolvedValueOnce({
+        id: 'expired-id',
+        bolt11Invoice: 'expired-invoice',
+        amountSat: 1000,
+        expiresAt: Date.now() - 1000,
+      })
+      .mockResolvedValueOnce({
+        id: 'fresh-id',
+        bolt11Invoice: 'fresh-invoice',
+        amountSat: 1000,
+        expiresAt: Date.now() + 600000,
+      });
+
+    render(<HumanLightningPayment onBack={() => {}} onSuccess={() => {}} />);
+
+    const refreshButton = await screen.findByRole('button', { name: 'New invoice' });
+    expect(screen.queryByRole('link', { name: 'Pay now' })).not.toBeInTheDocument();
+
+    fireEvent.click(refreshButton);
+
+    await waitFor(() => {
+      expect(HomegateController.createLnVerification).toHaveBeenCalledTimes(2);
+    });
+    await waitFor(() => {
+      expect(screen.getByRole('link', { name: 'Pay now' })).toHaveAttribute('href', 'lightning:fresh-invoice');
+    });
+  });
+
   it('on back', async () => {
     let isBackClicked = false;
     const { container } = render(
