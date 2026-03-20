@@ -1,0 +1,21 @@
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
+
+exports[`Tooltip - Snapshots > matches snapshot when open with trigger and content 1`] = `
+<button
+  aria-describedby="radix-normalized"
+  data-state="instant-open"
+  type="button"
+>
+  Trigger
+</button>
+`;
+
+exports[`Tooltip - Snapshots > matches snapshot when open with trigger and content 2`] = `
+<span
+  id="radix-normalized"
+  role="tooltip"
+  style="position: absolute; border: 0px; width: 1px; height: 1px; padding: 0px; margin: -1px; overflow: hidden; clip: rect(0px, 0px, 0px, 0px); white-space: nowrap; word-wrap: normal;"
+>
+  Snapshot label
+</span>
+`;
