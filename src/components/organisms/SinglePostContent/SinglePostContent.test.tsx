@@ -5,24 +5,9 @@ import { SinglePostContent } from './SinglePostContent';
 import * as Hooks from '@/hooks';
 
 // Mock hooks
-const mockUsePostReplies = vi.fn(() => ({
-  replyIds: [],
-  loading: false,
-  loadingMore: false,
-  error: null,
-  hasMore: false,
-  loadMore: vi.fn(),
-  refresh: vi.fn(),
-  prependReply: vi.fn(),
-}));
-
 const mockUseRequireAuth = vi.fn(() => ({
   isAuthenticated: true,
   requireAuth: vi.fn((action: () => unknown) => action()),
-}));
-
-const mockUsePostNavigation = vi.fn(() => ({
-  navigateToPost: vi.fn(),
 }));
 
 const mockUsePostDetails = vi.fn(() => ({
@@ -38,8 +23,9 @@ const mockUsePostDetails = vi.fn(() => ({
   isLoading: false,
 }));
 
-const mockUseInfiniteScroll = vi.fn(() => ({
-  sentinelRef: vi.fn(),
+const mockUsePostCounts = vi.fn(() => ({
+  postCounts: { replies: 0, tags: 0, unique_tags: 0, reposts: 0 },
+  isLoading: false,
 }));
 
 const mockUsePostAncestors = vi.fn(() => ({
@@ -54,11 +40,9 @@ const mockUseUserDetailsFromIds = vi.fn(() => ({
 }));
 
 vi.mock('@/hooks', () => ({
-  usePostReplies: vi.fn(),
-  usePostNavigation: vi.fn(),
   usePostDetails: vi.fn(),
-  useInfiniteScroll: vi.fn(),
   useRequireAuth: vi.fn(),
+  usePostCounts: vi.fn(),
   usePostAncestors: vi.fn(),
   useUserDetailsFromIds: vi.fn(),
 }));
@@ -97,16 +81,6 @@ vi.mock('@/atoms', () => ({
       {children}
     </div>
   ),
-  Spinner: ({ size }: { size?: string }) => (
-    <div data-testid="spinner" data-size={size}>
-      Loading...
-    </div>
-  ),
-  Typography: ({ children, as, className }: { children: React.ReactNode; as?: string; className?: string }) => (
-    <span data-testid="typography" data-as={as} data-class-name={className}>
-      {children}
-    </span>
-  ),
   PostThreadSpacer: () => <div data-testid="post-thread-spacer" />,
   POST_THREAD_CONNECTOR_VARIANTS: {
     REGULAR: 'regular',
@@ -116,9 +90,6 @@ vi.mock('@/atoms', () => ({
 
 // Mock molecules
 vi.mock('@/molecules', () => ({
-  TimelineError: ({ message }: { message: string }) => <div data-testid="timeline-error">{message}</div>,
-  TimelineLoadingMore: () => <div data-testid="timeline-loading-more">Loading more...</div>,
-  TimelineEndMessage: () => <div data-testid="timeline-end-message">End of replies</div>,
   PostDeleted: () => <div data-testid="post-deleted">Post deleted</div>,
 }));
 
@@ -165,46 +136,17 @@ vi.mock('../SinglePostParticipants', () => ({
 }));
 
 vi.mock('../QuickReply', () => ({
-  QuickReply: ({
-    parentPostId,
-    connectorVariant,
-    onReplySubmitted,
-  }: {
-    parentPostId: string;
-    connectorVariant?: string;
-    onReplySubmitted?: (replyId: string) => void;
-  }) => (
-    <div
-      data-testid="quick-reply"
-      data-parent-post-id={parentPostId}
-      data-connector-variant={connectorVariant}
-      onClick={() => onReplySubmitted?.('reply-123')}
-    >
+  QuickReply: ({ parentPostId, connectorVariant }: { parentPostId: string; connectorVariant?: string }) => (
+    <div data-testid="quick-reply" data-parent-post-id={parentPostId} data-connector-variant={connectorVariant}>
       QuickReply
     </div>
   ),
 }));
 
-vi.mock('../PostMain', () => ({
-  PostMain: ({
-    postId,
-    isReply,
-    onClick,
-    isLastReply,
-  }: {
-    postId: string;
-    isReply?: boolean;
-    onClick?: () => void;
-    isLastReply?: boolean;
-  }) => (
-    <div
-      data-testid="post-main"
-      data-post-id={postId}
-      data-is-reply={isReply}
-      data-is-last-reply={isLastReply}
-      onClick={onClick}
-    >
-      PostMain {postId}
+vi.mock('../ThreadTree', () => ({
+  ThreadTree: ({ postId, showQuickReply }: { postId: string; showQuickReply?: boolean }) => (
+    <div data-testid="thread-tree" data-post-id={postId} data-show-quick-reply={String(showQuickReply)}>
+      ThreadTree
     </div>
   ),
 }));
@@ -216,12 +158,8 @@ describe('SinglePostContent', () => {
     vi.clearAllMocks();
     mockIsPostDeleted.mockReturnValue(false);
     vi.mocked(Hooks.useRequireAuth).mockReturnValue(mockUseRequireAuth());
-    vi.mocked(Hooks.usePostReplies).mockReturnValue(mockUsePostReplies());
-    vi.mocked(Hooks.usePostNavigation).mockReturnValue(mockUsePostNavigation());
     vi.mocked(Hooks.usePostDetails).mockReturnValue(mockUsePostDetails());
-    vi.mocked(Hooks.useInfiniteScroll).mockReturnValue(
-      mockUseInfiniteScroll() as unknown as ReturnType<typeof Hooks.useInfiniteScroll>,
-    );
+    vi.mocked(Hooks.usePostCounts).mockReturnValue(mockUsePostCounts());
     vi.mocked(Hooks.usePostAncestors).mockReturnValue(mockUsePostAncestors());
     vi.mocked(Hooks.useUserDetailsFromIds).mockReturnValue(mockUseUserDetailsFromIds());
   });
@@ -266,19 +204,20 @@ describe('SinglePostContent', () => {
       expect(screen.getByText('Loading post...')).toBeInTheDocument();
     });
 
-    it('renders QuickReply component when parent post is not deleted', () => {
+    it('renders ThreadTree with showQuickReply=true when parent post is not deleted', () => {
       render(<SinglePostContent postId={mockPostId} />);
 
-      expect(screen.getByTestId('quick-reply')).toBeInTheDocument();
-      expect(screen.getByTestId('quick-reply')).toHaveAttribute('data-parent-post-id', mockPostId);
+      const tree = screen.getByTestId('thread-tree');
+      expect(tree).toHaveAttribute('data-show-quick-reply', 'true');
     });
 
-    it('does not render QuickReply when parent post is deleted', () => {
+    it('renders ThreadTree with showQuickReply=false when parent post is deleted', () => {
       mockIsPostDeleted.mockReturnValue(true);
 
       render(<SinglePostContent postId={mockPostId} />);
 
-      expect(screen.queryByTestId('quick-reply')).not.toBeInTheDocument();
+      const tree = screen.getByTestId('thread-tree');
+      expect(tree).toHaveAttribute('data-show-quick-reply', 'false');
     });
 
     it('renders PostDeleted component instead of post content when post is deleted', () => {
@@ -297,187 +236,18 @@ describe('SinglePostContent', () => {
       expect(screen.getByTestId('single-post-participants')).toBeInTheDocument();
       expect(screen.getByTestId('single-post-participants')).toHaveAttribute('data-post-id', mockPostId);
     });
-  });
 
-  describe('loading states', () => {
-    it('shows loading spinner when replies are loading', () => {
-      vi.mocked(Hooks.usePostReplies).mockReturnValue({
-        ...mockUsePostReplies(),
-        loading: true,
-      });
-
+    it('renders ThreadTree with correct postId', () => {
       render(<SinglePostContent postId={mockPostId} />);
 
-      expect(screen.getByTestId('spinner')).toBeInTheDocument();
-      expect(screen.getByText('Loading replies...')).toBeInTheDocument();
-    });
-
-    it('shows loading more indicator when loading additional replies', () => {
-      vi.mocked(Hooks.usePostReplies).mockReturnValue({
-        ...mockUsePostReplies(),
-        replyIds: ['reply-1', 'reply-2'],
-        loadingMore: true,
-        hasMore: true,
-      });
-
-      render(<SinglePostContent postId={mockPostId} />);
-
-      expect(screen.getByTestId('timeline-loading-more')).toBeInTheDocument();
+      const tree = screen.getByTestId('thread-tree');
+      expect(tree).toBeInTheDocument();
+      expect(tree).toHaveAttribute('data-post-id', mockPostId);
     });
   });
 
-  describe('error states', () => {
-    it('shows error message when there is an error', () => {
-      vi.mocked(Hooks.usePostReplies).mockReturnValue({
-        ...mockUsePostReplies(),
-        error: 'Failed to load replies',
-      });
-
-      render(<SinglePostContent postId={mockPostId} />);
-
-      expect(screen.getByTestId('timeline-error')).toBeInTheDocument();
-      expect(screen.getByTestId('timeline-error')).toHaveTextContent('Failed to load replies');
-    });
-
-    it('does not show error when loading', () => {
-      vi.mocked(Hooks.usePostReplies).mockReturnValue({
-        ...mockUsePostReplies(),
-        loading: true,
-        error: 'Failed to load replies',
-      });
-
-      render(<SinglePostContent postId={mockPostId} />);
-
-      expect(screen.queryByTestId('timeline-error')).not.toBeInTheDocument();
-    });
-  });
-
-  describe('replies list', () => {
-    it('renders reply items when replies are available', () => {
-      vi.mocked(Hooks.usePostReplies).mockReturnValue({
-        ...mockUsePostReplies(),
-        replyIds: ['reply-1', 'reply-2', 'reply-3'],
-      });
-
-      render(<SinglePostContent postId={mockPostId} />);
-
-      const replyItems = screen.getAllByTestId('post-main');
-      expect(replyItems).toHaveLength(3);
-      expect(replyItems[0]).toHaveAttribute('data-post-id', 'reply-1');
-      expect(replyItems[1]).toHaveAttribute('data-post-id', 'reply-2');
-      expect(replyItems[2]).toHaveAttribute('data-post-id', 'reply-3');
-    });
-
-    it('marks reply items as replies', () => {
-      vi.mocked(Hooks.usePostReplies).mockReturnValue({
-        ...mockUsePostReplies(),
-        replyIds: ['reply-1'],
-      });
-
-      render(<SinglePostContent postId={mockPostId} />);
-
-      const replyItem = screen.getByTestId('post-main');
-      expect(replyItem).toHaveAttribute('data-is-reply', 'true');
-    });
-
-    it('marks last reply correctly when no more replies', () => {
-      vi.mocked(Hooks.usePostReplies).mockReturnValue({
-        ...mockUsePostReplies(),
-        replyIds: ['reply-1', 'reply-2'],
-        hasMore: false,
-      });
-
-      render(<SinglePostContent postId={mockPostId} />);
-
-      const replyItems = screen.getAllByTestId('post-main');
-      expect(replyItems[0]).toHaveAttribute('data-is-last-reply', 'false');
-      expect(replyItems[1]).toHaveAttribute('data-is-last-reply', 'true');
-    });
-
-    it('does not mark last reply when there are more replies to load', () => {
-      vi.mocked(Hooks.usePostReplies).mockReturnValue({
-        ...mockUsePostReplies(),
-        replyIds: ['reply-1', 'reply-2'],
-        hasMore: true,
-      });
-
-      render(<SinglePostContent postId={mockPostId} />);
-
-      const replyItems = screen.getAllByTestId('post-main');
-      expect(replyItems[1]).toHaveAttribute('data-is-last-reply', 'false');
-    });
-
-    it('shows end message when all replies are loaded', () => {
-      vi.mocked(Hooks.usePostReplies).mockReturnValue({
-        ...mockUsePostReplies(),
-        replyIds: ['reply-1'],
-        hasMore: false,
-      });
-
-      render(<SinglePostContent postId={mockPostId} />);
-
-      expect(screen.getByTestId('timeline-end-message')).toBeInTheDocument();
-    });
-
-    it('does not show end message when there are no replies', () => {
-      vi.mocked(Hooks.usePostReplies).mockReturnValue({
-        ...mockUsePostReplies(),
-        replyIds: [],
-        hasMore: false,
-      });
-
-      render(<SinglePostContent postId={mockPostId} />);
-
-      expect(screen.queryByTestId('timeline-end-message')).not.toBeInTheDocument();
-    });
-  });
-
-  describe('quick reply connector variant', () => {
-    it('uses REGULAR connector when there are replies', () => {
-      vi.mocked(Hooks.usePostReplies).mockReturnValue({
-        ...mockUsePostReplies(),
-        replyIds: ['reply-1'],
-      });
-
-      render(<SinglePostContent postId={mockPostId} />);
-
-      expect(screen.getByTestId('quick-reply')).toHaveAttribute('data-connector-variant', 'regular');
-    });
-
-    it('uses REGULAR connector when hasMore is true even with no loaded replies', () => {
-      vi.mocked(Hooks.usePostReplies).mockReturnValue({
-        ...mockUsePostReplies(),
-        replyIds: [],
-        hasMore: true,
-        loading: false,
-      });
-
-      render(<SinglePostContent postId={mockPostId} />);
-
-      expect(screen.getByTestId('quick-reply')).toHaveAttribute('data-connector-variant', 'regular');
-    });
-
-    it('uses LAST connector when there are no replies and no more to load', () => {
-      vi.mocked(Hooks.usePostReplies).mockReturnValue({
-        ...mockUsePostReplies(),
-        replyIds: [],
-        hasMore: false,
-      });
-
-      render(<SinglePostContent postId={mockPostId} />);
-
-      expect(screen.getByTestId('quick-reply')).toHaveAttribute('data-connector-variant', 'last');
-    });
-  });
-
-  describe('hooks integration', () => {
-    it('calls usePostReplies with the correct postId when authenticated', () => {
-      render(<SinglePostContent postId={mockPostId} />);
-
-      expect(Hooks.usePostReplies).toHaveBeenCalledWith(mockPostId);
-    });
-
-    it('calls usePostReplies with null when not authenticated', () => {
+  describe('authentication', () => {
+    it('hides replies section when not authenticated', () => {
       vi.mocked(Hooks.useRequireAuth).mockReturnValue({
         isAuthenticated: false,
         requireAuth: vi.fn(),
@@ -485,33 +255,17 @@ describe('SinglePostContent', () => {
 
       render(<SinglePostContent postId={mockPostId} />);
 
-      expect(Hooks.usePostReplies).toHaveBeenCalledWith(null);
+      expect(screen.queryByTestId('thread-tree')).not.toBeInTheDocument();
+      expect(screen.queryByTestId('quick-reply')).not.toBeInTheDocument();
+      expect(screen.queryByTestId('single-post-participants')).not.toBeInTheDocument();
     });
+  });
 
+  describe('hooks integration', () => {
     it('calls usePostDetails with the correct postId', () => {
       render(<SinglePostContent postId={mockPostId} />);
 
       expect(Hooks.usePostDetails).toHaveBeenCalledWith(mockPostId);
-    });
-
-    it('calls useInfiniteScroll with correct parameters', () => {
-      const mockLoadMore = vi.fn();
-      vi.mocked(Hooks.usePostReplies).mockReturnValue({
-        ...mockUsePostReplies(),
-        loadMore: mockLoadMore,
-        hasMore: true,
-        loadingMore: false,
-      });
-
-      render(<SinglePostContent postId={mockPostId} />);
-
-      expect(Hooks.useInfiniteScroll).toHaveBeenCalledWith({
-        onLoadMore: mockLoadMore,
-        hasMore: true,
-        isLoading: false,
-        threshold: 3000,
-        debounceMs: 20,
-      });
     });
   });
 });
@@ -523,12 +277,8 @@ describe('SinglePostContent - Snapshots', () => {
     vi.clearAllMocks();
     mockIsPostDeleted.mockReturnValue(false);
     vi.mocked(Hooks.useRequireAuth).mockReturnValue(mockUseRequireAuth());
-    vi.mocked(Hooks.usePostReplies).mockReturnValue(mockUsePostReplies());
-    vi.mocked(Hooks.usePostNavigation).mockReturnValue(mockUsePostNavigation());
     vi.mocked(Hooks.usePostDetails).mockReturnValue(mockUsePostDetails());
-    vi.mocked(Hooks.useInfiniteScroll).mockReturnValue(
-      mockUseInfiniteScroll() as unknown as ReturnType<typeof Hooks.useInfiniteScroll>,
-    );
+    vi.mocked(Hooks.usePostCounts).mockReturnValue(mockUsePostCounts());
     vi.mocked(Hooks.usePostAncestors).mockReturnValue(mockUsePostAncestors());
     vi.mocked(Hooks.useUserDetailsFromIds).mockReturnValue(mockUseUserDetailsFromIds());
   });
@@ -556,37 +306,6 @@ describe('SinglePostContent - Snapshots', () => {
     expect(container).toMatchSnapshot();
   });
 
-  it('matches snapshot with loading replies state', () => {
-    vi.mocked(Hooks.usePostReplies).mockReturnValue({
-      ...mockUsePostReplies(),
-      loading: true,
-    });
-
-    const { container } = render(<SinglePostContent postId={mockPostId} />);
-    expect(container).toMatchSnapshot();
-  });
-
-  it('matches snapshot with replies', () => {
-    vi.mocked(Hooks.usePostReplies).mockReturnValue({
-      ...mockUsePostReplies(),
-      replyIds: ['reply-1', 'reply-2'],
-      hasMore: false,
-    });
-
-    const { container } = render(<SinglePostContent postId={mockPostId} />);
-    expect(container).toMatchSnapshot();
-  });
-
-  it('matches snapshot with error state', () => {
-    vi.mocked(Hooks.usePostReplies).mockReturnValue({
-      ...mockUsePostReplies(),
-      error: 'Failed to load replies',
-    });
-
-    const { container } = render(<SinglePostContent postId={mockPostId} />);
-    expect(container).toMatchSnapshot();
-  });
-
   it('matches snapshot with deleted parent post', () => {
     mockIsPostDeleted.mockReturnValue(true);
 
@@ -594,12 +313,10 @@ describe('SinglePostContent - Snapshots', () => {
     expect(container).toMatchSnapshot();
   });
 
-  it('matches snapshot with loading more state', () => {
-    vi.mocked(Hooks.usePostReplies).mockReturnValue({
-      ...mockUsePostReplies(),
-      replyIds: ['reply-1'],
-      loadingMore: true,
-      hasMore: true,
+  it('matches snapshot when not authenticated', () => {
+    vi.mocked(Hooks.useRequireAuth).mockReturnValue({
+      isAuthenticated: false,
+      requireAuth: vi.fn(),
     });
 
     const { container } = render(<SinglePostContent postId={mockPostId} />);
