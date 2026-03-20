@@ -504,11 +504,12 @@ describe('posts', () => {
     replyToPost({ replyContent, filterText: postContent });
 
     cy.findFirstPostInFeedFiltered(replyContent, CheckForNewPosts.Yes).should('be.visible');
-    editPost({ newPostContent: editedReplyContent, filterText: replyContent, type: PostOrReply.Post });
+    editPost({ newPostContent: editedReplyContent, filterText: replyContent, type: PostOrReply.Reply });
 
-    cy.findFirstPostInFeedFiltered(editedReplyContent, CheckForNewPosts.Yes).should('be.visible');
+    cy.findFirstPostInFeedFiltered(editedReplyContent).should('be.visible');
     cy.reload();
-    cy.findFirstPostInFeedFiltered(editedReplyContent, CheckForNewPosts.Yes).should('be.visible');
+    waitForFeedToLoad();
+    cy.findFirstPostInFeedFiltered(editedReplyContent).should('be.visible');
   });
 
   it('can edit a repost', () => {
@@ -522,9 +523,10 @@ describe('posts', () => {
     cy.findFirstPostInFeedFiltered(repostContent, CheckForNewPosts.Yes).should('be.visible');
     editPost({ newPostContent: editedRepostContent, filterText: repostContent, type: PostOrReply.Post });
 
-    cy.findFirstPostInFeedFiltered(editedRepostContent, CheckForNewPosts.Yes).should('be.visible');
+    cy.findFirstPostInFeedFiltered(editedRepostContent).should('be.visible');
     cy.reload();
-    cy.findFirstPostInFeedFiltered(editedRepostContent, CheckForNewPosts.Yes).should('be.visible');
+    waitForFeedToLoad();
+    cy.findFirstPostInFeedFiltered(editedRepostContent).should('be.visible');
   });
 
   // todo, covers bug https://github.com/pubky/franky/issues/993
