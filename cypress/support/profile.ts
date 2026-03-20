@@ -164,17 +164,20 @@ export const unfollowUserByUsername = (username: string) => {
   // Find the user by name and click their follow toggle button
   cy.contains('[data-cy="profile-follower-item-name"]', username)
     .closest('[data-testid^="user-list-item-"]')
-    .find('[data-cy="profile-follower-item-follow-toggle-btn"]')
+    .find('[data-cy="user-list-item-follow-toggle-btn"]')
     .filter(':visible') // Filter to only the visible button (desktop or mobile)
     .should('be.visible')
-    .and('contain.text', 'Following') // todo: fails here due to bug, button shows 'Follow' text bug, see https://github.com/pubky/franky/issues/695
-    .click();
+    .then(($btn) => {
+      expect($btn.attr('aria-label')).to.match(/^Unfollow\b/);
+      cy.wrap($btn).click();
+    });
   // Verify the button now shows "Follow" (unfollowed state)
   cy.contains('[data-cy="profile-follower-item-name"]', username)
     .closest('[data-testid^="user-list-item-"]')
-    .find('[data-cy="profile-follower-item-follow-toggle-btn"]')
+    .find('[data-cy="user-list-item-follow-toggle-btn"]')
     .filter(':visible') // Filter to only the visible button (desktop or mobile)
-    .should('contain.text', 'Follow');
+    .should('have.attr', 'aria-label')
+    .and('match', /^Follow\b/);
 };
 
 export const waitForPutLastRead = () => {

@@ -58,7 +58,7 @@ describe('contacts', () => {
         // check 0 posts
         cy.get('[data-cy="profile-follower-item-posts-count"]').should('have.text', 0);
         // check follower is 'me'
-        cy.get('[data-cy="profile-follower-item-me-btn"]').should('be.visible');
+        cy.get('[data-cy="user-list-item-me-btn"]').should('be.visible');
       });
 
     // check number of listed following is 0
@@ -92,9 +92,11 @@ describe('contacts', () => {
         // check 0 posts
         cy.get('[data-cy="profile-follower-item-posts-count"]').should('have.text', 0);
         // check option to unfollow profile 1
-        cy.get('[data-cy="profile-follower-item-follow-toggle-btn"]')
+        cy.get('[data-cy="user-list-item-follow-toggle-btn"]')
+          .filter(':visible')
           .should('be.visible')
-          .and('contain.text', 'FollowingUnfollow');
+          .and('have.attr', 'aria-label')
+          .and('include', 'Unfollow');
       });
 
     // check number of listed followers is 0
@@ -132,11 +134,13 @@ describe('contacts', () => {
         // check 0 posts
         cy.get('[data-cy="profile-follower-item-posts-count"]').should('have.text', 0);
         // click follow button to make profile 2 a friend
-        cy.get('[data-cy="profile-follower-item-follow-toggle-btn"]')
+        cy.get('[data-cy="user-list-item-follow-toggle-btn"]')
           .filter(':visible') // Filter to only the visible button (desktop or mobile)
           .should('be.visible')
-          .and('contain.text', 'FollowFollow')
-          .click();
+          .then(($btn) => {
+            expect($btn.attr('aria-label')).to.match(/^Follow\b/);
+            cy.wrap($btn).click();
+          });
       });
 
     // check number of listed following is 1
@@ -165,11 +169,13 @@ describe('contacts', () => {
         // check 0 posts
         cy.get('[data-cy="profile-follower-item-posts-count"]').should('have.text', 0);
         // check option to unfollow profile 1
-        cy.get('[data-cy="profile-follower-item-follow-toggle-btn"]')
+        cy.get('[data-cy="user-list-item-follow-toggle-btn"]')
           .filter(':visible') // Filter to only the visible button (desktop or mobile)
           .should('be.visible')
-          .and('contain.text', 'FollowingUnfollow')
-          .click();
+          .then(($btn) => {
+            expect($btn.attr('aria-label')).to.match(/^Unfollow\b/);
+            cy.wrap($btn).click();
+          });
       });
   });
 });
