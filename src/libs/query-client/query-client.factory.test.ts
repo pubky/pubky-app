@@ -33,7 +33,10 @@ describe('clearAllQueryClients', () => {
     expect(clearSpy2).toHaveBeenCalledOnce();
   });
 
-  it('should not throw when no query clients are registered', () => {
+  it('should not throw when called on already-cleared clients', () => {
+    // beforeEach already called clearAllQueryClients(), so the registry holds
+    // clients from the previous test that have already been cleared.
+    // This verifies that clearing them again is safe.
     expect(() => clearAllQueryClients()).not.toThrow();
   });
 
