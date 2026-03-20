@@ -224,11 +224,8 @@ export class AuthController {
     // Cancel active auth flows
     this.cancelActiveAuthFlow();
 
-    // Cancel all pending queries to prevent retries after sign-out
-    // TODO: Centralise query client cleanup via a registry in createQueryClient
-    // so new query clients are automatically cancelled/cleared here.
-    Core.nexusQueryClient.cancelQueries();
-    Core.nexusQueryClient.clear();
+    // Cancel and clear all query clients (nexus, homegate, exchangerate, and any future ones)
+    Libs.clearAllQueryClients();
 
     // Reset all Zustand stores.
     // Settings reset() keeps `language`,
