@@ -75,7 +75,12 @@
     "links": "链接",
     "tags": "标签",
     "posts": "帖子",
-    "avatar": "头像"
+    "avatar": "头像",
+    "threadTree": {
+      "expandAllReplies": "展开所有回复",
+      "collapseAllReplies": "收起所有回复",
+      "moreReplies": "还有{count}条回复"
+    }
   },
   "header": {
     "home": "首页",

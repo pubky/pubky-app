@@ -72,7 +72,7 @@ export function TimelinePosts({
                   isReply={false}
                   tagsLayout={tagsLayout}
                 />
-                <Organisms.TimelinePostReplies postId={postId} onPostClick={navigateToPost} tagsLayout={tagsLayout} />
+                <Organisms.TimelinePostReplies postId={postId} />
               </Atoms.Container>
             )}
             components={virtuosoComponents}
