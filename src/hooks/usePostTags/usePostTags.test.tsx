@@ -56,17 +56,19 @@ vi.mock('@/molecules/TaggedItem/TaggedItem.utils', () => ({
 
 /**
  * Helper to mock useLiveQuery returning different values for its two call sites:
- *   1st call (odd)  → tagsCollection  (PostController.getTags)
- *   2nd call (even) → postCounts      (PostController.getCounts)
+ *   - PostController.getTags  → tagsValue
+ *   - PostController.getCounts → countsValue
  *
- * Because React hooks run in a stable order on every render, the modulo-2
- * pattern holds across re-renders within the same mockImplementation closure.
+ * The mapping is based on the query factory function content rather than call
+ * order, so the mock stays correct even if a future change reorders or adds
+ * additional useLiveQuery calls in the hook.
  */
 function setupLiveQueryMock(dexieHooks: typeof import('dexie-react-hooks'), tagsValue: unknown, countsValue: unknown) {
-  let callCount = 0;
-  vi.mocked(dexieHooks.useLiveQuery).mockImplementation(() => {
-    callCount++;
-    return callCount % 2 === 1 ? tagsValue : countsValue;
+  vi.mocked(dexieHooks.useLiveQuery).mockImplementation((queryFn) => {
+    const fnStr = queryFn.toString();
+    if (fnStr.includes('getTags')) return tagsValue;
+    if (fnStr.includes('getCounts')) return countsValue;
+    return undefined;
   });
 }
 
