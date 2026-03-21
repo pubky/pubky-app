@@ -253,8 +253,7 @@ describe('posts', () => {
     cy.intercept('POST', '/api/report', { statusCode: 200 }).as('reportPost');
     cy.get('[data-cy="report-reason-step-submit"]').click();
 
-    cy.wait('@reportPost');
-    cy.get('@reportPost').its('response.statusCode').should('eq', 200);
+    cy.wait('@reportPost').its('response.statusCode').should('eq', 200);
 
     cy.get('[data-cy="dialog-content"]')
       .should('be.visible')
@@ -312,13 +311,13 @@ describe('posts', () => {
       [tag1, tag2, tag3].forEach((tag) => {
         cy.contains('button', tag).should('be.visible').find('[data-cy="post-tag-count"]').should('have.text', '1');
       });
-      cy.intercept('DELETE', '**/pub/pubky.app/tags/**', { statusCode: 204 }).as('deleteTag');
+      cy.intercept('DELETE', '**/pub/pubky.app/tags/**').as('deleteTag');
       cy.contains('button', tag2).click();
-      cy.wait('@deleteTag');
+      cy.wait('@deleteTag').its('response.statusCode').should('eq', 204);
       cy.contains('button', tag2).should('be.visible').find('[data-cy="post-tag-count"]').should('have.text', '0');
-      cy.intercept('PUT', '**/pub/pubky.app/tags/**', { statusCode: 201 }).as('putTag');
+      cy.intercept('PUT', '**/pub/pubky.app/tags/**').as('putTag');
       cy.contains('button', tag2).click();
-      cy.wait('@putTag');
+      cy.wait('@putTag').its('response.statusCode').should('eq', 201);
       cy.contains('button', tag2).should('be.visible').find('[data-cy="post-tag-count"]').should('have.text', '1');
     });
 
@@ -346,10 +345,10 @@ describe('posts', () => {
     cy.location('pathname').should('contain', '/post/');
 
     cy.get('[data-cy="single-post-card"]').within(() => {
+      cy.intercept('PUT', '**/pub/pubky.app/tags/**').as('putTag');
       [tag1, tag2, tag3].forEach((tag) => {
-        cy.intercept('PUT', '**/pub/pubky.app/tags/**', { statusCode: 201 }).as('putTag');
         cy.get('[data-cy="add-tag-input"]').filter(':visible').type(`${tag}{enter}`);
-        cy.wait('@putTag');
+        cy.wait('@putTag').its('response.statusCode').should('eq', 201);
       });
 
       cy.get('[data-cy="post-tags-panel"]')
@@ -363,9 +362,9 @@ describe('posts', () => {
               .should('have.text', '1');
           });
 
-          cy.intercept('DELETE', '**/pub/pubky.app/tags/**', { statusCode: 204 }).as('deleteTag');
+          cy.intercept('DELETE', '**/pub/pubky.app/tags/**').as('deleteTag');
           cy.contains('p', tag2).parent().click();
-          cy.wait('@deleteTag');
+          cy.wait('@deleteTag').its('response.statusCode').should('eq', 204);
           cy.contains('p', tag2)
             .should('be.visible')
             .parent()
