@@ -249,8 +249,10 @@ export const fastTagPost = (tags: string[]) => {
   // Click the add tag button to show the input
   cy.get('[data-cy="post-tag-add-button"]').first().click();
   tags.forEach((tag) => {
+    cy.intercept('PUT', '**/pub/pubky.app/tags/**', { statusCode: 201 }).as('putTag');
     // Type the tag and press Enter to submit
     cy.get('[data-cy="add-tag-input"]').first().type(`${tag}{enter}`);
+    cy.wait('@putTag');
   });
 };
 

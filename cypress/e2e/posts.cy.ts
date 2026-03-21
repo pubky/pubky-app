@@ -347,7 +347,9 @@ describe('posts', () => {
 
     cy.get('[data-cy="single-post-card"]').within(() => {
       [tag1, tag2, tag3].forEach((tag) => {
+        cy.intercept('PUT', '**/pub/pubky.app/tags/**', { statusCode: 201 }).as('putTag');
         cy.get('[data-cy="add-tag-input"]').filter(':visible').type(`${tag}{enter}`);
+        cy.wait('@putTag');
       });
 
       cy.get('[data-cy="post-tags-panel"]')
@@ -503,7 +505,7 @@ describe('posts', () => {
     createQuickPost(postContent);
     replyToPost({ replyContent, filterText: postContent });
 
-    cy.findFirstPostInFeedFiltered(replyContent, CheckForNewPosts.Yes).should('be.visible');
+    cy.findFirstPostInFeedFiltered(replyContent, CheckForNewPosts.No, WaitForNewPosts.Yes).should('be.visible');
     editPost({ newPostContent: editedReplyContent, filterText: replyContent, type: PostOrReply.Reply });
 
     cy.findFirstPostInFeedFiltered(editedReplyContent).should('be.visible');
@@ -520,7 +522,7 @@ describe('posts', () => {
     createQuickPost(postContent);
     repostPost({ repostContent, filterText: postContent });
 
-    cy.findFirstPostInFeedFiltered(repostContent, CheckForNewPosts.Yes).should('be.visible');
+    cy.findFirstPostInFeedFiltered(repostContent, CheckForNewPosts.No, WaitForNewPosts.Yes).should('be.visible');
     editPost({ newPostContent: editedRepostContent, filterText: repostContent, type: PostOrReply.Post });
 
     cy.findFirstPostInFeedFiltered(editedRepostContent).should('be.visible');
