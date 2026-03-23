@@ -25,7 +25,7 @@ function StickySidebar({ children }: Types.StickySidebarProps) {
       className={Libs.cn(
         'hidden flex-col items-start justify-start gap-6 self-start lg:flex',
         'w-(--filter-bar-width) max-w-(--filter-bar-width) min-w-(--filter-bar-width) shrink-0',
-        'sticky overflow-y-auto overscroll-contain',
+        'sticky overflow-x-hidden overflow-y-auto overscroll-contain',
       )}
       style={{ top: `${stickyTop}px`, maxHeight: sidebarMaxHeight }}
     >
