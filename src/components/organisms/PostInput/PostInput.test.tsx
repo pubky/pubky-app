@@ -584,19 +584,21 @@ describe('PostInput - autoFocusTarget', () => {
     expect(textarea).toHaveFocus();
   });
 
-  it('does not focus any element when autoFocusTarget is omitted', () => {
+  it('does not auto-focus via autoFocusTarget when it is omitted', () => {
     render(<PostInput variant={POST_INPUT_VARIANT.POST} />);
 
     expect(screen.getByTestId('textarea')).not.toHaveFocus();
+    expect(screen.queryByTestId('input')).not.toBeInTheDocument();
   });
 
-  it('does not focus any element when autoFocusTarget is omitted in article mode', () => {
+  it('does not auto-focus via autoFocusTarget in article mode (MarkdownEditor manages its own focus)', () => {
     mockUsePostReturn.isArticle = true;
 
     render(<PostInput variant={POST_INPUT_VARIANT.POST} />);
 
     expect(screen.getByTestId('input')).not.toHaveFocus();
     expect(screen.getByTestId('markdown-editor')).not.toHaveFocus();
+    expect(screen.queryByTestId('textarea')).not.toBeInTheDocument();
   });
 
   it('focuses title input when autoFocusTarget is "title" in article mode', () => {
