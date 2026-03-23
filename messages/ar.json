@@ -75,7 +75,12 @@
     "links": "روابط",
     "tags": "وسوم",
     "posts": "منشورات",
-    "avatar": "صورة رمزية"
+    "avatar": "صورة رمزية",
+    "threadTree": {
+      "expandAllReplies": "توسيع كل الردود",
+      "collapseAllReplies": "طي كل الردود",
+      "moreReplies": "{count, plural, zero {لا ردود إضافية} one {رد إضافي واحد} two {ردان إضافيان} few {# ردود إضافية} many {# ردا إضافيا} other {# رد إضافي}}"
+    }
   },
   "header": {
     "home": "الرئيسية",

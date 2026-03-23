@@ -120,3 +120,5 @@ export * from './UsersList';
 export * from './SearchHeader';
 export * from './SearchEmptyState';
 export * from './MentionPopover';
+export * from './ShowMoreReplies';
+export * from './ThreadExpandToggle';
