@@ -10,6 +10,7 @@ vi.mock('next/navigation', () => ({
   useRouter: () => ({
     push: mockPush,
   }),
+  usePathname: () => '/sign-in',
 }));
 
 // Mock Next.js Image
