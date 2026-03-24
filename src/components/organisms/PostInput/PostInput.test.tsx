@@ -249,7 +249,6 @@ vi.mock('@/molecules/PostInputAttachments/PostInputAttachments', () => ({
 // Shared refs so React populates them when mock components render
 const mockTextareaRef = createRef<HTMLTextAreaElement>();
 const mockMarkdownEditorRef = { current: null as { focus: ReturnType<typeof vi.fn> } | null };
-const mockTitleRef = createRef<HTMLInputElement>();
 const mockContainerRef = createRef<HTMLDivElement>();
 const mockFileInputRef = createRef<HTMLInputElement>();
 
@@ -279,7 +278,6 @@ vi.mock('@/hooks', () => ({
   usePostInput: vi.fn((options: { variant: string; placeholder?: string }) => ({
     textareaRef: mockTextareaRef,
     markdownEditorRef: mockMarkdownEditorRef,
-    titleRef: mockTitleRef,
     containerRef: mockContainerRef,
     fileInputRef: mockFileInputRef,
     content: mockUsePostReturn.content,

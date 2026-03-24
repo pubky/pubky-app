@@ -31,7 +31,6 @@ export interface UsePostInputReturn {
   // Refs
   textareaRef: RefObject<HTMLTextAreaElement | null>;
   markdownEditorRef: RefObject<MDXEditorMethods | null>;
-  titleRef: RefObject<HTMLInputElement | null>;
   containerRef: RefObject<HTMLDivElement | null>;
   fileInputRef: RefObject<HTMLInputElement | null>;
 

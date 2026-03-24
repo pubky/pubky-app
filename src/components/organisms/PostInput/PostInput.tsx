@@ -40,7 +40,6 @@ export function PostInput({
   const {
     textareaRef,
     markdownEditorRef,
-    titleRef,
     containerRef,
     fileInputRef,
     content,
@@ -153,9 +152,8 @@ export function PostInput({
   // Uses requestAnimationFrame to wait for Radix Dialog's focus trap to finish before taking focus.
   React.useEffect(() => {
     if (!autoFocusTarget) return;
-    const refMap = { textarea: textareaRef, title: titleRef };
     requestAnimationFrame(() => {
-      refMap[autoFocusTarget]?.current?.focus();
+      textareaRef.current?.focus();
     });
     // eslint-disable-next-line react-hooks/exhaustive-deps -- only run on mount
   }, []);
@@ -188,7 +186,6 @@ export function PostInput({
       <Atoms.Container className="gap-4 contain-inline-size">
         {isArticle && (
           <Atoms.Input
-            ref={titleRef}
             placeholder={t('articleTitle')}
             defaultValue={articleTitle}
             onChange={handleArticleTitleChange}
