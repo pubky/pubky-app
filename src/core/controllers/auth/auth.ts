@@ -41,6 +41,8 @@ export class AuthController {
    * @returns Configured homeserver service instance
    */
   private static async signIn({ keypair }: Core.TKeypairParams): Promise<boolean> {
+    // Clear query clients to ensure no stale cache from previous session
+    Libs.clearAllQueryClients();
     // Clear database before sign in to ensure clean state
     await Core.clearDatabase();
     // Skip post-migration resync — bootstrap runs if user has profile, otherwise no data to resync
@@ -138,6 +140,8 @@ export class AuthController {
    * @param params.signupToken - Invitation code for user registration
    */
   static async signUp({ secretKey, signupToken }: Core.TSignUpParams) {
+    // Clear query clients to ensure no stale cache from previous session
+    Libs.clearAllQueryClients();
     // Clear database before sign up to ensure clean state
     await Core.clearDatabase();
     // Skip post-migration resync — new user has no homeserver data to resync
@@ -227,11 +231,8 @@ export class AuthController {
     // Cancel active auth flows
     this.cancelActiveAuthFlow();
 
-    // Cancel all pending queries to prevent retries after sign-out
-    // TODO: Centralise query client cleanup via a registry in createQueryClient
-    // so new query clients are automatically cancelled/cleared here.
-    Core.nexusQueryClient.cancelQueries();
-    Core.nexusQueryClient.clear();
+    // Cancel and clear all query clients (nexus, homegate, exchangerate, and any future ones)
+    Libs.clearAllQueryClients();
 
     // Reset all Zustand stores.
     // Settings reset() keeps `language`,
