@@ -38,47 +38,58 @@ exports[`TimelinePosts - Snapshots > should match snapshot with posts 1`] = `
     data-testid="container"
   >
     <div
-      class="space-y-4"
       data-cy="timeline-posts"
       data-testid="container"
     >
       <div
-        data-cy="post-card"
-        data-testid="container"
+        data-testid="virtuoso"
       >
-        <div
-          data-testid="post-author1:post1"
-        />
-        <div
-          data-testid="replies-author1:post1"
+        <div>
+          <div
+            class="pb-4"
+            data-cy="post-card"
+            data-testid="container"
+          >
+            <div
+              data-testid="post-author1:post1"
+            />
+            <div
+              data-testid="replies-author1:post1"
+            />
+          </div>
+        </div>
+        <div>
+          <div
+            class="pb-4"
+            data-cy="post-card"
+            data-testid="container"
+          >
+            <div
+              data-testid="post-author2:post2"
+            />
+            <div
+              data-testid="replies-author2:post2"
+            />
+          </div>
+        </div>
+        <div>
+          <div
+            class="pb-4"
+            data-cy="post-card"
+            data-testid="container"
+          >
+            <div
+              data-testid="post-author3:post3"
+            />
+            <div
+              data-testid="replies-author3:post3"
+            />
+          </div>
+        </div>
+        <button
+          data-testid="virtuoso-end-reached"
         />
       </div>
-      <div
-        data-cy="post-card"
-        data-testid="container"
-      >
-        <div
-          data-testid="post-author2:post2"
-        />
-        <div
-          data-testid="replies-author2:post2"
-        />
-      </div>
-      <div
-        data-cy="post-card"
-        data-testid="container"
-      >
-        <div
-          data-testid="post-author3:post3"
-        />
-        <div
-          data-testid="replies-author3:post3"
-        />
-      </div>
-      <div
-        class="h-5"
-        data-testid="container"
-      />
     </div>
   </div>
 </div>
