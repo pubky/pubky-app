@@ -49,6 +49,11 @@ vi.mock('@/atoms', () => ({
       {children}
     </div>
   )),
+  DialogFooter: vi.fn(({ children, className }) => (
+    <div data-testid="dialog-footer" className={className}>
+      {children}
+    </div>
+  )),
   Button: vi.fn(({ children, variant, className, size, onClick, disabled, ...props }) => (
     <button
       data-testid="button"

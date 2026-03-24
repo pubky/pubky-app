@@ -11,4 +11,6 @@ export interface PostTagsPanelProps {
   autoFocusInput?: boolean;
   /** Optional className for the container */
   className?: string;
+  /** Whether to show a loading skeleton while fetching initial data. Defaults to true. */
+  enableLoadingSkeleton?: boolean;
 }
