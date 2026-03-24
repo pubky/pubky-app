@@ -600,15 +600,6 @@ describe('PostInput - autoFocusTarget', () => {
     expect(screen.getByTestId('markdown-editor')).not.toHaveFocus();
     expect(screen.queryByTestId('textarea')).not.toBeInTheDocument();
   });
-
-  it('focuses title input when autoFocusTarget is "title" in article mode', () => {
-    mockUsePostReturn.isArticle = true;
-
-    render(<PostInput variant={POST_INPUT_VARIANT.POST} autoFocusTarget="title" />);
-
-    const titleInput = screen.getByTestId('input');
-    expect(titleInput).toHaveFocus();
-  });
 });
 
 describe('PostInput - Snapshots', () => {

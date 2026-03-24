@@ -31,7 +31,6 @@ interface PostInputBaseProps {
    *
    * Controls ref-based focus for PostInput's own input elements:
    * - 'textarea': the short-form post textarea (replies, regular post edits)
-   * - 'title': the article title input
    *
    * MarkdownEditor is not included here — it manages its own focus via its
    * native autoFocus prop, since it is lazy-loaded and its ref isn't available
@@ -43,7 +42,7 @@ interface PostInputBaseProps {
    *
    * Omit or leave undefined for no auto-focus.
    */
-  autoFocusTarget?: 'textarea' | 'title';
+  autoFocusTarget?: 'textarea';
   /**
    * Initial content to pre-fill (e.g. from OS share target).
    * Note: Only applied on mount, subsequent prop changes are ignored.
