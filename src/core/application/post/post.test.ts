@@ -9,6 +9,9 @@ vi.mock('@/core/services/local/post', () => ({
   LocalPostService: {
     fetch: vi.fn(),
     create: vi.fn(),
+    delete: vi.fn(),
+    edit: vi.fn(),
+    readDetails: vi.fn(),
   },
 }));
 
@@ -84,6 +87,7 @@ describe('Post Application', () => {
   // Spy setup helpers
   const setupBasicSpies = () => ({
     saveSpy: vi.spyOn(Core.LocalPostService, 'create').mockResolvedValue(undefined),
+    deleteSpy: vi.spyOn(Core.LocalPostService, 'delete').mockResolvedValue(false),
     requestSpy: vi.spyOn(Core.HomeserverService, 'request').mockResolvedValue(undefined),
   });
 
@@ -136,14 +140,26 @@ describe('Post Application', () => {
       expect(requestSpy).not.toHaveBeenCalled();
     });
 
-    it('should propagate error when homeserver sync fails', async () => {
+    it('should rollback local write and propagate error when homeserver sync fails', async () => {
       const mockData = createMockPostData();
-      const { saveSpy, requestSpy } = setupBasicSpies();
+      const { saveSpy, deleteSpy, requestSpy } = setupBasicSpies();
       requestSpy.mockRejectedValue(new Error('Failed to PUT to homeserver: 500'));
 
       await expect(Core.PostApplication.commitCreate(mockData)).rejects.toThrow('Failed to PUT to homeserver: 500');
       expect(saveSpy).toHaveBeenCalledOnce();
       expect(requestSpy).toHaveBeenCalledOnce();
+      expect(deleteSpy).toHaveBeenCalledWith({ compositePostId: mockData.compositePostId });
+    });
+
+    it('should propagate original error when rollback also fails', async () => {
+      const mockData = createMockPostData();
+      const { saveSpy, deleteSpy, requestSpy } = setupBasicSpies();
+      requestSpy.mockRejectedValue(new Error('Failed to PUT to homeserver: 401'));
+      deleteSpy.mockRejectedValue(new Error('Rollback DB error'));
+
+      await expect(Core.PostApplication.commitCreate(mockData)).rejects.toThrow('Failed to PUT to homeserver: 401');
+      expect(saveSpy).toHaveBeenCalledOnce();
+      expect(deleteSpy).toHaveBeenCalledWith({ compositePostId: mockData.compositePostId });
     });
 
     it('should handle posts with Long kind', async () => {
@@ -374,7 +390,7 @@ describe('Post Application', () => {
         expect(requestSpy).toHaveBeenCalledBefore(tagCreateSpy);
       });
 
-      it('should skip tags when homeserver sync fails', async () => {
+      it('should rollback local write, rollback files, and skip tags when homeserver sync fails', async () => {
         const mockFileAttachments = [createMockFileAttachment('file-fail')];
         const mockTags = [createMockTag('author:post-fail', 'art')];
 
@@ -394,6 +410,8 @@ describe('Post Application', () => {
         };
 
         const { commitCreateSpy, saveSpy, requestSpy, tagCreateSpy } = setupCreateSpies();
+        const deleteSpy = vi.spyOn(Core.LocalPostService, 'delete').mockResolvedValue(false);
+        const fileCommitDeleteSpy = vi.spyOn(Core.FileApplication, 'commitDelete').mockResolvedValue(undefined);
         requestSpy.mockRejectedValue(new Error('Homeserver sync failed: 503 Service Unavailable'));
 
         await expect(Core.PostApplication.commitCreate(mockData)).rejects.toThrow(
@@ -413,7 +431,41 @@ describe('Post Application', () => {
             kind: 'short',
           }),
         });
+        expect(deleteSpy).toHaveBeenCalledWith({ compositePostId: mockData.compositePostId });
+        expect(fileCommitDeleteSpy).toHaveBeenCalledWith(mockFileAttachments.map((f) => f.fileResult.meta.url));
         expect(tagCreateSpy).not.toHaveBeenCalled();
+      });
+
+      it('should propagate original error when file rollback also fails', async () => {
+        const mockFileAttachments = [createMockFileAttachment('file-rollback-fail')];
+
+        const mockPost = new PubkyAppPost(
+          'Post with file rollback failure',
+          PubkyAppPostKind.Short,
+          undefined,
+          undefined,
+          undefined,
+        );
+        const mockData: Core.TCreatePostInput = {
+          compositePostId: 'author:post-file-rollback-fail',
+          post: mockPost,
+          postUrl: 'pubky://author/pub/pubky.app/posts/post-file-rollback-fail',
+          fileAttachments: mockFileAttachments,
+        };
+
+        const { commitCreateSpy, saveSpy, requestSpy } = setupCreateSpies();
+        const deleteSpy = vi.spyOn(Core.LocalPostService, 'delete').mockResolvedValue(false);
+        const fileCommitDeleteSpy = vi
+          .spyOn(Core.FileApplication, 'commitDelete')
+          .mockRejectedValue(new Error('File rollback failed'));
+        requestSpy.mockRejectedValue(new Error('Homeserver sync failed: 401'));
+
+        await expect(Core.PostApplication.commitCreate(mockData)).rejects.toThrow('Homeserver sync failed: 401');
+
+        expect(commitCreateSpy).toHaveBeenCalledWith({ fileAttachments: mockFileAttachments });
+        expect(saveSpy).toHaveBeenCalledOnce();
+        expect(deleteSpy).toHaveBeenCalledWith({ compositePostId: mockData.compositePostId });
+        expect(fileCommitDeleteSpy).toHaveBeenCalledWith(mockFileAttachments.map((f) => f.fileResult.meta.url));
       });
     });
   });
@@ -1023,6 +1075,78 @@ describe('Post Application', () => {
 
       await expect(Core.PostApplication.fetchTaggers(params)).rejects.toThrow('Nexus failed');
       expect(taggersSpy).toHaveBeenCalledWith(params);
+    });
+  });
+
+  describe('commitEdit', () => {
+    const mockPostDetails: Core.PostDetailsModelSchema = {
+      id: 'author:post123',
+      content: 'Original content',
+      kind: 'short',
+      uri: 'pubky://author/pub/pubky.app/posts/post123',
+      indexed_at: Date.now(),
+      attachments: null,
+    };
+
+    const createMockEditInput = (): Core.TEditPostInput => {
+      const mockPost = new PubkyAppPost('Edited content', PubkyAppPostKind.Short, undefined, undefined, undefined);
+      return {
+        compositePostId: 'author:post123',
+        post: mockPost,
+        postUrl: 'pubky://author/pub/pubky.app/posts/post123',
+      };
+    };
+
+    const setupEditSpies = () => ({
+      readDetailsSpy: vi.spyOn(Core.LocalPostService, 'readDetails').mockResolvedValue(mockPostDetails),
+      editSpy: vi.spyOn(Core.LocalPostService, 'edit').mockResolvedValue(undefined),
+      requestSpy: vi.spyOn(Core.HomeserverService, 'request').mockResolvedValue(undefined),
+    });
+
+    it('should edit locally and sync to homeserver', async () => {
+      const mockData = createMockEditInput();
+      const { readDetailsSpy, editSpy, requestSpy } = setupEditSpies();
+
+      await Core.PostApplication.commitEdit(mockData);
+
+      expect(readDetailsSpy).toHaveBeenCalledWith({ postId: mockData.compositePostId });
+      expect(editSpy).toHaveBeenCalledWith({ compositePostId: mockData.compositePostId, content: 'Edited content' });
+      expect(requestSpy).toHaveBeenCalledWith({
+        method: HttpMethod.PUT,
+        url: mockData.postUrl,
+        bodyJson: expect.objectContaining({ content: 'Edited content', kind: 'short' }),
+      });
+    });
+
+    it('should rollback local edit when homeserver sync fails', async () => {
+      const mockData = createMockEditInput();
+      const { readDetailsSpy, editSpy, requestSpy } = setupEditSpies();
+      requestSpy.mockRejectedValue(new Error('Failed to PUT to homeserver: 401'));
+
+      await expect(Core.PostApplication.commitEdit(mockData)).rejects.toThrow('Failed to PUT to homeserver: 401');
+
+      expect(readDetailsSpy).toHaveBeenCalledWith({ postId: mockData.compositePostId });
+      expect(editSpy).toHaveBeenCalledTimes(2);
+      expect(editSpy).toHaveBeenNthCalledWith(1, {
+        compositePostId: mockData.compositePostId,
+        content: 'Edited content',
+      });
+      expect(editSpy).toHaveBeenNthCalledWith(2, {
+        compositePostId: mockData.compositePostId,
+        content: 'Original content',
+      });
+    });
+
+    it('should propagate original error when edit rollback also fails', async () => {
+      const mockData = createMockEditInput();
+      const { readDetailsSpy, editSpy, requestSpy } = setupEditSpies();
+      requestSpy.mockRejectedValue(new Error('Failed to PUT to homeserver: 401'));
+      editSpy.mockResolvedValueOnce(undefined).mockRejectedValueOnce(new Error('Rollback DB error'));
+
+      await expect(Core.PostApplication.commitEdit(mockData)).rejects.toThrow('Failed to PUT to homeserver: 401');
+
+      expect(readDetailsSpy).toHaveBeenCalledWith({ postId: mockData.compositePostId });
+      expect(editSpy).toHaveBeenCalledTimes(2);
     });
   });
 });

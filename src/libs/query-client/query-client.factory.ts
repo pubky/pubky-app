@@ -3,6 +3,18 @@ import { isAppError } from '../error';
 import { HttpStatusCode } from '../http';
 import type { QueryClientConfig } from './query-client.types';
 
+const queryClientRegistry: QueryClient[] = [];
+
+/**
+ * Cancels and clears all query clients created via createQueryClient.
+ */
+export function clearAllQueryClients(): void {
+  for (const client of queryClientRegistry) {
+    client.cancelQueries();
+    client.clear();
+  }
+}
+
 /**
  * Creates a TanStack QueryClient with configurable retry behavior.
  *
@@ -79,7 +91,7 @@ export function createQueryClient(config: QueryClientConfig): QueryClient {
     return Math.min(delays.default.initial * 2 ** attemptIndex, delays.default.max);
   }
 
-  return new QueryClient({
+  const client = new QueryClient({
     defaultOptions: {
       queries: {
         retry: shouldRetry,
@@ -89,4 +101,8 @@ export function createQueryClient(config: QueryClientConfig): QueryClient {
       },
     },
   });
+
+  queryClientRegistry.push(client);
+
+  return client;
 }
