@@ -119,8 +119,20 @@ export function NotificationItem({ notification, isUnread }: NotificationItemPro
     router.push(buildSearchUrl([normalizedTag]));
   };
 
+  // Handle clicking empty space in the notification row - navigate to the main notification target
+  const handleRowClick = (e: React.MouseEvent) => {
+    if ((e.target as HTMLElement).closest('a, button')) return;
+    if (notificationLink) {
+      router.push(notificationLink);
+    }
+  };
+
   return (
-    <Atoms.Container overrideDefaults={true} className="flex w-full min-w-0 items-center justify-between gap-2">
+    <Atoms.Container
+      overrideDefaults={true}
+      className={`flex w-full min-w-0 items-center justify-between gap-2 ${notificationLink ? 'cursor-pointer' : ''}`}
+      onClick={handleRowClick}
+    >
       <Atoms.Container overrideDefaults={true} className="flex min-w-0 flex-1 items-center gap-2">
         {/* Avatar - links to user profile */}
         {userProfileLink ? (
