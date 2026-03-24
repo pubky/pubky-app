@@ -310,7 +310,7 @@ function FullVariant({
         {/* User info */}
         <Atoms.Link href={`/profile/${user.id}`} className="flex min-w-0 flex-1 items-center gap-2">
           <Organisms.AvatarWithFallback avatarUrl={avatarUrl} name={displayName} fallbackSeed={user.id} size="md" />
-          <Atoms.Container overrideDefaults>
+          <Atoms.Container overrideDefaults className="min-w-0">
             <Atoms.Typography data-cy="profile-follower-item-name" size="sm" className="truncate font-bold">
               {displayName}
             </Atoms.Typography>
@@ -320,8 +320,8 @@ function FullVariant({
           </Atoms.Container>
         </Atoms.Link>
 
-        {/* Desktop: Tags - hidden between lg (1024px) and xl (1280px) */}
-        <TagsList userId={user.id} className="hidden xl:flex" />
+        {/* Desktop: Tags — constrained pills prevent overlay */}
+        <TagsList userId={user.id} className="hidden flex-nowrap justify-end *:max-w-[135px] xl:flex" />
 
         {/* Stats */}
         <UserStats tags={stats.tags} posts={stats.posts} />
