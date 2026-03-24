@@ -87,7 +87,7 @@ vi.mock('@/molecules', async (importOriginal) => {
         </div>
       ),
     ),
-    PostHeaderTimestamp: vi.fn(({ timeAgo }: { timeAgo: string }) => (
+    PostHeaderTimestamp: vi.fn(({ timeAgo }: { timeAgo: string; indexedAt: Date }) => (
       <div data-testid="post-header-timestamp">
         <svg data-testid="clock-icon" />
         <span>{timeAgo}</span>

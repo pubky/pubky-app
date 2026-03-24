@@ -32,6 +32,7 @@ export * from './Skeleton';
 export * from './Spinner';
 export * from './Textarea';
 export * from './Toast';
+export * from './Tooltip';
 export * from './Toggle';
 export * from './Switch';
 export * from './Typography';

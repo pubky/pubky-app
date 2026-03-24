@@ -5,98 +5,105 @@ exports[`VisualTimelinePosts - Snapshots > matches snapshot for a populated visu
   data-cy="visual-feed-container"
 >
   <div
-    class="mx-auto flex w-full flex-col gap-6"
+    class="mx-auto w-full"
     style="max-width: 1200px;"
   >
     <div
-      class="grid grid-cols-12 gap-6"
+      data-testid="virtuoso"
     >
-      <div
-        class="min-w-0"
-        style="grid-column: span 6 / span 6;"
-      >
+      <div>
         <div
-          aria-label="Open post author:post1"
-          class="group relative size-full cursor-pointer overflow-hidden rounded-md border border-white/10 bg-black focus-visible:ring-2 focus-visible:ring-white/50 focus-visible:outline-none"
-          data-cy="visual-feed-tile"
-          role="button"
-          style="aspect-ratio: 588 / 384;"
-          tabindex="0"
+          class="grid grid-cols-12 gap-6 pb-6"
         >
-          <img
-            alt="image.jpg"
-            class="object-cover"
-            src="/image.jpg"
-          />
           <div
-            class="pointer-events-none absolute inset-0 flex flex-col justify-between bg-[linear-gradient(180deg,rgba(5,5,10,0.58)_0%,rgba(5,5,10,0.72)_100%)] opacity-0 backdrop-blur-[3px] transition-opacity duration-200 group-focus-within:opacity-100 group-hover:opacity-100 p-5"
+            class="min-w-0"
+            style="grid-column: span 6 / span 6;"
           >
             <div
-              class="pointer-events-none drop-shadow-[0_2px_10px_rgba(5,5,10,0.9)] group-focus-within:pointer-events-auto group-hover:pointer-events-auto"
+              aria-label="Open post author:post1"
+              class="group relative size-full cursor-pointer overflow-hidden rounded-md border border-white/10 bg-black focus-visible:ring-2 focus-visible:ring-white/50 focus-visible:outline-none"
+              data-cy="visual-feed-tile"
+              role="button"
+              style="aspect-ratio: 588 / 384;"
+              tabindex="0"
             >
+              <img
+                alt="image.jpg"
+                class="object-cover"
+                src="/image.jpg"
+              />
               <div
-                class="flex flex-col gap-4 max-h-56"
-                data-testid="visual-overlay-content-stack"
+                class="pointer-events-none absolute inset-0 flex flex-col justify-between bg-[linear-gradient(180deg,rgba(5,5,10,0.58)_0%,rgba(5,5,10,0.72)_100%)] opacity-0 backdrop-blur-[3px] transition-opacity duration-200 group-focus-within:opacity-100 group-hover:opacity-100 p-5"
               >
                 <div
-                  class="flex items-start justify-between gap-4"
+                  class="pointer-events-none drop-shadow-[0_2px_10px_rgba(5,5,10,0.9)] group-focus-within:pointer-events-auto group-hover:pointer-events-auto"
                 >
                   <div
-                    class="min-w-0 flex-1"
+                    class="flex flex-col gap-4 max-h-56"
+                    data-testid="visual-overlay-content-stack"
                   >
                     <div
-                      data-testid="visual-overlay-header"
+                      class="flex items-start justify-between gap-4"
                     >
-                      Header
+                      <div
+                        class="min-w-0 flex-1"
+                      >
+                        <div
+                          data-testid="visual-overlay-header"
+                        >
+                          Header
+                        </div>
+                      </div>
+                      <div
+                        class="shrink-0 pt-0.5 [&_span]:text-white/70 [&_svg]:text-white/70"
+                      >
+                        <div
+                          data-testid="visual-overlay-timestamp"
+                        >
+                          1m
+                        </div>
+                      </div>
                     </div>
-                  </div>
-                  <div
-                    class="shrink-0 pt-0.5 [&_span]:text-white/70 [&_svg]:text-white/70"
-                  >
                     <div
-                      data-testid="visual-overlay-timestamp"
+                      class="overflow-hidden max-h-[96px]"
                     >
-                      1m
+                      <div
+                        data-testid="visual-overlay-text"
+                      >
+                        Hello world
+                      </div>
                     </div>
                   </div>
                 </div>
                 <div
-                  class="overflow-hidden max-h-[96px]"
+                  class="pointer-events-none w-full drop-shadow-[0_2px_10px_rgba(5,5,10,0.9)] group-focus-within:pointer-events-auto group-hover:pointer-events-auto mt-4 flex flex-wrap items-end justify-between gap-x-6 gap-y-4"
                 >
                   <div
-                    data-testid="visual-overlay-text"
+                    data-testid="visual-overlay-tags"
                   >
-                    Hello world
+                    Tags
                   </div>
+                  <button
+                    data-testid="visual-overlay-reply"
+                  >
+                    Reply
+                  </button>
                 </div>
               </div>
-            </div>
-            <div
-              class="pointer-events-none w-full drop-shadow-[0_2px_10px_rgba(5,5,10,0.9)] group-focus-within:pointer-events-auto group-hover:pointer-events-auto mt-4 flex flex-wrap items-end justify-between gap-x-6 gap-y-4"
-            >
-              <div
-                data-testid="visual-overlay-tags"
-              >
-                Tags
-              </div>
-              <button
-                data-testid="visual-overlay-reply"
-              >
-                Reply
-              </button>
             </div>
           </div>
         </div>
       </div>
+      <div
+        data-testid="timeline-end"
+      >
+        End
+      </div>
+      <button
+        data-testid="virtuoso-end-reached"
+        type="button"
+      />
     </div>
-    <div
-      data-testid="timeline-end"
-    >
-      End
-    </div>
-    <div
-      class="h-5"
-    />
   </div>
 </div>
 `;
@@ -114,40 +121,47 @@ exports[`VisualTimelinePosts - Snapshots > matches snapshot for touch devices wi
   data-cy="visual-feed-container"
 >
   <div
-    class="mx-auto flex w-full flex-col gap-6"
+    class="mx-auto w-full"
     style="max-width: 1200px;"
   >
     <div
-      class="grid grid-cols-12 gap-6"
+      data-testid="virtuoso"
     >
-      <div
-        class="min-w-0"
-        style="grid-column: span 6 / span 6;"
-      >
+      <div>
         <div
-          aria-label="Open post author:post1"
-          class="group relative size-full cursor-pointer overflow-hidden rounded-md border border-white/10 bg-black focus-visible:ring-2 focus-visible:ring-white/50 focus-visible:outline-none"
-          data-cy="visual-feed-tile"
-          role="button"
-          style="aspect-ratio: 588 / 384;"
-          tabindex="0"
+          class="grid grid-cols-12 gap-6 pb-6"
         >
-          <img
-            alt="image.jpg"
-            class="object-cover"
-            src="/image.jpg"
-          />
+          <div
+            class="min-w-0"
+            style="grid-column: span 6 / span 6;"
+          >
+            <div
+              aria-label="Open post author:post1"
+              class="group relative size-full cursor-pointer overflow-hidden rounded-md border border-white/10 bg-black focus-visible:ring-2 focus-visible:ring-white/50 focus-visible:outline-none"
+              data-cy="visual-feed-tile"
+              role="button"
+              style="aspect-ratio: 588 / 384;"
+              tabindex="0"
+            >
+              <img
+                alt="image.jpg"
+                class="object-cover"
+                src="/image.jpg"
+              />
+            </div>
+          </div>
         </div>
       </div>
+      <div
+        data-testid="timeline-end"
+      >
+        End
+      </div>
+      <button
+        data-testid="virtuoso-end-reached"
+        type="button"
+      />
     </div>
-    <div
-      data-testid="timeline-end"
-    >
-      End
-    </div>
-    <div
-      class="h-5"
-    />
   </div>
 </div>
 `;
