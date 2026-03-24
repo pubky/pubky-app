@@ -444,7 +444,7 @@ describe('NotificationItem', () => {
     expect(mockPush).not.toHaveBeenCalled();
   });
 
-  it('does not navigate when clicking on a button inside the row', () => {
+  it('does not navigate when clicking on a link inside the TagPost notification row', () => {
     const tagNotification = {
       id: 'tagpost:123:user1',
       type: NotificationType.TagPost,
