@@ -54,7 +54,7 @@ export const Tag = ({
       data-testid={dataTestId || 'tag'}
       {...props}
     >
-      <Atoms.Typography size="sm" data-testid="tag-name">
+      <Atoms.Typography size="sm" className="truncate" data-testid="tag-name">
         {name}
       </Atoms.Typography>
 
