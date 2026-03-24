@@ -12,6 +12,9 @@ import { TAGS_PER_PAGE } from './usePostTags.constants';
  * Hook for fetching and managing post tags with pagination.
  * Uses useLiveQuery with PostController for automatic reactivity.
  *
+ * On mount, fetches the first page of tags from Nexus and merges into IndexedDB
+ * so that tags from other users are visible (not just locally-created ones).
+ *
  * The TagController.commitCreate/commitDelete methods use local-first writes with
  * compensation rollback, so useLiveQuery reacts immediately and failed homeserver
  * writes are reverted back out of IndexedDB.
@@ -25,9 +28,10 @@ export function usePostTags(postId: string | null | undefined, options: UsePostT
   const viewerId = customViewerId ?? currentUserId;
 
   const [isLoadingMore, setIsLoadingMore] = useState(false);
-  const [hasMore, setHasMore] = useState(true);
+  const [paginationExhausted, setPaginationExhausted] = useState(false);
   const loadedCountRef = useRef(0);
   const prevPostIdRef = useRef<string | null | undefined>(null);
+  const [hasFetched, setHasFetched] = useState(false);
 
   // Track zero-tagger tags with their original index for order preservation
   const [zeroTaggerTags, setZeroTaggerTags] = useState<Map<string, { tag: Core.NexusTag; index: number }>>(new Map());
@@ -38,11 +42,12 @@ export function usePostTags(postId: string | null | undefined, options: UsePostT
   // Reset state when postId changes
   useEffect(() => {
     if (prevPostIdRef.current !== postId) {
-      setHasMore(true);
+      setPaginationExhausted(false);
       loadedCountRef.current = 0;
       prevPostIdRef.current = postId;
       setZeroTaggerTags(new Map());
       setTagOrder(new Map());
+      setHasFetched(false);
     }
   }, [postId]);
 
@@ -56,6 +61,50 @@ export function usePostTags(postId: string | null | undefined, options: UsePostT
     undefined,
   );
 
+  // Fetch post counts to derive hasMore from unique_tags count.
+  // This avoids defaulting hasMore to true and triggering unnecessary loadMore calls.
+  const postCounts = useLiveQuery(
+    async () => {
+      if (!postId) return null;
+      return await Core.PostController.getCounts({ compositeId: postId });
+    },
+    [postId],
+    undefined,
+  );
+
+  // Fetch first page of tags from Nexus on mount to ensure tags from other users are visible.
+  // PostApplication.fetchTags merges results into IndexedDB, so useLiveQuery reacts automatically.
+  useEffect(() => {
+    if (!postId || hasFetched) return;
+    let stale = false;
+
+    const fetchInitialTags = async () => {
+      try {
+        const fetchedTags = await Core.PostController.fetchTags({
+          compositeId: postId,
+          skip: 0,
+          limit: TAGS_PER_PAGE,
+        });
+
+        if (stale) return;
+        loadedCountRef.current = Math.max(loadedCountRef.current, fetchedTags.length);
+
+        if (fetchedTags.length < TAGS_PER_PAGE) {
+          setPaginationExhausted(true);
+        }
+      } catch {
+        // Silently fail — local tags (if any) are still shown via useLiveQuery
+      } finally {
+        if (!stale) setHasFetched(true);
+      }
+    };
+
+    fetchInitialTags();
+    return () => {
+      stale = true;
+    };
+  }, [postId, hasFetched]);
+
   const isLoading = tagsCollection === undefined;
 
   // Extract NexusTag[] from the collection (first item contains the tags array)
@@ -63,6 +112,15 @@ export function usePostTags(postId: string | null | undefined, options: UsePostT
     if (!tagsCollection || tagsCollection.length === 0) return [];
     return tagsCollection[0]?.tags ?? [];
   }, [tagsCollection]);
+
+  // Derive hasMore from the known unique_tags count in IndexedDB rather than
+  // defaulting to true. This prevents the sentinel from rendering (and loadMore
+  // from firing) when all tags are already cached locally.
+  // paginationExhausted acts as a safety valve: if loadMore ever receives fewer
+  // than TAGS_PER_PAGE results, pagination is marked exhausted to prevent infinite
+  // empty fetches when unique_tags in IndexedDB is stale (e.g. a tag was deleted
+  // on the server but the count hasn't refreshed via TTL yet).
+  const hasMore = postCounts && !paginationExhausted ? localTags.length < postCounts.unique_tags : false;
 
   // Update tag order map when localTags change (only for new tags)
   useEffect(() => {
@@ -145,7 +203,7 @@ export function usePostTags(postId: string | null | undefined, options: UsePostT
       loadedCountRef.current += newTags.length;
 
       if (newTags.length < TAGS_PER_PAGE) {
-        setHasMore(false);
+        setPaginationExhausted(true);
       }
     } catch {
       toast({

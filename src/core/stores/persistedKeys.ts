@@ -5,7 +5,10 @@ export const SEARCH_PERSIST_KEY = 'search-store';
 export const HOME_PERSIST_KEY = 'home-store';
 export const HOT_PERSIST_KEY = 'hot-store';
 export const SETTINGS_PERSIST_KEY = 'settings-storage';
+export const MIGRATION_STORE_KEY = 'migration-store';
 
+// List of all persisted store keys (Local storage keys)
+// EX: MIGRATION_STORE_KEY won't be included in this list because it's not a persisted store key.
 export const PERSISTED_STORE_KEYS = [
   AUTH_PERSIST_KEY,
   ONBOARDING_PERSIST_KEY,

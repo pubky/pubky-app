@@ -42,6 +42,7 @@ export function DialogReportPostReasonStep({
             )}
 
             <Atoms.Textarea
+              data-cy="report-reason-input"
               aria-label="Report reason"
               placeholder="Why are you reporting?"
               className="min-h-20 resize-none border-none bg-transparent p-0 text-base font-medium text-secondary-foreground shadow-none focus-visible:ring-0 focus-visible:ring-offset-0"
@@ -56,6 +57,7 @@ export function DialogReportPostReasonStep({
 
       <Atoms.DialogFooter>
         <Atoms.Button
+          data-cy="report-reason-step-cancel"
           variant="secondary"
           size="lg"
           onClick={onCancel}
@@ -65,6 +67,7 @@ export function DialogReportPostReasonStep({
           Cancel
         </Atoms.Button>
         <Atoms.Button
+          data-cy="report-reason-step-submit"
           variant="dark-outline"
           size="lg"
           onClick={onSubmit}

@@ -25,6 +25,7 @@ const PUBKY_ERROR_NAMES = {
 } as const;
 
 const RETRYABLE_STATUS_CODES = [
+  HttpStatusCode.NOT_FOUND,
   HttpStatusCode.REQUEST_TIMEOUT,
   HttpStatusCode.TOO_MANY_REQUESTS,
   HttpStatusCode.INTERNAL_SERVER_ERROR,

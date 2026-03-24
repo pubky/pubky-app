@@ -75,7 +75,12 @@
     "links": "Enlaces",
     "tags": "Etiquetas",
     "posts": "Publicaciones",
-    "avatar": "Avatar"
+    "avatar": "Avatar",
+    "threadTree": {
+      "expandAllReplies": "Expandir todas las respuestas",
+      "collapseAllReplies": "Colapsar todas las respuestas",
+      "moreReplies": "{count, plural, one {# respuesta más} other {# respuestas más}}"
+    }
   },
   "header": {
     "home": "Inicio",
@@ -1056,7 +1061,7 @@
     "hotTags": "Etiquetas populares",
     "activeUsers": "Usuarios activos",
     "trendingPosts": "Publicaciones en tendencia",
-    "postsCount": "{count} publicaciónes",
+    "postsCount": "{count} publicaciones este mes",
     "failedToLoadUsers": "Error al cargar usuarios",
     "failedToLoadTags": "Error al cargar etiquetas",
     "noUsersToShow": "No hay usuarios para mostrar",

@@ -75,7 +75,12 @@
     "links": "Links",
     "tags": "Tags",
     "posts": "Posts",
-    "avatar": "Avatar"
+    "avatar": "Avatar",
+    "threadTree": {
+      "expandAllReplies": "Expandir todas as respostas",
+      "collapseAllReplies": "Recolher todas as respostas",
+      "moreReplies": "{count, plural, one {# resposta a mais} other {# respostas a mais}}"
+    }
   },
   "header": {
     "home": "Início",
@@ -1056,7 +1061,7 @@
     "hotTags": "Tags em alta",
     "activeUsers": "Usuários ativos",
     "trendingPosts": "Posts em alta",
-    "postsCount": "{count} posts",
+    "postsCount": "{count} publicações este mês",
     "failedToLoadUsers": "Falha ao carregar usuarios",
     "failedToLoadTags": "Falha ao carregar tags",
     "noUsersToShow": "Nenhum usuario para mostrar",

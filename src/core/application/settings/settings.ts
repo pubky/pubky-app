@@ -72,16 +72,19 @@ export class SettingsApplication {
    * @returns The remote settings if newer than local, or null if local is newer/equal
    * @throws If fetch or sync operations fail, caller should handle errors
    */
-  static async initializeSettings(pubky: Core.Pubky): Promise<Core.SettingsState | null> {
+  static async initializeSettings(
+    pubky: Core.Pubky,
+    localSettings: Core.SettingsState,
+  ): Promise<Core.SettingsState | null> {
     Logger.info('[Settings] Initializing settings sync');
-
-    const localSettings = Core.SettingsNormalizer.extractState(Core.useSettingsStore.getState());
     const remoteSettings = await this.fetchFromHomeserver(pubky);
 
     if (!remoteSettings) {
       Logger.info('[Settings] No remote settings, pushing local to homeserver');
-      await this.commitUpdate(localSettings, pubky);
-      return null;
+      // Stamp a real timestamp if updatedAt is 0 (initial default), so homeserver has a valid timestamp for future conflict resolution
+      const settingsWithTimestamp = { ...localSettings, updatedAt: localSettings.updatedAt || Date.now() };
+      await this.commitUpdate(settingsWithTimestamp, pubky);
+      return settingsWithTimestamp;
     }
 
     // Check if remote settings are newer (higher version or same version with newer timestamp)

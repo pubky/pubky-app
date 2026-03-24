@@ -1,10 +1,10 @@
 'use client';
 
-import { createContext, useEffect, useState, type ReactNode } from 'react';
+import { createContext, useEffect, useRef, useState, type ReactNode } from 'react';
 import * as Atoms from '@/atoms';
 import { AppError, Err, ErrorService, DatabaseErrorCode } from '@/libs';
 import { DatabaseContextType } from '@/providers';
-import { db } from '@/core';
+import { db, useMigrationStore } from '@/core';
 
 export const DatabaseContext = createContext<DatabaseContextType>({
   isReady: false,
@@ -20,11 +20,18 @@ export const DatabaseContext = createContext<DatabaseContextType>({
 export function DatabaseProvider({ children }: { children: ReactNode }) {
   const [isReady, setIsReady] = useState(false);
   const [error, setError] = useState<AppError | null>(null);
+  // Guards against the 'close' event (manually deleteding indexedDB fires this event) that fires during recreateDatabase() → this.close().
+  // Without this, the close handler would re-trigger initDatabase and cause an infinite loop.
+  const isInitializingRef = useRef(false);
 
   const initDatabase = async () => {
+    isInitializingRef.current = true;
     try {
       setError(null);
-      await db.initialize();
+      const { wasDbReset } = await db.initialize();
+      if (wasDbReset) {
+        useMigrationStore.getState().setWasDbReset(true);
+      }
       setIsReady(true);
     } catch (err) {
       setIsReady(false);
@@ -40,11 +47,27 @@ export function DatabaseProvider({ children }: { children: ReactNode }) {
           }),
         );
       }
+    } finally {
+      isInitializingRef.current = false;
     }
   };
 
   useEffect(() => {
     initDatabase();
+
+    // Re-initialize when the DB is unexpectedly closed (e.g. user deletes IndexedDB via devtools).
+    // Skips expected closes during recreateDatabase() via the isInitializingRef guard.
+    const handleUnexpectedClose = () => {
+      if (isInitializingRef.current) return;
+      setIsReady(false);
+      initDatabase();
+    };
+
+    db.on('close', handleUnexpectedClose);
+
+    return () => {
+      db.on('close').unsubscribe(handleUnexpectedClose);
+    };
   }, []);
 
   // Block rendering until database is ready

@@ -31,6 +31,7 @@ function FollowButton({ isFollowing, isLoading, isStatusLoading, displayName, va
   if (variant === 'icon') {
     return (
       <Atoms.Button
+        data-cy="user-list-item-follow-toggle-btn"
         variant="secondary"
         size="icon"
         onClick={onClick}
@@ -55,7 +56,7 @@ function FollowButton({ isFollowing, isLoading, isStatusLoading, displayName, va
   // iconWithText variant with hover states
   return (
     <Atoms.Button
-      data-cy="profile-follower-item-follow-toggle-btn"
+      data-cy="user-list-item-follow-toggle-btn"
       variant="secondary"
       size="sm"
       className="group w-[110px] justify-center"
@@ -103,6 +104,7 @@ function MeButton({ variant = 'icon', className }: { variant?: 'iconWithText' | 
   if (variant === 'icon') {
     return (
       <Atoms.Button
+        data-cy="user-list-item-me-btn"
         variant="secondary"
         size="icon"
         className={Libs.cn('size-8 shrink-0 cursor-not-allowed rounded-full opacity-50', className)}
@@ -116,7 +118,7 @@ function MeButton({ variant = 'icon', className }: { variant?: 'iconWithText' | 
 
   return (
     <Atoms.Button
-      data-cy="profile-follower-item-me-btn"
+      data-cy="user-list-item-me-btn"
       variant="secondary"
       size="sm"
       className={Libs.cn('w-[110px] cursor-not-allowed justify-center text-muted-foreground opacity-50', className)}
@@ -308,7 +310,7 @@ function FullVariant({
         {/* User info */}
         <Atoms.Link href={`/profile/${user.id}`} className="flex min-w-0 flex-1 items-center gap-2">
           <Organisms.AvatarWithFallback avatarUrl={avatarUrl} name={displayName} fallbackSeed={user.id} size="md" />
-          <Atoms.Container overrideDefaults>
+          <Atoms.Container overrideDefaults className="min-w-0">
             <Atoms.Typography data-cy="profile-follower-item-name" size="sm" className="truncate font-bold">
               {displayName}
             </Atoms.Typography>
@@ -318,8 +320,8 @@ function FullVariant({
           </Atoms.Container>
         </Atoms.Link>
 
-        {/* Desktop: Tags - hidden between lg (1024px) and xl (1280px) */}
-        <TagsList userId={user.id} className="hidden xl:flex" />
+        {/* Desktop: Tags — constrained pills prevent overlay */}
+        <TagsList userId={user.id} className="hidden flex-nowrap justify-end *:max-w-[135px] xl:flex" />
 
         {/* Stats */}
         <UserStats tags={stats.tags} posts={stats.posts} />
@@ -342,20 +344,22 @@ function FullVariant({
       </Atoms.Container>
 
       {/* Mobile: Bottom row */}
-      <Atoms.Container overrideDefaults className="flex flex-wrap items-center justify-between gap-3 lg:hidden">
+      <Atoms.Container overrideDefaults className="flex flex-wrap items-center gap-3 lg:hidden">
         <TagsList userId={user.id} className="flex-1" />
-        {isCurrentUser ? (
-          <MeButton variant={followButtonVariant} />
-        ) : (
-          <FollowButton
-            isFollowing={isFollowing}
-            isLoading={isLoading}
-            isStatusLoading={isStatusLoading}
-            displayName={displayName}
-            variant={followButtonVariant}
-            onClick={onFollowClick}
-          />
-        )}
+        <Atoms.Container overrideDefaults className="ml-auto">
+          {isCurrentUser ? (
+            <MeButton variant={followButtonVariant} />
+          ) : (
+            <FollowButton
+              isFollowing={isFollowing}
+              isLoading={isLoading}
+              isStatusLoading={isStatusLoading}
+              displayName={displayName}
+              variant={followButtonVariant}
+              onClick={onFollowClick}
+            />
+          )}
+        </Atoms.Container>
       </Atoms.Container>
     </Atoms.Container>
   );

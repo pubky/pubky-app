@@ -22,13 +22,13 @@ exports[`CopyrightForm - Snapshots > matches snapshot for default state 1`] = `
           Copyright Removal Request
         </h1>
         <p
-          class="text-sm font-semibold text-foreground font-normal text-muted-foreground"
+          class="text-sm font-medium text-foreground font-normal text-muted-foreground"
           data-testid="typography"
         >
           Date: 01/15/2026
         </p>
         <p
-          class="text-sm font-semibold text-foreground font-normal text-muted-foreground"
+          class="text-sm font-medium text-foreground font-normal text-muted-foreground"
           data-testid="typography"
         >
           Synonym Software, S.A. de C.V. ("Synonym")
@@ -45,7 +45,7 @@ exports[`CopyrightForm - Snapshots > matches snapshot for default state 1`] = `
           data-testid="container"
         >
           <p
-            class="text-sm font-semibold text-foreground font-normal text-muted-foreground"
+            class="text-sm font-medium text-foreground font-normal text-muted-foreground"
             data-testid="typography"
           >
             Dear Synonym:
@@ -55,7 +55,7 @@ exports[`CopyrightForm - Snapshots > matches snapshot for default state 1`] = `
           </p>
         </div>
         <p
-          class="text-xl font-semibold text-foreground"
+          class="text-base font-medium text-foreground"
           data-testid="typography"
         >
           Rights Owner Information
@@ -203,7 +203,7 @@ exports[`CopyrightForm - Snapshots > matches snapshot for default state 1`] = `
           data-testid="container"
         >
           <p
-            class="text-sm font-semibold text-foreground font-normal text-muted-foreground"
+            class="text-sm font-medium text-foreground font-normal text-muted-foreground"
             data-testid="typography"
           >
             We hereby provide notice of copyright infringements pursuant to the terms of the Digital Millennium Copyright Act (the "Act") and the Pubky Terms and Conditions. Copyright Owner is the owner of the copyrights in the following work(s) (collectively, the "Work(s)"):
@@ -276,14 +276,14 @@ exports[`CopyrightForm - Snapshots > matches snapshot for default state 1`] = `
           data-testid="container"
         >
           <p
-            class="text-sm font-semibold text-foreground font-normal text-muted-foreground"
+            class="text-sm font-medium text-foreground font-normal text-muted-foreground"
             data-testid="typography"
           >
             It has come to Copyright Owner's attention that your platform (the "Platform") displays, provides access to or caches materials that infringe Copyright Owner's copyrights in the Work(s). The following is a list of the infringing material(s) and the URL(s), if applicable, at which the infringing material(s) are accessible on the Platform:
           </p>
         </div>
         <p
-          class="text-xl font-semibold text-foreground"
+          class="text-base font-medium text-foreground"
           data-testid="typography"
         >
           Infringing work details
@@ -324,7 +324,7 @@ exports[`CopyrightForm - Snapshots > matches snapshot for default state 1`] = `
           data-testid="container"
         >
           <p
-            class="text-sm font-semibold text-foreground font-normal text-muted-foreground"
+            class="text-sm font-medium text-foreground font-normal text-muted-foreground"
             data-testid="typography"
           >
             We have a good faith belief that the use of the Works described in this letter are not authorized by Copyright Owner, any agent of Copyright Owner or any applicable law. The information in this notification is accurate. We swear under penalty of perjury that we are authorized to act on behalf of Copyright Owner with respect to the subject matter of this letter.
@@ -334,7 +334,7 @@ exports[`CopyrightForm - Snapshots > matches snapshot for default state 1`] = `
           </p>
         </div>
         <p
-          class="text-xl font-semibold text-foreground"
+          class="text-base font-medium text-foreground"
           data-testid="typography"
         >
           Contact Information
@@ -462,7 +462,7 @@ exports[`CopyrightForm - Snapshots > matches snapshot for default state 1`] = `
           </div>
         </div>
         <p
-          class="text-xl font-semibold text-foreground"
+          class="text-base font-medium text-foreground"
           data-testid="typography"
         >
           Address
@@ -623,7 +623,7 @@ exports[`CopyrightForm - Snapshots > matches snapshot for default state 1`] = `
           data-testid="container"
         />
         <h2
-          class="text-xl font-semibold text-foreground"
+          class="text-base font-medium text-foreground"
           data-testid="typography"
         >
           Signature

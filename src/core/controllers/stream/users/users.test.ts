@@ -257,4 +257,45 @@ describe('StreamUserController', () => {
       });
     });
   });
+
+  describe('getOrFetchUsers', () => {
+    it('should delegate to UserStreamApplication.getOrFetchUsers with correct args', async () => {
+      const userIds: Core.Pubky[] = ['user-1', 'user-2', 'user-3'];
+
+      const getOrFetchUsersSpy = vi.spyOn(Core.UserStreamApplication, 'getOrFetchUsers').mockResolvedValue();
+
+      await StreamUserController.getOrFetchUsers({ userIds });
+
+      expect(getOrFetchUsersSpy).toHaveBeenCalledWith({
+        userIds,
+        viewerId,
+      });
+    });
+
+    it('should pass undefined as viewerId when currentUserPubky is null', async () => {
+      vi.spyOn(Core.useAuthStore, 'getState').mockReturnValue({
+        ...Core.useAuthStore.getState(),
+        currentUserPubky: null,
+      });
+
+      const userIds: Core.Pubky[] = ['user-1'];
+
+      const getOrFetchUsersSpy = vi.spyOn(Core.UserStreamApplication, 'getOrFetchUsers').mockResolvedValue();
+
+      await StreamUserController.getOrFetchUsers({ userIds });
+
+      expect(getOrFetchUsersSpy).toHaveBeenCalledWith({
+        userIds,
+        viewerId: undefined,
+      });
+    });
+
+    it('should propagate errors from UserStreamApplication.getOrFetchUsers', async () => {
+      const userIds: Core.Pubky[] = ['user-1'];
+
+      vi.spyOn(Core.UserStreamApplication, 'getOrFetchUsers').mockRejectedValue(new Error('fetch-users-fail'));
+
+      await expect(StreamUserController.getOrFetchUsers({ userIds })).rejects.toThrow('fetch-users-fail');
+    });
+  });
 });

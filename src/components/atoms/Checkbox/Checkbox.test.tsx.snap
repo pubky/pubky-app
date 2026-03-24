@@ -168,7 +168,7 @@ exports[`Checkbox - Snapshots > matches snapshot with label and description 1`] 
       Label
     </label>
     <p
-      class="font-semibold text-sm leading-normal text-muted-foreground"
+      class="font-medium text-sm leading-normal text-muted-foreground"
       data-testid="typography"
     >
       Description text
@@ -227,7 +227,7 @@ exports[`Checkbox - Snapshots > matches snapshot with label, description and che
       Checked label
     </label>
     <p
-      class="font-semibold text-sm leading-normal text-muted-foreground"
+      class="font-medium text-sm leading-normal text-muted-foreground"
       data-testid="typography"
     >
       Description text
