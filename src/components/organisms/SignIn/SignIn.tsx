@@ -246,6 +246,7 @@ const SignInProgressHeader = () => {
 
   return (
     <Atoms.PageHeader>
+      <Molecules.Logo className="py-6 lg:hidden" />
       <Molecules.PageTitle size="large">{t('progressTitle')}</Molecules.PageTitle>
       <Atoms.PageSubtitle>{t('progressSubtitle')}</Atoms.PageSubtitle>
     </Atoms.PageHeader>
