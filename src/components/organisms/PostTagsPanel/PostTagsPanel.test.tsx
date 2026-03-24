@@ -115,6 +115,23 @@ describe('PostTagsPanel', () => {
 
       expect(screen.getByTestId('post-tags-panel-skeleton')).toBeInTheDocument();
     });
+
+    it('should not render skeleton when enableLoadingSkeleton is false', () => {
+      mockUsePostTags.mockReturnValue({
+        tags: [],
+        isLoading: true,
+        handleTagAdd: mockHandleTagAdd,
+        handleTagToggle: mockHandleTagToggle,
+        hasMore: false,
+        isLoadingMore: false,
+        loadMore: mockLoadMore,
+      });
+
+      render(<PostTagsPanel postId="author:post123" enableLoadingSkeleton={false} />);
+
+      expect(screen.queryByTestId('post-tags-panel-skeleton')).not.toBeInTheDocument();
+      expect(screen.getByTestId('tag-input')).toBeInTheDocument();
+    });
   });
 
   describe('empty state', () => {

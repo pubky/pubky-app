@@ -28,7 +28,7 @@ export function usePostTags(postId: string | null | undefined, options: UsePostT
   const viewerId = customViewerId ?? currentUserId;
 
   const [isLoadingMore, setIsLoadingMore] = useState(false);
-  const [hasMore, setHasMore] = useState(true);
+  const [paginationExhausted, setPaginationExhausted] = useState(false);
   const loadedCountRef = useRef(0);
   const prevPostIdRef = useRef<string | null | undefined>(null);
   const [hasFetched, setHasFetched] = useState(false);
@@ -42,7 +42,7 @@ export function usePostTags(postId: string | null | undefined, options: UsePostT
   // Reset state when postId changes
   useEffect(() => {
     if (prevPostIdRef.current !== postId) {
-      setHasMore(true);
+      setPaginationExhausted(false);
       loadedCountRef.current = 0;
       prevPostIdRef.current = postId;
       setZeroTaggerTags(new Map());
@@ -56,6 +56,17 @@ export function usePostTags(postId: string | null | undefined, options: UsePostT
     async () => {
       if (!postId) return null;
       return await Core.PostController.getTags({ compositeId: postId });
+    },
+    [postId],
+    undefined,
+  );
+
+  // Fetch post counts to derive hasMore from unique_tags count.
+  // This avoids defaulting hasMore to true and triggering unnecessary loadMore calls.
+  const postCounts = useLiveQuery(
+    async () => {
+      if (!postId) return null;
+      return await Core.PostController.getCounts({ compositeId: postId });
     },
     [postId],
     undefined,
@@ -79,7 +90,7 @@ export function usePostTags(postId: string | null | undefined, options: UsePostT
         loadedCountRef.current = Math.max(loadedCountRef.current, fetchedTags.length);
 
         if (fetchedTags.length < TAGS_PER_PAGE) {
-          setHasMore(false);
+          setPaginationExhausted(true);
         }
       } catch {
         // Silently fail — local tags (if any) are still shown via useLiveQuery
@@ -101,6 +112,15 @@ export function usePostTags(postId: string | null | undefined, options: UsePostT
     if (!tagsCollection || tagsCollection.length === 0) return [];
     return tagsCollection[0]?.tags ?? [];
   }, [tagsCollection]);
+
+  // Derive hasMore from the known unique_tags count in IndexedDB rather than
+  // defaulting to true. This prevents the sentinel from rendering (and loadMore
+  // from firing) when all tags are already cached locally.
+  // paginationExhausted acts as a safety valve: if loadMore ever receives fewer
+  // than TAGS_PER_PAGE results, pagination is marked exhausted to prevent infinite
+  // empty fetches when unique_tags in IndexedDB is stale (e.g. a tag was deleted
+  // on the server but the count hasn't refreshed via TTL yet).
+  const hasMore = postCounts && !paginationExhausted ? localTags.length < postCounts.unique_tags : false;
 
   // Update tag order map when localTags change (only for new tags)
   useEffect(() => {
@@ -183,7 +203,7 @@ export function usePostTags(postId: string | null | undefined, options: UsePostT
       loadedCountRef.current += newTags.length;
 
       if (newTags.length < TAGS_PER_PAGE) {
-        setHasMore(false);
+        setPaginationExhausted(true);
       }
     } catch {
       toast({
