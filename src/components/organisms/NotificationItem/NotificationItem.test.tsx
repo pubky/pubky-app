@@ -97,7 +97,7 @@ vi.mock('@/organisms', () => ({
 
 // Mock molecules
 const mockToast = vi.fn();
-const mockGetOrFetch = vi.fn(() => Promise.resolve(null));
+const mockGetOrFetch = vi.fn<() => Promise<{ kind: string; content: string } | null>>(() => Promise.resolve(null));
 vi.mock('@/molecules', () => ({
   PostTag: ({ label, onClick }: { label: string; onClick?: (e: React.MouseEvent) => void }) => (
     <span data-testid="post-tag" onClick={onClick}>
@@ -114,8 +114,16 @@ vi.mock('@/molecules', () => ({
 
 // Mock atoms
 vi.mock('@/atoms', () => ({
-  Container: ({ children, className }: { children: React.ReactNode; className?: string }) => (
-    <div data-testid="container" className={className}>
+  Container: ({
+    children,
+    className,
+    onClick,
+  }: {
+    children: React.ReactNode;
+    className?: string;
+    onClick?: React.MouseEventHandler;
+  }) => (
+    <div data-testid="container" className={className} onClick={onClick}>
       {children}
     </div>
   ),
@@ -410,6 +418,117 @@ describe('NotificationItem', () => {
 
     // Verify the href points to the PARENT post, not the reply
     expect(actionLink.closest('a')).toHaveAttribute('href', '/post/original-author/parent-post-id');
+  });
+
+  it('navigates to notification link when clicking empty space in the row', () => {
+    render(<NotificationItem notification={baseNotification} isUnread={false} />);
+
+    // The outermost container has the onClick handler and cursor-pointer class
+    const row = screen.getAllByTestId('container')[0];
+    expect(row).toHaveClass('cursor-pointer');
+
+    // Click on the container itself (empty space)
+    fireEvent.click(row);
+
+    // Follow notification links to user profile
+    expect(mockPush).toHaveBeenCalledWith('/profile/user1');
+  });
+
+  it('does not navigate when clicking on a link inside the row', () => {
+    render(<NotificationItem notification={baseNotification} isUnread={false} />);
+
+    const link = screen.getByText('User').closest('a')!;
+    // Clicking user's name link, in that case the row click handler should not be called
+    fireEvent.click(link);
+
+    expect(mockPush).not.toHaveBeenCalled();
+  });
+
+  it('does not navigate when clicking on a link inside the TagPost notification row', () => {
+    const tagNotification = {
+      id: 'tagpost:123:user1',
+      type: NotificationType.TagPost,
+      timestamp: Date.now() - 1000 * 60 * 30,
+      tagged_by: 'user1',
+      tag_label: 'bitcoin',
+      post_uri: 'user1:post123',
+    } as Core.FlatNotification;
+    render(<NotificationItem notification={tagNotification} isUnread={false} />);
+
+    // PostTag mock renders a span, but let's verify the closest('a, button') guard
+    // by clicking a link element - the handler should bail out
+    const actionLink = screen.getByText('tagged your post').closest('a')!;
+    fireEvent.click(actionLink);
+
+    // mockPush should only be called from tag click handler, not row click
+    expect(mockPush).not.toHaveBeenCalled();
+  });
+
+  it('does not navigate when clicking on a link inside Reply notification row', () => {
+    const replyNotification = {
+      id: 'reply:123:user1',
+      type: NotificationType.Reply,
+      timestamp: Date.now() - 1000 * 60 * 30,
+      replied_by: 'user1',
+      parent_post_uri: 'pubky://original-author/pub/pubky.app/posts/parent-post-id',
+      reply_uri: 'pubky://user1/pub/pubky.app/posts/reply-post-id',
+    } as Core.FlatNotification;
+    render(<NotificationItem notification={replyNotification} isUnread={false} />);
+
+    const actionLink = screen.getByText('replied to your post').closest('a')!;
+    fireEvent.click(actionLink);
+
+    expect(mockPush).not.toHaveBeenCalled();
+  });
+
+  it('does not navigate when clicking on a link inside NewFriend notification row', () => {
+    const friendNotification = {
+      id: 'new_friend:123:user1',
+      type: NotificationType.NewFriend,
+      timestamp: Date.now() - 1000 * 60 * 30,
+      followed_by: 'user1',
+    } as Core.FlatNotification;
+    render(<NotificationItem notification={friendNotification} isUnread={false} />);
+
+    const actionLink = screen.getByText('is now your friend').closest('a')!;
+    fireEvent.click(actionLink);
+
+    expect(mockPush).not.toHaveBeenCalled();
+  });
+
+  it('does not navigate when clicking on a link inside TagProfile notification row', () => {
+    const tagProfileNotification = {
+      id: 'tagprofile:123:user1',
+      type: NotificationType.TagProfile,
+      timestamp: Date.now() - 1000 * 60 * 30,
+      tagged_by: 'user1',
+      tag_label: 'developer',
+    } as Core.FlatNotification;
+    render(<NotificationItem notification={tagProfileNotification} isUnread={false} />);
+
+    const actionLink = screen.getByText('tagged your profile').closest('a')!;
+    fireEvent.click(actionLink);
+
+    expect(mockPush).not.toHaveBeenCalled();
+  });
+
+  it('does not navigate via row click when clicking on the timestamp and icon link', () => {
+    const replyNotification = {
+      id: 'reply:123:user1',
+      type: NotificationType.Reply,
+      timestamp: Date.now() - 1000 * 60 * 30,
+      replied_by: 'user1',
+      parent_post_uri: 'pubky://original-author/pub/pubky.app/posts/parent-post-id',
+      reply_uri: 'pubky://user1/pub/pubky.app/posts/reply-post-id',
+    } as Core.FlatNotification;
+    render(<NotificationItem notification={replyNotification} isUnread={false} />);
+
+    // The timestamp and icon share the same parent Link — use the icon as a stable selector
+    // "notification-icon" test id comes from the NotificationIcon mock defined in this file
+    const timestampLink = screen.getByTestId('notification-icon').closest('a')!;
+    fireEvent.click(timestampLink);
+
+    expect(mockPush).not.toHaveBeenCalled();
   });
 
   it('does not underline the username link on hover', () => {
