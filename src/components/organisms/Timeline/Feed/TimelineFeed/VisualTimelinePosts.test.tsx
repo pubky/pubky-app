@@ -44,7 +44,9 @@ vi.mock('@/hooks', async (importOriginal) => {
     useViewportObserver: () => ({ ref: vi.fn(), isVisible: true }),
     useUserDetails: () => ({ userDetails: { id: 'author', name: 'Author', image: null } }),
     useAvatarUrl: () => null,
-    useRelativeTime: () => ({ formatRelativeTime: () => '1m' }),
+    useRelativeTime: () => ({
+      formatRelativeTime: () => '1m',
+    }),
   };
 });
 
@@ -107,7 +109,7 @@ vi.mock('@/molecules', () => ({
   TimelineError: ({ message }: { message: string }) => <div data-testid="timeline-error">{message}</div>,
   TimelineEndMessage: () => <div data-testid="timeline-end">End</div>,
   PostHeaderUserInfo: (...args: unknown[]) => mockPostHeaderUserInfo(...args),
-  PostHeaderTimestamp: ({ timeAgo }: { timeAgo: string }) => (
+  PostHeaderTimestamp: ({ timeAgo }: { timeAgo: string; indexedAt: Date }) => (
     <div data-testid="visual-overlay-timestamp">{timeAgo}</div>
   ),
   PostText: ({ content }: { content: string }) => <div data-testid="visual-overlay-text">{content}</div>,

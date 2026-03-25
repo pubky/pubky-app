@@ -110,6 +110,7 @@ function VisualTimelineTileOverlay({ tile, size, onReplyClick, onRepostClick }: 
   const { userDetails } = Hooks.useUserDetails(userId);
   const avatarUrl = Hooks.useAvatarUrl(userDetails);
   const { formatRelativeTime } = Hooks.useRelativeTime();
+  const indexedAt = new Date(tile.indexedAt);
   const [tagsExpanded, setTagsExpanded] = React.useState(false);
   const isCompact = size === 'square';
   const truncatedContent = React.useMemo(() => {
@@ -152,7 +153,7 @@ function VisualTimelineTileOverlay({ tile, size, onReplyClick, onRepostClick }: 
             </Atoms.Container>
 
             <Atoms.Container overrideDefaults className="shrink-0 pt-0.5 [&_span]:text-white/70 [&_svg]:text-white/70">
-              <Molecules.PostHeaderTimestamp timeAgo={formatRelativeTime(new Date(tile.indexedAt))} />
+              <Molecules.PostHeaderTimestamp timeAgo={formatRelativeTime(indexedAt)} indexedAt={indexedAt} />
             </Atoms.Container>
           </Atoms.Container>
 
