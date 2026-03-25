@@ -40,9 +40,21 @@ vi.mock('@/organisms', () => ({
   ),
 }));
 
+let mockSignInState = { authUrlResolved: false };
+
+vi.mock('@/core', () => ({
+  useSignInStore: vi.fn((selector) => {
+    if (typeof selector === 'function') {
+      return selector(mockSignInState);
+    }
+    return mockSignInState;
+  }),
+}));
+
 describe('SignInNavigation', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    mockSignInState = { authUrlResolved: false };
   });
 
   it('renders both restore dialogs', () => {
@@ -65,9 +77,22 @@ describe('SignInNavigation', () => {
     fireEvent.click(screen.getByTestId('restore-file'));
     expect(mockPush).toHaveBeenCalledWith(App.HOME_ROUTES.HOME);
   });
+
+  it('does not render when sign-in progress is active', () => {
+    mockSignInState.authUrlResolved = true;
+
+    render(<SignInNavigation />);
+
+    expect(screen.queryByTestId('restore-phrase')).not.toBeInTheDocument();
+    expect(screen.queryByTestId('restore-file')).not.toBeInTheDocument();
+  });
 });
 
 describe('SignInNavigation - Snapshots', () => {
+  beforeEach(() => {
+    mockSignInState = { authUrlResolved: false };
+  });
+
   it('matches snapshot', () => {
     const { container } = render(<SignInNavigation />);
     expect(container.firstChild).toMatchSnapshot();
