@@ -20,6 +20,7 @@ import enMessages from '../../messages/en.json';
 
 process.env.NEXT_PUBLIC_DB_VERSION = '1';
 process.env.NEXT_PUBLIC_DEBUG_MODE = 'false';
+
 process.env.NEXT_PUBLIC_NEXUS_URL = 'https://nexus.staging.pubky.app';
 process.env.NEXT_PUBLIC_CDN_URL = 'https://nexus.staging.pubky.app/static';
 // Server-side only admin credentials (not exposed to client)

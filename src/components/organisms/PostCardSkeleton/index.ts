@@ -1,0 +1,1 @@
+export { PostCardSkeleton } from './PostCardSkeleton';

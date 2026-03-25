@@ -91,10 +91,10 @@ export function ProfileFollowers() {
       {/* Infinite scroll trigger */}
       <div ref={sentinelRef} className="h-1" />
 
-      {/* Loading more indicator */}
       {isLoadingMore && (
-        <Atoms.Container className="flex justify-center py-4">
-          <Atoms.Spinner />
+        <Atoms.Container className="gap-4 py-4">
+          <Organisms.FullUserListItemSkeleton />
+          <Organisms.FullUserListItemSkeleton />
         </Atoms.Container>
       )}
     </Atoms.Container>

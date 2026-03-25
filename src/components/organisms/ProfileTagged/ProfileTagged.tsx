@@ -1,10 +1,10 @@
 'use client';
 
-import { useTranslations } from 'next-intl';
 import * as Atoms from '@/atoms';
 import * as Molecules from '@/molecules';
 import * as Hooks from '@/hooks';
 import * as Providers from '@/providers';
+import { ProfileTaggedSkeleton } from './ProfileTagged.skeleton';
 
 /**
  * ProfileTagged Organism
@@ -18,8 +18,6 @@ import * as Providers from '@/providers';
  * Uses ProfileContext to get the target user's pubky.
  */
 export function ProfileTagged() {
-  const t = useTranslations('common');
-
   // Get the profile pubky from context
   const { pubky } = Providers.useProfileContext();
 
@@ -31,16 +29,8 @@ export function ProfileTagged() {
 
   const userName = profile?.name || '';
 
-  // Show loading state while fetching initial data
   if (isLoading) {
-    return (
-      <Atoms.Container className="flex items-center justify-center gap-3">
-        <Atoms.Spinner size="md" />
-        <Atoms.Typography as="p" className="text-muted-foreground">
-          {t('loadingTags')}
-        </Atoms.Typography>
-      </Atoms.Container>
-    );
+    return <ProfileTaggedSkeleton />;
   }
 
   // Show empty state only after loading is complete and there are no tags

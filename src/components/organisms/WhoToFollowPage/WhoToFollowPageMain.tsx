@@ -5,7 +5,6 @@ import * as Organisms from '@/organisms';
 import * as Hooks from '@/hooks';
 import * as Core from '@/core';
 import * as Libs from '@/libs';
-
 import { USERS_PER_PAGE } from './WhoToFollowPageMain.constants';
 
 /**
@@ -93,10 +92,10 @@ export function WhoToFollowPageMain() {
       {/* Infinite scroll trigger */}
       <Atoms.Container overrideDefaults ref={sentinelRef} className="h-1" />
 
-      {/* Loading more indicator */}
       {isLoadingMore && (
-        <Atoms.Container className="justify-center py-4">
-          <Atoms.Spinner />
+        <Atoms.Container className="gap-4 py-4">
+          <Organisms.FullUserListItemSkeleton />
+          <Organisms.FullUserListItemSkeleton />
         </Atoms.Container>
       )}
     </Atoms.Container>

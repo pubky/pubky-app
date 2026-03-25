@@ -6,19 +6,8 @@ import * as Atoms from '@/atoms';
 import * as Libs from '@/libs';
 import * as Hooks from '@/hooks';
 import * as Organisms from '@/organisms';
+import { PostActionsBarSkeleton } from './PostActionsBar.skeleton';
 import type { PostActionsBarProps, ActionButtonConfig } from './PostActionsBar.types';
-
-const postActionsLoadingVariants = cva('', {
-  variants: {
-    variant: {
-      default: 'text-muted-foreground',
-      visual: 'text-white/70',
-    },
-  },
-  defaultVariants: {
-    variant: 'default',
-  },
-});
 
 const postActionsButtonVariants = cva('', {
   variants: {
@@ -63,16 +52,11 @@ export function PostActionsBar({
   const { requireAuth } = Hooks.useRequireAuth();
 
   const isBookmarkBusy = isBookmarkLoading || isBookmarkToggling;
-  const loadingClassName = postActionsLoadingVariants({ variant });
   const buttonClassName = postActionsButtonVariants({ variant });
   const countClassName = postActionsCountVariants({ variant });
 
   if (isCountsLoading || !postCounts) {
-    return (
-      <Atoms.Container overrideDefaults className={loadingClassName}>
-        {t('loadingActions')}
-      </Atoms.Container>
-    );
+    return <PostActionsBarSkeleton className={className} />;
   }
 
   const commonButtonProps = {

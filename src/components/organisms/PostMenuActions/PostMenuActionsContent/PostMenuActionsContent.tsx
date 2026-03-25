@@ -5,6 +5,7 @@ import { MENU_VARIANT } from '@/config/ui';
 import * as Hooks from '@/hooks';
 import * as Libs from '@/libs';
 import { POST_MENU_ACTION_IDS } from '@/hooks/usePostMenuActions';
+import { PostMenuActionsContentSkeleton } from './PostMenuActionsContent.skeleton';
 import type { PostMenuActionsContentProps } from './PostMenuActionsContent.types';
 
 export function PostMenuActionsContent({
@@ -17,11 +18,7 @@ export function PostMenuActionsContent({
   const { menuItems, isLoading } = Hooks.usePostMenuActions(postId, { onReportClick, onEditClick });
 
   if (isLoading) {
-    return (
-      <Atoms.Container overrideDefaults className="flex items-center justify-center p-4">
-        <Libs.Loader2 className="size-5 animate-spin text-muted-foreground" />
-      </Atoms.Container>
-    );
+    return <PostMenuActionsContentSkeleton />;
   }
 
   const handleItemClick = async (item: (typeof menuItems)[0]) => {
