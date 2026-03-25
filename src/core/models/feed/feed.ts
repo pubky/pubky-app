@@ -56,18 +56,4 @@ export class FeedModel extends RecordModelBase<string, Core.FeedModelSchema> imp
       });
     }
   }
-
-  static async findByName(name: string): Promise<Core.FeedModelSchema | undefined> {
-    try {
-      const lowerName = name.toLowerCase();
-      return await this.table.filter((f) => f.name.toLowerCase() === lowerName).first();
-    } catch (error) {
-      throw Err.database(DatabaseErrorCode.QUERY_FAILED, `Failed to find record by name in ${this.table.name}`, {
-        service: ErrorService.Local,
-        operation: 'findByName',
-        context: { table: this.table.name, name },
-        cause: error,
-      });
-    }
-  }
 }

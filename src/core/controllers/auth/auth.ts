@@ -1,5 +1,6 @@
 import * as Core from '@/core';
 import * as Libs from '@/libs';
+import { setLocaleCookie } from '@/i18n/utils';
 
 export class AuthController {
   private constructor() {} // Prevent instantiation
@@ -40,8 +41,12 @@ export class AuthController {
    * @returns Configured homeserver service instance
    */
   private static async signIn({ keypair }: Core.TKeypairParams): Promise<boolean> {
+    // Clear query clients to ensure no stale cache from previous session
+    Libs.clearAllQueryClients();
     // Clear database before sign in to ensure clean state
     await Core.clearDatabase();
+    // Skip post-migration resync — bootstrap runs if user has profile, otherwise no data to resync
+    Core.useMigrationStore.getState().reset();
     const session = await Core.AuthApplication.signIn({ keypair });
     if (!session) {
       Libs.Logger.error('Failed to sign in. Please try again.', { keypair });
@@ -78,8 +83,19 @@ export class AuthController {
       }
     };
 
-    const { notification } = await Core.BootstrapApplication.initialize({ pubky, lastReadUrl: url }, onProgress);
+    const localSettings = Core.SettingsNormalizer.extractState(Core.useSettingsStore.getState());
+    const { notification, remoteSettings } = await Core.BootstrapApplication.initialize(
+      { pubky, lastReadUrl: url, localSettings },
+      onProgress,
+    );
     Core.useNotificationStore.getState().setState(notification);
+
+    // Apply remote settings to store + cookie (store mutation stays in Controller layer)
+    if (remoteSettings) {
+      Core.useSettingsStore.getState().loadFromHomeserver(remoteSettings);
+      setLocaleCookie(remoteSettings.language);
+      Libs.Logger.info('Settings loaded from homeserver', { pubky });
+    }
   }
 
   /**
@@ -124,8 +140,12 @@ export class AuthController {
    * @param params.signupToken - Invitation code for user registration
    */
   static async signUp({ secretKey, signupToken }: Core.TSignUpParams) {
+    // Clear query clients to ensure no stale cache from previous session
+    Libs.clearAllQueryClients();
     // Clear database before sign up to ensure clean state
     await Core.clearDatabase();
+    // Skip post-migration resync — new user has no homeserver data to resync
+    Core.useMigrationStore.getState().reset();
     const keypair = Libs.Identity.keypairFromSecretKey(secretKey);
     const { session } = await Core.AuthApplication.signUp({ keypair, signupToken });
     const authStore = Core.useAuthStore.getState();
@@ -169,6 +189,8 @@ export class AuthController {
     generateFn: () => Promise<Core.TGenerateAuthUrlResult>,
   ): Promise<Core.TGenerateAuthUrlResult> {
     await Core.clearDatabase();
+    // Skip post-migration resync — full bootstrap below covers all data
+    Core.useMigrationStore.getState().reset();
     const token = Symbol('auth-flow');
     this.cancelActiveAuthFlow();
     this.activeAuthFlow = { token, cancel: null };
@@ -193,7 +215,7 @@ export class AuthController {
 
   /**
    * Centralizes all local state cleanup: resets every Zustand store, clears cookies,
-   * IndexedDB, query cache, singletons, and persisted localStorage keys.
+   * IndexedDB, query cache, singletons, in-memory stream pagination queues, and persisted localStorage keys.
    * Used by both logout() and restorePersistedSession() on failure.
    */
   private static async cleanupLocalState() {
@@ -203,16 +225,18 @@ export class AuthController {
     Core.StreamCoordinator.resetInstance();
     Core.NotificationCoordinator.resetInstance();
 
+    // Clear in-memory feed stream queues
+    Core.postStreamQueue.clear();
+
     // Cancel active auth flows
     this.cancelActiveAuthFlow();
 
-    // Cancel all pending queries to prevent retries after sign-out
-    // TODO: Centralise query client cleanup via a registry in createQueryClient
-    // so new query clients are automatically cancelled/cleared here.
-    Core.nexusQueryClient.cancelQueries();
-    Core.nexusQueryClient.clear();
+    // Cancel and clear all query clients (nexus, homegate, exchangerate, and any future ones)
+    Libs.clearAllQueryClients();
 
-    // Reset ALL Zustand stores
+    // Reset all Zustand stores.
+    // Settings reset() keeps `language`,
+    // so the "/logout" page stays in the chosen language while remote settings still win on next login.
     Core.useOnboardingStore.getState().reset();
     Core.useAuthStore.getState().reset();
     Core.useSignInStore.getState().reset();
@@ -223,11 +247,12 @@ export class AuthController {
     Core.useNotificationStore.getState().reset();
     Core.useSettingsStore.getState().reset();
 
-    // Clear cookies, database, and persisted localStorage keys
-    Libs.clearCookies();
-    await Core.clearDatabase();
+    // Clear cookies (locale cookie excluded — device-level UI preference, not sensitive data)
+    Libs.clearCookies(['locale']);
 
-    Core.PERSISTED_STORE_KEYS.forEach((key) => localStorage.removeItem(key));
+    await Core.clearDatabase();
+    // Skip post-migration resync — full cleanup resets all state
+    Core.useMigrationStore.getState().reset();
   }
 
   /**

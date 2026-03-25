@@ -75,7 +75,12 @@
     "links": "Links",
     "tags": "Tags",
     "posts": "Posts",
-    "avatar": "Avatar"
+    "avatar": "Avatar",
+    "threadTree": {
+      "expandAllReplies": "Expand all replies",
+      "collapseAllReplies": "Collapse all replies",
+      "moreReplies": "{count, plural, one {# more reply} other {# more replies}}"
+    }
   },
   "header": {
     "home": "Home",
@@ -674,7 +679,8 @@
       "subtitle2": "You can search for multiple tags separated by commas."
     },
     "userSuggestion": "User {name} ({pubky})",
-    "viewProfile": "View profile for {name}"
+    "viewProfile": "View profile for {name}",
+    "invalidTag": "Tags must be 20 characters or less and cannot contain special characters"
   },
   "feedback": {
     "title": "Provide Feedback",
@@ -950,6 +956,10 @@
       "userIdRequired": "User ID is required",
       "loginRequired": "You must be logged in to add tags",
       "alreadyAdded": "You have already added this tag",
+      "added": "Tag added",
+      "addedDesc": "\"{label}\" was added successfully.",
+      "removed": "Tag removed",
+      "removedDesc": "\"{label}\" was removed successfully.",
       "addFailed": "Failed to add tag",
       "addFailedDesc": "Could not add \"{label}\". Please try again.",
       "removeFailed": "Failed to remove tag",
@@ -1048,7 +1058,7 @@
     "hotTags": "Hot tags",
     "activeUsers": "Active users",
     "trendingPosts": "Trending posts",
-    "postsCount": "{count} posts",
+    "postsCount": "{count} posts this month",
     "failedToLoadUsers": "Failed to load users",
     "failedToLoadTags": "Failed to load tags",
     "noUsersToShow": "No users to show",

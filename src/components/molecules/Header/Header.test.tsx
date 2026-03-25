@@ -341,7 +341,7 @@ describe('Header Components', () => {
       const button = screen.getByText('New here?');
       fireEvent.click(button);
 
-      expect(mockPush).toHaveBeenCalledWith('/sign-in');
+      expect(mockPush).toHaveBeenCalledWith('/onboarding/human');
     });
 
     it('applies correct classes', () => {

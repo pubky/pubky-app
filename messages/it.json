@@ -75,7 +75,12 @@
     "links": "Link",
     "tags": "Tag",
     "posts": "Post",
-    "avatar": "Avatar"
+    "avatar": "Avatar",
+    "threadTree": {
+      "expandAllReplies": "Espandi tutte le risposte",
+      "collapseAllReplies": "Comprimi tutte le risposte",
+      "moreReplies": "{count, plural, one {# risposta in più} other {# risposte in più}}"
+    }
   },
   "header": {
     "home": "Home",
@@ -680,7 +685,8 @@
       "subtitle2": "Puoi cercare più tag separati da virgole."
     },
     "userSuggestion": "Utente {name} ({pubky})",
-    "viewProfile": "Vedi profilo di {name}"
+    "viewProfile": "Vedi profilo di {name}",
+    "invalidTag": "I tag devono avere al massimo 20 caratteri e non possono contenere caratteri speciali"
   },
   "feedback": {
     "title": "Invia feedback",
@@ -956,6 +962,10 @@
       "userIdRequired": "ID utente obbligatorio",
       "loginRequired": "Devi accedere per aggiungere tag",
       "alreadyAdded": "Hai già aggiunto questo tag",
+      "added": "Tag aggiunto",
+      "addedDesc": "\"{label}\" è stato aggiunto con successo.",
+      "removed": "Tag rimosso",
+      "removedDesc": "\"{label}\" è stato rimosso con successo.",
       "addFailed": "Aggiunta tag fallita",
       "addFailedDesc": "Impossibile aggiungere \"{label}\". Riprova.",
       "removeFailed": "Rimozione tag fallita",
@@ -1054,7 +1064,7 @@
     "hotTags": "Tag di tendenza",
     "activeUsers": "Utenti attivi",
     "trendingPosts": "Post di tendenza",
-    "postsCount": "{count} post",
+    "postsCount": "{count} post questo mese",
     "failedToLoadUsers": "Caricamento utenti fallito",
     "failedToLoadTags": "Caricamento tag fallito",
     "noUsersToShow": "Nessun utente da mostrare",

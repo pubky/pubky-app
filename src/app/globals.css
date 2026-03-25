@@ -117,14 +117,6 @@ body {
    * ================================================================== */
 
   /**
-   * Tag badge maximum width
-   * - Constrains tag width to prevent layout overflow with long tag names
-   * - Enables text truncation with ellipsis for long tag labels
-   * - Applied: TaggedItem component
-   */
-  --tag-max-width: 10rem;
-
-  /**
    * Desktop header height (profile page header)
    * - Used for sticky positioning of filter bars and sidebars
    * - Matches ProfilePageHeader height on desktop (lg+)
@@ -461,141 +453,89 @@ body {
     caret-color: #fff;
   }
 
-  /* Native scrollbar styles for the page and managed scroll containers */
+  /* Keep the document scrollbar visible and hide all nested scrollbars */
   html,
-  body,
+  body {
+    scrollbar-width: thin;
+    scrollbar-color: var(--scrollbar-thumb-color) var(--scrollbar-track-color);
+  }
+
+  html {
+    scrollbar-gutter: stable;
+  }
+
+  html::-webkit-scrollbar,
+  body::-webkit-scrollbar {
+    width: var(--scrollbar-size);
+    height: var(--scrollbar-size);
+  }
+
+  html::-webkit-scrollbar-track,
+  body::-webkit-scrollbar-track {
+    background: var(--scrollbar-track-color);
+  }
+
+  html::-webkit-scrollbar-thumb,
+  body::-webkit-scrollbar-thumb {
+    background-color: var(--scrollbar-thumb-color);
+    border: 2px solid transparent;
+    border-radius: var(--scrollbar-radius);
+    background-clip: content-box;
+    min-height: 24px;
+  }
+
+  html::-webkit-scrollbar-corner,
+  body::-webkit-scrollbar-corner {
+    background: transparent;
+  }
+
   :where(
     .scrollbar-custom,
     .overflow-auto,
     .overflow-x-auto,
     .overflow-y-auto,
     .overflow-scroll,
-    .mdxeditor-popup-container .mdxeditor-select-content
+    .mdxeditor-popup-container .mdxeditor-select-content,
+    [data-radix-scroll-area-viewport]
   ):not(.scrollbar-none) {
-    /* Firefox: keep scrollbar hidden until hover/focus-within */
+    -ms-overflow-style: none;
     scrollbar-width: none;
-    scrollbar-color: transparent transparent;
   }
 
-  html:is(:hover, :focus-within),
-  body:is(:hover, :focus-within),
   :where(
       .scrollbar-custom,
       .overflow-auto,
       .overflow-x-auto,
       .overflow-y-auto,
       .overflow-scroll,
-      .mdxeditor-popup-container .mdxeditor-select-content
-    ):not(.scrollbar-none):is(:hover, :focus-within) {
-    scrollbar-width: thin;
-    scrollbar-color: var(--scrollbar-thumb-color) var(--scrollbar-track-color);
-  }
-
-  html::-webkit-scrollbar,
-  body::-webkit-scrollbar,
-  :where(
-      .scrollbar-custom,
-      .overflow-auto,
-      .overflow-x-auto,
-      .overflow-y-auto,
-      .overflow-scroll,
-      .mdxeditor-popup-container .mdxeditor-select-content
+      .mdxeditor-popup-container .mdxeditor-select-content,
+      [data-radix-scroll-area-viewport]
     ):not(.scrollbar-none)::-webkit-scrollbar {
-    width: 0;
-    height: 0;
-  }
-
-  html:is(:hover, :focus-within)::-webkit-scrollbar,
-  body:is(:hover, :focus-within)::-webkit-scrollbar,
-  :where(
-      .scrollbar-custom,
-      .overflow-auto,
-      .overflow-x-auto,
-      .overflow-y-auto,
-      .overflow-scroll,
-      .mdxeditor-popup-container .mdxeditor-select-content
-    ):not(.scrollbar-none):is(:hover, :focus-within)::-webkit-scrollbar {
-    width: var(--scrollbar-size);
-    height: var(--scrollbar-size);
-  }
-
-  html::-webkit-scrollbar-track,
-  body::-webkit-scrollbar-track,
-  :where(
-      .scrollbar-custom,
-      .overflow-auto,
-      .overflow-x-auto,
-      .overflow-y-auto,
-      .overflow-scroll,
-      .mdxeditor-popup-container .mdxeditor-select-content
-    ):not(.scrollbar-none)::-webkit-scrollbar-track {
-    background: var(--scrollbar-track-color);
-  }
-
-  html::-webkit-scrollbar-thumb,
-  body::-webkit-scrollbar-thumb,
-  :where(
-      .scrollbar-custom,
-      .overflow-auto,
-      .overflow-x-auto,
-      .overflow-y-auto,
-      .overflow-scroll,
-      .mdxeditor-popup-container .mdxeditor-select-content
-    ):not(.scrollbar-none)::-webkit-scrollbar-thumb {
-    background-color: transparent;
-    border: 2px solid transparent;
-    border-radius: var(--scrollbar-radius);
-    background-clip: content-box;
-    transition: background-color 160ms ease;
-    min-height: 24px;
-  }
-
-  html:is(:hover, :focus-within)::-webkit-scrollbar-thumb,
-  body:is(:hover, :focus-within)::-webkit-scrollbar-thumb,
-  :where(
-      .scrollbar-custom,
-      .overflow-auto,
-      .overflow-x-auto,
-      .overflow-y-auto,
-      .overflow-scroll,
-      .mdxeditor-popup-container .mdxeditor-select-content
-    ):not(.scrollbar-none):is(:hover, :focus-within)::-webkit-scrollbar-thumb {
-    background-color: var(--scrollbar-thumb-color);
+    width: 0 !important;
+    height: 0 !important;
+    display: none !important;
   }
 
   .scrollbar-none {
+    -ms-overflow-style: none !important;
     scrollbar-width: none !important;
   }
 
   .scrollbar-none::-webkit-scrollbar {
+    width: 0 !important;
+    height: 0 !important;
     display: none !important;
   }
 
   @media (forced-colors: active) {
     html,
-    body,
-    :where(
-      .scrollbar-custom,
-      .overflow-auto,
-      .overflow-x-auto,
-      .overflow-y-auto,
-      .overflow-scroll,
-      .mdxeditor-popup-container .mdxeditor-select-content
-    ):not(.scrollbar-none) {
+    body {
       scrollbar-width: auto;
       scrollbar-color: auto;
     }
 
     html::-webkit-scrollbar-thumb,
-    body::-webkit-scrollbar-thumb,
-    :where(
-        .scrollbar-custom,
-        .overflow-auto,
-        .overflow-x-auto,
-        .overflow-y-auto,
-        .overflow-scroll,
-        .mdxeditor-popup-container .mdxeditor-select-content
-      ):not(.scrollbar-none)::-webkit-scrollbar-thumb {
+    body::-webkit-scrollbar-thumb {
       background-color: ButtonText;
       border-color: Canvas;
     }

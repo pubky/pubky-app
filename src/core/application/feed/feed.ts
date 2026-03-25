@@ -8,7 +8,7 @@ import type {
   HomeserverFeedJson,
   RemoteFeedParams,
 } from './feed.types';
-import { Err, ErrorService, HttpMethod, Logger, ValidationErrorCode } from '@/libs';
+import { AppError, Err, ErrorService, HttpMethod, HttpStatusCode, Logger, ValidationErrorCode } from '@/libs';
 
 export class FeedApplication {
   private constructor() {}
@@ -120,7 +120,18 @@ export class FeedApplication {
    */
   static async fetchFeeds(userId: Core.Pubky): Promise<Core.FeedModelSchema[]> {
     const feedsDirectory = `${baseUriBuilder(userId)}feeds/`;
-    const feedUris = await Core.HomeserverService.list({ baseDirectory: feedsDirectory });
+
+    let feedUris: string[];
+    try {
+      feedUris = await Core.HomeserverService.list({ baseDirectory: feedsDirectory });
+    } catch (error) {
+      if (error instanceof AppError && error.context?.statusCode === HttpStatusCode.NOT_FOUND) {
+        Logger.info('Feeds directory not found, defaulting to empty list', { userId });
+        return [];
+      }
+      throw error;
+    }
+
     const validFeeds: Core.FeedModelSchema[] = [];
 
     for (let index = 0; index < feedUris.length; index += this.FETCH_FEEDS_BATCH_SIZE) {

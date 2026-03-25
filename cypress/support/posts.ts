@@ -122,9 +122,7 @@ export const createQuickPost = (postContent: string, tags?: string[], expectedPo
         // Click the add tag button to show the input
         cy.get('[data-cy="post-tag-add-button"]').click();
 
-        // add tags to the post
         tags.forEach((tag) => {
-          // Type the tag and press Enter to submit
           cy.get('[data-cy="add-tag-input"]').type(`${tag}{enter}`);
         });
       }
@@ -136,8 +134,10 @@ export const createQuickPost = (postContent: string, tags?: string[], expectedPo
           : expect(counter.text()).to.eq(`${Array.from(postContent).length}/${MAX_POST_LENGTH}`);
       });
 
+      cy.intercept('PUT', '**/pub/pubky.app/posts/**').as('postCreated');
       // submit the post
       cy.get('[data-cy="post-input-action-bar-post"]').click();
+      cy.wait('@postCreated').its('response.statusCode').should('eq', 201);
       // verify textarea is empty
       cy.get('textarea').should('have.value', '');
     });
@@ -183,8 +183,10 @@ export const createPostFromDialog = (postContent: string, expectedPostLength?: n
           : expect(counter.text()).to.eq(`${postContent.length}/${MAX_POST_LENGTH}`);
       });
 
+      cy.intercept('PUT', '**/pub/pubky.app/posts/**').as('postCreated');
       // submit
       cy.get('[data-cy="post-input-action-bar-post"]').click();
+      cy.wait('@postCreated').its('response.statusCode').should('eq', 201);
     });
   // verify dialog is closed
   cy.get('[data-cy="dialog-content"]').should('not.exist');
@@ -208,7 +210,9 @@ export const replyToPost = ({
   cy.get('[data-cy="reply-post-input"]').should('be.visible');
   cy.get('[data-cy="reply-post-input"]').within(() => {
     cy.get('textarea').should('have.value', '').type(replyContent);
+    cy.intercept('PUT', '**/pub/pubky.app/posts/**').as('replyCreated');
     cy.get('[data-cy="post-input-action-bar-reply"]').click();
+    cy.wait('@replyCreated').its('response.statusCode').should('eq', 201);
   });
 
   // Wait for dialog to close
@@ -236,8 +240,10 @@ export const repostPost = ({
     if (repostContent) {
       cy.get('textarea').should('have.value', '').type(repostContent);
     }
+    cy.intercept('PUT', '**/pub/pubky.app/posts/**').as('repostCreated');
     // Submit the repost
     cy.get('[data-cy="post-input-action-bar-repost"]').click();
+    cy.wait('@repostCreated').its('response.statusCode').should('eq', 201);
   });
 
   // Wait for dialog to close
@@ -248,9 +254,10 @@ export const repostPost = ({
 export const fastTagPost = (tags: string[]) => {
   // Click the add tag button to show the input
   cy.get('[data-cy="post-tag-add-button"]').first().click();
+  cy.intercept('PUT', '**/pub/pubky.app/tags/**').as('putTag');
   tags.forEach((tag) => {
-    // Type the tag and press Enter to submit
     cy.get('[data-cy="add-tag-input"]').first().type(`${tag}{enter}`);
+    cy.wait('@putTag').its('response.statusCode').should('eq', 201);
   });
 };
 

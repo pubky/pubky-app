@@ -118,7 +118,13 @@ export function PostMain({
                       )}
                     >
                       {tagsExpanded ? (
-                        <Organisms.PostTagsPanel postId={postId} widthMode="fit" autoFocusInput className="flex-1" />
+                        <Organisms.PostTagsPanel
+                          postId={postId}
+                          widthMode="fit"
+                          autoFocusInput
+                          enableLoadingSkeleton={false}
+                          className="flex-1"
+                        />
                       ) : (
                         <Organisms.ClickableTagsList
                           taggedId={postId}

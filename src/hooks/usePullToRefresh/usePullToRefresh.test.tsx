@@ -2,6 +2,7 @@ import { renderHook, act, waitFor } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { usePullToRefresh } from './usePullToRefresh';
 import type { UsePullToRefreshResult } from './usePullToRefresh.types';
+import { useRef } from 'react';
 
 // Mock useIsTouchDevice hook
 vi.mock('@/hooks', async () => {
@@ -14,8 +15,34 @@ vi.mock('@/hooks', async () => {
 
 import * as Hooks from '@/hooks';
 
+/**
+ * Helper to create a container element and a ref pointing to it.
+ * The container is appended to document.body so event listeners work.
+ */
+function createContainer() {
+  const container = document.createElement('div');
+  document.body.appendChild(container);
+  return container;
+}
+
+/**
+ * Wrapper that provides a containerRef pointing to the given element.
+ */
+function renderPullToRefresh(container: HTMLElement, options: Partial<Parameters<typeof usePullToRefresh>[0]> = {}) {
+  const mockOnRefresh = options.onRefresh ?? vi.fn().mockResolvedValue(undefined);
+  return renderHook(() => {
+    const containerRef = useRef<HTMLElement>(container);
+    return usePullToRefresh({
+      containerRef,
+      onRefresh: mockOnRefresh,
+      ...options,
+    });
+  });
+}
+
 describe('usePullToRefresh', () => {
   const mockOnRefresh = vi.fn().mockResolvedValue(undefined);
+  let container: HTMLElement;
 
   beforeEach(() => {
     vi.clearAllMocks();
@@ -24,30 +51,24 @@ describe('usePullToRefresh', () => {
     Object.defineProperty(window, 'scrollY', { value: 0, writable: true, configurable: true });
     // Mock navigator.vibrate
     Object.defineProperty(navigator, 'vibrate', { value: vi.fn(), writable: true, configurable: true });
+    container = createContainer();
   });
 
   afterEach(() => {
     vi.restoreAllMocks();
+    container.remove();
   });
 
   describe('Initialization', () => {
     it('should initialize with idle state', () => {
-      const { result } = renderHook(() =>
-        usePullToRefresh({
-          onRefresh: mockOnRefresh,
-        }),
-      );
+      const { result } = renderPullToRefresh(container, { onRefresh: mockOnRefresh });
 
       expect(result.current.state).toBe('idle');
       expect(result.current.pullDistance).toBe(0);
     });
 
     it('should return all expected properties', () => {
-      const { result } = renderHook(() =>
-        usePullToRefresh({
-          onRefresh: mockOnRefresh,
-        }),
-      );
+      const { result } = renderPullToRefresh(container, { onRefresh: mockOnRefresh });
 
       const expectedKeys: (keyof UsePullToRefreshResult)[] = ['state', 'pullDistance'];
 
@@ -59,18 +80,17 @@ describe('usePullToRefresh', () => {
 
   describe('Disabled state', () => {
     it('should not respond to touch events when disabled', () => {
-      const { result } = renderHook(() =>
-        usePullToRefresh({
-          onRefresh: mockOnRefresh,
-          disabled: true,
-        }),
-      );
+      const { result } = renderPullToRefresh(container, {
+        onRefresh: mockOnRefresh,
+        disabled: true,
+      });
 
-      // Simulate touch start
+      // Simulate touch start on the container
       act(() => {
-        window.dispatchEvent(
+        container.dispatchEvent(
           new TouchEvent('touchstart', {
             touches: [{ clientY: 100 } as Touch],
+            bubbles: true,
           }),
         );
       });
@@ -82,17 +102,14 @@ describe('usePullToRefresh', () => {
     it('should not respond to touch events on non-touch devices', () => {
       vi.mocked(Hooks.useIsTouchDevice).mockReturnValue(false);
 
-      const { result } = renderHook(() =>
-        usePullToRefresh({
-          onRefresh: mockOnRefresh,
-        }),
-      );
+      const { result } = renderPullToRefresh(container, { onRefresh: mockOnRefresh });
 
-      // Simulate touch start
+      // Simulate touch start on the container
       act(() => {
-        window.dispatchEvent(
+        container.dispatchEvent(
           new TouchEvent('touchstart', {
             touches: [{ clientY: 100 } as Touch],
+            bubbles: true,
           }),
         );
       });
@@ -106,25 +123,23 @@ describe('usePullToRefresh', () => {
       // Set scrollY to a non-zero value
       Object.defineProperty(window, 'scrollY', { value: 100, writable: true, configurable: true });
 
-      const { result } = renderHook(() =>
-        usePullToRefresh({
-          onRefresh: mockOnRefresh,
-        }),
-      );
+      const { result } = renderPullToRefresh(container, { onRefresh: mockOnRefresh });
 
       act(() => {
-        window.dispatchEvent(
+        container.dispatchEvent(
           new TouchEvent('touchstart', {
             touches: [{ clientY: 100 } as Touch],
+            bubbles: true,
           }),
         );
       });
 
       act(() => {
-        window.dispatchEvent(
+        container.dispatchEvent(
           new TouchEvent('touchmove', {
             touches: [{ clientY: 200 } as Touch],
             cancelable: true,
+            bubbles: true,
           }),
         );
       });
@@ -134,25 +149,23 @@ describe('usePullToRefresh', () => {
     });
 
     it('should update state to pulling when pulling down from top', () => {
-      const { result } = renderHook(() =>
-        usePullToRefresh({
-          onRefresh: mockOnRefresh,
-        }),
-      );
+      const { result } = renderPullToRefresh(container, { onRefresh: mockOnRefresh });
 
       act(() => {
-        window.dispatchEvent(
+        container.dispatchEvent(
           new TouchEvent('touchstart', {
             touches: [{ clientY: 100 } as Touch],
+            bubbles: true,
           }),
         );
       });
 
       act(() => {
-        window.dispatchEvent(
+        container.dispatchEvent(
           new TouchEvent('touchmove', {
             touches: [{ clientY: 150 } as Touch],
             cancelable: true,
+            bubbles: true,
           }),
         );
       });
@@ -162,25 +175,23 @@ describe('usePullToRefresh', () => {
     });
 
     it('should not pull on upward swipe', () => {
-      const { result } = renderHook(() =>
-        usePullToRefresh({
-          onRefresh: mockOnRefresh,
-        }),
-      );
+      const { result } = renderPullToRefresh(container, { onRefresh: mockOnRefresh });
 
       act(() => {
-        window.dispatchEvent(
+        container.dispatchEvent(
           new TouchEvent('touchstart', {
             touches: [{ clientY: 200 } as Touch],
+            bubbles: true,
           }),
         );
       });
 
       act(() => {
-        window.dispatchEvent(
+        container.dispatchEvent(
           new TouchEvent('touchmove', {
             touches: [{ clientY: 100 } as Touch],
             cancelable: true,
+            bubbles: true,
           }),
         );
       });
@@ -190,27 +201,27 @@ describe('usePullToRefresh', () => {
     });
 
     it('should change to ready state when threshold is reached', () => {
-      const { result } = renderHook(() =>
-        usePullToRefresh({
-          onRefresh: mockOnRefresh,
-          threshold: 50,
-        }),
-      );
+      const { result } = renderPullToRefresh(container, {
+        onRefresh: mockOnRefresh,
+        threshold: 50,
+      });
 
       act(() => {
-        window.dispatchEvent(
+        container.dispatchEvent(
           new TouchEvent('touchstart', {
             touches: [{ clientY: 0 } as Touch],
+            bubbles: true,
           }),
         );
       });
 
       // Pull far enough to exceed threshold (accounting for resistance)
       act(() => {
-        window.dispatchEvent(
+        container.dispatchEvent(
           new TouchEvent('touchmove', {
             touches: [{ clientY: 150 } as Touch],
             cancelable: true,
+            bubbles: true,
           }),
         );
       });
@@ -219,32 +230,32 @@ describe('usePullToRefresh', () => {
     });
 
     it('should reset state on touch end when below threshold', () => {
-      const { result } = renderHook(() =>
-        usePullToRefresh({
-          onRefresh: mockOnRefresh,
-          threshold: 100,
-        }),
-      );
+      const { result } = renderPullToRefresh(container, {
+        onRefresh: mockOnRefresh,
+        threshold: 100,
+      });
 
       act(() => {
-        window.dispatchEvent(
+        container.dispatchEvent(
           new TouchEvent('touchstart', {
             touches: [{ clientY: 100 } as Touch],
+            bubbles: true,
           }),
         );
       });
 
       act(() => {
-        window.dispatchEvent(
+        container.dispatchEvent(
           new TouchEvent('touchmove', {
             touches: [{ clientY: 120 } as Touch],
             cancelable: true,
+            bubbles: true,
           }),
         );
       });
 
       act(() => {
-        window.dispatchEvent(new TouchEvent('touchend', {}));
+        container.dispatchEvent(new TouchEvent('touchend', { bubbles: true }));
       });
 
       expect(result.current.state).toBe('idle');
@@ -253,33 +264,33 @@ describe('usePullToRefresh', () => {
     });
 
     it('should trigger refresh when released above threshold', async () => {
-      const { result } = renderHook(() =>
-        usePullToRefresh({
-          onRefresh: mockOnRefresh,
-          threshold: 50,
-        }),
-      );
+      const { result } = renderPullToRefresh(container, {
+        onRefresh: mockOnRefresh,
+        threshold: 50,
+      });
 
       act(() => {
-        window.dispatchEvent(
+        container.dispatchEvent(
           new TouchEvent('touchstart', {
             touches: [{ clientY: 0 } as Touch],
+            bubbles: true,
           }),
         );
       });
 
       // Pull far enough to exceed threshold
       act(() => {
-        window.dispatchEvent(
+        container.dispatchEvent(
           new TouchEvent('touchmove', {
             touches: [{ clientY: 200 } as Touch],
             cancelable: true,
+            bubbles: true,
           }),
         );
       });
 
       act(() => {
-        window.dispatchEvent(new TouchEvent('touchend', {}));
+        container.dispatchEvent(new TouchEvent('touchend', { bubbles: true }));
       });
 
       expect(result.current.state).toBe('refreshing');
@@ -290,31 +301,88 @@ describe('usePullToRefresh', () => {
         expect(result.current.state).toBe('idle');
       });
     });
+
+    it('should not respond to touch events outside the container', () => {
+      const { result } = renderPullToRefresh(container, { onRefresh: mockOnRefresh });
+
+      // Dispatch touch events on window (simulating a touch on a dialog overlay)
+      act(() => {
+        window.dispatchEvent(
+          new TouchEvent('touchstart', {
+            touches: [{ clientY: 100 } as Touch],
+          }),
+        );
+      });
+
+      act(() => {
+        window.dispatchEvent(
+          new TouchEvent('touchmove', {
+            touches: [{ clientY: 200 } as Touch],
+            cancelable: true,
+          }),
+        );
+      });
+
+      expect(result.current.state).toBe('idle');
+      expect(result.current.pullDistance).toBe(0);
+    });
+
+    it('should not respond to touch events on a sibling element', () => {
+      const sibling = document.createElement('div');
+      document.body.appendChild(sibling);
+
+      const { result } = renderPullToRefresh(container, { onRefresh: mockOnRefresh });
+
+      // Dispatch touch events on the sibling element
+      act(() => {
+        sibling.dispatchEvent(
+          new TouchEvent('touchstart', {
+            touches: [{ clientY: 100 } as Touch],
+            bubbles: true,
+          }),
+        );
+      });
+
+      act(() => {
+        sibling.dispatchEvent(
+          new TouchEvent('touchmove', {
+            touches: [{ clientY: 200 } as Touch],
+            cancelable: true,
+            bubbles: true,
+          }),
+        );
+      });
+
+      expect(result.current.state).toBe('idle');
+      expect(result.current.pullDistance).toBe(0);
+
+      sibling.remove();
+    });
   });
 
   describe('Rubber band resistance', () => {
     it('should apply resistance to pull distance', () => {
-      const { result } = renderHook(() =>
-        usePullToRefresh({
-          onRefresh: mockOnRefresh,
-          maxPull: 120,
-        }),
-      );
+      const { result } = renderPullToRefresh(container, {
+        onRefresh: mockOnRefresh,
+        maxPull: 120,
+      });
 
       act(() => {
-        window.dispatchEvent(
+        container.dispatchEvent(
           new TouchEvent('touchstart', {
             touches: [{ clientY: 0 } as Touch],
+            bubbles: true,
           }),
         );
       });
 
       // Pull a large distance
       act(() => {
-        window.dispatchEvent(
+        container.dispatchEvent(
           new TouchEvent('touchmove', {
             touches: [{ clientY: 500 } as Touch],
             cancelable: true,
+            bubbles: true,
           }),
         );
       });
@@ -330,27 +398,27 @@ describe('usePullToRefresh', () => {
       const vibrateMock = vi.fn();
       Object.defineProperty(navigator, 'vibrate', { value: vibrateMock, writable: true, configurable: true });
 
-      renderHook(() =>
-        usePullToRefresh({
-          onRefresh: mockOnRefresh,
-          threshold: 50,
-        }),
-      );
+      renderPullToRefresh(container, {
+        onRefresh: mockOnRefresh,
+        threshold: 50,
+      });
 
       act(() => {
-        window.dispatchEvent(
+        container.dispatchEvent(
           new TouchEvent('touchstart', {
             touches: [{ clientY: 0 } as Touch],
+            bubbles: true,
           }),
         );
       });
 
       // Pull past threshold
       act(() => {
-        window.dispatchEvent(
+        container.dispatchEvent(
           new TouchEvent('touchmove', {
             touches: [{ clientY: 200 } as Touch],
             cancelable: true,
+            bubbles: true,
           }),
         );
       });
@@ -361,13 +429,9 @@ describe('usePullToRefresh', () => {
 
   describe('Cleanup', () => {
     it('should remove event listeners on unmount', () => {
-      const removeEventListenerSpy = vi.spyOn(window, 'removeEventListener');
+      const removeEventListenerSpy = vi.spyOn(container, 'removeEventListener');
 
-      const { unmount } = renderHook(() =>
-        usePullToRefresh({
-          onRefresh: mockOnRefresh,
-        }),
-      );
+      const { unmount } = renderPullToRefresh(container, { onRefresh: mockOnRefresh });
 
       unmount();
 

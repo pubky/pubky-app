@@ -242,7 +242,7 @@ export const TagInput = forwardRef<TagInputHandle, TagInputProps>(function TagIn
             side="bottom"
             sideOffset={1}
             avoidCollisions={false}
-            className="z-50 mx-0 w-32 border-none bg-transparent p-0 shadow-none"
+            className="z-50 mx-0 w-48 border-none bg-transparent p-0 shadow-none"
             onOpenAutoFocus={(e) => e.preventDefault()}
             onCloseAutoFocus={(e) => e.preventDefault()}
             onFocusOutside={(e) => e.preventDefault()}

@@ -117,8 +117,7 @@ describe('posts', () => {
     latestPostInFeedContentEq(postContent);
   });
 
-  // todo: remove skip once images always show optimistically in feed, see https://github.com/pubky/pubky-app/issues/656
-  it.skip('can post with image upload', () => {
+  it('can post with image upload', () => {
     const postContent = `I can post with an image! ${Date.now()}`;
 
     cy.get('[data-cy="home-post-input"]').within(() => {
@@ -223,6 +222,50 @@ describe('posts', () => {
     cy.get('[data-cy="post-menu-action-delete"]').should('not.exist');
   });
 
+  it('can report a post', () => {
+    const canReportPostContent = `This post will be reported! ${Date.now()}`;
+    const cannotReportPostContent = `This post will not be reported! ${Date.now()}`;
+    const reportReason = 'E2e test report reason.';
+
+    createQuickPost(canReportPostContent);
+    cy.signOut(HasBackedUp.Yes);
+    cy.onboardAsNewUser('Reporter', 'I can report a post.', [BackupType.EncryptedFile]);
+
+    createQuickPost(cannotReportPostContent);
+
+    cy.findFirstPostInFeedFiltered(cannotReportPostContent, CheckForNewPosts.No, WaitForNewPosts.Yes).within(() => {
+      cy.get('[data-cy="post-more-btn"]').click();
+    });
+    cy.get('[data-cy="post-menu-action-report"]').should('not.exist');
+    // click copy link option to dismiss post menu
+    cy.get('[data-cy="post-menu-action-copy-link"]').click();
+
+    cy.findFirstPostInFeedFiltered(canReportPostContent, CheckForNewPosts.Yes).within(() => {
+      cy.get('[data-cy="post-more-btn"]').click();
+    });
+    cy.get('[data-cy="post-menu-action-report"]').click();
+
+    cy.get('[data-cy="dialog-content"]').should('be.visible');
+    cy.get('[data-cy="report-issue-harassment"]').click();
+    cy.get('[data-cy="report-issue-step-next"]').click();
+
+    cy.get('[data-cy="report-reason-input"]').type(reportReason);
+    cy.intercept('POST', '/api/report', { statusCode: 200 }).as('reportPost');
+    cy.get('[data-cy="report-reason-step-submit"]').click();
+
+    cy.wait('@reportPost').its('response.statusCode').should('eq', 200);
+
+    cy.get('[data-cy="dialog-content"]')
+      .should('be.visible')
+      .within(() => {
+        cy.contains('Report Sent').should('be.visible');
+        cy.contains('Your report will be reviewed soon. Thank you.').should('be.visible');
+      });
+
+    cy.get('[data-cy="report-success-close"]').click();
+    cy.get('[data-cy="dialog-content"]').should('not.exist');
+  });
+
   it('can tag whilst creating post', () => {
     const postContent = `I can post with tags! ${Date.now()}`;
     const tags = ['alpacas', 'llamas', 'vicuñas'];
@@ -268,13 +311,13 @@ describe('posts', () => {
       [tag1, tag2, tag3].forEach((tag) => {
         cy.contains('button', tag).should('be.visible').find('[data-cy="post-tag-count"]').should('have.text', '1');
       });
-      cy.intercept('DELETE', '**/pub/pubky.app/tags/**', { statusCode: 204 }).as('deleteTag');
+      cy.intercept('DELETE', '**/pub/pubky.app/tags/**').as('deleteTag');
       cy.contains('button', tag2).click();
-      cy.wait('@deleteTag');
+      cy.wait('@deleteTag').its('response.statusCode').should('eq', 204);
       cy.contains('button', tag2).should('be.visible').find('[data-cy="post-tag-count"]').should('have.text', '0');
-      cy.intercept('PUT', '**/pub/pubky.app/tags/**', { statusCode: 201 }).as('putTag');
+      cy.intercept('PUT', '**/pub/pubky.app/tags/**').as('putTag');
       cy.contains('button', tag2).click();
-      cy.wait('@putTag');
+      cy.wait('@putTag').its('response.statusCode').should('eq', 201);
       cy.contains('button', tag2).should('be.visible').find('[data-cy="post-tag-count"]').should('have.text', '1');
     });
 
@@ -302,8 +345,10 @@ describe('posts', () => {
     cy.location('pathname').should('contain', '/post/');
 
     cy.get('[data-cy="single-post-card"]').within(() => {
+      cy.intercept('PUT', '**/pub/pubky.app/tags/**').as('putTag');
       [tag1, tag2, tag3].forEach((tag) => {
         cy.get('[data-cy="add-tag-input"]').filter(':visible').type(`${tag}{enter}`);
+        cy.wait('@putTag').its('response.statusCode').should('eq', 201);
       });
 
       cy.get('[data-cy="post-tags-panel"]')
@@ -317,9 +362,9 @@ describe('posts', () => {
               .should('have.text', '1');
           });
 
-          cy.intercept('DELETE', '**/pub/pubky.app/tags/**', { statusCode: 204 }).as('deleteTag');
+          cy.intercept('DELETE', '**/pub/pubky.app/tags/**').as('deleteTag');
           cy.contains('p', tag2).parent().click();
-          cy.wait('@deleteTag');
+          cy.wait('@deleteTag').its('response.statusCode').should('eq', 204);
           cy.contains('p', tag2)
             .should('be.visible')
             .parent()
@@ -449,6 +494,40 @@ describe('posts', () => {
 
     cy.get('[data-cy="timeline-posts"]').should('not.contain.text', replyContent);
     cy.get('[data-cy="timeline-posts"]').should('not.contain.text', postContent);
+  });
+
+  it('can edit a reply', () => {
+    const postContent = `This post will receive a reply! ${Date.now()}`;
+    const replyContent = `This reply will be edited! ${Date.now()}`;
+    const editedReplyContent = `This reply has been edited! ${Date.now()}`;
+
+    createQuickPost(postContent);
+    replyToPost({ replyContent, filterText: postContent });
+
+    cy.findFirstPostInFeedFiltered(replyContent, CheckForNewPosts.No, WaitForNewPosts.Yes).should('be.visible');
+    editPost({ newPostContent: editedReplyContent, filterText: replyContent, type: PostOrReply.Reply });
+
+    cy.findFirstPostInFeedFiltered(editedReplyContent).should('be.visible');
+    cy.reload();
+    waitForFeedToLoad();
+    cy.findFirstPostInFeedFiltered(editedReplyContent).should('be.visible');
+  });
+
+  it('can edit a repost', () => {
+    const postContent = `This post will be reposted! ${Date.now()}`;
+    const repostContent = `This repost will be edited! ${Date.now()}`;
+    const editedRepostContent = `This repost has been edited! ${Date.now()}`;
+
+    createQuickPost(postContent);
+    repostPost({ repostContent, filterText: postContent });
+
+    cy.findFirstPostInFeedFiltered(repostContent, CheckForNewPosts.No, WaitForNewPosts.Yes).should('be.visible');
+    editPost({ newPostContent: editedRepostContent, filterText: repostContent, type: PostOrReply.Post });
+
+    cy.findFirstPostInFeedFiltered(editedRepostContent).should('be.visible');
+    cy.reload();
+    waitForFeedToLoad();
+    cy.findFirstPostInFeedFiltered(editedRepostContent).should('be.visible');
   });
 
   // todo, covers bug https://github.com/pubky/franky/issues/993

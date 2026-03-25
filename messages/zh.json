@@ -75,7 +75,12 @@
     "links": "链接",
     "tags": "标签",
     "posts": "帖子",
-    "avatar": "头像"
+    "avatar": "头像",
+    "threadTree": {
+      "expandAllReplies": "展开所有回复",
+      "collapseAllReplies": "收起所有回复",
+      "moreReplies": "还有{count}条回复"
+    }
   },
   "header": {
     "home": "首页",
@@ -680,7 +685,8 @@
       "subtitle2": "您可以搜索多个用逗号分隔的标签。"
     },
     "userSuggestion": "用户 {name}（{pubky}）",
-    "viewProfile": "查看 {name} 的个人资料"
+    "viewProfile": "查看 {name} 的个人资料",
+    "invalidTag": "标签不能超过20个字符，且不能包含特殊字符"
   },
   "feedback": {
     "title": "提供反馈",
@@ -956,6 +962,10 @@
       "userIdRequired": "用户 ID 为必填项",
       "loginRequired": "您必须登录才能添加标签",
       "alreadyAdded": "您已添加此标签",
+      "added": "标签已添加",
+      "addedDesc": "已成功添加“{label}”。",
+      "removed": "标签已移除",
+      "removedDesc": "已成功移除“{label}”。",
       "addFailed": "添加标签失败",
       "addFailedDesc": "无法添加 \"{label}\"。请重试。",
       "removeFailed": "移除标签失败",
@@ -1048,7 +1058,7 @@
     "hotTags": "热门标签",
     "activeUsers": "活跃用户",
     "trendingPosts": "热门帖子",
-    "postsCount": "{count} 条帖子",
+    "postsCount": "本月 {count} 条帖子",
     "failedToLoadUsers": "加载用户失败",
     "failedToLoadTags": "加载标签失败",
     "noUsersToShow": "暂无用户显示",

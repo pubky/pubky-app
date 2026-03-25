@@ -29,7 +29,7 @@ const INITIAL_VISIBLE_TAGS = 3;
  * Uses the same TaggedSection pattern as ProfileTagged but adapted for posts.
  */
 export const PostTagsPanel = forwardRef<PostTagsPanelHandle, PostTagsPanelProps>(function PostTagsPanel(
-  { postId, widthMode = 'fit', autoFocusInput, className },
+  { postId, widthMode = 'fit', autoFocusInput, enableLoadingSkeleton = true, className },
   ref,
 ) {
   const t = useTranslations('common');
@@ -64,7 +64,7 @@ export const PostTagsPanel = forwardRef<PostTagsPanelHandle, PostTagsPanelProps>
   const handleInputClick = !isAuthenticated ? () => setShowSignInDialog(true) : undefined;
 
   // Show skeleton while fetching initial data
-  if (isLoading) {
+  if (isLoading && enableLoadingSkeleton) {
     return <PostTagsPanelSkeleton className={className} widthMode={widthMode} />;
   }
 
