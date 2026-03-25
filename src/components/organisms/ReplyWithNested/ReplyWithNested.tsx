@@ -79,7 +79,7 @@ export function ReplyWithNested({
               {!isLastReply && <Atoms.Container overrideDefaults className="w-3 shrink-0 border-l border-border" />}
 
               {/* Indented sub-replies */}
-              <Atoms.Container overrideDefaults className={isLastReply ? 'ml-6 flex-1' : 'ml-3 flex-1'}>
+              <Atoms.Container overrideDefaults className={isLastReply ? 'ml-6 min-w-0 flex-1' : 'ml-3 min-w-0 flex-1'}>
                 {nestedReplyIds.map((nestedId, index) => {
                   const isLastNested = index === nestedReplyIds.length - 1 && !hasMoreReplies;
                   return (
