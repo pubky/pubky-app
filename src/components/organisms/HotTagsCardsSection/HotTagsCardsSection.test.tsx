@@ -31,7 +31,15 @@ vi.mock('@/config', () => ({
 }));
 
 vi.mock('@/atoms', () => ({
-  Container: ({ children, ...props }: { children: React.ReactNode; [key: string]: unknown }) => (
+  Container: ({
+    children,
+    overrideDefaults: _overrideDefaults,
+    ...props
+  }: {
+    children: React.ReactNode;
+    overrideDefaults?: boolean;
+    [key: string]: unknown;
+  }) => (
     <div {...props}>{children}</div>
   ),
   Heading: ({ children }: { children: React.ReactNode }) => <h5>{children}</h5>,
