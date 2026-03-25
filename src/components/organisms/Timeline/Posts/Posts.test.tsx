@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach, vi, afterEach } from 'vitest';
-import { render, screen, waitFor } from '@testing-library/react';
+import { render, screen, waitFor, fireEvent } from '@testing-library/react';
 import { useRouter } from 'next/navigation';
 import { useLiveQuery } from 'dexie-react-hooks';
 import { TimelinePosts } from './Posts';
@@ -8,11 +8,33 @@ import * as Hooks from '@/hooks';
 // Mock dependencies
 vi.mock('next/navigation');
 vi.mock('dexie-react-hooks');
+vi.mock('react-virtuoso', () => ({
+  Virtuoso: ({
+    data,
+    context,
+    itemContent,
+    components,
+    endReached,
+  }: {
+    data: string[];
+    context?: Record<string, unknown>;
+    itemContent: (index: number, item: string) => React.ReactNode;
+    components?: { Footer?: (props: { context?: Record<string, unknown> }) => React.ReactNode };
+    endReached?: () => void;
+  }) => (
+    <div data-testid="virtuoso">
+      {data?.map((item, index) => (
+        <div key={index}>{itemContent(index, item)}</div>
+      ))}
+      {components?.Footer?.({ context })}
+      <button data-testid="virtuoso-end-reached" onClick={() => endReached?.()} />
+    </div>
+  ),
+}));
 vi.mock('@/hooks', async (importOriginal) => {
   const actual = await importOriginal<typeof import('@/hooks')>();
   return {
     ...actual,
-    useInfiniteScroll: vi.fn(),
     usePostNavigation: vi.fn(),
   };
 });
@@ -35,6 +57,23 @@ vi.mock('@/atoms', () => ({
   ),
 }));
 
+vi.mock('@/components/molecules/Timeline/TimelineVirtuosoFooter', () => ({
+  TimelineVirtuosoFooter: ({
+    context,
+  }: {
+    context?: { loadingMore: boolean; error: string | null; hasMore: boolean; itemCount: number };
+  }) => {
+    if (!context) return null;
+    const { loadingMore, error, hasMore, itemCount } = context;
+    return (
+      <>
+        {loadingMore && <div data-testid="timeline-loading-more">Loading more...</div>}
+        {error && itemCount > 0 && <div data-testid="timeline-error">Error: {error}</div>}
+        {!hasMore && !loadingMore && itemCount > 0 && <div data-testid="timeline-end-message">End of timeline</div>}
+      </>
+    );
+  },
+}));
 vi.mock('@/molecules', () => ({
   TimelineLoading: () => <div data-testid="timeline-loading">Loading...</div>,
   TimelineLoadingMore: () => <div data-testid="timeline-loading-more">Loading more...</div>,
@@ -68,7 +107,6 @@ vi.mock('@/organisms', () => ({
 const mockPush = vi.fn();
 const mockUseLiveQuery = vi.mocked(useLiveQuery);
 const mockUseRouter = vi.mocked(useRouter);
-const mockUseInfiniteScroll = vi.mocked(Hooks.useInfiniteScroll);
 const mockUsePostNavigation = vi.mocked(Hooks.usePostNavigation);
 
 const mockPostIds = ['author1:post1', 'author2:post2', 'author3:post3'];
@@ -85,11 +123,6 @@ describe('TimelinePosts', () => {
       replace: vi.fn(),
       prefetch: vi.fn(),
     } as ReturnType<typeof useRouter>);
-
-    // Mock infinite scroll - create a mock callback ref
-    mockUseInfiniteScroll.mockReturnValue({
-      sentinelRef: vi.fn(),
-    });
 
     // Mock usePostNavigation
     mockUsePostNavigation.mockReturnValue({
@@ -251,8 +284,8 @@ describe('TimelinePosts', () => {
       );
 
       await waitFor(() => {
-        const { hasMore } = mockUseInfiniteScroll.mock.calls[0][0];
-        expect(hasMore).toBe(false);
+        expect(screen.getByTestId('timeline-error')).toBeInTheDocument();
+        expect(screen.queryByTestId('timeline-loading-more')).not.toBeInTheDocument();
       });
     });
   });
@@ -357,8 +390,7 @@ describe('TimelinePosts', () => {
   });
 
   describe('Pagination', () => {
-    it('should call loadMore when infinite scroll triggers', async () => {
-      const mockLoadMore = vi.fn();
+    it('should render posts and allow loading more', async () => {
       render(
         <TimelinePosts
           postIds={mockPostIds}
@@ -366,22 +398,16 @@ describe('TimelinePosts', () => {
           loadingMore={false}
           error={null}
           hasMore={true}
-          loadMore={mockLoadMore}
+          loadMore={vi.fn()}
         />,
       );
 
       await waitFor(() => {
         expect(screen.getByTestId('post-author1:post1')).toBeInTheDocument();
       });
-
-      // Trigger load more
-      const { onLoadMore } = mockUseInfiniteScroll.mock.calls[0][0];
-      await onLoadMore();
-
-      expect(mockLoadMore).toHaveBeenCalled();
     });
 
-    it('should pass hasMore to infinite scroll hook', async () => {
+    it('should show end message when hasMore is false', async () => {
       render(
         <TimelinePosts
           postIds={mockPostIds}
@@ -394,12 +420,11 @@ describe('TimelinePosts', () => {
       );
 
       await waitFor(() => {
-        const { hasMore } = mockUseInfiniteScroll.mock.calls[0][0];
-        expect(hasMore).toBe(false);
+        expect(screen.getByTestId('timeline-end-message')).toBeInTheDocument();
       });
     });
 
-    it('should pass loadingMore to infinite scroll hook', async () => {
+    it('should show loading more indicator when loadingMore is true', async () => {
       render(
         <TimelinePosts
           postIds={mockPostIds}
@@ -412,8 +437,7 @@ describe('TimelinePosts', () => {
       );
 
       await waitFor(() => {
-        const { isLoading } = mockUseInfiniteScroll.mock.calls[0][0];
-        expect(isLoading).toBe(true);
+        expect(screen.getByTestId('timeline-loading-more')).toBeInTheDocument();
       });
     });
   });
@@ -459,8 +483,8 @@ describe('TimelinePosts', () => {
     });
   });
 
-  describe('Infinite Scroll Configuration', () => {
-    it('should configure infinite scroll with correct parameters', async () => {
+  describe('Virtuoso Configuration', () => {
+    it('should render posts inside Virtuoso', async () => {
       render(
         <TimelinePosts
           postIds={mockPostIds}
@@ -473,36 +497,62 @@ describe('TimelinePosts', () => {
       );
 
       await waitFor(() => {
-        expect(mockUseInfiniteScroll).toHaveBeenCalledWith({
-          onLoadMore: expect.any(Function),
-          hasMore: expect.any(Boolean),
-          isLoading: expect.any(Boolean),
-          threshold: 3000,
-          debounceMs: 20,
+        expect(screen.getByTestId('virtuoso')).toBeInTheDocument();
+        mockPostIds.forEach((postId) => {
+          expect(screen.getByTestId(`post-${postId}`)).toBeInTheDocument();
         });
       });
     });
 
-    it('should render sentinel element for infinite scroll', async () => {
-      mockUseInfiniteScroll.mockReturnValue({
-        sentinelRef: vi.fn(),
-      });
-
-      const { container } = render(
+    it('should call loadMore via endReached when hasMore and not loading', async () => {
+      const mockLoadMore = vi.fn().mockResolvedValue(undefined);
+      render(
         <TimelinePosts
           postIds={mockPostIds}
           loading={false}
           loadingMore={false}
           error={null}
           hasMore={true}
-          loadMore={vi.fn()}
+          loadMore={mockLoadMore}
         />,
       );
 
-      await waitFor(() => {
-        const sentinel = container.querySelector('.h-5');
-        expect(sentinel).toBeInTheDocument();
-      });
+      fireEvent.click(screen.getByTestId('virtuoso-end-reached'));
+      expect(mockLoadMore).toHaveBeenCalledOnce();
+    });
+
+    it('should not call loadMore via endReached when loadingMore is true', async () => {
+      const mockLoadMore = vi.fn().mockResolvedValue(undefined);
+      render(
+        <TimelinePosts
+          postIds={mockPostIds}
+          loading={false}
+          loadingMore={true}
+          error={null}
+          hasMore={true}
+          loadMore={mockLoadMore}
+        />,
+      );
+
+      fireEvent.click(screen.getByTestId('virtuoso-end-reached'));
+      expect(mockLoadMore).not.toHaveBeenCalled();
+    });
+
+    it('should not call loadMore via endReached when hasMore is false', async () => {
+      const mockLoadMore = vi.fn().mockResolvedValue(undefined);
+      render(
+        <TimelinePosts
+          postIds={mockPostIds}
+          loading={false}
+          loadingMore={false}
+          error={null}
+          hasMore={false}
+          loadMore={mockLoadMore}
+        />,
+      );
+
+      fireEvent.click(screen.getByTestId('virtuoso-end-reached'));
+      expect(mockLoadMore).not.toHaveBeenCalled();
     });
   });
 });
@@ -520,11 +570,6 @@ describe('TimelinePosts - Snapshots', () => {
       replace: vi.fn(),
       prefetch: vi.fn(),
     } as ReturnType<typeof useRouter>);
-
-    // Mock infinite scroll
-    mockUseInfiniteScroll.mockReturnValue({
-      sentinelRef: vi.fn(),
-    });
 
     // Mock usePostNavigation
     mockUsePostNavigation.mockReturnValue({

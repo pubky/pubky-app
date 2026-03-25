@@ -687,7 +687,8 @@
       "subtitle2": "Puoi cercare più tag separati da virgole."
     },
     "userSuggestion": "Utente {name} ({pubky})",
-    "viewProfile": "Vedi profilo di {name}"
+    "viewProfile": "Vedi profilo di {name}",
+    "invalidTag": "I tag devono avere al massimo 20 caratteri e non possono contenere caratteri speciali"
   },
   "feedback": {
     "title": "Invia feedback",
@@ -963,6 +964,10 @@
       "userIdRequired": "ID utente obbligatorio",
       "loginRequired": "Devi accedere per aggiungere tag",
       "alreadyAdded": "Hai già aggiunto questo tag",
+      "added": "Tag aggiunto",
+      "addedDesc": "\"{label}\" è stato aggiunto con successo.",
+      "removed": "Tag rimosso",
+      "removedDesc": "\"{label}\" è stato rimosso con successo.",
       "addFailed": "Aggiunta tag fallita",
       "addFailedDesc": "Impossibile aggiungere \"{label}\". Riprova.",
       "removeFailed": "Rimozione tag fallita",

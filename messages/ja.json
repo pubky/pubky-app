@@ -687,7 +687,8 @@
       "subtitle2": "カンマで区切って複数のタグを検索できます。"
     },
     "userSuggestion": "ユーザー {name}（{pubky}）",
-    "viewProfile": "{name}のプロフィールを見る"
+    "viewProfile": "{name}のプロフィールを見る",
+    "invalidTag": "タグは20文字以内で、特殊文字を含めることはできません"
   },
   "feedback": {
     "title": "フィードバックを送信",
@@ -963,6 +964,10 @@
       "userIdRequired": "ユーザーIDは必須です",
       "loginRequired": "タグを追加するにはログインが必要です",
       "alreadyAdded": "このタグは既に追加済みです",
+      "added": "タグを追加しました",
+      "addedDesc": "「{label}」を正常に追加しました。",
+      "removed": "タグを削除しました",
+      "removedDesc": "「{label}」を正常に削除しました。",
       "addFailed": "タグの追加に失敗しました",
       "addFailedDesc": "「{label}」を追加できません。再試行してください。",
       "removeFailed": "タグの削除に失敗しました",

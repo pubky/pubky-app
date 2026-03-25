@@ -19,8 +19,8 @@ export function useSearchInput({ onEnter }: UseSearchInputParams = {}): UseSearc
 
   const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
     if (e.key === 'Enter' && inputValue.trim()) {
-      onEnter?.(inputValue.trim());
-      setInputValue('');
+      const accepted = onEnter?.(inputValue.trim());
+      if (accepted !== false) setInputValue('');
     } else if (e.key === 'Escape') {
       // Keep blur behavior consistent with `setFocus(false)`
       setFocus(false);

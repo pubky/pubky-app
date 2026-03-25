@@ -4,7 +4,20 @@ import * as Libs from '@/libs';
 import * as Atoms from '@/atoms';
 import * as Molecules from '@/molecules';
 import * as Organisms from '@/organisms';
-import type { PostHeaderUserInfoProps } from './PostHeaderUserInfo.types';
+
+interface PostHeaderUserInfoProps {
+  userId: string;
+  userName: string;
+  avatarUrl?: string;
+  characterLimit?: {
+    count: number;
+    max: number;
+  };
+  showPopover?: boolean;
+  size?: 'normal' | 'large';
+  timeAgo?: string | null;
+  indexedAt?: Date | null;
+}
 
 export function PostHeaderUserInfo({
   userId,
@@ -14,6 +27,7 @@ export function PostHeaderUserInfo({
   showPopover = true,
   size = 'normal',
   timeAgo,
+  indexedAt,
 }: PostHeaderUserInfoProps) {
   const formattedPublicKey = Libs.formatPublicKey({ key: userId });
 
@@ -65,7 +79,7 @@ export function PostHeaderUserInfo({
               {characterLimit.count}/{characterLimit.max}
             </Atoms.Typography>
           )}
-          {timeAgo && <Molecules.PostHeaderTimestamp timeAgo={timeAgo} />}
+          {timeAgo && <Molecules.PostHeaderTimestamp timeAgo={timeAgo} indexedAt={indexedAt} />}
         </Atoms.Container>
       </Atoms.Container>
     </Atoms.Container>
