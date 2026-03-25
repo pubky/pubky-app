@@ -286,6 +286,8 @@
     "signIn": {
       "title": "تسجيل الدخول الى <highlight>Pubky.</highlight>",
       "subtitle": "قم بالتفويض باستخدام Pubky Ring لتسجيل الدخول.",
+      "progressTitle": "جارٍ تسجيل الدخول.",
+      "progressSubtitle": "يرجى الانتظار بينما يتم تحميل تجربتك على Pubky.",
       "generating": "جاري انشاء رمز QR...",
       "generatingShort": "جاري الانشاء...",
 

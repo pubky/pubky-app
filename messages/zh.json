@@ -286,6 +286,8 @@
     "signIn": {
       "title": "登录 <highlight>Pubky。</highlight>",
       "subtitle": "使用 Pubky Ring 授权登录。",
+      "progressTitle": "正在登录。",
+      "progressSubtitle": "请稍候，正在加载你的 Pubky 体验。",
       "generating": "正在生成二维码...",
       "generatingShort": "生成中...",
 
