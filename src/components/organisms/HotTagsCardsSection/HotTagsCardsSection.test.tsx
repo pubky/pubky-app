@@ -39,9 +39,7 @@ vi.mock('@/atoms', () => ({
     children: React.ReactNode;
     overrideDefaults?: boolean;
     [key: string]: unknown;
-  }) => (
-    <div {...props}>{children}</div>
-  ),
+  }) => <div {...props}>{children}</div>,
   Heading: ({ children }: { children: React.ReactNode }) => <h5>{children}</h5>,
   Typography: ({ children, className }: { children: React.ReactNode; className?: string }) => (
     <p className={className}>{children}</p>

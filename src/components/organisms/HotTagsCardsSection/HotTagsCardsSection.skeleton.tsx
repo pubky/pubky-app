@@ -2,13 +2,7 @@ import * as Atoms from '@/atoms';
 import { HOT_TAGS_FEATURED_COUNT } from '@/config';
 import { MAX_AVATARS_DEFAULT } from './HotTagsCardsSection.constants';
 
-function HotTagsCardAvatarSkeletonRow({
-  index,
-  maxAvatars,
-}: {
-  index: number;
-  maxAvatars: number;
-}) {
+function HotTagsCardAvatarSkeletonRow({ index, maxAvatars }: { index: number; maxAvatars: number }) {
   return (
     <Atoms.Container overrideDefaults className="flex items-center gap-1.5">
       {Array.from({ length: maxAvatars }).map((__, avatarIndex) => (

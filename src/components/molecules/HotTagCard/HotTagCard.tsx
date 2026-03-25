@@ -90,11 +90,7 @@ export function HotTagCard({
 
       {/* Card Footer - Avatar Group */}
       {taggers.length > 0 && (
-        <Atoms.Container
-          overrideDefaults
-          className="hidden px-6 sm:flex"
-          data-testid="hot-tag-card-desktop-avatars"
-        >
+        <Atoms.Container overrideDefaults className="hidden px-6 sm:flex" data-testid="hot-tag-card-desktop-avatars">
           <Molecules.AvatarGroup items={taggers} totalCount={postCount} maxAvatars={maxAvatars} />
         </Atoms.Container>
       )}
