@@ -737,7 +737,7 @@
       "repostedPost": "reposted your post",
       "mentionedYou": "mentioned you in post",
       "deletedPost": "deleted a post",
-      "editedPost": "edited a post",
+      "editedPost": "edited a post you have interacted with",
       "fallback": "New notification"
     },
     "settings": {
