@@ -286,6 +286,8 @@
     "signIn": {
       "title": "<highlight>Pubky</highlight>にログイン。",
       "subtitle": "Pubky Ringで認証してログインしてください。",
+      "progressTitle": "サインイン中。",
+      "progressSubtitle": "Pubky の体験を読み込んでいます。しばらくお待ちください。",
       "generating": "QRコード生成中...",
       "generatingShort": "生成中...",
 

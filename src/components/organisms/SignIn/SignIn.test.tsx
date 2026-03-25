@@ -1,6 +1,7 @@
 import { describe, it, expect, vi, beforeAll, afterAll, beforeEach } from 'vitest';
 import { render, screen, waitFor, act, fireEvent } from '@testing-library/react';
 import React from 'react';
+import messages from '../../../../messages/en.json';
 import { SignInContent, SignInFooter } from './SignIn';
 
 // Mock Next.js router
@@ -9,6 +10,7 @@ vi.mock('next/navigation', () => ({
   useRouter: () => ({
     push: mockPush,
   }),
+  usePathname: () => '/sign-in',
 }));
 
 // Mock Next.js Image
@@ -476,6 +478,9 @@ describe('SignInContent - Progress View', () => {
       render(<SignInContent />);
     });
 
+    expect(screen.getByText(messages.onboarding.signIn.progressTitle)).toBeInTheDocument();
+    expect(screen.getByText(messages.onboarding.signIn.progressSubtitle)).toBeInTheDocument();
+
     // Should show all 4 step labels
     expect(screen.getByText('Verifying account')).toBeInTheDocument();
     expect(screen.getByText('Loading your data')).toBeInTheDocument();
@@ -558,6 +563,10 @@ describe('SignInContent - Progress View', () => {
 });
 
 describe('SignInFooter', () => {
+  beforeEach(() => {
+    resetMockSignInState();
+  });
+
   it('renders footer with recovery message', () => {
     render(<SignInFooter />);
 
@@ -577,5 +586,13 @@ describe('SignInFooter', () => {
     expect(link).toHaveAttribute('target', '_blank');
     expect(link).toHaveAttribute('rel', 'noopener noreferrer');
     expect(link).toHaveTextContent('Pubky Ring');
+  });
+
+  it('does not render in progress view', () => {
+    mockSignInState.authUrlResolved = true;
+
+    render(<SignInFooter />);
+
+    expect(screen.queryByTestId('footer-links')).not.toBeInTheDocument();
   });
 });

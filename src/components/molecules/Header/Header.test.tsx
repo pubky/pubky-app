@@ -219,6 +219,7 @@ describe('Header Components', () => {
 
       const container = screen.getByRole('banner');
       expect(container).toHaveClass(
+        'pointer-events-none',
         'sticky',
         'top-0',
         'z-(--z-sticky-header)',
@@ -227,7 +228,7 @@ describe('Header Components', () => {
         'from-(--background)',
         'from-50%',
         'to-transparent',
-        'py-6',
+        'lg:py-6',
       );
 
       const innerContainer = container.querySelector('[data-testid="container"]') as HTMLElement | null;
