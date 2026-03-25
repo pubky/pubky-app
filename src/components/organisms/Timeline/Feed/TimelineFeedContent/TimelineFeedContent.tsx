@@ -1,20 +1,23 @@
 'use client';
 
-import { useEffect } from 'react';
+import { useEffect, useRef } from 'react';
+import { TIMELINE_FEED_VARIANT } from '@/config';
 import * as Core from '@/core';
+import * as Atoms from '@/atoms';
 import * as Molecules from '@/molecules';
 import * as Organisms from '@/organisms';
 import * as Hooks from '@/hooks';
 import type { TagsLayout } from '../../../PostMain/PostMain.types';
 import type { TimelineFeedProps, TimelineFeedContextValue } from '../TimelineFeed/TimelineFeed.types';
-import { TIMELINE_FEED_VARIANT } from '../TimelineFeed/TimelineFeed.types';
 import { TimelineFeedContext } from '../TimelineFeed/TimelineFeedContext';
 import { NewPostsSection } from '../NewPostsSection';
+import { VisualTimelinePosts } from '../TimelineFeed/VisualTimelinePosts';
 
 interface TimelineFeedContentProps {
   streamId: Core.PostStreamId;
   variant: TimelineFeedProps['variant'];
   tagsLayout: TagsLayout;
+  layoutResolution?: Hooks.FeedLayoutResolution;
   children?: TimelineFeedProps['children'];
 }
 
@@ -22,6 +25,7 @@ interface TimelineFeedWithStreamProps {
   streamId: Core.PostStreamId | undefined;
   variant: TimelineFeedProps['variant'];
   tagsLayout: TagsLayout;
+  layoutResolution?: Hooks.FeedLayoutResolution;
   children?: TimelineFeedProps['children'];
 }
 
@@ -31,13 +35,24 @@ interface TimelineFeedWithStreamProps {
  * Guard component that shows a loading state until the streamId is resolved,
  * then delegates to TimelineFeedContent.
  */
-export function TimelineFeedWithStream({ streamId, variant, tagsLayout, children }: TimelineFeedWithStreamProps) {
+export function TimelineFeedWithStream({
+  streamId,
+  variant,
+  tagsLayout,
+  layoutResolution,
+  children,
+}: TimelineFeedWithStreamProps) {
   if (!streamId) {
     return <Molecules.TimelineLoading />;
   }
 
   return (
-    <TimelineFeedContent streamId={streamId} variant={variant} tagsLayout={tagsLayout}>
+    <TimelineFeedContent
+      streamId={streamId}
+      variant={variant}
+      tagsLayout={tagsLayout}
+      layoutResolution={layoutResolution}
+    >
       {children}
     </TimelineFeedContent>
   );
@@ -48,8 +63,17 @@ export function TimelineFeedWithStream({ streamId, variant, tagsLayout, children
  *
  * Core component that manages stream pagination, muting, pull-to-refresh,
  * and provides the TimelineFeedContext to children.
+ *
+ * The outermost Atoms.Container carries the containerRef so that pull-to-refresh
+ * touch events are scoped to this feed area only. Its classes match
+ * ContentLayout's main content area (min-w-0 flex-1 gap-6 lg:overflow-hidden)
+ * to preserve the same flex-col spacing that children previously inherited as
+ * direct descendants of that container.
  */
-function TimelineFeedContent({ streamId, variant, tagsLayout, children }: TimelineFeedContentProps) {
+function TimelineFeedContent({ streamId, variant, tagsLayout, layoutResolution, children }: TimelineFeedContentProps) {
+  const containerRef = useRef<HTMLDivElement>(null);
+
+  const isVisualActive = layoutResolution?.isVisualActive ?? false;
   const {
     postIds: rawPostIds,
     loading,
@@ -66,7 +90,6 @@ function TimelineFeedContent({ streamId, variant, tagsLayout, children }: Timeli
 
   const postIds = [...new Set(rawPostIds)];
 
-  const { unreadPostIds } = Hooks.useUnreadPosts({ streamId });
   const { mutedUserIdSet } = Hooks.useMutedUsers();
 
   const enablePullToRefresh =
@@ -74,6 +97,7 @@ function TimelineFeedContent({ streamId, variant, tagsLayout, children }: Timeli
     variant === TIMELINE_FEED_VARIANT.CUSTOM ||
     variant === TIMELINE_FEED_VARIANT.HOT;
   const { state: pullState, pullDistance } = Hooks.usePullToRefresh({
+    containerRef,
     onRefresh: refresh,
     disabled: !enablePullToRefresh,
   });
@@ -96,25 +120,37 @@ function TimelineFeedContent({ streamId, variant, tagsLayout, children }: Timeli
 
   return (
     <TimelineFeedContext.Provider value={contextValue}>
-      {enablePullToRefresh && <Molecules.PullToRefreshIndicator state={pullState} pullDistance={pullDistance} />}
-      {children}
-      <NewPostsSection
-        streamId={streamId}
-        unreadPostIds={unreadPostIds}
-        postIds={postIds}
-        mutedUserIdSet={mutedUserIdSet}
-        loading={loading}
-        prependPosts={prependPosts}
-      />
-      <Organisms.TimelinePosts
-        postIds={postIds}
-        loading={loading}
-        loadingMore={loadingMore}
-        error={error}
-        hasMore={hasMore}
-        loadMore={loadMore}
-        tagsLayout={tagsLayout}
-      />
+      <Atoms.Container ref={containerRef} className="min-w-0 flex-1 gap-6 lg:overflow-hidden">
+        {enablePullToRefresh && <Molecules.PullToRefreshIndicator state={pullState} pullDistance={pullDistance} />}
+        {!isVisualActive ? children : null}
+        <NewPostsSection
+          streamId={streamId}
+          postIds={postIds}
+          mutedUserIdSet={mutedUserIdSet}
+          loading={loading}
+          prependPosts={prependPosts}
+        />
+        {isVisualActive ? (
+          <VisualTimelinePosts
+            postIds={postIds}
+            loading={loading}
+            loadingMore={loadingMore}
+            error={error}
+            hasMore={hasMore}
+            loadMore={loadMore}
+          />
+        ) : (
+          <Organisms.TimelinePosts
+            postIds={postIds}
+            loading={loading}
+            loadingMore={loadingMore}
+            error={error}
+            hasMore={hasMore}
+            loadMore={loadMore}
+            tagsLayout={tagsLayout}
+          />
+        )}
+      </Atoms.Container>
     </TimelineFeedContext.Provider>
   );
 }

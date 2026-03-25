@@ -218,11 +218,12 @@ export function formatInviteCode(code: string) {
   }
 }
 
-export function clearCookies() {
+export function clearCookies(exclude: string[] = []) {
   if (typeof document !== 'undefined') {
     document.cookie.split(';').forEach((cookie) => {
       const eqPos = cookie.indexOf('=');
       const name = eqPos > -1 ? cookie.substr(0, eqPos) : cookie;
+      if (exclude.includes(name.trim())) return;
       document.cookie = `${name.trim()}=;expires=Thu, 01 Jan 1970 00:00:00 GMT;path=/`;
     });
   }
@@ -576,6 +577,17 @@ export function getCharacterCount(text: string): number {
  */
 export function sanitizeTagInput(value: string): string {
   return value.replace(TAG_BANNED_CHARS, '');
+}
+
+/**
+ * Checks whether a string is a valid tag label (correct length, no banned characters).
+ *
+ * @param value - The candidate tag label (should already be trimmed/lowercased)
+ * @returns true when the label satisfies all tag constraints
+ */
+export function isValidTagLabel(value: string): boolean {
+  const charCount = getCharacterCount(value);
+  return charCount > 0 && charCount <= Config.TAG_MAX_LENGTH && sanitizeTagInput(value) === value;
 }
 
 /**

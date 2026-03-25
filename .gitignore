@@ -61,6 +61,7 @@ public/sw.js.map
 # Cursor
 /.cursor/plans
 /.cursor/commands
+/.cursor/hooks
 
 # Claude
 .claude
@@ -70,3 +71,6 @@ public/sw.js.map
 
 # Development Containers
 .devcontainer
+
+# AI Context Plans
+.plans

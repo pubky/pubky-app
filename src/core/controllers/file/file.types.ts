@@ -15,6 +15,10 @@ export type TGetMetadataParams = {
   fileAttachments: string[];
 };
 
+export type TFetchFilesParams = {
+  fileUris: string[];
+};
+
 export type TGetFileUrlParams = {
   // Composite ID: author:fileId
   fileId: string;

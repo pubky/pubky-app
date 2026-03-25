@@ -75,7 +75,12 @@
     "links": "Liens",
     "tags": "Tags",
     "posts": "Publications",
-    "avatar": "Avatar"
+    "avatar": "Avatar",
+    "threadTree": {
+      "expandAllReplies": "Développer toutes les réponses",
+      "collapseAllReplies": "Réduire toutes les réponses",
+      "moreReplies": "{count, plural, one {# réponse de plus} other {# réponses de plus}}"
+    }
   },
   "header": {
     "home": "Accueil",
@@ -680,7 +685,8 @@
       "subtitle2": "Vous pouvez rechercher plusieurs tags separes par des virgules."
     },
     "userSuggestion": "Utilisateur {name} ({pubky})",
-    "viewProfile": "Voir le profil de {name}"
+    "viewProfile": "Voir le profil de {name}",
+    "invalidTag": "Les tags doivent contenir 20 caractères ou moins et ne peuvent pas contenir de caractères spéciaux"
   },
   "feedback": {
     "title": "Donner votre avis",
@@ -956,6 +962,10 @@
       "userIdRequired": "L'ID utilisateur est obligatoire",
       "loginRequired": "Vous devez etre connecte pour ajouter des tags",
       "alreadyAdded": "Vous avez déjà ajoute ce tag",
+      "added": "Tag ajouté",
+      "addedDesc": "\"{label}\" a été ajouté avec succès.",
+      "removed": "Tag supprimé",
+      "removedDesc": "\"{label}\" a été supprimé avec succès.",
       "addFailed": "Échec de l'ajout du tag",
       "addFailedDesc": "Impossible d'ajouter \"{label}\". Veuillez réessayer.",
       "removeFailed": "Échec du retrait du tag",
@@ -1030,7 +1040,8 @@
     "layout": {
       "title": "Disposition",
       "columns": "Colonnes",
-      "wide": "Large"
+      "wide": "Large",
+      "visual": "Visuel"
     },
     "content": {
       "title": "Contenu",
@@ -1053,7 +1064,7 @@
     "hotTags": "Tags tendances",
     "activeUsers": "Utilisateurs actifs",
     "trendingPosts": "Publications tendances",
-    "postsCount": "{count} publications",
+    "postsCount": "{count} publications ce mois-ci",
     "failedToLoadUsers": "Échec du chargement des utilisateurs",
     "failedToLoadTags": "Échec du chargement des tags",
     "noUsersToShow": "Aucun utilisateur a afficher",

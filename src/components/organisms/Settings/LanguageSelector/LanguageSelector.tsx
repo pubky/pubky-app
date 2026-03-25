@@ -4,21 +4,9 @@ import * as React from 'react';
 import { useRouter } from 'next/navigation';
 import { useTranslations, useLocale } from 'next-intl';
 import * as Atoms from '@/atoms';
-import * as Core from '@/core';
 import * as Hooks from '@/hooks';
 import * as Libs from '@/libs';
 import { LANGUAGES } from './LanguageSelector.constants';
-
-/**
- * Sets the locale cookie for server-side i18n.
- * Cookie is used by next-intl to determine the locale on the server.
- * Adds Secure flag for HTTPS environments to prevent cookie leakage.
- */
-function setLocaleCookie(locale: string) {
-  const encodedLocale = encodeURIComponent(locale);
-  const secure = window.location.protocol === 'https:' ? ';Secure' : '';
-  document.cookie = `locale=${encodedLocale};path=/;max-age=31536000;SameSite=Lax${secure}`;
-}
 
 function LanguageOptions({ currentLanguage, onSelect }: { currentLanguage: string; onSelect: (code: string) => void }) {
   return (
@@ -54,30 +42,19 @@ function LanguageOptions({ currentLanguage, onSelect }: { currentLanguage: strin
 export function LanguageSelector() {
   const t = useTranslations('language');
   const router = useRouter();
-  // Use server locale as source of truth
   const serverLocale = useLocale();
-  const { setLanguage } = Core.useSettingsStore();
   const isMobile = Hooks.useIsMobile();
+  const { setLanguage } = Hooks.useSettingsActions();
   const [isOpen, setIsOpen] = React.useState(false);
 
-  // Sync store with server locale on mount (one-way sync: server -> client)
-  React.useEffect(() => {
-    setLanguage(serverLocale);
-  }, [serverLocale, setLanguage]);
-
   const handleSelect = (code: string) => {
-    // Prevent same language click
     if (code === serverLocale) {
       setIsOpen(false);
       return;
     }
 
-    // Set cookie and close dropdown
-    setLocaleCookie(code);
     setLanguage(code);
     setIsOpen(false);
-
-    // Refresh server components to pick up new locale
     router.refresh();
   };
 

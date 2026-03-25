@@ -3,7 +3,7 @@ import { render, screen, fireEvent } from '@testing-library/react';
 import { NotificationSettings } from './NotificationSettings';
 import { defaultNotificationPreferences } from '@/core/stores/settings/settings.types';
 
-// Mock settings store
+// Mock settings store and hook
 const mockSetNotificationPreference = vi.fn();
 const mockUseSettingsStore = vi.fn();
 
@@ -15,11 +15,20 @@ vi.mock('@/core', async (importOriginal) => {
   };
 });
 
+vi.mock('@/hooks/useSettingsActions', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('@/hooks/useSettingsActions')>();
+  return {
+    ...actual,
+    useSettingsActions: () => ({
+      setNotificationPreference: mockSetNotificationPreference,
+    }),
+  };
+});
+
 beforeEach(() => {
   vi.clearAllMocks();
   mockUseSettingsStore.mockReturnValue({
     notifications: defaultNotificationPreferences,
-    setNotificationPreference: mockSetNotificationPreference,
   });
 });
 
@@ -54,7 +63,6 @@ describe('NotificationSettings', () => {
         follow: false,
         reply: false,
       },
-      setNotificationPreference: mockSetNotificationPreference,
     });
 
     const { container } = render(<NotificationSettings />);
@@ -74,7 +82,6 @@ describe('NotificationSettings', () => {
         ...defaultNotificationPreferences,
         follow: false,
       },
-      setNotificationPreference: mockSetNotificationPreference,
     });
 
     const { container } = render(<NotificationSettings />);

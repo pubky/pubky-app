@@ -169,6 +169,128 @@ describe('UserController', () => {
     });
   });
 
+  describe('fetchDetails', () => {
+    it('should delegate to UserApplication.fetchDetails', async () => {
+      const userId = 'test-user-id';
+      const mockUserDetails: Core.NexusUserDetails = {
+        id: userId,
+        name: 'Test User',
+        bio: 'Test bio',
+        image: null,
+        links: [],
+        status: '',
+        indexed_at: Date.now(),
+      };
+
+      const spy = vi.spyOn(Core.UserApplication, 'fetchDetails').mockResolvedValue(mockUserDetails);
+
+      const result = await UserController.fetchDetails({ userId });
+
+      expect(result).toEqual(mockUserDetails);
+      expect(spy).toHaveBeenCalledWith({ userId });
+    });
+
+    it('should return null when user not found', async () => {
+      const userId = 'non-existent-user';
+
+      vi.spyOn(Core.UserApplication, 'fetchDetails').mockResolvedValue(null);
+
+      const result = await UserController.fetchDetails({ userId });
+
+      expect(result).toBeNull();
+    });
+
+    it('should propagate errors from application layer', async () => {
+      const userId = 'test-user-id';
+
+      vi.spyOn(Core.UserApplication, 'fetchDetails').mockRejectedValue(new Error('Network error'));
+
+      await expect(UserController.fetchDetails({ userId })).rejects.toThrow('Network error');
+    });
+  });
+
+  describe('fetch', () => {
+    it('should delegate to UserApplication.fetch', async () => {
+      const userId = 'test-user-id';
+      const mockUserDetails: Core.NexusUserDetails = {
+        id: userId,
+        name: 'Test User',
+        bio: 'Test bio',
+        image: null,
+        links: [],
+        status: '',
+        indexed_at: Date.now(),
+      };
+
+      const spy = vi.spyOn(Core.UserApplication, 'fetch').mockResolvedValue(mockUserDetails);
+
+      const result = await UserController.fetch({ userId });
+
+      expect(result).toEqual(mockUserDetails);
+      expect(spy).toHaveBeenCalledWith({ userId });
+    });
+
+    it('should return null when user not found', async () => {
+      const userId = 'non-existent-user';
+
+      vi.spyOn(Core.UserApplication, 'fetch').mockResolvedValue(null);
+
+      const result = await UserController.fetch({ userId });
+
+      expect(result).toBeNull();
+    });
+
+    it('should propagate errors from application layer', async () => {
+      const userId = 'test-user-id';
+
+      vi.spyOn(Core.UserApplication, 'fetch').mockRejectedValue(new Error('Network error'));
+
+      await expect(UserController.fetch({ userId })).rejects.toThrow('Network error');
+    });
+  });
+
+  describe('fetchCounts', () => {
+    it('should delegate to UserApplication.fetchCounts', async () => {
+      const userId = 'test-user-id';
+      const mockUserCounts: Core.NexusUserCounts = {
+        posts: 10,
+        replies: 5,
+        followers: 20,
+        following: 15,
+        friends: 8,
+        tagged: 3,
+        tags: 2,
+        unique_tags: 1,
+        bookmarks: 7,
+      };
+
+      const spy = vi.spyOn(Core.UserApplication, 'fetchCounts').mockResolvedValue(mockUserCounts);
+
+      const result = await UserController.fetchCounts({ userId });
+
+      expect(result).toEqual(mockUserCounts);
+      expect(spy).toHaveBeenCalledWith({ userId });
+    });
+
+    it('should return null when counts not found', async () => {
+      const userId = 'non-existent-user';
+
+      vi.spyOn(Core.UserApplication, 'fetchCounts').mockResolvedValue(null);
+
+      const result = await UserController.fetchCounts({ userId });
+
+      expect(result).toBeNull();
+    });
+
+    it('should propagate errors from application layer', async () => {
+      const userId = 'test-user-id';
+
+      vi.spyOn(Core.UserApplication, 'fetchCounts').mockRejectedValue(new Error('Network error'));
+
+      await expect(UserController.fetchCounts({ userId })).rejects.toThrow('Network error');
+    });
+  });
+
   describe('getManyCounts', () => {
     it('should delegate to UserApplication.getManyCounts', async () => {
       const userIds = ['user1', 'user2'] as Core.Pubky[];

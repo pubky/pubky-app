@@ -1,0 +1,66 @@
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
+
+exports[`ReplyWithNested - Snapshots > matches snapshot for expanded nested replies 1`] = `
+<div>
+  <div
+    data-testid="post-thread-spacer"
+  />
+  <div
+    class="relative"
+  >
+    <button
+      data-is-last-reply="false"
+      data-post-id="author:reply-1"
+      data-testid="post-main"
+      type="button"
+    >
+      author:reply-1
+    </button>
+    <div
+      class="absolute bottom-[24px] left-0 z-10 -translate-x-1/2"
+    >
+      <button
+        data-expanded="true"
+        data-testid="thread-expand-toggle"
+        type="button"
+      >
+        toggle
+      </button>
+    </div>
+  </div>
+  <div
+    class="grid transition-all duration-300 ease-in-out grid-rows-[1fr] opacity-100"
+  >
+    <div
+      class="overflow-hidden"
+    >
+      <div
+        class="flex"
+      >
+        <div
+          class="w-3 shrink-0 border-l border-border"
+        />
+        <div
+          class="ml-3 flex-1"
+        >
+          <div>
+            <div
+              data-testid="post-thread-spacer"
+            />
+            <div>
+              <button
+                data-is-last-reply="true"
+                data-post-id="author:nested-1"
+                data-testid="post-main"
+                type="button"
+              >
+                author:nested-1
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+`;

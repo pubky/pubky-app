@@ -57,7 +57,7 @@ export function TaggedItem({
           count={tag.taggers_count}
           clicked={!!tag.relationship}
           onClick={handleTagClick}
-          className="max-w-(--tag-max-width) cursor-pointer transition-opacity hover:opacity-80"
+          className="cursor-pointer transition-opacity hover:opacity-80"
         />
 
         {/* Search button */}

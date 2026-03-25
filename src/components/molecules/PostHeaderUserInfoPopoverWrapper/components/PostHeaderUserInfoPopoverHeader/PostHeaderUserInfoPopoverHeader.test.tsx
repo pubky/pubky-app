@@ -126,6 +126,21 @@ describe('PostHeaderUserInfoPopoverHeader', () => {
     expect(stopPropagationSpy).toHaveBeenCalled();
     expect(preventDefaultSpy).toHaveBeenCalled();
   });
+
+  it('does not underline the username on hover', () => {
+    render(
+      <PostHeaderUserInfoPopoverHeader
+        userId="user123"
+        userName="Test User"
+        formattedPublicKey="test123"
+        avatarUrl="x"
+      />,
+    );
+
+    const [, usernameTypography] = screen.getAllByTestId('typography');
+
+    expect(usernameTypography).not.toHaveClass('hover:underline');
+  });
 });
 
 describe('PostHeaderUserInfoPopoverHeader - Snapshots', () => {

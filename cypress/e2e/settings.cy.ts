@@ -2,7 +2,7 @@ import { latestPostInFeedContentEq, createQuickPost, waitForFeedToLoad } from '.
 import { searchForProfileByPubky } from '../support/contacts';
 import { slowCypressDown } from 'cypress-slow-down';
 import 'cypress-slow-down/commands';
-import { BackupType, HasBackedUp } from '../support/types/enums';
+import { BackupType, CheckForNewPosts, HasBackedUp } from '../support/types/enums';
 import { backupDownloadFilePath } from '../support/common';
 
 describe('settings', () => {
@@ -80,6 +80,7 @@ describe('settings', () => {
     cy.onboardAsNewUser('Mr Mute', 'I like to mute people');
 
     // View user 1's post
+    cy.findFirstPostInFeedFiltered(postContent, CheckForNewPosts.Yes);
     latestPostInFeedContentEq(postContent);
 
     // Confirm that no users are muted yet in settings page
@@ -98,7 +99,7 @@ describe('settings', () => {
 
     // Check user 1's post is no longer seen in feed
     cy.get('[data-cy="header-home-btn"]').click();
-    cy.get('[data-cy="timeline-posts"]').should('not.contain.text', postContent);
+    cy.get('[data-cy="timeline-container"]').should('not.contain.text', postContent);
 
     // Confirm user 1 is now muted in settings page and unmute them
     cy.get('[data-cy="header-settings-btn"]').click();

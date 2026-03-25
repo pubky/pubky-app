@@ -41,7 +41,7 @@ exports[`ProfileTagged - Snapshots > matches snapshot for loading state 1`] = `
     role="status"
   />
   <p
-    class="text-xl font-semibold text-muted-foreground"
+    class="text-base font-medium text-muted-foreground"
     data-testid="typography"
   >
     Loading tags...

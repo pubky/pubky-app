@@ -75,7 +75,12 @@
     "links": "Links",
     "tags": "Tags",
     "posts": "Beiträge",
-    "avatar": "Avatar"
+    "avatar": "Avatar",
+    "threadTree": {
+      "expandAllReplies": "Alle Antworten ausklappen",
+      "collapseAllReplies": "Alle Antworten einklappen",
+      "moreReplies": "{count, plural, one {# weitere Antwort} other {# weitere Antworten}}"
+    }
   },
   "header": {
     "home": "Startseite",
@@ -680,7 +685,8 @@
       "subtitle2": "Sie können nach mehreren durch Kommas getrennten Tags suchen."
     },
     "userSuggestion": "Benutzer {name} ({pubky})",
-    "viewProfile": "Profil von {name} ansehen"
+    "viewProfile": "Profil von {name} ansehen",
+    "invalidTag": "Tags dürfen maximal 20 Zeichen lang sein und keine Sonderzeichen enthalten"
   },
   "feedback": {
     "title": "Feedback geben",
@@ -956,6 +962,10 @@
       "userIdRequired": "Benutzer-ID ist erforderlich",
       "loginRequired": "Sie müssen angemeldet sein, um Tags hinzuzufuegen",
       "alreadyAdded": "Sie haben diesen Tag bereits hinzugefügt",
+      "added": "Tag hinzugefuegt",
+      "addedDesc": "\"{label}\" wurde erfolgreich hinzugefuegt.",
+      "removed": "Tag entfernt",
+      "removedDesc": "\"{label}\" wurde erfolgreich entfernt.",
       "addFailed": "Tag konnte nicht hinzugefügt werden",
       "addFailedDesc": "\"{label}\" konnte nicht hinzugefügt werden. Bitte versuchen Sie es erneut.",
       "removeFailed": "Tag konnte nicht entfernt werden",
@@ -1030,7 +1040,8 @@
     "layout": {
       "title": "Layout",
       "columns": "Spalten",
-      "wide": "Breit"
+      "wide": "Breit",
+      "visual": "Visuell"
     },
     "content": {
       "title": "Inhalt",
@@ -1053,7 +1064,7 @@
     "hotTags": "Beliebte Tags",
     "activeUsers": "Aktive Benutzer",
     "trendingPosts": "Trendende Beiträge",
-    "postsCount": "{count} Beiträge",
+    "postsCount": "{count} Beiträge diesen Monat",
     "failedToLoadUsers": "Benutzer konnten nicht geladen werden",
     "failedToLoadTags": "Tags konnten nicht geladen werden",
     "noUsersToShow": "Keine Benutzer anzuzeigen",

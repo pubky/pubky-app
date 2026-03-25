@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState, type ReactNode } from 'react';
+import { useEffect, useState, type ComponentType, type ReactNode } from 'react';
 import * as Atoms from '@/atoms';
 import * as Molecules from '@/molecules';
 import * as Libs from '@/libs';
@@ -15,6 +15,12 @@ type CustomFeedDialogProps = {
   mode: 'create' | 'edit';
   children: ReactNode;
 };
+
+type CustomFeedDialogContent = PubkyAppPostKind | 'ALL';
+
+function isVisualCustomFeedContentSupported(content?: CustomFeedDialogContent): boolean {
+  return content === 'ALL' || content === PubkyAppPostKind.Image || content === PubkyAppPostKind.Video;
+}
 
 export const CustomFeedDialog = ({ mode, children }: CustomFeedDialogProps) => {
   const router = useRouter();
@@ -35,7 +41,7 @@ export const CustomFeedDialog = ({ mode, children }: CustomFeedDialogProps) => {
   const [layout, setLayout] = useState<PubkyAppFeedLayout | undefined>(
     mode === 'create' ? PubkyAppFeedLayout.Columns : undefined,
   );
-  const [content, setContent] = useState<PubkyAppPostKind | 'ALL' | undefined>(mode === 'create' ? 'ALL' : undefined);
+  const [content, setContent] = useState<CustomFeedDialogContent | undefined>(mode === 'create' ? 'ALL' : undefined);
   const [tags, setTags] = useState<string[]>([]);
   const [loading, setLoading] = useState(false);
 
@@ -75,9 +81,10 @@ export const CustomFeedDialog = ({ mode, children }: CustomFeedDialogProps) => {
   const layoutFilters = [
     { value: PubkyAppFeedLayout.Columns, label: tFilter('layout.columns'), icon: Libs.Columns3 },
     { value: PubkyAppFeedLayout.Wide, label: tFilter('layout.wide'), icon: Libs.Menu },
+    { value: PubkyAppFeedLayout.Visual, label: tFilter('layout.visual'), icon: Libs.LayoutGrid },
   ];
 
-  const contentFilters = [
+  const allContentFilters: Array<{ value: CustomFeedDialogContent; label: string; icon: ComponentType }> = [
     { value: 'ALL', label: tFilter('content.all'), icon: Libs.Layers },
     { value: PubkyAppPostKind.Short, label: tFilter('content.posts'), icon: Libs.StickyNote },
     { value: PubkyAppPostKind.Long, label: tFilter('content.articles'), icon: Libs.Newspaper },
@@ -86,6 +93,29 @@ export const CustomFeedDialog = ({ mode, children }: CustomFeedDialogProps) => {
     { value: PubkyAppPostKind.Link, label: tFilter('content.links'), icon: Libs.Link },
     { value: PubkyAppPostKind.File, label: tFilter('content.files'), icon: Libs.Download },
   ];
+  const contentFilters =
+    layout === PubkyAppFeedLayout.Visual
+      ? allContentFilters.filter((filter) => isVisualCustomFeedContentSupported(filter.value))
+      : allContentFilters;
+
+  useEffect(() => {
+    if (layout !== PubkyAppFeedLayout.Visual) return;
+    if (content === undefined || isVisualCustomFeedContentSupported(content)) return;
+    setContent('ALL');
+  }, [content, layout]);
+
+  const handleLayoutChange = (value: string) => {
+    const nextLayout = Number(value) as PubkyAppFeedLayout;
+    setLayout(nextLayout);
+
+    if (
+      nextLayout === PubkyAppFeedLayout.Visual &&
+      content !== undefined &&
+      !isVisualCustomFeedContentSupported(content)
+    ) {
+      setContent('ALL');
+    }
+  };
 
   const handleSaveFeed = async () => {
     if (reach === undefined || sort === undefined || layout === undefined || content === undefined) return;
@@ -258,7 +288,7 @@ export const CustomFeedDialog = ({ mode, children }: CustomFeedDialogProps) => {
 
             <Atoms.Select
               value={layout === undefined ? layout : String(layout)}
-              onValueChange={(v) => setLayout(Number(v))}
+              onValueChange={handleLayoutChange}
               disabled={disabled}
               data-testid="layout-select"
             >

@@ -44,8 +44,8 @@ vi.mock('@/libs', async () => {
 
 // Mock app
 vi.mock('@/app', () => ({
-  AUTH_ROUTES: {
-    SIGN_IN: '/sign-in',
+  ONBOARDING_ROUTES: {
+    HUMAN: '/onboarding/human',
   },
 }));
 
@@ -64,13 +64,13 @@ describe('HeaderButtonSignIn', () => {
     expect(screen.getByTestId('header-sign-in-btn')).toBeInTheDocument();
   });
 
-  it('navigates to sign in page when clicked', () => {
+  it('navigates to onboarding when clicked', () => {
     render(<HeaderButtonSignIn />);
 
     const button = screen.getByRole('button', { name: /New here?/i });
     button.click();
 
-    expect(mockPush).toHaveBeenCalledWith('/sign-in');
+    expect(mockPush).toHaveBeenCalledWith('/onboarding/human');
   });
 
   it('passes through additional props', () => {

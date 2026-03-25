@@ -2,6 +2,8 @@ import { describe, it, expect, vi } from 'vitest';
 import { render, screen } from '@testing-library/react';
 import { Hot } from './Hot';
 
+const mockUseLayoutReset = vi.fn();
+
 // Mock Core
 vi.mock('@/core', () => ({
   useHotStore: vi.fn(() => ({
@@ -14,7 +16,7 @@ vi.mock('@/core', () => ({
 
 // Mock Hooks
 vi.mock('@/hooks', () => ({
-  useLayoutReset: vi.fn(),
+  useLayoutReset: () => mockUseLayoutReset(),
 }));
 
 // Mock Organisms
@@ -32,7 +34,15 @@ vi.mock('@/organisms', () => ({
 
 // Mock Atoms
 vi.mock('@/atoms', () => ({
-  Container: ({ children, ...props }: { children: React.ReactNode; [key: string]: unknown }) => (
+  Container: ({
+    children,
+    overrideDefaults: _overrideDefaults,
+    ...props
+  }: {
+    children: React.ReactNode;
+    overrideDefaults?: boolean;
+    [key: string]: unknown;
+  }) => (
     <div data-testid="container" {...props}>
       {children}
     </div>
@@ -46,6 +56,11 @@ describe('Hot', () => {
   it('renders without errors', () => {
     render(<Hot />);
     expect(screen.getByTestId('content-layout')).toBeInTheDocument();
+  });
+
+  it('restores the unsupported wide layout on mount', () => {
+    render(<Hot />);
+    expect(mockUseLayoutReset).toHaveBeenCalled();
   });
 
   it('renders HotTagsCardsSection', () => {

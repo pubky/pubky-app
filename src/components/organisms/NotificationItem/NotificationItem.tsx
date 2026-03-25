@@ -56,11 +56,11 @@ export function NotificationItem({ notification, isUnread }: NotificationItemPro
 
     let isCancelled = false;
 
-    // PostController.getOrFetchDetails handles the caching strategy:
+    // PostController.getOrFetch handles the caching strategy:
     // 1. Check local DB first
     // 2. If missing, fetch from Nexus
     // 3. Write to local DB
-    Core.PostController.getOrFetchDetails({ compositeId: postCompositeId, viewerId })
+    Core.PostController.getOrFetch({ compositeId: postCompositeId, viewerId })
       .then((post) => {
         if (!isCancelled && post?.content) {
           if (Libs.isPostDeleted(post.content)) {
@@ -119,8 +119,20 @@ export function NotificationItem({ notification, isUnread }: NotificationItemPro
     router.push(buildSearchUrl([normalizedTag]));
   };
 
+  // Handle clicking empty space in the notification row - navigate to the main notification target
+  const handleRowClick = (e: React.MouseEvent) => {
+    if ((e.target as HTMLElement).closest('a, button')) return;
+    if (notificationLink) {
+      router.push(notificationLink);
+    }
+  };
+
   return (
-    <Atoms.Container overrideDefaults={true} className="flex w-full min-w-0 items-center justify-between gap-2">
+    <Atoms.Container
+      overrideDefaults={true}
+      className={`flex w-full min-w-0 items-center justify-between gap-2 ${notificationLink ? 'cursor-pointer' : ''}`}
+      onClick={handleRowClick}
+    >
       <Atoms.Container overrideDefaults={true} className="flex min-w-0 flex-1 items-center gap-2">
         {/* Avatar - links to user profile */}
         {userProfileLink ? (
@@ -148,9 +160,9 @@ export function NotificationItem({ notification, isUnread }: NotificationItemPro
             as="p"
             className="min-w-0 shrink truncate text-sm leading-none font-medium text-foreground lg:text-base lg:leading-normal"
           >
-            {/* Username - links to user profile with hover underline */}
+            {/* Username - links to user profile without underline on hover */}
             {userProfileLink ? (
-              <Link href={userProfileLink} className="hover:underline">
+              <Link href={userProfileLink} className="no-underline hover:no-underline">
                 {userName}
               </Link>
             ) : (

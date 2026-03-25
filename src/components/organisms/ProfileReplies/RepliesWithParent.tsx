@@ -116,7 +116,7 @@ function ReplyWithParent({ replyPostId, onPostClick }: Types.ReplyWithParentProp
       if (!viewerId) return;
       // Parent post ID exists but post details are missing
       // Fetch via Controller (fire-and-forget, useLiveQuery will react to DB updates)
-      Core.PostController.getOrFetchDetails({ compositeId: parentPostId, viewerId })
+      Core.PostController.getOrFetch({ compositeId: parentPostId, viewerId })
         .catch((error) => {
           Libs.Logger.error('[RepliesWithParent] Failed to fetch parent post details', { parentPostId, error });
         })

@@ -1,8 +1,8 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { render, screen } from '@testing-library/react';
+import { TIMELINE_FEED_VARIANT } from '@/config';
 import * as Core from '@/core';
 import { TimelineFeedWithStream } from './TimelineFeedContent';
-import { TIMELINE_FEED_VARIANT } from '../TimelineFeed/TimelineFeed.types';
 
 vi.mock('next-intl', () => ({
   useTranslations: () => (key: string) => key,
@@ -183,7 +183,12 @@ describe('TimelineFeedContent', () => {
           tagsLayout="inline"
         />,
       );
-      expect(mockUsePullToRefresh).toHaveBeenCalledWith(expect.objectContaining({ disabled: false }));
+      expect(mockUsePullToRefresh).toHaveBeenCalledWith(
+        expect.objectContaining({
+          disabled: false,
+          containerRef: expect.objectContaining({ current: expect.any(Object) }),
+        }),
+      );
     });
 
     it('disables pull-to-refresh for bookmarks variant', () => {
@@ -194,7 +199,9 @@ describe('TimelineFeedContent', () => {
           tagsLayout="inline"
         />,
       );
-      expect(mockUsePullToRefresh).toHaveBeenCalledWith(expect.objectContaining({ disabled: true }));
+      expect(mockUsePullToRefresh).toHaveBeenCalledWith(
+        expect.objectContaining({ disabled: true, containerRef: expect.any(Object) }),
+      );
     });
 
     it('shows pull-to-refresh indicator when pulling', () => {

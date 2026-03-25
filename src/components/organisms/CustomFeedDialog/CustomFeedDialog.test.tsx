@@ -202,7 +202,9 @@ vi.mock('@/atoms', () => ({
       {children}
       <input
         data-testid={`${dataTestId ?? 'select'}-hidden-input`}
-        type="hidden"
+        type="text"
+        hidden
+        aria-hidden="true"
         value={value ?? ''}
         onChange={(e) => onValueChange?.(e.target.value)}
       />
@@ -278,6 +280,7 @@ vi.mock('@/libs', async () => {
     Flame: IconStub,
     Columns3: IconStub,
     Menu: IconStub,
+    LayoutGrid: IconStub,
     Layers: IconStub,
     StickyNote: IconStub,
     Newspaper: IconStub,
@@ -308,6 +311,10 @@ const createMockFeed = (overrides: Partial<FeedModelSchema> = {}): FeedModelSche
   updated_at: Date.now(),
   ...overrides,
 });
+
+const changeSelectValue = (testId: string, value: string | number) => {
+  fireEvent.change(screen.getByTestId(`${testId}-hidden-input`), { target: { value: String(value) } });
+};
 
 // --- Unit Tests ---
 
@@ -662,6 +669,7 @@ describe('CustomFeedDialog', () => {
     const section = screen.getByTestId('layout-filter-section');
     expect(within(section).getByText('Columns')).toBeInTheDocument();
     expect(within(section).getByText('Wide')).toBeInTheDocument();
+    expect(within(section).getByText('Visual')).toBeInTheDocument();
   });
 
   it('renders all content filter options', () => {
@@ -679,6 +687,27 @@ describe('CustomFeedDialog', () => {
     expect(within(section).getByText('Videos')).toBeInTheDocument();
     expect(within(section).getByText('Links')).toBeInTheDocument();
     expect(within(section).getByText('Files')).toBeInTheDocument();
+  });
+
+  it('limits content filter options when layout is Visual', async () => {
+    render(
+      <CustomFeedDialog mode="create">
+        <button>Create Feed</button>
+      </CustomFeedDialog>,
+    );
+
+    changeSelectValue('layout-select', PubkyAppFeedLayout.Visual);
+
+    await waitFor(() => {
+      const section = screen.getByTestId('content-filter-section');
+      expect(within(section).getByText('All')).toBeInTheDocument();
+      expect(within(section).getByText('Images')).toBeInTheDocument();
+      expect(within(section).getByText('Videos')).toBeInTheDocument();
+      expect(within(section).queryByText('Posts')).not.toBeInTheDocument();
+      expect(within(section).queryByText('Articles')).not.toBeInTheDocument();
+      expect(within(section).queryByText('Links')).not.toBeInTheDocument();
+      expect(within(section).queryByText('Files')).not.toBeInTheDocument();
+    });
   });
 
   // -- Default select values in create mode --
@@ -723,6 +752,42 @@ describe('CustomFeedDialog', () => {
     expect(screen.getByTestId('content-select')).toHaveAttribute('data-value', 'ALL');
   });
 
+  it('coerces unsupported content to ALL when switching to Visual', async () => {
+    render(
+      <CustomFeedDialog mode="create">
+        <button>Create Feed</button>
+      </CustomFeedDialog>,
+    );
+
+    changeSelectValue('content-select', PubkyAppPostKind.Short);
+    expect(screen.getByTestId('content-select')).toHaveAttribute('data-value', String(PubkyAppPostKind.Short));
+
+    changeSelectValue('layout-select', PubkyAppFeedLayout.Visual);
+
+    await waitFor(() => {
+      expect(screen.getByTestId('content-select')).toHaveAttribute('data-value', 'ALL');
+    });
+  });
+
+  it('does not restore unsupported content when leaving Visual', async () => {
+    render(
+      <CustomFeedDialog mode="create">
+        <button>Create Feed</button>
+      </CustomFeedDialog>,
+    );
+
+    changeSelectValue('content-select', PubkyAppPostKind.Link);
+    changeSelectValue('layout-select', PubkyAppFeedLayout.Visual);
+
+    await waitFor(() => {
+      expect(screen.getByTestId('content-select')).toHaveAttribute('data-value', 'ALL');
+    });
+
+    changeSelectValue('layout-select', PubkyAppFeedLayout.Columns);
+
+    expect(screen.getByTestId('content-select')).toHaveAttribute('data-value', 'ALL');
+  });
+
   // -- Edit mode populates from customFeed --
 
   it('populates feed name input from customFeed in edit mode', () => {
@@ -762,6 +827,34 @@ describe('CustomFeedDialog', () => {
     );
 
     expect(screen.getByTestId('content-select')).toHaveAttribute('data-value', 'ALL');
+  });
+
+  it('populates visual layout from customFeed in edit mode', () => {
+    const mockFeed = createMockFeed({ layout: PubkyAppFeedLayout.Visual, content: PubkyAppPostKind.Video });
+    mockUseCustomFeed.mockReturnValue(mockFeed);
+
+    render(
+      <CustomFeedDialog mode="edit">
+        <button>Edit Feed</button>
+      </CustomFeedDialog>,
+    );
+
+    expect(screen.getByTestId('layout-select')).toHaveAttribute('data-value', String(PubkyAppFeedLayout.Visual));
+  });
+
+  it('normalizes unsupported visual content from customFeed to ALL in edit mode', async () => {
+    const mockFeed = createMockFeed({ layout: PubkyAppFeedLayout.Visual, content: PubkyAppPostKind.Short });
+    mockUseCustomFeed.mockReturnValue(mockFeed);
+
+    render(
+      <CustomFeedDialog mode="edit">
+        <button>Edit Feed</button>
+      </CustomFeedDialog>,
+    );
+
+    await waitFor(() => {
+      expect(screen.getByTestId('content-select')).toHaveAttribute('data-value', 'ALL');
+    });
   });
 
   // -- Create feed flow --
@@ -858,6 +951,41 @@ describe('CustomFeedDialog', () => {
     await waitFor(() => {
       expect(mockCommitCreate).toHaveBeenCalledWith(
         expect.objectContaining({
+          content: null,
+        }),
+      );
+    });
+  });
+
+  it('passes visual layout on create when selected', async () => {
+    const mockCreatedFeed = createMockFeed({
+      id: 'new-visual-feed-123',
+      name: 'My Visual Feed',
+      layout: PubkyAppFeedLayout.Visual,
+      content: null,
+    });
+    mockCommitCreate.mockResolvedValue(mockCreatedFeed);
+
+    render(
+      <CustomFeedDialog mode="create">
+        <button>Create Feed</button>
+      </CustomFeedDialog>,
+    );
+
+    fireEvent.change(screen.getByTestId('feed-name-input'), { target: { value: 'My Visual Feed' } });
+    fireEvent.change(screen.getByTestId('tag-input-field'), { target: { value: 'images' } });
+    changeSelectValue('layout-select', PubkyAppFeedLayout.Visual);
+
+    await waitFor(() => {
+      expect(screen.getByTestId('layout-select')).toHaveAttribute('data-value', String(PubkyAppFeedLayout.Visual));
+    });
+
+    fireEvent.click(screen.getByTestId('save-feed-button'));
+
+    await waitFor(() => {
+      expect(mockCommitCreate).toHaveBeenCalledWith(
+        expect.objectContaining({
+          layout: PubkyAppFeedLayout.Visual,
           content: null,
         }),
       );

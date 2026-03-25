@@ -3,7 +3,6 @@
 exports[`PostHeaderTimestamp - Snapshots > matches snapshot with "just now" 1`] = `
 <div
   class="flex flex-shrink-0 items-center gap-1"
-  data-override-defaults="true"
   data-testid="container"
 >
   <svg
@@ -22,7 +21,6 @@ exports[`PostHeaderTimestamp - Snapshots > matches snapshot with "just now" 1`] 
 exports[`PostHeaderTimestamp - Snapshots > matches snapshot with days 1`] = `
 <div
   class="flex flex-shrink-0 items-center gap-1"
-  data-override-defaults="true"
   data-testid="container"
 >
   <svg
@@ -41,7 +39,6 @@ exports[`PostHeaderTimestamp - Snapshots > matches snapshot with days 1`] = `
 exports[`PostHeaderTimestamp - Snapshots > matches snapshot with hours 1`] = `
 <div
   class="flex flex-shrink-0 items-center gap-1"
-  data-override-defaults="true"
   data-testid="container"
 >
   <svg
@@ -60,7 +57,6 @@ exports[`PostHeaderTimestamp - Snapshots > matches snapshot with hours 1`] = `
 exports[`PostHeaderTimestamp - Snapshots > matches snapshot with minutes 1`] = `
 <div
   class="flex flex-shrink-0 items-center gap-1"
-  data-override-defaults="true"
   data-testid="container"
 >
   <svg

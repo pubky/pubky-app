@@ -187,8 +187,7 @@ export const createSettingsActions = (set: ZustandSet<SettingsStore>): SettingsA
     set(
       (state) => ({
         ...settingsInitialState,
-        version: state.version, // Preserve version during reset
-        updatedAt: Date.now(), // Update timestamp on reset
+        language: state.language, // device-level preference, not sensitive data
       }),
       false,
       SettingsActionTypes.RESET,

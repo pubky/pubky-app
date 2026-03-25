@@ -75,7 +75,12 @@
     "links": "روابط",
     "tags": "وسوم",
     "posts": "منشورات",
-    "avatar": "صورة رمزية"
+    "avatar": "صورة رمزية",
+    "threadTree": {
+      "expandAllReplies": "توسيع كل الردود",
+      "collapseAllReplies": "طي كل الردود",
+      "moreReplies": "{count, plural, zero {لا ردود إضافية} one {رد إضافي واحد} two {ردان إضافيان} few {# ردود إضافية} many {# ردا إضافيا} other {# رد إضافي}}"
+    }
   },
   "header": {
     "home": "الرئيسية",
@@ -680,7 +685,8 @@
       "subtitle2": "يمكنك البحث عن وسوم متعددة مفصولة بفواصل."
     },
     "userSuggestion": "المستخدم {name} ({pubky})",
-    "viewProfile": "عرض ملف {name} الشخصي"
+    "viewProfile": "عرض ملف {name} الشخصي",
+    "invalidTag": "يجب أن تكون العلامات 20 حرفًا أو أقل ولا يمكن أن تحتوي على أحرف خاصة"
   },
   "feedback": {
     "title": "ارسال ملاحظات",
@@ -956,6 +962,10 @@
       "userIdRequired": "معرف المستخدم مطلوب",
       "loginRequired": "يجب تسجيل الدخول لاضافة وسوم",
       "alreadyAdded": "لقد اضفت هذا الوسم بالفعل",
+      "added": "تمت اضافة الوسم",
+      "addedDesc": "تمت اضافة \"{label}\" بنجاح.",
+      "removed": "تمت ازالة الوسم",
+      "removedDesc": "تمت ازالة \"{label}\" بنجاح.",
       "addFailed": "فشل اضافة الوسم",
       "addFailedDesc": "تعذر اضافة \"{label}\". يرجى المحاولة مرة اخرى.",
       "removeFailed": "فشل ازالة الوسم",
@@ -1024,7 +1034,8 @@
     "layout": {
       "title": "التخطيط",
       "columns": "اعمدة",
-      "wide": "عريض"
+      "wide": "عريض",
+      "visual": "مرئي"
     },
     "content": {
       "title": "المحتوى",
@@ -1047,7 +1058,7 @@
     "hotTags": "الوسوم الرائجة",
     "activeUsers": "المستخدمون النشطون",
     "trendingPosts": "المنشورات الرائجة",
-    "postsCount": "{count} منشور",
+    "postsCount": "{count} منشور هذا الشهر",
     "failedToLoadUsers": "فشل تحميل المستخدمين",
     "failedToLoadTags": "فشل تحميل الوسوم",
     "noUsersToShow": "لا يوجد مستخدمون للعرض",

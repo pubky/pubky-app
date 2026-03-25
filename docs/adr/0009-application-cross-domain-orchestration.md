@@ -45,7 +45,37 @@ The fundamental issue: **Where does cross-domain orchestration belong?**
 1. **Horizontal calls permitted**: Application classes MAY call other Application classes within the same layer
 2. **Acyclic dependency graph**: Circular dependencies between Application classes are FORBIDDEN
 3. **Maximum call depth of 1**: If Application A calls Application B, then B MUST NOT call any other Application class within that execution flow
-4. **Orchestration privilege**: Only the following Applications may call other Application classes: `PostApplication`, `NotificationApplication`, `BootstrapApplication`, `HotApplication`, `PostStreamApplication`, `TtlApplication`. `NotificationApplication` is also constrained by ADR-0010 (read-only hydration before notification persistence). All other Application classes (FileApplication, TagApplication, BookmarkApplication, etc.) MUST NOT call other Application classes. This ensures orchestrators can coordinate cross-domain workflows while specialized domains remain independent and cannot create reverse dependencies.
+4. **Orchestration privilege**: `PostApplication` and `UserApplication` are permitted to call other Application classes. `NotificationApplication` is also permitted as a scoped exception defined by ADR-0010 (read-only hydration before notification persistence). `BootstrapApplication` and `MigrationApplication` are also permitted as **root-node orchestrators** — see rationale below. All other Application classes (FileApplication, TagApplication, BookmarkApplication, etc.) MUST NOT call other Application classes, including PostApplication, UserApplication, or NotificationApplication. This ensures orchestrators can coordinate cross-domain workflows while specialized domains remain independent and cannot create reverse dependencies on core entities.
+
+#### BootstrapApplication and MigrationApplication as Root-Node Orchestrators
+
+In the Application dependency DAG, `BootstrapApplication` and `MigrationApplication` are **source nodes (in-degree 0)**: no other Application class holds a reference to them or calls into them. They are invoked from the Controller layer and fan out to multiple domain Applications.
+
+`BootstrapApplication` is invoked exactly once per session for initial hydration:
+
+```
+BootstrapApplication          ← in-degree 0 (root/source node)
+  ├─→ MuteApplication         (fetch muted users)
+  ├─→ FeedApplication          (fetch feeds)
+  ├─→ NotificationApplication  (persist & summarize)
+  ├─→ FileApplication          (persist files)
+  └─→ SettingsApplication      (initialize settings)
+```
+
+`MigrationApplication` is invoked after a database recreation (version bump) to re-fetch critical homeserver data that is not automatically re-populated:
+
+```
+MigrationApplication          ← in-degree 0 (root/source node)
+  ├─→ MuteApplication         (fetch muted users)
+  ├─→ FeedApplication          (fetch feeds)
+  └─→ SettingsApplication      (initialize settings)
+```
+
+Because no edge points **into** these orchestrators, they structurally **cannot** participate in a cycle, and the max-depth constraint is satisfied (orchestrator → leaf, depth 1). The constraints are:
+
+- ✅ `BootstrapApplication` MAY call other Application classes for startup hydration.
+- ✅ `MigrationApplication` MAY call other Application classes for post-migration re-sync.
+- ❌ No Application class MAY call `BootstrapApplication` or `MigrationApplication` (enforced by their root-node positions; adding such an edge would violate the acyclic graph rule).
 
 ### Example
 
@@ -126,7 +156,11 @@ class FileApplication {
 1. **Code Reviews**: Reviewers MUST check for:
    - Circular dependencies
    - Excessive call depth (max depth 1)
+     <<<<<<< HEAD:.cursor/adr/0009-application-cross-domain-orchestration.md
+   - **Orchestration privilege violations** (only PostApplication/UserApplication/NotificationApplication/BootstrapApplication/MigrationApplication can call other Applications)
+   - # **Root-node invariant**: no Application class may add a dependency edge pointing into `BootstrapApplication` or `MigrationApplication`
    - **Orchestration privilege violations** (only PostApplication, NotificationApplication, BootstrapApplication, HotApplication, PostStreamApplication, TtlApplication can call other Applications)
+     > > > > > > > dev:docs/adr/0009-application-cross-domain-orchestration.md
 2. **Documentation**: This ADR as the source of truth
 3. **Testing**: Integration tests to catch violations at runtime
 4. **Code Comments**: Developers MUST document cross-Application calls with ADR reference
@@ -144,14 +178,20 @@ class FileApplication {
 - ✅ Single user action requires multi-domain coordination
 - ✅ Complex workflow with ordering/transactional requirements
 - ✅ Avoiding code duplication of orchestration logic
+  <<<<<<< HEAD:.cursor/adr/0009-application-cross-domain-orchestration.md
+- # ✅ **Only from PostApplication, UserApplication, NotificationApplication, BootstrapApplication, or MigrationApplication** (NotificationApplication is constrained by ADR-0010; BootstrapApplication is constrained to startup hydration and MigrationApplication to post-migration re-sync as root-node orchestrators)
 - ✅ **Only from approved orchestrators**: PostApplication, NotificationApplication, BootstrapApplication, HotApplication, PostStreamApplication, TtlApplication
+  > > > > > > > dev:docs/adr/0009-application-cross-domain-orchestration.md
 
 **When NOT to use:**
 
 - ❌ Simple read operations (use services directly)
 - ❌ Single-domain workflows (stay within one Application)
 - ❌ Deep processing chains (refactor to flatten)
+  <<<<<<< HEAD:.cursor/adr/0009-application-cross-domain-orchestration.md
+- # ❌ **From specialized Application classes** (FileApplication, TagApplication, BookmarkApplication, etc.) - these must remain independent and cannot depend on PostApplication, UserApplication, NotificationApplication, BootstrapApplication, or MigrationApplication
 - ❌ **From specialized Application classes** (FileApplication, TagApplication, BookmarkApplication, etc.) — these must remain independent and cannot call other Applications
+  > > > > > > > dev:docs/adr/0009-application-cross-domain-orchestration.md
 
 ## Consequences
 

@@ -1,5 +1,5 @@
 import * as Core from '@/core';
-import { HttpMethod, Err, ClientErrorCode, ErrorService } from '@/libs';
+import { HttpMethod, Err, ClientErrorCode, ErrorService, Logger } from '@/libs';
 import { postUriBuilder } from 'pubky-app-specs';
 
 export class PostApplication {
@@ -18,9 +18,9 @@ export class PostApplication {
   /**
    * Reads post counts for a specific post
    * @param compositeId - Composite post ID in format "authorId:postId"
-   * @returns Post counts (with default values if not found)
+   * @returns Post counts or null if not found
    */
-  static async getCounts({ compositeId }: Core.TCompositeId): Promise<Core.PostCountsModelSchema> {
+  static async getCounts({ compositeId }: Core.TCompositeId): Promise<Core.PostCountsModelSchema | null> {
     return await Core.LocalPostService.readCounts(compositeId);
   }
 
@@ -81,12 +81,13 @@ export class PostApplication {
   }
 
   /**
-   * Reads or fetches a post - reads from local DB first, fetches from Nexus if not found
-   * Also fetches and persists related data: counts, relationships, tags, and author
+   * Reads or fetches a full post entity from local database.
+   * If not found locally, fetches from Nexus and persists everything (details, counts, relationships, tags, author).
    * @param compositeId - Composite post ID in format "authorId:postId"
+   * @param viewerId - Optional viewer ID for relationship data
    * @returns Post details or null if not found
    */
-  static async getOrFetchDetails({
+  static async getOrFetch({
     compositeId,
     viewerId,
   }: Core.TGetOrFetchPostParams): Promise<Core.PostDetailsModelSchema | null> {
@@ -103,12 +104,60 @@ export class PostApplication {
     return await Core.LocalPostService.readDetails({ postId: compositeId });
   }
 
+  /**
+   * Fetches a post from Nexus and persists to local database (network-only, no local read).
+   * Use this instead of `getOrFetch` when the caller already knows the post is not in
+   * local DB (e.g. `useLocalFirstQuery` hook where `useLiveQuery` handles the local read).
+   * @param compositeId - Composite post ID in format "authorId:postId"
+   * @param viewerId - Optional viewer ID for relationship data
+   * @returns Post details or null if not found on Nexus
+   */
+  static async fetch({
+    compositeId,
+    viewerId,
+  }: Core.TGetOrFetchPostParams): Promise<Core.PostDetailsModelSchema | null> {
+    await Core.PostStreamApplication.fetchMissingPostsFromNexus({
+      cacheMissPostIds: [compositeId],
+      viewerId,
+    });
+
+    return await Core.LocalPostService.readDetails({ postId: compositeId });
+  }
+
   static async commitCreate({ postUrl, compositePostId, post, fileAttachments, tags }: Core.TCreatePostInput) {
-    if (fileAttachments && fileAttachments.length > 0) {
+    const hasFiles = fileAttachments != null && fileAttachments.length > 0;
+
+    if (hasFiles) {
       await Core.FileApplication.commitCreate({ fileAttachments });
     }
     await Core.LocalPostService.create({ compositePostId, post });
-    await Core.HomeserverService.request({ method: HttpMethod.PUT, url: postUrl, bodyJson: post.toJson() });
+
+    try {
+      await Core.HomeserverService.request({ method: HttpMethod.PUT, url: postUrl, bodyJson: post.toJson() });
+    } catch (error) {
+      try {
+        await Core.LocalPostService.delete({ compositePostId });
+      } catch (rollbackError) {
+        Logger.error('[PostApplication.commitCreate] Failed to rollback local post create', {
+          compositePostId,
+          rollbackError,
+        });
+      }
+
+      if (hasFiles) {
+        try {
+          const fileUris = fileAttachments.map((f) => f.fileResult.meta.url);
+          await Core.FileApplication.commitDelete(fileUris);
+        } catch (fileRollbackError) {
+          Logger.error('[PostApplication.commitCreate] Failed to rollback file attachments', {
+            compositePostId,
+            fileRollbackError,
+          });
+        }
+      }
+
+      throw error;
+    }
 
     if (tags && tags.length > 0) {
       await Core.TagApplication.commitCreate({ tagList: tags });
@@ -138,10 +187,23 @@ export class PostApplication {
   }
 
   static async commitEdit({ compositePostId, post, postUrl }: Core.TEditPostInput) {
-    // Update local database
+    const originalPost = await Core.LocalPostService.readDetails({ postId: compositePostId });
     await Core.LocalPostService.edit({ compositePostId, content: post.content });
 
-    // Sync to homeserver
-    await Core.HomeserverService.request({ method: HttpMethod.PUT, url: postUrl, bodyJson: post.toJson() });
+    try {
+      await Core.HomeserverService.request({ method: HttpMethod.PUT, url: postUrl, bodyJson: post.toJson() });
+    } catch (error) {
+      if (originalPost) {
+        try {
+          await Core.LocalPostService.edit({ compositePostId, content: originalPost.content });
+        } catch (rollbackError) {
+          Logger.error('[PostApplication.commitEdit] Failed to rollback local post edit', {
+            compositePostId,
+            rollbackError,
+          });
+        }
+      }
+      throw error;
+    }
   }
 }

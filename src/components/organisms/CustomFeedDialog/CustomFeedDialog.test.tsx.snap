@@ -110,8 +110,10 @@ exports[`CustomFeedDialog - Snapshots > matches snapshot for create mode default
             </div>
           </div>
           <input
+            aria-hidden="true"
             data-testid="reach-select-hidden-input"
-            type="hidden"
+            hidden=""
+            type="text"
             value="3"
           />
         </div>
@@ -167,8 +169,10 @@ exports[`CustomFeedDialog - Snapshots > matches snapshot for create mode default
             </div>
           </div>
           <input
+            aria-hidden="true"
             data-testid="sort-select-hidden-input"
-            type="hidden"
+            hidden=""
+            type="text"
             value="0"
           />
         </div>
@@ -222,10 +226,22 @@ exports[`CustomFeedDialog - Snapshots > matches snapshot for create mode default
                
               Wide
             </div>
+            <div
+              data-testid="select-item-2"
+              data-value="2"
+            >
+              <svg
+                data-testid="icon"
+              />
+               
+              Visual
+            </div>
           </div>
           <input
+            aria-hidden="true"
             data-testid="layout-select-hidden-input"
-            type="hidden"
+            hidden=""
+            type="text"
             value="0"
           />
         </div>
@@ -331,8 +347,10 @@ exports[`CustomFeedDialog - Snapshots > matches snapshot for create mode default
             </div>
           </div>
           <input
+            aria-hidden="true"
             data-testid="content-select-hidden-input"
-            type="hidden"
+            hidden=""
+            type="text"
             value="ALL"
           />
         </div>
@@ -493,8 +511,10 @@ exports[`CustomFeedDialog - Snapshots > matches snapshot for create mode with di
             </div>
           </div>
           <input
+            aria-hidden="true"
             data-testid="reach-select-hidden-input"
-            type="hidden"
+            hidden=""
+            type="text"
             value="3"
           />
         </div>
@@ -550,8 +570,10 @@ exports[`CustomFeedDialog - Snapshots > matches snapshot for create mode with di
             </div>
           </div>
           <input
+            aria-hidden="true"
             data-testid="sort-select-hidden-input"
-            type="hidden"
+            hidden=""
+            type="text"
             value="0"
           />
         </div>
@@ -605,10 +627,22 @@ exports[`CustomFeedDialog - Snapshots > matches snapshot for create mode with di
                
               Wide
             </div>
+            <div
+              data-testid="select-item-2"
+              data-value="2"
+            >
+              <svg
+                data-testid="icon"
+              />
+               
+              Visual
+            </div>
           </div>
           <input
+            aria-hidden="true"
             data-testid="layout-select-hidden-input"
-            type="hidden"
+            hidden=""
+            type="text"
             value="0"
           />
         </div>
@@ -714,8 +748,10 @@ exports[`CustomFeedDialog - Snapshots > matches snapshot for create mode with di
             </div>
           </div>
           <input
+            aria-hidden="true"
             data-testid="content-select-hidden-input"
-            type="hidden"
+            hidden=""
+            type="text"
             value="ALL"
           />
         </div>
@@ -874,8 +910,10 @@ exports[`CustomFeedDialog - Snapshots > matches snapshot for edit mode with cust
             </div>
           </div>
           <input
+            aria-hidden="true"
             data-testid="reach-select-hidden-input"
-            type="hidden"
+            hidden=""
+            type="text"
             value="0"
           />
         </div>
@@ -931,8 +969,10 @@ exports[`CustomFeedDialog - Snapshots > matches snapshot for edit mode with cust
             </div>
           </div>
           <input
+            aria-hidden="true"
             data-testid="sort-select-hidden-input"
-            type="hidden"
+            hidden=""
+            type="text"
             value="1"
           />
         </div>
@@ -986,10 +1026,22 @@ exports[`CustomFeedDialog - Snapshots > matches snapshot for edit mode with cust
                
               Wide
             </div>
+            <div
+              data-testid="select-item-2"
+              data-value="2"
+            >
+              <svg
+                data-testid="icon"
+              />
+               
+              Visual
+            </div>
           </div>
           <input
+            aria-hidden="true"
             data-testid="layout-select-hidden-input"
-            type="hidden"
+            hidden=""
+            type="text"
             value="1"
           />
         </div>
@@ -1095,8 +1147,10 @@ exports[`CustomFeedDialog - Snapshots > matches snapshot for edit mode with cust
             </div>
           </div>
           <input
+            aria-hidden="true"
             data-testid="content-select-hidden-input"
-            type="hidden"
+            hidden=""
+            type="text"
             value="0"
           />
         </div>
@@ -1303,8 +1357,10 @@ exports[`CustomFeedDialog - Snapshots > matches snapshot for edit mode with null
             </div>
           </div>
           <input
+            aria-hidden="true"
             data-testid="reach-select-hidden-input"
-            type="hidden"
+            hidden=""
+            type="text"
             value="0"
           />
         </div>
@@ -1360,8 +1416,10 @@ exports[`CustomFeedDialog - Snapshots > matches snapshot for edit mode with null
             </div>
           </div>
           <input
+            aria-hidden="true"
             data-testid="sort-select-hidden-input"
-            type="hidden"
+            hidden=""
+            type="text"
             value="1"
           />
         </div>
@@ -1415,10 +1473,22 @@ exports[`CustomFeedDialog - Snapshots > matches snapshot for edit mode with null
                
               Wide
             </div>
+            <div
+              data-testid="select-item-2"
+              data-value="2"
+            >
+              <svg
+                data-testid="icon"
+              />
+               
+              Visual
+            </div>
           </div>
           <input
+            aria-hidden="true"
             data-testid="layout-select-hidden-input"
-            type="hidden"
+            hidden=""
+            type="text"
             value="1"
           />
         </div>
@@ -1524,8 +1594,10 @@ exports[`CustomFeedDialog - Snapshots > matches snapshot for edit mode with null
             </div>
           </div>
           <input
+            aria-hidden="true"
             data-testid="content-select-hidden-input"
-            type="hidden"
+            hidden=""
+            type="text"
             value="ALL"
           />
         </div>
@@ -1716,8 +1788,10 @@ exports[`CustomFeedDialog - Snapshots > matches snapshot for edit mode without c
             </div>
           </div>
           <input
+            aria-hidden="true"
             data-testid="reach-select-hidden-input"
-            type="hidden"
+            hidden=""
+            type="text"
             value=""
           />
         </div>
@@ -1772,8 +1846,10 @@ exports[`CustomFeedDialog - Snapshots > matches snapshot for edit mode without c
             </div>
           </div>
           <input
+            aria-hidden="true"
             data-testid="sort-select-hidden-input"
-            type="hidden"
+            hidden=""
+            type="text"
             value=""
           />
         </div>
@@ -1826,10 +1902,22 @@ exports[`CustomFeedDialog - Snapshots > matches snapshot for edit mode without c
                
               Wide
             </div>
+            <div
+              data-testid="select-item-2"
+              data-value="2"
+            >
+              <svg
+                data-testid="icon"
+              />
+               
+              Visual
+            </div>
           </div>
           <input
+            aria-hidden="true"
             data-testid="layout-select-hidden-input"
-            type="hidden"
+            hidden=""
+            type="text"
             value=""
           />
         </div>
@@ -1934,8 +2022,10 @@ exports[`CustomFeedDialog - Snapshots > matches snapshot for edit mode without c
             </div>
           </div>
           <input
+            aria-hidden="true"
             data-testid="content-select-hidden-input"
-            type="hidden"
+            hidden=""
+            type="text"
             value=""
           />
         </div>

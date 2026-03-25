@@ -220,7 +220,7 @@ exports[`HumanInviteCode - Snapshots > matches snapshot for complete code state 
         >
           <button
             aria-label="Custom homeserver"
-            class="inline-flex items-center justify-center whitespace-nowrap text-sm transition-all disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg:not([class*=\\"size-\\"])]:size-4 [&_svg]:shrink-0 outline-none focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[3px] aria-invalid:ring-destructive/40 aria-invalid:border-destructive font-semibold cursor-pointer border shadow-xs bg-secondary text-secondary-foreground hover:bg-secondary/80 h-10 gap-1 px-4 py-2 has-[>svg]:px-4 shrink-0 rounded-full opacity-40"
+            class="inline-flex items-center justify-center whitespace-nowrap text-sm transition-all disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg:not([class*=\\"size-\\"])]:size-4 [&_svg]:shrink-0 outline-none focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[3px] aria-invalid:ring-destructive/40 aria-invalid:border-destructive font-semibold cursor-pointer border shadow-xs bg-secondary text-secondary-foreground hover:bg-accent h-10 gap-1 px-4 py-2 has-[>svg]:px-4 shrink-0 rounded-full opacity-40"
             data-slot="button"
             data-variant="secondary"
             disabled=""
@@ -289,7 +289,7 @@ exports[`HumanInviteCode - Snapshots > matches snapshot for complete code state 
     data-testid="container"
   >
     <button
-      class="inline-flex items-center justify-center whitespace-nowrap transition-all disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg:not([class*=\\"size-\\"])]:size-4 [&_svg]:shrink-0 outline-none focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[3px] aria-invalid:ring-destructive/40 aria-invalid:border-destructive cursor-pointer border shadow-xs bg-secondary text-secondary-foreground hover:bg-secondary/80 h-auto gap-2 px-4 py-2.5 sm:px-8 sm:py-5 text-sm font-bold leading-normal w-full flex-1 rounded-full md:flex-0"
+      class="inline-flex items-center justify-center whitespace-nowrap transition-all disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg:not([class*=\\"size-\\"])]:size-4 [&_svg]:shrink-0 outline-none focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[3px] aria-invalid:ring-destructive/40 aria-invalid:border-destructive cursor-pointer border shadow-xs bg-secondary text-secondary-foreground hover:bg-accent h-auto gap-2 px-4 py-2.5 sm:px-8 sm:py-5 text-sm font-bold leading-normal w-full flex-1 rounded-full md:flex-0"
       data-size="lg"
       data-slot="button"
       data-variant="secondary"
@@ -549,7 +549,7 @@ exports[`HumanInviteCode - Snapshots > matches snapshot for empty state 1`] = `
         >
           <button
             aria-label="Custom homeserver"
-            class="inline-flex items-center justify-center whitespace-nowrap text-sm transition-all disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg:not([class*=\\"size-\\"])]:size-4 [&_svg]:shrink-0 outline-none focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[3px] aria-invalid:ring-destructive/40 aria-invalid:border-destructive font-semibold cursor-pointer border shadow-xs bg-secondary text-secondary-foreground hover:bg-secondary/80 h-10 gap-1 px-4 py-2 has-[>svg]:px-4 shrink-0 rounded-full opacity-40"
+            class="inline-flex items-center justify-center whitespace-nowrap text-sm transition-all disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg:not([class*=\\"size-\\"])]:size-4 [&_svg]:shrink-0 outline-none focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[3px] aria-invalid:ring-destructive/40 aria-invalid:border-destructive font-semibold cursor-pointer border shadow-xs bg-secondary text-secondary-foreground hover:bg-accent h-10 gap-1 px-4 py-2 has-[>svg]:px-4 shrink-0 rounded-full opacity-40"
             data-slot="button"
             data-variant="secondary"
             disabled=""
@@ -618,7 +618,7 @@ exports[`HumanInviteCode - Snapshots > matches snapshot for empty state 1`] = `
     data-testid="container"
   >
     <button
-      class="inline-flex items-center justify-center whitespace-nowrap transition-all disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg:not([class*=\\"size-\\"])]:size-4 [&_svg]:shrink-0 outline-none focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[3px] aria-invalid:ring-destructive/40 aria-invalid:border-destructive cursor-pointer border shadow-xs bg-secondary text-secondary-foreground hover:bg-secondary/80 h-auto gap-2 px-4 py-2.5 sm:px-8 sm:py-5 text-sm font-bold leading-normal w-full flex-1 rounded-full md:flex-0"
+      class="inline-flex items-center justify-center whitespace-nowrap transition-all disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg:not([class*=\\"size-\\"])]:size-4 [&_svg]:shrink-0 outline-none focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[3px] aria-invalid:ring-destructive/40 aria-invalid:border-destructive cursor-pointer border shadow-xs bg-secondary text-secondary-foreground hover:bg-accent h-auto gap-2 px-4 py-2.5 sm:px-8 sm:py-5 text-sm font-bold leading-normal w-full flex-1 rounded-full md:flex-0"
       data-size="lg"
       data-slot="button"
       data-variant="secondary"

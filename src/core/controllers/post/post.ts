@@ -18,9 +18,9 @@ export class PostController {
    * Read post counts for a specific post
    * @param params - Parameters object
    * @param params.compositeId - Composite post ID in format "authorId:postId"
-   * @returns Post counts (with default values if not found)
+   * @returns Post counts or null if not found
    */
-  static async getCounts({ compositeId }: Core.TCompositeId) {
+  static async getCounts({ compositeId }: Core.TCompositeId): Promise<Core.PostCountsModelSchema | null> {
     return await Core.PostApplication.getCounts({ compositeId });
   }
 
@@ -55,17 +55,27 @@ export class PostController {
   }
 
   /**
-   * Read or fetch a post - reads from local DB first, fetches from Nexus if not found
+   * Read or fetch a full post entity from local database or Nexus API.
+   * Persists details, counts, relationships, tags, and author.
    * @param params - Parameters object
    * @param params.compositeId - Composite post ID in format "authorId:postId"
    * @param params.viewerId - Optional viewer ID for relationship data
    * @returns Post details or null if not found
    */
-  static async getOrFetchDetails({
-    compositeId,
-    viewerId,
-  }: Core.TGetOrFetchPostParams): Promise<Core.PostDetailsModelSchema | null> {
-    return await Core.PostApplication.getOrFetchDetails({ compositeId, viewerId });
+  static async getOrFetch(params: Core.TGetOrFetchPostParams): Promise<Core.PostDetailsModelSchema | null> {
+    return await Core.PostApplication.getOrFetch(params);
+  }
+
+  /**
+   * Fetch a post from Nexus and persist to local database (network-only, no local read).
+   * Use instead of `getOrFetch` when the caller already knows the post is not cached.
+   * @param params - Parameters object
+   * @param params.compositeId - Composite post ID in format "authorId:postId"
+   * @param params.viewerId - Optional viewer ID for relationship data
+   * @returns Post details or null if not found
+   */
+  static async fetch(params: Core.TGetOrFetchPostParams): Promise<Core.PostDetailsModelSchema | null> {
+    return await Core.PostApplication.fetch(params);
   }
 
   /**

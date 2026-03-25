@@ -107,18 +107,14 @@ body {
   --sidebar-ring: oklch(0.472 0.007 274.863);
   --brand: oklch(0.928 0.23 123.978);
   --transparent: oklch(0.118 0.014 284.115 / 0);
+  --scrollbar-size: 10px;
+  --scrollbar-radius: 100%;
+  --scrollbar-thumb-color: var(--muted-foreground);
+  --scrollbar-track-color: transparent;
 
   /* ==================================================================
    * LAYOUT DIMENSIONS
    * ================================================================== */
-
-  /**
-   * Tag badge maximum width
-   * - Constrains tag width to prevent layout overflow with long tag names
-   * - Enables text truncation with ellipsis for long tag labels
-   * - Applied: TaggedItem component
-   */
-  --tag-max-width: 10rem;
 
   /**
    * Desktop header height (profile page header)
@@ -457,34 +453,92 @@ body {
     caret-color: #fff;
   }
 
-  /* Native scrollbar styles (global) */
-  * {
+  /* Keep the document scrollbar visible and hide all nested scrollbars */
+  html,
+  body {
     scrollbar-width: thin;
-    scrollbar-color: var(--muted-foreground) transparent;
+    scrollbar-color: var(--scrollbar-thumb-color) var(--scrollbar-track-color);
   }
 
-  *::-webkit-scrollbar {
-    width: 8px;
-    height: 8px;
+  html {
+    scrollbar-gutter: stable;
   }
 
-  *::-webkit-scrollbar-track {
+  html::-webkit-scrollbar,
+  body::-webkit-scrollbar {
+    width: var(--scrollbar-size);
+    height: var(--scrollbar-size);
+  }
+
+  html::-webkit-scrollbar-track,
+  body::-webkit-scrollbar-track {
+    background: var(--scrollbar-track-color);
+  }
+
+  html::-webkit-scrollbar-thumb,
+  body::-webkit-scrollbar-thumb {
+    background-color: var(--scrollbar-thumb-color);
+    border: 2px solid transparent;
+    border-radius: var(--scrollbar-radius);
+    background-clip: content-box;
+    min-height: 24px;
+  }
+
+  html::-webkit-scrollbar-corner,
+  body::-webkit-scrollbar-corner {
     background: transparent;
   }
 
-  *::-webkit-scrollbar-thumb {
-    background-color: var(--muted-foreground);
-    border: 1px solid transparent;
-    border-radius: 9999px;
-    background-clip: content-box;
-  }
-
-  .scrollbar-none {
+  :where(
+    .scrollbar-custom,
+    .overflow-auto,
+    .overflow-x-auto,
+    .overflow-y-auto,
+    .overflow-scroll,
+    .mdxeditor-popup-container .mdxeditor-select-content,
+    [data-radix-scroll-area-viewport]
+  ):not(.scrollbar-none) {
+    -ms-overflow-style: none;
     scrollbar-width: none;
   }
 
+  :where(
+      .scrollbar-custom,
+      .overflow-auto,
+      .overflow-x-auto,
+      .overflow-y-auto,
+      .overflow-scroll,
+      .mdxeditor-popup-container .mdxeditor-select-content,
+      [data-radix-scroll-area-viewport]
+    ):not(.scrollbar-none)::-webkit-scrollbar {
+    width: 0 !important;
+    height: 0 !important;
+    display: none !important;
+  }
+
+  .scrollbar-none {
+    -ms-overflow-style: none !important;
+    scrollbar-width: none !important;
+  }
+
   .scrollbar-none::-webkit-scrollbar {
-    display: none;
+    width: 0 !important;
+    height: 0 !important;
+    display: none !important;
+  }
+
+  @media (forced-colors: active) {
+    html,
+    body {
+      scrollbar-width: auto;
+      scrollbar-color: auto;
+    }
+
+    html::-webkit-scrollbar-thumb,
+    body::-webkit-scrollbar-thumb {
+      background-color: ButtonText;
+      border-color: Canvas;
+    }
   }
 
   /**

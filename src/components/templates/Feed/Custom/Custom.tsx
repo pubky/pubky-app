@@ -1,11 +1,12 @@
 import * as Organisms from '@/organisms';
+import { TIMELINE_FEED_VARIANT } from '@/config';
 import { POST_INPUT_VARIANT } from '@/organisms/PostInput/PostInput.constants';
-import { TIMELINE_FEED_VARIANT } from '@/organisms/Timeline/Feed/TimelineFeed/TimelineFeed.types';
 
 export function Custom() {
   return (
     <>
       <Organisms.ContentLayout
+        feedVariant={TIMELINE_FEED_VARIANT.CUSTOM}
         leftSidebarContent={<Organisms.CustomFeedFilters variant="sidebar" />}
         rightSidebarContent={<Organisms.HomeFeedRightSidebar />}
         leftDrawerContent={<Organisms.CustomFeedFilters variant="drawer" />}

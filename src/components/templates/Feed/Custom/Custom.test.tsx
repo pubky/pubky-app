@@ -63,11 +63,16 @@ vi.mock('@/organisms/PostInput/PostInput.constants', () => ({
   },
 }));
 
-vi.mock('@/organisms/Timeline/Feed/TimelineFeed/TimelineFeed.types', () => ({
-  TIMELINE_FEED_VARIANT: {
-    CUSTOM: 'custom',
-  },
-}));
+vi.mock('@/config', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('@/config')>();
+  return {
+    ...actual,
+    TIMELINE_FEED_VARIANT: {
+      ...actual.TIMELINE_FEED_VARIANT,
+      CUSTOM: 'custom',
+    },
+  };
+});
 
 describe('Custom', () => {
   it('renders without errors', () => {
