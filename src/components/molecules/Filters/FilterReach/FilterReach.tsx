@@ -10,16 +10,17 @@ export function FilterReach({
   selectedTab,
   defaultSelectedTab = Core.REACH.ALL,
   onTabChange,
+  disabled,
 }: Molecules.BaseFilterProps<Core.ReachType>) {
   const t = useTranslations('filters.reach');
 
   const items = React.useMemo(
     () => [
-      { key: Core.REACH.ALL, label: t('all'), icon: Libs.Radio },
-      { key: Core.REACH.FOLLOWING, label: t('following'), icon: Libs.UsersRound2 },
-      { key: Core.REACH.FRIENDS, label: t('friends'), icon: Libs.HeartHandshake },
+      { key: Core.REACH.ALL, label: t('all'), icon: Libs.Radio, disabled },
+      { key: Core.REACH.FOLLOWING, label: t('following'), icon: Libs.UsersRound2, disabled },
+      { key: Core.REACH.FRIENDS, label: t('friends'), icon: Libs.HeartHandshake, disabled },
     ],
-    [t],
+    [t, disabled],
   );
 
   return (

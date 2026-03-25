@@ -3,7 +3,7 @@
 import { useState, useCallback, useMemo } from 'react';
 import * as Molecules from '@/molecules';
 import * as Hooks from '@/hooks';
-import { HttpMethod, JSON_HEADERS } from '@/libs';
+import { Logger, postJson } from '@/libs';
 
 /**
  * Hook to handle feedback submission.
@@ -20,22 +20,14 @@ import { HttpMethod, JSON_HEADERS } from '@/libs';
  * @returns reset - Resets all state to initial values
  */
 export function useFeedback() {
-  const { toast } = Molecules.useToast();
   const { currentUserPubky, userDetails } = Hooks.useCurrentUserProfile();
   const [feedback, setFeedback] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isSuccess, setIsSuccess] = useState(false);
 
-  const showErrorToast = useCallback(
-    (description: string) => {
-      toast({
-        title: 'Error',
-        description,
-        className: 'destructive border-destructive bg-destructive text-destructive-foreground',
-      });
-    },
-    [toast],
-  );
+  const showErrorToast = useCallback((description: string) => {
+    Molecules.showErrorToast({ description });
+  }, []);
 
   const handleChange = useCallback((e: React.ChangeEvent<HTMLTextAreaElement>) => {
     setFeedback(e.target.value);
@@ -54,28 +46,17 @@ export function useFeedback() {
 
     setIsSubmitting(true);
     try {
-      const response = await fetch('/api/feedback', {
-        method: HttpMethod.POST,
-        headers: JSON_HEADERS,
-        body: JSON.stringify({
-          pubky: currentUserPubky,
-          comment: currentFeedback,
-          name: userDetails.name,
-        }),
+      await postJson('/api/feedback', {
+        pubky: currentUserPubky,
+        comment: currentFeedback,
+        name: userDetails.name,
       });
-
-      if (!response.ok) {
-        const errorData = await response.json().catch(() => ({ error: 'Unknown error' }));
-        const errorMessage = errorData.error || 'Failed to submit feedback';
-        showErrorToast(errorMessage);
-        return;
-      }
 
       setIsSuccess(true);
       // Note: feedback is cleared by reset() when dialog closes, no need to clear here
     } catch (error) {
-      console.error('Error submitting feedback:', error);
-      showErrorToast('Failed to submit feedback. Please try again.');
+      Logger.error('Error submitting feedback:', error);
+      showErrorToast(error instanceof Error ? error.message : 'Failed to submit feedback. Please try again.');
     } finally {
       setIsSubmitting(false);
     }

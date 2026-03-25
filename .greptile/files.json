@@ -1,0 +1,59 @@
+{
+  "files": [
+    {
+      "path": "docs/architecture.md",
+      "description": "Layered architecture rules, dependency constraints, and anti-patterns for src/core/",
+      "scope": ["src/core/**"]
+    },
+    {
+      "path": "docs/local-first.md",
+      "description": "Local-first write patterns and controller naming conventions",
+      "scope": ["src/core/**"]
+    },
+    {
+      "path": "docs/data-patterns.md",
+      "description": "Composite IDs, streams, TTL policies, and pipe normalization rules",
+      "scope": ["src/core/**"]
+    },
+    {
+      "path": "docs/error-handling.md",
+      "description": "Error handling conventions using Err.* factories across all layers",
+      "scope": ["src/core/**"]
+    },
+    {
+      "path": "docs/components.md",
+      "description": "Component development patterns — Shadcn first, atomic design, Figma parity",
+      "scope": ["src/components/**"]
+    },
+    {
+      "path": "docs/component-testing.md",
+      "description": "Unit test and snapshot test rules for UI components",
+      "scope": ["src/components/**", "**/*.test.*"]
+    },
+    {
+      "path": "docs/skeleton-architecture.md",
+      "description": "Skeleton loader placement, naming, implementation, and testing rules",
+      "scope": ["src/components/**/*skeleton*", "src/components/**/*Skeleton*"]
+    },
+    {
+      "path": "docs/z-index.md",
+      "description": "Z-index layering conventions and stacking order",
+      "scope": ["src/components/**"]
+    },
+    {
+      "path": "docs/environment.md",
+      "description": "Environment variable configuration and Zod validation rules",
+      "scope": ["src/libs/env/**"]
+    },
+    {
+      "path": "docs/adr-guidelines.md",
+      "description": "When and how to write Architecture Decision Records",
+      "scope": ["docs/adr/**"]
+    },
+    {
+      "path": "docs/commit-message.md",
+      "description": "Conventional commit message format and examples",
+      "scope": ["**"]
+    }
+  ]
+}

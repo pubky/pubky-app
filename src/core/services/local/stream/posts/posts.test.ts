@@ -95,7 +95,7 @@ describe('LocalStreamPostsService', () => {
     const result = await Core.LocalStreamPostsService.persistPosts({ posts: [mockPost] });
 
     const expectedAttachments = mockPost.details.attachments || [];
-    expect(result).toEqual({ postAttachments: expectedAttachments });
+    expect(result).toEqual({ attachmentMetadata: expectedAttachments });
     return { compositeId, mockPost };
   };
 
@@ -236,7 +236,7 @@ describe('LocalStreamPostsService', () => {
 
       const result = await Core.LocalStreamPostsService.persistPosts({ posts: mockPosts });
 
-      expect(result).toEqual({ postAttachments: [] });
+      expect(result).toEqual({ attachmentMetadata: [] });
       await verifyPostPersisted(buildCompositeId({ pubky: 'user-1', id: 'post-1' }), 'Post post-1 content');
       await verifyPostPersisted(buildCompositeId({ pubky: 'user-2', id: 'post-2' }), 'Post post-2 content');
     });
@@ -288,7 +288,7 @@ describe('LocalStreamPostsService', () => {
     it('should handle empty array', async () => {
       const result = await Core.LocalStreamPostsService.persistPosts({ posts: [] });
 
-      expect(result).toEqual({ postAttachments: [] });
+      expect(result).toEqual({ attachmentMetadata: [] });
     });
 
     it('should handle posts with empty tags array', async () => {
@@ -365,7 +365,7 @@ describe('LocalStreamPostsService', () => {
 
       const result = await Core.LocalStreamPostsService.persistPosts({ posts: mockPosts });
 
-      expect(result).toEqual({ postAttachments: [] });
+      expect(result).toEqual({ attachmentMetadata: [] });
 
       // Verify all posts were persisted
       await verifyPostPersisted(buildCompositeId({ pubky: 'author-1', id: 'post-1' }), 'Post post-1 content');
@@ -373,40 +373,44 @@ describe('LocalStreamPostsService', () => {
       await verifyPostPersisted(buildCompositeId({ pubky: 'author-1', id: 'post-3' }), 'Post post-3 content');
     });
 
-    it('should collect and return attachments from posts', async () => {
-      const attachment1 = 'https://pubky.app/file1.jpg';
-      const attachment2 = 'https://pubky.app/file2.png';
-      const attachment3 = 'https://pubky.app/file3.gif';
+    it('should collect and return attachments_metadata from posts', async () => {
+      const fileMetadata = (id: string, uri: string): Core.NexusFileDetails => ({
+        id,
+        name: id,
+        src: '',
+        content_type: 'image/png',
+        size: 100,
+        created_at: 0,
+        indexed_at: 0,
+        metadata: {},
+        owner_id: 'user-1',
+        uri,
+        urls: {} as Core.NexusFileUrls,
+      });
 
-      const mockPosts: Core.NexusPost[] = [
-        createMockNexusPost('post-1', 'user-1', BASE_TIMESTAMP, {
-          details: { attachments: [attachment1, attachment2] } as Core.NexusPostDetails,
-        }),
-        createMockNexusPost('post-2', 'user-2', BASE_TIMESTAMP, {
-          details: { attachments: [attachment3] } as Core.NexusPostDetails,
-        }),
-        createMockNexusPost('post-3', 'user-3', BASE_TIMESTAMP, {
-          details: { attachments: null } as Core.NexusPostDetails,
-        }),
+      const meta1 = fileMetadata('file-1', 'pubky://user-1/pub/pubky.app/files/file-1');
+      const meta2 = fileMetadata('file-2', 'pubky://user-1/pub/pubky.app/files/file-2');
+      const meta3 = fileMetadata('file-3', 'pubky://user-2/pub/pubky.app/files/file-3');
+
+      const mockPosts: Core.NexusPostWithAttachmentMetadata[] = [
+        { ...createMockNexusPost('post-1', 'user-1'), attachments_metadata: [meta1, meta2] },
+        { ...createMockNexusPost('post-2', 'user-2'), attachments_metadata: [meta3] },
+        { ...createMockNexusPost('post-3', 'user-3') },
       ];
 
       const result = await Core.LocalStreamPostsService.persistPosts({ posts: mockPosts });
 
       expect(result).toEqual({
-        postAttachments: [attachment1, attachment2, attachment3],
+        attachmentMetadata: [meta1, meta2, meta3],
       });
     });
 
-    it('should handle posts with empty attachments array', async () => {
-      const mockPosts: Core.NexusPost[] = [
-        createMockNexusPost('post-1', 'user-1', BASE_TIMESTAMP, {
-          details: { attachments: [] } as unknown as Core.NexusPostDetails,
-        }),
-      ];
+    it('should handle posts without attachments_metadata', async () => {
+      const mockPosts: Core.NexusPostWithAttachmentMetadata[] = [{ ...createMockNexusPost('post-1', 'user-1') }];
 
       const result = await Core.LocalStreamPostsService.persistPosts({ posts: mockPosts });
 
-      expect(result).toEqual({ postAttachments: [] });
+      expect(result).toEqual({ attachmentMetadata: [] });
     });
   });
 

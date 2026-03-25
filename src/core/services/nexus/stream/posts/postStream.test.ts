@@ -249,6 +249,7 @@ describe('Stream API URL Generation', () => {
       expect(request.url).toMatch(/\/stream\/posts\/by_ids$/);
       expect(request.body).toEqual({
         post_ids: mockPostIds,
+        include_attachment_metadata: true,
       });
     });
 
@@ -261,6 +262,7 @@ describe('Stream API URL Generation', () => {
       expect(request.url).toMatch(/\/stream\/posts\/by_ids$/);
       expect(request.body).toEqual({
         post_ids: mockPostIds,
+        include_attachment_metadata: true,
         viewer_id: mockViewerId,
       });
     });
@@ -284,6 +286,44 @@ describe('Stream API URL Generation', () => {
       expect(request.url).toMatch(/\/stream\/posts\/by_ids$/);
       expect(request.body.post_ids).toHaveLength(100);
       expect(request.body.viewer_id).toBe(mockViewerId);
+    });
+
+    it('should include include_attachment_metadata when true', () => {
+      const request = postStreamApi.postsByIds({
+        post_ids: mockPostIds,
+        viewer_id: mockViewerId,
+        include_attachment_metadata: true,
+      });
+
+      expect(request.url).toMatch(/\/stream\/posts\/by_ids$/);
+      expect(request.body).toEqual({
+        post_ids: mockPostIds,
+        viewer_id: mockViewerId,
+        include_attachment_metadata: true,
+      });
+    });
+
+    it('should default include_attachment_metadata to true when not provided', () => {
+      const request = postStreamApi.postsByIds({
+        post_ids: mockPostIds,
+      });
+
+      expect(request.body).toEqual({
+        post_ids: mockPostIds,
+        include_attachment_metadata: true,
+      });
+    });
+
+    it('should allow explicitly setting include_attachment_metadata to false', () => {
+      const request = postStreamApi.postsByIds({
+        post_ids: mockPostIds,
+        include_attachment_metadata: false,
+      });
+
+      expect(request.body).toEqual({
+        post_ids: mockPostIds,
+        include_attachment_metadata: false,
+      });
     });
   });
 
@@ -768,7 +808,7 @@ describe('NexusPostStreamService', () => {
       expect(queryNexusSpy).toHaveBeenCalledWith({
         url: expect.stringContaining('/stream/posts/by_ids'),
         method: 'POST',
-        body: JSON.stringify({ post_ids: mockPostIds, viewer_id: mockViewerId }),
+        body: JSON.stringify({ post_ids: mockPostIds, include_attachment_metadata: true, viewer_id: mockViewerId }),
       });
       expect(result).toEqual(mockPosts);
     });
@@ -786,7 +826,7 @@ describe('NexusPostStreamService', () => {
       expect(queryNexusSpy).toHaveBeenCalledWith({
         url: expect.stringContaining('/stream/posts/by_ids'),
         method: 'POST',
-        body: JSON.stringify({ post_ids: mockPostIds }),
+        body: JSON.stringify({ post_ids: mockPostIds, include_attachment_metadata: true }),
       });
       expect(result).toEqual(mockPosts);
     });
@@ -802,7 +842,7 @@ describe('NexusPostStreamService', () => {
       expect(queryNexusSpy).toHaveBeenCalledWith({
         url: expect.stringContaining('/stream/posts/by_ids'),
         method: 'POST',
-        body: JSON.stringify({ post_ids: [] }),
+        body: JSON.stringify({ post_ids: [], include_attachment_metadata: true }),
       });
       expect(result).toEqual([]);
     });

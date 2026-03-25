@@ -1,6 +1,7 @@
 export * from './onboarding';
 export * from './auth';
 export * from './signIn';
+export * from './migration';
 export * from './home';
 export * from './hot';
 export * from './localFiles';
@@ -8,3 +9,4 @@ export * from './notification';
 export * from './search';
 export * from './settings';
 export * from './stores.types';
+export * from './persistedKeys';

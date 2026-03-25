@@ -60,6 +60,33 @@ describe('FilterReach', () => {
     expect(followingRadio).toHaveAttribute('aria-label', 'Following');
     expect(friendsRadio).toHaveAttribute('aria-label', 'Friends');
   });
+  it('renders all items as disabled when disabled prop is true', () => {
+    render(<FilterReach disabled />);
+
+    const labels = ['All', 'Following', 'Friends'];
+    labels.forEach((label) => {
+      expect(screen.getByLabelText(label)).toHaveAttribute('aria-disabled', 'true');
+    });
+  });
+
+  it('does not call onTabChange when disabled', () => {
+    const mockOnTabChange = vi.fn();
+    render(<FilterReach disabled onTabChange={mockOnTabChange} />);
+
+    fireEvent.click(screen.getByLabelText('Following'));
+    fireEvent.click(screen.getByLabelText('Friends'));
+
+    expect(mockOnTabChange).not.toHaveBeenCalled();
+  });
+
+  it('items are not disabled by default', () => {
+    render(<FilterReach />);
+
+    const labels = ['All', 'Following', 'Friends'];
+    labels.forEach((label) => {
+      expect(screen.getByLabelText(label)).not.toHaveAttribute('aria-disabled', 'true');
+    });
+  });
 });
 
 describe('FilterReach - Keyboard Navigation', () => {
@@ -289,6 +316,11 @@ describe('FilterReach - Snapshots', () => {
 
   it('matches snapshot in uncontrolled mode with defaultSelectedTab', () => {
     const { container } = render(<FilterReach defaultSelectedTab={REACH.FRIENDS} />);
+    expect(container.firstChild).toMatchSnapshot();
+  });
+
+  it('matches snapshot with disabled state', () => {
+    const { container } = render(<FilterReach disabled />);
     expect(container.firstChild).toMatchSnapshot();
   });
 });

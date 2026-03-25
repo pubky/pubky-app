@@ -75,14 +75,21 @@
     "links": "روابط",
     "tags": "وسوم",
     "posts": "منشورات",
-    "avatar": "صورة رمزية"
+    "avatar": "صورة رمزية",
+    "threadTree": {
+      "expandAllReplies": "توسيع كل الردود",
+      "collapseAllReplies": "طي كل الردود",
+      "moreReplies": "{count, plural, zero {لا ردود إضافية} one {رد إضافي واحد} two {ردان إضافيان} few {# ردود إضافية} many {# ردا إضافيا} other {# رد إضافي}}"
+    }
   },
   "header": {
     "home": "الرئيسية",
     "hot": "الرائج",
     "bookmarks": "المفضلة",
     "settings": "الاعدادات",
-    "signIn": "تسجيل الدخول"
+    "newHere": "جديد هنا؟",
+    "signIn": "تسجيل الدخول",
+    "feed": "فيد"
   },
   "settings": {
     "title": "الاعدادات",
@@ -251,7 +258,7 @@
     "footer": {
       "agreement": "بانشاء حساب <pubky>Pubky</pubky>، فانك توافق على",
       "andConfirmAge": "، وتؤكد أنك",
-      "copyright": "Pubky مدعوم من <pubkyCore>Pubky Core</pubkyCore> وتم بناؤه بحب وتفان من Synonym Software, S.A. DE C.V. ©2025. جميع الحقوق محفوظة."
+      "copyright": "Pubky مدعوم من <pubkyCore>Pubky Core</pubkyCore> وتم بناؤه بحب وتفان من Synonym Software, S.A. DE C.V. ©2026. جميع الحقوق محفوظة."
     },
     "scan": {
       "titleMobile": "انقر <highlight>للتفويض.</highlight>",
@@ -259,21 +266,44 @@
       "subtitle": "افتح Pubky Ring، انشئ pubky وامسح رمز QR.",
       "generating": "جاري انشاء رمز QR...",
       "generatingShort": "جاري الانشاء...",
+
+      "expired": "منتهي الصلاحية",
+
+      "openingRing": "جارٍ فتح Pubky Ring...",
+
       "authorize": "تفويض باستخدام Pubky Ring",
       "authorizeSub": "استخدم <pubkyRing>Pubky Ring</pubkyRing> او اي سلسلة مفاتيح اخرى مدعومة من <pubkyCore>Pubky Core</pubkyCore>.",
       "linkFailed": "تعذر الاتصال بتطبيق التوقيع Pubky Ring",
       "tryAgain": "يرجى المحاولة مرة اخرى."
+    },
+    "authExpired": {
+      "titleDesktop": "انتهت صلاحية رمز QR",
+      "descriptionDesktop": "رمز QR هذا لم يعد نشطاً. قم بالتحديث للحصول على رمز جديد.",
+      "titleMobile": "انتهت صلاحية جلسة التفويض",
+      "descriptionMobile": "جلسة التفويض لم تعد نشطة. حدّث لإنشاء جلسة جديدة والمتابعة.",
+      "refresh": "تحديث"
     },
     "signIn": {
       "title": "تسجيل الدخول الى <highlight>Pubky.</highlight>",
       "subtitle": "قم بالتفويض باستخدام Pubky Ring لتسجيل الدخول.",
       "generating": "جاري انشاء رمز QR...",
       "generatingShort": "جاري الانشاء...",
+
+      "expired": "منتهي الصلاحية",
+
+      "openingRing": "جارٍ فتح Pubky Ring...",
+
       "authorize": "تفويض باستخدام Pubky Ring",
       "linkCopied": "تم نسخ الرابط",
       "linkCopiedDescription": "تم نسخ رابط المصادقة الى الحافظة.",
       "linkFailed": "تعذر الاتصال بتطبيق التوقيع Pubky Ring",
       "tryAgain": "يرجى المحاولة مرة اخرى.",
+      "authInitFailedTitle": "فشل تسجيل الدخول. يرجى المحاولة مرة اخرى.",
+      "authInitFailedDescription": "تعذر اكمال التفويض باستخدام Pubky Ring. يرجى المحاولة مرة اخرى.",
+      "authNotCompletedTitle": "لم يكتمل التفويض",
+      "authNotCompletedDescription": "لم يكمل تطبيق التوقيع عملية التفويض. يرجى المحاولة مرة اخرى.",
+      "qrGenerationFailedTitle": "فشل انشاء رمز QR",
+      "qrGenerationFailedDescription": "تعذر انشاء رمز QR لتسجيل الدخول. يرجى التحديث والمحاولة مرة اخرى.",
       "recoveryHint": "لا تستطيع تسجيل الدخول باستخدام <pubkyRing>Pubky Ring</pubkyRing>؟ استخدم عبارة الاسترداد او الملف المشفر لاستعادة حسابك.",
       "verifyingAccount": "جاري التحقق من الحساب",
       "loadingData": "جاري تحميل بياناتك",
@@ -598,6 +628,29 @@
       "urlField": "الرابط",
       "urlPlaceholder": "https://twitter.com/satoshi",
       "saveButton": "حفظ الرابط"
+    },
+    "customFeed": {
+      "createTitle": "إنشاء خلاصة",
+      "editTitle": "تعديل الخلاصة",
+      "feedName": "اسم الخلاصة",
+      "feedNamePlaceholder": "ليست مفاتيحك...",
+      "reach": "النطاق",
+      "reachPlaceholder": "اختر نطاقاً",
+      "sort": "الترتيب",
+      "sortPlaceholder": "اختر ترتيباً",
+      "layout": "التخطيط",
+      "layoutPlaceholder": "اختر تخطيطاً",
+      "content": "المحتوى",
+      "contentPlaceholder": "اختر محتوى",
+      "filterTags": "تصفية حسب وسوم المحتوى",
+      "saveFeed": "حفظ الخلاصة",
+      "deleteFeed": "حذف الخلاصة",
+      "feedCreated": "تم إنشاء الخلاصة {name}!",
+      "feedCreateError": "تعذر إنشاء الخلاصة، يرجى المحاولة مرة أخرى أو التواصل مع الدعم.",
+      "feedEdited": "تم تعديل الخلاصة {name}!",
+      "feedEditError": "تعذر تعديل الخلاصة، يرجى المحاولة مرة أخرى أو التواصل مع الدعم.",
+      "feedDeleted": "تم حذف الخلاصة {name}!",
+      "feedDeleteError": "تعذر حذف الخلاصة، يرجى المحاولة مرة أخرى أو التواصل مع الدعم."
     }
   },
   "sidebar": {
@@ -819,6 +872,7 @@
     "success": "نجاح",
     "error": "خطا",
     "errors": "اخطاء",
+    "genericErrorTitle": "عذرا! حدث خطا ما!",
     "post": {
       "replyPosted": "تم نشر الرد",
       "replyPostedDesc": "تم نشر ردك بنجاح.",
@@ -907,6 +961,10 @@
       "userIdRequired": "معرف المستخدم مطلوب",
       "loginRequired": "يجب تسجيل الدخول لاضافة وسوم",
       "alreadyAdded": "لقد اضفت هذا الوسم بالفعل",
+      "added": "تمت اضافة الوسم",
+      "addedDesc": "تمت اضافة \"{label}\" بنجاح.",
+      "removed": "تمت ازالة الوسم",
+      "removedDesc": "تمت ازالة \"{label}\" بنجاح.",
       "addFailed": "فشل اضافة الوسم",
       "addFailedDesc": "تعذر اضافة \"{label}\". يرجى المحاولة مرة اخرى.",
       "removeFailed": "فشل ازالة الوسم",
@@ -975,7 +1033,8 @@
     "layout": {
       "title": "التخطيط",
       "columns": "اعمدة",
-      "wide": "عريض"
+      "wide": "عريض",
+      "visual": "مرئي"
     },
     "content": {
       "title": "المحتوى",
@@ -998,7 +1057,7 @@
     "hotTags": "الوسوم الرائجة",
     "activeUsers": "المستخدمون النشطون",
     "trendingPosts": "المنشورات الرائجة",
-    "postsCount": "{count} منشور",
+    "postsCount": "{count} منشور هذا الشهر",
     "failedToLoadUsers": "فشل تحميل المستخدمين",
     "failedToLoadTags": "فشل تحميل الوسوم",
     "noUsersToShow": "لا يوجد مستخدمون للعرض",
@@ -1121,5 +1180,15 @@
     "pullToRefresh": "اسحب للتحديث",
     "releaseToRefresh": "أفلت للتحديث",
     "refreshing": "جارٍ التحديث..."
+  },
+  "markdownEditor": {
+    "emoji": "رمز تعبيري",
+    "richText": "نص منسق",
+    "markdown": "ماركداون",
+    "clearToSwitch": "امسح المحتوى للتبديل بين الأوضاع",
+    "placeholder": "ابدأ بكتابة تحفتك",
+    "toolbarAriaLabel": "شريط أدوات تحرير ماركداون",
+    "warningApproaching": "أنت تقترب من الحد الأقصى لعدد الأحرف.",
+    "warningReached": "لقد وصلت إلى الحد الأقصى لعدد الأحرف."
   }
 }

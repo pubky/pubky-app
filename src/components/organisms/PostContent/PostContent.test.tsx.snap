@@ -2,41 +2,30 @@
 
 exports[`PostContent - Snapshots > matches snapshot as repost with content 1`] = `
 <div
-  class="mx-auto w-full flex-col flex min-w-0 gap-3"
-  data-testid="container"
+  data-post-id="repost-1"
+  data-testid="post-content-base"
 >
-  <div
-    class="text-base leading-6 font-medium wrap-anywhere hyphens-auto whitespace-pre-line text-secondary-foreground"
-    data-cy="post-text"
-    data-testid="container"
-  >
-    <p>
-      Quote
-    </p>
-  </div>
+  PostContentBase 
+  repost-1
 </div>
 `;
 
 exports[`PostContent - Snapshots > matches snapshot as repost without content 1`] = `
 <div
-  class="mx-auto w-full flex-col flex min-w-0 gap-3"
-  data-testid="container"
-/>
+  data-post-id="repost-2"
+  data-testid="post-content-base"
+>
+  PostContentBase 
+  repost-2
+</div>
 `;
 
 exports[`PostContent - Snapshots > matches snapshot with single-line content 1`] = `
 <div
-  class="mx-auto w-full flex-col flex min-w-0 gap-3"
-  data-testid="container"
+  data-post-id="post-1"
+  data-testid="post-content-base"
 >
-  <div
-    class="text-base leading-6 font-medium wrap-anywhere hyphens-auto whitespace-pre-line text-secondary-foreground"
-    data-cy="post-text"
-    data-testid="container"
-  >
-    <p>
-      One liner
-    </p>
-  </div>
+  PostContentBase 
+  post-1
 </div>
 `;

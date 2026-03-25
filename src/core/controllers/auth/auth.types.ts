@@ -26,4 +26,5 @@ export interface TLoginWithEncryptedFileParams {
 
 export interface TBootstrapResponse {
   notification: Core.NotificationState;
+  remoteSettings: Core.SettingsState | null;
 }

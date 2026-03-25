@@ -19,7 +19,7 @@ describe('CopyrightValidators', () => {
         const appError = error as AppError;
         expect(appError.category).toBe(ErrorCategory.Validation);
         expect(appError.code).toBe(ValidationErrorCode.MISSING_FIELD);
-        expect(appError.service).toBe(ErrorService.Local);
+        expect(appError.service).toBe(ErrorService.NextJsServer);
         expect(appError.operation).toBe('validateNameOwner');
         expect(appError.context).toEqual({ field: 'Name of rights owner' });
         expect(appError.message).toBe('Name of rights owner is required');
@@ -139,6 +139,7 @@ describe('CopyrightValidators', () => {
       } catch (error) {
         const appError = error as AppError;
         expect(appError.code).toBe(ValidationErrorCode.FORMAT_ERROR);
+        expect(appError.service).toBe(ErrorService.NextJsServer);
         expect(appError.message).toBe('Infringing content URL must be a valid URL');
       }
     });
@@ -160,6 +161,7 @@ describe('CopyrightValidators', () => {
       } catch (error) {
         const appError = error as AppError;
         expect(appError.code).toBe(ValidationErrorCode.FORMAT_ERROR);
+        expect(appError.service).toBe(ErrorService.NextJsServer);
         expect(appError.message).toBe(Config.VALIDATION_MESSAGES.INVALID_EMAIL);
       }
     });
@@ -181,6 +183,7 @@ describe('CopyrightValidators', () => {
       } catch (error) {
         const appError = error as AppError;
         expect(appError.code).toBe(ValidationErrorCode.FORMAT_ERROR);
+        expect(appError.service).toBe(ErrorService.NextJsServer);
         expect(appError.message).toBe(Config.VALIDATION_MESSAGES.INVALID_PHONE);
       }
     });
@@ -202,6 +205,7 @@ describe('CopyrightValidators', () => {
       } catch (error) {
         const appError = error as AppError;
         expect(appError.code).toBe(ValidationErrorCode.MISSING_FIELD);
+        expect(appError.service).toBe(ErrorService.NextJsServer);
         expect(appError.message).toBe(Config.VALIDATION_MESSAGES.ROLE_REQUIRED);
       }
     });

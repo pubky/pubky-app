@@ -75,12 +75,6 @@ exports[`FeedbackCard - Snapshots > matches snapshot with authenticated user wit
           />
         </div>
       </div>
-      <div
-        class="min-w-0 flex-1 truncate text-base font-bold text-foreground"
-        data-testid="container"
-      >
-        Miguel Medeiros
-      </div>
     </div>
     <button
       class="w-full cursor-pointer text-left text-base leading-normal font-medium break-words text-muted-foreground"
@@ -130,12 +124,6 @@ exports[`FeedbackCard - Snapshots > matches snapshot with authenticated user wit
             M
           </div>
         </div>
-      </div>
-      <div
-        class="min-w-0 flex-1 truncate text-base font-bold text-foreground"
-        data-testid="container"
-      >
-        Miguel
       </div>
     </div>
     <button
@@ -187,12 +175,6 @@ exports[`FeedbackCard - Snapshots > matches snapshot with long name (CSS truncat
           </div>
         </div>
       </div>
-      <div
-        class="min-w-0 flex-1 truncate text-base font-bold text-foreground"
-        data-testid="container"
-      >
-        VeryLongUserNameThatExceedsTenCharacters
-      </div>
     </div>
     <button
       class="w-full cursor-pointer text-left text-base leading-normal font-medium break-words text-muted-foreground"
@@ -242,12 +224,6 @@ exports[`FeedbackCard - Snapshots > matches snapshot with unauthenticated user 1
             Y
           </div>
         </div>
-      </div>
-      <div
-        class="min-w-0 flex-1 truncate text-base font-bold text-foreground"
-        data-testid="container"
-      >
-        Your Name
       </div>
     </div>
     <button

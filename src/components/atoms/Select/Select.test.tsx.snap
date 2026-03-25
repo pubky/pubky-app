@@ -1,0 +1,614 @@
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
+
+exports[`Select - Snapshots > matches snapshot for Select with default value 1`] = `
+<button
+  aria-autocomplete="none"
+  aria-controls="radix-normalized"
+  aria-expanded="false"
+  class="flex w-fit cursor-pointer items-center justify-between gap-2.5 rounded-md bg-transparent py-2 text-base font-bold whitespace-nowrap text-foreground transition-colors outline-none select-none focus-visible:border-ring focus-visible:ring-1 focus-visible:ring-ring/50 disabled:cursor-not-allowed disabled:opacity-50 aria-invalid:border-destructive aria-invalid:ring-1 aria-invalid:ring-destructive/20 data-placeholder:text-muted-foreground data-[size=default]:h-8 data-[size=sm]:h-7 data-[size=sm]:rounded-[min(var(--radius-md),10px)] *:data-[slot=select-value]:line-clamp-1 *:data-[slot=select-value]:flex *:data-[slot=select-value]:items-center *:data-[slot=select-value]:gap-1.5 dark:aria-invalid:border-destructive/50 dark:aria-invalid:ring-destructive/40 [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4"
+  data-size="default"
+  data-slot="select-trigger"
+  data-state="closed"
+  dir="ltr"
+  role="combobox"
+  type="button"
+>
+  <span
+    data-slot="select-value"
+    style="pointer-events: none;"
+  >
+    Apple
+  </span>
+  <svg
+    aria-hidden="true"
+    class="lucide lucide-chevron-down pointer-events-none size-4"
+    fill="none"
+    height="24"
+    stroke="currentColor"
+    stroke-linecap="round"
+    stroke-linejoin="round"
+    stroke-width="2"
+    viewBox="0 0 24 24"
+    width="24"
+    xmlns="http://www.w3.org/2000/svg"
+  >
+    <path
+      d="m6 9 6 6 6-6"
+    />
+  </svg>
+</button>
+`;
+
+exports[`Select - Snapshots > matches snapshot for SelectContent with item-aligned position 1`] = `
+<div
+  style="display: flex; flex-direction: column; position: fixed; min-width: 0px; left: 10px; top: 0px; margin: 10px 0px; max-height: 748px;"
+>
+  <div
+    class="relative z-50 max-h-(--radix-select-content-available-height) min-w-36 origin-(--radix-select-content-transform-origin) overflow-x-hidden overflow-y-auto rounded-md bg-popover p-2 text-popover-foreground shadow-md ring-1 ring-foreground/10 duration-100 data-closed:animate-out data-closed:fade-out-0 data-closed:zoom-out-95 data-open:animate-in data-open:fade-in-0 data-open:zoom-in-95 data-[align-trigger=true]:animate-none data-[side=bottom]:slide-in-from-top-2 data-[side=left]:slide-in-from-right-2 data-[side=right]:slide-in-from-left-2 data-[side=top]:slide-in-from-bottom-2"
+    data-align-trigger="true"
+    data-slot="select-content"
+    data-state="open"
+    dir="ltr"
+    id="radix-normalized"
+    role="listbox"
+    style="box-sizing: border-box; max-height: 100%; display: flex; flex-direction: column; outline: none; pointer-events: auto;"
+    tabindex="-1"
+  >
+    <style>
+      [data-radix-select-viewport]{scrollbar-width:none;-ms-overflow-style:none;-webkit-overflow-scrolling:touch;}[data-radix-select-viewport]::-webkit-scrollbar{display:none}
+    </style>
+    <div
+      class="data-[position=popper]:h-(--radix-select-trigger-height) data-[position=popper]:w-full data-[position=popper]:min-w-(--radix-select-trigger-width)"
+      data-position="item-aligned"
+      data-radix-select-viewport=""
+      role="presentation"
+      style="position: relative; flex: 1 1 0%; overflow: hidden auto;"
+    >
+      <div
+        aria-labelledby="radix-normalized"
+        aria-selected="false"
+        class="relative flex w-full cursor-default items-center gap-1.5 rounded-md py-1 pr-8 pl-1.5 text-base text-muted-foreground outline-hidden select-none focus:text-foreground not-data-[variant=destructive]:focus:**:text-foreground data-disabled:pointer-events-none data-disabled:opacity-50 data-[state=checked]:text-foreground [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4 *:[span]:last:flex *:[span]:last:items-center *:[span]:last:gap-2"
+        data-highlighted=""
+        data-radix-collection-item=""
+        data-slot="select-item"
+        data-state="unchecked"
+        role="option"
+        tabindex="-1"
+      >
+        <span
+          class="pointer-events-none absolute right-2 flex size-4 items-center justify-center"
+        />
+        <span
+          id="radix-normalized"
+        >
+          Apple
+        </span>
+      </div>
+      <div
+        aria-labelledby="radix-normalized"
+        aria-selected="false"
+        class="relative flex w-full cursor-default items-center gap-1.5 rounded-md py-1 pr-8 pl-1.5 text-base text-muted-foreground outline-hidden select-none focus:text-foreground not-data-[variant=destructive]:focus:**:text-foreground data-disabled:pointer-events-none data-disabled:opacity-50 data-[state=checked]:text-foreground [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4 *:[span]:last:flex *:[span]:last:items-center *:[span]:last:gap-2"
+        data-radix-collection-item=""
+        data-slot="select-item"
+        data-state="unchecked"
+        role="option"
+        tabindex="-1"
+      >
+        <span
+          class="pointer-events-none absolute right-2 flex size-4 items-center justify-center"
+        />
+        <span
+          id="radix-normalized"
+        >
+          Banana
+        </span>
+      </div>
+    </div>
+  </div>
+</div>
+`;
+
+exports[`Select - Snapshots > matches snapshot for SelectContent with popper position 1`] = `
+<div
+  data-radix-popper-content-wrapper=""
+  dir="ltr"
+  style="position: fixed; left: 0px; top: 0px; transform: translate(0, -200%); min-width: max-content;"
+>
+  <div
+    class="relative z-50 max-h-(--radix-select-content-available-height) min-w-36 origin-(--radix-select-content-transform-origin) overflow-x-hidden overflow-y-auto rounded-md bg-popover p-2 text-popover-foreground shadow-md ring-1 ring-foreground/10 duration-100 data-closed:animate-out data-closed:fade-out-0 data-closed:zoom-out-95 data-open:animate-in data-open:fade-in-0 data-open:zoom-in-95 data-[align-trigger=true]:animate-none data-[side=bottom]:slide-in-from-top-2 data-[side=left]:slide-in-from-right-2 data-[side=right]:slide-in-from-left-2 data-[side=top]:slide-in-from-bottom-2 data-[side=bottom]:translate-y-1 data-[side=left]:-translate-x-1 data-[side=right]:translate-x-1 data-[side=top]:-translate-y-1"
+    data-align="center"
+    data-align-trigger="false"
+    data-side="bottom"
+    data-slot="select-content"
+    data-state="open"
+    dir="ltr"
+    id="radix-normalized"
+    role="listbox"
+    style="box-sizing: border-box; display: flex; flex-direction: column; outline: none; --radix-select-content-transform-origin: var(--radix-popper-transform-origin); --radix-select-content-available-width: var(--radix-popper-available-width); --radix-select-content-available-height: var(--radix-popper-available-height); --radix-select-trigger-width: var(--radix-popper-anchor-width); --radix-select-trigger-height: var(--radix-popper-anchor-height); animation: none; pointer-events: auto;"
+    tabindex="-1"
+  >
+    <style>
+      [data-radix-select-viewport]{scrollbar-width:none;-ms-overflow-style:none;-webkit-overflow-scrolling:touch;}[data-radix-select-viewport]::-webkit-scrollbar{display:none}
+    </style>
+    <div
+      class="data-[position=popper]:h-(--radix-select-trigger-height) data-[position=popper]:w-full data-[position=popper]:min-w-(--radix-select-trigger-width)"
+      data-position="popper"
+      data-radix-select-viewport=""
+      role="presentation"
+      style="position: relative; flex: 1 1 0%; overflow: hidden auto;"
+    >
+      <div
+        aria-labelledby="radix-normalized"
+        aria-selected="false"
+        class="relative flex w-full cursor-default items-center gap-1.5 rounded-md py-1 pr-8 pl-1.5 text-base text-muted-foreground outline-hidden select-none focus:text-foreground not-data-[variant=destructive]:focus:**:text-foreground data-disabled:pointer-events-none data-disabled:opacity-50 data-[state=checked]:text-foreground [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4 *:[span]:last:flex *:[span]:last:items-center *:[span]:last:gap-2"
+        data-radix-collection-item=""
+        data-slot="select-item"
+        data-state="unchecked"
+        role="option"
+        tabindex="-1"
+      >
+        <span
+          class="pointer-events-none absolute right-2 flex size-4 items-center justify-center"
+        />
+        <span
+          id="radix-normalized"
+        >
+          Apple
+        </span>
+      </div>
+      <div
+        aria-labelledby="radix-normalized"
+        aria-selected="false"
+        class="relative flex w-full cursor-default items-center gap-1.5 rounded-md py-1 pr-8 pl-1.5 text-base text-muted-foreground outline-hidden select-none focus:text-foreground not-data-[variant=destructive]:focus:**:text-foreground data-disabled:pointer-events-none data-disabled:opacity-50 data-[state=checked]:text-foreground [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4 *:[span]:last:flex *:[span]:last:items-center *:[span]:last:gap-2"
+        data-radix-collection-item=""
+        data-slot="select-item"
+        data-state="unchecked"
+        role="option"
+        tabindex="-1"
+      >
+        <span
+          class="pointer-events-none absolute right-2 flex size-4 items-center justify-center"
+        />
+        <span
+          id="radix-normalized"
+        >
+          Banana
+        </span>
+      </div>
+    </div>
+  </div>
+</div>
+`;
+
+exports[`Select - Snapshots > matches snapshot for SelectGroup with SelectLabel 1`] = `
+<div
+  aria-labelledby="radix-normalized"
+  class="scroll-my-1 p-1"
+  data-slot="select-group"
+  role="group"
+>
+  <div
+    class="px-1.5 py-1 text-xs text-muted-foreground"
+    data-slot="select-label"
+    id="radix-normalized"
+  >
+    Fruits
+  </div>
+  <div
+    aria-labelledby="radix-normalized"
+    aria-selected="false"
+    class="relative flex w-full cursor-default items-center gap-1.5 rounded-md py-1 pr-8 pl-1.5 text-base text-muted-foreground outline-hidden select-none focus:text-foreground not-data-[variant=destructive]:focus:**:text-foreground data-disabled:pointer-events-none data-disabled:opacity-50 data-[state=checked]:text-foreground [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4 *:[span]:last:flex *:[span]:last:items-center *:[span]:last:gap-2"
+    data-radix-collection-item=""
+    data-slot="select-item"
+    data-state="unchecked"
+    role="option"
+    tabindex="-1"
+  >
+    <span
+      class="pointer-events-none absolute right-2 flex size-4 items-center justify-center"
+    />
+    <span
+      id="radix-normalized"
+    >
+      Apple
+    </span>
+  </div>
+  <div
+    aria-labelledby="radix-normalized"
+    aria-selected="false"
+    class="relative flex w-full cursor-default items-center gap-1.5 rounded-md py-1 pr-8 pl-1.5 text-base text-muted-foreground outline-hidden select-none focus:text-foreground not-data-[variant=destructive]:focus:**:text-foreground data-disabled:pointer-events-none data-disabled:opacity-50 data-[state=checked]:text-foreground [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4 *:[span]:last:flex *:[span]:last:items-center *:[span]:last:gap-2"
+    data-radix-collection-item=""
+    data-slot="select-item"
+    data-state="unchecked"
+    role="option"
+    tabindex="-1"
+  >
+    <span
+      class="pointer-events-none absolute right-2 flex size-4 items-center justify-center"
+    />
+    <span
+      id="radix-normalized"
+    >
+      Banana
+    </span>
+  </div>
+</div>
+`;
+
+exports[`Select - Snapshots > matches snapshot for SelectItem with custom className 1`] = `
+<div
+  aria-labelledby="radix-normalized"
+  aria-selected="false"
+  class="relative flex w-full cursor-default items-center gap-1.5 rounded-md py-1 pr-8 pl-1.5 text-base text-muted-foreground outline-hidden select-none focus:text-foreground not-data-[variant=destructive]:focus:**:text-foreground data-disabled:pointer-events-none data-disabled:opacity-50 data-[state=checked]:text-foreground [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4 *:[span]:last:flex *:[span]:last:items-center *:[span]:last:gap-2 custom-item-class"
+  data-radix-collection-item=""
+  data-slot="select-item"
+  data-state="unchecked"
+  role="option"
+  tabindex="-1"
+>
+  <span
+    class="pointer-events-none absolute right-2 flex size-4 items-center justify-center"
+  />
+  <span
+    id="radix-normalized"
+  >
+    Apple
+  </span>
+</div>
+`;
+
+exports[`Select - Snapshots > matches snapshot for SelectSeparator 1`] = `
+<div
+  aria-hidden="true"
+  class="pointer-events-none -mx-1 my-1 h-px bg-border"
+  data-slot="select-separator"
+/>
+`;
+
+exports[`Select - Snapshots > matches snapshot for SelectTrigger with custom className 1`] = `
+<button
+  aria-autocomplete="none"
+  aria-controls="radix-normalized"
+  aria-expanded="false"
+  class="flex w-fit cursor-pointer items-center justify-between gap-2.5 rounded-md bg-transparent py-2 text-base font-bold whitespace-nowrap text-foreground transition-colors outline-none select-none focus-visible:border-ring focus-visible:ring-1 focus-visible:ring-ring/50 disabled:cursor-not-allowed disabled:opacity-50 aria-invalid:border-destructive aria-invalid:ring-1 aria-invalid:ring-destructive/20 data-placeholder:text-muted-foreground data-[size=default]:h-8 data-[size=sm]:h-7 data-[size=sm]:rounded-[min(var(--radius-md),10px)] *:data-[slot=select-value]:line-clamp-1 *:data-[slot=select-value]:flex *:data-[slot=select-value]:items-center *:data-[slot=select-value]:gap-1.5 dark:aria-invalid:border-destructive/50 dark:aria-invalid:ring-destructive/40 [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4 custom-trigger-class"
+  data-placeholder=""
+  data-size="default"
+  data-slot="select-trigger"
+  data-state="closed"
+  dir="ltr"
+  role="combobox"
+  type="button"
+>
+  <span
+    data-slot="select-value"
+    style="pointer-events: none;"
+  >
+    Select an option
+  </span>
+  <svg
+    aria-hidden="true"
+    class="lucide lucide-chevron-down pointer-events-none size-4"
+    fill="none"
+    height="24"
+    stroke="currentColor"
+    stroke-linecap="round"
+    stroke-linejoin="round"
+    stroke-width="2"
+    viewBox="0 0 24 24"
+    width="24"
+    xmlns="http://www.w3.org/2000/svg"
+  >
+    <path
+      d="m6 9 6 6 6-6"
+    />
+  </svg>
+</button>
+`;
+
+exports[`Select - Snapshots > matches snapshot for SelectTrigger with default size 1`] = `
+<button
+  aria-autocomplete="none"
+  aria-controls="radix-normalized"
+  aria-expanded="false"
+  class="flex w-fit cursor-pointer items-center justify-between gap-2.5 rounded-md bg-transparent py-2 text-base font-bold whitespace-nowrap text-foreground transition-colors outline-none select-none focus-visible:border-ring focus-visible:ring-1 focus-visible:ring-ring/50 disabled:cursor-not-allowed disabled:opacity-50 aria-invalid:border-destructive aria-invalid:ring-1 aria-invalid:ring-destructive/20 data-placeholder:text-muted-foreground data-[size=default]:h-8 data-[size=sm]:h-7 data-[size=sm]:rounded-[min(var(--radius-md),10px)] *:data-[slot=select-value]:line-clamp-1 *:data-[slot=select-value]:flex *:data-[slot=select-value]:items-center *:data-[slot=select-value]:gap-1.5 dark:aria-invalid:border-destructive/50 dark:aria-invalid:ring-destructive/40 [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4"
+  data-placeholder=""
+  data-size="default"
+  data-slot="select-trigger"
+  data-state="closed"
+  dir="ltr"
+  role="combobox"
+  type="button"
+>
+  <span
+    data-slot="select-value"
+    style="pointer-events: none;"
+  >
+    Select an option
+  </span>
+  <svg
+    aria-hidden="true"
+    class="lucide lucide-chevron-down pointer-events-none size-4"
+    fill="none"
+    height="24"
+    stroke="currentColor"
+    stroke-linecap="round"
+    stroke-linejoin="round"
+    stroke-width="2"
+    viewBox="0 0 24 24"
+    width="24"
+    xmlns="http://www.w3.org/2000/svg"
+  >
+    <path
+      d="m6 9 6 6 6-6"
+    />
+  </svg>
+</button>
+`;
+
+exports[`Select - Snapshots > matches snapshot for SelectTrigger with sm size 1`] = `
+<button
+  aria-autocomplete="none"
+  aria-controls="radix-normalized"
+  aria-expanded="false"
+  class="flex w-fit cursor-pointer items-center justify-between gap-2.5 rounded-md bg-transparent py-2 text-base font-bold whitespace-nowrap text-foreground transition-colors outline-none select-none focus-visible:border-ring focus-visible:ring-1 focus-visible:ring-ring/50 disabled:cursor-not-allowed disabled:opacity-50 aria-invalid:border-destructive aria-invalid:ring-1 aria-invalid:ring-destructive/20 data-placeholder:text-muted-foreground data-[size=default]:h-8 data-[size=sm]:h-7 data-[size=sm]:rounded-[min(var(--radius-md),10px)] *:data-[slot=select-value]:line-clamp-1 *:data-[slot=select-value]:flex *:data-[slot=select-value]:items-center *:data-[slot=select-value]:gap-1.5 dark:aria-invalid:border-destructive/50 dark:aria-invalid:ring-destructive/40 [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4"
+  data-placeholder=""
+  data-size="sm"
+  data-slot="select-trigger"
+  data-state="closed"
+  dir="ltr"
+  role="combobox"
+  type="button"
+>
+  <span
+    data-slot="select-value"
+    style="pointer-events: none;"
+  >
+    Select an option
+  </span>
+  <svg
+    aria-hidden="true"
+    class="lucide lucide-chevron-down pointer-events-none size-4"
+    fill="none"
+    height="24"
+    stroke="currentColor"
+    stroke-linecap="round"
+    stroke-linejoin="round"
+    stroke-width="2"
+    viewBox="0 0 24 24"
+    width="24"
+    xmlns="http://www.w3.org/2000/svg"
+  >
+    <path
+      d="m6 9 6 6 6-6"
+    />
+  </svg>
+</button>
+`;
+
+exports[`Select - Snapshots > matches snapshot for complete select structure 1`] = `
+<div
+  data-radix-popper-content-wrapper=""
+  dir="ltr"
+  style="position: fixed; left: 0px; top: 0px; transform: translate(0, -200%); min-width: max-content;"
+>
+  <div
+    class="relative z-50 max-h-(--radix-select-content-available-height) min-w-36 origin-(--radix-select-content-transform-origin) overflow-x-hidden overflow-y-auto rounded-md bg-popover p-2 text-popover-foreground shadow-md ring-1 ring-foreground/10 duration-100 data-closed:animate-out data-closed:fade-out-0 data-closed:zoom-out-95 data-open:animate-in data-open:fade-in-0 data-open:zoom-in-95 data-[align-trigger=true]:animate-none data-[side=bottom]:slide-in-from-top-2 data-[side=left]:slide-in-from-right-2 data-[side=right]:slide-in-from-left-2 data-[side=top]:slide-in-from-bottom-2 data-[side=bottom]:translate-y-1 data-[side=left]:-translate-x-1 data-[side=right]:translate-x-1 data-[side=top]:-translate-y-1"
+    data-align="center"
+    data-align-trigger="false"
+    data-side="bottom"
+    data-slot="select-content"
+    data-state="open"
+    dir="ltr"
+    id="radix-normalized"
+    role="listbox"
+    style="box-sizing: border-box; display: flex; flex-direction: column; outline: none; --radix-select-content-transform-origin: var(--radix-popper-transform-origin); --radix-select-content-available-width: var(--radix-popper-available-width); --radix-select-content-available-height: var(--radix-popper-available-height); --radix-select-trigger-width: var(--radix-popper-anchor-width); --radix-select-trigger-height: var(--radix-popper-anchor-height); animation: none; pointer-events: auto;"
+    tabindex="-1"
+  >
+    <style>
+      [data-radix-select-viewport]{scrollbar-width:none;-ms-overflow-style:none;-webkit-overflow-scrolling:touch;}[data-radix-select-viewport]::-webkit-scrollbar{display:none}
+    </style>
+    <div
+      class="data-[position=popper]:h-(--radix-select-trigger-height) data-[position=popper]:w-full data-[position=popper]:min-w-(--radix-select-trigger-width)"
+      data-position="popper"
+      data-radix-select-viewport=""
+      role="presentation"
+      style="position: relative; flex: 1 1 0%; overflow: hidden auto;"
+    >
+      <div
+        aria-labelledby="radix-normalized"
+        class="scroll-my-1 p-1"
+        data-slot="select-group"
+        role="group"
+      >
+        <div
+          class="px-1.5 py-1 text-xs text-muted-foreground"
+          data-slot="select-label"
+          id="radix-normalized"
+        >
+          Fruits
+        </div>
+        <div
+          aria-labelledby="radix-normalized"
+          aria-selected="false"
+          class="relative flex w-full cursor-default items-center gap-1.5 rounded-md py-1 pr-8 pl-1.5 text-base text-muted-foreground outline-hidden select-none focus:text-foreground not-data-[variant=destructive]:focus:**:text-foreground data-disabled:pointer-events-none data-disabled:opacity-50 data-[state=checked]:text-foreground [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4 *:[span]:last:flex *:[span]:last:items-center *:[span]:last:gap-2"
+          data-radix-collection-item=""
+          data-slot="select-item"
+          data-state="unchecked"
+          role="option"
+          tabindex="-1"
+        >
+          <span
+            class="pointer-events-none absolute right-2 flex size-4 items-center justify-center"
+          />
+          <span
+            id="radix-normalized"
+          >
+            Apple
+          </span>
+        </div>
+        <div
+          aria-labelledby="radix-normalized"
+          aria-selected="false"
+          class="relative flex w-full cursor-default items-center gap-1.5 rounded-md py-1 pr-8 pl-1.5 text-base text-muted-foreground outline-hidden select-none focus:text-foreground not-data-[variant=destructive]:focus:**:text-foreground data-disabled:pointer-events-none data-disabled:opacity-50 data-[state=checked]:text-foreground [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4 *:[span]:last:flex *:[span]:last:items-center *:[span]:last:gap-2"
+          data-radix-collection-item=""
+          data-slot="select-item"
+          data-state="unchecked"
+          role="option"
+          tabindex="-1"
+        >
+          <span
+            class="pointer-events-none absolute right-2 flex size-4 items-center justify-center"
+          />
+          <span
+            id="radix-normalized"
+          >
+            Banana
+          </span>
+        </div>
+        <div
+          aria-labelledby="radix-normalized"
+          aria-selected="false"
+          class="relative flex w-full cursor-default items-center gap-1.5 rounded-md py-1 pr-8 pl-1.5 text-base text-muted-foreground outline-hidden select-none focus:text-foreground not-data-[variant=destructive]:focus:**:text-foreground data-disabled:pointer-events-none data-disabled:opacity-50 data-[state=checked]:text-foreground [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4 *:[span]:last:flex *:[span]:last:items-center *:[span]:last:gap-2"
+          data-radix-collection-item=""
+          data-slot="select-item"
+          data-state="unchecked"
+          role="option"
+          tabindex="-1"
+        >
+          <span
+            class="pointer-events-none absolute right-2 flex size-4 items-center justify-center"
+          />
+          <span
+            id="radix-normalized"
+          >
+            Cherry
+          </span>
+        </div>
+      </div>
+      <div
+        aria-hidden="true"
+        class="pointer-events-none -mx-1 my-1 h-px bg-border"
+        data-slot="select-separator"
+      />
+      <div
+        aria-labelledby="radix-normalized"
+        class="scroll-my-1 p-1"
+        data-slot="select-group"
+        role="group"
+      >
+        <div
+          class="px-1.5 py-1 text-xs text-muted-foreground"
+          data-slot="select-label"
+          id="radix-normalized"
+        >
+          Vegetables
+        </div>
+        <div
+          aria-labelledby="radix-normalized"
+          aria-selected="false"
+          class="relative flex w-full cursor-default items-center gap-1.5 rounded-md py-1 pr-8 pl-1.5 text-base text-muted-foreground outline-hidden select-none focus:text-foreground not-data-[variant=destructive]:focus:**:text-foreground data-disabled:pointer-events-none data-disabled:opacity-50 data-[state=checked]:text-foreground [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4 *:[span]:last:flex *:[span]:last:items-center *:[span]:last:gap-2"
+          data-radix-collection-item=""
+          data-slot="select-item"
+          data-state="unchecked"
+          role="option"
+          tabindex="-1"
+        >
+          <span
+            class="pointer-events-none absolute right-2 flex size-4 items-center justify-center"
+          />
+          <span
+            id="radix-normalized"
+          >
+            Carrot
+          </span>
+        </div>
+        <div
+          aria-disabled="true"
+          aria-labelledby="radix-normalized"
+          aria-selected="false"
+          class="relative flex w-full cursor-default items-center gap-1.5 rounded-md py-1 pr-8 pl-1.5 text-base text-muted-foreground outline-hidden select-none focus:text-foreground not-data-[variant=destructive]:focus:**:text-foreground data-disabled:pointer-events-none data-disabled:opacity-50 data-[state=checked]:text-foreground [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4 *:[span]:last:flex *:[span]:last:items-center *:[span]:last:gap-2"
+          data-disabled=""
+          data-radix-collection-item=""
+          data-slot="select-item"
+          data-state="unchecked"
+          role="option"
+        >
+          <span
+            class="pointer-events-none absolute right-2 flex size-4 items-center justify-center"
+          />
+          <span
+            id="radix-normalized"
+          >
+            Lettuce
+          </span>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+`;
+
+exports[`Select - Snapshots > matches snapshot for disabled SelectItem 1`] = `
+<div
+  aria-disabled="true"
+  aria-labelledby="radix-normalized"
+  aria-selected="false"
+  class="relative flex w-full cursor-default items-center gap-1.5 rounded-md py-1 pr-8 pl-1.5 text-base text-muted-foreground outline-hidden select-none focus:text-foreground not-data-[variant=destructive]:focus:**:text-foreground data-disabled:pointer-events-none data-disabled:opacity-50 data-[state=checked]:text-foreground [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4 *:[span]:last:flex *:[span]:last:items-center *:[span]:last:gap-2"
+  data-disabled=""
+  data-radix-collection-item=""
+  data-slot="select-item"
+  data-state="unchecked"
+  role="option"
+>
+  <span
+    class="pointer-events-none absolute right-2 flex size-4 items-center justify-center"
+  />
+  <span
+    id="radix-normalized"
+  >
+    Apple
+  </span>
+</div>
+`;
+
+exports[`Select - Snapshots > matches snapshot for disabled SelectTrigger 1`] = `
+<button
+  aria-autocomplete="none"
+  aria-controls="radix-normalized"
+  aria-expanded="false"
+  class="flex w-fit cursor-pointer items-center justify-between gap-2.5 rounded-md bg-transparent py-2 text-base font-bold whitespace-nowrap text-foreground transition-colors outline-none select-none focus-visible:border-ring focus-visible:ring-1 focus-visible:ring-ring/50 disabled:cursor-not-allowed disabled:opacity-50 aria-invalid:border-destructive aria-invalid:ring-1 aria-invalid:ring-destructive/20 data-placeholder:text-muted-foreground data-[size=default]:h-8 data-[size=sm]:h-7 data-[size=sm]:rounded-[min(var(--radius-md),10px)] *:data-[slot=select-value]:line-clamp-1 *:data-[slot=select-value]:flex *:data-[slot=select-value]:items-center *:data-[slot=select-value]:gap-1.5 dark:aria-invalid:border-destructive/50 dark:aria-invalid:ring-destructive/40 [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4"
+  data-disabled=""
+  data-placeholder=""
+  data-size="default"
+  data-slot="select-trigger"
+  data-state="closed"
+  dir="ltr"
+  disabled=""
+  role="combobox"
+  type="button"
+>
+  <span
+    data-slot="select-value"
+    style="pointer-events: none;"
+  >
+    Select an option
+  </span>
+  <svg
+    aria-hidden="true"
+    class="lucide lucide-chevron-down pointer-events-none size-4"
+    fill="none"
+    height="24"
+    stroke="currentColor"
+    stroke-linecap="round"
+    stroke-linejoin="round"
+    stroke-width="2"
+    viewBox="0 0 24 24"
+    width="24"
+    xmlns="http://www.w3.org/2000/svg"
+  >
+    <path
+      d="m6 9 6 6 6-6"
+    />
+  </svg>
+</button>
+`;

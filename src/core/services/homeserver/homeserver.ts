@@ -105,7 +105,6 @@ export class HomeserverService {
       return handleError({
         error,
         additionalContext: { publicKey: publicKey?.z32?.() },
-        statusCode: HttpStatusCode.UNAUTHORIZED,
       });
     }
   }
@@ -437,7 +436,6 @@ export class HomeserverService {
       return handleError({
         error,
         additionalContext: { sessionExport: Boolean(sessionExport) },
-        statusCode: HttpStatusCode.UNAUTHORIZED,
       });
     }
   }

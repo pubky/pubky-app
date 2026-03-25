@@ -25,11 +25,7 @@ export function SinglePost({ postId }: SinglePostProps) {
       {/* Main content container */}
       <Atoms.Container
         overrideDefaults
-        className={Libs.cn(
-          'max-w-sm sm:max-w-xl md:max-w-3xl lg:max-w-5xl xl:max-w-6xl',
-          'm-auto w-full px-6 pb-12 xl:px-0',
-          'pt-0',
-        )}
+        className={Libs.cn('max-w-(--container-max-width)', 'm-auto w-full px-6 pb-12 xl:px-0', 'pt-0')}
       >
         <Organisms.SinglePostContent postId={postId} />
       </Atoms.Container>

@@ -10,15 +10,16 @@ export function FilterSort({
   selectedTab,
   defaultSelectedTab = Core.SORT.TIMELINE,
   onTabChange,
+  disabled,
 }: Molecules.BaseFilterProps<Core.SortType>) {
   const t = useTranslations('filters.sort');
 
   const items = React.useMemo(
     () => [
-      { key: Core.SORT.TIMELINE, label: t('recent'), icon: Libs.SquareAsterisk },
-      { key: Core.SORT.ENGAGEMENT, label: t('popularity'), icon: Libs.Flame },
+      { key: Core.SORT.TIMELINE, label: t('recent'), icon: Libs.SquareAsterisk, disabled },
+      { key: Core.SORT.ENGAGEMENT, label: t('popularity'), icon: Libs.Flame, disabled },
     ],
-    [t],
+    [t, disabled],
   );
 
   return (

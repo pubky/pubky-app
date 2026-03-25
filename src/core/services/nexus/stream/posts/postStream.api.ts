@@ -69,10 +69,10 @@ export const postStreamApi = {
  * Posts by IDs endpoint (POST request)
  * Returns both the URL and the request body for the POST request
  */
-export function buildPostStreamBodyUrl(params: Core.TStreamPostsByIdsParams) {
-  // Build request body
-  const body: { post_ids: string[]; viewer_id?: string } = {
+export function buildPostStreamBodyUrl(params: Core.TStreamPostsByIdsParams): Core.TStreamPostsByIdsParams {
+  const body: Core.TStreamPostsByIdsParams = {
     post_ids: params.post_ids,
+    include_attachment_metadata: params.include_attachment_metadata ?? true,
   };
 
   if (params.viewer_id) {

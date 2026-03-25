@@ -1,0 +1,22 @@
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
+
+exports[`ThreadTree - Snapshots > matches snapshot with replies and show-more 1`] = `
+<div
+  class=""
+  data-testid="container"
+>
+  <div
+    data-is-last-reply="false"
+    data-reply-id="author:reply-1"
+    data-testid="reply-with-nested"
+  />
+  <button
+    data-count="1"
+    data-is-last="true"
+    data-testid="show-more-replies"
+    type="button"
+  >
+    show more
+  </button>
+</div>
+`;

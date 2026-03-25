@@ -2,6 +2,7 @@ import { create } from 'zustand';
 import { persist, devtools } from 'zustand/middleware';
 import { type SettingsStore, settingsInitialState } from './settings.types';
 import { createSettingsActions } from './settings.actions';
+import { SETTINGS_PERSIST_KEY } from '../persistedKeys';
 
 // Store creation
 export const useSettingsStore = create<SettingsStore>()(
@@ -12,7 +13,7 @@ export const useSettingsStore = create<SettingsStore>()(
         ...createSettingsActions(set),
       }),
       {
-        name: 'settings-storage',
+        name: SETTINGS_PERSIST_KEY,
 
         // Persist settings data
         partialize: (state) => ({

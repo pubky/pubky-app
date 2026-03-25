@@ -1,21 +1,39 @@
 import { render, screen, fireEvent } from '@testing-library/react';
 import { vi, describe, it, expect, beforeEach } from 'vitest';
+import { forwardRef, useImperativeHandle, useRef } from 'react';
 import { SinglePostCard } from './SinglePostCard';
+import * as Hooks from '@/hooks';
+
+const { mockPostHeader } = vi.hoisted(() => ({
+  mockPostHeader: vi.fn(({ postId }: { postId: string; timeAgoPlacement?: 'top-right' | 'bottom-left' }) => (
+    <div data-testid="post-header">Header: {postId}</div>
+  )),
+}));
+
+vi.mock('@/hooks', () => ({
+  useIsMobile: vi.fn(() => false),
+}));
 
 // Mock organisms
 vi.mock('@/organisms', () => ({
-  PostHeader: ({ postId }: { postId: string }) => <div data-testid="post-header">Header: {postId}</div>,
+  PostHeader: ({ postId, timeAgoPlacement }: { postId: string; timeAgoPlacement?: 'top-right' | 'bottom-left' }) =>
+    mockPostHeader({ postId, timeAgoPlacement }),
   PostContent: ({ postId }: { postId: string }) => <div data-testid="post-content">Content: {postId}</div>,
   PostActionsBar: ({
     postId,
+    onTagClick,
     onReplyClick,
     onRepostClick,
   }: {
     postId: string;
+    onTagClick?: () => void;
     onReplyClick?: () => void;
     onRepostClick?: () => void;
   }) => (
     <div data-testid="post-actions-bar">
+      <button data-testid="tag-action" onClick={onTagClick}>
+        Tag
+      </button>
       <button data-testid="reply-action" onClick={onReplyClick}>
         Reply
       </button>
@@ -25,11 +43,25 @@ vi.mock('@/organisms', () => ({
       Actions: {postId}
     </div>
   ),
-  PostTagsPanel: ({ postId, className }: { postId: string; className?: string }) => (
-    <div data-testid="post-tags-panel" data-class-name={className}>
-      Tags: {postId}
-    </div>
-  ),
+  PostTagsPanel: forwardRef<{ focus: () => void }, { postId: string; className?: string }>(function MockPostTagsPanel(
+    { postId, className },
+    ref,
+  ) {
+    const inputRef = useRef<HTMLInputElement>(null);
+
+    useImperativeHandle(ref, () => ({
+      focus: () => inputRef.current?.focus(),
+    }));
+
+    const panelType = className?.includes('hidden lg:flex') ? 'desktop' : 'mobile';
+
+    return (
+      <div data-testid="post-tags-panel" data-class-name={className}>
+        <input ref={inputRef} data-testid={`tag-input-${panelType}`} />
+        Tags: {postId}
+      </div>
+    );
+  }),
   DialogReply: ({ postId, open }: { postId: string; open: boolean }) => (
     <div data-testid="dialog-reply" data-open={open}>
       Reply Dialog: {postId}
@@ -39,6 +71,9 @@ vi.mock('@/organisms', () => ({
     <div data-testid="dialog-repost" data-open={open}>
       Repost Dialog: {postId}
     </div>
+  ),
+  ClickableTagsList: ({ taggedId }: { taggedId: string }) => (
+    <div data-testid="clickable-tags-list">ClickableTagsList {taggedId}</div>
   ),
 }));
 
@@ -77,9 +112,12 @@ vi.mock('@/libs', async () => {
 
 describe('SinglePostCard', () => {
   const mockPostId = 'author:post123';
+  const mockUseIsMobile = vi.mocked(Hooks.useIsMobile);
 
   beforeEach(() => {
     vi.clearAllMocks();
+    mockPostHeader.mockClear();
+    mockUseIsMobile.mockReturnValue(false);
   });
 
   describe('rendering', () => {
@@ -116,6 +154,17 @@ describe('SinglePostCard', () => {
   });
 
   describe('interactions', () => {
+    it('should focus desktop tag input when tag action is clicked', () => {
+      render(<SinglePostCard postId={mockPostId} />);
+
+      const desktopTagInput = screen.getByTestId('tag-input-desktop');
+      expect(desktopTagInput).not.toHaveFocus();
+
+      fireEvent.click(screen.getByTestId('tag-action'));
+
+      expect(desktopTagInput).toHaveFocus();
+    });
+
     it('should open reply dialog when reply action is clicked', () => {
       render(<SinglePostCard postId={mockPostId} />);
 
@@ -159,6 +208,39 @@ describe('SinglePostCard', () => {
       expect(tagPanels[0]).toHaveAttribute('data-class-name', 'lg:hidden');
       // Desktop tags panel
       expect(tagPanels[1]).toHaveAttribute('data-class-name', 'hidden lg:flex');
+    });
+  });
+
+  describe('timestamp placement', () => {
+    it('passes bottom-left timestamp placement to PostHeader', () => {
+      render(<SinglePostCard postId={mockPostId} />);
+
+      expect(mockPostHeader).toHaveBeenCalledWith({
+        postId: mockPostId,
+        timeAgoPlacement: 'bottom-left',
+      });
+    });
+  });
+
+  describe('mobile layout fallback', () => {
+    it('uses inline layout on mobile with tags hidden by default', () => {
+      mockUseIsMobile.mockReturnValue(true);
+
+      render(<SinglePostCard postId={mockPostId} />);
+
+      expect(screen.getByTestId('clickable-tags-list')).toBeInTheDocument();
+      expect(screen.queryByTestId('post-tags-panel')).not.toBeInTheDocument();
+    });
+
+    it('shows tags panel only after clicking tag action on mobile', () => {
+      mockUseIsMobile.mockReturnValue(true);
+
+      render(<SinglePostCard postId={mockPostId} />);
+
+      fireEvent.click(screen.getByTestId('tag-action'));
+
+      expect(screen.queryByTestId('clickable-tags-list')).not.toBeInTheDocument();
+      expect(screen.getByTestId('post-tags-panel')).toBeInTheDocument();
     });
   });
 });

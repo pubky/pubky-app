@@ -24,7 +24,7 @@ export function ProfileProfile() {
 
   // Handle follow/unfollow for other users' profiles (with auth check)
   const { requireAuth } = Hooks.useRequireAuth();
-  const { toggleFollow, isLoading: isFollowLoading } = Hooks.useFollowUser();
+  const { toggleFollow, isLoading: isFollowLoading, loadingAction: followLoadingAction } = Hooks.useFollowUser();
   const { isFollowing } = Hooks.useIsFollowing(pubky ?? '');
 
   // Get tags for the user
@@ -53,6 +53,7 @@ export function ProfileProfile() {
     ...actions,
     onFollowToggle: handleFollowToggle,
     isFollowLoading,
+    followLoadingAction,
     isFollowing,
   };
 

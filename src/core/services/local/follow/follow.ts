@@ -56,9 +56,7 @@ export class LocalFollowService {
               ops.push(Core.UserRelationshipsModel.update(followee, { following: true }));
             }
           } else {
-            ops.push(
-              Core.UserRelationshipsModel.create({ id: followee, following: true, followed_by: false, muted: false }),
-            );
+            ops.push(Core.UserRelationshipsModel.create({ id: followee, following: true, followed_by: false }));
           }
 
           await Promise.all(ops);
@@ -129,9 +127,7 @@ export class LocalFollowService {
               ops.push(Core.UserRelationshipsModel.update(followee, { following: false }));
             }
           } else {
-            ops.push(
-              Core.UserRelationshipsModel.create({ id: followee, following: false, followed_by: false, muted: false }),
-            );
+            ops.push(Core.UserRelationshipsModel.create({ id: followee, following: false, followed_by: false }));
           }
 
           await Promise.all(ops);

@@ -3,16 +3,18 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import { MutedUsers } from './MutedUsers';
 
-const { mockUseMutedUsers, mockUseBulkUserAvatars, mockUseMuteUser } = vi.hoisted(() => ({
+const { mockUseMutedUsers, mockUseBulkUserAvatars, mockUseMuteUser, mockUseIsMobile } = vi.hoisted(() => ({
   mockUseMutedUsers: vi.fn(),
   mockUseBulkUserAvatars: vi.fn(),
   mockUseMuteUser: vi.fn(),
+  mockUseIsMobile: vi.fn(() => false),
 }));
 
 vi.mock('@/hooks', () => ({
   useMutedUsers: () => mockUseMutedUsers(),
   useBulkUserAvatars: (ids: string[]) => mockUseBulkUserAvatars(ids),
   useMuteUser: () => mockUseMuteUser(),
+  useIsMobile: () => mockUseIsMobile(),
 }));
 
 describe('MutedUsers', () => {
@@ -21,6 +23,7 @@ describe('MutedUsers', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     mockToggleMute.mockResolvedValue(undefined);
+    mockUseIsMobile.mockReturnValue(false);
     mockUseMutedUsers.mockReturnValue({
       mutedUserIds: [],
       mutedUserIdSet: new Set(),
@@ -42,6 +45,24 @@ describe('MutedUsers', () => {
   it('renders with default props', () => {
     render(<MutedUsers />);
     expect(screen.getByText('Muted users')).toBeInTheDocument();
+  });
+
+  it('wraps muted users content in section card on desktop', () => {
+    const { container } = render(<MutedUsers />);
+    const mutedUsersRoot = container.querySelector('[data-cy="muted-users-root"]');
+
+    expect(mutedUsersRoot).toBeInTheDocument();
+    expect(mutedUsersRoot?.closest('.border.border-border.p-6')).toBeInTheDocument();
+  });
+
+  it('does not wrap muted users content in section card on mobile', () => {
+    mockUseIsMobile.mockReturnValue(true);
+
+    const { container } = render(<MutedUsers />);
+    const mutedUsersRoot = container.querySelector('[data-cy="muted-users-root"]');
+
+    expect(mutedUsersRoot).toBeInTheDocument();
+    expect(mutedUsersRoot?.closest('.border.border-border.p-6')).not.toBeInTheDocument();
   });
 
   it('renders empty state when no muted users', () => {
@@ -151,6 +172,7 @@ describe('MutedUsers', () => {
 describe('MutedUsers - Snapshots', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    mockUseIsMobile.mockReturnValue(false);
     mockUseMuteUser.mockReturnValue({
       toggleMute: vi.fn(),
       isLoading: false,

@@ -35,7 +35,7 @@ export const ProfileNavigation = ({
       {!hiddenBackButton && (
         <Atoms.Button
           size="lg"
-          className="w-full flex-1 rounded-full md:flex-0"
+          className="rounded-full"
           variant={'secondary'}
           onClick={onHandleBackButton}
           disabled={backButtonDisabled}
@@ -48,7 +48,7 @@ export const ProfileNavigation = ({
         <Atoms.Button
           id="profile-finish-btn"
           size="lg"
-          className={Libs.cn('w-full flex-1 rounded-full md:flex-0', hiddenBackButton && 'ml-auto w-auto flex-none')}
+          className={Libs.cn('w-full rounded-full sm:w-auto')}
           onClick={onHandleContinueButton}
           disabled={continueButtonDisabled}
         >

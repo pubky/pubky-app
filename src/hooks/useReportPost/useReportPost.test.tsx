@@ -43,13 +43,13 @@ vi.mock('@/core', async (importOriginal) => {
   };
 });
 
-// Mock toast
-const mockToast = vi.fn();
+// Mock toast helpers
+const mockShowErrorToast = vi.fn();
 vi.mock('@/molecules', async (importOriginal) => {
   const actual = await importOriginal<typeof import('@/molecules')>();
   return {
     ...actual,
-    useToast: () => ({ toast: mockToast }),
+    showErrorToast: (params: { title?: string; description: string }) => mockShowErrorToast(params),
   };
 });
 
@@ -300,9 +300,8 @@ describe('useReportPost', () => {
         expect(result.current.isSuccess).toBe(false);
       });
 
-      expect(mockToast).toHaveBeenCalledWith(
+      expect(mockShowErrorToast).toHaveBeenCalledWith(
         expect.objectContaining({
-          title: 'Error',
           description: 'Server error',
         }),
       );
@@ -387,9 +386,8 @@ describe('useReportPost', () => {
 
       expect(result.current.isSubmitting).toBe(false);
       expect(result.current.isSuccess).toBe(false);
-      expect(mockToast).toHaveBeenCalledWith(
+      expect(mockShowErrorToast).toHaveBeenCalledWith(
         expect.objectContaining({
-          title: 'Error',
           description: 'User profile not loaded. Please try again.',
         }),
       );
@@ -421,9 +419,8 @@ describe('useReportPost', () => {
 
       expect(result.current.isSubmitting).toBe(false);
       expect(result.current.isSuccess).toBe(false);
-      expect(mockToast).toHaveBeenCalledWith(
+      expect(mockShowErrorToast).toHaveBeenCalledWith(
         expect.objectContaining({
-          title: 'Error',
           description: 'User profile not loaded. Please try again.',
         }),
       );
@@ -455,10 +452,9 @@ describe('useReportPost', () => {
         expect(result.current.isSuccess).toBe(false);
       });
 
-      expect(mockToast).toHaveBeenCalledWith(
+      expect(mockShowErrorToast).toHaveBeenCalledWith(
         expect.objectContaining({
-          title: 'Error',
-          description: 'Failed to submit report. Please try again.',
+          description: 'Network error',
         }),
       );
     });

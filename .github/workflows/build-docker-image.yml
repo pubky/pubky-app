@@ -33,6 +33,11 @@ on:
         required: false
         type: string
 
+      commit_sha:
+        description: 'Commit SHA to checkout'
+        required: false
+        type: string
+
   workflow_call:
     outputs:
       image_tag:
@@ -62,6 +67,11 @@ on:
         required: false
         type: string
 
+      commit_sha:
+        description: 'Commit SHA to checkout'
+        required: false
+        type: string
+
 env:
   registry: 'europe-west6-docker.pkg.dev/infra-464608/synonym-private-repo'
 
@@ -76,6 +86,8 @@ jobs:
     steps:
       - name: Checkout this repository
         uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.commit_sha || github.sha }}
 
       - name: Set HEAD commit hash
         id: sha_tag
@@ -111,6 +123,8 @@ jobs:
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.commit_sha || github.sha }}
 
       - name: Login to registry
         uses: pubky/ci-workflows/.github/actions/docker/registry_login@main

@@ -54,8 +54,8 @@ export type TGetOrFetchNotificationsResponse = TFlatNotifications & {
 
 export type TPersistAndSummarizeParams = {
   notifications: Core.NexusNotification[];
-  flatNotifications: Core.TFlatNotificationList;
   lastRead: number;
+  flatNotifications?: Core.TFlatNotificationList;
 };
 
 export type TFetchMissingEntitiesParams = {

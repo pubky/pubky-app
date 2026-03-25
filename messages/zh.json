@@ -75,14 +75,21 @@
     "links": "链接",
     "tags": "标签",
     "posts": "帖子",
-    "avatar": "头像"
+    "avatar": "头像",
+    "threadTree": {
+      "expandAllReplies": "展开所有回复",
+      "collapseAllReplies": "收起所有回复",
+      "moreReplies": "还有{count}条回复"
+    }
   },
   "header": {
     "home": "首页",
     "hot": "热门",
     "bookmarks": "书签",
     "settings": "设置",
-    "signIn": "登录"
+    "newHere": "新来?",
+    "signIn": "登录",
+    "feed": "动态"
   },
   "settings": {
     "title": "设置",
@@ -251,7 +258,7 @@
     "footer": {
       "agreement": "创建 <pubky>Pubky</pubky> 账户即表示您同意",
       "andConfirmAge": "，并确认您",
-      "copyright": "Pubky 由 <pubkyCore>Pubky Core</pubkyCore> 驱动，由 Synonym Software, S.A. DE C.V. 用爱和奉献精神打造。©2025。保留所有权利。"
+      "copyright": "Pubky 由 <pubkyCore>Pubky Core</pubkyCore> 驱动，由 Synonym Software, S.A. DE C.V. 用爱和奉献精神打造。©2026。保留所有权利。"
     },
     "scan": {
       "titleMobile": "点击<highlight>授权。</highlight>",
@@ -259,21 +266,44 @@
       "subtitle": "打开 Pubky Ring，创建一个 pubky，然后扫描二维码。",
       "generating": "正在生成二维码...",
       "generatingShort": "生成中...",
+
+      "expired": "已过期",
+
+      "openingRing": "正在打开 Pubky Ring...",
+
       "authorize": "使用 Pubky Ring 授权",
       "authorizeSub": "使用 <pubkyRing>Pubky Ring</pubkyRing> 或任何其他由 <pubkyCore>Pubky Core</pubkyCore> 驱动的密钥链。",
       "linkFailed": "无法连接到 Pubky Ring 签名应用",
       "tryAgain": "请重试。"
+    },
+    "authExpired": {
+      "titleDesktop": "二维码已过期",
+      "descriptionDesktop": "此二维码已失效。刷新以获取新的二维码。",
+      "titleMobile": "授权会话已过期",
+      "descriptionMobile": "你的授权会话已失效。请刷新以生成新的会话并继续。",
+      "refresh": "刷新"
     },
     "signIn": {
       "title": "登录 <highlight>Pubky。</highlight>",
       "subtitle": "使用 Pubky Ring 授权登录。",
       "generating": "正在生成二维码...",
       "generatingShort": "生成中...",
+
+      "expired": "已过期",
+
+      "openingRing": "正在打开 Pubky Ring...",
+
       "authorize": "使用 Pubky Ring 授权",
       "linkCopied": "链接已复制",
       "linkCopiedDescription": "认证链接已复制到剪贴板。",
       "linkFailed": "无法连接到 Pubky Ring 签名应用",
       "tryAgain": "请重试。",
+      "authInitFailedTitle": "登录失败，请重试。",
+      "authInitFailedDescription": "无法完成 Pubky Ring 授权，请重试。",
+      "authNotCompletedTitle": "授权未完成",
+      "authNotCompletedDescription": "签名器未完成授权，请重试。",
+      "qrGenerationFailedTitle": "二维码生成失败",
+      "qrGenerationFailedDescription": "无法生成登录二维码。请刷新后重试。",
       "recoveryHint": "无法使用 <pubkyRing>Pubky Ring</pubkyRing> 登录？使用恢复短语或加密文件恢复您的账户。",
       "verifyingAccount": "验证账户",
       "loadingData": "加载您的数据",
@@ -598,6 +628,29 @@
       "urlField": "网址",
       "urlPlaceholder": "https://twitter.com/satoshi",
       "saveButton": "保存链接"
+    },
+    "customFeed": {
+      "createTitle": "创建信息流",
+      "editTitle": "编辑信息流",
+      "feedName": "信息流名称",
+      "feedNamePlaceholder": "不是你的密钥...",
+      "reach": "范围",
+      "reachPlaceholder": "选择范围",
+      "sort": "排序",
+      "sortPlaceholder": "选择排序方式",
+      "layout": "布局",
+      "layoutPlaceholder": "选择布局",
+      "content": "内容",
+      "contentPlaceholder": "选择内容类型",
+      "filterTags": "按内容标签筛选",
+      "saveFeed": "保存信息流",
+      "deleteFeed": "删除信息流",
+      "feedCreated": "信息流 {name} 已创建！",
+      "feedCreateError": "无法创建信息流，请重试或联系支持。",
+      "feedEdited": "信息流 {name} 已编辑！",
+      "feedEditError": "无法编辑信息流，请重试或联系支持。",
+      "feedDeleted": "信息流 {name} 已删除！",
+      "feedDeleteError": "无法删除信息流，请重试或联系支持。"
     }
   },
   "sidebar": {
@@ -819,6 +872,7 @@
     "success": "成功",
     "error": "错误",
     "errors": "错误",
+    "genericErrorTitle": "糟糕！出了点问题！",
     "post": {
       "replyPosted": "回复已发布",
       "replyPostedDesc": "您的回复已成功发布。",
@@ -907,6 +961,10 @@
       "userIdRequired": "用户 ID 为必填项",
       "loginRequired": "您必须登录才能添加标签",
       "alreadyAdded": "您已添加此标签",
+      "added": "标签已添加",
+      "addedDesc": "已成功添加“{label}”。",
+      "removed": "标签已移除",
+      "removedDesc": "已成功移除“{label}”。",
       "addFailed": "添加标签失败",
       "addFailedDesc": "无法添加 \"{label}\"。请重试。",
       "removeFailed": "移除标签失败",
@@ -975,7 +1033,8 @@
     "layout": {
       "title": "布局",
       "columns": "多列",
-      "wide": "宽屏"
+      "wide": "宽屏",
+      "visual": "视觉"
     },
     "content": {
       "title": "内容",
@@ -998,7 +1057,7 @@
     "hotTags": "热门标签",
     "activeUsers": "活跃用户",
     "trendingPosts": "热门帖子",
-    "postsCount": "{count} 条帖子",
+    "postsCount": "本月 {count} 条帖子",
     "failedToLoadUsers": "加载用户失败",
     "failedToLoadTags": "加载标签失败",
     "noUsersToShow": "暂无用户显示",
@@ -1121,5 +1180,15 @@
     "pullToRefresh": "下拉刷新",
     "releaseToRefresh": "释放刷新",
     "refreshing": "刷新中..."
+  },
+  "markdownEditor": {
+    "emoji": "表情",
+    "richText": "富文本",
+    "markdown": "Markdown",
+    "clearToSwitch": "清除内容以切换模式",
+    "placeholder": "开始创作你的杰作",
+    "toolbarAriaLabel": "Markdown 编辑工具栏",
+    "warningApproaching": "您即将达到最大字符数限制。",
+    "warningReached": "您已达到最大字符数限制。"
   }
 }

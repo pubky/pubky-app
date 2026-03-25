@@ -1,14 +1,19 @@
 'use client';
 
-import { useLiveQuery } from 'dexie-react-hooks';
 import * as Core from '@/core';
 import * as Hooks from '@/hooks';
 import * as Libs from '@/libs';
+import { useLocalFirstQuery } from '@/hooks/useLocalFirstQuery';
 import type { UseRepostInfoResult } from './useRepostInfo.types';
 
 /**
  * Hook to get repost information for a post.
  * Checks if a post is a repost and identifies who reposted it.
+ * If the post relationships are not in cache, it will trigger a fetch from Nexus.
+ *
+ * Uses the local-first query pattern (ADR-0011) via `useLocalFirstQuery`:
+ * 1. fetchFn (useEffect): Ensures data exists (fetch full entity from Nexus if missing)
+ * 2. queryFn (useLiveQuery): Reads current data reactively from local DB
  *
  * **Usage by Component:**
  * - **PostContent**: Uses `isRepost` and `originalPostId` to render repost preview
@@ -38,22 +43,16 @@ import type { UseRepostInfoResult } from './useRepostInfo.types';
 export function useRepostInfo(postId: string): UseRepostInfoResult {
   const { currentUserPubky } = Hooks.useCurrentUserProfile();
 
-  // Read relationships via controller (keeps UI layer from reaching into models directly)
-  const relationships = useLiveQuery(async () => {
-    try {
-      return await Core.PostController.getRelationships({ compositeId: postId });
-    } catch (error) {
-      Libs.Logger.error('[useRepostInfo] Failed to fetch post relationships', {
-        postId,
-        error,
-      });
-      return null;
-    }
-  }, [postId]);
+  // Read relationships via controller using local-first pattern
+  const { data: relationships, isLoading } = useLocalFirstQuery<Core.PostRelationshipsModelSchema>({
+    queryFn: () => Core.PostController.getRelationships({ compositeId: postId }),
+    fetchFn: () => Core.PostController.fetch({ compositeId: postId }),
+    deps: [postId],
+    enabled: !!postId,
+  });
 
   const isRepost = !!relationships?.reposted;
-  const isLoading = relationships === undefined;
-  const hasError = relationships === null && !isLoading;
+  const hasError = !!postId && relationships === null && !isLoading;
 
   // Extract original post ID from reposted URI
   let originalPostId: string | null = null;

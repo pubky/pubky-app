@@ -72,7 +72,7 @@ vi.mock('@/hooks', () => ({
 
 // Mock TimelineFeed context
 const mockPrependPosts = vi.fn();
-vi.mock('@/organisms/TimelineFeed/TimelineFeed', () => ({
+vi.mock('@/organisms/Timeline/Feed/TimelineFeed', () => ({
   useTimelineFeedContext: vi.fn(() => ({
     prependPosts: mockPrependPosts,
     removePosts: vi.fn(),

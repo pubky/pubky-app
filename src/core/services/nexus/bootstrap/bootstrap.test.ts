@@ -46,7 +46,6 @@ describe('NexusBootstrapService', () => {
         relationship: {
           following: false,
           followed_by: false,
-          muted: false,
         },
       },
     ],
@@ -105,7 +104,6 @@ describe('NexusBootstrapService', () => {
           relationship: {
             following: false,
             followed_by: false,
-            muted: false,
           },
         },
         tags: [

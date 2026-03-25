@@ -2,27 +2,30 @@
 
 exports[`HeaderButtonSignIn - Snapshots > matches snapshot for default HeaderButtonSignIn 1`] = `
 <button
+  class="gap-2"
+  data-testid="header-sign-in-btn"
   data-variant="secondary"
   id="header-sign-in-btn"
 >
   <span
-    class="mr-2 h-4 w-4"
-    data-testid="log-in-icon"
+    class="size-4"
+    data-testid="user-round-plus-icon"
   />
-  Sign in
+  New here?
 </button>
 `;
 
 exports[`HeaderButtonSignIn - Snapshots > matches snapshot with custom className 1`] = `
 <button
   class="custom-class"
+  data-testid="header-sign-in-btn"
   data-variant="secondary"
   id="header-sign-in-btn"
 >
   <span
-    class="mr-2 h-4 w-4"
-    data-testid="log-in-icon"
+    class="size-4"
+    data-testid="user-round-plus-icon"
   />
-  Sign in
+  New here?
 </button>
 `;

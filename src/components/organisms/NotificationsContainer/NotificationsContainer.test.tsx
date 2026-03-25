@@ -170,7 +170,7 @@ describe('NotificationsContainer', () => {
     expect(screen.getByTestId('spinner')).toBeInTheDocument();
   });
 
-  it('calls markAllAsRead on unmount', () => {
+  it('calls markAllAsRead on mount and not on unmount', () => {
     const markAllAsRead = vi.fn();
     vi.mocked(Hooks.useNotifications).mockReturnValue({
       notifications: [
@@ -194,9 +194,9 @@ describe('NotificationsContainer', () => {
       isNotificationUnread: vi.fn(() => false),
     });
     const { unmount } = render(<NotificationsContainer />);
-    expect(markAllAsRead).not.toHaveBeenCalled();
+    expect(markAllAsRead).toHaveBeenCalledTimes(1);
     unmount();
-    expect(markAllAsRead).toHaveBeenCalled();
+    expect(markAllAsRead).toHaveBeenCalledTimes(1);
   });
 
   it('matches snapshot', () => {

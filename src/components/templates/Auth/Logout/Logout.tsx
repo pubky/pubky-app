@@ -13,9 +13,11 @@ export function Logout() {
   }, []);
 
   return (
-    <Atoms.Container size="container" className="px-6">
+    <Atoms.Container size="container" className="h-screen-without-page-header-auth-pages gap-0 px-6">
       <Molecules.LogoutContent />
-      <Molecules.LogoutNavigation />
+      <div className="onboarding-nav mt-auto w-full lg:mt-0">
+        <Molecules.LogoutNavigation />
+      </div>
     </Atoms.Container>
   );
 }

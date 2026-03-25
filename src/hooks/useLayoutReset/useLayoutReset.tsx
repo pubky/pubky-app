@@ -1,16 +1,20 @@
 'use client';
 
-import { useEffect } from 'react';
+import { useLayoutEffect } from 'react';
 import * as Core from '@/core';
 
 /**
- * Hook to reset layout to COLUMNS mode on component mount
- * Useful for pages that don't support WIDE layout mode
+ * Hook to reset unsupported wide-shell pages back to columns.
+ * Visual layout is intentionally preserved and handled via render-time fallback.
  */
 export function useLayoutReset() {
-  const { setLayout } = Core.useHomeStore();
+  const { layout, setLayout } = Core.useHomeStore();
 
-  useEffect(() => {
+  useLayoutEffect(() => {
+    if (layout !== Core.LAYOUT.WIDE) {
+      return;
+    }
+
     setLayout(Core.LAYOUT.COLUMNS);
-  }, [setLayout]);
+  }, [layout, setLayout]);
 }

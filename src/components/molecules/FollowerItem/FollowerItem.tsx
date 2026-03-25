@@ -77,7 +77,7 @@ export function FollowerItem({ follower, isFollowing = false, onFollow, isCurren
         {/* Desktop: Follow Button */}
         {isCurrentUser ? (
           <Atoms.Button
-            data-cy="profile-follower-item-me-btn"
+            data-cy="user-list-item-me-btn"
             variant="secondary"
             size="sm"
             className="hidden w-[110px] justify-center lg:flex"
@@ -88,7 +88,7 @@ export function FollowerItem({ follower, isFollowing = false, onFollow, isCurren
           </Atoms.Button>
         ) : (
           <Atoms.Button
-            data-cy="profile-follower-item-follow-toggle-btn"
+            data-cy="user-list-item-follow-toggle-btn"
             variant="secondary"
             size="sm"
             className="group hidden w-[110px] justify-center lg:flex"

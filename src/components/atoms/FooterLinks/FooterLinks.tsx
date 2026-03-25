@@ -1,5 +1,5 @@
 import { cn } from '@/libs';
-import { Typography } from '@/components';
+import { Typography } from '../Typography';
 
 export function FooterLinks({ children, className, ...props }: React.HTMLAttributes<HTMLParagraphElement>) {
   return (

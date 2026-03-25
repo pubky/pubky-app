@@ -2,6 +2,7 @@ import { render, screen, fireEvent } from '@testing-library/react';
 import { describe, it, expect, vi } from 'vitest';
 import { FilterContent } from './FilterContent';
 import { CONTENT, type ContentType } from '@/core/stores/home/home.types';
+import { VISUAL_DISABLED_CONTENT } from '@/organisms/Timeline/Feed/TimelineFeed/TimelineFeedVisual.helpers';
 
 // Mock libs - use actual utility functions and icons from lucide-react
 vi.mock('@/libs', async () => {
@@ -68,6 +69,47 @@ describe('FilterContent', () => {
     expect(onTabChange).toHaveBeenNthCalledWith(2, 'videos');
     expect(onTabChange).toHaveBeenNthCalledWith(3, 'files');
   });
+
+  it('renders all items as disabled when disabled prop is true', () => {
+    render(<FilterContent disabled />);
+
+    const labels = ['All', 'Posts', 'Articles', 'Images', 'Videos', 'Links', 'Files'];
+    labels.forEach((label) => {
+      expect(screen.getByLabelText(label)).toHaveAttribute('aria-disabled', 'true');
+    });
+  });
+
+  it('does not call onTabChange when disabled', () => {
+    const onTabChange = vi.fn();
+    render(<FilterContent disabled onTabChange={onTabChange} />);
+
+    fireEvent.click(screen.getByText('Images'));
+    fireEvent.click(screen.getByText('Videos'));
+    fireEvent.click(screen.getByText('Files'));
+
+    expect(onTabChange).not.toHaveBeenCalled();
+  });
+
+  it('items are not disabled by default', () => {
+    render(<FilterContent />);
+
+    const labels = ['All', 'Posts', 'Articles', 'Images', 'Videos', 'Links', 'Files'];
+    labels.forEach((label) => {
+      expect(screen.getByLabelText(label)).not.toHaveAttribute('aria-disabled', 'true');
+    });
+  });
+
+  it('disables only the requested tabs', () => {
+    render(<FilterContent disabledTabs={VISUAL_DISABLED_CONTENT} />);
+
+    expect(screen.getByLabelText('Posts')).toHaveAttribute('aria-disabled', 'true');
+    expect(screen.getByLabelText('Articles')).toHaveAttribute('aria-disabled', 'true');
+    expect(screen.getByLabelText('Links')).toHaveAttribute('aria-disabled', 'true');
+    expect(screen.getByLabelText('Files')).toHaveAttribute('aria-disabled', 'true');
+    expect(screen.getByLabelText('All')).not.toHaveAttribute('aria-disabled', 'true');
+    expect(screen.getByLabelText('Images')).not.toHaveAttribute('aria-disabled', 'true');
+    expect(screen.getByLabelText('Videos')).not.toHaveAttribute('aria-disabled', 'true');
+  });
 });
 
 describe('FilterContent - Snapshots', () => {
@@ -108,6 +150,11 @@ describe('FilterContent - Snapshots', () => {
 
   it('matches snapshot with Files content selected tab', () => {
     const { container } = render(<FilterContent selectedTab={CONTENT.FILES} />);
+    expect(container.firstChild).toMatchSnapshot();
+  });
+
+  it('matches snapshot with disabled state', () => {
+    const { container } = render(<FilterContent disabled />);
     expect(container.firstChild).toMatchSnapshot();
   });
 });

@@ -75,14 +75,21 @@
     "links": "Links",
     "tags": "Tags",
     "posts": "Posts",
-    "avatar": "Avatar"
+    "avatar": "Avatar",
+    "threadTree": {
+      "expandAllReplies": "Expand all replies",
+      "collapseAllReplies": "Collapse all replies",
+      "moreReplies": "{count, plural, one {# more reply} other {# more replies}}"
+    }
   },
   "header": {
     "home": "Home",
     "hot": "Hot",
     "bookmarks": "Bookmarks",
     "settings": "Settings",
-    "signIn": "Sign in"
+    "newHere": "New here?",
+    "signIn": "Sign in",
+    "feed": "Feed"
   },
   "settings": {
     "title": "Settings",
@@ -251,7 +258,7 @@
     "footer": {
       "agreement": "By creating a <pubky>Pubky</pubky> account, you agree to the",
       "andConfirmAge": ", and confirm you are",
-      "copyright": "Pubky is powered by <pubkyCore>Pubky Core</pubkyCore> and was built with love and dedication by Synonym Software, S.A. DE C.V. ©2025. All rights reserved."
+      "copyright": "Pubky is powered by <pubkyCore>Pubky Core</pubkyCore> and was built with love and dedication by Synonym Software, S.A. DE C.V. ©2026. All rights reserved."
     },
     "scan": {
       "titleMobile": "Tap to <highlight>Authorize.</highlight>",
@@ -259,21 +266,38 @@
       "subtitle": "Open Pubky Ring, create a pubky, and scan the QR.",
       "generating": "Generating QR Code...",
       "generatingShort": "Generating...",
+      "expired": "Expired",
+      "openingRing": "Opening Pubky Ring...",
       "authorize": "Authorize with Pubky Ring",
       "authorizeSub": "Use <pubkyRing>Pubky Ring</pubkyRing> or any other <pubkyCore>Pubky Core</pubkyCore>–powered keychain.",
       "linkFailed": "Unable to link to signer application Pubky Ring",
       "tryAgain": "Please try again."
+    },
+    "authExpired": {
+      "titleDesktop": "QR code expired",
+      "descriptionDesktop": "This QR code is no longer active. Refresh to get a new one.",
+      "titleMobile": "Authorization session expired",
+      "descriptionMobile": "Your authorization session is no longer active. Refresh to generate a new one and continue.",
+      "refresh": "Refresh"
     },
     "signIn": {
       "title": "Sign in to <highlight>Pubky.</highlight>",
       "subtitle": "Authorize with Pubky Ring to sign in.",
       "generating": "Generating QR Code...",
       "generatingShort": "Generating...",
+      "expired": "Expired",
+      "openingRing": "Opening Pubky Ring...",
       "authorize": "Authorize with Pubky Ring",
       "linkCopied": "Link copied",
       "linkCopiedDescription": "Authentication link copied to clipboard.",
       "linkFailed": "Unable to link to signer application Pubky Ring",
       "tryAgain": "Please try again.",
+      "authInitFailedTitle": "Sign in failed. Please try again.",
+      "authInitFailedDescription": "Unable to complete authorization with Pubky Ring. Please try again.",
+      "authNotCompletedTitle": "Authorization was not completed",
+      "authNotCompletedDescription": "The signer did not complete authorization. Please try again.",
+      "qrGenerationFailedTitle": "QR code generation failed",
+      "qrGenerationFailedDescription": "Unable to generate sign-in QR code. Please refresh and try again.",
       "recoveryHint": "Not able to sign in with <pubkyRing>Pubky Ring</pubkyRing>? Use the recovery phrase or encrypted file to restore your account.",
       "verifyingAccount": "Verifying account",
       "loadingData": "Loading your data",
@@ -598,6 +622,29 @@
       "urlField": "URL",
       "urlPlaceholder": "https://twitter.com/satoshi",
       "saveButton": "Save link"
+    },
+    "customFeed": {
+      "createTitle": "Create Feed",
+      "editTitle": "Edit Feed",
+      "feedName": "Feed Name",
+      "feedNamePlaceholder": "Not your keys...",
+      "reach": "Reach",
+      "reachPlaceholder": "Select a reach",
+      "sort": "Sort",
+      "sortPlaceholder": "Select a sort",
+      "layout": "Layout",
+      "layoutPlaceholder": "Select a layout",
+      "content": "Content",
+      "contentPlaceholder": "Select content",
+      "filterTags": "Filter on Content Tags",
+      "saveFeed": "Save Feed",
+      "deleteFeed": "Delete Feed",
+      "feedCreated": "Feed {name} created!",
+      "feedCreateError": "Could not create feed, please try again or reach out to support.",
+      "feedEdited": "Feed {name} edited!",
+      "feedEditError": "Could not edit feed, please try again or reach out to support.",
+      "feedDeleted": "Feed {name} deleted!",
+      "feedDeleteError": "Could not delete feed, please try again or reach out to support."
     }
   },
   "sidebar": {
@@ -819,6 +866,7 @@
     "success": "Success",
     "error": "Error",
     "errors": "Errors",
+    "genericErrorTitle": "Uh oh! Something went wrong!",
     "post": {
       "replyPosted": "Reply posted",
       "replyPostedDesc": "Your reply has been posted successfully.",
@@ -907,6 +955,10 @@
       "userIdRequired": "User ID is required",
       "loginRequired": "You must be logged in to add tags",
       "alreadyAdded": "You have already added this tag",
+      "added": "Tag added",
+      "addedDesc": "\"{label}\" was added successfully.",
+      "removed": "Tag removed",
+      "removedDesc": "\"{label}\" was removed successfully.",
       "addFailed": "Failed to add tag",
       "addFailedDesc": "Could not add \"{label}\". Please try again.",
       "removeFailed": "Failed to remove tag",
@@ -981,7 +1033,8 @@
     "layout": {
       "title": "Layout",
       "columns": "Columns",
-      "wide": "Wide"
+      "wide": "Wide",
+      "visual": "Visual"
     },
     "content": {
       "title": "Content",
@@ -1004,7 +1057,7 @@
     "hotTags": "Hot tags",
     "activeUsers": "Active users",
     "trendingPosts": "Trending posts",
-    "postsCount": "{count} posts",
+    "postsCount": "{count} posts this month",
     "failedToLoadUsers": "Failed to load users",
     "failedToLoadTags": "Failed to load tags",
     "noUsersToShow": "No users to show",
@@ -1127,5 +1180,15 @@
     "pullToRefresh": "Pull to refresh",
     "releaseToRefresh": "Release to refresh",
     "refreshing": "Refreshing..."
+  },
+  "markdownEditor": {
+    "emoji": "Emoji",
+    "richText": "Rich Text",
+    "markdown": "Markdown",
+    "clearToSwitch": "Clear content to switch modes",
+    "placeholder": "Start writing your masterpiece",
+    "toolbarAriaLabel": "Markdown editing toolbar",
+    "warningApproaching": "You're approaching the maximum character limit.",
+    "warningReached": "You've reached the maximum character limit."
   }
 }

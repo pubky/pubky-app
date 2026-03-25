@@ -26,6 +26,7 @@ coverage/
 .vscode/
 .idea/
 .cursor/
+.claude/
 
 # AI generated files
 .ai-reviews/

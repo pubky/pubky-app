@@ -24,9 +24,10 @@ import * as Core from '@/core';
  * }
  * ```
  */
-export function useBookmarksStreamId(): Core.PostStreamTypes {
+export function useBookmarksStreamId(contentOverride?: Core.ContentType): Core.PostStreamTypes {
   const sort = Core.useHomeStore((state) => state.sort);
   const content = Core.useHomeStore((state) => state.content);
+  const effectiveContent = contentOverride ?? content;
 
   /**
    * Mapping from Sort + Content filters to Bookmark stream types.
@@ -55,8 +56,8 @@ export function useBookmarksStreamId(): Core.PostStreamTypes {
       },
     };
 
-    return BOOKMARK_STREAM_MAP[sort][content];
-  }, [sort, content]);
+    return BOOKMARK_STREAM_MAP[sort][effectiveContent];
+  }, [sort, effectiveContent]);
 
   return streamId;
 }

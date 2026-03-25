@@ -52,6 +52,34 @@ describe('FilterSort', () => {
     expect(mockOnTabChange).toHaveBeenCalledTimes(1);
   });
 
+  it('renders all items as disabled when disabled prop is true', () => {
+    render(<FilterSort disabled />);
+
+    const labels = ['Recent', 'Popularity'];
+    labels.forEach((label) => {
+      expect(screen.getByLabelText(label)).toHaveAttribute('aria-disabled', 'true');
+    });
+  });
+
+  it('does not call onTabChange when disabled', () => {
+    const mockOnTabChange = vi.fn();
+    render(<FilterSort disabled onTabChange={mockOnTabChange} />);
+
+    fireEvent.click(screen.getByText('Recent'));
+    fireEvent.click(screen.getByText('Popularity'));
+
+    expect(mockOnTabChange).not.toHaveBeenCalled();
+  });
+
+  it('items are not disabled by default', () => {
+    render(<FilterSort />);
+
+    const labels = ['Recent', 'Popularity'];
+    labels.forEach((label) => {
+      expect(screen.getByLabelText(label)).not.toHaveAttribute('aria-disabled', 'true');
+    });
+  });
+
   it('renders with different selected tabs', () => {
     const { rerender } = render(<FilterSort selectedTab={SORT.TIMELINE} />);
 
@@ -85,6 +113,11 @@ describe('FilterSort - Snapshots', () => {
 
   it('matches snapshot with Popularity content selected tab', () => {
     const { container } = render(<FilterSort selectedTab={SORT.ENGAGEMENT} />);
+    expect(container.firstChild).toMatchSnapshot();
+  });
+
+  it('matches snapshot with disabled state', () => {
+    const { container } = render(<FilterSort disabled />);
     expect(container.firstChild).toMatchSnapshot();
   });
 });

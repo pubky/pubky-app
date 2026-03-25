@@ -340,12 +340,12 @@ exports[`PostMain - Snapshots > matches snapshot with isReply false 1`] = `
 
 exports[`PostMain - Snapshots > matches snapshot with isReply true 1`] = `
 <div
-  data-class-name="relative flex min-w-0 cursor-pointer"
+  data-class-name="relative flex min-w-0 cursor-pointer pl-3"
   data-override-defaults="true"
   data-testid="container"
 >
   <div
-    data-class-name="w-3 shrink-0"
+    data-class-name="absolute top-0 bottom-0 left-0 w-3"
     data-override-defaults="true"
     data-testid="container"
   >

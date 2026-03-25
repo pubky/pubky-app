@@ -2,7 +2,7 @@
 
 exports[`ProfilePageContainer > matches snapshot 1`] = `
 <div
-  data-actions-count="8"
+  data-actions-count="9"
   data-active-page="notifications"
   data-filter-bar-page="notifications"
   data-is-loading="false"

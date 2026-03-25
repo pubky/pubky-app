@@ -49,12 +49,6 @@ export function FeedbackCard() {
                 fallbackClassName="text-sm"
               />
             </Atoms.Container>
-            <Atoms.Container
-              overrideDefaults={true}
-              className="min-w-0 flex-1 truncate text-base font-bold text-foreground"
-            >
-              {name}
-            </Atoms.Container>
           </Atoms.Container>
 
           <Atoms.Button

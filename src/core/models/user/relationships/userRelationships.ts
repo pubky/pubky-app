@@ -11,13 +11,11 @@ export class UserRelationshipsModel
 
   following: boolean;
   followed_by: boolean;
-  muted: boolean;
 
   constructor(userRelationships: Core.UserRelationshipsModelSchema) {
     super(userRelationships);
     this.following = userRelationships.following;
     this.followed_by = userRelationships.followed_by;
-    this.muted = userRelationships.muted;
   }
 
   // Adapter function to convert NexusUserRelationship to UserRelationshipsModelSchema

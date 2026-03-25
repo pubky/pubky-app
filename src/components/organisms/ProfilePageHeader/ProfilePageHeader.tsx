@@ -8,6 +8,7 @@ import * as Organisms from '@/organisms';
 import * as Icons from '@/libs/icons';
 import * as Libs from '@/libs';
 import * as Types from './ProfilePageHeader.types';
+import { FOLLOW_ACTIONS } from '@/hooks/useFollowUser/useFollowUser.types';
 
 /**
  * ProfilePageHeader
@@ -32,6 +33,7 @@ export function ProfilePageHeader({ profile, actions, isOwnProfile = true, userI
     isLoggingOut,
     onFollowToggle,
     isFollowLoading,
+    followLoadingAction,
     isFollowing,
   } = actions;
 
@@ -44,6 +46,17 @@ export function ProfilePageHeader({ profile, actions, isOwnProfile = true, userI
 
   const formattedPublicKey = Libs.formatPublicKey({ key: publicKey });
   const displayEmoji = Libs.extractEmojiFromStatus(status || '', emoji);
+  const getLoadingFollowText = () => {
+    if (followLoadingAction === FOLLOW_ACTIONS.UNFOLLOW) {
+      return t('unfollowing');
+    }
+
+    if (followLoadingAction === FOLLOW_ACTIONS.FOLLOW) {
+      return t('followingProgress');
+    }
+
+    return t('loading');
+  };
 
   return (
     <Atoms.Container
@@ -152,7 +165,7 @@ export function ProfilePageHeader({ profile, actions, isOwnProfile = true, userI
                   {isFollowLoading ? (
                     <>
                       <Icons.Loader2 className="size-4 animate-spin" />
-                      {isFollowing ? t('unfollowing') : t('followingProgress')}
+                      {getLoadingFollowText()}
                     </>
                   ) : isFollowing ? (
                     <>

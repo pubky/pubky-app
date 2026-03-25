@@ -1,15 +1,16 @@
 'use client';
 
-import { useLiveQuery } from 'dexie-react-hooks';
 import * as Core from '@/core';
-import * as Libs from '@/libs';
+import { useLocalFirstQuery } from '@/hooks/useLocalFirstQuery';
 import type { UsePostCountsResult } from './usePostCounts.types';
 
 /**
  * Hook to get post counts from local database with live updates.
- * This is a lightweight hook that only reads from local cache - no network side effects.
+ * If the post counts are not in cache, it will trigger a fetch from Nexus.
  *
- * Use this when you need cached post counts (replies, reposts, bookmarks) without triggering network fetches.
+ * Uses the local-first query pattern (ADR-0011) via `useLocalFirstQuery`:
+ * 1. fetchFn (useEffect): Ensures data exists (fetch full entity from Nexus if missing)
+ * 2. queryFn (useLiveQuery): Reads current data reactively from local DB
  *
  * @param compositeId - Composite post ID in format "authorId:postId" (can be null/undefined)
  * @returns Post counts and loading state
@@ -22,22 +23,15 @@ import type { UsePostCountsResult } from './usePostCounts.types';
  * ```
  */
 export function usePostCounts(compositeId: string | null | undefined): UsePostCountsResult {
-  const postCounts = useLiveQuery(
-    async () => {
-      try {
-        if (!compositeId) return null;
-        return await Core.PostController.getCounts({ compositeId });
-      } catch (error) {
-        Libs.Logger.error('[usePostCounts] Failed to query post counts', { compositeId, error });
-        return null;
-      }
-    },
-    [compositeId],
-    undefined,
-  );
+  const { data, isLoading } = useLocalFirstQuery<Core.PostCountsModelSchema>({
+    queryFn: () => Core.PostController.getCounts({ compositeId: compositeId! }),
+    fetchFn: () => Core.PostController.fetch({ compositeId: compositeId! }),
+    deps: [compositeId],
+    enabled: !!compositeId,
+  });
 
   return {
-    postCounts,
-    isLoading: postCounts === undefined,
+    postCounts: data,
+    isLoading,
   };
 }

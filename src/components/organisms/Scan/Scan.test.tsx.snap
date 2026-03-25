@@ -8,7 +8,7 @@ exports[`Scan Components - Snapshots > ScanContent - Snapshots > matches snapsho
   <div
     data-testid="page-header"
   >
-    <div
+    <h1
       data-size="large"
       data-testid="page-title"
     >
@@ -18,7 +18,7 @@ exports[`Scan Components - Snapshots > ScanContent - Snapshots > matches snapsho
       >
         QR Code.
       </span>
-    </div>
+    </h1>
     <div
       data-testid="page-subtitle"
     >
@@ -36,20 +36,80 @@ exports[`Scan Components - Snapshots > ScanContent - Snapshots > matches snapsho
       <div
         class="relative flex h-[220px] w-[220px] items-center justify-center rounded-lg bg-foreground p-4"
       >
-        <img
-          alt="Pubky Ring"
-          data-testid="next-image"
-          height="220"
-          src="/images/pubky-ring-qr-example.webp"
-          width="220"
-        />
-        <img
-          alt="Pubky Ring"
-          data-testid="next-image"
-          height="48"
-          src="/images/ring-logo.svg"
-          width="48"
-        />
+        <div
+          class="items-center gap-2"
+          data-testid="container"
+        >
+          <svg
+            aria-hidden="true"
+            class="lucide lucide-qr-code size-8 text-muted-foreground"
+            fill="none"
+            height="24"
+            stroke="currentColor"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+            stroke-width="2"
+            viewBox="0 0 24 24"
+            width="24"
+            xmlns="http://www.w3.org/2000/svg"
+          >
+            <rect
+              height="5"
+              rx="1"
+              width="5"
+              x="3"
+              y="3"
+            />
+            <rect
+              height="5"
+              rx="1"
+              width="5"
+              x="16"
+              y="3"
+            />
+            <rect
+              height="5"
+              rx="1"
+              width="5"
+              x="3"
+              y="16"
+            />
+            <path
+              d="M21 16h-3a2 2 0 0 0-2 2v3"
+            />
+            <path
+              d="M21 21v.01"
+            />
+            <path
+              d="M12 7v3a2 2 0 0 1-2 2H7"
+            />
+            <path
+              d="M3 12h.01"
+            />
+            <path
+              d="M12 3h.01"
+            />
+            <path
+              d="M12 16v.01"
+            />
+            <path
+              d="M16 12h1"
+            />
+            <path
+              d="M21 12v.01"
+            />
+            <path
+              d="M12 21v-1"
+            />
+          </svg>
+          <small
+            class="text-muted-foreground"
+            data-size="sm"
+            data-testid="typography"
+          >
+            Expired
+          </small>
+        </div>
       </div>
       <p
         class="text-lg font-semibold tracking-widest text-brand"
@@ -82,7 +142,7 @@ exports[`Scan Components - Snapshots > ScanHeader - Snapshots > matches snapshot
 <div
   data-testid="page-header"
 >
-  <div
+  <h1
     data-size="large"
     data-testid="page-title"
   >
@@ -92,7 +152,7 @@ exports[`Scan Components - Snapshots > ScanHeader - Snapshots > matches snapshot
     >
       QR Code.
     </span>
-  </div>
+  </h1>
   <div
     data-testid="page-subtitle"
   >
@@ -105,7 +165,7 @@ exports[`Scan Components - Snapshots > ScanHeader - Snapshots > matches snapshot
 <div
   data-testid="page-header"
 >
-  <div
+  <h1
     data-size="large"
     data-testid="page-title"
   >
@@ -115,7 +175,7 @@ exports[`Scan Components - Snapshots > ScanHeader - Snapshots > matches snapshot
     >
       Authorize.
     </span>
-  </div>
+  </h1>
   <div
     data-testid="page-subtitle"
   >

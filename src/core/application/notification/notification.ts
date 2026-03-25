@@ -21,7 +21,7 @@ export class NotificationApplication {
   }: Core.TNotificationApplicationNotificationsParams): Promise<Core.TFetchNotificationsResult> {
     const notifications = await Core.NexusUserService.notifications({ user_id: userId, end: lastPolledTimestamp });
     const flatNotifications = await this.fetchMissingEntities({ notifications, viewerId: userId });
-    return this.persistAndSummarize({ notifications, flatNotifications, lastRead });
+    return this.persistAndSummarize({ notifications, lastRead, flatNotifications });
   }
   /**
    * Updates the lastRead timestamp on the homeserver to mark all notifications as read.
@@ -87,9 +87,10 @@ export class NotificationApplication {
    */
   static async persistAndSummarize({
     notifications,
-    flatNotifications,
     lastRead,
+    flatNotifications: precomputed,
   }: Core.TPersistAndSummarizeParams): Promise<Core.TFetchNotificationsResult> {
+    const flatNotifications = precomputed ?? this.toSupportedFlatNotifications(notifications);
     await Core.LocalNotificationService.bulkSave({ flatNotifications });
     const unread = await Core.LocalNotificationService.countUnreadSince(lastRead);
     const nextPollCursor = notifications.length > 0 ? notifications[0].timestamp + 1 : undefined;
@@ -183,13 +184,7 @@ export class NotificationApplication {
     notifications,
     viewerId,
   }: Core.TFetchMissingEntitiesParams): Promise<Core.TFlatNotificationList> {
-    // Transforms Nexus notifications to flat notification format for persistence
-    const allFlatNotifications = notifications.map((n) => Core.NotificationNormalizer.toFlatNotification(n));
-
-    // Filter out unsupported notification types (e.g., lost_friend from the server)
-    // Only keep notifications with types defined in the NotificationType enum
-    const supportedTypes = Object.values(Core.NotificationType) as string[];
-    const flatNotifications = allFlatNotifications.filter((n) => supportedTypes.includes(n.type));
+    const flatNotifications = this.toSupportedFlatNotifications(notifications);
 
     const { relatedPostIds, relatedUserIds } = Core.LocalNotificationService.parseNotifications({ flatNotifications });
 
@@ -197,12 +192,26 @@ export class NotificationApplication {
     const notPersistedUserIds = await Core.LocalStreamUsersService.getNotPersistedUsersInCache(relatedUserIds);
 
     if (notPersistedPostIds.length > 0) {
-      await Core.PostStreamApplication.fetchMissingPostsFromNexus({ cacheMissPostIds: notPersistedPostIds, viewerId });
+      await Core.PostStreamApplication.fetchMissingPostsFromNexus({
+        cacheMissPostIds: notPersistedPostIds,
+        viewerId,
+      });
     }
 
     if (notPersistedUserIds.length > 0) {
       await Core.UserStreamApplication.fetchMissingUsersFromNexus({ cacheMissUserIds: notPersistedUserIds, viewerId });
     }
     return flatNotifications;
+  }
+
+  /**
+   * Transforms Nexus notifications to flat format and filters out unsupported types
+   * (e.g., lost_friend from the server).
+   */
+  static toSupportedFlatNotifications(notifications: Core.NexusNotification[]): Core.TFlatNotificationList {
+    const supportedTypes = Object.values(Core.NotificationType) as string[];
+    return notifications
+      .map((n) => Core.NotificationNormalizer.toFlatNotification(n))
+      .filter((n) => supportedTypes.includes(n.type));
   }
 }

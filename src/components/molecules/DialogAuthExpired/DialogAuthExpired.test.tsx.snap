@@ -1,0 +1,7 @@
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
+
+exports[`DialogAuthExpired - Snapshots > matches snapshot when closed 1`] = `null`;
+
+exports[`DialogAuthExpired - Snapshots > matches snapshot when open 1`] = `null`;
+
+exports[`DialogAuthExpired - Snapshots > matches snapshot when open with isLoading 1`] = `null`;

@@ -1,0 +1,216 @@
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
+
+exports[`CustomFeedFilters - Snapshots > matches snapshot for drawer variant with custom feed 1`] = `
+<div
+  class="flex flex-col gap-6"
+  data-testid="container"
+>
+  <div
+    data-default-selected-tab=""
+    data-disabled="true"
+    data-selected-tab="friends"
+    data-testid="filter-reach"
+  >
+    FilterReach
+  </div>
+  <div
+    data-default-selected-tab=""
+    data-disabled="true"
+    data-selected-tab="timeline"
+    data-testid="filter-sort"
+  >
+    FilterSort
+  </div>
+  <div
+    data-default-selected-tab=""
+    data-disabled="true"
+    data-selected-tab="columns"
+    data-testid="filter-layout"
+  >
+    FilterLayout
+  </div>
+  <div
+    data-default-selected-tab=""
+    data-disabled="true"
+    data-selected-tab="long"
+    data-testid="filter-content"
+  >
+    FilterContent
+  </div>
+</div>
+`;
+
+exports[`CustomFeedFilters - Snapshots > matches snapshot for drawer variant without custom feed 1`] = `
+<div
+  class="flex flex-col gap-6"
+  data-testid="container"
+>
+  <div
+    data-default-selected-tab=""
+    data-disabled="true"
+    data-selected-tab=""
+    data-testid="filter-reach"
+  >
+    FilterReach
+  </div>
+  <div
+    data-default-selected-tab=""
+    data-disabled="true"
+    data-selected-tab=""
+    data-testid="filter-sort"
+  >
+    FilterSort
+  </div>
+  <div
+    data-default-selected-tab=""
+    data-disabled="true"
+    data-selected-tab=""
+    data-testid="filter-layout"
+  >
+    FilterLayout
+  </div>
+  <div
+    data-default-selected-tab=""
+    data-disabled="true"
+    data-selected-tab=""
+    data-testid="filter-content"
+  >
+    FilterContent
+  </div>
+</div>
+`;
+
+exports[`CustomFeedFilters - Snapshots > matches snapshot for sidebar variant with custom feed 1`] = `
+<div
+  class="flex flex-col gap-6"
+  data-testid="container"
+>
+  <div
+    data-default-selected-tab=""
+    data-disabled="true"
+    data-selected-tab="following"
+    data-testid="filter-reach"
+  >
+    FilterReach
+  </div>
+  <div
+    data-default-selected-tab=""
+    data-disabled="true"
+    data-selected-tab="total_engagement"
+    data-testid="filter-sort"
+  >
+    FilterSort
+  </div>
+  <div
+    class="sticky top-[100px] flex w-full flex-col gap-6 self-start"
+    data-testid="container"
+  >
+    <div
+      data-default-selected-tab=""
+      data-disabled="true"
+      data-selected-tab="wide"
+      data-testid="filter-layout"
+    >
+      FilterLayout
+    </div>
+    <div
+      data-default-selected-tab=""
+      data-disabled="true"
+      data-selected-tab="images"
+      data-testid="filter-content"
+    >
+      FilterContent
+    </div>
+  </div>
+</div>
+`;
+
+exports[`CustomFeedFilters - Snapshots > matches snapshot for sidebar variant with null content 1`] = `
+<div
+  class="flex flex-col gap-6"
+  data-testid="container"
+>
+  <div
+    data-default-selected-tab=""
+    data-disabled="true"
+    data-selected-tab="all"
+    data-testid="filter-reach"
+  >
+    FilterReach
+  </div>
+  <div
+    data-default-selected-tab=""
+    data-disabled="true"
+    data-selected-tab="timeline"
+    data-testid="filter-sort"
+  >
+    FilterSort
+  </div>
+  <div
+    class="sticky top-[100px] flex w-full flex-col gap-6 self-start"
+    data-testid="container"
+  >
+    <div
+      data-default-selected-tab=""
+      data-disabled="true"
+      data-selected-tab="columns"
+      data-testid="filter-layout"
+    >
+      FilterLayout
+    </div>
+    <div
+      data-default-selected-tab=""
+      data-disabled="true"
+      data-selected-tab="all"
+      data-testid="filter-content"
+    >
+      FilterContent
+    </div>
+  </div>
+</div>
+`;
+
+exports[`CustomFeedFilters - Snapshots > matches snapshot for sidebar variant without custom feed 1`] = `
+<div
+  class="flex flex-col gap-6"
+  data-testid="container"
+>
+  <div
+    data-default-selected-tab=""
+    data-disabled="true"
+    data-selected-tab=""
+    data-testid="filter-reach"
+  >
+    FilterReach
+  </div>
+  <div
+    data-default-selected-tab=""
+    data-disabled="true"
+    data-selected-tab=""
+    data-testid="filter-sort"
+  >
+    FilterSort
+  </div>
+  <div
+    class="sticky top-[100px] flex w-full flex-col gap-6 self-start"
+    data-testid="container"
+  >
+    <div
+      data-default-selected-tab=""
+      data-disabled="true"
+      data-selected-tab=""
+      data-testid="filter-layout"
+    >
+      FilterLayout
+    </div>
+    <div
+      data-default-selected-tab=""
+      data-disabled="true"
+      data-selected-tab=""
+      data-testid="filter-content"
+    >
+      FilterContent
+    </div>
+  </div>
+</div>
+`;

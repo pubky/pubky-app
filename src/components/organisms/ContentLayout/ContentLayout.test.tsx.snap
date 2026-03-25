@@ -1,5 +1,133 @@
 // Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
 
+exports[`ContentLayout - Custom Feed Layout Override > matches snapshot when custom feed layout is columns 1`] = `
+<div>
+  <div
+    data-testid="mobile-header"
+  >
+    <button>
+      Left
+    </button>
+    <button>
+      Right
+    </button>
+  </div>
+  <div
+    class="container max-w-(--container-max-width) m-auto w-full px-6 pb-12 xl:px-0 pt-0"
+    data-testid="container"
+  >
+    <div
+      class="flex gap-6"
+      data-testid="container"
+    >
+      <div
+        class="hidden flex-col items-start justify-start gap-6 self-start lg:flex w-(--filter-bar-width) max-w-(--filter-bar-width) min-w-(--filter-bar-width) shrink-0 sticky overflow-x-hidden overflow-y-auto overscroll-contain"
+        data-testid="container"
+        style="top: 150px; max-height: calc(100svh - 48px + 150px);"
+      >
+        <div>
+          Left Sidebar
+        </div>
+      </div>
+      <div
+        class="mx-auto flex-col flex w-full min-w-0 flex-1 gap-6 lg:overflow-hidden"
+        data-testid="container"
+      >
+        <div>
+          Test Content
+        </div>
+      </div>
+      <div
+        class="hidden flex-col items-start justify-start gap-6 self-start lg:flex w-(--filter-bar-width) max-w-(--filter-bar-width) min-w-(--filter-bar-width) shrink-0 sticky overflow-x-hidden overflow-y-auto overscroll-contain"
+        data-testid="container"
+        style="top: 150px; max-height: calc(100svh - 48px + 150px);"
+      >
+        <div>
+          Right Sidebar
+        </div>
+      </div>
+    </div>
+  </div>
+  <div
+    data-testid="mobile-footer"
+  >
+    Mobile Footer
+  </div>
+</div>
+`;
+
+exports[`ContentLayout - Custom Feed Layout Override > matches snapshot when custom feed layout is wide 1`] = `
+<div>
+  <div
+    data-testid="mobile-header"
+  >
+    <button>
+      Left
+    </button>
+    <button>
+      Right
+    </button>
+  </div>
+  <button
+    data-testid="button-filters-left"
+  >
+    Filter Button 
+    left
+  </button>
+  <button
+    data-testid="button-filters-right"
+  >
+    Filter Button 
+    right
+  </button>
+  <div
+    class="container max-w-(--container-max-width) m-auto w-full px-6 pb-12 xl:px-0 pt-0"
+    data-testid="container"
+  >
+    <div
+      class="flex gap-6"
+      data-testid="container"
+    >
+      <div
+        class="mx-auto flex-col flex w-full min-w-0 flex-1 gap-6 lg:overflow-hidden"
+        data-testid="container"
+      >
+        <div>
+          Test Content
+        </div>
+      </div>
+    </div>
+  </div>
+  <div
+    data-testid="mobile-footer"
+  >
+    Mobile Footer
+  </div>
+  <div
+    data-open="false"
+    data-testid="side-drawer-left"
+  >
+    <button>
+      Close
+    </button>
+    <div>
+      Left Drawer
+    </div>
+  </div>
+  <div
+    data-open="false"
+    data-testid="side-drawer-right"
+  >
+    <button>
+      Close
+    </button>
+    <div>
+      Right Drawer
+    </div>
+  </div>
+</div>
+`;
+
 exports[`ContentLayout - Snapshots > matches snapshot with both sidebars hidden 1`] = `
 <div
   data-testid="mobile-header"
@@ -54,7 +182,7 @@ exports[`ContentLayout - Snapshots > matches snapshot with default props 1`] = `
 
 exports[`ContentLayout - Snapshots > matches snapshot with renderMobileHeader false 1`] = `
 <div
-  class="max-w-sm sm:max-w-xl md:max-w-3xl lg:max-w-5xl xl:max-w-6xl m-auto w-full px-6 pb-12 xl:px-0 pt-0"
+  class="container max-w-(--container-max-width) m-auto w-full px-6 pb-12 xl:px-0 pt-0"
   data-testid="container"
 >
   <div

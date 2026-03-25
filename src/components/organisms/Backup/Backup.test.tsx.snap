@@ -2,7 +2,6 @@
 
 exports[`BackupNavigation > matches snapshot for default BackupNavigation 1`] = `
 <div
-  class="py-6"
   data-testid="buttons-navigation"
 >
   <button

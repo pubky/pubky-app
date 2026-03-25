@@ -1,16 +1,16 @@
 'use client';
 
-import { useLiveQuery } from 'dexie-react-hooks';
 import * as Core from '@/core';
-import * as Libs from '@/libs';
+import { useLocalFirstQuery } from '@/hooks/useLocalFirstQuery';
 import * as Types from './useUserDetails.types';
 
 /**
  * Hook to get user details from local database with live updates.
- * This is a lightweight hook that only reads from local cache - no network side effects.
+ * If the user is not in cache, it will trigger a fetch from Nexus.
  *
- * Use this when you need cached user data without triggering network fetches.
- * For full profile fetching with network fallback, use `useUserProfile` instead.
+ * Uses the local-first query pattern (ADR-0011) via `useLocalFirstQuery`:
+ * 1. fetchFn (useEffect): Ensures data exists (fetch full entity from Nexus if missing)
+ * 2. queryFn (useLiveQuery): Reads current data reactively from local DB
  *
  * @param userId - The user ID to fetch details for (can be null/undefined)
  * @returns User details and loading state
@@ -23,22 +23,15 @@ import * as Types from './useUserDetails.types';
  * ```
  */
 export function useUserDetails(userId: string | null | undefined): Types.UseUserDetailsResult {
-  const userDetails = useLiveQuery(
-    async () => {
-      try {
-        if (!userId) return null;
-        return await Core.UserController.getDetails({ userId });
-      } catch (error) {
-        Libs.Logger.error('[useUserDetails] Failed to query user details', { userId, error });
-        return null;
-      }
-    },
-    [userId],
-    undefined,
-  );
+  const { data, isLoading } = useLocalFirstQuery<Core.NexusUserDetails>({
+    queryFn: () => Core.UserController.getDetails({ userId: userId! }),
+    fetchFn: () => Core.UserController.fetchDetails({ userId: userId! }),
+    deps: [userId],
+    enabled: !!userId,
+  });
 
   return {
-    userDetails,
-    isLoading: userDetails === undefined,
+    userDetails: data,
+    isLoading,
   };
 }

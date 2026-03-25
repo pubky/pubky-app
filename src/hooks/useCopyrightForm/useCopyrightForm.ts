@@ -3,12 +3,11 @@
 import { useForm, type FieldErrors } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as Molecules from '@/molecules';
+import { postJson } from '@/libs';
 import { copyrightFormSchema, type CopyrightFormData, type RoleField } from './useCopyrightForm.types';
 import { copyrightFormDefaultValues, COPYRIGHT_FORM_FIELDS } from './useCopyrightForm.constants';
 
 export function useCopyrightForm() {
-  const { toast } = Molecules.useToast();
-
   const form = useForm<CopyrightFormData>({
     resolver: zodResolver(copyrightFormSchema),
     defaultValues: copyrightFormDefaultValues,
@@ -17,24 +16,13 @@ export function useCopyrightForm() {
 
   const submitForm = async (data: CopyrightFormData) => {
     try {
-      const response = await fetch('/api/copyright', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(data),
-      });
-
-      if (!response.ok) {
-        const errorData = await response.json().catch(() => ({ error: 'Unknown error' }));
-        throw new Error(errorData.error || 'Failed to submit request');
-      }
+      await postJson('/api/copyright', data);
 
       form.reset();
-      toast({ title: 'Success', description: 'Request sent successfully' });
+      Molecules.toast({ title: 'Success', description: 'Request sent successfully' });
     } catch (error) {
-      toast({
-        title: 'Error',
+      Molecules.showErrorToast({
         description: error instanceof Error ? error.message : 'Error sending request',
-        className: 'destructive border-destructive bg-destructive text-destructive-foreground',
       });
     }
   };

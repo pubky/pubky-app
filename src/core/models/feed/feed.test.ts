@@ -4,7 +4,7 @@ import * as Core from '@/core';
 
 describe('FeedModel', () => {
   const createFeedSchema = (overrides: Partial<Core.FeedModelSchema> = {}): Core.FeedModelSchema => ({
-    id: 123,
+    id: 'feed-abc123',
     name: 'Bitcoin News',
     tags: ['bitcoin', 'lightning'],
     reach: PubkyAppFeedReach.All,
@@ -32,19 +32,6 @@ describe('FeedModel', () => {
       expect(saved!.id).toBe(feed.id);
       expect(saved!.name).toBe(feed.name);
       expect(saved!.tags).toEqual(feed.tags);
-    });
-
-    it('should create and return feed with auto-generated ID via createAndGet', async () => {
-      const feed = createFeedSchema();
-      // eslint-disable-next-line @typescript-eslint/no-unused-vars
-      const { id, ...feedWithoutId } = feed; // Omit id to trigger Dexie auto-increment
-
-      const created = await Core.FeedModel.createAndGet(feedWithoutId as Core.FeedModelSchema);
-
-      expect(created).toBeTruthy();
-      expect(created.id).toBeGreaterThan(0); // Auto-generated ID
-      expect(created.name).toBe(feed.name);
-      expect(created.tags).toEqual(feed.tags);
     });
 
     it('should update an existing feed', async () => {
@@ -79,7 +66,7 @@ describe('FeedModel', () => {
     });
 
     it('should return null when feed not found', async () => {
-      const found = await Core.FeedModel.findById(99999);
+      const found = await Core.FeedModel.findById('nonexistent');
 
       expect(found).toBeNull();
     });
@@ -98,7 +85,7 @@ describe('FeedModel', () => {
     });
 
     it('should throw RECORD_NOT_FOUND when feed does not exist', async () => {
-      await expect(Core.FeedModel.findByIdOrThrow(99999)).rejects.toMatchObject({
+      await expect(Core.FeedModel.findByIdOrThrow('nonexistent')).rejects.toMatchObject({
         name: 'AppError',
         code: 'RECORD_NOT_FOUND',
         category: 'database',
@@ -109,9 +96,9 @@ describe('FeedModel', () => {
   describe('findAllSorted', () => {
     it('should return feeds sorted by created_at descending (most recent first)', async () => {
       const now = Date.now();
-      const feed1 = createFeedSchema({ id: 1, name: 'Oldest', created_at: now - 2000 });
-      const feed2 = createFeedSchema({ id: 2, name: 'Middle', created_at: now - 1000 });
-      const feed3 = createFeedSchema({ id: 3, name: 'Newest', created_at: now });
+      const feed1 = createFeedSchema({ id: 'feed-1', name: 'Oldest', created_at: now - 2000 });
+      const feed2 = createFeedSchema({ id: 'feed-2', name: 'Middle', created_at: now - 1000 });
+      const feed3 = createFeedSchema({ id: 'feed-3', name: 'Newest', created_at: now });
 
       // Insert in random order
       await Core.FeedModel.upsert(feed2);
@@ -141,31 +128,10 @@ describe('FeedModel', () => {
     });
   });
 
-  describe('findByName', () => {
-    it('should find feed by name (case-insensitive)', async () => {
-      const feed = createFeedSchema({ name: 'Bitcoin News' });
-      await Core.FeedModel.upsert(feed);
-
-      const foundLower = await Core.FeedModel.findByName('bitcoin news');
-      const foundUpper = await Core.FeedModel.findByName('BITCOIN NEWS');
-      const foundMixed = await Core.FeedModel.findByName('Bitcoin News');
-
-      expect(foundLower).toBeTruthy();
-      expect(foundUpper).toBeTruthy();
-      expect(foundMixed).toBeTruthy();
-    });
-
-    it('should return undefined when name not found', async () => {
-      const found = await Core.FeedModel.findByName('Nonexistent Feed');
-
-      expect(found).toBeUndefined();
-    });
-  });
-
   describe('schema fields', () => {
     it('should store all feed configuration fields', async () => {
       const feed = createFeedSchema({
-        id: 1,
+        id: 'feed-complete',
         name: 'Complete Feed',
         tags: ['tag1', 'tag2', 'tag3'],
         reach: PubkyAppFeedReach.Following,

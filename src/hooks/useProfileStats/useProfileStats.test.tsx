@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { renderHook } from '@testing-library/react';
+import { renderHook, waitFor } from '@testing-library/react';
 import { useProfileStats } from './useProfileStats';
 import * as Core from '@/core';
 
@@ -96,7 +96,7 @@ vi.mock('@/core', async (importOriginal) => {
     ...actual,
     UserController: {
       getCounts: vi.fn().mockImplementation(() => Promise.resolve(mockUserCounts.current)),
-      getOrFetchCounts: vi.fn().mockImplementation(() => Promise.resolve(mockUserCounts.current)),
+      fetchCounts: vi.fn().mockImplementation(() => Promise.resolve(mockUserCounts.current)),
     },
     NotificationController: {
       getNotificationsCountsNow: vi.fn(() => mockNotificationsCount.current),
@@ -131,9 +131,15 @@ describe('useProfileStats', () => {
       expect(result.current.isLoading).toBe(true);
     });
 
-    it('returns zero stats and isLoading false when counts not found (null)', () => {
+    it('returns zero stats and isLoading false when counts not found (null) after fetch settles', async () => {
       setMockUserCounts(null);
       const { result } = renderHook(() => useProfileStats('test-user-id'));
+
+      // Wait for fetchFn (fetchCounts) to settle — isLoading stays true
+      // while the fetch is in-flight, then becomes false once it resolves.
+      await waitFor(() => {
+        expect(result.current.isLoading).toBe(false);
+      });
 
       expect(result.current.stats.posts).toBe(0);
       expect(result.current.stats.replies).toBe(0);
@@ -142,7 +148,6 @@ describe('useProfileStats', () => {
       expect(result.current.stats.friends).toBe(0);
       expect(result.current.stats.uniqueTags).toBe(0);
       expect(result.current.stats.notifications).toBe(0);
-      expect(result.current.isLoading).toBe(false);
     });
 
     it('returns correct stats when user counts exist', () => {
@@ -254,11 +259,15 @@ describe('useProfileStats', () => {
       expect(result.current.isLoading).toBe(true);
     });
 
-    it('isLoading is false when counts not found (null)', () => {
+    it('isLoading is false when counts not found (null) after fetch settles', async () => {
       setMockUserCounts(null);
       const { result } = renderHook(() => useProfileStats('test-user-id'));
 
-      expect(result.current.isLoading).toBe(false);
+      // isLoading stays true while fetchFn is in-flight, then becomes false
+      // once the fetch settles and data is still null (genuinely not found).
+      await waitFor(() => {
+        expect(result.current.isLoading).toBe(false);
+      });
     });
 
     it('isLoading is false when user counts are available', () => {
@@ -338,51 +347,24 @@ describe('useProfileStats', () => {
     it('calls UserController.getCounts with correct userId', () => {
       renderHook(() => useProfileStats('test-user-id'));
 
-      // UserController.getCounts should be called with object parameter
+      // UserController.getCounts should be called with object parameter (queryFn)
       expect(Core.UserController.getCounts).toHaveBeenCalledWith({ userId: 'test-user-id' });
     });
-  });
 
-  describe('Fetch fallback behavior', () => {
-    it('calls getOrFetchCounts when local cache returns null', () => {
-      setMockUserCounts(null);
+    it('does not call UserController.fetchCounts when data is cached (cache hit optimization)', () => {
+      // mockUserCounts.current is non-null by default → useLiveQuery returns non-null data
+      // → useLocalFirstQuery skips fetchFn (Phase 1 early-return optimization)
       renderHook(() => useProfileStats('test-user-id'));
 
-      expect(Core.UserController.getOrFetchCounts).toHaveBeenCalledWith({ userId: 'test-user-id' });
+      expect(Core.UserController.fetchCounts).not.toHaveBeenCalled();
     });
 
-    it('does not call getOrFetchCounts when local cache has data', () => {
-      setMockUserCounts({
-        id: 'test-user-id',
-        posts: 10,
-        replies: 5,
-        followers: 20,
-        following: 15,
-        friends: 8,
-        uniqueTags: 0,
-        tagged: 0,
-        tags: 0,
-        unique_tags: 3,
-        bookmarks: 0,
-      } as Core.UserCountsModelSchema);
-
-      renderHook(() => useProfileStats('test-user-id'));
-
-      expect(Core.UserController.getOrFetchCounts).not.toHaveBeenCalled();
-    });
-
-    it('does not call getOrFetchCounts when query is still loading (undefined)', () => {
+    it('does not call fetchCounts when userId is empty', () => {
       setMockUserCounts(undefined);
-      renderHook(() => useProfileStats('test-user-id'));
-
-      expect(Core.UserController.getOrFetchCounts).not.toHaveBeenCalled();
-    });
-
-    it('does not call getOrFetchCounts when userId is empty', () => {
-      setMockUserCounts(null);
       renderHook(() => useProfileStats(''));
 
-      expect(Core.UserController.getOrFetchCounts).not.toHaveBeenCalled();
+      // enabled=false when userId is empty, so fetchFn should not fire
+      expect(Core.UserController.fetchCounts).not.toHaveBeenCalled();
     });
   });
 });

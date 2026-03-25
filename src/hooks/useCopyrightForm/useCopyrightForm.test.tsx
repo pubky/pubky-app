@@ -3,11 +3,13 @@ import { renderHook, act } from '@testing-library/react';
 import { useCopyrightForm } from './useCopyrightForm';
 
 const mockToast = vi.fn();
+const mockShowErrorToast = vi.fn();
 vi.mock('@/molecules', async (importOriginal) => {
   const actual = await importOriginal<typeof import('@/molecules')>();
   return {
     ...actual,
-    useToast: () => ({ toast: mockToast }),
+    toast: (...args: unknown[]) => mockToast(...args),
+    showErrorToast: (params: { title?: string; description: string }) => mockShowErrorToast(params),
   };
 });
 
@@ -181,10 +183,8 @@ describe('useCopyrightForm', () => {
         await result.current.onSubmit();
       });
 
-      expect(mockToast).toHaveBeenCalledWith({
-        title: 'Error',
+      expect(mockShowErrorToast).toHaveBeenCalledWith({
         description: 'Validation failed',
-        className: 'destructive border-destructive bg-destructive text-destructive-foreground',
       });
     });
 
@@ -222,10 +222,8 @@ describe('useCopyrightForm', () => {
         await result.current.onSubmit();
       });
 
-      expect(mockToast).toHaveBeenCalledWith({
-        title: 'Error',
+      expect(mockShowErrorToast).toHaveBeenCalledWith({
         description: 'Network error',
-        className: 'destructive border-destructive bg-destructive text-destructive-foreground',
       });
     });
   });

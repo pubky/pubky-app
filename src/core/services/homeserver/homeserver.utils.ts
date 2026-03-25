@@ -34,9 +34,9 @@ const PUBKY_HOSTNAME_PREFIX = '_pubky.';
 
 // Auth polling defaults
 /** Default interval between auth flow polls in milliseconds */
-const AUTH_POLL_INTERVAL_MS = 2_000;
-/** Maximum auth poll attempts (150 × 2s = 5 minutes max wait) */
-const AUTH_POLL_MAX_ATTEMPTS = 150;
+const AUTH_POLL_INTERVAL_MS = 100;
+/** Maximum auth poll attempts (3000 × 100ms = 5 minutes max wait) */
+const AUTH_POLL_MAX_ATTEMPTS = 3_000;
 
 /**
  * Checks if a URL is an HTTP or HTTPS URL

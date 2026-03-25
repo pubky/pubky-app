@@ -7,10 +7,15 @@ import {
   clickFollowButton,
   checkLatestNotification,
   addProfileTags,
-  waitForNotificationDotsToDisappear,
-  causeLastReadToBeUpdated,
+  causeNotificationsToBeRead,
 } from '../support/profile';
-import { BackupType, CheckForNewPosts, HasBackedUp, WaitForNewPosts } from '../support/types/enums';
+import {
+  BackupType,
+  CheckForNewPosts,
+  HasBackedUp,
+  LatestNotificationReadState,
+  WaitForNewPosts,
+} from '../support/types/enums';
 import { verifyNotificationCounter } from '../support/common';
 import { goToProfilePageFromHeader } from '../support/header';
 
@@ -56,10 +61,15 @@ describe('notifications', () => {
 
     cy.signInWithEncryptedFile(backupDownloadFilePath(profile2.username));
     verifyNotificationCounter(1);
+    cy.intercept({
+      method: 'PUT',
+      url: '/pub/pubky.app/last_read',
+    }).as('putLastRead');
     goToProfilePageFromHeader();
-    verifyNotificationCounter(1);
+    cy.wait('@putLastRead').should('have.property', 'response').its('statusCode').should('eq', 201);
+    verifyNotificationCounter(0);
     // check latest notification on profile page and navigate to profile 1 profile page
-    checkLatestNotification([profile1.username, 'followed you'], profile1.username);
+    checkLatestNotification([profile1.username, 'followed you'], LatestNotificationReadState.Unread, profile1.username);
 
     // * profile 2 follows profile 1
     clickFollowButton();
@@ -70,14 +80,14 @@ describe('notifications', () => {
     cy.signInWithEncryptedFile(backupDownloadFilePath(profile1.username));
     verifyNotificationCounter(1);
     goToProfilePageFromHeader();
-    verifyNotificationCounter(1);
-    // check latest notification on profile page
-    checkLatestNotification([profile2.username, 'is now your friend']);
-
-    // * check that toggling profile page tabs clears notification counter for new notification
-    causeLastReadToBeUpdated();
     verifyNotificationCounter(0);
-    waitForNotificationDotsToDisappear();
+    // check latest notification on profile page
+    checkLatestNotification([profile2.username, 'is now your friend'], LatestNotificationReadState.Unread);
+
+    // * toggle tabs to check unread dot disappears
+    causeNotificationsToBeRead();
+    verifyNotificationCounter(0);
+    checkLatestNotification([profile2.username, 'is now your friend'], LatestNotificationReadState.Read);
 
     // TODO: add checks for disabled notifications
     // * profile 1 disables follow notifications
@@ -109,19 +119,14 @@ describe('notifications', () => {
     cy.signInWithEncryptedFile(backupDownloadFilePath(profile2.username));
     verifyNotificationCounter(1);
     goToProfilePageFromHeader();
-    verifyNotificationCounter(1);
+    verifyNotificationCounter(0);
     // check latest notification on profile page
-    checkLatestNotification([profile1.username, 'tagged your profile', profileTag]);
+    checkLatestNotification([profile1.username, 'tagged your profile', profileTag], LatestNotificationReadState.Unread);
 
     // * profile 2 tags profile 1's post (from their profile page)
-    cy.intercept({
-      method: 'PUT',
-      url: '/pub/pubky.app/last_read',
-    }).as('putLastRead');
     cy.get(`@${profile1.pubkyAlias}`).then((pubky) => {
       searchForProfileByPubky(`${pubky}`, profile1.username);
     });
-    cy.wait('@putLastRead').should('have.property', 'response').its('statusCode').should('eq', 201);
     verifyNotificationCounter(0);
     // click Posts tab to show profile 1's posts
     cy.get('[data-cy="profile-filter-item-posts"]').click();
@@ -136,10 +141,13 @@ describe('notifications', () => {
     cy.signInWithEncryptedFile(backupDownloadFilePath(profile1.username));
     verifyNotificationCounter(1);
     goToProfilePageFromHeader();
-    verifyNotificationCounter(1);
-    checkLatestNotification([profile2.username, 'tagged your post', postTag]);
-    causeLastReadToBeUpdated();
     verifyNotificationCounter(0);
+    checkLatestNotification([profile2.username, 'tagged your post', postTag], LatestNotificationReadState.Unread);
+
+    // * toggle tabs to check unread dot disappears
+    causeNotificationsToBeRead();
+    verifyNotificationCounter(0);
+    checkLatestNotification([profile2.username, 'tagged your post', postTag], LatestNotificationReadState.Read);
 
     // TODO: add checks for disabled notifications
     // * profile 1 disables notifications for tagged profile
@@ -157,9 +165,7 @@ describe('notifications', () => {
   it('can be notified for your post being replied to', () => {
     // * profile 1 creates a post (1)
     const postContent = `I will be notified when this post is replied to! ${Date.now()}`;
-    //cy.intercept({method:'PUT', url:'/pub/pubky.app/posts/**'}).as('putPost');
     createQuickPost(postContent);
-    //cy.wait('@putPost').should('have.property', 'response').its('statusCode').should('eq', 201);
 
     // * profile 2 replies to profile 1's post (1)
     cy.signOut(HasBackedUp.Yes);
@@ -171,12 +177,13 @@ describe('notifications', () => {
     cy.signInWithEncryptedFile(backupDownloadFilePath(profile1.username));
     verifyNotificationCounter(1);
     goToProfilePageFromHeader();
-    verifyNotificationCounter(1);
-    checkLatestNotification([profile2.username, 'replied to your post']);
-    causeLastReadToBeUpdated();
     verifyNotificationCounter(0);
+    checkLatestNotification([profile2.username, 'replied to your post'], LatestNotificationReadState.Unread);
 
-    // cause last_read to be updated
+    // * toggle tabs to check unread dot disappears
+    causeNotificationsToBeRead();
+    verifyNotificationCounter(0);
+    checkLatestNotification([profile2.username, 'replied to your post'], LatestNotificationReadState.Read);
 
     // TODO: add checks for disabled notifications
     // * profile 1 disables notifications for being replied to
@@ -202,10 +209,13 @@ describe('notifications', () => {
     cy.signInWithEncryptedFile(backupDownloadFilePath(profile1.username));
     verifyNotificationCounter(1);
     goToProfilePageFromHeader();
-    verifyNotificationCounter(1);
-    checkLatestNotification([profile2.username, 'reposted your post']);
-    causeLastReadToBeUpdated();
     verifyNotificationCounter(0);
+    checkLatestNotification([profile2.username, 'reposted your post'], LatestNotificationReadState.Unread);
+
+    // * toggle tabs to check unread dot disappears
+    causeNotificationsToBeRead();
+    verifyNotificationCounter(0);
+    checkLatestNotification([profile2.username, 'reposted your post'], LatestNotificationReadState.Read);
 
     // TODO: add checks for disabled notifications
     // * profile 1 disables notifications for being reposted
@@ -239,10 +249,13 @@ describe('notifications', () => {
     cy.signInWithEncryptedFile(backupDownloadFilePath(profile2.username));
     verifyNotificationCounter(1);
     goToProfilePageFromHeader();
-    verifyNotificationCounter(1);
-    checkLatestNotification([profile1.username, 'deleted a post']);
-    causeLastReadToBeUpdated();
     verifyNotificationCounter(0);
+    checkLatestNotification([profile1.username, 'deleted a post'], LatestNotificationReadState.Unread);
+
+    // * toggle tabs to check unread dot disappears
+    causeNotificationsToBeRead();
+    verifyNotificationCounter(0);
+    checkLatestNotification([profile1.username, 'deleted a post'], LatestNotificationReadState.Read);
 
     // TODO: add checks for disabled notifications
     // * profile 2 disables notifications for being replied to
@@ -277,10 +290,13 @@ describe('notifications', () => {
     cy.signInWithEncryptedFile(backupDownloadFilePath(profile2.username));
     verifyNotificationCounter(1);
     goToProfilePageFromHeader();
-    verifyNotificationCounter(1);
-    checkLatestNotification([profile1.username, 'deleted a post']);
-    causeLastReadToBeUpdated();
     verifyNotificationCounter(0);
+    checkLatestNotification([profile1.username, 'deleted a post'], LatestNotificationReadState.Unread);
+
+    // * toggle tabs to check unread dot disappears
+    causeNotificationsToBeRead();
+    verifyNotificationCounter(0);
+    checkLatestNotification([profile1.username, 'deleted a post'], LatestNotificationReadState.Read);
 
     // TODO: add checks for disabled notifications
     // * profile 2 disables notifications for post being deleted that you reposted
@@ -314,10 +330,13 @@ describe('notifications', () => {
     cy.signInWithEncryptedFile(backupDownloadFilePath(profile2.username));
     verifyNotificationCounter(1);
     goToProfilePageFromHeader();
-    verifyNotificationCounter(1);
-    checkLatestNotification([profile1.username, 'edited a post']);
-    causeLastReadToBeUpdated();
     verifyNotificationCounter(0);
+    checkLatestNotification([profile1.username, 'edited a post'], LatestNotificationReadState.Unread);
+
+    // * toggle tabs to check unread dot disappears
+    causeNotificationsToBeRead();
+    verifyNotificationCounter(0);
+    checkLatestNotification([profile1.username, 'edited a post'], LatestNotificationReadState.Read);
   });
 
   it('can be notified for a post being edited that you reposted', () => {
@@ -345,10 +364,13 @@ describe('notifications', () => {
     cy.signInWithEncryptedFile(backupDownloadFilePath(profile2.username));
     verifyNotificationCounter(1);
     goToProfilePageFromHeader();
-    verifyNotificationCounter(1);
-    checkLatestNotification([profile1.username, 'edited a post']);
-    causeLastReadToBeUpdated();
     verifyNotificationCounter(0);
+    checkLatestNotification([profile1.username, 'edited a post'], LatestNotificationReadState.Unread);
+
+    // * toggle tabs to check unread dot disappears
+    causeNotificationsToBeRead();
+    verifyNotificationCounter(0);
+    checkLatestNotification([profile1.username, 'edited a post'], LatestNotificationReadState.Read);
   });
 
   it('can display counter for multiple new notifications');

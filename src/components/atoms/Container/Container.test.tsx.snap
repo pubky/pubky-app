@@ -20,7 +20,7 @@ exports[`Container - Snapshots > matches snapshot for block display 1`] = `
 
 exports[`Container - Snapshots > matches snapshot for container size 1`] = `
 <div
-  class="mx-auto w-full flex-col flex container"
+  class="mx-auto w-full flex-col flex container max-w-(--container-max-width)"
   data-testid="container"
 >
   Container Size

@@ -1,6 +1,6 @@
 'use client';
 
-import * as PopoverPrimitive from '@radix-ui/react-popover';
+import { Popover as PopoverPrimitive } from 'radix-ui';
 import { useState, useRef, useEffect, createContext, useContext } from 'react';
 
 import * as Libs from '@/libs';

@@ -83,12 +83,12 @@ export function MutedUsersList() {
             <Atoms.Container
               overrideDefaults
               key={mutedUser?.id}
-              className="flex w-full items-center justify-between gap-4"
+              className="flex w-full items-center justify-between gap-3"
             >
               <Atoms.Link
                 href={`/profile/${mutedUser.id}`}
                 overrideDefaults
-                className="flex flex-1 items-center gap-3 hover:opacity-80"
+                className="flex min-w-0 flex-1 items-center gap-3 hover:opacity-80"
               >
                 <Atoms.Avatar className="h-10 w-10">
                   {mutedUser?.avatar && (
@@ -105,8 +105,12 @@ export function MutedUsersList() {
                     />
                   </Atoms.AvatarFallback>
                 </Atoms.Avatar>
-                <Atoms.Container overrideDefaults className="inline-flex flex-col items-start">
-                  <Atoms.Typography as="span" overrideDefaults className="text-base font-bold">
+                <Atoms.Container overrideDefaults className="flex min-w-0 flex-1 flex-col items-start">
+                  <Atoms.Typography
+                    as="span"
+                    overrideDefaults
+                    className="block max-w-full truncate text-base font-bold"
+                  >
                     {mutedUser?.name || tCommon('unknownUser')}
                   </Atoms.Typography>
                   <Atoms.Typography
@@ -114,7 +118,7 @@ export function MutedUsersList() {
                     overrideDefaults
                     className="text-xs tracking-widest text-muted-foreground uppercase"
                   >
-                    {Libs.truncateString(mutedUser?.id || '', 12)}
+                    {Libs.truncateMiddle(mutedUser?.id || '', 12)}
                   </Atoms.Typography>
                 </Atoms.Container>
               </Atoms.Link>

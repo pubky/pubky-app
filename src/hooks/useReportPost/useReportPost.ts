@@ -3,7 +3,7 @@
 import { useState, useCallback } from 'react';
 import type { ReportIssueType } from '@/core/pipes/report';
 import * as Core from '@/core';
-import { HttpMethod, JSON_HEADERS, Logger } from '@/libs';
+import { Logger, postJson } from '@/libs';
 import * as Molecules from '@/molecules';
 import { POST_ROUTES } from '@/app/routes';
 import * as Hooks from '@/hooks';
@@ -22,7 +22,6 @@ import type { UseReportPostReturn } from './useReportPost.types';
  * @returns Report state and handlers
  */
 export function useReportPost(postId: string): UseReportPostReturn {
-  const { toast } = Molecules.useToast();
   const { currentUserPubky, userDetails } = Hooks.useCurrentUserProfile();
   const parsedId = Core.parseCompositeId(postId);
   const postUrl = `${window.location.origin}${POST_ROUTES.POST}/${parsedId.pubky}/${parsedId.id}`;
@@ -34,10 +33,8 @@ export function useReportPost(postId: string): UseReportPostReturn {
   const [isSuccess, setIsSuccess] = useState(false);
 
   const showErrorToast = (description: string) => {
-    toast({
-      title: 'Error',
+    Molecules.showErrorToast({
       description,
-      className: 'destructive border-destructive bg-destructive text-destructive-foreground',
     });
   };
 
@@ -64,30 +61,18 @@ export function useReportPost(postId: string): UseReportPostReturn {
     setIsSubmitting(true);
 
     try {
-      const response = await fetch(REPORT_API_ENDPOINT, {
-        method: HttpMethod.POST,
-        headers: JSON_HEADERS,
-        body: JSON.stringify({
-          pubky: currentUserPubky,
-          postUrl,
-          issueType: selectedIssueType,
-          reason: trimmedReason,
-          name: userDetails.name,
-        }),
+      await postJson(REPORT_API_ENDPOINT, {
+        pubky: currentUserPubky,
+        postUrl,
+        issueType: selectedIssueType,
+        reason: trimmedReason,
+        name: userDetails.name,
       });
-
-      if (!response.ok) {
-        const errorData = await response.json().catch(() => ({ error: 'Unknown error' }));
-        const errorMessage = errorData.error || 'Failed to submit report';
-        Logger.error('Report submission failed:', errorMessage);
-        showErrorToast(errorMessage);
-        return;
-      }
 
       setIsSuccess(true);
     } catch (err) {
       Logger.error('Error submitting report:', err);
-      showErrorToast('Failed to submit report. Please try again.');
+      showErrorToast(err instanceof Error ? err.message : 'Failed to submit report. Please try again.');
     } finally {
       setIsSubmitting(false);
     }

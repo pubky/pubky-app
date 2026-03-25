@@ -77,7 +77,6 @@ describe('LocalUserService', () => {
         id: userId,
         following: true,
         followed_by: true,
-        muted: false,
       };
 
       await Core.UserRelationshipsModel.create(mockRelationships);
@@ -87,7 +86,6 @@ describe('LocalUserService', () => {
       expect(result).not.toBeNull();
       expect(result!.following).toBe(true);
       expect(result!.followed_by).toBe(true);
-      expect(result!.muted).toBe(false);
     });
 
     it('should return null when user relationships not found in local database', async () => {
@@ -101,7 +99,6 @@ describe('LocalUserService', () => {
         id: userId,
         following: false,
         followed_by: false,
-        muted: false,
       };
 
       await Core.UserRelationshipsModel.create(emptyRelationships);
@@ -111,7 +108,6 @@ describe('LocalUserService', () => {
       expect(result).not.toBeNull();
       expect(result!.following).toBe(false);
       expect(result!.followed_by).toBe(false);
-      expect(result!.muted).toBe(false);
     });
   });
 

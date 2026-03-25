@@ -1,0 +1,62 @@
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
+
+exports[`TimelineFeedContent - Snapshots > matches snapshot for loading state 1`] = `
+<div>
+  <div
+    data-testid="timeline-loading"
+  >
+    Loading...
+  </div>
+</div>
+`;
+
+exports[`TimelineFeedContent - Snapshots > matches snapshot with children 1`] = `
+<div>
+  <div>
+    Filter bar
+  </div>
+  <div
+    data-testid="timeline-posts"
+  >
+    <span
+      data-testid="post-count"
+    >
+      3
+    </span>
+    <span
+      data-testid="loading"
+    >
+      false
+    </span>
+    <span
+      data-testid="has-more"
+    >
+      true
+    </span>
+  </div>
+</div>
+`;
+
+exports[`TimelineFeedContent - Snapshots > matches snapshot with posts 1`] = `
+<div>
+  <div
+    data-testid="timeline-posts"
+  >
+    <span
+      data-testid="post-count"
+    >
+      3
+    </span>
+    <span
+      data-testid="loading"
+    >
+      false
+    </span>
+    <span
+      data-testid="has-more"
+    >
+      true
+    </span>
+  </div>
+</div>
+`;

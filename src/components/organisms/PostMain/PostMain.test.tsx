@@ -6,8 +6,9 @@ import { PostMain } from './PostMain';
 import { POST_THREAD_CONNECTOR_VARIANTS } from '@/components/atoms/PostThreadConnector/PostThreadConnector.constants';
 
 // Use vi.hoisted to define mock functions before vi.mock calls (which are hoisted)
-const { mockIsPostDeleted } = vi.hoisted(() => ({
+const { mockIsPostDeleted, mockPostHeader } = vi.hoisted(() => ({
   mockIsPostDeleted: vi.fn(() => false),
+  mockPostHeader: vi.fn(({ postId }: { postId: string }) => <div data-testid="post-header">PostHeader {postId}</div>),
 }));
 
 // Use real libs - use actual implementations
@@ -63,7 +64,8 @@ vi.mock('@/atoms', async () => {
 
 // Stub organisms composed inside PostMain
 vi.mock('@/organisms', () => ({
-  PostHeader: ({ postId }: { postId: string }) => <div data-testid="post-header">PostHeader {postId}</div>,
+  PostHeader: ({ postId, timeAgoPlacement }: { postId: string; timeAgoPlacement?: 'top-right' | 'bottom-left' }) =>
+    mockPostHeader({ postId, timeAgoPlacement }),
   PostContent: ({ postId }: { postId: string }) => <div data-testid="post-content">PostContent {postId}</div>,
   PostActionsBar: ({
     postId,
@@ -160,6 +162,7 @@ vi.mock('@/hooks', () => ({
     ref: vi.fn(),
     height: 150,
   })),
+  useIsMobile: vi.fn(() => false),
   usePostDetails: vi.fn(() => ({
     postDetails: {
       id: 'post-123',
@@ -191,9 +194,13 @@ vi.mock('@/hooks', () => ({
 }));
 
 describe('PostMain', () => {
+  const mockUseIsMobile = vi.mocked(Hooks.useIsMobile);
+
   beforeEach(() => {
     vi.clearAllMocks();
     mockIsPostDeleted.mockReturnValue(false);
+    mockPostHeader.mockClear();
+    mockUseIsMobile.mockReturnValue(false);
   });
 
   it('renders header, content, tags and actions', () => {
@@ -369,6 +376,37 @@ describe('PostMain', () => {
     expect(screen.getByTestId('post-header')).toBeInTheDocument();
     expect(screen.getByTestId('repost-header')).toBeInTheDocument();
     expect(screen.getByTestId('post-content')).toBeInTheDocument();
+  });
+
+  it('passes bottom-left timestamp placement for side tags layout', () => {
+    render(<PostMain postId="post-side-1" tagsLayout="side" />);
+
+    expect(mockPostHeader).toHaveBeenCalledWith({
+      postId: 'post-side-1',
+      timeAgoPlacement: 'bottom-left',
+    });
+  });
+
+  it('keeps default timestamp placement for inline tags layout', () => {
+    render(<PostMain postId="post-inline-1" tagsLayout="inline" />);
+
+    expect(mockPostHeader).toHaveBeenCalledWith({
+      postId: 'post-inline-1',
+      timeAgoPlacement: undefined,
+    });
+  });
+
+  it('falls back to inline layout on mobile when tagsLayout is side', () => {
+    mockUseIsMobile.mockReturnValue(true);
+
+    render(<PostMain postId="post-mobile-side-1" tagsLayout="side" />);
+
+    expect(screen.getByTestId('clickable-tags-list')).toBeInTheDocument();
+    expect(screen.queryByTestId('post-tags-panel')).not.toBeInTheDocument();
+    expect(mockPostHeader).toHaveBeenCalledWith({
+      postId: 'post-mobile-side-1',
+      timeAgoPlacement: undefined,
+    });
   });
 });
 

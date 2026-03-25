@@ -3,6 +3,7 @@ import { persist, devtools } from 'zustand/middleware';
 import { type OnboardingStore, onboardingInitialState } from './onboarding.types';
 import { createOnboardingActions } from './onboarding.actions';
 import { createOnboardingSelectors } from './onboarding.selectors';
+import { ONBOARDING_PERSIST_KEY } from '../persistedKeys';
 
 // Store creation
 export const useOnboardingStore = create<OnboardingStore>()(
@@ -14,7 +15,7 @@ export const useOnboardingStore = create<OnboardingStore>()(
         ...createOnboardingSelectors(get),
       }),
       {
-        name: 'onboarding-storage',
+        name: ONBOARDING_PERSIST_KEY,
 
         // Persist keys data
         partialize: (state) => ({

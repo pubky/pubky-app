@@ -40,7 +40,6 @@ describe('UserStreamApplication', () => {
     relationship: {
       following: false,
       followed_by: false,
-      muted: false,
       ...overrides?.relationship,
     },
     ...overrides,
@@ -385,6 +384,80 @@ describe('UserStreamApplication', () => {
       });
 
       // Assert: Should still work, just without viewer_id
+      expect(fetchByIdsSpy).toHaveBeenCalledWith({
+        user_ids: cacheMissUserIds,
+        viewer_id: undefined,
+      });
+    });
+  });
+
+  // ============================================================================
+  // getOrFetchUsers Tests
+  // ============================================================================
+
+  describe('getOrFetchUsers', () => {
+    it('should return early when userIds is empty', async () => {
+      const getNotPersistedSpy = vi.spyOn(Core.LocalStreamUsersService, 'getNotPersistedUsersInCache');
+      const fetchByIdsSpy = vi.spyOn(Core.NexusUserStreamService, 'fetchByIds');
+
+      await Core.UserStreamApplication.getOrFetchUsers({
+        userIds: [],
+        viewerId: DEFAULT_VIEWER_ID,
+      });
+
+      expect(getNotPersistedSpy).not.toHaveBeenCalled();
+      expect(fetchByIdsSpy).not.toHaveBeenCalled();
+    });
+
+    it('should return early when all users are already cached', async () => {
+      const userIds: Core.Pubky[] = ['user-1', 'user-2'];
+
+      // All users are already in cache
+      vi.spyOn(Core.LocalStreamUsersService, 'getNotPersistedUsersInCache').mockResolvedValue([]);
+      const fetchByIdsSpy = vi.spyOn(Core.NexusUserStreamService, 'fetchByIds');
+
+      await Core.UserStreamApplication.getOrFetchUsers({
+        userIds,
+        viewerId: DEFAULT_VIEWER_ID,
+      });
+
+      expect(fetchByIdsSpy).not.toHaveBeenCalled();
+    });
+
+    it('should fetch missing users from Nexus when cache misses exist', async () => {
+      const userIds: Core.Pubky[] = ['user-1', 'user-2', 'user-3'];
+      const cacheMissUserIds: Core.Pubky[] = ['user-2', 'user-3'];
+      const mockUsers = cacheMissUserIds.map((id) => createMockNexusUser(id));
+
+      vi.spyOn(Core.LocalStreamUsersService, 'getNotPersistedUsersInCache').mockResolvedValue(cacheMissUserIds);
+      const fetchByIdsSpy = vi.spyOn(Core.NexusUserStreamService, 'fetchByIds').mockResolvedValue(mockUsers);
+      const persistSpy = vi.spyOn(Core.LocalStreamUsersService, 'persistUsers');
+
+      await Core.UserStreamApplication.getOrFetchUsers({
+        userIds,
+        viewerId: DEFAULT_VIEWER_ID,
+      });
+
+      expect(fetchByIdsSpy).toHaveBeenCalledWith({
+        user_ids: cacheMissUserIds,
+        viewer_id: DEFAULT_VIEWER_ID,
+      });
+      expect(persistSpy).toHaveBeenCalledWith(mockUsers);
+    });
+
+    it('should pass viewerId through to fetchMissingUsersFromNexus', async () => {
+      const userIds: Core.Pubky[] = ['user-1'];
+      const cacheMissUserIds: Core.Pubky[] = ['user-1'];
+      const mockUsers = [createMockNexusUser('user-1')];
+
+      vi.spyOn(Core.LocalStreamUsersService, 'getNotPersistedUsersInCache').mockResolvedValue(cacheMissUserIds);
+      const fetchByIdsSpy = vi.spyOn(Core.NexusUserStreamService, 'fetchByIds').mockResolvedValue(mockUsers);
+
+      await Core.UserStreamApplication.getOrFetchUsers({
+        userIds,
+        viewerId: undefined,
+      });
+
       expect(fetchByIdsSpy).toHaveBeenCalledWith({
         user_ids: cacheMissUserIds,
         viewer_id: undefined,

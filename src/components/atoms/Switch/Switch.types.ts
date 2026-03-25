@@ -1,4 +1,4 @@
-import * as SwitchPrimitives from '@radix-ui/react-switch';
+import { Switch as SwitchPrimitives } from 'radix-ui';
 
 export interface SwitchProps extends React.ComponentPropsWithoutRef<typeof SwitchPrimitives.Root> {
   id?: string;

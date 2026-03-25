@@ -29,6 +29,7 @@ import type { UseFollowUserResult } from './useFollowUser.types';
 export function useFollowUser(): UseFollowUserResult {
   const { currentUserPubky } = Core.useAuthStore();
   const [isLoading, setIsLoading] = useState(false);
+  const [loadingAction, setLoadingAction] = useState<UseFollowUserResult['loadingAction']>(null);
   const [loadingUserId, setLoadingUserId] = useState<Core.Pubky | null>(null);
   const [error, setError] = useState<string | null>(null);
 
@@ -44,6 +45,7 @@ export function useFollowUser(): UseFollowUserResult {
         return;
       }
 
+      setLoadingAction(isCurrentlyFollowing ? 'unfollow' : 'follow');
       setIsLoading(true);
       setLoadingUserId(userId);
       setError(null);
@@ -66,6 +68,7 @@ export function useFollowUser(): UseFollowUserResult {
         throw err;
       } finally {
         setIsLoading(false);
+        setLoadingAction(null);
         setLoadingUserId(null);
       }
     },
@@ -80,6 +83,7 @@ export function useFollowUser(): UseFollowUserResult {
   return {
     toggleFollow,
     isLoading,
+    loadingAction,
     loadingUserId,
     isUserLoading,
     error,

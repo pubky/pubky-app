@@ -12,14 +12,21 @@ export function HeaderButtonSignIn({ ...props }: React.HTMLAttributes<HTMLButton
   const t = useTranslations('header');
   const router = useRouter();
 
-  const handleSignIn = () => {
-    router.push(App.AUTH_ROUTES.SIGN_IN);
+  const handleNewHere = () => {
+    router.push(App.ONBOARDING_ROUTES.HUMAN);
   };
 
   return (
-    <Atoms.Button id="header-sign-in-btn" variant="secondary" onClick={handleSignIn} {...props}>
-      <Libs.LogIn className="mr-2 h-4 w-4" />
-      {t('signIn')}
+    <Atoms.Button
+      id="header-sign-in-btn"
+      data-testid="header-sign-in-btn"
+      variant="secondary"
+      onClick={handleNewHere}
+      className="gap-2"
+      {...props}
+    >
+      <Libs.UserRoundPlus className="size-4" />
+      {t('newHere')}
     </Atoms.Button>
   );
 }

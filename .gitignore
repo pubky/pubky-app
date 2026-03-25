@@ -61,9 +61,9 @@ public/sw.js.map
 # Cursor
 /.cursor/plans
 /.cursor/commands
+/.cursor/hooks
 
 # Claude
-CLAUDE.md
 .claude
 
 # AI generated reviews
@@ -71,3 +71,6 @@ CLAUDE.md
 
 # Development Containers
 .devcontainer
+
+# AI Context Plans
+.plans

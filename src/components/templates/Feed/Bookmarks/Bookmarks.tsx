@@ -1,5 +1,5 @@
+import { TIMELINE_FEED_VARIANT } from '@/config';
 import * as Organisms from '@/organisms';
-import { TIMELINE_FEED_VARIANT } from '@/organisms/TimelineFeed/TimelineFeed.types';
 
 /**
  * Bookmarks Page Template
@@ -13,12 +13,23 @@ import { TIMELINE_FEED_VARIANT } from '@/organisms/TimelineFeed/TimelineFeed.typ
 export function Bookmarks() {
   return (
     <Organisms.ContentLayout
+      feedVariant={TIMELINE_FEED_VARIANT.BOOKMARKS}
       showRightMobileButton={false}
-      leftSidebarContent={<Organisms.HomeFeedSidebar hideReachFilter />}
+      leftSidebarContent={
+        <Organisms.HomeFeedSidebar hideReachFilter allowVisualLayout feedVariant={TIMELINE_FEED_VARIANT.BOOKMARKS} />
+      }
       rightSidebarContent={<Organisms.HomeFeedRightSidebar />}
-      leftDrawerContent={<Organisms.HomeFeedDrawer hideReachFilter />}
+      leftDrawerContent={
+        <Organisms.HomeFeedDrawer hideReachFilter allowVisualLayout feedVariant={TIMELINE_FEED_VARIANT.BOOKMARKS} />
+      }
       rightDrawerContent={<Organisms.HomeFeedRightDrawer />}
-      leftDrawerContentMobile={<Organisms.HomeFeedDrawerMobile hideReachFilter />}
+      leftDrawerContentMobile={
+        <Organisms.HomeFeedDrawerMobile
+          hideReachFilter
+          allowVisualLayout
+          feedVariant={TIMELINE_FEED_VARIANT.BOOKMARKS}
+        />
+      }
     >
       <Organisms.TimelineFeed variant={TIMELINE_FEED_VARIANT.BOOKMARKS} />
     </Organisms.ContentLayout>

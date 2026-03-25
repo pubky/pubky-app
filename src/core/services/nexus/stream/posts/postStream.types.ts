@@ -71,6 +71,7 @@ export type TStreamAllParams = TStreamBase;
 export type TStreamPostsByIdsParams = {
   post_ids: string[]; // Required array of post IDs
   viewer_id?: Core.Pubky; // Optional viewer ID
+  include_attachment_metadata?: boolean; // Optional include attachment metadata
 };
 
 export type TStreamQueryParams =

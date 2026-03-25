@@ -5,8 +5,7 @@ export interface TagCollectionModelSchema<Id> {
   tags: Core.NexusTag[];
 }
 
-// Schema for Dexie table
+// Keep only the primary key index. Tag arrays are read/updated by id.
 export const tagCollectionTableSchema = `
-  &id,
-  tags
+  &id
 `;

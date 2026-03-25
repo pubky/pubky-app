@@ -105,11 +105,11 @@ export const HumanBitcoinCard = ({ onClick }: HumanBitcoinCardProps) => {
           className="absolute top-1/2 left-1/2 flex h-11 -translate-x-1/2 -translate-y-1/2 items-center gap-3 rounded-md bg-destructive/60 px-6 py-3 shadow-xl"
         >
           <Atoms.Container overrideDefaults className="pt-0.5">
-            <Libs.TriangleAlert className="text-destructive-foreground size-4" />
+            <Libs.TriangleAlert className="size-4 text-destructive-foreground" />
           </Atoms.Container>
           <Atoms.Typography
             overrideDefaults
-            className="text-destructive-foreground text-sm font-semibold whitespace-nowrap"
+            className="text-sm font-semibold whitespace-nowrap text-destructive-foreground"
           >
             {t('notAvailable')}
           </Atoms.Typography>
@@ -124,11 +124,11 @@ export const HumanBitcoinCard = ({ onClick }: HumanBitcoinCardProps) => {
           className="absolute top-1/2 left-1/2 flex h-11 -translate-x-1/2 -translate-y-1/2 items-center gap-3 rounded-md bg-destructive/60 px-6 py-3 shadow-xl"
         >
           <Atoms.Container overrideDefaults className="pt-0.5">
-            <Libs.TriangleAlert className="text-destructive-foreground size-4" />
+            <Libs.TriangleAlert className="size-4 text-destructive-foreground" />
           </Atoms.Container>
           <Atoms.Typography
             overrideDefaults
-            className="text-destructive-foreground text-sm font-semibold whitespace-nowrap"
+            className="text-sm font-semibold whitespace-nowrap text-destructive-foreground"
           >
             {t('unavailable')}
           </Atoms.Typography>

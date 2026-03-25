@@ -1,7 +1,7 @@
 'use client';
 
 import * as React from 'react';
-import { Slot } from '@radix-ui/react-slot';
+import { Slot } from 'radix-ui';
 import { cva } from 'class-variance-authority';
 
 import * as Libs from '@/libs';
@@ -113,7 +113,7 @@ export const BreadcrumbLink = React.forwardRef<
     asChild?: boolean;
   }
 >(({ asChild, className, ...props }, ref) => {
-  const Comp = asChild ? Slot : 'a';
+  const Comp = asChild ? Slot.Root : 'a';
 
   return <Comp ref={ref} className={Libs.cn('transition-colors hover:text-foreground', className)} {...props} />;
 });

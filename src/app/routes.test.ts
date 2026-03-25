@@ -99,6 +99,10 @@ describe('isDynamicPublicRoute', () => {
       expect(isDynamicPublicRoute('/search')).toBe(false);
     });
 
+    it('returns false for feed route', () => {
+      expect(isDynamicPublicRoute('/feed')).toBe(false);
+    });
+
     it('returns false for onboarding routes', () => {
       expect(isDynamicPublicRoute('/onboarding')).toBe(false);
       expect(isDynamicPublicRoute('/onboarding/profile')).toBe(false);

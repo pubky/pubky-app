@@ -101,7 +101,9 @@ function toStreamSource({ value }: Core.TStreamSource): Core.StreamSource {
 export function breakDownStreamId(streamId: Core.PostStreamId): Core.TStreamIdBreakdown {
   const [sorting, invokeEndpoint, kind, tags] = streamId.split(':');
   // Tags are separated by ',' character. Only the first MAX_STREAM_TAGS are considered.
-  const limitTags = tags ? tags.split(',').slice(0, Env.NEXT_MAX_STREAM_TAGS).join(',') : undefined;
+  const limitTags = tags
+    ? tags.split(Core.POST_STREAM_TAG_DELIMITER).slice(0, Env.NEXT_MAX_STREAM_TAGS).join(Core.POST_STREAM_TAG_DELIMITER)
+    : undefined;
 
   if (kind) {
     if (sorting === Core.StreamSource.REPLIES) {

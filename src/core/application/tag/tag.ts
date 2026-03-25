@@ -1,20 +1,18 @@
 import * as Core from '@/core';
-import { HttpMethod } from '@/libs';
+import { HttpMethod, Logger } from '@/libs';
 
 /**
- * Tag application service implementing local-first architecture.
+ * Tag application service implementing local-first architecture with rollback.
  *
  * **Local-First Write Pattern:**
  * Both `create` and `delete` methods update the local IndexedDB first, then
- * synchronize with the homeserver. This ensures immediate UI responsiveness
- * but may cause divergence if the homeserver request fails.
+ * synchronize with the homeserver. This keeps the UI responsive while still
+ * compensating locally if the homeserver request fails.
  *
  * **Failure Handling:**
- * If the homeserver request fails after local update, the local state remains
- * ahead of remote state. Callers should:
- * - Implement retry logic for failed homeserver requests
- * - Add reconciliation mechanisms during app sync/bootstrap
- * - Consider compensation rollback on homeserver failure if strict consistency is required
+ * If the homeserver request fails after the local update, the failed write is
+ * rolled back locally so counters and relationship state stay consistent with
+ * Nexus.
  */
 export class TagApplication {
   /**
@@ -22,16 +20,41 @@ export class TagApplication {
    * @param tagList - The list of tags to create
    */
   static async commitCreate({ tagList }: Core.TCreateTagListInput) {
-    await Promise.all(
-      tagList.map(async ({ taggerId, taggedId, label, tagUrl, tagJson, taggedKind }: Core.TCreateTagInput) => {
-        if (taggedKind === Core.TagKind.POST) {
-          await Core.LocalPostTagService.create({ taggerId, taggedId, label });
-        } else {
-          await Core.LocalUserTagService.create({ taggerId, taggedId, label });
-        }
+    // Process tags one at a time so callers never observe hidden in-flight work
+    // from later entries after an earlier tag fails.
+    for (const { taggerId, taggedId, label, tagUrl, tagJson, taggedKind } of tagList) {
+      let didCreateLocally = false;
+
+      if (taggedKind === Core.TagKind.POST) {
+        didCreateLocally = await Core.LocalPostTagService.create({ taggerId, taggedId, label });
+      } else {
+        didCreateLocally = await Core.LocalUserTagService.create({ taggerId, taggedId, label });
+      }
+
+      try {
         await Core.HomeserverService.request({ method: HttpMethod.PUT, url: tagUrl, bodyJson: tagJson });
-      }),
-    );
+      } catch (error) {
+        if (didCreateLocally) {
+          try {
+            if (taggedKind === Core.TagKind.POST) {
+              await Core.LocalPostTagService.delete({ taggerId, taggedId, label });
+            } else {
+              await Core.LocalUserTagService.delete({ taggerId, taggedId, label });
+            }
+          } catch (rollbackError) {
+            Logger.error('[TagApplication.commitCreate] Failed to rollback local tag create', {
+              taggedId,
+              label,
+              taggerId,
+              taggedKind,
+              rollbackError,
+            });
+          }
+        }
+
+        throw error;
+      }
+    }
   }
 
   /**
@@ -54,7 +77,27 @@ export class TagApplication {
 
     // Only send to homeserver if something was actually deleted locally
     if (wasDeleted) {
-      await Core.HomeserverService.request({ method: HttpMethod.DELETE, url: tagUrl });
+      try {
+        await Core.HomeserverService.request({ method: HttpMethod.DELETE, url: tagUrl });
+      } catch (error) {
+        try {
+          if (taggedKind === Core.TagKind.POST) {
+            await Core.LocalPostTagService.create({ taggerId, taggedId, label });
+          } else {
+            await Core.LocalUserTagService.create({ taggerId, taggedId, label });
+          }
+        } catch (rollbackError) {
+          Logger.error('[TagApplication.commitDelete] Failed to rollback local tag delete', {
+            taggedId,
+            label,
+            taggerId,
+            taggedKind,
+            rollbackError,
+          });
+        }
+
+        throw error;
+      }
     }
   }
 }

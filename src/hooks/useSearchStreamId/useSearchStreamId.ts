@@ -71,7 +71,7 @@ export function useSearchStreamId(): Core.PostStreamId | undefined {
     const baseStreamId = Core.getStreamIdFromFilters(sort, Core.REACH.ALL, content);
 
     // Append tags to the stream ID
-    return `${baseStreamId}:${tags.join(',')}` as Core.PostStreamId;
+    return `${baseStreamId}:${tags.join(Core.POST_STREAM_TAG_DELIMITER)}` as Core.PostStreamId;
   }, [searchParams, sort, content]);
 
   return streamId;

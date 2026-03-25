@@ -4,6 +4,7 @@ import { useCallback, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import * as Core from '@/core';
 import * as Libs from '@/libs';
+import * as Molecules from '@/molecules';
 import { AUTH_ROUTES, SETTINGS_ROUTES } from '@/app';
 // Import directly to avoid circular dependency with @/hooks barrel
 import { useCopyToClipboard } from '@/hooks/useCopyToClipboard';
@@ -54,7 +55,8 @@ export function useProfileActions({ publicKey, link }: UseProfileActionsProps): 
       await Core.AuthController.logout();
       router.push(AUTH_ROUTES.LOGOUT);
     } catch (error) {
-      console.error('Failed to logout:', error);
+      Libs.Logger.error('Failed to logout:', error);
+      Molecules.showErrorToast({ description: Libs.ErrorMessages.LOGOUT_FAILED });
       setIsLoggingOut(false);
     }
   }, [router]);
@@ -63,14 +65,16 @@ export function useProfileActions({ publicKey, link }: UseProfileActionsProps): 
     async (status: string) => {
       const currentUserPubky = authStore.currentUserPubky;
       if (!currentUserPubky) {
-        console.error('No authenticated user found');
+        Libs.Logger.error('No authenticated user found');
+        Molecules.showErrorToast({ description: 'User profile not loaded. Please try again.' });
         return;
       }
 
       try {
         await Core.ProfileController.commitUpdateStatus({ pubky: currentUserPubky, status });
       } catch (error) {
-        console.error('Failed to update status:', error);
+        Libs.Logger.error('Failed to update status:', error);
+        Molecules.showErrorToast({ description: 'Failed to update status. Please try again.' });
       }
     },
     [authStore],

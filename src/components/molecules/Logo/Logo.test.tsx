@@ -1,4 +1,4 @@
-import { describe, it, expect, vi } from 'vitest';
+import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen, fireEvent } from '@testing-library/react';
 import { usePathname } from 'next/navigation';
 import { Logo } from './Logo';
@@ -25,8 +25,23 @@ vi.mock('next/navigation', () => ({
 }));
 
 const FORCE_HOME_SCROLL_TOP_KEY = 'pubky:force-home-scroll-top';
+const createSessionStorageMock = () => ({
+  getItem: vi.fn(),
+  setItem: vi.fn(),
+  removeItem: vi.fn(),
+  clear: vi.fn(),
+  key: vi.fn(),
+  length: 0,
+});
 
 describe('Logo', () => {
+  beforeEach(() => {
+    Object.defineProperty(window, 'sessionStorage', {
+      configurable: true,
+      value: createSessionStorageMock(),
+    });
+  });
+
   it('renders with default src', () => {
     vi.mocked(usePathname).mockReturnValue('/home');
 
@@ -57,7 +72,7 @@ describe('Logo', () => {
     vi.mocked(usePathname).mockReturnValue('/hot');
 
     Object.defineProperty(window, 'scrollTo', { value: vi.fn(), writable: true });
-    const setItemSpy = vi.spyOn(Storage.prototype, 'setItem');
+    const setItemSpy = vi.spyOn(window.sessionStorage, 'setItem');
 
     render(<Logo />);
     const link = screen.getByTestId('logo-image').closest('a');

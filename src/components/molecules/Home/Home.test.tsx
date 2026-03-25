@@ -25,6 +25,18 @@ vi.mock('@/molecules', () => ({
   ),
 }));
 
+// Mock organisms
+vi.mock('@/organisms', () => ({
+  DialogTerms: () => <span data-testid="dialog-terms">Terms of Service</span>,
+  DialogPrivacy: () => <span data-testid="dialog-privacy">Privacy Policy</span>,
+  DialogAge: () => <span data-testid="dialog-age">over 18 years old</span>,
+}));
+
+// Mock config
+vi.mock('@/config', () => ({
+  PUBKY_CORE_URL: 'https://github.com/pubky/pubky-core',
+}));
+
 // Mock atoms
 vi.mock('@/atoms', () => ({
   FooterLinks: ({ children }: { children: React.ReactNode }) => <div data-testid="footer-links">{children}</div>,
@@ -119,9 +131,16 @@ describe('HomeFooter', () => {
   it('renders branding text and copyright', () => {
     render(<HomeFooter />);
 
-    // The translation "a {tether} company" is rendered with Tether image in place of {tether}
     expect(screen.getByText(/company/)).toBeInTheDocument();
-    expect(screen.getByText(/Synonym Software, S\.A\. DE C\.V\. ©2026/)).toBeInTheDocument();
+    expect(screen.getByText(/Synonym Software, S\.A\. DE C\.V\./)).toBeInTheDocument();
+  });
+
+  it('renders terms, privacy and age agreement text', () => {
+    render(<HomeFooter />);
+
+    expect(screen.getByTestId('dialog-terms')).toBeInTheDocument();
+    expect(screen.getByTestId('dialog-privacy')).toBeInTheDocument();
+    expect(screen.getByTestId('dialog-age')).toBeInTheDocument();
   });
 
   it('renders Synonym logo as a link', () => {

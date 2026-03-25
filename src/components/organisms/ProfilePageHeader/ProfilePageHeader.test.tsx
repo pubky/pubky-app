@@ -2,6 +2,7 @@ import { render, screen, fireEvent } from '@testing-library/react';
 import { describe, it, expect, vi } from 'vitest';
 import { ProfilePageHeader } from './ProfilePageHeader';
 import { ProfilePageHeaderProps } from './ProfilePageHeader.types';
+import { FOLLOW_ACTIONS } from '@/hooks/useFollowUser/useFollowUser.types';
 
 // Mock Molecules components
 vi.mock('@/molecules', async (importOriginal) => {
@@ -95,6 +96,7 @@ const mockProps: ProfilePageHeaderProps = {
     onStatusChange: vi.fn(),
     onAvatarClick: vi.fn(),
     isLoggingOut: false,
+    followLoadingAction: null,
   },
   isOwnProfile: true,
   userId: '1QX7GKW3abcdef1234567890',
@@ -116,6 +118,7 @@ const mockOtherUserProps: ProfilePageHeaderProps = {
     onFollowToggle: vi.fn(),
     isFollowLoading: false,
     isFollowing: false,
+    followLoadingAction: null,
   },
   isOwnProfile: false,
   userId: 'other123456789012345',
@@ -256,6 +259,38 @@ describe('ProfilePageHeader - Other User Profile', () => {
     render(<ProfilePageHeader {...props} />);
 
     expect(screen.getByText('Following')).toBeInTheDocument();
+  });
+
+  it('shows Following... while follow action is loading even if isFollowing has updated', () => {
+    const props = {
+      ...mockOtherUserProps,
+      actions: {
+        ...mockOtherUserProps.actions,
+        isFollowing: true,
+        isFollowLoading: true,
+        followLoadingAction: FOLLOW_ACTIONS.FOLLOW,
+      },
+    };
+    render(<ProfilePageHeader {...props} />);
+
+    expect(screen.getByText('Following...')).toBeInTheDocument();
+    expect(screen.queryByText('Unfollowing...')).not.toBeInTheDocument();
+  });
+
+  it('shows Unfollowing... while unfollow action is loading even if isFollowing has updated', () => {
+    const props = {
+      ...mockOtherUserProps,
+      actions: {
+        ...mockOtherUserProps.actions,
+        isFollowing: false,
+        isFollowLoading: true,
+        followLoadingAction: FOLLOW_ACTIONS.UNFOLLOW,
+      },
+    };
+    render(<ProfilePageHeader {...props} />);
+
+    expect(screen.getByText('Unfollowing...')).toBeInTheDocument();
+    expect(screen.queryByText('Following...')).not.toBeInTheDocument();
   });
 
   it('renders Unfollow text for hover state when following', () => {

@@ -37,6 +37,7 @@ body {
   --color-input: var(--input);
   --color-border: var(--border);
   --color-destructive: var(--destructive);
+  --color-destructive-foreground: var(--destructive-foreground);
   --color-accent-foreground: var(--accent-foreground);
   --color-accent: var(--accent);
   --color-muted-foreground: var(--muted-foreground);
@@ -85,6 +86,7 @@ body {
   --accent: oklch(0.392 0.007 286.088);
   --accent-foreground: oklch(0.951 0.011 286.195);
   --destructive: oklch(0.628 0.258 29.234);
+  --destructive-foreground: oklch(0.971 0.013 17.38);
   --border: oklch(0.311 0.007 285.98);
   --input: #525252;
   --ring: oklch(0.55 0.008 286.145);
@@ -105,18 +107,14 @@ body {
   --sidebar-ring: oklch(0.472 0.007 274.863);
   --brand: oklch(0.928 0.23 123.978);
   --transparent: oklch(0.118 0.014 284.115 / 0);
+  --scrollbar-size: 10px;
+  --scrollbar-radius: 100%;
+  --scrollbar-thumb-color: var(--muted-foreground);
+  --scrollbar-track-color: transparent;
 
   /* ==================================================================
    * LAYOUT DIMENSIONS
    * ================================================================== */
-
-  /**
-   * Tag badge maximum width
-   * - Constrains tag width to prevent layout overflow with long tag names
-   * - Enables text truncation with ellipsis for long tag labels
-   * - Applied: TaggedItem component
-   */
-  --tag-max-width: 10rem;
 
   /**
    * Desktop header height (profile page header)
@@ -151,6 +149,26 @@ body {
    * Note: Profile pages use --header-height (146px) for ProfilePageHeader.
    */
   --header-offset-main: 150px;
+
+  /**
+   * Main content header offset
+   * - Vertical offset for auth pages, smaller header than normal
+   *
+   * Value rationale (120px):
+   * - Header container size: 120px
+   *
+   */
+  --header-offset-auth-pages: 120px;
+
+  /**
+   * Onboarding content header offset
+   * - Vertical offset for sticky below main header Different than others ones
+   *
+   * Value rationale (100px):
+   * - Header outer container: Smaller than auth pages due the header being 20px less pixels
+   *
+   */
+  --header-offset-onboarding: 100px;
 
   /**
    * Sidebar and filter bar width
@@ -300,6 +318,14 @@ body {
    * - Desktop uses different layout without mobile menu
    */
   --z-mobile-menu: 30;
+
+  /**
+   * Container max width
+   * - Maximum width for the container
+   * - Applied to: Container component
+   * - Used for: Main content area
+   */
+  --container-max-width: 1200px;
 }
 
 @layer base {
@@ -427,34 +453,92 @@ body {
     caret-color: #fff;
   }
 
-  /* Native scrollbar styles (global) */
-  * {
+  /* Keep the document scrollbar visible and hide all nested scrollbars */
+  html,
+  body {
     scrollbar-width: thin;
-    scrollbar-color: var(--muted-foreground) transparent;
+    scrollbar-color: var(--scrollbar-thumb-color) var(--scrollbar-track-color);
   }
 
-  *::-webkit-scrollbar {
-    width: 8px;
-    height: 8px;
+  html {
+    scrollbar-gutter: stable;
   }
 
-  *::-webkit-scrollbar-track {
+  html::-webkit-scrollbar,
+  body::-webkit-scrollbar {
+    width: var(--scrollbar-size);
+    height: var(--scrollbar-size);
+  }
+
+  html::-webkit-scrollbar-track,
+  body::-webkit-scrollbar-track {
+    background: var(--scrollbar-track-color);
+  }
+
+  html::-webkit-scrollbar-thumb,
+  body::-webkit-scrollbar-thumb {
+    background-color: var(--scrollbar-thumb-color);
+    border: 2px solid transparent;
+    border-radius: var(--scrollbar-radius);
+    background-clip: content-box;
+    min-height: 24px;
+  }
+
+  html::-webkit-scrollbar-corner,
+  body::-webkit-scrollbar-corner {
     background: transparent;
   }
 
-  *::-webkit-scrollbar-thumb {
-    background-color: var(--muted-foreground);
-    border: 1px solid transparent;
-    border-radius: 9999px;
-    background-clip: content-box;
-  }
-
-  .scrollbar-none {
+  :where(
+    .scrollbar-custom,
+    .overflow-auto,
+    .overflow-x-auto,
+    .overflow-y-auto,
+    .overflow-scroll,
+    .mdxeditor-popup-container .mdxeditor-select-content,
+    [data-radix-scroll-area-viewport]
+  ):not(.scrollbar-none) {
+    -ms-overflow-style: none;
     scrollbar-width: none;
   }
 
+  :where(
+      .scrollbar-custom,
+      .overflow-auto,
+      .overflow-x-auto,
+      .overflow-y-auto,
+      .overflow-scroll,
+      .mdxeditor-popup-container .mdxeditor-select-content,
+      [data-radix-scroll-area-viewport]
+    ):not(.scrollbar-none)::-webkit-scrollbar {
+    width: 0 !important;
+    height: 0 !important;
+    display: none !important;
+  }
+
+  .scrollbar-none {
+    -ms-overflow-style: none !important;
+    scrollbar-width: none !important;
+  }
+
   .scrollbar-none::-webkit-scrollbar {
-    display: none;
+    width: 0 !important;
+    height: 0 !important;
+    display: none !important;
+  }
+
+  @media (forced-colors: active) {
+    html,
+    body {
+      scrollbar-width: auto;
+      scrollbar-color: auto;
+    }
+
+    html::-webkit-scrollbar-thumb,
+    body::-webkit-scrollbar-thumb {
+      background-color: ButtonText;
+      border-color: Canvas;
+    }
   }
 
   /**
@@ -525,5 +609,12 @@ body {
 
   .max-width-profile-page-header {
     max-width: calc(100vw - 6rem);
+  }
+
+  .h-screen-without-page-header-auth-pages {
+    min-height: calc(100dvh - var(--header-offset-auth-pages));
+  }
+  .h-screen-without-page-header-onboarding {
+    min-height: calc(100dvh - var(--header-offset-onboarding));
   }
 }

@@ -2,7 +2,7 @@
 
 exports[`OnboardingLayout - Snapshots > matches snapshot with complex navigation 1`] = `
 <div
-  class="mx-auto w-full flex-col flex container items-stretch gap-0 px-6 pt-4 pb-0 lg:min-h-0 lg:items-start lg:pb-6"
+  class="mx-auto w-full flex-col flex container max-w-(--container-max-width) h-screen-without-page-header-onboarding items-stretch gap-0 px-6 pt-4 pb-0 lg:min-h-0 lg:items-start lg:pb-6"
   data-testid="container"
 >
   <div
@@ -32,7 +32,7 @@ exports[`OnboardingLayout - Snapshots > matches snapshot with complex navigation
 
 exports[`OnboardingLayout - Snapshots > matches snapshot with content and navigation 1`] = `
 <div
-  class="mx-auto w-full flex-col flex container items-stretch gap-0 px-6 pt-4 pb-0 lg:min-h-0 lg:items-start lg:pb-6"
+  class="mx-auto w-full flex-col flex container max-w-(--container-max-width) h-screen-without-page-header-onboarding items-stretch gap-0 px-6 pt-4 pb-0 lg:min-h-0 lg:items-start lg:pb-6"
   data-testid="container"
 >
   <div
@@ -55,7 +55,7 @@ exports[`OnboardingLayout - Snapshots > matches snapshot with content and naviga
 
 exports[`OnboardingLayout - Snapshots > matches snapshot with multiple children 1`] = `
 <div
-  class="mx-auto w-full flex-col flex container items-stretch gap-0 px-6 pt-4 pb-0 lg:min-h-0 lg:items-start lg:pb-6"
+  class="mx-auto w-full flex-col flex container max-w-(--container-max-width) h-screen-without-page-header-onboarding items-stretch gap-0 px-6 pt-4 pb-0 lg:min-h-0 lg:items-start lg:pb-6"
   data-testid="container"
 >
   <div
@@ -77,7 +77,7 @@ exports[`OnboardingLayout - Snapshots > matches snapshot with multiple children 
 
 exports[`OnboardingLayout - Snapshots > matches snapshot with only content 1`] = `
 <div
-  class="mx-auto w-full flex-col flex container items-stretch gap-0 px-6 pt-4 pb-0 lg:min-h-0 lg:items-start lg:pb-6"
+  class="mx-auto w-full flex-col flex container max-w-(--container-max-width) h-screen-without-page-header-onboarding items-stretch gap-0 px-6 pt-4 pb-0 lg:min-h-0 lg:items-start lg:pb-6"
   data-testid="container"
 >
   <div

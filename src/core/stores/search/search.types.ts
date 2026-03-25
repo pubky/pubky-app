@@ -38,6 +38,8 @@ export interface SearchActions {
   addActiveTag: (tag: string) => void;
   /** Remove a tag from active tags (optimistic update). Tag should be normalized (lowercase, trimmed) before calling */
   removeActiveTag: (tag: string) => void;
+  /** Reset search store to initial state */
+  reset: () => void;
 }
 
 /**
@@ -64,4 +66,5 @@ export enum SearchActionTypes {
   SET_ACTIVE_TAGS = 'SET_ACTIVE_TAGS',
   ADD_ACTIVE_TAG = 'ADD_ACTIVE_TAG',
   REMOVE_ACTIVE_TAG = 'REMOVE_ACTIVE_TAG',
+  RESET = 'RESET',
 }

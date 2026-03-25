@@ -10,9 +10,9 @@ export type TFeedCreateParams = {
 };
 
 export type TFeedUpdateParams = {
-  changes: Partial<Omit<TFeedCreateParams, 'name'>>;
+  changes: Partial<TFeedCreateParams>;
 } & TFeedIdParam;
 
 export type TFeedIdParam = {
-  feedId: number;
+  feedId: string;
 };

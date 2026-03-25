@@ -57,11 +57,12 @@ exports[`MobileFooter - Snapshots > matches snapshot for profile link 1`] = `
 
 exports[`MobileFooter - Snapshots > matches snapshot with custom className 1`] = `
 <div
-  class="flex justify-center pb-20 lg:hidden custom-footer"
+  class="fixed bottom-0 z-40 w-full overflow-x-auto bg-gradient-to-t from-background via-background/95 to-transparent px-3 py-4 transition-transform duration-75 lg:hidden custom-footer"
+  data-testid="container"
 >
   <div
-    class="fixed bottom-0 z-40 flex w-full max-w-[380px] items-center justify-between overflow-x-auto bg-gradient-to-t from-background via-background/95 to-transparent px-3 py-4 sm:max-w-[600px] md:max-w-[720px] transition-transform duration-75"
-    style="transform: translateY(-300px);"
+    class="mx-auto flex max-w-[380px] items-center justify-between sm:max-w-[600px] md:max-w-[720px]"
+    data-testid="container"
   >
     <a
       aria-label="Home"
@@ -220,11 +221,12 @@ exports[`MobileFooter - Snapshots > matches snapshot with custom className 1`] =
 
 exports[`MobileFooter - Snapshots > matches snapshot with default props 1`] = `
 <div
-  class="flex justify-center pb-20 lg:hidden"
+  class="fixed bottom-0 z-40 w-full overflow-x-auto bg-gradient-to-t from-background via-background/95 to-transparent px-3 py-4 transition-transform duration-75 lg:hidden"
+  data-testid="container"
 >
   <div
-    class="fixed bottom-0 z-40 flex w-full max-w-[380px] items-center justify-between overflow-x-auto bg-gradient-to-t from-background via-background/95 to-transparent px-3 py-4 sm:max-w-[600px] md:max-w-[720px] transition-transform duration-75"
-    style="transform: translateY(-300px);"
+    class="mx-auto flex max-w-[380px] items-center justify-between sm:max-w-[600px] md:max-w-[720px]"
+    data-testid="container"
   >
     <a
       aria-label="Home"
@@ -383,11 +385,12 @@ exports[`MobileFooter - Snapshots > matches snapshot with default props 1`] = `
 
 exports[`MobileFooter - Snapshots > matches snapshot with different active path 1`] = `
 <div
-  class="flex justify-center pb-20 lg:hidden"
+  class="fixed bottom-0 z-40 w-full overflow-x-auto bg-gradient-to-t from-background via-background/95 to-transparent px-3 py-4 transition-transform duration-75 lg:hidden"
+  data-testid="container"
 >
   <div
-    class="fixed bottom-0 z-40 flex w-full max-w-[380px] items-center justify-between overflow-x-auto bg-gradient-to-t from-background via-background/95 to-transparent px-3 py-4 sm:max-w-[600px] md:max-w-[720px] transition-transform duration-75"
-    style="transform: translateY(-300px);"
+    class="mx-auto flex max-w-[380px] items-center justify-between sm:max-w-[600px] md:max-w-[720px]"
+    data-testid="container"
   >
     <a
       aria-label="Home"

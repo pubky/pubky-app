@@ -19,7 +19,7 @@ const createFeedParams = (overrides: Partial<TFeedCreateParams> = {}): TFeedCrea
 });
 
 const createMockFeedSchema = (overrides: Partial<Core.FeedModelSchema> = {}): Core.FeedModelSchema => ({
-  id: 123,
+  id: 'feed-abc123',
   name: 'Bitcoin News',
   tags: ['bitcoin', 'lightning'],
   reach: PubkyAppFeedReach.All,
@@ -48,6 +48,7 @@ describe('FeedController', () => {
     vi.spyOn(Core.FeedApplication, 'commitDelete').mockResolvedValue(undefined);
     vi.spyOn(Core.FeedApplication, 'getList').mockResolvedValue([createMockFeedSchema()]);
     vi.spyOn(Core.FeedApplication, 'get').mockResolvedValue(createMockFeedSchema());
+    vi.spyOn(Core.FeedApplication, 'fetchFeeds').mockResolvedValue([createMockFeedSchema()]);
 
     // Import FeedController
     const feedModule = await import('./feed');
@@ -68,7 +69,7 @@ describe('FeedController', () => {
         },
       });
       expect(result).toBeTruthy();
-      expect(result.id).toBe(123);
+      expect(result.id).toBe('feed-abc123');
     });
 
     it('should throw when user is not authenticated (via application layer)', async () => {
@@ -98,21 +99,21 @@ describe('FeedController', () => {
         .mockResolvedValue(createFeedParams({ tags: ['bitcoin', 'mining'] }));
 
       const updateParams: TFeedUpdateParams = {
-        feedId: 123,
+        feedId: 'feed-abc123',
         changes: { tags: ['bitcoin', 'mining'] },
       };
 
       const result = await FeedController.commitUpdate(updateParams);
 
       expect(prepareSpy).toHaveBeenCalledWith({
-        feedId: 123,
+        feedId: 'feed-abc123',
         changes: { tags: ['bitcoin', 'mining'] },
       });
       expect(persistSpy).toHaveBeenCalledWith({
         userId: testData.userPubky,
         params: {
           feed: expect.any(Object),
-          existingId: 123,
+          existingId: 'feed-abc123',
         },
       });
       expect(result).toBeTruthy();
@@ -122,18 +123,45 @@ describe('FeedController', () => {
       vi.spyOn(Core.FeedApplication, 'prepareUpdateParams').mockRejectedValue(new Error('Feed not found'));
 
       const updateParams: TFeedUpdateParams = {
-        feedId: 999,
+        feedId: 'feed-nonexistent',
         changes: { tags: ['new'] },
       };
 
       await expect(FeedController.commitUpdate(updateParams)).rejects.toThrow('Feed not found');
     });
 
+    it('should pass name change to application layer for persistence', async () => {
+      const persistSpy = vi.spyOn(Core.FeedApplication, 'persist');
+      const prepareSpy = vi
+        .spyOn(Core.FeedApplication, 'prepareUpdateParams')
+        .mockResolvedValue(createFeedParams({ name: 'Renamed Feed' }));
+
+      const updateParams: TFeedUpdateParams = {
+        feedId: 'feed-abc123',
+        changes: { name: 'Renamed Feed' },
+      };
+
+      const result = await FeedController.commitUpdate(updateParams);
+
+      expect(prepareSpy).toHaveBeenCalledWith({
+        feedId: 'feed-abc123',
+        changes: { name: 'Renamed Feed' },
+      });
+      expect(persistSpy).toHaveBeenCalledWith({
+        userId: testData.userPubky,
+        params: {
+          feed: expect.any(Object),
+          existingId: 'feed-abc123',
+        },
+      });
+      expect(result).toBeTruthy();
+    });
+
     it('should throw when user is not authenticated (via application layer)', async () => {
       vi.spyOn(Core.FeedApplication, 'prepareUpdateParams').mockResolvedValue(createFeedParams({ tags: ['new'] }));
       vi.spyOn(Core.FeedApplication, 'persist').mockRejectedValue(new Error('User not authenticated'));
 
-      await expect(FeedController.commitUpdate({ feedId: 123, changes: { tags: ['new'] } })).rejects.toThrow(
+      await expect(FeedController.commitUpdate({ feedId: 'feed-abc123', changes: { tags: ['new'] } })).rejects.toThrow(
         'User not authenticated',
       );
     });
@@ -142,23 +170,61 @@ describe('FeedController', () => {
   describe('delete', () => {
     it('should call delete in application layer', async () => {
       const deleteSpy = vi.spyOn(Core.FeedApplication, 'commitDelete');
-      const deleteParams: TFeedIdParam = { feedId: 123 };
+      const deleteParams: TFeedIdParam = { feedId: 'feed-abc123' };
 
       await FeedController.commitDelete(deleteParams);
 
-      expect(deleteSpy).toHaveBeenCalledWith({ userId: testData.userPubky, params: { feedId: 123 } });
+      expect(deleteSpy).toHaveBeenCalledWith({ userId: testData.userPubky, params: { feedId: 'feed-abc123' } });
     });
 
     it('should throw when user is not authenticated (via application layer)', async () => {
       vi.spyOn(Core.FeedApplication, 'commitDelete').mockRejectedValue(new Error('User not authenticated'));
 
-      await expect(FeedController.commitDelete({ feedId: 123 })).rejects.toThrow('User not authenticated');
+      await expect(FeedController.commitDelete({ feedId: 'feed-abc123' })).rejects.toThrow('User not authenticated');
+    });
+  });
+
+  describe('fetchFeeds', () => {
+    it('should pass userId from auth store to application layer', async () => {
+      const fetchSpy = vi.spyOn(Core.FeedApplication, 'fetchFeeds');
+
+      await FeedController.fetchFeeds();
+
+      expect(fetchSpy).toHaveBeenCalledWith(testData.userPubky);
+    });
+
+    it('should return persisted feeds from application layer', async () => {
+      const feeds = [createMockFeedSchema({ id: 'feed-1' }), createMockFeedSchema({ id: 'feed-2' })];
+      vi.spyOn(Core.FeedApplication, 'fetchFeeds').mockResolvedValue(feeds);
+
+      const result = await FeedController.fetchFeeds();
+
+      expect(result).toHaveLength(2);
+      expect(result[0].id).toBe('feed-1');
+      expect(result[1].id).toBe('feed-2');
+    });
+
+    it('should return empty array when no feeds on homeserver', async () => {
+      vi.spyOn(Core.FeedApplication, 'fetchFeeds').mockResolvedValue([]);
+
+      const result = await FeedController.fetchFeeds();
+
+      expect(result).toEqual([]);
+    });
+
+    it('should propagate errors from application layer', async () => {
+      vi.spyOn(Core.FeedApplication, 'fetchFeeds').mockRejectedValue(new Error('Network error'));
+
+      await expect(FeedController.fetchFeeds()).rejects.toThrow('Network error');
     });
   });
 
   describe('list', () => {
     it('should return all feeds sorted', async () => {
-      const feeds = [createMockFeedSchema({ id: 1, name: 'Feed 1' }), createMockFeedSchema({ id: 2, name: 'Feed 2' })];
+      const feeds = [
+        createMockFeedSchema({ id: 'feed-1', name: 'Feed 1' }),
+        createMockFeedSchema({ id: 'feed-2', name: 'Feed 2' }),
+      ];
       vi.spyOn(Core.FeedApplication, 'getList').mockResolvedValue(feeds);
 
       const result = await FeedController.getList();
@@ -173,16 +239,16 @@ describe('FeedController', () => {
       const feed = createMockFeedSchema();
       vi.spyOn(Core.FeedApplication, 'get').mockResolvedValue(feed);
 
-      const result = await FeedController.get({ feedId: 123 });
+      const result = await FeedController.get({ feedId: 'feed-abc123' });
 
       expect(result).toBeTruthy();
-      expect(result!.id).toBe(123);
+      expect(result!.id).toBe('feed-abc123');
     });
 
     it('should return undefined when not found', async () => {
       vi.spyOn(Core.FeedApplication, 'get').mockResolvedValue(undefined as unknown as Core.FeedModelSchema);
 
-      const result = await FeedController.get({ feedId: 999 });
+      const result = await FeedController.get({ feedId: 'feed-nonexistent' });
 
       expect(result).toBeUndefined();
     });

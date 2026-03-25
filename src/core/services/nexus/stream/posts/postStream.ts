@@ -13,9 +13,13 @@ export class NexusPostStreamService {
    * @param params - Parameters containing post IDs and optional viewer ID
    * @returns Array of posts
    */
-  static async fetchByIds(params: Core.TStreamPostsByIdsParams): Promise<Core.NexusPost[]> {
+  static async fetchByIds(params: Core.TStreamPostsByIdsParams): Promise<Core.NexusPostWithAttachmentMetadata[]> {
     const { url, body } = Core.postStreamApi.postsByIds(params);
-    return await Core.queryNexus<Core.NexusPost[]>({ url, method: HttpMethod.POST, body: JSON.stringify(body) });
+    return await Core.queryNexus<Core.NexusPostWithAttachmentMetadata[]>({
+      url,
+      method: HttpMethod.POST,
+      body: JSON.stringify(body),
+    });
   }
 
   /**

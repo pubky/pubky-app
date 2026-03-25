@@ -1,19 +1,44 @@
-import { describe, it, expect, vi } from 'vitest';
+import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { render, screen } from '@testing-library/react';
 import { HomeFeedSidebar, HomeFeedDrawer, HomeFeedDrawerMobile } from './HomeFeedSidebar';
+import { TIMELINE_FEED_VARIANT } from '@/config';
+
+const mockSetContent = vi.fn();
+const mockUseHomeStore = vi.fn();
+const mockFilterContent = vi.fn(({ disabledTabs, selectedTab }: { disabledTabs?: string[]; selectedTab?: string }) => (
+  <div
+    data-testid="filter-content"
+    data-disabled-tabs={(disabledTabs ?? []).length ? disabledTabs?.join(',') : undefined}
+    data-selected-tab={selectedTab}
+  >
+    FilterContent
+  </div>
+));
 
 // Mock Core.useHomeStore
 vi.mock('@/core', () => ({
-  useHomeStore: vi.fn(() => ({
-    layout: 'column',
-    setLayout: vi.fn(),
-    reach: 'following',
-    setReach: vi.fn(),
-    sort: 'recent',
-    setSort: vi.fn(),
-    content: 'posts',
-    setContent: vi.fn(),
-  })),
+  CONTENT: {
+    ALL: 'all',
+    SHORT: 'short',
+    LONG: 'long',
+    IMAGES: 'images',
+    VIDEOS: 'videos',
+    LINKS: 'links',
+    FILES: 'files',
+  },
+  useHomeStore: () => mockUseHomeStore(),
+}));
+
+const mockUseFeedLayoutResolution = vi.fn(() => ({
+  requestedLayout: 'columns',
+  effectiveLayout: 'columns',
+  isVisualRequested: false,
+  isVisualActive: false,
+  isPhoneViewport: false,
+}));
+
+vi.mock('@/hooks', () => ({
+  useFeedLayoutResolution: () => mockUseFeedLayoutResolution(),
 }));
 
 // Mock Atoms
@@ -29,9 +54,35 @@ vi.mock('@/atoms', () => ({
 vi.mock('@/molecules', () => ({
   FilterReach: () => <div data-testid="filter-reach">FilterReach</div>,
   FilterSort: () => <div data-testid="filter-sort">FilterSort</div>,
-  FilterContent: () => <div data-testid="filter-content">FilterContent</div>,
-  FilterLayout: () => <div data-testid="filter-layout">FilterLayout</div>,
+  FilterContent: (props: { disabledTabs?: string[]; selectedTab?: string }) => mockFilterContent(props),
+  FilterLayout: ({ showVisual }: { showVisual?: boolean }) => (
+    <div data-testid="filter-layout" data-show-visual={showVisual ? 'true' : undefined}>
+      FilterLayout
+    </div>
+  ),
 }));
+
+beforeEach(() => {
+  mockSetContent.mockClear();
+  mockUseHomeStore.mockReturnValue({
+    layout: 'columns',
+    setLayout: vi.fn(),
+    reach: 'following',
+    setReach: vi.fn(),
+    sort: 'timeline',
+    setSort: vi.fn(),
+    content: 'all',
+    setContent: mockSetContent,
+  });
+  mockFilterContent.mockClear();
+  mockUseFeedLayoutResolution.mockReturnValue({
+    requestedLayout: 'columns',
+    effectiveLayout: 'columns',
+    isVisualRequested: false,
+    isVisualActive: false,
+    isPhoneViewport: false,
+  });
+});
 
 describe('HomeFeedSidebar', () => {
   it('renders all filter components', () => {
@@ -46,6 +97,51 @@ describe('HomeFeedSidebar', () => {
   it('matches snapshot', () => {
     const { container } = render(<HomeFeedSidebar />);
     expect(container).toMatchSnapshot();
+  });
+
+  it('shows visual layout when enabled on desktop/tablet', () => {
+    render(<HomeFeedSidebar allowVisualLayout feedVariant={TIMELINE_FEED_VARIANT.HOME} />);
+
+    expect(screen.getByTestId('filter-layout')).toHaveAttribute('data-show-visual', 'true');
+  });
+
+  it('disables unsupported content options while visual is active', () => {
+    mockUseFeedLayoutResolution.mockReturnValue({
+      requestedLayout: 'visual',
+      effectiveLayout: 'visual',
+      isVisualRequested: true,
+      isVisualActive: true,
+      isPhoneViewport: false,
+    });
+
+    render(<HomeFeedSidebar allowVisualLayout feedVariant={TIMELINE_FEED_VARIANT.HOME} />);
+
+    expect(screen.getByTestId('filter-content')).toHaveAttribute('data-disabled-tabs', 'short,long,links,files');
+  });
+
+  it('shows the resolved visual content without mutating the store from the sidebar', () => {
+    mockUseHomeStore.mockReturnValue({
+      layout: 'visual',
+      setLayout: vi.fn(),
+      reach: 'following',
+      setReach: vi.fn(),
+      sort: 'timeline',
+      setSort: vi.fn(),
+      content: 'short',
+      setContent: mockSetContent,
+    });
+    mockUseFeedLayoutResolution.mockReturnValue({
+      requestedLayout: 'visual',
+      effectiveLayout: 'visual',
+      isVisualRequested: true,
+      isVisualActive: true,
+      isPhoneViewport: false,
+    });
+
+    render(<HomeFeedSidebar allowVisualLayout feedVariant={TIMELINE_FEED_VARIANT.HOME} />);
+
+    expect(screen.getByTestId('filter-content')).toHaveAttribute('data-selected-tab', 'all');
+    expect(mockSetContent).not.toHaveBeenCalled();
   });
 });
 

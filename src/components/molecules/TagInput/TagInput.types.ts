@@ -1,5 +1,9 @@
 import type { TagLabel } from '@/hooks/useTagInput/useTagInput.types';
 
+export interface TagInputHandle {
+  focus: () => void;
+}
+
 export interface TagInputProps {
   /** Callback when a tag is added. Can return a Promise for async handling. */
   onTagAdd: (tag: string) => void | Promise<unknown>;

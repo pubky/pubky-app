@@ -4,43 +4,6 @@ globs: src/libs/env/env.ts
 alwaysApply: false
 ---
 
-# Environment Variables Configuration
+# Environment Variable Rules
 
-When adding or modifying environment variables, you MUST update **two places** in `src/libs/env/env.ts`:
-
-## 1. Add to `envSchema`
-
-Define the variable in the Zod schema with proper validation:
-
-```typescript
-const envSchema = z.object({
-  // ... existing variables ...
-  
-  // Add your new variable here with appropriate validation
-  NEXT_PUBLIC_MY_NEW_VAR: z.string().url().default('https://example.com'),
-});
-```
-
-## 2. Add to `parseEnv()`
-
-Pass the variable to `safeParse()` inside the `parseEnv` function:
-
-```typescript
-function parseEnv(): z.infer<typeof envSchema> {
-  const result = envSchema.safeParse({
-    // ... existing variables ...
-    
-    // Add your new variable here
-    NEXT_PUBLIC_MY_NEW_VAR: process.env.NEXT_PUBLIC_MY_NEW_VAR,
-  });
-  // ...
-}
-```
-
-## Checklist for New Environment Variables
-
-- [ ] Added to `envSchema` with Zod validation
-- [ ] Added to `parseEnv()` safeParse object
-- [ ] Added to `.env.example` with documentation
-- [ ] Added to `.env` (local development)
-- [ ] Added tests if the variable has special parsing logic
+@docs/environment.md
