@@ -7,6 +7,8 @@ import * as Core from '@/core';
 import * as Libs from '@/libs';
 import { USERS_PER_PAGE } from './WhoToFollowPageMain.constants';
 
+const LOAD_MORE_SKELETON_COUNT = 2;
+
 /**
  * WhoToFollowPageMain
  *
@@ -94,8 +96,9 @@ export function WhoToFollowPageMain() {
 
       {isLoadingMore && (
         <Atoms.Container className="gap-4 py-4">
-          <Organisms.FullUserListItemSkeleton />
-          <Organisms.FullUserListItemSkeleton />
+          {Array.from({ length: LOAD_MORE_SKELETON_COUNT }).map((_, i) => (
+            <Organisms.FullUserListItemSkeleton key={`who-to-follow-load-more-skeleton-${i}`} />
+          ))}
         </Atoms.Container>
       )}
     </Atoms.Container>

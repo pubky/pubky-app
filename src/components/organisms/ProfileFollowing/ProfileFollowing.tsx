@@ -8,6 +8,8 @@ import * as Core from '@/core';
 import * as Providers from '@/providers';
 import { NEXUS_USERS_PER_PAGE } from '@/config';
 
+const LOAD_MORE_SKELETON_COUNT = 2;
+
 /**
  * ProfileFollowing
  *
@@ -93,8 +95,9 @@ export function ProfileFollowing() {
 
       {isLoadingMore && (
         <Atoms.Container className="gap-4 py-4">
-          <Organisms.FullUserListItemSkeleton />
-          <Organisms.FullUserListItemSkeleton />
+          {Array.from({ length: LOAD_MORE_SKELETON_COUNT }).map((_, i) => (
+            <Organisms.FullUserListItemSkeleton key={`following-load-more-skeleton-${i}`} />
+          ))}
         </Atoms.Container>
       )}
     </Atoms.Container>

@@ -1,7 +1,7 @@
 'use client';
 
 import * as Atoms from '@/atoms';
-import { PostCardSkeleton } from '@/organisms/PostCardSkeleton';
+import { PostCardSkeleton } from '@/organisms/PostCardSkeleton/PostCardSkeleton';
 
 const TIMELINE_LOAD_MORE_SKELETON_COUNT = 2;
 
