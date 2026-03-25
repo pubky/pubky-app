@@ -92,7 +92,7 @@ exports[`MobileHeader - Snapshots > matches snapshot with custom onLeftIconClick
   data-testid="container"
 >
   <div
-    class="m-auto w-full max-w-sm p-6 sm:max-w-xl md:max-w-3xl lg:max-w-5xl xl:max-w-6xl xl:px-0"
+    class="m-auto w-full max-w-sm p-6 pb-0 sm:max-w-xl md:max-w-3xl lg:max-w-5xl xl:max-w-6xl xl:px-0"
     data-testid="container"
   >
     <div
@@ -187,7 +187,7 @@ exports[`MobileHeader - Snapshots > matches snapshot with default props 1`] = `
   data-testid="container"
 >
   <div
-    class="m-auto w-full max-w-sm p-6 sm:max-w-xl md:max-w-3xl lg:max-w-5xl xl:max-w-6xl xl:px-0"
+    class="m-auto w-full max-w-sm p-6 pb-0 sm:max-w-xl md:max-w-3xl lg:max-w-5xl xl:max-w-6xl xl:px-0"
     data-testid="container"
   >
     <div
@@ -282,7 +282,7 @@ exports[`MobileHeader - Snapshots > matches snapshot with fixed positioning 1`] 
   data-testid="container"
 >
   <div
-    class="m-auto w-full max-w-sm p-6 sm:max-w-xl md:max-w-3xl lg:max-w-5xl xl:max-w-6xl xl:px-0"
+    class="m-auto w-full max-w-sm p-6 pb-0 sm:max-w-xl md:max-w-3xl lg:max-w-5xl xl:max-w-6xl xl:px-0"
     data-testid="container"
   >
     <div
@@ -377,7 +377,7 @@ exports[`MobileHeader - Snapshots > matches snapshot with solid background (hasG
   data-testid="container"
 >
   <div
-    class="m-auto w-full max-w-sm p-6 sm:max-w-xl md:max-w-3xl lg:max-w-5xl xl:max-w-6xl xl:px-0"
+    class="m-auto w-full max-w-sm p-6 pb-0 sm:max-w-xl md:max-w-3xl lg:max-w-5xl xl:max-w-6xl xl:px-0"
     data-testid="container"
   >
     <div

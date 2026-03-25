@@ -48,8 +48,8 @@ const SignInProgress = () => {
   const t = useTranslations('onboarding.signIn');
 
   return (
-    <Atoms.Container className="items-center justify-center">
-      <div className="flex flex-col gap-4">
+    <Atoms.Container className="items-start justify-center">
+      <div className="flex w-full max-w-sm flex-col gap-4">
         {SIGN_IN_STEPS.map((step) => {
           const status = getStepStatus(step.key, state);
           return (
@@ -122,7 +122,7 @@ export const SignInContent = () => {
   if (authUrlResolved) {
     return (
       <Atoms.Container size="container" className="flex flex-col">
-        <SignInHeader />
+        <SignInProgressHeader />
         <Molecules.ContentCard layout="column">
           <SignInProgress />
         </Molecules.ContentCard>
@@ -209,7 +209,11 @@ export const SignInContent = () => {
 };
 
 export const SignInFooter = () => {
+  const authUrlResolved = Core.useSignInStore((state) => state.authUrlResolved);
   const t = useTranslations('onboarding.signIn');
+
+  if (authUrlResolved) return null;
+
   return (
     <Atoms.FooterLinks className="py-6">
       {t.rich('recoveryHint', {
@@ -233,6 +237,18 @@ export const SignInHeader = () => {
         })}
       </Molecules.PageTitle>
       <Atoms.PageSubtitle>{t('subtitle')}</Atoms.PageSubtitle>
+    </Atoms.PageHeader>
+  );
+};
+
+const SignInProgressHeader = () => {
+  const t = useTranslations('onboarding.signIn');
+
+  return (
+    <Atoms.PageHeader>
+      <Molecules.Logo className="py-6 lg:hidden" />
+      <Molecules.PageTitle size="large">{t('progressTitle')}</Molecules.PageTitle>
+      <Atoms.PageSubtitle>{t('progressSubtitle')}</Atoms.PageSubtitle>
     </Atoms.PageHeader>
   );
 };
