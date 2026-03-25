@@ -86,6 +86,17 @@ vi.mock('@/atoms', () => ({
     REGULAR: 'regular',
     LAST: 'last',
   },
+  Skeleton: ({ className }: { className?: string }) => <div data-testid="skeleton" className={className} />,
+  CardContent: ({ children, className }: { children: React.ReactNode; className?: string }) => (
+    <div data-testid="card-content" className={className}>
+      {children}
+    </div>
+  ),
+  PageHeader: ({ children, ...props }: { children: React.ReactNode; [key: string]: unknown }) => (
+    <div data-testid="page-header" {...props}>
+      {children}
+    </div>
+  ),
 }));
 
 // Mock molecules
@@ -201,7 +212,7 @@ describe('SinglePostContent', () => {
 
       render(<SinglePostContent postId={mockPostId} />);
 
-      expect(screen.getByText('Loading post...')).toBeInTheDocument();
+      expect(screen.getAllByTestId('skeleton').length).toBeGreaterThan(0);
     });
 
     it('renders ThreadTree with showQuickReply=true when parent post is not deleted', () => {
