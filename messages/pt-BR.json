@@ -75,7 +75,12 @@
     "links": "Links",
     "tags": "Tags",
     "posts": "Posts",
-    "avatar": "Avatar"
+    "avatar": "Avatar",
+    "threadTree": {
+      "expandAllReplies": "Expandir todas as respostas",
+      "collapseAllReplies": "Recolher todas as respostas",
+      "moreReplies": "{count, plural, one {# resposta a mais} other {# respostas a mais}}"
+    }
   },
   "header": {
     "home": "Início",
@@ -956,6 +961,10 @@
       "userIdRequired": "ID do usuario e obrigatório",
       "loginRequired": "Voce precisa estar logado para adicionar tags",
       "alreadyAdded": "Voce ja adicionou esta tag",
+      "added": "Tag adicionada",
+      "addedDesc": "\"{label}\" foi adicionada com sucesso.",
+      "removed": "Tag removida",
+      "removedDesc": "\"{label}\" foi removida com sucesso.",
       "addFailed": "Falha ao adicionar tag",
       "addFailedDesc": "Nao foi possivel adicionar \"{label}\". Por favor, tente novamente.",
       "removeFailed": "Falha ao remover tag",

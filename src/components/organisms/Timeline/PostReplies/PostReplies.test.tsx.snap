@@ -1,42 +1,32 @@
 // Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
 
-exports[`TimelinePostReplies > Snapshots > should match snapshot when rendering no replies 1`] = `<div />`;
-
-exports[`TimelinePostReplies > Snapshots > should match snapshot when rendering replies 1`] = `
+exports[`TimelinePostReplies - Snapshots > matches snapshot when authenticated with non-deleted post 1`] = `
 <div>
   <div
     class="ml-3"
     data-testid="container"
   >
     <div
-      data-testid="post-thread-spacer"
+      data-post-id="author:post123"
+      data-show-quick-reply="true"
+      data-testid="thread-tree"
     />
+  </div>
+</div>
+`;
+
+exports[`TimelinePostReplies - Snapshots > matches snapshot when not authenticated 1`] = `<div />`;
+
+exports[`TimelinePostReplies - Snapshots > matches snapshot when parent post is deleted 1`] = `
+<div>
+  <div
+    class="ml-3"
+    data-testid="container"
+  >
     <div
-      data-is-last-reply="false"
-      data-is-reply="true"
-      data-testid="post-main-author:reply1"
-    />
-    <div
-      data-testid="post-thread-spacer"
-    />
-    <div
-      data-is-last-reply="false"
-      data-is-reply="true"
-      data-testid="post-main-author:reply2"
-    />
-    <div
-      data-testid="post-thread-spacer"
-    />
-    <div
-      data-is-last-reply="false"
-      data-is-reply="true"
-      data-testid="post-main-author:reply3"
-    />
-    <div
-      data-testid="post-thread-spacer"
-    />
-    <div
-      data-testid="quick-reply-author:post123"
+      data-post-id="author:post123"
+      data-show-quick-reply="false"
+      data-testid="thread-tree"
     />
   </div>
 </div>

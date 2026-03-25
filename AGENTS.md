@@ -42,6 +42,14 @@ Use `Err.*` factories (never raw `Error`). Factories log automatically — don't
 - Atomic design: atoms → molecules → organisms → templates
 - Z-index scale: -z-10, z-10, z-30, z-40, z-50, z-60 (see `docs/z-index.md`)
 
+## Learned User Preferences
+
+- Bug fixes must not regress existing visible functionality (e.g., reducing displayed item count from 3 to 2)
+
+## Learned Workspace Facts
+
+- Config constants in `src/config/` (e.g., `USER_LIST_TAGS_MAX_TOTAL_CHARS`, tag limits) are project-wide hard limits — do not modify them for individual component fixes
+
 ## Documentation
 
 Consult `docs/` before making changes:

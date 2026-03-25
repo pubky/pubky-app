@@ -1,6 +1,8 @@
 'use client';
 
 import * as React from 'react';
+import { Virtuoso } from 'react-virtuoso';
+import { TIMELINE_VIRTUOSO_OVERSCAN_PX } from '@/config';
 import * as Atoms from '@/atoms';
 import * as Core from '@/core';
 import * as Hooks from '@/hooks';
@@ -20,7 +22,13 @@ import type {
   VisualTimelineTileProps,
   VisualTileVideoProps,
 } from './VisualTimelinePosts.types';
+import {
+  TimelineVirtuosoFooter,
+  type TimelineVirtuosoContext,
+} from '@/components/molecules/Timeline/TimelineVirtuosoFooter';
 import { useVisualFeedTiles } from './useVisualFeedTiles';
+
+const visualVirtuosoComponents = { Footer: TimelineVirtuosoFooter };
 
 function stopPropagation(event: React.SyntheticEvent) {
   event.stopPropagation();
@@ -102,6 +110,7 @@ function VisualTimelineTileOverlay({ tile, size, onReplyClick, onRepostClick }: 
   const { userDetails } = Hooks.useUserDetails(userId);
   const avatarUrl = Hooks.useAvatarUrl(userDetails);
   const { formatRelativeTime } = Hooks.useRelativeTime();
+  const indexedAt = new Date(tile.indexedAt);
   const [tagsExpanded, setTagsExpanded] = React.useState(false);
   const isCompact = size === 'square';
   const truncatedContent = React.useMemo(() => {
@@ -144,7 +153,7 @@ function VisualTimelineTileOverlay({ tile, size, onReplyClick, onRepostClick }: 
             </Atoms.Container>
 
             <Atoms.Container overrideDefaults className="shrink-0 pt-0.5 [&_span]:text-white/70 [&_svg]:text-white/70">
-              <Molecules.PostHeaderTimestamp timeAgo={formatRelativeTime(new Date(tile.indexedAt))} />
+              <Molecules.PostHeaderTimestamp timeAgo={formatRelativeTime(indexedAt)} indexedAt={indexedAt} />
             </Atoms.Container>
           </Atoms.Container>
 
@@ -293,16 +302,15 @@ export function VisualTimelinePosts({
   const { navigateToPost } = Hooks.usePostNavigation();
   const { rows, hasPendingTiles } = useVisualFeedTiles({ postIds, hasMore });
 
-  const { sentinelRef } = Hooks.useInfiniteScroll({
-    onLoadMore: loadMore,
-    hasMore,
-    isLoading: loadingMore,
-    threshold: 3000,
-    debounceMs: 20,
-  });
-
   const showFilteredEmptyState =
     !loading && !error && postIds.length > 0 && rows.length === 0 && !hasMore && !loadingMore && !hasPendingTiles;
+
+  const virtuosoContext: TimelineVirtuosoContext = {
+    loadingMore,
+    error,
+    hasMore,
+    itemCount: rows.length,
+  };
 
   return (
     <Molecules.TimelineStateWrapper
@@ -314,24 +322,29 @@ export function VisualTimelinePosts({
         <Atoms.Container data-cy="visual-feed-container">
           <Atoms.Container
             overrideDefaults
-            className="mx-auto flex w-full flex-col gap-6"
+            className="mx-auto w-full"
             style={{ maxWidth: `${VISUAL_GRID_MAX_WIDTH_PX}px` }}
           >
-            {rows.map((row) => (
-              <Atoms.Container key={row.key} overrideDefaults className="grid grid-cols-12 gap-6">
-                {row.cells.map((cell) => (
-                  <VisualTimelineRow key={cell.key} cell={cell} onNavigate={navigateToPost} />
-                ))}
-              </Atoms.Container>
-            ))}
-
-            {loadingMore && <Molecules.TimelineLoadingMore />}
-
-            {error && postIds.length > 0 && <Molecules.TimelineError message={error} />}
-
-            {!hasMore && !loadingMore && rows.length > 0 && <Molecules.TimelineEndMessage />}
-
-            <Atoms.Container overrideDefaults className="h-5" ref={sentinelRef} />
+            <Virtuoso
+              useWindowScroll
+              data={rows}
+              context={virtuosoContext}
+              overscan={TIMELINE_VIRTUOSO_OVERSCAN_PX}
+              computeItemKey={(_index, row) => row.key}
+              endReached={() => {
+                if (!loadingMore && hasMore) {
+                  void loadMore();
+                }
+              }}
+              itemContent={(_index, row) => (
+                <Atoms.Container overrideDefaults className="grid grid-cols-12 gap-6 pb-6">
+                  {row.cells.map((cell) => (
+                    <VisualTimelineRow key={cell.key} cell={cell} onNavigate={navigateToPost} />
+                  ))}
+                </Atoms.Container>
+              )}
+              components={visualVirtuosoComponents}
+            />
           </Atoms.Container>
         </Atoms.Container>
       ) : null}

@@ -75,7 +75,12 @@
     "links": "Enlaces",
     "tags": "Etiquetas",
     "posts": "Publicaciones",
-    "avatar": "Avatar"
+    "avatar": "Avatar",
+    "threadTree": {
+      "expandAllReplies": "Expandir todas las respuestas",
+      "collapseAllReplies": "Colapsar todas las respuestas",
+      "moreReplies": "{count, plural, one {# respuesta más} other {# respuestas más}}"
+    }
   },
   "header": {
     "home": "Inicio",
@@ -956,6 +961,10 @@
       "userIdRequired": "ID de usuario requerido",
       "loginRequired": "Debes iniciar sesión para agregar etiquetas",
       "alreadyAdded": "Ya has agregado esta etiqueta",
+      "added": "Etiqueta agregada",
+      "addedDesc": "Se agregó correctamente \"{label}\".",
+      "removed": "Etiqueta eliminada",
+      "removedDesc": "Se eliminó correctamente \"{label}\".",
       "addFailed": "Error al agregar etiqueta",
       "addFailedDesc": "No se pudo agregar \"{label}\". Por favor intenta de nuevo.",
       "removeFailed": "Error al eliminar etiqueta",

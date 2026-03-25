@@ -41,6 +41,8 @@ export class AuthController {
    * @returns Configured homeserver service instance
    */
   private static async signIn({ keypair }: Core.TKeypairParams): Promise<boolean> {
+    // Clear query clients to ensure no stale cache from previous session
+    Libs.clearAllQueryClients();
     // Clear database before sign in to ensure clean state
     await Core.clearDatabase();
     // Skip post-migration resync — bootstrap runs if user has profile, otherwise no data to resync
@@ -138,6 +140,8 @@ export class AuthController {
    * @param params.signupToken - Invitation code for user registration
    */
   static async signUp({ secretKey, signupToken }: Core.TSignUpParams) {
+    // Clear query clients to ensure no stale cache from previous session
+    Libs.clearAllQueryClients();
     // Clear database before sign up to ensure clean state
     await Core.clearDatabase();
     // Skip post-migration resync — new user has no homeserver data to resync
@@ -211,7 +215,7 @@ export class AuthController {
 
   /**
    * Centralizes all local state cleanup: resets every Zustand store, clears cookies,
-   * IndexedDB, query cache, singletons, and persisted localStorage keys.
+   * IndexedDB, query cache, singletons, in-memory stream pagination queues, and persisted localStorage keys.
    * Used by both logout() and restorePersistedSession() on failure.
    */
   private static async cleanupLocalState() {
@@ -221,14 +225,14 @@ export class AuthController {
     Core.StreamCoordinator.resetInstance();
     Core.NotificationCoordinator.resetInstance();
 
+    // Clear in-memory feed stream queues
+    Core.postStreamQueue.clear();
+
     // Cancel active auth flows
     this.cancelActiveAuthFlow();
 
-    // Cancel all pending queries to prevent retries after sign-out
-    // TODO: Centralise query client cleanup via a registry in createQueryClient
-    // so new query clients are automatically cancelled/cleared here.
-    Core.nexusQueryClient.cancelQueries();
-    Core.nexusQueryClient.clear();
+    // Cancel and clear all query clients (nexus, homegate, exchangerate, and any future ones)
+    Libs.clearAllQueryClients();
 
     // Reset all Zustand stores.
     // Settings reset() keeps `language`,

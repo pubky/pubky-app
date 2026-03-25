@@ -84,6 +84,11 @@ vi.mock('@/components/atoms', () => ({
       {children}
     </div>
   ),
+  DialogFooter: ({ children, className }: { children: React.ReactNode; className?: string }) => (
+    <div data-testid="dialog-footer" className={className}>
+      {children}
+    </div>
+  ),
   Button: ({
     children,
     variant,

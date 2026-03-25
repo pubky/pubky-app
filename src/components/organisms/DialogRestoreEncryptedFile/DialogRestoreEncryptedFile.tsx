@@ -191,11 +191,12 @@ export function DialogRestoreEncryptedFile({ onRestore }: { onRestore: () => voi
         </Atoms.Container>
 
         {/* Action Buttons */}
-        <Atoms.Container className="justify-between gap-4 sm:gap-3 md:flex-row">
+        <Atoms.DialogFooter>
           <Atoms.DialogClose asChild>
             <Atoms.Button
               variant="outline"
-              className="order-2 h-10 flex-1 rounded-full px-4 py-2.5 md:order-0 md:px-12 md:py-6"
+              size="lg"
+              className="order-2 sm:order-1"
               onClick={handleReset}
               disabled={isRestoring}
             >
@@ -204,7 +205,8 @@ export function DialogRestoreEncryptedFile({ onRestore }: { onRestore: () => voi
           </Atoms.DialogClose>
           <Atoms.Button
             id="encrypted-file-restore-btn"
-            className="order-1 h-10 flex-1 rounded-full px-4 py-2.5 md:px-12 md:py-6"
+            size="lg"
+            className="order-1 sm:order-2"
             onClick={handleRestore}
             disabled={!isFormValid()}
           >
@@ -215,12 +217,12 @@ export function DialogRestoreEncryptedFile({ onRestore }: { onRestore: () => voi
               </>
             ) : (
               <>
-                <Libs.RotateCcw className="mr-2 h-4 w-4" />
+                <Libs.RotateCcw className="mr-2 h-4 w-4 rotate-180" />
                 {tRestore('restore')}
               </>
             )}
           </Atoms.Button>
-        </Atoms.Container>
+        </Atoms.DialogFooter>
       </Atoms.DialogContent>
     </Atoms.Dialog>
   );

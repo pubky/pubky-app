@@ -2,7 +2,7 @@
 
 exports[`NotificationItem - Snapshots > matches snapshot for Follow notification 1`] = `
 <div
-  class="flex w-full min-w-0 items-center justify-between gap-2"
+  class="flex w-full min-w-0 items-center justify-between gap-2 cursor-pointer"
   data-testid="container"
 >
   <div
@@ -76,7 +76,7 @@ exports[`NotificationItem - Snapshots > matches snapshot for Follow notification
 
 exports[`NotificationItem - Snapshots > matches snapshot for Mention notification 1`] = `
 <div
-  class="flex w-full min-w-0 items-center justify-between gap-2"
+  class="flex w-full min-w-0 items-center justify-between gap-2 cursor-pointer"
   data-testid="container"
 >
   <div
@@ -150,7 +150,7 @@ exports[`NotificationItem - Snapshots > matches snapshot for Mention notificatio
 
 exports[`NotificationItem - Snapshots > matches snapshot for TagPost notification 1`] = `
 <div
-  class="flex w-full min-w-0 items-center justify-between gap-2"
+  class="flex w-full min-w-0 items-center justify-between gap-2 cursor-pointer"
   data-testid="container"
 >
   <div

@@ -81,7 +81,6 @@ function TimelineFeedContent({ streamId, variant, tagsLayout, layoutResolution, 
 
   const postIds = [...new Set(rawPostIds)];
 
-  const { unreadPostIds } = Hooks.useUnreadPosts({ streamId });
   const { mutedUserIdSet } = Hooks.useMutedUsers();
 
   const enablePullToRefresh =
@@ -115,7 +114,6 @@ function TimelineFeedContent({ streamId, variant, tagsLayout, layoutResolution, 
       {!isVisualActive ? children : null}
       <NewPostsSection
         streamId={streamId}
-        unreadPostIds={unreadPostIds}
         postIds={postIds}
         mutedUserIdSet={mutedUserIdSet}
         loading={loading}
