@@ -685,7 +685,8 @@
       "subtitle2": "Vous pouvez rechercher plusieurs tags separes par des virgules."
     },
     "userSuggestion": "Utilisateur {name} ({pubky})",
-    "viewProfile": "Voir le profil de {name}"
+    "viewProfile": "Voir le profil de {name}",
+    "invalidTag": "Les tags doivent contenir 20 caractères ou moins et ne peuvent pas contenir de caractères spéciaux"
   },
   "feedback": {
     "title": "Donner votre avis",

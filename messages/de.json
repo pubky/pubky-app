@@ -685,7 +685,8 @@
       "subtitle2": "Sie können nach mehreren durch Kommas getrennten Tags suchen."
     },
     "userSuggestion": "Benutzer {name} ({pubky})",
-    "viewProfile": "Profil von {name} ansehen"
+    "viewProfile": "Profil von {name} ansehen",
+    "invalidTag": "Tags dürfen maximal 20 Zeichen lang sein und keine Sonderzeichen enthalten"
   },
   "feedback": {
     "title": "Feedback geben",

@@ -679,7 +679,8 @@
       "subtitle2": "You can search for multiple tags separated by commas."
     },
     "userSuggestion": "User {name} ({pubky})",
-    "viewProfile": "View profile for {name}"
+    "viewProfile": "View profile for {name}",
+    "invalidTag": "Tags must be 20 characters or less and cannot contain special characters"
   },
   "feedback": {
     "title": "Provide Feedback",

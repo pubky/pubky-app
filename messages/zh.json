@@ -685,7 +685,8 @@
       "subtitle2": "您可以搜索多个用逗号分隔的标签。"
     },
     "userSuggestion": "用户 {name}（{pubky}）",
-    "viewProfile": "查看 {name} 的个人资料"
+    "viewProfile": "查看 {name} 的个人资料",
+    "invalidTag": "标签不能超过20个字符，且不能包含特殊字符"
   },
   "feedback": {
     "title": "提供反馈",

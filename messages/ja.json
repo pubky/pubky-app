@@ -685,7 +685,8 @@
       "subtitle2": "カンマで区切って複数のタグを検索できます。"
     },
     "userSuggestion": "ユーザー {name}（{pubky}）",
-    "viewProfile": "{name}のプロフィールを見る"
+    "viewProfile": "{name}のプロフィールを見る",
+    "invalidTag": "タグは20文字以内で、特殊文字を含めることはできません"
   },
   "feedback": {
     "title": "フィードバックを送信",

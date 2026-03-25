@@ -685,7 +685,8 @@
       "subtitle2": "Puedes buscar multiples etiquetas separadas por comas."
     },
     "userSuggestion": "Usuario {name} ({pubky})",
-    "viewProfile": "Ver perfil de {name}"
+    "viewProfile": "Ver perfil de {name}",
+    "invalidTag": "Las etiquetas deben tener 20 caracteres o menos y no pueden contener caracteres especiales"
   },
   "feedback": {
     "title": "Enviar comentarios",
