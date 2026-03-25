@@ -1,6 +1,7 @@
 name: Tests
 
 on:
+  merge_group:
   push:
     branches:
       - master
@@ -11,10 +12,18 @@ on:
   # Enable manual trigger
   workflow_dispatch:
 
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+
 jobs:
   test:
-    name: Run Tests
+    name: Run Shard Tests
     runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        shard: [1, 2, 3, 4, 5]
 
     steps:
       - name: Checkout code
@@ -24,18 +33,70 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: '20'
-          cache: 'npm'
+
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: '1.3.11'
 
       - name: Install dependencies
-        run: npm ci
+        run: bun install
 
-      - name: Run tests
-        run: npm run test:coverage
+      - name: Run Vitest Shard ${{ matrix.shard }}
+        env:
+          VITEST_MAX_WORKERS: 4
+        # 1. Force Vitest to output raw 'json' coverage data
+        run: npx vitest run --coverage --coverage.reporter=json --shard=${{ matrix.shard }}/5 --pool=forks
 
-      - name: Upload test results
-        if: always()
+      - name: Rename coverage file
+        # 2. Rename the file so the shards don't overwrite each other when downloaded
+        run: mv coverage/coverage-final.json coverage/coverage-${{ matrix.shard }}.json
+
+      - name: Upload partial coverage
         uses: actions/upload-artifact@v4
         with:
-          name: test-results
-          path: coverage/
+          name: coverage-shard-${{ matrix.shard }}
+          path: coverage/coverage-${{ matrix.shard }}.json
+          retention-days: 1 # We only need this temporarily for the merge job
+
+  merge-coverage:
+    name: Merge Coverage Reports
+    needs: test # 3. Wait for all test shards to complete successfully
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Download all coverage artifacts
+        uses: actions/download-artifact@v4
+        with:
+          pattern: coverage-shard-*
+          path: .nyc_output # 4. Download directly into nyc's default input folder
+          merge-multiple: true
+
+      - name: Merge coverage and generate final report
+        # 5. Read the .nyc_output folder and generate standard unified reports
+        run: npx nyc report --reporter=lcov --reporter=html --reporter=text-summary
+
+      - name: Upload Final Coverage
+        uses: actions/upload-artifact@v4
+        with:
+          name: coverage-final
+          path: coverage/ # Contains your unified lcov.info and html reports
           retention-days: 30
+
+  test-status:
+    name: Run Tests
+    needs: test     # Waits for all your test shards to finish
+    if: always()    # Forces this to run even if a shard fails
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check test matrix status
+        # If any shard failed or was cancelled, this step fails the gatekeeper job
+        if: contains(needs.*.result, 'failure') || contains(needs.*.result, 'cancelled')
+        run: |
+          echo "One or more test shards failed."
+          exit 1
+
+      - name: Tests passed
+        run: echo "All test shards passed successfully!"

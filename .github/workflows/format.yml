@@ -1,6 +1,7 @@
 name: Code Quality
 
 on:
+  merge_group:
   push:
     branches:
       - master
