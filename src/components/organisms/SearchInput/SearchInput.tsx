@@ -2,9 +2,11 @@
 
 import { useEffect } from 'react';
 import { useRouter, useSearchParams, usePathname } from 'next/navigation';
+import { useTranslations } from 'next-intl';
 import * as Molecules from '@/molecules';
 import * as Atoms from '@/atoms';
 import * as Hooks from '@/hooks';
+import * as Libs from '@/libs';
 import * as Core from '@/core';
 import { APP_ROUTES } from '@/app/routes';
 import { CLICKABLE_TAGS_DEFAULT_MAX_LENGTH } from '@/config/tags';
@@ -15,12 +17,18 @@ export function SearchInput({ autoFocus = false }: SearchInputProps) {
   const router = useRouter();
   const searchParams = useSearchParams();
   const pathname = usePathname();
+  const t = useTranslations('search');
 
   const { addTagToSearch, removeTagFromSearch, activeTags, isReadOnly } = Hooks.useTagSearch();
   const { setActiveTags, recentUsers, recentTags, addUser, clearRecentSearches } = Core.useSearchStore();
   const isMobile = Hooks.useIsMobile();
 
   const handleEnter = (value: string) => {
+    if (!Libs.isValidTagLabel(value.trim().toLowerCase())) {
+      Molecules.toast({ description: t('invalidTag') });
+      return false;
+    }
+
     addTagToSearch(value, { addToRecent: true });
     if (pathname !== APP_ROUTES.SEARCH) {
       setFocus(false);

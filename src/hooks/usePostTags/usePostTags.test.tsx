@@ -1,15 +1,20 @@
-import { renderHook, waitFor } from '@testing-library/react';
+import { act, renderHook, waitFor } from '@testing-library/react';
 import { vi, describe, it, expect, beforeEach } from 'vitest';
 import { usePostTags } from './usePostTags';
+import * as Core from '@/core';
+import * as DexieHooks from 'dexie-react-hooks';
 
 // Hoisted mock for fetchTags - must be defined before vi.mock
-const { mockFetchTags } = vi.hoisted(() => ({
+const { mockFetchTags, mockToast } = vi.hoisted(() => ({
   mockFetchTags: vi.fn().mockResolvedValue([]),
+  mockToast: vi.fn(),
 }));
 
 // Mock Core module
 vi.mock('@/core', () => ({
-  useAuthStore: vi.fn(() => vi.fn(() => 'mock-user-id')),
+  useAuthStore: vi.fn((selector?: (state: { currentUserPubky: string | null }) => unknown) =>
+    selector ? selector({ currentUserPubky: 'mock-user-id' }) : { currentUserPubky: 'mock-user-id' },
+  ),
   PostController: {
     getTags: vi.fn().mockResolvedValue([]),
     getCounts: vi.fn().mockResolvedValue(null),
@@ -33,9 +38,38 @@ vi.mock('dexie-react-hooks', () => ({
   useLiveQuery: vi.fn(() => undefined),
 }));
 
+vi.mock('next-intl', () => ({
+  useTranslations: () => (key: string, values?: { label?: string }) => {
+    switch (key) {
+      case 'loadFailed':
+        return 'Failed to load more tags';
+      case 'loadFailedDesc':
+        return 'Could not load more tags. Please try again.';
+      case 'added':
+        return 'Tag added';
+      case 'addedDesc':
+        return `"${values?.label}" was added successfully.`;
+      case 'removed':
+        return 'Tag removed';
+      case 'removedDesc':
+        return `"${values?.label}" was removed successfully.`;
+      case 'addFailed':
+        return 'Failed to add tag';
+      case 'addFailedDesc':
+        return `Could not add "${values?.label}". Please try again.`;
+      case 'removeFailed':
+        return 'Failed to remove tag';
+      case 'removeFailedDesc':
+        return `Could not remove "${values?.label}". Please try again.`;
+      default:
+        return key;
+    }
+  },
+}));
+
 // Mock toast
 vi.mock('@/molecules/Toaster/use-toast', () => ({
-  toast: vi.fn(),
+  toast: mockToast,
 }));
 
 // Mock tag transformation utilities
@@ -75,6 +109,11 @@ function setupLiveQueryMock(dexieHooks: typeof import('dexie-react-hooks'), tags
 describe('usePostTags', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    vi.mocked(Core.useAuthStore).mockImplementation(
+      (selector?: (state: { currentUserPubky: string | null }) => unknown) =>
+        selector ? selector({ currentUserPubky: 'mock-user-id' }) : { currentUserPubky: 'mock-user-id' },
+    );
+    vi.mocked(DexieHooks.useLiveQuery).mockReturnValue(undefined);
   });
 
   describe('initialization', () => {
@@ -137,7 +176,9 @@ describe('usePostTags', () => {
       const dexieHooks = await import('dexie-react-hooks');
       const Core = await import('@/core');
 
-      vi.mocked(Core.useAuthStore).mockImplementation(() => null);
+      vi.mocked(Core.useAuthStore).mockImplementation((selector?: (state: { currentUserPubky: null }) => unknown) =>
+        selector ? selector({ currentUserPubky: null }) : { currentUserPubky: null },
+      );
       vi.mocked(dexieHooks.useLiveQuery).mockReturnValue(undefined);
 
       const { result } = renderHook(() => usePostTags('author:post123'));
@@ -146,6 +187,39 @@ describe('usePostTags', () => {
 
       expect(response.success).toBe(false);
       expect(response.error).toBe('You must be logged in to add tags');
+    });
+
+    it('shows a success toast when a tag is added', async () => {
+      const { result } = renderHook(() => usePostTags('author:post123'));
+
+      let response: Awaited<ReturnType<typeof result.current.handleTagAdd>>;
+      await act(async () => {
+        response = await result.current.handleTagAdd('test-tag');
+      });
+
+      expect(response!).toEqual({ success: true });
+      expect(mockToast).toHaveBeenCalledWith({
+        title: 'Tag added',
+        description: '"test-tag" was added successfully.',
+      });
+    });
+
+    it('shows an error toast when adding a tag fails', async () => {
+      const Core = await import('@/core');
+      vi.mocked(Core.TagController.commitCreate).mockRejectedValueOnce(new Error('Network error'));
+
+      const { result } = renderHook(() => usePostTags('author:post123'));
+
+      let response: Awaited<ReturnType<typeof result.current.handleTagAdd>>;
+      await act(async () => {
+        response = await result.current.handleTagAdd('broken-tag');
+      });
+
+      expect(response!).toEqual({ success: false, error: 'Failed to add tag' });
+      expect(mockToast).toHaveBeenCalledWith({
+        title: 'Failed to add tag',
+        description: 'Could not add "broken-tag". Please try again.',
+      });
     });
   });
 
@@ -195,6 +269,32 @@ describe('usePostTags', () => {
       expect(result.current.tags[0].label).toBe('solo-tag');
       expect(result.current.tags[0].taggers_count).toBe(0);
       expect(result.current.tags[0].relationship).toBe(false);
+    });
+
+    it('shows a success toast when removing a tag', async () => {
+      const dexieHooks = await import('dexie-react-hooks');
+      const Core = await import('@/core');
+
+      const mockViewerId = 'viewer-123';
+      vi.mocked(Core.useAuthStore).mockImplementation((selector?: (state: { currentUserPubky: string }) => unknown) =>
+        selector ? selector({ currentUserPubky: mockViewerId }) : { currentUserPubky: mockViewerId },
+      );
+      vi.mocked(dexieHooks.useLiveQuery).mockReturnValue([
+        {
+          tags: [{ label: 'solo-tag', taggers_count: 1, taggers: [mockViewerId], relationship: true }],
+        },
+      ]);
+
+      const { result } = renderHook(() => usePostTags('author:post123'));
+
+      await act(async () => {
+        await result.current.handleTagToggle({ label: 'solo-tag', relationship: true });
+      });
+
+      expect(mockToast).toHaveBeenCalledWith({
+        title: 'Tag removed',
+        description: '"solo-tag" was removed successfully.',
+      });
     });
   });
 
