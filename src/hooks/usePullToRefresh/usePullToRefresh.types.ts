@@ -8,6 +8,14 @@ export type PullToRefreshState = 'idle' | 'pulling' | 'ready' | 'refreshing';
  */
 export interface UsePullToRefreshOptions {
   /**
+   * Ref to the container element that pull-to-refresh should be scoped to.
+   * Only touch interactions originating inside this element will trigger pull-to-refresh.
+   * This prevents pull-to-refresh from activating when interacting with overlays,
+   * dialogs, sidebars, or other elements outside the feed.
+   */
+  containerRef: React.RefObject<HTMLElement | null>;
+
+  /**
    * Callback function to execute when refresh is triggered.
    * Should return a Promise that resolves when refresh is complete.
    */

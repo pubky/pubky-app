@@ -12,27 +12,32 @@ exports[`TimelineFeedContent - Snapshots > matches snapshot for loading state 1`
 
 exports[`TimelineFeedContent - Snapshots > matches snapshot with children 1`] = `
 <div>
-  <div>
-    Filter bar
-  </div>
   <div
-    data-testid="timeline-posts"
+    class="mx-auto w-full flex-col flex min-w-0 flex-1 gap-6 lg:overflow-hidden"
+    data-testid="container"
   >
-    <span
-      data-testid="post-count"
+    <div>
+      Filter bar
+    </div>
+    <div
+      data-testid="timeline-posts"
     >
-      3
-    </span>
-    <span
-      data-testid="loading"
-    >
-      false
-    </span>
-    <span
-      data-testid="has-more"
-    >
-      true
-    </span>
+      <span
+        data-testid="post-count"
+      >
+        3
+      </span>
+      <span
+        data-testid="loading"
+      >
+        false
+      </span>
+      <span
+        data-testid="has-more"
+      >
+        true
+      </span>
+    </div>
   </div>
 </div>
 `;
@@ -40,23 +45,28 @@ exports[`TimelineFeedContent - Snapshots > matches snapshot with children 1`] = 
 exports[`TimelineFeedContent - Snapshots > matches snapshot with posts 1`] = `
 <div>
   <div
-    data-testid="timeline-posts"
+    class="mx-auto w-full flex-col flex min-w-0 flex-1 gap-6 lg:overflow-hidden"
+    data-testid="container"
   >
-    <span
-      data-testid="post-count"
+    <div
+      data-testid="timeline-posts"
     >
-      3
-    </span>
-    <span
-      data-testid="loading"
-    >
-      false
-    </span>
-    <span
-      data-testid="has-more"
-    >
-      true
-    </span>
+      <span
+        data-testid="post-count"
+      >
+        3
+      </span>
+      <span
+        data-testid="loading"
+      >
+        false
+      </span>
+      <span
+        data-testid="has-more"
+      >
+        true
+      </span>
+    </div>
   </div>
 </div>
 `;
