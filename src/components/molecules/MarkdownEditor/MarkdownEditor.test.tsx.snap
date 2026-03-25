@@ -9,8 +9,9 @@ exports[`MarkdownEditor - Snapshots > matches snapshot with custom className 1`]
     data-testid="loading-state"
   >
     <div
-      class="h-22 animate-pulse rounded-md bg-card"
-      data-testid="container"
+      class="h-22 w-full rounded-md"
+      data-slot="skeleton"
+      data-testid="skeleton"
     />
   </div>
   <div
@@ -34,8 +35,9 @@ exports[`MarkdownEditor - Snapshots > matches snapshot with default props 1`] = 
     data-testid="loading-state"
   >
     <div
-      class="h-22 animate-pulse rounded-md bg-card"
-      data-testid="container"
+      class="h-22 w-full rounded-md"
+      data-slot="skeleton"
+      data-testid="skeleton"
     />
   </div>
   <div
@@ -58,8 +60,9 @@ exports[`MarkdownEditor - Snapshots > matches snapshot with markdown content 1`]
     data-testid="loading-state"
   >
     <div
-      class="h-22 animate-pulse rounded-md bg-card"
-      data-testid="container"
+      class="h-22 w-full rounded-md"
+      data-slot="skeleton"
+      data-testid="skeleton"
     />
   </div>
   <div
@@ -82,8 +85,9 @@ exports[`MarkdownEditor - Snapshots > matches snapshot with placeholder 1`] = `
     data-testid="loading-state"
   >
     <div
-      class="h-22 animate-pulse rounded-md bg-card"
-      data-testid="container"
+      class="h-22 w-full rounded-md"
+      data-slot="skeleton"
+      data-testid="skeleton"
     />
   </div>
   <div
