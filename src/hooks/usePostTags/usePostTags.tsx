@@ -2,6 +2,7 @@
 
 import { useCallback, useMemo, useState, useRef, useEffect } from 'react';
 import { useLiveQuery } from 'dexie-react-hooks';
+import { useTranslations } from 'next-intl';
 import * as Core from '@/core';
 import { toast } from '@/molecules/Toaster/use-toast';
 import type { UsePostTagsResult, UsePostTagsOptions } from './usePostTags.types';
@@ -21,6 +22,7 @@ import { TAGS_PER_PAGE } from './usePostTags.constants';
  */
 export function usePostTags(postId: string | null | undefined, options: UsePostTagsOptions = {}): UsePostTagsResult {
   const { viewerId: customViewerId } = options;
+  const tTags = useTranslations('toast.tags');
 
   // selectCurrentUserPubky() throws an error when user is not authenticated;
   // access currentUserPubky directly to get null instead (unauthenticated views should still render tags)
@@ -207,13 +209,13 @@ export function usePostTags(postId: string | null | undefined, options: UsePostT
       }
     } catch {
       toast({
-        title: 'Failed to load more tags',
-        description: 'Could not load more tags. Please try again.',
+        title: tTags('loadFailed'),
+        description: tTags('loadFailedDesc'),
       });
     } finally {
       setIsLoadingMore(false);
     }
-  }, [postId, isLoadingMore, hasMore]);
+  }, [postId, isLoadingMore, hasMore, tTags]);
 
   const handleTagAdd = useCallback(
     async (tagString: string): Promise<{ success: boolean; error?: string }> => {
@@ -245,16 +247,20 @@ export function usePostTags(postId: string | null | undefined, options: UsePostT
           return next;
         });
 
+        toast({
+          title: tTags('added'),
+          description: tTags('addedDesc', { label }),
+        });
         return { success: true };
       } catch {
         toast({
-          title: 'Failed to add tag',
-          description: `Could not add "${label}". Please try again.`,
+          title: tTags('addFailed'),
+          description: tTags('addFailedDesc', { label }),
         });
         return { success: false, error: 'Failed to add tag' };
       }
     },
-    [postId, viewerId, allTags],
+    [postId, viewerId, allTags, tTags],
   );
 
   const handleTagToggle = useCallback(
@@ -293,6 +299,11 @@ export function usePostTags(postId: string | null | undefined, options: UsePostT
             taggerId: viewerId,
             taggedKind: Core.TagKind.POST,
           });
+
+          toast({
+            title: tTags('removed'),
+            description: tTags('removedDesc', { label: tag.label }),
+          });
         } else {
           await Core.TagController.commitCreate({
             taggedId: postId,
@@ -307,6 +318,11 @@ export function usePostTags(postId: string | null | undefined, options: UsePostT
             next.delete(labelLower);
             return next;
           });
+
+          toast({
+            title: tTags('added'),
+            description: tTags('addedDesc', { label: tag.label }),
+          });
         }
       } catch {
         // Rollback zero-tagger state on error
@@ -318,12 +334,14 @@ export function usePostTags(postId: string | null | undefined, options: UsePostT
           });
         }
         toast({
-          title: userIsTagger ? 'Failed to remove tag' : 'Failed to add tag',
-          description: `Could not ${userIsTagger ? 'remove' : 'add'} "${tag.label}". Please try again.`,
+          title: userIsTagger ? tTags('removeFailed') : tTags('addFailed'),
+          description: userIsTagger
+            ? tTags('removeFailedDesc', { label: tag.label })
+            : tTags('addFailedDesc', { label: tag.label }),
         });
       }
     },
-    [postId, viewerId, allTags, tagOrder],
+    [postId, viewerId, allTags, tagOrder, tTags],
   );
 
   return {

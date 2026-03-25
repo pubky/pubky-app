@@ -1,6 +1,7 @@
 'use client';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useLiveQuery } from 'dexie-react-hooks';
+import { useTranslations } from 'next-intl';
 import * as Core from '@/core';
 import * as Libs from '@/libs';
 // Import directly to avoid circular dependency with @/hooks barrel
@@ -20,6 +21,7 @@ import { TAGS_PER_PAGE } from './useTagged.constants';
  */
 export function useTagged(userId: string | null | undefined, options: UseTaggedOptions = {}): UseTaggedResult {
   const { enablePagination = true, enableStats = true, viewerId: customViewerId } = options;
+  const tTags = useTranslations('toast.tags');
 
   // selectCurrentUserPubky() throws an error when user is not authenticated;
   // access currentUserPubky directly to get null instead (e.g., during logout or unauthenticated views)
@@ -169,16 +171,20 @@ export function useTagged(userId: string | null | undefined, options: UseTaggedO
           return next;
         });
 
+        toast({
+          title: tTags('added'),
+          description: tTags('addedDesc', { label }),
+        });
         return { success: true };
       } catch {
         toast({
-          title: 'Failed to add tag',
-          description: `Could not add "${label}". Please try again.`,
+          title: tTags('addFailed'),
+          description: tTags('addFailedDesc', { label }),
         });
         return { success: false, error: 'Failed to add tag' };
       }
     },
-    [userId, viewerId, allTags],
+    [userId, viewerId, allTags, tTags],
   );
 
   const handleTagToggle = useCallback(
@@ -219,6 +225,11 @@ export function useTagged(userId: string | null | undefined, options: UseTaggedO
 
           // TagController.commitDelete updates IndexedDB first and rolls back on homeserver failure.
           await Core.TagController.commitDelete(params);
+
+          toast({
+            title: tTags('removed'),
+            description: tTags('removedDesc', { label: tag.label }),
+          });
         } else {
           // TagController.commitCreate updates IndexedDB first and rolls back on homeserver failure.
           await Core.TagController.commitCreate(params);
@@ -228,6 +239,11 @@ export function useTagged(userId: string | null | undefined, options: UseTaggedO
             const next = new Map(prev);
             next.delete(labelLower);
             return next;
+          });
+
+          toast({
+            title: tTags('added'),
+            description: tTags('addedDesc', { label: tag.label }),
           });
         }
       } catch {
@@ -240,12 +256,14 @@ export function useTagged(userId: string | null | undefined, options: UseTaggedO
           });
         }
         toast({
-          title: userIsTagger ? 'Failed to remove tag' : 'Failed to add tag',
-          description: `Could not ${userIsTagger ? 'remove' : 'add'} "${tag.label}". Please try again.`,
+          title: userIsTagger ? tTags('removeFailed') : tTags('addFailed'),
+          description: userIsTagger
+            ? tTags('removeFailedDesc', { label: tag.label })
+            : tTags('addFailedDesc', { label: tag.label }),
         });
       }
     },
-    [userId, viewerId, allTags, tagOrder],
+    [userId, viewerId, allTags, tagOrder, tTags],
   );
 
   // Use actual total count from stats to determine if there are more tags
