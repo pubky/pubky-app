@@ -20,6 +20,7 @@ import {
   shouldBypassLinkConfirmation,
   getCharacterCount,
   sanitizeTagInput,
+  isValidTagLabel,
   canSubmitPost,
   formatUSDate,
   generateRandomUsername,
@@ -1307,6 +1308,52 @@ describe('Utils', () => {
       expect('a'.match(TAG_BANNED_CHARS)).toBeNull();
       expect('-'.match(TAG_BANNED_CHARS)).toBeNull();
       expect('_'.match(TAG_BANNED_CHARS)).toBeNull();
+    });
+  });
+
+  describe('isValidTagLabel', () => {
+    it('should accept a short valid tag', () => {
+      expect(isValidTagLabel('bitcoin')).toBe(true);
+    });
+
+    it('should accept a tag at exactly 20 characters', () => {
+      expect(isValidTagLabel('a'.repeat(20))).toBe(true);
+    });
+
+    it('should reject a tag exceeding 20 characters', () => {
+      expect(isValidTagLabel('a'.repeat(21))).toBe(false);
+    });
+
+    it('should reject an empty string', () => {
+      expect(isValidTagLabel('')).toBe(false);
+    });
+
+    it('should reject strings containing colons', () => {
+      expect(isValidTagLabel('pk:abc')).toBe(false);
+      expect(isValidTagLabel('hello:world')).toBe(false);
+    });
+
+    it('should reject strings containing commas', () => {
+      expect(isValidTagLabel('one,two')).toBe(false);
+    });
+
+    it('should reject strings containing spaces', () => {
+      expect(isValidTagLabel('hello world')).toBe(false);
+    });
+
+    it('should reject strings containing tabs and newlines', () => {
+      expect(isValidTagLabel('hello\tworld')).toBe(false);
+      expect(isValidTagLabel('hello\nworld')).toBe(false);
+    });
+
+    it('should accept tags with hyphens, underscores, and unicode', () => {
+      expect(isValidTagLabel('valid-tag')).toBe(true);
+      expect(isValidTagLabel('valid_tag')).toBe(true);
+      expect(isValidTagLabel('日本語')).toBe(true);
+    });
+
+    it('should reject a pk:-prefixed pubky string', () => {
+      expect(isValidTagLabel('pk:abcdefghijklmnopqrstuvwxyz')).toBe(false);
     });
   });
 

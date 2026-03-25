@@ -5,6 +5,7 @@ import { useRouter, useSearchParams, usePathname } from 'next/navigation';
 import * as Molecules from '@/molecules';
 import * as Atoms from '@/atoms';
 import * as Hooks from '@/hooks';
+import * as Libs from '@/libs';
 import * as Core from '@/core';
 import { APP_ROUTES } from '@/app/routes';
 import { CLICKABLE_TAGS_DEFAULT_MAX_LENGTH } from '@/config/tags';
@@ -21,6 +22,8 @@ export function SearchInput({ autoFocus = false }: SearchInputProps) {
   const isMobile = Hooks.useIsMobile();
 
   const handleEnter = (value: string) => {
+    if (!Libs.isValidTagLabel(value.trim().toLowerCase())) return;
+
     addTagToSearch(value, { addToRecent: true });
     if (pathname !== APP_ROUTES.SEARCH) {
       setFocus(false);
