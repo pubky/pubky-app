@@ -9,9 +9,11 @@ import {
   codeBlockPlugin,
   codeMirrorPlugin,
   CodeToggle,
+  CreateLink,
   headingsPlugin,
   InsertCodeBlock,
   InsertThematicBreak,
+  linkDialogPlugin,
   linkPlugin,
   listsPlugin,
   ListsToggle,
@@ -235,6 +237,7 @@ export default function InitializedMDXEditor({
                 <StrikeThroughSupSubToggles options={['Strikethrough']} />
                 <ListsToggle options={['bullet', 'number']} />
                 <InsertThematicBreak />
+                <CreateLink />
                 <CodeToggle />
                 <InsertCodeBlock />
                 <ButtonWithTooltip title={t('emoji')} onClick={() => setShowEmojiPicker(true)}>
@@ -256,6 +259,7 @@ export default function InitializedMDXEditor({
           listsPlugin(),
           thematicBreakPlugin(),
           linkPlugin(),
+          linkDialogPlugin({ showLinkTitleField: false }),
           codeBlockPlugin({ defaultCodeBlockLanguage: 'plaintext' }),
           codeMirrorPlugin({
             codeBlockLanguages: CODE_BLOCK_LANGUAGES,
