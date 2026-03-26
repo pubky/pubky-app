@@ -1,8 +1,8 @@
 import { RefObject } from 'react';
 
 export interface UseSearchInputParams {
-  /** Callback when Enter is pressed with input value */
-  onEnter?: (value: string) => void;
+  /** Callback when Enter is pressed with input value. Return false to keep input. */
+  onEnter?: (value: string) => boolean | void;
 }
 
 export interface UseSearchInputResult {

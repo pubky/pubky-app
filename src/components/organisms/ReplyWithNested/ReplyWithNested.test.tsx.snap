@@ -41,7 +41,7 @@ exports[`ReplyWithNested - Snapshots > matches snapshot for expanded nested repl
           class="w-3 shrink-0 border-l border-border"
         />
         <div
-          class="ml-3 flex-1"
+          class="min-w-0 flex-1 ml-3"
         >
           <div>
             <div
