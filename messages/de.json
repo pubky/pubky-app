@@ -286,6 +286,8 @@
     "signIn": {
       "title": "Bei <highlight>Pubky</highlight> anmelden.",
       "subtitle": "Autorisieren Sie mit Pubky Ring, um sich anzumelden.",
+      "progressTitle": "Anmeldung läuft.",
+      "progressSubtitle": "Bitte warten Sie, während Ihr Pubky-Erlebnis geladen wird.",
       "generating": "QR-Code wird generiert...",
       "generatingShort": "Generieren...",
 
