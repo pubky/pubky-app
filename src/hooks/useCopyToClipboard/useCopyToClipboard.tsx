@@ -1,4 +1,5 @@
 import React, { useCallback } from 'react';
+import { useTranslations } from 'next-intl';
 
 import * as Libs from '@/libs';
 import * as Molecules from '@/molecules';
@@ -13,13 +14,12 @@ interface UseCopyToClipboardOptions {
 }
 
 export function useCopyToClipboard(options: UseCopyToClipboardOptions = {}) {
-  const {
-    onSuccess,
-    onError,
-    successTitle = 'Pubky copied to clipboard',
-    errorTitle = 'Copy failed',
-    errorDescription = 'Unable to copy to clipboard',
-  } = options;
+  const tCopy = useTranslations('toast.copy');
+  const { onSuccess, onError, successTitle, errorTitle, errorDescription } = options;
+
+  const resolvedSuccessTitle = successTitle ?? tCopy('pubkyCopied');
+  const resolvedErrorTitle = errorTitle ?? tCopy('copyFailed');
+  const resolvedErrorDescription = errorDescription ?? tCopy('copyFailedDesc');
 
   const copyToClipboardHandler = useCallback(
     async (text: string) => {
@@ -27,11 +27,11 @@ export function useCopyToClipboard(options: UseCopyToClipboardOptions = {}) {
         await Libs.copyToClipboard({ text });
 
         const toastInstance = Molecules.toast({
-          title: successTitle,
+          title: resolvedSuccessTitle,
           description: text,
           action: (
             <Atoms.Button size="sm" className="text-xs font-bold" onClick={() => toastInstance.dismiss()}>
-              OK
+              {tCopy('ok')}
             </Atoms.Button>
           ),
         });
@@ -40,15 +40,15 @@ export function useCopyToClipboard(options: UseCopyToClipboardOptions = {}) {
         return true;
       } catch (error) {
         Molecules.toast({
-          title: errorTitle,
-          description: errorDescription,
+          title: resolvedErrorTitle,
+          description: resolvedErrorDescription,
         });
 
         onError?.(error as Error);
         return false;
       }
     },
-    [onSuccess, onError, successTitle, errorTitle, errorDescription],
+    [onSuccess, onError, resolvedSuccessTitle, resolvedErrorTitle, resolvedErrorDescription, tCopy],
   );
 
   return { copyToClipboard: copyToClipboardHandler };

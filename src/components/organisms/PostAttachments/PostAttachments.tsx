@@ -4,6 +4,7 @@ import * as Core from '@/core';
 import * as Atoms from '@/atoms';
 import * as Molecules from '@/molecules';
 import { useEffect, useState } from 'react';
+import { useTranslations } from 'next-intl';
 import type { AttachmentConstructed, PostAttachmentsProps } from './PostAttachments.types';
 
 export const PostAttachments = ({ attachments, localAttachments }: PostAttachmentsProps) => {
@@ -12,6 +13,8 @@ export const PostAttachments = ({ attachments, localAttachments }: PostAttachmen
   const [genericFiles, setGenericFiles] = useState<AttachmentConstructed[]>([]);
 
   const { toast } = Molecules.useToast();
+  const tToast = useTranslations('toast');
+  const tPost = useTranslations('toast.post');
 
   useEffect(() => {
     const constructAttachments = async () => {
@@ -62,8 +65,8 @@ export const PostAttachments = ({ attachments, localAttachments }: PostAttachmen
         setGenericFiles(genericFiles);
       } catch {
         toast({
-          title: 'Error',
-          description: 'Failed to load post attachments',
+          title: tToast('error'),
+          description: tPost('attachmentsLoadFailed'),
         });
       }
     };

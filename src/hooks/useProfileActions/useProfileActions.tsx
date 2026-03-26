@@ -2,6 +2,7 @@
 
 import { useCallback, useState } from 'react';
 import { useRouter } from 'next/navigation';
+import { useTranslations } from 'next-intl';
 import * as Core from '@/core';
 import * as Libs from '@/libs';
 import * as Molecules from '@/molecules';
@@ -36,6 +37,9 @@ export function useProfileActions({ publicKey, link }: UseProfileActionsProps): 
   const { copyToClipboard } = useCopyToClipboard();
   const authStore = Core.useAuthStore();
   const [isLoggingOut, setIsLoggingOut] = useState(false);
+  const tReport = useTranslations('toast.report');
+  const tLogout = useTranslations('toast.logout');
+  const tStatus = useTranslations('toast.status');
 
   const onEdit = useCallback(() => {
     router.push(SETTINGS_ROUTES.EDIT);
@@ -56,17 +60,17 @@ export function useProfileActions({ publicKey, link }: UseProfileActionsProps): 
       router.push(AUTH_ROUTES.LOGOUT);
     } catch (error) {
       Libs.Logger.error('Failed to logout:', error);
-      Molecules.showErrorToast({ description: Libs.ErrorMessages.LOGOUT_FAILED });
+      Molecules.showErrorToast({ description: tLogout('failed') });
       setIsLoggingOut(false);
     }
-  }, [router]);
+  }, [router, tLogout]);
 
   const onStatusChange = useCallback(
     async (status: string) => {
       const currentUserPubky = authStore.currentUserPubky;
       if (!currentUserPubky) {
         Libs.Logger.error('No authenticated user found');
-        Molecules.showErrorToast({ description: 'User profile not loaded. Please try again.' });
+        Molecules.showErrorToast({ description: tReport('userNotLoaded') });
         return;
       }
 
@@ -74,10 +78,10 @@ export function useProfileActions({ publicKey, link }: UseProfileActionsProps): 
         await Core.ProfileController.commitUpdateStatus({ pubky: currentUserPubky, status });
       } catch (error) {
         Libs.Logger.error('Failed to update status:', error);
-        Molecules.showErrorToast({ description: 'Failed to update status. Please try again.' });
+        Molecules.showErrorToast({ description: tStatus('updateFailed') });
       }
     },
-    [authStore],
+    [authStore, tReport, tStatus],
   );
 
   return {

@@ -900,7 +900,8 @@
       "failedToLoadPosts": "加载新帖子失败",
       "failedToLoadPostsDesc": "无法显示新帖子。请重试。",
       "parseError": "解析文章内容失败",
-      "coverImageError": "加载文章封面图片失败"
+      "coverImageError": "加载文章封面图片失败",
+      "attachmentsLoadFailed": "加载附件失败"
     },
     "bookmark": {
       "added": "书签已添加",
@@ -986,6 +987,15 @@
       "maxFilesPartial": "最多允许 {max} 个文件。部分文件未被添加。",
       "unsupportedType": "\"{name}\" 的类型 \"{type}\" 不受支持。支持的格式：{formats}。",
       "fileTooLarge": "\"{name}\" 超过最大大小 {maxSize}。"
+    },
+    "status": {
+      "updateFailed": "更新状态失败。请重试。"
+    },
+    "fullscreen": {
+      "error": "尝试启用全屏时出错"
+    },
+    "logout": {
+      "failed": "退出登录失败。请重试。"
     }
   },
   "empty": {
