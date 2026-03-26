@@ -1194,7 +1194,6 @@
     "emoji": "絵文字",
     "richText": "リッチテキスト",
     "markdown": "マークダウン",
-    "clearToSwitch": "モードを切り替えるにはコンテンツをクリアしてください",
     "placeholder": "あなたの傑作を書き始めましょう",
     "toolbarAriaLabel": "マークダウン編集ツールバー",
     "warningApproaching": "最大文字数制限に近づいています。",

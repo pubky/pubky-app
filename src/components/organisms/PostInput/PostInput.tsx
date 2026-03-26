@@ -15,6 +15,7 @@ import type { PostInputProps } from './PostInput.types';
 import { PostInputExpandableSection } from '../PostInputExpandableSection';
 import { PostInputAttachments } from '@/molecules/PostInputAttachments/PostInputAttachments';
 import type { ArticleJSON } from '@/hooks';
+import { sanitizeCodeBlockLanguages } from '@/molecules/MarkdownEditor/InitializedMDXEditor.utils';
 
 export function PostInput({
   dataCy,
@@ -240,7 +241,7 @@ export function PostInput({
           <Molecules.MarkdownEditor
             ref={markdownEditorRef}
             autoFocus
-            markdown={content}
+            markdown={sanitizeCodeBlockLanguages(content)}
             onChange={handleArticleBodyChange}
             readOnly={isSubmitting}
           />

@@ -1194,7 +1194,6 @@
     "emoji": "Emoji",
     "richText": "Rich-Text",
     "markdown": "Markdown",
-    "clearToSwitch": "Inhalt löschen, um den Modus zu wechseln",
     "placeholder": "Beginne dein Meisterwerk zu schreiben",
     "toolbarAriaLabel": "Markdown-Bearbeitungsleiste",
     "warningApproaching": "Du näherst dich dem maximalen Zeichenlimit.",
