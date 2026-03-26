@@ -83,7 +83,7 @@ export function SearchInput({ autoFocus = false }: SearchInputProps) {
   const suggestionsId = 'search-suggestions';
 
   return (
-    <Atoms.Container ref={containerRef} data-testid="search-input" className="relative">
+    <Atoms.Container ref={containerRef} data-testid="search-input" className="relative min-w-0">
       {/* Input bar with active tags */}
       <Molecules.SearchInputBar
         activeTags={activeTags}
