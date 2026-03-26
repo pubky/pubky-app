@@ -989,7 +989,8 @@
       "fileTooLarge": "\"{name}\" depasse la taille maximale de {maxSize}."
     },
     "status": {
-      "updateFailed": "Échec de la mise à jour du statut. Veuillez réessayer."
+      "updateFailed": "Échec de la mise à jour du statut. Veuillez réessayer.",
+      "userNotLoaded": "Profil utilisateur non chargé. Veuillez réessayer."
     },
     "fullscreen": {
       "error": "Erreur lors de l'activation du plein écran"

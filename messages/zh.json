@@ -989,7 +989,8 @@
       "fileTooLarge": "\"{name}\" 超过最大大小 {maxSize}。"
     },
     "status": {
-      "updateFailed": "更新状态失败。请重试。"
+      "updateFailed": "更新状态失败。请重试。",
+      "userNotLoaded": "用户资料未加载。请重试。"
     },
     "fullscreen": {
       "error": "尝试启用全屏时出错"

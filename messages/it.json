@@ -989,7 +989,8 @@
       "fileTooLarge": "\"{name}\" supera la dimensione massima di {maxSize}."
     },
     "status": {
-      "updateFailed": "Impossibile aggiornare lo stato. Riprova."
+      "updateFailed": "Impossibile aggiornare lo stato. Riprova.",
+      "userNotLoaded": "Profilo utente non caricato. Riprova."
     },
     "fullscreen": {
       "error": "Errore durante l'attivazione della modalità schermo intero"

@@ -989,7 +989,8 @@
       "fileTooLarge": "\"{name}\" excede o tamanho máximo de {maxSize}."
     },
     "status": {
-      "updateFailed": "Falha ao atualizar status. Por favor, tente novamente."
+      "updateFailed": "Falha ao atualizar status. Por favor, tente novamente.",
+      "userNotLoaded": "Perfil do usuário não carregado. Por favor, tente novamente."
     },
     "fullscreen": {
       "error": "Erro ao tentar habilitar tela cheia"

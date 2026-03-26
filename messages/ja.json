@@ -989,7 +989,8 @@
       "fileTooLarge": "「{name}」は最大サイズ{maxSize}を超えています。"
     },
     "status": {
-      "updateFailed": "ステータスの更新に失敗しました。再試行してください。"
+      "updateFailed": "ステータスの更新に失敗しました。再試行してください。",
+      "userNotLoaded": "ユーザープロフィールが読み込まれていません。再試行してください。"
     },
     "fullscreen": {
       "error": "フルスクリーンの有効化中にエラーが発生しました"

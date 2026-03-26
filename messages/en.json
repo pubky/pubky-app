@@ -983,7 +983,8 @@
       "fileTooLarge": "\"{name}\" exceeds the maximum size of {maxSize}."
     },
     "status": {
-      "updateFailed": "Failed to update status. Please try again."
+      "updateFailed": "Failed to update status. Please try again.",
+      "userNotLoaded": "User profile not loaded. Please try again."
     },
     "fullscreen": {
       "error": "Error attempting to enable fullscreen"

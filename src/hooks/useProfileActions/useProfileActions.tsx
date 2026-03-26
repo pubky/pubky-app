@@ -37,7 +37,6 @@ export function useProfileActions({ publicKey, link }: UseProfileActionsProps): 
   const { copyToClipboard } = useCopyToClipboard();
   const authStore = Core.useAuthStore();
   const [isLoggingOut, setIsLoggingOut] = useState(false);
-  const tReport = useTranslations('toast.report');
   const tLogout = useTranslations('toast.logout');
   const tStatus = useTranslations('toast.status');
 
@@ -70,7 +69,7 @@ export function useProfileActions({ publicKey, link }: UseProfileActionsProps): 
       const currentUserPubky = authStore.currentUserPubky;
       if (!currentUserPubky) {
         Libs.Logger.error('No authenticated user found');
-        Molecules.showErrorToast({ description: tReport('userNotLoaded') });
+        Molecules.showErrorToast({ description: tStatus('userNotLoaded') });
         return;
       }
 
@@ -81,7 +80,7 @@ export function useProfileActions({ publicKey, link }: UseProfileActionsProps): 
         Molecules.showErrorToast({ description: tStatus('updateFailed') });
       }
     },
-    [authStore, tReport, tStatus],
+    [authStore, tStatus],
   );
 
   return {

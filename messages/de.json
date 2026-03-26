@@ -989,7 +989,8 @@
       "fileTooLarge": "\"{name}\" überschreitet die maximale Größe von {maxSize}."
     },
     "status": {
-      "updateFailed": "Status konnte nicht aktualisiert werden. Bitte versuchen Sie es erneut."
+      "updateFailed": "Status konnte nicht aktualisiert werden. Bitte versuchen Sie es erneut.",
+      "userNotLoaded": "Benutzerprofil nicht geladen. Bitte versuchen Sie es erneut."
     },
     "fullscreen": {
       "error": "Fehler beim Aktivieren des Vollbildmodus"
