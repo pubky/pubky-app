@@ -55,7 +55,7 @@ describe('Button', () => {
 
     rerender(<Button size="lg">Large</Button>);
     button = screen.getByRole('button');
-    expect(button).toHaveClass('h-auto', 'px-4', 'py-2.5', 'sm:px-8', 'sm:py-5');
+    expect(button).toHaveClass('h-auto', 'gap-2', 'px-8', 'py-5', 'text-sm', 'font-bold', 'leading-normal');
 
     rerender(<Button size="icon">Icon</Button>);
     button = screen.getByRole('button');
