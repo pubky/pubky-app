@@ -244,6 +244,25 @@ describe('PostText', () => {
 
         expect(handleParentClick).not.toHaveBeenCalled();
       });
+
+      it('calls onLinkClick handler when provided and link is clicked', () => {
+        const handleLinkClick = vi.fn();
+        render(<PostText content="Visit https://example.com" onLinkClick={handleLinkClick} />);
+
+        const link = screen.getByRole('link');
+        fireEvent.click(link);
+
+        expect(handleLinkClick).toHaveBeenCalledTimes(1);
+        expect(handleLinkClick).toHaveBeenCalledWith('https://example.com', expect.any(Object));
+      });
+
+      it('does not call onLinkClick when not provided', () => {
+        render(<PostText content="Visit https://example.com" />);
+
+        const link = screen.getByRole('link');
+        // Should not throw
+        fireEvent.click(link);
+      });
     });
 
     describe('Markdown links (disallowed)', () => {
@@ -429,6 +448,15 @@ describe('PostText', () => {
       // The isArticle prop only prevents the "Show more" button, not the truncation itself
       expect(container.textContent).toContain('...');
       expect(screen.queryByRole('button', { name: 'Show full post content' })).not.toBeInTheDocument();
+    });
+
+    it('allows markdown links when isArticle is true', () => {
+      render(<PostText content="Check out [example](https://example.com)" isArticle />);
+
+      const link = screen.getByRole('link');
+      expect(link).toBeInTheDocument();
+      expect(link).toHaveAttribute('href', 'https://example.com');
+      expect(link).toHaveTextContent('example');
     });
   });
 
