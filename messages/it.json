@@ -743,7 +743,7 @@
       "repostedPost": "ha ripubblicato il tuo post",
       "mentionedYou": "ti ha menzionato in un post",
       "deletedPost": "ha eliminato un post",
-      "editedPost": "ha modificato un post",
+      "editedPost": "ha modificato un post con cui hai interagito",
       "fallback": "Nuova notifica"
     },
     "settings": {
