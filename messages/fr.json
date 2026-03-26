@@ -743,7 +743,7 @@
       "repostedPost": "a republie votre publication",
       "mentionedYou": "vous a mentionne dans une publication",
       "deletedPost": "a supprimé une publication",
-      "editedPost": "a modifié une publication",
+      "editedPost": "a modifié une publication avec laquelle vous avez interagi",
       "fallback": "Nouvelle notification"
     },
     "settings": {
