@@ -10,7 +10,7 @@ import { useTranslations } from 'next-intl';
 import { VerificationHandler } from './HumanLightningPayment.utils';
 import { QRCodeSkeleton, PriceSkeleton } from './HumanLightningPayment.skeleton';
 import type { HumanLightningPaymentProps } from './HumanLightningPayment.types';
-import { useIsMobile } from '@/hooks';
+import { useIsMobile } from '@/hooks/useIsMobile';
 
 export const HumanLightningPayment = ({ onBack, onSuccess }: HumanLightningPaymentProps) => {
   const t = useTranslations('onboarding.lightning');
@@ -146,7 +146,7 @@ export const HumanLightningPayment = ({ onBack, onSuccess }: HumanLightningPayme
 
     if (isMobile) {
       return (
-        <Atoms.Button asChild className="w-full">
+        <Atoms.Button asChild className="w-full lg:flex-0">
           <a href={`lightning:${verification.data.bolt11Invoice}`}>
             <Libs.Wallet className="mr-2 size-4" />
             {t('payNow')}
@@ -222,7 +222,7 @@ export const HumanLightningPayment = ({ onBack, onSuccess }: HumanLightningPayme
         <Atoms.Button
           id="human-phone-back-btn"
           size="lg"
-          className="w-full flex-1 rounded-full md:flex-0"
+          className="w-full flex-1 rounded-full lg:flex-0"
           variant="secondary"
           onClick={onBack}
         >
@@ -232,8 +232,8 @@ export const HumanLightningPayment = ({ onBack, onSuccess }: HumanLightningPayme
         <Atoms.Button
           id="human-phone-send-code-btn"
           size="lg"
-          className="w-full flex-1 rounded-full md:flex-0"
-          variant="secondary"
+          className="w-full flex-1 rounded-full lg:flex-0"
+          variant={isMobile ? 'secondary' : 'brand'}
           disabled={!isDataAvailable}
           onClick={() => verification && copyToClipboard(verification.data.bolt11Invoice)}
         >
