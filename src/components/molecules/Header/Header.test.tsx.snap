@@ -521,7 +521,7 @@ exports[`Header Components - Snapshots > matches snapshot for HeaderOnboarding 1
 
 exports[`Header Components - Snapshots > matches snapshot for HeaderSignIn 1`] = `
 <div
-  class="mx-auto w-full flex flex-1 flex-row items-center justify-end gap-3"
+  class="mx-auto w-full flex min-w-0 flex-1 flex-row items-center justify-end gap-3"
   data-testid="container"
 >
   <div
