@@ -580,6 +580,17 @@ export function sanitizeTagInput(value: string): string {
 }
 
 /**
+ * Checks whether a string is a valid tag label (correct length, no banned characters).
+ *
+ * @param value - The candidate tag label (should already be trimmed/lowercased)
+ * @returns true when the label satisfies all tag constraints
+ */
+export function isValidTagLabel(value: string): boolean {
+  const charCount = getCharacterCount(value);
+  return charCount > 0 && charCount <= Config.TAG_MAX_LENGTH && sanitizeTagInput(value) === value;
+}
+
+/**
  * Determines if a post can be submitted based on variant, content, attachments, submission state, and article options.
  *
  * @param variant - The post input variant ('post', 'reply', 'repost', or 'edit')

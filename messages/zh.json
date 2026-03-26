@@ -286,6 +286,8 @@
     "signIn": {
       "title": "登录 <highlight>Pubky。</highlight>",
       "subtitle": "使用 Pubky Ring 授权登录。",
+      "progressTitle": "正在登录。",
+      "progressSubtitle": "请稍候，正在加载你的 Pubky 体验。",
       "generating": "正在生成二维码...",
       "generatingShort": "生成中...",
 
@@ -685,7 +687,8 @@
       "subtitle2": "您可以搜索多个用逗号分隔的标签。"
     },
     "userSuggestion": "用户 {name}（{pubky}）",
-    "viewProfile": "查看 {name} 的个人资料"
+    "viewProfile": "查看 {name} 的个人资料",
+    "invalidTag": "标签不能超过20个字符，且不能包含特殊字符"
   },
   "feedback": {
     "title": "提供反馈",
@@ -740,7 +743,7 @@
       "repostedPost": "转发了您的帖子",
       "mentionedYou": "在帖子中提到了您",
       "deletedPost": "删除了一条帖子",
-      "editedPost": "编辑了一条帖子",
+      "editedPost": "编辑了您互动过的帖子",
       "fallback": "新通知"
     },
     "settings": {

@@ -286,6 +286,8 @@
     "signIn": {
       "title": "Bei <highlight>Pubky</highlight> anmelden.",
       "subtitle": "Autorisieren Sie mit Pubky Ring, um sich anzumelden.",
+      "progressTitle": "Anmeldung läuft.",
+      "progressSubtitle": "Bitte warten Sie, während Ihr Pubky-Erlebnis geladen wird.",
       "generating": "QR-Code wird generiert...",
       "generatingShort": "Generieren...",
 
@@ -685,7 +687,8 @@
       "subtitle2": "Sie können nach mehreren durch Kommas getrennten Tags suchen."
     },
     "userSuggestion": "Benutzer {name} ({pubky})",
-    "viewProfile": "Profil von {name} ansehen"
+    "viewProfile": "Profil von {name} ansehen",
+    "invalidTag": "Tags dürfen maximal 20 Zeichen lang sein und keine Sonderzeichen enthalten"
   },
   "feedback": {
     "title": "Feedback geben",
@@ -740,7 +743,7 @@
       "repostedPost": "hat Ihren Beitrag repostet",
       "mentionedYou": "hat Sie in einem Beitrag erwaehnt",
       "deletedPost": "hat einen Beitrag gelöscht",
-      "editedPost": "hat einen Beitrag bearbeitet",
+      "editedPost": "hat einen Beitrag bearbeitet, mit dem Sie interagiert haben",
       "fallback": "Neue Benachrichtigung"
     },
     "settings": {

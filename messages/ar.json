@@ -286,6 +286,8 @@
     "signIn": {
       "title": "تسجيل الدخول الى <highlight>Pubky.</highlight>",
       "subtitle": "قم بالتفويض باستخدام Pubky Ring لتسجيل الدخول.",
+      "progressTitle": "جارٍ تسجيل الدخول.",
+      "progressSubtitle": "يرجى الانتظار بينما يتم تحميل تجربتك على Pubky.",
       "generating": "جاري انشاء رمز QR...",
       "generatingShort": "جاري الانشاء...",
 
@@ -685,7 +687,8 @@
       "subtitle2": "يمكنك البحث عن وسوم متعددة مفصولة بفواصل."
     },
     "userSuggestion": "المستخدم {name} ({pubky})",
-    "viewProfile": "عرض ملف {name} الشخصي"
+    "viewProfile": "عرض ملف {name} الشخصي",
+    "invalidTag": "يجب أن تكون العلامات 20 حرفًا أو أقل ولا يمكن أن تحتوي على أحرف خاصة"
   },
   "feedback": {
     "title": "ارسال ملاحظات",
@@ -740,7 +743,7 @@
       "repostedPost": "اعاد نشر منشورك",
       "mentionedYou": "ذكرك في منشور",
       "deletedPost": "حذف منشورا",
-      "editedPost": "عدّل منشوراً",
+      "editedPost": "عدّل منشوراً تفاعلت معه",
       "fallback": "إشعار جديد"
     },
     "settings": {

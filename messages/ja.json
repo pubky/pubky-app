@@ -286,6 +286,8 @@
     "signIn": {
       "title": "<highlight>Pubky</highlight>にログイン。",
       "subtitle": "Pubky Ringで認証してログインしてください。",
+      "progressTitle": "サインイン中。",
+      "progressSubtitle": "Pubky の体験を読み込んでいます。しばらくお待ちください。",
       "generating": "QRコード生成中...",
       "generatingShort": "生成中...",
 
@@ -685,7 +687,8 @@
       "subtitle2": "カンマで区切って複数のタグを検索できます。"
     },
     "userSuggestion": "ユーザー {name}（{pubky}）",
-    "viewProfile": "{name}のプロフィールを見る"
+    "viewProfile": "{name}のプロフィールを見る",
+    "invalidTag": "タグは20文字以内で、特殊文字を含めることはできません"
   },
   "feedback": {
     "title": "フィードバックを送信",
@@ -740,7 +743,7 @@
       "repostedPost": "あなたの投稿をリポストしました",
       "mentionedYou": "投稿であなたをメンションしました",
       "deletedPost": "投稿を削除しました",
-      "editedPost": "投稿を編集しました",
+      "editedPost": "関わった投稿を編集しました",
       "fallback": "新しい通知"
     },
     "settings": {
