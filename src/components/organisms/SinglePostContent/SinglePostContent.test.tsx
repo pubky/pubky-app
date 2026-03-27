@@ -143,7 +143,7 @@ vi.mock('../QuickReply', () => ({
   ),
 }));
 
-vi.mock('../ThreadTree', () => ({
+vi.mock('../ThreadTree/ThreadTree', () => ({
   ThreadTree: ({ postId, showQuickReply }: { postId: string; showQuickReply?: boolean }) => (
     <div data-testid="thread-tree" data-post-id={postId} data-show-quick-reply={String(showQuickReply)}>
       ThreadTree
