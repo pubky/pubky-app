@@ -445,9 +445,35 @@ describe('PostText', () => {
       const { container } = render(<PostText content={longContent} isArticle />);
 
       // Content can still be truncated (ellipsis present), but no "Show more" button
-      // The isArticle prop only prevents the "Show more" button, not the truncation itself
+      // The remarkExtractFirstParagraph plugin handles truncation for articles at the AST level
       expect(container.textContent).toContain('...');
       expect(screen.queryByRole('button', { name: 'Show full post content' })).not.toBeInTheDocument();
+    });
+
+    it('shows only first paragraph of article in feed', () => {
+      render(<PostText content={`# Title\n\nFirst paragraph text.\n\nSecond paragraph text.`} isArticle />);
+
+      expect(screen.getByText('First paragraph text.')).toBeInTheDocument();
+      expect(screen.queryByText('Second paragraph text.')).not.toBeInTheDocument();
+      expect(screen.queryByText('Title')).not.toBeInTheDocument();
+    });
+
+    it('shows full article content on post page', () => {
+      mockUsePathname.mockReturnValue('/post/some-post-id');
+      render(<PostText content={`# Title\n\nFirst paragraph text.\n\nSecond paragraph text.`} isArticle />);
+
+      expect(screen.getByText('First paragraph text.')).toBeInTheDocument();
+      expect(screen.getByText('Second paragraph text.')).toBeInTheDocument();
+      expect(screen.getByRole('heading', { level: 1 })).toHaveTextContent('Title');
+    });
+
+    it('does not truncate article content on post page', () => {
+      mockUsePathname.mockReturnValue('/post/some-post-id');
+      const longContent = generateContent(600);
+      render(<PostText content={longContent} isArticle />);
+
+      // On post page, the plugin is a no-op, so full content renders
+      expect(screen.queryByText(/\.\.\./)).not.toBeInTheDocument();
     });
 
     it('allows markdown links when isArticle is true', () => {
@@ -1046,7 +1072,7 @@ Third line`}
     expect(container.firstChild).toMatchSnapshot();
   });
 
-  it('matches snapshot for article with multiple headings', () => {
+  it('matches snapshot for article with multiple headings (first paragraph extracted in feed)', () => {
     const { container } = render(
       <PostText
         content={`# Article Title
@@ -1068,10 +1094,31 @@ Even more specific information.`}
     expect(container.firstChild).toMatchSnapshot();
   });
 
-  it('matches snapshot for article with long content (truncated without Show more button)', () => {
+  it('matches snapshot for article with long content (first paragraph extracted and truncated in feed)', () => {
     const longContent =
       'Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat. Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur. Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia deserunt mollit anim id est laborum. Extra text to make this longer than 500 characters for truncation testing purposes.';
     const { container } = render(<PostText content={longContent} isArticle />);
+    expect(container.firstChild).toMatchSnapshot();
+  });
+
+  it('matches snapshot for article showing only first paragraph in feed', () => {
+    const { container } = render(
+      <PostText
+        content={`# Article Title\n\nThis is the introduction paragraph.\n\n## Section\n\nMore content here.`}
+        isArticle
+      />,
+    );
+    expect(container.firstChild).toMatchSnapshot();
+  });
+
+  it('matches snapshot for article showing full content on post page', () => {
+    mockUsePathname.mockReturnValue('/post/some-post-id');
+    const { container } = render(
+      <PostText
+        content={`# Article Title\n\nThis is the introduction paragraph.\n\n## Section\n\nMore content here.`}
+        isArticle
+      />,
+    );
     expect(container.firstChild).toMatchSnapshot();
   });
 

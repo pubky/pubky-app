@@ -4,6 +4,7 @@ import { memo, useMemo } from 'react';
 import Markdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import {
+  remarkExtractFirstParagraph,
   remarkDisallowMarkdownLinks,
   remarkHashtags,
   remarkMentions,
@@ -38,15 +39,16 @@ import { POST_ROUTES } from '@/app/routes';
  */
 export const PostText = memo(function PostText({ content, isArticle, onLinkClick, className }: PostTextProps) {
   const pathname = usePathname();
+  const onPostPage = pathname.startsWith(POST_ROUTES.POST);
 
   const contentTruncated =
-    content.length > TRUNCATION_LIMIT && !pathname.startsWith(POST_ROUTES.POST)
+    !isArticle && !onPostPage && content.length > TRUNCATION_LIMIT
       ? truncateAtWordBoundary(content, TRUNCATION_LIMIT)
       : null;
 
   const remarkPlugins = [
     remarkGfm,
-    ...(isArticle ? [] : [remarkDisallowMarkdownLinks]),
+    ...(isArticle ? (!onPostPage ? [remarkExtractFirstParagraph] : []) : [remarkDisallowMarkdownLinks]),
     remarkPlaintextCodeblock,
     remarkHashtags,
     remarkMentions,
@@ -204,7 +206,7 @@ export const PostText = memo(function PostText({ content, isArticle, onLinkClick
       </Markdown>
 
       {/* No stopPropagation on this element therefore click takes user to post via parent element */}
-      {contentTruncated && !isArticle && (
+      {contentTruncated && (
         <Atoms.Button
           overrideDefaults
           aria-label="Show full post content"
