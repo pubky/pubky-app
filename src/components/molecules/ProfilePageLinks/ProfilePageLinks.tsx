@@ -1,22 +1,19 @@
 'use client';
 
-import { useMemo, useState } from 'react';
+import { useMemo } from 'react';
 import { useRouter } from 'next/navigation';
 import { useTranslations } from 'next-intl';
 import * as Atoms from '@/atoms';
 import * as Libs from '@/libs';
-import * as Core from '@/core';
 import * as Organisms from '@/organisms';
+import * as Hooks from '@/hooks';
 import { SETTINGS_ROUTES } from '@/app/routes';
 import type { ProfilePageLinksProps } from './ProfilePageLinks.types';
 
 export function ProfilePageLinks({ links, isOwnProfile = false }: ProfilePageLinksProps) {
   const t = useTranslations('profile.sidebar');
   const router = useRouter();
-  const { privacy } = Core.useSettingsStore();
-  const checkLinkEnabled = privacy.showConfirm;
-  const [dialogOpen, setDialogOpen] = useState(false);
-  const [clickedLink, setClickedLink] = useState('');
+  const { dialogOpen, setDialogOpen, clickedLink, handleLinkClick } = Hooks.useLinkConfirmation();
 
   const handleAddLinkClick = () => {
     router.push(SETTINGS_ROUTES.EDIT);
@@ -32,20 +29,6 @@ export function ProfilePageLinks({ links, isOwnProfile = false }: ProfilePageLin
       })) || [],
     [links],
   );
-
-  const handleLinkClick = (url: string, e: React.MouseEvent) => {
-    e.preventDefault();
-
-    // If link should bypass confirmation or checkLink is disabled, open directly
-    if (Libs.shouldBypassLinkConfirmation(url) || !checkLinkEnabled) {
-      window.open(url, '_blank', 'noopener,noreferrer');
-      return;
-    }
-
-    // Show dialog for external links
-    setClickedLink(url);
-    setDialogOpen(true);
-  };
 
   return (
     <>

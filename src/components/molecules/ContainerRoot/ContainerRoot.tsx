@@ -1,7 +1,9 @@
 import { Inter_Tight } from 'next/font/google';
+import Script from 'next/script';
 
 import * as Atoms from '@/atoms';
 import * as Molecules from '@/molecules';
+import { Env } from '@/libs/env';
 import { isRtlLocale } from '@/i18n';
 
 const interTight = Inter_Tight({
@@ -20,6 +22,13 @@ export function RootContainer({ children, locale = 'en' }: RootContainerProps) {
   return (
     <Atoms.Container as="html" lang={locale} dir={dir}>
       <Atoms.Container as="body" className={`${interTight.variable} antialiased`}>
+        {Env.NEXT_PUBLIC_PLAUSIBLE_DOMAIN && Env.NEXT_PUBLIC_PLAUSIBLE_SCRIPT_URL && (
+          <Script
+            data-domain={Env.NEXT_PUBLIC_PLAUSIBLE_DOMAIN}
+            src={Env.NEXT_PUBLIC_PLAUSIBLE_SCRIPT_URL}
+            strategy="afterInteractive"
+          />
+        )}
         <Molecules.PageContainer>{children}</Molecules.PageContainer>
       </Atoms.Container>
     </Atoms.Container>

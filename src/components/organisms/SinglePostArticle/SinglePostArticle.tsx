@@ -46,6 +46,8 @@ export const SinglePostArticle = ({ postId, content, attachments, isBlurred }: S
     coverImageVariant: Core.FileVariant.MAIN,
   });
 
+  const { dialogOpen, setDialogOpen, clickedLink, handleLinkClick } = Hooks.useLinkConfirmation();
+
   const localAttachments = Core.useLocalFilesStore((s) => s.posts[postId]);
 
   const localCoverImage = localAttachments?.[0]?.type.startsWith('image')
@@ -81,7 +83,7 @@ export const SinglePostArticle = ({ postId, content, attachments, isBlurred }: S
                 <Atoms.Image src={finalCoverImage.src} alt={finalCoverImage.alt} className="mb-6 w-full rounded-md" />
               )}
 
-              <Molecules.PostText content={body} isArticle />
+              <Molecules.PostText content={body} isArticle onLinkClick={handleLinkClick} />
             </>
           )}
 
@@ -105,6 +107,7 @@ export const SinglePostArticle = ({ postId, content, attachments, isBlurred }: S
 
       <Organisms.DialogReply postId={postId} open={replyDialogOpen} onOpenChangeAction={setReplyDialogOpen} />
       <Organisms.DialogRepost postId={postId} open={repostDialogOpen} onOpenChangeAction={setRepostDialogOpen} />
+      <Organisms.DialogCheckLink open={dialogOpen} onOpenChangeAction={setDialogOpen} linkUrl={clickedLink} />
 
       <Atoms.Typography className="text-2xl font-light text-muted-foreground">Replies</Atoms.Typography>
     </>
