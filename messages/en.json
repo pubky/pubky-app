@@ -536,6 +536,12 @@
     }
   },
   "dialogs": {
+    "deletePost": {
+      "title": "Delete post?",
+      "description": "This action cannot be undone. The post will be permanently deleted.",
+      "confirmButton": "Delete",
+      "cancelButton": "Cancel"
+    },
     "editPost": {
       "editArticle": "Edit Article",
       "editPost": "Edit Post",

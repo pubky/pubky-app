@@ -9,4 +9,8 @@ export interface PostMenuActionsContentProps {
   onReportClick: () => void;
   /** Callback when edit action is clicked */
   onEditClick: () => void;
+  /** Callback when delete action is clicked */
+  onDeleteClick: () => void;
+  /** Whether a delete operation is in progress */
+  isDeleting: boolean;
 }

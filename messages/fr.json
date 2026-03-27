@@ -542,6 +542,12 @@
     }
   },
   "dialogs": {
+    "deletePost": {
+      "title": "Supprimer la publication ?",
+      "description": "Cette action est irréversible. La publication sera définitivement supprimée.",
+      "confirmButton": "Supprimer",
+      "cancelButton": "Annuler"
+    },
     "editPost": {
       "editArticle": "Modifiér l'article",
       "editPost": "Modifiér la publication",

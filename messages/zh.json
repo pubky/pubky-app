@@ -542,6 +542,12 @@
     }
   },
   "dialogs": {
+    "deletePost": {
+      "title": "删除帖子？",
+      "description": "此操作无法撤销。帖子将被永久删除。",
+      "confirmButton": "删除",
+      "cancelButton": "取消"
+    },
     "editPost": {
       "editArticle": "编辑文章",
       "editPost": "编辑帖子",
