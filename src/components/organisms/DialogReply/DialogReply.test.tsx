@@ -204,7 +204,7 @@ describe('DialogReply', () => {
         onSuccess: expect.any(Function),
         showThreadConnector: true,
         expanded: true,
-        autoFocusTarget: 'textarea',
+        autoFocusTextarea: true,
         onContentChange: mockHandleContentChange,
       },
       undefined,

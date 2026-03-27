@@ -30,7 +30,7 @@ export function PostInput({
   onArticleModeChange,
   editContent,
   editIsArticle,
-  autoFocusTarget,
+  autoFocusTextarea = false,
   initialContent,
   initialAttachments,
 }: PostInputProps) {
@@ -148,16 +148,6 @@ export function PostInput({
     // eslint-disable-next-line react-hooks/exhaustive-deps -- only run on mount
   }, []);
 
-  // use case: Auto-focus the specified input after dialog animation settles.
-  // Uses requestAnimationFrame to wait for Radix Dialog's focus trap to finish before taking focus.
-  React.useEffect(() => {
-    if (!autoFocusTarget) return;
-    requestAnimationFrame(() => {
-      textareaRef.current?.focus();
-    });
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- only run on mount
-  }, []);
-
   return (
     <Atoms.Container
       data-cy={dataCy}
@@ -221,6 +211,7 @@ export function PostInput({
               rows={1}
               disabled={isSubmitting}
               aria-haspopup="listbox"
+              autoFocus={autoFocusTextarea}
             />
 
             {/* Mention autocomplete popover */}

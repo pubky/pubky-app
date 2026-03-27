@@ -46,7 +46,7 @@ vi.mock('@/atoms', async () => {
         {children}
       </div>
     ),
-    Textarea: vi.fn(({ value, onChange, placeholder, disabled, ref, onFocus, onKeyDown }) => (
+    Textarea: vi.fn(({ value, onChange, placeholder, disabled, ref, onFocus, onKeyDown, autoFocus }) => (
       <textarea
         ref={ref}
         data-testid="textarea"
@@ -56,6 +56,7 @@ vi.mock('@/atoms', async () => {
         onKeyDown={onKeyDown}
         placeholder={placeholder}
         disabled={disabled}
+        autoFocus={autoFocus}
       />
     )),
     PostThreadConnector: vi.fn(({ height, variant }) => (
@@ -555,7 +556,7 @@ describe('PostInput', () => {
   });
 });
 
-describe('PostInput - autoFocusTarget', () => {
+describe('PostInput - autoFocusTextarea', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     mockUsePostReturn.content = '';
@@ -565,31 +566,22 @@ describe('PostInput - autoFocusTarget', () => {
     mockUsePostReturn.isArticle = false;
     mockUsePostReturn.articleTitle = '';
     mockMarkdownEditorRef.current = null;
-    vi.spyOn(window, 'requestAnimationFrame').mockImplementation((cb) => {
-      cb(0);
-      return 0;
-    });
   });
 
-  afterEach(() => {
-    vi.mocked(window.requestAnimationFrame).mockRestore();
+  it('focuses textarea when autoFocusTextarea is true', () => {
+    render(<PostInput variant={POST_INPUT_VARIANT.POST} autoFocusTextarea />);
+
+    expect(screen.getByTestId('textarea')).toHaveFocus();
   });
 
-  it('focuses textarea when autoFocusTarget is "textarea"', () => {
-    render(<PostInput variant={POST_INPUT_VARIANT.POST} autoFocusTarget="textarea" />);
-
-    const textarea = screen.getByTestId('textarea');
-    expect(textarea).toHaveFocus();
-  });
-
-  it('does not auto-focus via autoFocusTarget when it is omitted', () => {
+  it('does not focus textarea when autoFocusTextarea is omitted', () => {
     render(<PostInput variant={POST_INPUT_VARIANT.POST} />);
 
     expect(screen.getByTestId('textarea')).not.toHaveFocus();
     expect(screen.queryByTestId('input')).not.toBeInTheDocument();
   });
 
-  it('does not auto-focus via autoFocusTarget in article mode (MarkdownEditor manages its own focus)', () => {
+  it('does not auto-focus textarea in article mode (MarkdownEditor manages its own focus)', () => {
     mockUsePostReturn.isArticle = true;
 
     render(<PostInput variant={POST_INPUT_VARIANT.POST} />);

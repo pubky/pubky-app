@@ -28,8 +28,7 @@ export function DialogEditPost({ open, onOpenChangeAction, postId }: DialogEditP
 
   return (
     <Atoms.Dialog open={open} onOpenChange={handleOpenChange}>
-      {/* onOpenAutoFocus: prevent Radix from auto-focusing the title input — PostInput handles focus via autoFocusTarget */}
-      <Atoms.DialogContent className="w-3xl" hiddenTitle={title} onOpenAutoFocus={(e) => e.preventDefault()}>
+      <Atoms.DialogContent className="w-3xl" hiddenTitle={title}>
         <Atoms.DialogHeader>
           <Atoms.DialogTitle>{title}</Atoms.DialogTitle>
 
@@ -42,7 +41,7 @@ export function DialogEditPost({ open, onOpenChangeAction, postId }: DialogEditP
           variant={POST_INPUT_VARIANT.EDIT}
           onSuccess={() => onOpenChangeAction(false)}
           expanded={true}
-          autoFocusTarget={isArticle ? undefined : 'textarea'}
+          autoFocusTextarea={!isArticle}
           onContentChange={handleContentChange}
           editPostId={postDetails.id}
           editContent={postDetails.content}

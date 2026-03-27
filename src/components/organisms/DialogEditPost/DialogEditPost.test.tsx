@@ -210,7 +210,7 @@ describe('DialogEditPost', () => {
         dataCy: 'edit-post-input',
         variant: POST_INPUT_VARIANT.EDIT,
         expanded: true,
-        autoFocusTarget: 'textarea',
+        autoFocusTextarea: true,
         editPostId: 'test-post-123',
         editContent: 'Test post content',
         editIsArticle: false,
@@ -219,7 +219,7 @@ describe('DialogEditPost', () => {
     );
   });
 
-  it('renders PostInput with editIsArticle true and no autoFocusTarget for long posts', () => {
+  it('renders PostInput with editIsArticle true and autoFocusTextarea false for long posts', () => {
     vi.mocked(Hooks.usePostDetails).mockReturnValue({
       postDetails: {
         id: 'test-article-123',
@@ -235,7 +235,7 @@ describe('DialogEditPost', () => {
     expect(Organisms.PostInput).toHaveBeenCalledWith(
       expect.objectContaining({
         editIsArticle: true,
-        autoFocusTarget: undefined,
+        autoFocusTextarea: false,
       }),
       undefined,
     );
