@@ -40,7 +40,7 @@ export function DialogCheckLink({ open, onOpenChangeAction, linkUrl }: DialogChe
 
   return (
     <Atoms.Dialog open={open} onOpenChange={onOpenChangeAction}>
-      <Atoms.DialogContent className="w-2xl" hiddenTitle="Double-check this link">
+      <Atoms.DialogContent className="w-2xl" hiddenTitle="Double-check this link" onClick={(e) => e.stopPropagation()}>
         <Atoms.DialogHeader>
           <Atoms.DialogTitle>Double-check this link</Atoms.DialogTitle>
           <Atoms.DialogDescription>The link is taking you to another site:</Atoms.DialogDescription>

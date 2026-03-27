@@ -36,7 +36,7 @@ import { POST_ROUTES } from '@/app/routes';
  * Memoization prevents unnecessary re-renders when TTL refreshes update IndexedDB records
  * without changes to the actual post content.
  */
-export const PostText = memo(function PostText({ content, isArticle, className }: PostTextProps) {
+export const PostText = memo(function PostText({ content, isArticle, onLinkClick, className }: PostTextProps) {
   const pathname = usePathname();
 
   const contentTruncated =
@@ -46,7 +46,7 @@ export const PostText = memo(function PostText({ content, isArticle, className }
 
   const remarkPlugins = [
     remarkGfm,
-    remarkDisallowMarkdownLinks,
+    ...(isArticle ? [] : [remarkDisallowMarkdownLinks]),
     remarkPlaintextCodeblock,
     remarkHashtags,
     remarkMentions,
@@ -98,7 +98,13 @@ export const PostText = memo(function PostText({ content, isArticle, className }
                 {...rest}
                 target="_blank"
                 rel="noopener noreferrer"
-                onClick={(e) => e.stopPropagation()}
+                onClick={(e) => {
+                  e.stopPropagation();
+
+                  if (onLinkClick && rest.href) {
+                    onLinkClick(rest.href, e);
+                  }
+                }}
                 className={Libs.cn(className, 'cursor-pointer text-brand transition-colors hover:text-brand/80')}
               >
                 {children}

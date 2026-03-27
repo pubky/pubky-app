@@ -111,6 +111,7 @@ exports[`SinglePostArticle - Snapshots > matches snapshot with cover image 1`] =
       src="https://example.com/cover.jpg"
     />
     <div
+      data-has-link-click="true"
       data-is-article="true"
       data-testid="post-text"
     >
@@ -175,6 +176,7 @@ exports[`SinglePostArticle - Snapshots > matches snapshot with default props (no
       </button>
     </div>
     <div
+      data-has-link-click="true"
       data-is-article="true"
       data-testid="post-text"
     >

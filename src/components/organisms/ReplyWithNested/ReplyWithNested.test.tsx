@@ -205,6 +205,14 @@ describe('ReplyWithNested', () => {
     expect(mocks.mockOnPostClick).toHaveBeenCalledWith('author:reply-1');
   });
 
+  it('applies min-w-0 to the nested sub-reply column so long usernames truncate', () => {
+    render(<ReplyWithNested replyId="author:reply-1" onPostClick={mocks.mockOnPostClick} />);
+
+    const nestedPost = screen.getByText('author:nested-1');
+    const nestedColumn = nestedPost.closest('.flex-1.min-w-0');
+    expect(nestedColumn).toBeInTheDocument();
+  });
+
   it('passes depth options to useNestedReplies', () => {
     // depth=0 so the mock wrapper passes through to mockUseNestedReplies
     render(<ReplyWithNested replyId="author:reply-1" onPostClick={mocks.mockOnPostClick} depth={0} maxDepth={2} />);

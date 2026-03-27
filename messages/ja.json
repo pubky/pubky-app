@@ -743,7 +743,7 @@
       "repostedPost": "あなたの投稿をリポストしました",
       "mentionedYou": "投稿であなたをメンションしました",
       "deletedPost": "投稿を削除しました",
-      "editedPost": "投稿を編集しました",
+      "editedPost": "関わった投稿を編集しました",
       "fallback": "新しい通知"
     },
     "settings": {

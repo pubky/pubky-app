@@ -94,3 +94,4 @@ export * from './useCustomFeed';
 export * from './useCustomStreamId';
 export * from './useSettingsActions';
 export * from './useLocalFirstQuery';
+export * from './useLinkConfirmation';
