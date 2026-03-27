@@ -106,5 +106,5 @@ export * from './FullUserListItemSkeleton';
 export * from './WhoToFollow';
 export * from './WhoToFollowPage';
 export * from './SearchInput';
-export * from './ThreadTree';
-export * from './ReplyWithNested';
+export * from './ThreadTree/ThreadTree';
+export * from './ReplyWithNested/ReplyWithNested';

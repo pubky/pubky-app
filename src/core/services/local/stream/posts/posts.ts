@@ -287,11 +287,14 @@ export class LocalStreamPostsService {
   }
 
   /**
-   * Extracts post IDs from Nexus post response
-   * Temporary function until Nexus provides an endpoint that returns only IDs
+   * Persist a new chunk of post IDs into a cached stream.
    *
-   * @param posts - Array of posts from Nexus API
-   * @returns Array of composite post IDs (author:postId)
+   * Creates the stream when it does not exist yet. Otherwise merges the incoming
+   * IDs with the existing stream, removes duplicates, and re-sorts by post
+   * timestamp in descending order before saving.
+   *
+   * @param stream - Incoming post IDs to merge into the stream cache
+   * @param streamId - Stream identifier to create or update
    */
   static async persistNewStreamChunk({ stream, streamId }: Core.TPostStreamUpsertParams) {
     const postStream = await Core.PostStreamModel.findById(streamId);
