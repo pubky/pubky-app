@@ -30,12 +30,11 @@ vi.mock('@/hooks', () => ({
   useUserProfile: (userId: string) => mockUseUserProfile(userId),
 }));
 
-// Mock PostHeaderUserInfoPopoverWrapper to avoid Next.js router and popover dependencies
 vi.mock('@/molecules', async (importOriginal) => {
   const actual = await importOriginal<typeof import('@/molecules')>();
   return {
     ...actual,
-    PostHeaderUserInfoPopoverWrapper: ({ children }: { children: React.ReactNode }) => <>{children}</>,
+    UserInfoPopover: ({ children }: { children: React.ReactNode }) => <>{children}</>,
   };
 });
 

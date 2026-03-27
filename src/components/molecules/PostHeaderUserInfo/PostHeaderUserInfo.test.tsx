@@ -152,7 +152,7 @@ vi.mock('@/molecules', async (importOriginal) => {
   const actual = await importOriginal<typeof import('@/molecules')>();
   return {
     ...actual,
-    PostHeaderUserInfoPopoverWrapper: ({
+    UserInfoPopover: ({
       children,
       userId: _userId,
       userName,
@@ -295,7 +295,7 @@ describe('PostHeaderUserInfo', () => {
     expect(content).toHaveAttribute('data-side', 'top');
     expect(content).toHaveAttribute('data-side-offset', '1');
   });
-  // Popover content details (bio/follow actions) are covered by PostHeaderUserInfoPopoverWrapper + hooks tests.
+  // Popover content details (bio/follow actions) are covered by UserInfoPopover + hooks tests.
 
   it('renders without popover when showPopover is false', () => {
     render(<PostHeaderUserInfo userId="user123" userName="Test User" showPopover={false} />);
