@@ -59,7 +59,7 @@ exports[`InitializedMDXEditor - Snapshots > matches snapshot in markdown mode 1`
     class="dark-theme cursor-auto hidden"
     data-content-editable-class="prose prose-neutral prose-invert prose-code:before:content-none prose-code:after:content-none max-w-none px-0! pb-0! pt-4! max-h-[60dvh] overflow-y-auto"
     data-placeholder="Start writing your masterpiece"
-    data-plugins-count="9"
+    data-plugins-count="10"
     data-testid="mdx-editor"
     markdown=""
   >
@@ -95,6 +95,11 @@ exports[`InitializedMDXEditor - Snapshots > matches snapshot in markdown mode 1`
         data-testid="insert-thematic-break"
       >
         Insert Break
+      </button>
+      <button
+        data-testid="create-link"
+      >
+        Create Link
       </button>
       <button
         data-testid="code-toggle"
@@ -203,7 +208,7 @@ exports[`InitializedMDXEditor - Snapshots > matches snapshot with approaching ma
       class="dark-theme cursor-auto"
       data-content-editable-class="prose prose-neutral prose-invert prose-code:before:content-none prose-code:after:content-none max-w-none px-0! pb-0! pt-4! max-h-[60dvh] overflow-y-auto"
       data-placeholder="Start writing your masterpiece"
-      data-plugins-count="9"
+      data-plugins-count="10"
       data-testid="mdx-editor"
       markdown=""
     >
@@ -239,6 +244,11 @@ exports[`InitializedMDXEditor - Snapshots > matches snapshot with approaching ma
           data-testid="insert-thematic-break"
         >
           Insert Break
+        </button>
+        <button
+          data-testid="create-link"
+        >
+          Create Link
         </button>
         <button
           data-testid="code-toggle"
@@ -367,7 +377,7 @@ exports[`InitializedMDXEditor - Snapshots > matches snapshot with custom classNa
     class="custom-editor-class"
     data-content-editable-class="prose prose-neutral prose-invert prose-code:before:content-none prose-code:after:content-none max-w-none px-0! pb-0! pt-4! max-h-[60dvh] overflow-y-auto"
     data-placeholder="Start writing your masterpiece"
-    data-plugins-count="9"
+    data-plugins-count="10"
     data-testid="mdx-editor"
     markdown=""
   >
@@ -403,6 +413,11 @@ exports[`InitializedMDXEditor - Snapshots > matches snapshot with custom classNa
         data-testid="insert-thematic-break"
       >
         Insert Break
+      </button>
+      <button
+        data-testid="create-link"
+      >
+        Create Link
       </button>
       <button
         data-testid="code-toggle"
@@ -510,7 +525,7 @@ exports[`InitializedMDXEditor - Snapshots > matches snapshot with default props 
     class="dark-theme cursor-auto"
     data-content-editable-class="prose prose-neutral prose-invert prose-code:before:content-none prose-code:after:content-none max-w-none px-0! pb-0! pt-4! max-h-[60dvh] overflow-y-auto"
     data-placeholder="Start writing your masterpiece"
-    data-plugins-count="9"
+    data-plugins-count="10"
     data-testid="mdx-editor"
     markdown=""
   >
@@ -546,6 +561,11 @@ exports[`InitializedMDXEditor - Snapshots > matches snapshot with default props 
         data-testid="insert-thematic-break"
       >
         Insert Break
+      </button>
+      <button
+        data-testid="create-link"
+      >
+        Create Link
       </button>
       <button
         data-testid="code-toggle"
@@ -653,7 +673,7 @@ exports[`InitializedMDXEditor - Snapshots > matches snapshot with emoji picker o
     class="dark-theme cursor-auto"
     data-content-editable-class="prose prose-neutral prose-invert prose-code:before:content-none prose-code:after:content-none max-w-none px-0! pb-0! pt-4! max-h-[60dvh] overflow-y-auto"
     data-placeholder="Start writing your masterpiece"
-    data-plugins-count="9"
+    data-plugins-count="10"
     data-testid="mdx-editor"
     markdown=""
   >
@@ -689,6 +709,11 @@ exports[`InitializedMDXEditor - Snapshots > matches snapshot with emoji picker o
         data-testid="insert-thematic-break"
       >
         Insert Break
+      </button>
+      <button
+        data-testid="create-link"
+      >
+        Create Link
       </button>
       <button
         data-testid="code-toggle"
@@ -805,7 +830,7 @@ exports[`InitializedMDXEditor - Snapshots > matches snapshot with markdown conte
     class="dark-theme cursor-auto"
     data-content-editable-class="prose prose-neutral prose-invert prose-code:before:content-none prose-code:after:content-none max-w-none px-0! pb-0! pt-4! max-h-[60dvh] overflow-y-auto"
     data-placeholder="Start writing your masterpiece"
-    data-plugins-count="9"
+    data-plugins-count="10"
     data-testid="mdx-editor"
     markdown="# Test Content"
   >
@@ -841,6 +866,11 @@ exports[`InitializedMDXEditor - Snapshots > matches snapshot with markdown conte
         data-testid="insert-thematic-break"
       >
         Insert Break
+      </button>
+      <button
+        data-testid="create-link"
+      >
+        Create Link
       </button>
       <button
         data-testid="code-toggle"
@@ -950,7 +980,7 @@ exports[`InitializedMDXEditor - Snapshots > matches snapshot with reached max le
       class="dark-theme cursor-auto"
       data-content-editable-class="prose prose-neutral prose-invert prose-code:before:content-none prose-code:after:content-none max-w-none px-0! pb-0! pt-4! max-h-[60dvh] overflow-y-auto"
       data-placeholder="Start writing your masterpiece"
-      data-plugins-count="9"
+      data-plugins-count="10"
       data-testid="mdx-editor"
       markdown=""
     >
@@ -986,6 +1016,11 @@ exports[`InitializedMDXEditor - Snapshots > matches snapshot with reached max le
           data-testid="insert-thematic-break"
         >
           Insert Break
+        </button>
+        <button
+          data-testid="create-link"
+        >
+          Create Link
         </button>
         <button
           data-testid="code-toggle"
@@ -1117,7 +1152,7 @@ exports[`InitializedMDXEditor - Snapshots > matches snapshot with readOnly prop 
     class="dark-theme cursor-auto"
     data-content-editable-class="prose prose-neutral prose-invert prose-code:before:content-none prose-code:after:content-none max-w-none px-0! pb-0! pt-4! max-h-[60dvh] overflow-y-auto"
     data-placeholder="Start writing your masterpiece"
-    data-plugins-count="9"
+    data-plugins-count="10"
     data-readonly="true"
     data-testid="mdx-editor"
     markdown=""
@@ -1154,6 +1189,11 @@ exports[`InitializedMDXEditor - Snapshots > matches snapshot with readOnly prop 
         data-testid="insert-thematic-break"
       >
         Insert Break
+      </button>
+      <button
+        data-testid="create-link"
+      >
+        Create Link
       </button>
       <button
         data-testid="code-toggle"

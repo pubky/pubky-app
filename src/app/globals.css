@@ -428,6 +428,83 @@ body {
   .mdxeditor.dark-theme .cm-activeLineGutter {
     background-color: var(--muted) !important;
   }
+
+  /**
+   * MDXEditor link dialog dark mode fixes
+   * The link dialog is portaled via Radix Popover outside the editor DOM,
+   * so we target elements by their hashed class name patterns directly.
+   * Organized from outermost container to innermost elements:
+   * 1. Popover content (dialog container)
+   * 2. Form field labels
+   * 3. Text inputs (default + focus)
+   * 4. Action buttons (primary + secondary)
+   * 5. Link preview anchor
+   * 6. Popover arrow
+   */
+
+  /* 1. Link dialog popover container */
+  .mdxeditor-popup-container [class*='linkDialogPopoverContent'][role='dialog'] {
+    background-color: var(--card) !important;
+    border: 1px solid var(--border) !important;
+    border-radius: var(--radius-md) !important;
+    color: var(--card-foreground) !important;
+  }
+
+  /* 2. Form field labels */
+  .mdxeditor-popup-container [class*='linkDialogPopoverContent'] [class*='formField'] label {
+    color: var(--muted-foreground) !important;
+  }
+
+  /* 3a. Text inputs - default state */
+  .mdxeditor-popup-container [class*='linkDialogPopoverContent'] [class*='textInput'] {
+    background-color: var(--background) !important;
+    border: 1px solid var(--border) !important;
+    border-radius: var(--radius-sm) !important;
+    color: var(--card-foreground) !important;
+    padding: 0.5rem !important;
+  }
+
+  /* 3b. Text inputs - focus state */
+  .mdxeditor-popup-container [class*='linkDialogPopoverContent'] [class*='textInput']:focus {
+    border-color: var(--ring) !important;
+    outline: none !important;
+  }
+
+  /* 4a. Primary button (Save) */
+  .mdxeditor-popup-container [class*='linkDialogPopoverContent'] [class*='primaryButton'] {
+    background-color: var(--brand) !important;
+    color: var(--background) !important;
+    border: none !important;
+    border-radius: var(--radius-sm) !important;
+  }
+
+  /* 4b. Primary button hover */
+  .mdxeditor-popup-container [class*='linkDialogPopoverContent'] [class*='primaryButton']:hover {
+    opacity: 0.9 !important;
+  }
+
+  /* 4c. Secondary button (Cancel) */
+  .mdxeditor-popup-container [class*='linkDialogPopoverContent'] [class*='secondaryButton'] {
+    background-color: var(--secondary) !important;
+    color: var(--secondary-foreground) !important;
+    border: 1px solid var(--border) !important;
+    border-radius: var(--radius-sm) !important;
+  }
+
+  /* 4d. Secondary button hover */
+  .mdxeditor-popup-container [class*='linkDialogPopoverContent'] [class*='secondaryButton']:hover {
+    background-color: var(--muted) !important;
+  }
+
+  /* 5. Link preview anchor - brand color */
+  .mdxeditor-popup-container [class*='linkDialogPreviewAnchor'] {
+    color: var(--brand) !important;
+  }
+
+  /* 6. Popover arrow - match dialog background */
+  .mdxeditor-popup-container [class*='linkDialogPopoverContent'] [class*='popoverArrow'] polygon {
+    fill: var(--card) !important;
+  }
 }
 
 @layer utilities {
