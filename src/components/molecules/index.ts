@@ -63,7 +63,7 @@ export * from './PostInputAttachments';
 export * from './PostLinkEmbeds';
 export * from './PostHeaderTimestamp';
 export * from './PostHeaderUserInfo';
-export * from './PostHeaderUserInfoPopoverWrapper';
+export * from './UserInfoPopover';
 export * from './PostPreviewCard';
 export * from './RepostHeader';
 export * from './PostTag';

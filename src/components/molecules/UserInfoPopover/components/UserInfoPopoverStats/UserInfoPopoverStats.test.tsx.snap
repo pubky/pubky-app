@@ -1,0 +1,55 @@
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
+
+exports[`UserInfoPopoverStats - Snapshots > matches snapshot 1`] = `
+<div
+  class="flex items-start gap-2.5"
+  data-testid="container"
+>
+  <div
+    class="mx-auto w-full flex-col flex flex-1 items-start gap-2"
+    data-testid="container"
+  >
+    <p
+      class="text-xs leading-4 font-medium tracking-[1.2px] whitespace-pre-wrap text-muted-foreground uppercase"
+      data-testid="typography"
+    >
+      <span
+        class="text-foreground"
+        data-testid="typography"
+      >
+        10
+      </span>
+       
+      FOLLOWERS
+    </p>
+    <div
+      data-testid="avatar-group"
+    >
+      10
+    </div>
+  </div>
+  <div
+    class="mx-auto w-full flex-col flex flex-1 items-start gap-2"
+    data-testid="container"
+  >
+    <p
+      class="text-xs leading-4 font-medium tracking-[1.2px] whitespace-pre-wrap text-muted-foreground uppercase"
+      data-testid="typography"
+    >
+      <span
+        class="text-foreground"
+        data-testid="typography"
+      >
+        3
+      </span>
+       
+      FOLLOWING
+    </p>
+    <div
+      data-testid="avatar-group"
+    >
+      3
+    </div>
+  </div>
+</div>
+`;
