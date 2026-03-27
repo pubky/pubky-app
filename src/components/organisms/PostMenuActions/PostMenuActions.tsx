@@ -97,7 +97,6 @@ export function PostMenuActions({ postId, trigger }: PostMenuActionsProps) {
         open={deleteConfirmOpen}
         onOpenChange={setDeleteConfirmOpen}
         onConfirm={handleDeleteConfirm}
-        isLoading={isDeleting}
       />
     </>
   );

@@ -40,7 +40,6 @@ vi.mock('@/libs', async () => {
   return {
     ...actual,
     Trash2: () => <span data-testid="trash-icon" />,
-    Loader2: () => <span data-testid="loader-icon" />,
   };
 });
 
@@ -87,21 +86,8 @@ describe('DialogConfirmDelete', () => {
     expect(mockOnOpenChange).toHaveBeenCalledWith(false);
   });
 
-  it('disables delete button when loading', () => {
-    render(<DialogConfirmDelete open={true} onOpenChange={vi.fn()} onConfirm={vi.fn()} isLoading={true} />);
-
-    const deleteButton = screen.getByTestId('button-destructive');
-    expect(deleteButton).toBeDisabled();
-  });
-
-  it('shows loader icon when loading', () => {
-    render(<DialogConfirmDelete open={true} onOpenChange={vi.fn()} onConfirm={vi.fn()} isLoading={true} />);
-
-    expect(screen.getByTestId('loader-icon')).toBeInTheDocument();
-  });
-
-  it('shows trash icon when not loading', () => {
-    render(<DialogConfirmDelete open={true} onOpenChange={vi.fn()} onConfirm={vi.fn()} isLoading={false} />);
+  it('shows trash icon on delete button', () => {
+    render(<DialogConfirmDelete open={true} onOpenChange={vi.fn()} onConfirm={vi.fn()} />);
 
     expect(screen.getByTestId('trash-icon')).toBeInTheDocument();
   });
@@ -110,13 +96,6 @@ describe('DialogConfirmDelete', () => {
 describe('DialogConfirmDelete - Snapshots', () => {
   it('matches snapshot when open', () => {
     const { container } = render(<DialogConfirmDelete open={true} onOpenChange={vi.fn()} onConfirm={vi.fn()} />);
-    expect(container.firstChild).toMatchSnapshot();
-  });
-
-  it('matches snapshot when loading', () => {
-    const { container } = render(
-      <DialogConfirmDelete open={true} onOpenChange={vi.fn()} onConfirm={vi.fn()} isLoading={true} />,
-    );
     expect(container.firstChild).toMatchSnapshot();
   });
 });

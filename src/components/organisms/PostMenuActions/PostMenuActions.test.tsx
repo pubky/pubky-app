@@ -48,14 +48,12 @@ vi.mock('@/molecules', () => ({
   DialogConfirmDelete: ({
     open,
     onConfirm,
-    isLoading,
   }: {
     open: boolean;
     onOpenChange: (open: boolean) => void;
     onConfirm: () => void;
-    isLoading?: boolean;
   }) => (
-    <div data-testid="dialog-confirm-delete" data-open={open.toString()} data-loading={isLoading?.toString()}>
+    <div data-testid="dialog-confirm-delete" data-open={open.toString()}>
       <button onClick={onConfirm} data-testid="confirm-delete-button">
         Confirm Delete
       </button>

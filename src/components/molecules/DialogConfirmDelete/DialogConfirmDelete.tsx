@@ -8,10 +8,9 @@ interface DialogConfirmDeleteProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   onConfirm: () => void;
-  isLoading?: boolean;
 }
 
-export function DialogConfirmDelete({ open, onOpenChange, onConfirm, isLoading }: DialogConfirmDeleteProps) {
+export function DialogConfirmDelete({ open, onOpenChange, onConfirm }: DialogConfirmDeleteProps) {
   const t = useTranslations('dialogs.deletePost');
 
   const handleDelete = () => {
@@ -31,8 +30,8 @@ export function DialogConfirmDelete({ open, onOpenChange, onConfirm, isLoading }
         </Atoms.DialogHeader>
         <Atoms.Typography className="text-base tracking-wide text-white/80">{t('description')}</Atoms.Typography>
         <Atoms.DialogFooter>
-          <Atoms.Button variant="destructive" size="lg" onClick={handleDelete} disabled={isLoading}>
-            {isLoading ? <Libs.Loader2 className="h-4 w-4 animate-spin" /> : <Libs.Trash2 className="h-4 w-4" />}
+          <Atoms.Button variant="destructive" size="lg" onClick={handleDelete}>
+            <Libs.Trash2 className="h-4 w-4" />
             {t('confirmButton')}
           </Atoms.Button>
           <Atoms.Button variant="outline" size="lg" onClick={handleCancel}>
