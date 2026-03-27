@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import * as Libs from '@/libs';
 import * as Atoms from '@/atoms';
 import * as Molecules from '@/molecules';
 import * as Organisms from '@/organisms';
@@ -79,7 +80,7 @@ export function ReplyWithNested({
               {!isLastReply && <Atoms.Container overrideDefaults className="w-3 shrink-0 border-l border-border" />}
 
               {/* Indented sub-replies */}
-              <Atoms.Container overrideDefaults className={isLastReply ? 'ml-6 flex-1' : 'ml-3 flex-1'}>
+              <Atoms.Container overrideDefaults className={Libs.cn('min-w-0 flex-1', isLastReply ? 'ml-6' : 'ml-3')}>
                 {nestedReplyIds.map((nestedId, index) => {
                   const isLastNested = index === nestedReplyIds.length - 1 && !hasMoreReplies;
                   return (

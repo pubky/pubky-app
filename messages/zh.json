@@ -743,7 +743,7 @@
       "repostedPost": "转发了您的帖子",
       "mentionedYou": "在帖子中提到了您",
       "deletedPost": "删除了一条帖子",
-      "editedPost": "编辑了一条帖子",
+      "editedPost": "编辑了您互动过的帖子",
       "fallback": "新通知"
     },
     "settings": {

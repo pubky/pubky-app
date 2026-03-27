@@ -62,6 +62,7 @@ vi.mock('@mdxeditor/editor', () => {
     listsPlugin: vi.fn(() => ({ type: 'lists' })),
     thematicBreakPlugin: vi.fn(() => ({ type: 'thematicBreak' })),
     linkPlugin: vi.fn(() => ({ type: 'link' })),
+    linkDialogPlugin: vi.fn(() => ({ type: 'linkDialog' })),
     codeBlockPlugin: vi.fn(() => ({ type: 'codeBlock' })),
     codeMirrorPlugin: vi.fn(() => ({ type: 'codeMirror' })),
     maxLengthPlugin: vi.fn(() => ({ type: 'maxLength' })),
@@ -90,6 +91,7 @@ vi.mock('@mdxeditor/editor', () => {
         {children}
       </button>
     ),
+    CreateLink: () => <button data-testid="create-link">Create Link</button>,
     CodeToggle: () => <button data-testid="code-toggle">Code</button>,
     InsertCodeBlock: () => <button data-testid="insert-code-block">Insert Code Block</button>,
     InsertThematicBreak: () => <button data-testid="insert-thematic-break">Insert Break</button>,
@@ -289,8 +291,8 @@ describe('InitializedMDXEditor', () => {
       render(<InitializedMDXEditor editorRef={null} markdown="" />);
 
       const editor = screen.getByTestId('mdx-editor');
-      // The editor should have 9 plugins configured
-      expect(editor).toHaveAttribute('data-plugins-count', '9');
+      // The editor should have 10 plugins configured
+      expect(editor).toHaveAttribute('data-plugins-count', '10');
     });
 
     it('passes additional props to MDXEditor', () => {
@@ -317,6 +319,7 @@ describe('InitializedMDXEditor', () => {
       expect(screen.getByTestId('strikethrough-toggle')).toBeInTheDocument();
       expect(screen.getByTestId('lists-toggle')).toBeInTheDocument();
       expect(screen.getByTestId('insert-thematic-break')).toBeInTheDocument();
+      expect(screen.getByTestId('create-link')).toBeInTheDocument();
       expect(screen.getByTestId('code-toggle')).toBeInTheDocument();
       expect(screen.getByTestId('insert-code-block')).toBeInTheDocument();
     });
