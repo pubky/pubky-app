@@ -32,7 +32,7 @@ import { POST_ROUTES } from '@/app/routes';
  * - Hashtag parsing (#tag → clickable search link)
  * - Mention parsing (pk:... or pubky... → clickable profile link)
  * - URL detection and linking
- * - Content truncation with "Show more" on non-post pages (500 char limit)
+ * - Content truncation with "Show more" on non-post pages (TRUNCATION_LIMIT char limit)
  *
  * Memoization prevents unnecessary re-renders when TTL refreshes update IndexedDB records
  * without changes to the actual post content.

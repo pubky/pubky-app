@@ -1,6 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen, fireEvent } from '@testing-library/react';
 import { PostText } from './PostText';
+import { TRUNCATION_LIMIT } from './PostText.constants';
 
 // Mock next/navigation
 const mockUsePathname = vi.fn();
@@ -681,15 +682,15 @@ describe('PostText', () => {
   });
 
   describe('Content truncation and Show more button', () => {
-    it('does not truncate content under 500 characters', () => {
-      const shortContent = generateContent(400);
+    it('does not truncate content under TRUNCATION_LIMIT characters', () => {
+      const shortContent = generateContent(TRUNCATION_LIMIT - 100);
       render(<PostText content={shortContent} />);
 
       expect(screen.queryByRole('button', { name: 'Show full post content' })).not.toBeInTheDocument();
       expect(screen.queryByText(/\.\.\./)).not.toBeInTheDocument();
     });
 
-    it('truncates content over 500 characters and shows "Show more" button', () => {
+    it('truncates content over TRUNCATION_LIMIT characters and shows "Show more" button', () => {
       const longContent = generateContent(600);
       render(<PostText content={longContent} />);
 
@@ -697,13 +698,13 @@ describe('PostText', () => {
       expect(showMoreButton).toBeInTheDocument();
     });
 
-    it('shows truncated content with ellipsis when over 500 characters', () => {
+    it('shows truncated content with ellipsis when over TRUNCATION_LIMIT characters', () => {
       const longContent = generateContent(600);
       render(<PostText content={longContent} />);
 
-      // The truncated content should be 500 chars + "..." + non-breaking space
-      // Original content beyond 500 chars should not be present
-      const originalEndText = longContent.slice(495, 505);
+      // The truncated content should be TRUNCATION_LIMIT chars + "..." + non-breaking space
+      // Original content beyond TRUNCATION_LIMIT chars should not be present
+      const originalEndText = longContent.slice(TRUNCATION_LIMIT - 5, TRUNCATION_LIMIT + 5);
       expect(screen.queryByText(originalEndText)).not.toBeInTheDocument();
     });
 
@@ -774,7 +775,7 @@ describe('PostText', () => {
       expect(handleParentClick).toHaveBeenCalled();
     });
 
-    it('truncates content exactly at 500 characters plus ellipsis', () => {
+    it('truncates content exactly at TRUNCATION_LIMIT characters plus ellipsis', () => {
       const longContent = generateContent(600);
       const { container } = render(<PostText content={longContent} />);
 

@@ -9,6 +9,7 @@ import {
   truncateAtWordBoundary,
   remarkExtractFirstParagraph,
 } from './PostText.utils';
+import { TRUNCATION_LIMIT } from './PostText.constants';
 
 // Helper to create a simple paragraph node with text
 const createParagraph = (text: string): Paragraph => ({
@@ -1497,7 +1498,7 @@ describe('remarkExtractFirstParagraph', () => {
       const tree = createRoot([createParagraph(longText)]);
       runPlugin(tree);
       const textNode = (tree.children[0] as Paragraph).children[0] as Text;
-      expect(textNode.value.length).toBeLessThanOrEqual(510);
+      expect(textNode.value.length).toBeLessThanOrEqual(TRUNCATION_LIMIT + 4);
       expect(textNode.value.endsWith('...\u00A0')).toBe(true);
     });
 
