@@ -1,0 +1,69 @@
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
+
+exports[`UserInfoPopoverFollowButton - Snapshots > matches snapshot for follow state 1`] = `
+<button
+  aria-label="Follow"
+  class="inline-flex items-center justify-center whitespace-nowrap text-sm transition-all disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg:not([class*=\\"size-\\"])]:size-4 shrink-0 [&_svg]:shrink-0 outline-none focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[3px] aria-invalid:ring-destructive/40 aria-invalid:border-destructive font-semibold cursor-pointer rounded-full border shadow-xs bg-secondary text-secondary-foreground hover:bg-accent h-8 px-3 has-[>svg]:px-2.5 group gap-2"
+  data-size="sm"
+  data-slot="button"
+  data-variant="secondary"
+>
+  <svg
+    class="size-4"
+    data-testid="icon-user-round-plus"
+  />
+  <p
+    class="text-xs leading-4 font-bold"
+    data-testid="typography"
+  >
+    Follow
+  </p>
+</button>
+`;
+
+exports[`UserInfoPopoverFollowButton - Snapshots > matches snapshot for following state 1`] = `
+<button
+  aria-label="Unfollow"
+  class="inline-flex items-center justify-center whitespace-nowrap text-sm transition-all disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg:not([class*=\\"size-\\"])]:size-4 shrink-0 [&_svg]:shrink-0 outline-none focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[3px] aria-invalid:ring-destructive/40 aria-invalid:border-destructive font-semibold cursor-pointer rounded-full border shadow-xs bg-secondary text-secondary-foreground hover:bg-accent h-8 px-3 has-[>svg]:px-2.5 group gap-2"
+  data-size="sm"
+  data-slot="button"
+  data-variant="secondary"
+>
+  <svg
+    class="size-4 group-hover:hidden"
+    data-testid="icon-check"
+  />
+  <p
+    class="text-xs leading-4 font-bold group-hover:hidden"
+    data-testid="typography"
+  >
+    Following
+  </p>
+  <svg
+    class="hidden size-4 group-hover:block"
+    data-testid="icon-user-minus"
+  />
+  <p
+    class="hidden text-xs leading-4 font-bold group-hover:block"
+    data-testid="typography"
+  >
+    Unfollow
+  </p>
+</button>
+`;
+
+exports[`UserInfoPopoverFollowButton - Snapshots > matches snapshot for loading state 1`] = `
+<button
+  aria-label="Follow"
+  class="inline-flex items-center justify-center whitespace-nowrap text-sm transition-all disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg:not([class*=\\"size-\\"])]:size-4 shrink-0 [&_svg]:shrink-0 outline-none focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[3px] aria-invalid:ring-destructive/40 aria-invalid:border-destructive font-semibold cursor-pointer rounded-full border shadow-xs bg-secondary text-secondary-foreground hover:bg-accent h-8 px-3 has-[>svg]:px-2.5 group gap-2"
+  data-size="sm"
+  data-slot="button"
+  data-variant="secondary"
+  disabled=""
+>
+  <svg
+    class="size-4 animate-spin"
+    data-testid="icon-loader2"
+  />
+</button>
+`;

@@ -90,13 +90,13 @@ export function PostHeaderUserInfo({
   }
 
   return (
-    <Molecules.PostHeaderUserInfoPopoverWrapper
+    <Molecules.UserInfoPopover
       userId={userId}
       userName={userName}
       avatarUrl={avatarUrl}
       formattedPublicKey={formattedPublicKey}
     >
       {content}
-    </Molecules.PostHeaderUserInfoPopoverWrapper>
+    </Molecules.UserInfoPopover>
   );
 }
