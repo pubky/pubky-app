@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useCallback, useMemo } from 'react';
+import { useTranslations } from 'next-intl';
 import * as Molecules from '@/molecules';
 import * as Hooks from '@/hooks';
 import { Logger, postJson } from '@/libs';
@@ -21,6 +22,7 @@ import { Logger, postJson } from '@/libs';
  */
 export function useFeedback() {
   const { currentUserPubky, userDetails } = Hooks.useCurrentUserProfile();
+  const tFeedback = useTranslations('toast.feedback');
   const [feedback, setFeedback] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isSuccess, setIsSuccess] = useState(false);
@@ -40,7 +42,7 @@ export function useFeedback() {
     if (isSubmitting) return;
 
     if (!currentUserPubky || !userDetails?.name) {
-      showErrorToast('User profile not loaded. Please try again.');
+      showErrorToast(tFeedback('userNotLoaded'));
       return;
     }
 
@@ -56,11 +58,11 @@ export function useFeedback() {
       // Note: feedback is cleared by reset() when dialog closes, no need to clear here
     } catch (error) {
       Logger.error('Error submitting feedback:', error);
-      showErrorToast(error instanceof Error ? error.message : 'Failed to submit feedback. Please try again.');
+      showErrorToast(error instanceof Error ? error.message : tFeedback('submitFailedDesc'));
     } finally {
       setIsSubmitting(false);
     }
-  }, [feedback, isSubmitting, currentUserPubky, userDetails?.name, showErrorToast]);
+  }, [feedback, isSubmitting, currentUserPubky, userDetails?.name, showErrorToast, tFeedback]);
 
   const reset = useCallback(() => {
     setFeedback('');

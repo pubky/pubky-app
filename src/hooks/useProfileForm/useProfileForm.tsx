@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState, useCallback, useMemo } from 'react';
 import { z } from 'zod';
 import { useRouter } from 'next/navigation';
+import { useTranslations } from 'next-intl';
 
 import * as Molecules from '@/molecules';
 import * as Libs from '@/libs';
@@ -36,6 +37,7 @@ export function useProfileForm(props: UseProfileFormProps): UseProfileFormReturn
 
   const router = useRouter();
   const { toast } = Molecules.useToast();
+  const tProfile = useTranslations('toast.profile');
   const fileInputRef = useRef<HTMLInputElement | null>(null);
 
   // Generate a stable initial username for create mode (only generated once)
@@ -336,8 +338,8 @@ export function useProfileForm(props: UseProfileFormProps): UseProfileFormReturn
           }
         }
         toast({
-          title: 'Profile updated',
-          description: 'Your profile has been updated successfully.',
+          title: tProfile('updated'),
+          description: tProfile('updatedDesc'),
         });
         router.push(App.PROFILE_ROUTES.PROFILE);
       }
@@ -348,8 +350,8 @@ export function useProfileForm(props: UseProfileFormProps): UseProfileFormReturn
           Libs.Logger.error('Session expired while saving profile', error);
           setSubmitTextKey('tryAgain');
           toast({
-            title: 'Session expired',
-            description: 'Please sign out and sign in again to continue.',
+            title: tProfile('sessionExpired'),
+            description: tProfile('sessionExpiredDesc'),
           });
           return;
         }
@@ -359,8 +361,8 @@ export function useProfileForm(props: UseProfileFormProps): UseProfileFormReturn
           Libs.Logger.error('Failed to save profile in Homeserver', error);
           setSubmitTextKey('tryAgain');
           toast({
-            title: 'Failed to save profile',
-            description: 'Please try again.',
+            title: tProfile('saveFailed'),
+            description: tProfile('saveFailedDesc'),
           });
           return;
         }
@@ -368,11 +370,8 @@ export function useProfileForm(props: UseProfileFormProps): UseProfileFormReturn
 
       setSubmitTextKey('tryAgain');
       toast({
-        title: 'Please try again.',
-        description:
-          mode === 'create'
-            ? 'Failed to fetch the new user data. Indexing might be in progress...'
-            : 'Failed to update profile.',
+        title: tProfile('fetchFailed'),
+        description: mode === 'create' ? tProfile('fetchFailedDesc') : tProfile('updateFailed'),
       });
     } finally {
       setIsSaving(false);
@@ -388,6 +387,7 @@ export function useProfileForm(props: UseProfileFormProps): UseProfileFormReturn
     setShowWelcomeDialog,
     router,
     toast,
+    tProfile,
   ]);
 
   const handleCancel = useCallback(() => {

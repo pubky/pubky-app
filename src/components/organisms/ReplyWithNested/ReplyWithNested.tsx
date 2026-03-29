@@ -6,8 +6,20 @@ import * as Atoms from '@/atoms';
 import * as Molecules from '@/molecules';
 import * as Organisms from '@/organisms';
 import * as Hooks from '@/hooks';
-import { AUTO_COLLAPSE_THRESHOLD } from '@/hooks/useNestedReplies/useNestedReplies.constants';
-import type { ReplyWithNestedProps } from './ReplyWithNested.types';
+import { AUTO_COLLAPSE_THRESHOLD, DEFAULT_MAX_DEPTH } from '@/hooks/useNestedReplies/useNestedReplies.constants';
+
+interface ReplyWithNestedProps {
+  /** The composite ID of the reply post */
+  replyId: string;
+  /** Whether this is the last reply in the main list */
+  isLastReply?: boolean;
+  /** Click handler to navigate to the post */
+  onPostClick: (postId: string) => void;
+  /** Current nesting depth (to prevent infinite nesting) */
+  depth?: number;
+  /** Maximum nesting depth allowed */
+  maxDepth?: number;
+}
 
 /**
  * ReplyWithNested Organism
@@ -24,7 +36,7 @@ export function ReplyWithNested({
   isLastReply = false,
   onPostClick,
   depth = 0,
-  maxDepth = Hooks.DEFAULT_MAX_DEPTH,
+  maxDepth = DEFAULT_MAX_DEPTH,
 }: ReplyWithNestedProps) {
   const { nestedReplyIds, hasMoreReplies, hasNestedReplies, replyCount, isExpandingAll, expandAll } =
     Hooks.useNestedReplies(replyId, { depth, maxDepth });

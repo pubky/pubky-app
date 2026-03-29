@@ -8,8 +8,6 @@ const mocks = vi.hoisted(() => ({
 }));
 
 vi.mock('@/hooks', () => ({
-  DEFAULT_MAX_DEPTH: 3,
-  DEFAULT_MAX_NESTED: 10,
   useNestedReplies: (...args: unknown[]) => {
     // Depth-aware: only return nested replies at depth 0 to prevent infinite recursion
     const options = args[1] as { depth?: number } | undefined;
@@ -29,6 +27,7 @@ vi.mock('@/hooks', () => ({
 }));
 
 vi.mock('@/hooks/useNestedReplies/useNestedReplies.constants', () => ({
+  DEFAULT_MAX_DEPTH: 3,
   AUTO_COLLAPSE_THRESHOLD: 4,
 }));
 

@@ -5,6 +5,9 @@ exports[`PostMenuActions - Snapshots > matches snapshot for desktop dropdown 1`]
   data-open="false"
   data-testid="dropdown-menu"
 >
+  <button
+    data-testid="dropdown-open-trigger"
+  />
   <div
     data-testid="dropdown-trigger"
   >
