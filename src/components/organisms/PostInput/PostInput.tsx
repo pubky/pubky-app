@@ -30,6 +30,7 @@ export function PostInput({
   onArticleModeChange,
   editContent,
   editIsArticle,
+  autoFocusTextarea = false,
   initialContent,
   initialAttachments,
 }: PostInputProps) {
@@ -210,6 +211,7 @@ export function PostInput({
               rows={1}
               disabled={isSubmitting}
               aria-haspopup="listbox"
+              autoFocus={autoFocusTextarea}
             />
 
             {/* Mention autocomplete popover */}

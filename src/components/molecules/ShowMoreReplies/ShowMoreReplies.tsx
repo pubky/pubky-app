@@ -3,7 +3,15 @@
 import * as Atoms from '@/atoms';
 import * as Libs from '@/libs';
 import { useTranslations } from 'next-intl';
-import type { ShowMoreRepliesProps } from './ShowMoreReplies.types';
+
+interface ShowMoreRepliesProps {
+  /** Number of remaining replies to show */
+  count: number;
+  /** Callback when the button is clicked */
+  onClick: () => void;
+  /** Whether this is the last element in the thread (affects connector variant) */
+  isLast?: boolean;
+}
 
 /**
  * ShowMoreReplies Molecule
@@ -16,53 +24,35 @@ import type { ShowMoreRepliesProps } from './ShowMoreReplies.types';
  */
 export function ShowMoreReplies({ count, onClick, isLast = false }: ShowMoreRepliesProps) {
   const tThreadTree = useTranslations('common.threadTree');
+  const connectorVariant = isLast ? 'last' : 'regular';
 
   return (
     <Atoms.Container overrideDefaults>
       <Atoms.PostThreadSpacer />
       <Atoms.Container overrideDefaults className="relative flex min-w-0">
         {/* Thread connector column — stretches to match button height via flex row */}
-        {isLast ? (
-          <Atoms.Container overrideDefaults className="flex w-3 shrink-0 flex-col items-start" data-variant="last">
-            {/* Top half: vertical line + rounded corner */}
-            <Atoms.Container
-              overrideDefaults
-              className="flex min-h-px w-full min-w-px shrink-0 grow basis-0 flex-col items-start"
-            >
-              {/* Vertical line above the corner */}
-              <Atoms.Container
-                overrideDefaults
-                className="min-h-px w-full min-w-px shrink-0 grow basis-0 border-l border-border"
-              />
-              {/* Rounded corner */}
-              <Atoms.Container overrideDefaults className="relative size-3 shrink-0">
-                <Libs.RoundedCorner />
-              </Atoms.Container>
-            </Atoms.Container>
-            {/* Bottom half: empty spacer (no border — line does not continue) */}
-            <Atoms.Container overrideDefaults className="min-h-px w-3 min-w-px shrink-0 grow basis-0" />
-          </Atoms.Container>
-        ) : (
+        <Atoms.Container
+          overrideDefaults
+          className={Libs.cn('flex w-3 shrink-0 flex-col items-start', !isLast && 'border-l border-border')}
+          data-variant={connectorVariant}
+        >
           <Atoms.Container
             overrideDefaults
-            className="flex w-3 shrink-0 flex-col items-start border-l border-border"
-            data-variant="regular"
+            className={Libs.cn(
+              'flex min-h-px shrink-0 grow basis-0 flex-col items-start',
+              isLast ? 'w-full min-w-px' : 'min-w-3',
+            )}
           >
             <Atoms.Container
               overrideDefaults
-              className="flex min-h-px min-w-3 shrink-0 grow basis-0 flex-col items-start"
-            >
-              {/* Space above the corner */}
-              <Atoms.Container overrideDefaults className="min-h-px w-full min-w-px shrink-0 grow basis-0" />
-              {/* Rounded corner */}
-              <Atoms.Container overrideDefaults className="relative size-3 shrink-0">
-                <Libs.RoundedCorner />
-              </Atoms.Container>
+              className={Libs.cn('min-h-px w-full min-w-px shrink-0 grow basis-0', isLast && 'border-l border-border')}
+            />
+            <Atoms.Container overrideDefaults className="relative size-3 shrink-0">
+              <Libs.RoundedCorner />
             </Atoms.Container>
-            {/* Space below — line continues */}
-            <Atoms.Container overrideDefaults className="min-h-px w-3 min-w-px shrink-0 grow basis-0" />
           </Atoms.Container>
-        )}
+          <Atoms.Container overrideDefaults className="min-h-px w-3 min-w-px shrink-0 grow basis-0" />
+        </Atoms.Container>
         {/* Button content — determines the actual row height */}
         <Atoms.Container overrideDefaults className="flex-1">
           <Atoms.Button
