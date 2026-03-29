@@ -906,7 +906,8 @@
       "failedToLoadPosts": "Caricamento nuovi post fallito",
       "failedToLoadPostsDesc": "Impossibile visualizzare nuovi post. Riprova.",
       "parseError": "Analisi contenuto articolo fallita",
-      "coverImageError": "Caricamento immagine di copertina articolo fallito"
+      "coverImageError": "Caricamento immagine di copertina articolo fallito",
+      "attachmentsLoadFailed": "Caricamento allegati fallito"
     },
     "bookmark": {
       "added": "Segnalibro aggiunto",
@@ -992,6 +993,16 @@
       "maxFilesPartial": "Massimo {max} file consentiti. Alcuni file non sono stati aggiunti.",
       "unsupportedType": "\"{name}\" ha tipo non supportato \"{type}\". Formati supportati: {formats}.",
       "fileTooLarge": "\"{name}\" supera la dimensione massima di {maxSize}."
+    },
+    "status": {
+      "updateFailed": "Impossibile aggiornare lo stato. Riprova.",
+      "userNotLoaded": "Profilo utente non caricato. Riprova."
+    },
+    "fullscreen": {
+      "error": "Errore durante l'attivazione della modalità schermo intero"
+    },
+    "logout": {
+      "failed": "Disconnessione fallita. Riprova."
     }
   },
   "empty": {
@@ -1201,7 +1212,6 @@
     "emoji": "Emoji",
     "richText": "Testo formattato",
     "markdown": "Markdown",
-    "clearToSwitch": "Cancella il contenuto per cambiare modalità",
     "placeholder": "Inizia a scrivere il tuo capolavoro",
     "toolbarAriaLabel": "Barra degli strumenti per la modifica Markdown",
     "warningApproaching": "Ti stai avvicinando al limite massimo di caratteri.",

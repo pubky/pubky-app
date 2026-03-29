@@ -36,43 +36,8 @@ import * as Molecules from '@/molecules';
 import * as Icons from '@/libs/icons';
 import * as Utils from '@/libs/utils';
 import * as Hooks from '@/hooks';
-
-/**
- * Common programming languages for code blocks in the Markdown editor.
- * Keys are language identifiers used by CodeMirror, values are display names.
- */
-const CODE_BLOCK_LANGUAGES: Record<string, string> = {
-  plaintext: 'Plain Text',
-  javascript: 'JavaScript',
-  typescript: 'TypeScript',
-  jsx: 'JSX',
-  tsx: 'TSX',
-  html: 'HTML',
-  css: 'CSS',
-  scss: 'SCSS',
-  json: 'JSON',
-  markdown: 'Markdown',
-  python: 'Python',
-  rust: 'Rust',
-  go: 'Go',
-  java: 'Java',
-  c: 'C',
-  cpp: 'C++',
-  csharp: 'C#',
-  php: 'PHP',
-  ruby: 'Ruby',
-  swift: 'Swift',
-  kotlin: 'Kotlin',
-  sql: 'SQL',
-  bash: 'Bash',
-  shell: 'Shell',
-  yaml: 'YAML',
-  toml: 'TOML',
-  xml: 'XML',
-  graphql: 'GraphQL',
-  docker: 'Dockerfile',
-  diff: 'Diff',
-};
+import { sanitizeCodeBlockLanguages } from './InitializedMDXEditor.utils';
+import { CODE_BLOCK_LANGUAGES } from './InitializedMDXEditor.constants';
 
 /**
  * Preload all CodeMirror language support modules to prevent layout shift
@@ -115,21 +80,27 @@ export default function InitializedMDXEditor({
   const [showEmojiPicker, setShowEmojiPicker] = useState(false);
   const [maxLengthWarning, setMaxLengthWarning] = useState<null | 'approaching' | 'reached'>(null);
   const [mode, setMode] = useState<EditorMode>('richtext');
-  const [richText, setRichText] = useState(props.markdown);
   const [markdownText, setMarkdownText] = useState('');
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
-  const isRichTextEmpty = richText.trim() === '';
-  const isMarkdownEmpty = markdownText.trim() === '';
-
   const switchToMarkdownMode = () => {
-    if (!isRichTextEmpty) return;
-    setMode('markdown');
+    if (editorRef && 'current' in editorRef) {
+      const markdown = editorRef.current?.getMarkdown() ?? '';
+      setMarkdownText(markdown);
+      setMode('markdown');
+    }
   };
 
   const switchToRichTextMode = () => {
-    if (!isMarkdownEmpty) return;
-    setMode('richtext');
+    if (editorRef && 'current' in editorRef) {
+      // Sanitize code block languages before passing to the rich text editor.
+      // This prevents crashes from unsupported or missing language identifiers
+      // in fenced code blocks (e.g. ``` with no language, or ```haskell).
+      const sanitized = sanitizeCodeBlockLanguages(markdownText);
+      editorRef.current?.setMarkdown(sanitized);
+      updateMaxLengthWarning(sanitized);
+      setMode('richtext');
+    }
   };
 
   const updateMaxLengthWarning = (text: string) => {
@@ -198,10 +169,10 @@ export default function InitializedMDXEditor({
           <Atoms.Button
             variant="ghost"
             size="icon"
-            title={isMarkdownEmpty ? t('richText') : t('clearToSwitch')}
+            title={t('richText')}
             onClick={switchToRichTextMode}
-            disabled={readOnly || !isMarkdownEmpty}
-            className="size-7 cursor-default rounded disabled:pointer-events-auto"
+            disabled={readOnly}
+            className="size-7 cursor-default rounded"
             data-testid="markdown-richtext-button"
           >
             <Icons.Type className="size-6" />
@@ -243,12 +214,7 @@ export default function InitializedMDXEditor({
                 <ButtonWithTooltip title={t('emoji')} onClick={() => setShowEmojiPicker(true)}>
                   <Icons.Smile className="size-6" />
                 </ButtonWithTooltip>
-                <ButtonWithTooltip
-                  title={isRichTextEmpty ? t('markdown') : t('clearToSwitch')}
-                  onClick={switchToMarkdownMode}
-                  disabled={!isRichTextEmpty}
-                  className={Utils.cn(!isRichTextEmpty && 'opacity-50!')}
-                >
+                <ButtonWithTooltip title={t('markdown')} onClick={switchToMarkdownMode}>
                   <Icons.MarkdownMark className="size-6" />
                 </ButtonWithTooltip>
               </>
@@ -269,7 +235,6 @@ export default function InitializedMDXEditor({
         ]}
         {...props}
         onChange={(markdown, initialMarkdownNormalize) => {
-          setRichText(markdown);
           updateMaxLengthWarning(markdown);
           props.onChange?.(markdown, initialMarkdownNormalize);
         }}

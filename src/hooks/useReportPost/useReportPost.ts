@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useCallback } from 'react';
+import { useTranslations } from 'next-intl';
 import type { ReportIssueType } from '@/core/pipes/report';
 import * as Core from '@/core';
 import { Logger, postJson } from '@/libs';
@@ -23,6 +24,7 @@ import type { UseReportPostReturn } from './useReportPost.types';
  */
 export function useReportPost(postId: string): UseReportPostReturn {
   const { currentUserPubky, userDetails } = Hooks.useCurrentUserProfile();
+  const tReport = useTranslations('toast.report');
   const parsedId = Core.parseCompositeId(postId);
   const postUrl = `${window.location.origin}${POST_ROUTES.POST}/${parsedId.pubky}/${parsedId.id}`;
 
@@ -54,7 +56,7 @@ export function useReportPost(postId: string): UseReportPostReturn {
     if (!canSubmit) return;
 
     if (!currentUserPubky || !userDetails?.name) {
-      showErrorToast('User profile not loaded. Please try again.');
+      showErrorToast(tReport('userNotLoaded'));
       return;
     }
 
@@ -72,7 +74,7 @@ export function useReportPost(postId: string): UseReportPostReturn {
       setIsSuccess(true);
     } catch (err) {
       Logger.error('Error submitting report:', err);
-      showErrorToast(err instanceof Error ? err.message : 'Failed to submit report. Please try again.');
+      showErrorToast(err instanceof Error ? err.message : tReport('submitFailedDesc'));
     } finally {
       setIsSubmitting(false);
     }

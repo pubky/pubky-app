@@ -906,7 +906,8 @@
       "failedToLoadPosts": "Échec du chargement des nouvelles publications",
       "failedToLoadPostsDesc": "Impossible d'afficher les nouvelles publications. Veuillez réessayer.",
       "parseError": "Échec de l'analyse du contenu de l'article",
-      "coverImageError": "Échec du chargement de l'image de couverture de l'article"
+      "coverImageError": "Échec du chargement de l'image de couverture de l'article",
+      "attachmentsLoadFailed": "Échec du chargement des pièces jointes"
     },
     "bookmark": {
       "added": "Favori ajoute",
@@ -992,6 +993,16 @@
       "maxFilesPartial": "Maximum {max} fichiers autorises. Certains fichiers n'ont pas ete ajoutes.",
       "unsupportedType": "\"{name}\" a un type non supporte \"{type}\". Formats supportes : {formats}.",
       "fileTooLarge": "\"{name}\" depasse la taille maximale de {maxSize}."
+    },
+    "status": {
+      "updateFailed": "Échec de la mise à jour du statut. Veuillez réessayer.",
+      "userNotLoaded": "Profil utilisateur non chargé. Veuillez réessayer."
+    },
+    "fullscreen": {
+      "error": "Erreur lors de l'activation du plein écran"
+    },
+    "logout": {
+      "failed": "Échec de la déconnexion. Veuillez réessayer."
     }
   },
   "empty": {
@@ -1201,7 +1212,6 @@
     "emoji": "Émoji",
     "richText": "Texte enrichi",
     "markdown": "Markdown",
-    "clearToSwitch": "Effacez le contenu pour changer de mode",
     "placeholder": "Commencez à écrire votre chef-d'œuvre",
     "toolbarAriaLabel": "Barre d'outils d'édition Markdown",
     "warningApproaching": "Vous approchez de la limite maximale de caractères.",

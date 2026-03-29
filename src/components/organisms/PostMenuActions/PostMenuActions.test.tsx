@@ -9,14 +9,15 @@ const mockUsePostMenuActions = vi.fn((_postId: string) => ({
   menuItems: [] as unknown[],
   isLoading: false,
 }));
+const mockRequireAuth = vi.fn((action: () => void) => action());
 
 vi.mock('@/hooks', () => ({
   useIsMobile: () => mockUseIsMobile(),
   usePostMenuActions: (postId: string) => mockUsePostMenuActions(postId),
-  useRequireAuth: vi.fn(() => ({
+  useRequireAuth: () => ({
     isAuthenticated: true,
-    requireAuth: vi.fn((action: () => void) => action()),
-  })),
+    requireAuth: mockRequireAuth,
+  }),
   useDeletePost: vi.fn(() => ({
     deletePost: mockDeletePost,
     isDeleting: false,
@@ -130,12 +131,14 @@ vi.mock('@/atoms', () => ({
   DropdownMenu: ({
     children,
     open,
+    onOpenChange,
   }: {
     children: React.ReactNode;
     open: boolean;
     onOpenChange: (open: boolean) => void;
   }) => (
     <div data-testid="dropdown-menu" data-open={open.toString()}>
+      <button data-testid="dropdown-open-trigger" onClick={() => onOpenChange(true)} />
       {children}
     </div>
   ),
@@ -252,7 +255,7 @@ describe('PostMenuActions', () => {
     expect(editDialog).toHaveAttribute('data-post-id', 'pk:test123:post456');
   });
 
-  it('closes menu when edit button is clicked', async () => {
+  it('does not open menu when edit button is clicked', async () => {
     const user = userEvent.setup();
     const trigger = <button>Menu</button>;
     render(<PostMenuActions postId="pk:test123:post456" trigger={trigger} />);
@@ -300,6 +303,28 @@ describe('PostMenuActions', () => {
     await user.click(confirmButton);
 
     expect(mockDeletePost).toHaveBeenCalledWith('pk:test123:post456');
+  });
+
+  it('requires authentication before opening the menu', async () => {
+    const user = userEvent.setup();
+    const trigger = <button>Menu</button>;
+    render(<PostMenuActions postId="pk:test123:post456" trigger={trigger} />);
+
+    await user.click(screen.getByTestId('dropdown-open-trigger'));
+
+    expect(mockRequireAuth).toHaveBeenCalled();
+  });
+
+  it('does not open menu when unauthenticated user clicks trigger', async () => {
+    mockRequireAuth.mockImplementation(() => undefined);
+    const user = userEvent.setup();
+    const trigger = <button>Menu</button>;
+    render(<PostMenuActions postId="pk:test123:post456" trigger={trigger} />);
+
+    await user.click(screen.getByTestId('dropdown-open-trigger'));
+
+    expect(mockRequireAuth).toHaveBeenCalled();
+    expect(screen.getByTestId('dropdown-menu')).toHaveAttribute('data-open', 'false');
   });
 });
 

@@ -28,6 +28,8 @@ export function NotificationItem({ notification, isUnread }: NotificationItemPro
   const t = useTranslations('notifications.actions');
   const tCommon = useTranslations('common');
   const tProfile = useTranslations('profile');
+  const tToast = useTranslations('toast');
+  const tPostToast = useTranslations('toast.post');
   const tPost = useTranslations('post');
   const router = useRouter();
   const { toast } = Molecules.useToast();
@@ -72,8 +74,8 @@ export function NotificationItem({ notification, isUnread }: NotificationItemPro
             } catch {
               setPostContent(post.content);
               toast({
-                title: 'Error',
-                description: 'Failed to parse article content',
+                title: tToast('error'),
+                description: tPostToast('parseError'),
               });
             }
           } else {
