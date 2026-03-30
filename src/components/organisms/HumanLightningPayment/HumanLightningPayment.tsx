@@ -186,7 +186,7 @@ export const HumanLightningPayment = ({ onBack, onSuccess }: HumanLightningPayme
 
       <Atoms.Card
         data-testid="human-lightning-payment-card"
-        className="flex flex-col-reverse items-start gap-6 p-6 md:flex-row lg:gap-12 lg:p-12"
+        className="flex flex-col-reverse items-start gap-6 p-6 lg:flex-row lg:gap-12 lg:p-12"
       >
         {/* Payment QR code */}
 
