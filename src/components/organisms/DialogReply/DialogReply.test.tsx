@@ -254,14 +254,11 @@ describe('DialogReply', () => {
     expect(dialog).toHaveAttribute('data-open', 'true');
   });
 
-  it('focuses and scrolls the reply textarea when dialog opens', () => {
+  it('scrolls the reply textarea when dialog opens', () => {
     const onOpenChangeAction = vi.fn();
     render(<DialogReply postId="test-post-123" open={true} onOpenChangeAction={onOpenChangeAction} />);
 
     const textarea = document.createElement('textarea');
-    const querySelector = vi.fn().mockReturnValue(textarea);
-    const preventDefault = vi.fn();
-    const focusSpy = vi.spyOn(textarea, 'focus');
     const scrollIntoViewSpy = vi.fn();
     const documentQuerySelectorSpy = vi.spyOn(document, 'querySelector').mockReturnValue(textarea);
 
@@ -270,15 +267,9 @@ describe('DialogReply', () => {
       value: scrollIntoViewSpy,
     });
 
-    dialogContentMockControls.onOpenAutoFocus?.({
-      preventDefault,
-      currentTarget: { querySelector },
-    } as unknown as Event);
+    dialogContentMockControls.onOpenAutoFocus?.({} as Event);
 
-    expect(preventDefault).toHaveBeenCalledTimes(1);
-    expect(querySelector).toHaveBeenCalledWith('[data-cy="reply-post-input"] [data-slot="textarea"]');
     expect(documentQuerySelectorSpy).toHaveBeenCalledWith('[data-cy="reply-post-input"] [data-slot="textarea"]');
-    expect(focusSpy).toHaveBeenCalledTimes(1);
     expect(scrollIntoViewSpy).toHaveBeenCalledWith({ block: 'center', inline: 'nearest', behavior: 'auto' });
 
     documentQuerySelectorSpy.mockRestore();

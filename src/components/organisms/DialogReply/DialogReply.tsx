@@ -25,17 +25,7 @@ export function DialogReply({ postId, open, onOpenChangeAction }: DialogReplyPro
     replyTextarea.scrollIntoView({ block: 'center', inline: 'nearest', behavior });
   }, []);
 
-  const handleOpenAutoFocus = (event: Event) => {
-    event.preventDefault();
-
-    const dialogContent = event.currentTarget as HTMLElement | null;
-    const replyTextarea = dialogContent?.querySelector<HTMLTextAreaElement>(
-      '[data-cy="reply-post-input"] [data-slot="textarea"]',
-    );
-
-    if (!replyTextarea) return;
-
-    replyTextarea.focus();
+  const handleOpenAutoFocus = (_event: Event) => {
     scrollReplyTextareaIntoView('auto');
 
     // Mobile keyboards can shift viewport after focus; scroll again once it settles.
