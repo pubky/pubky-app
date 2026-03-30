@@ -50,6 +50,7 @@ Use `Err.*` factories (never raw `Error`). Factories log automatically — don't
 
 - Config constants in `src/config/` (e.g., `USER_LIST_TAGS_MAX_TOTAL_CHARS`, tag limits) are project-wide hard limits — do not modify them for individual component fixes
 - This project uses Zod v4 — use `z.url()` for URL validation, not the deprecated `z.string().url()`
+- PWA / service worker: Serwist via `@serwist/next` in `next.config` (core package `serwist`), not Workbox or `next-pwa`
 
 ## Documentation
 
