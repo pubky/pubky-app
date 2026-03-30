@@ -8,6 +8,7 @@ import * as Molecules from '@/molecules';
 import * as Organisms from '@/organisms';
 import { POST_INPUT_VARIANT } from '@/organisms/PostInput/PostInput.constants';
 import type { DialogReplyProps } from './DialogReply.types';
+import { scrollReplyTextareaIntoDialog } from './DialogReply.utils';
 
 export function DialogReply({ postId, open, onOpenChangeAction }: DialogReplyProps) {
   const t = useTranslations('dialogs.reply');
@@ -15,44 +16,29 @@ export function DialogReply({ postId, open, onOpenChangeAction }: DialogReplyPro
     Hooks.useConfirmableDialog({
       onClose: () => onOpenChangeAction(false),
     });
-  const scrollReplyTextareaIntoView = React.useCallback((behavior: ScrollBehavior = 'auto') => {
-    const replyTextarea = document.querySelector<HTMLTextAreaElement>(
-      '[data-cy="reply-post-input"] [data-slot="textarea"]',
-    );
-
-    if (!replyTextarea) return;
-
-    replyTextarea.scrollIntoView({ block: 'center', inline: 'nearest', behavior });
-  }, []);
-
-  const handleOpenAutoFocus = (_event: Event) => {
-    scrollReplyTextareaIntoView('auto');
-
-    // Mobile keyboards can shift viewport after focus; scroll again once it settles.
-    window.setTimeout(() => {
-      scrollReplyTextareaIntoView('smooth');
-    }, 200);
-  };
 
   React.useEffect(() => {
     if (!open || typeof window === 'undefined') return;
 
+    const scrollAuto = () => scrollReplyTextareaIntoDialog('auto');
+    const scrollSmooth = () => scrollReplyTextareaIntoDialog('smooth');
+
+    const initialTimeoutId = window.setTimeout(scrollAuto, 0);
+    const settleTimeoutId = window.setTimeout(scrollSmooth, 200);
+
     const viewport = window.visualViewport;
-    if (!viewport) return;
+    viewport?.addEventListener('resize', scrollSmooth);
 
-    const handleViewportResize = () => {
-      scrollReplyTextareaIntoView('auto');
-    };
-
-    viewport.addEventListener('resize', handleViewportResize);
     return () => {
-      viewport.removeEventListener('resize', handleViewportResize);
+      window.clearTimeout(initialTimeoutId);
+      window.clearTimeout(settleTimeoutId);
+      viewport?.removeEventListener('resize', scrollSmooth);
     };
-  }, [open, scrollReplyTextareaIntoView]);
+  }, [open]);
 
   return (
     <Atoms.Dialog open={open} onOpenChange={handleOpenChange}>
-      <Atoms.DialogContent className="w-3xl" hiddenTitle={t('hiddenTitle')} onOpenAutoFocus={handleOpenAutoFocus}>
+      <Atoms.DialogContent className="w-3xl" hiddenTitle={t('hiddenTitle')}>
         <Atoms.DialogHeader>
           <Atoms.DialogTitle>{t('title')}</Atoms.DialogTitle>
           <Atoms.DialogDescription className="sr-only">{t('description')}</Atoms.DialogDescription>

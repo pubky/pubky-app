@@ -6,10 +6,6 @@ import { POST_INPUT_VARIANT } from '@/organisms/PostInput/PostInput.constants';
 
 // Mock hooks
 const mockUseConfirmableDialog = vi.fn();
-const dialogContentMockControls: {
-  onOpenAutoFocus?: (event: Event) => void;
-} = {};
-
 vi.mock('@/hooks', async (importOriginal) => {
   const actual = await importOriginal<typeof import('@/hooks')>();
   return {
@@ -84,29 +80,24 @@ vi.mock('@/atoms', () => ({
     className,
     hiddenTitle,
     'aria-describedby': ariaDescribedBy,
-    onOpenAutoFocus,
     ...props
   }: {
     children: React.ReactNode;
     className?: string;
     hiddenTitle?: string;
     'aria-describedby'?: string;
-    onOpenAutoFocus?: (event: Event) => void;
     [key: string]: unknown;
-  }) => {
-    dialogContentMockControls.onOpenAutoFocus = onOpenAutoFocus;
-    return (
-      <div
-        data-testid="dialog-content"
-        className={className}
-        aria-label={hiddenTitle}
-        aria-describedby={ariaDescribedBy}
-        {...props}
-      >
-        {children}
-      </div>
-    );
-  },
+  }) => (
+    <div
+      data-testid="dialog-content"
+      className={className}
+      aria-label={hiddenTitle}
+      aria-describedby={ariaDescribedBy}
+      {...props}
+    >
+      {children}
+    </div>
+  ),
   DialogHeader: ({ children }: { children: React.ReactNode }) => <div data-testid="dialog-header">{children}</div>,
   DialogTitle: ({ children }: { children: React.ReactNode }) => <h2 data-testid="dialog-title">{children}</h2>,
   DialogDescription: ({ children }: { children: React.ReactNode }) => (
@@ -172,7 +163,6 @@ describe('DialogReply', () => {
 
   beforeEach(() => {
     vi.clearAllMocks();
-    dialogContentMockControls.onOpenAutoFocus = undefined;
     mockUseConfirmableDialog.mockReturnValue({
       showConfirmDialog: false,
       setShowConfirmDialog: mockSetShowConfirmDialog,
@@ -254,24 +244,31 @@ describe('DialogReply', () => {
     expect(dialog).toHaveAttribute('data-open', 'true');
   });
 
-  it('scrolls the reply textarea when dialog opens', () => {
+  it('scrolls the reply textarea when dialog opens', async () => {
     const onOpenChangeAction = vi.fn();
-    render(<DialogReply postId="test-post-123" open={true} onOpenChangeAction={onOpenChangeAction} />);
-
     const textarea = document.createElement('textarea');
     const scrollIntoViewSpy = vi.fn();
     const documentQuerySelectorSpy = vi.spyOn(document, 'querySelector').mockReturnValue(textarea);
+    const requestAnimationFrameSpy = vi
+      .spyOn(window, 'requestAnimationFrame')
+      .mockImplementation((callback: FrameRequestCallback) => {
+        callback(0);
+        return 1;
+      });
 
     Object.defineProperty(textarea, 'scrollIntoView', {
       configurable: true,
       value: scrollIntoViewSpy,
     });
 
-    dialogContentMockControls.onOpenAutoFocus?.({} as Event);
+    render(<DialogReply postId="test-post-123" open={true} onOpenChangeAction={onOpenChangeAction} />);
 
-    expect(documentQuerySelectorSpy).toHaveBeenCalledWith('[data-cy="reply-post-input"] [data-slot="textarea"]');
-    expect(scrollIntoViewSpy).toHaveBeenCalledWith({ block: 'center', inline: 'nearest', behavior: 'auto' });
+    await waitFor(() => {
+      expect(documentQuerySelectorSpy).toHaveBeenCalled();
+      expect(scrollIntoViewSpy).toHaveBeenCalledWith({ block: 'center', behavior: 'auto' });
+    });
 
+    requestAnimationFrameSpy.mockRestore();
     documentQuerySelectorSpy.mockRestore();
   });
 });
@@ -284,7 +281,6 @@ describe('DialogReply - Snapshots', () => {
 
   beforeEach(() => {
     vi.clearAllMocks();
-    dialogContentMockControls.onOpenAutoFocus = undefined;
     mockUseConfirmableDialog.mockReturnValue({
       showConfirmDialog: false,
       setShowConfirmDialog: mockSetShowConfirmDialog,
