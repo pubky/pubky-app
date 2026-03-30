@@ -363,4 +363,41 @@ describe('useSearchAutocomplete', () => {
     expect(mockGetUsersByName).not.toHaveBeenCalled();
     expect(mockGetTagsByPrefix).not.toHaveBeenCalled();
   });
+
+  it('skips tag search when query exceeds TAG_MAX_LENGTH', async () => {
+    const longQuery = 'a'.repeat(21);
+    renderHook(() => useSearchAutocomplete({ query: longQuery }));
+
+    await act(async () => {
+      vi.advanceTimersByTime(AUTOCOMPLETE_DEBOUNCE_MS);
+      await vi.runOnlyPendingTimersAsync();
+    });
+
+    await act(async () => {
+      await Promise.resolve();
+      await Promise.resolve();
+    });
+
+    expect(mockGetTagsByPrefix).not.toHaveBeenCalled();
+    // User searches should still proceed
+    expect(mockGetUsersByName).toHaveBeenCalledWith({ prefix: longQuery, limit: 10 });
+    expect(mockFetchUsersById).toHaveBeenCalledWith({ prefix: longQuery, limit: 10 });
+  });
+
+  it('searches tags when query is exactly TAG_MAX_LENGTH', async () => {
+    const exactQuery = 'a'.repeat(20);
+    renderHook(() => useSearchAutocomplete({ query: exactQuery }));
+
+    await act(async () => {
+      vi.advanceTimersByTime(AUTOCOMPLETE_DEBOUNCE_MS);
+      await vi.runOnlyPendingTimersAsync();
+    });
+
+    await act(async () => {
+      await Promise.resolve();
+      await Promise.resolve();
+    });
+
+    expect(mockGetTagsByPrefix).toHaveBeenCalledWith({ prefix: exactQuery, limit: 3 });
+  });
 });

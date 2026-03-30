@@ -16,8 +16,22 @@ vi.mock('@/core', async (importOriginal) => {
   const actual = await importOriginal<typeof import('@/core')>();
   return {
     ...actual,
-    useSettingsStore: () => ({
-      setLanguage: mockSetLanguage,
+    useSettingsStore: Object.assign(() => ({}), {
+      getState: () => ({
+        setLanguage: mockSetLanguage,
+      }),
+    }),
+  };
+});
+
+// Mock @/hooks
+const mockHookSetLanguage = vi.fn();
+vi.mock('@/hooks', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('@/hooks')>();
+  return {
+    ...actual,
+    useSettingsActions: () => ({
+      setLanguage: mockHookSetLanguage,
     }),
   };
 });
@@ -88,17 +102,9 @@ describe('LanguageSelector', () => {
     const spanishOption = screen.getByText('Español');
     fireEvent.click(spanishOption);
 
-    // Should set cookie and call refresh
-    expect(document.cookie).toContain('locale=es');
-    expect(mockSetLanguage).toHaveBeenCalledWith('es');
+    // Cookie is set inside SettingsController.setLanguage (not tested here)
+    expect(mockHookSetLanguage).toHaveBeenCalledWith('es');
     expect(mockRefresh).toHaveBeenCalled();
-  });
-
-  it('syncs language store with server locale on mount', () => {
-    render(<LanguageSelector />);
-
-    // The useEffect should sync the language store with server locale
-    expect(mockSetLanguage).toHaveBeenCalledWith('en');
   });
 });
 

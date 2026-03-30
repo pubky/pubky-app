@@ -28,6 +28,8 @@ export function NotificationItem({ notification, isUnread }: NotificationItemPro
   const t = useTranslations('notifications.actions');
   const tCommon = useTranslations('common');
   const tProfile = useTranslations('profile');
+  const tToast = useTranslations('toast');
+  const tPostToast = useTranslations('toast.post');
   const tPost = useTranslations('post');
   const router = useRouter();
   const { toast } = Molecules.useToast();
@@ -72,8 +74,8 @@ export function NotificationItem({ notification, isUnread }: NotificationItemPro
             } catch {
               setPostContent(post.content);
               toast({
-                title: 'Error',
-                description: 'Failed to parse article content',
+                title: tToast('error'),
+                description: tPostToast('parseError'),
               });
             }
           } else {
@@ -119,8 +121,20 @@ export function NotificationItem({ notification, isUnread }: NotificationItemPro
     router.push(buildSearchUrl([normalizedTag]));
   };
 
+  // Handle clicking empty space in the notification row - navigate to the main notification target
+  const handleRowClick = (e: React.MouseEvent) => {
+    if ((e.target as HTMLElement).closest('a, button')) return;
+    if (notificationLink) {
+      router.push(notificationLink);
+    }
+  };
+
   return (
-    <Atoms.Container overrideDefaults={true} className="flex w-full min-w-0 items-center justify-between gap-2">
+    <Atoms.Container
+      overrideDefaults={true}
+      className={`flex w-full min-w-0 items-center justify-between gap-2 ${notificationLink ? 'cursor-pointer' : ''}`}
+      onClick={handleRowClick}
+    >
       <Atoms.Container overrideDefaults={true} className="flex min-w-0 flex-1 items-center gap-2">
         {/* Avatar - links to user profile */}
         {userProfileLink ? (

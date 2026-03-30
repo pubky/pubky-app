@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { renderHook, waitFor } from '@testing-library/react';
+import { act, renderHook, waitFor } from '@testing-library/react';
 import { useTagged } from './useTagged';
 import * as Core from '@/core';
 
@@ -11,6 +11,7 @@ const mockMocks = vi.hoisted(() => {
   const mockGetCounts = vi.fn();
   const mockTagCreate = vi.fn();
   const mockTagDelete = vi.fn();
+  const mockToast = vi.fn();
   return {
     mockGetTags,
     mockFetchTags,
@@ -18,6 +19,7 @@ const mockMocks = vi.hoisted(() => {
     mockGetCounts,
     mockTagCreate,
     mockTagDelete,
+    mockToast,
   };
 });
 
@@ -58,9 +60,34 @@ vi.mock('@/hooks/useProfileStats', () => ({
   useProfileStats: (...args: Parameters<typeof useProfileStats>) => mockUseProfileStats(...args),
 }));
 
+vi.mock('next-intl', () => ({
+  useTranslations: () => (key: string, values?: { label?: string }) => {
+    switch (key) {
+      case 'added':
+        return 'Tag added';
+      case 'addedDesc':
+        return `"${values?.label}" was added successfully.`;
+      case 'removed':
+        return 'Tag removed';
+      case 'removedDesc':
+        return `"${values?.label}" was removed successfully.`;
+      case 'addFailed':
+        return 'Failed to add tag';
+      case 'addFailedDesc':
+        return `Could not add "${values?.label}". Please try again.`;
+      case 'removeFailed':
+        return 'Failed to remove tag';
+      case 'removeFailedDesc':
+        return `Could not remove "${values?.label}". Please try again.`;
+      default:
+        return key;
+    }
+  },
+}));
+
 // Mock toast
 vi.mock('@/molecules/Toaster/use-toast', () => ({
-  toast: vi.fn(),
+  toast: mockMocks.mockToast,
 }));
 
 // Mock dexie-react-hooks
@@ -172,14 +199,75 @@ describe('useTagged', () => {
       expect(result.current.isLoading).toBe(false);
     });
 
-    const addResult = await result.current.handleTagAdd('ethereum');
+    let addResult: Awaited<ReturnType<typeof result.current.handleTagAdd>>;
+    await act(async () => {
+      addResult = await result.current.handleTagAdd('ethereum');
+    });
 
-    expect(addResult.success).toBe(true);
+    expect(addResult!.success).toBe(true);
     expect(mockMocks.mockTagCreate).toHaveBeenCalledWith({
       taggedId: mockUserId,
       label: 'ethereum',
       taggerId: 'mock-current-user',
       taggedKind: Core.TagKind.USER,
+    });
+    expect(mockMocks.mockToast).toHaveBeenCalledWith({
+      title: 'Tag added',
+      description: '"ethereum" was added successfully.',
+    });
+  });
+
+  it('shows an error toast when adding a tag fails', async () => {
+    mockLocalTags = [];
+    mockMocks.mockTagCreate.mockRejectedValueOnce(new Error('Network error'));
+
+    const { result } = renderHook(() => useTagged(mockUserId));
+
+    await waitFor(() => {
+      expect(result.current.isLoading).toBe(false);
+    });
+
+    let addResult: Awaited<ReturnType<typeof result.current.handleTagAdd>>;
+    await act(async () => {
+      addResult = await result.current.handleTagAdd('ethereum');
+    });
+
+    expect(addResult!).toEqual({ success: false, error: 'Failed to add tag' });
+    expect(mockMocks.mockToast).toHaveBeenCalledWith({
+      title: 'Failed to add tag',
+      description: 'Could not add "ethereum". Please try again.',
+    });
+  });
+
+  it('shows a success toast when removing a tag', async () => {
+    mockLocalTags = [
+      {
+        label: 'bitcoin',
+        taggers: ['mock-current-user'],
+        taggers_count: 1,
+        relationship: true,
+      },
+    ];
+
+    const { result } = renderHook(() => useTagged(mockUserId));
+
+    await waitFor(() => {
+      expect(result.current.isLoading).toBe(false);
+    });
+
+    await act(async () => {
+      await result.current.handleTagToggle({ label: 'bitcoin', relationship: true });
+    });
+
+    expect(mockMocks.mockTagDelete).toHaveBeenCalledWith({
+      taggedId: mockUserId,
+      label: 'bitcoin',
+      taggerId: 'mock-current-user',
+      taggedKind: Core.TagKind.USER,
+    });
+    expect(mockMocks.mockToast).toHaveBeenCalledWith({
+      title: 'Tag removed',
+      description: '"bitcoin" was removed successfully.',
     });
   });
 

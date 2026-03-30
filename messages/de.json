@@ -75,7 +75,12 @@
     "links": "Links",
     "tags": "Tags",
     "posts": "Beiträge",
-    "avatar": "Avatar"
+    "avatar": "Avatar",
+    "threadTree": {
+      "expandAllReplies": "Alle Antworten ausklappen",
+      "collapseAllReplies": "Alle Antworten einklappen",
+      "moreReplies": "{count, plural, one {# weitere Antwort} other {# weitere Antworten}}"
+    }
   },
   "header": {
     "home": "Startseite",
@@ -281,6 +286,8 @@
     "signIn": {
       "title": "Bei <highlight>Pubky</highlight> anmelden.",
       "subtitle": "Autorisieren Sie mit Pubky Ring, um sich anzumelden.",
+      "progressTitle": "Anmeldung läuft.",
+      "progressSubtitle": "Bitte warten Sie, während Ihr Pubky-Erlebnis geladen wird.",
       "generating": "QR-Code wird generiert...",
       "generatingShort": "Generieren...",
 
@@ -680,7 +687,8 @@
       "subtitle2": "Sie können nach mehreren durch Kommas getrennten Tags suchen."
     },
     "userSuggestion": "Benutzer {name} ({pubky})",
-    "viewProfile": "Profil von {name} ansehen"
+    "viewProfile": "Profil von {name} ansehen",
+    "invalidTag": "Tags dürfen maximal 20 Zeichen lang sein und keine Sonderzeichen enthalten"
   },
   "feedback": {
     "title": "Feedback geben",
@@ -735,7 +743,7 @@
       "repostedPost": "hat Ihren Beitrag repostet",
       "mentionedYou": "hat Sie in einem Beitrag erwaehnt",
       "deletedPost": "hat einen Beitrag gelöscht",
-      "editedPost": "hat einen Beitrag bearbeitet",
+      "editedPost": "hat einen Beitrag bearbeitet, mit dem Sie interagiert haben",
       "fallback": "Neue Benachrichtigung"
     },
     "settings": {
@@ -892,7 +900,8 @@
       "failedToLoadPosts": "Neue Beiträge konnten nicht geladen werden",
       "failedToLoadPostsDesc": "Neue Beiträge können nicht angezeigt werden. Bitte versuchen Sie es erneut.",
       "parseError": "Artikelinhalt konnte nicht analysiert werden",
-      "coverImageError": "Artikeltitelbild konnte nicht geladen werden"
+      "coverImageError": "Artikeltitelbild konnte nicht geladen werden",
+      "attachmentsLoadFailed": "Anhänge konnten nicht geladen werden"
     },
     "bookmark": {
       "added": "Lesezeichen hinzugefügt",
@@ -956,6 +965,10 @@
       "userIdRequired": "Benutzer-ID ist erforderlich",
       "loginRequired": "Sie müssen angemeldet sein, um Tags hinzuzufuegen",
       "alreadyAdded": "Sie haben diesen Tag bereits hinzugefügt",
+      "added": "Tag hinzugefuegt",
+      "addedDesc": "\"{label}\" wurde erfolgreich hinzugefuegt.",
+      "removed": "Tag entfernt",
+      "removedDesc": "\"{label}\" wurde erfolgreich entfernt.",
       "addFailed": "Tag konnte nicht hinzugefügt werden",
       "addFailedDesc": "\"{label}\" konnte nicht hinzugefügt werden. Bitte versuchen Sie es erneut.",
       "removeFailed": "Tag konnte nicht entfernt werden",
@@ -974,6 +987,16 @@
       "maxFilesPartial": "Maximal {max} Dateien erlaubt. Einige Dateien wurden nicht hinzugefügt.",
       "unsupportedType": "\"{name}\" hat nicht unterstützten Typ \"{type}\". Unterstützte Formate: {formats}.",
       "fileTooLarge": "\"{name}\" überschreitet die maximale Größe von {maxSize}."
+    },
+    "status": {
+      "updateFailed": "Status konnte nicht aktualisiert werden. Bitte versuchen Sie es erneut.",
+      "userNotLoaded": "Benutzerprofil nicht geladen. Bitte versuchen Sie es erneut."
+    },
+    "fullscreen": {
+      "error": "Fehler beim Aktivieren des Vollbildmodus"
+    },
+    "logout": {
+      "failed": "Abmelden fehlgeschlagen. Bitte versuchen Sie es erneut."
     }
   },
   "empty": {
@@ -1009,6 +1032,7 @@
     "follow": "Folgen",
     "unfollow": "Entfolgen",
     "following": "Folge ich",
+    "editProfile": "Profil bearbeiten",
     "me": "Ich",
     "tags": "TAGS",
     "posts": "BEITRAEGE",
@@ -1054,7 +1078,7 @@
     "hotTags": "Beliebte Tags",
     "activeUsers": "Aktive Benutzer",
     "trendingPosts": "Trendende Beiträge",
-    "postsCount": "{count} Beiträge",
+    "postsCount": "{count} Beiträge diesen Monat",
     "failedToLoadUsers": "Benutzer konnten nicht geladen werden",
     "failedToLoadTags": "Tags konnten nicht geladen werden",
     "noUsersToShow": "Keine Benutzer anzuzeigen",
@@ -1182,7 +1206,6 @@
     "emoji": "Emoji",
     "richText": "Rich-Text",
     "markdown": "Markdown",
-    "clearToSwitch": "Inhalt löschen, um den Modus zu wechseln",
     "placeholder": "Beginne dein Meisterwerk zu schreiben",
     "toolbarAriaLabel": "Markdown-Bearbeitungsleiste",
     "warningApproaching": "Du näherst dich dem maximalen Zeichenlimit.",

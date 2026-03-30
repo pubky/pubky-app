@@ -12,8 +12,8 @@ export function HeaderButtonSignIn({ ...props }: React.HTMLAttributes<HTMLButton
   const t = useTranslations('header');
   const router = useRouter();
 
-  const handleSignIn = () => {
-    router.push(App.AUTH_ROUTES.SIGN_IN);
+  const handleNewHere = () => {
+    router.push(App.ONBOARDING_ROUTES.HUMAN);
   };
 
   return (
@@ -21,7 +21,7 @@ export function HeaderButtonSignIn({ ...props }: React.HTMLAttributes<HTMLButton
       id="header-sign-in-btn"
       data-testid="header-sign-in-btn"
       variant="secondary"
-      onClick={handleSignIn}
+      onClick={handleNewHere}
       className="gap-2"
       {...props}
     >

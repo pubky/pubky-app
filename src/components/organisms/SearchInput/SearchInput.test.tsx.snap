@@ -2,7 +2,7 @@
 
 exports[`SearchInput > SearchInput - Snapshots > matches snapshot - default state 1`] = `
 <div
-  class="relative"
+  class="relative min-w-0"
   data-testid="search-input"
 >
   <div
@@ -26,7 +26,7 @@ exports[`SearchInput > SearchInput - Snapshots > matches snapshot - default stat
 
 exports[`SearchInput > SearchInput - Snapshots > matches snapshot - focused with suggestions 1`] = `
 <div
-  class="relative"
+  class="relative min-w-0"
   data-testid="search-input"
 >
   <div
@@ -72,7 +72,7 @@ exports[`SearchInput > SearchInput - Snapshots > matches snapshot - focused with
 
 exports[`SearchInput > SearchInput - Snapshots > matches snapshot - with active tags 1`] = `
 <div
-  class="relative"
+  class="relative min-w-0"
   data-testid="search-input"
 >
   <div

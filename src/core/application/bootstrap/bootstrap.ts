@@ -3,7 +3,6 @@ import { Logger } from '@/libs/logger';
 import { AppError } from '@/libs/error';
 import { HttpMethod, HttpStatusCode } from '@/libs/http';
 import * as Core from '@/core';
-import * as Config from '@/config';
 
 /**
  * Callback type for reporting bootstrap progress to the Controller layer.
@@ -24,84 +23,87 @@ export class BootstrapApplication {
    * @returns Promise resolving to notification state with unread count and last read timestamp
    */
   static async initialize(
-    params: Core.TBootstrapParams,
+    params: Core.TBootstrapParams & { localSettings: Core.SettingsState },
     onProgress?: BootstrapProgressCallback,
   ): Promise<Core.TBootstrapResponse> {
-    const data = await Core.NexusBootstrapService.fetch(params.pubky);
+    const pubky = params.pubky;
+    const [bootstrapData, userLastRead, remoteSettings] = await Promise.all([
+      Core.NexusBootstrapService.fetch(pubky),
+      this.fetchOrPutLastRead(params),
+      // Initialize settings from homeserver (non-blocking, errors are logged but don't fail bootstrap)
+      this.syncSettings(pubky, params.localSettings),
+      Core.MuteApplication.fetchMutedUsers(pubky), // fetches and persists MUTED stream internally
+      Core.FeedApplication.fetchFeeds(pubky),
+    ]);
     onProgress?.('bootstrapFetched'); // Step 3 complete (60%)
 
-    if (!data.indexed) {
+    if (!bootstrapData.indexed) {
       Logger.warn('User is not indexed in Nexus. Scheduling TTL retry', {
-        pubky: params.pubky,
+        pubky,
         retryDelayMs: Env.NEXT_PUBLIC_TTL_RETRY_DELAY_MS,
       });
 
       // Write TTL record to become stale after configured retry delay
-      await Core.LocalUserService.upsertTtlWithDelay(params.pubky, Env.NEXT_PUBLIC_TTL_RETRY_DELAY_MS);
+      await Core.LocalUserService.upsertTtlWithDelay(pubky, Env.NEXT_PUBLIC_TTL_RETRY_DELAY_MS);
 
       // Subscribe to TTL coordinator for periodic staleness checks
-      Core.TtlCoordinator.getInstance().subscribeUser({ pubky: params.pubky });
+      Core.TtlCoordinator.getInstance().subscribeUser({ pubky });
     }
-    await Promise.all([
-      Core.LocalStreamUsersService.persistUsers(data.users),
-      Core.LocalStreamPostsService.persistPosts({ posts: data.posts }),
+    const [{ unread, nextPollCursor }] = await Promise.all([
+      Core.NotificationApplication.persistAndSummarize({
+        notifications: bootstrapData.notifications,
+        lastRead: userLastRead,
+      }),
+      Core.LocalStreamUsersService.persistUsers(bootstrapData.users),
+      Core.LocalStreamPostsService.persistPosts({ posts: bootstrapData.posts }),
       Core.LocalStreamPostsService.upsert({
         streamId: Core.PostStreamTypes.TIMELINE_ALL_ALL,
-        stream: data.ids.stream,
+        stream: bootstrapData.ids.stream,
       }),
       Core.LocalStreamUsersService.upsert({
         streamId: Core.UserStreamTypes.TODAY_INFLUENCERS_ALL,
-        stream: data.ids.influencers,
+        stream: bootstrapData.ids.influencers,
       }),
       Core.LocalStreamUsersService.upsert({
         streamId: Core.UserStreamTypes.RECOMMENDED,
-        stream: data.ids.recommended,
+        stream: bootstrapData.ids.recommended,
       }),
-      Core.LocalStreamUsersService.upsert({
-        streamId: Core.UserStreamTypes.MUTED,
-        stream: data.ids.muted,
-      }),
+      Core.FileApplication.persistFiles(bootstrapData.files),
       // Both features: hot tags and tag streams
-      Core.LocalHotService.upsert(Core.buildHotTagsId(Core.UserStreamTimeframe.TODAY, 'all'), data.ids.hot_tags),
-      Core.LocalStreamTagsService.upsert(Core.TagStreamTypes.TODAY_ALL, data.ids.hot_tags),
+      Core.LocalHotService.upsert(
+        Core.buildHotTagsId(Core.UserStreamTimeframe.TODAY, 'all'),
+        bootstrapData.ids.hot_tags,
+      ),
+      Core.LocalStreamTagsService.upsert(Core.TagStreamTypes.TODAY_ALL, bootstrapData.ids.hot_tags),
     ]);
     onProgress?.('dataPersisted'); // Step 4 complete (80%)
-
-    // Bootstrap posts don't include attachments_metadata, so collect URIs and fetch separately
-    const fileUris = data.posts.flatMap((post) => post.details.attachments ?? []);
-
-    const [_, notification] = await Promise.all([
-      Core.FileApplication.fetchFiles(fileUris),
-      this.fetchNotifications(params),
-      // Initialize settings from homeserver (non-blocking, errors are logged but don't fail bootstrap)
-      this.initializeSettings(params.pubky),
-    ]);
+    // TODO: We will not have that step, but we will add HomeserverSignIn step before step 1 to catch errors
     onProgress?.('homeserverSynced'); // Step 5 complete (100%)
 
-    return { notification };
+    const notification = { unread, lastRead: userLastRead, lastPolledTimestamp: nextPollCursor };
+
+    return { notification, remoteSettings: remoteSettings ?? null };
   }
 
   /**
-   * Initializes user settings from homeserver.
-   * If remote settings are newer, updates the local store.
-   * If local settings are newer, syncs to homeserver.
-   * Errors are logged but don't fail bootstrap.
+   * Syncs user settings with the homeserver.
+   * Returns remote settings if newer, null otherwise.
+   * Errors are caught and logged — settings failure must not block bootstrap.
    *
    * @private
-   * @param pubky, The user's public key identifier
+   * @param pubky - The user's public key identifier
+   * @param localSettings - Current local settings state (passed from Controller layer)
    */
-  private static async initializeSettings(pubky: Core.Pubky): Promise<void> {
+  private static async syncSettings(
+    pubky: Core.Pubky,
+    localSettings: Core.SettingsState,
+  ): Promise<Core.SettingsState | null> {
     try {
-      const remoteSettings = await Core.SettingsApplication.initializeSettings(pubky);
-
-      // If remote settings were returned and are newer, update the local store
-      if (remoteSettings) {
-        Core.useSettingsStore.getState().loadFromHomeserver(remoteSettings);
-        Logger.info('Settings loaded from homeserver', { pubky });
-      }
+      return await Core.SettingsApplication.initializeSettings(pubky, localSettings);
     } catch (error) {
       // Log but don't throw, settings sync failure shouldn't block bootstrap
       Logger.error('Failed to initialize settings during bootstrap', { error, pubky });
+      return null;
     }
   }
 
@@ -115,17 +117,13 @@ export class BootstrapApplication {
    * @param params.lastReadUrl, URL to fetch user's last read timestamp from homeserver
    * @returns Promise resolving to notification list and last read timestamp
    */
-  private static async fetchNotifications({
-    pubky,
-    lastReadUrl,
-  }: Core.TBootstrapParams): Promise<Core.NotificationState> {
-    let userLastRead: number;
+  private static async fetchOrPutLastRead({ pubky, lastReadUrl }: Core.TBootstrapParams): Promise<number> {
     try {
       const { timestamp } = await Core.HomeserverService.request<{ timestamp: number }>({
         method: HttpMethod.GET,
         url: lastReadUrl,
       });
-      userLastRead = timestamp;
+      return timestamp;
     } catch (error) {
       // Only handle 404 errors (resource not found), rethrow everything else
       if (error instanceof AppError && error.context?.statusCode === HttpStatusCode.NOT_FOUND) {
@@ -136,7 +134,7 @@ export class BootstrapApplication {
           url: lastRead.meta.url,
           bodyJson: lastRead.last_read.toJson(),
         });
-        userLastRead = Number(lastRead.last_read.timestamp);
+        return Number(lastRead.last_read.timestamp);
       } else {
         // Network errors, timeouts, server errors, etc. should bubble up
         Logger.error('Failed to fetch last read timestamp', error);
@@ -144,24 +142,5 @@ export class BootstrapApplication {
         throw error;
       }
     }
-
-    // Get the latest notifications
-    const notificationList = await Core.NexusUserService.notifications({
-      user_id: pubky,
-      limit: Config.NEXUS_NOTIFICATIONS_LIMIT,
-    });
-
-    // TODO: Temporal fix.This is an anti-pattern, we should fetch notifications also from nexus, like this we just need to persist and get the unread count.
-    // Nexus will manage which parts of notifications are missings like Users and Posts.
-    const flatNotifications = await Core.NotificationApplication.fetchMissingEntities({
-      notifications: notificationList,
-      viewerId: pubky,
-    });
-    const { unread, nextPollCursor } = await Core.NotificationApplication.persistAndSummarize({
-      notifications: notificationList,
-      flatNotifications,
-      lastRead: userLastRead,
-    });
-    return { unread, lastRead: userLastRead, lastPolledTimestamp: nextPollCursor };
   }
 }

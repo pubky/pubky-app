@@ -42,7 +42,7 @@ export function MobileHeader({
     >
       <Atoms.Container
         overrideDefaults
-        className="m-auto w-full max-w-sm p-6 sm:max-w-xl md:max-w-3xl lg:max-w-5xl xl:max-w-6xl xl:px-0"
+        className="m-auto w-full max-w-sm p-6 pb-0 sm:max-w-xl md:max-w-3xl lg:max-w-5xl xl:max-w-6xl xl:px-0"
       >
         <Atoms.Container overrideDefaults className="flex items-center justify-between py-3">
           {/* Left icon - filters (authenticated only) */}

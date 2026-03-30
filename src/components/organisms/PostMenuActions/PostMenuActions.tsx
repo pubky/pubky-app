@@ -24,7 +24,6 @@ export function PostMenuActions({ postId, trigger }: PostMenuActionsProps) {
   };
 
   const handleEditClick = () => {
-    closeMenu();
     setEditDialogOpen(true);
   };
 

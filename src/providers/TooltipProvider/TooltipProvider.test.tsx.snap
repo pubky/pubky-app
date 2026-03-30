@@ -1,0 +1,7 @@
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
+
+exports[`TooltipProvider - Snapshots > matches snapshot with children 1`] = `
+<span>
+  Content
+</span>
+`;

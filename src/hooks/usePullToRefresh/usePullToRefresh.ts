@@ -17,25 +17,30 @@ const REFRESH_SNAP_POSITION = 64; // position to hold indicator during refresh
  *
  * A hook that implements pull-to-refresh functionality for touch devices.
  * Features rubber band physics, threshold detection, and haptic feedback.
- * Works with window/document scrolling (scrollY === 0 detection).
+ * Touch events are scoped to the provided containerRef so that pull-to-refresh
+ * only activates when the user interacts directly with the target element
+ * (not when dialogs, sidebars, or other overlays are open).
  *
  * @example
  * ```tsx
+ * const containerRef = useRef<HTMLDivElement>(null);
  * const { state, pullDistance } = usePullToRefresh({
+ *   containerRef,
  *   onRefresh: async () => {
  *     await fetchNewData();
  *   },
  * });
  *
  * return (
- *   <>
+ *   <div ref={containerRef}>
  *     <PullToRefreshIndicator state={state} pullDistance={pullDistance} />
  *     {children}
- *   </>
+ *   </div>
  * );
  * ```
  */
 export function usePullToRefresh({
+  containerRef,
   onRefresh,
   threshold = DEFAULT_THRESHOLD,
   maxPull = DEFAULT_MAX_PULL,
@@ -124,6 +129,9 @@ export function usePullToRefresh({
     if (disabled || !isTouchDevice) return;
     if (typeof window === 'undefined') return;
 
+    const container = containerRef.current;
+    if (!container) return;
+
     let thresholdArmed = false;
 
     const handleTouchStart = (e: TouchEvent) => {
@@ -189,19 +197,21 @@ export function usePullToRefresh({
       }
     };
 
-    // Attach event listeners to window
+    // Attach event listeners to the container element so that only touches
+    // originating inside this element trigger pull-to-refresh. This prevents
+    // activation when dialogs, sidebars, or other overlays are open.
     // touchstart and touchend can be passive
     // touchmove must be non-passive to allow preventDefault
-    window.addEventListener('touchstart', handleTouchStart, { passive: true });
-    window.addEventListener('touchmove', handleTouchMove, { passive: false });
-    window.addEventListener('touchend', handleTouchEnd, { passive: true });
+    container.addEventListener('touchstart', handleTouchStart, { passive: true });
+    container.addEventListener('touchmove', handleTouchMove, { passive: false });
+    container.addEventListener('touchend', handleTouchEnd, { passive: true });
 
     return () => {
-      window.removeEventListener('touchstart', handleTouchStart);
-      window.removeEventListener('touchmove', handleTouchMove);
-      window.removeEventListener('touchend', handleTouchEnd);
+      container.removeEventListener('touchstart', handleTouchStart);
+      container.removeEventListener('touchmove', handleTouchMove);
+      container.removeEventListener('touchend', handleTouchEnd);
     };
-  }, [disabled, isTouchDevice, threshold, isAtTop, applyResistance, haptic, handleRefresh, resetPull]);
+  }, [disabled, isTouchDevice, containerRef, threshold, isAtTop, applyResistance, haptic, handleRefresh, resetPull]);
 
   // Track mounted state for cleanup
   useEffect(() => {

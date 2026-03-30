@@ -1,5 +1,22 @@
 // Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
 
+exports[`SinglePostContent - Snapshots > matches snapshot when not authenticated 1`] = `
+<div>
+  <div
+    data-post-id="author:post123"
+    data-testid="post-page-header"
+  >
+    PostPageHeader
+  </div>
+  <div
+    data-post-id="author:post123"
+    data-testid="single-post-card"
+  >
+    SinglePostCard
+  </div>
+</div>
+`;
+
 exports[`SinglePostContent - Snapshots > matches snapshot with deleted parent post 1`] = `
 <div>
   <div
@@ -26,45 +43,6 @@ exports[`SinglePostContent - Snapshots > matches snapshot with deleted parent po
     <div
       data-class-name="w-full min-w-0 flex-1 gap-0 overflow-hidden"
       data-testid="container"
-    />
-    <div
-      data-class-name="sticky hidden flex-col items-start justify-start gap-6 self-start pt-6 lg:flex top-[147px] w-full max-w-xs"
-      data-override-defaults="true"
-      data-testid="container"
-    >
-      <div
-        data-post-id="author:post123"
-        data-testid="single-post-participants"
-      >
-        SinglePostParticipants
-      </div>
-    </div>
-  </div>
-</div>
-`;
-
-exports[`SinglePostContent - Snapshots > matches snapshot with error state 1`] = `
-<div>
-  <div
-    data-post-id="author:post123"
-    data-testid="post-page-header"
-  >
-    PostPageHeader
-  </div>
-  <div
-    data-post-id="author:post123"
-    data-testid="single-post-card"
-  >
-    SinglePostCard
-  </div>
-  <div
-    data-class-name="flex gap-6"
-    data-override-defaults="true"
-    data-testid="container"
-  >
-    <div
-      data-class-name="w-full min-w-0 flex-1 gap-0 overflow-hidden"
-      data-testid="container"
     >
       <div
         data-class-name="ml-3"
@@ -72,181 +50,12 @@ exports[`SinglePostContent - Snapshots > matches snapshot with error state 1`] =
         data-testid="container"
       >
         <div
-          data-testid="post-thread-spacer"
-        />
-        <div
-          data-connector-variant="last"
-          data-parent-post-id="author:post123"
-          data-testid="quick-reply"
+          data-post-id="author:post123"
+          data-show-quick-reply="false"
+          data-testid="thread-tree"
         >
-          QuickReply
+          ThreadTree
         </div>
-      </div>
-      <div
-        data-testid="timeline-error"
-      >
-        Failed to load replies
-      </div>
-    </div>
-    <div
-      data-class-name="sticky hidden flex-col items-start justify-start gap-6 self-start pt-6 lg:flex top-[147px] w-full max-w-xs"
-      data-override-defaults="true"
-      data-testid="container"
-    >
-      <div
-        data-post-id="author:post123"
-        data-testid="single-post-participants"
-      >
-        SinglePostParticipants
-      </div>
-    </div>
-  </div>
-</div>
-`;
-
-exports[`SinglePostContent - Snapshots > matches snapshot with loading more state 1`] = `
-<div>
-  <div
-    data-post-id="author:post123"
-    data-testid="post-page-header"
-  >
-    PostPageHeader
-  </div>
-  <div
-    data-post-id="author:post123"
-    data-testid="single-post-card"
-  >
-    SinglePostCard
-  </div>
-  <div
-    data-class-name="flex gap-6"
-    data-override-defaults="true"
-    data-testid="container"
-  >
-    <div
-      data-class-name="w-full min-w-0 flex-1 gap-0 overflow-hidden"
-      data-testid="container"
-    >
-      <div
-        data-class-name="ml-3"
-        data-override-defaults="true"
-        data-testid="container"
-      >
-        <div
-          data-testid="post-thread-spacer"
-        />
-        <div
-          data-connector-variant="regular"
-          data-parent-post-id="author:post123"
-          data-testid="quick-reply"
-        >
-          QuickReply
-        </div>
-      </div>
-      <div
-        data-class-name="ml-3"
-        data-override-defaults="true"
-        data-testid="container"
-      >
-        <div
-          data-override-defaults="true"
-          data-testid="container"
-        >
-          <div
-            data-testid="post-thread-spacer"
-          />
-          <div
-            data-is-last-reply="false"
-            data-is-reply="true"
-            data-post-id="reply-1"
-            data-testid="post-main"
-          >
-            PostMain 
-            reply-1
-          </div>
-        </div>
-        <div
-          data-testid="timeline-loading-more"
-        >
-          Loading more...
-        </div>
-        <div
-          class="h-1"
-        />
-      </div>
-    </div>
-    <div
-      data-class-name="sticky hidden flex-col items-start justify-start gap-6 self-start pt-6 lg:flex top-[147px] w-full max-w-xs"
-      data-override-defaults="true"
-      data-testid="container"
-    >
-      <div
-        data-post-id="author:post123"
-        data-testid="single-post-participants"
-      >
-        SinglePostParticipants
-      </div>
-    </div>
-  </div>
-</div>
-`;
-
-exports[`SinglePostContent - Snapshots > matches snapshot with loading replies state 1`] = `
-<div>
-  <div
-    data-post-id="author:post123"
-    data-testid="post-page-header"
-  >
-    PostPageHeader
-  </div>
-  <div
-    data-post-id="author:post123"
-    data-testid="single-post-card"
-  >
-    SinglePostCard
-  </div>
-  <div
-    data-class-name="flex gap-6"
-    data-override-defaults="true"
-    data-testid="container"
-  >
-    <div
-      data-class-name="w-full min-w-0 flex-1 gap-0 overflow-hidden"
-      data-testid="container"
-    >
-      <div
-        data-class-name="ml-3"
-        data-override-defaults="true"
-        data-testid="container"
-      >
-        <div
-          data-testid="post-thread-spacer"
-        />
-        <div
-          data-connector-variant="last"
-          data-parent-post-id="author:post123"
-          data-testid="quick-reply"
-        >
-          QuickReply
-        </div>
-      </div>
-      <div
-        data-class-name="flex items-center justify-center gap-3 py-8"
-        data-testid="container"
-      >
-        <div
-          data-size="md"
-          data-testid="spinner"
-        >
-          Loading...
-        </div>
-        <span
-          data-as="p"
-          data-class-name="text-muted-foreground"
-          data-testid="typography"
-        >
-          Loading replies...
-        </span>
       </div>
     </div>
     <div
@@ -298,118 +107,11 @@ Article content"
         data-testid="container"
       >
         <div
-          data-testid="post-thread-spacer"
-        />
-        <div
-          data-connector-variant="last"
-          data-parent-post-id="author:post123"
-          data-testid="quick-reply"
+          data-post-id="author:post123"
+          data-show-quick-reply="true"
+          data-testid="thread-tree"
         >
-          QuickReply
-        </div>
-      </div>
-    </div>
-    <div
-      data-class-name="sticky hidden flex-col items-start justify-start gap-6 self-start pt-6 lg:flex top-[147px] w-full max-w-xs"
-      data-override-defaults="true"
-      data-testid="container"
-    >
-      <div
-        data-post-id="author:post123"
-        data-testid="single-post-participants"
-      >
-        SinglePostParticipants
-      </div>
-    </div>
-  </div>
-</div>
-`;
-
-exports[`SinglePostContent - Snapshots > matches snapshot with replies 1`] = `
-<div>
-  <div
-    data-post-id="author:post123"
-    data-testid="post-page-header"
-  >
-    PostPageHeader
-  </div>
-  <div
-    data-post-id="author:post123"
-    data-testid="single-post-card"
-  >
-    SinglePostCard
-  </div>
-  <div
-    data-class-name="flex gap-6"
-    data-override-defaults="true"
-    data-testid="container"
-  >
-    <div
-      data-class-name="w-full min-w-0 flex-1 gap-0 overflow-hidden"
-      data-testid="container"
-    >
-      <div
-        data-class-name="ml-3"
-        data-override-defaults="true"
-        data-testid="container"
-      >
-        <div
-          data-testid="post-thread-spacer"
-        />
-        <div
-          data-connector-variant="regular"
-          data-parent-post-id="author:post123"
-          data-testid="quick-reply"
-        >
-          QuickReply
-        </div>
-      </div>
-      <div
-        data-class-name="ml-3"
-        data-override-defaults="true"
-        data-testid="container"
-      >
-        <div
-          data-override-defaults="true"
-          data-testid="container"
-        >
-          <div
-            data-testid="post-thread-spacer"
-          />
-          <div
-            data-is-last-reply="false"
-            data-is-reply="true"
-            data-post-id="reply-1"
-            data-testid="post-main"
-          >
-            PostMain 
-            reply-1
-          </div>
-        </div>
-        <div
-          data-override-defaults="true"
-          data-testid="container"
-        >
-          <div
-            data-testid="post-thread-spacer"
-          />
-          <div
-            data-is-last-reply="true"
-            data-is-reply="true"
-            data-post-id="reply-2"
-            data-testid="post-main"
-          >
-            PostMain 
-            reply-2
-          </div>
-        </div>
-        <div
-          class="h-1"
-        />
-        <div
-          data-testid="timeline-end-message"
-        >
-          End of replies
+          ThreadTree
         </div>
       </div>
     </div>
@@ -458,14 +160,11 @@ exports[`SinglePostContent - Snapshots > matches snapshot with short post and no
         data-testid="container"
       >
         <div
-          data-testid="post-thread-spacer"
-        />
-        <div
-          data-connector-variant="last"
-          data-parent-post-id="author:post123"
-          data-testid="quick-reply"
+          data-post-id="author:post123"
+          data-show-quick-reply="true"
+          data-testid="thread-tree"
         >
-          QuickReply
+          ThreadTree
         </div>
       </div>
     </div>

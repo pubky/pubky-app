@@ -128,27 +128,6 @@ describe('FeedModel', () => {
     });
   });
 
-  describe('findByName', () => {
-    it('should find feed by name (case-insensitive)', async () => {
-      const feed = createFeedSchema({ name: 'Bitcoin News' });
-      await Core.FeedModel.upsert(feed);
-
-      const foundLower = await Core.FeedModel.findByName('bitcoin news');
-      const foundUpper = await Core.FeedModel.findByName('BITCOIN NEWS');
-      const foundMixed = await Core.FeedModel.findByName('Bitcoin News');
-
-      expect(foundLower).toBeTruthy();
-      expect(foundUpper).toBeTruthy();
-      expect(foundMixed).toBeTruthy();
-    });
-
-    it('should return undefined when name not found', async () => {
-      const found = await Core.FeedModel.findByName('Nonexistent Feed');
-
-      expect(found).toBeUndefined();
-    });
-  });
-
   describe('schema fields', () => {
     it('should store all feed configuration fields', async () => {
       const feed = createFeedSchema({

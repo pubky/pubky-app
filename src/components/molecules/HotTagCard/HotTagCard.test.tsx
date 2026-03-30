@@ -1,4 +1,4 @@
-import { render, screen, fireEvent } from '@testing-library/react';
+import { render, screen, fireEvent, within } from '@testing-library/react';
 import { describe, it, expect, vi } from 'vitest';
 import { HotTagCard } from './HotTagCard';
 
@@ -14,14 +14,14 @@ describe('HotTagCard', () => {
 
     expect(screen.getByText('1')).toBeInTheDocument();
     expect(screen.getByText('bitcoin')).toBeInTheDocument();
-    expect(screen.getByText('371 posts')).toBeInTheDocument();
+    expect(screen.getByText('371 posts this month')).toBeInTheDocument();
   });
 
   it('formats large post counts with locale separators', () => {
     render(<HotTagCard {...defaultProps} postCount={1234567} />);
 
     // Use regex to match formatted number (handles different locale separators)
-    expect(screen.getByText(/1[,.]234[,.]567 posts/)).toBeInTheDocument();
+    expect(screen.getByText(/1[,.]234[,.]567 posts this month/)).toBeInTheDocument();
   });
 
   it('calls onClick when clicked', () => {
@@ -78,9 +78,8 @@ describe('HotTagCard', () => {
 
     render(<HotTagCard {...defaultProps} taggers={taggers} />);
 
-    // The avatars should be rendered
-    const card = screen.getByTestId('hot-tag-card-1');
-    expect(card).toBeInTheDocument();
+    expect(screen.getByTestId('hot-tag-card-mobile-avatars')).toHaveClass('sm:hidden');
+    expect(screen.getByTestId('hot-tag-card-desktop-avatars')).toHaveClass('hidden', 'sm:flex');
   });
 
   it('shows overflow based on postCount minus visible avatars', () => {
@@ -92,7 +91,8 @@ describe('HotTagCard', () => {
     // postCount is 371 (default), showing 6 avatars → overflow is 371 - 6 = 365 → +99
     render(<HotTagCard {...defaultProps} taggers={taggers} maxAvatars={6} />);
 
-    expect(screen.getByText('+99')).toBeInTheDocument();
+    expect(within(screen.getByTestId('hot-tag-card-mobile-avatars')).getByText('+99')).toBeInTheDocument();
+    expect(within(screen.getByTestId('hot-tag-card-desktop-avatars')).getByText('+99')).toBeInTheDocument();
   });
 
   it('shows correct overflow for smaller postCount', () => {
@@ -104,7 +104,8 @@ describe('HotTagCard', () => {
     // postCount is 50, showing 6 avatars → overflow is 50 - 6 = 44
     render(<HotTagCard {...defaultProps} postCount={50} taggers={taggers} maxAvatars={6} />);
 
-    expect(screen.getByText('+44')).toBeInTheDocument();
+    expect(within(screen.getByTestId('hot-tag-card-mobile-avatars')).getByText('+44')).toBeInTheDocument();
+    expect(within(screen.getByTestId('hot-tag-card-desktop-avatars')).getByText('+44')).toBeInTheDocument();
   });
 
   it('does not show overflow when postCount equals visible avatars', () => {
@@ -116,7 +117,8 @@ describe('HotTagCard', () => {
     // postCount is 6, showing 6 avatars → no overflow
     render(<HotTagCard {...defaultProps} postCount={6} taggers={taggers} maxAvatars={6} />);
 
-    expect(screen.queryByText(/^\+/)).not.toBeInTheDocument();
+    expect(within(screen.getByTestId('hot-tag-card-mobile-avatars')).queryByText(/^\+/)).not.toBeInTheDocument();
+    expect(within(screen.getByTestId('hot-tag-card-desktop-avatars')).queryByText(/^\+/)).not.toBeInTheDocument();
   });
 
   it('caps overflow display at +99 for large postCounts', () => {
@@ -128,7 +130,8 @@ describe('HotTagCard', () => {
     // postCount is 500, showing 6 avatars → overflow is 494 → +99
     render(<HotTagCard {...defaultProps} postCount={500} taggers={taggers} maxAvatars={6} />);
 
-    expect(screen.getByText('+99')).toBeInTheDocument();
+    expect(within(screen.getByTestId('hot-tag-card-mobile-avatars')).getByText('+99')).toBeInTheDocument();
+    expect(within(screen.getByTestId('hot-tag-card-desktop-avatars')).getByText('+99')).toBeInTheDocument();
   });
 
   it('renders different ranks correctly', () => {

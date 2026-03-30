@@ -21,12 +21,14 @@ vi.mock('@/atoms', () => ({
     children,
     className,
     hiddenTitle,
+    onClick,
   }: {
     children: React.ReactNode;
     className?: string;
     hiddenTitle?: string;
+    onClick?: (e: React.MouseEvent) => void;
   }) => (
-    <div data-testid="dialog-content" className={className} data-hidden-title={hiddenTitle}>
+    <div data-testid="dialog-content" className={className} data-hidden-title={hiddenTitle} onClick={onClick}>
       {hiddenTitle && (
         <h2 className="sr-only" data-testid="dialog-hidden-title">
           {hiddenTitle}
@@ -238,6 +240,20 @@ describe('DialogCheckLink', () => {
     fireEvent.click(continueButton);
 
     expect(mockSetShowConfirm).toHaveBeenCalledWith(false);
+  });
+
+  it('stops event propagation when dialog content is clicked', () => {
+    const handleParentClick = vi.fn();
+    render(
+      <div onClick={handleParentClick}>
+        <DialogCheckLink {...defaultProps} />
+      </div>,
+    );
+
+    const dialogContent = screen.getByTestId('dialog-content');
+    fireEvent.click(dialogContent);
+
+    expect(handleParentClick).not.toHaveBeenCalled();
   });
 });
 

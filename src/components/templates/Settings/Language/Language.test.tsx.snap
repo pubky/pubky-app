@@ -49,7 +49,7 @@ exports[`Language - Snapshots > matches snapshot 1`] = `
       class="text-base leading-6 font-medium text-secondary-foreground"
       data-testid="typography"
     >
-      Choose your preferred language for the Pubky interface.
+      Choose your preferred language
     </p>
   </div>
   <div

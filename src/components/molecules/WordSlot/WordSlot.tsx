@@ -10,7 +10,7 @@ export const WordSlot = (props: Types.WordSlotProps) => {
     const hasError = isError && showError;
 
     const containerClasses = Libs.cn(
-      'flex-row px-3 py-2 rounded-md border overflow-hidden relative',
+      'flex-row px-3 py-2 rounded-md border border-dashed overflow-hidden relative',
       'inline-flex w-full items-center bg-transparent transition-colors',
       hasError && 'border-red-500 bg-red-500/10',
       !hasError && 'border-border hover:bg-secondary/50',

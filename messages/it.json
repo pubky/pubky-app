@@ -75,7 +75,12 @@
     "links": "Link",
     "tags": "Tag",
     "posts": "Post",
-    "avatar": "Avatar"
+    "avatar": "Avatar",
+    "threadTree": {
+      "expandAllReplies": "Espandi tutte le risposte",
+      "collapseAllReplies": "Comprimi tutte le risposte",
+      "moreReplies": "{count, plural, one {# risposta in più} other {# risposte in più}}"
+    }
   },
   "header": {
     "home": "Home",
@@ -281,6 +286,8 @@
     "signIn": {
       "title": "Accedi a <highlight>Pubky.</highlight>",
       "subtitle": "Autorizza con Pubky Ring per accedere.",
+      "progressTitle": "Accesso in corso.",
+      "progressSubtitle": "Attendi mentre la tua esperienza Pubky viene caricata.",
       "generating": "Generazione codice QR...",
       "generatingShort": "Generazione...",
 
@@ -680,7 +687,8 @@
       "subtitle2": "Puoi cercare più tag separati da virgole."
     },
     "userSuggestion": "Utente {name} ({pubky})",
-    "viewProfile": "Vedi profilo di {name}"
+    "viewProfile": "Vedi profilo di {name}",
+    "invalidTag": "I tag devono avere al massimo 20 caratteri e non possono contenere caratteri speciali"
   },
   "feedback": {
     "title": "Invia feedback",
@@ -735,7 +743,7 @@
       "repostedPost": "ha ripubblicato il tuo post",
       "mentionedYou": "ti ha menzionato in un post",
       "deletedPost": "ha eliminato un post",
-      "editedPost": "ha modificato un post",
+      "editedPost": "ha modificato un post con cui hai interagito",
       "fallback": "Nuova notifica"
     },
     "settings": {
@@ -892,7 +900,8 @@
       "failedToLoadPosts": "Caricamento nuovi post fallito",
       "failedToLoadPostsDesc": "Impossibile visualizzare nuovi post. Riprova.",
       "parseError": "Analisi contenuto articolo fallita",
-      "coverImageError": "Caricamento immagine di copertina articolo fallito"
+      "coverImageError": "Caricamento immagine di copertina articolo fallito",
+      "attachmentsLoadFailed": "Caricamento allegati fallito"
     },
     "bookmark": {
       "added": "Segnalibro aggiunto",
@@ -956,6 +965,10 @@
       "userIdRequired": "ID utente obbligatorio",
       "loginRequired": "Devi accedere per aggiungere tag",
       "alreadyAdded": "Hai già aggiunto questo tag",
+      "added": "Tag aggiunto",
+      "addedDesc": "\"{label}\" è stato aggiunto con successo.",
+      "removed": "Tag rimosso",
+      "removedDesc": "\"{label}\" è stato rimosso con successo.",
       "addFailed": "Aggiunta tag fallita",
       "addFailedDesc": "Impossibile aggiungere \"{label}\". Riprova.",
       "removeFailed": "Rimozione tag fallita",
@@ -974,6 +987,16 @@
       "maxFilesPartial": "Massimo {max} file consentiti. Alcuni file non sono stati aggiunti.",
       "unsupportedType": "\"{name}\" ha tipo non supportato \"{type}\". Formati supportati: {formats}.",
       "fileTooLarge": "\"{name}\" supera la dimensione massima di {maxSize}."
+    },
+    "status": {
+      "updateFailed": "Impossibile aggiornare lo stato. Riprova.",
+      "userNotLoaded": "Profilo utente non caricato. Riprova."
+    },
+    "fullscreen": {
+      "error": "Errore durante l'attivazione della modalità schermo intero"
+    },
+    "logout": {
+      "failed": "Disconnessione fallita. Riprova."
     }
   },
   "empty": {
@@ -1009,6 +1032,7 @@
     "follow": "Segui",
     "unfollow": "Non seguire",
     "following": "Seguiti",
+    "editProfile": "Modifica profilo",
     "me": "Io",
     "tags": "TAG",
     "posts": "POST",
@@ -1054,7 +1078,7 @@
     "hotTags": "Tag di tendenza",
     "activeUsers": "Utenti attivi",
     "trendingPosts": "Post di tendenza",
-    "postsCount": "{count} post",
+    "postsCount": "{count} post questo mese",
     "failedToLoadUsers": "Caricamento utenti fallito",
     "failedToLoadTags": "Caricamento tag fallito",
     "noUsersToShow": "Nessun utente da mostrare",
@@ -1182,7 +1206,6 @@
     "emoji": "Emoji",
     "richText": "Testo formattato",
     "markdown": "Markdown",
-    "clearToSwitch": "Cancella il contenuto per cambiare modalità",
     "placeholder": "Inizia a scrivere il tuo capolavoro",
     "toolbarAriaLabel": "Barra degli strumenti per la modifica Markdown",
     "warningApproaching": "Ti stai avvicinando al limite massimo di caratteri.",

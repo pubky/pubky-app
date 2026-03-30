@@ -1,6 +1,7 @@
 import type { Root, Paragraph, Text, Link, PhrasingContent, Parent, RootContent } from 'mdast';
 import { ReactNode } from 'react';
 import { visit } from 'unist-util-visit';
+import { TRUNCATION_LIMIT } from './PostText.constants';
 
 // We assign full code blocks without a language specified as plaintext (ex. ```...```)
 export const remarkPlaintextCodeblock = () => (tree: Root) => {
@@ -169,6 +170,59 @@ export const extractTextFromChildren = (children: ReactNode) =>
     : Array.isArray(children) && typeof children[0] === 'string'
       ? children[0]
       : '';
+
+// Truncate text content within an AST paragraph node at a character limit,
+// preserving formatting structure (bold, italic, links, etc.)
+const truncateAstParagraph = (paragraph: Paragraph, limit: number): void => {
+  let remaining = limit;
+
+  const truncateChildren = (children: PhrasingContent[]): PhrasingContent[] => {
+    const result: PhrasingContent[] = [];
+
+    for (const child of children) {
+      if (remaining <= 0) break;
+
+      if (child.type === 'text') {
+        const text = (child as Text).value;
+        if (text.length <= remaining) {
+          result.push(child);
+          remaining -= text.length;
+        } else {
+          result.push({
+            type: 'text',
+            value: truncateAtWordBoundary(text, remaining),
+          } as Text);
+          remaining = 0;
+        }
+      } else if ('children' in child) {
+        const truncatedChildren = truncateChildren((child as Parent).children as PhrasingContent[]);
+        if (truncatedChildren.length > 0) {
+          result.push({ ...child, children: truncatedChildren } as PhrasingContent);
+        }
+      } else {
+        result.push(child);
+      }
+    }
+
+    return result;
+  };
+
+  paragraph.children = truncateChildren(paragraph.children);
+};
+
+// Remark plugin for articles: extracts the first paragraph and truncates if needed.
+export const remarkExtractFirstParagraph = () => (tree: Root) => {
+  const firstParagraphIndex = tree.children.findIndex((child) => child.type === 'paragraph');
+  if (firstParagraphIndex === -1) return;
+
+  const firstParagraph = tree.children[firstParagraphIndex] as Paragraph;
+  tree.children = [firstParagraph];
+
+  const totalText = extractText(firstParagraph);
+  if (totalText.length > TRUNCATION_LIMIT) {
+    truncateAstParagraph(firstParagraph, TRUNCATION_LIMIT);
+  }
+};
 
 // Truncate text at word boundaries to avoid cutting mid-word, mid-markdown, or mid-URL.
 // Falls back to hard cut if no suitable word boundary is found within 80% of the limit.

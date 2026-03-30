@@ -1,0 +1,44 @@
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
+
+exports[`UserInfoPopoverHeader - Snapshots > matches snapshot 1`] = `
+<div
+  class="flex min-w-0 items-center gap-2"
+  data-testid="container"
+>
+  <a
+    class="shrink-0"
+    data-override-defaults="true"
+    data-testid="profile-link"
+    href="/profile/snapshotUser"
+  >
+    <div
+      data-testid="avatar"
+    >
+      Snapshot User
+    </div>
+  </a>
+  <div
+    class="mx-auto w-full flex-col flex min-w-0 flex-1 items-start overflow-hidden"
+    data-testid="container"
+  >
+    <a
+      data-override-defaults="true"
+      data-testid="profile-link"
+      href="/profile/snapshotUser"
+    >
+      <p
+        class="max-w-full cursor-pointer truncate text-sm leading-5 font-bold text-foreground"
+        data-testid="typography"
+      >
+        Snapshot User
+      </p>
+    </a>
+    <p
+      class="text-xs leading-4 font-medium tracking-[1.2px] text-muted-foreground uppercase"
+      data-testid="typography"
+    >
+      snapshot123
+    </p>
+  </div>
+</div>
+`;

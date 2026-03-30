@@ -10,6 +10,7 @@ import type {
   UseSearchAutocompleteResult,
   AutocompleteTag,
 } from './useSearchAutocomplete.types';
+import { TAG_MAX_LENGTH } from '@/config/posts';
 import {
   AUTOCOMPLETE_DEBOUNCE_MS,
   AUTOCOMPLETE_TAG_LIMIT,
@@ -52,8 +53,8 @@ export function useSearchAutocomplete({
         let userByNamePromise: Promise<string[]> | null = null;
         let userByIdPromise: Promise<string[]> | null = null;
 
-        // Search tags (skip for explicit user ID searches)
-        if (!isExplicitIdSearch) {
+        // Search tags (skip for explicit user ID searches and over-length queries)
+        if (!isExplicitIdSearch && searchQuery.length <= TAG_MAX_LENGTH) {
           tagPromise = Core.SearchController.getTagsByPrefix({
             prefix: searchQuery,
             limit: AUTOCOMPLETE_TAG_LIMIT,
