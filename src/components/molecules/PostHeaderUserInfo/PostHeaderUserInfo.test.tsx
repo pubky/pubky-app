@@ -152,7 +152,7 @@ vi.mock('@/molecules', async (importOriginal) => {
   const actual = await importOriginal<typeof import('@/molecules')>();
   return {
     ...actual,
-    PostHeaderUserInfoPopoverWrapper: ({
+    UserInfoPopover: ({
       children,
       userId: _userId,
       userName,
@@ -178,7 +178,7 @@ vi.mock('@/molecules', async (importOriginal) => {
         </div>
       </div>
     ),
-    PostHeaderTimestamp: ({ timeAgo }: { timeAgo: string }) => (
+    PostHeaderTimestamp: ({ timeAgo }: { timeAgo: string; indexedAt: Date }) => (
       <span data-testid="post-header-timestamp">{timeAgo}</span>
     ),
   };
@@ -295,7 +295,7 @@ describe('PostHeaderUserInfo', () => {
     expect(content).toHaveAttribute('data-side', 'top');
     expect(content).toHaveAttribute('data-side-offset', '1');
   });
-  // Popover content details (bio/follow actions) are covered by PostHeaderUserInfoPopoverWrapper + hooks tests.
+  // Popover content details (bio/follow actions) are covered by UserInfoPopover + hooks tests.
 
   it('renders without popover when showPopover is false', () => {
     render(<PostHeaderUserInfo userId="user123" userName="Test User" showPopover={false} />);
@@ -339,7 +339,14 @@ describe('PostHeaderUserInfo', () => {
   });
 
   it('renders timeAgo when provided', () => {
-    render(<PostHeaderUserInfo userId="user123" userName="Test User" timeAgo="2h ago" />);
+    render(
+      <PostHeaderUserInfo
+        userId="user123"
+        userName="Test User"
+        timeAgo="2h ago"
+        indexedAt={new Date('2025-01-15T10:00:00Z')}
+      />,
+    );
 
     expect(screen.getByTestId('post-header-timestamp')).toBeInTheDocument();
     expect(screen.getByText('2h ago')).toBeInTheDocument();
@@ -562,7 +569,12 @@ describe('PostHeaderUserInfo - Snapshots', () => {
 
   it('matches snapshot with timeAgo', () => {
     const { container } = render(
-      <PostHeaderUserInfo userId="snapshotUserKey" userName="Snapshot User" timeAgo="5m ago" />,
+      <PostHeaderUserInfo
+        userId="snapshotUserKey"
+        userName="Snapshot User"
+        timeAgo="5m ago"
+        indexedAt={new Date('2025-03-01T12:00:00Z')}
+      />,
     );
     expect(container.firstChild).toMatchSnapshot();
   });
@@ -575,6 +587,7 @@ describe('PostHeaderUserInfo - Snapshots', () => {
         avatarUrl="https://example.com/avatar.png"
         size="large"
         timeAgo="1h ago"
+        indexedAt={new Date('2025-03-01T13:00:00Z')}
       />,
     );
     expect(container.firstChild).toMatchSnapshot();

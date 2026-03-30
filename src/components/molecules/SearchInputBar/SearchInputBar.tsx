@@ -29,7 +29,7 @@ export function SearchInputBar({
       data-testid="search-input-bar"
       data-cy="header-search"
       className={Libs.cn(
-        'relative flex h-12 items-center gap-3 border border-border px-6 py-3',
+        'relative flex h-12 min-w-0 items-center gap-3 border border-border px-6 py-3',
         isFocused ? 'rounded-t-2xl rounded-b-none border-b-transparent' : 'rounded-full',
       )}
       style={isFocused ? SEARCH_INPUT_EXPANDED_STYLE : SEARCH_CLOSED_STYLE}
@@ -38,12 +38,18 @@ export function SearchInputBar({
       {hasActiveTags && (
         <Atoms.Container
           overrideDefaults
-          className="flex shrink-0 items-center gap-2.5 py-2"
+          className="flex min-w-0 items-center gap-2.5 overflow-x-auto py-2"
           role="list"
           aria-label={t('activeTags')}
         >
           {activeTags.map((tag) => (
-            <Molecules.PostTag key={tag} label={tag} showClose onClose={() => onTagRemove(tag)} />
+            <Molecules.PostTag
+              key={tag}
+              label={tag}
+              showClose
+              onClose={() => onTagRemove(tag)}
+              className="max-w-none shrink-0"
+            />
           ))}
         </Atoms.Container>
       )}
@@ -65,8 +71,8 @@ export function SearchInputBar({
         aria-expanded={isExpanded}
         aria-haspopup={suggestionsId ? 'dialog' : undefined}
         className={Libs.cn(
-          'h-auto min-w-20 flex-1 border-none bg-transparent pr-0 text-base font-medium text-foreground md:text-base',
-          hasActiveTags ? 'pl-2.5' : 'pl-0',
+          'h-auto flex-1 border-none bg-transparent pr-0 text-base font-medium text-foreground md:text-base',
+          hasActiveTags ? 'min-w-8 pl-2.5' : 'min-w-20 pl-0',
         )}
       />
 

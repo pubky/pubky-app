@@ -32,7 +32,7 @@ exports[`InitializedMDXEditor - Snapshots > matches snapshot in markdown mode 1`
         </svg>
       </button>
       <button
-        class="size-7 cursor-default rounded disabled:pointer-events-auto"
+        class="size-7 cursor-default rounded"
         data-size="icon"
         data-testid="markdown-richtext-button"
         data-variant="ghost"
@@ -59,7 +59,7 @@ exports[`InitializedMDXEditor - Snapshots > matches snapshot in markdown mode 1`
     class="dark-theme cursor-auto hidden"
     data-content-editable-class="prose prose-neutral prose-invert prose-code:before:content-none prose-code:after:content-none max-w-none px-0! pb-0! pt-4! max-h-[60dvh] overflow-y-auto"
     data-placeholder="Start writing your masterpiece"
-    data-plugins-count="9"
+    data-plugins-count="10"
     data-testid="mdx-editor"
     markdown=""
   >
@@ -97,6 +97,11 @@ exports[`InitializedMDXEditor - Snapshots > matches snapshot in markdown mode 1`
         Insert Break
       </button>
       <button
+        data-testid="create-link"
+      >
+        Create Link
+      </button>
+      <button
         data-testid="code-toggle"
       >
         Code
@@ -120,7 +125,6 @@ exports[`InitializedMDXEditor - Snapshots > matches snapshot in markdown mode 1`
         </svg>
       </button>
       <button
-        class=""
         data-testid="button-with-tooltip-markdown"
         title="Markdown"
       >
@@ -176,7 +180,7 @@ exports[`InitializedMDXEditor - Snapshots > matches snapshot with approaching ma
           </svg>
         </button>
         <button
-          class="size-7 cursor-default rounded disabled:pointer-events-auto"
+          class="size-7 cursor-default rounded"
           data-size="icon"
           data-testid="markdown-richtext-button"
           data-variant="ghost"
@@ -203,7 +207,7 @@ exports[`InitializedMDXEditor - Snapshots > matches snapshot with approaching ma
       class="dark-theme cursor-auto"
       data-content-editable-class="prose prose-neutral prose-invert prose-code:before:content-none prose-code:after:content-none max-w-none px-0! pb-0! pt-4! max-h-[60dvh] overflow-y-auto"
       data-placeholder="Start writing your masterpiece"
-      data-plugins-count="9"
+      data-plugins-count="10"
       data-testid="mdx-editor"
       markdown=""
     >
@@ -241,6 +245,11 @@ exports[`InitializedMDXEditor - Snapshots > matches snapshot with approaching ma
           Insert Break
         </button>
         <button
+          data-testid="create-link"
+        >
+          Create Link
+        </button>
+        <button
           data-testid="code-toggle"
         >
           Code
@@ -264,10 +273,8 @@ exports[`InitializedMDXEditor - Snapshots > matches snapshot with approaching ma
           </svg>
         </button>
         <button
-          class="opacity-50!"
-          data-testid="button-with-tooltip-clear content to switch modes"
-          disabled=""
-          title="Clear content to switch modes"
+          data-testid="button-with-tooltip-markdown"
+          title="Markdown"
         >
           <svg
             class="size-6"
@@ -340,7 +347,7 @@ exports[`InitializedMDXEditor - Snapshots > matches snapshot with custom classNa
         </svg>
       </button>
       <button
-        class="size-7 cursor-default rounded disabled:pointer-events-auto"
+        class="size-7 cursor-default rounded"
         data-size="icon"
         data-testid="markdown-richtext-button"
         data-variant="ghost"
@@ -367,7 +374,7 @@ exports[`InitializedMDXEditor - Snapshots > matches snapshot with custom classNa
     class="custom-editor-class"
     data-content-editable-class="prose prose-neutral prose-invert prose-code:before:content-none prose-code:after:content-none max-w-none px-0! pb-0! pt-4! max-h-[60dvh] overflow-y-auto"
     data-placeholder="Start writing your masterpiece"
-    data-plugins-count="9"
+    data-plugins-count="10"
     data-testid="mdx-editor"
     markdown=""
   >
@@ -405,6 +412,11 @@ exports[`InitializedMDXEditor - Snapshots > matches snapshot with custom classNa
         Insert Break
       </button>
       <button
+        data-testid="create-link"
+      >
+        Create Link
+      </button>
+      <button
         data-testid="code-toggle"
       >
         Code
@@ -428,7 +440,6 @@ exports[`InitializedMDXEditor - Snapshots > matches snapshot with custom classNa
         </svg>
       </button>
       <button
-        class=""
         data-testid="button-with-tooltip-markdown"
         title="Markdown"
       >
@@ -483,7 +494,7 @@ exports[`InitializedMDXEditor - Snapshots > matches snapshot with default props 
         </svg>
       </button>
       <button
-        class="size-7 cursor-default rounded disabled:pointer-events-auto"
+        class="size-7 cursor-default rounded"
         data-size="icon"
         data-testid="markdown-richtext-button"
         data-variant="ghost"
@@ -510,7 +521,7 @@ exports[`InitializedMDXEditor - Snapshots > matches snapshot with default props 
     class="dark-theme cursor-auto"
     data-content-editable-class="prose prose-neutral prose-invert prose-code:before:content-none prose-code:after:content-none max-w-none px-0! pb-0! pt-4! max-h-[60dvh] overflow-y-auto"
     data-placeholder="Start writing your masterpiece"
-    data-plugins-count="9"
+    data-plugins-count="10"
     data-testid="mdx-editor"
     markdown=""
   >
@@ -548,6 +559,11 @@ exports[`InitializedMDXEditor - Snapshots > matches snapshot with default props 
         Insert Break
       </button>
       <button
+        data-testid="create-link"
+      >
+        Create Link
+      </button>
+      <button
         data-testid="code-toggle"
       >
         Code
@@ -571,7 +587,6 @@ exports[`InitializedMDXEditor - Snapshots > matches snapshot with default props 
         </svg>
       </button>
       <button
-        class=""
         data-testid="button-with-tooltip-markdown"
         title="Markdown"
       >
@@ -626,7 +641,7 @@ exports[`InitializedMDXEditor - Snapshots > matches snapshot with emoji picker o
         </svg>
       </button>
       <button
-        class="size-7 cursor-default rounded disabled:pointer-events-auto"
+        class="size-7 cursor-default rounded"
         data-size="icon"
         data-testid="markdown-richtext-button"
         data-variant="ghost"
@@ -653,7 +668,7 @@ exports[`InitializedMDXEditor - Snapshots > matches snapshot with emoji picker o
     class="dark-theme cursor-auto"
     data-content-editable-class="prose prose-neutral prose-invert prose-code:before:content-none prose-code:after:content-none max-w-none px-0! pb-0! pt-4! max-h-[60dvh] overflow-y-auto"
     data-placeholder="Start writing your masterpiece"
-    data-plugins-count="9"
+    data-plugins-count="10"
     data-testid="mdx-editor"
     markdown=""
   >
@@ -691,6 +706,11 @@ exports[`InitializedMDXEditor - Snapshots > matches snapshot with emoji picker o
         Insert Break
       </button>
       <button
+        data-testid="create-link"
+      >
+        Create Link
+      </button>
+      <button
         data-testid="code-toggle"
       >
         Code
@@ -714,7 +734,6 @@ exports[`InitializedMDXEditor - Snapshots > matches snapshot with emoji picker o
         </svg>
       </button>
       <button
-        class=""
         data-testid="button-with-tooltip-markdown"
         title="Markdown"
       >
@@ -778,7 +797,7 @@ exports[`InitializedMDXEditor - Snapshots > matches snapshot with markdown conte
         </svg>
       </button>
       <button
-        class="size-7 cursor-default rounded disabled:pointer-events-auto"
+        class="size-7 cursor-default rounded"
         data-size="icon"
         data-testid="markdown-richtext-button"
         data-variant="ghost"
@@ -805,7 +824,7 @@ exports[`InitializedMDXEditor - Snapshots > matches snapshot with markdown conte
     class="dark-theme cursor-auto"
     data-content-editable-class="prose prose-neutral prose-invert prose-code:before:content-none prose-code:after:content-none max-w-none px-0! pb-0! pt-4! max-h-[60dvh] overflow-y-auto"
     data-placeholder="Start writing your masterpiece"
-    data-plugins-count="9"
+    data-plugins-count="10"
     data-testid="mdx-editor"
     markdown="# Test Content"
   >
@@ -843,6 +862,11 @@ exports[`InitializedMDXEditor - Snapshots > matches snapshot with markdown conte
         Insert Break
       </button>
       <button
+        data-testid="create-link"
+      >
+        Create Link
+      </button>
+      <button
         data-testid="code-toggle"
       >
         Code
@@ -866,10 +890,8 @@ exports[`InitializedMDXEditor - Snapshots > matches snapshot with markdown conte
         </svg>
       </button>
       <button
-        class="opacity-50!"
-        data-testid="button-with-tooltip-clear content to switch modes"
-        disabled=""
-        title="Clear content to switch modes"
+        data-testid="button-with-tooltip-markdown"
+        title="Markdown"
       >
         <svg
           class="size-6"
@@ -923,7 +945,7 @@ exports[`InitializedMDXEditor - Snapshots > matches snapshot with reached max le
           </svg>
         </button>
         <button
-          class="size-7 cursor-default rounded disabled:pointer-events-auto"
+          class="size-7 cursor-default rounded"
           data-size="icon"
           data-testid="markdown-richtext-button"
           data-variant="ghost"
@@ -950,7 +972,7 @@ exports[`InitializedMDXEditor - Snapshots > matches snapshot with reached max le
       class="dark-theme cursor-auto"
       data-content-editable-class="prose prose-neutral prose-invert prose-code:before:content-none prose-code:after:content-none max-w-none px-0! pb-0! pt-4! max-h-[60dvh] overflow-y-auto"
       data-placeholder="Start writing your masterpiece"
-      data-plugins-count="9"
+      data-plugins-count="10"
       data-testid="mdx-editor"
       markdown=""
     >
@@ -988,6 +1010,11 @@ exports[`InitializedMDXEditor - Snapshots > matches snapshot with reached max le
           Insert Break
         </button>
         <button
+          data-testid="create-link"
+        >
+          Create Link
+        </button>
+        <button
           data-testid="code-toggle"
         >
           Code
@@ -1011,10 +1038,8 @@ exports[`InitializedMDXEditor - Snapshots > matches snapshot with reached max le
           </svg>
         </button>
         <button
-          class="opacity-50!"
-          data-testid="button-with-tooltip-clear content to switch modes"
-          disabled=""
-          title="Clear content to switch modes"
+          data-testid="button-with-tooltip-markdown"
+          title="Markdown"
         >
           <svg
             class="size-6"
@@ -1088,7 +1113,7 @@ exports[`InitializedMDXEditor - Snapshots > matches snapshot with readOnly prop 
         </svg>
       </button>
       <button
-        class="size-7 cursor-default rounded disabled:pointer-events-auto"
+        class="size-7 cursor-default rounded"
         data-size="icon"
         data-testid="markdown-richtext-button"
         data-variant="ghost"
@@ -1117,7 +1142,7 @@ exports[`InitializedMDXEditor - Snapshots > matches snapshot with readOnly prop 
     class="dark-theme cursor-auto"
     data-content-editable-class="prose prose-neutral prose-invert prose-code:before:content-none prose-code:after:content-none max-w-none px-0! pb-0! pt-4! max-h-[60dvh] overflow-y-auto"
     data-placeholder="Start writing your masterpiece"
-    data-plugins-count="9"
+    data-plugins-count="10"
     data-readonly="true"
     data-testid="mdx-editor"
     markdown=""
@@ -1156,6 +1181,11 @@ exports[`InitializedMDXEditor - Snapshots > matches snapshot with readOnly prop 
         Insert Break
       </button>
       <button
+        data-testid="create-link"
+      >
+        Create Link
+      </button>
+      <button
         data-testid="code-toggle"
       >
         Code
@@ -1179,7 +1209,6 @@ exports[`InitializedMDXEditor - Snapshots > matches snapshot with readOnly prop 
         </svg>
       </button>
       <button
-        class=""
         data-testid="button-with-tooltip-markdown"
         title="Markdown"
       >

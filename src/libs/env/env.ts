@@ -184,6 +184,12 @@ const envSchema = z.object({
     .default('26')
     .transform((val) => parseInt(val, 10)),
 
+  // =============================================================================
+  // ANALYTICS (Plausible)
+  // =============================================================================
+  NEXT_PUBLIC_PLAUSIBLE_DOMAIN: z.string().optional(),
+  NEXT_PUBLIC_PLAUSIBLE_SCRIPT_URL: z.url().optional(),
+
   NEXT_PUBLIC_PREVIEW_IMAGE: z.string().optional().default('/preview.webp'),
   NEXT_PUBLIC_SITE_NAME: z.string().optional().default('Pubky App'),
   NEXT_PUBLIC_LOCALE: z.string().optional().default('en_US'),
@@ -322,6 +328,8 @@ function parseEnv(): z.infer<typeof envSchema> {
     SUPPORT_API_ACCESS_TOKEN: process.env.SUPPORT_API_ACCESS_TOKEN,
     SUPPORT_ACCOUNT_ID: process.env.SUPPORT_ACCOUNT_ID,
     SUPPORT_FEEDBACK_INBOX_ID: process.env.SUPPORT_FEEDBACK_INBOX_ID,
+    NEXT_PUBLIC_PLAUSIBLE_DOMAIN: process.env.NEXT_PUBLIC_PLAUSIBLE_DOMAIN,
+    NEXT_PUBLIC_PLAUSIBLE_SCRIPT_URL: process.env.NEXT_PUBLIC_PLAUSIBLE_SCRIPT_URL,
     NEXT_PUBLIC_PREVIEW_IMAGE: process.env.NEXT_PUBLIC_PREVIEW_IMAGE,
     NEXT_PUBLIC_DEFAULT_URL: process.env.NEXT_PUBLIC_DEFAULT_URL,
     NEXT_PUBLIC_LOCALE: process.env.NEXT_PUBLIC_LOCALE,

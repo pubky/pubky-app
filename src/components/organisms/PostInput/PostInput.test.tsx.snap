@@ -12,6 +12,8 @@ exports[`PostInput - Snapshots > matches snapshot for article mode 1`] = `
     <input
       class="h-auto border-none p-0 text-3xl font-bold md:text-6xl"
       data-testid="input"
+      placeholder="Article Title"
+      value="Test Article Title"
     />
     <div
       data-is-reply="true"
@@ -174,6 +176,8 @@ exports[`PostInput - Snapshots > matches snapshot for edit variant with article 
     <input
       class="h-auto border-none p-0 text-3xl font-bold md:text-6xl"
       data-testid="input"
+      placeholder="Article Title"
+      value="Existing Article Title"
     />
     <div
       data-is-reply="true"

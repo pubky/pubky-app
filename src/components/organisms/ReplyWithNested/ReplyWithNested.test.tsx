@@ -8,8 +8,6 @@ const mocks = vi.hoisted(() => ({
 }));
 
 vi.mock('@/hooks', () => ({
-  DEFAULT_MAX_DEPTH: 3,
-  DEFAULT_MAX_NESTED: 10,
   useNestedReplies: (...args: unknown[]) => {
     // Depth-aware: only return nested replies at depth 0 to prevent infinite recursion
     const options = args[1] as { depth?: number } | undefined;
@@ -29,6 +27,7 @@ vi.mock('@/hooks', () => ({
 }));
 
 vi.mock('@/hooks/useNestedReplies/useNestedReplies.constants', () => ({
+  DEFAULT_MAX_DEPTH: 3,
   AUTO_COLLAPSE_THRESHOLD: 4,
 }));
 
@@ -203,6 +202,14 @@ describe('ReplyWithNested', () => {
 
     fireEvent.click(screen.getByText('author:reply-1'));
     expect(mocks.mockOnPostClick).toHaveBeenCalledWith('author:reply-1');
+  });
+
+  it('applies min-w-0 to the nested sub-reply column so long usernames truncate', () => {
+    render(<ReplyWithNested replyId="author:reply-1" onPostClick={mocks.mockOnPostClick} />);
+
+    const nestedPost = screen.getByText('author:nested-1');
+    const nestedColumn = nestedPost.closest('.flex-1.min-w-0');
+    expect(nestedColumn).toBeInTheDocument();
   });
 
   it('passes depth options to useNestedReplies', () => {

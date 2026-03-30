@@ -288,6 +288,8 @@
     "signIn": {
       "title": "Entre no <highlight>Pubky.</highlight>",
       "subtitle": "Autorize com o Pubky Ring para entrar.",
+      "progressTitle": "Entrando.",
+      "progressSubtitle": "Aguarde enquanto sua experiência no Pubky é carregada.",
       "generating": "Gerando Código QR...",
       "generatingShort": "Gerando...",
 
@@ -687,7 +689,8 @@
       "subtitle2": "Voce pode buscar por varias tags separadas por virgulas."
     },
     "userSuggestion": "Usuário {name} ({pubky})",
-    "viewProfile": "Ver perfil de {name}"
+    "viewProfile": "Ver perfil de {name}",
+    "invalidTag": "Tags devem ter 20 caracteres ou menos e não podem conter caracteres especiais"
   },
   "feedback": {
     "title": "Enviar Feedback",
@@ -742,7 +745,7 @@
       "repostedPost": "repostou seu post",
       "mentionedYou": "mencionou você em um post",
       "deletedPost": "excluiu um post",
-      "editedPost": "editou um post",
+      "editedPost": "editou um post com que você interagiu",
       "fallback": "Nova notificação"
     },
     "settings": {
@@ -899,7 +902,8 @@
       "failedToLoadPosts": "Falha ao carregar novos posts",
       "failedToLoadPostsDesc": "Nao foi possivel exibir novos posts. Por favor, tente novamente.",
       "parseError": "Falha ao processar conteúdo do artigo",
-      "coverImageError": "Falha ao carregar imagem de capa do artigo"
+      "coverImageError": "Falha ao carregar imagem de capa do artigo",
+      "attachmentsLoadFailed": "Falha ao carregar anexos da publicação"
     },
     "bookmark": {
       "added": "Bookmark adicionado",
@@ -963,6 +967,10 @@
       "userIdRequired": "ID do usuario e obrigatório",
       "loginRequired": "Voce precisa estar logado para adicionar tags",
       "alreadyAdded": "Voce ja adicionou esta tag",
+      "added": "Tag adicionada",
+      "addedDesc": "\"{label}\" foi adicionada com sucesso.",
+      "removed": "Tag removida",
+      "removedDesc": "\"{label}\" foi removida com sucesso.",
       "addFailed": "Falha ao adicionar tag",
       "addFailedDesc": "Nao foi possivel adicionar \"{label}\". Por favor, tente novamente.",
       "removeFailed": "Falha ao remover tag",
@@ -981,6 +989,16 @@
       "maxFilesPartial": "Maximo de {max} arquivos permitidos. Alguns arquivos não foram adicionados.",
       "unsupportedType": "\"{name}\" tem tipo não suportado \"{type}\". Formatos suportados: {formats}.",
       "fileTooLarge": "\"{name}\" excede o tamanho máximo de {maxSize}."
+    },
+    "status": {
+      "updateFailed": "Falha ao atualizar status. Por favor, tente novamente.",
+      "userNotLoaded": "Perfil do usuário não carregado. Por favor, tente novamente."
+    },
+    "fullscreen": {
+      "error": "Erro ao tentar habilitar tela cheia"
+    },
+    "logout": {
+      "failed": "Falha ao sair. Por favor, tente novamente."
     }
   },
   "empty": {
@@ -1016,6 +1034,7 @@
     "follow": "Seguir",
     "unfollow": "Deixar de seguir",
     "following": "Seguindo",
+    "editProfile": "Editar perfil",
     "me": "Eu",
     "tags": "TAGS",
     "posts": "POSTS",
@@ -1189,7 +1208,6 @@
     "emoji": "Emoji",
     "richText": "Texto formatado",
     "markdown": "Markdown",
-    "clearToSwitch": "Limpe o conteúdo para trocar de modo",
     "placeholder": "Comece a escrever sua obra-prima",
     "toolbarAriaLabel": "Barra de ferramentas de edição Markdown",
     "warningApproaching": "Você está se aproximando do limite máximo de caracteres.",

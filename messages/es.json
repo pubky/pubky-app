@@ -288,6 +288,8 @@
     "signIn": {
       "title": "Inicia sesión en <highlight>Pubky.</highlight>",
       "subtitle": "Autoriza con Pubky Ring para iniciar sesión.",
+      "progressTitle": "Iniciando sesión.",
+      "progressSubtitle": "Espera mientras se carga tu experiencia en Pubky.",
       "generating": "Generando código QR...",
       "generatingShort": "Generando...",
 
@@ -687,7 +689,8 @@
       "subtitle2": "Puedes buscar multiples etiquetas separadas por comas."
     },
     "userSuggestion": "Usuario {name} ({pubky})",
-    "viewProfile": "Ver perfil de {name}"
+    "viewProfile": "Ver perfil de {name}",
+    "invalidTag": "Las etiquetas deben tener 20 caracteres o menos y no pueden contener caracteres especiales"
   },
   "feedback": {
     "title": "Enviar comentarios",
@@ -742,7 +745,7 @@
       "repostedPost": "republicó tu publicación",
       "mentionedYou": "te mencionó en una publicación",
       "deletedPost": "eliminó una publicación",
-      "editedPost": "editó una publicación",
+      "editedPost": "editó una publicación con la que interactuaste",
       "fallback": "Nueva notificación"
     },
     "settings": {
@@ -899,7 +902,8 @@
       "failedToLoadPosts": "Error al cargar nuevas publicaciónes",
       "failedToLoadPostsDesc": "No se pueden mostrar nuevas publicaciónes. Por favor intenta de nuevo.",
       "parseError": "Error al analizar contenido del articulo",
-      "coverImageError": "Error al cargar imagen de portada del articulo"
+      "coverImageError": "Error al cargar imagen de portada del articulo",
+      "attachmentsLoadFailed": "Error al cargar los archivos adjuntos"
     },
     "bookmark": {
       "added": "Favorito agregado",
@@ -963,6 +967,10 @@
       "userIdRequired": "ID de usuario requerido",
       "loginRequired": "Debes iniciar sesión para agregar etiquetas",
       "alreadyAdded": "Ya has agregado esta etiqueta",
+      "added": "Etiqueta agregada",
+      "addedDesc": "Se agregó correctamente \"{label}\".",
+      "removed": "Etiqueta eliminada",
+      "removedDesc": "Se eliminó correctamente \"{label}\".",
       "addFailed": "Error al agregar etiqueta",
       "addFailedDesc": "No se pudo agregar \"{label}\". Por favor intenta de nuevo.",
       "removeFailed": "Error al eliminar etiqueta",
@@ -981,6 +989,16 @@
       "maxFilesPartial": "Maximo {max} archivos permitidos. Algunos archivos no fueron agregados.",
       "unsupportedType": "\"{name}\" tiene tipo no soportado \"{type}\". Formatos soportados: {formats}.",
       "fileTooLarge": "\"{name}\" excede el tamaño maximo de {maxSize}."
+    },
+    "status": {
+      "updateFailed": "Error al actualizar el estado. Por favor intenta de nuevo.",
+      "userNotLoaded": "Perfil de usuario no cargado. Por favor intenta de nuevo."
+    },
+    "fullscreen": {
+      "error": "Error al intentar habilitar pantalla completa"
+    },
+    "logout": {
+      "failed": "Error al cerrar sesión. Por favor intenta de nuevo."
     }
   },
   "empty": {
@@ -1016,6 +1034,7 @@
     "follow": "Seguir",
     "unfollow": "Dejar de seguir",
     "following": "Siguiendo",
+    "editProfile": "Editar perfil",
     "me": "Yo",
     "tags": "ETIQUETAS",
     "posts": "PUBLICACIONES",
@@ -1189,7 +1208,6 @@
     "emoji": "Emoji",
     "richText": "Texto enriquecido",
     "markdown": "Markdown",
-    "clearToSwitch": "Borra el contenido para cambiar de modo",
     "placeholder": "Empieza a escribir tu obra maestra",
     "toolbarAriaLabel": "Barra de herramientas de edición Markdown",
     "warningApproaching": "Te estás acercando al límite máximo de caracteres.",

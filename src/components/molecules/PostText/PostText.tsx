@@ -4,6 +4,7 @@ import { memo, useMemo } from 'react';
 import Markdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import {
+  remarkExtractFirstParagraph,
   remarkDisallowMarkdownLinks,
   remarkHashtags,
   remarkMentions,
@@ -31,22 +32,23 @@ import { POST_ROUTES } from '@/app/routes';
  * - Hashtag parsing (#tag → clickable search link)
  * - Mention parsing (pk:... or pubky... → clickable profile link)
  * - URL detection and linking
- * - Content truncation with "Show more" on non-post pages (500 char limit)
+ * - Content truncation with "Show more" on non-post pages (TRUNCATION_LIMIT char limit)
  *
  * Memoization prevents unnecessary re-renders when TTL refreshes update IndexedDB records
  * without changes to the actual post content.
  */
-export const PostText = memo(function PostText({ content, isArticle, className }: PostTextProps) {
+export const PostText = memo(function PostText({ content, isArticle, onLinkClick, className }: PostTextProps) {
   const pathname = usePathname();
+  const onPostPage = pathname.startsWith(POST_ROUTES.POST);
 
   const contentTruncated =
-    content.length > TRUNCATION_LIMIT && !pathname.startsWith(POST_ROUTES.POST)
+    !isArticle && !onPostPage && content.length > TRUNCATION_LIMIT
       ? truncateAtWordBoundary(content, TRUNCATION_LIMIT)
       : null;
 
   const remarkPlugins = [
     remarkGfm,
-    remarkDisallowMarkdownLinks,
+    ...(isArticle ? (!onPostPage ? [remarkExtractFirstParagraph] : []) : [remarkDisallowMarkdownLinks]),
     remarkPlaintextCodeblock,
     remarkHashtags,
     remarkMentions,
@@ -98,7 +100,13 @@ export const PostText = memo(function PostText({ content, isArticle, className }
                 {...rest}
                 target="_blank"
                 rel="noopener noreferrer"
-                onClick={(e) => e.stopPropagation()}
+                onClick={(e) => {
+                  e.stopPropagation();
+
+                  if (onLinkClick && rest.href) {
+                    onLinkClick(rest.href, e);
+                  }
+                }}
                 className={Libs.cn(className, 'cursor-pointer text-brand transition-colors hover:text-brand/80')}
               >
                 {children}
@@ -198,7 +206,7 @@ export const PostText = memo(function PostText({ content, isArticle, className }
       </Markdown>
 
       {/* No stopPropagation on this element therefore click takes user to post via parent element */}
-      {contentTruncated && !isArticle && (
+      {contentTruncated && (
         <Atoms.Button
           overrideDefaults
           aria-label="Show full post content"

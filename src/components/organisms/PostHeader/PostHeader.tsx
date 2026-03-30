@@ -28,7 +28,6 @@ export function PostHeader({
   // Compute avatar URL from user details (only if the user has an image)
   const avatarUrl = Hooks.useAvatarUrl(userDetails);
 
-  // Format relative time with localization support
   const { formatRelativeTime } = Hooks.useRelativeTime();
 
   const isLoading = !userDetails || (!isReplyInput && !postDetails);
@@ -41,7 +40,8 @@ export function PostHeader({
     );
   }
 
-  const timeAgo = !isReplyInput && postDetails ? formatRelativeTime(new Date(postDetails.indexed_at)) : null;
+  const indexedAt = !isReplyInput && postDetails ? new Date(postDetails.indexed_at) : null;
+  const timeAgo = indexedAt ? formatRelativeTime(indexedAt) : null;
 
   return (
     <Atoms.Container className="flex min-w-0 items-start justify-between gap-3" overrideDefaults>
@@ -53,8 +53,11 @@ export function PostHeader({
         showPopover={showPopover}
         size={size}
         timeAgo={timeAgoPlacement === 'bottom-left' ? timeAgo : null}
+        indexedAt={timeAgoPlacement === 'bottom-left' ? indexedAt : null}
       />
-      {timeAgo && timeAgoPlacement === 'top-right' && <Molecules.PostHeaderTimestamp timeAgo={timeAgo} />}
+      {timeAgo && timeAgoPlacement === 'top-right' && (
+        <Molecules.PostHeaderTimestamp timeAgo={timeAgo} indexedAt={indexedAt} />
+      )}
     </Atoms.Container>
   );
 }

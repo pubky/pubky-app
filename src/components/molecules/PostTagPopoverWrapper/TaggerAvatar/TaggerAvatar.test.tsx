@@ -1,4 +1,4 @@
-import { render, screen, fireEvent } from '@testing-library/react';
+import { render, screen } from '@testing-library/react';
 import { describe, it, expect, vi } from 'vitest';
 import { TaggerAvatar } from './TaggerAvatar';
 import type { TaggerWithAvatar } from '@/molecules/TaggedItem/TaggedItem.types';
@@ -7,13 +7,11 @@ vi.mock('@/organisms', () => ({
   AvatarWithFallback: ({ name }: { name: string }) => <div data-testid={`avatar-${name}`}>Avatar</div>,
 }));
 
-vi.mock('../../PostHeaderUserInfoPopoverWrapper', async (importOriginal) => {
-  const actual = await importOriginal<typeof import('../../PostHeaderUserInfoPopoverWrapper')>();
-  return {
-    ...actual,
-    PostHeaderUserInfoPopoverContent: () => <div data-testid="user-info-content">User Info</div>,
-  };
-});
+vi.mock('../../UserInfoPopover', () => ({
+  UserInfoPopover: ({ children }: { children: React.ReactNode }) => (
+    <div data-testid="user-info-popover">{children}</div>
+  ),
+}));
 
 vi.mock('@/libs', async (importOriginal) => {
   const actual = await importOriginal<typeof import('@/libs')>();
@@ -32,35 +30,20 @@ describe('TaggerAvatar', () => {
     expect(screen.getByTestId('avatar-Alice')).toBeInTheDocument();
   });
 
-  it('renders trigger with popover role', () => {
+  it('wraps trigger in UserInfoPopover', () => {
     render(<TaggerAvatar tagger={mockTagger} index={0} />);
-    const trigger = screen.getByRole('button');
-    expect(trigger).toBeInTheDocument();
-    expect(trigger).toHaveAttribute('aria-haspopup', 'dialog');
-  });
-
-  it('shows user info content when trigger is clicked', () => {
-    render(<TaggerAvatar tagger={mockTagger} index={0} />);
-    expect(screen.queryByTestId('user-info-content')).not.toBeInTheDocument();
-    fireEvent.click(screen.getByRole('button'));
-    expect(screen.getByTestId('user-info-content')).toBeInTheDocument();
+    expect(screen.getByTestId('user-info-popover')).toBeInTheDocument();
   });
 });
 
 describe('TaggerAvatar - Snapshots', () => {
-  it('matches snapshot (closed state, index 0)', () => {
+  it('matches snapshot (index 0)', () => {
     const { container } = render(<TaggerAvatar tagger={mockTagger} index={0} />);
     expect(container.firstChild).toMatchSnapshot();
   });
 
-  it('matches snapshot (closed state, index 1)', () => {
+  it('matches snapshot (index 1)', () => {
     const { container } = render(<TaggerAvatar tagger={mockTagger} index={1} />);
-    expect(container.firstChild).toMatchSnapshot();
-  });
-
-  it('matches snapshot (open state)', () => {
-    const { container } = render(<TaggerAvatar tagger={mockTagger} index={0} />);
-    fireEvent.click(screen.getByRole('button'));
     expect(container.firstChild).toMatchSnapshot();
   });
 });

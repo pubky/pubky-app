@@ -42,7 +42,7 @@ exports[`Header Components - Snapshots > matches snapshot for HeaderButtonSignIn
 
 exports[`Header Components - Snapshots > matches snapshot for HeaderContainer 1`] = `
 <header
-  class="pointer-events-none sticky top-0 z-(--z-sticky-header) w-full bg-linear-to-b from-(--background) from-50% to-transparent py-6"
+  class="pointer-events-none sticky top-0 z-(--z-sticky-header) w-full bg-linear-to-b from-(--background) from-50% to-transparent lg:py-6"
   data-testid="container"
 >
   <nav
@@ -521,7 +521,7 @@ exports[`Header Components - Snapshots > matches snapshot for HeaderOnboarding 1
 
 exports[`Header Components - Snapshots > matches snapshot for HeaderSignIn 1`] = `
 <div
-  class="mx-auto w-full flex flex-1 flex-row items-center justify-end gap-3"
+  class="mx-auto w-full flex min-w-0 flex-1 flex-row items-center justify-end gap-3"
   data-testid="container"
 >
   <div

@@ -288,6 +288,8 @@
     "signIn": {
       "title": "تسجيل الدخول الى <highlight>Pubky.</highlight>",
       "subtitle": "قم بالتفويض باستخدام Pubky Ring لتسجيل الدخول.",
+      "progressTitle": "جارٍ تسجيل الدخول.",
+      "progressSubtitle": "يرجى الانتظار بينما يتم تحميل تجربتك على Pubky.",
       "generating": "جاري انشاء رمز QR...",
       "generatingShort": "جاري الانشاء...",
 
@@ -687,7 +689,8 @@
       "subtitle2": "يمكنك البحث عن وسوم متعددة مفصولة بفواصل."
     },
     "userSuggestion": "المستخدم {name} ({pubky})",
-    "viewProfile": "عرض ملف {name} الشخصي"
+    "viewProfile": "عرض ملف {name} الشخصي",
+    "invalidTag": "يجب أن تكون العلامات 20 حرفًا أو أقل ولا يمكن أن تحتوي على أحرف خاصة"
   },
   "feedback": {
     "title": "ارسال ملاحظات",
@@ -742,7 +745,7 @@
       "repostedPost": "اعاد نشر منشورك",
       "mentionedYou": "ذكرك في منشور",
       "deletedPost": "حذف منشورا",
-      "editedPost": "عدّل منشوراً",
+      "editedPost": "عدّل منشوراً تفاعلت معه",
       "fallback": "إشعار جديد"
     },
     "settings": {
@@ -899,7 +902,8 @@
       "failedToLoadPosts": "فشل تحميل المنشورات الجديدة",
       "failedToLoadPostsDesc": "تعذر عرض المنشورات الجديدة. يرجى المحاولة مرة اخرى.",
       "parseError": "فشل تحليل محتوى المقال",
-      "coverImageError": "فشل تحميل صورة غلاف المقال"
+      "coverImageError": "فشل تحميل صورة غلاف المقال",
+      "attachmentsLoadFailed": "فشل تحميل المرفقات"
     },
     "bookmark": {
       "added": "تمت اضافة المفضلة",
@@ -963,6 +967,10 @@
       "userIdRequired": "معرف المستخدم مطلوب",
       "loginRequired": "يجب تسجيل الدخول لاضافة وسوم",
       "alreadyAdded": "لقد اضفت هذا الوسم بالفعل",
+      "added": "تمت اضافة الوسم",
+      "addedDesc": "تمت اضافة \"{label}\" بنجاح.",
+      "removed": "تمت ازالة الوسم",
+      "removedDesc": "تمت ازالة \"{label}\" بنجاح.",
       "addFailed": "فشل اضافة الوسم",
       "addFailedDesc": "تعذر اضافة \"{label}\". يرجى المحاولة مرة اخرى.",
       "removeFailed": "فشل ازالة الوسم",
@@ -981,6 +989,16 @@
       "maxFilesPartial": "الحد الاقصى {max} ملفات. لم تتم اضافة بعض الملفات.",
       "unsupportedType": "\"{name}\" نوعه \"{type}\" غير مدعوم. الانواع المدعومة: {formats}.",
       "fileTooLarge": "\"{name}\" يتجاوز الحجم الاقصى {maxSize}."
+    },
+    "status": {
+      "updateFailed": "فشل تحديث الحالة. يرجى المحاولة مرة اخرى.",
+      "userNotLoaded": "لم يتم تحميل ملف المستخدم. يرجى المحاولة مرة اخرى."
+    },
+    "fullscreen": {
+      "error": "خطأ في محاولة تفعيل وضع ملء الشاشة"
+    },
+    "logout": {
+      "failed": "فشل تسجيل الخروج. يرجى المحاولة مرة اخرى."
     }
   },
   "empty": {
@@ -1010,6 +1028,7 @@
     "follow": "متابعة",
     "unfollow": "الغاء المتابعة",
     "following": "متابَع",
+    "editProfile": "تعديل الملف الشخصي",
     "me": "انا",
     "tags": "الوسوم",
     "posts": "المنشورات",
@@ -1183,7 +1202,6 @@
     "emoji": "رمز تعبيري",
     "richText": "نص منسق",
     "markdown": "ماركداون",
-    "clearToSwitch": "امسح المحتوى للتبديل بين الأوضاع",
     "placeholder": "ابدأ بكتابة تحفتك",
     "toolbarAriaLabel": "شريط أدوات تحرير ماركداون",
     "warningApproaching": "أنت تقترب من الحد الأقصى لعدد الأحرف.",

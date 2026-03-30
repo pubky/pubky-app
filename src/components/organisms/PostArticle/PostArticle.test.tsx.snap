@@ -19,6 +19,7 @@ exports[`PostArticle > Snapshots > matches snapshot with cover image 1`] = `
       </span>
       <div
         class="text-muted-foreground"
+        data-has-link-click="true"
         data-is-article="true"
         data-testid="post-text"
       >
@@ -33,6 +34,17 @@ exports[`PostArticle > Snapshots > matches snapshot with cover image 1`] = `
       src="https://example.com/cover-image.jpg"
       width="180"
     />
+  </div>
+  <div
+    data-link-url=""
+    data-open="false"
+    data-testid="dialog-check-link"
+  >
+    <button
+      data-testid="dialog-close"
+    >
+      Close
+    </button>
   </div>
 </div>
 `;
@@ -56,6 +68,7 @@ exports[`PostArticle > Snapshots > matches snapshot with custom className 1`] = 
       </span>
       <div
         class="text-muted-foreground"
+        data-has-link-click="true"
         data-is-article="true"
         data-testid="post-text"
       >
@@ -70,6 +83,17 @@ exports[`PostArticle > Snapshots > matches snapshot with custom className 1`] = 
       src="https://example.com/cover-image.jpg"
       width="180"
     />
+  </div>
+  <div
+    data-link-url=""
+    data-open="false"
+    data-testid="dialog-check-link"
+  >
+    <button
+      data-testid="dialog-close"
+    >
+      Close
+    </button>
   </div>
 </div>
 `;
@@ -93,6 +117,7 @@ exports[`PostArticle > Snapshots > matches snapshot with local cover image 1`] =
       </span>
       <div
         class="text-muted-foreground"
+        data-has-link-click="true"
         data-is-article="true"
         data-testid="post-text"
       >
@@ -107,6 +132,17 @@ exports[`PostArticle > Snapshots > matches snapshot with local cover image 1`] =
       src="blob:http://localhost/local-cover-image"
       width="180"
     />
+  </div>
+  <div
+    data-link-url=""
+    data-open="false"
+    data-testid="dialog-check-link"
+  >
+    <button
+      data-testid="dialog-close"
+    >
+      Close
+    </button>
   </div>
 </div>
 `;
@@ -130,6 +166,7 @@ exports[`PostArticle > Snapshots > matches snapshot with local video attachment 
       </span>
       <div
         class="text-muted-foreground"
+        data-has-link-click="true"
         data-is-article="true"
         data-testid="post-text"
       >
@@ -144,6 +181,17 @@ exports[`PostArticle > Snapshots > matches snapshot with local video attachment 
       src="https://example.com/cover-image.jpg"
       width="180"
     />
+  </div>
+  <div
+    data-link-url=""
+    data-open="false"
+    data-testid="dialog-check-link"
+  >
+    <button
+      data-testid="dialog-close"
+    >
+      Close
+    </button>
   </div>
 </div>
 `;
@@ -167,6 +215,7 @@ exports[`PostArticle > Snapshots > matches snapshot with long title and body 1`]
       </span>
       <div
         class="text-muted-foreground"
+        data-has-link-click="true"
         data-is-article="true"
         data-testid="post-text"
       >
@@ -181,6 +230,17 @@ exports[`PostArticle > Snapshots > matches snapshot with long title and body 1`]
       src="https://example.com/cover-image.jpg"
       width="180"
     />
+  </div>
+  <div
+    data-link-url=""
+    data-open="false"
+    data-testid="dialog-check-link"
+  >
+    <button
+      data-testid="dialog-close"
+    >
+      Close
+    </button>
   </div>
 </div>
 `;
@@ -204,12 +264,24 @@ exports[`PostArticle > Snapshots > matches snapshot without cover image 1`] = `
       </span>
       <div
         class="text-muted-foreground"
+        data-has-link-click="true"
         data-is-article="true"
         data-testid="post-text"
       >
         This is the article body content.
       </div>
     </div>
+  </div>
+  <div
+    data-link-url=""
+    data-open="false"
+    data-testid="dialog-check-link"
+  >
+    <button
+      data-testid="dialog-close"
+    >
+      Close
+    </button>
   </div>
 </div>
 `;
