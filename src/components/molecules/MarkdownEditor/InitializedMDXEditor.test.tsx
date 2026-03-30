@@ -62,6 +62,7 @@ vi.mock('@mdxeditor/editor', () => {
     listsPlugin: vi.fn(() => ({ type: 'lists' })),
     thematicBreakPlugin: vi.fn(() => ({ type: 'thematicBreak' })),
     linkPlugin: vi.fn(() => ({ type: 'link' })),
+    linkDialogPlugin: vi.fn(() => ({ type: 'linkDialog' })),
     codeBlockPlugin: vi.fn(() => ({ type: 'codeBlock' })),
     codeMirrorPlugin: vi.fn(() => ({ type: 'codeMirror' })),
     maxLengthPlugin: vi.fn(() => ({ type: 'maxLength' })),
@@ -90,6 +91,7 @@ vi.mock('@mdxeditor/editor', () => {
         {children}
       </button>
     ),
+    CreateLink: () => <button data-testid="create-link">Create Link</button>,
     CodeToggle: () => <button data-testid="code-toggle">Code</button>,
     InsertCodeBlock: () => <button data-testid="insert-code-block">Insert Code Block</button>,
     InsertThematicBreak: () => <button data-testid="insert-thematic-break">Insert Break</button>,
@@ -237,6 +239,18 @@ vi.mock('@/libs/utils', () => ({
   cn: (...classes: (string | boolean | undefined)[]) => classes.filter(Boolean).join(' '),
 }));
 
+/** Creates a mock editor ref with stub methods for mode-switching tests. */
+function createMockEditorRef(markdown = '') {
+  return {
+    current: {
+      getMarkdown: vi.fn(() => markdown),
+      setMarkdown: vi.fn(),
+      focus: vi.fn(),
+      insertMarkdown: vi.fn(),
+    },
+  } as unknown as React.RefObject<MDXEditorMethods>;
+}
+
 describe('InitializedMDXEditor', () => {
   beforeEach(() => {
     vi.clearAllMocks();
@@ -289,8 +303,8 @@ describe('InitializedMDXEditor', () => {
       render(<InitializedMDXEditor editorRef={null} markdown="" />);
 
       const editor = screen.getByTestId('mdx-editor');
-      // The editor should have 9 plugins configured
-      expect(editor).toHaveAttribute('data-plugins-count', '9');
+      // The editor should have 10 plugins configured
+      expect(editor).toHaveAttribute('data-plugins-count', '10');
     });
 
     it('passes additional props to MDXEditor', () => {
@@ -317,6 +331,7 @@ describe('InitializedMDXEditor', () => {
       expect(screen.getByTestId('strikethrough-toggle')).toBeInTheDocument();
       expect(screen.getByTestId('lists-toggle')).toBeInTheDocument();
       expect(screen.getByTestId('insert-thematic-break')).toBeInTheDocument();
+      expect(screen.getByTestId('create-link')).toBeInTheDocument();
       expect(screen.getByTestId('code-toggle')).toBeInTheDocument();
       expect(screen.getByTestId('insert-code-block')).toBeInTheDocument();
     });
@@ -475,7 +490,8 @@ describe('InitializedMDXEditor', () => {
 
   describe('Mode Switching', () => {
     it('switches to markdown mode when markdown button is clicked (empty content)', () => {
-      render(<InitializedMDXEditor editorRef={null} markdown="" />);
+      const mockRef = createMockEditorRef();
+      render(<InitializedMDXEditor editorRef={mockRef} markdown="" />);
 
       const markdownButton = screen.getByTestId('button-with-tooltip-markdown');
       fireEvent.click(markdownButton);
@@ -493,35 +509,37 @@ describe('InitializedMDXEditor', () => {
       expect(textarea).toBeInTheDocument();
     });
 
-    it('does not switch to markdown mode when rich text has content', () => {
-      render(<InitializedMDXEditor editorRef={null} markdown="# Hello" />);
+    it('switches to markdown mode and transfers content when rich text has content', () => {
+      const mockRef = createMockEditorRef('# Hello');
+      render(<InitializedMDXEditor editorRef={mockRef} markdown="# Hello" />);
 
-      // Markdown button should show disabled tooltip text
-      const markdownButton = screen.getByTestId('button-with-tooltip-clear content to switch modes');
-      expect(markdownButton).toBeDisabled();
+      // Markdown button should be enabled (seamless toggle)
+      const markdownButton = screen.getByTestId('button-with-tooltip-markdown');
+      expect(markdownButton).not.toBeDisabled();
       fireEvent.click(markdownButton);
 
-      // MDXEditor should NOT have hidden class (still in richtext mode)
+      // MDXEditor should have hidden class (switched to markdown mode)
       const mdxEditor = screen.getByTestId('mdx-editor');
-      expect(mdxEditor.className).not.toContain('hidden');
+      expect(mdxEditor.className).toContain('hidden');
+
+      // Markdown textarea should have the content from editor ref's getMarkdown()
+      const textarea = screen.getByTestId('markdown-textarea');
+      expect(textarea).toHaveValue('# Hello');
     });
 
-    it('markdown button shows conditional title based on content', () => {
-      // With empty content, title is "Markdown"
+    it('markdown button always shows Markdown title regardless of content', () => {
       const { unmount } = render(<InitializedMDXEditor editorRef={null} markdown="" />);
       expect(screen.getByTestId('button-with-tooltip-markdown')).toHaveAttribute('title', 'Markdown');
       unmount();
 
-      // With content, title is "Clear content to switch modes"
+      // Even with content, title is still "Markdown" (no more "Clear content to switch modes")
       render(<InitializedMDXEditor editorRef={null} markdown="# Content" />);
-      expect(screen.getByTestId('button-with-tooltip-clear content to switch modes')).toHaveAttribute(
-        'title',
-        'Clear content to switch modes',
-      );
+      expect(screen.getByTestId('button-with-tooltip-markdown')).toHaveAttribute('title', 'Markdown');
     });
 
     it('switches back to richtext mode when rich text button is clicked (empty markdown)', () => {
-      render(<InitializedMDXEditor editorRef={null} markdown="" />);
+      const mockRef = createMockEditorRef();
+      render(<InitializedMDXEditor editorRef={mockRef} markdown="" />);
 
       // Switch to markdown mode first
       const markdownButton = screen.getByTestId('button-with-tooltip-markdown');
@@ -540,8 +558,9 @@ describe('InitializedMDXEditor', () => {
       expect(markdownToolbar.parentElement?.className).toContain('hidden');
     });
 
-    it('does not switch back to richtext mode when markdown text has content', () => {
-      render(<InitializedMDXEditor editorRef={null} markdown="" />);
+    it('switches back to richtext mode and transfers content when markdown has content', () => {
+      const mockRef = createMockEditorRef();
+      render(<InitializedMDXEditor editorRef={mockRef} markdown="" />);
 
       // Switch to markdown mode
       const markdownButton = screen.getByTestId('button-with-tooltip-markdown');
@@ -551,21 +570,177 @@ describe('InitializedMDXEditor', () => {
       const textarea = screen.getByTestId('markdown-textarea');
       fireEvent.change(textarea, { target: { value: '# Some content' } });
 
-      // Rich text button should now show disabled tooltip and be disabled
+      // Rich text button should be enabled and show Rich Text title
       const richTextButton = screen.getByTestId('markdown-richtext-button');
-      expect(richTextButton).toHaveAttribute('title', 'Clear content to switch modes');
-      expect(richTextButton).toBeDisabled();
+      expect(richTextButton).toHaveAttribute('title', 'Rich Text');
+      expect(richTextButton).not.toBeDisabled();
+
       fireEvent.click(richTextButton);
 
-      // Should still be in markdown mode - MDXEditor should still have hidden class
+      // Should switch to richtext mode - MDXEditor should not have hidden class
       const mdxEditor = screen.getByTestId('mdx-editor');
-      expect(mdxEditor.className).toContain('hidden');
+      expect(mdxEditor.className).not.toContain('hidden');
+
+      // Markdown toolbar parent should have hidden class
+      const markdownToolbar = screen.getByTestId('markdown-toolbar');
+      expect(markdownToolbar.parentElement?.className).toContain('hidden');
+
+      // setMarkdown should have been called with the content
+      expect(mockRef.current.setMarkdown).toHaveBeenCalledWith('# Some content');
+    });
+
+    it('sanitizes code blocks without language when switching from markdown to richtext', () => {
+      const mockRef = createMockEditorRef();
+      render(<InitializedMDXEditor editorRef={mockRef} markdown="" />);
+
+      fireEvent.click(screen.getByTestId('button-with-tooltip-markdown'));
+
+      const textarea = screen.getByTestId('markdown-textarea');
+      fireEvent.change(textarea, { target: { value: '```\nconsole.log("test")\n```' } });
+
+      fireEvent.click(screen.getByTestId('markdown-richtext-button'));
+
+      // Code block without language should get 'plaintext' added
+      expect(mockRef.current.setMarkdown).toHaveBeenCalledWith('```plaintext\nconsole.log("test")\n```');
+    });
+
+    it('resolves language aliases when switching from markdown to richtext', () => {
+      const mockRef = createMockEditorRef();
+      render(<InitializedMDXEditor editorRef={mockRef} markdown="" />);
+
+      fireEvent.click(screen.getByTestId('button-with-tooltip-markdown'));
+
+      const textarea = screen.getByTestId('markdown-textarea');
+      fireEvent.change(textarea, { target: { value: '```js\nconsole.log("test")\n```' } });
+
+      fireEvent.click(screen.getByTestId('markdown-richtext-button'));
+
+      // 'js' alias should be resolved to 'javascript'
+      expect(mockRef.current.setMarkdown).toHaveBeenCalledWith('```javascript\nconsole.log("test")\n```');
+    });
+
+    it('replaces unsupported languages with plaintext when switching from markdown to richtext', () => {
+      const mockRef = createMockEditorRef();
+      render(<InitializedMDXEditor editorRef={mockRef} markdown="" />);
+
+      fireEvent.click(screen.getByTestId('button-with-tooltip-markdown'));
+
+      const textarea = screen.getByTestId('markdown-textarea');
+      fireEvent.change(textarea, { target: { value: '```haskell\n++++++++\n```' } });
+
+      fireEvent.click(screen.getByTestId('markdown-richtext-button'));
+
+      expect(mockRef.current.setMarkdown).toHaveBeenCalledWith('```plaintext\n++++++++\n```');
+    });
+
+    it('transfers richtext content to markdown textarea when switching modes', () => {
+      const mockRef = createMockEditorRef('# Hello World\n\nSome **bold** text.');
+      render(<InitializedMDXEditor editorRef={mockRef} markdown="" />);
+
+      // Switch to markdown mode
+      fireEvent.click(screen.getByTestId('button-with-tooltip-markdown'));
+
+      // Textarea should have the editor content from getMarkdown()
+      const textarea = screen.getByTestId('markdown-textarea');
+      expect(textarea).toHaveValue('# Hello World\n\nSome **bold** text.');
+    });
+
+    it('updates max length warning when sanitization changes content length', () => {
+      const mockRef = createMockEditorRef();
+      render(<InitializedMDXEditor editorRef={mockRef} markdown="" />);
+
+      fireEvent.click(screen.getByTestId('button-with-tooltip-markdown'));
+
+      // Build content where sanitization pushes it past the approaching threshold.
+      // Each bare ``` gets 'plaintext' appended (9 extra chars). With 3 bare fences
+      // that's 27 extra chars. We want the pre-sanitized length to be safely under
+      // the threshold, but post-sanitized length to be within 100 chars of the limit.
+      const fences = '```\nx\n```\n\n```\nx\n```\n\n```\nx\n```';
+      const padding = 'a'.repeat(MOCK_MAX_LENGTH - 100 - fences.length - 2);
+      const content = padding + '\n\n' + fences;
+
+      const textarea = screen.getByTestId('markdown-textarea');
+      fireEvent.change(textarea, { target: { value: content } });
+
+      // No warning yet in markdown mode (content is under threshold before sanitization)
+      expect(screen.queryByTestId('max-length-warning')).not.toBeInTheDocument();
+
+      // Switch to richtext — sanitization adds 'plaintext' to each fence, pushing length up
+      fireEvent.click(screen.getByTestId('markdown-richtext-button'));
+
+      const warning = screen.getByTestId('max-length-warning');
+      expect(warning).toBeInTheDocument();
+      expect(warning).toHaveClass('bg-yellow-500/15');
+    });
+
+    it('clears max length warning when switching to richtext if sanitized content is short', () => {
+      const mockRef = createMockEditorRef();
+      render(<InitializedMDXEditor editorRef={mockRef} markdown="" />);
+
+      fireEvent.click(screen.getByTestId('button-with-tooltip-markdown'));
+
+      // Type content near the limit to trigger a warning in markdown mode
+      const textarea = screen.getByTestId('markdown-textarea');
+      fireEvent.change(textarea, { target: { value: 'a'.repeat(MOCK_MAX_LENGTH - 50) } });
+      expect(screen.getByTestId('max-length-warning')).toBeInTheDocument();
+
+      // Replace with short content and switch back
+      fireEvent.change(textarea, { target: { value: 'short' } });
+      fireEvent.click(screen.getByTestId('markdown-richtext-button'));
+
+      expect(screen.queryByTestId('max-length-warning')).not.toBeInTheDocument();
+    });
+
+    it('does not switch modes when editorRef is null', () => {
+      render(<InitializedMDXEditor editorRef={null} markdown="" />);
+
+      // Click markdown button — should be a no-op since editorRef is null
+      fireEvent.click(screen.getByTestId('button-with-tooltip-markdown'));
+
+      // Should still be in richtext mode
+      const mdxEditor = screen.getByTestId('mdx-editor');
+      expect(mdxEditor.className).not.toContain('hidden');
+      const markdownToolbar = screen.getByTestId('markdown-toolbar');
+      expect(markdownToolbar.parentElement?.className).toContain('hidden');
+    });
+
+    it('calls focus and insertMarkdown on editor ref when selecting emoji in richtext mode', () => {
+      const mockRef = createMockEditorRef();
+      render(<InitializedMDXEditor editorRef={mockRef} markdown="" />);
+
+      // Open emoji picker and select an emoji
+      const emojiButton = screen.getByTestId('button-with-tooltip-emoji');
+      fireEvent.click(emojiButton);
+
+      const selectEmojiButton = screen.getByTestId('emoji-select-button');
+      fireEvent.click(selectEmojiButton);
+
+      // Should call focus, insertMarkdown, focus on the editor ref
+      expect(mockRef.current.focus).toHaveBeenCalledTimes(2);
+      expect(mockRef.current.insertMarkdown).toHaveBeenCalledWith('🎉');
+    });
+
+    it('round-trips content through mode switches preserving supported languages', () => {
+      const mockRef = createMockEditorRef();
+      render(<InitializedMDXEditor editorRef={mockRef} markdown="" />);
+
+      // Switch to markdown → type content → switch back to richtext
+      fireEvent.click(screen.getByTestId('button-with-tooltip-markdown'));
+
+      const textarea = screen.getByTestId('markdown-textarea');
+      fireEvent.change(textarea, { target: { value: '```javascript\nconsole.log("test")\n```' } });
+
+      fireEvent.click(screen.getByTestId('markdown-richtext-button'));
+
+      // Supported languages should pass through unchanged
+      expect(mockRef.current.setMarkdown).toHaveBeenCalledWith('```javascript\nconsole.log("test")\n```');
     });
   });
 
   describe('Markdown Mode Text Editing', () => {
     it('updates textarea value when typing in markdown mode', () => {
-      render(<InitializedMDXEditor editorRef={null} markdown="" />);
+      const mockRef = createMockEditorRef();
+      render(<InitializedMDXEditor editorRef={mockRef} markdown="" />);
 
       // Switch to markdown mode
       fireEvent.click(screen.getByTestId('button-with-tooltip-markdown'));
@@ -582,7 +757,8 @@ describe('InitializedMDXEditor', () => {
       // so the handler would never receive more than ARTICLE_MAX_CHARACTER_LENGTH
       // characters. JSDOM does not enforce maxLength, allowing us to verify
       // the JS guard works as a defense-in-depth measure.
-      render(<InitializedMDXEditor editorRef={null} markdown="" />);
+      const mockRef = createMockEditorRef();
+      render(<InitializedMDXEditor editorRef={mockRef} markdown="" />);
 
       // Switch to markdown mode
       fireEvent.click(screen.getByTestId('button-with-tooltip-markdown'));
@@ -596,7 +772,8 @@ describe('InitializedMDXEditor', () => {
     });
 
     it('accepts content at exactly the max character length', () => {
-      render(<InitializedMDXEditor editorRef={null} markdown="" />);
+      const mockRef = createMockEditorRef();
+      render(<InitializedMDXEditor editorRef={mockRef} markdown="" />);
 
       // Switch to markdown mode
       fireEvent.click(screen.getByTestId('button-with-tooltip-markdown'));
@@ -611,8 +788,9 @@ describe('InitializedMDXEditor', () => {
 
     it('calls props.onChange when typing in markdown mode', () => {
       const mockOnChange = vi.fn();
+      const mockRef = createMockEditorRef();
 
-      render(<InitializedMDXEditor editorRef={null} markdown="" onChange={mockOnChange} />);
+      render(<InitializedMDXEditor editorRef={mockRef} markdown="" onChange={mockOnChange} />);
 
       // Switch to markdown mode
       fireEvent.click(screen.getByTestId('button-with-tooltip-markdown'));
@@ -716,7 +894,8 @@ describe('InitializedMDXEditor', () => {
 
   describe('Max Length Warning (Markdown Mode)', () => {
     it('shows approaching warning in markdown mode when less than 100 chars remaining', () => {
-      render(<InitializedMDXEditor editorRef={null} markdown="" />);
+      const mockRef = createMockEditorRef();
+      render(<InitializedMDXEditor editorRef={mockRef} markdown="" />);
 
       // Switch to markdown mode
       fireEvent.click(screen.getByTestId('button-with-tooltip-markdown'));
@@ -732,7 +911,8 @@ describe('InitializedMDXEditor', () => {
     });
 
     it('shows reached warning in markdown mode when at max length', () => {
-      render(<InitializedMDXEditor editorRef={null} markdown="" />);
+      const mockRef = createMockEditorRef();
+      render(<InitializedMDXEditor editorRef={mockRef} markdown="" />);
 
       // Switch to markdown mode
       fireEvent.click(screen.getByTestId('button-with-tooltip-markdown'));
@@ -803,7 +983,8 @@ describe('InitializedMDXEditor - Snapshots', () => {
   });
 
   it('matches snapshot in markdown mode', () => {
-    const { container } = render(<InitializedMDXEditor editorRef={null} markdown="" />);
+    const mockRef = createMockEditorRef();
+    const { container } = render(<InitializedMDXEditor editorRef={mockRef} markdown="" />);
 
     // Switch to markdown mode
     fireEvent.click(screen.getByTestId('button-with-tooltip-markdown'));

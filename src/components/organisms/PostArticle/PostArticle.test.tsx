@@ -6,10 +6,18 @@ import * as Core from '@/core';
 
 // Mock hooks
 const mockUsePostArticle = vi.fn();
+const mockHandleLinkClick = vi.fn();
+const mockSetDialogOpen = vi.fn();
 
 vi.mock('@/hooks', () => ({
   usePostArticle: (params: { content: string; attachments: string[]; coverImageVariant: Core.FileVariant }) =>
     mockUsePostArticle(params),
+  useLinkConfirmation: () => ({
+    dialogOpen: false,
+    setDialogOpen: mockSetDialogOpen,
+    clickedLink: '',
+    handleLinkClick: mockHandleLinkClick,
+  }),
 }));
 
 // Mock atoms
@@ -41,9 +49,38 @@ vi.mock('@/atoms', () => ({
 
 // Mock molecules
 vi.mock('@/molecules', () => ({
-  PostText: ({ content, isArticle, className }: { content: string; isArticle?: boolean; className?: string }) => (
-    <div data-testid="post-text" data-is-article={isArticle} className={className}>
+  PostText: ({
+    content,
+    isArticle,
+    onLinkClick,
+    className,
+  }: {
+    content: string;
+    isArticle?: boolean;
+    onLinkClick?: (url: string, e: React.MouseEvent) => void;
+    className?: string;
+  }) => (
+    <div data-testid="post-text" data-is-article={isArticle} data-has-link-click={!!onLinkClick} className={className}>
       {content}
+    </div>
+  ),
+}));
+
+// Mock organisms
+vi.mock('@/organisms', () => ({
+  DialogCheckLink: ({
+    open,
+    onOpenChangeAction,
+    linkUrl,
+  }: {
+    open: boolean;
+    onOpenChangeAction: (open: boolean) => void;
+    linkUrl: string;
+  }) => (
+    <div data-testid="dialog-check-link" data-open={open} data-link-url={linkUrl}>
+      <button data-testid="dialog-close" onClick={() => onOpenChangeAction(false)}>
+        Close
+      </button>
     </div>
   ),
 }));
@@ -136,6 +173,21 @@ describe('PostArticle', () => {
 
       const postText = screen.getByTestId('post-text');
       expect(postText).toHaveAttribute('data-is-article', 'true');
+    });
+
+    it('passes onLinkClick handler to PostText', () => {
+      render(<PostArticle {...defaultProps} />);
+
+      const postText = screen.getByTestId('post-text');
+      expect(postText).toHaveAttribute('data-has-link-click', 'true');
+    });
+
+    it('renders DialogCheckLink dialog', () => {
+      render(<PostArticle {...defaultProps} />);
+
+      const dialog = screen.getByTestId('dialog-check-link');
+      expect(dialog).toBeInTheDocument();
+      expect(dialog).toHaveAttribute('data-open', 'false');
     });
 
     it('applies muted-foreground class to PostText', () => {

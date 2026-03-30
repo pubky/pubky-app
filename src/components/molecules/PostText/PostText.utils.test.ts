@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import type { Root, Paragraph, Text, Code, Link } from 'mdast';
+import type { Root, Paragraph, Text, Code, Link, Emphasis } from 'mdast';
 import {
   remarkPlaintextCodeblock,
   remarkDisallowMarkdownLinks,
@@ -7,7 +7,9 @@ import {
   remarkMentions,
   extractTextFromChildren,
   truncateAtWordBoundary,
+  remarkExtractFirstParagraph,
 } from './PostText.utils';
+import { TRUNCATION_LIMIT } from './PostText.constants';
 
 // Helper to create a simple paragraph node with text
 const createParagraph = (text: string): Paragraph => ({
@@ -1434,5 +1436,101 @@ describe('truncateAtWordBoundary', () => {
     const text = 'Hello world test';
     const result = truncateAtWordBoundary(text, 12);
     expect(result.endsWith('...\u00A0')).toBe(true);
+  });
+});
+
+describe('remarkExtractFirstParagraph', () => {
+  const runPlugin = (tree: Root) => {
+    remarkExtractFirstParagraph()(tree);
+    return tree;
+  };
+
+  describe('First paragraph extraction', () => {
+    it('extracts first paragraph when multiple paragraphs exist', () => {
+      const tree = createRoot([
+        createParagraph('First paragraph'),
+        createParagraph('Second paragraph'),
+        createParagraph('Third paragraph'),
+      ]);
+      runPlugin(tree);
+      expect(tree.children.length).toBe(1);
+      expect(tree.children[0].type).toBe('paragraph');
+      const textNodes = getTextNodes(tree.children[0] as Paragraph);
+      expect(textNodes[0].value).toBe('First paragraph');
+    });
+
+    it('extracts first paragraph when headings precede it', () => {
+      const heading = {
+        type: 'heading' as const,
+        depth: 1 as const,
+        children: [{ type: 'text', value: 'Title' } as Text],
+      };
+      const tree: Root = {
+        type: 'root',
+        children: [heading, createParagraph('Intro text'), createParagraph('More text')],
+      };
+      runPlugin(tree);
+      expect(tree.children.length).toBe(1);
+      expect(tree.children[0].type).toBe('paragraph');
+      const textNodes = getTextNodes(tree.children[0] as Paragraph);
+      expect(textNodes[0].value).toBe('Intro text');
+    });
+
+    it('returns original tree when no paragraphs exist', () => {
+      const tree = createRoot([{ type: 'code', value: 'const x = 1' } as Code]);
+      runPlugin(tree);
+      expect(tree.children.length).toBe(1);
+      expect(tree.children[0].type).toBe('code');
+    });
+
+    it('keeps single paragraph unchanged when it is the only child', () => {
+      const tree = createRoot([createParagraph('Only paragraph')]);
+      runPlugin(tree);
+      expect(tree.children.length).toBe(1);
+      const textNodes = getTextNodes(tree.children[0] as Paragraph);
+      expect(textNodes[0].value).toBe('Only paragraph');
+    });
+  });
+
+  describe('Truncation', () => {
+    it('truncates first paragraph text when it exceeds the limit', () => {
+      const longText = 'word '.repeat(120); // 600 chars
+      const tree = createRoot([createParagraph(longText)]);
+      runPlugin(tree);
+      const textNode = (tree.children[0] as Paragraph).children[0] as Text;
+      expect(textNode.value.length).toBeLessThanOrEqual(TRUNCATION_LIMIT + 4);
+      expect(textNode.value.endsWith('...\u00A0')).toBe(true);
+    });
+
+    it('does not truncate when text is under the limit', () => {
+      const tree = createRoot([createParagraph('Short text')]);
+      runPlugin(tree);
+      const textNode = (tree.children[0] as Paragraph).children[0] as Text;
+      expect(textNode.value).toBe('Short text');
+    });
+
+    it('preserves formatting structure during truncation', () => {
+      const longEmphasizedText = 'word '.repeat(100); // 500 chars, combined with prefix exceeds limit
+      const paragraph: Paragraph = {
+        type: 'paragraph',
+        children: [
+          { type: 'text', value: 'Start ' } as Text,
+          {
+            type: 'emphasis',
+            children: [{ type: 'text', value: longEmphasizedText }],
+          } as Emphasis,
+        ],
+      };
+      const tree = createRoot([paragraph]);
+      runPlugin(tree);
+      expect(tree.children.length).toBe(1);
+      const para = tree.children[0] as Paragraph;
+      expect(para.children[0].type).toBe('text');
+      expect((para.children[0] as Text).value).toBe('Start ');
+      expect(para.children[1].type).toBe('emphasis');
+      const emphasisChildren = (para.children[1] as Emphasis).children;
+      expect(emphasisChildren.length).toBeGreaterThan(0);
+      expect((emphasisChildren[0] as Text).value.length).toBeLessThan(longEmphasizedText.length);
+    });
   });
 });

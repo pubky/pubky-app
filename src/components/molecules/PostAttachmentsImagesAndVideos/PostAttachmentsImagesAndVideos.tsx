@@ -7,6 +7,7 @@ import * as Utils from '@/libs/utils';
 import type { AttachmentConstructed } from '@/organisms/PostAttachments/PostAttachments.types';
 import type { CarouselApi } from '@/components/atoms/Carousel';
 import { useEffect, useState } from 'react';
+import { useTranslations } from 'next-intl';
 
 type PostAttachmentsImagesAndVideosProps = {
   imagesAndVideos: AttachmentConstructed[];
@@ -20,13 +21,14 @@ export const PostAttachmentsImagesAndVideos = ({ imagesAndVideos }: PostAttachme
   const [isFullscreen, setIsFullscreen] = useState(false);
 
   const { toast } = Molecules.useToast();
+  const tFullscreen = useTranslations('toast.fullscreen');
 
   const handleFullscreen = () => {
     const currentMedia = document.getElementById(`media-item-${currentIndex}`);
 
     if (currentMedia) {
       currentMedia.requestFullscreen().catch((error) => {
-        toast({ title: 'Error attempting to enable fullscreen', description: error });
+        toast({ title: tFullscreen('error'), description: error });
       });
     }
   };

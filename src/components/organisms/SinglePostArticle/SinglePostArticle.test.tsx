@@ -11,6 +11,12 @@ vi.mock('@/hooks', async (importOriginal) => {
   return {
     ...actual,
     usePostArticle: vi.fn(),
+    useLinkConfirmation: vi.fn().mockReturnValue({
+      dialogOpen: false,
+      setDialogOpen: vi.fn(),
+      clickedLink: '',
+      handleLinkClick: vi.fn(),
+    }),
   };
 });
 
@@ -43,8 +49,16 @@ vi.mock('@/atoms', () => ({
 
 // Mock molecules
 vi.mock('@/molecules', () => ({
-  PostText: ({ content, isArticle }: { content: string; isArticle?: boolean }) => (
-    <div data-testid="post-text" data-is-article={isArticle}>
+  PostText: ({
+    content,
+    isArticle,
+    onLinkClick,
+  }: {
+    content: string;
+    isArticle?: boolean;
+    onLinkClick?: (url: string, e: React.MouseEvent) => void;
+  }) => (
+    <div data-testid="post-text" data-is-article={isArticle} data-has-link-click={!!onLinkClick}>
       {content}
     </div>
   ),
@@ -117,6 +131,21 @@ vi.mock('@/organisms', async (importOriginal) => {
       <div data-testid="dialog-repost" data-post-id={postId} data-open={open}>
         <button data-testid="close-repost-dialog" onClick={() => onOpenChangeAction(false)}>
           Close Repost
+        </button>
+      </div>
+    ),
+    DialogCheckLink: ({
+      open,
+      onOpenChangeAction,
+      linkUrl,
+    }: {
+      open: boolean;
+      onOpenChangeAction: (open: boolean) => void;
+      linkUrl: string;
+    }) => (
+      <div data-testid="dialog-check-link" data-open={open} data-link-url={linkUrl}>
+        <button data-testid="dialog-check-link-close" onClick={() => onOpenChangeAction(false)}>
+          Close Check Link
         </button>
       </div>
     ),
@@ -231,6 +260,14 @@ describe('SinglePostArticle', () => {
 
     expect(screen.getByTestId('dialog-reply')).toHaveAttribute('data-open', 'false');
     expect(screen.getByTestId('dialog-repost')).toHaveAttribute('data-open', 'false');
+    expect(screen.getByTestId('dialog-check-link')).toHaveAttribute('data-open', 'false');
+  });
+
+  it('passes onLinkClick handler to PostText', () => {
+    render(<SinglePostArticle {...defaultProps} />);
+
+    const postText = screen.getByTestId('post-text');
+    expect(postText).toHaveAttribute('data-has-link-click', 'true');
   });
 
   describe('cover image', () => {

@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import { useTranslations } from 'next-intl';
 import * as Core from '@/core';
 import * as Molecules from '@/molecules';
 import * as Organisms from '@/organisms';
@@ -30,6 +31,8 @@ import type { UseDeletePostResult } from './useDeletePost.types';
 export function useDeletePost(): UseDeletePostResult {
   const [isDeleting, setIsDeleting] = useState(false);
   const { toast } = Molecules.useToast();
+  const tToast = useTranslations('toast');
+  const tPost = useTranslations('toast.post');
   const timelineFeed = Organisms.useTimelineFeedContext();
 
   const deletePost = async (postId: string) => {
@@ -41,8 +44,8 @@ export function useDeletePost(): UseDeletePostResult {
     if (!postId || !postId.trim()) {
       Libs.Logger.error('[useDeletePost] Invalid post ID provided', { postId });
       toast({
-        title: 'Error',
-        description: 'Invalid post ID. Please try again.',
+        title: tToast('error'),
+        description: tPost('invalidPostId'),
         className: 'destructive border-destructive bg-destructive text-destructive-foreground',
       });
       return;
@@ -57,8 +60,8 @@ export function useDeletePost(): UseDeletePostResult {
       await Core.PostController.commitDelete({ compositePostId: postId });
       Libs.Logger.info('[useDeletePost] Post deleted successfully', { postId });
       toast({
-        title: 'Post deleted',
-        description: 'Your post has been deleted',
+        title: tPost('postDeleted'),
+        description: tPost('postDeletedDesc'),
       });
     } catch (error) {
       Libs.Logger.error('[useDeletePost] Failed to delete post', {
@@ -103,8 +106,8 @@ export function useDeletePost(): UseDeletePostResult {
       }
 
       toast({
-        title: 'Error',
-        description: 'Failed to delete post. Please try again.',
+        title: tToast('error'),
+        description: tPost('deleteFailed'),
         className: 'destructive border-destructive bg-destructive text-destructive-foreground',
       });
     } finally {
