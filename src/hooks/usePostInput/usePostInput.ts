@@ -63,6 +63,8 @@ export function usePostInput({
 
   // Hooks
   const t = useTranslations('post.placeholder');
+  const tToast = useTranslations('toast');
+  const tFile = useTranslations('toast.file');
   const { currentUserPubky } = Hooks.useCurrentUserProfile();
   const {
     content,
@@ -302,8 +304,8 @@ export function usePostInput({
 
       if (availableSlots <= 0) {
         toast({
-          title: 'Error',
-          description: `Maximum of ${ATTACHMENT_MAX_FILES} files allowed`,
+          title: tToast('error'),
+          description: tFile('maxFiles', { max: ATTACHMENT_MAX_FILES }),
         });
         return;
       }
@@ -313,16 +315,14 @@ export function usePostInput({
 
       for (const file of files) {
         if (validFiles.length >= availableSlots) {
-          errors.push(`Maximum of ${ATTACHMENT_MAX_FILES} files allowed. Some files were not added.`);
+          errors.push(tFile('maxFilesPartial', { max: ATTACHMENT_MAX_FILES }));
           break;
         }
 
         // Check against specific supported MIME types from pubky-app-specs
         const isAcceptedType = SUPPORTED_ATTACHMENT_MIME_TYPES.includes(file.type);
         if (!isAcceptedType) {
-          errors.push(
-            `"${file.name}" has unsupported type "${file.type}". Supported formats: ${SUPPORTED_FILE_TYPES}.`,
-          );
+          errors.push(tFile('unsupportedType', { name: file.name, type: file.type, formats: SUPPORTED_FILE_TYPES }));
           continue;
         }
 
@@ -332,7 +332,7 @@ export function usePostInput({
         const maxSizeLabel = isImage ? '5MB' : maxOtherSizeLabel;
 
         if (file.size > maxSize) {
-          errors.push(`"${file.name}" exceeds the maximum size of ${maxSizeLabel}.`);
+          errors.push(tFile('fileTooLarge', { name: file.name, maxSize: maxSizeLabel }));
           continue;
         }
 
@@ -341,7 +341,7 @@ export function usePostInput({
 
       if (errors.length > 0) {
         toast({
-          title: errors.length > 1 ? 'Errors' : 'Error',
+          title: errors.length > 1 ? tToast('errors') : tToast('error'),
           description: errors.join('\n'),
         });
       }
@@ -350,7 +350,7 @@ export function usePostInput({
         setAttachments((prev) => [...prev, ...validFiles]);
       }
     },
-    [isArticle, isSubmitting, attachments.length, setAttachments, toast],
+    [isArticle, isSubmitting, attachments.length, setAttachments, toast, tToast, tFile],
   );
 
   // Drag and drop handlers

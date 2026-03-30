@@ -4,7 +4,13 @@ import * as Atoms from '@/atoms';
 import * as Molecules from '@/molecules';
 import * as Organisms from '@/organisms';
 import * as Hooks from '@/hooks';
-import type { ThreadTreeProps } from './ThreadTree.types';
+
+interface ThreadTreeProps {
+  /** The composite post ID of the parent (Level 0) post */
+  postId: string;
+  /** Whether to show the QuickReply input at the end */
+  showQuickReply?: boolean;
+}
 
 /**
  * ThreadTree Organism
