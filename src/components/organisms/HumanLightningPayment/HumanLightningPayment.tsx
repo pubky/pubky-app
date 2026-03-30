@@ -233,7 +233,7 @@ export const HumanLightningPayment = ({ onBack, onSuccess }: HumanLightningPayme
           id="human-phone-send-code-btn"
           size="lg"
           className="w-full flex-1 rounded-full lg:flex-0"
-          variant={isMobile ? 'secondary' : 'brand'}
+          variant={isMobile ? 'secondary' : 'default'}
           disabled={!isDataAvailable}
           onClick={() => verification && copyToClipboard(verification.data.bolt11Invoice)}
         >
