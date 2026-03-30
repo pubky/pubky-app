@@ -2,7 +2,7 @@
 
 exports[`SearchInputBar > SearchInputBar - Snapshots > matches snapshot - default state 1`] = `
 <div
-  class="relative flex h-12 items-center gap-3 border border-border px-6 py-3 rounded-full"
+  class="relative flex h-12 min-w-0 items-center gap-3 border border-border px-6 py-3 rounded-full"
   data-cy="header-search"
   data-testid="search-input-bar"
   style="background: linear-gradient(180deg, rgb(7, 4, 10) 0%, rgb(27, 24, 32) 100%); backdrop-filter: blur(20px);"
@@ -11,7 +11,7 @@ exports[`SearchInputBar > SearchInputBar - Snapshots > matches snapshot - defaul
     aria-autocomplete="list"
     aria-expanded="false"
     aria-label="Search input"
-    class="h-auto min-w-20 flex-1 border-none bg-transparent pr-0 text-base font-medium text-foreground md:text-base pl-0"
+    class="h-auto flex-1 border-none bg-transparent pr-0 text-base font-medium text-foreground md:text-base min-w-20 pl-0"
     data-cy="header-search-input"
     placeholder="Search"
     type="text"
@@ -44,7 +44,7 @@ exports[`SearchInputBar > SearchInputBar - Snapshots > matches snapshot - defaul
 
 exports[`SearchInputBar > SearchInputBar - Snapshots > matches snapshot - focused state 1`] = `
 <div
-  class="relative flex h-12 items-center gap-3 border border-border px-6 py-3 rounded-t-2xl rounded-b-none border-b-transparent"
+  class="relative flex h-12 min-w-0 items-center gap-3 border border-border px-6 py-3 rounded-t-2xl rounded-b-none border-b-transparent"
   data-cy="header-search"
   data-testid="search-input-bar"
   style="background: linear-gradient(180deg, var(--background) 0%, var(--background) 100%);"
@@ -53,7 +53,7 @@ exports[`SearchInputBar > SearchInputBar - Snapshots > matches snapshot - focuse
     aria-autocomplete="list"
     aria-expanded="false"
     aria-label="Search input"
-    class="h-auto min-w-20 flex-1 border-none bg-transparent pr-0 text-base font-medium text-foreground md:text-base pl-0"
+    class="h-auto flex-1 border-none bg-transparent pr-0 text-base font-medium text-foreground md:text-base min-w-20 pl-0"
     data-cy="header-search-input"
     placeholder="Search"
     type="text"
@@ -86,14 +86,14 @@ exports[`SearchInputBar > SearchInputBar - Snapshots > matches snapshot - focuse
 
 exports[`SearchInputBar > SearchInputBar - Snapshots > matches snapshot - with active tags 1`] = `
 <div
-  class="relative flex h-12 items-center gap-3 border border-border px-6 py-3 rounded-full"
+  class="relative flex h-12 min-w-0 items-center gap-3 border border-border px-6 py-3 rounded-full"
   data-cy="header-search"
   data-testid="search-input-bar"
   style="background: linear-gradient(180deg, rgb(7, 4, 10) 0%, rgb(27, 24, 32) 100%); backdrop-filter: blur(20px);"
 >
   <div
     aria-label="Active search tags"
-    class="flex shrink-0 items-center gap-2.5 py-2"
+    class="flex min-w-0 items-center gap-2.5 overflow-x-auto py-2"
     role="list"
   >
     <span
@@ -121,7 +121,7 @@ exports[`SearchInputBar > SearchInputBar - Snapshots > matches snapshot - with a
     aria-autocomplete="list"
     aria-expanded="false"
     aria-label="Search input"
-    class="h-auto min-w-20 flex-1 border-none bg-transparent pr-0 text-base font-medium text-foreground md:text-base pl-2.5"
+    class="h-auto flex-1 border-none bg-transparent pr-0 text-base font-medium text-foreground md:text-base min-w-8 pl-2.5"
     data-cy="header-search-input"
     placeholder=""
     type="text"
@@ -154,7 +154,7 @@ exports[`SearchInputBar > SearchInputBar - Snapshots > matches snapshot - with a
 
 exports[`SearchInputBar > SearchInputBar - Snapshots > matches snapshot - with input value 1`] = `
 <div
-  class="relative flex h-12 items-center gap-3 border border-border px-6 py-3 rounded-full"
+  class="relative flex h-12 min-w-0 items-center gap-3 border border-border px-6 py-3 rounded-full"
   data-cy="header-search"
   data-testid="search-input-bar"
   style="background: linear-gradient(180deg, rgb(7, 4, 10) 0%, rgb(27, 24, 32) 100%); backdrop-filter: blur(20px);"
@@ -163,7 +163,7 @@ exports[`SearchInputBar > SearchInputBar - Snapshots > matches snapshot - with i
     aria-autocomplete="list"
     aria-expanded="false"
     aria-label="Search input"
-    class="h-auto min-w-20 flex-1 border-none bg-transparent pr-0 text-base font-medium text-foreground md:text-base pl-0"
+    class="h-auto flex-1 border-none bg-transparent pr-0 text-base font-medium text-foreground md:text-base min-w-20 pl-0"
     data-cy="header-search-input"
     placeholder="Search"
     type="text"

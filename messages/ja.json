@@ -743,7 +743,7 @@
       "repostedPost": "あなたの投稿をリポストしました",
       "mentionedYou": "投稿であなたをメンションしました",
       "deletedPost": "投稿を削除しました",
-      "editedPost": "投稿を編集しました",
+      "editedPost": "関わった投稿を編集しました",
       "fallback": "新しい通知"
     },
     "settings": {
@@ -900,7 +900,8 @@
       "failedToLoadPosts": "新しい投稿の読み込みに失敗しました",
       "failedToLoadPostsDesc": "新しい投稿を表示できません。再試行してください。",
       "parseError": "記事コンテンツの解析に失敗しました",
-      "coverImageError": "記事のカバー画像の読み込みに失敗しました"
+      "coverImageError": "記事のカバー画像の読み込みに失敗しました",
+      "attachmentsLoadFailed": "添付ファイルの読み込みに失敗しました"
     },
     "bookmark": {
       "added": "ブックマークを追加しました",
@@ -986,6 +987,16 @@
       "maxFilesPartial": "最大{max}ファイルまで許可されています。一部のファイルは追加されませんでした。",
       "unsupportedType": "「{name}」はサポートされていないタイプ「{type}」です。サポートされている形式：{formats}。",
       "fileTooLarge": "「{name}」は最大サイズ{maxSize}を超えています。"
+    },
+    "status": {
+      "updateFailed": "ステータスの更新に失敗しました。再試行してください。",
+      "userNotLoaded": "ユーザープロフィールが読み込まれていません。再試行してください。"
+    },
+    "fullscreen": {
+      "error": "フルスクリーンの有効化中にエラーが発生しました"
+    },
+    "logout": {
+      "failed": "ログアウトに失敗しました。再試行してください。"
     }
   },
   "empty": {
@@ -1021,6 +1032,7 @@
     "follow": "フォロー",
     "unfollow": "フォロー解除",
     "following": "フォロー中",
+    "editProfile": "プロフィールを編集",
     "me": "自分",
     "tags": "タグ",
     "posts": "投稿",
@@ -1194,7 +1206,6 @@
     "emoji": "絵文字",
     "richText": "リッチテキスト",
     "markdown": "マークダウン",
-    "clearToSwitch": "モードを切り替えるにはコンテンツをクリアしてください",
     "placeholder": "あなたの傑作を書き始めましょう",
     "toolbarAriaLabel": "マークダウン編集ツールバー",
     "warningApproaching": "最大文字数制限に近づいています。",

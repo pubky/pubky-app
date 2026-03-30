@@ -743,7 +743,7 @@
       "repostedPost": "اعاد نشر منشورك",
       "mentionedYou": "ذكرك في منشور",
       "deletedPost": "حذف منشورا",
-      "editedPost": "عدّل منشوراً",
+      "editedPost": "عدّل منشوراً تفاعلت معه",
       "fallback": "إشعار جديد"
     },
     "settings": {
@@ -900,7 +900,8 @@
       "failedToLoadPosts": "فشل تحميل المنشورات الجديدة",
       "failedToLoadPostsDesc": "تعذر عرض المنشورات الجديدة. يرجى المحاولة مرة اخرى.",
       "parseError": "فشل تحليل محتوى المقال",
-      "coverImageError": "فشل تحميل صورة غلاف المقال"
+      "coverImageError": "فشل تحميل صورة غلاف المقال",
+      "attachmentsLoadFailed": "فشل تحميل المرفقات"
     },
     "bookmark": {
       "added": "تمت اضافة المفضلة",
@@ -986,6 +987,16 @@
       "maxFilesPartial": "الحد الاقصى {max} ملفات. لم تتم اضافة بعض الملفات.",
       "unsupportedType": "\"{name}\" نوعه \"{type}\" غير مدعوم. الانواع المدعومة: {formats}.",
       "fileTooLarge": "\"{name}\" يتجاوز الحجم الاقصى {maxSize}."
+    },
+    "status": {
+      "updateFailed": "فشل تحديث الحالة. يرجى المحاولة مرة اخرى.",
+      "userNotLoaded": "لم يتم تحميل ملف المستخدم. يرجى المحاولة مرة اخرى."
+    },
+    "fullscreen": {
+      "error": "خطأ في محاولة تفعيل وضع ملء الشاشة"
+    },
+    "logout": {
+      "failed": "فشل تسجيل الخروج. يرجى المحاولة مرة اخرى."
     }
   },
   "empty": {
@@ -1015,6 +1026,7 @@
     "follow": "متابعة",
     "unfollow": "الغاء المتابعة",
     "following": "متابَع",
+    "editProfile": "تعديل الملف الشخصي",
     "me": "انا",
     "tags": "الوسوم",
     "posts": "المنشورات",
@@ -1188,7 +1200,6 @@
     "emoji": "رمز تعبيري",
     "richText": "نص منسق",
     "markdown": "ماركداون",
-    "clearToSwitch": "امسح المحتوى للتبديل بين الأوضاع",
     "placeholder": "ابدأ بكتابة تحفتك",
     "toolbarAriaLabel": "شريط أدوات تحرير ماركداون",
     "warningApproaching": "أنت تقترب من الحد الأقصى لعدد الأحرف.",

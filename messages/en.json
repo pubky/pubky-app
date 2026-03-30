@@ -737,7 +737,7 @@
       "repostedPost": "reposted your post",
       "mentionedYou": "mentioned you in post",
       "deletedPost": "deleted a post",
-      "editedPost": "edited a post",
+      "editedPost": "edited a post you have interacted with",
       "fallback": "New notification"
     },
     "settings": {
@@ -894,7 +894,8 @@
       "failedToLoadPosts": "Failed to load new posts",
       "failedToLoadPostsDesc": "Unable to display new posts. Please try again.",
       "parseError": "Failed to parse article content",
-      "coverImageError": "Failed to load article cover image"
+      "coverImageError": "Failed to load article cover image",
+      "attachmentsLoadFailed": "Failed to load post attachments"
     },
     "bookmark": {
       "added": "Bookmark added",
@@ -980,6 +981,16 @@
       "maxFilesPartial": "Maximum of {max} files allowed. Some files were not added.",
       "unsupportedType": "\"{name}\" has unsupported type \"{type}\". Supported formats: {formats}.",
       "fileTooLarge": "\"{name}\" exceeds the maximum size of {maxSize}."
+    },
+    "status": {
+      "updateFailed": "Failed to update status. Please try again.",
+      "userNotLoaded": "User profile not loaded. Please try again."
+    },
+    "fullscreen": {
+      "error": "Error attempting to enable fullscreen"
+    },
+    "logout": {
+      "failed": "Failed to logout. Please try again."
     }
   },
   "empty": {
@@ -1015,6 +1026,7 @@
     "follow": "Follow",
     "unfollow": "Unfollow",
     "following": "Following",
+    "editProfile": "Edit profile",
     "me": "Me",
     "tags": "TAGS",
     "posts": "POSTS",
@@ -1188,7 +1200,6 @@
     "emoji": "Emoji",
     "richText": "Rich Text",
     "markdown": "Markdown",
-    "clearToSwitch": "Clear content to switch modes",
     "placeholder": "Start writing your masterpiece",
     "toolbarAriaLabel": "Markdown editing toolbar",
     "warningApproaching": "You're approaching the maximum character limit.",

@@ -47,11 +47,12 @@ export function usePost(): UsePostReturn {
   // access currentUserPubky directly to get null instead (post actions return early if null)
   const currentUserId = Core.useAuthStore((state) => state.currentUserPubky);
   const { toast } = Molecules.useToast();
-  const tToast = useTranslations('toast.post');
+  const tToast = useTranslations('toast');
+  const tPost = useTranslations('toast.post');
 
   const showErrorToast = (description: string) => {
     toast({
-      title: 'Error',
+      title: tToast('error'),
       description,
       className: 'destructive border-destructive bg-destructive text-destructive-foreground',
     });
@@ -81,11 +82,11 @@ export function usePost(): UsePostReturn {
       setContent('');
       setTags([]);
       setAttachments([]);
-      showSuccessToast('Reply posted', 'Your reply has been posted successfully.');
+      showSuccessToast(tPost('replyPosted'), tPost('replyPostedDesc'));
       onSuccess?.(createdPostId);
     } catch (err) {
       Libs.Logger.error('[usePost] Failed to submit reply:', err);
-      showErrorToast('Failed to post reply. Please try again.');
+      showErrorToast(tPost('replyFailed'));
     } finally {
       setIsSubmitting(false);
     }
@@ -115,11 +116,11 @@ export function usePost(): UsePostReturn {
       setAttachments([]);
       setIsArticle(false);
       setArticleTitle('');
-      showSuccessToast('Post created', 'Your post has been created successfully.');
+      showSuccessToast(tPost('postCreated'), tPost('postCreatedDesc'));
       onSuccess?.(createdPostId);
     } catch (err) {
       Libs.Logger.error('[usePost] Failed to create post:', err);
-      showErrorToast('Failed to create post. Please try again.');
+      showErrorToast(tPost('postFailed'));
     } finally {
       setIsSubmitting(false);
     }
@@ -143,19 +144,19 @@ export function usePost(): UsePostReturn {
       setAttachments([]);
 
       const toastInstance = toast({
-        title: tToast('repostSuccess'),
+        title: tPost('repostSuccess'),
         description: originalAuthorName
-          ? tToast('repostSuccessDesc', { author: originalAuthorName })
-          : tToast('repostSuccessDescFallback'),
+          ? tPost('repostSuccessDesc', { author: originalAuthorName })
+          : tPost('repostSuccessDescFallback'),
         action: (
           <Atoms.ToastAction
-            altText={tToast('repostUndo')}
+            altText={tPost('repostUndo')}
             onClick={() => {
               toastInstance.dismiss();
               onUndo(createdPostId);
             }}
           >
-            {tToast('repostUndo')}
+            {tPost('repostUndo')}
           </Atoms.ToastAction>
         ),
       });
@@ -163,7 +164,7 @@ export function usePost(): UsePostReturn {
       onSuccess?.(createdPostId);
     } catch (err) {
       Libs.Logger.error('[usePost] Failed to repost:', err);
-      showErrorToast(tToast('repostFailed'));
+      showErrorToast(tPost('repostFailed'));
     } finally {
       setIsSubmitting(false);
     }
@@ -184,11 +185,11 @@ export function usePost(): UsePostReturn {
       setContent('');
       setIsArticle(false);
       setArticleTitle('');
-      showSuccessToast('Post edited', 'Your post has been edited successfully.');
+      showSuccessToast(tPost('postEdited'), tPost('postEditedDesc'));
       onSuccess?.(editPostId);
     } catch (err) {
       Libs.Logger.error('[usePost] Failed to edit post:', err);
-      showErrorToast('Failed to edit post. Please try again.');
+      showErrorToast(tPost('editFailed'));
     } finally {
       setIsSubmitting(false);
     }
@@ -198,13 +199,13 @@ export function usePost(): UsePostReturn {
   useEffect(() => {
     if (isArticle && attachments.length > 0) {
       toast({
-        title: 'Attachments cleared',
-        description: 'Articles support one cover image only.',
+        title: tPost('attachmentsCleared'),
+        description: tPost('attachmentsClearedDesc'),
       });
       setAttachments([]);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps -- only trigger on isArticle change, not attachments
-  }, [isArticle]);
+  }, [isArticle, tPost]);
 
   return {
     content,

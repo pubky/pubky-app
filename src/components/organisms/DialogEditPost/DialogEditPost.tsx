@@ -28,15 +28,7 @@ export function DialogEditPost({ open, onOpenChangeAction, postId }: DialogEditP
 
   return (
     <Atoms.Dialog open={open} onOpenChange={handleOpenChange}>
-      <Atoms.DialogContent
-        className="w-3xl"
-        hiddenTitle={title}
-        onOpenAutoFocus={(e) => {
-          if (isArticle) {
-            e.preventDefault();
-          }
-        }}
-      >
+      <Atoms.DialogContent className="w-3xl" hiddenTitle={title}>
         <Atoms.DialogHeader>
           <Atoms.DialogTitle>{title}</Atoms.DialogTitle>
 
@@ -49,6 +41,7 @@ export function DialogEditPost({ open, onOpenChangeAction, postId }: DialogEditP
           variant={POST_INPUT_VARIANT.EDIT}
           onSuccess={() => onOpenChangeAction(false)}
           expanded={true}
+          autoFocusTextarea={!isArticle}
           onContentChange={handleContentChange}
           editPostId={postDetails.id}
           editContent={postDetails.content}

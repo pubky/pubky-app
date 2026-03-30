@@ -2,6 +2,7 @@
 
 import type { PostDetailsModel } from '@/core';
 import { useEffect, useState } from 'react';
+import { useTranslations } from 'next-intl';
 import * as Core from '@/core';
 import * as Molecules from '@/molecules';
 import type { ArticleJSON } from './usePostArticle.types';
@@ -46,6 +47,8 @@ export function usePostArticle({
   coverImageVariant,
 }: UsePostArticleParams): UsePostArticleResult {
   const { toast } = Molecules.useToast();
+  const tToast = useTranslations('toast');
+  const tPost = useTranslations('toast.post');
 
   const [title, setTitle] = useState('');
   const [body, setBody] = useState('');
@@ -58,8 +61,8 @@ export function usePostArticle({
       setBody(parsed.body || '');
     } catch {
       toast({
-        title: 'Error',
-        description: 'Failed to parse article content',
+        title: tToast('error'),
+        description: tPost('parseError'),
       });
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps -- toast is an external side-effect, not a dependency
@@ -85,8 +88,8 @@ export function usePostArticle({
         if (cancelled) return;
 
         toast({
-          title: 'Error',
-          description: 'Failed to load article cover image',
+          title: tToast('error'),
+          description: tPost('coverImageError'),
         });
       }
     };

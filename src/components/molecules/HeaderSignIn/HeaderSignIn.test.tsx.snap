@@ -2,7 +2,7 @@
 
 exports[`HeaderSignIn - Snapshots > matches snapshot for default HeaderSignIn 1`] = `
 <div
-  class="flex-1 flex-row items-center justify-end gap-3"
+  class="min-w-0 flex-1 flex-row items-center justify-end gap-3"
 >
   <div
     data-testid="search-input"

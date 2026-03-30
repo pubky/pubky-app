@@ -743,7 +743,7 @@
       "repostedPost": "republicó tu publicación",
       "mentionedYou": "te mencionó en una publicación",
       "deletedPost": "eliminó una publicación",
-      "editedPost": "editó una publicación",
+      "editedPost": "editó una publicación con la que interactuaste",
       "fallback": "Nueva notificación"
     },
     "settings": {
@@ -900,7 +900,8 @@
       "failedToLoadPosts": "Error al cargar nuevas publicaciónes",
       "failedToLoadPostsDesc": "No se pueden mostrar nuevas publicaciónes. Por favor intenta de nuevo.",
       "parseError": "Error al analizar contenido del articulo",
-      "coverImageError": "Error al cargar imagen de portada del articulo"
+      "coverImageError": "Error al cargar imagen de portada del articulo",
+      "attachmentsLoadFailed": "Error al cargar los archivos adjuntos"
     },
     "bookmark": {
       "added": "Favorito agregado",
@@ -986,6 +987,16 @@
       "maxFilesPartial": "Maximo {max} archivos permitidos. Algunos archivos no fueron agregados.",
       "unsupportedType": "\"{name}\" tiene tipo no soportado \"{type}\". Formatos soportados: {formats}.",
       "fileTooLarge": "\"{name}\" excede el tamaño maximo de {maxSize}."
+    },
+    "status": {
+      "updateFailed": "Error al actualizar el estado. Por favor intenta de nuevo.",
+      "userNotLoaded": "Perfil de usuario no cargado. Por favor intenta de nuevo."
+    },
+    "fullscreen": {
+      "error": "Error al intentar habilitar pantalla completa"
+    },
+    "logout": {
+      "failed": "Error al cerrar sesión. Por favor intenta de nuevo."
     }
   },
   "empty": {
@@ -1021,6 +1032,7 @@
     "follow": "Seguir",
     "unfollow": "Dejar de seguir",
     "following": "Siguiendo",
+    "editProfile": "Editar perfil",
     "me": "Yo",
     "tags": "ETIQUETAS",
     "posts": "PUBLICACIONES",
@@ -1194,7 +1206,6 @@
     "emoji": "Emoji",
     "richText": "Texto enriquecido",
     "markdown": "Markdown",
-    "clearToSwitch": "Borra el contenido para cambiar de modo",
     "placeholder": "Empieza a escribir tu obra maestra",
     "toolbarAriaLabel": "Barra de herramientas de edición Markdown",
     "warningApproaching": "Te estás acercando al límite máximo de caracteres.",

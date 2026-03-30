@@ -34,13 +34,13 @@ export const PostMentions = (props: RemarkAnchorProps) => {
   );
 
   return (
-    <Molecules.PostHeaderUserInfoPopoverWrapper
+    <Molecules.UserInfoPopover
       userId={userId}
       userName={userName}
       avatarUrl={profile?.avatarUrl}
       formattedPublicKey={fallbackMention}
     >
       {linkContent}
-    </Molecules.PostHeaderUserInfoPopoverWrapper>
+    </Molecules.UserInfoPopover>
   );
 };

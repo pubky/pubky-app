@@ -743,7 +743,7 @@
       "repostedPost": "转发了您的帖子",
       "mentionedYou": "在帖子中提到了您",
       "deletedPost": "删除了一条帖子",
-      "editedPost": "编辑了一条帖子",
+      "editedPost": "编辑了您互动过的帖子",
       "fallback": "新通知"
     },
     "settings": {
@@ -900,7 +900,8 @@
       "failedToLoadPosts": "加载新帖子失败",
       "failedToLoadPostsDesc": "无法显示新帖子。请重试。",
       "parseError": "解析文章内容失败",
-      "coverImageError": "加载文章封面图片失败"
+      "coverImageError": "加载文章封面图片失败",
+      "attachmentsLoadFailed": "加载附件失败"
     },
     "bookmark": {
       "added": "书签已添加",
@@ -986,6 +987,16 @@
       "maxFilesPartial": "最多允许 {max} 个文件。部分文件未被添加。",
       "unsupportedType": "\"{name}\" 的类型 \"{type}\" 不受支持。支持的格式：{formats}。",
       "fileTooLarge": "\"{name}\" 超过最大大小 {maxSize}。"
+    },
+    "status": {
+      "updateFailed": "更新状态失败。请重试。",
+      "userNotLoaded": "用户资料未加载。请重试。"
+    },
+    "fullscreen": {
+      "error": "尝试启用全屏时出错"
+    },
+    "logout": {
+      "failed": "退出登录失败。请重试。"
     }
   },
   "empty": {
@@ -1015,6 +1026,7 @@
     "follow": "关注",
     "unfollow": "取消关注",
     "following": "已关注",
+    "editProfile": "编辑资料",
     "me": "我",
     "tags": "标签",
     "posts": "帖子",
@@ -1188,7 +1200,6 @@
     "emoji": "表情",
     "richText": "富文本",
     "markdown": "Markdown",
-    "clearToSwitch": "清除内容以切换模式",
     "placeholder": "开始创作你的杰作",
     "toolbarAriaLabel": "Markdown 编辑工具栏",
     "warningApproaching": "您即将达到最大字符数限制。",
