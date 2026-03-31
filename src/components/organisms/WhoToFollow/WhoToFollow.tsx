@@ -45,7 +45,7 @@ export function WhoToFollow({ className }: WhoToFollowProps) {
   return (
     <Molecules.SidebarSection
       title={t('whoToFollow')}
-      footerIcon={Libs.Users}
+      footerIcon={Libs.UsersRound}
       footerText={tCommon('seeAll')}
       onFooterClick={handleSeeAll}
       className={className}

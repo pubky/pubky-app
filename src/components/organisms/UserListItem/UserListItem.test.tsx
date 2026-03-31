@@ -57,9 +57,11 @@ vi.mock('@/libs', () => ({
   cn: (...args: unknown[]) => args.filter(Boolean).join(' '),
   Check: (props: Record<string, unknown>) => <svg data-testid="check-icon" {...props} />,
   UserMinus: (props: Record<string, unknown>) => <svg data-testid="user-minus-icon" {...props} />,
-  UserPlus: (props: Record<string, unknown>) => <svg data-testid="user-plus-icon" {...props} />,
   UserRoundPlus: (props: Record<string, unknown>) => <svg data-testid="user-round-plus-icon" {...props} />,
   CircleUserRound: (props: Record<string, unknown>) => <svg data-testid="circle-user-round" {...props} />,
+  Tag: (props: Record<string, unknown>) => <svg data-testid="tag-icon" {...props} />,
+  StickyNote: (props: Record<string, unknown>) => <svg data-testid="sticky-note-icon" {...props} />,
+  Loader2: (props: Record<string, unknown>) => <svg data-testid="loader-icon" {...props} />,
 }));
 
 // Mock Core
