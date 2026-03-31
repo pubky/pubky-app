@@ -1,8 +1,8 @@
-const REPLY_TEXTAREA_SELECTOR = '[data-cy="reply-post-input"] [data-slot="textarea"]';
+const REPLY_TEXTAREA_SELECTOR = '#reply-post-input [data-slot="textarea"]';
 const OPEN_DIALOG_REPLY_TEXTAREA_SELECTOR = `[data-slot="dialog-content"][data-state="open"] ${REPLY_TEXTAREA_SELECTOR}`;
 const DIALOG_CONTENT_SELECTOR = '[data-slot="dialog-content"]';
 
-export function getReplyTextarea(): HTMLTextAreaElement | null {
+function getReplyTextarea(): HTMLTextAreaElement | null {
   if (typeof document === 'undefined') return null;
 
   return (

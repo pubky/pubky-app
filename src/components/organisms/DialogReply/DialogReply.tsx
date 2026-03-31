@@ -1,6 +1,6 @@
 'use client';
 
-import * as React from 'react';
+import { useEffect } from 'react';
 import { useTranslations } from 'next-intl';
 import * as Atoms from '@/atoms';
 import * as Hooks from '@/hooks';
@@ -17,7 +17,9 @@ export function DialogReply({ postId, open, onOpenChangeAction }: DialogReplyPro
       onClose: () => onOpenChangeAction(false),
     });
 
-  React.useEffect(() => {
+  //NOTE: This might refactor or improved in the future if we need it.
+  // PostInput can handle this autoscrolling already but refactoring without need could impact in many other places.
+  useEffect(() => {
     if (!open || typeof window === 'undefined') return;
 
     const scrollAuto = () => scrollReplyTextareaIntoDialog('auto');
@@ -51,6 +53,7 @@ export function DialogReply({ postId, open, onOpenChangeAction }: DialogReplyPro
           <Atoms.Container className="relative pl-6" overrideDefaults>
             <Organisms.PostInput
               dataCy="reply-post-input"
+              id="reply-post-input"
               key={resetKey}
               variant={POST_INPUT_VARIANT.REPLY}
               postId={postId}
