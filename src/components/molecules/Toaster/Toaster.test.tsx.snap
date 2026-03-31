@@ -12,7 +12,7 @@ exports[`Toaster - Snapshots > matches snapshot for Toaster with multiple toasts
     tabindex="0"
   />
   <ol
-    class="fixed bottom-0 left-1/2 z-[100] flex max-h-screen w-full -translate-x-1/2 flex-col-reverse p-4 sm:bottom-8 sm:max-w-[550px]"
+    class="fixed bottom-16 left-1/2 z-[100] flex max-h-screen w-full -translate-x-1/2 flex-col-reverse p-4 sm:bottom-8 sm:max-w-[550px]"
     tabindex="-1"
   >
     <li
@@ -83,7 +83,7 @@ exports[`Toaster - Snapshots > matches snapshot for Toaster with single toast 1`
     tabindex="0"
   />
   <ol
-    class="fixed bottom-0 left-1/2 z-[100] flex max-h-screen w-full -translate-x-1/2 flex-col-reverse p-4 sm:bottom-8 sm:max-w-[550px]"
+    class="fixed bottom-16 left-1/2 z-[100] flex max-h-screen w-full -translate-x-1/2 flex-col-reverse p-4 sm:bottom-8 sm:max-w-[550px]"
     tabindex="-1"
   >
     <li
@@ -130,7 +130,7 @@ exports[`Toaster - Snapshots > matches snapshot for Toaster with title-only toas
     tabindex="0"
   />
   <ol
-    class="fixed bottom-0 left-1/2 z-[100] flex max-h-screen w-full -translate-x-1/2 flex-col-reverse p-4 sm:bottom-8 sm:max-w-[550px]"
+    class="fixed bottom-16 left-1/2 z-[100] flex max-h-screen w-full -translate-x-1/2 flex-col-reverse p-4 sm:bottom-8 sm:max-w-[550px]"
     tabindex="-1"
   >
     <li
@@ -172,7 +172,7 @@ exports[`Toaster - Snapshots > matches snapshot for Toaster with toast action 1`
     tabindex="0"
   />
   <ol
-    class="fixed bottom-0 left-1/2 z-[100] flex max-h-screen w-full -translate-x-1/2 flex-col-reverse p-4 sm:bottom-8 sm:max-w-[550px]"
+    class="fixed bottom-16 left-1/2 z-[100] flex max-h-screen w-full -translate-x-1/2 flex-col-reverse p-4 sm:bottom-8 sm:max-w-[550px]"
     tabindex="-1"
   >
     <li
@@ -226,7 +226,7 @@ exports[`Toaster - Snapshots > matches snapshot for Toaster with toast with acti
     tabindex="0"
   />
   <ol
-    class="fixed bottom-0 left-1/2 z-[100] flex max-h-screen w-full -translate-x-1/2 flex-col-reverse p-4 sm:bottom-8 sm:max-w-[550px]"
+    class="fixed bottom-16 left-1/2 z-[100] flex max-h-screen w-full -translate-x-1/2 flex-col-reverse p-4 sm:bottom-8 sm:max-w-[550px]"
     tabindex="-1"
   >
     <li
@@ -278,7 +278,7 @@ exports[`Toaster - Snapshots > matches snapshot for empty Toaster 1`] = `
   tabindex="-1"
 >
   <ol
-    class="fixed bottom-0 left-1/2 z-[100] flex max-h-screen w-full -translate-x-1/2 flex-col-reverse p-4 sm:bottom-8 sm:max-w-[550px]"
+    class="fixed bottom-16 left-1/2 z-[100] flex max-h-screen w-full -translate-x-1/2 flex-col-reverse p-4 sm:bottom-8 sm:max-w-[550px]"
     tabindex="-1"
   />
 </div>

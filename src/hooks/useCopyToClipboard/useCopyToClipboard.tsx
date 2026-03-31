@@ -14,6 +14,7 @@ interface UseCopyToClipboardOptions {
 }
 
 export function useCopyToClipboard(options: UseCopyToClipboardOptions = {}) {
+  const tCommon = useTranslations('common');
   const tCopy = useTranslations('toast.copy');
   const { onSuccess, onError, successTitle, errorTitle, errorDescription } = options;
 
@@ -31,7 +32,7 @@ export function useCopyToClipboard(options: UseCopyToClipboardOptions = {}) {
           description: text,
           action: (
             <Atoms.Button size="sm" className="text-xs font-bold" onClick={() => toastInstance.dismiss()}>
-              {tCopy('ok')}
+              {tCommon('ok')}
             </Atoms.Button>
           ),
         });
@@ -48,7 +49,7 @@ export function useCopyToClipboard(options: UseCopyToClipboardOptions = {}) {
         return false;
       }
     },
-    [onSuccess, onError, resolvedSuccessTitle, resolvedErrorTitle, resolvedErrorDescription, tCopy],
+    [onSuccess, onError, resolvedSuccessTitle, resolvedErrorTitle, resolvedErrorDescription, tCommon],
   );
 
   return { copyToClipboard: copyToClipboardHandler };

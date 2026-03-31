@@ -47,6 +47,7 @@ export function usePost(): UsePostReturn {
   // access currentUserPubky directly to get null instead (post actions return early if null)
   const currentUserId = Core.useAuthStore((state) => state.currentUserPubky);
   const { toast } = Molecules.useToast();
+  const tCommon = useTranslations('common');
   const tToast = useTranslations('toast');
   const tPost = useTranslations('toast.post');
 
@@ -82,7 +83,15 @@ export function usePost(): UsePostReturn {
       setContent('');
       setTags([]);
       setAttachments([]);
-      showSuccessToast(tPost('replyPosted'), tPost('replyPostedDesc'));
+      const toastInstance = toast({
+        title: tPost('replyPosted'),
+        description: tPost('replyPostedDesc'),
+        action: (
+          <Atoms.Button size="sm" className="text-xs font-bold" onClick={() => toastInstance.dismiss()}>
+            {tCommon('ok')}
+          </Atoms.Button>
+        ),
+      });
       onSuccess?.(createdPostId);
     } catch (err) {
       Libs.Logger.error('[usePost] Failed to submit reply:', err);

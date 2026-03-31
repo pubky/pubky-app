@@ -1,5 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { renderHook, waitFor, act } from '@testing-library/react';
+import { Button } from '@/atoms';
 import { usePost } from './usePost';
 
 // Hoist mock data and functions
@@ -264,10 +265,15 @@ describe('usePost', () => {
       expect(result.current.content).toBe('');
       expect(result.current.tags).toEqual([]);
       expect(result.current.attachments).toEqual([]);
-      expect(mockToast).toHaveBeenCalledWith({
-        title: 'Reply posted',
-        description: 'Your reply has been posted successfully.',
-      });
+      expect(mockToast).toHaveBeenCalledWith(
+        expect.objectContaining({
+          title: 'Reply posted',
+          description: 'Your reply has been posted successfully.',
+          action: expect.objectContaining({ type: Button }),
+        }),
+      );
+      const toastCall = mockToast.mock.calls[0][0];
+      expect(toastCall.action.props.children).toBe('OK');
       expect(mockOnSuccess).toHaveBeenCalled();
       expect(result.current.isSubmitting).toBe(false);
     });
