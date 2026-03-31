@@ -19,6 +19,7 @@ import { sanitizeCodeBlockLanguages } from '@/molecules/MarkdownEditor/Initializ
 
 export function PostInput({
   dataCy,
+  id,
   variant,
   postId,
   originalPostId,
@@ -152,6 +153,7 @@ export function PostInput({
   return (
     <Atoms.Container
       data-cy={dataCy}
+      id={id}
       ref={containerRef}
       className={Libs.cn(
         'relative cursor-pointer rounded-md border border-dashed p-4 transition-colors duration-200',
