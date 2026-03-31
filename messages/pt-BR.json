@@ -542,6 +542,12 @@
     }
   },
   "dialogs": {
+    "deletePost": {
+      "title": "Excluir post?",
+      "description": "Esta ação não pode ser desfeita. O post será excluído permanentemente.",
+      "confirmButton": "Excluir",
+      "cancelButton": "Cancelar"
+    },
     "editPost": {
       "editArticle": "Editar Artigo",
       "editPost": "Editar Post",

@@ -542,6 +542,12 @@
     }
   },
   "dialogs": {
+    "deletePost": {
+      "title": "Eliminare il post?",
+      "description": "Questa azione non può essere annullata. Il post verrà eliminato definitivamente.",
+      "confirmButton": "Elimina",
+      "cancelButton": "Annulla"
+    },
     "editPost": {
       "editArticle": "Modifica articolo",
       "editPost": "Modifica post",
