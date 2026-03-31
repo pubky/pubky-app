@@ -13,6 +13,13 @@ vi.mock('@/core', async () => {
   };
 });
 
+const DEFAULT_VERIFICATION_DATA = {
+  id: 'test-verification-id',
+  bolt11Invoice: 'lnbc1000...',
+  amountSat: 1000,
+  expiresAt: Date.now() + 600000,
+};
+
 describe('VerificationHandler', () => {
   const flushMicrotasks = async (iterations = 5) => {
     for (let i = 0; i < iterations; i += 1) {
@@ -54,12 +61,7 @@ describe('VerificationHandler', () => {
     ) => VerificationHandler;
 
     return new VerificationHandlerCtor(
-      overrides.data ?? {
-        id: 'test-verification-id',
-        bolt11Invoice: 'lnbc1000...',
-        amountSat: 1000,
-        expiresAt: Date.now() + 600000,
-      },
+      overrides.data ?? DEFAULT_VERIFICATION_DATA,
       overrides.onPaymentConfirmed ?? vi.fn(),
       overrides.onPaymentExpired ?? vi.fn(),
       overrides.onError,
@@ -68,13 +70,7 @@ describe('VerificationHandler', () => {
 
   beforeEach(() => {
     vi.clearAllMocks();
-    // Default: verification not expired (expires in 10 minutes)
-    mockCreateLnVerification.mockResolvedValue({
-      id: 'test-verification-id',
-      bolt11Invoice: 'lnbc1000...',
-      amountSat: 1000,
-      expiresAt: Date.now() + 600000,
-    });
+    mockCreateLnVerification.mockResolvedValue(DEFAULT_VERIFICATION_DATA);
   });
 
   afterEach(() => {

@@ -34,33 +34,26 @@ export const HumanLightningPayment = ({ onBack, onSuccess }: HumanLightningPayme
         verificationRef.current.abort();
       }
 
-      const onPaymentConfirmed = async (signupCode: string, homeserverPubky: string) => {
-        try {
-          await onSuccess(signupCode, homeserverPubky);
-          toast({
-            title: t('paymentSuccess'),
-          });
-        } catch (error) {
-          toast({
-            title: tCommon('error'),
-            description: Libs.isAppError(error) ? error.message : t('requestFailedDescription'),
-          });
-        }
-      };
-      const onPaymentExpired = () => {
-        setIsPaymentExpired(true);
-        toast({
-          title: t('paymentExpired'),
-        });
-      };
-      const onVerificationError = (error: unknown) => {
+      const toastVerificationError = (error: unknown) => {
         toast({
           title: tCommon('error'),
           description: Libs.isAppError(error) ? error.message : t('requestFailedDescription'),
         });
       };
+      const onPaymentConfirmed = async (signupCode: string, homeserverPubky: string) => {
+        try {
+          await onSuccess(signupCode, homeserverPubky);
+          toast({ title: t('paymentSuccess') });
+        } catch (error) {
+          toastVerificationError(error);
+        }
+      };
+      const onPaymentExpired = () => {
+        setIsPaymentExpired(true);
+        toast({ title: t('paymentExpired') });
+      };
 
-      const client = await VerificationHandler.create(onPaymentConfirmed, onPaymentExpired, onVerificationError);
+      const client = await VerificationHandler.create(onPaymentConfirmed, onPaymentExpired, toastVerificationError);
       verificationRef.current = client;
       setVerification(client);
       setIsPaymentExpired(false);
@@ -139,9 +132,12 @@ export const HumanLightningPayment = ({ onBack, onSuccess }: HumanLightningPayme
     if (!verification) return null;
 
     if (isPaymentExpired) {
-      return isMobile
-        ? renderExpiredState('flex h-[192px] w-full items-center justify-center rounded-[9px] bg-secondary p-[9px]')
-        : renderExpiredState('flex h-[192px] w-[192px] items-center justify-center rounded-[9px] bg-secondary p-[9px]');
+      return renderExpiredState(
+        Libs.cn(
+          'flex h-[192px] items-center justify-center rounded-[9px] bg-secondary p-[9px]',
+          isMobile ? 'w-full' : 'w-[192px]',
+        ),
+      );
     }
 
     if (isMobile) {
@@ -173,13 +169,13 @@ export const HumanLightningPayment = ({ onBack, onSuccess }: HumanLightningPayme
     <React.Fragment>
       <Atoms.PageHeader>
         <Molecules.PageTitle size="large">
-          {isMobile
-            ? t.rich('title_mobile', {
-                highlight: (chunks) => <span className="text-brand">{chunks}</span>,
-              })
-            : t.rich('title', {
-                highlight: (chunks) => <span className="text-brand">{chunks}</span>,
-              })}
+          {t.rich(isMobile ? 'title_mobile' : 'title', {
+            highlight: (chunks) => (
+              <Atoms.Typography as="span" overrideDefaults className="text-brand">
+                {chunks}
+              </Atoms.Typography>
+            ),
+          })}
         </Molecules.PageTitle>
         <Atoms.PageSubtitle>{t('subtitle')}</Atoms.PageSubtitle>
       </Atoms.PageHeader>
