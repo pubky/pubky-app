@@ -230,7 +230,7 @@ exports[`CopyrightForm - Snapshots > matches snapshot for default state 1`] = `
             >
               <textarea
                 aria-invalid="false"
-                class="flex field-sizing-content min-h-16 w-full rounded-md border border-input bg-transparent px-3 py-2 text-base wrap-anywhere shadow-xs transition-[color,box-shadow] outline-none placeholder:text-muted-foreground focus-visible:border-ring focus-visible:ring-ring/50 disabled:cursor-not-allowed disabled:opacity-50 aria-invalid:border-destructive aria-invalid:ring-destructive/40 w-full border-none resize-none px-5 py-4 h-25 !bg-transparent overflow-y-auto overflow-x-hidden break-words"
+                class="flex field-sizing-content w-full rounded-md bg-transparent text-base wrap-anywhere outline-none placeholder:text-muted-foreground disabled:cursor-not-allowed disabled:opacity-50 aria-invalid:border-destructive aria-invalid:ring-destructive/40 transition-[color,box-shadow] min-h-6 resize-none border-none p-0 font-medium text-secondary-foreground shadow-none focus-visible:ring-0 focus-visible:ring-offset-0 px-5 py-4 h-25 overflow-y-auto overflow-x-hidden break-words"
                 data-slot="textarea"
                 id="originalContentUrls"
                 name="originalContentUrls"
@@ -256,7 +256,7 @@ exports[`CopyrightForm - Snapshots > matches snapshot for default state 1`] = `
             >
               <textarea
                 aria-invalid="false"
-                class="flex field-sizing-content min-h-16 w-full rounded-md border border-input bg-transparent px-3 py-2 text-base wrap-anywhere shadow-xs transition-[color,box-shadow] outline-none placeholder:text-muted-foreground focus-visible:border-ring focus-visible:ring-ring/50 disabled:cursor-not-allowed disabled:opacity-50 aria-invalid:border-destructive aria-invalid:ring-destructive/40 w-full border-none resize-none px-5 py-4 h-25 !bg-transparent overflow-y-auto overflow-x-hidden"
+                class="flex field-sizing-content w-full rounded-md bg-transparent text-base wrap-anywhere outline-none placeholder:text-muted-foreground disabled:cursor-not-allowed disabled:opacity-50 aria-invalid:border-destructive aria-invalid:ring-destructive/40 transition-[color,box-shadow] min-h-6 resize-none border-none p-0 font-medium text-secondary-foreground shadow-none focus-visible:ring-0 focus-visible:ring-offset-0 px-5 py-4 h-25 overflow-y-auto overflow-x-hidden"
                 data-slot="textarea"
                 id="briefDescription"
                 name="briefDescription"
@@ -305,7 +305,7 @@ exports[`CopyrightForm - Snapshots > matches snapshot for default state 1`] = `
           >
             <textarea
               aria-invalid="false"
-              class="flex field-sizing-content min-h-16 w-full rounded-md border border-input bg-transparent px-3 py-2 text-base wrap-anywhere shadow-xs transition-[color,box-shadow] outline-none placeholder:text-muted-foreground focus-visible:border-ring focus-visible:ring-ring/50 disabled:cursor-not-allowed disabled:opacity-50 aria-invalid:border-destructive aria-invalid:ring-destructive/40 w-full border-none resize-none px-5 py-4 h-25 !bg-transparent overflow-y-auto overflow-x-hidden break-words"
+              class="flex field-sizing-content w-full rounded-md bg-transparent text-base wrap-anywhere outline-none placeholder:text-muted-foreground disabled:cursor-not-allowed disabled:opacity-50 aria-invalid:border-destructive aria-invalid:ring-destructive/40 transition-[color,box-shadow] min-h-6 resize-none border-none p-0 font-medium text-secondary-foreground shadow-none focus-visible:ring-0 focus-visible:ring-offset-0 px-5 py-4 h-25 overflow-y-auto overflow-x-hidden break-words"
               data-slot="textarea"
               id="infringingContentUrl"
               name="infringingContentUrl"
