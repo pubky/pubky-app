@@ -1,12 +1,12 @@
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { DialogReply } from './DialogReply';
+import * as Atoms from '@/atoms';
 import * as Organisms from '@/organisms';
 import { POST_INPUT_VARIANT } from '@/organisms/PostInput/PostInput.constants';
 
 // Mock hooks
 const mockUseConfirmableDialog = vi.fn();
-
 vi.mock('@/hooks', async (importOriginal) => {
   const actual = await importOriginal<typeof import('@/hooks')>();
   return {
@@ -76,28 +76,30 @@ vi.mock('@/atoms', () => ({
       {children}
     </div>
   ),
-  DialogContent: ({
-    children,
-    className,
-    hiddenTitle,
-    'aria-describedby': ariaDescribedBy,
-    ...props
-  }: {
-    children: React.ReactNode;
-    className?: string;
-    hiddenTitle?: string;
-    'aria-describedby'?: string;
-    [key: string]: unknown;
-  }) => (
-    <div
-      data-testid="dialog-content"
-      className={className}
-      aria-label={hiddenTitle}
-      aria-describedby={ariaDescribedBy}
-      {...props}
-    >
-      {children}
-    </div>
+  DialogContent: vi.fn(
+    ({
+      children,
+      className,
+      hiddenTitle,
+      'aria-describedby': ariaDescribedBy,
+      ...props
+    }: {
+      children: React.ReactNode;
+      className?: string;
+      hiddenTitle?: string;
+      'aria-describedby'?: string;
+      [key: string]: unknown;
+    }) => (
+      <div
+        data-testid="dialog-content"
+        className={className}
+        aria-label={hiddenTitle}
+        aria-describedby={ariaDescribedBy}
+        {...props}
+      >
+        {children}
+      </div>
+    ),
   ),
   DialogHeader: ({ children }: { children: React.ReactNode }) => <div data-testid="dialog-header">{children}</div>,
   DialogTitle: ({ children }: { children: React.ReactNode }) => <h2 data-testid="dialog-title">{children}</h2>,
@@ -199,6 +201,7 @@ describe('DialogReply', () => {
     expect(Organisms.PostInput).toHaveBeenCalledWith(
       {
         dataCy: 'reply-post-input',
+        id: 'reply-post-input',
         variant: POST_INPUT_VARIANT.REPLY,
         postId: 'test-post-123',
         onSuccess: expect.any(Function),
@@ -243,6 +246,36 @@ describe('DialogReply', () => {
     rerender(<DialogReply postId="test-post-123" open={true} onOpenChangeAction={onOpenChangeAction} />);
     dialog = screen.getByTestId('dialog');
     expect(dialog).toHaveAttribute('data-open', 'true');
+  });
+
+  it('scrolls the reply textarea when dialog opens', () => {
+    const onOpenChangeAction = vi.fn();
+    const documentQuerySelectorSpy = vi.spyOn(document, 'querySelector');
+
+    render(<DialogReply postId="test-post-123" open={true} onOpenChangeAction={onOpenChangeAction} />);
+
+    const postInput = screen.getByTestId('post-input');
+    postInput.setAttribute('id', 'reply-post-input');
+
+    const textarea = document.createElement('textarea');
+    textarea.setAttribute('data-slot', 'textarea');
+
+    const scrollIntoViewSpy = vi.fn();
+    Object.defineProperty(textarea, 'scrollIntoView', {
+      configurable: true,
+      value: scrollIntoViewSpy,
+    });
+
+    postInput.appendChild(textarea);
+    const dialogContentProps = vi.mocked(Atoms.DialogContent).mock.calls.at(-1)?.[0] as {
+      onAnimationEnd?: React.AnimationEventHandler<HTMLDivElement>;
+    };
+    dialogContentProps.onAnimationEnd?.({} as React.AnimationEvent<HTMLDivElement>);
+
+    expect(documentQuerySelectorSpy).toHaveBeenCalled();
+    expect(scrollIntoViewSpy).toHaveBeenCalledWith({ block: 'center', behavior: 'smooth' });
+
+    documentQuerySelectorSpy.mockRestore();
   });
 });
 

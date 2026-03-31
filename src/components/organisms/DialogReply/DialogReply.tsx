@@ -7,6 +7,7 @@ import * as Molecules from '@/molecules';
 import * as Organisms from '@/organisms';
 import { POST_INPUT_VARIANT } from '@/organisms/PostInput/PostInput.constants';
 import type { DialogReplyProps } from './DialogReply.types';
+import { scrollReplyTextareaIntoDialog } from './DialogReply.utils';
 
 export function DialogReply({ postId, open, onOpenChangeAction }: DialogReplyProps) {
   const t = useTranslations('dialogs.reply');
@@ -15,9 +16,21 @@ export function DialogReply({ postId, open, onOpenChangeAction }: DialogReplyPro
       onClose: () => onOpenChangeAction(false),
     });
 
+  //NOTE: This might refactor or improved in the future if we need it.
+  // PostInput can handle this autoscrolling already but refactoring without need could impact in many other places.
+  const handleDialogContentAnimationEnd: React.AnimationEventHandler<HTMLDivElement> = () => {
+    if (!open) return;
+
+    scrollReplyTextareaIntoDialog('smooth');
+  };
+
   return (
     <Atoms.Dialog open={open} onOpenChange={handleOpenChange}>
-      <Atoms.DialogContent className="w-3xl" hiddenTitle={t('hiddenTitle')}>
+      <Atoms.DialogContent
+        className="w-3xl"
+        hiddenTitle={t('hiddenTitle')}
+        onAnimationEnd={handleDialogContentAnimationEnd}
+      >
         <Atoms.DialogHeader>
           <Atoms.DialogTitle>{t('title')}</Atoms.DialogTitle>
           <Atoms.DialogDescription className="sr-only">{t('description')}</Atoms.DialogDescription>
@@ -30,6 +43,7 @@ export function DialogReply({ postId, open, onOpenChangeAction }: DialogReplyPro
           <Atoms.Container className="relative pl-6" overrideDefaults>
             <Organisms.PostInput
               dataCy="reply-post-input"
+              id="reply-post-input"
               key={resetKey}
               variant={POST_INPUT_VARIANT.REPLY}
               postId={postId}

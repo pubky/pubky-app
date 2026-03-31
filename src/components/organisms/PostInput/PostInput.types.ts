@@ -26,6 +26,8 @@ interface PostInputBaseProps {
   onArticleModeChange?: (isArticle: boolean) => void;
   /** Data Cy for the post input */
   dataCy?: string;
+  /** ID to access the post input */
+  id?: string;
   /**
    * Whether to auto-focus textarea element on mount.
    *

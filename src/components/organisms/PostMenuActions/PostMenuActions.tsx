@@ -5,6 +5,7 @@ import { useTranslations } from 'next-intl';
 import * as Atoms from '@/atoms';
 import { MENU_VARIANT } from '@/config/ui';
 import * as Hooks from '@/hooks';
+import * as Molecules from '@/molecules';
 import * as Organisms from '@/organisms';
 import { PostMenuActionsContent } from './PostMenuActionsContent';
 import type { PostMenuActionsProps } from './PostMenuActions.types';
@@ -15,6 +16,8 @@ export function PostMenuActions({ postId, trigger }: PostMenuActionsProps) {
   const [open, setOpen] = useState(false);
   const [reportDialogOpen, setReportDialogOpen] = useState(false);
   const [editDialogOpen, setEditDialogOpen] = useState(false);
+  const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
+  const { deletePost, isDeleting } = Hooks.useDeletePost();
   const { requireAuth } = Hooks.useRequireAuth();
   const closeMenu = () => setOpen(false);
 
@@ -25,6 +28,15 @@ export function PostMenuActions({ postId, trigger }: PostMenuActionsProps) {
 
   const handleEditClick = () => {
     setEditDialogOpen(true);
+  };
+
+  const handleDeleteClick = () => {
+    closeMenu();
+    setDeleteConfirmOpen(true);
+  };
+
+  const handleDeleteConfirm = () => {
+    deletePost(postId);
   };
 
   // Handle open/close with auth check - opens sign-in dialog for unauthenticated users
@@ -52,6 +64,8 @@ export function PostMenuActions({ postId, trigger }: PostMenuActionsProps) {
                 onActionComplete={closeMenu}
                 onReportClick={handleReportClick}
                 onEditClick={handleEditClick}
+                onDeleteClick={handleDeleteClick}
+                isDeleting={isDeleting}
               />
             </Atoms.Container>
           </Atoms.SheetContent>
@@ -70,12 +84,19 @@ export function PostMenuActions({ postId, trigger }: PostMenuActionsProps) {
               onActionComplete={closeMenu}
               onReportClick={handleReportClick}
               onEditClick={handleEditClick}
+              onDeleteClick={handleDeleteClick}
+              isDeleting={isDeleting}
             />
           </Atoms.DropdownMenuContent>
         </Atoms.DropdownMenu>
       )}
       <Organisms.DialogReportPost open={reportDialogOpen} onOpenChange={setReportDialogOpen} postId={postId} />
       <Organisms.DialogEditPost open={editDialogOpen} onOpenChangeAction={setEditDialogOpen} postId={postId} />
+      <Molecules.DialogConfirmDelete
+        open={deleteConfirmOpen}
+        onOpenChange={setDeleteConfirmOpen}
+        onConfirm={handleDeleteConfirm}
+      />
     </>
   );
 }
