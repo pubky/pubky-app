@@ -13,7 +13,7 @@ const IconsButton = {
   [POST_INPUT_VARIANT.EDIT]: Icons.Edit,
   [POST_INPUT_VARIANT.REPOST]: Icons.Repeat,
   [POST_INPUT_VARIANT.POST]: undefined,
-  [POST_INPUT_VARIANT.REPLY]: undefined,
+  [POST_INPUT_VARIANT.REPLY]: Icons.MessageCircle,
 } as const;
 
 export function PostInputExpandableSection({
