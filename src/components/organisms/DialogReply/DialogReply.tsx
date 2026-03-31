@@ -1,6 +1,5 @@
 'use client';
 
-import { useEffect } from 'react';
 import { useTranslations } from 'next-intl';
 import * as Atoms from '@/atoms';
 import * as Hooks from '@/hooks';
@@ -19,28 +18,19 @@ export function DialogReply({ postId, open, onOpenChangeAction }: DialogReplyPro
 
   //NOTE: This might refactor or improved in the future if we need it.
   // PostInput can handle this autoscrolling already but refactoring without need could impact in many other places.
-  useEffect(() => {
-    if (!open || typeof window === 'undefined') return;
+  const handleDialogContentAnimationEnd: React.AnimationEventHandler<HTMLDivElement> = () => {
+    if (!open) return;
 
-    const scrollAuto = () => scrollReplyTextareaIntoDialog('auto');
-    const scrollSmooth = () => scrollReplyTextareaIntoDialog('smooth');
-
-    const initialTimeoutId = window.setTimeout(scrollAuto, 0);
-    const settleTimeoutId = window.setTimeout(scrollSmooth, 200);
-
-    const viewport = window.visualViewport;
-    viewport?.addEventListener('resize', scrollSmooth);
-
-    return () => {
-      window.clearTimeout(initialTimeoutId);
-      window.clearTimeout(settleTimeoutId);
-      viewport?.removeEventListener('resize', scrollSmooth);
-    };
-  }, [open]);
+    scrollReplyTextareaIntoDialog('smooth');
+  };
 
   return (
     <Atoms.Dialog open={open} onOpenChange={handleOpenChange}>
-      <Atoms.DialogContent className="w-3xl" hiddenTitle={t('hiddenTitle')}>
+      <Atoms.DialogContent
+        className="w-3xl"
+        hiddenTitle={t('hiddenTitle')}
+        onAnimationEnd={handleDialogContentAnimationEnd}
+      >
         <Atoms.DialogHeader>
           <Atoms.DialogTitle>{t('title')}</Atoms.DialogTitle>
           <Atoms.DialogDescription className="sr-only">{t('description')}</Atoms.DialogDescription>
