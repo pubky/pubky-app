@@ -265,12 +265,12 @@ describe('MobileFooter', () => {
     expect(settingsLink).not.toHaveClass('border');
   });
 
-  it('highlights profile avatar when on a profile route', () => {
+  it('does not highlight profile avatar when on a profile route', () => {
     vi.mocked(usePathname).mockReturnValue('/profile/posts');
     render(<MobileFooter />);
 
     const profileLink = screen.getByTestId('avatar-with-fallback').closest('a');
-    expect(profileLink).toHaveClass('ring-2', 'ring-primary');
+    expect(profileLink).not.toHaveClass('ring-2', 'ring-primary');
   });
 
   it('does not highlight profile avatar when on a non-profile route', () => {
@@ -278,7 +278,7 @@ describe('MobileFooter', () => {
     render(<MobileFooter />);
 
     const profileLink = screen.getByTestId('avatar-with-fallback').closest('a');
-    expect(profileLink).not.toHaveClass('ring-2');
+    expect(profileLink).not.toHaveClass('ring-2', 'ring-primary');
   });
 
   it('displays notification counter badge when unread notifications > 0', () => {

@@ -122,10 +122,7 @@ export function MobileFooter({ className }: MobileFooterProps) {
           data-cy="footer-nav-profile-btn"
           href={App.APP_ROUTES.PROFILE}
           aria-label={tCommon('profile')}
-          className={Libs.cn(
-            'relative shrink-0 rounded-full',
-            isActive(App.APP_ROUTES.PROFILE) && 'ring-2 ring-primary',
-          )}
+          className="relative shrink-0 rounded-full"
         >
           <Organisms.AvatarWithFallback
             avatarUrl={avatarUrl}
