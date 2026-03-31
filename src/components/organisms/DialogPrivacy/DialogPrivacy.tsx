@@ -165,6 +165,12 @@ export function DialogPrivacy({ trigger }: DialogPrivacyProps) {
                 information we collect through our Platform. We may also combine information we collect about you from
                 the different devices you use to access our Platform.
               </li>
+              <li>
+                <strong>Privacy-Focused Analytics, to help operate, secure, and improve the Platform.</strong> We may
+                use privacy-focused analytics service providers to measure aggregate usage of the Platform, such as page
+                views, referral sources, device types, and general usage trends. Such services operate without
+                advertising cookies or cross-site tracking.
+              </li>
             </Atoms.List>
 
             {/** Section 6 */}
