@@ -47,7 +47,7 @@ function FollowButton({ isFollowing, isLoading, isStatusLoading, displayName, va
             <Libs.UserMinus className="hidden size-5 group-hover:block" />
           </>
         ) : (
-          <Libs.UserPlus className="size-5" />
+          <Libs.UserRoundPlus className="size-5" />
         )}
       </Atoms.Button>
     );
@@ -136,15 +136,18 @@ function MeButton({ variant = 'icon', className }: { variant?: 'iconWithText' | 
  */
 function StatsSubtitle({ tags, posts }: StatsSubtitleProps) {
   return (
-    <Atoms.Container overrideDefaults className="flex items-center gap-2 text-sm text-muted-foreground">
+    <Atoms.Container
+      overrideDefaults
+      className="flex items-center gap-3 text-xs font-medium tracking-[1.2px] text-muted-foreground"
+    >
       <Atoms.Container overrideDefaults className="flex items-center gap-1">
-        <Libs.Tag className="size-3.5" />
+        <Libs.Tag className="size-3" />
         <Atoms.Typography as="span" overrideDefaults>
           {tags}
         </Atoms.Typography>
       </Atoms.Container>
       <Atoms.Container overrideDefaults className="flex items-center gap-1">
-        <Libs.StickyNote className="size-3.5" />
+        <Libs.StickyNote className="size-3" />
         <Atoms.Typography as="span" overrideDefaults>
           {posts}
         </Atoms.Typography>
@@ -230,14 +233,14 @@ function CompactVariant({
     <Atoms.Container
       ref={ttlRef}
       overrideDefaults
-      className={Libs.cn('flex w-full items-center gap-3', className)}
+      className={Libs.cn('flex w-full items-center gap-2', className)}
       data-testid={dataTestId || `user-list-item-${user.id}`}
     >
       {/* Clickable user area */}
       <Atoms.Button
         overrideDefaults
         onClick={onUserClick}
-        className="flex min-w-0 flex-1 cursor-pointer items-center gap-3 text-left transition-opacity hover:opacity-80"
+        className="flex min-w-0 flex-1 cursor-pointer items-center gap-2 text-left transition-opacity hover:opacity-80"
         aria-label={`View ${displayName}'s profile`}
       >
         <Organisms.AvatarWithFallback
@@ -249,13 +252,17 @@ function CompactVariant({
         />
 
         <Atoms.Container overrideDefaults className="flex min-w-0 flex-1 flex-col">
-          <Atoms.Typography as="span" overrideDefaults className="truncate text-base font-bold text-foreground">
+          <Atoms.Typography as="span" overrideDefaults className="truncate text-sm font-bold text-foreground">
             {displayName}
           </Atoms.Typography>
           {showStats ? (
             <StatsSubtitle tags={stats.tags} posts={stats.posts} />
           ) : (
-            <Atoms.Typography as="span" overrideDefaults className="truncate text-sm text-muted-foreground uppercase">
+            <Atoms.Typography
+              as="span"
+              overrideDefaults
+              className="truncate text-xs font-medium tracking-[1.2px] text-muted-foreground uppercase"
+            >
               {formattedPublicKey}
             </Atoms.Typography>
           )}
