@@ -65,7 +65,7 @@ jobs:
 
   merge-coverage:
     name: Merge Coverage Reports
-    needs: test # 3. Wait for all test shards to complete successfully
+    needs: test # 3. Wait for all test shards to complete
     runs-on: ubuntu-latest
     if: always()
     steps:
