@@ -192,7 +192,7 @@ export const HumanLightningPayment = ({ onBack, onSuccess }: HumanLightningPayme
 
         <Atoms.Container
           overrideDefaults={true}
-          className="flex h-full w-full flex-col items-center justify-center md:w-auto"
+          className="flex h-full w-full flex-col items-center justify-center lg:w-auto"
         >
           {renderPaymentAction()}
         </Atoms.Container>
