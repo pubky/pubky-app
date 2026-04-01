@@ -28,6 +28,12 @@ export enum LatestNotificationReadState {
   Read = 'read',
 }
 
+export enum PostType {
+  Post = 'post',
+  Repost = 'repost',
+  Any = 'any',
+}
+
 // can use only one of RecoveryPhraseWithConfirmation or RecoveryPhraseWithoutConfirmation
 export enum BackupType {
   EncryptedFile = 'encryptedFile',

@@ -1,4 +1,4 @@
-import type { PostInputActionSubmitMode } from '../PostInputActionBar/PostInputActionBar.types';
+import type { CharacterLimit, PostInputActionSubmitMode } from '../PostInputActionBar/PostInputActionBar.types';
 
 export interface PostInputExpandableSectionProps {
   isExpanded: boolean;
@@ -22,4 +22,5 @@ export interface PostInputExpandableSectionProps {
   onImageClick?: () => void;
   onArticleClick?: () => void;
   className?: string;
+  characterLimit?: CharacterLimit;
 }

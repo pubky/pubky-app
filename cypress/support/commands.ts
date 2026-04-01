@@ -3,7 +3,7 @@
 import { backupDownloadFilePath, extendedTimeout } from './common';
 import { goToProfilePageFromHeader } from './header';
 import { waitForFeedToLoad } from './posts';
-import { BackupType, CheckForNewPosts, WaitForNewPosts } from './types/enums';
+import { BackupType, CheckForNewPosts, PostType, WaitForNewPosts } from './types/enums';
 // ***********************************************
 // This example commands.ts shows you how to
 // create various custom commands and overwrite
@@ -35,18 +35,22 @@ Cypress.Commands.add(
     cy.get('[data-cy="invite-code-link"]').should('exist').click();
 
     // use cy.request to get the invite code from the HOMESERVER_ADMIN_URL using the HOMESERVER_ADMIN_PASSWORD
-    cy.request({
-      method: 'GET',
-      url: Cypress.env('homeserverAdminUrl'),
-      headers: {
-        'X-Admin-Password': Cypress.env('homeserverAdminPassword'),
+    cy.env(['homeserverAdminUrl', 'homeserverAdminPassword']).then(
+      ({ homeserverAdminUrl, homeserverAdminPassword }) => {
+        cy.request({
+          method: 'GET',
+          url: homeserverAdminUrl,
+          headers: {
+            'X-Admin-Password': homeserverAdminPassword,
+          },
+        }).then((response) => {
+          const inviteCode = response.body;
+          console.log('inviteCode', inviteCode);
+          cy.get('[data-cy="human-invite-code-input"]').type(inviteCode);
+          cy.get('[data-cy="human-invite-code-continue-btn"]').click();
+        });
       },
-    }).then((response) => {
-      const inviteCode = response.body;
-      console.log('inviteCode', inviteCode);
-      cy.get('[data-cy="human-invite-code-input"]').type(inviteCode);
-      cy.get('[data-cy="human-invite-code-continue-btn"]').click();
-    });
+    );
 
     cy.location('pathname').should('eq', '/onboarding/install');
 
@@ -92,7 +96,7 @@ Cypress.Commands.add(
       });
 
       // Select button based on viewport (mobile or desktop)
-      const confirmBtnId = Cypress.env('isMobile')
+      const confirmBtnId = Cypress.expose('isMobile')
         ? '#backup-recovery-phrase-confirm-btn-mobile'
         : '#backup-recovery-phrase-confirm-btn-desktop';
       cy.get(confirmBtnId).click();
@@ -297,8 +301,8 @@ function storeStringToAlias(text: string, alias: string): void {
   // store text as alias
   cy.wrap(text).as(alias);
   // also store text in Cypress env to be used in beforeEach to re-create aliases because they are cleared at end of each test
-  // e.g. cy.wrap(Cypress.env(profile1.pubkyAlias)).as(profile1.pubkyAlias);
-  Cypress.env(alias, text);
+  // e.g. cy.wrap(Cypress.expose(profile1.pubkyAlias)).as(profile1.pubkyAlias);
+  Cypress.expose(alias, text);
 }
 
 // Stores a string value to an alias
@@ -385,7 +389,7 @@ Cypress.Commands.add('waitReloadWhileElementDoesNotExist', (selector, attempts =
         cy.reload();
         // wait for page to load before checking again
         // TODO: improve wait by detecting presence of key element on page (e.g. profile picture)
-        cy.wait(Cypress.env('ci') ? 3_000 : 1_000);
+        cy.wait(Cypress.expose('ci') ? 3_000 : 1_000);
         go(attempts - 1);
       } else {
         cy.log(`waitReloadWhileElementDoesNotExist: ${selector} found; continuing.`);
@@ -410,16 +414,24 @@ const findPostInFeed = (
   filterText?: string,
   checkForNewPosts = CheckForNewPosts.No,
   waitForNewPosts = WaitForNewPosts.No,
+  postType = PostType.Any,
 ) => {
   var filteredPosts: JQuery<HTMLElement>;
   // find the post in the timeline
   return cy
     .get('[data-cy="timeline-posts"]')
+    .find('[data-testid="virtuoso-item-list"]')
     .children()
-    .should('have.length.gte', 1)
+    .should('have.length.gt', postIdx)
     .then(($posts): Cypress.Chainable<JQuery<HTMLElement>> => {
-      // optionally filter posts by contained text
-      filteredPosts = filterText ? $posts.filter((_idx, element) => element.innerText.includes(filterText)) : $posts;
+      // optionally filter posts by contained text and whether the card itself is a repost
+      filteredPosts = $posts.filter((_idx, element) => {
+        const matchesText = !filterText || element.innerText.includes(filterText);
+        const isRepost = element.querySelector('[data-cy="post-preview-card"]') !== null;
+        const matchesPostType = postType === PostType.Any ? true : postType === PostType.Repost ? isRepost : !isRepost;
+
+        return matchesText && matchesPostType;
+      });
 
       // Check if the requested post index exists
       if (filteredPosts.length > postIdx) {
@@ -437,18 +449,19 @@ const findPostInFeed = (
         cy.get('[data-cy="new-posts-button"]', { timeout: 30_000 }).should('be.visible').click();
         waitForFeedToLoad();
         // Recursively call findPostInFeed without checking for new posts
-        return findPostInFeed(postIdx, filterText, CheckForNewPosts.No, WaitForNewPosts.Yes);
+        return findPostInFeed(postIdx, filterText, CheckForNewPosts.No, WaitForNewPosts.Yes, postType);
       }
 
       // Post not found - if waitForNewPosts is enabled, wait for new posts and try again
       if (waitForNewPosts) {
         cy.log(`Waiting for new posts to appear`);
-        cy.wait(Cypress.env('ci') ? 2_000 : 500);
-        return findPostInFeed(postIdx, filterText, checkForNewPosts, WaitForNewPosts.No);
+        cy.wait(Cypress.expose('ci') ? 2_000 : 500);
+        waitForFeedToLoad();
+        return findPostInFeed(postIdx, filterText, checkForNewPosts, WaitForNewPosts.No, postType);
       }
 
       // fail the test if the post cannot be found
-      assert(false, `findPostInFeed: Post not found at index ${postIdx} and checkForNewPosts is disabled`);
+      assert(false, `findPostInFeed: Post not found at index ${postIdx} - Failing test`);
       // return unfound post to satisfy return type
       return cy.wrap(filteredPosts.eq(postIdx));
     });
@@ -467,10 +480,37 @@ Cypress.Commands.add(
   },
 );
 
+Cypress.Commands.add(
+  'findFirstPostInFeedFilteredByType',
+  (
+    filterText,
+    postType = PostType.Post,
+    checkForNewPosts = CheckForNewPosts.No,
+    waitForNewPosts = WaitForNewPosts.No,
+  ) => {
+    return findPostInFeed(0, filterText, checkForNewPosts, waitForNewPosts, postType);
+  },
+);
+
 // useful for finding a specific post by index with optional filter text
-Cypress.Commands.add('findPostInFeed', (postIdx = 0, filterText?, checkForNewPosts = CheckForNewPosts.No) => {
-  return findPostInFeed(postIdx, filterText, checkForNewPosts);
-});
+Cypress.Commands.add(
+  'findPostInFeed',
+  (postIdx = 0, filterText?, checkForNewPosts = CheckForNewPosts.No, waitForNewPosts = WaitForNewPosts.No) => {
+    return findPostInFeed(postIdx, filterText, checkForNewPosts, waitForNewPosts);
+  },
+);
+
+Cypress.Commands.add(
+  'findPostInFeedByType',
+  (
+    postType = PostType.Post,
+    filterText?,
+    checkForNewPosts = CheckForNewPosts.No,
+    waitForNewPosts = WaitForNewPosts.No,
+  ) => {
+    return findPostInFeed(0, filterText, checkForNewPosts, waitForNewPosts, postType);
+  },
+);
 
 // useful for finding a specific post card by text in search results
 Cypress.Commands.add('findPostInSearchResults', (filterText?: string, postIdx = 0) => {
