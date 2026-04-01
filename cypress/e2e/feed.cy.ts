@@ -13,6 +13,7 @@ import {
 } from '../support/posts';
 import { followFromPostMenu, searchAndFollowProfile } from '../support/contacts';
 import { BackupType, HasBackedUp, WaitForNewPosts } from '../support/types/enums';
+import { fastMs, slowMs } from '../support/slow-down';
 
 // Profile 1 follows Profile 2 and is friends with Profile 2. Profile 1 also follows Profile 3 and Profile 4.
 // Needs 5 posts to be suggested in "who to follow"
@@ -68,8 +69,10 @@ describe('feed and filters', () => {
     createQuickPost(profile2.postText);
     // find Profile 1's latest post and repost it
     repostPost({ repostContent: profile2.repostText, filterText: profile1.postText2 });
+    // scroll to top to ensure repost is visible
+    cy.get('[data-cy="header-logo"]').filter(':visible').click();
     // follow Profile 1 from post menu (postIdx 1 = Profile 1's original; 0 = Profile 2's repost)
-    // wait for repost to load without "Loading header..." or "Loading content..."
+    // wait for repost to load without "Loading header..." or "Loading content..." to ensure original post is used for follow
     followFromPostMenu(profile1.postText2, 1, WaitForNewPosts.Yes);
     cy.signOut(HasBackedUp.Yes);
 
@@ -155,6 +158,10 @@ describe('feed and filters', () => {
   });
 
   it('can filter to view only posts and reposts of following', () => {
+    // slow down execution locally to avoid seeing wrong profile in filtered feed
+    const slowCy = Cypress.expose('ci') ? fastMs * 2 : slowMs;
+    slowCypressDown(slowCy);
+
     // * sign in as profile 2 and view Reach Following, only profile 1's posts can be seen
     cy.signInWithEncryptedFile(backupDownloadFilePath(profile2.username));
     // click the Following filter
@@ -203,6 +210,10 @@ describe('feed and filters', () => {
   });
 
   it('can filter to view only posts and reposts of friends', () => {
+    // slow down execution more locally to avoid seeing wrong profile in filtered feed
+    const slowCy = Cypress.expose('ci') ? fastMs * 2 : slowMs;
+    slowCypressDown(slowCy);
+
     // * sign in as profile 1 and view Reach Friends, only profile 2's post can be seen
     cy.signInWithEncryptedFile(backupDownloadFilePath(profile1.username));
     cy.get('[data-cy="filter-reach-radiogroup"]').find('[aria-label="Friends"]').click();
