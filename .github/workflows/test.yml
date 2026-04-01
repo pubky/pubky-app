@@ -50,20 +50,24 @@ jobs:
         run: npx vitest run --coverage --coverage.reporter=json --shard=${{ matrix.shard }}/5 --pool=forks
 
       - name: Rename coverage file
+        if: always()
         # 2. Rename the file so the shards don't overwrite each other when downloaded
         run: mv coverage/coverage-final.json coverage/coverage-${{ matrix.shard }}.json
 
       - name: Upload partial coverage
+        if: always()
         uses: actions/upload-artifact@v4
         with:
           name: coverage-shard-${{ matrix.shard }}
           path: coverage/coverage-${{ matrix.shard }}.json
+          if-no-files-found: ignore
           retention-days: 1 # We only need this temporarily for the merge job
 
   merge-coverage:
     name: Merge Coverage Reports
-    needs: test # 3. Wait for all test shards to complete successfully
+    needs: test # 3. Wait for all test shards to complete
     runs-on: ubuntu-latest
+    if: always()
     steps:
       - name: Checkout code
         uses: actions/checkout@v4

@@ -12,103 +12,22 @@ export enum PostOrReply {
   Reply = 1,
 }
 
-// select an emoji using the emoji picker by its data-full-name attribute
-// export const selectEmojis = (emojiName: string[]) => {
-//   // open emoji picker
-//   cy.get('#emoji-btn').click();
-//   // select each emoji
-//   emojiName.forEach((emoji) => {
-//     cy.get('em-emoji-picker')
-//       .shadow()
-//       .find(`button[aria-label*="${emoji}"]`)
-//       .should('be.visible')
-//       .click({ force: true });
-//   });
-
-//   // close emoji picker by clicking outside of it
-//   cy.get('#emoji-picker').parent().click('left');
-// };
-
-// // check if post at index has two green ticks
-// export const checkPostIsIndexed = (postIdx: number, t = 50) => {
-//   if (t === 0) assert(false, `findPostInFeed: Post not indexed`);
-//   cy.log(`findPostInFeed: Checking if post ${postIdx} is indexed`);
-//   cy.get('#posts-feed')
-//     .find('#timeline')
-//     .children()
-//     .eq(postIdx)
-//     .then(($post) => {
-//       // if post has the status checkmarks then wait for it to have two green ticks
-//       if ($post.find('#post-status').length > 0) {
-//         if ($post.find('#post-status #post-status-indexed').length === 0) {
-//           cy.log('findPostInFeed: Post not indexed; waiting 200ms and checking again');
-//           cy.wait(200);
-//           checkPostIsIndexed(postIdx, t - 1);
-//         }
-//       } else {
-//         cy.log(`findPostInFeed: Post ${postIdx} was already indexed`);
-//       }
-//     });
-//   cy.log(`findPostInFeed: Post ${postIdx} is indexed`);
-// };
-
-// export const checkLatestPostIsIndexed = () => {
-//   checkPostIsIndexed(0);
-// };
-
-// // wait for latest post to be a repost
-// export const waitForRepost = (t = 10, text?: string) => {
-//   if (t === 0) assert(false, `waitForRepost: Latest post is not a repost. text=${text}`);
-//   cy.get('#posts-feed')
-//     .find('#timeline')
-//     .children()
-//     .eq(0)
-//     .invoke('text')
-//     .then((text) => {
-//       if (text.includes('Undo repost')) {
-//         cy.log('waitForRepost: Latest post is a repost');
-//       } else {
-//         cy.log('waitForRepost: Latest post is not a repost; waiting 200ms and checking again');
-//         cy.wait(200);
-//         waitForRepost(t - 1, text);
-//       }
-//     });
-// };
-
 // // verify that a post in the feed has the expected content, post is located by index
 export const postInFeedContentEq = (postContent: string, idx: number) => {
   cy.get('[data-cy="timeline-posts"]')
+    .find('[data-testid="virtuoso-item-list"]')
     .children()
-    .should('have.length.gte', 1)
-    .eq(idx)
-    .within(() => {
-      cy.get('[data-cy="post-text"]').should('have.text', postContent);
+    .should(($posts) => {
+      expect($posts.length).to.be.greaterThan(idx);
+
+      const postText = $posts.eq(idx).find('[data-cy="post-text"]').text();
+      expect(postText).to.eq(postContent);
     });
 };
 
 export const latestPostInFeedContentEq = (postContent: string) => {
   postInFeedContentEq(postContent, 0);
 };
-
-// // check how many images are in a post
-// export const checkNumberOfImagesInPost = (expectedNumberOfImages: number, idx: number) => {
-//   cy.get('#posts-feed')
-//     .find('#timeline')
-//     .children()
-//     .should('have.length.gte', 1)
-//     .eq(idx)
-//     .within(() => {
-//       cy.get('#post-content-text').find('img').should('have.length', expectedNumberOfImages);
-//     });
-// };
-
-// export const latestPostHasAnImage = () => {
-//   checkNumberOfImagesInPost(1, 0);
-// };
-
-// export const latestPostHasImages = (expectedNumberOfImages: number) => {
-//   checkNumberOfImagesInPost(expectedNumberOfImages, 0);
-// };
 
 export const createQuickPost = (postContent: string, tags?: string[], expectedPostLength?: number) => {
   cy.get('[data-cy="home-post-input"]')
@@ -142,25 +61,6 @@ export const createQuickPost = (postContent: string, tags?: string[], expectedPo
       cy.get('textarea').should('have.value', '');
     });
 };
-
-// export const createQuickPostWithTags = (postContent: string, tags: string[], expectedPostLength?: number) => {
-//   cy.get('[data-cy="home-post-input"]').within(() => {
-//     cy.get('textarea').should('have.value', '');
-//     // type the post
-//     cy.get('textarea').type(postContent);
-
-//     // add tags to the post
-//     fastTagWhilstCreatingPost(tags);
-
-//     // check displayed content length
-//     expectedPostLength
-//       ? cy.get('#content-length').innerTextShouldEq(`${expectedPostLength} / ${MAX_POST_LENGTH}`)
-//       : cy.get('#content-length').innerTextShouldEq(`${postContent.length} / ${MAX_POST_LENGTH}`);
-
-//     // submit the post
-//     cy.get('#post-btn').click();
-//   });
-// };
 
 export const createPostFromDialog = (postContent: string, expectedPostLength?: number) => {
   // click button to display new post dialog
@@ -268,56 +168,6 @@ export const fastTagPostInFeed = (tags: string[], postContent: string) => {
   });
 };
 
-// // tag whilst creating post
-// export const fastTagWhilstCreatingPost = (tags: string[]) => {
-//   // add the tags
-//   cy.get('#add-tag-container').within(() => {
-//     cy.get('#show-add-tag-input-btn').click();
-//     tags.forEach((tag) => {
-//       cy.get('input').type(tag);
-//       cy.get('#add-tag-btn').click();
-//     });
-//   });
-//   // verify the tags are displayed in the quick post area
-//   cy.get('#tags').children().should('have.length', tags.length);
-//   tags.forEach((tag, idx) => {
-//     cy.get('#tags').children().eq(idx).contains(tag);
-//   });
-// };
-
-// // menuBtnIdx: 0 for original post, 1 for reply
-// export const editPost = ({
-//   newPostContent,
-//   filterText = '',
-//   postIdx = 0,
-//   menuBtnIdx = 0
-// }: {
-//   newPostContent: string;
-//   filterText?: string;
-//   postIdx?: number;
-//   menuBtnIdx?: number;
-// }) => {
-//   // find post and click menu button
-//   cy.findPostInFeed(postIdx, filterText).within(() => {
-//     // '[id="menu-btn"]' finds all with id
-//     cy.get('[id="menu-btn"]').eq(menuBtnIdx).should('be.visible').click();
-//     cy.get('#post-tooltip-menu')
-//       .should('be.visible')
-//       .within(() => {
-//         cy.get('#edit-post').should('be.visible').innerTextShouldEq('Edit post').get('#edit-post').click();
-//       });
-//   });
-
-//   // input edited post content in modal and submit
-//   cy.get('#modal-root')
-//     .should('be.visible')
-//     .within(() => {
-//       cy.get('h1').contains('Edit Post');
-//       cy.get('textarea').clear().type(newPostContent);
-//       cy.get('#post-btn').click();
-//     });
-// };
-
 // edit any post in the feed that contains the filterText by index
 export const editPost = ({
   newPostContent,
@@ -363,61 +213,32 @@ export const deletePost = ({
     cy.get('[data-cy="post-more-btn"]').eq(type).should('be.visible').click();
   });
 
-  // click delete menu item (no confirmation dialog needed)
+  // click delete menu item
   cy.get('[data-cy="post-menu-action-delete"]').should('be.visible').click();
-};
 
-// reloads the page until the post is no longer displayed in the feed
-const waitForPostToBeDeleted = (postContent: string, attempts: number = 5, firstCheck: boolean = true) => {
-  if (attempts <= 0) assert(false, 'Post still exists with content: ' + postContent);
-
-  cy.get('[data-cy="timeline-posts"]')
-    .invoke('text')
-    .then((text) => {
-      // handle whitespace consistently
-      const normalisedText = text.replace(/\s+/g, ' ').trim();
-      if (normalisedText.includes(postContent)) {
-        firstCheck ? cy.wait(200) : cy.wait(1000);
-        cy.reload();
-        waitForPostToBeDeleted(postContent, attempts - 1, false);
-      }
-    });
-};
-
-export const checkPostIsNotAtTopOfFeed = ({
-  postContent,
-  refreshIfPostExists = false,
-}: {
-  postContent: string;
-  refreshIfPostExists?: boolean;
-}) => {
-  if (refreshIfPostExists) waitForPostToBeDeleted(postContent);
-  cy.get('#posts-feed')
-    .find('#timeline')
-    .children()
-    .its('length')
-    .then((length) => {
-      // if at least 1 post still exists, check it doesn't match the text of the deleted post
-      if (length > 0) {
-        cy.get('#posts-feed')
-          .find('#timeline')
-          .children()
-          .should('have.length.gte', 1)
-          .eq(0)
-          .within(() => {
-            cy.get('#post-content-text').innerTextShouldNotEq(postContent);
-          });
-      }
-    });
-};
-
-export const checkPostIsAtIndexInFeed = (postContent: string, index: number) => {
-  cy.get('[data-cy="timeline-posts"]')
-    .children()
-    .should('have.length.gte', 1)
-    .eq(index)
+  // confirm deletion in dialog
+  cy.get('[data-cy="dialog-content"]')
+    .should('be.visible')
     .within(() => {
-      cy.get('[data-cy="post-text"]').innerTextShouldEq(postContent);
+      cy.get('[data-cy="dialog-confirm-delete-btn"]').click();
+    });
+  cy.get('[data-cy="dialog-content"]').should('not.exist');
+};
+
+export const checkPostIsAtIndexInFeed = (postContent: string, index: number, repostContent?: string) => {
+  cy.get('[data-cy="timeline-posts"]')
+    .find('[data-testid="virtuoso-item-list"]')
+    .children()
+    .should(($posts) => {
+      expect($posts.length).to.be.greaterThan(index);
+
+      const postText = $posts.eq(index).find('[data-cy="post-text"]').first().text();
+      expect(postText).to.eq(postContent);
+
+      if (repostContent) {
+        const repostText = $posts.eq(index).find('[data-cy="post-text"]').eq(1).text();
+        expect(repostText).to.eq(repostContent);
+      }
     });
 };
 
@@ -489,6 +310,7 @@ const findAndCountPostsInFeed = (filterText: string, expectedCount: number) => {
     }
 
     cy.get('[data-cy="timeline-posts"]')
+      .find('[data-testid="virtuoso-item-list"]')
       .children()
       .then(($posts) => {
         // Filter posts by text
