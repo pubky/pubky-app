@@ -1,9 +1,8 @@
-import React, { useCallback } from 'react';
+import { useCallback } from 'react';
 import { useTranslations } from 'next-intl';
 
 import * as Libs from '@/libs';
 import * as Molecules from '@/molecules';
-import * as Atoms from '@/atoms';
 
 interface UseCopyToClipboardOptions {
   onSuccess?: (text: string) => void;
@@ -14,7 +13,6 @@ interface UseCopyToClipboardOptions {
 }
 
 export function useCopyToClipboard(options: UseCopyToClipboardOptions = {}) {
-  const tCommon = useTranslations('common');
   const tCopy = useTranslations('toast.copy');
   const { onSuccess, onError, successTitle, errorTitle, errorDescription } = options;
 
@@ -27,14 +25,10 @@ export function useCopyToClipboard(options: UseCopyToClipboardOptions = {}) {
       try {
         await Libs.copyToClipboard({ text });
 
-        const toastInstance = Molecules.toast({
+        Molecules.toast({
           title: resolvedSuccessTitle,
           description: text,
-          action: (
-            <Atoms.Button size="sm" className="text-xs font-bold" onClick={() => toastInstance.dismiss()}>
-              {tCommon('ok')}
-            </Atoms.Button>
-          ),
+          dismissButton: true,
         });
 
         onSuccess?.(text);
@@ -49,7 +43,7 @@ export function useCopyToClipboard(options: UseCopyToClipboardOptions = {}) {
         return false;
       }
     },
-    [onSuccess, onError, resolvedSuccessTitle, resolvedErrorTitle, resolvedErrorDescription, tCommon],
+    [onSuccess, onError, resolvedSuccessTitle, resolvedErrorTitle, resolvedErrorDescription],
   );
 
   return { copyToClipboard: copyToClipboardHandler };

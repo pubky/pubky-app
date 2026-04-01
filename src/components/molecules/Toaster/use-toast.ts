@@ -4,13 +4,14 @@ import * as React from 'react';
 import type { ToastActionElement, ToastProps } from '@/atoms';
 
 const TOAST_LIMIT = 1;
-const TOAST_REMOVE_DELAY = 1000000;
+const TOAST_REMOVE_DELAY = 3_000;
 
 type ToasterToast = Omit<ToastProps, 'title'> & {
   id: string;
   title?: React.ReactNode;
   description?: React.ReactNode;
   action?: ToastActionElement;
+  dismissButton?: boolean;
 };
 
 export const actionTypes = {
