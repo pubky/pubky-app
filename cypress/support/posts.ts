@@ -225,51 +225,6 @@ export const deletePost = ({
   cy.get('[data-cy="dialog-content"]').should('not.exist');
 };
 
-// reloads the page until the post is no longer displayed in the feed
-const waitForPostToBeDeleted = (postContent: string, attempts: number = 5, firstCheck: boolean = true) => {
-  if (attempts <= 0) assert(false, 'Post still exists with content: ' + postContent);
-
-  cy.get('[data-cy="timeline-posts"]')
-    .invoke('text')
-    .then((text) => {
-      // handle whitespace consistently
-      const normalisedText = text.replace(/\s+/g, ' ').trim();
-      if (normalisedText.includes(postContent)) {
-        firstCheck ? cy.wait(200) : cy.wait(1000);
-        cy.reload();
-        waitForPostToBeDeleted(postContent, attempts - 1, false);
-      }
-    });
-};
-
-export const checkPostIsNotAtTopOfFeed = ({
-  postContent,
-  refreshIfPostExists = false,
-}: {
-  postContent: string;
-  refreshIfPostExists?: boolean;
-}) => {
-  if (refreshIfPostExists) waitForPostToBeDeleted(postContent);
-  cy.get('#posts-feed')
-    .find('#timeline')
-    .children()
-    .its('length')
-    .then((length) => {
-      // if at least 1 post still exists, check it doesn't match the text of the deleted post
-      if (length > 0) {
-        cy.get('#posts-feed')
-          .find('#timeline')
-          .children()
-          .should(($posts) => {
-            expect($posts.length).to.be.gte(1);
-
-            const topPostText = $posts.eq(0).find('#post-content-text').text();
-            expect(topPostText).to.not.eq(postContent);
-          });
-      }
-    });
-};
-
 export const checkPostIsAtIndexInFeed = (postContent: string, index: number, repostContent?: string) => {
   cy.get('[data-cy="timeline-posts"]')
     .find('[data-testid="virtuoso-item-list"]')

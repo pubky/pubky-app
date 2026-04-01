@@ -24,7 +24,6 @@ exports[`DialogConfirmDelete - Snapshots > matches snapshot when open 1`] = `
       data-testid="dialog-footer"
     >
       <button
-        data-cy="dialog-confirm-delete-btn"
         data-testid="button-destructive"
         data-variant="destructive"
       >
