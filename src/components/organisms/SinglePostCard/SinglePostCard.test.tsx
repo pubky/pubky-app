@@ -5,9 +5,20 @@ import { SinglePostCard } from './SinglePostCard';
 import * as Hooks from '@/hooks';
 
 const { mockPostHeader } = vi.hoisted(() => ({
-  mockPostHeader: vi.fn(({ postId }: { postId: string; timeAgoPlacement?: 'top-right' | 'bottom-left' }) => (
-    <div data-testid="post-header">Header: {postId}</div>
-  )),
+  mockPostHeader: vi.fn(
+    ({
+      postId,
+      stablePopoverPlacement,
+    }: {
+      postId: string;
+      timeAgoPlacement?: 'top-right' | 'bottom-left';
+      stablePopoverPlacement?: boolean;
+    }) => (
+      <div data-testid="post-header" data-stable-popover-placement={stablePopoverPlacement ? 'true' : undefined}>
+        Header: {postId}
+      </div>
+    ),
+  ),
 }));
 
 vi.mock('@/hooks', () => ({
@@ -16,8 +27,15 @@ vi.mock('@/hooks', () => ({
 
 // Mock organisms
 vi.mock('@/organisms', () => ({
-  PostHeader: ({ postId, timeAgoPlacement }: { postId: string; timeAgoPlacement?: 'top-right' | 'bottom-left' }) =>
-    mockPostHeader({ postId, timeAgoPlacement }),
+  PostHeader: ({
+    postId,
+    timeAgoPlacement,
+    stablePopoverPlacement,
+  }: {
+    postId: string;
+    timeAgoPlacement?: 'top-right' | 'bottom-left';
+    stablePopoverPlacement?: boolean;
+  }) => mockPostHeader({ postId, timeAgoPlacement, stablePopoverPlacement }),
   PostContent: ({ postId }: { postId: string }) => <div data-testid="post-content">Content: {postId}</div>,
   PostActionsBar: ({
     postId,
@@ -218,6 +236,7 @@ describe('SinglePostCard', () => {
       expect(mockPostHeader).toHaveBeenCalledWith({
         postId: mockPostId,
         timeAgoPlacement: 'bottom-left',
+        stablePopoverPlacement: true,
       });
     });
   });

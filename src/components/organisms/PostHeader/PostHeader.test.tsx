@@ -65,16 +65,22 @@ vi.mock('@/molecules', async (importOriginal) => {
         userId,
         userName,
         characterLimit,
+        stablePopoverPlacement,
         size,
         timeAgo,
       }: {
         userId: string;
         userName: string;
         characterLimit?: { count: number; max: number };
+        stablePopoverPlacement?: boolean;
         size?: 'normal' | 'large';
         timeAgo?: string | null;
       }) => (
-        <div data-testid="post-header-user-info" data-size={size}>
+        <div
+          data-testid="post-header-user-info"
+          data-size={size}
+          data-stable-popover-placement={stablePopoverPlacement ? 'true' : undefined}
+        >
           <div data-testid="avatar" />
           <div>{userName}</div>
           <div>@{userId.substring(0, 8)}</div>
@@ -198,6 +204,29 @@ describe('PostHeader', () => {
     render(<PostHeader postId="userpubkykey:post456" size="large" />);
 
     expect(screen.getByTestId('post-header-user-info')).toHaveAttribute('data-size', 'large');
+  });
+
+  it('passes stable popover placement to PostHeaderUserInfo', () => {
+    mockUsePostDetails.mockReturnValue({
+      postDetails: {
+        id: 'userpubkykey:post456',
+        indexed_at: Date.now(),
+        kind: 'short' as const,
+        uri: 'pubky://userpubkykey/pub/pubky.app/posts/post456',
+        content: '',
+        attachments: null,
+      } as Core.PostDetailsModelSchema,
+      isLoading: false,
+    });
+    mockUseUserDetails.mockReturnValue({
+      userDetails: { id: 'userpubkykey', name: 'Test User', image: 'test-image-id' } as Core.NexusUserDetails,
+      isLoading: false,
+    });
+    mockUseAvatarUrl.mockReturnValue('https://example.com/avatar/userpubkykey.png');
+
+    render(<PostHeader postId="userpubkykey:post456" stablePopoverPlacement={true} />);
+
+    expect(screen.getByTestId('post-header-user-info')).toHaveAttribute('data-stable-popover-placement', 'true');
   });
 
   it('renders time in top-right by default', () => {

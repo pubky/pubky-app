@@ -3,6 +3,37 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { PostHeaderUserInfo } from './PostHeaderUserInfo';
 import * as Libs from '@/libs';
 
+const { mockUserInfoPopover } = vi.hoisted(() => ({
+  mockUserInfoPopover: vi.fn(
+    ({
+      children,
+      userName,
+      formattedPublicKey,
+      preferredSide = 'top',
+      sideOffset = 1,
+    }: {
+      children: React.ReactNode;
+      userName: string;
+      formattedPublicKey: string;
+      preferredSide?: 'top' | 'bottom';
+      sideOffset?: number;
+    }) => (
+      <div data-testid="popover" data-hover="true">
+        <div data-testid="popover-trigger" data-as-child="true">
+          {children}
+        </div>
+        <div data-testid="popover-content" data-side={preferredSide} data-side-offset={sideOffset}>
+          <div data-testid="popover-inner-content">
+            <div data-testid="avatar" />
+            <div>{userName}</div>
+            <div>@{formattedPublicKey}</div>
+          </div>
+        </div>
+      </div>
+    ),
+  ),
+}));
+
 // Mock hooks
 const mockUseUserProfile = vi.fn();
 const mockUseIsFollowing = vi.fn();
@@ -41,6 +72,7 @@ vi.mock('@/core', async (importOriginal) => {
 // Mock atoms
 vi.mock('@/atoms', async (importOriginal) => {
   const actual = await importOriginal<typeof import('@/atoms')>();
+  const React = await import('react');
   return {
     ...actual,
     Popover: ({ children, hover }: { children: React.ReactNode; hover?: boolean }) => (
@@ -68,19 +100,20 @@ vi.mock('@/atoms', async (importOriginal) => {
         {children}
       </div>
     ),
-    Container: ({
-      children,
-      className,
-      overrideDefaults,
-    }: {
-      children: React.ReactNode;
-      className?: string;
-      overrideDefaults?: boolean;
-    }) => (
-      <div data-testid="container" className={className} data-override-defaults={overrideDefaults}>
-        {children}
-      </div>
-    ),
+    Container: React.forwardRef<
+      HTMLDivElement,
+      {
+        children: React.ReactNode;
+        className?: string;
+        overrideDefaults?: boolean;
+      }
+    >(function MockContainer({ children, className, overrideDefaults }, ref) {
+      return (
+        <div ref={ref} data-testid="container" className={className} data-override-defaults={overrideDefaults}>
+          {children}
+        </div>
+      );
+    }),
     Typography: ({ children, className }: { children: React.ReactNode; className?: string }) => (
       <p data-testid="typography" className={className}>
         {children}
@@ -152,32 +185,7 @@ vi.mock('@/molecules', async (importOriginal) => {
   const actual = await importOriginal<typeof import('@/molecules')>();
   return {
     ...actual,
-    UserInfoPopover: ({
-      children,
-      userId: _userId,
-      userName,
-      avatarUrl: _avatarUrl,
-      formattedPublicKey,
-    }: {
-      children: React.ReactNode;
-      userId: string;
-      userName: string;
-      avatarUrl?: string;
-      formattedPublicKey: string;
-    }) => (
-      <div data-testid="popover" data-hover="true">
-        <div data-testid="popover-trigger" data-as-child="true">
-          {children}
-        </div>
-        <div data-testid="popover-content" data-side="top" data-side-offset="1">
-          <div data-testid="popover-inner-content">
-            <div data-testid="avatar" />
-            <div>{userName}</div>
-            <div>@{formattedPublicKey}</div>
-          </div>
-        </div>
-      </div>
-    ),
+    UserInfoPopover: (props: React.ComponentProps<typeof actual.UserInfoPopover>) => mockUserInfoPopover(props),
     PostHeaderTimestamp: ({ timeAgo }: { timeAgo: string; indexedAt: Date }) => (
       <span data-testid="post-header-timestamp">{timeAgo}</span>
     ),
@@ -322,6 +330,25 @@ describe('PostHeaderUserInfo', () => {
     expect(screen.getByTestId('popover')).toBeInTheDocument();
     expect(screen.getByTestId('popover-trigger')).toBeInTheDocument();
     expect(screen.getByTestId('popover-content')).toBeInTheDocument();
+  });
+
+  it('does not pass stable placement config by default', () => {
+    render(<PostHeaderUserInfo userId="user123" userName="Test User" />);
+
+    const popoverProps = mockUserInfoPopover.mock.calls.at(-1)?.[0];
+    expect(popoverProps.stablePlacement).toBeUndefined();
+  });
+
+  it('passes stable placement config when requested', () => {
+    render(<PostHeaderUserInfo userId="user123" userName="Test User" stablePopoverPlacement={true} />);
+
+    const popoverProps = mockUserInfoPopover.mock.calls.at(-1)?.[0];
+    expect(popoverProps).toMatchObject({
+      stablePlacement: {
+        viewportPadding: { top: 150, bottom: 16 },
+      },
+    });
+    expect(popoverProps.stablePlacement.triggerRef.current).toBeInstanceOf(HTMLDivElement);
   });
 
   it('renders with normal size by default', () => {

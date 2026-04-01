@@ -51,7 +51,7 @@ export function SinglePostCard({ postId, className }: SinglePostCardProps) {
         <Atoms.CardContent className="flex min-w-0 flex-col gap-4 p-6">
           {isMobile ? (
             <>
-              <Organisms.PostHeader postId={postId} />
+              <Organisms.PostHeader postId={postId} stablePopoverPlacement />
 
               <Organisms.PostContent postId={postId} />
 
@@ -96,7 +96,7 @@ export function SinglePostCard({ postId, className }: SinglePostCardProps) {
             <Atoms.Container className="grid min-w-0 grid-cols-1 gap-6 lg:grid-cols-3">
               {/* Left column - Post content */}
               <Atoms.Container className="flex min-w-0 flex-col gap-4 lg:col-span-2">
-                <Organisms.PostHeader postId={postId} timeAgoPlacement="bottom-left" />
+                <Organisms.PostHeader postId={postId} timeAgoPlacement="bottom-left" stablePopoverPlacement />
 
                 <Organisms.PostContent postId={postId} />
 

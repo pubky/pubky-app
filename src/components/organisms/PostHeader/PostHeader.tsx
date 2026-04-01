@@ -11,6 +11,7 @@ export function PostHeader({
   isReplyInput = false,
   characterLimit,
   showPopover = true,
+  stablePopoverPlacement = false,
   size = 'normal',
   timeAgoPlacement = 'top-right',
 }: PostHeaderProps) {
@@ -51,6 +52,7 @@ export function PostHeader({
         avatarUrl={avatarUrl}
         characterLimit={characterLimit}
         showPopover={showPopover}
+        stablePopoverPlacement={stablePopoverPlacement}
         size={size}
         timeAgo={timeAgoPlacement === 'bottom-left' ? timeAgo : null}
         indexedAt={timeAgoPlacement === 'bottom-left' ? indexedAt : null}

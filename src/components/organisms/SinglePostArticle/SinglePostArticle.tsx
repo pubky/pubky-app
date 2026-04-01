@@ -65,7 +65,7 @@ export const SinglePostArticle = ({ postId, content, attachments, isBlurred }: S
             {title}
           </Atoms.Typography>
 
-          <Organisms.PostHeader postId={postId} size="large" timeAgoPlacement="bottom-left" />
+          <Organisms.PostHeader postId={postId} size="large" timeAgoPlacement="bottom-left" stablePopoverPlacement />
 
           <Organisms.PostActionsBar
             postId={postId}
