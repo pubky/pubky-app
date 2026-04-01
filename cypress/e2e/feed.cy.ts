@@ -12,7 +12,7 @@ import {
   waitForFeedToLoad,
 } from '../support/posts';
 import { followFromPostMenu, searchAndFollowProfile } from '../support/contacts';
-import { BackupType, HasBackedUp } from '../support/types/enums';
+import { BackupType, HasBackedUp, WaitForNewPosts } from '../support/types/enums';
 
 // Profile 1 follows Profile 2 and is friends with Profile 2. Profile 1 also follows Profile 3 and Profile 4.
 // Needs 5 posts to be suggested in "who to follow"
@@ -69,7 +69,8 @@ describe('feed and filters', () => {
     // find Profile 1's latest post and repost it
     repostPost({ repostContent: profile2.repostText, filterText: profile1.postText2 });
     // follow Profile 1 from post menu (postIdx 1 = Profile 1's original; 0 = Profile 2's repost)
-    followFromPostMenu(profile1.postText2, 1);
+    // wait for repost to load without "Loading header..." or "Loading content..."
+    followFromPostMenu(profile1.postText2, 1, WaitForNewPosts.Yes);
     cy.signOut(HasBackedUp.Yes);
 
     // * create profile 3 of 4, post and follow profile 2
