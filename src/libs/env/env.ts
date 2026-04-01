@@ -168,6 +168,17 @@ const envSchema = z.object({
   /** Homegate authentication service URL */
   NEXT_PUBLIC_HOMEGATE_URL: z.url().default('https://homegate.staging.pubky.app'),
 
+  // Prelude SDK key for sending client browser signals to Prelude for SMS fraud prevention.
+  // Optional: If not set we still use Prelude but without providing all available client signals.
+  NEXT_PUBLIC_PRELUDE_SDK_KEY: z.string().optional(),
+
+  /** Prelude SDK signal dispatch timeout in milliseconds (default: 5000) */
+  NEXT_PUBLIC_PRELUDE_SDK_TIMEOUT_MS: z
+    .string()
+    .default('5000')
+    .transform((val) => parseInt(val, 10))
+    .pipe(z.number().int().positive()),
+
   // Test environment variable (optional)
   VITEST: z.string().optional(),
 
@@ -323,6 +334,8 @@ function parseEnv(): z.infer<typeof envSchema> {
     NEXT_PUBLIC_MODERATED_TAGS: process.env.NEXT_PUBLIC_MODERATED_TAGS,
     NEXT_PUBLIC_EXCHANGE_RATE_API: process.env.NEXT_PUBLIC_EXCHANGE_RATE_API,
     NEXT_PUBLIC_HOMEGATE_URL: process.env.NEXT_PUBLIC_HOMEGATE_URL,
+    NEXT_PUBLIC_PRELUDE_SDK_KEY: process.env.NEXT_PUBLIC_PRELUDE_SDK_KEY,
+    NEXT_PUBLIC_PRELUDE_SDK_TIMEOUT_MS: process.env.NEXT_PUBLIC_PRELUDE_SDK_TIMEOUT_MS,
     VITEST: process.env.VITEST,
     BASE_URL_SUPPORT: process.env.BASE_URL_SUPPORT,
     SUPPORT_API_ACCESS_TOKEN: process.env.SUPPORT_API_ACCESS_TOKEN,
