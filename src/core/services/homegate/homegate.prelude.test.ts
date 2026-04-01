@@ -12,7 +12,7 @@ vi.mock('@/libs', async (importOriginal) => {
     Env: {
       ...actual.Env,
       NEXT_PUBLIC_PRELUDE_SDK_KEY: 'test-sdk-key',
-      NEXT_PUBLIC_PRELUDE_SDK_TIMEOUT_MS: 5000,
+      NEXT_PUBLIC_PRELUDE_SDK_TIMEOUT_MS: 50,
     },
   };
 });
@@ -61,24 +61,11 @@ describe('HomegateService Prelude integration', () => {
   });
 
   it('sends SMS code without dispatchId when Prelude times out', async () => {
-    // Mock dispatchSignals to take longer than the timeout
+    // Mock dispatchSignals to take longer than the 50ms timeout
     mockDispatchSignals.mockImplementation(
-      () => new Promise((resolve) => setTimeout(() => resolve('too-late-dispatch-id'), 100)),
+      () => new Promise((resolve) => setTimeout(() => resolve('too-late-dispatch-id'), 200)),
     );
     mockFetch.mockResolvedValue(new Response(JSON.stringify({}), { status: 200 }));
-
-    // Re-mock with a very short timeout
-    vi.doMock('@/libs', async (importOriginal) => {
-      const actual = await importOriginal<typeof import('@/libs')>();
-      return {
-        ...actual,
-        Env: {
-          ...actual.Env,
-          NEXT_PUBLIC_PRELUDE_SDK_KEY: 'test-sdk-key',
-          NEXT_PUBLIC_PRELUDE_SDK_TIMEOUT_MS: 10, // Very short timeout
-        },
-      };
-    });
 
     const { HomegateService } = await import('./homegate');
     const result = await HomegateService.sendSmsCode('+1234567890');
