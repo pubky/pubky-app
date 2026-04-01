@@ -39,8 +39,8 @@ describe('notifications', () => {
   beforeEach(() => {
     // Re-create the aliases in beforeEach
     cy.log('Re-creating aliases in beforeEach');
-    cy.wrap(Cypress.env(profile1.pubkyAlias)).as(profile1.pubkyAlias);
-    cy.wrap(Cypress.env(profile2.pubkyAlias)).as(profile2.pubkyAlias);
+    cy.wrap(Cypress.expose(profile1.pubkyAlias)).as(profile1.pubkyAlias);
+    cy.wrap(Cypress.expose(profile2.pubkyAlias)).as(profile2.pubkyAlias);
 
     // sign in if not already
     cy.location('pathname').then((currentPath) => {

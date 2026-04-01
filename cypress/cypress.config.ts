@@ -24,10 +24,12 @@ export default defineConfig({
     env: {
       // slow down execution more in CI to avoid flaky tests
       commandDelay: defaultMs,
-      ci: process.env['CI'],
       // Server-side only admin credentials (not exposed to client bundle)
       homeserverAdminUrl: process.env['HOMESERVER_ADMIN_URL'] || 'http://localhost:6288/generate_signup_token',
       homeserverAdminPassword: process.env['HOMESERVER_ADMIN_PASSWORD'] || 'admin',
+    },
+    expose: {
+      ci: process.env['CI'],
       isMobile: false,
     },
 

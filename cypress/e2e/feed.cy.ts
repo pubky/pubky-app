@@ -12,7 +12,8 @@ import {
   waitForFeedToLoad,
 } from '../support/posts';
 import { followFromPostMenu, searchAndFollowProfile } from '../support/contacts';
-import { BackupType, HasBackedUp } from '../support/types/enums';
+import { BackupType, HasBackedUp, PostType, WaitForNewPosts } from '../support/types/enums';
+import { fastMs, slowMs } from '../support/slow-down';
 
 // Profile 1 follows Profile 2 and is friends with Profile 2. Profile 1 also follows Profile 3 and Profile 4.
 // Needs 5 posts to be suggested in "who to follow"
@@ -68,8 +69,8 @@ describe('feed and filters', () => {
     createQuickPost(profile2.postText);
     // find Profile 1's latest post and repost it
     repostPost({ repostContent: profile2.repostText, filterText: profile1.postText2 });
-    // follow Profile 1 from post menu (postIdx 1 = Profile 1's original; 0 = Profile 2's repost)
-    followFromPostMenu(profile1.postText2, 1);
+    // follow Profile 1 from the original post card rather than the repost card
+    followFromPostMenu(profile1.postText2, PostType.Post);
     cy.signOut(HasBackedUp.Yes);
 
     // * create profile 3 of 4, post and follow profile 2
@@ -113,7 +114,7 @@ describe('feed and filters', () => {
     cy.findFirstPostInFeedFiltered(profile1.postText4).should('be.visible');
     cy.findFirstPostInFeedFiltered(profile1.postText5).should('be.visible');
     cy.findFirstPostInFeedFiltered(profile2.postText).should('be.visible');
-    cy.findFirstPostInFeedFiltered(profile2.repostText).should('be.visible');
+    cy.findFirstPostInFeedFilteredByType(profile2.repostText, PostType.Repost).should('be.visible');
     cy.findFirstPostInFeedFiltered(profile3.postText).should('be.visible');
     cy.findFirstPostInFeedFiltered(profile4.postText).should('be.visible');
 
@@ -141,7 +142,7 @@ describe('feed and filters', () => {
     cy.findFirstPostInFeedFiltered(profile1.postText4).should('be.visible');
     cy.findFirstPostInFeedFiltered(profile1.postText5).should('be.visible');
     cy.findFirstPostInFeedFiltered(profile2.postText).should('be.visible');
-    cy.findFirstPostInFeedFiltered(profile2.repostText).should('be.visible');
+    cy.findFirstPostInFeedFilteredByType(profile2.repostText, PostType.Repost).should('be.visible');
     cy.findFirstPostInFeedFiltered(profile3.postText).should('be.visible');
     cy.findFirstPostInFeedFiltered(profile4.postText).should('be.visible');
 
@@ -154,6 +155,10 @@ describe('feed and filters', () => {
   });
 
   it('can filter to view only posts and reposts of following', () => {
+    // slow down execution locally to avoid seeing wrong profile in filtered feed
+    const slowCy = Cypress.expose('ci') ? fastMs * 2 : slowMs;
+    slowCypressDown(slowCy);
+
     // * sign in as profile 2 and view Reach Following, only profile 1's posts can be seen
     cy.signInWithEncryptedFile(backupDownloadFilePath(profile2.username));
     // click the Following filter
@@ -164,7 +169,7 @@ describe('feed and filters', () => {
     cy.findFirstPostInFeedFiltered(profile1.postText2).should('be.visible');
     // can see own posts
     cy.findFirstPostInFeedFiltered(profile2.postText).should('be.visible');
-    cy.findFirstPostInFeedFiltered(profile2.repostText).should('be.visible');
+    cy.findFirstPostInFeedFilteredByType(profile2.repostText, PostType.Repost).should('be.visible');
     cannotFindPostInFeed(profile3.postText);
     cannotFindPostInFeed(profile4.postText);
 
@@ -202,14 +207,17 @@ describe('feed and filters', () => {
   });
 
   it('can filter to view only posts and reposts of friends', () => {
+    // slow down execution more locally to avoid seeing wrong profile in filtered feed
+    const slowCy = Cypress.expose('ci') ? fastMs * 2 : slowMs;
+    slowCypressDown(slowCy);
+
     // * sign in as profile 1 and view Reach Friends, only profile 2's post can be seen
     cy.signInWithEncryptedFile(backupDownloadFilePath(profile1.username));
-    waitForFeedToLoad();
     cy.get('[data-cy="filter-reach-radiogroup"]').find('[aria-label="Friends"]').click();
     waitForFeedToLoad();
 
     cy.findFirstPostInFeedFiltered(profile2.postText).should('be.visible');
-    cy.findFirstPostInFeedFiltered(profile2.repostText).should('be.visible');
+    cy.findFirstPostInFeedFilteredByType(profile2.repostText, PostType.Repost).should('be.visible');
     cy.findFirstPostInFeedFiltered(profile1.postText1).should('be.visible');
     cy.findFirstPostInFeedFiltered(profile1.postText2).should('be.visible');
     // 2 occurrences of profile 1's post due to profile 2 reposting it
@@ -223,14 +231,13 @@ describe('feed and filters', () => {
 
     // * sign in as profile 2 and view Reach Friends, only profile 1's posts can be seen
     cy.signInWithEncryptedFile(backupDownloadFilePath(profile2.username));
-    waitForFeedToLoad();
     cy.get('[data-cy="filter-reach-radiogroup"]').find('[aria-label="Friends"]').click();
     waitForFeedToLoad();
     cy.findFirstPostInFeedFiltered(profile1.postText1).should('be.visible');
     cy.findFirstPostInFeedFiltered(profile1.postText2).should('be.visible');
     // can see own posts
     cy.findFirstPostInFeedFiltered(profile2.postText).should('be.visible');
-    cy.findFirstPostInFeedFiltered(profile2.repostText).should('be.visible');
+    cy.findFirstPostInFeedFilteredByType(profile2.repostText, PostType.Repost).should('be.visible');
     cannotFindPostInFeed(profile3.postText);
     cannotFindPostInFeed(profile4.postText);
 
@@ -238,7 +245,6 @@ describe('feed and filters', () => {
 
     // * sign in as profile 3 and view Reach Friends, no posts can be seen
     cy.signInWithEncryptedFile(backupDownloadFilePath(profile3.username));
-    waitForFeedToLoad();
     cy.get('[data-cy="filter-reach-radiogroup"]').find('[aria-label="Friends"]').click();
     waitForFeedToLoad();
 
@@ -253,7 +259,6 @@ describe('feed and filters', () => {
 
   it('"who to follow" does not suggest users you are already following', () => {
     cy.signInWithEncryptedFile(backupDownloadFilePath(profile2.username));
-    waitForFeedToLoad();
 
     cy.get('[data-cy="who-to-follow"]').within(() => {
       cy.contains(profile1.username).should('not.exist');
@@ -265,7 +270,6 @@ describe('feed and filters', () => {
 
   it('who to follow sidebar and who-to-follow page suggested other profiles', () => {
     cy.signInWithEncryptedFile(backupDownloadFilePath(profile3.username));
-    waitForFeedToLoad();
 
     cy.get('[data-cy="who-to-follow"]').within(() => {
       cy.contains(profile1.username).should('be.visible');

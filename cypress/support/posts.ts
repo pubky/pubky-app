@@ -261,16 +261,20 @@ export const waitForFeedToLoad = () => {
       const normalisedFeedText = feedText.replace(/\s+/g, ' ').trim();
       const hasTimelinePosts = $feed.find('[data-cy="timeline-posts"]').length > 0;
       const hasEmptyState = normalisedFeedText.includes('No posts found');
-      const isLoading = normalisedFeedText.includes('Loading posts...');
+      const isLoadingPosts = normalisedFeedText.includes('Loading posts...');
+      const isLoadingHeader = normalisedFeedText.includes('Loading header...');
+      const isLoadingContent = normalisedFeedText.includes('Loading content...');
 
       cy.log('hasTimelinePosts: ', String(hasTimelinePosts));
       cy.log('hasEmptyState: ', String(hasEmptyState));
-      cy.log('isLoading: ', String(isLoading));
+      cy.log('isLoadingPosts: ', String(isLoadingPosts));
+      cy.log('isLoadingHeader: ', String(isLoadingHeader));
+      cy.log('isLoadingContent: ', String(isLoadingContent));
 
       // Feed has loaded if:
       // 1. Not loading anymore AND
       // 2. Either timeline-posts exists (has posts) OR empty state is shown (no posts)
-      if (!isLoading && (hasTimelinePosts || hasEmptyState)) {
+      if (!isLoadingPosts && !isLoadingHeader && !isLoadingContent && (hasTimelinePosts || hasEmptyState)) {
         // Feed has loaded successfully
         return;
       }
@@ -301,6 +305,7 @@ export const waitForBookmarksToLoad = (seconds: number = 6) => {
   checkBookmarksRecursively(seconds);
 };
 
+// todo: consider using PostType enum
 const findAndCountPostsInFeed = (filterText: string, expectedCount: number) => {
   cy.get('body').then(($body) => {
     // If timeline-posts doesn't exist (empty feed state), assert expectedCount is 0
