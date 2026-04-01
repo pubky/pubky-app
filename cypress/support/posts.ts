@@ -305,6 +305,7 @@ export const waitForBookmarksToLoad = (seconds: number = 6) => {
   checkBookmarksRecursively(seconds);
 };
 
+// todo: consider using PostType enum
 const findAndCountPostsInFeed = (filterText: string, expectedCount: number) => {
   cy.get('body').then(($body) => {
     // If timeline-posts doesn't exist (empty feed state), assert expectedCount is 0

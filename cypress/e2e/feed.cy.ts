@@ -12,7 +12,7 @@ import {
   waitForFeedToLoad,
 } from '../support/posts';
 import { followFromPostMenu, searchAndFollowProfile } from '../support/contacts';
-import { BackupType, HasBackedUp, WaitForNewPosts } from '../support/types/enums';
+import { BackupType, HasBackedUp, PostType, WaitForNewPosts } from '../support/types/enums';
 import { fastMs, slowMs } from '../support/slow-down';
 
 // Profile 1 follows Profile 2 and is friends with Profile 2. Profile 1 also follows Profile 3 and Profile 4.
@@ -69,11 +69,8 @@ describe('feed and filters', () => {
     createQuickPost(profile2.postText);
     // find Profile 1's latest post and repost it
     repostPost({ repostContent: profile2.repostText, filterText: profile1.postText2 });
-    // scroll to top to ensure repost is visible
-    cy.get('[data-cy="header-logo"]').filter(':visible').click();
-    // follow Profile 1 from post menu (postIdx 1 = Profile 1's original; 0 = Profile 2's repost)
-    // wait for repost to load without "Loading header..." or "Loading content..." to ensure original post is used for follow
-    followFromPostMenu(profile1.postText2, 1, WaitForNewPosts.Yes);
+    // follow Profile 1 from the original post card rather than the repost card
+    followFromPostMenu(profile1.postText2, PostType.Post);
     cy.signOut(HasBackedUp.Yes);
 
     // * create profile 3 of 4, post and follow profile 2
@@ -117,7 +114,7 @@ describe('feed and filters', () => {
     cy.findFirstPostInFeedFiltered(profile1.postText4).should('be.visible');
     cy.findFirstPostInFeedFiltered(profile1.postText5).should('be.visible');
     cy.findFirstPostInFeedFiltered(profile2.postText).should('be.visible');
-    cy.findFirstPostInFeedFiltered(profile2.repostText).should('be.visible');
+    cy.findFirstPostInFeedFilteredByType(profile2.repostText, PostType.Repost).should('be.visible');
     cy.findFirstPostInFeedFiltered(profile3.postText).should('be.visible');
     cy.findFirstPostInFeedFiltered(profile4.postText).should('be.visible');
 
@@ -145,7 +142,7 @@ describe('feed and filters', () => {
     cy.findFirstPostInFeedFiltered(profile1.postText4).should('be.visible');
     cy.findFirstPostInFeedFiltered(profile1.postText5).should('be.visible');
     cy.findFirstPostInFeedFiltered(profile2.postText).should('be.visible');
-    cy.findFirstPostInFeedFiltered(profile2.repostText).should('be.visible');
+    cy.findFirstPostInFeedFilteredByType(profile2.repostText, PostType.Repost).should('be.visible');
     cy.findFirstPostInFeedFiltered(profile3.postText).should('be.visible');
     cy.findFirstPostInFeedFiltered(profile4.postText).should('be.visible');
 
@@ -172,7 +169,7 @@ describe('feed and filters', () => {
     cy.findFirstPostInFeedFiltered(profile1.postText2).should('be.visible');
     // can see own posts
     cy.findFirstPostInFeedFiltered(profile2.postText).should('be.visible');
-    cy.findFirstPostInFeedFiltered(profile2.repostText).should('be.visible');
+    cy.findFirstPostInFeedFilteredByType(profile2.repostText, PostType.Repost).should('be.visible');
     cannotFindPostInFeed(profile3.postText);
     cannotFindPostInFeed(profile4.postText);
 
@@ -220,7 +217,7 @@ describe('feed and filters', () => {
     waitForFeedToLoad();
 
     cy.findFirstPostInFeedFiltered(profile2.postText).should('be.visible');
-    cy.findFirstPostInFeedFiltered(profile2.repostText).should('be.visible');
+    cy.findFirstPostInFeedFilteredByType(profile2.repostText, PostType.Repost).should('be.visible');
     cy.findFirstPostInFeedFiltered(profile1.postText1).should('be.visible');
     cy.findFirstPostInFeedFiltered(profile1.postText2).should('be.visible');
     // 2 occurrences of profile 1's post due to profile 2 reposting it
@@ -240,7 +237,7 @@ describe('feed and filters', () => {
     cy.findFirstPostInFeedFiltered(profile1.postText2).should('be.visible');
     // can see own posts
     cy.findFirstPostInFeedFiltered(profile2.postText).should('be.visible');
-    cy.findFirstPostInFeedFiltered(profile2.repostText).should('be.visible');
+    cy.findFirstPostInFeedFilteredByType(profile2.repostText, PostType.Repost).should('be.visible');
     cannotFindPostInFeed(profile3.postText);
     cannotFindPostInFeed(profile4.postText);
 

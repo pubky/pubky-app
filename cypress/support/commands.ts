@@ -3,7 +3,7 @@
 import { backupDownloadFilePath, extendedTimeout } from './common';
 import { goToProfilePageFromHeader } from './header';
 import { waitForFeedToLoad } from './posts';
-import { BackupType, CheckForNewPosts, WaitForNewPosts } from './types/enums';
+import { BackupType, CheckForNewPosts, PostType, WaitForNewPosts } from './types/enums';
 // ***********************************************
 // This example commands.ts shows you how to
 // create various custom commands and overwrite
@@ -414,6 +414,7 @@ const findPostInFeed = (
   filterText?: string,
   checkForNewPosts = CheckForNewPosts.No,
   waitForNewPosts = WaitForNewPosts.No,
+  postType = PostType.Any,
 ) => {
   var filteredPosts: JQuery<HTMLElement>;
   // find the post in the timeline
@@ -423,8 +424,14 @@ const findPostInFeed = (
     .children()
     .should('have.length.gt', postIdx)
     .then(($posts): Cypress.Chainable<JQuery<HTMLElement>> => {
-      // optionally filter posts by contained text
-      filteredPosts = filterText ? $posts.filter((_idx, element) => element.innerText.includes(filterText)) : $posts;
+      // optionally filter posts by contained text and whether the card itself is a repost
+      filteredPosts = $posts.filter((_idx, element) => {
+        const matchesText = !filterText || element.innerText.includes(filterText);
+        const isRepost = element.querySelector('[data-cy="post-preview-card"]') !== null;
+        const matchesPostType = postType === PostType.Any ? true : postType === PostType.Repost ? isRepost : !isRepost;
+
+        return matchesText && matchesPostType;
+      });
 
       // Check if the requested post index exists
       if (filteredPosts.length > postIdx) {
@@ -442,7 +449,7 @@ const findPostInFeed = (
         cy.get('[data-cy="new-posts-button"]', { timeout: 30_000 }).should('be.visible').click();
         waitForFeedToLoad();
         // Recursively call findPostInFeed without checking for new posts
-        return findPostInFeed(postIdx, filterText, CheckForNewPosts.No, WaitForNewPosts.Yes);
+        return findPostInFeed(postIdx, filterText, CheckForNewPosts.No, WaitForNewPosts.Yes, postType);
       }
 
       // Post not found - if waitForNewPosts is enabled, wait for new posts and try again
@@ -450,7 +457,7 @@ const findPostInFeed = (
         cy.log(`Waiting for new posts to appear`);
         cy.wait(Cypress.expose('ci') ? 2_000 : 500);
         waitForFeedToLoad();
-        return findPostInFeed(postIdx, filterText, checkForNewPosts, WaitForNewPosts.No);
+        return findPostInFeed(postIdx, filterText, checkForNewPosts, WaitForNewPosts.No, postType);
       }
 
       // fail the test if the post cannot be found
@@ -473,11 +480,35 @@ Cypress.Commands.add(
   },
 );
 
+Cypress.Commands.add(
+  'findFirstPostInFeedFilteredByType',
+  (
+    filterText,
+    postType = PostType.Post,
+    checkForNewPosts = CheckForNewPosts.No,
+    waitForNewPosts = WaitForNewPosts.No,
+  ) => {
+    return findPostInFeed(0, filterText, checkForNewPosts, waitForNewPosts, postType);
+  },
+);
+
 // useful for finding a specific post by index with optional filter text
 Cypress.Commands.add(
   'findPostInFeed',
   (postIdx = 0, filterText?, checkForNewPosts = CheckForNewPosts.No, waitForNewPosts = WaitForNewPosts.No) => {
     return findPostInFeed(postIdx, filterText, checkForNewPosts, waitForNewPosts);
+  },
+);
+
+Cypress.Commands.add(
+  'findPostInFeedByType',
+  (
+    postType = PostType.Post,
+    filterText?,
+    checkForNewPosts = CheckForNewPosts.No,
+    waitForNewPosts = WaitForNewPosts.No,
+  ) => {
+    return findPostInFeed(0, filterText, checkForNewPosts, waitForNewPosts, postType);
   },
 );
 
