@@ -120,7 +120,7 @@ describe('feed and filters', () => {
     // check posts are in the correct order
     checkPostIsAtIndexInFeed(profile4.postText, 0);
     checkPostIsAtIndexInFeed(profile3.postText, 1);
-    checkPostIsAtIndexInFeed(profile2.repostText, 2);
+    checkPostIsAtIndexInFeed(profile2.repostText, 2, profile1.postText2);
     checkPostIsAtIndexInFeed(profile2.postText, 3);
     checkPostIsAtIndexInFeed(profile1.postText5, 4);
     checkPostIsAtIndexInFeed(profile1.postText4, 5);
@@ -304,7 +304,7 @@ describe('feed and filters', () => {
     // own posts are not seen when filtering by following
     // the remaining posts are of equal popularity so they are sorted by recency
     checkPostIsAtIndexInFeed(profile4.postText, 2);
-    checkPostIsAtIndexInFeed(profile2.repostText, 3);
+    checkPostIsAtIndexInFeed(profile2.repostText, 3, profile1.postText2);
   });
 
   // TODO: implement when custom feeds are supported in the app

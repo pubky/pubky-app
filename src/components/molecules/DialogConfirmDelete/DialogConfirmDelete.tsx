@@ -30,7 +30,7 @@ export function DialogConfirmDelete({ open, onOpenChange, onConfirm }: DialogCon
         </Atoms.DialogHeader>
         <Atoms.Typography className="text-base tracking-wide text-white/80">{t('description')}</Atoms.Typography>
         <Atoms.DialogFooter>
-          <Atoms.Button variant="destructive" size="lg" onClick={handleDelete}>
+          <Atoms.Button variant="destructive" size="lg" onClick={handleDelete} data-cy="dialog-confirm-delete-btn">
             <Libs.Trash2 className="h-4 w-4" />
             {t('confirmButton')}
           </Atoms.Button>
