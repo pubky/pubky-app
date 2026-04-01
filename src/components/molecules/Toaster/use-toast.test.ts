@@ -63,6 +63,71 @@ describe('useToast', () => {
       expect(typeof toastInstance.update).toBe('function');
       expect(toastInstance.id).toBeDefined();
     });
+
+    describe('TOAST_DURATION', () => {
+      // Radix Toast's internal timer fails when isClosePausedRef stays true after user interaction.
+      // This setTimeout fallback ensures auto-dismiss always works.
+      // See: https://github.com/radix-ui/primitives/issues/2233
+      it('should auto-dismiss toast after TOAST_DURATION via setTimeout fallback', () => {
+        vi.useFakeTimers();
+
+        const { result } = renderHook(() => useToast());
+
+        act(() => {
+          result.current.toast({ title: 'Auto-dismiss test' });
+        });
+
+        expect(result.current.toasts).toHaveLength(1);
+        expect(result.current.toasts[0].open).toBe(true);
+
+        // Advance past TOAST_DURATION (3000ms)
+        act(() => {
+          vi.advanceTimersByTime(3_000);
+        });
+
+        expect(result.current.toasts[0].open).toBe(false);
+
+        vi.useRealTimers();
+      });
+    });
+
+    describe('TOAST_REMOVE_DELAY', () => {
+      it('should remove dismissed toast from state after TOAST_REMOVE_DELAY', () => {
+        vi.useFakeTimers();
+
+        const { result } = renderHook(() => useToast());
+
+        act(() => {
+          result.current.toast({ title: 'Remove delay test' });
+        });
+
+        expect(result.current.toasts).toHaveLength(1);
+
+        // Dismiss the toast
+        act(() => {
+          result.current.dismiss(result.current.toasts[0].id);
+        });
+
+        expect(result.current.toasts[0].open).toBe(false);
+        expect(result.current.toasts).toHaveLength(1);
+
+        // Advance just before TOAST_REMOVE_DELAY (20_000ms) — toast should still be in state
+        act(() => {
+          vi.advanceTimersByTime(19_999);
+        });
+
+        expect(result.current.toasts).toHaveLength(1);
+
+        // Advance past TOAST_REMOVE_DELAY — toast should be removed from state
+        act(() => {
+          vi.advanceTimersByTime(1);
+        });
+
+        expect(result.current.toasts).toHaveLength(0);
+
+        vi.useRealTimers();
+      });
+    });
   });
 
   describe('reducer', () => {
