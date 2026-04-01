@@ -72,6 +72,9 @@ vi.mock('@/app', async () => {
       SETTINGS: '/settings',
       PROFILE: '/profile',
     },
+    SETTINGS_ROUTES: {
+      ACCOUNT: '/settings/account',
+    },
     UNAUTHENTICATED_ROUTES: [],
     AUTHENTICATED_ROUTES: [],
   };
@@ -155,7 +158,7 @@ describe('MobileFooter', () => {
       { href: '/search', iconClass: '.lucide-search', label: 'Search' },
       { href: '/hot', iconClass: '.lucide-flame', label: 'Hot' },
       { href: '/bookmarks', iconClass: '.lucide-bookmark', label: 'Bookmarks' },
-      { href: '/settings', iconClass: '.lucide-settings', label: 'Settings' },
+      { href: '/settings/account', iconClass: '.lucide-settings', label: 'Settings' },
     ];
 
     const links = screen.getAllByRole('link');
@@ -231,7 +234,8 @@ describe('MobileFooter', () => {
     render(<MobileFooter />);
 
     const homeLink = document.querySelector('.lucide-house')?.closest('a');
-    expect(homeLink).toHaveClass('bg-secondary/30');
+    expect(homeLink).toHaveClass('bg-secondary');
+    expect(homeLink).not.toHaveClass('border');
   });
 
   it('handles inactive state correctly', () => {
@@ -239,7 +243,42 @@ describe('MobileFooter', () => {
     render(<MobileFooter />);
 
     const homeLink = document.querySelector('.lucide-house')?.closest('a');
-    expect(homeLink).toHaveClass('bg-secondary/20', 'hover:bg-secondary/25');
+    expect(homeLink).toHaveClass('border', 'border-border', 'bg-white/5');
+    expect(homeLink).not.toHaveClass('bg-secondary');
+  });
+
+  it('highlights Settings when on a settings sub-route', () => {
+    vi.mocked(usePathname).mockReturnValue('/settings/account');
+    render(<MobileFooter />);
+
+    const settingsLink = document.querySelector('.lucide-settings')?.closest('a');
+    expect(settingsLink).toHaveClass('bg-secondary');
+    expect(settingsLink).not.toHaveClass('border');
+  });
+
+  it('highlights Settings when on any sibling settings page', () => {
+    vi.mocked(usePathname).mockReturnValue('/settings/notifications');
+    render(<MobileFooter />);
+
+    const settingsLink = document.querySelector('.lucide-settings')?.closest('a');
+    expect(settingsLink).toHaveClass('bg-secondary');
+    expect(settingsLink).not.toHaveClass('border');
+  });
+
+  it('does not highlight profile avatar when on a profile route', () => {
+    vi.mocked(usePathname).mockReturnValue('/profile/posts');
+    render(<MobileFooter />);
+
+    const profileLink = screen.getByTestId('avatar-with-fallback').closest('a');
+    expect(profileLink).not.toHaveClass('ring-2', 'ring-primary');
+  });
+
+  it('does not highlight profile avatar when on a non-profile route', () => {
+    vi.mocked(usePathname).mockReturnValue('/home');
+    render(<MobileFooter />);
+
+    const profileLink = screen.getByTestId('avatar-with-fallback').closest('a');
+    expect(profileLink).not.toHaveClass('ring-2', 'ring-primary');
   });
 
   it('displays notification counter badge when unread notifications > 0', () => {
