@@ -205,7 +205,6 @@ describe('feed and filters', () => {
   it('can filter to view only posts and reposts of friends', () => {
     // * sign in as profile 1 and view Reach Friends, only profile 2's post can be seen
     cy.signInWithEncryptedFile(backupDownloadFilePath(profile1.username));
-    waitForFeedToLoad();
     cy.get('[data-cy="filter-reach-radiogroup"]').find('[aria-label="Friends"]').click();
     waitForFeedToLoad();
 
@@ -224,7 +223,6 @@ describe('feed and filters', () => {
 
     // * sign in as profile 2 and view Reach Friends, only profile 1's posts can be seen
     cy.signInWithEncryptedFile(backupDownloadFilePath(profile2.username));
-    waitForFeedToLoad();
     cy.get('[data-cy="filter-reach-radiogroup"]').find('[aria-label="Friends"]').click();
     waitForFeedToLoad();
     cy.findFirstPostInFeedFiltered(profile1.postText1).should('be.visible');
@@ -239,7 +237,6 @@ describe('feed and filters', () => {
 
     // * sign in as profile 3 and view Reach Friends, no posts can be seen
     cy.signInWithEncryptedFile(backupDownloadFilePath(profile3.username));
-    waitForFeedToLoad();
     cy.get('[data-cy="filter-reach-radiogroup"]').find('[aria-label="Friends"]').click();
     waitForFeedToLoad();
 
@@ -254,7 +251,6 @@ describe('feed and filters', () => {
 
   it('"who to follow" does not suggest users you are already following', () => {
     cy.signInWithEncryptedFile(backupDownloadFilePath(profile2.username));
-    waitForFeedToLoad();
 
     cy.get('[data-cy="who-to-follow"]').within(() => {
       cy.contains(profile1.username).should('not.exist');
@@ -266,7 +262,6 @@ describe('feed and filters', () => {
 
   it('who to follow sidebar and who-to-follow page suggested other profiles', () => {
     cy.signInWithEncryptedFile(backupDownloadFilePath(profile3.username));
-    waitForFeedToLoad();
 
     cy.get('[data-cy="who-to-follow"]').within(() => {
       cy.contains(profile1.username).should('be.visible');

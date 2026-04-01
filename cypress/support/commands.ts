@@ -444,12 +444,12 @@ const findPostInFeed = (
       // Post not found - if waitForNewPosts is enabled, wait for new posts and try again
       if (waitForNewPosts) {
         cy.log(`Waiting for new posts to appear`);
-        cy.wait(Cypress.env('ci') ? 2_000 : 500);
+        cy.wait(Cypress.expose('ci') ? 2_000 : 500);
         return findPostInFeed(postIdx, filterText, checkForNewPosts, WaitForNewPosts.No);
       }
 
       // fail the test if the post cannot be found
-      assert(false, `findPostInFeed: Post not found at index ${postIdx} and checkForNewPosts is disabled`);
+      assert(false, `findPostInFeed: Post not found at index ${postIdx} - Failing test`);
       // return unfound post to satisfy return type
       return cy.wrap(filteredPosts.eq(postIdx));
     });
@@ -469,8 +469,8 @@ Cypress.Commands.add(
 );
 
 // useful for finding a specific post by index with optional filter text
-Cypress.Commands.add('findPostInFeed', (postIdx = 0, filterText?, checkForNewPosts = CheckForNewPosts.No) => {
-  return findPostInFeed(postIdx, filterText, checkForNewPosts);
+Cypress.Commands.add('findPostInFeed', (postIdx = 0, filterText?, checkForNewPosts = CheckForNewPosts.No, waitForNewPosts = WaitForNewPosts.No) => {
+  return findPostInFeed(postIdx, filterText, checkForNewPosts, waitForNewPosts);
 });
 
 // useful for finding a specific post card by text in search results
