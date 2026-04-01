@@ -415,8 +415,9 @@ const findPostInFeed = (
   // find the post in the timeline
   return cy
     .get('[data-cy="timeline-posts"]')
+    .find('[data-testid="virtuoso-item-list"]')
     .children()
-    .should('have.length.gte', 1)
+    .should('have.length.gt', postIdx)
     .then(($posts): Cypress.Chainable<JQuery<HTMLElement>> => {
       // optionally filter posts by contained text
       filteredPosts = filterText ? $posts.filter((_idx, element) => element.innerText.includes(filterText)) : $posts;
