@@ -31,7 +31,7 @@ export function usePostMenuActions(postId: string, options: UsePostMenuActionsOp
   const tCopy = useTranslations('toast.copy');
   const tFollow = useTranslations('toast.follow');
 
-  const { onReportClick, onEditClick } = options;
+  const { onReportClick, onEditClick, onDeleteClick, isDeleting = false } = options;
   const parsedId = Core.parseCompositeId(postId);
   // Normalize author ID to ensure consistent format (strip pubky: or pk: prefix)
   // This is necessary because composite IDs may contain prefixed pubky IDs
@@ -45,7 +45,6 @@ export function usePostMenuActions(postId: string, options: UsePostMenuActionsOp
   const { toggleFollow, isLoading: isFollowLoading, isUserLoading } = Hooks.useFollowUser();
   const { toggleMute, isLoading: isMuteLoading, isUserLoading: isMuteUserLoading } = Hooks.useMuteUser();
   const { isMuted, isLoading: isMutedUsersLoading } = Hooks.useMutedUsers();
-  const { deletePost, isDeleting } = Hooks.useDeletePost();
   const { copyToClipboard: copyPubky } = Hooks.useCopyToClipboard({
     successTitle: tCopy('pubkyCopied'),
   });
@@ -184,7 +183,7 @@ export function usePostMenuActions(postId: string, options: UsePostMenuActionsOp
       id: POST_MENU_ACTION_IDS.DELETE,
       label: t('deletePost'),
       icon: Libs.Trash,
-      onClick: () => deletePost(postId),
+      onClick: onDeleteClick,
       variant: POST_MENU_ACTION_VARIANTS.DESTRUCTIVE,
       disabled: isDeleting,
     });

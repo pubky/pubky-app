@@ -1,0 +1,44 @@
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
+
+exports[`DialogConfirmDelete - Snapshots > matches snapshot when open 1`] = `
+<div
+  data-testid="dialog"
+>
+  <div
+    data-testid="dialog-content"
+  >
+    <div>
+      <h2
+        data-testid="dialog-title"
+      >
+        Delete post?
+      </h2>
+    </div>
+    <p
+      class="text-base tracking-wide text-white/80"
+      data-testid="dialog-description"
+    >
+      This action cannot be undone. The post will be permanently deleted.
+    </p>
+    <div
+      data-testid="dialog-footer"
+    >
+      <button
+        data-testid="button-destructive"
+        data-variant="destructive"
+      >
+        <span
+          data-testid="trash-icon"
+        />
+        Delete
+      </button>
+      <button
+        data-testid="button-outline"
+        data-variant="outline"
+      >
+        Cancel
+      </button>
+    </div>
+  </div>
+</div>
+`;

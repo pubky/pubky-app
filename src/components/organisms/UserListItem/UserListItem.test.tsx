@@ -57,9 +57,11 @@ vi.mock('@/libs', () => ({
   cn: (...args: unknown[]) => args.filter(Boolean).join(' '),
   Check: (props: Record<string, unknown>) => <svg data-testid="check-icon" {...props} />,
   UserMinus: (props: Record<string, unknown>) => <svg data-testid="user-minus-icon" {...props} />,
-  UserPlus: (props: Record<string, unknown>) => <svg data-testid="user-plus-icon" {...props} />,
   UserRoundPlus: (props: Record<string, unknown>) => <svg data-testid="user-round-plus-icon" {...props} />,
   CircleUserRound: (props: Record<string, unknown>) => <svg data-testid="circle-user-round" {...props} />,
+  Tag: (props: Record<string, unknown>) => <svg data-testid="tag-icon" {...props} />,
+  StickyNote: (props: Record<string, unknown>) => <svg data-testid="sticky-note-icon" {...props} />,
+  Loader2: (props: Record<string, unknown>) => <svg data-testid="loader-icon" {...props} />,
 }));
 
 // Mock Core
@@ -159,5 +161,34 @@ describe('UserListItem - followButtonVariant', () => {
     render(<UserListItem user={mockUser} variant="compact" isCurrentUser followButtonVariant="iconWithText" />);
 
     expect(screen.getByText('Me')).toBeInTheDocument();
+  });
+});
+
+describe('UserListItem - Snapshots', () => {
+  it('matches snapshot for compact variant', () => {
+    const { container } = render(<UserListItem user={mockUser} variant="compact" onFollowClick={vi.fn()} />);
+    expect(container.firstChild).toMatchSnapshot();
+  });
+
+  it('matches snapshot for compact variant with stats', () => {
+    const { container } = render(<UserListItem user={mockUser} variant="compact" showStats onFollowClick={vi.fn()} />);
+    expect(container.firstChild).toMatchSnapshot();
+  });
+
+  it('matches snapshot for compact variant when following', () => {
+    const { container } = render(
+      <UserListItem user={{ ...mockUser, isFollowing: true }} variant="compact" onFollowClick={vi.fn()} />,
+    );
+    expect(container.firstChild).toMatchSnapshot();
+  });
+
+  it('matches snapshot for compact variant as current user', () => {
+    const { container } = render(<UserListItem user={mockUser} variant="compact" isCurrentUser />);
+    expect(container.firstChild).toMatchSnapshot();
+  });
+
+  it('matches snapshot for full variant', () => {
+    const { container } = render(<UserListItem user={mockUser} variant="full" onFollowClick={vi.fn()} />);
+    expect(container.firstChild).toMatchSnapshot();
   });
 });

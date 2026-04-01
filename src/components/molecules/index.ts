@@ -12,6 +12,7 @@ export * from './Content';
 export * from './ControlledInputField';
 export * from './ControlledTextareaField';
 export * from './DialogAuthExpired';
+export * from './DialogConfirmDelete';
 export * from './DialogConfirmDiscard';
 export * from './FacehashAvatar';
 export * from './FAQAccordion';
