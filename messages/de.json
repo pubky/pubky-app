@@ -542,6 +542,12 @@
     }
   },
   "dialogs": {
+    "deletePost": {
+      "title": "Beitrag löschen?",
+      "description": "Diese Aktion kann nicht rückgängig gemacht werden. Der Beitrag wird dauerhaft gelöscht.",
+      "confirmButton": "Löschen",
+      "cancelButton": "Abbrechen"
+    },
     "editPost": {
       "editArticle": "Artikel bearbeiten",
       "editPost": "Beitrag bearbeiten",

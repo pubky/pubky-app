@@ -18,6 +18,10 @@ export interface UsePostMenuActionsOptions {
   onReportClick: () => void;
   /** Callback when edit action is clicked - opens the edit dialog */
   onEditClick: () => void;
+  /** Callback when delete action is clicked - opens the confirm delete dialog */
+  onDeleteClick: () => void;
+  /** Whether a delete operation is in progress (disables the delete menu item) */
+  isDeleting?: boolean;
 }
 
 export interface UsePostMenuActionsResult {

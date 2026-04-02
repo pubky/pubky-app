@@ -542,6 +542,12 @@
     }
   },
   "dialogs": {
+    "deletePost": {
+      "title": "¿Eliminar publicación?",
+      "description": "Esta acción no se puede deshacer. La publicación se eliminará permanentemente.",
+      "confirmButton": "Eliminar",
+      "cancelButton": "Cancelar"
+    },
     "editPost": {
       "editArticle": "Editar articulo",
       "editPost": "Editar publicación",

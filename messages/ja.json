@@ -542,6 +542,12 @@
     }
   },
   "dialogs": {
+    "deletePost": {
+      "title": "投稿を削除しますか？",
+      "description": "この操作は取り消せません。投稿は完全に削除されます。",
+      "confirmButton": "削除",
+      "cancelButton": "キャンセル"
+    },
     "editPost": {
       "editArticle": "記事を編集",
       "editPost": "投稿を編集",

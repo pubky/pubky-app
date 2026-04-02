@@ -9,6 +9,7 @@ import * as Molecules from '@/molecules';
 import * as Organisms from '@/organisms';
 import * as Utils from '@/libs/utils';
 import * as Libs from '@/libs';
+import { POST_MAX_CHARACTER_LENGTH } from '@/config';
 import { POST_INPUT_VARIANT } from '@/organisms/PostInput/PostInput.constants';
 import { POST_THREAD_CONNECTOR_VARIANTS } from '@/atoms';
 import { PostInputExpandableSection } from '@/organisms/PostInputExpandableSection';
@@ -76,6 +77,8 @@ export function QuickReply({
   const isValid = React.useCallback(() => {
     return Libs.canSubmitPost(POST_INPUT_VARIANT.REPLY, content, attachments, isSubmitting);
   }, [content, attachments, isSubmitting]);
+
+  const characterLimit = { count: Libs.getCharacterCount(content), max: POST_MAX_CHARACTER_LENGTH };
 
   const enterSubmitHandler = Hooks.useEnterSubmit(isValid, handleSubmit, {
     requireModifier: true,
@@ -184,6 +187,7 @@ export function QuickReply({
             isPostDisabled={!isValid()}
             submitMode={POST_INPUT_VARIANT.REPLY}
             className={isExpanded ? 'mt-4' : ''}
+            characterLimit={characterLimit}
           />
         </Atoms.Container>
       </Atoms.Container>

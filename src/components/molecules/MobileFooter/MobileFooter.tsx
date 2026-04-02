@@ -33,7 +33,7 @@ export function MobileFooter({ className }: MobileFooterProps) {
   const localAvatarUrl = Core.useLocalFilesStore((state) => state.profile);
   const { isKeyboardVisible, keyboardOffset } = Hooks.useKeyboardOffset();
 
-  const isActive = (path: string) => pathname === path;
+  const isActive = (path: string) => pathname === path || pathname.startsWith(path + '/');
 
   // Hide footer for unauthenticated users on public routes
   if (!isAuthenticated && isPublicRoute) {
@@ -53,7 +53,12 @@ export function MobileFooter({ className }: MobileFooterProps) {
     { href: App.APP_ROUTES.SEARCH, icon: Libs.Search, label: 'Search' },
     { href: App.APP_ROUTES.HOT, icon: Libs.Flame, label: 'Hot' },
     { href: App.APP_ROUTES.BOOKMARKS, icon: Libs.Bookmark, label: 'Bookmarks' },
-    { href: App.APP_ROUTES.SETTINGS, icon: Libs.Settings, label: 'Settings' },
+    {
+      href: App.SETTINGS_ROUTES.ACCOUNT,
+      activePrefix: App.APP_ROUTES.SETTINGS,
+      icon: Libs.Settings,
+      label: 'Settings',
+    },
   ];
 
   return (
@@ -77,6 +82,7 @@ export function MobileFooter({ className }: MobileFooterProps) {
       >
         {navItems.map((item) => {
           const Icon = item.icon;
+          const activePath = item.activePrefix ?? item.href;
           const isHome = item.href === App.APP_ROUTES.HOME;
           const isHomeActive = isHome && isActive(item.href);
 
@@ -104,8 +110,8 @@ export function MobileFooter({ className }: MobileFooterProps) {
                 }
               }}
               className={Libs.cn(
-                'rounded-full p-3 backdrop-blur-sm transition-all',
-                isActive(item.href) ? 'bg-secondary/30' : 'bg-secondary/20 hover:bg-secondary/25',
+                'rounded-full p-3 shadow-xs backdrop-blur-sm transition-all',
+                isActive(activePath) ? 'bg-secondary' : 'border border-border bg-white/5',
               )}
             >
               <Icon className="h-6 w-6" />
@@ -116,7 +122,7 @@ export function MobileFooter({ className }: MobileFooterProps) {
           data-cy="footer-nav-profile-btn"
           href={App.APP_ROUTES.PROFILE}
           aria-label={tCommon('profile')}
-          className="relative shrink-0"
+          className="relative shrink-0 rounded-full"
         >
           <Organisms.AvatarWithFallback
             avatarUrl={avatarUrl}

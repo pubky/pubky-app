@@ -60,7 +60,7 @@ export const verifyNotificationCounter = (expectedCount?: number) => {
  * Useful for commands that may need extra time in local development
  */
 export const extendedTimeout = (): Partial<Cypress.Timeoutable> => {
-  return Cypress.env('ci')
+  return Cypress.expose('ci')
     ? { timeout: Cypress.config('defaultCommandTimeout') * 1.2 }
     : { timeout: Cypress.config('defaultCommandTimeout') * 2 };
 };

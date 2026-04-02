@@ -542,6 +542,12 @@
     }
   },
   "dialogs": {
+    "deletePost": {
+      "title": "حذف المنشور؟",
+      "description": "لا يمكن التراجع عن هذا الإجراء. سيتم حذف المنشور نهائياً.",
+      "confirmButton": "حذف",
+      "cancelButton": "إلغاء"
+    },
     "editPost": {
       "editArticle": "تعديل المقال",
       "editPost": "تعديل المنشور",
