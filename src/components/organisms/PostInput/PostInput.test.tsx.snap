@@ -122,6 +122,8 @@ exports[`PostInput - Snapshots > matches snapshot for edit variant 1`] = `
             data-testid="post-input-tags"
           />
           <div
+            data-character-count="21"
+            data-character-max="2000"
             data-testid="post-input-action-bar"
           >
             <button
@@ -282,6 +284,8 @@ exports[`PostInput - Snapshots > matches snapshot for post variant when dragging
             data-testid="post-input-tags"
           />
           <div
+            data-character-count="0"
+            data-character-max="2000"
             data-testid="post-input-action-bar"
           >
             <button
@@ -360,6 +364,8 @@ exports[`PostInput - Snapshots > matches snapshot for post variant when submitti
             data-testid="post-input-tags"
           />
           <div
+            data-character-count="0"
+            data-character-max="2000"
             data-testid="post-input-action-bar"
           >
             <button
@@ -443,6 +449,8 @@ exports[`PostInput - Snapshots > matches snapshot for post variant with attachme
             data-testid="post-input-tags"
           />
           <div
+            data-character-count="0"
+            data-character-max="2000"
             data-testid="post-input-action-bar"
           >
             <button
@@ -521,6 +529,8 @@ exports[`PostInput - Snapshots > matches snapshot for post variant with content 
             data-testid="post-input-tags"
           />
           <div
+            data-character-count="12"
+            data-character-max="2000"
             data-testid="post-input-action-bar"
           >
             <button
@@ -597,6 +607,8 @@ exports[`PostInput - Snapshots > matches snapshot for post variant with custom p
             data-testid="post-input-tags"
           />
           <div
+            data-character-count="0"
+            data-character-max="2000"
             data-testid="post-input-action-bar"
           >
             <button
@@ -674,6 +686,8 @@ exports[`PostInput - Snapshots > matches snapshot for post variant without conte
             data-testid="post-input-tags"
           />
           <div
+            data-character-count="0"
+            data-character-max="2000"
             data-testid="post-input-action-bar"
           >
             <button
@@ -751,6 +765,8 @@ exports[`PostInput - Snapshots > matches snapshot for reply variant without cont
             data-testid="post-input-tags"
           />
           <div
+            data-character-count="0"
+            data-character-max="2000"
             data-testid="post-input-action-bar"
           >
             <button
@@ -832,6 +848,8 @@ exports[`PostInput - Snapshots > matches snapshot for reply with thread connecto
             data-testid="post-input-tags"
           />
           <div
+            data-character-count="0"
+            data-character-max="2000"
             data-testid="post-input-action-bar"
           >
             <button
@@ -917,6 +935,8 @@ exports[`PostInput - Snapshots > matches snapshot for repost variant without con
             data-testid="post-input-tags"
           />
           <div
+            data-character-count="0"
+            data-character-max="2000"
             data-testid="post-input-action-bar"
           >
             <button

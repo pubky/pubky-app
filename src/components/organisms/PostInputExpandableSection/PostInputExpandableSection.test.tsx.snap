@@ -350,7 +350,7 @@ exports[`PostInputExpandableSection - Snapshots > matches snapshot with REPLY su
         data-testid="post-input-tags"
       />
       <div
-        data-has-post-button-icon="false"
+        data-has-post-button-icon="true"
         data-hide-article-button="true"
         data-is-article="false"
         data-is-edit="false"

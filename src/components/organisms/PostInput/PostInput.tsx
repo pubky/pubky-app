@@ -19,6 +19,7 @@ import { sanitizeCodeBlockLanguages } from '@/molecules/MarkdownEditor/Initializ
 
 export function PostInput({
   dataCy,
+  id,
   variant,
   postId,
   originalPostId,
@@ -149,9 +150,14 @@ export function PostInput({
     // eslint-disable-next-line react-hooks/exhaustive-deps -- only run on mount
   }, []);
 
+  const characterLimit = isArticle
+    ? undefined
+    : { count: Libs.getCharacterCount(content), max: POST_MAX_CHARACTER_LENGTH };
+
   return (
     <Atoms.Container
       data-cy={dataCy}
+      id={id}
       ref={containerRef}
       className={Libs.cn(
         'relative cursor-pointer rounded-md border border-dashed p-4 transition-colors duration-200',
@@ -190,9 +196,7 @@ export function PostInput({
           <Organisms.PostHeader
             postId={currentUserPubky}
             isReplyInput={true}
-            characterLimit={
-              isArticle ? undefined : { count: Libs.getCharacterCount(content), max: POST_MAX_CHARACTER_LENGTH }
-            }
+            characterLimit={characterLimit}
             showPopover={false}
           />
         )}
@@ -269,6 +273,7 @@ export function PostInput({
           onArticleClick={handleArticleClick}
           isPostDisabled={!isValid()}
           submitMode={variant}
+          characterLimit={characterLimit}
         />
       </Atoms.Container>
     </Atoms.Container>

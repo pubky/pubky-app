@@ -201,6 +201,7 @@ export function usePostInput({
       // Only prepend to timeline for posts and reposts, not replies or edits
       if (variant !== POST_INPUT_VARIANT.REPLY && variant !== POST_INPUT_VARIANT.EDIT) {
         timelineFeed?.prependPosts(createdPostId);
+        setIsExpanded(false);
       }
       // Call original onSuccess callback if provided
       onSuccess?.(createdPostId);

@@ -180,7 +180,7 @@ export function ProfilePageHeader({ profile, actions, isOwnProfile = true, userI
                     </>
                   ) : (
                     <>
-                      <Icons.UserPlus className="size-4" />
+                      <Icons.UserRoundPlus className="size-4" />
                       {t('follow')}
                     </>
                   )}
