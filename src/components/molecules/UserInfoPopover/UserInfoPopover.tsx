@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import * as Atoms from '@/atoms';
-import { useClosingPresence } from '@/hooks/useClosingPresence';
+import { useClosingPresence } from '@/hooks/useClosingPresence/useClosingPresence';
 import { DEFAULT_CLOSE_PRESENCE_TIMEOUT } from '@/hooks/useClosingPresence/useClosingPresence.constants';
 import { POPOVER_ALIGN_OFFSET, POPOVER_HOVER_DELAY, POPOVER_SIDE_OFFSET } from './UserInfoPopover.constants';
 import { UserInfoPopoverContent } from './components/UserInfoPopoverContent/UserInfoPopoverContent';
@@ -48,7 +48,7 @@ export function UserInfoPopover({
   const handleOpenChange = (nextOpen: boolean) => {
     if (nextOpen) {
       beginOpening();
-    } else if (!nextOpen && open) {
+    } else if (open) {
       beginClosing();
     }
 
