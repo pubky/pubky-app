@@ -95,6 +95,9 @@ export class PostStreamApplication {
    * @param streamId - The ID of the stream to prepare
    */
   static async prepareStreamForInitialLoad({ streamId }: Core.TStreamIdParams): Promise<void> {
+    // Initial loads and pull-to-refresh should start from the real stream head,
+    // not reuse buffered overflow from a previous pagination session.
+    postStreamQueue.remove(streamId);
     const now = Date.now();
 
     // 1. Check if main stream cache is stale

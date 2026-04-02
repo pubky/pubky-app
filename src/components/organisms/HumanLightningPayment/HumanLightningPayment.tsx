@@ -10,6 +10,7 @@ import { useTranslations } from 'next-intl';
 import { VerificationHandler } from './HumanLightningPayment.utils';
 import { QRCodeSkeleton, PriceSkeleton } from './HumanLightningPayment.skeleton';
 import type { HumanLightningPaymentProps } from './HumanLightningPayment.types';
+import { useIsMobile } from '@/hooks/useIsMobile';
 
 export const HumanLightningPayment = ({ onBack, onSuccess }: HumanLightningPaymentProps) => {
   const t = useTranslations('onboarding.lightning');
@@ -17,6 +18,7 @@ export const HumanLightningPayment = ({ onBack, onSuccess }: HumanLightningPayme
   const [verification, setVerification] = useState<VerificationHandler | null>(null);
   const verificationRef = React.useRef<VerificationHandler | null>(null);
   const initTimeoutRef = React.useRef<number | null>(null);
+  const isMobile = useIsMobile();
   const rate = useBtcRate();
   const [isLoading, setIsLoading] = useState(true);
   const [isPaymentExpired, setIsPaymentExpired] = useState(false);
@@ -32,33 +34,26 @@ export const HumanLightningPayment = ({ onBack, onSuccess }: HumanLightningPayme
         verificationRef.current.abort();
       }
 
-      const onPaymentConfirmed = async (signupCode: string, homeserverPubky: string) => {
-        try {
-          await onSuccess(signupCode, homeserverPubky);
-          toast({
-            title: t('paymentSuccess'),
-          });
-        } catch (error) {
-          toast({
-            title: tCommon('error'),
-            description: Libs.isAppError(error) ? error.message : t('requestFailedDescription'),
-          });
-        }
-      };
-      const onPaymentExpired = () => {
-        setIsPaymentExpired(true);
-        toast({
-          title: t('paymentExpired'),
-        });
-      };
-      const onVerificationError = (error: unknown) => {
+      const toastVerificationError = (error: unknown) => {
         toast({
           title: tCommon('error'),
           description: Libs.isAppError(error) ? error.message : t('requestFailedDescription'),
         });
       };
+      const onPaymentConfirmed = async (signupCode: string, homeserverPubky: string) => {
+        try {
+          await onSuccess(signupCode, homeserverPubky);
+          toast({ title: t('paymentSuccess') });
+        } catch (error) {
+          toastVerificationError(error);
+        }
+      };
+      const onPaymentExpired = () => {
+        setIsPaymentExpired(true);
+        toast({ title: t('paymentExpired') });
+      };
 
-      const client = await VerificationHandler.create(onPaymentConfirmed, onPaymentExpired, onVerificationError);
+      const client = await VerificationHandler.create(onPaymentConfirmed, onPaymentExpired, toastVerificationError);
       verificationRef.current = client;
       setVerification(client);
       setIsPaymentExpired(false);
@@ -120,12 +115,69 @@ export const HumanLightningPayment = ({ onBack, onSuccess }: HumanLightningPayme
       : t('payAmount', { amount: amountFormatted });
   };
 
+  const renderExpiredState = (containerClassName: string) => (
+    <Atoms.Container className={containerClassName}>
+      <Atoms.Typography as="p" className="mb-4 text-base leading-6 font-medium text-secondary-foreground/80">
+        {t('expired')}
+      </Atoms.Typography>
+      <Atoms.Button size="sm" className="rounded-full font-bold" variant="default" onClick={requestLightningInvoice}>
+        <Libs.RefreshCw className="mr-1.5 h-3.5 w-3.5" />
+        {t('newInvoice')}
+      </Atoms.Button>
+    </Atoms.Container>
+  );
+
+  const renderPaymentAction = () => {
+    if (isLoading) return <QRCodeSkeleton />;
+    if (!verification) return null;
+
+    if (isPaymentExpired) {
+      return renderExpiredState(
+        Libs.cn(
+          'flex h-[192px] items-center justify-center rounded-[9px] bg-secondary p-[9px]',
+          isMobile ? 'w-full' : 'w-[192px]',
+        ),
+      );
+    }
+
+    if (isMobile) {
+      return (
+        <Atoms.Button asChild className="w-full lg:flex-0">
+          <a href={`lightning:${verification.data.bolt11Invoice}`}>
+            <Libs.Wallet className="mr-2 size-4" />
+            {t('payNow')}
+          </a>
+        </Atoms.Button>
+      );
+    }
+
+    return (
+      <Atoms.Container
+        overrideDefaults={true}
+        className="relative flex cursor-pointer items-center justify-center rounded-[9px] bg-white p-[9px]"
+        onClick={() => copyToClipboard(verification.data.bolt11Invoice)}
+      >
+        <QRCodeSVG value={verification.data.bolt11Invoice} size={174} />
+        <Atoms.Container
+          overrideDefaults
+          className="pointer-events-none absolute inset-0 flex items-center justify-center"
+        >
+          <Atoms.Image src="/images/bitcoin-logo.svg" alt="Bitcoin logo" width={45} height={45} />
+        </Atoms.Container>
+      </Atoms.Container>
+    );
+  };
+
   return (
     <React.Fragment>
       <Atoms.PageHeader>
         <Molecules.PageTitle size="large">
-          {t.rich('title', {
-            highlight: (chunks) => <span className="text-brand">{chunks}</span>,
+          {t.rich(isMobile ? 'title_mobile' : 'title', {
+            highlight: (chunks) => (
+              <Atoms.Typography as="span" overrideDefaults className="text-brand">
+                {chunks}
+              </Atoms.Typography>
+            ),
           })}
         </Molecules.PageTitle>
         <Atoms.PageSubtitle>{t('subtitle')}</Atoms.PageSubtitle>
@@ -133,52 +185,15 @@ export const HumanLightningPayment = ({ onBack, onSuccess }: HumanLightningPayme
 
       <Atoms.Card
         data-testid="human-lightning-payment-card"
-        className="flex flex-col-reverse items-start gap-6 p-6 md:flex-row lg:gap-12 lg:p-12"
+        className="flex flex-col-reverse items-start gap-6 p-6 lg:flex-row lg:gap-12 lg:p-12"
       >
         {/* Payment QR code */}
-        <Atoms.Container overrideDefaults={true} className="flex h-full flex-col items-center justify-center">
-          {isLoading && <QRCodeSkeleton />}
-          {!isLoading && verification && (
-            <React.Fragment>
-              {!isPaymentExpired && (
-                <Atoms.Container
-                  overrideDefaults={true}
-                  className="relative flex cursor-pointer items-center justify-center rounded-[9px] bg-white p-[9px]"
-                  onClick={() => copyToClipboard(verification.data.bolt11Invoice)}
-                >
-                  <QRCodeSVG value={verification.data.bolt11Invoice} size={174} />
-                  <div className="pointer-events-none absolute inset-0 flex items-center justify-center">
-                    <Atoms.Image
-                      src="/images/bitcoin-logo.svg"
-                      alt="Bitcoin logo"
-                      width={45}
-                      height={45}
-                      className=""
-                    />
-                  </div>
-                </Atoms.Container>
-              )}
-              {isPaymentExpired && (
-                <Atoms.Container className="flex h-[192px] w-[192px] items-center justify-center rounded-[9px] bg-secondary p-[9px]">
-                  <Atoms.Typography
-                    as="p"
-                    className="mb-4 text-base leading-6 font-medium text-secondary-foreground/80"
-                  >
-                    {t('expired')}
-                  </Atoms.Typography>
-                  <Atoms.Button
-                    size="sm"
-                    className="rounded-full font-bold"
-                    variant="default"
-                    onClick={requestLightningInvoice}
-                  >
-                    <Libs.RefreshCw className="mr-1.5 h-3.5 w-3.5" />
-                    {t('newInvoice')}
-                  </Atoms.Button>
-                </Atoms.Container>
-              )}
-            </React.Fragment>
-          )}
+
+        <Atoms.Container
+          overrideDefaults={true}
+          className="flex h-full w-full flex-col items-center justify-center lg:w-auto"
+        >
+          {renderPaymentAction()}
         </Atoms.Container>
 
         {/* Description */}
@@ -202,11 +217,11 @@ export const HumanLightningPayment = ({ onBack, onSuccess }: HumanLightningPayme
       </Atoms.Card>
 
       {/* Buttons container */}
-      <Atoms.Container className={Libs.cn('mt-6 flex-row justify-between gap-3 lg:gap-6')}>
+      <Atoms.Container className={Libs.cn('mt-6 justify-between gap-3 sm:flex-row lg:gap-6')}>
         <Atoms.Button
           id="human-phone-back-btn"
           size="lg"
-          className="w-full flex-1 rounded-full md:flex-0"
+          className="w-full flex-1 rounded-full lg:flex-0"
           variant="secondary"
           onClick={onBack}
         >
@@ -216,8 +231,8 @@ export const HumanLightningPayment = ({ onBack, onSuccess }: HumanLightningPayme
         <Atoms.Button
           id="human-phone-send-code-btn"
           size="lg"
-          className="w-full flex-1 rounded-full md:flex-0"
-          variant="default"
+          className="w-full flex-1 rounded-full lg:flex-0"
+          variant={isMobile ? 'secondary' : 'default'}
           disabled={!isDataAvailable}
           onClick={() => verification && copyToClipboard(verification.data.bolt11Invoice)}
         >
