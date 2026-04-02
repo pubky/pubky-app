@@ -28,4 +28,4 @@ function Textarea({
   return <textarea data-slot="textarea" {...props} className={Libs.cn(textareaVariants({ variant }), className)} />;
 }
 
-export { Textarea };
+export { Textarea, textareaVariants };
