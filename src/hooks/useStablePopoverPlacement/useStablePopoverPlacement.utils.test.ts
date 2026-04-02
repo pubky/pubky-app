@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { chooseStableVerticalSide } from './UserInfoPopover.utils';
+import { chooseStableVerticalSide } from './useStablePopoverPlacement.utils';
 
 describe('chooseStableVerticalSide', () => {
   it('chooses top when there is enough space above', () => {

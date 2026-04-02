@@ -1,16 +1,12 @@
 'use client';
 
-import { useEffect, useRef, useState } from 'react';
+import { useState } from 'react';
 import * as Atoms from '@/atoms';
-import {
-  DEFAULT_STABLE_POPOVER_VIEWPORT_PADDING,
-  POPOVER_ALIGN_OFFSET,
-  POPOVER_HOVER_DELAY,
-  POPOVER_SIDE_OFFSET,
-  STABLE_POPOVER_CLOSE_RENDER_TIMEOUT,
-  STABLE_POPOVER_ESTIMATED_HEIGHT,
-} from './UserInfoPopover.constants';
-import { chooseStableVerticalSide, type StableVerticalPopoverSide } from './UserInfoPopover.utils';
+import * as Hooks from '@/hooks';
+import { STABLE_POPOVER_CLOSE_RENDER_TIMEOUT } from '@/hooks/useStablePopoverPlacement/useStablePopoverPlacement.constants';
+import { type StableVerticalPopoverSide } from '@/hooks/useStablePopoverPlacement/useStablePopoverPlacement.utils';
+import { useClosingPresence } from '@/hooks/useStablePopoverPlacement/useClosingPresence';
+import { POPOVER_ALIGN_OFFSET, POPOVER_HOVER_DELAY, POPOVER_SIDE_OFFSET } from './UserInfoPopover.constants';
 import { UserInfoPopoverContent } from './components/UserInfoPopoverContent/UserInfoPopoverContent';
 
 interface UserInfoPopoverProps {
@@ -57,118 +53,47 @@ export function UserInfoPopover({
   stablePlacement,
 }: UserInfoPopoverProps) {
   const [open, setOpen] = useState(false);
-  const [isClosing, setIsClosing] = useState(false);
-  const [resolvedSide, setResolvedSide] = useState<StableVerticalPopoverSide>(preferredSide);
-  const measuredHeightRef = useRef(STABLE_POPOVER_ESTIMATED_HEIGHT);
-  const contentRef = useRef<HTMLDivElement>(null);
-  const closeRenderTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const isStablePlacement = Boolean(stablePlacement);
-  const triggerRef = stablePlacement?.triggerRef;
-  const viewportPadding = stablePlacement?.viewportPadding ?? DEFAULT_STABLE_POPOVER_VIEWPORT_PADDING;
-
-  const clearCloseRenderTimeout = () => {
-    if (closeRenderTimeoutRef.current) {
-      clearTimeout(closeRenderTimeoutRef.current);
-      closeRenderTimeoutRef.current = null;
-    }
-  };
+  const { side, contentRef, resolve } = Hooks.useStablePopoverPlacement({
+    enabled: isStablePlacement,
+    open,
+    preferredSide,
+    triggerRef: stablePlacement?.triggerRef,
+    sideOffset,
+    viewportPadding: stablePlacement?.viewportPadding,
+  });
+  const { shouldRender, beginOpening, beginClosing, onAnimationEnd } = useClosingPresence({
+    open,
+    enabled: isStablePlacement,
+    timeoutMs: STABLE_POPOVER_CLOSE_RENDER_TIMEOUT,
+  });
 
   const handleOpenChange = (nextOpen: boolean) => {
     if (nextOpen && isStablePlacement) {
-      clearCloseRenderTimeout();
-      setIsClosing(false);
-      const triggerElement = triggerRef?.current;
-
-      if (triggerElement) {
-        setResolvedSide(
-          chooseStableVerticalSide({
-            triggerRect: triggerElement.getBoundingClientRect(),
-            estimatedPopoverHeight: measuredHeightRef.current,
-            preferredSide,
-            sideOffset,
-            viewportPaddingTop: viewportPadding.top,
-            viewportPaddingBottom: viewportPadding.bottom,
-            viewportHeight: window.innerHeight,
-          }),
-        );
-      } else {
-        setResolvedSide(preferredSide);
-      }
+      beginOpening();
+      resolve();
     } else if (!nextOpen && open && isStablePlacement) {
-      clearCloseRenderTimeout();
-      setIsClosing(true);
-      closeRenderTimeoutRef.current = setTimeout(() => {
-        setIsClosing(false);
-        closeRenderTimeoutRef.current = null;
-      }, STABLE_POPOVER_CLOSE_RENDER_TIMEOUT);
+      beginClosing();
     }
 
     setOpen(nextOpen);
   };
-
-  useEffect(() => {
-    if (!open || !isStablePlacement || !contentRef.current) {
-      return;
-    }
-
-    const updateMeasuredHeight = () => {
-      const contentHeight = Math.ceil(contentRef.current?.getBoundingClientRect().height ?? 0);
-      if (contentHeight > 0) {
-        measuredHeightRef.current = contentHeight;
-      }
-    };
-
-    updateMeasuredHeight();
-
-    if (typeof ResizeObserver === 'undefined') {
-      return;
-    }
-
-    const resizeObserver = new ResizeObserver(() => {
-      updateMeasuredHeight();
-    });
-
-    resizeObserver.observe(contentRef.current);
-
-    return () => {
-      resizeObserver.disconnect();
-    };
-  }, [isStablePlacement, open]);
-
-  useEffect(() => {
-    return () => {
-      clearCloseRenderTimeout();
-    };
-  }, []);
-
-  const handleContentAnimationEnd = (e: React.AnimationEvent<HTMLDivElement>) => {
-    if (e.target !== e.currentTarget) {
-      return;
-    }
-
-    if (e.currentTarget.getAttribute('data-state') === 'closed') {
-      clearCloseRenderTimeout();
-      setIsClosing(false);
-    }
-  };
-
-  const shouldRenderContent = open || (isStablePlacement && isClosing);
 
   return (
     <Atoms.Popover hover={hover} hoverDelay={POPOVER_HOVER_DELAY} open={open} onOpenChange={handleOpenChange}>
       <Atoms.PopoverTrigger asChild>{children}</Atoms.PopoverTrigger>
       <Atoms.PopoverContent
         ref={contentRef}
-        side={isStablePlacement ? resolvedSide : preferredSide}
+        side={isStablePlacement ? side : preferredSide}
         sideOffset={sideOffset}
         align="start"
         alignOffset={alignOffset}
         avoidCollisions={isStablePlacement ? false : undefined}
         className="mx-0 w-(--popover-width)"
         onOpenAutoFocus={(e) => e.preventDefault()}
-        onAnimationEnd={handleContentAnimationEnd}
+        onAnimationEnd={onAnimationEnd}
       >
-        {shouldRenderContent ? (
+        {shouldRender ? (
           <UserInfoPopoverContent
             userId={userId}
             userName={userName}

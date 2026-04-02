@@ -1,0 +1,8 @@
+export const STABLE_POPOVER_ESTIMATED_HEIGHT = 220;
+
+export const DEFAULT_STABLE_POPOVER_VIEWPORT_PADDING = {
+  top: 0,
+  bottom: 16,
+} as const;
+
+export const STABLE_POPOVER_CLOSE_RENDER_TIMEOUT = 200;

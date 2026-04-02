@@ -2,7 +2,7 @@ import { render, screen, fireEvent } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { useRef } from 'react';
 import { UserInfoPopover } from './UserInfoPopover';
-import { STABLE_POPOVER_ESTIMATED_HEIGHT } from './UserInfoPopover.constants';
+import { STABLE_POPOVER_ESTIMATED_HEIGHT } from '@/hooks/useStablePopoverPlacement/useStablePopoverPlacement.constants';
 
 const { measurementState } = vi.hoisted(() => ({
   measurementState: {
