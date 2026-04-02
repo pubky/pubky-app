@@ -22,7 +22,7 @@ export const HeaderContainer = ({ children, className, classNameNav }: HeaderCon
       overrideDefaults
       as="header"
       className={Libs.cn(
-        'pointer-events-none sticky top-0 z-(--z-sticky-header) w-full bg-linear-to-b from-(--background) from-50% to-transparent lg:py-6',
+        'pointer-events-none sticky top-0 z-(--z-sticky-header) w-full bg-linear-to-b from-(--background) from-50% to-transparent',
         className,
       )}
     >
@@ -31,7 +31,7 @@ export const HeaderContainer = ({ children, className, classNameNav }: HeaderCon
         size="container"
         className={Libs.cn(
           'pointer-events-auto mx-auto flex h-24 w-full flex-row flex-wrap items-center justify-between gap-4 sm:flex-nowrap sm:gap-6',
-          'p-4 sm:p-0',
+          'p-6',
           classNameNav,
         )}
       >

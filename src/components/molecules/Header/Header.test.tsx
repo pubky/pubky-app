@@ -228,7 +228,6 @@ describe('Header Components', () => {
         'from-(--background)',
         'from-50%',
         'to-transparent',
-        'lg:py-6',
       );
 
       const innerContainer = container.querySelector('[data-testid="container"]') as HTMLElement | null;
@@ -249,8 +248,7 @@ describe('Header Components', () => {
         'gap-4',
         'sm:flex-nowrap',
         'sm:gap-6',
-        'p-4',
-        'sm:p-0',
+        'p-6',
       );
     });
 
