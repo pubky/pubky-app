@@ -73,20 +73,12 @@ vi.mock('@/organisms', async (importOriginal) => {
       postId,
       size,
       timeAgoPlacement,
-      stablePopoverPlacement,
     }: {
       postId: string;
       size?: string;
       timeAgoPlacement?: string;
-      stablePopoverPlacement?: boolean;
     }) => (
-      <div
-        data-testid="post-header"
-        data-post-id={postId}
-        data-size={size}
-        data-time-placement={timeAgoPlacement}
-        data-stable-popover-placement={stablePopoverPlacement ? 'true' : undefined}
-      >
+      <div data-testid="post-header" data-post-id={postId} data-size={size} data-time-placement={timeAgoPlacement}>
         PostHeader
       </div>
     ),
@@ -238,7 +230,7 @@ describe('SinglePostArticle', () => {
     expect(header).toHaveAttribute('data-post-id', 'user123:post456');
     expect(header).toHaveAttribute('data-size', 'large');
     expect(header).toHaveAttribute('data-time-placement', 'bottom-left');
-    expect(header).toHaveAttribute('data-stable-popover-placement', 'true');
+    expect(header).not.toHaveAttribute('data-stable-popover-placement');
   });
 
   it('renders PostActionsBar with correct postId', () => {

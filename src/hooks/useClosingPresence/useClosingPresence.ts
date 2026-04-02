@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useRef, useState } from 'react';
-import { STABLE_POPOVER_CLOSE_RENDER_TIMEOUT } from './useStablePopoverPlacement.constants';
+import { DEFAULT_CLOSE_PRESENCE_TIMEOUT } from './useClosingPresence.constants';
 
 interface UseClosingPresenceOptions {
   open: boolean;
@@ -19,7 +19,7 @@ interface UseClosingPresenceResult {
 export function useClosingPresence({
   open,
   enabled,
-  timeoutMs = STABLE_POPOVER_CLOSE_RENDER_TIMEOUT,
+  timeoutMs = DEFAULT_CLOSE_PRESENCE_TIMEOUT,
 }: UseClosingPresenceOptions): UseClosingPresenceResult {
   const [isClosing, setIsClosing] = useState(false);
   const closeRenderTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);

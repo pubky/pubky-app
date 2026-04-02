@@ -2,12 +2,12 @@
 
 import { useState } from 'react';
 import * as Atoms from '@/atoms';
-import * as Hooks from '@/hooks';
-import { STABLE_POPOVER_CLOSE_RENDER_TIMEOUT } from '@/hooks/useStablePopoverPlacement/useStablePopoverPlacement.constants';
-import { type StableVerticalPopoverSide } from '@/hooks/useStablePopoverPlacement/useStablePopoverPlacement.utils';
-import { useClosingPresence } from '@/hooks/useStablePopoverPlacement/useClosingPresence';
+import { useClosingPresence } from '@/hooks/useClosingPresence';
+import { DEFAULT_CLOSE_PRESENCE_TIMEOUT } from '@/hooks/useClosingPresence/useClosingPresence.constants';
 import { POPOVER_ALIGN_OFFSET, POPOVER_HOVER_DELAY, POPOVER_SIDE_OFFSET } from './UserInfoPopover.constants';
 import { UserInfoPopoverContent } from './components/UserInfoPopoverContent/UserInfoPopoverContent';
+
+type PopoverSide = 'top' | 'bottom';
 
 interface UserInfoPopoverProps {
   userId: string;
@@ -22,15 +22,7 @@ interface UserInfoPopoverProps {
   /** Horizontal alignment offset. Defaults to POPOVER_ALIGN_OFFSET (-24). */
   alignOffset?: number;
   /** Preferred vertical side for the popover. Defaults to top. */
-  preferredSide?: StableVerticalPopoverSide;
-  /** Optional stable-placement config. When omitted, Radix collision handling is used. */
-  stablePlacement?: {
-    triggerRef: React.RefObject<HTMLElement | null>;
-    viewportPadding?: {
-      top: number;
-      bottom: number;
-    };
-  };
+  preferredSide?: PopoverSide;
 }
 
 /**
@@ -50,29 +42,18 @@ export function UserInfoPopover({
   sideOffset = POPOVER_SIDE_OFFSET,
   alignOffset = POPOVER_ALIGN_OFFSET,
   preferredSide = 'top',
-  stablePlacement,
 }: UserInfoPopoverProps) {
   const [open, setOpen] = useState(false);
-  const isStablePlacement = Boolean(stablePlacement);
-  const { side, contentRef, resolve } = Hooks.useStablePopoverPlacement({
-    enabled: isStablePlacement,
-    open,
-    preferredSide,
-    triggerRef: stablePlacement?.triggerRef,
-    sideOffset,
-    viewportPadding: stablePlacement?.viewportPadding,
-  });
   const { shouldRender, beginOpening, beginClosing, onAnimationEnd } = useClosingPresence({
     open,
-    enabled: isStablePlacement,
-    timeoutMs: STABLE_POPOVER_CLOSE_RENDER_TIMEOUT,
+    enabled: true,
+    timeoutMs: DEFAULT_CLOSE_PRESENCE_TIMEOUT,
   });
 
   const handleOpenChange = (nextOpen: boolean) => {
-    if (nextOpen && isStablePlacement) {
+    if (nextOpen) {
       beginOpening();
-      resolve();
-    } else if (!nextOpen && open && isStablePlacement) {
+    } else if (!nextOpen && open) {
       beginClosing();
     }
 
@@ -83,12 +64,10 @@ export function UserInfoPopover({
     <Atoms.Popover hover={hover} hoverDelay={POPOVER_HOVER_DELAY} open={open} onOpenChange={handleOpenChange}>
       <Atoms.PopoverTrigger asChild>{children}</Atoms.PopoverTrigger>
       <Atoms.PopoverContent
-        ref={contentRef}
-        side={isStablePlacement ? side : preferredSide}
+        side={preferredSide}
         sideOffset={sideOffset}
         align="start"
         alignOffset={alignOffset}
-        avoidCollisions={isStablePlacement ? false : undefined}
         className="mx-0 w-(--popover-width)"
         onOpenAutoFocus={(e) => e.preventDefault()}
         onAnimationEnd={onAnimationEnd}

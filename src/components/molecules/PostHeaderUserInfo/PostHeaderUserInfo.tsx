@@ -1,16 +1,9 @@
 'use client';
 
-import { useRef } from 'react';
 import * as Libs from '@/libs';
 import * as Atoms from '@/atoms';
 import * as Molecules from '@/molecules';
 import * as Organisms from '@/organisms';
-
-const STABLE_SINGLE_POST_POPOVER_VIEWPORT_PADDING = {
-  // ~64px sticky nav + ~86px single-post page header keeps the popover from clipping under fixed UI.
-  top: 150,
-  bottom: 16,
-} as const;
 
 interface PostHeaderUserInfoProps {
   userId: string;
@@ -21,7 +14,6 @@ interface PostHeaderUserInfoProps {
     max: number;
   };
   showPopover?: boolean;
-  stablePopoverPlacement?: boolean;
   size?: 'normal' | 'large';
   timeAgo?: string | null;
   indexedAt?: Date | null;
@@ -33,20 +25,11 @@ export function PostHeaderUserInfo({
   avatarUrl,
   characterLimit,
   showPopover = true,
-  stablePopoverPlacement = false,
   size = 'normal',
   timeAgo,
   indexedAt,
 }: PostHeaderUserInfoProps) {
   const formattedPublicKey = Libs.formatPublicKey({ key: userId });
-  const triggerRef = useRef<HTMLDivElement>(null);
-  const stablePlacement = stablePopoverPlacement
-    ? {
-        triggerRef,
-        viewportPadding: STABLE_SINGLE_POST_POPOVER_VIEWPORT_PADDING,
-      }
-    : undefined;
-
   const profileUrl = `/profile/${userId}`;
 
   // Prevent click from bubbling to parent post card (which navigates to post)
@@ -55,11 +38,7 @@ export function PostHeaderUserInfo({
   };
 
   const content = (
-    <Atoms.Container
-      ref={triggerRef}
-      overrideDefaults
-      className={Libs.cn('flex min-w-0 items-center', size === 'large' ? 'gap-5' : 'gap-3')}
-    >
+    <Atoms.Container overrideDefaults className={Libs.cn('flex min-w-0 items-center', size === 'large' ? 'gap-5' : 'gap-3')}>
       <Atoms.Link href={profileUrl} onClick={handleLinkClick} className="shrink-0">
         <Organisms.AvatarWithFallback
           avatarUrl={avatarUrl}
@@ -112,7 +91,6 @@ export function PostHeaderUserInfo({
       userName={userName}
       avatarUrl={avatarUrl}
       formattedPublicKey={formattedPublicKey}
-      stablePlacement={stablePlacement}
     >
       {content}
     </Molecules.UserInfoPopover>

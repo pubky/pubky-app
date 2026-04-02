@@ -332,23 +332,11 @@ describe('PostHeaderUserInfo', () => {
     expect(screen.getByTestId('popover-content')).toBeInTheDocument();
   });
 
-  it('does not pass stable placement config by default', () => {
+  it('does not pass stable placement config', () => {
     render(<PostHeaderUserInfo userId="user123" userName="Test User" />);
 
     const popoverProps = mockUserInfoPopover.mock.calls.at(-1)?.[0];
-    expect(popoverProps.stablePlacement).toBeUndefined();
-  });
-
-  it('passes stable placement config when requested', () => {
-    render(<PostHeaderUserInfo userId="user123" userName="Test User" stablePopoverPlacement={true} />);
-
-    const popoverProps = mockUserInfoPopover.mock.calls.at(-1)?.[0];
-    expect(popoverProps).toMatchObject({
-      stablePlacement: {
-        viewportPadding: { top: 150, bottom: 16 },
-      },
-    });
-    expect(popoverProps.stablePlacement.triggerRef.current).toBeInstanceOf(HTMLDivElement);
+    expect(popoverProps).not.toHaveProperty('stablePlacement');
   });
 
   it('renders with normal size by default', () => {

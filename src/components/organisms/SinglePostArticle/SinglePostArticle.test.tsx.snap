@@ -19,7 +19,6 @@ exports[`SinglePostArticle - Snapshots > matches snapshot when blurred 1`] = `
     <div
       data-post-id="snapshot-user:blurred-post"
       data-size="large"
-      data-stable-popover-placement="true"
       data-testid="post-header"
       data-time-placement="bottom-left"
     >
@@ -84,7 +83,6 @@ exports[`SinglePostArticle - Snapshots > matches snapshot with cover image 1`] =
     <div
       data-post-id="snapshot-user:cover-post"
       data-size="large"
-      data-stable-popover-placement="true"
       data-testid="post-header"
       data-time-placement="bottom-left"
     >
@@ -156,7 +154,6 @@ exports[`SinglePostArticle - Snapshots > matches snapshot with default props (no
     <div
       data-post-id="snapshot-user:snapshot-post"
       data-size="large"
-      data-stable-popover-placement="true"
       data-testid="post-header"
       data-time-placement="bottom-left"
     >
