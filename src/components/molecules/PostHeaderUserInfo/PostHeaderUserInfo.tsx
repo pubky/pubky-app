@@ -38,7 +38,10 @@ export function PostHeaderUserInfo({
   };
 
   const content = (
-    <Atoms.Container overrideDefaults className={Libs.cn('flex min-w-0 items-center', size === 'large' ? 'gap-5' : 'gap-3')}>
+    <Atoms.Container
+      overrideDefaults
+      className={Libs.cn('flex min-w-0 items-center', size === 'large' ? 'gap-5' : 'gap-3')}
+    >
       <Atoms.Link href={profileUrl} onClick={handleLinkClick} className="shrink-0">
         <Organisms.AvatarWithFallback
           avatarUrl={avatarUrl}

@@ -69,15 +69,7 @@ vi.mock('@/organisms', async (importOriginal) => {
   const actual = await importOriginal<typeof import('@/organisms')>();
   return {
     ...actual,
-    PostHeader: ({
-      postId,
-      size,
-      timeAgoPlacement,
-    }: {
-      postId: string;
-      size?: string;
-      timeAgoPlacement?: string;
-    }) => (
+    PostHeader: ({ postId, size, timeAgoPlacement }: { postId: string; size?: string; timeAgoPlacement?: string }) => (
       <div data-testid="post-header" data-post-id={postId} data-size={size} data-time-placement={timeAgoPlacement}>
         PostHeader
       </div>

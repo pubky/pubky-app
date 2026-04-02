@@ -5,11 +5,9 @@ import { SinglePostCard } from './SinglePostCard';
 import * as Hooks from '@/hooks';
 
 const { mockPostHeader } = vi.hoisted(() => ({
-  mockPostHeader: vi.fn(
-    ({ postId }: { postId: string; timeAgoPlacement?: 'top-right' | 'bottom-left' }) => (
-      <div data-testid="post-header">Header: {postId}</div>
-    ),
-  ),
+  mockPostHeader: vi.fn(({ postId }: { postId: string; timeAgoPlacement?: 'top-right' | 'bottom-left' }) => (
+    <div data-testid="post-header">Header: {postId}</div>
+  )),
 }));
 
 vi.mock('@/hooks', () => ({
