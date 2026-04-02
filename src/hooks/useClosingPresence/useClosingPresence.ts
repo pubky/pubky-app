@@ -5,7 +5,6 @@ import { DEFAULT_CLOSE_PRESENCE_TIMEOUT } from './useClosingPresence.constants';
 
 interface UseClosingPresenceOptions {
   open: boolean;
-  enabled: boolean;
   timeoutMs?: number;
 }
 
@@ -31,7 +30,6 @@ interface UseClosingPresenceResult {
  */
 export function useClosingPresence({
   open,
-  enabled,
   timeoutMs = DEFAULT_CLOSE_PRESENCE_TIMEOUT,
 }: UseClosingPresenceOptions): UseClosingPresenceResult {
   const [isClosing, setIsClosing] = useState(false);
@@ -50,10 +48,6 @@ export function useClosingPresence({
   };
 
   const beginClosing = () => {
-    if (!enabled) {
-      return;
-    }
-
     clearCloseRenderTimeout();
     setIsClosing(true);
     closeRenderTimeoutRef.current = setTimeout(() => {
@@ -80,7 +74,7 @@ export function useClosingPresence({
   }, []);
 
   return {
-    shouldRender: open || (enabled && isClosing),
+    shouldRender: open || isClosing,
     beginOpening,
     beginClosing,
     onAnimationEnd,

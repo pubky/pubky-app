@@ -17,7 +17,6 @@ describe('useClosingPresence', () => {
       ({ open }: { open: boolean }) =>
         useClosingPresence({
           open,
-          enabled: true,
           timeoutMs: 200,
         }),
       { initialProps: { open: false } },
@@ -30,21 +29,20 @@ describe('useClosingPresence', () => {
     expect(result.current.shouldRender).toBe(true);
   });
 
-  it('beginClosing keeps content rendered after open becomes false when enabled', () => {
+  it('beginClosing keeps content rendered after open becomes false', () => {
     const { result, rerender } = renderHook(
-      ({ open, enabled }: { open: boolean; enabled: boolean }) =>
+      ({ open }: { open: boolean }) =>
         useClosingPresence({
           open,
-          enabled,
           timeoutMs: 200,
         }),
-      { initialProps: { open: true, enabled: true } },
+      { initialProps: { open: true } },
     );
 
     act(() => {
       result.current.beginClosing();
     });
-    rerender({ open: false, enabled: true });
+    rerender({ open: false });
 
     expect(result.current.shouldRender).toBe(true);
   });
@@ -54,7 +52,6 @@ describe('useClosingPresence', () => {
       ({ open }: { open: boolean }) =>
         useClosingPresence({
           open,
-          enabled: true,
           timeoutMs: 200,
         }),
       { initialProps: { open: true } },
@@ -83,7 +80,6 @@ describe('useClosingPresence', () => {
       ({ open }: { open: boolean }) =>
         useClosingPresence({
           open,
-          enabled: true,
           timeoutMs: 200,
         }),
       { initialProps: { open: true } },
@@ -106,7 +102,6 @@ describe('useClosingPresence', () => {
     const { result, unmount } = renderHook(() =>
       useClosingPresence({
         open: true,
-        enabled: true,
         timeoutMs: 200,
       }),
     );
@@ -118,24 +113,5 @@ describe('useClosingPresence', () => {
     unmount();
 
     expect(clearTimeoutSpy).toHaveBeenCalled();
-  });
-
-  it('does not persist rendering on close when disabled', () => {
-    const { result, rerender } = renderHook(
-      ({ open }: { open: boolean }) =>
-        useClosingPresence({
-          open,
-          enabled: false,
-          timeoutMs: 200,
-        }),
-      { initialProps: { open: true } },
-    );
-
-    act(() => {
-      result.current.beginClosing();
-    });
-    rerender({ open: false });
-
-    expect(result.current.shouldRender).toBe(false);
   });
 });

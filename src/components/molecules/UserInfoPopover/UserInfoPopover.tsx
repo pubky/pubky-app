@@ -40,7 +40,6 @@ export function UserInfoPopover({
   const [open, setOpen] = useState(false);
   const { shouldRender, beginOpening, beginClosing, onAnimationEnd } = useClosingPresence({
     open,
-    enabled: true,
   });
 
   const handleOpenChange = (nextOpen: boolean) => {
