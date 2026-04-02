@@ -12,6 +12,7 @@ exports[`HumanLightningPayment > matches snapshot 1`] = `
     Scan to 
     <span
       class="text-brand"
+      data-testid="typography"
     >
       Pay.
     </span>

@@ -213,8 +213,10 @@
     },
     "lightning": {
       "title": "スキャンして<highlight>支払い。</highlight>",
+      "title_mobile": "タップして<highlight>支払い。</highlight>",
       "subtitle": "お好みのウォレットでQRコードをスキャンしてください。",
       "qrLabel": "Bitcoin Lightning支払い",
+      "payNow": "今すぐ支払う",
       "payAmount": "続行するには₿ {amount}を支払ってください。",
       "payAmountUsd": "続行するには₿ {amount}（${usdAmount}）を支払ってください。",
       "expired": "支払いの期限が切れました",

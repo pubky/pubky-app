@@ -1439,6 +1439,14 @@ describe('PostStreamApplication', () => {
   });
 
   describe('prepareStreamForInitialLoad', () => {
+    it('should clear pagination queue before preparing the stream', async () => {
+      const removeSpy = vi.spyOn(postStreamQueue, 'remove');
+
+      await Core.PostStreamApplication.prepareStreamForInitialLoad({ streamId });
+
+      expect(removeSpy).toHaveBeenCalledWith(streamId);
+    });
+
     it('should clear both streams when main stream cache is stale', async () => {
       const now = BASE_TIMESTAMP + Config.STREAM_CACHE_MAX_AGE_MS + 10;
       const staleTimestamp = now - Config.STREAM_CACHE_MAX_AGE_MS - 1;

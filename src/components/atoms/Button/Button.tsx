@@ -38,7 +38,7 @@ const buttonVariants = cva(
         default: 'h-10 gap-1 px-4 py-2 has-[>svg]:px-4',
         sm: 'h-8 gap-1.5 px-3 has-[>svg]:px-3.5',
         icon: 'size-9',
-        lg: 'h-auto gap-2 px-4 py-2.5 sm:px-8 sm:py-5 text-sm font-bold leading-normal',
+        lg: 'h-auto gap-2 px-8 py-5 text-sm font-bold leading-normal',
       },
     },
     defaultVariants: {
