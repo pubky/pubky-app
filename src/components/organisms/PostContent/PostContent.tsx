@@ -12,10 +12,7 @@ import type { PostContentOrganismProps } from './PostContent.types';
  * **Rendering logic:**
  * - **Regular post**: Renders PostContentBase (text, embeds, attachments)
  * - **Repost with content (quote)**: Renders PostContentBase (quote text) + PostPreviewCard (original post)
- * - **Repost without content (plain repost)**: Renders PostContentBase (empty wrapper, may have attachments) + PostPreviewCard (original post)
- *
- * PostContentBase is always rendered as it's a structural wrapper that maintains layout
- * and handles attachments even when there's no text content.
+ * - **Repost without content (plain repost)**: PostContentBase returns null + PostPreviewCard (original post)
  */
 export function PostContent({ postId, className }: PostContentOrganismProps) {
   // Get repost information
