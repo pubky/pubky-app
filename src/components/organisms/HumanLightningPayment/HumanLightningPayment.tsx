@@ -158,9 +158,12 @@ export const HumanLightningPayment = ({ onBack, onSuccess }: HumanLightningPayme
         onClick={() => copyToClipboard(verification.data.bolt11Invoice)}
       >
         <QRCodeSVG value={verification.data.bolt11Invoice} size={174} />
-        <div className="pointer-events-none absolute inset-0 flex items-center justify-center">
-          <Atoms.Image src="/images/bitcoin-logo.svg" alt="Bitcoin logo" width={45} height={45} className="" />
-        </div>
+        <Atoms.Container
+          overrideDefaults
+          className="pointer-events-none absolute inset-0 flex items-center justify-center"
+        >
+          <Atoms.Image src="/images/bitcoin-logo.svg" alt="Bitcoin logo" width={45} height={45} />
+        </Atoms.Container>
       </Atoms.Container>
     );
   };
