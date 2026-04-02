@@ -1,0 +1,306 @@
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
+
+exports[`UserListItem - Snapshots > matches snapshot for compact variant 1`] = `
+<div
+  class="flex w-full items-center gap-2"
+  data-testid="user-list-item-test-user-pubky-123456"
+>
+  <button
+    aria-label="View Test User's profile"
+    class="flex min-w-0 flex-1 cursor-pointer items-center gap-2 text-left transition-opacity hover:opacity-80"
+  >
+    <div
+      data-testid="avatar"
+    />
+    <div
+      class="flex min-w-0 flex-1 flex-col"
+    >
+      <span
+        class="truncate text-sm font-bold text-foreground"
+      >
+        Test User
+      </span>
+      <span
+        class="truncate text-xs font-medium tracking-[1.2px] text-muted-foreground uppercase"
+      >
+        pk:test-use
+      </span>
+    </div>
+  </button>
+  <button
+    aria-label="Follow Test User"
+    class="group size-8 shrink-0 rounded-full"
+    data-cy="user-list-item-follow-toggle-btn"
+    data-size="icon"
+    data-variant="secondary"
+  >
+    <svg
+      class="size-5"
+      data-testid="user-round-plus-icon"
+    />
+  </button>
+</div>
+`;
+
+exports[`UserListItem - Snapshots > matches snapshot for compact variant as current user 1`] = `
+<div
+  class="flex w-full items-center gap-2"
+  data-testid="user-list-item-test-user-pubky-123456"
+>
+  <button
+    aria-label="View Test User's profile"
+    class="flex min-w-0 flex-1 cursor-pointer items-center gap-2 text-left transition-opacity hover:opacity-80"
+  >
+    <div
+      data-testid="avatar"
+    />
+    <div
+      class="flex min-w-0 flex-1 flex-col"
+    >
+      <span
+        class="truncate text-sm font-bold text-foreground"
+      >
+        Test User
+      </span>
+      <span
+        class="truncate text-xs font-medium tracking-[1.2px] text-muted-foreground uppercase"
+      >
+        pk:test-use
+      </span>
+    </div>
+  </button>
+  <button
+    aria-label="This is you"
+    class="size-8 shrink-0 cursor-not-allowed rounded-full opacity-50"
+    data-cy="user-list-item-me-btn"
+    data-size="icon"
+    data-variant="secondary"
+    disabled=""
+  >
+    <svg
+      class="size-5 text-muted-foreground"
+      data-testid="circle-user-round"
+    />
+  </button>
+</div>
+`;
+
+exports[`UserListItem - Snapshots > matches snapshot for compact variant when following 1`] = `
+<div
+  class="flex w-full items-center gap-2"
+  data-testid="user-list-item-test-user-pubky-123456"
+>
+  <button
+    aria-label="View Test User's profile"
+    class="flex min-w-0 flex-1 cursor-pointer items-center gap-2 text-left transition-opacity hover:opacity-80"
+  >
+    <div
+      data-testid="avatar"
+    />
+    <div
+      class="flex min-w-0 flex-1 flex-col"
+    >
+      <span
+        class="truncate text-sm font-bold text-foreground"
+      >
+        Test User
+      </span>
+      <span
+        class="truncate text-xs font-medium tracking-[1.2px] text-muted-foreground uppercase"
+      >
+        pk:test-use
+      </span>
+    </div>
+  </button>
+  <button
+    aria-label="Unfollow Test User"
+    class="group size-8 shrink-0 rounded-full"
+    data-cy="user-list-item-follow-toggle-btn"
+    data-size="icon"
+    data-variant="secondary"
+  >
+    <svg
+      class="size-5 group-hover:hidden"
+      data-testid="check-icon"
+    />
+    <svg
+      class="hidden size-5 group-hover:block"
+      data-testid="user-minus-icon"
+    />
+  </button>
+</div>
+`;
+
+exports[`UserListItem - Snapshots > matches snapshot for compact variant with stats 1`] = `
+<div
+  class="flex w-full items-center gap-2"
+  data-testid="user-list-item-test-user-pubky-123456"
+>
+  <button
+    aria-label="View Test User's profile"
+    class="flex min-w-0 flex-1 cursor-pointer items-center gap-2 text-left transition-opacity hover:opacity-80"
+  >
+    <div
+      data-testid="avatar"
+    />
+    <div
+      class="flex min-w-0 flex-1 flex-col"
+    >
+      <span
+        class="truncate text-sm font-bold text-foreground"
+      >
+        Test User
+      </span>
+      <div
+        class="flex items-center gap-3 text-xs font-medium tracking-[1.2px] text-muted-foreground"
+      >
+        <div
+          class="flex items-center gap-1"
+        >
+          <svg
+            class="size-3"
+            data-testid="tag-icon"
+          />
+          <span>
+            5
+          </span>
+        </div>
+        <div
+          class="flex items-center gap-1"
+        >
+          <svg
+            class="size-3"
+            data-testid="sticky-note-icon"
+          />
+          <span>
+            10
+          </span>
+        </div>
+      </div>
+    </div>
+  </button>
+  <button
+    aria-label="Follow Test User"
+    class="group size-8 shrink-0 rounded-full"
+    data-cy="user-list-item-follow-toggle-btn"
+    data-size="icon"
+    data-variant="secondary"
+  >
+    <svg
+      class="size-5"
+      data-testid="user-round-plus-icon"
+    />
+  </button>
+</div>
+`;
+
+exports[`UserListItem - Snapshots > matches snapshot for full variant 1`] = `
+<div
+  class="gap-3 rounded-md bg-card p-6 lg:bg-transparent lg:p-0"
+  data-testid="user-list-item-test-user-pubky-123456"
+>
+  <div
+    class="flex flex-wrap items-center justify-between gap-6 lg:flex-nowrap"
+  >
+    <a
+      class="flex min-w-0 flex-1 items-center gap-2"
+      href="/profile/test-user-pubky-123456"
+    >
+      <div
+        data-testid="avatar"
+      />
+      <div
+        class="min-w-0 flex-1 truncate"
+      >
+        <span
+          class="truncate font-bold"
+          data-cy="profile-follower-item-name"
+        >
+          Test User
+        </span>
+        <span
+          class="truncate text-xs font-medium tracking-[1.2px] text-muted-foreground uppercase"
+        >
+          pk:test-use
+        </span>
+      </div>
+    </a>
+    <div
+      data-testid="tags-list"
+    />
+    <div
+      class="flex shrink-0 items-center gap-3"
+    >
+      <div
+        class="items-start"
+      >
+        <span
+          class="text-xs font-medium tracking-[1.2px] text-muted-foreground uppercase"
+        >
+          TAGS
+        </span>
+        <span
+          class="font-bold"
+          data-cy="profile-follower-item-tags-count"
+        >
+          5
+        </span>
+      </div>
+      <div
+        class="items-start"
+      >
+        <span
+          class="text-xs font-medium tracking-[1.2px] text-muted-foreground uppercase"
+        >
+          POSTS
+        </span>
+        <span
+          class="font-bold"
+          data-cy="profile-follower-item-posts-count"
+        >
+          10
+        </span>
+      </div>
+    </div>
+    <div
+      class="hidden lg:flex"
+    >
+      <button
+        aria-label="Follow Test User"
+        class="group size-8 shrink-0 rounded-full"
+        data-cy="user-list-item-follow-toggle-btn"
+        data-size="icon"
+        data-variant="secondary"
+      >
+        <svg
+          class="size-5"
+          data-testid="user-round-plus-icon"
+        />
+      </button>
+    </div>
+  </div>
+  <div
+    class="flex flex-wrap items-center gap-3 lg:hidden"
+  >
+    <div
+      data-testid="tags-list"
+    />
+    <div
+      class="ml-auto"
+    >
+      <button
+        aria-label="Follow Test User"
+        class="group size-8 shrink-0 rounded-full"
+        data-cy="user-list-item-follow-toggle-btn"
+        data-size="icon"
+        data-variant="secondary"
+      >
+        <svg
+          class="size-5"
+          data-testid="user-round-plus-icon"
+        />
+      </button>
+    </div>
+  </div>
+</div>
+`;

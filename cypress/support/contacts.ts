@@ -1,16 +1,16 @@
 import { userIdFromPubky } from './common';
 import { clickFollowButton } from './profile';
-import { CheckForNewPosts } from './types/enums';
+import { CheckForNewPosts, PostType, WaitForNewPosts } from './types/enums';
 
 /**
  * Follow a user from the post menu on one of their posts in the feed.
  * Use when the target user's post is visible in the feed (e.g. Reach All).
  *
  * @param filterText - Text content to identify the post in the feed
- * @param postIdx - Index of the post among those matching filterText (0 = first match)
+ * @param postType - Whether to target an original post or repost card
  */
-export const followFromPostMenu = (filterText: string, postIdx: number) => {
-  cy.findPostInFeed(postIdx, filterText, CheckForNewPosts.No).within(() => {
+export const followFromPostMenu = (filterText: string, postType = PostType.Post) => {
+  cy.findPostInFeedByType(postType, filterText, CheckForNewPosts.No).within(() => {
     cy.get('[data-cy="post-more-btn"]').click();
   });
   cy.get('[data-cy="post-menu-action-follow"]').should('be.visible').click();

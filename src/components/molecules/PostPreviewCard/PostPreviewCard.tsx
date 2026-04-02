@@ -50,6 +50,7 @@ export function PostPreviewCard({ postId, className }: PostPreviewCardProps) {
   return (
     <Atoms.Card
       ref={ttlRef}
+      data-cy="post-preview-card"
       className={Libs.cn('min-w-0 cursor-pointer rounded-md py-0 transition-colors hover:bg-accent/50', className)}
       onClick={handleClick}
       onKeyDown={handleKeyDown}

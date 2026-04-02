@@ -50,28 +50,20 @@ describe('posts', () => {
     // verify the post is displayed correctly in feed
     latestPostInFeedContentEq(postContent);
 
-    // wait for post to be indexed before reloading page
-    // checkLatestPostIsIndexed();
-    // todo: remove this once we have a way to check if the post is indexed
-    cy.wait(1000);
-
     // reload and check post is still displayed correctly
     cy.reload();
     latestPostInFeedContentEq(postContent);
   });
 
-  // todo: reenable when posts created from new post are optimistically added to feed, see https://github.com/pubky/franky/issues/618
-  it.skip('can post from new post', () => {
+  it('can post from new post', () => {
     const postContent = `I can make a new post! ${Date.now()}`;
     createPostFromDialog(postContent);
 
+    // wait and click 'see new posts' button
+    cy.findFirstPostInFeedFiltered(postContent, CheckForNewPosts.Yes);
+
     // verify the post is displayed correctly in feed
     latestPostInFeedContentEq(postContent);
-
-    // wait for post to be indexed before reloading page
-    // checkLatestPostIsIndexed();
-    // todo: remove this once we have a way to check if the post is indexed
-    cy.wait(1000);
 
     // reload and check post is still displayed correctly
     cy.reload();
@@ -94,7 +86,6 @@ describe('posts', () => {
     latestPostInFeedContentEq(editedContent);
   });
 
-  // todo: ready to implement these tests
   it('can post with maximum character limit (2000)', () => {
     const prefix = `I can make a max length post! ${Date.now()} `;
     const fillerLength = Math.max(0, MAX_POST_LENGTH - prefix.length);
@@ -296,13 +287,7 @@ describe('posts', () => {
 
     createQuickPost(postContent);
 
-    // scroll to top (to aid visual debugging)
-    cy.get('[data-cy="header-logo"]').filter(':visible').click();
-
     fastTagPostInFeed([tag1, tag2, tag3], postContent);
-
-    // scroll to top (to aid visual debugging)
-    cy.get('[data-cy="header-logo"]').filter(':visible').click();
 
     // todo: remove wait workaround once bug is fixed, see https://github.com/pubky/pubky-app/issues/805
     cy.wait(Cypress.expose('ci') ? 3_000 : 500);
@@ -406,10 +391,12 @@ describe('posts', () => {
 
     // unbookmark both posts
     cy.get('[data-cy="timeline-posts"]')
+      .find('[data-testid="virtuoso-item-list"]')
       .children()
+      .should('have.length', 2)
       .then(($posts) => {
-        cy.wrap($posts.slice(0, 2)).each(($post) => {
-          cy.wrap($post).find('[data-cy="post-bookmark-btn"]').click();
+        $posts.each((_idx, element) => {
+          cy.wrap(element).find('[data-cy="post-bookmark-btn"]').click();
         });
       });
 
