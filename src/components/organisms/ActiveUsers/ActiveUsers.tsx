@@ -9,8 +9,7 @@ import * as Libs from '@/libs';
 import * as Molecules from '@/molecules';
 import * as Organisms from '@/organisms';
 import { APP_ROUTES } from '@/app/routes';
-import type { ActiveUsersProps } from './ActiveUsers.types';
-import { USERS_LIMIT } from './ActiveUsers.constants';
+const USERS_LIMIT = 3;
 
 /**
  * ActiveUsers
@@ -20,7 +19,7 @@ import { USERS_LIMIT } from './ActiveUsers.constants';
  *
  * Note: This is an Organism because it interacts with Core via hooks (useUserStream, useFollowUser).
  */
-export function ActiveUsers({ className }: ActiveUsersProps) {
+export function ActiveUsers() {
   const t = useTranslations('sidebar');
   const tCommon = useTranslations('common');
   const router = useRouter();
@@ -47,10 +46,9 @@ export function ActiveUsers({ className }: ActiveUsersProps) {
   return (
     <Molecules.SidebarSection
       title={t('activeUsers')}
-      footerIcon={Libs.Users}
+      footerIcon={Libs.UsersRound}
       footerText={tCommon('seeAll')}
       onFooterClick={handleSeeAll}
-      className={className}
       data-testid="active-users"
     >
       {isStreamLoading ? (

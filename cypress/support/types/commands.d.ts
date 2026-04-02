@@ -1,4 +1,4 @@
-import { HasBackedUp, BackupType, CheckForNewPosts, WaitForNewPosts } from './enums';
+import { HasBackedUp, BackupType, CheckForNewPosts, PostType, WaitForNewPosts } from './enums';
 
 declare global {
   namespace Cypress {
@@ -38,8 +38,20 @@ declare global {
         checkForNewPosts?: CheckForNewPosts,
         waitForNewPosts?: WaitForNewPosts,
       ): Chainable<JQuery<HTMLElement>>;
+      findFirstPostInFeedFilteredByType(
+        filterText: string,
+        postType?: PostType,
+        checkForNewPosts?: CheckForNewPosts,
+        waitForNewPosts?: WaitForNewPosts,
+      ): Chainable<JQuery<HTMLElement>>;
       findPostInFeed(
         postIdx?: number,
+        filterText?: string,
+        checkForNewPosts?: CheckForNewPosts,
+        waitForNewPosts?: WaitForNewPosts,
+      ): Chainable<JQuery<HTMLElement>>;
+      findPostInFeedByType(
+        postType?: PostType,
         filterText?: string,
         checkForNewPosts?: CheckForNewPosts,
         waitForNewPosts?: WaitForNewPosts,

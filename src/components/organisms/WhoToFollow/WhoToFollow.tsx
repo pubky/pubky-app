@@ -8,8 +8,7 @@ import * as Libs from '@/libs';
 import * as Molecules from '@/molecules';
 import * as Organisms from '@/organisms';
 import { APP_ROUTES } from '@/app/routes';
-import type { WhoToFollowProps } from './WhoToFollow.types';
-import { USERS_LIMIT } from './WhoToFollow.constants';
+const USERS_LIMIT = 3;
 
 /**
  * WhoToFollow
@@ -19,7 +18,7 @@ import { USERS_LIMIT } from './WhoToFollow.constants';
  *
  * Note: This is an Organism because it interacts with Core via hooks (useUserStream, useFollowUser).
  */
-export function WhoToFollow({ className }: WhoToFollowProps) {
+export function WhoToFollow() {
   const t = useTranslations('sidebar');
   const tCommon = useTranslations('common');
   const router = useRouter();
@@ -45,10 +44,9 @@ export function WhoToFollow({ className }: WhoToFollowProps) {
   return (
     <Molecules.SidebarSection
       title={t('whoToFollow')}
-      footerIcon={Libs.Users}
+      footerIcon={Libs.UsersRound}
       footerText={tCommon('seeAll')}
       onFooterClick={handleSeeAll}
-      className={className}
       dataCy="who-to-follow"
       footerDataCy="who-to-follow-see-all"
       data-testid="who-to-follow"
