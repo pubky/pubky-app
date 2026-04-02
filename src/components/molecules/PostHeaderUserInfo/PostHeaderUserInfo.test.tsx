@@ -9,20 +9,18 @@ const { mockUserInfoPopover } = vi.hoisted(() => ({
       children,
       userName,
       formattedPublicKey,
-      preferredSide = 'top',
       sideOffset = 1,
     }: {
       children: React.ReactNode;
       userName: string;
       formattedPublicKey: string;
-      preferredSide?: 'top' | 'bottom';
       sideOffset?: number;
     }) => (
       <div data-testid="popover" data-hover="true">
         <div data-testid="popover-trigger" data-as-child="true">
           {children}
         </div>
-        <div data-testid="popover-content" data-side={preferredSide} data-side-offset={sideOffset}>
+        <div data-testid="popover-content" data-side-offset={sideOffset}>
           <div data-testid="popover-inner-content">
             <div data-testid="avatar" />
             <div>{userName}</div>
@@ -300,7 +298,6 @@ describe('PostHeaderUserInfo', () => {
 
     const content = screen.getByTestId('popover-content');
     expect(content).toBeInTheDocument();
-    expect(content).toHaveAttribute('data-side', 'top');
     expect(content).toHaveAttribute('data-side-offset', '1');
   });
   // Popover content details (bio/follow actions) are covered by UserInfoPopover + hooks tests.

@@ -16,6 +16,19 @@ interface UseClosingPresenceResult {
   onAnimationEnd: React.AnimationEventHandler<HTMLDivElement>;
 }
 
+/**
+ * Keeps inner content mounted while an animated container finishes closing.
+ *
+ * This hook exists to prevent the "empty popover flash" bug on hover-out/close:
+ * the outer Radix content stays mounted long enough to run its `data-state="closed"`
+ * animation, but conditionally rendered children would normally unmount as soon as
+ * `open` becomes `false`. That leaves a visible empty shell for a frame or two.
+ *
+ * Use `beginOpening` / `beginClosing` in the same transition that updates `open`,
+ * render children while `shouldRender` is true, and attach `onAnimationEnd` to the
+ * animated container so closing presence is cleared when the close animation ends.
+ * A timeout fallback covers cases where `animationend` does not fire.
+ */
 export function useClosingPresence({
   open,
   enabled,

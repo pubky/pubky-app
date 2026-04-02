@@ -93,9 +93,9 @@ describe('UserInfoPopover', () => {
     expect(screen.getByTestId('popover-inner-content')).toBeInTheDocument();
   });
 
-  it('preserves the preferred side during close', () => {
+  it('keeps content mounted during close without forcing a side', () => {
     render(
-      <UserInfoPopover userId="user123" userName="Test User" formattedPublicKey="user123" preferredSide="bottom">
+      <UserInfoPopover userId="user123" userName="Test User" formattedPublicKey="user123">
         <button data-testid="trigger" type="button">
           Trigger
         </button>
@@ -105,7 +105,7 @@ describe('UserInfoPopover', () => {
     fireEvent.click(screen.getByTestId('open-popover'));
     fireEvent.click(screen.getByTestId('close-popover'));
 
-    expect(screen.getByTestId('popover-content')).toHaveAttribute('data-side', 'bottom');
+    expect(screen.getByTestId('popover-content')).not.toHaveAttribute('data-side');
     expect(screen.getByTestId('popover-inner-content')).toBeInTheDocument();
   });
 });

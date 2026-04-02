@@ -7,8 +7,6 @@ import { DEFAULT_CLOSE_PRESENCE_TIMEOUT } from '@/hooks/useClosingPresence/useCl
 import { POPOVER_ALIGN_OFFSET, POPOVER_HOVER_DELAY, POPOVER_SIDE_OFFSET } from './UserInfoPopover.constants';
 import { UserInfoPopoverContent } from './components/UserInfoPopoverContent/UserInfoPopoverContent';
 
-type PopoverSide = 'top' | 'bottom';
-
 interface UserInfoPopoverProps {
   userId: string;
   userName: string;
@@ -21,8 +19,6 @@ interface UserInfoPopoverProps {
   sideOffset?: number;
   /** Horizontal alignment offset. Defaults to POPOVER_ALIGN_OFFSET (-24). */
   alignOffset?: number;
-  /** Preferred vertical side for the popover. Defaults to top. */
-  preferredSide?: PopoverSide;
 }
 
 /**
@@ -41,7 +37,6 @@ export function UserInfoPopover({
   hover = true,
   sideOffset = POPOVER_SIDE_OFFSET,
   alignOffset = POPOVER_ALIGN_OFFSET,
-  preferredSide = 'top',
 }: UserInfoPopoverProps) {
   const [open, setOpen] = useState(false);
   const { shouldRender, beginOpening, beginClosing, onAnimationEnd } = useClosingPresence({
@@ -64,7 +59,6 @@ export function UserInfoPopover({
     <Atoms.Popover hover={hover} hoverDelay={POPOVER_HOVER_DELAY} open={open} onOpenChange={handleOpenChange}>
       <Atoms.PopoverTrigger asChild>{children}</Atoms.PopoverTrigger>
       <Atoms.PopoverContent
-        side={preferredSide}
         sideOffset={sideOffset}
         align="start"
         alignOffset={alignOffset}
