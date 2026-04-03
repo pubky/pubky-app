@@ -82,7 +82,11 @@ export function usePost(): UsePostReturn {
       setContent('');
       setTags([]);
       setAttachments([]);
-      showSuccessToast(tPost('replyPosted'), tPost('replyPostedDesc'));
+      toast({
+        title: tPost('replyPosted'),
+        description: tPost('replyPostedDesc'),
+        dismissButton: true,
+      });
       onSuccess?.(createdPostId);
     } catch (err) {
       Libs.Logger.error('[usePost] Failed to submit reply:', err);
@@ -116,7 +120,11 @@ export function usePost(): UsePostReturn {
       setAttachments([]);
       setIsArticle(false);
       setArticleTitle('');
-      showSuccessToast(tPost('postCreated'), tPost('postCreatedDesc'));
+      toast({
+        title: tPost('postCreated'),
+        description: tPost('postCreatedDesc'),
+        dismissButton: true,
+      });
       onSuccess?.(createdPostId);
     } catch (err) {
       Libs.Logger.error('[usePost] Failed to create post:', err);

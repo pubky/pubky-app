@@ -1,3 +1,4 @@
+import { useEffect, useRef } from 'react';
 import * as Atoms from '@/atoms';
 import * as ProviderTypes from '../Provider.types';
 import { Tweet } from 'react-tweet';
@@ -42,6 +43,51 @@ const TWITTER_DOMAINS = [
 ] as const;
 
 /**
+ * TEMPORARY WORKAROUND: Intercepts clicks on the video area and redirects to X.
+ * Twitter CDN blocks video playback from external sites (403 Forbidden).
+ * Remove this once react-tweet provides an upstream fix.
+ * See: https://github.com/vercel/react-tweet/issues/212
+ */
+const TwitterEmbed = ({ tweetId, tweetUrl }: { tweetId: string; tweetUrl: string }) => {
+  const containerRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const node = containerRef.current;
+    if (!node) return;
+
+    // Intercept video clicks before react-tweet's handler fires via stopImmediatePropagation
+    const handler = (e: Event) => {
+      const target = e.target as HTMLElement;
+      if (
+        target.closest('video') ||
+        target.closest('button[aria-label="View video on X"]') ||
+        target.closest('[class^="tweet-media-video-module"]')
+      ) {
+        e.preventDefault();
+        e.stopImmediatePropagation();
+        // noopener: prevents the opened page from accessing window.opener
+        // noreferrer: avoids sending Referer header to X
+        window.open(tweetUrl, '_blank', 'noopener,noreferrer');
+      }
+    };
+
+    node.addEventListener('click', handler);
+    return () => node.removeEventListener('click', handler);
+  }, [tweetUrl]);
+
+  return (
+    <Atoms.Container
+      ref={containerRef}
+      data-testid="twitter-container"
+      data-theme="dark"
+      className="mx-0 max-w-70 sm:mx-auto sm:max-w-none [&_.react-tweet-theme]:m-0! [&_.tweet-media\_root\_\_k6gQ2]:max-h-75! [&_.tweet-media\_root\_\_k6gQ2]:overflow-y-auto!"
+    >
+      <Tweet id={tweetId} />
+    </Atoms.Container>
+  );
+};
+
+/**
  * Twitter/X embed provider
  * Implements the standard EmbedProvider interface
  */
@@ -74,15 +120,8 @@ export const Twitter: ProviderTypes.EmbedProvider = {
     if (embedData.type !== 'id') return null;
 
     const tweetId = embedData.value;
+    const tweetUrl = `https://x.com/i/status/${tweetId}`;
 
-    return (
-      <Atoms.Container
-        data-testid="twitter-container"
-        data-theme="dark"
-        className="mx-0 max-w-70 sm:mx-auto sm:max-w-none [&_.react-tweet-theme]:m-0! [&_.tweet-media\_root\_\_k6gQ2]:max-h-75! [&_.tweet-media\_root\_\_k6gQ2]:overflow-y-auto!"
-      >
-        <Tweet id={tweetId} />
-      </Atoms.Container>
-    );
+    return <TwitterEmbed tweetId={tweetId} tweetUrl={tweetUrl} />;
   },
 };

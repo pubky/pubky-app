@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import * as Atoms from '@/atoms';
+import { useClosingPresence } from '@/hooks/useClosingPresence/useClosingPresence';
 import { POPOVER_ALIGN_OFFSET, POPOVER_HOVER_DELAY, POPOVER_SIDE_OFFSET } from './UserInfoPopover.constants';
 import { UserInfoPopoverContent } from './components/UserInfoPopoverContent/UserInfoPopoverContent';
 
@@ -37,19 +38,32 @@ export function UserInfoPopover({
   alignOffset = POPOVER_ALIGN_OFFSET,
 }: UserInfoPopoverProps) {
   const [open, setOpen] = useState(false);
+  const { shouldRender, beginOpening, beginClosing, onAnimationEnd } = useClosingPresence({
+    open,
+  });
+
+  const handleOpenChange = (nextOpen: boolean) => {
+    if (nextOpen) {
+      beginOpening();
+    } else if (open) {
+      beginClosing();
+    }
+
+    setOpen(nextOpen);
+  };
 
   return (
-    <Atoms.Popover hover={hover} hoverDelay={POPOVER_HOVER_DELAY} open={open} onOpenChange={setOpen}>
+    <Atoms.Popover hover={hover} hoverDelay={POPOVER_HOVER_DELAY} open={open} onOpenChange={handleOpenChange}>
       <Atoms.PopoverTrigger asChild>{children}</Atoms.PopoverTrigger>
       <Atoms.PopoverContent
-        side="top"
         sideOffset={sideOffset}
         align="start"
         alignOffset={alignOffset}
         className="mx-0 w-(--popover-width)"
         onOpenAutoFocus={(e) => e.preventDefault()}
+        onAnimationEnd={onAnimationEnd}
       >
-        {open ? (
+        {shouldRender ? (
           <UserInfoPopoverContent
             userId={userId}
             userName={userName}

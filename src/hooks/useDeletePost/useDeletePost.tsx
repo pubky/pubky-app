@@ -62,6 +62,7 @@ export function useDeletePost(): UseDeletePostResult {
       toast({
         title: tPost('postDeleted'),
         description: tPost('postDeletedDesc'),
+        dismissButton: true,
       });
     } catch (error) {
       Libs.Logger.error('[useDeletePost] Failed to delete post', {

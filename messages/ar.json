@@ -32,6 +32,7 @@
     "cancel": "الغاء",
     "confirm": "تاكيد",
     "delete": "حذف",
+    "ok": "حسنا",
     "send": "ارسال",
     "submit": "ارسال",
     "loading": "جاري التحميل...",
@@ -926,8 +927,7 @@
       "textCopied": "تم نسخ النص الى الحافظة",
       "profileLinkCopied": "تم نسخ رابط الملف الشخصي الى الحافظة",
       "copyFailed": "فشل النسخ",
-      "copyFailedDesc": "تعذر النسخ الى الحافظة",
-      "ok": "حسنا"
+      "copyFailedDesc": "تعذر النسخ الى الحافظة"
     },
     "follow": {
       "failed": "فشل تحديث حالة المتابعة"
@@ -1134,10 +1134,15 @@
     }
   },
   "logout": {
+    "loadingTitle": "Signing you out...",
+    "loadingSubtitle": "We're ending your session securely.",
+    "errorTitle": "We couldn't sign you out yet",
+    "errorSubtitle": "Please try again to finish signing out securely.",
     "title": "إلى <highlight>اللقاء!</highlight>",
     "subtitle": "لقد قمت بتسجيل الخروج بأمان.",
     "homepage": "الصفحة الرئيسية",
-    "signBackIn": "تسجيل الدخول مجدداً"
+    "signBackIn": "تسجيل الدخول مجدداً",
+    "retry": "Retry"
   },
   "tradeoffs": {
     "title": "كن على علم بهذه المفاضلات:",
