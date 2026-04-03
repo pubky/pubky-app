@@ -19,8 +19,12 @@ import {
 import { verifyNotificationCounter } from '../support/common';
 import { goToProfilePageFromHeader } from '../support/header';
 
+const uniqueSuffix = String(Date.now()).slice(-5);
+
 const profile1 = { username: 'Notif #1', pubkyAlias: 'pubky_1' };
-const profile2 = { username: 'Notif #2', pubkyAlias: 'pubky_2' };
+// profile 2 has a unique suffix to avoid conflicts when mentioning profile 2 in new posts across test runs
+// todo: use space in username after bug fixed https://github.com/pubky/pubky-app/issues/1638
+const profile2 = { username: `Notif#${uniqueSuffix}`, pubkyAlias: 'pubky_2' };
 
 describe('notifications', () => {
   before(() => {
@@ -159,8 +163,39 @@ describe('notifications', () => {
     // * profile 2 checks for absence of notifications
   });
 
-  // todo: blocked by bug, see https://github.com/pubky/franky/issues/717
-  it('can be notified for profile being mentioned in a post');
+  it('can be notified for profile being mentioned in a post', () => {
+    // * profile 1 creates a post mentioning profile 2 via @username autocomplete
+    cy.get('[data-cy="home-post-input"]')
+      .should('be.visible')
+      .within(() => {
+        cy.get('textarea').should('have.value', '').type('Hey ');
+        // Type @Notif2 to trigger mention autocomplete for profile 2 only
+        cy.get('textarea').type(`@${profile2.username}`);
+
+        // Wait for the mention popover and click profile 2's suggestion
+        cy.get('[data-cy="mention-popover"]').should('be.visible').contains(profile2.username).click();
+
+        // Submit the post
+        cy.intercept('PUT', '**/pub/pubky.app/posts/**').as('postCreated');
+        cy.get('[data-cy="post-input-action-bar-post"]').click();
+        cy.wait('@postCreated').its('response.statusCode').should('eq', 201);
+        cy.get('textarea').should('have.value', '');
+      });
+
+    // * profile 2 checks for notification for being mentioned
+    cy.signOut(HasBackedUp.Yes);
+
+    cy.signInWithEncryptedFile(backupDownloadFilePath(profile2.username));
+    verifyNotificationCounter(1);
+    goToProfilePageFromHeader();
+    verifyNotificationCounter(0);
+    checkLatestNotification([profile1.username, 'mentioned you in post'], LatestNotificationReadState.Unread);
+
+    // * toggle tabs to check unread dot disappears
+    causeNotificationsToBeRead();
+    verifyNotificationCounter(0);
+    checkLatestNotification([profile1.username, 'mentioned you in post'], LatestNotificationReadState.Read);
+  });
 
   it('can be notified for your post being replied to', () => {
     // * profile 1 creates a post (1)
