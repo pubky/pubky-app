@@ -186,7 +186,8 @@ export default function InitializedMDXEditor({
           readOnly={readOnly}
           placeholder={t('placeholder')}
           maxLength={ARTICLE_MAX_CHARACTER_LENGTH}
-          className="max-h-[60dvh] min-h-11 resize-none rounded-none border-none p-0 pt-4 shadow-none outline-none placeholder:text-muted-foreground/70 focus-visible:border-none focus-visible:ring-0"
+          variant="inline"
+          className="max-h-[60dvh] min-h-11 rounded-none pt-4 font-normal text-foreground placeholder:text-muted-foreground/70"
           data-testid="markdown-textarea"
         />
       </Atoms.Container>

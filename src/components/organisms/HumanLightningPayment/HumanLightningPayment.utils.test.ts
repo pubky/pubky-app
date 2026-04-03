@@ -13,6 +13,13 @@ vi.mock('@/core', async () => {
   };
 });
 
+const DEFAULT_VERIFICATION_DATA = {
+  id: 'test-verification-id',
+  bolt11Invoice: 'lnbc1000...',
+  amountSat: 1000,
+  expiresAt: Date.now() + 600000,
+};
+
 describe('VerificationHandler', () => {
   const flushMicrotasks = async (iterations = 5) => {
     for (let i = 0; i < iterations; i += 1) {
@@ -38,16 +45,32 @@ describe('VerificationHandler', () => {
 
   const mockCreateLnVerification = HomegateController.createLnVerification as ReturnType<typeof vi.fn>;
   const mockAwaitLnVerification = HomegateController.awaitLnVerification as ReturnType<typeof vi.fn>;
+  const createHandlerInstance = (
+    overrides: Partial<{
+      data: { id: string; bolt11Invoice: string; amountSat: number; expiresAt: number };
+      onPaymentConfirmed: (signupCode: string, homeserverPubky: string) => void;
+      onPaymentExpired: () => void;
+      onError: (error: unknown) => void;
+    }> = {},
+  ) => {
+    const VerificationHandlerCtor = VerificationHandler as unknown as new (
+      data: { id: string; bolt11Invoice: string; amountSat: number; expiresAt: number },
+      onPaymentConfirmed: (signupCode: string, homeserverPubky: string) => void,
+      onPaymentExpired: () => void,
+      onError?: (error: unknown) => void,
+    ) => VerificationHandler;
+
+    return new VerificationHandlerCtor(
+      overrides.data ?? DEFAULT_VERIFICATION_DATA,
+      overrides.onPaymentConfirmed ?? vi.fn(),
+      overrides.onPaymentExpired ?? vi.fn(),
+      overrides.onError,
+    );
+  };
 
   beforeEach(() => {
     vi.clearAllMocks();
-    // Default: verification not expired (expires in 10 minutes)
-    mockCreateLnVerification.mockResolvedValue({
-      id: 'test-verification-id',
-      bolt11Invoice: 'lnbc1000...',
-      amountSat: 1000,
-      expiresAt: Date.now() + 600000,
-    });
+    mockCreateLnVerification.mockResolvedValue(DEFAULT_VERIFICATION_DATA);
   });
 
   afterEach(() => {
@@ -397,6 +420,55 @@ describe('VerificationHandler', () => {
       } finally {
         vi.useRealTimers();
       }
+    });
+  });
+
+  describe('visibility check retries', () => {
+    it('retries immediate visibility check on rate-limit and confirms on retry', async () => {
+      vi.useFakeTimers();
+      try {
+        mockAwaitLnVerification
+          .mockResolvedValueOnce({
+            success: false,
+            rateLimited: true,
+            retryAfter: 1,
+          })
+          .mockResolvedValueOnce({
+            success: true,
+            data: {
+              isPaid: true,
+              signupCode: 'signup-code-123',
+              homeserverPubky: 'homeserver-pubky-456',
+            },
+          });
+
+        const onPaymentConfirmed = vi.fn();
+        const handler = createHandlerInstance({ onPaymentConfirmed });
+
+        const runCheck = (handler as unknown as { checkPaymentStatus: () => Promise<void> }).checkPaymentStatus();
+        await flushMicrotasks();
+        expect(onPaymentConfirmed).not.toHaveBeenCalled();
+
+        await vi.advanceTimersByTimeAsync(1000);
+        await runCheck;
+
+        expect(onPaymentConfirmed).toHaveBeenCalledWith('signup-code-123', 'homeserver-pubky-456');
+      } finally {
+        vi.useRealTimers();
+      }
+    });
+
+    it('stops immediate visibility check when await fails with non-retryable error', async () => {
+      const fatalError = new Error('fatal visibility check failure');
+      mockAwaitLnVerification.mockRejectedValueOnce(fatalError);
+
+      const onError = vi.fn();
+      const handler = createHandlerInstance({ onError });
+
+      await (handler as unknown as { checkPaymentStatus: () => Promise<void> }).checkPaymentStatus();
+
+      expect(onError).toHaveBeenCalledWith(fatalError);
+      expect(handler.aborted).toBe(true);
     });
   });
 });

@@ -49,7 +49,7 @@ export function TextareaField({
     error: 'border-red-500 text-red-500',
   };
 
-  const textAreaClasses = Libs.cn('w-full border-none resize-none px-5 py-4 h-25 !bg-transparent', textareaClassName);
+  const textAreaClasses = Libs.cn('px-5 py-4 h-25', textareaClassName);
   const containerClasses = Libs.cn(
     'flex-1 cursor-pointer w-full items-center flex-row border gap-0 rounded-md font-medium',
     variant === 'dashed' && 'border-dashed !bg-alpha-90/10',
@@ -68,6 +68,7 @@ export function TextareaField({
         <Atoms.Textarea
           id={id}
           name={name}
+          variant="inline"
           className={textAreaClasses}
           value={value}
           placeholder={placeholder}

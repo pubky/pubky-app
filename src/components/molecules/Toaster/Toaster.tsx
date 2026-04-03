@@ -1,14 +1,16 @@
 'use client';
 
-import { Toast, ToastDescription, ToastProvider, ToastTitle, ToastViewport } from '@/atoms';
+import { useTranslations } from 'next-intl';
+import { Toast, ToastAction, ToastDescription, ToastProvider, ToastTitle, ToastViewport } from '@/atoms';
 import { useToast } from './use-toast';
 
 export function Toaster() {
-  const { toasts } = useToast();
+  const { toasts, dismiss } = useToast();
+  const tCommon = useTranslations('common');
 
   return (
     <ToastProvider>
-      {toasts.map(function ({ id, title, description, action, ...props }) {
+      {toasts.map(function ({ id, title, description, action, dismissButton, ...props }) {
         return (
           <Toast
             key={id}
@@ -20,7 +22,14 @@ export function Toaster() {
               {title && <ToastTitle>{title}</ToastTitle>}
               {description && <ToastDescription>{description}</ToastDescription>}
             </div>
-            {action && <div className="shrink-0">{action}</div>}
+            <div className="flex shrink-0 items-center gap-2">
+              {action}
+              {dismissButton && (
+                <ToastAction altText={tCommon('ok')} onClick={() => dismiss(id)}>
+                  {tCommon('ok')}
+                </ToastAction>
+              )}
+            </div>
           </Toast>
         );
       })}

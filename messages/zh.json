@@ -32,6 +32,7 @@
     "cancel": "取消",
     "confirm": "确认",
     "delete": "删除",
+    "ok": "确定",
     "send": "发送",
     "submit": "提交",
     "loading": "加载中...",
@@ -213,8 +214,10 @@
     },
     "lightning": {
       "title": "扫码<highlight>支付。</highlight>",
+      "title_mobile": "点击<highlight>支付。</highlight>",
       "subtitle": "使用您喜欢的钱包扫描二维码。",
       "qrLabel": "比特币闪电网络支付",
+      "payNow": "立即支付",
       "payAmount": "支付 ₿ {amount} 以继续。",
       "payAmountUsd": "支付 ₿ {amount}（${usdAmount}）以继续。",
       "expired": "支付已过期",
@@ -924,8 +927,7 @@
       "textCopied": "文本已复制到剪贴板",
       "profileLinkCopied": "个人资料链接已复制到剪贴板",
       "copyFailed": "复制失败",
-      "copyFailedDesc": "无法复制到剪贴板",
-      "ok": "确定"
+      "copyFailedDesc": "无法复制到剪贴板"
     },
     "follow": {
       "failed": "更新关注状态失败"

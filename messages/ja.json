@@ -32,6 +32,7 @@
     "cancel": "キャンセル",
     "confirm": "確認",
     "delete": "削除",
+    "ok": "OK",
     "send": "送信",
     "submit": "送信",
     "loading": "読み込み中...",
@@ -213,8 +214,10 @@
     },
     "lightning": {
       "title": "スキャンして<highlight>支払い。</highlight>",
+      "title_mobile": "タップして<highlight>支払い。</highlight>",
       "subtitle": "お好みのウォレットでQRコードをスキャンしてください。",
       "qrLabel": "Bitcoin Lightning支払い",
+      "payNow": "今すぐ支払う",
       "payAmount": "続行するには₿ {amount}を支払ってください。",
       "payAmountUsd": "続行するには₿ {amount}（${usdAmount}）を支払ってください。",
       "expired": "支払いの期限が切れました",
@@ -924,8 +927,7 @@
       "textCopied": "テキストをクリップボードにコピーしました",
       "profileLinkCopied": "プロフィールリンクをクリップボードにコピーしました",
       "copyFailed": "コピーに失敗しました",
-      "copyFailedDesc": "クリップボードにコピーできません",
-      "ok": "OK"
+      "copyFailedDesc": "クリップボードにコピーできません"
     },
     "follow": {
       "failed": "フォロー状態の更新に失敗しました"

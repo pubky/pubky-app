@@ -32,6 +32,7 @@
     "cancel": "Cancelar",
     "confirm": "Confirmar",
     "delete": "Excluir",
+    "ok": "OK",
     "send": "Enviar",
     "submit": "Enviar",
     "loading": "Carregando...",
@@ -213,8 +214,10 @@
     },
     "lightning": {
       "title": "Escaneie para <highlight>Pagar.</highlight>",
+      "title_mobile": "Toque para <highlight>Pagar.</highlight>",
       "subtitle": "Escaneie o código QR com sua carteira favorita.",
       "qrLabel": "Pagamento Bitcoin Lightning",
+      "payNow": "Pagar agora",
       "payAmount": "Pague ₿ {amount} para continuar.",
       "payAmountUsd": "Pague ₿ {amount} (${usdAmount}) para continuar.",
       "expired": "Pagamento expirado",
@@ -924,8 +927,7 @@
       "textCopied": "Texto copiado para área de transferência",
       "profileLinkCopied": "Link do perfil copiado para área de transferência",
       "copyFailed": "Falha ao copiar",
-      "copyFailedDesc": "Nao foi possivel copiar para área de transferência",
-      "ok": "OK"
+      "copyFailedDesc": "Nao foi possivel copiar para área de transferência"
     },
     "follow": {
       "failed": "Falha ao atualizar status de seguir"
