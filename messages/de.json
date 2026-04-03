@@ -213,8 +213,10 @@
     },
     "lightning": {
       "title": "Scannen zum <highlight>Bezahlen.</highlight>",
+      "title_mobile": "Tippen zum <highlight>Bezahlen.</highlight>",
       "subtitle": "Scannen Sie den QR-Code mit Ihrer bevorzugten Wallet.",
       "qrLabel": "Bitcoin Lightning-Zahlung",
+      "payNow": "Jetzt bezahlen",
       "payAmount": "Zahlen Sie ₿ {amount}, um fortzufahren.",
       "payAmountUsd": "Zahlen Sie ₿ {amount} (${usdAmount}), um fortzufahren.",
       "expired": "Zahlung abgelaufen",

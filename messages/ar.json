@@ -213,8 +213,10 @@
     },
     "lightning": {
       "title": "امسح <highlight>للدفع.</highlight>",
+      "title_mobile": "اضغط <highlight>للدفع.</highlight>",
       "subtitle": "امسح رمز QR بمحفظتك المفضلة.",
       "qrLabel": "دفع Bitcoin Lightning",
+      "payNow": "ادفع الآن",
       "payAmount": "ادفع ₿ {amount} للمتابعة.",
       "payAmountUsd": "ادفع ₿ {amount} (${usdAmount}) للمتابعة.",
       "expired": "انتهت صلاحية الدفع",
