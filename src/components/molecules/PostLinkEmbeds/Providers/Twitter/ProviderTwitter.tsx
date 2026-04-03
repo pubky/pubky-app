@@ -55,7 +55,7 @@ const TwitterEmbed = ({ tweetId, tweetUrl }: { tweetId: string; tweetUrl: string
     const node = containerRef.current;
     if (!node) return;
 
-    // Use capture phase to intercept clicks BEFORE react-tweet's handler fires
+    // Intercept video clicks before react-tweet's handler fires via stopImmediatePropagation
     const handler = (e: Event) => {
       const target = e.target as HTMLElement;
       if (

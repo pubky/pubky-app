@@ -4,7 +4,7 @@ import { render, screen, fireEvent } from '@testing-library/react';
 import { PostLinkEmbeds } from './PostLinkEmbeds';
 
 vi.mock('@/atoms', () => ({
-  // eslint-disable-next-line react/display-name
+  // eslint-disable-next-line react/display-name -- forwardRef with anonymous render fn; display name is irrelevant in test mocks
   Container: React.forwardRef(
     (
       {
