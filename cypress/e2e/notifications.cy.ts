@@ -1,5 +1,13 @@
 import { backupDownloadFilePath } from '../support/auth';
-import { createQuickPost, replyToPost, repostPost, deletePost, editPost, fastTagPostInFeed } from '../support/posts';
+import {
+  createQuickPost,
+  createQuickPostWithMention,
+  replyToPost,
+  repostPost,
+  deletePost,
+  editPost,
+  fastTagPostInFeed,
+} from '../support/posts';
 import { slowCypressDown } from 'cypress-slow-down';
 import 'cypress-slow-down/commands';
 import { searchAndFollowProfile, searchForProfileByPubky } from '../support/contacts';
@@ -21,10 +29,12 @@ import { goToProfilePageFromHeader } from '../support/header';
 
 const uniqueSuffix = String(Date.now()).slice(-5);
 
+// profile 1 and 2 are used for enabled notifications, profile 3 is used for disabled notifications
 const profile1 = { username: 'Notif #1', pubkyAlias: 'pubky_1' };
-// profile 2 has a unique suffix to avoid conflicts when mentioning profile 2 in new posts across test runs
+// profile 2 and 3 have a unique suffix to avoid conflicts when mentioning profile 2 and 3 in new posts across test runs
 // todo: use space in username after bug fixed https://github.com/pubky/pubky-app/issues/1638
-const profile2 = { username: `Notif#${uniqueSuffix}`, pubkyAlias: 'pubky_2' };
+const profile2 = { username: `Notif#2${uniqueSuffix}`, pubkyAlias: 'pubky_2' };
+const profile3 = { username: `Notif#3${uniqueSuffix}`, pubkyAlias: 'pubky_3' };
 
 describe('notifications', () => {
   before(() => {
@@ -38,6 +48,10 @@ describe('notifications', () => {
     // * create profile 2
     cy.onboardAsNewUser(profile2.username, '', [BackupType.EncryptedFile], profile2.pubkyAlias);
     cy.signOut(HasBackedUp.Yes);
+
+    // * create profile 3
+    cy.onboardAsNewUser(profile3.username, '', [BackupType.EncryptedFile], profile3.pubkyAlias);
+    cy.signOut(HasBackedUp.Yes);
   });
 
   beforeEach(() => {
@@ -45,6 +59,7 @@ describe('notifications', () => {
     cy.log('Re-creating aliases in beforeEach');
     cy.wrap(Cypress.expose(profile1.pubkyAlias)).as(profile1.pubkyAlias);
     cy.wrap(Cypress.expose(profile2.pubkyAlias)).as(profile2.pubkyAlias);
+    cy.wrap(Cypress.expose(profile3.pubkyAlias)).as(profile3.pubkyAlias);
 
     // sign in if not already
     cy.location('pathname').then((currentPath) => {
@@ -164,23 +179,8 @@ describe('notifications', () => {
   });
 
   it('can be notified for profile being mentioned in a post', () => {
-    // * profile 1 creates a post mentioning profile 2 via @username autocomplete
-    cy.get('[data-cy="home-post-input"]')
-      .should('be.visible')
-      .within(() => {
-        cy.get('textarea').should('have.value', '').type('Hey ');
-        // Type @Notif2 to trigger mention autocomplete for profile 2 only
-        cy.get('textarea').type(`@${profile2.username}`);
-
-        // Wait for the mention popover and click profile 2's suggestion
-        cy.get('[data-cy="mention-popover"]').should('be.visible').contains(profile2.username).click();
-
-        // Submit the post
-        cy.intercept('PUT', '**/pub/pubky.app/posts/**').as('postCreated');
-        cy.get('[data-cy="post-input-action-bar-post"]').click();
-        cy.wait('@postCreated').its('response.statusCode').should('eq', 201);
-        cy.get('textarea').should('have.value', '');
-      });
+    // * profile 1 creates a post mentioning profile 2 via @username lookup
+    createQuickPostWithMention(profile2.username);
 
     // * profile 2 checks for notification for being mentioned
     cy.signOut(HasBackedUp.Yes);
@@ -195,6 +195,30 @@ describe('notifications', () => {
     causeNotificationsToBeRead();
     verifyNotificationCounter(0);
     checkLatestNotification([profile1.username, 'mentioned you in post'], LatestNotificationReadState.Read);
+  });
+
+  // todo: disabling notifications still shows notification, see bug https://github.com/pubky/pubky-app/issues/1603
+  it.skip('can disable being notified for profile being mentioned in a post', () => {
+    // * profile 3 signs in and disables mention notifications
+    cy.signOut(HasBackedUp.Yes);
+    cy.signInWithEncryptedFile(backupDownloadFilePath(profile3.username));
+    cy.get('[data-cy="header-settings-btn"]').click();
+    cy.location('pathname').should('eq', '/settings/account');
+    cy.get('[data-cy="settings-menu-item-notifications"]').click();
+    cy.location('pathname').should('eq', '/settings/notifications');
+    cy.get('#notification-switch-mention').click();
+
+    // * profile 1 signs in and creates a post mentioning profile 3 via @username lookup
+    cy.signOut(HasBackedUp.Yes);
+    cy.signInWithEncryptedFile(backupDownloadFilePath(profile1.username));
+    createQuickPostWithMention(profile3.username);
+
+    // * profile 3 checks for absence of notification for being mentioned
+    cy.signOut(HasBackedUp.Yes);
+    cy.signInWithEncryptedFile(backupDownloadFilePath(profile3.username));
+    verifyNotificationCounter(0);
+    goToProfilePageFromHeader();
+    cy.get('[data-cy="notifications-list"]').should('contain.text', 'No notifications yet');
   });
 
   it('can be notified for your post being replied to', () => {
