@@ -35,6 +35,7 @@ export function PostInputExpandableSection({
   onImageClick,
   onArticleClick,
   className,
+  parentGapPx = 0,
   characterLimit,
 }: PostInputExpandableSectionProps) {
   const hasContent = content.trim().length > 0;
@@ -46,6 +47,8 @@ export function PostInputExpandableSection({
   const postButtonAriaLabel = postButtonLabel;
 
   const isEdit = submitMode === POST_INPUT_VARIANT.EDIT;
+  const hasParentGapCompensation = parentGapPx > 0;
+  const compensatedMarginTop = -parentGapPx;
 
   return (
     <>
@@ -53,9 +56,25 @@ export function PostInputExpandableSection({
         {isExpanded && (
           <motion.div
             initial={{ height: 0, opacity: 0 }}
-            animate={{ height: 'auto', opacity: 1 }}
-            exit={{ height: 0, opacity: 0 }}
-            transition={{ duration: 0.2, ease: 'easeInOut' }}
+            animate={{
+              height: 'auto',
+              opacity: 1,
+              transition: {
+                height: { duration: 0.2, ease: 'linear' },
+                opacity: { duration: 0.4, ease: 'linear' },
+              },
+            }}
+            exit={{
+              height: 0,
+              opacity: 0,
+              ...(hasParentGapCompensation ? { marginTop: compensatedMarginTop } : {}),
+              // Fade out quickly so less content is repainted while height collapses.
+              transition: {
+                opacity: { duration: 0.3, ease: 'linear' },
+                height: { duration: 0.2, ease: 'linear' },
+                ...(hasParentGapCompensation ? { marginTop: { duration: 0.2, ease: 'linear' } } : {}),
+              },
+            }}
             className={`overflow-hidden ${className || ''}`}
           >
             <Atoms.Container className="gap-6">
