@@ -32,6 +32,7 @@
     "cancel": "取消",
     "confirm": "确认",
     "delete": "删除",
+    "ok": "确定",
     "send": "发送",
     "submit": "提交",
     "loading": "加载中...",
@@ -926,8 +927,7 @@
       "textCopied": "文本已复制到剪贴板",
       "profileLinkCopied": "个人资料链接已复制到剪贴板",
       "copyFailed": "复制失败",
-      "copyFailedDesc": "无法复制到剪贴板",
-      "ok": "确定"
+      "copyFailedDesc": "无法复制到剪贴板"
     },
     "follow": {
       "failed": "更新关注状态失败"

@@ -32,6 +32,7 @@
     "cancel": "Annuler",
     "confirm": "Confirmer",
     "delete": "Supprimér",
+    "ok": "OK",
     "send": "Envoyer",
     "submit": "Soumettre",
     "loading": "Chargement...",
@@ -926,8 +927,7 @@
       "textCopied": "Texte copie dans le presse-papiers",
       "profileLinkCopied": "Lien du profil copie dans le presse-papiers",
       "copyFailed": "Échec de la copie",
-      "copyFailedDesc": "Impossible de copier dans le presse-papiers",
-      "ok": "OK"
+      "copyFailedDesc": "Impossible de copier dans le presse-papiers"
     },
     "follow": {
       "failed": "Échec de la mise a jour du statut de suivi"

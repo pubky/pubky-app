@@ -32,6 +32,7 @@
     "cancel": "キャンセル",
     "confirm": "確認",
     "delete": "削除",
+    "ok": "OK",
     "send": "送信",
     "submit": "送信",
     "loading": "読み込み中...",
@@ -926,8 +927,7 @@
       "textCopied": "テキストをクリップボードにコピーしました",
       "profileLinkCopied": "プロフィールリンクをクリップボードにコピーしました",
       "copyFailed": "コピーに失敗しました",
-      "copyFailedDesc": "クリップボードにコピーできません",
-      "ok": "OK"
+      "copyFailedDesc": "クリップボードにコピーできません"
     },
     "follow": {
       "failed": "フォロー状態の更新に失敗しました"

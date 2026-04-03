@@ -38,7 +38,8 @@ export function DialogFeedbackContent({
 
             <Atoms.Textarea
               placeholder={t('placeholder')}
-              className="min-h-6 resize-none border-none bg-transparent px-0 py-2 text-base font-medium text-secondary-foreground shadow-none focus-visible:ring-0 focus-visible:ring-offset-0"
+              variant="inline"
+              className="px-0 py-2 text-base"
               value={feedback}
               onChange={handleChange}
               maxLength={FEEDBACK_MAX_CHARACTER_LENGTH}

@@ -30,7 +30,6 @@ export function PostHeaderUserInfo({
   indexedAt,
 }: PostHeaderUserInfoProps) {
   const formattedPublicKey = Libs.formatPublicKey({ key: userId });
-
   const profileUrl = `/profile/${userId}`;
 
   // Prevent click from bubbling to parent post card (which navigates to post)

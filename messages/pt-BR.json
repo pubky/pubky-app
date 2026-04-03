@@ -32,6 +32,7 @@
     "cancel": "Cancelar",
     "confirm": "Confirmar",
     "delete": "Excluir",
+    "ok": "OK",
     "send": "Enviar",
     "submit": "Enviar",
     "loading": "Carregando...",
@@ -926,8 +927,7 @@
       "textCopied": "Texto copiado para área de transferência",
       "profileLinkCopied": "Link do perfil copiado para área de transferência",
       "copyFailed": "Falha ao copiar",
-      "copyFailedDesc": "Nao foi possivel copiar para área de transferência",
-      "ok": "OK"
+      "copyFailedDesc": "Nao foi possivel copiar para área de transferência"
     },
     "follow": {
       "failed": "Falha ao atualizar status de seguir"

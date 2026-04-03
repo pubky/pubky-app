@@ -32,6 +32,7 @@
     "cancel": "Cancel",
     "confirm": "Confirm",
     "delete": "Delete",
+    "ok": "OK",
     "send": "Send",
     "submit": "Submit",
     "loading": "Loading...",
@@ -920,8 +921,7 @@
       "textCopied": "Text copied to clipboard",
       "profileLinkCopied": "Profile link copied to clipboard",
       "copyFailed": "Copy failed",
-      "copyFailedDesc": "Unable to copy to clipboard",
-      "ok": "OK"
+      "copyFailedDesc": "Unable to copy to clipboard"
     },
     "follow": {
       "failed": "Failed to update follow status"

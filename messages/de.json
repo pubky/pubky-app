@@ -32,6 +32,7 @@
     "cancel": "Abbrechen",
     "confirm": "Bestätigen",
     "delete": "Löschen",
+    "ok": "OK",
     "send": "Senden",
     "submit": "Absenden",
     "loading": "Laden...",
@@ -926,8 +927,7 @@
       "textCopied": "Text in Zwischenablage kopiert",
       "profileLinkCopied": "Profillink in Zwischenablage kopiert",
       "copyFailed": "Kopieren fehlgeschlagen",
-      "copyFailedDesc": "Kopieren in Zwischenablage nicht möglich",
-      "ok": "OK"
+      "copyFailedDesc": "Kopieren in Zwischenablage nicht möglich"
     },
     "follow": {
       "failed": "Folgestatus konnte nicht aktualisiert werden"
