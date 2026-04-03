@@ -277,14 +277,27 @@ export class AuthController {
    * Logs out the current user from both the homeserver and local application state.
    */
   static async logout() {
-    const authStore = Core.useAuthStore.getState();
+    let authStore = Core.useAuthStore.getState();
 
     // Set logging out flag immediately to prevent flash of weird states in UI
     authStore.setIsLoggingOut(true);
 
-    if (authStore.session) {
+    let session = authStore.session;
+
+    // Fresh loads can still have a persisted session export before the live session is restored.
+    // Reuse the restore flow so /logout performs a real homeserver sign-out before local cleanup.
+    if (!session && authStore.sessionExport) {
+      const didRestoreSession = await this.restorePersistedSession();
+      if (!didRestoreSession) {
+        return;
+      }
+      authStore = Core.useAuthStore.getState();
+      session = authStore.session;
+    }
+
+    if (session) {
       try {
-        await Core.AuthApplication.logout({ session: authStore.session });
+        await Core.AuthApplication.logout({ session });
       } catch (error) {
         Libs.Logger.warn('Homeserver logout failed, clearing local state anyway', { error });
       }

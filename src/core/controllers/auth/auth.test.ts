@@ -899,7 +899,7 @@ describe('AuthController', () => {
   });
 
   describe('logout', () => {
-    const createAuthStore = (): Core.AuthStore =>
+    const createAuthStore = (overrides: Partial<Core.AuthStore> = {}): Core.AuthStore =>
       ({
         ...storeMocks.getAuthState(),
         currentUserPubky: 'test-pubky' as Core.Pubky,
@@ -913,6 +913,7 @@ describe('AuthController', () => {
         setHasHydrated: vi.fn(),
         setIsRestoringSession: vi.fn(),
         setIsLoggingOut: vi.fn(),
+        ...overrides,
       }) as unknown as Core.AuthStore;
 
     const createOnboardingStore = () =>
@@ -1025,6 +1026,76 @@ describe('AuthController', () => {
       expect(localFilesStore.reset).toHaveBeenCalled();
       expect(clearCookiesSpy).toHaveBeenCalled();
       expect(clearDatabaseSpy).toHaveBeenCalledTimes(1);
+    });
+
+    it('should restore a persisted session before homeserver logout when only sessionExport exists', async () => {
+      const restoredSession = {
+        export: vi.fn(() => 'restored-export'),
+      } as unknown as import('@synonymdev/pubky').Session;
+      const logoutSpy = vi.spyOn(Core.AuthApplication, 'logout').mockResolvedValue(undefined);
+      const clearDatabaseSpy = vi.spyOn(Core, 'clearDatabase').mockResolvedValue(undefined);
+      const clearCookiesSpy = vi.spyOn(Libs, 'clearCookies').mockImplementation(() => {});
+      vi.spyOn(Libs, 'clearAllQueryClients').mockImplementation(() => {});
+
+      const authStore = createAuthStore({
+        session: null,
+        sessionExport: 'session-export',
+      });
+      const localFilesStore = createLocalFilesStore();
+      const homeStore = storeMocks.getHomeState();
+      const hotStore = storeMocks.getHotState();
+      const searchStore = storeMocks.getSearchState();
+      const notificationStore = storeMocks.getNotificationState();
+      const settingsStore = storeMocks.getSettingsState();
+
+      vi.spyOn(Core.useAuthStore, 'getState').mockImplementation(() => authStore);
+      vi.spyOn(Core.useOnboardingStore, 'getState').mockReturnValue(createOnboardingStore());
+      vi.spyOn(Core.useSignInStore, 'getState').mockReturnValue(createSignInStore());
+      vi.spyOn(Core.useLocalFilesStore, 'getState').mockReturnValue(localFilesStore);
+      vi.spyOn(Core.useHomeStore, 'getState').mockReturnValue(homeStore as unknown as Core.HomeStore);
+      vi.spyOn(Core.useHotStore, 'getState').mockReturnValue(hotStore as unknown as Core.HotStore);
+      vi.spyOn(Core.useSearchStore, 'getState').mockReturnValue(searchStore as unknown as Core.SearchStore);
+      vi.spyOn(Core.useNotificationStore, 'getState').mockReturnValue(
+        notificationStore as unknown as Core.NotificationStore,
+      );
+      vi.spyOn(Core.useSettingsStore, 'getState').mockReturnValue(settingsStore as unknown as Core.SettingsStore);
+
+      const restorePersistedSessionSpy = vi
+        .spyOn(AuthController, 'restorePersistedSession')
+        .mockImplementation(async () => {
+          authStore.session = restoredSession;
+          authStore.sessionExport = null;
+          return true;
+        });
+
+      await AuthController.logout();
+
+      expect(restorePersistedSessionSpy).toHaveBeenCalledOnce();
+      expect(logoutSpy).toHaveBeenCalledWith({ session: restoredSession });
+      expect(clearCookiesSpy).toHaveBeenCalledWith(['locale']);
+      expect(clearDatabaseSpy).toHaveBeenCalledTimes(1);
+    });
+
+    it('should not run local cleanup twice when persisted session restore fails', async () => {
+      const clearDatabaseSpy = vi.spyOn(Core, 'clearDatabase').mockResolvedValue(undefined);
+      const clearCookiesSpy = vi.spyOn(Libs, 'clearCookies').mockImplementation(() => {});
+      vi.spyOn(Libs, 'clearAllQueryClients').mockImplementation(() => {});
+      const logoutSpy = vi.spyOn(Core.AuthApplication, 'logout').mockResolvedValue(undefined);
+
+      const authStore = createAuthStore({
+        session: null,
+        sessionExport: 'session-export',
+      });
+
+      vi.spyOn(Core.useAuthStore, 'getState').mockImplementation(() => authStore);
+      vi.spyOn(Core.useOnboardingStore, 'getState').mockReturnValue(createOnboardingStore());
+      vi.spyOn(AuthController, 'restorePersistedSession').mockResolvedValue(false);
+
+      await AuthController.logout();
+
+      expect(logoutSpy).not.toHaveBeenCalled();
+      expect(clearCookiesSpy).not.toHaveBeenCalled();
+      expect(clearDatabaseSpy).not.toHaveBeenCalled();
     });
 
     it('should reset PubkySpecsSingleton even when homeserver logout fails (issue #538)', async () => {

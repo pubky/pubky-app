@@ -1131,10 +1131,15 @@
     }
   },
   "logout": {
+    "loadingTitle": "Signing you out...",
+    "loadingSubtitle": "We're ending your session securely.",
+    "errorTitle": "We couldn't sign you out yet",
+    "errorSubtitle": "Please try again to finish signing out securely.",
     "title": "See you <highlight>soon!</highlight>",
     "subtitle": "You have securely signed out.",
     "homepage": "Homepage",
-    "signBackIn": "Sign back in"
+    "signBackIn": "Sign back in",
+    "retry": "Retry"
   },
   "tradeoffs": {
     "title": "Be aware of these tradeoffs:",

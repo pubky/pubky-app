@@ -1137,10 +1137,15 @@
     }
   },
   "logout": {
+    "loadingTitle": "Signing you out...",
+    "loadingSubtitle": "We're ending your session securely.",
+    "errorTitle": "We couldn't sign you out yet",
+    "errorSubtitle": "Please try again to finish signing out securely.",
     "title": "Bis <highlight>bald!</highlight>",
     "subtitle": "Sie haben sich sicher abgemeldet.",
     "homepage": "Startseite",
-    "signBackIn": "Erneut anmelden"
+    "signBackIn": "Erneut anmelden",
+    "retry": "Retry"
   },
   "tradeoffs": {
     "title": "Beachten Sie diese Nachteile:",
