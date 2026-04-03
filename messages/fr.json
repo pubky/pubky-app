@@ -1137,10 +1137,15 @@
     }
   },
   "logout": {
+    "loadingTitle": "Signing you out...",
+    "loadingSubtitle": "We're ending your session securely.",
+    "errorTitle": "We couldn't sign you out yet",
+    "errorSubtitle": "Please try again to finish signing out securely.",
     "title": "À <highlight>bientôt!</highlight>",
     "subtitle": "Vous vous êtes déconnecté en toute sécurité.",
     "homepage": "Page d'accueil",
-    "signBackIn": "Se reconnecter"
+    "signBackIn": "Se reconnecter",
+    "retry": "Retry"
   },
   "tradeoffs": {
     "title": "Soyez conscient de ces inconvénients:",

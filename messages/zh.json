@@ -1131,10 +1131,15 @@
     }
   },
   "logout": {
+    "loadingTitle": "Signing you out...",
+    "loadingSubtitle": "We're ending your session securely.",
+    "errorTitle": "We couldn't sign you out yet",
+    "errorSubtitle": "Please try again to finish signing out securely.",
     "title": "<highlight>再见！</highlight>",
     "subtitle": "您已安全退出。",
     "homepage": "首页",
-    "signBackIn": "重新登录"
+    "signBackIn": "重新登录",
+    "retry": "Retry"
   },
   "tradeoffs": {
     "title": "请注意以下权衡：",
