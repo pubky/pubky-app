@@ -1,7 +1,7 @@
 'use client';
 
 import * as Molecules from '@/molecules';
-import * as Libs from '@/libs';
+
 import * as Hooks from '@/hooks';
 import * as Organisms from '@/organisms';
 import type { PostContentOrganismProps } from './PostContent.types';
@@ -27,9 +27,7 @@ export function PostContent({ postId, className }: PostContentOrganismProps) {
       <Organisms.PostContentBase postId={postId} className={className} />
 
       {/* Show original post preview for reposts */}
-      {shouldRenderRepostPreview && (
-        <Molecules.PostPreviewCard postId={originalPostId} className={Libs.cn('bg-muted')} />
-      )}
+      {shouldRenderRepostPreview && <Molecules.PostPreviewCard postId={originalPostId} className={'bg-muted'} />}
     </>
   );
 }
