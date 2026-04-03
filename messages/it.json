@@ -32,6 +32,7 @@
     "cancel": "Annulla",
     "confirm": "Conferma",
     "delete": "Elimina",
+    "ok": "OK",
     "send": "Invia",
     "submit": "Invia",
     "loading": "Caricamento...",
@@ -926,8 +927,7 @@
       "textCopied": "Testo copiato negli appunti",
       "profileLinkCopied": "Link profilo copiato negli appunti",
       "copyFailed": "Copia fallita",
-      "copyFailedDesc": "Impossibile copiare negli appunti",
-      "ok": "OK"
+      "copyFailedDesc": "Impossibile copiare negli appunti"
     },
     "follow": {
       "failed": "Aggiornamento stato follow fallito"

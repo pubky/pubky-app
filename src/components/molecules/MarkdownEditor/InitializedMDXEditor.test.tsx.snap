@@ -49,10 +49,11 @@ exports[`InitializedMDXEditor - Snapshots > matches snapshot in markdown mode 1`
       </button>
     </div>
     <textarea
-      class="max-h-[60dvh] min-h-11 resize-none rounded-none border-none p-0 pt-4 shadow-none outline-none placeholder:text-muted-foreground/70 focus-visible:border-none focus-visible:ring-0"
+      class="max-h-[60dvh] min-h-11 rounded-none pt-4 font-normal text-foreground placeholder:text-muted-foreground/70"
       data-testid="markdown-textarea"
       maxlength="1000"
       placeholder="Start writing your masterpiece"
+      variant="inline"
     />
   </div>
   <div
@@ -197,10 +198,11 @@ exports[`InitializedMDXEditor - Snapshots > matches snapshot with approaching ma
         </button>
       </div>
       <textarea
-        class="max-h-[60dvh] min-h-11 resize-none rounded-none border-none p-0 pt-4 shadow-none outline-none placeholder:text-muted-foreground/70 focus-visible:border-none focus-visible:ring-0"
+        class="max-h-[60dvh] min-h-11 rounded-none pt-4 font-normal text-foreground placeholder:text-muted-foreground/70"
         data-testid="markdown-textarea"
         maxlength="1000"
         placeholder="Start writing your masterpiece"
+        variant="inline"
       />
     </div>
     <div
@@ -364,10 +366,11 @@ exports[`InitializedMDXEditor - Snapshots > matches snapshot with custom classNa
       </button>
     </div>
     <textarea
-      class="max-h-[60dvh] min-h-11 resize-none rounded-none border-none p-0 pt-4 shadow-none outline-none placeholder:text-muted-foreground/70 focus-visible:border-none focus-visible:ring-0"
+      class="max-h-[60dvh] min-h-11 rounded-none pt-4 font-normal text-foreground placeholder:text-muted-foreground/70"
       data-testid="markdown-textarea"
       maxlength="1000"
       placeholder="Start writing your masterpiece"
+      variant="inline"
     />
   </div>
   <div
@@ -511,10 +514,11 @@ exports[`InitializedMDXEditor - Snapshots > matches snapshot with default props 
       </button>
     </div>
     <textarea
-      class="max-h-[60dvh] min-h-11 resize-none rounded-none border-none p-0 pt-4 shadow-none outline-none placeholder:text-muted-foreground/70 focus-visible:border-none focus-visible:ring-0"
+      class="max-h-[60dvh] min-h-11 rounded-none pt-4 font-normal text-foreground placeholder:text-muted-foreground/70"
       data-testid="markdown-textarea"
       maxlength="1000"
       placeholder="Start writing your masterpiece"
+      variant="inline"
     />
   </div>
   <div
@@ -658,10 +662,11 @@ exports[`InitializedMDXEditor - Snapshots > matches snapshot with emoji picker o
       </button>
     </div>
     <textarea
-      class="max-h-[60dvh] min-h-11 resize-none rounded-none border-none p-0 pt-4 shadow-none outline-none placeholder:text-muted-foreground/70 focus-visible:border-none focus-visible:ring-0"
+      class="max-h-[60dvh] min-h-11 rounded-none pt-4 font-normal text-foreground placeholder:text-muted-foreground/70"
       data-testid="markdown-textarea"
       maxlength="1000"
       placeholder="Start writing your masterpiece"
+      variant="inline"
     />
   </div>
   <div
@@ -814,10 +819,11 @@ exports[`InitializedMDXEditor - Snapshots > matches snapshot with markdown conte
       </button>
     </div>
     <textarea
-      class="max-h-[60dvh] min-h-11 resize-none rounded-none border-none p-0 pt-4 shadow-none outline-none placeholder:text-muted-foreground/70 focus-visible:border-none focus-visible:ring-0"
+      class="max-h-[60dvh] min-h-11 rounded-none pt-4 font-normal text-foreground placeholder:text-muted-foreground/70"
       data-testid="markdown-textarea"
       maxlength="1000"
       placeholder="Start writing your masterpiece"
+      variant="inline"
     />
   </div>
   <div
@@ -962,10 +968,11 @@ exports[`InitializedMDXEditor - Snapshots > matches snapshot with reached max le
         </button>
       </div>
       <textarea
-        class="max-h-[60dvh] min-h-11 resize-none rounded-none border-none p-0 pt-4 shadow-none outline-none placeholder:text-muted-foreground/70 focus-visible:border-none focus-visible:ring-0"
+        class="max-h-[60dvh] min-h-11 rounded-none pt-4 font-normal text-foreground placeholder:text-muted-foreground/70"
         data-testid="markdown-textarea"
         maxlength="1000"
         placeholder="Start writing your masterpiece"
+        variant="inline"
       />
     </div>
     <div
@@ -1131,11 +1138,12 @@ exports[`InitializedMDXEditor - Snapshots > matches snapshot with readOnly prop 
       </button>
     </div>
     <textarea
-      class="max-h-[60dvh] min-h-11 resize-none rounded-none border-none p-0 pt-4 shadow-none outline-none placeholder:text-muted-foreground/70 focus-visible:border-none focus-visible:ring-0"
+      class="max-h-[60dvh] min-h-11 rounded-none pt-4 font-normal text-foreground placeholder:text-muted-foreground/70"
       data-testid="markdown-textarea"
       maxlength="1000"
       placeholder="Start writing your masterpiece"
       readonly=""
+      variant="inline"
     />
   </div>
   <div

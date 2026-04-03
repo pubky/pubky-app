@@ -95,6 +95,7 @@ describe('useDeletePost', () => {
     expect(mockToast).toHaveBeenCalledWith({
       title: 'Post deleted',
       description: 'Your post has been deleted',
+      dismissButton: true,
     });
   });
 
@@ -230,6 +231,7 @@ describe('useDeletePost', () => {
     expect(mockToast).toHaveBeenCalledWith({
       title: 'Post deleted',
       description: 'Your post has been deleted',
+      dismissButton: true,
     });
   });
 });

@@ -1,0 +1,1 @@
+export const DEFAULT_CLOSE_PRESENCE_TIMEOUT = 200;

@@ -32,6 +32,7 @@
     "cancel": "Cancelar",
     "confirm": "Confirmar",
     "delete": "Eliminar",
+    "ok": "OK",
     "send": "Enviar",
     "submit": "Enviar",
     "loading": "Cargando...",
@@ -926,8 +927,7 @@
       "textCopied": "Texto copiado al portapapeles",
       "profileLinkCopied": "Enlace del perfil copiado al portapapeles",
       "copyFailed": "Error al copiar",
-      "copyFailedDesc": "No se pudo copiar al portapapeles",
-      "ok": "OK"
+      "copyFailedDesc": "No se pudo copiar al portapapeles"
     },
     "follow": {
       "failed": "Error al actualizar estado de seguimiento"
