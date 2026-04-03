@@ -32,7 +32,7 @@ describe('resolvePubkyToNames', () => {
     const result = await resolvePubkyToNames(`pk:${PUBKY_A} said hello`);
 
     expect(mockGetOrFetchDetails).toHaveBeenCalledWith({ userId: PUBKY_A });
-    expect(result).toBe('Alice said hello');
+    expect(result).toBe('@Alice said hello');
   });
 
   it('resolves pubky prefixed mention to user name', async () => {
@@ -41,7 +41,7 @@ describe('resolvePubkyToNames', () => {
     const result = await resolvePubkyToNames(`pubky${PUBKY_A} said hello`);
 
     expect(mockGetOrFetchDetails).toHaveBeenCalledWith({ userId: PUBKY_A });
-    expect(result).toBe('Bob said hello');
+    expect(result).toBe('@Bob said hello');
   });
 
   it('resolves multiple different mentions', async () => {
@@ -50,7 +50,7 @@ describe('resolvePubkyToNames', () => {
     const result = await resolvePubkyToNames(`pk:${PUBKY_A} and pubky${PUBKY_B} are friends`);
 
     expect(mockGetOrFetchDetails).toHaveBeenCalledTimes(2);
-    expect(result).toBe('Alice and Bob are friends');
+    expect(result).toBe('@Alice and @Bob are friends');
   });
 
   it('deduplicates repeated mentions and fetches each user only once', async () => {
@@ -61,7 +61,7 @@ describe('resolvePubkyToNames', () => {
     );
 
     expect(mockGetOrFetchDetails).toHaveBeenCalledTimes(2);
-    expect(result).toBe('Alice tagged Bob then Bob replied to Alice and Alice joined');
+    expect(result).toBe('@Alice tagged @Bob then @Bob replied to @Alice and @Alice joined');
   });
 
   it('keeps original mention when fetchDetails returns no name', async () => {

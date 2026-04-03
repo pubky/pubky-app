@@ -48,6 +48,6 @@ export async function resolvePubkyToNames(content: string): Promise<string> {
 
   // 5) Replace mentions while preserving the captured leading boundary (start/whitespace).
   return content.replace(mentionInTextRegex, (_full, leading: string, mention: string) => {
-    return leading + (mentionToName.get(mention) ?? mention);
+    return leading + (mentionToName.has(mention) ? `@${mentionToName.get(mention)}` : mention);
   });
 }
