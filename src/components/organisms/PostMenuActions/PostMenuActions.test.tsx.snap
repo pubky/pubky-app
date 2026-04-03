@@ -5,6 +5,9 @@ exports[`PostMenuActions - Snapshots > matches snapshot for desktop dropdown 1`]
   data-open="false"
   data-testid="dropdown-menu"
 >
+  <button
+    data-testid="dropdown-open-trigger"
+  />
   <div
     data-testid="dropdown-trigger"
   >
@@ -34,6 +37,11 @@ exports[`PostMenuActions - Snapshots > matches snapshot for desktop dropdown 1`]
         data-testid="edit-button"
       >
         Edit
+      </button>
+      <button
+        data-testid="delete-button"
+      >
+        Delete
       </button>
     </div>
   </div>
@@ -87,6 +95,11 @@ exports[`PostMenuActions - Snapshots > matches snapshot for mobile sheet 1`] = `
           data-testid="edit-button"
         >
           Edit
+        </button>
+        <button
+          data-testid="delete-button"
+        >
+          Delete
         </button>
       </div>
     </div>

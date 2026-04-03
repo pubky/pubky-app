@@ -32,6 +32,7 @@
     "cancel": "Cancelar",
     "confirm": "Confirmar",
     "delete": "Eliminar",
+    "ok": "OK",
     "send": "Enviar",
     "submit": "Enviar",
     "loading": "Cargando...",
@@ -213,8 +214,10 @@
     },
     "lightning": {
       "title": "Escanea para <highlight>pagar.</highlight>",
+      "title_mobile": "Toca para <highlight>pagar.</highlight>",
       "subtitle": "Escanea el código QR con tu billetera favorita.",
       "qrLabel": "Pago Bitcoin Lightning",
+      "payNow": "Pagar ahora",
       "payAmount": "Paga ₿ {amount} para continuar.",
       "payAmountUsd": "Paga ₿ {amount} (${usdAmount}) para continuar.",
       "expired": "Pago expirado",
@@ -542,6 +545,12 @@
     }
   },
   "dialogs": {
+    "deletePost": {
+      "title": "¿Eliminar publicación?",
+      "description": "Esta acción no se puede deshacer. La publicación se eliminará permanentemente.",
+      "confirmButton": "Eliminar",
+      "cancelButton": "Cancelar"
+    },
     "editPost": {
       "editArticle": "Editar articulo",
       "editPost": "Editar publicación",
@@ -900,7 +909,8 @@
       "failedToLoadPosts": "Error al cargar nuevas publicaciónes",
       "failedToLoadPostsDesc": "No se pueden mostrar nuevas publicaciónes. Por favor intenta de nuevo.",
       "parseError": "Error al analizar contenido del articulo",
-      "coverImageError": "Error al cargar imagen de portada del articulo"
+      "coverImageError": "Error al cargar imagen de portada del articulo",
+      "attachmentsLoadFailed": "Error al cargar los archivos adjuntos"
     },
     "bookmark": {
       "added": "Favorito agregado",
@@ -917,8 +927,7 @@
       "textCopied": "Texto copiado al portapapeles",
       "profileLinkCopied": "Enlace del perfil copiado al portapapeles",
       "copyFailed": "Error al copiar",
-      "copyFailedDesc": "No se pudo copiar al portapapeles",
-      "ok": "OK"
+      "copyFailedDesc": "No se pudo copiar al portapapeles"
     },
     "follow": {
       "failed": "Error al actualizar estado de seguimiento"
@@ -986,6 +995,16 @@
       "maxFilesPartial": "Maximo {max} archivos permitidos. Algunos archivos no fueron agregados.",
       "unsupportedType": "\"{name}\" tiene tipo no soportado \"{type}\". Formatos soportados: {formats}.",
       "fileTooLarge": "\"{name}\" excede el tamaño maximo de {maxSize}."
+    },
+    "status": {
+      "updateFailed": "Error al actualizar el estado. Por favor intenta de nuevo.",
+      "userNotLoaded": "Perfil de usuario no cargado. Por favor intenta de nuevo."
+    },
+    "fullscreen": {
+      "error": "Error al intentar habilitar pantalla completa"
+    },
+    "logout": {
+      "failed": "Error al cerrar sesión. Por favor intenta de nuevo."
     }
   },
   "empty": {
@@ -1021,6 +1040,7 @@
     "follow": "Seguir",
     "unfollow": "Dejar de seguir",
     "following": "Siguiendo",
+    "editProfile": "Editar perfil",
     "me": "Yo",
     "tags": "ETIQUETAS",
     "posts": "PUBLICACIONES",
@@ -1199,7 +1219,6 @@
     "emoji": "Emoji",
     "richText": "Texto enriquecido",
     "markdown": "Markdown",
-    "clearToSwitch": "Borra el contenido para cambiar de modo",
     "placeholder": "Empieza a escribir tu obra maestra",
     "toolbarAriaLabel": "Barra de herramientas de edición Markdown",
     "warningApproaching": "Te estás acercando al límite máximo de caracteres.",

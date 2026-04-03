@@ -14,7 +14,7 @@ exports[`Toast - Snapshots > matches snapshot for ToastViewport 1`] = `
   tabindex="-1"
 >
   <ol
-    class="fixed bottom-0 left-1/2 z-[100] flex max-h-screen w-full -translate-x-1/2 flex-col-reverse p-4 sm:bottom-8 sm:max-w-[550px]"
+    class="fixed bottom-16 left-1/2 z-[100] flex max-h-screen w-full -translate-x-1/2 flex-col-reverse p-4 sm:bottom-8 sm:max-w-[550px]"
     tabindex="-1"
   />
 </div>

@@ -1,1 +1,1 @@
-export const TRUNCATION_LIMIT = 500;
+export const TRUNCATION_LIMIT = 300;

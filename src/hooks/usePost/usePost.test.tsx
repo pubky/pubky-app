@@ -264,10 +264,13 @@ describe('usePost', () => {
       expect(result.current.content).toBe('');
       expect(result.current.tags).toEqual([]);
       expect(result.current.attachments).toEqual([]);
-      expect(mockToast).toHaveBeenCalledWith({
-        title: 'Reply posted',
-        description: 'Your reply has been posted successfully.',
-      });
+      expect(mockToast).toHaveBeenCalledWith(
+        expect.objectContaining({
+          title: 'Reply posted',
+          description: 'Your reply has been posted successfully.',
+          dismissButton: true,
+        }),
+      );
       expect(mockOnSuccess).toHaveBeenCalled();
       expect(result.current.isSubmitting).toBe(false);
     });
@@ -518,6 +521,7 @@ describe('usePost', () => {
       expect(mockToast).toHaveBeenCalledWith({
         title: 'Post created',
         description: 'Your post has been created successfully.',
+        dismissButton: true,
       });
       expect(mockOnSuccess).toHaveBeenCalled();
       expect(result.current.isSubmitting).toBe(false);
@@ -758,6 +762,7 @@ describe('usePost', () => {
       expect(mockToast).toHaveBeenCalledWith({
         title: 'Post created',
         description: 'Your post has been created successfully.',
+        dismissButton: true,
       });
       expect(mockOnSuccess).toHaveBeenCalled();
     });

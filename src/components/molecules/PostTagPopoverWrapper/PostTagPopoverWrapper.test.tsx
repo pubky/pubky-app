@@ -39,13 +39,11 @@ vi.mock('@/organisms', async (importOriginal) => {
   };
 });
 
-vi.mock('../PostHeaderUserInfoPopoverWrapper', async (importOriginal) => {
-  const actual = await importOriginal<typeof import('../PostHeaderUserInfoPopoverWrapper')>();
-  return {
-    ...actual,
-    PostHeaderUserInfoPopoverContent: () => <div data-testid="user-info-content">User Info</div>,
-  };
-});
+vi.mock('../UserInfoPopover', () => ({
+  UserInfoPopover: ({ children }: { children: React.ReactNode }) => (
+    <div data-testid="user-info-popover">{children}</div>
+  ),
+}));
 
 vi.mock('@/libs', async (importOriginal) => {
   const actual = await importOriginal<typeof import('@/libs')>();

@@ -2,23 +2,37 @@
 
 exports[`Textarea - Snapshots > matches snapshot for disabled state 1`] = `
 <textarea
-  class="flex field-sizing-content min-h-16 w-full rounded-md border border-input bg-transparent px-3 py-2 text-base wrap-anywhere shadow-xs transition-[color,box-shadow] outline-none placeholder:text-muted-foreground focus-visible:border-ring focus-visible:ring-ring/50 disabled:cursor-not-allowed disabled:opacity-50 aria-invalid:border-destructive aria-invalid:ring-destructive/40"
+  class="flex field-sizing-content w-full rounded-md bg-transparent text-base wrap-anywhere outline-none placeholder:text-muted-foreground disabled:cursor-not-allowed disabled:opacity-50 aria-invalid:border-destructive aria-invalid:ring-destructive/40 transition-[color,box-shadow] min-h-16 border border-input px-3 py-2 shadow-xs focus-visible:border-ring focus-visible:ring-ring/50"
   data-slot="textarea"
   disabled=""
+/>
+`;
+
+exports[`Textarea - Snapshots > matches snapshot for inline variant 1`] = `
+<textarea
+  class="flex field-sizing-content w-full rounded-md bg-transparent text-base wrap-anywhere outline-none placeholder:text-muted-foreground disabled:cursor-not-allowed disabled:opacity-50 aria-invalid:border-destructive aria-invalid:ring-destructive/40 transition-[color,box-shadow] min-h-6 resize-none border-none p-0 font-medium text-secondary-foreground shadow-none focus-visible:ring-0 focus-visible:ring-offset-0"
+  data-slot="textarea"
+/>
+`;
+
+exports[`Textarea - Snapshots > matches snapshot for inline variant with custom className 1`] = `
+<textarea
+  class="flex field-sizing-content w-full rounded-md bg-transparent wrap-anywhere outline-none placeholder:text-muted-foreground disabled:cursor-not-allowed disabled:opacity-50 aria-invalid:border-destructive aria-invalid:ring-destructive/40 transition-[color,box-shadow] resize-none border-none p-0 font-medium text-secondary-foreground shadow-none focus-visible:ring-0 focus-visible:ring-offset-0 min-h-20 text-base"
+  data-slot="textarea"
 />
 `;
 
 exports[`Textarea - Snapshots > matches snapshot for invalid state 1`] = `
 <textarea
   aria-invalid="true"
-  class="flex field-sizing-content min-h-16 w-full rounded-md border border-input bg-transparent px-3 py-2 text-base wrap-anywhere shadow-xs transition-[color,box-shadow] outline-none placeholder:text-muted-foreground focus-visible:border-ring focus-visible:ring-ring/50 disabled:cursor-not-allowed disabled:opacity-50 aria-invalid:border-destructive aria-invalid:ring-destructive/40"
+  class="flex field-sizing-content w-full rounded-md bg-transparent text-base wrap-anywhere outline-none placeholder:text-muted-foreground disabled:cursor-not-allowed disabled:opacity-50 aria-invalid:border-destructive aria-invalid:ring-destructive/40 transition-[color,box-shadow] min-h-16 border border-input px-3 py-2 shadow-xs focus-visible:border-ring focus-visible:ring-ring/50"
   data-slot="textarea"
 />
 `;
 
 exports[`Textarea - Snapshots > matches snapshot for readOnly state 1`] = `
 <textarea
-  class="flex field-sizing-content min-h-16 w-full rounded-md border border-input bg-transparent px-3 py-2 text-base wrap-anywhere shadow-xs transition-[color,box-shadow] outline-none placeholder:text-muted-foreground focus-visible:border-ring focus-visible:ring-ring/50 disabled:cursor-not-allowed disabled:opacity-50 aria-invalid:border-destructive aria-invalid:ring-destructive/40"
+  class="flex field-sizing-content w-full rounded-md bg-transparent text-base wrap-anywhere outline-none placeholder:text-muted-foreground disabled:cursor-not-allowed disabled:opacity-50 aria-invalid:border-destructive aria-invalid:ring-destructive/40 transition-[color,box-shadow] min-h-16 border border-input px-3 py-2 shadow-xs focus-visible:border-ring focus-visible:ring-ring/50"
   data-slot="textarea"
   readonly=""
 />
@@ -26,14 +40,14 @@ exports[`Textarea - Snapshots > matches snapshot for readOnly state 1`] = `
 
 exports[`Textarea - Snapshots > matches snapshot with custom className 1`] = `
 <textarea
-  class="flex field-sizing-content min-h-16 w-full rounded-md border border-input bg-transparent px-3 py-2 text-base wrap-anywhere shadow-xs transition-[color,box-shadow] outline-none placeholder:text-muted-foreground focus-visible:border-ring focus-visible:ring-ring/50 disabled:cursor-not-allowed disabled:opacity-50 aria-invalid:border-destructive aria-invalid:ring-destructive/40 custom-textarea"
+  class="flex field-sizing-content w-full rounded-md bg-transparent text-base wrap-anywhere outline-none placeholder:text-muted-foreground disabled:cursor-not-allowed disabled:opacity-50 aria-invalid:border-destructive aria-invalid:ring-destructive/40 transition-[color,box-shadow] min-h-16 border border-input px-3 py-2 shadow-xs focus-visible:border-ring focus-visible:ring-ring/50 custom-textarea"
   data-slot="textarea"
 />
 `;
 
 exports[`Textarea - Snapshots > matches snapshot with custom rows 1`] = `
 <textarea
-  class="flex field-sizing-content min-h-16 w-full rounded-md border border-input bg-transparent px-3 py-2 text-base wrap-anywhere shadow-xs transition-[color,box-shadow] outline-none placeholder:text-muted-foreground focus-visible:border-ring focus-visible:ring-ring/50 disabled:cursor-not-allowed disabled:opacity-50 aria-invalid:border-destructive aria-invalid:ring-destructive/40"
+  class="flex field-sizing-content w-full rounded-md bg-transparent text-base wrap-anywhere outline-none placeholder:text-muted-foreground disabled:cursor-not-allowed disabled:opacity-50 aria-invalid:border-destructive aria-invalid:ring-destructive/40 transition-[color,box-shadow] min-h-16 border border-input px-3 py-2 shadow-xs focus-visible:border-ring focus-visible:ring-ring/50"
   data-slot="textarea"
   rows="5"
 />
@@ -41,7 +55,7 @@ exports[`Textarea - Snapshots > matches snapshot with custom rows 1`] = `
 
 exports[`Textarea - Snapshots > matches snapshot with data-testid prop 1`] = `
 <textarea
-  class="flex field-sizing-content min-h-16 w-full rounded-md border border-input bg-transparent px-3 py-2 text-base wrap-anywhere shadow-xs transition-[color,box-shadow] outline-none placeholder:text-muted-foreground focus-visible:border-ring focus-visible:ring-ring/50 disabled:cursor-not-allowed disabled:opacity-50 aria-invalid:border-destructive aria-invalid:ring-destructive/40"
+  class="flex field-sizing-content w-full rounded-md bg-transparent text-base wrap-anywhere outline-none placeholder:text-muted-foreground disabled:cursor-not-allowed disabled:opacity-50 aria-invalid:border-destructive aria-invalid:ring-destructive/40 transition-[color,box-shadow] min-h-16 border border-input px-3 py-2 shadow-xs focus-visible:border-ring focus-visible:ring-ring/50"
   data-slot="textarea"
   data-testid="custom-textarea"
 />
@@ -49,14 +63,14 @@ exports[`Textarea - Snapshots > matches snapshot with data-testid prop 1`] = `
 
 exports[`Textarea - Snapshots > matches snapshot with default props 1`] = `
 <textarea
-  class="flex field-sizing-content min-h-16 w-full rounded-md border border-input bg-transparent px-3 py-2 text-base wrap-anywhere shadow-xs transition-[color,box-shadow] outline-none placeholder:text-muted-foreground focus-visible:border-ring focus-visible:ring-ring/50 disabled:cursor-not-allowed disabled:opacity-50 aria-invalid:border-destructive aria-invalid:ring-destructive/40"
+  class="flex field-sizing-content w-full rounded-md bg-transparent text-base wrap-anywhere outline-none placeholder:text-muted-foreground disabled:cursor-not-allowed disabled:opacity-50 aria-invalid:border-destructive aria-invalid:ring-destructive/40 transition-[color,box-shadow] min-h-16 border border-input px-3 py-2 shadow-xs focus-visible:border-ring focus-visible:ring-ring/50"
   data-slot="textarea"
 />
 `;
 
 exports[`Textarea - Snapshots > matches snapshot with defaultValue prop 1`] = `
 <textarea
-  class="flex field-sizing-content min-h-16 w-full rounded-md border border-input bg-transparent px-3 py-2 text-base wrap-anywhere shadow-xs transition-[color,box-shadow] outline-none placeholder:text-muted-foreground focus-visible:border-ring focus-visible:ring-ring/50 disabled:cursor-not-allowed disabled:opacity-50 aria-invalid:border-destructive aria-invalid:ring-destructive/40"
+  class="flex field-sizing-content w-full rounded-md bg-transparent text-base wrap-anywhere outline-none placeholder:text-muted-foreground disabled:cursor-not-allowed disabled:opacity-50 aria-invalid:border-destructive aria-invalid:ring-destructive/40 transition-[color,box-shadow] min-h-16 border border-input px-3 py-2 shadow-xs focus-visible:border-ring focus-visible:ring-ring/50"
   data-slot="textarea"
 >
   Default text
@@ -65,7 +79,7 @@ exports[`Textarea - Snapshots > matches snapshot with defaultValue prop 1`] = `
 
 exports[`Textarea - Snapshots > matches snapshot with id prop 1`] = `
 <textarea
-  class="flex field-sizing-content min-h-16 w-full rounded-md border border-input bg-transparent px-3 py-2 text-base wrap-anywhere shadow-xs transition-[color,box-shadow] outline-none placeholder:text-muted-foreground focus-visible:border-ring focus-visible:ring-ring/50 disabled:cursor-not-allowed disabled:opacity-50 aria-invalid:border-destructive aria-invalid:ring-destructive/40"
+  class="flex field-sizing-content w-full rounded-md bg-transparent text-base wrap-anywhere outline-none placeholder:text-muted-foreground disabled:cursor-not-allowed disabled:opacity-50 aria-invalid:border-destructive aria-invalid:ring-destructive/40 transition-[color,box-shadow] min-h-16 border border-input px-3 py-2 shadow-xs focus-visible:border-ring focus-visible:ring-ring/50"
   data-slot="textarea"
   id="textarea-id"
 />
@@ -73,7 +87,7 @@ exports[`Textarea - Snapshots > matches snapshot with id prop 1`] = `
 
 exports[`Textarea - Snapshots > matches snapshot with name prop 1`] = `
 <textarea
-  class="flex field-sizing-content min-h-16 w-full rounded-md border border-input bg-transparent px-3 py-2 text-base wrap-anywhere shadow-xs transition-[color,box-shadow] outline-none placeholder:text-muted-foreground focus-visible:border-ring focus-visible:ring-ring/50 disabled:cursor-not-allowed disabled:opacity-50 aria-invalid:border-destructive aria-invalid:ring-destructive/40"
+  class="flex field-sizing-content w-full rounded-md bg-transparent text-base wrap-anywhere outline-none placeholder:text-muted-foreground disabled:cursor-not-allowed disabled:opacity-50 aria-invalid:border-destructive aria-invalid:ring-destructive/40 transition-[color,box-shadow] min-h-16 border border-input px-3 py-2 shadow-xs focus-visible:border-ring focus-visible:ring-ring/50"
   data-slot="textarea"
   name="textarea-name"
 />
@@ -81,7 +95,7 @@ exports[`Textarea - Snapshots > matches snapshot with name prop 1`] = `
 
 exports[`Textarea - Snapshots > matches snapshot with placeholder 1`] = `
 <textarea
-  class="flex field-sizing-content min-h-16 w-full rounded-md border border-input bg-transparent px-3 py-2 text-base wrap-anywhere shadow-xs transition-[color,box-shadow] outline-none placeholder:text-muted-foreground focus-visible:border-ring focus-visible:ring-ring/50 disabled:cursor-not-allowed disabled:opacity-50 aria-invalid:border-destructive aria-invalid:ring-destructive/40"
+  class="flex field-sizing-content w-full rounded-md bg-transparent text-base wrap-anywhere outline-none placeholder:text-muted-foreground disabled:cursor-not-allowed disabled:opacity-50 aria-invalid:border-destructive aria-invalid:ring-destructive/40 transition-[color,box-shadow] min-h-16 border border-input px-3 py-2 shadow-xs focus-visible:border-ring focus-visible:ring-ring/50"
   data-slot="textarea"
   placeholder="Enter text"
 />
@@ -89,14 +103,14 @@ exports[`Textarea - Snapshots > matches snapshot with placeholder 1`] = `
 
 exports[`Textarea - Snapshots > matches snapshot with resize-none className 1`] = `
 <textarea
-  class="flex field-sizing-content min-h-16 w-full rounded-md border border-input bg-transparent px-3 py-2 text-base wrap-anywhere shadow-xs transition-[color,box-shadow] outline-none placeholder:text-muted-foreground focus-visible:border-ring focus-visible:ring-ring/50 disabled:cursor-not-allowed disabled:opacity-50 aria-invalid:border-destructive aria-invalid:ring-destructive/40 resize-none"
+  class="flex field-sizing-content w-full rounded-md bg-transparent text-base wrap-anywhere outline-none placeholder:text-muted-foreground disabled:cursor-not-allowed disabled:opacity-50 aria-invalid:border-destructive aria-invalid:ring-destructive/40 transition-[color,box-shadow] min-h-16 border border-input px-3 py-2 shadow-xs focus-visible:border-ring focus-visible:ring-ring/50 resize-none"
   data-slot="textarea"
 />
 `;
 
 exports[`Textarea - Snapshots > matches snapshot with value prop 1`] = `
 <textarea
-  class="flex field-sizing-content min-h-16 w-full rounded-md border border-input bg-transparent px-3 py-2 text-base wrap-anywhere shadow-xs transition-[color,box-shadow] outline-none placeholder:text-muted-foreground focus-visible:border-ring focus-visible:ring-ring/50 disabled:cursor-not-allowed disabled:opacity-50 aria-invalid:border-destructive aria-invalid:ring-destructive/40"
+  class="flex field-sizing-content w-full rounded-md bg-transparent text-base wrap-anywhere outline-none placeholder:text-muted-foreground disabled:cursor-not-allowed disabled:opacity-50 aria-invalid:border-destructive aria-invalid:ring-destructive/40 transition-[color,box-shadow] min-h-16 border border-input px-3 py-2 shadow-xs focus-visible:border-ring focus-visible:ring-ring/50"
   data-slot="textarea"
 >
   Initial value

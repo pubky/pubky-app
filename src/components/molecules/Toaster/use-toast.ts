@@ -3,14 +3,19 @@
 import * as React from 'react';
 import type { ToastActionElement, ToastProps } from '@/atoms';
 
+// Max number of toasts visible at once
 const TOAST_LIMIT = 1;
-const TOAST_REMOVE_DELAY = 1000000;
+// Delay before removing a dismissed toast from React state (after visual dismiss)
+const TOAST_REMOVE_DELAY = 20_000;
+// How long a toast stays visible before auto-dismissing
+const TOAST_DURATION = 3_000;
 
 type ToasterToast = Omit<ToastProps, 'title'> & {
   id: string;
   title?: React.ReactNode;
   description?: React.ReactNode;
   action?: ToastActionElement;
+  dismissButton?: boolean;
 };
 
 export const actionTypes = {
@@ -145,6 +150,8 @@ function toast({ ...props }: Toast) {
     });
   const dismiss = () => dispatch({ type: 'DISMISS_TOAST', toastId: id });
 
+  const duration = props.duration ?? TOAST_DURATION;
+
   dispatch({
     type: 'ADD_TOAST',
     toast: {
@@ -156,6 +163,13 @@ function toast({ ...props }: Toast) {
       },
     },
   });
+
+  // Radix Toast's internal timer fails to start when isClosePausedRef stays true (node_modules/@radix-ui/react-toast/dist/index.mjs)
+  // after user interaction (e.g., clicking a dismiss button inside a toast).
+  // This caused the delete success toast to never auto-dismiss in the repost → undo flow,
+  // because clicking the Undo button kept the pointer over the viewport, leaving isClosePausedRef stuck as true.
+  // This is a known unresolved bug: https://github.com/radix-ui/primitives/issues/2233
+  setTimeout(dismiss, duration);
 
   return {
     id: id,
