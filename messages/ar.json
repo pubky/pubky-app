@@ -1131,10 +1131,15 @@
     }
   },
   "logout": {
+    "loadingTitle": "Signing you out...",
+    "loadingSubtitle": "We're ending your session securely.",
+    "errorTitle": "We couldn't sign you out yet",
+    "errorSubtitle": "Please try again to finish signing out securely.",
     "title": "إلى <highlight>اللقاء!</highlight>",
     "subtitle": "لقد قمت بتسجيل الخروج بأمان.",
     "homepage": "الصفحة الرئيسية",
-    "signBackIn": "تسجيل الدخول مجدداً"
+    "signBackIn": "تسجيل الدخول مجدداً",
+    "retry": "Retry"
   },
   "tradeoffs": {
     "title": "كن على علم بهذه المفاضلات:",

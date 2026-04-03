@@ -1137,10 +1137,15 @@
     }
   },
   "logout": {
+    "loadingTitle": "Signing you out...",
+    "loadingSubtitle": "We're ending your session securely.",
+    "errorTitle": "We couldn't sign you out yet",
+    "errorSubtitle": "Please try again to finish signing out securely.",
     "title": "<highlight>また会いましょう！</highlight>",
     "subtitle": "安全にログアウトしました。",
     "homepage": "ホームページ",
-    "signBackIn": "再ログイン"
+    "signBackIn": "再ログイン",
+    "retry": "Retry"
   },
   "tradeoffs": {
     "title": "これらのトレードオフに注意してください：",
