@@ -57,35 +57,37 @@ export const HumanPhoneCodeInput = ({ value, onChange, onEnter = () => {} }: Hum
         prevInput?.select();
       }
 
-      // Handle paste (Ctrl/Cmd + V)
-      if (e.key === 'v' && (e.ctrlKey || e.metaKey)) {
-        e.preventDefault();
-        navigator.clipboard.readText().then((text) => {
-          const digits = text.replace(/\D/g, '').slice(0, DIGITS).split('');
-          const newCode = [...value];
-
-          digits.forEach((digit, i) => {
-            if (index + i < DIGITS) {
-              newCode[index + i] = digit;
-            }
-          });
-
-          onChange(newCode);
-
-          // Focus the last filled input or the next empty one
-          const lastFilledIndex = Math.min(index + digits.length - 1, DIGITS - 1);
-          const nextEmptyIndex = newCode.findIndex((digit, i) => i > lastFilledIndex && digit === '');
-          const focusIndex = nextEmptyIndex !== -1 ? nextEmptyIndex : lastFilledIndex;
-          inputRefs.current[focusIndex]?.focus();
-        });
-      }
-
       // Handle enter - if the code is complete, call onEnter
       if (e.key === 'Enter' && isCodeComplete) {
         onEnter();
       }
     },
-    [value, onChange, onEnter, isCodeComplete],
+    [value, onEnter, isCodeComplete],
+  );
+
+  const handlePaste = useCallback(
+    (index: number, e: React.ClipboardEvent<HTMLInputElement>) => {
+      e.preventDefault();
+      const pastedText = e.clipboardData.getData('text');
+      const digits = pastedText.replace(/\D/g, '').slice(0, DIGITS).split('');
+
+      if (digits.length === 0) return;
+
+      const newCode = [...value];
+      digits.forEach((digit, i) => {
+        if (index + i < DIGITS) {
+          newCode[index + i] = digit;
+        }
+      });
+      onChange(newCode);
+
+      // Focus the next empty input or the last filled one
+      const lastFilledIndex = Math.min(index + digits.length - 1, DIGITS - 1);
+      const nextEmptyIndex = newCode.findIndex((d, i) => i > lastFilledIndex && d === '');
+      const focusIndex = nextEmptyIndex !== -1 ? nextEmptyIndex : lastFilledIndex;
+      inputRefs.current[focusIndex]?.focus();
+    },
+    [value, onChange],
   );
 
   return (
@@ -114,6 +116,7 @@ export const HumanPhoneCodeInput = ({ value, onChange, onEnter = () => {} }: Hum
             value={digit}
             onChange={(e) => handleCodeChange(index, e.target.value)}
             onKeyDown={(e) => handleKeyDown(index, e)}
+            onPaste={(e) => handlePaste(index, e)}
             className={Libs.cn(
               'text-center text-base font-medium text-brand',
               '!h-auto !border-none !bg-transparent !p-0',
