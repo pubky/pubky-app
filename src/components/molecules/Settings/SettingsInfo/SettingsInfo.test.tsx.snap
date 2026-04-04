@@ -404,6 +404,33 @@ exports[`SettingsInfo - Snapshots > matches snapshot 1`] = `
       </div>
     </div>
     <div
+      class="flex flex-col gap-2"
+      data-testid="container"
+    >
+      <span
+        class="text-2xl font-light text-muted-foreground"
+        data-testid="typography"
+      >
+        Version
+      </span>
+      <span
+        class="text-base font-medium text-secondary-foreground"
+        data-testid="typography"
+      >
+        Pubky
+         
+        <a
+          class="cursor-pointer transition-colors text-muted-foreground hover:text-brand text-base font-medium"
+          href="https://github.com/pubky/pubky-app/releases/tag/1.2.3"
+          rel="noopener noreferrer"
+          target="_blank"
+        >
+          v
+          1.2.3
+        </a>
+      </span>
+    </div>
+    <div
       class="flex flex-col gap-4"
       data-testid="container"
     >
