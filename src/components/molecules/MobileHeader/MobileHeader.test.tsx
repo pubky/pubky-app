@@ -73,7 +73,7 @@ describe('MobileHeader', () => {
   it('uses fixed positioning when fixed prop is true', () => {
     const { container } = render(<MobileHeader fixed />);
     const outerContainer = container.firstChild as HTMLElement;
-    expect(outerContainer).toHaveClass('fixed', 'right-0', 'left-0');
+    expect(outerContainer).toHaveClass('fixed', 'inset-x-0');
     expect(outerContainer).not.toHaveClass('sticky');
   });
 
@@ -96,8 +96,8 @@ describe('MobileHeader', () => {
   it('applies correct classes to inner container', () => {
     render(<MobileHeader />);
 
-    const innerContainer = screen.getByTestId('logo').closest('div')?.parentElement;
-    expect(innerContainer).toHaveClass('flex', 'items-center', 'justify-between', 'py-3');
+    const innerContainer = screen.getByTestId('logo').parentElement;
+    expect(innerContainer).toHaveClass('flex', 'w-full', 'items-center', 'justify-between', 'p-6');
   });
 
   it('applies correct classes to left button', () => {

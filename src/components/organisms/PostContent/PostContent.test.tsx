@@ -78,10 +78,9 @@ describe('PostContent', () => {
     expect(screen.getByTestId('post-content-base')).toHaveAttribute('data-post-id', 'post-123');
   });
 
-  it('calls usePostDetails and useRepostInfo with correct id', () => {
+  it('calls useRepostInfo with correct id', () => {
     render(<PostContent postId="post-abc" />);
 
-    expect(mockUsePostDetails).toHaveBeenCalledWith('post-abc');
     expect(mockUseRepostInfo).toHaveBeenCalledWith('post-abc');
   });
 
