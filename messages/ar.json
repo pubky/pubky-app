@@ -1072,6 +1072,7 @@
     "timeframe": {
       "title": "الفترة الزمنية",
       "today": "اليوم",
+      "thisWeek": "هذا الأسبوع",
       "thisMonth": "هذا الشهر",
       "allTime": "كل الاوقات"
     }
