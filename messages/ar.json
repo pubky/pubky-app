@@ -8,7 +8,7 @@
     "title": "<highlight>افتح</highlight> الويب.",
     "subtitle": "مفاتيحك، محتواك، قواعدك.",
     "signIn": "تسجيل الدخول",
-    "createAccount": "إنشاء حساب",
+    "createAccount": "انضم الآن",
     "aTetherCompany": "شركة تابعة لـ <tether>tether.</tether>",
     "copyright": "Synonym Software, S.A. DE C.V. ©2026. جميع الحقوق محفوظة."
   },
@@ -169,7 +169,7 @@
   },
   "onboarding": {
     "steps": {
-      "createAccount": "انشاء حساب",
+      "createAccount": "انضم الآن",
       "identityKeys": "مفاتيح الهوية",
       "usePubkyRing": "استخدام Pubky Ring",
       "yourPubky": "بوبكي الخاص بك",

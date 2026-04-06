@@ -8,7 +8,7 @@
     "title": "<highlight>Unlock</highlight> the web.",
     "subtitle": "Your keys, your content, your rules.",
     "signIn": "Sign in",
-    "createAccount": "Create account",
+    "createAccount": "Join now",
     "aTetherCompany": "a <tether>tether.</tether> company",
     "copyright": "Synonym Software, S.A. DE C.V. ©2026. All rights reserved."
   },
@@ -169,7 +169,7 @@
   },
   "onboarding": {
     "steps": {
-      "createAccount": "Create account",
+      "createAccount": "Join now",
       "identityKeys": "Identity keys",
       "usePubkyRing": "Use Pubky Ring",
       "yourPubky": "Your pubky",
