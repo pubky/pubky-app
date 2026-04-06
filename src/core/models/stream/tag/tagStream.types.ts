@@ -1,5 +1,5 @@
 // Tag Stream ID Pattern: timeframe:reach
-// TIMEFRAME: today, this_month, all_time
+// TIMEFRAME: today, this_week, this_month, all_time
 // REACH (Supported in 'influencers' source): followers, following, friends, wot (u8)
 //
 // Note: Different from TagStreamTypes pattern (timeframe:reach) to optimize for tag-centric queries

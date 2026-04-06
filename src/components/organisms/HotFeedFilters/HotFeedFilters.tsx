@@ -18,7 +18,7 @@ interface FilterTimeframeProps {
 /**
  * FilterTimeframe
  *
- * Filter component for selecting timeframe (Today, This Month, All Time).
+ * Filter component for selecting timeframe (Today, This Week, This Month, All Time).
  */
 export function FilterTimeframe({ selectedTab = Core.TIMEFRAME.THIS_MONTH, onTabChange }: FilterTimeframeProps) {
   const t = useTranslations('filters.timeframe');
