@@ -32,7 +32,7 @@ export const LAYOUT = {
    * - Header content height (buttons h-12) = 48px
    * - Total header visual height ~144px, rounded up to 150px for spacing
    */
-  HEADER_OFFSET_MAIN: 150,
+  HEADER_OFFSET_MAIN: 100,
 
   /**
    * Bottom offset for sidebar sticky behavior in pixels.
