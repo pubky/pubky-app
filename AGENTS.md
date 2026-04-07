@@ -79,6 +79,16 @@ This is a **pure Next.js frontend** — no local database or backend needed. All
 - **E2E tests**: `npm run test:e2e` (Cypress with Firefox — requires external staging services to be reachable)
 - **Storybook**: `npm run storybook` (port 6006)
 
+### Signing in (staging account)
+
+A staging recovery phrase is stored in the `STAGING_RECOVERY_PHRASE` secret (12 words). To sign in:
+
+1. Start the dev server (`npm run dev`)
+2. Navigate to `http://localhost:3000` and click **Sign In**
+3. Click **Use recovery phrase**
+4. Enter the 12 words from `$STAGING_RECOVERY_PHRASE` into the input fields
+5. Click **Restore** — the app loads the staging user "Orlando"
+
 ### Caveats
 
 - `.nvmrc` specifies Node.js **v24**. The VM update script installs it via nvm automatically.
