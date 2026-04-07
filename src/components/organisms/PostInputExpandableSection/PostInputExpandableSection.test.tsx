@@ -3,6 +3,27 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { PostInputExpandableSection } from './PostInputExpandableSection';
 import { POST_INPUT_VARIANT } from '../PostInput/PostInput.constants';
 
+vi.mock('motion/react', () => ({
+  AnimatePresence: ({ children }: { children: React.ReactNode }) => <>{children}</>,
+  motion: {
+    div: ({
+      children,
+      initial: _initial,
+      animate: _animate,
+      exit: _exit,
+      transition: _transition,
+      ...props
+    }: {
+      children: React.ReactNode;
+      initial?: unknown;
+      animate?: unknown;
+      exit?: unknown;
+      transition?: unknown;
+      [key: string]: unknown;
+    }) => <div {...props}>{children}</div>,
+  },
+}));
+
 // Use real libs - use actual implementations
 vi.mock('@/libs', async () => {
   const actual = await vi.importActual('@/libs');
@@ -92,6 +113,7 @@ vi.mock('../PostInputActionBar', () => ({
     isArticle,
     isEdit,
     postButtonIcon,
+    characterLimit,
   }: {
     onPostClick?: () => void;
     onEmojiClick?: () => void;
@@ -102,6 +124,7 @@ vi.mock('../PostInputActionBar', () => ({
     isArticle?: boolean;
     isEdit?: boolean;
     postButtonIcon?: React.ComponentType;
+    characterLimit?: { count: number; max: number };
   }) => (
     <div
       data-testid="post-input-action-bar"
@@ -111,6 +134,8 @@ vi.mock('../PostInputActionBar', () => ({
       data-is-article={isArticle}
       data-is-edit={isEdit}
       data-has-post-button-icon={!!postButtonIcon}
+      data-character-count={characterLimit?.count}
+      data-character-max={characterLimit?.max}
     >
       <button data-testid="action-bar-post" onClick={onPostClick} disabled={isPostDisabled}>
         Post
@@ -193,6 +218,19 @@ describe('PostInputExpandableSection', () => {
     fireEvent.click(closeButton);
 
     expect(setTags).toHaveBeenCalled();
+  });
+
+  it('applies tag removal updater when closing a tag', () => {
+    const setTags = vi.fn();
+    render(
+      <PostInputExpandableSection {...defaultProps} tags={['tag1', 'tag2']} setTags={setTags} isDisabled={false} />,
+    );
+
+    fireEvent.click(screen.getByTestId('tag-close-tag1'));
+
+    const updater = setTags.mock.calls[0]?.[0] as (prevTags: string[]) => string[];
+    expect(updater).toBeTypeOf('function');
+    expect(updater(['tag1', 'tag2'])).toEqual(['tag2']);
   });
 
   it('does not show tag close button when disabled', () => {
@@ -280,28 +318,21 @@ describe('PostInputExpandableSection', () => {
     expect(onEmojiSelect).toHaveBeenCalledWith({ native: '😀' });
   });
 
-  it('applies correct classes when expanded', () => {
-    const { container } = render(<PostInputExpandableSection {...defaultProps} isExpanded={true} />);
+  it('renders animated wrapper with overflow-hidden when expanded', () => {
+    const { container } = render(
+      <PostInputExpandableSection {...defaultProps} isExpanded={true} className="test-expandable-class" />,
+    );
 
-    const expandableContainer = container.querySelector('[data-testid="container"]');
-    expect(expandableContainer).toHaveClass('grid-rows-[1fr]');
-    expect(expandableContainer).toHaveClass('opacity-100');
+    const expandableContainer = container.querySelector('.overflow-hidden');
+    expect(expandableContainer).toBeInTheDocument();
+    expect(expandableContainer).toHaveClass('test-expandable-class');
   });
 
-  it('applies correct classes when collapsed', () => {
-    const { container } = render(<PostInputExpandableSection {...defaultProps} isExpanded={false} />);
+  it('unmounts expandable section when collapsed', () => {
+    render(<PostInputExpandableSection {...defaultProps} isExpanded={false} />);
 
-    const expandableContainer = container.querySelector('[data-testid="container"]');
-    expect(expandableContainer).toHaveClass('grid-rows-[0fr]');
-    expect(expandableContainer).toHaveClass('opacity-0');
-  });
-
-  it('uses overflow-hidden to keep collapse animation behavior', () => {
-    const { container } = render(<PostInputExpandableSection {...defaultProps} isExpanded={false} />);
-
-    const containers = container.querySelectorAll('[data-testid="container"]');
-    const contentWrapper = containers[1];
-    expect(contentWrapper).toHaveClass('overflow-hidden');
+    expect(screen.queryByTestId('post-input-action-bar')).not.toBeInTheDocument();
+    expect(screen.queryByTestId('post-input-tags')).not.toBeInTheDocument();
   });
 
   it('shows article button when submitMode is POST and not an article', () => {
@@ -384,6 +415,22 @@ describe('PostInputExpandableSection', () => {
     render(<PostInputExpandableSection {...defaultProps} submitMode={POST_INPUT_VARIANT.EDIT} isArticle={false} />);
 
     expect(screen.queryByTestId('action-bar-article')).not.toBeInTheDocument();
+  });
+
+  it('passes characterLimit to PostInputActionBar', () => {
+    render(<PostInputExpandableSection {...defaultProps} characterLimit={{ count: 123, max: 300 }} />);
+
+    const actionBar = screen.getByTestId('post-input-action-bar');
+    expect(actionBar).toHaveAttribute('data-character-count', '123');
+    expect(actionBar).toHaveAttribute('data-character-max', '300');
+  });
+
+  it('does not pass characterLimit when not provided', () => {
+    render(<PostInputExpandableSection {...defaultProps} />);
+
+    const actionBar = screen.getByTestId('post-input-action-bar');
+    expect(actionBar).not.toHaveAttribute('data-character-count');
+    expect(actionBar).not.toHaveAttribute('data-character-max');
   });
 });
 

@@ -4,17 +4,23 @@ import userEvent from '@testing-library/user-event';
 import { PostMenuActions } from './PostMenuActions';
 
 const mockUseIsMobile = vi.fn(() => false);
+const mockDeletePost = vi.fn();
 const mockUsePostMenuActions = vi.fn((_postId: string) => ({
   menuItems: [] as unknown[],
   isLoading: false,
 }));
+const mockRequireAuth = vi.fn((action: () => void) => action());
 
 vi.mock('@/hooks', () => ({
   useIsMobile: () => mockUseIsMobile(),
   usePostMenuActions: (postId: string) => mockUsePostMenuActions(postId),
-  useRequireAuth: vi.fn(() => ({
+  useRequireAuth: () => ({
     isAuthenticated: true,
-    requireAuth: vi.fn((action: () => void) => action()),
+    requireAuth: mockRequireAuth,
+  }),
+  useDeletePost: vi.fn(() => ({
+    deletePost: mockDeletePost,
+    isDeleting: false,
   })),
 }));
 
@@ -39,6 +45,23 @@ vi.mock('@/organisms', () => ({
   ),
 }));
 
+vi.mock('@/molecules', () => ({
+  DialogConfirmDelete: ({
+    open,
+    onConfirm,
+  }: {
+    open: boolean;
+    onOpenChange: (open: boolean) => void;
+    onConfirm: () => void;
+  }) => (
+    <div data-testid="dialog-confirm-delete" data-open={open.toString()}>
+      <button onClick={onConfirm} data-testid="confirm-delete-button">
+        Confirm Delete
+      </button>
+    </div>
+  ),
+}));
+
 vi.mock('@/libs', async () => {
   const actual = await vi.importActual('@/libs');
   return {
@@ -53,12 +76,15 @@ vi.mock('./PostMenuActionsContent', () => ({
     onActionComplete,
     onReportClick,
     onEditClick,
+    onDeleteClick,
   }: {
     postId: string;
     variant: string;
     onActionComplete?: () => void;
     onReportClick?: () => void;
     onEditClick?: () => void;
+    onDeleteClick?: () => void;
+    isDeleting?: boolean;
   }) => (
     <div data-testid="post-menu-actions-content" data-post-id={postId} data-variant={variant}>
       <button onClick={onActionComplete}>Close</button>
@@ -67,6 +93,9 @@ vi.mock('./PostMenuActionsContent', () => ({
       </button>
       <button onClick={onEditClick} data-testid="edit-button">
         Edit
+      </button>
+      <button onClick={onDeleteClick} data-testid="delete-button">
+        Delete
       </button>
     </div>
   ),
@@ -102,12 +131,14 @@ vi.mock('@/atoms', () => ({
   DropdownMenu: ({
     children,
     open,
+    onOpenChange,
   }: {
     children: React.ReactNode;
     open: boolean;
     onOpenChange: (open: boolean) => void;
   }) => (
     <div data-testid="dropdown-menu" data-open={open.toString()}>
+      <button data-testid="dropdown-open-trigger" onClick={() => onOpenChange(true)} />
       {children}
     </div>
   ),
@@ -224,7 +255,7 @@ describe('PostMenuActions', () => {
     expect(editDialog).toHaveAttribute('data-post-id', 'pk:test123:post456');
   });
 
-  it('closes menu when edit button is clicked', async () => {
+  it('does not open menu when edit button is clicked', async () => {
     const user = userEvent.setup();
     const trigger = <button>Menu</button>;
     render(<PostMenuActions postId="pk:test123:post456" trigger={trigger} />);
@@ -234,6 +265,66 @@ describe('PostMenuActions', () => {
 
     const dropdown = screen.getByTestId('dropdown-menu');
     expect(dropdown).toHaveAttribute('data-open', 'false');
+  });
+
+  it('opens delete confirmation dialog when delete button is clicked', async () => {
+    const user = userEvent.setup();
+    const trigger = <button>Menu</button>;
+    render(<PostMenuActions postId="pk:test123:post456" trigger={trigger} />);
+
+    const deleteButton = screen.getByTestId('delete-button');
+    await user.click(deleteButton);
+
+    const confirmDialog = screen.getByTestId('dialog-confirm-delete');
+    expect(confirmDialog).toHaveAttribute('data-open', 'true');
+  });
+
+  it('closes menu when delete button is clicked', async () => {
+    const user = userEvent.setup();
+    const trigger = <button>Menu</button>;
+    render(<PostMenuActions postId="pk:test123:post456" trigger={trigger} />);
+
+    const deleteButton = screen.getByTestId('delete-button');
+    await user.click(deleteButton);
+
+    const dropdown = screen.getByTestId('dropdown-menu');
+    expect(dropdown).toHaveAttribute('data-open', 'false');
+  });
+
+  it('calls deletePost when delete is confirmed', async () => {
+    const user = userEvent.setup();
+    const trigger = <button>Menu</button>;
+    render(<PostMenuActions postId="pk:test123:post456" trigger={trigger} />);
+
+    const deleteButton = screen.getByTestId('delete-button');
+    await user.click(deleteButton);
+
+    const confirmButton = screen.getByTestId('confirm-delete-button');
+    await user.click(confirmButton);
+
+    expect(mockDeletePost).toHaveBeenCalledWith('pk:test123:post456');
+  });
+
+  it('requires authentication before opening the menu', async () => {
+    const user = userEvent.setup();
+    const trigger = <button>Menu</button>;
+    render(<PostMenuActions postId="pk:test123:post456" trigger={trigger} />);
+
+    await user.click(screen.getByTestId('dropdown-open-trigger'));
+
+    expect(mockRequireAuth).toHaveBeenCalled();
+  });
+
+  it('does not open menu when unauthenticated user clicks trigger', async () => {
+    mockRequireAuth.mockImplementation(() => undefined);
+    const user = userEvent.setup();
+    const trigger = <button>Menu</button>;
+    render(<PostMenuActions postId="pk:test123:post456" trigger={trigger} />);
+
+    await user.click(screen.getByTestId('dropdown-open-trigger'));
+
+    expect(mockRequireAuth).toHaveBeenCalled();
+    expect(screen.getByTestId('dropdown-menu')).toHaveAttribute('data-open', 'false');
   });
 });
 

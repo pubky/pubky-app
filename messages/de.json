@@ -32,6 +32,7 @@
     "cancel": "Abbrechen",
     "confirm": "Bestätigen",
     "delete": "Löschen",
+    "ok": "OK",
     "send": "Senden",
     "submit": "Absenden",
     "loading": "Laden...",
@@ -213,8 +214,10 @@
     },
     "lightning": {
       "title": "Scannen zum <highlight>Bezahlen.</highlight>",
+      "title_mobile": "Tippen zum <highlight>Bezahlen.</highlight>",
       "subtitle": "Scannen Sie den QR-Code mit Ihrer bevorzugten Wallet.",
       "qrLabel": "Bitcoin Lightning-Zahlung",
+      "payNow": "Jetzt bezahlen",
       "payAmount": "Zahlen Sie ₿ {amount}, um fortzufahren.",
       "payAmountUsd": "Zahlen Sie ₿ {amount} (${usdAmount}), um fortzufahren.",
       "expired": "Zahlung abgelaufen",
@@ -542,6 +545,12 @@
     }
   },
   "dialogs": {
+    "deletePost": {
+      "title": "Beitrag löschen?",
+      "description": "Diese Aktion kann nicht rückgängig gemacht werden. Der Beitrag wird dauerhaft gelöscht.",
+      "confirmButton": "Löschen",
+      "cancelButton": "Abbrechen"
+    },
     "editPost": {
       "editArticle": "Artikel bearbeiten",
       "editPost": "Beitrag bearbeiten",
@@ -900,7 +909,8 @@
       "failedToLoadPosts": "Neue Beiträge konnten nicht geladen werden",
       "failedToLoadPostsDesc": "Neue Beiträge können nicht angezeigt werden. Bitte versuchen Sie es erneut.",
       "parseError": "Artikelinhalt konnte nicht analysiert werden",
-      "coverImageError": "Artikeltitelbild konnte nicht geladen werden"
+      "coverImageError": "Artikeltitelbild konnte nicht geladen werden",
+      "attachmentsLoadFailed": "Anhänge konnten nicht geladen werden"
     },
     "bookmark": {
       "added": "Lesezeichen hinzugefügt",
@@ -917,8 +927,7 @@
       "textCopied": "Text in Zwischenablage kopiert",
       "profileLinkCopied": "Profillink in Zwischenablage kopiert",
       "copyFailed": "Kopieren fehlgeschlagen",
-      "copyFailedDesc": "Kopieren in Zwischenablage nicht möglich",
-      "ok": "OK"
+      "copyFailedDesc": "Kopieren in Zwischenablage nicht möglich"
     },
     "follow": {
       "failed": "Folgestatus konnte nicht aktualisiert werden"
@@ -986,6 +995,16 @@
       "maxFilesPartial": "Maximal {max} Dateien erlaubt. Einige Dateien wurden nicht hinzugefügt.",
       "unsupportedType": "\"{name}\" hat nicht unterstützten Typ \"{type}\". Unterstützte Formate: {formats}.",
       "fileTooLarge": "\"{name}\" überschreitet die maximale Größe von {maxSize}."
+    },
+    "status": {
+      "updateFailed": "Status konnte nicht aktualisiert werden. Bitte versuchen Sie es erneut.",
+      "userNotLoaded": "Benutzerprofil nicht geladen. Bitte versuchen Sie es erneut."
+    },
+    "fullscreen": {
+      "error": "Fehler beim Aktivieren des Vollbildmodus"
+    },
+    "logout": {
+      "failed": "Abmelden fehlgeschlagen. Bitte versuchen Sie es erneut."
     }
   },
   "empty": {
@@ -1021,6 +1040,7 @@
     "follow": "Folgen",
     "unfollow": "Entfolgen",
     "following": "Folge ich",
+    "editProfile": "Profil bearbeiten",
     "me": "Ich",
     "tags": "TAGS",
     "posts": "BEITRAEGE",
@@ -1117,10 +1137,15 @@
     }
   },
   "logout": {
+    "loadingTitle": "Signing you out...",
+    "loadingSubtitle": "We're ending your session securely.",
+    "errorTitle": "We couldn't sign you out yet",
+    "errorSubtitle": "Please try again to finish signing out securely.",
     "title": "Bis <highlight>bald!</highlight>",
     "subtitle": "Sie haben sich sicher abgemeldet.",
     "homepage": "Startseite",
-    "signBackIn": "Erneut anmelden"
+    "signBackIn": "Erneut anmelden",
+    "retry": "Retry"
   },
   "tradeoffs": {
     "title": "Beachten Sie diese Nachteile:",
@@ -1194,7 +1219,6 @@
     "emoji": "Emoji",
     "richText": "Rich-Text",
     "markdown": "Markdown",
-    "clearToSwitch": "Inhalt löschen, um den Modus zu wechseln",
     "placeholder": "Beginne dein Meisterwerk zu schreiben",
     "toolbarAriaLabel": "Markdown-Bearbeitungsleiste",
     "warningApproaching": "Du näherst dich dem maximalen Zeichenlimit.",

@@ -32,6 +32,7 @@
     "cancel": "الغاء",
     "confirm": "تاكيد",
     "delete": "حذف",
+    "ok": "حسنا",
     "send": "ارسال",
     "submit": "ارسال",
     "loading": "جاري التحميل...",
@@ -213,8 +214,10 @@
     },
     "lightning": {
       "title": "امسح <highlight>للدفع.</highlight>",
+      "title_mobile": "اضغط <highlight>للدفع.</highlight>",
       "subtitle": "امسح رمز QR بمحفظتك المفضلة.",
       "qrLabel": "دفع Bitcoin Lightning",
+      "payNow": "ادفع الآن",
       "payAmount": "ادفع ₿ {amount} للمتابعة.",
       "payAmountUsd": "ادفع ₿ {amount} (${usdAmount}) للمتابعة.",
       "expired": "انتهت صلاحية الدفع",
@@ -542,6 +545,12 @@
     }
   },
   "dialogs": {
+    "deletePost": {
+      "title": "حذف المنشور؟",
+      "description": "لا يمكن التراجع عن هذا الإجراء. سيتم حذف المنشور نهائياً.",
+      "confirmButton": "حذف",
+      "cancelButton": "إلغاء"
+    },
     "editPost": {
       "editArticle": "تعديل المقال",
       "editPost": "تعديل المنشور",
@@ -900,7 +909,8 @@
       "failedToLoadPosts": "فشل تحميل المنشورات الجديدة",
       "failedToLoadPostsDesc": "تعذر عرض المنشورات الجديدة. يرجى المحاولة مرة اخرى.",
       "parseError": "فشل تحليل محتوى المقال",
-      "coverImageError": "فشل تحميل صورة غلاف المقال"
+      "coverImageError": "فشل تحميل صورة غلاف المقال",
+      "attachmentsLoadFailed": "فشل تحميل المرفقات"
     },
     "bookmark": {
       "added": "تمت اضافة المفضلة",
@@ -917,8 +927,7 @@
       "textCopied": "تم نسخ النص الى الحافظة",
       "profileLinkCopied": "تم نسخ رابط الملف الشخصي الى الحافظة",
       "copyFailed": "فشل النسخ",
-      "copyFailedDesc": "تعذر النسخ الى الحافظة",
-      "ok": "حسنا"
+      "copyFailedDesc": "تعذر النسخ الى الحافظة"
     },
     "follow": {
       "failed": "فشل تحديث حالة المتابعة"
@@ -986,6 +995,16 @@
       "maxFilesPartial": "الحد الاقصى {max} ملفات. لم تتم اضافة بعض الملفات.",
       "unsupportedType": "\"{name}\" نوعه \"{type}\" غير مدعوم. الانواع المدعومة: {formats}.",
       "fileTooLarge": "\"{name}\" يتجاوز الحجم الاقصى {maxSize}."
+    },
+    "status": {
+      "updateFailed": "فشل تحديث الحالة. يرجى المحاولة مرة اخرى.",
+      "userNotLoaded": "لم يتم تحميل ملف المستخدم. يرجى المحاولة مرة اخرى."
+    },
+    "fullscreen": {
+      "error": "خطأ في محاولة تفعيل وضع ملء الشاشة"
+    },
+    "logout": {
+      "failed": "فشل تسجيل الخروج. يرجى المحاولة مرة اخرى."
     }
   },
   "empty": {
@@ -1015,6 +1034,7 @@
     "follow": "متابعة",
     "unfollow": "الغاء المتابعة",
     "following": "متابَع",
+    "editProfile": "تعديل الملف الشخصي",
     "me": "انا",
     "tags": "الوسوم",
     "posts": "المنشورات",
@@ -1111,10 +1131,15 @@
     }
   },
   "logout": {
+    "loadingTitle": "Signing you out...",
+    "loadingSubtitle": "We're ending your session securely.",
+    "errorTitle": "We couldn't sign you out yet",
+    "errorSubtitle": "Please try again to finish signing out securely.",
     "title": "إلى <highlight>اللقاء!</highlight>",
     "subtitle": "لقد قمت بتسجيل الخروج بأمان.",
     "homepage": "الصفحة الرئيسية",
-    "signBackIn": "تسجيل الدخول مجدداً"
+    "signBackIn": "تسجيل الدخول مجدداً",
+    "retry": "Retry"
   },
   "tradeoffs": {
     "title": "كن على علم بهذه المفاضلات:",
@@ -1188,7 +1213,6 @@
     "emoji": "رمز تعبيري",
     "richText": "نص منسق",
     "markdown": "ماركداون",
-    "clearToSwitch": "امسح المحتوى للتبديل بين الأوضاع",
     "placeholder": "ابدأ بكتابة تحفتك",
     "toolbarAriaLabel": "شريط أدوات تحرير ماركداون",
     "warningApproaching": "أنت تقترب من الحد الأقصى لعدد الأحرف.",

@@ -22,12 +22,15 @@ import {
   formatPreviewText,
   hasPostPreview,
 } from './NotificationItem.utils';
+import { resolvePubkyToNames } from './NotificationItem.helpers';
 import type { NotificationItemProps } from './NotificationItem.types';
 
 export function NotificationItem({ notification, isUnread }: NotificationItemProps) {
   const t = useTranslations('notifications.actions');
   const tCommon = useTranslations('common');
   const tProfile = useTranslations('profile');
+  const tToast = useTranslations('toast');
+  const tPostToast = useTranslations('toast.post');
   const tPost = useTranslations('post');
   const router = useRouter();
   const { toast } = Molecules.useToast();
@@ -61,7 +64,7 @@ export function NotificationItem({ notification, isUnread }: NotificationItemPro
     // 2. If missing, fetch from Nexus
     // 3. Write to local DB
     Core.PostController.getOrFetch({ compositeId: postCompositeId, viewerId })
-      .then((post) => {
+      .then(async (post) => {
         if (!isCancelled && post?.content) {
           if (Libs.isPostDeleted(post.content)) {
             setPostContent(tPost('deleted'));
@@ -72,12 +75,13 @@ export function NotificationItem({ notification, isUnread }: NotificationItemPro
             } catch {
               setPostContent(post.content);
               toast({
-                title: 'Error',
-                description: 'Failed to parse article content',
+                title: tToast('error'),
+                description: tPostToast('parseError'),
               });
             }
           } else {
-            setPostContent(post.content);
+            const content = await resolvePubkyToNames(post.content);
+            if (!isCancelled) setPostContent(content);
           }
         }
       })

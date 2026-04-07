@@ -2,12 +2,15 @@
 
 import { useForm, type FieldErrors } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
+import { useTranslations } from 'next-intl';
 import * as Molecules from '@/molecules';
 import { postJson } from '@/libs';
 import { copyrightFormSchema, type CopyrightFormData, type RoleField } from './useCopyrightForm.types';
 import { copyrightFormDefaultValues, COPYRIGHT_FORM_FIELDS } from './useCopyrightForm.constants';
 
 export function useCopyrightForm() {
+  const tToast = useTranslations('toast');
+  const tCopyright = useTranslations('toast.copyright');
   const form = useForm<CopyrightFormData>({
     resolver: zodResolver(copyrightFormSchema),
     defaultValues: copyrightFormDefaultValues,
@@ -19,10 +22,10 @@ export function useCopyrightForm() {
       await postJson('/api/copyright', data);
 
       form.reset();
-      Molecules.toast({ title: 'Success', description: 'Request sent successfully' });
+      Molecules.toast({ title: tToast('success'), description: tCopyright('success') });
     } catch (error) {
       Molecules.showErrorToast({
-        description: error instanceof Error ? error.message : 'Error sending request',
+        description: error instanceof Error ? error.message : tCopyright('error'),
       });
     }
   };

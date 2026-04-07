@@ -32,6 +32,7 @@
     "cancel": "Annulla",
     "confirm": "Conferma",
     "delete": "Elimina",
+    "ok": "OK",
     "send": "Invia",
     "submit": "Invia",
     "loading": "Caricamento...",
@@ -213,8 +214,10 @@
     },
     "lightning": {
       "title": "Scansiona per <highlight>pagare.</highlight>",
+      "title_mobile": "Tocca per <highlight>pagare.</highlight>",
       "subtitle": "Scansiona il codice QR con il tuo wallet preferito.",
       "qrLabel": "Pagamento Bitcoin Lightning",
+      "payNow": "Paga ora",
       "payAmount": "Paga ₿ {amount} per continuare.",
       "payAmountUsd": "Paga ₿ {amount} (${usdAmount}) per continuare.",
       "expired": "Pagamento scaduto",
@@ -542,6 +545,12 @@
     }
   },
   "dialogs": {
+    "deletePost": {
+      "title": "Eliminare il post?",
+      "description": "Questa azione non può essere annullata. Il post verrà eliminato definitivamente.",
+      "confirmButton": "Elimina",
+      "cancelButton": "Annulla"
+    },
     "editPost": {
       "editArticle": "Modifica articolo",
       "editPost": "Modifica post",
@@ -900,7 +909,8 @@
       "failedToLoadPosts": "Caricamento nuovi post fallito",
       "failedToLoadPostsDesc": "Impossibile visualizzare nuovi post. Riprova.",
       "parseError": "Analisi contenuto articolo fallita",
-      "coverImageError": "Caricamento immagine di copertina articolo fallito"
+      "coverImageError": "Caricamento immagine di copertina articolo fallito",
+      "attachmentsLoadFailed": "Caricamento allegati fallito"
     },
     "bookmark": {
       "added": "Segnalibro aggiunto",
@@ -917,8 +927,7 @@
       "textCopied": "Testo copiato negli appunti",
       "profileLinkCopied": "Link profilo copiato negli appunti",
       "copyFailed": "Copia fallita",
-      "copyFailedDesc": "Impossibile copiare negli appunti",
-      "ok": "OK"
+      "copyFailedDesc": "Impossibile copiare negli appunti"
     },
     "follow": {
       "failed": "Aggiornamento stato follow fallito"
@@ -986,6 +995,16 @@
       "maxFilesPartial": "Massimo {max} file consentiti. Alcuni file non sono stati aggiunti.",
       "unsupportedType": "\"{name}\" ha tipo non supportato \"{type}\". Formati supportati: {formats}.",
       "fileTooLarge": "\"{name}\" supera la dimensione massima di {maxSize}."
+    },
+    "status": {
+      "updateFailed": "Impossibile aggiornare lo stato. Riprova.",
+      "userNotLoaded": "Profilo utente non caricato. Riprova."
+    },
+    "fullscreen": {
+      "error": "Errore durante l'attivazione della modalità schermo intero"
+    },
+    "logout": {
+      "failed": "Disconnessione fallita. Riprova."
     }
   },
   "empty": {
@@ -1021,6 +1040,7 @@
     "follow": "Segui",
     "unfollow": "Non seguire",
     "following": "Seguiti",
+    "editProfile": "Modifica profilo",
     "me": "Io",
     "tags": "TAG",
     "posts": "POST",
@@ -1117,10 +1137,15 @@
     }
   },
   "logout": {
+    "loadingTitle": "Signing you out...",
+    "loadingSubtitle": "We're ending your session securely.",
+    "errorTitle": "We couldn't sign you out yet",
+    "errorSubtitle": "Please try again to finish signing out securely.",
     "title": "A <highlight>presto!</highlight>",
     "subtitle": "Ti sei disconnesso in modo sicuro.",
     "homepage": "Homepage",
-    "signBackIn": "Accedi di nuovo"
+    "signBackIn": "Accedi di nuovo",
+    "retry": "Retry"
   },
   "tradeoffs": {
     "title": "Sii consapevole di questi svantaggi:",
@@ -1194,7 +1219,6 @@
     "emoji": "Emoji",
     "richText": "Testo formattato",
     "markdown": "Markdown",
-    "clearToSwitch": "Cancella il contenuto per cambiare modalità",
     "placeholder": "Inizia a scrivere il tuo capolavoro",
     "toolbarAriaLabel": "Barra degli strumenti per la modifica Markdown",
     "warningApproaching": "Ti stai avvicinando al limite massimo di caratteri.",

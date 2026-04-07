@@ -605,6 +605,53 @@ describe('usePostInput', () => {
       expect(mockOnSuccess).toHaveBeenCalledWith('created-post-id');
     });
 
+    it('collapses PostInput after successful post submission', async () => {
+      mockContent = 'Test content';
+      mockPost.mockImplementation(async ({ onSuccess }) => {
+        onSuccess('created-post-id');
+      });
+
+      const { result } = renderHook(() =>
+        usePostInput({
+          variant: 'post',
+        }),
+      );
+
+      act(() => {
+        result.current.handleExpand();
+      });
+      expect(result.current.isExpanded).toBe(true);
+
+      await act(async () => {
+        await result.current.handleSubmit();
+      });
+
+      expect(result.current.isExpanded).toBe(false);
+    });
+
+    it('does not collapse PostInput after successful reply submission', async () => {
+      mockContent = 'Test reply';
+      mockReply.mockImplementation(async ({ onSuccess }) => {
+        onSuccess('created-reply-id');
+      });
+
+      const { result } = renderHook(() =>
+        usePostInput({
+          variant: 'reply',
+          postId: 'parent-post-id',
+          expanded: true,
+        }),
+      );
+
+      expect(result.current.isExpanded).toBe(true);
+
+      await act(async () => {
+        await result.current.handleSubmit();
+      });
+
+      expect(result.current.isExpanded).toBe(true);
+    });
+
     it('stores local attachments when submission succeeds with attachments', async () => {
       mockContent = 'Test content with attachments';
       const imageFile = new File(['image content'], 'test-image.png', { type: 'image/png' });

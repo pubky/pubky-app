@@ -45,10 +45,14 @@ Use `Err.*` factories (never raw `Error`). Factories log automatically — don't
 ## Learned User Preferences
 
 - Bug fixes must not regress existing visible functionality (e.g., reducing displayed item count from 3 to 2)
+- For icon / circular nav matching Figma, confirm active vs inactive from the Shadcn button component variants (Selected vs Default: background, border, shadow), not only the parent frame or another surface’s pattern
 
 ## Learned Workspace Facts
 
+- Nav items that link to a default child route (e.g. footer Settings → `SETTINGS_ROUTES.ACCOUNT`) but must stay visually active on sibling routes under the parent (e.g. `/settings/notifications`) need active detection on a broader prefix (e.g. `activePrefix: APP_ROUTES.SETTINGS`), not only `href` or `pathname.startsWith(href + '/')`
 - Config constants in `src/config/` (e.g., `USER_LIST_TAGS_MAX_TOTAL_CHARS`, tag limits) are project-wide hard limits — do not modify them for individual component fixes
+- This project uses Zod v4 — use `z.url()` for URL validation, not the deprecated `z.string().url()`
+- PWA / service worker: Serwist via `@serwist/next` in `next.config` (core package `serwist`), not Workbox or `next-pwa`
 
 ## Documentation
 

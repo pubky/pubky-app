@@ -1,24 +1,37 @@
+import React from 'react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen, fireEvent } from '@testing-library/react';
 import { PostLinkEmbeds } from './PostLinkEmbeds';
 
 vi.mock('@/atoms', () => ({
-  Container: ({
-    children,
-    className,
-    onClick,
-    'data-testid': dataTestId,
-    'data-theme': dataTheme,
-  }: {
-    children: React.ReactNode;
-    className?: string;
-    onClick?: (e: React.MouseEvent) => void;
-    'data-testid'?: string;
-    'data-theme'?: string;
-  }) => (
-    <div data-testid={dataTestId || 'container'} data-theme={dataTheme} className={className} onClick={onClick}>
-      {children}
-    </div>
+  // eslint-disable-next-line react/display-name -- forwardRef with anonymous render fn; display name is irrelevant in test mocks
+  Container: React.forwardRef(
+    (
+      {
+        children,
+        className,
+        onClick,
+        'data-testid': dataTestId,
+        'data-theme': dataTheme,
+      }: {
+        children: React.ReactNode;
+        className?: string;
+        onClick?: (e: React.MouseEvent) => void;
+        'data-testid'?: string;
+        'data-theme'?: string;
+      },
+      ref: React.Ref<HTMLDivElement>,
+    ) => (
+      <div
+        ref={ref}
+        data-testid={dataTestId || 'container'}
+        data-theme={dataTheme}
+        className={className}
+        onClick={onClick}
+      >
+        {children}
+      </div>
+    ),
   ),
   Iframe: ({
     'data-testid': dataTestId,
@@ -569,6 +582,40 @@ describe('PostLinkEmbeds', () => {
       expect(tweet).toBeInTheDocument();
       expect(tweet).toHaveAttribute('data-tweet-id', '987654321');
       expect(tweet).toHaveTextContent('Mocked Tweet 987654321');
+    });
+
+    it('intercepts video click and opens tweet on X', () => {
+      const windowOpenSpy = vi.spyOn(window, 'open').mockImplementation(() => null);
+
+      render(<PostLinkEmbeds content="https://x.com/user/status/123456789" />);
+
+      const container = screen.getByTestId('twitter-container');
+
+      // Simulate a click on a video element inside the container
+      const video = document.createElement('video');
+      container.querySelector('[data-testid="twitter-tweet"]')!.appendChild(video);
+      fireEvent.click(video);
+
+      expect(windowOpenSpy).toHaveBeenCalledWith('https://x.com/i/status/123456789', '_blank', 'noopener,noreferrer');
+
+      windowOpenSpy.mockRestore();
+    });
+
+    // Verifies that our video click interception handler does NOT trigger
+    // for non-video elements (e.g. tweet text, profile links).
+    // Note: This uses a mocked Tweet component (plain <div>), so it only tests
+    // our handler logic — not the real react-tweet link behavior.
+    it('video click handler does not intercept clicks on non-video elements', () => {
+      const windowOpenSpy = vi.spyOn(window, 'open').mockImplementation(() => null);
+
+      render(<PostLinkEmbeds content="https://x.com/user/status/123456789" />);
+
+      const tweet = screen.getByTestId('twitter-tweet');
+      fireEvent.click(tweet);
+
+      expect(windowOpenSpy).not.toHaveBeenCalled();
+
+      windowOpenSpy.mockRestore();
     });
   });
 

@@ -68,6 +68,47 @@ describe('Toaster', () => {
     expect(descriptionElement).not.toHaveClass('truncate');
   });
 
+  it('should render dismiss button when dismissButton is true', () => {
+    const mockDismiss = vi.fn();
+    mockUseToast.mockReturnValue({
+      toasts: [
+        {
+          id: 'dismiss-toast',
+          title: 'Success',
+          description: 'Operation completed',
+          dismissButton: true,
+          open: true,
+        },
+      ],
+      dismiss: mockDismiss,
+    });
+
+    render(<Toaster />);
+
+    const okButton = screen.getByRole('button', { name: 'OK' });
+    expect(okButton).toBeInTheDocument();
+
+    fireEvent.click(okButton);
+    expect(mockDismiss).toHaveBeenCalledWith('dismiss-toast');
+  });
+
+  it('should not render dismiss button when dismissButton is not set', () => {
+    mockUseToast.mockReturnValue({
+      toasts: [
+        {
+          id: 'no-dismiss',
+          title: 'Simple toast',
+          open: true,
+        },
+      ],
+      dismiss: vi.fn(),
+    });
+
+    render(<Toaster />);
+
+    expect(screen.queryByRole('button', { name: 'OK' })).not.toBeInTheDocument();
+  });
+
   it('should handle complex toast with action button click', () => {
     const handleActionClick = vi.fn();
     const mockAction = (

@@ -51,11 +51,11 @@ describe('Button', () => {
   it('renders different sizes correctly', () => {
     const { rerender } = render(<Button size="sm">Small</Button>);
     let button = screen.getByRole('button');
-    expect(button).toHaveClass('h-8', 'gap-1.5', 'px-3', 'has-[>svg]:px-2.5', 'text-sm');
+    expect(button).toHaveClass('h-8', 'gap-1.5', 'px-3', 'has-[>svg]:px-3.5', 'text-sm');
 
     rerender(<Button size="lg">Large</Button>);
     button = screen.getByRole('button');
-    expect(button).toHaveClass('h-auto', 'px-4', 'py-2.5', 'sm:px-8', 'sm:py-5');
+    expect(button).toHaveClass('h-auto', 'gap-2', 'px-8', 'py-5', 'text-sm', 'font-bold', 'leading-normal');
 
     rerender(<Button size="icon">Icon</Button>);
     button = screen.getByRole('button');

@@ -15,7 +15,6 @@ const {
   mockUseFollowUser,
   mockUseMuteUser,
   mockUseMutedUsers,
-  mockUseDeletePost,
   mockUseCopyToClipboard,
   mockToast,
 } = vi.hoisted(() => ({
@@ -28,7 +27,6 @@ const {
   mockUseFollowUser: vi.fn(),
   mockUseMuteUser: vi.fn(),
   mockUseMutedUsers: vi.fn(),
-  mockUseDeletePost: vi.fn(),
   mockUseCopyToClipboard: vi.fn(),
   mockToast: vi.fn(),
 }));
@@ -47,7 +45,6 @@ vi.mock('@/hooks', () => ({
   useFollowUser: () => mockUseFollowUser(),
   useMuteUser: () => mockUseMuteUser(),
   useMutedUsers: () => mockUseMutedUsers(),
-  useDeletePost: (postId: string) => mockUseDeletePost(postId),
   useCopyToClipboard: (options: unknown) => mockUseCopyToClipboard(options),
 }));
 
@@ -100,8 +97,6 @@ describe('usePostMenuActions', () => {
     isMuteLoading: false,
     isMuteUserLoading: vi.fn().mockReturnValue(false),
     isMuted: vi.fn().mockReturnValue(false),
-    deletePost: vi.fn(),
-    isDeleting: false,
     copyToClipboard: vi.fn().mockResolvedValue(true),
   };
 
@@ -151,11 +146,6 @@ describe('usePostMenuActions', () => {
       mutedUserIdSet: new Set(),
       isMuted: defaultMocks.isMuted,
       isLoading: false,
-    });
-
-    mockUseDeletePost.mockReturnValue({
-      deletePost: defaultMocks.deletePost,
-      isDeleting: defaultMocks.isDeleting,
     });
 
     mockUseCopyToClipboard.mockReturnValue({
@@ -378,19 +368,23 @@ describe('usePostMenuActions', () => {
     });
 
     it('disables delete action when deleting', () => {
-      mockUseDeletePost.mockReturnValue({
-        deletePost: defaultMocks.deletePost,
-        isDeleting: true,
-      });
-
-      const { result } = renderHook(() => usePostMenuActions(mockPostId, { onReportClick: vi.fn() }));
+      const { result } = renderHook(() =>
+        usePostMenuActions(mockPostId, { onReportClick: vi.fn(), onDeleteClick: vi.fn(), isDeleting: true }),
+      );
 
       const deleteItem = result.current.menuItems.find((item) => item.id === POST_MENU_ACTION_IDS.DELETE);
       expect(deleteItem?.disabled).toBe(true);
     });
 
-    it('calls deletePost on delete action click', async () => {
-      const { result } = renderHook(() => usePostMenuActions(mockPostId, { onReportClick: vi.fn() }));
+    it('calls onDeleteClick on delete action click', async () => {
+      const mockOnDeleteClick = vi.fn();
+      const { result } = renderHook(() =>
+        usePostMenuActions(mockPostId, {
+          onReportClick: vi.fn(),
+          onEditClick: vi.fn(),
+          onDeleteClick: mockOnDeleteClick,
+        }),
+      );
 
       const deleteItem = result.current.menuItems.find((item) => item.id === POST_MENU_ACTION_IDS.DELETE);
 
@@ -398,7 +392,7 @@ describe('usePostMenuActions', () => {
         await deleteItem?.onClick();
       });
 
-      expect(defaultMocks.deletePost).toHaveBeenCalled();
+      expect(mockOnDeleteClick).toHaveBeenCalled();
     });
   });
 
