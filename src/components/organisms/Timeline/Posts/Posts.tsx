@@ -28,9 +28,9 @@ const virtuosoComponents = { Footer: TimelineVirtuosoFooter };
 /**
  * Extracted from Virtuoso's `itemContent` callback so hooks are valid: hooks must run
  * only at the top level of a React component (or custom hook), not inside plain
- * render callbacks. Here we need `usePostDetails` / `usePostNavigation` to hide
- * soft-deleted feed items once details resolve (stream filter is fail-open when
- * details are not cached yet).
+ * render callbacks. `usePostDetails` gates each row: render nothing until details exist,
+ * then hide soft-deleted items (`[DELETED]`). The stream list itself can still contain
+ * ids before details are cached; rows stay empty until local-first details resolve.
  */
 function TimelinePostItem({ postId, tagsLayout }: { postId: string; tagsLayout?: TagsLayout }) {
   const { navigateToPost } = Hooks.usePostNavigation();

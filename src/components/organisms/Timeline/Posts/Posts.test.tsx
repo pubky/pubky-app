@@ -393,7 +393,7 @@ describe('TimelinePosts', () => {
       });
     });
 
-    it('still renders the row while post details are unresolved (loading)', async () => {
+    it('does not render PostMain while post details are unresolved (loading)', async () => {
       mockUsePostDetails.mockImplementation(() => ({
         postDetails: undefined,
         isLoading: true,
@@ -411,7 +411,7 @@ describe('TimelinePosts', () => {
       );
 
       await waitFor(() => {
-        expect(screen.getByTestId('post-author:pending')).toBeInTheDocument();
+        expect(screen.queryByTestId('post-author:pending')).not.toBeInTheDocument();
       });
     });
   });
