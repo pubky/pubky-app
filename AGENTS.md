@@ -63,3 +63,25 @@ Consult `docs/` before making changes:
 - `src/libs/env/` changes → `docs/environment.md`
 - Commits → `docs/commit-message.md`
 - Architecture decisions → `docs/adr/`
+
+## Cursor Cloud specific instructions
+
+### Services
+
+This is a **pure Next.js frontend** — no local database or backend needed. All external services (Nexus API, Homeserver, CDN, HTTP Relay, Pkarr Relays, Homegate) have **staging defaults** baked into the Zod schema at `src/libs/env/env.ts`, so the app runs without a `.env` file. Copy `.env.example` to `.env` only if you need to override defaults.
+
+### Running
+
+- **Dev server**: `npm run dev` (port 3000, Turbopack)
+- **Lint**: `npm run lint` (ESLint)
+- **Format check**: `npm run format:check` (Prettier)
+- **Unit tests**: `npm run test` (Vitest — ~580 test files, ~9300 tests, takes ~9 min)
+- **E2E tests**: `npm run test:e2e` (Cypress with Firefox — requires external staging services to be reachable)
+- **Storybook**: `npm run storybook` (port 6006)
+
+### Caveats
+
+- `.nvmrc` specifies Node.js **v24**. The VM update script installs it via nvm automatically.
+- The pre-commit hook runs `format:check` then `lint` — both must pass before committing. Run `npm run format` to auto-fix formatting.
+- Account creation requires SMS verification or Bitcoin payment against staging infrastructure — you cannot create a real account in the cloud VM without external credentials.
+- Vitest tests use `fake-indexeddb` and `jsdom` — no browser needed for unit tests.
