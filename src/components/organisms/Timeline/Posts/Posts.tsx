@@ -37,7 +37,7 @@ function TimelinePostItem({ postId, tagsLayout }: { postId: string; tagsLayout?:
   const { postDetails } = Hooks.usePostDetails(postId);
   const isDeleted = Libs.isPostDeleted(postDetails?.content);
 
-  if (isDeleted) return null;
+  if (!postDetails || isDeleted) return null;
 
   return (
     <Atoms.Container data-cy="post-card" overrideDefaults className="pb-4">
