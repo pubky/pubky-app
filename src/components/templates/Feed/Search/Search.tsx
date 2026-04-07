@@ -32,13 +32,22 @@ export function Search() {
     <>
       <Organisms.DialogWelcome />
       <Organisms.ContentLayout
+        feedVariant={TIMELINE_FEED_VARIANT.SEARCH}
         showRightMobileButton={false}
-        leftSidebarContent={<Organisms.HomeFeedSidebar hideReachFilter feedVariant={TIMELINE_FEED_VARIANT.SEARCH} />}
+        leftSidebarContent={
+          <Organisms.HomeFeedSidebar hideReachFilter allowVisualLayout feedVariant={TIMELINE_FEED_VARIANT.SEARCH} />
+        }
         rightSidebarContent={<Organisms.HomeFeedRightSidebar />}
-        leftDrawerContent={<Organisms.HomeFeedDrawer hideReachFilter feedVariant={TIMELINE_FEED_VARIANT.SEARCH} />}
+        leftDrawerContent={
+          <Organisms.HomeFeedDrawer hideReachFilter allowVisualLayout feedVariant={TIMELINE_FEED_VARIANT.SEARCH} />
+        }
         rightDrawerContent={<Organisms.HomeFeedRightDrawer />}
         leftDrawerContentMobile={
-          <Organisms.HomeFeedDrawerMobile hideReachFilter feedVariant={TIMELINE_FEED_VARIANT.SEARCH} />
+          <Organisms.HomeFeedDrawerMobile
+            hideReachFilter
+            allowVisualLayout
+            feedVariant={TIMELINE_FEED_VARIANT.SEARCH}
+          />
         }
       >
         {/* Mobile search input - hidden on desktop (shown in header there) */}

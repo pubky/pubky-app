@@ -55,10 +55,11 @@ function parseTags(tagsParam: string | null): string[] {
  * }
  * ```
  */
-export function useSearchStreamId(): Core.PostStreamId | undefined {
+export function useSearchStreamId(contentOverride?: Core.ContentType): Core.PostStreamId | undefined {
   const searchParams = useSearchParams();
   const sort = Core.useHomeStore((state) => state.sort);
-  const content = Core.useHomeStore((state) => state.content);
+  const storeContent = Core.useHomeStore((state) => state.content);
+  const content = contentOverride ?? storeContent;
 
   const streamId = useMemo(() => {
     const tags = parseTags(searchParams.get('tags'));
