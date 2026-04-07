@@ -4,6 +4,7 @@ import { ReachType, REACH } from '../home/home.types';
 // Hot page constants
 export const TIMEFRAME = {
   TODAY: UserStreamTimeframe.TODAY,
+  THIS_WEEK: UserStreamTimeframe.THIS_WEEK,
   THIS_MONTH: UserStreamTimeframe.THIS_MONTH,
   ALL_TIME: UserStreamTimeframe.ALL_TIME,
 } as const;

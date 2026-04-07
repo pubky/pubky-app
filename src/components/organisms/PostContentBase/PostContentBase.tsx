@@ -46,6 +46,8 @@ export function PostContentBase({ postId, className }: PostContentBaseProps) {
       />
     );
 
+  if (!hasContent && !postDetails.attachments?.length && !localAttachments) return null;
+
   return (
     <Atoms.Container className={Libs.cn('min-w-0 gap-3', className)}>
       {/* Post text */}

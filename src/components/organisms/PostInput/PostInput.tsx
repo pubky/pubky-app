@@ -17,6 +17,8 @@ import { PostInputAttachments } from '@/molecules/PostInputAttachments/PostInput
 import type { ArticleJSON } from '@/hooks';
 import { sanitizeCodeBlockLanguages } from '@/molecules/MarkdownEditor/InitializedMDXEditor.utils';
 
+const EXPANDABLE_SECTION_PARENT_GAP_PX = 16;
+
 export function PostInput({
   dataCy,
   id,
@@ -273,6 +275,7 @@ export function PostInput({
           onArticleClick={handleArticleClick}
           isPostDisabled={!isValid()}
           submitMode={variant}
+          parentGapPx={EXPANDABLE_SECTION_PARENT_GAP_PX}
           characterLimit={characterLimit}
         />
       </Atoms.Container>

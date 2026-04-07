@@ -66,6 +66,13 @@ describe('HotStore', () => {
       expect(useHotStore.getState().timeframe).toBe(TIMEFRAME.TODAY);
     });
 
+    it('should set timeframe to this week', () => {
+      const store = useHotStore.getState();
+
+      store.setTimeframe(TIMEFRAME.THIS_WEEK);
+      expect(useHotStore.getState().timeframe).toBe(TIMEFRAME.THIS_WEEK);
+    });
+
     it('should set timeframe to this month', () => {
       const store = useHotStore.getState();
 

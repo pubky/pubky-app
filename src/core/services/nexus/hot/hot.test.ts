@@ -234,10 +234,11 @@ describe('NexusHotService', () => {
       const queryNexusSpy = vi.spyOn(Core, 'queryNexus').mockResolvedValue(mockHotTags);
 
       await NexusHotService.fetch({ timeframe: Core.UserStreamTimeframe.TODAY });
+      await NexusHotService.fetch({ timeframe: Core.UserStreamTimeframe.THIS_WEEK });
       await NexusHotService.fetch({ timeframe: Core.UserStreamTimeframe.THIS_MONTH });
       await NexusHotService.fetch({ timeframe: Core.UserStreamTimeframe.ALL_TIME });
 
-      expect(queryNexusSpy).toHaveBeenCalledTimes(3);
+      expect(queryNexusSpy).toHaveBeenCalledTimes(4);
     });
   });
 });
