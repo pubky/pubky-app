@@ -37,7 +37,7 @@ exports[`GenericPreview - Snapshots > matches snapshot for image type 1`] = `
 exports[`GenericPreview - Snapshots > matches snapshot for loading state 1`] = `
 <div>
   <div
-    class="mx-auto w-full flex-col flex justify-between gap-6 rounded-md bg-muted p-6 lg:flex-row"
+    class="mx-auto w-full flex-col flex justify-between gap-6 rounded-md p-6 lg:flex-row"
     data-testid="container"
   >
     <div
