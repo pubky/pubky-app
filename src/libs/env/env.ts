@@ -168,8 +168,10 @@ const envSchema = z.object({
   /** Homegate authentication service URL */
   NEXT_PUBLIC_HOMEGATE_URL: z.url().default('https://homegate.staging.pubky.app'),
 
-  // Prelude SDK key for sending client browser signals for SMS fraud prevention.
-  // Optional. If not set we still use Prelude but without providing all available client signals.
+  // Prelude SDK key for collecting client browser signals for SMS fraud prevention.
+  // This is a public/publishable key (distinct from the secret Prelude API key used server-side).
+  // It is safe to expose in client-side bundles.
+  // Optional: if not set, signals are not dispatched.
   NEXT_PUBLIC_PRELUDE_SDK_KEY: z.string().optional(),
 
   /** Prelude SDK signal dispatch timeout in milliseconds (default: 5000) */

@@ -18,6 +18,7 @@ import {
   ErrorService,
   HttpStatusCode,
   JSON_HEADERS,
+  Logger,
   httpResponseToError,
   safeFetch,
   parseResponseOrThrow,
@@ -91,7 +92,7 @@ export class HomegateService {
         ),
       ]);
     } catch (error) {
-      console.warn('Prelude dispatchSignals failed:', error);
+      Logger.warn('Prelude dispatchSignals failed:', error);
       return undefined;
     }
   }
@@ -132,7 +133,7 @@ export class HomegateService {
    */
   static async sendSmsCode(phoneNumber: string): Promise<TSendSmsCodeResult> {
     const url = homegateApi.sendSmsCode();
-    const body: Record<string, string> = { phoneNumber };
+    const body: { phoneNumber: string; dispatchId?: string } = { phoneNumber };
 
     // Get Prelude dispatch ID for fraud prevention (non-blocking if it fails or times out)
     const dispatchId = await this.getPreludeDispatchId();
