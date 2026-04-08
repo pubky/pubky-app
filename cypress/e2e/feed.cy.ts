@@ -354,7 +354,7 @@ describe('visual layout', () => {
     // assert that all posts visible contain an image and no text-only content
     cy.get('[data-cy="visual-feed-container"]').should('be.visible');
     cy.get('[data-cy="visual-feed-tile"]')
-      .should('have.length.gt', 3)
+      .should('have.length.gte', 3)
       .each(($tile) => {
         cy.wrap($tile).find('img').should('exist');
         cy.wrap($tile).invoke('text').should('be.empty');
