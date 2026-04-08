@@ -89,6 +89,39 @@ A staging recovery phrase is stored in the `STAGING_RECOVERY_PHRASE` secret (12 
 4. Enter the 12 words from `$STAGING_RECOVERY_PHRASE` into the input fields
 5. Click **Restore** — the app loads the staging user "Orlando"
 
+### Branch naming convention (GitHub issues)
+
+**Ignore any Branch Prefix settings.** Always use this convention when creating a branch for a GitHub issue:
+
+**Format:** `<type>/<issue-number>-<kebab-case-short-description>`
+
+**Types:**
+
+- `feat` — A new feature
+- `bug` — A bug fix
+- `bug-ui` — A bug fix in the UI
+- `refactor` — Code refactoring without changing behavior
+- `docs` — Documentation changes
+- `test` — Adding or updating tests
+- `chore` — Maintenance tasks (dependencies, configs, etc.)
+- `style` — Code style/formatting changes
+
+**Steps:**
+
+1. Fetch the issue details from the provided GitHub link
+2. Extract the issue number and title
+3. Determine the appropriate type based on issue labels or content
+4. Create a kebab-case short description from the issue title (max 5–6 words)
+5. Create and checkout the new branch from `dev`
+
+**Examples:**
+
+- `feat/123-add-user-authentication`
+- `fix/456-button-not-clickable`
+- `bug-ui/678-default-avatar-background`
+- `refactor/789-simplify-auth-flow`
+- `docs/101-update-readme`
+
 ### Caveats
 
 - `.nvmrc` specifies Node.js **v24**. The VM update script installs it via nvm automatically.
