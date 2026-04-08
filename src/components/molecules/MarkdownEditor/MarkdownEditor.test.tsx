@@ -95,10 +95,10 @@ describe('MarkdownEditor', () => {
   it('renders loading state with skeleton', () => {
     render(<MarkdownEditor markdown="" />);
 
-    const skeleton = screen.getByTestId('skeleton');
-    expect(skeleton).toBeInTheDocument();
-    expect(skeleton).toHaveClass('h-22');
-    expect(skeleton).toHaveClass('rounded-md');
+    const skeletons = screen.getAllByTestId('skeleton');
+    expect(skeletons.length).toBe(2);
+    expect(skeletons[0]).toHaveClass('h-11');
+    expect(skeletons[1]).toHaveClass('h-4');
   });
 
   it('passes props to the editor', () => {
