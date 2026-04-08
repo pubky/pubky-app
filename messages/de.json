@@ -1078,6 +1078,7 @@
     "timeframe": {
       "title": "Zeitraum",
       "today": "Heute",
+      "thisWeek": "Diese Woche",
       "thisMonth": "Diesen Monat",
       "allTime": "Alle Zeit"
     }

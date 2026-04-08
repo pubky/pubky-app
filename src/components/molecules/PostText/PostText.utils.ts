@@ -1,6 +1,7 @@
 import type { Root, Paragraph, Text, Link, PhrasingContent, Parent, RootContent } from 'mdast';
 import { ReactNode } from 'react';
 import { visit } from 'unist-util-visit';
+import { Identity } from '@/libs';
 import { TRUNCATION_LIMIT } from './PostText.constants';
 
 // We assign full code blocks without a language specified as plaintext (ex. ```...```)
@@ -154,7 +155,7 @@ export const remarkHashtags = createPatternPlugin({
 // Mention pattern: pk: or pubky followed by exactly 52 lowercase alphanumeric characters
 // Must be at start of text or preceded by whitespace (standalone)
 export const remarkMentions = createPatternPlugin({
-  regex: /(^|\s)((?:pk:|pubky)[a-z0-9]{52})/g,
+  regex: new RegExp(`(^|\\s)(${Identity.PUBKY_IDENTIFIER_WITH_PREFIX_SOURCE})`, 'g'),
   getUrl: (mention: string) => {
     // Extract the public key without the prefix (pk: or pubky)
     const publicKey = mention.startsWith('pk:') ? mention.slice(3) : mention.slice(5);

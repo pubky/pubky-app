@@ -3,7 +3,7 @@
 exports[`MobileFooter - Snapshots > matches snapshot for navigation links 1`] = `
 <a
   aria-label="Home"
-  class="rounded-full p-3 shadow-xs backdrop-blur-sm transition-all bg-secondary"
+  class="rounded-full p-3 transition-all bg-secondary"
   href="/home"
 >
   <svg
@@ -66,7 +66,7 @@ exports[`MobileFooter - Snapshots > matches snapshot with custom className 1`] =
   >
     <a
       aria-label="Home"
-      class="rounded-full p-3 shadow-xs backdrop-blur-sm transition-all bg-secondary"
+      class="rounded-full p-3 transition-all bg-secondary"
       href="/home"
     >
       <svg
@@ -92,7 +92,7 @@ exports[`MobileFooter - Snapshots > matches snapshot with custom className 1`] =
     </a>
     <a
       aria-label="Search"
-      class="rounded-full p-3 shadow-xs backdrop-blur-sm transition-all border border-border bg-white/5"
+      class="rounded-full p-3 transition-all border border-border bg-white/5 backdrop-blur-sm hover:bg-white/10"
       href="/search"
     >
       <svg
@@ -120,7 +120,7 @@ exports[`MobileFooter - Snapshots > matches snapshot with custom className 1`] =
     </a>
     <a
       aria-label="Hot"
-      class="rounded-full p-3 shadow-xs backdrop-blur-sm transition-all border border-border bg-white/5"
+      class="rounded-full p-3 transition-all border border-border bg-white/5 backdrop-blur-sm hover:bg-white/10"
       href="/hot"
     >
       <svg
@@ -143,7 +143,7 @@ exports[`MobileFooter - Snapshots > matches snapshot with custom className 1`] =
     </a>
     <a
       aria-label="Bookmarks"
-      class="rounded-full p-3 shadow-xs backdrop-blur-sm transition-all border border-border bg-white/5"
+      class="rounded-full p-3 transition-all border border-border bg-white/5 backdrop-blur-sm hover:bg-white/10"
       href="/bookmarks"
     >
       <svg
@@ -166,7 +166,7 @@ exports[`MobileFooter - Snapshots > matches snapshot with custom className 1`] =
     </a>
     <a
       aria-label="Settings"
-      class="rounded-full p-3 shadow-xs backdrop-blur-sm transition-all border border-border bg-white/5"
+      class="rounded-full p-3 transition-all border border-border bg-white/5 backdrop-blur-sm hover:bg-white/10"
       href="/settings/account"
     >
       <svg
@@ -230,7 +230,7 @@ exports[`MobileFooter - Snapshots > matches snapshot with default props 1`] = `
   >
     <a
       aria-label="Home"
-      class="rounded-full p-3 shadow-xs backdrop-blur-sm transition-all bg-secondary"
+      class="rounded-full p-3 transition-all bg-secondary"
       href="/home"
     >
       <svg
@@ -256,7 +256,7 @@ exports[`MobileFooter - Snapshots > matches snapshot with default props 1`] = `
     </a>
     <a
       aria-label="Search"
-      class="rounded-full p-3 shadow-xs backdrop-blur-sm transition-all border border-border bg-white/5"
+      class="rounded-full p-3 transition-all border border-border bg-white/5 backdrop-blur-sm hover:bg-white/10"
       href="/search"
     >
       <svg
@@ -284,7 +284,7 @@ exports[`MobileFooter - Snapshots > matches snapshot with default props 1`] = `
     </a>
     <a
       aria-label="Hot"
-      class="rounded-full p-3 shadow-xs backdrop-blur-sm transition-all border border-border bg-white/5"
+      class="rounded-full p-3 transition-all border border-border bg-white/5 backdrop-blur-sm hover:bg-white/10"
       href="/hot"
     >
       <svg
@@ -307,7 +307,7 @@ exports[`MobileFooter - Snapshots > matches snapshot with default props 1`] = `
     </a>
     <a
       aria-label="Bookmarks"
-      class="rounded-full p-3 shadow-xs backdrop-blur-sm transition-all border border-border bg-white/5"
+      class="rounded-full p-3 transition-all border border-border bg-white/5 backdrop-blur-sm hover:bg-white/10"
       href="/bookmarks"
     >
       <svg
@@ -330,7 +330,7 @@ exports[`MobileFooter - Snapshots > matches snapshot with default props 1`] = `
     </a>
     <a
       aria-label="Settings"
-      class="rounded-full p-3 shadow-xs backdrop-blur-sm transition-all border border-border bg-white/5"
+      class="rounded-full p-3 transition-all border border-border bg-white/5 backdrop-blur-sm hover:bg-white/10"
       href="/settings/account"
     >
       <svg
@@ -394,7 +394,7 @@ exports[`MobileFooter - Snapshots > matches snapshot with different active path 
   >
     <a
       aria-label="Home"
-      class="rounded-full p-3 shadow-xs backdrop-blur-sm transition-all border border-border bg-white/5"
+      class="rounded-full p-3 transition-all border border-border bg-white/5 backdrop-blur-sm hover:bg-white/10"
       href="/home"
     >
       <svg
@@ -420,7 +420,7 @@ exports[`MobileFooter - Snapshots > matches snapshot with different active path 
     </a>
     <a
       aria-label="Search"
-      class="rounded-full p-3 shadow-xs backdrop-blur-sm transition-all bg-secondary"
+      class="rounded-full p-3 transition-all bg-secondary"
       href="/search"
     >
       <svg
@@ -448,7 +448,7 @@ exports[`MobileFooter - Snapshots > matches snapshot with different active path 
     </a>
     <a
       aria-label="Hot"
-      class="rounded-full p-3 shadow-xs backdrop-blur-sm transition-all border border-border bg-white/5"
+      class="rounded-full p-3 transition-all border border-border bg-white/5 backdrop-blur-sm hover:bg-white/10"
       href="/hot"
     >
       <svg
@@ -471,7 +471,7 @@ exports[`MobileFooter - Snapshots > matches snapshot with different active path 
     </a>
     <a
       aria-label="Bookmarks"
-      class="rounded-full p-3 shadow-xs backdrop-blur-sm transition-all border border-border bg-white/5"
+      class="rounded-full p-3 transition-all border border-border bg-white/5 backdrop-blur-sm hover:bg-white/10"
       href="/bookmarks"
     >
       <svg
@@ -494,7 +494,7 @@ exports[`MobileFooter - Snapshots > matches snapshot with different active path 
     </a>
     <a
       aria-label="Settings"
-      class="rounded-full p-3 shadow-xs backdrop-blur-sm transition-all border border-border bg-white/5"
+      class="rounded-full p-3 transition-all border border-border bg-white/5 backdrop-blur-sm hover:bg-white/10"
       href="/settings/account"
     >
       <svg

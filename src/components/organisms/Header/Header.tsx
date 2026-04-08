@@ -31,7 +31,7 @@ export function Header() {
   // Onboarding or non-authenticated route
   const isOnboardingOrNonAuthenticatedRoute = isOnboarding || !isAuthenticated;
   // Add padding to the header container only on onboarding or non-authenticated routes
-  const classNameNav = isOnboardingOrNonAuthenticatedRoute ? 'p-6 sm:px-6' : 'lg:px-6 xl:px-0';
+  const classNameNav = isOnboardingOrNonAuthenticatedRoute ? '' : ' xl:px-0';
   // Determine which header content to show:
   // - Onboarding: HeaderOnboarding
   // - Authenticated: HeaderSignIn (navigation + avatar)

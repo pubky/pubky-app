@@ -1,118 +1,53 @@
 // Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
 
-exports[`PostInputExpandableSection - Snapshots > matches snapshot when collapsed 1`] = `
-<div
-  class="grid transition-all duration-300 ease-in-out grid-rows-[0fr] opacity-0 "
-  data-override-defaults="true"
-  data-testid="container"
->
-  <div
-    class="overflow-hidden"
-    data-override-defaults="true"
-    data-testid="container"
-  >
-    <div
-      class="gap-6"
-      data-testid="container"
-    >
-      <div
-        data-testid="post-link-embeds"
-      >
-        Test content
-      </div>
-      <div
-        class="justify-between gap-4"
-        data-testid="container"
-      >
-        <div
-          data-disabled="false"
-          data-testid="post-input-tags"
-        />
-        <div
-          data-has-post-button-icon="false"
-          data-hide-article-button="false"
-          data-is-article="false"
-          data-is-edit="false"
-          data-post-disabled="false"
-          data-submitting="false"
-          data-testid="post-input-action-bar"
-        >
-          <button
-            data-testid="action-bar-post"
-          >
-            Post
-          </button>
-          <button
-            data-testid="action-bar-emoji"
-          >
-            Emoji
-          </button>
-          <button
-            data-testid="action-bar-article"
-          >
-            Article
-          </button>
-        </div>
-      </div>
-    </div>
-  </div>
-</div>
-`;
+exports[`PostInputExpandableSection - Snapshots > matches snapshot when collapsed 1`] = `null`;
 
 exports[`PostInputExpandableSection - Snapshots > matches snapshot when disabled 1`] = `
 <div
-  class="grid transition-all duration-300 ease-in-out grid-rows-[1fr] opacity-100 "
-  data-override-defaults="true"
-  data-testid="container"
+  class="overflow-hidden "
 >
   <div
-    class="overflow-hidden"
-    data-override-defaults="true"
+    class="gap-6"
     data-testid="container"
   >
     <div
-      class="gap-6"
+      data-testid="post-link-embeds"
+    >
+      Test
+    </div>
+    <div
+      class="justify-between gap-4 md:flex-row md:gap-0"
       data-testid="container"
     >
       <div
-        data-testid="post-link-embeds"
-      >
-        Test
-      </div>
+        data-disabled="true"
+        data-testid="post-input-tags"
+      />
       <div
-        class="justify-between gap-4"
-        data-testid="container"
+        data-has-post-button-icon="false"
+        data-hide-article-button="false"
+        data-is-article="false"
+        data-is-edit="false"
+        data-post-disabled="true"
+        data-submitting="false"
+        data-testid="post-input-action-bar"
       >
-        <div
-          data-disabled="true"
-          data-testid="post-input-tags"
-        />
-        <div
-          data-has-post-button-icon="false"
-          data-hide-article-button="false"
-          data-is-article="false"
-          data-is-edit="false"
-          data-post-disabled="true"
-          data-submitting="false"
-          data-testid="post-input-action-bar"
+        <button
+          data-testid="action-bar-post"
+          disabled=""
         >
-          <button
-            data-testid="action-bar-post"
-            disabled=""
-          >
-            Post
-          </button>
-          <button
-            data-testid="action-bar-emoji"
-          >
-            Emoji
-          </button>
-          <button
-            data-testid="action-bar-article"
-          >
-            Article
-          </button>
-        </div>
+          Post
+        </button>
+        <button
+          data-testid="action-bar-emoji"
+        >
+          Emoji
+        </button>
+        <button
+          data-testid="action-bar-article"
+        >
+          Article
+        </button>
       </div>
     </div>
   </div>
@@ -121,57 +56,49 @@ exports[`PostInputExpandableSection - Snapshots > matches snapshot when disabled
 
 exports[`PostInputExpandableSection - Snapshots > matches snapshot when expanded with content 1`] = `
 <div
-  class="grid transition-all duration-300 ease-in-out grid-rows-[1fr] opacity-100 "
-  data-override-defaults="true"
-  data-testid="container"
+  class="overflow-hidden "
 >
   <div
-    class="overflow-hidden"
-    data-override-defaults="true"
+    class="gap-6"
     data-testid="container"
   >
     <div
-      class="gap-6"
+      data-testid="post-link-embeds"
+    >
+      Test content with link https://example.com
+    </div>
+    <div
+      class="justify-between gap-4 md:flex-row md:gap-0"
       data-testid="container"
     >
       <div
-        data-testid="post-link-embeds"
-      >
-        Test content with link https://example.com
-      </div>
+        data-disabled="false"
+        data-testid="post-input-tags"
+      />
       <div
-        class="justify-between gap-4"
-        data-testid="container"
+        data-has-post-button-icon="false"
+        data-hide-article-button="false"
+        data-is-article="false"
+        data-is-edit="false"
+        data-post-disabled="false"
+        data-submitting="false"
+        data-testid="post-input-action-bar"
       >
-        <div
-          data-disabled="false"
-          data-testid="post-input-tags"
-        />
-        <div
-          data-has-post-button-icon="false"
-          data-hide-article-button="false"
-          data-is-article="false"
-          data-is-edit="false"
-          data-post-disabled="false"
-          data-submitting="false"
-          data-testid="post-input-action-bar"
+        <button
+          data-testid="action-bar-post"
         >
-          <button
-            data-testid="action-bar-post"
-          >
-            Post
-          </button>
-          <button
-            data-testid="action-bar-emoji"
-          >
-            Emoji
-          </button>
-          <button
-            data-testid="action-bar-article"
-          >
-            Article
-          </button>
-        </div>
+          Post
+        </button>
+        <button
+          data-testid="action-bar-emoji"
+        >
+          Emoji
+        </button>
+        <button
+          data-testid="action-bar-article"
+        >
+          Article
+        </button>
       </div>
     </div>
   </div>
@@ -180,90 +107,82 @@ exports[`PostInputExpandableSection - Snapshots > matches snapshot when expanded
 
 exports[`PostInputExpandableSection - Snapshots > matches snapshot when expanded with tags 1`] = `
 <div
-  class="grid transition-all duration-300 ease-in-out grid-rows-[1fr] opacity-100 "
-  data-override-defaults="true"
-  data-testid="container"
+  class="overflow-hidden "
 >
   <div
-    class="overflow-hidden"
-    data-override-defaults="true"
+    class="gap-6"
     data-testid="container"
   >
     <div
-      class="gap-6"
+      data-testid="post-link-embeds"
+    >
+      Test content
+    </div>
+    <div
+      class="flex flex-wrap items-center gap-2"
+      data-override-defaults="true"
       data-testid="container"
     >
       <div
-        data-testid="post-link-embeds"
+        data-testid="post-tag"
       >
-        Test content
+        tag1
+        <button
+          data-testid="tag-close-tag1"
+        >
+          ×
+        </button>
       </div>
       <div
-        class="flex flex-wrap items-center gap-2"
-        data-override-defaults="true"
-        data-testid="container"
+        data-testid="post-tag"
       >
-        <div
-          data-testid="post-tag"
+        tag2
+        <button
+          data-testid="tag-close-tag2"
         >
+          ×
+        </button>
+      </div>
+    </div>
+    <div
+      class="justify-between gap-4 md:flex-row md:gap-0"
+      data-testid="container"
+    >
+      <div
+        data-disabled="false"
+        data-testid="post-input-tags"
+      >
+        <span>
           tag1
-          <button
-            data-testid="tag-close-tag1"
-          >
-            ×
-          </button>
-        </div>
-        <div
-          data-testid="post-tag"
-        >
+        </span>
+        <span>
           tag2
-          <button
-            data-testid="tag-close-tag2"
-          >
-            ×
-          </button>
-        </div>
+        </span>
       </div>
       <div
-        class="justify-between gap-4"
-        data-testid="container"
+        data-has-post-button-icon="false"
+        data-hide-article-button="false"
+        data-is-article="false"
+        data-is-edit="false"
+        data-post-disabled="false"
+        data-submitting="false"
+        data-testid="post-input-action-bar"
       >
-        <div
-          data-disabled="false"
-          data-testid="post-input-tags"
+        <button
+          data-testid="action-bar-post"
         >
-          <span>
-            tag1
-          </span>
-          <span>
-            tag2
-          </span>
-        </div>
-        <div
-          data-has-post-button-icon="false"
-          data-hide-article-button="false"
-          data-is-article="false"
-          data-is-edit="false"
-          data-post-disabled="false"
-          data-submitting="false"
-          data-testid="post-input-action-bar"
+          Post
+        </button>
+        <button
+          data-testid="action-bar-emoji"
         >
-          <button
-            data-testid="action-bar-post"
-          >
-            Post
-          </button>
-          <button
-            data-testid="action-bar-emoji"
-          >
-            Emoji
-          </button>
-          <button
-            data-testid="action-bar-article"
-          >
-            Article
-          </button>
-        </div>
+          Emoji
+        </button>
+        <button
+          data-testid="action-bar-article"
+        >
+          Article
+        </button>
       </div>
     </div>
   </div>
@@ -272,47 +191,39 @@ exports[`PostInputExpandableSection - Snapshots > matches snapshot when expanded
 
 exports[`PostInputExpandableSection - Snapshots > matches snapshot when isArticle is true 1`] = `
 <div
-  class="grid transition-all duration-300 ease-in-out grid-rows-[1fr] opacity-100 "
-  data-override-defaults="true"
-  data-testid="container"
+  class="overflow-hidden "
 >
   <div
-    class="overflow-hidden"
-    data-override-defaults="true"
+    class="gap-6"
     data-testid="container"
   >
     <div
-      class="gap-6"
+      class="justify-between gap-4 md:flex-row md:gap-0"
       data-testid="container"
     >
       <div
-        class="justify-between gap-4"
-        data-testid="container"
+        data-disabled="false"
+        data-testid="post-input-tags"
+      />
+      <div
+        data-has-post-button-icon="false"
+        data-hide-article-button="true"
+        data-is-article="true"
+        data-is-edit="false"
+        data-post-disabled="false"
+        data-submitting="false"
+        data-testid="post-input-action-bar"
       >
-        <div
-          data-disabled="false"
-          data-testid="post-input-tags"
-        />
-        <div
-          data-has-post-button-icon="false"
-          data-hide-article-button="true"
-          data-is-article="true"
-          data-is-edit="false"
-          data-post-disabled="false"
-          data-submitting="false"
-          data-testid="post-input-action-bar"
+        <button
+          data-testid="action-bar-post"
         >
-          <button
-            data-testid="action-bar-post"
-          >
-            Post
-          </button>
-          <button
-            data-testid="action-bar-emoji"
-          >
-            Emoji
-          </button>
-        </div>
+          Post
+        </button>
+        <button
+          data-testid="action-bar-emoji"
+        >
+          Emoji
+        </button>
       </div>
     </div>
   </div>
@@ -321,58 +232,50 @@ exports[`PostInputExpandableSection - Snapshots > matches snapshot when isArticl
 
 exports[`PostInputExpandableSection - Snapshots > matches snapshot when submitting 1`] = `
 <div
-  class="grid transition-all duration-300 ease-in-out grid-rows-[1fr] opacity-100 "
-  data-override-defaults="true"
-  data-testid="container"
+  class="overflow-hidden "
 >
   <div
-    class="overflow-hidden"
-    data-override-defaults="true"
+    class="gap-6"
     data-testid="container"
   >
     <div
-      class="gap-6"
+      data-testid="post-link-embeds"
+    >
+      Test
+    </div>
+    <div
+      class="justify-between gap-4 md:flex-row md:gap-0"
       data-testid="container"
     >
       <div
-        data-testid="post-link-embeds"
-      >
-        Test
-      </div>
+        data-disabled="true"
+        data-testid="post-input-tags"
+      />
       <div
-        class="justify-between gap-4"
-        data-testid="container"
+        data-has-post-button-icon="false"
+        data-hide-article-button="false"
+        data-is-article="false"
+        data-is-edit="false"
+        data-post-disabled="true"
+        data-submitting="true"
+        data-testid="post-input-action-bar"
       >
-        <div
-          data-disabled="true"
-          data-testid="post-input-tags"
-        />
-        <div
-          data-has-post-button-icon="false"
-          data-hide-article-button="false"
-          data-is-article="false"
-          data-is-edit="false"
-          data-post-disabled="true"
-          data-submitting="true"
-          data-testid="post-input-action-bar"
+        <button
+          data-testid="action-bar-post"
+          disabled=""
         >
-          <button
-            data-testid="action-bar-post"
-            disabled=""
-          >
-            Post
-          </button>
-          <button
-            data-testid="action-bar-emoji"
-          >
-            Emoji
-          </button>
-          <button
-            data-testid="action-bar-article"
-          >
-            Article
-          </button>
-        </div>
+          Post
+        </button>
+        <button
+          data-testid="action-bar-emoji"
+        >
+          Emoji
+        </button>
+        <button
+          data-testid="action-bar-article"
+        >
+          Article
+        </button>
       </div>
     </div>
   </div>
@@ -381,52 +284,44 @@ exports[`PostInputExpandableSection - Snapshots > matches snapshot when submitti
 
 exports[`PostInputExpandableSection - Snapshots > matches snapshot with EDIT submit mode 1`] = `
 <div
-  class="grid transition-all duration-300 ease-in-out grid-rows-[1fr] opacity-100 "
-  data-override-defaults="true"
-  data-testid="container"
+  class="overflow-hidden "
 >
   <div
-    class="overflow-hidden"
-    data-override-defaults="true"
+    class="gap-6"
     data-testid="container"
   >
     <div
-      class="gap-6"
+      data-testid="post-link-embeds"
+    >
+      Editing content
+    </div>
+    <div
+      class="justify-between gap-4 md:flex-row md:gap-0"
       data-testid="container"
     >
       <div
-        data-testid="post-link-embeds"
-      >
-        Editing content
-      </div>
+        data-disabled="true"
+        data-testid="post-input-tags"
+      />
       <div
-        class="justify-between gap-4"
-        data-testid="container"
+        data-has-post-button-icon="true"
+        data-hide-article-button="true"
+        data-is-article="false"
+        data-is-edit="true"
+        data-post-disabled="false"
+        data-submitting="false"
+        data-testid="post-input-action-bar"
       >
-        <div
-          data-disabled="true"
-          data-testid="post-input-tags"
-        />
-        <div
-          data-has-post-button-icon="true"
-          data-hide-article-button="true"
-          data-is-article="false"
-          data-is-edit="true"
-          data-post-disabled="false"
-          data-submitting="false"
-          data-testid="post-input-action-bar"
+        <button
+          data-testid="action-bar-post"
         >
-          <button
-            data-testid="action-bar-post"
-          >
-            Post
-          </button>
-          <button
-            data-testid="action-bar-emoji"
-          >
-            Emoji
-          </button>
-        </div>
+          Post
+        </button>
+        <button
+          data-testid="action-bar-emoji"
+        >
+          Emoji
+        </button>
       </div>
     </div>
   </div>
@@ -435,52 +330,44 @@ exports[`PostInputExpandableSection - Snapshots > matches snapshot with EDIT sub
 
 exports[`PostInputExpandableSection - Snapshots > matches snapshot with REPLY submit mode 1`] = `
 <div
-  class="grid transition-all duration-300 ease-in-out grid-rows-[1fr] opacity-100 "
-  data-override-defaults="true"
-  data-testid="container"
+  class="overflow-hidden "
 >
   <div
-    class="overflow-hidden"
-    data-override-defaults="true"
+    class="gap-6"
     data-testid="container"
   >
     <div
-      class="gap-6"
+      data-testid="post-link-embeds"
+    >
+      Test content
+    </div>
+    <div
+      class="justify-between gap-4 md:flex-row md:gap-0"
       data-testid="container"
     >
       <div
-        data-testid="post-link-embeds"
-      >
-        Test content
-      </div>
+        data-disabled="false"
+        data-testid="post-input-tags"
+      />
       <div
-        class="justify-between gap-4"
-        data-testid="container"
+        data-has-post-button-icon="true"
+        data-hide-article-button="true"
+        data-is-article="false"
+        data-is-edit="false"
+        data-post-disabled="false"
+        data-submitting="false"
+        data-testid="post-input-action-bar"
       >
-        <div
-          data-disabled="false"
-          data-testid="post-input-tags"
-        />
-        <div
-          data-has-post-button-icon="true"
-          data-hide-article-button="true"
-          data-is-article="false"
-          data-is-edit="false"
-          data-post-disabled="false"
-          data-submitting="false"
-          data-testid="post-input-action-bar"
+        <button
+          data-testid="action-bar-post"
         >
-          <button
-            data-testid="action-bar-post"
-          >
-            Post
-          </button>
-          <button
-            data-testid="action-bar-emoji"
-          >
-            Emoji
-          </button>
-        </div>
+          Post
+        </button>
+        <button
+          data-testid="action-bar-emoji"
+        >
+          Emoji
+        </button>
       </div>
     </div>
   </div>
@@ -489,57 +376,49 @@ exports[`PostInputExpandableSection - Snapshots > matches snapshot with REPLY su
 
 exports[`PostInputExpandableSection - Snapshots > matches snapshot with emoji picker open 1`] = `
 <div
-  class="grid transition-all duration-300 ease-in-out grid-rows-[1fr] opacity-100 "
-  data-override-defaults="true"
-  data-testid="container"
+  class="overflow-hidden "
 >
   <div
-    class="overflow-hidden"
-    data-override-defaults="true"
+    class="gap-6"
     data-testid="container"
   >
     <div
-      class="gap-6"
+      data-testid="post-link-embeds"
+    >
+      Test content
+    </div>
+    <div
+      class="justify-between gap-4 md:flex-row md:gap-0"
       data-testid="container"
     >
       <div
-        data-testid="post-link-embeds"
-      >
-        Test content
-      </div>
+        data-disabled="false"
+        data-testid="post-input-tags"
+      />
       <div
-        class="justify-between gap-4"
-        data-testid="container"
+        data-has-post-button-icon="false"
+        data-hide-article-button="false"
+        data-is-article="false"
+        data-is-edit="false"
+        data-post-disabled="false"
+        data-submitting="false"
+        data-testid="post-input-action-bar"
       >
-        <div
-          data-disabled="false"
-          data-testid="post-input-tags"
-        />
-        <div
-          data-has-post-button-icon="false"
-          data-hide-article-button="false"
-          data-is-article="false"
-          data-is-edit="false"
-          data-post-disabled="false"
-          data-submitting="false"
-          data-testid="post-input-action-bar"
+        <button
+          data-testid="action-bar-post"
         >
-          <button
-            data-testid="action-bar-post"
-          >
-            Post
-          </button>
-          <button
-            data-testid="action-bar-emoji"
-          >
-            Emoji
-          </button>
-          <button
-            data-testid="action-bar-article"
-          >
-            Article
-          </button>
-        </div>
+          Post
+        </button>
+        <button
+          data-testid="action-bar-emoji"
+        >
+          Emoji
+        </button>
+        <button
+          data-testid="action-bar-article"
+        >
+          Article
+        </button>
       </div>
     </div>
   </div>

@@ -22,6 +22,7 @@ import {
   formatPreviewText,
   hasPostPreview,
 } from './NotificationItem.utils';
+import { resolvePubkyToNames } from './NotificationItem.helpers';
 import type { NotificationItemProps } from './NotificationItem.types';
 
 export function NotificationItem({ notification, isUnread }: NotificationItemProps) {
@@ -63,7 +64,7 @@ export function NotificationItem({ notification, isUnread }: NotificationItemPro
     // 2. If missing, fetch from Nexus
     // 3. Write to local DB
     Core.PostController.getOrFetch({ compositeId: postCompositeId, viewerId })
-      .then((post) => {
+      .then(async (post) => {
         if (!isCancelled && post?.content) {
           if (Libs.isPostDeleted(post.content)) {
             setPostContent(tPost('deleted'));
@@ -79,7 +80,8 @@ export function NotificationItem({ notification, isUnread }: NotificationItemPro
               });
             }
           } else {
-            setPostContent(post.content);
+            const content = await resolvePubkyToNames(post.content);
+            if (!isCancelled) setPostContent(content);
           }
         }
       })

@@ -33,48 +33,43 @@ export function MobileHeader({
     <Atoms.Container
       overrideDefaults
       className={Libs.cn(
-        fixed ? 'fixed right-0 left-0' : 'sticky',
-        'top-0 z-(--z-mobile-menu) lg:hidden',
+        fixed ? 'fixed inset-x-0' : 'sticky',
+        'top-0 z-(--z-mobile-menu) w-full lg:hidden',
         hasGradientBackground
           ? 'bg-linear-to-b from-(--background) from-35% to-transparent'
           : 'bg-background shadow-xs',
       )}
     >
-      <Atoms.Container
-        overrideDefaults
-        className="m-auto w-full max-w-sm p-6 pb-0 sm:max-w-xl md:max-w-3xl lg:max-w-5xl xl:max-w-6xl xl:px-0"
-      >
-        <Atoms.Container overrideDefaults className="flex items-center justify-between py-3">
-          {/* Left icon - filters (authenticated only) */}
-          {showLeftIcon ? (
-            <Atoms.Button variant="ghost" size="icon" onClick={onLeftIconClick}>
-              <Libs.SlidersHorizontal className="size-6" />
-            </Atoms.Button>
-          ) : (
-            <Placeholder />
-          )}
+      <Atoms.Container overrideDefaults className="flex w-full items-center justify-between p-6">
+        {/* Left icon - filters (authenticated only) */}
+        {showLeftIcon ? (
+          <Atoms.Button variant="ghost" size="icon" onClick={onLeftIconClick}>
+            <Libs.SlidersHorizontal className="size-6" />
+          </Atoms.Button>
+        ) : (
+          <Placeholder />
+        )}
 
-          <Molecules.Logo />
+        <Molecules.Logo />
 
-          {/* Right icon - Join for unauthenticated, Activity for authenticated */}
-          {!isAuthenticated ? (
-            <Atoms.Button
-              variant="secondary"
-              size="icon"
-              className="size-12"
-              onClick={() => setShowSignInDialog(true)}
-              aria-label="Join Pubky"
-            >
-              <Libs.UserRound className="size-6" />
-            </Atoms.Button>
-          ) : showRightButton ? (
-            <Atoms.Button variant="ghost" size="icon" onClick={onRightIconClick}>
-              <Libs.Activity className="size-6" />
-            </Atoms.Button>
-          ) : (
-            <Placeholder />
-          )}
-        </Atoms.Container>
+        {/* Right icon - Join for unauthenticated, Activity for authenticated */}
+        {!isAuthenticated ? (
+          <Atoms.Button
+            variant="secondary"
+            size="icon"
+            className="size-12"
+            onClick={() => setShowSignInDialog(true)}
+            aria-label="Join Pubky"
+          >
+            <Libs.UserRound className="size-6" />
+          </Atoms.Button>
+        ) : showRightButton ? (
+          <Atoms.Button variant="ghost" size="icon" onClick={onRightIconClick}>
+            <Libs.Activity className="size-6" />
+          </Atoms.Button>
+        ) : (
+          <Placeholder />
+        )}
       </Atoms.Container>
     </Atoms.Container>
   );

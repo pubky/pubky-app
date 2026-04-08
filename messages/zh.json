@@ -1072,6 +1072,7 @@
     "timeframe": {
       "title": "时间范围",
       "today": "今天",
+      "thisWeek": "本周",
       "thisMonth": "本月",
       "allTime": "全部时间"
     }
