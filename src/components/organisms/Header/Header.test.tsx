@@ -459,7 +459,7 @@ describe('Header', () => {
 
     it('renders HeaderTitle with correct title for each onboarding step', () => {
       const testCases = [
-        { path: App.ONBOARDING_ROUTES.HUMAN, expectedTitle: 'Create account' },
+        { path: App.ONBOARDING_ROUTES.HUMAN, expectedTitle: 'Join now' },
         { path: App.ONBOARDING_ROUTES.INSTALL, expectedTitle: 'Identity keys' },
         { path: App.ONBOARDING_ROUTES.SCAN, expectedTitle: 'Use Pubky Ring' },
         { path: App.ONBOARDING_ROUTES.PUBKY, expectedTitle: 'Your pubky' },
@@ -474,7 +474,6 @@ describe('Header', () => {
 
         const { rerender } = render(<Header />);
 
-        console.log('path:', path, 'expectedTitle:', expectedTitle, testCases);
         expect(screen.getByTestId('header-title')).toHaveTextContent(expectedTitle);
 
         rerender(<></>); // Clear for next iteration
