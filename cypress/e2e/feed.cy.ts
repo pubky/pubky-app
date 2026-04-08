@@ -7,7 +7,7 @@ import {
   checkPostIsAtIndexInFeed,
   countPostsInFeed,
   createQuickPost,
-  addImage,
+  createQuickPostWithImage,
   fastTagPostInFeed,
   repostPost,
   waitForFeedToLoad,
@@ -335,28 +335,14 @@ describe('visual layout', () => {
 
     // create 2 posts with images
     [imagePostContent1, imagePostContent2].forEach((postContent) => {
-      cy.get('[data-cy="home-post-input"]').within(() => {
-        cy.get('textarea').click();
-        addImage();
-        cy.get('textarea').type(postContent);
-        cy.intercept('PUT', '**/pub/pubky.app/posts/**').as('postCreated');
-        cy.get('[data-cy="post-input-action-bar-post"]').click();
-        cy.wait('@postCreated').its('response.statusCode').should('eq', 201);
-      });
+      createQuickPostWithImage(postContent);
     });
 
     // create post with just text
     createQuickPost(textOnlyPostContent);
 
     // create another post with image
-    cy.get('[data-cy="home-post-input"]').within(() => {
-      cy.get('textarea').click();
-      addImage();
-      cy.get('textarea').type(imagePostContent3);
-      cy.intercept('PUT', '**/pub/pubky.app/posts/**').as('postCreated');
-      cy.get('[data-cy="post-input-action-bar-post"]').click();
-      cy.wait('@postCreated').its('response.statusCode').should('eq', 201);
-    });
+    createQuickPostWithImage(imagePostContent3);
 
     // switch to visual layout
     cy.get('[data-testid="filter-layout-radiogroup"]').find('[aria-label="Visual"]').click();
