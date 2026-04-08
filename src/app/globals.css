@@ -139,16 +139,16 @@ body {
    * - Vertical offset for sticky sidebars and floating elements below main header
    * - Used by: ContentLayout sidebars, NewPostsButton when in fixed/floating mode
    *
-   * Value rationale (150px):
+   * Value rationale (144px):
    * - Header outer container: py-6 (24px top + 24px bottom) = 48px
    * - Header inner container: py-6 (24px top + 24px bottom) = 48px
    * - Header content height (buttons h-12) = 48px
-   * - Total header visual height ~144px, rounded up to 150px for spacing
+   * - Total header visual height: 144px (24px outer padding + 96px nav + 24px outer padding)
    * - Ensures sidebars and floating elements appear clearly below header
    *
    * Note: Profile pages use --header-height (146px) for ProfilePageHeader.
    */
-  --header-offset-main: 150px;
+  --header-offset-main: 144px;
 
   /**
    * Main content header offset
