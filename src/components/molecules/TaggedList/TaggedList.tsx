@@ -1,7 +1,6 @@
 'use client';
 
 import { useEffect, useRef, useState } from 'react';
-import { useTranslations } from 'next-intl';
 import * as Atoms from '@/atoms';
 import * as Molecules from '@/molecules';
 import * as Hooks from '@/hooks';
@@ -17,7 +16,6 @@ export function TaggedList({
   onLoadMore,
   onTagToggle,
 }: TaggedListProps) {
-  const t = useTranslations('common');
   // Track which tag is currently expanded (only one at a time - accordion behavior)
   const [expandedTagLabel, setExpandedTagLabel] = useState<string | null>(null);
 
@@ -73,11 +71,17 @@ export function TaggedList({
         );
       })}
       {hasMore && (
-        <Atoms.Container overrideDefaults ref={sentinelRef} className="h-4 w-full">
+        <Atoms.Container overrideDefaults ref={sentinelRef} className="w-full">
           {isLoadingMore && (
-            <Atoms.Typography as="p" className="text-center text-sm text-muted-foreground">
-              {t('loadingMoreTags')}
-            </Atoms.Typography>
+            <Atoms.Container overrideDefaults className="flex items-center gap-2 py-1">
+              <Atoms.Skeleton className="h-8 w-20 shrink-0 rounded-md" />
+              <Atoms.Skeleton className="size-8 shrink-0 rounded-full" />
+              <Atoms.Container overrideDefaults className="flex items-center gap-0">
+                <Atoms.Skeleton className="-mr-2 size-8 shrink-0 rounded-full" />
+                <Atoms.Skeleton className="-mr-2 size-8 shrink-0 rounded-full" />
+                <Atoms.Skeleton className="size-8 shrink-0 rounded-full" />
+              </Atoms.Container>
+            </Atoms.Container>
           )}
         </Atoms.Container>
       )}

@@ -7,7 +7,12 @@ import * as Atoms from '@/atoms';
 
 const Editor = dynamic(() => import('./InitializedMDXEditor'), {
   ssr: false,
-  loading: () => <Atoms.Skeleton className="h-22 w-full rounded-md" />,
+  loading: () => (
+    <Atoms.Container className="flex flex-col">
+      <Atoms.Skeleton className="h-11 w-full rounded-md" />
+      <Atoms.Skeleton className="mt-4 h-4 w-3/5 rounded-md" />
+    </Atoms.Container>
+  ),
 });
 
 // This is what is imported by other components. Pre-initialized with plugins & styling, and ready

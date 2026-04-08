@@ -12,7 +12,7 @@ const TIMELINE_SKELETON_COUNT = 3;
  */
 export function TimelineLoading() {
   return (
-    <Atoms.Container data-cy="timeline-container" className="gap-4 py-4">
+    <Atoms.Container data-cy="timeline-container" className="gap-4">
       {Array.from({ length: TIMELINE_SKELETON_COUNT }).map((_, i) => (
         <PostCardSkeleton key={`timeline-skeleton-${i}`} />
       ))}
