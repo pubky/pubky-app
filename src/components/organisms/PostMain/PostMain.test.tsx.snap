@@ -45,7 +45,7 @@ exports[`PostMain - Snapshots > matches snapshot for quote repost by current use
           me:quote-repost-1
         </div>
         <div
-          data-class-name="w-full shrink-0 justify-start overflow-y-scroll sm:w-auto md:justify-end"
+          data-class-name="w-full shrink-0 justify-start sm:w-auto md:justify-end"
           data-testid="post-actions"
         >
           Actions 
@@ -108,7 +108,7 @@ exports[`PostMain - Snapshots > matches snapshot for repost by another user 1`] 
           other-user:repost-1
         </div>
         <div
-          data-class-name="w-full shrink-0 justify-start overflow-y-scroll sm:w-auto md:justify-end"
+          data-class-name="w-full shrink-0 justify-start sm:w-auto md:justify-end"
           data-testid="post-actions"
         >
           Actions 
@@ -170,7 +170,7 @@ exports[`PostMain - Snapshots > matches snapshot for simple repost by current us
           me:simple-repost-1
         </div>
         <div
-          data-class-name="w-full shrink-0 justify-start overflow-y-scroll sm:w-auto md:justify-end"
+          data-class-name="w-full shrink-0 justify-start sm:w-auto md:justify-end"
           data-testid="post-actions"
         >
           Actions 
@@ -233,7 +233,7 @@ exports[`PostMain - Snapshots > matches snapshot with default state 1`] = `
           post-123
         </div>
         <div
-          data-class-name="w-full shrink-0 justify-start overflow-y-scroll sm:w-auto md:justify-end"
+          data-class-name="w-full shrink-0 justify-start sm:w-auto md:justify-end"
           data-testid="post-actions"
         >
           Actions 
@@ -315,7 +315,7 @@ exports[`PostMain - Snapshots > matches snapshot with isReply false 1`] = `
           post-no-reply-456
         </div>
         <div
-          data-class-name="w-full shrink-0 justify-start overflow-y-scroll sm:w-auto md:justify-end"
+          data-class-name="w-full shrink-0 justify-start sm:w-auto md:justify-end"
           data-testid="post-actions"
         >
           Actions 
@@ -391,7 +391,7 @@ exports[`PostMain - Snapshots > matches snapshot with isReply true 1`] = `
           post-reply-123
         </div>
         <div
-          data-class-name="w-full shrink-0 justify-start overflow-y-scroll sm:w-auto md:justify-end"
+          data-class-name="w-full shrink-0 justify-start sm:w-auto md:justify-end"
           data-testid="post-actions"
         >
           Actions 
