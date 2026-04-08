@@ -11,7 +11,7 @@ exports[`PostActionsBar - Snapshots > matches snapshot loading 1`] = `
 
 exports[`PostActionsBar - Snapshots > matches snapshot with counts 1`] = `
 <div
-  data-class-name="flex gap-2 extra"
+  data-class-name="flex flex-wrap gap-2 extra"
   data-testid="actions-container"
 >
   <button
