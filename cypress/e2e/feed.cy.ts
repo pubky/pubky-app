@@ -7,6 +7,7 @@ import {
   checkPostIsAtIndexInFeed,
   countPostsInFeed,
   createQuickPost,
+  addImage,
   fastTagPostInFeed,
   repostPost,
   waitForFeedToLoad,
@@ -315,4 +316,62 @@ describe('feed and filters', () => {
   it.skip('can create and delete a custom feed', () => {});
 
   it.skip('can create a custom feed with filters', () => {});
+});
+
+describe('visual layout', () => {
+  before(() => {
+    slowCypressDown();
+    cy.deleteDownloadsFolder();
+  });
+
+  // skipped due to bug https://github.com/pubky/pubky-app/issues/1661
+  it.skip('can view image-only posts in visual layout', () => {
+    const imagePostContent1 = `Image post 1 ${Date.now()}`;
+    const imagePostContent2 = `Image post 2 ${Date.now()}`;
+    const imagePostContent3 = `Image post 3 ${Date.now()}`;
+    const textOnlyPostContent = `Text-only post ${Date.now()}`;
+
+    cy.onboardAsNewUser('Pete the Photographer', 'I post photos');
+
+    // create 2 posts with images
+    [imagePostContent1, imagePostContent2].forEach((postContent) => {
+      cy.get('[data-cy="home-post-input"]').within(() => {
+        cy.get('textarea').click();
+        addImage();
+        cy.get('textarea').type(postContent);
+        cy.intercept('PUT', '**/pub/pubky.app/posts/**').as('postCreated');
+        cy.get('[data-cy="post-input-action-bar-post"]').click();
+        cy.wait('@postCreated').its('response.statusCode').should('eq', 201);
+      });
+    });
+
+    // create post with just text
+    createQuickPost(textOnlyPostContent);
+
+    // create another post with image
+    cy.get('[data-cy="home-post-input"]').within(() => {
+      cy.get('textarea').click();
+      addImage();
+      cy.get('textarea').type(imagePostContent3);
+      cy.intercept('PUT', '**/pub/pubky.app/posts/**').as('postCreated');
+      cy.get('[data-cy="post-input-action-bar-post"]').click();
+      cy.wait('@postCreated').its('response.statusCode').should('eq', 201);
+    });
+
+    // switch to visual layout
+    cy.get('[data-testid="filter-layout-radiogroup"]').find('[aria-label="Visual"]').click();
+
+    // assert that only the post with text is not visible
+    cannotFindPostInFeed(textOnlyPostContent);
+    cy.contains(textOnlyPostContent).should('not.exist');
+
+    // assert that all posts visible contain an image and no text-only content
+    cy.get('[data-cy="visual-feed-container"]').should('be.visible');
+    cy.get('[data-cy="visual-feed-tile"]')
+      .should('have.length.gt', 3)
+      .each(($tile) => {
+        cy.wrap($tile).find('img').should('exist');
+        cy.wrap($tile).invoke('text').should('be.empty');
+      });
+  });
 });
