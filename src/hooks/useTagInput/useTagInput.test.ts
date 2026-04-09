@@ -1,11 +1,27 @@
 import { renderHook, act } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
+import type { RefObject } from 'react';
 import { useTagInput } from './useTagInput';
+import { TAG_MAX_LENGTH } from '@/config';
 
 // Mock useEmojiInsert
 vi.mock('../useEmojiInsert', () => ({
   useEmojiInsert: vi.fn(() => vi.fn()),
 }));
+
+function createPasteEvent(text: string): React.ClipboardEvent {
+  return {
+    preventDefault: vi.fn(),
+    clipboardData: { getData: vi.fn(() => text) },
+  } as unknown as React.ClipboardEvent;
+}
+
+function mockInputSelection(ref: RefObject<HTMLInputElement | null>, start: number, end: number) {
+  (ref as { current: Partial<HTMLInputElement> | null }).current = {
+    selectionStart: start,
+    selectionEnd: end,
+  } as HTMLInputElement;
+}
 
 describe('useTagInput', () => {
   const mockOnTagAdd = vi.fn();
@@ -171,5 +187,172 @@ describe('useTagInput', () => {
 
     expect(result.current.inputRef).toBeDefined();
     expect(result.current.inputRef.current).toBeNull();
+  });
+
+  describe('handlePaste', () => {
+    it('appends pasted text when no selection is set', () => {
+      const { result } = renderHook(() => useTagInput({ onTagAdd: mockOnTagAdd }));
+
+      act(() => {
+        result.current.handleInputChange({
+          target: { value: 'hello' },
+        } as React.ChangeEvent<HTMLInputElement>);
+      });
+
+      act(() => {
+        result.current.handlePaste(createPasteEvent('world'));
+      });
+
+      expect(result.current.inputValue).toBe('helloworld');
+    });
+
+    it('replaces selected text in the middle', () => {
+      const { result } = renderHook(() => useTagInput({ onTagAdd: mockOnTagAdd }));
+
+      act(() => {
+        result.current.handleInputChange({
+          target: { value: 'helloworld' },
+        } as React.ChangeEvent<HTMLInputElement>);
+      });
+
+      mockInputSelection(result.current.inputRef, 3, 8);
+
+      act(() => {
+        result.current.handlePaste(createPasteEvent('XY'));
+      });
+
+      expect(result.current.inputValue).toBe('helxyld');
+    });
+
+    it('replaces selected text at the start', () => {
+      const { result } = renderHook(() => useTagInput({ onTagAdd: mockOnTagAdd }));
+
+      act(() => {
+        result.current.handleInputChange({
+          target: { value: 'abcdef' },
+        } as React.ChangeEvent<HTMLInputElement>);
+      });
+
+      mockInputSelection(result.current.inputRef, 0, 3);
+
+      act(() => {
+        result.current.handlePaste(createPasteEvent('XY'));
+      });
+
+      expect(result.current.inputValue).toBe('xydef');
+    });
+
+    it('replaces selected text at the end', () => {
+      const { result } = renderHook(() => useTagInput({ onTagAdd: mockOnTagAdd }));
+
+      act(() => {
+        result.current.handleInputChange({
+          target: { value: 'abcdef' },
+        } as React.ChangeEvent<HTMLInputElement>);
+      });
+
+      mockInputSelection(result.current.inputRef, 3, 6);
+
+      act(() => {
+        result.current.handlePaste(createPasteEvent('XY'));
+      });
+
+      expect(result.current.inputValue).toBe('abcxy');
+    });
+
+    it('replaces entire value when all text is selected', () => {
+      const { result } = renderHook(() => useTagInput({ onTagAdd: mockOnTagAdd }));
+
+      act(() => {
+        result.current.handleInputChange({
+          target: { value: 'abcdef' },
+        } as React.ChangeEvent<HTMLInputElement>);
+      });
+
+      mockInputSelection(result.current.inputRef, 0, 6);
+
+      act(() => {
+        result.current.handlePaste(createPasteEvent('newtext'));
+      });
+
+      expect(result.current.inputValue).toBe('newtext');
+    });
+
+    it('truncates paste result to TAG_MAX_LENGTH', () => {
+      const { result } = renderHook(() => useTagInput({ onTagAdd: mockOnTagAdd }));
+
+      act(() => {
+        result.current.handleInputChange({
+          target: { value: 'existing' },
+        } as React.ChangeEvent<HTMLInputElement>);
+      });
+
+      const longPaste = 'a'.repeat(TAG_MAX_LENGTH);
+
+      act(() => {
+        result.current.handlePaste(createPasteEvent(longPaste));
+      });
+
+      expect(result.current.inputValue).toHaveLength(TAG_MAX_LENGTH);
+      expect(result.current.inputValue).toBe('existing' + 'a'.repeat(TAG_MAX_LENGTH - 8));
+    });
+
+    it('truncates after replacing selection near TAG_MAX_LENGTH', () => {
+      const { result } = renderHook(() => useTagInput({ onTagAdd: mockOnTagAdd }));
+
+      const initial = 'a'.repeat(TAG_MAX_LENGTH - 2);
+
+      act(() => {
+        result.current.handleInputChange({
+          target: { value: initial },
+        } as React.ChangeEvent<HTMLInputElement>);
+      });
+
+      mockInputSelection(result.current.inputRef, TAG_MAX_LENGTH - 4, TAG_MAX_LENGTH - 2);
+
+      act(() => {
+        result.current.handlePaste(createPasteEvent('xxxxx'));
+      });
+
+      expect(result.current.inputValue).toHaveLength(TAG_MAX_LENGTH);
+    });
+
+    it('sanitizes banned characters from pasted text', () => {
+      const { result } = renderHook(() => useTagInput({ onTagAdd: mockOnTagAdd }));
+
+      act(() => {
+        result.current.handleInputChange({
+          target: { value: 'tag' },
+        } as React.ChangeEvent<HTMLInputElement>);
+      });
+
+      mockInputSelection(result.current.inputRef, 0, 3);
+
+      act(() => {
+        result.current.handlePaste(createPasteEvent('hello:world,test'));
+      });
+
+      expect(result.current.inputValue).toBe('helloworldtest');
+    });
+
+    it('converts pasted text to lowercase', () => {
+      const { result } = renderHook(() => useTagInput({ onTagAdd: mockOnTagAdd }));
+
+      act(() => {
+        result.current.handlePaste(createPasteEvent('HELLO'));
+      });
+
+      expect(result.current.inputValue).toBe('hello');
+    });
+
+    it('shows suggestions after paste', () => {
+      const { result } = renderHook(() => useTagInput({ onTagAdd: mockOnTagAdd }));
+
+      act(() => {
+        result.current.handlePaste(createPasteEvent('test'));
+      });
+
+      expect(result.current.showSuggestions).toBe(true);
+    });
   });
 });
