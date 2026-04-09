@@ -26,7 +26,7 @@ A staging recovery phrase is stored in the `STAGING_RECOVERY_PHRASE` secret (12 
 2. Navigate to `http://localhost:3000` and click **Sign In**
 3. Click **Use recovery phrase**
 4. Enter the 12 words from `$STAGING_RECOVERY_PHRASE` into the input fields
-5. Click **Restore** — the app loads the staging user "Orlando"
+5. Click **Restore** — the app loads the staging user
 
 ## Branch naming convention (GitHub issues)
 
