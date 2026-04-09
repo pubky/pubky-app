@@ -175,9 +175,7 @@ describe('useVisualFeedTiles', () => {
       missingFileUris: ['pubky://user-1/pub/pubky.app/files/file-1'],
     });
 
-    const { result } = renderHook(() =>
-      useVisualFeedTiles({ postIds: ['author:post-1'], hasMore: false }),
-    );
+    const { result } = renderHook(() => useVisualFeedTiles({ postIds: ['author:post-1'], hasMore: false }));
 
     expect(result.current.hasPendingFiles).toBe(true);
   });
