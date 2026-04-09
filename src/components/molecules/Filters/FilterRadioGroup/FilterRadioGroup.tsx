@@ -82,7 +82,7 @@ export function FilterRadioGroup<T extends string = string>({
                 aria-label={label}
                 aria-disabled={disabled}
                 tabIndex={isSelected ? 0 : -1}
-                className={disabled ? 'cursor-default opacity-20' : undefined}
+                className={disabled ? 'cursor-default opacity-40' : undefined}
               >
                 <Atoms.FilterItemIcon icon={Icon} />
                 <Atoms.FilterItemLabel>{label}</Atoms.FilterItemLabel>

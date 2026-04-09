@@ -4,6 +4,7 @@ import React from 'react';
 import { ScanContent, ScanFooter, ScanHeader, ScanNavigation } from './Scan';
 import * as Config from '@/config';
 import * as App from '@/app';
+import * as Hooks from '@/hooks';
 
 // Mock Next.js router
 const mockPush = vi.fn();
@@ -220,6 +221,15 @@ describe('ScanContent', () => {
     onboardingState.inviteCode = 'A9KM-7MJP-ERM9';
     window.location.href = '';
     clipboardMock.writeText.mockClear();
+    vi.mocked(Hooks.useMobileAuth).mockReturnValue({
+      url: 'mock-auth-url',
+      isLoading: false,
+      isExpired: false,
+      fetchUrl: mockFetchUrl,
+      copyAuthUrl: mockCopyAuthUrl,
+      isOpeningRing: false,
+      onAuthorizeClick: mockOnAuthorizeClick,
+    });
   });
 
   afterAll(() => {
@@ -281,7 +291,6 @@ describe('ScanContent', () => {
   });
 
   it('opens expired dialog when auth flow is expired', async () => {
-    const Hooks = await import('@/hooks');
     vi.mocked(Hooks.useMobileAuth).mockReturnValue({
       url: '',
       isLoading: false,
@@ -301,7 +310,6 @@ describe('ScanContent', () => {
   });
 
   it('calls fetchUrl when expired dialog refresh button is clicked', async () => {
-    const Hooks = await import('@/hooks');
     vi.mocked(Hooks.useMobileAuth).mockReturnValue({
       url: '',
       isLoading: false,
@@ -397,6 +405,15 @@ describe('ScanNavigation', () => {
 describe('Scan Components - Snapshots', () => {
   beforeEach(() => {
     onboardingState.inviteCode = 'A9KM-7MJP-ERM9';
+    vi.mocked(Hooks.useMobileAuth).mockReturnValue({
+      url: 'mock-auth-url',
+      isLoading: false,
+      isExpired: false,
+      fetchUrl: mockFetchUrl,
+      copyAuthUrl: mockCopyAuthUrl,
+      isOpeningRing: false,
+      onAuthorizeClick: mockOnAuthorizeClick,
+    });
   });
 
   describe('ScanContent - Snapshots', () => {

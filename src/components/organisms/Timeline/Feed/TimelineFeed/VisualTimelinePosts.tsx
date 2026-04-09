@@ -302,6 +302,30 @@ export function VisualTimelinePosts({
   const { navigateToPost } = Hooks.usePostNavigation();
   const { rows, hasPendingTiles } = useVisualFeedTiles({ postIds, hasMore });
 
+  // The visual grid only renders posts with image/video attachments. When a page of
+  // posts contains no media, the row count stays unchanged and Virtuoso won't fire
+  // endReached again (the data length didn't change). Track the row count from the
+  // last stable state so we can auto-paginate through media-less pages until visual
+  // tiles appear or the stream is exhausted.
+  const stableRowCountRef = React.useRef(0);
+
+  React.useEffect(() => {
+    if (loading) {
+      stableRowCountRef.current = 0;
+      return;
+    }
+
+    if (loadingMore || error || !hasMore || hasPendingTiles || postIds.length === 0) {
+      return;
+    }
+
+    if (rows.length <= stableRowCountRef.current) {
+      void loadMore();
+    }
+
+    stableRowCountRef.current = rows.length;
+  }, [loading, loadingMore, error, hasMore, postIds.length, rows.length, hasPendingTiles, loadMore]);
+
   const showFilteredEmptyState =
     !loading && !error && postIds.length > 0 && rows.length === 0 && !hasMore && !loadingMore && !hasPendingTiles;
 

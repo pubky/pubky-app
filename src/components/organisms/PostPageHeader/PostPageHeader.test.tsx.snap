@@ -3,7 +3,7 @@
 exports[`PostPageHeader > matches snapshot for reply post with breadcrumb 1`] = `
 <div>
   <div
-    class="mx-auto w-full flex-col flex gap-3 pt-2 pb-6"
+    class="mx-auto w-full flex-col flex gap-3 pt-0 pb-3"
     data-testid="post-page-header"
   >
     <div
@@ -127,7 +127,7 @@ exports[`PostPageHeader > matches snapshot for reply post with breadcrumb 1`] = 
 exports[`PostPageHeader > matches snapshot for root post 1`] = `
 <div>
   <div
-    class="mx-auto w-full flex-col flex gap-3 pt-2 pb-6"
+    class="mx-auto w-full flex-col flex gap-3 pt-0 pb-3"
     data-testid="post-page-header"
   >
     <div

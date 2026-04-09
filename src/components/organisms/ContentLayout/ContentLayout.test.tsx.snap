@@ -23,7 +23,7 @@ exports[`ContentLayout - Custom Feed Layout Override > matches snapshot when cus
       <div
         class="hidden flex-col items-start justify-start gap-6 self-start lg:flex w-(--filter-bar-width) max-w-(--filter-bar-width) min-w-(--filter-bar-width) shrink-0 sticky overflow-x-hidden overflow-y-auto overscroll-contain"
         data-testid="container"
-        style="top: 150px; max-height: calc(100svh - 48px + 150px);"
+        style="top: 144px; max-height: calc(100svh - 48px + 144px);"
       >
         <div>
           Left Sidebar
@@ -40,7 +40,7 @@ exports[`ContentLayout - Custom Feed Layout Override > matches snapshot when cus
       <div
         class="hidden flex-col items-start justify-start gap-6 self-start lg:flex w-(--filter-bar-width) max-w-(--filter-bar-width) min-w-(--filter-bar-width) shrink-0 sticky overflow-x-hidden overflow-y-auto overscroll-contain"
         data-testid="container"
-        style="top: 150px; max-height: calc(100svh - 48px + 150px);"
+        style="top: 144px; max-height: calc(100svh - 48px + 144px);"
       >
         <div>
           Right Sidebar
