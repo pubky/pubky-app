@@ -1,5 +1,6 @@
 import * as Core from '@/core';
 import * as Config from '@/config';
+import { filterByPreferences } from './notification.filters';
 
 export class NotificationController {
   private constructor() {} // Prevent instantiation
@@ -58,24 +59,35 @@ export class NotificationController {
    * Retrieves notifications from cache if available, otherwise fetches from Nexus.
    * Uses timestamp-based pagination.
    *
+   * All notifications are stored unfiltered in IndexedDB.
+   * Filtering by user preferences happens here at read time — the Controller reads
+   * NotificationPreferences from the settings store and removes disabled items before
+   * returning to the UI. This avoids accessing Zustand stores from the Application layer (ADR-0004).
+   *
    * @param params.olderThan - Unix timestamp to get notifications older than.
    *                           Defaults to Infinity for initial load (most recent notifications).
    *                           Use the timestamp of the last notification for pagination.
    * @param params.limit - Maximum number of notifications to return. Defaults to NEXUS_NOTIFICATIONS_LIMIT.
    *
-   * @returns Promise resolving to notifications and next timestamp for pagination
+   * @returns Promise resolving to filtered notifications and next timestamp for pagination
    */
   static async getOrFetchNotifications({
     olderThan = Infinity,
     limit = Config.NEXUS_NOTIFICATIONS_LIMIT,
   }: Core.TGetNotificationsParams): Promise<Core.TGetOrFetchNotificationsResponse> {
     const userId = Core.useAuthStore.getState().selectCurrentUserPubky();
+    const preferences = Core.useSettingsStore.getState().notifications;
 
-    return await Core.NotificationApplication.getOrFetchNotifications({
+    const response = await Core.NotificationApplication.getOrFetchNotifications({
       userId,
       olderThan,
       limit,
     });
+
+    return {
+      ...response,
+      flatNotifications: filterByPreferences(response.flatNotifications, preferences),
+    };
   }
 
   /**
