@@ -38,6 +38,23 @@ exports[`FilterTimeframe > matches snapshot 1`] = `
           data-testid="filter-icon"
         >
           <span>
+            CalendarRange
+          </span>
+        </span>
+        <span
+          data-testid="filter-label"
+        >
+          This Week
+        </span>
+      </li>
+      <li
+        data-selected="false"
+        data-testid="filter-item"
+      >
+        <span
+          data-testid="filter-icon"
+        >
+          <span>
             Calendar
           </span>
         </span>
@@ -105,6 +122,23 @@ exports[`HotFeedDrawer > matches snapshot 1`] = `
             data-testid="filter-label"
           >
             Today
+          </span>
+        </li>
+        <li
+          data-selected="false"
+          data-testid="filter-item"
+        >
+          <span
+            data-testid="filter-icon"
+          >
+            <span>
+              CalendarRange
+            </span>
+          </span>
+          <span
+            data-testid="filter-label"
+          >
+            This Week
           </span>
         </li>
         <li
@@ -183,6 +217,23 @@ exports[`HotFeedSidebar > matches snapshot 1`] = `
             data-testid="filter-label"
           >
             Today
+          </span>
+        </li>
+        <li
+          data-selected="false"
+          data-testid="filter-item"
+        >
+          <span
+            data-testid="filter-icon"
+          >
+            <span>
+              CalendarRange
+            </span>
+          </span>
+          <span
+            data-testid="filter-label"
+          >
+            This Week
           </span>
         </li>
         <li
