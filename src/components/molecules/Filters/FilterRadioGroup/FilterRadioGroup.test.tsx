@@ -115,7 +115,7 @@ describe('FilterRadioGroup', () => {
 
       const option2 = screen.getByLabelText('Option 2');
       expect(option2).toHaveAttribute('aria-disabled', 'true');
-      expect(option2).toHaveClass('opacity-20', 'cursor-default');
+      expect(option2).toHaveClass('opacity-40', 'cursor-default');
     });
 
     it('does not call onChange when disabled item is clicked', () => {
