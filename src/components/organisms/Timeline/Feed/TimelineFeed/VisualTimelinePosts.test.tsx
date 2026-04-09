@@ -389,6 +389,48 @@ describe('VisualTimelinePosts', () => {
     expect(screen.getByTestId('visual-overlay-content-stack')).toHaveClass('flex', 'flex-col', 'gap-4');
   });
 
+  describe('auto-pagination', () => {
+    it('auto-paginates when the grid has too few rows for scroll-driven loading', () => {
+      const mockLoadMore = vi.fn().mockResolvedValue(undefined);
+      render(
+        <VisualTimelinePosts
+          postIds={['author:post1']}
+          loading={false}
+          loadingMore={false}
+          error={null}
+          hasMore={true}
+          loadMore={mockLoadMore}
+        />,
+      );
+
+      expect(mockLoadMore).toHaveBeenCalled();
+    });
+
+    it('auto-paginates even while tile probes are pending', () => {
+      mockUseVisualFeedTiles.mockReturnValue({
+        rows: createRows(),
+        tail: [],
+        tiles: [],
+        hasPendingTiles: true,
+        hasPendingFiles: false,
+      });
+
+      const mockLoadMore = vi.fn().mockResolvedValue(undefined);
+      render(
+        <VisualTimelinePosts
+          postIds={['author:post1']}
+          loading={false}
+          loadingMore={false}
+          error={null}
+          hasMore={true}
+          loadMore={mockLoadMore}
+        />,
+      );
+
+      expect(mockLoadMore).toHaveBeenCalled();
+    });
+  });
+
   describe('Virtuoso endReached', () => {
     it('calls loadMore when hasMore and not loadingMore', () => {
       const mockLoadMore = vi.fn().mockResolvedValue(undefined);
@@ -403,6 +445,7 @@ describe('VisualTimelinePosts', () => {
         />,
       );
 
+      mockLoadMore.mockClear();
       fireEvent.click(screen.getByTestId('virtuoso-end-reached'));
       expect(mockLoadMore).toHaveBeenCalledOnce();
     });

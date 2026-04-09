@@ -324,7 +324,7 @@ describe('visual layout', () => {
     cy.deleteDownloadsFolder();
   });
 
-  it.only('can view image-only posts in visual layout', () => {
+  it('can view image-only posts in visual layout', () => {
     const imagePostContent1 = `Image post 1 ${Date.now()}`;
     const imagePostContent2 = `Image post 2 ${Date.now()}`;
     const imagePostContent3 = `Image post 3 ${Date.now()}`;
