@@ -177,6 +177,7 @@ describe('VisualTimelinePosts', () => {
       tail: [],
       tiles: [],
       hasPendingTiles: false,
+      hasPendingFiles: false,
     });
   });
 
@@ -239,6 +240,30 @@ describe('VisualTimelinePosts', () => {
       tail: [],
       tiles: [],
       hasPendingTiles: true,
+      hasPendingFiles: false,
+    });
+
+    render(
+      <VisualTimelinePosts
+        postIds={['author:post1']}
+        loading={false}
+        loadingMore={false}
+        error={null}
+        hasMore={false}
+        loadMore={vi.fn()}
+      />,
+    );
+
+    expect(screen.queryByTestId('timeline-empty')).not.toBeInTheDocument();
+  });
+
+  it('does not render the filtered empty state while file metadata is being fetched', () => {
+    mockUseVisualFeedTiles.mockReturnValue({
+      rows: [],
+      tail: [],
+      tiles: [],
+      hasPendingTiles: false,
+      hasPendingFiles: true,
     });
 
     render(
@@ -287,6 +312,7 @@ describe('VisualTimelinePosts', () => {
       tail: [],
       tiles: [],
       hasPendingTiles: false,
+      hasPendingFiles: false,
     });
 
     render(
@@ -426,6 +452,7 @@ describe('VisualTimelinePosts - Snapshots', () => {
       tail: [],
       tiles: [],
       hasPendingTiles: false,
+      hasPendingFiles: false,
     });
   });
 
@@ -450,6 +477,7 @@ describe('VisualTimelinePosts - Snapshots', () => {
       tail: [],
       tiles: [],
       hasPendingTiles: false,
+      hasPendingFiles: false,
     });
 
     const { container } = render(

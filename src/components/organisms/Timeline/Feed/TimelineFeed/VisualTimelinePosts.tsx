@@ -300,7 +300,7 @@ export function VisualTimelinePosts({
   loadMore,
 }: VisualTimelinePostsProps) {
   const { navigateToPost } = Hooks.usePostNavigation();
-  const { rows, hasPendingTiles } = useVisualFeedTiles({ postIds, hasMore });
+  const { rows, hasPendingTiles, hasPendingFiles } = useVisualFeedTiles({ postIds, hasMore });
 
   // The visual grid only renders posts with image/video attachments. When a page of
   // posts contains no media, the row count stays unchanged and Virtuoso won't fire
@@ -315,7 +315,7 @@ export function VisualTimelinePosts({
       return;
     }
 
-    if (loadingMore || error || !hasMore || hasPendingTiles || postIds.length === 0) {
+    if (loadingMore || error || !hasMore || hasPendingTiles || hasPendingFiles || postIds.length === 0) {
       return;
     }
 
@@ -324,10 +324,17 @@ export function VisualTimelinePosts({
     }
 
     stableRowCountRef.current = rows.length;
-  }, [loading, loadingMore, error, hasMore, postIds.length, rows.length, hasPendingTiles, loadMore]);
+  }, [loading, loadingMore, error, hasMore, postIds.length, rows.length, hasPendingTiles, hasPendingFiles, loadMore]);
 
   const showFilteredEmptyState =
-    !loading && !error && postIds.length > 0 && rows.length === 0 && !hasMore && !loadingMore && !hasPendingTiles;
+    !loading &&
+    !error &&
+    postIds.length > 0 &&
+    rows.length === 0 &&
+    !hasMore &&
+    !loadingMore &&
+    !hasPendingTiles &&
+    !hasPendingFiles;
 
   const virtuosoContext: TimelineVirtuosoContext = {
     loadingMore,
