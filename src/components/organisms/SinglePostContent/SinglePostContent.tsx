@@ -7,7 +7,7 @@ import * as Hooks from '@/hooks';
 import * as Libs from '@/libs';
 import { SinglePostArticle } from '../SinglePostArticle';
 import { SinglePostCard } from '../SinglePostCard';
-import { SinglePostParticipants } from '../SinglePostParticipants';
+
 import { PostPageHeader } from '../PostPageHeader';
 import { ThreadTree } from '../ThreadTree/ThreadTree';
 import type { SinglePostContentProps } from './SinglePostContent.types';
@@ -64,25 +64,12 @@ export function SinglePostContent({ postId }: SinglePostContentProps) {
 
       {/* Replies section - only visible for authenticated users */}
       {isAuthenticated && (
-        <Atoms.Container overrideDefaults className="flex gap-6">
+        <Atoms.Container overrideDefaults className="mb-6 flex">
           {/* Left column - Replies thread with QuickReply at the end (larger) */}
           <Atoms.Container className="w-full min-w-0 flex-1 gap-0 overflow-hidden">
             <Atoms.Container overrideDefaults className="ml-3">
               <ThreadTree key={postId} postId={postId} showQuickReply={!isDeleted} />
             </Atoms.Container>
-          </Atoms.Container>
-
-          {/* Right column - Participants sidebar (desktop only) */}
-          <Atoms.Container
-            overrideDefaults
-            className={Libs.cn(
-              'sticky hidden flex-col items-start justify-start gap-6 self-start pt-6 lg:flex',
-              // Aligns sticky sidebar below the fixed page header stack on desktop.
-              'top-[147px]',
-              'w-full max-w-xs',
-            )}
-          >
-            <SinglePostParticipants postId={postId} />
           </Atoms.Container>
         </Atoms.Container>
       )}

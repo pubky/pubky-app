@@ -71,7 +71,7 @@ export function PostPageHeader({ postId }: PostPageHeaderProps) {
   const titlePrefix = hasParents ? 'Reply by' : 'Post by';
 
   return (
-    <Atoms.PageHeader data-testid="post-page-header">
+    <Atoms.PageHeader data-testid="post-page-header" className="pt-0 pb-3">
       <Atoms.Container
         className="flex flex-col gap-2 md:flex-row md:items-center md:justify-between md:gap-4"
         overrideDefaults
