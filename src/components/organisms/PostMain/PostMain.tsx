@@ -78,12 +78,19 @@ export function PostMain({
           ) : (
             <>
               {showRepostHeader && <Molecules.RepostHeader />}
-              <Atoms.CardContent className="flex min-w-0 flex-col gap-4 p-6">
+              <Atoms.CardContent
+                className={Libs.cn(
+                  'flex min-w-0 flex-col',
+                  effectiveTagsLayout === 'side' ? 'gap-6 p-12' : 'gap-4 p-6',
+                )}
+              >
                 {effectiveTagsLayout === 'side' ? (
                   <Atoms.Container className="grid min-w-0 grid-cols-1 gap-6 lg:grid-cols-3">
                     <Atoms.Container className="flex min-w-0 flex-col gap-4 lg:col-span-2">
-                      {shouldShowPostHeader && <Organisms.PostHeader postId={postId} timeAgoPlacement="bottom-left" />}
-                      <Organisms.PostContent postId={postId} />
+                      {shouldShowPostHeader && (
+                        <Organisms.PostHeader postId={postId} size="large" timeAgoPlacement="bottom-left" />
+                      )}
+                      <Organisms.PostContent postId={postId} textClassName="text-xl leading-7" />
                       <Atoms.Container overrideDefaults onClick={handleFooterClick} className="flex flex-col gap-4">
                         <Organisms.PostTagsPanel
                           ref={mobileTagsPanelRef}

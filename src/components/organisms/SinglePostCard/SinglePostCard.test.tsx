@@ -18,9 +18,20 @@ vi.mock('@/hooks', () => ({
 
 // Mock organisms
 vi.mock('@/organisms', () => ({
-  PostHeader: ({ postId, timeAgoPlacement }: { postId: string; timeAgoPlacement?: 'top-right' | 'bottom-left' }) =>
-    mockPostHeader({ postId, timeAgoPlacement }),
-  PostContent: ({ postId }: { postId: string }) => <div data-testid="post-content">Content: {postId}</div>,
+  PostHeader: ({
+    postId,
+    size,
+    timeAgoPlacement,
+  }: {
+    postId: string;
+    size?: 'normal' | 'large';
+    timeAgoPlacement?: 'top-right' | 'bottom-left';
+  }) => mockPostHeader({ postId, size, timeAgoPlacement }),
+  PostContent: ({ postId, textClassName }: { postId: string; textClassName?: string }) => (
+    <div data-testid="post-content" data-text-class-name={textClassName}>
+      Content: {postId}
+    </div>
+  ),
   PostActionsBar: ({
     postId,
     onTagClick,
@@ -254,11 +265,23 @@ describe('SinglePostCard', () => {
   });
 
   describe('timestamp placement', () => {
-    it('passes bottom-left timestamp placement to PostHeader', () => {
+    it('passes normal size and bottom-left timestamp placement to PostHeader in columns layout', () => {
       render(<SinglePostCard postId={mockPostId} />);
 
       expect(mockPostHeader).toHaveBeenCalledWith({
         postId: mockPostId,
+        size: 'normal',
+        timeAgoPlacement: 'bottom-left',
+      });
+    });
+
+    it('passes large size and bottom-left timestamp placement to PostHeader in wide layout', () => {
+      Core.useHomeStore.getState().setLayout(Core.LAYOUT.WIDE);
+      render(<SinglePostCard postId={mockPostId} />);
+
+      expect(mockPostHeader).toHaveBeenCalledWith({
+        postId: mockPostId,
+        size: 'large',
         timeAgoPlacement: 'bottom-left',
       });
     });
@@ -270,8 +293,48 @@ describe('SinglePostCard', () => {
 
       expect(mockPostHeader).toHaveBeenCalledWith({
         postId: mockPostId,
+        size: undefined,
         timeAgoPlacement: undefined,
       });
+    });
+  });
+
+  describe('wide layout styling', () => {
+    it('applies wide padding and gap in wide layout on desktop', () => {
+      Core.useHomeStore.getState().setLayout(Core.LAYOUT.WIDE);
+      render(<SinglePostCard postId={mockPostId} />);
+
+      const cardContent = screen.getByTestId('card-content');
+      expect(cardContent).toHaveClass('gap-6', 'p-12');
+    });
+
+    it('applies default padding and gap in columns layout', () => {
+      render(<SinglePostCard postId={mockPostId} />);
+
+      const cardContent = screen.getByTestId('card-content');
+      expect(cardContent).toHaveClass('gap-4', 'p-6');
+    });
+
+    it('applies default padding on mobile even in wide layout', () => {
+      Core.useHomeStore.getState().setLayout(Core.LAYOUT.WIDE);
+      mockUseIsMobile.mockReturnValue(true);
+      render(<SinglePostCard postId={mockPostId} />);
+
+      const cardContent = screen.getByTestId('card-content');
+      expect(cardContent).toHaveClass('gap-4', 'p-6');
+    });
+
+    it('passes text-xl className to PostContent in wide layout', () => {
+      Core.useHomeStore.getState().setLayout(Core.LAYOUT.WIDE);
+      render(<SinglePostCard postId={mockPostId} />);
+
+      expect(screen.getByTestId('post-content')).toHaveAttribute('data-text-class-name', 'text-xl leading-7');
+    });
+
+    it('does not pass text className to PostContent in columns layout', () => {
+      render(<SinglePostCard postId={mockPostId} />);
+
+      expect(screen.getByTestId('post-content')).not.toHaveAttribute('data-text-class-name');
     });
   });
 

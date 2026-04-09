@@ -64,9 +64,20 @@ vi.mock('@/atoms', async () => {
 
 // Stub organisms composed inside PostMain
 vi.mock('@/organisms', () => ({
-  PostHeader: ({ postId, timeAgoPlacement }: { postId: string; timeAgoPlacement?: 'top-right' | 'bottom-left' }) =>
-    mockPostHeader({ postId, timeAgoPlacement }),
-  PostContent: ({ postId }: { postId: string }) => <div data-testid="post-content">PostContent {postId}</div>,
+  PostHeader: ({
+    postId,
+    size,
+    timeAgoPlacement,
+  }: {
+    postId: string;
+    size?: 'normal' | 'large';
+    timeAgoPlacement?: 'top-right' | 'bottom-left';
+  }) => mockPostHeader({ postId, size, timeAgoPlacement }),
+  PostContent: ({ postId, textClassName }: { postId: string; textClassName?: string }) => (
+    <div data-testid="post-content" data-text-class-name={textClassName}>
+      PostContent {postId}
+    </div>
+  ),
   PostActionsBar: ({
     postId,
     className,
@@ -378,22 +389,51 @@ describe('PostMain', () => {
     expect(screen.getByTestId('post-content')).toBeInTheDocument();
   });
 
-  it('passes bottom-left timestamp placement for side tags layout', () => {
+  it('passes large size and bottom-left timestamp placement for side tags layout', () => {
     render(<PostMain postId="post-side-1" tagsLayout="side" />);
 
     expect(mockPostHeader).toHaveBeenCalledWith({
       postId: 'post-side-1',
+      size: 'large',
       timeAgoPlacement: 'bottom-left',
     });
   });
 
-  it('keeps default timestamp placement for inline tags layout', () => {
+  it('passes text-xl className to PostContent for side tags layout', () => {
+    render(<PostMain postId="post-side-1" tagsLayout="side" />);
+
+    expect(screen.getByTestId('post-content')).toHaveAttribute('data-text-class-name', 'text-xl leading-7');
+  });
+
+  it('applies wide padding and gap for side tags layout', () => {
+    render(<PostMain postId="post-side-1" tagsLayout="side" />);
+
+    const cardContent = screen.getByTestId('card-content');
+    expect(cardContent).toHaveAttribute('data-class-name', expect.stringContaining('gap-6 p-12'));
+  });
+
+  it('keeps default size and timestamp placement for inline tags layout', () => {
     render(<PostMain postId="post-inline-1" tagsLayout="inline" />);
 
     expect(mockPostHeader).toHaveBeenCalledWith({
       postId: 'post-inline-1',
+      size: undefined,
       timeAgoPlacement: undefined,
     });
+  });
+
+  it('does not apply wide text className for inline tags layout', () => {
+    render(<PostMain postId="post-inline-1" tagsLayout="inline" />);
+
+    expect(screen.getByTestId('post-content')).not.toHaveAttribute('data-text-class-name');
+  });
+
+  it('applies default padding and gap for inline tags layout', () => {
+    render(<PostMain postId="post-inline-1" tagsLayout="inline" />);
+
+    const cardContent = screen.getByTestId('card-content');
+    expect(cardContent).toHaveAttribute('data-class-name', expect.stringContaining('gap-4 p-6'));
+    expect(cardContent).not.toHaveAttribute('data-class-name', expect.stringContaining('p-12'));
   });
 
   it('falls back to inline layout on mobile when tagsLayout is side', () => {
@@ -405,6 +445,7 @@ describe('PostMain', () => {
     expect(screen.queryByTestId('post-tags-panel')).not.toBeInTheDocument();
     expect(mockPostHeader).toHaveBeenCalledWith({
       postId: 'post-mobile-side-1',
+      size: undefined,
       timeAgoPlacement: undefined,
     });
   });

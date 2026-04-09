@@ -70,7 +70,9 @@ export function SinglePostCard({ postId, className }: SinglePostCardProps) {
   return (
     <>
       <Atoms.Card data-cy="single-post-card" className={Libs.cn('min-w-0 rounded-lg py-0', className)}>
-        <Atoms.CardContent className="flex min-w-0 flex-col gap-4 p-6">
+        <Atoms.CardContent
+          className={Libs.cn('flex min-w-0 flex-col', !isMobile && isWideLayout ? 'gap-6 p-12' : 'gap-4 p-6')}
+        >
           {isMobile ? (
             <>
               <Organisms.PostHeader postId={postId} />
@@ -100,9 +102,13 @@ export function SinglePostCard({ postId, className }: SinglePostCardProps) {
             >
               {/* Left column - Post content */}
               <Atoms.Container className="flex min-w-0 flex-col gap-4 lg:col-span-2">
-                <Organisms.PostHeader postId={postId} timeAgoPlacement="bottom-left" />
+                <Organisms.PostHeader
+                  postId={postId}
+                  size={isWideLayout ? 'large' : 'normal'}
+                  timeAgoPlacement="bottom-left"
+                />
 
-                <Organisms.PostContent postId={postId} />
+                <Organisms.PostContent postId={postId} textClassName={isWideLayout ? 'text-xl leading-7' : undefined} />
 
                 {/* Spacer to push actions bar to bottom */}
                 <Atoms.Container overrideDefaults className="flex-1" />

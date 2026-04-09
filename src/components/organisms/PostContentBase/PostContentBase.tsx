@@ -14,7 +14,7 @@ import type { PostContentBaseProps } from './PostContentBase.types';
  * This component is used internally by PostContent and PostPreviewCard.
  * It only renders the content elements: text, link embeds, and attachments.
  */
-export function PostContentBase({ postId, className }: PostContentBaseProps) {
+export function PostContentBase({ postId, className, textClassName }: PostContentBaseProps) {
   const t = useTranslations('common');
 
   const localAttachments = Core.useLocalFilesStore((s) => s.posts[postId]);
@@ -51,7 +51,7 @@ export function PostContentBase({ postId, className }: PostContentBaseProps) {
   return (
     <Atoms.Container className={Libs.cn('min-w-0 gap-3', className)}>
       {/* Post text */}
-      {hasContent && <Molecules.PostText content={postDetails.content} />}
+      {hasContent && <Molecules.PostText content={postDetails.content} className={textClassName} />}
 
       {/* Link previews from text */}
       {hasContent && <Molecules.PostLinkEmbeds content={postDetails.content} />}
