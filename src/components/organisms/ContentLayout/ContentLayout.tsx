@@ -48,6 +48,7 @@ export function ContentLayout({
   showRightMobileButton = true,
   renderMobileHeader = true,
   className,
+  classNameWrapperContent,
   feedVariant,
 }: Types.ContentLayoutProps) {
   const { layout: homeLayout } = Core.useHomeStore();
@@ -118,7 +119,11 @@ export function ContentLayout({
           )}
 
           {/* Main content area - grows to fill space, min-w-0 prevents flex overflow */}
-          <Atoms.Container className="w-full min-w-0 flex-1 gap-6 lg:overflow-hidden">{children}</Atoms.Container>
+          <Atoms.Container
+            className={Libs.cn('w-full min-w-0 flex-1 gap-6 lg:overflow-hidden', classNameWrapperContent)}
+          >
+            {children}
+          </Atoms.Container>
 
           {/* Right sidebar - hidden on mobile (< lg) and in wide-shell layout mode */}
           {showRightSidebar && !usesWideShellLayout && rightSidebarContent && (

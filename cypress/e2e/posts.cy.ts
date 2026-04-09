@@ -12,7 +12,7 @@ import {
   replyToPost,
   repostPost,
   MAX_POST_LENGTH,
-  addImage,
+  createQuickPostWithImage,
   PostOrReply,
   waitForFeedToLoad,
 } from '../support/posts';
@@ -110,16 +110,7 @@ describe('posts', () => {
 
   it('can post with image upload', () => {
     const postContent = `I can post with an image! ${Date.now()}`;
-
-    cy.get('[data-cy="home-post-input"]').within(() => {
-      cy.get('textarea').click();
-
-      // upload image
-      addImage();
-
-      cy.get('textarea').type(postContent);
-      cy.get('[data-cy="post-input-action-bar-post"]').click();
-    });
+    createQuickPostWithImage(postContent);
 
     cy.findFirstPostInFeedFiltered(postContent, CheckForNewPosts.No, WaitForNewPosts.Yes).within(() => {
       cy.get('[data-cy="post-text"]').should('contain.text', postContent);

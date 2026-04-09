@@ -143,7 +143,7 @@ export function PostMain({
                         onTagClick={() => setTagsExpanded((prev) => !prev)}
                         onReplyClick={handleReplyClick}
                         onRepostClick={handleRepostClick}
-                        className="w-full shrink-0 justify-start overflow-y-scroll sm:w-auto md:justify-end"
+                        className="w-full shrink-0 justify-start sm:w-auto md:justify-end"
                       />
                     </Atoms.Container>
                   </>

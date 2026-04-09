@@ -50,7 +50,7 @@ describe('StreamPostsController', () => {
       });
     });
 
-    it('should fetch missing posts when cacheMissPostIds exist', async () => {
+    it('should fetch missing posts and re-filter deleted when cacheMissPostIds exist', async () => {
       const nextPageIds = ['user-1:post-1', 'user-1:post-2'];
       const cacheMissPostIds = ['user-1:post-3', 'user-1:post-4'];
       const timestamp = 1000000;
@@ -64,6 +64,10 @@ describe('StreamPostsController', () => {
       const fetchMissingPostsSpy = vi
         .spyOn(Core.PostStreamApplication, 'fetchMissingPostsFromNexus')
         .mockResolvedValue();
+
+      const filterDeletedSpy = vi
+        .spyOn(Core.PostStreamApplication, 'filterDeletedPosts')
+        .mockResolvedValue(nextPageIds);
 
       const result = await StreamPostsController.getOrFetchStreamSlice({
         streamId,
@@ -82,10 +86,35 @@ describe('StreamPostsController', () => {
         cacheMissPostIds,
         viewerId,
       });
+      expect(filterDeletedSpy).toHaveBeenCalledWith(nextPageIds);
       expect(result).toEqual({
         nextPageIds,
         timestamp,
       });
+    });
+
+    it('should remove deleted posts discovered after cache-miss fetch', async () => {
+      const nextPageIds = ['user-1:post-1', 'user-1:post-2', 'user-1:post-3'];
+      const cacheMissPostIds = ['user-1:post-2'];
+      const timestamp = 1000000;
+
+      vi.spyOn(Core.PostStreamApplication, 'getOrFetchStreamSlice').mockResolvedValue({
+        nextPageIds,
+        cacheMissPostIds,
+        timestamp,
+      });
+
+      vi.spyOn(Core.PostStreamApplication, 'fetchMissingPostsFromNexus').mockResolvedValue();
+
+      vi.spyOn(Core.PostStreamApplication, 'filterDeletedPosts').mockResolvedValue(['user-1:post-1', 'user-1:post-3']);
+
+      const result = await StreamPostsController.getOrFetchStreamSlice({
+        streamId,
+        streamTail: 0,
+      });
+
+      expect(result.nextPageIds).toEqual(['user-1:post-1', 'user-1:post-3']);
+      expect(result.timestamp).toBe(timestamp);
     });
 
     it('should pass lastPostId and streamTail to getOrFetchStreamSlice', async () => {

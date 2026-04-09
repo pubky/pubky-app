@@ -13,7 +13,7 @@ exports[`UserListItem - Snapshots > matches snapshot for compact variant 1`] = `
       data-testid="avatar"
     />
     <div
-      class="flex min-w-0 flex-1 flex-col"
+      class="flex max-w-25 min-w-0 flex-1 flex-col"
     >
       <span
         class="truncate text-sm font-bold text-foreground"
@@ -29,7 +29,7 @@ exports[`UserListItem - Snapshots > matches snapshot for compact variant 1`] = `
   </button>
   <button
     aria-label="Follow Test User"
-    class="group size-8 shrink-0 rounded-full"
+    class="group size-8 shrink-0 rounded-full p-1"
     data-cy="user-list-item-follow-toggle-btn"
     data-size="icon"
     data-variant="secondary"
@@ -55,7 +55,7 @@ exports[`UserListItem - Snapshots > matches snapshot for compact variant as curr
       data-testid="avatar"
     />
     <div
-      class="flex min-w-0 flex-1 flex-col"
+      class="flex max-w-25 min-w-0 flex-1 flex-col"
     >
       <span
         class="truncate text-sm font-bold text-foreground"
@@ -71,15 +71,15 @@ exports[`UserListItem - Snapshots > matches snapshot for compact variant as curr
   </button>
   <button
     aria-label="This is you"
-    class="size-8 shrink-0 cursor-not-allowed rounded-full opacity-50"
+    class="size-8 shrink-0 cursor-not-allowed border-none bg-transparent p-1 opacity-100 hover:bg-transparent"
     data-cy="user-list-item-me-btn"
     data-size="icon"
     data-variant="secondary"
-    disabled=""
   >
     <svg
-      class="size-5 text-muted-foreground"
-      data-testid="circle-user-round"
+      class="size-5"
+      data-testid="user-round-icon"
+      stroke-width="2"
     />
   </button>
 </div>
@@ -98,7 +98,7 @@ exports[`UserListItem - Snapshots > matches snapshot for compact variant when fo
       data-testid="avatar"
     />
     <div
-      class="flex min-w-0 flex-1 flex-col"
+      class="flex max-w-25 min-w-0 flex-1 flex-col"
     >
       <span
         class="truncate text-sm font-bold text-foreground"
@@ -114,7 +114,7 @@ exports[`UserListItem - Snapshots > matches snapshot for compact variant when fo
   </button>
   <button
     aria-label="Unfollow Test User"
-    class="group size-8 shrink-0 rounded-full"
+    class="group size-8 shrink-0 rounded-full p-1"
     data-cy="user-list-item-follow-toggle-btn"
     data-size="icon"
     data-variant="secondary"
@@ -144,7 +144,7 @@ exports[`UserListItem - Snapshots > matches snapshot for compact variant with st
       data-testid="avatar"
     />
     <div
-      class="flex min-w-0 flex-1 flex-col"
+      class="flex max-w-25 min-w-0 flex-1 flex-col"
     >
       <span
         class="truncate text-sm font-bold text-foreground"
@@ -181,7 +181,7 @@ exports[`UserListItem - Snapshots > matches snapshot for compact variant with st
   </button>
   <button
     aria-label="Follow Test User"
-    class="group size-8 shrink-0 rounded-full"
+    class="group size-8 shrink-0 rounded-full p-1"
     data-cy="user-list-item-follow-toggle-btn"
     data-size="icon"
     data-variant="secondary"
@@ -267,7 +267,7 @@ exports[`UserListItem - Snapshots > matches snapshot for full variant 1`] = `
     >
       <button
         aria-label="Follow Test User"
-        class="group size-8 shrink-0 rounded-full"
+        class="group size-8 shrink-0 rounded-full p-1"
         data-cy="user-list-item-follow-toggle-btn"
         data-size="icon"
         data-variant="secondary"
@@ -290,7 +290,7 @@ exports[`UserListItem - Snapshots > matches snapshot for full variant 1`] = `
     >
       <button
         aria-label="Follow Test User"
-        class="group size-8 shrink-0 rounded-full"
+        class="group size-8 shrink-0 rounded-full p-1"
         data-cy="user-list-item-follow-toggle-btn"
         data-size="icon"
         data-variant="secondary"
