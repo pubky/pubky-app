@@ -8,6 +8,7 @@ import type { NotificationPreferences } from '@/core/stores/settings/settings.ty
  * conventions — the enum uses snake_case from the API, while preferences use
  * camelCase from the settings store — so an explicit mapping is required.
  */
+// exported for tests
 export const NOTIFICATION_TYPE_TO_PREFERENCE_KEY: Record<NotificationType, keyof NotificationPreferences> = {
   [NotificationType.Follow]: 'follow',
   [NotificationType.NewFriend]: 'newFriend',
