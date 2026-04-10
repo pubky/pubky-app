@@ -115,7 +115,7 @@ vi.mock('@/atoms', () => ({
     className?: string;
     onClick?: () => void;
   }) => (
-    <div className={className} onClick={onClick}>
+    <div data-testid="container" data-class-name={className} className={className} onClick={onClick}>
       {children}
     </div>
   ),
@@ -300,12 +300,24 @@ describe('SinglePostCard', () => {
   });
 
   describe('wide layout styling', () => {
-    it('applies wide padding and gap in wide layout on desktop', () => {
+    it('applies section-owned spacing in wide layout on desktop', () => {
       Core.useHomeStore.getState().setLayout(Core.LAYOUT.WIDE);
       render(<SinglePostCard postId={mockPostId} />);
 
       const cardContent = screen.getByTestId('card-content');
-      expect(cardContent).toHaveClass('gap-6', 'p-12');
+      expect(cardContent).toHaveClass('p-0');
+      expect(cardContent).not.toHaveClass('p-12');
+
+      const containers = screen.getAllByTestId('container');
+      const leftSection = containers.find((container) =>
+        container.getAttribute('data-class-name')?.includes('p-12 lg:flex-1'),
+      );
+      const rightSection = containers.find((container) =>
+        container.getAttribute('data-class-name')?.includes('lg:w-96 lg:shrink-0 lg:p-12'),
+      );
+
+      expect(leftSection).toBeDefined();
+      expect(rightSection).toBeDefined();
     });
 
     it('applies default padding and gap in columns layout', () => {

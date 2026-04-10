@@ -71,7 +71,7 @@ export function SinglePostCard({ postId, className }: SinglePostCardProps) {
     <>
       <Atoms.Card data-cy="single-post-card" className={Libs.cn('min-w-0 rounded-lg py-0', className)}>
         <Atoms.CardContent
-          className={Libs.cn('flex min-w-0 flex-col', !isMobile && isWideLayout ? 'gap-6 p-12' : 'gap-4 p-6')}
+          className={Libs.cn('flex min-w-0 flex-col', !isMobile && isWideLayout ? 'p-0' : 'gap-4 p-6')}
         >
           {isMobile ? (
             <>
@@ -96,6 +96,41 @@ export function SinglePostCard({ postId, className }: SinglePostCardProps) {
                 />
               </Atoms.Container>
             </>
+          ) : isWideLayout ? (
+            <Atoms.Container className="flex min-w-0 flex-col lg:flex-row">
+              <Atoms.Container className="flex min-w-0 flex-col gap-4 p-12 lg:flex-1">
+                <Organisms.PostHeader postId={postId} size="large" timeAgoPlacement="bottom-left" />
+
+                <Organisms.PostContent postId={postId} textClassName="text-xl leading-7" />
+
+                {/* Spacer to push actions bar to bottom */}
+                <Atoms.Container overrideDefaults className="flex-1" />
+
+                <Atoms.Container
+                  onClick={handleFooterClick}
+                  className={Libs.cn(
+                    'flex-col items-start gap-2 md:flex-row md:justify-between md:gap-4',
+                    tagsExpanded ? 'md:items-end' : 'md:items-start',
+                  )}
+                >
+                  <Organisms.PostActionsBar
+                    postId={postId}
+                    onTagClick={handleTagClick}
+                    onReplyClick={handleReplyClick}
+                    onRepostClick={handleRepostClick}
+                  />
+                </Atoms.Container>
+              </Atoms.Container>
+
+              <Atoms.Container className="hidden lg:flex lg:w-96 lg:shrink-0 lg:p-12">
+                <Organisms.PostTagsPanel
+                  ref={desktopTagsPanelRef}
+                  postId={postId}
+                  widthMode="full"
+                  className="w-full"
+                />
+              </Atoms.Container>
+            </Atoms.Container>
           ) : (
             <Atoms.Container
               className={Libs.cn('grid min-w-0 grid-cols-1 gap-6', isWideLayout ? 'lg:grid-cols-3' : 'lg:grid-cols-2')}

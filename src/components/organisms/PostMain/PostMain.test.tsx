@@ -409,7 +409,19 @@ describe('PostMain', () => {
     render(<PostMain postId="post-side-1" tagsLayout="side" />);
 
     const cardContent = screen.getByTestId('card-content');
-    expect(cardContent).toHaveAttribute('data-class-name', expect.stringContaining('gap-6 p-12'));
+    expect(cardContent).toHaveAttribute('data-class-name', expect.stringContaining('p-0'));
+    expect(cardContent).not.toHaveAttribute('data-class-name', expect.stringContaining('p-12'));
+
+    const containers = screen.getAllByTestId('container');
+    const leftSection = containers.find((container) =>
+      container.getAttribute('data-class-name')?.includes('p-12 lg:flex-1'),
+    );
+    const rightSection = containers.find((container) =>
+      container.getAttribute('data-class-name')?.includes('lg:w-96 lg:shrink-0 lg:p-12'),
+    );
+
+    expect(leftSection).toBeDefined();
+    expect(rightSection).toBeDefined();
   });
 
   it('keeps default size and timestamp placement for inline tags layout', () => {
