@@ -3,11 +3,9 @@
 import { useRouter } from 'next/navigation';
 import { useTranslations } from 'next-intl';
 import * as Molecules from '@/molecules';
-import * as Atoms from '@/atoms';
 import * as Organisms from '@/organisms';
 import * as Hooks from '@/hooks';
 import * as Core from '@/core';
-import * as Libs from '@/libs';
 import { APP_ROUTES } from '@/app/routes';
 import { SinglePostParticipantsSkeleton } from './SinglePostParticipants.skeleton';
 import type { SinglePostParticipantsProps, ParticipantItemProps } from './SinglePostParticipants.types';
