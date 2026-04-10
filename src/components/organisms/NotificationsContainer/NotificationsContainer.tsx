@@ -5,6 +5,7 @@ import * as Atoms from '@/atoms';
 import * as Organisms from '@/organisms';
 import * as Molecules from '@/molecules';
 import * as Hooks from '@/hooks';
+import { NotificationsContainerSkeleton, NotificationsLoadMoreSkeleton } from './NotificationsContainer.skeleton';
 
 /**
  * Organism that handles all notification business logic:
@@ -30,13 +31,8 @@ export function NotificationsContainer() {
     markAllAsRead();
   }, [markAllAsRead]);
 
-  // Loading state
   if (isLoading) {
-    return (
-      <Atoms.Container overrideDefaults={true} className="flex items-center justify-center py-12">
-        <Atoms.Spinner size="lg" />
-      </Atoms.Container>
-    );
+    return <NotificationsContainerSkeleton />;
   }
 
   // Error state
@@ -63,12 +59,7 @@ export function NotificationsContainer() {
       {/* Infinite scroll sentinel - triggers loadMore when visible */}
       <div ref={sentinelRef} className="h-10" />
 
-      {/* Loading more indicator */}
-      {isLoadingMore && (
-        <Atoms.Container overrideDefaults={true} className="flex items-center justify-center py-4">
-          <Atoms.Spinner size="md" />
-        </Atoms.Container>
-      )}
+      {isLoadingMore && <NotificationsLoadMoreSkeleton />}
     </>
   );
 }

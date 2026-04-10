@@ -6,6 +6,7 @@ import * as Atoms from '@/atoms';
 import * as Libs from '@/libs';
 import * as Hooks from '@/hooks';
 import * as Molecules from '@/molecules';
+import { MutedUsersListSkeleton } from './MutedUsersList.skeleton';
 import { mapUserIdsToMutedUsers } from './MutedUsersList.utils';
 
 export function MutedUsersList() {
@@ -72,11 +73,7 @@ export function MutedUsersList() {
   return (
     <Atoms.Container data-cy="muted-users-root" overrideDefaults className="inline-flex w-full flex-col gap-6">
       {isLoading ? (
-        <Atoms.Container overrideDefaults className="w-full">
-          <Atoms.Typography as="span" overrideDefaults className="text-base font-medium text-muted-foreground">
-            {tCommon('loading')}
-          </Atoms.Typography>
-        </Atoms.Container>
+        <MutedUsersListSkeleton />
       ) : mutedUsers && mutedUsers.length > 0 ? (
         <>
           {mutedUsers.map((mutedUser) => (

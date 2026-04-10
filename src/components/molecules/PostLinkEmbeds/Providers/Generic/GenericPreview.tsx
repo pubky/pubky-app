@@ -1,9 +1,9 @@
 'use client';
 
-import { useTranslations } from 'next-intl';
 import * as Atoms from '@/atoms';
 import * as Icons from '@/libs/icons';
 import * as Hooks from '@/hooks';
+import { GenericPreviewSkeleton } from './GenericPreview.skeleton';
 
 interface GenericPreviewProps {
   url: string;
@@ -14,15 +14,10 @@ interface GenericPreviewProps {
  * Fetches OpenGraph metadata via /api/og-metadata
  */
 export function GenericPreview({ url }: GenericPreviewProps) {
-  const t = useTranslations('common');
   const { metadata, isLoading, error } = Hooks.useOgMetadata(url);
 
   if (isLoading) {
-    return (
-      <Atoms.Typography size="sm" className="text-muted-foreground">
-        {t('loadingPreview')}
-      </Atoms.Typography>
-    );
+    return <GenericPreviewSkeleton />;
   }
 
   if (error || !metadata) {
