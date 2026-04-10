@@ -1088,6 +1088,7 @@
     "activeUsers": "Usuários ativos",
     "trendingPosts": "Posts em alta",
     "postsCountToday": "{count} publicações hoje",
+    "postsCountThisWeek": "{count} publicações esta semana",
     "postsCountThisMonth": "{count} publicações este mês",
     "postsCountAllTime": "{count} publicações",
     "failedToLoadUsers": "Falha ao carregar usuarios",

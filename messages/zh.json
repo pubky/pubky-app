@@ -1082,6 +1082,7 @@
     "activeUsers": "活跃用户",
     "trendingPosts": "热门帖子",
     "postsCountToday": "今日 {count} 条帖子",
+    "postsCountThisWeek": "本周 {count} 条帖子",
     "postsCountThisMonth": "本月 {count} 条帖子",
     "postsCountAllTime": "{count} 条帖子",
     "failedToLoadUsers": "加载用户失败",

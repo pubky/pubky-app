@@ -1088,6 +1088,7 @@
     "activeUsers": "アクティブユーザー",
     "trendingPosts": "トレンド投稿",
     "postsCountToday": "今日の投稿 {count}件",
+    "postsCountThisWeek": "今週の投稿 {count}件",
     "postsCountThisMonth": "今月の投稿 {count}件",
     "postsCountAllTime": "投稿 {count}件",
     "failedToLoadUsers": "ユーザーの読み込みに失敗しました",

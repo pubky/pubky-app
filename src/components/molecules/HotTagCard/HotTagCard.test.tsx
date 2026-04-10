@@ -24,6 +24,12 @@ describe('HotTagCard', () => {
     expect(screen.getByText('371 posts today')).toBeInTheDocument();
   });
 
+  it('renders "this week" text when timeframe is THIS_WEEK', () => {
+    render(<HotTagCard {...defaultProps} timeframe={TIMEFRAME.THIS_WEEK} />);
+
+    expect(screen.getByText('371 posts this week')).toBeInTheDocument();
+  });
+
   it('renders "this month" text when timeframe is THIS_MONTH', () => {
     render(<HotTagCard {...defaultProps} timeframe={TIMEFRAME.THIS_MONTH} />);
 

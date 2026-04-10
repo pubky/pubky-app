@@ -10,6 +10,7 @@ import type { HotTagCardProps } from './HotTagCard.types';
 
 const TIMEFRAME_TRANSLATION_KEY = {
   [TIMEFRAME.TODAY]: 'postsCountToday',
+  [TIMEFRAME.THIS_WEEK]: 'postsCountThisWeek',
   [TIMEFRAME.THIS_MONTH]: 'postsCountThisMonth',
   [TIMEFRAME.ALL_TIME]: 'postsCountAllTime',
 } as const;

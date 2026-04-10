@@ -1082,6 +1082,7 @@
     "activeUsers": "المستخدمون النشطون",
     "trendingPosts": "المنشورات الرائجة",
     "postsCountToday": "{count} منشور اليوم",
+    "postsCountThisWeek": "{count} منشور هذا الأسبوع",
     "postsCountThisMonth": "{count} منشور هذا الشهر",
     "postsCountAllTime": "{count} منشور",
     "failedToLoadUsers": "فشل تحميل المستخدمين",
