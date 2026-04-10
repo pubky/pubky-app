@@ -77,7 +77,6 @@ export * from './PublicKeyCard';
 // SinglePost page components
 export * from './SinglePostArticle';
 export * from './SinglePostCard';
-export * from './SinglePostContent';
 export * from './SinglePostParticipants';
 export * from './PostPageBreadcrumb';
 export * from './PostPageHeader';
