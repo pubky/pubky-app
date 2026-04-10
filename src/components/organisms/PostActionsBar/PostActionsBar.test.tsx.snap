@@ -2,10 +2,38 @@
 
 exports[`PostActionsBar - Snapshots > matches snapshot loading 1`] = `
 <div
-  data-class-name="text-muted-foreground"
+  data-class-name="flex justify-between"
   data-testid="actions-container"
 >
-  Loading actions...
+  <div
+    class="h-8 w-8 rounded-sm"
+    data-testid="skeleton"
+  />
+  <div
+    data-class-name="flex gap-2"
+    data-testid="actions-container"
+  >
+    <div
+      class="h-8 w-14 rounded-full"
+      data-testid="skeleton"
+    />
+    <div
+      class="h-8 w-14 rounded-full"
+      data-testid="skeleton"
+    />
+    <div
+      class="h-8 w-14 rounded-full"
+      data-testid="skeleton"
+    />
+    <div
+      class="h-8 w-14 rounded-full"
+      data-testid="skeleton"
+    />
+    <div
+      class="h-8 w-14 rounded-full"
+      data-testid="skeleton"
+    />
+  </div>
 </div>
 `;
 

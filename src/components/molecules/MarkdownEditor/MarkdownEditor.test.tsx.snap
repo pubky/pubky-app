@@ -9,9 +9,20 @@ exports[`MarkdownEditor - Snapshots > matches snapshot with custom className 1`]
     data-testid="loading-state"
   >
     <div
-      class="h-22 animate-pulse rounded-md bg-card"
+      class="flex flex-col"
       data-testid="container"
-    />
+    >
+      <div
+        class="h-11 w-full rounded-md"
+        data-slot="skeleton"
+        data-testid="skeleton"
+      />
+      <div
+        class="mt-[28px] h-4 w-3/5 rounded-md"
+        data-slot="skeleton"
+        data-testid="skeleton"
+      />
+    </div>
   </div>
   <div
     class="custom-editor"
@@ -34,9 +45,20 @@ exports[`MarkdownEditor - Snapshots > matches snapshot with default props 1`] = 
     data-testid="loading-state"
   >
     <div
-      class="h-22 animate-pulse rounded-md bg-card"
+      class="flex flex-col"
       data-testid="container"
-    />
+    >
+      <div
+        class="h-11 w-full rounded-md"
+        data-slot="skeleton"
+        data-testid="skeleton"
+      />
+      <div
+        class="mt-[28px] h-4 w-3/5 rounded-md"
+        data-slot="skeleton"
+        data-testid="skeleton"
+      />
+    </div>
   </div>
   <div
     data-has-onchange="false"
@@ -58,9 +80,20 @@ exports[`MarkdownEditor - Snapshots > matches snapshot with markdown content 1`]
     data-testid="loading-state"
   >
     <div
-      class="h-22 animate-pulse rounded-md bg-card"
+      class="flex flex-col"
       data-testid="container"
-    />
+    >
+      <div
+        class="h-11 w-full rounded-md"
+        data-slot="skeleton"
+        data-testid="skeleton"
+      />
+      <div
+        class="mt-[28px] h-4 w-3/5 rounded-md"
+        data-slot="skeleton"
+        data-testid="skeleton"
+      />
+    </div>
   </div>
   <div
     data-has-onchange="false"
@@ -82,9 +115,20 @@ exports[`MarkdownEditor - Snapshots > matches snapshot with placeholder 1`] = `
     data-testid="loading-state"
   >
     <div
-      class="h-22 animate-pulse rounded-md bg-card"
+      class="flex flex-col"
       data-testid="container"
-    />
+    >
+      <div
+        class="h-11 w-full rounded-md"
+        data-slot="skeleton"
+        data-testid="skeleton"
+      />
+      <div
+        class="mt-[28px] h-4 w-3/5 rounded-md"
+        data-slot="skeleton"
+        data-testid="skeleton"
+      />
+    </div>
   </div>
   <div
     data-has-onchange="false"

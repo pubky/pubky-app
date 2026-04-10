@@ -51,6 +51,7 @@ vi.mock('@/atoms', () => ({
       {children}
     </button>
   ),
+  Skeleton: ({ className }: { className?: string }) => <div data-testid="skeleton" className={className} />,
 }));
 
 // Mock molecules - PostText, PostLinkEmbeds

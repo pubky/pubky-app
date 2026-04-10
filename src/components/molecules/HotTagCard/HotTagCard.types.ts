@@ -1,4 +1,5 @@
 import type { AvatarGroupItem } from '../AvatarGroup/AvatarGroup.types';
+import type { TimeframeType } from '@/core/stores/hot/hot.types';
 
 export interface HotTagCardProps {
   /** Rank position (1, 2, 3) */
@@ -7,8 +8,8 @@ export interface HotTagCardProps {
   tagName: string;
   /** Number of posts with this tag */
   postCount: number;
-  /** Timeframe label (e.g., "this month") */
-  timeframeLabel?: string;
+  /** Active timeframe filter for dynamic post count label */
+  timeframe: TimeframeType;
   /** Array of top taggers (users) */
   taggers?: AvatarGroupItem[];
   /** Maximum number of avatars to show */

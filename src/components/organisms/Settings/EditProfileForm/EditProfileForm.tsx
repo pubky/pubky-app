@@ -7,6 +7,7 @@ import * as Atoms from '@/atoms';
 import * as Hooks from '@/hooks';
 import * as Config from '@/config';
 import { useTranslations } from 'next-intl';
+import { EditProfileFormSkeleton } from './EditProfileForm.skeleton';
 
 export const EditProfileForm = () => {
   const t = useTranslations('forms.profile');
@@ -23,12 +24,7 @@ export const EditProfileForm = () => {
     Libs.extractInitials({ name: state.name, maxLength: 1 }) || avatarFallbackSeed.charAt(0).toUpperCase() || 'U';
 
   if (state.isLoading) {
-    return (
-      <Atoms.Container className="flex w-full flex-1 flex-col items-center justify-center gap-6">
-        <Atoms.Spinner size="lg" />
-        <Atoms.Typography>{t('loading')}</Atoms.Typography>
-      </Atoms.Container>
-    );
+    return <EditProfileFormSkeleton />;
   }
 
   return (
