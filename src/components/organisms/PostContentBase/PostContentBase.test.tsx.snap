@@ -4,9 +4,21 @@ exports[`PostContentBase - Snapshots > matches snapshot with empty content 1`] =
 
 exports[`PostContentBase - Snapshots > matches snapshot with loading state 1`] = `
 <div
-  class="text-muted-foreground"
+  class="flex min-w-0 flex-col gap-y-1"
+  data-testid="container"
 >
-  Loading content...
+  <div
+    class="h-4 w-full rounded-md"
+    data-testid="skeleton"
+  />
+  <div
+    class="h-4 w-4/5 rounded-md"
+    data-testid="skeleton"
+  />
+  <div
+    class="h-4 w-3/5 rounded-md"
+    data-testid="skeleton"
+  />
 </div>
 `;
 

@@ -1,9 +1,9 @@
 'use client';
 
-import { useTranslations } from 'next-intl';
 import * as Atoms from '@/atoms';
 import * as Hooks from '@/hooks';
 import * as Molecules from '@/molecules';
+import { PostHeaderSkeleton } from './PostHeader.skeleton';
 import type { PostHeaderProps } from './PostHeader.types';
 
 export function PostHeader({
@@ -14,8 +14,6 @@ export function PostHeader({
   size = 'normal',
   timeAgoPlacement = 'top-right',
 }: PostHeaderProps) {
-  const t = useTranslations('common');
-
   // Extract userId from postId (format: userId:postId or just userId if isReplyInput is true)
   const userId = isReplyInput ? postId : postId.split(':')[0];
 
@@ -33,11 +31,7 @@ export function PostHeader({
   const isLoading = !userDetails || (!isReplyInput && !postDetails);
 
   if (isLoading) {
-    return (
-      <Atoms.Container className="text-muted-foreground" overrideDefaults>
-        {t('loadingHeader')}
-      </Atoms.Container>
-    );
+    return <PostHeaderSkeleton />;
   }
 
   const indexedAt = !isReplyInput && postDetails ? new Date(postDetails.indexed_at) : null;

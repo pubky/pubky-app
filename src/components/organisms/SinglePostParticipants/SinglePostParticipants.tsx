@@ -2,13 +2,12 @@
 
 import { useRouter } from 'next/navigation';
 import { useTranslations } from 'next-intl';
-import * as Atoms from '@/atoms';
 import * as Molecules from '@/molecules';
 import * as Organisms from '@/organisms';
 import * as Hooks from '@/hooks';
-import * as Libs from '@/libs';
 import * as Core from '@/core';
 import { APP_ROUTES } from '@/app/routes';
+import { SinglePostParticipantsSkeleton } from './SinglePostParticipants.skeleton';
 import type { SinglePostParticipantsProps, ParticipantItemProps } from './SinglePostParticipants.types';
 
 /**
@@ -68,16 +67,8 @@ export function SinglePostParticipants({ postId, className }: SinglePostParticip
     await toggleFollow(userId, isFollowing);
   };
 
-  // Show loading state
   if (isLoading && participants.length === 0) {
-    return (
-      <Atoms.Container className={Libs.cn('flex items-center justify-center gap-2 py-4', className)}>
-        <Atoms.Spinner size="md" />
-        <Atoms.Typography as="p" className="text-muted-foreground">
-          {t('loadingParticipants')}
-        </Atoms.Typography>
-      </Atoms.Container>
-    );
+    return <SinglePostParticipantsSkeleton className={className} />;
   }
 
   // Don't render if no participants
