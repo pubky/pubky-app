@@ -8,6 +8,8 @@ import * as Core from '@/core';
 import * as Providers from '@/providers';
 import { NEXUS_USERS_PER_PAGE } from '@/config';
 
+const LOAD_MORE_SKELETON_COUNT = 2;
+
 /**
  * ProfileFollowing
  *
@@ -91,10 +93,11 @@ export function ProfileFollowing() {
       {/* Infinite scroll trigger */}
       <div ref={sentinelRef} className="h-1" />
 
-      {/* Loading more indicator */}
       {isLoadingMore && (
-        <Atoms.Container className="flex justify-center py-4">
-          <Atoms.Spinner />
+        <Atoms.Container className="gap-4 py-4">
+          {Array.from({ length: LOAD_MORE_SKELETON_COUNT }).map((_, i) => (
+            <Organisms.FullUserListItemSkeleton key={`following-load-more-skeleton-${i}`} />
+          ))}
         </Atoms.Container>
       )}
     </Atoms.Container>

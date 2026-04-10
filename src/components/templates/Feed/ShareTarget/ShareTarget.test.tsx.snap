@@ -50,9 +50,26 @@ exports[`ShareTarget - Snapshots > matches snapshot for loading state 1`] = `
     class="flex min-h-[50vh] items-center justify-center"
   >
     <div
-      data-testid="spinner"
+      class="mx-auto w-full max-w-2xl gap-4 p-4"
+      data-testid="container"
     >
-      Loading...
+      <div
+        class="flex-row items-center justify-between"
+        data-testid="container"
+      >
+        <div
+          class="h-6 w-32 rounded-md"
+          data-testid="skeleton"
+        />
+        <div
+          class="h-8 w-16 rounded-md"
+          data-testid="skeleton"
+        />
+      </div>
+      <div
+        class="h-32 w-full rounded-md"
+        data-testid="skeleton"
+      />
     </div>
   </div>
 </div>
