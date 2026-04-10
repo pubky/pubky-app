@@ -22,5 +22,10 @@ export interface PostInputExpandableSectionProps {
   onImageClick?: () => void;
   onArticleClick?: () => void;
   className?: string;
+  /**
+   * Optional compensation for vertical parent gap (in px) so spacing can animate out
+   * together with height during exit.
+   */
+  parentGapPx?: number;
   characterLimit?: CharacterLimit;
 }

@@ -167,6 +167,7 @@ jobs:
             NEXT_PUBLIC_DEFAULT_HTTP_RELAY=http://localhost:15412/link/
             NEXT_PUBLIC_EXCHANGE_RATE_API=https://bitkit.stag0.blocktank.to/fx/rates/btc
             NEXT_PUBLIC_HOMEGATE_URL=https://homegate.staging.pubky.app
+            NEXT_PUBLIC_PRELUDE_SDK_KEY=${{ secrets.PRELUDE_SDK_KEY }}
             NEXT_PUBLIC_MODERATION_ID=euwmq57zefw5ynnkhh37b3gcmhs7g3cptdbw1doaxj1pbmzp3wro
             NEXT_PUBLIC_MODERATED_TAGS=["nudity"]
             BASE_URL_SUPPORT=https://chatwoot.example.com
@@ -214,6 +215,7 @@ jobs:
             NEXT_PUBLIC_DEFAULT_HTTP_RELAY=https://httprelay.staging.pubky.app/link
             NEXT_PUBLIC_EXCHANGE_RATE_API=https://bitkit.stag0.blocktank.to/fx/rates/btc
             NEXT_PUBLIC_HOMEGATE_URL=https://homegate.staging.pubky.app
+            NEXT_PUBLIC_PRELUDE_SDK_KEY=${{ secrets.PRELUDE_SDK_KEY }}
             NEXT_PUBLIC_MODERATION_ID=euwmq57zefw5ynnkhh37b3gcmhs7g3cptdbw1doaxj1pbmzp3wro
             NEXT_PUBLIC_MODERATED_TAGS=["nudity"]
         if: ${{ inputs.env == 'preview' }}

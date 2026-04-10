@@ -18,7 +18,7 @@ interface FilterTimeframeProps {
 /**
  * FilterTimeframe
  *
- * Filter component for selecting timeframe (Today, This Month, All Time).
+ * Filter component for selecting timeframe (Today, This Week, This Month, All Time).
  */
 export function FilterTimeframe({ selectedTab = Core.TIMEFRAME.THIS_MONTH, onTabChange }: FilterTimeframeProps) {
   const t = useTranslations('filters.timeframe');
@@ -26,6 +26,7 @@ export function FilterTimeframe({ selectedTab = Core.TIMEFRAME.THIS_MONTH, onTab
   const timeframeTabs: { key: Core.TimeframeType; label: string; icon: React.ComponentType<{ className?: string }> }[] =
     [
       { key: Core.TIMEFRAME.TODAY, label: t('today'), icon: Libs.Star },
+      { key: Core.TIMEFRAME.THIS_WEEK, label: t('thisWeek'), icon: Libs.CalendarRange },
       { key: Core.TIMEFRAME.THIS_MONTH, label: t('thisMonth'), icon: Libs.Calendar },
       { key: Core.TIMEFRAME.ALL_TIME, label: t('allTime'), icon: Libs.Clock },
     ];

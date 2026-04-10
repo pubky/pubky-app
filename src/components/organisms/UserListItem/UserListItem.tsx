@@ -36,7 +36,7 @@ function FollowButton({ isFollowing, isLoading, isStatusLoading, displayName, va
         size="icon"
         onClick={onClick}
         disabled={showLoading}
-        className="group size-8 shrink-0 rounded-full"
+        className="group size-8 shrink-0 rounded-full p-1"
         aria-label={isFollowing ? `${t('unfollow')} ${displayName}` : `${t('follow')} ${displayName}`}
       >
         {showLoading ? (
@@ -107,11 +107,13 @@ function MeButton({ variant = 'icon', className }: { variant?: 'iconWithText' | 
         data-cy="user-list-item-me-btn"
         variant="secondary"
         size="icon"
-        className={Libs.cn('size-8 shrink-0 cursor-not-allowed rounded-full opacity-50', className)}
-        disabled
+        className={Libs.cn(
+          'size-8 shrink-0 cursor-not-allowed border-none bg-transparent p-1 opacity-100 hover:bg-transparent',
+          className,
+        )}
         aria-label={tProfile('thisIsYou')}
       >
-        <Libs.CircleUserRound className="size-5 text-muted-foreground" />
+        <Libs.UserRound strokeWidth={2} className="size-5" />
       </Atoms.Button>
     );
   }
@@ -251,7 +253,7 @@ function CompactVariant({
           className="shrink-0"
         />
 
-        <Atoms.Container overrideDefaults className="flex min-w-0 flex-1 flex-col">
+        <Atoms.Container overrideDefaults className="flex max-w-25 min-w-0 flex-1 flex-col">
           <Atoms.Typography as="span" overrideDefaults className="truncate text-sm font-bold text-foreground">
             {displayName}
           </Atoms.Typography>

@@ -15,6 +15,7 @@ export interface ContentLayoutProps {
   /** Whether to render the MobileHeader. Set to false when rendering MobileHeader externally (e.g., Settings page). Defaults to true. */
   renderMobileHeader?: boolean;
   className?: string;
+  classNameWrapperContent?: string;
   feedVariant?: TimelineFeedVariant;
 }
 
