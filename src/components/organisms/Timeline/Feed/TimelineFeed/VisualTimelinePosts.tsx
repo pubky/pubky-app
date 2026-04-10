@@ -10,6 +10,7 @@ import * as Libs from '@/libs';
 import * as Molecules from '@/molecules';
 import * as Organisms from '@/organisms';
 import {
+  VISUAL_AUTO_PAGINATE_MIN_ROWS,
   VISUAL_GRID_MAX_WIDTH_PX,
   VISUAL_TILE_ASPECT_RATIOS,
   VISUAL_TILE_COLUMN_SPANS,
@@ -300,13 +301,22 @@ export function VisualTimelinePosts({
   loadMore,
 }: VisualTimelinePostsProps) {
   const { navigateToPost } = Hooks.usePostNavigation();
-  const { rows, hasPendingTiles } = useVisualFeedTiles({ postIds, hasMore });
+  const { rows, hasPendingTiles, hasPendingFiles } = useVisualFeedTiles({ postIds, hasMore });
 
-  // The visual grid only renders posts with image/video attachments. When a page of
-  // posts contains no media, the row count stays unchanged and Virtuoso won't fire
-  // endReached again (the data length didn't change). Track the row count from the
-  // last stable state so we can auto-paginate through media-less pages until visual
-  // tiles appear or the stream is exhausted.
+  // Auto-paginate when the visual grid doesn't fill the viewport. Two triggers:
+  //
+  // 1. rows.length <= stableRowCountRef — a page loaded but produced no new visual
+  //    rows (all text posts). Virtuoso won't fire endReached because the data length
+  //    didn't change, so we must load the next page ourselves.
+  //
+  // 2. rows.length < VISUAL_AUTO_PAGINATE_MIN_ROWS — the grid is too short to trigger
+  //    scroll-based loading. Virtuoso with useWindowScroll may not fire endReached when
+  //    the content doesn't fill the window (resizing the window works around this).
+  //
+  // hasPendingTiles and hasPendingFiles are deliberately excluded from the bail-out
+  // conditions. Blocking on them creates a deadlock: the effect can't fire while tiles
+  // are probing, and by the time probes finish, stableRowCountRef has been overtaken by
+  // probe-driven row growth, so the "no new rows" check no longer triggers.
   const stableRowCountRef = React.useRef(0);
 
   React.useEffect(() => {
@@ -315,19 +325,26 @@ export function VisualTimelinePosts({
       return;
     }
 
-    if (loadingMore || error || !hasMore || hasPendingTiles || postIds.length === 0) {
+    if (loadingMore || error || !hasMore || postIds.length === 0) {
       return;
     }
 
-    if (rows.length <= stableRowCountRef.current) {
+    if (rows.length <= stableRowCountRef.current || rows.length < VISUAL_AUTO_PAGINATE_MIN_ROWS) {
       void loadMore();
     }
 
     stableRowCountRef.current = rows.length;
-  }, [loading, loadingMore, error, hasMore, postIds.length, rows.length, hasPendingTiles, loadMore]);
+  }, [loading, loadingMore, error, hasMore, postIds.length, rows.length, loadMore]);
 
   const showFilteredEmptyState =
-    !loading && !error && postIds.length > 0 && rows.length === 0 && !hasMore && !loadingMore && !hasPendingTiles;
+    !loading &&
+    !error &&
+    postIds.length > 0 &&
+    rows.length === 0 &&
+    !hasMore &&
+    !loadingMore &&
+    !hasPendingTiles &&
+    !hasPendingFiles;
 
   const virtuosoContext: TimelineVirtuosoContext = {
     loadingMore,
