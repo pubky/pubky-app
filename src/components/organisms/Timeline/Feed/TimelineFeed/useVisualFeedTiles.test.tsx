@@ -130,6 +130,56 @@ describe('useVisualFeedTiles', () => {
     });
   });
 
+  it('assigns medium fallback immediately when stream is exhausted with few tiles', () => {
+    mockUseLiveQuery.mockReturnValue({
+      tiles: [
+        createPendingTile({ id: 'tile-a', postId: 'author:post-1', attachmentName: 'a.png', previewSrc: '/a.png' }),
+        createPendingTile({ id: 'tile-b', postId: 'author:post-2', attachmentName: 'b.png', previewSrc: '/b.png' }),
+        createPendingTile({ id: 'tile-c', postId: 'author:post-3', attachmentName: 'c.png', previewSrc: '/c.png' }),
+      ],
+      missingFileUris: [],
+    });
+
+    const { result } = renderHook(() =>
+      useVisualFeedTiles({ postIds: ['author:post-1', 'author:post-2', 'author:post-3'], hasMore: false }),
+    );
+
+    expect(result.current.rows.length).toBeGreaterThan(0);
+    expect(result.current.hasPendingTiles).toBe(false);
+    result.current.tiles.forEach((tile) => {
+      expect(tile.preferredSize).toBe('medium');
+    });
+  });
+
+  it('does not assign fallback when stream has more pages', () => {
+    mockUseLiveQuery.mockReturnValue({
+      tiles: [
+        createPendingTile({ id: 'tile-a', postId: 'author:post-1', attachmentName: 'a.png', previewSrc: '/a.png' }),
+        createPendingTile({ id: 'tile-b', postId: 'author:post-2', attachmentName: 'b.png', previewSrc: '/b.png' }),
+        createPendingTile({ id: 'tile-c', postId: 'author:post-3', attachmentName: 'c.png', previewSrc: '/c.png' }),
+      ],
+      missingFileUris: [],
+    });
+
+    const { result } = renderHook(() =>
+      useVisualFeedTiles({ postIds: ['author:post-1', 'author:post-2', 'author:post-3'], hasMore: true }),
+    );
+
+    expect(result.current.rows.length).toBe(0);
+    expect(result.current.hasPendingTiles).toBe(true);
+  });
+
+  it('exposes hasPendingFiles when file metadata is missing', () => {
+    mockUseLiveQuery.mockReturnValue({
+      tiles: [],
+      missingFileUris: ['pubky://user-1/pub/pubky.app/files/file-1'],
+    });
+
+    const { result } = renderHook(() => useVisualFeedTiles({ postIds: ['author:post-1'], hasMore: false }));
+
+    expect(result.current.hasPendingFiles).toBe(true);
+  });
+
   it('resolves probed square and wide tiles into non-medium rows', async () => {
     const squareId = findIdentity({
       base: 'square-tile',

@@ -159,7 +159,7 @@ describe('GenericPreview', () => {
   });
 
   describe('loading state', () => {
-    it('renders loading text when fetching metadata', () => {
+    it('renders skeleton when fetching metadata', () => {
       mockUseOgMetadata.mockReturnValue({
         metadata: null,
         isLoading: true,
@@ -168,7 +168,7 @@ describe('GenericPreview', () => {
 
       render(<GenericPreview url="https://example.com" />);
 
-      expect(screen.getByText('Loading preview...')).toBeInTheDocument();
+      expect(screen.getAllByRole('generic').some((el) => el.getAttribute('data-slot') === 'skeleton')).toBe(true);
     });
   });
 

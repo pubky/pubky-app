@@ -1,6 +1,7 @@
 import { act, renderHook, waitFor } from '@testing-library/react';
 import { vi, describe, it, expect, beforeEach } from 'vitest';
 import { usePostTags } from './usePostTags';
+import { TAGS_PER_PAGE } from './usePostTags.constants';
 import * as Core from '@/core';
 import * as DexieHooks from 'dexie-react-hooks';
 
@@ -124,7 +125,7 @@ describe('usePostTags', () => {
         expect(mockFetchTags).toHaveBeenCalledWith({
           compositeId: 'author:post123',
           skip: 0,
-          limit: 10,
+          limit: TAGS_PER_PAGE,
         });
       });
     });
@@ -320,9 +321,9 @@ describe('usePostTags', () => {
       // hasMore is derived from postCounts.unique_tags > localTags.length
       setupLiveQueryMock(dexieHooks, [{ tags: initialTags }], { unique_tags: 50 });
 
-      // fetchTags returns 10 new tags
+      // fetchTags returns a full page of new tags
       mockFetchTags.mockResolvedValueOnce(
-        Array.from({ length: 10 }, (_, i) => ({
+        Array.from({ length: TAGS_PER_PAGE }, (_, i) => ({
           label: `new-tag-${i}`,
           taggers_count: 1,
           taggers: ['user-1'],
@@ -343,7 +344,7 @@ describe('usePostTags', () => {
       expect(mockFetchTags).toHaveBeenCalledWith({
         compositeId: 'author:post123',
         skip: 25,
-        limit: 10,
+        limit: TAGS_PER_PAGE,
       });
     });
 
@@ -364,18 +365,18 @@ describe('usePostTags', () => {
       // hasMore is derived from postCounts.unique_tags > localTags.length
       setupLiveQueryMock(dexieHooks, [{ tags: initialTags }], { unique_tags: 100 });
 
-      // First loadMore returns 10 tags
+      // First loadMore returns a full page of tags
       mockFetchTags.mockResolvedValueOnce(
-        Array.from({ length: 10 }, (_, i) => ({
+        Array.from({ length: TAGS_PER_PAGE }, (_, i) => ({
           label: `batch1-tag-${i}`,
           taggers_count: 1,
           taggers: ['user-1'],
         })),
       );
 
-      // Second loadMore returns 10 tags
+      // Second loadMore returns a full page of tags
       mockFetchTags.mockResolvedValueOnce(
-        Array.from({ length: 10 }, (_, i) => ({
+        Array.from({ length: TAGS_PER_PAGE }, (_, i) => ({
           label: `batch2-tag-${i}`,
           taggers_count: 1,
           taggers: ['user-1'],
@@ -393,15 +394,15 @@ describe('usePostTags', () => {
       expect(mockFetchTags).toHaveBeenLastCalledWith({
         compositeId: 'author:post123',
         skip: 25,
-        limit: 10,
+        limit: TAGS_PER_PAGE,
       });
 
-      // Second loadMore - skip should now be 35 (25 + 10)
+      // Second loadMore - skip should now be 25 + TAGS_PER_PAGE
       await result.current.loadMore();
       expect(mockFetchTags).toHaveBeenLastCalledWith({
         compositeId: 'author:post123',
-        skip: 35,
-        limit: 10,
+        skip: 25 + TAGS_PER_PAGE,
+        limit: TAGS_PER_PAGE,
       });
     });
 
@@ -417,7 +418,7 @@ describe('usePostTags', () => {
 
       // Initial fetch on mount should return a full page so hasMore remains true.
       mockFetchTags.mockResolvedValueOnce(
-        Array.from({ length: 10 }, (_, i) => ({
+        Array.from({ length: TAGS_PER_PAGE }, (_, i) => ({
           label: `initial-tag-${i}`,
           taggers_count: 1,
           taggers: ['user-1'],
@@ -463,7 +464,7 @@ describe('usePostTags', () => {
       setupLiveQueryMock(dexieHooks, [{ tags: initialTags }], { unique_tags: 50 });
 
       mockFetchTags.mockResolvedValue(
-        Array.from({ length: 10 }, (_, i) => ({
+        Array.from({ length: TAGS_PER_PAGE }, (_, i) => ({
           label: `new-tag-${i}`,
           taggers_count: 1,
           taggers: ['user-1'],
@@ -483,7 +484,7 @@ describe('usePostTags', () => {
       expect(mockFetchTags).toHaveBeenLastCalledWith({
         compositeId: 'author:post1',
         skip: 25,
-        limit: 10,
+        limit: TAGS_PER_PAGE,
       });
 
       // Change postId - this should reset the skip
@@ -506,7 +507,7 @@ describe('usePostTags', () => {
       expect(mockFetchTags).toHaveBeenLastCalledWith({
         compositeId: 'author:post2',
         skip: 15,
-        limit: 10,
+        limit: TAGS_PER_PAGE,
       });
     });
   });

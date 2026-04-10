@@ -9,6 +9,7 @@ import * as Organisms from '@/organisms';
 import * as Libs from '@/libs';
 import { POST_INPUT_VARIANT } from '@/organisms/PostInput/PostInput.constants';
 import { APP_ROUTES } from '@/app/routes';
+import { ShareTargetSkeleton } from './ShareTarget.skeleton';
 
 export function ShareTarget() {
   const searchParams = useSearchParams();
@@ -51,11 +52,7 @@ export function ShareTarget() {
   }, [router]);
 
   if (isLoading) {
-    return (
-      <div className="flex min-h-[50vh] items-center justify-center">
-        <Atoms.Spinner />
-      </div>
-    );
+    return <ShareTargetSkeleton />;
   }
 
   return (
