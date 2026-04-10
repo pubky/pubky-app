@@ -3,6 +3,7 @@
 import * as React from 'react';
 import * as Atoms from '@/atoms';
 import * as Hooks from '@/hooks';
+import { PostPageHeaderSkeleton } from './PostPageHeader.skeleton';
 import type { PostPageHeaderProps } from './PostPageHeader.types';
 import { PostPageBreadcrumb } from '@/organisms/PostPageBreadcrumb';
 
@@ -56,16 +57,8 @@ export function PostPageHeader({ postId }: PostPageHeaderProps) {
 
   const isLoading = ancestorsLoading || usersLoading;
 
-  // Don't render anything while loading
   if (isLoading || !authorName) {
-    return (
-      <Atoms.PageHeader data-testid="post-page-header-loading">
-        <Atoms.Container className="flex items-center justify-between" overrideDefaults>
-          <Atoms.Container overrideDefaults className="h-8 w-48 animate-pulse rounded bg-muted" />
-          <Atoms.Container overrideDefaults className="h-5 w-32 animate-pulse rounded bg-muted" />
-        </Atoms.Container>
-      </Atoms.PageHeader>
-    );
+    return <PostPageHeaderSkeleton />;
   }
 
   const titlePrefix = hasParents ? 'Reply by' : 'Post by';
