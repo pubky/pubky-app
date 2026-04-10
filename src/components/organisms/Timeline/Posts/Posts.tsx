@@ -2,7 +2,6 @@
 
 import { Virtuoso } from 'react-virtuoso';
 import { TIMELINE_VIRTUOSO_OVERSCAN_PX } from '@/config';
-import * as Libs from '@/libs';
 import * as Atoms from '@/atoms';
 import * as Molecules from '@/molecules';
 import * as Organisms from '@/organisms';
@@ -26,18 +25,12 @@ interface TimelinePostsProps {
 const virtuosoComponents = { Footer: TimelineVirtuosoFooter };
 
 /**
- * Extracted from Virtuoso's `itemContent` callback so hooks are valid: hooks must run
- * only at the top level of a React component (or custom hook), not inside plain
- * render callbacks. `usePostDetails` gates each row: render nothing until details exist,
- * then hide soft-deleted items (`[DELETED]`). The stream list itself can still contain
- * ids before details are cached; rows stay empty until local-first details resolve.
+ * Extracted from Virtuoso's `itemContent` so hooks run at component level.
+ * Deleted posts are filtered upstream in TimelineFeedContent; this component
+ * is a pure renderer that never returns null (Virtuoso requires non-zero-height items).
  */
 function TimelinePostItem({ postId, tagsLayout }: { postId: string; tagsLayout?: TagsLayout }) {
   const { navigateToPost } = Hooks.usePostNavigation();
-  const { postDetails } = Hooks.usePostDetails(postId);
-  const isDeleted = Libs.isPostDeleted(postDetails?.content);
-
-  if (!postDetails || isDeleted) return null;
 
   return (
     <Atoms.Container data-cy="post-card" overrideDefaults className="pb-4">
