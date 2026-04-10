@@ -434,5 +434,32 @@ describe('useProfileNavigation', () => {
 
       expect(result.current.activePage).toBe(PROFILE_PAGE_TYPES.NOTIFICATIONS);
     });
+
+    it('should return NOTIFICATIONS for own profile dynamic base route on mobile', () => {
+      mockIsMobile.mockReturnValue(true);
+      mockPathname.mockReturnValue('/profile/user123');
+
+      const { result } = renderHook(() => useProfileNavigation());
+
+      expect(result.current.activePage).toBe(PROFILE_PAGE_TYPES.NOTIFICATIONS);
+    });
+
+    it('should return NOTIFICATIONS for own profile dynamic base route on desktop', () => {
+      mockIsMobile.mockReturnValue(false);
+      mockPathname.mockReturnValue('/profile/user123');
+
+      const { result } = renderHook(() => useProfileNavigation());
+
+      expect(result.current.activePage).toBe(PROFILE_PAGE_TYPES.NOTIFICATIONS);
+    });
+
+    it('should return NOTIFICATIONS for own profile dynamic notifications route', () => {
+      mockIsMobile.mockReturnValue(true);
+      mockPathname.mockReturnValue('/profile/user123/notifications');
+
+      const { result } = renderHook(() => useProfileNavigation());
+
+      expect(result.current.activePage).toBe(PROFILE_PAGE_TYPES.NOTIFICATIONS);
+    });
   });
 });

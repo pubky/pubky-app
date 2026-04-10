@@ -1,5 +1,6 @@
 'use client';
 
+import { useEffect, useState } from 'react';
 import * as Templates from '@/templates';
 import { useIsMobile } from '@/hooks/useIsMobile';
 
@@ -11,8 +12,14 @@ import { useIsMobile } from '@/hooks/useIsMobile';
  */
 export default function DynamicProfilePage() {
   const isMobile = useIsMobile();
+  const [hasMounted, setHasMounted] = useState(false);
 
-  if (isMobile) {
+  useEffect(() => {
+    setHasMounted(true);
+  }, []);
+
+  // Keep the first client render aligned with the server markup.
+  if (hasMounted && isMobile) {
     return <Templates.ProfilePageProfile />;
   }
 

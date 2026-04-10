@@ -110,11 +110,14 @@ const ROUTE_MAP = deriveRouteMap();
  * Extracts the page type from a dynamic route pathname
  * Handles paths like /profile/{pubky}/posts, /profile/{pubky}/followers, etc.
  *
- * On mobile, the base route (/profile/{pubky}) defaults to PROFILE so users
- * see bio/details/follow first. On desktop it defaults to POSTS since the
- * sidebar already provides follow affordances.
+ * Own-profile dynamic routes preserve the Notifications default.
+ * Other users default to PROFILE on mobile and POSTS on desktop.
  */
-const getPageTypeFromDynamicPath = (pathname: string, isMobile: boolean): ProfilePageType | null => {
+const getPageTypeFromDynamicPath = (
+  pathname: string,
+  isMobile: boolean,
+  isOwnProfile: boolean,
+): ProfilePageType | null => {
   const dynamicRouteMatch = pathname.match(/^\/profile\/[^/]+(\/.+)?$/);
 
   if (!dynamicRouteMatch) {
@@ -124,11 +127,17 @@ const getPageTypeFromDynamicPath = (pathname: string, isMobile: boolean): Profil
   const subPath = dynamicRouteMatch[1] || '';
 
   for (const [pageType, config] of Object.entries(PROFILE_ROUTES_CONFIG)) {
-    // Skip own-profile-only pages (e.g. Notifications) on dynamic routes
-    if (config.ownProfileOnly) continue;
     if (config.subPath === subPath) {
+      if (config.ownProfileOnly && !isOwnProfile) {
+        continue;
+      }
+
       return pageType as ProfilePageType;
     }
+  }
+
+  if (isOwnProfile) {
+    return PROFILE_PAGE_TYPES.NOTIFICATIONS;
   }
 
   return isMobile ? PROFILE_PAGE_TYPES.PROFILE : PROFILE_PAGE_TYPES.POSTS;
@@ -192,7 +201,7 @@ export function useProfileNavigation(): UseProfileNavigationReturn {
       return PAGE_PATH_MAP[pathname];
     }
 
-    const dynamicPageType = getPageTypeFromDynamicPath(pathname, isMobile);
+    const dynamicPageType = getPageTypeFromDynamicPath(pathname, isMobile, isOwnProfile);
     if (dynamicPageType) {
       return dynamicPageType;
     }
