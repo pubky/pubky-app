@@ -10,7 +10,8 @@ const Editor = dynamic(() => import('./InitializedMDXEditor'), {
   loading: () => (
     <Atoms.Container className="flex flex-col">
       <Atoms.Skeleton className="h-11 w-full rounded-md" />
-      <Atoms.Skeleton className="mt-4 h-4 w-3/5 rounded-md" />
+      {/* mt-[28px] is so the skeleton is aligned with the editor placeholder */}
+      <Atoms.Skeleton className="mt-[28px] h-4 w-3/5 rounded-md" />
     </Atoms.Container>
   ),
 });
