@@ -1,37 +1,33 @@
 'use client';
 
-import * as Atoms from '@/atoms';
-import * as Molecules from '@/molecules';
-import * as Organisms from '@/organisms';
-import * as Libs from '@/libs';
+import { ContentLayout } from '@/organisms/ContentLayout';
+
 import type { SinglePostProps } from './SinglePost.types';
+
+import { SinglePostContent } from '@/organisms/SinglePostContent';
+import { SinglePostLeftDrawer, SinglePostLeftSidebar } from '@/organisms/SinglePostLeftSidebar';
+import { SinglePostRightPanel } from '@/organisms/SinglePostRightPanel';
 
 /**
  * SinglePost Template
  *
  * Displays a single post page with:
  * - Main post card (FULL WIDTH) with tags panel in two-column layout
- * - Below: Two columns with Replies timeline (larger) and Participants sidebar (smaller)
+ * - Below:  Replies timeline
  *
  * This template uses a FIXED layout that doesn't change based on user preferences.
  * All hook logic is delegated to the SinglePostContent organism.
  */
 export function SinglePost({ postId }: SinglePostProps) {
   return (
-    <>
-      {/* Mobile header */}
-      <Molecules.MobileHeader showLeftButton={false} showRightButton={false} />
-
-      {/* Main content container */}
-      <Atoms.Container
-        overrideDefaults
-        className={Libs.cn('max-w-(--container-max-width)', 'm-auto w-full px-6 pb-12 xl:px-0', 'pt-0')}
-      >
-        <Organisms.SinglePostContent postId={postId} />
-      </Atoms.Container>
-
-      {/* Mobile footer navigation */}
-      <Molecules.MobileFooter />
-    </>
+    <ContentLayout
+      classNameWrapperContent="gap-0"
+      leftSidebarContent={<SinglePostLeftSidebar />}
+      rightSidebarContent={<SinglePostRightPanel postId={postId} />}
+      leftDrawerContent={<SinglePostLeftDrawer />}
+      rightDrawerContent={<SinglePostRightPanel postId={postId} showFeedback={false} />}
+    >
+      <SinglePostContent postId={postId} />
+    </ContentLayout>
   );
 }

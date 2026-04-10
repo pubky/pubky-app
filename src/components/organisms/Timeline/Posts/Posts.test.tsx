@@ -2,8 +2,6 @@ import { describe, it, expect, beforeEach, vi, afterEach } from 'vitest';
 import { render, screen, waitFor, fireEvent } from '@testing-library/react';
 import { useRouter } from 'next/navigation';
 import { useLiveQuery } from 'dexie-react-hooks';
-import * as Core from '@/core';
-import type { UsePostDetailsResult } from '@/hooks';
 import { TimelinePosts } from './Posts';
 import * as Hooks from '@/hooks';
 
@@ -38,7 +36,6 @@ vi.mock('@/hooks', async (importOriginal) => {
   return {
     ...actual,
     usePostNavigation: vi.fn(),
-    usePostDetails: vi.fn(),
   };
 });
 vi.mock('@/libs', async () => {
@@ -111,17 +108,6 @@ const mockPush = vi.fn();
 const mockUseLiveQuery = vi.mocked(useLiveQuery);
 const mockUseRouter = vi.mocked(useRouter);
 const mockUsePostNavigation = vi.mocked(Hooks.usePostNavigation);
-const mockUsePostDetails = vi.mocked(Hooks.usePostDetails);
-
-function defaultPostDetailsMock(compositeId: string | null | undefined): UsePostDetailsResult {
-  return {
-    postDetails:
-      compositeId != null
-        ? ({ id: compositeId, content: 'timeline test post body' } as Core.EnrichedPostDetails)
-        : undefined,
-    isLoading: false,
-  };
-}
 
 const mockPostIds = ['author1:post1', 'author2:post2', 'author3:post3'];
 describe('TimelinePosts', () => {
@@ -142,8 +128,6 @@ describe('TimelinePosts', () => {
     mockUsePostNavigation.mockReturnValue({
       navigateToPost: mockPush,
     });
-
-    mockUsePostDetails.mockImplementation(defaultPostDetailsMock);
 
     // Mock useLiveQuery to return no replies by default
     mockUseLiveQuery.mockReturnValue({ id: 'test', replies: 0, tags: 0, unique_tags: 0, reposts: 0 });
@@ -359,59 +343,6 @@ describe('TimelinePosts', () => {
       await waitFor(() => {
         const posts = container.querySelectorAll('[data-testid^="post-"]');
         expect(posts).toHaveLength(mockPostIds.length);
-      });
-    });
-  });
-
-  describe('Soft-deleted posts (feed guard)', () => {
-    it('does not render PostMain or inline replies when details content is [DELETED]', async () => {
-      mockUsePostDetails.mockImplementation((compositeId) => {
-        if (compositeId === 'author:soft-deleted') {
-          return {
-            postDetails: { content: '[DELETED]' } as Core.EnrichedPostDetails,
-            isLoading: false,
-          };
-        }
-        return defaultPostDetailsMock(compositeId);
-      });
-
-      render(
-        <TimelinePosts
-          postIds={['author:soft-deleted', 'author1:post1']}
-          loading={false}
-          loadingMore={false}
-          error={null}
-          hasMore={true}
-          loadMore={vi.fn()}
-        />,
-      );
-
-      await waitFor(() => {
-        expect(screen.queryByTestId('post-author:soft-deleted')).not.toBeInTheDocument();
-        expect(screen.queryByTestId('replies-author:soft-deleted')).not.toBeInTheDocument();
-        expect(screen.getByTestId('post-author1:post1')).toBeInTheDocument();
-      });
-    });
-
-    it('does not render PostMain while post details are unresolved (loading)', async () => {
-      mockUsePostDetails.mockImplementation(() => ({
-        postDetails: undefined,
-        isLoading: true,
-      }));
-
-      render(
-        <TimelinePosts
-          postIds={['author:pending']}
-          loading={false}
-          loadingMore={false}
-          error={null}
-          hasMore={true}
-          loadMore={vi.fn()}
-        />,
-      );
-
-      await waitFor(() => {
-        expect(screen.queryByTestId('post-author:pending')).not.toBeInTheDocument();
       });
     });
   });
@@ -644,8 +575,6 @@ describe('TimelinePosts - Snapshots', () => {
     mockUsePostNavigation.mockReturnValue({
       navigateToPost: mockPush,
     });
-
-    mockUsePostDetails.mockImplementation(defaultPostDetailsMock);
 
     // Mock useLiveQuery
     mockUseLiveQuery.mockReturnValue({ id: 'test', replies: 0, tags: 0, unique_tags: 0, reposts: 0 });

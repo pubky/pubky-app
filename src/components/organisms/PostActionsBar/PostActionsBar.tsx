@@ -125,16 +125,16 @@ export function PostActionsBar({
   );
 
   return (
-    <Atoms.Container overrideDefaults className={Libs.cn('flex gap-2', className)}>
+    <Atoms.Container overrideDefaults className={Libs.cn('flex flex-wrap gap-2', className)}>
       {actionButtons.map(
-        ({ id, icon: Icon, count, onClick, ariaLabel, className: buttonClassName, iconProps, disabled }) => (
+        ({ id, icon: Icon, count, onClick, ariaLabel, className: btnClassName, iconProps, disabled }) => (
           <Atoms.Button
             key={id}
             data-cy={`post-${id}-btn`}
             {...commonButtonProps}
             onClick={onClick}
             disabled={disabled}
-            className={Libs.cn(commonButtonProps.className, buttonClassName)}
+            className={Libs.cn(commonButtonProps.className, btnClassName)}
             aria-label={ariaLabel}
           >
             <Icon {...iconProps} />

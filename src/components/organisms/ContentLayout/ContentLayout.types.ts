@@ -17,6 +17,7 @@ export interface ContentLayoutProps {
   /** Whether the MobileHeader uses a gradient background or a solid one. Defaults to true. */
   hasGradientBackground?: boolean;
   className?: string;
+  classNameWrapperContent?: string;
   feedVariant?: TimelineFeedVariant;
 }
 

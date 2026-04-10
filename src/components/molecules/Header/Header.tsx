@@ -22,7 +22,7 @@ export const HeaderContainer = ({ children, className, classNameNav }: HeaderCon
       overrideDefaults
       as="header"
       className={Libs.cn(
-        'pointer-events-none sticky top-0 z-(--z-sticky-header) w-full bg-linear-to-b from-(--background) from-50% to-transparent',
+        'pointer-events-none sticky top-0 z-(--z-sticky-header) w-full bg-linear-to-b from-(--background) from-50% to-transparent p-6',
         className,
       )}
     >
