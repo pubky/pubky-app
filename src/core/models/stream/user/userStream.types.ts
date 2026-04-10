@@ -2,7 +2,7 @@ import type { Pubky, UserStreamCompositeReach } from '@/core';
 
 // User Stream ID Pattern: source:timeframe:reach
 // - SOURCE: followers, following, friends, muted, most_followed, influencers, recommended, post_replies, wot
-// - TIMEFRAME: today, this_month, all_time, all
+// - TIMEFRAME: today, this_week, this_month, all_time, all
 // - REACH (Supported in 'influencers' source): followers, following, friends, wot (u8), all
 //
 // Note: Different from PostStreamTypes pattern (sorting:source:kind) to optimize for user-centric queries

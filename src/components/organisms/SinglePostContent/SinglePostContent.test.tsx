@@ -230,11 +230,10 @@ describe('SinglePostContent', () => {
       expect(screen.queryByTestId('single-post-article')).not.toBeInTheDocument();
     });
 
-    it('renders SinglePostParticipants sidebar', () => {
+    it('does not render SinglePostParticipants inside content', () => {
       render(<SinglePostContent postId={mockPostId} />);
 
-      expect(screen.getByTestId('single-post-participants')).toBeInTheDocument();
-      expect(screen.getByTestId('single-post-participants')).toHaveAttribute('data-post-id', mockPostId);
+      expect(screen.queryByTestId('single-post-participants')).not.toBeInTheDocument();
     });
 
     it('renders ThreadTree with correct postId', () => {

@@ -7,6 +7,7 @@ import {
   checkPostIsAtIndexInFeed,
   countPostsInFeed,
   createQuickPost,
+  createQuickPostWithImage,
   fastTagPostInFeed,
   repostPost,
   waitForFeedToLoad,
@@ -315,4 +316,48 @@ describe('feed and filters', () => {
   it.skip('can create and delete a custom feed', () => {});
 
   it.skip('can create a custom feed with filters', () => {});
+});
+
+describe('visual layout', () => {
+  before(() => {
+    slowCypressDown();
+    cy.deleteDownloadsFolder();
+  });
+
+  it('can view image-only posts in visual layout', () => {
+    const imagePostContent1 = `Image post 1 ${Date.now()}`;
+    const imagePostContent2 = `Image post 2 ${Date.now()}`;
+    const imagePostContent3 = `Image post 3 ${Date.now()}`;
+    const textOnlyPostContent = `Text-only post ${Date.now()}`;
+
+    cy.onboardAsNewUser('Pete the Photographer', 'I post photos');
+
+    // create 2 posts with images
+    [imagePostContent1, imagePostContent2].forEach((postContent) => {
+      createQuickPostWithImage(postContent);
+    });
+
+    // create post with just text
+    createQuickPost(textOnlyPostContent);
+
+    // create another post with image (3 posts with images in total)
+    createQuickPostWithImage(imagePostContent3);
+
+    // switch to visual layout
+    cy.get('[data-testid="filter-layout-radiogroup"]').find('[aria-label="Visual"]').click();
+
+    // check the post with text is not visible
+    cannotFindPostInFeed(textOnlyPostContent);
+    cy.contains(textOnlyPostContent).should('not.exist');
+
+    // check all visible posts contain an image
+    cy.get('[data-cy="visual-feed-container"]').should('be.visible');
+    cy.get('[data-cy="visual-feed-tile"]')
+      .should('have.length.gte', 3)
+      .each(($tile) => {
+        cy.wrap($tile).find('img').should('exist').and('be.visible');
+        // check overlay post content text is not visible whilst not hovering over the tile
+        cy.wrap($tile).find('[data-testid="visual-overlay-content-stack"]').should('exist').and('not.be.visible');
+      });
+  });
 });

@@ -278,10 +278,11 @@ describe('HotController', () => {
       const getOrFetchSpy = vi.spyOn(Core.HotApplication, 'getOrFetch').mockResolvedValue(mockHotTags);
 
       await HotController.getOrFetch({ timeframe: Core.UserStreamTimeframe.TODAY });
+      await HotController.getOrFetch({ timeframe: Core.UserStreamTimeframe.THIS_WEEK });
       await HotController.getOrFetch({ timeframe: Core.UserStreamTimeframe.THIS_MONTH });
       await HotController.getOrFetch({ timeframe: Core.UserStreamTimeframe.ALL_TIME });
 
-      expect(getOrFetchSpy).toHaveBeenCalledTimes(3);
+      expect(getOrFetchSpy).toHaveBeenCalledTimes(4);
     });
   });
 });

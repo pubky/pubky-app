@@ -25,6 +25,27 @@ interface TimelinePostsProps {
 const virtuosoComponents = { Footer: TimelineVirtuosoFooter };
 
 /**
+ * Extracted from Virtuoso's `itemContent` so hooks run at component level.
+ * Deleted posts are filtered upstream in TimelineFeedContent; this component
+ * is a pure renderer that never returns null (Virtuoso requires non-zero-height items).
+ */
+function TimelinePostItem({ postId, tagsLayout }: { postId: string; tagsLayout?: TagsLayout }) {
+  const { navigateToPost } = Hooks.usePostNavigation();
+
+  return (
+    <Atoms.Container data-cy="post-card" overrideDefaults className="pb-4">
+      <Organisms.PostMain
+        postId={postId}
+        onClick={() => navigateToPost(postId)}
+        isReply={false}
+        tagsLayout={tagsLayout}
+      />
+      <Organisms.TimelinePostReplies postId={postId} />
+    </Atoms.Container>
+  );
+}
+
+/**
  * TimelinePosts
  *
  * Virtualized timeline that only mounts posts near the viewport.
@@ -40,8 +61,6 @@ export function TimelinePosts({
   loadMore,
   tagsLayout,
 }: TimelinePostsProps) {
-  const { navigateToPost } = Hooks.usePostNavigation();
-
   const virtuosoContext: TimelineVirtuosoContext = {
     loadingMore,
     error,
@@ -64,17 +83,7 @@ export function TimelinePosts({
                 void loadMore();
               }
             }}
-            itemContent={(_index, postId) => (
-              <Atoms.Container data-cy="post-card" overrideDefaults className="pb-4">
-                <Organisms.PostMain
-                  postId={postId}
-                  onClick={() => navigateToPost(postId)}
-                  isReply={false}
-                  tagsLayout={tagsLayout}
-                />
-                <Organisms.TimelinePostReplies postId={postId} />
-              </Atoms.Container>
-            )}
+            itemContent={(_index, postId) => <TimelinePostItem postId={postId} tagsLayout={tagsLayout} />}
             components={virtuosoComponents}
           />
         </Atoms.Container>

@@ -71,7 +71,7 @@ export function SinglePostParticipants({ postId, className }: SinglePostParticip
   // Show loading state
   if (isLoading && participants.length === 0) {
     return (
-      <Atoms.Container className={Libs.cn('flex items-center justify-center gap-3 py-4', className)}>
+      <Atoms.Container className={Libs.cn('flex items-center justify-center gap-2 py-4', className)}>
         <Atoms.Spinner size="md" />
         <Atoms.Typography as="p" className="text-muted-foreground">
           {t('loadingParticipants')}
