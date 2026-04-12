@@ -183,6 +183,62 @@ describe('NotificationModel', () => {
     });
   });
 
+  describe('countFilteredNewerThan', () => {
+    it('should count only notifications with matching types above the timestamp', async () => {
+      await NotificationModel.bulkSave([
+        createNotification(1000, NotificationType.Follow),
+        createNotification(2000, NotificationType.Follow),
+        createReply(3000),
+      ]);
+
+      const count = await NotificationModel.countFilteredNewerThan(500, [NotificationType.Follow]);
+
+      expect(count).toBe(2);
+    });
+
+    it('should exclude notifications of types not in allowedTypes', async () => {
+      await NotificationModel.bulkSave([createNotification(2000, NotificationType.Follow), createReply(3000)]);
+
+      const count = await NotificationModel.countFilteredNewerThan(1000, [NotificationType.Reply]);
+
+      expect(count).toBe(1);
+    });
+
+    it('should exclude notifications at or below the timestamp boundary', async () => {
+      await NotificationModel.bulkSave([
+        createNotification(1000, NotificationType.Follow),
+        createNotification(2000, NotificationType.Follow),
+        createNotification(3000, NotificationType.Follow),
+      ]);
+
+      const count = await NotificationModel.countFilteredNewerThan(2000, [NotificationType.Follow]);
+
+      expect(count).toBe(1);
+    });
+
+    it('should return 0 when no notifications match', async () => {
+      await NotificationModel.bulkSave([createNotification(1000, NotificationType.Follow)]);
+
+      const count = await NotificationModel.countFilteredNewerThan(1000, [NotificationType.Reply]);
+
+      expect(count).toBe(0);
+    });
+
+    it('should return 0 when allowedTypes is empty', async () => {
+      await NotificationModel.bulkSave([createNotification(2000, NotificationType.Follow)]);
+
+      const count = await NotificationModel.countFilteredNewerThan(1000, []);
+
+      expect(count).toBe(0);
+    });
+
+    it('should return 0 on empty table', async () => {
+      const count = await NotificationModel.countFilteredNewerThan(0, [NotificationType.Follow]);
+
+      expect(count).toBe(0);
+    });
+  });
+
   describe('clear', () => {
     it('should remove all notifications', async () => {
       await NotificationModel.bulkSave([createNotification(1000), createNotification(2000)]);

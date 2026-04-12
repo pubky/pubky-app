@@ -3,6 +3,7 @@ import { Logger } from '@/libs/logger';
 import { AppError } from '@/libs/error';
 import { HttpMethod, HttpStatusCode } from '@/libs/http';
 import * as Core from '@/core';
+import { NotificationNormalizer } from '@/core/pipes/notification/notification.normalizer';
 
 /**
  * Callback type for reporting bootstrap progress to the Controller layer.
@@ -20,7 +21,7 @@ export class BootstrapApplication {
    * @param params.pubky, The user's public key identifier
    * @param params.lastReadUrl, URL to fetch user's last read timestamp from homeserver
    * @param onProgress, Optional callback to report progress to the Controller layer
-   * @returns Promise resolving to notification state with unread count and last read timestamp
+   * @returns Promise resolving to notification state with preference-filtered unread count and remote settings
    */
   static async initialize(
     params: Core.TBootstrapParams & { localSettings: Core.SettingsState },
@@ -49,10 +50,15 @@ export class BootstrapApplication {
       // Subscribe to TTL coordinator for periodic staleness checks
       Core.TtlCoordinator.getInstance().subscribeUser({ pubky });
     }
+    // Resolve final preferences: remote settings win if available, otherwise use local
+    const finalPreferences = (remoteSettings ?? params.localSettings).notifications;
+    const allowedTypes = NotificationNormalizer.toEnabledTypes(finalPreferences);
+
     const [{ unread, nextPollCursor }] = await Promise.all([
       Core.NotificationApplication.persistAndSummarize({
         notifications: bootstrapData.notifications,
         lastRead: userLastRead,
+        allowedTypes,
       }),
       Core.LocalStreamUsersService.persistUsers(bootstrapData.users),
       Core.LocalStreamPostsService.persistPosts({ posts: bootstrapData.posts }),

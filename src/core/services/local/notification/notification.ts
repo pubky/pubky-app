@@ -1,4 +1,6 @@
 import * as Core from '@/core';
+import { NotificationType } from '@/core/models/notification/notification.types';
+import { NotificationModel } from '@/core/models/notification/notification';
 
 export class LocalNotificationService {
   private constructor() {}
@@ -30,6 +32,17 @@ export class LocalNotificationService {
    */
   static async countUnreadSince(lastRead: number): Promise<number> {
     return await Core.NotificationModel.countNewerThan(lastRead);
+  }
+
+  /**
+   * Counts unread notifications filtered by allowed types.
+   *
+   * @param lastRead - Timestamp of the last read notification
+   * @param allowedTypes - Notification types to include in the count
+   * @returns Promise resolving to the number of filtered unread notifications
+   */
+  static async countFilteredUnreadSince(lastRead: number, allowedTypes: NotificationType[]): Promise<number> {
+    return await NotificationModel.countFilteredNewerThan(lastRead, allowedTypes);
   }
 
   /**

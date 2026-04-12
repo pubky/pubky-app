@@ -118,7 +118,7 @@ type MockConfig = {
   upsertTagsError?: Error;
   persistFilesError?: Error;
   bulkSaveError?: Error;
-  countUnreadError?: Error;
+  countFilteredError?: Error;
   settingsInitError?: Error;
   remoteSettings?: Core.SettingsState | null;
   mutedUsers?: Core.Pubky[];
@@ -139,7 +139,7 @@ type ServiceMocks = {
   upsertHotTags: unknown;
   upsertTagsStream: unknown;
   bulkSave: unknown;
-  countUnreadSince: unknown;
+  countFilteredUnreadSince: unknown;
   initializeSettings: unknown;
 };
 
@@ -156,7 +156,7 @@ const setupMocks = (config: MockConfig = {}): ServiceMocks => {
     upsertTagsError,
     persistFilesError,
     bulkSaveError,
-    countUnreadError,
+    countFilteredError,
     settingsInitError,
     remoteSettings = null,
     mutedUsers = [],
@@ -215,10 +215,10 @@ const setupMocks = (config: MockConfig = {}): ServiceMocks => {
     bulkSave: vi
       .spyOn(Core.LocalNotificationService, 'bulkSave')
       .mockImplementation(bulkSaveError ? () => Promise.reject(bulkSaveError) : () => Promise.resolve(undefined)),
-    countUnreadSince: vi
-      .spyOn(Core.LocalNotificationService, 'countUnreadSince')
+    countFilteredUnreadSince: vi
+      .spyOn(Core.LocalNotificationService, 'countFilteredUnreadSince')
       .mockImplementation(
-        countUnreadError ? () => Promise.reject(countUnreadError) : () => Promise.resolve(unreadCount),
+        countFilteredError ? () => Promise.reject(countFilteredError) : () => Promise.resolve(unreadCount),
       ),
     initializeSettings: vi
       .spyOn(Core.SettingsApplication, 'initializeSettings')
@@ -255,7 +255,7 @@ const assertCommonCalls = (mocks: ServiceMocks, bootstrapData: Core.NexusBootstr
   expect(mocks.persistFiles).toHaveBeenCalledWith(bootstrapData.files);
   const flatNotifications = bootstrapData.notifications.map((n) => createFlatNotification(n.timestamp));
   expect(mocks.bulkSave).toHaveBeenCalledWith({ flatNotifications });
-  expect(mocks.countUnreadSince).toHaveBeenCalledWith(MOCK_LAST_READ);
+  expect(mocks.countFilteredUnreadSince).toHaveBeenCalledWith(MOCK_LAST_READ, expect.any(Object));
 };
 
 describe('BootstrapApplication', () => {
@@ -499,11 +499,11 @@ describe('BootstrapApplication', () => {
       expect(mocks.bulkSave).toHaveBeenCalledWith({ flatNotifications: [] });
     });
 
-    it('should throw error when countUnreadSince fails', async () => {
+    it('should throw error when countFilteredUnreadSince fails', async () => {
       const bootstrapData = emptyBootstrap();
       const mocks = setupMocks({
         bootstrapData,
-        countUnreadError: new Error('Count unread error'),
+        countFilteredError: new Error('Count unread error'),
       });
 
       await expect(BootstrapApplication.initialize(getBootstrapParams(TEST_PUBKY))).rejects.toThrow(
@@ -511,7 +511,7 @@ describe('BootstrapApplication', () => {
       );
 
       expect(mocks.bulkSave).toHaveBeenCalledWith({ flatNotifications: [] });
-      expect(mocks.countUnreadSince).toHaveBeenCalledWith(MOCK_LAST_READ);
+      expect(mocks.countFilteredUnreadSince).toHaveBeenCalledWith(MOCK_LAST_READ, expect.any(Array));
     });
 
     it('should throw error when upsert influencers stream fails', async () => {

@@ -1,6 +1,7 @@
 import * as Core from '@/core';
 import * as Config from '@/config';
-import { filterByPreferences } from './notification.filters';
+import { NotificationNormalizer } from '@/core/pipes/notification/notification.normalizer';
+import { useSettingsStore } from '@/core/stores/settings/settings.store';
 
 export class NotificationController {
   private constructor() {} // Prevent instantiation
@@ -17,11 +18,14 @@ export class NotificationController {
     const notificationStore = Core.useNotificationStore.getState();
     const lastPolledTimestamp = notificationStore.selectLastPolledTimestamp();
     const lastRead = notificationStore.selectLastRead();
+    const preferences = useSettingsStore.getState().notifications;
 
+    const allowedTypes = NotificationNormalizer.toEnabledTypes(preferences);
     const { unread, nextPollCursor } = await Core.NotificationApplication.fetchNotifications({
       userId,
       lastPolledTimestamp,
       lastRead,
+      allowedTypes,
     });
 
     notificationStore.setUnread(unread);
@@ -76,7 +80,7 @@ export class NotificationController {
     limit = Config.NEXUS_NOTIFICATIONS_LIMIT,
   }: Core.TGetNotificationsParams): Promise<Core.TGetOrFetchNotificationsResponse> {
     const userId = Core.useAuthStore.getState().selectCurrentUserPubky();
-    const preferences = Core.useSettingsStore.getState().notifications;
+    const preferences = useSettingsStore.getState().notifications;
 
     const response = await Core.NotificationApplication.getOrFetchNotifications({
       userId,
@@ -86,7 +90,7 @@ export class NotificationController {
 
     return {
       ...response,
-      flatNotifications: filterByPreferences(response.flatNotifications, preferences),
+      flatNotifications: NotificationNormalizer.filterByPreferences(response.flatNotifications, preferences),
     };
   }
 

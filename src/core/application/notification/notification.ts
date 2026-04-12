@@ -7,21 +7,23 @@ export class NotificationApplication {
 
   /**
    * Retrieves notifications from the nexus service and persists them locally,
-   * then returns the count of unread notifications and the newest notification timestamp.
+   * then returns the preference-filtered unread count and the newest notification timestamp.
    *
    * @param params.userId - The user ID to fetch notifications for
    * @param params.lastPolledTimestamp - Polling cursor passed as `end` to Nexus (advances after each poll)
    * @param params.lastRead - Read/unread boundary used to count unread notifications
-   * @returns Promise resolving to unread count and the newest notification timestamp
+   * @param params.allowedTypes - Notification types to include in the unread count
+   * @returns Promise resolving to filtered unread count and the newest notification timestamp
    */
   static async fetchNotifications({
     userId,
     lastPolledTimestamp,
     lastRead,
+    allowedTypes,
   }: Core.TNotificationApplicationNotificationsParams): Promise<Core.TFetchNotificationsResult> {
     const notifications = await Core.NexusUserService.notifications({ user_id: userId, end: lastPolledTimestamp });
     const flatNotifications = await this.fetchMissingEntities({ notifications, viewerId: userId });
-    return this.persistAndSummarize({ notifications, lastRead, flatNotifications });
+    return this.persistAndSummarize({ notifications, lastRead, allowedTypes, flatNotifications });
   }
   /**
    * Updates the lastRead timestamp on the homeserver to mark all notifications as read.
@@ -42,6 +44,18 @@ export class NotificationApplication {
    */
   static async getAllFromCache(): Promise<Core.FlatNotification[]> {
     return await Core.LocalNotificationService.getAll();
+  }
+
+  /**
+   * Counts unread notifications filtered by allowed types.
+   * Used by Controllers to compute the preference-filtered badge count.
+   *
+   * @param lastRead - Timestamp of the last read notification
+   * @param allowedTypes - Notification types to include in the count
+   * @returns Promise resolving to the filtered unread count
+   */
+  static async countFilteredUnreadSince(lastRead: number, allowedTypes: Core.NotificationType[]): Promise<number> {
+    return await Core.LocalNotificationService.countFilteredUnreadSince(lastRead, allowedTypes);
   }
 
   /**
@@ -82,17 +96,18 @@ export class NotificationApplication {
   }
 
   /**
-   * Persists flat notifications to IndexedDB, counts unread, and computes the
-   * next poll cursor
+   * Persists flat notifications to IndexedDB, counts preference-filtered unread,
+   * and computes the next poll cursor.
    */
   static async persistAndSummarize({
     notifications,
     lastRead,
+    allowedTypes,
     flatNotifications: precomputed,
   }: Core.TPersistAndSummarizeParams): Promise<Core.TFetchNotificationsResult> {
     const flatNotifications = precomputed ?? this.toSupportedFlatNotifications(notifications);
     await Core.LocalNotificationService.bulkSave({ flatNotifications });
-    const unread = await Core.LocalNotificationService.countUnreadSince(lastRead);
+    const unread = await Core.LocalNotificationService.countFilteredUnreadSince(lastRead, allowedTypes);
     const nextPollCursor = notifications.length > 0 ? notifications[0].timestamp + 1 : undefined;
     return { unread, nextPollCursor };
   }

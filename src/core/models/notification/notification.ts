@@ -162,6 +162,32 @@ export class NotificationModel {
   }
 
   /**
+   * Counts notifications with a timestamp strictly greater than the given value,
+   * filtered to only include the specified allowed types.
+   * Used to get the filtered unread count by passing the lastRead timestamp.
+   */
+  static async countFilteredNewerThan(timestamp: number, allowedTypes: NotificationType[]): Promise<number> {
+    try {
+      return await this.table
+        .where('timestamp')
+        .above(timestamp)
+        .and((n) => allowedTypes.includes(n.type))
+        .count();
+    } catch (error) {
+      throw Err.database(
+        DatabaseErrorCode.QUERY_FAILED,
+        `Failed to count filtered notifications newer than ${timestamp} from ${this.table.name}`,
+        {
+          service: ErrorService.Local,
+          operation: 'countFilteredNewerThan',
+          context: { table: this.table.name, timestamp, allowedTypes },
+          cause: error,
+        },
+      );
+    }
+  }
+
+  /**
    * Retrieves notifications older than a given timestamp, ordered by timestamp descending.
    * Used for timestamp-based pagination.
    *

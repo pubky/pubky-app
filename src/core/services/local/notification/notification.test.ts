@@ -86,4 +86,33 @@ describe('LocalNotificationService', () => {
       await expect(LocalNotificationService.countUnreadSince(1000)).rejects.toThrow('count-failed');
     });
   });
+
+  describe('countFilteredUnreadSince', () => {
+    const allowedTypes = [Core.NotificationType.Follow, Core.NotificationType.Reply];
+
+    it('should delegate to NotificationModel.countFilteredNewerThan', async () => {
+      const modelSpy = vi.spyOn(Core.NotificationModel, 'countFilteredNewerThan').mockResolvedValue(2);
+
+      const result = await LocalNotificationService.countFilteredUnreadSince(1000, allowedTypes);
+
+      expect(modelSpy).toHaveBeenCalledWith(1000, allowedTypes);
+      expect(result).toBe(2);
+    });
+
+    it('should return 0 when no unread notifications exist', async () => {
+      vi.spyOn(Core.NotificationModel, 'countFilteredNewerThan').mockResolvedValue(0);
+
+      const result = await LocalNotificationService.countFilteredUnreadSince(5000, allowedTypes);
+
+      expect(result).toBe(0);
+    });
+
+    it('should bubble model errors', async () => {
+      vi.spyOn(Core.NotificationModel, 'countFilteredNewerThan').mockRejectedValue(new Error('count-failed'));
+
+      await expect(LocalNotificationService.countFilteredUnreadSince(1000, allowedTypes)).rejects.toThrow(
+        'count-failed',
+      );
+    });
+  });
 });

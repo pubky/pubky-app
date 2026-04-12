@@ -4,12 +4,13 @@ export type TNotificationApplicationNotificationsParams = {
   userId: Core.Pubky;
   lastPolledTimestamp: number | undefined;
   lastRead: number;
+  allowedTypes: Core.NotificationType[];
 };
 
 /**
- * Result from fetchNotifications containing unread count and the next poll cursor.
+ * Result from fetchNotifications containing the filtered unread count and next poll cursor.
  *
- * @property unread - Number of unread notifications (those newer than lastRead)
+ * @property unread - Number of unread notifications filtered by user preferences
  * @property nextPollCursor - Next polling cursor (newest timestamp + 1 to avoid refetch), undefined if no notifications
  */
 export type TFetchNotificationsResult = {
@@ -55,6 +56,7 @@ export type TGetOrFetchNotificationsResponse = TFlatNotifications & {
 export type TPersistAndSummarizeParams = {
   notifications: Core.NexusNotification[];
   lastRead: number;
+  allowedTypes: Core.NotificationType[];
   flatNotifications?: Core.TFlatNotificationList;
 };
 
