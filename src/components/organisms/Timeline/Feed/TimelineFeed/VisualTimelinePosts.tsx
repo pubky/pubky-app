@@ -1,8 +1,6 @@
 'use client';
 
 import * as React from 'react';
-import { Virtuoso } from 'react-virtuoso';
-import { TIMELINE_VIRTUOSO_OVERSCAN_PX } from '@/config';
 import * as Atoms from '@/atoms';
 import * as Core from '@/core';
 import * as Hooks from '@/hooks';
@@ -10,7 +8,6 @@ import * as Libs from '@/libs';
 import * as Molecules from '@/molecules';
 import * as Organisms from '@/organisms';
 import {
-  VISUAL_AUTO_PAGINATE_MIN_ROWS,
   VISUAL_GRID_MAX_WIDTH_PX,
   VISUAL_TILE_ASPECT_RATIOS,
   VISUAL_TILE_COLUMN_SPANS,
@@ -23,13 +20,7 @@ import type {
   VisualTimelineTileProps,
   VisualTileVideoProps,
 } from './VisualTimelinePosts.types';
-import {
-  TimelineVirtuosoFooter,
-  type TimelineVirtuosoContext,
-} from '@/components/molecules/Timeline/TimelineVirtuosoFooter';
 import { useVisualFeedTiles } from './useVisualFeedTiles';
-
-const visualVirtuosoComponents = { Footer: TimelineVirtuosoFooter };
 
 function stopPropagation(event: React.SyntheticEvent) {
   event.stopPropagation();
@@ -304,38 +295,13 @@ export function VisualTimelinePosts({
   const { navigateToPost } = Hooks.usePostNavigation();
   const { rows, hasPendingTiles, hasPendingFiles } = useVisualFeedTiles({ postIds, hasMore });
 
-  // Auto-paginate when the visual grid doesn't fill the viewport. Two triggers:
-  //
-  // 1. rows.length <= stableRowCountRef — a page loaded but produced no new visual
-  //    rows (all text posts). Virtuoso won't fire endReached because the data length
-  //    didn't change, so we must load the next page ourselves.
-  //
-  // 2. rows.length < VISUAL_AUTO_PAGINATE_MIN_ROWS — the grid is too short to trigger
-  //    scroll-based loading. Virtuoso with useWindowScroll may not fire endReached when
-  //    the content doesn't fill the window (resizing the window works around this).
-  //
-  // hasPendingTiles and hasPendingFiles are deliberately excluded from the bail-out
-  // conditions. Blocking on them creates a deadlock: the effect can't fire while tiles
-  // are probing, and by the time probes finish, stableRowCountRef has been overtaken by
-  // probe-driven row growth, so the "no new rows" check no longer triggers.
-  const stableRowCountRef = React.useRef(0);
-
-  React.useEffect(() => {
-    if (loading) {
-      stableRowCountRef.current = 0;
-      return;
-    }
-
-    if (loadingMore || error || !hasMore || postIds.length === 0) {
-      return;
-    }
-
-    if (rows.length <= stableRowCountRef.current || rows.length < VISUAL_AUTO_PAGINATE_MIN_ROWS) {
-      void loadMore();
-    }
-
-    stableRowCountRef.current = rows.length;
-  }, [loading, loadingMore, error, hasMore, postIds.length, rows.length, loadMore]);
+  const { sentinelRef } = Hooks.useInfiniteScroll({
+    onLoadMore: loadMore,
+    hasMore,
+    isLoading: loadingMore,
+    threshold: 3000,
+    debounceMs: 20,
+  });
 
   const showFilteredEmptyState =
     !loading &&
@@ -347,13 +313,6 @@ export function VisualTimelinePosts({
     !hasPendingTiles &&
     !hasPendingFiles;
 
-  const virtuosoContext: TimelineVirtuosoContext = {
-    loadingMore,
-    error,
-    hasMore,
-    itemCount: rows.length,
-  };
-
   return (
     <Molecules.TimelineStateWrapper
       loading={loading}
@@ -364,29 +323,24 @@ export function VisualTimelinePosts({
         <Atoms.Container data-cy="visual-feed-container">
           <Atoms.Container
             overrideDefaults
-            className="mx-auto w-full"
+            className="mx-auto flex w-full flex-col gap-6"
             style={{ maxWidth: `${VISUAL_GRID_MAX_WIDTH_PX}px` }}
           >
-            <Virtuoso
-              useWindowScroll
-              data={rows}
-              context={virtuosoContext}
-              overscan={TIMELINE_VIRTUOSO_OVERSCAN_PX}
-              computeItemKey={(_index, row) => row.key}
-              endReached={() => {
-                if (!loadingMore && hasMore) {
-                  void loadMore();
-                }
-              }}
-              itemContent={(_index, row) => (
-                <Atoms.Container overrideDefaults className="grid grid-cols-12 gap-6 pb-6">
-                  {row.cells.map((cell) => (
-                    <VisualTimelineRow key={cell.key} cell={cell} onNavigate={navigateToPost} />
-                  ))}
-                </Atoms.Container>
-              )}
-              components={visualVirtuosoComponents}
-            />
+            {rows.map((row) => (
+              <Atoms.Container key={row.key} overrideDefaults className="grid grid-cols-12 gap-6">
+                {row.cells.map((cell) => (
+                  <VisualTimelineRow key={cell.key} cell={cell} onNavigate={navigateToPost} />
+                ))}
+              </Atoms.Container>
+            ))}
+
+            {loadingMore && <Molecules.TimelineLoadingMore />}
+
+            {error && postIds.length > 0 && <Molecules.TimelineError message={error} />}
+
+            {!hasMore && !loadingMore && rows.length > 0 && <Molecules.TimelineEndMessage />}
+
+            <Atoms.Container overrideDefaults className="h-5" ref={sentinelRef} />
           </Atoms.Container>
         </Atoms.Container>
       ) : null}
