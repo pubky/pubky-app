@@ -420,8 +420,7 @@ const findPostInFeed = (
   // find the post in the timeline
   return cy
     .get('[data-cy="timeline-posts"]')
-    .find('[data-testid="virtuoso-item-list"]')
-    .children()
+    .find('[data-cy="post-card"]')
     .should('have.length.gt', postIdx)
     .then(($posts): Cypress.Chainable<JQuery<HTMLElement>> => {
       // optionally filter posts by contained text and whether the card itself is a repost
