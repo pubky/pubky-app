@@ -5,7 +5,10 @@ import * as Hooks from '@/hooks';
 import * as Molecules from '@/molecules';
 import * as Organisms from '@/organisms';
 import { POST_INPUT_VARIANT } from '@/organisms/PostInput/PostInput.constants';
+import { scrollDialogTextareaIntoDialog } from '@/organisms/PostInput/PostInput.utils';
 import type { DialogRepostProps } from './DialogRepost.types';
+
+const REPOST_TEXTAREA_SELECTOR = '#repost-post-input [data-slot="textarea"]';
 
 export function DialogRepost({ postId, open, onOpenChangeAction }: DialogRepostProps) {
   const { showConfirmDialog, setShowConfirmDialog, resetKey, handleContentChange, handleOpenChange, handleDiscard } =
@@ -13,9 +16,15 @@ export function DialogRepost({ postId, open, onOpenChangeAction }: DialogRepostP
       onClose: () => onOpenChangeAction(false),
     });
 
+  const handleDialogContentAnimationEnd: React.AnimationEventHandler<HTMLDivElement> = () => {
+    if (!open) return;
+
+    scrollDialogTextareaIntoDialog(REPOST_TEXTAREA_SELECTOR, 'smooth');
+  };
+
   return (
     <Atoms.Dialog open={open} onOpenChange={handleOpenChange}>
-      <Atoms.DialogContent className="w-3xl" hiddenTitle="Repost">
+      <Atoms.DialogContent className="w-3xl" hiddenTitle="Repost" onAnimationEnd={handleDialogContentAnimationEnd}>
         <Atoms.DialogHeader>
           <Atoms.DialogTitle>Repost</Atoms.DialogTitle>
           <Atoms.DialogDescription className="sr-only">Repost dialog</Atoms.DialogDescription>
@@ -23,7 +32,9 @@ export function DialogRepost({ postId, open, onOpenChangeAction }: DialogRepostP
         <Atoms.Container className="gap-3">
           {/* Repost input - repost preview is rendered inside PostInput */}
           <Organisms.PostInput
+            autoFocusTextarea
             dataCy="repost-post-input"
+            id="repost-post-input"
             key={resetKey}
             variant={POST_INPUT_VARIANT.REPOST}
             originalPostId={postId}
