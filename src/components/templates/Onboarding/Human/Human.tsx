@@ -5,7 +5,7 @@ import * as Organisms from '@/organisms';
 import * as Core from '@/core';
 import * as Libs from '@/libs';
 import { useState, useEffect } from 'react';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { ONBOARDING_ROUTES } from '@/app';
 
 enum States {
@@ -19,18 +19,26 @@ enum States {
 export function Human() {
   const [state, setState] = useState<States>(States.Selection);
   const [phoneNumber, setPhoneNumber] = useState<string>('');
-  const { setInviteCode, reset } = Core.useOnboardingStore();
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const inviteCodeFromUrl = Libs.formatInviteCode(searchParams.get('inviteCode') ?? '');
+  const hasInviteCodeFromUrl = inviteCodeFromUrl.length === 14;
 
   useEffect(() => {
-    reset();
-  }, [reset]);
+    if (hasInviteCodeFromUrl) {
+      const { setInviteCode } = Core.useOnboardingStore.getState();
+      setInviteCode(inviteCodeFromUrl);
+      router.push(ONBOARDING_ROUTES.INSTALL);
+    } else {
+      Core.useOnboardingStore.getState().reset();
+    }
+  }, [hasInviteCodeFromUrl, inviteCodeFromUrl, router]);
 
   // After payment/SMS verification, save the invite code and redirect to install page.
   // Signup to the homeserver happens later, after the user creates their keypair
   // (browser keys on /onboarding/pubky or Pubky Ring on /onboarding/scan).
   function onSuccess(inviteCode: string) {
-    setInviteCode(inviteCode);
+    Core.useOnboardingStore.getState().setInviteCode(inviteCode);
     router.push(ONBOARDING_ROUTES.INSTALL);
   }
   return (
