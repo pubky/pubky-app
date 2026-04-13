@@ -62,6 +62,7 @@ vi.mock('@/atoms', () => ({
     </button>
   ),
   Spinner: () => <div data-testid="spinner">Loading...</div>,
+  Skeleton: ({ className }: { className?: string }) => <div data-testid="skeleton" className={className} />,
 }));
 
 // Mock Organisms
@@ -113,13 +114,13 @@ describe('ShareTarget', () => {
     });
   });
 
-  it('shows loading spinner while retrieving shared files', () => {
+  it('shows loading skeleton while retrieving shared files', () => {
     mockSearchParams.set('hasFiles', 'true');
     mockGetSharedFiles.mockImplementation(() => new Promise(() => {})); // Never resolves
 
     render(<ShareTarget />);
 
-    expect(screen.getByTestId('spinner')).toBeInTheDocument();
+    expect(screen.getAllByTestId('skeleton').length).toBeGreaterThan(0);
   });
 
   it('renders title correctly', async () => {

@@ -83,6 +83,7 @@ vi.mock('@/atoms', () => ({
   ),
   Typography: ({ children }: { children: React.ReactNode }) => <span>{children}</span>,
   Spinner: ({ size }: { size: string }) => <div data-testid="spinner" data-size={size} />,
+  Skeleton: ({ className }: { className?: string }) => <div data-testid="skeleton" className={className} />,
 }));
 
 // Mock libs - use actual implementations
@@ -119,8 +120,7 @@ describe('SinglePostParticipants', () => {
 
       render(<SinglePostParticipants postId={mockPostId} />);
 
-      expect(screen.getByTestId('spinner')).toBeInTheDocument();
-      expect(screen.getByText('Loading participants...')).toBeInTheDocument();
+      expect(screen.getAllByTestId('skeleton').length).toBeGreaterThan(0);
     });
   });
 

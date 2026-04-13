@@ -69,6 +69,9 @@ vi.mock('@/atoms', () => ({
       {children}
     </div>
   ),
+  Skeleton: ({ className, ...props }: { className?: string }) => (
+    <div data-testid="skeleton" data-slot="skeleton" className={className} {...props} />
+  ),
 }));
 
 describe('MarkdownEditor', () => {
@@ -89,15 +92,13 @@ describe('MarkdownEditor', () => {
     expect(wrapper).toHaveAttribute('data-ssr', 'false');
   });
 
-  it('renders loading state with correct styling', () => {
+  it('renders loading state with skeleton', () => {
     render(<MarkdownEditor markdown="" />);
 
-    const loadingContainer = screen.getByTestId('container');
-    expect(loadingContainer).toBeInTheDocument();
-    expect(loadingContainer).toHaveClass('h-22');
-    expect(loadingContainer).toHaveClass('animate-pulse');
-    expect(loadingContainer).toHaveClass('rounded-md');
-    expect(loadingContainer).toHaveClass('bg-card');
+    const skeletons = screen.getAllByTestId('skeleton');
+    expect(skeletons.length).toBe(2);
+    expect(skeletons[0]).toHaveClass('h-11');
+    expect(skeletons[1]).toHaveClass('h-4');
   });
 
   it('passes props to the editor', () => {

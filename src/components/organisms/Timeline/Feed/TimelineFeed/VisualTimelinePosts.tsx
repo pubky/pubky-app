@@ -147,9 +147,10 @@ function VisualTimelineTileOverlay({ tile, size, onReplyClick, onRepostClick }: 
               {userDetails ? (
                 <Molecules.PostHeaderUserInfo userId={userId} userName={userDetails.name || ''} avatarUrl={avatarUrl} />
               ) : (
-                <Atoms.Typography overrideDefaults className="text-sm text-white/70">
-                  Loading...
-                </Atoms.Typography>
+                <Atoms.Container overrideDefaults className="flex items-center gap-2">
+                  <Atoms.Skeleton className="size-6 rounded-full bg-white/20" />
+                  <Atoms.Skeleton className="h-3 w-20 rounded-md bg-white/20" />
+                </Atoms.Container>
               )}
             </Atoms.Container>
 

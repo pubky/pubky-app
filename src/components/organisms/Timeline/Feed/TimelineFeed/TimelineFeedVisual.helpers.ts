@@ -30,6 +30,7 @@ export const VISUAL_DISABLED_CONTENT: ContentType[] = [
 const VISUAL_INTERACTIVE_CONTENT_VARIANTS = new Set<TimelineFeedVariant>([
   TIMELINE_FEED_VARIANT.HOME,
   TIMELINE_FEED_VARIANT.BOOKMARKS,
+  TIMELINE_FEED_VARIANT.SEARCH,
 ]);
 
 export const VISUAL_TILE_COLUMN_SPANS: Record<VisualTileSize, number> = {
