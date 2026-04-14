@@ -63,6 +63,9 @@ public/sw.js.map
 /.cursor/commands
 /.cursor/hooks
 
+# Scrapling MCP (local venv; recreate with: python3 -m venv .venv-scrapling && .venv-scrapling/bin/pip install "scrapling[ai]" && scrapling install)
+/.venv-scrapling
+
 # Claude
 .claude
 

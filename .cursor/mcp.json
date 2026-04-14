@@ -1,0 +1,9 @@
+{
+  "mcpServers": {
+    "scrapling": {
+      "type": "stdio",
+      "command": "${workspaceFolder}/.venv-scrapling/bin/scrapling",
+      "args": ["mcp"]
+    }
+  }
+}
