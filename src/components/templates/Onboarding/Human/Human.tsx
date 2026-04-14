@@ -4,7 +4,7 @@ import * as Molecules from '@/molecules';
 import * as Organisms from '@/organisms';
 import * as Core from '@/core';
 import * as Libs from '@/libs';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { ONBOARDING_ROUTES } from '@/app';
 
@@ -21,18 +21,30 @@ export function Human() {
   const [phoneNumber, setPhoneNumber] = useState<string>('');
   const router = useRouter();
   const searchParams = useSearchParams();
+  const { toast } = Molecules.useToast();
+  const hasInitialisedFromUrlRef = useRef(false);
   const inviteCodeFromUrl = Libs.formatInviteCode(searchParams.get('inviteCode') ?? '');
   const hasInviteCodeFromUrl = inviteCodeFromUrl.length === 14;
 
   useEffect(() => {
+    if (hasInitialisedFromUrlRef.current) {
+      return;
+    }
+
+    hasInitialisedFromUrlRef.current = true;
+
     if (hasInviteCodeFromUrl) {
       const { setInviteCode } = Core.useOnboardingStore.getState();
       setInviteCode(inviteCodeFromUrl);
+      toast({
+        title: 'Invite code applied',
+        description: `Your invite code ${inviteCodeFromUrl} has been applied.`,
+      });
       router.push(ONBOARDING_ROUTES.INSTALL);
     } else {
       Core.useOnboardingStore.getState().reset();
     }
-  }, [hasInviteCodeFromUrl, inviteCodeFromUrl, router]);
+  }, [hasInviteCodeFromUrl, inviteCodeFromUrl, router, toast]);
 
   // After payment/SMS verification, save the invite code and redirect to install page.
   // Signup to the homeserver happens later, after the user creates their keypair
