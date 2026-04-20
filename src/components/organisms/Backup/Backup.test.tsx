@@ -111,7 +111,7 @@ describe('BackupNavigation', () => {
     expect(container.firstChild).toMatchSnapshot();
   });
 
-  it('renders buttons navigation component without back button', () => {
+  it('renders buttons navigation component with back button', () => {
     render(<BackupNavigation />);
 
     expect(screen.getByTestId('buttons-navigation')).toBeInTheDocument();
