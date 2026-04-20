@@ -59,6 +59,7 @@ export function CopyrightForm() {
                   onBlur={field.onBlur}
                   disabled={isSubmitting}
                   className="gap-4 xl:auto-cols-fr xl:grid-flow-col"
+                  aria-required
                   aria-invalid={Boolean(roleError) || undefined}
                   aria-errormessage={roleError ? 'copyright-role-error' : undefined}
                   aria-describedby={roleError ? 'copyright-role-error' : undefined}

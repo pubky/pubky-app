@@ -61,7 +61,7 @@ exports[`CopyrightForm - Snapshots > matches snapshot for default state 1`] = `
           Rights Owner Information
         </p>
         <div
-          aria-required="false"
+          aria-required="true"
           class="grid gap-3 gap-4 xl:auto-cols-fr xl:grid-flow-col"
           dir="ltr"
           role="radiogroup"
