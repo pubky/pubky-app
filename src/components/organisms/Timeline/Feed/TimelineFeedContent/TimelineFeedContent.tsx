@@ -121,27 +121,27 @@ function TimelineFeedContent({ streamId, variant, tagsLayout, layoutResolution, 
 
   return (
     <TimelineFeedContext.Provider value={contextValue}>
-      <Atoms.Container ref={containerRef} className="min-w-0 flex-1 gap-6 lg:overflow-hidden">
-        {enablePullToRefresh && <Molecules.PullToRefreshIndicator state={pullState} pullDistance={pullDistance} />}
-        {!isVisualActive ? children : null}
-        <NewPostsSection
-          streamId={streamId}
-          postIds={postIds}
-          mutedUserIdSet={mutedUserIdSet}
-          loading={loading}
-          prependPosts={prependPosts}
-        />
-        {isVisualActive ? (
-          <VisualTimelinePosts
+      <PostMainLayoutProvider tagsLayout={tagsLayout}>
+        <Atoms.Container ref={containerRef} className="min-w-0 flex-1 gap-6 lg:overflow-hidden">
+          {enablePullToRefresh && <Molecules.PullToRefreshIndicator state={pullState} pullDistance={pullDistance} />}
+          {!isVisualActive ? children : null}
+          <NewPostsSection
+            streamId={streamId}
             postIds={postIds}
+            mutedUserIdSet={mutedUserIdSet}
             loading={loading}
-            loadingMore={loadingMore}
-            error={error}
-            hasMore={hasMore}
-            loadMore={loadMore}
+            prependPosts={prependPosts}
           />
-        ) : (
-          <PostMainLayoutProvider tagsLayout={tagsLayout}>
+          {isVisualActive ? (
+            <VisualTimelinePosts
+              postIds={postIds}
+              loading={loading}
+              loadingMore={loadingMore}
+              error={error}
+              hasMore={hasMore}
+              loadMore={loadMore}
+            />
+          ) : (
             <Organisms.TimelinePosts
               postIds={postIds}
               loading={loading}
@@ -150,9 +150,9 @@ function TimelineFeedContent({ streamId, variant, tagsLayout, layoutResolution, 
               hasMore={hasMore}
               loadMore={loadMore}
             />
-          </PostMainLayoutProvider>
-        )}
-      </Atoms.Container>
+          )}
+        </Atoms.Container>
+      </PostMainLayoutProvider>
     </TimelineFeedContext.Provider>
   );
 }
