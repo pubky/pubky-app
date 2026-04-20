@@ -76,7 +76,7 @@ export const HomeSectionTitle = () => {
   const t = useTranslations('landing');
   return (
     <Atoms.Container className="flex-row items-start gap-2">
-      <Atoms.Typography as="h5" size="md" className="self-center text-xl font-light text-brand sm:text-2xl">
+      <Atoms.Typography as="h2" size="md" className="self-center text-xl font-light text-brand sm:text-2xl">
         {t('subtitle')}
       </Atoms.Typography>
     </Atoms.Container>
