@@ -15,8 +15,7 @@ export enum PostOrReply {
 // // verify that a post in the feed has the expected content, post is located by index
 export const postInFeedContentEq = (postContent: string, idx: number) => {
   cy.get('[data-cy="timeline-posts"]')
-    .find('[data-testid="virtuoso-item-list"]')
-    .children()
+    .find('[data-cy="post-card"]')
     .should(($posts) => {
       expect($posts.length).to.be.greaterThan(idx);
 
@@ -58,6 +57,23 @@ export const createQuickPost = (postContent: string, tags?: string[], expectedPo
       cy.get('[data-cy="post-input-action-bar-post"]').click();
       cy.wait('@postCreated').its('response.statusCode').should('eq', 201);
       // verify textarea is empty
+      cy.get('textarea').should('have.value', '');
+    });
+};
+
+export const createQuickPostWithImage = (postContent: string) => {
+  cy.get('[data-cy="home-post-input"]')
+    .should('be.visible')
+    .within(() => {
+      cy.get('textarea').click();
+      addImage();
+      cy.get('textarea').type(postContent);
+      cy.get('[data-cy="post-header-character-count"]').then((counter) => {
+        expect(counter.text()).to.eq(`${Array.from(postContent).length}/${MAX_POST_LENGTH}`);
+      });
+      cy.intercept('PUT', '**/pub/pubky.app/posts/**').as('postCreated');
+      cy.get('[data-cy="post-input-action-bar-post"]').click();
+      cy.wait('@postCreated').its('response.statusCode').should('eq', 201);
       cy.get('textarea').should('have.value', '');
     });
 };
@@ -227,8 +243,7 @@ export const deletePost = ({
 
 export const checkPostIsAtIndexInFeed = (postContent: string, index: number, repostContent?: string) => {
   cy.get('[data-cy="timeline-posts"]')
-    .find('[data-testid="virtuoso-item-list"]')
-    .children()
+    .find('[data-cy="post-card"]')
     .should(($posts) => {
       expect($posts.length).to.be.greaterThan(index);
 
@@ -315,8 +330,7 @@ const findAndCountPostsInFeed = (filterText: string, expectedCount: number) => {
     }
 
     cy.get('[data-cy="timeline-posts"]')
-      .find('[data-testid="virtuoso-item-list"]')
-      .children()
+      .find('[data-cy="post-card"]')
       .then(($posts) => {
         // Filter posts by text
         const matchingPosts = $posts.filter((_idx, element) => element.innerText.includes(filterText));

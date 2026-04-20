@@ -1,44 +1,26 @@
 import * as React from 'react';
-import { fireEvent, render, screen } from '@testing-library/react';
+import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { VisualTimelinePosts } from './VisualTimelinePosts';
 import type { VisualRow } from './TimelineFeedVisual.types';
 
-const mockNavigateToPost = vi.fn();
+const { mockNavigateToPost, mockUseInfiniteScroll } = vi.hoisted(() => ({
+  mockNavigateToPost: vi.fn(),
+  mockUseInfiniteScroll: vi.fn(),
+}));
+
 const mockUseVisualFeedTiles = vi.fn();
 const mockUseIsTouchDevice = vi.fn(() => false);
 const mockPostHeaderUserInfo = vi.fn(({ timeAgo }: { timeAgo?: string }) => (
   <div data-testid="visual-overlay-header">{timeAgo ? `Header:${timeAgo}` : 'Header'}</div>
 ));
 
-vi.mock('react-virtuoso', () => ({
-  Virtuoso: ({
-    data,
-    context,
-    itemContent,
-    components,
-    endReached,
-  }: {
-    data: unknown[];
-    context?: Record<string, unknown>;
-    itemContent: (index: number, item: unknown) => React.ReactNode;
-    components?: { Footer?: (props: { context?: Record<string, unknown> }) => React.ReactNode };
-    endReached?: () => void;
-  }) => (
-    <div data-testid="virtuoso">
-      {data?.map((item, index) => (
-        <div key={index}>{itemContent(index, item)}</div>
-      ))}
-      {components?.Footer?.({ context })}
-      <button type="button" data-testid="virtuoso-end-reached" onClick={() => endReached?.()} />
-    </div>
-  ),
-}));
 vi.mock('@/hooks', async (importOriginal) => {
   const actual = await importOriginal<typeof import('@/hooks')>();
   return {
     ...actual,
     useVisualFeedTiles: undefined,
+    useInfiniteScroll: mockUseInfiniteScroll,
     usePostNavigation: () => ({ navigateToPost: mockNavigateToPost }),
     useIsTouchDevice: () => mockUseIsTouchDevice(),
     useViewportObserver: () => ({ ref: vi.fn(), isVisible: true }),
@@ -69,23 +51,6 @@ vi.mock('@/atoms', () => ({
   Typography: (props: React.HTMLAttributes<HTMLElement>) => <span {...props} />,
 }));
 
-vi.mock('@/components/molecules/Timeline/TimelineVirtuosoFooter', () => ({
-  TimelineVirtuosoFooter: ({
-    context,
-  }: {
-    context?: { loadingMore: boolean; error: string | null; hasMore: boolean; itemCount: number };
-  }) => {
-    if (!context) return null;
-    const { loadingMore, error, hasMore, itemCount } = context;
-    return (
-      <>
-        {loadingMore && <div data-testid="timeline-loading-more">Loading more</div>}
-        {error && itemCount > 0 && <div data-testid="timeline-error">{error}</div>}
-        {!hasMore && !loadingMore && itemCount > 0 && <div data-testid="timeline-end">End</div>}
-      </>
-    );
-  },
-}));
 vi.mock('@/molecules', () => ({
   TimelineStateWrapper: ({
     children,
@@ -172,11 +137,15 @@ describe('VisualTimelinePosts', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     mockUseIsTouchDevice.mockReturnValue(false);
+    mockUseInfiniteScroll.mockReturnValue({
+      sentinelRef: vi.fn(),
+    });
     mockUseVisualFeedTiles.mockReturnValue({
       rows: createRows(),
       tail: [],
       tiles: [],
       hasPendingTiles: false,
+      hasPendingFiles: false,
     });
   });
 
@@ -239,6 +208,30 @@ describe('VisualTimelinePosts', () => {
       tail: [],
       tiles: [],
       hasPendingTiles: true,
+      hasPendingFiles: false,
+    });
+
+    render(
+      <VisualTimelinePosts
+        postIds={['author:post1']}
+        loading={false}
+        loadingMore={false}
+        error={null}
+        hasMore={false}
+        loadMore={vi.fn()}
+      />,
+    );
+
+    expect(screen.queryByTestId('timeline-empty')).not.toBeInTheDocument();
+  });
+
+  it('does not render the filtered empty state while file metadata is being fetched', () => {
+    mockUseVisualFeedTiles.mockReturnValue({
+      rows: [],
+      tail: [],
+      tiles: [],
+      hasPendingTiles: false,
+      hasPendingFiles: true,
     });
 
     render(
@@ -287,6 +280,7 @@ describe('VisualTimelinePosts', () => {
       tail: [],
       tiles: [],
       hasPendingTiles: false,
+      hasPendingFiles: false,
     });
 
     render(
@@ -363,8 +357,8 @@ describe('VisualTimelinePosts', () => {
     expect(screen.getByTestId('visual-overlay-content-stack')).toHaveClass('flex', 'flex-col', 'gap-4');
   });
 
-  describe('Virtuoso endReached', () => {
-    it('calls loadMore when hasMore and not loadingMore', () => {
+  describe('Infinite scroll configuration', () => {
+    it('calls loadMore when infinite scroll onLoadMore runs', async () => {
       const mockLoadMore = vi.fn().mockResolvedValue(undefined);
       render(
         <VisualTimelinePosts
@@ -377,42 +371,37 @@ describe('VisualTimelinePosts', () => {
         />,
       );
 
-      fireEvent.click(screen.getByTestId('virtuoso-end-reached'));
-      expect(mockLoadMore).toHaveBeenCalledOnce();
+      await waitFor(() => {
+        expect(screen.getByLabelText('Open post author:post1')).toBeInTheDocument();
+      });
+
+      const { onLoadMore } = mockUseInfiniteScroll.mock.calls[0][0];
+      await onLoadMore();
+
+      expect(mockLoadMore).toHaveBeenCalled();
     });
 
-    it('does not call loadMore when loadingMore is true', () => {
-      const mockLoadMore = vi.fn().mockResolvedValue(undefined);
-      render(
-        <VisualTimelinePosts
-          postIds={['author:post1']}
-          loading={false}
-          loadingMore={true}
-          error={null}
-          hasMore={true}
-          loadMore={mockLoadMore}
-        />,
-      );
-
-      fireEvent.click(screen.getByTestId('virtuoso-end-reached'));
-      expect(mockLoadMore).not.toHaveBeenCalled();
-    });
-
-    it('does not call loadMore when hasMore is false', () => {
-      const mockLoadMore = vi.fn().mockResolvedValue(undefined);
+    it('configures useInfiniteScroll with threshold 3000 and debounceMs 20', async () => {
       render(
         <VisualTimelinePosts
           postIds={['author:post1']}
           loading={false}
           loadingMore={false}
           error={null}
-          hasMore={false}
-          loadMore={mockLoadMore}
+          hasMore={true}
+          loadMore={vi.fn()}
         />,
       );
 
-      fireEvent.click(screen.getByTestId('virtuoso-end-reached'));
-      expect(mockLoadMore).not.toHaveBeenCalled();
+      await waitFor(() => {
+        expect(mockUseInfiniteScroll).toHaveBeenCalledWith({
+          onLoadMore: expect.any(Function),
+          hasMore: true,
+          isLoading: false,
+          threshold: 3000,
+          debounceMs: 20,
+        });
+      });
     });
   });
 });
@@ -421,11 +410,15 @@ describe('VisualTimelinePosts - Snapshots', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     mockUseIsTouchDevice.mockReturnValue(false);
+    mockUseInfiniteScroll.mockReturnValue({
+      sentinelRef: vi.fn(),
+    });
     mockUseVisualFeedTiles.mockReturnValue({
       rows: createRows(),
       tail: [],
       tiles: [],
       hasPendingTiles: false,
+      hasPendingFiles: false,
     });
   });
 
@@ -450,6 +443,7 @@ describe('VisualTimelinePosts - Snapshots', () => {
       tail: [],
       tiles: [],
       hasPendingTiles: false,
+      hasPendingFiles: false,
     });
 
     const { container } = render(

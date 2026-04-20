@@ -26,6 +26,10 @@ export const COLORS = {
  * Used for responsive design and media query hooks
  */
 export const BREAKPOINTS = {
+  /** Narrow phones — matches `body` min-width and `--breakpoint-xsm` in globals.css */
+  xxs: 375,
+  /** Compact mobile: 480px and up */
+  xs: 480,
   /** Mobile landscape: 640px and up */
   sm: 640,
   /** Tablets: 768px and up */
