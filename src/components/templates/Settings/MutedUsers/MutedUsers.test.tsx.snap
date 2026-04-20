@@ -66,15 +66,102 @@ exports[`MutedUsers - Snapshots > matches snapshot with loading state 1`] = `
       data-testid="container"
     >
       <div
-        class="w-full"
+        class="inline-flex w-full flex-col gap-6"
         data-testid="container"
       >
-        <span
-          class="text-base font-medium text-muted-foreground"
-          data-testid="typography"
+        <div
+          class="flex w-full items-center justify-between gap-3"
+          data-testid="container"
         >
-          Loading...
-        </span>
+          <div
+            class="flex min-w-0 flex-1 items-center gap-3"
+            data-testid="container"
+          >
+            <div
+              class="animate-pulse bg-muted size-10 shrink-0 rounded-full"
+              data-slot="skeleton"
+            />
+            <div
+              class="flex min-w-0 flex-1 flex-col gap-1.5"
+              data-testid="container"
+            >
+              <div
+                class="animate-pulse bg-muted h-4 w-28 rounded-md"
+                data-slot="skeleton"
+              />
+              <div
+                class="animate-pulse bg-muted h-3 w-20 rounded-md"
+                data-slot="skeleton"
+              />
+            </div>
+          </div>
+          <div
+            class="animate-pulse bg-muted h-8 w-20 shrink-0 rounded-full"
+            data-slot="skeleton"
+          />
+        </div>
+        <div
+          class="flex w-full items-center justify-between gap-3"
+          data-testid="container"
+        >
+          <div
+            class="flex min-w-0 flex-1 items-center gap-3"
+            data-testid="container"
+          >
+            <div
+              class="animate-pulse bg-muted size-10 shrink-0 rounded-full"
+              data-slot="skeleton"
+            />
+            <div
+              class="flex min-w-0 flex-1 flex-col gap-1.5"
+              data-testid="container"
+            >
+              <div
+                class="animate-pulse bg-muted h-4 w-28 rounded-md"
+                data-slot="skeleton"
+              />
+              <div
+                class="animate-pulse bg-muted h-3 w-20 rounded-md"
+                data-slot="skeleton"
+              />
+            </div>
+          </div>
+          <div
+            class="animate-pulse bg-muted h-8 w-20 shrink-0 rounded-full"
+            data-slot="skeleton"
+          />
+        </div>
+        <div
+          class="flex w-full items-center justify-between gap-3"
+          data-testid="container"
+        >
+          <div
+            class="flex min-w-0 flex-1 items-center gap-3"
+            data-testid="container"
+          >
+            <div
+              class="animate-pulse bg-muted size-10 shrink-0 rounded-full"
+              data-slot="skeleton"
+            />
+            <div
+              class="flex min-w-0 flex-1 flex-col gap-1.5"
+              data-testid="container"
+            >
+              <div
+                class="animate-pulse bg-muted h-4 w-28 rounded-md"
+                data-slot="skeleton"
+              />
+              <div
+                class="animate-pulse bg-muted h-3 w-20 rounded-md"
+                data-slot="skeleton"
+              />
+            </div>
+          </div>
+          <div
+            class="animate-pulse bg-muted h-8 w-20 shrink-0 rounded-full"
+            data-slot="skeleton"
+          />
+        </div>
       </div>
     </div>
   </div>

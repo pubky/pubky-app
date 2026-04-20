@@ -1,0 +1,57 @@
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
+
+exports[`SinglePost > matches snapshot 1`] = `
+<div>
+  <div
+    data-testid="content-layout"
+    data-wrapper-class-name="gap-0"
+  >
+    <div
+      data-testid="left-sidebar"
+    >
+      <div
+        data-testid="single-post-left-sidebar"
+      >
+        SinglePostLeftSidebar
+      </div>
+    </div>
+    <div
+      data-testid="right-sidebar"
+    >
+      <div
+        data-post-id="author:post-1"
+        data-show-feedback="true"
+        data-testid="single-post-right-panel"
+      >
+        SinglePostRightPanel
+      </div>
+    </div>
+    <div
+      data-testid="left-drawer"
+    >
+      <div
+        data-testid="single-post-left-drawer"
+      >
+        SinglePostLeftDrawer
+      </div>
+    </div>
+    <div
+      data-testid="right-drawer"
+    >
+      <div
+        data-post-id="author:post-1"
+        data-show-feedback="false"
+        data-testid="single-post-right-panel"
+      >
+        SinglePostRightPanel
+      </div>
+    </div>
+    <div
+      data-post-id="author:post-1"
+      data-testid="single-post-content"
+    >
+      SinglePostContent
+    </div>
+  </div>
+</div>
+`;

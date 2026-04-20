@@ -5,7 +5,15 @@ import { useTranslations } from 'next-intl';
 import * as Atoms from '@/atoms';
 import * as Molecules from '@/molecules';
 import * as Libs from '@/libs';
+import { TIMEFRAME } from '@/core/stores/hot/hot.types';
 import type { HotTagCardProps } from './HotTagCard.types';
+
+const TIMEFRAME_TRANSLATION_KEY = {
+  [TIMEFRAME.TODAY]: 'postsCountToday',
+  [TIMEFRAME.THIS_WEEK]: 'postsCountThisWeek',
+  [TIMEFRAME.THIS_MONTH]: 'postsCountThisMonth',
+  [TIMEFRAME.ALL_TIME]: 'postsCountAllTime',
+} as const;
 
 /**
  * HotTagCard
@@ -17,6 +25,7 @@ export function HotTagCard({
   rank,
   tagName,
   postCount,
+  timeframe,
   taggers = [],
   maxAvatars = 6,
   onClick,
@@ -84,7 +93,7 @@ export function HotTagCard({
 
         {/* Post Count */}
         <Atoms.Typography size="md" className="text-secondary-foreground">
-          {t('postsCount', { count: postCount.toLocaleString() })}
+          {t(TIMEFRAME_TRANSLATION_KEY[timeframe], { count: postCount.toLocaleString() })}
         </Atoms.Typography>
       </Atoms.Container>
 

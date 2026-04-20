@@ -1,4 +1,7 @@
+'use client';
+
 import { ReactNode } from 'react';
+import { useTranslations } from 'next-intl';
 
 import * as Atoms from '@/atoms';
 import * as Libs from '@/libs';
@@ -43,7 +46,7 @@ export function InputField({
   icon,
   variant = 'default',
   loading = false,
-  loadingText = 'Loading...',
+  loadingText,
   loadingIcon,
   status = 'default',
   onChange,
@@ -56,6 +59,9 @@ export function InputField({
   size = 'md',
   dataCy,
 }: InputFieldProps) {
+  const t = useTranslations('common');
+  const resolvedLoadingText = loadingText ?? t('loading');
+
   const containerClasses = variant === 'dashed' && 'border-dashed';
 
   const statusClasses = {
@@ -111,7 +117,7 @@ export function InputField({
           name={name}
           type="text"
           className={Libs.cn('w-full border-none !bg-transparent')}
-          value={loading ? loadingText : value}
+          value={loading ? resolvedLoadingText : value}
           placeholder={placeholder}
           disabled={disabled || loading}
           readOnly={readOnly}

@@ -1,21 +1,24 @@
 // Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
 
-exports[`PostContentBase - Snapshots > matches snapshot with empty content 1`] = `
-<div
-  class="min-w-0 gap-3"
-  data-testid="container"
->
-  <div
-    data-testid="post-attachments"
-  />
-</div>
-`;
+exports[`PostContentBase - Snapshots > matches snapshot with empty content 1`] = `null`;
 
 exports[`PostContentBase - Snapshots > matches snapshot with loading state 1`] = `
 <div
-  class="text-muted-foreground"
+  class="flex min-w-0 flex-col gap-y-1"
+  data-testid="container"
 >
-  Loading content...
+  <div
+    class="h-4 w-full rounded-md"
+    data-testid="skeleton"
+  />
+  <div
+    class="h-4 w-4/5 rounded-md"
+    data-testid="skeleton"
+  />
+  <div
+    class="h-4 w-3/5 rounded-md"
+    data-testid="skeleton"
+  />
 </div>
 `;
 

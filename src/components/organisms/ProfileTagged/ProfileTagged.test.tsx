@@ -107,9 +107,9 @@ describe('ProfileTagged - Loading State', () => {
     mockUseTagged.mockReturnValue(mockTaggedLoading);
   });
 
-  it('renders loading state when isLoading is true', () => {
+  it('renders skeleton loading state when isLoading is true', () => {
     render(<ProfileTagged />);
-    expect(screen.getByText('Loading tags...')).toBeInTheDocument();
+    expect(screen.getAllByRole('generic').some((el) => el.getAttribute('data-slot') === 'skeleton')).toBe(true);
     expect(screen.queryByTestId('tagged-section')).not.toBeInTheDocument();
     expect(screen.queryByTestId('tagged-empty')).not.toBeInTheDocument();
   });
@@ -124,7 +124,7 @@ describe('ProfileTagged - Empty State', () => {
     render(<ProfileTagged />);
     expect(screen.getByTestId('tagged-empty')).toBeInTheDocument();
     expect(screen.queryByTestId('tagged-section')).not.toBeInTheDocument();
-    expect(screen.queryByText('Loading tags...')).not.toBeInTheDocument();
+    expect(screen.queryAllByRole('generic').every((el) => el.getAttribute('data-slot') !== 'skeleton')).toBe(true);
   });
 });
 

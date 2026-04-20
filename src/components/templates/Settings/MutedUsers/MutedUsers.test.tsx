@@ -70,7 +70,7 @@ describe('MutedUsers', () => {
     expect(screen.getByText('No muted users yet')).toBeInTheDocument();
   });
 
-  it('renders loading state', () => {
+  it('renders loading state with skeletons', () => {
     mockUseMutedUsers.mockReturnValue({
       mutedUserIds: [],
       mutedUserIdSet: new Set(),
@@ -78,7 +78,7 @@ describe('MutedUsers', () => {
       isLoading: true,
     });
     render(<MutedUsers />);
-    expect(screen.getByText('Loading...')).toBeInTheDocument();
+    expect(screen.getAllByRole('generic').some((el) => el.getAttribute('data-slot') === 'skeleton')).toBe(true);
   });
 
   it('renders muted users list', () => {

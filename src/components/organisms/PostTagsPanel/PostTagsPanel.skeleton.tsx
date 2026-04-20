@@ -19,7 +19,7 @@ export function PostTagsPanelSkeleton({ widthMode = 'fit', className }: PostTags
         className={Libs.cn('flex flex-col gap-2', widthMode === 'fit' ? 'w-fit max-w-full' : 'w-full')}
       >
         {/* TagInput area */}
-        <Atoms.Skeleton className="h-10 w-full rounded-md" />
+        <Atoms.Skeleton className="h-8 w-full rounded-md" />
 
         {/* Scrollable list of tag rows */}
         <Atoms.Container overrideDefaults className="max-h-80 overflow-x-hidden overflow-y-auto pr-1">
@@ -39,6 +39,9 @@ export function PostTagsPanelSkeleton({ widthMode = 'fit', className }: PostTags
             </Atoms.Container>
           ))}
         </Atoms.Container>
+
+        {/* See All button */}
+        <Atoms.Skeleton className="h-8 w-full rounded-md" />
       </Atoms.Container>
     </Atoms.Container>
   );

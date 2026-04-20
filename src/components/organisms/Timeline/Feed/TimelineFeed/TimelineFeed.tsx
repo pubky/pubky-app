@@ -142,8 +142,15 @@ function HotTimelineFeed({ children }: { children?: TimelineFeedProps['children'
 }
 
 function SearchTimelineFeed({ children }: { children?: TimelineFeedProps['children'] }) {
-  const streamId = Hooks.useSearchStreamId();
+  const content = Core.useHomeStore((state) => state.content);
   const layoutResolution = Hooks.useFeedLayoutResolution(TIMELINE_FEED_VARIANT.SEARCH);
+  const resolvedContent = resolveVisualFeedContent({
+    content,
+    variant: TIMELINE_FEED_VARIANT.SEARCH,
+    isVisualActive: layoutResolution.isVisualActive,
+  });
+  Hooks.useSyncInteractiveVisualContent(resolvedContent);
+  const streamId = Hooks.useSearchStreamId(resolvedContent);
   const tagsLayout = getTagsLayout(layoutResolution.effectiveLayout);
 
   return (

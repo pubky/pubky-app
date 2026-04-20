@@ -3,6 +3,27 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { PostInputExpandableSection } from './PostInputExpandableSection';
 import { POST_INPUT_VARIANT } from '../PostInput/PostInput.constants';
 
+vi.mock('motion/react', () => ({
+  AnimatePresence: ({ children }: { children: React.ReactNode }) => <>{children}</>,
+  motion: {
+    div: ({
+      children,
+      initial: _initial,
+      animate: _animate,
+      exit: _exit,
+      transition: _transition,
+      ...props
+    }: {
+      children: React.ReactNode;
+      initial?: unknown;
+      animate?: unknown;
+      exit?: unknown;
+      transition?: unknown;
+      [key: string]: unknown;
+    }) => <div {...props}>{children}</div>,
+  },
+}));
+
 // Use real libs - use actual implementations
 vi.mock('@/libs', async () => {
   const actual = await vi.importActual('@/libs');
@@ -297,28 +318,21 @@ describe('PostInputExpandableSection', () => {
     expect(onEmojiSelect).toHaveBeenCalledWith({ native: '😀' });
   });
 
-  it('applies correct classes when expanded', () => {
-    const { container } = render(<PostInputExpandableSection {...defaultProps} isExpanded={true} />);
+  it('renders animated wrapper with overflow-hidden when expanded', () => {
+    const { container } = render(
+      <PostInputExpandableSection {...defaultProps} isExpanded={true} className="test-expandable-class" />,
+    );
 
-    const expandableContainer = container.querySelector('[data-testid="container"]');
-    expect(expandableContainer).toHaveClass('grid-rows-[1fr]');
-    expect(expandableContainer).toHaveClass('opacity-100');
+    const expandableContainer = container.querySelector('.overflow-hidden');
+    expect(expandableContainer).toBeInTheDocument();
+    expect(expandableContainer).toHaveClass('test-expandable-class');
   });
 
-  it('applies correct classes when collapsed', () => {
-    const { container } = render(<PostInputExpandableSection {...defaultProps} isExpanded={false} />);
+  it('unmounts expandable section when collapsed', () => {
+    render(<PostInputExpandableSection {...defaultProps} isExpanded={false} />);
 
-    const expandableContainer = container.querySelector('[data-testid="container"]');
-    expect(expandableContainer).toHaveClass('grid-rows-[0fr]');
-    expect(expandableContainer).toHaveClass('opacity-0');
-  });
-
-  it('uses overflow-hidden to keep collapse animation behavior', () => {
-    const { container } = render(<PostInputExpandableSection {...defaultProps} isExpanded={false} />);
-
-    const containers = container.querySelectorAll('[data-testid="container"]');
-    const contentWrapper = containers[1];
-    expect(contentWrapper).toHaveClass('overflow-hidden');
+    expect(screen.queryByTestId('post-input-action-bar')).not.toBeInTheDocument();
+    expect(screen.queryByTestId('post-input-tags')).not.toBeInTheDocument();
   });
 
   it('shows article button when submitMode is POST and not an article', () => {

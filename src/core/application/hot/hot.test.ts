@@ -284,10 +284,11 @@ describe('HotApplication', () => {
       const fetchSpy = vi.spyOn(Core.NexusHotService, 'fetch').mockResolvedValue(mockHotTags);
 
       await HotApplication.getOrFetch({ timeframe: Core.UserStreamTimeframe.TODAY });
+      await HotApplication.getOrFetch({ timeframe: Core.UserStreamTimeframe.THIS_WEEK });
       await HotApplication.getOrFetch({ timeframe: Core.UserStreamTimeframe.THIS_MONTH });
       await HotApplication.getOrFetch({ timeframe: Core.UserStreamTimeframe.ALL_TIME });
 
-      expect(fetchSpy).toHaveBeenCalledTimes(3);
+      expect(fetchSpy).toHaveBeenCalledTimes(4);
     });
 
     it('should strip limit from Nexus fetch on cache miss and apply it on return', async () => {

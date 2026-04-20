@@ -90,16 +90,26 @@ export function useTagInput({ onTagAdd, existingTags = [], allTags = [] }: UseTa
     const pasted = e.clipboardData.getData('text');
     const sanitized = Libs.sanitizeTagInput(pasted).toLowerCase();
 
-    const newValue = inputValue + sanitized;
-    const charCount = Libs.getCharacterCount(newValue);
+    const input = inputRef.current;
+    const start = input?.selectionStart ?? inputValue.length;
+    const end = input?.selectionEnd ?? inputValue.length;
 
-    if (charCount <= TAG_MAX_LENGTH) {
-      setInputValue(newValue);
-    } else {
-      const chars = Array.from(newValue);
-      setInputValue(chars.slice(0, TAG_MAX_LENGTH).join(''));
-    }
+    const before = inputValue.slice(0, start);
+    const after = inputValue.slice(end);
+    const merged = before + sanitized + after;
+
+    const newValue =
+      Libs.getCharacterCount(merged) <= TAG_MAX_LENGTH ? merged : Array.from(merged).slice(0, TAG_MAX_LENGTH).join('');
+
+    setInputValue(newValue);
     setShowSuggestions(true);
+
+    const caretTarget = Math.min(start + sanitized.length, newValue.length);
+    requestAnimationFrame(() => {
+      if (input?.isConnected) {
+        input.setSelectionRange(caretTarget, caretTarget);
+      }
+    });
   };
 
   const handleEmojiChange = (newValue: string) => {
