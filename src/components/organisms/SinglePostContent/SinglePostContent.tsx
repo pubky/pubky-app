@@ -1,6 +1,5 @@
 'use client';
 
-import { useTranslations } from 'next-intl';
 import * as Atoms from '@/atoms';
 import * as Molecules from '@/molecules';
 import * as Hooks from '@/hooks';
@@ -9,6 +8,7 @@ import { SinglePostArticle } from '../SinglePostArticle';
 import { SinglePostCard } from '../SinglePostCard';
 
 import { PostPageHeader } from '../PostPageHeader';
+import { SinglePostContentSkeleton } from './SinglePostContent.skeleton';
 import { ThreadTree } from '../ThreadTree/ThreadTree';
 import type { SinglePostContentProps } from './SinglePostContent.types';
 
@@ -27,8 +27,6 @@ import type { SinglePostContentProps } from './SinglePostContent.types';
  * following the atomic design pattern where only organisms can call hooks.
  */
 export function SinglePostContent({ postId }: SinglePostContentProps) {
-  const t = useTranslations('common');
-
   // Check authentication status - unauthenticated users see limited view
   const { isAuthenticated } = Hooks.useRequireAuth();
 
@@ -36,8 +34,9 @@ export function SinglePostContent({ postId }: SinglePostContentProps) {
   const { postDetails } = Hooks.usePostDetails(postId);
   const isDeleted = Libs.isPostDeleted(postDetails?.content);
 
-  // TODO - Add loading skeleton
-  if (!postDetails) return t('loadingPost');
+  if (!postDetails) {
+    return <SinglePostContentSkeleton />;
+  }
 
   const isArticle = postDetails.kind === 'long';
 

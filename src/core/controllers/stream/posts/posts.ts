@@ -71,6 +71,10 @@ export class StreamPostsController {
         cacheMissPostIds,
         viewerId,
       });
+      // Second-pass: cache-miss details are now resolved,
+      // re-filter to catch posts that were fail-open in the first pass
+      const validIds = await Core.PostStreamApplication.filterDeletedPosts(nextPageIds);
+      return { nextPageIds: validIds, timestamp, reachedEnd };
     }
     return { nextPageIds, timestamp, reachedEnd };
   }

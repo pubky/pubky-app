@@ -279,17 +279,21 @@ export function useVisualFeedTiles({ postIds, hasMore }: { postIds: string[]; ha
   }, [missingFileUris, missingFileUrisKey]);
 
   const tiles = (snapshot?.tiles ?? []).map(resolveTileProbeState);
-  const pendingOverflowFallbackIds = React.useMemo(() => getVisualPendingOverflowFallbackIds(tiles), [tiles]);
+  const pendingOverflowFallbackIds = React.useMemo(
+    () => getVisualPendingOverflowFallbackIds(tiles, hasMore ? undefined : 0),
+    [tiles, hasMore],
+  );
   const pendingOverflowFallbackIdSet = React.useMemo(
     () => new Set(pendingOverflowFallbackIds),
     [pendingOverflowFallbackIds],
   );
 
   React.useEffect(() => {
+    if (!hasMore) return;
     pendingOverflowFallbackIds.forEach((tileId) => {
       setVisualTilePreferredSizeFallback(tileId, 'medium');
     });
-  }, [pendingOverflowFallbackIds]);
+  }, [pendingOverflowFallbackIds, hasMore]);
 
   const stabilizedTiles = React.useMemo(() => {
     return tiles.map((tile) => {
@@ -308,9 +312,7 @@ export function useVisualFeedTiles({ postIds, hasMore }: { postIds: string[]; ha
     if (typeof window === 'undefined') return;
 
     let isMounted = true;
-    const pendingTiles = stabilizedTiles.filter(
-      (tile) => tile.preferredSize === undefined && tile.probeState === 'pending',
-    );
+    const pendingTiles = stabilizedTiles.filter((tile) => tile.probeState === 'pending');
 
     pendingTiles.forEach((tile) => {
       void ensureVisualTileProbe(tile).finally(() => {
@@ -340,5 +342,6 @@ export function useVisualFeedTiles({ postIds, hasMore }: { postIds: string[]; ha
     tail,
     tiles: stabilizedTiles,
     hasPendingTiles: firstPendingTileIndex !== -1,
+    hasPendingFiles: missingFileUris.length > 0,
   };
 }

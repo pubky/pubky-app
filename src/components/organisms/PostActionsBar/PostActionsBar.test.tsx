@@ -79,6 +79,7 @@ vi.mock('@/atoms', () => ({
       {children}
     </Tag>
   ),
+  Skeleton: ({ className }: { className?: string }) => <div data-testid="skeleton" className={className} />,
 }));
 
 describe('PostActionsBar', () => {
@@ -93,11 +94,11 @@ describe('PostActionsBar', () => {
     });
   });
 
-  it('shows loading state while counts are not available', () => {
+  it('shows skeleton loading state while counts are not available', () => {
     mockUsePostCounts.mockReturnValue({ postCounts: null, isLoading: true });
 
-    const { container } = render(<PostActionsBar postId="post-1" />);
-    expect(container.firstChild).toHaveTextContent('Loading actions...');
+    render(<PostActionsBar postId="post-1" />);
+    expect(screen.getAllByTestId('skeleton').length).toBeGreaterThan(0);
   });
 
   it('renders all action buttons with counts and aria labels', () => {
