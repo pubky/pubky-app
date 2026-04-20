@@ -1,6 +1,6 @@
 'use client';
 
-import { useMemo } from 'react';
+import { useMemo, useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { useTranslations } from 'next-intl';
 import * as Atoms from '@/atoms';
@@ -30,6 +30,19 @@ export function HotTagsCardsSection({ className }: HotTagsCardsSectionProps) {
     reach: reach === 'all' ? undefined : (reach as Core.UserStreamReach),
     timeframe,
   });
+
+  // Track the timeframe that corresponds to the currently loaded data.
+  // This prevents showing a new timeframe label on stale cards during the
+  // render gap between a store update and the fetch completing.
+  const [dataTimeframe, setDataTimeframe] = useState(timeframe);
+
+  useEffect(() => {
+    if (!isLoading) {
+      setDataTimeframe(timeframe);
+    }
+  }, [isLoading, timeframe]);
+
+  const isEffectivelyLoading = isLoading || timeframe !== dataTimeframe;
 
   // Display only the top tags as featured cards
   const featuredTags = useMemo(() => rawTags.slice(0, HOT_TAGS_FEATURED_COUNT), [rawTags]);
@@ -69,7 +82,7 @@ export function HotTagsCardsSection({ className }: HotTagsCardsSectionProps) {
     );
   }
 
-  if (isLoading) {
+  if (isEffectivelyLoading) {
     return (
       <Atoms.Container overrideDefaults className={Libs.cn('flex w-full flex-col gap-2', className)}>
         <Atoms.Heading level={5} size="lg" className="font-light text-muted-foreground">
@@ -99,6 +112,7 @@ export function HotTagsCardsSection({ className }: HotTagsCardsSectionProps) {
               rank={index + 1}
               tagName={tag.label}
               postCount={tag.tagged_count}
+              timeframe={dataTimeframe}
               taggers={getUsersWithAvatars(tag.taggers_id)}
               maxAvatars={maxAvatars}
               onClick={handleTagClick}

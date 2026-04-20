@@ -2,12 +2,10 @@ import { describe, expect, it, vi, beforeEach } from 'vitest';
 import { render, screen } from '@testing-library/react';
 import { Search } from './Search';
 
-const mockUseLayoutReset = vi.fn();
 const mockUseIsMobile = vi.fn(() => false);
 const mockUseSearchTags = vi.fn(() => ['pubky']);
 
 vi.mock('@/hooks', () => ({
-  useLayoutReset: () => mockUseLayoutReset(),
   useIsMobile: () => mockUseIsMobile(),
 }));
 
@@ -17,7 +15,11 @@ vi.mock('@/hooks/useSearchStreamId', () => ({
 
 vi.mock('@/organisms', () => ({
   DialogWelcome: () => <div data-testid="dialog-welcome">DialogWelcome</div>,
-  ContentLayout: ({ children }: { children: React.ReactNode }) => <div data-testid="content-layout">{children}</div>,
+  ContentLayout: ({ children, feedVariant }: { children: React.ReactNode; feedVariant?: string }) => (
+    <div data-testid="content-layout" data-feed-variant={feedVariant}>
+      {children}
+    </div>
+  ),
   HomeFeedSidebar: () => <div data-testid="home-feed-sidebar">HomeFeedSidebar</div>,
   HomeFeedRightSidebar: () => <div data-testid="home-feed-right-sidebar">HomeFeedRightSidebar</div>,
   HomeFeedDrawer: () => <div data-testid="home-feed-drawer">HomeFeedDrawer</div>,
@@ -55,10 +57,10 @@ describe('Search', () => {
     mockUseSearchTags.mockReturnValue(['pubky']);
   });
 
-  it('restores the unsupported wide layout on mount', () => {
+  it('passes SEARCH feedVariant to ContentLayout', () => {
     render(<Search />);
 
-    expect(mockUseLayoutReset).toHaveBeenCalled();
+    expect(screen.getByTestId('content-layout')).toHaveAttribute('data-feed-variant', 'search');
   });
 
   it('renders search results when tags are present', () => {

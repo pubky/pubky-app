@@ -382,8 +382,7 @@ describe('posts', () => {
 
     // unbookmark both posts
     cy.get('[data-cy="timeline-posts"]')
-      .find('[data-testid="virtuoso-item-list"]')
-      .children()
+      .find('[data-cy="post-card"]')
       .should('have.length', 2)
       .then(($posts) => {
         $posts.each((_idx, element) => {

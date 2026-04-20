@@ -97,6 +97,7 @@ vi.mock('@/atoms', () => ({
       {children}
     </span>
   ),
+  Skeleton: ({ className }: { className?: string }) => <div data-testid="skeleton" className={className} />,
 }));
 
 describe('PostMenuActionsContent', () => {

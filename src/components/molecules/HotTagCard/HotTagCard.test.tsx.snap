@@ -1109,7 +1109,7 @@ exports[`HotTagCard - Snapshots > matches snapshot with small postCount 1`] = `
       class="text-base font-medium text-secondary-foreground"
       data-testid="typography"
     >
-      50 posts this month
+      50 posts
     </p>
   </div>
 </div>
