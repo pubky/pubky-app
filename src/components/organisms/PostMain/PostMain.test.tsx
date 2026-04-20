@@ -3,6 +3,7 @@ import { render, screen, fireEvent } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import * as Hooks from '@/hooks';
 import { PostMain } from './PostMain';
+import { PostMainLayoutProvider } from './PostMainLayout';
 import { POST_THREAD_CONNECTOR_VARIANTS } from '@/components/atoms/PostThreadConnector/PostThreadConnector.constants';
 
 // Use vi.hoisted to define mock functions before vi.mock calls (which are hoisted)
@@ -390,7 +391,11 @@ describe('PostMain', () => {
   });
 
   it('passes large size and bottom-left timestamp placement for side tags layout', () => {
-    render(<PostMain postId="post-side-1" tagsLayout="side" />);
+    render(
+      <PostMainLayoutProvider tagsLayout="side">
+        <PostMain postId="post-side-1" />
+      </PostMainLayoutProvider>,
+    );
 
     expect(mockPostHeader).toHaveBeenCalledWith({
       postId: 'post-side-1',
@@ -400,13 +405,21 @@ describe('PostMain', () => {
   });
 
   it('passes text-xl className to PostContent for side tags layout', () => {
-    render(<PostMain postId="post-side-1" tagsLayout="side" />);
+    render(
+      <PostMainLayoutProvider tagsLayout="side">
+        <PostMain postId="post-side-1" />
+      </PostMainLayoutProvider>,
+    );
 
     expect(screen.getByTestId('post-content')).toHaveAttribute('data-text-class-name', 'text-xl leading-7');
   });
 
   it('applies wide padding and gap for side tags layout', () => {
-    render(<PostMain postId="post-side-1" tagsLayout="side" />);
+    render(
+      <PostMainLayoutProvider tagsLayout="side">
+        <PostMain postId="post-side-1" />
+      </PostMainLayoutProvider>,
+    );
 
     const cardContent = screen.getByTestId('card-content');
     expect(cardContent).toHaveAttribute('data-class-name', expect.stringContaining('p-0'));
@@ -424,8 +437,27 @@ describe('PostMain', () => {
     expect(rightSection).toBeDefined();
   });
 
+  it('applies wide repost-header padding when reposting in side layout', () => {
+    vi.mocked(Hooks.usePostHeaderVisibility).mockReturnValue({
+      showRepostHeader: true,
+      shouldShowPostHeader: true,
+    });
+
+    render(
+      <PostMainLayoutProvider tagsLayout="side">
+        <PostMain postId="me:repost-side-1" />
+      </PostMainLayoutProvider>,
+    );
+
+    const containers = screen.getAllByTestId('container');
+    const repostWrapper = containers.find((container) =>
+      container.getAttribute('data-class-name')?.includes('px-12 pt-12 pb-6'),
+    );
+    expect(repostWrapper).toBeDefined();
+  });
+
   it('keeps default size and timestamp placement for inline tags layout', () => {
-    render(<PostMain postId="post-inline-1" tagsLayout="inline" />);
+    render(<PostMain postId="post-inline-1" />);
 
     expect(mockPostHeader).toHaveBeenCalledWith({
       postId: 'post-inline-1',
@@ -435,23 +467,27 @@ describe('PostMain', () => {
   });
 
   it('does not apply wide text className for inline tags layout', () => {
-    render(<PostMain postId="post-inline-1" tagsLayout="inline" />);
+    render(<PostMain postId="post-inline-1" />);
 
     expect(screen.getByTestId('post-content')).not.toHaveAttribute('data-text-class-name');
   });
 
   it('applies default padding and gap for inline tags layout', () => {
-    render(<PostMain postId="post-inline-1" tagsLayout="inline" />);
+    render(<PostMain postId="post-inline-1" />);
 
     const cardContent = screen.getByTestId('card-content');
     expect(cardContent).toHaveAttribute('data-class-name', expect.stringContaining('gap-4 p-6'));
     expect(cardContent).not.toHaveAttribute('data-class-name', expect.stringContaining('p-12'));
   });
 
-  it('falls back to inline layout on mobile when tagsLayout is side', () => {
+  it('falls back to inline layout on mobile when the inherited layout is side', () => {
     mockUseIsMobile.mockReturnValue(true);
 
-    render(<PostMain postId="post-mobile-side-1" tagsLayout="side" />);
+    render(
+      <PostMainLayoutProvider tagsLayout="side">
+        <PostMain postId="post-mobile-side-1" />
+      </PostMainLayoutProvider>,
+    );
 
     expect(screen.getByTestId('clickable-tags-list')).toBeInTheDocument();
     expect(screen.queryByTestId('post-tags-panel')).not.toBeInTheDocument();
@@ -460,6 +496,21 @@ describe('PostMain', () => {
       size: undefined,
       timeAgoPlacement: undefined,
     });
+  });
+
+  it('inherits side tags layout from the thread context', () => {
+    render(
+      <PostMainLayoutProvider tagsLayout="side">
+        <PostMain postId="post-context-side-1" />
+      </PostMainLayoutProvider>,
+    );
+
+    expect(mockPostHeader).toHaveBeenCalledWith({
+      postId: 'post-context-side-1',
+      size: 'large',
+      timeAgoPlacement: 'bottom-left',
+    });
+    expect(screen.getByTestId('post-content')).toHaveAttribute('data-text-class-name', 'text-xl leading-7');
   });
 });
 

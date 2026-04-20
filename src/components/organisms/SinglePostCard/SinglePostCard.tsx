@@ -8,6 +8,7 @@ import * as Atoms from '@/atoms';
 import * as Organisms from '@/organisms';
 import type { PostTagsPanelHandle } from '@/organisms';
 import { POST_TAGS_MAX_COUNT, POST_TAGS_MAX_LENGTH, POST_TAGS_MAX_TOTAL_CHARS } from '@/config';
+import { usePostMainLayout, WIDE_POST_LAYOUT_CLASSES } from '@/organisms/PostMain/PostMainLayout';
 import type { SinglePostCardProps } from './SinglePostCard.types';
 
 /**
@@ -18,15 +19,17 @@ import type { SinglePostCardProps } from './SinglePostCard.types';
  * - Right column: PostTagsPanel (tags with avatars and search)
  *
  * This component is used on the single post page for the main post display.
+ * The surface (SinglePostContent) wraps the page in PostMainLayoutProvider,
+ * keeping this wrapper aligned with PostMain via the shared context.
  */
 export function SinglePostCard({ postId, className }: SinglePostCardProps) {
   const isMobile = Hooks.useIsMobile();
-  const { layout } = Core.useHomeStore();
+  const inheritedTagsLayout = usePostMainLayout() ?? 'inline';
   const [replyDialogOpen, setReplyDialogOpen] = useState(false);
   const [repostDialogOpen, setRepostDialogOpen] = useState(false);
   const [tagsExpanded, setTagsExpanded] = useState(false);
   const desktopTagsPanelRef = useRef<PostTagsPanelHandle>(null);
-  const isWideLayout = layout === 'wide';
+  const isWideLayout = inheritedTagsLayout === 'side';
 
   const handleTagClick = () => {
     setTagsExpanded((prev) => !prev);
@@ -97,11 +100,11 @@ export function SinglePostCard({ postId, className }: SinglePostCardProps) {
               </Atoms.Container>
             </>
           ) : isWideLayout ? (
-            <Atoms.Container className="flex min-w-0 flex-col lg:flex-row">
-              <Atoms.Container className="flex min-w-0 flex-col gap-4 p-12 lg:flex-1">
+            <Atoms.Container className={WIDE_POST_LAYOUT_CLASSES.shell}>
+              <Atoms.Container className={WIDE_POST_LAYOUT_CLASSES.leftColumn}>
                 <Organisms.PostHeader postId={postId} size="large" timeAgoPlacement="bottom-left" />
 
-                <Organisms.PostContent postId={postId} textClassName="text-xl leading-7" />
+                <Organisms.PostContent postId={postId} textClassName={WIDE_POST_LAYOUT_CLASSES.bodyText} />
 
                 {/* Spacer to push actions bar to bottom */}
                 <Atoms.Container overrideDefaults className="flex-1" />
@@ -122,7 +125,7 @@ export function SinglePostCard({ postId, className }: SinglePostCardProps) {
                 </Atoms.Container>
               </Atoms.Container>
 
-              <Atoms.Container className="hidden lg:flex lg:w-96 lg:shrink-0 lg:p-12">
+              <Atoms.Container className={WIDE_POST_LAYOUT_CLASSES.rightColumn}>
                 <Organisms.PostTagsPanel
                   ref={desktopTagsPanelRef}
                   postId={postId}
@@ -132,42 +135,30 @@ export function SinglePostCard({ postId, className }: SinglePostCardProps) {
               </Atoms.Container>
             </Atoms.Container>
           ) : (
-            <Atoms.Container
-              className={Libs.cn('grid min-w-0 grid-cols-1 gap-6', isWideLayout ? 'lg:grid-cols-3' : 'lg:grid-cols-2')}
-            >
-              {/* Left column - Post content */}
-              <Atoms.Container className="flex min-w-0 flex-col gap-4 lg:col-span-2">
-                <Organisms.PostHeader
+            <Atoms.Container className="flex min-w-0 flex-col gap-4">
+              <Organisms.PostHeader postId={postId} size="normal" timeAgoPlacement="bottom-left" />
+
+              <Organisms.PostContent postId={postId} />
+
+              {/* Spacer to push actions bar to bottom */}
+              <Atoms.Container overrideDefaults className="flex-1" />
+
+              <Atoms.Container
+                onClick={handleFooterClick}
+                className={Libs.cn(
+                  'flex-col items-start gap-2 md:flex-row md:justify-between md:gap-4',
+                  tagsExpanded ? 'md:items-end' : 'md:items-start',
+                )}
+              >
+                {tagsSection}
+
+                <Organisms.PostActionsBar
                   postId={postId}
-                  size={isWideLayout ? 'large' : 'normal'}
-                  timeAgoPlacement="bottom-left"
+                  onTagClick={handleTagClick}
+                  onReplyClick={handleReplyClick}
+                  onRepostClick={handleRepostClick}
                 />
-
-                <Organisms.PostContent postId={postId} textClassName={isWideLayout ? 'text-xl leading-7' : undefined} />
-
-                {/* Spacer to push actions bar to bottom */}
-                <Atoms.Container overrideDefaults className="flex-1" />
-
-                <Atoms.Container
-                  onClick={handleFooterClick}
-                  className={Libs.cn(
-                    'flex-col items-start gap-2 md:flex-row md:justify-between md:gap-4',
-                    tagsExpanded ? 'md:items-end' : 'md:items-start',
-                  )}
-                >
-                  {!isWideLayout && tagsSection}
-
-                  <Organisms.PostActionsBar
-                    postId={postId}
-                    onTagClick={handleTagClick}
-                    onReplyClick={handleReplyClick}
-                    onRepostClick={handleRepostClick}
-                  />
-                </Atoms.Container>
               </Atoms.Container>
-
-              {/* Right column - Tags (desktop only) */}
-              {isWideLayout && <Organisms.PostTagsPanel ref={desktopTagsPanelRef} postId={postId} widthMode="full" />}
             </Atoms.Container>
           )}
         </Atoms.CardContent>

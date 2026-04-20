@@ -12,17 +12,12 @@ import { POST_TAGS_MAX_COUNT, POST_TAGS_MAX_LENGTH, POST_TAGS_MAX_TOTAL_CHARS } 
 import { POST_THREAD_CONNECTOR_VARIANTS } from '@/atoms';
 
 import type { PostMainProps } from './PostMain.types';
+import { usePostMainLayout, WIDE_POST_LAYOUT_CLASSES } from './PostMainLayout';
 
-export function PostMain({
-  postId,
-  onClick,
-  className,
-  isReply = false,
-  isLastReply = false,
-  tagsLayout = 'inline',
-}: PostMainProps) {
+export function PostMain({ postId, onClick, className, isReply = false, isLastReply = false }: PostMainProps) {
   const isMobile = Hooks.useIsMobile();
-  const effectiveTagsLayout = tagsLayout === 'side' && isMobile ? 'inline' : tagsLayout;
+  const inheritedTagsLayout = usePostMainLayout() ?? 'inline';
+  const effectiveTagsLayout = inheritedTagsLayout === 'side' && isMobile ? 'inline' : inheritedTagsLayout;
   const isWideLayout = effectiveTagsLayout === 'side';
   const { postDetails } = Hooks.usePostDetails(postId);
   const isDeleted = Libs.isPostDeleted(postDetails?.content);
@@ -79,17 +74,17 @@ export function PostMain({
           ) : (
             <Atoms.CardContent className={Libs.cn('flex min-w-0 flex-col', isWideLayout ? 'p-0' : 'gap-4 p-6')}>
               {showRepostHeader && (
-                <Atoms.Container overrideDefaults className={Libs.cn(isWideLayout ? 'px-12 pt-12' : undefined)}>
+                <Atoms.Container overrideDefaults className={Libs.cn(isWideLayout && 'px-12 pt-12 pb-6')}>
                   <Molecules.RepostHeader />
                 </Atoms.Container>
               )}
               {isWideLayout ? (
-                <Atoms.Container className={Libs.cn('flex min-w-0 flex-col lg:flex-row', showRepostHeader && 'pt-6')}>
-                  <Atoms.Container className="flex min-w-0 flex-col gap-4 p-12 lg:flex-1">
+                <Atoms.Container className={WIDE_POST_LAYOUT_CLASSES.shell}>
+                  <Atoms.Container className={WIDE_POST_LAYOUT_CLASSES.leftColumn}>
                     {shouldShowPostHeader && (
                       <Organisms.PostHeader postId={postId} size="large" timeAgoPlacement="bottom-left" />
                     )}
-                    <Organisms.PostContent postId={postId} textClassName="text-xl leading-7" />
+                    <Organisms.PostContent postId={postId} textClassName={WIDE_POST_LAYOUT_CLASSES.bodyText} />
                     <Atoms.Container overrideDefaults onClick={handleFooterClick} className="flex flex-col gap-4">
                       <Organisms.PostTagsPanel
                         ref={mobileTagsPanelRef}
@@ -111,7 +106,7 @@ export function PostMain({
                   <Atoms.Container
                     overrideDefaults
                     onClick={handleFooterClick}
-                    className="hidden lg:flex lg:w-96 lg:shrink-0 lg:p-12"
+                    className={WIDE_POST_LAYOUT_CLASSES.rightColumn}
                   >
                     <Organisms.PostTagsPanel
                       ref={desktopTagsPanelRef}

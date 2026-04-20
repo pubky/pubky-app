@@ -7,7 +7,8 @@ import * as Atoms from '@/atoms';
 import * as Molecules from '@/molecules';
 import * as Organisms from '@/organisms';
 import * as Hooks from '@/hooks';
-import type { TagsLayout } from '../../../PostMain/PostMain.types';
+import type { TagsLayout } from '@/organisms/PostMain/PostMain.types';
+import { PostMainLayoutProvider } from '@/organisms/PostMain/PostMainLayout';
 import type { TimelineFeedProps, TimelineFeedContextValue } from '../TimelineFeed/TimelineFeed.types';
 import { TimelineFeedContext } from '../TimelineFeed/TimelineFeedContext';
 import { NewPostsSection } from '../NewPostsSection';
@@ -140,15 +141,16 @@ function TimelineFeedContent({ streamId, variant, tagsLayout, layoutResolution, 
             loadMore={loadMore}
           />
         ) : (
-          <Organisms.TimelinePosts
-            postIds={postIds}
-            loading={loading}
-            loadingMore={loadingMore}
-            error={error}
-            hasMore={hasMore}
-            loadMore={loadMore}
-            tagsLayout={tagsLayout}
-          />
+          <PostMainLayoutProvider tagsLayout={tagsLayout}>
+            <Organisms.TimelinePosts
+              postIds={postIds}
+              loading={loading}
+              loadingMore={loadingMore}
+              error={error}
+              hasMore={hasMore}
+              loadMore={loadMore}
+            />
+          </PostMainLayoutProvider>
         )}
       </Atoms.Container>
     </TimelineFeedContext.Provider>

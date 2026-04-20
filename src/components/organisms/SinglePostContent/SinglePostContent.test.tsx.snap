@@ -10,6 +10,7 @@ exports[`SinglePostContent - Snapshots > matches snapshot when not authenticated
   </div>
   <div
     data-post-id="author:post123"
+    data-tags-layout="inline"
     data-testid="single-post-card"
   >
     SinglePostCard
@@ -117,6 +118,7 @@ exports[`SinglePostContent - Snapshots > matches snapshot with short post and no
   </div>
   <div
     data-post-id="author:post123"
+    data-tags-layout="inline"
     data-testid="single-post-card"
   >
     SinglePostCard
