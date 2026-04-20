@@ -6,6 +6,8 @@ import type { NotificationPreferences } from '@/core/stores/settings/settings.ty
 import { NotificationType } from '@/core/models/notification/notification.types';
 import type { FlatNotification } from '@/core/models/notification/notification.types';
 
+// Maps each NotificationType enum to its corresponding NotificationPreferences key.
+// Needed because NotificationType values don't match the preference key names directly.
 // exported for tests
 export const NOTIFICATION_TYPE_TO_PREFERENCE_KEY: Record<NotificationType, keyof NotificationPreferences> = {
   [NotificationType.Follow]: 'follow',
