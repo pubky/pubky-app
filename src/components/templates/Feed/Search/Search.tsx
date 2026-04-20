@@ -21,8 +21,6 @@ import { useSearchTags } from '@/hooks/useSearchStreamId';
  * - Shows SearchInput on mobile (hidden on desktop where it's in the header)
  */
 export function Search() {
-  Hooks.useLayoutReset();
-
   // Get tags from URL query params
   const tags = useSearchTags();
   const isMobile = Hooks.useIsMobile();
