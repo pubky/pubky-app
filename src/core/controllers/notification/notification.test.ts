@@ -11,6 +11,17 @@ const mockAuthStore = (userId: Core.Pubky = mockUserId) => {
   } as ReturnType<typeof Core.useAuthStore.getState>);
 };
 
+/**
+ * Mocks the settings store with notification preferences.
+ * The controller reads preferences to filter out disabled notification types.
+ * Defaults to all enabled; pass overrides to disable specific types (e.g., { follow: false }).
+ */
+const mockSettingsStore = (overrides: Partial<Core.NotificationPreferences> = {}) => {
+  vi.spyOn(Core.useSettingsStore, 'getState').mockReturnValue({
+    notifications: { ...Core.defaultNotificationPreferences, ...overrides },
+  } as ReturnType<typeof Core.useSettingsStore.getState>);
+};
+
 describe('NotificationController', () => {
   beforeEach(() => vi.clearAllMocks());
   afterEach(() => vi.restoreAllMocks());
@@ -159,7 +170,10 @@ describe('NotificationController', () => {
       olderThan: 3000,
     };
 
-    beforeEach(() => mockAuthStore());
+    beforeEach(() => {
+      mockAuthStore();
+      mockSettingsStore();
+    });
 
     it.each([
       { params: {}, expectedOlderThan: Infinity, expectedLimit: Config.NEXUS_NOTIFICATIONS_LIMIT },
@@ -178,12 +192,62 @@ describe('NotificationController', () => {
       });
     });
 
-    it('should return response from application', async () => {
+    it('should return all notifications when all preferences are enabled (default)', async () => {
+      // mockSettingsStore() defaults to all preferences enabled,
+      // so no notifications should be filtered out
       vi.spyOn(Core.NotificationApplication, 'getOrFetchNotifications').mockResolvedValue(mockResponse);
 
       const result = await NotificationController.getOrFetchNotifications({});
 
-      expect(result).toEqual(mockResponse);
+      expect(result.flatNotifications).toHaveLength(1);
+      expect(result.olderThan).toBe(3000);
+    });
+
+    it('should filter out disabled notification types', async () => {
+      mockSettingsStore({ follow: false });
+      vi.spyOn(Core.NotificationApplication, 'getOrFetchNotifications').mockResolvedValue(mockResponse);
+
+      const result = await NotificationController.getOrFetchNotifications({});
+
+      expect(result.flatNotifications).toHaveLength(0);
+      expect(result.olderThan).toBe(3000);
+    });
+
+    it('should filter mixed notification types by preferences', async () => {
+      mockSettingsStore({ postDeleted: false });
+      const mixedResponse: Core.TGetOrFetchNotificationsResponse = {
+        flatNotifications: [
+          { id: 'follow:3000:user-1', type: Core.NotificationType.Follow, timestamp: 3000, followed_by: 'user-1' },
+          {
+            id: 'post_deleted:2000:user-2',
+            type: Core.NotificationType.PostDeleted,
+            timestamp: 2000,
+            delete_source: 'reply',
+            deleted_by: 'user-2',
+            deleted_uri: 'pubky://post/1',
+            linked_uri: 'pubky://post/2',
+          },
+          {
+            id: 'reply:1000:user-3',
+            type: Core.NotificationType.Reply,
+            timestamp: 1000,
+            replied_by: 'user-3',
+            parent_post_uri: 'pubky://post/1',
+            reply_uri: 'pubky://post/3',
+          },
+        ] as Core.FlatNotification[],
+        olderThan: 1000,
+      };
+      vi.spyOn(Core.NotificationApplication, 'getOrFetchNotifications').mockResolvedValue(mixedResponse);
+
+      const result = await NotificationController.getOrFetchNotifications({});
+
+      expect(result.flatNotifications).toHaveLength(2);
+      expect(result.flatNotifications.map((n) => n.type)).toEqual([
+        Core.NotificationType.Follow,
+        Core.NotificationType.Reply,
+      ]);
+      expect(result.olderThan).toBe(1000);
     });
 
     it('should return empty response when no notifications', async () => {
