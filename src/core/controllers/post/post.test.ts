@@ -21,6 +21,7 @@ vi.mock('@/core/application/file', () => ({
 vi.mock('@/core/application/tag', () => ({
   TagApplication: {
     create: vi.fn(),
+    commitCreate: vi.fn().mockResolvedValue(undefined),
   },
 }));
 
@@ -477,6 +478,71 @@ describe('PostController', () => {
         url: expect.stringContaining('pubky://'),
         bodyJson: expect.any(Object),
       });
+    });
+
+    it('should apply tags to the original post for a simple repost', async () => {
+      await setupExistingPost();
+      const ApplicationModule = await import('@/core/application');
+      const tagCommitSpy = vi.spyOn(ApplicationModule.TagApplication, 'commitCreate');
+
+      const { PostController } = await import('./post');
+      await PostController.commitCreate({
+        content: '',
+        authorId: testData.authorPubky,
+        originalPostId: testData.fullPostId,
+        tags: ['bitcoin'],
+      });
+
+      expect(tagCommitSpy).toHaveBeenCalled();
+      const { tagList } = tagCommitSpy.mock.calls[0][0];
+      expect(tagList[0]?.taggedId).toBe(testData.fullPostId);
+      expect(tagList[0]?.label).toBe('bitcoin');
+
+      tagCommitSpy.mockRestore();
+    });
+
+    it('should apply tags to the new post for a quote repost with text', async () => {
+      await setupExistingPost();
+      const ApplicationModule = await import('@/core/application');
+      const tagCommitSpy = vi.spyOn(ApplicationModule.TagApplication, 'commitCreate');
+
+      const { PostController } = await import('./post');
+      const createdId = await PostController.commitCreate({
+        content: 'my comment',
+        authorId: testData.authorPubky,
+        originalPostId: testData.fullPostId,
+        tags: ['ethereum'],
+      });
+
+      expect(tagCommitSpy).toHaveBeenCalled();
+      const { tagList } = tagCommitSpy.mock.calls[0][0];
+      expect(tagList[0]?.taggedId).toBe(createdId);
+      expect(tagList[0]?.label).toBe('ethereum');
+
+      tagCommitSpy.mockRestore();
+    });
+
+    it('should apply tags to the new post for a quote repost with attachment only', async () => {
+      await setupExistingPost();
+      const ApplicationModule = await import('@/core/application');
+      const tagCommitSpy = vi.spyOn(ApplicationModule.TagApplication, 'commitCreate');
+      const imageFile = new File(['image-content'], 'photo.png', { type: 'image/png' });
+
+      const { PostController } = await import('./post');
+      const createdId = await PostController.commitCreate({
+        content: '',
+        authorId: testData.authorPubky,
+        originalPostId: testData.fullPostId,
+        attachments: [imageFile],
+        tags: ['nft'],
+      });
+
+      expect(tagCommitSpy).toHaveBeenCalled();
+      const { tagList } = tagCommitSpy.mock.calls[0][0];
+      expect(tagList[0]?.taggedId).toBe(createdId);
+      expect(tagList[0]?.label).toBe('nft');
+
+      tagCommitSpy.mockRestore();
     });
   });
 
