@@ -1,27 +1,24 @@
-'use client';
-
-import { useEffect, useState } from 'react';
 import * as Templates from '@/templates';
-import { useIsMobile } from '@/hooks/useIsMobile';
 
 /**
  * Default page for /profile/[pubky]/ route
  *
- * Mobile: shows Profile (bio/details/follow) so users can easily follow.
- * Desktop: shows Posts since the sidebar already provides follow affordances.
+ * Mobile (< lg / 1024px): shows Profile (bio/details/follow) so users can easily follow.
+ * Desktop (>= lg): shows Posts since the sidebar already provides follow affordances.
+ *
+ * Both subtrees render server-side; CSS hides the inactive one. This keeps the
+ * server response identical for every visitor and avoids the hydration
+ * mismatch / first-paint flash that a JS-driven viewport check would introduce.
  */
 export default function DynamicProfilePage() {
-  const isMobile = useIsMobile();
-  const [hasMounted, setHasMounted] = useState(false);
-
-  useEffect(() => {
-    setHasMounted(true);
-  }, []);
-
-  // Keep the first client render aligned with the server markup.
-  if (hasMounted && isMobile) {
-    return <Templates.ProfilePageProfile />;
-  }
-
-  return <Templates.ProfilePagePosts />;
+  return (
+    <>
+      <div className="lg:hidden">
+        <Templates.ProfilePageProfile />
+      </div>
+      <div className="hidden lg:block">
+        <Templates.ProfilePagePosts />
+      </div>
+    </>
+  );
 }
