@@ -179,16 +179,15 @@ describe('DialogRepost', () => {
     render(<DialogRepost postId="test-post-123" open={false} onOpenChangeAction={onOpenChangeAction} />);
 
     expect(Organisms.PostInput).toHaveBeenCalledWith(
-      expect.objectContaining({
+      {
         dataCy: 'repost-post-input',
-        id: 'repost-post-input',
         variant: POST_INPUT_VARIANT.REPOST,
         originalPostId: 'test-post-123',
         onSuccess: expect.any(Function),
         showThreadConnector: false,
         expanded: true,
         onContentChange: mockHandleContentChange,
-      }),
+      },
       undefined,
     );
   });
