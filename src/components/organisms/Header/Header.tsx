@@ -50,10 +50,12 @@ export function Header() {
     return <Molecules.HeaderHome />;
   };
 
-  // Copyright page shows only logo (minimal header)
+  // Copyright page shows only logo (minimal header).
+  // Pass the same classNameNav as other routes so the logo doesn't shift
+  // horizontally when navigating between the app and /copyright.
   if (isCopyrightPage) {
     return (
-      <Molecules.HeaderContainer>
+      <Molecules.HeaderContainer classNameNav={classNameNav}>
         <Molecules.Logo />
       </Molecules.HeaderContainer>
     );
