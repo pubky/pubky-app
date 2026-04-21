@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import * as Core from '@/core';
 import { HttpMethod } from '@/libs';
 
@@ -149,6 +149,10 @@ describe('PostController', () => {
         await Core.PostTagsModel.table.clear();
       },
     );
+  });
+
+  afterEach(() => {
+    vi.restoreAllMocks();
   });
 
   describe('getDetails', () => {
@@ -497,8 +501,6 @@ describe('PostController', () => {
       const { tagList } = tagCommitSpy.mock.calls[0][0];
       expect(tagList[0]?.taggedId).toBe(testData.fullPostId);
       expect(tagList[0]?.label).toBe('bitcoin');
-
-      tagCommitSpy.mockRestore();
     });
 
     it('should apply tags to the new post for a quote repost with text', async () => {
@@ -518,8 +520,6 @@ describe('PostController', () => {
       const { tagList } = tagCommitSpy.mock.calls[0][0];
       expect(tagList[0]?.taggedId).toBe(createdId);
       expect(tagList[0]?.label).toBe('ethereum');
-
-      tagCommitSpy.mockRestore();
     });
 
     it('should apply tags to the new post for a quote repost with attachment only', async () => {
@@ -541,8 +541,6 @@ describe('PostController', () => {
       const { tagList } = tagCommitSpy.mock.calls[0][0];
       expect(tagList[0]?.taggedId).toBe(createdId);
       expect(tagList[0]?.label).toBe('nft');
-
-      tagCommitSpy.mockRestore();
     });
   });
 

@@ -157,7 +157,6 @@ export class PostController {
         originalPostId,
         content,
         attachments,
-        isArticle,
       });
       const tagsMetadata = tags.map((tag) => {
         return {

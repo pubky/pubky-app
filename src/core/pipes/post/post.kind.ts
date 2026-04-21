@@ -13,7 +13,6 @@ type TResolveTagTargetCompositeIdParams = {
   originalPostId?: string;
   content: string;
   attachments?: File[];
-  isArticle?: boolean;
 };
 
 // Keep these aligned with PostLinkEmbeds so we treat links consistently.
@@ -78,7 +77,6 @@ export const resolveTagTargetCompositeIdForPostCreate = ({
   originalPostId,
   content,
   attachments,
-  isArticle,
 }: TResolveTagTargetCompositeIdParams): string => {
   const newCompositeId = `${authorId}:${newPostId}`;
   if (!originalPostId) {
@@ -86,7 +84,7 @@ export const resolveTagTargetCompositeIdForPostCreate = ({
   }
 
   const hasAttachments = (attachments?.length ?? 0) > 0;
-  const isSimpleRepost = !content.trim() && !hasAttachments && !isArticle;
+  const isSimpleRepost = !content.trim() && !hasAttachments;
 
   if (isSimpleRepost) {
     return originalPostId;

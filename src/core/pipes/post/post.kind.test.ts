@@ -156,17 +156,4 @@ describe('resolveTagTargetCompositeIdForPostCreate', () => {
       }),
     ).toBe(`${authorId}:${newPostId}`);
   });
-
-  it('targets the new post when isArticle is true on a repost-shaped create', () => {
-    expect(
-      Core.resolveTagTargetCompositeIdForPostCreate({
-        authorId,
-        newPostId,
-        originalPostId,
-        content: '',
-        attachments: undefined,
-        isArticle: true,
-      }),
-    ).toBe(`${authorId}:${newPostId}`);
-  });
 });
