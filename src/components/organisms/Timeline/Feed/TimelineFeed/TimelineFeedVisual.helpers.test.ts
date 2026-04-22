@@ -163,12 +163,12 @@ describe('resolveVisualFeedContent', () => {
 describe('getVisualPendingOverflowFallbackIds', () => {
   it('caps the pending suffix by degrading the oldest unresolved tile first', () => {
     const fallbackIds = getVisualPendingOverflowFallbackIds([
-      createTile('a', 'medium'),
-      { ...createTile('b', 'medium'), preferredSize: undefined, probeState: 'pending' },
-      createTile('c', 'medium'),
-      { ...createTile('d', 'medium'), preferredSize: undefined, probeState: 'pending' },
-      createTile('e', 'medium'),
-      createTile('f', 'medium'),
+      { id: 'a', preferredSize: 'medium' },
+      { id: 'b', preferredSize: undefined },
+      { id: 'c', preferredSize: 'medium' },
+      { id: 'd', preferredSize: undefined },
+      { id: 'e', preferredSize: 'medium' },
+      { id: 'f', preferredSize: 'medium' },
     ]);
 
     expect(fallbackIds).toEqual(['b']);
@@ -176,12 +176,12 @@ describe('getVisualPendingOverflowFallbackIds', () => {
 
   it('degrades multiple unresolved tiles when needed to keep only a bounded tail', () => {
     const fallbackIds = getVisualPendingOverflowFallbackIds([
-      { ...createTile('a', 'medium'), preferredSize: undefined, probeState: 'pending' },
-      createTile('b', 'medium'),
-      { ...createTile('c', 'medium'), preferredSize: undefined, probeState: 'pending' },
-      createTile('d', 'medium'),
-      createTile('e', 'medium'),
-      createTile('f', 'medium'),
+      { id: 'a', preferredSize: undefined },
+      { id: 'b', preferredSize: 'medium' },
+      { id: 'c', preferredSize: undefined },
+      { id: 'd', preferredSize: 'medium' },
+      { id: 'e', preferredSize: 'medium' },
+      { id: 'f', preferredSize: 'medium' },
     ]);
 
     expect(fallbackIds).toEqual(['a', 'c']);

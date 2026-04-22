@@ -58,7 +58,10 @@ const createStreamWithPosts = async (streamId: Core.PostStreamId, postIds: strin
 };
 
 const setupMutedUsers = async (mutedUserIds: string[]) => {
-  await Core.UserStreamModel.create(Core.UserStreamTypes.MUTED, mutedUserIds);
+  await (Core.UserStreamModel as { upsert: (id: Core.UserStreamId, stream?: Core.Pubky[]) => Promise<unknown> }).upsert(
+    Core.UserStreamTypes.MUTED,
+    mutedUserIds as Core.Pubky[],
+  );
 };
 
 const clearMutedUsers = async () => {

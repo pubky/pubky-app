@@ -95,7 +95,7 @@ vi.mock('@/molecules', () => ({
 vi.mock('@/core', () => {
   const useAuthStore = ((selector?: (state: typeof mocks.authState) => unknown) =>
     selector ? selector(mocks.authState) : mocks.authState) as typeof import('@/core').useAuthStore;
-  useAuthStore.getState = () => mocks.authState as ReturnType<typeof useAuthStore.getState>;
+  useAuthStore.getState = () => mocks.authState as unknown as ReturnType<typeof useAuthStore.getState>;
 
   const useOnboardingStore = ((selector?: (state: typeof mocks.onboardingState) => unknown) =>
     selector ? selector(mocks.onboardingState) : mocks.onboardingState) as typeof import('@/core').useOnboardingStore;

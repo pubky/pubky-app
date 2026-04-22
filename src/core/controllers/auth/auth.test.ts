@@ -213,7 +213,7 @@ describe('AuthController', () => {
 
     it('should wait 5 seconds, initialize bootstrap, and setState notification store', async () => {
       const notification: Core.NotificationState = { unread: 2, lastRead: 123, lastPolledTimestamp: undefined };
-      const bootstrapResponse = { notification };
+      const bootstrapResponse = { notification, remoteSettings: null };
       const initializeSpy = vi.spyOn(Core.BootstrapApplication, 'initialize').mockResolvedValue(bootstrapResponse);
       const sleepSpy = vi.spyOn(Libs, 'sleep').mockResolvedValue(undefined);
 
@@ -329,7 +329,7 @@ describe('AuthController', () => {
       const mockPubky = 'test-pubky' as Core.Pubky;
       const mockData = { session: mockSession };
       const mockNotification: Core.NotificationState = { unread: 0, lastRead: 123, lastPolledTimestamp: 0 };
-      const bootstrapResponse = { notification: mockNotification };
+      const bootstrapResponse = { notification: mockNotification, remoteSettings: null };
 
       const keypairSpy = vi.spyOn(Libs.Identity, 'keypairFromMnemonic').mockReturnValue(mockKeypair);
       const signInSpy = vi.spyOn(Core.AuthApplication, 'signIn').mockResolvedValue(mockData);
@@ -451,7 +451,7 @@ describe('AuthController', () => {
       const mockPubky = 'test-pubky' as Core.Pubky;
       const mockData = { session: mockSession };
       const mockNotification: Core.NotificationState = { unread: 0, lastRead: 123, lastPolledTimestamp: 0 };
-      const bootstrapResponse = { notification: mockNotification };
+      const bootstrapResponse = { notification: mockNotification, remoteSettings: null };
 
       const decryptSpy = vi.spyOn(Libs.Identity, 'decryptRecoveryFile').mockResolvedValue(mockKeypair);
       const signInSpy = vi.spyOn(Core.AuthApplication, 'signIn').mockResolvedValue(mockData);
@@ -831,7 +831,7 @@ describe('AuthController', () => {
       const mockSession = {} as unknown as import('@synonymdev/pubky').Session;
       const mockPubky = TEST_PUBKY as Core.Pubky;
       const notification: Core.NotificationState = { unread: 0, lastRead: 456, lastPolledTimestamp: 0 };
-      const bootstrapResponse = { notification };
+      const bootstrapResponse = { notification, remoteSettings: null };
 
       const z32FromSessionSpy = vi.spyOn(Libs.Identity, 'z32FromSession').mockReturnValue(mockPubky);
       const userIsSignedUpSpy = vi.spyOn(Core.AuthApplication, 'userIsSignedUp').mockResolvedValue(true);

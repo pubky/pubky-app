@@ -131,7 +131,7 @@ describe('Feed Helpers', () => {
 
   describe('buildFeedStreamId', () => {
     const createFeed = (overrides: Partial<Core.FeedModelSchema> = {}): Core.FeedModelSchema => ({
-      id: 123,
+      id: '123',
       name: 'Test Feed',
       tags: ['bitcoin'],
       reach: PubkyAppFeedReach.All,

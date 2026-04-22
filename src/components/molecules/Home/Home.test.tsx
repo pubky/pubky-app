@@ -1,3 +1,4 @@
+import type { ElementType } from 'react';
 import { describe, it, expect, vi } from 'vitest';
 import { render, screen, fireEvent } from '@testing-library/react';
 import { HomeActions, HomeFooter, HomeSectionTitle, HomePageHeading } from './Home';
@@ -67,11 +68,11 @@ vi.mock('@/atoms', () => ({
     className,
   }: {
     children: React.ReactNode;
-    as?: string;
+    as?: ElementType;
     size?: string;
     className?: string;
   }) => {
-    const Tag = as || 'p';
+    const Tag = (as ?? 'p') as ElementType;
     return (
       <Tag data-testid="typography" data-size={size} className={className}>
         {children}

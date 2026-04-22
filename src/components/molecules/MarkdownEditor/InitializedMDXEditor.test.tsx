@@ -37,10 +37,10 @@ vi.mock('@mdxeditor/editor', () => {
       return (
         <div
           data-testid="mdx-editor"
-          data-placeholder={placeholder}
-          className={className}
-          data-content-editable-class={contentEditableClassName}
-          data-plugins-count={plugins?.length}
+          data-placeholder={placeholder as string | undefined}
+          className={className as string | undefined}
+          data-content-editable-class={contentEditableClassName as string | undefined}
+          data-plugins-count={Array.isArray(plugins) ? plugins.length : undefined}
           data-readonly={readOnly}
           {...props}
         >

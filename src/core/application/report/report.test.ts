@@ -199,7 +199,7 @@ describe('ReportApplication', () => {
 
     it('should re-throw AppError from ChatwootService', async () => {
       const input = createReportInput();
-      const appError = Libs.Err.network(Libs.NetworkErrorCode.REQUEST_FAILED, 'Chatwoot API error', {
+      const appError = Libs.Err.network(Libs.NetworkErrorCode.CONNECTION_FAILED, 'Chatwoot API error', {
         service: Libs.ErrorService.Chatwoot,
         operation: 'createOrFindContact',
         context: { statusCode: Libs.HttpStatusCode.INTERNAL_SERVER_ERROR },
@@ -231,7 +231,7 @@ describe('ReportApplication', () => {
 
     it('should throw AppError when createConversation fails', async () => {
       const input = createReportInput();
-      const appError = Libs.Err.network(Libs.NetworkErrorCode.REQUEST_FAILED, 'Failed to create conversation', {
+      const appError = Libs.Err.network(Libs.NetworkErrorCode.CONNECTION_FAILED, 'Failed to create conversation', {
         service: Libs.ErrorService.Chatwoot,
         operation: 'createConversation',
         context: { statusCode: Libs.HttpStatusCode.INTERNAL_SERVER_ERROR },

@@ -33,7 +33,7 @@ vi.mock('@/hooks', async (importOriginal) => {
 });
 
 vi.mock('./useVisualFeedTiles', () => ({
-  useVisualFeedTiles: (...args: unknown[]) => mockUseVisualFeedTiles(...args),
+  useVisualFeedTiles: mockUseVisualFeedTiles as typeof import('./useVisualFeedTiles').useVisualFeedTiles,
 }));
 
 vi.mock('@/atoms', () => ({
@@ -73,7 +73,8 @@ vi.mock('@/molecules', () => ({
   TimelineLoadingMore: () => <div data-testid="timeline-loading-more">Loading more</div>,
   TimelineError: ({ message }: { message: string }) => <div data-testid="timeline-error">{message}</div>,
   TimelineEndMessage: () => <div data-testid="timeline-end">End</div>,
-  PostHeaderUserInfo: (...args: unknown[]) => mockPostHeaderUserInfo(...args),
+  PostHeaderUserInfo:
+    mockPostHeaderUserInfo as typeof import('@/molecules/PostHeaderUserInfo/PostHeaderUserInfo').PostHeaderUserInfo,
   PostHeaderTimestamp: ({ timeAgo }: { timeAgo: string; indexedAt: Date }) => (
     <div data-testid="visual-overlay-timestamp">{timeAgo}</div>
   ),

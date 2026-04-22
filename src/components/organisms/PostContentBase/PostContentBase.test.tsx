@@ -1,3 +1,4 @@
+import * as React from 'react';
 import { render, screen } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { PostContentBase } from './PostContentBase';
@@ -81,13 +82,14 @@ const createMockPostDetails = (
     is_blurred: boolean;
     kind: 'short' | 'long';
   }> = {},
-) => ({
+): Core.EnrichedPostDetails => ({
   id: 'test-author:test-post',
   indexed_at: Date.now(),
   kind: 'short' as const,
   uri: 'pubky://test-author/pub/pubky.app/posts/test-post',
   content: 'Mock content',
   attachments: null as string[] | null,
+  is_moderated: false,
   is_blurred: false,
   ...overrides,
 });
@@ -284,8 +286,8 @@ describe('PostContentBase - Snapshots', () => {
     );
     // Replace the mock implementations with real ones for snapshots
     // PostText is wrapped with React.memo(), so we need to access the underlying function via .type
-    const PostTextComponent = (actualPostText.PostText as React.MemoExoticComponent<React.FC>)
-      .type as typeof Molecules.PostText;
+    const PostTextComponent = (actualPostText.PostText as unknown as React.MemoExoticComponent<React.FC<unknown>>)
+      .type as unknown as typeof Molecules.PostText;
     vi.mocked(Molecules.PostText).mockImplementation(PostTextComponent);
     vi.mocked(Molecules.PostLinkEmbeds).mockImplementation(actualPostLinkEmbeds.PostLinkEmbeds);
     // PostAttachments stays mocked - it has its own test file

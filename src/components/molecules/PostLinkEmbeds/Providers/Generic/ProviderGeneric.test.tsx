@@ -131,7 +131,7 @@ describe('ProviderGeneric', () => {
         },
       };
 
-      const result = Generic.renderEmbed(embedData);
+      const result = Generic.renderEmbed(embedData as unknown as import('../../Providers/Provider.types').EmbedData);
 
       expect(result).toBeNull();
     });

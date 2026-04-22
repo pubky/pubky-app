@@ -1,5 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { renderHook, waitFor, act } from '@testing-library/react';
+import { UserStreamTypes } from '@/core/models/stream/user/userStream.types';
 import { useUserStream } from './useUserStream';
 import { DEFAULT_USER_STREAM_LIMIT, DEFAULT_USER_STREAM_PAGE_SIZE } from './useUserStream.constants';
 
@@ -28,8 +29,8 @@ vi.mock('@/core', () => ({
     getAvatarUrl: (id: string) => `https://cdn.example.com/avatar/${id}`,
   },
   UserStreamTypes: {
-    RECOMMENDED: 'recommended',
-    TODAY_INFLUENCERS_ALL: 'today_influencers_all',
+    RECOMMENDED: 'recommended:all:all',
+    TODAY_INFLUENCERS_ALL: 'influencers:today:all',
   },
 }));
 
@@ -79,7 +80,7 @@ describe('useUserStream', () => {
 
       const { result } = renderHook(() =>
         useUserStream({
-          streamId: 'recommended',
+          streamId: UserStreamTypes.RECOMMENDED,
         }),
       );
 
@@ -95,7 +96,7 @@ describe('useUserStream', () => {
 
       const { result } = renderHook(() =>
         useUserStream({
-          streamId: 'recommended',
+          streamId: UserStreamTypes.RECOMMENDED,
           limit: 10,
         }),
       );
@@ -105,7 +106,7 @@ describe('useUserStream', () => {
       });
 
       expect(mockGetOrFetchStreamSlice).toHaveBeenCalledWith({
-        streamId: 'recommended',
+        streamId: UserStreamTypes.RECOMMENDED,
         limit: 10,
         skip: 0,
       });
@@ -119,7 +120,7 @@ describe('useUserStream', () => {
 
       renderHook(() =>
         useUserStream({
-          streamId: 'recommended',
+          streamId: UserStreamTypes.RECOMMENDED,
         }),
       );
 
@@ -141,7 +142,7 @@ describe('useUserStream', () => {
 
       const { result } = renderHook(() =>
         useUserStream({
-          streamId: 'recommended',
+          streamId: UserStreamTypes.RECOMMENDED,
           paginated: false,
         }),
       );
@@ -161,7 +162,7 @@ describe('useUserStream', () => {
 
       renderHook(() =>
         useUserStream({
-          streamId: 'recommended',
+          streamId: UserStreamTypes.RECOMMENDED,
           paginated: true,
         }),
       );
@@ -185,7 +186,7 @@ describe('useUserStream', () => {
 
       const { result } = renderHook(() =>
         useUserStream({
-          streamId: 'recommended',
+          streamId: UserStreamTypes.RECOMMENDED,
           paginated: true,
         }),
       );
@@ -206,7 +207,7 @@ describe('useUserStream', () => {
 
       const { result } = renderHook(() =>
         useUserStream({
-          streamId: 'recommended',
+          streamId: UserStreamTypes.RECOMMENDED,
           paginated: true,
         }),
       );
@@ -227,7 +228,7 @@ describe('useUserStream', () => {
 
       const { result } = renderHook(() =>
         useUserStream({
-          streamId: 'recommended',
+          streamId: UserStreamTypes.RECOMMENDED,
           paginated: true,
         }),
       );
@@ -243,7 +244,7 @@ describe('useUserStream', () => {
 
       expect(mockGetOrFetchStreamSlice).toHaveBeenCalledTimes(2);
       expect(mockGetOrFetchStreamSlice).toHaveBeenLastCalledWith({
-        streamId: 'recommended',
+        streamId: UserStreamTypes.RECOMMENDED,
         limit: DEFAULT_USER_STREAM_PAGE_SIZE,
         skip: DEFAULT_USER_STREAM_PAGE_SIZE,
       });
@@ -258,7 +259,7 @@ describe('useUserStream', () => {
 
       const { result } = renderHook(() =>
         useUserStream({
-          streamId: 'recommended',
+          streamId: UserStreamTypes.RECOMMENDED,
           paginated: true,
         }),
       );
@@ -283,7 +284,7 @@ describe('useUserStream', () => {
 
       const { result } = renderHook(() =>
         useUserStream({
-          streamId: 'recommended',
+          streamId: UserStreamTypes.RECOMMENDED,
         }),
       );
 
@@ -305,7 +306,7 @@ describe('useUserStream', () => {
 
       const { result } = renderHook(() =>
         useUserStream({
-          streamId: 'recommended',
+          streamId: UserStreamTypes.RECOMMENDED,
         }),
       );
 

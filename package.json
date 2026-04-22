@@ -10,6 +10,7 @@
     "start": "next start",
     "lint": "eslint",
     "lint:fix": "eslint --fix",
+    "typecheck": "tsc --noEmit",
     "clean": "rm -rf .next node_modules && npm install",
     "start:e2e": "cypress open -P cypress",
     "start:e2e:mobile": "cypress open -P cypress --config-file cypress.config.mobile.ts",

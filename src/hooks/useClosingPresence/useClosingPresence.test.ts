@@ -69,7 +69,7 @@ describe('useClosingPresence', () => {
       result.current.onAnimationEnd({
         target: root,
         currentTarget: root,
-      } as React.AnimationEvent<HTMLDivElement>);
+      } as unknown as React.AnimationEvent<HTMLDivElement>);
     });
 
     expect(result.current.shouldRender).toBe(false);
