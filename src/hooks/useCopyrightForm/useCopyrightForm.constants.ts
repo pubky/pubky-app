@@ -1,15 +1,19 @@
 import type { CopyrightFormData } from './useCopyrightForm.types';
 
-/** Field names for role selection checkboxes */
+/** Allowed values for the copyright role field */
+export const COPYRIGHT_ROLES = {
+  RIGHTS_OWNER: 'rights_owner',
+  REPORTING_ON_BEHALF: 'reporting_on_behalf',
+} as const;
+
+/** Field names for the copyright form */
 export const COPYRIGHT_FORM_FIELDS = {
-  IS_RIGHTS_OWNER: 'isRightsOwner',
-  IS_REPORTING_ON_BEHALF: 'isReportingOnBehalf',
+  ROLE: 'role',
 } as const;
 
 /** Default values for the copyright form */
 export const copyrightFormDefaultValues: CopyrightFormData = {
-  isRightsOwner: true,
-  isReportingOnBehalf: false,
+  role: COPYRIGHT_ROLES.RIGHTS_OWNER,
   nameOwner: '',
   originalContentUrls: '',
   briefDescription: '',

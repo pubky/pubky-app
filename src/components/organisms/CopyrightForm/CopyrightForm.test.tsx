@@ -71,11 +71,17 @@ describe('CopyrightForm', () => {
     expect(screen.getByLabelText(/Full Name as Signature/i)).toBeInTheDocument();
   });
 
-  it('renders checkboxes for rights owner selection', () => {
+  it('renders radio buttons for rights owner selection', () => {
     render(<CopyrightForm />);
 
-    expect(screen.getByLabelText('I am the rights owner')).toBeInTheDocument();
-    expect(screen.getByLabelText('I am reporting on behalf of my organization or client')).toBeInTheDocument();
+    const rightsOwnerRadio = screen.getByLabelText('I am the rights owner');
+    const reportingRadio = screen.getByLabelText('I am reporting on behalf of my organization or client');
+
+    expect(rightsOwnerRadio).toHaveAttribute('role', 'radio');
+    expect(reportingRadio).toHaveAttribute('role', 'radio');
+    // Rights owner is selected by default
+    expect(rightsOwnerRadio).toHaveAttribute('aria-checked', 'true');
+    expect(reportingRadio).toHaveAttribute('aria-checked', 'false');
   });
 
   it('validates required fields on submit', async () => {
@@ -110,11 +116,10 @@ describe('CopyrightForm', () => {
     });
   });
 
-  it('validates role selection', async () => {
+  it('submits successfully when default role is selected (no role error shown)', async () => {
     const user = userEvent.setup();
     render(<CopyrightForm />);
 
-    // Fill all required fields first
     await user.type(screen.getByLabelText(/Name of the rights owner/i), 'John Doe');
     await user.type(screen.getByLabelText(/Original Content URLs/i), 'https://example.com/original');
     await user.type(screen.getByLabelText(/Brief description/i), 'Description');
@@ -130,17 +135,15 @@ describe('CopyrightForm', () => {
     await user.type(screen.getByLabelText(/Zip code/i), '10001');
     await user.type(screen.getByLabelText(/Full Name as Signature/i), 'John Doe');
 
-    // Switch to reporting on behalf, then uncheck it (both will be unchecked)
-    const reportingOnBehalfCheckbox = screen.getByLabelText('I am reporting on behalf of my organization or client');
-    await user.click(reportingOnBehalfCheckbox);
-    await user.click(reportingOnBehalfCheckbox);
-
     const submitButton = screen.getByRole('button', { name: 'Submit Form' });
     await user.click(submitButton);
 
     await waitFor(() => {
-      expect(screen.getByText('Please select if you are the rights owner or reporting on behalf')).toBeInTheDocument();
+      expect(global.fetch).toHaveBeenCalled();
     });
+    expect(
+      screen.queryByText('Please select if you are the rights owner or reporting on behalf'),
+    ).not.toBeInTheDocument();
   });
 
   it('submits form with valid data', async () => {
@@ -282,26 +285,26 @@ describe('CopyrightForm', () => {
     });
   });
 
-  it('handles checkbox interactions correctly', async () => {
+  it('handles radio selection correctly with mutual exclusivity', async () => {
     const user = userEvent.setup();
     render(<CopyrightForm />);
 
-    const rightsOwnerCheckbox = screen.getByLabelText('I am the rights owner');
-    const reportingOnBehalfCheckbox = screen.getByLabelText('I am reporting on behalf of my organization or client');
+    const rightsOwnerRadio = screen.getByLabelText('I am the rights owner');
+    const reportingOnBehalfRadio = screen.getByLabelText('I am reporting on behalf of my organization or client');
 
-    // Initially, rights owner is checked
-    expect(rightsOwnerCheckbox).toBeChecked();
-    expect(reportingOnBehalfCheckbox).not.toBeChecked();
+    // Initially, rights owner is selected
+    expect(rightsOwnerRadio).toHaveAttribute('aria-checked', 'true');
+    expect(reportingOnBehalfRadio).toHaveAttribute('aria-checked', 'false');
 
-    // Click reporting on behalf - should uncheck rights owner
-    await user.click(reportingOnBehalfCheckbox);
-    expect(reportingOnBehalfCheckbox).toBeChecked();
-    expect(rightsOwnerCheckbox).not.toBeChecked();
+    // Click reporting on behalf - rights owner deselects automatically
+    await user.click(reportingOnBehalfRadio);
+    expect(reportingOnBehalfRadio).toHaveAttribute('aria-checked', 'true');
+    expect(rightsOwnerRadio).toHaveAttribute('aria-checked', 'false');
 
-    // Click rights owner - should uncheck reporting on behalf
-    await user.click(rightsOwnerCheckbox);
-    expect(rightsOwnerCheckbox).toBeChecked();
-    expect(reportingOnBehalfCheckbox).not.toBeChecked();
+    // Click rights owner - reporting deselects automatically
+    await user.click(rightsOwnerRadio);
+    expect(rightsOwnerRadio).toHaveAttribute('aria-checked', 'true');
+    expect(reportingOnBehalfRadio).toHaveAttribute('aria-checked', 'false');
   });
 
   it('resets form after successful submission', async () => {
