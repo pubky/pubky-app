@@ -7,7 +7,7 @@ export class HotController {
    * Get or fetch hot/trending tags based on reach and timeframe
    * @param params - Parameters object
    * @param params.reach - Reach filter (followers, following, friends, wot)
-   * @param params.timeframe - Time period (today, this_month, all_time)
+   * @param params.timeframe - Time period (today, this_week, this_month, all_time)
    * @param params.limit - Maximum number of tags to return
    * @param params.skip - Number of tags to skip
    * @param params.user_id - Optional user ID for personalized results

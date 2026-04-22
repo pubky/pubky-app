@@ -23,6 +23,7 @@ export * from './PageHeader';
 export * from './PageSubtitle';
 export * from './Popover';
 export * from './PostThreadConnector';
+export * from './RadioGroup';
 export * from './PostThreadSpacer';
 export * from './ReplyLine';
 export * from './Select';

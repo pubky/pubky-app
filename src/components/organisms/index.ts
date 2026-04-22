@@ -77,7 +77,6 @@ export * from './PublicKeyCard';
 // SinglePost page components
 export * from './SinglePostArticle';
 export * from './SinglePostCard';
-export * from './SinglePostContent';
 export * from './SinglePostParticipants';
 export * from './PostPageBreadcrumb';
 export * from './PostPageHeader';
@@ -103,6 +102,7 @@ export * from './NotificationsList';
 export * from './UserListItem';
 export * from './CompactUserListItemSkeleton';
 export * from './FullUserListItemSkeleton';
+export * from './PostCardSkeleton/PostCardSkeleton';
 export * from './WhoToFollow';
 export * from './WhoToFollowPage';
 export * from './SearchInput';

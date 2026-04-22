@@ -47,6 +47,7 @@ vi.mock('@/atoms', () => ({
     );
   },
   Spinner: ({ size }: { size?: string }) => <div data-testid="spinner" data-size={size} />,
+  Skeleton: ({ className }: { className?: string }) => <div data-testid="skeleton" className={className} />,
   Container: ({
     children,
     className,
@@ -103,7 +104,7 @@ describe('NotificationsContainer', () => {
       isNotificationUnread: vi.fn(() => false),
     });
     render(<NotificationsContainer />);
-    expect(screen.getByTestId('spinner')).toBeInTheDocument();
+    expect(screen.getAllByTestId('skeleton').length).toBeGreaterThan(0);
   });
 
   it('shows empty state when no notifications', () => {
@@ -167,7 +168,7 @@ describe('NotificationsContainer', () => {
       isNotificationUnread: vi.fn(() => false),
     });
     render(<NotificationsContainer />);
-    expect(screen.getByTestId('spinner')).toBeInTheDocument();
+    expect(screen.getAllByTestId('skeleton').length).toBeGreaterThan(0);
   });
 
   it('calls markAllAsRead on mount and not on unmount', () => {

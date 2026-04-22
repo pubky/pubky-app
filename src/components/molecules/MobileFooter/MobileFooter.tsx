@@ -110,8 +110,10 @@ export function MobileFooter({ className }: MobileFooterProps) {
                 }
               }}
               className={Libs.cn(
-                'rounded-full p-3 shadow-xs backdrop-blur-sm transition-all',
-                isActive(activePath) ? 'bg-secondary' : 'border border-border bg-white/5',
+                'rounded-full p-3 transition-all',
+                isActive(activePath)
+                  ? 'bg-secondary'
+                  : 'border border-border bg-white/5 backdrop-blur-sm hover:bg-white/10',
               )}
             >
               <Icon className="h-6 w-6" />

@@ -3,18 +3,14 @@
 import * as Atoms from '@/atoms';
 import { MENU_VARIANT } from '@/config/ui';
 import * as Hooks from '@/hooks';
-import * as Libs from '@/libs';
+import { ProfileMenuActionsContentSkeleton } from './ProfileMenuActionsContent.skeleton';
 import type { ProfileMenuActionsContentProps } from './ProfileMenuActionsContent.types';
 
 export function ProfileMenuActionsContent({ userId, variant, onActionComplete }: ProfileMenuActionsContentProps) {
   const { menuItems, isLoading } = Hooks.useProfileMenuActions(userId);
 
   if (isLoading) {
-    return (
-      <Atoms.Container overrideDefaults className="flex items-center justify-center p-4">
-        <Libs.Loader2 className="size-5 animate-spin text-muted-foreground" />
-      </Atoms.Container>
-    );
+    return <ProfileMenuActionsContentSkeleton />;
   }
 
   const handleItemClick = async (item: (typeof menuItems)[0]) => {

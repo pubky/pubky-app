@@ -36,12 +36,28 @@ exports[`GenericPreview - Snapshots > matches snapshot for image type 1`] = `
 
 exports[`GenericPreview - Snapshots > matches snapshot for loading state 1`] = `
 <div>
-  <p
-    class="text-sm font-medium text-muted-foreground"
-    data-testid="typography"
+  <div
+    class="mx-auto w-full flex-col flex justify-between gap-6 rounded-md p-6 lg:flex-row"
+    data-testid="container"
   >
-    Loading preview...
-  </p>
+    <div
+      class="mx-auto w-full flex-col flex gap-y-2"
+      data-testid="container"
+    >
+      <div
+        class="animate-pulse bg-muted h-5 w-48 rounded-md"
+        data-slot="skeleton"
+      />
+      <div
+        class="animate-pulse bg-muted h-4 w-32 rounded-md"
+        data-slot="skeleton"
+      />
+    </div>
+    <div
+      class="animate-pulse bg-muted h-25 w-45 shrink-0 rounded-md"
+      data-slot="skeleton"
+    />
+  </div>
 </div>
 `;
 
