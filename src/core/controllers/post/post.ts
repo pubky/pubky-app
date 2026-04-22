@@ -105,7 +105,7 @@ export class PostController {
    * @param params.authorId - ID of the user creating the post
    * @param params.content - Post content (can be empty for simple reposts)
    * @param params.isArticle - Whether the post is a long-form article
-   * @param params.tags - Tags to add to the post (optional)
+   * @param params.tags - Tags to add (optional). For a simple repost, tags target the embedded original post.
    * @param params.attachments - Attachments to add to the post (optional)
    * @param params.parentPostId - ID of the post being replied to (optional for root posts)
    * @param params.originalPostId - ID of the post being reposted (optional for reposts)
@@ -151,10 +151,17 @@ export class PostController {
     const { id: postId } = meta;
 
     if (tags) {
+      const tagTargetCompositeId = Core.resolveTagTargetCompositeIdForPostCreate({
+        authorId,
+        newPostId: postId,
+        originalPostId,
+        content,
+        attachments,
+      });
       const tagsMetadata = tags.map((tag) => {
         return {
           taggerId: authorId,
-          taggedId: `${authorId}:${postId}`,
+          taggedId: tagTargetCompositeId,
           label: tag,
           taggedKind: Core.TagKind.POST,
         };
