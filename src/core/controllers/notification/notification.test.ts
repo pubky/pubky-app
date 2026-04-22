@@ -56,9 +56,32 @@ describe('NotificationController', () => {
 
       await NotificationController.fetchNotifications({ userId: mockUserId });
 
-      expect(appSpy).toHaveBeenCalledWith({ userId: mockUserId, lastPolledTimestamp: 500, lastRead: 1234 });
+      expect(appSpy).toHaveBeenCalledWith({
+        userId: mockUserId,
+        lastPolledTimestamp: 500,
+        lastRead: 1234,
+        allowedTypes: expect.arrayContaining(Object.values(Core.NotificationType)),
+      });
       expect(store.setUnread).toHaveBeenCalledWith(5);
       expect(store.setLastPolledTimestamp).toHaveBeenCalledWith(3000);
+    });
+
+    it('should pass lastRead and preferences to application for filtered counting', async () => {
+      mockSettingsStore({ follow: false });
+      setupNotificationStore({ lastRead: 1234, lastPolledTimestamp: 500 });
+      const appSpy = vi.spyOn(Core.NotificationApplication, 'fetchNotifications').mockResolvedValue({
+        unread: 3,
+        nextPollCursor: 3000,
+      });
+
+      await NotificationController.fetchNotifications({ userId: mockUserId });
+
+      expect(appSpy).toHaveBeenCalledWith(
+        expect.objectContaining({
+          lastRead: 1234,
+          allowedTypes: expect.not.arrayContaining([Core.NotificationType.Follow]),
+        }),
+      );
     });
 
     it('should pass lastPolledTimestamp (not lastRead) to application', async () => {
@@ -107,7 +130,12 @@ describe('NotificationController', () => {
       appSpy.mockResolvedValueOnce({ unread: 2, nextPollCursor: 3000 });
       await NotificationController.fetchNotifications({ userId: mockUserId });
 
-      expect(appSpy).toHaveBeenCalledWith({ userId: mockUserId, lastPolledTimestamp: undefined, lastRead: 1000 });
+      expect(appSpy).toHaveBeenCalledWith({
+        userId: mockUserId,
+        lastPolledTimestamp: undefined,
+        lastRead: 1000,
+        allowedTypes: expect.arrayContaining(Object.values(Core.NotificationType)),
+      });
       expect(setUnread).toHaveBeenCalledWith(2);
       expect(setLastPolledTimestamp).toHaveBeenCalledWith(3000);
 
@@ -115,7 +143,12 @@ describe('NotificationController', () => {
       appSpy.mockResolvedValueOnce({ unread: 4, nextPollCursor: 5000 });
       await NotificationController.fetchNotifications({ userId: mockUserId });
 
-      expect(appSpy).toHaveBeenCalledWith({ userId: mockUserId, lastPolledTimestamp: 3000, lastRead: 1000 });
+      expect(appSpy).toHaveBeenCalledWith({
+        userId: mockUserId,
+        lastPolledTimestamp: 3000,
+        lastRead: 1000,
+        allowedTypes: expect.arrayContaining(Object.values(Core.NotificationType)),
+      });
       expect(setUnread).toHaveBeenCalledWith(4);
       expect(setLastPolledTimestamp).toHaveBeenCalledWith(5000);
     });
