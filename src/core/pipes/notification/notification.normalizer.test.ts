@@ -7,6 +7,7 @@ import type { FlatNotification } from '@/core/models/notification/notification.t
 import type { NotificationPreferences } from '@/core/stores/settings/settings.types';
 import { defaultNotificationPreferences } from '@/core/stores/settings/settings.types';
 import { NotificationNormalizer } from './notification.normalizer';
+import { NOTIFICATION_TYPE_TO_PREFERENCE_KEY } from './notification.constants';
 import {
   TEST_PUBKY,
   INVALID_INPUTS,
@@ -353,7 +354,7 @@ describe('NotificationNormalizer', () => {
 
       for (const disabledType of allTypes) {
         const preferences: NotificationPreferences = { ...defaultNotificationPreferences };
-        preferences[Core.NOTIFICATION_TYPE_TO_PREFERENCE_KEY[disabledType]] = false;
+        preferences[NOTIFICATION_TYPE_TO_PREFERENCE_KEY[disabledType]] = false;
 
         const result = NotificationNormalizer.filterByPreferences(notifications, preferences);
 

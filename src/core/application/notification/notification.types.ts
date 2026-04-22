@@ -10,7 +10,7 @@ export type TNotificationApplicationNotificationsParams = {
 /**
  * Result from fetchNotifications containing the filtered unread count and next poll cursor.
  *
- * @property unread - Number of unread notifications filtered by user preferences
+ * @property unread - Number of unread notifications (newer than lastRead) filtered by user preferences
  * @property nextPollCursor - Next polling cursor (newest timestamp + 1 to avoid refetch), undefined if no notifications
  */
 export type TFetchNotificationsResult = {

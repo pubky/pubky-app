@@ -26,7 +26,7 @@ export class LocalNotificationService {
   }
 
   /**
-   * Counts unread notifications filtered by allowed types.
+   * Counts unread notifications (entries newer than lastRead) filtered by allowed types.
    *
    * @param lastRead - Timestamp of the last read notification
    * @param allowedTypes - Notification types to include in the count

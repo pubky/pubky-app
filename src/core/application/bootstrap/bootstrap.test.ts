@@ -3,6 +3,7 @@ import { LastReadResult } from 'pubky-app-specs';
 import { BootstrapApplication } from './bootstrap';
 import * as Core from '@/core';
 import * as Libs from '@/libs';
+import { NotificationNormalizer } from '@/core/pipes/notification/notification.normalizer';
 
 // Mock pubky-app-specs to avoid WebAssembly issues
 vi.mock('pubky-app-specs', () => ({
@@ -12,6 +13,7 @@ vi.mock('pubky-app-specs', () => ({
 const TEST_PUBKY = '5a1diz4pghi47ywdfyfzpit5f3bdomzt4pugpbmq4rngdd4iub4y';
 const MOCK_LAST_READ_URL = 'http://example.com/last-read';
 const MOCK_LAST_READ = 1234567890;
+const MOCK_ALLOWED_TYPES = [Core.NotificationType.Follow, Core.NotificationType.Reply];
 
 const emptyBootstrap = (): Core.NexusBootstrapResponse => ({
   users: [],
@@ -255,7 +257,7 @@ const assertCommonCalls = (mocks: ServiceMocks, bootstrapData: Core.NexusBootstr
   expect(mocks.persistFiles).toHaveBeenCalledWith(bootstrapData.files);
   const flatNotifications = bootstrapData.notifications.map((n) => createFlatNotification(n.timestamp));
   expect(mocks.bulkSave).toHaveBeenCalledWith({ flatNotifications });
-  expect(mocks.countFilteredUnreadSince).toHaveBeenCalledWith(MOCK_LAST_READ, expect.any(Object));
+  expect(mocks.countFilteredUnreadSince).toHaveBeenCalledWith(MOCK_LAST_READ, MOCK_ALLOWED_TYPES);
 };
 
 describe('BootstrapApplication', () => {
@@ -268,6 +270,7 @@ describe('BootstrapApplication', () => {
     vi.spyOn(Core.NotificationNormalizer, 'toFlatNotification').mockImplementation((n) =>
       createFlatNotification(n.timestamp),
     );
+    vi.spyOn(NotificationNormalizer, 'toEnabledTypes').mockReturnValue(MOCK_ALLOWED_TYPES);
   });
 
   afterEach(() => {
@@ -511,7 +514,7 @@ describe('BootstrapApplication', () => {
       );
 
       expect(mocks.bulkSave).toHaveBeenCalledWith({ flatNotifications: [] });
-      expect(mocks.countFilteredUnreadSince).toHaveBeenCalledWith(MOCK_LAST_READ, expect.any(Array));
+      expect(mocks.countFilteredUnreadSince).toHaveBeenCalledWith(MOCK_LAST_READ, MOCK_ALLOWED_TYPES);
     });
 
     it('should throw error when upsert influencers stream fails', async () => {
