@@ -1,10 +1,10 @@
 import { renderHook } from '@testing-library/react';
 import type { Session } from '@synonymdev/pubky';
 import { describe, it, expect, beforeEach, vi } from 'vitest';
+import { mockSession as buildSession } from '@/test-utils';
 import { useAuthStatus } from './useAuthStatus';
 
-/** Session has a private constructor; tests use a minimal object cast like other auth tests. */
-const mockSession = { token: 'test-token' } as unknown as Session;
+const mockSession = buildSession();
 
 // Mock the stores
 const mockOnboardingStore = {

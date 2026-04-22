@@ -1,6 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { renderHook, act, waitFor } from '@testing-library/react';
 import * as Core from '@/core';
+import { asOpaque } from '@/test-utils';
 import { usePostMenuActions } from './usePostMenuActions';
 import * as Libs from '@/libs';
 import { POST_MENU_ACTION_IDS } from './usePostMenuActions.constants';
@@ -221,7 +222,7 @@ describe('usePostMenuActions', () => {
     });
 
     it('shows error toast when follow fails with AppError', async () => {
-      const error = { type: 'AppError', message: 'Follow failed' } as unknown as Error;
+      const error = asOpaque<Error>({ type: 'AppError', message: 'Follow failed' });
       vi.mocked(Libs.isAppError).mockReturnValue(true);
       defaultMocks.toggleFollow.mockRejectedValue(error);
 

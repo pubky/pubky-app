@@ -1,5 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { renderHook, act } from '@testing-library/react';
+import { asInvalid } from '@/test-utils';
 import { useCopyrightForm } from './useCopyrightForm';
 import { COPYRIGHT_ROLES } from './useCopyrightForm.constants';
 
@@ -76,7 +77,7 @@ describe('useCopyrightForm', () => {
         // Cast undefined to bypass enum-typing — we're explicitly testing the unset case
         result.current.form.setValue(
           'role',
-          undefined as unknown as (typeof COPYRIGHT_ROLES)[keyof typeof COPYRIGHT_ROLES],
+          asInvalid<(typeof COPYRIGHT_ROLES)[keyof typeof COPYRIGHT_ROLES]>(undefined),
         );
       });
 

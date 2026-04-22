@@ -2,6 +2,7 @@ import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import * as Core from '@/core';
 import { AppError, ErrorCategory, ValidationErrorCode, ErrorService } from '@/libs';
 import { BlobResult, FileResult } from 'pubky-app-specs';
+import { asOpaque } from '@/test-utils';
 import {
   TEST_PUBKY,
   setupUnitTestMocks,
@@ -26,12 +27,12 @@ const createMockFile = (
   size = FILE_TEST_DATA.size,
   content = FILE_TEST_DATA.content,
 ): File =>
-  ({
+  asOpaque<File>({
     name,
     type,
     size,
     arrayBuffer: vi.fn().mockResolvedValue(content.buffer),
-  }) as unknown as File;
+  });
 
 describe('FileNormalizer', () => {
   const createMockBuilder = (
@@ -40,25 +41,23 @@ describe('FileNormalizer', () => {
       createFile: ReturnType<typeof vi.fn>;
     }>,
   ) => ({
-    createBlob: vi.fn(
-      (blobData: Uint8Array) =>
-        ({
-          blob: { data: blobData, toJson: vi.fn(() => ({ data: Array.from(blobData) })) },
-          meta: { url: FILE_TEST_DATA.blobUrl },
-        }) as unknown as BlobResult,
+    createBlob: vi.fn((blobData: Uint8Array) =>
+      asOpaque<BlobResult>({
+        blob: { data: blobData, toJson: vi.fn(() => ({ data: Array.from(blobData) })) },
+        meta: { url: FILE_TEST_DATA.blobUrl },
+      }),
     ),
-    createFile: vi.fn(
-      (name: string, src: string, contentType: string, size: number) =>
-        ({
-          file: {
-            name,
-            src,
-            content_type: contentType,
-            size,
-            toJson: vi.fn(() => ({ name, src, content_type: contentType, size })),
-          },
-          meta: { url: buildPubkyUri(TEST_PUBKY.USER_1, `files/${Date.now()}`) },
-        }) as unknown as FileResult,
+    createFile: vi.fn((name: string, src: string, contentType: string, size: number) =>
+      asOpaque<FileResult>({
+        file: {
+          name,
+          src,
+          content_type: contentType,
+          size,
+          toJson: vi.fn(() => ({ name, src, content_type: contentType, size })),
+        },
+        meta: { url: buildPubkyUri(TEST_PUBKY.USER_1, `files/${Date.now()}`) },
+      }),
     ),
     ...overrides,
   });

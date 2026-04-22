@@ -2,6 +2,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, waitFor, fireEvent, screen } from '@testing-library/react';
 
 import { HomegateController } from '@/core';
+import { asOpaque } from '@/test-utils';
 import { HumanLightningPayment } from './HumanLightningPayment';
 import { VerificationHandler } from './HumanLightningPayment.utils';
 
@@ -51,7 +52,7 @@ vi.mock('@/core', async () => {
 
 describe('HumanLightningPayment', () => {
   const createMockVerificationClient = () =>
-    ({
+    asOpaque<VerificationHandler>({
       data: {
         id: 'mock-id',
         bolt11Invoice: 'mock-invoice',
@@ -59,7 +60,7 @@ describe('HumanLightningPayment', () => {
         expiresAt: Date.now() + 600000,
       },
       abort: vi.fn(),
-    }) as unknown as VerificationHandler;
+    });
 
   beforeEach(() => {
     vi.clearAllMocks();

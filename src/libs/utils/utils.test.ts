@@ -28,6 +28,7 @@ import {
   radixIdSerializer,
 } from './utils';
 import { RADIX_ID_TEST_REGEX, RADIX_ID_REGEX, TAG_BANNED_CHARS } from './utils.constants';
+import { asInvalid } from '@/test-utils';
 
 describe('Utils', () => {
   describe('radixIdSerializer', () => {
@@ -594,13 +595,13 @@ describe('Utils', () => {
     });
 
     it('should handle null and undefined', () => {
-      expect(extractInitials({ name: null as unknown as string })).toBe('');
-      expect(extractInitials({ name: undefined as unknown as string })).toBe('');
+      expect(extractInitials({ name: asInvalid<string>(null) })).toBe('');
+      expect(extractInitials({ name: asInvalid<string>(undefined) })).toBe('');
     });
 
     it('should handle non-string input', () => {
-      expect(extractInitials({ name: 123 as unknown as string })).toBe('');
-      expect(extractInitials({ name: {} as unknown as string })).toBe('');
+      expect(extractInitials({ name: asInvalid<string>(123) })).toBe('');
+      expect(extractInitials({ name: asInvalid<string>({}) })).toBe('');
     });
 
     it('should handle names with special characters', () => {
@@ -665,8 +666,8 @@ describe('Utils', () => {
     });
 
     it('should handle null and undefined as empty strings', () => {
-      expect(truncateString(null as unknown as string, 10)).toBe('');
-      expect(truncateString(undefined as unknown as string, 10)).toBe('');
+      expect(truncateString(asInvalid<string>(null), 10)).toBe('');
+      expect(truncateString(asInvalid<string>(undefined), 10)).toBe('');
     });
 
     it('should add exactly three dots as ellipsis', () => {
@@ -1593,8 +1594,8 @@ describe('Utils', () => {
     });
 
     it('should handle null-like values gracefully', () => {
-      expect(stripPubkyPrefix(null as unknown as string)).toBe('');
-      expect(stripPubkyPrefix(undefined as unknown as string)).toBe('');
+      expect(stripPubkyPrefix(asInvalid<string>(null))).toBe('');
+      expect(stripPubkyPrefix(asInvalid<string>(undefined))).toBe('');
     });
   });
 

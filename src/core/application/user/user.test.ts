@@ -1,6 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import * as Core from '@/core';
 import { HttpMethod } from '@/libs';
+import { asInvalid } from '@/test-utils';
 import { UserApplication } from './user';
 
 describe('UserApplication.commitFollow', () => {
@@ -14,9 +15,9 @@ describe('UserApplication.commitFollow', () => {
   });
 
   it('should update local state on PUT and call homeserver', async () => {
-    const createSpy = vi.spyOn(Core.LocalFollowService, 'create').mockResolvedValue(undefined as unknown as void);
-    const deleteSpy = vi.spyOn(Core.LocalFollowService, 'delete').mockResolvedValue(undefined as unknown as void);
-    const requestSpy = vi.spyOn(Core.HomeserverService, 'request').mockResolvedValue(undefined as unknown as void);
+    const createSpy = vi.spyOn(Core.LocalFollowService, 'create').mockResolvedValue(undefined);
+    const deleteSpy = vi.spyOn(Core.LocalFollowService, 'delete').mockResolvedValue(undefined);
+    const requestSpy = vi.spyOn(Core.HomeserverService, 'request').mockResolvedValue(undefined);
 
     await UserApplication.commitFollow({
       eventType: HttpMethod.PUT,
@@ -33,9 +34,9 @@ describe('UserApplication.commitFollow', () => {
   });
 
   it('should update local state on DELETE and call homeserver', async () => {
-    const createSpy = vi.spyOn(Core.LocalFollowService, 'create').mockResolvedValue(undefined as unknown as void);
-    const deleteSpy = vi.spyOn(Core.LocalFollowService, 'delete').mockResolvedValue(undefined as unknown as void);
-    const requestSpy = vi.spyOn(Core.HomeserverService, 'request').mockResolvedValue(undefined as unknown as void);
+    const createSpy = vi.spyOn(Core.LocalFollowService, 'create').mockResolvedValue(undefined);
+    const deleteSpy = vi.spyOn(Core.LocalFollowService, 'delete').mockResolvedValue(undefined);
+    const requestSpy = vi.spyOn(Core.HomeserverService, 'request').mockResolvedValue(undefined);
 
     await UserApplication.commitFollow({
       eventType: HttpMethod.DELETE,
@@ -52,9 +53,9 @@ describe('UserApplication.commitFollow', () => {
   });
 
   it('should not update local state for non-mutate methods but still call homeserver', async () => {
-    const createSpy = vi.spyOn(Core.LocalFollowService, 'create').mockResolvedValue(undefined as unknown as void);
-    const deleteSpy = vi.spyOn(Core.LocalFollowService, 'delete').mockResolvedValue(undefined as unknown as void);
-    const requestSpy = vi.spyOn(Core.HomeserverService, 'request').mockResolvedValue(undefined as unknown as void);
+    const createSpy = vi.spyOn(Core.LocalFollowService, 'create').mockResolvedValue(undefined);
+    const deleteSpy = vi.spyOn(Core.LocalFollowService, 'delete').mockResolvedValue(undefined);
+    const requestSpy = vi.spyOn(Core.HomeserverService, 'request').mockResolvedValue(undefined);
 
     await UserApplication.commitFollow({
       eventType: HttpMethod.GET,
@@ -72,7 +73,7 @@ describe('UserApplication.commitFollow', () => {
 
   it('should propagate error when local create fails on PUT and not call homeserver', async () => {
     const createSpy = vi.spyOn(Core.LocalFollowService, 'create').mockRejectedValue(new Error('local-fail'));
-    const requestSpy = vi.spyOn(Core.HomeserverService, 'request').mockResolvedValue(undefined as unknown as void);
+    const requestSpy = vi.spyOn(Core.HomeserverService, 'request').mockResolvedValue(undefined);
 
     await expect(
       UserApplication.commitFollow({
@@ -91,7 +92,7 @@ describe('UserApplication.commitFollow', () => {
 
   it('should propagate error when local delete fails on DELETE and not call homeserver', async () => {
     const deleteSpy = vi.spyOn(Core.LocalFollowService, 'delete').mockRejectedValue(new Error('local-delete-fail'));
-    const requestSpy = vi.spyOn(Core.HomeserverService, 'request').mockResolvedValue(undefined as unknown as void);
+    const requestSpy = vi.spyOn(Core.HomeserverService, 'request').mockResolvedValue(undefined);
 
     await expect(
       UserApplication.commitFollow({
@@ -109,7 +110,7 @@ describe('UserApplication.commitFollow', () => {
   });
 
   it('should propagate error when homeserver request fails', async () => {
-    vi.spyOn(Core.LocalFollowService, 'create').mockResolvedValue(undefined as unknown as void);
+    vi.spyOn(Core.LocalFollowService, 'create').mockResolvedValue(undefined);
     const requestSpy = vi.spyOn(Core.HomeserverService, 'request').mockRejectedValue(new Error('homeserver-fail'));
 
     await expect(
@@ -258,7 +259,7 @@ describe('UserApplication.getOrFetchDetails', () => {
     const localSpy = vi.spyOn(Core.LocalUserService, 'readDetails').mockResolvedValue(null);
     const nexusSpy = vi
       .spyOn(Core.NexusUserService, 'details')
-      .mockResolvedValue(undefined as unknown as Core.NexusUserDetails);
+      .mockResolvedValue(asInvalid<Core.NexusUserDetails>(undefined));
     const upsertSpy = vi.spyOn(Core.LocalProfileService, 'upsertDetails').mockResolvedValue(undefined);
 
     const result = await UserApplication.getOrFetchDetails({ userId });

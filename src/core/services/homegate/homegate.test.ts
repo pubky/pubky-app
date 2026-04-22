@@ -1,8 +1,9 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { HomegateService } from './homegate';
+import { asOpaque } from '@/test-utils';
 
 const mockFetch = vi.fn();
-global.fetch = mockFetch as unknown as typeof global.fetch;
+global.fetch = asOpaque<typeof global.fetch>(mockFetch);
 
 describe('HomegateService', () => {
   beforeEach(() => {

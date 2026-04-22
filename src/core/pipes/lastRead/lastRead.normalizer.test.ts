@@ -2,6 +2,7 @@ import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import * as Core from '@/core';
 import { AppError, ErrorCategory, ValidationErrorCode, ErrorService } from '@/libs';
 import { LastReadResult } from 'pubky-app-specs';
+import { asOpaque } from '@/test-utils';
 import {
   TEST_PUBKY,
   INVALID_INPUTS,
@@ -16,13 +17,13 @@ describe('LastReadNormalizer', () => {
   const createMockBuilder = (overrides?: Partial<{ createLastRead: ReturnType<typeof vi.fn> }>) => ({
     createLastRead: vi.fn(() => {
       const mockTimestamp = BigInt(Date.now());
-      return {
+      return asOpaque<LastReadResult>({
         last_read: {
           timestamp: mockTimestamp,
           toJson: vi.fn(() => ({ timestamp: Number(mockTimestamp) })),
         },
         meta: { url: buildPubkyUri(TEST_PUBKY.USER_1, 'last_read') },
-      } as unknown as LastReadResult;
+      });
     }),
     ...overrides,
   });

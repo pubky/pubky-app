@@ -2,6 +2,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen, fireEvent, act } from '@testing-library/react';
 import React, { createRef } from 'react';
 import type { MDXEditorMethods } from '@mdxeditor/editor';
+import { asOpaque } from '@/test-utils';
 import InitializedMDXEditor from './InitializedMDXEditor';
 
 // Mock config - use a smaller value for easier testing
@@ -241,14 +242,14 @@ vi.mock('@/libs/utils', () => ({
 
 /** Creates a mock editor ref with stub methods for mode-switching tests. */
 function createMockEditorRef(markdown = '') {
-  return {
+  return asOpaque<React.RefObject<MDXEditorMethods>>({
     current: {
       getMarkdown: vi.fn(() => markdown),
       setMarkdown: vi.fn(),
       focus: vi.fn(),
       insertMarkdown: vi.fn(),
     },
-  } as unknown as React.RefObject<MDXEditorMethods>;
+  });
 }
 
 describe('InitializedMDXEditor', () => {

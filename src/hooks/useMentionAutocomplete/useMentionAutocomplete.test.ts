@@ -1,5 +1,6 @@
 import { renderHook, act } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
+import { mockKeyboardEvent } from '@/test-utils';
 import { useMentionAutocomplete } from './useMentionAutocomplete';
 import type * as Core from '@/core';
 
@@ -236,7 +237,7 @@ describe('useMentionAutocomplete', () => {
     it('handleKeyDown returns false when popover is closed', () => {
       const { result } = renderHook(() => useMentionAutocomplete({ content: '' }));
 
-      const event = { key: 'ArrowDown', preventDefault: vi.fn() } as unknown as React.KeyboardEvent;
+      const event = mockKeyboardEvent({ key: 'ArrowDown', preventDefault: vi.fn() });
       const handled = result.current.handleKeyDown(event);
 
       expect(handled).toBe(false);

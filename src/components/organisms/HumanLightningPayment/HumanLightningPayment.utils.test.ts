@@ -1,6 +1,9 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { VerificationHandler } from './HumanLightningPayment.utils';
 import { HomegateController } from '@/core';
+import { asOpaque } from '@/test-utils';
+
+type VerificationHandlerInternals = { checkPaymentStatus: () => Promise<void> };
 
 vi.mock('@/core', async () => {
   const actual = await vi.importActual('@/core');
@@ -53,12 +56,15 @@ describe('VerificationHandler', () => {
       onError: (error: unknown) => void;
     }> = {},
   ) => {
-    const VerificationHandlerCtor = VerificationHandler as unknown as new (
-      data: { id: string; bolt11Invoice: string; amountSat: number; expiresAt: number },
-      onPaymentConfirmed: (signupCode: string, homeserverPubky: string) => void,
-      onPaymentExpired: () => void,
-      onError?: (error: unknown) => void,
-    ) => VerificationHandler;
+    const VerificationHandlerCtor =
+      asOpaque<
+        new (
+          data: { id: string; bolt11Invoice: string; amountSat: number; expiresAt: number },
+          onPaymentConfirmed: (signupCode: string, homeserverPubky: string) => void,
+          onPaymentExpired: () => void,
+          onError?: (error: unknown) => void,
+        ) => VerificationHandler
+      >(VerificationHandler);
 
     return new VerificationHandlerCtor(
       overrides.data ?? DEFAULT_VERIFICATION_DATA,
@@ -445,7 +451,7 @@ describe('VerificationHandler', () => {
         const onPaymentConfirmed = vi.fn();
         const handler = createHandlerInstance({ onPaymentConfirmed });
 
-        const runCheck = (handler as unknown as { checkPaymentStatus: () => Promise<void> }).checkPaymentStatus();
+        const runCheck = asOpaque<VerificationHandlerInternals>(handler).checkPaymentStatus();
         await flushMicrotasks();
         expect(onPaymentConfirmed).not.toHaveBeenCalled();
 
@@ -465,7 +471,7 @@ describe('VerificationHandler', () => {
       const onError = vi.fn();
       const handler = createHandlerInstance({ onError });
 
-      await (handler as unknown as { checkPaymentStatus: () => Promise<void> }).checkPaymentStatus();
+      await asOpaque<VerificationHandlerInternals>(handler).checkPaymentStatus();
 
       expect(onError).toHaveBeenCalledWith(fatalError);
       expect(handler.aborted).toBe(true);

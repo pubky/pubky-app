@@ -4,6 +4,7 @@ import { usePostTags } from './usePostTags';
 import { TAGS_PER_PAGE } from './usePostTags.constants';
 import * as Core from '@/core';
 import type { AuthStore } from '@/core/stores/auth/auth.types';
+import { mockAuthStore } from '@/test-utils';
 import * as DexieHooks from 'dexie-react-hooks';
 
 // Hoisted mock for fetchTags - must be defined before vi.mock
@@ -11,7 +12,7 @@ const { mockFetchTags, mockToast, mockAuthStoreSelector } = vi.hoisted(() => ({
   mockFetchTags: vi.fn().mockResolvedValue([]),
   mockToast: vi.fn(),
   mockAuthStoreSelector: (currentUserPubky: string | null) => {
-    return (selector: (state: AuthStore) => unknown) => selector({ currentUserPubky } as unknown as AuthStore);
+    return (selector: (state: AuthStore) => unknown) => selector(mockAuthStore({ currentUserPubky }));
   },
 }));
 

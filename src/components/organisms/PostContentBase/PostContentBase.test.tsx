@@ -6,6 +6,7 @@ import * as Molecules from '@/molecules';
 import * as Organisms from '@/organisms';
 import * as Hooks from '@/hooks';
 import * as Core from '@/core';
+import { asOpaque } from '@/test-utils';
 
 // Mock next/navigation for usePathname used by PostText
 vi.mock('next/navigation', () => ({
@@ -286,8 +287,8 @@ describe('PostContentBase - Snapshots', () => {
     );
     // Replace the mock implementations with real ones for snapshots
     // PostText is wrapped with React.memo(), so we need to access the underlying function via .type
-    const PostTextComponent = (actualPostText.PostText as unknown as React.MemoExoticComponent<React.FC<unknown>>)
-      .type as unknown as typeof Molecules.PostText;
+    const memoizedPostText = asOpaque<React.MemoExoticComponent<React.FC<unknown>>>(actualPostText.PostText);
+    const PostTextComponent = asOpaque<typeof Molecules.PostText>(memoizedPostText.type);
     vi.mocked(Molecules.PostText).mockImplementation(PostTextComponent);
     vi.mocked(Molecules.PostLinkEmbeds).mockImplementation(actualPostLinkEmbeds.PostLinkEmbeds);
     // PostAttachments stays mocked - it has its own test file

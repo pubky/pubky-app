@@ -3,6 +3,7 @@ import { LastReadResult } from 'pubky-app-specs';
 import { BootstrapApplication } from './bootstrap';
 import * as Core from '@/core';
 import * as Libs from '@/libs';
+import { asOpaque } from '@/test-utils';
 
 // Mock pubky-app-specs to avoid WebAssembly issues
 vi.mock('pubky-app-specs', () => ({
@@ -370,7 +371,7 @@ describe('BootstrapApplication', () => {
 
       const lastReadNormalizerSpy = vi
         .spyOn(Core.LastReadNormalizer, 'to')
-        .mockReturnValue(mockLastReadResult as unknown as LastReadResult);
+        .mockReturnValue(asOpaque<LastReadResult>(mockLastReadResult));
       const loggerInfoSpy = vi.spyOn(Libs.Logger, 'info').mockImplementation(() => {});
 
       const result = await BootstrapApplication.initialize(getBootstrapParams(TEST_PUBKY));
@@ -547,7 +548,7 @@ describe('BootstrapApplication', () => {
 
     it('should persist files from bootstrap payload', async () => {
       const bootstrapData = createMockBootstrapData();
-      const mockFiles = [{ id: 'file-1' }, { id: 'file-2' }] as unknown as Core.NexusFileDetails[];
+      const mockFiles = asOpaque<Core.NexusFileDetails[]>([{ id: 'file-1' }, { id: 'file-2' }]);
       bootstrapData.files = mockFiles;
       bootstrapData.notifications = [createMockNotification()];
 
@@ -613,9 +614,11 @@ describe('BootstrapApplication', () => {
 
       const upsertTtlSpy = vi.spyOn(Core.LocalUserService, 'upsertTtlWithDelay').mockResolvedValue(undefined);
       const mockSubscribeUser = vi.fn();
-      const mockGetInstance = vi.spyOn(Core.TtlCoordinator, 'getInstance').mockReturnValue({
-        subscribeUser: mockSubscribeUser,
-      } as unknown as Core.TtlCoordinator);
+      const mockGetInstance = vi.spyOn(Core.TtlCoordinator, 'getInstance').mockReturnValue(
+        asOpaque<Core.TtlCoordinator>({
+          subscribeUser: mockSubscribeUser,
+        }),
+      );
       const loggerWarnSpy = vi.spyOn(Libs.Logger, 'warn').mockImplementation(() => {});
 
       await BootstrapApplication.initialize(getBootstrapParams(TEST_PUBKY));
@@ -639,9 +642,11 @@ describe('BootstrapApplication', () => {
 
       const upsertTtlSpy = vi.spyOn(Core.LocalUserService, 'upsertTtlWithDelay').mockResolvedValue(undefined);
       const mockSubscribeUser = vi.fn();
-      vi.spyOn(Core.TtlCoordinator, 'getInstance').mockReturnValue({
-        subscribeUser: mockSubscribeUser,
-      } as unknown as Core.TtlCoordinator);
+      vi.spyOn(Core.TtlCoordinator, 'getInstance').mockReturnValue(
+        asOpaque<Core.TtlCoordinator>({
+          subscribeUser: mockSubscribeUser,
+        }),
+      );
       const loggerWarnSpy = vi.spyOn(Libs.Logger, 'warn').mockImplementation(() => {});
 
       await BootstrapApplication.initialize(getBootstrapParams(TEST_PUBKY));

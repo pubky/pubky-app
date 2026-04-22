@@ -5,6 +5,7 @@ import { REPORT_ISSUE_TYPES, REPORT_ISSUE_LABELS } from '@/core/pipes/report';
 import { CHATWOOT_INBOX_IDS, CHATWOOT_REPORT_MESSAGE_PREFIX } from '@/core/services/chatwoot';
 import type { TReportSubmitInput } from './report.types';
 import type { TChatwootContact } from '@/core/services/chatwoot/chatwoot.types';
+import { asOpaque } from '@/test-utils';
 
 const testData = {
   userPubky: 'o1gg96ewuojmopcjbz8895478wdtxtzzuxnfjjz8o8e77csa1ngo' as Core.Pubky,
@@ -184,12 +185,12 @@ describe('ReportApplication', () => {
 
     it('should throw AppError when contact has undefined inbox associations', async () => {
       const input = createReportInput();
-      const contactWithUndefinedInbox = {
+      const contactWithUndefinedInbox = asOpaque<TChatwootContact>({
         id: testData.contactId,
         email: `${testData.userPubky}@pubky.app`,
         name: testData.userName,
         contact_inboxes: undefined,
-      } as unknown as TChatwootContact;
+      });
       vi.spyOn(Core.ChatwootService, 'createOrFindContact').mockResolvedValue(contactWithUndefinedInbox);
 
       await expect(ReportApplication.submit(input)).rejects.toThrow('Contact has no inbox associations');

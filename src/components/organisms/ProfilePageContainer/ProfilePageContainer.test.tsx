@@ -3,6 +3,7 @@ import { render, screen } from '@testing-library/react';
 import { ProfilePageContainer } from './ProfilePageContainer';
 import { PROFILE_PAGE_TYPES } from '@/app/profile/types';
 import type { AuthStore } from '@/core/stores/auth/auth.types';
+import { asOpaque, mockAuthStore } from '@/test-utils';
 
 // Mock Core
 const mockCurrentUserPubky = 'user123';
@@ -11,9 +12,7 @@ const mockAuthStoreState = {
   isLoggingOut: false,
 };
 vi.mock('@/core', () => ({
-  useAuthStore: vi.fn((selector: (state: AuthStore) => unknown) =>
-    selector(mockAuthStoreState as unknown as AuthStore),
-  ),
+  useAuthStore: vi.fn((selector: (state: AuthStore) => unknown) => selector(mockAuthStore(mockAuthStoreState))),
 }));
 
 // Mock Providers
@@ -283,8 +282,8 @@ describe('ProfilePageContainer - User not found', () => {
         avatarUrl: undefined,
         link: '',
       },
-      stats: mockStats as unknown as ReturnType<typeof hooks.useProfileHeader>['stats'],
-      actions: mockActions as unknown as ReturnType<typeof hooks.useProfileHeader>['actions'],
+      stats: asOpaque<ReturnType<typeof hooks.useProfileHeader>['stats']>(mockStats),
+      actions: asOpaque<ReturnType<typeof hooks.useProfileHeader>['actions']>(mockActions),
       isLoading: false,
       userNotFound: true,
     });
@@ -311,8 +310,8 @@ describe('ProfilePageContainer - User not found', () => {
     const hooks = await import('@/hooks');
     vi.mocked(hooks.useProfileHeader).mockReturnValue({
       profile: mockProfile,
-      stats: mockStats as unknown as ReturnType<typeof hooks.useProfileHeader>['stats'],
-      actions: mockActions as unknown as ReturnType<typeof hooks.useProfileHeader>['actions'],
+      stats: asOpaque<ReturnType<typeof hooks.useProfileHeader>['stats']>(mockStats),
+      actions: asOpaque<ReturnType<typeof hooks.useProfileHeader>['actions']>(mockActions),
       isLoading: false,
       userNotFound: false,
     });
@@ -348,8 +347,8 @@ describe('ProfilePageContainer - User not found', () => {
         avatarUrl: undefined,
         link: '',
       },
-      stats: mockStats as unknown as ReturnType<typeof hooks.useProfileHeader>['stats'],
-      actions: mockActions as unknown as ReturnType<typeof hooks.useProfileHeader>['actions'],
+      stats: asOpaque<ReturnType<typeof hooks.useProfileHeader>['stats']>(mockStats),
+      actions: asOpaque<ReturnType<typeof hooks.useProfileHeader>['actions']>(mockActions),
       isLoading: false,
       userNotFound: true,
     });
@@ -377,7 +376,7 @@ describe('ProfilePageContainer - User not found', () => {
     // Mock useAuthStore to return isLoggingOut: true (global logout state)
     const core = await import('@/core');
     vi.mocked(core.useAuthStore).mockImplementation((selector: (state: AuthStore) => unknown) => {
-      const stateWithLogout = { ...mockAuthStoreState, isLoggingOut: true } as unknown as AuthStore;
+      const stateWithLogout = mockAuthStore({ ...mockAuthStoreState, isLoggingOut: true });
       return selector(stateWithLogout);
     });
 
@@ -393,8 +392,8 @@ describe('ProfilePageContainer - User not found', () => {
         avatarUrl: undefined,
         link: '',
       },
-      stats: mockStats as unknown as ReturnType<typeof hooks.useProfileHeader>['stats'],
-      actions: mockActions as unknown as ReturnType<typeof hooks.useProfileHeader>['actions'],
+      stats: asOpaque<ReturnType<typeof hooks.useProfileHeader>['stats']>(mockStats),
+      actions: asOpaque<ReturnType<typeof hooks.useProfileHeader>['actions']>(mockActions),
       isLoading: false,
       userNotFound: true,
     });
