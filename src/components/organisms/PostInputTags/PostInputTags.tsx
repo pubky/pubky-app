@@ -48,6 +48,7 @@ export function PostInputTags({ tags, onTagsChange, maxTags = POST_MAX_TAGS, dis
               currentTagsCount={tags.length}
               onBlur={disabled ? undefined : handleInputBlur}
               enableApiSuggestions
+              autoFocus={isAddingTag}
               excludeFromApiSuggestions={tags}
               addOnSuggestionClick
               containerVariant="plain"
