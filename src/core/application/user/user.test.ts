@@ -358,16 +358,18 @@ describe('UserApplication.getCounts', () => {
     bookmarks: 30,
   };
 
+  const mockCachedCounts = { id: userId, ...mockUserCounts } as Core.UserCountsModel;
+
   beforeEach(() => {
     vi.clearAllMocks();
   });
 
   it('should return user counts from local cache', async () => {
-    const localSpy = vi.spyOn(Core.LocalUserService, 'readCounts').mockResolvedValue(mockUserCounts);
+    const localSpy = vi.spyOn(Core.LocalUserService, 'readCounts').mockResolvedValue(mockCachedCounts);
 
     const result = await UserApplication.getCounts({ userId });
 
-    expect(result).toEqual(mockUserCounts);
+    expect(result).toEqual(mockCachedCounts);
     expect(localSpy).toHaveBeenCalledWith({ userId });
   });
 
@@ -401,17 +403,19 @@ describe('UserApplication.getOrFetchCounts', () => {
     unique_tags: 2,
   };
 
+  const mockCachedCounts = { id: userId, ...mockUserCounts } as Core.UserCountsModel;
+
   beforeEach(() => {
     vi.clearAllMocks();
   });
 
   it('should return user counts from local cache when available (local-first)', async () => {
-    const localSpy = vi.spyOn(Core.LocalUserService, 'readCounts').mockResolvedValue(mockUserCounts);
+    const localSpy = vi.spyOn(Core.LocalUserService, 'readCounts').mockResolvedValue(mockCachedCounts);
     const nexusSpy = vi.spyOn(Core.NexusUserService, 'counts');
 
     const result = await UserApplication.getOrFetchCounts({ userId });
 
-    expect(result).toEqual(mockUserCounts);
+    expect(result).toEqual(mockCachedCounts);
     expect(localSpy).toHaveBeenCalledWith({ userId });
     expect(nexusSpy).not.toHaveBeenCalled();
   });

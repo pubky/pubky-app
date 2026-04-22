@@ -58,6 +58,8 @@ const createStreamWithPosts = async (streamId: Core.PostStreamId, postIds: strin
 };
 
 const setupMutedUsers = async (mutedUserIds: string[]) => {
+  // BaseStreamModel.upsert's static `this` / Table generic does not narrow for UserStreamModel here
+  // (tsc error TS2684), but the runtime call matches other tests. Cast keeps the test compiling.
   await (Core.UserStreamModel as { upsert: (id: Core.UserStreamId, stream?: Core.Pubky[]) => Promise<unknown> }).upsert(
     Core.UserStreamTypes.MUTED,
     mutedUserIds as Core.Pubky[],

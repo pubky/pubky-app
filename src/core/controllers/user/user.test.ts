@@ -87,7 +87,7 @@ describe('UserController', () => {
 
   describe('getCounts', () => {
     it('should delegate to UserApplication.getCounts', async () => {
-      const userId = 'test-user-id';
+      const userId = 'test-user-id' as Core.Pubky;
       const mockUserCounts: Core.NexusUserCounts = {
         posts: 10,
         replies: 5,
@@ -100,11 +100,13 @@ describe('UserController', () => {
         bookmarks: 7,
       };
 
-      const countsSpy = vi.spyOn(Core.UserApplication, 'getCounts').mockResolvedValue(mockUserCounts);
+      const mockCachedCounts = { id: userId, ...mockUserCounts } as Core.UserCountsModel;
+
+      const countsSpy = vi.spyOn(Core.UserApplication, 'getCounts').mockResolvedValue(mockCachedCounts);
 
       const result = await UserController.getCounts({ userId });
 
-      expect(result).toEqual(mockUserCounts);
+      expect(result).toEqual(mockCachedCounts);
       expect(countsSpy).toHaveBeenCalledWith({ userId });
     });
 

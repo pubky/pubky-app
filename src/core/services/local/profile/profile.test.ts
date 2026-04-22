@@ -82,6 +82,7 @@ describe('LocalProfileService', () => {
 
       const result = await Core.LocalUserService.readCounts({ userId });
       expect(result).not.toBeNull();
+      expect(result!.id).toBe(userId);
       expect(result!.posts).toBe(10);
       expect(result!.replies).toBe(5);
       expect(result!.followers).toBe(100);

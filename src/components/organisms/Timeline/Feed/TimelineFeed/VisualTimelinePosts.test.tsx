@@ -4,16 +4,21 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { VisualTimelinePosts } from './VisualTimelinePosts';
 import type { VisualRow } from './TimelineFeedVisual.types';
 
-const { mockNavigateToPost, mockUseInfiniteScroll } = vi.hoisted(() => ({
+const {
+  mockNavigateToPost,
+  mockUseInfiniteScroll,
+  mockPostHeaderUserInfo,
+  mockUseVisualFeedTiles,
+  mockUseIsTouchDevice,
+} = vi.hoisted(() => ({
   mockNavigateToPost: vi.fn(),
   mockUseInfiniteScroll: vi.fn(),
+  mockPostHeaderUserInfo: vi.fn(({ timeAgo }: { timeAgo?: string }) => (
+    <div data-testid="visual-overlay-header">{timeAgo ? `Header:${timeAgo}` : 'Header'}</div>
+  )),
+  mockUseVisualFeedTiles: vi.fn(),
+  mockUseIsTouchDevice: vi.fn(() => false),
 }));
-
-const mockUseVisualFeedTiles = vi.fn();
-const mockUseIsTouchDevice = vi.fn(() => false);
-const mockPostHeaderUserInfo = vi.fn(({ timeAgo }: { timeAgo?: string }) => (
-  <div data-testid="visual-overlay-header">{timeAgo ? `Header:${timeAgo}` : 'Header'}</div>
-));
 
 vi.mock('@/hooks', async (importOriginal) => {
   const actual = await importOriginal<typeof import('@/hooks')>();
