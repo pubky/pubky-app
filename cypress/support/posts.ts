@@ -15,8 +15,7 @@ export enum PostOrReply {
 // // verify that a post in the feed has the expected content, post is located by index
 export const postInFeedContentEq = (postContent: string, idx: number) => {
   cy.get('[data-cy="timeline-posts"]')
-    .find('[data-testid="virtuoso-item-list"]')
-    .children()
+    .find('[data-cy="post-card"]')
     .should(($posts) => {
       expect($posts.length).to.be.greaterThan(idx);
 
@@ -244,8 +243,7 @@ export const deletePost = ({
 
 export const checkPostIsAtIndexInFeed = (postContent: string, index: number, repostContent?: string) => {
   cy.get('[data-cy="timeline-posts"]')
-    .find('[data-testid="virtuoso-item-list"]')
-    .children()
+    .find('[data-cy="post-card"]')
     .should(($posts) => {
       expect($posts.length).to.be.greaterThan(index);
 
@@ -332,8 +330,7 @@ const findAndCountPostsInFeed = (filterText: string, expectedCount: number) => {
     }
 
     cy.get('[data-cy="timeline-posts"]')
-      .find('[data-testid="virtuoso-item-list"]')
-      .children()
+      .find('[data-cy="post-card"]')
       .then(($posts) => {
         // Filter posts by text
         const matchingPosts = $posts.filter((_idx, element) => element.innerText.includes(filterText));

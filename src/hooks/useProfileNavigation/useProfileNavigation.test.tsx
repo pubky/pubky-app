@@ -27,12 +27,20 @@ vi.mock('@/providers', () => ({
   }),
 }));
 
+// Mock useIsMobile - default to desktop
+const mockIsMobile = vi.fn(() => false);
+
+vi.mock('@/hooks/useIsMobile', () => ({
+  useIsMobile: () => mockIsMobile(),
+}));
+
 describe('useProfileNavigation', () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    // Default to notifications route and own profile
+    // Default to notifications route, own profile, desktop
     mockPathname.mockReturnValue(PROFILE_ROUTES.PROFILE);
     mockIsOwnProfile.mockReturnValue(true);
+    mockIsMobile.mockReturnValue(false);
   });
 
   describe('activePage', () => {
@@ -319,6 +327,139 @@ describe('useProfileNavigation', () => {
 
       // Should return the same reference
       expect(result.current.filterBarActivePage).toBe(firstFilterBarActivePage);
+    });
+  });
+
+  describe('Mobile/Desktop viewport behavior for other users', () => {
+    beforeEach(() => {
+      mockIsOwnProfile.mockReturnValue(false);
+    });
+
+    it('should return PROFILE for other user base route on mobile', () => {
+      mockIsMobile.mockReturnValue(true);
+      mockPathname.mockReturnValue('/profile/user123');
+
+      const { result } = renderHook(() => useProfileNavigation());
+
+      expect(result.current.activePage).toBe(PROFILE_PAGE_TYPES.PROFILE);
+    });
+
+    it('should return POSTS for other user base route on desktop', () => {
+      mockIsMobile.mockReturnValue(false);
+      mockPathname.mockReturnValue('/profile/user123');
+
+      const { result } = renderHook(() => useProfileNavigation());
+
+      expect(result.current.activePage).toBe(PROFILE_PAGE_TYPES.POSTS);
+    });
+
+    it('should map filterBarActivePage to POSTS when activePage is PROFILE on mobile', () => {
+      mockIsMobile.mockReturnValue(true);
+      mockPathname.mockReturnValue('/profile/user123');
+
+      const { result } = renderHook(() => useProfileNavigation());
+
+      expect(result.current.activePage).toBe(PROFILE_PAGE_TYPES.PROFILE);
+      expect(result.current.filterBarActivePage).toBe(PROFILE_PAGE_TYPES.POSTS);
+    });
+
+    it('should return POSTS for explicit /posts route regardless of viewport', () => {
+      mockPathname.mockReturnValue('/profile/user123/posts');
+
+      mockIsMobile.mockReturnValue(true);
+      const { result: mobileResult } = renderHook(() => useProfileNavigation());
+      expect(mobileResult.current.activePage).toBe(PROFILE_PAGE_TYPES.POSTS);
+
+      mockIsMobile.mockReturnValue(false);
+      const { result: desktopResult } = renderHook(() => useProfileNavigation());
+      expect(desktopResult.current.activePage).toBe(PROFILE_PAGE_TYPES.POSTS);
+    });
+
+    it('should return PROFILE for explicit /profile route regardless of viewport', () => {
+      mockPathname.mockReturnValue('/profile/user123/profile');
+
+      mockIsMobile.mockReturnValue(true);
+      const { result: mobileResult } = renderHook(() => useProfileNavigation());
+      expect(mobileResult.current.activePage).toBe(PROFILE_PAGE_TYPES.PROFILE);
+
+      mockIsMobile.mockReturnValue(false);
+      const { result: desktopResult } = renderHook(() => useProfileNavigation());
+      expect(desktopResult.current.activePage).toBe(PROFILE_PAGE_TYPES.PROFILE);
+    });
+
+    it('should navigate to /profile subpath for other users', () => {
+      mockPathname.mockReturnValue('/profile/user123');
+
+      const { result } = renderHook(() => useProfileNavigation());
+
+      act(() => {
+        result.current.navigateToPage(PROFILE_PAGE_TYPES.PROFILE);
+      });
+
+      expect(mockPush).toHaveBeenCalledWith('/profile/user123/profile');
+    });
+
+    it('should navigate to /posts subpath for other users', () => {
+      mockPathname.mockReturnValue('/profile/user123');
+
+      const { result } = renderHook(() => useProfileNavigation());
+
+      act(() => {
+        result.current.navigateToPage(PROFILE_PAGE_TYPES.POSTS);
+      });
+
+      expect(mockPush).toHaveBeenCalledWith('/profile/user123/posts');
+    });
+  });
+
+  describe('Own profile is unaffected by viewport', () => {
+    beforeEach(() => {
+      mockIsOwnProfile.mockReturnValue(true);
+    });
+
+    it('should return NOTIFICATIONS for own profile base route on mobile', () => {
+      mockIsMobile.mockReturnValue(true);
+      mockPathname.mockReturnValue(PROFILE_ROUTES.PROFILE);
+
+      const { result } = renderHook(() => useProfileNavigation());
+
+      expect(result.current.activePage).toBe(PROFILE_PAGE_TYPES.NOTIFICATIONS);
+    });
+
+    it('should return NOTIFICATIONS for own profile base route on desktop', () => {
+      mockIsMobile.mockReturnValue(false);
+      mockPathname.mockReturnValue(PROFILE_ROUTES.PROFILE);
+
+      const { result } = renderHook(() => useProfileNavigation());
+
+      expect(result.current.activePage).toBe(PROFILE_PAGE_TYPES.NOTIFICATIONS);
+    });
+
+    it('should return NOTIFICATIONS for own profile dynamic base route on mobile', () => {
+      mockIsMobile.mockReturnValue(true);
+      mockPathname.mockReturnValue('/profile/user123');
+
+      const { result } = renderHook(() => useProfileNavigation());
+
+      expect(result.current.activePage).toBe(PROFILE_PAGE_TYPES.NOTIFICATIONS);
+    });
+
+    it('should return NOTIFICATIONS for own profile dynamic base route on desktop', () => {
+      mockIsMobile.mockReturnValue(false);
+      mockPathname.mockReturnValue('/profile/user123');
+
+      const { result } = renderHook(() => useProfileNavigation());
+
+      expect(result.current.activePage).toBe(PROFILE_PAGE_TYPES.NOTIFICATIONS);
+    });
+
+    it('should return NOTIFICATIONS for own profile dynamic notifications route', () => {
+      mockIsMobile.mockReturnValue(true);
+      mockPathname.mockReturnValue('/profile/user123/notifications');
+
+      const { result } = renderHook(() => useProfileNavigation());
+
+      expect(result.current.activePage).toBe(PROFILE_PAGE_TYPES.NOTIFICATIONS);
     });
   });
 });

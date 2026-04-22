@@ -2,7 +2,7 @@
 
 exports[`CopyrightForm - Snapshots > matches snapshot for default state 1`] = `
 <div
-  class="mx-auto w-full flex-col flex"
+  class="mx-auto w-full flex-col flex container max-w-(--container-max-width) px-6 pb-12 xl:px-0"
   data-testid="container"
 >
   <form>
@@ -61,8 +61,12 @@ exports[`CopyrightForm - Snapshots > matches snapshot for default state 1`] = `
           Rights Owner Information
         </p>
         <div
-          class="mx-auto w-full flex-col flex gap-4 xl:flex-row xl:justify-between"
-          data-testid="container"
+          aria-required="true"
+          class="grid gap-3 gap-4 xl:auto-cols-fr xl:grid-flow-col"
+          dir="ltr"
+          role="radiogroup"
+          style="outline: none;"
+          tabindex="0"
         >
           <div
             class="flex items-start gap-2"
@@ -70,45 +74,32 @@ exports[`CopyrightForm - Snapshots > matches snapshot for default state 1`] = `
           >
             <button
               aria-checked="true"
-              class="peer h-4 w-4 shrink-0 rounded border border-input bg-white/5 shadow-sm transition-colors focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background focus-visible:outline-none disabled:cursor-not-allowed disabled:opacity-50 data-[state=checked]:border-brand data-[state=checked]:bg-brand"
+              class="peer size-4 shrink-0 rounded-full border border-input bg-white/5 shadow-sm transition-colors focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background focus-visible:outline-none disabled:cursor-not-allowed disabled:opacity-50 data-[state=checked]:border-brand data-[state=checked]:bg-brand"
+              data-radix-collection-item=""
               data-state="checked"
-              id="isRightsOwner"
-              role="checkbox"
+              id="radix-normalized"
+              role="radio"
+              tabindex="-1"
               type="button"
-              value="on"
+              value="rights_owner"
             >
               <span
                 class="flex items-center justify-center"
                 data-state="checked"
-                style="pointer-events: none;"
               >
-                <svg
-                  aria-hidden="true"
-                  class="lucide lucide-check h-3.5 w-3.5 text-background"
-                  fill="none"
-                  height="24"
-                  stroke="currentColor"
-                  stroke-linecap="round"
-                  stroke-linejoin="round"
-                  stroke-width="3"
-                  viewBox="0 0 24 24"
-                  width="24"
-                  xmlns="http://www.w3.org/2000/svg"
-                >
-                  <path
-                    d="M20 6 9 17l-5-5"
-                  />
-                </svg>
+                <span
+                  class="block size-2 rounded-full bg-background"
+                />
               </span>
             </button>
             <input
               aria-hidden="true"
               checked=""
-              name="isRightsOwner"
-              style="position: absolute; pointer-events: none; opacity: 0; margin: 0px; transform: translateX(-100%); width: 0px; height: 0px;"
+              name="role"
+              style="transform: translateX(-100%); position: absolute; pointer-events: none; opacity: 0; margin: 0px; width: 0px; height: 0px;"
               tabindex="-1"
-              type="checkbox"
-              value="on"
+              type="radio"
+              value="rights_owner"
             />
             <div
               class="flex flex-col gap-1.5"
@@ -117,7 +108,7 @@ exports[`CopyrightForm - Snapshots > matches snapshot for default state 1`] = `
               <label
                 class="flex items-center gap-2 text-sm leading-none font-medium select-none group-data-[disabled=true]:pointer-events-none group-data-[disabled=true]:opacity-50 peer-disabled:cursor-not-allowed peer-disabled:opacity-50 cursor-pointer text-base leading-none font-medium text-foreground peer-disabled:cursor-not-allowed peer-disabled:opacity-50"
                 data-slot="label"
-                for="isRightsOwner"
+                for="radix-normalized"
               >
                 I am the rights owner
               </label>
@@ -129,20 +120,22 @@ exports[`CopyrightForm - Snapshots > matches snapshot for default state 1`] = `
           >
             <button
               aria-checked="false"
-              class="peer h-4 w-4 shrink-0 rounded border border-input bg-white/5 shadow-sm transition-colors focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background focus-visible:outline-none disabled:cursor-not-allowed disabled:opacity-50 data-[state=checked]:border-brand data-[state=checked]:bg-brand"
+              class="peer size-4 shrink-0 rounded-full border border-input bg-white/5 shadow-sm transition-colors focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background focus-visible:outline-none disabled:cursor-not-allowed disabled:opacity-50 data-[state=checked]:border-brand data-[state=checked]:bg-brand"
+              data-radix-collection-item=""
               data-state="unchecked"
-              id="isReportingOnBehalf"
-              role="checkbox"
+              id="radix-normalized"
+              role="radio"
+              tabindex="-1"
               type="button"
-              value="on"
+              value="reporting_on_behalf"
             />
             <input
               aria-hidden="true"
-              name="isReportingOnBehalf"
-              style="position: absolute; pointer-events: none; opacity: 0; margin: 0px; transform: translateX(-100%); width: 0px; height: 0px;"
+              name="role"
+              style="transform: translateX(-100%); position: absolute; pointer-events: none; opacity: 0; margin: 0px; width: 0px; height: 0px;"
               tabindex="-1"
-              type="checkbox"
-              value="on"
+              type="radio"
+              value="reporting_on_behalf"
             />
             <div
               class="flex flex-col gap-1.5"
@@ -151,7 +144,7 @@ exports[`CopyrightForm - Snapshots > matches snapshot for default state 1`] = `
               <label
                 class="flex items-center gap-2 text-sm leading-none font-medium select-none group-data-[disabled=true]:pointer-events-none group-data-[disabled=true]:opacity-50 peer-disabled:cursor-not-allowed peer-disabled:opacity-50 cursor-pointer text-base leading-none font-medium text-foreground peer-disabled:cursor-not-allowed peer-disabled:opacity-50"
                 data-slot="label"
-                for="isReportingOnBehalf"
+                for="radix-normalized"
               >
                 I am reporting on behalf of my organization or client
               </label>

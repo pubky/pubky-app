@@ -5,7 +5,6 @@ import type { VisualRow, VisualTile, VisualTileSize } from './TimelineFeedVisual
 export const VISUAL_GRID_GAP_PX = 24;
 export const VISUAL_GRID_MAX_WIDTH_PX = 1200;
 export const VISUAL_PENDING_TAIL_LIMIT = 3;
-export const VISUAL_AUTO_PAGINATE_MIN_ROWS = 3;
 export const VISUAL_SQUARE_MAX_RATIO = 1;
 export const VISUAL_WIDE_ELIGIBLE_MIN_RATIO = 4 / 3;
 export const VISUAL_WIDE_MIN_RATIO = 16 / 9;

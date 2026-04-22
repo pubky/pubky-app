@@ -11,6 +11,3 @@ export const TIMELINE_FEED_VARIANT = {
 } as const;
 
 export type TimelineFeedVariant = (typeof TIMELINE_FEED_VARIANT)[keyof typeof TIMELINE_FEED_VARIANT];
-
-/** Pixel overscan buffer for Virtuoso-based timeline lists. */
-export const TIMELINE_VIRTUOSO_OVERSCAN_PX = 1500;
