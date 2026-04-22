@@ -124,6 +124,8 @@ const cleanupAuthUser = () => {
   Core.useAuthStore.getState().reset();
 };
 
+// TODO: Refactor the dynamic `await import('./post')` / `await import('@/core/application')`
+// pattern in these tests to static top-level imports in a follow-up PR.
 describe('PostController', () => {
   beforeEach(async () => {
     vi.clearAllMocks();
@@ -487,7 +489,7 @@ describe('PostController', () => {
     it('should apply tags to the original post for a simple repost', async () => {
       await setupExistingPost();
       const ApplicationModule = await import('@/core/application');
-      const tagCommitSpy = vi.spyOn(ApplicationModule.TagApplication, 'commitCreate');
+      const postCommitSpy = vi.spyOn(ApplicationModule.PostApplication, 'commitCreate');
 
       const { PostController } = await import('./post');
       await PostController.commitCreate({
@@ -497,16 +499,16 @@ describe('PostController', () => {
         tags: ['bitcoin'],
       });
 
-      expect(tagCommitSpy).toHaveBeenCalled();
-      const { tagList } = tagCommitSpy.mock.calls[0][0];
-      expect(tagList[0]?.taggedId).toBe(testData.fullPostId);
-      expect(tagList[0]?.label).toBe('bitcoin');
+      expect(postCommitSpy).toHaveBeenCalled();
+      const { tags: tagList } = postCommitSpy.mock.calls[0][0];
+      expect(tagList?.[0]?.taggedId).toBe(testData.fullPostId);
+      expect(tagList?.[0]?.label).toBe('bitcoin');
     });
 
     it('should apply tags to the new post for a quote repost with text', async () => {
       await setupExistingPost();
       const ApplicationModule = await import('@/core/application');
-      const tagCommitSpy = vi.spyOn(ApplicationModule.TagApplication, 'commitCreate');
+      const postCommitSpy = vi.spyOn(ApplicationModule.PostApplication, 'commitCreate');
 
       const { PostController } = await import('./post');
       const createdId = await PostController.commitCreate({
@@ -516,16 +518,16 @@ describe('PostController', () => {
         tags: ['ethereum'],
       });
 
-      expect(tagCommitSpy).toHaveBeenCalled();
-      const { tagList } = tagCommitSpy.mock.calls[0][0];
-      expect(tagList[0]?.taggedId).toBe(createdId);
-      expect(tagList[0]?.label).toBe('ethereum');
+      expect(postCommitSpy).toHaveBeenCalled();
+      const { tags: tagList } = postCommitSpy.mock.calls[0][0];
+      expect(tagList?.[0]?.taggedId).toBe(createdId);
+      expect(tagList?.[0]?.label).toBe('ethereum');
     });
 
     it('should apply tags to the new post for a quote repost with attachment only', async () => {
       await setupExistingPost();
       const ApplicationModule = await import('@/core/application');
-      const tagCommitSpy = vi.spyOn(ApplicationModule.TagApplication, 'commitCreate');
+      const postCommitSpy = vi.spyOn(ApplicationModule.PostApplication, 'commitCreate');
       const imageFile = new File(['image-content'], 'photo.png', { type: 'image/png' });
 
       const { PostController } = await import('./post');
@@ -537,10 +539,10 @@ describe('PostController', () => {
         tags: ['nft'],
       });
 
-      expect(tagCommitSpy).toHaveBeenCalled();
-      const { tagList } = tagCommitSpy.mock.calls[0][0];
-      expect(tagList[0]?.taggedId).toBe(createdId);
-      expect(tagList[0]?.label).toBe('nft');
+      expect(postCommitSpy).toHaveBeenCalled();
+      const { tags: tagList } = postCommitSpy.mock.calls[0][0];
+      expect(tagList?.[0]?.taggedId).toBe(createdId);
+      expect(tagList?.[0]?.label).toBe('nft');
     });
   });
 
