@@ -186,6 +186,7 @@ export function ClickableTagsList({
                 enableApiSuggestions={isAuthenticated}
                 excludeFromApiSuggestions={enrichedTags.map((t) => t.label)}
                 addOnSuggestionClick={true}
+                autoFocus={isAuthenticated && isAdding}
                 containerVariant="plain"
                 className="w-full shrink-0"
               />

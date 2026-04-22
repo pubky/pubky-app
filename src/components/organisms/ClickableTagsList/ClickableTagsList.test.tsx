@@ -573,6 +573,28 @@ describe('ClickableTagsList', () => {
       expect(screen.getByTestId('tag-input')).toBeInTheDocument();
     });
 
+    it('auto-focuses input when entering addMode', () => {
+      render(
+        <ClickableTagsList
+          taggedId="post-123"
+          taggedKind={Core.TagKind.POST}
+          tags={mockTags}
+          showAddButton={true}
+          maxTags={10}
+          addMode={true}
+        />,
+      );
+
+      fireEvent.click(screen.getByTestId('post-tag-add-button'));
+
+      expect(mockTagInput).toHaveBeenLastCalledWith(
+        expect.objectContaining({
+          autoFocus: true,
+        }),
+        undefined,
+      );
+    });
+
     it('closes input on blur in addMode', () => {
       render(
         <ClickableTagsList
