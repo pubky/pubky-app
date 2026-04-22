@@ -1,10 +1,14 @@
 import type { NextConfig } from 'next';
 import withSerwistInit from '@serwist/next';
 import createNextIntlPlugin from 'next-intl/plugin';
+import packageJson from './package.json';
 
 const withNextIntl = createNextIntlPlugin('./src/i18n/request.ts');
 
 const nextConfig: NextConfig = {
+  env: {
+    NEXT_PUBLIC_APP_VERSION: packageJson.version,
+  },
   reactCompiler: true,
   // Only use standalone output when building for Docker (set NEXT_STANDALONE=true)
   ...(process.env.NEXT_STANDALONE === 'true' && { output: 'standalone' }),

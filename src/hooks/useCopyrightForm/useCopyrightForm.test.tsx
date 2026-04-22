@@ -1,6 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { renderHook, act } from '@testing-library/react';
 import { useCopyrightForm } from './useCopyrightForm';
+import { COPYRIGHT_ROLES } from './useCopyrightForm.constants';
 
 const mockToast = vi.fn();
 const mockShowErrorToast = vi.fn();
@@ -42,38 +43,14 @@ describe('useCopyrightForm', () => {
   });
 
   describe('initial state', () => {
-    it('should initialize with correct default values', () => {
+    it('should initialize with rights_owner role selected by default', () => {
       const { result } = renderHook(() => useCopyrightForm());
       const values = result.current.form.getValues();
 
-      expect(values.isRightsOwner).toBe(true);
-      expect(values.isReportingOnBehalf).toBe(false);
+      expect(values.role).toBe(COPYRIGHT_ROLES.RIGHTS_OWNER);
       expect(values.nameOwner).toBe('');
       expect(values.email).toBe('');
       expect(result.current.form.formState.isSubmitting).toBe(false);
-    });
-  });
-
-  describe('handleRoleChange', () => {
-    it('should handle mutual exclusion for role checkboxes', () => {
-      const { result } = renderHook(() => useCopyrightForm());
-
-      expect(result.current.form.getValues('isRightsOwner')).toBe(true);
-      expect(result.current.form.getValues('isReportingOnBehalf')).toBe(false);
-
-      act(() => {
-        result.current.handleRoleChange('isReportingOnBehalf', true);
-      });
-
-      expect(result.current.form.getValues('isRightsOwner')).toBe(false);
-      expect(result.current.form.getValues('isReportingOnBehalf')).toBe(true);
-
-      act(() => {
-        result.current.handleRoleChange('isRightsOwner', true);
-      });
-
-      expect(result.current.form.getValues('isRightsOwner')).toBe(true);
-      expect(result.current.form.getValues('isReportingOnBehalf')).toBe(false);
     });
   });
 
@@ -88,22 +65,25 @@ describe('useCopyrightForm', () => {
       expect(global.fetch).not.toHaveBeenCalled();
     });
 
-    it('should not submit when role validation fails', async () => {
+    it('should not submit when role is unset', async () => {
       const { result } = renderHook(() => useCopyrightForm());
 
-      // Fill all required fields but uncheck both role checkboxes
+      // Fill all required fields, then clear the role to trigger role validation failure
       act(() => {
         Object.entries(validFormData).forEach(([key, value]) => {
           result.current.form.setValue(key as keyof typeof validFormData, value);
         });
-        result.current.handleRoleChange('isRightsOwner', false);
+        // Cast undefined to bypass enum-typing — we're explicitly testing the unset case
+        result.current.form.setValue(
+          'role',
+          undefined as unknown as (typeof COPYRIGHT_ROLES)[keyof typeof COPYRIGHT_ROLES],
+        );
       });
 
       await act(async () => {
         await result.current.onSubmit();
       });
 
-      // Should not call fetch because role validation fails
       expect(global.fetch).not.toHaveBeenCalled();
     });
 
@@ -126,24 +106,47 @@ describe('useCopyrightForm', () => {
   });
 
   describe('form submission', () => {
-    it('should submit form with valid data', async () => {
+    it('should derive isRightsOwner=true / isReportingOnBehalf=false in payload when role=rights_owner', async () => {
       const { result } = renderHook(() => useCopyrightForm());
 
       act(() => {
         Object.entries(validFormData).forEach(([key, value]) => {
           result.current.form.setValue(key as keyof typeof validFormData, value);
         });
+        result.current.form.setValue('role', COPYRIGHT_ROLES.RIGHTS_OWNER);
       });
 
       await act(async () => {
         await result.current.onSubmit();
       });
 
-      expect(global.fetch).toHaveBeenCalledWith('/api/copyright', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: expect.stringContaining('"nameOwner":"John Doe"'),
+      expect(global.fetch).toHaveBeenCalledTimes(1);
+      const [, init] = vi.mocked(global.fetch).mock.calls[0]!;
+      const body = JSON.parse((init as RequestInit).body as string);
+      expect(body.isRightsOwner).toBe(true);
+      expect(body.isReportingOnBehalf).toBe(false);
+      expect(body.role).toBeUndefined();
+      expect(body.nameOwner).toBe('John Doe');
+    });
+
+    it('should derive isRightsOwner=false / isReportingOnBehalf=true in payload when role=reporting_on_behalf', async () => {
+      const { result } = renderHook(() => useCopyrightForm());
+
+      act(() => {
+        Object.entries(validFormData).forEach(([key, value]) => {
+          result.current.form.setValue(key as keyof typeof validFormData, value);
+        });
+        result.current.form.setValue('role', COPYRIGHT_ROLES.REPORTING_ON_BEHALF);
       });
+
+      await act(async () => {
+        await result.current.onSubmit();
+      });
+
+      const [, init] = vi.mocked(global.fetch).mock.calls[0]!;
+      const body = JSON.parse((init as RequestInit).body as string);
+      expect(body.isRightsOwner).toBe(false);
+      expect(body.isReportingOnBehalf).toBe(true);
     });
 
     it('should show success toast on successful submission', async () => {
@@ -188,13 +191,14 @@ describe('useCopyrightForm', () => {
       });
     });
 
-    it('should reset form after successful submission', async () => {
+    it('should reset form (and restore default role) after successful submission', async () => {
       const { result } = renderHook(() => useCopyrightForm());
 
       act(() => {
         Object.entries(validFormData).forEach(([key, value]) => {
           result.current.form.setValue(key as keyof typeof validFormData, value);
         });
+        result.current.form.setValue('role', COPYRIGHT_ROLES.REPORTING_ON_BEHALF);
       });
 
       expect(result.current.form.getValues('nameOwner')).toBe('John Doe');
@@ -204,7 +208,7 @@ describe('useCopyrightForm', () => {
       });
 
       expect(result.current.form.getValues('nameOwner')).toBe('');
-      expect(result.current.form.getValues('isRightsOwner')).toBe(true);
+      expect(result.current.form.getValues('role')).toBe(COPYRIGHT_ROLES.RIGHTS_OWNER);
     });
 
     it('should handle network errors gracefully', async () => {

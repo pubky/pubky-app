@@ -41,7 +41,7 @@ exports[`SinglePostContent - Snapshots > matches snapshot with deleted parent po
     data-testid="container"
   >
     <div
-      data-class-name="w-full min-w-0 flex-1 gap-0 overflow-hidden"
+      data-class-name="mb-12 w-full min-w-0 flex-1 gap-0 overflow-hidden sm:mb-0"
       data-testid="container"
     >
       <div
@@ -86,7 +86,7 @@ Article content"
     data-testid="container"
   >
     <div
-      data-class-name="w-full min-w-0 flex-1 gap-0 overflow-hidden"
+      data-class-name="mb-12 w-full min-w-0 flex-1 gap-0 overflow-hidden sm:mb-0"
       data-testid="container"
     >
       <div
@@ -127,7 +127,7 @@ exports[`SinglePostContent - Snapshots > matches snapshot with short post and no
     data-testid="container"
   >
     <div
-      data-class-name="w-full min-w-0 flex-1 gap-0 overflow-hidden"
+      data-class-name="mb-12 w-full min-w-0 flex-1 gap-0 overflow-hidden sm:mb-0"
       data-testid="container"
     >
       <div

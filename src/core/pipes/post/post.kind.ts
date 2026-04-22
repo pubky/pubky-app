@@ -7,6 +7,14 @@ type TInferPostKindParams = {
   isArticle?: boolean;
 };
 
+type TResolveTagTargetCompositeIdParams = {
+  authorId: string;
+  newPostId: string;
+  originalPostId?: string;
+  content: string;
+  attachments?: File[];
+};
+
 // Keep these aligned with PostLinkEmbeds so we treat links consistently.
 const IGNORED_PROTOCOLS = ['ftp:', 'mailto:'];
 
@@ -57,4 +65,30 @@ export const inferPostKindForCreate = ({ content, attachments, isArticle }: TInf
   }
 
   return PubkyAppPostKind.Short;
+};
+
+/**
+ * Where post tags should be stored on create. For a simple repost (no text, no attachments),
+ * tags apply to the embedded original post; for a quote repost (text and/or attachment), they apply to the new post.
+ */
+export const resolveTagTargetCompositeIdForPostCreate = ({
+  authorId,
+  newPostId,
+  originalPostId,
+  content,
+  attachments,
+}: TResolveTagTargetCompositeIdParams): string => {
+  const newCompositeId = `${authorId}:${newPostId}`;
+  if (!originalPostId) {
+    return newCompositeId;
+  }
+
+  const hasAttachments = (attachments?.length ?? 0) > 0;
+  const isSimpleRepost = !content.trim() && !hasAttachments;
+
+  if (isSimpleRepost) {
+    return originalPostId;
+  }
+
+  return newCompositeId;
 };

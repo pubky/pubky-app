@@ -225,6 +225,9 @@ const envSchema = z.object({
     .string()
     .optional()
     .default('https://play.google.com/store/apps/details?id=to.pubky.ring&pcampaignid=web_share'),
+
+  // App version (injected from package.json via next.config.ts)
+  NEXT_PUBLIC_APP_VERSION: z.string(),
 });
 
 /**
@@ -361,6 +364,7 @@ function parseEnv(): z.infer<typeof envSchema> {
     NEXT_PUBLIC_EMAIL: process.env.NEXT_PUBLIC_EMAIL,
     NEXT_PUBLIC_APP_STORE_URL: process.env.NEXT_PUBLIC_APP_STORE_URL,
     NEXT_PUBLIC_PLAY_STORE_URL: process.env.NEXT_PUBLIC_PLAY_STORE_URL,
+    NEXT_PUBLIC_APP_VERSION: process.env.NEXT_PUBLIC_APP_VERSION,
     NEXT_PUBLIC_SITE_NAME: process.env.NEXT_PUBLIC_SITE_NAME,
   });
 
