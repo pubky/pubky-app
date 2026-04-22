@@ -66,9 +66,5 @@
     "src/__tests__/page.test.jsx",
     ".next/dev/types/**/*.ts"
   ],
-  "exclude": [
-    "node_modules",
-    "**/*.stories.tsx",
-    "**/*.stories.ts"
-  ]
+  "exclude": ["node_modules"]
 }

@@ -2,7 +2,6 @@ import { fixupConfigRules } from '@eslint/compat';
 import pluginNext from '@next/eslint-plugin-next';
 import pluginReact from 'eslint-plugin-react';
 import pluginReactHooks from 'eslint-plugin-react-hooks';
-import pluginStorybook from 'eslint-plugin-storybook';
 import tsParser from '@typescript-eslint/parser';
 import tsPlugin from '@typescript-eslint/eslint-plugin';
 
@@ -16,8 +15,6 @@ const eslintConfig = [
       '**/dist/**',
       '**/.turbo/**',
       '**/coverage/**',
-      '**/storybook-static/**',
-      '**/.storybook/**',
       '**/__snapshots__/**',
       '*.config.js',
       '*.config.mjs',
@@ -25,7 +22,6 @@ const eslintConfig = [
       'cypress/**',
       'cypress.config.ts',
       'next-env.d.ts',
-      'vitest.shims.d.ts',
       // PWA generated files (serwist)
       'public/sw.js',
     ],
@@ -47,7 +43,6 @@ const eslintConfig = [
       react: pluginReact,
       'react-hooks': pluginReactHooks,
       '@next/next': pluginNext,
-      storybook: pluginStorybook,
     },
     rules: {
       ...tsPlugin.configs['recommended'].rules,
@@ -76,12 +71,6 @@ const eslintConfig = [
     files: ['**/*.test.{ts,tsx,js,jsx,mjs,cjs}'],
     rules: {
       '@next/next/no-img-element': 'off',
-    },
-  },
-  {
-    files: ['**/*.stories.{ts,tsx,js,jsx,mjs,cjs}'],
-    rules: {
-      'storybook/no-redundant-story-name': 'off',
     },
   },
 ];
