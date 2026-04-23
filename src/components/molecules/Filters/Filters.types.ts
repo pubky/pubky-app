@@ -12,6 +12,7 @@ export interface FilterItem<T = string> {
   label: string;
   icon: React.ComponentType<{ className?: string }>;
   disabled?: boolean;
+  dataCy?: string;
 }
 
 /**

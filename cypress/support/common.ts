@@ -47,6 +47,8 @@ export const saveNetworkRequestLog = (interceptedRequests: NetworkRequest[], tes
 
 export const verifyNotificationCounter = (expectedCount?: number) => {
   if (expectedCount === 0) {
+    cy.intercept({ method: 'GET', url: '**/v0/user/*/notifications*' }).as('getNextNotifications');
+    cy.wait('@getNextNotifications', { timeout: 30_000 });
     cy.get('[data-cy="header-notification-counter"]').should('not.exist');
   } else {
     cy.get('[data-cy="header-notification-counter"]', { timeout: 30_000 })
