@@ -27,7 +27,7 @@ export const HomeActions = () => {
       onSignIn={handleSignIn}
       onCreateAccount={handleCreateAccount}
       signInText={t('signIn')}
-      createAccountText={t('createAccount')}
+      createAccountText={t('joinNow')}
     />
   );
 };
