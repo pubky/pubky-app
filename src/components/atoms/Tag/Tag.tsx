@@ -59,7 +59,12 @@ export const Tag = ({
       </Atoms.Typography>
 
       {count !== undefined && (
-        <Atoms.Typography size="sm" className="ml-1.5 shrink-0 font-medium text-foreground/50" data-testid="tag-count">
+        <Atoms.Typography
+          size="sm"
+          className="ml-1.5 shrink-0 font-medium text-foreground/50"
+          data-cy="post-tag-count"
+          data-testid="tag-count"
+        >
           {count}
         </Atoms.Typography>
       )}

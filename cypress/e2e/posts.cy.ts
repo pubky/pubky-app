@@ -306,7 +306,7 @@ describe('posts', () => {
     });
   });
 
-  it('can tag and remove tags from existing post on post page', () => {
+  it('can tag and remove tags from existing post on post page (columns layout)', () => {
     const postContent = `I can add and remove tags from my existing post on the post page! ${Date.now()}`;
     const tag1 = 'açorda';
     const tag2 = 'cassava';
@@ -322,6 +322,64 @@ describe('posts', () => {
 
     cy.get('[data-cy="single-post-card"]').within(() => {
       cy.intercept('PUT', '**/pub/pubky.app/tags/**').as('putTag');
+      cy.get('[data-cy="post-tag-add-button"]').click();
+      [tag1, tag2, tag3].forEach((tag) => {
+        cy.get('[data-cy="add-tag-input"]').filter(':visible').type(`${tag}{enter}`);
+        cy.wait('@putTag').its('response.statusCode').should('eq', 201);
+      });
+
+      cy.get('[data-cy="clickable-tags-list"]')
+        .filter(':visible')
+        .within(() => {
+          [tag1, tag2, tag3].forEach((tag) => {
+            cy.contains('span', tag)
+              .should('be.visible')
+              .parent()
+              .find('[data-cy="post-tag-count"]')
+              .should('have.text', '1');
+          });
+
+          cy.intercept('DELETE', '**/pub/pubky.app/tags/**').as('deleteTag');
+          cy.contains('span', tag2).parent().click();
+          cy.wait('@deleteTag').its('response.statusCode').should('eq', 204);
+          cy.contains('span', tag2)
+            .should('be.visible')
+            .parent()
+            .find('[data-cy="post-tag-count"]')
+            .should('have.text', '0');
+        });
+    });
+
+    cy.reload();
+
+    cy.get('[data-cy="single-post-card"]').within(() => {
+      cy.get('[data-cy="clickable-tags-list"]')
+        .filter(':visible')
+        .within(() => {
+          cy.contains('span', tag2).should('not.exist');
+        });
+    });
+  });
+
+  it('can tag and remove tags from existing post on post page (wide layout)', () => {
+    const postContent = `I can add and remove tags from my existing post on the post page! ${Date.now()}`;
+    const tag1 = 'açorda';
+    const tag2 = 'cassava';
+    const tag3 = 'feijoada';
+
+    createQuickPost(postContent);
+
+    cy.findFirstPostInFeedFiltered(postContent, CheckForNewPosts.No, WaitForNewPosts.Yes).within(() => {
+      cy.get('[data-cy="post-text"]').click();
+    });
+
+    cy.location('pathname').should('contain', '/post/');
+
+    // switch to wide layout
+    cy.get('[data-cy="wide-layout-toggle"]').filter(':visible').click();
+
+    cy.get('[data-cy="single-post-card"]').within(() => {
+      cy.intercept('PUT', '**/pub/pubky.app/tags/**').as('putTag');
       [tag1, tag2, tag3].forEach((tag) => {
         cy.get('[data-cy="add-tag-input"]').filter(':visible').type(`${tag}{enter}`);
         cy.wait('@putTag').its('response.statusCode').should('eq', 201);
@@ -334,7 +392,7 @@ describe('posts', () => {
             cy.contains('p', tag)
               .should('be.visible')
               .parent()
-              .find('[data-testid="tag-count"]')
+              .find('[data-cy="post-tag-count"]')
               .should('have.text', '1');
           });
 
@@ -344,7 +402,7 @@ describe('posts', () => {
           cy.contains('p', tag2)
             .should('be.visible')
             .parent()
-            .find('[data-testid="tag-count"]')
+            .find('[data-cy="post-tag-count"]')
             .should('have.text', '0');
         });
     });

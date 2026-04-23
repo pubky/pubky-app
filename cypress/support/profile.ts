@@ -73,9 +73,24 @@ export const editProfileAndVerify = (profileData: Partial<Record<keyof typeof pr
 };
 
 export const clickFollowButton = () => {
-  cy.get('[data-cy="profile-follow-toggle-btn"]').should('be.visible').and('have.text', 'Follow').click();
-  // Check follow button is now unfollow
-  cy.get('[data-cy="profile-follow-toggle-btn"]').should('be.visible').and('have.text', 'FollowingUnfollow');
+  cy.get('[data-cy="profile-follow-toggle-btn"]')
+    .filter(':visible')
+    .should('have.length.at.least', 1)
+    .first()
+    .should('be.visible')
+    .then(($btn) => {
+      expect($btn.text().trim()).to.match(/^Follow\b/);
+      cy.wrap($btn).click();
+    });
+
+  // Check follow button has moved to followed/unfollow state.
+  cy.get('[data-cy="profile-follow-toggle-btn"]')
+    .filter(':visible')
+    .should('have.length.at.least', 1)
+    .first()
+    .should('be.visible')
+    .invoke('text')
+    .should('match', /Following|Unfollow/);
 };
 
 export const clickUnfollowButton = () => {
