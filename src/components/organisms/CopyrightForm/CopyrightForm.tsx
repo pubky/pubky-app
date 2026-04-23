@@ -1,21 +1,22 @@
 'use client';
 
+import { Controller } from 'react-hook-form';
 import * as Atoms from '@/atoms';
 import * as Hooks from '@/hooks';
 import * as Libs from '@/libs';
 import * as Molecules from '@/molecules';
-import { COPYRIGHT_FORM_FIELDS, type CopyrightFormData } from '@/hooks';
+import { COPYRIGHT_FORM_FIELDS, COPYRIGHT_ROLES, type CopyrightFormData } from '@/hooks';
 import { useTranslations } from 'next-intl';
 
 export function CopyrightForm() {
   const t = useTranslations('forms.copyright');
-  const { form, onSubmit, handleRoleChange } = Hooks.useCopyrightForm();
+  const { form, onSubmit } = Hooks.useCopyrightForm();
   const { isSubmitting, errors } = form.formState;
-  const roleError = errors.isRightsOwner?.message;
+  const roleError = errors.role?.message;
   const currentDate = Libs.formatUSDate();
 
   return (
-    <Atoms.Container>
+    <Atoms.Container size="container" className="px-6 pb-12 xl:px-0">
       <form onSubmit={onSubmit}>
         <Atoms.Card className="rounded-t-lg rounded-b-none border border-border p-8 md:p-12">
           <Atoms.Container className="gap-6">
@@ -47,29 +48,35 @@ export function CopyrightForm() {
 
             <Atoms.Typography size="md">{t('rightsOwner')}</Atoms.Typography>
 
-            <Atoms.Container className="gap-4 xl:flex-row xl:justify-between">
-              <Atoms.Checkbox
-                id={COPYRIGHT_FORM_FIELDS.IS_RIGHTS_OWNER}
-                name={COPYRIGHT_FORM_FIELDS.IS_RIGHTS_OWNER}
-                checked={form.watch(COPYRIGHT_FORM_FIELDS.IS_RIGHTS_OWNER)}
-                onCheckedChange={(checked) => handleRoleChange(COPYRIGHT_FORM_FIELDS.IS_RIGHTS_OWNER, Boolean(checked))}
-                label={t('iAmOwner')}
-                disabled={isSubmitting}
-              />
-              <Atoms.Checkbox
-                id={COPYRIGHT_FORM_FIELDS.IS_REPORTING_ON_BEHALF}
-                name={COPYRIGHT_FORM_FIELDS.IS_REPORTING_ON_BEHALF}
-                checked={form.watch(COPYRIGHT_FORM_FIELDS.IS_REPORTING_ON_BEHALF)}
-                onCheckedChange={(checked) =>
-                  handleRoleChange(COPYRIGHT_FORM_FIELDS.IS_REPORTING_ON_BEHALF, Boolean(checked))
-                }
-                label={t('iAmReporting')}
-                disabled={isSubmitting}
-              />
-            </Atoms.Container>
+            <Controller
+              control={form.control}
+              name={COPYRIGHT_FORM_FIELDS.ROLE}
+              render={({ field }) => (
+                <Atoms.RadioGroup
+                  name={field.name}
+                  value={field.value ?? ''}
+                  onValueChange={field.onChange}
+                  onBlur={field.onBlur}
+                  disabled={isSubmitting}
+                  className="gap-4 xl:auto-cols-fr xl:grid-flow-col"
+                  aria-required
+                  aria-invalid={Boolean(roleError) || undefined}
+                  aria-errormessage={roleError ? 'copyright-role-error' : undefined}
+                  aria-describedby={roleError ? 'copyright-role-error' : undefined}
+                >
+                  <Atoms.RadioGroupItem value={COPYRIGHT_ROLES.RIGHTS_OWNER} label={t('iAmOwner')} />
+                  <Atoms.RadioGroupItem value={COPYRIGHT_ROLES.REPORTING_ON_BEHALF} label={t('iAmReporting')} />
+                </Atoms.RadioGroup>
+              )}
+            />
 
             {roleError && (
-              <Atoms.Typography size="sm" className="font-normal text-destructive" role="alert">
+              <Atoms.Typography
+                id="copyright-role-error"
+                size="sm"
+                className="font-normal text-destructive"
+                role="alert"
+              >
                 {roleError}
               </Atoms.Typography>
             )}

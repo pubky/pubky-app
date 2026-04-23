@@ -5,6 +5,7 @@ import { PostInput } from './PostInput';
 import { POST_INPUT_VARIANT } from './PostInput.constants';
 import { POST_THREAD_CONNECTOR_VARIANTS } from '@/components/atoms/PostThreadConnector/PostThreadConnector.constants';
 import { POST_MAX_CHARACTER_LENGTH } from '@/config';
+import { PostMainLayoutProvider } from '@/organisms/PostMain/PostMainLayout';
 import * as Hooks from '@/hooks';
 
 // next-intl is mocked globally in src/config/test.ts
@@ -57,10 +58,11 @@ vi.mock('@/atoms', async () => {
         {children}
       </div>
     ),
-    Textarea: vi.fn(({ value, onChange, placeholder, disabled, ref, onFocus, onKeyDown, autoFocus }) => (
+    Textarea: vi.fn(({ value, onChange, placeholder, disabled, ref, onFocus, onKeyDown, autoFocus, className }) => (
       <textarea
         ref={ref}
         data-testid="textarea"
+        data-class-name={className}
         value={value}
         onChange={onChange}
         onFocus={onFocus}
@@ -106,13 +108,14 @@ vi.mock('@/atoms', async () => {
 });
 
 vi.mock('@/organisms', () => ({
-  PostHeader: vi.fn(({ postId, isReplyInput, characterLimit }) => (
+  PostHeader: vi.fn(({ postId, isReplyInput, characterLimit, size }) => (
     <div
       data-testid="post-header"
       data-post-id={postId}
       data-is-reply={isReplyInput}
       data-count={characterLimit?.count}
       data-max={characterLimit?.max}
+      data-size={size}
     />
   )),
 }));
@@ -373,6 +376,7 @@ vi.mock('@/hooks', () => ({
   })),
   useEmojiInsert: vi.fn(() => vi.fn()),
   useEnterSubmit: vi.fn(() => mockEnterSubmitHandler),
+  useIsMobile: vi.fn(() => false),
   usePostInput: vi.fn((options: { variant: string; placeholder?: string }) => createUsePostInputReturn(options)),
 }));
 
@@ -715,6 +719,62 @@ describe('PostInput', () => {
     render(<PostInput variant={POST_INPUT_VARIANT.POST} />);
 
     expect(screen.getByTestId('post-input-attachments')).toBeInTheDocument();
+  });
+
+  describe('wide layout', () => {
+    const mockUseIsMobile = vi.mocked(Hooks.useIsMobile);
+
+    beforeEach(() => {
+      mockUseIsMobile.mockReturnValue(false);
+    });
+
+    it('applies inline padding and default header size when no provider is present', () => {
+      render(<PostInput variant={POST_INPUT_VARIANT.POST} />);
+
+      const outerContainer = screen.getAllByTestId('container')[0];
+      expect(outerContainer.className).toContain('p-4');
+      expect(outerContainer.className).not.toContain('p-12');
+
+      const postHeader = screen.getByTestId('post-header');
+      expect(postHeader).toHaveAttribute('data-size', 'normal');
+
+      expect(screen.getByTestId('textarea')).not.toHaveAttribute('data-class-name');
+    });
+
+    it('applies wide padding, large header size, and text-xl body when inheriting side layout', () => {
+      render(
+        <PostMainLayoutProvider tagsLayout="side">
+          <PostInput variant={POST_INPUT_VARIANT.POST} />
+        </PostMainLayoutProvider>,
+      );
+
+      const outerContainer = screen.getAllByTestId('container')[0];
+      expect(outerContainer.className).toContain('p-12');
+      expect(outerContainer.className).not.toContain('p-4');
+
+      const postHeader = screen.getByTestId('post-header');
+      expect(postHeader).toHaveAttribute('data-size', 'large');
+
+      expect(screen.getByTestId('textarea')).toHaveAttribute('data-class-name', 'text-xl leading-7');
+    });
+
+    it('falls back to inline layout on mobile even when the inherited layout is side', () => {
+      mockUseIsMobile.mockReturnValue(true);
+
+      render(
+        <PostMainLayoutProvider tagsLayout="side">
+          <PostInput variant={POST_INPUT_VARIANT.POST} />
+        </PostMainLayoutProvider>,
+      );
+
+      const outerContainer = screen.getAllByTestId('container')[0];
+      expect(outerContainer.className).toContain('p-4');
+      expect(outerContainer.className).not.toContain('p-12');
+
+      const postHeader = screen.getByTestId('post-header');
+      expect(postHeader).toHaveAttribute('data-size', 'normal');
+      expect(screen.getByTestId('textarea')).not.toHaveAttribute('data-class-name');
+    });
   });
 
   it('does not trigger drag handlers in edit mode', () => {

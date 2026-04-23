@@ -2,6 +2,7 @@ import React from 'react';
 import { render, screen } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { SinglePostContent } from './SinglePostContent';
+import * as Core from '@/core';
 import * as Hooks from '@/hooks';
 
 // Mock hooks
@@ -122,13 +123,20 @@ vi.mock('../SinglePostArticle', () => ({
   ),
 }));
 
-vi.mock('../SinglePostCard', () => ({
-  SinglePostCard: ({ postId }: { postId: string }) => (
-    <div data-testid="single-post-card" data-post-id={postId}>
-      SinglePostCard
-    </div>
-  ),
-}));
+vi.mock('../SinglePostCard', async () => {
+  const { usePostMainLayout } = await import('@/organisms/PostMain/PostMainLayout');
+
+  return {
+    SinglePostCard: ({ postId }: { postId: string }) => {
+      const inheritedTagsLayout = usePostMainLayout();
+      return (
+        <div data-testid="single-post-card" data-post-id={postId} data-tags-layout={inheritedTagsLayout}>
+          SinglePostCard
+        </div>
+      );
+    },
+  };
+});
 
 vi.mock('../PostPageHeader', () => ({
   PostPageHeader: ({ postId }: { postId: string }) => (
@@ -168,6 +176,7 @@ describe('SinglePostContent', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     mockIsPostDeleted.mockReturnValue(false);
+    Core.useHomeStore.getState().reset();
     vi.mocked(Hooks.useRequireAuth).mockReturnValue(mockUseRequireAuth());
     vi.mocked(Hooks.usePostDetails).mockReturnValue(mockUsePostDetails());
     vi.mocked(Hooks.usePostCounts).mockReturnValue(mockUsePostCounts());
@@ -181,7 +190,16 @@ describe('SinglePostContent', () => {
 
       expect(screen.getByTestId('single-post-card')).toBeInTheDocument();
       expect(screen.getByTestId('single-post-card')).toHaveAttribute('data-post-id', mockPostId);
+      expect(screen.getByTestId('single-post-card')).toHaveAttribute('data-tags-layout', 'inline');
       expect(screen.queryByTestId('single-post-article')).not.toBeInTheDocument();
+    });
+
+    it('derives side tags layout for the single-post surface when the app is in wide mode', () => {
+      Core.useHomeStore.getState().setLayout(Core.LAYOUT.WIDE);
+
+      render(<SinglePostContent postId={mockPostId} />);
+
+      expect(screen.getByTestId('single-post-card')).toHaveAttribute('data-tags-layout', 'side');
     });
 
     it('renders SinglePostArticle for long posts', () => {

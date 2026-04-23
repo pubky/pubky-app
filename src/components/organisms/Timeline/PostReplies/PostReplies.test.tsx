@@ -37,7 +37,15 @@ vi.mock('@/libs', async () => {
 
 // Mock atoms
 vi.mock('@/atoms', () => ({
-  Container: ({ children, ...props }: { children?: React.ReactNode; [key: string]: unknown }) => (
+  Container: ({
+    children,
+    overrideDefaults: _overrideDefaults,
+    ...props
+  }: {
+    children?: React.ReactNode;
+    overrideDefaults?: boolean;
+    [key: string]: unknown;
+  }) => (
     <div data-testid="container" {...props}>
       {children}
     </div>
