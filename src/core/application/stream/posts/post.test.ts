@@ -3,6 +3,7 @@ import * as Core from '@/core';
 import * as Config from '@/config';
 import { postStreamQueue } from './muting/post-stream-queue';
 import { MuteFilter } from './muting/mute-filter';
+import { asInvalid } from '@/test-utils';
 
 describe('PostStreamApplication', () => {
   const streamId = Core.PostStreamTypes.TIMELINE_ALL_ALL as Core.PostStreamId;
@@ -900,7 +901,7 @@ describe('PostStreamApplication', () => {
       mocks.getUserDetails.mockResolvedValue([undefined]);
 
       vi.spyOn(Core.NexusPostStreamService, 'fetchByIds').mockResolvedValue(mockNexusPosts);
-      vi.spyOn(Core.NexusUserStreamService, 'fetchByIds').mockResolvedValue(undefined as unknown as Core.NexusUser[]);
+      vi.spyOn(Core.NexusUserStreamService, 'fetchByIds').mockResolvedValue(asInvalid<Core.NexusUser[]>(undefined));
 
       const persistUsersSpy = vi.spyOn(Core.LocalStreamUsersService, 'persistUsers').mockResolvedValue([]);
 
@@ -1439,6 +1440,14 @@ describe('PostStreamApplication', () => {
   });
 
   describe('prepareStreamForInitialLoad', () => {
+    it('should clear pagination queue before preparing the stream', async () => {
+      const removeSpy = vi.spyOn(postStreamQueue, 'remove');
+
+      await Core.PostStreamApplication.prepareStreamForInitialLoad({ streamId });
+
+      expect(removeSpy).toHaveBeenCalledWith(streamId);
+    });
+
     it('should clear both streams when main stream cache is stale', async () => {
       const now = BASE_TIMESTAMP + Config.STREAM_CACHE_MAX_AGE_MS + 10;
       const staleTimestamp = now - Config.STREAM_CACHE_MAX_AGE_MS - 1;

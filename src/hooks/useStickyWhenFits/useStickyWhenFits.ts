@@ -8,8 +8,8 @@ interface UseStickyWhenFitsOptions {
    * Offset from top of viewport (e.g., header height)
    * Should match the CSS variable for header height:
    * - Profile pages: LAYOUT.HEADER_HEIGHT_PROFILE (146px, --header-height)
-   * - Main content areas: LAYOUT.HEADER_OFFSET_MAIN (150px, --header-offset-main)
-   * Default: LAYOUT.HEADER_OFFSET_MAIN (150px)
+   * - Main content areas: LAYOUT.HEADER_OFFSET_MAIN (144px, --header-offset-main)
+   * Default: LAYOUT.HEADER_OFFSET_MAIN (144px)
    */
   topOffset?: number;
   /**

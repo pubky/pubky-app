@@ -32,21 +32,10 @@
     "cancel": "キャンセル",
     "confirm": "確認",
     "delete": "削除",
+    "ok": "OK",
     "send": "送信",
     "submit": "送信",
     "loading": "読み込み中...",
-    "loadingActions": "アクション読み込み中...",
-    "loadingHeader": "ヘッダー読み込み中...",
-    "loadingPost": "投稿読み込み中...",
-    "loadingContent": "コンテンツ読み込み中...",
-    "loadingReplies": "返信読み込み中...",
-    "loadingParticipants": "参加者読み込み中...",
-    "loadingTags": "タグ読み込み中...",
-    "loadingMoreTags": "タグをさらに読み込み中...",
-    "loadingTaggers": "タグ付けユーザーを読み込み中...",
-    "loadingPosts": "投稿読み込み中...",
-    "loadingMorePosts": "投稿をさらに読み込み中...",
-    "loadingPreview": "プレビュー読み込み中...",
     "loadingBookmark": "読み込み中...",
     "addBookmark": "ブックマークに追加",
     "removeBookmark": "ブックマークを削除",
@@ -213,8 +202,10 @@
     },
     "lightning": {
       "title": "スキャンして<highlight>支払い。</highlight>",
+      "title_mobile": "タップして<highlight>支払い。</highlight>",
       "subtitle": "お好みのウォレットでQRコードをスキャンしてください。",
       "qrLabel": "Bitcoin Lightning支払い",
+      "payNow": "今すぐ支払う",
       "payAmount": "続行するには₿ {amount}を支払ってください。",
       "payAmountUsd": "続行するには₿ {amount}（${usdAmount}）を支払ってください。",
       "expired": "支払いの期限が切れました",
@@ -924,8 +915,7 @@
       "textCopied": "テキストをクリップボードにコピーしました",
       "profileLinkCopied": "プロフィールリンクをクリップボードにコピーしました",
       "copyFailed": "コピーに失敗しました",
-      "copyFailedDesc": "クリップボードにコピーできません",
-      "ok": "OK"
+      "copyFailedDesc": "クリップボードにコピーできません"
     },
     "follow": {
       "failed": "フォロー状態の更新に失敗しました"
@@ -1077,6 +1067,7 @@
     "timeframe": {
       "title": "期間",
       "today": "今日",
+      "thisWeek": "今週",
       "thisMonth": "今月",
       "allTime": "全期間"
     }
@@ -1085,7 +1076,10 @@
     "hotTags": "人気タグ",
     "activeUsers": "アクティブユーザー",
     "trendingPosts": "トレンド投稿",
-    "postsCount": "今月の投稿 {count}件",
+    "postsCountToday": "今日の投稿 {count}件",
+    "postsCountThisWeek": "今週の投稿 {count}件",
+    "postsCountThisMonth": "今月の投稿 {count}件",
+    "postsCountAllTime": "投稿 {count}件",
     "failedToLoadUsers": "ユーザーの読み込みに失敗しました",
     "failedToLoadTags": "タグの読み込みに失敗しました",
     "noUsersToShow": "表示するユーザーがいません",
@@ -1131,15 +1125,19 @@
       }
     },
     "version": {
-      "title": "バージョン",
-      "text": "Pubky v0.12 © Synonym Software Ltd"
+      "title": "バージョン"
     }
   },
   "logout": {
+    "loadingTitle": "Signing you out...",
+    "loadingSubtitle": "We're ending your session securely.",
+    "errorTitle": "We couldn't sign you out yet",
+    "errorSubtitle": "Please try again to finish signing out securely.",
     "title": "<highlight>また会いましょう！</highlight>",
     "subtitle": "安全にログアウトしました。",
     "homepage": "ホームページ",
-    "signBackIn": "再ログイン"
+    "signBackIn": "再ログイン",
+    "retry": "Retry"
   },
   "tradeoffs": {
     "title": "これらのトレードオフに注意してください：",

@@ -32,21 +32,10 @@
     "cancel": "Abbrechen",
     "confirm": "Bestätigen",
     "delete": "Löschen",
+    "ok": "OK",
     "send": "Senden",
     "submit": "Absenden",
     "loading": "Laden...",
-    "loadingActions": "Aktionen werden geladen...",
-    "loadingHeader": "Header wird geladen...",
-    "loadingPost": "Beitrag wird geladen...",
-    "loadingContent": "Inhalt wird geladen...",
-    "loadingReplies": "Antworten werden geladen...",
-    "loadingParticipants": "Teilnehmer werden geladen...",
-    "loadingTags": "Tags werden geladen...",
-    "loadingMoreTags": "Weitere Tags werden geladen...",
-    "loadingTaggers": "Tagger werden geladen...",
-    "loadingPosts": "Beiträge werden geladen...",
-    "loadingMorePosts": "Weitere Beiträge werden geladen...",
-    "loadingPreview": "Vorschau wird geladen...",
     "loadingBookmark": "Laden...",
     "addBookmark": "Lesezeichen hinzufügen",
     "removeBookmark": "Lesezeichen entfernen",
@@ -213,8 +202,10 @@
     },
     "lightning": {
       "title": "Scannen zum <highlight>Bezahlen.</highlight>",
+      "title_mobile": "Tippen zum <highlight>Bezahlen.</highlight>",
       "subtitle": "Scannen Sie den QR-Code mit Ihrer bevorzugten Wallet.",
       "qrLabel": "Bitcoin Lightning-Zahlung",
+      "payNow": "Jetzt bezahlen",
       "payAmount": "Zahlen Sie ₿ {amount}, um fortzufahren.",
       "payAmountUsd": "Zahlen Sie ₿ {amount} (${usdAmount}), um fortzufahren.",
       "expired": "Zahlung abgelaufen",
@@ -924,8 +915,7 @@
       "textCopied": "Text in Zwischenablage kopiert",
       "profileLinkCopied": "Profillink in Zwischenablage kopiert",
       "copyFailed": "Kopieren fehlgeschlagen",
-      "copyFailedDesc": "Kopieren in Zwischenablage nicht möglich",
-      "ok": "OK"
+      "copyFailedDesc": "Kopieren in Zwischenablage nicht möglich"
     },
     "follow": {
       "failed": "Folgestatus konnte nicht aktualisiert werden"
@@ -1077,6 +1067,7 @@
     "timeframe": {
       "title": "Zeitraum",
       "today": "Heute",
+      "thisWeek": "Diese Woche",
       "thisMonth": "Diesen Monat",
       "allTime": "Alle Zeit"
     }
@@ -1085,7 +1076,10 @@
     "hotTags": "Beliebte Tags",
     "activeUsers": "Aktive Benutzer",
     "trendingPosts": "Trendende Beiträge",
-    "postsCount": "{count} Beiträge diesen Monat",
+    "postsCountToday": "{count} Beiträge heute",
+    "postsCountThisWeek": "{count} Beiträge diese Woche",
+    "postsCountThisMonth": "{count} Beiträge diesen Monat",
+    "postsCountAllTime": "{count} Beiträge",
     "failedToLoadUsers": "Benutzer konnten nicht geladen werden",
     "failedToLoadTags": "Tags konnten nicht geladen werden",
     "noUsersToShow": "Keine Benutzer anzuzeigen",
@@ -1131,15 +1125,19 @@
       }
     },
     "version": {
-      "title": "Version",
-      "text": "Pubky v0.12 © Synonym Software Ltd"
+      "title": "Version"
     }
   },
   "logout": {
+    "loadingTitle": "Signing you out...",
+    "loadingSubtitle": "We're ending your session securely.",
+    "errorTitle": "We couldn't sign you out yet",
+    "errorSubtitle": "Please try again to finish signing out securely.",
     "title": "Bis <highlight>bald!</highlight>",
     "subtitle": "Sie haben sich sicher abgemeldet.",
     "homepage": "Startseite",
-    "signBackIn": "Erneut anmelden"
+    "signBackIn": "Erneut anmelden",
+    "retry": "Retry"
   },
   "tradeoffs": {
     "title": "Beachten Sie diese Nachteile:",

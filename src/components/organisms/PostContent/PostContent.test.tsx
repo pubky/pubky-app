@@ -1,6 +1,7 @@
 import { render, screen } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { PostContent } from './PostContent';
+import * as Core from '@/core';
 import * as Organisms from '@/organisms';
 import * as Hooks from '@/hooks';
 
@@ -44,13 +45,17 @@ const mockUsePostDetails = vi.mocked(Hooks.usePostDetails);
 const mockUseRepostInfo = vi.mocked(Hooks.useRepostInfo);
 
 // Helper to create complete PostDetails mock
-const createMockPostDetails = (overrides: Partial<{ content: string; attachments: string[] | null }> = {}) => ({
+const createMockPostDetails = (
+  overrides: Partial<{ content: string; attachments: string[] | null }> = {},
+): Core.EnrichedPostDetails => ({
   id: 'test-author:test-post',
   indexed_at: Date.now(),
   kind: 'short' as const,
   uri: 'pubky://test-author/pub/pubky.app/posts/test-post',
   content: 'Mock content',
   attachments: null as string[] | null,
+  is_moderated: false,
+  is_blurred: false,
   ...overrides,
 });
 
@@ -78,10 +83,9 @@ describe('PostContent', () => {
     expect(screen.getByTestId('post-content-base')).toHaveAttribute('data-post-id', 'post-123');
   });
 
-  it('calls usePostDetails and useRepostInfo with correct id', () => {
+  it('calls useRepostInfo with correct id', () => {
     render(<PostContent postId="post-abc" />);
 
-    expect(mockUsePostDetails).toHaveBeenCalledWith('post-abc');
     expect(mockUseRepostInfo).toHaveBeenCalledWith('post-abc');
   });
 

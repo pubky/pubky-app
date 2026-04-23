@@ -1,4 +1,5 @@
 import { Env } from '@/libs/env';
+import { APP_VERSION } from './app';
 
 /**
  * External Links Configuration
@@ -6,6 +7,9 @@ import { Env } from '@/libs/env';
  * This file centralizes all external URLs used throughout the application.
  * URLs can be overridden using environment variables for different environments.
  */
+
+// App release URL (version injected from package.json via next.config.ts)
+export const APP_RELEASE_URL = `https://github.com/pubky/pubky-app/releases/tag/${APP_VERSION}`;
 
 // Pubky ecosystem links
 export const PUBKY_RING_URL = Env.NEXT_PUBLIC_PUBKY_RING_URL;

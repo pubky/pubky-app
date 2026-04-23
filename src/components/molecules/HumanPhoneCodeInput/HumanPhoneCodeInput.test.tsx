@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, vi } from 'vitest';
 import { render, fireEvent } from '@testing-library/react';
 
 import { HumanPhoneCodeInput } from './HumanPhoneCodeInput';
@@ -62,5 +62,70 @@ describe('HumanPhoneCodeInput', () => {
     // Content should be selected (selectionStart=0, selectionEnd=1 means "2" is selected)
     expect(input1.selectionStart).toBe(0);
     expect(input1.selectionEnd).toBe(1);
+  });
+
+  it('fills all digits when pasting a 6-digit code into the first input', () => {
+    const onChangeSpy = vi.fn();
+    const { container } = render(<HumanPhoneCodeInput value={['', '', '', '', '', '']} onChange={onChangeSpy} />);
+
+    const firstInput = container.querySelector('#human-phone-code-input-0-input')!;
+
+    fireEvent.paste(firstInput, {
+      clipboardData: { getData: () => '123456' },
+    });
+
+    expect(onChangeSpy).toHaveBeenCalledWith(['1', '2', '3', '4', '5', '6']);
+  });
+
+  it('fills remaining digits when pasting from a middle input', () => {
+    const onChangeSpy = vi.fn();
+    const { container } = render(<HumanPhoneCodeInput value={['1', '2', '', '', '', '']} onChange={onChangeSpy} />);
+
+    const input2 = container.querySelector('#human-phone-code-input-2-input')!;
+
+    fireEvent.paste(input2, {
+      clipboardData: { getData: () => '7890' },
+    });
+
+    expect(onChangeSpy).toHaveBeenCalledWith(['1', '2', '7', '8', '9', '0']);
+  });
+
+  it('strips non-digit characters when pasting', () => {
+    const onChangeSpy = vi.fn();
+    const { container } = render(<HumanPhoneCodeInput value={['', '', '', '', '', '']} onChange={onChangeSpy} />);
+
+    const firstInput = container.querySelector('#human-phone-code-input-0-input')!;
+
+    fireEvent.paste(firstInput, {
+      clipboardData: { getData: () => '12-34-56' },
+    });
+
+    expect(onChangeSpy).toHaveBeenCalledWith(['1', '2', '3', '4', '5', '6']);
+  });
+
+  it('ignores paste with no digits', () => {
+    const onChangeSpy = vi.fn();
+    const { container } = render(<HumanPhoneCodeInput value={['', '', '', '', '', '']} onChange={onChangeSpy} />);
+
+    const firstInput = container.querySelector('#human-phone-code-input-0-input')!;
+
+    fireEvent.paste(firstInput, {
+      clipboardData: { getData: () => 'abcdef' },
+    });
+
+    expect(onChangeSpy).not.toHaveBeenCalled();
+  });
+
+  it('truncates pasted code longer than 6 digits', () => {
+    const onChangeSpy = vi.fn();
+    const { container } = render(<HumanPhoneCodeInput value={['', '', '', '', '', '']} onChange={onChangeSpy} />);
+
+    const firstInput = container.querySelector('#human-phone-code-input-0-input')!;
+
+    fireEvent.paste(firstInput, {
+      clipboardData: { getData: () => '12345678' },
+    });
+
+    expect(onChangeSpy).toHaveBeenCalledWith(['1', '2', '3', '4', '5', '6']);
   });
 });

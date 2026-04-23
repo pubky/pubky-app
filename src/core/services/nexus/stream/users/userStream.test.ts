@@ -1,6 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import { userStreamApi, buildUserStreamBodyUrl } from './userStream.api';
 import * as Core from '@/core';
+import { asInvalid } from '@/test-utils';
 
 describe('Users Stream API - Error Control', () => {
   const mockUserId = 'erztyis9oiaho93ckucetcf5xnxacecqwhbst5hnd7mmkf69dhby';
@@ -13,7 +14,7 @@ describe('Users Stream API - Error Control', () => {
       const url = userStreamApi.followers({
         user_id: mockUserId,
         viewer_id: undefined,
-        skip: null as unknown as number,
+        skip: asInvalid<number>(null),
         limit: undefined,
       });
 

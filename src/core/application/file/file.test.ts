@@ -4,6 +4,7 @@ import type { Pubky } from '@/core/models/models.types';
 import type { NexusFileDetails } from '@/core/services/nexus/nexus.types';
 import { FileVariant } from '@/core/services/nexus/file/file.types';
 import { HttpMethod } from '@/libs';
+import { asOpaque } from '@/test-utils';
 
 // Avoid pulling WASM-heavy deps from type-only modules
 vi.mock('pubky-app-specs', () => ({
@@ -85,19 +86,19 @@ const createMockUrls = (feed: string = 'feed', main: string = 'main', small: str
   JSON.stringify({ feed, main, small });
 
 const createMockBlobResult = (url: string = 'pubky://user/blob/file') =>
-  ({
+  asOpaque<BlobResult>({
     blob: { data: new Uint8Array([1, 2, 3]) },
     meta: { url },
-  }) as unknown as BlobResult;
+  });
 
 const createMockFileResult = (
   url: string = 'pubky://user/pub/pubky.app/files/file',
   fileJson: Record<string, unknown> = { id: 'file-1', kind: 'image' },
 ) =>
-  ({
+  asOpaque<FileResult>({
     file: { toJson: vi.fn(() => fileJson) },
     meta: { url },
-  }) as unknown as FileResult;
+  });
 
 beforeEach(async () => {
   vi.clearAllMocks();
@@ -380,7 +381,7 @@ describe('FileApplication', () => {
 
       const createManySpy = vi.spyOn(Core.LocalFileService, 'createMany').mockResolvedValue(undefined);
 
-      await FileApplication.persistFiles(fileAttachments as unknown as NexusFileDetails[]);
+      await FileApplication.persistFiles(asOpaque<NexusFileDetails[]>(fileAttachments));
 
       expect(createManySpy).toHaveBeenCalledWith({
         files: [{ ...fileAttachments[0], id: compositeId, urls: { feed: 'feed1', main: 'main1', small: 'small1' } }],
@@ -433,7 +434,7 @@ describe('FileApplication', () => {
 
       const createManySpy = vi.spyOn(Core.LocalFileService, 'createMany').mockResolvedValue(undefined);
 
-      await FileApplication.persistFiles(fileAttachments as unknown as NexusFileDetails[]);
+      await FileApplication.persistFiles(asOpaque<NexusFileDetails[]>(fileAttachments));
 
       expect(createManySpy).toHaveBeenCalledWith({
         files: [{ ...fileAttachments[0], id: compositeId, urls: { feed: 'feed1', main: 'main1', small: 'small1' } }],
@@ -500,7 +501,7 @@ describe('FileApplication', () => {
       const readSpy = vi.spyOn(Core.LocalFileService, 'read').mockResolvedValue(null);
       const requestSpy = vi
         .spyOn(Core.HomeserverService, 'request')
-        .mockResolvedValue({ src: blobUrl } as unknown as void);
+        .mockResolvedValue(asOpaque<void>({ src: blobUrl }));
       const deleteLocalSpy = vi.spyOn(Core.LocalFileService, 'deleteById');
 
       await FileApplication.commitDelete([fileUri]);

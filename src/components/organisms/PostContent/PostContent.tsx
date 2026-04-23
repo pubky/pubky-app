@@ -1,7 +1,7 @@
 'use client';
 
 import * as Molecules from '@/molecules';
-import * as Libs from '@/libs';
+
 import * as Hooks from '@/hooks';
 import * as Organisms from '@/organisms';
 import type { PostContentOrganismProps } from './PostContent.types';
@@ -12,19 +12,11 @@ import type { PostContentOrganismProps } from './PostContent.types';
  * **Rendering logic:**
  * - **Regular post**: Renders PostContentBase (text, embeds, attachments)
  * - **Repost with content (quote)**: Renders PostContentBase (quote text) + PostPreviewCard (original post)
- * - **Repost without content (plain repost)**: Renders PostContentBase (empty wrapper, may have attachments) + PostPreviewCard (original post)
- *
- * PostContentBase is always rendered as it's a structural wrapper that maintains layout
- * and handles attachments even when there's no text content.
+ * - **Repost without content (plain repost)**: PostContentBase returns null + PostPreviewCard (original post)
  */
-export function PostContent({ postId, className }: PostContentOrganismProps) {
+export function PostContent({ postId, className, textClassName }: PostContentOrganismProps) {
   // Get repost information
   const { isRepost, originalPostId } = Hooks.useRepostInfo(postId);
-
-  // Get post details to check if repost has content (for spacing between quote and preview).
-  // Note: Reposts can be plain reposts (no content) or quote reposts (with content).
-  const { postDetails } = Hooks.usePostDetails(postId);
-  const hasContent = (postDetails?.content?.trim().length ?? 0) > 0;
 
   // Determine if we should render the repost preview
   const shouldRenderRepostPreview = isRepost && !!originalPostId;
@@ -32,12 +24,10 @@ export function PostContent({ postId, className }: PostContentOrganismProps) {
   return (
     <>
       {/* Always render PostContentBase - it's a structural wrapper for content elements */}
-      <Organisms.PostContentBase postId={postId} className={className} />
+      <Organisms.PostContentBase postId={postId} className={className} textClassName={textClassName} />
 
       {/* Show original post preview for reposts */}
-      {shouldRenderRepostPreview && (
-        <Molecules.PostPreviewCard postId={originalPostId} className={Libs.cn('bg-muted', hasContent && 'mt-4')} />
-      )}
+      {shouldRenderRepostPreview && <Molecules.PostPreviewCard postId={originalPostId} className={'bg-muted'} />}
     </>
   );
 }

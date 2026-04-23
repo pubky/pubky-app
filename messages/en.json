@@ -32,21 +32,10 @@
     "cancel": "Cancel",
     "confirm": "Confirm",
     "delete": "Delete",
+    "ok": "OK",
     "send": "Send",
     "submit": "Submit",
     "loading": "Loading...",
-    "loadingActions": "Loading actions...",
-    "loadingHeader": "Loading header...",
-    "loadingPost": "Loading post...",
-    "loadingContent": "Loading content...",
-    "loadingReplies": "Loading replies...",
-    "loadingParticipants": "Loading participants...",
-    "loadingTags": "Loading tags...",
-    "loadingMoreTags": "Loading more tags...",
-    "loadingTaggers": "Loading taggers...",
-    "loadingPosts": "Loading posts...",
-    "loadingMorePosts": "Loading more posts...",
-    "loadingPreview": "Loading preview...",
     "loadingBookmark": "Loading...",
     "addBookmark": "Add bookmark",
     "removeBookmark": "Remove bookmark",
@@ -213,8 +202,10 @@
     },
     "lightning": {
       "title": "Scan to <highlight>Pay.</highlight>",
+      "title_mobile": "Tap to <highlight>Pay.</highlight>",
       "subtitle": "Scan the QR code with your favorite wallet.",
       "qrLabel": "Bitcoin Lightning Payment",
+      "payNow": "Pay now",
       "payAmount": "Pay ₿ {amount} to continue.",
       "payAmountUsd": "Pay ₿ {amount} (${usdAmount}) to continue.",
       "expired": "Payment expired",
@@ -918,8 +909,7 @@
       "textCopied": "Text copied to clipboard",
       "profileLinkCopied": "Profile link copied to clipboard",
       "copyFailed": "Copy failed",
-      "copyFailedDesc": "Unable to copy to clipboard",
-      "ok": "OK"
+      "copyFailedDesc": "Unable to copy to clipboard"
     },
     "follow": {
       "failed": "Failed to update follow status"
@@ -1071,6 +1061,7 @@
     "timeframe": {
       "title": "Timeframe",
       "today": "Today",
+      "thisWeek": "This Week",
       "thisMonth": "This Month",
       "allTime": "All Time"
     }
@@ -1079,7 +1070,10 @@
     "hotTags": "Hot tags",
     "activeUsers": "Active users",
     "trendingPosts": "Trending posts",
-    "postsCount": "{count} posts this month",
+    "postsCountToday": "{count} posts today",
+    "postsCountThisWeek": "{count} posts this week",
+    "postsCountThisMonth": "{count} posts this month",
+    "postsCountAllTime": "{count} posts",
     "failedToLoadUsers": "Failed to load users",
     "failedToLoadTags": "Failed to load tags",
     "noUsersToShow": "No users to show",
@@ -1125,15 +1119,19 @@
       }
     },
     "version": {
-      "title": "Version",
-      "text": "Pubky v0.12 © Synonym Software Ltd"
+      "title": "Version"
     }
   },
   "logout": {
+    "loadingTitle": "Signing you out...",
+    "loadingSubtitle": "We're ending your session securely.",
+    "errorTitle": "We couldn't sign you out yet",
+    "errorSubtitle": "Please try again to finish signing out securely.",
     "title": "See you <highlight>soon!</highlight>",
     "subtitle": "You have securely signed out.",
     "homepage": "Homepage",
-    "signBackIn": "Sign back in"
+    "signBackIn": "Sign back in",
+    "retry": "Retry"
   },
   "tradeoffs": {
     "title": "Be aware of these tradeoffs:",

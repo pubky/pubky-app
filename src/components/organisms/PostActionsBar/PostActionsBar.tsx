@@ -6,19 +6,8 @@ import * as Atoms from '@/atoms';
 import * as Libs from '@/libs';
 import * as Hooks from '@/hooks';
 import * as Organisms from '@/organisms';
+import { PostActionsBarSkeleton } from './PostActionsBar.skeleton';
 import type { PostActionsBarProps, ActionButtonConfig } from './PostActionsBar.types';
-
-const postActionsLoadingVariants = cva('', {
-  variants: {
-    variant: {
-      default: 'text-muted-foreground',
-      visual: 'text-white/70',
-    },
-  },
-  defaultVariants: {
-    variant: 'default',
-  },
-});
 
 const postActionsButtonVariants = cva('', {
   variants: {
@@ -63,16 +52,11 @@ export function PostActionsBar({
   const { requireAuth } = Hooks.useRequireAuth();
 
   const isBookmarkBusy = isBookmarkLoading || isBookmarkToggling;
-  const loadingClassName = postActionsLoadingVariants({ variant });
   const buttonClassName = postActionsButtonVariants({ variant });
   const countClassName = postActionsCountVariants({ variant });
 
   if (isCountsLoading || !postCounts) {
-    return (
-      <Atoms.Container overrideDefaults className={loadingClassName}>
-        {t('loadingActions')}
-      </Atoms.Container>
-    );
+    return <PostActionsBarSkeleton className={className} />;
   }
 
   const commonButtonProps = {
@@ -125,16 +109,16 @@ export function PostActionsBar({
   );
 
   return (
-    <Atoms.Container overrideDefaults className={Libs.cn('flex gap-2', className)}>
+    <Atoms.Container overrideDefaults className={Libs.cn('flex flex-wrap gap-2', className)}>
       {actionButtons.map(
-        ({ id, icon: Icon, count, onClick, ariaLabel, className: buttonClassName, iconProps, disabled }) => (
+        ({ id, icon: Icon, count, onClick, ariaLabel, className: btnClassName, iconProps, disabled }) => (
           <Atoms.Button
             key={id}
             data-cy={`post-${id}-btn`}
             {...commonButtonProps}
             onClick={onClick}
             disabled={disabled}
-            className={Libs.cn(commonButtonProps.className, buttonClassName)}
+            className={Libs.cn(commonButtonProps.className, btnClassName)}
             aria-label={ariaLabel}
           >
             <Icon {...iconProps} />

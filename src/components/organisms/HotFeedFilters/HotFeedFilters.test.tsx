@@ -7,6 +7,7 @@ import * as Core from '@/core';
 vi.mock('@/core', () => ({
   TIMEFRAME: {
     TODAY: 'today',
+    THIS_WEEK: 'this_week',
     THIS_MONTH: 'this_month',
     ALL_TIME: 'all_time',
   },
@@ -52,6 +53,7 @@ vi.mock('@/molecules', () => ({
 // Mock Libs icons
 vi.mock('@/libs', () => ({
   Star: () => <span>Star</span>,
+  CalendarRange: () => <span>CalendarRange</span>,
   Calendar: () => <span>Calendar</span>,
   Clock: () => <span>Clock</span>,
 }));
@@ -61,6 +63,7 @@ describe('FilterTimeframe', () => {
     render(<FilterTimeframe />);
 
     expect(screen.getByText('Today')).toBeInTheDocument();
+    expect(screen.getByText('This Week')).toBeInTheDocument();
     expect(screen.getByText('This Month')).toBeInTheDocument();
     expect(screen.getByText('All Time')).toBeInTheDocument();
   });

@@ -1,13 +1,18 @@
 import { render, screen, fireEvent } from '@testing-library/react';
 import { vi, describe, it, expect, beforeEach } from 'vitest';
-import { forwardRef, useImperativeHandle, useRef } from 'react';
+import { forwardRef, useImperativeHandle, useRef, type ReactElement } from 'react';
 import { SinglePostCard } from './SinglePostCard';
+import { PostMainLayoutProvider } from '@/organisms/PostMain/PostMainLayout';
+import type { TagsLayout } from '@/organisms/PostMain/PostMain.types';
 import * as Hooks from '@/hooks';
 
-const { mockPostHeader } = vi.hoisted(() => ({
-  mockPostHeader: vi.fn(({ postId }: { postId: string; timeAgoPlacement?: 'top-right' | 'bottom-left' }) => (
-    <div data-testid="post-header">Header: {postId}</div>
-  )),
+const { mockPostHeader, mockPostTagsPanelFocus } = vi.hoisted(() => ({
+  mockPostHeader: vi.fn(
+    ({ postId }: { postId: string; size?: 'normal' | 'large'; timeAgoPlacement?: 'top-right' | 'bottom-left' }) => (
+      <div data-testid="post-header">Header: {postId}</div>
+    ),
+  ),
+  mockPostTagsPanelFocus: vi.fn(),
 }));
 
 vi.mock('@/hooks', () => ({
@@ -16,9 +21,20 @@ vi.mock('@/hooks', () => ({
 
 // Mock organisms
 vi.mock('@/organisms', () => ({
-  PostHeader: ({ postId, timeAgoPlacement }: { postId: string; timeAgoPlacement?: 'top-right' | 'bottom-left' }) =>
-    mockPostHeader({ postId, timeAgoPlacement }),
-  PostContent: ({ postId }: { postId: string }) => <div data-testid="post-content">Content: {postId}</div>,
+  PostHeader: ({
+    postId,
+    size,
+    timeAgoPlacement,
+  }: {
+    postId: string;
+    size?: 'normal' | 'large';
+    timeAgoPlacement?: 'top-right' | 'bottom-left';
+  }) => mockPostHeader({ postId, size, timeAgoPlacement }),
+  PostContent: ({ postId, textClassName }: { postId: string; textClassName?: string }) => (
+    <div data-testid="post-content" data-text-class-name={textClassName}>
+      Content: {postId}
+    </div>
+  ),
   PostActionsBar: ({
     postId,
     onTagClick,
@@ -43,21 +59,25 @@ vi.mock('@/organisms', () => ({
       Actions: {postId}
     </div>
   ),
-  PostTagsPanel: forwardRef<{ focus: () => void }, { postId: string; className?: string }>(function MockPostTagsPanel(
-    { postId, className },
-    ref,
-  ) {
+  PostTagsPanel: forwardRef<
+    { focus: () => void },
+    { postId: string; className?: string; widthMode?: 'fit' | 'full'; autoFocusInput?: boolean }
+  >(function MockPostTagsPanel({ postId, className, widthMode, autoFocusInput }, ref) {
     const inputRef = useRef<HTMLInputElement>(null);
 
     useImperativeHandle(ref, () => ({
-      focus: () => inputRef.current?.focus(),
+      focus: () => {
+        const panelType = widthMode === 'full' ? 'desktop' : 'inline';
+        mockPostTagsPanelFocus(panelType);
+        inputRef.current?.focus();
+      },
     }));
 
-    const panelType = className?.includes('hidden lg:flex') ? 'desktop' : 'mobile';
+    const panelType = widthMode === 'full' ? 'desktop' : 'inline';
 
     return (
-      <div data-testid="post-tags-panel" data-class-name={className}>
-        <input ref={inputRef} data-testid={`tag-input-${panelType}`} />
+      <div data-testid={`post-tags-panel-${panelType}`} data-class-name={className} data-width-mode={widthMode}>
+        <input ref={inputRef} data-testid={`tag-input-${panelType}`} autoFocus={autoFocusInput} />
         Tags: {postId}
       </div>
     );
@@ -98,7 +118,7 @@ vi.mock('@/atoms', () => ({
     className?: string;
     onClick?: () => void;
   }) => (
-    <div className={className} onClick={onClick}>
+    <div data-testid="container" data-class-name={className} className={className} onClick={onClick}>
       {children}
     </div>
   ),
@@ -114,59 +134,91 @@ describe('SinglePostCard', () => {
   const mockPostId = 'author:post123';
   const mockUseIsMobile = vi.mocked(Hooks.useIsMobile);
 
+  function renderWithLayout(ui: ReactElement, tagsLayout: TagsLayout = 'inline') {
+    return render(<PostMainLayoutProvider tagsLayout={tagsLayout}>{ui}</PostMainLayoutProvider>);
+  }
+
   beforeEach(() => {
     vi.clearAllMocks();
     mockPostHeader.mockClear();
+    mockPostTagsPanelFocus.mockClear();
     mockUseIsMobile.mockReturnValue(false);
   });
 
   describe('rendering', () => {
-    it('should render the card with post header, content, actions and tags', () => {
-      render(<SinglePostCard postId={mockPostId} />);
+    it('should render default desktop layout with post header, content, actions and inline tags list', () => {
+      renderWithLayout(<SinglePostCard postId={mockPostId} />);
 
       expect(screen.getByTestId('card')).toBeInTheDocument();
       expect(screen.getByTestId('post-header')).toBeInTheDocument();
       expect(screen.getByTestId('post-content')).toBeInTheDocument();
       expect(screen.getByTestId('post-actions-bar')).toBeInTheDocument();
-      // Both mobile and desktop PostTagsPanel are visible by default on single post page
-      expect(screen.getAllByTestId('post-tags-panel')).toHaveLength(2);
+      expect(screen.getByTestId('clickable-tags-list')).toBeInTheDocument();
+      expect(screen.queryByTestId('post-tags-panel-inline')).not.toBeInTheDocument();
+      expect(screen.queryByTestId('post-tags-panel-desktop')).not.toBeInTheDocument();
     });
 
     it('should render the dialog reply component', () => {
-      render(<SinglePostCard postId={mockPostId} />);
+      renderWithLayout(<SinglePostCard postId={mockPostId} />);
 
       expect(screen.getByTestId('dialog-reply')).toBeInTheDocument();
       expect(screen.getByTestId('dialog-reply')).toHaveAttribute('data-open', 'false');
     });
 
     it('should render the dialog repost component', () => {
-      render(<SinglePostCard postId={mockPostId} />);
+      renderWithLayout(<SinglePostCard postId={mockPostId} />);
 
       expect(screen.getByTestId('dialog-repost')).toBeInTheDocument();
       expect(screen.getByTestId('dialog-repost')).toHaveAttribute('data-open', 'false');
     });
 
     it('should apply custom className to the card', () => {
-      render(<SinglePostCard postId={mockPostId} className="custom-class" />);
+      renderWithLayout(<SinglePostCard postId={mockPostId} className="custom-class" />);
 
       expect(screen.getByTestId('card')).toHaveClass('custom-class');
+    });
+
+    it('falls back to inline layout when rendered without a PostMainLayoutProvider', () => {
+      render(<SinglePostCard postId={mockPostId} />);
+
+      expect(screen.getByTestId('clickable-tags-list')).toBeInTheDocument();
+      expect(screen.queryByTestId('post-tags-panel-desktop')).not.toBeInTheDocument();
     });
   });
 
   describe('interactions', () => {
-    it('should focus desktop tag input when tag action is clicked', () => {
-      render(<SinglePostCard postId={mockPostId} />);
+    it('should expand inline tags panel in inline layout when tag action is clicked', () => {
+      renderWithLayout(<SinglePostCard postId={mockPostId} />);
 
-      const desktopTagInput = screen.getByTestId('tag-input-desktop');
-      expect(desktopTagInput).not.toHaveFocus();
+      expect(screen.getByTestId('clickable-tags-list')).toBeInTheDocument();
+      expect(screen.queryByTestId('post-tags-panel-inline')).not.toBeInTheDocument();
+      expect(screen.queryByTestId('post-tags-panel-desktop')).not.toBeInTheDocument();
 
       fireEvent.click(screen.getByTestId('tag-action'));
 
-      expect(desktopTagInput).toHaveFocus();
+      expect(screen.queryByTestId('clickable-tags-list')).not.toBeInTheDocument();
+      expect(screen.getByTestId('post-tags-panel-inline')).toBeInTheDocument();
+      expect(screen.queryByTestId('post-tags-panel-desktop')).not.toBeInTheDocument();
+      // No ref exists in inline mode, so focus callback should not run on first toggle.
+      expect(mockPostTagsPanelFocus).not.toHaveBeenCalled();
+    });
+
+    it('should focus desktop tags panel when tag action is clicked in side layout', () => {
+      renderWithLayout(<SinglePostCard postId={mockPostId} />, 'side');
+
+      expect(screen.getByTestId('post-tags-panel-desktop')).toBeInTheDocument();
+      expect(screen.queryByTestId('clickable-tags-list')).not.toBeInTheDocument();
+
+      fireEvent.click(screen.getByTestId('tag-action'));
+
+      expect(mockPostTagsPanelFocus).toHaveBeenCalledWith('desktop');
+      expect(screen.getByTestId('post-tags-panel-desktop')).toBeInTheDocument();
+      expect(screen.queryByTestId('clickable-tags-list')).not.toBeInTheDocument();
+      expect(screen.queryByTestId('post-tags-panel-inline')).not.toBeInTheDocument();
     });
 
     it('should open reply dialog when reply action is clicked', () => {
-      render(<SinglePostCard postId={mockPostId} />);
+      renderWithLayout(<SinglePostCard postId={mockPostId} />);
 
       const replyButton = screen.getByTestId('reply-action');
       fireEvent.click(replyButton);
@@ -175,7 +227,7 @@ describe('SinglePostCard', () => {
     });
 
     it('should open repost dialog when repost action is clicked', () => {
-      render(<SinglePostCard postId={mockPostId} />);
+      renderWithLayout(<SinglePostCard postId={mockPostId} />);
 
       const repostButton = screen.getByTestId('repost-action');
       fireEvent.click(repostButton);
@@ -185,40 +237,119 @@ describe('SinglePostCard', () => {
   });
 
   describe('post ID propagation', () => {
-    it('should pass postId to all child components', () => {
-      render(<SinglePostCard postId={mockPostId} />);
+    it('should pass postId to default-layout child components', () => {
+      renderWithLayout(<SinglePostCard postId={mockPostId} />);
 
       expect(screen.getByText(`Header: ${mockPostId}`)).toBeInTheDocument();
       expect(screen.getByText(`Content: ${mockPostId}`)).toBeInTheDocument();
       expect(screen.getByText(`Actions: ${mockPostId}`)).toBeInTheDocument();
-      // Both mobile and desktop PostTagsPanel are visible by default
-      expect(screen.getAllByText(`Tags: ${mockPostId}`)).toHaveLength(2);
+      expect(screen.getByText(`ClickableTagsList ${mockPostId}`)).toBeInTheDocument();
       expect(screen.getByText(`Reply Dialog: ${mockPostId}`)).toBeInTheDocument();
       expect(screen.getByText(`Repost Dialog: ${mockPostId}`)).toBeInTheDocument();
+    });
+
+    it('should pass postId to desktop tags panel in side layout', () => {
+      renderWithLayout(<SinglePostCard postId={mockPostId} />, 'side');
+
+      expect(screen.getByTestId('post-tags-panel-desktop')).toHaveTextContent(`Tags: ${mockPostId}`);
     });
   });
 
   describe('tags visibility', () => {
-    it('should always show both mobile and desktop tags panels (no toggle)', () => {
-      render(<SinglePostCard postId={mockPostId} />);
+    it('shows clickable tags list in inline layout and hides desktop tags panel', () => {
+      renderWithLayout(<SinglePostCard postId={mockPostId} />);
 
-      const tagPanels = screen.getAllByTestId('post-tags-panel');
-      expect(tagPanels).toHaveLength(2);
-      // Mobile tags panel
-      expect(tagPanels[0]).toHaveAttribute('data-class-name', 'lg:hidden');
-      // Desktop tags panel
-      expect(tagPanels[1]).toHaveAttribute('data-class-name', 'hidden lg:flex');
+      expect(screen.getByTestId('clickable-tags-list')).toBeInTheDocument();
+      expect(screen.queryByTestId('post-tags-panel-desktop')).not.toBeInTheDocument();
+    });
+
+    it('shows desktop tags panel in side layout and hides inline tags list', () => {
+      renderWithLayout(<SinglePostCard postId={mockPostId} />, 'side');
+
+      expect(screen.getByTestId('post-tags-panel-desktop')).toBeInTheDocument();
+      expect(screen.queryByTestId('clickable-tags-list')).not.toBeInTheDocument();
     });
   });
 
   describe('timestamp placement', () => {
-    it('passes bottom-left timestamp placement to PostHeader', () => {
-      render(<SinglePostCard postId={mockPostId} />);
+    it('passes normal size and bottom-left timestamp placement to PostHeader in inline layout', () => {
+      renderWithLayout(<SinglePostCard postId={mockPostId} />);
 
       expect(mockPostHeader).toHaveBeenCalledWith({
         postId: mockPostId,
+        size: 'normal',
         timeAgoPlacement: 'bottom-left',
       });
+    });
+
+    it('passes large size and bottom-left timestamp placement to PostHeader in side layout', () => {
+      renderWithLayout(<SinglePostCard postId={mockPostId} />, 'side');
+
+      expect(mockPostHeader).toHaveBeenCalledWith({
+        postId: mockPostId,
+        size: 'large',
+        timeAgoPlacement: 'bottom-left',
+      });
+    });
+
+    it('does not pass timestamp placement override on mobile', () => {
+      mockUseIsMobile.mockReturnValue(true);
+
+      renderWithLayout(<SinglePostCard postId={mockPostId} />);
+
+      expect(mockPostHeader).toHaveBeenCalledWith({
+        postId: mockPostId,
+        size: undefined,
+        timeAgoPlacement: undefined,
+      });
+    });
+  });
+
+  describe('wide layout styling', () => {
+    it('applies section-owned spacing in side layout on desktop', () => {
+      renderWithLayout(<SinglePostCard postId={mockPostId} />, 'side');
+
+      const cardContent = screen.getByTestId('card-content');
+      expect(cardContent).toHaveClass('p-0');
+      expect(cardContent).not.toHaveClass('p-12');
+
+      const containers = screen.getAllByTestId('container');
+      const leftSection = containers.find((container) =>
+        container.getAttribute('data-class-name')?.includes('p-12 lg:flex-1'),
+      );
+      const rightSection = containers.find((container) =>
+        container.getAttribute('data-class-name')?.includes('lg:w-96 lg:shrink-0 lg:p-12'),
+      );
+
+      expect(leftSection).toBeDefined();
+      expect(rightSection).toBeDefined();
+    });
+
+    it('applies default padding and gap in inline layout', () => {
+      renderWithLayout(<SinglePostCard postId={mockPostId} />);
+
+      const cardContent = screen.getByTestId('card-content');
+      expect(cardContent).toHaveClass('gap-4', 'p-6');
+    });
+
+    it('applies default padding on mobile even in side layout', () => {
+      mockUseIsMobile.mockReturnValue(true);
+      renderWithLayout(<SinglePostCard postId={mockPostId} />, 'side');
+
+      const cardContent = screen.getByTestId('card-content');
+      expect(cardContent).toHaveClass('gap-4', 'p-6');
+    });
+
+    it('passes text-xl className to PostContent in side layout', () => {
+      renderWithLayout(<SinglePostCard postId={mockPostId} />, 'side');
+
+      expect(screen.getByTestId('post-content')).toHaveAttribute('data-text-class-name', 'text-xl leading-7');
+    });
+
+    it('does not pass text className to PostContent in inline layout', () => {
+      renderWithLayout(<SinglePostCard postId={mockPostId} />);
+
+      expect(screen.getByTestId('post-content')).not.toHaveAttribute('data-text-class-name');
     });
   });
 
@@ -226,21 +357,37 @@ describe('SinglePostCard', () => {
     it('uses inline layout on mobile with tags hidden by default', () => {
       mockUseIsMobile.mockReturnValue(true);
 
-      render(<SinglePostCard postId={mockPostId} />);
+      renderWithLayout(<SinglePostCard postId={mockPostId} />);
 
       expect(screen.getByTestId('clickable-tags-list')).toBeInTheDocument();
-      expect(screen.queryByTestId('post-tags-panel')).not.toBeInTheDocument();
+      expect(screen.queryByTestId('post-tags-panel-inline')).not.toBeInTheDocument();
+      expect(screen.queryByTestId('post-tags-panel-desktop')).not.toBeInTheDocument();
     });
 
     it('shows tags panel only after clicking tag action on mobile', () => {
       mockUseIsMobile.mockReturnValue(true);
 
-      render(<SinglePostCard postId={mockPostId} />);
+      renderWithLayout(<SinglePostCard postId={mockPostId} />);
 
       fireEvent.click(screen.getByTestId('tag-action'));
 
       expect(screen.queryByTestId('clickable-tags-list')).not.toBeInTheDocument();
-      expect(screen.getByTestId('post-tags-panel')).toBeInTheDocument();
+      expect(screen.getByTestId('post-tags-panel-inline')).toBeInTheDocument();
+      expect(screen.queryByTestId('post-tags-panel-desktop')).not.toBeInTheDocument();
+    });
+
+    it('toggles back to clickable tags list after clicking tag action twice on mobile', () => {
+      mockUseIsMobile.mockReturnValue(true);
+
+      renderWithLayout(<SinglePostCard postId={mockPostId} />);
+
+      fireEvent.click(screen.getByTestId('tag-action'));
+      expect(screen.getByTestId('post-tags-panel-inline')).toBeInTheDocument();
+
+      fireEvent.click(screen.getByTestId('tag-action'));
+
+      expect(screen.getByTestId('clickable-tags-list')).toBeInTheDocument();
+      expect(screen.queryByTestId('post-tags-panel-inline')).not.toBeInTheDocument();
     });
   });
 });

@@ -1,3 +1,4 @@
+import type { ElementType } from 'react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import { ShareTarget } from './ShareTarget';
@@ -42,9 +43,9 @@ vi.mock('@/atoms', () => ({
       {children}
     </div>
   ),
-  Typography: ({ children, as: Tag = 'span' }: { children: React.ReactNode; as?: string; size?: string }) => {
-    const Element = Tag as keyof JSX.IntrinsicElements;
-    return <Element data-testid="typography">{children}</Element>;
+  Typography: ({ children, as: Tag = 'span' }: { children: React.ReactNode; as?: ElementType; size?: string }) => {
+    const Comp = Tag as ElementType;
+    return <Comp data-testid="typography">{children}</Comp>;
   },
   Button: ({
     children,
@@ -62,6 +63,7 @@ vi.mock('@/atoms', () => ({
     </button>
   ),
   Spinner: () => <div data-testid="spinner">Loading...</div>,
+  Skeleton: ({ className }: { className?: string }) => <div data-testid="skeleton" className={className} />,
 }));
 
 // Mock Organisms
@@ -113,13 +115,13 @@ describe('ShareTarget', () => {
     });
   });
 
-  it('shows loading spinner while retrieving shared files', () => {
+  it('shows loading skeleton while retrieving shared files', () => {
     mockSearchParams.set('hasFiles', 'true');
     mockGetSharedFiles.mockImplementation(() => new Promise(() => {})); // Never resolves
 
     render(<ShareTarget />);
 
-    expect(screen.getByTestId('spinner')).toBeInTheDocument();
+    expect(screen.getAllByTestId('skeleton').length).toBeGreaterThan(0);
   });
 
   it('renders title correctly', async () => {

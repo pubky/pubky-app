@@ -116,13 +116,13 @@ describe('PostHeader', () => {
     vi.clearAllMocks();
   });
 
-  it('shows loading when details are unavailable', () => {
+  it('shows skeleton when details are unavailable', () => {
     mockUsePostDetails.mockReturnValue({ postDetails: null, isLoading: false });
     mockUseUserDetails.mockReturnValue({ userDetails: null, isLoading: false });
     mockUseAvatarUrl.mockReturnValue(undefined);
 
-    const { container } = render(<PostHeader postId="user123:post456" />);
-    expect(container.firstChild).toHaveTextContent('Loading header...');
+    render(<PostHeader postId="user123:post456" />);
+    expect(screen.getAllByRole('generic').some((el) => el.getAttribute('data-slot') === 'skeleton')).toBe(true);
   });
 
   it('renders user name, handle and time', () => {
@@ -134,7 +134,9 @@ describe('PostHeader', () => {
         uri: 'pubky://userpubkykey/pub/pubky.app/posts/post456',
         content: '',
         attachments: null,
-      } as Core.PostDetailsModelSchema,
+        is_moderated: false,
+        is_blurred: false,
+      } as Core.EnrichedPostDetails,
       isLoading: false,
     });
     mockUseUserDetails.mockReturnValue({
@@ -167,14 +169,14 @@ describe('PostHeader', () => {
     expect(container.querySelector('[data-testid="clock-icon"]')).not.toBeInTheDocument();
   });
 
-  it('shows loading when user details are not available and isReplyInput is true', () => {
+  it('shows skeleton when user details are not available and isReplyInput is true', () => {
     mockUsePostDetails.mockReturnValue({ postDetails: null, isLoading: false });
     mockUseUserDetails.mockReturnValue({ userDetails: null, isLoading: false });
     mockUseAvatarUrl.mockReturnValue(undefined);
 
-    const { container } = render(<PostHeader postId="userpubkykey:post456" isReplyInput={true} />);
+    render(<PostHeader postId="userpubkykey:post456" isReplyInput={true} />);
 
-    expect(container.firstChild).toHaveTextContent('Loading header...');
+    expect(screen.getAllByRole('generic').some((el) => el.getAttribute('data-slot') === 'skeleton')).toBe(true);
   });
 
   it('passes size prop to PostHeaderUserInfo', () => {
@@ -186,7 +188,9 @@ describe('PostHeader', () => {
         uri: 'pubky://userpubkykey/pub/pubky.app/posts/post456',
         content: '',
         attachments: null,
-      } as Core.PostDetailsModelSchema,
+        is_moderated: false,
+        is_blurred: false,
+      } as Core.EnrichedPostDetails,
       isLoading: false,
     });
     mockUseUserDetails.mockReturnValue({
@@ -209,7 +213,9 @@ describe('PostHeader', () => {
         uri: 'pubky://userpubkykey/pub/pubky.app/posts/post456',
         content: '',
         attachments: null,
-      } as Core.PostDetailsModelSchema,
+        is_moderated: false,
+        is_blurred: false,
+      } as Core.EnrichedPostDetails,
       isLoading: false,
     });
     mockUseUserDetails.mockReturnValue({
@@ -233,7 +239,9 @@ describe('PostHeader', () => {
         uri: 'pubky://userpubkykey/pub/pubky.app/posts/post456',
         content: '',
         attachments: null,
-      } as Core.PostDetailsModelSchema,
+        is_moderated: false,
+        is_blurred: false,
+      } as Core.EnrichedPostDetails,
       isLoading: false,
     });
     mockUseUserDetails.mockReturnValue({
@@ -263,7 +271,9 @@ describe('PostHeader - Snapshots', () => {
         uri: 'pubky://userpubkykey/pub/pubky.app/posts/post456',
         content: '',
         attachments: null,
-      } as Core.PostDetailsModelSchema,
+        is_moderated: false,
+        is_blurred: false,
+      } as Core.EnrichedPostDetails,
       isLoading: false,
     });
     mockUseUserDetails.mockReturnValue({

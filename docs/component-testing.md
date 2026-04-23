@@ -110,6 +110,46 @@ vi.mock('@/libs', async () => {
 });
 ```
 
+### Typed Mocks: No `as unknown as T` or `as any`
+
+ESLint bans both `as any` and `as unknown as T` in every `*.test.{ts,tsx}` file (via `no-restricted-syntax` in `eslint.config.mjs`). Both patterns silently switch off TypeScript on the mock and let a bad shape sail through for the lifetime of the test.
+
+Route every cast in a test through a named helper from `src/test-utils` instead. See `src/test-utils/README.md` for the full list, but in short:
+
+| Situation                                                            | Helper                                                   |
+| -------------------------------------------------------------------- | -------------------------------------------------------- |
+| Partial Zustand store double                                         | `mockAuthStore({...})`, `mockHomeStore({...})`, etc.     |
+| Partial React synthetic event                                        | `mockKeyboardEvent({...})`, `mockDragEvent({...})`, etc. |
+| Partial `@synonymdev/pubky` `Session` / `Keypair`                    | `mockSession({...})` / `mockKeypair({...})`              |
+| Partial `fetch` `Response`                                           | `mockResponse({...})`                                    |
+| Deliberately invalid input to exercise a runtime guard               | `asInvalid<T>(value)`                                    |
+| Opaque external SDK type with no constructor and no dedicated helper | `asOpaque<T>(value)`                                     |
+
+Each helper takes a `Partial<T>` (or a named `T` type parameter) and buries the cast in one place, so the shape of the argument you pass is still type-checked and every remaining escape hatch is greppable.
+
+```typescript
+// Before — silently disables the type check on AuthStore and the keyboard event
+import * as Core from '@/core';
+const authStore = {
+  currentUserPubky: 'abc',
+  signIn: vi.fn(),
+} as unknown as Core.AuthStore;
+
+const event = { key: 'Enter', preventDefault: vi.fn() } as any;
+
+// After — the helpers type-check the partials and add sensible defaults
+import { mockAuthStore, mockKeyboardEvent } from '@/test-utils';
+
+const authStore = mockAuthStore({
+  currentUserPubky: 'abc',
+  signIn: vi.fn(),
+});
+
+const event = mockKeyboardEvent({ key: 'Enter' });
+```
+
+A single-step widening cast like `value as unknown` or `[] as unknown[]` (inside a `vi.hoisted` placeholder, for instance) is still allowed — it widens the type without bypassing any read-side check, so it's not an escape hatch. The rule only fires on the `unknown as T` second hop and on `as any`.
+
 ### Icon Components: Always Real
 
 Icon components from `@/libs/icons` should **always** use real implementations. This ensures snapshots capture actual SVG rendering and visual regression tests detect icon changes.

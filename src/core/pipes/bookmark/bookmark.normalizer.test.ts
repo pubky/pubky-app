@@ -3,6 +3,7 @@ import * as Core from '@/core';
 import * as Libs from '@/libs';
 import { AppError, ErrorCategory, ValidationErrorCode, ErrorService } from '@/libs';
 import { BookmarkResult, postUriBuilder } from 'pubky-app-specs';
+import { asOpaque } from '@/test-utils';
 import {
   TEST_PUBKY,
   TEST_POST_IDS,
@@ -16,12 +17,11 @@ import {
 
 describe('BookmarkNormalizer', () => {
   const createMockBuilder = (overrides?: Partial<{ createBookmark: ReturnType<typeof vi.fn> }>) => ({
-    createBookmark: vi.fn(
-      (uri: string) =>
-        ({
-          bookmark: { uri, toJson: vi.fn(() => ({ uri })) },
-          meta: { url: buildPubkyUri(TEST_PUBKY.USER_1, `bookmarks/${Date.now()}`) },
-        }) as unknown as BookmarkResult,
+    createBookmark: vi.fn((uri: string) =>
+      asOpaque<BookmarkResult>({
+        bookmark: { uri, toJson: vi.fn(() => ({ uri })) },
+        meta: { url: buildPubkyUri(TEST_PUBKY.USER_1, `bookmarks/${Date.now()}`) },
+      }),
     ),
     ...overrides,
   });

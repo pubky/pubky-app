@@ -44,10 +44,6 @@ next-env.d.ts
 #Intelij
 .idea
 
-# Storybook
-*storybook.log
-storybook-static
-
 # Cypress files
 cypress/download
 cypress/screenshots
@@ -74,3 +70,6 @@ public/sw.js.map
 
 # AI Context Plans
 .plans
+
+# Serena
+.serena

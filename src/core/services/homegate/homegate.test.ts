@@ -1,8 +1,9 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { HomegateService } from './homegate';
+import { asOpaque } from '@/test-utils';
 
 const mockFetch = vi.fn();
-global.fetch = mockFetch as unknown as typeof global.fetch;
+global.fetch = asOpaque<typeof global.fetch>(mockFetch);
 
 describe('HomegateService', () => {
   beforeEach(() => {
@@ -77,6 +78,63 @@ describe('HomegateService', () => {
         expect.stringContaining(`/ln_verification/${verificationId}/await`),
         expect.objectContaining({ method: 'GET', signal: controller.signal }),
       );
+    });
+  });
+
+  describe('sendSmsCode', () => {
+    it('sends SMS code successfully', async () => {
+      mockFetch.mockResolvedValue(new Response(JSON.stringify({}), { status: 200 }));
+
+      const result = await HomegateService.sendSmsCode('+1234567890');
+
+      expect(result).toEqual({ success: true });
+      expect(mockFetch).toHaveBeenCalledWith(
+        expect.stringContaining('/sms_verification/send_code'),
+        expect.objectContaining({
+          method: 'POST',
+        }),
+      );
+    });
+
+    it('returns blocked error for 403 response', async () => {
+      mockFetch.mockResolvedValue(new Response(null, { status: 403 }));
+
+      const result = await HomegateService.sendSmsCode('+1234567890');
+
+      expect(result).toEqual({ success: false, errorType: 'blocked' });
+    });
+
+    it('returns rate limited error with retry-after for 429 response', async () => {
+      mockFetch.mockResolvedValue(
+        new Response(JSON.stringify({ error: 'too many requests' }), {
+          status: 429,
+          headers: { 'retry-after': '60' },
+        }),
+      );
+
+      const result = await HomegateService.sendSmsCode('+1234567890');
+
+      expect(result).toEqual({
+        success: false,
+        errorType: 'rate_limited_temporary',
+        retryAfter: 60,
+      });
+    });
+
+    it('returns weekly rate limit error when error message contains weekly', async () => {
+      mockFetch.mockResolvedValue(new Response(JSON.stringify({ error: 'Weekly limit exceeded' }), { status: 429 }));
+
+      const result = await HomegateService.sendSmsCode('+1234567890');
+
+      expect(result).toEqual({ success: false, errorType: 'rate_limited_weekly' });
+    });
+
+    it('returns yearly rate limit error when error message contains yearly', async () => {
+      mockFetch.mockResolvedValue(new Response(JSON.stringify({ error: 'Yearly limit exceeded' }), { status: 429 }));
+
+      const result = await HomegateService.sendSmsCode('+1234567890');
+
+      expect(result).toEqual({ success: false, errorType: 'rate_limited_yearly' });
     });
   });
 });

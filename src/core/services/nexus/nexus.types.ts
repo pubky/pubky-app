@@ -68,6 +68,7 @@ export type UserStreamCompositeReach = Exclude<UserStreamReach, UserStreamReach.
 /** Timeframe filter for user stream endpoints */
 export enum UserStreamTimeframe {
   TODAY = 'today',
+  THIS_WEEK = 'this_week',
   THIS_MONTH = 'this_month',
   ALL_TIME = 'all_time',
 }

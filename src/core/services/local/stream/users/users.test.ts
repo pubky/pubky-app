@@ -373,7 +373,7 @@ describe('LocalStreamUsersService', () => {
             label: Config.MODERATED_TAGS[0],
             taggers: [Config.MODERATION_ID],
             taggers_count: 1,
-            relationship: { tagged: true, tagged_by_viewer: false },
+            relationship: true,
           },
         ];
 
@@ -393,7 +393,7 @@ describe('LocalStreamUsersService', () => {
             label: 'developer',
             taggers: ['tagger-1'],
             taggers_count: 1,
-            relationship: { tagged: true, tagged_by_viewer: false },
+            relationship: true,
           },
         ];
 
@@ -411,7 +411,7 @@ describe('LocalStreamUsersService', () => {
             label: Config.MODERATED_TAGS[0],
             taggers: ['wrong-tagger-id'],
             taggers_count: 1,
-            relationship: { tagged: true, tagged_by_viewer: false },
+            relationship: true,
           },
         ];
 
@@ -432,7 +432,7 @@ describe('LocalStreamUsersService', () => {
               label: Config.MODERATED_TAGS[0],
               taggers: [Config.MODERATION_ID],
               taggers_count: 1,
-              relationship: { tagged: true, tagged_by_viewer: false },
+              relationship: true,
             },
           ],
         });

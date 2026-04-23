@@ -12,7 +12,7 @@ exports[`Toaster - Snapshots > matches snapshot for Toaster with multiple toasts
     tabindex="0"
   />
   <ol
-    class="fixed bottom-0 left-1/2 z-[100] flex max-h-screen w-full -translate-x-1/2 flex-col-reverse p-4 sm:bottom-8 sm:max-w-[550px]"
+    class="fixed bottom-16 left-1/2 z-[100] flex max-h-screen w-full -translate-x-1/2 flex-col-reverse p-4 sm:bottom-8 sm:max-w-[550px]"
     tabindex="-1"
   >
     <li
@@ -38,6 +38,9 @@ exports[`Toaster - Snapshots > matches snapshot for Toaster with multiple toasts
           First description
         </div>
       </div>
+      <div
+        class="flex shrink-0 items-center gap-2"
+      />
     </li>
     <li
       class="group pointer-events-auto relative w-full space-x-4 overflow-hidden transition-all data-[swipe=cancel]:translate-x-0 data-[swipe=end]:translate-x-[var(--radix-toast-swipe-end-x)] data-[swipe=move]:translate-x-[var(--radix-toast-swipe-move-x)] data-[swipe=move]:transition-none data-[state=open]:animate-in data-[state=closed]:animate-out data-[swipe=end]:animate-out data-[state=closed]:fade-out-80 data-[state=closed]:slide-out-to-bottom-full data-[state=open]:slide-in-from-bottom-full data-[state=open]:sm:slide-in-from-bottom-full flex items-center justify-between gap-2 rounded-lg border border-brand/32 bg-brand/8 p-6 shadow-lg backdrop-blur-[10px]"
@@ -62,6 +65,9 @@ exports[`Toaster - Snapshots > matches snapshot for Toaster with multiple toasts
           Second description
         </div>
       </div>
+      <div
+        class="flex shrink-0 items-center gap-2"
+      />
     </li>
   </ol>
   <span
@@ -83,7 +89,7 @@ exports[`Toaster - Snapshots > matches snapshot for Toaster with single toast 1`
     tabindex="0"
   />
   <ol
-    class="fixed bottom-0 left-1/2 z-[100] flex max-h-screen w-full -translate-x-1/2 flex-col-reverse p-4 sm:bottom-8 sm:max-w-[550px]"
+    class="fixed bottom-16 left-1/2 z-[100] flex max-h-screen w-full -translate-x-1/2 flex-col-reverse p-4 sm:bottom-8 sm:max-w-[550px]"
     tabindex="-1"
   >
     <li
@@ -109,6 +115,9 @@ exports[`Toaster - Snapshots > matches snapshot for Toaster with single toast 1`
           This is a test toast message
         </div>
       </div>
+      <div
+        class="flex shrink-0 items-center gap-2"
+      />
     </li>
   </ol>
   <span
@@ -130,7 +139,7 @@ exports[`Toaster - Snapshots > matches snapshot for Toaster with title-only toas
     tabindex="0"
   />
   <ol
-    class="fixed bottom-0 left-1/2 z-[100] flex max-h-screen w-full -translate-x-1/2 flex-col-reverse p-4 sm:bottom-8 sm:max-w-[550px]"
+    class="fixed bottom-16 left-1/2 z-[100] flex max-h-screen w-full -translate-x-1/2 flex-col-reverse p-4 sm:bottom-8 sm:max-w-[550px]"
     tabindex="-1"
   >
     <li
@@ -151,6 +160,9 @@ exports[`Toaster - Snapshots > matches snapshot for Toaster with title-only toas
           Simple Toast
         </div>
       </div>
+      <div
+        class="flex shrink-0 items-center gap-2"
+      />
     </li>
   </ol>
   <span
@@ -172,7 +184,7 @@ exports[`Toaster - Snapshots > matches snapshot for Toaster with toast action 1`
     tabindex="0"
   />
   <ol
-    class="fixed bottom-0 left-1/2 z-[100] flex max-h-screen w-full -translate-x-1/2 flex-col-reverse p-4 sm:bottom-8 sm:max-w-[550px]"
+    class="fixed bottom-16 left-1/2 z-[100] flex max-h-screen w-full -translate-x-1/2 flex-col-reverse p-4 sm:bottom-8 sm:max-w-[550px]"
     tabindex="-1"
   >
     <li
@@ -199,7 +211,7 @@ exports[`Toaster - Snapshots > matches snapshot for Toaster with toast action 1`
         </div>
       </div>
       <div
-        class="shrink-0"
+        class="flex shrink-0 items-center gap-2"
       >
         <button>
           Undo
@@ -226,7 +238,7 @@ exports[`Toaster - Snapshots > matches snapshot for Toaster with toast with acti
     tabindex="0"
   />
   <ol
-    class="fixed bottom-0 left-1/2 z-[100] flex max-h-screen w-full -translate-x-1/2 flex-col-reverse p-4 sm:bottom-8 sm:max-w-[550px]"
+    class="fixed bottom-16 left-1/2 z-[100] flex max-h-screen w-full -translate-x-1/2 flex-col-reverse p-4 sm:bottom-8 sm:max-w-[550px]"
     tabindex="-1"
   >
     <li
@@ -253,7 +265,7 @@ exports[`Toaster - Snapshots > matches snapshot for Toaster with toast with acti
         </div>
       </div>
       <div
-        class="shrink-0"
+        class="flex shrink-0 items-center gap-2"
       >
         <button
           data-testid="custom-action"
@@ -278,7 +290,7 @@ exports[`Toaster - Snapshots > matches snapshot for empty Toaster 1`] = `
   tabindex="-1"
 >
   <ol
-    class="fixed bottom-0 left-1/2 z-[100] flex max-h-screen w-full -translate-x-1/2 flex-col-reverse p-4 sm:bottom-8 sm:max-w-[550px]"
+    class="fixed bottom-16 left-1/2 z-[100] flex max-h-screen w-full -translate-x-1/2 flex-col-reverse p-4 sm:bottom-8 sm:max-w-[550px]"
     tabindex="-1"
   />
 </div>

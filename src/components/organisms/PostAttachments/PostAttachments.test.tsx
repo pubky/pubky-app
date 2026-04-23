@@ -2,6 +2,7 @@ import { render, screen, waitFor } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { PostAttachments } from './PostAttachments';
 import * as Core from '@/core';
+import { asInvalid } from '@/test-utils';
 
 // Mock useToast
 const mockToast = vi.fn();
@@ -124,7 +125,7 @@ describe('PostAttachments', () => {
 
     it('renders nothing when attachments is undefined', () => {
       const { container } = render(
-        <PostAttachments attachments={undefined as unknown as string[] | null} localAttachments={undefined} />,
+        <PostAttachments attachments={asInvalid<string[] | null>(undefined)} localAttachments={undefined} />,
       );
       expect(container.firstChild).toBeNull();
     });

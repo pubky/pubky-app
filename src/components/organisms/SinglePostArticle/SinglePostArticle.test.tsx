@@ -222,6 +222,7 @@ describe('SinglePostArticle', () => {
     expect(header).toHaveAttribute('data-post-id', 'user123:post456');
     expect(header).toHaveAttribute('data-size', 'large');
     expect(header).toHaveAttribute('data-time-placement', 'bottom-left');
+    expect(header).not.toHaveAttribute('data-stable-popover-placement');
   });
 
   it('renders PostActionsBar with correct postId', () => {

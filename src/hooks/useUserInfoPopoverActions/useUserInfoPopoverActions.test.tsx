@@ -1,5 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { renderHook, act } from '@testing-library/react';
+import { mockMouseEvent } from '@/test-utils';
 import { useUserInfoPopoverActions } from './useUserInfoPopoverActions';
 
 const mockPush = vi.fn();
@@ -36,7 +37,7 @@ describe('useUserInfoPopoverActions', () => {
       }),
     );
 
-    const event = { preventDefault: vi.fn(), stopPropagation: vi.fn() } as unknown as React.MouseEvent;
+    const event = mockMouseEvent({ preventDefault: vi.fn(), stopPropagation: vi.fn() });
     act(() => {
       result.current.onEditClick(event);
     });
@@ -60,7 +61,7 @@ describe('useUserInfoPopoverActions', () => {
       }),
     );
 
-    const event = { preventDefault: vi.fn(), stopPropagation: vi.fn() } as unknown as React.MouseEvent;
+    const event = mockMouseEvent({ preventDefault: vi.fn(), stopPropagation: vi.fn() });
     await act(async () => {
       await result.current.onFollowClick(event);
     });

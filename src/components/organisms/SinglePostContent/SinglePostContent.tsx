@@ -1,14 +1,16 @@
 'use client';
 
-import { useTranslations } from 'next-intl';
+import * as Core from '@/core';
 import * as Atoms from '@/atoms';
 import * as Molecules from '@/molecules';
 import * as Hooks from '@/hooks';
 import * as Libs from '@/libs';
+import { getTagsLayoutForSurfaceLayout, PostMainLayoutProvider } from '@/organisms/PostMain/PostMainLayout';
 import { SinglePostArticle } from '../SinglePostArticle';
 import { SinglePostCard } from '../SinglePostCard';
-import { SinglePostParticipants } from '../SinglePostParticipants';
+
 import { PostPageHeader } from '../PostPageHeader';
+import { SinglePostContentSkeleton } from './SinglePostContent.skeleton';
 import { ThreadTree } from '../ThreadTree/ThreadTree';
 import type { SinglePostContentProps } from './SinglePostContent.types';
 
@@ -27,7 +29,8 @@ import type { SinglePostContentProps } from './SinglePostContent.types';
  * following the atomic design pattern where only organisms can call hooks.
  */
 export function SinglePostContent({ postId }: SinglePostContentProps) {
-  const t = useTranslations('common');
+  const layout = Core.useHomeStore((state) => state.layout);
+  const tagsLayout = getTagsLayoutForSurfaceLayout(layout);
 
   // Check authentication status - unauthenticated users see limited view
   const { isAuthenticated } = Hooks.useRequireAuth();
@@ -36,13 +39,14 @@ export function SinglePostContent({ postId }: SinglePostContentProps) {
   const { postDetails } = Hooks.usePostDetails(postId);
   const isDeleted = Libs.isPostDeleted(postDetails?.content);
 
-  // TODO - Add loading skeleton
-  if (!postDetails) return t('loadingPost');
+  if (!postDetails) {
+    return <SinglePostContentSkeleton />;
+  }
 
   const isArticle = postDetails.kind === 'long';
 
   return (
-    <>
+    <PostMainLayoutProvider tagsLayout={tagsLayout}>
       {/* Page header with breadcrumb navigation */}
       <PostPageHeader postId={postId} />
 
@@ -64,28 +68,15 @@ export function SinglePostContent({ postId }: SinglePostContentProps) {
 
       {/* Replies section - only visible for authenticated users */}
       {isAuthenticated && (
-        <Atoms.Container overrideDefaults className="flex gap-6">
+        <Atoms.Container overrideDefaults className="mb-6 flex">
           {/* Left column - Replies thread with QuickReply at the end (larger) */}
-          <Atoms.Container className="w-full min-w-0 flex-1 gap-0 overflow-hidden">
+          <Atoms.Container className="mb-12 w-full min-w-0 flex-1 gap-0 overflow-hidden sm:mb-0">
             <Atoms.Container overrideDefaults className="ml-3">
               <ThreadTree key={postId} postId={postId} showQuickReply={!isDeleted} />
             </Atoms.Container>
           </Atoms.Container>
-
-          {/* Right column - Participants sidebar (desktop only) */}
-          <Atoms.Container
-            overrideDefaults
-            className={Libs.cn(
-              'sticky hidden flex-col items-start justify-start gap-6 self-start pt-6 lg:flex',
-              // Aligns sticky sidebar below the fixed page header stack on desktop.
-              'top-[147px]',
-              'w-full max-w-xs',
-            )}
-          >
-            <SinglePostParticipants postId={postId} />
-          </Atoms.Container>
         </Atoms.Container>
       )}
-    </>
+    </PostMainLayoutProvider>
   );
 }

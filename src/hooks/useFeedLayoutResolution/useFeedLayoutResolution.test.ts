@@ -32,13 +32,25 @@ describe('resolveFeedLayout', () => {
   it('falls back to columns for unsupported feeds without mutating the requested value', () => {
     const result = resolveFeedLayout({
       requestedLayout: Core.LAYOUT.VISUAL,
-      variant: TIMELINE_FEED_VARIANT.SEARCH,
+      variant: TIMELINE_FEED_VARIANT.HOT,
       isPhoneViewport: false,
     });
 
     expect(result.requestedLayout).toBe(Core.LAYOUT.VISUAL);
     expect(result.effectiveLayout).toBe(Core.LAYOUT.COLUMNS);
     expect(result.isVisualActive).toBe(false);
+  });
+
+  it('keeps visual layout active for search feed on desktop/tablet', () => {
+    const result = resolveFeedLayout({
+      requestedLayout: Core.LAYOUT.VISUAL,
+      variant: TIMELINE_FEED_VARIANT.SEARCH,
+      isPhoneViewport: false,
+    });
+
+    expect(result.requestedLayout).toBe(Core.LAYOUT.VISUAL);
+    expect(result.effectiveLayout).toBe(Core.LAYOUT.VISUAL);
+    expect(result.isVisualActive).toBe(true);
   });
 
   it('leaves non-visual layouts unchanged', () => {

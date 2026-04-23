@@ -10,6 +10,7 @@ exports[`SinglePostContent - Snapshots > matches snapshot when not authenticated
   </div>
   <div
     data-post-id="author:post123"
+    data-tags-layout="inline"
     data-testid="single-post-card"
   >
     SinglePostCard
@@ -36,12 +37,12 @@ exports[`SinglePostContent - Snapshots > matches snapshot with deleted parent po
     </div>
   </div>
   <div
-    data-class-name="flex gap-6"
+    data-class-name="mb-6 flex"
     data-override-defaults="true"
     data-testid="container"
   >
     <div
-      data-class-name="w-full min-w-0 flex-1 gap-0 overflow-hidden"
+      data-class-name="mb-12 w-full min-w-0 flex-1 gap-0 overflow-hidden sm:mb-0"
       data-testid="container"
     >
       <div
@@ -56,18 +57,6 @@ exports[`SinglePostContent - Snapshots > matches snapshot with deleted parent po
         >
           ThreadTree
         </div>
-      </div>
-    </div>
-    <div
-      data-class-name="sticky hidden flex-col items-start justify-start gap-6 self-start pt-6 lg:flex top-[147px] w-full max-w-xs"
-      data-override-defaults="true"
-      data-testid="container"
-    >
-      <div
-        data-post-id="author:post123"
-        data-testid="single-post-participants"
-      >
-        SinglePostParticipants
       </div>
     </div>
   </div>
@@ -93,12 +82,12 @@ Article content"
     SinglePostArticle
   </div>
   <div
-    data-class-name="flex gap-6"
+    data-class-name="mb-6 flex"
     data-override-defaults="true"
     data-testid="container"
   >
     <div
-      data-class-name="w-full min-w-0 flex-1 gap-0 overflow-hidden"
+      data-class-name="mb-12 w-full min-w-0 flex-1 gap-0 overflow-hidden sm:mb-0"
       data-testid="container"
     >
       <div
@@ -113,18 +102,6 @@ Article content"
         >
           ThreadTree
         </div>
-      </div>
-    </div>
-    <div
-      data-class-name="sticky hidden flex-col items-start justify-start gap-6 self-start pt-6 lg:flex top-[147px] w-full max-w-xs"
-      data-override-defaults="true"
-      data-testid="container"
-    >
-      <div
-        data-post-id="author:post123"
-        data-testid="single-post-participants"
-      >
-        SinglePostParticipants
       </div>
     </div>
   </div>
@@ -141,17 +118,18 @@ exports[`SinglePostContent - Snapshots > matches snapshot with short post and no
   </div>
   <div
     data-post-id="author:post123"
+    data-tags-layout="inline"
     data-testid="single-post-card"
   >
     SinglePostCard
   </div>
   <div
-    data-class-name="flex gap-6"
+    data-class-name="mb-6 flex"
     data-override-defaults="true"
     data-testid="container"
   >
     <div
-      data-class-name="w-full min-w-0 flex-1 gap-0 overflow-hidden"
+      data-class-name="mb-12 w-full min-w-0 flex-1 gap-0 overflow-hidden sm:mb-0"
       data-testid="container"
     >
       <div
@@ -166,18 +144,6 @@ exports[`SinglePostContent - Snapshots > matches snapshot with short post and no
         >
           ThreadTree
         </div>
-      </div>
-    </div>
-    <div
-      data-class-name="sticky hidden flex-col items-start justify-start gap-6 self-start pt-6 lg:flex top-[147px] w-full max-w-xs"
-      data-override-defaults="true"
-      data-testid="container"
-    >
-      <div
-        data-post-id="author:post123"
-        data-testid="single-post-participants"
-      >
-        SinglePostParticipants
       </div>
     </div>
   </div>

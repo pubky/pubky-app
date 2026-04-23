@@ -32,21 +32,10 @@
     "cancel": "取消",
     "confirm": "确认",
     "delete": "删除",
+    "ok": "确定",
     "send": "发送",
     "submit": "提交",
     "loading": "加载中...",
-    "loadingActions": "加载操作...",
-    "loadingHeader": "加载头部...",
-    "loadingPost": "加载帖子...",
-    "loadingContent": "加载内容...",
-    "loadingReplies": "加载回复...",
-    "loadingParticipants": "加载参与者...",
-    "loadingTags": "加载标签...",
-    "loadingMoreTags": "加载更多标签...",
-    "loadingTaggers": "加载标记者...",
-    "loadingPosts": "加载帖子...",
-    "loadingMorePosts": "加载更多帖子...",
-    "loadingPreview": "加载预览...",
     "loadingBookmark": "加载中...",
     "addBookmark": "添加书签",
     "removeBookmark": "移除书签",
@@ -213,8 +202,10 @@
     },
     "lightning": {
       "title": "扫码<highlight>支付。</highlight>",
+      "title_mobile": "点击<highlight>支付。</highlight>",
       "subtitle": "使用您喜欢的钱包扫描二维码。",
       "qrLabel": "比特币闪电网络支付",
+      "payNow": "立即支付",
       "payAmount": "支付 ₿ {amount} 以继续。",
       "payAmountUsd": "支付 ₿ {amount}（${usdAmount}）以继续。",
       "expired": "支付已过期",
@@ -924,8 +915,7 @@
       "textCopied": "文本已复制到剪贴板",
       "profileLinkCopied": "个人资料链接已复制到剪贴板",
       "copyFailed": "复制失败",
-      "copyFailedDesc": "无法复制到剪贴板",
-      "ok": "确定"
+      "copyFailedDesc": "无法复制到剪贴板"
     },
     "follow": {
       "failed": "更新关注状态失败"
@@ -1071,6 +1061,7 @@
     "timeframe": {
       "title": "时间范围",
       "today": "今天",
+      "thisWeek": "本周",
       "thisMonth": "本月",
       "allTime": "全部时间"
     }
@@ -1079,7 +1070,10 @@
     "hotTags": "热门标签",
     "activeUsers": "活跃用户",
     "trendingPosts": "热门帖子",
-    "postsCount": "本月 {count} 条帖子",
+    "postsCountToday": "今日 {count} 条帖子",
+    "postsCountThisWeek": "本周 {count} 条帖子",
+    "postsCountThisMonth": "本月 {count} 条帖子",
+    "postsCountAllTime": "{count} 条帖子",
     "failedToLoadUsers": "加载用户失败",
     "failedToLoadTags": "加载标签失败",
     "noUsersToShow": "暂无用户显示",
@@ -1125,15 +1119,19 @@
       }
     },
     "version": {
-      "title": "版本",
-      "text": "Pubky v0.12 © Synonym Software Ltd"
+      "title": "版本"
     }
   },
   "logout": {
+    "loadingTitle": "Signing you out...",
+    "loadingSubtitle": "We're ending your session securely.",
+    "errorTitle": "We couldn't sign you out yet",
+    "errorSubtitle": "Please try again to finish signing out securely.",
     "title": "<highlight>再见！</highlight>",
     "subtitle": "您已安全退出。",
     "homepage": "首页",
-    "signBackIn": "重新登录"
+    "signBackIn": "重新登录",
+    "retry": "Retry"
   },
   "tradeoffs": {
     "title": "请注意以下权衡：",
