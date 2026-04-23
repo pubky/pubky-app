@@ -1,6 +1,8 @@
 import * as Core from '@/core';
 import { setLocaleCookie } from '@/i18n/utils';
 import { NotificationNormalizer } from '@/core/pipes/notification/notification.normalizer';
+import { useSettingsStore } from '@/core/stores/settings/settings.store';
+import { useNotificationStore } from '@/core/stores/notification/notification.store';
 
 /**
  * Settings controller.
@@ -58,11 +60,11 @@ export class SettingsController {
    * Recalculates the unread badge count based on current notification preferences.
    */
   private static async recalculateUnreadBadge(): Promise<void> {
-    const preferences = Core.useSettingsStore.getState().notifications;
+    const preferences = useSettingsStore.getState().notifications;
     const allowedTypes = NotificationNormalizer.toEnabledTypes(preferences);
-    const lastRead = Core.useNotificationStore.getState().selectLastRead();
+    const lastRead = useNotificationStore.getState().selectLastRead();
     const unread = await Core.NotificationApplication.countFilteredUnreadSince(lastRead, allowedTypes);
-    Core.useNotificationStore.getState().setUnread(unread);
+    useNotificationStore.getState().setUnread(unread);
   }
 
   /**
