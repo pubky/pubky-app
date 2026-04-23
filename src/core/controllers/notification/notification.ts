@@ -95,8 +95,8 @@ export class NotificationController {
   }
 
   /**
-   * Retrieves all notifications from the local database.
-   * Used for reactive queries in UI components.
+   * Retrieves all notifications from the local database without preference filtering.
+   * Currently unused since filtered-notification was introduced, but kept for future use.
    *
    * @returns Promise resolving to all notifications ordered by timestamp descending
    */
