@@ -80,7 +80,7 @@ Never call `Sentry.setUser({ email, ... })`. If user attribution is ever needed,
 To verify end-to-end after an env/config change, temporarily throw from the three runtimes and confirm exactly one event per trigger in the matching Sentry environment:
 
 1. **Browser globalHandlers** — in any client component event handler, `throw new Error('test')`. Confirm one event with readable stack (source maps) and no accompanying `AppError` duplicate.
-2. **Err.* factory funnel** — `throw Err.database(DatabaseErrorCode.WRITE_FAILED, 'test', { service: ErrorService.Local, operation: 'test' })`. Confirm event tags `error.category=database`, `error.service=local`, `error.operation=test`.
+2. **Err.\* factory funnel** — `throw Err.database(DatabaseErrorCode.WRITE_FAILED, 'test', { service: ErrorService.Local, operation: 'test' })`. Confirm event tags `error.category=database`, `error.service=local`, `error.operation=test`.
 3. **Server `onRequestError`** — throw from a route handler (`/api/...`). Confirm capture with `runtime.name=node`.
 4. **Unhandled promise rejection** — `Promise.reject(new Error('test'))`. Confirm exactly one event (no duplicate from `GlobalErrorHandlerProvider`).
 5. **Replay** — open Replays for an errored session and confirm masked DOM (no usernames, post bodies, or input contents visible).
