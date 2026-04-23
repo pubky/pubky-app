@@ -26,7 +26,7 @@ function RecoveryStep1({ setStep }: { setStep: (step: number) => void }) {
 
   const passphraseStrength = calculatePasswordStrength(passphrase);
   const passphraseMatch = passphrase === confirmPassphrase;
-  const showWeakWarning = passphrase.length > 0 && passphrase.length < MIN_ENTROPY_CHARS;
+  const showWeakWarning = passphrase.length < MIN_ENTROPY_CHARS;
 
   const handleDownload = () => {
     Core.ProfileController.createRecoveryFile(passphrase);
