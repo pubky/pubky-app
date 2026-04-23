@@ -8,12 +8,25 @@ import { Env, Err, ErrorService, ValidationErrorCode } from '@/libs';
  * 1. Browser globalHandlers (unhandled exception)
  * 2. Server-side onRequestError (via /api/sentry-test)
  * 3. Err.* factory funnel (captureAppError with structured tags)
+ * 4. React render-time throw → app/error.tsx boundary
  *
  * Gated on NEXT_PUBLIC_DEBUG_MODE so production builds render the not-allowed message.
  * Delete this folder + src/app/api/sentry-test/ once Sentry capture is verified.
  */
+function RenderThrower({ shouldThrow }: { shouldThrow: boolean }) {
+  if (shouldThrow) {
+    // Thrown during render so React's error boundary (src/app/error.tsx) catches it.
+    throw Err.validation(ValidationErrorCode.INVALID_INPUT, 'Sentry test (render) — delete me', {
+      service: ErrorService.Local,
+      operation: 'sentryTestPage.throwOnRender',
+    });
+  }
+  return null;
+}
+
 export default function SentryTestPage() {
   const [serverStatus, setServerStatus] = useState<string>('idle');
+  const [throwOnRender, setThrowOnRender] = useState<boolean>(false);
 
   if (!Env.NEXT_PUBLIC_DEBUG_MODE) {
     return (
@@ -70,7 +83,15 @@ export default function SentryTestPage() {
         >
           Throw server error (onRequestError) — {serverStatus}
         </button>
+        <button
+          type="button"
+          onClick={() => setThrowOnRender(true)}
+          className="cursor-pointer rounded-full border border-border bg-secondary px-4 py-2 font-semibold text-foreground"
+        >
+          Throw AppError from render (app/error.tsx boundary)
+        </button>
       </div>
+      <RenderThrower shouldThrow={throwOnRender} />
       <p className="mt-6 text-sm text-muted-foreground">
         Verify in Sentry: readable stack trace (source maps), <code>environment</code> tag matches the deploy target,
         and the factory event has <code>error.category=Validation</code>, <code>error.service=Local</code>,{' '}
