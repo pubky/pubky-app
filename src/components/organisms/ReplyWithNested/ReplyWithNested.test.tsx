@@ -1,6 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { fireEvent, render, screen } from '@testing-library/react';
 import { ReplyWithNested } from './ReplyWithNested';
+import { PostMainLayoutProvider } from '@/organisms/PostMain/PostMainLayout';
 
 const mocks = vi.hoisted(() => ({
   mockUseNestedReplies: vi.fn(),
@@ -38,19 +39,28 @@ vi.mock('@/atoms', () => ({
   PostThreadSpacer: () => <div data-testid="post-thread-spacer" />,
 }));
 
-vi.mock('@/organisms', () => ({
-  PostMain: ({ postId, isLastReply, onClick }: { postId: string; isLastReply: boolean; onClick: () => void }) => (
-    <button
-      type="button"
-      data-testid="post-main"
-      data-post-id={postId}
-      data-is-last-reply={String(isLastReply)}
-      onClick={onClick}
-    >
-      {postId}
-    </button>
-  ),
-}));
+vi.mock('@/organisms', async () => {
+  const { usePostMainLayout } = await import('@/organisms/PostMain/PostMainLayout');
+
+  return {
+    PostMain: ({ postId, isLastReply, onClick }: { postId: string; isLastReply: boolean; onClick: () => void }) => {
+      const tagsLayout = usePostMainLayout();
+
+      return (
+        <button
+          type="button"
+          data-testid="post-main"
+          data-post-id={postId}
+          data-is-last-reply={String(isLastReply)}
+          data-tags-layout={tagsLayout}
+          onClick={onClick}
+        >
+          {postId}
+        </button>
+      );
+    },
+  };
+});
 
 vi.mock('@/molecules', () => ({
   ThreadExpandToggle: ({ expanded, onToggle }: { expanded: boolean; onToggle: () => void }) => (
@@ -220,6 +230,20 @@ describe('ReplyWithNested', () => {
       depth: 0,
       maxDepth: 2,
     });
+  });
+
+  it('inherits side layout for the full nested reply tree from the thread context', () => {
+    render(
+      <PostMainLayoutProvider tagsLayout="side">
+        <ReplyWithNested replyId="author:reply-1" onPostClick={mocks.mockOnPostClick} />
+      </PostMainLayoutProvider>,
+    );
+
+    const postCards = screen.getAllByTestId('post-main');
+    expect(postCards).toHaveLength(3);
+    for (const postCard of postCards) {
+      expect(postCard).toHaveAttribute('data-tags-layout', 'side');
+    }
   });
 });
 

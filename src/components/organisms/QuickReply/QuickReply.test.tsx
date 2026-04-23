@@ -4,6 +4,8 @@ import { render, screen, cleanup } from '@testing-library/react';
 import { QuickReply } from './QuickReply';
 import { QUICK_REPLY_PROMPTS_COUNT } from './QuickReply.constants';
 import { POST_MAX_CHARACTER_LENGTH } from '@/config';
+import { PostMainLayoutProvider } from '@/organisms/PostMain/PostMainLayout';
+import * as Hooks from '@/hooks';
 
 // next-intl is mocked globally in src/config/test.ts
 // The global mock uses real translations from messages/en.json
@@ -66,7 +68,7 @@ vi.mock('@/atoms', () => ({
 }));
 
 vi.mock('@/organisms', () => ({
-  AvatarWithFallback: ({ ...props }: { [key: string]: unknown }) => <div data-testid="avatar" {...props} />,
+  AvatarWithFallback: ({ size }: { size?: string }) => <div data-testid="avatar" data-size={size} />,
 }));
 
 vi.mock('@/molecules', () => ({
@@ -116,6 +118,7 @@ vi.mock('@/hooks', async (importOriginal) => {
     useElementHeight: () => ({ ref: () => null, height: 123 }),
     useEnterSubmit: (...args: unknown[]) => mockUseEnterSubmit(...args),
     usePostInput: (options: unknown) => mockUsePostInput(options),
+    useIsMobile: vi.fn(() => false),
   };
 });
 
@@ -165,5 +168,56 @@ describe('QuickReply', () => {
     const expandableSection = screen.getByTestId('post-input-expandable-section');
     expect(expandableSection).toHaveAttribute('data-character-count', '10');
     expect(expandableSection).toHaveAttribute('data-character-max', POST_MAX_CHARACTER_LENGTH.toString());
+  });
+
+  describe('wide layout', () => {
+    const mockUseIsMobile = vi.mocked(Hooks.useIsMobile);
+
+    beforeEach(() => {
+      mockUseIsMobile.mockReturnValue(false);
+    });
+
+    it('uses inline padding, default avatar size, and no body class when no provider is present', () => {
+      render(<QuickReply parentPostId="author:post1" />);
+
+      const inputContainer = screen.getAllByTestId('container').find((c) => c.className?.includes('rounded-md'));
+      expect(inputContainer?.className).toContain('p-4');
+      expect(inputContainer?.className).not.toContain('p-12');
+
+      expect(screen.getByTestId('avatar')).toHaveAttribute('data-size', 'default');
+      expect(screen.getByTestId('quick-reply-textarea')).not.toHaveAttribute('class');
+    });
+
+    it('applies wide padding, xl avatar, and text-xl body when inheriting side layout', () => {
+      render(
+        <PostMainLayoutProvider tagsLayout="side">
+          <QuickReply parentPostId="author:post1" />
+        </PostMainLayoutProvider>,
+      );
+
+      const inputContainer = screen.getAllByTestId('container').find((c) => c.className?.includes('rounded-md'));
+      expect(inputContainer?.className).toContain('p-12');
+      expect(inputContainer?.className).not.toContain('p-4');
+
+      expect(screen.getByTestId('avatar')).toHaveAttribute('data-size', 'xl');
+      expect(screen.getByTestId('quick-reply-textarea')).toHaveAttribute('class', 'text-xl leading-7');
+    });
+
+    it('falls back to inline layout on mobile even when the inherited layout is side', () => {
+      mockUseIsMobile.mockReturnValue(true);
+
+      render(
+        <PostMainLayoutProvider tagsLayout="side">
+          <QuickReply parentPostId="author:post1" />
+        </PostMainLayoutProvider>,
+      );
+
+      const inputContainer = screen.getAllByTestId('container').find((c) => c.className?.includes('rounded-md'));
+      expect(inputContainer?.className).toContain('p-4');
+      expect(inputContainer?.className).not.toContain('p-12');
+
+      expect(screen.getByTestId('avatar')).toHaveAttribute('data-size', 'default');
+      expect(screen.getByTestId('quick-reply-textarea')).not.toHaveAttribute('class');
+    });
   });
 });
