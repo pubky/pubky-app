@@ -3,12 +3,16 @@ import './globals.css';
 
 import { useEffect } from 'react';
 import * as Sentry from '@sentry/nextjs';
+import { AppError } from '@/libs';
 
 export default function GlobalError({ error, reset }: { error: Error & { digest?: string }; reset: () => void }) {
   useEffect(() => {
-    // global-error.tsx is caught by Next.js before Sentry's automatic handlers can see it,
-    // so we must capture explicitly here.
-    Sentry.captureException(error);
+    // global-error.tsx is caught by Next.js before Sentry's automatic handlers can see it.
+    // AppError instances are already captured once by Err.* factories via captureAppError;
+    // capturing again here would create duplicate events with the same fingerprint.
+    if (!(error instanceof AppError)) {
+      Sentry.captureException(error);
+    }
   }, [error]);
 
   return (

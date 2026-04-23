@@ -3,13 +3,17 @@
 import { useEffect } from 'react';
 import * as Sentry from '@sentry/nextjs';
 import * as Atoms from '@/atoms';
-import { Logger } from '@/libs';
+import { AppError, Logger } from '@/libs';
 
 export default function Error({ error, reset }: { error: Error & { digest?: string }; reset: () => void }) {
   useEffect(() => {
     Logger.error('[app/error] Route segment render error', error);
     // Next.js catches segment render errors before Sentry's automatic handlers.
-    Sentry.captureException(error);
+    // AppError instances are already captured once by Err.* factories via captureAppError;
+    // only capture the non-AppError path here to avoid double-emitting the same fingerprint.
+    if (!(error instanceof AppError)) {
+      Sentry.captureException(error);
+    }
   }, [error]);
 
   return (

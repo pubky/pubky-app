@@ -16,15 +16,19 @@ export function GlobalErrorHandlerProvider({ children }: GlobalErrorHandlerProvi
 
   useEffect(() => {
     const notifyError = (error: unknown, operation: string, context: Record<string, unknown>) => {
-      const appError = Libs.toAppError(error, Libs.ErrorService.Local, operation);
-      const message = Libs.getErrorMessage(appError);
+      // Do NOT wrap via Libs.toAppError here. Sentry's globalHandlers integration already
+      // captures the original window.error / unhandledrejection once; wrapping through the
+      // Err.* factory would emit a second event with a different fingerprint (the wrapper
+      // stack frames replace the original's), creating duplicate Sentry issues.
+      // This provider owns the UX side-effect (toast + log) only.
+      const message = Libs.getErrorMessage(error);
       const now = Date.now();
       const toastKey = `${operation}:${message}`;
       const lastToastTime = toastTimestampsRef.current.get(toastKey);
 
       Libs.Logger.error(`[GlobalErrorHandlerProvider] ${operation}`, {
         ...context,
-        error: appError,
+        error,
       });
 
       if (lastToastTime !== undefined && now - lastToastTime < TOAST_THROTTLE_MS) {

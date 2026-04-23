@@ -8,7 +8,6 @@ vi.mock('@/libs', async (importOriginal) => {
   const actual = await importOriginal<typeof import('@/libs')>();
   return {
     ...actual,
-    toAppError: vi.fn((error: unknown) => (error instanceof Error ? error : new Error('normalized'))),
     getErrorMessage: vi.fn(() => 'Something went wrong'),
     Logger: {
       ...actual.Logger,
@@ -56,7 +55,7 @@ describe('GlobalErrorHandlerProvider', () => {
       window.dispatchEvent(new ErrorEvent('error', { error: new Error('boom'), message: 'boom' }));
     });
 
-    expect(Libs.toAppError).toHaveBeenCalled();
+    expect(Libs.getErrorMessage).toHaveBeenCalled();
     expect(Libs.Logger.error).toHaveBeenCalled();
     expect(Molecules.showErrorToast).toHaveBeenCalledWith({ description: 'Something went wrong' });
   });
@@ -74,7 +73,7 @@ describe('GlobalErrorHandlerProvider', () => {
       window.dispatchEvent(event);
     });
 
-    expect(Libs.toAppError).toHaveBeenCalled();
+    expect(Libs.getErrorMessage).toHaveBeenCalled();
     expect(Libs.Logger.error).toHaveBeenCalled();
     expect(Molecules.showErrorToast).toHaveBeenCalledWith({ description: 'Something went wrong' });
   });
