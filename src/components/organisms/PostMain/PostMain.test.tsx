@@ -9,7 +9,11 @@ import { POST_THREAD_CONNECTOR_VARIANTS } from '@/components/atoms/PostThreadCon
 // Use vi.hoisted to define mock functions before vi.mock calls (which are hoisted)
 const { mockIsPostDeleted, mockPostHeader } = vi.hoisted(() => ({
   mockIsPostDeleted: vi.fn(() => false),
-  mockPostHeader: vi.fn(({ postId }: { postId: string }) => <div data-testid="post-header">PostHeader {postId}</div>),
+  mockPostHeader: vi.fn(
+    ({ postId }: { postId: string; size?: 'normal' | 'large'; timeAgoPlacement?: 'top-right' | 'bottom-left' }) => (
+      <div data-testid="post-header">PostHeader {postId}</div>
+    ),
+  ),
 }));
 
 // Use real libs - use actual implementations

@@ -6,6 +6,7 @@ import { TimelineFeed, useTimelineFeedContext } from './TimelineFeed';
 import * as Hooks from '@/hooks';
 import * as Providers from '@/providers';
 import * as Core from '@/core';
+import { asInvalid } from '@/test-utils';
 
 // Mock next/navigation for useSearchParams used by useSearchStreamId
 vi.mock('next/navigation', () => ({
@@ -59,8 +60,8 @@ vi.mock('@/hooks/useIsScrolledFromTop', () => ({
 }));
 
 const { mockUsePullToRefresh } = vi.hoisted(() => ({
-  mockUsePullToRefresh: vi.fn(() => ({
-    state: 'idle' as const,
+  mockUsePullToRefresh: vi.fn((): import('@/hooks/usePullToRefresh/usePullToRefresh.types').UsePullToRefreshResult => ({
+    state: 'idle',
     pullDistance: 0,
   })),
 }));
@@ -509,7 +510,7 @@ describe('TimelineFeed', () => {
 
   describe('Loading States', () => {
     it('should show loading when streamId is undefined', () => {
-      mockUseStreamIdFromFilters.mockReturnValue(undefined as unknown as Core.PostStreamTypes);
+      mockUseStreamIdFromFilters.mockReturnValue(asInvalid<Core.PostStreamTypes>(undefined));
 
       render(<TimelineFeed variant={TIMELINE_FEED_VARIANT.HOME} />);
 
@@ -664,7 +665,7 @@ describe('TimelineFeed - Snapshots', () => {
   });
 
   it('should match snapshot for loading state', () => {
-    mockUseStreamIdFromFilters.mockReturnValue(undefined as unknown as Core.PostStreamTypes);
+    mockUseStreamIdFromFilters.mockReturnValue(asInvalid<Core.PostStreamTypes>(undefined));
 
     const { container } = render(<TimelineFeed variant={TIMELINE_FEED_VARIANT.HOME} />);
     expect(container).toMatchSnapshot();

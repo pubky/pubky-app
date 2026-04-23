@@ -2,6 +2,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import type { Pubky } from '@/core';
 import { HttpMethod } from '@/libs';
 import type { PubkyAppUser, UserResult } from 'pubky-app-specs';
+import { asOpaque } from '@/test-utils';
 
 // Avoid pulling WASM-heavy deps from type-only modules
 vi.mock('pubky-app-specs', () => ({
@@ -53,11 +54,11 @@ describe('ProfileApplication', () => {
   describe('commitCreate', () => {
     it('creates profile and sets auth state on success', async () => {
       const profileJson = { name: 'Alice' };
-      const profile = { toJson: vi.fn(() => profileJson) } as unknown as PubkyAppUser;
+      const profile = asOpaque<PubkyAppUser>({ toJson: vi.fn(() => profileJson) });
       const url = 'pubky://user/pub/pubky.app/user';
       const pubky = 'test-pubky' as Pubky;
 
-      const requestSpy = vi.spyOn(Core.HomeserverService, 'request').mockResolvedValue(undefined as unknown as void);
+      const requestSpy = vi.spyOn(Core.HomeserverService, 'request').mockResolvedValue(undefined);
 
       await ProfileApplication.commitCreate({ profile, url, pubky });
 
@@ -69,7 +70,7 @@ describe('ProfileApplication', () => {
 
     it('rethrows on failure without resetting auth state', async () => {
       const profileJson = { name: 'Bob' };
-      const profile = { toJson: vi.fn(() => profileJson) } as unknown as PubkyAppUser;
+      const profile = asOpaque<PubkyAppUser>({ toJson: vi.fn(() => profileJson) });
       const url = 'pubky://user/pub/pubky.app/user';
       const pubky = 'test-pubky' as Pubky;
 
@@ -116,12 +117,10 @@ describe('ProfileApplication', () => {
         },
         meta: { url: `pubky://${testPubky}/pub/pubky.app/profile.json` },
       };
-      const normalizerSpy = vi
-        .spyOn(Core.UserNormalizer, 'to')
-        .mockReturnValue(mockUserResult as unknown as UserResult);
+      const normalizerSpy = vi.spyOn(Core.UserNormalizer, 'to').mockReturnValue(asOpaque<UserResult>(mockUserResult));
 
       // Mock HomeserverService
-      const requestSpy = vi.spyOn(Core.HomeserverService, 'request').mockResolvedValue(undefined as unknown as void);
+      const requestSpy = vi.spyOn(Core.HomeserverService, 'request').mockResolvedValue(undefined);
 
       // Execute
       await ProfileApplication.commitUpdateStatus({ pubky: testPubky, status: 'vacationing' });
@@ -167,8 +166,8 @@ describe('ProfileApplication', () => {
         user: { toJson: vi.fn(() => ({ name: 'Test User', bio: '', image: '', links: [], status: '' })) },
         meta: { url: `pubky://${testPubky}/pub/pubky.app/profile.json` },
       };
-      vi.spyOn(Core.UserNormalizer, 'to').mockReturnValue(mockUserResult as unknown as UserResult);
-      vi.spyOn(Core.HomeserverService, 'request').mockResolvedValue(undefined as unknown as void);
+      vi.spyOn(Core.UserNormalizer, 'to').mockReturnValue(asOpaque<UserResult>(mockUserResult));
+      vi.spyOn(Core.HomeserverService, 'request').mockResolvedValue(undefined);
 
       await ProfileApplication.commitUpdateStatus({ pubky: testPubky, status: '' });
 
@@ -198,7 +197,7 @@ describe('ProfileApplication', () => {
         user: { toJson: vi.fn(() => ({ name: 'Test User', status: 'vacationing' })) },
         meta: { url: `pubky://${testPubky}/pub/pubky.app/profile.json` },
       };
-      vi.spyOn(Core.UserNormalizer, 'to').mockReturnValue(mockUserResult as unknown as UserResult);
+      vi.spyOn(Core.UserNormalizer, 'to').mockReturnValue(asOpaque<UserResult>(mockUserResult));
       vi.spyOn(Core.HomeserverService, 'request').mockRejectedValue(new Error('Network error'));
 
       await expect(ProfileApplication.commitUpdateStatus({ pubky: testPubky, status: 'vacationing' })).rejects.toThrow(
@@ -226,10 +225,8 @@ describe('ProfileApplication', () => {
         user: { toJson: vi.fn(() => ({ name: 'Minimal User', bio: '', image: null, links: [], status: 'busy' })) },
         meta: { url: `pubky://${testPubky}/pub/pubky.app/profile.json` },
       };
-      const normalizerSpy = vi
-        .spyOn(Core.UserNormalizer, 'to')
-        .mockReturnValue(mockUserResult as unknown as UserResult);
-      vi.spyOn(Core.HomeserverService, 'request').mockResolvedValue(undefined as unknown as void);
+      const normalizerSpy = vi.spyOn(Core.UserNormalizer, 'to').mockReturnValue(asOpaque<UserResult>(mockUserResult));
+      vi.spyOn(Core.HomeserverService, 'request').mockResolvedValue(undefined);
 
       await ProfileApplication.commitUpdateStatus({ pubky: testPubky, status: 'busy' });
 

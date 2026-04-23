@@ -4,6 +4,7 @@ import type { ElementType, ReactNode } from 'react';
 import { WhoToFollowPageMain } from './WhoToFollowPageMain';
 import * as Hooks from '@/hooks';
 import * as Core from '@/core';
+import { asOpaque } from '@/test-utils';
 
 // Mock Core
 vi.mock('@/core', () => ({
@@ -132,10 +133,10 @@ describe('WhoToFollowPageMain', () => {
   beforeEach(() => {
     vi.mocked(Hooks.useUserStream).mockImplementation(mockUseUserStream);
     vi.mocked(Hooks.useInfiniteScroll).mockReturnValue(
-      mockUseInfiniteScroll() as unknown as ReturnType<typeof Hooks.useInfiniteScroll>,
+      asOpaque<ReturnType<typeof Hooks.useInfiniteScroll>>(mockUseInfiniteScroll()),
     );
     vi.mocked(Hooks.useFollowUser).mockReturnValue(
-      mockUseFollowUser() as unknown as ReturnType<typeof Hooks.useFollowUser>,
+      asOpaque<ReturnType<typeof Hooks.useFollowUser>>(mockUseFollowUser()),
     );
   });
 
@@ -190,10 +191,10 @@ describe('WhoToFollowPageMain - Snapshots', () => {
   beforeEach(() => {
     vi.mocked(Hooks.useUserStream).mockImplementation(mockUseUserStream);
     vi.mocked(Hooks.useInfiniteScroll).mockReturnValue(
-      mockUseInfiniteScroll() as unknown as ReturnType<typeof Hooks.useInfiniteScroll>,
+      asOpaque<ReturnType<typeof Hooks.useInfiniteScroll>>(mockUseInfiniteScroll()),
     );
     vi.mocked(Hooks.useFollowUser).mockReturnValue(
-      mockUseFollowUser() as unknown as ReturnType<typeof Hooks.useFollowUser>,
+      asOpaque<ReturnType<typeof Hooks.useFollowUser>>(mockUseFollowUser()),
     );
   });
 

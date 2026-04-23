@@ -1050,7 +1050,7 @@ describe('LocalPostService', () => {
       const postId2 = Core.buildCompositeId({ pubky: testData.authorPubky, id: 'post-2' });
       const parentUri = 'pubky://parent/pub/pubky.app/posts/parent123';
       await setupExistingPost(postId1, 'Test post 1', parentUri);
-      await setupExistingPost(postId2, 'Test post 2', null);
+      await setupExistingPost(postId2, 'Test post 2', undefined);
 
       const relationships = await Core.LocalPostService.readRelationshipsByIds([postId1, postId2]);
 
@@ -1064,7 +1064,7 @@ describe('LocalPostService', () => {
     it('should return undefined for posts that do not exist', async () => {
       const postId1 = testData.fullPostId1;
       const nonExistentPostId = 'nonexistent:post123';
-      await setupExistingPost(postId1, 'Test post 1', null);
+      await setupExistingPost(postId1, 'Test post 1', undefined);
 
       const relationships = await Core.LocalPostService.readRelationshipsByIds([postId1, nonExistentPostId]);
 

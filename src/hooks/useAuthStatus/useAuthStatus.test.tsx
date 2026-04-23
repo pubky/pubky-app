@@ -1,6 +1,10 @@
 import { renderHook } from '@testing-library/react';
+import type { Session } from '@synonymdev/pubky';
 import { describe, it, expect, beforeEach, vi } from 'vitest';
+import { mockSession as buildSession } from '@/test-utils';
 import { useAuthStatus } from './useAuthStatus';
+
+const mockSession = buildSession();
 
 // Mock the stores
 const mockOnboardingStore = {
@@ -12,8 +16,8 @@ const mockOnboardingStore = {
 };
 
 const mockAuthStore = {
-  session: null,
-  sessionExport: null,
+  session: null as Session | null,
+  sessionExport: null as string | null,
   isRestoringSession: false,
   hasProfile: null as boolean | null,
   hasHydrated: true,
@@ -110,8 +114,7 @@ describe('useAuthStatus', () => {
 
   it('should return UNAUTHENTICATED status when has session but hasProfile is null (determining)', () => {
     mockOnboardingStore.hasHydrated = true;
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    mockAuthStore.session = { token: 'test-token' } as any;
+    mockAuthStore.session = mockSession;
     mockAuthStore.hasProfile = null; // Still determining profile status
 
     const { result } = renderHook(() => useAuthStatus());
@@ -125,8 +128,7 @@ describe('useAuthStatus', () => {
 
   it('should return NEEDS_PROFILE_CREATION status when has session but no profile', () => {
     mockOnboardingStore.hasHydrated = true;
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    mockAuthStore.session = { token: 'test-token' } as any;
+    mockAuthStore.session = mockSession;
     mockAuthStore.hasProfile = false;
     mockAuthStore.selectIsAuthenticated = vi.fn(() => true); // Has session, so authenticated
 
@@ -140,8 +142,7 @@ describe('useAuthStatus', () => {
 
   it('should return AUTHENTICATED status when has profile', () => {
     mockOnboardingStore.hasHydrated = true;
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    mockAuthStore.session = { token: 'test-token' } as any;
+    mockAuthStore.session = mockSession;
     mockAuthStore.hasProfile = true;
     mockAuthStore.selectIsAuthenticated = vi.fn(() => true); // Has session, so authenticated
 
@@ -155,8 +156,7 @@ describe('useAuthStatus', () => {
 
   it('should check keypair existence correctly based on session', () => {
     mockOnboardingStore.hasHydrated = true;
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    mockAuthStore.session = { token: 'test-token' } as any;
+    mockAuthStore.session = mockSession;
     mockAuthStore.selectIsAuthenticated = vi.fn(() => true); // Has session, so authenticated
 
     const { result } = renderHook(() => useAuthStatus());
@@ -177,8 +177,7 @@ describe('useAuthStatus', () => {
     it('should remain not loading after store reset if hydration is preserved', () => {
       // Simulate authenticated state
       mockOnboardingStore.hasHydrated = true;
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      mockAuthStore.session = { token: 'test-token' } as any;
+      mockAuthStore.session = mockSession;
       mockAuthStore.hasProfile = true;
 
       const { result, rerender } = renderHook(() => useAuthStatus());
@@ -205,8 +204,7 @@ describe('useAuthStatus', () => {
     it('would be stuck loading if hydration was not preserved (demonstrating the bug)', () => {
       // Simulate the old buggy behavior
       mockOnboardingStore.hasHydrated = true;
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      mockAuthStore.session = { token: 'test-token' } as any;
+      mockAuthStore.session = mockSession;
       mockAuthStore.hasProfile = true;
 
       const { result, rerender } = renderHook(() => useAuthStatus());

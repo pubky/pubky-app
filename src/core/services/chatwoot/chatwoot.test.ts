@@ -1,4 +1,5 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
+import { asOpaque, mockResponse } from '@/test-utils';
 import type {
   TChatwootContact,
   TChatwootContactSearchResponse,
@@ -37,16 +38,16 @@ const createMockResponse = (
   status = ok ? 200 : 500,
   statusText = ok ? 'OK' : 'Internal Server Error',
 ): Response =>
-  ({
+  mockResponse({
     ok,
     status,
     statusText,
     text: vi.fn().mockResolvedValue(data ? JSON.stringify(data) : ''),
     json: vi.fn().mockResolvedValue(data),
-    headers: {
+    headers: asOpaque<Headers>({
       get: vi.fn().mockReturnValue(null),
-    },
-  }) as unknown as Response;
+    }),
+  });
 
 describe('ChatwootService', () => {
   let ChatwootService: typeof import('./chatwoot').ChatwootService;
@@ -172,20 +173,19 @@ describe('ChatwootService', () => {
       };
 
       // Override the Env values to undefined
-      (mockEnv.Env as unknown as { BASE_URL_SUPPORT?: string }).BASE_URL_SUPPORT = undefined;
-      (mockEnv.Env as unknown as { SUPPORT_API_ACCESS_TOKEN?: string }).SUPPORT_API_ACCESS_TOKEN = undefined;
-      (mockEnv.Env as unknown as { SUPPORT_ACCOUNT_ID?: string }).SUPPORT_ACCOUNT_ID = undefined;
+      asOpaque<{ BASE_URL_SUPPORT?: string }>(mockEnv.Env).BASE_URL_SUPPORT = undefined;
+      asOpaque<{ SUPPORT_API_ACCESS_TOKEN?: string }>(mockEnv.Env).SUPPORT_API_ACCESS_TOKEN = undefined;
+      asOpaque<{ SUPPORT_ACCOUNT_ID?: string }>(mockEnv.Env).SUPPORT_ACCOUNT_ID = undefined;
 
       await expect(
         ChatwootService.createOrFindContact(testData.email, testData.userName, testData.inboxId),
       ).rejects.toThrow('Missing required Chatwoot environment variables');
 
       // Restore original values
-      (mockEnv.Env as unknown as { BASE_URL_SUPPORT: string }).BASE_URL_SUPPORT = originalValues.BASE_URL_SUPPORT!;
-      (mockEnv.Env as unknown as { SUPPORT_API_ACCESS_TOKEN: string }).SUPPORT_API_ACCESS_TOKEN =
+      asOpaque<{ BASE_URL_SUPPORT: string }>(mockEnv.Env).BASE_URL_SUPPORT = originalValues.BASE_URL_SUPPORT!;
+      asOpaque<{ SUPPORT_API_ACCESS_TOKEN: string }>(mockEnv.Env).SUPPORT_API_ACCESS_TOKEN =
         originalValues.SUPPORT_API_ACCESS_TOKEN!;
-      (mockEnv.Env as unknown as { SUPPORT_ACCOUNT_ID: string }).SUPPORT_ACCOUNT_ID =
-        originalValues.SUPPORT_ACCOUNT_ID!;
+      asOpaque<{ SUPPORT_ACCOUNT_ID: string }>(mockEnv.Env).SUPPORT_ACCOUNT_ID = originalValues.SUPPORT_ACCOUNT_ID!;
     });
   });
 
@@ -232,20 +232,19 @@ describe('ChatwootService', () => {
       };
 
       // Override the Env values to undefined
-      (mockEnv.Env as unknown as { BASE_URL_SUPPORT?: string }).BASE_URL_SUPPORT = undefined;
-      (mockEnv.Env as unknown as { SUPPORT_API_ACCESS_TOKEN?: string }).SUPPORT_API_ACCESS_TOKEN = undefined;
-      (mockEnv.Env as unknown as { SUPPORT_ACCOUNT_ID?: string }).SUPPORT_ACCOUNT_ID = undefined;
+      asOpaque<{ BASE_URL_SUPPORT?: string }>(mockEnv.Env).BASE_URL_SUPPORT = undefined;
+      asOpaque<{ SUPPORT_API_ACCESS_TOKEN?: string }>(mockEnv.Env).SUPPORT_API_ACCESS_TOKEN = undefined;
+      asOpaque<{ SUPPORT_ACCOUNT_ID?: string }>(mockEnv.Env).SUPPORT_ACCOUNT_ID = undefined;
 
       await expect(
         ChatwootService.createConversation(testData.sourceId, testData.contactId, testData.inboxId, 'Test content'),
       ).rejects.toThrow('Missing required Chatwoot environment variables');
 
       // Restore original values
-      (mockEnv.Env as unknown as { BASE_URL_SUPPORT: string }).BASE_URL_SUPPORT = originalValues.BASE_URL_SUPPORT!;
-      (mockEnv.Env as unknown as { SUPPORT_API_ACCESS_TOKEN: string }).SUPPORT_API_ACCESS_TOKEN =
+      asOpaque<{ BASE_URL_SUPPORT: string }>(mockEnv.Env).BASE_URL_SUPPORT = originalValues.BASE_URL_SUPPORT!;
+      asOpaque<{ SUPPORT_API_ACCESS_TOKEN: string }>(mockEnv.Env).SUPPORT_API_ACCESS_TOKEN =
         originalValues.SUPPORT_API_ACCESS_TOKEN!;
-      (mockEnv.Env as unknown as { SUPPORT_ACCOUNT_ID: string }).SUPPORT_ACCOUNT_ID =
-        originalValues.SUPPORT_ACCOUNT_ID!;
+      asOpaque<{ SUPPORT_ACCOUNT_ID: string }>(mockEnv.Env).SUPPORT_ACCOUNT_ID = originalValues.SUPPORT_ACCOUNT_ID!;
     });
   });
 });

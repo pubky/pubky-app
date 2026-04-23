@@ -5,6 +5,7 @@ import { PostInput } from './PostInput';
 import { POST_INPUT_VARIANT } from './PostInput.constants';
 import { POST_THREAD_CONNECTOR_VARIANTS } from '@/components/atoms/PostThreadConnector/PostThreadConnector.constants';
 import { POST_MAX_CHARACTER_LENGTH } from '@/config';
+import type { UsePostInputOptions, UsePostInputReturn } from '@/hooks/usePostInput/usePostInput.types';
 import { PostMainLayoutProvider } from '@/organisms/PostMain/PostMainLayout';
 import * as Hooks from '@/hooks';
 
@@ -302,10 +303,7 @@ const mockUsePostReturn = {
   articleTitle: '',
 };
 
-function createUsePostInputReturn(
-  options: { variant: string; placeholder?: string },
-  overrides: Record<string, unknown> = {},
-) {
+function createUsePostInputReturn(options: UsePostInputOptions, overrides: Record<string, unknown> = {}) {
   return {
     textareaRef: mockTextareaRef,
     markdownEditorRef: mockMarkdownEditorRef,
@@ -366,7 +364,7 @@ function createUsePostInputReturn(
     handleMentionSelect: mockHandleMentionSelect,
     handleMentionKeyDown: mockHandleMentionKeyDown,
     ...overrides,
-  };
+  } as UsePostInputReturn;
 }
 
 vi.mock('@/hooks', () => ({
@@ -377,7 +375,7 @@ vi.mock('@/hooks', () => ({
   useEmojiInsert: vi.fn(() => vi.fn()),
   useEnterSubmit: vi.fn(() => mockEnterSubmitHandler),
   useIsMobile: vi.fn(() => false),
-  usePostInput: vi.fn((options: { variant: string; placeholder?: string }) => createUsePostInputReturn(options)),
+  usePostInput: vi.fn((options: UsePostInputOptions) => createUsePostInputReturn(options)),
 }));
 
 describe('PostInput', () => {
@@ -420,9 +418,7 @@ describe('PostInput', () => {
     mockHandleMentionSelect.mockReset();
 
     mockUseEnterSubmit.mockImplementation(() => mockEnterSubmitHandler);
-    mockUsePostInput.mockImplementation((options: { variant: string; placeholder?: string }) =>
-      createUsePostInputReturn(options),
-    );
+    mockUsePostInput.mockImplementation((options: UsePostInputOptions) => createUsePostInputReturn(options));
   });
 
   it('renders with post variant', () => {
@@ -520,7 +516,7 @@ describe('PostInput', () => {
   });
 
   it('renders mention popover when mentionIsOpen is true', () => {
-    mockUsePostInput.mockImplementationOnce((options: { variant: string; placeholder?: string }) =>
+    mockUsePostInput.mockImplementationOnce((options: UsePostInputOptions) =>
       createUsePostInputReturn(options, {
         mentionIsOpen: true,
         mentionUsers: [{ id: '1', name: 'Alice', pubky: 'alice' }],

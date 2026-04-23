@@ -1,4 +1,5 @@
 import { describe, expect, it, vi, beforeEach, afterEach } from 'vitest';
+import { asOpaque } from '@/test-utils';
 import { cropImageToBlob } from './cropImage';
 
 describe('cropImage', () => {
@@ -10,42 +11,37 @@ describe('cropImage', () => {
 
     beforeEach(() => {
       // Mock canvas context
-      mockContext = {
+      mockContext = asOpaque<CanvasRenderingContext2D>({
         drawImage: vi.fn(),
         imageSmoothingQuality: 'low',
-      } as unknown as CanvasRenderingContext2D;
+      });
 
-      // Mock canvas
-      mockCanvas = {
+      mockCanvas = asOpaque<HTMLCanvasElement>({
         width: 0,
         height: 0,
         getContext: vi.fn(() => mockContext),
         toBlob: vi.fn((callback) => {
-          // Simulate successful blob creation
           const blob = new Blob(['fake image data'], { type: 'image/png' });
           callback(blob);
         }),
-      } as unknown as HTMLCanvasElement;
+      });
 
-      // Mock document.createElement
       vi.spyOn(document, 'createElement').mockImplementation((tagName) => {
         if (tagName === 'canvas') {
-          return mockCanvas as unknown as HTMLCanvasElement;
+          return mockCanvas;
         }
         return document.createElement(tagName);
       });
 
-      // Mock Image constructor
-      mockImage = {
+      mockImage = asOpaque<HTMLImageElement>({
         addEventListener: vi.fn((event, handler) => {
           if (event === 'load') {
-            // Immediately trigger load
             setTimeout(() => handler(new Event('load')), 0);
           }
         }),
         crossOrigin: null,
         src: '',
-      } as unknown as HTMLImageElement;
+      });
 
       // @ts-expect-error - mocking global Image
       global.Image = class {

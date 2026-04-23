@@ -2,6 +2,7 @@ import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import * as Core from '@/core';
 import { AppError, ErrorCategory, ValidationErrorCode, ErrorService } from '@/libs';
 import { MuteResult } from 'pubky-app-specs';
+import { asOpaque } from '@/test-utils';
 import {
   TEST_PUBKY,
   INVALID_INPUTS,
@@ -13,12 +14,11 @@ import {
 
 describe('MuteNormalizer', () => {
   const createMockBuilder = (overrides?: Partial<{ createMute: ReturnType<typeof vi.fn> }>) => ({
-    createMute: vi.fn(
-      (mutee: string) =>
-        ({
-          mute: { mutee, toJson: vi.fn(() => ({})) },
-          meta: { url: buildPubkyUri(TEST_PUBKY.USER_1, `mutes/${mutee}`) },
-        }) as unknown as MuteResult,
+    createMute: vi.fn((mutee: string) =>
+      asOpaque<MuteResult>({
+        mute: { mutee, toJson: vi.fn(() => ({})) },
+        meta: { url: buildPubkyUri(TEST_PUBKY.USER_1, `mutes/${mutee}`) },
+      }),
     ),
     ...overrides,
   });

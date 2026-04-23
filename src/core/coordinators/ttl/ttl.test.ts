@@ -1,6 +1,6 @@
-/* eslint-disable @typescript-eslint/no-explicit-any */
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import * as Core from '@/core';
+import { mockSession } from '@/test-utils';
 
 // =============================================================================
 // Test Helpers
@@ -12,7 +12,7 @@ import * as Core from '@/core';
  */
 function setupAuthenticatedUser(pubky = 'test-user-pubky' as Core.Pubky) {
   Core.useAuthStore.getState().init({
-    session: {} as any,
+    session: mockSession(),
     currentUserPubky: pubky,
     hasProfile: true,
   });
@@ -1055,7 +1055,7 @@ describe('TtlCoordinator', () => {
     it('requires hasProfile to be true to tick', async () => {
       // Authenticate but without profile
       Core.useAuthStore.getState().init({
-        session: {} as any,
+        session: mockSession(),
         currentUserPubky: 'test-user' as Core.Pubky,
         hasProfile: false, // No profile!
       });
@@ -1075,7 +1075,7 @@ describe('TtlCoordinator', () => {
 
       // Now set hasProfile to true and restart
       Core.useAuthStore.getState().init({
-        session: {} as any,
+        session: mockSession(),
         currentUserPubky: 'test-user' as Core.Pubky,
         hasProfile: true,
       });

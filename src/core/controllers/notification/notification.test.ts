@@ -2,13 +2,12 @@ import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { NotificationController } from './notification';
 import * as Core from '@/core';
 import * as Config from '@/config';
+import { mockAuthStore, mockNotificationStore, asOpaque } from '@/test-utils';
 
 const mockUserId = 'pubky-user-123' as Core.Pubky;
 
-const mockAuthStore = (userId: Core.Pubky = mockUserId) => {
-  vi.spyOn(Core.useAuthStore, 'getState').mockReturnValue({
-    selectCurrentUserPubky: () => userId,
-  } as ReturnType<typeof Core.useAuthStore.getState>);
+const setupAuthStore = (userId: Core.Pubky = mockUserId) => {
+  vi.spyOn(Core.useAuthStore, 'getState').mockReturnValue(mockAuthStore({ selectCurrentUserPubky: () => userId }));
 };
 
 describe('NotificationController', () => {
@@ -27,12 +26,14 @@ describe('NotificationController', () => {
       const selectLastPolledTimestamp = vi.fn(() => lastPolledTimestamp);
       const setUnread = vi.fn();
       const setLastPolledTimestamp = vi.fn();
-      vi.spyOn(Core.useNotificationStore, 'getState').mockReturnValue({
-        selectLastRead,
-        selectLastPolledTimestamp,
-        setUnread,
-        setLastPolledTimestamp,
-      } as unknown as Core.NotificationStore);
+      vi.spyOn(Core.useNotificationStore, 'getState').mockReturnValue(
+        mockNotificationStore({
+          selectLastRead,
+          selectLastPolledTimestamp,
+          setUnread,
+          setLastPolledTimestamp,
+        }),
+      );
       return { selectLastRead, selectLastPolledTimestamp, setUnread, setLastPolledTimestamp };
     };
 
@@ -80,15 +81,17 @@ describe('NotificationController', () => {
       let currentLastPolledTimestamp: number | undefined = undefined;
       const selectLastPolledTimestamp = vi.fn(() => currentLastPolledTimestamp);
       const setUnread = vi.fn();
-      const setLastPolledTimestamp = vi.fn((ts: number) => {
+      const setLastPolledTimestamp = vi.fn((ts: number | undefined) => {
         currentLastPolledTimestamp = ts;
       });
-      vi.spyOn(Core.useNotificationStore, 'getState').mockReturnValue({
-        selectLastRead,
-        selectLastPolledTimestamp,
-        setUnread,
-        setLastPolledTimestamp,
-      } as unknown as Core.NotificationStore);
+      vi.spyOn(Core.useNotificationStore, 'getState').mockReturnValue(
+        mockNotificationStore({
+          selectLastRead,
+          selectLastPolledTimestamp,
+          setUnread,
+          setLastPolledTimestamp,
+        }),
+      );
 
       const appSpy = vi.spyOn(Core.NotificationApplication, 'fetchNotifications');
 
@@ -113,15 +116,17 @@ describe('NotificationController', () => {
       let currentLastPolledTimestamp: number | undefined = undefined;
       const selectLastPolledTimestamp = vi.fn(() => currentLastPolledTimestamp);
       const setUnread = vi.fn();
-      const setLastPolledTimestamp = vi.fn((ts: number) => {
+      const setLastPolledTimestamp = vi.fn((ts: number | undefined) => {
         currentLastPolledTimestamp = ts;
       });
-      vi.spyOn(Core.useNotificationStore, 'getState').mockReturnValue({
-        selectLastRead: vi.fn(() => 1000),
-        selectLastPolledTimestamp,
-        setUnread,
-        setLastPolledTimestamp,
-      } as unknown as Core.NotificationStore);
+      vi.spyOn(Core.useNotificationStore, 'getState').mockReturnValue(
+        mockNotificationStore({
+          selectLastRead: vi.fn(() => 1000),
+          selectLastPolledTimestamp,
+          setUnread,
+          setLastPolledTimestamp,
+        }),
+      );
 
       const appSpy = vi.spyOn(Core.NotificationApplication, 'fetchNotifications');
 
@@ -159,7 +164,7 @@ describe('NotificationController', () => {
       olderThan: 3000,
     };
 
-    beforeEach(() => mockAuthStore());
+    beforeEach(() => setupAuthStore());
 
     it.each([
       { params: {}, expectedOlderThan: Infinity, expectedLimit: Config.NEXUS_NOTIFICATIONS_LIMIT },
@@ -213,18 +218,22 @@ describe('NotificationController', () => {
       const setLastRead = vi.fn();
       const setUnread = vi.fn();
 
-      vi.spyOn(Core.useAuthStore, 'getState').mockReturnValue({
-        currentUserPubky: pubky,
-        selectCurrentUserPubky: () => {
-          if (!pubky) throw new Error('No pubky');
-          return pubky;
-        },
-      } as unknown as ReturnType<typeof Core.useAuthStore.getState>);
+      vi.spyOn(Core.useAuthStore, 'getState').mockReturnValue(
+        mockAuthStore({
+          currentUserPubky: pubky,
+          selectCurrentUserPubky: () => {
+            if (!pubky) throw new Error('No pubky');
+            return pubky;
+          },
+        }),
+      );
 
-      vi.spyOn(Core.useNotificationStore, 'getState').mockReturnValue({
-        setLastRead,
-        setUnread,
-      } as unknown as Core.NotificationStore);
+      vi.spyOn(Core.useNotificationStore, 'getState').mockReturnValue(
+        mockNotificationStore({
+          setLastRead,
+          setUnread,
+        }),
+      );
 
       return { setLastRead, setUnread };
     };
@@ -241,7 +250,7 @@ describe('NotificationController', () => {
       };
 
       vi.spyOn(Core.LastReadNormalizer, 'to').mockReturnValue(
-        mockLastReadResult as unknown as ReturnType<typeof Core.LastReadNormalizer.to>,
+        asOpaque<ReturnType<typeof Core.LastReadNormalizer.to>>(mockLastReadResult),
       );
       const applicationSpy = vi.spyOn(Core.NotificationApplication, 'markAllAsRead').mockImplementation(() => {});
 

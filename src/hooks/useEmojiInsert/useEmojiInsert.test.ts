@@ -1,5 +1,6 @@
 import { renderHook, act } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
+import { asInvalid } from '@/test-utils';
 import { useEmojiInsert } from './useEmojiInsert';
 
 describe('useEmojiInsert', () => {
@@ -150,8 +151,8 @@ describe('useEmojiInsert', () => {
   });
 
   it('handles null selection positions', () => {
-    mockInput.selectionStart = null as unknown as number;
-    mockInput.selectionEnd = null as unknown as number;
+    mockInput.selectionStart = asInvalid<number>(null);
+    mockInput.selectionEnd = asInvalid<number>(null);
     const onChange = vi.fn();
 
     const { result } = renderHook(() =>
