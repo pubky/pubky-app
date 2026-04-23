@@ -14,11 +14,20 @@ import { AppError } from '@/libs/error/error';
  * Throw via Err.* factories instead — they route through captureAppError() automatically.
  */
 
+const REDACTED = '[redacted: contained pubky:// URI]';
+
 /**
  * Whether Sentry should be initialized in the current runtime.
  * False during tests, false when no DSN is configured.
+ *
+ * The `!Env` guard protects against a module-init circular dependency:
+ * env.ts → @/libs/error → error.factories.ts → observability/sentry.ts → env.ts.
+ * If parseEnv() throws during validation, `Env` is still undefined when the
+ * resulting AppError flows into captureAppError → shouldEnableSentry. Without
+ * the guard we'd mask the real validation error with a TypeError.
  */
 export function shouldEnableSentry(): boolean {
+  if (!Env) return false;
   if (Env.NODE_ENV === 'test') return false;
   if (Env.VITEST) return false;
   if (!Env.NEXT_PUBLIC_SENTRY_DSN) return false;
@@ -30,26 +39,40 @@ export function shouldEnableSentry(): boolean {
  * Falls back to NODE_ENV when NEXT_PUBLIC_SENTRY_ENVIRONMENT is unset.
  */
 export function getSentryEnvironment(): string {
+  if (!Env) return 'unknown';
   return Env.NEXT_PUBLIC_SENTRY_ENVIRONMENT ?? Env.NODE_ENV;
 }
 
 /**
- * Defensive PII filter — drops events whose message or breadcrumbs contain a Pubky URI
- * (which can embed a public key that, combined with content, may identify the user).
+ * Defensive PII filter — redacts Pubky URIs across every string surface that can
+ * carry an error message (top-level message, exception values, breadcrumb messages).
  *
- * The browser/server initializers also set sendDefaultPii: false; this hook is a second line.
+ * A `pubky://` URI embeds a public key that, combined with content, may identify
+ * the user. The browser/server initializers also set sendDefaultPii: false; this
+ * hook is a second line of defense on the application payload.
  */
 function scrubPubkyData(event: Sentry.ErrorEvent): Sentry.ErrorEvent | null {
   const containsPubkyUri = (value: unknown): boolean => typeof value === 'string' && value.includes('pubky://');
 
   if (event.message && containsPubkyUri(event.message)) {
-    event.message = '[redacted: contained pubky:// URI]';
+    event.message = REDACTED;
+  }
+
+  // captureException populates event.exception.values[].value with the error message.
+  // Unlike event.breadcrumbs, event.exception IS wrapped as { values: Exception[] } in-SDK.
+  if (event.exception?.values) {
+    event.exception.values = event.exception.values.map((exception) => {
+      if (containsPubkyUri(exception.value)) {
+        return { ...exception, value: REDACTED };
+      }
+      return exception;
+    });
   }
 
   if (event.breadcrumbs) {
     event.breadcrumbs = event.breadcrumbs.map((crumb) => {
       if (containsPubkyUri(crumb.message)) {
-        return { ...crumb, message: '[redacted: contained pubky:// URI]' };
+        return { ...crumb, message: REDACTED };
       }
       return crumb;
     });

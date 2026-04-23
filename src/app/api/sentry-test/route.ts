@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server';
+import { Env } from '@/libs';
 
 /**
  * DEV/PREVIEW ONLY: Throws unconditionally to verify Sentry server-side capture
@@ -8,7 +9,7 @@ import { NextResponse } from 'next/server';
  * Delete this file (and src/app/sentry-test/) once Sentry capture is verified.
  */
 export async function GET() {
-  if (process.env.NEXT_PUBLIC_DEBUG_MODE !== 'true') {
+  if (!Env.NEXT_PUBLIC_DEBUG_MODE) {
     return NextResponse.json({ error: 'Not found' }, { status: 404 });
   }
 
