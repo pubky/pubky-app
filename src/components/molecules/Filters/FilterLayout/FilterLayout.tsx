@@ -25,12 +25,14 @@ export function FilterLayout({
           label: t('columns'),
           icon: Columns3,
           disabled,
+          dataCy: 'columns-layout-toggle',
         },
         {
           key: Core.LAYOUT.WIDE,
           label: t('wide'),
           icon: Menu,
           disabled,
+          dataCy: 'wide-layout-toggle',
         },
         showVisual
           ? {
@@ -38,6 +40,7 @@ export function FilterLayout({
               label: t('visual'),
               icon: LayoutGrid,
               disabled,
+              dataCy: 'visual-layout-toggle',
             }
           : null,
       ].filter(Boolean) as Molecules.FilterItem<Core.LayoutType>[],
