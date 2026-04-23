@@ -4,6 +4,7 @@ import * as Libs from '@/libs';
 import { CHATWOOT_INBOX_IDS, CHATWOOT_FEEDBACK_MESSAGE_PREFIX } from '@/core/services/chatwoot';
 import type { TFeedbackSubmitInput } from './feedback.types';
 import type { TChatwootContact } from '@/core/services/chatwoot/chatwoot.types';
+import { asOpaque } from '@/test-utils';
 
 const testData = {
   userPubky: 'o1gg96ewuojmopcjbz8895478wdtxtzzuxnfjjz8o8e77csa1ngo' as Core.Pubky,
@@ -160,12 +161,12 @@ describe('FeedbackApplication', () => {
 
     it('should throw AppError when contact has undefined inbox associations', async () => {
       const input = createFeedbackInput();
-      const contactWithUndefinedInbox = {
+      const contactWithUndefinedInbox = asOpaque<TChatwootContact>({
         id: testData.contactId,
         email: `${testData.userPubky}@pubky.app`,
         name: testData.userName,
         contact_inboxes: undefined,
-      } as unknown as TChatwootContact;
+      });
       vi.spyOn(Core.ChatwootService, 'createOrFindContact').mockResolvedValue(contactWithUndefinedInbox);
 
       await expect(FeedbackApplication.submit(input)).rejects.toThrow('Contact has no inbox associations');
@@ -175,7 +176,7 @@ describe('FeedbackApplication', () => {
 
     it('should re-throw AppError from ChatwootService', async () => {
       const input = createFeedbackInput();
-      const appError = Libs.Err.network(Libs.NetworkErrorCode.REQUEST_FAILED, 'Chatwoot API error', {
+      const appError = Libs.Err.network(Libs.NetworkErrorCode.CONNECTION_FAILED, 'Chatwoot API error', {
         service: Libs.ErrorService.Chatwoot,
         operation: 'createOrFindContact',
         context: { statusCode: Libs.HttpStatusCode.INTERNAL_SERVER_ERROR },
@@ -207,7 +208,7 @@ describe('FeedbackApplication', () => {
 
     it('should throw AppError when createConversation fails', async () => {
       const input = createFeedbackInput();
-      const appError = Libs.Err.network(Libs.NetworkErrorCode.REQUEST_FAILED, 'Failed to create conversation', {
+      const appError = Libs.Err.network(Libs.NetworkErrorCode.CONNECTION_FAILED, 'Failed to create conversation', {
         service: Libs.ErrorService.Chatwoot,
         operation: 'createConversation',
         context: { statusCode: Libs.HttpStatusCode.INTERNAL_SERVER_ERROR },

@@ -3,6 +3,7 @@ import type { BlobResult, FileResult } from 'pubky-app-specs';
 import * as Core from '@/core';
 import * as Libs from '@/libs';
 import { LocalFileService } from './file';
+import { asOpaque } from '@/test-utils';
 
 describe('LocalFileService', () => {
   const testPubky: Core.Pubky = 'operrr8wsbpr3ue9d4qj41ge1kcc6r7fdiy6o3ugjrrhi4y77rd0';
@@ -196,17 +197,17 @@ describe('LocalFileService', () => {
 
   describe('create', () => {
     const createMockBlobResult = (url: string): BlobResult =>
-      ({
+      asOpaque<BlobResult>({
         blob: { data: new Uint8Array([1, 2, 3]) },
         meta: { url },
-      }) as unknown as BlobResult;
+      });
 
     const createMockFileResult = (
       fileId: string,
       overrides?: Partial<{ name: string; content_type: string; size: number; created_at: string }>,
     ): FileResult => {
       const uri = `pubky://${testPubky}/pub/pubky.app/files/${fileId}`;
-      return {
+      return asOpaque<FileResult>({
         file: {
           name: overrides?.name || `test-file-${fileId}.jpg`,
           content_type: overrides?.content_type || 'image/jpeg',
@@ -214,7 +215,7 @@ describe('LocalFileService', () => {
           created_at: overrides?.created_at || '1234567890',
         },
         meta: { url: uri },
-      } as unknown as FileResult;
+      });
     };
 
     it('creates a file record with correct properties', async () => {
@@ -272,7 +273,7 @@ describe('LocalFileService', () => {
 
     it('does not create file when URI is invalid', async () => {
       const blobResult = createMockBlobResult(`pubky://${testPubky}/blobs/blob-invalid`);
-      const fileResult = {
+      const fileResult = asOpaque<FileResult>({
         file: {
           name: 'test.jpg',
           content_type: 'image/jpeg',
@@ -280,7 +281,7 @@ describe('LocalFileService', () => {
           created_at: '1234567890',
         },
         meta: { url: 'invalid-uri' },
-      } as unknown as FileResult;
+      });
 
       await LocalFileService.create({ blobResult, fileResult });
 

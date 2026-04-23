@@ -1,9 +1,9 @@
-/* eslint-disable @typescript-eslint/no-explicit-any */
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import * as Core from '@/core';
 import type { PollingServiceConfig } from '@/core/coordinators/base';
 import { APP_ROUTES, POST_ROUTES } from '@/app/routes';
 import { PubkyAppFeedReach, PubkyAppFeedSort, PubkyAppFeedLayout } from 'pubky-app-specs';
+import { mockHomeStore, mockSession } from '@/test-utils';
 
 // =============================================================================
 // Test Helpers
@@ -46,8 +46,8 @@ interface HomeStoreSetup {
 /** Sets up authentication for a user */
 function setupAuth(userId = 'user123'): string {
   Core.useAuthStore.getState().init({
-    session: {} as any,
-    currentUserPubky: userId as unknown as Core.Pubky,
+    session: mockSession(),
+    currentUserPubky: userId as Core.Pubky,
     hasProfile: true,
   });
   return userId;
@@ -56,7 +56,7 @@ function setupAuth(userId = 'user123'): string {
 /** Sets up home store state for testing (uses real state that getStreamId reads) */
 function setupHomeStore(options: HomeStoreOptions = {}): HomeStoreSetup {
   const unsubscribeSpy = vi.fn();
-  const homeStoreState = {
+  const homeStoreState = mockHomeStore({
     sort: options.sort ?? Core.SORT.TIMELINE,
     reach: options.reach ?? Core.REACH.ALL,
     content: options.content ?? Core.CONTENT.ALL,
@@ -66,7 +66,7 @@ function setupHomeStore(options: HomeStoreOptions = {}): HomeStoreSetup {
     setReach: vi.fn(),
     setContent: vi.fn(),
     reset: vi.fn(),
-  } as unknown as Core.HomeStore;
+  });
 
   vi.spyOn(Core.useHomeStore, 'getState').mockReturnValue(homeStoreState);
   vi.spyOn(Core.useHomeStore, 'subscribe').mockReturnValue(unsubscribeSpy);
@@ -315,7 +315,7 @@ describe('StreamCoordinator', () => {
         timestamp: 0,
       });
 
-      const homeStoreState = {
+      const homeStoreState = mockHomeStore({
         sort: Core.SORT.TIMELINE,
         reach: Core.REACH.ALL,
         content: Core.CONTENT.ALL,
@@ -325,11 +325,11 @@ describe('StreamCoordinator', () => {
         setReach: vi.fn(),
         setContent: vi.fn(),
         reset: vi.fn(),
-      } as unknown as Core.HomeStore;
+      });
 
       Core.useAuthStore.getState().init({
-        session: {} as any,
-        currentUserPubky: 'user123' as unknown as Core.Pubky,
+        session: mockSession(),
+        currentUserPubky: 'user123' as Core.Pubky,
         hasProfile: true,
       });
 
@@ -361,8 +361,8 @@ describe('StreamCoordinator', () => {
       coordinator.destroy();
 
       Core.useAuthStore.getState().init({
-        session: null as any,
-        currentUserPubky: null as any,
+        session: null,
+        currentUserPubky: null,
         hasProfile: false,
       });
 
@@ -664,9 +664,10 @@ describe('StreamCoordinator', () => {
       const { getOrFetchStreamSliceSpy, homeStoreState } = setupIntegrationTest();
 
       // Set up a real subscription spy to verify it's being used
-      let subscriptionCallback: ((state: Core.HomeStore, prevState: Core.HomeStore) => void) | null = null;
-      vi.spyOn(Core.useHomeStore, 'subscribe').mockImplementation((callback: any) => {
-        subscriptionCallback = callback;
+      type HomeStoreSubscriber = (state: Core.HomeStore, prevState: Core.HomeStore) => void;
+      let subscriptionCallback: HomeStoreSubscriber | null = null;
+      vi.spyOn(Core.useHomeStore, 'subscribe').mockImplementation((callback) => {
+        subscriptionCallback = callback as HomeStoreSubscriber;
         return vi.fn();
       });
 
@@ -709,9 +710,10 @@ describe('StreamCoordinator', () => {
       const { getOrFetchStreamSliceSpy, homeStoreState } = setupIntegrationTest();
 
       // Set up a real subscription spy
-      let subscriptionCallback: ((state: Core.HomeStore, prevState: Core.HomeStore) => void) | null = null;
-      vi.spyOn(Core.useHomeStore, 'subscribe').mockImplementation((callback: any) => {
-        subscriptionCallback = callback;
+      type HomeStoreSubscriber = (state: Core.HomeStore, prevState: Core.HomeStore) => void;
+      let subscriptionCallback: HomeStoreSubscriber | null = null;
+      vi.spyOn(Core.useHomeStore, 'subscribe').mockImplementation((callback) => {
+        subscriptionCallback = callback as HomeStoreSubscriber;
         return vi.fn();
       });
 
@@ -943,8 +945,8 @@ describe('StreamCoordinator', () => {
       expect(pollsWhileAuthenticated).toBeGreaterThan(0);
 
       Core.useAuthStore.getState().init({
-        session: null as any,
-        currentUserPubky: null as any,
+        session: null,
+        currentUserPubky: null,
         hasProfile: false,
       });
 
@@ -952,8 +954,8 @@ describe('StreamCoordinator', () => {
       expect(getOrFetchStreamSliceSpy.mock.calls.length).toBe(pollsWhileAuthenticated);
 
       Core.useAuthStore.getState().init({
-        session: {} as any,
-        currentUserPubky: 'user123' as unknown as Core.Pubky,
+        session: mockSession(),
+        currentUserPubky: 'user123' as Core.Pubky,
         hasProfile: true,
       });
 

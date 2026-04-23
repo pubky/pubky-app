@@ -11,7 +11,7 @@ export default defineConfig({
     environment: 'jsdom',
     setupFiles: ['./src/config/test.ts'],
     globals: true,
-    exclude: ['**/*.stories.tsx', '**/node_modules/**'],
+    exclude: ['**/node_modules/**'],
     coverage: {
       provider: 'v8',
       reporter: ['text', 'json', 'html'],

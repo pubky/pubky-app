@@ -13,6 +13,7 @@ import {
 } from '@/libs';
 import * as libs from '@/libs';
 import type { Session, Keypair } from '@synonymdev/pubky';
+import { asOpaque, mockAuthStore, mockSession } from '@/test-utils';
 
 vi.mock('pubky-app-specs', () => ({
   default: vi.fn(() => Promise.resolve()),
@@ -26,17 +27,17 @@ describe('AuthApplication', () => {
 
   describe('signUp', () => {
     const createParams = (): Core.THomeserverSignUpParams => ({
-      keypair: {
+      keypair: asOpaque<Keypair>({
         publicKey: vi.fn(() => ({ z32: () => 'test-pubky' })),
         secret: vi.fn(() => new Uint8Array([1, 2, 3])),
-      } as unknown as Keypair,
+      }),
       signupToken: 'test-signup-token',
     });
 
     it('should sign up successfully', async () => {
       const params = createParams();
-      const mockSession = { token: 'test-token' } as unknown as Session;
-      const expectedResult = { session: mockSession };
+      const session = asOpaque<Session>({ token: 'test-token' });
+      const expectedResult = { session };
 
       const signUpSpy = vi.spyOn(Core.HomeserverService, 'signUp').mockResolvedValue(expectedResult);
 
@@ -57,17 +58,17 @@ describe('AuthApplication', () => {
 
   describe('signIn', () => {
     const createParams = (): Core.THomeserverAuthenticateParams => ({
-      keypair: {
+      keypair: asOpaque<Keypair>({
         publicKey: vi.fn(() => ({ z32: () => 'test-pubky' })),
         secret: vi.fn(() => new Uint8Array([1, 2, 3])),
-      } as unknown as Keypair,
+      }),
       secretKey: 'test-secret-key',
     });
 
     it('should successfully authenticate and return result', async () => {
       const params = createParams();
-      const mockSession = { token: 'test-token' } as unknown as Session;
-      const expectedResult = { session: mockSession };
+      const session = asOpaque<Session>({ token: 'test-token' });
+      const expectedResult = { session };
 
       const signInSpy = vi.spyOn(Core.HomeserverService, 'signIn').mockResolvedValue(expectedResult);
 
@@ -100,11 +101,11 @@ describe('AuthApplication', () => {
 
   describe('generateAuthUrl', () => {
     it('should generate and return auth URL', async () => {
-      const mockSession = { token: 'test-token' } as unknown as Session;
+      const session = asOpaque<Session>({ token: 'test-token' });
       const cancelAuthFlow = vi.fn();
       const expectedResult = {
         authorizationUrl: 'https://example.com/auth?token=test-token',
-        awaitApproval: Promise.resolve(mockSession),
+        awaitApproval: Promise.resolve(session),
         cancelAuthFlow,
       };
 
@@ -128,8 +129,8 @@ describe('AuthApplication', () => {
 
   describe('logout', () => {
     it('should successfully logout', async () => {
-      const mockSession = { signout: vi.fn() } as unknown as Session;
-      const params = { session: mockSession };
+      const session = mockSession({ signout: vi.fn() });
+      const params = { session };
       const logoutSpy = vi.spyOn(Core.HomeserverService, 'logout').mockResolvedValue(undefined);
 
       await Core.AuthApplication.logout(params);
@@ -138,8 +139,8 @@ describe('AuthApplication', () => {
     });
 
     it('should propagate error when logout fails', async () => {
-      const mockSession = { signout: vi.fn() } as unknown as Session;
-      const params = { session: mockSession };
+      const session = mockSession({ signout: vi.fn() });
+      const params = { session };
       const logoutSpy = vi.spyOn(Core.HomeserverService, 'logout').mockRejectedValue(new Error('Logout failed'));
 
       await expect(Core.AuthApplication.logout(params)).rejects.toThrow('Logout failed');
@@ -171,12 +172,12 @@ describe('AuthApplication', () => {
 
   describe('restorePersistedSession', () => {
     const createMockAuthStore = (sessionExport: string | null = 'mock-session-export') =>
-      ({
+      mockAuthStore({
         sessionExport,
         isRestoringSession: false,
         setIsRestoringSession: vi.fn(),
         init: vi.fn(),
-      }) as unknown as Core.AuthStore;
+      });
 
     const createNetworkError = () =>
       new AppError({
@@ -204,13 +205,13 @@ describe('AuthApplication', () => {
 
     it('should restore session successfully on first attempt', async () => {
       const authStore = createMockAuthStore();
-      const mockSession = { token: 'test-token' } as unknown as Session;
-      const restoreSpy = vi.spyOn(Core.HomeserverService, 'restoreSession').mockResolvedValue(mockSession);
+      const session = asOpaque<Session>({ token: 'test-token' });
+      const restoreSpy = vi.spyOn(Core.HomeserverService, 'restoreSession').mockResolvedValue(session);
 
       const result = await Core.AuthApplication.restorePersistedSession({ authStore });
 
       expect(restoreSpy).toHaveBeenCalledOnce();
-      expect(result).toEqual({ session: mockSession });
+      expect(result).toEqual({ session });
       // Ensure loading state is toggled: true on start, false on finish (prevents stuck spinner)
       expect(authStore.setIsRestoringSession).toHaveBeenCalledWith(true);
       expect(authStore.setIsRestoringSession).toHaveBeenCalledWith(false);
@@ -228,19 +229,19 @@ describe('AuthApplication', () => {
 
     it('should retry on retryable error and succeed on subsequent attempt', async () => {
       const authStore = createMockAuthStore();
-      const mockSession = { token: 'test-token' } as unknown as Session;
+      const session = asOpaque<Session>({ token: 'test-token' });
       // Simulate: 1st call fails (network), 2nd call fails (network), 3rd call succeeds
       const restoreSpy = vi
         .spyOn(Core.HomeserverService, 'restoreSession')
         .mockRejectedValueOnce(createNetworkError())
         .mockRejectedValueOnce(createNetworkError())
-        .mockResolvedValueOnce(mockSession);
+        .mockResolvedValueOnce(session);
 
       const result = await Core.AuthApplication.restorePersistedSession({ authStore });
 
       expect(restoreSpy).toHaveBeenCalledTimes(3);
       expect(sleepSpy).toHaveBeenCalledTimes(2);
-      expect(result).toEqual({ session: mockSession });
+      expect(result).toEqual({ session });
     });
 
     // Errors like expired session (Auth category) are permanent — retrying won't help.

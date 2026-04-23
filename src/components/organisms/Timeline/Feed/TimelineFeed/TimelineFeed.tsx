@@ -5,16 +5,12 @@ import * as Core from '@/core';
 import * as Hooks from '@/hooks';
 import * as Molecules from '@/molecules';
 import * as Providers from '@/providers';
-import type { TagsLayout } from '../../../PostMain/PostMain.types';
+import { getTagsLayoutForSurfaceLayout } from '@/organisms/PostMain/PostMainLayout';
 import type { TimelineFeedProps } from './TimelineFeed.types';
 import { resolveVisualFeedContent } from './TimelineFeedVisual.helpers';
 import { TimelineFeedWithStream } from '../TimelineFeedContent';
 
 export { useTimelineFeedContext } from './TimelineFeedContext';
-
-function getTagsLayout(effectiveLayout: Core.LayoutType): TagsLayout {
-  return effectiveLayout === Core.LAYOUT.WIDE ? 'side' : 'inline';
-}
 
 /**
  * TimelineFeed
@@ -51,7 +47,7 @@ function HomeTimelineFeed({ children }: { children?: TimelineFeedProps['children
   });
   Hooks.useSyncInteractiveVisualContent(resolvedContent);
   const streamId = Hooks.useStreamIdFromFilters(resolvedContent);
-  const tagsLayout = getTagsLayout(layoutResolution.effectiveLayout);
+  const tagsLayout = getTagsLayoutForSurfaceLayout(layoutResolution.effectiveLayout);
 
   return (
     <TimelineFeedWithStream
@@ -68,7 +64,7 @@ function HomeTimelineFeed({ children }: { children?: TimelineFeedProps['children
 function CustomTimelineFeed({ children }: { children?: TimelineFeedProps['children'] }) {
   const streamId = Hooks.useCustomStreamId();
   const layoutResolution = Hooks.useFeedLayoutResolution(TIMELINE_FEED_VARIANT.CUSTOM);
-  const tagsLayout = getTagsLayout(layoutResolution.effectiveLayout);
+  const tagsLayout = getTagsLayoutForSurfaceLayout(layoutResolution.effectiveLayout);
 
   return (
     <TimelineFeedWithStream
@@ -92,7 +88,7 @@ function BookmarksTimelineFeed({ children }: { children?: TimelineFeedProps['chi
   });
   Hooks.useSyncInteractiveVisualContent(resolvedContent);
   const streamId = Hooks.useBookmarksStreamId(resolvedContent);
-  const tagsLayout = getTagsLayout(layoutResolution.effectiveLayout);
+  const tagsLayout = getTagsLayoutForSurfaceLayout(layoutResolution.effectiveLayout);
 
   return (
     <TimelineFeedWithStream
@@ -110,7 +106,7 @@ function ProfileTimelineFeed({ children }: { children?: TimelineFeedProps['child
   const { pubky } = Providers.useProfileContext();
   const streamId = pubky ? (`${Core.StreamSource.AUTHOR}:${pubky}` as Core.AuthorStreamCompositeId) : undefined;
   const layoutResolution = Hooks.useFeedLayoutResolution(TIMELINE_FEED_VARIANT.PROFILE);
-  const tagsLayout = getTagsLayout(layoutResolution.effectiveLayout);
+  const tagsLayout = getTagsLayoutForSurfaceLayout(layoutResolution.effectiveLayout);
 
   return (
     <TimelineFeedWithStream
@@ -127,7 +123,7 @@ function ProfileTimelineFeed({ children }: { children?: TimelineFeedProps['child
 function HotTimelineFeed({ children }: { children?: TimelineFeedProps['children'] }) {
   const streamId = Hooks.useHotStreamId();
   const layoutResolution = Hooks.useFeedLayoutResolution(TIMELINE_FEED_VARIANT.HOT);
-  const tagsLayout = getTagsLayout(layoutResolution.effectiveLayout);
+  const tagsLayout = getTagsLayoutForSurfaceLayout(layoutResolution.effectiveLayout);
 
   return (
     <TimelineFeedWithStream
@@ -151,7 +147,7 @@ function SearchTimelineFeed({ children }: { children?: TimelineFeedProps['childr
   });
   Hooks.useSyncInteractiveVisualContent(resolvedContent);
   const streamId = Hooks.useSearchStreamId(resolvedContent);
-  const tagsLayout = getTagsLayout(layoutResolution.effectiveLayout);
+  const tagsLayout = getTagsLayoutForSurfaceLayout(layoutResolution.effectiveLayout);
 
   return (
     <TimelineFeedWithStream

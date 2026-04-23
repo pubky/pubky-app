@@ -9,6 +9,7 @@ import {
 import { FeedApplication } from './feed';
 import * as Core from '@/core';
 import { HttpMethod, Logger } from '@/libs';
+import { asOpaque } from '@/test-utils';
 
 // Mock the LocalFeedService
 vi.mock('@/core/services/local/feed', () => ({
@@ -51,7 +52,7 @@ describe('FeedApplication', () => {
 
   // Test data factory
   const createMockFeedResult = (): FeedResult =>
-    ({
+    asOpaque<FeedResult>({
       feed: {
         name: 'Bitcoin News',
         feed: {
@@ -71,7 +72,7 @@ describe('FeedApplication', () => {
         url: `pubky://${testUserId}/pub/pubky.app/feeds/feed123`,
         path: '/pub/pubky.app/feeds/feed123',
       },
-    }) as unknown as FeedResult;
+    });
 
   const createMockCreateParams = (): Core.TFeedPersistCreateParams => ({
     feed: createMockFeedResult(),
@@ -450,7 +451,7 @@ describe('FeedApplication', () => {
       };
       const specsSpy = vi
         .spyOn(Core.PubkySpecsSingleton, 'get')
-        .mockReturnValue(mockBuilder as unknown as PubkySpecsBuilder);
+        .mockReturnValue(asOpaque<PubkySpecsBuilder>(mockBuilder));
       return { ...mocks, mockBuilder, specsSpy };
     };
 

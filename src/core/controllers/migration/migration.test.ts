@@ -1,6 +1,7 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { MigrationController } from './migration';
 import * as Core from '@/core';
+import { mockSettingsStore } from '@/test-utils';
 
 vi.mock('pubky-app-specs', () => ({
   baseUriBuilder: (pubky: string) => `pubky://${pubky}/pub/pubky.app/`,
@@ -27,9 +28,9 @@ describe('MigrationController', () => {
       const mockRemoteSettings = { version: 6, updatedAt: 600 } as Core.SettingsState;
       const resyncSpy = vi.spyOn(Core.MigrationApplication, 'resync').mockResolvedValue(mockRemoteSettings);
       const loadFromHomeserverSpy = vi.fn();
-      vi.spyOn(Core.useSettingsStore, 'getState').mockReturnValue({
-        loadFromHomeserver: loadFromHomeserverSpy,
-      } as unknown as ReturnType<typeof Core.useSettingsStore.getState>);
+      vi.spyOn(Core.useSettingsStore, 'getState').mockReturnValue(
+        mockSettingsStore({ loadFromHomeserver: loadFromHomeserverSpy }),
+      );
       vi.spyOn(Core.SettingsNormalizer, 'extractState').mockReturnValue(mockLocalSettings);
 
       await MigrationController.resync(TEST_PUBKY);
@@ -42,9 +43,9 @@ describe('MigrationController', () => {
       const mockLocalSettings = { version: 5, updatedAt: 500 } as Core.SettingsState;
       vi.spyOn(Core.MigrationApplication, 'resync').mockResolvedValue(null);
       const loadFromHomeserverSpy = vi.fn();
-      vi.spyOn(Core.useSettingsStore, 'getState').mockReturnValue({
-        loadFromHomeserver: loadFromHomeserverSpy,
-      } as unknown as ReturnType<typeof Core.useSettingsStore.getState>);
+      vi.spyOn(Core.useSettingsStore, 'getState').mockReturnValue(
+        mockSettingsStore({ loadFromHomeserver: loadFromHomeserverSpy }),
+      );
       vi.spyOn(Core.SettingsNormalizer, 'extractState').mockReturnValue(mockLocalSettings);
 
       await MigrationController.resync(TEST_PUBKY);

@@ -1,3 +1,4 @@
+import type { ElementType } from 'react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import { ShareTarget } from './ShareTarget';
@@ -42,9 +43,9 @@ vi.mock('@/atoms', () => ({
       {children}
     </div>
   ),
-  Typography: ({ children, as: Tag = 'span' }: { children: React.ReactNode; as?: string; size?: string }) => {
-    const Element = Tag as keyof JSX.IntrinsicElements;
-    return <Element data-testid="typography">{children}</Element>;
+  Typography: ({ children, as: Tag = 'span' }: { children: React.ReactNode; as?: ElementType; size?: string }) => {
+    const Comp = Tag as ElementType;
+    return <Comp data-testid="typography">{children}</Comp>;
   },
   Button: ({
     children,

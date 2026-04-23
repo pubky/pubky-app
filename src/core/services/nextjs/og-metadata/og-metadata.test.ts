@@ -1,5 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { URL_TRUNCATE_LENGTH, TITLE_TRUNCATE_LENGTH } from '@/config';
+import { asOpaque } from '@/test-utils';
 
 // ---------------------------------------------------------------------------
 // Mocks
@@ -249,7 +250,7 @@ describe('NextJsOgMetadataService', () => {
     // Mock setTimeout to invoke the callback immediately to trigger abort.
     vi.spyOn(globalThis, 'setTimeout').mockImplementation((fn: TimerHandler) => {
       if (typeof fn === 'function') fn();
-      return 0 as unknown as ReturnType<typeof setTimeout>;
+      return asOpaque<ReturnType<typeof setTimeout>>(0);
     });
 
     mockFetch.mockImplementation(() => {

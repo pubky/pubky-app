@@ -23,15 +23,12 @@ vi.mock('@/organisms', async () => {
 });
 
 describe('HumanSelection', () => {
-  const originalNodeEnv = process.env.NODE_ENV;
-
   beforeEach(() => {
-    // Ensure consistent environment across all test runs
-    process.env.NODE_ENV = 'test';
+    vi.stubEnv('NODE_ENV', 'test');
   });
 
   afterEach(() => {
-    process.env.NODE_ENV = originalNodeEnv;
+    vi.unstubAllEnvs();
   });
 
   it('renders both verification cards', () => {

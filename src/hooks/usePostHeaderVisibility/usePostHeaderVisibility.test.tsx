@@ -1,6 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { renderHook } from '@testing-library/react';
 import { usePostHeaderVisibility } from './usePostHeaderVisibility';
+import * as Core from '@/core';
 import * as Hooks from '@/hooks';
 
 // Mock the hooks that usePostHeaderVisibility depends on
@@ -13,13 +14,17 @@ vi.mock('@/hooks/useRepostInfo', () => ({
 }));
 
 // Helper to create complete PostDetails mock
-const createMockPostDetails = (overrides: Partial<{ content: string; attachments: string[] | null }> = {}) => ({
+const createMockPostDetails = (
+  overrides: Partial<{ content: string; attachments: string[] | null }> = {},
+): Core.EnrichedPostDetails => ({
   id: 'test-author:test-post',
   indexed_at: Date.now(),
   kind: 'short' as const,
   uri: 'pubky://test-author/pub/pubky.app/posts/test-post',
   content: '',
   attachments: null as string[] | null,
+  is_moderated: false,
+  is_blurred: false,
   ...overrides,
 });
 
@@ -99,8 +104,10 @@ describe('usePostHeaderVisibility', () => {
         content: '',
         attachments: ['attachment-1', 'attachment-2'],
         indexed_at: Date.now(),
-        kind: 'short',
+        kind: 'short' as const,
         uri: 'https://example.com/post/me:repost-with-attachments-1',
+        is_moderated: false,
+        is_blurred: false,
       },
       isLoading: false,
     });
@@ -127,8 +134,10 @@ describe('usePostHeaderVisibility', () => {
         content: '   \n\t  ',
         attachments: null,
         indexed_at: Date.now(),
-        kind: 'short',
+        kind: 'short' as const,
         uri: 'https://example.com/post/me:repost-whitespace-1',
+        is_moderated: false,
+        is_blurred: false,
       },
       isLoading: false,
     });

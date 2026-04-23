@@ -3,6 +3,20 @@ import { LastReadResult } from 'pubky-app-specs';
 import { AuthController } from './auth';
 import * as Core from '@/core';
 import * as Libs from '@/libs';
+import {
+  asOpaque,
+  mockAuthStore,
+  mockHomeStore,
+  mockHotStore,
+  mockLocalFilesStore,
+  mockMigrationStore,
+  mockNotificationStore,
+  mockOnboardingStore,
+  mockSearchStore,
+  mockSession as buildMockSession,
+  mockSettingsStore,
+  mockSignInStore,
+} from '@/test-utils';
 
 const TEST_SECRET_KEY = Buffer.from(new Uint8Array(32).fill(1)).toString('hex');
 const TEST_PUBKY = '5a1diz4pghi47ywdfyfzpit5f3bdomzt4pugpbmq4rngdd4iub4y';
@@ -10,27 +24,31 @@ const TEST_PUBKY = '5a1diz4pghi47ywdfyfzpit5f3bdomzt4pugpbmq4rngdd4iub4y';
 const getLastReadUrl = (pubky: string) => `pubky://${pubky}/pub/pubky.app/last_read`;
 
 const createMockKeypair = () =>
-  ({
+  asOpaque<import('@synonymdev/pubky').Keypair>({
     pubky: vi.fn(() => ({ z32: () => 'test-pubky' })),
     secret: vi.fn(() => new Uint8Array(32).fill(1)),
     publicKey: vi.fn(() => ({ z32: () => 'test-pubky' })),
     free: vi.fn(),
-  }) as unknown as import('@synonymdev/pubky').Keypair;
+  });
 
 const createMockEncryptedFile = () =>
   new File([new Uint8Array([1, 2, 3, 4, 5])], 'recovery.bin', { type: 'application/octet-stream' });
 
 const setupOnboardingStore = () => {
-  vi.spyOn(Core.useOnboardingStore, 'getState').mockReturnValue({
-    secretKey: TEST_SECRET_KEY,
-    reset: storeMocks.resetOnboardingStore,
-  } as unknown as Core.OnboardingStore);
+  vi.spyOn(Core.useOnboardingStore, 'getState').mockReturnValue(
+    mockOnboardingStore({
+      secretKey: TEST_SECRET_KEY,
+      reset: storeMocks.resetOnboardingStore,
+    }),
+  );
 };
 
 const setupNotificationMocks = () => {
-  vi.spyOn(Core.useNotificationStore, 'getState').mockReturnValue({
-    setState: storeMocks.notificationInit,
-  } as unknown as import('@/core/stores/notification/notification.types').NotificationStore);
+  vi.spyOn(Core.useNotificationStore, 'getState').mockReturnValue(
+    mockNotificationStore({
+      setState: storeMocks.notificationInit,
+    }),
+  );
 
   vi.spyOn(Core.NotificationNormalizer, 'to').mockImplementation(
     (pubky: string) => ({ meta: { url: getLastReadUrl(pubky) } }) as LastReadResult,
@@ -39,10 +57,12 @@ const setupNotificationMocks = () => {
 
 const setupAuthAndNotificationStores = () => {
   const authStore = storeMocks.getAuthState();
-  vi.spyOn(Core.useAuthStore, 'getState').mockReturnValue(authStore as unknown as Core.AuthStore);
-  vi.spyOn(Core.useNotificationStore, 'getState').mockReturnValue({
-    setState: storeMocks.notificationInit,
-  } as unknown as import('@/core/stores/notification/notification.types').NotificationStore);
+  vi.spyOn(Core.useAuthStore, 'getState').mockReturnValue(mockAuthStore(authStore));
+  vi.spyOn(Core.useNotificationStore, 'getState').mockReturnValue(
+    mockNotificationStore({
+      setState: storeMocks.notificationInit,
+    }),
+  );
   return authStore;
 };
 
@@ -196,10 +216,12 @@ describe('AuthController', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     // Ensure migration store mock is always available
-    vi.spyOn(Core.useMigrationStore, 'getState').mockReturnValue({
-      reset: storeMocks.resetMigrationStore,
-      wasDbReset: false,
-    } as unknown as Core.MigrationStore);
+    vi.spyOn(Core.useMigrationStore, 'getState').mockReturnValue(
+      mockMigrationStore({
+        reset: storeMocks.resetMigrationStore,
+        wasDbReset: false,
+      }),
+    );
   });
 
   afterEach(() => {
@@ -213,11 +235,11 @@ describe('AuthController', () => {
 
     it('should wait 5 seconds, initialize bootstrap, and setState notification store', async () => {
       const notification: Core.NotificationState = { unread: 2, lastRead: 123, lastPolledTimestamp: undefined };
-      const bootstrapResponse = { notification };
+      const bootstrapResponse = { notification, remoteSettings: null };
       const initializeSpy = vi.spyOn(Core.BootstrapApplication, 'initialize').mockResolvedValue(bootstrapResponse);
       const sleepSpy = vi.spyOn(Libs, 'sleep').mockResolvedValue(undefined);
 
-      const authStoreState: Core.AuthStore = {
+      const authStoreState = mockAuthStore({
         currentUserPubky: TEST_PUBKY,
         session: null,
         hasProfile: false,
@@ -233,7 +255,7 @@ describe('AuthController', () => {
         setIsRestoringSession: vi.fn(),
         reset: vi.fn(),
         selectCurrentUserPubky: vi.fn(() => TEST_PUBKY),
-      } as unknown as Core.AuthStore;
+      });
       vi.spyOn(Core.useAuthStore, 'getState').mockReturnValue(authStoreState);
 
       await AuthController.bootstrapWithDelay();
@@ -260,7 +282,7 @@ describe('AuthController', () => {
     it('should successfully sign up a user and call init', async () => {
       const keypair = createMockKeypair();
       const signupToken = 'test-token';
-      const mockSession = {} as unknown as import('@synonymdev/pubky').Session;
+      const mockSession = buildMockSession();
       const mockPubky = 'test-pubky' as Core.Pubky;
 
       const signUpSpy = vi.spyOn(Core.AuthApplication, 'signUp').mockResolvedValue({
@@ -272,7 +294,7 @@ describe('AuthController', () => {
       const clearAllQueryClientsSpy = vi.spyOn(Libs, 'clearAllQueryClients').mockImplementation(() => {});
 
       const authStore = storeMocks.getAuthState();
-      vi.spyOn(Core.useAuthStore, 'getState').mockReturnValue(authStore as unknown as Core.AuthStore);
+      vi.spyOn(Core.useAuthStore, 'getState').mockReturnValue(mockAuthStore(authStore));
 
       const result = await AuthController.signUp({ secretKey: TEST_SECRET_KEY, signupToken });
 
@@ -317,19 +339,21 @@ describe('AuthController', () => {
   describe('loginWithMnemonic', () => {
     beforeEach(() => {
       setupOnboardingStore();
-      vi.spyOn(Core.NotificationNormalizer, 'to').mockReturnValue({
-        meta: { url: 'pubky://test-pubky/pub/pubky.app/last_read' },
-      } as unknown as LastReadResult);
+      vi.spyOn(Core.NotificationNormalizer, 'to').mockReturnValue(
+        asOpaque<LastReadResult>({
+          meta: { url: 'pubky://test-pubky/pub/pubky.app/last_read' },
+        }),
+      );
     });
 
     it('should successfully login with mnemonic and bootstrap', async () => {
       const mnemonic = 'test mnemonic phrase';
       const mockKeypair = createMockKeypair();
-      const mockSession = {} as unknown as import('@synonymdev/pubky').Session;
+      const mockSession = buildMockSession();
       const mockPubky = 'test-pubky' as Core.Pubky;
       const mockData = { session: mockSession };
       const mockNotification: Core.NotificationState = { unread: 0, lastRead: 123, lastPolledTimestamp: 0 };
-      const bootstrapResponse = { notification: mockNotification };
+      const bootstrapResponse = { notification: mockNotification, remoteSettings: null };
 
       const keypairSpy = vi.spyOn(Libs.Identity, 'keypairFromMnemonic').mockReturnValue(mockKeypair);
       const signInSpy = vi.spyOn(Core.AuthApplication, 'signIn').mockResolvedValue(mockData);
@@ -373,7 +397,7 @@ describe('AuthController', () => {
     it('should successfully login with mnemonic without bootstrap if user is not signed up', async () => {
       const mnemonic = 'test mnemonic phrase';
       const mockKeypair = createMockKeypair();
-      const mockSession = {} as unknown as import('@synonymdev/pubky').Session;
+      const mockSession = buildMockSession();
       const mockPubky = 'test-pubky' as Core.Pubky;
       const mockData = { session: mockSession };
 
@@ -438,20 +462,22 @@ describe('AuthController', () => {
   describe('loginWithEncryptedFile', () => {
     beforeEach(() => {
       setupOnboardingStore();
-      vi.spyOn(Core.NotificationNormalizer, 'to').mockReturnValue({
-        meta: { url: 'pubky://test-pubky/pub/pubky.app/last_read' },
-      } as unknown as LastReadResult);
+      vi.spyOn(Core.NotificationNormalizer, 'to').mockReturnValue(
+        asOpaque<LastReadResult>({
+          meta: { url: 'pubky://test-pubky/pub/pubky.app/last_read' },
+        }),
+      );
     });
 
     it('should successfully login with encrypted file and bootstrap', async () => {
       const encryptedFile = createMockEncryptedFile();
       const password = 'test-password';
       const mockKeypair = createMockKeypair();
-      const mockSession = {} as unknown as import('@synonymdev/pubky').Session;
+      const mockSession = buildMockSession();
       const mockPubky = 'test-pubky' as Core.Pubky;
       const mockData = { session: mockSession };
       const mockNotification: Core.NotificationState = { unread: 0, lastRead: 123, lastPolledTimestamp: 0 };
-      const bootstrapResponse = { notification: mockNotification };
+      const bootstrapResponse = { notification: mockNotification, remoteSettings: null };
 
       const decryptSpy = vi.spyOn(Libs.Identity, 'decryptRecoveryFile').mockResolvedValue(mockKeypair);
       const signInSpy = vi.spyOn(Core.AuthApplication, 'signIn').mockResolvedValue(mockData);
@@ -494,7 +520,7 @@ describe('AuthController', () => {
       const encryptedFile = createMockEncryptedFile();
       const password = 'test-password';
       const mockKeypair = createMockKeypair();
-      const mockSession = {} as unknown as import('@synonymdev/pubky').Session;
+      const mockSession = buildMockSession();
       const mockPubky = 'test-pubky' as Core.Pubky;
       const mockData = { session: mockSession };
 
@@ -580,7 +606,7 @@ describe('AuthController', () => {
       const cancelAuthFlow = vi.fn();
       const mockAuthUrl = {
         authorizationUrl: 'https://example.com/auth?token=abc123',
-        awaitApproval: Promise.resolve({} as unknown as import('@synonymdev/pubky').Session),
+        awaitApproval: Promise.resolve(buildMockSession()),
         cancelAuthFlow,
       };
       const generateAuthUrlSpy = vi.spyOn(Core.AuthApplication, 'generateAuthUrl').mockResolvedValue(mockAuthUrl);
@@ -656,7 +682,7 @@ describe('AuthController', () => {
       const cancelAuthFlow = vi.fn();
       const mockAuthUrl = {
         authorizationUrl: 'https://example.com/auth?token=signup123',
-        awaitApproval: Promise.resolve({} as unknown as import('@synonymdev/pubky').Session),
+        awaitApproval: Promise.resolve(buildMockSession()),
         cancelAuthFlow,
       };
       const generateSignupAuthUrlSpy = vi
@@ -725,10 +751,10 @@ describe('AuthController', () => {
 
   describe('restorePersistedSession', () => {
     it('should restore a session when sessionExport exists and store has hydrated', async () => {
-      const mockSession = {} as unknown as import('@synonymdev/pubky').Session;
+      const mockSession = buildMockSession();
       const mockPubky = TEST_PUBKY as Core.Pubky;
 
-      const authStore = {
+      const authStore = mockAuthStore({
         ...storeMocks.getAuthState(),
         hasHydrated: true,
         session: null,
@@ -737,7 +763,7 @@ describe('AuthController', () => {
         isRestoringSession: false,
         setIsRestoringSession: vi.fn(),
         init: vi.fn(),
-      } as unknown as Core.AuthStore;
+      });
 
       vi.spyOn(Core.useAuthStore, 'getState').mockReturnValue(authStore);
       vi.spyOn(Core.AuthApplication, 'restorePersistedSession').mockResolvedValue({ session: mockSession });
@@ -756,7 +782,7 @@ describe('AuthController', () => {
     });
 
     it('should return false and run full cleanup when restoration fails', async () => {
-      const authStore = {
+      const authStore = mockAuthStore({
         ...storeMocks.getAuthState(),
         hasHydrated: true,
         session: null,
@@ -764,7 +790,7 @@ describe('AuthController', () => {
         isRestoringSession: false,
         setIsRestoringSession: vi.fn(),
         init: vi.fn(),
-      } as unknown as Core.AuthStore;
+      });
 
       vi.spyOn(Core.useAuthStore, 'getState').mockReturnValue(authStore);
       vi.spyOn(Core.AuthApplication, 'restorePersistedSession').mockResolvedValue(null);
@@ -777,12 +803,10 @@ describe('AuthController', () => {
       const notificationStore = storeMocks.getNotificationState();
       const settingsStore = storeMocks.getSettingsState();
       // Partial mocks: only mock the methods under test, cast via `unknown` to satisfy the full store type
-      vi.spyOn(Core.useHomeStore, 'getState').mockReturnValue(homeStore as unknown as Core.HomeStore);
-      vi.spyOn(Core.useSearchStore, 'getState').mockReturnValue(searchStore as unknown as Core.SearchStore);
-      vi.spyOn(Core.useNotificationStore, 'getState').mockReturnValue(
-        notificationStore as unknown as Core.NotificationStore,
-      );
-      vi.spyOn(Core.useSettingsStore, 'getState').mockReturnValue(settingsStore as unknown as Core.SettingsStore);
+      vi.spyOn(Core.useHomeStore, 'getState').mockReturnValue(mockHomeStore(homeStore));
+      vi.spyOn(Core.useSearchStore, 'getState').mockReturnValue(mockSearchStore(searchStore));
+      vi.spyOn(Core.useNotificationStore, 'getState').mockReturnValue(mockNotificationStore(notificationStore));
+      vi.spyOn(Core.useSettingsStore, 'getState').mockReturnValue(mockSettingsStore(settingsStore));
 
       const result = await AuthController.restorePersistedSession();
 
@@ -816,11 +840,11 @@ describe('AuthController', () => {
 
       await AuthController.getAuthUrl();
 
-      const mockSession = {} as unknown as import('@synonymdev/pubky').Session;
+      const mockSession = buildMockSession();
       vi.spyOn(Libs.Identity, 'z32FromSession').mockReturnValue(TEST_PUBKY as Core.Pubky);
       vi.spyOn(Core.AuthApplication, 'userIsSignedUp').mockResolvedValue(false);
       const authStore = storeMocks.getAuthState();
-      vi.spyOn(Core.useAuthStore, 'getState').mockReturnValue(authStore as unknown as Core.AuthStore);
+      vi.spyOn(Core.useAuthStore, 'getState').mockReturnValue(mockAuthStore(authStore));
 
       await AuthController.initializeAuthenticatedSession({ session: mockSession });
 
@@ -828,10 +852,10 @@ describe('AuthController', () => {
     });
 
     it('should initialize session and bootstrap if user is signed up', async () => {
-      const mockSession = {} as unknown as import('@synonymdev/pubky').Session;
+      const mockSession = buildMockSession();
       const mockPubky = TEST_PUBKY as Core.Pubky;
       const notification: Core.NotificationState = { unread: 0, lastRead: 456, lastPolledTimestamp: 0 };
-      const bootstrapResponse = { notification };
+      const bootstrapResponse = { notification, remoteSettings: null };
 
       const z32FromSessionSpy = vi.spyOn(Libs.Identity, 'z32FromSession').mockReturnValue(mockPubky);
       const userIsSignedUpSpy = vi.spyOn(Core.AuthApplication, 'userIsSignedUp').mockResolvedValue(true);
@@ -839,8 +863,8 @@ describe('AuthController', () => {
 
       const authStore = storeMocks.getAuthState();
       const signInStore = storeMocks.getSignInState();
-      vi.spyOn(Core.useAuthStore, 'getState').mockReturnValue(authStore as unknown as Core.AuthStore);
-      vi.spyOn(Core.useSignInStore, 'getState').mockReturnValue(signInStore as unknown as Core.SignInStore);
+      vi.spyOn(Core.useAuthStore, 'getState').mockReturnValue(mockAuthStore(authStore));
+      vi.spyOn(Core.useSignInStore, 'getState').mockReturnValue(mockSignInStore(signInStore));
 
       await AuthController.initializeAuthenticatedSession({ session: mockSession });
 
@@ -868,7 +892,7 @@ describe('AuthController', () => {
     });
 
     it('should initialize session without bootstrap if user is not signed up', async () => {
-      const mockSession = {} as unknown as import('@synonymdev/pubky').Session;
+      const mockSession = buildMockSession();
       const mockPubky = TEST_PUBKY as Core.Pubky;
 
       const z32FromSessionSpy = vi.spyOn(Libs.Identity, 'z32FromSession').mockReturnValue(mockPubky);
@@ -877,8 +901,8 @@ describe('AuthController', () => {
 
       const authStore = storeMocks.getAuthState();
       const signInStore = storeMocks.getSignInState();
-      vi.spyOn(Core.useAuthStore, 'getState').mockReturnValue(authStore as unknown as Core.AuthStore);
-      vi.spyOn(Core.useSignInStore, 'getState').mockReturnValue(signInStore as unknown as Core.SignInStore);
+      vi.spyOn(Core.useAuthStore, 'getState').mockReturnValue(mockAuthStore(authStore));
+      vi.spyOn(Core.useSignInStore, 'getState').mockReturnValue(mockSignInStore(signInStore));
 
       await AuthController.initializeAuthenticatedSession({ session: mockSession });
 
@@ -900,10 +924,10 @@ describe('AuthController', () => {
 
   describe('logout', () => {
     const createAuthStore = (overrides: Partial<Core.AuthStore> = {}): Core.AuthStore =>
-      ({
+      mockAuthStore({
         ...storeMocks.getAuthState(),
         currentUserPubky: 'test-pubky' as Core.Pubky,
-        session: {} as unknown as import('@synonymdev/pubky').Session,
+        session: buildMockSession(),
         hasProfile: false,
         hasHydrated: false,
         sessionExport: null,
@@ -914,17 +938,17 @@ describe('AuthController', () => {
         setIsRestoringSession: vi.fn(),
         setIsLoggingOut: vi.fn(),
         ...overrides,
-      }) as unknown as Core.AuthStore;
+      });
 
     const createOnboardingStore = () =>
-      ({
+      mockOnboardingStore({
         secretKey: TEST_SECRET_KEY,
         reset: storeMocks.resetOnboardingStore,
-      }) as unknown as Core.OnboardingStore;
+      });
 
-    const createSignInStore = () => storeMocks.getSignInState() as unknown as Core.SignInStore;
+    const createSignInStore = () => mockSignInStore(storeMocks.getSignInState());
 
-    const createLocalFilesStore = () => storeMocks.getLocalFilesState() as unknown as Core.LocalFilesStore;
+    const createLocalFilesStore = () => mockLocalFilesStore(storeMocks.getLocalFilesState());
 
     beforeEach(() => {
       Object.defineProperty(document, 'cookie', { writable: true, value: '' });
@@ -958,13 +982,11 @@ describe('AuthController', () => {
       vi.spyOn(Core.useSignInStore, 'getState').mockReturnValue(signInStore);
       vi.spyOn(Core.useLocalFilesStore, 'getState').mockReturnValue(localFilesStore);
       // Partial mocks: only mock the methods under test, cast via `unknown` to satisfy the full store type
-      vi.spyOn(Core.useHomeStore, 'getState').mockReturnValue(homeStore as unknown as Core.HomeStore);
-      vi.spyOn(Core.useHotStore, 'getState').mockReturnValue(hotStore as unknown as Core.HotStore);
-      vi.spyOn(Core.useSearchStore, 'getState').mockReturnValue(searchStore as unknown as Core.SearchStore);
-      vi.spyOn(Core.useNotificationStore, 'getState').mockReturnValue(
-        notificationStore as unknown as Core.NotificationStore,
-      );
-      vi.spyOn(Core.useSettingsStore, 'getState').mockReturnValue(settingsStore as unknown as Core.SettingsStore);
+      vi.spyOn(Core.useHomeStore, 'getState').mockReturnValue(mockHomeStore(homeStore));
+      vi.spyOn(Core.useHotStore, 'getState').mockReturnValue(mockHotStore(hotStore));
+      vi.spyOn(Core.useSearchStore, 'getState').mockReturnValue(mockSearchStore(searchStore));
+      vi.spyOn(Core.useNotificationStore, 'getState').mockReturnValue(mockNotificationStore(notificationStore));
+      vi.spyOn(Core.useSettingsStore, 'getState').mockReturnValue(mockSettingsStore(settingsStore));
 
       document.cookie = 'testCookie=value; path=/';
       document.cookie = 'anotherCookie=anotherValue; path=/';
@@ -1029,9 +1051,9 @@ describe('AuthController', () => {
     });
 
     it('should restore a persisted session before homeserver logout when only sessionExport exists', async () => {
-      const restoredSession = {
+      const restoredSession = buildMockSession({
         export: vi.fn(() => 'restored-export'),
-      } as unknown as import('@synonymdev/pubky').Session;
+      });
       const logoutSpy = vi.spyOn(Core.AuthApplication, 'logout').mockResolvedValue(undefined);
       const clearDatabaseSpy = vi.spyOn(Core, 'clearDatabase').mockResolvedValue(undefined);
       const clearCookiesSpy = vi.spyOn(Libs, 'clearCookies').mockImplementation(() => {});
@@ -1052,13 +1074,11 @@ describe('AuthController', () => {
       vi.spyOn(Core.useOnboardingStore, 'getState').mockReturnValue(createOnboardingStore());
       vi.spyOn(Core.useSignInStore, 'getState').mockReturnValue(createSignInStore());
       vi.spyOn(Core.useLocalFilesStore, 'getState').mockReturnValue(localFilesStore);
-      vi.spyOn(Core.useHomeStore, 'getState').mockReturnValue(homeStore as unknown as Core.HomeStore);
-      vi.spyOn(Core.useHotStore, 'getState').mockReturnValue(hotStore as unknown as Core.HotStore);
-      vi.spyOn(Core.useSearchStore, 'getState').mockReturnValue(searchStore as unknown as Core.SearchStore);
-      vi.spyOn(Core.useNotificationStore, 'getState').mockReturnValue(
-        notificationStore as unknown as Core.NotificationStore,
-      );
-      vi.spyOn(Core.useSettingsStore, 'getState').mockReturnValue(settingsStore as unknown as Core.SettingsStore);
+      vi.spyOn(Core.useHomeStore, 'getState').mockReturnValue(mockHomeStore(homeStore));
+      vi.spyOn(Core.useHotStore, 'getState').mockReturnValue(mockHotStore(hotStore));
+      vi.spyOn(Core.useSearchStore, 'getState').mockReturnValue(mockSearchStore(searchStore));
+      vi.spyOn(Core.useNotificationStore, 'getState').mockReturnValue(mockNotificationStore(notificationStore));
+      vi.spyOn(Core.useSettingsStore, 'getState').mockReturnValue(mockSettingsStore(settingsStore));
 
       const restorePersistedSessionSpy = vi
         .spyOn(AuthController, 'restorePersistedSession')

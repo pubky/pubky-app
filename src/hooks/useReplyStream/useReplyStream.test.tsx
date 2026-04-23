@@ -70,7 +70,7 @@ describe('useReplyStream', () => {
       localTotalCount: 2,
     });
 
-    vi.spyOn(Core, 'buildPostReplyStreamId').mockReturnValue('stream:author:post-1');
+    vi.spyOn(Core, 'buildPostReplyStreamId').mockReturnValue('post_replies:author:post-1');
     const getOrFetchSpy = vi
       .spyOn(Core.StreamPostsController, 'getOrFetchStreamSlice')
       .mockResolvedValueOnce({
@@ -107,7 +107,7 @@ describe('useReplyStream', () => {
       localTotalCount: 3,
     });
 
-    vi.spyOn(Core, 'buildPostReplyStreamId').mockReturnValue('stream:author:post-1');
+    vi.spyOn(Core, 'buildPostReplyStreamId').mockReturnValue('post_replies:author:post-1');
     const getOrFetchSpy = vi.spyOn(Core.StreamPostsController, 'getOrFetchStreamSlice').mockResolvedValue({
       nextPageIds: ['author:reply-4'],
       timestamp: 1,
@@ -139,7 +139,7 @@ describe('useReplyStream', () => {
       localTotalCount: 3,
     });
 
-    vi.spyOn(Core, 'buildPostReplyStreamId').mockReturnValue('stream:author:post-1');
+    vi.spyOn(Core, 'buildPostReplyStreamId').mockReturnValue('post_replies:author:post-1');
     const getOrFetchSpy = vi.spyOn(Core.StreamPostsController, 'getOrFetchStreamSlice').mockResolvedValue({
       nextPageIds: [],
       timestamp: 1,
@@ -173,7 +173,7 @@ describe('useReplyStream', () => {
       localTotalCount: 3,
     });
 
-    vi.spyOn(Core, 'buildPostReplyStreamId').mockReturnValue('stream:author:post-1');
+    vi.spyOn(Core, 'buildPostReplyStreamId').mockReturnValue('post_replies:author:post-1');
     let callCount = 0;
     vi.spyOn(Core.StreamPostsController, 'getOrFetchStreamSlice').mockImplementation(async () => {
       callCount++;

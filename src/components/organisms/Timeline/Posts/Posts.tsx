@@ -4,7 +4,6 @@ import * as Atoms from '@/atoms';
 import * as Molecules from '@/molecules';
 import * as Organisms from '@/organisms';
 import * as Hooks from '@/hooks';
-import type { TagsLayout } from '../../PostMain/PostMain.types';
 
 interface TimelinePostsProps {
   postIds: string[];
@@ -13,7 +12,6 @@ interface TimelinePostsProps {
   error: string | null;
   hasMore: boolean;
   loadMore: () => Promise<void>;
-  tagsLayout?: TagsLayout;
 }
 
 /**
@@ -21,16 +19,11 @@ interface TimelinePostsProps {
  *
  * Presentational component that displays posts in a timeline with infinite scroll.
  * Receives all data and handlers from a parent component.
+ *
+ * The surface (TimelineFeedContent) wraps this in PostMainLayoutProvider so each
+ * PostMain / nested reply inherits the active tags layout via context.
  */
-export function TimelinePosts({
-  postIds,
-  loading,
-  loadingMore,
-  error,
-  hasMore,
-  loadMore,
-  tagsLayout,
-}: TimelinePostsProps) {
+export function TimelinePosts({ postIds, loading, loadingMore, error, hasMore, loadMore }: TimelinePostsProps) {
   const { navigateToPost } = Hooks.usePostNavigation();
 
   const { sentinelRef } = Hooks.useInfiniteScroll({
@@ -47,12 +40,7 @@ export function TimelinePosts({
         <Atoms.Container data-cy="timeline-posts" overrideDefaults className="space-y-4">
           {postIds.map((postId) => (
             <Atoms.Container key={`main_${postId}`} data-cy="post-card">
-              <Organisms.PostMain
-                postId={postId}
-                onClick={() => navigateToPost(postId)}
-                isReply={false}
-                tagsLayout={tagsLayout}
-              />
+              <Organisms.PostMain postId={postId} onClick={() => navigateToPost(postId)} isReply={false} />
               <Organisms.TimelinePostReplies postId={postId} />
             </Atoms.Container>
           ))}

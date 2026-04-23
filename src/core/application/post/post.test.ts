@@ -3,6 +3,7 @@ import * as Core from '@/core';
 import { Err, DatabaseErrorCode, ErrorService, HttpMethod } from '@/libs';
 import { PubkyAppPost, PubkyAppPostKind } from 'pubky-app-specs';
 import type { BlobResult, FileResult } from 'pubky-app-specs';
+import { asOpaque } from '@/test-utils';
 
 // Mock the Local.Post service
 vi.mock('@/core/services/local/post', () => ({
@@ -51,19 +52,19 @@ describe('Post Application', () => {
   };
 
   const createMockBlobResult = (url: string = 'pubky://author/pub/pubky.app/blobs/blob123'): BlobResult =>
-    ({
+    asOpaque<BlobResult>({
       blob: { data: new Uint8Array([1, 2, 3]) },
       meta: { url },
-    }) as unknown as BlobResult;
+    });
 
   const createMockFileResult = (
     url: string = 'pubky://author/pub/pubky.app/files/file123',
     fileJson: Record<string, unknown> = { id: 'file-1', src: 'blob-url', content_type: 'image/png', size: 1024 },
   ): FileResult =>
-    ({
+    asOpaque<FileResult>({
       file: { toJson: vi.fn(() => fileJson) },
       meta: { url },
-    }) as unknown as FileResult;
+    });
 
   const createMockFileAttachment = (id: string = 'file1'): Core.TFileAttachmentResult => ({
     blobResult: createMockBlobResult(`pubky://author/pub/pubky.app/blobs/${id}`),

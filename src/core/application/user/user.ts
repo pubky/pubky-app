@@ -114,18 +114,18 @@ export class UserApplication {
    * Retrieves user counts from local database.
    * Local-only read per ADR 0001 (get* methods don't call Nexus).
    * @param params - Parameters containing user ID
-   * @returns Promise resolving to user counts or null if not found
+   * @returns Promise resolving to the cached row (includes `id`) or null if not found
    */
-  static async getCounts({ userId }: Core.TReadProfileParams): Promise<Core.NexusUserCounts | null> {
+  static async getCounts({ userId }: Core.TReadProfileParams): Promise<Core.UserCountsModel | null> {
     return await Core.LocalUserService.readCounts({ userId });
   }
 
   /**
    * Retrieves user counts from local database. If not found, fetches from Nexus API and persists to local database.
    * @param params - Parameters containing user ID
-   * @returns Promise resolving to user counts or null if not found
+   * @returns Cached row (includes `id`) or Nexus payload or null if unavailable
    */
-  static async getOrFetchCounts({ userId }: Core.TReadProfileParams): Promise<Core.NexusUserCounts | null> {
+  static async getOrFetchCounts({ userId }: Core.TReadProfileParams): Promise<Core.TUserCountsOrFetchResult | null> {
     const userCounts = await Core.LocalUserService.readCounts({ userId });
     if (userCounts) {
       return userCounts;

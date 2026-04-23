@@ -2,6 +2,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import * as Core from '@/core';
 import * as Config from '@/config';
 import type { TFeedbackSubmitParams } from './feedback.types';
+import { asInvalid } from '@/test-utils';
 
 const testData = {
   userPubky: 'o1gg96ewuojmopcjbz8895478wdtxtzzuxnfjjz8o8e77csa1ngo' as Core.Pubky,
@@ -52,7 +53,7 @@ describe('FeedbackController', () => {
     });
 
     it('should throw when pubky is null', async () => {
-      const params = createFeedbackParams({ pubky: null as unknown as Core.Pubky });
+      const params = createFeedbackParams({ pubky: asInvalid<Core.Pubky>(null) });
 
       await expect(FeedbackController.submit(params)).rejects.toThrow(
         'Pubky is required and must be a non-empty string',
@@ -68,7 +69,7 @@ describe('FeedbackController', () => {
     });
 
     it('should throw when comment is null', async () => {
-      const params = createFeedbackParams({ comment: null as unknown as string });
+      const params = createFeedbackParams({ comment: asInvalid<string>(null) });
 
       await expect(FeedbackController.submit(params)).rejects.toThrow(
         'Comment is required and must be a non-empty string',
@@ -84,7 +85,7 @@ describe('FeedbackController', () => {
     });
 
     it('should throw when name is null', async () => {
-      const params = createFeedbackParams({ name: null as unknown as string });
+      const params = createFeedbackParams({ name: asInvalid<string>(null) });
 
       await expect(FeedbackController.submit(params)).rejects.toThrow(
         'Name is required and must be a non-empty string',

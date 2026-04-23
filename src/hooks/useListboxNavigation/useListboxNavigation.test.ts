@@ -1,13 +1,14 @@
 import { renderHook, act } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { mockKeyboardEvent } from '@/test-utils';
 import { useListboxNavigation } from './useListboxNavigation';
 
 describe('useListboxNavigation', () => {
   const createKeyboardEvent = (key: string): React.KeyboardEvent =>
-    ({
+    mockKeyboardEvent({
       key,
       preventDefault: vi.fn(),
-    }) as unknown as React.KeyboardEvent;
+    });
 
   beforeEach(() => {
     vi.clearAllMocks();

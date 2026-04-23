@@ -3,6 +3,7 @@ import { TagResult } from 'pubky-app-specs';
 import * as Core from '@/core';
 import { HttpMethod } from '@/libs';
 import type { TTagEventParams } from './tag.types';
+import { asOpaque } from '@/test-utils';
 
 // Mock HomeserverService
 vi.mock('@/core/services/homeserver', () => ({
@@ -80,11 +81,11 @@ describe('TagController', () => {
     vi.spyOn(Core.HomeserverService, 'request').mockResolvedValue(undefined);
 
     vi.spyOn(Core.TagNormalizer, 'to').mockImplementation((uri: string, label: string, pubky: Core.Pubky) => {
-      return {
+      return asOpaque<TagResult>({
         tag: { label, toJson: () => ({ label }), free: vi.fn() },
         meta: { url: `pubky://${pubky}/pub/pubky.app/tags/${label}` },
         free: vi.fn(),
-      } as unknown as TagResult;
+      });
     });
 
     // Initialize database and clear tables
