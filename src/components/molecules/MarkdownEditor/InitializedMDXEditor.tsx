@@ -33,9 +33,9 @@ import { languages } from '@codemirror/language-data';
 import { ARTICLE_MAX_CHARACTER_LENGTH } from '@/config';
 import * as Atoms from '@/atoms';
 import * as Molecules from '@/molecules';
-import * as Icons from '@/libs/icons';
 import * as Utils from '@/libs/utils';
 import * as Hooks from '@/hooks';
+import { MarkdownMark } from '@icons';
 import { sanitizeCodeBlockLanguages } from './InitializedMDXEditor.utils';
 import { CODE_BLOCK_LANGUAGES } from './InitializedMDXEditor.constants';
 
@@ -208,7 +208,7 @@ export default function InitializedMDXEditor({
                   <Smile className="size-6" />
                 </ButtonWithTooltip>
                 <ButtonWithTooltip title={t('markdown')} onClick={switchToMarkdownMode}>
-                  <Icons.MarkdownMark className="size-6" />
+                  <MarkdownMark className="size-6" />
                 </ButtonWithTooltip>
               </>
             ),

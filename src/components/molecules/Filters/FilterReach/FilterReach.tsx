@@ -5,7 +5,7 @@ import { useTranslations } from 'next-intl';
 import * as Core from '@/core';
 import * as Molecules from '@/molecules';
 import { Radio, HeartHandshake } from 'lucide-react';
-import { UsersRound2 } from '@/libs/icons';
+import { UsersRound2 } from '@icons';
 export function FilterReach({
   selectedTab,
   defaultSelectedTab = Core.REACH.ALL,

@@ -6,7 +6,7 @@ import * as Libs from '@/libs';
 import * as Hooks from '@/hooks';
 import * as Types from '@/app/profile/types';
 import { CircleUserRound, Bell, MessageCircle, StickyNote, UsersRound, HeartHandshake, Tag } from 'lucide-react';
-import { UsersRound2 } from '@/libs/icons';
+import { UsersRound2 } from '@icons';
 export interface ProfileMenuItem {
   icon: React.ComponentType<{
     size?: number;

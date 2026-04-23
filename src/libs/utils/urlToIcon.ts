@@ -17,7 +17,7 @@ import {
   Youtube,
   type LucideProps,
 } from 'lucide-react';
-import { Telegram, XTwitter } from './icons';
+import { Telegram, XTwitter } from '../icons/icons';
 
 /**
  * Maps a URL to the appropriate icon component based on the domain.
@@ -28,10 +28,10 @@ import { Telegram, XTwitter } from './icons';
  * @example
  * ```ts
  * const icon = getIconFromUrl('https://github.com/user/repo');
- * // Returns Icons.Github
+ * // Returns Github
  *
  * const defaultIcon = getIconFromUrl('https://example.com');
- * // Returns Icons.Link (default)
+ * // Returns Link (default)
  * ```
  */
 export function getIconFromUrl(url: string): React.ComponentType<LucideProps> {
