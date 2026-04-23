@@ -173,6 +173,14 @@ jobs:
             SUPPORT_API_ACCESS_TOKEN=your_token_here
             SUPPORT_ACCOUNT_ID=123
             SUPPORT_FEEDBACK_INBOX_ID=26
+            NEXT_PUBLIC_SENTRY_DSN=${{ vars.SENTRY_DSN }}
+            NEXT_PUBLIC_SENTRY_ENVIRONMENT=testnet
+            NEXT_PUBLIC_SENTRY_TRACES_SAMPLE_RATE=0.1
+            NEXT_PUBLIC_SENTRY_REPLAYS_SESSION_SAMPLE_RATE=0.0
+            NEXT_PUBLIC_SENTRY_REPLAYS_ON_ERROR_SAMPLE_RATE=1.0
+            SENTRY_AUTH_TOKEN=${{ secrets.SENTRY_AUTH_TOKEN }}
+            SENTRY_ORG=${{ vars.SENTRY_ORG }}
+            SENTRY_PROJECT=${{ vars.SENTRY_PROJECT }}
         if: ${{ inputs.env == 'testnet' }}
 
       - name: Build and push image pubky-app (preview)
@@ -217,4 +225,12 @@ jobs:
             NEXT_PUBLIC_PRELUDE_SDK_KEY=${{ vars.PRELUDE_SDK_KEY }}
             NEXT_PUBLIC_MODERATION_ID=euwmq57zefw5ynnkhh37b3gcmhs7g3cptdbw1doaxj1pbmzp3wro
             NEXT_PUBLIC_MODERATED_TAGS=["nudity"]
+            NEXT_PUBLIC_SENTRY_DSN=${{ vars.SENTRY_DSN }}
+            NEXT_PUBLIC_SENTRY_ENVIRONMENT=preview
+            NEXT_PUBLIC_SENTRY_TRACES_SAMPLE_RATE=0.5
+            NEXT_PUBLIC_SENTRY_REPLAYS_SESSION_SAMPLE_RATE=0.1
+            NEXT_PUBLIC_SENTRY_REPLAYS_ON_ERROR_SAMPLE_RATE=1.0
+            SENTRY_AUTH_TOKEN=${{ secrets.SENTRY_AUTH_TOKEN }}
+            SENTRY_ORG=${{ vars.SENTRY_ORG }}
+            SENTRY_PROJECT=${{ vars.SENTRY_PROJECT }}
         if: ${{ inputs.env == 'preview' }}

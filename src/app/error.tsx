@@ -1,12 +1,15 @@
 'use client';
 
 import { useEffect } from 'react';
+import * as Sentry from '@sentry/nextjs';
 import * as Atoms from '@/atoms';
 import { Logger } from '@/libs';
 
 export default function Error({ error, reset }: { error: Error & { digest?: string }; reset: () => void }) {
   useEffect(() => {
     Logger.error('[app/error] Route segment render error', error);
+    // Next.js catches segment render errors before Sentry's automatic handlers.
+    Sentry.captureException(error);
   }, [error]);
 
   return (

@@ -1,6 +1,7 @@
 import { AppError, type AppErrorParams } from './error';
 import { ErrorCategory, ErrorService } from './error.types';
 import { Logger } from '../logger';
+import { captureAppError } from '../observability/sentry';
 import type {
   ErrorCodeByCategory,
   NetworkErrorCode,
@@ -55,8 +56,7 @@ function createAppError<C extends ErrorCategory>(
 
   Logger.error(`[${params.service}:${params.operation}]`, error.message, params.context);
 
-  // We could send to sentry error here
-  // Sentry.captureException(err);
+  captureAppError(error);
 
   return error;
 }

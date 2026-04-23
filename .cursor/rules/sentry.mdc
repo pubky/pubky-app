@@ -1,0 +1,9 @@
+---
+description: Sentry observability conventions — capture funnel and direct-call rule
+globs: src/**/*
+alwaysApply: false
+---
+
+# Sentry Rules
+
+@docs/sentry.md
