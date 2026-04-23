@@ -1,5 +1,9 @@
 import * as Core from '@/core';
 import { setLocaleCookie } from '@/i18n/utils';
+import { NotificationNormalizer } from '@/core/pipes/notification/notification.normalizer';
+import { NotificationApplication } from '@/core/application/notification/notification';
+import { useSettingsStore } from '@/core/stores/settings/settings.store';
+import { useNotificationStore } from '@/core/stores/notification/notification.store';
 
 /**
  * Settings controller.
@@ -34,19 +38,34 @@ export class SettingsController {
   }
 
   /**
-   * Updates a notification preference and syncs to homeserver.
+   * Updates a notification preference, recalculates the unread badge count,
+   * and syncs to homeserver.
    */
   static async setNotificationPreference(type: keyof Core.NotificationPreferences, enabled: boolean): Promise<void> {
     Core.useSettingsStore.getState().setNotificationPreference(type, enabled);
+    await this.recalculateUnreadBadge();
     await this.commitUpdate();
   }
 
   /**
-   * Updates all notification preferences and syncs to homeserver.
+   * Updates all notification preferences, recalculates the unread badge count,
+   * and syncs to homeserver.
    */
   static async setAllNotifications(preferences: Core.NotificationPreferences): Promise<void> {
     Core.useSettingsStore.getState().setAllNotifications(preferences);
+    await this.recalculateUnreadBadge();
     await this.commitUpdate();
+  }
+
+  /**
+   * Recalculates the unread badge count based on current notification preferences.
+   */
+  private static async recalculateUnreadBadge(): Promise<void> {
+    const preferences = useSettingsStore.getState().notifications;
+    const allowedTypes = NotificationNormalizer.toEnabledTypes(preferences);
+    const lastRead = useNotificationStore.getState().selectLastRead();
+    const unread = await NotificationApplication.countFilteredUnreadSince(lastRead, allowedTypes);
+    useNotificationStore.getState().setUnread(unread);
   }
 
   /**
