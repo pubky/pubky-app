@@ -92,7 +92,9 @@ exports[`DialogBackupEncrypted - Snapshots > matches snapshot for default Dialog
             data-testid="typography"
           >
             We recommend using a long ,[object Object], 
-            <span>
+            <span
+              class="text-destructive"
+            >
               over 16 characters
             </span>
              for better security.
