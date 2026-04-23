@@ -6,6 +6,7 @@ import * as Atoms from '@/atoms';
 import * as Libs from '@/libs';
 import * as Organisms from '@/organisms';
 import * as App from '@/app';
+import { APP_RELEASE_URL, APP_VERSION } from '@/config';
 import type { SettingsInfoProps } from './SettingsInfo.types';
 import { FAQ_QUESTION_KEYS, COPYRIGHT_TEXT } from './SettingsInfo.constants';
 
@@ -63,6 +64,24 @@ export function SettingsInfo({ className, hideFAQ = false }: SettingsInfoProps) 
 
       {/* Feedback Section */}
       <Organisms.FeedbackCard />
+
+      {/* Version Section */}
+      <Atoms.Container overrideDefaults className="flex flex-col gap-2">
+        <Atoms.Typography as="span" size="lg" className="font-light text-muted-foreground">
+          {t('version.title')}
+        </Atoms.Typography>
+        <Atoms.Typography
+          as="span"
+          size="md"
+          overrideDefaults
+          className="text-base font-medium text-secondary-foreground"
+        >
+          Pubky{' '}
+          <Atoms.Link href={APP_RELEASE_URL} target="_blank" variant="muted" className="text-base font-medium">
+            v{APP_VERSION}
+          </Atoms.Link>
+        </Atoms.Typography>
+      </Atoms.Container>
 
       {/* Copyright & Branding Section */}
       <Atoms.Container overrideDefaults className="flex flex-col gap-4">
