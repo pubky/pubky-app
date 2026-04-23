@@ -11,6 +11,8 @@ import {
   CLICKABLE_TAGS_DEFAULT_MAX_LENGTH,
   CLICKABLE_TAGS_DEFAULT_MAX_TOTAL_CHARS,
   CLICKABLE_TAGS_DEFAULT_MAX_TAGS,
+  TAG_INPUT_WIDTH_AT_LIMIT,
+  TAG_INPUT_WIDTH_DEFAULT,
 } from '@/config';
 
 /**
@@ -71,7 +73,7 @@ export function ClickableTagsList({
   // Determine if input should be shown
   const hasInput = showInput || isAdding;
   const isAtLimit = enrichedTags.length >= maxTags;
-  const inputWidth = isAtLimit ? 162 : 130;
+  const inputWidth = isAtLimit ? TAG_INPUT_WIDTH_AT_LIMIT : TAG_INPUT_WIDTH_DEFAULT;
 
   // Get viewer's own tags for duplicate checking
   // This allows adding a tag that others have used but the viewer hasn't

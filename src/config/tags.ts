@@ -47,6 +47,16 @@ export const CLICKABLE_TAGS_DEFAULT_MAX_TOTAL_CHARS = 20;
 export const CLICKABLE_TAGS_DEFAULT_MAX_TAGS = 3;
 
 // =============================================================================
+// Tag Input Layout
+// =============================================================================
+
+/** Tag input width in pixels when user can still add more tags */
+export const TAG_INPUT_WIDTH_DEFAULT = 130;
+
+/** Tag input width in pixels when max tags limit is reached */
+export const TAG_INPUT_WIDTH_AT_LIMIT = 162;
+
+// =============================================================================
 // Hot Tags Page Display
 // =============================================================================
 

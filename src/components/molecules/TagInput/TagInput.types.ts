@@ -43,4 +43,6 @@ export interface TagInputProps {
   containerVariant?: TagInputContainerVariant;
   /** Additional className for the container */
   className?: string;
+  /** Inline styles for the container */
+  style?: React.CSSProperties;
 }

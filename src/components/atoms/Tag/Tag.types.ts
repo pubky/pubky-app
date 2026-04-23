@@ -7,4 +7,6 @@ export interface TagProps {
   onClick?: (tagName: string) => void;
   className?: React.HTMLAttributes<HTMLDivElement>['className'];
   'data-testid'?: string;
+  'data-cy'?: string;
+  style?: React.CSSProperties;
 }

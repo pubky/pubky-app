@@ -32,6 +32,7 @@ export const TagInput = forwardRef<TagInputHandle, TagInputProps>(function TagIn
     autoFocus = false,
     containerVariant = 'dashed',
     className,
+    style,
   },
   ref,
 ) {
@@ -169,6 +170,7 @@ export const TagInput = forwardRef<TagInputHandle, TagInputProps>(function TagIn
               className,
               isAtLimit && 'w-40',
             )}
+            style={style}
             onClick={onClick}
           >
             <Atoms.Input

@@ -4,7 +4,7 @@ import { useState } from 'react';
 
 import * as Atoms from '@/atoms';
 import * as Molecules from '@/molecules';
-import { POST_MAX_TAGS } from '@/config';
+import { POST_MAX_TAGS, TAG_INPUT_WIDTH_AT_LIMIT, TAG_INPUT_WIDTH_DEFAULT } from '@/config';
 import type { PostInputTagsProps } from './PostInputTags.types';
 
 export function PostInputTags({ tags, onTagsChange, maxTags = POST_MAX_TAGS, disabled = false }: PostInputTagsProps) {
@@ -12,7 +12,7 @@ export function PostInputTags({ tags, onTagsChange, maxTags = POST_MAX_TAGS, dis
 
   const isAtLimit = tags.length >= maxTags;
   const isDisabled = disabled || isAtLimit;
-  const inputWidth = isAtLimit ? 162 : 130;
+  const inputWidth = isAtLimit ? TAG_INPUT_WIDTH_AT_LIMIT : TAG_INPUT_WIDTH_DEFAULT;
 
   const handleTagAdd = (tag: string) => {
     // Duplicate check is handled by useTagInput internally
