@@ -35,14 +35,6 @@ vi.mock('@/atoms', () => ({
   ),
 }));
 
-vi.mock('@/libs', async () => {
-  const actual = await vi.importActual('@/libs');
-  return {
-    ...actual,
-    Trash2: () => <span data-testid="trash-icon" />,
-  };
-});
-
 describe('DialogConfirmDelete', () => {
   it('renders dialog when open', () => {
     render(<DialogConfirmDelete open={true} onOpenChange={vi.fn()} onConfirm={vi.fn()} />);
@@ -89,7 +81,8 @@ describe('DialogConfirmDelete', () => {
   it('shows trash icon on delete button', () => {
     render(<DialogConfirmDelete open={true} onOpenChange={vi.fn()} onConfirm={vi.fn()} />);
 
-    expect(screen.getByTestId('trash-icon')).toBeInTheDocument();
+    const deleteButton = screen.getByTestId('button-destructive');
+    expect(deleteButton.querySelector('.lucide-trash-2')).toBeInTheDocument();
   });
 });
 

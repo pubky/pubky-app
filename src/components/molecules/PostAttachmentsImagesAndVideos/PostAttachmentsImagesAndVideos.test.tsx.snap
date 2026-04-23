@@ -76,10 +76,24 @@ exports[`PostAttachmentsImagesAndVideos - Snapshots > matches snapshot with dial
       data-testid="dialog-close"
     >
       <svg
-        class="size-4"
-        data-testid="icon-x"
+        aria-hidden="true"
+        class="lucide lucide-x size-4"
+        fill="none"
+        height="24"
+        stroke="currentColor"
+        stroke-linecap="round"
+        stroke-linejoin="round"
+        stroke-width="2"
+        viewBox="0 0 24 24"
+        width="24"
+        xmlns="http://www.w3.org/2000/svg"
       >
-        X
+        <path
+          d="M18 6 6 18"
+        />
+        <path
+          d="m6 6 12 12"
+        />
       </svg>
     </button>
     <div
@@ -146,10 +160,30 @@ exports[`PostAttachmentsImagesAndVideos - Snapshots > matches snapshot with dial
       >
         Fullscreen 
         <svg
-          class="size-3"
-          data-testid="icon-maximize"
+          aria-hidden="true"
+          class="lucide lucide-maximize size-3"
+          fill="none"
+          height="24"
+          stroke="currentColor"
+          stroke-linecap="round"
+          stroke-linejoin="round"
+          stroke-width="2"
+          viewBox="0 0 24 24"
+          width="24"
+          xmlns="http://www.w3.org/2000/svg"
         >
-          Maximize
+          <path
+            d="M8 3H5a2 2 0 0 0-2 2v3"
+          />
+          <path
+            d="M21 8V5a2 2 0 0 0-2-2h-3"
+          />
+          <path
+            d="M3 16v3a2 2 0 0 0 2 2h3"
+          />
+          <path
+            d="M16 21h3a2 2 0 0 0 2-2v-3"
+          />
         </svg>
       </button>
       <span
@@ -239,10 +273,24 @@ exports[`PostAttachmentsImagesAndVideos - Snapshots > matches snapshot with dial
       data-testid="dialog-close"
     >
       <svg
-        class="size-4"
-        data-testid="icon-x"
+        aria-hidden="true"
+        class="lucide lucide-x size-4"
+        fill="none"
+        height="24"
+        stroke="currentColor"
+        stroke-linecap="round"
+        stroke-linejoin="round"
+        stroke-width="2"
+        viewBox="0 0 24 24"
+        width="24"
+        xmlns="http://www.w3.org/2000/svg"
       >
-        X
+        <path
+          d="M18 6 6 18"
+        />
+        <path
+          d="m6 6 12 12"
+        />
       </svg>
     </button>
     <div
@@ -325,10 +373,30 @@ exports[`PostAttachmentsImagesAndVideos - Snapshots > matches snapshot with dial
       >
         Fullscreen 
         <svg
-          class="size-3"
-          data-testid="icon-maximize"
+          aria-hidden="true"
+          class="lucide lucide-maximize size-3"
+          fill="none"
+          height="24"
+          stroke="currentColor"
+          stroke-linecap="round"
+          stroke-linejoin="round"
+          stroke-width="2"
+          viewBox="0 0 24 24"
+          width="24"
+          xmlns="http://www.w3.org/2000/svg"
         >
-          Maximize
+          <path
+            d="M8 3H5a2 2 0 0 0-2 2v3"
+          />
+          <path
+            d="M21 8V5a2 2 0 0 0-2-2h-3"
+          />
+          <path
+            d="M3 16v3a2 2 0 0 0 2 2h3"
+          />
+          <path
+            d="M16 21h3a2 2 0 0 0 2-2v-3"
+          />
         </svg>
       </button>
       <span
@@ -384,10 +452,24 @@ exports[`PostAttachmentsImagesAndVideos - Snapshots > matches snapshot with dial
       data-testid="dialog-close"
     >
       <svg
-        class="size-4"
-        data-testid="icon-x"
+        aria-hidden="true"
+        class="lucide lucide-x size-4"
+        fill="none"
+        height="24"
+        stroke="currentColor"
+        stroke-linecap="round"
+        stroke-linejoin="round"
+        stroke-width="2"
+        viewBox="0 0 24 24"
+        width="24"
+        xmlns="http://www.w3.org/2000/svg"
       >
-        X
+        <path
+          d="M18 6 6 18"
+        />
+        <path
+          d="m6 6 12 12"
+        />
       </svg>
     </button>
     <div
@@ -430,10 +512,30 @@ exports[`PostAttachmentsImagesAndVideos - Snapshots > matches snapshot with dial
       >
         Fullscreen 
         <svg
-          class="size-3"
-          data-testid="icon-maximize"
+          aria-hidden="true"
+          class="lucide lucide-maximize size-3"
+          fill="none"
+          height="24"
+          stroke="currentColor"
+          stroke-linecap="round"
+          stroke-linejoin="round"
+          stroke-width="2"
+          viewBox="0 0 24 24"
+          width="24"
+          xmlns="http://www.w3.org/2000/svg"
         >
-          Maximize
+          <path
+            d="M8 3H5a2 2 0 0 0-2 2v3"
+          />
+          <path
+            d="M21 8V5a2 2 0 0 0-2-2h-3"
+          />
+          <path
+            d="M3 16v3a2 2 0 0 0 2 2h3"
+          />
+          <path
+            d="M16 21h3a2 2 0 0 0 2-2v-3"
+          />
         </svg>
       </button>
     </div>
@@ -469,10 +571,24 @@ exports[`PostAttachmentsImagesAndVideos - Snapshots > matches snapshot with dial
       data-testid="dialog-close"
     >
       <svg
-        class="size-4"
-        data-testid="icon-x"
+        aria-hidden="true"
+        class="lucide lucide-x size-4"
+        fill="none"
+        height="24"
+        stroke="currentColor"
+        stroke-linecap="round"
+        stroke-linejoin="round"
+        stroke-width="2"
+        viewBox="0 0 24 24"
+        width="24"
+        xmlns="http://www.w3.org/2000/svg"
       >
-        X
+        <path
+          d="M18 6 6 18"
+        />
+        <path
+          d="m6 6 12 12"
+        />
       </svg>
     </button>
     <div
@@ -513,10 +629,30 @@ exports[`PostAttachmentsImagesAndVideos - Snapshots > matches snapshot with dial
       >
         Fullscreen 
         <svg
-          class="size-3"
-          data-testid="icon-maximize"
+          aria-hidden="true"
+          class="lucide lucide-maximize size-3"
+          fill="none"
+          height="24"
+          stroke="currentColor"
+          stroke-linecap="round"
+          stroke-linejoin="round"
+          stroke-width="2"
+          viewBox="0 0 24 24"
+          width="24"
+          xmlns="http://www.w3.org/2000/svg"
         >
-          Maximize
+          <path
+            d="M8 3H5a2 2 0 0 0-2 2v3"
+          />
+          <path
+            d="M21 8V5a2 2 0 0 0-2-2h-3"
+          />
+          <path
+            d="M3 16v3a2 2 0 0 0 2 2h3"
+          />
+          <path
+            d="M16 21h3a2 2 0 0 0 2-2v-3"
+          />
         </svg>
       </button>
     </div>
@@ -558,10 +694,24 @@ exports[`PostAttachmentsImagesAndVideos - Snapshots > matches snapshot with dial
       data-testid="dialog-close"
     >
       <svg
-        class="size-4"
-        data-testid="icon-x"
+        aria-hidden="true"
+        class="lucide lucide-x size-4"
+        fill="none"
+        height="24"
+        stroke="currentColor"
+        stroke-linecap="round"
+        stroke-linejoin="round"
+        stroke-width="2"
+        viewBox="0 0 24 24"
+        width="24"
+        xmlns="http://www.w3.org/2000/svg"
       >
-        X
+        <path
+          d="M18 6 6 18"
+        />
+        <path
+          d="m6 6 12 12"
+        />
       </svg>
     </button>
     <div
@@ -626,10 +776,30 @@ exports[`PostAttachmentsImagesAndVideos - Snapshots > matches snapshot with dial
       >
         Fullscreen 
         <svg
-          class="size-3"
-          data-testid="icon-maximize"
+          aria-hidden="true"
+          class="lucide lucide-maximize size-3"
+          fill="none"
+          height="24"
+          stroke="currentColor"
+          stroke-linecap="round"
+          stroke-linejoin="round"
+          stroke-width="2"
+          viewBox="0 0 24 24"
+          width="24"
+          xmlns="http://www.w3.org/2000/svg"
         >
-          Maximize
+          <path
+            d="M8 3H5a2 2 0 0 0-2 2v3"
+          />
+          <path
+            d="M21 8V5a2 2 0 0 0-2-2h-3"
+          />
+          <path
+            d="M3 16v3a2 2 0 0 0 2 2h3"
+          />
+          <path
+            d="M16 21h3a2 2 0 0 0 2-2v-3"
+          />
         </svg>
       </button>
       <span

@@ -13,7 +13,6 @@ vi.mock('@/core', () => ({
 // Mock Libs
 vi.mock('@/libs', () => ({
   cn: (...classes: (string | undefined)[]) => classes.filter(Boolean).join(' '),
-  EyeOff: ({ className }: { className?: string }) => <svg data-testid="eye-off-icon" className={className} />,
 }));
 
 // Mock Atoms
@@ -91,7 +90,8 @@ describe('PostContentBlurred', () => {
   it('renders the eye-off icon', () => {
     render(<PostContentBlurred {...defaultProps} />);
 
-    expect(screen.getByTestId('eye-off-icon')).toBeInTheDocument();
+    const button = screen.getByTestId('blurred-content-button');
+    expect(button.querySelector('.lucide-eye-off')).toBeInTheDocument();
   });
 
   it('displays the moderated post message', () => {

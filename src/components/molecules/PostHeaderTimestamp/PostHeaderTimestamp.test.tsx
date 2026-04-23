@@ -40,14 +40,6 @@ vi.mock('@/atoms', async (importOriginal) => {
   };
 });
 
-vi.mock('@/libs', async (importOriginal) => {
-  const mod = await importOriginal<typeof import('@/libs')>();
-  return {
-    ...mod,
-    Clock: vi.fn(({ className }: { className?: string }) => <svg data-testid="clock-icon" className={className} />),
-  };
-});
-
 function renderWithTooltip(ui: ReactElement) {
   return render(<Atoms.TooltipProvider delayDuration={0}>{ui}</Atoms.TooltipProvider>);
 }
@@ -65,15 +57,15 @@ describe('PostHeaderTimestamp', () => {
   });
 
   it('renders clock icon', () => {
-    render(<PostHeaderTimestamp timeAgo="2h" indexedAt={TEST_DATE} />);
+    const { container } = render(<PostHeaderTimestamp timeAgo="2h" indexedAt={TEST_DATE} />);
 
-    expect(screen.getByTestId('clock-icon')).toBeInTheDocument();
+    expect(container.querySelector('.lucide-clock')).toBeInTheDocument();
   });
 
   it('applies correct styling classes', () => {
-    render(<PostHeaderTimestamp timeAgo="5m" indexedAt={TEST_DATE} />);
+    const { container } = render(<PostHeaderTimestamp timeAgo="5m" indexedAt={TEST_DATE} />);
 
-    const clockIcon = screen.getByTestId('clock-icon');
+    const clockIcon = container.querySelector('.lucide-clock');
     expect(clockIcon).toHaveClass('size-4', 'text-muted-foreground');
   });
 
