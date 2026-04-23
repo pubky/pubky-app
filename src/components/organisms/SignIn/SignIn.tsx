@@ -4,7 +4,6 @@ import Image from 'next/image';
 import { QRCodeSVG } from 'qrcode.react';
 import { useEffect } from 'react';
 import { useTranslations } from 'next-intl';
-
 import * as Atoms from '@/atoms';
 import * as Libs from '@/libs';
 import * as Molecules from '@/molecules';
@@ -12,41 +11,48 @@ import * as Core from '@/core';
 import * as Hooks from '@/hooks';
 
 // Step configuration for the progress display (labels are translation keys)
+import { CheckCircle, Loader2, Circle, QrCode, Key } from 'lucide-react';
 const SIGN_IN_STEPS = [
-  { key: 'profileChecked', labelKey: 'verifyingAccount' },
-  { key: 'bootstrapFetched', labelKey: 'loadingData' },
-  { key: 'dataPersisted', labelKey: 'buildingFeed' },
-  { key: 'homeserverSynced', labelKey: 'syncingSettings' },
+  {
+    key: 'profileChecked',
+    labelKey: 'verifyingAccount',
+  },
+  {
+    key: 'bootstrapFetched',
+    labelKey: 'loadingData',
+  },
+  {
+    key: 'dataPersisted',
+    labelKey: 'buildingFeed',
+  },
+  {
+    key: 'homeserverSynced',
+    labelKey: 'syncingSettings',
+  },
 ] as const;
-
 type StepKey = (typeof SIGN_IN_STEPS)[number]['key'];
 type StepStatus = 'completed' | 'running' | 'pending';
-
 const getStepStatus = (stepKey: StepKey, state: Core.SignInState): StepStatus => {
   if (state[stepKey]) return 'completed';
 
   // Find the first false step (currently running)
   const firstPendingKey = SIGN_IN_STEPS.find((step) => !state[step.key])?.key;
   if (stepKey === firstPendingKey) return 'running';
-
   return 'pending';
 };
-
 const StepIcon = ({ status }: { status: StepStatus }) => {
   switch (status) {
     case 'completed':
-      return <Libs.CheckCircle className="h-6 w-6 text-brand" />;
+      return <CheckCircle className="h-6 w-6 text-brand" />;
     case 'running':
-      return <Libs.Loader2 className="h-6 w-6 animate-spin text-brand" />;
+      return <Loader2 className="h-6 w-6 animate-spin text-brand" />;
     case 'pending':
-      return <Libs.Circle className="h-6 w-6 text-muted-foreground" />;
+      return <Circle className="h-6 w-6 text-muted-foreground" />;
   }
 };
-
 const SignInProgress = () => {
   const state = Core.useSignInStore();
   const t = useTranslations('onboarding.signIn');
-
   return (
     <Atoms.Container className="items-start justify-center">
       <div className="flex w-full max-w-sm flex-col gap-4">
@@ -73,20 +79,16 @@ const SignInProgress = () => {
     </Atoms.Container>
   );
 };
-
 export const SignInContent = () => {
   const t = useTranslations('onboarding.signIn');
   const { url, isLoading, isExpired, fetchUrl, copyAuthUrl, isOpeningRing, onAuthorizeClick } = Hooks.useMobileAuth();
   const authUrlResolved = Core.useSignInStore((state) => state.authUrlResolved);
-
   useEffect(() => {
     // Clear onboarding storage when sign-in flow begins to prevent backup reminders from showing for existing users
     Core.useOnboardingStore.getState().reset();
   }, []);
-
   const handleQRClick = async () => {
     if (!url) return;
-
     try {
       await copyAuthUrl();
       Molecules.toast({
@@ -97,23 +99,22 @@ export const SignInContent = () => {
       Libs.Logger.error('Failed to copy auth URL to clipboard:', error);
     }
   };
-
   const isMobileLaunching = isLoading || isOpeningRing;
   const mobileAuthorizeContent = isMobileLaunching ? (
     <>
-      <Libs.Loader2 className="mr-2 size-4 animate-spin" />
+      <Loader2 className="mr-2 size-4 animate-spin" />
       <Atoms.Typography as="span" overrideDefaults aria-live="polite">
         {isOpeningRing ? t('openingRing') : t('generatingShort')}
       </Atoms.Typography>
     </>
   ) : isExpired ? (
     <>
-      <Libs.QrCode className="mr-2 size-4" />
+      <QrCode className="mr-2 size-4" />
       {t('expired')}
     </>
   ) : (
     <>
-      <Libs.Key className="mr-2 size-4" />
+      <Key className="mr-2 size-4" />
       {t('authorize')}
     </>
   );
@@ -129,7 +130,6 @@ export const SignInContent = () => {
       </Atoms.Container>
     );
   }
-
   return (
     <>
       {/** Desktop view */}
@@ -146,14 +146,14 @@ export const SignInContent = () => {
             >
               {isLoading || (!url && !isExpired) ? (
                 <Atoms.Container className="items-center gap-2">
-                  <Libs.Loader2 className="size-8 animate-spin text-background" />
+                  <Loader2 className="size-8 animate-spin text-background" />
                   <Atoms.Typography as="small" size="sm" className="text-background">
                     {t('generating')}
                   </Atoms.Typography>
                 </Atoms.Container>
               ) : isExpired ? (
                 <Atoms.Container className="items-center gap-2">
-                  <Libs.QrCode className="size-8 text-muted-foreground" />
+                  <QrCode className="size-8 text-muted-foreground" />
                   <Atoms.Typography as="small" size="sm" className="text-muted-foreground">
                     {t('expired')}
                   </Atoms.Typography>
@@ -207,13 +207,10 @@ export const SignInContent = () => {
     </>
   );
 };
-
 export const SignInFooter = () => {
   const authUrlResolved = Core.useSignInStore((state) => state.authUrlResolved);
   const t = useTranslations('onboarding.signIn');
-
   if (authUrlResolved) return null;
-
   return (
     <Atoms.FooterLinks className="py-6">
       {t.rich('recoveryHint', {
@@ -226,7 +223,6 @@ export const SignInFooter = () => {
     </Atoms.FooterLinks>
   );
 };
-
 export const SignInHeader = () => {
   const t = useTranslations('onboarding.signIn');
   return (
@@ -240,10 +236,8 @@ export const SignInHeader = () => {
     </Atoms.PageHeader>
   );
 };
-
 const SignInProgressHeader = () => {
   const t = useTranslations('onboarding.signIn');
-
   return (
     <Atoms.PageHeader>
       <Molecules.Logo className="py-6 lg:hidden" />

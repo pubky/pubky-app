@@ -2,13 +2,11 @@
 
 import { useTranslations } from 'next-intl';
 import * as Atoms from '@/atoms';
-import * as Libs from '@/libs';
 import type { DialogReportPostSuccessProps } from './DialogReportPostSuccess.types';
-
+import { Check } from 'lucide-react';
 export function DialogReportPostSuccess({ onOpenChange }: DialogReportPostSuccessProps) {
   const t = useTranslations('report.success');
   const tCommon = useTranslations('common');
-
   return (
     <>
       <Atoms.DialogHeader>
@@ -24,7 +22,7 @@ export function DialogReportPostSuccess({ onOpenChange }: DialogReportPostSucces
             onClick={() => onOpenChange(false)}
             aria-label={tCommon('close')}
           >
-            <Libs.Check className="size-4" aria-hidden="true" />
+            <Check className="size-4" aria-hidden="true" />
             {tCommon('yourWelcome')}
           </Atoms.Button>
         </Atoms.DialogClose>

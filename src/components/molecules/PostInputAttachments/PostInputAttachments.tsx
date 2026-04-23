@@ -2,10 +2,9 @@
 
 import { ChangeEvent, Dispatch, SetStateAction, forwardRef, useEffect, useMemo } from 'react';
 import * as Atoms from '@/atoms';
-import * as Icons from '@/libs/icons';
 import * as Utils from '@/libs/utils';
 import { ARTICLE_ATTACHMENT_ACCEPT_STRING, POST_ATTACHMENT_ACCEPT_STRING } from '@/config';
-
+import { ImagePlus, Plus, Trash2, FileText } from 'lucide-react';
 type PostInputAttachmentsProps = {
   attachments: File[];
   setAttachments: Dispatch<SetStateAction<File[]>>;
@@ -14,29 +13,24 @@ type PostInputAttachmentsProps = {
   isArticle?: boolean;
   handleFileClick?: () => void;
 };
-
 type AttachmentType = 'image' | 'video' | 'audio' | 'pdf';
-
 type AttachmentWithPreview = {
   file: File;
   type: AttachmentType;
   previewUrl: string;
 };
-
 const getAttachmentType = (file: File) => {
   if (file.type.startsWith('image/')) return 'image';
   if (file.type.startsWith('video/')) return 'video';
   if (file.type.startsWith('audio/')) return 'audio';
   if (file.type === 'application/pdf') return 'pdf';
 };
-
 export const PostInputAttachments = forwardRef<HTMLInputElement, PostInputAttachmentsProps>(
   ({ attachments, setAttachments, handleFilesAdded, isSubmitting, isArticle, handleFileClick }, ref) => {
     const attachmentsWithPreviews: AttachmentWithPreview[] = useMemo(
       () =>
         attachments.map((file) => {
           const type = getAttachmentType(file) as AttachmentType;
-
           return {
             file,
             type,
@@ -54,7 +48,6 @@ export const PostInputAttachments = forwardRef<HTMLInputElement, PostInputAttach
         });
       };
     }, [attachmentsWithPreviews]);
-
     const handleFileChange = (e: ChangeEvent<HTMLInputElement>) => {
       const files = Array.from(e.target.files || []);
       handleFilesAdded(files);
@@ -62,7 +55,6 @@ export const PostInputAttachments = forwardRef<HTMLInputElement, PostInputAttach
       // Reset input so the same file can be selected again
       e.target.value = '';
     };
-
     return (
       <>
         <Atoms.Input
@@ -81,11 +73,11 @@ export const PostInputAttachments = forwardRef<HTMLInputElement, PostInputAttach
                 overrideDefaults
                 className="flex size-16 items-center justify-center rounded-full bg-brand/15"
               >
-                <Icons.ImagePlus className="size-8 text-brand" />
+                <ImagePlus className="size-8 text-brand" />
               </Atoms.Container>
 
               <Atoms.Button variant="secondary" size="sm" onClick={handleFileClick} disabled={isSubmitting}>
-                <Icons.Plus className="size-4" /> Add image
+                <Plus className="size-4" /> Add image
               </Atoms.Button>
             </Atoms.CardContent>
           </Atoms.Card>
@@ -107,7 +99,7 @@ export const PostInputAttachments = forwardRef<HTMLInputElement, PostInputAttach
                     a.type === 'pdf' && 'size-8',
                   )}
                 >
-                  <Icons.Trash2 className={Utils.cn(a.type === 'audio' ? 'size-3' : 'size-4')} />
+                  <Trash2 className={Utils.cn(a.type === 'audio' ? 'size-3' : 'size-4')} />
                 </Atoms.Button>
 
                 {a.type === 'image' && (
@@ -124,7 +116,7 @@ export const PostInputAttachments = forwardRef<HTMLInputElement, PostInputAttach
 
                 {a.type === 'pdf' && (
                   <Atoms.Container className="cursor-auto flex-row items-center gap-x-2 rounded-md bg-muted p-4 pr-14">
-                    <Icons.FileText className="size-6 shrink-0" />
+                    <FileText className="size-6 shrink-0" />
 
                     <Atoms.Typography size="sm" className="font-bold break-all">
                       {a.file.name}
@@ -139,5 +131,4 @@ export const PostInputAttachments = forwardRef<HTMLInputElement, PostInputAttach
     );
   },
 );
-
 PostInputAttachments.displayName = 'PostInputAttachments';

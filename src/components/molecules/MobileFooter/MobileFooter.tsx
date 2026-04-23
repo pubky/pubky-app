@@ -9,11 +9,10 @@ import * as App from '@/app';
 import * as Core from '@/core';
 import * as Hooks from '@/hooks';
 import { useTranslations } from 'next-intl';
-
+import { Home, Search, Flame, Bookmark, Settings } from 'lucide-react';
 export interface MobileFooterProps {
   className?: string;
 }
-
 const FORCE_HOME_SCROLL_TOP_KEY = 'pubky:force-home-scroll-top';
 
 /**
@@ -25,14 +24,12 @@ const FORCE_HOME_SCROLL_TOP_KEY = 'pubky:force-home-scroll-top';
 export function MobileFooter({ className }: MobileFooterProps) {
   const pathname = usePathname();
   const tCommon = useTranslations('common');
-
   const isAuthenticated = Core.useAuthStore((state) => Boolean(state.currentUserPubky));
   const { isPublicRoute } = Hooks.usePublicRoute();
   const { userDetails, currentUserPubky } = Hooks.useCurrentUserProfile();
   const unreadNotifications = Core.useNotificationStore((state) => state.selectUnread());
   const localAvatarUrl = Core.useLocalFilesStore((state) => state.profile);
   const { isKeyboardVisible, keyboardOffset } = Hooks.useKeyboardOffset();
-
   const isActive = (path: string) => pathname === path || pathname.startsWith(path + '/');
 
   // Hide footer for unauthenticated users on public routes
@@ -47,20 +44,34 @@ export function MobileFooter({ className }: MobileFooterProps) {
       ? Core.FileController.getAvatarUrl(currentUserPubky, userDetails.indexed_at)
       : undefined);
   const avatarName = userDetails?.name || 'U';
-
   const navItems = [
-    { href: App.APP_ROUTES.HOME, icon: Libs.Home, label: 'Home' },
-    { href: App.APP_ROUTES.SEARCH, icon: Libs.Search, label: 'Search' },
-    { href: App.APP_ROUTES.HOT, icon: Libs.Flame, label: 'Hot' },
-    { href: App.APP_ROUTES.BOOKMARKS, icon: Libs.Bookmark, label: 'Bookmarks' },
+    {
+      href: App.APP_ROUTES.HOME,
+      icon: Home,
+      label: 'Home',
+    },
+    {
+      href: App.APP_ROUTES.SEARCH,
+      icon: Search,
+      label: 'Search',
+    },
+    {
+      href: App.APP_ROUTES.HOT,
+      icon: Flame,
+      label: 'Hot',
+    },
+    {
+      href: App.APP_ROUTES.BOOKMARKS,
+      icon: Bookmark,
+      label: 'Bookmarks',
+    },
     {
       href: App.SETTINGS_ROUTES.ACCOUNT,
       activePrefix: App.APP_ROUTES.SETTINGS,
-      icon: Libs.Settings,
+      icon: Settings,
       label: 'Settings',
     },
   ];
-
   return (
     <Atoms.Container
       overrideDefaults
@@ -85,7 +96,6 @@ export function MobileFooter({ className }: MobileFooterProps) {
           const activePath = item.activePrefix ?? item.href;
           const isHome = item.href === App.APP_ROUTES.HOME;
           const isHomeActive = isHome && isActive(item.href);
-
           return (
             <Link
               key={item.href}
@@ -95,10 +105,12 @@ export function MobileFooter({ className }: MobileFooterProps) {
                 // Don't hijack modified clicks (new tab/window, etc.)
                 if (event.metaKey || event.ctrlKey || event.shiftKey || event.altKey || event.button !== 0) return;
                 if (!isHome) return;
-
                 if (isHomeActive) {
                   event.preventDefault();
-                  window.scrollTo({ top: 0, behavior: 'smooth' });
+                  window.scrollTo({
+                    top: 0,
+                    behavior: 'smooth',
+                  });
                   return;
                 }
 

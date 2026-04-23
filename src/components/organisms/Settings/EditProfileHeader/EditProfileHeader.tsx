@@ -5,22 +5,19 @@ import * as Molecules from '@/molecules';
 import * as Atoms from '@/atoms';
 import * as Libs from '@/libs';
 import * as Hooks from '@/hooks';
-
+import { Key } from 'lucide-react';
 export const EditProfileHeader = () => {
   const t = useTranslations('forms.profile');
   const { currentUserPubky } = Hooks.useCurrentUserProfile();
   const { copyToClipboard } = Hooks.useCopyToClipboard();
-
   const displayPublicKey = Libs.formatPublicKey({
     key: currentUserPubky ?? '',
   });
-
   const handleCopyToClipboard = () => {
     if (currentUserPubky) {
       copyToClipboard(Libs.withPubkyPrefix(currentUserPubky));
     }
   };
-
   return (
     <Atoms.PageHeader>
       <Molecules.PageTitle size="large">
@@ -37,7 +34,7 @@ export const EditProfileHeader = () => {
             className="h-8 w-fit gap-2 rounded-full uppercase"
             onClick={handleCopyToClipboard}
           >
-            <Libs.Key className="h-4 w-4" />
+            <Key className="h-4 w-4" />
             {displayPublicKey || '...'}
           </Atoms.Button>
           <Molecules.PopoverPublicKey className="-ml-1" />

@@ -1,19 +1,16 @@
 'use client';
 
 import * as Atoms from '@/atoms';
-import * as Libs from '@/libs';
 import type { DialogConfirmDiscardProps } from './DialogConfirmDiscard.types';
-
+import { Trash2 } from 'lucide-react';
 export function DialogConfirmDiscard({ open, onOpenChange, onConfirm }: DialogConfirmDiscardProps) {
   const handleDiscard = () => {
     onConfirm();
     onOpenChange(false);
   };
-
   const handleCancel = () => {
     onOpenChange(false);
   };
-
   return (
     <Atoms.Dialog open={open} onOpenChange={onOpenChange}>
       <Atoms.DialogContent className="w-xl" hiddenTitle="Do you want to close it?">
@@ -25,7 +22,7 @@ export function DialogConfirmDiscard({ open, onOpenChange, onConfirm }: DialogCo
         </Atoms.Typography>
         <Atoms.DialogFooter>
           <Atoms.Button variant="destructive" size="lg" onClick={handleDiscard}>
-            <Libs.Trash2 className="h-4 w-4" />
+            <Trash2 className="h-4 w-4" />
             Discard
           </Atoms.Button>
           <Atoms.Button variant="outline" size="lg" onClick={handleCancel}>

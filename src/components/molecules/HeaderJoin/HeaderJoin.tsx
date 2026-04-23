@@ -1,7 +1,6 @@
 'use client';
 
 import * as Atoms from '@/atoms';
-import * as Libs from '@/libs';
 import * as Core from '@/core';
 
 /**
@@ -12,13 +11,12 @@ import * as Core from '@/core';
  *
  * Follows pubky-app pattern for minimal header on public view pages.
  */
+import { UserRound } from 'lucide-react';
 export function HeaderJoin() {
   const setShowSignInDialog = Core.useAuthStore((state) => state.setShowSignInDialog);
-
   const handleJoinClick = () => {
     setShowSignInDialog(true);
   };
-
   return (
     <Atoms.Container className="flex-1 flex-row items-center justify-end">
       <Atoms.Button
@@ -29,7 +27,7 @@ export function HeaderJoin() {
         aria-label="Join Pubky"
         data-testid="header-join-button"
       >
-        <Libs.UserRound className="size-6" />
+        <UserRound className="size-6" />
       </Atoms.Button>
     </Atoms.Container>
   );

@@ -6,7 +6,7 @@ import * as Libs from '@/libs';
 import * as Core from '@/core';
 import * as Config from '@/config';
 import type { DialogCheckLinkProps } from './DialogCheckLink.types';
-
+import { ExternalLink } from 'lucide-react';
 export function DialogCheckLink({ open, onOpenChangeAction, linkUrl }: DialogCheckLinkProps) {
   const [dontShowAgain, setDontShowAgain] = useState(false);
   const { setShowConfirm } = Core.useSettingsStore();
@@ -17,7 +17,6 @@ export function DialogCheckLink({ open, onOpenChangeAction, linkUrl }: DialogChe
       setDontShowAgain(false);
     }
   }, [open]);
-
   const handleContinue = () => {
     // If "Don't show this again" is checked, disable the check
     if (dontShowAgain) {
@@ -30,14 +29,12 @@ export function DialogCheckLink({ open, onOpenChangeAction, linkUrl }: DialogChe
     // Close dialog
     onOpenChangeAction(false);
   };
-
   const handleCancel = () => {
     onOpenChangeAction(false);
   };
 
   // Truncate URL for display (preserves beginning and end)
   const displayUrl = useMemo(() => Libs.truncateMiddle(linkUrl, Config.URL_TRUNCATE_LENGTH), [linkUrl]);
-
   return (
     <Atoms.Dialog open={open} onOpenChange={onOpenChangeAction}>
       <Atoms.DialogContent className="w-2xl" hiddenTitle="Double-check this link" onClick={(e) => e.stopPropagation()}>
@@ -62,7 +59,7 @@ export function DialogCheckLink({ open, onOpenChangeAction, linkUrl }: DialogChe
             Cancel
           </Atoms.Button>
           <Atoms.Button size="lg" onClick={handleContinue}>
-            <Libs.ExternalLink className="h-4 w-4" />
+            <ExternalLink className="h-4 w-4" />
             Continue
           </Atoms.Button>
         </Atoms.DialogFooter>

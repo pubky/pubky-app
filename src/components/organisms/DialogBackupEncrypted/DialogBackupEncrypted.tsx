@@ -1,40 +1,32 @@
 'use client';
 
 import { useState } from 'react';
-
 import * as Atoms from '@/components/atoms';
-import * as Libs from '@/libs';
 import * as Hooks from '@/hooks';
 import Image from 'next/image';
 import { calculatePasswordStrength, getStrengthColor } from '@/libs';
 import * as Core from '@/core';
 import { useTranslations } from 'next-intl';
-
+import { Download, ArrowRight } from 'lucide-react';
 interface DialogBackupEncryptedProps {
   children?: React.ReactNode;
 }
-
 function RecoveryStep1({ setStep }: { setStep: (step: number) => void }) {
   const t = useTranslations('onboarding.backupEncrypted');
   const tCommon = useTranslations('common');
   const tPassword = useTranslations('password');
   const [passphrase, setPassphrase] = useState('');
   const [confirmPassphrase, setConfirmPassphrase] = useState('');
-
   const passphraseStrength = calculatePasswordStrength(passphrase);
   const passphraseMatch = passphrase === confirmPassphrase && passphrase !== '';
-
   const handleDownload = () => {
     Core.ProfileController.createRecoveryFile(passphrase);
     setStep(2);
   };
-
   const isFormValid = () => {
     return Boolean(passphrase && passphraseMatch);
   };
-
   const handleKeyDown = Hooks.useEnterSubmit(isFormValid, handleDownload);
-
   const getStrengthText = (strength: number): string => {
     if (strength === 0) return '';
     if (strength <= 2) return tPassword('weak');
@@ -42,7 +34,6 @@ function RecoveryStep1({ setStep }: { setStep: (step: number) => void }) {
     if (strength <= 4) return tPassword('good');
     return tPassword('strong');
   };
-
   return (
     <>
       <Atoms.DialogHeader>
@@ -119,9 +110,7 @@ function RecoveryStep1({ setStep }: { setStep: (step: number) => void }) {
               value={confirmPassphrase}
               onChange={(e) => setConfirmPassphrase(e.target.value)}
               onKeyDown={handleKeyDown}
-              className={`bg-opacity-90 h-14 rounded-md border border-dashed px-5 py-4 shadow-sm ${
-                confirmPassphrase && !passphraseMatch ? 'border-destructive' : ''
-              }`}
+              className={`bg-opacity-90 h-14 rounded-md border border-dashed px-5 py-4 shadow-sm ${confirmPassphrase && !passphraseMatch ? 'border-destructive' : ''}`}
               placeholder={t('repeatPasswordPlaceholder')}
               autoComplete="new-password"
               aria-invalid={Boolean(confirmPassphrase && !passphraseMatch)}
@@ -148,7 +137,7 @@ function RecoveryStep1({ setStep }: { setStep: (step: number) => void }) {
           disabled={!isFormValid()}
           className="order-2 sm:order-1"
         >
-          <Libs.Download className="h-4 w-4" />
+          <Download className="h-4 w-4" />
           {t('downloadFile')}
         </Atoms.Button>
         <Atoms.DialogClose asChild>
@@ -167,7 +156,6 @@ function RecoveryStep1({ setStep }: { setStep: (step: number) => void }) {
     </>
   );
 }
-
 function RecoveryStep2({ handleClose }: { handleClose: () => void }) {
   const t = useTranslations('onboarding.backupEncrypted');
   const tCommon = useTranslations('common');
@@ -192,7 +180,7 @@ function RecoveryStep2({ handleClose }: { handleClose: () => void }) {
         </Atoms.DialogClose>
         <Atoms.DialogClose asChild>
           <Atoms.Button id="backup-successful-ok-btn" size="lg" onClick={handleClose}>
-            <Libs.ArrowRight className="h-4 w-4" />
+            <ArrowRight className="h-4 w-4" />
             {tCommon('finish')}
           </Atoms.Button>
         </Atoms.DialogClose>
@@ -200,17 +188,14 @@ function RecoveryStep2({ handleClose }: { handleClose: () => void }) {
     </>
   );
 }
-
 export function DialogBackupEncrypted({ children }: DialogBackupEncryptedProps) {
   const [step, setStep] = useState(1);
-
   const handleClose = () => {
     //delay 1 second
     setTimeout(() => {
       setStep(1);
     }, 1000);
   };
-
   return (
     <Atoms.Dialog
       onOpenChange={(open) => {

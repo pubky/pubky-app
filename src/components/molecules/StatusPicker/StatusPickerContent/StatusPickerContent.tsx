@@ -4,12 +4,11 @@ import { useState, useEffect, useRef } from 'react';
 import { useTranslations } from 'next-intl';
 import * as Atoms from '@/atoms';
 import * as Molecules from '@/molecules';
-import * as Icons from '@/libs/icons';
 import * as Libs from '@/libs';
 import * as Hooks from '@/hooks';
 import * as Config from '@/config';
 import * as Types from './index';
-
+import { Check, Smile } from 'lucide-react';
 export function StatusPickerContent({ onStatusSelect, currentStatus }: Types.StatusPickerContentProps) {
   const t = useTranslations('status');
   const [customStatus, setCustomStatus] = useState('');
@@ -31,17 +30,14 @@ export function StatusPickerContent({ onStatusSelect, currentStatus }: Types.Sta
       setSelectedEmoji('');
     }
   }, [currentStatus, isCustomStatus, parsed.emoji, parsed.text]);
-
   const handlePredefinedStatusClick = (statusValue: string) => {
     onStatusSelect(statusValue);
     setCustomStatus('');
     setSelectedEmoji('');
   };
-
   const isValidCustomStatus = () => {
     return Boolean(customStatus.trim());
   };
-
   const handleCustomStatusSave = () => {
     if (isValidCustomStatus()) {
       // If emoji is selected, prepend it; otherwise just use text
@@ -51,7 +47,6 @@ export function StatusPickerContent({ onStatusSelect, currentStatus }: Types.Sta
       setSelectedEmoji('');
     }
   };
-
   const handleEmojiSelect = (emoji: { native: string }) => {
     setSelectedEmoji(emoji.native);
     setShowEmojiPicker(false);
@@ -60,9 +55,7 @@ export function StatusPickerContent({ onStatusSelect, currentStatus }: Types.Sta
       inputRef.current?.focus();
     }, 0);
   };
-
   const handleKeyDown = Hooks.useEnterSubmit(isValidCustomStatus, handleCustomStatusSave);
-
   return (
     <Atoms.Container className="gap-2">
       {/* Predefined status options */}
@@ -87,7 +80,7 @@ export function StatusPickerContent({ onStatusSelect, currentStatus }: Types.Sta
                 {t(option.value as Parameters<typeof t>[0])}
               </Atoms.Typography>
             </Atoms.Container>
-            {isSelected && <Icons.Check className="size-5 text-popover-foreground" />}
+            {isSelected && <Check className="size-5 text-popover-foreground" />}
           </Atoms.Button>
         );
       })}
@@ -126,7 +119,7 @@ export function StatusPickerContent({ onStatusSelect, currentStatus }: Types.Sta
                 )}
                 aria-label="Open emoji picker"
               >
-                <Icons.Smile className="size-5" strokeWidth={2} />
+                <Smile className="size-5" strokeWidth={2} />
               </Atoms.Button>
             )}
             <Atoms.Input
