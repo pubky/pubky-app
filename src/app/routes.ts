@@ -71,9 +71,6 @@ export const PUBLIC_ROUTES: string[] = [
   COPYRIGHT_ROUTES.COPYRIGHT,
   // Language settings page is public to allow language changes without auth issues
   SETTINGS_ROUTES.LANGUAGE,
-  // Throwaway Sentry verification page (gated by NEXT_PUBLIC_DEBUG_MODE inside the page).
-  // Remove this entry when src/app/sentry-test/ is deleted.
-  '/sentry-test',
 ];
 
 export const ALLOWED_ROUTES = [

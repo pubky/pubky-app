@@ -16,11 +16,21 @@ How errors and performance data flow into Sentry from Pubky App.
 
 ## Capture rule
 
-> Throw via `Err.*` factories. Do **not** call `Sentry.captureException` directly anywhere except `app/error.tsx` and `app/global-error.tsx`.
+> Throw via `Err.*` factories. Do **not** call `Sentry.captureException` directly anywhere except `app/error.tsx` and `app/global-error.tsx`, and in those two files only for non-`AppError` instances.
 
 The `Err.*` factories already log once and capture once — adding extra `Sentry.captureException` calls causes duplicate issues in the dashboard. Anything that bubbles to the browser global handler or the server `onRequestError` hook is captured automatically by the SDK.
 
+The two route-segment error boundaries (`app/error.tsx`, `app/global-error.tsx`) guard their `Sentry.captureException` call with `if (!(error instanceof AppError))` so an `AppError` thrown during render isn't captured twice (once by the factory, once by the boundary).
+
 For future Server Actions, wrap with `Sentry.withServerActionInstrumentation('actionName', { headers: await headers() }, async () => { ... })` so server-action errors are captured and traces stitch with the client.
+
+### Known quirk: render-time errors emit 2 events in React 19
+
+When an `AppError` is thrown synchronously during React render (as opposed to event handlers, effects, or application-layer code), React 19 attempts to re-render the failing component once before handing off to the error boundary. Each render invocation runs the `throw Err.*(...)` expression afresh, constructing a new `AppError` and routing through `captureAppError` — producing **2 Sentry events** within ~30 ms.
+
+Both events share identical fingerprints, so Sentry groups them into a **single issue** — triage and alerting are unaffected, only the raw event count is inflated. This pathology is limited to synchronous render throws; event-handler, effect, Server Action, and application-layer throws all emit exactly one event.
+
+See [React 19's `onRecoverableError` docs](https://react.dev/reference/react-dom/client/createRoot#parameters) for the retry semantics. If event-quota inflation ever becomes a concern, the fix is a short-window LRU in `captureAppError` keyed on `${service}:${operation}:${message}`.
 
 ## Files
 
@@ -67,8 +77,12 @@ Never call `Sentry.setUser({ email, ... })`. If user attribution is ever needed,
 
 ## Verification
 
-1. Throw a `new Error()` in any client component — confirm one event in Sentry with readable stack (source maps).
-2. Throw inside a server route handler — confirm capture via `onRequestError`.
-3. Throw `Err.database(DatabaseErrorCode.WRITE_FAILED, '...', { service: ErrorService.Local, operation: 'test' })` — confirm event tags `error.category=Database`, `error.service=Local`, `error.operation=test`.
-4. Trigger an unhandled promise rejection — confirm exactly one event (no duplicate from `GlobalErrorHandlerProvider`).
-5. Open Replays for an errored session — confirm masked DOM (no usernames, post bodies, or input contents visible).
+To verify end-to-end after an env/config change, temporarily throw from the three runtimes and confirm exactly one event per trigger in the matching Sentry environment:
+
+1. **Browser globalHandlers** — in any client component event handler, `throw new Error('test')`. Confirm one event with readable stack (source maps) and no accompanying `AppError` duplicate.
+2. **Err.* factory funnel** — `throw Err.database(DatabaseErrorCode.WRITE_FAILED, 'test', { service: ErrorService.Local, operation: 'test' })`. Confirm event tags `error.category=database`, `error.service=local`, `error.operation=test`.
+3. **Server `onRequestError`** — throw from a route handler (`/api/...`). Confirm capture with `runtime.name=node`.
+4. **Unhandled promise rejection** — `Promise.reject(new Error('test'))`. Confirm exactly one event (no duplicate from `GlobalErrorHandlerProvider`).
+5. **Replay** — open Replays for an errored session and confirm masked DOM (no usernames, post bodies, or input contents visible).
+
+Remove the test throws before committing. For a reproducible harness, see commit history before the scaffolding in `src/app/sentry-test/` and `src/app/api/sentry-test/` was removed.
