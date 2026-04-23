@@ -40,7 +40,7 @@ export function PostHeaderUserInfo({
   const content = (
     <Atoms.Container
       overrideDefaults
-      className={Libs.cn('flex min-w-0 items-center', size === 'large' ? 'gap-5' : 'gap-3')}
+      className={Libs.cn('flex min-w-0 items-center', size === 'large' ? 'gap-4' : 'gap-3')}
     >
       <Atoms.Link href={profileUrl} onClick={handleLinkClick} className="shrink-0">
         <Organisms.AvatarWithFallback
@@ -54,8 +54,8 @@ export function PostHeaderUserInfo({
         <Atoms.Link href={profileUrl} onClick={handleLinkClick}>
           <Atoms.Typography
             className={Libs.cn(
-              'block max-w-full cursor-pointer truncate leading-5 font-bold text-foreground',
-              size === 'large' ? 'text-2xl' : 'text-base',
+              'block max-w-full cursor-pointer truncate font-bold text-foreground',
+              size === 'large' ? 'text-2xl leading-8' : 'text-base leading-5',
             )}
             overrideDefaults
           >

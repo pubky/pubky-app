@@ -2,6 +2,7 @@ import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import * as Core from '@/core';
 import { AppError, ErrorCategory, ValidationErrorCode, ErrorService } from '@/libs';
 import { TagResult, postUriBuilder } from 'pubky-app-specs';
+import { asInvalid, asOpaque } from '@/test-utils';
 import {
   TEST_PUBKY,
   TEST_POST_IDS,
@@ -13,12 +14,11 @@ import {
 
 describe('TagNormalizer', () => {
   const createMockBuilder = (overrides?: Partial<{ createTag: ReturnType<typeof vi.fn> }>) => ({
-    createTag: vi.fn(
-      (uri: string, label: string) =>
-        ({
-          tag: { label, toJson: vi.fn(() => ({ uri, label })) },
-          meta: { url: buildPubkyUri(TEST_PUBKY.USER_1, `tags/${encodeURIComponent(label)}`) },
-        }) as unknown as TagResult,
+    createTag: vi.fn((uri: string, label: string) =>
+      asOpaque<TagResult>({
+        tag: { label, toJson: vi.fn(() => ({ uri, label })) },
+        meta: { url: buildPubkyUri(TEST_PUBKY.USER_1, `tags/${encodeURIComponent(label)}`) },
+      }),
     ),
     ...overrides,
   });
@@ -176,7 +176,7 @@ describe('TagNormalizer', () => {
         it('should throw AppError for null label', () => {
           const uri = postUriBuilder(TEST_PUBKY.USER_2, TEST_POST_IDS.POST_1);
 
-          expect(() => Core.TagNormalizer.to(uri, null as unknown as string, TEST_PUBKY.USER_1)).toThrow(AppError);
+          expect(() => Core.TagNormalizer.to(uri, asInvalid<string>(null), TEST_PUBKY.USER_1)).toThrow(AppError);
         });
       });
 

@@ -2,6 +2,7 @@ import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import * as Core from '@/core';
 import { AppError, ErrorCategory, ValidationErrorCode, ErrorService } from '@/libs';
 import { UserResult } from 'pubky-app-specs';
+import { asInvalid, asOpaque } from '@/test-utils';
 import {
   TEST_PUBKY,
   setupUnitTestMocks,
@@ -22,19 +23,18 @@ describe('UserNormalizer', () => {
   });
 
   const createMockBuilder = (overrides?: Partial<{ createUser: ReturnType<typeof vi.fn> }>) => ({
-    createUser: vi.fn(
-      (name, bio, image, links, status) =>
-        ({
-          user: {
-            name,
-            bio,
-            image,
-            links,
-            status,
-            toJson: vi.fn(() => ({ name, bio, image, links, status })),
-          },
-          meta: { url: buildPubkyUri(TEST_PUBKY.USER_1, 'profile.json') },
-        }) as unknown as UserResult,
+    createUser: vi.fn((name, bio, image, links, status) =>
+      asOpaque<UserResult>({
+        user: {
+          name,
+          bio,
+          image,
+          links,
+          status,
+          toJson: vi.fn(() => ({ name, bio, image, links, status })),
+        },
+        meta: { url: buildPubkyUri(TEST_PUBKY.USER_1, 'profile.json') },
+      }),
     ),
     ...overrides,
   });
@@ -267,7 +267,7 @@ describe('UserNormalizer', () => {
       });
 
       it('should throw AppError for null name', () => {
-        const user = createUserData({ name: null as unknown as string });
+        const user = createUserData({ name: asInvalid<string>(null) });
 
         expect(() => Core.UserNormalizer.to(user, TEST_PUBKY.USER_1)).toThrow(AppError);
       });

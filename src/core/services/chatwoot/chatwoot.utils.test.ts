@@ -1,6 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import { buildChatwootEmail, extractSourceId, CHATWOOT_EMAIL_DOMAIN } from './chatwoot.utils';
 import type { TChatwootContact } from './chatwoot.types';
+import { asInvalid } from '@/test-utils';
 
 const testData = {
   pubky: 'o1gg96ewuojmopcjbz8895478wdtxtzzuxnfjjz8o8e77csa1ngo',
@@ -70,12 +71,12 @@ describe('chatwoot.utils', () => {
     });
 
     it('should throw AppError when contact has undefined inbox associations', () => {
-      const contact = {
+      const contact = asInvalid<TChatwootContact>({
         id: testData.contactId,
         email: `${testData.pubky}@${CHATWOOT_EMAIL_DOMAIN}`,
         name: 'Test User',
         contact_inboxes: undefined,
-      } as unknown as TChatwootContact;
+      });
       const email = `${testData.pubky}@${CHATWOOT_EMAIL_DOMAIN}`;
 
       expect(() => extractSourceId(contact, email)).toThrow('Contact has no inbox associations');

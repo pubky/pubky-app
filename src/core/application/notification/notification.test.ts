@@ -4,6 +4,7 @@ import { HttpMethod, Logger } from '@/libs';
 import { LastReadResult } from 'pubky-app-specs';
 import { NotificationApplication } from './notification';
 import { NotificationType } from '@/core/models/notification/notification.types';
+import { asInvalid, asOpaque } from '@/test-utils';
 
 const userId = 'pubky_user' as Core.Pubky;
 
@@ -225,7 +226,7 @@ describe('NotificationApplication.getOrFetchNotifications', () => {
 
     it.each([
       { nexusResponse: [], desc: 'empty array' },
-      { nexusResponse: null as unknown as Core.NexusNotification[], desc: 'null' },
+      { nexusResponse: asInvalid<Core.NexusNotification[]>(null), desc: 'null' },
     ])('should return empty response when Nexus returns $desc', async ({ nexusResponse }) => {
       vi.spyOn(Core.NexusUserService, 'notifications').mockResolvedValue(nexusResponse);
       mockNormalizer();
@@ -315,14 +316,14 @@ describe('NotificationApplication.markAllAsRead', () => {
   beforeEach(() => vi.clearAllMocks());
 
   it('should send lastRead to homeserver', () => {
-    const mockLastReadResult = {
+    const mockLastReadResult = asOpaque<LastReadResult>({
       last_read: {
         timestamp: BigInt(mockTimestamp),
         toJson: vi.fn().mockReturnValue({ timestamp: mockTimestamp }),
       },
       meta: { url: mockLastReadUrl },
       free: vi.fn(),
-    } as unknown as LastReadResult;
+    });
 
     const homeserverSpy = vi.spyOn(Core.HomeserverService, 'request').mockResolvedValue(undefined);
 
@@ -336,14 +337,14 @@ describe('NotificationApplication.markAllAsRead', () => {
   });
 
   it('should log warning if homeserver fails (fire and forget)', async () => {
-    const mockLastReadResult = {
+    const mockLastReadResult = asOpaque<LastReadResult>({
       last_read: {
         timestamp: BigInt(mockTimestamp),
         toJson: vi.fn().mockReturnValue({ timestamp: mockTimestamp }),
       },
       meta: { url: mockLastReadUrl },
       free: vi.fn(),
-    } as unknown as LastReadResult;
+    });
 
     vi.spyOn(Core.HomeserverService, 'request').mockRejectedValue(new Error('homeserver-fail'));
     const loggerWarnSpy = vi.spyOn(Logger, 'warn').mockImplementation(() => {});

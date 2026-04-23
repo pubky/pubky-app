@@ -2,6 +2,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import * as Core from '@/core';
 import { REPORT_ISSUE_TYPES, REPORT_REASON_MAX_LENGTH, REPORT_ISSUE_TYPE_VALUES } from '@/core/pipes/report';
 import type { TReportSubmitParams } from './report.types';
+import { asInvalid } from '@/test-utils';
 
 const testData = {
   userPubky: 'o1gg96ewuojmopcjbz8895478wdtxtzzuxnfjjz8o8e77csa1ngo' as Core.Pubky,
@@ -68,7 +69,7 @@ describe('ReportController', () => {
     });
 
     it('should throw when pubky is null', async () => {
-      const params = createReportParams({ pubky: null as unknown as Core.Pubky });
+      const params = createReportParams({ pubky: asInvalid<Core.Pubky>(null) });
 
       await expect(ReportController.submit(params)).rejects.toThrow('Pubky is required and must be a non-empty string');
     });
@@ -82,7 +83,7 @@ describe('ReportController', () => {
     });
 
     it('should throw when postUrl is null', async () => {
-      const params = createReportParams({ postUrl: null as unknown as string });
+      const params = createReportParams({ postUrl: asInvalid<string>(null) });
 
       await expect(ReportController.submit(params)).rejects.toThrow(
         'Post URL is required and must be a non-empty string',
@@ -98,7 +99,7 @@ describe('ReportController', () => {
     });
 
     it('should throw when issueType is null', async () => {
-      const params = createReportParams({ issueType: null as unknown as string });
+      const params = createReportParams({ issueType: asInvalid<string>(null) });
 
       await expect(ReportController.submit(params)).rejects.toThrow(
         'Issue type is required and must be a non-empty string',
@@ -122,7 +123,7 @@ describe('ReportController', () => {
     });
 
     it('should throw when reason is null', async () => {
-      const params = createReportParams({ reason: null as unknown as string });
+      const params = createReportParams({ reason: asInvalid<string>(null) });
 
       await expect(ReportController.submit(params)).rejects.toThrow(
         'Reason is required and must be a non-empty string',
@@ -155,7 +156,7 @@ describe('ReportController', () => {
     });
 
     it('should throw when name is null', async () => {
-      const params = createReportParams({ name: null as unknown as string });
+      const params = createReportParams({ name: asInvalid<string>(null) });
 
       await expect(ReportController.submit(params)).rejects.toThrow('Name is required and must be a non-empty string');
     });

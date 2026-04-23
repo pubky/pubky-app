@@ -66,12 +66,6 @@ vi.mock('@/atoms', () => ({
 }));
 
 // Mock icon components
-const MockIcon = ({ size, className }: { size?: number; className?: string }) => (
-  <svg data-testid="mock-icon" data-size={size} className={className}>
-    <title>Mock Icon</title>
-  </svg>
-);
-
 const MockButtonIcon = ({ size }: { size?: number }) => (
   <svg data-testid="mock-button-icon" data-size={size}>
     <title>Mock Button Icon</title>
@@ -79,7 +73,6 @@ const MockButtonIcon = ({ size }: { size?: number }) => (
 );
 
 const defaultProps = {
-  icon: MockIcon,
   title: 'Account Settings',
   description: 'Manage your account preferences and security settings.',
   buttonText: 'Edit Account',
@@ -138,13 +131,6 @@ describe('SettingsSection - Snapshots', () => {
 
   it('matches snapshot with disabled button', () => {
     const { container } = render(<SettingsSection {...defaultProps} buttonDisabled={true} />);
-    expect(container.firstChild).toMatchSnapshot();
-  });
-
-  it('matches snapshot with custom classNames', () => {
-    const { container } = render(
-      <SettingsSection {...defaultProps} titleClassName="custom-title" iconClassName="custom-icon" />,
-    );
     expect(container.firstChild).toMatchSnapshot();
   });
 });

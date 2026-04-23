@@ -3,6 +3,7 @@ import * as Core from '@/core';
 import * as Libs from '@/libs';
 import { PubkyAppPostKind, PostResult, PubkyAppPostEmbed, PubkyAppPost } from 'pubky-app-specs';
 import type { FileResult } from 'pubky-app-specs';
+import { asInvalid, asOpaque } from '@/test-utils';
 import {
   TEST_PUBKY,
   TEST_POST_IDS,
@@ -21,16 +22,16 @@ describe('PostNormalizer', () => {
   });
 
   const createMockFileResult = (id: string): FileResult =>
-    ({
+    asOpaque<FileResult>({
       file: { toJson: vi.fn(() => ({ id, src: `blob-${id}`, content_type: 'image/png', size: 1024 })) },
       meta: { url: buildPubkyUri(TEST_PUBKY.USER_1, `files/${id}`) },
-    }) as unknown as FileResult;
+    });
 
   const createMockAttachment = (id: string): Core.TFileAttachmentResult => ({
-    blobResult: {
+    blobResult: asOpaque<Core.TFileAttachmentResult['blobResult']>({
       blob: { data: new Uint8Array([1, 2, 3]) },
       meta: { url: buildPubkyUri(TEST_PUBKY.USER_1, `blobs/${id}`) },
-    } as unknown as Core.TFileAttachmentResult['blobResult'],
+    }),
     fileResult: createMockFileResult(id),
   });
 
@@ -44,18 +45,17 @@ describe('PostNormalizer', () => {
   });
 
   const createMockBuilder = (overrides?: Partial<{ createPost: ReturnType<typeof vi.fn> }>) => ({
-    createPost: vi.fn(
-      (content, kind, parent, embed, attachments) =>
-        ({
-          post: {
-            content,
-            kind,
-            parent: parent || undefined,
-            embed: embed || undefined,
-            attachments: attachments || undefined,
-          },
-          meta: { url: buildPubkyUri(TEST_PUBKY.USER_1, `posts/${TEST_POST_IDS.POST_1}`) },
-        }) as unknown as PostResult,
+    createPost: vi.fn((content, kind, parent, embed, attachments) =>
+      asOpaque<PostResult>({
+        post: {
+          content,
+          kind,
+          parent: parent || undefined,
+          embed: embed || undefined,
+          attachments: attachments || undefined,
+        },
+        meta: { url: buildPubkyUri(TEST_PUBKY.USER_1, `posts/${TEST_POST_IDS.POST_1}`) },
+      }),
     ),
     ...overrides,
   });
@@ -339,7 +339,7 @@ describe('PostNormalizer', () => {
         });
 
         it('should throw error for null content', async () => {
-          const post = createBasicPost({ content: null as unknown as string });
+          const post = createBasicPost({ content: asInvalid<string>(null) });
 
           await expect(Core.PostNormalizer.to(post, TEST_PUBKY.USER_1)).rejects.toThrow();
         });
@@ -440,26 +440,25 @@ describe('PostNormalizer', () => {
     const createMockEditBuilder = (
       overrides?: Partial<{ editPost: ReturnType<typeof vi.fn>; createPost: ReturnType<typeof vi.fn> }>,
     ) => ({
-      editPost: vi.fn(
-        (originalPost: PubkyAppPost, postId: string, newContent: string) =>
-          ({
-            post: {
+      editPost: vi.fn((originalPost: PubkyAppPost, postId: string, newContent: string) =>
+        asOpaque<PostResult>({
+          post: {
+            content: newContent,
+            kind: originalPost.kind,
+            parent: originalPost.parent,
+            embed: originalPost.embed,
+            attachments: originalPost.attachments,
+            toJson: vi.fn(() => ({
               content: newContent,
               kind: originalPost.kind,
-              parent: originalPost.parent,
-              embed: originalPost.embed,
-              attachments: originalPost.attachments,
-              toJson: vi.fn(() => ({
-                content: newContent,
-                kind: originalPost.kind,
-              })),
-            },
-            meta: {
-              id: postId,
-              url: buildPubkyUri(TEST_PUBKY.USER_1, `posts/${postId}`),
-              path: `/pub/pubky.app/posts/${postId}`,
-            },
-          }) as unknown as PostResult,
+            })),
+          },
+          meta: {
+            id: postId,
+            url: buildPubkyUri(TEST_PUBKY.USER_1, `posts/${postId}`),
+            path: `/pub/pubky.app/posts/${postId}`,
+          },
+        }),
       ),
       createPost: vi.fn(),
       ...overrides,

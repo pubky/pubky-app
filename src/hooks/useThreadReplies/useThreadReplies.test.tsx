@@ -53,7 +53,7 @@ describe('useThreadReplies', () => {
       localTotalCount: 3,
     });
 
-    vi.spyOn(Core, 'buildPostReplyStreamId').mockReturnValue('stream:author:post-1');
+    vi.spyOn(Core, 'buildPostReplyStreamId').mockReturnValue('post_replies:author:post-1');
     const getOrFetchSpy = vi
       .spyOn(Core.StreamPostsController, 'getOrFetchStreamSlice')
       .mockResolvedValueOnce({
@@ -89,7 +89,7 @@ describe('useThreadReplies', () => {
       localTotalCount: 2,
     });
 
-    vi.spyOn(Core, 'buildPostReplyStreamId').mockReturnValue('stream:author:post-1');
+    vi.spyOn(Core, 'buildPostReplyStreamId').mockReturnValue('post_replies:author:post-1');
     const getOrFetchSpy = vi.spyOn(Core.StreamPostsController, 'getOrFetchStreamSlice').mockResolvedValue({
       nextPageIds: Array.from({ length: 10 }, (_, index) => `author:reply-${index + 3}`),
       timestamp: 0,

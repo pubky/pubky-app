@@ -1,9 +1,11 @@
 'use client';
 
+import * as Core from '@/core';
 import * as Atoms from '@/atoms';
 import * as Molecules from '@/molecules';
 import * as Hooks from '@/hooks';
 import * as Libs from '@/libs';
+import { getTagsLayoutForSurfaceLayout, PostMainLayoutProvider } from '@/organisms/PostMain/PostMainLayout';
 import { SinglePostArticle } from '../SinglePostArticle';
 import { SinglePostCard } from '../SinglePostCard';
 
@@ -27,6 +29,9 @@ import type { SinglePostContentProps } from './SinglePostContent.types';
  * following the atomic design pattern where only organisms can call hooks.
  */
 export function SinglePostContent({ postId }: SinglePostContentProps) {
+  const layout = Core.useHomeStore((state) => state.layout);
+  const tagsLayout = getTagsLayoutForSurfaceLayout(layout);
+
   // Check authentication status - unauthenticated users see limited view
   const { isAuthenticated } = Hooks.useRequireAuth();
 
@@ -41,7 +46,7 @@ export function SinglePostContent({ postId }: SinglePostContentProps) {
   const isArticle = postDetails.kind === 'long';
 
   return (
-    <>
+    <PostMainLayoutProvider tagsLayout={tagsLayout}>
       {/* Page header with breadcrumb navigation */}
       <PostPageHeader postId={postId} />
 
@@ -72,6 +77,6 @@ export function SinglePostContent({ postId }: SinglePostContentProps) {
           </Atoms.Container>
         </Atoms.Container>
       )}
-    </>
+    </PostMainLayoutProvider>
   );
 }

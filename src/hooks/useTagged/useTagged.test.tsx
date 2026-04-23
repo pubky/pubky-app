@@ -52,7 +52,7 @@ vi.mock('@/core', async () => {
 
 // Mock useProfileStats
 import { useProfileStats } from '@/hooks/useProfileStats';
-const mockUseProfileStats = vi.fn(() => ({
+const mockUseProfileStats = vi.fn((_userId: string) => ({
   stats: { uniqueTags: 0, posts: 0, replies: 0, followers: 0, following: 0, friends: 0, notifications: 0 },
   isLoading: false,
 }));

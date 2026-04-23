@@ -2,6 +2,7 @@ import { describe, it, expect, vi, beforeAll, afterAll, beforeEach } from 'vites
 import { render, screen, waitFor, act, fireEvent } from '@testing-library/react';
 import React from 'react';
 import messages from '../../../../messages/en.json';
+import { asOpaque } from '@/test-utils';
 import { SignInContent, SignInFooter } from './SignIn';
 
 // Mock Next.js router
@@ -225,7 +226,7 @@ describe('SignInContent', () => {
   beforeAll(() => {
     Object.defineProperty(window, 'location', {
       configurable: true,
-      value: { ...(originalLocation as unknown as object), href: '' } as unknown as Location,
+      value: asOpaque<Location>({ ...asOpaque<object>(originalLocation), href: '' }),
     });
     Object.defineProperty(navigator, 'clipboard', {
       configurable: true,

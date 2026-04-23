@@ -4,6 +4,7 @@ import * as i18nUtils from '@/i18n/utils';
 import * as Core from '@/core';
 import { defaultNotificationPreferences, defaultPrivacyPreferences } from '@/core/stores/settings/settings.types';
 import { NotificationNormalizer } from '@/core/pipes/notification/notification.normalizer';
+import { asOpaque, mockAuthStore, mockSettingsStore } from '@/test-utils';
 
 const TEST_PUBKY = 'o1gg96ewuojmopcjbz8895478wdtxtzzuxnfjjz8o8e77csa1ngo' as Core.Pubky;
 const MOCK_LAST_READ = 5000;
@@ -56,17 +57,17 @@ describe('SettingsController', () => {
     vi.clearAllMocks();
 
     // Reset pendingCommit between tests to avoid chaining across tests
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any -- pendingCommit is private; cast needed to reset static state between tests
-    (SettingsController as any).pendingCommit = Promise.resolve();
+    // pendingCommit is private; an opaque cast is needed to reset static state between tests
+    asOpaque<{ pendingCommit: Promise<void> }>(SettingsController).pendingCommit = Promise.resolve();
 
-    vi.spyOn(Core.useSettingsStore, 'getState').mockReturnValue(mockStoreActions as unknown as Core.SettingsStore);
+    vi.spyOn(Core.useSettingsStore, 'getState').mockReturnValue(mockSettingsStore(mockStoreActions));
 
-    vi.spyOn(Core.useAuthStore, 'getState').mockReturnValue({
-      selectCurrentUserPubky: () => TEST_PUBKY,
-    } as unknown as Core.AuthStore);
+    vi.spyOn(Core.useAuthStore, 'getState').mockReturnValue(
+      mockAuthStore({ selectCurrentUserPubky: () => TEST_PUBKY }),
+    );
 
     vi.spyOn(Core.useNotificationStore, 'getState').mockReturnValue(
-      mockNotificationStoreActions as unknown as Core.NotificationStore,
+      asOpaque<Core.NotificationStore>(mockNotificationStoreActions),
     );
 
     vi.spyOn(Core.SettingsNormalizer, 'extractState').mockReturnValue(mockSettingsState);
