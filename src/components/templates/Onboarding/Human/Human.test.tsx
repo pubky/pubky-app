@@ -4,15 +4,10 @@ import type { ReactNode } from 'react';
 import { Human } from './Human';
 
 const mockPush = vi.fn();
-const mockSearchParamsGet = vi.fn<(key: string) => string | null>(() => null);
-const mockToast = vi.fn();
 
 vi.mock('next/navigation', () => ({
   useRouter: () => ({
     push: mockPush,
-  }),
-  useSearchParams: () => ({
-    get: mockSearchParamsGet,
   }),
 }));
 
@@ -29,35 +24,18 @@ vi.mock('@/organisms', () => {
 vi.mock('@/molecules', () => {
   return {
     OnboardingLayout: ({ children }: { children: ReactNode }) => <div data-testid="onboarding-layout">{children}</div>,
-    useToast: () => ({
-      toast: mockToast,
-    }),
   };
 });
 
 describe('Human template', () => {
   beforeEach(() => {
     mockPush.mockClear();
-    mockToast.mockClear();
-    mockSearchParamsGet.mockReset();
-    mockSearchParamsGet.mockReturnValue(null);
   });
 
   it('renders all main components', () => {
     render(<Human />);
 
     expect(screen.getByTestId('human-selection')).toBeInTheDocument();
-  });
-
-  it('redirects to install when invite code is present in URL', () => {
-    mockSearchParamsGet.mockReturnValueOnce('abcdefghijkl');
-    render(<Human />);
-
-    expect(mockPush).toHaveBeenCalledWith('/onboarding/install');
-    expect(mockToast).toHaveBeenCalledWith({
-      title: 'Invite code applied',
-      description: 'Your invite code ABCD-EFGH-IJKL has been applied.',
-    });
   });
 });
 describe('Human template - Snapshots', () => {

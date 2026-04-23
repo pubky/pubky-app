@@ -15,5 +15,5 @@ export default async function InvitePage({ params }: InvitePageProps) {
   const searchParams = new URLSearchParams();
   searchParams.set('inviteCode', formattedInviteCode);
 
-  redirect(`${ONBOARDING_ROUTES.HUMAN}?${searchParams.toString()}`);
+  redirect(`${ONBOARDING_ROUTES.INSTALL}?${searchParams.toString()}`);
 }
