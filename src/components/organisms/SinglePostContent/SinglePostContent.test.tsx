@@ -3,13 +3,16 @@ import { render, screen } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { SinglePostContent } from './SinglePostContent';
 import * as Core from '@/core';
+import type { UseRequireAuthResult } from '@/hooks/useRequireAuth/useRequireAuth.types';
 import * as Hooks from '@/hooks';
 
 // Mock hooks
-const mockUseRequireAuth = vi.fn(() => ({
-  isAuthenticated: true,
-  requireAuth: vi.fn((action: () => unknown) => action()),
-}));
+const mockUseRequireAuth = vi.fn(
+  (): UseRequireAuthResult => ({
+    isAuthenticated: true,
+    requireAuth: <T,>(action: () => T) => action(),
+  }),
+);
 
 const mockUsePostDetails = vi.fn(() => ({
   postDetails: {
@@ -19,13 +22,20 @@ const mockUsePostDetails = vi.fn(() => ({
     uri: 'pubky://author/pub/pubky.app/posts/post123',
     content: 'Test post content',
     attachments: [],
+    is_moderated: false,
     is_blurred: false,
-  },
+  } satisfies Core.EnrichedPostDetails,
   isLoading: false,
 }));
 
 const mockUsePostCounts = vi.fn(() => ({
-  postCounts: { replies: 0, tags: 0, unique_tags: 0, reposts: 0 },
+  postCounts: {
+    id: 'author:post123',
+    replies: 0,
+    tags: 0,
+    unique_tags: 0,
+    reposts: 0,
+  } satisfies Core.PostCountsModelSchema,
   isLoading: false,
 }));
 
@@ -211,8 +221,9 @@ describe('SinglePostContent', () => {
           uri: 'pubky://author/pub/pubky.app/posts/post123',
           content: '# Article Title\n\nArticle content',
           attachments: [],
+          is_moderated: false,
           is_blurred: false,
-        },
+        } satisfies Core.EnrichedPostDetails,
         isLoading: false,
       });
 
@@ -278,7 +289,7 @@ describe('SinglePostContent', () => {
     it('hides replies section when not authenticated', () => {
       vi.mocked(Hooks.useRequireAuth).mockReturnValue({
         isAuthenticated: false,
-        requireAuth: vi.fn(),
+        requireAuth: <T,>(_action: () => T) => undefined,
       });
 
       render(<SinglePostContent postId={mockPostId} />);
@@ -325,8 +336,9 @@ describe('SinglePostContent - Snapshots', () => {
         uri: 'pubky://author/pub/pubky.app/posts/post123',
         content: '# Article Title\n\nArticle content',
         attachments: [],
+        is_moderated: false,
         is_blurred: false,
-      },
+      } satisfies Core.EnrichedPostDetails,
       isLoading: false,
     });
 
@@ -344,7 +356,7 @@ describe('SinglePostContent - Snapshots', () => {
   it('matches snapshot when not authenticated', () => {
     vi.mocked(Hooks.useRequireAuth).mockReturnValue({
       isAuthenticated: false,
-      requireAuth: vi.fn(),
+      requireAuth: <T,>(_action: () => T) => undefined,
     });
 
     const { container } = render(<SinglePostContent postId={mockPostId} />);

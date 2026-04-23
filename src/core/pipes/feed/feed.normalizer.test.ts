@@ -9,6 +9,7 @@ import {
 } from 'pubky-app-specs';
 import * as Core from '@/core';
 import { AppError, ErrorCategory, ValidationErrorCode, ErrorService } from '@/libs';
+import { asOpaque } from '@/test-utils';
 
 describe('FeedNormalizer', () => {
   const testData = {
@@ -32,14 +33,14 @@ describe('FeedNormalizer', () => {
           },
           toJson: vi.fn(() => ({ name, tags, reach, layout, sort, content })),
         };
-        return {
+        return asOpaque<FeedResult>({
           feed: mockFeed,
           meta: {
             id: 'feed123',
             url: `pubky://${testData.userPubky}/pub/pubky.app/feeds/feed123`,
             path: '/pub/pubky.app/feeds/feed123',
           },
-        } as unknown as FeedResult;
+        });
       },
     ),
   });
@@ -49,7 +50,7 @@ describe('FeedNormalizer', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     mockBuilder = createMockBuilder();
-    vi.spyOn(Core.PubkySpecsSingleton, 'get').mockReturnValue(mockBuilder as unknown as PubkySpecsBuilder);
+    vi.spyOn(Core.PubkySpecsSingleton, 'get').mockReturnValue(asOpaque<PubkySpecsBuilder>(mockBuilder));
   });
 
   afterEach(() => {

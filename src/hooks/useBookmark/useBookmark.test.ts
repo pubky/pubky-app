@@ -2,6 +2,7 @@ import { renderHook, act, waitFor } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { useBookmark } from './useBookmark';
 import * as Core from '@/core';
+import { mockAuthStore } from '@/test-utils';
 
 // Mock Core
 vi.mock('@/core', () => ({
@@ -33,7 +34,7 @@ describe('useBookmark', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     vi.mocked(Core.useAuthStore).mockImplementation((selector) =>
-      selector({ currentUserPubky: mockUserId } as unknown as Core.AuthStore),
+      selector(mockAuthStore({ currentUserPubky: mockUserId })),
     );
   });
 
@@ -136,9 +137,7 @@ describe('useBookmark', () => {
   });
 
   it('shows error toast when user is not logged in', async () => {
-    vi.mocked(Core.useAuthStore).mockImplementation((selector) =>
-      selector({ currentUserPubky: null } as unknown as Core.AuthStore),
-    );
+    vi.mocked(Core.useAuthStore).mockImplementation((selector) => selector(mockAuthStore({ currentUserPubky: null })));
     vi.mocked(Core.BookmarkController.exists).mockResolvedValue(false);
 
     const { result } = renderHook(() => useBookmark(mockPostId));

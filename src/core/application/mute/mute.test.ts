@@ -9,6 +9,7 @@ import {
   ServerErrorCode,
   HttpStatusCode,
 } from '@/libs';
+import { asInvalid, asOpaque } from '@/test-utils';
 import { MuteApplication } from './mute';
 
 vi.mock('pubky-app-specs', () => ({
@@ -19,7 +20,7 @@ describe('MuteApplication.commitMute', () => {
   const muter = 'pubky_muter' as Core.Pubky;
   const mutee = 'pubky_mutee' as Core.Pubky;
   const muteUrl = 'pubky://muter/pub/pubky.app/mutes/mutee';
-  const muteJson = { created_at: BigInt(Date.now()) } as unknown as Record<string, unknown>;
+  const muteJson = asOpaque<Record<string, unknown>>({ created_at: BigInt(Date.now()) });
 
   async function clearTables() {
     await Core.db.transaction('rw', [Core.UserStreamModel.table], async () => {
@@ -45,7 +46,7 @@ describe('MuteApplication.commitMute', () => {
     const homeserverAction = eventType === 'PUT' ? HttpMethod.PUT : HttpMethod.DELETE;
 
     it(`should ${action} when stream is empty`, async () => {
-      const requestSpy = vi.spyOn(Core.HomeserverService, 'request').mockResolvedValue(undefined as unknown as void);
+      const requestSpy = vi.spyOn(Core.HomeserverService, 'request').mockResolvedValue(undefined);
 
       await MuteApplication.commitMute({
         eventType: homeserverAction,
@@ -67,7 +68,7 @@ describe('MuteApplication.commitMute', () => {
         await Core.LocalStreamUsersService.prependToStream(Core.UserStreamTypes.MUTED, [mutee]);
       }
 
-      const requestSpy = vi.spyOn(Core.HomeserverService, 'request').mockResolvedValue(undefined as unknown as void);
+      const requestSpy = vi.spyOn(Core.HomeserverService, 'request').mockResolvedValue(undefined);
 
       await MuteApplication.commitMute({
         eventType: homeserverAction,
@@ -95,7 +96,7 @@ describe('MuteApplication.commitMute', () => {
 
       const prependSpy = vi.spyOn(Core.LocalStreamUsersService, 'prependToStream');
       const removeSpy = vi.spyOn(Core.LocalStreamUsersService, 'removeFromStream');
-      const requestSpy = vi.spyOn(Core.HomeserverService, 'request').mockResolvedValue(undefined as unknown as void);
+      const requestSpy = vi.spyOn(Core.HomeserverService, 'request').mockResolvedValue(undefined);
 
       await MuteApplication.commitMute({
         eventType: homeserverAction,
@@ -118,7 +119,7 @@ describe('MuteApplication.commitMute', () => {
   describe('Operation Order', () => {
     it('should call database operation before homeserver for PUT', async () => {
       const createSpy = vi.spyOn(Core.LocalMuteService, 'create');
-      const requestSpy = vi.spyOn(Core.HomeserverService, 'request').mockResolvedValue(undefined as unknown as void);
+      const requestSpy = vi.spyOn(Core.HomeserverService, 'request').mockResolvedValue(undefined);
 
       await MuteApplication.commitMute({
         eventType: HttpMethod.PUT,
@@ -133,7 +134,7 @@ describe('MuteApplication.commitMute', () => {
 
     it('should call database operation before homeserver for DELETE', async () => {
       const deleteSpy = vi.spyOn(Core.LocalMuteService, 'delete');
-      const requestSpy = vi.spyOn(Core.HomeserverService, 'request').mockResolvedValue(undefined as unknown as void);
+      const requestSpy = vi.spyOn(Core.HomeserverService, 'request').mockResolvedValue(undefined);
 
       await MuteApplication.commitMute({
         eventType: HttpMethod.DELETE,
@@ -150,7 +151,7 @@ describe('MuteApplication.commitMute', () => {
   describe('Error Handling', () => {
     it('should not call homeserver when local mute operation fails', async () => {
       const findByIdSpy = vi.spyOn(Core.LocalStreamUsersService, 'findById').mockRejectedValue(new Error('db-fail'));
-      const requestSpy = vi.spyOn(Core.HomeserverService, 'request').mockResolvedValue(undefined as unknown as void);
+      const requestSpy = vi.spyOn(Core.HomeserverService, 'request').mockResolvedValue(undefined);
 
       try {
         await expect(
@@ -189,7 +190,7 @@ describe('MuteApplication.commitMute', () => {
       const streamSpy = vi
         .spyOn(Core.LocalStreamUsersService, 'prependToStream')
         .mockRejectedValue(new Error('stream-fail'));
-      const requestSpy = vi.spyOn(Core.HomeserverService, 'request').mockResolvedValue(undefined as unknown as void);
+      const requestSpy = vi.spyOn(Core.HomeserverService, 'request').mockResolvedValue(undefined);
 
       try {
         await expect(
@@ -229,10 +230,10 @@ describe('MuteApplication.commitMute', () => {
 
   describe('Edge Cases', () => {
     it('should handle invalid event types gracefully', async () => {
-      const requestSpy = vi.spyOn(Core.HomeserverService, 'request').mockResolvedValue(undefined as unknown as void);
+      const requestSpy = vi.spyOn(Core.HomeserverService, 'request').mockResolvedValue(undefined);
 
       await MuteApplication.commitMute({
-        eventType: 'INVALID' as unknown as HttpMethod,
+        eventType: asInvalid<HttpMethod>('INVALID'),
         muteUrl,
         muteJson,
         muter,
@@ -243,7 +244,7 @@ describe('MuteApplication.commitMute', () => {
     });
 
     it('should handle undefined return values correctly', async () => {
-      const requestSpy = vi.spyOn(Core.HomeserverService, 'request').mockResolvedValue(undefined as unknown as void);
+      const requestSpy = vi.spyOn(Core.HomeserverService, 'request').mockResolvedValue(undefined);
 
       const result = await MuteApplication.commitMute({
         eventType: HttpMethod.DELETE,

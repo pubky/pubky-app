@@ -7,9 +7,11 @@ import type { TagsLayout } from '@/organisms/PostMain/PostMain.types';
 import * as Hooks from '@/hooks';
 
 const { mockPostHeader, mockPostTagsPanelFocus } = vi.hoisted(() => ({
-  mockPostHeader: vi.fn(({ postId }: { postId: string; timeAgoPlacement?: 'top-right' | 'bottom-left' }) => (
-    <div data-testid="post-header">Header: {postId}</div>
-  )),
+  mockPostHeader: vi.fn(
+    ({ postId }: { postId: string; size?: 'normal' | 'large'; timeAgoPlacement?: 'top-right' | 'bottom-left' }) => (
+      <div data-testid="post-header">Header: {postId}</div>
+    ),
+  ),
   mockPostTagsPanelFocus: vi.fn(),
 }));
 

@@ -2,6 +2,7 @@ import React from 'react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import { Logout } from './Logout';
+import { asOpaque } from '@/test-utils';
 
 const mocks = vi.hoisted(() => {
   const authState = {
@@ -95,7 +96,7 @@ vi.mock('@/molecules', () => ({
 vi.mock('@/core', () => {
   const useAuthStore = ((selector?: (state: typeof mocks.authState) => unknown) =>
     selector ? selector(mocks.authState) : mocks.authState) as typeof import('@/core').useAuthStore;
-  useAuthStore.getState = () => mocks.authState as ReturnType<typeof useAuthStore.getState>;
+  useAuthStore.getState = () => asOpaque<ReturnType<typeof useAuthStore.getState>>(mocks.authState);
 
   const useOnboardingStore = ((selector?: (state: typeof mocks.onboardingState) => unknown) =>
     selector ? selector(mocks.onboardingState) : mocks.onboardingState) as typeof import('@/core').useOnboardingStore;

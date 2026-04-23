@@ -2,6 +2,7 @@ import { describe, it, expect, vi, afterEach, beforeEach } from 'vitest';
 import { ExchangerateService } from './exchangerate';
 import { exchangerateQueryClient } from './exchangerate.query-client';
 import { Env, ErrorCategory, ErrorService, NetworkErrorCode, ServerErrorCode } from '@/libs';
+import { asOpaque } from '@/test-utils';
 
 // Helper to build a minimal BlockTank ticker
 function createTicker(overrides: Partial<{ symbol: string; lastPrice: string }> = {}) {
@@ -21,7 +22,7 @@ function createTicker(overrides: Partial<{ symbol: string; lastPrice: string }> 
 
 const mockFetch = vi.fn();
 
-global.fetch = mockFetch as unknown as typeof global.fetch;
+global.fetch = asOpaque<typeof global.fetch>(mockFetch);
 
 beforeEach(() => {
   // Clear the query client cache before each test to avoid stale data

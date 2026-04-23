@@ -3,6 +3,7 @@ import { MuteResult } from 'pubky-app-specs';
 import { MuteController } from './mute';
 import * as Core from '@/core';
 import { HttpMethod } from '@/libs';
+import { asOpaque } from '@/test-utils';
 
 const TEST_PUBKY = {
   USER_1: '5a1diz4pghi47ywdfyfzpit5f3bdomzt4pugpbmq4rngdd4iub4y' as Core.Pubky,
@@ -27,10 +28,12 @@ describe('MuteController', () => {
       const mockToJson = vi.fn(() => mockMuteJson);
       const mockMeta = { url: 'pubky://muter/pub/pubky.app/mutes/mutee' } as { url: string };
 
-      const toSpy = vi.spyOn(Core.MuteNormalizer, 'to').mockReturnValue({
-        meta: mockMeta,
-        mute: { toJson: mockToJson },
-      } as unknown as MuteResult);
+      const toSpy = vi.spyOn(Core.MuteNormalizer, 'to').mockReturnValue(
+        asOpaque<MuteResult>({
+          meta: mockMeta,
+          mute: { toJson: mockToJson },
+        }),
+      );
 
       const commitMuteSpy = vi.spyOn(Core.MuteApplication, 'commitMute').mockResolvedValue(undefined);
 
@@ -55,10 +58,12 @@ describe('MuteController', () => {
       const mockToJson = vi.fn(() => mockMuteJson);
       const mockMeta = { url: 'pubky://muter/pub/pubky.app/mutes/mutee' } as { url: string };
 
-      vi.spyOn(Core.MuteNormalizer, 'to').mockReturnValue({
-        meta: mockMeta,
-        mute: { toJson: mockToJson },
-      } as unknown as MuteResult);
+      vi.spyOn(Core.MuteNormalizer, 'to').mockReturnValue(
+        asOpaque<MuteResult>({
+          meta: mockMeta,
+          mute: { toJson: mockToJson },
+        }),
+      );
 
       const commitMuteSpy = vi.spyOn(Core.MuteApplication, 'commitMute').mockResolvedValue(undefined);
 
@@ -80,10 +85,12 @@ describe('MuteController', () => {
       const mockToJson = vi.fn(() => ({}));
       const mockMeta = { url: 'pubky://muter/pub/pubky.app/mutes/mutee' } as { url: string };
 
-      const toSpy = vi.spyOn(Core.MuteNormalizer, 'to').mockReturnValue({
-        meta: mockMeta,
-        mute: { toJson: mockToJson },
-      } as unknown as MuteResult);
+      const toSpy = vi.spyOn(Core.MuteNormalizer, 'to').mockReturnValue(
+        asOpaque<MuteResult>({
+          meta: mockMeta,
+          mute: { toJson: mockToJson },
+        }),
+      );
 
       const commitMuteSpy = vi.spyOn(Core.MuteApplication, 'commitMute').mockResolvedValue(undefined);
 
@@ -111,10 +118,12 @@ describe('MuteController', () => {
       const muter = TEST_PUBKY.USER_1;
       const mutee = TEST_PUBKY.USER_2;
 
-      vi.spyOn(Core.MuteNormalizer, 'to').mockReturnValue({
-        meta: { url: 'pubky://muter/pub/pubky.app/mutes/mutee' },
-        mute: { toJson: () => ({}) },
-      } as unknown as MuteResult);
+      vi.spyOn(Core.MuteNormalizer, 'to').mockReturnValue(
+        asOpaque<MuteResult>({
+          meta: { url: 'pubky://muter/pub/pubky.app/mutes/mutee' },
+          mute: { toJson: () => ({}) },
+        }),
+      );
 
       vi.spyOn(Core.MuteApplication, 'commitMute').mockRejectedValue(new Error('commit-fail'));
 

@@ -1,5 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import type { Pubky } from '@/core';
+import { asOpaque } from '@/test-utils';
 
 const mockFile = vi.fn();
 const mockFolder = vi.fn();
@@ -81,13 +82,13 @@ beforeEach(() => {
   };
   mockCreateElement.mockReturnValue(mockAnchorElement);
 
-  global.document = {
+  global.document = asOpaque<Document>({
     createElement: mockCreateElement,
     body: {
       appendChild: mockAppendChild,
       removeChild: mockRemoveChild,
     },
-  } as unknown as Document;
+  });
 
   // Don't override the entire URL object, just the methods we need
   URL.createObjectURL = mockCreateObjectURL;

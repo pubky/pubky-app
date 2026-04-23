@@ -30,4 +30,14 @@ if ! npm run lint; then
   exit 1
 fi
 
+echo "🧩 Running TypeScript (including tests)..."
+if ! npm run typecheck; then
+  echo ""
+  echo "❌ TypeScript check failed!"
+  echo ""
+  echo "Fix the reported errors (including in *.test.ts / *.test.tsx) and commit again."
+  echo ""
+  exit 1
+fi
+
 echo "✅ All pre-commit checks passed!"

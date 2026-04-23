@@ -1,15 +1,28 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { render, screen } from '@testing-library/react';
+import * as Core from '@/core';
+import type { UseRequireAuthResult } from '@/hooks/useRequireAuth/useRequireAuth.types';
 import { TimelinePostReplies } from './PostReplies';
 
 // Mock hooks
-const mockUseRequireAuth = vi.fn(() => ({
-  isAuthenticated: true,
-  requireAuth: vi.fn((action: () => void) => action()),
-}));
+const mockUseRequireAuth = vi.fn(
+  (): UseRequireAuthResult => ({
+    isAuthenticated: true,
+    requireAuth: <T,>(action: () => T) => action(),
+  }),
+);
 
 const mockUsePostDetails = vi.fn(() => ({
-  postDetails: { content: 'Normal post' },
+  postDetails: {
+    id: 'author:post123',
+    indexed_at: Date.now(),
+    kind: 'short' as const,
+    uri: 'pubky://author/pub/pubky.app/posts/post123',
+    content: 'Normal post',
+    attachments: null,
+    is_moderated: false,
+    is_blurred: false,
+  } satisfies Core.EnrichedPostDetails,
   isLoading: false,
 }));
 
@@ -70,9 +83,16 @@ describe('TimelinePostReplies', () => {
     mockIsPostDeleted.mockReturnValue(false);
     vi.mocked(Hooks.useRequireAuth).mockReturnValue(mockUseRequireAuth());
     vi.mocked(Hooks.usePostDetails).mockReturnValue(mockUsePostDetails());
-    vi.mocked(Hooks.usePostCounts).mockReturnValue({ postCounts: { replies: 3 } } as ReturnType<
-      typeof Hooks.usePostCounts
-    >);
+    vi.mocked(Hooks.usePostCounts).mockReturnValue({
+      postCounts: {
+        id: mockPostId,
+        replies: 3,
+        tags: 0,
+        unique_tags: 0,
+        reposts: 0,
+      } satisfies Core.PostCountsModelSchema,
+      isLoading: false,
+    });
   });
 
   it('renders ThreadTree with correct postId', () => {
@@ -102,7 +122,7 @@ describe('TimelinePostReplies', () => {
   it('renders nothing when not authenticated', () => {
     vi.mocked(Hooks.useRequireAuth).mockReturnValue({
       isAuthenticated: false,
-      requireAuth: vi.fn(),
+      requireAuth: <T,>(_action: () => T) => undefined,
     });
 
     const { container } = render(<TimelinePostReplies postId={mockPostId} />);
@@ -111,9 +131,16 @@ describe('TimelinePostReplies', () => {
   });
 
   it('renders nothing when post has no replies', () => {
-    vi.mocked(Hooks.usePostCounts).mockReturnValue({ postCounts: { replies: 0 } } as ReturnType<
-      typeof Hooks.usePostCounts
-    >);
+    vi.mocked(Hooks.usePostCounts).mockReturnValue({
+      postCounts: {
+        id: mockPostId,
+        replies: 0,
+        tags: 0,
+        unique_tags: 0,
+        reposts: 0,
+      } satisfies Core.PostCountsModelSchema,
+      isLoading: false,
+    });
 
     const { container } = render(<TimelinePostReplies postId={mockPostId} />);
 
@@ -136,9 +163,16 @@ describe('TimelinePostReplies - Snapshots', () => {
     mockIsPostDeleted.mockReturnValue(false);
     vi.mocked(Hooks.useRequireAuth).mockReturnValue(mockUseRequireAuth());
     vi.mocked(Hooks.usePostDetails).mockReturnValue(mockUsePostDetails());
-    vi.mocked(Hooks.usePostCounts).mockReturnValue({ postCounts: { replies: 3 } } as ReturnType<
-      typeof Hooks.usePostCounts
-    >);
+    vi.mocked(Hooks.usePostCounts).mockReturnValue({
+      postCounts: {
+        id: mockPostId,
+        replies: 3,
+        tags: 0,
+        unique_tags: 0,
+        reposts: 0,
+      } satisfies Core.PostCountsModelSchema,
+      isLoading: false,
+    });
   });
 
   it('matches snapshot when authenticated with non-deleted post', () => {
@@ -149,7 +183,7 @@ describe('TimelinePostReplies - Snapshots', () => {
   it('matches snapshot when not authenticated', () => {
     vi.mocked(Hooks.useRequireAuth).mockReturnValue({
       isAuthenticated: false,
-      requireAuth: vi.fn(),
+      requireAuth: <T,>(_action: () => T) => undefined,
     });
 
     const { container } = render(<TimelinePostReplies postId={mockPostId} />);
