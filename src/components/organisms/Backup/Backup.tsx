@@ -21,10 +21,10 @@ export const BackupNavigation = () => {
   return (
     <Molecules.ButtonsNavigation
       id="backup-navigation"
-      hiddenBackButton={true}
       loadingContinueButton={loading}
       onHandleContinueButton={onHandleContinueButton}
       continueButtonClassName="w-full md:flex-0"
+      backButtonDisabled={true}
     />
   );
 };
