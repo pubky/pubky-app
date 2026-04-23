@@ -37,7 +37,7 @@ See [React 19's `onRecoverableError` docs](https://react.dev/reference/react-dom
 - `src/instrumentation.ts` — server runtime dispatch + `onRequestError`
 - `src/instrumentation-client.ts` — browser init + Replay + `onRouterTransitionStart`
 - `src/sentry.server.config.ts` / `src/sentry.edge.config.ts` — runtime-specific init
-- `src/libs/observability/sentry.ts` — single source of truth (`shouldEnableSentry`, `getSentryInitBase`, `captureAppError`, `getSentryEnvironment`)
+- `src/libs/observability/sentry.ts` — single source of truth (`shouldEnableSentry`, `getSentryInitBase`, `captureAppError`)
 - `src/libs/error/error.factories.ts` — `createAppError()` calls `captureAppError(error)` after `Logger.error`
 - `next.config.ts` — wrapped by `withSentryConfig(...)` for source map upload
 

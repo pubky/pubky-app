@@ -37,8 +37,9 @@ export function shouldEnableSentry(): boolean {
 /**
  * Resolved environment tag attached to every event.
  * Falls back to NODE_ENV when NEXT_PUBLIC_SENTRY_ENVIRONMENT is unset.
+ * Internal: consumed only by getSentryInitBase() in the same file.
  */
-export function getSentryEnvironment(): string {
+function getSentryEnvironment(): string {
   if (!Env) return 'unknown';
   return Env.NEXT_PUBLIC_SENTRY_ENVIRONMENT ?? Env.NODE_ENV;
 }
