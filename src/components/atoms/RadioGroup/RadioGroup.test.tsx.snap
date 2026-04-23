@@ -1,0 +1,274 @@
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
+
+exports[`RadioGroup - Snapshots > matches snapshot for box variant 1`] = `
+<div
+  aria-required="false"
+  class="grid gap-3"
+  dir="ltr"
+  role="radiogroup"
+  style="outline: none;"
+  tabindex="0"
+>
+  <div
+    class="rounded-lg border border-border p-4 transition-colors has-[[data-state=checked]]:border-brand has-[[data-disabled]]:cursor-not-allowed has-[[data-disabled]]:opacity-50"
+    data-testid="container"
+  >
+    <div
+      class="flex items-start gap-2"
+      data-testid="container"
+    >
+      <button
+        aria-checked="true"
+        class="peer size-4 shrink-0 rounded-full border border-input bg-white/5 shadow-sm transition-colors focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background focus-visible:outline-none disabled:cursor-not-allowed disabled:opacity-50 data-[state=checked]:border-brand data-[state=checked]:bg-brand"
+        data-radix-collection-item=""
+        data-state="checked"
+        id="radix-normalized"
+        role="radio"
+        tabindex="-1"
+        type="button"
+        value="starter"
+      >
+        <span
+          class="flex items-center justify-center"
+          data-state="checked"
+        >
+          <span
+            class="block size-2 rounded-full bg-background"
+          />
+        </span>
+      </button>
+      <div
+        class="flex flex-col gap-1.5"
+        data-testid="container"
+      >
+        <label
+          class="flex items-center gap-2 select-none group-data-[disabled=true]:pointer-events-none group-data-[disabled=true]:opacity-50 cursor-pointer text-base leading-none font-medium text-foreground peer-disabled:cursor-not-allowed peer-disabled:opacity-50"
+          data-slot="label"
+          for="radix-normalized"
+        >
+          Starter Plan
+        </label>
+        <p
+          class="font-medium text-sm leading-normal text-muted-foreground"
+          data-testid="typography"
+        >
+          Perfect for small businesses
+        </p>
+      </div>
+    </div>
+  </div>
+  <div
+    class="rounded-lg border border-border p-4 transition-colors has-[[data-state=checked]]:border-brand has-[[data-disabled]]:cursor-not-allowed has-[[data-disabled]]:opacity-50"
+    data-testid="container"
+  >
+    <div
+      class="flex items-start gap-2"
+      data-testid="container"
+    >
+      <button
+        aria-checked="false"
+        class="peer size-4 shrink-0 rounded-full border border-input bg-white/5 shadow-sm transition-colors focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background focus-visible:outline-none disabled:cursor-not-allowed disabled:opacity-50 data-[state=checked]:border-brand data-[state=checked]:bg-brand"
+        data-radix-collection-item=""
+        data-state="unchecked"
+        id="radix-normalized"
+        role="radio"
+        tabindex="-1"
+        type="button"
+        value="pro"
+      />
+      <div
+        class="flex flex-col gap-1.5"
+        data-testid="container"
+      >
+        <label
+          class="flex items-center gap-2 select-none group-data-[disabled=true]:pointer-events-none group-data-[disabled=true]:opacity-50 cursor-pointer text-base leading-none font-medium text-foreground peer-disabled:cursor-not-allowed peer-disabled:opacity-50"
+          data-slot="label"
+          for="radix-normalized"
+        >
+          Pro Plan
+        </label>
+        <p
+          class="font-medium text-sm leading-normal text-muted-foreground"
+          data-testid="typography"
+        >
+          Advanced features
+        </p>
+      </div>
+    </div>
+  </div>
+</div>
+`;
+
+exports[`RadioGroup - Snapshots > matches snapshot for default group with labels 1`] = `
+<div
+  aria-required="false"
+  class="grid gap-3"
+  dir="ltr"
+  role="radiogroup"
+  style="outline: none;"
+  tabindex="0"
+>
+  <div
+    class="flex items-start gap-2"
+    data-testid="container"
+  >
+    <button
+      aria-checked="true"
+      class="peer size-4 shrink-0 rounded-full border border-input bg-white/5 shadow-sm transition-colors focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background focus-visible:outline-none disabled:cursor-not-allowed disabled:opacity-50 data-[state=checked]:border-brand data-[state=checked]:bg-brand"
+      data-radix-collection-item=""
+      data-state="checked"
+      id="radix-normalized"
+      role="radio"
+      tabindex="-1"
+      type="button"
+      value="one"
+    >
+      <span
+        class="flex items-center justify-center"
+        data-state="checked"
+      >
+        <span
+          class="block size-2 rounded-full bg-background"
+        />
+      </span>
+    </button>
+    <div
+      class="flex flex-col gap-1.5"
+      data-testid="container"
+    >
+      <label
+        class="flex items-center gap-2 select-none group-data-[disabled=true]:pointer-events-none group-data-[disabled=true]:opacity-50 cursor-pointer text-base leading-none font-medium text-foreground peer-disabled:cursor-not-allowed peer-disabled:opacity-50"
+        data-slot="label"
+        for="radix-normalized"
+      >
+        One
+      </label>
+    </div>
+  </div>
+  <div
+    class="flex items-start gap-2"
+    data-testid="container"
+  >
+    <button
+      aria-checked="false"
+      class="peer size-4 shrink-0 rounded-full border border-input bg-white/5 shadow-sm transition-colors focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background focus-visible:outline-none disabled:cursor-not-allowed disabled:opacity-50 data-[state=checked]:border-brand data-[state=checked]:bg-brand"
+      data-radix-collection-item=""
+      data-state="unchecked"
+      id="radix-normalized"
+      role="radio"
+      tabindex="-1"
+      type="button"
+      value="two"
+    />
+    <div
+      class="flex flex-col gap-1.5"
+      data-testid="container"
+    >
+      <label
+        class="flex items-center gap-2 select-none group-data-[disabled=true]:pointer-events-none group-data-[disabled=true]:opacity-50 cursor-pointer text-base leading-none font-medium text-foreground peer-disabled:cursor-not-allowed peer-disabled:opacity-50"
+        data-slot="label"
+        for="radix-normalized"
+      >
+        Two
+      </label>
+    </div>
+  </div>
+</div>
+`;
+
+exports[`RadioGroup - Snapshots > matches snapshot for disabled item 1`] = `
+<div
+  aria-required="false"
+  class="grid gap-3"
+  dir="ltr"
+  role="radiogroup"
+  style="outline: none;"
+  tabindex="-1"
+>
+  <div
+    class="flex items-start gap-2"
+    data-testid="container"
+  >
+    <button
+      aria-checked="false"
+      class="peer size-4 shrink-0 rounded-full border border-input bg-white/5 shadow-sm transition-colors focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background focus-visible:outline-none disabled:cursor-not-allowed disabled:opacity-50 data-[state=checked]:border-brand data-[state=checked]:bg-brand"
+      data-disabled=""
+      data-radix-collection-item=""
+      data-state="unchecked"
+      disabled=""
+      id="radix-normalized"
+      role="radio"
+      tabindex="-1"
+      type="button"
+      value="one"
+    />
+    <div
+      class="flex flex-col gap-1.5"
+      data-testid="container"
+    >
+      <label
+        class="flex items-center gap-2 select-none group-data-[disabled=true]:pointer-events-none group-data-[disabled=true]:opacity-50 cursor-pointer text-base leading-none font-medium text-foreground peer-disabled:cursor-not-allowed peer-disabled:opacity-50"
+        data-slot="label"
+        for="radix-normalized"
+      >
+        One
+      </label>
+    </div>
+  </div>
+</div>
+`;
+
+exports[`RadioGroup - Snapshots > matches snapshot for item with label and description 1`] = `
+<div
+  aria-required="false"
+  class="grid gap-3"
+  dir="ltr"
+  role="radiogroup"
+  style="outline: none;"
+  tabindex="0"
+>
+  <div
+    class="flex items-start gap-2"
+    data-testid="container"
+  >
+    <button
+      aria-checked="true"
+      class="peer size-4 shrink-0 rounded-full border border-input bg-white/5 shadow-sm transition-colors focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background focus-visible:outline-none disabled:cursor-not-allowed disabled:opacity-50 data-[state=checked]:border-brand data-[state=checked]:bg-brand"
+      data-radix-collection-item=""
+      data-state="checked"
+      id="radix-normalized"
+      role="radio"
+      tabindex="-1"
+      type="button"
+      value="one"
+    >
+      <span
+        class="flex items-center justify-center"
+        data-state="checked"
+      >
+        <span
+          class="block size-2 rounded-full bg-background"
+        />
+      </span>
+    </button>
+    <div
+      class="flex flex-col gap-1.5"
+      data-testid="container"
+    >
+      <label
+        class="flex items-center gap-2 select-none group-data-[disabled=true]:pointer-events-none group-data-[disabled=true]:opacity-50 cursor-pointer text-base leading-none font-medium text-foreground peer-disabled:cursor-not-allowed peer-disabled:opacity-50"
+        data-slot="label"
+        for="radix-normalized"
+      >
+        One
+      </label>
+      <p
+        class="font-medium text-sm leading-normal text-muted-foreground"
+        data-testid="typography"
+      >
+        The first option
+      </p>
+    </div>
+  </div>
+</div>
+`;

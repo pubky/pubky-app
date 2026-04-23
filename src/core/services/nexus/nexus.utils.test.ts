@@ -9,6 +9,7 @@ import {
   parseResponseOrThrow,
 } from '@/libs';
 import { buildNexusUrl, buildCdnUrl, buildUrlWithQuery, createFetchOptions, queryNexus } from './nexus.utils';
+import { mockResponse, asOpaque } from '@/test-utils';
 
 describe('nexus.utils', () => {
   describe('buildNexusUrl', () => {
@@ -69,12 +70,12 @@ describe('nexus.utils', () => {
 
   describe('parseResponseOrThrow', () => {
     const createMockResponse = (overrides: Partial<Response> = {}) =>
-      ({
+      mockResponse({
         status: 200,
-        headers: { get: vi.fn() },
+        headers: asOpaque<Headers>({ get: vi.fn() }),
         text: vi.fn().mockResolvedValue(''),
         ...overrides,
-      }) as unknown as Response;
+      });
 
     it('should throw server error for 204 No Content with empty body', async () => {
       const response = createMockResponse({ status: 204, text: vi.fn().mockResolvedValue('') });

@@ -1,5 +1,6 @@
 import { renderHook, act } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
+import { asOpaque, mockClipboardEvent, mockDragEvent } from '@/test-utils';
 import { usePostInput } from './usePostInput';
 import { POST_INPUT_VARIANT } from '@/organisms/PostInput/PostInput.constants';
 import {
@@ -1760,17 +1761,16 @@ describe('usePostInput', () => {
   });
 
   describe('drag and drop handlers', () => {
-    const createMockDragEvent = (type: string, hasFiles = true): React.DragEvent => {
-      const event = {
+    const createMockDragEvent = (type: string, hasFiles = true): React.DragEvent =>
+      mockDragEvent({
+        type,
         preventDefault: vi.fn(),
         stopPropagation: vi.fn(),
-        dataTransfer: {
+        dataTransfer: asOpaque<DataTransfer>({
           types: hasFiles ? ['Files'] : [],
           items: [],
-        },
-      } as unknown as React.DragEvent;
-      return event;
-    };
+        }),
+      });
 
     describe('handleDragEnter', () => {
       it('sets isDragging to true when files are being dragged', () => {
@@ -1921,13 +1921,13 @@ describe('usePostInput', () => {
         expect(result.current.isDragging).toBe(true);
 
         // Then drop
-        const dropEvent = {
+        const dropEvent = mockDragEvent({
           preventDefault: vi.fn(),
           stopPropagation: vi.fn(),
-          dataTransfer: {
+          dataTransfer: asOpaque<DataTransfer>({
             items: [],
-          },
-        } as unknown as React.DragEvent;
+          }),
+        });
 
         act(() => {
           result.current.handleDrop(dropEvent);
@@ -1946,18 +1946,18 @@ describe('usePostInput', () => {
         );
 
         const mockFile = new File(['test'], 'test.png', { type: 'image/png' });
-        const dropEvent = {
+        const dropEvent = mockDragEvent({
           preventDefault: vi.fn(),
           stopPropagation: vi.fn(),
-          dataTransfer: {
+          dataTransfer: asOpaque<DataTransfer>({
             items: [
               {
                 kind: 'file',
                 getAsFile: () => mockFile,
               },
             ],
-          },
-        } as unknown as React.DragEvent;
+          }),
+        });
 
         act(() => {
           result.current.handleDrop(dropEvent);
@@ -1973,18 +1973,18 @@ describe('usePostInput', () => {
           }),
         );
 
-        const dropEvent = {
+        const dropEvent = mockDragEvent({
           preventDefault: vi.fn(),
           stopPropagation: vi.fn(),
-          dataTransfer: {
+          dataTransfer: asOpaque<DataTransfer>({
             items: [
               {
                 kind: 'string',
                 getAsFile: () => null,
               },
             ],
-          },
-        } as unknown as React.DragEvent;
+          }),
+        });
 
         act(() => {
           result.current.handleDrop(dropEvent);
@@ -2000,11 +2000,11 @@ describe('usePostInput', () => {
           }),
         );
 
-        const dropEvent = {
+        const dropEvent = mockDragEvent({
           preventDefault: vi.fn(),
           stopPropagation: vi.fn(),
-          dataTransfer: null,
-        } as unknown as React.DragEvent;
+          dataTransfer: asOpaque<DataTransfer>(null),
+        });
 
         expect(() => {
           act(() => {
@@ -2022,18 +2022,18 @@ describe('usePostInput', () => {
           }),
         );
 
-        const dropEvent = {
+        const dropEvent = mockDragEvent({
           preventDefault: vi.fn(),
           stopPropagation: vi.fn(),
-          dataTransfer: {
+          dataTransfer: asOpaque<DataTransfer>({
             items: [
               {
                 kind: 'file',
                 getAsFile: () => null,
               },
             ],
-          },
-        } as unknown as React.DragEvent;
+          }),
+        });
 
         act(() => {
           result.current.handleDrop(dropEvent);
@@ -2123,12 +2123,12 @@ describe('usePostInput', () => {
       );
 
       const file = new File(['test'], 'test.png', { type: 'image/png' });
-      const pasteEvent = {
-        clipboardData: {
+      const pasteEvent = mockClipboardEvent({
+        clipboardData: asOpaque<DataTransfer>({
           items: [{ kind: 'file', getAsFile: () => file }],
-        },
+        }),
         preventDefault: vi.fn(),
-      } as unknown as React.ClipboardEvent;
+      });
 
       act(() => {
         result.current.handlePaste(pasteEvent);
@@ -2145,12 +2145,12 @@ describe('usePostInput', () => {
         }),
       );
 
-      const pasteEvent = {
-        clipboardData: {
+      const pasteEvent = mockClipboardEvent({
+        clipboardData: asOpaque<DataTransfer>({
           items: [{ kind: 'string', getAsFile: () => null }],
-        },
+        }),
         preventDefault: vi.fn(),
-      } as unknown as React.ClipboardEvent;
+      });
 
       act(() => {
         result.current.handlePaste(pasteEvent);
@@ -2169,15 +2169,15 @@ describe('usePostInput', () => {
 
       const file1 = new File(['test1'], 'test1.png', { type: 'image/png' });
       const file2 = new File(['test2'], 'test2.jpg', { type: 'image/jpeg' });
-      const pasteEvent = {
-        clipboardData: {
+      const pasteEvent = mockClipboardEvent({
+        clipboardData: asOpaque<DataTransfer>({
           items: [
             { kind: 'file', getAsFile: () => file1 },
             { kind: 'file', getAsFile: () => file2 },
           ],
-        },
+        }),
         preventDefault: vi.fn(),
-      } as unknown as React.ClipboardEvent;
+      });
 
       act(() => {
         result.current.handlePaste(pasteEvent);
@@ -2194,10 +2194,10 @@ describe('usePostInput', () => {
         }),
       );
 
-      const pasteEvent = {
-        clipboardData: null,
+      const pasteEvent = mockClipboardEvent({
+        clipboardData: asOpaque<DataTransfer>(null),
         preventDefault: vi.fn(),
-      } as unknown as React.ClipboardEvent;
+      });
 
       expect(() => {
         act(() => {
@@ -2215,12 +2215,12 @@ describe('usePostInput', () => {
         }),
       );
 
-      const pasteEvent = {
-        clipboardData: {
+      const pasteEvent = mockClipboardEvent({
+        clipboardData: asOpaque<DataTransfer>({
           items: null,
-        },
+        }),
         preventDefault: vi.fn(),
-      } as unknown as React.ClipboardEvent;
+      });
 
       expect(() => {
         act(() => {
@@ -2238,12 +2238,12 @@ describe('usePostInput', () => {
         }),
       );
 
-      const pasteEvent = {
-        clipboardData: {
+      const pasteEvent = mockClipboardEvent({
+        clipboardData: asOpaque<DataTransfer>({
           items: [{ kind: 'file', getAsFile: () => null }],
-        },
+        }),
         preventDefault: vi.fn(),
-      } as unknown as React.ClipboardEvent;
+      });
 
       act(() => {
         result.current.handlePaste(pasteEvent);

@@ -1,6 +1,7 @@
 import { renderHook, act } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { defaultPrivacyPreferences } from '@/core/stores/settings/settings.types';
+import { mockMouseEvent } from '@/test-utils';
 import { useLinkConfirmation } from './useLinkConfirmation';
 
 const mockUseSettingsStore = vi.fn();
@@ -14,10 +15,10 @@ vi.mock('@/core', async (importOriginal) => {
 });
 
 const createMockEvent = () =>
-  ({
+  mockMouseEvent<HTMLAnchorElement>({
     stopPropagation: vi.fn(),
     preventDefault: vi.fn(),
-  }) as unknown as React.MouseEvent<HTMLAnchorElement>;
+  });
 
 describe('useLinkConfirmation', () => {
   let windowOpenSpy: ReturnType<typeof vi.spyOn>;

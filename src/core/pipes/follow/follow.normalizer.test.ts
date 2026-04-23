@@ -2,6 +2,7 @@ import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import * as Core from '@/core';
 import { AppError, ErrorCategory, ValidationErrorCode, ErrorService } from '@/libs';
 import { FollowResult } from 'pubky-app-specs';
+import { asOpaque } from '@/test-utils';
 import {
   TEST_PUBKY,
   INVALID_INPUTS,
@@ -13,12 +14,11 @@ import {
 
 describe('FollowNormalizer', () => {
   const createMockBuilder = (overrides?: Partial<{ createFollow: ReturnType<typeof vi.fn> }>) => ({
-    createFollow: vi.fn(
-      (followee: string) =>
-        ({
-          follow: { followee, toJson: vi.fn(() => ({})) },
-          meta: { url: buildPubkyUri(TEST_PUBKY.USER_1, `follows/${followee}`) },
-        }) as unknown as FollowResult,
+    createFollow: vi.fn((followee: string) =>
+      asOpaque<FollowResult>({
+        follow: { followee, toJson: vi.fn(() => ({})) },
+        meta: { url: buildPubkyUri(TEST_PUBKY.USER_1, `follows/${followee}`) },
+      }),
     ),
     ...overrides,
   });

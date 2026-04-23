@@ -69,7 +69,7 @@ describe('useNestedReplies', () => {
       localTotalCount: 3,
     });
 
-    vi.spyOn(Core, 'buildPostReplyStreamId').mockReturnValue('stream:author:reply-1');
+    vi.spyOn(Core, 'buildPostReplyStreamId').mockReturnValue('post_replies:author:reply-1');
     const getOrFetchSpy = vi
       .spyOn(Core.StreamPostsController, 'getOrFetchStreamSlice')
       .mockResolvedValueOnce({
@@ -105,7 +105,7 @@ describe('useNestedReplies', () => {
       localTotalCount: 2,
     });
 
-    vi.spyOn(Core, 'buildPostReplyStreamId').mockReturnValue('stream:author:reply-1');
+    vi.spyOn(Core, 'buildPostReplyStreamId').mockReturnValue('post_replies:author:reply-1');
     const getOrFetchSpy = vi.spyOn(Core.StreamPostsController, 'getOrFetchStreamSlice').mockResolvedValue({
       nextPageIds: Array.from({ length: 10 }, (_, index) => `author:nested-${index + 3}`),
       timestamp: 0,

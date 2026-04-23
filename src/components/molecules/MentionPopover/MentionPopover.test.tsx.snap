@@ -6,6 +6,7 @@ exports[`MentionPopover > MentionPopover - Snapshots > matches snapshot with sel
 <div
   aria-label="User suggestions"
   class="absolute z-50 mt-1 w-[var(--mention-popover-width)] max-h-[var(--mention-popover-max-height)] overflow-y-auto rounded-md border border-border bg-popover p-2"
+  data-cy="mention-popover"
   data-testid="mention-popover"
   role="listbox"
 >
@@ -52,6 +53,7 @@ exports[`MentionPopover > MentionPopover - Snapshots > matches snapshot with use
 <div
   aria-label="User suggestions"
   class="absolute z-50 mt-1 w-[var(--mention-popover-width)] max-h-[var(--mention-popover-max-height)] overflow-y-auto rounded-md border border-border bg-popover p-2"
+  data-cy="mention-popover"
   data-testid="mention-popover"
   role="listbox"
 >

@@ -104,3 +104,56 @@ describe('inferPostKindForCreate', () => {
     expect(kind).toBe(PubkyAppPostKind.Long);
   });
 });
+
+describe('resolveTagTargetCompositeIdForPostCreate', () => {
+  const authorId = 'authorpubky111111111111111111111111111111111111111';
+  const newPostId = 'newpost1';
+  const originalPostId = 'otherauthor222222222222222222222222222222222222222:original1';
+
+  it('targets the new post when not a repost', () => {
+    expect(
+      Core.resolveTagTargetCompositeIdForPostCreate({
+        authorId,
+        newPostId,
+        content: '',
+        attachments: undefined,
+      }),
+    ).toBe(`${authorId}:${newPostId}`);
+  });
+
+  it('targets the original post for a simple repost (no text, no attachments)', () => {
+    expect(
+      Core.resolveTagTargetCompositeIdForPostCreate({
+        authorId,
+        newPostId,
+        originalPostId,
+        content: '',
+        attachments: undefined,
+      }),
+    ).toBe(originalPostId);
+  });
+
+  it('targets the new post for a quote repost with text', () => {
+    expect(
+      Core.resolveTagTargetCompositeIdForPostCreate({
+        authorId,
+        newPostId,
+        originalPostId,
+        content: 'my take',
+        attachments: undefined,
+      }),
+    ).toBe(`${authorId}:${newPostId}`);
+  });
+
+  it('targets the new post for a quote repost with attachment only', () => {
+    expect(
+      Core.resolveTagTargetCompositeIdForPostCreate({
+        authorId,
+        newPostId,
+        originalPostId,
+        content: '',
+        attachments: [new File(['x'], 'a.png', { type: 'image/png' })],
+      }),
+    ).toBe(`${authorId}:${newPostId}`);
+  });
+});

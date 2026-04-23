@@ -1,6 +1,7 @@
 import { describe, expect, it, vi, beforeEach } from 'vitest';
 
 import * as Core from '@/core';
+import { asOpaque } from '@/test-utils';
 
 describe('TtlApplication', () => {
   beforeEach(() => {
@@ -15,11 +16,11 @@ describe('TtlApplication', () => {
       const postIds = ['alice:1', 'bob:2', 'carol:3'];
       vi.spyOn(Core.PostTtlModel, 'findByIds').mockResolvedValue([
         // alice fresh
-        { id: 'alice:1', lastUpdatedAt: now - 1_000 } as unknown as Core.PostTtlModel,
+        asOpaque<Core.PostTtlModel>({ id: 'alice:1', lastUpdatedAt: now - 1_000 }),
         // bob stale
-        { id: 'bob:2', lastUpdatedAt: now - 10_000 } as unknown as Core.PostTtlModel,
+        asOpaque<Core.PostTtlModel>({ id: 'bob:2', lastUpdatedAt: now - 10_000 }),
         // carol missing
-      ] as unknown as Core.PostTtlModel[]);
+      ]);
 
       const stale = await Core.TtlApplication.findStalePostsByIds({ postIds, ttlMs: 5_000 });
       expect(stale.sort()).toEqual(['bob:2', 'carol:3'].sort());
@@ -34,7 +35,7 @@ describe('TtlApplication', () => {
       vi.spyOn(Core.postStreamApi, 'postsByIds').mockReturnValue({
         url: '/stream/posts/by_ids',
         body: { post_ids: postIds, viewer_id: viewerId },
-      } as unknown as ReturnType<typeof Core.postStreamApi.postsByIds>);
+      } as ReturnType<typeof Core.postStreamApi.postsByIds>);
 
       const nexusPosts: Core.NexusPost[] = [
         {
@@ -72,9 +73,9 @@ describe('TtlApplication', () => {
       const queryNexusSpy = vi.spyOn(Core, 'queryNexus').mockResolvedValue(nexusPosts);
       const persistPostsSpy = vi
         .spyOn(Core.LocalStreamPostsService, 'persistPosts')
-        .mockResolvedValue({ attachmentMetadata: [] } as unknown as Awaited<
-          ReturnType<typeof Core.LocalStreamPostsService.persistPosts>
-        >);
+        .mockResolvedValue(
+          asOpaque<Awaited<ReturnType<typeof Core.LocalStreamPostsService.persistPosts>>>({ attachmentMetadata: [] }),
+        );
       const persistFilesSpy = vi.spyOn(Core.FileApplication, 'persistFiles').mockResolvedValue(undefined);
       vi.spyOn(Core.LocalStreamUsersService, 'getNotPersistedUsersInCache').mockResolvedValue([]);
 
@@ -95,7 +96,7 @@ describe('TtlApplication', () => {
       vi.spyOn(Core.postStreamApi, 'postsByIds').mockReturnValue({
         url: '/stream/posts/by_ids',
         body: { post_ids: ['alice:1'], viewer_id: viewerId },
-      } as unknown as ReturnType<typeof Core.postStreamApi.postsByIds>);
+      } as ReturnType<typeof Core.postStreamApi.postsByIds>);
 
       vi.spyOn(Core, 'queryNexus').mockRejectedValue(new Error('Network down'));
       const persistPostsSpy = vi
@@ -134,12 +135,12 @@ describe('TtlApplication', () => {
       vi.spyOn(Core.postStreamApi, 'postsByIds').mockReturnValue({
         url: '/stream/posts/by_ids',
         body: { post_ids: ['reposter:repost-1'], viewer_id: viewerId },
-      } as unknown as ReturnType<typeof Core.postStreamApi.postsByIds>);
+      } as ReturnType<typeof Core.postStreamApi.postsByIds>);
 
       vi.spyOn(Core, 'queryNexus').mockResolvedValue([repostNexusPost]);
-      vi.spyOn(Core.LocalStreamPostsService, 'persistPosts').mockResolvedValue({
-        attachmentMetadata: [],
-      } as unknown as Awaited<ReturnType<typeof Core.LocalStreamPostsService.persistPosts>>);
+      vi.spyOn(Core.LocalStreamPostsService, 'persistPosts').mockResolvedValue(
+        asOpaque<Awaited<ReturnType<typeof Core.LocalStreamPostsService.persistPosts>>>({ attachmentMetadata: [] }),
+      );
       vi.spyOn(Core.FileApplication, 'persistFiles').mockResolvedValue(undefined);
       vi.spyOn(Core.LocalStreamUsersService, 'getNotPersistedUsersInCache').mockResolvedValue([]);
 
@@ -179,12 +180,12 @@ describe('TtlApplication', () => {
       vi.spyOn(Core.postStreamApi, 'postsByIds').mockReturnValue({
         url: '/stream/posts/by_ids',
         body: { post_ids: ['alice:post-1'], viewer_id: viewerId },
-      } as unknown as ReturnType<typeof Core.postStreamApi.postsByIds>);
+      } as ReturnType<typeof Core.postStreamApi.postsByIds>);
 
       vi.spyOn(Core, 'queryNexus').mockResolvedValue([regularPost]);
-      vi.spyOn(Core.LocalStreamPostsService, 'persistPosts').mockResolvedValue({
-        attachmentMetadata: [],
-      } as unknown as Awaited<ReturnType<typeof Core.LocalStreamPostsService.persistPosts>>);
+      vi.spyOn(Core.LocalStreamPostsService, 'persistPosts').mockResolvedValue(
+        asOpaque<Awaited<ReturnType<typeof Core.LocalStreamPostsService.persistPosts>>>({ attachmentMetadata: [] }),
+      );
       vi.spyOn(Core.FileApplication, 'persistFiles').mockResolvedValue(undefined);
       vi.spyOn(Core.LocalStreamUsersService, 'getNotPersistedUsersInCache').mockResolvedValue([]);
 
@@ -208,7 +209,7 @@ describe('TtlApplication', () => {
       vi.spyOn(Core.userStreamApi, 'usersByIds').mockReturnValue({
         url: '/stream/users/by_ids',
         body: { user_ids: userIds, viewer_id: undefined },
-      } as unknown as ReturnType<typeof Core.userStreamApi.usersByIds>);
+      } as ReturnType<typeof Core.userStreamApi.usersByIds>);
 
       const nexusUsers: Core.NexusUser[] = [
         {

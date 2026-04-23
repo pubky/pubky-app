@@ -17,6 +17,10 @@ interface TimelinePostRepliesProps {
  * and a global collapse/expand toggle.
  *
  * Hidden for unauthenticated users following pubky-app pattern.
+ *
+ * The surface (TimelineFeedContent) provides PostMainLayoutProvider above this
+ * subtree, so the nested ThreadTree → ReplyWithNested → PostMain chain inherits
+ * the active tags layout via context — no prop drilling required here.
  */
 
 export function TimelinePostReplies({ postId }: TimelinePostRepliesProps) {

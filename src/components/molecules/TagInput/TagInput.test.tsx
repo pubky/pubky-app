@@ -1,10 +1,11 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
+import type { UseTagSuggestionsResult } from '@/hooks/useTagSuggestions/useTagSuggestions.types';
 import { TagInput } from './TagInput';
 
 // Hoist mock for useTagSuggestions
 const { mockUseTagSuggestions } = vi.hoisted(() => ({
-  mockUseTagSuggestions: vi.fn(() => ({ suggestions: [], isLoading: false })),
+  mockUseTagSuggestions: vi.fn((): UseTagSuggestionsResult => ({ suggestions: [], isLoading: false })),
 }));
 
 // Use real hooks, only mock useEmojiInsert and useTagSuggestions
@@ -13,7 +14,7 @@ vi.mock('@/hooks', async (importOriginal) => {
   return {
     ...actual,
     useEmojiInsert: vi.fn(() => vi.fn()),
-    useTagSuggestions: (...args: unknown[]) => mockUseTagSuggestions(...args),
+    useTagSuggestions: mockUseTagSuggestions as typeof actual.useTagSuggestions,
   };
 });
 
@@ -25,7 +26,7 @@ vi.mock('@/molecules', async (importOriginal) => {
   };
 });
 
-const mockOnTagAdd = vi.fn<(tag: string) => void>();
+const mockOnTagAdd = vi.fn();
 
 describe('TagInput', () => {
   beforeEach(() => {

@@ -6,8 +6,10 @@ import * as Hooks from '@/hooks';
 import * as Molecules from '@/molecules';
 import * as Organisms from '@/organisms';
 import { POST_INPUT_VARIANT } from '@/organisms/PostInput/PostInput.constants';
+import { scrollDialogTextareaIntoDialog } from '@/organisms/PostInput/PostInput.utils';
 import type { DialogReplyProps } from './DialogReply.types';
-import { scrollReplyTextareaIntoDialog } from './DialogReply.utils';
+
+const REPLY_TEXTAREA_SELECTOR = '#reply-post-input [data-slot="textarea"]';
 
 export function DialogReply({ postId, open, onOpenChangeAction }: DialogReplyProps) {
   const t = useTranslations('dialogs.reply');
@@ -21,7 +23,7 @@ export function DialogReply({ postId, open, onOpenChangeAction }: DialogReplyPro
   const handleDialogContentAnimationEnd: React.AnimationEventHandler<HTMLDivElement> = () => {
     if (!open) return;
 
-    scrollReplyTextareaIntoDialog('smooth');
+    scrollDialogTextareaIntoDialog(REPLY_TEXTAREA_SELECTOR, 'smooth');
   };
 
   return (

@@ -1,6 +1,7 @@
 import { render, screen } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { PostContent } from './PostContent';
+import * as Core from '@/core';
 import * as Organisms from '@/organisms';
 import * as Hooks from '@/hooks';
 
@@ -44,13 +45,17 @@ const mockUsePostDetails = vi.mocked(Hooks.usePostDetails);
 const mockUseRepostInfo = vi.mocked(Hooks.useRepostInfo);
 
 // Helper to create complete PostDetails mock
-const createMockPostDetails = (overrides: Partial<{ content: string; attachments: string[] | null }> = {}) => ({
+const createMockPostDetails = (
+  overrides: Partial<{ content: string; attachments: string[] | null }> = {},
+): Core.EnrichedPostDetails => ({
   id: 'test-author:test-post',
   indexed_at: Date.now(),
   kind: 'short' as const,
   uri: 'pubky://test-author/pub/pubky.app/posts/test-post',
   content: 'Mock content',
   attachments: null as string[] | null,
+  is_moderated: false,
+  is_blurred: false,
   ...overrides,
 });
 

@@ -10,6 +10,7 @@ import * as Organisms from '@/organisms';
 import * as Libs from '@/libs';
 import { ARTICLE_TITLE_MAX_CHARACTER_LENGTH, POST_MAX_CHARACTER_LENGTH } from '@/config';
 import { POST_THREAD_CONNECTOR_VARIANTS } from '@/atoms';
+import { usePostMainLayout, WIDE_POST_LAYOUT_CLASSES } from '@/organisms/PostMain/PostMainLayout';
 import { POST_INPUT_VARIANT } from './PostInput.constants';
 import type { PostInputProps } from './PostInput.types';
 import { PostInputExpandableSection } from '../PostInputExpandableSection';
@@ -156,13 +157,18 @@ export function PostInput({
     ? undefined
     : { count: Libs.getCharacterCount(content), max: POST_MAX_CHARACTER_LENGTH };
 
+  const isMobile = Hooks.useIsMobile();
+  const inheritedTagsLayout = usePostMainLayout() ?? 'inline';
+  const isWideLayout = !isMobile && inheritedTagsLayout === 'side';
+
   return (
     <Atoms.Container
       data-cy={dataCy}
       id={id}
       ref={containerRef}
       className={Libs.cn(
-        'relative cursor-pointer rounded-md border border-dashed p-4 transition-colors duration-200',
+        'relative cursor-pointer rounded-md border border-dashed transition-colors duration-200',
+        isWideLayout ? 'p-12' : 'p-4',
         isDragging ? 'border-brand' : 'border-input',
       )}
       onClick={handleExpand}
@@ -200,6 +206,7 @@ export function PostInput({
             isReplyInput={true}
             characterLimit={characterLimit}
             showPopover={false}
+            size={isWideLayout ? 'large' : 'normal'}
           />
         )}
 
@@ -209,6 +216,7 @@ export function PostInput({
               ref={textareaRef}
               placeholder={displayPlaceholder}
               variant="inline"
+              className={isWideLayout ? WIDE_POST_LAYOUT_CLASSES.bodyText : undefined}
               value={content}
               onChange={handleChange}
               onFocus={handleExpand}

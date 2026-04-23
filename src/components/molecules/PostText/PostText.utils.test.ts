@@ -1,5 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import type { Root, Paragraph, Text, Code, Link, Emphasis } from 'mdast';
+import { asInvalid } from '@/test-utils';
 import {
   remarkPlaintextCodeblock,
   remarkDisallowMarkdownLinks,
@@ -1333,7 +1334,7 @@ describe('extractTextFromChildren', () => {
     });
 
     it('returns empty string when first element is an object', () => {
-      expect(extractTextFromChildren([{ text: 'hello' }, 'second'] as unknown as React.ReactNode)).toBe('');
+      expect(extractTextFromChildren(asInvalid<React.ReactNode>([{ text: 'hello' }, 'second']))).toBe('');
     });
 
     it('returns empty string when first element is null', () => {
@@ -1355,15 +1356,15 @@ describe('extractTextFromChildren', () => {
     });
 
     it('returns empty string for number', () => {
-      expect(extractTextFromChildren(42 as unknown as React.ReactNode)).toBe('');
+      expect(extractTextFromChildren(asInvalid<React.ReactNode>(42))).toBe('');
     });
 
     it('returns empty string for boolean', () => {
-      expect(extractTextFromChildren(true as unknown as React.ReactNode)).toBe('');
+      expect(extractTextFromChildren(asInvalid<React.ReactNode>(true))).toBe('');
     });
 
     it('returns empty string for object', () => {
-      expect(extractTextFromChildren({ type: 'element' } as unknown as React.ReactNode)).toBe('');
+      expect(extractTextFromChildren(asInvalid<React.ReactNode>({ type: 'element' }))).toBe('');
     });
   });
 });

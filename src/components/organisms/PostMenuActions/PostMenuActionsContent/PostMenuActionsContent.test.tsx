@@ -155,6 +155,8 @@ describe('PostMenuActionsContent', () => {
         onActionComplete={vi.fn()}
         onReportClick={vi.fn()}
         onEditClick={vi.fn()}
+        onDeleteClick={vi.fn()}
+        isDeleting={false}
       />,
     );
 
@@ -223,6 +225,8 @@ describe('PostMenuActionsContent', () => {
         onActionComplete={vi.fn()}
         onReportClick={vi.fn()}
         onEditClick={vi.fn()}
+        onDeleteClick={vi.fn()}
+        isDeleting={false}
       />,
     );
 
@@ -282,6 +286,8 @@ describe('PostMenuActionsContent', () => {
         onActionComplete={vi.fn()}
         onReportClick={vi.fn()}
         onEditClick={vi.fn()}
+        onDeleteClick={vi.fn()}
+        isDeleting={false}
       />,
     );
 
@@ -351,6 +357,8 @@ describe('PostMenuActionsContent - Snapshots', () => {
         onActionComplete={vi.fn()}
         onReportClick={vi.fn()}
         onEditClick={vi.fn()}
+        onDeleteClick={vi.fn()}
+        isDeleting={false}
       />,
     );
     expect(container.firstChild).toMatchSnapshot();
@@ -406,6 +414,8 @@ describe('PostMenuActionsContent - Snapshots', () => {
         onActionComplete={vi.fn()}
         onReportClick={vi.fn()}
         onEditClick={vi.fn()}
+        onDeleteClick={vi.fn()}
+        isDeleting={false}
       />,
     );
     expect(container.firstChild).toMatchSnapshot();
@@ -468,6 +478,8 @@ describe('PostMenuActionsContent - Snapshots', () => {
         onActionComplete={vi.fn()}
         onReportClick={vi.fn()}
         onEditClick={vi.fn()}
+        onDeleteClick={vi.fn()}
+        isDeleting={false}
       />,
     );
     expect(container.firstChild).toMatchSnapshot();

@@ -14,6 +14,7 @@ import { POST_INPUT_VARIANT } from '@/organisms/PostInput/PostInput.constants';
 import { POST_THREAD_CONNECTOR_VARIANTS } from '@/atoms';
 import { PostInputExpandableSection } from '@/organisms/PostInputExpandableSection';
 import { PostInputAttachments } from '@/molecules/PostInputAttachments/PostInputAttachments';
+import { usePostMainLayout, WIDE_POST_LAYOUT_CLASSES } from '@/organisms/PostMain/PostMainLayout';
 
 import { QUICK_REPLY_CONNECTOR_SPACER_HEIGHT } from './QuickReply.constants';
 import type { QuickReplyProps } from './QuickReply.types';
@@ -93,6 +94,10 @@ export function QuickReply({
   // Account for spacing between main post and QuickReply in connector calculation
   const connectorHeight = cardHeight ? cardHeight + QUICK_REPLY_CONNECTOR_SPACER_HEIGHT : undefined;
 
+  const isMobile = Hooks.useIsMobile();
+  const inheritedTagsLayout = usePostMainLayout() ?? 'inline';
+  const isWideLayout = !isMobile && inheritedTagsLayout === 'side';
+
   return (
     <Atoms.Container overrideDefaults className="relative flex" data-testid="quick-reply" aria-busy={isSubmitting}>
       <Atoms.Container overrideDefaults className="-mt-4 w-3 shrink-0">
@@ -106,7 +111,8 @@ export function QuickReply({
       <Atoms.Container
         ref={containerRef}
         className={Utils.cn(
-          'relative w-full cursor-pointer rounded-md border border-dashed p-4 transition-colors duration-200',
+          'relative w-full cursor-pointer rounded-md border border-dashed transition-colors duration-200',
+          isWideLayout ? 'p-12' : 'p-4',
           isDragging ? 'border-brand' : 'border-input',
         )}
         onClick={handleExpand}
@@ -133,7 +139,7 @@ export function QuickReply({
               avatarUrl={avatarUrl}
               name={userDetails?.name || ''}
               fallbackSeed={currentUserPubky || userDetails?.name || 'user'}
-              size="default"
+              size={isWideLayout ? 'xl' : 'default'}
             />
 
             <Atoms.Container overrideDefaults className="relative flex-1">
@@ -142,6 +148,7 @@ export function QuickReply({
                 aria-label="Reply"
                 placeholder={displayPlaceholder}
                 variant="inline"
+                className={isWideLayout ? WIDE_POST_LAYOUT_CLASSES.bodyText : undefined}
                 value={content}
                 onChange={handleChange}
                 onFocus={handleExpand}

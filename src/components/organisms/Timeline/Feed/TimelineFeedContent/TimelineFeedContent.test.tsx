@@ -31,8 +31,8 @@ vi.mock('@/hooks/useIsScrolledFromTop', () => ({
 }));
 
 const { mockUsePullToRefresh } = vi.hoisted(() => ({
-  mockUsePullToRefresh: vi.fn(() => ({
-    state: 'idle' as const,
+  mockUsePullToRefresh: vi.fn((): import('@/hooks/usePullToRefresh/usePullToRefresh.types').UsePullToRefreshResult => ({
+    state: 'idle',
     pullDistance: 0,
   })),
 }));

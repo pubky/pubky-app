@@ -2,6 +2,7 @@ import { act, renderHook, waitFor } from '@testing-library/react';
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import type { Session } from '@synonymdev/pubky';
 import * as Libs from '@/libs';
+import { mockSession } from '@/test-utils';
 import { useAuthUrl } from './useAuthUrl';
 
 // Mock dependencies
@@ -116,7 +117,7 @@ describe('useAuthUrl', () => {
   });
 
   it('initializes session when approval succeeds', async () => {
-    const mockSession = { token: 'test-token' } as unknown as Session;
+    const session = mockSession();
 
     let resolveApproval: (session: Session) => void;
     const mockAwaitApproval = new Promise<Session>((resolve) => {
@@ -135,10 +136,10 @@ describe('useAuthUrl', () => {
       expect(mockGetAuthUrl).toHaveBeenCalled();
     });
 
-    resolveApproval!(mockSession);
+    resolveApproval!(session);
 
     await waitFor(() => {
-      expect(mockInitializeAuthenticatedSession).toHaveBeenCalledWith({ session: mockSession });
+      expect(mockInitializeAuthenticatedSession).toHaveBeenCalledWith({ session });
     });
   });
 
@@ -267,7 +268,7 @@ describe('useAuthUrl', () => {
   });
 
   it('shows toast when session initialization fails', async () => {
-    const mockSession = { token: 'test-token' } as unknown as Session;
+    const session = mockSession();
 
     let resolveApproval: (session: Session) => void;
     const mockAwaitApproval = new Promise<Session>((resolve) => {
@@ -288,7 +289,7 @@ describe('useAuthUrl', () => {
       expect(mockGetAuthUrl).toHaveBeenCalled();
     });
 
-    resolveApproval!(mockSession);
+    resolveApproval!(session);
 
     await waitFor(() => {
       expect(mockToast).toHaveBeenCalledWith({
@@ -329,7 +330,7 @@ describe('useAuthUrl', () => {
   });
 
   it('initializes session even after component unmounts', async () => {
-    const mockSession = { token: 'test-token' } as unknown as Session;
+    const session = mockSession();
 
     let resolveApproval: (session: Session) => void;
     const mockAwaitApproval = new Promise<Session>((resolve) => {
@@ -349,10 +350,10 @@ describe('useAuthUrl', () => {
     });
 
     unmount();
-    resolveApproval!(mockSession);
+    resolveApproval!(session);
 
     await waitFor(() => {
-      expect(mockInitializeAuthenticatedSession).toHaveBeenCalledWith({ session: mockSession });
+      expect(mockInitializeAuthenticatedSession).toHaveBeenCalledWith({ session });
     });
   });
 

@@ -2,6 +2,7 @@ import { describe, it, expect, beforeEach, vi } from 'vitest';
 import * as Core from '@/core';
 import * as Libs from '@/libs';
 import { buildCompositeId } from '@/core';
+import { asOpaque } from '@/test-utils';
 
 describe('LocalStreamPostsService', () => {
   const streamId: Core.PostStreamId = Core.PostStreamTypes.TIMELINE_ALL_ALL;
@@ -282,7 +283,7 @@ describe('LocalStreamPostsService', () => {
       const postDetails = await Core.PostDetailsModel.findById(compositeId);
       expect(postDetails).toBeTruthy();
       // Author should not be in details (it's in the composite ID)
-      expect((postDetails as unknown as { author?: string }).author).toBeUndefined();
+      expect(asOpaque<{ author?: string }>(postDetails).author).toBeUndefined();
     });
 
     it('should handle empty array', async () => {

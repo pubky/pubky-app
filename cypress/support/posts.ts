@@ -78,6 +78,20 @@ export const createQuickPostWithImage = (postContent: string) => {
     });
 };
 
+export const createQuickPostWithMention = (mentionUsername: string) => {
+  cy.get('[data-cy="home-post-input"]')
+    .should('be.visible')
+    .within(() => {
+      cy.get('textarea').should('have.value', '').type('Hey ');
+      cy.get('textarea').type(`@${mentionUsername}`);
+      cy.get('[data-cy="mention-popover"]').should('be.visible').contains(mentionUsername).click();
+      cy.intercept('PUT', '**/pub/pubky.app/posts/**').as('postCreated');
+      cy.get('[data-cy="post-input-action-bar-post"]').click();
+      cy.wait('@postCreated').its('response.statusCode').should('eq', 201);
+      cy.get('textarea').should('have.value', '');
+    });
+};
+
 export const createPostFromDialog = (postContent: string, expectedPostLength?: number) => {
   // click button to display new post dialog
   cy.get('[data-cy="new-post-btn"]').click();
