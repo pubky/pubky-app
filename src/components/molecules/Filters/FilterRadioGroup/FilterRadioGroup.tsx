@@ -68,7 +68,7 @@ export function FilterRadioGroup<T extends string = string>({
         data-testid={testId || `filter-${title.toLowerCase()}-radiogroup`}
       >
         <Atoms.FilterList>
-          {items.map(({ key, label, icon: Icon, disabled }, index) => {
+          {items.map(({ key, label, icon: Icon, disabled, dataCy: itemDataCy }, index) => {
             const isSelected = selectedValue === key;
 
             return (
@@ -82,6 +82,7 @@ export function FilterRadioGroup<T extends string = string>({
                 aria-label={label}
                 aria-disabled={disabled}
                 tabIndex={isSelected ? 0 : -1}
+                data-cy={itemDataCy}
                 className={disabled ? 'cursor-default opacity-40' : undefined}
               >
                 <Atoms.FilterItemIcon icon={Icon} />
