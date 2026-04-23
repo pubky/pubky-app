@@ -1,5 +1,6 @@
 import { renderHook, act } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { mockAnimationEvent } from '@/test-utils';
 import { useClosingPresence } from './useClosingPresence';
 
 describe('useClosingPresence', () => {
@@ -66,10 +67,12 @@ describe('useClosingPresence', () => {
     root.setAttribute('data-state', 'closed');
 
     act(() => {
-      result.current.onAnimationEnd({
-        target: root,
-        currentTarget: root,
-      } as React.AnimationEvent<HTMLDivElement>);
+      result.current.onAnimationEnd(
+        mockAnimationEvent<HTMLDivElement>({
+          target: root,
+          currentTarget: root,
+        }),
+      );
     });
 
     expect(result.current.shouldRender).toBe(false);

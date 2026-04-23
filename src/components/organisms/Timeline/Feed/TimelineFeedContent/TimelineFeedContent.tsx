@@ -7,7 +7,8 @@ import * as Atoms from '@/atoms';
 import * as Molecules from '@/molecules';
 import * as Organisms from '@/organisms';
 import * as Hooks from '@/hooks';
-import type { TagsLayout } from '../../../PostMain/PostMain.types';
+import type { TagsLayout } from '@/organisms/PostMain/PostMain.types';
+import { PostMainLayoutProvider } from '@/organisms/PostMain/PostMainLayout';
 import type { TimelineFeedProps, TimelineFeedContextValue } from '../TimelineFeed/TimelineFeed.types';
 import { TimelineFeedContext } from '../TimelineFeed/TimelineFeedContext';
 import { NewPostsSection } from '../NewPostsSection';
@@ -120,37 +121,38 @@ function TimelineFeedContent({ streamId, variant, tagsLayout, layoutResolution, 
 
   return (
     <TimelineFeedContext.Provider value={contextValue}>
-      <Atoms.Container ref={containerRef} className="min-w-0 flex-1 gap-6 lg:overflow-hidden">
-        {enablePullToRefresh && <Molecules.PullToRefreshIndicator state={pullState} pullDistance={pullDistance} />}
-        {!isVisualActive ? children : null}
-        <NewPostsSection
-          streamId={streamId}
-          postIds={postIds}
-          mutedUserIdSet={mutedUserIdSet}
-          loading={loading}
-          prependPosts={prependPosts}
-        />
-        {isVisualActive ? (
-          <VisualTimelinePosts
+      <PostMainLayoutProvider tagsLayout={tagsLayout}>
+        <Atoms.Container ref={containerRef} className="min-w-0 flex-1 gap-6 lg:overflow-hidden">
+          {enablePullToRefresh && <Molecules.PullToRefreshIndicator state={pullState} pullDistance={pullDistance} />}
+          {!isVisualActive ? children : null}
+          <NewPostsSection
+            streamId={streamId}
             postIds={postIds}
+            mutedUserIdSet={mutedUserIdSet}
             loading={loading}
-            loadingMore={loadingMore}
-            error={error}
-            hasMore={hasMore}
-            loadMore={loadMore}
+            prependPosts={prependPosts}
           />
-        ) : (
-          <Organisms.TimelinePosts
-            postIds={postIds}
-            loading={loading}
-            loadingMore={loadingMore}
-            error={error}
-            hasMore={hasMore}
-            loadMore={loadMore}
-            tagsLayout={tagsLayout}
-          />
-        )}
-      </Atoms.Container>
+          {isVisualActive ? (
+            <VisualTimelinePosts
+              postIds={postIds}
+              loading={loading}
+              loadingMore={loadingMore}
+              error={error}
+              hasMore={hasMore}
+              loadMore={loadMore}
+            />
+          ) : (
+            <Organisms.TimelinePosts
+              postIds={postIds}
+              loading={loading}
+              loadingMore={loadingMore}
+              error={error}
+              hasMore={hasMore}
+              loadMore={loadMore}
+            />
+          )}
+        </Atoms.Container>
+      </PostMainLayoutProvider>
     </TimelineFeedContext.Provider>
   );
 }

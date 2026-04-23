@@ -206,7 +206,15 @@ describe('MobileFooter', () => {
   it('requests avatar URL when user has an avatar set', async () => {
     const { useCurrentUserProfile } = await import('@/hooks');
     vi.mocked(useCurrentUserProfile).mockReturnValueOnce({
-      userDetails: { name: 'Test User', image: 'has-avatar', indexed_at: 456 },
+      userDetails: {
+        id: 'pk:test-user-pubky',
+        name: 'Test User',
+        bio: '',
+        image: 'has-avatar',
+        indexed_at: 456,
+        links: [],
+        status: '',
+      },
       currentUserPubky: 'pk:test-user-pubky',
     });
 

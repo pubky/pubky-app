@@ -1,5 +1,6 @@
 import { describe, it, expect, vi, beforeEach, type Mock } from 'vitest';
 import { renderHook, act } from '@testing-library/react';
+import { asOpaque } from '@/test-utils';
 import { useLocalFirstQuery } from './useLocalFirstQuery';
 import type { UseLocalFirstQueryParams } from './useLocalFirstQuery.types';
 
@@ -43,8 +44,8 @@ vi.mock('@/libs', () => ({
 
 /**
  * Helper to build typed `useLocalFirstQuery` params from untyped vi.fn() mocks.
- * Uses `as unknown as` cast — same pattern used throughout the test suite
- * (see useAuthUrl, useBookmark, useEmojiInsert tests).
+ * The opaque cast routes through the named helper so the ESLint ban on raw
+ * double casts in test files stays active.
  */
 function createParams(overrides: {
   queryFn?: ReturnType<typeof vi.fn>;
@@ -53,8 +54,8 @@ function createParams(overrides: {
   enabled?: boolean;
 }): UseLocalFirstQueryParams<unknown> {
   return {
-    queryFn: overrides.queryFn as unknown as () => Promise<unknown | null>,
-    fetchFn: overrides.fetchFn as unknown as () => Promise<unknown>,
+    queryFn: asOpaque<() => Promise<unknown | null>>(overrides.queryFn),
+    fetchFn: asOpaque<() => Promise<unknown>>(overrides.fetchFn),
     deps: overrides.deps ?? ['default-dep'],
     enabled: overrides.enabled,
   };

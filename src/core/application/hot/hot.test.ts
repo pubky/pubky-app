@@ -103,7 +103,7 @@ describe('HotApplication', () => {
         timeframe: Core.UserStreamTimeframe.TODAY,
       };
 
-      const appError = Libs.Err.network(Libs.NetworkErrorCode.REQUEST_FAILED, 'Network error', {
+      const appError = Libs.Err.network(Libs.NetworkErrorCode.CONNECTION_FAILED, 'Network error', {
         service: Libs.ErrorService.Nexus,
         operation: 'fetch',
         context: { statusCode: 500 },

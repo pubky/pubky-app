@@ -1,6 +1,7 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import * as Core from '@/core';
 import { HttpMethod } from '@/libs';
+import { mockSession } from '@/test-utils';
 
 // Mock HomeserverService
 vi.mock('@/core/services/homeserver', () => ({
@@ -114,8 +115,7 @@ const setupAuthUser = (pubky: Core.Pubky) => {
   const authStore = Core.useAuthStore.getState();
   authStore.init({
     currentUserPubky: pubky,
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    session: {} as any,
+    session: mockSession(),
     hasProfile: false,
   });
 };

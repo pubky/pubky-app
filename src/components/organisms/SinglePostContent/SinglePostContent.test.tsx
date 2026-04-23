@@ -2,13 +2,17 @@ import React from 'react';
 import { render, screen } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { SinglePostContent } from './SinglePostContent';
+import * as Core from '@/core';
+import type { UseRequireAuthResult } from '@/hooks/useRequireAuth/useRequireAuth.types';
 import * as Hooks from '@/hooks';
 
 // Mock hooks
-const mockUseRequireAuth = vi.fn(() => ({
-  isAuthenticated: true,
-  requireAuth: vi.fn((action: () => unknown) => action()),
-}));
+const mockUseRequireAuth = vi.fn(
+  (): UseRequireAuthResult => ({
+    isAuthenticated: true,
+    requireAuth: <T,>(action: () => T) => action(),
+  }),
+);
 
 const mockUsePostDetails = vi.fn(() => ({
   postDetails: {
@@ -18,13 +22,20 @@ const mockUsePostDetails = vi.fn(() => ({
     uri: 'pubky://author/pub/pubky.app/posts/post123',
     content: 'Test post content',
     attachments: [],
+    is_moderated: false,
     is_blurred: false,
-  },
+  } satisfies Core.EnrichedPostDetails,
   isLoading: false,
 }));
 
 const mockUsePostCounts = vi.fn(() => ({
-  postCounts: { replies: 0, tags: 0, unique_tags: 0, reposts: 0 },
+  postCounts: {
+    id: 'author:post123',
+    replies: 0,
+    tags: 0,
+    unique_tags: 0,
+    reposts: 0,
+  } satisfies Core.PostCountsModelSchema,
   isLoading: false,
 }));
 
@@ -122,13 +133,20 @@ vi.mock('../SinglePostArticle', () => ({
   ),
 }));
 
-vi.mock('../SinglePostCard', () => ({
-  SinglePostCard: ({ postId }: { postId: string }) => (
-    <div data-testid="single-post-card" data-post-id={postId}>
-      SinglePostCard
-    </div>
-  ),
-}));
+vi.mock('../SinglePostCard', async () => {
+  const { usePostMainLayout } = await import('@/organisms/PostMain/PostMainLayout');
+
+  return {
+    SinglePostCard: ({ postId }: { postId: string }) => {
+      const inheritedTagsLayout = usePostMainLayout();
+      return (
+        <div data-testid="single-post-card" data-post-id={postId} data-tags-layout={inheritedTagsLayout}>
+          SinglePostCard
+        </div>
+      );
+    },
+  };
+});
 
 vi.mock('../PostPageHeader', () => ({
   PostPageHeader: ({ postId }: { postId: string }) => (
@@ -168,6 +186,7 @@ describe('SinglePostContent', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     mockIsPostDeleted.mockReturnValue(false);
+    Core.useHomeStore.getState().reset();
     vi.mocked(Hooks.useRequireAuth).mockReturnValue(mockUseRequireAuth());
     vi.mocked(Hooks.usePostDetails).mockReturnValue(mockUsePostDetails());
     vi.mocked(Hooks.usePostCounts).mockReturnValue(mockUsePostCounts());
@@ -181,7 +200,16 @@ describe('SinglePostContent', () => {
 
       expect(screen.getByTestId('single-post-card')).toBeInTheDocument();
       expect(screen.getByTestId('single-post-card')).toHaveAttribute('data-post-id', mockPostId);
+      expect(screen.getByTestId('single-post-card')).toHaveAttribute('data-tags-layout', 'inline');
       expect(screen.queryByTestId('single-post-article')).not.toBeInTheDocument();
+    });
+
+    it('derives side tags layout for the single-post surface when the app is in wide mode', () => {
+      Core.useHomeStore.getState().setLayout(Core.LAYOUT.WIDE);
+
+      render(<SinglePostContent postId={mockPostId} />);
+
+      expect(screen.getByTestId('single-post-card')).toHaveAttribute('data-tags-layout', 'side');
     });
 
     it('renders SinglePostArticle for long posts', () => {
@@ -193,8 +221,9 @@ describe('SinglePostContent', () => {
           uri: 'pubky://author/pub/pubky.app/posts/post123',
           content: '# Article Title\n\nArticle content',
           attachments: [],
+          is_moderated: false,
           is_blurred: false,
-        },
+        } satisfies Core.EnrichedPostDetails,
         isLoading: false,
       });
 
@@ -260,7 +289,7 @@ describe('SinglePostContent', () => {
     it('hides replies section when not authenticated', () => {
       vi.mocked(Hooks.useRequireAuth).mockReturnValue({
         isAuthenticated: false,
-        requireAuth: vi.fn(),
+        requireAuth: <T,>(_action: () => T) => undefined,
       });
 
       render(<SinglePostContent postId={mockPostId} />);
@@ -307,8 +336,9 @@ describe('SinglePostContent - Snapshots', () => {
         uri: 'pubky://author/pub/pubky.app/posts/post123',
         content: '# Article Title\n\nArticle content',
         attachments: [],
+        is_moderated: false,
         is_blurred: false,
-      },
+      } satisfies Core.EnrichedPostDetails,
       isLoading: false,
     });
 
@@ -326,7 +356,7 @@ describe('SinglePostContent - Snapshots', () => {
   it('matches snapshot when not authenticated', () => {
     vi.mocked(Hooks.useRequireAuth).mockReturnValue({
       isAuthenticated: false,
-      requireAuth: vi.fn(),
+      requireAuth: <T,>(_action: () => T) => undefined,
     });
 
     const { container } = render(<SinglePostContent postId={mockPostId} />);
