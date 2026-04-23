@@ -19,17 +19,18 @@ enum States {
 export function Human() {
   const [state, setState] = useState<States>(States.Selection);
   const [phoneNumber, setPhoneNumber] = useState<string>('');
+  const { setInviteCode, reset } = Core.useOnboardingStore();
   const router = useRouter();
 
   useEffect(() => {
-    Core.useOnboardingStore.getState().reset();
-  }, []);
+    reset();
+  }, [reset]);
 
   // After payment/SMS verification, save the invite code and redirect to install page.
   // Signup to the homeserver happens later, after the user creates their keypair
   // (browser keys on /onboarding/pubky or Pubky Ring on /onboarding/scan).
   function onSuccess(inviteCode: string) {
-    Core.useOnboardingStore.getState().setInviteCode(inviteCode);
+    setInviteCode(inviteCode);
     router.push(ONBOARDING_ROUTES.INSTALL);
   }
   return (

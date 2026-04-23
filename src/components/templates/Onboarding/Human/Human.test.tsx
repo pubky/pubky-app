@@ -1,18 +1,18 @@
-import { beforeEach, describe, it, expect, vi } from 'vitest';
+import { describe, it, expect, vi } from 'vitest';
 import { render, screen } from '@testing-library/react';
-import type { ReactNode } from 'react';
 import { Human } from './Human';
 
 const mockPush = vi.fn();
-
 vi.mock('next/navigation', () => ({
   useRouter: () => ({
     push: mockPush,
   }),
 }));
 
-vi.mock('@/organisms', () => {
+vi.mock('@/organisms', async () => {
+  const actual = await vi.importActual('@/organisms');
   return {
+    ...actual,
     HumanSelection: () => <div data-testid="human-selection">Human Selection</div>,
     HumanPhoneInput: () => <div data-testid="human-phone-input">Human Phone Input</div>,
     HumanPhoneCode: () => <div data-testid="human-phone-code">Human Phone Code</div>,
@@ -21,17 +21,7 @@ vi.mock('@/organisms', () => {
   };
 });
 
-vi.mock('@/molecules', () => {
-  return {
-    OnboardingLayout: ({ children }: { children: ReactNode }) => <div data-testid="onboarding-layout">{children}</div>,
-  };
-});
-
 describe('Human template', () => {
-  beforeEach(() => {
-    mockPush.mockClear();
-  });
-
   it('renders all main components', () => {
     render(<Human />);
 
