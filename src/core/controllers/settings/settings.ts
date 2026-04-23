@@ -1,6 +1,7 @@
 import * as Core from '@/core';
 import { setLocaleCookie } from '@/i18n/utils';
 import { NotificationNormalizer } from '@/core/pipes/notification/notification.normalizer';
+import { NotificationApplication } from '@/core/application/notification/notification';
 import { useSettingsStore } from '@/core/stores/settings/settings.store';
 import { useNotificationStore } from '@/core/stores/notification/notification.store';
 
@@ -63,7 +64,7 @@ export class SettingsController {
     const preferences = useSettingsStore.getState().notifications;
     const allowedTypes = NotificationNormalizer.toEnabledTypes(preferences);
     const lastRead = useNotificationStore.getState().selectLastRead();
-    const unread = await Core.NotificationApplication.countFilteredUnreadSince(lastRead, allowedTypes);
+    const unread = await NotificationApplication.countFilteredUnreadSince(lastRead, allowedTypes);
     useNotificationStore.getState().setUnread(unread);
   }
 
