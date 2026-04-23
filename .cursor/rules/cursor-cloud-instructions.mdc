@@ -16,7 +16,6 @@ No external database or backend server needed — the app uses browser IndexedDB
 - **Format check**: `npm run format:check` (Prettier)
 - **Unit tests**: `npm run test` (Vitest — ~580 test files, ~9300 tests, takes ~9 min)
 - **E2E tests**: `npm run test:e2e` (Cypress with Firefox — requires external staging services to be reachable)
-- **Storybook**: `npm run storybook` (port 6006)
 
 ## Signing in (staging account)
 

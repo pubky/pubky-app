@@ -5,6 +5,7 @@ import { usePathname, useRouter } from 'next/navigation';
 import { PROFILE_ROUTES } from '@/app';
 import { PROFILE_PAGE_TYPES, ProfilePageType, FilterBarPageType } from '@/app/profile/types';
 import * as Providers from '@/providers';
+import { useIsMobile } from '@/hooks/useIsMobile';
 
 /**
  * Profile routes configuration - single source of truth
@@ -108,9 +109,15 @@ const ROUTE_MAP = deriveRouteMap();
 /**
  * Extracts the page type from a dynamic route pathname
  * Handles paths like /profile/{pubky}/posts, /profile/{pubky}/followers, etc.
+ *
+ * Own-profile dynamic routes preserve the Notifications default.
+ * Other users default to PROFILE on mobile and POSTS on desktop.
  */
-const getPageTypeFromDynamicPath = (pathname: string): ProfilePageType | null => {
-  // Match pattern: /profile/{pubky}/{subPath}
+const getPageTypeFromDynamicPath = (
+  pathname: string,
+  isMobile: boolean,
+  isOwnProfile: boolean,
+): ProfilePageType | null => {
   const dynamicRouteMatch = pathname.match(/^\/profile\/[^/]+(\/.+)?$/);
 
   if (!dynamicRouteMatch) {
@@ -119,15 +126,21 @@ const getPageTypeFromDynamicPath = (pathname: string): ProfilePageType | null =>
 
   const subPath = dynamicRouteMatch[1] || '';
 
-  // Find the page type by subPath
   for (const [pageType, config] of Object.entries(PROFILE_ROUTES_CONFIG)) {
     if (config.subPath === subPath) {
+      if (config.ownProfileOnly && !isOwnProfile) {
+        continue;
+      }
+
       return pageType as ProfilePageType;
     }
   }
 
-  // Default to POSTS for /profile/{pubky} (no subPath) for other users
-  return PROFILE_PAGE_TYPES.POSTS;
+  if (isOwnProfile) {
+    return PROFILE_PAGE_TYPES.NOTIFICATIONS;
+  }
+
+  return isMobile ? PROFILE_PAGE_TYPES.PROFILE : PROFILE_PAGE_TYPES.POSTS;
 };
 
 /**
@@ -175,8 +188,8 @@ export interface UseProfileNavigationReturn {
 export function useProfileNavigation(): UseProfileNavigationReturn {
   const pathname = usePathname();
   const router = useRouter();
+  const isMobile = useIsMobile();
 
-  // Get profile context to determine if we're on a dynamic route
   const { pubky, isOwnProfile } = Providers.useProfileContext();
 
   /**
@@ -184,20 +197,21 @@ export function useProfileNavigation(): UseProfileNavigationReturn {
    * Handles both static routes (/profile/posts) and dynamic routes (/profile/{pubky}/posts)
    */
   const activePage = useMemo(() => {
-    // First try exact match in static routes
     if (PAGE_PATH_MAP[pathname]) {
       return PAGE_PATH_MAP[pathname];
     }
 
-    // Try to extract page type from dynamic route
-    const dynamicPageType = getPageTypeFromDynamicPath(pathname);
+    const dynamicPageType = getPageTypeFromDynamicPath(pathname, isMobile, isOwnProfile);
     if (dynamicPageType) {
       return dynamicPageType;
     }
 
-    // Default: for own profile show notifications, for others show posts
-    return isOwnProfile ? PROFILE_PAGE_TYPES.NOTIFICATIONS : PROFILE_PAGE_TYPES.POSTS;
-  }, [pathname, isOwnProfile]);
+    if (isOwnProfile) {
+      return PROFILE_PAGE_TYPES.NOTIFICATIONS;
+    }
+
+    return isMobile ? PROFILE_PAGE_TYPES.PROFILE : PROFILE_PAGE_TYPES.POSTS;
+  }, [pathname, isOwnProfile, isMobile]);
 
   /**
    * Calculate the filter bar active page

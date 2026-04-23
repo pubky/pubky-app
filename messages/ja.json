@@ -1127,8 +1127,7 @@
       }
     },
     "version": {
-      "title": "バージョン",
-      "text": "Pubky v0.12 © Synonym Software Ltd"
+      "title": "バージョン"
     }
   },
   "logout": {
