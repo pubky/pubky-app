@@ -13,7 +13,7 @@ import {
   Twitch,
   Youtube,
 } from 'lucide-react';
-import { Telegram, XTwitter } from '../icons/icons';
+import { Telegram, XTwitter } from '@/icons';
 import { getIconFromUrl, getLabelFromUrl } from './urlToIcon';
 
 describe('getIconFromUrl', () => {
