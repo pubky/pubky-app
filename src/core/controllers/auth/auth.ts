@@ -1,6 +1,10 @@
 import * as Core from '@/core';
+import type { Pubky, SettingsState } from '@/core';
+import { SettingsApplication } from '@/core/application/settings/settings';
 import * as Libs from '@/libs';
 import { setLocaleCookie } from '@/i18n/utils';
+import { Logger } from '@/libs/logger';
+import { NotificationNormalizer } from '@/core/pipes/notification/notification.normalizer';
 
 export class AuthController {
   private constructor() {} // Prevent instantiation
@@ -84,8 +88,16 @@ export class AuthController {
     };
 
     const localSettings = Core.SettingsNormalizer.extractState(Core.useSettingsStore.getState());
-    const { notification, remoteSettings } = await Core.BootstrapApplication.initialize(
-      { pubky, lastReadUrl: url, localSettings },
+
+    // Sync settings from homeserver before bootstrap; errors are logged and fall back to local settings.
+    const remoteSettings = await this.syncSettings(pubky, localSettings);
+
+    // Resolve final preferences: remote settings win if available, otherwise use local
+    const preferences = (remoteSettings ?? localSettings).notifications;
+    const allowedTypes = NotificationNormalizer.toEnabledTypes(preferences);
+
+    const notification = await Core.BootstrapApplication.initialize(
+      { pubky, lastReadUrl: url, allowedTypes },
       onProgress,
     );
     Core.useNotificationStore.getState().setState(notification);
@@ -318,6 +330,20 @@ export class AuthController {
     await Libs.sleep(5000);
     await this.hydrateMeImAlive({ pubky });
     authStore.setHasProfile(true);
+  }
+
+  /**
+   * Syncs user settings with the homeserver.
+   * Returns remote settings if newer, null otherwise.
+   * All failures are treated as non-blocking and fall back to local settings.
+   */
+  private static async syncSettings(pubky: Pubky, localSettings: SettingsState): Promise<SettingsState | null> {
+    try {
+      return await SettingsApplication.initializeSettings(pubky, localSettings);
+    } catch (error) {
+      Logger.error('Failed to initialize settings during bootstrap', { error, pubky });
+      return null;
+    }
   }
 
   /**

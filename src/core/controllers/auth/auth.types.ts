@@ -23,8 +23,3 @@ export interface TLoginWithEncryptedFileParams {
   encryptedFile: File;
   password: string;
 }
-
-export interface TBootstrapResponse {
-  notification: Core.NotificationState;
-  remoteSettings: Core.SettingsState | null;
-}

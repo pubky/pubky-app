@@ -3,8 +3,8 @@ import { Logger } from '@/libs/logger';
 import { AppError } from '@/libs/error';
 import { HttpMethod, HttpStatusCode } from '@/libs/http';
 import * as Core from '@/core';
-import { NotificationNormalizer } from '@/core/pipes/notification/notification.normalizer';
-
+import { NotificationType } from '@/core/models/notification/notification.types';
+import { NotificationState } from '@/core/stores/notification/notification.types';
 /**
  * Callback type for reporting bootstrap progress to the Controller layer.
  * This allows the Controller to update stores without violating architecture rules.
@@ -21,18 +21,16 @@ export class BootstrapApplication {
    * @param params.pubky, The user's public key identifier
    * @param params.lastReadUrl, URL to fetch user's last read timestamp from homeserver
    * @param onProgress, Optional callback to report progress to the Controller layer
-   * @returns Promise resolving to notification state with preference-filtered unread count and remote settings
+   * @returns Promise resolving to notification state with preference-filtered unread count
    */
   static async initialize(
-    params: Core.TBootstrapParams & { localSettings: Core.SettingsState },
+    params: Core.TBootstrapParams & { allowedTypes: NotificationType[] },
     onProgress?: BootstrapProgressCallback,
-  ): Promise<Core.TBootstrapResponse> {
+  ): Promise<NotificationState> {
     const pubky = params.pubky;
-    const [bootstrapData, userLastRead, remoteSettings] = await Promise.all([
+    const [bootstrapData, userLastRead] = await Promise.all([
       Core.NexusBootstrapService.fetch(pubky),
       this.fetchOrPutLastRead(params),
-      // Initialize settings from homeserver (non-blocking, errors are logged but don't fail bootstrap)
-      this.syncSettings(pubky, params.localSettings),
       Core.MuteApplication.fetchMutedUsers(pubky), // fetches and persists MUTED stream internally
       Core.FeedApplication.fetchFeeds(pubky),
     ]);
@@ -50,15 +48,12 @@ export class BootstrapApplication {
       // Subscribe to TTL coordinator for periodic staleness checks
       Core.TtlCoordinator.getInstance().subscribeUser({ pubky });
     }
-    // Resolve final preferences: remote settings win if available, otherwise use local
-    const finalPreferences = (remoteSettings ?? params.localSettings).notifications;
-    const allowedTypes = NotificationNormalizer.toEnabledTypes(finalPreferences);
 
     const [{ unread, nextPollCursor }] = await Promise.all([
       Core.NotificationApplication.persistAndSummarize({
         notifications: bootstrapData.notifications,
         lastRead: userLastRead,
-        allowedTypes,
+        allowedTypes: params.allowedTypes,
       }),
       Core.LocalStreamUsersService.persistUsers(bootstrapData.users),
       Core.LocalStreamPostsService.persistPosts({ posts: bootstrapData.posts }),
@@ -86,31 +81,7 @@ export class BootstrapApplication {
     // TODO: We will not have that step, but we will add HomeserverSignIn step before step 1 to catch errors
     onProgress?.('homeserverSynced'); // Step 5 complete (100%)
 
-    const notification = { unread, lastRead: userLastRead, lastPolledTimestamp: nextPollCursor };
-
-    return { notification, remoteSettings: remoteSettings ?? null };
-  }
-
-  /**
-   * Syncs user settings with the homeserver.
-   * Returns remote settings if newer, null otherwise.
-   * Errors are caught and logged — settings failure must not block bootstrap.
-   *
-   * @private
-   * @param pubky - The user's public key identifier
-   * @param localSettings - Current local settings state (passed from Controller layer)
-   */
-  private static async syncSettings(
-    pubky: Core.Pubky,
-    localSettings: Core.SettingsState,
-  ): Promise<Core.SettingsState | null> {
-    try {
-      return await Core.SettingsApplication.initializeSettings(pubky, localSettings);
-    } catch (error) {
-      // Log but don't throw, settings sync failure shouldn't block bootstrap
-      Logger.error('Failed to initialize settings during bootstrap', { error, pubky });
-      return null;
-    }
+    return { unread, lastRead: userLastRead, lastPolledTimestamp: nextPollCursor };
   }
 
   /**
