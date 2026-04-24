@@ -488,7 +488,7 @@ const postDetails = useLiveQuery(async () => {
     if (!compositeId) return null;
     return await Core.PostController.getDetails({ compositeId });
   } catch (error) {
-    Libs.Logger.error('[usePostDetails] Query failed', { compositeId, error });
+    Logger.error('[usePostDetails] Query failed', { compositeId, error });
     return null; // or undefined, depending on desired behavior
   }
 }, [compositeId]);
@@ -522,7 +522,7 @@ export function useSafeLiveQuery<T>(
       setError(null);
       return await queryFn();
     } catch (e) {
-      Libs.Logger.error(`[${context}] Query failed`, { error: e });
+      Logger.error(`[${context}] Query failed`, { error: e });
       setError(e instanceof Error ? e : new Error(String(e)));
       return undefined;
     }

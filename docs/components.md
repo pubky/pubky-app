@@ -123,7 +123,7 @@ The `@icons` alias is defined in `tsconfig.json` and points at `src/libs/icons/i
 
 ### URL → icon / label helpers
 
-Helpers such as **`getIconFromUrl`** and **`getLabelFromUrl`** live in **`@libs/utils`** (`src/libs/utils/urlToIcon.ts`). They return Lucide component types or labels for link previews — import them from `@libs/utils`, not from `@icons`.
+Helpers such as **`getIconFromUrl`** and **`getLabelFromUrl`** live in **`@libs/utils/urlToIcon`** (`src/libs/utils/urlToIcon.ts`). They return Lucide component types or labels for link previews — import them from `@libs/utils/urlToIcon`, not from `@icons`.
 
 ### Tests
 

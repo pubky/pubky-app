@@ -18,11 +18,17 @@ import {
 } from '@/test-utils';
 import { Identity } from '@libs/identity/identity';
 import { Logger } from '@libs/logger/logger';
-import * as QueryClientFactory from '@libs/query-client/query-client.factory';
-import * as Utils from '@libs/utils/utils';
 
 const TEST_SECRET_KEY = Buffer.from(new Uint8Array(32).fill(1)).toString('hex');
 const TEST_PUBKY = '5a1diz4pghi47ywdfyfzpit5f3bdomzt4pugpbmq4rngdd4iub4y';
+
+const spyOnSleep = async () => vi.spyOn(await import('@libs/utils/utils'), 'sleep').mockResolvedValue(undefined);
+const spyOnClearCookies = async () =>
+  vi.spyOn(await import('@libs/utils/utils'), 'clearCookies').mockImplementation(() => {});
+const spyOnClearAllQueryClients = async () =>
+  vi
+    .spyOn(await import('@libs/query-client/query-client.factory'), 'clearAllQueryClients')
+    .mockImplementation(() => {});
 
 const getLastReadUrl = (pubky: string) => `pubky://${pubky}/pub/pubky.app/last_read`;
 
@@ -240,7 +246,7 @@ describe('AuthController', () => {
       const notification: Core.NotificationState = { unread: 2, lastRead: 123, lastPolledTimestamp: undefined };
       const bootstrapResponse = { notification, remoteSettings: null };
       const initializeSpy = vi.spyOn(Core.BootstrapApplication, 'initialize').mockResolvedValue(bootstrapResponse);
-      const sleepSpy = vi.spyOn(Utils, 'sleep').mockResolvedValue(undefined);
+      const sleepSpy = await spyOnSleep();
 
       const authStoreState = mockAuthStore({
         currentUserPubky: TEST_PUBKY,
@@ -294,7 +300,7 @@ describe('AuthController', () => {
       const keypairFromSecretKeySpy = vi.spyOn(Identity, 'keypairFromSecretKey').mockReturnValue(keypair);
       const z32FromSessionSpy = vi.spyOn(Identity, 'z32FromSession').mockReturnValue(mockPubky);
       const clearDatabaseSpy = vi.spyOn(Core, 'clearDatabase').mockResolvedValue(undefined);
-      const clearAllQueryClientsSpy = vi.spyOn(QueryClientFactory, 'clearAllQueryClients').mockImplementation(() => {});
+      const clearAllQueryClientsSpy = await spyOnClearAllQueryClients();
 
       const authStore = storeMocks.getAuthState();
       vi.spyOn(Core.useAuthStore, 'getState').mockReturnValue(mockAuthStore(authStore));
@@ -326,7 +332,7 @@ describe('AuthController', () => {
       const signUpSpy = vi.spyOn(Core.AuthApplication, 'signUp').mockRejectedValue(new Error('Signup failed'));
       const keypairFromSecretKeySpy = vi.spyOn(Identity, 'keypairFromSecretKey').mockReturnValue(keypair);
       const clearDatabaseSpy = vi.spyOn(Core, 'clearDatabase').mockResolvedValue(undefined);
-      const clearAllQueryClientsSpy = vi.spyOn(QueryClientFactory, 'clearAllQueryClients').mockImplementation(() => {});
+      const clearAllQueryClientsSpy = await spyOnClearAllQueryClients();
 
       await expect(AuthController.signUp({ secretKey: TEST_SECRET_KEY, signupToken })).rejects.toThrow('Signup failed');
       expect(clearAllQueryClientsSpy).toHaveBeenCalled();
@@ -364,7 +370,7 @@ describe('AuthController', () => {
       const userIsSignedUpSpy = vi.spyOn(Core.AuthApplication, 'userIsSignedUp').mockResolvedValue(true);
       const initializeSpy = vi.spyOn(Core.BootstrapApplication, 'initialize').mockResolvedValue(bootstrapResponse);
       const clearDatabaseSpy = vi.spyOn(Core, 'clearDatabase').mockResolvedValue(undefined);
-      const clearAllQueryClientsSpy = vi.spyOn(QueryClientFactory, 'clearAllQueryClients').mockImplementation(() => {});
+      const clearAllQueryClientsSpy = await spyOnClearAllQueryClients();
 
       const _authStore = setupAuthAndNotificationStores();
 
@@ -410,7 +416,7 @@ describe('AuthController', () => {
       const userIsSignedUpSpy = vi.spyOn(Core.AuthApplication, 'userIsSignedUp').mockResolvedValue(false);
       const initializeSpy = vi.spyOn(Core.BootstrapApplication, 'initialize');
       const clearDatabaseSpy = vi.spyOn(Core, 'clearDatabase').mockResolvedValue(undefined);
-      vi.spyOn(QueryClientFactory, 'clearAllQueryClients').mockImplementation(() => {});
+      await spyOnClearAllQueryClients();
 
       const _authStore = setupAuthAndNotificationStores();
 
@@ -439,7 +445,7 @@ describe('AuthController', () => {
       vi.spyOn(Identity, 'keypairFromMnemonic').mockReturnValue(mockKeypair);
       vi.spyOn(Core.AuthApplication, 'signIn').mockResolvedValue(undefined);
       vi.spyOn(Core, 'clearDatabase').mockResolvedValue(undefined);
-      vi.spyOn(QueryClientFactory, 'clearAllQueryClients').mockImplementation(() => {});
+      await spyOnClearAllQueryClients();
 
       const initializeSpy = vi.spyOn(Core.BootstrapApplication, 'initialize');
 
@@ -456,7 +462,7 @@ describe('AuthController', () => {
       vi.spyOn(Identity, 'keypairFromMnemonic').mockReturnValue(mockKeypair);
       vi.spyOn(Core.AuthApplication, 'signIn').mockRejectedValue(new Error('Authentication failed'));
       vi.spyOn(Core, 'clearDatabase').mockResolvedValue(undefined);
-      vi.spyOn(QueryClientFactory, 'clearAllQueryClients').mockImplementation(() => {});
+      await spyOnClearAllQueryClients();
 
       await expect(AuthController.loginWithMnemonic({ mnemonic })).rejects.toThrow('Authentication failed');
     });
@@ -488,7 +494,7 @@ describe('AuthController', () => {
       const userIsSignedUpSpy = vi.spyOn(Core.AuthApplication, 'userIsSignedUp').mockResolvedValue(true);
       const initializeSpy = vi.spyOn(Core.BootstrapApplication, 'initialize').mockResolvedValue(bootstrapResponse);
       const clearDatabaseSpy = vi.spyOn(Core, 'clearDatabase').mockResolvedValue(undefined);
-      const clearAllQueryClientsSpy = vi.spyOn(QueryClientFactory, 'clearAllQueryClients').mockImplementation(() => {});
+      const clearAllQueryClientsSpy = await spyOnClearAllQueryClients();
 
       const _authStore = setupAuthAndNotificationStores();
 
@@ -533,7 +539,7 @@ describe('AuthController', () => {
       const userIsSignedUpSpy = vi.spyOn(Core.AuthApplication, 'userIsSignedUp').mockResolvedValue(false);
       const initializeSpy = vi.spyOn(Core.BootstrapApplication, 'initialize');
       const clearDatabaseSpy = vi.spyOn(Core, 'clearDatabase').mockResolvedValue(undefined);
-      vi.spyOn(QueryClientFactory, 'clearAllQueryClients').mockImplementation(() => {});
+      await spyOnClearAllQueryClients();
 
       const _authStore = setupAuthAndNotificationStores();
 
@@ -563,7 +569,7 @@ describe('AuthController', () => {
       vi.spyOn(Identity, 'decryptRecoveryFile').mockResolvedValue(mockKeypair);
       vi.spyOn(Core.AuthApplication, 'signIn').mockResolvedValue(undefined);
       vi.spyOn(Core, 'clearDatabase').mockResolvedValue(undefined);
-      vi.spyOn(QueryClientFactory, 'clearAllQueryClients').mockImplementation(() => {});
+      await spyOnClearAllQueryClients();
 
       const initializeSpy = vi.spyOn(Core.BootstrapApplication, 'initialize');
 
@@ -592,7 +598,7 @@ describe('AuthController', () => {
       vi.spyOn(Identity, 'decryptRecoveryFile').mockResolvedValue(mockKeypair);
       vi.spyOn(Core.AuthApplication, 'signIn').mockRejectedValue(new Error('Authentication failed'));
       vi.spyOn(Core, 'clearDatabase').mockResolvedValue(undefined);
-      vi.spyOn(QueryClientFactory, 'clearAllQueryClients').mockImplementation(() => {});
+      await spyOnClearAllQueryClients();
 
       await expect(AuthController.loginWithEncryptedFile({ encryptedFile, password })).rejects.toThrow(
         'Authentication failed',
@@ -798,8 +804,8 @@ describe('AuthController', () => {
       vi.spyOn(Core.useAuthStore, 'getState').mockReturnValue(authStore);
       vi.spyOn(Core.AuthApplication, 'restorePersistedSession').mockResolvedValue(null);
       const clearDatabaseSpy = vi.spyOn(Core, 'clearDatabase').mockResolvedValue(undefined);
-      const clearCookiesSpy = vi.spyOn(Utils, 'clearCookies').mockImplementation(() => {});
-      vi.spyOn(QueryClientFactory, 'clearAllQueryClients').mockImplementation(() => {});
+      const clearCookiesSpy = await spyOnClearCookies();
+      await spyOnClearAllQueryClients();
       const resetSpy = vi.spyOn(Core.PubkySpecsSingleton, 'reset');
       const homeStore = storeMocks.getHomeState();
       const searchStore = storeMocks.getSearchState();
@@ -965,8 +971,8 @@ describe('AuthController', () => {
     it('should successfully logout user, clear stores, cookies and redirect', async () => {
       const logoutSpy = vi.spyOn(Core.AuthApplication, 'logout').mockResolvedValue(undefined);
       const clearDatabaseSpy = vi.spyOn(Core, 'clearDatabase').mockResolvedValue(undefined);
-      const clearCookiesSpy = vi.spyOn(Utils, 'clearCookies').mockImplementation(() => {});
-      const clearAllQueryClientsSpy = vi.spyOn(QueryClientFactory, 'clearAllQueryClients').mockImplementation(() => {});
+      const clearCookiesSpy = await spyOnClearCookies();
+      const clearAllQueryClientsSpy = await spyOnClearAllQueryClients();
       const resetSpy = vi.spyOn(Core.PubkySpecsSingleton, 'reset');
       const resetTtlSpy = vi.spyOn(Core.TtlCoordinator, 'resetInstance');
       const resetStreamSpy = vi.spyOn(Core.StreamCoordinator, 'resetInstance');
@@ -1031,8 +1037,8 @@ describe('AuthController', () => {
     it('should log warning and clear local state even when homeserver logout fails', async () => {
       const logoutSpy = vi.spyOn(Core.AuthApplication, 'logout').mockRejectedValue(new Error('Network error'));
       const clearDatabaseSpy = vi.spyOn(Core, 'clearDatabase').mockResolvedValue(undefined);
-      const clearCookiesSpy = vi.spyOn(Utils, 'clearCookies').mockImplementation(() => {});
-      vi.spyOn(QueryClientFactory, 'clearAllQueryClients').mockImplementation(() => {});
+      const clearCookiesSpy = await spyOnClearCookies();
+      await spyOnClearAllQueryClients();
       const warnSpy = vi.spyOn(Logger, 'warn').mockImplementation(() => {});
 
       const localFilesStore = createLocalFilesStore();
@@ -1059,8 +1065,8 @@ describe('AuthController', () => {
       });
       const logoutSpy = vi.spyOn(Core.AuthApplication, 'logout').mockResolvedValue(undefined);
       const clearDatabaseSpy = vi.spyOn(Core, 'clearDatabase').mockResolvedValue(undefined);
-      const clearCookiesSpy = vi.spyOn(Utils, 'clearCookies').mockImplementation(() => {});
-      vi.spyOn(QueryClientFactory, 'clearAllQueryClients').mockImplementation(() => {});
+      const clearCookiesSpy = await spyOnClearCookies();
+      await spyOnClearAllQueryClients();
 
       const authStore = createAuthStore({
         session: null,
@@ -1101,8 +1107,8 @@ describe('AuthController', () => {
 
     it('should not run local cleanup twice when persisted session restore fails', async () => {
       const clearDatabaseSpy = vi.spyOn(Core, 'clearDatabase').mockResolvedValue(undefined);
-      const clearCookiesSpy = vi.spyOn(Utils, 'clearCookies').mockImplementation(() => {});
-      vi.spyOn(QueryClientFactory, 'clearAllQueryClients').mockImplementation(() => {});
+      const clearCookiesSpy = await spyOnClearCookies();
+      await spyOnClearAllQueryClients();
       const logoutSpy = vi.spyOn(Core.AuthApplication, 'logout').mockResolvedValue(undefined);
 
       const authStore = createAuthStore({
@@ -1124,8 +1130,8 @@ describe('AuthController', () => {
     it('should reset PubkySpecsSingleton even when homeserver logout fails (issue #538)', async () => {
       vi.spyOn(Core.AuthApplication, 'logout').mockRejectedValue(new Error('Pubky resolution failed'));
       vi.spyOn(Core, 'clearDatabase').mockResolvedValue(undefined);
-      vi.spyOn(Utils, 'clearCookies').mockImplementation(() => {});
-      vi.spyOn(QueryClientFactory, 'clearAllQueryClients').mockImplementation(() => {});
+      await spyOnClearCookies();
+      await spyOnClearAllQueryClients();
       vi.spyOn(Logger, 'warn').mockImplementation(() => {});
       const resetSpy = vi.spyOn(Core.PubkySpecsSingleton, 'reset');
 
@@ -1142,8 +1148,8 @@ describe('AuthController', () => {
     it('should clear all existing cookies', async () => {
       const logoutSpy = vi.spyOn(Core.AuthApplication, 'logout').mockResolvedValue(undefined);
       const clearDatabaseSpy = vi.spyOn(Core, 'clearDatabase').mockResolvedValue(undefined);
-      const clearCookiesSpy = vi.spyOn(Utils, 'clearCookies').mockImplementation(() => {});
-      vi.spyOn(QueryClientFactory, 'clearAllQueryClients').mockImplementation(() => {});
+      const clearCookiesSpy = await spyOnClearCookies();
+      await spyOnClearAllQueryClients();
 
       vi.spyOn(Core.useAuthStore, 'getState').mockReturnValue(createAuthStore());
       vi.spyOn(Core.useOnboardingStore, 'getState').mockReturnValue(createOnboardingStore());
@@ -1162,8 +1168,8 @@ describe('AuthController', () => {
     it('should throw error if clearing the database fails', async () => {
       const logoutSpy = vi.spyOn(Core.AuthApplication, 'logout').mockResolvedValue(undefined);
       const clearDatabaseSpy = vi.spyOn(Core, 'clearDatabase').mockRejectedValue(new Error('clear failed'));
-      const clearCookiesSpy = vi.spyOn(Utils, 'clearCookies').mockImplementation(() => {});
-      vi.spyOn(QueryClientFactory, 'clearAllQueryClients').mockImplementation(() => {});
+      const clearCookiesSpy = await spyOnClearCookies();
+      await spyOnClearAllQueryClients();
 
       vi.spyOn(Core.useAuthStore, 'getState').mockReturnValue(createAuthStore());
       vi.spyOn(Core.useOnboardingStore, 'getState').mockReturnValue(createOnboardingStore());

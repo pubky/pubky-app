@@ -43,7 +43,7 @@ export const BackupMethodCard = () => {
           {/* TODO: Re-enable when Pubky Ring export is ready
            <Organisms.DialogBackupExport mnemonic={mnemonic}>
             <Atoms.Button className="gap-2" disabled>
-              <Libs.Scan className="h-4 w-4" />
+              <FileText className="h-4 w-4" />
               <span>{mnemonic ? 'Export recovery phrase' : 'Export to Pubky Ring'}</span>
             </Atoms.Button>
            </Organisms.DialogBackupExport>

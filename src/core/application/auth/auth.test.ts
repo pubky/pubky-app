@@ -7,7 +7,8 @@ import { AuthErrorCode, ClientErrorCode, NetworkErrorCode, ServerErrorCode } fro
 import { Err } from '@libs/error/error.factories';
 import { ErrorCategory, ErrorService } from '@libs/error/error.types';
 import { HttpMethod } from '@libs/http/http.types';
-import * as libs from '@libs/utils/utils';
+
+const spyOnSleep = async () => vi.spyOn(await import('@libs/utils/utils'), 'sleep').mockResolvedValue(undefined);
 
 vi.mock('pubky-app-specs', () => ({
   default: vi.fn(() => Promise.resolve()),
@@ -193,8 +194,8 @@ describe('AuthApplication', () => {
 
     let sleepSpy: ReturnType<typeof vi.spyOn>;
 
-    beforeEach(() => {
-      sleepSpy = vi.spyOn(libs, 'sleep').mockResolvedValue(undefined);
+    beforeEach(async () => {
+      sleepSpy = await spyOnSleep();
     });
 
     it('should restore session successfully on first attempt', async () => {

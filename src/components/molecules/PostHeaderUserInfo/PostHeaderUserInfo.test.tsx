@@ -1,7 +1,7 @@
 import { render, screen, fireEvent } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { PostHeaderUserInfo } from './PostHeaderUserInfo';
-import * as Utils from '@libs/utils/utils';
+import { formatPublicKey } from '@libs/utils/utils';
 
 const { mockUserInfoPopover } = vi.hoisted(() => ({
   mockUserInfoPopover: vi.fn(
@@ -282,7 +282,7 @@ describe('PostHeaderUserInfo', () => {
   });
 
   it('formats public key correctly', () => {
-    const formatSpy = vi.spyOn(Utils, 'formatPublicKey');
+    const formatSpy = vi.mocked(formatPublicKey);
     formatSpy.mockReturnValue('userpubk');
 
     render(<PostHeaderUserInfo userId="userpubkykey" userName="Test User" />);
@@ -290,7 +290,7 @@ describe('PostHeaderUserInfo', () => {
     expect(formatSpy).toHaveBeenCalledWith({ key: 'userpubkykey' });
     expect(screen.getAllByText('@userpubk').length).toBeGreaterThan(0);
 
-    formatSpy.mockRestore();
+    formatSpy.mockReset();
   });
 
   it('renders popover content with user info', () => {
