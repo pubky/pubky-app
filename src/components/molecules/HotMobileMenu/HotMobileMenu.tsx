@@ -1,8 +1,8 @@
 'use client';
 
-import * as Atoms from '@/atoms';
-import * as Libs from '@/libs';
 import { useTranslations } from 'next-intl';
+import * as Libs from '@/libs';
+import { MobileTabBar, type MobileTabBarItem } from '../MobileTabBar';
 import { HotSection, type HotMobileMenuItem, type HotMobileMenuProps } from './HotMobileMenu.types';
 
 export const HOT_MOBILE_MENU_ITEMS: HotMobileMenuItem[] = [
@@ -15,9 +15,9 @@ export const HOT_MOBILE_MENU_ITEMS: HotMobileMenuItem[] = [
  * Mobile navigation menu for the Hot page.
  * Shows 3 tabs with icon + text: Tags, Users, Posts.
  * Only visible on mobile (< lg breakpoint).
- * Follows same positioning pattern as ProfilePageMobileMenu.
+ * Delegates rendering to the shared `MobileTabBar` molecule.
  *
- * Negative margin overrides:
+ * Negative margin overrides (passed via className):
  * - `-mx-6` cancels the parent ContentLayout container's `px-6` padding
  *   so the menu stretches full-width edge-to-edge.
  * - `-mt-6` cancels the parent flex container's `gap-6` above so the menu sits
@@ -26,45 +26,21 @@ export const HOT_MOBILE_MENU_ITEMS: HotMobileMenuItem[] = [
 export function HotMobileMenu({ activeSection, onSectionChange }: HotMobileMenuProps) {
   const t = useTranslations('hot');
 
-  return (
-    <Atoms.Container
-      overrideDefaults
-      data-testid="hot-mobile-menu"
-      className="mobile-menu-gradient-fade sticky top-(--header-height-mobile) z-(--z-mobile-menu) -mx-6 -mt-6 mb-6 bg-background lg:hidden"
-    >
-      <Atoms.Container overrideDefaults className="flex w-full">
-        {HOT_MOBILE_MENU_ITEMS.map((item) => {
-          const Icon = item.icon;
-          const isSelected = item.section === activeSection;
+  const items: MobileTabBarItem[] = HOT_MOBILE_MENU_ITEMS.map((item) => ({
+    key: item.section,
+    icon: item.icon,
+    label: t(item.section),
+    isActive: item.section === activeSection,
+    onSelect: () => onSectionChange(item.section),
+  }));
 
-          return (
-            <Atoms.Container
-              key={item.section}
-              overrideDefaults
-              className={Libs.cn(
-                'flex flex-1 justify-center border-b px-0 py-1.5',
-                isSelected ? 'border-foreground' : 'border-border',
-              )}
-            >
-              <Atoms.Button
-                overrideDefaults
-                onClick={() => onSectionChange(item.section)}
-                className="flex items-center gap-2 px-2.5 py-2"
-                aria-label={t(item.section)}
-                aria-current={isSelected ? 'page' : undefined}
-              >
-                <Icon size={20} className={isSelected ? 'text-foreground' : 'text-muted-foreground'} />
-                <Atoms.Typography
-                  as="span"
-                  className={Libs.cn('text-sm font-medium', isSelected ? 'text-foreground' : 'text-muted-foreground')}
-                >
-                  {t(item.section)}
-                </Atoms.Typography>
-              </Atoms.Button>
-            </Atoms.Container>
-          );
-        })}
-      </Atoms.Container>
-    </Atoms.Container>
+  return (
+    <MobileTabBar
+      items={items}
+      showLabels
+      position="sticky"
+      className="-mx-6 -mt-6 mb-6"
+      data-testid="hot-mobile-menu"
+    />
   );
 }

@@ -1,9 +1,9 @@
 // Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
 
-exports[`SettingsMobileMenu - Snapshots > matches snapshot 1`] = `
+exports[`MobileTabBar - Snapshots > matches snapshot for icon-only sticky (default) 1`] = `
 <div
-  class="mobile-menu-gradient-fade z-(--z-mobile-menu) bg-background lg:hidden fixed top-(--header-height-mobile) right-0 left-0"
-  data-testid="settings-mobile-menu"
+  class="mobile-menu-gradient-fade z-(--z-mobile-menu) bg-background lg:hidden sticky top-(--header-height-mobile)"
+  data-testid="mobile-tab-bar"
 >
   <div
     class="flex w-full"
@@ -15,13 +15,13 @@ exports[`SettingsMobileMenu - Snapshots > matches snapshot 1`] = `
     >
       <button
         aria-current="page"
-        aria-label="Account"
+        aria-label="Tags"
         class="px-2.5 py-2"
         data-slot="button"
       >
         <svg
           aria-hidden="true"
-          class="lucide lucide-user-round text-foreground"
+          class="lucide lucide-tag text-foreground"
           fill="none"
           height="20"
           stroke="currentColor"
@@ -32,13 +32,50 @@ exports[`SettingsMobileMenu - Snapshots > matches snapshot 1`] = `
           width="20"
           xmlns="http://www.w3.org/2000/svg"
         >
+          <path
+            d="M12.586 2.586A2 2 0 0 0 11.172 2H4a2 2 0 0 0-2 2v7.172a2 2 0 0 0 .586 1.414l8.704 8.704a2.426 2.426 0 0 0 3.42 0l6.58-6.58a2.426 2.426 0 0 0 0-3.42z"
+          />
           <circle
-            cx="12"
+            cx="7.5"
+            cy="7.5"
+            fill="currentColor"
+            r=".5"
+          />
+        </svg>
+      </button>
+    </div>
+    <div
+      class="flex flex-1 justify-center border-b px-0 py-1.5 border-border"
+      data-testid="container"
+    >
+      <button
+        aria-label="Users"
+        class="px-2.5 py-2"
+        data-slot="button"
+      >
+        <svg
+          aria-hidden="true"
+          class="lucide lucide-users-round text-muted-foreground"
+          fill="none"
+          height="20"
+          stroke="currentColor"
+          stroke-linecap="round"
+          stroke-linejoin="round"
+          stroke-width="2"
+          viewBox="0 0 24 24"
+          width="20"
+          xmlns="http://www.w3.org/2000/svg"
+        >
+          <path
+            d="M18 21a8 8 0 0 0-16 0"
+          />
+          <circle
+            cx="10"
             cy="8"
             r="5"
           />
           <path
-            d="M20 21a8 8 0 0 0-16 0"
+            d="M22 20c0-3.37-2-6.5-4-8a5 5 0 0 0-.45-8.3"
           />
         </svg>
       </button>
@@ -48,13 +85,13 @@ exports[`SettingsMobileMenu - Snapshots > matches snapshot 1`] = `
       data-testid="container"
     >
       <button
-        aria-label="Notifications"
+        aria-label="Posts"
         class="px-2.5 py-2"
         data-slot="button"
       >
         <svg
           aria-hidden="true"
-          class="lucide lucide-bell text-muted-foreground"
+          class="lucide lucide-sticky-note text-muted-foreground"
           fill="none"
           height="20"
           stroke="currentColor"
@@ -66,26 +103,40 @@ exports[`SettingsMobileMenu - Snapshots > matches snapshot 1`] = `
           xmlns="http://www.w3.org/2000/svg"
         >
           <path
-            d="M10.268 21a2 2 0 0 0 3.464 0"
+            d="M21 9a2.4 2.4 0 0 0-.706-1.706l-3.588-3.588A2.4 2.4 0 0 0 15 3H5a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2z"
           />
           <path
-            d="M3.262 15.326A1 1 0 0 0 4 17h16a1 1 0 0 0 .74-1.673C19.41 13.956 18 12.499 18 8A6 6 0 0 0 6 8c0 4.499-1.411 5.956-2.738 7.326"
+            d="M15 3v5a1 1 0 0 0 1 1h5"
           />
         </svg>
       </button>
     </div>
+  </div>
+</div>
+`;
+
+exports[`MobileTabBar - Snapshots > matches snapshot for showLabels + sticky 1`] = `
+<div
+  class="mobile-menu-gradient-fade z-(--z-mobile-menu) bg-background lg:hidden sticky top-(--header-height-mobile)"
+  data-testid="mobile-tab-bar"
+>
+  <div
+    class="flex w-full"
+    data-testid="container"
+  >
     <div
-      class="flex flex-1 justify-center border-b px-0 py-1.5 border-border"
+      class="flex flex-1 justify-center border-b px-0 py-1.5 border-foreground"
       data-testid="container"
     >
       <button
-        aria-label="Privacy & Safety"
-        class="px-2.5 py-2"
+        aria-current="page"
+        aria-label="Tags"
+        class="px-2.5 py-2 flex items-center gap-2"
         data-slot="button"
       >
         <svg
           aria-hidden="true"
-          class="lucide lucide-shield text-muted-foreground"
+          class="lucide lucide-tag text-foreground"
           fill="none"
           height="20"
           stroke="currentColor"
@@ -97,85 +148,21 @@ exports[`SettingsMobileMenu - Snapshots > matches snapshot 1`] = `
           xmlns="http://www.w3.org/2000/svg"
         >
           <path
-            d="M20 13c0 5-3.5 7.5-7.66 8.95a1 1 0 0 1-.67-.01C7.5 20.5 4 18 4 13V6a1 1 0 0 1 1-1c2 0 4.5-1.2 6.24-2.72a1.17 1.17 0 0 1 1.52 0C14.51 3.81 17 5 19 5a1 1 0 0 1 1 1z"
+            d="M12.586 2.586A2 2 0 0 0 11.172 2H4a2 2 0 0 0-2 2v7.172a2 2 0 0 0 .586 1.414l8.704 8.704a2.426 2.426 0 0 0 3.42 0l6.58-6.58a2.426 2.426 0 0 0 0-3.42z"
           />
-        </svg>
-      </button>
-    </div>
-    <div
-      class="flex flex-1 justify-center border-b px-0 py-1.5 border-border"
-      data-testid="container"
-    >
-      <button
-        aria-label="Muted Users"
-        class="px-2.5 py-2"
-        data-slot="button"
-      >
-        <svg
-          aria-hidden="true"
-          class="lucide lucide-megaphone-off text-muted-foreground"
-          fill="none"
-          height="20"
-          stroke="currentColor"
-          stroke-linecap="round"
-          stroke-linejoin="round"
-          stroke-width="2"
-          viewBox="0 0 24 24"
-          width="20"
-          xmlns="http://www.w3.org/2000/svg"
-        >
-          <path
-            d="M11.636 6A13 13 0 0 0 19.4 3.2 1 1 0 0 1 21 4v11.344"
-          />
-          <path
-            d="M14.378 14.357A13 13 0 0 0 11 14H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h1"
-          />
-          <path
-            d="m2 2 20 20"
-          />
-          <path
-            d="M6 14a12 12 0 0 0 2.4 7.2 2 2 0 0 0 3.2-2.4A8 8 0 0 1 10 14"
-          />
-          <path
-            d="M8 8v6"
-          />
-        </svg>
-      </button>
-    </div>
-    <div
-      class="flex flex-1 justify-center border-b px-0 py-1.5 border-border"
-      data-testid="container"
-    >
-      <button
-        aria-label="Language"
-        class="px-2.5 py-2"
-        data-slot="button"
-      >
-        <svg
-          aria-hidden="true"
-          class="lucide lucide-globe text-muted-foreground"
-          fill="none"
-          height="20"
-          stroke="currentColor"
-          stroke-linecap="round"
-          stroke-linejoin="round"
-          stroke-width="2"
-          viewBox="0 0 24 24"
-          width="20"
-          xmlns="http://www.w3.org/2000/svg"
-        >
           <circle
-            cx="12"
-            cy="12"
-            r="10"
-          />
-          <path
-            d="M12 2a14.5 14.5 0 0 0 0 20 14.5 14.5 0 0 0 0-20"
-          />
-          <path
-            d="M2 12h20"
+            cx="7.5"
+            cy="7.5"
+            fill="currentColor"
+            r=".5"
           />
         </svg>
+        <span
+          class="text-sm font-medium text-foreground"
+          data-testid="typography"
+        >
+          Tags
+        </span>
       </button>
     </div>
     <div
@@ -183,13 +170,13 @@ exports[`SettingsMobileMenu - Snapshots > matches snapshot 1`] = `
       data-testid="container"
     >
       <button
-        aria-label="Help"
-        class="px-2.5 py-2"
+        aria-label="Users"
+        class="px-2.5 py-2 flex items-center gap-2"
         data-slot="button"
       >
         <svg
           aria-hidden="true"
-          class="lucide lucide-circle-question-mark text-muted-foreground"
+          class="lucide lucide-users-round text-muted-foreground"
           fill="none"
           height="20"
           stroke="currentColor"
@@ -200,18 +187,61 @@ exports[`SettingsMobileMenu - Snapshots > matches snapshot 1`] = `
           width="20"
           xmlns="http://www.w3.org/2000/svg"
         >
+          <path
+            d="M18 21a8 8 0 0 0-16 0"
+          />
           <circle
-            cx="12"
-            cy="12"
-            r="10"
+            cx="10"
+            cy="8"
+            r="5"
           />
           <path
-            d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"
-          />
-          <path
-            d="M12 17h.01"
+            d="M22 20c0-3.37-2-6.5-4-8a5 5 0 0 0-.45-8.3"
           />
         </svg>
+        <span
+          class="text-sm font-medium text-muted-foreground"
+          data-testid="typography"
+        >
+          Users
+        </span>
+      </button>
+    </div>
+    <div
+      class="flex flex-1 justify-center border-b px-0 py-1.5 border-border"
+      data-testid="container"
+    >
+      <button
+        aria-label="Posts"
+        class="px-2.5 py-2 flex items-center gap-2"
+        data-slot="button"
+      >
+        <svg
+          aria-hidden="true"
+          class="lucide lucide-sticky-note text-muted-foreground"
+          fill="none"
+          height="20"
+          stroke="currentColor"
+          stroke-linecap="round"
+          stroke-linejoin="round"
+          stroke-width="2"
+          viewBox="0 0 24 24"
+          width="20"
+          xmlns="http://www.w3.org/2000/svg"
+        >
+          <path
+            d="M21 9a2.4 2.4 0 0 0-.706-1.706l-3.588-3.588A2.4 2.4 0 0 0 15 3H5a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2z"
+          />
+          <path
+            d="M15 3v5a1 1 0 0 0 1 1h5"
+          />
+        </svg>
+        <span
+          class="text-sm font-medium text-muted-foreground"
+          data-testid="typography"
+        >
+          Posts
+        </span>
       </button>
     </div>
   </div>

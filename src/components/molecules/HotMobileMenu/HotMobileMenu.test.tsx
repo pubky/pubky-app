@@ -17,25 +17,39 @@ describe('HotMobileMenu', () => {
     });
   });
 
-  it('has correct structure with sticky positioning', () => {
-    const { container } = render(<HotMobileMenu activeSection={HotSection.TAGS} onSectionChange={() => {}} />);
-    const rootElement = container.firstChild as HTMLElement;
-    expect(rootElement).toHaveClass(
-      'sticky',
-      'top-(--header-height-mobile)',
-      'z-(--z-mobile-menu)',
-      '-mx-6',
-      '-mt-6',
-      'mb-6',
-      'bg-background',
-      'lg:hidden',
-    );
-  });
-
   it('renders correct number of menu items', () => {
     const { container } = render(<HotMobileMenu activeSection={HotSection.TAGS} onSectionChange={() => {}} />);
     const buttons = container.querySelectorAll('button');
     expect(buttons).toHaveLength(HOT_MOBILE_MENU_ITEMS.length);
+  });
+
+  it('renders text labels alongside icons (showLabels mode)', () => {
+    const { container } = render(<HotMobileMenu activeSection={HotSection.TAGS} onSectionChange={() => {}} />);
+
+    HOT_MOBILE_MENU_ITEMS.forEach((item) => {
+      expect(screen.getByText(item.section)).toBeInTheDocument();
+    });
+
+    const icons = container.querySelectorAll('svg');
+    expect(icons).toHaveLength(HOT_MOBILE_MENU_ITEMS.length);
+  });
+
+  it('applies Hot-specific margin overrides via className passthrough', () => {
+    const { container } = render(<HotMobileMenu activeSection={HotSection.TAGS} onSectionChange={() => {}} />);
+    const rootElement = container.firstChild as HTMLElement;
+    expect(rootElement).toHaveClass('-mx-6', '-mt-6', 'mb-6');
+  });
+
+  it('renders with sticky positioning', () => {
+    const { container } = render(<HotMobileMenu activeSection={HotSection.TAGS} onSectionChange={() => {}} />);
+    const rootElement = container.firstChild as HTMLElement;
+    expect(rootElement).toHaveClass('sticky', 'top-(--header-height-mobile)');
+  });
+
+  it('exposes the hot-mobile-menu data-testid on the root', () => {
+    const { container } = render(<HotMobileMenu activeSection={HotSection.TAGS} onSectionChange={() => {}} />);
+    const rootElement = container.firstChild as HTMLElement;
+    expect(rootElement).toHaveAttribute('data-testid', 'hot-mobile-menu');
   });
 
   it('marks the active item with aria-current="page"', () => {
@@ -43,52 +57,6 @@ describe('HotMobileMenu', () => {
     const activeButton = container.querySelector('button[aria-current="page"]');
     expect(activeButton).toBeInTheDocument();
     expect(activeButton).toHaveAttribute('aria-label', 'users');
-  });
-
-  it('applies correct border classes to active and inactive items', () => {
-    const { container } = render(<HotMobileMenu activeSection={HotSection.USERS} onSectionChange={() => {}} />);
-    const items = container.querySelectorAll('div[class*="border-b"]');
-
-    const usersIndex = HOT_MOBILE_MENU_ITEMS.findIndex((item) => item.section === HotSection.USERS);
-    const activeItem = items[usersIndex];
-    expect(activeItem).toHaveClass('border-foreground');
-
-    items.forEach((item, index) => {
-      if (index !== usersIndex) {
-        expect(item).toHaveClass('border-border');
-      }
-    });
-  });
-
-  it('applies correct text color classes to icons', () => {
-    const { container } = render(<HotMobileMenu activeSection={HotSection.USERS} onSectionChange={() => {}} />);
-    const icons = container.querySelectorAll('svg');
-
-    const usersIndex = HOT_MOBILE_MENU_ITEMS.findIndex((item) => item.section === HotSection.USERS);
-    const activeIcon = icons[usersIndex];
-    expect(activeIcon).toHaveClass('text-foreground');
-
-    icons.forEach((icon, index) => {
-      if (index !== usersIndex) {
-        expect(icon).toHaveClass('text-muted-foreground');
-      }
-    });
-  });
-
-  it('has correct button structure with padding', () => {
-    const { container } = render(<HotMobileMenu activeSection={HotSection.TAGS} onSectionChange={() => {}} />);
-    const buttons = container.querySelectorAll('button');
-    buttons.forEach((button) => {
-      expect(button).toHaveClass('px-2.5', 'py-2');
-    });
-  });
-
-  it('has correct container structure with flex and border', () => {
-    const { container } = render(<HotMobileMenu activeSection={HotSection.TAGS} onSectionChange={() => {}} />);
-    const items = container.querySelectorAll('div[class*="border-b"]');
-    items.forEach((item) => {
-      expect(item).toHaveClass('flex', 'flex-1', 'justify-center', 'border-b', 'px-0', 'py-1.5');
-    });
   });
 
   it('calls onSectionChange with correct section when clicked', async () => {
@@ -107,17 +75,6 @@ describe('HotMobileMenu', () => {
     expect(onSectionChange).toHaveBeenCalledWith(HotSection.TAGS);
 
     expect(onSectionChange).toHaveBeenCalledTimes(3);
-  });
-
-  it('renders text labels alongside icons', () => {
-    const { container } = render(<HotMobileMenu activeSection={HotSection.TAGS} onSectionChange={() => {}} />);
-
-    HOT_MOBILE_MENU_ITEMS.forEach((item) => {
-      expect(screen.getByText(item.section)).toBeInTheDocument();
-    });
-
-    const icons = container.querySelectorAll('svg');
-    expect(icons).toHaveLength(HOT_MOBILE_MENU_ITEMS.length);
   });
 });
 

@@ -1,10 +1,10 @@
 'use client';
 
 import * as React from 'react';
-import * as Atoms from '@/atoms';
 import * as Libs from '@/libs';
 import * as Hooks from '@/hooks';
 import * as Types from '@/app/profile/types';
+import { MobileTabBar, type MobileTabBarItem } from '../MobileTabBar';
 
 export interface ProfileMenuItem {
   icon: React.ComponentType<{ size?: number; className?: string }>;
@@ -41,6 +41,15 @@ export interface ProfilePageMobileMenuProps {
   isOwnProfile?: boolean;
 }
 
+/**
+ * Mobile navigation menu for profile pages.
+ * Delegates rendering to the shared `MobileTabBar` molecule.
+ *
+ * Owns profile-specific semantics:
+ * - Filters items via `isOwnProfile` (e.g. hides Notifications on other users).
+ * - Wraps click handlers with `requireAuth` for unauthenticated users.
+ * - Uses raw English labels (no i18n sweep yet).
+ */
 export function ProfilePageMobileMenu({
   activePage,
   onPageChangeAction,
@@ -58,45 +67,13 @@ export function ProfilePageMobileMenu({
     });
   }, [isOwnProfile]);
 
-  // Handle item click - require auth for unauthenticated users
-  const handleItemClick = (pageType: Types.ProfilePageType) => {
-    requireAuth(() => onPageChangeAction(pageType));
-  };
+  const items: MobileTabBarItem[] = visibleItems.map((item) => ({
+    key: item.pageType,
+    icon: item.icon,
+    label: item.label,
+    isActive: item.pageType === activePage,
+    onSelect: () => requireAuth(() => onPageChangeAction(item.pageType)),
+  }));
 
-  return (
-    <Atoms.Container
-      overrideDefaults={true}
-      className="mobile-menu-gradient-fade sticky top-(--header-height-mobile) z-(--z-mobile-menu) bg-background lg:hidden"
-      data-testid="profile-page-mobile-menu"
-    >
-      <Atoms.Container overrideDefaults={true} className="flex w-full" data-testid="profile-page-mobile-menu-items">
-        {visibleItems.map((item, index) => {
-          const Icon = item.icon;
-          const isSelected = item.pageType === activePage;
-
-          return (
-            <Atoms.Container
-              key={index}
-              overrideDefaults={true}
-              className={Libs.cn(
-                'flex flex-1 justify-center border-b px-0 py-1.5',
-                'data-testid="profile-page-mobile-menu-item"',
-                isSelected ? 'border-foreground' : 'border-border',
-              )}
-            >
-              <Atoms.Button
-                overrideDefaults
-                onClick={() => handleItemClick(item.pageType)}
-                className="px-2.5 py-2"
-                aria-label={item.label}
-                aria-current={isSelected ? 'page' : undefined}
-              >
-                <Icon size={20} className={isSelected ? 'text-foreground' : 'text-muted-foreground'} />
-              </Atoms.Button>
-            </Atoms.Container>
-          );
-        })}
-      </Atoms.Container>
-    </Atoms.Container>
-  );
+  return <MobileTabBar items={items} position="sticky" data-testid="profile-page-mobile-menu" />;
 }

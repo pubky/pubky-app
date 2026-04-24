@@ -28,6 +28,20 @@ describe('SettingsMobileMenu', () => {
     const { container } = render(<SettingsMobileMenu />);
     expect(container.firstChild).toHaveClass('lg:hidden');
   });
+
+  it('uses the mobile-menu z-index (consolidated from --z-sticky-header)', () => {
+    const { container } = render(<SettingsMobileMenu />);
+    const root = container.firstChild as HTMLElement;
+    expect(root).toHaveClass('z-(--z-mobile-menu)');
+    expect(root).not.toHaveClass('z-(--z-sticky-header)');
+  });
+
+  it('preserves fixed positioning', () => {
+    const { container } = render(<SettingsMobileMenu />);
+    const root = container.firstChild as HTMLElement;
+    expect(root).toHaveClass('fixed', 'top-(--header-height-mobile)', 'right-0', 'left-0');
+    expect(root).not.toHaveClass('sticky');
+  });
 });
 
 describe('SettingsMobileMenu - Snapshots', () => {
