@@ -23,6 +23,8 @@ export * from './HeaderJoin';
 export * from './HeaderSignIn';
 export * from './Settings/HelpContent';
 export * from './Home';
+export * from './HotMobileMenu';
+export * from './MobileTabBar';
 export * from './HotTagCard';
 export * from './InputField';
 export * from './Install';
