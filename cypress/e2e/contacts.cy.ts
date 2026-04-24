@@ -178,4 +178,72 @@ describe('contacts', () => {
           });
       });
   });
+
+  it('loads complete own following list across pagination', () => {
+    const runId = Date.now();
+    const ownerProfile = {
+      name: `Pagination Owner ${runId}`,
+      pubkyAlias: `pagination_owner_${runId}`,
+    };
+    const followedProfiles = Array.from({ length: 11 }, (_, index) => ({
+      name: `Pagination Follow ${index + 1} ${runId}`,
+      pubkyAlias: `pagination_follow_${index + 1}_${runId}`,
+    }));
+
+    // Create owner account
+    cy.onboardAsNewUser(
+      ownerProfile.name,
+      'Own following pagination owner',
+      [BackupType.RecoveryPhraseWithoutConfirmation],
+      ownerProfile.pubkyAlias,
+    );
+    cy.signOut(HasBackedUp.Yes);
+
+    // Create 11 target accounts so Following requires pagination (> 10)
+    followedProfiles.forEach((profile) => {
+      cy.onboardAsNewUser(
+        profile.name,
+        `Own following pagination target ${profile.pubkyAlias}`,
+        [BackupType.RecoveryPhraseWithoutConfirmation],
+        profile.pubkyAlias,
+      );
+      cy.signOut(HasBackedUp.Yes);
+    });
+
+    // Sign back in as owner
+    cy.get(`@recoveryPhrase-${ownerProfile.name}`).then((recoveryPhrase) => {
+      cy.signInWithRecoveryPhrase(recoveryPhrase.toString());
+    });
+
+    // Follow all target accounts
+    followedProfiles.forEach((profile) => {
+      cy.get(`@${profile.pubkyAlias}`).then((pubky) => {
+        searchAndFollowProfile(`${pubky}`, profile.name);
+      });
+    });
+
+    goToProfilePageFromHeader();
+
+    // Quick parity checks for other tabs
+    cy.get('[data-cy="profile-filter-item-followers-count"]').should('have.text', 0);
+    cy.get('[data-cy="profile-filter-item-friends-count"]').should('have.text', 0);
+
+    // Validate Following count and open Following tab
+    cy.get('[data-cy="profile-filter-item-following-count"]').should('have.text', followedProfiles.length).click();
+
+    // Trigger infinite scroll page 2 load
+    cy.scrollTo('bottom', { ensureScrollable: false });
+    cy.wait(1500);
+    cy.scrollTo('bottom', { ensureScrollable: false });
+
+    // Following list should include all followed users (not truncated at first page)
+    cy.get('[data-cy="profile-connections-list"]').children().should('have.length', followedProfiles.length);
+    followedProfiles.forEach((profile) => {
+      cy.get('[data-cy="profile-connections-list"]')
+        .contains('[data-cy="profile-follower-item-name"]', profile.name)
+        .should('be.visible');
+    });
+
+    cy.signOut(HasBackedUp.Yes);
+  });
 });

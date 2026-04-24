@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { renderHook, waitFor } from '@testing-library/react';
+import { act, renderHook, waitFor } from '@testing-library/react';
 import { useProfileConnections, CONNECTION_TYPE } from './useProfileConnections';
 import * as Core from '@/core';
 
@@ -69,8 +69,14 @@ vi.mock('@/config', () => ({
 let mockUserDetailsMap = new Map<Core.Pubky, Core.NexusUserDetails>();
 let mockUserCountsMap = new Map<Core.Pubky, Core.NexusUserCounts>();
 let mockUserRelationshipsMap = new Map<Core.Pubky, Core.UserRelationshipsModelSchema>();
+let mockCachedStream: Core.Pubky[] | null = null;
 
 const mockUseLiveQuery = vi.fn(<T,>(queryFn: () => Promise<T> | T, deps: unknown[], defaultValue: T): T => {
+  // Stream cache query: deps is [streamId]
+  if (deps && deps.length === 1 && typeof deps[0] === 'string') {
+    return mockCachedStream as T;
+  }
+
   // Check which query function is being called based on dependencies
   if (deps && deps[0] && Array.isArray(deps[0])) {
     // Determine which map to return based on the query function
@@ -107,6 +113,7 @@ describe('useProfileConnections', () => {
     mockUserDetailsMap = new Map();
     mockUserCountsMap = new Map();
     mockUserRelationshipsMap = new Map();
+    mockCachedStream = null;
     mockMocks.mockGetAvatarUrl.mockReturnValue(null);
   });
 
@@ -350,6 +357,85 @@ describe('useProfileConnections', () => {
       });
 
       expect(result.current.hasMore).toBe(false);
+    });
+
+    it('loads all pages for own FOLLOWING without truncating page 2 and stops on short page', async () => {
+      const page1 = Array.from({ length: 20 }, (_, i) => `user-${i + 1}` as Core.Pubky);
+      const page2 = Array.from({ length: 20 }, (_, i) => `user-${i + 21}` as Core.Pubky);
+      const page3 = Array.from({ length: 5 }, (_, i) => `user-${i + 41}` as Core.Pubky);
+
+      mockMocks.mockGetOrFetchStreamSlice
+        .mockResolvedValueOnce({
+          nextPageIds: page1,
+          skip: 20,
+        })
+        .mockResolvedValueOnce({
+          nextPageIds: page2,
+          skip: 40,
+        })
+        .mockResolvedValueOnce({
+          nextPageIds: page3,
+          skip: 45,
+        });
+
+      const { result } = renderHook(() => useProfileConnections(CONNECTION_TYPE.FOLLOWING));
+
+      await waitFor(() => {
+        expect(result.current.isLoading).toBe(false);
+      });
+
+      expect(result.current.connections.map((connection) => connection.id)).toEqual(page1);
+      expect(result.current.hasMore).toBe(true);
+
+      await act(async () => {
+        await result.current.loadMore();
+      });
+
+      await waitFor(() => {
+        expect(result.current.connections).toHaveLength(40);
+      });
+
+      expect(result.current.connections.map((connection) => connection.id)).toEqual([...page1, ...page2]);
+      expect(result.current.hasMore).toBe(true);
+
+      await act(async () => {
+        await result.current.loadMore();
+      });
+
+      await waitFor(() => {
+        expect(result.current.connections).toHaveLength(45);
+      });
+
+      expect(result.current.connections.map((connection) => connection.id)).toEqual([...page1, ...page2, ...page3]);
+      expect(result.current.hasMore).toBe(false);
+    });
+
+    it('syncs own FOLLOWING list when cached stream shrinks after unfollow', async () => {
+      const initialFollowing = ['user-1', 'user-2', 'user-3'] as Core.Pubky[];
+      const afterUnfollow = ['user-1', 'user-2'] as Core.Pubky[];
+
+      mockCachedStream = initialFollowing;
+      mockMocks.mockGetOrFetchStreamSlice.mockResolvedValue({
+        nextPageIds: initialFollowing,
+        skip: 3,
+      });
+
+      const { result, rerender } = renderHook(() => useProfileConnections(CONNECTION_TYPE.FOLLOWING));
+
+      await waitFor(() => {
+        expect(result.current.isLoading).toBe(false);
+      });
+
+      await waitFor(() => {
+        expect(result.current.connections.map((connection) => connection.id)).toEqual(initialFollowing);
+      });
+
+      mockCachedStream = afterUnfollow;
+      rerender();
+
+      await waitFor(() => {
+        expect(result.current.connections.map((connection) => connection.id)).toEqual(afterUnfollow);
+      });
     });
   });
 });

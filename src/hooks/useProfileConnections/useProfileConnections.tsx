@@ -71,16 +71,10 @@ export function useProfileConnections(type: ConnectionType, userId?: Core.Pubky)
       const hasPaginated = skip > Config.NEXUS_USERS_PER_PAGE;
       if (hasPaginated) return;
 
-      // For own following list: only sync when cache has MORE users (new follows)
-      // Block sync when cache has fewer users (unfollows) to preserve UI state
-      // This allows new follows to appear reactively while keeping unfollowed users visible
-      const isOwnFollowing = targetUserId === currentUserPubky && type === 'following';
-      if (isOwnFollowing && cachedStream.length <= userIdsRef.current.length) return;
-
       userIdsRef.current = cachedStream;
       setUserIds(cachedStream);
     }
-  }, [cachedStream, isLoading, skip, targetUserId, currentUserPubky, type]);
+  }, [cachedStream, isLoading, skip]);
 
   // Subscribe to user details from local database (reactive via Controller)
   const userDetailsMap = useLiveQuery(
@@ -215,37 +209,13 @@ export function useProfileConnections(type: ConnectionType, userId?: Core.Pubky)
       try {
         const currentSkip = isInitialLoad ? 0 : skip;
 
-        // For own following list, snapshot the cache BEFORE fetch
-        // The fetch may pollute the cache with stale API data
-        const isOwnFollowing = targetUserId === currentUserPubky && type === 'following';
-        const preFetchCache = isOwnFollowing ? await Core.LocalStreamUsersService.findById(streamId) : null;
-
         const result = await Core.StreamUserController.getOrFetchStreamSlice({
           streamId,
           skip: currentSkip,
           limit: Config.NEXUS_USERS_PER_PAGE,
         });
 
-        let pageIds = result.nextPageIds;
-
-        // Filter API results against pre-fetch cache snapshot
-        // This handles eventual consistency where API returns unfollowed users
-        if (preFetchCache) {
-          const cachedSet = new Set(preFetchCache.stream);
-          pageIds = pageIds.filter((id) => cachedSet.has(id));
-
-          // Get current cache after fetch (may contain new follows added during session)
-          const postFetchCache = await Core.LocalStreamUsersService.findById(streamId);
-
-          // Merge: start with pre-fetch snapshot, then add any NEW follows from post-fetch
-          // that weren't in the pre-fetch (these are new follows made during the session)
-          const preFetchSet = new Set(preFetchCache.stream);
-          const newFollows = postFetchCache?.stream.filter((id) => !preFetchSet.has(id)) ?? [];
-          const mergedStream = [...preFetchCache.stream, ...newFollows];
-
-          // Reset cache to merged state (preserves new follows while undoing API pollution)
-          await Core.LocalStreamUsersService.upsert({ streamId, stream: mergedStream });
-        }
+        const pageIds = result.nextPageIds;
 
         // Handle empty results
         if (pageIds.length === 0) {
@@ -283,7 +253,7 @@ export function useProfileConnections(type: ConnectionType, userId?: Core.Pubky)
         }
       }
     },
-    [streamId, skip, targetUserId, currentUserPubky, type],
+    [streamId, skip],
   );
 
   /**
