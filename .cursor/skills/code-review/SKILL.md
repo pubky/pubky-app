@@ -193,7 +193,7 @@ Each finding:
   "severity": "medium",
   "what": "Component manually formats timestamps with Date math instead of using timeAgo() from src/libs/",
   "why": "Duplicates existing utility and diverges from the formatting used elsewhere in the app",
-  "fix": "import { timeAgo } from '@/libs' and replace the manual calculation"
+  "fix": "import { timeAgo } from '@libs/utils/utils' and replace the manual calculation"
 }
 
 If nothing to simplify, return an empty array: []

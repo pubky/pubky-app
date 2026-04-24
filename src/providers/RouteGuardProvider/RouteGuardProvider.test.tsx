@@ -1,6 +1,7 @@
 import React from 'react';
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { render, screen, act } from '@testing-library/react';
+import { Logger } from '@libs/logger/logger';
 
 // Hoisted mocks
 const mocks = vi.hoisted(() => {
@@ -68,13 +69,18 @@ vi.mock('@/atoms', () => ({
   Spinner: (props: Record<string, unknown>) => <div data-testid="spinner" {...props} />,
 }));
 
-// Mock @/libs
-vi.mock('@/libs', () => ({
+vi.mock('@libs/logger/logger', () => ({
   Logger: { error: vi.fn(), warn: vi.fn(), info: vi.fn() },
+}));
+vi.mock('@libs/error/error.factories', () => ({
   Err: {
-    timeout: (code: string, msg: string, _opts: unknown) => new Error(msg),
+    timeout: (_code: string, msg: string, _opts: unknown) => new Error(msg),
   },
+}));
+vi.mock('@libs/error/error.codes', () => ({
   TimeoutErrorCode: { REQUEST_TIMEOUT: 'REQUEST_TIMEOUT' },
+}));
+vi.mock('@libs/error/error.types', () => ({
   ErrorService: { Local: 'Local' },
 }));
 
@@ -182,8 +188,6 @@ describe('RouteGuardProvider — migration resync', () => {
     mocks.wasDbReset = true;
     mocks.mockResync.mockRejectedValue(new Error('resync failed'));
 
-    const { Logger } = await import('@/libs');
-
     render(
       <RouteGuardProvider>
         <div>Protected Content</div>
@@ -211,8 +215,6 @@ describe('RouteGuardProvider — migration resync', () => {
     mocks.wasDbReset = true;
     // resync never resolves — the timeout will fire
     mocks.mockResync.mockReturnValue(new Promise(() => {}));
-
-    const { Logger } = await import('@/libs');
 
     render(
       <RouteGuardProvider>

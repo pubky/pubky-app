@@ -502,7 +502,7 @@ This pattern must be repeated in every hook that uses `useLiveQuery` (~40 hooks)
 // src/hooks/useSafeLiveQuery/useSafeLiveQuery.ts
 import { useState, type DependencyList } from 'react';
 import { useLiveQuery } from 'dexie-react-hooks';
-import * as Libs from '@/libs';
+import { Logger } from '@libs/logger/logger';
 
 export interface UseSafeLiveQueryResult<T> {
   data: T | undefined;

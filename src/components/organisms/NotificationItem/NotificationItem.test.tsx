@@ -3,7 +3,7 @@ import { render, screen, fireEvent } from '@testing-library/react';
 import { NotificationItem } from './NotificationItem';
 import { NotificationType } from '@/core/models/notification/notification.types';
 import * as Core from '@/core';
-import * as Libs from '@/libs';
+import { formatNotificationTime } from '@libs/utils/utils';
 
 // Hoisted mocks for isPostDeleted
 const { mockIsPostDeleted } = vi.hoisted(() => ({
@@ -174,8 +174,8 @@ describe('NotificationItem', () => {
 
   it('renders timestamp', () => {
     render(<NotificationItem notification={baseNotification} isUnread={false} />);
-    expect(Libs.formatNotificationTime).toHaveBeenCalledWith(baseNotification.timestamp, false);
-    expect(Libs.formatNotificationTime).toHaveBeenCalledWith(baseNotification.timestamp, true);
+    expect(formatNotificationTime).toHaveBeenCalledWith(baseNotification.timestamp, false);
+    expect(formatNotificationTime).toHaveBeenCalledWith(baseNotification.timestamp, true);
   });
 
   it('renders notification icon', () => {

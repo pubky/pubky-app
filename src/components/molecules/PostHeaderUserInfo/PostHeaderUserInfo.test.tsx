@@ -1,7 +1,7 @@
 import { render, screen, fireEvent } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { PostHeaderUserInfo } from './PostHeaderUserInfo';
-import * as Libs from '@/libs';
+import * as Utils from '@libs/utils/utils';
 
 const { mockUserInfoPopover } = vi.hoisted(() => ({
   mockUserInfoPopover: vi.fn(
@@ -190,9 +190,9 @@ vi.mock('@/molecules', async (importOriginal) => {
   };
 });
 
-// Mock libs
-vi.mock('@/libs', async (importOriginal) => {
-  const actual = await importOriginal<typeof import('@/libs')>();
+// Mock utils
+vi.mock('@libs/utils/utils', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('@libs/utils/utils')>();
   const { DEFAULT_DISPLAY_PUBLIC_KEY_LENGTH } = await import('@/config');
   return {
     ...actual,
@@ -282,7 +282,7 @@ describe('PostHeaderUserInfo', () => {
   });
 
   it('formats public key correctly', () => {
-    const formatSpy = vi.spyOn(Libs, 'formatPublicKey');
+    const formatSpy = vi.spyOn(Utils, 'formatPublicKey');
     formatSpy.mockReturnValue('userpubk');
 
     render(<PostHeaderUserInfo userId="userpubkykey" userName="Test User" />);

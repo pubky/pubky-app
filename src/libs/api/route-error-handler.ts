@@ -1,6 +1,8 @@
 import { NextResponse } from 'next/server';
-import { AppError, ErrorService, toAppError } from '../error';
-import { HttpStatusCode } from '../http';
+import { AppError } from '../error/error';
+import { ErrorService } from '../error/error.types';
+import { toAppError } from '../error/error.utils';
+import { HttpStatusCode } from '../http/http.types';
 
 interface HandleApiErrorOptions {
   unknownErrorMessage?: string;

@@ -2,9 +2,9 @@ import { describe, it, expect, vi } from 'vitest';
 import { render, screen, fireEvent } from '@testing-library/react';
 import { PostTag } from './PostTag';
 
-// Mock @/libs with partial mock
-vi.mock('@/libs', async () => {
-  const actual = await vi.importActual<typeof import('@/libs')>('@/libs');
+// Mock utils with partial overrides
+vi.mock('@libs/utils/utils', async () => {
+  const actual = await vi.importActual<typeof import('@libs/utils/utils')>('@libs/utils/utils');
   return {
     ...actual,
     generateRandomColor: vi.fn((str: string) => {

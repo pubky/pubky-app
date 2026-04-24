@@ -2,11 +2,11 @@
 
 import * as React from 'react';
 import * as Atoms from '@/atoms';
-import * as Libs from '@/libs';
 import * as Hooks from '@/hooks';
 import * as Types from '@/app/profile/types';
 import { CircleUserRound, Bell, MessageCircle, StickyNote, UsersRound, HeartHandshake, Tag } from 'lucide-react';
 import { UsersRound2 } from '@icons';
+import { cn } from '@libs/utils/utils';
 export interface ProfileMenuItem {
   icon: React.ComponentType<{
     size?: number;
@@ -101,7 +101,7 @@ export function ProfilePageMobileMenu({
             <Atoms.Container
               key={index}
               overrideDefaults={true}
-              className={Libs.cn(
+              className={cn(
                 'flex flex-1 justify-center border-b px-0 py-1.5',
                 'data-testid="profile-page-mobile-menu-item"',
                 isSelected ? 'border-foreground' : 'border-border',

@@ -4,7 +4,6 @@ import { useTranslations } from 'next-intl';
 import * as Atoms from '@/atoms';
 import * as Organisms from '@/organisms';
 import * as Hooks from '@/hooks';
-import * as Libs from '@/libs';
 import * as Core from '@/core';
 import type {
   UserListItemProps,
@@ -24,6 +23,7 @@ import { USER_LIST_TAG_MAX_LENGTH, USER_LIST_TAGS_MAX_TOTAL_CHARS, USER_LIST_TAG
  * Renders follow/unfollow button in icon or text variant
  */
 import { Loader2, Check, UserMinus, UserRoundPlus, UserRound, Tag, StickyNote } from 'lucide-react';
+import { cn, formatPublicKey } from '@libs/utils/utils';
 function FollowButton({ isFollowing, isLoading, isStatusLoading, displayName, variant, onClick }: FollowButtonProps) {
   const t = useTranslations('userList');
   // Show loading if action is in progress OR if status is still being loaded
@@ -106,7 +106,7 @@ function MeButton({ variant = 'icon', className }: { variant?: 'iconWithText' | 
         data-cy="user-list-item-me-btn"
         variant="secondary"
         size="icon"
-        className={Libs.cn(
+        className={cn(
           'size-8 shrink-0 cursor-not-allowed border-none bg-transparent p-1 opacity-100 hover:bg-transparent',
           className,
         )}
@@ -121,7 +121,7 @@ function MeButton({ variant = 'icon', className }: { variant?: 'iconWithText' | 
       data-cy="user-list-item-me-btn"
       variant="secondary"
       size="sm"
-      className={Libs.cn('w-[110px] cursor-not-allowed justify-center text-muted-foreground opacity-50', className)}
+      className={cn('w-[110px] cursor-not-allowed justify-center text-muted-foreground opacity-50', className)}
       disabled
       aria-label={tProfile('thisIsYou')}
     >
@@ -232,7 +232,7 @@ function CompactVariant({
     <Atoms.Container
       ref={ttlRef}
       overrideDefaults
-      className={Libs.cn('flex w-full items-center gap-2', className)}
+      className={cn('flex w-full items-center gap-2', className)}
       data-testid={dataTestId || `user-list-item-${user.id}`}
     >
       {/* Clickable user area */}
@@ -308,7 +308,7 @@ function FullVariant({
   return (
     <Atoms.Container
       ref={ttlRef}
-      className={Libs.cn('gap-3 rounded-md bg-card p-6 lg:bg-transparent lg:p-0', className)}
+      className={cn('gap-3 rounded-md bg-card p-6 lg:bg-transparent lg:p-0', className)}
       data-testid={dataTestId || `user-list-item-${user.id}`}
     >
       {/* Main row */}
@@ -414,10 +414,10 @@ export function UserListItem({
   const avatarUrl = user.avatarUrl || user.image || undefined;
   const displayName =
     user.name ||
-    Libs.formatPublicKey({
+    formatPublicKey({
       key: user.id,
     });
-  const formattedPublicKey = Libs.formatPublicKey({
+  const formattedPublicKey = formatPublicKey({
     key: user.id,
   });
   const tags = user.tags || [];

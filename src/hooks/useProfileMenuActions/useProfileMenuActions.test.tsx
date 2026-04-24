@@ -1,8 +1,8 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { renderHook, act, waitFor } from '@testing-library/react';
 import { useProfileMenuActions } from './useProfileMenuActions';
-import * as Libs from '@/libs';
 import { PROFILE_MENU_ACTION_IDS } from './useProfileMenuActions.constants';
+import { isAppError } from '@libs/error/error.utils';
 
 // Hoist mocks
 const {
@@ -212,7 +212,7 @@ describe('useProfileMenuActions', () => {
 
     it('shows error toast when follow fails', async () => {
       const error = new Error('Follow failed');
-      vi.mocked(Libs.isAppError).mockReturnValue(false);
+      vi.mocked(isAppError).mockReturnValue(false);
       defaultMocks.toggleFollow.mockRejectedValue(error);
 
       const { result } = renderHook(() => useProfileMenuActions(mockUserId));
@@ -301,7 +301,7 @@ describe('useProfileMenuActions', () => {
 
     it('shows error toast when mute fails', async () => {
       const error = new Error('Mute failed');
-      vi.mocked(Libs.isAppError).mockReturnValue(false);
+      vi.mocked(isAppError).mockReturnValue(false);
       defaultMocks.toggleMute.mockRejectedValue(error);
 
       const { result } = renderHook(() => useProfileMenuActions(mockUserId));
@@ -364,7 +364,7 @@ describe('useProfileMenuActions', () => {
 
     it('shows error toast when copy pubky fails', async () => {
       const error = new Error('Copy failed');
-      vi.mocked(Libs.isAppError).mockReturnValue(false);
+      vi.mocked(isAppError).mockReturnValue(false);
       defaultMocks.copyToClipboard.mockRejectedValue(error);
 
       const { result } = renderHook(() => useProfileMenuActions(mockUserId));
@@ -385,7 +385,7 @@ describe('useProfileMenuActions', () => {
 
     it('shows error toast when copy link fails', async () => {
       const error = new Error('Copy failed');
-      vi.mocked(Libs.isAppError).mockReturnValue(false);
+      vi.mocked(isAppError).mockReturnValue(false);
       defaultMocks.copyToClipboard.mockRejectedValue(error);
 
       const { result } = renderHook(() => useProfileMenuActions(mockUserId));

@@ -2,9 +2,9 @@
 
 import { usePathname, useRouter } from 'next/navigation';
 import { useTranslations } from 'next-intl';
-import * as Libs from '@/libs';
 import * as Atoms from '@/atoms';
 import { SETTINGS_MOBILE_ITEMS } from './SettingsMobileMenu.constants';
+import { cn } from '@libs/utils/utils';
 
 /**
  * Mobile settings navigation menu.
@@ -32,7 +32,7 @@ export function SettingsMobileMenu() {
             <Atoms.Container
               key={item.path}
               overrideDefaults
-              className={Libs.cn(
+              className={cn(
                 'flex flex-1 justify-center border-b px-0 py-1.5',
                 isSelected ? 'border-foreground' : 'border-border',
               )}

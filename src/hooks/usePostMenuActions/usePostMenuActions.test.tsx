@@ -3,8 +3,8 @@ import { renderHook, act, waitFor } from '@testing-library/react';
 import * as Core from '@/core';
 import { asOpaque } from '@/test-utils';
 import { usePostMenuActions } from './usePostMenuActions';
-import * as Libs from '@/libs';
 import { POST_MENU_ACTION_IDS } from './usePostMenuActions.constants';
+import { isAppError } from '@libs/error/error.utils';
 
 // Hoist mocks
 const {
@@ -223,7 +223,7 @@ describe('usePostMenuActions', () => {
 
     it('shows error toast when follow fails with AppError', async () => {
       const error = asOpaque<Error>({ type: 'AppError', message: 'Follow failed' });
-      vi.mocked(Libs.isAppError).mockReturnValue(true);
+      vi.mocked(isAppError).mockReturnValue(true);
       defaultMocks.toggleFollow.mockRejectedValue(error);
 
       const { result } = renderHook(() =>
@@ -246,7 +246,7 @@ describe('usePostMenuActions', () => {
 
     it('shows generic error toast when follow fails with non-AppError', async () => {
       const error = new Error('Follow failed');
-      vi.mocked(Libs.isAppError).mockReturnValue(false);
+      vi.mocked(isAppError).mockReturnValue(false);
       defaultMocks.toggleFollow.mockRejectedValue(error);
 
       const { result } = renderHook(() =>

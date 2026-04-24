@@ -3,9 +3,9 @@ import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { CopyrightForm } from './CopyrightForm';
 
-// Mock @/libs
-vi.mock('@/libs', async (importOriginal) => {
-  const actual = await importOriginal<typeof import('@/libs')>();
+// Mock utils
+vi.mock('@libs/utils/utils', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('@libs/utils/utils')>();
   return {
     ...actual,
     cn: (...inputs: (string | undefined | null | false)[]) => inputs.filter(Boolean).join(' '),

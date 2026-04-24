@@ -33,7 +33,6 @@ import { languages } from '@codemirror/language-data';
 import { ARTICLE_MAX_CHARACTER_LENGTH } from '@/config';
 import * as Atoms from '@/atoms';
 import * as Molecules from '@/molecules';
-import * as Utils from '@/libs/utils';
 import * as Hooks from '@/hooks';
 import { MarkdownMark } from '@icons';
 import { sanitizeCodeBlockLanguages } from './InitializedMDXEditor.utils';
@@ -47,6 +46,7 @@ import { CODE_BLOCK_LANGUAGES } from './InitializedMDXEditor.constants';
  * flicker/resize of the parent dialog while the async import resolves.
  */
 import { Smile, Type, AlertTriangle } from 'lucide-react';
+import { cn } from '@libs/utils/utils';
 function preloadLanguages() {
   const languageKeys = Object.keys(CODE_BLOCK_LANGUAGES);
   languageKeys.forEach((langKey) => {
@@ -138,7 +138,7 @@ export default function InitializedMDXEditor({
   return (
     <Atoms.Container className="gap-4">
       {/* Markdown mode: custom toolbar + textarea — hidden via CSS in rich text mode */}
-      <Atoms.Container overrideDefaults className={Utils.cn(mode === 'richtext' && 'hidden')}>
+      <Atoms.Container overrideDefaults className={cn(mode === 'richtext' && 'hidden')}>
         <Atoms.Container
           overrideDefaults
           className="flex min-h-10.75 cursor-auto flex-wrap items-center gap-2 rounded-md border bg-background px-2.5 py-1.5"
@@ -188,7 +188,7 @@ export default function InitializedMDXEditor({
       <MDXEditor
         readOnly={readOnly}
         placeholder={t('placeholder')}
-        className={Utils.cn('dark-theme cursor-auto', mode === 'markdown' && 'hidden')}
+        className={cn('dark-theme cursor-auto', mode === 'markdown' && 'hidden')}
         contentEditableClassName="prose prose-neutral prose-invert prose-code:before:content-none prose-code:after:content-none max-w-none px-0! pb-0! pt-4! max-h-[60dvh] overflow-y-auto"
         plugins={[
           toolbarPlugin({
@@ -246,7 +246,7 @@ export default function InitializedMDXEditor({
 
       {maxLengthWarning && (
         <Atoms.Container
-          className={Utils.cn(
+          className={cn(
             'cursor-auto flex-row items-center gap-x-2 rounded-md p-2',
             maxLengthWarning === 'approaching' && 'bg-yellow-500/15 text-yellow-500',
             maxLengthWarning === 'reached' && 'bg-red-500/15 text-red-500',

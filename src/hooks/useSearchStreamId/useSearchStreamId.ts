@@ -3,7 +3,7 @@
 import { useMemo } from 'react';
 import { useSearchParams } from 'next/navigation';
 import * as Core from '@/core';
-import { Env } from '@/libs/env/env';
+import { Env } from '@libs/env/env';
 
 /**
  * Parses tags from a comma-separated string parameter.

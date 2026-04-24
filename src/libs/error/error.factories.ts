@@ -1,6 +1,6 @@
 import { AppError, type AppErrorParams } from './error';
 import { ErrorCategory, ErrorService } from './error.types';
-import { Logger } from '../logger';
+import { Logger } from '../logger/logger';
 import type {
   ErrorCodeByCategory,
   NetworkErrorCode,

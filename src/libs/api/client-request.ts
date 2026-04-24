@@ -1,4 +1,4 @@
-import { HttpMethod, JSON_HEADERS } from '../http';
+import { HttpMethod, JSON_HEADERS } from '../http/http.types';
 
 async function getErrorMessage(response: Response): Promise<string> {
   try {
