@@ -42,8 +42,8 @@ Entry points (UI, Coordinators) -> Controllers -> Application -> Services -> Mod
 ### Icons
 
 - **Stock Lucide**: `import { IconName } from 'lucide-react'` — never re-export the whole package from `@/libs` or other app barrels (`export * from 'lucide-react'` is forbidden).
-- **Custom / brand SVGs**: `import { CustomMark } from '@icons'` — alias → `src/libs/icons/icons.tsx` (see `docs/components.md`).
-- **URL → icon / label**: `getIconFromUrl`, `getLabelFromUrl`, etc. from `@/libs/utils` (`src/libs/utils/urlToIcon.ts`), not from `@icons`.
+- **Custom / brand SVGs**: `import { CustomMark } from '@/icons'` — alias → `src/libs/icons/icons.tsx` (see `docs/components.md`).
+- **URL → icon / label**: `getIconFromUrl`, `getLabelFromUrl`, etc. from `@/libs/utils` (`src/libs/utils/urlToIcon.ts`), not from `@/icons`.
 
 ## Code Quality
 

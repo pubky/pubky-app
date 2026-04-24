@@ -3,7 +3,7 @@ import { RemarkAnchorProps } from '../PostText/PostText.types';
 import { extractTextFromChildren } from '../PostText/PostText.utils';
 import * as Libs from '@/libs';
 import * as Atoms from '@/atoms';
-import { Bitkit, Blocktank, BTCIcon, PubkyIcon, Synonym, Tether } from '@icons';
+import { Bitkit, Blocktank, BTCIcon, PubkyIcon, Synonym, Tether } from '@/icons';
 
 type TagIcons = {
   [key: string]: JSX.Element | undefined;

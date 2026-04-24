@@ -10,7 +10,7 @@ import * as Libs from '@/libs';
 import * as Config from '@/config';
 import * as App from '@/app';
 import { Home, Flame, Bookmark, Settings } from 'lucide-react';
-import { Github2, XTwitter, Telegram } from '@icons';
+import { Github2, XTwitter, Telegram } from '@/icons';
 export interface HeaderContainerProps {
   children: React.ReactNode;
   className?: string;

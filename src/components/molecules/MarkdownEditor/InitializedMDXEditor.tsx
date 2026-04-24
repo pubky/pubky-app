@@ -36,7 +36,7 @@ import * as Atoms from '@/atoms';
 import * as Molecules from '@/molecules';
 import * as Utils from '@/libs/utils';
 import * as Hooks from '@/hooks';
-import { MarkdownMark } from '@icons';
+import { MarkdownMark } from '@/icons';
 import { sanitizeCodeBlockLanguages } from './InitializedMDXEditor.utils';
 import { CODE_BLOCK_LANGUAGES } from './InitializedMDXEditor.constants';
 

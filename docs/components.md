@@ -103,7 +103,7 @@ export * from './Avatar';
 
 ## Icons (Lucide and custom)
 
-Icons are split on purpose: **stock Lucide** ships from the `lucide-react` package; **app-owned SVGs** (brands, bespoke marks, non-Lucide shapes) live in a single module behind the **`@icons`** path alias (`src/libs/icons/icons.tsx`). **`@/libs` does not re-export Lucide** — do not add `export * from 'lucide-react'` (or any full-package star re-export of icons) to app barrels.
+Icons are split on purpose: **stock Lucide** ships from the `lucide-react` package; **app-owned SVGs** (brands, bespoke marks, non-Lucide shapes) live in a single module behind the **`@/icons`** path alias (`src/libs/icons/icons.tsx`). **`@/libs` does not re-export Lucide** — do not add `export * from 'lucide-react'` (or any full-package star re-export of icons) to app barrels.
 
 ### Stock Lucide icons
 
@@ -116,18 +116,18 @@ Use named imports from `lucide-react` only. Do not pull stock icons through `imp
 ### Custom / brand icons
 
 ```tsx
-import { MarkdownMark, UsersRound2 } from '@icons';
+import { MarkdownMark, UsersRound2 } from '@/icons';
 ```
 
-The `@icons` alias is defined in `tsconfig.json` and points at `src/libs/icons/icons.tsx`. Add new custom components there; keep them out of generic `@/libs` barrels.
+The `@/icons` alias is defined in `tsconfig.json` and points at `src/libs/icons/icons.tsx`. Add new custom components there; keep them out of generic `@/libs` barrels.
 
 ### URL → icon / label helpers
 
-Helpers such as **`getIconFromUrl`** and **`getLabelFromUrl`** live in **`@/libs/utils`** (`src/libs/utils/urlToIcon.ts`). They return Lucide component types or labels for link previews — import them from `@/libs/utils` (or `@/libs` where utils are re-exported), not from `@icons`.
+Helpers such as **`getIconFromUrl`** and **`getLabelFromUrl`** live in **`@/libs/utils`** (`src/libs/utils/urlToIcon.ts`). They return Lucide component types or labels for link previews — import them from `@/libs/utils` (or `@/libs` where utils are re-exported), not from `@/icons`.
 
 ### Tests
 
-Component tests must use **real** `lucide-react` and `@icons` implementations (no `vi.mock('lucide-react')` / `vi.mock('@icons')` for icons). See `docs/component-testing.md` — _Icon components: Always Real_.
+Component tests must use **real** `lucide-react` and `@/icons` implementations (no `vi.mock('lucide-react')` / `vi.mock('@/icons')` for icons). See `docs/component-testing.md` — _Icon components: Always Real_.
 
 ## Design System Integration
 
@@ -198,7 +198,7 @@ When migrating/creating a component:
 - [ ] Figma design analyzed
 - [ ] Shadcn installed if available
 - [ ] Placed at correct atomic level
-- [ ] Utilities from `@/libs` (e.g. `cn`); **icons** from `lucide-react` or `@icons` per [Icons (Lucide and custom)](#icons-lucide-and-custom)
+- [ ] Utilities from `@/libs` (e.g. `cn`); **icons** from `lucide-react` or `@/icons` per [Icons (Lucide and custom)](#icons-lucide-and-custom)
 - [ ] All Figma variants implemented
 - [ ] CVA used for variant management
 - [ ] Tests created (unit + snapshot) — see `docs/component-testing.md`

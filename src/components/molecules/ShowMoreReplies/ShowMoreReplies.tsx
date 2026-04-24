@@ -4,7 +4,7 @@ import * as Atoms from '@/atoms';
 import * as Libs from '@/libs';
 import { useTranslations } from 'next-intl';
 import { CirclePlus } from 'lucide-react';
-import { RoundedCorner } from '@icons';
+import { RoundedCorner } from '@/icons';
 interface ShowMoreRepliesProps {
   /** Number of remaining replies to show */
   count: number;
