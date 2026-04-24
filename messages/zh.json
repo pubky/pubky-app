@@ -1076,7 +1076,10 @@
     "failedToLoadUsers": "加载用户失败",
     "failedToLoadTags": "加载标签失败",
     "noUsersToShow": "暂无用户显示",
-    "noTagsToShow": "暂无标签显示"
+    "noTagsToShow": "暂无标签显示",
+    "tags": "标签",
+    "users": "用户",
+    "posts": "帖子"
   },
   "privacy": {
     "showConfirmation": "重定向前显示确认",

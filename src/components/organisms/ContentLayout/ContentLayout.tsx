@@ -47,6 +47,7 @@ export function ContentLayout({
   showLeftMobileButton = true,
   showRightMobileButton = true,
   renderMobileHeader = true,
+  hasGradientBackground,
   className,
   classNameWrapperContent,
   feedVariant,
@@ -91,6 +92,7 @@ export function ContentLayout({
           onRightIconClick={showRightMobileButton ? () => setDrawerRightOpen(true) : undefined}
           showLeftButton={showLeftMobileButton}
           showRightButton={showRightMobileButton}
+          hasGradientBackground={hasGradientBackground}
         />
       )}
 
