@@ -17,7 +17,7 @@ import {
   Youtube,
   type LucideProps,
 } from 'lucide-react';
-import { Telegram, XTwitter } from '../icons/icons';
+import { Telegram, XTwitter } from '@icons';
 
 /**
  * Maps a URL to the appropriate icon component based on the domain.

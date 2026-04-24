@@ -30,6 +30,7 @@ import {
 import '@mdxeditor/editor/style.css';
 import { oneDark } from '@codemirror/theme-one-dark';
 import { languages } from '@codemirror/language-data';
+import { AlertTriangle, Smile, Type } from 'lucide-react';
 import { ARTICLE_MAX_CHARACTER_LENGTH } from '@/config';
 import * as Atoms from '@/atoms';
 import * as Molecules from '@/molecules';
@@ -46,7 +47,6 @@ import { CODE_BLOCK_LANGUAGES } from './InitializedMDXEditor.constants';
  * Without this, languages are lazy-loaded on first selection, causing a brief
  * flicker/resize of the parent dialog while the async import resolves.
  */
-import { Smile, Type, AlertTriangle } from 'lucide-react';
 function preloadLanguages() {
   const languageKeys = Object.keys(CODE_BLOCK_LANGUAGES);
   languageKeys.forEach((langKey) => {

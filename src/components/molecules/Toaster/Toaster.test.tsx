@@ -8,13 +8,6 @@ vi.mock('./use-toast', () => ({
   useToast: () => mockUseToast(),
 }));
 
-// Mock @/libs to intercept any icons and utilities
-// Mock libs - use actual utility functions and icons from lucide-react
-vi.mock('@/libs', async () => {
-  const actual = await vi.importActual('@/libs');
-  return { ...actual };
-});
-
 describe('Toaster', () => {
   beforeEach(() => {
     vi.clearAllMocks();
