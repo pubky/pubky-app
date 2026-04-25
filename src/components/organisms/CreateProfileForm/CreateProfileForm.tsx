@@ -8,14 +8,13 @@ import * as Hooks from '@/hooks';
 import * as Core from '@/core';
 import * as Config from '@/config';
 import { useTranslations } from 'next-intl';
-
+import { Trash2, File } from 'lucide-react';
 export const CreateProfileForm = () => {
   const t = useTranslations('forms.profile');
   const tCommon = useTranslations('common');
   const { setShowWelcomeDialog } = Core.useOnboardingStore();
   const authStore = Core.useAuthStore();
   const pubky = authStore.selectCurrentUserPubky();
-
   const { state, errors, handlers, cropDialog, fileInputRef, isSubmitDisabled } = Hooks.useProfileForm({
     mode: 'create',
     pubky,
@@ -23,8 +22,12 @@ export const CreateProfileForm = () => {
   });
   const avatarFallbackSeed = pubky || state.name || 'user';
   const avatarFallbackInitial =
-    Libs.extractInitials({ name: state.name, maxLength: 1 }) || avatarFallbackSeed.charAt(0).toUpperCase() || 'U';
-
+    Libs.extractInitials({
+      name: state.name,
+      maxLength: 1,
+    }) ||
+    avatarFallbackSeed.charAt(0).toUpperCase() ||
+    'U';
   return (
     <>
       <Atoms.Container className="flex w-full flex-1 flex-col gap-6 lg:flex-none" data-testid="create-profile-form">
@@ -94,10 +97,19 @@ export const CreateProfileForm = () => {
                     variant="dashed"
                     onChange={(e) => {
                       const value = e.target.value;
-                      handlers.setLinks(state.links.map((l, i) => (i === index ? { ...l, url: value } : l)));
+                      handlers.setLinks(
+                        state.links.map((l, i) =>
+                          i === index
+                            ? {
+                                ...l,
+                                url: value,
+                              }
+                            : l,
+                        ),
+                      );
                       handlers.validateLinkUrl(value, index);
                     }}
-                    icon={<Libs.Trash2 className="h-4 w-4" />}
+                    icon={<Trash2 className="h-4 w-4" />}
                     onClickIcon={() => handlers.handleDeleteLink(index)}
                     iconPosition="right"
                     status={errors.linkUrlErrors[index] ? 'error' : 'default'}
@@ -109,7 +121,13 @@ export const CreateProfileForm = () => {
 
               <Organisms.DialogAddLink
                 onSave={(label, url) => {
-                  handlers.setLinks([...state.links, { label, url }]);
+                  handlers.setLinks([
+                    ...state.links,
+                    {
+                      label,
+                      url,
+                    },
+                  ]);
                 }}
                 disabled={state.links.length >= Config.USER_MAX_LINKS}
               />
@@ -137,7 +155,9 @@ export const CreateProfileForm = () => {
                     src={state.avatarPreview}
                     alt={
                       state.avatarFile
-                        ? t('avatarPreview', { filename: state.avatarFile.name })
+                        ? t('avatarPreview', {
+                            filename: state.avatarFile.name,
+                          })
                         : t('avatarPreviewDefault')
                     }
                   />
@@ -165,12 +185,12 @@ export const CreateProfileForm = () => {
               >
                 {state.avatarPreview ? (
                   <>
-                    <Libs.Trash2 className="h-4 w-4" />
+                    <Trash2 className="h-4 w-4" />
                     <span>{tCommon('delete')}</span>
                   </>
                 ) : (
                   <>
-                    <Libs.File className="h-4 w-4" />
+                    <File className="h-4 w-4" />
                     <span>{t('chooseFile')}</span>
                   </>
                 )}

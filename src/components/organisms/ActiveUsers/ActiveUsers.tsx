@@ -5,10 +5,10 @@ import { useTranslations } from 'next-intl';
 import * as Atoms from '@/atoms';
 import * as Core from '@/core';
 import * as Hooks from '@/hooks';
-import * as Libs from '@/libs';
 import * as Molecules from '@/molecules';
 import * as Organisms from '@/organisms';
 import { APP_ROUTES } from '@/app/routes';
+import { UsersRound } from 'lucide-react';
 const USERS_LIMIT = 3;
 
 /**
@@ -30,31 +30,27 @@ export function ActiveUsers() {
     includeRelationships: true,
   });
   const { toggleFollow, isUserLoading } = Hooks.useFollowUser();
-
   const handleUserClick = (pubky: Core.Pubky) => {
     router.push(`${APP_ROUTES.PROFILE}/${pubky}`);
   };
-
   const handleFollowClick = async (userId: Core.Pubky, isFollowing: boolean) => {
     await toggleFollow(userId, isFollowing);
   };
-
   const handleSeeAll = () => {
     router.push(`${APP_ROUTES.HOT}`);
   };
-
   return (
     <Molecules.SidebarSection
       title={t('activeUsers')}
-      footerIcon={Libs.UsersRound}
+      footerIcon={UsersRound}
       footerText={tCommon('seeAll')}
       onFooterClick={handleSeeAll}
       data-testid="active-users"
     >
       {isStreamLoading ? (
-        Array.from({ length: USERS_LIMIT }).map((_, index) => (
-          <Organisms.CompactUserListItemSkeleton key={`active-users-skeleton-${index}`} />
-        ))
+        Array.from({
+          length: USERS_LIMIT,
+        }).map((_, index) => <Organisms.CompactUserListItemSkeleton key={`active-users-skeleton-${index}`} />)
       ) : users.length === 0 ? (
         <Atoms.Typography className="font-light text-muted-foreground">{t('noUsers')}</Atoms.Typography>
       ) : (

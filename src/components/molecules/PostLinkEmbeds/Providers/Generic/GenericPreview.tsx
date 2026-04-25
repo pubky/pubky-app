@@ -1,10 +1,9 @@
 'use client';
 
 import * as Atoms from '@/atoms';
-import * as Icons from '@/libs/icons';
 import * as Hooks from '@/hooks';
 import { GenericPreviewSkeleton } from './GenericPreview.skeleton';
-
+import { Globe } from 'lucide-react';
 interface GenericPreviewProps {
   url: string;
 }
@@ -15,28 +14,21 @@ interface GenericPreviewProps {
  */
 export function GenericPreview({ url }: GenericPreviewProps) {
   const { metadata, isLoading, error } = Hooks.useOgMetadata(url);
-
   if (isLoading) {
     return <GenericPreviewSkeleton />;
   }
-
   if (error || !metadata) {
     return null;
   }
-
   const { url: displayUrl, title, image, type } = metadata;
-
   if (type === 'image')
     return (
       <Atoms.Link overrideDefaults href={url}>
         <Atoms.Image src={url} alt="Image preview" className="w-full rounded-md object-contain" />
       </Atoms.Link>
     );
-
   if (type === 'video') return <Atoms.Video src={url} className="w-full cursor-auto object-contain" />;
-
   if (type === 'audio') return <Atoms.Audio src={url} className="cursor-auto" />;
-
   return (
     <Atoms.Link data-testid="generic-website-preview" href={url}>
       <Atoms.Container className="justify-between gap-6 rounded-md bg-muted p-6 lg:flex-row">
@@ -48,7 +40,7 @@ export function GenericPreview({ url }: GenericPreviewProps) {
           )}
 
           <Atoms.Container className="flex-row items-center gap-x-1">
-            <Icons.Globe size={13} className="shrink-0 text-muted-foreground" />
+            <Globe size={13} className="shrink-0 text-muted-foreground" />
 
             <Atoms.Typography
               size="sm"

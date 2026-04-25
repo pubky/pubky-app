@@ -1,7 +1,6 @@
 'use client';
 
 import * as Atoms from '@/atoms';
-import * as Libs from '@/libs';
 import * as Molecules from '@/molecules';
 import * as Organisms from '@/organisms';
 
@@ -15,6 +14,7 @@ import * as Organisms from '@/organisms';
  * Shared content for Home feed sidebars - WhoToFollow, ActiveUsers, HotTags, FeedbackCard.
  * Used by both HomeFeedRightSidebar (desktop) and HomeFeedRightDrawer (tablet).
  */
+import { UsersRound, Pencil } from 'lucide-react';
 function HomeFeedContent() {
   return (
     <>
@@ -62,9 +62,18 @@ export function HomeFeedRightDrawerMobile() {
   return (
     <Molecules.FeedSection
       feeds={[
-        { icon: Libs.UsersRound, label: 'Following' },
-        { icon: Libs.Pencil, label: 'Based bitcoin' },
-        { icon: Libs.Pencil, label: 'Mining industry' },
+        {
+          icon: UsersRound,
+          label: 'Following',
+        },
+        {
+          icon: Pencil,
+          label: 'Based bitcoin',
+        },
+        {
+          icon: Pencil,
+          label: 'Mining industry',
+        },
       ]}
       showCreateButton={true}
     />

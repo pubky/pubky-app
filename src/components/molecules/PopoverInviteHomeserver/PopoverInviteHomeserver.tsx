@@ -1,17 +1,16 @@
 import * as Atoms from '@/atoms';
-import * as Libs from '@/libs';
 import * as Config from '@/config';
-
+import { CircleHelp, Mail } from 'lucide-react';
+import { XTwitter, Telegram } from '@/icons';
 interface PopoverInviteHomeserverProps {
   className?: React.HTMLAttributes<HTMLDivElement>['className'];
 }
-
 export function PopoverInviteHomeserver({ className = 'hover:bg-brand/10' }: PopoverInviteHomeserverProps) {
   return (
     <Atoms.Popover hover>
       <Atoms.PopoverTrigger asChild>
         <Atoms.Button variant="ghost" size="icon" className={className}>
-          <Libs.CircleHelp className="h-4 w-4 text-white" data-testid="circle-help-icon" />
+          <CircleHelp className="h-4 w-4 text-white" data-testid="circle-help-icon" />
         </Atoms.Button>
       </Atoms.PopoverTrigger>
       <Atoms.PopoverContent className="w-[327px]">
@@ -30,13 +29,13 @@ export function PopoverInviteHomeserver({ className = 'hover:bg-brand/10' }: Pop
           </Atoms.Container>
           <Atoms.Container className="flex-row gap-4">
             <Atoms.Link href={Config.EMAIL_URL} className="text-muted-foreground hover:text-brand">
-              <Libs.Mail className="h-6 w-6" />
+              <Mail className="h-6 w-6" />
             </Atoms.Link>
             <Atoms.Link href={Config.TWITTER_URL} className="text-muted-foreground hover:text-brand">
-              <Libs.XTwitter className="h-6 w-6" />
+              <XTwitter className="h-6 w-6" />
             </Atoms.Link>
             <Atoms.Link href={Config.TELEGRAM_URL} className="text-muted-foreground hover:text-brand">
-              <Libs.Telegram className="h-6 w-6" />
+              <Telegram className="h-6 w-6" />
             </Atoms.Link>
           </Atoms.Container>
         </Atoms.Container>

@@ -3,7 +3,8 @@
 import * as Atoms from '@/atoms';
 import * as Libs from '@/libs';
 import { useTranslations } from 'next-intl';
-
+import { CirclePlus } from 'lucide-react';
+import { RoundedCorner } from '@/icons';
 interface ShowMoreRepliesProps {
   /** Number of remaining replies to show */
   count: number;
@@ -25,7 +26,6 @@ interface ShowMoreRepliesProps {
 export function ShowMoreReplies({ count, onClick, isLast = false }: ShowMoreRepliesProps) {
   const tThreadTree = useTranslations('common.threadTree');
   const connectorVariant = isLast ? 'last' : 'regular';
-
   return (
     <Atoms.Container overrideDefaults>
       <Atoms.PostThreadSpacer />
@@ -48,7 +48,7 @@ export function ShowMoreReplies({ count, onClick, isLast = false }: ShowMoreRepl
               className={Libs.cn('min-h-px w-full min-w-px shrink-0 grow basis-0', isLast && 'border-l border-border')}
             />
             <Atoms.Container overrideDefaults className="relative size-3 shrink-0">
-              <Libs.RoundedCorner />
+              <RoundedCorner />
             </Atoms.Container>
           </Atoms.Container>
           <Atoms.Container overrideDefaults className="min-h-px w-3 min-w-px shrink-0 grow basis-0" />
@@ -62,8 +62,12 @@ export function ShowMoreReplies({ count, onClick, isLast = false }: ShowMoreRepl
             onClick={onClick}
             className="gap-2 rounded-full px-3.5 py-2 text-xs font-bold text-foreground"
           >
-            <Libs.CirclePlus className="size-6" />
-            <span>{tThreadTree('moreReplies', { count })}</span>
+            <CirclePlus className="size-6" />
+            <span>
+              {tThreadTree('moreReplies', {
+                count,
+              })}
+            </span>
           </Atoms.Button>
         </Atoms.Container>
       </Atoms.Container>

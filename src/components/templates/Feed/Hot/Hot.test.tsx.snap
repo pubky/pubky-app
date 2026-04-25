@@ -3,19 +3,44 @@
 exports[`Hot - Snapshots > matches snapshot 1`] = `
 <div>
   <div
+    class="pb-24 lg:pb-12"
+    data-has-gradient-background="false"
     data-testid="content-layout"
   >
     <div
+      data-active-section="tags"
+      data-testid="hot-mobile-menu"
+    >
+      <button
+        data-testid="tab-tags"
+      >
+        Tags
+      </button>
+      <button
+        data-testid="tab-users"
+      >
+        Users
+      </button>
+      <button
+        data-testid="tab-posts"
+      >
+        Posts
+      </button>
+    </div>
+    <div
+      class=""
       data-testid="hot-tags-cards-section"
     >
       HotTagsCardsSection
     </div>
     <div
+      class=""
       data-testid="hot-tags-overview"
     >
       HotTagsOverview
     </div>
     <div
+      class=""
       data-testid="hot-active-users"
     >
       HotActiveUsers

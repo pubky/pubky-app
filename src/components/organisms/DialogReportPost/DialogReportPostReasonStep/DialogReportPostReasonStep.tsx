@@ -6,7 +6,7 @@ import * as Hooks from '@/hooks';
 import * as Libs from '@/libs';
 import { REPORT_REASON_MAX_LENGTH } from '@/core/pipes/report';
 import type { DialogReportPostReasonStepProps } from './DialogReportPostReasonStep.types';
-
+import { Loader2 } from 'lucide-react';
 export function DialogReportPostReasonStep({
   reason,
   hasContent,
@@ -16,7 +16,6 @@ export function DialogReportPostReasonStep({
   onSubmit,
 }: DialogReportPostReasonStepProps) {
   const { currentUserPubky } = Hooks.useCurrentUserProfile();
-
   return (
     <>
       <Atoms.DialogHeader>
@@ -75,7 +74,7 @@ export function DialogReportPostReasonStep({
           disabled={!hasContent || isSubmitting}
           aria-label={isSubmitting ? 'Submitting report' : 'Submit report'}
         >
-          {isSubmitting ? <Libs.Loader2 className="size-4 animate-spin" aria-hidden="true" /> : 'Report Post'}
+          {isSubmitting ? <Loader2 className="size-4 animate-spin" aria-hidden="true" /> : 'Report Post'}
         </Atoms.Button>
       </Atoms.DialogFooter>
     </>

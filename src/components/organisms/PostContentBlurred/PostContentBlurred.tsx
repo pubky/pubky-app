@@ -1,12 +1,11 @@
 import * as Atoms from '@/atoms';
 import * as Libs from '@/libs';
 import * as Core from '@/core';
-
+import { EyeOff } from 'lucide-react';
 interface PostContentBlurredProps {
   postId: string;
   className?: string;
 }
-
 export const PostContentBlurred = ({ postId, className }: PostContentBlurredProps) => {
   return (
     <Atoms.Button
@@ -34,7 +33,7 @@ export const PostContentBlurred = ({ postId, className }: PostContentBlurredProp
         overrideDefaults
         className="absolute inset-0 flex flex-col items-center justify-center gap-2 text-muted-foreground transition-colors group-hover:text-secondary-foreground"
       >
-        <Libs.EyeOff className="size-6" />
+        <EyeOff className="size-6" />
 
         <Atoms.Typography overrideDefaults as="p" className="text-sm">
           Post content moderated.

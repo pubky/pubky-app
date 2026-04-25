@@ -1,5 +1,23 @@
-import { LucideProps } from 'lucide-react';
-import * as Icons from './index';
+import {
+  Facebook,
+  Github,
+  GitFork,
+  Gitlab,
+  Instagram,
+  Link,
+  Linkedin,
+  Mail,
+  MessageCircle,
+  MessageSquare,
+  Music,
+  Phone,
+  Slack,
+  Twitch,
+  Video,
+  Youtube,
+  type LucideProps,
+} from 'lucide-react';
+import { Telegram, XTwitter } from '@/icons';
 
 /**
  * Maps a URL to the appropriate icon component based on the domain.
@@ -10,10 +28,10 @@ import * as Icons from './index';
  * @example
  * ```ts
  * const icon = getIconFromUrl('https://github.com/user/repo');
- * // Returns Icons.Github
+ * // Returns Github
  *
  * const defaultIcon = getIconFromUrl('https://example.com');
- * // Returns Icons.Link (default)
+ * // Returns Link (default)
  * ```
  */
 export function getIconFromUrl(url: string): React.ComponentType<LucideProps> {
@@ -28,56 +46,56 @@ export function getIconFromUrl(url: string): React.ComponentType<LucideProps> {
     // Map domains to their respective icons
     const domainIconMap: Record<string, React.ComponentType<LucideProps>> = {
       // Social Media
-      'github.com': Icons.Github,
-      'x.com': Icons.XTwitter,
-      'twitter.com': Icons.XTwitter,
-      'youtube.com': Icons.Youtube,
-      'youtu.be': Icons.Youtube,
-      'facebook.com': Icons.Facebook,
-      'fb.com': Icons.Facebook,
-      'instagram.com': Icons.Instagram,
-      'linkedin.com': Icons.Linkedin,
-      'reddit.com': Icons.MessageSquare, // Lucide doesn't have Reddit
-      'twitch.tv': Icons.Twitch,
-      'discord.com': Icons.MessageSquare, // Lucide doesn't have Discord
-      'discord.gg': Icons.MessageSquare,
+      'github.com': Github,
+      'x.com': XTwitter,
+      'twitter.com': XTwitter,
+      'youtube.com': Youtube,
+      'youtu.be': Youtube,
+      'facebook.com': Facebook,
+      'fb.com': Facebook,
+      'instagram.com': Instagram,
+      'linkedin.com': Linkedin,
+      'reddit.com': MessageSquare, // Lucide doesn't have Reddit
+      'twitch.tv': Twitch,
+      'discord.com': MessageSquare, // Lucide doesn't have Discord
+      'discord.gg': MessageSquare,
 
       // Messaging
-      'telegram.org': Icons.Telegram,
-      't.me': Icons.Telegram,
-      'telegram.me': Icons.Telegram,
-      'web.telegram.org': Icons.Telegram,
-      'slack.com': Icons.Slack,
-      'whatsapp.com': Icons.MessageSquare,
-      'signal.org': Icons.MessageSquare,
+      'telegram.org': Telegram,
+      't.me': Telegram,
+      'telegram.me': Telegram,
+      'web.telegram.org': Telegram,
+      'slack.com': Slack,
+      'whatsapp.com': MessageSquare,
+      'signal.org': MessageSquare,
 
       // Communication
-      'gmail.com': Icons.Mail,
-      'outlook.com': Icons.Mail,
-      'mail.google.com': Icons.Mail,
+      'gmail.com': Mail,
+      'outlook.com': Mail,
+      'mail.google.com': Mail,
 
       // Development
-      'gitlab.com': Icons.Gitlab,
-      'bitbucket.org': Icons.GitFork,
-      'stackoverflow.com': Icons.MessageCircle,
-      'stackexchange.com': Icons.MessageCircle,
+      'gitlab.com': Gitlab,
+      'bitbucket.org': GitFork,
+      'stackoverflow.com': MessageCircle,
+      'stackexchange.com': MessageCircle,
 
       // Video/Streaming
-      'vimeo.com': Icons.Video,
-      'dailymotion.com': Icons.Video,
-      'tiktok.com': Icons.Video,
+      'vimeo.com': Video,
+      'dailymotion.com': Video,
+      'tiktok.com': Video,
 
       // Music
-      'spotify.com': Icons.Music,
-      'soundcloud.com': Icons.Music,
-      'music.apple.com': Icons.Music,
-      'music.youtube.com': Icons.Music,
+      'spotify.com': Music,
+      'soundcloud.com': Music,
+      'music.apple.com': Music,
+      'music.youtube.com': Music,
 
       // Generic patterns
       // Email pattern (if it starts with mailto:)
-      ...(url.startsWith('mailto:') ? { _email: Icons.Mail } : {}),
+      ...(url.startsWith('mailto:') ? { _email: Mail } : {}),
       // Phone pattern (if it starts with tel:)
-      ...(url.startsWith('tel:') ? { _phone: Icons.Phone } : {}),
+      ...(url.startsWith('tel:') ? { _phone: Phone } : {}),
     };
 
     // Check for exact domain match
@@ -94,17 +112,17 @@ export function getIconFromUrl(url: string): React.ComponentType<LucideProps> {
 
     // Special URL patterns
     if (url.startsWith('mailto:')) {
-      return Icons.Mail;
+      return Mail;
     }
     if (url.startsWith('tel:')) {
-      return Icons.Phone;
+      return Phone;
     }
 
     // Default to Link icon
-    return Icons.Link;
+    return Link;
   } catch {
     // If URL parsing fails, return default Link icon
-    return Icons.Link;
+    return Link;
   }
 }
 

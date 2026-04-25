@@ -4,12 +4,11 @@ import { useTranslations } from 'next-intl';
 import * as Atoms from '@/atoms';
 import * as Molecules from '@/molecules';
 import * as Hooks from '@/hooks';
-import * as Libs from '@/libs';
 import { useRouter } from 'next/navigation';
 import { PROFILE_ROUTES, getProfileRoute } from '@/app/routes';
 import type { ProfilePageTaggedAsProps } from './ProfilePageTaggedAs.types';
 import { ProfilePageTaggedAsSkeleton } from './ProfilePageTaggedAs.skeleton';
-
+import { Tag } from 'lucide-react';
 export function ProfilePageTaggedAs({ tags, isLoading = false, onTagClick, pubky }: ProfilePageTaggedAsProps) {
   const t = useTranslations('profile.sidebar');
   const router = useRouter();
@@ -19,7 +18,6 @@ export function ProfilePageTaggedAs({ tags, isLoading = false, onTagClick, pubky
   const handleButtonClick = () => {
     requireAuth(() => router.push(getProfileRoute(PROFILE_ROUTES.UNIQUE_TAGS, pubky)));
   };
-
   return (
     <Atoms.Container data-cy="profile-tagged-section" overrideDefaults={true} className="flex flex-col gap-2">
       <Atoms.Heading level={2} size="lg" className="font-light text-muted-foreground">
@@ -50,7 +48,7 @@ export function ProfilePageTaggedAs({ tags, isLoading = false, onTagClick, pubky
         className="border border-border bg-foreground/5"
         onClick={handleButtonClick}
       >
-        <Libs.Tag size={16} className="text-foreground" />
+        <Tag size={16} className="text-foreground" />
         <Atoms.Typography as="span" className="text-sm font-bold">
           {t('addTag')}
         </Atoms.Typography>

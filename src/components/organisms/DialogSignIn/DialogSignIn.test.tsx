@@ -25,16 +25,6 @@ vi.mock('next/link', () => ({
   ),
 }));
 
-// Mock only the icons used by this component, preserve all others
-vi.mock('@/libs/icons', async (importOriginal) => {
-  const actual = await importOriginal<typeof import('@/libs/icons')>();
-  return {
-    ...actual,
-    UserPlus: ({ className }: { className?: string }) => <span data-testid="user-plus-icon" className={className} />,
-    KeyRound: ({ className }: { className?: string }) => <span data-testid="key-round-icon" className={className} />,
-  };
-});
-
 describe('DialogSignIn', () => {
   beforeEach(() => {
     vi.clearAllMocks();
@@ -90,8 +80,9 @@ describe('DialogSignIn', () => {
       mockShowSignInDialog.value = true;
       render(<DialogSignIn />);
 
-      expect(screen.getAllByTestId('user-plus-icon')).toHaveLength(2); // One in text, one in button
-      expect(screen.getAllByTestId('key-round-icon')).toHaveLength(2); // One in text, one in button
+      const dialog = screen.getByRole('dialog');
+      expect(dialog.querySelectorAll('.lucide-user-plus')).toHaveLength(2);
+      expect(dialog.querySelectorAll('.lucide-key-round')).toHaveLength(2);
     });
   });
 

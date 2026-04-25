@@ -30,12 +30,13 @@ import {
 import '@mdxeditor/editor/style.css';
 import { oneDark } from '@codemirror/theme-one-dark';
 import { languages } from '@codemirror/language-data';
+import { AlertTriangle, Smile, Type } from 'lucide-react';
 import { ARTICLE_MAX_CHARACTER_LENGTH } from '@/config';
 import * as Atoms from '@/atoms';
 import * as Molecules from '@/molecules';
-import * as Icons from '@/libs/icons';
 import * as Utils from '@/libs/utils';
 import * as Hooks from '@/hooks';
+import { MarkdownMark } from '@/icons';
 import { sanitizeCodeBlockLanguages } from './InitializedMDXEditor.utils';
 import { CODE_BLOCK_LANGUAGES } from './InitializedMDXEditor.constants';
 
@@ -48,7 +49,6 @@ import { CODE_BLOCK_LANGUAGES } from './InitializedMDXEditor.constants';
  */
 function preloadLanguages() {
   const languageKeys = Object.keys(CODE_BLOCK_LANGUAGES);
-
   languageKeys.forEach((langKey) => {
     // Find matching language description from @codemirror/language-data
     const langDesc = languages.find(
@@ -66,7 +66,6 @@ function preloadLanguages() {
 
 // Start preloading languages when this module is imported
 preloadLanguages();
-
 type EditorMode = 'richtext' | 'markdown';
 
 // Only import this to MarkdownEditor.tsx
@@ -74,15 +73,15 @@ export default function InitializedMDXEditor({
   editorRef,
   readOnly,
   ...props
-}: { editorRef: ForwardedRef<MDXEditorMethods> | null } & MDXEditorProps) {
+}: {
+  editorRef: ForwardedRef<MDXEditorMethods> | null;
+} & MDXEditorProps) {
   const t = useTranslations('markdownEditor');
-
   const [showEmojiPicker, setShowEmojiPicker] = useState(false);
   const [maxLengthWarning, setMaxLengthWarning] = useState<null | 'approaching' | 'reached'>(null);
   const [mode, setMode] = useState<EditorMode>('richtext');
   const [markdownText, setMarkdownText] = useState('');
   const textareaRef = useRef<HTMLTextAreaElement>(null);
-
   const switchToMarkdownMode = () => {
     if (editorRef && 'current' in editorRef) {
       const markdown = editorRef.current?.getMarkdown() ?? '';
@@ -90,7 +89,6 @@ export default function InitializedMDXEditor({
       setMode('markdown');
     }
   };
-
   const switchToRichTextMode = () => {
     if (editorRef && 'current' in editorRef) {
       // Sanitize code block languages before passing to the rich text editor.
@@ -102,10 +100,8 @@ export default function InitializedMDXEditor({
       setMode('richtext');
     }
   };
-
   const updateMaxLengthWarning = (text: string) => {
     const remaining = ARTICLE_MAX_CHARACTER_LENGTH - text.length;
-
     switch (true) {
       case remaining === 0:
         setMaxLengthWarning('reached');
@@ -117,20 +113,17 @@ export default function InitializedMDXEditor({
         setMaxLengthWarning(null);
     }
   };
-
   const handleMarkdownTextChange = (newText: string) => {
     if (newText.length > ARTICLE_MAX_CHARACTER_LENGTH) return;
     setMarkdownText(newText);
     updateMaxLengthWarning(newText);
     props.onChange?.(newText, false);
   };
-
   const handleMarkdownEmojiSelect = Hooks.useEmojiInsert({
     inputRef: textareaRef,
     value: markdownText,
     onChange: handleMarkdownTextChange,
   });
-
   const handleEmojiSelect = (emoji: { native: string }) => {
     if (mode === 'markdown') {
       handleMarkdownEmojiSelect(emoji);
@@ -142,7 +135,6 @@ export default function InitializedMDXEditor({
       }
     }
   };
-
   return (
     <Atoms.Container className="gap-4">
       {/* Markdown mode: custom toolbar + textarea — hidden via CSS in rich text mode */}
@@ -163,7 +155,7 @@ export default function InitializedMDXEditor({
             className="size-7 cursor-default rounded"
             data-testid="markdown-emoji-button"
           >
-            <Icons.Smile className="size-6" />
+            <Smile className="size-6" />
           </Atoms.Button>
 
           <Atoms.Button
@@ -175,7 +167,7 @@ export default function InitializedMDXEditor({
             className="size-7 cursor-default rounded"
             data-testid="markdown-richtext-button"
           >
-            <Icons.Type className="size-6" />
+            <Type className="size-6" />
           </Atoms.Button>
         </Atoms.Container>
 
@@ -213,10 +205,10 @@ export default function InitializedMDXEditor({
                 <CodeToggle />
                 <InsertCodeBlock />
                 <ButtonWithTooltip title={t('emoji')} onClick={() => setShowEmojiPicker(true)}>
-                  <Icons.Smile className="size-6" />
+                  <Smile className="size-6" />
                 </ButtonWithTooltip>
                 <ButtonWithTooltip title={t('markdown')} onClick={switchToMarkdownMode}>
-                  <Icons.MarkdownMark className="size-6" />
+                  <MarkdownMark className="size-6" />
                 </ButtonWithTooltip>
               </>
             ),
@@ -226,8 +218,12 @@ export default function InitializedMDXEditor({
           listsPlugin(),
           thematicBreakPlugin(),
           linkPlugin(),
-          linkDialogPlugin({ showLinkTitleField: false }),
-          codeBlockPlugin({ defaultCodeBlockLanguage: 'plaintext' }),
+          linkDialogPlugin({
+            showLinkTitleField: false,
+          }),
+          codeBlockPlugin({
+            defaultCodeBlockLanguage: 'plaintext',
+          }),
           codeMirrorPlugin({
             codeBlockLanguages: CODE_BLOCK_LANGUAGES,
             codeMirrorExtensions: [oneDark],
@@ -257,7 +253,7 @@ export default function InitializedMDXEditor({
           )}
           data-testid="max-length-warning"
         >
-          <Icons.AlertTriangle className="size-4 shrink-0" />
+          <AlertTriangle className="size-4 shrink-0" />
 
           <Atoms.Typography overrideDefaults className="text-sm">
             {maxLengthWarning === 'approaching' && t('warningApproaching')}

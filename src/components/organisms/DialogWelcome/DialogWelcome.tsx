@@ -13,6 +13,7 @@ import * as Core from '@/core';
  * Self-contained welcome dialog that manages its own state and data.
  * No props needed - it fetches user data and manages dialog state internally.
  */
+import { Key, ArrowRight } from 'lucide-react';
 export function DialogWelcome() {
   const { currentUserPubky } = Core.useAuthStore();
   const { showWelcomeDialog, setShowWelcomeDialog } = Core.useOnboardingStore();
@@ -21,37 +22,36 @@ export function DialogWelcome() {
   const userDetails = useLiveQuery(async () => {
     try {
       if (!currentUserPubky) return null;
-      const details = await Core.UserController.getDetails({ userId: currentUserPubky });
+      const details = await Core.UserController.getDetails({
+        userId: currentUserPubky,
+      });
       return details || null;
     } catch (error) {
-      Libs.Logger.error('[DialogWelcome] Failed to query user details', { error });
+      Libs.Logger.error('[DialogWelcome] Failed to query user details', {
+        error,
+      });
       return null;
     }
   }, [currentUserPubky]);
-
   const { copyToClipboard } = Hooks.useCopyToClipboard();
 
   // Don't render if conditions aren't met
   if (!userDetails || !currentUserPubky) {
     return null;
   }
-
   const displayPublicKey = Libs.formatPublicKey({
     key: currentUserPubky,
   });
   const avatarImage = userDetails.image
     ? Core.FileController.getAvatarUrl(currentUserPubky, userDetails.indexed_at)
     : undefined;
-
   const handleCopyToClipboard = () => {
     copyToClipboard(Libs.withPubkyPrefix(currentUserPubky));
   };
-
   const handleExplorePubky = () => {
     // Set welcome dialog to false permanently - it will never show again for this user
     setShowWelcomeDialog(false);
   };
-
   return (
     <Atoms.Dialog open={showWelcomeDialog} onOpenChange={setShowWelcomeDialog}>
       <Atoms.DialogContent className="sm:max-w-2xl" hiddenTitle="Welcome to Pubky!">
@@ -86,13 +86,13 @@ export function DialogWelcome() {
                   className="mt-2 h-8 w-fit gap-2 rounded-full uppercase"
                   onClick={handleCopyToClipboard}
                 >
-                  <Libs.Key className="h-4 w-4" />
+                  <Key className="h-4 w-4" />
                   {displayPublicKey || '...'}
                 </Atoms.Button>
               </Atoms.Container>
             </Atoms.Card>
             <Atoms.Button id="welcome-explore-pubky-btn" className="w-auto" size="lg" onClick={handleExplorePubky}>
-              <Libs.ArrowRight className="mr-2 h-4 w-4" />
+              <ArrowRight className="mr-2 h-4 w-4" />
               Explore Pubky
             </Atoms.Button>
           </Atoms.Container>

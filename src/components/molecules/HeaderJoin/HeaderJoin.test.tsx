@@ -43,11 +43,6 @@ vi.mock('@/atoms', () => ({
   ),
 }));
 
-// Mock libs
-vi.mock('@/libs', () => ({
-  UserRound: ({ className }: { className?: string }) => <svg data-testid="user-round-icon" className={className} />,
-}));
-
 describe('HeaderJoin', () => {
   beforeEach(() => {
     vi.clearAllMocks();
@@ -56,8 +51,9 @@ describe('HeaderJoin', () => {
   it('renders join button with icon', () => {
     render(<HeaderJoin />);
 
-    expect(screen.getByTestId('header-join-button')).toBeInTheDocument();
-    expect(screen.getByTestId('user-round-icon')).toBeInTheDocument();
+    const joinButton = screen.getByTestId('header-join-button');
+    expect(joinButton).toBeInTheDocument();
+    expect(joinButton.querySelector('.lucide-user-round')).toBeInTheDocument();
   });
 
   it('has correct aria-label for accessibility', () => {

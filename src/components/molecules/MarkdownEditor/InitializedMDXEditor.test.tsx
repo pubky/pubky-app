@@ -150,30 +150,6 @@ vi.mock('@/components/molecules', () => ({
   },
 }));
 
-// Mock icons
-vi.mock('@/libs/icons', () => ({
-  Smile: ({ className }: { className?: string }) => (
-    <svg data-testid="smile-icon" className={className}>
-      <title>Smile</title>
-    </svg>
-  ),
-  AlertTriangle: ({ className }: { className?: string }) => (
-    <svg data-testid="alert-triangle-icon" className={className}>
-      <title>Alert Triangle</title>
-    </svg>
-  ),
-  Type: ({ className }: { className?: string }) => (
-    <svg data-testid="type-icon" className={className}>
-      <title>Type</title>
-    </svg>
-  ),
-  MarkdownMark: ({ className }: { className?: string }) => (
-    <svg data-testid="markdown-mark-icon" className={className}>
-      <title>Markdown Mark</title>
-    </svg>
-  ),
-}));
-
 // Mock useEmojiInsert hook
 const mockHandleMarkdownEmojiSelect = vi.fn();
 vi.mock('@/hooks', () => ({
@@ -354,9 +330,9 @@ describe('InitializedMDXEditor', () => {
     });
 
     it('renders smile icons in emoji buttons', () => {
-      render(<InitializedMDXEditor editorRef={null} markdown="" />);
+      const { container } = render(<InitializedMDXEditor editorRef={null} markdown="" />);
 
-      const smileIcons = screen.getAllByTestId('smile-icon');
+      const smileIcons = container.querySelectorAll('.lucide-smile');
       // One in the markdown toolbar, one in the rich text toolbar
       expect(smileIcons).toHaveLength(2);
       smileIcons.forEach((icon) => {
@@ -367,7 +343,8 @@ describe('InitializedMDXEditor', () => {
     it('renders markdown mark icon in markdown button', () => {
       render(<InitializedMDXEditor editorRef={null} markdown="" />);
 
-      const markdownIcon = screen.getByTestId('markdown-mark-icon');
+      const markdownButton = screen.getByTestId('button-with-tooltip-markdown');
+      const markdownIcon = markdownButton.querySelector('svg[viewBox="0 0 208 128"]');
       expect(markdownIcon).toBeInTheDocument();
       expect(markdownIcon).toHaveClass('size-6');
     });
@@ -469,7 +446,8 @@ describe('InitializedMDXEditor', () => {
     it('renders type icon in rich text mode switch button', () => {
       render(<InitializedMDXEditor editorRef={null} markdown="" />);
 
-      expect(screen.getByTestId('type-icon')).toBeInTheDocument();
+      const richTextButton = screen.getByTestId('markdown-richtext-button');
+      expect(richTextButton.querySelector('.lucide-type')).toBeInTheDocument();
     });
 
     it('disables markdown toolbar buttons when readOnly', () => {
@@ -886,7 +864,8 @@ describe('InitializedMDXEditor', () => {
         capturedOnChange?.('a'.repeat(MOCK_MAX_LENGTH - 50));
       });
 
-      const alertIcon = screen.getByTestId('alert-triangle-icon');
+      const warning = screen.getByTestId('max-length-warning');
+      const alertIcon = warning.querySelector('.lucide-triangle-alert');
       expect(alertIcon).toBeInTheDocument();
       expect(alertIcon).toHaveClass('size-4');
       expect(alertIcon).toHaveClass('shrink-0');

@@ -7,25 +7,22 @@ import * as Libs from '@/libs';
 import * as Config from '@/config';
 import { useState } from 'react';
 import { z } from 'zod';
-
+import { Link, Clipboard } from 'lucide-react';
 const labelSchema = z
   .string()
   .trim()
   .min(1, 'Label is required')
   .max(Config.USER_LINK_LABEL_MAX_LENGTH, `Max ${Config.USER_LINK_LABEL_MAX_LENGTH} characters`)
   .regex(/^[a-zA-Z0-9]+$/, 'Alphanumeric only');
-
 const urlSchema = z
   .string()
   .trim()
   .url('Invalid URL')
   .max(Config.USER_LINK_URL_MAX_LENGTH, `Max ${Config.USER_LINK_URL_MAX_LENGTH} characters`);
-
 interface DialogAddLinkProps {
   onSave: (label: string, url: string) => void;
   disabled?: boolean;
 }
-
 export function DialogAddLink({ onSave, disabled = false }: DialogAddLinkProps) {
   const t = useTranslations('dialogs.addLink');
   const tCommon = useTranslations('common');
@@ -33,24 +30,19 @@ export function DialogAddLink({ onSave, disabled = false }: DialogAddLinkProps) 
   const [url, setUrl] = useState('');
   const [labelError, setLabelError] = useState<string | null>(null);
   const [urlError, setUrlError] = useState<string | null>(null);
-
   const validateLabel = (value: string) => {
     const result = labelSchema.safeParse(value);
     setLabelError(result.success ? null : (result.error.issues[0]?.message ?? 'Invalid label'));
   };
-
   const validateUrl = (value: string) => {
     const result = urlSchema.safeParse(value);
     setUrlError(result.success ? null : (result.error.issues[0]?.message ?? 'Invalid URL'));
   };
-
   const handleSave = () => {
     const trimmedLabel = label.trim();
     const trimmedUrl = url.trim();
-
     const isLabelValid = labelSchema.safeParse(trimmedLabel).success;
     const isUrlValid = urlSchema.safeParse(trimmedUrl).success;
-
     if (!isLabelValid) {
       validateLabel(trimmedLabel);
     }
@@ -58,14 +50,12 @@ export function DialogAddLink({ onSave, disabled = false }: DialogAddLinkProps) 
       validateUrl(trimmedUrl);
     }
     if (!isLabelValid || !isUrlValid) return;
-
     onSave(trimmedLabel, trimmedUrl);
     setLabel('');
     setUrl('');
     setLabelError(null);
     setUrlError(null);
   };
-
   const isValid =
     !labelError &&
     !urlError &&
@@ -73,16 +63,14 @@ export function DialogAddLink({ onSave, disabled = false }: DialogAddLinkProps) 
     url.trim().length > 0 &&
     labelSchema.safeParse(label.trim()).success &&
     urlSchema.safeParse(url.trim()).success;
-
   if (disabled) {
     return null;
   }
-
   return (
     <Atoms.Dialog>
       <Atoms.DialogTrigger asChild>
         <Atoms.Button data-cy="edit-profile-add-link-btn" variant="secondary" size="sm" className="w-fit rounded-full">
-          <Libs.Link className="h-4 w-4" />
+          <Link className="h-4 w-4" />
           <span>{t('title')}</span>
         </Atoms.Button>
       </Atoms.DialogTrigger>
@@ -133,11 +121,13 @@ export function DialogAddLink({ onSave, disabled = false }: DialogAddLinkProps) 
               }}
               size="lg"
               maxLength={Config.USER_LINK_URL_MAX_LENGTH}
-              icon={<Libs.Clipboard className="h-4 w-4" />}
+              icon={<Clipboard className="h-4 w-4" />}
               iconPosition="right"
               onClickIcon={async () => {
                 try {
-                  await Libs.copyToClipboard({ text: url });
+                  await Libs.copyToClipboard({
+                    text: url,
+                  });
                 } catch {}
               }}
               status={urlError ? 'error' : 'default'}

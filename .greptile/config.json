@@ -49,6 +49,12 @@
       "severity": "medium"
     },
     {
+      "id": "icons-import-conventions",
+      "rule": "Stock Lucide icons: import from 'lucide-react' only. Custom/brand SVG components: import from '@/icons' (tsconfig alias → src/libs/icons/icons.tsx). Do not re-export lucide-react from @/libs or add export * from 'lucide-react' to app barrels. URL→icon helpers (getIconFromUrl, getLabelFromUrl) belong in @/libs/utils (urlToIcon). See docs/components.md — Icons.",
+      "scope": ["src/components/**", "src/app/**", "src/hooks/**", "src/providers/**", "src/libs/**"],
+      "severity": "medium"
+    },
+    {
       "id": "skeleton-no-hardcoded-counts",
       "rule": "Never hardcode counts or quantities in skeleton components. Source from constants or props.",
       "scope": ["src/components/**/*skeleton*", "src/components/**/*Skeleton*"],

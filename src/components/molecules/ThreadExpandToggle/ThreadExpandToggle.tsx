@@ -1,9 +1,8 @@
 'use client';
 
 import * as Atoms from '@/atoms';
-import * as Libs from '@/libs';
 import { useTranslations } from 'next-intl';
-
+import { CircleMinus, CirclePlus } from 'lucide-react';
 interface ThreadExpandToggleProps {
   expanded: boolean;
   onToggle: () => void;
@@ -19,9 +18,7 @@ interface ThreadExpandToggleProps {
  */
 export function ThreadExpandToggle({ expanded, onToggle }: ThreadExpandToggleProps) {
   const tThreadTree = useTranslations('common.threadTree');
-
-  const Icon = expanded ? Libs.CircleMinus : Libs.CirclePlus;
-
+  const Icon = expanded ? CircleMinus : CirclePlus;
   return (
     <Atoms.Button
       variant="ghost"

@@ -69,19 +69,79 @@ exports[`DialogSignIn - Snapshots > matches snapshot when open 1`] = `
           class="mx-auto w-full flex-col flex flex-1 items-center justify-center py-4"
           data-testid="container"
         >
-          <span
-            class="size-16 text-muted-foreground/50"
-            data-testid="user-plus-icon"
-          />
+          <svg
+            aria-hidden="true"
+            class="lucide lucide-user-plus size-16 text-muted-foreground/50"
+            fill="none"
+            height="24"
+            stroke="currentColor"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+            stroke-width="2"
+            viewBox="0 0 24 24"
+            width="24"
+            xmlns="http://www.w3.org/2000/svg"
+          >
+            <path
+              d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"
+            />
+            <circle
+              cx="9"
+              cy="7"
+              r="4"
+            />
+            <line
+              x1="19"
+              x2="19"
+              y1="8"
+              y2="14"
+            />
+            <line
+              x1="22"
+              x2="16"
+              y1="11"
+              y2="11"
+            />
+          </svg>
         </div>
         <a
           data-testid="link--"
           href="/"
         >
-          <span
-            class="mr-2 size-4"
-            data-testid="user-plus-icon"
-          />
+          <svg
+            aria-hidden="true"
+            class="lucide lucide-user-plus mr-2 size-4"
+            fill="none"
+            height="24"
+            stroke="currentColor"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+            stroke-width="2"
+            viewBox="0 0 24 24"
+            width="24"
+            xmlns="http://www.w3.org/2000/svg"
+          >
+            <path
+              d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"
+            />
+            <circle
+              cx="9"
+              cy="7"
+              r="4"
+            />
+            <line
+              x1="19"
+              x2="19"
+              y1="8"
+              y2="14"
+            />
+            <line
+              x1="22"
+              x2="16"
+              y1="11"
+              y2="11"
+            />
+          </svg>
           Join Pubky
         </a>
       </div>
@@ -111,19 +171,57 @@ exports[`DialogSignIn - Snapshots > matches snapshot when open 1`] = `
           class="mx-auto w-full flex-col flex flex-1 items-center justify-center py-4"
           data-testid="container"
         >
-          <span
-            class="size-16 text-muted-foreground/50"
-            data-testid="key-round-icon"
-          />
+          <svg
+            aria-hidden="true"
+            class="lucide lucide-key-round size-16 text-muted-foreground/50"
+            fill="none"
+            height="24"
+            stroke="currentColor"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+            stroke-width="2"
+            viewBox="0 0 24 24"
+            width="24"
+            xmlns="http://www.w3.org/2000/svg"
+          >
+            <path
+              d="M2.586 17.414A2 2 0 0 0 2 18.828V21a1 1 0 0 0 1 1h3a1 1 0 0 0 1-1v-1a1 1 0 0 1 1-1h1a1 1 0 0 0 1-1v-1a1 1 0 0 1 1-1h.172a2 2 0 0 0 1.414-.586l.814-.814a6.5 6.5 0 1 0-4-4z"
+            />
+            <circle
+              cx="16.5"
+              cy="7.5"
+              fill="currentColor"
+              r=".5"
+            />
+          </svg>
         </div>
         <a
           data-testid="link--sign-in"
           href="/sign-in"
         >
-          <span
-            class="mr-2 size-4"
-            data-testid="key-round-icon"
-          />
+          <svg
+            aria-hidden="true"
+            class="lucide lucide-key-round mr-2 size-4"
+            fill="none"
+            height="24"
+            stroke="currentColor"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+            stroke-width="2"
+            viewBox="0 0 24 24"
+            width="24"
+            xmlns="http://www.w3.org/2000/svg"
+          >
+            <path
+              d="M2.586 17.414A2 2 0 0 0 2 18.828V21a1 1 0 0 0 1 1h3a1 1 0 0 0 1-1v-1a1 1 0 0 1 1-1h1a1 1 0 0 0 1-1v-1a1 1 0 0 1 1-1h.172a2 2 0 0 0 1.414-.586l.814-.814a6.5 6.5 0 1 0-4-4z"
+            />
+            <circle
+              cx="16.5"
+              cy="7.5"
+              fill="currentColor"
+              r=".5"
+            />
+          </svg>
           Sign In
         </a>
       </div>

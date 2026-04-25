@@ -152,7 +152,9 @@ A single-step widening cast like `value as unknown` or `[] as unknown[]` (inside
 
 ### Icon Components: Always Real
 
-Icon components from `@/libs/icons` should **always** use real implementations. This ensures snapshots capture actual SVG rendering and visual regression tests detect icon changes.
+Stock Lucide icons imported from `lucide-react` and custom SVG icons from `@/icons` (`src/libs/icons/icons.tsx`) should **always** use real implementations in tests—do not `vi.mock('lucide-react')` or `vi.mock('@/icons')` to stub icons. This ensures snapshots capture actual SVG output and visual regression tests detect icon changes.
+
+Application import conventions (where to import icons, URL helpers, and what not to do) are documented in **`docs/components.md`** — _Icons (Lucide and custom)_.
 
 ### Radix UI Components: Always Real
 

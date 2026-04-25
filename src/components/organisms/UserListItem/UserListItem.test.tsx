@@ -55,14 +55,6 @@ vi.mock('@/organisms', () => ({
 vi.mock('@/libs', () => ({
   formatPublicKey: ({ key }: { key: string }) => `pk:${key.slice(0, 8)}`,
   cn: (...args: unknown[]) => args.filter(Boolean).join(' '),
-  Check: (props: Record<string, unknown>) => <svg data-testid="check-icon" {...props} />,
-  UserMinus: (props: Record<string, unknown>) => <svg data-testid="user-minus-icon" {...props} />,
-  UserRoundPlus: (props: Record<string, unknown>) => <svg data-testid="user-round-plus-icon" {...props} />,
-  UserRound: (props: Record<string, unknown>) => <svg data-testid="user-round-icon" {...props} />,
-  CircleUserRound: (props: Record<string, unknown>) => <svg data-testid="circle-user-round" {...props} />,
-  Tag: (props: Record<string, unknown>) => <svg data-testid="tag-icon" {...props} />,
-  StickyNote: (props: Record<string, unknown>) => <svg data-testid="sticky-note-icon" {...props} />,
-  Loader2: (props: Record<string, unknown>) => <svg data-testid="loader-icon" {...props} />,
 }));
 
 // Mock Core
@@ -115,7 +107,8 @@ describe('UserListItem - followButtonVariant', () => {
     );
 
     // iconWithText variant shows both icon and visible "Follow" text
-    expect(screen.getByTestId('user-round-plus-icon')).toBeInTheDocument();
+    const followBtn = screen.getByRole('button', { name: /^Follow$/i });
+    expect(followBtn.querySelector('.lucide-user-round-plus')).toBeInTheDocument();
     expect(screen.getAllByText('Follow').length).toBeGreaterThan(0);
   });
 
@@ -129,12 +122,12 @@ describe('UserListItem - followButtonVariant', () => {
       />,
     );
 
-    // iconWithText + isFollowing shows Check icon and "Following" text
-    expect(screen.getByTestId('check-icon')).toBeInTheDocument();
     const followingText = screen.getByText('Following');
     expect(followingText).toBeInTheDocument();
+    const followToggle = followingText.closest('button') as HTMLButtonElement;
+    expect(followToggle.querySelector('.lucide-check')).toBeInTheDocument();
     // Hover state also renders "Unfollow" text and UserMinus icon
-    expect(screen.getByTestId('user-minus-icon')).toBeInTheDocument();
+    expect(followToggle.querySelector('.lucide-user-minus')).toBeInTheDocument();
     const unfollowText = screen.getByText('Unfollow');
     expect(unfollowText).toBeInTheDocument();
 

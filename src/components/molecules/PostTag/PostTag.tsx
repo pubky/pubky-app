@@ -2,7 +2,7 @@ import * as Atoms from '@/atoms';
 import { COLORS } from '@/config';
 import * as Libs from '@/libs';
 import type { PostTagProps } from './PostTag.types';
-
+import { X } from 'lucide-react';
 export function PostTag({
   label,
   count,
@@ -16,12 +16,10 @@ export function PostTag({
 }: PostTagProps) {
   const tagColor = color || Libs.generateRandomColor(label);
   const backgroundGradient = `linear-gradient(90deg, ${Libs.hexToRgba(COLORS.background, 0.7)} 0%, ${Libs.hexToRgba(COLORS.background, 0.7)} 100%), linear-gradient(90deg, ${tagColor} 0%, ${tagColor} 100%)`;
-
   const handleClose = (e: React.MouseEvent) => {
     e.stopPropagation();
     onClose?.(e);
   };
-
   return (
     <Atoms.Toggle
       {...rest}
@@ -68,7 +66,7 @@ export function PostTag({
           aria-label={`Remove ${label} tag`}
           role="button"
         >
-          <Libs.X className="size-3" strokeWidth={2} />
+          <X className="size-3" strokeWidth={2} />
         </span>
       )}
 
@@ -85,7 +83,9 @@ export function PostTag({
       {selected && (
         <span
           className="pointer-events-none absolute inset-0 rounded-md border border-solid"
-          style={{ borderColor: tagColor }}
+          style={{
+            borderColor: tagColor,
+          }}
           aria-hidden="true"
         />
       )}

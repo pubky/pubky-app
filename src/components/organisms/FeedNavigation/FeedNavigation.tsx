@@ -11,17 +11,15 @@ import { usePathname } from 'next/navigation';
 
 // Module-level cache: survives remounts within the session so that
 // navigating between /home and /feed/[id] doesn't flash empty tabs.
+import { Pencil, Home, PlusCircle } from 'lucide-react';
 let cachedFeeds: Core.FeedModelSchema[] = [];
-
 interface FeedNavigationProps {
   className?: string;
 }
-
 export const FeedNavigation = ({ className }: FeedNavigationProps) => {
   const pathname = usePathname();
   const tHeader = useTranslations('header');
   const tDialog = useTranslations('dialogs.customFeed');
-
   const customFeeds = useLiveQuery(
     async () => {
       try {
@@ -29,25 +27,28 @@ export const FeedNavigation = ({ className }: FeedNavigationProps) => {
         cachedFeeds = result;
         return result;
       } catch (error) {
-        Libs.Logger.error('[FeedNavigation] Failed to query custom feeds', { error });
+        Libs.Logger.error('[FeedNavigation] Failed to query custom feeds', {
+          error,
+        });
         return [] as Core.FeedModelSchema[];
       }
     },
     [],
     cachedFeeds,
   );
-
   const customFeedsMapped = customFeeds.map((f) => ({
     name: f.name,
-    icon: <Libs.Pencil className="size-5 shrink-0" />,
+    icon: <Pencil className="size-5 shrink-0" />,
     href: APP_ROUTES.FEED + '/' + f.id,
   }));
-
   const feeds = [
-    { name: tHeader('home'), icon: <Libs.Home className="size-5 shrink-0" />, href: APP_ROUTES.HOME },
+    {
+      name: tHeader('home'),
+      icon: <Home className="size-5 shrink-0" />,
+      href: APP_ROUTES.HOME,
+    },
     ...customFeedsMapped,
   ];
-
   return (
     <Atoms.Container className={Libs.cn('overflow-x-auto lg:flex-row', className)}>
       <Atoms.Heading level={2} size="lg" className="mb-2 font-light text-muted-foreground lg:hidden">
@@ -85,7 +86,7 @@ export const FeedNavigation = ({ className }: FeedNavigationProps) => {
           overrideDefaults
           className="flex min-h-12 w-full min-w-40 cursor-pointer items-center gap-x-2 border-b border-muted-foreground text-muted-foreground transition-colors hover:text-white lg:justify-center"
         >
-          <Libs.PlusCircle className="size-5 shrink-0" />
+          <PlusCircle className="size-5 shrink-0" />
 
           <Atoms.Typography overrideDefaults className="font-medium lg:text-sm">
             {tDialog('createTitle')}

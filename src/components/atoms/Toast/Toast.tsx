@@ -3,9 +3,8 @@
 import * as React from 'react';
 import { Toast as ToastPrimitives } from 'radix-ui';
 import * as Libs from '@/libs';
-
+import { X } from 'lucide-react';
 const ToastProvider = ToastPrimitives.Provider;
-
 const ToastViewport = React.forwardRef<
   React.ComponentRef<typeof ToastPrimitives.Viewport>,
   React.ComponentPropsWithoutRef<typeof ToastPrimitives.Viewport>
@@ -20,7 +19,6 @@ const ToastViewport = React.forwardRef<
   />
 ));
 ToastViewport.displayName = ToastPrimitives.Viewport.displayName;
-
 const Toast = React.forwardRef<
   React.ComponentRef<typeof ToastPrimitives.Root>,
   React.ComponentPropsWithoutRef<typeof ToastPrimitives.Root>
@@ -48,7 +46,6 @@ const Toast = React.forwardRef<
   );
 });
 Toast.displayName = ToastPrimitives.Root.displayName;
-
 const ToastAction = React.forwardRef<
   React.ComponentRef<typeof ToastPrimitives.Action>,
   React.ComponentPropsWithoutRef<typeof ToastPrimitives.Action>
@@ -63,7 +60,6 @@ const ToastAction = React.forwardRef<
   />
 ));
 ToastAction.displayName = ToastPrimitives.Action.displayName;
-
 const ToastClose = React.forwardRef<
   React.ComponentRef<typeof ToastPrimitives.Close>,
   React.ComponentPropsWithoutRef<typeof ToastPrimitives.Close>
@@ -77,11 +73,10 @@ const ToastClose = React.forwardRef<
     toast-close=""
     {...props}
   >
-    <Libs.X className="h-4 w-4" />
+    <X className="h-4 w-4" />
   </ToastPrimitives.Close>
 ));
 ToastClose.displayName = ToastPrimitives.Close.displayName;
-
 const ToastTitle = React.forwardRef<
   React.ComponentRef<typeof ToastPrimitives.Title>,
   React.ComponentPropsWithoutRef<typeof ToastPrimitives.Title>
@@ -93,7 +88,6 @@ const ToastTitle = React.forwardRef<
   />
 ));
 ToastTitle.displayName = ToastPrimitives.Title.displayName;
-
 const ToastDescription = React.forwardRef<
   React.ComponentRef<typeof ToastPrimitives.Description>,
   React.ComponentPropsWithoutRef<typeof ToastPrimitives.Description>
@@ -101,7 +95,6 @@ const ToastDescription = React.forwardRef<
   <ToastPrimitives.Description ref={ref} className={Libs.cn('text-sm text-muted-foreground', className)} {...props} />
 ));
 ToastDescription.displayName = ToastPrimitives.Description.displayName;
-
 export {
   type ToastProps,
   type ToastActionElement,
@@ -113,7 +106,5 @@ export {
   ToastClose,
   ToastAction,
 };
-
 type ToastProps = React.ComponentPropsWithoutRef<typeof Toast>;
-
 type ToastActionElement = React.ReactElement<typeof ToastAction>;

@@ -5,37 +5,31 @@ import type { ExtraProps } from 'react-markdown';
 import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter';
 import { oneDark } from 'react-syntax-highlighter/dist/esm/styles/prism';
 import * as Libs from '@/libs';
-import * as Icons from '@/libs/icons';
 import * as Atoms from '@/atoms';
-
+import { Check, Clipboard } from 'lucide-react';
 type PostCodeBlockProps = ClassAttributes<HTMLElement> & HTMLAttributes<HTMLElement> & ExtraProps;
-
 export const PostCodeBlock = (props: PostCodeBlockProps) => {
   const [copied, setCopied] = useState(false);
-
   const { children, className, node: _node, ref: _ref, ...rest } = props;
-
   const lang = /language-(\w+)/.exec(className || '')?.[1];
   const codeSyntaxHighlight = String(children).replace(/\n$/, '');
-
   const copyCodeBlock = async () => {
     if (copied) return;
-
     try {
-      await Libs.copyToClipboard({ text: codeSyntaxHighlight });
+      await Libs.copyToClipboard({
+        text: codeSyntaxHighlight,
+      });
       setCopied(true);
     } catch {
       // TODO: add error handling
     }
   };
-
   useEffect(() => {
     if (copied) {
       const timeoutId = setTimeout(() => setCopied(false), 2000);
       return () => clearTimeout(timeoutId);
     }
   }, [copied]);
-
   return lang ? (
     // Full code block with syntax highlighting and copy functionality (ex. ``` or ```ts)
     <Atoms.Container
@@ -54,7 +48,7 @@ export const PostCodeBlock = (props: PostCodeBlockProps) => {
           size="sm"
           className="hover:bg-transparent hover:opacity-50"
         >
-          {copied ? <Icons.Check size={16} /> : <Icons.Clipboard size={16} />}
+          {copied ? <Check size={16} /> : <Clipboard size={16} />}
 
           <Atoms.Typography size="sm">{copied ? 'Copied!' : 'Copy'}</Atoms.Typography>
         </Atoms.Button>

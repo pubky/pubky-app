@@ -4,14 +4,13 @@ import { forwardRef, useImperativeHandle, useRef } from 'react';
 import { useTranslations } from 'next-intl';
 import * as Atoms from '@/atoms';
 import * as Molecules from '@/molecules';
-import * as Icons from '@/libs/icons';
 import * as Libs from '@/libs';
 import * as Hooks from '@/hooks';
 import { mergeTagSuggestions, TAG_INPUT_BLUR_DELAY_MS } from '@/hooks/useTagInput';
 import { TAG_MAX_LENGTH } from '@/config';
 import type { TagInputProps, TagInputHandle } from './TagInput.types';
 import { TagSuggestionsDropdown } from './TagSuggestionsDropdown';
-
+import { Smile, X } from 'lucide-react';
 export const TagInput = forwardRef<TagInputHandle, TagInputProps>(function TagInput(
   {
     onTagAdd,
@@ -42,13 +41,11 @@ export const TagInput = forwardRef<TagInputHandle, TagInputProps>(function TagIn
   // Combine exclusions for API suggestions
   const existingTagLabels = existingTags.map((tag) => tag.label);
   const apiExcludeTags = [...new Set([...excludeFromApiSuggestions, ...existingTagLabels])];
-
   const isAtLimit = maxTags !== undefined && currentTagsCount >= maxTags;
   const isDisabled = disabled || isAtLimit;
 
   // Use viewerTags for duplicate checking, fallback to existingTags
   const tagsForDuplicateCheck = viewerTags ?? existingTags;
-
   const {
     inputValue,
     setInputValue,
@@ -68,7 +65,6 @@ export const TagInput = forwardRef<TagInputHandle, TagInputProps>(function TagIn
     existingTags: tagsForDuplicateCheck.map((t) => t.label),
     allTags: existingTags,
   });
-
   useImperativeHandle(ref, () => ({
     focus: () => inputRef.current?.focus(),
   }));
@@ -79,10 +75,8 @@ export const TagInput = forwardRef<TagInputHandle, TagInputProps>(function TagIn
     excludeTags: apiExcludeTags,
     enabled: enableApiSuggestions && showSuggestions,
   });
-
   const displaySuggestions = mergeTagSuggestions(suggestions, apiSuggestions, enableApiSuggestions);
   const isListboxOpen = showSuggestions && displaySuggestions.length > 0;
-
   const {
     selectedIndex: selectedSuggestionIndex,
     setSelectedIndex: setSelectedSuggestionIndex,
@@ -98,7 +92,6 @@ export const TagInput = forwardRef<TagInputHandle, TagInputProps>(function TagIn
       setShowSuggestions(false);
     },
   });
-
   const handleInputBlur = () => {
     setTimeout(() => {
       if (!containerRef.current?.contains(document.activeElement)) {
@@ -109,21 +102,17 @@ export const TagInput = forwardRef<TagInputHandle, TagInputProps>(function TagIn
       }
     }, TAG_INPUT_BLUR_DELAY_MS);
   };
-
   const handleEmojiPickerClose = (open: boolean) => {
     setShowEmojiPicker(open);
     if (!open) {
       inputRef.current?.focus();
     }
   };
-
   const preventBlur = (e: React.MouseEvent) => {
     e.preventDefault();
   };
-
   const selectSuggestion = (label: string) => {
     const normalizedLabel = label.toLowerCase();
-
     if (addOnSuggestionClick) {
       const isDuplicate = tagsForDuplicateCheck.some((tag) => tag.label.toLowerCase() === normalizedLabel);
       if (!isDuplicate) {
@@ -137,7 +126,6 @@ export const TagInput = forwardRef<TagInputHandle, TagInputProps>(function TagIn
     resetSelection();
     inputRef.current?.focus();
   };
-
   const handleMergedSuggestionsKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
     const handledByListbox = handleListboxKeyDown(e);
     if (handledByListbox) {
@@ -150,9 +138,7 @@ export const TagInput = forwardRef<TagInputHandle, TagInputProps>(function TagIn
       handleTagSubmit();
     }
   };
-
   const displayPlaceholder = isAtLimit ? defaultLimitReachedPlaceholder : defaultPlaceholder;
-
   return (
     <>
       <Atoms.Popover open={isListboxOpen}>
@@ -202,7 +188,7 @@ export const TagInput = forwardRef<TagInputHandle, TagInputProps>(function TagIn
               aria-label="Open emoji picker"
               disabled={isDisabled}
             >
-              <Icons.Smile className="size-4" strokeWidth={2} />
+              <Smile className="size-4" strokeWidth={2} />
             </Atoms.Button>
 
             {showCloseButton && (
@@ -213,7 +199,7 @@ export const TagInput = forwardRef<TagInputHandle, TagInputProps>(function TagIn
                 className="inline-flex size-5 cursor-pointer items-center justify-center rounded-full p-1 hover:opacity-80"
                 aria-label="Close tag input"
               >
-                <Icons.X className="size-3" strokeWidth={2} />
+                <X className="size-3" strokeWidth={2} />
               </Atoms.Button>
             )}
           </Atoms.Container>

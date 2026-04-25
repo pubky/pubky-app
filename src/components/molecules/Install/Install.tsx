@@ -4,14 +4,13 @@ import Image from 'next/image';
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useTranslations } from 'next-intl';
-
 import * as Atoms from '@/atoms';
 import * as Molecules from '@/molecules';
 import * as Organisms from '@/organisms';
 import * as Libs from '@/libs';
 import * as Config from '@/config';
 import * as App from '@/app';
-
+import { Loader2, AppWindow, ArrowRight } from 'lucide-react';
 export const InstallCard = () => {
   const t = useTranslations('onboarding.install');
   return (
@@ -41,7 +40,6 @@ export const InstallCard = () => {
     </Molecules.ContentCard>
   );
 };
-
 export const InstallFooter = () => {
   const t = useTranslations('onboarding.install');
   return (
@@ -61,7 +59,6 @@ export const InstallFooter = () => {
     </Atoms.FooterLinks>
   );
 };
-
 export const InstallHeader = () => {
   const t = useTranslations('onboarding.install');
   return (
@@ -79,24 +76,20 @@ export const InstallHeader = () => {
     </Atoms.PageHeader>
   );
 };
-
 export const InstallNavigation = ({ ...props }: React.HTMLAttributes<HTMLDivElement>) => {
   const t = useTranslations('onboarding.install');
   const router = useRouter();
   const [loadingCreate, setLoadingCreate] = useState(false);
   const [loadingContinue, setLoadingContinue] = useState(false);
-
   const handleCreate = () => {
     // Reset any existing keypair to ensure a fresh one is generated
     setLoadingCreate(true);
     router.push(App.ONBOARDING_ROUTES.PUBKY);
   };
-
   const handleContinue = () => {
     setLoadingContinue(true);
     router.push(App.ONBOARDING_ROUTES.SCAN);
   };
-
   return (
     <Atoms.Container className={Libs.cn('flex-col-reverse gap-3 md:flex-row lg:gap-6', props.className)}>
       <Atoms.Container className="flex-row items-center gap-1">
@@ -107,11 +100,7 @@ export const InstallNavigation = ({ ...props }: React.HTMLAttributes<HTMLDivElem
           onClick={handleCreate}
           disabled={loadingCreate || loadingContinue}
         >
-          {loadingCreate ? (
-            <Libs.Loader2 className="mr-2 h-4 w-4 animate-spin" />
-          ) : (
-            <Libs.AppWindow className="mr-2 h-4 w-4" />
-          )}
+          {loadingCreate ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <AppWindow className="mr-2 h-4 w-4" />}
           {t('createInBrowser')}
         </Atoms.Button>
         <Molecules.PopoverTradeoffs />
@@ -123,17 +112,12 @@ export const InstallNavigation = ({ ...props }: React.HTMLAttributes<HTMLDivElem
         onClick={handleContinue}
         disabled={loadingCreate || loadingContinue}
       >
-        {loadingContinue ? (
-          <Libs.Loader2 className="mr-2 h-4 w-4 animate-spin" />
-        ) : (
-          <Libs.ArrowRight className="mr-2 h-4 w-4" />
-        )}
+        {loadingContinue ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <ArrowRight className="mr-2 h-4 w-4" />}
         {t('continueWithRing')}
       </Atoms.Button>
     </Atoms.Container>
   );
 };
-
 export function StoreButtons({ className }: React.HTMLAttributes<HTMLDivElement>) {
   return (
     <Atoms.Container className={Libs.cn('flex-row justify-around gap-4 sm:justify-start', className)}>

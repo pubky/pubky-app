@@ -1,15 +1,14 @@
 'use client';
 
 import { useTranslations } from 'next-intl';
+import { Calendar, CalendarRange, Clock, Star } from 'lucide-react';
 import * as Atoms from '@/atoms';
 import * as Molecules from '@/molecules';
-import * as Libs from '@/libs';
 import * as Core from '@/core';
 
 // ============================================================================
 // FilterTimeframe Component
 // ============================================================================
-
 interface FilterTimeframeProps {
   selectedTab?: Core.TimeframeType;
   onTabChange?: (tab: Core.TimeframeType) => void;
@@ -22,19 +21,37 @@ interface FilterTimeframeProps {
  */
 export function FilterTimeframe({ selectedTab = Core.TIMEFRAME.THIS_MONTH, onTabChange }: FilterTimeframeProps) {
   const t = useTranslations('filters.timeframe');
-
-  const timeframeTabs: { key: Core.TimeframeType; label: string; icon: React.ComponentType<{ className?: string }> }[] =
-    [
-      { key: Core.TIMEFRAME.TODAY, label: t('today'), icon: Libs.Star },
-      { key: Core.TIMEFRAME.THIS_WEEK, label: t('thisWeek'), icon: Libs.CalendarRange },
-      { key: Core.TIMEFRAME.THIS_MONTH, label: t('thisMonth'), icon: Libs.Calendar },
-      { key: Core.TIMEFRAME.ALL_TIME, label: t('allTime'), icon: Libs.Clock },
-    ];
-
+  const timeframeTabs: {
+    key: Core.TimeframeType;
+    label: string;
+    icon: React.ComponentType<{
+      className?: string;
+    }>;
+  }[] = [
+    {
+      key: Core.TIMEFRAME.TODAY,
+      label: t('today'),
+      icon: Star,
+    },
+    {
+      key: Core.TIMEFRAME.THIS_WEEK,
+      label: t('thisWeek'),
+      icon: CalendarRange,
+    },
+    {
+      key: Core.TIMEFRAME.THIS_MONTH,
+      label: t('thisMonth'),
+      icon: Calendar,
+    },
+    {
+      key: Core.TIMEFRAME.ALL_TIME,
+      label: t('allTime'),
+      icon: Clock,
+    },
+  ];
   const handleTabClick = (tab: Core.TimeframeType) => {
     onTabChange?.(tab);
   };
-
   return (
     <Atoms.FilterRoot>
       <Atoms.FilterHeader title={t('title')} />
@@ -66,7 +83,6 @@ export function FilterTimeframe({ selectedTab = Core.TIMEFRAME.THIS_MONTH, onTab
  */
 export function HotFeedSidebar() {
   const { reach, setReach, timeframe, setTimeframe } = Core.useHotStore();
-
   return (
     <>
       <Molecules.FilterReach selectedTab={reach} onTabChange={setReach} />
@@ -85,7 +101,6 @@ export function HotFeedSidebar() {
  */
 export function HotFeedDrawer() {
   const { reach, setReach, timeframe, setTimeframe } = Core.useHotStore();
-
   return (
     <div className="flex flex-col gap-6">
       <Molecules.FilterReach selectedTab={reach} onTabChange={setReach} />
