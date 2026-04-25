@@ -1082,7 +1082,10 @@
     "failedToLoadUsers": "ユーザーの読み込みに失敗しました",
     "failedToLoadTags": "タグの読み込みに失敗しました",
     "noUsersToShow": "表示するユーザーがいません",
-    "noTagsToShow": "表示するタグがありません"
+    "noTagsToShow": "表示するタグがありません",
+    "tags": "タグ",
+    "users": "ユーザー",
+    "posts": "投稿"
   },
   "privacy": {
     "showConfirmation": "リダイレクト前に確認を表示",

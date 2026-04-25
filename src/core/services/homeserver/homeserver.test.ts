@@ -9,6 +9,7 @@ import {
   ClientErrorCode,
   ValidationErrorCode,
 } from '@/libs';
+import { asOpaque } from '@/test-utils';
 
 // =============================================================================
 // HOISTED MOCKS - Must be hoisted to run before module imports
@@ -130,7 +131,7 @@ vi.mock('@synonymdev/pubky', () => {
  * Creates a mock Session object
  */
 const createMockSession = (): Session =>
-  ({
+  asOpaque<Session>({
     info: {
       publicKey: {
         z32: () => 'user',
@@ -144,18 +145,18 @@ const createMockSession = (): Session =>
       list: (...args: unknown[]) => mockState.sessionStorageList(...args),
     },
     signout: (...args: unknown[]) => mockState.sessionSignout(...args),
-  }) as unknown as Session;
+  });
 
 /**
  * Creates a mock Keypair
  */
 const createMockKeypair = (): Keypair =>
-  ({
+  asOpaque<Keypair>({
     publicKey: {
       z32: () => 'test-public-key-z32',
     } as PublicKey,
     secret: vi.fn(() => new Uint8Array(32).fill(1)),
-  }) as unknown as Keypair;
+  });
 
 // =============================================================================
 // TEST SUITE

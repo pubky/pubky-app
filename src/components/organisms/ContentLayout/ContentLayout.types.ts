@@ -14,6 +14,8 @@ export interface ContentLayoutProps {
   showRightMobileButton?: boolean;
   /** Whether to render the MobileHeader. Set to false when rendering MobileHeader externally (e.g., Settings page). Defaults to true. */
   renderMobileHeader?: boolean;
+  /** Whether the MobileHeader uses a gradient background or a solid one. Defaults to true. */
+  hasGradientBackground?: boolean;
   className?: string;
   classNameWrapperContent?: string;
   feedVariant?: TimelineFeedVariant;

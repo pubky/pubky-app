@@ -5,6 +5,7 @@ import { ScanContent, ScanFooter, ScanHeader, ScanNavigation } from './Scan';
 import * as Config from '@/config';
 import * as App from '@/app';
 import * as Hooks from '@/hooks';
+import { asOpaque } from '@/test-utils';
 
 // Mock Next.js router
 const mockPush = vi.fn();
@@ -211,7 +212,7 @@ describe('ScanContent', () => {
   beforeAll(() => {
     Object.defineProperty(window, 'location', {
       configurable: true,
-      value: { ...(originalLocation as unknown as object), href: '' } as unknown as Location,
+      value: asOpaque<Location>({ ...asOpaque<object>(originalLocation), href: '' }),
     });
   });
 

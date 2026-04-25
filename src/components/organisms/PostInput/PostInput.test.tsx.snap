@@ -2,7 +2,7 @@
 
 exports[`PostInput - Snapshots > matches snapshot for article mode 1`] = `
 <div
-  class="relative cursor-pointer rounded-md border border-dashed p-4 transition-colors duration-200 border-input"
+  class="relative cursor-pointer rounded-md border border-dashed transition-colors duration-200 p-4 border-input"
   data-testid="container"
 >
   <div
@@ -18,6 +18,7 @@ exports[`PostInput - Snapshots > matches snapshot for article mode 1`] = `
     <div
       data-is-reply="true"
       data-post-id="test-user-id:pubkey"
+      data-size="normal"
       data-testid="post-header"
     />
     <div
@@ -79,7 +80,7 @@ exports[`PostInput - Snapshots > matches snapshot for article mode 1`] = `
 
 exports[`PostInput - Snapshots > matches snapshot for edit variant 1`] = `
 <div
-  class="relative cursor-pointer rounded-md border border-dashed p-4 transition-colors duration-200 border-input"
+  class="relative cursor-pointer rounded-md border border-dashed transition-colors duration-200 p-4 border-input"
   data-testid="container"
 >
   <div
@@ -91,6 +92,7 @@ exports[`PostInput - Snapshots > matches snapshot for edit variant 1`] = `
       data-is-reply="true"
       data-max="2000"
       data-post-id="test-user-id:pubkey"
+      data-size="normal"
       data-testid="post-header"
     />
     <div
@@ -154,7 +156,7 @@ exports[`PostInput - Snapshots > matches snapshot for edit variant 1`] = `
 
 exports[`PostInput - Snapshots > matches snapshot for edit variant with article mode 1`] = `
 <div
-  class="relative cursor-pointer rounded-md border border-dashed p-4 transition-colors duration-200 border-input"
+  class="relative cursor-pointer rounded-md border border-dashed transition-colors duration-200 p-4 border-input"
   data-testid="container"
 >
   <div
@@ -170,6 +172,7 @@ exports[`PostInput - Snapshots > matches snapshot for edit variant with article 
     <div
       data-is-reply="true"
       data-post-id="test-user-id:pubkey"
+      data-size="normal"
       data-testid="post-header"
     />
     <div
@@ -226,7 +229,7 @@ exports[`PostInput - Snapshots > matches snapshot for edit variant with article 
 
 exports[`PostInput - Snapshots > matches snapshot for post variant when dragging 1`] = `
 <div
-  class="relative cursor-pointer rounded-md border border-dashed p-4 transition-colors duration-200 border-brand"
+  class="relative cursor-pointer rounded-md border border-dashed transition-colors duration-200 p-4 border-brand"
   data-testid="container"
 >
   <div
@@ -250,6 +253,7 @@ exports[`PostInput - Snapshots > matches snapshot for post variant when dragging
       data-is-reply="true"
       data-max="2000"
       data-post-id="test-user-id:pubkey"
+      data-size="normal"
       data-testid="post-header"
     />
     <div
@@ -317,7 +321,7 @@ exports[`PostInput - Snapshots > matches snapshot for post variant when dragging
 
 exports[`PostInput - Snapshots > matches snapshot for post variant when submitting 1`] = `
 <div
-  class="relative cursor-pointer rounded-md border border-dashed p-4 transition-colors duration-200 border-input"
+  class="relative cursor-pointer rounded-md border border-dashed transition-colors duration-200 p-4 border-input"
   data-testid="container"
 >
   <div
@@ -329,6 +333,7 @@ exports[`PostInput - Snapshots > matches snapshot for post variant when submitti
       data-is-reply="true"
       data-max="2000"
       data-post-id="test-user-id:pubkey"
+      data-size="normal"
       data-testid="post-header"
     />
     <div
@@ -397,7 +402,7 @@ exports[`PostInput - Snapshots > matches snapshot for post variant when submitti
 
 exports[`PostInput - Snapshots > matches snapshot for post variant with attachments 1`] = `
 <div
-  class="relative cursor-pointer rounded-md border border-dashed p-4 transition-colors duration-200 border-input"
+  class="relative cursor-pointer rounded-md border border-dashed transition-colors duration-200 p-4 border-input"
   data-testid="container"
 >
   <div
@@ -409,6 +414,7 @@ exports[`PostInput - Snapshots > matches snapshot for post variant with attachme
       data-is-reply="true"
       data-max="2000"
       data-post-id="test-user-id:pubkey"
+      data-size="normal"
       data-testid="post-header"
     />
     <div
@@ -481,7 +487,7 @@ exports[`PostInput - Snapshots > matches snapshot for post variant with attachme
 
 exports[`PostInput - Snapshots > matches snapshot for post variant with content 1`] = `
 <div
-  class="relative cursor-pointer rounded-md border border-dashed p-4 transition-colors duration-200 border-input"
+  class="relative cursor-pointer rounded-md border border-dashed transition-colors duration-200 p-4 border-input"
   data-testid="container"
 >
   <div
@@ -493,6 +499,7 @@ exports[`PostInput - Snapshots > matches snapshot for post variant with content 
       data-is-reply="true"
       data-max="2000"
       data-post-id="test-user-id:pubkey"
+      data-size="normal"
       data-testid="post-header"
     />
     <div
@@ -561,7 +568,7 @@ exports[`PostInput - Snapshots > matches snapshot for post variant with content 
 
 exports[`PostInput - Snapshots > matches snapshot for post variant with custom placeholder 1`] = `
 <div
-  class="relative cursor-pointer rounded-md border border-dashed p-4 transition-colors duration-200 border-input"
+  class="relative cursor-pointer rounded-md border border-dashed transition-colors duration-200 p-4 border-input"
   data-testid="container"
 >
   <div
@@ -573,6 +580,7 @@ exports[`PostInput - Snapshots > matches snapshot for post variant with custom p
       data-is-reply="true"
       data-max="2000"
       data-post-id="test-user-id:pubkey"
+      data-size="normal"
       data-testid="post-header"
     />
     <div
@@ -640,7 +648,7 @@ exports[`PostInput - Snapshots > matches snapshot for post variant with custom p
 
 exports[`PostInput - Snapshots > matches snapshot for post variant without content or attachments 1`] = `
 <div
-  class="relative cursor-pointer rounded-md border border-dashed p-4 transition-colors duration-200 border-input"
+  class="relative cursor-pointer rounded-md border border-dashed transition-colors duration-200 p-4 border-input"
   data-testid="container"
 >
   <div
@@ -652,6 +660,7 @@ exports[`PostInput - Snapshots > matches snapshot for post variant without conte
       data-is-reply="true"
       data-max="2000"
       data-post-id="test-user-id:pubkey"
+      data-size="normal"
       data-testid="post-header"
     />
     <div
@@ -719,7 +728,7 @@ exports[`PostInput - Snapshots > matches snapshot for post variant without conte
 
 exports[`PostInput - Snapshots > matches snapshot for reply variant without content or attachments 1`] = `
 <div
-  class="relative cursor-pointer rounded-md border border-dashed p-4 transition-colors duration-200 border-input"
+  class="relative cursor-pointer rounded-md border border-dashed transition-colors duration-200 p-4 border-input"
   data-testid="container"
 >
   <div
@@ -731,6 +740,7 @@ exports[`PostInput - Snapshots > matches snapshot for reply variant without cont
       data-is-reply="true"
       data-max="2000"
       data-post-id="test-user-id:pubkey"
+      data-size="normal"
       data-testid="post-header"
     />
     <div
@@ -798,7 +808,7 @@ exports[`PostInput - Snapshots > matches snapshot for reply variant without cont
 
 exports[`PostInput - Snapshots > matches snapshot for reply with thread connector 1`] = `
 <div
-  class="relative cursor-pointer rounded-md border border-dashed p-4 transition-colors duration-200 border-input"
+  class="relative cursor-pointer rounded-md border border-dashed transition-colors duration-200 p-4 border-input"
   data-testid="container"
 >
   <div
@@ -814,6 +824,7 @@ exports[`PostInput - Snapshots > matches snapshot for reply with thread connecto
       data-is-reply="true"
       data-max="2000"
       data-post-id="test-user-id:pubkey"
+      data-size="normal"
       data-testid="post-header"
     />
     <div
@@ -881,7 +892,7 @@ exports[`PostInput - Snapshots > matches snapshot for reply with thread connecto
 
 exports[`PostInput - Snapshots > matches snapshot for repost variant without content or attachments 1`] = `
 <div
-  class="relative cursor-pointer rounded-md border border-dashed p-4 transition-colors duration-200 border-input"
+  class="relative cursor-pointer rounded-md border border-dashed transition-colors duration-200 p-4 border-input"
   data-testid="container"
 >
   <div
@@ -893,6 +904,7 @@ exports[`PostInput - Snapshots > matches snapshot for repost variant without con
       data-is-reply="true"
       data-max="2000"
       data-post-id="test-user-id:pubkey"
+      data-size="normal"
       data-testid="post-header"
     />
     <div

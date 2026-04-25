@@ -23,9 +23,23 @@ export function FilterLayout({
   const items = React.useMemo(
     () =>
       [
-        { key: Core.LAYOUT.COLUMNS, label: t('columns'), icon: Libs.Columns3, disabled },
-        { key: Core.LAYOUT.WIDE, label: t('wide'), icon: Libs.Menu, disabled },
-        showVisual ? { key: Core.LAYOUT.VISUAL, label: t('visual'), icon: Libs.LayoutGrid, disabled } : null,
+        {
+          key: Core.LAYOUT.COLUMNS,
+          label: t('columns'),
+          icon: Libs.Columns3,
+          disabled,
+          dataCy: 'columns-layout-toggle',
+        },
+        { key: Core.LAYOUT.WIDE, label: t('wide'), icon: Libs.Menu, disabled, dataCy: 'wide-layout-toggle' },
+        showVisual
+          ? {
+              key: Core.LAYOUT.VISUAL,
+              label: t('visual'),
+              icon: Libs.LayoutGrid,
+              disabled,
+              dataCy: 'visual-layout-toggle',
+            }
+          : null,
       ].filter(Boolean) as Molecules.FilterItem<Core.LayoutType>[],
     [t, disabled, showVisual],
   );

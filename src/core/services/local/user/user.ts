@@ -36,9 +36,9 @@ export class LocalUserService {
   /**
    * Reads user counts from local database.
    * @param userId - The user ID to read counts for
-   * @returns Promise resolving to user counts or null if not found
+   * @returns Promise resolving to the stored row (including `id`) or null if not found
    */
-  static async readCounts({ userId }: Core.TReadProfileParams): Promise<Core.NexusUserCounts | null> {
+  static async readCounts({ userId }: Core.TReadProfileParams): Promise<Core.UserCountsModel | null> {
     return await Core.UserCountsModel.findById(userId);
   }
 

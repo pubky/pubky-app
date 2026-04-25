@@ -1,5 +1,6 @@
 import { renderHook, waitFor } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
+import { asInvalid } from '@/test-utils';
 import { useUserDetailsFromIds } from './useUserDetailsFromIds';
 import type * as Core from '@/core';
 
@@ -115,7 +116,7 @@ describe('useUserDetailsFromIds', () => {
       setMockUserDetailsMap(
         new Map([
           ['user1', { id: 'user1', name: '', image: null } as Core.NexusUserDetails],
-          ['user2', { id: 'user2', name: null, image: null } as unknown as Core.NexusUserDetails],
+          ['user2', asInvalid<Core.NexusUserDetails>({ id: 'user2', name: null, image: null })],
         ]),
       );
 

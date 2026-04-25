@@ -1076,7 +1076,10 @@
     "failedToLoadUsers": "فشل تحميل المستخدمين",
     "failedToLoadTags": "فشل تحميل الوسوم",
     "noUsersToShow": "لا يوجد مستخدمون للعرض",
-    "noTagsToShow": "لا توجد وسوم للعرض"
+    "noTagsToShow": "لا توجد وسوم للعرض",
+    "tags": "الوسوم",
+    "users": "المستخدمون",
+    "posts": "المنشورات"
   },
   "privacy": {
     "showConfirmation": "اظهار تاكيد قبل اعادة التوجيه",

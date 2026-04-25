@@ -129,6 +129,7 @@ const mockActions = {
   onCopyLink: vi.fn(),
   onSignOut: vi.fn(),
   onStatusChange: vi.fn(),
+  followLoadingAction: null,
 };
 
 const defaultProps: ProfilePageLayoutProps = {

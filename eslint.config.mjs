@@ -71,6 +71,32 @@ const eslintConfig = [
     files: ['**/*.test.{ts,tsx,js,jsx,mjs,cjs}'],
     rules: {
       '@next/next/no-img-element': 'off',
+      // Keep test type assertions honest: escape hatches must route through the
+      // named helpers in `src/test-utils` (asInvalid, asOpaque, mockSession, ...)
+      // so intent is documented and every escape is greppable.
+      '@typescript-eslint/no-explicit-any': 'error',
+      'no-restricted-syntax': [
+        'error',
+        {
+          selector: 'TSAsExpression[expression.type="TSAsExpression"][expression.typeAnnotation.type="TSUnknownKeyword"]',
+          message:
+            '`as unknown as T` is banned in test files. Use asInvalid<T>() / asOpaque<T>() or a dedicated mock helper from @/test-utils instead.',
+        },
+        {
+          selector: 'TSAsExpression[typeAnnotation.type="TSAnyKeyword"]',
+          message:
+            '`as any` is banned in test files. Use asOpaque<T>() or a dedicated mock helper from @/test-utils instead.',
+        },
+      ],
+    },
+  },
+  {
+    // Helpers in src/test-utils are the single permitted home for the underlying
+    // casts that the rule above forbids in tests. Exempt only these files.
+    files: ['src/test-utils/**/*.{ts,tsx}'],
+    rules: {
+      '@typescript-eslint/no-explicit-any': 'off',
+      'no-restricted-syntax': 'off',
     },
   },
 ];

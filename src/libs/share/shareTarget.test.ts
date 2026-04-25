@@ -1,11 +1,12 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
+import { asOpaque, mockResponse } from '@/test-utils';
 import { getSharedFiles, composeShareContent } from './shareTarget';
 
 function createMockResponse(blob: Blob, headers: Headers): Response {
-  return {
+  return mockResponse({
     blob: () => Promise.resolve(blob),
     headers,
-  } as unknown as Response;
+  });
 }
 
 // Store original caches
@@ -94,26 +95,25 @@ describe('shareTarget utilities', () => {
     it('uses blob type when Content-Type header is missing', async () => {
       const mockRequest = new Request('http://localhost/file-0');
       // Create a mock blob object that will return the expected type
-      const mockBlob = {
+      const mockBlob = asOpaque<Blob>({
         type: 'video/mp4',
         arrayBuffer: () => Promise.resolve(new ArrayBuffer(0)),
         text: () => Promise.resolve(''),
         slice: () => new Blob([]),
         stream: () => new ReadableStream(),
         size: 0,
-      } as unknown as Blob;
+      });
       const mockHeaders = new Headers({
         'X-Share-Filename': 'video.mp4',
       });
 
-      // Create a mock response that returns our custom blob
-      const mockResponse = {
+      const mockResponseValue = mockResponse({
         blob: () => Promise.resolve(mockBlob),
         headers: mockHeaders,
-      } as unknown as Response;
+      });
 
       mockCacheKeys.mockResolvedValue([mockRequest]);
-      mockCacheMatch.mockResolvedValue(mockResponse);
+      mockCacheMatch.mockResolvedValue(mockResponseValue);
 
       const files = await getSharedFiles();
 

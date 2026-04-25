@@ -3,6 +3,7 @@ import { PubkyAppFeedLayout, PubkyAppFeedReach, PubkyAppFeedSort } from 'pubky-a
 import * as Core from '@/core';
 import type { TFeedCreateParams, TFeedUpdateParams, TFeedIdParam } from './feed.types';
 import type { AuthStore } from '@/core/stores/auth/auth.types';
+import { asInvalid } from '@/test-utils';
 
 const testData = {
   userPubky: 'o1gg96ewuojmopcjbz8895478wdtxtzzuxnfjjz8o8e77csa1ngo' as Core.Pubky,
@@ -246,7 +247,7 @@ describe('FeedController', () => {
     });
 
     it('should return undefined when not found', async () => {
-      vi.spyOn(Core.FeedApplication, 'get').mockResolvedValue(undefined as unknown as Core.FeedModelSchema);
+      vi.spyOn(Core.FeedApplication, 'get').mockResolvedValue(asInvalid<Core.FeedModelSchema>(undefined));
 
       const result = await FeedController.get({ feedId: 'feed-nonexistent' });
 

@@ -1,4 +1,5 @@
 import { describe, expect, it, vi } from 'vitest';
+import { asOpaque } from '@/test-utils';
 import { probeImageDimensions, probeVideoDimensions } from './TimelineFeedVisualMedia.utils';
 
 describe('TimelineFeedVisualMedia.utils', () => {
@@ -121,7 +122,7 @@ describe('TimelineFeedVisualMedia.utils', () => {
     const originalCreateElement = document.createElement.bind(document) as (tagName: string) => HTMLElement;
     const createElementSpy = vi.spyOn(document, 'createElement').mockImplementation((tagName: string) => {
       if (tagName === 'video') {
-        return new MockVideoElement() as unknown as HTMLVideoElement;
+        return asOpaque<HTMLVideoElement>(new MockVideoElement());
       }
 
       return originalCreateElement(tagName);

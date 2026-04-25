@@ -1,5 +1,7 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { render, screen } from '@testing-library/react';
+import { asInvalid } from '@/test-utils';
+import type { EmbedData } from '../../Providers/Provider.types';
 import { Generic } from './ProviderGeneric';
 import { GenericPreview } from './GenericPreview';
 
@@ -131,7 +133,7 @@ describe('ProviderGeneric', () => {
         },
       };
 
-      const result = Generic.renderEmbed(embedData);
+      const result = Generic.renderEmbed(asInvalid<EmbedData>(embedData));
 
       expect(result).toBeNull();
     });

@@ -88,7 +88,7 @@ describe('PostInputActionBar', () => {
   });
 
   it('renders all action buttons with aria labels', () => {
-    render(<PostInputActionBar />);
+    render(<PostInputActionBar hideArticleButton={false} />);
 
     expect(screen.getByRole('button', { name: 'Add emoji' })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Add image' })).toBeInTheDocument();
@@ -104,6 +104,7 @@ describe('PostInputActionBar', () => {
 
     render(
       <PostInputActionBar
+        hideArticleButton={false}
         onEmojiClick={onEmojiClick}
         onImageClick={onImageClick}
         onArticleClick={onArticleClick}
@@ -123,7 +124,7 @@ describe('PostInputActionBar', () => {
   });
 
   it('disables Post button when isPostDisabled is true', () => {
-    render(<PostInputActionBar isPostDisabled={true} />);
+    render(<PostInputActionBar hideArticleButton={false} isPostDisabled={true} />);
 
     const postButton = screen.getByRole('button', { name: 'Post' });
     expect(postButton).toBeDisabled();
@@ -131,14 +132,14 @@ describe('PostInputActionBar', () => {
 
   it('enables Post button when isPostDisabled is false and handler is provided', () => {
     const onPostClick = vi.fn();
-    render(<PostInputActionBar isPostDisabled={false} onPostClick={onPostClick} />);
+    render(<PostInputActionBar hideArticleButton={false} isPostDisabled={false} onPostClick={onPostClick} />);
 
     const postButton = screen.getByRole('button', { name: 'Post' });
     expect(postButton).not.toBeDisabled();
   });
 
   it('disables buttons without handlers', () => {
-    render(<PostInputActionBar />);
+    render(<PostInputActionBar hideArticleButton={false} />);
 
     expect(screen.getByRole('button', { name: 'Add emoji' })).toBeDisabled();
     expect(screen.getByRole('button', { name: 'Add image' })).toBeDisabled();
@@ -147,32 +148,32 @@ describe('PostInputActionBar', () => {
   });
 
   it('renders Post button with label text', () => {
-    render(<PostInputActionBar />);
+    render(<PostInputActionBar hideArticleButton={false} />);
 
     const postButton = screen.getByRole('button', { name: 'Post' });
     expect(postButton).toHaveTextContent('Post');
   });
 
   it('shows loading state when isSubmitting is true', () => {
-    render(<PostInputActionBar onPostClick={vi.fn()} isSubmitting={true} />);
+    render(<PostInputActionBar hideArticleButton={false} onPostClick={vi.fn()} isSubmitting={true} />);
 
     const postButton = screen.getByRole('button', { name: 'Posting...' });
     expect(postButton).toHaveTextContent('Posting...');
   });
 
   it('disables all buttons when isSubmitting is true', () => {
-    render(<PostInputActionBar onEmojiClick={vi.fn()} isSubmitting={true} />);
+    render(<PostInputActionBar hideArticleButton={false} onEmojiClick={vi.fn()} isSubmitting={true} />);
 
     expect(screen.getByRole('button', { name: 'Add emoji' })).toBeDisabled();
   });
 
   it('renders reply labeling when postButtonAriaLabel is Reply', () => {
-    render(<PostInputActionBar postButtonLabel="Reply" postButtonAriaLabel="Reply" />);
+    render(<PostInputActionBar hideArticleButton={false} postButtonLabel="Reply" postButtonAriaLabel="Reply" />);
     expect(screen.getByRole('button', { name: 'Reply' })).toBeInTheDocument();
   });
 
   it('hides emoji, image, and file buttons when isArticle is true', () => {
-    render(<PostInputActionBar isArticle={true} />);
+    render(<PostInputActionBar hideArticleButton={false} isArticle={true} />);
 
     expect(screen.queryByRole('button', { name: 'Add emoji' })).not.toBeInTheDocument();
     expect(screen.queryByRole('button', { name: 'Add image' })).not.toBeInTheDocument();
@@ -181,7 +182,7 @@ describe('PostInputActionBar', () => {
   });
 
   it('hides image and file buttons but shows emoji when isEdit is true', () => {
-    render(<PostInputActionBar isEdit={true} />);
+    render(<PostInputActionBar hideArticleButton={false} isEdit={true} />);
 
     expect(screen.getByRole('button', { name: 'Add emoji' })).toBeInTheDocument();
     expect(screen.queryByRole('button', { name: 'Add image' })).not.toBeInTheDocument();
@@ -198,19 +199,19 @@ describe('PostInputActionBar', () => {
   });
 
   it('does not render character limit when not provided', () => {
-    render(<PostInputActionBar />);
+    render(<PostInputActionBar hideArticleButton={false} />);
 
     expect(screen.queryByText(/^\d+\/\d+$/)).not.toBeInTheDocument();
   });
 
   it('renders character limit when provided', () => {
-    render(<PostInputActionBar characterLimit={{ count: 45, max: 300 }} />);
+    render(<PostInputActionBar hideArticleButton={false} characterLimit={{ count: 45, max: 300 }} />);
 
     expect(screen.getByText('45/300')).toBeInTheDocument();
   });
 
   it('uses desktop-only classes for character limit', () => {
-    render(<PostInputActionBar characterLimit={{ count: 45, max: 300 }} />);
+    render(<PostInputActionBar hideArticleButton={false} characterLimit={{ count: 45, max: 300 }} />);
 
     expect(screen.getByText('45/300')).toHaveClass('hidden');
     expect(screen.getByText('45/300')).toHaveClass('sm:block');
@@ -218,13 +219,13 @@ describe('PostInputActionBar', () => {
 
   it('uses default size for post button on mobile', () => {
     mockUseIsMobile.mockReturnValue(true);
-    render(<PostInputActionBar />);
+    render(<PostInputActionBar hideArticleButton={false} />);
 
     expect(screen.getByRole('button', { name: 'Post' })).toHaveAttribute('data-size', 'default');
   });
 
   it('uses small size for post button on desktop', () => {
-    render(<PostInputActionBar />);
+    render(<PostInputActionBar hideArticleButton={false} />);
 
     expect(screen.getByRole('button', { name: 'Post' })).toHaveAttribute('data-size', 'sm');
   });
@@ -234,7 +235,7 @@ describe('PostInputActionBar', () => {
       <svg data-testid="custom-post-icon" className={className} />
     );
 
-    render(<PostInputActionBar postButtonIcon={CustomIcon} />);
+    render(<PostInputActionBar hideArticleButton={false} postButtonIcon={CustomIcon} />);
 
     expect(screen.getByTestId('custom-post-icon')).toBeInTheDocument();
   });
@@ -246,7 +247,7 @@ describe('PostInputActionBar - Snapshots', () => {
   });
 
   it('matches snapshot with default props', () => {
-    const { container } = render(<PostInputActionBar />);
+    const { container } = render(<PostInputActionBar hideArticleButton={false} />);
     expect(container.firstChild).toMatchSnapshot();
   });
 
@@ -258,6 +259,7 @@ describe('PostInputActionBar - Snapshots', () => {
 
     const { container } = render(
       <PostInputActionBar
+        hideArticleButton={false}
         onEmojiClick={onEmojiClick}
         onImageClick={onImageClick}
         onArticleClick={onArticleClick}
@@ -268,7 +270,7 @@ describe('PostInputActionBar - Snapshots', () => {
   });
 
   it('matches snapshot with disabled post button', () => {
-    const { container } = render(<PostInputActionBar isPostDisabled={true} />);
+    const { container } = render(<PostInputActionBar hideArticleButton={false} isPostDisabled={true} />);
     expect(container.firstChild).toMatchSnapshot();
   });
 
@@ -278,12 +280,12 @@ describe('PostInputActionBar - Snapshots', () => {
   });
 
   it('matches snapshot with isArticle prop', () => {
-    const { container } = render(<PostInputActionBar isArticle={true} />);
+    const { container } = render(<PostInputActionBar hideArticleButton={false} isArticle={true} />);
     expect(container.firstChild).toMatchSnapshot();
   });
 
   it('matches snapshot with isEdit prop', () => {
-    const { container } = render(<PostInputActionBar isEdit={true} />);
+    const { container } = render(<PostInputActionBar hideArticleButton={false} isEdit={true} />);
     expect(container.firstChild).toMatchSnapshot();
   });
 });

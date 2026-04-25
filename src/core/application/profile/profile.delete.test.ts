@@ -46,11 +46,9 @@ describe('ProfileApplication.commitDelete', () => {
       `${baseDirectory}tags/tag1`,
     ];
 
-    const localDeleteSpy = vi
-      .spyOn(Core.LocalProfileService, 'deleteAll')
-      .mockResolvedValue(undefined as unknown as void);
+    const localDeleteSpy = vi.spyOn(Core.LocalProfileService, 'deleteAll').mockResolvedValue(undefined);
     const listSpy = vi.spyOn(Core.HomeserverService, 'list').mockResolvedValue(fileList);
-    const deleteSpy = vi.spyOn(Core.HomeserverService, 'delete').mockResolvedValue(undefined as unknown as void);
+    const deleteSpy = vi.spyOn(Core.HomeserverService, 'delete').mockResolvedValue(undefined);
 
     await ProfileApplication.commitDelete({ pubky });
 
@@ -67,9 +65,9 @@ describe('ProfileApplication.commitDelete', () => {
   it('calls setProgress with correct percentages', async () => {
     const fileList = [`${baseDirectory}file1`, `${baseDirectory}file2`, `${baseDirectory}profile.json`];
 
-    vi.spyOn(Core.LocalProfileService, 'deleteAll').mockResolvedValue(undefined as unknown as void);
+    vi.spyOn(Core.LocalProfileService, 'deleteAll').mockResolvedValue(undefined);
     vi.spyOn(Core.HomeserverService, 'list').mockResolvedValue(fileList);
-    vi.spyOn(Core.HomeserverService, 'delete').mockResolvedValue(undefined as unknown as void);
+    vi.spyOn(Core.HomeserverService, 'delete').mockResolvedValue(undefined);
 
     const setProgress = vi.fn();
     await ProfileApplication.commitDelete({ pubky, setProgress });
@@ -82,9 +80,9 @@ describe('ProfileApplication.commitDelete', () => {
   it('works without setProgress callback', async () => {
     const fileList = [`${baseDirectory}file1`, `${baseDirectory}profile.json`];
 
-    vi.spyOn(Core.LocalProfileService, 'deleteAll').mockResolvedValue(undefined as unknown as void);
+    vi.spyOn(Core.LocalProfileService, 'deleteAll').mockResolvedValue(undefined);
     vi.spyOn(Core.HomeserverService, 'list').mockResolvedValue(fileList);
-    const deleteSpy = vi.spyOn(Core.HomeserverService, 'delete').mockResolvedValue(undefined as unknown as void);
+    const deleteSpy = vi.spyOn(Core.HomeserverService, 'delete').mockResolvedValue(undefined);
 
     await ProfileApplication.commitDelete({ pubky });
 
@@ -94,9 +92,9 @@ describe('ProfileApplication.commitDelete', () => {
   it('handles empty file list and only deletes profile.json', async () => {
     const fileList = [`${baseDirectory}profile.json`];
 
-    vi.spyOn(Core.LocalProfileService, 'deleteAll').mockResolvedValue(undefined as unknown as void);
+    vi.spyOn(Core.LocalProfileService, 'deleteAll').mockResolvedValue(undefined);
     const listSpy = vi.spyOn(Core.HomeserverService, 'list').mockResolvedValue(fileList);
-    const deleteSpy = vi.spyOn(Core.HomeserverService, 'delete').mockResolvedValue(undefined as unknown as void);
+    const deleteSpy = vi.spyOn(Core.HomeserverService, 'delete').mockResolvedValue(undefined);
 
     await ProfileApplication.commitDelete({ pubky });
     // TODO: Using undefined, false, and Infinity here as a temporary workaround since
@@ -121,7 +119,7 @@ describe('ProfileApplication.commitDelete', () => {
   });
 
   it('propagates errors when list fails', async () => {
-    vi.spyOn(Core.LocalProfileService, 'deleteAll').mockResolvedValue(undefined as unknown as void);
+    vi.spyOn(Core.LocalProfileService, 'deleteAll').mockResolvedValue(undefined);
     const listSpy = vi.spyOn(Core.HomeserverService, 'list').mockRejectedValue(new Error('list failed'));
     const deleteSpy = vi.spyOn(Core.HomeserverService, 'delete');
 
@@ -134,7 +132,7 @@ describe('ProfileApplication.commitDelete', () => {
   it('propagates errors when delete fails', async () => {
     const fileList = [`${baseDirectory}file1`, `${baseDirectory}profile.json`];
 
-    vi.spyOn(Core.LocalProfileService, 'deleteAll').mockResolvedValue(undefined as unknown as void);
+    vi.spyOn(Core.LocalProfileService, 'deleteAll').mockResolvedValue(undefined);
     vi.spyOn(Core.HomeserverService, 'list').mockResolvedValue(fileList);
     const deleteSpy = vi.spyOn(Core.HomeserverService, 'delete').mockRejectedValueOnce(new Error('delete failed'));
 
@@ -151,9 +149,9 @@ describe('ProfileApplication.commitDelete', () => {
       `${baseDirectory}profile.json`,
     ];
 
-    vi.spyOn(Core.LocalProfileService, 'deleteAll').mockResolvedValue(undefined as unknown as void);
+    vi.spyOn(Core.LocalProfileService, 'deleteAll').mockResolvedValue(undefined);
     vi.spyOn(Core.HomeserverService, 'list').mockResolvedValue(fileList);
-    const deleteSpy = vi.spyOn(Core.HomeserverService, 'delete').mockResolvedValue(undefined as unknown as void);
+    const deleteSpy = vi.spyOn(Core.HomeserverService, 'delete').mockResolvedValue(undefined);
 
     await ProfileApplication.commitDelete({ pubky });
 
@@ -170,9 +168,9 @@ describe('ProfileApplication.commitDelete', () => {
       `${baseDirectory}profile.json`,
     ];
 
-    vi.spyOn(Core.LocalProfileService, 'deleteAll').mockResolvedValue(undefined as unknown as void);
+    vi.spyOn(Core.LocalProfileService, 'deleteAll').mockResolvedValue(undefined);
     const listSpy = vi.spyOn(Core.HomeserverService, 'list').mockResolvedValue(largeFileList);
-    vi.spyOn(Core.HomeserverService, 'delete').mockResolvedValue(undefined as unknown as void);
+    vi.spyOn(Core.HomeserverService, 'delete').mockResolvedValue(undefined);
 
     await ProfileApplication.commitDelete({ pubky });
 

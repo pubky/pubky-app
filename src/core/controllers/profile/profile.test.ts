@@ -1,6 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { UserResult } from 'pubky-app-specs';
 import type { Pubky } from '@/core/models/models.types';
+import { asOpaque } from '@/test-utils';
 
 const mockProfileApplication = {
   commitCreate: vi.fn(),
@@ -100,7 +101,7 @@ describe('ProfileController', () => {
         meta: { url: 'user-url' },
       };
 
-      mockUserNormalizer.to.mockReturnValue(userResult as unknown as UserResult);
+      mockUserNormalizer.to.mockReturnValue(asOpaque<UserResult>(userResult));
       mockProfileApplication.commitCreate.mockResolvedValue(undefined);
 
       await ProfileController.commitCreate({
@@ -137,7 +138,7 @@ describe('ProfileController', () => {
         meta: { url: 'user-url' },
       };
 
-      mockUserNormalizer.to.mockReturnValue(userResult as unknown as UserResult);
+      mockUserNormalizer.to.mockReturnValue(asOpaque<UserResult>(userResult));
       mockProfileApplication.commitCreate.mockResolvedValue(undefined);
 
       await ProfileController.commitCreate({
@@ -195,7 +196,7 @@ describe('ProfileController', () => {
         meta: { url: 'user-url' },
       };
 
-      mockUserNormalizer.to.mockReturnValue(userResult as unknown as UserResult);
+      mockUserNormalizer.to.mockReturnValue(asOpaque<UserResult>(userResult));
       mockProfileApplication.commitCreate.mockRejectedValue(new Error('create failed'));
 
       await expect(

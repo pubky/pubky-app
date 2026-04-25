@@ -50,6 +50,7 @@ export function MentionPopover({ users, selectedIndex, onSelect, onHover }: Ment
       ref={containerRef}
       role="listbox"
       aria-label="User suggestions"
+      data-cy="mention-popover"
       data-testid="mention-popover"
       overrideDefaults
       className={Libs.cn(POPOVER_CLASSNAME)}
