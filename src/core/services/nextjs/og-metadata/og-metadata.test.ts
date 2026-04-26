@@ -1,7 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { URL_TRUNCATE_LENGTH, TITLE_TRUNCATE_LENGTH } from '@/config';
 import { asOpaque } from '@/test-utils';
-import { AppError } from '@/libs/error/error';
 import { AuthErrorCode, NetworkErrorCode, ServerErrorCode, ValidationErrorCode } from '@/libs/error/error.codes';
 import { ErrorCategory, ErrorService } from '@/libs/error/error.types';
 import { HttpStatusCode } from '@/libs/http/http.types';
@@ -314,7 +313,8 @@ describe('NextJsOgMetadataService', () => {
   // -------------------------------------------------------------------------
 
   it('should re-throw AppError as-is', async () => {
-    const appError = new AppError({
+    const { AppError: FreshAppError } = await import('@/libs/error/error');
+    const appError = new FreshAppError({
       category: ErrorCategory.Network,
       code: NetworkErrorCode.DNS_FAILED,
       message: 'DNS failed',

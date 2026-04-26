@@ -31,7 +31,7 @@ vi.mock('@/core', () => ({
   },
 }));
 
-vi.mock('@/libs', () => ({
+vi.mock('@/libs/logger/logger', () => ({
   Logger: {
     error: vi.fn(),
   },

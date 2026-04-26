@@ -55,9 +55,8 @@ vi.mock('@/molecules', () => ({
   toast: (props: unknown) => mockToast(props),
 }));
 
-// Mock Libs
-vi.mock('@/libs', async () => {
-  const actual = await vi.importActual('@/libs');
+vi.mock('lucide-react', async () => {
+  const actual = await vi.importActual<typeof import('lucide-react')>('lucide-react');
   return {
     ...actual,
     UserRoundPlus: vi.fn(() => <span>UserRoundPlus</span>),
@@ -70,6 +69,12 @@ vi.mock('@/libs', async () => {
     Flag: vi.fn(() => <span>Flag</span>),
     Edit: vi.fn(() => <span>Edit</span>),
     Trash: vi.fn(() => <span>Trash</span>),
+  };
+});
+vi.mock('@/libs/error/error.utils', async () => {
+  const actual = await vi.importActual<typeof import('@/libs/error/error.utils')>('@/libs/error/error.utils');
+  return {
+    ...actual,
     isAppError: mockIsAppError,
   };
 });

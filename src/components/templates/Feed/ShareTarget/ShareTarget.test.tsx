@@ -27,11 +27,11 @@ vi.mock('next-intl', () => ({
   },
 }));
 
-// Mock Libs
+// Mock share target helpers
 const mockGetSharedFiles = vi.fn();
 const mockComposeShareContent = vi.fn();
 
-vi.mock('@/libs', () => ({
+vi.mock('@/libs/share/shareTarget', () => ({
   getSharedFiles: () => mockGetSharedFiles(),
   composeShareContent: (params: { title?: string; text?: string; url?: string }) => mockComposeShareContent(params),
 }));

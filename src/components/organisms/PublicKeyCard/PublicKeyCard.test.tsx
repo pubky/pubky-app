@@ -185,20 +185,19 @@ const { mockLoggerError, mockLoggerInfo } = vi.hoisted(() => ({
   mockLoggerInfo: vi.fn(),
 }));
 
-// Mock libs - use actual utility functions and icons from lucide-react
-vi.mock('@/libs', async () => {
-  const actual = await vi.importActual('@/libs');
+vi.mock('@/libs/share/share', async () => {
+  const actual = await vi.importActual<typeof import('@/libs/share/share')>('@/libs/share/share');
   return {
     ...actual,
-    Identity: {
-      generateKeypair: vi.fn(() => ({
-        keypair: 'test-keypair',
-        mnemonic: 'abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon about',
-      })),
-      pubkyFromKeypair: vi.fn(() => 'generated-pubky'),
-    },
     shareWithFallback: mockShareWithFallback,
+  };
+});
+vi.mock('@/libs/logger/logger', async () => {
+  const actual = await vi.importActual<typeof import('@/libs/logger/logger')>('@/libs/logger/logger');
+  return {
+    ...actual,
     Logger: {
+      ...actual.Logger,
       error: mockLoggerError,
       info: mockLoggerInfo,
     },

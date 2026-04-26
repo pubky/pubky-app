@@ -19,12 +19,16 @@ vi.mock('@/core', () => ({
   },
 }));
 
-vi.mock('@/libs', () => ({
+vi.mock('@/libs/http/http.types', () => ({
   HttpMethod: {
     PUT: 'PUT',
     DELETE: 'DELETE',
   },
+}));
+vi.mock('@/libs/logger/logger', () => ({
   Logger: mockLogger,
+}));
+vi.mock('@/libs/error/error.utils', () => ({
   isAppError: (...args: unknown[]) => mockIsAppError(...args),
 }));
 

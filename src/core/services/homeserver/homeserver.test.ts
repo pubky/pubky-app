@@ -4,7 +4,6 @@ import { asOpaque } from '@/test-utils';
 import { AppError } from '@/libs/error/error';
 import { AuthErrorCode, ClientErrorCode, ServerErrorCode, ValidationErrorCode } from '@/libs/error/error.codes';
 import { ErrorCategory, ErrorService } from '@/libs/error/error.types';
-import { Err } from '@/libs/error/error.factories';
 import { HttpMethod } from '@/libs/http/http.types';
 
 // =============================================================================
@@ -841,7 +840,8 @@ describe('HomeserverService', () => {
   describe('Edge Cases & Error Handling', () => {
     describe('handleError (private)', () => {
       it('should re-throw AppError instances without wrapping', async () => {
-        const appError = Err.auth(AuthErrorCode.UNAUTHORIZED, 'Already an AppError', {
+        const { Err: FreshErr } = await import('@/libs/error/error.factories');
+        const appError = FreshErr.auth(AuthErrorCode.UNAUTHORIZED, 'Already an AppError', {
           service: ErrorService.Homeserver,
           operation: 'test',
         });

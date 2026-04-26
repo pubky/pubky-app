@@ -3,12 +3,12 @@
 exports[`TextareaField - Snapshots > matches snapshot for TextareaField with custom rows and maxLength 1`] = `
 <div>
   <div
-    class="flex-1 cursor-pointer w-full items-center flex-row border gap-0 rounded-md font-medium"
+    class="w-full flex-1 cursor-pointer flex-row items-center gap-0 rounded-md border font-medium"
     data-testid="container"
   >
     <textarea
       aria-invalid="false"
-      class="px-5 py-4 h-25"
+      class="h-25 px-5 py-4"
       data-testid="textarea"
       maxlength="100"
       rows="6"
@@ -23,12 +23,12 @@ exports[`TextareaField - Snapshots > matches snapshot for TextareaField with cus
 exports[`TextareaField - Snapshots > matches snapshot for TextareaField with dashed variant 1`] = `
 <div>
   <div
-    class="flex-1 cursor-pointer w-full items-center flex-row border gap-0 rounded-md font-medium border-dashed !bg-alpha-90/10"
+    class="w-full flex-1 cursor-pointer flex-row items-center gap-0 rounded-md border font-medium !bg-alpha-90/10 border-dashed"
     data-testid="container"
   >
     <textarea
       aria-invalid="false"
-      class="px-5 py-4 h-25"
+      class="h-25 px-5 py-4"
       data-testid="textarea"
       rows="4"
       variant="inline"
@@ -42,12 +42,12 @@ exports[`TextareaField - Snapshots > matches snapshot for TextareaField with das
 exports[`TextareaField - Snapshots > matches snapshot for TextareaField with error status 1`] = `
 <div>
   <div
-    class="flex-1 cursor-pointer w-full items-center flex-row border gap-0 rounded-md font-medium border-red-500 text-red-500"
+    class="w-full flex-1 cursor-pointer flex-row items-center gap-0 rounded-md border font-medium border-red-500 text-red-500"
     data-testid="container"
   >
     <textarea
       aria-invalid="true"
-      class="px-5 py-4 h-25"
+      class="h-25 px-5 py-4"
       data-testid="textarea"
       rows="4"
       variant="inline"
@@ -67,12 +67,12 @@ exports[`TextareaField - Snapshots > matches snapshot for TextareaField with err
 exports[`TextareaField - Snapshots > matches snapshot for TextareaField with placeholder 1`] = `
 <div>
   <div
-    class="flex-1 cursor-pointer w-full items-center flex-row border gap-0 rounded-md font-medium"
+    class="w-full flex-1 cursor-pointer flex-row items-center gap-0 rounded-md border font-medium"
     data-testid="container"
   >
     <textarea
       aria-invalid="false"
-      class="px-5 py-4 h-25"
+      class="h-25 px-5 py-4"
       data-testid="textarea"
       placeholder="Enter your message here..."
       rows="4"
@@ -85,12 +85,12 @@ exports[`TextareaField - Snapshots > matches snapshot for TextareaField with pla
 exports[`TextareaField - Snapshots > matches snapshot for TextareaField with provided message 1`] = `
 <div>
   <div
-    class="flex-1 cursor-pointer w-full items-center flex-row border gap-0 rounded-md font-medium"
+    class="w-full flex-1 cursor-pointer flex-row items-center gap-0 rounded-md border font-medium"
     data-testid="container"
   >
     <textarea
       aria-invalid="false"
-      class="px-5 py-4 h-25"
+      class="h-25 px-5 py-4"
       data-testid="textarea"
       rows="4"
       variant="inline"
@@ -108,12 +108,12 @@ exports[`TextareaField - Snapshots > matches snapshot for TextareaField with pro
 exports[`TextareaField - Snapshots > matches snapshot for TextareaField with success status 1`] = `
 <div>
   <div
-    class="flex-1 cursor-pointer w-full items-center flex-row border gap-0 rounded-md font-medium border-brand text-brand"
+    class="w-full flex-1 cursor-pointer flex-row items-center gap-0 rounded-md border font-medium border-brand text-brand"
     data-testid="container"
   >
     <textarea
       aria-invalid="false"
-      class="px-5 py-4 h-25"
+      class="h-25 px-5 py-4"
       data-testid="textarea"
       rows="4"
       variant="inline"
@@ -133,12 +133,12 @@ exports[`TextareaField - Snapshots > matches snapshot for TextareaField with suc
 exports[`TextareaField - Snapshots > matches snapshot for default TextareaField 1`] = `
 <div>
   <div
-    class="flex-1 cursor-pointer w-full items-center flex-row border gap-0 rounded-md font-medium"
+    class="w-full flex-1 cursor-pointer flex-row items-center gap-0 rounded-md border font-medium"
     data-testid="container"
   >
     <textarea
       aria-invalid="false"
-      class="px-5 py-4 h-25"
+      class="h-25 px-5 py-4"
       data-testid="textarea"
       rows="4"
       variant="inline"
@@ -152,12 +152,12 @@ exports[`TextareaField - Snapshots > matches snapshot for default TextareaField 
 exports[`TextareaField - Snapshots > matches snapshot for disabled TextareaField 1`] = `
 <div>
   <div
-    class="flex-1 cursor-pointer w-full items-center flex-row border gap-0 rounded-md font-medium"
+    class="w-full flex-1 cursor-pointer flex-row items-center gap-0 rounded-md border font-medium"
     data-testid="container"
   >
     <textarea
       aria-invalid="false"
-      class="px-5 py-4 h-25"
+      class="h-25 px-5 py-4"
       data-testid="textarea"
       disabled=""
       rows="4"
@@ -172,12 +172,12 @@ exports[`TextareaField - Snapshots > matches snapshot for disabled TextareaField
 exports[`TextareaField - Snapshots > matches snapshot for readOnly TextareaField 1`] = `
 <div>
   <div
-    class="flex-1 cursor-pointer w-full items-center flex-row border gap-0 rounded-md font-medium"
+    class="w-full flex-1 cursor-pointer flex-row items-center gap-0 rounded-md border font-medium"
     data-testid="container"
   >
     <textarea
       aria-invalid="false"
-      class="px-5 py-4 h-25"
+      class="h-25 px-5 py-4"
       data-testid="textarea"
       readonly=""
       rows="4"

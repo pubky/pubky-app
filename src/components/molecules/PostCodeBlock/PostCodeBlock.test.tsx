@@ -3,10 +3,10 @@ import { render, screen, fireEvent, act } from '@testing-library/react';
 import { PostCodeBlock } from './PostCodeBlock';
 import { copyToClipboard } from '@/libs/utils/utils';
 
-// Mock only copyToClipboard from @/libs (uses browser Clipboard API)
+// Mock only copyToClipboard from utils (uses browser Clipboard API)
 // Keep real implementations of pure functions like cn
-vi.mock('@/libs', async () => {
-  const actual = await vi.importActual('@/libs');
+vi.mock('@/libs/utils/utils', async () => {
+  const actual = await vi.importActual<typeof import('@/libs/utils/utils')>('@/libs/utils/utils');
   return {
     ...actual,
     copyToClipboard: vi.fn().mockResolvedValue(undefined),

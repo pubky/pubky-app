@@ -63,9 +63,8 @@ const { mockIsPostDeleted } = vi.hoisted(() => ({
   mockIsPostDeleted: vi.fn(() => false),
 }));
 
-// Mock libs - use actual implementations except for isPostDeleted
-vi.mock('@/libs', async () => {
-  const actual = await vi.importActual('@/libs');
+vi.mock('@/libs/utils/utils', async () => {
+  const actual = await vi.importActual<typeof import('@/libs/utils/utils')>('@/libs/utils/utils');
   return {
     ...actual,
     isPostDeleted: mockIsPostDeleted,

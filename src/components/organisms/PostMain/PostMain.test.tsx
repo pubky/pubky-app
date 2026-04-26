@@ -16,9 +16,8 @@ const { mockIsPostDeleted, mockPostHeader } = vi.hoisted(() => ({
   ),
 }));
 
-// Use real libs - use actual implementations
-vi.mock('@/libs', async () => {
-  const actual = await vi.importActual('@/libs');
+vi.mock('@/libs/utils/utils', async () => {
+  const actual = await vi.importActual<typeof import('@/libs/utils/utils')>('@/libs/utils/utils');
   return { ...actual, isPostDeleted: mockIsPostDeleted };
 });
 

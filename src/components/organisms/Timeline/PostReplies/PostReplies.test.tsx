@@ -40,8 +40,8 @@ vi.mock('@/hooks', async (importOriginal) => {
   };
 });
 
-vi.mock('@/libs', async () => {
-  const actual = await vi.importActual('@/libs');
+vi.mock('@/libs/utils/utils', async () => {
+  const actual = await vi.importActual<typeof import('@/libs/utils/utils')>('@/libs/utils/utils');
   return {
     ...actual,
     isPostDeleted: mockIsPostDeleted,

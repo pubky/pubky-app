@@ -30,9 +30,8 @@ vi.mock('@/hooks', async (importOriginal) => {
   };
 });
 
-// Mock libs
-vi.mock('@/libs', async () => {
-  const actual = await vi.importActual('@/libs');
+vi.mock('@/libs/utils/utils', async () => {
+  const actual = await vi.importActual<typeof import('@/libs/utils/utils')>('@/libs/utils/utils');
   return {
     ...actual,
     formatNotificationTime: vi.fn((timestamp: number) => {
@@ -43,6 +42,12 @@ vi.mock('@/libs', async () => {
       return '1h';
     }),
     isPostDeleted: mockIsPostDeleted,
+  };
+});
+vi.mock('@/libs/logger/logger', async () => {
+  const actual = await vi.importActual<typeof import('@/libs/logger/logger')>('@/libs/logger/logger');
+  return {
+    ...actual,
     Logger: {
       warn: vi.fn(),
       error: vi.fn(),
