@@ -12,7 +12,7 @@ import { POST_THREAD_CONNECTOR_VARIANTS } from '@/atoms';
 
 import type { PostMainProps } from './PostMain.types';
 import { usePostMainLayout, WIDE_POST_LAYOUT_CLASSES } from './PostMainLayout';
-import { cn, isPostDeleted } from '@libs/utils/utils';
+import { cn, isPostDeleted } from '@/libs/utils/utils';
 
 export function PostMain({ postId, onClick, className, isReply = false, isLastReply = false }: PostMainProps) {
   const isMobile = Hooks.useIsMobile();

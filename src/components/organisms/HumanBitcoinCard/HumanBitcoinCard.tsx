@@ -7,7 +7,7 @@ import { HumanBitcoinCardSkeleton, PriceSkeleton } from './HumanBitcoinCard.skel
 import type { HumanBitcoinCardProps } from './HumanBitcoinCard.types';
 import { useTranslations } from 'next-intl';
 import { Wallet, TriangleAlert } from 'lucide-react';
-import { cn } from '@libs/utils/utils';
+import { cn } from '@/libs/utils/utils';
 export const HumanBitcoinCard = ({ onClick }: HumanBitcoinCardProps) => {
   const t = useTranslations('onboarding.bitcoin');
   const satUsdRate = useBtcRate()?.satUsd;

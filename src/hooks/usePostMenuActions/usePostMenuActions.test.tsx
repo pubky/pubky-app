@@ -4,7 +4,7 @@ import * as Core from '@/core';
 import { asOpaque } from '@/test-utils';
 import { usePostMenuActions } from './usePostMenuActions';
 import { POST_MENU_ACTION_IDS } from './usePostMenuActions.constants';
-import { isAppError } from '@libs/error/error.utils';
+import { isAppError } from '@/libs/error/error.utils';
 
 // Hoist mocks
 const {

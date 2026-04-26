@@ -4,7 +4,7 @@ import * as Atoms from '@/atoms';
 import * as Organisms from '@/organisms';
 import * as Hooks from '@/hooks';
 import type { PostPreviewCardProps } from './PostPreviewCard.types';
-import { cn } from '@libs/utils/utils';
+import { cn } from '@/libs/utils/utils';
 
 /**
  * PostPreviewCard - Compact preview card for displaying a post in a nested context.

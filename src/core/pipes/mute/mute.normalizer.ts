@@ -1,9 +1,9 @@
 import { MuteResult } from 'pubky-app-specs';
 import * as Core from '@/core';
-import { stripPubkyPrefix } from '@libs/utils/utils';
-import { ValidationErrorCode } from '@libs/error/error.codes';
-import { Err } from '@libs/error/error.factories';
-import { ErrorService } from '@libs/error/error.types';
+import { stripPubkyPrefix } from '@/libs/utils/utils';
+import { ValidationErrorCode } from '@/libs/error/error.codes';
+import { Err } from '@/libs/error/error.factories';
+import { ErrorService } from '@/libs/error/error.types';
 
 export class MuteNormalizer {
   private constructor() {}

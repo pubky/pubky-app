@@ -8,8 +8,8 @@ import * as Molecules from '@/molecules';
 import { MutedUsersListSkeleton } from './MutedUsersList.skeleton';
 import { mapUserIdsToMutedUsers } from './MutedUsersList.utils';
 import { Megaphone } from 'lucide-react';
-import { extractInitials, truncateMiddle } from '@libs/utils/utils';
-import { isAppError } from '@libs/error/error.utils';
+import { isAppError } from '@/libs/error/error.utils';
+import { extractInitials, truncateMiddle } from '@/libs/utils/utils';
 export function MutedUsersList() {
   const t = useTranslations('mutedUsers');
   const tCommon = useTranslations('common');

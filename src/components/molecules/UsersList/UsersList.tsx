@@ -4,7 +4,7 @@ import * as React from 'react';
 import * as Atoms from '@/atoms';
 import * as Molecules from '@/molecules';
 import { Users } from 'lucide-react';
-import { cn } from '@libs/utils/utils';
+import { cn } from '@/libs/utils/utils';
 interface UsersListProps {
   users: Molecules.UserData[];
   onFollow?: (userId: string) => void;

@@ -13,8 +13,8 @@ import * as Core from '@/core';
  * No props needed - it fetches user data and manages dialog state internally.
  */
 import { Key, ArrowRight } from 'lucide-react';
-import { Logger } from '@libs/logger/logger';
-import { formatPublicKey, withPubkyPrefix } from '@libs/utils/utils';
+import { Logger } from '@/libs/logger/logger';
+import { formatPublicKey, withPubkyPrefix } from '@/libs/utils/utils';
 export function DialogWelcome() {
   const { currentUserPubky } = Core.useAuthStore();
   const { showWelcomeDialog, setShowWelcomeDialog } = Core.useOnboardingStore();

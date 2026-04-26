@@ -9,7 +9,7 @@ import { useMutedUsers } from '@/hooks/useMutedUsers';
 import { usePostCounts } from '@/hooks/usePostCounts';
 import { MAX_EXPAND_PAGES } from './useReplyStream.constants';
 import type { UseReplyStreamOptions, UseReplyStreamResult } from './useReplyStream.types';
-import { Logger } from '@libs/logger/logger';
+import { Logger } from '@/libs/logger/logger';
 
 /**
  * Shared base hook for fetching and displaying reply streams.

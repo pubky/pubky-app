@@ -16,18 +16,18 @@ import {
   mockSettingsStore,
   mockSignInStore,
 } from '@/test-utils';
-import { Identity } from '@libs/identity/identity';
-import { Logger } from '@libs/logger/logger';
+import { Identity } from '@/libs/identity/identity';
+import { Logger } from '@/libs/logger/logger';
 
 const TEST_SECRET_KEY = Buffer.from(new Uint8Array(32).fill(1)).toString('hex');
 const TEST_PUBKY = '5a1diz4pghi47ywdfyfzpit5f3bdomzt4pugpbmq4rngdd4iub4y';
 
-const spyOnSleep = async () => vi.spyOn(await import('@libs/utils/utils'), 'sleep').mockResolvedValue(undefined);
+const spyOnSleep = async () => vi.spyOn(await import('@/libs/utils/utils'), 'sleep').mockResolvedValue(undefined);
 const spyOnClearCookies = async () =>
-  vi.spyOn(await import('@libs/utils/utils'), 'clearCookies').mockImplementation(() => {});
+  vi.spyOn(await import('@/libs/utils/utils'), 'clearCookies').mockImplementation(() => {});
 const spyOnClearAllQueryClients = async () =>
   vi
-    .spyOn(await import('@libs/query-client/query-client.factory'), 'clearAllQueryClients')
+    .spyOn(await import('@/libs/query-client/query-client.factory'), 'clearAllQueryClients')
     .mockImplementation(() => {});
 
 const getLastReadUrl = (pubky: string) => `pubky://${pubky}/pub/pubky.app/last_read`;
@@ -214,7 +214,7 @@ vi.mock('@synonymdev/pubky', () => ({
 }));
 
 // Admin credentials are now server-side only (not exposed to client)
-vi.mock('@libs/env/env', () => ({
+vi.mock('@/libs/env/env', () => ({
   Env: {
     HOMESERVER_ADMIN_URL: 'http://test-admin.com',
     HOMESERVER_ADMIN_PASSWORD: 'test-password',

@@ -5,7 +5,7 @@ import { MENU_VARIANT } from '@/config/ui';
 import * as Hooks from '@/hooks';
 import { PostMenuActionsContentSkeleton } from './PostMenuActionsContent.skeleton';
 import type { PostMenuActionsContentProps } from './PostMenuActionsContent.types';
-import { cn } from '@libs/utils/utils';
+import { cn } from '@/libs/utils/utils';
 
 export function PostMenuActionsContent({
   postId,

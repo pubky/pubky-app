@@ -2,8 +2,8 @@ import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { Identity } from './identity';
 import * as bip39 from 'bip39';
 import { asInvalid } from '@/test-utils';
-import { ClientErrorCode, ValidationErrorCode } from '@libs/error/error.codes';
-import { ErrorCategory } from '@libs/error/error.types';
+import { ClientErrorCode, ValidationErrorCode } from '@/libs/error/error.codes';
+import { ErrorCategory } from '@/libs/error/error.types';
 
 // Mock @synonymdev/pubky
 const mockCreateRecoveryFile = vi.fn(() => new Uint8Array([1, 2, 3, 4, 5]));

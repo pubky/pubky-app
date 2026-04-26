@@ -4,8 +4,8 @@ import { useState, useEffect, useCallback, useRef } from 'react';
 import * as Core from '@/core';
 import * as Config from '@/config';
 import * as Types from './useStreamPagination.types';
-import { Logger } from '@libs/logger/logger';
-import { isAppError } from '@libs/error/error.utils';
+import { Logger } from '@/libs/logger/logger';
+import { isAppError } from '@/libs/error/error.utils';
 
 /**
  * useStreamPagination

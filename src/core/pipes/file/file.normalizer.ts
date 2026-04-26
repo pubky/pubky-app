@@ -1,8 +1,8 @@
 import { BlobResult, FileResult } from 'pubky-app-specs';
 import * as Core from '@/core';
-import { ValidationErrorCode } from '@libs/error/error.codes';
-import { Err } from '@libs/error/error.factories';
-import { ErrorService } from '@libs/error/error.types';
+import { ValidationErrorCode } from '@/libs/error/error.codes';
+import { Err } from '@/libs/error/error.factories';
+import { ErrorService } from '@/libs/error/error.types';
 
 export class FileNormalizer {
   private constructor() {}

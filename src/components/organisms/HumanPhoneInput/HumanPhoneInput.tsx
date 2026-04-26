@@ -7,8 +7,8 @@ import React, { useState } from 'react';
 import { useTranslations } from 'next-intl';
 import type { HumanPhoneInputProps } from './HumanPhoneInput.types';
 import { ArrowLeft, ArrowRight } from 'lucide-react';
-import { parsePhoneNumber } from '@libs/phone/phone';
-import { cn } from '@libs/utils/utils';
+import { parsePhoneNumber } from '@/libs/phone/phone';
+import { cn } from '@/libs/utils/utils';
 export const HumanPhoneInput = ({ onBack, onCodeSent, initialPhoneNumber }: HumanPhoneInputProps) => {
   const t = useTranslations('onboarding.phone');
   const tCommon = useTranslations('common');

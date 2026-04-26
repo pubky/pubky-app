@@ -8,8 +8,8 @@ import * as Molecules from '@/molecules';
 import { AUTH_ROUTES, SETTINGS_ROUTES } from '@/app';
 // Import directly to avoid circular dependency with @/hooks barrel
 import { useCopyToClipboard } from '@/hooks/useCopyToClipboard';
-import { Logger } from '@libs/logger/logger';
-import { withPubkyPrefix } from '@libs/utils/utils';
+import { Logger } from '@/libs/logger/logger';
+import { withPubkyPrefix } from '@/libs/utils/utils';
 
 export interface ProfileActions {
   onEdit: () => void;

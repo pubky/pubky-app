@@ -1,7 +1,7 @@
 import React from 'react';
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { render, screen, act } from '@testing-library/react';
-import { Logger } from '@libs/logger/logger';
+import { Logger } from '@/libs/logger/logger';
 
 // Hoisted mocks
 const mocks = vi.hoisted(() => {
@@ -69,18 +69,18 @@ vi.mock('@/atoms', () => ({
   Spinner: (props: Record<string, unknown>) => <div data-testid="spinner" {...props} />,
 }));
 
-vi.mock('@libs/logger/logger', () => ({
+vi.mock('@/libs/logger/logger', () => ({
   Logger: { error: vi.fn(), warn: vi.fn(), info: vi.fn() },
 }));
-vi.mock('@libs/error/error.factories', () => ({
+vi.mock('@/libs/error/error.factories', () => ({
   Err: {
     timeout: (_code: string, msg: string, _opts: unknown) => new Error(msg),
   },
 }));
-vi.mock('@libs/error/error.codes', () => ({
+vi.mock('@/libs/error/error.codes', () => ({
   TimeoutErrorCode: { REQUEST_TIMEOUT: 'REQUEST_TIMEOUT' },
 }));
-vi.mock('@libs/error/error.types', () => ({
+vi.mock('@/libs/error/error.types', () => ({
   ErrorService: { Local: 'Local' },
 }));
 

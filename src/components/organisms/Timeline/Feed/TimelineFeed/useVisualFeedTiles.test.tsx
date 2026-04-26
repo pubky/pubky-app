@@ -80,8 +80,8 @@ vi.mock('@/core', async () => {
   };
 });
 
-vi.mock('@libs/logger/logger', async () => {
-  const actual = await vi.importActual<typeof import('@libs/logger/logger')>('@libs/logger/logger');
+vi.mock('@/libs/logger/logger', async () => {
+  const actual = await vi.importActual<typeof import('@/libs/logger/logger')>('@/libs/logger/logger');
   return {
     ...actual,
     Logger: {

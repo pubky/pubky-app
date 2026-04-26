@@ -10,9 +10,9 @@ import {
   restoreMocks,
   buildPubkyUri,
 } from '../pipes.test-utils';
-import { AppError } from '@libs/error/error';
-import { ValidationErrorCode } from '@libs/error/error.codes';
-import { ErrorCategory, ErrorService } from '@libs/error/error.types';
+import { AppError } from '@/libs/error/error';
+import { ValidationErrorCode } from '@/libs/error/error.codes';
+import { ErrorCategory, ErrorService } from '@/libs/error/error.types';
 
 describe('TagNormalizer', () => {
   const createMockBuilder = (overrides?: Partial<{ createTag: ReturnType<typeof vi.fn> }>) => ({

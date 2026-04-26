@@ -6,7 +6,7 @@ import { HumanSmsCardSkeleton } from './HumanSmsCard.skeleton';
 import type { HumanSmsCardProps } from './HumanSmsCard.types';
 import { useTranslations } from 'next-intl';
 import { Smartphone, TriangleAlert } from 'lucide-react';
-import { cn } from '@libs/utils/utils';
+import { cn } from '@/libs/utils/utils';
 export const HumanSmsCard = ({ onClick }: HumanSmsCardProps) => {
   const t = useTranslations('onboarding.sms');
   const smsInfo = useSmsVerificationInfo();

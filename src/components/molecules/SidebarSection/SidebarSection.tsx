@@ -2,7 +2,7 @@
 
 import * as Atoms from '@/atoms';
 import type { SidebarSectionProps } from './SidebarSection.types';
-import { cn } from '@libs/utils/utils';
+import { cn } from '@/libs/utils/utils';
 
 /**
  * SidebarSection

@@ -1,5 +1,5 @@
 import * as Core from '@/core';
-import { HttpMethod } from '@libs/http/http.types';
+import { HttpMethod } from '@/libs/http/http.types';
 
 /**
  * Nexus User Stream Service

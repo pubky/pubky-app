@@ -9,7 +9,7 @@ import * as Organisms from '@/organisms';
 import * as Core from '@/core';
 import * as Hooks from '@/hooks';
 import * as Types from './RepliesWithParent.types';
-import { Logger } from '@libs/logger/logger';
+import { Logger } from '@/libs/logger/logger';
 
 /**
  * RepliesWithParent

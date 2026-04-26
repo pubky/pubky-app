@@ -1,7 +1,7 @@
 import { ComponentProps } from 'react';
 import { cva } from 'class-variance-authority';
 import NextLink from 'next/link';
-import { cn } from '@libs/utils/utils';
+import { cn } from '@/libs/utils/utils';
 
 interface LinkProps extends ComponentProps<typeof NextLink> {
   variant?: 'default' | 'muted';

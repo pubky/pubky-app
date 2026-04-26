@@ -8,7 +8,7 @@ import * as Stores from '@/core';
 import * as Molecules from '@/molecules';
 import * as Hooks from '@/hooks';
 import { Eye, ArrowRight, EyeOff, ArrowLeft, Check } from 'lucide-react';
-import { cn } from '@libs/utils/utils';
+import { cn } from '@/libs/utils/utils';
 interface DialogBackupPhraseProps {
   children?: ReactNode;
 }

@@ -1,5 +1,5 @@
 import * as Core from '@/core';
-import { Env } from '@libs/env/env';
+import { Env } from '@/libs/env/env';
 
 export class LocalUserService {
   private constructor() {} // Prevent instantiation

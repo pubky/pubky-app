@@ -35,8 +35,8 @@ import {
   Edit,
   Trash,
 } from 'lucide-react';
-import { stripPubkyPrefix, truncateString, withPubkyPrefix } from '@libs/utils/utils';
-import { isAppError } from '@libs/error/error.utils';
+import { isAppError } from '@/libs/error/error.utils';
+import { stripPubkyPrefix, truncateString, withPubkyPrefix } from '@/libs/utils/utils';
 export function usePostMenuActions(postId: string, options: UsePostMenuActionsOptions): UsePostMenuActionsResult {
   const t = useTranslations('post.actions');
   const tToast = useTranslations('toast');

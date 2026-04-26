@@ -12,8 +12,8 @@ import {
 } from './AvatarWithFallback.utils';
 import type { AvatarWithFallbackProps } from './AvatarWithFallback.types';
 import { EyeOff } from 'lucide-react';
-import { Logger } from '@libs/logger/logger';
-import { cn } from '@libs/utils/utils';
+import { Logger } from '@/libs/logger/logger';
+import { cn } from '@/libs/utils/utils';
 export type { AvatarWithFallbackProps };
 export function AvatarWithFallback({
   avatarUrl,

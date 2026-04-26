@@ -3,7 +3,7 @@
 import { useState } from 'react';
 import { SettingsController, NotificationPreferences } from '@/core';
 import type { UseSettingsActionsResult } from './useSettingsActions.types';
-import { isAppError } from '@libs/error/error.utils';
+import { isAppError } from '@/libs/error/error.utils';
 
 /**
  * useSettingsActions

@@ -2,7 +2,7 @@
 
 import * as Atoms from '@/atoms';
 import { Settings2, Lightbulb } from 'lucide-react';
-import { cn } from '@libs/utils/utils';
+import { cn } from '@/libs/utils/utils';
 export interface ButtonFiltersProps {
   onClick?: () => void;
   className?: string;

@@ -7,7 +7,7 @@ import * as Core from '@/core';
 import * as Molecules from '@/molecules';
 import * as App from '@/app';
 import type { UseSignOutResult } from './useSignOut.types';
-import { Logger } from '@libs/logger/logger';
+import { Logger } from '@/libs/logger/logger';
 
 export function useSignOut(): UseSignOutResult {
   const router = useRouter();

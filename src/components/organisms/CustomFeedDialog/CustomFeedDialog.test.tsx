@@ -268,8 +268,8 @@ vi.mock('@/atoms', () => ({
 }));
 
 // Mock env — real implementations with Env override
-vi.mock('@libs/env/env', async () => {
-  const actual = await vi.importActual<typeof import('@libs/env/env')>('@libs/env/env');
+vi.mock('@/libs/env/env', async () => {
+  const actual = await vi.importActual<typeof import('@/libs/env/env')>('@/libs/env/env');
   return {
     ...actual,
     Env: {

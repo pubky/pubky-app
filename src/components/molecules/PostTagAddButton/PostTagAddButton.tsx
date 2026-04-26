@@ -2,7 +2,7 @@ import * as React from 'react';
 import * as Atoms from '@/atoms';
 import type { PostTagAddButtonProps } from './PostTagAddButton.types';
 import { Plus } from 'lucide-react';
-import { cn } from '@libs/utils/utils';
+import { cn } from '@/libs/utils/utils';
 export function PostTagAddButton({ onClick, className, disabled }: PostTagAddButtonProps) {
   return (
     <Atoms.Button

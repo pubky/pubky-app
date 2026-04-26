@@ -1,6 +1,6 @@
 import * as Config from '@/config';
 import type { ResolveAvatarFallbackSeedProps, ResolveAvatarFallbackInitialProps } from './AvatarWithFallback.types';
-import { extractInitials } from '@libs/utils/utils';
+import { extractInitials } from '@/libs/utils/utils';
 
 /**
  * Regex pattern for validating userId format.

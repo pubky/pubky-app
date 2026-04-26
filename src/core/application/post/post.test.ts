@@ -3,10 +3,10 @@ import * as Core from '@/core';
 import { PubkyAppPost, PubkyAppPostKind } from 'pubky-app-specs';
 import type { BlobResult, FileResult } from 'pubky-app-specs';
 import { asOpaque } from '@/test-utils';
-import { DatabaseErrorCode } from '@libs/error/error.codes';
-import { Err } from '@libs/error/error.factories';
-import { ErrorService } from '@libs/error/error.types';
-import { HttpMethod } from '@libs/http/http.types';
+import { DatabaseErrorCode } from '@/libs/error/error.codes';
+import { Err } from '@/libs/error/error.factories';
+import { ErrorService } from '@/libs/error/error.types';
+import { HttpMethod } from '@/libs/http/http.types';
 
 // Mock the Local.Post service
 vi.mock('@/core/services/local/post', () => ({

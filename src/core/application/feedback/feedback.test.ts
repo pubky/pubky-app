@@ -4,11 +4,11 @@ import { CHATWOOT_INBOX_IDS, CHATWOOT_FEEDBACK_MESSAGE_PREFIX } from '@/core/ser
 import type { TFeedbackSubmitInput } from './feedback.types';
 import type { TChatwootContact } from '@/core/services/chatwoot/chatwoot.types';
 import { asOpaque } from '@/test-utils';
-import { NetworkErrorCode } from '@libs/error/error.codes';
-import { Err } from '@libs/error/error.factories';
-import { ErrorService } from '@libs/error/error.types';
-import { HttpStatusCode } from '@libs/http/http.types';
-import { Logger } from '@libs/logger/logger';
+import { NetworkErrorCode } from '@/libs/error/error.codes';
+import { Err } from '@/libs/error/error.factories';
+import { ErrorService } from '@/libs/error/error.types';
+import { HttpStatusCode } from '@/libs/http/http.types';
+import { Logger } from '@/libs/logger/logger';
 
 const testData = {
   userPubky: 'o1gg96ewuojmopcjbz8895478wdtxtzzuxnfjjz8o8e77csa1ngo' as Core.Pubky,

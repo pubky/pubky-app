@@ -1,7 +1,7 @@
 import { useCallback } from 'react';
 import { useTranslations } from 'next-intl';
 import * as Molecules from '@/molecules';
-import { copyToClipboard } from '@libs/utils/utils';
+import { copyToClipboard } from '@/libs/utils/utils';
 
 interface UseCopyToClipboardOptions {
   onSuccess?: (text: string) => void;

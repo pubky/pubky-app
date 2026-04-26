@@ -9,7 +9,7 @@ import type { PostTagsPanelHandle } from '@/organisms';
 import { POST_TAGS_MAX_COUNT, POST_TAGS_MAX_LENGTH, POST_TAGS_MAX_TOTAL_CHARS } from '@/config';
 import { usePostMainLayout, WIDE_POST_LAYOUT_CLASSES } from '@/organisms/PostMain/PostMainLayout';
 import type { SinglePostCardProps } from './SinglePostCard.types';
-import { cn } from '@libs/utils/utils';
+import { cn } from '@/libs/utils/utils';
 
 /**
  * SinglePostCard Organism

@@ -10,7 +10,7 @@ import { HOT_TAGS_FEATURED_COUNT } from '@/config';
 import type { HotTagsOverviewProps } from './HotTagsOverview.types';
 import { DEFAULT_TAGS_LIMIT } from './HotTagsOverview.constants';
 import { HotTagsOverviewSkeleton } from './HotTagsOverview.skeleton';
-import { cn } from '@libs/utils/utils';
+import { cn } from '@/libs/utils/utils';
 
 /**
  * HotTagsOverview

@@ -1,7 +1,7 @@
 import { ReactNode } from 'react';
 
 import * as Atoms from '@/atoms';
-import { cn } from '@libs/utils/utils';
+import { cn } from '@/libs/utils/utils';
 
 interface ActionSectionProps {
   children?: ReactNode;

@@ -2,19 +2,19 @@ import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { act, render } from '@testing-library/react';
 import { GlobalErrorHandlerProvider } from './GlobalErrorHandlerProvider';
 import * as Molecules from '@/molecules';
-import { toAppError } from '@libs/error/error.utils';
-import { Logger } from '@libs/logger/logger';
+import { toAppError } from '@/libs/error/error.utils';
+import { Logger } from '@/libs/logger/logger';
 
-vi.mock('@libs/error/error.utils', async (importOriginal) => {
-  const actual = await importOriginal<typeof import('@libs/error/error.utils')>();
+vi.mock('@/libs/error/error.utils', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('@/libs/error/error.utils')>();
   return {
     ...actual,
     toAppError: vi.fn((error: unknown) => (error instanceof Error ? error : new Error('normalized'))),
     getErrorMessage: vi.fn(() => 'Something went wrong'),
   };
 });
-vi.mock('@libs/logger/logger', async (importOriginal) => {
-  const actual = await importOriginal<typeof import('@libs/logger/logger')>();
+vi.mock('@/libs/logger/logger', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('@/libs/logger/logger')>();
   return {
     ...actual,
     Logger: {

@@ -6,7 +6,7 @@ import * as Molecules from '@/molecules';
 import * as Organisms from '@/organisms';
 import * as Hooks from '@/hooks';
 import { AUTO_COLLAPSE_THRESHOLD, DEFAULT_MAX_DEPTH } from '@/hooks/useNestedReplies/useNestedReplies.constants';
-import { cn } from '@libs/utils/utils';
+import { cn } from '@/libs/utils/utils';
 
 interface ReplyWithNestedProps {
   /** The composite ID of the reply post */

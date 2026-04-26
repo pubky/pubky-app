@@ -1,5 +1,5 @@
 import * as React from 'react';
-import { cn } from '@libs/utils/utils';
+import { cn } from '@/libs/utils/utils';
 
 type InputTheme = 'default' | 'outline';
 

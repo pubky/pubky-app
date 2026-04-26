@@ -1,10 +1,10 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import * as Core from '@/core';
 import { HotApplication } from './hot';
-import { NetworkErrorCode } from '@libs/error/error.codes';
-import { Err } from '@libs/error/error.factories';
-import { ErrorService } from '@libs/error/error.types';
-import { Logger } from '@libs/logger/logger';
+import { NetworkErrorCode } from '@/libs/error/error.codes';
+import { Err } from '@/libs/error/error.factories';
+import { ErrorService } from '@/libs/error/error.types';
+import { Logger } from '@/libs/logger/logger';
 
 describe('HotApplication', () => {
   beforeEach(() => {

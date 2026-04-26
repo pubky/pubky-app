@@ -7,7 +7,7 @@ import * as Atoms from '@/atoms';
 import * as Hooks from '@/hooks';
 import { LANGUAGES } from './LanguageSelector.constants';
 import { Check, ChevronDown } from 'lucide-react';
-import { cn } from '@libs/utils/utils';
+import { cn } from '@/libs/utils/utils';
 function LanguageOptions({ currentLanguage, onSelect }: { currentLanguage: string; onSelect: (code: string) => void }) {
   return (
     <Atoms.Container overrideDefaults className="flex flex-col">

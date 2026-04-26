@@ -9,9 +9,9 @@ import {
 } from 'pubky-app-specs';
 import * as Core from '@/core';
 import { asOpaque } from '@/test-utils';
-import { AppError } from '@libs/error/error';
-import { ValidationErrorCode } from '@libs/error/error.codes';
-import { ErrorCategory, ErrorService } from '@libs/error/error.types';
+import { AppError } from '@/libs/error/error';
+import { ValidationErrorCode } from '@/libs/error/error.codes';
+import { ErrorCategory, ErrorService } from '@/libs/error/error.types';
 
 describe('FeedNormalizer', () => {
   const testData = {

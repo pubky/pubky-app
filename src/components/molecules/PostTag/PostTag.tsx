@@ -2,7 +2,7 @@ import * as Atoms from '@/atoms';
 import { COLORS } from '@/config';
 import type { PostTagProps } from './PostTag.types';
 import { X } from 'lucide-react';
-import { cn, generateRandomColor, hexToRgba } from '@libs/utils/utils';
+import { cn, generateRandomColor, hexToRgba } from '@/libs/utils/utils';
 export function PostTag({
   label,
   count,

@@ -4,7 +4,7 @@ import { ChangeEvent, Dispatch, SetStateAction, forwardRef, useEffect, useMemo }
 import * as Atoms from '@/atoms';
 import { ARTICLE_ATTACHMENT_ACCEPT_STRING, POST_ATTACHMENT_ACCEPT_STRING } from '@/config';
 import { ImagePlus, Plus, Trash2, FileText } from 'lucide-react';
-import { cn } from '@libs/utils/utils';
+import { cn } from '@/libs/utils/utils';
 type PostInputAttachmentsProps = {
   attachments: File[];
   setAttachments: Dispatch<SetStateAction<File[]>>;

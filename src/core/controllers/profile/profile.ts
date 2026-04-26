@@ -1,5 +1,5 @@
 import * as Core from '@/core';
-import { Identity } from '@libs/identity/identity';
+import { Identity } from '@/libs/identity/identity';
 
 // Operations related with the profile.json file in the homeserver
 export class ProfileController {

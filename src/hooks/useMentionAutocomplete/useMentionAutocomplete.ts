@@ -8,7 +8,7 @@ import { useUserDetailsFromIds } from '@/hooks/useUserDetailsFromIds';
 import type { UseMentionAutocompleteParams, UseMentionAutocompleteResult } from './useMentionAutocomplete.types';
 import { MENTION_DEBOUNCE_MS, MENTION_USER_LIMIT } from './useMentionAutocomplete.constants';
 import { extractMentionQuery } from './useMentionAutocomplete.utils';
-import { Logger } from '@libs/logger/logger';
+import { Logger } from '@/libs/logger/logger';
 
 /**
  * Hook for mention autocomplete functionality in post input

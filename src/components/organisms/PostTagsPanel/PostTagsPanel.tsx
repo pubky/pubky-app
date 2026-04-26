@@ -10,7 +10,7 @@ import type { TagInputHandle } from '@/molecules';
 import type { PostTagsPanelProps, PostTagsPanelHandle } from './PostTagsPanel.types';
 import { PostTagsPanelSkeleton } from './PostTagsPanel.skeleton';
 import { Tag } from 'lucide-react';
-import { cn } from '@libs/utils/utils';
+import { cn } from '@/libs/utils/utils';
 const INITIAL_VISIBLE_TAGS = 3;
 
 /**

@@ -7,7 +7,7 @@ import * as Config from '@/config';
 import { useState } from 'react';
 import { z } from 'zod';
 import { Link, Clipboard } from 'lucide-react';
-import { copyToClipboard } from '@libs/utils/utils';
+import { copyToClipboard } from '@/libs/utils/utils';
 const labelSchema = z
   .string()
   .trim()

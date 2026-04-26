@@ -2,6 +2,20 @@ import { describe, it, expect } from 'vitest';
 import { isDynamicPublicRoute } from './routes';
 
 describe('isDynamicPublicRoute', () => {
+  describe('invite routes', () => {
+    it('returns true for invite code route', () => {
+      expect(isDynamicPublicRoute('/invite/abcdefghijkl')).toBe(true);
+    });
+
+    it('returns false for base invite route', () => {
+      expect(isDynamicPublicRoute('/invite')).toBe(false);
+    });
+
+    it('returns false for invite route with extra segments', () => {
+      expect(isDynamicPublicRoute('/invite/abcdefghijkl/extra')).toBe(false);
+    });
+  });
+
   describe('post routes', () => {
     it('returns true for valid single post route', () => {
       expect(isDynamicPublicRoute('/post/abc123/xyz789')).toBe(true);

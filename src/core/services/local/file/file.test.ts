@@ -3,9 +3,9 @@ import type { BlobResult, FileResult } from 'pubky-app-specs';
 import * as Core from '@/core';
 import { LocalFileService } from './file';
 import { asOpaque } from '@/test-utils';
-import { DatabaseErrorCode } from '@libs/error/error.codes';
-import { Err } from '@libs/error/error.factories';
-import { ErrorCategory, ErrorService } from '@libs/error/error.types';
+import { DatabaseErrorCode } from '@/libs/error/error.codes';
+import { Err } from '@/libs/error/error.factories';
+import { ErrorCategory, ErrorService } from '@/libs/error/error.types';
 
 describe('LocalFileService', () => {
   const testPubky: Core.Pubky = 'operrr8wsbpr3ue9d4qj41ge1kcc6r7fdiy6o3ugjrrhi4y77rd0';

@@ -1,5 +1,5 @@
 import { ReactNode } from 'react';
-import { cn } from '@libs/utils/utils';
+import { cn } from '@/libs/utils/utils';
 
 interface ListProps {
   as?: 'ul' | 'ol';

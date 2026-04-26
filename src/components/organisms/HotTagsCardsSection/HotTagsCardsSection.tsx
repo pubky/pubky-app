@@ -12,7 +12,7 @@ import { HOT_TAGS_FEATURED_COUNT } from '@/config';
 import { HotTagsCardsSectionSkeleton } from './HotTagsCardsSection.skeleton';
 import type { HotTagsCardsSectionProps } from './HotTagsCardsSection.types';
 import { MAX_AVATARS_MOBILE, MAX_AVATARS_DEFAULT, MAX_AVATARS_XL } from './HotTagsCardsSection.constants';
-import { cn } from '@libs/utils/utils';
+import { cn } from '@/libs/utils/utils';
 
 /**
  * HotTagsCardsSection

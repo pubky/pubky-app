@@ -1,4 +1,4 @@
-import { STATUS_EMOJIS, STATUS_LABELS } from '@libs/status/status.constants';
+import { STATUS_EMOJIS, STATUS_LABELS } from '@/libs/status/status.constants';
 
 /**
  * Predefined status options available in the status picker

@@ -10,8 +10,8 @@ import Cropper, { type Area } from 'react-easy-crop';
 import 'react-easy-crop/react-easy-crop.css';
 
 import * as Atoms from '@/atoms';
-import { cropImageToBlob } from '@libs/image/cropImage';
-import { Logger } from '@libs/logger/logger';
+import { cropImageToBlob } from '@/libs/image/cropImage';
+import { Logger } from '@/libs/logger/logger';
 
 type DialogCropImageProps = {
   open: boolean;

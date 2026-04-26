@@ -6,7 +6,7 @@ import * as Atoms from '@/atoms';
 import * as Core from '@/core';
 import * as Hooks from '@/hooks';
 import { Key } from 'lucide-react';
-import { formatPublicKey, withPubkyPrefix } from '@libs/utils/utils';
+import { formatPublicKey, withPubkyPrefix } from '@/libs/utils/utils';
 export const CreateProfileHeader = () => {
   const t = useTranslations('onboarding.createProfile');
   const authStore = Core.useAuthStore();

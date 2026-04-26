@@ -18,8 +18,8 @@ import type { UseProfileMenuActionsResult, ProfileMenuActionItem } from './usePr
  * @returns Menu items array and loading state
  */
 import { UserRoundMinus, UserRoundPlus, Key, Link, Megaphone, MegaphoneOff } from 'lucide-react';
-import { truncateString, withPubkyPrefix } from '@libs/utils/utils';
-import { isAppError } from '@libs/error/error.utils';
+import { isAppError } from '@/libs/error/error.utils';
+import { truncateString, withPubkyPrefix } from '@/libs/utils/utils';
 export function useProfileMenuActions(userId: string): UseProfileMenuActionsResult {
   const t = useTranslations('profile.actions');
   const tToast = useTranslations('toast');

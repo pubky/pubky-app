@@ -1,7 +1,7 @@
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { StatusPickerWrapper } from './StatusPickerWrapper';
-import { STATUS_LABELS } from '@libs/status/status.constants';
+import { STATUS_LABELS } from '@/libs/status/status.constants';
 
 // Mock StatusPickerContent
 vi.mock('../StatusPickerContent', () => ({

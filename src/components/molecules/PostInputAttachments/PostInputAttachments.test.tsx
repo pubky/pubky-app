@@ -163,8 +163,8 @@ vi.mock('@/atoms', () => ({
 }));
 
 // Mock @/libs/utils
-vi.mock('@libs/utils/utils', async (importOriginal) => {
-  const actual = await importOriginal<typeof import('@libs/utils/utils')>();
+vi.mock('@/libs/utils/utils', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('@/libs/utils/utils')>();
   return { ...actual };
 });
 

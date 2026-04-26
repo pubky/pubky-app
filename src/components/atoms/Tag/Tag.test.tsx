@@ -1,7 +1,7 @@
 import { render, screen, fireEvent } from '@testing-library/react';
 import { describe, it, expect, vi } from 'vitest';
 import { Tag } from './Tag';
-import { generateRandomColor, hexToRgba } from '@libs/utils/utils';
+import { generateRandomColor, hexToRgba } from '@/libs/utils/utils';
 
 describe('Tag', () => {
   it('renders tag with count', () => {

@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import * as Core from '@/core';
-import { handleApiError } from '@libs/api/route-error-handler';
+import { handleApiError } from '@/libs/api/route-error-handler';
 
 /**
  * API Route for secure OpenGraph metadata fetching.

@@ -17,7 +17,7 @@ import {
   MIN_USER_ID_SEARCH_LENGTH,
   USER_ID_PREFIXES,
 } from './useSearchAutocomplete.constants';
-import { Logger } from '@libs/logger/logger';
+import { Logger } from '@/libs/logger/logger';
 
 export function useSearchAutocomplete({
   query,

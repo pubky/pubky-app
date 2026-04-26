@@ -3,7 +3,7 @@
 import * as React from 'react';
 import * as Atoms from '@/atoms';
 import type { TagProps } from './Tag.types';
-import { cn, generateRandomColor, hexToRgba } from '@libs/utils/utils';
+import { cn, generateRandomColor, hexToRgba } from '@/libs/utils/utils';
 
 export const Tag = ({
   name,

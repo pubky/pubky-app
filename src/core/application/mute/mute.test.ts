@@ -2,10 +2,10 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import * as Core from '@/core';
 import { asInvalid, asOpaque } from '@/test-utils';
 import { MuteApplication } from './mute';
-import { AppError } from '@libs/error/error';
-import { ClientErrorCode, ServerErrorCode } from '@libs/error/error.codes';
-import { ErrorCategory, ErrorService } from '@libs/error/error.types';
-import { HttpMethod, HttpStatusCode } from '@libs/http/http.types';
+import { AppError } from '@/libs/error/error';
+import { ClientErrorCode, ServerErrorCode } from '@/libs/error/error.codes';
+import { ErrorCategory, ErrorService } from '@/libs/error/error.types';
+import { HttpMethod, HttpStatusCode } from '@/libs/http/http.types';
 
 vi.mock('pubky-app-specs', () => ({
   baseUriBuilder: (pubky: string) => `pubky://${pubky}/pub/pubky.app/`,

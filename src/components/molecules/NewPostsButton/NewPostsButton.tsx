@@ -22,7 +22,7 @@ import type { NewPostsButtonProps } from './NewPostsButton.types';
  * ```
  */
 import { ArrowUp } from 'lucide-react';
-import { cn } from '@libs/utils/utils';
+import { cn } from '@/libs/utils/utils';
 export function NewPostsButton({ count, onClick, visible, isScrolled = false }: NewPostsButtonProps) {
   const t = useTranslations('post');
   if (!visible || count === 0) return null;

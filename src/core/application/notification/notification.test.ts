@@ -3,8 +3,8 @@ import * as Core from '@/core';
 import { LastReadResult } from 'pubky-app-specs';
 import { NotificationApplication } from './notification';
 import { asInvalid, asOpaque } from '@/test-utils';
-import { HttpMethod } from '@libs/http/http.types';
-import { Logger } from '@libs/logger/logger';
+import { HttpMethod } from '@/libs/http/http.types';
+import { Logger } from '@/libs/logger/logger';
 
 const userId = 'pubky_user' as Core.Pubky;
 

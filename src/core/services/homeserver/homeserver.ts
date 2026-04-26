@@ -32,14 +32,14 @@ import type {
   TPutBlobParams,
   THomeserverListParams,
 } from './homeserver.types';
-import { Env } from '@libs/env/env';
-import { HttpMethod, HttpStatusCode } from '@libs/http/http.types';
-import { Identity } from '@libs/identity/identity';
-import { Logger } from '@libs/logger/logger';
-import { ServerErrorCode, ValidationErrorCode } from '@libs/error/error.codes';
-import { Err } from '@libs/error/error.factories';
-import { httpResponseToError } from '@libs/error/error.http';
-import { ErrorService } from '@libs/error/error.types';
+import { Env } from '@/libs/env/env';
+import { HttpMethod, HttpStatusCode } from '@/libs/http/http.types';
+import { Identity } from '@/libs/identity/identity';
+import { Logger } from '@/libs/logger/logger';
+import { ServerErrorCode, ValidationErrorCode } from '@/libs/error/error.codes';
+import { Err } from '@/libs/error/error.factories';
+import { httpResponseToError } from '@/libs/error/error.http';
+import { ErrorService } from '@/libs/error/error.types';
 
 const TESTNET = Config.TESTNET.toString() === 'true';
 

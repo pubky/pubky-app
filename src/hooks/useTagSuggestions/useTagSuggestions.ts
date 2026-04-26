@@ -9,7 +9,7 @@ import {
   TAG_SUGGESTIONS_DEFAULT_LIMIT,
   TAG_SUGGESTIONS_MIN_QUERY_LENGTH,
 } from './useTagSuggestions.constants';
-import { Logger } from '@libs/logger/logger';
+import { Logger } from '@/libs/logger/logger';
 
 /**
  * Hook for fetching tag suggestions from the API

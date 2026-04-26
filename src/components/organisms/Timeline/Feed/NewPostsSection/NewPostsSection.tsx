@@ -4,7 +4,7 @@ import { useTranslations } from 'next-intl';
 import * as Core from '@/core';
 import * as Molecules from '@/molecules';
 import * as Hooks from '@/hooks';
-import { Logger } from '@libs/logger/logger';
+import { Logger } from '@/libs/logger/logger';
 
 interface NewPostsSectionProps {
   streamId: Core.PostStreamId;

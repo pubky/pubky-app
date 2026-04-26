@@ -3,9 +3,9 @@ import { NextRequest } from 'next/server';
 import { POST, GET, OPTIONS } from './route';
 import * as Core from '@/core';
 import { REPORT_REASON_MAX_LENGTH } from '@/core/pipes/report';
-import { ServerErrorCode, ValidationErrorCode } from '@libs/error/error.codes';
-import { Err } from '@libs/error/error.factories';
-import { ErrorService } from '@libs/error/error.types';
+import { ServerErrorCode, ValidationErrorCode } from '@/libs/error/error.codes';
+import { Err } from '@/libs/error/error.factories';
+import { ErrorService } from '@/libs/error/error.types';
 
 const testData = {
   userPubky: 'o1gg96ewuojmopcjbz8895478wdtxtzzuxnfjjz8o8e77csa1ngo' as Core.Pubky,

@@ -1,8 +1,8 @@
 import * as Core from '@/core';
-import { Logger } from '@libs/logger/logger';
-import { DatabaseErrorCode } from '@libs/error/error.codes';
-import { Err } from '@libs/error/error.factories';
-import { ErrorService } from '@libs/error/error.types';
+import { Logger } from '@/libs/logger/logger';
+import { DatabaseErrorCode } from '@/libs/error/error.codes';
+import { Err } from '@/libs/error/error.factories';
+import { ErrorService } from '@/libs/error/error.types';
 
 type MuteAction = 'mute' | 'unmute';
 

@@ -1,7 +1,7 @@
 import * as Core from '@/core';
 import { filesApi } from './file.api';
-import { HttpMethod } from '@libs/http/http.types';
-import { Logger } from '@libs/logger/logger';
+import { HttpMethod } from '@/libs/http/http.types';
+import { Logger } from '@/libs/logger/logger';
 
 /**
  * Nexus File Service

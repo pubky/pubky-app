@@ -6,7 +6,7 @@ import { NotificationType, type FlatNotification } from '@/core';
 // Direct import to avoid circular dependency (this hook is exported from @/hooks)
 import { useMutedUsers } from '@/hooks/useMutedUsers';
 import type { UseNotificationsResult } from './useNotifications.types';
-import { Logger } from '@libs/logger/logger';
+import { Logger } from '@/libs/logger/logger';
 
 /**
  * Hook for notifications with infinite scroll pagination.

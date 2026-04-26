@@ -1,7 +1,7 @@
 import * as Core from '@/core';
-import { HttpMethod, HttpStatusCode } from '@libs/http/http.types';
-import { Logger } from '@libs/logger/logger';
-import { AppError } from '@libs/error/error';
+import { HttpMethod, HttpStatusCode } from '@/libs/http/http.types';
+import { Logger } from '@/libs/logger/logger';
+import { AppError } from '@/libs/error/error';
 
 /**
  * Settings application service.

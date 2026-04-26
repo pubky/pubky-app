@@ -11,7 +11,7 @@ import {
   CLICKABLE_TAGS_DEFAULT_MAX_TOTAL_CHARS,
   CLICKABLE_TAGS_DEFAULT_MAX_TAGS,
 } from '@/config';
-import { cn, generateRandomColor, getDisplayTags } from '@libs/utils/utils';
+import { cn, generateRandomColor, getDisplayTags } from '@/libs/utils/utils';
 
 /**
  * ClickableTagsList

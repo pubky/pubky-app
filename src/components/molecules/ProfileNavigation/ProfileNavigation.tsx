@@ -2,7 +2,7 @@
 
 import * as Atoms from '@/atoms';
 import { ArrowLeft, Loader2, ArrowRight } from 'lucide-react';
-import { cn } from '@libs/utils/utils';
+import { cn } from '@/libs/utils/utils';
 export const ProfileNavigation = ({
   continueButtonDisabled,
   continueText = 'Finish',

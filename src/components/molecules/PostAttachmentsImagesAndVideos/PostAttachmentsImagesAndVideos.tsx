@@ -7,7 +7,7 @@ import type { CarouselApi } from '@/components/atoms/Carousel';
 import { useEffect, useState } from 'react';
 import { useTranslations } from 'next-intl';
 import { X, Maximize } from 'lucide-react';
-import { cn } from '@libs/utils/utils';
+import { cn } from '@/libs/utils/utils';
 type PostAttachmentsImagesAndVideosProps = {
   imagesAndVideos: AttachmentConstructed[];
 };

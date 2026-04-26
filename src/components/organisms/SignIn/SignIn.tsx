@@ -11,8 +11,8 @@ import * as Hooks from '@/hooks';
 
 // Step configuration for the progress display (labels are translation keys)
 import { CheckCircle, Loader2, Circle, QrCode, Key } from 'lucide-react';
-import { Logger } from '@libs/logger/logger';
-import { cn } from '@libs/utils/utils';
+import { Logger } from '@/libs/logger/logger';
+import { cn } from '@/libs/utils/utils';
 const SIGN_IN_STEPS = [
   {
     key: 'profileChecked',

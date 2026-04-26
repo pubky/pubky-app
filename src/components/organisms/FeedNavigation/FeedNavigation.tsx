@@ -11,8 +11,8 @@ import { usePathname } from 'next/navigation';
 // Module-level cache: survives remounts within the session so that
 // navigating between /home and /feed/[id] doesn't flash empty tabs.
 import { Pencil, Home, PlusCircle } from 'lucide-react';
-import { Logger } from '@libs/logger/logger';
-import { cn } from '@libs/utils/utils';
+import { Logger } from '@/libs/logger/logger';
+import { cn } from '@/libs/utils/utils';
 let cachedFeeds: Core.FeedModelSchema[] = [];
 interface FeedNavigationProps {
   className?: string;

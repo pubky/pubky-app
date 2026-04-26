@@ -1,11 +1,11 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import type { Session, Keypair, PublicKey } from '@synonymdev/pubky';
 import { asOpaque } from '@/test-utils';
-import { AppError } from '@libs/error/error';
-import { AuthErrorCode, ClientErrorCode, ServerErrorCode, ValidationErrorCode } from '@libs/error/error.codes';
-import { ErrorCategory, ErrorService } from '@libs/error/error.types';
-import { Err } from '@libs/error/error.factories';
-import { HttpMethod } from '@libs/http/http.types';
+import { AppError } from '@/libs/error/error';
+import { AuthErrorCode, ClientErrorCode, ServerErrorCode, ValidationErrorCode } from '@/libs/error/error.codes';
+import { ErrorCategory, ErrorService } from '@/libs/error/error.types';
+import { Err } from '@/libs/error/error.factories';
+import { HttpMethod } from '@/libs/http/http.types';
 
 // =============================================================================
 // HOISTED MOCKS - Must be hoisted to run before module imports
@@ -48,7 +48,7 @@ vi.mock('pubky-app-specs', () => ({
 }));
 
 // Mock Logger to suppress console output during tests
-vi.mock('@libs/logger/logger', () => ({
+vi.mock('@/libs/logger/logger', () => ({
   Logger: {
     debug: vi.fn(),
     info: vi.fn(),

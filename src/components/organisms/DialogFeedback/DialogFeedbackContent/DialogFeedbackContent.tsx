@@ -6,7 +6,7 @@ import * as Organisms from '@/organisms';
 import { FEEDBACK_MAX_CHARACTER_LENGTH } from '@/config';
 import type { DialogFeedbackContentProps } from './DialogFeedbackContent.types';
 import { Loader2, Send } from 'lucide-react';
-import { getCharacterCount } from '@libs/utils/utils';
+import { getCharacterCount } from '@/libs/utils/utils';
 export function DialogFeedbackContent({
   feedback,
   handleChange,

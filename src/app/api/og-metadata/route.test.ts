@@ -2,10 +2,10 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { NextRequest } from 'next/server';
 import { GET } from './route';
 import * as Core from '@/core';
-import { AuthErrorCode, ClientErrorCode, TimeoutErrorCode, ValidationErrorCode } from '@libs/error/error.codes';
-import { Err } from '@libs/error/error.factories';
-import { ErrorService } from '@libs/error/error.types';
-import { HttpStatusCode } from '@libs/http/http.types';
+import { AuthErrorCode, ClientErrorCode, TimeoutErrorCode, ValidationErrorCode } from '@/libs/error/error.codes';
+import { Err } from '@/libs/error/error.factories';
+import { ErrorService } from '@/libs/error/error.types';
+import { HttpStatusCode } from '@/libs/http/http.types';
 
 const createRequest = (url: string) => {
   const searchParams = new URLSearchParams({ url });

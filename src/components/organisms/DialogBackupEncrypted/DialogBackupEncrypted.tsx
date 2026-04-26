@@ -7,7 +7,7 @@ import Image from 'next/image';
 import * as Core from '@/core';
 import { useTranslations } from 'next-intl';
 import { Download, ArrowRight } from 'lucide-react';
-import { calculatePasswordStrength, getStrengthColor } from '@libs/password/password';
+import { calculatePasswordStrength, getStrengthColor } from '@/libs/password/password';
 interface DialogBackupEncryptedProps {
   children?: React.ReactNode;
 }

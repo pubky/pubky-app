@@ -3,7 +3,7 @@ import { renderHook } from '@testing-library/react';
 import { useCustomFeed } from './useCustomFeed';
 import { PubkyAppFeedReach, PubkyAppFeedSort, PubkyAppFeedLayout } from 'pubky-app-specs';
 import type * as Core from '@/core';
-import { Logger } from '@libs/logger/logger';
+import { Logger } from '@/libs/logger/logger';
 
 // --- Hoisted mocks ---
 

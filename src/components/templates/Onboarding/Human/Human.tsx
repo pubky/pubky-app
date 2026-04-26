@@ -6,7 +6,7 @@ import * as Core from '@/core';
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { ONBOARDING_ROUTES } from '@/app';
-import { Logger } from '@libs/logger/logger';
+import { Logger } from '@/libs/logger/logger';
 
 enum States {
   Selection = 'selection',

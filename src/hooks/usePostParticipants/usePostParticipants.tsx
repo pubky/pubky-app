@@ -11,7 +11,7 @@ import type {
   UsePostParticipantsOptions,
   PostParticipant,
 } from './usePostParticipants.types';
-import { Logger } from '@libs/logger/logger';
+import { Logger } from '@/libs/logger/logger';
 
 const DEFAULT_LIMIT = 10;
 

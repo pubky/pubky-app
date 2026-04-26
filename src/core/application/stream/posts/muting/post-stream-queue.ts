@@ -1,7 +1,7 @@
 import * as Core from '@/core';
 import { TQueueEntry } from '../post.types';
 import { CollectParams, CollectResult } from './post-stream-queue.types';
-import { Logger } from '@libs/logger/logger';
+import { Logger } from '@/libs/logger/logger';
 
 // Safety valve to prevent infinite loops when filters remove many posts.
 // At 20 iterations with limit=30, we scan up to 600 posts before giving up.

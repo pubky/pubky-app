@@ -3,7 +3,7 @@
 import { useLiveQuery } from 'dexie-react-hooks';
 import * as Core from '@/core';
 import type { UseUnreadPostsOptions, UseUnreadPostsResult } from './useUnreadPosts.types';
-import { Logger } from '@libs/logger/logger';
+import { Logger } from '@/libs/logger/logger';
 
 /**
  * useUnreadPosts

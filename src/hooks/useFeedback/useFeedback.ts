@@ -4,8 +4,8 @@ import { useState, useCallback, useMemo } from 'react';
 import { useTranslations } from 'next-intl';
 import * as Molecules from '@/molecules';
 import * as Hooks from '@/hooks';
-import { Logger } from '@libs/logger/logger';
-import { postJson } from '@libs/api/client-request';
+import { Logger } from '@/libs/logger/logger';
+import { postJson } from '@/libs/api/client-request';
 
 /**
  * Hook to handle feedback submission.

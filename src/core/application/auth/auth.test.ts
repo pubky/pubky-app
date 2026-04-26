@@ -2,13 +2,13 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import * as Core from '@/core';
 import type { Session, Keypair } from '@synonymdev/pubky';
 import { asOpaque, mockAuthStore, mockSession } from '@/test-utils';
-import { AppError } from '@libs/error/error';
-import { AuthErrorCode, ClientErrorCode, NetworkErrorCode, ServerErrorCode } from '@libs/error/error.codes';
-import { Err } from '@libs/error/error.factories';
-import { ErrorCategory, ErrorService } from '@libs/error/error.types';
-import { HttpMethod } from '@libs/http/http.types';
+import { AppError } from '@/libs/error/error';
+import { AuthErrorCode, ClientErrorCode, NetworkErrorCode, ServerErrorCode } from '@/libs/error/error.codes';
+import { Err } from '@/libs/error/error.factories';
+import { ErrorCategory, ErrorService } from '@/libs/error/error.types';
+import { HttpMethod } from '@/libs/http/http.types';
 
-const spyOnSleep = async () => vi.spyOn(await import('@libs/utils/utils'), 'sleep').mockResolvedValue(undefined);
+const spyOnSleep = async () => vi.spyOn(await import('@/libs/utils/utils'), 'sleep').mockResolvedValue(undefined);
 
 vi.mock('pubky-app-specs', () => ({
   default: vi.fn(() => Promise.resolve()),

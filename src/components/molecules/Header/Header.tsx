@@ -9,8 +9,8 @@ import * as Organisms from '@/organisms';
 import * as Config from '@/config';
 import * as App from '@/app';
 import { Home, Flame, Bookmark, Settings } from 'lucide-react';
-import { Github2, XTwitter, Telegram } from '@icons';
-import { cn } from '@libs/utils/utils';
+import { Github2, XTwitter, Telegram } from '@/icons';
+import { cn } from '@/libs/utils/utils';
 export interface HeaderContainerProps {
   children: React.ReactNode;
   className?: string;

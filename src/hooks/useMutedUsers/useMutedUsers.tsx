@@ -4,7 +4,7 @@ import { useMemo, useCallback } from 'react';
 import { useLiveQuery } from 'dexie-react-hooks';
 import * as Core from '@/core';
 import type { UseMutedUsersResult } from './useMutedUsers.types';
-import { stripPubkyPrefix } from '@libs/utils/utils';
+import { stripPubkyPrefix } from '@/libs/utils/utils';
 
 const EMPTY_ARRAY: Core.Pubky[] = [];
 

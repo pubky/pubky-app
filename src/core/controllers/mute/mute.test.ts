@@ -3,7 +3,7 @@ import { MuteResult } from 'pubky-app-specs';
 import { MuteController } from './mute';
 import * as Core from '@/core';
 import { asOpaque } from '@/test-utils';
-import { HttpMethod } from '@libs/http/http.types';
+import { HttpMethod } from '@/libs/http/http.types';
 
 const TEST_PUBKY = {
   USER_1: '5a1diz4pghi47ywdfyfzpit5f3bdomzt4pugpbmq4rngdd4iub4y' as Core.Pubky,

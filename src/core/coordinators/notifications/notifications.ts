@@ -6,7 +6,7 @@ import {
   type NotificationCoordinatorConfig,
   type NotificationCoordinatorState,
 } from '@/core/coordinators';
-import { Logger } from '@libs/logger/logger';
+import { Logger } from '@/libs/logger/logger';
 
 /**
  * NotificationCoordinator

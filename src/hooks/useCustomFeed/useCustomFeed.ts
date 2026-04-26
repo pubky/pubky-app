@@ -4,7 +4,7 @@ import { useLiveQuery } from 'dexie-react-hooks';
 import { useParams, usePathname } from 'next/navigation';
 import * as Core from '@/core';
 import { APP_ROUTES } from '@/app/routes';
-import { Logger } from '@libs/logger/logger';
+import { Logger } from '@/libs/logger/logger';
 
 export function useCustomFeed(): Core.FeedModelSchema | undefined {
   const pathname = usePathname();

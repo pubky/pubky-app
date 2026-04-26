@@ -5,8 +5,8 @@ import { QRCodeSVG } from 'qrcode.react';
 
 import * as Atoms from '@/atoms';
 import * as Config from '@/config';
-import { generatePubkyRingDeeplink } from '@libs/deeplink/deeplink';
-import type { TMnemonicWords } from '@libs/identity/identity.types';
+import { generatePubkyRingDeeplink } from '@/libs/deeplink/deeplink';
+import type { TMnemonicWords } from '@/libs/identity/identity.types';
 
 interface DialogBackupExportProps {
   mnemonic?: TMnemonicWords | null;

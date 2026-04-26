@@ -3,8 +3,8 @@ import { renderHook, act, waitFor } from '@testing-library/react';
 import * as Core from '@/core';
 import * as Molecules from '@/molecules';
 import { useProfileActions } from './useProfileActions';
-import { ErrorMessages } from '@libs/error/error.messages';
-import { Logger } from '@libs/logger/logger';
+import { ErrorMessages } from '@/libs/error/error.messages';
+import { Logger } from '@/libs/logger/logger';
 
 // Mock next/navigation
 const mockPush = vi.fn();

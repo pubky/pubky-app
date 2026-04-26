@@ -5,8 +5,8 @@ import {
   type PollingServiceConfig,
   type PollingServiceState,
 } from './coordinators.types';
-import { Env } from '@libs/env/env';
-import { Logger } from '@libs/logger/logger';
+import { Env } from '@/libs/env/env';
+import { Logger } from '@/libs/logger/logger';
 
 /**
  * Abstract base class for polling coordinators

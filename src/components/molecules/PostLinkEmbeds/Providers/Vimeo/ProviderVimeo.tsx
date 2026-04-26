@@ -1,8 +1,8 @@
 import * as Atoms from '@/atoms';
 import * as ProviderTypes from '../Provider.types';
 import { VIDEO_EMBED_PROPS } from '../Provider.constants';
-import { convertHmsToSeconds } from '@libs/utils/utils';
-import { HMS_TIMESTAMP_REGEX } from '@libs/utils/utils.constants';
+import { convertHmsToSeconds } from '@/libs/utils/utils';
+import { HMS_TIMESTAMP_REGEX } from '@/libs/utils/utils.constants';
 
 /**
  * Extract Vimeo video ID from URL

@@ -3,8 +3,8 @@ import { render, screen, fireEvent } from '@testing-library/react';
 import { PostTag } from './PostTag';
 
 // Mock utils with partial overrides
-vi.mock('@libs/utils/utils', async () => {
-  const actual = await vi.importActual<typeof import('@libs/utils/utils')>('@libs/utils/utils');
+vi.mock('@/libs/utils/utils', async () => {
+  const actual = await vi.importActual<typeof import('@/libs/utils/utils')>('@/libs/utils/utils');
   return {
     ...actual,
     generateRandomColor: vi.fn((str: string) => {

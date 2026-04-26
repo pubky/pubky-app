@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react';
 import { useLiveQuery } from 'dexie-react-hooks';
 import * as Core from '@/core';
 import type { Ancestor, UsePostAncestorsResult } from './usePostAncestors.types';
-import { Logger } from '@libs/logger/logger';
+import { Logger } from '@/libs/logger/logger';
 
 /** Maximum depth to traverse to prevent infinite loops */
 const MAX_ANCESTOR_DEPTH = 10;

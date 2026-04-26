@@ -1,10 +1,12 @@
 'use client';
 
 import { useTranslations } from 'next-intl';
+import { Check, Loader2, StickyNote, Tag, UserMinus, UserRound, UserRoundPlus } from 'lucide-react';
 import * as Atoms from '@/atoms';
 import * as Organisms from '@/organisms';
 import * as Hooks from '@/hooks';
 import * as Core from '@/core';
+import { USER_LIST_TAG_MAX_LENGTH, USER_LIST_TAGS_MAX_TOTAL_CHARS, USER_LIST_TAGS_MAX_COUNT } from '@/config';
 import type {
   UserListItemProps,
   FollowButtonProps,
@@ -12,7 +14,7 @@ import type {
   UserStatsProps,
   VariantProps,
 } from './UserListItem.types';
-import { USER_LIST_TAG_MAX_LENGTH, USER_LIST_TAGS_MAX_TOTAL_CHARS, USER_LIST_TAGS_MAX_COUNT } from '@/config';
+import { cn, formatPublicKey } from '@/libs/utils/utils';
 
 // =============================================================================
 // Internal Components
@@ -22,8 +24,6 @@ import { USER_LIST_TAG_MAX_LENGTH, USER_LIST_TAGS_MAX_TOTAL_CHARS, USER_LIST_TAG
  * FollowButton
  * Renders follow/unfollow button in icon or text variant
  */
-import { Loader2, Check, UserMinus, UserRoundPlus, UserRound, Tag, StickyNote } from 'lucide-react';
-import { cn, formatPublicKey } from '@libs/utils/utils';
 function FollowButton({ isFollowing, isLoading, isStatusLoading, displayName, variant, onClick }: FollowButtonProps) {
   const t = useTranslations('userList');
   // Show loading if action is in progress OR if status is still being loaded

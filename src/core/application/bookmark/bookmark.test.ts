@@ -3,7 +3,7 @@ import { BookmarkApplication } from './bookmark';
 import * as Core from '@/core';
 import type { TCreateBookmarkInput, TDeleteBookmarkInput } from './bookmark.types';
 import { mockAuthStore } from '@/test-utils';
-import { HttpMethod } from '@libs/http/http.types';
+import { HttpMethod } from '@/libs/http/http.types';
 
 // Mock the LocalBookmarkService
 vi.mock('@/core/services/local/bookmark', () => ({

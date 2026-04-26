@@ -3,8 +3,8 @@
 import * as Atoms from '@/atoms';
 import { useTranslations } from 'next-intl';
 import { CirclePlus } from 'lucide-react';
-import { RoundedCorner } from '@icons';
-import { cn } from '@libs/utils/utils';
+import { RoundedCorner } from '@/icons';
+import { cn } from '@/libs/utils/utils';
 interface ShowMoreRepliesProps {
   /** Number of remaining replies to show */
   count: number;

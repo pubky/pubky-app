@@ -4,8 +4,8 @@ import { useState, useEffect, useCallback } from 'react';
 import * as Core from '@/core';
 import type { UseHotTagsParams, UseHotTagsResult, HotTag } from './useHotTags.types';
 import { DEFAULT_LIMIT } from './useHotTags.constants';
-import { Logger } from '@libs/logger/logger';
-import { isAppError } from '@libs/error/error.utils';
+import { Logger } from '@/libs/logger/logger';
+import { isAppError } from '@/libs/error/error.utils';
 
 /**
  * useHotTags

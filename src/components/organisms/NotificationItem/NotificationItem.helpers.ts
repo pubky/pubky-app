@@ -1,6 +1,6 @@
 import { UserController } from '@/core/controllers/user/user';
-import { Identity } from '@libs/identity/identity';
-import { Logger } from '@libs/logger/logger';
+import { Identity } from '@/libs/identity/identity';
+import { Logger } from '@/libs/logger/logger';
 
 // Mention pattern: pk: or pubky followed by exactly 52 lowercase alphanumeric characters
 const mentionInTextRegex = new RegExp(`(^|\\s)(${Identity.PUBKY_IDENTIFIER_WITH_PREFIX_SOURCE})`, 'g');

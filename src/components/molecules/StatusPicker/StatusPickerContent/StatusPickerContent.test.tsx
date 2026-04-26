@@ -1,7 +1,7 @@
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { StatusPickerContent } from './StatusPickerContent';
-import { STATUS_EMOJIS, STATUS_LABELS } from '@libs/status/status.constants';
+import { STATUS_EMOJIS, STATUS_LABELS } from '@/libs/status/status.constants';
 
 // Mock EmojiPickerDialog
 vi.mock('@/components/molecules', () => ({

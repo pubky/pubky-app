@@ -1,9 +1,9 @@
 import { Table } from 'dexie';
 import * as Core from '@/core';
 import { RecordModelBase } from '@/core/models/shared/base/record/baseRecord';
-import { DatabaseErrorCode } from '@libs/error/error.codes';
-import { Err } from '@libs/error/error.factories';
-import { ErrorService } from '@libs/error/error.types';
+import { DatabaseErrorCode } from '@/libs/error/error.codes';
+import { Err } from '@/libs/error/error.factories';
+import { ErrorService } from '@/libs/error/error.types';
 
 export class BookmarkModel
   extends RecordModelBase<string, Core.BookmarkModelSchema>

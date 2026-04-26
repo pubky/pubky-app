@@ -6,7 +6,7 @@ import * as Atoms from '@/atoms';
 import * as Molecules from '@/molecules';
 import { TIMEFRAME } from '@/core/stores/hot/hot.types';
 import type { HotTagCardProps } from './HotTagCard.types';
-import { cn, generateRandomColor } from '@libs/utils/utils';
+import { cn, generateRandomColor } from '@/libs/utils/utils';
 
 const TIMEFRAME_TRANSLATION_KEY = {
   [TIMEFRAME.TODAY]: 'postsCountToday',

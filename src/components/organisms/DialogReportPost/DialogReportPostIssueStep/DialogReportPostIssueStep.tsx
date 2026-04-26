@@ -13,7 +13,7 @@ import {
 import { ISSUE_TYPE_ICONS } from './DialogReportPostIssueStep.constants';
 import type { DialogReportPostIssueStepProps } from './DialogReportPostIssueStep.types';
 import { Check } from 'lucide-react';
-import { cn } from '@libs/utils/utils';
+import { cn } from '@/libs/utils/utils';
 export function DialogReportPostIssueStep({
   onSelectIssueType,
   onCancel,

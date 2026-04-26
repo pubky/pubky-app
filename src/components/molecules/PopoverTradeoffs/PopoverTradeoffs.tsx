@@ -3,7 +3,7 @@
 import { useTranslations } from 'next-intl';
 import * as Atoms from '@/components/atoms';
 import { AlertTriangle } from 'lucide-react';
-import { cn } from '@libs/utils/utils';
+import { cn } from '@/libs/utils/utils';
 export function PopoverTradeoffs({ ...props }: React.HTMLAttributes<HTMLDivElement>) {
   const t = useTranslations('tradeoffs');
   return (

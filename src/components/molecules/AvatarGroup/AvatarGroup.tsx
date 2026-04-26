@@ -5,7 +5,7 @@ import * as Atoms from '@/atoms';
 import * as Organisms from '@/organisms';
 import type { AvatarGroupProps } from './AvatarGroup.types';
 import { MAX_OVERFLOW_DISPLAY } from './AvatarGroup.constants';
-import { cn } from '@libs/utils/utils';
+import { cn } from '@/libs/utils/utils';
 
 /**
  * AvatarGroup

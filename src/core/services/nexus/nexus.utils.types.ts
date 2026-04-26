@@ -1,4 +1,4 @@
-import { HttpMethod } from '@libs/http/http.types';
+import { HttpMethod } from '@/libs/http/http.types';
 
 /**
  * Parameters for building a Nexus URL with query string.

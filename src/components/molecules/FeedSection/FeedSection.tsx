@@ -2,7 +2,7 @@
 
 import * as Atoms from '@/atoms';
 import { Bitcoin, Pickaxe, Zap, Palette, Plus } from 'lucide-react';
-import { UsersRound2 } from '@icons';
+import { UsersRound2 } from '@/icons';
 export interface FeedItem {
   icon: React.ComponentType<{
     className?: string;

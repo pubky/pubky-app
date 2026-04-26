@@ -9,7 +9,7 @@ import * as Core from '@/core';
 import * as Hooks from '@/hooks';
 import { useTranslations } from 'next-intl';
 import { Home, Search, Flame, Bookmark, Settings } from 'lucide-react';
-import { cn } from '@libs/utils/utils';
+import { cn } from '@/libs/utils/utils';
 export interface MobileFooterProps {
   className?: string;
 }

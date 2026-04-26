@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react';
 import { useLiveQuery } from 'dexie-react-hooks';
 import type { UseLocalFirstQueryParams, UseLocalFirstQueryResult } from './useLocalFirstQuery.types';
-import { Logger } from '@libs/logger/logger';
+import { Logger } from '@/libs/logger/logger';
 
 /**
  * Shared hook that encapsulates the local-first query pattern (ADR-0011).

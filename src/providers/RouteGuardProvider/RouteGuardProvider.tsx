@@ -9,10 +9,10 @@ import * as Providers from '@/providers';
 import * as App from '@/app';
 import * as Atoms from '@/atoms';
 import * as Core from '@/core';
-import { Logger } from '@libs/logger/logger';
-import { TimeoutErrorCode } from '@libs/error/error.codes';
-import { Err } from '@libs/error/error.factories';
-import { ErrorService } from '@libs/error/error.types';
+import { Logger } from '@/libs/logger/logger';
+import { TimeoutErrorCode } from '@/libs/error/error.codes';
+import { Err } from '@/libs/error/error.factories';
+import { ErrorService } from '@/libs/error/error.types';
 
 // Migration resync timeout in milliseconds
 const MIGRATION_RESYNC_TIMEOUT_MS = 10_000;

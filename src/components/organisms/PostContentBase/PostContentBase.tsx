@@ -7,7 +7,7 @@ import * as Hooks from '@/hooks';
 import * as Core from '@/core';
 import { PostContentBaseSkeleton } from './PostContentBase.skeleton';
 import type { PostContentBaseProps } from './PostContentBase.types';
-import { cn, isPostDeleted } from '@libs/utils/utils';
+import { cn, isPostDeleted } from '@/libs/utils/utils';
 
 /**
  * PostContentBase - Base component that renders post content without repost handling.

@@ -2,7 +2,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { TagApplication } from './tag';
 import * as Core from '@/core';
 import type { TCreateTagInput, TDeleteTagInput } from './tag.types';
-import { HttpMethod } from '@libs/http/http.types';
+import { HttpMethod } from '@/libs/http/http.types';
 
 // Mock the Local.Tag service
 vi.mock('@/core/services/local/tag', () => ({

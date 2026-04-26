@@ -2,7 +2,7 @@ import * as Core from '@/core';
 import * as Config from '@/config';
 import { postStreamQueue } from './muting/post-stream-queue';
 import { MuteFilter } from './muting/mute-filter';
-import { Logger } from '@libs/logger/logger';
+import { Logger } from '@/libs/logger/logger';
 
 export class PostStreamApplication {
   private constructor() {}

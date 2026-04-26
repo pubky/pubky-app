@@ -53,10 +53,10 @@
       "@/hooks/*": [
         "./src/hooks/*"
       ],
-      "@libs/*": [
+      "@/libs/*": [
         "./src/libs/*"
       ],
-      "@icons": [
+      "@/icons": [
         "./src/libs/icons/icons.tsx"
       ],
       "@/*": [

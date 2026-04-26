@@ -5,8 +5,8 @@ import { extractTextFromChildren } from '@/molecules/PostText/PostText.utils';
 import * as Atoms from '@/atoms';
 import * as Hooks from '@/hooks';
 import * as Molecules from '@/molecules';
-import { Identity } from '@libs/identity/identity';
-import { cn, formatPublicKey, withPubkyPrefix } from '@libs/utils/utils';
+import { Identity } from '@/libs/identity/identity';
+import { cn, formatPublicKey, withPubkyPrefix } from '@/libs/utils/utils';
 
 export const PostMentions = (props: RemarkAnchorProps) => {
   const { href, children, className, node: _node, ref: _ref, ...rest } = props;

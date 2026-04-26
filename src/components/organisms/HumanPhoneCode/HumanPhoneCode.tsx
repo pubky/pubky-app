@@ -7,7 +7,7 @@ import React, { useState } from 'react';
 import { useTranslations } from 'next-intl';
 import type { HumanPhoneCodeProps } from './HumanPhoneCode.types';
 import { RefreshCcw, ArrowRight } from 'lucide-react';
-import { cn } from '@libs/utils/utils';
+import { cn } from '@/libs/utils/utils';
 export const HumanPhoneCode = ({ phoneNumber, onBack, onSuccess }: HumanPhoneCodeProps) => {
   const t = useTranslations('onboarding.phoneCode');
   const [code, setCode] = useState<string[]>(['', '', '', '', '', '']);

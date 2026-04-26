@@ -6,11 +6,11 @@ import {
   extractSourceId,
 } from '@/core/services/chatwoot';
 import * as Types from './feedback.types';
-import { Logger } from '@libs/logger/logger';
-import { AppError } from '@libs/error/error';
-import { ServerErrorCode } from '@libs/error/error.codes';
-import { Err } from '@libs/error/error.factories';
-import { ErrorService } from '@libs/error/error.types';
+import { Logger } from '@/libs/logger/logger';
+import { AppError } from '@/libs/error/error';
+import { ServerErrorCode } from '@/libs/error/error.codes';
+import { Err } from '@/libs/error/error.factories';
+import { ErrorService } from '@/libs/error/error.types';
 
 /**
  * Feedback application service.

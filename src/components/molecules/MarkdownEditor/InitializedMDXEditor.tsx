@@ -30,13 +30,15 @@ import {
 import '@mdxeditor/editor/style.css';
 import { oneDark } from '@codemirror/theme-one-dark';
 import { languages } from '@codemirror/language-data';
+import { AlertTriangle, Smile, Type } from 'lucide-react';
 import { ARTICLE_MAX_CHARACTER_LENGTH } from '@/config';
 import * as Atoms from '@/atoms';
 import * as Molecules from '@/molecules';
 import * as Hooks from '@/hooks';
-import { MarkdownMark } from '@icons';
+import { MarkdownMark } from '@/icons';
 import { sanitizeCodeBlockLanguages } from './InitializedMDXEditor.utils';
 import { CODE_BLOCK_LANGUAGES } from './InitializedMDXEditor.constants';
+import { cn } from '@/libs/utils/utils';
 
 /**
  * Preload all CodeMirror language support modules to prevent layout shift
@@ -45,8 +47,6 @@ import { CODE_BLOCK_LANGUAGES } from './InitializedMDXEditor.constants';
  * Without this, languages are lazy-loaded on first selection, causing a brief
  * flicker/resize of the parent dialog while the async import resolves.
  */
-import { Smile, Type, AlertTriangle } from 'lucide-react';
-import { cn } from '@libs/utils/utils';
 function preloadLanguages() {
   const languageKeys = Object.keys(CODE_BLOCK_LANGUAGES);
   languageKeys.forEach((langKey) => {

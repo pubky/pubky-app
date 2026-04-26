@@ -4,7 +4,7 @@ import { useCallback, useEffect, useState } from 'react';
 import { useTranslations } from 'next-intl';
 import * as Core from '@/core';
 import * as Molecules from '@/molecules';
-import { Logger } from '@libs/logger/logger';
+import { Logger } from '@/libs/logger/logger';
 
 export interface UseBookmarkResult {
   isBookmarked: boolean;

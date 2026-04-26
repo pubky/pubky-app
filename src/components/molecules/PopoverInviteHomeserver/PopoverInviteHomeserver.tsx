@@ -1,7 +1,7 @@
 import * as Atoms from '@/atoms';
 import * as Config from '@/config';
 import { CircleHelp, Mail } from 'lucide-react';
-import { XTwitter, Telegram } from '@icons';
+import { XTwitter, Telegram } from '@/icons';
 interface PopoverInviteHomeserverProps {
   className?: React.HTMLAttributes<HTMLDivElement>['className'];
 }

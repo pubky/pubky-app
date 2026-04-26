@@ -8,7 +8,7 @@ import * as Molecules from '@/molecules';
 import * as Organisms from '@/organisms';
 import { POST_INPUT_VARIANT } from '@/organisms/PostInput/PostInput.constants';
 import type { DialogNewPostProps } from './DialogNewPost.types';
-import { cn } from '@libs/utils/utils';
+import { cn } from '@/libs/utils/utils';
 
 export function DialogNewPost({ open, onOpenChangeAction }: DialogNewPostProps) {
   const t = useTranslations('dialogs.newPost');

@@ -2,9 +2,9 @@ import { describe, it, expect, vi, afterEach, beforeEach } from 'vitest';
 import { ExchangerateService } from './exchangerate';
 import { exchangerateQueryClient } from './exchangerate.query-client';
 import { asOpaque } from '@/test-utils';
-import { Env } from '@libs/env/env';
-import { NetworkErrorCode, ServerErrorCode } from '@libs/error/error.codes';
-import { ErrorCategory, ErrorService } from '@libs/error/error.types';
+import { Env } from '@/libs/env/env';
+import { NetworkErrorCode, ServerErrorCode } from '@/libs/error/error.codes';
+import { ErrorCategory, ErrorService } from '@/libs/error/error.types';
 
 // Helper to build a minimal BlockTank ticker
 function createTicker(overrides: Partial<{ symbol: string; lastPrice: string }> = {}) {

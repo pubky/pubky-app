@@ -7,7 +7,7 @@ import * as Atoms from '@/atoms';
 import * as Molecules from '@/molecules';
 import * as Core from '@/core';
 import * as App from '@/app';
-import { Logger } from '@libs/logger/logger';
+import { Logger } from '@/libs/logger/logger';
 
 type LogoutViewState = 'idle' | 'loading' | 'success' | 'error';
 

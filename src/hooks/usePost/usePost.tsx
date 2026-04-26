@@ -12,7 +12,7 @@ import type {
   UsePostEditOptions,
   UsePostReturn,
 } from './usePost.types';
-import { Logger } from '@libs/logger/logger';
+import { Logger } from '@/libs/logger/logger';
 
 /**
  * Custom hook to handle post creation or edits (replies, reposts, and root posts)

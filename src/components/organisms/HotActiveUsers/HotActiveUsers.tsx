@@ -9,7 +9,7 @@ import * as Hooks from '@/hooks';
 import * as Core from '@/core';
 import { APP_ROUTES } from '@/app/routes';
 import type { HotActiveUsersProps } from './HotActiveUsers.types';
-import { cn } from '@libs/utils/utils';
+import { cn } from '@/libs/utils/utils';
 
 const DEFAULT_USERS_LIMIT = 10;
 

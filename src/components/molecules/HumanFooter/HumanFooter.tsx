@@ -4,7 +4,7 @@ import * as Atoms from '@/atoms';
 import * as Organisms from '@/organisms';
 import * as Config from '@/config';
 import { useTranslations } from 'next-intl';
-import { cn } from '@libs/utils/utils';
+import { cn } from '@/libs/utils/utils';
 
 export const HumanFooter = () => {
   const t = useTranslations('onboarding.footer');

@@ -1,7 +1,7 @@
 import * as Atoms from '@/atoms';
 import * as Organisms from '@/organisms';
 import type { SearchUserSuggestionProps } from './SearchUserSuggestion.types';
-import { formatPublicKey } from '@libs/utils/utils';
+import { formatPublicKey } from '@/libs/utils/utils';
 
 export function SearchUserSuggestion({ user, onClick }: SearchUserSuggestionProps) {
   const handleClick = () => {

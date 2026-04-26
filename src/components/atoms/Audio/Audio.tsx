@@ -2,7 +2,7 @@
 
 import { forwardRef } from 'react';
 import * as Types from './Audio.types';
-import { cn } from '@libs/utils/utils';
+import { cn } from '@/libs/utils/utils';
 
 export const Audio = forwardRef<HTMLAudioElement, Types.AudioProps>(function Audio(
   { 'data-testid': dataTestId, className, src, controls = true, preload = 'metadata', ...props }: Types.AudioProps,

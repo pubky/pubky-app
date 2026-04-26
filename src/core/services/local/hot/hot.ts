@@ -1,5 +1,5 @@
 import * as Core from '@/core';
-import { Logger } from '@libs/logger/logger';
+import { Logger } from '@/libs/logger/logger';
 
 /**
  * Local Hot Service

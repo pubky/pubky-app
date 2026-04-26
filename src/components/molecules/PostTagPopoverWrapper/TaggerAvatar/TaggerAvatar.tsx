@@ -4,7 +4,7 @@ import * as Atoms from '@/atoms';
 import * as Organisms from '@/organisms';
 import type { TaggerAvatarProps } from '../PostTagPopoverWrapper.types';
 import { UserInfoPopover } from '../../UserInfoPopover';
-import { cn, formatPublicKey } from '@libs/utils/utils';
+import { cn, formatPublicKey } from '@/libs/utils/utils';
 
 /**
  * TaggerAvatar

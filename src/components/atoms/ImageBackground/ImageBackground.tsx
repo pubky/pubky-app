@@ -1,4 +1,4 @@
-import { cn } from '@libs/utils/utils';
+import { cn } from '@/libs/utils/utils';
 
 export const ImageBackground = ({
   image,

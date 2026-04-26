@@ -1,4 +1,4 @@
-import { createReplyConnectorPath } from '@libs/svg/svg';
+import { createReplyConnectorPath } from '@/libs/svg/svg';
 
 interface ReplyLineProps {
   height: number;

@@ -4,7 +4,7 @@ import { useCallback, useEffect, useMemo } from 'react';
 import { useLiveQuery } from 'dexie-react-hooks';
 import * as Core from '@/core';
 import type { UseBulkUserAvatarsResult, UserWithAvatar } from './useBulkUserAvatars.types';
-import { Logger } from '@libs/logger/logger';
+import { Logger } from '@/libs/logger/logger';
 
 /**
  * Hook to get user details with avatar URLs for multiple users.

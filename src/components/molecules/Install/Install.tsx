@@ -10,7 +10,7 @@ import * as Organisms from '@/organisms';
 import * as Config from '@/config';
 import * as App from '@/app';
 import { Loader2, AppWindow, ArrowRight } from 'lucide-react';
-import { cn } from '@libs/utils/utils';
+import { cn } from '@/libs/utils/utils';
 export const InstallCard = () => {
   const t = useTranslations('onboarding.install');
   return (

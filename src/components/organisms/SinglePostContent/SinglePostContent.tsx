@@ -12,7 +12,7 @@ import { PostPageHeader } from '../PostPageHeader';
 import { SinglePostContentSkeleton } from './SinglePostContent.skeleton';
 import { ThreadTree } from '../ThreadTree/ThreadTree';
 import type { SinglePostContentProps } from './SinglePostContent.types';
-import { isPostDeleted } from '@libs/utils/utils';
+import { isPostDeleted } from '@/libs/utils/utils';
 
 /**
  * SinglePostContent Organism

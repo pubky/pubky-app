@@ -5,8 +5,8 @@ import { useLiveQuery } from 'dexie-react-hooks';
 import * as Core from '@/core';
 import type { UseUserStreamParams, UseUserStreamResult, UserStreamUser } from './useUserStream.types';
 import { DEFAULT_USER_STREAM_LIMIT, DEFAULT_USER_STREAM_PAGE_SIZE } from './useUserStream.constants';
-import { Logger } from '@libs/logger/logger';
-import { isAppError } from '@libs/error/error.utils';
+import { Logger } from '@/libs/logger/logger';
+import { isAppError } from '@/libs/error/error.utils';
 
 /**
  * useUserStream

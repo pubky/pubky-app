@@ -9,7 +9,7 @@ import { toast } from '@/molecules/Toaster/use-toast';
 import type { UseTaggedResult, UseTaggedOptions } from './useTagged.types';
 import { transformTagsForViewer } from '@/molecules/TaggedItem/TaggedItem.utils';
 import { TAGS_PER_PAGE } from './useTagged.constants';
-import { Logger } from '@libs/logger/logger';
+import { Logger } from '@/libs/logger/logger';
 
 /**
  * Unified hook for fetching and managing user tags.

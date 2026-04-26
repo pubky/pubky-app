@@ -15,7 +15,7 @@ import type {
   TtlUnsubscribeUserParams,
   EntityOps,
 } from './ttl.types';
-import { Logger } from '@libs/logger/logger';
+import { Logger } from '@/libs/logger/logger';
 
 /**
  * TtlCoordinator

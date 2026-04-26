@@ -2,9 +2,9 @@ import { Table } from 'dexie';
 import { PubkyAppFeedLayout, PubkyAppFeedReach, PubkyAppFeedSort, PubkyAppPostKind } from 'pubky-app-specs';
 import * as Core from '@/core';
 import { RecordModelBase } from '@/core/models/shared/base/record/baseRecord';
-import { DatabaseErrorCode } from '@libs/error/error.codes';
-import { Err } from '@libs/error/error.factories';
-import { ErrorService } from '@libs/error/error.types';
+import { DatabaseErrorCode } from '@/libs/error/error.codes';
+import { Err } from '@/libs/error/error.factories';
+import { ErrorService } from '@/libs/error/error.types';
 
 export class FeedModel extends RecordModelBase<string, Core.FeedModelSchema> implements Core.FeedModelSchema {
   static table: Table<Core.FeedModelSchema, string> = Core.db.table('feeds');

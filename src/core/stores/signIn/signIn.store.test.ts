@@ -1,8 +1,8 @@
 import { describe, it, expect, beforeEach } from 'vitest';
 import { useSignInStore } from './signIn.store';
-import { AppError } from '@libs/error/error';
-import { NetworkErrorCode } from '@libs/error/error.codes';
-import { ErrorCategory, ErrorService } from '@libs/error/error.types';
+import { AppError } from '@/libs/error/error';
+import { NetworkErrorCode } from '@/libs/error/error.codes';
+import { ErrorCategory, ErrorService } from '@/libs/error/error.types';
 
 describe('SignInStore', () => {
   beforeEach(() => {

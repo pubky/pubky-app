@@ -1,6 +1,6 @@
 import * as Atoms from '@/atoms';
 import { LogIn, UserRoundPlus } from 'lucide-react';
-import { cn } from '@libs/utils/utils';
+import { cn } from '@/libs/utils/utils';
 interface ActionButtonsProps {
   className?: React.HTMLAttributes<HTMLDivElement>['className'];
   onSignIn?: () => void;

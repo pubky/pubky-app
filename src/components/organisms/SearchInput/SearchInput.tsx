@@ -11,7 +11,7 @@ import { APP_ROUTES } from '@/app/routes';
 import { CLICKABLE_TAGS_DEFAULT_MAX_LENGTH } from '@/config/tags';
 import { parseTagsFromUrl } from './SearchInput.utils';
 import { SearchInputProps } from './SearchInput.types';
-import { isValidTagLabel } from '@libs/utils/utils';
+import { isValidTagLabel } from '@/libs/utils/utils';
 
 export function SearchInput({ autoFocus = false }: SearchInputProps) {
   const router = useRouter();

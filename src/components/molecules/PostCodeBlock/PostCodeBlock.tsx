@@ -6,7 +6,7 @@ import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter';
 import { oneDark } from 'react-syntax-highlighter/dist/esm/styles/prism';
 import * as Atoms from '@/atoms';
 import { Check, Clipboard } from 'lucide-react';
-import { cn, copyToClipboard } from '@libs/utils/utils';
+import { cn, copyToClipboard } from '@/libs/utils/utils';
 type PostCodeBlockProps = ClassAttributes<HTMLElement> & HTMLAttributes<HTMLElement> & ExtraProps;
 export const PostCodeBlock = (props: PostCodeBlockProps) => {
   const [copied, setCopied] = useState(false);

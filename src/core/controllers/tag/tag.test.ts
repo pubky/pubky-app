@@ -3,7 +3,7 @@ import { TagResult } from 'pubky-app-specs';
 import * as Core from '@/core';
 import type { TTagEventParams } from './tag.types';
 import { asOpaque } from '@/test-utils';
-import { HttpMethod } from '@libs/http/http.types';
+import { HttpMethod } from '@/libs/http/http.types';
 
 // Mock HomeserverService
 vi.mock('@/core/services/homeserver', () => ({

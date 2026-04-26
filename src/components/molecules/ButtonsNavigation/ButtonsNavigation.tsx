@@ -1,7 +1,7 @@
 import * as Atoms from '@/atoms';
 import * as Types from './ButtonsNavigation.types';
 import { ArrowLeft, Loader2, ArrowRight } from 'lucide-react';
-import { cn } from '@libs/utils/utils';
+import { cn } from '@/libs/utils/utils';
 export function ButtonsNavigation({
   id,
   className,

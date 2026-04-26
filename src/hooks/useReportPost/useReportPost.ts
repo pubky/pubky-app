@@ -10,8 +10,8 @@ import * as Hooks from '@/hooks';
 import { REPORT_POST_STEPS, REPORT_API_ENDPOINT } from './useReportPost.constants';
 import type { ReportPostStep } from './useReportPost.types';
 import type { UseReportPostReturn } from './useReportPost.types';
-import { Logger } from '@libs/logger/logger';
-import { postJson } from '@libs/api/client-request';
+import { Logger } from '@/libs/logger/logger';
+import { postJson } from '@/libs/api/client-request';
 
 /**
  * Hook to handle post reporting to Chatwoot.

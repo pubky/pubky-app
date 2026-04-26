@@ -5,7 +5,7 @@ import * as Atoms from '@/atoms';
 import type { PostInputActionBarProps } from './PostInputActionBar.types';
 import { useIsMobile } from '@/hooks';
 import { Loader2, Send, Smile, Image, Newspaper } from 'lucide-react';
-import { cn } from '@libs/utils/utils';
+import { cn } from '@/libs/utils/utils';
 interface ActionButtonContentProps {
   Icon: React.ComponentType<{
     className?: string;

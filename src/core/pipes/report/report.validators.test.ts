@@ -1,9 +1,9 @@
 import { describe, it, expect } from 'vitest';
 import { ReportValidators } from './report.validators';
 import { REPORT_ISSUE_TYPES, REPORT_REASON_MAX_LENGTH, REPORT_ISSUE_TYPE_VALUES } from './report.constants';
-import { AppError, AppError as LibsAppError } from '@libs/error/error';
-import { ValidationErrorCode } from '@libs/error/error.codes';
-import { ErrorCategory, ErrorService } from '@libs/error/error.types';
+import { AppError, AppError as LibsAppError } from '@/libs/error/error';
+import { ValidationErrorCode } from '@/libs/error/error.codes';
+import { ErrorCategory, ErrorService } from '@/libs/error/error.types';
 
 describe('ReportValidators', () => {
   describe('validatePostUrl', () => {

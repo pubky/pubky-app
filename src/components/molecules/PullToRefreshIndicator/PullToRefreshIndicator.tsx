@@ -22,7 +22,7 @@ import type { PullToRefreshIndicatorProps } from './PullToRefreshIndicator.types
  * ```
  */
 import { ChevronDown } from 'lucide-react';
-import { cn } from '@libs/utils/utils';
+import { cn } from '@/libs/utils/utils';
 export function PullToRefreshIndicator({ state, pullDistance }: PullToRefreshIndicatorProps) {
   const t = useTranslations('pullToRefresh');
   const isReady = state === 'ready';

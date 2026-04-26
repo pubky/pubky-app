@@ -1,6 +1,6 @@
 import * as Atoms from '@/atoms';
 import { TAGS_OVERVIEW_SKELETON_WIDTHS } from './HotTagsOverview.constants';
-import { cn } from '@libs/utils/utils';
+import { cn } from '@/libs/utils/utils';
 
 export function HotTagsOverviewSkeleton() {
   return (

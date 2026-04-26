@@ -6,7 +6,7 @@ import * as Core from '@/core';
 import * as Molecules from '@/molecules';
 import * as Organisms from '@/organisms';
 import type { UseDeletePostResult } from './useDeletePost.types';
-import { Logger } from '@libs/logger/logger';
+import { Logger } from '@/libs/logger/logger';
 
 /**
  * Hook to handle post deletion with optimistic UI updates and error recovery.

@@ -1,12 +1,12 @@
 import * as Types from './chatwoot.types';
 import { chatwootApi } from './chatwoot.api';
-import { Env } from '@libs/env/env';
-import { HttpMethod, JSON_HEADERS } from '@libs/http/http.types';
-import { parseResponseOrThrow } from '@libs/http/response.utils';
-import { ValidationErrorCode } from '@libs/error/error.codes';
-import { Err } from '@libs/error/error.factories';
-import { httpResponseToError, safeFetch } from '@libs/error/error.http';
-import { ErrorService } from '@libs/error/error.types';
+import { Env } from '@/libs/env/env';
+import { HttpMethod, JSON_HEADERS } from '@/libs/http/http.types';
+import { parseResponseOrThrow } from '@/libs/http/response.utils';
+import { ValidationErrorCode } from '@/libs/error/error.codes';
+import { Err } from '@/libs/error/error.factories';
+import { httpResponseToError, safeFetch } from '@/libs/error/error.http';
+import { ErrorService } from '@/libs/error/error.types';
 
 /**
  * Chatwoot API configuration

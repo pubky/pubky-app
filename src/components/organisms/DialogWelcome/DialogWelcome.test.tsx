@@ -52,8 +52,8 @@ vi.mock('@/hooks', () => ({
 }));
 
 // Mock utils
-vi.mock('@libs/utils/utils', async () => {
-  const actual = await vi.importActual<typeof import('@libs/utils/utils')>('@libs/utils/utils');
+vi.mock('@/libs/utils/utils', async () => {
+  const actual = await vi.importActual<typeof import('@/libs/utils/utils')>('@/libs/utils/utils');
   return {
     ...actual,
     formatPublicKey: vi.fn(({ key, length }) => `${key.slice(0, 4)}...${key.slice(-length + 4)}`),

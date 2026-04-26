@@ -3,7 +3,7 @@ import { render, screen, fireEvent } from '@testing-library/react';
 import { NotificationItem } from './NotificationItem';
 import { NotificationType } from '@/core/models/notification/notification.types';
 import * as Core from '@/core';
-import { formatNotificationTime } from '@libs/utils/utils';
+import { formatNotificationTime } from '@/libs/utils/utils';
 
 // Hoisted mocks for isPostDeleted
 const { mockIsPostDeleted } = vi.hoisted(() => ({

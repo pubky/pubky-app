@@ -1,6 +1,6 @@
 import * as Atoms from '@/atoms';
 import * as Types from './WordSlot.types';
-import { cn } from '@libs/utils/utils';
+import { cn } from '@/libs/utils/utils';
 
 export const WordSlot = (props: Types.WordSlotProps) => {
   const { index, word, mode } = props;

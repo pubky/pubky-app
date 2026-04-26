@@ -20,8 +20,8 @@ import {
   setVisualTilePreferredSizeFallback,
 } from './TimelineFeedVisualMedia.utils';
 import type { VisualTile } from './TimelineFeedVisual.types';
-import { Logger } from '@libs/logger/logger';
-import { isPostDeleted } from '@libs/utils/utils';
+import { Logger } from '@/libs/logger/logger';
+import { isPostDeleted } from '@/libs/utils/utils';
 
 type VisualFeedSnapshot = {
   tiles: VisualTile[];

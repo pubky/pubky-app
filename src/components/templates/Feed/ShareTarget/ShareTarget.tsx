@@ -9,7 +9,7 @@ import * as Organisms from '@/organisms';
 import { POST_INPUT_VARIANT } from '@/organisms/PostInput/PostInput.constants';
 import { APP_ROUTES } from '@/app/routes';
 import { ShareTargetSkeleton } from './ShareTarget.skeleton';
-import { composeShareContent, getSharedFiles } from '@libs/share/shareTarget';
+import { composeShareContent, getSharedFiles } from '@/libs/share/shareTarget';
 
 export function ShareTarget() {
   const searchParams = useSearchParams();

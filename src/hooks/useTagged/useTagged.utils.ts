@@ -1,5 +1,5 @@
 import * as Core from '@/core';
-import { Logger } from '@libs/logger/logger';
+import { Logger } from '@/libs/logger/logger';
 
 /**
  * Adds a user as tagger to a tag (optimistically)

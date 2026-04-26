@@ -9,7 +9,7 @@ import type {
   AutocompleteUserData,
 } from './useUserDetailsFromIds.types';
 import { FALLBACK_USER_NAME } from './useUserDetailsFromIds.constants';
-import { Logger } from '@libs/logger/logger';
+import { Logger } from '@/libs/logger/logger';
 
 /**
  * Hook to fetch and transform user details from a list of user IDs.

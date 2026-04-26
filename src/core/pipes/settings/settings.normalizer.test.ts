@@ -1,7 +1,7 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import * as Core from '@/core';
 import { TEST_PUBKY, restoreMocks, buildPubkyUri } from '../pipes.test-utils';
-import { Logger } from '@libs/logger/logger';
+import { Logger } from '@/libs/logger/logger';
 
 describe('SettingsNormalizer', () => {
   beforeEach(() => {

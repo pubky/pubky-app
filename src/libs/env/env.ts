@@ -1,7 +1,7 @@
 import { z } from 'zod';
-import { ValidationErrorCode } from '@libs/error/error.codes';
-import { Err } from '@libs/error/error.factories';
-import { ErrorService } from '@libs/error/error.types';
+import { ValidationErrorCode } from '@/libs/error/error.codes';
+import { Err } from '@/libs/error/error.factories';
+import { ErrorService } from '@/libs/error/error.types';
 
 const DEFAULT_PKARR_RELAYS = ['https://pkarr.pubky.app', 'https://pkarr.pubky.org'];
 

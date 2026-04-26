@@ -1,7 +1,7 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { render, screen, fireEvent, act } from '@testing-library/react';
 import { PostCodeBlock } from './PostCodeBlock';
-import { copyToClipboard } from '@libs/utils/utils';
+import { copyToClipboard } from '@/libs/utils/utils';
 
 // Mock only copyToClipboard from @/libs (uses browser Clipboard API)
 // Keep real implementations of pure functions like cn

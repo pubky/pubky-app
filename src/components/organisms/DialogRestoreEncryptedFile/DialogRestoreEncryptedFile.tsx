@@ -6,9 +6,9 @@ import * as Atoms from '@/atoms';
 import * as Core from '@/core';
 import * as Hooks from '@/hooks';
 import { FileUp, FileText, Loader2, RotateCcw } from 'lucide-react';
-import { formatFileName } from '@libs/utils/utils';
-import { AppError } from '@libs/error/error';
-import { ErrorService } from '@libs/error/error.types';
+import { AppError } from '@/libs/error/error';
+import { ErrorService } from '@/libs/error/error.types';
+import { formatFileName } from '@/libs/utils/utils';
 export function DialogRestoreEncryptedFile({ onRestore }: { onRestore: () => void }) {
   const t = useTranslations('onboarding.signIn');
   const tRestore = useTranslations('onboarding.signIn.restoreEncryptedFile');

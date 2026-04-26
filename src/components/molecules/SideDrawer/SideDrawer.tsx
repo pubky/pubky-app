@@ -1,7 +1,7 @@
 'use client';
 
 import { useLayoutEffect, useState } from 'react';
-import { cn } from '@libs/utils/utils';
+import { cn } from '@/libs/utils/utils';
 
 export interface SideDrawerProps {
   open: boolean;

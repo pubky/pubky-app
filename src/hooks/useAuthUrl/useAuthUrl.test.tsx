@@ -3,9 +3,9 @@ import { describe, it, expect, beforeEach, vi } from 'vitest';
 import type { Session } from '@synonymdev/pubky';
 import { mockSession } from '@/test-utils';
 import { useAuthUrl } from './useAuthUrl';
-import { AppError } from '@libs/error/error';
-import { AuthErrorCode, TimeoutErrorCode } from '@libs/error/error.codes';
-import { ErrorCategory, ErrorService } from '@libs/error/error.types';
+import { AppError } from '@/libs/error/error';
+import { AuthErrorCode, TimeoutErrorCode } from '@/libs/error/error.codes';
+import { ErrorCategory, ErrorService } from '@/libs/error/error.types';
 
 // Mock dependencies
 const mockToast = vi.fn();
@@ -35,8 +35,8 @@ vi.mock('@/molecules', () => ({
   toast: (...args: unknown[]) => mockToast(...args),
 }));
 
-vi.mock('@libs/logger/logger', async () => {
-  const actual = await vi.importActual<typeof import('@libs/logger/logger')>('@libs/logger/logger');
+vi.mock('@/libs/logger/logger', async () => {
+  const actual = await vi.importActual<typeof import('@/libs/logger/logger')>('@/libs/logger/logger');
   return {
     ...actual,
     Logger: {
@@ -45,8 +45,8 @@ vi.mock('@libs/logger/logger', async () => {
     },
   };
 });
-vi.mock('@libs/utils/utils', async () => {
-  const actual = await vi.importActual<typeof import('@libs/utils/utils')>('@libs/utils/utils');
+vi.mock('@/libs/utils/utils', async () => {
+  const actual = await vi.importActual<typeof import('@/libs/utils/utils')>('@/libs/utils/utils');
   return {
     ...actual,
     copyToClipboard: (...args: unknown[]) => mockCopyToClipboard(...args),

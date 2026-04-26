@@ -4,7 +4,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import * as Core from '@/core';
 import { TAGGERS_PAGE_SIZE } from './usePostTaggers.constants';
 import type { TaggersStateMap, UsePostTaggersResult } from './usePostTaggers.types';
-import { Logger } from '@libs/logger/logger';
+import { Logger } from '@/libs/logger/logger';
 
 /**
  * Hook to fetch and cache full tagger lists for post tags on demand.

@@ -18,7 +18,7 @@ import * as Molecules from '@/molecules';
 import * as Organisms from '@/organisms';
 import { usePathname } from 'next/navigation';
 import { POST_ROUTES } from '@/app/routes';
-import { cn } from '@libs/utils/utils';
+import { cn } from '@/libs/utils/utils';
 
 /**
  * Renders formatted text content with markdown, hashtags, mentions, and links.

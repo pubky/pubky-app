@@ -3,8 +3,8 @@
 import { useEffect } from 'react';
 import * as Atoms from '@/atoms';
 import type { ErrorFallbackProps } from './ErrorBoundaryProvider.types';
-import { Logger } from '@libs/logger/logger';
-import { getErrorMessage } from '@libs/error/error.utils';
+import { Logger } from '@/libs/logger/logger';
+import { getErrorMessage } from '@/libs/error/error.utils';
 
 /**
  * ErrorFallback

@@ -8,10 +8,10 @@ import * as Core from '@/core';
 import * as Molecules from '@/molecules';
 
 import type { UseAuthUrlOptions, UseAuthUrlReturn } from './useAuthUrl.types';
-import { Logger } from '@libs/logger/logger';
-import { copyToClipboard } from '@libs/utils/utils';
-import { AuthErrorCode } from '@libs/error/error.codes';
-import { isAppError, isAuthError, isTimeoutError } from '@libs/error/error.utils';
+import { Logger } from '@/libs/logger/logger';
+import { copyToClipboard } from '@/libs/utils/utils';
+import { AuthErrorCode } from '@/libs/error/error.codes';
+import { isAppError, isAuthError, isTimeoutError } from '@/libs/error/error.utils';
 
 /** Returns true if the error indicates the auth flow has expired (timeout or SESSION_EXPIRED). */
 const isAuthFlowExpiredError = (error: unknown): boolean => {

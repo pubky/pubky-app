@@ -8,7 +8,7 @@ import * as Core from '@/core';
 import * as Config from '@/config';
 import { useTranslations } from 'next-intl';
 import { Trash2, File } from 'lucide-react';
-import { extractInitials } from '@libs/utils/utils';
+import { extractInitials } from '@/libs/utils/utils';
 export const CreateProfileForm = () => {
   const t = useTranslations('forms.profile');
   const tCommon = useTranslations('common');

@@ -2,7 +2,7 @@
 
 import { forwardRef, useEffect, useRef } from 'react';
 import * as Types from './Video.types';
-import { cn } from '@libs/utils/utils';
+import { cn } from '@/libs/utils/utils';
 
 export const Video = forwardRef<HTMLVideoElement, Types.VideoProps>(function Video(
   {

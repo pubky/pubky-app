@@ -16,9 +16,9 @@ import type { HumanInviteCodeProps } from './HumanInviteCode.types';
  * @param onSuccess - Called with the trimmed invite code; may be async. Throws on validation failure.
  */
 import { CircleCheck, Server, ArrowLeft, Loader2, ArrowRight } from 'lucide-react';
-import { XTwitter, Telegram } from '@icons';
-import { Logger } from '@libs/logger/logger';
-import { cn } from '@libs/utils/utils';
+import { XTwitter, Telegram } from '@/icons';
+import { Logger } from '@/libs/logger/logger';
+import { cn } from '@/libs/utils/utils';
 export const HumanInviteCode = ({ onBack, onSuccess }: HumanInviteCodeProps) => {
   const t = useTranslations('onboarding.inviteCode');
   const tCommon = useTranslations('common');

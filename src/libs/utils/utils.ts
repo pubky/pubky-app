@@ -770,7 +770,7 @@ export function generateRandomUsername(): string {
  *
  * @example
  * // In test setup (e.g., vitest.setup.ts):
- * import { radixIdSerializer } from '@libs/utils/utils';
+ * import { radixIdSerializer } from '@/libs/utils/utils';
  * expect.addSnapshotSerializer(radixIdSerializer);
  */
 export const radixIdSerializer: SnapshotSerializer = {

@@ -6,7 +6,7 @@ import * as Molecules from '@/molecules';
 import { SEARCH_CLOSED_STYLE, SEARCH_INPUT_EXPANDED_STYLE } from '@/config/search';
 import type { SearchInputBarProps } from './SearchInputBar.types';
 import { Search } from 'lucide-react';
-import { cn } from '@libs/utils/utils';
+import { cn } from '@/libs/utils/utils';
 export function SearchInputBar({
   activeTags,
   inputValue,

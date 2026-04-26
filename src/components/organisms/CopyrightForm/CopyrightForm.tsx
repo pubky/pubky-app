@@ -7,7 +7,7 @@ import * as Molecules from '@/molecules';
 import { COPYRIGHT_FORM_FIELDS, COPYRIGHT_ROLES, type CopyrightFormData } from '@/hooks';
 import { useTranslations } from 'next-intl';
 import { Loader2 } from 'lucide-react';
-import { formatUSDate } from '@libs/utils/utils';
+import { formatUSDate } from '@/libs/utils/utils';
 export function CopyrightForm() {
   const t = useTranslations('forms.copyright');
   const { form, onSubmit } = Hooks.useCopyrightForm();

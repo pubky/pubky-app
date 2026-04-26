@@ -120,7 +120,7 @@ Review ONLY for these categories:
 1. **Security**: hardcoded secrets/tokens, unsafe input handling, XSS vectors in JSX (dangerouslySetInnerHTML), unescaped user content in HTML
 2. **Error handling gaps**: raw `throw new Error()` in src/core/ production code (should use `Err.*` factories — they log automatically), unhandled promise rejections (missing catch/try-catch on async calls), swallowed errors (empty catch blocks), logging before throwing `Err.*` (causes double-logging)
 3. **Type safety**: unnecessary `any` types, missing null/undefined checks before property access, type assertions that hide bugs (`as unknown as X`)
-4. **Dexie/React misuse**: network calls or TanStack Query usage inside `useLiveQuery` callbacks (breaks Dexie PSD — see docs/local-first.md, ADR-0011), direct `process.env` access instead of the validated `Env` object from `@libs/env/env`
+4. **Dexie/React misuse**: network calls or TanStack Query usage inside `useLiveQuery` callbacks (breaks Dexie PSD — see docs/local-first.md, ADR-0011), direct `process.env` access instead of the validated `Env` object from `@/libs/env/env`
 5. **Hardcoded design values**: hardcoded hex/rgb colors in Tailwind classes (`bg-[#1a1a1a]`) instead of design tokens (`bg-primary`), arbitrary z-index values (`z-[999]`) instead of the standard scale (-z-10, z-10, z-30, z-40, z-50, z-60)
 6. **Naming**: controller methods not following fetch*/get*/getOrFetch*/commitCreate*/commitUpdate*/commitDelete* conventions, functions whose names don't match what they actually do
 7. **Missing tests**: complex functions (3+ branches or async with error paths) in src/core/ or src/components/ that have no co-located .test.tsx/.test.ts file — suggest 1-2 specific test cases
@@ -193,7 +193,7 @@ Each finding:
   "severity": "medium",
   "what": "Component manually formats timestamps with Date math instead of using timeAgo() from src/libs/",
   "why": "Duplicates existing utility and diverges from the formatting used elsewhere in the app",
-  "fix": "import { timeAgo } from '@libs/utils/utils' and replace the manual calculation"
+  "fix": "import { timeAgo } from '@/libs/utils/utils' and replace the manual calculation"
 }
 
 If nothing to simplify, return an empty array: []

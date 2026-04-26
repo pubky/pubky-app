@@ -3,9 +3,9 @@
 import type { ReactNode } from 'react';
 import { useEffect, useRef } from 'react';
 import * as Molecules from '@/molecules';
-import { Logger } from '@libs/logger/logger';
-import { ErrorService } from '@libs/error/error.types';
-import { getErrorMessage, toAppError } from '@libs/error/error.utils';
+import { Logger } from '@/libs/logger/logger';
+import { ErrorService } from '@/libs/error/error.types';
+import { getErrorMessage, toAppError } from '@/libs/error/error.utils';
 
 interface GlobalErrorHandlerProviderProps {
   children: ReactNode;

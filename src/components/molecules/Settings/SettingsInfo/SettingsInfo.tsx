@@ -9,7 +9,7 @@ import { APP_RELEASE_URL, APP_VERSION } from '@/config';
 import type { SettingsInfoProps } from './SettingsInfo.types';
 import { FAQ_QUESTION_KEYS, COPYRIGHT_TEXT } from './SettingsInfo.constants';
 import { FileText, LockKeyhole, ChevronRight, MessageCircleQuestion } from 'lucide-react';
-import { cn } from '@libs/utils/utils';
+import { cn } from '@/libs/utils/utils';
 export function SettingsInfo({ className, hideFAQ = false }: SettingsInfoProps) {
   const t = useTranslations('settingsInfo');
   return (

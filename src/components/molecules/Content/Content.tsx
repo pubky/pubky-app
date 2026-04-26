@@ -2,7 +2,7 @@ import { ReactNode } from 'react';
 import Image, { ImageProps } from 'next/image';
 
 import * as Atoms from '@/atoms';
-import { cn } from '@libs/utils/utils';
+import { cn } from '@/libs/utils/utils';
 
 interface ContentCardProps {
   children?: ReactNode;

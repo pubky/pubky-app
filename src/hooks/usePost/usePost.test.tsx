@@ -59,8 +59,8 @@ vi.mock('@/molecules', async (importOriginal) => {
 });
 
 // Mock Logger
-vi.mock('@libs/logger/logger', async () => {
-  const actual = await vi.importActual<typeof import('@libs/logger/logger')>('@libs/logger/logger');
+vi.mock('@/libs/logger/logger', async () => {
+  const actual = await vi.importActual<typeof import('@/libs/logger/logger')>('@/libs/logger/logger');
   return {
     ...actual,
     Logger: {

@@ -1,8 +1,8 @@
 import { Table } from 'dexie';
 import { ModelBase } from '@/core/models/shared/base/baseModel';
-import { DatabaseErrorCode } from '@libs/error/error.codes';
-import { Err } from '@libs/error/error.factories';
-import { ErrorService } from '@libs/error/error.types';
+import { DatabaseErrorCode } from '@/libs/error/error.codes';
+import { Err } from '@/libs/error/error.factories';
+import { ErrorService } from '@/libs/error/error.types';
 
 /**
  * Base class for record-oriented models backed by a Dexie table.

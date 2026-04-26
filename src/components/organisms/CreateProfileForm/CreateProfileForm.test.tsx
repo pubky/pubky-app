@@ -3,9 +3,9 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import { CreateProfileForm } from './CreateProfileForm';
 import * as App from '@/app';
-import { ServerErrorCode } from '@libs/error/error.codes';
-import { Err } from '@libs/error/error.factories';
-import { ErrorService } from '@libs/error/error.types';
+import { ServerErrorCode } from '@/libs/error/error.codes';
+import { Err } from '@/libs/error/error.factories';
+import { ErrorService } from '@/libs/error/error.types';
 
 vi.mock('facehash', () => ({
   Facehash: ({ name, onRenderMouth }: { name: string; onRenderMouth?: () => React.ReactNode }) => (
@@ -52,8 +52,8 @@ const { mockCropImageToBlob, mockToast } = vi.hoisted(() => ({
   mockToast: vi.fn(),
 }));
 
-vi.mock('@libs/image/cropImage', async () => {
-  const actual = await vi.importActual<typeof import('@libs/image/cropImage')>('@libs/image/cropImage');
+vi.mock('@/libs/image/cropImage', async () => {
+  const actual = await vi.importActual<typeof import('@/libs/image/cropImage')>('@/libs/image/cropImage');
   return {
     ...actual,
     cropImageToBlob: mockCropImageToBlob,

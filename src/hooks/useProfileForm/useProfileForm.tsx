@@ -11,10 +11,10 @@ import * as App from '@/app';
 import { USER_NAME_MIN_LENGTH, USER_NAME_MAX_LENGTH, USER_BIO_MAX_LENGTH } from '@/config';
 
 import type { ProfileLink, UseProfileFormProps, UseProfileFormReturn, SubmitTextKey } from './useProfileForm.types';
-import { Logger } from '@libs/logger/logger';
-import { generateRandomUsername } from '@libs/utils/utils';
-import { AppError } from '@libs/error/error';
-import { isAuthError, requiresLogin } from '@libs/error/error.utils';
+import { Logger } from '@/libs/logger/logger';
+import { generateRandomUsername } from '@/libs/utils/utils';
+import { AppError } from '@/libs/error/error';
+import { isAuthError, requiresLogin } from '@/libs/error/error.utils';
 
 const DEFAULT_LINKS: ProfileLink[] = [
   { label: 'WEBSITE', url: '' },

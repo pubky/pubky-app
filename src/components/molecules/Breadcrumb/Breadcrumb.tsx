@@ -7,7 +7,7 @@ import * as Types from './Breadcrumb.types';
 
 // Shadcn-based Breadcrumb with custom variants
 import { ChevronDown, ChevronRight, MoreHorizontal } from 'lucide-react';
-import { cn } from '@libs/utils/utils';
+import { cn } from '@/libs/utils/utils';
 const breadcrumbVariants = cva('flex flex-wrap items-center', {
   variants: {
     size: {

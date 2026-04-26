@@ -4,7 +4,7 @@ import { ReactNode } from 'react';
 import { useTranslations } from 'next-intl';
 import * as Atoms from '@/atoms';
 import { Loader2 } from 'lucide-react';
-import { cn } from '@libs/utils/utils';
+import { cn } from '@/libs/utils/utils';
 interface InputFieldProps {
   id?: string;
   name?: string;

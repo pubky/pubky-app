@@ -4,7 +4,7 @@ import * as Atoms from '@/atoms';
 import * as Organisms from '@/organisms';
 import * as Hooks from '@/hooks';
 import type { SearchRecentUserItemProps } from './SearchRecentUserItem.types';
-import { formatPublicKey } from '@libs/utils/utils';
+import { formatPublicKey } from '@/libs/utils/utils';
 
 /**
  * SearchRecentUserItem

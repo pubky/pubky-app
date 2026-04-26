@@ -19,7 +19,7 @@ import * as Organisms from '@/organisms';
  * - md breakpoint uses 80px for additional spacing.
  */
 import { Plus } from 'lucide-react';
-import { cn } from '@libs/utils/utils';
+import { cn } from '@/libs/utils/utils';
 export function NewPostCTA() {
   const [open, setOpen] = useState(false);
   const { isFullyAuthenticated, isLoading } = Hooks.useAuthStatus();

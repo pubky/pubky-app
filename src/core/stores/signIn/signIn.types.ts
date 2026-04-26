@@ -1,4 +1,4 @@
-import type { AppError } from '@libs/error/error';
+import type { AppError } from '@/libs/error/error';
 
 export interface SignInState {
   /** Auth URL callback successfully resolved (20%) */

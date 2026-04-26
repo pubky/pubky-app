@@ -18,8 +18,8 @@ import { FOLLOW_ACTIONS } from '@/hooks/useFollowUser/useFollowUser.types';
  * This ensures profile data gets refreshed when stale.
  */
 import { Pencil, KeyRound, Link, Loader2, LogOut, Check, UserMinus, UserRoundPlus, Ellipsis } from 'lucide-react';
-import { extractEmojiFromStatus, parseStatus } from '@libs/status/status';
-import { cn, formatPublicKey } from '@libs/utils/utils';
+import { extractEmojiFromStatus, parseStatus } from '@/libs/status/status';
+import { cn, formatPublicKey } from '@/libs/utils/utils';
 export function ProfilePageHeader({ profile, actions, isOwnProfile = true, userId }: Types.ProfilePageHeaderProps) {
   const t = useTranslations('profile.actions');
   const tStatus = useTranslations('status');

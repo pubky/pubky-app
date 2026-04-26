@@ -8,7 +8,7 @@ import * as Hooks from '@/hooks';
 import * as Core from '@/core';
 import * as Config from '@/config';
 import * as Types from './ContentLayout.types';
-import { cn } from '@libs/utils/utils';
+import { cn } from '@/libs/utils/utils';
 
 /**
  * Reusable sticky sidebar component for left and right sidebars
@@ -47,6 +47,7 @@ export function ContentLayout({
   showLeftMobileButton = true,
   showRightMobileButton = true,
   renderMobileHeader = true,
+  hasGradientBackground,
   className,
   classNameWrapperContent,
   feedVariant,
@@ -91,6 +92,7 @@ export function ContentLayout({
           onRightIconClick={showRightMobileButton ? () => setDrawerRightOpen(true) : undefined}
           showLeftButton={showLeftMobileButton}
           showRightButton={showRightMobileButton}
+          hasGradientBackground={hasGradientBackground}
         />
       )}
 

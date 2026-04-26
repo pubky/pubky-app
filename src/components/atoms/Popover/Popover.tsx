@@ -5,7 +5,7 @@ import { useState, useRef, useEffect, createContext, useContext } from 'react';
 import * as Hooks from '@/hooks';
 import { DEFAULT_HOVER_CLOSE_DELAY } from './Popover.constants';
 import type { PopoverContextType, PopoverProps } from './Popover.types';
-import { cn } from '@libs/utils/utils';
+import { cn } from '@/libs/utils/utils';
 
 const PopoverContext = createContext<PopoverContextType>({});
 

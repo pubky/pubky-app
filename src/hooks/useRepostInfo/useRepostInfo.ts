@@ -4,7 +4,7 @@ import * as Core from '@/core';
 import * as Hooks from '@/hooks';
 import { useLocalFirstQuery } from '@/hooks/useLocalFirstQuery';
 import type { UseRepostInfoResult } from './useRepostInfo.types';
-import { Logger } from '@libs/logger/logger';
+import { Logger } from '@/libs/logger/logger';
 
 /**
  * Hook to get repost information for a post.

@@ -6,7 +6,7 @@ import * as Core from '@/core';
 import * as Molecules from '@/molecules';
 
 import type { UseInviteCodeSignUpResult } from './useInviteCodeSignUp.types';
-import { getRetryAfter, isAppError, isAuthError, isRetryable } from '@libs/error/error.utils';
+import { getRetryAfter, isAppError, isAuthError, isRetryable } from '@/libs/error/error.utils';
 
 const SIGN_UP_MAX_ATTEMPTS = 4;
 const SIGN_UP_RETRY_BASE_DELAY_MS = 500;

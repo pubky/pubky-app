@@ -1,7 +1,7 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import * as Core from '@/core';
-import { ClientErrorCode, ServerErrorCode } from '@libs/error/error.codes';
-import { ErrorCategory } from '@libs/error/error.types';
+import { ClientErrorCode, ServerErrorCode } from '@/libs/error/error.codes';
+import { ErrorCategory } from '@/libs/error/error.types';
 
 describe('NexusBootstrapService', () => {
   const mockFetch = vi.fn();

@@ -2,9 +2,9 @@ import { renderHook, act } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { useInviteCodeSignUp } from './useInviteCodeSignUp';
 import * as Core from '@/core';
-import { NetworkErrorCode } from '@libs/error/error.codes';
-import { Err } from '@libs/error/error.factories';
-import { ErrorService } from '@libs/error/error.types';
+import { NetworkErrorCode } from '@/libs/error/error.codes';
+import { Err } from '@/libs/error/error.factories';
+import { ErrorService } from '@/libs/error/error.types';
 
 const {
   mockSignUp,
@@ -48,8 +48,8 @@ vi.mock('next-intl', () => ({
   },
 }));
 
-vi.mock('@libs/error/error.utils', async (importOriginal) => {
-  const actual = await importOriginal<typeof import('@libs/error/error.utils')>();
+vi.mock('@/libs/error/error.utils', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('@/libs/error/error.utils')>();
   return {
     ...actual,
     isAppError: mockIsAppError,

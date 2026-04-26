@@ -1,8 +1,8 @@
 import * as Atoms from '@/atoms';
 import { POST_THREAD_CONNECTOR_VARIANTS } from './PostThreadConnector.constants';
 import type { PostThreadConnectorVariant } from './PostThreadConnector.types';
-import { LineHorizontal, RoundedCorner } from '@icons';
-import { cn } from '@libs/utils/utils';
+import { LineHorizontal, RoundedCorner } from '@/icons';
+import { cn } from '@/libs/utils/utils';
 interface PostThreadConnectorProps {
   height?: number;
   variant?: PostThreadConnectorVariant;

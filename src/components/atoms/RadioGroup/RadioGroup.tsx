@@ -3,7 +3,7 @@
 import * as React from 'react';
 import { RadioGroup as RadioGroupPrimitive } from 'radix-ui';
 import * as Atoms from '@/atoms';
-import { cn } from '@libs/utils/utils';
+import { cn } from '@/libs/utils/utils';
 
 type RadioGroupProps = React.ComponentPropsWithoutRef<typeof RadioGroupPrimitive.Root>;
 

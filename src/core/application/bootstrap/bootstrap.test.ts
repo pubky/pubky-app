@@ -3,12 +3,12 @@ import { LastReadResult } from 'pubky-app-specs';
 import { BootstrapApplication } from './bootstrap';
 import * as Core from '@/core';
 import { asOpaque } from '@/test-utils';
-import { Env } from '@libs/env/env';
-import { ClientErrorCode, ServerErrorCode } from '@libs/error/error.codes';
-import { Err } from '@libs/error/error.factories';
-import { ErrorCategory, ErrorService } from '@libs/error/error.types';
-import { HttpMethod, HttpStatusCode } from '@libs/http/http.types';
-import { Logger } from '@libs/logger/logger';
+import { Env } from '@/libs/env/env';
+import { ClientErrorCode, ServerErrorCode } from '@/libs/error/error.codes';
+import { Err } from '@/libs/error/error.factories';
+import { ErrorCategory, ErrorService } from '@/libs/error/error.types';
+import { HttpMethod, HttpStatusCode } from '@/libs/http/http.types';
+import { Logger } from '@/libs/logger/logger';
 
 // Mock pubky-app-specs to avoid WebAssembly issues
 vi.mock('pubky-app-specs', () => ({

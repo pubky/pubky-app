@@ -1,6 +1,6 @@
 import * as Atoms from '@/components/atoms';
 import { Check } from 'lucide-react';
-import { cn } from '@libs/utils/utils';
+import { cn } from '@/libs/utils/utils';
 interface ProgressStepsProps {
   currentStep: number;
   totalSteps: number;

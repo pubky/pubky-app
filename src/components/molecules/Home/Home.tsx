@@ -8,7 +8,7 @@ import * as Atoms from '@/atoms';
 import * as Organisms from '@/organisms';
 import * as Config from '@/config';
 import * as App from '@/app';
-import { cn } from '@libs/utils/utils';
+import { cn } from '@/libs/utils/utils';
 
 export const HomeActions = () => {
   const t = useTranslations('landing');

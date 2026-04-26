@@ -27,8 +27,8 @@ import {
   Activity,
   Delete,
 } from 'lucide-react';
-import { UsersRound2 } from '@icons';
-import { Env } from '@libs/env/env';
+import { UsersRound2 } from '@/icons';
+import { Env } from '@/libs/env/env';
 type CustomFeedDialogProps = {
   mode: 'create' | 'edit';
   children: ReactNode;

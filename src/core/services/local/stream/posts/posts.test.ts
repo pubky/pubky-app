@@ -2,9 +2,9 @@ import { describe, it, expect, beforeEach, vi } from 'vitest';
 import * as Core from '@/core';
 import { buildCompositeId } from '@/core';
 import { asOpaque } from '@/test-utils';
-import { DatabaseErrorCode } from '@libs/error/error.codes';
-import { Err } from '@libs/error/error.factories';
-import { ErrorService } from '@libs/error/error.types';
+import { DatabaseErrorCode } from '@/libs/error/error.codes';
+import { Err } from '@/libs/error/error.factories';
+import { ErrorService } from '@/libs/error/error.types';
 
 describe('LocalStreamPostsService', () => {
   const streamId: Core.PostStreamId = Core.PostStreamTypes.TIMELINE_ALL_ALL;

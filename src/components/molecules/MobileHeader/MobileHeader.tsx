@@ -4,7 +4,7 @@ import * as Atoms from '@/atoms';
 import * as Molecules from '@/molecules';
 import * as Core from '@/core';
 import { SlidersHorizontal, UserRound, Activity } from 'lucide-react';
-import { cn } from '@libs/utils/utils';
+import { cn } from '@/libs/utils/utils';
 export interface MobileHeaderProps {
   onLeftIconClick?: () => void;
   onRightIconClick?: () => void;

@@ -2,7 +2,7 @@
 
 import * as Atoms from '@/atoms';
 import type { TagSuggestionsDropdownProps } from './TagSuggestionsDropdown.types';
-import { cn } from '@libs/utils/utils';
+import { cn } from '@/libs/utils/utils';
 
 export function TagSuggestionsDropdown({
   suggestions,

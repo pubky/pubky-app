@@ -1,7 +1,7 @@
 import { render, screen, fireEvent } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { PostHeaderUserInfo } from './PostHeaderUserInfo';
-import { formatPublicKey } from '@libs/utils/utils';
+import { formatPublicKey } from '@/libs/utils/utils';
 
 const { mockUserInfoPopover } = vi.hoisted(() => ({
   mockUserInfoPopover: vi.fn(
@@ -191,8 +191,8 @@ vi.mock('@/molecules', async (importOriginal) => {
 });
 
 // Mock utils
-vi.mock('@libs/utils/utils', async (importOriginal) => {
-  const actual = await importOriginal<typeof import('@libs/utils/utils')>();
+vi.mock('@/libs/utils/utils', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('@/libs/utils/utils')>();
   const { DEFAULT_DISPLAY_PUBLIC_KEY_LENGTH } = await import('@/config');
   return {
     ...actual,

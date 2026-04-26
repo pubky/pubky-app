@@ -7,8 +7,8 @@ import * as Hooks from '@/hooks';
 import * as Molecules from '@/molecules';
 import * as Types from './index';
 import { ChevronDown } from 'lucide-react';
-import { parseStatus } from '@libs/status/status';
-import { cn } from '@libs/utils/utils';
+import { parseStatus } from '@/libs/status/status';
+import { cn } from '@/libs/utils/utils';
 export function StatusPickerWrapper({
   emoji,
   status,

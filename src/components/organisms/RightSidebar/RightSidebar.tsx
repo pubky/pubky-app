@@ -1,7 +1,7 @@
 import * as Atoms from '@/atoms';
 import * as Organisms from '@/organisms';
 import type { RightSidebarProps } from './RightSidebar.types';
-import { cn } from '@libs/utils/utils';
+import { cn } from '@/libs/utils/utils';
 
 export function RightSidebar({ className }: RightSidebarProps) {
   return (

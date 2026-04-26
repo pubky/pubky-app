@@ -3,7 +3,7 @@
 import * as Atoms from '@/atoms';
 import { TAGS_PER_PAGE } from '@/hooks/usePostTags/usePostTags.constants';
 import type { PostTagsPanelProps } from './PostTagsPanel.types';
-import { cn } from '@libs/utils/utils';
+import { cn } from '@/libs/utils/utils';
 
 type PostTagsPanelSkeletonProps = Omit<PostTagsPanelProps, 'postId'>;
 

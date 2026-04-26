@@ -16,7 +16,7 @@ import { PostInputExpandableSection } from '../PostInputExpandableSection';
 import { PostInputAttachments } from '@/molecules/PostInputAttachments/PostInputAttachments';
 import type { ArticleJSON } from '@/hooks';
 import { sanitizeCodeBlockLanguages } from '@/molecules/MarkdownEditor/InitializedMDXEditor.utils';
-import { canSubmitPost, cn, getCharacterCount } from '@libs/utils/utils';
+import { canSubmitPost, cn, getCharacterCount } from '@/libs/utils/utils';
 
 const EXPANDABLE_SECTION_PARENT_GAP_PX = 16;
 

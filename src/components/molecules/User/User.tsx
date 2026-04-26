@@ -4,7 +4,7 @@ import * as React from 'react';
 import * as Atoms from '@/atoms';
 import * as Organisms from '@/organisms';
 import { UserRoundPlus, Tag, StickyNote } from 'lucide-react';
-import { cn } from '@libs/utils/utils';
+import { cn } from '@/libs/utils/utils';
 export interface UserData {
   id: string;
   name: string;

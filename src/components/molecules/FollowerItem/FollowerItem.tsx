@@ -5,7 +5,7 @@ import * as Atoms from '@/atoms';
 import * as Organisms from '@/organisms';
 import { Check, UserMinus, UserRoundPlus } from 'lucide-react';
 import type { FollowerItemProps } from './FollowerItem.types';
-import { formatPublicKey } from '@libs/utils/utils';
+import { formatPublicKey } from '@/libs/utils/utils';
 
 export function FollowerItem({ follower, isFollowing = false, onFollow, isCurrentUser = false }: FollowerItemProps) {
   const t = useTranslations('userList');

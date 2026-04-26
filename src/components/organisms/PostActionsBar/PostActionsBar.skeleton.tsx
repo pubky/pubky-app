@@ -1,5 +1,5 @@
 import * as Atoms from '@/atoms';
-import { cn } from '@libs/utils/utils';
+import { cn } from '@/libs/utils/utils';
 
 const ACTION_BUTTON_COUNT = 5;
 

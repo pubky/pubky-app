@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import * as Core from '@/core';
-import { HttpStatusCode } from '@libs/http/http.types';
-import { handleApiError } from '@libs/api/route-error-handler';
+import { HttpStatusCode } from '@/libs/http/http.types';
+import { handleApiError } from '@/libs/api/route-error-handler';
 
 /**
  * API Route for post report submission to Chatwoot

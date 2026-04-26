@@ -20,7 +20,7 @@ import type {
   VisualTileVideoProps,
 } from './VisualTimelinePosts.types';
 import { useVisualFeedTiles } from './useVisualFeedTiles';
-import { cn } from '@libs/utils/utils';
+import { cn } from '@/libs/utils/utils';
 
 function stopPropagation(event: React.SyntheticEvent) {
   event.stopPropagation();

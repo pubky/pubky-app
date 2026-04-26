@@ -23,8 +23,8 @@ import {
 } from './NotificationItem.utils';
 import { resolvePubkyToNames } from './NotificationItem.helpers';
 import type { NotificationItemProps } from './NotificationItem.types';
-import { Logger } from '@libs/logger/logger';
-import { formatNotificationTime, isPostDeleted } from '@libs/utils/utils';
+import { Logger } from '@/libs/logger/logger';
+import { formatNotificationTime, isPostDeleted } from '@/libs/utils/utils';
 
 export function NotificationItem({ notification, isUnread }: NotificationItemProps) {
   const t = useTranslations('notifications.actions');

@@ -6,7 +6,7 @@ import { useTranslations } from 'next-intl';
 import * as Molecules from '@/molecules';
 import { copyrightFormSchema, type CopyrightFormData } from './useCopyrightForm.types';
 import { copyrightFormDefaultValues, COPYRIGHT_ROLES } from './useCopyrightForm.constants';
-import { postJson } from '@libs/api/client-request';
+import { postJson } from '@/libs/api/client-request';
 
 export function useCopyrightForm() {
   const tToast = useTranslations('toast');

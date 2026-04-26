@@ -6,10 +6,10 @@ import type {
   TFetchNexusParams,
   TQueryNexusParams,
 } from './nexus.utils.types';
-import { HttpMethod, JSON_HEADERS } from '@libs/http/http.types';
-import { parseResponseOrThrow } from '@libs/http/response.utils';
-import { httpResponseToError, safeFetch } from '@libs/error/error.http';
-import { ErrorService } from '@libs/error/error.types';
+import { HttpMethod, JSON_HEADERS } from '@/libs/http/http.types';
+import { parseResponseOrThrow } from '@/libs/http/response.utils';
+import { httpResponseToError, safeFetch } from '@/libs/error/error.http';
+import { ErrorService } from '@/libs/error/error.types';
 
 export function buildNexusUrl(endpoint: string): string {
   return `${Config.NEXUS_URL}/${endpoint}`;

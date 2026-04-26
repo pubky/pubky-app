@@ -9,7 +9,7 @@ import * as Hooks from '@/hooks';
 import * as Providers from '@/providers';
 import * as Config from '@/config';
 import { MAX_SIDEBAR_TAGS } from './ProfilePageSidebar.constants';
-import { cn } from '@libs/utils/utils';
+import { cn } from '@/libs/utils/utils';
 
 export function ProfilePageSidebar() {
   const pathname = usePathname();

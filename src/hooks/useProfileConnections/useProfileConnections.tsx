@@ -5,8 +5,8 @@ import { useLiveQuery } from 'dexie-react-hooks';
 import * as Core from '@/core';
 import * as Config from '@/config';
 import type { ConnectionType, UserConnectionData, UseProfileConnectionsResult } from './useProfileConnections.types';
-import { Logger } from '@libs/logger/logger';
-import { isAppError } from '@libs/error/error.utils';
+import { Logger } from '@/libs/logger/logger';
+import { isAppError } from '@/libs/error/error.utils';
 
 export type { ConnectionType, UserConnectionData, UseProfileConnectionsResult };
 export { CONNECTION_TYPE } from './useProfileConnections.types';

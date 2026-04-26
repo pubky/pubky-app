@@ -7,7 +7,7 @@ import * as Molecules from '@/molecules';
 import * as Organisms from '@/organisms';
 import * as Core from '@/core';
 import * as Hooks from '@/hooks';
-import { cn } from '@libs/utils/utils';
+import { cn } from '@/libs/utils/utils';
 
 interface PostArticleProps {
   content: string;

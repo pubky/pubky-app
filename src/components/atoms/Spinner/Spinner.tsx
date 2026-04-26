@@ -2,7 +2,7 @@
 
 import * as React from 'react';
 import * as Atoms from '@/atoms';
-import { cn } from '@libs/utils/utils';
+import { cn } from '@/libs/utils/utils';
 
 export interface SpinnerProps extends React.ComponentProps<typeof Atoms.Container> {
   size?: 'sm' | 'md' | 'lg';

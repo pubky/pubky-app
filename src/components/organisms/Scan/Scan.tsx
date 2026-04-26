@@ -12,7 +12,7 @@ import * as App from '@/app';
 import * as Hooks from '@/hooks';
 import * as Core from '@/core';
 import { Loader2, QrCode, Key } from 'lucide-react';
-import { Logger } from '@libs/logger/logger';
+import { Logger } from '@/libs/logger/logger';
 export const ScanContent = () => {
   const t = useTranslations('onboarding.scan');
   const router = useRouter();

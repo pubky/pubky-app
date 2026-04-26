@@ -7,8 +7,8 @@ import {
   type StreamCoordinatorConfig,
   type StreamCoordinatorState,
 } from '@/core/coordinators';
-import { Env } from '@libs/env/env';
-import { Logger } from '@libs/logger/logger';
+import { Env } from '@/libs/env/env';
+import { Logger } from '@/libs/logger/logger';
 
 /**
  * StreamCoordinator

@@ -9,9 +9,9 @@ import {
   restoreMocks,
   buildPubkyUri,
 } from '../pipes.test-utils';
-import { AppError } from '@libs/error/error';
-import { ValidationErrorCode } from '@libs/error/error.codes';
-import { ErrorCategory, ErrorService } from '@libs/error/error.types';
+import { AppError } from '@/libs/error/error';
+import { ValidationErrorCode } from '@/libs/error/error.codes';
+import { ErrorCategory, ErrorService } from '@/libs/error/error.types';
 
 // File-specific test data
 const FILE_TEST_DATA = {

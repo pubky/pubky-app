@@ -6,7 +6,7 @@ import * as Core from '@/core';
 import * as Config from '@/config';
 import type { DialogCheckLinkProps } from './DialogCheckLink.types';
 import { ExternalLink } from 'lucide-react';
-import { truncateMiddle } from '@libs/utils/utils';
+import { truncateMiddle } from '@/libs/utils/utils';
 export function DialogCheckLink({ open, onOpenChangeAction, linkUrl }: DialogCheckLinkProps) {
   const [dontShowAgain, setDontShowAgain] = useState(false);
   const { setShowConfirm } = Core.useSettingsStore();

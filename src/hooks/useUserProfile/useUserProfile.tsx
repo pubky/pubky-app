@@ -3,7 +3,7 @@
 import * as Core from '@/core';
 import * as Config from '@/config';
 import { useLocalFirstQuery } from '@/hooks/useLocalFirstQuery';
-import { withPubkyPrefix } from '@libs/utils/utils';
+import { withPubkyPrefix } from '@/libs/utils/utils';
 
 export interface UserProfile {
   name: string;

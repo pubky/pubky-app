@@ -2,7 +2,7 @@
 
 import * as Molecules from '@/molecules';
 import * as Core from '@/core';
-import { cn } from '@libs/utils/utils';
+import { cn } from '@/libs/utils/utils';
 
 export interface LeftSidebarProps {
   className?: string;

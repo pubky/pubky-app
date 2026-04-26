@@ -1,6 +1,6 @@
 import { forwardRef } from 'react';
 import * as Types from './Container.types';
-import { cn } from '@libs/utils/utils';
+import { cn } from '@/libs/utils/utils';
 
 export const Container = forwardRef<
   HTMLDivElement | HTMLHtmlElement | HTMLBodyElement,

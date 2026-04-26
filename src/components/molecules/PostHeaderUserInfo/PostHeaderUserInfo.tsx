@@ -2,7 +2,7 @@
 import * as Atoms from '@/atoms';
 import * as Molecules from '@/molecules';
 import * as Organisms from '@/organisms';
-import { cn, formatPublicKey } from '@libs/utils/utils';
+import { cn, formatPublicKey } from '@/libs/utils/utils';
 
 interface PostHeaderUserInfoProps {
   userId: string;

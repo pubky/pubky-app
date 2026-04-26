@@ -16,7 +16,7 @@ import { usePostMainLayout, WIDE_POST_LAYOUT_CLASSES } from '@/organisms/PostMai
 
 import { QUICK_REPLY_CONNECTOR_SPACER_HEIGHT } from './QuickReply.constants';
 import type { QuickReplyProps } from './QuickReply.types';
-import { canSubmitPost, cn, getCharacterCount } from '@libs/utils/utils';
+import { canSubmitPost, cn, getCharacterCount } from '@/libs/utils/utils';
 
 export function QuickReply({
   parentPostId,

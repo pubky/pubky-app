@@ -5,7 +5,7 @@
 import { vi } from 'vitest';
 import * as Core from '@/core';
 import { PubkySpecsBuilder } from 'pubky-app-specs';
-import { Logger } from '@libs/logger/logger';
+import { Logger } from '@/libs/logger/logger';
 
 /**
  * Valid z-base32 encoded public keys for testing.

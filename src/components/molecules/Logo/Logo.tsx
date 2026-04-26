@@ -3,7 +3,7 @@
 import Image from 'next/image';
 import { usePathname } from 'next/navigation';
 import * as Atoms from '@/atoms';
-import { cn } from '@libs/utils/utils';
+import { cn } from '@/libs/utils/utils';
 
 interface LogoProps {
   width?: number;

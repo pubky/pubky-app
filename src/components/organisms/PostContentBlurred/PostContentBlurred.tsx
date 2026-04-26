@@ -1,7 +1,7 @@
 import * as Atoms from '@/atoms';
 import * as Core from '@/core';
 import { EyeOff } from 'lucide-react';
-import { cn } from '@libs/utils/utils';
+import { cn } from '@/libs/utils/utils';
 interface PostContentBlurredProps {
   postId: string;
   className?: string;

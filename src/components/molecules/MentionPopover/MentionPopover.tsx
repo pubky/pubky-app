@@ -4,7 +4,7 @@ import { useRef, useEffect } from 'react';
 import * as Atoms from '@/atoms';
 import * as Molecules from '@/molecules';
 import type { MentionPopoverProps } from './MentionPopover.types';
-import { cn } from '@libs/utils/utils';
+import { cn } from '@/libs/utils/utils';
 
 const POPOVER_CLASSNAME =
   'absolute z-50 mt-1 w-[var(--mention-popover-width)] max-h-[var(--mention-popover-max-height)] overflow-y-auto rounded-md border border-border bg-popover p-2';

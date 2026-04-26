@@ -11,7 +11,7 @@ import {
   restoreMocks,
   buildPubkyUri,
 } from '../pipes.test-utils';
-import { Logger } from '@libs/logger/logger';
+import { Logger } from '@/libs/logger/logger';
 
 describe('PostNormalizer', () => {
   // Test data factories

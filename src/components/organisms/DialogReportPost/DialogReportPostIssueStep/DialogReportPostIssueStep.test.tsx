@@ -12,8 +12,8 @@ vi.mock('next/navigation', () => ({
 }));
 
 // Mock utils - use actual implementations and only stub cn helper
-vi.mock('@libs/utils/utils', async (importOriginal) => {
-  const actual = await importOriginal<typeof import('@libs/utils/utils')>();
+vi.mock('@/libs/utils/utils', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('@/libs/utils/utils')>();
   return {
     ...actual,
     cn: (...inputs: (string | undefined | null | false)[]) => inputs.filter(Boolean).join(' '),
