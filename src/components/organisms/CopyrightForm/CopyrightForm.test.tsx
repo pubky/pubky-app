@@ -3,15 +3,6 @@ import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { CopyrightForm } from './CopyrightForm';
 
-// Mock utils
-vi.mock('@/libs/utils/utils', async (importOriginal) => {
-  const actual = await importOriginal<typeof import('@/libs/utils/utils')>();
-  return {
-    ...actual,
-    cn: (...inputs: (string | undefined | null | false)[]) => inputs.filter(Boolean).join(' '),
-  };
-});
-
 // Mock @/molecules
 const { mockToast, mockShowErrorToast } = vi.hoisted(() => ({
   mockToast: vi.fn(),

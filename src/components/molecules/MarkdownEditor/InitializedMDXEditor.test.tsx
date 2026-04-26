@@ -211,10 +211,6 @@ vi.mock('@/atoms', () => ({
   )),
 }));
 
-vi.mock('@/libs/utils/utils', () => ({
-  cn: (...classes: (string | boolean | undefined)[]) => classes.filter(Boolean).join(' '),
-}));
-
 /** Creates a mock editor ref with stub methods for mode-switching tests. */
 function createMockEditorRef(markdown = '') {
   return asOpaque<React.RefObject<MDXEditorMethods>>({

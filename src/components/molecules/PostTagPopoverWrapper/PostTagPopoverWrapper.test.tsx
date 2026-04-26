@@ -45,11 +45,6 @@ vi.mock('../UserInfoPopover', () => ({
   ),
 }));
 
-vi.mock('@/libs/utils/utils', async (importOriginal) => {
-  const actual = await importOriginal<typeof import('@/libs/utils/utils')>();
-  return { ...actual, formatPublicKey: () => 'formatted-key' };
-});
-
 const mockTaggers: TaggerWithAvatar[] = [
   { id: 'user1', avatarUrl: 'https://example.com/1.png', name: 'Alice' },
   { id: 'user2', avatarUrl: 'https://example.com/2.png', name: 'Bob' },

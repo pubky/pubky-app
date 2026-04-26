@@ -58,19 +58,6 @@ vi.mock('@/hooks', () => ({
   useUserDetailsFromIds: vi.fn(),
 }));
 
-// Use vi.hoisted to define mock functions before vi.mock calls
-const { mockIsPostDeleted } = vi.hoisted(() => ({
-  mockIsPostDeleted: vi.fn(() => false),
-}));
-
-vi.mock('@/libs/utils/utils', async () => {
-  const actual = await vi.importActual<typeof import('@/libs/utils/utils')>('@/libs/utils/utils');
-  return {
-    ...actual,
-    isPostDeleted: mockIsPostDeleted,
-  };
-});
-
 // Mock atoms
 vi.mock('@/atoms', () => ({
   Container: ({
@@ -184,7 +171,6 @@ describe('SinglePostContent', () => {
 
   beforeEach(() => {
     vi.clearAllMocks();
-    mockIsPostDeleted.mockReturnValue(false);
     Core.useHomeStore.getState().reset();
     vi.mocked(Hooks.useRequireAuth).mockReturnValue(mockUseRequireAuth());
     vi.mocked(Hooks.usePostDetails).mockReturnValue(mockUsePostDetails());
@@ -251,7 +237,13 @@ describe('SinglePostContent', () => {
     });
 
     it('renders ThreadTree with showQuickReply=false when parent post is deleted', () => {
-      mockIsPostDeleted.mockReturnValue(true);
+      vi.mocked(Hooks.usePostDetails).mockReturnValue({
+        ...mockUsePostDetails(),
+        postDetails: {
+          ...mockUsePostDetails().postDetails,
+          content: '[DELETED]',
+        },
+      });
 
       render(<SinglePostContent postId={mockPostId} />);
 
@@ -260,7 +252,13 @@ describe('SinglePostContent', () => {
     });
 
     it('renders PostDeleted component instead of post content when post is deleted', () => {
-      mockIsPostDeleted.mockReturnValue(true);
+      vi.mocked(Hooks.usePostDetails).mockReturnValue({
+        ...mockUsePostDetails(),
+        postDetails: {
+          ...mockUsePostDetails().postDetails,
+          content: '[DELETED]',
+        },
+      });
 
       render(<SinglePostContent postId={mockPostId} />);
 
@@ -313,7 +311,6 @@ describe('SinglePostContent - Snapshots', () => {
 
   beforeEach(() => {
     vi.clearAllMocks();
-    mockIsPostDeleted.mockReturnValue(false);
     vi.mocked(Hooks.useRequireAuth).mockReturnValue(mockUseRequireAuth());
     vi.mocked(Hooks.usePostDetails).mockReturnValue(mockUsePostDetails());
     vi.mocked(Hooks.usePostCounts).mockReturnValue(mockUsePostCounts());
@@ -346,7 +343,13 @@ describe('SinglePostContent - Snapshots', () => {
   });
 
   it('matches snapshot with deleted parent post', () => {
-    mockIsPostDeleted.mockReturnValue(true);
+    vi.mocked(Hooks.usePostDetails).mockReturnValue({
+      ...mockUsePostDetails(),
+      postDetails: {
+        ...mockUsePostDetails().postDetails,
+        content: '[DELETED]',
+      },
+    });
 
     const { container } = render(<SinglePostContent postId={mockPostId} />);
     expect(container).toMatchSnapshot();
