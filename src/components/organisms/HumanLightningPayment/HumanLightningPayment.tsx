@@ -12,7 +12,7 @@ import type { HumanLightningPaymentProps } from './HumanLightningPayment.types';
 import { useIsMobile } from '@/hooks/useIsMobile';
 import { RefreshCw, Wallet, ArrowLeft, Copy } from 'lucide-react';
 import { isAppError } from '@/libs/error/error.utils';
-import { cn, copyToClipboard as copyTextToClipboard } from '@/libs/utils/utils';
+import { cn, copyToClipboard } from '@/libs/utils/utils';
 export const HumanLightningPayment = ({ onBack, onSuccess }: HumanLightningPaymentProps) => {
   const t = useTranslations('onboarding.lightning');
   const tCommon = useTranslations('common');
@@ -93,7 +93,7 @@ export const HumanLightningPayment = ({ onBack, onSuccess }: HumanLightningPayme
   }, []);
   async function copyInvoiceToClipboard(text: string) {
     try {
-      await copyTextToClipboard({
+      await copyToClipboard({
         text,
       });
       toast({
