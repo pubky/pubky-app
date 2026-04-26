@@ -47,7 +47,7 @@ exports[`BackupMethodCard - Snapshots > matches snapshot for default BackupMetho
         >
           <svg
             aria-hidden="true"
-            class="lucide lucide-scan h-4 w-4"
+            class="lucide lucide-file-text h-4 w-4"
             fill="none"
             height="24"
             stroke="currentColor"
@@ -59,16 +59,19 @@ exports[`BackupMethodCard - Snapshots > matches snapshot for default BackupMetho
             xmlns="http://www.w3.org/2000/svg"
           >
             <path
-              d="M3 7V5a2 2 0 0 1 2-2h2"
+              d="M6 22a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h8a2.4 2.4 0 0 1 1.704.706l3.588 3.588A2.4 2.4 0 0 1 20 8v12a2 2 0 0 1-2 2z"
             />
             <path
-              d="M17 3h2a2 2 0 0 1 2 2v2"
+              d="M14 2v5a1 1 0 0 0 1 1h5"
             />
             <path
-              d="M21 17v2a2 2 0 0 1-2 2h-2"
+              d="M10 9H8"
             />
             <path
-              d="M7 21H5a2 2 0 0 1-2-2v-2"
+              d="M16 13H8"
+            />
+            <path
+              d="M16 17H8"
             />
           </svg>
           <span>
