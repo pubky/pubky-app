@@ -4,7 +4,7 @@ import { useTranslations } from 'next-intl';
 import * as Atoms from '@/atoms';
 import * as Molecules from '@/molecules';
 import * as Organisms from '@/organisms';
-import { FileText } from 'lucide-react';
+import { FileText, Scan } from 'lucide-react';
 export const BackupMethodCard = () => {
   const t = useTranslations('onboarding.backupMethod');
   //const { mnemonic } = Stores.useOnboardingStore();
@@ -30,7 +30,7 @@ export const BackupMethodCard = () => {
         <Atoms.Container className="mt-6 flex-row flex-wrap gap-3">
           <Organisms.DialogBackupPhrase>
             <Atoms.Button id="backup-recovery-phrase-btn" variant="secondary" className="gap-2">
-              <FileText className="h-4 w-4" />
+              <Scan className="h-4 w-4" />
               <span>{t('recoveryPhrase')}</span>
             </Atoms.Button>
           </Organisms.DialogBackupPhrase>
