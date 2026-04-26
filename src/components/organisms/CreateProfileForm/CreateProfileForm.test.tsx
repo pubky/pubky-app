@@ -46,7 +46,6 @@ vi.mock('next/navigation', () => ({
   }),
 }));
 
-// Mock libs - use actual utility functions and icons from lucide-react
 const { mockCropImageToBlob, mockToast } = vi.hoisted(() => ({
   mockCropImageToBlob: vi.fn(async () => new Blob(['cropped-image'], { type: 'image/png' })),
   mockToast: vi.fn(),

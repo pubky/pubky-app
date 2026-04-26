@@ -97,15 +97,6 @@ vi.mock('@/molecules', async (importOriginal) => {
 });
 
 // Use real libs - use actual implementations
-vi.mock('@/libs', async () => {
-  const actual = await vi.importActual('@/libs');
-  return {
-    ...actual,
-    extractInitials: vi.fn(({ name }) => name?.substring(0, 2).toUpperCase() || ''),
-    formatPublicKey: vi.fn(({ key, length }) => key?.substring(0, length) || ''),
-    Clock: vi.fn(({ className }: { className?: string }) => <svg data-testid="clock-icon" className={className} />),
-  };
-});
 
 const mockUsePostDetails = vi.mocked(Hooks.usePostDetails);
 const mockUseUserDetails = vi.mocked(Hooks.useUserDetails);

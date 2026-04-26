@@ -4,11 +4,6 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { WordSlot } from './WordSlot';
 
 // Mock external dependencies
-// Mock libs - use actual utility functions and icons from lucide-react
-vi.mock('@/libs', async () => {
-  const actual = await vi.importActual('@/libs');
-  return { ...actual };
-});
 
 vi.mock('@/atoms', () => ({
   Container: vi.fn(({ children, className, ...props }) => (

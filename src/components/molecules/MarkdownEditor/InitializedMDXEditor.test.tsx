@@ -211,7 +211,6 @@ vi.mock('@/atoms', () => ({
   )),
 }));
 
-// Mock @/libs/utils
 vi.mock('@/libs/utils/utils', () => ({
   cn: (...classes: (string | boolean | undefined)[]) => classes.filter(Boolean).join(' '),
 }));

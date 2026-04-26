@@ -37,10 +37,6 @@ vi.mock('@/atoms', () => ({
 }));
 
 // Keep real libs for icons and utilities; only stub helpers we rely on for deterministic tests
-vi.mock('@/libs', async () => {
-  const actual = await vi.importActual('@/libs');
-  return { ...actual };
-});
 
 vi.mock('@/config', () => ({
   GITHUB_URL: 'https://github.com',

@@ -2,12 +2,6 @@ import { describe, it, expect, vi } from 'vitest';
 import { render, screen } from '@testing-library/react';
 import { PopoverTradeoffs } from '@/molecules';
 
-// Mock @/libs - use actual implementations
-vi.mock('@/libs', async () => {
-  const actual = await vi.importActual('@/libs');
-  return { ...actual };
-});
-
 // Mock atoms and molecules
 vi.mock('@/atoms', () => ({
   Button: ({ children, variant, className }: { children: React.ReactNode; variant?: string; className?: string }) => (

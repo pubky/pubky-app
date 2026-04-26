@@ -4,10 +4,6 @@ import { PostInputActionBar } from './PostInputActionBar';
 import * as Hooks from '@/hooks';
 
 // Use real libs - use actual implementations
-vi.mock('@/libs', async () => {
-  const actual = await vi.importActual('@/libs');
-  return { ...actual };
-});
 
 vi.mock('@/hooks', () => ({
   useIsMobile: vi.fn(() => false),

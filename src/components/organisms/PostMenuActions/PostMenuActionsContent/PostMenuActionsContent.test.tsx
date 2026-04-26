@@ -33,13 +33,6 @@ vi.mock('@/core', async (importOriginal) => {
   };
 });
 
-vi.mock('@/libs', async () => {
-  const actual = await vi.importActual('@/libs');
-  return {
-    ...actual,
-  };
-});
-
 vi.mock('@/atoms', () => ({
   Container: ({
     children,

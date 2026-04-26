@@ -27,17 +27,6 @@ vi.mock('@/core', async (importOriginal) => {
   };
 });
 
-// Mock libs - use actual utility functions and icons from lucide-react
-vi.mock('@/libs', async () => {
-  const actual = await vi.importActual('@/libs');
-  return {
-    ...actual,
-    Identity: {
-      secretKeyToHex: vi.fn((key) => `hex-${key}`),
-    },
-  };
-});
-
 // Mock atoms
 vi.mock('@/components/atoms', () => ({
   Dialog: ({ children }: { children: React.ReactNode }) => <div data-testid="dialog">{children}</div>,

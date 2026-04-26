@@ -175,7 +175,6 @@ vi.mock('@/hooks', () => ({
   useCopyToClipboard: mockUseCopyToClipboard,
 }));
 
-// Mock libs
 const { mockShareWithFallback } = vi.hoisted(() => ({
   mockShareWithFallback: vi.fn(),
 }));

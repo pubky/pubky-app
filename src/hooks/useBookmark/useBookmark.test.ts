@@ -20,13 +20,6 @@ vi.mock('@/molecules', () => ({
   useToast: () => ({ toast: mockToast }),
 }));
 
-// Mock libs
-vi.mock('@/libs', () => ({
-  Logger: {
-    error: vi.fn(),
-  },
-}));
-
 describe('useBookmark', () => {
   const mockUserId = 'user-123' as Core.Pubky;
   const mockPostId = 'author:post-456';

@@ -16,15 +16,6 @@ vi.mock('@/hooks', async (importOriginal) => {
     useInfiniteScroll: vi.fn(),
   };
 });
-vi.mock('@/libs', async () => {
-  const actual = await vi.importActual('@/libs');
-  return {
-    ...actual,
-    Logger: {
-      error: vi.fn(),
-    },
-  };
-});
 
 // Mock components
 vi.mock('@/atoms', () => ({

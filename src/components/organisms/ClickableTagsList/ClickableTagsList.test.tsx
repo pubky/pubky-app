@@ -90,12 +90,6 @@ vi.mock('@/molecules', () => ({
   PostTagPopoverWrapper: ({ children }: { children: React.ReactNode }) => <>{children}</>,
 }));
 
-// Mock libs - use actual implementations
-vi.mock('@/libs', async () => {
-  const actual = await vi.importActual('@/libs');
-  return { ...actual };
-});
-
 describe('ClickableTagsList', () => {
   const mockTags: Core.NexusTag[] = [
     { label: 'bitcoin', taggers_count: 5, taggers: ['user1', 'user2'], relationship: true },

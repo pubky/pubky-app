@@ -76,10 +76,6 @@ vi.mock('@/atoms', () => ({
 }));
 
 // Use real libs
-vi.mock('@/libs', async () => {
-  const actual = await vi.importActual('@/libs');
-  return { ...actual };
-});
 
 describe('NewPostCTA', () => {
   beforeEach(() => {

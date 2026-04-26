@@ -84,7 +84,7 @@ it('matches snapshot for small size', () => {
 Always prefer real implementations from concrete `@/libs/*` files for pure functions and business logic:
 
 ```typescript
-import { formatDate, validateEmail } from '@/libs/utils/utils';
+import { formatPublicKey, truncateString } from '@/libs/utils/utils';
 // No mocking needed for pure functions
 ```
 
