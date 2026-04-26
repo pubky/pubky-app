@@ -103,7 +103,7 @@ export * from './Avatar';
 
 ## Icons (Lucide and custom)
 
-Icons are split on purpose: **stock Lucide** ships from the `lucide-react` package; **app-owned SVGs** (brands, bespoke marks, non-Lucide shapes) live in a single module behind the **`@/icons`** path alias (`src/libs/icons/icons.tsx`). Do not add `export * from 'lucide-react'` (or any full-package star re-export of icons) to a libs barrel.
+Icons are split on purpose: **stock Lucide** ships from the `lucide-react` package; **app-owned SVGs** (brands, bespoke marks, non-Lucide shapes) live in a single module behind the **`@/icons`** path alias (`src/libs/icons/icons.tsx`).
 
 ### Stock Lucide icons
 
@@ -111,7 +111,7 @@ Icons are split on purpose: **stock Lucide** ships from the `lucide-react` packa
 import { ChevronDown, Plus, Trash2 } from 'lucide-react';
 ```
 
-Use named imports from `lucide-react` only. Do not pull stock icons through any removed libs barrel or a `src/libs/icons` barrel.
+Use named imports from `lucide-react` only.
 
 ### Custom / brand icons
 

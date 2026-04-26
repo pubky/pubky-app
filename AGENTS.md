@@ -41,7 +41,7 @@ Use `Err.*` factories (never raw `Error`). Factories log automatically — don't
 - Shadcn First: always check for Shadcn equivalent before building custom UI
 - Atomic design: atoms → molecules → organisms → templates
 - Z-index scale: -z-10, z-10, z-30, z-40, z-50, z-60 (see `docs/z-index.md`)
-- **Icons**: stock Lucide from `lucide-react`; custom/brand SVG components from `@/icons` (`src/libs/icons/icons.tsx` via `tsconfig` path alias). Do not re-export Lucide through `@/libs` or import stock icons from a libs/icons barrel. URL→icon helpers (`getIconFromUrl`, `getLabelFromUrl`, …) live in `@/libs/utils` — see `docs/components.md` — _Icons (Lucide and custom)_.
+- **Icons**: stock Lucide from `lucide-react`; custom/brand SVG components from `@/icons` (`src/libs/icons/icons.tsx` via `tsconfig` path alias). URL→icon helpers (`getIconFromUrl`, `getLabelFromUrl`, …) live in `@/libs/utils/urlToIcon` — see `docs/components.md` — _Icons (Lucide and custom)_.
 
 ## Learned User Preferences
 
