@@ -72,17 +72,6 @@ vi.mock('@/atoms', () => ({
 vi.mock('@/libs/logger/logger', () => ({
   Logger: { error: vi.fn(), warn: vi.fn(), info: vi.fn() },
 }));
-vi.mock('@/libs/error/error.factories', () => ({
-  Err: {
-    timeout: (_code: string, msg: string, _opts: unknown) => new Error(msg),
-  },
-}));
-vi.mock('@/libs/error/error.codes', () => ({
-  TimeoutErrorCode: { REQUEST_TIMEOUT: 'REQUEST_TIMEOUT' },
-}));
-vi.mock('@/libs/error/error.types', () => ({
-  ErrorService: { Local: 'Local' },
-}));
 
 // Mock @/core
 vi.mock('@/core', () => ({

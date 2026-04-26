@@ -2,17 +2,8 @@ import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { act, render } from '@testing-library/react';
 import { GlobalErrorHandlerProvider } from './GlobalErrorHandlerProvider';
 import * as Molecules from '@/molecules';
-import { toAppError } from '@/libs/error/error.utils';
 import { Logger } from '@/libs/logger/logger';
 
-vi.mock('@/libs/error/error.utils', async (importOriginal) => {
-  const actual = await importOriginal<typeof import('@/libs/error/error.utils')>();
-  return {
-    ...actual,
-    toAppError: vi.fn((error: unknown) => (error instanceof Error ? error : new Error('normalized'))),
-    getErrorMessage: vi.fn(() => 'Something went wrong'),
-  };
-});
 vi.mock('@/libs/logger/logger', async (importOriginal) => {
   const actual = await importOriginal<typeof import('@/libs/logger/logger')>();
   return {
@@ -63,9 +54,8 @@ describe('GlobalErrorHandlerProvider', () => {
       window.dispatchEvent(new ErrorEvent('error', { error: new Error('boom'), message: 'boom' }));
     });
 
-    expect(toAppError).toHaveBeenCalled();
     expect(Logger.error).toHaveBeenCalled();
-    expect(Molecules.showErrorToast).toHaveBeenCalledWith({ description: 'Something went wrong' });
+    expect(Molecules.showErrorToast).toHaveBeenCalledWith({ description: 'boom' });
   });
 
   it('handles unhandledrejection events', () => {
@@ -81,9 +71,8 @@ describe('GlobalErrorHandlerProvider', () => {
       window.dispatchEvent(event);
     });
 
-    expect(toAppError).toHaveBeenCalled();
     expect(Logger.error).toHaveBeenCalled();
-    expect(Molecules.showErrorToast).toHaveBeenCalledWith({ description: 'Something went wrong' });
+    expect(Molecules.showErrorToast).toHaveBeenCalledWith({ description: 'promise failed' });
   });
 
   it('throttles duplicate error toasts within the cooldown window', () => {
