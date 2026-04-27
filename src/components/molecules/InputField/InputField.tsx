@@ -2,10 +2,9 @@
 
 import { ReactNode } from 'react';
 import { useTranslations } from 'next-intl';
-
 import * as Atoms from '@/atoms';
 import * as Libs from '@/libs';
-
+import { Loader2 } from 'lucide-react';
 interface InputFieldProps {
   id?: string;
   name?: string;
@@ -32,7 +31,6 @@ interface InputFieldProps {
   size?: 'sm' | 'md' | 'lg';
   dataCy?: string;
 }
-
 export function InputField({
   id,
   name,
@@ -61,21 +59,17 @@ export function InputField({
 }: InputFieldProps) {
   const t = useTranslations('common');
   const resolvedLoadingText = loadingText ?? t('loading');
-
   const containerClasses = variant === 'dashed' && 'border-dashed';
-
   const statusClasses = {
     default: '',
     success: 'border-brand text-brand',
     error: 'border-red-500 text-red-500',
   };
-
   const sizeClasses = {
     sm: 'h-10 text-sm',
     md: 'h-12 text-base',
     lg: 'h-14 text-lg',
   } as const;
-
   const messageClasses = {
     default: 'text-muted-foreground',
     info: 'text-blue-500',
@@ -83,7 +77,6 @@ export function InputField({
     error: 'text-red-500',
     success: 'text-brand',
   } as const;
-
   return (
     <>
       <Atoms.Container
@@ -100,7 +93,7 @@ export function InputField({
         {loading && (
           <Atoms.Container className="w-auto items-center justify-center">
             {loadingIcon ?? (
-              <Libs.Loader2 className="linear infinite h-4 w-4 animate-spin text-brand" data-testid="loading-icon" />
+              <Loader2 className="linear infinite h-4 w-4 animate-spin text-brand" data-testid="loading-icon" />
             )}
           </Atoms.Container>
         )}

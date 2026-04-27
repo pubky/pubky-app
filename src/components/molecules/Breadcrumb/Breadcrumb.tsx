@@ -3,11 +3,11 @@
 import * as React from 'react';
 import { Slot } from 'radix-ui';
 import { cva } from 'class-variance-authority';
-
 import * as Libs from '@/libs';
 import * as Types from './Breadcrumb.types';
 
 // Shadcn-based Breadcrumb with custom variants
+import { ChevronDown, ChevronRight, MoreHorizontal } from 'lucide-react';
 const breadcrumbVariants = cva('flex flex-wrap items-center', {
   variants: {
     size: {
@@ -19,7 +19,6 @@ const breadcrumbVariants = cva('flex flex-wrap items-center', {
     size: 'md',
   },
 });
-
 const breadcrumbItemVariants = cva('flex items-center justify-center gap-2.5', {
   variants: {
     variant: {
@@ -51,7 +50,13 @@ const breadcrumbSeparatorVariants = cva('text-muted-foreground shrink-0', {
 export const Breadcrumb = React.forwardRef<HTMLElement, Types.BreadcrumbProps>(
   ({ className, size, children, ...props }, ref) => (
     <nav ref={ref} aria-label="breadcrumb" className={Libs.cn('inline-flex', className)} {...props}>
-      <ol className={breadcrumbVariants({ size })}>{children}</ol>
+      <ol
+        className={breadcrumbVariants({
+          size,
+        })}
+      >
+        {children}
+      </ol>
     </nav>
   ),
 );
@@ -76,18 +81,21 @@ BreadcrumbList.displayName = 'BreadcrumbList';
 export const BreadcrumbItem = React.forwardRef<HTMLLIElement, Types.BreadcrumbItemProps>(
   ({ className, variant, children, href, dropdown, onClick, ...props }, ref) => {
     const itemVariant = variant || (dropdown ? 'dropdown' : 'link');
-
     const content = (
       <>
         <span className="font-sans text-sm leading-5 font-bold">{children}</span>
-        {dropdown && <Libs.ChevronDown className="h-[15px] w-[15px]" />}
+        {dropdown && <ChevronDown className="h-[15px] w-[15px]" />}
       </>
     );
-
     return (
       <li
         ref={ref}
-        className={Libs.cn(breadcrumbItemVariants({ variant: itemVariant }), className)}
+        className={Libs.cn(
+          breadcrumbItemVariants({
+            variant: itemVariant,
+          }),
+          className,
+        )}
         onClick={onClick}
         {...props}
       >
@@ -114,7 +122,6 @@ export const BreadcrumbLink = React.forwardRef<
   }
 >(({ asChild, className, ...props }, ref) => {
   const Comp = asChild ? Slot.Root : 'a';
-
   return <Comp ref={ref} className={Libs.cn('transition-colors hover:text-foreground', className)} {...props} />;
 });
 BreadcrumbLink.displayName = 'BreadcrumbLink';
@@ -126,10 +133,15 @@ export const BreadcrumbSeparator = React.forwardRef<HTMLLIElement, Types.Breadcr
       ref={ref}
       role="presentation"
       aria-hidden="true"
-      className={Libs.cn(breadcrumbSeparatorVariants({ size }), className)}
+      className={Libs.cn(
+        breadcrumbSeparatorVariants({
+          size,
+        }),
+        className,
+      )}
       {...props}
     >
-      {icon || <Libs.ChevronRight className="h-full w-full" />}
+      {icon || <ChevronRight className="h-full w-full" />}
     </li>
   ),
 );
@@ -145,7 +157,7 @@ export const BreadcrumbEllipsis = React.forwardRef<HTMLSpanElement, Types.Breadc
       className={Libs.cn('flex h-9 w-9 items-center justify-center', className)}
       {...props}
     >
-      <Libs.MoreHorizontal className="h-4 w-4" />
+      <MoreHorizontal className="h-4 w-4" />
       <span className="sr-only">More</span>
     </span>
   ),

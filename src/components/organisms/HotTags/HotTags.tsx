@@ -3,7 +3,6 @@
 import { useRouter } from 'next/navigation';
 import { useTranslations } from 'next-intl';
 import * as Atoms from '@/atoms';
-import * as Libs from '@/libs';
 import * as Molecules from '@/molecules';
 import * as Hooks from '@/hooks';
 import { APP_ROUTES } from '@/app/routes';
@@ -20,26 +19,23 @@ import { HotTagsSkeleton } from './HotTags.skeleton';
  * Note: This is an Organism because it interacts with Core via hooks (useHotTags)
  * and handles routing.
  */
+import { Tag } from 'lucide-react';
 export function HotTags({ className }: HotTagsProps) {
   const t = useTranslations('sidebar');
   const tCommon = useTranslations('common');
   const router = useRouter();
   const { tags, isLoading } = Hooks.useHotTags();
-
   const displayTags = tags.slice(0, MAX_TAGS);
-
   const handleTagClick = (tagName: string) => {
     router.push(`${APP_ROUTES.SEARCH}?tags=${encodeURIComponent(tagName)}`);
   };
-
   const handleSeeAll = () => {
     router.push(APP_ROUTES.HOT);
   };
-
   return (
     <Molecules.SidebarSection
       title={t('hotTags')}
-      footerIcon={Libs.Tag}
+      footerIcon={Tag}
       footerText={tCommon('exploreAll')}
       onFooterClick={handleSeeAll}
       footerTestId="see-all-button"

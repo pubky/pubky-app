@@ -267,31 +267,13 @@ vi.mock('@/atoms', () => ({
   ),
 }));
 
-// Mock libs — use real implementations but provide icon stubs and Env
+// Mock libs — real implementations with Env override
 vi.mock('@/libs', async () => {
-  const actual = await vi.importActual('@/libs');
-  const IconStub = ({ className }: { className?: string }) => <svg data-testid="icon" className={className} />;
+  const actual = await vi.importActual<typeof import('@/libs')>('@/libs');
   return {
     ...actual,
-    Radio: IconStub,
-    UsersRound2: IconStub,
-    HeartHandshake: IconStub,
-    SquareAsterisk: IconStub,
-    Flame: IconStub,
-    Columns3: IconStub,
-    Menu: IconStub,
-    LayoutGrid: IconStub,
-    Layers: IconStub,
-    StickyNote: IconStub,
-    Newspaper: IconStub,
-    Image: IconStub,
-    CirclePlay: IconStub,
-    Link: IconStub,
-    Download: IconStub,
-    Activity: IconStub,
-    Delete: IconStub,
     Env: {
-      ...((actual as Record<string, unknown>).Env ?? {}),
+      ...actual.Env,
       NEXT_MAX_STREAM_TAGS: 5,
     },
   };

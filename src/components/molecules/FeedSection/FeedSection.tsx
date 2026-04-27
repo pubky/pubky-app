@@ -1,31 +1,44 @@
 'use client';
 
 import * as Atoms from '@/atoms';
-import * as Libs from '@/libs';
-
+import { Bitcoin, Pickaxe, Zap, Palette, Plus } from 'lucide-react';
+import { UsersRound2 } from '@/icons';
 export interface FeedItem {
-  icon: React.ComponentType<{ className?: string }>;
+  icon: React.ComponentType<{
+    className?: string;
+  }>;
   label: string;
   href?: string;
 }
-
 export interface FeedSectionProps {
   feeds?: FeedItem[];
   showCreateButton?: boolean;
   className?: string;
 }
-
 export function FeedSection({ feeds: customFeeds, showCreateButton = true, className }: FeedSectionProps) {
   const defaultFeeds: FeedItem[] = [
-    { icon: Libs.UsersRound2, label: 'Following' },
-    { icon: Libs.Bitcoin, label: 'Based Bitcoin' },
-    { icon: Libs.Pickaxe, label: 'Mining Industry' },
-    { icon: Libs.Zap, label: 'Lightning Network' },
-    { icon: Libs.Palette, label: 'Design UX/UI' },
+    {
+      icon: UsersRound2,
+      label: 'Following',
+    },
+    {
+      icon: Bitcoin,
+      label: 'Based Bitcoin',
+    },
+    {
+      icon: Pickaxe,
+      label: 'Mining Industry',
+    },
+    {
+      icon: Zap,
+      label: 'Lightning Network',
+    },
+    {
+      icon: Palette,
+      label: 'Design UX/UI',
+    },
   ];
-
   const feeds = customFeeds || defaultFeeds;
-
   return (
     <Atoms.FilterRoot className={className}>
       <Atoms.FilterHeader title="Feed" />
@@ -43,7 +56,7 @@ export function FeedSection({ feeds: customFeeds, showCreateButton = true, class
 
         {showCreateButton && (
           <Atoms.FilterItem isSelected={false} onClick={() => {}}>
-            <Atoms.FilterItemIcon icon={Libs.Plus} />
+            <Atoms.FilterItemIcon icon={Plus} />
             <Atoms.FilterItemLabel>Create Feed</Atoms.FilterItemLabel>
           </Atoms.FilterItem>
         )}

@@ -3,7 +3,6 @@
 import { useTranslations } from 'next-intl';
 import * as Atoms from '@/atoms';
 import * as Molecules from '@/molecules';
-import * as Libs from '@/libs';
 import type { SearchRecentSectionProps } from './SearchRecentSection.types';
 
 /**
@@ -14,14 +13,13 @@ import type { SearchRecentSectionProps } from './SearchRecentSection.types';
  * Users displayed horizontally, tags displayed horizontally below.
  * Note: Data is already limited by parent component.
  */
+import { X } from 'lucide-react';
 export function SearchRecentSection({ users, tags, onUserClick, onTagClick, onClearAll }: SearchRecentSectionProps) {
   const t = useTranslations('search.recent');
   const hasItems = users.length > 0 || tags.length > 0;
-
   if (!hasItems) {
     return null;
   }
-
   return (
     <Atoms.Container overrideDefaults className="flex flex-col gap-3">
       <Atoms.Container overrideDefaults className="flex items-center gap-2">
@@ -36,7 +34,7 @@ export function SearchRecentSection({ users, tags, onUserClick, onTagClick, onCl
             data-testid="clear-all-button"
             aria-label={t('clearAll')}
           >
-            <Libs.X className="size-4" strokeWidth={2} aria-hidden="true" />
+            <X className="size-4" strokeWidth={2} aria-hidden="true" />
           </Atoms.Button>
         )}
       </Atoms.Container>

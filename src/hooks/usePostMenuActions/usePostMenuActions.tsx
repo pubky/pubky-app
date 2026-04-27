@@ -24,24 +24,33 @@ import type {
  * @param options - Optional configuration including callbacks
  * @returns Menu items array, loading state, and report post data
  */
+import {
+  UserRoundMinus,
+  UserRoundPlus,
+  Key,
+  Link,
+  FileText,
+  Megaphone,
+  MegaphoneOff,
+  Flag,
+  Edit,
+  Trash,
+} from 'lucide-react';
 export function usePostMenuActions(postId: string, options: UsePostMenuActionsOptions): UsePostMenuActionsResult {
   const t = useTranslations('post.actions');
   const tToast = useTranslations('toast');
   const tMute = useTranslations('toast.mute');
   const tCopy = useTranslations('toast.copy');
   const tFollow = useTranslations('toast.follow');
-
   const { onReportClick, onEditClick, onDeleteClick, isDeleting = false } = options;
   const parsedId = Core.parseCompositeId(postId);
   // Normalize author ID to ensure consistent format (strip pubky: or pk: prefix)
   // This is necessary because composite IDs may contain prefixed pubky IDs
   const postAuthorId = Libs.stripPubkyPrefix(parsedId.pubky) as Core.Pubky;
-
   const { currentUserPubky } = Hooks.useCurrentUserProfile();
   const { postDetails, isLoading: isPostLoading } = Hooks.usePostDetails(postId);
   const { profile: authorProfile, isLoading: isAuthorLoading } = Hooks.useUserProfile(postAuthorId);
   const { isFollowing, isLoading: isFollowingLoading } = Hooks.useIsFollowing(postAuthorId);
-
   const { toggleFollow, isLoading: isFollowLoading, isUserLoading } = Hooks.useFollowUser();
   const { toggleMute, isLoading: isMuteLoading, isUserLoading: isMuteUserLoading } = Hooks.useMuteUser();
   const { isMuted, isLoading: isMutedUsersLoading } = Hooks.useMutedUsers();
@@ -54,7 +63,6 @@ export function usePostMenuActions(postId: string, options: UsePostMenuActionsOp
   const { copyToClipboard: copyText } = Hooks.useCopyToClipboard({
     successTitle: tCopy('textCopied'),
   });
-
   const isOwnPost = currentUserPubky === postAuthorId;
   const isUserMuted = isMuted(postAuthorId);
   const rawUsername = authorProfile?.name || postAuthorId;
@@ -62,14 +70,18 @@ export function usePostMenuActions(postId: string, options: UsePostMenuActionsOp
   const isArticle = postDetails?.kind === 'long';
   const isLoading = isPostLoading || isAuthorLoading || isFollowingLoading || isMutedUsersLoading;
   const postUrl = `${typeof window !== 'undefined' ? window.location.origin : ''}${POST_ROUTES.POST}/${parsedId.pubky}/${parsedId.id}`;
-
   const menuItems: PostMenuActionItem[] = [];
-
   if (!isOwnPost) {
     menuItems.push({
       id: POST_MENU_ACTION_IDS.FOLLOW,
-      label: isFollowing ? t('unfollowUser', { username }) : t('followUser', { username }),
-      icon: isFollowing ? Libs.UserRoundMinus : Libs.UserRoundPlus,
+      label: isFollowing
+        ? t('unfollowUser', {
+            username,
+          })
+        : t('followUser', {
+            username,
+          }),
+      icon: isFollowing ? UserRoundMinus : UserRoundPlus,
       onClick: async () => {
         try {
           await toggleFollow(postAuthorId, isFollowing);
@@ -84,11 +96,10 @@ export function usePostMenuActions(postId: string, options: UsePostMenuActionsOp
       disabled: isFollowLoading || isUserLoading(postAuthorId),
     });
   }
-
   menuItems.push({
     id: POST_MENU_ACTION_IDS.COPY_PUBKY,
     label: t('copyPubky'),
-    icon: Libs.Key,
+    icon: Key,
     onClick: async () => {
       try {
         await copyPubky(Libs.withPubkyPrefix(postAuthorId));
@@ -101,11 +112,10 @@ export function usePostMenuActions(postId: string, options: UsePostMenuActionsOp
     },
     variant: POST_MENU_ACTION_VARIANTS.DEFAULT,
   });
-
   menuItems.push({
     id: POST_MENU_ACTION_IDS.COPY_LINK,
     label: t('copyLink'),
-    icon: Libs.Link,
+    icon: Link,
     onClick: async () => {
       try {
         await copyLink(postUrl);
@@ -118,12 +128,11 @@ export function usePostMenuActions(postId: string, options: UsePostMenuActionsOp
     },
     variant: POST_MENU_ACTION_VARIANTS.DEFAULT,
   });
-
   if (!isArticle) {
     menuItems.push({
       id: POST_MENU_ACTION_IDS.COPY_TEXT,
       label: t('copyText'),
-      icon: Libs.FileText,
+      icon: FileText,
       onClick: async () => {
         try {
           await copyText(postDetails?.content ?? '');
@@ -137,18 +146,29 @@ export function usePostMenuActions(postId: string, options: UsePostMenuActionsOp
       variant: POST_MENU_ACTION_VARIANTS.DEFAULT,
     });
   }
-
   if (!isOwnPost) {
     menuItems.push({
       id: POST_MENU_ACTION_IDS.MUTE,
-      label: isUserMuted ? t('unmuteUser', { username }) : t('muteUser', { username }),
-      icon: isUserMuted ? Libs.Megaphone : Libs.MegaphoneOff,
+      label: isUserMuted
+        ? t('unmuteUser', {
+            username,
+          })
+        : t('muteUser', {
+            username,
+          }),
+      icon: isUserMuted ? Megaphone : MegaphoneOff,
       onClick: async () => {
         try {
           await toggleMute(postAuthorId, isUserMuted);
           Molecules.toast({
             title: isUserMuted ? tMute('unmuted') : tMute('muted'),
-            description: isUserMuted ? tMute('unmutedDesc', { username }) : tMute('mutedDesc', { username }),
+            description: isUserMuted
+              ? tMute('unmutedDesc', {
+                  username,
+                })
+              : tMute('mutedDesc', {
+                  username,
+                }),
           });
         } catch (error) {
           Molecules.toast({
@@ -160,35 +180,31 @@ export function usePostMenuActions(postId: string, options: UsePostMenuActionsOp
       variant: POST_MENU_ACTION_VARIANTS.DEFAULT,
       disabled: isMuteLoading || isMuteUserLoading(postAuthorId),
     });
-
     menuItems.push({
       id: POST_MENU_ACTION_IDS.REPORT,
       label: t('reportPost'),
-      icon: Libs.Flag,
+      icon: Flag,
       onClick: onReportClick,
       variant: POST_MENU_ACTION_VARIANTS.DEFAULT,
     });
   }
-
   if (isOwnPost) {
     menuItems.push({
       id: POST_MENU_ACTION_IDS.EDIT,
       label: t('editPost'),
-      icon: Libs.Edit,
+      icon: Edit,
       onClick: onEditClick,
       variant: POST_MENU_ACTION_VARIANTS.DEFAULT,
     });
-
     menuItems.push({
       id: POST_MENU_ACTION_IDS.DELETE,
       label: t('deletePost'),
-      icon: Libs.Trash,
+      icon: Trash,
       onClick: onDeleteClick,
       variant: POST_MENU_ACTION_VARIANTS.DESTRUCTIVE,
       disabled: isDeleting,
     });
   }
-
   return {
     menuItems,
     isLoading,

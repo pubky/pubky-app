@@ -8,12 +8,11 @@ import * as Hooks from '@/hooks';
 import * as Config from '@/config';
 import { useTranslations } from 'next-intl';
 import { EditProfileFormSkeleton } from './EditProfileForm.skeleton';
-
+import { Trash2, File } from 'lucide-react';
 export const EditProfileForm = () => {
   const t = useTranslations('forms.profile');
   const tCommon = useTranslations('common');
   const { userDetails, currentUserPubky } = Hooks.useCurrentUserProfile();
-
   const { state, errors, handlers, cropDialog, fileInputRef, isSubmitDisabled } = Hooks.useProfileForm({
     mode: 'edit',
     pubky: currentUserPubky,
@@ -21,12 +20,15 @@ export const EditProfileForm = () => {
   });
   const avatarFallbackSeed = currentUserPubky || state.name || 'user';
   const avatarFallbackInitial =
-    Libs.extractInitials({ name: state.name, maxLength: 1 }) || avatarFallbackSeed.charAt(0).toUpperCase() || 'U';
-
+    Libs.extractInitials({
+      name: state.name,
+      maxLength: 1,
+    }) ||
+    avatarFallbackSeed.charAt(0).toUpperCase() ||
+    'U';
   if (state.isLoading) {
     return <EditProfileFormSkeleton />;
   }
-
   return (
     <>
       <Atoms.Container className="flex w-full flex-1 flex-col gap-6 lg:flex-none" data-testid="edit-profile-form">
@@ -97,10 +99,19 @@ export const EditProfileForm = () => {
                     variant="dashed"
                     onChange={(e) => {
                       const value = e.target.value;
-                      handlers.setLinks(state.links.map((l, i) => (i === index ? { ...l, url: value } : l)));
+                      handlers.setLinks(
+                        state.links.map((l, i) =>
+                          i === index
+                            ? {
+                                ...l,
+                                url: value,
+                              }
+                            : l,
+                        ),
+                      );
                       handlers.validateLinkUrl(value, index);
                     }}
-                    icon={<Libs.Trash2 className="h-4 w-4" />}
+                    icon={<Trash2 className="h-4 w-4" />}
                     onClickIcon={() => handlers.handleDeleteLink(index)}
                     iconPosition="right"
                     status={errors.linkUrlErrors[index] ? 'error' : 'default'}
@@ -112,7 +123,13 @@ export const EditProfileForm = () => {
 
               <Organisms.DialogAddLink
                 onSave={(label, url) => {
-                  handlers.setLinks([...state.links, { label, url }]);
+                  handlers.setLinks([
+                    ...state.links,
+                    {
+                      label,
+                      url,
+                    },
+                  ]);
                 }}
                 disabled={state.links.length >= Config.USER_MAX_LINKS}
               />
@@ -139,7 +156,11 @@ export const EditProfileForm = () => {
                   <Atoms.AvatarImage
                     src={state.avatarPreview}
                     alt={
-                      state.avatarFile ? t('avatarPreview', { filename: state.avatarFile.name }) : t('currentAvatar')
+                      state.avatarFile
+                        ? t('avatarPreview', {
+                            filename: state.avatarFile.name,
+                          })
+                        : t('currentAvatar')
                     }
                   />
                 ) : (
@@ -166,14 +187,14 @@ export const EditProfileForm = () => {
               >
                 {state.avatarPreview ? (
                   <>
-                    <Libs.Trash2 className="h-4 w-4" />
+                    <Trash2 className="h-4 w-4" />
                     <Atoms.Typography as="span" overrideDefaults>
                       {tCommon('delete')}
                     </Atoms.Typography>
                   </>
                 ) : (
                   <>
-                    <Libs.File className="h-4 w-4" />
+                    <File className="h-4 w-4" />
                     <Atoms.Typography as="span" overrideDefaults>
                       {t('chooseFile')}
                     </Atoms.Typography>

@@ -1,11 +1,9 @@
 'use client';
 
 import { useTranslations } from 'next-intl';
-
 import * as Atoms from '@/atoms';
 import * as Hooks from '@/hooks';
-import * as Libs from '@/libs';
-
+import { RefreshCw } from 'lucide-react';
 type DialogAuthExpiredProps = {
   open: boolean;
   onRefresh: () => void;
@@ -18,7 +16,6 @@ export function DialogAuthExpired({ open, onRefresh, isLoading = false }: Dialog
   const isMobile = Hooks.useIsMobile();
   const title = isMobile ? t('titleMobile') : t('titleDesktop');
   const description = isMobile ? t('descriptionMobile') : t('descriptionDesktop');
-
   return (
     <Atoms.Dialog open={open}>
       <Atoms.DialogContent showCloseButton={false} hiddenTitle={title}>
@@ -28,7 +25,7 @@ export function DialogAuthExpired({ open, onRefresh, isLoading = false }: Dialog
         <Atoms.DialogDescription>{description}</Atoms.DialogDescription>
         <Atoms.DialogFooter>
           <Atoms.Button size="lg" onClick={onRefresh} disabled={isLoading}>
-            <Libs.RefreshCw className="size-4" />
+            <RefreshCw className="size-4" />
             {t('refresh')}
           </Atoms.Button>
         </Atoms.DialogFooter>

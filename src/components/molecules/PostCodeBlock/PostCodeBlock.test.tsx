@@ -12,20 +12,6 @@ vi.mock('@/libs', async () => {
   };
 });
 
-// Mock @/libs/icons
-vi.mock('@/libs/icons', () => ({
-  Check: ({ size, className }: { size?: number; className?: string }) => (
-    <svg data-testid="check-icon" width={size} className={className}>
-      Check
-    </svg>
-  ),
-  Clipboard: ({ size, className }: { size?: number; className?: string }) => (
-    <svg data-testid="clipboard-icon" width={size} className={className}>
-      Clipboard
-    </svg>
-  ),
-}));
-
 // Mock @/atoms
 vi.mock('@/atoms', () => ({
   Container: ({
@@ -153,7 +139,8 @@ describe('PostCodeBlock', () => {
     it('displays copy button with clipboard icon', () => {
       render(<PostCodeBlock className="language-rust">fn main() {}</PostCodeBlock>);
 
-      expect(screen.getByTestId('clipboard-icon')).toBeInTheDocument();
+      const copyButton = screen.getByTestId('copy-button');
+      expect(copyButton.querySelector('.lucide-clipboard')).toBeInTheDocument();
       expect(screen.getByText('Copy')).toBeInTheDocument();
     });
 
@@ -231,7 +218,8 @@ describe('PostCodeBlock', () => {
         fireEvent.click(copyButton);
       });
 
-      expect(screen.getByTestId('check-icon')).toBeInTheDocument();
+      const copyBtnAfter = screen.getByTestId('copy-button');
+      expect(copyBtnAfter.querySelector('.lucide-check')).toBeInTheDocument();
       expect(screen.getByText('Copied!')).toBeInTheDocument();
     });
 
@@ -243,13 +231,13 @@ describe('PostCodeBlock', () => {
         fireEvent.click(copyButton);
       });
 
-      expect(screen.getByTestId('check-icon')).toBeInTheDocument();
+      expect(screen.getByTestId('copy-button').querySelector('.lucide-check')).toBeInTheDocument();
 
       await act(async () => {
         vi.advanceTimersByTime(2000);
       });
 
-      expect(screen.getByTestId('clipboard-icon')).toBeInTheDocument();
+      expect(screen.getByTestId('copy-button').querySelector('.lucide-clipboard')).toBeInTheDocument();
       expect(screen.getByText('Copy')).toBeInTheDocument();
     });
 
@@ -323,7 +311,7 @@ describe('PostCodeBlock', () => {
       });
 
       // Should still show clipboard icon (not changed to check)
-      expect(screen.getByTestId('clipboard-icon')).toBeInTheDocument();
+      expect(copyButton.querySelector('.lucide-clipboard')).toBeInTheDocument();
     });
   });
 

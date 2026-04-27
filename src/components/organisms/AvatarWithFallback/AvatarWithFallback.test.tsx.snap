@@ -72,10 +72,32 @@ exports[`AvatarWithFallback - Snapshots > matches snapshot when image is blurred
     role="button"
     tabindex="0"
   >
-    <span
-      class="size-1/2 max-h-10 max-w-10"
-      data-testid="eye-off-icon"
-    />
+    <svg
+      aria-hidden="true"
+      class="lucide lucide-eye-off size-1/2 max-h-10 max-w-10"
+      fill="none"
+      height="24"
+      stroke="currentColor"
+      stroke-linecap="round"
+      stroke-linejoin="round"
+      stroke-width="2"
+      viewBox="0 0 24 24"
+      width="24"
+      xmlns="http://www.w3.org/2000/svg"
+    >
+      <path
+        d="M10.733 5.076a10.744 10.744 0 0 1 11.205 6.575 1 1 0 0 1 0 .696 10.747 10.747 0 0 1-1.444 2.49"
+      />
+      <path
+        d="M14.084 14.158a3 3 0 0 1-4.242-4.242"
+      />
+      <path
+        d="M17.479 17.499a10.75 10.75 0 0 1-15.417-5.151 1 1 0 0 1 0-.696 10.75 10.75 0 0 1 4.446-5.143"
+      />
+      <path
+        d="m2 2 20 20"
+      />
+    </svg>
   </div>
   <div
     class="overflow-hidden border-none"

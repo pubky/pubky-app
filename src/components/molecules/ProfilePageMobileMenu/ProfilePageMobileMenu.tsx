@@ -1,9 +1,10 @@
 'use client';
 
 import * as React from 'react';
-import * as Libs from '@/libs';
 import * as Hooks from '@/hooks';
 import * as Types from '@/app/profile/types';
+import { Bell, CircleUserRound, HeartHandshake, MessageCircle, StickyNote, Tag, UsersRound } from 'lucide-react';
+import { UsersRound2 } from '@/icons';
 import { MobileTabBar, type MobileTabBarItem } from '../MobileTabBar';
 
 export interface ProfileMenuItem {
@@ -13,27 +14,49 @@ export interface ProfileMenuItem {
   /** Whether this item should only be shown for own profile */
   ownProfileOnly?: boolean;
 }
-
 export const PROFILE_MENU_ITEMS: ProfileMenuItem[] = [
-  { icon: Libs.CircleUserRound, label: 'Profile', pageType: Types.PROFILE_PAGE_TYPES.PROFILE },
   {
-    icon: Libs.Bell,
+    icon: CircleUserRound,
+    label: 'Profile',
+    pageType: Types.PROFILE_PAGE_TYPES.PROFILE,
+  },
+  {
+    icon: Bell,
     label: 'Notifications',
     pageType: Types.PROFILE_PAGE_TYPES.NOTIFICATIONS,
     ownProfileOnly: true, // Notifications only make sense for logged-in user
   },
   {
-    icon: Libs.MessageCircle,
+    icon: MessageCircle,
     label: 'Replies',
     pageType: Types.PROFILE_PAGE_TYPES.REPLIES,
   },
-  { icon: Libs.StickyNote, label: 'Posts', pageType: Types.PROFILE_PAGE_TYPES.POSTS },
-  { icon: Libs.UsersRound, label: 'Followers', pageType: Types.PROFILE_PAGE_TYPES.FOLLOWERS },
-  { icon: Libs.UsersRound2, label: 'Following', pageType: Types.PROFILE_PAGE_TYPES.FOLLOWING },
-  { icon: Libs.HeartHandshake, label: 'Friends', pageType: Types.PROFILE_PAGE_TYPES.FRIENDS },
-  { icon: Libs.Tag, label: 'Tagged', pageType: Types.PROFILE_PAGE_TYPES.UNIQUE_TAGS },
+  {
+    icon: StickyNote,
+    label: 'Posts',
+    pageType: Types.PROFILE_PAGE_TYPES.POSTS,
+  },
+  {
+    icon: UsersRound,
+    label: 'Followers',
+    pageType: Types.PROFILE_PAGE_TYPES.FOLLOWERS,
+  },
+  {
+    icon: UsersRound2,
+    label: 'Following',
+    pageType: Types.PROFILE_PAGE_TYPES.FOLLOWING,
+  },
+  {
+    icon: HeartHandshake,
+    label: 'Friends',
+    pageType: Types.PROFILE_PAGE_TYPES.FRIENDS,
+  },
+  {
+    icon: Tag,
+    label: 'Tagged',
+    pageType: Types.PROFILE_PAGE_TYPES.UNIQUE_TAGS,
+  },
 ];
-
 export interface ProfilePageMobileMenuProps {
   activePage: Types.ProfilePageType;
   onPageChangeAction: (page: Types.ProfilePageType) => void;

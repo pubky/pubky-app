@@ -5,16 +5,17 @@ import * as Atoms from '@/atoms';
 import * as Libs from '@/libs';
 import type { PostInputActionBarProps } from './PostInputActionBar.types';
 import { useIsMobile } from '@/hooks';
-
+import { Loader2, Send, Smile, Image, Newspaper } from 'lucide-react';
 interface ActionButtonContentProps {
-  Icon: React.ComponentType<{ className?: string; strokeWidth?: number }>;
+  Icon: React.ComponentType<{
+    className?: string;
+    strokeWidth?: number;
+  }>;
   iconClassName?: string;
 }
-
 function ActionButtonContent({ Icon, iconClassName }: ActionButtonContentProps) {
   return <Icon className={Libs.cn('size-4 text-secondary-foreground', iconClassName)} strokeWidth={2} />;
 }
-
 export function PostInputActionBar({
   onEmojiClick,
   onImageClick,
@@ -38,14 +39,11 @@ export function PostInputActionBar({
     }),
     [],
   );
-
   const getButtonDataCy = (ariaLabel: string) => `post-input-action-bar-${ariaLabel.toLowerCase().replace(' ', '-')}`;
-
-  const PostButtonIconComponent = isSubmitting ? Libs.Loader2 : (postButtonIcon ?? Libs.Send);
+  const PostButtonIconComponent = isSubmitting ? Loader2 : (postButtonIcon ?? Send);
   const postButtonAriaText = isSubmitting ? 'Posting...' : postButtonAriaLabel;
   const postButtonText = isSubmitting ? 'Posting...' : postButtonLabel;
   const postButtonIconClassName = isSubmitting ? 'animate-spin' : undefined;
-
   return (
     <Atoms.Container className="flex flex-col justify-between gap-4 sm:flex-row sm:items-center" overrideDefaults>
       <Atoms.Container className="flex items-center gap-2" overrideDefaults>
@@ -57,7 +55,7 @@ export function PostInputActionBar({
             disabled={!onEmojiClick || isSubmitting}
             aria-label="Add emoji"
           >
-            <ActionButtonContent Icon={Libs.Smile} />
+            <ActionButtonContent Icon={Smile} />
           </Atoms.Button>
         ) : null}
         {!isArticle && !isEdit ? (
@@ -68,7 +66,7 @@ export function PostInputActionBar({
             disabled={!onImageClick || isSubmitting}
             aria-label="Add image"
           >
-            <ActionButtonContent Icon={Libs.Image} />
+            <ActionButtonContent Icon={Image} />
           </Atoms.Button>
         ) : null}
         {!hideArticleButton ? (
@@ -79,7 +77,7 @@ export function PostInputActionBar({
             disabled={!onArticleClick || isSubmitting}
             aria-label="Add article"
           >
-            <ActionButtonContent Icon={Libs.Newspaper} />
+            <ActionButtonContent Icon={Newspaper} />
           </Atoms.Button>
         ) : null}
       </Atoms.Container>

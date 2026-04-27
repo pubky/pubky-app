@@ -230,20 +230,6 @@ vi.mock('@/atoms', () => ({
   ),
 }));
 
-// Mock @/libs/icons
-vi.mock('@/libs/icons', () => ({
-  X: ({ className }: { className?: string }) => (
-    <svg data-testid="icon-x" className={className}>
-      X
-    </svg>
-  ),
-  Maximize: ({ className }: { className?: string }) => (
-    <svg data-testid="icon-maximize" className={className}>
-      Maximize
-    </svg>
-  ),
-}));
-
 const createMockImage = (overrides: Partial<AttachmentConstructed> = {}): AttachmentConstructed => ({
   type: 'image/jpeg',
   name: 'test-image.jpg',
@@ -455,7 +441,8 @@ describe('PostAttachmentsImagesAndVideos', () => {
       const imagesAndVideos = [createMockImage()];
       render(<PostAttachmentsImagesAndVideos imagesAndVideos={imagesAndVideos} />);
 
-      expect(screen.getByTestId('icon-x')).toBeInTheDocument();
+      const close = screen.getByTestId('dialog-close');
+      expect(close.querySelector('.lucide-x')).toBeInTheDocument();
     });
 
     it('renders dialog content with hidden title for accessibility', () => {
@@ -555,7 +542,10 @@ describe('PostAttachmentsImagesAndVideos', () => {
       const imagesAndVideos = [createMockImage()];
       render(<PostAttachmentsImagesAndVideos imagesAndVideos={imagesAndVideos} />);
 
-      expect(screen.getByTestId('icon-maximize')).toBeInTheDocument();
+      const fullscreenButton = screen
+        .getAllByTestId('button')
+        .find((btn) => btn.textContent?.includes('Fullscreen')) as HTMLButtonElement;
+      expect(fullscreenButton.querySelector('.lucide-maximize')).toBeInTheDocument();
     });
 
     it('fullscreen button is enabled when fullscreenEnabled is true', () => {

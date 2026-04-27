@@ -1,11 +1,13 @@
 'use client';
 
 import { useTranslations } from 'next-intl';
+import { Check, Loader2, StickyNote, Tag, UserMinus, UserRound, UserRoundPlus } from 'lucide-react';
 import * as Atoms from '@/atoms';
 import * as Organisms from '@/organisms';
 import * as Hooks from '@/hooks';
 import * as Libs from '@/libs';
 import * as Core from '@/core';
+import { USER_LIST_TAG_MAX_LENGTH, USER_LIST_TAGS_MAX_TOTAL_CHARS, USER_LIST_TAGS_MAX_COUNT } from '@/config';
 import type {
   UserListItemProps,
   FollowButtonProps,
@@ -13,7 +15,6 @@ import type {
   UserStatsProps,
   VariantProps,
 } from './UserListItem.types';
-import { USER_LIST_TAG_MAX_LENGTH, USER_LIST_TAGS_MAX_TOTAL_CHARS, USER_LIST_TAGS_MAX_COUNT } from '@/config';
 
 // =============================================================================
 // Internal Components
@@ -27,7 +28,6 @@ function FollowButton({ isFollowing, isLoading, isStatusLoading, displayName, va
   const t = useTranslations('userList');
   // Show loading if action is in progress OR if status is still being loaded
   const showLoading = isLoading || isStatusLoading;
-
   if (variant === 'icon') {
     return (
       <Atoms.Button
@@ -40,14 +40,14 @@ function FollowButton({ isFollowing, isLoading, isStatusLoading, displayName, va
         aria-label={isFollowing ? `${t('unfollow')} ${displayName}` : `${t('follow')} ${displayName}`}
       >
         {showLoading ? (
-          <Libs.Loader2 className="size-5 animate-spin" />
+          <Loader2 className="size-5 animate-spin" />
         ) : isFollowing ? (
           <>
-            <Libs.Check className="size-5 group-hover:hidden" />
-            <Libs.UserMinus className="hidden size-5 group-hover:block" />
+            <Check className="size-5 group-hover:hidden" />
+            <UserMinus className="hidden size-5 group-hover:block" />
           </>
         ) : (
-          <Libs.UserRoundPlus className="size-5" />
+          <UserRoundPlus className="size-5" />
         )}
       </Atoms.Button>
     );
@@ -65,26 +65,26 @@ function FollowButton({ isFollowing, isLoading, isStatusLoading, displayName, va
       aria-label={isFollowing ? t('unfollow') : t('follow')}
     >
       {showLoading ? (
-        <Libs.Loader2 className="size-4 animate-spin" />
+        <Loader2 className="size-4 animate-spin" />
       ) : isFollowing ? (
         <>
           <Atoms.Container overrideDefaults className="flex items-center gap-1.5 group-hover:hidden">
-            <Libs.Check className="size-4" />
+            <Check className="size-4" />
             <span>{t('following')}</span>
           </Atoms.Container>
           <Atoms.Container overrideDefaults className="hidden items-center gap-1.5 group-hover:flex">
-            <Libs.UserMinus className="size-4" />
+            <UserMinus className="size-4" />
             <span>{t('unfollow')}</span>
           </Atoms.Container>
         </>
       ) : (
         <>
           <Atoms.Container overrideDefaults className="flex items-center gap-1.5 group-hover:hidden">
-            <Libs.UserRoundPlus className="size-4" />
+            <UserRoundPlus className="size-4" />
             <span>{t('follow')}</span>
           </Atoms.Container>
           <Atoms.Container overrideDefaults className="hidden items-center gap-1.5 group-hover:flex">
-            <Libs.Check className="size-4" />
+            <Check className="size-4" />
             <span>{t('follow')}</span>
           </Atoms.Container>
         </>
@@ -100,7 +100,6 @@ function FollowButton({ isFollowing, isLoading, isStatusLoading, displayName, va
 function MeButton({ variant = 'icon', className }: { variant?: 'iconWithText' | 'icon'; className?: string }) {
   const t = useTranslations('userList');
   const tProfile = useTranslations('profile.actions');
-
   if (variant === 'icon') {
     return (
       <Atoms.Button
@@ -113,11 +112,10 @@ function MeButton({ variant = 'icon', className }: { variant?: 'iconWithText' | 
         )}
         aria-label={tProfile('thisIsYou')}
       >
-        <Libs.UserRound strokeWidth={2} className="size-5" />
+        <UserRound strokeWidth={2} className="size-5" />
       </Atoms.Button>
     );
   }
-
   return (
     <Atoms.Button
       data-cy="user-list-item-me-btn"
@@ -143,13 +141,13 @@ function StatsSubtitle({ tags, posts }: StatsSubtitleProps) {
       className="flex items-center gap-3 text-xs font-medium tracking-[1.2px] text-muted-foreground"
     >
       <Atoms.Container overrideDefaults className="flex items-center gap-1">
-        <Libs.Tag className="size-3" />
+        <Tag className="size-3" />
         <Atoms.Typography as="span" overrideDefaults>
           {tags}
         </Atoms.Typography>
       </Atoms.Container>
       <Atoms.Container overrideDefaults className="flex items-center gap-1">
-        <Libs.StickyNote className="size-3" />
+        <StickyNote className="size-3" />
         <Atoms.Typography as="span" overrideDefaults>
           {posts}
         </Atoms.Typography>
@@ -164,7 +162,6 @@ function StatsSubtitle({ tags, posts }: StatsSubtitleProps) {
  */
 function UserStats({ tags, posts }: UserStatsProps) {
   const t = useTranslations('userList');
-
   return (
     <Atoms.Container overrideDefaults className="flex shrink-0 items-center gap-3">
       <Atoms.Container className="items-start">
@@ -415,12 +412,21 @@ export function UserListItem({
 
   // Normalize user data
   const avatarUrl = user.avatarUrl || user.image || undefined;
-  const displayName = user.name || Libs.formatPublicKey({ key: user.id });
-  const formattedPublicKey = Libs.formatPublicKey({ key: user.id });
+  const displayName =
+    user.name ||
+    Libs.formatPublicKey({
+      key: user.id,
+    });
+  const formattedPublicKey = Libs.formatPublicKey({
+    key: user.id,
+  });
   const tags = user.tags || [];
-  const stats = user.stats || user.counts || { tags: 0, posts: 0 };
+  const stats = user.stats ||
+    user.counts || {
+      tags: 0,
+      posts: 0,
+    };
   const isFollowing = isFollowingProp ?? user.isFollowing ?? false;
-
   const handleUserClick = () => {
     onUserClick?.(user.id);
   };
@@ -431,7 +437,6 @@ export function UserListItem({
     e.stopPropagation();
     requireAuth(() => onFollowClick?.(user.id, isFollowing));
   };
-
   const commonProps: VariantProps = {
     user,
     avatarUrl,
@@ -451,10 +456,8 @@ export function UserListItem({
     onFollowClick: handleFollowClick,
     ttlRef,
   };
-
   if (variant === 'compact') {
     return <CompactVariant {...commonProps} />;
   }
-
   return <FullVariant {...commonProps} />;
 }

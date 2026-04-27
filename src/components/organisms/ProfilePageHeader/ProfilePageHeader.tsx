@@ -5,7 +5,6 @@ import * as Atoms from '@/atoms';
 import * as Hooks from '@/hooks';
 import * as Molecules from '@/molecules';
 import * as Organisms from '@/organisms';
-import * as Icons from '@/libs/icons';
 import * as Libs from '@/libs';
 import * as Types from './ProfilePageHeader.types';
 import { FOLLOW_ACTIONS } from '@/hooks/useFollowUser/useFollowUser.types';
@@ -19,6 +18,7 @@ import { FOLLOW_ACTIONS } from '@/hooks/useFollowUser/useFollowUser.types';
  * Subscribes the profile user to TTL tracking when visible in the viewport.
  * This ensures profile data gets refreshed when stale.
  */
+import { Pencil, KeyRound, Link, Loader2, LogOut, Check, UserMinus, UserRoundPlus, Ellipsis } from 'lucide-react';
 export function ProfilePageHeader({ profile, actions, isOwnProfile = true, userId }: Types.ProfilePageHeaderProps) {
   const t = useTranslations('profile.actions');
   const tStatus = useTranslations('status');
@@ -43,21 +43,19 @@ export function ProfilePageHeader({ profile, actions, isOwnProfile = true, userI
     type: 'user',
     id: userId,
   });
-
-  const formattedPublicKey = Libs.formatPublicKey({ key: publicKey });
+  const formattedPublicKey = Libs.formatPublicKey({
+    key: publicKey,
+  });
   const displayEmoji = Libs.extractEmojiFromStatus(status || '', emoji);
   const getLoadingFollowText = () => {
     if (followLoadingAction === FOLLOW_ACTIONS.UNFOLLOW) {
       return t('unfollowing');
     }
-
     if (followLoadingAction === FOLLOW_ACTIONS.FOLLOW) {
       return t('followingProgress');
     }
-
     return t('loading');
   };
-
   return (
     <Atoms.Container
       ref={ttlRef}
@@ -105,7 +103,7 @@ export function ProfilePageHeader({ profile, actions, isOwnProfile = true, userI
           {isOwnProfile && (
             <>
               <Atoms.Button data-cy="profile-edit-btn" variant="secondary" size="sm" onClick={onEdit}>
-                <Icons.Pencil className="size-4" />
+                <Pencil className="size-4" />
                 {t('edit')}
               </Atoms.Button>
               <Atoms.Button
@@ -115,11 +113,11 @@ export function ProfilePageHeader({ profile, actions, isOwnProfile = true, userI
                 size="sm"
                 onClick={onCopyPublicKey}
               >
-                <Icons.KeyRound className="size-4" />
+                <KeyRound className="size-4" />
                 {formattedPublicKey}
               </Atoms.Button>
               <Atoms.Button variant="secondary" size="sm" onClick={onCopyLink}>
-                <Icons.Link className="size-4" />
+                <Link className="size-4" />
                 {t('link')}
               </Atoms.Button>
               <Atoms.Button
@@ -131,12 +129,12 @@ export function ProfilePageHeader({ profile, actions, isOwnProfile = true, userI
               >
                 {isLoggingOut ? (
                   <>
-                    <Icons.Loader2 className="size-4 animate-spin" />
+                    <Loader2 className="size-4 animate-spin" />
                     {t('loggingOut')}
                   </>
                 ) : (
                   <>
-                    <Icons.LogOut className="size-4" />
+                    <LogOut className="size-4" />
                     {t('signOut')}
                   </>
                 )}
@@ -164,23 +162,23 @@ export function ProfilePageHeader({ profile, actions, isOwnProfile = true, userI
                 >
                   {isFollowLoading ? (
                     <>
-                      <Icons.Loader2 className="size-4 animate-spin" />
+                      <Loader2 className="size-4 animate-spin" />
                       {getLoadingFollowText()}
                     </>
                   ) : isFollowing ? (
                     <>
                       <Atoms.Container overrideDefaults className="flex items-center gap-1.5 group-hover:hidden">
-                        <Icons.Check className="size-4" />
+                        <Check className="size-4" />
                         {t('followingButton')}
                       </Atoms.Container>
                       <Atoms.Container overrideDefaults className="hidden items-center gap-1.5 group-hover:flex">
-                        <Icons.UserMinus className="size-4" />
+                        <UserMinus className="size-4" />
                         {t('unfollow')}
                       </Atoms.Container>
                     </>
                   ) : (
                     <>
-                      <Icons.UserRoundPlus className="size-4" />
+                      <UserRoundPlus className="size-4" />
                       {t('follow')}
                     </>
                   )}
@@ -193,11 +191,11 @@ export function ProfilePageHeader({ profile, actions, isOwnProfile = true, userI
                 size="sm"
                 onClick={onCopyPublicKey}
               >
-                <Icons.KeyRound className="size-4" />
+                <KeyRound className="size-4" />
                 {formattedPublicKey}
               </Atoms.Button>
               <Atoms.Button variant="secondary" size="sm" onClick={onCopyLink}>
-                <Icons.Link className="size-4" />
+                <Link className="size-4" />
                 {t('link')}
               </Atoms.Button>
               {/* Three-dot menu with additional profile actions */}
@@ -205,7 +203,7 @@ export function ProfilePageHeader({ profile, actions, isOwnProfile = true, userI
                 userId={userId}
                 trigger={
                   <Atoms.Button data-cy="profile-menu-btn" variant="secondary" size="sm" aria-label="Profile actions">
-                    <Libs.Ellipsis className="size-4" />
+                    <Ellipsis className="size-4" />
                   </Atoms.Button>
                 }
               />

@@ -2,17 +2,6 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen, fireEvent } from '@testing-library/react';
 import { UserInfoPopoverFollowButton } from './UserInfoPopoverFollowButton';
 
-vi.mock('@/libs', async (importOriginal) => {
-  const actual = await importOriginal<typeof import('@/libs')>();
-  return {
-    ...actual,
-    Loader2: (props: React.SVGProps<SVGSVGElement>) => <svg data-testid="icon-loader2" {...props} />,
-    Check: (props: React.SVGProps<SVGSVGElement>) => <svg data-testid="icon-check" {...props} />,
-    UserMinus: (props: React.SVGProps<SVGSVGElement>) => <svg data-testid="icon-user-minus" {...props} />,
-    UserRoundPlus: (props: React.SVGProps<SVGSVGElement>) => <svg data-testid="icon-user-round-plus" {...props} />,
-  };
-});
-
 describe('UserInfoPopoverFollowButton', () => {
   beforeEach(() => {
     vi.clearAllMocks();
@@ -35,9 +24,9 @@ describe('UserInfoPopoverFollowButton', () => {
 
   it('renders loading state and disables button', () => {
     render(<UserInfoPopoverFollowButton isFollowing={false} isLoading={true} onClick={vi.fn()} />);
-    const button = screen.getByLabelText('Follow');
+    const button = screen.getByLabelText('Follow') as HTMLButtonElement;
     expect(button).toBeDisabled();
-    expect(screen.getByTestId('icon-loader2')).toBeInTheDocument();
+    expect(button.querySelector('.lucide-loader-circle')).toBeInTheDocument();
   });
 });
 

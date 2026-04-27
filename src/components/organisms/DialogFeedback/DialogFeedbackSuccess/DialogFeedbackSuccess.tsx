@@ -2,13 +2,11 @@
 
 import { useTranslations } from 'next-intl';
 import * as Atoms from '@/atoms';
-import * as Libs from '@/libs';
 import type { DialogFeedbackSuccessProps } from './DialogFeedbackSuccess.types';
-
+import { Check } from 'lucide-react';
 export function DialogFeedbackSuccess({ onOpenChange }: DialogFeedbackSuccessProps) {
   const t = useTranslations('feedback.success');
   const tCommon = useTranslations('common');
-
   return (
     <>
       <Atoms.DialogHeader>
@@ -18,7 +16,7 @@ export function DialogFeedbackSuccess({ onOpenChange }: DialogFeedbackSuccessPro
       <Atoms.DialogFooter className="flex-row justify-end">
         <Atoms.DialogClose asChild>
           <Atoms.Button variant="dark-outline" size="lg" onClick={() => onOpenChange(false)} className="rounded-full">
-            <Libs.Check className="mr-2 h-4 w-4" />
+            <Check className="mr-2 h-4 w-4" />
             {tCommon('yourWelcome')}
           </Atoms.Button>
         </Atoms.DialogClose>

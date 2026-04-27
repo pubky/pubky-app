@@ -126,15 +126,6 @@ vi.mock('@/atoms', () => ({
   ),
 }));
 
-// Mock libs - use real extractInitials and cn
-vi.mock('@/libs', async () => {
-  const actual = await vi.importActual('@/libs');
-  return {
-    ...actual,
-    EyeOff: ({ className }: { className?: string }) => <span data-testid="eye-off-icon" className={className} />,
-  };
-});
-
 describe('AvatarWithFallback', () => {
   const mockProps = {
     name: 'John Doe',
@@ -475,8 +466,9 @@ describe('AvatarWithFallback', () => {
 
       render(<AvatarWithFallback {...mockProps} avatarUrl={validAvatarUrl} />);
 
-      expect(screen.getByTestId('unblur-button')).toBeInTheDocument();
-      expect(screen.getByTestId('eye-off-icon')).toBeInTheDocument();
+      const unblur = screen.getByTestId('unblur-button');
+      expect(unblur).toBeInTheDocument();
+      expect(unblur.querySelector('.lucide-eye-off')).toBeInTheDocument();
     });
 
     it('does not show unblur button when image is not blurred', () => {

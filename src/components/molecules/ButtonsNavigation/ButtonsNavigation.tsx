@@ -1,7 +1,7 @@
 import * as Atoms from '@/atoms';
 import * as Libs from '@/libs';
 import * as Types from './ButtonsNavigation.types';
-
+import { ArrowLeft, Loader2, ArrowRight } from 'lucide-react';
 export function ButtonsNavigation({
   id,
   className,
@@ -28,7 +28,7 @@ export function ButtonsNavigation({
           onClick={onHandleBackButton}
           disabled={backButtonDisabled}
         >
-          <Libs.ArrowLeft className="mr-1.5 h-4 w-4" />
+          <ArrowLeft className="mr-1.5 h-4 w-4" />
           {backText}
         </Atoms.Button>
       )}
@@ -42,12 +42,12 @@ export function ButtonsNavigation({
         >
           {loadingContinueButton ? (
             <>
-              <Libs.Loader2 className="mr-1.5 h-4 w-4 animate-spin" />
+              <Loader2 className="mr-1.5 h-4 w-4 animate-spin" />
               {continueText}
             </>
           ) : (
             <>
-              <Libs.ArrowRight className="mr-1.5 h-4 w-4" />
+              <ArrowRight className="mr-1.5 h-4 w-4" />
               {continueText}
             </>
           )}

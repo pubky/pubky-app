@@ -1,14 +1,14 @@
 'use client';
 
 import { useTranslations } from 'next-intl';
-import * as Libs from '@/libs';
+import { StickyNote, Tag, UsersRound } from 'lucide-react';
 import { MobileTabBar, type MobileTabBarItem } from '../MobileTabBar';
 import { HotSection, type HotMobileMenuItem, type HotMobileMenuProps } from './HotMobileMenu.types';
 
 export const HOT_MOBILE_MENU_ITEMS: HotMobileMenuItem[] = [
-  { icon: Libs.Tag, section: HotSection.TAGS },
-  { icon: Libs.UsersRound, section: HotSection.USERS },
-  { icon: Libs.StickyNote, section: HotSection.POSTS },
+  { icon: Tag, section: HotSection.TAGS },
+  { icon: UsersRound, section: HotSection.USERS },
+  { icon: StickyNote, section: HotSection.POSTS },
 ];
 
 /**

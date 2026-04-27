@@ -2,7 +2,7 @@ import React from 'react';
 import { describe, it, expect, vi } from 'vitest';
 import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import * as Libs from '@/libs';
+import { StickyNote, Tag, UsersRound } from 'lucide-react';
 import { MobileTabBar } from './MobileTabBar';
 import type { MobileTabBarItem } from './MobileTabBar.types';
 
@@ -10,21 +10,21 @@ const makeItems = (overrides: Partial<Record<string, Partial<MobileTabBarItem>>>
   const base: MobileTabBarItem[] = [
     {
       key: 'tags',
-      icon: Libs.Tag,
+      icon: Tag,
       label: 'Tags',
       isActive: true,
       onSelect: vi.fn(),
     },
     {
       key: 'users',
-      icon: Libs.UsersRound,
+      icon: UsersRound,
       label: 'Users',
       isActive: false,
       onSelect: vi.fn(),
     },
     {
       key: 'posts',
-      icon: Libs.StickyNote,
+      icon: StickyNote,
       label: 'Posts',
       isActive: false,
       onSelect: vi.fn(),

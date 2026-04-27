@@ -23,10 +23,29 @@ exports[`PostCodeBlock - Snapshots > matches snapshot for JavaScript code block 
       data-variant="ghost"
     >
       <svg
-        data-testid="clipboard-icon"
+        aria-hidden="true"
+        class="lucide lucide-clipboard"
+        fill="none"
+        height="16"
+        stroke="currentColor"
+        stroke-linecap="round"
+        stroke-linejoin="round"
+        stroke-width="2"
+        viewBox="0 0 24 24"
         width="16"
+        xmlns="http://www.w3.org/2000/svg"
       >
-        Clipboard
+        <rect
+          height="4"
+          rx="1"
+          ry="1"
+          width="8"
+          x="8"
+          y="2"
+        />
+        <path
+          d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"
+        />
       </svg>
       <span
         data-size="sm"
@@ -145,10 +164,29 @@ exports[`PostCodeBlock - Snapshots > matches snapshot for Python code block 1`] 
       data-variant="ghost"
     >
       <svg
-        data-testid="clipboard-icon"
+        aria-hidden="true"
+        class="lucide lucide-clipboard"
+        fill="none"
+        height="16"
+        stroke="currentColor"
+        stroke-linecap="round"
+        stroke-linejoin="round"
+        stroke-width="2"
+        viewBox="0 0 24 24"
         width="16"
+        xmlns="http://www.w3.org/2000/svg"
       >
-        Clipboard
+        <rect
+          height="4"
+          rx="1"
+          ry="1"
+          width="8"
+          x="8"
+          y="2"
+        />
+        <path
+          d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"
+        />
       </svg>
       <span
         data-size="sm"
@@ -279,10 +317,29 @@ exports[`PostCodeBlock - Snapshots > matches snapshot for TypeScript code block 
       data-variant="ghost"
     >
       <svg
-        data-testid="clipboard-icon"
+        aria-hidden="true"
+        class="lucide lucide-clipboard"
+        fill="none"
+        height="16"
+        stroke="currentColor"
+        stroke-linecap="round"
+        stroke-linejoin="round"
+        stroke-width="2"
+        viewBox="0 0 24 24"
         width="16"
+        xmlns="http://www.w3.org/2000/svg"
       >
-        Clipboard
+        <rect
+          height="4"
+          rx="1"
+          ry="1"
+          width="8"
+          x="8"
+          y="2"
+        />
+        <path
+          d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"
+        />
       </svg>
       <span
         data-size="sm"
@@ -418,10 +475,29 @@ exports[`PostCodeBlock - Snapshots > matches snapshot for code block with single
       data-variant="ghost"
     >
       <svg
-        data-testid="clipboard-icon"
+        aria-hidden="true"
+        class="lucide lucide-clipboard"
+        fill="none"
+        height="16"
+        stroke="currentColor"
+        stroke-linecap="round"
+        stroke-linejoin="round"
+        stroke-width="2"
+        viewBox="0 0 24 24"
         width="16"
+        xmlns="http://www.w3.org/2000/svg"
       >
-        Clipboard
+        <rect
+          height="4"
+          rx="1"
+          ry="1"
+          width="8"
+          x="8"
+          y="2"
+        />
+        <path
+          d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"
+        />
       </svg>
       <span
         data-size="sm"
@@ -496,10 +572,29 @@ exports[`PostCodeBlock - Snapshots > matches snapshot for code block with traili
       data-variant="ghost"
     >
       <svg
-        data-testid="clipboard-icon"
+        aria-hidden="true"
+        class="lucide lucide-clipboard"
+        fill="none"
+        height="16"
+        stroke="currentColor"
+        stroke-linecap="round"
+        stroke-linejoin="round"
+        stroke-width="2"
+        viewBox="0 0 24 24"
         width="16"
+        xmlns="http://www.w3.org/2000/svg"
       >
-        Clipboard
+        <rect
+          height="4"
+          rx="1"
+          ry="1"
+          width="8"
+          x="8"
+          y="2"
+        />
+        <path
+          d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"
+        />
       </svg>
       <span
         data-size="sm"
@@ -553,10 +648,29 @@ exports[`PostCodeBlock - Snapshots > matches snapshot for code with special char
       data-variant="ghost"
     >
       <svg
-        data-testid="clipboard-icon"
+        aria-hidden="true"
+        class="lucide lucide-clipboard"
+        fill="none"
+        height="16"
+        stroke="currentColor"
+        stroke-linecap="round"
+        stroke-linejoin="round"
+        stroke-width="2"
+        viewBox="0 0 24 24"
         width="16"
+        xmlns="http://www.w3.org/2000/svg"
       >
-        Clipboard
+        <rect
+          height="4"
+          rx="1"
+          ry="1"
+          width="8"
+          x="8"
+          y="2"
+        />
+        <path
+          d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"
+        />
       </svg>
       <span
         data-size="sm"
@@ -679,10 +793,29 @@ exports[`PostCodeBlock - Snapshots > matches snapshot for empty code block 1`] =
       data-variant="ghost"
     >
       <svg
-        data-testid="clipboard-icon"
+        aria-hidden="true"
+        class="lucide lucide-clipboard"
+        fill="none"
+        height="16"
+        stroke="currentColor"
+        stroke-linecap="round"
+        stroke-linejoin="round"
+        stroke-width="2"
+        viewBox="0 0 24 24"
         width="16"
+        xmlns="http://www.w3.org/2000/svg"
       >
-        Clipboard
+        <rect
+          height="4"
+          rx="1"
+          ry="1"
+          width="8"
+          x="8"
+          y="2"
+        />
+        <path
+          d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"
+        />
       </svg>
       <span
         data-size="sm"

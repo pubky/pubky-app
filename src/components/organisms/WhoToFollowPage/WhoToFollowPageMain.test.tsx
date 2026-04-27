@@ -69,11 +69,6 @@ vi.mock('@/atoms', () => ({
   },
 }));
 
-// Mock Libs
-vi.mock('@/libs', () => ({
-  Users: () => <svg data-testid="users-icon" />,
-}));
-
 // Mock Organisms
 vi.mock('@/organisms', () => ({
   UserListItem: ({ user, followButtonVariant = 'icon' }: { user: { id: string }; followButtonVariant?: string }) => (

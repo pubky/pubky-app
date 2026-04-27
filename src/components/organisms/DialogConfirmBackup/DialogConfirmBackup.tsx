@@ -2,30 +2,25 @@
 
 import { useState } from 'react';
 import * as Atoms from '@/atoms';
-import * as Libs from '@/libs';
 import * as Core from '@/core';
 import * as Organisms from '@/organisms';
-
+import { TriangleAlert, ShieldCheck, Check } from 'lucide-react';
 interface DialogConfirmBackupProps {
   onConfirm?: () => void;
 }
-
 export function DialogConfirmBackup({ onConfirm }: DialogConfirmBackupProps) {
   const [isOpen, setIsOpen] = useState(false);
   const [isBackupOpen, setIsBackupOpen] = useState(false);
   const { clearSecrets } = Core.useOnboardingStore();
-
   const handleConfirm = () => {
     clearSecrets();
     setIsOpen(false);
     onConfirm?.();
   };
-
   const handleBackupMethods = () => {
     setIsOpen(false);
     setIsBackupOpen(true);
   };
-
   return (
     <>
       <Organisms.DialogBackup open={isBackupOpen} onOpenChange={setIsBackupOpen} />
@@ -50,7 +45,7 @@ export function DialogConfirmBackup({ onConfirm }: DialogConfirmBackupProps) {
           </Atoms.DialogHeader>
           <Atoms.Container className="gap-6">
             <Atoms.Container className="flex flex-row items-center gap-3 rounded-md bg-destructive/60 px-6 py-3">
-              <Libs.TriangleAlert className="h-4 w-4 font-bold" />
+              <TriangleAlert className="h-4 w-4 font-bold" />
               <Atoms.Typography
                 id="backup-done-warning-text"
                 size="sm"
@@ -62,11 +57,11 @@ export function DialogConfirmBackup({ onConfirm }: DialogConfirmBackupProps) {
           </Atoms.Container>
           <Atoms.DialogFooter>
             <Atoms.Button size="lg" variant="outline" onClick={handleBackupMethods}>
-              <Libs.ShieldCheck className="h-4 w-4" />
+              <ShieldCheck className="h-4 w-4" />
               Backup methods
             </Atoms.Button>
             <Atoms.Button id="backup-done-confirm-btn" size="lg" onClick={handleConfirm}>
-              <Libs.Check className="h-4 w-4" />
+              <Check className="h-4 w-4" />
               Confirm (delete seed)
             </Atoms.Button>
           </Atoms.DialogFooter>

@@ -3,6 +3,8 @@
 This document captures the intent, boundaries, responsibilities, and operating model of `src/core/`.
 Based on ADR-0004, ADR-0008, ADR-0009.
 
+For **UI** (`src/components/`, `src/app/`) and related **`src/libs/`** usage such as **icon imports** (stock icons from `lucide-react`, custom SVGs from `@/icons`, URL helpers from `@/libs/utils`), see **`docs/components.md`** — _Icons (Lucide and custom)_.
+
 ## Layer Flow
 
 ```

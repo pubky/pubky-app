@@ -6,7 +6,7 @@ import * as Organisms from '@/organisms';
 import * as Libs from '@/libs';
 import { FEEDBACK_MAX_CHARACTER_LENGTH } from '@/config';
 import type { DialogFeedbackContentProps } from './DialogFeedbackContent.types';
-
+import { Loader2, Send } from 'lucide-react';
 export function DialogFeedbackContent({
   feedback,
   handleChange,
@@ -18,8 +18,12 @@ export function DialogFeedbackContent({
   const t = useTranslations('feedback');
   const tCommon = useTranslations('common');
   const characterLimit =
-    feedback.length > 0 ? { count: Libs.getCharacterCount(feedback), max: FEEDBACK_MAX_CHARACTER_LENGTH } : undefined;
-
+    feedback.length > 0
+      ? {
+          count: Libs.getCharacterCount(feedback),
+          max: FEEDBACK_MAX_CHARACTER_LENGTH,
+        }
+      : undefined;
   return (
     <>
       <Atoms.DialogHeader>
@@ -48,9 +52,7 @@ export function DialogFeedbackContent({
             />
 
             <Atoms.Container
-              className={`flex items-center justify-end transition-all duration-300 ease-in-out ${
-                hasContent ? 'translate-y-0 opacity-100' : 'pointer-events-none -translate-y-2 opacity-0'
-              }`}
+              className={`flex items-center justify-end transition-all duration-300 ease-in-out ${hasContent ? 'translate-y-0 opacity-100' : 'pointer-events-none -translate-y-2 opacity-0'}`}
               overrideDefaults
             >
               <Atoms.Button
@@ -61,10 +63,10 @@ export function DialogFeedbackContent({
                 className="h-8 rounded-full border-none px-3 py-2 shadow-xs"
               >
                 {isSubmitting ? (
-                  <Libs.Loader2 className="size-4 animate-spin text-secondary-foreground" strokeWidth={2} />
+                  <Loader2 className="size-4 animate-spin text-secondary-foreground" strokeWidth={2} />
                 ) : (
                   <Atoms.Container className="flex items-center gap-2" overrideDefaults>
-                    <Libs.Send className="size-4 text-secondary-foreground" strokeWidth={2} />
+                    <Send className="size-4 text-secondary-foreground" strokeWidth={2} />
                     <Atoms.Typography
                       as="span"
                       size="sm"

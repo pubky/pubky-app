@@ -2,42 +2,38 @@
 
 import * as Atoms from '@/atoms';
 import * as Molecules from '@/molecules';
-import * as Icons from '@/libs/icons';
 import * as Utils from '@/libs/utils';
 import type { AttachmentConstructed } from '@/organisms/PostAttachments/PostAttachments.types';
 import type { CarouselApi } from '@/components/atoms/Carousel';
 import { useEffect, useState } from 'react';
 import { useTranslations } from 'next-intl';
-
+import { X, Maximize } from 'lucide-react';
 type PostAttachmentsImagesAndVideosProps = {
   imagesAndVideos: AttachmentConstructed[];
 };
-
 export const PostAttachmentsImagesAndVideos = ({ imagesAndVideos }: PostAttachmentsImagesAndVideosProps) => {
   const total = imagesAndVideos.length;
   const [open, setOpen] = useState(false);
   const [api, setApi] = useState<CarouselApi>();
   const [currentIndex, setCurrentIndex] = useState(0);
   const [isFullscreen, setIsFullscreen] = useState(false);
-
   const { toast } = Molecules.useToast();
   const tFullscreen = useTranslations('toast.fullscreen');
-
   const handleFullscreen = () => {
     const currentMedia = document.getElementById(`media-item-${currentIndex}`);
-
     if (currentMedia) {
       currentMedia.requestFullscreen().catch((error) => {
-        toast({ title: tFullscreen('error'), description: error });
+        toast({
+          title: tFullscreen('error'),
+          description: error,
+        });
       });
     }
   };
-
   useEffect(() => {
     if (!api) {
       return;
     }
-
     api.on('settle', () => {
       setCurrentIndex(api.selectedScrollSnap());
     });
@@ -48,16 +44,12 @@ export const PostAttachmentsImagesAndVideos = ({ imagesAndVideos }: PostAttachme
     const handleFullscreenChange = () => {
       setIsFullscreen(document.fullscreenElement !== null);
     };
-
     document.addEventListener('fullscreenchange', handleFullscreenChange);
-
     return () => {
       document.removeEventListener('fullscreenchange', handleFullscreenChange);
     };
   }, []);
-
   const isOnlyMedia = imagesAndVideos.length === 1;
-
   return (
     <Atoms.Dialog open={open} onOpenChange={setOpen}>
       {/* Grid layout */}
@@ -112,7 +104,7 @@ export const PostAttachmentsImagesAndVideos = ({ imagesAndVideos }: PostAttachme
         }}
       >
         <Atoms.DialogClose className="absolute top-4 right-4 z-60 flex size-8 cursor-pointer items-center justify-center rounded-full bg-[rgba(5,5,10,0.30)] text-secondary-foreground/70 transition-colors hover:bg-[rgba(5,5,10,0.40)] hover:text-secondary-foreground">
-          <Icons.X className="size-4" />
+          <X className="size-4" />
         </Atoms.DialogClose>
 
         <Atoms.Carousel
@@ -158,7 +150,7 @@ export const PostAttachmentsImagesAndVideos = ({ imagesAndVideos }: PostAttachme
             size="sm"
             className="text-xs hover:bg-secondary"
           >
-            Fullscreen <Icons.Maximize className="size-3" />
+            Fullscreen <Maximize className="size-3" />
           </Atoms.Button>
 
           {total > 1 && (

@@ -2,12 +2,11 @@
 
 import { useState, useRef } from 'react';
 import { useTranslations } from 'next-intl';
-
 import * as Atoms from '@/atoms';
 import * as Core from '@/core';
 import * as Libs from '@/libs';
 import * as Hooks from '@/hooks';
-
+import { FileUp, FileText, Loader2, RotateCcw } from 'lucide-react';
 export function DialogRestoreEncryptedFile({ onRestore }: { onRestore: () => void }) {
   const t = useTranslations('onboarding.signIn');
   const tRestore = useTranslations('onboarding.signIn.restoreEncryptedFile');
@@ -16,11 +15,9 @@ export function DialogRestoreEncryptedFile({ onRestore }: { onRestore: () => voi
   const [isRestoring, setIsRestoring] = useState(false);
   const [error, setError] = useState('');
   const fileInputRef = useRef<HTMLInputElement>(null);
-
   const handleFileSelect = () => {
     fileInputRef.current?.click();
   };
-
   const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (file) {
@@ -33,21 +30,20 @@ export function DialogRestoreEncryptedFile({ onRestore }: { onRestore: () => voi
       setError('');
     }
   };
-
   const handleRestore = async () => {
     // Guard against double-submit race condition
     if (isRestoring) return;
-
     if (!selectedFile || !password) {
       setError(tRestore('missingFields'));
       return;
     }
-
     setIsRestoring(true);
     setError('');
-
     try {
-      await Core.AuthController.loginWithEncryptedFile({ encryptedFile: selectedFile, password });
+      await Core.AuthController.loginWithEncryptedFile({
+        encryptedFile: selectedFile,
+        password,
+      });
       onRestore?.();
     } catch (error) {
       if (error instanceof Error) {
@@ -74,7 +70,6 @@ export function DialogRestoreEncryptedFile({ onRestore }: { onRestore: () => voi
       setIsRestoring(false);
     }
   };
-
   const handleReset = () => {
     setSelectedFile(null);
     setPassword('');
@@ -84,15 +79,11 @@ export function DialogRestoreEncryptedFile({ onRestore }: { onRestore: () => voi
       fileInputRef.current.value = '';
     }
   };
-
   const isFormValid = () => {
     return Boolean(selectedFile && password && !isRestoring);
   };
-
   const handleKeyDown = Hooks.useEnterSubmit(isFormValid, handleRestore);
-
   const selectedFileDisplayName = selectedFile ? Libs.formatFileName(selectedFile.name) : 'encryptedfile.pkarr';
-
   return (
     <Atoms.Dialog>
       <Atoms.DialogTrigger asChild>
@@ -101,7 +92,7 @@ export function DialogRestoreEncryptedFile({ onRestore }: { onRestore: () => voi
           variant="outline"
           className="w-full rounded-full sm:w-auto md:flex-none"
         >
-          <Libs.FileUp className="mr-2 h-4 w-4" />
+          <FileUp className="mr-2 h-4 w-4" />
           <span>{t('useEncryptedFile')}</span>
         </Atoms.Button>
       </Atoms.DialogTrigger>
@@ -125,9 +116,7 @@ export function DialogRestoreEncryptedFile({ onRestore }: { onRestore: () => voi
               onClick={handleFileSelect}
             >
               <span
-                className={`block min-w-0 flex-1 truncate font-medium ${
-                  selectedFile?.name ? 'text-foreground' : 'text-muted-foreground'
-                }`}
+                className={`block min-w-0 flex-1 truncate font-medium ${selectedFile?.name ? 'text-foreground' : 'text-muted-foreground'}`}
                 title={selectedFile ? selectedFile.name : undefined}
               >
                 {selectedFileDisplayName}
@@ -143,7 +132,7 @@ export function DialogRestoreEncryptedFile({ onRestore }: { onRestore: () => voi
                   handleFileSelect();
                 }}
               >
-                <Libs.FileText className="h-4 w-4" />
+                <FileText className="h-4 w-4" />
                 {tRestore('selectFile')}
               </Atoms.Button>
             </Atoms.Container>
@@ -212,12 +201,12 @@ export function DialogRestoreEncryptedFile({ onRestore }: { onRestore: () => voi
           >
             {isRestoring ? (
               <>
-                <Libs.Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                 {tRestore('restoring')}
               </>
             ) : (
               <>
-                <Libs.RotateCcw className="mr-2 h-4 w-4 rotate-180" />
+                <RotateCcw className="mr-2 h-4 w-4 rotate-180" />
                 {tRestore('restore')}
               </>
             )}

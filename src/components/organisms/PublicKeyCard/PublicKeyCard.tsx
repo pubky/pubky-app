@@ -2,13 +2,12 @@
 
 import { useEffect } from 'react';
 import { useTranslations } from 'next-intl';
-
 import * as Molecules from '@/molecules';
 import * as Atoms from '@/atoms';
 import * as Core from '@/core';
 import * as Libs from '@/libs';
 import * as Hooks from '@/hooks';
-
+import { Copy, Share, Key } from 'lucide-react';
 export function PublicKeyCard() {
   const t = useTranslations('onboarding.pubky');
   const secretKey = Core.useOnboardingStore((state) => state.secretKey);
@@ -16,32 +15,29 @@ export function PublicKeyCard() {
   const displayPubky = pubky ? Libs.withPubkyPrefix(pubky) : '';
   const { copyToClipboard } = Hooks.useCopyToClipboard();
   const { toast } = Molecules.useToast();
-
   useEffect(() => {
     if (!secretKey) {
       Core.ProfileController.generateSecrets();
     }
   }, [secretKey]);
-
   const handleCopyToClipboard = () => {
     if (displayPubky) {
       copyToClipboard(displayPubky);
     }
   };
-
   const handleShare = async () => {
     if (!displayPubky) return;
-
     try {
       await Libs.shareWithFallback(
         {
           title: t('myPubky'),
-          text: t('shareText', { displayPubky }),
+          text: t('shareText', {
+            displayPubky,
+          }),
         },
         {
           onFallback: async () => {
             const copied = await copyToClipboard(displayPubky);
-
             if (!copied) {
               throw new Error('Unable to copy pubky to clipboard');
             }
@@ -65,15 +61,16 @@ export function PublicKeyCard() {
     } catch (error) {
       // Error handling is done in the onError callback
       // This catch block is here for any unexpected errors
-      Libs.Logger.error('Unexpected share error', { error });
+      Libs.Logger.error('Unexpected share error', {
+        error,
+      });
     }
   };
-
   const actions = [
     {
       id: 'copy-to-clipboard-action-btn',
       label: t('copy'),
-      icon: <Libs.Copy className="mr-2 h-4 w-4" />,
+      icon: <Copy className="mr-2 h-4 w-4" />,
       onClick: handleCopyToClipboard,
       variant: 'secondary' as const,
       disabled: !displayPubky,
@@ -83,14 +80,13 @@ export function PublicKeyCard() {
     // See issue #265: visibility based on screen size, not Web Share API support.
     {
       label: t('share'),
-      icon: <Libs.Share className="mr-2 h-4 w-4" />,
+      icon: <Share className="mr-2 h-4 w-4" />,
       onClick: handleShare,
       variant: 'secondary' as const,
       disabled: !displayPubky,
       className: 'md:hidden',
     },
   ];
-
   return (
     <Molecules.ContentCard
       image={{
@@ -114,7 +110,7 @@ export function PublicKeyCard() {
           onClick={handleCopyToClipboard}
           loading={!displayPubky}
           loadingText={t('generating')}
-          icon={<Libs.Key className="h-4 w-4 text-brand" />}
+          icon={<Key className="h-4 w-4 text-brand" />}
           status={displayPubky ? 'success' : 'default'}
           className="w-full max-w-[576px]"
           dataCy="pubky-display"

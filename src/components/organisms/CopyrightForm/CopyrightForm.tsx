@@ -7,14 +7,13 @@ import * as Libs from '@/libs';
 import * as Molecules from '@/molecules';
 import { COPYRIGHT_FORM_FIELDS, COPYRIGHT_ROLES, type CopyrightFormData } from '@/hooks';
 import { useTranslations } from 'next-intl';
-
+import { Loader2 } from 'lucide-react';
 export function CopyrightForm() {
   const t = useTranslations('forms.copyright');
   const { form, onSubmit } = Hooks.useCopyrightForm();
   const { isSubmitting, errors } = form.formState;
   const roleError = errors.role?.message;
   const currentDate = Libs.formatUSDate();
-
   return (
     <Atoms.Container size="container" className="px-6 pb-12 xl:px-0">
       <form onSubmit={onSubmit}>
@@ -25,7 +24,9 @@ export function CopyrightForm() {
             </Atoms.Typography>
 
             <Atoms.Typography size="sm" className="font-normal text-muted-foreground">
-              {t('date', { date: currentDate })}
+              {t('date', {
+                date: currentDate,
+              })}
             </Atoms.Typography>
 
             <Atoms.Typography size="sm" className="font-normal text-muted-foreground">
@@ -291,7 +292,7 @@ export function CopyrightForm() {
             >
               {isSubmitting ? (
                 <>
-                  <Libs.Loader2 className="mr-2 size-4 animate-spin" aria-hidden="true" />
+                  <Loader2 className="mr-2 size-4 animate-spin" aria-hidden="true" />
                   {t('submitting')}
                 </>
               ) : (
