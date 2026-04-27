@@ -1,7 +1,7 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import * as Core from '@/core';
-import { HttpMethod } from '@/libs';
 import { mockSession } from '@/test-utils';
+import { HttpMethod } from '@/libs/http/http.types';
 
 // Mock HomeserverService
 vi.mock('@/core/services/homeserver', () => ({

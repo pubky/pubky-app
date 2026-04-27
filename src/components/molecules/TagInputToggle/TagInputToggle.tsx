@@ -1,8 +1,8 @@
 'use client';
 
 import { AnimatePresence, motion } from 'motion/react';
-import * as Libs from '@/libs';
 import type { TagInputToggleProps } from './TagInputToggle.types';
+import { cn } from '@/libs/utils/utils';
 
 const SUBTLE_ENTER_TRANSITION = { duration: 0.12, ease: 'easeOut' } as const;
 const SUBTLE_EXIT_TRANSITION = { duration: 0.12, ease: 'easeInOut' } as const;
@@ -36,7 +36,7 @@ export function TagInputToggle({
           initial={inputInitial}
           animate={inputAnimate}
           exit={inputExit}
-          className={Libs.cn(hasWidthAnimation ? 'absolute inset-0' : 'shrink-0', inputWrapperClassName)}
+          className={cn(hasWidthAnimation ? 'absolute inset-0' : 'shrink-0', inputWrapperClassName)}
         >
           {inputContent}
         </motion.div>
@@ -46,7 +46,7 @@ export function TagInputToggle({
           initial={addButtonInitial}
           animate={addButtonAnimate}
           exit={addButtonExit}
-          className={Libs.cn(
+          className={cn(
             hasWidthAnimation
               ? 'absolute inset-0 inline-flex items-center justify-center'
               : 'inline-flex h-full w-full items-center justify-center',
@@ -69,7 +69,7 @@ export function TagInputToggle({
       animate={{ width: showInput ? widthByState.input : widthByState.addButton }}
       transition={{ duration: 0.2, ease: 'easeInOut' }}
       style={{ originX: 0 }}
-      className={Libs.cn(
+      className={cn(
         'relative overflow-hidden rounded-md border border-dashed border-input shadow-sm',
         containerClassName,
       )}

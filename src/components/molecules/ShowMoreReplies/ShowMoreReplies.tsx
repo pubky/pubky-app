@@ -1,10 +1,10 @@
 'use client';
 
 import * as Atoms from '@/atoms';
-import * as Libs from '@/libs';
 import { useTranslations } from 'next-intl';
 import { CirclePlus } from 'lucide-react';
 import { RoundedCorner } from '@/icons';
+import { cn } from '@/libs/utils/utils';
 interface ShowMoreRepliesProps {
   /** Number of remaining replies to show */
   count: number;
@@ -33,19 +33,19 @@ export function ShowMoreReplies({ count, onClick, isLast = false }: ShowMoreRepl
         {/* Thread connector column — stretches to match button height via flex row */}
         <Atoms.Container
           overrideDefaults
-          className={Libs.cn('flex w-3 shrink-0 flex-col items-start', !isLast && 'border-l border-border')}
+          className={cn('flex w-3 shrink-0 flex-col items-start', !isLast && 'border-l border-border')}
           data-variant={connectorVariant}
         >
           <Atoms.Container
             overrideDefaults
-            className={Libs.cn(
+            className={cn(
               'flex min-h-px shrink-0 grow basis-0 flex-col items-start',
               isLast ? 'w-full min-w-px' : 'min-w-3',
             )}
           >
             <Atoms.Container
               overrideDefaults
-              className={Libs.cn('min-h-px w-full min-w-px shrink-0 grow basis-0', isLast && 'border-l border-border')}
+              className={cn('min-h-px w-full min-w-px shrink-0 grow basis-0', isLast && 'border-l border-border')}
             />
             <Atoms.Container overrideDefaults className="relative size-3 shrink-0">
               <RoundedCorner />

@@ -1,14 +1,14 @@
 import * as Atoms from '@/atoms';
 import * as Organisms from '@/organisms';
-import * as Libs from '@/libs';
 import type { SearchUserSuggestionProps } from './SearchUserSuggestion.types';
+import { formatPublicKey } from '@/libs/utils/utils';
 
 export function SearchUserSuggestion({ user, onClick }: SearchUserSuggestionProps) {
   const handleClick = () => {
     onClick?.(user.id);
   };
 
-  const formattedPubky = Libs.formatPublicKey({ key: user.id });
+  const formattedPubky = formatPublicKey({ key: user.id });
 
   return (
     <Atoms.Container

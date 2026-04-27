@@ -3,7 +3,6 @@
 import { useState } from 'react';
 import * as Atoms from '@/atoms';
 import * as Hooks from '@/hooks';
-import * as Libs from '@/libs';
 import * as Organisms from '@/organisms';
 
 /**
@@ -20,6 +19,7 @@ import * as Organisms from '@/organisms';
  * - md breakpoint uses 80px for additional spacing.
  */
 import { Plus } from 'lucide-react';
+import { cn } from '@/libs/utils/utils';
 export function NewPostCTA() {
   const [open, setOpen] = useState(false);
   const { isFullyAuthenticated, isLoading } = Hooks.useAuthStatus();
@@ -31,7 +31,7 @@ export function NewPostCTA() {
   if (isLoading || !shouldShow) {
     return null;
   }
-  const buttonClasses = Libs.cn(
+  const buttonClasses = cn(
     'fixed right-3 bottom-[72px] sm:right-10 md:bottom-20 lg:bottom-6',
     'size-20 rounded-full',
     'flex items-center justify-center',

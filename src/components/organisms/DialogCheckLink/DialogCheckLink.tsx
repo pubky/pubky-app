@@ -2,11 +2,11 @@
 
 import { useState, useEffect, useMemo } from 'react';
 import * as Atoms from '@/atoms';
-import * as Libs from '@/libs';
 import * as Core from '@/core';
 import * as Config from '@/config';
 import type { DialogCheckLinkProps } from './DialogCheckLink.types';
 import { ExternalLink } from 'lucide-react';
+import { truncateMiddle } from '@/libs/utils/utils';
 export function DialogCheckLink({ open, onOpenChangeAction, linkUrl }: DialogCheckLinkProps) {
   const [dontShowAgain, setDontShowAgain] = useState(false);
   const { setShowConfirm } = Core.useSettingsStore();
@@ -34,7 +34,7 @@ export function DialogCheckLink({ open, onOpenChangeAction, linkUrl }: DialogChe
   };
 
   // Truncate URL for display (preserves beginning and end)
-  const displayUrl = useMemo(() => Libs.truncateMiddle(linkUrl, Config.URL_TRUNCATE_LENGTH), [linkUrl]);
+  const displayUrl = useMemo(() => truncateMiddle(linkUrl, Config.URL_TRUNCATE_LENGTH), [linkUrl]);
   return (
     <Atoms.Dialog open={open} onOpenChange={onOpenChangeAction}>
       <Atoms.DialogContent className="w-2xl" hiddenTitle="Double-check this link" onClick={(e) => e.stopPropagation()}>

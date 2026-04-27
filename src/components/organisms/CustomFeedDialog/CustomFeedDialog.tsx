@@ -3,7 +3,6 @@
 import { useEffect, useState, type ComponentType, type ReactNode } from 'react';
 import * as Atoms from '@/atoms';
 import * as Molecules from '@/molecules';
-import * as Libs from '@/libs';
 import * as Core from '@/core';
 import * as Hooks from '@/hooks';
 import { useTranslations } from 'next-intl';
@@ -29,6 +28,7 @@ import {
   Delete,
 } from 'lucide-react';
 import { UsersRound2 } from '@/icons';
+import { Env } from '@/libs/env/env';
 type CustomFeedDialogProps = {
   mode: 'create' | 'edit';
   children: ReactNode;
@@ -418,7 +418,7 @@ export const CustomFeedDialog = ({ mode, children }: CustomFeedDialogProps) => {
             }))}
             showCloseButton={false}
             disabled={disabled}
-            maxTags={Libs.Env.NEXT_MAX_STREAM_TAGS}
+            maxTags={Env.NEXT_MAX_STREAM_TAGS}
             currentTagsCount={tags.length}
             enableApiSuggestions
             excludeFromApiSuggestions={tags}

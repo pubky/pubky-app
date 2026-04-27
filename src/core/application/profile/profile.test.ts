@@ -1,8 +1,9 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import type { Pubky } from '@/core';
-import { HttpMethod } from '@/libs';
 import type { PubkyAppUser, UserResult } from 'pubky-app-specs';
 import { asOpaque } from '@/test-utils';
+import { HttpMethod } from '@/libs/http/http.types';
+import { Logger } from '@/libs/logger/logger';
 
 // Avoid pulling WASM-heavy deps from type-only modules
 vi.mock('pubky-app-specs', () => ({
@@ -27,7 +28,6 @@ vi.mock('@/core/stores', () => ({
 
 let ProfileApplication: typeof import('./profile').ProfileApplication;
 let Core: typeof import('@/core');
-let Libs: typeof import('@/libs');
 
 beforeEach(async () => {
   vi.clearAllMocks();
@@ -39,15 +39,14 @@ beforeEach(async () => {
   };
 
   // Re-import after resetModules
-  Libs = await import('@/libs');
   Core = await import('@/core');
   ({ ProfileApplication } = await import('./profile'));
 
   // Mock Logger to prevent AppError from logging during tests
-  vi.spyOn(Libs.Logger, 'error').mockImplementation(() => {});
-  vi.spyOn(Libs.Logger, 'warn').mockImplementation(() => {});
-  vi.spyOn(Libs.Logger, 'info').mockImplementation(() => {});
-  vi.spyOn(Libs.Logger, 'debug').mockImplementation(() => {});
+  vi.spyOn(Logger, 'error').mockImplementation(() => {});
+  vi.spyOn(Logger, 'warn').mockImplementation(() => {});
+  vi.spyOn(Logger, 'info').mockImplementation(() => {});
+  vi.spyOn(Logger, 'debug').mockImplementation(() => {});
 });
 
 describe('ProfileApplication', () => {

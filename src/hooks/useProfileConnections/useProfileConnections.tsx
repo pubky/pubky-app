@@ -4,8 +4,9 @@ import { useState, useEffect, useCallback, useRef, useMemo } from 'react';
 import { useLiveQuery } from 'dexie-react-hooks';
 import * as Core from '@/core';
 import * as Config from '@/config';
-import * as Libs from '@/libs';
 import type { ConnectionType, UserConnectionData, UseProfileConnectionsResult } from './useProfileConnections.types';
+import { Logger } from '@/libs/logger/logger';
+import { isAppError } from '@/libs/error/error.utils';
 
 export type { ConnectionType, UserConnectionData, UseProfileConnectionsResult };
 export { CONNECTION_TYPE } from './useProfileConnections.types';
@@ -57,7 +58,7 @@ export function useProfileConnections(type: ConnectionType, userId?: Core.Pubky)
         if (!streamId) return null;
         return (await Core.LocalStreamUsersService.findById(streamId))?.stream ?? null;
       } catch (error) {
-        Libs.Logger.error('[useProfileConnections] Failed to query cached stream', { streamId, error });
+        Logger.error('[useProfileConnections] Failed to query cached stream', { streamId, error });
         return null;
       }
     },
@@ -89,7 +90,7 @@ export function useProfileConnections(type: ConnectionType, userId?: Core.Pubky)
         if (userIds.length === 0) return new Map<Core.Pubky, Core.NexusUserDetails>();
         return await Core.UserController.getManyDetails({ userIds });
       } catch (error) {
-        Libs.Logger.error('[useProfileConnections] Failed to query user details', { userIds, error });
+        Logger.error('[useProfileConnections] Failed to query user details', { userIds, error });
         return new Map<Core.Pubky, Core.NexusUserDetails>();
       }
     },
@@ -104,7 +105,7 @@ export function useProfileConnections(type: ConnectionType, userId?: Core.Pubky)
         if (userIds.length === 0) return new Map<Core.Pubky, Core.NexusUserCounts>();
         return await Core.UserController.getManyCounts({ userIds });
       } catch (error) {
-        Libs.Logger.error('[useProfileConnections] Failed to query user counts', { userIds, error });
+        Logger.error('[useProfileConnections] Failed to query user counts', { userIds, error });
         return new Map<Core.Pubky, Core.NexusUserCounts>();
       }
     },
@@ -120,7 +121,7 @@ export function useProfileConnections(type: ConnectionType, userId?: Core.Pubky)
         if (userIds.length === 0) return new Map<Core.Pubky, Core.UserRelationshipsModelSchema>();
         return await Core.UserController.getManyRelationships({ userIds });
       } catch (error) {
-        Libs.Logger.error('[useProfileConnections] Failed to query user relationships', { userIds, error });
+        Logger.error('[useProfileConnections] Failed to query user relationships', { userIds, error });
         return new Map<Core.Pubky, Core.UserRelationshipsModelSchema>();
       }
     },
@@ -143,7 +144,7 @@ export function useProfileConnections(type: ConnectionType, userId?: Core.Pubky)
         const tagsMap = await Core.UserController.getManyTagsOrFetch({ userIds });
         setUserTagsMap(tagsMap);
       } catch (err) {
-        Libs.Logger.error('[useProfileConnections] Failed to fetch user tags:', err);
+        Logger.error('[useProfileConnections] Failed to fetch user tags:', err);
         setUserTagsMap(new Map());
       }
     };
@@ -249,7 +250,7 @@ export function useProfileConnections(type: ConnectionType, userId?: Core.Pubky)
 
         // Handle empty results
         if (pageIds.length === 0) {
-          Libs.Logger.debug('[useProfileConnections] Empty result, no more connections');
+          Logger.debug('[useProfileConnections] Empty result, no more connections');
           setHasMore(false);
           return;
         }
@@ -271,10 +272,10 @@ export function useProfileConnections(type: ConnectionType, userId?: Core.Pubky)
         userIdsRef.current = updatedIds;
         setUserIds(updatedIds);
       } catch (err) {
-        const errorMessage = Libs.isAppError(err) ? err.message : 'Failed to fetch connections';
+        const errorMessage = isAppError(err) ? err.message : 'Failed to fetch connections';
         setError(errorMessage);
         setHasMore(false);
-        Libs.Logger.error('[useProfileConnections] Failed to fetch stream slice:', err);
+        Logger.error('[useProfileConnections] Failed to fetch stream slice:', err);
       } finally {
         if (isInitialLoad) {
           setIsLoading(false);

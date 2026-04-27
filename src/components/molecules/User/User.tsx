@@ -3,8 +3,8 @@
 import * as React from 'react';
 import * as Atoms from '@/atoms';
 import * as Organisms from '@/organisms';
-import * as Libs from '@/libs';
 import { UserRoundPlus, Tag, StickyNote } from 'lucide-react';
+import { cn } from '@/libs/utils/utils';
 export interface UserData {
   id: string;
   name: string;
@@ -32,10 +32,7 @@ export function User({
   'data-testid': dataTestId,
 }: UserProps) {
   return (
-    <Atoms.Container
-      className={Libs.cn('flex flex-row items-center gap-2', className)}
-      data-testid={dataTestId || 'user'}
-    >
+    <Atoms.Container className={cn('flex flex-row items-center gap-2', className)} data-testid={dataTestId || 'user'}>
       <Organisms.AvatarWithFallback
         avatarUrl={user.avatar}
         name={user.name}

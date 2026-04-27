@@ -1,6 +1,6 @@
 import * as Specs from 'pubky-app-specs';
 import * as Core from '@/core';
-import * as Libs from '@/libs';
+import { Logger } from '@/libs/logger/logger';
 
 /**
  * Settings JSON structure for homeserver persistence.
@@ -87,7 +87,7 @@ export class SettingsNormalizer {
       version: settings.version,
     };
 
-    Libs.Logger.debug('Settings normalized for homeserver', { url, settings: settingsJson });
+    Logger.debug('Settings normalized for homeserver', { url, settings: settingsJson });
 
     return {
       settings: settingsJson,

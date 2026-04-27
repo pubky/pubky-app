@@ -9,7 +9,7 @@ import * as Hooks from '@/hooks';
 import { SETTINGS_ROUTES } from '@/app/routes';
 import type { ProfilePageLinksProps } from './ProfilePageLinks.types';
 import { Link } from 'lucide-react';
-import { getIconFromUrl } from '@/libs/utils';
+import { getIconFromUrl } from '@/libs/utils/urlToIcon';
 export function ProfilePageLinks({ links, isOwnProfile = false }: ProfilePageLinksProps) {
   const t = useTranslations('profile.sidebar');
   const router = useRouter();

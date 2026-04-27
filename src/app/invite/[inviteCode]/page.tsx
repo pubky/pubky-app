@@ -1,7 +1,7 @@
 import { redirect } from 'next/navigation';
 
 import { ONBOARDING_ROUTES } from '@/app';
-import * as Libs from '@/libs';
+import { formatInviteCode } from '@/libs/utils/utils';
 
 interface InvitePageProps {
   params: Promise<{
@@ -11,7 +11,7 @@ interface InvitePageProps {
 
 export default async function InvitePage({ params }: InvitePageProps) {
   const { inviteCode } = await params;
-  const formattedInviteCode = Libs.formatInviteCode(inviteCode);
+  const formattedInviteCode = formatInviteCode(inviteCode);
   const searchParams = new URLSearchParams();
   searchParams.set('inviteCode', formattedInviteCode);
 

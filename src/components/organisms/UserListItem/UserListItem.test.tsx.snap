@@ -23,7 +23,7 @@ exports[`UserListItem - Snapshots > matches snapshot for compact variant 1`] = `
       <span
         class="truncate text-xs font-medium tracking-[1.2px] text-muted-foreground uppercase"
       >
-        pk:test-use
+        test...3456
       </span>
     </div>
   </button>
@@ -89,7 +89,7 @@ exports[`UserListItem - Snapshots > matches snapshot for compact variant as curr
       <span
         class="truncate text-xs font-medium tracking-[1.2px] text-muted-foreground uppercase"
       >
-        pk:test-use
+        test...3456
       </span>
     </div>
   </button>
@@ -149,7 +149,7 @@ exports[`UserListItem - Snapshots > matches snapshot for compact variant when fo
       <span
         class="truncate text-xs font-medium tracking-[1.2px] text-muted-foreground uppercase"
       >
-        pk:test-use
+        test...3456
       </span>
     </div>
   </button>
@@ -358,7 +358,7 @@ exports[`UserListItem - Snapshots > matches snapshot for full variant 1`] = `
         <span
           class="truncate text-xs font-medium tracking-[1.2px] text-muted-foreground uppercase"
         >
-          pk:test-use
+          test...3456
         </span>
       </div>
     </a>

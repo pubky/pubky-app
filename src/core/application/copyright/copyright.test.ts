@@ -1,9 +1,11 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import * as Core from '@/core';
-import { Err, ServerErrorCode, ErrorService } from '@/libs';
 import { CHATWOOT_INBOX_IDS } from '@/core/services/chatwoot';
 import type { TCopyrightSubmitInput } from './copyright.types';
 import type { TChatwootContact } from '@/core/services/chatwoot/chatwoot.types';
+import { ServerErrorCode } from '@/libs/error/error.codes';
+import { Err } from '@/libs/error/error.factories';
+import { ErrorService } from '@/libs/error/error.types';
 
 const testData = {
   nameOwner: 'John Doe',

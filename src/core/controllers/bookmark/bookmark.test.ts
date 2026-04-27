@@ -1,7 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import * as Core from '@/core';
-import { HttpMethod } from '@/libs';
 import type { TBookmarkEventParams } from './bookmark.types';
+import { HttpMethod } from '@/libs/http/http.types';
 
 // Mock pubky-app-specs
 vi.mock('pubky-app-specs', () => ({

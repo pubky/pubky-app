@@ -2,8 +2,10 @@
 
 import { useState, useCallback } from 'react';
 import * as Core from '@/core';
-import * as Libs from '@/libs';
 import type { UseMuteUserResult } from './useMuteUser.types';
+import { HttpMethod } from '@/libs/http/http.types';
+import { Logger } from '@/libs/logger/logger';
+import { isAppError } from '@/libs/error/error.utils';
 
 /**
  * useMuteUser
@@ -35,20 +37,20 @@ export function useMuteUser(): UseMuteUserResult {
       setError(null);
 
       try {
-        const action = isCurrentlyMuted ? Libs.HttpMethod.DELETE : Libs.HttpMethod.PUT;
+        const action = isCurrentlyMuted ? HttpMethod.DELETE : HttpMethod.PUT;
 
         await Core.MuteController.commitMute(action, {
           muter: currentUserPubky,
           mutee: userId,
         });
 
-        Libs.Logger.debug(`[useMuteUser] Successfully ${isCurrentlyMuted ? 'unmuted' : 'muted'} user`, {
+        Logger.debug(`[useMuteUser] Successfully ${isCurrentlyMuted ? 'unmuted' : 'muted'} user`, {
           userId,
         });
       } catch (err) {
-        const errorMessage = Libs.isAppError(err) ? err.message : 'Failed to update mute status';
+        const errorMessage = isAppError(err) ? err.message : 'Failed to update mute status';
         setError(errorMessage);
-        Libs.Logger.error('[useMuteUser] Failed to toggle mute:', err);
+        Logger.error('[useMuteUser] Failed to toggle mute:', err);
         throw err;
       } finally {
         setIsLoading(false);

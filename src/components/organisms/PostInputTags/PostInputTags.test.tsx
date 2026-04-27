@@ -144,11 +144,6 @@ vi.mock('@/molecules', () => ({
   }) => <div data-testid="tag-input-toggle">{showInput ? inputContent : addButtonContent}</div>,
 }));
 
-vi.mock('@/libs', async () => {
-  const actual = await vi.importActual('@/libs');
-  return { ...actual };
-});
-
 describe('PostInputTags', () => {
   const mockOnTagsChange = vi.fn();
 

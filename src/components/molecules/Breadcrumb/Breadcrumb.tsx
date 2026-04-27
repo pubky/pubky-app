@@ -3,11 +3,11 @@
 import * as React from 'react';
 import { Slot } from 'radix-ui';
 import { cva } from 'class-variance-authority';
-import * as Libs from '@/libs';
 import * as Types from './Breadcrumb.types';
 
 // Shadcn-based Breadcrumb with custom variants
 import { ChevronDown, ChevronRight, MoreHorizontal } from 'lucide-react';
+import { cn } from '@/libs/utils/utils';
 const breadcrumbVariants = cva('flex flex-wrap items-center', {
   variants: {
     size: {
@@ -49,7 +49,7 @@ const breadcrumbSeparatorVariants = cva('text-muted-foreground shrink-0', {
 // Main Breadcrumb container - based on Shadcn
 export const Breadcrumb = React.forwardRef<HTMLElement, Types.BreadcrumbProps>(
   ({ className, size, children, ...props }, ref) => (
-    <nav ref={ref} aria-label="breadcrumb" className={Libs.cn('inline-flex', className)} {...props}>
+    <nav ref={ref} aria-label="breadcrumb" className={cn('inline-flex', className)} {...props}>
       <ol
         className={breadcrumbVariants({
           size,
@@ -67,7 +67,7 @@ export const BreadcrumbList = React.forwardRef<HTMLOListElement, React.Component
   ({ className, ...props }, ref) => (
     <ol
       ref={ref}
-      className={Libs.cn(
+      className={cn(
         'flex flex-wrap items-center gap-1.5 text-sm break-words text-muted-foreground sm:gap-2.5',
         className,
       )}
@@ -90,7 +90,7 @@ export const BreadcrumbItem = React.forwardRef<HTMLLIElement, Types.BreadcrumbIt
     return (
       <li
         ref={ref}
-        className={Libs.cn(
+        className={cn(
           breadcrumbItemVariants({
             variant: itemVariant,
           }),
@@ -122,7 +122,7 @@ export const BreadcrumbLink = React.forwardRef<
   }
 >(({ asChild, className, ...props }, ref) => {
   const Comp = asChild ? Slot.Root : 'a';
-  return <Comp ref={ref} className={Libs.cn('transition-colors hover:text-foreground', className)} {...props} />;
+  return <Comp ref={ref} className={cn('transition-colors hover:text-foreground', className)} {...props} />;
 });
 BreadcrumbLink.displayName = 'BreadcrumbLink';
 
@@ -133,7 +133,7 @@ export const BreadcrumbSeparator = React.forwardRef<HTMLLIElement, Types.Breadcr
       ref={ref}
       role="presentation"
       aria-hidden="true"
-      className={Libs.cn(
+      className={cn(
         breadcrumbSeparatorVariants({
           size,
         }),
@@ -154,7 +154,7 @@ export const BreadcrumbEllipsis = React.forwardRef<HTMLSpanElement, Types.Breadc
       ref={ref}
       role="presentation"
       aria-hidden="true"
-      className={Libs.cn('flex h-9 w-9 items-center justify-center', className)}
+      className={cn('flex h-9 w-9 items-center justify-center', className)}
       {...props}
     >
       <MoreHorizontal className="h-4 w-4" />
@@ -172,7 +172,7 @@ export const BreadcrumbPage = React.forwardRef<HTMLSpanElement, React.ComponentP
       role="link"
       aria-disabled="true"
       aria-current="page"
-      className={Libs.cn('font-normal text-foreground', className)}
+      className={cn('font-normal text-foreground', className)}
       {...props}
     />
   ),

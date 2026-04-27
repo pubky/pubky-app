@@ -1,7 +1,7 @@
 import * as React from 'react';
 import { Dialog as DialogPrimitive } from 'radix-ui';
-import * as Libs from '@/libs';
 import { X } from 'lucide-react';
+import { cn } from '@/libs/utils/utils';
 function Dialog({ ...props }: React.ComponentProps<typeof DialogPrimitive.Root>) {
   return <DialogPrimitive.Root data-slot="dialog" data-testid="dialog" {...props} />;
 }
@@ -50,7 +50,7 @@ function DialogOverlay({
         e.stopPropagation();
         onCloseRef?.current?.click();
       }}
-      className={Libs.cn(
+      className={cn(
         'fixed inset-0 z-40 bg-black/50 data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:animate-in data-[state=open]:fade-in-0',
         className,
       )}
@@ -82,7 +82,7 @@ function DialogContent({
           data-cy="dialog-content"
           data-slot="dialog-content"
           data-testid="dialog-content"
-          className={Libs.cn(
+          className={cn(
             'relative z-50 grid',
             'duration-200',
             'data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=closed]:zoom-out-95',
@@ -98,7 +98,7 @@ function DialogContent({
           {children}
           <DialogClose
             ref={closeRef}
-            className={Libs.cn(
+            className={cn(
               showCloseButton
                 ? 'absolute top-4 right-4 cursor-pointer rounded-full bg-secondary p-2 transition-all duration-300 ease-in-out outline-none hover:bg-secondary/80 focus:outline-none disabled:pointer-events-none disabled:opacity-50'
                 : 'hidden',
@@ -117,7 +117,7 @@ function DialogHeader({ className, ...props }: React.ComponentProps<'div'>) {
     <div
       data-slot="dialog-header"
       data-testid="dialog-header"
-      className={Libs.cn('flex flex-col gap-1.5 pr-6', className)}
+      className={cn('flex flex-col gap-1.5 pr-6', className)}
       {...props}
     />
   );
@@ -126,7 +126,7 @@ function DialogFooter({ className, ...props }: React.ComponentProps<'div'>) {
   return (
     <div
       data-slot="dialog-footer"
-      className={Libs.cn(
+      className={cn(
         'flex flex-col gap-3 sm:flex-row sm:justify-end sm:gap-4 md:justify-between [&>*]:w-full sm:[&>*]:flex-1',
         className,
       )}
@@ -139,7 +139,7 @@ function DialogTitle({ className, ...props }: React.ComponentProps<typeof Dialog
     <DialogPrimitive.Title
       data-slot="dialog-title"
       data-testid="dialog-title"
-      className={Libs.cn('text-xl/[1.4] font-bold text-foreground sm:text-2xl/[1.333]', className)}
+      className={cn('text-xl/[1.4] font-bold text-foreground sm:text-2xl/[1.333]', className)}
       {...props}
     />
   );
@@ -148,7 +148,7 @@ function DialogDescription({ className, ...props }: React.ComponentProps<typeof 
   return (
     <DialogPrimitive.Description
       data-slot="dialog-description"
-      className={Libs.cn('text-sm leading-normal font-medium text-muted-foreground', className)}
+      className={cn('text-sm leading-normal font-medium text-muted-foreground', className)}
       {...props}
     />
   );

@@ -5,13 +5,14 @@ import { QRCodeSVG } from 'qrcode.react';
 import { useEffect } from 'react';
 import { useTranslations } from 'next-intl';
 import * as Atoms from '@/atoms';
-import * as Libs from '@/libs';
 import * as Molecules from '@/molecules';
 import * as Core from '@/core';
 import * as Hooks from '@/hooks';
 
 // Step configuration for the progress display (labels are translation keys)
 import { CheckCircle, Loader2, Circle, QrCode, Key } from 'lucide-react';
+import { Logger } from '@/libs/logger/logger';
+import { cn } from '@/libs/utils/utils';
 const SIGN_IN_STEPS = [
   {
     key: 'profileChecked',
@@ -63,7 +64,7 @@ const SignInProgress = () => {
               <StepIcon status={status} />
               <Atoms.Typography
                 as="span"
-                className={Libs.cn(
+                className={cn(
                   'text-base leading-normal font-light',
                   status === 'completed' && 'font-bold text-foreground',
                   status === 'running' && 'text-foreground',
@@ -96,7 +97,7 @@ export const SignInContent = () => {
         description: t('linkCopiedDescription'),
       });
     } catch (error) {
-      Libs.Logger.error('Failed to copy auth URL to clipboard:', error);
+      Logger.error('Failed to copy auth URL to clipboard:', error);
     }
   };
   const isMobileLaunching = isLoading || isOpeningRing;

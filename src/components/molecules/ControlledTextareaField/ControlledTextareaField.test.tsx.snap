@@ -13,12 +13,12 @@ exports[`ControlledTextareaField - Snapshots > matches snapshot for default stat
     Test Label
   </label>
   <div
-    class="mx-auto flex flex-1 cursor-pointer w-full items-center flex-row border gap-0 rounded-md font-medium border-dashed !bg-alpha-90/10"
+    class="mx-auto flex w-full flex-1 cursor-pointer flex-row items-center gap-0 rounded-md border font-medium !bg-alpha-90/10 border-dashed"
     data-testid="container"
   >
     <textarea
       aria-invalid="false"
-      class="flex field-sizing-content w-full rounded-md bg-transparent text-base wrap-anywhere outline-none placeholder:text-muted-foreground disabled:cursor-not-allowed disabled:opacity-50 aria-invalid:border-destructive aria-invalid:ring-destructive/40 transition-[color,box-shadow] min-h-6 resize-none border-none p-0 font-medium text-secondary-foreground shadow-none focus-visible:ring-0 focus-visible:ring-offset-0 px-5 py-4 h-25"
+      class="flex field-sizing-content w-full rounded-md bg-transparent text-base wrap-anywhere outline-none placeholder:text-muted-foreground disabled:cursor-not-allowed disabled:opacity-50 aria-invalid:border-destructive aria-invalid:ring-destructive/40 transition-[color,box-shadow] min-h-6 resize-none border-none p-0 font-medium text-secondary-foreground shadow-none focus-visible:ring-0 focus-visible:ring-offset-0 h-25 px-5 py-4"
       data-slot="textarea"
       id="testField"
       name="testField"

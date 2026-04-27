@@ -1,7 +1,10 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import * as Core from '@/core';
-import * as Libs from '@/libs';
 import { HotApplication } from './hot';
+import { NetworkErrorCode } from '@/libs/error/error.codes';
+import { Err } from '@/libs/error/error.factories';
+import { ErrorService } from '@/libs/error/error.types';
+import { Logger } from '@/libs/logger/logger';
 
 describe('HotApplication', () => {
   beforeEach(() => {
@@ -103,8 +106,8 @@ describe('HotApplication', () => {
         timeframe: Core.UserStreamTimeframe.TODAY,
       };
 
-      const appError = Libs.Err.network(Libs.NetworkErrorCode.CONNECTION_FAILED, 'Network error', {
-        service: Libs.ErrorService.Nexus,
+      const appError = Err.network(NetworkErrorCode.CONNECTION_FAILED, 'Network error', {
+        service: ErrorService.Nexus,
         operation: 'fetch',
         context: { statusCode: 500 },
       });
@@ -121,7 +124,7 @@ describe('HotApplication', () => {
       };
 
       const error = new Error('service-fail');
-      const loggerSpy = vi.spyOn(Libs.Logger, 'error');
+      const loggerSpy = vi.spyOn(Logger, 'error');
       vi.spyOn(Core.NexusHotService, 'fetch').mockRejectedValue(error);
 
       await HotApplication.getOrFetch(params);

@@ -4,11 +4,12 @@ import { useState, useEffect, useRef } from 'react';
 import { useTranslations } from 'next-intl';
 import * as Atoms from '@/atoms';
 import * as Molecules from '@/molecules';
-import * as Libs from '@/libs';
 import * as Hooks from '@/hooks';
 import * as Config from '@/config';
 import * as Types from './index';
 import { Check, Smile } from 'lucide-react';
+import { parseStatus } from '@/libs/status/status';
+import { cn } from '@/libs/utils/utils';
 export function StatusPickerContent({ onStatusSelect, currentStatus }: Types.StatusPickerContentProps) {
   const t = useTranslations('status');
   const [customStatus, setCustomStatus] = useState('');
@@ -17,7 +18,7 @@ export function StatusPickerContent({ onStatusSelect, currentStatus }: Types.Sta
   const inputRef = useRef<HTMLInputElement>(null);
 
   // Parse current status to extract emoji and text if it's custom
-  const parsed = Libs.parseStatus(currentStatus || '');
+  const parsed = parseStatus(currentStatus || '');
   const isCustomStatus = parsed.isCustom;
 
   // Initialize custom status state from current status if it's custom
@@ -66,13 +67,13 @@ export function StatusPickerContent({ onStatusSelect, currentStatus }: Types.Sta
             key={option.value}
             overrideDefaults={true}
             onClick={() => handlePredefinedStatusClick(option.value)}
-            className={Libs.cn('w-full justify-between gap-2 p-0', 'inline-flex cursor-pointer items-center', 'group')}
+            className={cn('w-full justify-between gap-2 p-0', 'inline-flex cursor-pointer items-center', 'group')}
           >
             <Atoms.Container overrideDefaults className="flex items-center gap-2">
               <span>{option.emoji}</span>
               <Atoms.Typography
                 as="span"
-                className={Libs.cn(
+                className={cn(
                   'text-base leading-6 font-medium transition-colors',
                   isSelected ? 'text-popover-foreground' : 'text-muted-foreground group-hover:text-popover-foreground',
                 )}
@@ -99,7 +100,7 @@ export function StatusPickerContent({ onStatusSelect, currentStatus }: Types.Sta
               <Atoms.Button
                 overrideDefaults={true}
                 onClick={() => setShowEmojiPicker(true)}
-                className={Libs.cn(
+                className={cn(
                   'size-9 shrink-0 rounded-full bg-secondary p-1',
                   'inline-flex cursor-pointer items-center justify-center',
                   'hover:bg-secondary/80',
@@ -112,7 +113,7 @@ export function StatusPickerContent({ onStatusSelect, currentStatus }: Types.Sta
               <Atoms.Button
                 overrideDefaults={true}
                 onClick={() => setShowEmojiPicker(true)}
-                className={Libs.cn(
+                className={cn(
                   'size-9 shrink-0 rounded-full bg-secondary p-1',
                   'inline-flex cursor-pointer items-center justify-center',
                   'hover:bg-secondary/80',
@@ -130,7 +131,7 @@ export function StatusPickerContent({ onStatusSelect, currentStatus }: Types.Sta
               maxLength={Config.USER_STATUS_MAX_LENGTH}
               onChange={(e) => setCustomStatus(e.target.value)}
               onKeyDown={handleKeyDown}
-              className={Libs.cn(
+              className={cn(
                 'flex-1 bg-transparent text-base leading-6 font-medium caret-white outline-none',
                 'border-none shadow-none ring-0 hover:outline-none focus:ring-0 focus:ring-offset-0 focus:outline-none',
                 'min-h-6 p-0',

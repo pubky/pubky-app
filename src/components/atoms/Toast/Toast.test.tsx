@@ -1,12 +1,6 @@
 import { render } from '@testing-library/react';
-import { describe, it, expect, vi } from 'vitest';
+import { describe, it, expect } from 'vitest';
 import { Toast, ToastProvider, ToastViewport } from './Toast';
-
-// Mock @/libs - use actual implementations
-vi.mock('@/libs', async () => {
-  const actual = await vi.importActual('@/libs');
-  return { ...actual };
-});
 
 describe('Toast Components', () => {
   it('should handle Toast component imports without errors', () => {

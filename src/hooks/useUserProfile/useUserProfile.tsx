@@ -2,8 +2,8 @@
 
 import * as Core from '@/core';
 import * as Config from '@/config';
-import * as Libs from '@/libs';
 import { useLocalFirstQuery } from '@/hooks/useLocalFirstQuery';
+import { withPubkyPrefix } from '@/libs/utils/utils';
 
 export interface UserProfile {
   name: string;
@@ -53,7 +53,7 @@ export function useUserProfile(userId: string): UseUserProfileResult {
     : undefined;
 
   // Build public key with proper format
-  const publicKey = Libs.withPubkyPrefix(userId);
+  const publicKey = withPubkyPrefix(userId);
 
   // Build profile link using config (SSR-safe)
   // Use DEFAULT_URL from config to avoid window.location.origin which breaks SSR

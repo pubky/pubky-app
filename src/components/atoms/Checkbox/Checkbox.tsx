@@ -2,10 +2,10 @@
 
 import * as React from 'react';
 import { Checkbox as CheckboxPrimitive } from 'radix-ui';
-import * as Libs from '@/libs';
 import * as Atoms from '@/atoms';
 import type { CheckboxProps } from './Checkbox.types';
 import { Check } from 'lucide-react';
+import { cn } from '@/libs/utils/utils';
 const Checkbox = React.forwardRef<React.ComponentRef<typeof CheckboxPrimitive.Root>, CheckboxProps>(
   ({ className, label, description, id, ...props }, ref) => {
     const generatedId = React.useId();
@@ -14,7 +14,7 @@ const Checkbox = React.forwardRef<React.ComponentRef<typeof CheckboxPrimitive.Ro
       <CheckboxPrimitive.Root
         ref={ref}
         id={checkboxId}
-        className={Libs.cn(
+        className={cn(
           'peer h-4 w-4 shrink-0 rounded',
           'border border-input bg-white/5 shadow-sm',
           'transition-colors',

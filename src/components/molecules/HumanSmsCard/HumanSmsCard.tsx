@@ -1,12 +1,12 @@
 'use client';
 
 import * as Atoms from '@/atoms';
-import * as Libs from '@/libs';
 import { useSmsVerificationInfo } from '@/hooks/useSmsVerificationInfo';
 import { HumanSmsCardSkeleton } from './HumanSmsCard.skeleton';
 import type { HumanSmsCardProps } from './HumanSmsCard.types';
 import { useTranslations } from 'next-intl';
 import { Smartphone, TriangleAlert } from 'lucide-react';
+import { cn } from '@/libs/utils/utils';
 export const HumanSmsCard = ({ onClick }: HumanSmsCardProps) => {
   const t = useTranslations('onboarding.sms');
   const smsInfo = useSmsVerificationInfo();
@@ -26,7 +26,7 @@ export const HumanSmsCard = ({ onClick }: HumanSmsCardProps) => {
     <Atoms.Container className="relative flex-1">
       <Atoms.Card
         data-testid="sms-verification-card"
-        className={Libs.cn('flex-1 gap-0 p-6 md:p-12', isUnavailable && 'pointer-events-none opacity-60 blur-[5px]')}
+        className={cn('flex-1 gap-0 p-6 md:p-12', isUnavailable && 'pointer-events-none opacity-60 blur-[5px]')}
       >
         <Atoms.Container className="flex-col gap-10 lg:flex-row lg:items-center lg:gap-12">
           <Atoms.Container className="hidden h-full w-full flex-1 items-center lg:block lg:w-auto">

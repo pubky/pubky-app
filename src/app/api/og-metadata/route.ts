@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import * as Core from '@/core';
-import * as Libs from '@/libs';
+import { handleApiError } from '@/libs/api/route-error-handler';
 
 /**
  * API Route for secure OpenGraph metadata fetching.
@@ -33,7 +33,7 @@ export async function GET(request: NextRequest) {
 
     return NextResponse.json(metadata, CACHE_HEADERS);
   } catch (error) {
-    return Libs.handleApiError(error, 'api.og-metadata.GET', {
+    return handleApiError(error, 'api.og-metadata.GET', {
       unknownErrorMessage: 'Internal server error',
     });
   }

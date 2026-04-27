@@ -1,9 +1,10 @@
 import { Keypair } from '@synonymdev/pubky';
 import * as bip39 from 'bip39';
 import * as Core from '@/core';
-
-import { Err, ErrorService, ValidationErrorCode, ServerErrorCode, ClientErrorCode } from '@/libs';
 import type { TMnemonicWords, TCreateRecoveryFileParams, TDecryptRecoveryFileParams } from './identity.types';
+import { ClientErrorCode, ServerErrorCode, ValidationErrorCode } from '@/libs/error/error.codes';
+import { Err } from '@/libs/error/error.factories';
+import { ErrorService } from '@/libs/error/error.types';
 
 export class Identity {
   // Mention pattern: pk: or pubky followed by exactly 52 lowercase alphanumeric characters

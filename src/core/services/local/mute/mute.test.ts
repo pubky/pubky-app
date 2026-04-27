@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import * as Core from '@/core';
-import { Logger } from '@/libs';
+import { Logger } from '@/libs/logger/logger';
 
 const muter = 'pubky_muter' as Core.Pubky;
 const mutee = 'pubky_mutee' as Core.Pubky;

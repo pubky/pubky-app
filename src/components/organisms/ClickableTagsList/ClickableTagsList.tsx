@@ -3,7 +3,6 @@
 import * as React from 'react';
 import * as Atoms from '@/atoms';
 import * as Molecules from '@/molecules';
-import * as Libs from '@/libs';
 import * as Hooks from '@/hooks';
 import * as Core from '@/core';
 import type { ClickableTagsListProps } from './ClickableTagsList.types';
@@ -13,6 +12,7 @@ import {
   TAG_INPUT_WIDTH_AT_LIMIT,
   TAG_INPUT_WIDTH_DEFAULT,
 } from '@/config';
+import { cn, generateRandomColor, getDisplayTags } from '@/libs/utils/utils';
 
 /**
  * ClickableTagsList
@@ -112,7 +112,7 @@ export function ClickableTagsList({
 
   // Apply smart limiting based on character budget
   const tagLabels = enrichedTags.map((tag) => tag.label);
-  const displayLabels = Libs.getDisplayTags(tagLabels, {
+  const displayLabels = getDisplayTags(tagLabels, {
     maxTagLength,
     maxTotalChars,
     maxCount: maxTags,
@@ -141,7 +141,7 @@ export function ClickableTagsList({
       <Atoms.Container
         overrideDefaults
         data-cy="clickable-tags-list"
-        className={Libs.cn('flex flex-wrap items-center gap-2', className)}
+        className={cn('flex flex-wrap items-center gap-2', className)}
       >
         {/* Render existing tags with hover popover for tagger avatars */}
         {visibleTags.map((tag, index) => (
@@ -155,7 +155,7 @@ export function ClickableTagsList({
             <Molecules.PostTag
               label={tag.label}
               count={showCount ? tag.taggers_count : undefined}
-              color={Libs.generateRandomColor(tag.label)}
+              color={generateRandomColor(tag.label)}
               selected={isViewerTagger(tag)}
               showClose={showTagClose}
               onClick={(e) => handleTagClick(tag, index, e)}

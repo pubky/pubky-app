@@ -1,6 +1,6 @@
 import { QueryClient } from '@tanstack/react-query';
-import { isAppError } from '../error';
-import { HttpStatusCode } from '../http';
+import { isAppError } from '../error/error';
+import { HttpStatusCode } from '../http/http.types';
 import type { QueryClientConfig } from './query-client.types';
 
 const queryClientRegistry: QueryClient[] = [];

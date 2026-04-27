@@ -3,13 +3,13 @@
 import * as Atoms from '@/atoms';
 import * as Molecules from '@/molecules';
 import * as Organisms from '@/organisms';
-import * as Libs from '@/libs';
 import * as Hooks from '@/hooks';
 import { useRouter } from 'next/navigation';
 import { APP_ROUTES } from '@/app/routes';
 import type { TaggedItemProps } from './TaggedItem.types';
 import { MAX_VISIBLE_AVATARS } from './TaggedItem.constants';
 import { Search } from 'lucide-react';
+import { cn, formatPublicKey } from '@/libs/utils/utils';
 export function TaggedItem({
   tag,
   onTagClick,
@@ -75,20 +75,20 @@ export function TaggedItem({
                 key={tagger.id}
                 name={
                   tagger.name ||
-                  Libs.formatPublicKey({
+                  formatPublicKey({
                     key: tagger.id,
                   })
                 }
                 avatarUrl={tagger.avatarUrl}
                 fallbackSeed={tagger.id}
                 size="md"
-                className={Libs.cn('shrink-0', index > 0 && '-ml-2')}
+                className={cn('shrink-0', index > 0 && '-ml-2')}
               />
             ))}
             {overflowCount > 0 && (
               <Atoms.Container
                 overrideDefaults={true}
-                className={Libs.cn(
+                className={cn(
                   'flex shrink-0 items-center justify-center rounded-full border border-muted-foreground bg-background shadow-sm',
                   'size-8 text-xs font-medium text-foreground',
                   visibleTaggers.length > 0 && 'z-10 -ml-2',

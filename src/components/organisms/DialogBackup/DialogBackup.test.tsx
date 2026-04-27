@@ -112,14 +112,6 @@ vi.mock('@/atoms', () => ({
   ),
 }));
 
-// Mock libs - use actual utility functions and icons from lucide-react
-vi.mock('@/libs', async () => {
-  const actual = await vi.importActual('@/libs');
-  return {
-    ...actual,
-  };
-});
-
 // Mock Next.js Image
 vi.mock('next/image', () => ({
   default: ({

@@ -1,11 +1,11 @@
 import * as Atoms from '@/atoms';
-import * as Libs from '@/libs';
+import { cn } from '@/libs/utils/utils';
 
 const ACTION_BUTTON_COUNT = 5;
 
 export function PostActionsBarSkeleton({ className }: { className?: string }) {
   return (
-    <Atoms.Container overrideDefaults className={Libs.cn('flex justify-between', className)}>
+    <Atoms.Container overrideDefaults className={cn('flex justify-between', className)}>
       <Atoms.Skeleton className="h-8 w-8 rounded-sm" />
       <Atoms.Container overrideDefaults className="flex gap-2">
         {Array.from({ length: ACTION_BUTTON_COUNT }).map((_, i) => (

@@ -2,7 +2,6 @@
 
 import { useTranslations } from 'next-intl';
 import * as Hooks from '@/hooks';
-import * as Libs from '@/libs';
 import * as Molecules from '@/molecules';
 import { PROFILE_ROUTES } from '@/app/routes';
 import { PROFILE_MENU_ACTION_IDS } from './useProfileMenuActions.constants';
@@ -19,6 +18,8 @@ import type { UseProfileMenuActionsResult, ProfileMenuActionItem } from './usePr
  * @returns Menu items array and loading state
  */
 import { UserRoundMinus, UserRoundPlus, Key, Link, Megaphone, MegaphoneOff } from 'lucide-react';
+import { isAppError } from '@/libs/error/error.utils';
+import { truncateString, withPubkyPrefix } from '@/libs/utils/utils';
 export function useProfileMenuActions(userId: string): UseProfileMenuActionsResult {
   const t = useTranslations('profile.actions');
   const tToast = useTranslations('toast');
@@ -36,7 +37,7 @@ export function useProfileMenuActions(userId: string): UseProfileMenuActionsResu
   });
   const isUserMuted = isMuted(userId);
   const rawUsername = profile?.name || userId;
-  const username = Libs.truncateString(rawUsername, 15);
+  const username = truncateString(rawUsername, 15);
   const isLoading = isProfileLoading || isFollowingLoading;
   const profileUrl = `${typeof window !== 'undefined' ? window.location.origin : ''}${PROFILE_ROUTES.PROFILE}/${userId}`;
   const menuItems: ProfileMenuActionItem[] = [];
@@ -58,7 +59,7 @@ export function useProfileMenuActions(userId: string): UseProfileMenuActionsResu
       } catch (error) {
         Molecules.toast({
           title: tErrors('title'),
-          description: Libs.isAppError(error) ? error.message : tToast('follow.failed'),
+          description: isAppError(error) ? error.message : tToast('follow.failed'),
         });
       }
     },
@@ -72,11 +73,11 @@ export function useProfileMenuActions(userId: string): UseProfileMenuActionsResu
     icon: Key,
     onClick: async () => {
       try {
-        await copyPubky(Libs.withPubkyPrefix(userId));
+        await copyPubky(withPubkyPrefix(userId));
       } catch (error) {
         Molecules.toast({
           title: tErrors('title'),
-          description: Libs.isAppError(error) ? error.message : tToast('copy.copyFailed'),
+          description: isAppError(error) ? error.message : tToast('copy.copyFailed'),
         });
       }
     },
@@ -93,7 +94,7 @@ export function useProfileMenuActions(userId: string): UseProfileMenuActionsResu
       } catch (error) {
         Molecules.toast({
           title: tErrors('title'),
-          description: Libs.isAppError(error) ? error.message : tToast('copy.copyFailed'),
+          description: isAppError(error) ? error.message : tToast('copy.copyFailed'),
         });
       }
     },
@@ -126,7 +127,7 @@ export function useProfileMenuActions(userId: string): UseProfileMenuActionsResu
       } catch (error) {
         Molecules.toast({
           title: tErrors('title'),
-          description: Libs.isAppError(error) ? error.message : tToast('mute.failed'),
+          description: isAppError(error) ? error.message : tToast('mute.failed'),
         });
       }
     },

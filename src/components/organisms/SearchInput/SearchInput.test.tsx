@@ -193,14 +193,6 @@ vi.mock('@/molecules', () => ({
   RecentTagSearchItem: {} as { tag: string; searchedAt: number },
 }));
 
-// Mock libs
-vi.mock('@/libs', () => ({
-  cn: (...args: (string | undefined | false)[]) => args.filter(Boolean).join(' '),
-  Search: ({ className, ...props }: { className?: string }) => (
-    <svg data-testid="search-icon" className={className} {...props} />
-  ),
-}));
-
 describe('SearchInput', () => {
   beforeEach(async () => {
     vi.clearAllMocks();

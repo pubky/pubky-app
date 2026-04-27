@@ -3,17 +3,17 @@
 import { Controller } from 'react-hook-form';
 import * as Atoms from '@/atoms';
 import * as Hooks from '@/hooks';
-import * as Libs from '@/libs';
 import * as Molecules from '@/molecules';
 import { COPYRIGHT_FORM_FIELDS, COPYRIGHT_ROLES, type CopyrightFormData } from '@/hooks';
 import { useTranslations } from 'next-intl';
 import { Loader2 } from 'lucide-react';
+import { formatUSDate } from '@/libs/utils/utils';
 export function CopyrightForm() {
   const t = useTranslations('forms.copyright');
   const { form, onSubmit } = Hooks.useCopyrightForm();
   const { isSubmitting, errors } = form.formState;
   const roleError = errors.role?.message;
-  const currentDate = Libs.formatUSDate();
+  const currentDate = formatUSDate();
   return (
     <Atoms.Container size="container" className="px-6 pb-12 xl:px-0">
       <form onSubmit={onSubmit}>

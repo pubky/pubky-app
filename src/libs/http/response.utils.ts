@@ -1,4 +1,5 @@
-import { Err, ServerErrorCode } from '../error';
+import { ServerErrorCode } from '../error/error.codes';
+import { Err } from '../error/error.factories';
 import { ErrorService } from '../error/error.types';
 
 /**

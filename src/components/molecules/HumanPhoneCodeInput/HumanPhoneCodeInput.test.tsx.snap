@@ -10,7 +10,7 @@ exports[`HumanPhoneCodeInput > matches snapshot 1`] = `
     data-testid="human-phone-code-input-0"
   >
     <input
-      class="file:text-foreground placeholder:text-muted-foreground selection:bg-primary selection:text-primary-foreground border-input flex h-9 w-full min-w-0 rounded-md border bg-transparent px-3 py-1 shadow-xs transition-[color,box-shadow] outline-none file:inline-flex file:h-7 file:border-0 file:bg-transparent file:text-sm file:font-medium disabled:pointer-events-none disabled:cursor-not-allowed disabled:opacity-50 aria-invalid:ring-destructive/40 aria-invalid:border-destructive hover:outline-none hover:ring-0 focus:ring-offset-0 text-center text-base font-medium text-brand !h-auto !border-none !bg-transparent !p-0 focus:ring-0 focus:outline-none"
+      class="flex h-9 w-full min-w-0 rounded-md border border-input bg-transparent px-3 py-1 shadow-xs transition-[color,box-shadow] outline-none selection:bg-primary selection:text-primary-foreground file:inline-flex file:h-7 file:border-0 file:bg-transparent file:text-sm file:font-medium file:text-foreground placeholder:text-muted-foreground disabled:pointer-events-none disabled:cursor-not-allowed disabled:opacity-50 hover:ring-0 hover:outline-none focus:ring-offset-0 aria-invalid:border-destructive aria-invalid:ring-destructive/40 text-center text-base font-medium text-brand !h-auto !border-none !bg-transparent !p-0 focus:ring-0 focus:outline-none"
       data-testid="human-phone-code-input-0-input"
       id="human-phone-code-input-0-input"
       inputmode="numeric"
@@ -24,7 +24,7 @@ exports[`HumanPhoneCodeInput > matches snapshot 1`] = `
     data-testid="human-phone-code-input-1"
   >
     <input
-      class="file:text-foreground placeholder:text-muted-foreground selection:bg-primary selection:text-primary-foreground border-input flex h-9 w-full min-w-0 rounded-md border bg-transparent px-3 py-1 shadow-xs transition-[color,box-shadow] outline-none file:inline-flex file:h-7 file:border-0 file:bg-transparent file:text-sm file:font-medium disabled:pointer-events-none disabled:cursor-not-allowed disabled:opacity-50 aria-invalid:ring-destructive/40 aria-invalid:border-destructive hover:outline-none hover:ring-0 focus:ring-offset-0 text-center text-base font-medium text-brand !h-auto !border-none !bg-transparent !p-0 focus:ring-0 focus:outline-none"
+      class="flex h-9 w-full min-w-0 rounded-md border border-input bg-transparent px-3 py-1 shadow-xs transition-[color,box-shadow] outline-none selection:bg-primary selection:text-primary-foreground file:inline-flex file:h-7 file:border-0 file:bg-transparent file:text-sm file:font-medium file:text-foreground placeholder:text-muted-foreground disabled:pointer-events-none disabled:cursor-not-allowed disabled:opacity-50 hover:ring-0 hover:outline-none focus:ring-offset-0 aria-invalid:border-destructive aria-invalid:ring-destructive/40 text-center text-base font-medium text-brand !h-auto !border-none !bg-transparent !p-0 focus:ring-0 focus:outline-none"
       data-testid="human-phone-code-input-1-input"
       id="human-phone-code-input-1-input"
       inputmode="numeric"
@@ -38,7 +38,7 @@ exports[`HumanPhoneCodeInput > matches snapshot 1`] = `
     data-testid="human-phone-code-input-2"
   >
     <input
-      class="file:text-foreground placeholder:text-muted-foreground selection:bg-primary selection:text-primary-foreground border-input flex h-9 w-full min-w-0 rounded-md border bg-transparent px-3 py-1 shadow-xs transition-[color,box-shadow] outline-none file:inline-flex file:h-7 file:border-0 file:bg-transparent file:text-sm file:font-medium disabled:pointer-events-none disabled:cursor-not-allowed disabled:opacity-50 aria-invalid:ring-destructive/40 aria-invalid:border-destructive hover:outline-none hover:ring-0 focus:ring-offset-0 text-center text-base font-medium text-brand !h-auto !border-none !bg-transparent !p-0 focus:ring-0 focus:outline-none"
+      class="flex h-9 w-full min-w-0 rounded-md border border-input bg-transparent px-3 py-1 shadow-xs transition-[color,box-shadow] outline-none selection:bg-primary selection:text-primary-foreground file:inline-flex file:h-7 file:border-0 file:bg-transparent file:text-sm file:font-medium file:text-foreground placeholder:text-muted-foreground disabled:pointer-events-none disabled:cursor-not-allowed disabled:opacity-50 hover:ring-0 hover:outline-none focus:ring-offset-0 aria-invalid:border-destructive aria-invalid:ring-destructive/40 text-center text-base font-medium text-brand !h-auto !border-none !bg-transparent !p-0 focus:ring-0 focus:outline-none"
       data-testid="human-phone-code-input-2-input"
       id="human-phone-code-input-2-input"
       inputmode="numeric"
@@ -52,7 +52,7 @@ exports[`HumanPhoneCodeInput > matches snapshot 1`] = `
     data-testid="human-phone-code-input-3"
   >
     <input
-      class="file:text-foreground placeholder:text-muted-foreground selection:bg-primary selection:text-primary-foreground border-input flex h-9 w-full min-w-0 rounded-md border bg-transparent px-3 py-1 shadow-xs transition-[color,box-shadow] outline-none file:inline-flex file:h-7 file:border-0 file:bg-transparent file:text-sm file:font-medium disabled:pointer-events-none disabled:cursor-not-allowed disabled:opacity-50 aria-invalid:ring-destructive/40 aria-invalid:border-destructive hover:outline-none hover:ring-0 focus:ring-offset-0 text-center text-base font-medium text-brand !h-auto !border-none !bg-transparent !p-0 focus:ring-0 focus:outline-none"
+      class="flex h-9 w-full min-w-0 rounded-md border border-input bg-transparent px-3 py-1 shadow-xs transition-[color,box-shadow] outline-none selection:bg-primary selection:text-primary-foreground file:inline-flex file:h-7 file:border-0 file:bg-transparent file:text-sm file:font-medium file:text-foreground placeholder:text-muted-foreground disabled:pointer-events-none disabled:cursor-not-allowed disabled:opacity-50 hover:ring-0 hover:outline-none focus:ring-offset-0 aria-invalid:border-destructive aria-invalid:ring-destructive/40 text-center text-base font-medium text-brand !h-auto !border-none !bg-transparent !p-0 focus:ring-0 focus:outline-none"
       data-testid="human-phone-code-input-3-input"
       id="human-phone-code-input-3-input"
       inputmode="numeric"
@@ -66,7 +66,7 @@ exports[`HumanPhoneCodeInput > matches snapshot 1`] = `
     data-testid="human-phone-code-input-4"
   >
     <input
-      class="file:text-foreground placeholder:text-muted-foreground selection:bg-primary selection:text-primary-foreground border-input flex h-9 w-full min-w-0 rounded-md border bg-transparent px-3 py-1 shadow-xs transition-[color,box-shadow] outline-none file:inline-flex file:h-7 file:border-0 file:bg-transparent file:text-sm file:font-medium disabled:pointer-events-none disabled:cursor-not-allowed disabled:opacity-50 aria-invalid:ring-destructive/40 aria-invalid:border-destructive hover:outline-none hover:ring-0 focus:ring-offset-0 text-center text-base font-medium text-brand !h-auto !border-none !bg-transparent !p-0 focus:ring-0 focus:outline-none"
+      class="flex h-9 w-full min-w-0 rounded-md border border-input bg-transparent px-3 py-1 shadow-xs transition-[color,box-shadow] outline-none selection:bg-primary selection:text-primary-foreground file:inline-flex file:h-7 file:border-0 file:bg-transparent file:text-sm file:font-medium file:text-foreground placeholder:text-muted-foreground disabled:pointer-events-none disabled:cursor-not-allowed disabled:opacity-50 hover:ring-0 hover:outline-none focus:ring-offset-0 aria-invalid:border-destructive aria-invalid:ring-destructive/40 text-center text-base font-medium text-brand !h-auto !border-none !bg-transparent !p-0 focus:ring-0 focus:outline-none"
       data-testid="human-phone-code-input-4-input"
       id="human-phone-code-input-4-input"
       inputmode="numeric"
@@ -80,7 +80,7 @@ exports[`HumanPhoneCodeInput > matches snapshot 1`] = `
     data-testid="human-phone-code-input-5"
   >
     <input
-      class="file:text-foreground placeholder:text-muted-foreground selection:bg-primary selection:text-primary-foreground border-input flex h-9 w-full min-w-0 rounded-md border bg-transparent px-3 py-1 shadow-xs transition-[color,box-shadow] outline-none file:inline-flex file:h-7 file:border-0 file:bg-transparent file:text-sm file:font-medium disabled:pointer-events-none disabled:cursor-not-allowed disabled:opacity-50 aria-invalid:ring-destructive/40 aria-invalid:border-destructive hover:outline-none hover:ring-0 focus:ring-offset-0 text-center text-base font-medium text-brand !h-auto !border-none !bg-transparent !p-0 focus:ring-0 focus:outline-none"
+      class="flex h-9 w-full min-w-0 rounded-md border border-input bg-transparent px-3 py-1 shadow-xs transition-[color,box-shadow] outline-none selection:bg-primary selection:text-primary-foreground file:inline-flex file:h-7 file:border-0 file:bg-transparent file:text-sm file:font-medium file:text-foreground placeholder:text-muted-foreground disabled:pointer-events-none disabled:cursor-not-allowed disabled:opacity-50 hover:ring-0 hover:outline-none focus:ring-offset-0 aria-invalid:border-destructive aria-invalid:ring-destructive/40 text-center text-base font-medium text-brand !h-auto !border-none !bg-transparent !p-0 focus:ring-0 focus:outline-none"
       data-testid="human-phone-code-input-5-input"
       id="human-phone-code-input-5-input"
       inputmode="numeric"

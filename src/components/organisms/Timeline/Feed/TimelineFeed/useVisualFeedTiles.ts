@@ -3,7 +3,6 @@
 import * as React from 'react';
 import { useLiveQuery } from 'dexie-react-hooks';
 import * as Core from '@/core';
-import * as Libs from '@/libs';
 import type { AttachmentConstructed } from '@/organisms/PostAttachments/PostAttachments.types';
 import {
   composeVisualRows,
@@ -21,6 +20,8 @@ import {
   setVisualTilePreferredSizeFallback,
 } from './TimelineFeedVisualMedia.utils';
 import type { VisualTile } from './TimelineFeedVisual.types';
+import { Logger } from '@/libs/logger/logger';
+import { isPostDeleted } from '@/libs/utils/utils';
 
 type VisualFeedSnapshot = {
   tiles: VisualTile[];
@@ -180,7 +181,7 @@ export function useVisualFeedTiles({ postIds, hasMore }: { postIds: string[]; ha
         try {
           await Core.PostController.getOrFetch({ compositeId: postId });
         } catch (error) {
-          Libs.Logger.error('[VisualFeed] Failed to ensure post details', {
+          Logger.error('[VisualFeed] Failed to ensure post details', {
             postId,
             error,
           });
@@ -223,7 +224,7 @@ export function useVisualFeedTiles({ postIds, hasMore }: { postIds: string[]; ha
 
       const tiles = postIds.flatMap((postId) => {
         const post = enrichedPostsById.get(postId);
-        if (!post || Libs.isPostDeleted(post.content)) {
+        if (!post || isPostDeleted(post.content)) {
           return [];
         }
 
@@ -271,7 +272,7 @@ export function useVisualFeedTiles({ postIds, hasMore }: { postIds: string[]; ha
     if (!missingFileUris.length) return;
 
     void Core.FileController.fetchFiles({ fileUris: missingFileUris }).catch((error) => {
-      Libs.Logger.error('[VisualFeed] Failed to fetch missing file metadata', {
+      Logger.error('[VisualFeed] Failed to fetch missing file metadata', {
         fileUris: missingFileUris,
         error,
       });

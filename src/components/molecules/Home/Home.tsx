@@ -6,9 +6,9 @@ import { useTranslations } from 'next-intl';
 import * as Molecules from '@/molecules';
 import * as Atoms from '@/atoms';
 import * as Organisms from '@/organisms';
-import * as Libs from '@/libs';
 import * as Config from '@/config';
 import * as App from '@/app';
+import { cn } from '@/libs/utils/utils';
 
 export const HomeActions = () => {
   const t = useTranslations('landing');
@@ -36,10 +36,7 @@ export const HomeFooter = ({ ...props }: React.HTMLAttributes<HTMLDivElement>) =
   const t = useTranslations('landing');
   const tFooter = useTranslations('onboarding.footer');
   return (
-    <Atoms.Container
-      className={Libs.cn('flex-1 flex-col items-start justify-end gap-1 pt-3', props.className)}
-      {...props}
-    >
+    <Atoms.Container className={cn('flex-1 flex-col items-start justify-end gap-1 pt-3', props.className)} {...props}>
       <Atoms.FooterLinks>
         {tFooter.rich('agreement', {
           pubky: () => <span className="text-brand">Pubky</span>,

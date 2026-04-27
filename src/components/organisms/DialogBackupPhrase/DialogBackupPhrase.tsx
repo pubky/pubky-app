@@ -4,11 +4,11 @@ import { useState, useEffect, ReactNode } from 'react';
 import Image from 'next/image';
 import { useTranslations } from 'next-intl';
 import * as Atoms from '@/components/atoms';
-import * as Libs from '@/libs';
 import * as Stores from '@/core';
 import * as Molecules from '@/molecules';
 import * as Hooks from '@/hooks';
 import { Eye, ArrowRight, EyeOff, ArrowLeft, Check } from 'lucide-react';
+import { cn } from '@/libs/utils/utils';
 interface DialogBackupPhraseProps {
   children?: ReactNode;
 }
@@ -83,7 +83,7 @@ function RecoveryStep1({
         </Atoms.DialogDescription>
       </Atoms.DialogHeader>
 
-      <Atoms.Container className={Libs.cn(isHidden && 'blur-md')}>
+      <Atoms.Container className={cn(isHidden && 'blur-md')}>
         <Atoms.Container display="grid" className="grid-cols-2 gap-1.5 md:grid-cols-3 md:gap-3">
           {recoveryWords.map((word, index) => (
             <Atoms.Container

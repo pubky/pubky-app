@@ -6,11 +6,11 @@ import { useTranslations } from 'next-intl';
 import * as Atoms from '@/atoms';
 import * as Molecules from '@/molecules';
 import * as Organisms from '@/organisms';
-import * as Libs from '@/libs';
 import * as Config from '@/config';
 import * as App from '@/app';
 import { Home, Flame, Bookmark, Settings } from 'lucide-react';
 import { Github2, XTwitter, Telegram } from '@/icons';
+import { cn } from '@/libs/utils/utils';
 export interface HeaderContainerProps {
   children: React.ReactNode;
   className?: string;
@@ -21,7 +21,7 @@ export const HeaderContainer = ({ children, className, classNameNav }: HeaderCon
     <Atoms.Container
       overrideDefaults
       as="header"
-      className={Libs.cn(
+      className={cn(
         'pointer-events-none sticky top-0 z-(--z-sticky-header) w-full bg-linear-to-b from-(--background) from-50% to-transparent p-6',
         className,
       )}
@@ -29,7 +29,7 @@ export const HeaderContainer = ({ children, className, classNameNav }: HeaderCon
       <Atoms.Container
         as="nav"
         size="container"
-        className={Libs.cn(
+        className={cn(
           'pointer-events-auto mx-auto flex h-24 w-full flex-row flex-wrap items-center justify-between gap-4 sm:flex-nowrap sm:gap-6',
           'p-6',
           classNameNav,
@@ -56,7 +56,7 @@ export function HeaderSocialLinks({ ...props }: React.HTMLAttributes<HTMLDivElem
   return (
     <Atoms.Container
       data-testid="header-social-links"
-      className={Libs.cn('mr-6 hidden flex-row justify-end gap-6 md:flex', props.className)}
+      className={cn('mr-6 hidden flex-row justify-end gap-6 md:flex', props.className)}
     >
       <Atoms.Link href={Config.GITHUB_URL} target="_blank" variant="muted" size="default">
         <Github2 className="h-6 w-6" />
@@ -122,7 +122,7 @@ type NavigationButtonProps = {
 const NavigationButton = ({ href, icon: Icon, label, isActive, dataCy }: NavigationButtonProps) => (
   <Atoms.Link href={href} data-cy={dataCy}>
     <Atoms.Button
-      className={Libs.cn('h-12 w-12 backdrop-blur-md', isActive ? '' : 'border bg-white/5')}
+      className={cn('h-12 w-12 backdrop-blur-md', isActive ? '' : 'border bg-white/5')}
       variant="secondary"
       size="icon"
       aria-label={label}
@@ -170,7 +170,7 @@ export function HeaderNavigationButtons({
             variant="secondary"
           >
             <Atoms.Typography
-              className={Libs.cn('font-semibold text-primary-foreground', counter > 21 && 'text-xs')}
+              className={cn('font-semibold text-primary-foreground', counter > 21 && 'text-xs')}
               size="xs"
             >
               {counterString}

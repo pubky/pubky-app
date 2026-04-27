@@ -7,10 +7,10 @@ import { useTranslations } from 'next-intl';
 import * as Atoms from '@/atoms';
 import * as Molecules from '@/molecules';
 import * as Organisms from '@/organisms';
-import * as Libs from '@/libs';
 import * as Config from '@/config';
 import * as App from '@/app';
 import { Loader2, AppWindow, ArrowRight } from 'lucide-react';
+import { cn } from '@/libs/utils/utils';
 export const InstallCard = () => {
   const t = useTranslations('onboarding.install');
   return (
@@ -91,7 +91,7 @@ export const InstallNavigation = ({ ...props }: React.HTMLAttributes<HTMLDivElem
     router.push(App.ONBOARDING_ROUTES.SCAN);
   };
   return (
-    <Atoms.Container className={Libs.cn('flex-col-reverse gap-3 md:flex-row lg:gap-6', props.className)}>
+    <Atoms.Container className={cn('flex-col-reverse gap-3 md:flex-row lg:gap-6', props.className)}>
       <Atoms.Container className="flex-row items-center gap-1">
         <Atoms.Button
           id="create-keys-in-browser-btn"
@@ -120,7 +120,7 @@ export const InstallNavigation = ({ ...props }: React.HTMLAttributes<HTMLDivElem
 };
 export function StoreButtons({ className }: React.HTMLAttributes<HTMLDivElement>) {
   return (
-    <Atoms.Container className={Libs.cn('flex-row justify-around gap-4 sm:justify-start', className)}>
+    <Atoms.Container className={cn('flex-row justify-around gap-4 sm:justify-start', className)}>
       <Organisms.DialogDownloadPubkyRing store="apple" />
       <Organisms.DialogDownloadPubkyRing store="android" />
     </Atoms.Container>

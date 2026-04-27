@@ -86,12 +86,6 @@ vi.mock('@/atoms', () => ({
   Skeleton: ({ className }: { className?: string }) => <div data-testid="skeleton" className={className} />,
 }));
 
-// Mock libs - use actual implementations
-vi.mock('@/libs', async () => {
-  const actual = await vi.importActual('@/libs');
-  return { ...actual };
-});
-
 // Mock core
 vi.mock('@/core', () => ({
   useAuthStore: vi.fn((selector) => {

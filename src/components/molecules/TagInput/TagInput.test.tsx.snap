@@ -7,7 +7,7 @@ exports[`TagInput - Snapshots > matches snapshot 1`] = `
   data-testid="container"
 >
   <input
-    class="file:text-foreground selection:bg-primary selection:text-primary-foreground border-input flex h-9 w-full min-w-0 rounded-md border transition-[color,box-shadow] file:inline-flex file:h-7 file:border-0 file:bg-transparent file:text-sm file:font-medium disabled:pointer-events-none disabled:cursor-not-allowed disabled:opacity-50 aria-invalid:ring-destructive/40 aria-invalid:border-destructive hover:ring-0 flex-1 bg-transparent p-0 text-sm leading-5 font-bold caret-white border-none shadow-none ring-0 outline-none hover:outline-none focus:ring-0 focus:ring-offset-0 focus:outline-none placeholder:font-bold placeholder:text-input text-input"
+    class="flex h-9 w-full min-w-0 rounded-md border border-input transition-[color,box-shadow] selection:bg-primary selection:text-primary-foreground file:inline-flex file:h-7 file:border-0 file:bg-transparent file:text-sm file:font-medium file:text-foreground disabled:pointer-events-none disabled:cursor-not-allowed disabled:opacity-50 hover:ring-0 aria-invalid:border-destructive aria-invalid:ring-destructive/40 flex-1 bg-transparent p-0 text-sm leading-5 font-bold caret-white border-none shadow-none ring-0 outline-none hover:outline-none focus:ring-0 focus:ring-offset-0 focus:outline-none placeholder:font-bold placeholder:text-input text-input"
     data-cy="add-tag-input"
     data-testid="input"
     maxlength="20"

@@ -1,18 +1,3 @@
-import {
-  HttpMethod,
-  HttpStatusCode,
-  AppError,
-  sleep,
-  httpResponseToError,
-  ErrorService,
-  Err,
-  AuthErrorCode,
-  TimeoutErrorCode,
-  ErrorCategory,
-  ServerErrorCode,
-  Logger,
-  parseResponseOrThrow,
-} from '@/libs';
 import { type AuthFlow } from '@synonymdev/pubky';
 import type {
   CancelableAuthApproval,
@@ -25,6 +10,15 @@ import type {
   TGetOwnedResponseParams,
 } from './homeserver.types';
 import { createCanceledError, handleError, isRetryableRelayPollError } from './error.utils';
+import { HttpMethod, HttpStatusCode } from '@/libs/http/http.types';
+import { parseResponseOrThrow } from '@/libs/http/response.utils';
+import { Logger } from '@/libs/logger/logger';
+import { sleep } from '@/libs/utils/utils';
+import { AppError } from '@/libs/error/error';
+import { AuthErrorCode, ServerErrorCode, TimeoutErrorCode } from '@/libs/error/error.codes';
+import { Err } from '@/libs/error/error.factories';
+import { httpResponseToError } from '@/libs/error/error.http';
+import { ErrorCategory, ErrorService } from '@/libs/error/error.types';
 
 // URL protocol constants
 const PUBKY_PROTOCOL = 'pubky://';

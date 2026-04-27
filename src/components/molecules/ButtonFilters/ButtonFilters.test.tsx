@@ -25,12 +25,6 @@ vi.mock('@/atoms', () => ({
   ),
 }));
 
-// Mock libs - use actual utility functions and icons from lucide-react
-vi.mock('@/libs', async () => {
-  const actual = await vi.importActual('@/libs');
-  return { ...actual };
-});
-
 describe('ButtonFilters', () => {
   it('renders with default props', () => {
     render(<ButtonFilters />);

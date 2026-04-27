@@ -3,9 +3,8 @@
 import * as React from 'react';
 import { Avatar as AvatarPrimitive } from 'radix-ui';
 import { type VariantProps } from 'class-variance-authority';
-
-import { cn } from '@/libs';
 import { avatarVariants } from './Avatar.variants';
+import { cn } from '@/libs/utils/utils';
 
 const Avatar = React.forwardRef<
   React.ComponentRef<typeof AvatarPrimitive.Root>,

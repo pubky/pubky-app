@@ -4,9 +4,9 @@ import { useForm, type FieldErrors } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useTranslations } from 'next-intl';
 import * as Molecules from '@/molecules';
-import { postJson } from '@/libs';
 import { copyrightFormSchema, type CopyrightFormData } from './useCopyrightForm.types';
 import { copyrightFormDefaultValues, COPYRIGHT_ROLES } from './useCopyrightForm.constants';
+import { postJson } from '@/libs/api/client-request';
 
 export function useCopyrightForm() {
   const tToast = useTranslations('toast');

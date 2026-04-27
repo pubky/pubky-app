@@ -7,8 +7,6 @@ import * as Atoms from '@/atoms';
 import * as Hooks from '@/hooks';
 import * as Molecules from '@/molecules';
 import * as Organisms from '@/organisms';
-import * as Utils from '@/libs/utils';
-import * as Libs from '@/libs';
 import { POST_MAX_CHARACTER_LENGTH } from '@/config';
 import { POST_INPUT_VARIANT } from '@/organisms/PostInput/PostInput.constants';
 import { POST_THREAD_CONNECTOR_VARIANTS } from '@/atoms';
@@ -18,6 +16,7 @@ import { usePostMainLayout, WIDE_POST_LAYOUT_CLASSES } from '@/organisms/PostMai
 
 import { QUICK_REPLY_CONNECTOR_SPACER_HEIGHT } from './QuickReply.constants';
 import type { QuickReplyProps } from './QuickReply.types';
+import { canSubmitPost, cn, getCharacterCount } from '@/libs/utils/utils';
 
 export function QuickReply({
   parentPostId,
@@ -76,10 +75,10 @@ export function QuickReply({
   const { ref: cardRef, height: cardHeight } = Hooks.useElementHeight();
 
   const isValid = React.useCallback(() => {
-    return Libs.canSubmitPost(POST_INPUT_VARIANT.REPLY, content, attachments, isSubmitting);
+    return canSubmitPost(POST_INPUT_VARIANT.REPLY, content, attachments, isSubmitting);
   }, [content, attachments, isSubmitting]);
 
-  const characterLimit = { count: Libs.getCharacterCount(content), max: POST_MAX_CHARACTER_LENGTH };
+  const characterLimit = { count: getCharacterCount(content), max: POST_MAX_CHARACTER_LENGTH };
 
   const enterSubmitHandler = Hooks.useEnterSubmit(isValid, handleSubmit, {
     requireModifier: true,
@@ -110,7 +109,7 @@ export function QuickReply({
 
       <Atoms.Container
         ref={containerRef}
-        className={Utils.cn(
+        className={cn(
           'relative w-full cursor-pointer rounded-md border border-dashed transition-colors duration-200',
           isWideLayout ? 'p-12' : 'p-4',
           isDragging ? 'border-brand' : 'border-input',

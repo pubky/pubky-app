@@ -4,9 +4,9 @@ import { ClassAttributes, HTMLAttributes, useEffect, useState } from 'react';
 import type { ExtraProps } from 'react-markdown';
 import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter';
 import { oneDark } from 'react-syntax-highlighter/dist/esm/styles/prism';
-import * as Libs from '@/libs';
 import * as Atoms from '@/atoms';
 import { Check, Clipboard } from 'lucide-react';
+import { cn, copyToClipboard } from '@/libs/utils/utils';
 type PostCodeBlockProps = ClassAttributes<HTMLElement> & HTMLAttributes<HTMLElement> & ExtraProps;
 export const PostCodeBlock = (props: PostCodeBlockProps) => {
   const [copied, setCopied] = useState(false);
@@ -16,7 +16,7 @@ export const PostCodeBlock = (props: PostCodeBlockProps) => {
   const copyCodeBlock = async () => {
     if (copied) return;
     try {
-      await Libs.copyToClipboard({
+      await copyToClipboard({
         text: codeSyntaxHighlight,
       });
       setCopied(true);
@@ -71,7 +71,7 @@ export const PostCodeBlock = (props: PostCodeBlockProps) => {
     // Inline code block (ex. ``)
     <code
       {...rest}
-      className={Libs.cn(className, 'rounded border border-white/10 bg-neutral-800 px-1 font-mono text-orange-500')}
+      className={cn(className, 'rounded border border-white/10 bg-neutral-800 px-1 font-mono text-orange-500')}
     >
       {children}
     </code>

@@ -81,10 +81,10 @@ it('matches snapshot for small size', () => {
 
 ### Default: Use Real Implementations
 
-Always prefer real implementations from `@/libs` for pure functions and business logic:
+Always prefer real implementations from concrete `@/libs/*` files for pure functions and business logic:
 
 ```typescript
-import { formatDate, validateEmail } from '@/libs/utils';
+import { formatPublicKey, truncateString } from '@/libs/utils/utils';
 // No mocking needed for pure functions
 ```
 
@@ -101,8 +101,8 @@ Mock only for:
 ### Selective Mocking
 
 ```typescript
-vi.mock('@/libs', async () => {
-  const actual = await vi.importActual('@/libs');
+vi.mock('@/libs/logger/logger', async () => {
+  const actual = await vi.importActual<typeof import('@/libs/logger/logger')>('@/libs/logger/logger');
   return {
     ...actual,
     Logger: { ...actual.Logger, error: vi.fn() },

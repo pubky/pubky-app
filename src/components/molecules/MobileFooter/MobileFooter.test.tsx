@@ -54,10 +54,6 @@ vi.mock('@/organisms', () => ({
 }));
 
 // Mock the libs - use actual implementations
-vi.mock('@/libs', async () => {
-  const actual = await vi.importActual('@/libs');
-  return { ...actual };
-});
 
 // Mock the app routes
 vi.mock('@/app', async () => {

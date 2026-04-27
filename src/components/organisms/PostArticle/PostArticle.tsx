@@ -6,8 +6,8 @@ import * as Atoms from '@/atoms';
 import * as Molecules from '@/molecules';
 import * as Organisms from '@/organisms';
 import * as Core from '@/core';
-import * as Libs from '@/libs';
 import * as Hooks from '@/hooks';
+import { cn } from '@/libs/utils/utils';
 
 interface PostArticleProps {
   content: string;
@@ -33,7 +33,7 @@ export const PostArticle = ({ content, attachments, localAttachments, className 
 
   return (
     <>
-      <Atoms.Container className={Libs.cn('justify-between gap-6 lg:flex-row', className)}>
+      <Atoms.Container className={cn('justify-between gap-6 lg:flex-row', className)}>
         <Atoms.Container className="gap-y-1">
           <Atoms.Typography size="lg" className="wrap-anywhere hyphens-auto">
             {title}

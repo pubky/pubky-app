@@ -1,4 +1,4 @@
-import { isPubkyIdentifier } from '@/libs';
+import { isPubkyIdentifier } from '@/libs/utils/utils';
 
 export const ROOT_ROUTES = '/';
 

@@ -2,8 +2,8 @@
 
 import * as React from 'react';
 import * as Atoms from '@/atoms';
-import * as Libs from '@/libs';
 import type { SettingsSectionCardProps } from './SettingsSectionCard.types';
+import { cn } from '@/libs/utils/utils';
 
 export function SettingsSectionCard({
   icon: Icon,
@@ -18,10 +18,7 @@ export function SettingsSectionCard({
   return (
     <Atoms.Container
       overrideDefaults
-      className={Libs.cn(
-        'flex w-full flex-col items-start gap-8 rounded-md bg-card px-6 py-8 shadow-lg md:p-12',
-        className,
-      )}
+      className={cn('flex w-full flex-col items-start gap-8 rounded-md bg-card px-6 py-8 shadow-lg md:p-12', className)}
     >
       {(hasHeader || description) && (
         <Atoms.Container overrideDefaults className="flex w-full flex-col items-start gap-6">

@@ -4,8 +4,8 @@
  */
 import { vi } from 'vitest';
 import * as Core from '@/core';
-import * as Libs from '@/libs';
 import { PubkySpecsBuilder } from 'pubky-app-specs';
+import { Logger } from '@/libs/logger/logger';
 
 /**
  * Valid z-base32 encoded public keys for testing.
@@ -32,7 +32,7 @@ export const TEST_POST_IDS = {
 export const setupUnitTestMocks = <T extends Record<string, ReturnType<typeof vi.fn>>>(mockBuilder: T) => {
   vi.clearAllMocks();
   vi.spyOn(Core.PubkySpecsSingleton, 'get').mockReturnValue(mockBuilder as unknown as PubkySpecsBuilder);
-  vi.spyOn(Libs.Logger, 'debug').mockImplementation(() => {});
+  vi.spyOn(Logger, 'debug').mockImplementation(() => {});
 };
 
 /**
@@ -40,7 +40,7 @@ export const setupUnitTestMocks = <T extends Record<string, ReturnType<typeof vi
  * Only mocks Logger.debug to allow real library behavior.
  */
 export const setupIntegrationTestMocks = () => {
-  vi.spyOn(Libs.Logger, 'debug').mockImplementation(() => {});
+  vi.spyOn(Logger, 'debug').mockImplementation(() => {});
 };
 
 /**

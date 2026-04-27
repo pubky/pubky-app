@@ -3,15 +3,15 @@
 import { useTranslations } from 'next-intl';
 import * as Atoms from '@/atoms';
 import * as Organisms from '@/organisms';
-import * as Libs from '@/libs';
 import { Check, UserMinus, UserRoundPlus } from 'lucide-react';
 import type { FollowerItemProps } from './FollowerItem.types';
+import { formatPublicKey } from '@/libs/utils/utils';
 
 export function FollowerItem({ follower, isFollowing = false, onFollow, isCurrentUser = false }: FollowerItemProps) {
   const t = useTranslations('userList');
   const tProfile = useTranslations('profile.actions');
   const avatarUrl = follower.avatarUrl || follower.image || undefined;
-  const formattedPublicKey = Libs.formatPublicKey({ key: follower.id });
+  const formattedPublicKey = formatPublicKey({ key: follower.id });
   const tags = follower.tags || [];
   const stats = follower.stats || { tags: 0, posts: 0 };
   // Use formatted public key as fallback when name is loading

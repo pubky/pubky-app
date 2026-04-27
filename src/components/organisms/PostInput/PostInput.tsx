@@ -7,7 +7,6 @@ import * as Atoms from '@/atoms';
 import * as Hooks from '@/hooks';
 import * as Molecules from '@/molecules';
 import * as Organisms from '@/organisms';
-import * as Libs from '@/libs';
 import { ARTICLE_TITLE_MAX_CHARACTER_LENGTH, POST_MAX_CHARACTER_LENGTH } from '@/config';
 import { POST_THREAD_CONNECTOR_VARIANTS } from '@/atoms';
 import { usePostMainLayout, WIDE_POST_LAYOUT_CLASSES } from '@/organisms/PostMain/PostMainLayout';
@@ -17,6 +16,7 @@ import { PostInputExpandableSection } from '../PostInputExpandableSection';
 import { PostInputAttachments } from '@/molecules/PostInputAttachments/PostInputAttachments';
 import type { ArticleJSON } from '@/hooks';
 import { sanitizeCodeBlockLanguages } from '@/molecules/MarkdownEditor/InitializedMDXEditor.utils';
+import { canSubmitPost, cn, getCharacterCount } from '@/libs/utils/utils';
 
 const EXPANDABLE_SECTION_PARENT_GAP_PX = 16;
 
@@ -98,7 +98,7 @@ export function PostInput({
   });
 
   const isValid = React.useCallback(() => {
-    return Libs.canSubmitPost(variant, content, attachments, isSubmitting, isArticle, articleTitle);
+    return canSubmitPost(variant, content, attachments, isSubmitting, isArticle, articleTitle);
   }, [variant, content, attachments, isSubmitting, isArticle, articleTitle]);
 
   const enterSubmitHandler = Hooks.useEnterSubmit(isValid, handleSubmit, {
@@ -153,9 +153,7 @@ export function PostInput({
     // eslint-disable-next-line react-hooks/exhaustive-deps -- only run on mount
   }, []);
 
-  const characterLimit = isArticle
-    ? undefined
-    : { count: Libs.getCharacterCount(content), max: POST_MAX_CHARACTER_LENGTH };
+  const characterLimit = isArticle ? undefined : { count: getCharacterCount(content), max: POST_MAX_CHARACTER_LENGTH };
 
   const isMobile = Hooks.useIsMobile();
   const inheritedTagsLayout = usePostMainLayout() ?? 'inline';
@@ -166,7 +164,7 @@ export function PostInput({
       data-cy={dataCy}
       id={id}
       ref={containerRef}
-      className={Libs.cn(
+      className={cn(
         'relative cursor-pointer rounded-md border border-dashed transition-colors duration-200',
         isWideLayout ? 'p-12' : 'p-4',
         isDragging ? 'border-brand' : 'border-input',

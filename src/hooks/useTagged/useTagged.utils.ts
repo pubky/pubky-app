@@ -1,5 +1,5 @@
 import * as Core from '@/core';
-import * as Libs from '@/libs';
+import { Logger } from '@/libs/logger/logger';
 
 /**
  * Adds a user as tagger to a tag (optimistically)
@@ -80,7 +80,7 @@ export async function createTagInBackend(taggedId: string, label: string, tagger
       taggedKind: Core.TagKind.USER,
     });
   } catch (error) {
-    Libs.Logger.error('[useTagged.utils] Failed to create tag in backend', { taggedId, label, taggerId, error });
+    Logger.error('[useTagged.utils] Failed to create tag in backend', { taggedId, label, taggerId, error });
     throw error;
   }
 }
@@ -97,7 +97,7 @@ export async function deleteTagFromBackend(taggedId: string, label: string, tagg
       taggedKind: Core.TagKind.USER,
     });
   } catch (error) {
-    Libs.Logger.error('[useTagged.utils] Failed to delete tag from backend', { taggedId, label, taggerId, error });
+    Logger.error('[useTagged.utils] Failed to delete tag from backend', { taggedId, label, taggerId, error });
     throw error;
   }
 }

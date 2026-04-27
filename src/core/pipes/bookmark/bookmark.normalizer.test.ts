@@ -1,7 +1,5 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import * as Core from '@/core';
-import * as Libs from '@/libs';
-import { AppError, ErrorCategory, ValidationErrorCode, ErrorService } from '@/libs';
 import { BookmarkResult, postUriBuilder } from 'pubky-app-specs';
 import { asOpaque } from '@/test-utils';
 import {
@@ -14,6 +12,10 @@ import {
   buildPubkyUri,
   createPostUri,
 } from '../pipes.test-utils';
+import { AppError } from '@/libs/error/error';
+import { ValidationErrorCode } from '@/libs/error/error.codes';
+import { ErrorCategory, ErrorService } from '@/libs/error/error.types';
+import { Logger } from '@/libs/logger/logger';
 
 describe('BookmarkNormalizer', () => {
   const createMockBuilder = (overrides?: Partial<{ createBookmark: ReturnType<typeof vi.fn> }>) => ({
@@ -46,7 +48,7 @@ describe('BookmarkNormalizer', () => {
 
         expect(result).toHaveProperty('bookmark');
         expect(result).toHaveProperty('meta');
-        expect(Libs.Logger.debug).toHaveBeenCalledWith('Bookmark validated', { result });
+        expect(Logger.debug).toHaveBeenCalledWith('Bookmark validated', { result });
       });
 
       it('should call PubkySpecsSingleton.get with userId and createBookmark with postUri', () => {
@@ -137,7 +139,7 @@ describe('BookmarkNormalizer', () => {
         });
 
         expect(() => Core.BookmarkNormalizer.to(createPostUri(), TEST_PUBKY.USER_1)).toThrow(AppError);
-        expect(Libs.Logger.debug).not.toHaveBeenCalled();
+        expect(Logger.debug).not.toHaveBeenCalled();
       });
     });
 

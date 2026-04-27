@@ -2,7 +2,7 @@ import { ReactNode } from 'react';
 import Image, { ImageProps } from 'next/image';
 
 import * as Atoms from '@/atoms';
-import * as Libs from '@/libs';
+import { cn } from '@/libs/utils/utils';
 
 interface ContentCardProps {
   children?: ReactNode;
@@ -25,8 +25,8 @@ export function ContentCard({ children, className, classNameImage, image, layout
   };
 
   return (
-    <Atoms.Card className={Libs.cn('p-6 md:p-12', className)}>
-      <Atoms.Container className={Libs.cn('gap-12', layoutClasses[layout])}>
+    <Atoms.Card className={cn('p-6 md:p-12', className)}>
+      <Atoms.Container className={cn('gap-12', layoutClasses[layout])}>
         {image && (
           <ContentImage
             src={image.src}
@@ -64,9 +64,7 @@ export function ContentContainer({ children, className, maxWidth = 'lg', gap = '
   };
 
   return (
-    <Atoms.Container className={Libs.cn(maxWidthClasses[maxWidth], gapClasses[gap], className)}>
-      {children}
-    </Atoms.Container>
+    <Atoms.Container className={cn(maxWidthClasses[maxWidth], gapClasses[gap], className)}>{children}</Atoms.Container>
   );
 }
 
@@ -84,14 +82,14 @@ export function ContentImage({
 }: ContentImageProps) {
   return (
     <div
-      className={Libs.cn(hiddenOnMobile ? 'hidden lg:flex' : 'flex', containerClassName)}
+      className={cn(hiddenOnMobile ? 'hidden lg:flex' : 'flex', containerClassName)}
       style={{ width: imageProps.width, height: imageProps.height }}
     >
       <Image
         data-testid="content-image"
         height={imageProps.height}
         width={imageProps.width}
-        className={Libs.cn(className)}
+        className={cn(className)}
         style={{ objectFit: 'contain' }}
         src={imageProps.src}
         alt={imageProps.alt || 'Image'}

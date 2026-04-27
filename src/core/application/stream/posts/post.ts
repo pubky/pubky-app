@@ -1,8 +1,8 @@
 import * as Core from '@/core';
 import * as Config from '@/config';
-import * as Libs from '@/libs';
 import { postStreamQueue } from './muting/post-stream-queue';
 import { MuteFilter } from './muting/mute-filter';
+import { Logger } from '@/libs/logger/logger';
 
 export class PostStreamApplication {
   private constructor() {}
@@ -19,7 +19,7 @@ export class PostStreamApplication {
     try {
       const postStream = await Core.LocalStreamPostsService.read({ streamId });
       if (!postStream || postStream.stream.length === 0) {
-        Libs.Logger.warn('StreamId not found in cache', { streamId });
+        Logger.warn('StreamId not found in cache', { streamId });
         return Core.NOT_FOUND_CACHED_STREAM;
       }
 
@@ -35,10 +35,10 @@ export class PostStreamApplication {
       }
 
       // No posts in the stream have details, cache is not useful
-      Libs.Logger.warn('No post details found in cached stream', { streamId, streamLength: postStream.stream.length });
+      Logger.warn('No post details found in cached stream', { streamId, streamLength: postStream.stream.length });
       return Core.NOT_FOUND_CACHED_STREAM;
     } catch (error) {
-      Libs.Logger.warn('Failed to get timeline initial cursor', { streamId, error });
+      Logger.warn('Failed to get timeline initial cursor', { streamId, error });
       return Core.NOT_FOUND_CACHED_STREAM;
     }
   }
@@ -104,7 +104,7 @@ export class PostStreamApplication {
     const mainStreamHead = await this.getMainStreamHeadTimestamp({ streamId });
     if (this.isTimestampStale(mainStreamHead, now)) {
       // Main cache is stale - clear both main stream and unread stream (both are outdated)
-      Libs.Logger.debug('[PostStreamApplication] Main stream cache is stale, clearing both streams', {
+      Logger.debug('[PostStreamApplication] Main stream cache is stale, clearing both streams', {
         streamId,
         headTimestamp: mainStreamHead,
         ageMs: now - mainStreamHead,
@@ -121,7 +121,7 @@ export class PostStreamApplication {
     const unreadStreamHead = await this.getUnreadStreamHeadTimestamp({ streamId });
     if (this.isTimestampStale(unreadStreamHead, now)) {
       // Unread stream is stale - just clear it without merging
-      Libs.Logger.debug('[PostStreamApplication] Unread stream is stale, clearing without merge', {
+      Logger.debug('[PostStreamApplication] Unread stream is stale, clearing without merge', {
         streamId,
         headTimestamp: unreadStreamHead,
         ageMs: now - unreadStreamHead,
@@ -240,7 +240,7 @@ export class PostStreamApplication {
         .map((rel) => rel.reposted as string);
       await this.fetchOriginalPostsByUris({ repostedUris, viewerId });
     } catch (error) {
-      Libs.Logger.warn('Failed to fetch missing repost content', { postIds: posts, error });
+      Logger.warn('Failed to fetch missing repost content', { postIds: posts, error });
     }
 
     return {
@@ -264,7 +264,7 @@ export class PostStreamApplication {
       const postDetails = await Core.LocalPostService.readDetails({ postId });
       return postDetails?.indexed_at;
     } catch (error) {
-      Libs.Logger.warn('Failed to get post timestamp', { postId, error });
+      Logger.warn('Failed to get post timestamp', { postId, error });
       return undefined;
     }
   }
@@ -336,7 +336,7 @@ export class PostStreamApplication {
         .filter((uri): uri is string => uri !== null);
       await this.fetchOriginalPostsByUris({ repostedUris, viewerId });
     } catch (error) {
-      Libs.Logger.warn('Failed to fetch missing posts from Nexus', { cacheMissPostIds, viewerId, error });
+      Logger.warn('Failed to fetch missing posts from Nexus', { cacheMissPostIds, viewerId, error });
     }
   }
 
@@ -378,7 +378,7 @@ export class PostStreamApplication {
 
     if (missingOriginalPostIds.length === 0) return;
 
-    Libs.Logger.debug('Fetching original posts for reposts', {
+    Logger.debug('Fetching original posts for reposts', {
       repostCount: repostedUris.length,
       originalCount: originalPostIds.length,
       missingOriginalCount: missingOriginalPostIds.length,
@@ -393,7 +393,7 @@ export class PostStreamApplication {
       await Core.FileApplication.persistFiles(attachmentMetadata);
       await this.fetchMissingUsersFromNexus({ posts: originalPosts, viewerId });
     } catch (error) {
-      Libs.Logger.warn('Failed to fetch original posts for reposts', { missingOriginalPostIds, error });
+      Logger.warn('Failed to fetch original posts for reposts', { missingOriginalPostIds, error });
     }
   }
 

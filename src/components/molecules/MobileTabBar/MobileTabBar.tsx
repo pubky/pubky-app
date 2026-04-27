@@ -1,8 +1,8 @@
 'use client';
 
 import * as Atoms from '@/atoms';
-import * as Libs from '@/libs';
 import type { MobileTabBarProps } from './MobileTabBar.types';
+import { cn } from '@/libs/utils/utils';
 
 /**
  * Shared mobile tab bar molecule used by Hot, Profile, and Settings pages.
@@ -26,7 +26,7 @@ export function MobileTabBar({
     <Atoms.Container
       overrideDefaults
       data-testid={dataTestId}
-      className={Libs.cn(
+      className={cn(
         'mobile-menu-gradient-fade z-(--z-mobile-menu) bg-background lg:hidden',
         position === 'sticky' && 'sticky top-(--header-height-mobile)',
         position === 'fixed' && 'fixed top-(--header-height-mobile) right-0 left-0',
@@ -42,7 +42,7 @@ export function MobileTabBar({
             <Atoms.Container
               key={item.key}
               overrideDefaults
-              className={Libs.cn(
+              className={cn(
                 'flex flex-1 justify-center border-b px-0 py-1.5',
                 isActive ? 'border-foreground' : 'border-border',
               )}
@@ -50,7 +50,7 @@ export function MobileTabBar({
               <Atoms.Button
                 overrideDefaults
                 onClick={item.onSelect}
-                className={Libs.cn('px-2.5 py-2', showLabels && 'flex items-center gap-2')}
+                className={cn('px-2.5 py-2', showLabels && 'flex items-center gap-2')}
                 aria-label={item.ariaLabel ?? item.label}
                 aria-current={isActive ? 'page' : undefined}
               >
@@ -58,7 +58,7 @@ export function MobileTabBar({
                 {showLabels && (
                   <Atoms.Typography
                     as="span"
-                    className={Libs.cn('text-sm font-medium', isActive ? 'text-foreground' : 'text-muted-foreground')}
+                    className={cn('text-sm font-medium', isActive ? 'text-foreground' : 'text-muted-foreground')}
                   >
                     {item.label}
                   </Atoms.Typography>

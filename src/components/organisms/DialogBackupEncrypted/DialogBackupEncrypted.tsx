@@ -4,10 +4,10 @@ import { useState } from 'react';
 import * as Atoms from '@/components/atoms';
 import * as Hooks from '@/hooks';
 import Image from 'next/image';
-import { calculatePasswordStrength, getStrengthColor } from '@/libs';
 import * as Core from '@/core';
 import { useTranslations } from 'next-intl';
 import { Download, ArrowRight } from 'lucide-react';
+import { calculatePasswordStrength, getStrengthColor } from '@/libs/password/password';
 interface DialogBackupEncryptedProps {
   children?: React.ReactNode;
 }

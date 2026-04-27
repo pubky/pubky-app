@@ -3,8 +3,8 @@
 import * as Atoms from '@/atoms';
 import * as Molecules from '@/molecules';
 import * as Core from '@/core';
-import * as Libs from '@/libs';
 import { SlidersHorizontal, UserRound, Activity } from 'lucide-react';
+import { cn } from '@/libs/utils/utils';
 export interface MobileHeaderProps {
   onLeftIconClick?: () => void;
   onRightIconClick?: () => void;
@@ -28,7 +28,7 @@ export function MobileHeader({
   return (
     <Atoms.Container
       overrideDefaults
-      className={Libs.cn(
+      className={cn(
         fixed ? 'fixed inset-x-0' : 'sticky',
         'top-0 z-(--z-mobile-menu) w-full lg:hidden',
         hasGradientBackground

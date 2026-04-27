@@ -94,7 +94,7 @@ exports[`DialogWelcome - Snapshots > matches snapshot for default DialogWelcome 
                   r="5.5"
                 />
               </svg>
-              test...test-pubky-123
+              test...-123
             </button>
           </div>
         </div>
@@ -225,7 +225,7 @@ exports[`DialogWelcome - Snapshots > matches snapshot when user has no image 1`]
                   r="5.5"
                 />
               </svg>
-              test...test-pubky-123
+              test...-123
             </button>
           </div>
         </div>

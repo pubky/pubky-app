@@ -4,7 +4,6 @@ import * as Core from '@/core';
 import * as Atoms from '@/atoms';
 import * as Molecules from '@/molecules';
 import * as Hooks from '@/hooks';
-import * as Libs from '@/libs';
 import { getTagsLayoutForSurfaceLayout, PostMainLayoutProvider } from '@/organisms/PostMain/PostMainLayout';
 import { SinglePostArticle } from '../SinglePostArticle';
 import { SinglePostCard } from '../SinglePostCard';
@@ -13,6 +12,7 @@ import { PostPageHeader } from '../PostPageHeader';
 import { SinglePostContentSkeleton } from './SinglePostContent.skeleton';
 import { ThreadTree } from '../ThreadTree/ThreadTree';
 import type { SinglePostContentProps } from './SinglePostContent.types';
+import { isPostDeleted } from '@/libs/utils/utils';
 
 /**
  * SinglePostContent Organism
@@ -37,7 +37,7 @@ export function SinglePostContent({ postId }: SinglePostContentProps) {
 
   // Check if parent post is deleted to determine replyability
   const { postDetails } = Hooks.usePostDetails(postId);
-  const isDeleted = Libs.isPostDeleted(postDetails?.content);
+  const isDeleted = isPostDeleted(postDetails?.content);
 
   if (!postDetails) {
     return <SinglePostContentSkeleton />;

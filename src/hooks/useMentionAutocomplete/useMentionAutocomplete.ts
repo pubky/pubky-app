@@ -3,12 +3,12 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { debounce, type DebouncedFunc } from 'lodash-es';
 import * as Core from '@/core';
-import * as Libs from '@/libs';
 import { useListboxNavigation } from '@/hooks/useListboxNavigation';
 import { useUserDetailsFromIds } from '@/hooks/useUserDetailsFromIds';
 import type { UseMentionAutocompleteParams, UseMentionAutocompleteResult } from './useMentionAutocomplete.types';
 import { MENTION_DEBOUNCE_MS, MENTION_USER_LIMIT } from './useMentionAutocomplete.constants';
 import { extractMentionQuery } from './useMentionAutocomplete.utils';
+import { Logger } from '@/libs/logger/logger';
 
 /**
  * Hook for mention autocomplete functionality in post input
@@ -81,7 +81,7 @@ export function useMentionAutocomplete({
               prefix: atQuery,
               limit: MENTION_USER_LIMIT,
             }).catch((error) => {
-              Libs.Logger.error('[useMentionAutocomplete] Failed to fetch users by name:', error);
+              Logger.error('[useMentionAutocomplete] Failed to fetch users by name:', error);
               return [] as string[];
             }),
           );
@@ -93,7 +93,7 @@ export function useMentionAutocomplete({
               prefix: pkQuery,
               limit: MENTION_USER_LIMIT,
             }).catch((error) => {
-              Libs.Logger.error('[useMentionAutocomplete] Failed to fetch users by ID:', error);
+              Logger.error('[useMentionAutocomplete] Failed to fetch users by ID:', error);
               return [] as string[];
             }),
           );
@@ -115,7 +115,7 @@ export function useMentionAutocomplete({
         setIsOpen(uniqueUserIds.length > 0);
         resetSelection();
       } catch (error) {
-        Libs.Logger.error('[useMentionAutocomplete] Search failed:', error);
+        Logger.error('[useMentionAutocomplete] Search failed:', error);
         if (requestId === requestIdRef.current) {
           setUserIds([]);
           setIsOpen(false);

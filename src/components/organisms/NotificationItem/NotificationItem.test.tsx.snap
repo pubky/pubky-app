@@ -61,7 +61,7 @@ exports[`NotificationItem - Snapshots > matches snapshot for Follow notification
       class="hidden text-xs font-medium tracking-[1.2px] text-muted-foreground uppercase xl:block"
       data-testid="typography"
     >
-      30m
+      30 MINUTES AGO
     </p>
     <div
       data-badge="false"
@@ -135,7 +135,7 @@ exports[`NotificationItem - Snapshots > matches snapshot for Mention notificatio
       class="hidden text-xs font-medium tracking-[1.2px] text-muted-foreground uppercase xl:block"
       data-testid="typography"
     >
-      30m
+      30 MINUTES AGO
     </p>
     <div
       data-badge="false"
@@ -214,7 +214,7 @@ exports[`NotificationItem - Snapshots > matches snapshot for TagPost notificatio
       class="hidden text-xs font-medium tracking-[1.2px] text-muted-foreground uppercase xl:block"
       data-testid="typography"
     >
-      30m
+      30 MINUTES AGO
     </p>
     <div
       data-badge="false"

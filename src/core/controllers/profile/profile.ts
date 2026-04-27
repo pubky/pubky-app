@@ -1,5 +1,5 @@
 import * as Core from '@/core';
-import * as Libs from '@/libs';
+import { Identity } from '@/libs/identity/identity';
 
 // Operations related with the profile.json file in the homeserver
 export class ProfileController {
@@ -57,9 +57,9 @@ export class ProfileController {
    * Generates a new pair of secret key and mnemonic and sets them in the onboarding and auth stores.
    */
   static generateSecrets() {
-    const secrets = Libs.Identity.generateSecrets();
+    const secrets = Identity.generateSecrets();
     Core.useOnboardingStore.getState().setSecrets(secrets);
-    Core.useAuthStore.getState().setCurrentUserPubky(Libs.Identity.z32FromSecret(secrets.secretKey));
+    Core.useAuthStore.getState().setCurrentUserPubky(Identity.z32FromSecret(secrets.secretKey));
   }
 
   /**
@@ -68,8 +68,8 @@ export class ProfileController {
    */
   static createRecoveryFile(passphrase: string) {
     const secretKey = Core.useOnboardingStore.getState().selectSecretKey();
-    const keypair = Libs.Identity.keypairFromSecretKey(secretKey);
-    Libs.Identity.createRecoveryFile({ keypair, passphrase });
+    const keypair = Identity.keypairFromSecretKey(secretKey);
+    Identity.createRecoveryFile({ keypair, passphrase });
   }
 
   /**

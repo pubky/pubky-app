@@ -1,5 +1,4 @@
 import * as Core from '@/core';
-import { DatabaseErrorCode, Err, ErrorService, Logger } from '@/libs';
 import { FOLLOWING_TIMELINE_STREAMS, FRIENDS_TIMELINE_STREAMS } from './follow.constants';
 import type {
   CreateFollowParams,
@@ -7,6 +6,10 @@ import type {
   InvalidateTimelineStreamsParams,
   UpdateUserStreamsParams,
 } from './follow.types';
+import { Logger } from '@/libs/logger/logger';
+import { DatabaseErrorCode } from '@/libs/error/error.codes';
+import { Err } from '@/libs/error/error.factories';
+import { ErrorService } from '@/libs/error/error.types';
 
 export class LocalFollowService {
   static async create({ follower, followee, activeStreamId }: CreateFollowParams) {

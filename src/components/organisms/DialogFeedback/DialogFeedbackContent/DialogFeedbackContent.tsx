@@ -3,10 +3,10 @@
 import { useTranslations } from 'next-intl';
 import * as Atoms from '@/atoms';
 import * as Organisms from '@/organisms';
-import * as Libs from '@/libs';
 import { FEEDBACK_MAX_CHARACTER_LENGTH } from '@/config';
 import type { DialogFeedbackContentProps } from './DialogFeedbackContent.types';
 import { Loader2, Send } from 'lucide-react';
+import { getCharacterCount } from '@/libs/utils/utils';
 export function DialogFeedbackContent({
   feedback,
   handleChange,
@@ -20,7 +20,7 @@ export function DialogFeedbackContent({
   const characterLimit =
     feedback.length > 0
       ? {
-          count: Libs.getCharacterCount(feedback),
+          count: getCharacterCount(feedback),
           max: FEEDBACK_MAX_CHARACTER_LENGTH,
         }
       : undefined;

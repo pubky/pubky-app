@@ -4,9 +4,9 @@ import * as React from 'react';
 import { useTranslations } from 'next-intl';
 import * as Atoms from '@/atoms';
 import * as Molecules from '@/molecules';
-import * as Libs from '@/libs';
 import { TIMEFRAME } from '@/core/stores/hot/hot.types';
 import type { HotTagCardProps } from './HotTagCard.types';
+import { cn, generateRandomColor } from '@/libs/utils/utils';
 
 const TIMEFRAME_TRANSLATION_KEY = {
   [TIMEFRAME.TODAY]: 'postsCountToday',
@@ -33,7 +33,7 @@ export function HotTagCard({
   'data-testid': dataTestId,
 }: HotTagCardProps) {
   const t = useTranslations('hot');
-  const tagColor = React.useMemo(() => Libs.generateRandomColor(tagName), [tagName]);
+  const tagColor = React.useMemo(() => generateRandomColor(tagName), [tagName]);
 
   const handleClick = () => {
     onClick?.(tagName);
@@ -49,7 +49,7 @@ export function HotTagCard({
   return (
     <Atoms.Container
       overrideDefaults
-      className={Libs.cn(
+      className={cn(
         'relative flex min-h-fit min-w-0 flex-1 cursor-pointer flex-col gap-4 overflow-hidden rounded-md px-0 py-6 shadow-sm transition-opacity hover:opacity-90',
         className,
       )}

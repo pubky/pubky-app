@@ -3,12 +3,12 @@
 import * as React from 'react';
 import { useTranslations } from 'next-intl';
 import * as Atoms from '@/components/atoms';
-import * as Libs from '@/libs';
 import * as Hooks from '@/hooks';
 import * as Types from '@/app/profile/types';
 import * as Config from '@/config';
 import { Bell, StickyNote, MessageCircle, UsersRound, HeartHandshake, Tag } from 'lucide-react';
 import { UsersRound2 } from '@/icons';
+import { cn } from '@/libs/utils/utils';
 export interface ProfilePageFilterBarItem {
   icon: React.ComponentType<{
     className?: string;
@@ -142,7 +142,7 @@ export function ProfilePageFilterBar({
     <Atoms.Container
       ref={ref}
       overrideDefaults={true}
-      className={Libs.cn(
+      className={cn(
         'hidden h-fit w-(--filter-bar-width) flex-col self-start lg:flex',
         // Use !== false to treat undefined (SSR) as sticky (optimistic assumption)
         shouldBeSticky !== false && 'sticky top-(--header-height)',

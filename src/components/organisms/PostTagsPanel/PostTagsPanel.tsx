@@ -5,12 +5,12 @@ import { useTranslations } from 'next-intl';
 import * as Atoms from '@/atoms';
 import * as Molecules from '@/molecules';
 import * as Hooks from '@/hooks';
-import * as Libs from '@/libs';
 import * as Core from '@/core';
 import type { TagInputHandle } from '@/molecules';
 import type { PostTagsPanelProps, PostTagsPanelHandle } from './PostTagsPanel.types';
 import { PostTagsPanelSkeleton } from './PostTagsPanel.skeleton';
 import { Tag } from 'lucide-react';
+import { cn } from '@/libs/utils/utils';
 const INITIAL_VISIBLE_TAGS = 3;
 
 /**
@@ -75,10 +75,10 @@ export const PostTagsPanel = forwardRef<PostTagsPanelHandle, PostTagsPanelProps>
     tags.length > 0 &&
     (tags.length > INITIAL_VISIBLE_TAGS || (hasMore && tags.length >= INITIAL_VISIBLE_TAGS));
   return (
-    <Atoms.Container data-cy="post-tags-panel" className={Libs.cn('gap-2', className)}>
+    <Atoms.Container data-cy="post-tags-panel" className={cn('gap-2', className)}>
       <Atoms.Container
         overrideDefaults
-        className={Libs.cn('flex flex-col gap-2', widthMode === 'fit' ? 'w-fit max-w-full' : 'w-full')}
+        className={cn('flex flex-col gap-2', widthMode === 'fit' ? 'w-fit max-w-full' : 'w-full')}
       >
         {/* TagInput visible for all users - clicking opens sign-in for unauthenticated */}
         <Molecules.TagInput

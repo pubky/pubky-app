@@ -3,8 +3,8 @@ import type { BlobResult, FileResult } from 'pubky-app-specs';
 import type { Pubky } from '@/core/models/models.types';
 import type { NexusFileDetails } from '@/core/services/nexus/nexus.types';
 import { FileVariant } from '@/core/services/nexus/file/file.types';
-import { HttpMethod } from '@/libs';
 import { asOpaque } from '@/test-utils';
+import { HttpMethod } from '@/libs/http/http.types';
 
 // Avoid pulling WASM-heavy deps from type-only modules
 vi.mock('pubky-app-specs', () => ({

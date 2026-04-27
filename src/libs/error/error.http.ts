@@ -9,7 +9,8 @@ import {
   NetworkErrorCode,
 } from './error.codes';
 import { Err } from './error.factories';
-import { HttpStatusCode, parseRetryAfterHeader } from '../http';
+import { HttpStatusCode } from '../http/http.types';
+import { parseRetryAfterHeader } from '../http/response.utils';
 
 /**
  * Creates appropriate AppError from HTTP status code.
