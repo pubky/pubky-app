@@ -11,7 +11,7 @@
  *
  * @see src/app/globals.css for CSS variable definitions and detailed rationale
  */
-export const LAYOUT = {
+export const LAYOUT_DIMENSIONS = {
   /**
    * Profile page header height in pixels.
    * Used for sticky positioning of filter bars and sidebars on profile pages.
@@ -42,6 +42,6 @@ export const LAYOUT = {
 } as const;
 
 /**
- * Type for the LAYOUT object values
+ * Type for the LAYOUT_DIMENSIONS object values
  */
-export type LayoutValue = (typeof LAYOUT)[keyof typeof LAYOUT];
+export type LayoutDimensionValue = (typeof LAYOUT_DIMENSIONS)[keyof typeof LAYOUT_DIMENSIONS];

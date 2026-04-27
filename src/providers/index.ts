@@ -4,4 +4,3 @@ export * from './GlobalErrorHandlerProvider';
 export * from './IntlProvider';
 export * from './ProfileProvider';
 export * from './RouteGuardProvider';
-export * from './TooltipProvider';

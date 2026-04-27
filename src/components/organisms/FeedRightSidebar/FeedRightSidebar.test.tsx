@@ -15,7 +15,7 @@ vi.mock('@/molecules', () => ({
 
 // Mock Organisms
 vi.mock('@/organisms', () => ({
-  WhoToFollow: () => <div data-testid="who-to-follow">WhoToFollow</div>,
+  WhoToFollowSidebar: () => <div data-testid="who-to-follow">WhoToFollowSidebar</div>,
   ActiveUsers: () => <div data-testid="active-users">ActiveUsers</div>,
   HotTags: () => <div data-testid="hot-tags">HotTags</div>,
   FeedbackCard: () => <div data-testid="feedback-card">FeedbackCard</div>,

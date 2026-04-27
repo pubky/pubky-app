@@ -1,14 +1,22 @@
 'use client';
 
+import React, { useState } from 'react';
+
+import { useTranslations } from 'next-intl';
+import { ArrowLeft, ArrowRight } from 'lucide-react';
+
 import * as Atoms from '@/atoms';
 import * as Core from '@/core';
 import * as Molecules from '@/molecules';
-import React, { useState } from 'react';
-import { useTranslations } from 'next-intl';
-import type { HumanPhoneInputProps } from './HumanPhoneInput.types';
-import { ArrowLeft, ArrowRight } from 'lucide-react';
 import { parsePhoneNumber } from '@/libs/phone/phone';
 import { cn } from '@/libs/utils/utils';
+
+type HumanPhoneInputProps = {
+  onBack: () => void;
+  onCodeSent: (phoneNumber: string) => void;
+  initialPhoneNumber?: string;
+};
+
 export const HumanPhoneInput = ({ onBack, onCodeSent, initialPhoneNumber }: HumanPhoneInputProps) => {
   const t = useTranslations('onboarding.phone');
   const tCommon = useTranslations('common');

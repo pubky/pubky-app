@@ -7,5 +7,5 @@ export const metadata = Molecules.Metadata({
 });
 
 export default function ScanPage() {
-  return <Templates.Scan />;
+  return <Templates.OnboardingScanPage />;
 }

@@ -1,5 +1,5 @@
 import * as Templates from '@/templates';
 
 export default function DynamicProfileFollowingPage() {
-  return <Templates.ProfilePageFollowing />;
+  return <Templates.ProfileFollowingPage />;
 }

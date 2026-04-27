@@ -4,7 +4,7 @@ import { RightSidebar } from './RightSidebar';
 
 // Mock the organisms (WhoToFollow and ActiveUsers were moved from molecules to organisms)
 vi.mock('@/organisms', () => ({
-  WhoToFollow: () => <div data-testid="who-to-follow">Who to Follow</div>,
+  WhoToFollowSidebar: () => <div data-testid="who-to-follow">Who to Follow</div>,
   ActiveUsers: () => <div data-testid="active-users">Active Users</div>,
   FeedbackCard: () => <div data-testid="feedback-card">Feedback Card</div>,
 }));

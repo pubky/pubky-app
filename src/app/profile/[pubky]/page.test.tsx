@@ -4,8 +4,8 @@ import { describe, expect, it, vi } from 'vitest';
 import DynamicProfilePage from './page';
 
 vi.mock('@/templates', () => ({
-  ProfilePagePosts: () => <div data-testid="profile-page-posts">Posts</div>,
-  ProfilePageProfile: () => <div data-testid="profile-page-profile">Profile</div>,
+  ProfilePostsPage: () => <div data-testid="profile-page-posts">Posts</div>,
+  ProfileOverviewPage: () => <div data-testid="profile-page-profile">Profile</div>,
 }));
 
 describe('DynamicProfilePage', () => {

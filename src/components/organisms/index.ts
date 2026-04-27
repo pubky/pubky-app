@@ -103,7 +103,7 @@ export * from './UserListItem';
 export * from './CompactUserListItemSkeleton';
 export * from './FullUserListItemSkeleton';
 export * from './PostCardSkeleton/PostCardSkeleton';
-export * from './WhoToFollow';
+export * from './WhoToFollowSidebar';
 export * from './WhoToFollowPage';
 export * from './SearchInput';
 export * from './ThreadTree/ThreadTree';

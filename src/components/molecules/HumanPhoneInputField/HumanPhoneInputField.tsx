@@ -1,14 +1,28 @@
+import type * as React from 'react';
+
 import { useTranslations } from 'next-intl';
-import * as Atoms from '@/atoms';
-import type { HumanPhoneInputProps } from './HumanPhoneInputField.types';
 import { CheckCircle2 } from 'lucide-react';
+
+import * as Atoms from '@/atoms';
+
+type HumanPhoneInputFieldProps = {
+  /** Current phone number value (including country code). Example: "+316XXXXXXXX" */
+  value: string;
+  /** Callback fired when the phone number input changes. */
+  onChange: (e: React.ChangeEvent<HTMLInputElement>) => void;
+  placeholder?: string;
+  /** Whether to show the validation checkmark. */
+  isValid?: boolean;
+  onEnter?: () => void;
+};
+
 export const HumanPhoneInputField = ({
   value,
   onChange,
   placeholder,
   isValid = false,
   onEnter,
-}: HumanPhoneInputProps) => {
+}: HumanPhoneInputFieldProps) => {
   const t = useTranslations('onboarding.phone');
   const defaultPlaceholder = t('placeholder');
   return (
