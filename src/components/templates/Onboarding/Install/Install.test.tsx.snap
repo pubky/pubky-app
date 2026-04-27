@@ -1,0 +1,23 @@
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
+
+exports[`Install template - Snapshots > matches snapshot 1`] = `
+<div
+  data-testid="install-layout"
+>
+  <div
+    data-testid="install-header"
+  >
+    Install Header
+  </div>
+  <div
+    data-testid="install-card"
+  >
+    Install Card
+  </div>
+  <div
+    data-testid="install-footer"
+  >
+    Install Footer
+  </div>
+</div>
+`;
