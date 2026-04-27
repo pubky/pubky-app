@@ -13,7 +13,7 @@ describe('ActionButtons', () => {
     render(<ActionButtons />);
 
     const signInButton = screen.getByRole('button', { name: /sign in/i });
-    const createAccountButton = screen.getByRole('button', { name: /create account/i });
+    const createAccountButton = screen.getByRole('button', { name: /join now/i });
 
     expect(signInButton).toBeInTheDocument();
     expect(createAccountButton).toBeInTheDocument();
@@ -37,7 +37,7 @@ describe('ActionButtons', () => {
     const mockOnCreateAccount = vi.fn();
     render(<ActionButtons onCreateAccount={mockOnCreateAccount} />);
 
-    const createAccountButton = screen.getByRole('button', { name: /create account/i });
+    const createAccountButton = screen.getByRole('button', { name: /join now/i });
     fireEvent.click(createAccountButton);
 
     expect(mockOnCreateAccount).toHaveBeenCalledTimes(1);
@@ -50,7 +50,7 @@ describe('ActionButtons', () => {
     render(<ActionButtons onSignIn={mockOnSignIn} onCreateAccount={mockOnCreateAccount} />);
 
     const signInButton = screen.getByRole('button', { name: /sign in/i });
-    const createAccountButton = screen.getByRole('button', { name: /create account/i });
+    const createAccountButton = screen.getByRole('button', { name: /join now/i });
 
     fireEvent.click(signInButton);
     fireEvent.click(createAccountButton);
@@ -63,11 +63,6 @@ describe('ActionButtons', () => {
 describe('ActionButtons - Snapshots', () => {
   it('matches snapshot with default props', () => {
     const { container } = render(<ActionButtons />);
-    expect(container.firstChild).toMatchSnapshot();
-  });
-
-  it('matches snapshot with custom text', () => {
-    const { container } = render(<ActionButtons signInText="Log In" createAccountText="Register" />);
     expect(container.firstChild).toMatchSnapshot();
   });
 

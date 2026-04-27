@@ -11,7 +11,6 @@ import * as Config from '@/config';
 import * as App from '@/app';
 
 export const HomeActions = () => {
-  const t = useTranslations('landing');
   const router = useRouter();
 
   const handleCreateAccount = () => {
@@ -22,14 +21,7 @@ export const HomeActions = () => {
     router.push(App.AUTH_ROUTES.SIGN_IN);
   };
 
-  return (
-    <Molecules.ActionButtons
-      onSignIn={handleSignIn}
-      onCreateAccount={handleCreateAccount}
-      signInText={t('signIn')}
-      createAccountText={t('joinNow')}
-    />
-  );
+  return <Molecules.ActionButtons onSignIn={handleSignIn} onCreateAccount={handleCreateAccount} />;
 };
 
 export const HomeFooter = ({ ...props }: React.HTMLAttributes<HTMLDivElement>) => {
