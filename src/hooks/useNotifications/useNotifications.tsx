@@ -232,7 +232,6 @@ export function useNotifications(): UseNotificationsResult {
 
     if (!hasPreferencesChanged) return;
 
-    setHasMore(true);
     refresh();
   }, [currentUserPubky, notificationPreferences, refresh]);
 

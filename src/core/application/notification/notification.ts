@@ -118,7 +118,7 @@ export class NotificationApplication {
     userId: Core.Pubky;
     olderThan: number;
     limit: number;
-    allowedTypes?: NotificationType[];
+    allowedTypes: NotificationType[];
   }): Promise<Core.TGetOrFetchNotificationsResponse> {
     let cursor: number | undefined = olderThan;
     const collected: FlatNotification[] = [];
@@ -132,13 +132,13 @@ export class NotificationApplication {
       const response = await this.getOrFetchPage({
         userId,
         olderThan: cursor ?? Infinity,
-        limit: remaining,
+        limit,
       });
 
       const filtered = this.filterByAllowedTypes(response.flatNotifications, allowedTypes);
 
       if (filtered.length > 0) {
-        collected.push(...filtered);
+        collected.push(...filtered.slice(0, remaining));
       }
 
       cursor = response.olderThan;
@@ -316,16 +316,12 @@ export class NotificationApplication {
 
   /**
    * Applies user preference filtering to a page of notifications.
-   * - `allowedTypes === undefined`: no preference filter, keep all notifications
-   * - `allowedTypes.length === 0`: all types disabled, return nothing
+   * Only called from collectPages where allowedTypes is guaranteed non-empty.
    */
   private static filterByAllowedTypes(
     notifications: FlatNotification[],
-    allowedTypes?: NotificationType[],
+    allowedTypes: NotificationType[],
   ): FlatNotification[] {
-    if (allowedTypes === undefined) return notifications;
-    if (allowedTypes.length === 0) return [];
-
     return notifications.filter((notification) => allowedTypes.includes(notification.type));
   }
 }
