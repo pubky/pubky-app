@@ -1,10 +1,11 @@
 import * as Core from '@/core';
+import type { NotificationType } from '@/core/models/notification/notification.types';
 
 export type TNotificationApplicationNotificationsParams = {
   userId: Core.Pubky;
   lastPolledTimestamp: number | undefined;
   lastRead: number;
-  allowedTypes: Core.NotificationType[];
+  allowedTypes: NotificationType[];
 };
 
 /**
@@ -35,6 +36,7 @@ export type TNotificationsPartialCacheHitParams = {
  */
 export type TGetOrFetchNotificationsParams = Core.TOlderThanQueryParams & {
   userId: Core.Pubky;
+  allowedTypes?: NotificationType[];
 };
 
 export type TFlatNotificationList = Core.FlatNotification[];

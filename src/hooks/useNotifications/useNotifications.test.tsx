@@ -2,13 +2,48 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { renderHook, waitFor, act } from '@testing-library/react';
 import { useNotifications } from './useNotifications';
 import { NotificationType } from '@/core';
+import type { FlatNotification } from '@/core/models/notification/notification.types';
+
 import * as Core from '@/core';
 import { useMutedUsers } from '@/hooks/useMutedUsers';
+function createAllEnabledNotificationPreferences() {
+  return {
+    follow: true,
+    newFriend: true,
+    tagPost: true,
+    tagProfile: true,
+    mention: true,
+    reply: true,
+    repost: true,
+    postDeleted: true,
+    postEdited: true,
+  };
+}
 
 // Hoist mock data
-const { mockCurrentUserPubky, setMockCurrentUserPubky, mockUnreadCount, setMockUnreadCount } = vi.hoisted(() => {
+const {
+  mockCurrentUserPubky,
+  setMockCurrentUserPubky,
+  mockUnreadCount,
+  setMockUnreadCount,
+  mockNotificationPreferences,
+  setMockNotificationPreferences,
+  mockNotificationController,
+} = vi.hoisted(() => {
   const pubky = { current: 'test-user-pubky' as string | null };
   const unread = { current: 0 };
+  const notificationPreferences = {
+    current: createAllEnabledNotificationPreferences(),
+  };
+  const notificationController = {
+    getOrFetchNotifications: vi.fn(() =>
+      Promise.resolve({
+        flatNotifications: [],
+        olderThan: undefined,
+      }),
+    ),
+    markAllAsRead: vi.fn(),
+  };
   return {
     mockCurrentUserPubky: pubky,
     setMockCurrentUserPubky: (value: string | null) => {
@@ -18,23 +53,32 @@ const { mockCurrentUserPubky, setMockCurrentUserPubky, mockUnreadCount, setMockU
     setMockUnreadCount: (value: number) => {
       unread.current = value;
     },
+    mockNotificationPreferences: notificationPreferences,
+    setMockNotificationPreferences: (value: typeof notificationPreferences.current) => {
+      notificationPreferences.current = value;
+    },
+    mockNotificationController: notificationController,
   };
 });
 
+vi.mock('@/core/controllers/notification/notification', () => ({
+  NotificationController: mockNotificationController,
+}));
+
+vi.mock('@/core/stores/settings/settings.store', () => ({
+  useSettingsStore: vi.fn((selector) => {
+    const state = { notifications: mockNotificationPreferences.current };
+    return selector ? selector(state) : state;
+  }),
+}));
+
 // Mock Core
+// TODO(refactor): Remove Core.* test access once direct-path imports replace the core barrel. #1722
 vi.mock('@/core', async (importOriginal) => {
   const actual = await importOriginal<typeof import('@/core')>();
   return {
     ...actual,
-    NotificationController: {
-      getOrFetchNotifications: vi.fn(() =>
-        Promise.resolve({
-          flatNotifications: [],
-          olderThan: undefined,
-        }),
-      ),
-      markAllAsRead: vi.fn(),
-    },
+    NotificationController: mockNotificationController,
     useAuthStore: vi.fn(() => ({
       currentUserPubky: mockCurrentUserPubky.current,
     })),
@@ -68,6 +112,7 @@ describe('useNotifications', () => {
     vi.clearAllMocks();
     setMockCurrentUserPubky('test-user-pubky');
     setMockUnreadCount(0);
+    setMockNotificationPreferences(createAllEnabledNotificationPreferences());
     vi.mocked(useMutedUsers).mockReturnValue({
       mutedUserIds: [],
       mutedUserIdSet: new Set(),
@@ -299,5 +344,57 @@ describe('useNotifications', () => {
     expect(result.current.count).toBe(2);
     // Should have called getOrFetchNotifications twice: once on mount, once on unread count change
     expect(Core.NotificationController.getOrFetchNotifications).toHaveBeenCalledTimes(2);
+  });
+
+  it('should reset pagination and refetch first page when notification filter changes', async () => {
+    // Regression intent:
+    // - User may already be paginated into older items (cursor has advanced).
+    // - When notification preferences change, list query context changes.
+    // - Hook should restart from first page, not continue from stale olderThan cursor.
+    const olderPageNotifications = [
+      { id: 'older-1', type: NotificationType.Follow, timestamp: 1000, followed_by: 'user1' },
+    ] as FlatNotification[];
+    const latestPageNotifications = [
+      { id: 'latest-1', type: NotificationType.Reply, timestamp: 3000, replied_by: 'user2' },
+    ] as FlatNotification[];
+
+    vi.mocked(Core.NotificationController.getOrFetchNotifications)
+      .mockResolvedValueOnce({
+        flatNotifications: olderPageNotifications,
+        olderThan: 999,
+      })
+      .mockResolvedValueOnce({
+        flatNotifications: latestPageNotifications,
+        olderThan: 2999,
+      });
+
+    const { result, rerender } = renderHook(() => useNotifications());
+
+    await waitFor(() => {
+      expect(result.current.isLoading).toBe(false);
+    });
+
+    // Initial render reflects current paginated snapshot.
+    expect(result.current.notifications).toEqual(olderPageNotifications);
+    expect(Core.NotificationController.getOrFetchNotifications).toHaveBeenCalledTimes(1);
+
+    await act(async () => {
+      // Simulate user toggling one notification type in Settings.
+      setMockNotificationPreferences({
+        ...createAllEnabledNotificationPreferences(),
+        follow: false,
+      });
+      rerender();
+    });
+
+    // filter change should trigger a fresh first-page request ({})
+    // so newest matching items are shown again.
+    await waitFor(() => {
+      // Includes the initial mount call + one refetch after filter change.
+      expect(Core.NotificationController.getOrFetchNotifications).toHaveBeenCalledTimes(2);
+    });
+
+    expect(Core.NotificationController.getOrFetchNotifications).toHaveBeenNthCalledWith(2, {});
+    expect(result.current.notifications).toEqual(latestPageNotifications);
   });
 });

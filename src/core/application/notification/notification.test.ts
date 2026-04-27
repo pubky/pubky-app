@@ -2,8 +2,10 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import * as Core from '@/core';
 import { LastReadResult } from 'pubky-app-specs';
 import { NotificationApplication } from './notification';
-import { NotificationType } from '@/core/models/notification/notification.types';
+import { FlatNotification, NotificationType } from '@/core/models/notification/notification.types';
 import { asInvalid, asOpaque } from '@/test-utils';
+import { LocalNotificationService } from '@/core/services/local/notification/notification';
+import { NexusUserService } from '@/core/services/nexus/user/user';
 import { HttpMethod } from '@/libs/http/http.types';
 import { Logger } from '@/libs/logger/logger';
 
@@ -20,13 +22,39 @@ const createFlat = (timestamp: number): Core.FlatNotification => {
   } as Core.FlatNotification;
 };
 
+const createReplyFlat = (timestamp: number): FlatNotification => ({
+  id: `reply:${timestamp}:user-${timestamp}`,
+  type: NotificationType.Reply,
+  timestamp,
+  replied_by: `user-${timestamp}`,
+  parent_post_uri: 'pubky://post/1',
+  reply_uri: 'pubky://post/2',
+});
+
 const createNexus = (timestamp: number): Core.NexusNotification => ({
   timestamp,
   body: { type: Core.NotificationType.Follow, followed_by: `user-${timestamp}` },
 });
 
+const createNexusReply = (timestamp: number): Core.NexusNotification => ({
+  timestamp,
+  body: {
+    type: NotificationType.Reply,
+    replied_by: `user-${timestamp}`,
+    parent_post_uri: 'pubky://post/1',
+    reply_uri: 'pubky://post/2',
+  },
+});
+
 const mockNormalizer = () =>
   vi.spyOn(Core.NotificationNormalizer, 'toFlatNotification').mockImplementation((n) => createFlat(n.timestamp));
+
+const mockNormalizerWithReply = () =>
+  vi
+    .spyOn(Core.NotificationNormalizer, 'toFlatNotification')
+    .mockImplementation((n) =>
+      n.body.type === NotificationType.Reply ? createReplyFlat(n.timestamp) : createFlat(n.timestamp),
+    );
 
 const mockFetchMissingEntities = () => {
   vi.spyOn(Core.LocalNotificationService, 'parseNotifications').mockReturnValue({
@@ -43,7 +71,7 @@ describe('NotificationApplication.persistAndSummarize', () => {
   const lastRead = 1234;
   const allowedTypes = Object.values(NotificationType);
 
-  beforeEach(() => vi.clearAllMocks());
+  beforeEach(() => vi.restoreAllMocks());
 
   it('should bulkSave, count filtered unread, and return nextPollCursor', async () => {
     const notifications = [createNexus(2000), createNexus(1000)];
@@ -307,6 +335,149 @@ describe('NotificationApplication.getOrFetchNotifications', () => {
 
       expect(result.flatNotifications).toHaveLength(1);
     });
+  });
+});
+
+describe('NotificationApplication.getOrFetchNotifications (filtered pagination)', () => {
+  const limit = 30;
+  const allTypes = Object.values(NotificationType);
+  const replyOnly = [NotificationType.Reply];
+
+  beforeEach(() => vi.clearAllMocks());
+
+  it('should return immediately when filtered results are found on first page', async () => {
+    vi.spyOn(LocalNotificationService, 'getOlderThan').mockResolvedValue([createFlat(3000)]);
+    vi.spyOn(NexusUserService, 'notifications').mockResolvedValue([]);
+    mockNormalizer();
+    mockFetchMissingEntities();
+
+    const result = await NotificationApplication.getOrFetchNotifications({
+      userId,
+      olderThan: Infinity,
+      limit,
+      allowedTypes: allTypes,
+    });
+
+    expect(result.flatNotifications).toHaveLength(1);
+    expect(result.olderThan).toBeUndefined();
+  });
+
+  it('should fetch next pages when filter removes all items from a page', async () => {
+    const getOlderThanSpy = vi.spyOn(LocalNotificationService, 'getOlderThan').mockResolvedValue([]);
+
+    vi.spyOn(NexusUserService, 'notifications')
+      .mockResolvedValueOnce([createNexus(3000)]) // create a Follow notification which will be filtered out
+      .mockResolvedValueOnce([createNexusReply(2000)]) // create a Reply notification which is allowed by filter
+      .mockResolvedValueOnce([]); // no more notifications to fetch
+
+    mockNormalizerWithReply();
+    mockFetchMissingEntities();
+    vi.spyOn(LocalNotificationService, 'bulkSave').mockResolvedValue(undefined);
+
+    const result = await NotificationApplication.getOrFetchNotifications({
+      userId,
+      olderThan: Infinity,
+      limit,
+      allowedTypes: replyOnly,
+    });
+
+    expect(getOlderThanSpy).toHaveBeenCalledTimes(3); // first page filtered out, second page yields reply, third stops
+    expect(getOlderThanSpy).toHaveBeenNthCalledWith(2, { olderThan: 2999, limit });
+    expect(result.flatNotifications).toHaveLength(1);
+    expect(result.flatNotifications[0].type).toBe(NotificationType.Reply);
+    expect(result.olderThan).toBeUndefined(); // no more pages to fetch
+  });
+
+  it('should stop when no more pages exist even if filtered result is empty', async () => {
+    vi.spyOn(LocalNotificationService, 'getOlderThan').mockResolvedValue([createFlat(1000)]); // cache miss: nothing in local DB for this page
+    vi.spyOn(NexusUserService, 'notifications').mockResolvedValue([]); // meaning no more notifications to fetch
+    mockNormalizer();
+    mockFetchMissingEntities();
+
+    const result = await NotificationApplication.getOrFetchNotifications({
+      userId,
+      olderThan: Infinity,
+      limit,
+      allowedTypes: replyOnly,
+    });
+
+    expect(result.flatNotifications).toHaveLength(0);
+    expect(result.olderThan).toBeUndefined(); // no more pages to fetch
+  });
+
+  it('should accumulate filtered results across pages until limit is filled', async () => {
+    vi.spyOn(Core.LocalNotificationService, 'getOlderThan').mockResolvedValue([]); // cache miss: nothing in local DB for this page
+    vi.spyOn(Core.NexusUserService, 'notifications')
+      .mockResolvedValueOnce([createNexusReply(5000)])
+      .mockResolvedValueOnce([createNexusReply(4000)]);
+    mockNormalizerWithReply();
+    mockFetchMissingEntities();
+    vi.spyOn(Core.LocalNotificationService, 'bulkSave').mockResolvedValue(undefined);
+
+    const result = await NotificationApplication.getOrFetchNotifications({
+      userId,
+      olderThan: Infinity,
+      limit: 2, // Request exactly two filtered items; collection should stop once two replies are found.
+      allowedTypes: replyOnly,
+    });
+
+    expect(result.flatNotifications).toHaveLength(2);
+    expect(result.olderThan).toBe(3999);
+  });
+
+  it('should stop after MAX_FETCH_ROUNDS even if no results pass the filter', async () => {
+    const getOlderThanSpy = vi.spyOn(Core.LocalNotificationService, 'getOlderThan').mockResolvedValue([]); // cache miss: nothing in local DB for this page
+    vi.spyOn(Core.NexusUserService, 'notifications').mockResolvedValue([createNexus(1000)]);
+    mockNormalizer();
+    mockFetchMissingEntities();
+    vi.spyOn(Core.LocalNotificationService, 'bulkSave').mockResolvedValue(undefined);
+
+    const result = await NotificationApplication.getOrFetchNotifications({
+      userId,
+      olderThan: Infinity,
+      limit,
+      allowedTypes: replyOnly,
+    });
+
+    expect(getOlderThanSpy).toHaveBeenCalledTimes(10); // MAX_FETCH_ROUNDS = 10
+    expect(result.flatNotifications).toHaveLength(0);
+    expect(result.olderThan).toBe(999);
+  });
+
+  it('should return empty when first page returns no notifications', async () => {
+    const getOlderThanSpy = vi.spyOn(Core.LocalNotificationService, 'getOlderThan').mockResolvedValue([]); // No local items for this page.
+    vi.spyOn(Core.NexusUserService, 'notifications').mockResolvedValue([]); // Nexus also has no items to return.
+    mockNormalizer();
+    mockFetchMissingEntities();
+
+    const result = await NotificationApplication.getOrFetchNotifications({
+      userId,
+      olderThan: Infinity,
+      limit,
+      allowedTypes: allTypes,
+    });
+
+    expect(getOlderThanSpy).toHaveBeenCalledTimes(1);
+    expect(result.flatNotifications).toHaveLength(0);
+    expect(result.olderThan).toBeUndefined();
+  });
+
+  it('should return empty when allowedTypes is empty', async () => {
+    const disabledAll: NotificationType[] = [];
+    const getOlderThanSpy = vi.spyOn(Core.LocalNotificationService, 'getOlderThan');
+    const nexusSpy = vi.spyOn(Core.NexusUserService, 'notifications');
+
+    const result = await NotificationApplication.getOrFetchNotifications({
+      userId,
+      olderThan: Infinity,
+      limit,
+      allowedTypes: disabledAll,
+    });
+
+    expect(getOlderThanSpy).not.toHaveBeenCalled();
+    expect(nexusSpy).not.toHaveBeenCalled();
+    expect(result.flatNotifications).toHaveLength(0);
+    expect(result.olderThan).toBeUndefined();
   });
 });
 

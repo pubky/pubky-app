@@ -1,5 +1,6 @@
 import * as Core from '@/core';
 import * as Config from '@/config';
+import { NotificationType } from '@/core/models/notification/notification.types';
 import { NotificationNormalizer } from '@/core/pipes/notification/notification.normalizer';
 import { useSettingsStore } from '@/core/stores/settings/settings.store';
 
@@ -64,9 +65,10 @@ export class NotificationController {
    * Uses timestamp-based pagination.
    *
    * All notifications are stored unfiltered in IndexedDB.
-   * Filtering by user preferences happens here at read time — the Controller reads
-   * NotificationPreferences from the settings store and removes disabled items before
-   * returning to the UI. This avoids accessing Zustand stores from the Application layer (ADR-0004).
+   * The controller reads NotificationPreferences from the settings store and computes
+   * allowedTypes, then delegates filtering-aware pagination to NotificationApplication.
+   * This keeps store access in the Controller layer (ADR-0004) while keeping fetch
+   * orchestration in the Application layer.
    *
    * @param params.olderThan - Unix timestamp to get notifications older than.
    *                           Defaults to Infinity for initial load (most recent notifications).
@@ -81,17 +83,15 @@ export class NotificationController {
   }: Core.TGetNotificationsParams): Promise<Core.TGetOrFetchNotificationsResponse> {
     const userId = Core.useAuthStore.getState().selectCurrentUserPubky();
     const preferences = useSettingsStore.getState().notifications;
+    const allowedTypes = NotificationNormalizer.toEnabledTypes(preferences);
+    const shouldFilterByPreferences = allowedTypes.length < Object.values(NotificationType).length;
 
-    const response = await Core.NotificationApplication.getOrFetchNotifications({
+    return Core.NotificationApplication.getOrFetchNotifications({
       userId,
       olderThan,
       limit,
+      allowedTypes: shouldFilterByPreferences ? allowedTypes : undefined,
     });
-
-    return {
-      ...response,
-      flatNotifications: NotificationNormalizer.filterByPreferences(response.flatNotifications, preferences),
-    };
   }
 
   /**
