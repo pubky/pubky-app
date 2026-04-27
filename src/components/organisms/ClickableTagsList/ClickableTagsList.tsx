@@ -127,7 +127,6 @@ export function ClickableTagsList({
 
   // Handle add button click with auth requirement
   const handleAddButtonClick = () => {
-    console.log('handleAddButtonClick');
     requireAuth(() => {
       onAddButtonClick?.();
       if (addMode) setIsAdding(true);
