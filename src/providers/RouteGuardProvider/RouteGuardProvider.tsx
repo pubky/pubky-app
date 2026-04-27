@@ -8,8 +8,11 @@ import * as Hooks from '@/hooks';
 import * as Providers from '@/providers';
 import * as App from '@/app';
 import * as Atoms from '@/atoms';
-import * as Libs from '@/libs';
 import * as Core from '@/core';
+import { Logger } from '@/libs/logger/logger';
+import { TimeoutErrorCode } from '@/libs/error/error.codes';
+import { Err } from '@/libs/error/error.factories';
+import { ErrorService } from '@/libs/error/error.types';
 
 // Migration resync timeout in milliseconds
 const MIGRATION_RESYNC_TIMEOUT_MS = 10_000;
@@ -56,7 +59,7 @@ export function RouteGuardProvider({ children }: RouteGuardProviderProps) {
     if (session) return;
     if (!sessionExport) return;
     Core.AuthController.restorePersistedSession().catch((error) => {
-      Libs.Logger.error('[RouteGuardProvider] Failed to restore persisted session', { error });
+      Logger.error('[RouteGuardProvider] Failed to restore persisted session', { error });
     });
   }, [hasHydrated, session, sessionExport]);
 
@@ -83,8 +86,8 @@ export function RouteGuardProvider({ children }: RouteGuardProviderProps) {
           timeoutId = setTimeout(
             () =>
               reject(
-                Libs.Err.timeout(Libs.TimeoutErrorCode.REQUEST_TIMEOUT, 'DB re-sync timed out', {
-                  service: Libs.ErrorService.Local,
+                Err.timeout(TimeoutErrorCode.REQUEST_TIMEOUT, 'DB re-sync timed out', {
+                  service: ErrorService.Local,
                   operation: 'migrationResync',
                 }),
               ),
@@ -94,7 +97,7 @@ export function RouteGuardProvider({ children }: RouteGuardProviderProps) {
         // Unblock the app when either resync finishes or the timeout fires.
         await Promise.race([Core.MigrationController.resync(currentUserPubky), timeoutPromise]);
       } catch (error) {
-        Libs.Logger.warn('Migration re-sync degraded', {
+        Logger.warn('Migration re-sync degraded', {
           error,
           pubky: currentUserPubky,
           durationMs: Date.now() - startedAt,
@@ -161,7 +164,7 @@ export function RouteGuardProvider({ children }: RouteGuardProviderProps) {
 
     // Runtime validation: ensure redirect target is actually in allowed routes
     if (redirectTo && !routeAccess.allowedRoutes.includes(redirectTo)) {
-      Libs.Logger.error(
+      Logger.error(
         `RouteGuard configuration error: redirectTo "${redirectTo}" is not in allowedRoutes for status "${status}"`,
       );
       return;

@@ -1,5 +1,7 @@
 import { IndexableType, Table, UpdateSpec } from 'dexie';
-import { Err, DatabaseErrorCode, ErrorService } from '@/libs';
+import { DatabaseErrorCode } from '@/libs/error/error.codes';
+import { Err } from '@/libs/error/error.factories';
+import { ErrorService } from '@/libs/error/error.types';
 
 /**
  * Shared base class for Dexie-backed models exposing common CRUD/query helpers.

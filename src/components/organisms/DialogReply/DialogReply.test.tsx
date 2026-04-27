@@ -153,10 +153,6 @@ vi.mock('@/molecules', () => ({
 }));
 
 // Use real libs - use actual implementations
-vi.mock('@/libs', async () => {
-  const actual = await vi.importActual('@/libs');
-  return { ...actual };
-});
 
 describe('DialogReply', () => {
   const mockHandleContentChange = vi.fn();

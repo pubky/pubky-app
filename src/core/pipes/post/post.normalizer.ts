@@ -1,7 +1,10 @@
 import { PostResult, PubkyAppPostEmbed, PubkyAppPostKind, PubkyAppPost } from 'pubky-app-specs';
 import * as Core from '@/core';
-import * as Libs from '@/libs';
-import { Err, ValidationErrorCode, ErrorService, AppError, AuthErrorCode, ClientErrorCode } from '@/libs';
+import { Logger } from '@/libs/logger/logger';
+import { AppError } from '@/libs/error/error';
+import { AuthErrorCode, ClientErrorCode, ValidationErrorCode } from '@/libs/error/error.codes';
+import { Err } from '@/libs/error/error.factories';
+import { ErrorService } from '@/libs/error/error.types';
 
 export class PostNormalizer {
   private constructor() {}
@@ -115,7 +118,7 @@ export class PostNormalizer {
 
     const result = builder.editPost(originalPost, postId, content);
 
-    Libs.Logger.debug('Post validated', { result });
+    Logger.debug('Post validated', { result });
 
     return result;
   }

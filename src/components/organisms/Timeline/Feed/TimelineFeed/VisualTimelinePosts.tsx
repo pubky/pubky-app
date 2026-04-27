@@ -4,7 +4,6 @@ import * as React from 'react';
 import * as Atoms from '@/atoms';
 import * as Core from '@/core';
 import * as Hooks from '@/hooks';
-import * as Libs from '@/libs';
 import * as Molecules from '@/molecules';
 import * as Organisms from '@/organisms';
 import {
@@ -21,6 +20,7 @@ import type {
   VisualTileVideoProps,
 } from './VisualTimelinePosts.types';
 import { useVisualFeedTiles } from './useVisualFeedTiles';
+import { cn } from '@/libs/utils/utils';
 
 function stopPropagation(event: React.SyntheticEvent) {
   event.stopPropagation();
@@ -119,7 +119,7 @@ function VisualTimelineTileOverlay({ tile, size, onReplyClick, onRepostClick }: 
   return (
     <Atoms.Container
       overrideDefaults
-      className={Libs.cn(
+      className={cn(
         'pointer-events-none absolute inset-0 flex flex-col justify-between bg-[linear-gradient(180deg,rgba(5,5,10,0.58)_0%,rgba(5,5,10,0.72)_100%)] opacity-0 backdrop-blur-[3px] transition-opacity duration-200 group-focus-within:opacity-100 group-hover:opacity-100',
         isCompact ? 'p-4' : 'p-5',
       )}
@@ -131,7 +131,7 @@ function VisualTimelineTileOverlay({ tile, size, onReplyClick, onRepostClick }: 
         <Atoms.Container
           overrideDefaults
           data-testid="visual-overlay-content-stack"
-          className={Libs.cn('flex flex-col gap-4', isCompact ? 'max-h-44' : 'max-h-56')}
+          className={cn('flex flex-col gap-4', isCompact ? 'max-h-44' : 'max-h-56')}
         >
           <Atoms.Container overrideDefaults className="flex items-start justify-between gap-4">
             <Atoms.Container overrideDefaults className="min-w-0 flex-1">
@@ -153,11 +153,11 @@ function VisualTimelineTileOverlay({ tile, size, onReplyClick, onRepostClick }: 
           {truncatedContent ? (
             <Atoms.Container
               overrideDefaults
-              className={Libs.cn('overflow-hidden', isCompact ? 'max-h-[84px]' : 'max-h-[96px]')}
+              className={cn('overflow-hidden', isCompact ? 'max-h-[84px]' : 'max-h-[96px]')}
             >
               <Molecules.PostText
                 content={truncatedContent}
-                className={Libs.cn(
+                className={cn(
                   'text-white drop-shadow-[0_2px_10px_rgba(5,5,10,0.9)] [&_*]:text-white [&_blockquote]:border-white/30 [&_button]:text-white [&_button]:hover:text-white/80',
                   isCompact ? 'text-sm leading-5' : 'text-base leading-6',
                 )}
@@ -171,7 +171,7 @@ function VisualTimelineTileOverlay({ tile, size, onReplyClick, onRepostClick }: 
         overrideDefaults
         onClick={stopPropagation}
         onPointerDown={stopPropagation}
-        className={Libs.cn(
+        className={cn(
           'pointer-events-none w-full drop-shadow-[0_2px_10px_rgba(5,5,10,0.9)] group-focus-within:pointer-events-auto group-hover:pointer-events-auto',
           isCompact ? 'mt-4 flex flex-col gap-4' : 'mt-4 flex flex-wrap items-end justify-between gap-x-6 gap-y-4',
         )}
@@ -184,10 +184,7 @@ function VisualTimelineTileOverlay({ tile, size, onReplyClick, onRepostClick }: 
           showAddButton={!tagsExpanded}
           addMode={true}
           maxTags={isCompact ? 3 : 4}
-          className={Libs.cn(
-            'text-white [&_[role=button]]:border-white/20',
-            isCompact ? 'max-w-full' : 'min-w-0 flex-1',
-          )}
+          className={cn('text-white [&_[role=button]]:border-white/20', isCompact ? 'max-w-full' : 'min-w-0 flex-1')}
         />
 
         <Organisms.PostActionsBar
@@ -196,7 +193,7 @@ function VisualTimelineTileOverlay({ tile, size, onReplyClick, onRepostClick }: 
           onTagClick={() => setTagsExpanded((previousValue) => !previousValue)}
           onReplyClick={onReplyClick}
           onRepostClick={onRepostClick}
-          className={Libs.cn(isCompact ? 'justify-start' : 'shrink-0 justify-end')}
+          className={cn(isCompact ? 'justify-start' : 'shrink-0 justify-end')}
         />
       </Atoms.Container>
     </Atoms.Container>

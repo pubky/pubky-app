@@ -1,4 +1,4 @@
-import { AppError } from '@/libs';
+import { AppError } from '@/libs/error/error';
 
 export interface DatabaseContextType {
   isReady: boolean;

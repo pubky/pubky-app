@@ -2,7 +2,6 @@
 
 import { useTranslations } from 'next-intl';
 import * as Atoms from '@/atoms';
-import * as Libs from '@/libs';
 import type { NewPostsButtonProps } from './NewPostsButton.types';
 
 /**
@@ -23,6 +22,7 @@ import type { NewPostsButtonProps } from './NewPostsButton.types';
  * ```
  */
 import { ArrowUp } from 'lucide-react';
+import { cn } from '@/libs/utils/utils';
 export function NewPostsButton({ count, onClick, visible, isScrolled = false }: NewPostsButtonProps) {
   const t = useTranslations('post');
   if (!visible || count === 0) return null;
@@ -32,7 +32,7 @@ export function NewPostsButton({ count, onClick, visible, isScrolled = false }: 
       onClick={onClick}
       data-cy="new-posts-button"
       data-testid="new-posts-button"
-      className={Libs.cn(
+      className={cn(
         'animate-in fade-in slide-in-from-left-2',
         // When scrolled: fixed position floating below main header (uses --header-offset-main CSS variable)
         isScrolled && 'fixed top-(--header-offset-main) left-1/2 z-30 -translate-x-1/2 shadow-lg',
@@ -40,7 +40,7 @@ export function NewPostsButton({ count, onClick, visible, isScrolled = false }: 
         !isScrolled && 'w-full',
       )}
     >
-      <ArrowUp className={Libs.cn('h-4 w-4', !isScrolled && 'animate-bounce')} />
+      <ArrowUp className={cn('h-4 w-4', !isScrolled && 'animate-bounce')} />
       <span>
         {count === 1
           ? t('newPostsSingular', {

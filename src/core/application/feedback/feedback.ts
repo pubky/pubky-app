@@ -1,5 +1,4 @@
 import * as Core from '@/core';
-import * as Libs from '@/libs';
 import {
   CHATWOOT_INBOX_IDS,
   CHATWOOT_FEEDBACK_MESSAGE_PREFIX,
@@ -7,6 +6,11 @@ import {
   extractSourceId,
 } from '@/core/services/chatwoot';
 import * as Types from './feedback.types';
+import { Logger } from '@/libs/logger/logger';
+import { AppError } from '@/libs/error/error';
+import { ServerErrorCode } from '@/libs/error/error.codes';
+import { Err } from '@/libs/error/error.factories';
+import { ErrorService } from '@/libs/error/error.types';
 
 /**
  * Feedback application service.
@@ -68,8 +72,8 @@ export class FeedbackApplication {
       await Core.ChatwootService.createConversation(sourceId, contact.id, inboxId, content);
     } catch (error) {
       // Log error for observability
-      if (error instanceof Libs.AppError) {
-        Libs.Logger.error('Feedback submission failed', {
+      if (error instanceof AppError) {
+        Logger.error('Feedback submission failed', {
           category: error.category,
           code: error.code,
           service: error.service,
@@ -81,9 +85,9 @@ export class FeedbackApplication {
       }
 
       // Wrap unexpected errors
-      Libs.Logger.error('Unexpected error during feedback submission', { error });
-      throw Libs.Err.server(Libs.ServerErrorCode.UNKNOWN_ERROR, 'Failed to submit feedback', {
-        service: Libs.ErrorService.Chatwoot,
+      Logger.error('Unexpected error during feedback submission', { error });
+      throw Err.server(ServerErrorCode.UNKNOWN_ERROR, 'Failed to submit feedback', {
+        service: ErrorService.Chatwoot,
         operation: 'submit',
         cause: error,
       });

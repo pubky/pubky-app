@@ -1,5 +1,5 @@
 import * as Core from '@/core';
-import * as Libs from '@/libs';
+import { Env } from '@/libs/env/env';
 
 export class LocalUserService {
   private constructor() {} // Prevent instantiation
@@ -173,7 +173,7 @@ export class LocalUserService {
    * @returns Promise resolving to void
    */
   static async upsertTtlWithDelay(userId: Core.Pubky, retryDelayMs: number): Promise<void> {
-    const lastUpdatedAt = Date.now() - (Libs.Env.NEXT_PUBLIC_TTL_USER_MS - retryDelayMs);
+    const lastUpdatedAt = Date.now() - (Env.NEXT_PUBLIC_TTL_USER_MS - retryDelayMs);
     await Core.UserTtlModel.upsert({ id: userId, lastUpdatedAt });
   }
 }

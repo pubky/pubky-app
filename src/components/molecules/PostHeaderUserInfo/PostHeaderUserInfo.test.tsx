@@ -1,7 +1,7 @@
 import { render, screen, fireEvent } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { PostHeaderUserInfo } from './PostHeaderUserInfo';
-import * as Libs from '@/libs';
+import { formatPublicKey } from '@/libs/utils/utils';
 
 const { mockUserInfoPopover } = vi.hoisted(() => ({
   mockUserInfoPopover: vi.fn(
@@ -190,17 +190,6 @@ vi.mock('@/molecules', async (importOriginal) => {
   };
 });
 
-// Mock libs
-vi.mock('@/libs', async (importOriginal) => {
-  const actual = await importOriginal<typeof import('@/libs')>();
-  const { DEFAULT_DISPLAY_PUBLIC_KEY_LENGTH } = await import('@/config');
-  return {
-    ...actual,
-    cn: (...classes: (string | undefined)[]) => classes.filter(Boolean).join(' '),
-    formatPublicKey: vi.fn(({ key, length = DEFAULT_DISPLAY_PUBLIC_KEY_LENGTH }) => key?.substring(0, length) || ''),
-  };
-});
-
 describe('PostHeaderUserInfo', () => {
   beforeEach(() => {
     vi.clearAllMocks();
@@ -251,13 +240,14 @@ describe('PostHeaderUserInfo', () => {
   it('renders user name and public key', () => {
     render(<PostHeaderUserInfo userId="userpubkykey" userName="Test User" />);
 
+    const formattedPublicKey = formatPublicKey({ key: 'userpubkykey' });
+
     expect(screen.getByTestId('popover')).toBeInTheDocument();
     expect(screen.getByTestId('popover-trigger')).toBeInTheDocument();
     const avatars = screen.getAllByTestId('avatar');
     expect(avatars.length).toBeGreaterThan(0);
     expect(screen.getAllByText('Test User').length).toBeGreaterThan(0);
-    // formatPublicKey returns first 8 chars, so "userpubk"
-    expect(screen.getAllByText(/@userpubk/).length).toBeGreaterThan(0);
+    expect(screen.getAllByText(`@${formattedPublicKey}`).length).toBeGreaterThan(0);
   });
 
   it('renders avatar with image when avatarUrl is provided', () => {
@@ -282,15 +272,12 @@ describe('PostHeaderUserInfo', () => {
   });
 
   it('formats public key correctly', () => {
-    const formatSpy = vi.spyOn(Libs, 'formatPublicKey');
-    formatSpy.mockReturnValue('userpubk');
+    const formattedPublicKey = formatPublicKey({ key: 'userpubkykey' });
 
     render(<PostHeaderUserInfo userId="userpubkykey" userName="Test User" />);
 
-    expect(formatSpy).toHaveBeenCalledWith({ key: 'userpubkykey' });
-    expect(screen.getAllByText('@userpubk').length).toBeGreaterThan(0);
-
-    formatSpy.mockRestore();
+    expect(screen.getAllByText(formattedPublicKey).length).toBeGreaterThan(0);
+    expect(screen.getAllByText(`@${formattedPublicKey}`).length).toBeGreaterThan(0);
   });
 
   it('renders popover content with user info', () => {

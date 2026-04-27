@@ -3,19 +3,19 @@
 import { useTranslations } from 'next-intl';
 import * as Molecules from '@/molecules';
 import * as Atoms from '@/atoms';
-import * as Libs from '@/libs';
 import * as Hooks from '@/hooks';
 import { Key } from 'lucide-react';
+import { formatPublicKey, withPubkyPrefix } from '@/libs/utils/utils';
 export const EditProfileHeader = () => {
   const t = useTranslations('forms.profile');
   const { currentUserPubky } = Hooks.useCurrentUserProfile();
   const { copyToClipboard } = Hooks.useCopyToClipboard();
-  const displayPublicKey = Libs.formatPublicKey({
+  const displayPublicKey = formatPublicKey({
     key: currentUserPubky ?? '',
   });
   const handleCopyToClipboard = () => {
     if (currentUserPubky) {
-      copyToClipboard(Libs.withPubkyPrefix(currentUserPubky));
+      copyToClipboard(withPubkyPrefix(currentUserPubky));
     }
   };
   return (

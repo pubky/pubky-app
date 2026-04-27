@@ -3,11 +3,11 @@
 import * as Atoms from '@/atoms';
 import * as Molecules from '@/molecules';
 import * as Organisms from '@/organisms';
-import * as Libs from '@/libs';
 import * as Hooks from '@/hooks';
 import * as Core from '@/core';
 import { PostContentBaseSkeleton } from './PostContentBase.skeleton';
 import type { PostContentBaseProps } from './PostContentBase.types';
+import { cn, isPostDeleted } from '@/libs/utils/utils';
 
 /**
  * PostContentBase - Base component that renders post content without repost handling.
@@ -24,7 +24,7 @@ export function PostContentBase({ postId, className, textClassName }: PostConten
     return <PostContentBaseSkeleton />;
   }
 
-  const isDeleted = Libs.isPostDeleted(postDetails.content);
+  const isDeleted = isPostDeleted(postDetails.content);
   const hasContent = postDetails.content.trim().length > 0;
   const isBlurred = postDetails.is_blurred;
   const isArticle = postDetails.kind === 'long';
@@ -46,7 +46,7 @@ export function PostContentBase({ postId, className, textClassName }: PostConten
   if (!hasContent && !postDetails.attachments?.length && !localAttachments) return null;
 
   return (
-    <Atoms.Container className={Libs.cn('min-w-0 gap-3', className)}>
+    <Atoms.Container className={cn('min-w-0 gap-3', className)}>
       {/* Post text */}
       {hasContent && <Molecules.PostText content={postDetails.content} className={textClassName} />}
 

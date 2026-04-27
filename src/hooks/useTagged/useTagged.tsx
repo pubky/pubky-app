@@ -3,13 +3,13 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useLiveQuery } from 'dexie-react-hooks';
 import { useTranslations } from 'next-intl';
 import * as Core from '@/core';
-import * as Libs from '@/libs';
 // Import directly to avoid circular dependency with @/hooks barrel
 import { useProfileStats } from '@/hooks/useProfileStats';
 import { toast } from '@/molecules/Toaster/use-toast';
 import type { UseTaggedResult, UseTaggedOptions } from './useTagged.types';
 import { transformTagsForViewer } from '@/molecules/TaggedItem/TaggedItem.utils';
 import { TAGS_PER_PAGE } from './useTagged.constants';
+import { Logger } from '@/libs/logger/logger';
 
 /**
  * Unified hook for fetching and managing user tags.
@@ -44,7 +44,7 @@ export function useTagged(userId: string | null | undefined, options: UseTaggedO
       const tags = await Core.UserController.getTags({ userId });
       return tags.length > 0 ? tags : null;
     } catch (error) {
-      Libs.Logger.error('[useTagged] Failed to query user tags', { userId, error });
+      Logger.error('[useTagged] Failed to query user tags', { userId, error });
       return null;
     }
   }, [userId]);

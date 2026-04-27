@@ -1,7 +1,6 @@
 'use client';
 
 import React, { useRef, useState } from 'react';
-import * as Libs from '@/libs';
 import * as Core from '@/core';
 import * as Hooks from '@/hooks';
 import * as Atoms from '@/atoms';
@@ -10,6 +9,7 @@ import type { PostTagsPanelHandle } from '@/organisms';
 import { POST_TAGS_MAX_COUNT, POST_TAGS_MAX_LENGTH, POST_TAGS_MAX_TOTAL_CHARS } from '@/config';
 import { usePostMainLayout, WIDE_POST_LAYOUT_CLASSES } from '@/organisms/PostMain/PostMainLayout';
 import type { SinglePostCardProps } from './SinglePostCard.types';
+import { cn } from '@/libs/utils/utils';
 
 /**
  * SinglePostCard Organism
@@ -72,10 +72,8 @@ export function SinglePostCard({ postId, className }: SinglePostCardProps) {
 
   return (
     <>
-      <Atoms.Card data-cy="single-post-card" className={Libs.cn('min-w-0 rounded-lg py-0', className)}>
-        <Atoms.CardContent
-          className={Libs.cn('flex min-w-0 flex-col', !isMobile && isWideLayout ? 'p-0' : 'gap-4 p-6')}
-        >
+      <Atoms.Card data-cy="single-post-card" className={cn('min-w-0 rounded-lg py-0', className)}>
+        <Atoms.CardContent className={cn('flex min-w-0 flex-col', !isMobile && isWideLayout ? 'p-0' : 'gap-4 p-6')}>
           {isMobile ? (
             <>
               <Organisms.PostHeader postId={postId} />
@@ -83,7 +81,7 @@ export function SinglePostCard({ postId, className }: SinglePostCardProps) {
               <Organisms.PostContent postId={postId} />
 
               <Atoms.Container
-                className={Libs.cn(
+                className={cn(
                   'flex-col items-start gap-2 md:flex-row md:justify-between md:gap-4',
                   tagsExpanded ? 'md:items-end' : 'md:items-start',
                 )}
@@ -111,7 +109,7 @@ export function SinglePostCard({ postId, className }: SinglePostCardProps) {
 
                 <Atoms.Container
                   onClick={handleFooterClick}
-                  className={Libs.cn(
+                  className={cn(
                     'flex-col items-start gap-2 md:flex-row md:justify-between md:gap-4',
                     tagsExpanded ? 'md:items-end' : 'md:items-start',
                   )}
@@ -145,7 +143,7 @@ export function SinglePostCard({ postId, className }: SinglePostCardProps) {
 
               <Atoms.Container
                 onClick={handleFooterClick}
-                className={Libs.cn(
+                className={cn(
                   'flex-col items-start gap-2 md:flex-row md:justify-between md:gap-4',
                   tagsExpanded ? 'md:items-end' : 'md:items-start',
                 )}

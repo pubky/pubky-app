@@ -3,9 +3,9 @@
 import * as Atoms from '@/atoms';
 import { MENU_VARIANT } from '@/config/ui';
 import * as Hooks from '@/hooks';
-import * as Libs from '@/libs';
 import { PostMenuActionsContentSkeleton } from './PostMenuActionsContent.skeleton';
 import type { PostMenuActionsContentProps } from './PostMenuActionsContent.types';
+import { cn } from '@/libs/utils/utils';
 
 export function PostMenuActionsContent({
   postId,
@@ -48,8 +48,8 @@ export function PostMenuActionsContent({
             className="justify-start overflow-hidden"
           >
             <Atoms.Container overrideDefaults className="flex items-center gap-2 overflow-hidden">
-              <Icon className={Libs.cn('size-4 shrink-0', color)} />
-              <Atoms.Typography as="span" overrideDefaults className={Libs.cn('truncate text-base font-medium', color)}>
+              <Icon className={cn('size-4 shrink-0', color)} />
+              <Atoms.Typography as="span" overrideDefaults className={cn('truncate text-base font-medium', color)}>
                 {item.label}
               </Atoms.Typography>
             </Atoms.Container>
@@ -63,15 +63,11 @@ export function PostMenuActionsContent({
             className="group p-0"
           >
             <Atoms.Container overrideDefaults className="flex items-center gap-2 overflow-hidden p-0">
-              <Icon className={Libs.cn('size-4 shrink-0 transition-colors', color, 'group-hover:text-foreground')} />
+              <Icon className={cn('size-4 shrink-0 transition-colors', color, 'group-hover:text-foreground')} />
               <Atoms.Typography
                 as="span"
                 overrideDefaults
-                className={Libs.cn(
-                  'truncate text-base font-medium transition-colors',
-                  color,
-                  'group-hover:text-foreground',
-                )}
+                className={cn('truncate text-base font-medium transition-colors', color, 'group-hover:text-foreground')}
               >
                 {item.label}
               </Atoms.Typography>

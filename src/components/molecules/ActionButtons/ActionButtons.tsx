@@ -1,6 +1,6 @@
 import * as Atoms from '@/atoms';
-import * as Libs from '@/libs';
 import { LogIn, UserRoundPlus } from 'lucide-react';
+import { cn } from '@/libs/utils/utils';
 interface ActionButtonsProps {
   className?: React.HTMLAttributes<HTMLDivElement>['className'];
   onSignIn?: () => void;
@@ -17,7 +17,7 @@ export function ActionButtons({
   ...props
 }: ActionButtonsProps) {
   return (
-    <Atoms.Container className={Libs.cn('flex-row gap-3 sm:items-center', className)} {...props}>
+    <Atoms.Container className={cn('flex-row gap-3 sm:items-center', className)} {...props}>
       <Atoms.Button id="sign-in-btn" variant="secondary" className="w-[158px] sm:w-auto" size="lg" onClick={onSignIn}>
         <LogIn className="mr-2 h-4 w-4" />
         {signInText}

@@ -5,10 +5,11 @@ import { QRCodeSVG } from 'qrcode.react';
 
 import * as Atoms from '@/atoms';
 import * as Config from '@/config';
-import * as Libs from '@/libs';
+import { generatePubkyRingDeeplink } from '@/libs/deeplink/deeplink';
+import type { TMnemonicWords } from '@/libs/identity/identity.types';
 
 interface DialogBackupExportProps {
-  mnemonic?: Libs.TMnemonicWords | null;
+  mnemonic?: TMnemonicWords | null;
   children?: React.ReactNode;
 }
 
@@ -37,14 +38,14 @@ const MOBILE_IMPORT_DESCRIPTION =
   'Tap the button below to import your recovery phrase into Pubky Ring for a safer and easier sign-in experience.';
 
 export function DialogBackupExport({ mnemonic, children }: DialogBackupExportProps) {
-  const qrValue = mnemonic ? Libs.generatePubkyRingDeeplink(mnemonic) : Config.PUBKY_CORE_URL;
+  const qrValue = mnemonic ? generatePubkyRingDeeplink(mnemonic) : Config.PUBKY_CORE_URL;
   const descriptionContent = mnemonic ? IMPORT_DESCRIPTION : EXPORT_DESCRIPTION;
   const mobileDescription = mnemonic ? MOBILE_IMPORT_DESCRIPTION : MOBILE_EXPORT_DESCRIPTION;
   const dialogTitle = mnemonic ? 'Import recovery phrase' : 'Pubky Ring export';
 
   const handleMobileButtonClick = () => {
     if (typeof window !== 'undefined') {
-      const url = mnemonic ? Libs.generatePubkyRingDeeplink(mnemonic) : Config.PUBKY_CORE_URL;
+      const url = mnemonic ? generatePubkyRingDeeplink(mnemonic) : Config.PUBKY_CORE_URL;
       window.open(url, '_blank');
     }
   };

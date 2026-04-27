@@ -193,12 +193,6 @@ vi.mock('@/molecules', () => ({
   ),
 }));
 
-// Mock libs
-vi.mock('@/libs', async () => {
-  const actual = await vi.importActual('@/libs');
-  return { ...actual };
-});
-
 describe('DialogFeedback', () => {
   const mockOnOpenChange = vi.fn();
   const mockHandleChange = vi.fn();

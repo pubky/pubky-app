@@ -26,7 +26,7 @@ vi.mock('@/config', async (importOriginal) => {
 });
 
 // Mock the Env module (admin credentials are now server-side only)
-vi.mock('@/libs/env', () => ({
+vi.mock('@/libs/env/env', () => ({
   Env: {
     HOMESERVER_ADMIN_URL: 'http://test-admin.com',
     HOMESERVER_ADMIN_PASSWORD: 'test-password',

@@ -3,7 +3,6 @@
 import { useState, useEffect } from 'react';
 import { useLiveQuery } from 'dexie-react-hooks';
 import * as Atoms from '@/atoms';
-import * as Libs from '@/libs';
 import * as Core from '@/core';
 import { FacehashAvatar } from '@/molecules/FacehashAvatar';
 import {
@@ -13,6 +12,8 @@ import {
 } from './AvatarWithFallback.utils';
 import type { AvatarWithFallbackProps } from './AvatarWithFallback.types';
 import { EyeOff } from 'lucide-react';
+import { Logger } from '@/libs/logger/logger';
+import { cn } from '@/libs/utils/utils';
 export type { AvatarWithFallbackProps };
 export function AvatarWithFallback({
   avatarUrl,
@@ -53,7 +54,7 @@ export function AvatarWithFallback({
       if (!userId) return null;
       return await Core.ModerationController.getModerationStatus(userId, Core.ModerationType.PROFILE);
     } catch (error) {
-      Libs.Logger.error('[AvatarWithFallback] Failed to query moderation status', {
+      Logger.error('[AvatarWithFallback] Failed to query moderation status', {
         userId,
         error,
       });
@@ -80,7 +81,7 @@ export function AvatarWithFallback({
             src={resolvedAvatarUrl}
             alt={alt || name}
             onError={() => setImageError(true)}
-            className={Libs.cn(shouldBlur && 'blur-xs')}
+            className={cn(shouldBlur && 'blur-xs')}
           />
 
           {shouldBlur && (
@@ -108,7 +109,7 @@ export function AvatarWithFallback({
         </>
       )}
       {/* Always render fallback - Radix shows it while image loads or if image fails */}
-      <Atoms.AvatarFallback className={Libs.cn('overflow-hidden border-none', fallbackClassName)}>
+      <Atoms.AvatarFallback className={cn('overflow-hidden border-none', fallbackClassName)}>
         <FacehashAvatar seed={resolvedFallbackSeed} initial={fallbackInitial} />
       </Atoms.AvatarFallback>
     </Atoms.Avatar>

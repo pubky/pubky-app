@@ -1,7 +1,7 @@
 'use client';
 
 import { useLayoutEffect, useState } from 'react';
-import * as Libs from '@/libs';
+import { cn } from '@/libs/utils/utils';
 
 export interface SideDrawerProps {
   open: boolean;
@@ -53,7 +53,7 @@ export function SideDrawer({ open, onOpenChangeAction, children, position = 'lef
     <div className="fixed inset-0 z-50">
       {/* Backdrop */}
       <div
-        className={Libs.cn(
+        className={cn(
           'absolute inset-0 bg-black transition-opacity duration-300',
           isAnimating ? 'opacity-70' : 'opacity-0',
         )}
@@ -62,7 +62,7 @@ export function SideDrawer({ open, onOpenChangeAction, children, position = 'lef
 
       {/* Drawer */}
       <div
-        className={Libs.cn(
+        className={cn(
           'fixed top-0 z-50 h-full',
           'bg-background p-4 shadow-xl sm:p-4 md:p-12',
           'transition-transform duration-300 ease-in-out',

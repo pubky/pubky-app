@@ -2,9 +2,10 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import * as Core from '@/core';
-import * as Libs from '@/libs';
 import type { UseHotTagsParams, UseHotTagsResult, HotTag } from './useHotTags.types';
 import { DEFAULT_LIMIT } from './useHotTags.constants';
+import { Logger } from '@/libs/logger/logger';
+import { isAppError } from '@/libs/error/error.utils';
 
 /**
  * useHotTags
@@ -62,12 +63,12 @@ export function useHotTags({
       }));
 
       setTags(transformedTags);
-      Libs.Logger.debug('[useHotTags] Fetched hot tags', { count: transformedTags.length, reach, timeframe });
+      Logger.debug('[useHotTags] Fetched hot tags', { count: transformedTags.length, reach, timeframe });
     } catch (err) {
-      const errorMessage = Libs.isAppError(err) ? err.message : 'Failed to fetch hot tags';
+      const errorMessage = isAppError(err) ? err.message : 'Failed to fetch hot tags';
       setError(errorMessage);
       setRawTags([]);
-      Libs.Logger.error('[useHotTags] Failed to fetch hot tags:', err);
+      Logger.error('[useHotTags] Failed to fetch hot tags:', err);
     } finally {
       setIsLoading(false);
     }

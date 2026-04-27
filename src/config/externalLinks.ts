@@ -1,5 +1,5 @@
-import { Env } from '@/libs/env';
 import { APP_VERSION } from './app';
+import { Env } from '@/libs/env/env';
 
 /**
  * External Links Configuration

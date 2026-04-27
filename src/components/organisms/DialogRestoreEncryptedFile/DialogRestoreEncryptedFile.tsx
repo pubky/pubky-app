@@ -4,9 +4,11 @@ import { useState, useRef } from 'react';
 import { useTranslations } from 'next-intl';
 import * as Atoms from '@/atoms';
 import * as Core from '@/core';
-import * as Libs from '@/libs';
 import * as Hooks from '@/hooks';
 import { FileUp, FileText, Loader2, RotateCcw } from 'lucide-react';
+import { AppError } from '@/libs/error/error';
+import { ErrorService } from '@/libs/error/error.types';
+import { formatFileName } from '@/libs/utils/utils';
 export function DialogRestoreEncryptedFile({ onRestore }: { onRestore: () => void }) {
   const t = useTranslations('onboarding.signIn');
   const tRestore = useTranslations('onboarding.signIn.restoreEncryptedFile');
@@ -57,7 +59,7 @@ export function DialogRestoreEncryptedFile({ onRestore }: { onRestore: () => voi
           errorMessage.includes('cipher')
         ) {
           setError(tRestore('invalidPassword'));
-        } else if (error instanceof Libs.AppError && error.service === Libs.ErrorService.Nexus) {
+        } else if (error instanceof AppError && error.service === ErrorService.Nexus) {
           setError(tRestore('nexusError'));
         } else {
           setError(tRestore('restoreError'));
@@ -83,7 +85,7 @@ export function DialogRestoreEncryptedFile({ onRestore }: { onRestore: () => voi
     return Boolean(selectedFile && password && !isRestoring);
   };
   const handleKeyDown = Hooks.useEnterSubmit(isFormValid, handleRestore);
-  const selectedFileDisplayName = selectedFile ? Libs.formatFileName(selectedFile.name) : 'encryptedfile.pkarr';
+  const selectedFileDisplayName = selectedFile ? formatFileName(selectedFile.name) : 'encryptedfile.pkarr';
   return (
     <Atoms.Dialog>
       <Atoms.DialogTrigger asChild>

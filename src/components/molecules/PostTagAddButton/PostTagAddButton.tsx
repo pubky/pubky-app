@@ -1,8 +1,8 @@
 import * as React from 'react';
-import * as Libs from '@/libs';
 import * as Atoms from '@/atoms';
 import type { PostTagAddButtonProps } from './PostTagAddButton.types';
 import { Plus } from 'lucide-react';
+import { cn } from '@/libs/utils/utils';
 export function PostTagAddButton({ onClick, className, disabled }: PostTagAddButtonProps) {
   return (
     <Atoms.Button
@@ -11,7 +11,7 @@ export function PostTagAddButton({ onClick, className, disabled }: PostTagAddBut
       variant="outline"
       size="sm"
       disabled={disabled}
-      className={Libs.cn(
+      className={cn(
         'size-8 min-w-8! rounded-md border-dashed bg-transparent p-0 transition-opacity hover:bg-transparent hover:opacity-80',
         disabled && 'cursor-not-allowed opacity-50',
         className,

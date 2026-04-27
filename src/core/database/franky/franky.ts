@@ -1,5 +1,4 @@
 import Dexie from 'dexie';
-import { Err, ErrorService, DatabaseErrorCode, Logger } from '@/libs';
 import * as Config from '@/config';
 import * as Core from '@/core';
 
@@ -22,6 +21,10 @@ import { notificationTableSchema } from '@/core/models/notification/notification
 import { bookmarkTableSchema } from '@/core/models/bookmark/bookmark.schema';
 import { feedTableSchema } from '@/core/models/feed/feed.schema';
 import { moderationTableSchema } from '@/core/models/moderation/moderation.schema';
+import { Logger } from '@/libs/logger/logger';
+import { DatabaseErrorCode } from '@/libs/error/error.codes';
+import { Err } from '@/libs/error/error.factories';
+import { ErrorService } from '@/libs/error/error.types';
 
 export class AppDatabase extends Dexie {
   private static readonly DEXIE_VERSION_MULTIPLIER = 10;

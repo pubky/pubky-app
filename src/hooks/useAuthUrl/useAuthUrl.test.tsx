@@ -1,9 +1,11 @@
 import { act, renderHook, waitFor } from '@testing-library/react';
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import type { Session } from '@synonymdev/pubky';
-import * as Libs from '@/libs';
 import { mockSession } from '@/test-utils';
 import { useAuthUrl } from './useAuthUrl';
+import { AppError } from '@/libs/error/error';
+import { AuthErrorCode, TimeoutErrorCode } from '@/libs/error/error.codes';
+import { ErrorCategory, ErrorService } from '@/libs/error/error.types';
 
 // Mock dependencies
 const mockToast = vi.fn();
@@ -33,14 +35,20 @@ vi.mock('@/molecules', () => ({
   toast: (...args: unknown[]) => mockToast(...args),
 }));
 
-vi.mock('@/libs', async () => {
-  const actual = await vi.importActual<typeof import('@/libs')>('@/libs');
+vi.mock('@/libs/logger/logger', async () => {
+  const actual = await vi.importActual<typeof import('@/libs/logger/logger')>('@/libs/logger/logger');
   return {
     ...actual,
     Logger: {
       ...actual.Logger,
       error: (...args: unknown[]) => mockLoggerError(...args),
     },
+  };
+});
+vi.mock('@/libs/utils/utils', async () => {
+  const actual = await vi.importActual<typeof import('@/libs/utils/utils')>('@/libs/utils/utils');
+  return {
+    ...actual,
     copyToClipboard: (...args: unknown[]) => mockCopyToClipboard(...args),
   };
 });
@@ -216,11 +224,11 @@ describe('useAuthUrl', () => {
     });
 
     rejectApproval!(
-      new Libs.AppError({
-        category: Libs.ErrorCategory.Auth,
-        code: Libs.AuthErrorCode.SESSION_EXPIRED,
+      new AppError({
+        category: ErrorCategory.Auth,
+        code: AuthErrorCode.SESSION_EXPIRED,
         message: 'Session expired',
-        service: Libs.ErrorService.Homeserver,
+        service: ErrorService.Homeserver,
         operation: 'awaitApproval',
       }),
     );
@@ -251,11 +259,11 @@ describe('useAuthUrl', () => {
     });
 
     rejectApproval!(
-      new Libs.AppError({
-        category: Libs.ErrorCategory.Timeout,
-        code: Libs.TimeoutErrorCode.REQUEST_TIMEOUT,
+      new AppError({
+        category: ErrorCategory.Timeout,
+        code: TimeoutErrorCode.REQUEST_TIMEOUT,
         message: 'Auth flow timed out after maximum attempts',
-        service: Libs.ErrorService.Homeserver,
+        service: ErrorService.Homeserver,
         operation: 'awaitApproval',
       }),
     );

@@ -2,10 +2,10 @@
 
 import * as React from 'react';
 import * as Atoms from '@/atoms';
-import * as Libs from '@/libs';
 import type { PostInputActionBarProps } from './PostInputActionBar.types';
 import { useIsMobile } from '@/hooks';
 import { Loader2, Send, Smile, Image, Newspaper } from 'lucide-react';
+import { cn } from '@/libs/utils/utils';
 interface ActionButtonContentProps {
   Icon: React.ComponentType<{
     className?: string;
@@ -14,7 +14,7 @@ interface ActionButtonContentProps {
   iconClassName?: string;
 }
 function ActionButtonContent({ Icon, iconClassName }: ActionButtonContentProps) {
-  return <Icon className={Libs.cn('size-4 text-secondary-foreground', iconClassName)} strokeWidth={2} />;
+  return <Icon className={cn('size-4 text-secondary-foreground', iconClassName)} strokeWidth={2} />;
 }
 export function PostInputActionBar({
   onEmojiClick,
@@ -102,10 +102,7 @@ export function PostInputActionBar({
           size={isMobile ? 'default' : 'sm'}
         >
           <Atoms.Container className="flex items-center gap-2" overrideDefaults>
-            <PostButtonIconComponent
-              className={Libs.cn('size-4 text-brand', postButtonIconClassName)}
-              strokeWidth={2}
-            />
+            <PostButtonIconComponent className={cn('size-4 text-brand', postButtonIconClassName)} strokeWidth={2} />
             <Atoms.Typography as="span" size="sm" className={'text-brand'}>
               {postButtonText}
             </Atoms.Typography>

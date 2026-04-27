@@ -3,6 +3,7 @@ import { renderHook } from '@testing-library/react';
 import { useCustomFeed } from './useCustomFeed';
 import { PubkyAppFeedReach, PubkyAppFeedSort, PubkyAppFeedLayout } from 'pubky-app-specs';
 import type * as Core from '@/core';
+import { Logger } from '@/libs/logger/logger';
 
 // --- Hoisted mocks ---
 
@@ -30,7 +31,7 @@ vi.mock('@/core', () => ({
   },
 }));
 
-vi.mock('@/libs', () => ({
+vi.mock('@/libs/logger/logger', () => ({
   Logger: {
     error: vi.fn(),
   },
@@ -136,7 +137,6 @@ describe('useCustomFeed', () => {
 
   it('returns undefined and logs error when FeedController.get throws', async () => {
     const Core = await import('@/core');
-    const Libs = await import('@/libs');
     const error = new Error('DB read failed');
     vi.mocked(Core.FeedController.get).mockRejectedValue(error);
 
@@ -153,7 +153,7 @@ describe('useCustomFeed', () => {
 
     // Allow the promise to resolve
     await vi.waitFor(() => {
-      expect(Libs.Logger.error).toHaveBeenCalledWith('[useCustomFeed] Failed to query custom feed', {
+      expect(Logger.error).toHaveBeenCalledWith('[useCustomFeed] Failed to query custom feed', {
         error,
       });
     });

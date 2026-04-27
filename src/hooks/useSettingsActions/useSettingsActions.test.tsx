@@ -22,7 +22,7 @@ vi.mock('@/core', () => ({
   SettingsController: mockSettingsController,
 }));
 
-vi.mock('@/libs', () => ({
+vi.mock('@/libs/error/error.utils', () => ({
   isAppError: (...args: unknown[]) => mockIsAppError(...args),
 }));
 

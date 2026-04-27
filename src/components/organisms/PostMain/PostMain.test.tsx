@@ -7,20 +7,13 @@ import { PostMainLayoutProvider } from './PostMainLayout';
 import { POST_THREAD_CONNECTOR_VARIANTS } from '@/components/atoms/PostThreadConnector/PostThreadConnector.constants';
 
 // Use vi.hoisted to define mock functions before vi.mock calls (which are hoisted)
-const { mockIsPostDeleted, mockPostHeader } = vi.hoisted(() => ({
-  mockIsPostDeleted: vi.fn(() => false),
+const { mockPostHeader } = vi.hoisted(() => ({
   mockPostHeader: vi.fn(
     ({ postId }: { postId: string; size?: 'normal' | 'large'; timeAgoPlacement?: 'top-right' | 'bottom-left' }) => (
       <div data-testid="post-header">PostHeader {postId}</div>
     ),
   ),
 }));
-
-// Use real libs - use actual implementations
-vi.mock('@/libs', async () => {
-  const actual = await vi.importActual('@/libs');
-  return { ...actual, isPostDeleted: mockIsPostDeleted };
-});
 
 // Minimal atoms used by PostMain
 vi.mock('@/atoms', async () => {
@@ -214,9 +207,21 @@ describe('PostMain', () => {
 
   beforeEach(() => {
     vi.clearAllMocks();
-    mockIsPostDeleted.mockReturnValue(false);
     mockPostHeader.mockClear();
     mockUseIsMobile.mockReturnValue(false);
+    vi.mocked(Hooks.usePostDetails).mockReturnValue({
+      postDetails: {
+        id: 'post-123',
+        indexed_at: 0,
+        kind: 'short',
+        uri: 'pubky://test-user/pub/pubky.app/posts/post-123',
+        content: 'Some post content',
+        attachments: [],
+        is_moderated: false,
+        is_blurred: false,
+      },
+      isLoading: false,
+    });
   });
 
   it('renders header, content, tags and actions', () => {
@@ -258,7 +263,19 @@ describe('PostMain', () => {
   });
 
   it('renders PostDeleted when post is deleted', () => {
-    mockIsPostDeleted.mockReturnValue(true);
+    vi.mocked(Hooks.usePostDetails).mockReturnValue({
+      postDetails: {
+        id: 'post-deleted',
+        indexed_at: 0,
+        kind: 'short',
+        uri: 'pubky://test-user/pub/pubky.app/posts/post-deleted',
+        content: '[DELETED]',
+        attachments: [],
+        is_moderated: false,
+        is_blurred: false,
+      },
+      isLoading: false,
+    });
 
     render(<PostMain postId="post-deleted" />);
 
@@ -270,8 +287,6 @@ describe('PostMain', () => {
   });
 
   it('renders normal content when post is not deleted', () => {
-    mockIsPostDeleted.mockReturnValue(false);
-
     render(<PostMain postId="post-normal" />);
 
     expect(screen.queryByTestId('post-deleted')).not.toBeInTheDocument();
@@ -521,7 +536,6 @@ describe('PostMain', () => {
 describe('PostMain - Tag Expansion', () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    mockIsPostDeleted.mockReturnValue(false);
   });
 
   it('does not show PostTagsPanel by default', () => {
@@ -575,7 +589,6 @@ describe('PostMain - Tag Expansion', () => {
 describe('PostMain - Snapshots', () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    mockIsPostDeleted.mockReturnValue(false);
 
     // Reset mocked hook return values that are overridden in earlier (non-snapshot) tests.
     // Without this, running the full suite (e.g. CI `test:coverage`) can leak mocked
@@ -615,7 +628,19 @@ describe('PostMain - Snapshots', () => {
   });
 
   it('matches snapshot with deleted post', () => {
-    mockIsPostDeleted.mockReturnValue(true);
+    vi.mocked(Hooks.usePostDetails).mockReturnValue({
+      postDetails: {
+        id: 'post-deleted-123',
+        indexed_at: 0,
+        kind: 'short',
+        uri: 'pubky://test-user/pub/pubky.app/posts/post-deleted-123',
+        content: '[DELETED]',
+        attachments: [],
+        is_moderated: false,
+        is_blurred: false,
+      },
+      isLoading: false,
+    });
     const { container } = render(<PostMain postId="post-deleted-123" />);
     expect(container.firstChild).toMatchSnapshot();
   });

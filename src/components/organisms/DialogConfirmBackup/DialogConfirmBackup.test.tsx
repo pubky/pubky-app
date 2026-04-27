@@ -17,14 +17,6 @@ vi.mock('@/atoms', async (importOriginal) => {
   };
 });
 
-// Mock libs - use actual implementations
-vi.mock('@/libs', async () => {
-  const actual = await vi.importActual('@/libs');
-  return {
-    ...actual,
-  };
-});
-
 // Mock organisms
 vi.mock('@/organisms', () => ({
   DialogBackup: vi.fn(() => <div data-testid="dialog-backup">DialogBackup</div>),

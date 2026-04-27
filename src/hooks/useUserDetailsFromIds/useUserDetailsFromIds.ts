@@ -3,13 +3,13 @@
 import { useMemo, useEffect } from 'react';
 import { useLiveQuery } from 'dexie-react-hooks';
 import * as Core from '@/core';
-import * as Libs from '@/libs';
 import type {
   UseUserDetailsFromIdsParams,
   UseUserDetailsFromIdsResult,
   AutocompleteUserData,
 } from './useUserDetailsFromIds.types';
 import { FALLBACK_USER_NAME } from './useUserDetailsFromIds.constants';
+import { Logger } from '@/libs/logger/logger';
 
 /**
  * Hook to fetch and transform user details from a list of user IDs.
@@ -64,7 +64,7 @@ export function useUserDetailsFromIds({
     void Promise.all(
       userIds.map((userId) =>
         Core.UserController.getOrFetchDetails({ userId }).catch((error) => {
-          Libs.Logger.error('[useUserDetailsFromIds] Failed to fetch user details:', { userId, error });
+          Logger.error('[useUserDetailsFromIds] Failed to fetch user details:', { userId, error });
         }),
       ),
     );

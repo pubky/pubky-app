@@ -1,7 +1,12 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { SettingsApplication } from './settings';
 import * as Core from '@/core';
-import { HttpMethod, Logger, Err, ServerErrorCode, ErrorService, httpStatusCodeToError } from '@/libs';
+import { ServerErrorCode } from '@/libs/error/error.codes';
+import { Err } from '@/libs/error/error.factories';
+import { httpStatusCodeToError } from '@/libs/error/error.http';
+import { ErrorService } from '@/libs/error/error.types';
+import { HttpMethod } from '@/libs/http/http.types';
+import { Logger } from '@/libs/logger/logger';
 
 // Mock the HomeserverService
 vi.mock('@/core/services/homeserver', () => ({

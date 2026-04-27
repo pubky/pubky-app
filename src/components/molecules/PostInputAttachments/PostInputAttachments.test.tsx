@@ -162,12 +162,6 @@ vi.mock('@/atoms', () => ({
   ),
 }));
 
-// Mock @/libs/utils
-vi.mock('@/libs/utils', async (importOriginal) => {
-  const actual = await importOriginal<typeof import('@/libs/utils')>();
-  return { ...actual };
-});
-
 const createMockFile = (name: string, type: string): File => {
   return new File(['test content'], name, { type });
 };

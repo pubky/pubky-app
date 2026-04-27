@@ -1,6 +1,7 @@
 import * as Core from '@/core';
-import * as Libs from '@/libs';
 import { filesApi } from './file.api';
+import { HttpMethod } from '@/libs/http/http.types';
+import { Logger } from '@/libs/logger/logger';
 
 /**
  * Nexus File Service
@@ -24,11 +25,11 @@ export class NexusFileService {
     const { url, body } = filesApi.getFiles(fileUris);
     const files = await Core.queryNexus<Core.NexusFileDetails[]>({
       url,
-      method: Libs.HttpMethod.POST,
+      method: HttpMethod.POST,
       body: JSON.stringify(body),
     });
 
-    Libs.Logger.debug('Files fetched successfully from Nexus', { count: files.length });
+    Logger.debug('Files fetched successfully from Nexus', { count: files.length });
     return files;
   }
 }

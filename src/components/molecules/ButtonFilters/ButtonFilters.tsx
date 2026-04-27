@@ -1,8 +1,8 @@
 'use client';
 
 import * as Atoms from '@/atoms';
-import * as Libs from '@/libs';
 import { Settings2, Lightbulb } from 'lucide-react';
+import { cn } from '@/libs/utils/utils';
 export interface ButtonFiltersProps {
   onClick?: () => void;
   className?: string;
@@ -14,12 +14,12 @@ export function ButtonFilters({ onClick, className, position = 'left' }: ButtonF
   const roundedClasses = isLeft ? 'rounded-l-none rounded-r-full' : 'rounded-r-none rounded-l-full';
   const Icon = isLeft ? Settings2 : Lightbulb;
   return (
-    <div className={Libs.cn('fixed top-[150px] z-10', positionClasses)}>
+    <div className={cn('fixed top-[150px] z-10', positionClasses)}>
       <Atoms.Button
         variant="secondary"
         size="icon"
         onClick={onClick}
-        className={Libs.cn(
+        className={cn(
           'hidden bg-secondary px-4 py-3 shadow-xl hover:bg-secondary/90 lg:inline-flex',
           roundedClasses,
           className,

@@ -2,9 +2,9 @@
 
 import { useCallback, useEffect, useRef, useState } from 'react';
 import * as Core from '@/core';
-import * as Libs from '@/libs';
 import { TAGGERS_PAGE_SIZE } from './usePostTaggers.constants';
 import type { TaggersStateMap, UsePostTaggersResult } from './usePostTaggers.types';
+import { Logger } from '@/libs/logger/logger';
 
 /**
  * Hook to fetch and cache full tagger lists for post tags on demand.
@@ -116,7 +116,7 @@ export function usePostTaggers(postId?: string | null): UsePostTaggersResult {
           return next;
         });
       } catch (error) {
-        Libs.Logger.error('[usePostTaggers] Failed to fetch taggers', { postId, label, error });
+        Logger.error('[usePostTaggers] Failed to fetch taggers', { postId, label, error });
         setTaggerStates((prev) => {
           const next = new Map(prev);
           const currentState = next.get(labelKey);

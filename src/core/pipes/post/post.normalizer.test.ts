@@ -1,6 +1,5 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import * as Core from '@/core';
-import * as Libs from '@/libs';
 import { PubkyAppPostKind, PostResult, PubkyAppPostEmbed, PubkyAppPost } from 'pubky-app-specs';
 import type { FileResult } from 'pubky-app-specs';
 import { asInvalid, asOpaque } from '@/test-utils';
@@ -12,6 +11,7 @@ import {
   restoreMocks,
   buildPubkyUri,
 } from '../pipes.test-utils';
+import { Logger } from '@/libs/logger/logger';
 
 describe('PostNormalizer', () => {
   // Test data factories
@@ -277,7 +277,7 @@ describe('PostNormalizer', () => {
           });
 
           await expect(Core.PostNormalizer.to(createBasicPost(), TEST_PUBKY.USER_1)).rejects.toThrow();
-          expect(Libs.Logger.debug).not.toHaveBeenCalled();
+          expect(Logger.debug).not.toHaveBeenCalled();
         });
       });
     });

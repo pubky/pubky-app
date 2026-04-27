@@ -3,8 +3,8 @@ import { renderHook, act, waitFor } from '@testing-library/react';
 import * as Core from '@/core';
 import { asOpaque } from '@/test-utils';
 import { usePostMenuActions } from './usePostMenuActions';
-import * as Libs from '@/libs';
 import { POST_MENU_ACTION_IDS } from './usePostMenuActions.constants';
+import { isAppError } from '@/libs/error/error.utils';
 
 // Hoist mocks
 const {
@@ -55,9 +55,8 @@ vi.mock('@/molecules', () => ({
   toast: (props: unknown) => mockToast(props),
 }));
 
-// Mock Libs
-vi.mock('@/libs', async () => {
-  const actual = await vi.importActual('@/libs');
+vi.mock('lucide-react', async () => {
+  const actual = await vi.importActual<typeof import('lucide-react')>('lucide-react');
   return {
     ...actual,
     UserRoundPlus: vi.fn(() => <span>UserRoundPlus</span>),
@@ -70,6 +69,12 @@ vi.mock('@/libs', async () => {
     Flag: vi.fn(() => <span>Flag</span>),
     Edit: vi.fn(() => <span>Edit</span>),
     Trash: vi.fn(() => <span>Trash</span>),
+  };
+});
+vi.mock('@/libs/error/error.utils', async () => {
+  const actual = await vi.importActual<typeof import('@/libs/error/error.utils')>('@/libs/error/error.utils');
+  return {
+    ...actual,
     isAppError: mockIsAppError,
   };
 });
@@ -223,7 +228,7 @@ describe('usePostMenuActions', () => {
 
     it('shows error toast when follow fails with AppError', async () => {
       const error = asOpaque<Error>({ type: 'AppError', message: 'Follow failed' });
-      vi.mocked(Libs.isAppError).mockReturnValue(true);
+      vi.mocked(isAppError).mockReturnValue(true);
       defaultMocks.toggleFollow.mockRejectedValue(error);
 
       const { result } = renderHook(() =>
@@ -246,7 +251,7 @@ describe('usePostMenuActions', () => {
 
     it('shows generic error toast when follow fails with non-AppError', async () => {
       const error = new Error('Follow failed');
-      vi.mocked(Libs.isAppError).mockReturnValue(false);
+      vi.mocked(isAppError).mockReturnValue(false);
       defaultMocks.toggleFollow.mockRejectedValue(error);
 
       const { result } = renderHook(() =>

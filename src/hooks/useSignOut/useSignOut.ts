@@ -4,10 +4,10 @@ import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useTranslations } from 'next-intl';
 import * as Core from '@/core';
-import * as Libs from '@/libs';
 import * as Molecules from '@/molecules';
 import * as App from '@/app';
 import type { UseSignOutResult } from './useSignOut.types';
+import { Logger } from '@/libs/logger/logger';
 
 export function useSignOut(): UseSignOutResult {
   const router = useRouter();
@@ -30,7 +30,7 @@ export function useSignOut(): UseSignOutResult {
       await Core.AuthController.logout();
       router.push(App.AUTH_ROUTES.LOGOUT);
     } catch (error) {
-      Libs.Logger.error('Failed to sign out:', { error });
+      Logger.error('Failed to sign out:', { error });
       showErrorToast(tErrors('signOutFailed'));
       setIsLoading(false);
     }

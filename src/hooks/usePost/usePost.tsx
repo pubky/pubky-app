@@ -4,7 +4,6 @@ import { useState, useEffect } from 'react';
 import { useTranslations } from 'next-intl';
 import * as Atoms from '@/atoms';
 import * as Core from '@/core';
-import * as Libs from '@/libs';
 import * as Molecules from '@/molecules';
 import type {
   UsePostReplyOptions,
@@ -13,6 +12,7 @@ import type {
   UsePostEditOptions,
   UsePostReturn,
 } from './usePost.types';
+import { Logger } from '@/libs/logger/logger';
 
 /**
  * Custom hook to handle post creation or edits (replies, reposts, and root posts)
@@ -89,7 +89,7 @@ export function usePost(): UsePostReturn {
       });
       onSuccess?.(createdPostId);
     } catch (err) {
-      Libs.Logger.error('[usePost] Failed to submit reply:', err);
+      Logger.error('[usePost] Failed to submit reply:', err);
       showErrorToast(tPost('replyFailed'));
     } finally {
       setIsSubmitting(false);
@@ -127,7 +127,7 @@ export function usePost(): UsePostReturn {
       });
       onSuccess?.(createdPostId);
     } catch (err) {
-      Libs.Logger.error('[usePost] Failed to create post:', err);
+      Logger.error('[usePost] Failed to create post:', err);
       showErrorToast(tPost('postFailed'));
     } finally {
       setIsSubmitting(false);
@@ -171,7 +171,7 @@ export function usePost(): UsePostReturn {
 
       onSuccess?.(createdPostId);
     } catch (err) {
-      Libs.Logger.error('[usePost] Failed to repost:', err);
+      Logger.error('[usePost] Failed to repost:', err);
       showErrorToast(tPost('repostFailed'));
     } finally {
       setIsSubmitting(false);
@@ -196,7 +196,7 @@ export function usePost(): UsePostReturn {
       showSuccessToast(tPost('postEdited'), tPost('postEditedDesc'));
       onSuccess?.(editPostId);
     } catch (err) {
-      Libs.Logger.error('[usePost] Failed to edit post:', err);
+      Logger.error('[usePost] Failed to edit post:', err);
       showErrorToast(tPost('editFailed'));
     } finally {
       setIsSubmitting(false);

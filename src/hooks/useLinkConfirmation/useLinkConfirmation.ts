@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import { useSettingsStore } from '@/core';
-import { shouldBypassLinkConfirmation } from '@/libs';
+import { shouldBypassLinkConfirmation } from '@/libs/utils/utils';
 
 interface UseLinkConfirmationReturn {
   /** Whether the confirmation dialog is open */

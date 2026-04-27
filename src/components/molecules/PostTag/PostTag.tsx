@@ -1,8 +1,8 @@
 import * as Atoms from '@/atoms';
 import { COLORS } from '@/config';
-import * as Libs from '@/libs';
 import type { PostTagProps } from './PostTag.types';
 import { X } from 'lucide-react';
+import { cn, generateRandomColor, hexToRgba } from '@/libs/utils/utils';
 export function PostTag({
   label,
   count,
@@ -14,8 +14,8 @@ export function PostTag({
   className,
   ...rest
 }: PostTagProps) {
-  const tagColor = color || Libs.generateRandomColor(label);
-  const backgroundGradient = `linear-gradient(90deg, ${Libs.hexToRgba(COLORS.background, 0.7)} 0%, ${Libs.hexToRgba(COLORS.background, 0.7)} 100%), linear-gradient(90deg, ${tagColor} 0%, ${tagColor} 100%)`;
+  const tagColor = color || generateRandomColor(label);
+  const backgroundGradient = `linear-gradient(90deg, ${hexToRgba(COLORS.background, 0.7)} 0%, ${hexToRgba(COLORS.background, 0.7)} 100%), linear-gradient(90deg, ${tagColor} 0%, ${tagColor} 100%)`;
   const handleClose = (e: React.MouseEvent) => {
     e.stopPropagation();
     onClose?.(e);
@@ -30,7 +30,7 @@ export function PostTag({
       }}
       data-cy="post-tag"
       data-tag-label={label}
-      className={Libs.cn(
+      className={cn(
         'group relative h-8 max-w-full gap-1 rounded-md px-3 backdrop-blur-lg',
         'border-0 text-sm leading-5 font-bold text-white',
         'transition-all duration-200',

@@ -19,8 +19,8 @@ vi.mock('@/core', async (importOriginal) => {
 });
 
 // Mock the Logger to prevent console output during tests
-vi.mock('@/libs', async (importOriginal) => {
-  const actual = await importOriginal<typeof import('@/libs')>();
+vi.mock('@/libs/logger/logger', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('@/libs/logger/logger')>();
   return {
     ...actual,
     Logger: {

@@ -3,7 +3,9 @@ import Dexie, { Table } from 'dexie';
 import { indexedDB, IDBKeyRange } from 'fake-indexeddb';
 import * as Core from '@/core';
 import { Ttl } from './ttl';
-import { AppError, DatabaseErrorCode, ErrorCategory, ErrorService } from '@/libs';
+import { AppError } from '@/libs/error/error';
+import { DatabaseErrorCode } from '@/libs/error/error.codes';
+import { ErrorCategory, ErrorService } from '@/libs/error/error.types';
 
 type TestTtlSchema = Core.TtlModelSchema<string>;
 

@@ -1,7 +1,9 @@
 import { describe, it, expect } from 'vitest';
 import { FeedbackValidators } from './feedback.validators';
 import { FEEDBACK_MAX_CHARACTER_LENGTH } from '@/config';
-import { AppError, ErrorCategory, ValidationErrorCode, ErrorService } from '@/libs';
+import { AppError } from '@/libs/error/error';
+import { ValidationErrorCode } from '@/libs/error/error.codes';
+import { ErrorCategory, ErrorService } from '@/libs/error/error.types';
 
 describe('FeedbackValidators', () => {
   describe('validatePubky', () => {

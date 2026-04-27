@@ -1,10 +1,14 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import * as Core from '@/core';
-import * as Libs from '@/libs';
 import { CHATWOOT_INBOX_IDS, CHATWOOT_FEEDBACK_MESSAGE_PREFIX } from '@/core/services/chatwoot';
 import type { TFeedbackSubmitInput } from './feedback.types';
 import type { TChatwootContact } from '@/core/services/chatwoot/chatwoot.types';
 import { asOpaque } from '@/test-utils';
+import { NetworkErrorCode } from '@/libs/error/error.codes';
+import { Err } from '@/libs/error/error.factories';
+import { ErrorService } from '@/libs/error/error.types';
+import { HttpStatusCode } from '@/libs/http/http.types';
+import { Logger } from '@/libs/logger/logger';
 
 const testData = {
   userPubky: 'o1gg96ewuojmopcjbz8895478wdtxtzzuxnfjjz8o8e77csa1ngo' as Core.Pubky,
@@ -43,7 +47,7 @@ describe('FeedbackApplication', () => {
     vi.spyOn(Core.ChatwootService, 'createConversation').mockResolvedValue(undefined);
 
     // Mock Logger
-    vi.spyOn(Libs.Logger, 'error').mockImplementation(() => {});
+    vi.spyOn(Logger, 'error').mockImplementation(() => {});
 
     // Import FeedbackApplication
     const feedbackModule = await import('./feedback');
@@ -156,7 +160,7 @@ describe('FeedbackApplication', () => {
 
       await expect(FeedbackApplication.submit(input)).rejects.toThrow('Contact has no inbox associations');
 
-      expect(Libs.Logger.error).toHaveBeenCalledWith('Feedback submission failed', expect.any(Object));
+      expect(Logger.error).toHaveBeenCalledWith('Feedback submission failed', expect.any(Object));
     });
 
     it('should throw AppError when contact has undefined inbox associations', async () => {
@@ -171,21 +175,21 @@ describe('FeedbackApplication', () => {
 
       await expect(FeedbackApplication.submit(input)).rejects.toThrow('Contact has no inbox associations');
 
-      expect(Libs.Logger.error).toHaveBeenCalledWith('Feedback submission failed', expect.any(Object));
+      expect(Logger.error).toHaveBeenCalledWith('Feedback submission failed', expect.any(Object));
     });
 
     it('should re-throw AppError from ChatwootService', async () => {
       const input = createFeedbackInput();
-      const appError = Libs.Err.network(Libs.NetworkErrorCode.CONNECTION_FAILED, 'Chatwoot API error', {
-        service: Libs.ErrorService.Chatwoot,
+      const appError = Err.network(NetworkErrorCode.CONNECTION_FAILED, 'Chatwoot API error', {
+        service: ErrorService.Chatwoot,
         operation: 'createOrFindContact',
-        context: { statusCode: Libs.HttpStatusCode.INTERNAL_SERVER_ERROR },
+        context: { statusCode: HttpStatusCode.INTERNAL_SERVER_ERROR },
       });
       vi.spyOn(Core.ChatwootService, 'createOrFindContact').mockRejectedValue(appError);
 
       await expect(FeedbackApplication.submit(input)).rejects.toThrow(appError);
 
-      expect(Libs.Logger.error).toHaveBeenCalledWith('Feedback submission failed', {
+      expect(Logger.error).toHaveBeenCalledWith('Feedback submission failed', {
         category: appError.category,
         code: appError.code,
         service: appError.service,
@@ -201,23 +205,23 @@ describe('FeedbackApplication', () => {
 
       await expect(FeedbackApplication.submit(input)).rejects.toThrow('Failed to submit feedback');
 
-      expect(Libs.Logger.error).toHaveBeenCalledWith('Unexpected error during feedback submission', {
+      expect(Logger.error).toHaveBeenCalledWith('Unexpected error during feedback submission', {
         error: unexpectedError,
       });
     });
 
     it('should throw AppError when createConversation fails', async () => {
       const input = createFeedbackInput();
-      const appError = Libs.Err.network(Libs.NetworkErrorCode.CONNECTION_FAILED, 'Failed to create conversation', {
-        service: Libs.ErrorService.Chatwoot,
+      const appError = Err.network(NetworkErrorCode.CONNECTION_FAILED, 'Failed to create conversation', {
+        service: ErrorService.Chatwoot,
         operation: 'createConversation',
-        context: { statusCode: Libs.HttpStatusCode.INTERNAL_SERVER_ERROR },
+        context: { statusCode: HttpStatusCode.INTERNAL_SERVER_ERROR },
       });
       vi.spyOn(Core.ChatwootService, 'createConversation').mockRejectedValue(appError);
 
       await expect(FeedbackApplication.submit(input)).rejects.toThrow(appError);
 
-      expect(Libs.Logger.error).toHaveBeenCalledWith('Feedback submission failed', expect.any(Object));
+      expect(Logger.error).toHaveBeenCalledWith('Feedback submission failed', expect.any(Object));
     });
   });
 });

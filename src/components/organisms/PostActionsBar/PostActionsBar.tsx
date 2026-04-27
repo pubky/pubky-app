@@ -3,12 +3,12 @@
 import { useTranslations } from 'next-intl';
 import { cva } from 'class-variance-authority';
 import * as Atoms from '@/atoms';
-import * as Libs from '@/libs';
 import * as Hooks from '@/hooks';
 import * as Organisms from '@/organisms';
 import { PostActionsBarSkeleton } from './PostActionsBar.skeleton';
 import type { PostActionsBarProps, ActionButtonConfig } from './PostActionsBar.types';
 import { Tag, MessageCircle, Repeat, Loader2, Bookmark, Ellipsis } from 'lucide-react';
+import { cn } from '@/libs/utils/utils';
 const postActionsButtonVariants = cva('', {
   variants: {
     variant: {
@@ -105,7 +105,7 @@ export function PostActionsBar({
     </Atoms.Button>
   );
   return (
-    <Atoms.Container overrideDefaults className={Libs.cn('flex flex-wrap gap-2', className)}>
+    <Atoms.Container overrideDefaults className={cn('flex flex-wrap gap-2', className)}>
       {actionButtons.map(
         ({ id, icon: Icon, count, onClick, ariaLabel, className: btnClassName, iconProps, disabled }) => (
           <Atoms.Button
@@ -114,7 +114,7 @@ export function PostActionsBar({
             {...commonButtonProps}
             onClick={onClick}
             disabled={disabled}
-            className={Libs.cn(commonButtonProps.className, btnClassName)}
+            className={cn(commonButtonProps.className, btnClassName)}
             aria-label={ariaLabel}
           >
             <Icon {...iconProps} />

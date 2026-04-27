@@ -1,5 +1,5 @@
 import * as Core from '@/core';
-import * as Libs from '@/libs';
+import { Logger } from '@/libs/logger/logger';
 
 /**
  * Nexus Bootstrap Service
@@ -16,7 +16,7 @@ export class NexusBootstrapService {
   static async fetch(pubky: Core.Pubky): Promise<Core.NexusBootstrapResponse> {
     const url = Core.bootstrapApi.get(pubky);
     const data = await Core.queryNexus<Core.NexusBootstrapResponse>({ url });
-    Libs.Logger.debug('Bootstrap data fetched successfully', { data });
+    Logger.debug('Bootstrap data fetched successfully', { data });
     return data;
   }
 }

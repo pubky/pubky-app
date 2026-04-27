@@ -7,9 +7,9 @@ import * as Atoms from '@/atoms';
 import * as Organisms from '@/organisms';
 import * as Hooks from '@/hooks';
 import * as Core from '@/core';
-import * as Libs from '@/libs';
 import { APP_ROUTES } from '@/app/routes';
 import type { HotActiveUsersProps } from './HotActiveUsers.types';
+import { cn } from '@/libs/utils/utils';
 
 const DEFAULT_USERS_LIMIT = 10;
 
@@ -66,7 +66,7 @@ export function HotActiveUsers({ limit = DEFAULT_USERS_LIMIT, className }: HotAc
   return (
     <Atoms.Container
       overrideDefaults
-      className={Libs.cn('flex w-full flex-col gap-2', className)}
+      className={cn('flex w-full flex-col gap-2', className)}
       data-testid="hot-active-users"
     >
       <Atoms.Heading level={5} size="lg" className="font-light text-muted-foreground">

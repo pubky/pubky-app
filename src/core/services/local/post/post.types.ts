@@ -1,5 +1,5 @@
 import { PubkyAppPost } from 'pubky-app-specs';
-import { HttpMethod } from '@/libs';
+import { HttpMethod } from '@/libs/http/http.types';
 
 export interface TLocalSavePostParams {
   compositePostId: string;

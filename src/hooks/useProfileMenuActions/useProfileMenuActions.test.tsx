@@ -1,8 +1,8 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { renderHook, act, waitFor } from '@testing-library/react';
 import { useProfileMenuActions } from './useProfileMenuActions';
-import * as Libs from '@/libs';
 import { PROFILE_MENU_ACTION_IDS } from './useProfileMenuActions.constants';
+import { isAppError } from '@/libs/error/error.utils';
 
 // Hoist mocks
 const {
@@ -47,9 +47,8 @@ vi.mock('@/molecules', () => ({
   toast: (props: unknown) => mockToast(props),
 }));
 
-// Mock Libs
-vi.mock('@/libs', async () => {
-  const actual = await vi.importActual('@/libs');
+vi.mock('lucide-react', async () => {
+  const actual = await vi.importActual<typeof import('lucide-react')>('lucide-react');
   return {
     ...actual,
     UserRoundPlus: vi.fn(() => <span>UserRoundPlus</span>),
@@ -58,6 +57,12 @@ vi.mock('@/libs', async () => {
     Link: vi.fn(() => <span>Link</span>),
     Megaphone: vi.fn(() => <span>Megaphone</span>),
     MegaphoneOff: vi.fn(() => <span>MegaphoneOff</span>),
+  };
+});
+vi.mock('@/libs/error/error.utils', async () => {
+  const actual = await vi.importActual<typeof import('@/libs/error/error.utils')>('@/libs/error/error.utils');
+  return {
+    ...actual,
     isAppError: mockIsAppError,
   };
 });
@@ -212,7 +217,7 @@ describe('useProfileMenuActions', () => {
 
     it('shows error toast when follow fails', async () => {
       const error = new Error('Follow failed');
-      vi.mocked(Libs.isAppError).mockReturnValue(false);
+      vi.mocked(isAppError).mockReturnValue(false);
       defaultMocks.toggleFollow.mockRejectedValue(error);
 
       const { result } = renderHook(() => useProfileMenuActions(mockUserId));
@@ -301,7 +306,7 @@ describe('useProfileMenuActions', () => {
 
     it('shows error toast when mute fails', async () => {
       const error = new Error('Mute failed');
-      vi.mocked(Libs.isAppError).mockReturnValue(false);
+      vi.mocked(isAppError).mockReturnValue(false);
       defaultMocks.toggleMute.mockRejectedValue(error);
 
       const { result } = renderHook(() => useProfileMenuActions(mockUserId));
@@ -364,7 +369,7 @@ describe('useProfileMenuActions', () => {
 
     it('shows error toast when copy pubky fails', async () => {
       const error = new Error('Copy failed');
-      vi.mocked(Libs.isAppError).mockReturnValue(false);
+      vi.mocked(isAppError).mockReturnValue(false);
       defaultMocks.copyToClipboard.mockRejectedValue(error);
 
       const { result } = renderHook(() => useProfileMenuActions(mockUserId));
@@ -385,7 +390,7 @@ describe('useProfileMenuActions', () => {
 
     it('shows error toast when copy link fails', async () => {
       const error = new Error('Copy failed');
-      vi.mocked(Libs.isAppError).mockReturnValue(false);
+      vi.mocked(isAppError).mockReturnValue(false);
       defaultMocks.copyToClipboard.mockRejectedValue(error);
 
       const { result } = renderHook(() => useProfileMenuActions(mockUserId));

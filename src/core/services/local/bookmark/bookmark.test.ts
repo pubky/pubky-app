@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeEach } from 'vitest';
 import * as Core from '@/core';
-import { HttpMethod } from '@/libs';
+import { HttpMethod } from '@/libs/http/http.types';
 
 // Test data
 const testData = {

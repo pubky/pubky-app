@@ -4,11 +4,12 @@ import { useCallback, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useTranslations } from 'next-intl';
 import * as Core from '@/core';
-import * as Libs from '@/libs';
 import * as Molecules from '@/molecules';
 import { AUTH_ROUTES, SETTINGS_ROUTES } from '@/app';
 // Import directly to avoid circular dependency with @/hooks barrel
 import { useCopyToClipboard } from '@/hooks/useCopyToClipboard';
+import { Logger } from '@/libs/logger/logger';
+import { withPubkyPrefix } from '@/libs/utils/utils';
 
 export interface ProfileActions {
   onEdit: () => void;
@@ -45,7 +46,7 @@ export function useProfileActions({ publicKey, link }: UseProfileActionsProps): 
   }, [router]);
 
   const onCopyPublicKey = useCallback(() => {
-    void copyToClipboard(Libs.withPubkyPrefix(publicKey));
+    void copyToClipboard(withPubkyPrefix(publicKey));
   }, [publicKey, copyToClipboard]);
 
   const onCopyLink = useCallback(() => {
@@ -58,7 +59,7 @@ export function useProfileActions({ publicKey, link }: UseProfileActionsProps): 
       await Core.AuthController.logout();
       router.push(AUTH_ROUTES.LOGOUT);
     } catch (error) {
-      Libs.Logger.error('Failed to logout:', error);
+      Logger.error('Failed to logout:', error);
       Molecules.showErrorToast({ description: tLogout('failed') });
       setIsLoggingOut(false);
     }
@@ -68,7 +69,7 @@ export function useProfileActions({ publicKey, link }: UseProfileActionsProps): 
     async (status: string) => {
       const currentUserPubky = authStore.currentUserPubky;
       if (!currentUserPubky) {
-        Libs.Logger.error('No authenticated user found');
+        Logger.error('No authenticated user found');
         Molecules.showErrorToast({ description: tStatus('userNotLoaded') });
         return;
       }
@@ -76,7 +77,7 @@ export function useProfileActions({ publicKey, link }: UseProfileActionsProps): 
       try {
         await Core.ProfileController.commitUpdateStatus({ pubky: currentUserPubky, status });
       } catch (error) {
-        Libs.Logger.error('Failed to update status:', error);
+        Logger.error('Failed to update status:', error);
         Molecules.showErrorToast({ description: tStatus('updateFailed') });
       }
     },

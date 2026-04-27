@@ -1,5 +1,6 @@
 import * as Core from '@/core';
-import { HttpMethod, stripPubkyPrefix } from '@/libs';
+import { HttpMethod } from '@/libs/http/http.types';
+import { stripPubkyPrefix } from '@/libs/utils/utils';
 
 export class MuteController {
   private constructor() {}

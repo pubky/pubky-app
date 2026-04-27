@@ -1,7 +1,7 @@
 import * as Core from '@/core';
-import * as Libs from '@/libs';
 import { TQueueEntry } from '../post.types';
 import { CollectParams, CollectResult } from './post-stream-queue.types';
+import { Logger } from '@/libs/logger/logger';
 
 // Safety valve to prevent infinite loops when filters remove many posts.
 // At 20 iterations with limit=30, we scan up to 600 posts before giving up.
@@ -118,7 +118,7 @@ export class PostStreamQueue {
     } catch (error) {
       // Log but don't fail - caller can fall back to cursor
       // This allows pagination to continue even if IndexedDB access fails
-      Libs.Logger.warn('Failed to get last post timestamp', { error });
+      Logger.warn('Failed to get last post timestamp', { error });
       return undefined;
     }
   }

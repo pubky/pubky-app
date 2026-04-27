@@ -1,5 +1,4 @@
 import * as Core from '@/core';
-import * as Libs from '@/libs';
 import { REPORT_ISSUE_LABELS, type ReportIssueType } from '@/core/pipes/report';
 import {
   CHATWOOT_INBOX_IDS,
@@ -8,6 +7,11 @@ import {
   extractSourceId,
 } from '@/core/services/chatwoot';
 import * as Types from './report.types';
+import { Logger } from '@/libs/logger/logger';
+import { AppError } from '@/libs/error/error';
+import { ServerErrorCode } from '@/libs/error/error.codes';
+import { Err } from '@/libs/error/error.factories';
+import { ErrorService } from '@/libs/error/error.types';
 
 /**
  * Report application service.
@@ -101,8 +105,8 @@ export class ReportApplication {
       await Core.ChatwootService.createConversation(sourceId, contact.id, inboxId, content);
     } catch (error) {
       // Log error for observability
-      if (error instanceof Libs.AppError) {
-        Libs.Logger.error('Report submission failed', {
+      if (error instanceof AppError) {
+        Logger.error('Report submission failed', {
           category: error.category,
           code: error.code,
           service: error.service,
@@ -114,9 +118,9 @@ export class ReportApplication {
       }
 
       // Wrap unexpected errors
-      Libs.Logger.error('Unexpected error during report submission', { error });
-      throw Libs.Err.server(Libs.ServerErrorCode.UNKNOWN_ERROR, 'Failed to submit report', {
-        service: Libs.ErrorService.Chatwoot,
+      Logger.error('Unexpected error during report submission', { error });
+      throw Err.server(ServerErrorCode.UNKNOWN_ERROR, 'Failed to submit report', {
+        service: ErrorService.Chatwoot,
         operation: 'submit',
         cause: error,
       });

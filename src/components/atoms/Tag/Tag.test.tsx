@@ -1,7 +1,7 @@
 import { render, screen, fireEvent } from '@testing-library/react';
 import { describe, it, expect, vi } from 'vitest';
 import { Tag } from './Tag';
-import * as Libs from '@/libs';
+import { generateRandomColor, hexToRgba } from '@/libs/utils/utils';
 
 describe('Tag', () => {
   it('renders tag with count', () => {
@@ -53,7 +53,7 @@ describe('Tag', () => {
     const { container } = render(<Tag name="bitcoin" />);
     const style = container.firstChild as HTMLElement;
 
-    const expectedColor = Libs.hexToRgba(Libs.generateRandomColor('bitcoin'), 0.3);
+    const expectedColor = hexToRgba(generateRandomColor('bitcoin'), 0.3);
     expect(style.style.backgroundColor).toBe(expectedColor);
   });
 
@@ -65,7 +65,7 @@ describe('Tag', () => {
     const tag2 = container2.firstChild as HTMLElement;
 
     // Both should have same background color
-    const expectedColor = Libs.hexToRgba(Libs.generateRandomColor('bitcoin'), 0.3);
+    const expectedColor = hexToRgba(generateRandomColor('bitcoin'), 0.3);
     expect(tag1.style.backgroundColor).toBe(expectedColor);
     expect(tag2.style.backgroundColor).toBe(expectedColor);
   });
@@ -81,7 +81,7 @@ describe('Tag', () => {
     fireEvent.mouseEnter(tag);
 
     // Should show inset shadow (using borderColor which is 0.5 opacity)
-    const expectedShadowColor = Libs.hexToRgba(Libs.generateRandomColor('bitcoin'), 0.5);
+    const expectedShadowColor = hexToRgba(generateRandomColor('bitcoin'), 0.5);
     expect(tag.style.boxShadow).toBe(`inset 0 0 10px 2px ${expectedShadowColor}`);
 
     // Leave hover
@@ -116,7 +116,7 @@ describe('Tag', () => {
     const tag = container.firstChild as HTMLElement;
 
     // Should have border when clicked (using 0.5 opacity)
-    const expectedBorderColor = Libs.hexToRgba(Libs.generateRandomColor('bitcoin'), 0.5);
+    const expectedBorderColor = hexToRgba(generateRandomColor('bitcoin'), 0.5);
     expect(tag.style.border).toBe(`1px solid ${expectedBorderColor}`);
 
     // Hover and leave

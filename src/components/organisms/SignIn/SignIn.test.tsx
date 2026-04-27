@@ -123,18 +123,6 @@ const { mockCopyToClipboard } = vi.hoisted(() => ({
   mockCopyToClipboard: vi.fn().mockResolvedValue(undefined),
 }));
 
-// Mock libs - use actual utility functions and icons from lucide-react
-vi.mock('@/libs', async () => {
-  const actual = await vi.importActual('@/libs');
-  return {
-    ...actual,
-    copyToClipboard: mockCopyToClipboard,
-    Logger: {
-      error: vi.fn(),
-    },
-  };
-});
-
 // Mock atoms
 vi.mock('@/atoms', () => ({
   Container: ({ children, className }: { children: React.ReactNode; className?: string }) => (

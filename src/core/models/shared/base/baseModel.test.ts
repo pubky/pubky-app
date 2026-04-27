@@ -2,7 +2,9 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import Dexie, { Table, UpdateSpec } from 'dexie';
 import { indexedDB, IDBKeyRange } from 'fake-indexeddb';
 import { ModelBase } from './baseModel';
-import { AppError, DatabaseErrorCode, ErrorCategory, ErrorService } from '@/libs';
+import { AppError } from '@/libs/error/error';
+import { DatabaseErrorCode } from '@/libs/error/error.codes';
+import { ErrorCategory, ErrorService } from '@/libs/error/error.types';
 
 interface TestSchema {
   id: string;

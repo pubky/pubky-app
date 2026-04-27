@@ -1,8 +1,8 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import * as Core from '@/core';
-import { HttpMethod } from '@/libs';
 import { asInvalid } from '@/test-utils';
 import { UserApplication } from './user';
+import { HttpMethod } from '@/libs/http/http.types';
 
 describe('UserApplication.commitFollow', () => {
   const follower = 'pubky_follower' as Core.Pubky;

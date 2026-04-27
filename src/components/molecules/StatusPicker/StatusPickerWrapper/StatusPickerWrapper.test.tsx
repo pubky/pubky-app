@@ -1,7 +1,7 @@
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { StatusPickerWrapper } from './StatusPickerWrapper';
-import * as Libs from '@/libs';
+import { STATUS_LABELS } from '@/libs/status/status.constants';
 
 // Mock StatusPickerContent
 vi.mock('../StatusPickerContent', () => ({
@@ -45,7 +45,7 @@ describe('StatusPickerWrapper', () => {
       render(<StatusPickerWrapper emoji="🌴" status="vacationing" />);
 
       expect(screen.getByText('🌴')).toBeInTheDocument();
-      expect(screen.getByText(Libs.STATUS_LABELS.vacationing)).toBeInTheDocument();
+      expect(screen.getByText(STATUS_LABELS.vacationing)).toBeInTheDocument();
     });
 
     it('renders emoji and status correctly for custom status', () => {

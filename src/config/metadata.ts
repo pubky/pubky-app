@@ -1,4 +1,4 @@
-import { Env } from '@/libs/env';
+import { Env } from '@/libs/env/env';
 
 export const DEFAULT_PREVIEW_IMAGE = Env.NEXT_PUBLIC_PREVIEW_IMAGE;
 export const DEFAULT_SITE_NAME = Env.NEXT_PUBLIC_SITE_NAME;

@@ -110,18 +110,6 @@ vi.mock('@/organisms', () => ({
   ),
 }));
 
-// Keep real @/libs (cn, icons, Logger) but spy on Logger.error
-vi.mock('@/libs', async () => {
-  const actual = (await vi.importActual('@/libs')) as Record<string, unknown>;
-  return {
-    ...actual,
-    Logger: {
-      ...(actual.Logger as Record<string, unknown>),
-      error: vi.fn(),
-    },
-  };
-});
-
 // Mock @/app/routes
 vi.mock('@/app/routes', () => ({
   APP_ROUTES: {

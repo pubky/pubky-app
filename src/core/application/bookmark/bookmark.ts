@@ -1,5 +1,5 @@
 import * as Core from '@/core';
-import { HttpMethod } from '@/libs';
+import { HttpMethod } from '@/libs/http/http.types';
 
 /**
  * Bookmark application service.

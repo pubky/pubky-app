@@ -1,8 +1,8 @@
 'use client';
 
 import * as Atoms from '@/atoms';
-import * as Libs from '@/libs';
 import type { TagSuggestionsDropdownProps } from './TagSuggestionsDropdown.types';
+import { cn } from '@/libs/utils/utils';
 
 export function TagSuggestionsDropdown({
   suggestions,
@@ -22,7 +22,7 @@ export function TagSuggestionsDropdown({
         <Atoms.Container
           key={tag.label}
           overrideDefaults={true}
-          className={Libs.cn(
+          className={cn(
             'cursor-pointer px-3 py-2 hover:rounded-md hover:bg-accent',
             index === selectedIndex && 'rounded-md bg-accent',
           )}

@@ -1,5 +1,4 @@
 import * as Core from '@/core';
-import { Env, Logger } from '@/libs';
 import { APP_ROUTES, POST_ROUTES } from '@/app/routes';
 import {
   Coordinator,
@@ -8,6 +7,8 @@ import {
   type StreamCoordinatorConfig,
   type StreamCoordinatorState,
 } from '@/core/coordinators';
+import { Env } from '@/libs/env/env';
+import { Logger } from '@/libs/logger/logger';
 
 /**
  * StreamCoordinator

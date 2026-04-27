@@ -3,17 +3,17 @@
 import Link from 'next/link';
 import { useTranslations } from 'next-intl';
 import * as Atoms from '@/atoms';
-import * as Libs from '@/libs';
 import * as Organisms from '@/organisms';
 import * as App from '@/app';
 import { APP_RELEASE_URL, APP_VERSION } from '@/config';
 import type { SettingsInfoProps } from './SettingsInfo.types';
 import { FAQ_QUESTION_KEYS, COPYRIGHT_TEXT } from './SettingsInfo.constants';
 import { FileText, LockKeyhole, ChevronRight, MessageCircleQuestion } from 'lucide-react';
+import { cn } from '@/libs/utils/utils';
 export function SettingsInfo({ className, hideFAQ = false }: SettingsInfoProps) {
   const t = useTranslations('settingsInfo');
   return (
-    <Atoms.Container overrideDefaults className={Libs.cn('flex w-full min-w-0 flex-col gap-6', className)}>
+    <Atoms.Container overrideDefaults className={cn('flex w-full min-w-0 flex-col gap-6', className)}>
       {/* Terms of Service & Privacy Section */}
       <Atoms.FilterRoot>
         <Atoms.FilterHeader title={t('termsPrivacy.title')} subtitle={t('termsPrivacy.subtitle')} />

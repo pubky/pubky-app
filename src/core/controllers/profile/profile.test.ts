@@ -52,8 +52,8 @@ vi.mock('@/core', async () => {
   };
 });
 
-vi.mock('@/libs', async () => {
-  const actual = await vi.importActual('@/libs');
+vi.mock('@/libs/identity/identity', async () => {
+  const actual = await vi.importActual<typeof import('@/libs/identity/identity')>('@/libs/identity/identity');
   return {
     ...actual,
     Identity: mockIdentity,

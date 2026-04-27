@@ -2,9 +2,9 @@
 
 import * as Core from '@/core';
 import * as Hooks from '@/hooks';
-import * as Libs from '@/libs';
 import { useLocalFirstQuery } from '@/hooks/useLocalFirstQuery';
 import type { UseRepostInfoResult } from './useRepostInfo.types';
+import { Logger } from '@/libs/logger/logger';
 
 /**
  * Hook to get repost information for a post.
@@ -63,7 +63,7 @@ export function useRepostInfo(postId: string): UseRepostInfoResult {
     });
 
     if (!originalPostId) {
-      Libs.Logger.error('[useRepostInfo] Failed to build composite ID from reposted URI', {
+      Logger.error('[useRepostInfo] Failed to build composite ID from reposted URI', {
         postId,
         repostedUri: relationships.reposted,
       });
@@ -76,7 +76,7 @@ export function useRepostInfo(postId: string): UseRepostInfoResult {
     try {
       repostAuthorId = Core.parseCompositeId(postId).pubky;
     } catch (error) {
-      Libs.Logger.error('[useRepostInfo] Failed to parse composite post ID', {
+      Logger.error('[useRepostInfo] Failed to parse composite post ID', {
         postId,
         error,
       });

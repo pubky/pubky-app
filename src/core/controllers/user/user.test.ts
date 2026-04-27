@@ -2,8 +2,8 @@ import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { FollowResult } from 'pubky-app-specs';
 import { UserController } from './user';
 import * as Core from '@/core';
-import { HttpMethod } from '@/libs';
 import { asOpaque } from '@/test-utils';
+import { HttpMethod } from '@/libs/http/http.types';
 
 // Valid 52-character z-base32 encoded pubky IDs for testing
 const TEST_PUBKY = {

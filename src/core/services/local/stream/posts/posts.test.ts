@@ -1,8 +1,10 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import * as Core from '@/core';
-import * as Libs from '@/libs';
 import { buildCompositeId } from '@/core';
 import { asOpaque } from '@/test-utils';
+import { DatabaseErrorCode } from '@/libs/error/error.codes';
+import { Err } from '@/libs/error/error.factories';
+import { ErrorService } from '@/libs/error/error.types';
 
 describe('LocalStreamPostsService', () => {
   const streamId: Core.PostStreamId = Core.PostStreamTypes.TIMELINE_ALL_ALL;
@@ -150,8 +152,8 @@ describe('LocalStreamPostsService', () => {
 
     it('should propagate error when PostStreamModel.upsert throws', async () => {
       // Mock PostStreamModel.upsert to throw database error
-      const databaseError = Libs.Err.database(Libs.DatabaseErrorCode.WRITE_FAILED, 'Failed to upsert PostStream', {
-        service: Libs.ErrorService.Local,
+      const databaseError = Err.database(DatabaseErrorCode.WRITE_FAILED, 'Failed to upsert PostStream', {
+        service: ErrorService.Local,
         operation: 'upsert',
         context: { streamId },
       });
@@ -187,8 +189,8 @@ describe('LocalStreamPostsService', () => {
 
     it('should propagate error when PostStreamModel.findById throws', async () => {
       // Mock PostStreamModel.findById to throw database error
-      const databaseError = Libs.Err.database(Libs.DatabaseErrorCode.QUERY_FAILED, 'Database query failed', {
-        service: Libs.ErrorService.Local,
+      const databaseError = Err.database(DatabaseErrorCode.QUERY_FAILED, 'Database query failed', {
+        service: ErrorService.Local,
         operation: 'findById',
         context: { streamId },
       });
@@ -217,8 +219,8 @@ describe('LocalStreamPostsService', () => {
 
     it('should propagate error when PostStreamModel.deleteById throws', async () => {
       // Mock PostStreamModel.deleteById to throw database error
-      const databaseError = Libs.Err.database(Libs.DatabaseErrorCode.DELETE_FAILED, 'Failed to delete stream', {
-        service: Libs.ErrorService.Local,
+      const databaseError = Err.database(DatabaseErrorCode.DELETE_FAILED, 'Failed to delete stream', {
+        service: ErrorService.Local,
         operation: 'deleteById',
         context: { streamId },
       });
@@ -346,8 +348,8 @@ describe('LocalStreamPostsService', () => {
       const mockPosts: Core.NexusPost[] = [createMockNexusPost('post-1', 'user-1')];
 
       // Mock PostDetailsModel.bulkSave to throw error
-      const databaseError = Libs.Err.database(Libs.DatabaseErrorCode.WRITE_FAILED, 'Failed to save post details', {
-        service: Libs.ErrorService.Local,
+      const databaseError = Err.database(DatabaseErrorCode.WRITE_FAILED, 'Failed to save post details', {
+        service: ErrorService.Local,
         operation: 'bulkSave',
       });
       vi.spyOn(Core.PostDetailsModel, 'bulkSave').mockRejectedValue(databaseError);
@@ -583,8 +585,8 @@ describe('LocalStreamPostsService', () => {
     });
 
     it('should propagate error when PostStreamModel.findById throws in persistNewStreamChunk', async () => {
-      const databaseError = Libs.Err.database(Libs.DatabaseErrorCode.QUERY_FAILED, 'Database query failed', {
-        service: Libs.ErrorService.Local,
+      const databaseError = Err.database(DatabaseErrorCode.QUERY_FAILED, 'Database query failed', {
+        service: ErrorService.Local,
         operation: 'findById',
         context: { streamId },
       });
@@ -601,8 +603,8 @@ describe('LocalStreamPostsService', () => {
     it('should propagate error when PostDetailsModel.findByIdsPreserveOrder throws', async () => {
       await createStream([postId('post-1')]);
 
-      const databaseError = Libs.Err.database(Libs.DatabaseErrorCode.QUERY_FAILED, 'Database query failed', {
-        service: Libs.ErrorService.Local,
+      const databaseError = Err.database(DatabaseErrorCode.QUERY_FAILED, 'Database query failed', {
+        service: ErrorService.Local,
         operation: 'findByIdsPreserveOrder',
       });
       vi.spyOn(Core.PostDetailsModel, 'findByIdsPreserveOrder').mockRejectedValue(databaseError);
@@ -621,8 +623,8 @@ describe('LocalStreamPostsService', () => {
         posts: [createMockNexusPost('post-1', DEFAULT_AUTHOR), createMockNexusPost('post-2', DEFAULT_AUTHOR)],
       });
 
-      const databaseError = Libs.Err.database(Libs.DatabaseErrorCode.WRITE_FAILED, 'Failed to upsert stream', {
-        service: Libs.ErrorService.Local,
+      const databaseError = Err.database(DatabaseErrorCode.WRITE_FAILED, 'Failed to upsert stream', {
+        service: ErrorService.Local,
         operation: 'upsert',
         context: { streamId },
       });
@@ -709,8 +711,8 @@ describe('LocalStreamPostsService', () => {
     });
 
     it('should propagate error when underlying model throws', async () => {
-      const databaseError = Libs.Err.database(Libs.DatabaseErrorCode.QUERY_FAILED, 'Database query failed', {
-        service: Libs.ErrorService.Local,
+      const databaseError = Err.database(DatabaseErrorCode.QUERY_FAILED, 'Database query failed', {
+        service: ErrorService.Local,
         operation: 'getStreamHead',
         context: { streamId },
       });
@@ -822,8 +824,8 @@ describe('LocalStreamPostsService', () => {
     });
 
     it('should propagate error when underlying model throws', async () => {
-      const databaseError = Libs.Err.database(Libs.DatabaseErrorCode.QUERY_FAILED, 'Database query failed', {
-        service: Libs.ErrorService.Local,
+      const databaseError = Err.database(DatabaseErrorCode.QUERY_FAILED, 'Database query failed', {
+        service: ErrorService.Local,
         operation: 'prependToStream',
         context: { streamId },
       });
@@ -866,8 +868,8 @@ describe('LocalStreamPostsService', () => {
     });
 
     it('should propagate error when underlying model throws', async () => {
-      const databaseError = Libs.Err.database(Libs.DatabaseErrorCode.QUERY_FAILED, 'Database query failed', {
-        service: Libs.ErrorService.Local,
+      const databaseError = Err.database(DatabaseErrorCode.QUERY_FAILED, 'Database query failed', {
+        service: ErrorService.Local,
         operation: 'removeFromStream',
         context: { streamId },
       });
@@ -913,8 +915,8 @@ describe('LocalStreamPostsService', () => {
     });
 
     it('should propagate error when underlying model throws', async () => {
-      const databaseError = Libs.Err.database(Libs.DatabaseErrorCode.QUERY_FAILED, 'Database query failed', {
-        service: Libs.ErrorService.Local,
+      const databaseError = Err.database(DatabaseErrorCode.QUERY_FAILED, 'Database query failed', {
+        service: ErrorService.Local,
         operation: 'mergeUnreadStreamWithPostStream',
         context: { streamId },
       });
@@ -1093,8 +1095,8 @@ describe('LocalStreamPostsService', () => {
     });
 
     it('should propagate error when underlying model throws', async () => {
-      const databaseError = Libs.Err.database(Libs.DatabaseErrorCode.QUERY_FAILED, 'Database query failed', {
-        service: Libs.ErrorService.Local,
+      const databaseError = Err.database(DatabaseErrorCode.QUERY_FAILED, 'Database query failed', {
+        service: ErrorService.Local,
         operation: 'persistUnreadNewStreamChunk',
         context: { streamId },
       });
@@ -1131,8 +1133,8 @@ describe('LocalStreamPostsService', () => {
     });
 
     it('should propagate error when upsert throws', async () => {
-      const databaseError = Libs.Err.database(Libs.DatabaseErrorCode.WRITE_FAILED, 'Failed to upsert stream', {
-        service: Libs.ErrorService.Local,
+      const databaseError = Err.database(DatabaseErrorCode.WRITE_FAILED, 'Failed to upsert stream', {
+        service: ErrorService.Local,
         operation: 'bulkSave',
         context: { streamId },
       });
@@ -1166,8 +1168,8 @@ describe('LocalStreamPostsService', () => {
     });
 
     it('should propagate error when UnreadPostStreamModel.findById throws', async () => {
-      const databaseError = Libs.Err.database(Libs.DatabaseErrorCode.QUERY_FAILED, 'Database query failed', {
-        service: Libs.ErrorService.Local,
+      const databaseError = Err.database(DatabaseErrorCode.QUERY_FAILED, 'Database query failed', {
+        service: ErrorService.Local,
         operation: 'readUnreadStream',
         context: { streamId },
       });
@@ -1210,8 +1212,8 @@ describe('LocalStreamPostsService', () => {
     });
 
     it('should propagate error when UnreadPostStreamModel.findById throws', async () => {
-      const databaseError = Libs.Err.database(Libs.DatabaseErrorCode.QUERY_FAILED, 'Database query failed', {
-        service: Libs.ErrorService.Local,
+      const databaseError = Err.database(DatabaseErrorCode.QUERY_FAILED, 'Database query failed', {
+        service: ErrorService.Local,
         operation: 'clearUnreadStream',
         context: { streamId },
       });
@@ -1226,8 +1228,8 @@ describe('LocalStreamPostsService', () => {
       const unreadPostIds = [postId('unread-1')];
       await Core.UnreadPostStreamModel.upsert(streamId as Core.PostStreamId, unreadPostIds);
 
-      const databaseError = Libs.Err.database(Libs.DatabaseErrorCode.DELETE_FAILED, 'Failed to delete unread stream', {
-        service: Libs.ErrorService.Local,
+      const databaseError = Err.database(DatabaseErrorCode.DELETE_FAILED, 'Failed to delete unread stream', {
+        service: ErrorService.Local,
         operation: 'clearUnreadStream',
         context: { streamId },
       });
@@ -1316,8 +1318,8 @@ describe('LocalStreamPostsService', () => {
 
     it('should propagate error when PostDetailsModel.findByIdsPreserveOrder throws', async () => {
       const postIds = [postId('post-1')];
-      const databaseError = Libs.Err.database(Libs.DatabaseErrorCode.QUERY_FAILED, 'Database query failed', {
-        service: Libs.ErrorService.Local,
+      const databaseError = Err.database(DatabaseErrorCode.QUERY_FAILED, 'Database query failed', {
+        service: ErrorService.Local,
         operation: 'getNotPersistedPostsInCache',
       });
       vi.spyOn(Core.PostDetailsModel, 'findByIdsPreserveOrder').mockRejectedValue(databaseError);

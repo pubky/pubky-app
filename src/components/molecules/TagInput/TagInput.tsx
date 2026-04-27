@@ -4,13 +4,13 @@ import { forwardRef, useImperativeHandle, useRef } from 'react';
 import { useTranslations } from 'next-intl';
 import * as Atoms from '@/atoms';
 import * as Molecules from '@/molecules';
-import * as Libs from '@/libs';
 import * as Hooks from '@/hooks';
 import { mergeTagSuggestions, TAG_INPUT_BLUR_DELAY_MS } from '@/hooks/useTagInput';
 import { TAG_MAX_LENGTH } from '@/config';
 import type { TagInputProps, TagInputHandle } from './TagInput.types';
 import { TagSuggestionsDropdown } from './TagSuggestionsDropdown';
 import { Smile, X } from 'lucide-react';
+import { cn } from '@/libs/utils/utils';
 export const TagInput = forwardRef<TagInputHandle, TagInputProps>(function TagInput(
   {
     onTagAdd,
@@ -146,7 +146,7 @@ export const TagInput = forwardRef<TagInputHandle, TagInputProps>(function TagIn
           <Atoms.Container
             ref={containerRef}
             overrideDefaults={true}
-            className={Libs.cn(
+            className={cn(
               'relative flex h-8 w-full items-center gap-1 rounded-md border border-dashed border-input pr-1 pl-3 shadow-sm',
               onClick && 'cursor-pointer',
               className,
@@ -167,7 +167,7 @@ export const TagInput = forwardRef<TagInputHandle, TagInputProps>(function TagIn
               disabled={isDisabled}
               maxLength={TAG_MAX_LENGTH}
               autoFocus={autoFocus}
-              className={Libs.cn(
+              className={cn(
                 'flex-1 bg-transparent p-0 text-sm leading-5 font-bold caret-white',
                 'border-none shadow-none ring-0 outline-none hover:outline-none focus:ring-0 focus:ring-offset-0 focus:outline-none',
                 'placeholder:font-bold',
@@ -181,7 +181,7 @@ export const TagInput = forwardRef<TagInputHandle, TagInputProps>(function TagIn
               overrideDefaults={true}
               onMouseDown={preventBlur}
               onClick={() => setShowEmojiPicker(true)}
-              className={Libs.cn(
+              className={cn(
                 'shadow-xs-dark hover:shadow-xs-dark inline-flex size-5 cursor-pointer items-center justify-center rounded-full p-1',
                 isDisabled && onClick && 'pointer-events-none',
               )}

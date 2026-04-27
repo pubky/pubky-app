@@ -27,14 +27,17 @@ vi.mock('next-intl', () => ({
   },
 }));
 
-// Mock Libs
-const mockGetSharedFiles = vi.fn();
-const mockComposeShareContent = vi.fn();
-
-vi.mock('@/libs', () => ({
-  getSharedFiles: () => mockGetSharedFiles(),
-  composeShareContent: (params: { title?: string; text?: string; url?: string }) => mockComposeShareContent(params),
+const { mockGetSharedFiles } = vi.hoisted(() => ({
+  mockGetSharedFiles: vi.fn(),
 }));
+
+vi.mock('@/libs/share/shareTarget', async () => {
+  const actual = await vi.importActual<typeof import('@/libs/share/shareTarget')>('@/libs/share/shareTarget');
+  return {
+    ...actual,
+    getSharedFiles: () => mockGetSharedFiles(),
+  };
+});
 
 // Mock Atoms
 vi.mock('@/atoms', () => ({
@@ -104,7 +107,6 @@ describe('ShareTarget', () => {
     vi.clearAllMocks();
     mockSearchParams.clear();
     mockGetSharedFiles.mockResolvedValue([]);
-    mockComposeShareContent.mockReturnValue('');
   });
 
   it('renders without errors', async () => {
@@ -168,16 +170,14 @@ describe('ShareTarget', () => {
     mockSearchParams.set('title', 'Test Title');
     mockSearchParams.set('text', 'Test text content');
     mockSearchParams.set('url', 'https://example.com');
-    mockComposeShareContent.mockReturnValue('Test text content\n\nhttps://example.com');
 
     render(<ShareTarget />);
 
     await waitFor(() => {
-      expect(mockComposeShareContent).toHaveBeenCalledWith({
-        title: 'Test Title',
-        text: 'Test text content',
-        url: 'https://example.com',
-      });
+      expect(screen.getByTestId('post-input')).toHaveAttribute(
+        'data-initial-content',
+        'Test text content\n\nhttps://example.com',
+      );
     });
   });
 
@@ -204,8 +204,6 @@ describe('ShareTarget', () => {
   });
 
   it('renders PostInput with correct props', async () => {
-    mockComposeShareContent.mockReturnValue('Shared content');
-
     render(<ShareTarget />);
 
     await waitFor(() => {
@@ -217,7 +215,7 @@ describe('ShareTarget', () => {
   });
 
   it('passes initial content to PostInput', async () => {
-    mockComposeShareContent.mockReturnValue('Test shared content');
+    mockSearchParams.set('text', 'Test shared content');
 
     render(<ShareTarget />);
 
@@ -246,7 +244,6 @@ describe('ShareTarget - Snapshots', () => {
     vi.clearAllMocks();
     mockSearchParams.clear();
     mockGetSharedFiles.mockResolvedValue([]);
-    mockComposeShareContent.mockReturnValue('');
   });
 
   it('matches snapshot for loading state', () => {
@@ -258,7 +255,7 @@ describe('ShareTarget - Snapshots', () => {
   });
 
   it('matches snapshot for content state', async () => {
-    mockComposeShareContent.mockReturnValue('Shared content from another app');
+    mockSearchParams.set('text', 'Shared content from another app');
 
     const { container } = render(<ShareTarget />);
 
@@ -271,7 +268,6 @@ describe('ShareTarget - Snapshots', () => {
 
   it('matches snapshot with text content only', async () => {
     mockSearchParams.set('text', 'Just some text');
-    mockComposeShareContent.mockReturnValue('Just some text');
 
     const { container } = render(<ShareTarget />);
 

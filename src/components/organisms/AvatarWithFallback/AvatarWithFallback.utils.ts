@@ -1,6 +1,6 @@
 import * as Config from '@/config';
-import * as Libs from '@/libs';
 import type { ResolveAvatarFallbackSeedProps, ResolveAvatarFallbackInitialProps } from './AvatarWithFallback.types';
+import { extractInitials } from '@/libs/utils/utils';
 
 /**
  * Regex pattern for validating userId format.
@@ -61,7 +61,7 @@ export function resolveAvatarFallbackInitial({
   seed,
   defaultInitial = 'U',
 }: ResolveAvatarFallbackInitialProps): string {
-  const nameInitial = Libs.extractInitials({ name: name ?? '', maxLength: 1 });
+  const nameInitial = extractInitials({ name: name ?? '', maxLength: 1 });
   if (nameInitial) return nameInitial;
 
   const seedInitial = typeof seed === 'string' ? seed.trim().charAt(0).toUpperCase() : '';

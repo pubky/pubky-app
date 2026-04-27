@@ -26,10 +26,6 @@ const mockUsePostDetails = vi.fn(() => ({
   isLoading: false,
 }));
 
-const { mockIsPostDeleted } = vi.hoisted(() => ({
-  mockIsPostDeleted: vi.fn(() => false),
-}));
-
 vi.mock('@/hooks', async (importOriginal) => {
   const actual = await importOriginal<typeof import('@/hooks')>();
   return {
@@ -37,14 +33,6 @@ vi.mock('@/hooks', async (importOriginal) => {
     useRequireAuth: vi.fn(),
     usePostDetails: vi.fn(),
     usePostCounts: vi.fn(),
-  };
-});
-
-vi.mock('@/libs', async () => {
-  const actual = await vi.importActual('@/libs');
-  return {
-    ...actual,
-    isPostDeleted: mockIsPostDeleted,
   };
 });
 
@@ -80,7 +68,6 @@ describe('TimelinePostReplies', () => {
 
   beforeEach(() => {
     vi.clearAllMocks();
-    mockIsPostDeleted.mockReturnValue(false);
     vi.mocked(Hooks.useRequireAuth).mockReturnValue(mockUseRequireAuth());
     vi.mocked(Hooks.usePostDetails).mockReturnValue(mockUsePostDetails());
     vi.mocked(Hooks.usePostCounts).mockReturnValue({
@@ -111,7 +98,13 @@ describe('TimelinePostReplies', () => {
   });
 
   it('passes showQuickReply=false when parent is deleted', () => {
-    mockIsPostDeleted.mockReturnValue(true);
+    vi.mocked(Hooks.usePostDetails).mockReturnValue({
+      ...mockUsePostDetails(),
+      postDetails: {
+        ...mockUsePostDetails().postDetails,
+        content: '[DELETED]',
+      },
+    });
 
     render(<TimelinePostReplies postId={mockPostId} />);
 
@@ -160,7 +153,6 @@ describe('TimelinePostReplies - Snapshots', () => {
 
   beforeEach(() => {
     vi.clearAllMocks();
-    mockIsPostDeleted.mockReturnValue(false);
     vi.mocked(Hooks.useRequireAuth).mockReturnValue(mockUseRequireAuth());
     vi.mocked(Hooks.usePostDetails).mockReturnValue(mockUsePostDetails());
     vi.mocked(Hooks.usePostCounts).mockReturnValue({
@@ -191,7 +183,13 @@ describe('TimelinePostReplies - Snapshots', () => {
   });
 
   it('matches snapshot when parent post is deleted', () => {
-    mockIsPostDeleted.mockReturnValue(true);
+    vi.mocked(Hooks.usePostDetails).mockReturnValue({
+      ...mockUsePostDetails(),
+      postDetails: {
+        ...mockUsePostDetails().postDetails,
+        content: '[DELETED]',
+      },
+    });
 
     const { container } = render(<TimelinePostReplies postId={mockPostId} />);
     expect(container).toMatchSnapshot();

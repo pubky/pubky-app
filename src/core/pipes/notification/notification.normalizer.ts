@@ -1,10 +1,12 @@
 import { LastReadResult } from 'pubky-app-specs';
 import * as Core from '@/core';
-import { Err, ValidationErrorCode, ErrorService } from '@/libs';
 import { getBusinessKey } from '@/core/models/notification/notification.helpers';
 import type { NotificationPreferences } from '@/core/stores/settings/settings.types';
 import { NotificationType } from '@/core/models/notification/notification.types';
 import type { FlatNotification } from '@/core/models/notification/notification.types';
+import { ValidationErrorCode } from '@/libs/error/error.codes';
+import { Err } from '@/libs/error/error.factories';
+import { ErrorService } from '@/libs/error/error.types';
 import { NOTIFICATION_TYPE_TO_PREFERENCE_KEY } from './notification.constants';
 
 export class NotificationNormalizer {

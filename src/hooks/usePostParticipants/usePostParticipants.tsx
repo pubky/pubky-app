@@ -3,7 +3,6 @@
 import { useMemo } from 'react';
 import { useLiveQuery } from 'dexie-react-hooks';
 import * as Core from '@/core';
-import * as Libs from '@/libs';
 // Direct imports to avoid circular dependency (this hook is exported from @/hooks)
 import { useMutedUsers } from '@/hooks/useMutedUsers';
 import { useBulkUserAvatars } from '@/hooks/useBulkUserAvatars';
@@ -12,6 +11,7 @@ import type {
   UsePostParticipantsOptions,
   PostParticipant,
 } from './usePostParticipants.types';
+import { Logger } from '@/libs/logger/logger';
 
 const DEFAULT_LIMIT = 10;
 
@@ -53,7 +53,7 @@ export function usePostParticipants(
         if (!postId) return [];
         return await Core.PostController.getReplies({ compositeId: postId });
       } catch (error) {
-        Libs.Logger.error('[usePostParticipants] Failed to query post replies', { postId, error });
+        Logger.error('[usePostParticipants] Failed to query post replies', { postId, error });
         return [];
       }
     },

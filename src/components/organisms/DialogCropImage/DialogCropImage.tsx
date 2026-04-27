@@ -10,7 +10,8 @@ import Cropper, { type Area } from 'react-easy-crop';
 import 'react-easy-crop/react-easy-crop.css';
 
 import * as Atoms from '@/atoms';
-import * as Libs from '@/libs';
+import { cropImageToBlob } from '@/libs/image/cropImage';
+import { Logger } from '@/libs/logger/logger';
 
 type DialogCropImageProps = {
   open: boolean;
@@ -51,13 +52,13 @@ export function DialogCropImage({ open, imageSrc, fileName, fileType, onClose, o
     try {
       setIsCropping(true);
       const targetMimeType = fileType && fileType.startsWith('image/') ? fileType : 'image/png';
-      const blob = await Libs.cropImageToBlob(imageSrc, croppedAreaPixels, targetMimeType);
+      const blob = await cropImageToBlob(imageSrc, croppedAreaPixels, targetMimeType);
       const resolvedMimeType = blob.type || targetMimeType;
       const croppedFile = new File([blob], fileName || DEFAULT_FILE_NAME, { type: resolvedMimeType });
       const previewUrl = URL.createObjectURL(blob);
       onCrop(croppedFile, previewUrl);
     } catch (error) {
-      Libs.Logger.error('Failed to crop image', error);
+      Logger.error('Failed to crop image', error);
     } finally {
       setIsCropping(false);
     }

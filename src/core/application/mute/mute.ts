@@ -1,6 +1,8 @@
 import * as Core from '@/core';
 import { baseUriBuilder } from 'pubky-app-specs';
-import { HttpMethod, Logger, AppError, HttpStatusCode } from '@/libs';
+import { HttpMethod, HttpStatusCode } from '@/libs/http/http.types';
+import { Logger } from '@/libs/logger/logger';
+import { AppError } from '@/libs/error/error';
 
 export class MuteApplication {
   private constructor() {}

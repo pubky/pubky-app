@@ -3,7 +3,9 @@ import type { ArticleJSON } from '@/hooks/usePostArticle/usePostArticle.types';
 import * as Templates from '@/templates';
 import * as Core from '@/core';
 import { Metadata } from '@/molecules/Metadata/Metadata';
-import { httpResponseToError, ErrorService, isPostDeleted } from '@/libs';
+import { isPostDeleted } from '@/libs/utils/utils';
+import { httpResponseToError } from '@/libs/error/error.http';
+import { ErrorService } from '@/libs/error/error.types';
 
 export interface PostPageProps {
   params: Promise<{

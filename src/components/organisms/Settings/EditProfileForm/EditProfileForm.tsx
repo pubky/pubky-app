@@ -2,13 +2,13 @@
 
 import * as Molecules from '@/molecules';
 import * as Organisms from '@/organisms';
-import * as Libs from '@/libs';
 import * as Atoms from '@/atoms';
 import * as Hooks from '@/hooks';
 import * as Config from '@/config';
 import { useTranslations } from 'next-intl';
 import { EditProfileFormSkeleton } from './EditProfileForm.skeleton';
 import { Trash2, File } from 'lucide-react';
+import { extractInitials } from '@/libs/utils/utils';
 export const EditProfileForm = () => {
   const t = useTranslations('forms.profile');
   const tCommon = useTranslations('common');
@@ -20,7 +20,7 @@ export const EditProfileForm = () => {
   });
   const avatarFallbackSeed = currentUserPubky || state.name || 'user';
   const avatarFallbackInitial =
-    Libs.extractInitials({
+    extractInitials({
       name: state.name,
       maxLength: 1,
     }) ||

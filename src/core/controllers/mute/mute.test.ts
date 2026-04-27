@@ -2,8 +2,8 @@ import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { MuteResult } from 'pubky-app-specs';
 import { MuteController } from './mute';
 import * as Core from '@/core';
-import { HttpMethod } from '@/libs';
 import { asOpaque } from '@/test-utils';
+import { HttpMethod } from '@/libs/http/http.types';
 
 const TEST_PUBKY = {
   USER_1: '5a1diz4pghi47ywdfyfzpit5f3bdomzt4pugpbmq4rngdd4iub4y' as Core.Pubky,

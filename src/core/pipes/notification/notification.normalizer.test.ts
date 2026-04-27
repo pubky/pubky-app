@@ -1,6 +1,5 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import * as Core from '@/core';
-import { AppError, ErrorCategory, ValidationErrorCode, ErrorService } from '@/libs';
 import { LastReadResult } from 'pubky-app-specs';
 import { NotificationType, PostChangedSource } from '@/core/models/notification/notification.types';
 import type { FlatNotification } from '@/core/models/notification/notification.types';
@@ -17,6 +16,9 @@ import {
   restoreMocks,
   buildPubkyUri,
 } from '../pipes.test-utils';
+import { AppError } from '@/libs/error/error';
+import { ValidationErrorCode } from '@/libs/error/error.codes';
+import { ErrorCategory, ErrorService } from '@/libs/error/error.types';
 
 describe('NotificationNormalizer', () => {
   const makeNotification = (type: NotificationType, timestamp: number): FlatNotification => {

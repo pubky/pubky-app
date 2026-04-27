@@ -3,9 +3,10 @@
 import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { useLiveQuery } from 'dexie-react-hooks';
 import * as Core from '@/core';
-import * as Libs from '@/libs';
 import type { UseUserStreamParams, UseUserStreamResult, UserStreamUser } from './useUserStream.types';
 import { DEFAULT_USER_STREAM_LIMIT, DEFAULT_USER_STREAM_PAGE_SIZE } from './useUserStream.constants';
+import { Logger } from '@/libs/logger/logger';
+import { isAppError } from '@/libs/error/error.utils';
 
 /**
  * useUserStream
@@ -61,7 +62,7 @@ export function useUserStream({
       try {
         return await Core.UserController.getManyDetails({ userIds });
       } catch (err) {
-        Libs.Logger.error('[useUserStream] Failed to query user details', { error: err });
+        Logger.error('[useUserStream] Failed to query user details', { error: err });
         return new Map<Core.Pubky, Core.NexusUserDetails>();
       }
     },
@@ -75,7 +76,7 @@ export function useUserStream({
       try {
         return await Core.UserController.getManyCounts({ userIds });
       } catch (err) {
-        Libs.Logger.error('[useUserStream] Failed to query user counts', { error: err });
+        Logger.error('[useUserStream] Failed to query user counts', { error: err });
         return new Map<Core.Pubky, Core.NexusUserCounts>();
       }
     },
@@ -90,7 +91,7 @@ export function useUserStream({
       try {
         return await Core.UserController.getManyRelationships({ userIds });
       } catch (err) {
-        Libs.Logger.error('[useUserStream] Failed to query user relationships', { error: err });
+        Logger.error('[useUserStream] Failed to query user relationships', { error: err });
         return new Map<Core.Pubky, Core.UserRelationshipsModelSchema>();
       }
     },
@@ -110,7 +111,7 @@ export function useUserStream({
         const tagsMap = await Core.UserController.getManyTagsOrFetch({ userIds });
         setUserTagsMap(tagsMap);
       } catch (err) {
-        Libs.Logger.error('[useUserStream] Failed to fetch user tags:', err);
+        Logger.error('[useUserStream] Failed to fetch user tags:', err);
         setUserTagsMap(new Map());
       }
     };
@@ -195,9 +196,9 @@ export function useUserStream({
         setHasMore(paginated && nextPageIds.length >= effectiveLimit);
       } catch (err) {
         if (isInitial) {
-          setError(Libs.isAppError(err) ? err.message : 'Failed to fetch users');
+          setError(isAppError(err) ? err.message : 'Failed to fetch users');
         }
-        Libs.Logger.error('[useUserStream] Failed to fetch users:', err);
+        Logger.error('[useUserStream] Failed to fetch users:', err);
       } finally {
         if (isInitial) {
           setIsLoading(false);

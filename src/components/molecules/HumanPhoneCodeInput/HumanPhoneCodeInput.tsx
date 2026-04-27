@@ -2,9 +2,9 @@
 
 import React, { useCallback, useEffect, useRef } from 'react';
 import * as Atoms from '@/atoms';
-import * as Libs from '@/libs';
 import { DIGITS } from './HumanPhoneCodeInput.constants';
 import type { HumanPhoneCodeInputProps } from './HumanPhoneCodeInput.types';
+import { cn } from '@/libs/utils/utils';
 
 /**
  * HumanPhoneCodeInput component. Takes a 6 digit verification code and displays it as a grid of input fields.
@@ -91,13 +91,13 @@ export const HumanPhoneCodeInput = ({ value, onChange, onEnter = () => {} }: Hum
   );
 
   return (
-    <Atoms.Container className={Libs.cn('flex-row flex-wrap gap-3')} data-testid="code-input-container">
+    <Atoms.Container className={cn('flex-row flex-wrap gap-3')} data-testid="code-input-container">
       {value.map((digit, index) => (
         <Atoms.Container
           key={index}
           overrideDefaults={true}
           data-testid={`human-phone-code-input-${index}`}
-          className={Libs.cn(
+          className={cn(
             'rounded-md border border-dashed border-brand',
             'px-2 py-4 shadow-xs',
             'flex items-center justify-center',
@@ -117,7 +117,7 @@ export const HumanPhoneCodeInput = ({ value, onChange, onEnter = () => {} }: Hum
             onChange={(e) => handleCodeChange(index, e.target.value)}
             onKeyDown={(e) => handleKeyDown(index, e)}
             onPaste={(e) => handlePaste(index, e)}
-            className={Libs.cn(
+            className={cn(
               'text-center text-base font-medium text-brand',
               '!h-auto !border-none !bg-transparent !p-0',
               'focus:ring-0 focus:outline-none',

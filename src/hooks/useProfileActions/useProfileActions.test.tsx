@@ -1,9 +1,10 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { renderHook, act, waitFor } from '@testing-library/react';
 import * as Core from '@/core';
-import * as Libs from '@/libs';
 import * as Molecules from '@/molecules';
 import { useProfileActions } from './useProfileActions';
+import { ErrorMessages } from '@/libs/error/error.messages';
+import { Logger } from '@/libs/logger/logger';
 
 // Mock next/navigation
 const mockPush = vi.fn();
@@ -55,7 +56,7 @@ describe('useProfileActions', () => {
 
   beforeEach(() => {
     vi.clearAllMocks();
-    vi.spyOn(Libs.Logger, 'error').mockImplementation(() => {});
+    vi.spyOn(Logger, 'error').mockImplementation(() => {});
     vi.spyOn(Molecules, 'showErrorToast').mockImplementation(() => {});
   });
 
@@ -200,9 +201,9 @@ describe('useProfileActions', () => {
         await result.current.onSignOut();
       });
 
-      expect(Libs.Logger.error).toHaveBeenCalledWith('Failed to logout:', expect.any(Error));
+      expect(Logger.error).toHaveBeenCalledWith('Failed to logout:', expect.any(Error));
       expect(Molecules.showErrorToast).toHaveBeenCalledWith({
-        description: Libs.ErrorMessages.LOGOUT_FAILED,
+        description: ErrorMessages.LOGOUT_FAILED,
       });
       expect(mockPush).not.toHaveBeenCalled();
     });

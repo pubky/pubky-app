@@ -2,27 +2,6 @@ import { describe, it, expect, vi } from 'vitest';
 import { render, screen, fireEvent } from '@testing-library/react';
 import { PostTag } from './PostTag';
 
-// Mock @/libs with partial mock
-vi.mock('@/libs', async () => {
-  const actual = await vi.importActual<typeof import('@/libs')>('@/libs');
-  return {
-    ...actual,
-    generateRandomColor: vi.fn((str: string) => {
-      // Return consistent colors for testing
-      const colorMap: Record<string, string> = {
-        bitcoin: '#FF9900',
-        synonym: '#FF0000',
-        test: '#00FF00',
-      };
-      return colorMap[str.toLowerCase()] || '#FF9900';
-    }),
-    hexToRgba: vi.fn((hex: string, alpha: number) => {
-      const [r, g, b] = hex.match(/\w\w/g)!.map((x) => parseInt(x, 16));
-      return `rgba(${r}, ${g}, ${b}, ${alpha})`;
-    }),
-  };
-});
-
 describe('PostTag', () => {
   it('calls onClick when tag is clicked', () => {
     const mockOnClick = vi.fn();

@@ -3,7 +3,7 @@
 import * as Atoms from '@/atoms';
 import * as Organisms from '@/organisms';
 import * as Hooks from '@/hooks';
-import * as Libs from '@/libs';
+import { isPostDeleted } from '@/libs/utils/utils';
 
 interface TimelinePostRepliesProps {
   postId: string;
@@ -29,7 +29,7 @@ export function TimelinePostReplies({ postId }: TimelinePostRepliesProps) {
 
   // Check if parent post is deleted to determine replyability
   const { postDetails } = Hooks.usePostDetails(postId);
-  const isParentDeleted = Libs.isPostDeleted(postDetails?.content);
+  const isParentDeleted = isPostDeleted(postDetails?.content);
 
   const shouldShowQuickReply = !isParentDeleted;
   const hasReplies = (postCounts?.replies ?? 0) > 0;

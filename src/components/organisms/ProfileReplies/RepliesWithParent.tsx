@@ -4,12 +4,12 @@ import { useLiveQuery } from 'dexie-react-hooks';
 import { useEffect, useRef } from 'react';
 
 import * as Atoms from '@/atoms';
-import * as Libs from '@/libs';
 import * as Molecules from '@/molecules';
 import * as Organisms from '@/organisms';
 import * as Core from '@/core';
 import * as Hooks from '@/hooks';
 import * as Types from './RepliesWithParent.types';
+import { Logger } from '@/libs/logger/logger';
 
 /**
  * RepliesWithParent
@@ -84,7 +84,7 @@ function ReplyWithParent({ replyPostId, onPostClick }: Types.ReplyWithParentProp
 
       return parentCompositeId;
     } catch (error) {
-      Libs.Logger.error('[RepliesWithParent] Failed to query post relationships', { replyPostId, error });
+      Logger.error('[RepliesWithParent] Failed to query post relationships', { replyPostId, error });
       return null;
     }
   }, [replyPostId]);
@@ -99,7 +99,7 @@ function ReplyWithParent({ replyPostId, onPostClick }: Types.ReplyWithParentProp
 
       return post;
     } catch (error) {
-      Libs.Logger.error('[RepliesWithParent] Failed to query parent post details', { parentPostId, error });
+      Logger.error('[RepliesWithParent] Failed to query parent post details', { parentPostId, error });
       return null;
     }
   }, [parentPostId]);
@@ -118,7 +118,7 @@ function ReplyWithParent({ replyPostId, onPostClick }: Types.ReplyWithParentProp
       // Fetch via Controller (fire-and-forget, useLiveQuery will react to DB updates)
       Core.PostController.getOrFetch({ compositeId: parentPostId, viewerId })
         .catch((error) => {
-          Libs.Logger.error('[RepliesWithParent] Failed to fetch parent post details', { parentPostId, error });
+          Logger.error('[RepliesWithParent] Failed to fetch parent post details', { parentPostId, error });
         })
         .finally(() => {
           // Only clean up if this effect hasn't been cancelled (component still mounted and parentPostId unchanged)

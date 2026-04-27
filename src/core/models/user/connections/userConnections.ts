@@ -3,7 +3,9 @@ import { Table } from 'dexie';
 import * as Core from '@/core';
 import { UserConnectionsFields, UserConnectionsModelSchema } from './userConnections.schema';
 import { TupleModelBase } from '@/core/models/shared/base/tuple/baseTuple';
-import { DatabaseErrorCode, Err, ErrorService } from '@/libs/error';
+import { DatabaseErrorCode } from '@/libs/error/error.codes';
+import { Err } from '@/libs/error/error.factories';
+import { ErrorService } from '@/libs/error/error.types';
 
 export class UserConnectionsModel
   extends TupleModelBase<Core.Pubky, UserConnectionsModelSchema>

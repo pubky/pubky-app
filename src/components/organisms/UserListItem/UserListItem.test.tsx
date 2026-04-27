@@ -51,12 +51,6 @@ vi.mock('@/organisms', () => ({
   ClickableTagsList: () => <div data-testid="tags-list" />,
 }));
 
-// Mock Libs
-vi.mock('@/libs', () => ({
-  formatPublicKey: ({ key }: { key: string }) => `pk:${key.slice(0, 8)}`,
-  cn: (...args: unknown[]) => args.filter(Boolean).join(' '),
-}));
-
 // Mock Core
 vi.mock('@/core', () => ({
   TagKind: { USER: 'user' },

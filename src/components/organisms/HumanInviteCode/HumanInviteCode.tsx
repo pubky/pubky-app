@@ -3,7 +3,6 @@
 import * as Atoms from '@/atoms';
 import * as Config from '@/config';
 import * as Core from '@/core';
-import * as Libs from '@/libs';
 import * as Molecules from '@/molecules';
 import React, { useState } from 'react';
 import { useTranslations } from 'next-intl';
@@ -18,6 +17,8 @@ import type { HumanInviteCodeProps } from './HumanInviteCode.types';
  */
 import { CircleCheck, Server, ArrowLeft, Loader2, ArrowRight } from 'lucide-react';
 import { XTwitter, Telegram } from '@/icons';
+import { Logger } from '@/libs/logger/logger';
+import { cn } from '@/libs/utils/utils';
 export const HumanInviteCode = ({ onBack, onSuccess }: HumanInviteCodeProps) => {
   const t = useTranslations('onboarding.inviteCode');
   const tCommon = useTranslations('common');
@@ -42,10 +43,10 @@ export const HumanInviteCode = ({ onBack, onSuccess }: HumanInviteCodeProps) => 
     if (process.env.NODE_ENV === 'development') {
       Core.AuthController.generateSignupToken()
         .then((token) => {
-          Libs.Logger.info(token, token);
+          Logger.info(token, token);
         })
         .catch((error) => {
-          Libs.Logger.error('[HumanInviteCode] Failed to generate signup token', {
+          Logger.error('[HumanInviteCode] Failed to generate signup token', {
             error,
           });
         });
@@ -101,7 +102,7 @@ export const HumanInviteCode = ({ onBack, onSuccess }: HumanInviteCodeProps) => 
           <Atoms.Container className="gap-6">
             {/* Input */}
             <Atoms.Container
-              className={Libs.cn(
+              className={cn(
                 'flex-row items-center gap-3 rounded-md border border-dashed bg-background/10 px-5 py-4 shadow-xs',
                 isInviteCodeEntered ? 'border-brand' : 'border-input',
               )}
@@ -115,7 +116,7 @@ export const HumanInviteCode = ({ onBack, onSuccess }: HumanInviteCodeProps) => 
                 onChange={(e) => setInviteCode(formatInviteCode(e.target.value))}
                 placeholder={t('placeholder')}
                 maxLength={14}
-                className={Libs.cn(
+                className={cn(
                   'h-auto flex-1 border-none bg-transparent p-0 text-base font-medium placeholder:text-muted-foreground focus:ring-0 focus:outline-none',
                   isInviteCodeEntered ? 'font-bold text-brand' : 'text-foreground',
                 )}
@@ -150,7 +151,7 @@ export const HumanInviteCode = ({ onBack, onSuccess }: HumanInviteCodeProps) => 
       <Molecules.HumanFooter />
 
       {/* Buttons container */}
-      <Atoms.Container className={Libs.cn('mt-6 flex-row justify-between gap-3 lg:gap-6')}>
+      <Atoms.Container className={cn('mt-6 flex-row justify-between gap-3 lg:gap-6')}>
         <Atoms.Button
           id="human-invite-back-btn"
           size="lg"

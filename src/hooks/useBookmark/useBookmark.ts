@@ -4,7 +4,7 @@ import { useCallback, useEffect, useState } from 'react';
 import { useTranslations } from 'next-intl';
 import * as Core from '@/core';
 import * as Molecules from '@/molecules';
-import * as Libs from '@/libs';
+import { Logger } from '@/libs/logger/logger';
 
 export interface UseBookmarkResult {
   isBookmarked: boolean;
@@ -57,7 +57,7 @@ export function useBookmark(postId: string): UseBookmarkResult {
         setIsLoading(false);
       })
       .catch((error) => {
-        Libs.Logger.error('[useBookmark] Failed to check bookmark status', { error, postId });
+        Logger.error('[useBookmark] Failed to check bookmark status', { error, postId });
         setIsBookmarked(false);
         setIsLoading(false);
       });
@@ -92,7 +92,7 @@ export function useBookmark(postId: string): UseBookmarkResult {
         });
       }
     } catch (error) {
-      Libs.Logger.error('[useBookmark] Failed to toggle bookmark', { error, postId, currentUserPubky });
+      Logger.error('[useBookmark] Failed to toggle bookmark', { error, postId, currentUserPubky });
       toast({
         title: tToast('error'),
         description: isBookmarked ? tBookmark('removeFailed') : tBookmark('addFailed'),

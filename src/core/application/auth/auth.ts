@@ -1,17 +1,12 @@
 import * as Core from '@/core';
-import {
-  HttpMethod,
-  Logger,
-  Err,
-  ValidationErrorCode,
-  ErrorService,
-  toAppError,
-  isAppError,
-  isNotFound,
-  isRetryable,
-  sleep,
-} from '@/libs';
 import { userUriBuilder } from 'pubky-app-specs';
+import { HttpMethod } from '@/libs/http/http.types';
+import { Logger } from '@/libs/logger/logger';
+import { sleep } from '@/libs/utils/utils';
+import { ValidationErrorCode } from '@/libs/error/error.codes';
+import { Err } from '@/libs/error/error.factories';
+import { ErrorService } from '@/libs/error/error.types';
+import { isAppError, isNotFound, isRetryable, toAppError } from '@/libs/error/error.utils';
 
 export class AuthApplication {
   private constructor() {} // Prevent instantiation

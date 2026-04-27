@@ -1,5 +1,4 @@
 import * as Core from '@/core';
-import { Logger } from '@/libs';
 import { AUTH_ROUTES } from '@/app/routes';
 import {
   Coordinator,
@@ -7,6 +6,7 @@ import {
   type NotificationCoordinatorConfig,
   type NotificationCoordinatorState,
 } from '@/core/coordinators';
+import { Logger } from '@/libs/logger/logger';
 
 /**
  * NotificationCoordinator

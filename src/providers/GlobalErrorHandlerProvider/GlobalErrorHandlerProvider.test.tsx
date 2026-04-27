@@ -1,15 +1,13 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { act, render } from '@testing-library/react';
 import { GlobalErrorHandlerProvider } from './GlobalErrorHandlerProvider';
-import * as Libs from '@/libs';
 import * as Molecules from '@/molecules';
+import { Logger } from '@/libs/logger/logger';
 
-vi.mock('@/libs', async (importOriginal) => {
-  const actual = await importOriginal<typeof import('@/libs')>();
+vi.mock('@/libs/logger/logger', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('@/libs/logger/logger')>();
   return {
     ...actual,
-    toAppError: vi.fn((error: unknown) => (error instanceof Error ? error : new Error('normalized'))),
-    getErrorMessage: vi.fn(() => 'Something went wrong'),
     Logger: {
       ...actual.Logger,
       error: vi.fn(),
@@ -56,9 +54,8 @@ describe('GlobalErrorHandlerProvider', () => {
       window.dispatchEvent(new ErrorEvent('error', { error: new Error('boom'), message: 'boom' }));
     });
 
-    expect(Libs.toAppError).toHaveBeenCalled();
-    expect(Libs.Logger.error).toHaveBeenCalled();
-    expect(Molecules.showErrorToast).toHaveBeenCalledWith({ description: 'Something went wrong' });
+    expect(Logger.error).toHaveBeenCalled();
+    expect(Molecules.showErrorToast).toHaveBeenCalledWith({ description: 'boom' });
   });
 
   it('handles unhandledrejection events', () => {
@@ -74,9 +71,8 @@ describe('GlobalErrorHandlerProvider', () => {
       window.dispatchEvent(event);
     });
 
-    expect(Libs.toAppError).toHaveBeenCalled();
-    expect(Libs.Logger.error).toHaveBeenCalled();
-    expect(Molecules.showErrorToast).toHaveBeenCalledWith({ description: 'Something went wrong' });
+    expect(Logger.error).toHaveBeenCalled();
+    expect(Molecules.showErrorToast).toHaveBeenCalledWith({ description: 'promise failed' });
   });
 
   it('throttles duplicate error toasts within the cooldown window', () => {
@@ -94,7 +90,7 @@ describe('GlobalErrorHandlerProvider', () => {
       window.dispatchEvent(new ErrorEvent('error', { error: new Error('boom'), message: 'boom' }));
     });
 
-    expect(Libs.Logger.error).toHaveBeenCalledTimes(2);
+    expect(Logger.error).toHaveBeenCalledTimes(2);
     expect(Molecules.showErrorToast).toHaveBeenCalledTimes(1);
 
     act(() => {

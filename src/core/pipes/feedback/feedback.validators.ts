@@ -1,6 +1,8 @@
 import * as Config from '@/config';
-import { Err, ValidationErrorCode, ErrorService } from '@/libs';
 import * as Core from '@/core';
+import { ValidationErrorCode } from '@/libs/error/error.codes';
+import { Err } from '@/libs/error/error.factories';
+import { ErrorService } from '@/libs/error/error.types';
 
 export class FeedbackValidators {
   private constructor() {}

@@ -1,7 +1,7 @@
 import type { Capabilities, Session } from '@synonymdev/pubky';
 
 import * as Core from '@/core';
-import { HttpMethod } from '@/libs';
+import { HttpMethod } from '@/libs/http/http.types';
 
 export type FetchOptions = {
   method?: HttpMethod;

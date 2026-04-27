@@ -73,14 +73,6 @@ vi.mock('@/organisms', async (importOriginal) => {
   };
 });
 
-// Mock libs - use real extractInitials
-vi.mock('@/libs', async () => {
-  const actual = await vi.importActual('@/libs');
-  return {
-    ...actual,
-  };
-});
-
 describe('AvatarZoomModal', () => {
   const mockProps = {
     open: true,

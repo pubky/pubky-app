@@ -20,21 +20,6 @@ vi.mock('@/core', async () => {
   };
 });
 
-// Mock Libs
-vi.mock('@/libs', async () => {
-  const actual = await vi.importActual('@/libs');
-  return {
-    ...actual,
-    Logger: {
-      debug: vi.fn(),
-      error: vi.fn(),
-    },
-    isAppError: vi.fn((error: unknown) => {
-      return typeof error === 'object' && error !== null && 'message' in error && 'type' in error;
-    }),
-  };
-});
-
 describe('useStreamPagination', () => {
   const mockStreamId = 'timeline:all:all' as Core.PostStreamId;
   const mockPostIds = ['post1', 'post2', 'post3'];

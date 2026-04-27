@@ -3,7 +3,7 @@ import type { THomeserverSessionResult } from '@/core';
 import { useAuthStore } from './auth.store';
 
 // Mock the logger
-vi.mock('@/libs/logger', () => ({
+vi.mock('@/libs/logger/logger', () => ({
   Logger: {
     info: vi.fn(),
     debug: vi.fn(),

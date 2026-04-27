@@ -1,5 +1,5 @@
 import * as Core from '@/core';
-import * as Libs from '@/libs';
+import { Logger } from '@/libs/logger/logger';
 
 const TOP_TAGS_TO_FETCH_USERS = 3;
 
@@ -29,7 +29,7 @@ export class HotApplication {
 
       // Skip cache for pagination
       if (params.skip && params.skip > 0) {
-        Libs.Logger.debug('Fetching hot tags from Nexus (pagination)', { id, skip: params.skip });
+        Logger.debug('Fetching hot tags from Nexus (pagination)', { id, skip: params.skip });
         const tags = await Core.NexusHotService.fetch(params);
 
         // Fetch missing tagger users
@@ -42,7 +42,7 @@ export class HotApplication {
       const cached = await Core.LocalHotService.findById(id);
 
       if (cached && cached.tags.length > 0) {
-        Libs.Logger.debug('Hot tags cache hit', { id, count: cached.tags.length });
+        Logger.debug('Hot tags cache hit', { id, count: cached.tags.length });
 
         // Apply limit if specified
         const tags = params.limit ? cached.tags.slice(0, params.limit) : cached.tags;
@@ -59,7 +59,7 @@ export class HotApplication {
       // Cache miss - fetch from Nexus without limit so the full tag set is cached.
       // This prevents cache pollution when multiple consumers with different limits
       // share the same cache entry (e.g., HotTagsCardsSection with limit=5 vs HotTagsOverview with limit=50).
-      Libs.Logger.debug('Hot tags cache miss, fetching from Nexus', { id });
+      Logger.debug('Hot tags cache miss, fetching from Nexus', { id });
       const { limit, ...fetchParams } = params;
       const tags = await Core.NexusHotService.fetch(fetchParams);
 
@@ -73,7 +73,7 @@ export class HotApplication {
       // Apply caller's limit only on return, not on what gets cached
       return limit ? tags.slice(0, limit) : tags;
     } catch (error) {
-      Libs.Logger.error('Error in HotApplication.getOrFetch:', error);
+      Logger.error('Error in HotApplication.getOrFetch:', error);
       return [];
     }
   }
@@ -101,7 +101,7 @@ export class HotApplication {
         await Core.LocalHotService.upsert(id, tags);
       }
     } catch (error) {
-      Libs.Logger.error('Failed to refresh cache in background', { id, error });
+      Logger.error('Failed to refresh cache in background', { id, error });
     }
   }
 
