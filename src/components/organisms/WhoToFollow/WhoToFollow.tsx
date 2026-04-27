@@ -4,10 +4,10 @@ import { useRouter } from 'next/navigation';
 import { useTranslations } from 'next-intl';
 import * as Core from '@/core';
 import * as Hooks from '@/hooks';
-import * as Libs from '@/libs';
 import * as Molecules from '@/molecules';
 import * as Organisms from '@/organisms';
 import { APP_ROUTES } from '@/app/routes';
+import { UsersRound } from 'lucide-react';
 const USERS_LIMIT = 3;
 
 /**
@@ -28,23 +28,19 @@ export function WhoToFollow() {
     includeRelationships: true,
   });
   const { toggleFollow, isUserLoading } = Hooks.useFollowUser();
-
   const handleUserClick = (pubky: Core.Pubky) => {
     router.push(`${APP_ROUTES.PROFILE}/${pubky}`);
   };
-
   const handleFollowClick = async (userId: Core.Pubky, isFollowing: boolean) => {
     await toggleFollow(userId, isFollowing);
   };
-
   const handleSeeAll = () => {
     router.push(APP_ROUTES.WHO_TO_FOLLOW);
   };
-
   return (
     <Molecules.SidebarSection
       title={t('whoToFollow')}
-      footerIcon={Libs.UsersRound}
+      footerIcon={UsersRound}
       footerText={tCommon('seeAll')}
       onFooterClick={handleSeeAll}
       dataCy="who-to-follow"
@@ -52,9 +48,9 @@ export function WhoToFollow() {
       data-testid="who-to-follow"
     >
       {isStreamLoading
-        ? Array.from({ length: USERS_LIMIT }).map((_, index) => (
-            <Organisms.CompactUserListItemSkeleton key={`who-to-follow-skeleton-${index}`} />
-          ))
+        ? Array.from({
+            length: USERS_LIMIT,
+          }).map((_, index) => <Organisms.CompactUserListItemSkeleton key={`who-to-follow-skeleton-${index}`} />)
         : users.map((user) => (
             <Organisms.UserListItem
               key={user.id}

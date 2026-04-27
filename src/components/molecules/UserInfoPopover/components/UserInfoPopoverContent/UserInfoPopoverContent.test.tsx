@@ -43,8 +43,8 @@ vi.mock('../UserInfoPopoverFollowButton/UserInfoPopoverFollowButton', () => ({
 vi.mock('./UserInfoPopoverContent.skeleton', () => ({
   UserInfoPopoverSkeleton: () => <div data-testid="skeleton" />,
 }));
-vi.mock('@/libs', async (importOriginal) => {
-  const actual = await importOriginal<typeof import('@/libs')>();
+vi.mock('lucide-react', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('lucide-react')>();
   return { ...actual, Pencil: () => <svg data-testid="icon-pencil" /> };
 });
 

@@ -53,7 +53,7 @@ vi.mock('@/app', () => ({
   ROOT_ROUTES: '/',
 }));
 
-vi.mock('@/libs', () => ({
+vi.mock('@/libs/logger/logger', () => ({
   Logger: {
     error: (...args: unknown[]) => mocks.mockLoggerError(...args),
   },

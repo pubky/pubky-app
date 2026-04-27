@@ -4,15 +4,6 @@ import * as Atoms from '@/atoms';
 import { DialogReportPostReasonStep } from './DialogReportPostReasonStep';
 import { REPORT_REASON_MAX_LENGTH } from '@/core/pipes/report';
 
-// Mock @/libs - use actual implementations and only stub cn helper
-vi.mock('@/libs', async (importOriginal) => {
-  const actual = await importOriginal<typeof import('@/libs')>();
-  return {
-    ...actual,
-    cn: (...inputs: (string | undefined | null | false)[]) => inputs.filter(Boolean).join(' '),
-  };
-});
-
 // Mock hooks
 const mockUseCurrentUserProfile = vi.fn();
 

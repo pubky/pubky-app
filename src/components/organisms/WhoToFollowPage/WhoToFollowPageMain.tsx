@@ -4,9 +4,8 @@ import * as Atoms from '@/atoms';
 import * as Organisms from '@/organisms';
 import * as Hooks from '@/hooks';
 import * as Core from '@/core';
-import * as Libs from '@/libs';
 import { USERS_PER_PAGE } from './WhoToFollowPageMain.constants';
-
+import { Users } from 'lucide-react';
 const LOAD_MORE_SKELETON_COUNT = 2;
 
 /**
@@ -17,7 +16,6 @@ const LOAD_MORE_SKELETON_COUNT = 2;
  */
 export function WhoToFollowPageMain() {
   const currentUserPubky = Core.useAuthStore((state) => state.currentUserPubky);
-
   const { users, isLoading, isLoadingMore, hasMore, loadMore } = Hooks.useUserStream({
     streamId: Core.UserStreamTypes.RECOMMENDED,
     limit: USERS_PER_PAGE,
@@ -25,7 +23,6 @@ export function WhoToFollowPageMain() {
     includeRelationships: true,
     includeCounts: true,
   });
-
   const { toggleFollow, isUserLoading } = Hooks.useFollowUser();
 
   // Handle infinite scroll
@@ -39,25 +36,25 @@ export function WhoToFollowPageMain() {
   const handleFollow = async (userId: Core.Pubky, isCurrentlyFollowing: boolean) => {
     await toggleFollow(userId, isCurrentlyFollowing);
   };
-
   if (isLoading) {
     return (
       <Atoms.Container className="mt-6 gap-4 lg:mt-0">
         <Atoms.Container className="gap-3.5 rounded-md bg-transparent p-0 lg:gap-3 lg:bg-card lg:p-6">
-          {Array.from({ length: USERS_PER_PAGE }).map((_, index) => (
+          {Array.from({
+            length: USERS_PER_PAGE,
+          }).map((_, index) => (
             <Organisms.FullUserListItemSkeleton key={`who-to-follow-page-skeleton-${index}`} />
           ))}
         </Atoms.Container>
       </Atoms.Container>
     );
   }
-
   if (users.length === 0) {
     return (
       <Atoms.Container data-testid="who-to-follow-empty" className="relative mt-6 items-center gap-6 px-0 py-6 lg:mt-0">
         {/* Icon */}
         <Atoms.Container overrideDefaults className="flex items-center rounded-full bg-brand/16 p-6">
-          <Libs.Users className="size-12 text-brand" strokeWidth={1.5} />
+          <Users className="size-12 text-brand" strokeWidth={1.5} />
         </Atoms.Container>
 
         {/* Title and subtitle */}
@@ -74,7 +71,6 @@ export function WhoToFollowPageMain() {
       </Atoms.Container>
     );
   }
-
   return (
     <Atoms.Container data-cy="who-to-follow-page" className="mt-6 gap-4 lg:mt-0">
       <Atoms.Container className="gap-3.5 rounded-md bg-transparent p-0 lg:gap-3 lg:bg-card lg:p-6">
@@ -96,7 +92,9 @@ export function WhoToFollowPageMain() {
 
       {isLoadingMore && (
         <Atoms.Container className="gap-4 py-4">
-          {Array.from({ length: LOAD_MORE_SKELETON_COUNT }).map((_, i) => (
+          {Array.from({
+            length: LOAD_MORE_SKELETON_COUNT,
+          }).map((_, i) => (
             <Organisms.FullUserListItemSkeleton key={`who-to-follow-load-more-skeleton-${i}`} />
           ))}
         </Atoms.Container>

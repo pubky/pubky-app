@@ -3,13 +3,13 @@
 import * as Atoms from '@/atoms';
 import * as Molecules from '@/molecules';
 import * as Organisms from '@/organisms';
-import * as Libs from '@/libs';
 import * as Hooks from '@/hooks';
 import { useRouter } from 'next/navigation';
 import { APP_ROUTES } from '@/app/routes';
 import type { TaggedItemProps } from './TaggedItem.types';
 import { MAX_VISIBLE_AVATARS } from './TaggedItem.constants';
-
+import { Search } from 'lucide-react';
+import { cn, formatPublicKey } from '@/libs/utils/utils';
 export function TaggedItem({
   tag,
   onTagClick,
@@ -25,11 +25,9 @@ export function TaggedItem({
   const visibleTaggers = tag.taggers.slice(0, MAX_VISIBLE_AVATARS);
   const totalTaggersCount = tag.taggers_count ?? tag.taggers.length;
   const overflowCount = Math.max(0, totalTaggersCount - MAX_VISIBLE_AVATARS);
-
   const handleTagClick = () => {
     onTagClick(tag);
   };
-
   const handleSearchClick = () => {
     requireAuth(() => {
       if (onSearchClick) {
@@ -42,11 +40,9 @@ export function TaggedItem({
       }
     });
   };
-
   const handleAvatarGroupClick = () => {
     onExpandToggle?.(tag.label);
   };
-
   return (
     <Atoms.Container overrideDefaults={true} className="flex flex-col gap-2">
       {/* Tag row with tag badge, search button, and avatar group */}
@@ -62,7 +58,7 @@ export function TaggedItem({
 
         {/* Search button */}
         <Atoms.Button variant="secondary" className="size-8" onClick={handleSearchClick}>
-          <Libs.Search size={16} className="text-secondary-foreground" />
+          <Search size={16} className="text-secondary-foreground" />
         </Atoms.Button>
 
         {/* Avatar group - clickable to expand user list */}
@@ -77,17 +73,22 @@ export function TaggedItem({
             {visibleTaggers.map((tagger, index) => (
               <Organisms.AvatarWithFallback
                 key={tagger.id}
-                name={tagger.name || Libs.formatPublicKey({ key: tagger.id })}
+                name={
+                  tagger.name ||
+                  formatPublicKey({
+                    key: tagger.id,
+                  })
+                }
                 avatarUrl={tagger.avatarUrl}
                 fallbackSeed={tagger.id}
                 size="md"
-                className={Libs.cn('shrink-0', index > 0 && '-ml-2')}
+                className={cn('shrink-0', index > 0 && '-ml-2')}
               />
             ))}
             {overflowCount > 0 && (
               <Atoms.Container
                 overrideDefaults={true}
-                className={Libs.cn(
+                className={cn(
                   'flex shrink-0 items-center justify-center rounded-full border border-muted-foreground bg-background shadow-sm',
                   'size-8 text-xs font-medium text-foreground',
                   visibleTaggers.length > 0 && 'z-10 -ml-2',

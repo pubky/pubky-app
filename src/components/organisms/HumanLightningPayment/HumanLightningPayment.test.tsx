@@ -18,8 +18,8 @@ vi.mock('@/hooks/useSatUsdRate', () => ({
   useBtcRate: () => ({ satUsd: 0.0005 }),
 }));
 
-vi.mock('@/libs', async (importOriginal) => {
-  const actual = await importOriginal<typeof import('@/libs')>();
+vi.mock('@/libs/utils/utils', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('@/libs/utils/utils')>();
   return {
     ...actual,
     copyToClipboard: mockCopyToClipboard,

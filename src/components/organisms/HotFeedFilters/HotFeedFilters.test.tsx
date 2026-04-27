@@ -50,14 +50,6 @@ vi.mock('@/molecules', () => ({
   FilterReach: () => <div data-testid="filter-reach">FilterReach</div>,
 }));
 
-// Mock Libs icons
-vi.mock('@/libs', () => ({
-  Star: () => <span>Star</span>,
-  CalendarRange: () => <span>CalendarRange</span>,
-  Calendar: () => <span>Calendar</span>,
-  Clock: () => <span>Clock</span>,
-}));
-
 describe('FilterTimeframe', () => {
   it('renders all timeframe options', () => {
     render(<FilterTimeframe />);

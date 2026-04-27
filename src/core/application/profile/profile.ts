@@ -2,7 +2,10 @@ import JSZip from 'jszip';
 
 import * as Specs from 'pubky-app-specs';
 import * as Core from '@/core';
-import { HttpMethod, Err, ClientErrorCode, ErrorService } from '@/libs';
+import { HttpMethod } from '@/libs/http/http.types';
+import { ClientErrorCode } from '@/libs/error/error.codes';
+import { Err } from '@/libs/error/error.factories';
+import { ErrorService } from '@/libs/error/error.types';
 
 export class ProfileApplication {
   private constructor() {} // Prevent instantiation

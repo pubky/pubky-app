@@ -3,8 +3,8 @@
 import * as React from 'react';
 import * as Atoms from '@/atoms';
 import * as Organisms from '@/organisms';
-import * as Libs from '@/libs';
-
+import { UserRoundPlus, Tag, StickyNote } from 'lucide-react';
+import { cn } from '@/libs/utils/utils';
 export interface UserData {
   id: string;
   name: string;
@@ -13,7 +13,6 @@ export interface UserData {
   tagsCount?: number;
   postsCount?: number;
 }
-
 interface UserProps {
   user: UserData;
   onAction?: (userId: string) => void;
@@ -23,21 +22,17 @@ interface UserProps {
   className?: React.HTMLAttributes<HTMLDivElement>['className'];
   'data-testid'?: string;
 }
-
 export function User({
   user,
   onAction,
-  actionIcon = <Libs.UserRoundPlus className="h-4 w-4" />,
+  actionIcon = <UserRoundPlus className="h-4 w-4" />,
   showAction = true,
   actionVariant = Atoms.ButtonVariant.SECONDARY,
   className,
   'data-testid': dataTestId,
 }: UserProps) {
   return (
-    <Atoms.Container
-      className={Libs.cn('flex flex-row items-center gap-2', className)}
-      data-testid={dataTestId || 'user'}
-    >
+    <Atoms.Container className={cn('flex flex-row items-center gap-2', className)} data-testid={dataTestId || 'user'}>
       <Organisms.AvatarWithFallback
         avatarUrl={user.avatar}
         name={user.name}
@@ -57,14 +52,14 @@ export function User({
               className="flex items-center justify-center gap-1 truncate text-xs font-medium text-muted-foreground"
               data-testid="user-tags-count"
             >
-              <Libs.Tag className="h-2 w-2" />
+              <Tag className="h-2 w-2" />
               {user.tagsCount}
             </Atoms.Typography>
             <Atoms.Typography
               className="flex items-center justify-center gap-1 truncate text-xs font-medium text-muted-foreground"
               data-testid="user-posts-count"
             >
-              <Libs.StickyNote className="h-2 w-2" />
+              <StickyNote className="h-2 w-2" />
               {user.postsCount}
             </Atoms.Typography>
           </Atoms.Container>

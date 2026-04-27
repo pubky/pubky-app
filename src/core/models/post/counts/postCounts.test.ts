@@ -1,6 +1,8 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import * as Core from '@/core';
-import * as Libs from '@/libs';
+import { DatabaseErrorCode } from '@/libs/error/error.codes';
+import { Err } from '@/libs/error/error.factories';
+import { ErrorCategory, ErrorService } from '@/libs/error/error.types';
 
 describe('PostCountsModel', () => {
   beforeEach(async () => {
@@ -233,8 +235,8 @@ describe('PostCountsModel', () => {
         };
 
         it('should propagate database errors from findById', async () => {
-          const error = Libs.Err.database(Libs.DatabaseErrorCode.QUERY_FAILED, 'Failed to find record in post_counts', {
-            service: Libs.ErrorService.Local,
+          const error = Err.database(DatabaseErrorCode.QUERY_FAILED, 'Failed to find record in post_counts', {
+            service: ErrorService.Local,
             operation: 'findById',
             context: { id: testPostId1 },
           });
@@ -242,27 +244,23 @@ describe('PostCountsModel', () => {
           vi.spyOn(Core.PostCountsModel, 'findById').mockRejectedValueOnce(error);
 
           await expect(Core.PostCountsModel.updateCounts(updateParams)).rejects.toMatchObject({
-            category: Libs.ErrorCategory.Database,
-            code: Libs.DatabaseErrorCode.QUERY_FAILED,
+            category: ErrorCategory.Database,
+            code: DatabaseErrorCode.QUERY_FAILED,
           });
         });
 
         it('should propagate database errors from update', async () => {
-          const error = Libs.Err.database(
-            Libs.DatabaseErrorCode.WRITE_FAILED,
-            'Failed to update record in post_counts',
-            {
-              service: Libs.ErrorService.Local,
-              operation: 'update',
-              context: { id: testPostId1 },
-            },
-          );
+          const error = Err.database(DatabaseErrorCode.WRITE_FAILED, 'Failed to update record in post_counts', {
+            service: ErrorService.Local,
+            operation: 'update',
+            context: { id: testPostId1 },
+          });
 
           vi.spyOn(Core.PostCountsModel, 'update').mockRejectedValueOnce(error);
 
           await expect(Core.PostCountsModel.updateCounts(updateParams)).rejects.toMatchObject({
-            category: Libs.ErrorCategory.Database,
-            code: Libs.DatabaseErrorCode.WRITE_FAILED,
+            category: ErrorCategory.Database,
+            code: DatabaseErrorCode.WRITE_FAILED,
           });
         });
 

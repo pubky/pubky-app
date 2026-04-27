@@ -1,6 +1,9 @@
 import { describe, it, expect, vi } from 'vitest';
 import { OgMetadataValidators } from './og-metadata.validators';
-import { AppError, ErrorCategory, ValidationErrorCode, ErrorService, HttpStatusCode } from '@/libs';
+import { AppError } from '@/libs/error/error';
+import { ValidationErrorCode } from '@/libs/error/error.codes';
+import { ErrorCategory, ErrorService } from '@/libs/error/error.types';
+import { HttpStatusCode } from '@/libs/http/http.types';
 
 vi.mock('net', () => ({
   isIP: vi.fn((hostname: string) => {

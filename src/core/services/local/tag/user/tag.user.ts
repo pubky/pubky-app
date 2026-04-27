@@ -1,5 +1,7 @@
 import * as Core from '@/core';
-import { DatabaseErrorCode, Err, ErrorService } from '@/libs';
+import { DatabaseErrorCode } from '@/libs/error/error.codes';
+import { Err } from '@/libs/error/error.factories';
+import { ErrorService } from '@/libs/error/error.types';
 
 export class LocalUserTagService {
   private static readonly TAG_TABLES = [Core.UserTagsModel.table, Core.UserCountsModel.table] as const;

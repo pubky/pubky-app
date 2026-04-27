@@ -2,8 +2,8 @@
 
 import { useLiveQuery } from 'dexie-react-hooks';
 import * as Core from '@/core';
-import * as Libs from '@/libs';
 import type { UseUnreadPostsOptions, UseUnreadPostsResult } from './useUnreadPosts.types';
+import { Logger } from '@/libs/logger/logger';
 
 /**
  * useUnreadPosts
@@ -30,7 +30,7 @@ export function useUnreadPosts({ streamId }: UseUnreadPostsOptions): UseUnreadPo
       if (!streamId) return null;
       return await Core.StreamPostsController.getUnreadStream({ streamId });
     } catch (error) {
-      Libs.Logger.error('[useUnreadPosts] Failed to query unread stream', { streamId, error });
+      Logger.error('[useUnreadPosts] Failed to query unread stream', { streamId, error });
       return null;
     }
   }, [streamId]);

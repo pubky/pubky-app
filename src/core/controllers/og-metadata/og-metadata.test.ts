@@ -1,7 +1,10 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import * as Core from '@/core';
-import * as Libs from '@/libs';
 import type { TOgMetadataParams } from '@/core';
+import { NetworkErrorCode, ValidationErrorCode } from '@/libs/error/error.codes';
+import { Err } from '@/libs/error/error.factories';
+import { ErrorService } from '@/libs/error/error.types';
+import { HttpStatusCode } from '@/libs/http/http.types';
 
 const testData = {
   validUrl: 'https://example.com',
@@ -63,10 +66,10 @@ describe('OgMetadataController', () => {
     });
 
     it('should bubble up validation AppError from validators without wrapping', async () => {
-      const validationError = Libs.Err.validation(Libs.ValidationErrorCode.MISSING_FIELD, 'Invalid URL', {
-        service: Libs.ErrorService.NextJsServer,
+      const validationError = Err.validation(ValidationErrorCode.MISSING_FIELD, 'Invalid URL', {
+        service: ErrorService.NextJsServer,
         operation: 'validate',
-        context: { field: 'url', statusCode: Libs.HttpStatusCode.BAD_REQUEST },
+        context: { field: 'url', statusCode: HttpStatusCode.BAD_REQUEST },
       });
       // NOTE: error-handling rules (.cursor/rules/error-handling.mdc) require that layers
       // re-throw existing AppError instances as-is (no re-wrapping / double-logging).
@@ -79,10 +82,10 @@ describe('OgMetadataController', () => {
     });
 
     it('should bubble up AppError from application layer without wrapping', async () => {
-      const appError = Libs.Err.network(Libs.NetworkErrorCode.DNS_FAILED, 'DNS resolution failed', {
-        service: Libs.ErrorService.NextJsServer,
+      const appError = Err.network(NetworkErrorCode.DNS_FAILED, 'DNS resolution failed', {
+        service: ErrorService.NextJsServer,
         operation: 'validateDns',
-        context: { hostname: 'example.com', statusCode: Libs.HttpStatusCode.BAD_REQUEST },
+        context: { hostname: 'example.com', statusCode: HttpStatusCode.BAD_REQUEST },
       });
       // NOTE: According to the error-handling rules (.cursor/rules/error-handling.mdc),
       // the controller must re-throw AppError instances coming from the Application layer

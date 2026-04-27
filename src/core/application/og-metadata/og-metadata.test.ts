@@ -18,7 +18,7 @@ vi.mock('net', () => ({
   isIP: mockIsIP,
 }));
 
-vi.mock('@/libs/network', () => ({
+vi.mock('@/libs/network/network', () => ({
   isIpSafe: mockIsIpSafe,
 }));
 

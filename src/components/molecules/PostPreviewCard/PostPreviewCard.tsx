@@ -3,8 +3,8 @@
 import * as Atoms from '@/atoms';
 import * as Organisms from '@/organisms';
 import * as Hooks from '@/hooks';
-import * as Libs from '@/libs';
 import type { PostPreviewCardProps } from './PostPreviewCard.types';
+import { cn } from '@/libs/utils/utils';
 
 /**
  * PostPreviewCard - Compact preview card for displaying a post in a nested context.
@@ -51,7 +51,7 @@ export function PostPreviewCard({ postId, className }: PostPreviewCardProps) {
     <Atoms.Card
       ref={ttlRef}
       data-cy="post-preview-card"
-      className={Libs.cn('min-w-0 cursor-pointer rounded-md py-0 transition-colors hover:bg-accent/50', className)}
+      className={cn('min-w-0 cursor-pointer rounded-md py-0 transition-colors hover:bg-accent/50', className)}
       onClick={handleClick}
       onKeyDown={handleKeyDown}
       role="link"

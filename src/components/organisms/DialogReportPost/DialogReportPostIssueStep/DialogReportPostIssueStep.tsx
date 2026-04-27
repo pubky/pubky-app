@@ -4,7 +4,6 @@ import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useTranslations } from 'next-intl';
 import * as Atoms from '@/atoms';
-import * as Libs from '@/libs';
 import {
   REPORT_ISSUE_LABEL_KEYS,
   REPORT_ISSUE_TYPES,
@@ -13,7 +12,8 @@ import {
 } from '@/core/pipes/report';
 import { ISSUE_TYPE_ICONS } from './DialogReportPostIssueStep.constants';
 import type { DialogReportPostIssueStepProps } from './DialogReportPostIssueStep.types';
-
+import { Check } from 'lucide-react';
+import { cn } from '@/libs/utils/utils';
 export function DialogReportPostIssueStep({
   onSelectIssueType,
   onCancel,
@@ -24,11 +24,9 @@ export function DialogReportPostIssueStep({
   const tCommon = useTranslations('common');
   const router = useRouter();
   const [selectedType, setSelectedType] = useState<ReportIssueType | null>(null);
-
   const handleSelect = (issueType: ReportIssueType) => {
     setSelectedType(issueType);
   };
-
   const handleNext = () => {
     if (!selectedType) return;
 
@@ -42,7 +40,6 @@ export function DialogReportPostIssueStep({
     // Otherwise, proceed with normal flow
     onSelectIssueType(selectedType);
   };
-
   return (
     <>
       <Atoms.DialogHeader>
@@ -56,7 +53,6 @@ export function DialogReportPostIssueStep({
           const isSelected = selectedType === issueType;
           const labelKey = REPORT_ISSUE_LABEL_KEYS[issueType as ReportIssueType];
           const label = tIssues(labelKey);
-
           return (
             <Atoms.Button
               key={issueType}
@@ -65,7 +61,7 @@ export function DialogReportPostIssueStep({
               role="option"
               aria-selected={isSelected}
               aria-label={label}
-              className={Libs.cn(
+              className={cn(
                 'h-auto w-full justify-start gap-3 rounded-lg px-3 py-3 hover:bg-muted',
                 isSelected && 'bg-muted',
               )}
@@ -75,7 +71,7 @@ export function DialogReportPostIssueStep({
               <Atoms.Typography as="span" size="sm" className="flex-1 text-left text-foreground">
                 {label}
               </Atoms.Typography>
-              {isSelected && <Libs.Check className="size-5 shrink-0 text-foreground" aria-hidden="true" />}
+              {isSelected && <Check className="size-5 shrink-0 text-foreground" aria-hidden="true" />}
             </Atoms.Button>
           );
         })}

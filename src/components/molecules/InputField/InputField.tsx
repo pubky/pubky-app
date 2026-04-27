@@ -2,10 +2,9 @@
 
 import { ReactNode } from 'react';
 import { useTranslations } from 'next-intl';
-
 import * as Atoms from '@/atoms';
-import * as Libs from '@/libs';
-
+import { Loader2 } from 'lucide-react';
+import { cn } from '@/libs/utils/utils';
 interface InputFieldProps {
   id?: string;
   name?: string;
@@ -32,7 +31,6 @@ interface InputFieldProps {
   size?: 'sm' | 'md' | 'lg';
   dataCy?: string;
 }
-
 export function InputField({
   id,
   name,
@@ -61,21 +59,17 @@ export function InputField({
 }: InputFieldProps) {
   const t = useTranslations('common');
   const resolvedLoadingText = loadingText ?? t('loading');
-
   const containerClasses = variant === 'dashed' && 'border-dashed';
-
   const statusClasses = {
     default: '',
     success: 'border-brand text-brand',
     error: 'border-red-500 text-red-500',
   };
-
   const sizeClasses = {
     sm: 'h-10 text-sm',
     md: 'h-12 text-base',
     lg: 'h-14 text-lg',
   } as const;
-
   const messageClasses = {
     default: 'text-muted-foreground',
     info: 'text-blue-500',
@@ -83,11 +77,10 @@ export function InputField({
     error: 'text-red-500',
     success: 'text-brand',
   } as const;
-
   return (
     <>
       <Atoms.Container
-        className={Libs.cn(
+        className={cn(
           '!bg-alpha-90/10 mx-0 mb-2 w-full cursor-pointer flex-row items-center gap-0 rounded-md border bg-transparent',
           icon && iconPosition === 'left' ? 'pl-4.5' : 'pl-2',
           containerClasses,
@@ -100,15 +93,12 @@ export function InputField({
         {loading && (
           <Atoms.Container className="w-auto items-center justify-center">
             {loadingIcon ?? (
-              <Libs.Loader2 className="linear infinite h-4 w-4 animate-spin text-brand" data-testid="loading-icon" />
+              <Loader2 className="linear infinite h-4 w-4 animate-spin text-brand" data-testid="loading-icon" />
             )}
           </Atoms.Container>
         )}
         {!loading && icon && iconPosition === 'left' && (
-          <Atoms.Container
-            onClick={onClickIcon}
-            className={Libs.cn('w-auto cursor-pointer items-center justify-center')}
-          >
+          <Atoms.Container onClick={onClickIcon} className={cn('w-auto cursor-pointer items-center justify-center')}>
             {icon}
           </Atoms.Container>
         )}
@@ -116,7 +106,7 @@ export function InputField({
           id={id}
           name={name}
           type="text"
-          className={Libs.cn('w-full border-none !bg-transparent')}
+          className={cn('w-full border-none !bg-transparent')}
           value={loading ? resolvedLoadingText : value}
           placeholder={placeholder}
           disabled={disabled || loading}
@@ -132,14 +122,14 @@ export function InputField({
         {!loading && icon && iconPosition === 'right' && (
           <Atoms.Container
             onClick={onClickIcon}
-            className={Libs.cn('mr-5 w-auto cursor-pointer items-center justify-center')}
+            className={cn('mr-5 w-auto cursor-pointer items-center justify-center')}
           >
             {icon}
           </Atoms.Container>
         )}
       </Atoms.Container>
       {message && (
-        <Atoms.Typography as="small" size="sm" className={Libs.cn('ml-1', messageClasses[messageType])}>
+        <Atoms.Typography as="small" size="sm" className={cn('ml-1', messageClasses[messageType])}>
           {message}
         </Atoms.Typography>
       )}

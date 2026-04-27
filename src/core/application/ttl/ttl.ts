@@ -1,5 +1,5 @@
 import * as Core from '@/core';
-import { Logger } from '@/libs';
+import { Logger } from '@/libs/logger/logger';
 
 export class TtlApplication {
   private constructor() {}

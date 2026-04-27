@@ -2,11 +2,11 @@
 
 import { useState, useEffect, useCallback, useRef, useMemo } from 'react';
 import * as Core from '@/core';
-import * as Libs from '@/libs';
 import { NotificationType, type FlatNotification } from '@/core';
 // Direct import to avoid circular dependency (this hook is exported from @/hooks)
 import { useMutedUsers } from '@/hooks/useMutedUsers';
 import type { UseNotificationsResult } from './useNotifications.types';
+import { Logger } from '@/libs/logger/logger';
 
 /**
  * Hook for notifications with infinite scroll pagination.
@@ -77,7 +77,7 @@ export function useNotifications(): UseNotificationsResult {
       // Log a warning but still pass through (fail-open for mute filter)
       default: {
         const unhandledType: never = notification;
-        Libs.Logger.warn(
+        Logger.warn(
           `[useNotifications] Unhandled notification type for mute filtering: ${(unhandledType as FlatNotification).type}`,
         );
         return '';

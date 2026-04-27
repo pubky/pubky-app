@@ -1,4 +1,4 @@
-import { Env } from '@/libs/env';
+import { Env } from '@/libs/env/env';
 
 // TTL Coordinator configuration
 export const TTL_POST_MS = Env.NEXT_PUBLIC_TTL_POST_MS;

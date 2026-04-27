@@ -2,33 +2,29 @@
 
 import * as Atoms from '@/atoms';
 import * as Core from '@/core';
-import * as Libs from '@/libs';
 import * as Molecules from '@/molecules';
 import React, { useState } from 'react';
 import { useTranslations } from 'next-intl';
 import type { HumanPhoneInputProps } from './HumanPhoneInput.types';
-
+import { ArrowLeft, ArrowRight } from 'lucide-react';
+import { parsePhoneNumber } from '@/libs/phone/phone';
+import { cn } from '@/libs/utils/utils';
 export const HumanPhoneInput = ({ onBack, onCodeSent, initialPhoneNumber }: HumanPhoneInputProps) => {
   const t = useTranslations('onboarding.phone');
   const tCommon = useTranslations('common');
   const [phoneNumberInput, setPhoneNumberInput] = useState(initialPhoneNumber || '');
   const [isSendingCode, setIsSendingCode] = useState(false);
-
   const handlePhoneNumberChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setPhoneNumberInput(e.target.value);
   };
-
-  const isValidNumber = !!Libs.parsePhoneNumber(phoneNumberInput);
-
+  const isValidNumber = !!parsePhoneNumber(phoneNumberInput);
   async function onSendCode(phoneNumber: string) {
     if (isSendingCode) {
       return;
     }
-
     try {
       setIsSendingCode(true);
       const result = await Core.HomegateController.sendSmsCode(phoneNumber);
-
       if (!result.success) {
         switch (result.errorType) {
           case Core.SmsCodeErrorType.BLOCKED:
@@ -39,7 +35,9 @@ export const HumanPhoneInput = ({ onBack, onCodeSent, initialPhoneNumber }: Huma
             break;
           case Core.SmsCodeErrorType.RATE_LIMITED_TEMPORARY: {
             const retryMessage = result.retryAfter
-              ? t('rateLimitedWithRetry', { seconds: result.retryAfter })
+              ? t('rateLimitedWithRetry', {
+                  seconds: result.retryAfter,
+                })
               : t('tooManyAttemptsDescription');
             Molecules.toast({
               title: t('tooManyAttempts'),
@@ -67,7 +65,6 @@ export const HumanPhoneInput = ({ onBack, onCodeSent, initialPhoneNumber }: Huma
         }
         return;
       }
-
       onCodeSent(phoneNumber);
     } catch {
       Molecules.toast({
@@ -78,7 +75,6 @@ export const HumanPhoneInput = ({ onBack, onCodeSent, initialPhoneNumber }: Huma
       setIsSendingCode(false);
     }
   }
-
   return (
     <React.Fragment>
       <Atoms.PageHeader>
@@ -95,7 +91,7 @@ export const HumanPhoneInput = ({ onBack, onCodeSent, initialPhoneNumber }: Huma
         isValid={isValidNumber}
         onEnter={() => isValidNumber && onSendCode(phoneNumberInput)}
       />
-      <Atoms.Container className={Libs.cn('mt-6 flex-row justify-between gap-3 lg:gap-6')}>
+      <Atoms.Container className={cn('mt-6 flex-row justify-between gap-3 lg:gap-6')}>
         <Atoms.Button
           id="human-phone-back-btn"
           size="lg"
@@ -103,7 +99,7 @@ export const HumanPhoneInput = ({ onBack, onCodeSent, initialPhoneNumber }: Huma
           variant="secondary"
           onClick={onBack}
         >
-          <Libs.ArrowLeft className="mr-2 h-4 w-4" />
+          <ArrowLeft className="mr-2 h-4 w-4" />
           {tCommon('back')}
         </Atoms.Button>
         <Atoms.Button
@@ -114,7 +110,7 @@ export const HumanPhoneInput = ({ onBack, onCodeSent, initialPhoneNumber }: Huma
           disabled={!isValidNumber || isSendingCode}
           onClick={() => isValidNumber && onSendCode(phoneNumberInput)}
         >
-          <Libs.ArrowRight className="mr-2 h-4 w-4" />
+          <ArrowRight className="mr-2 h-4 w-4" />
           {t('sendCode')}
         </Atoms.Button>
       </Atoms.Container>

@@ -5,8 +5,8 @@ import { useTranslations } from 'next-intl';
 import * as Core from '@/core';
 import * as Molecules from '@/molecules';
 import * as Organisms from '@/organisms';
-import * as Libs from '@/libs';
 import type { UseDeletePostResult } from './useDeletePost.types';
+import { Logger } from '@/libs/logger/logger';
 
 /**
  * Hook to handle post deletion with optimistic UI updates and error recovery.
@@ -37,12 +37,12 @@ export function useDeletePost(): UseDeletePostResult {
 
   const deletePost = async (postId: string) => {
     if (isDeleting) {
-      Libs.Logger.warn('[useDeletePost] Delete already in progress, ignoring request', { postId });
+      Logger.warn('[useDeletePost] Delete already in progress, ignoring request', { postId });
       return;
     }
 
     if (!postId || !postId.trim()) {
-      Libs.Logger.error('[useDeletePost] Invalid post ID provided', { postId });
+      Logger.error('[useDeletePost] Invalid post ID provided', { postId });
       toast({
         title: tToast('error'),
         description: tPost('invalidPostId'),
@@ -58,14 +58,14 @@ export function useDeletePost(): UseDeletePostResult {
 
     try {
       await Core.PostController.commitDelete({ compositePostId: postId });
-      Libs.Logger.info('[useDeletePost] Post deleted successfully', { postId });
+      Logger.info('[useDeletePost] Post deleted successfully', { postId });
       toast({
         title: tPost('postDeleted'),
         description: tPost('postDeletedDesc'),
         dismissButton: true,
       });
     } catch (error) {
-      Libs.Logger.error('[useDeletePost] Failed to delete post', {
+      Logger.error('[useDeletePost] Failed to delete post', {
         postId,
         error,
         errorMessage: error instanceof Error ? error.message : String(error),
@@ -77,12 +77,12 @@ export function useDeletePost(): UseDeletePostResult {
       let postStillExists: Core.PostDetailsModelSchema | null | 'unknown' = 'unknown';
       try {
         postStillExists = await Core.PostController.getDetails({ compositeId: postId });
-        Libs.Logger.debug('[useDeletePost] Post existence check completed', {
+        Logger.debug('[useDeletePost] Post existence check completed', {
           postId,
           exists: postStillExists !== null,
         });
       } catch (detailsError) {
-        Libs.Logger.warn('[useDeletePost] Failed to verify post existence after delete failure', {
+        Logger.warn('[useDeletePost] Failed to verify post existence after delete failure', {
           postId,
           detailsError,
           errorMessage: detailsError instanceof Error ? detailsError.message : String(detailsError),
@@ -93,14 +93,14 @@ export function useDeletePost(): UseDeletePostResult {
       if (postStillExists === 'unknown' || postStillExists) {
         // Restore post to timeline since deletion failed or we couldn't verify
         timelineFeed?.prependPosts(postId);
-        Libs.Logger.info('[useDeletePost] Post restored to timeline after failed deletion', {
+        Logger.info('[useDeletePost] Post restored to timeline after failed deletion', {
           postId,
           reason: postStillExists === 'unknown' ? 'could_not_verify' : 'post_still_exists',
         });
       } else {
         // Post was already deleted from DB (local-first write succeeded)
         // Don't restore to avoid ghost posts - homeserver will sync eventually
-        Libs.Logger.warn('[useDeletePost] Post already deleted from DB, not restoring to timeline', {
+        Logger.warn('[useDeletePost] Post already deleted from DB, not restoring to timeline', {
           postId,
           note: 'Local deletion succeeded, homeserver sync may be pending',
         });

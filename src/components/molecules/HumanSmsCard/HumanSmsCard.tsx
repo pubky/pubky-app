@@ -1,12 +1,12 @@
 'use client';
 
 import * as Atoms from '@/atoms';
-import * as Libs from '@/libs';
 import { useSmsVerificationInfo } from '@/hooks/useSmsVerificationInfo';
 import { HumanSmsCardSkeleton } from './HumanSmsCard.skeleton';
 import type { HumanSmsCardProps } from './HumanSmsCard.types';
 import { useTranslations } from 'next-intl';
-
+import { Smartphone, TriangleAlert } from 'lucide-react';
+import { cn } from '@/libs/utils/utils';
 export const HumanSmsCard = ({ onClick }: HumanSmsCardProps) => {
   const t = useTranslations('onboarding.sms');
   const smsInfo = useSmsVerificationInfo();
@@ -19,16 +19,14 @@ export const HumanSmsCard = ({ onClick }: HumanSmsCardProps) => {
   const isError = smsInfo !== null && !smsInfo.available && smsInfo.error === true;
   // Unavailable when either geoblocked or error
   const isUnavailable = isGeoblocked || isError;
-
   if (isLoading) {
     return <HumanSmsCardSkeleton />;
   }
-
   return (
     <Atoms.Container className="relative flex-1">
       <Atoms.Card
         data-testid="sms-verification-card"
-        className={Libs.cn('flex-1 gap-0 p-6 md:p-12', isUnavailable && 'pointer-events-none opacity-60 blur-[5px]')}
+        className={cn('flex-1 gap-0 p-6 md:p-12', isUnavailable && 'pointer-events-none opacity-60 blur-[5px]')}
       >
         <Atoms.Container className="flex-col gap-10 lg:flex-row lg:items-center lg:gap-12">
           <Atoms.Container className="hidden h-full w-full flex-1 items-center lg:block lg:w-auto">
@@ -71,7 +69,7 @@ export const HumanSmsCard = ({ onClick }: HumanSmsCardProps) => {
               onClick={onClick}
               disabled={isUnavailable}
             >
-              <Libs.Smartphone className="mr-2 size-4" />
+              <Smartphone className="mr-2 size-4" />
               {t('receiveSms')}
             </Atoms.Button>
           </Atoms.Container>
@@ -86,7 +84,7 @@ export const HumanSmsCard = ({ onClick }: HumanSmsCardProps) => {
           className="absolute top-1/2 left-1/2 flex h-11 -translate-x-1/2 -translate-y-1/2 items-center gap-3 rounded-md bg-destructive/60 px-6 py-3 shadow-xl"
         >
           <Atoms.Container overrideDefaults className="pt-0.5">
-            <Libs.TriangleAlert className="size-4 text-destructive-foreground" />
+            <TriangleAlert className="size-4 text-destructive-foreground" />
           </Atoms.Container>
           <Atoms.Typography
             overrideDefaults
@@ -105,7 +103,7 @@ export const HumanSmsCard = ({ onClick }: HumanSmsCardProps) => {
           className="absolute top-1/2 left-1/2 flex h-11 -translate-x-1/2 -translate-y-1/2 items-center gap-3 rounded-md bg-destructive/60 px-6 py-3 shadow-xl"
         >
           <Atoms.Container overrideDefaults className="pt-0.5">
-            <Libs.TriangleAlert className="size-4 text-destructive-foreground" />
+            <TriangleAlert className="size-4 text-destructive-foreground" />
           </Atoms.Container>
           <Atoms.Typography
             overrideDefaults

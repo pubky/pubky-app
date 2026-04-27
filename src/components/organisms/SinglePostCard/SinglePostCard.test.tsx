@@ -124,12 +124,6 @@ vi.mock('@/atoms', () => ({
   ),
 }));
 
-// Mock libs - use actual implementations
-vi.mock('@/libs', async () => {
-  const actual = await vi.importActual('@/libs');
-  return { ...actual };
-});
-
 describe('SinglePostCard', () => {
   const mockPostId = 'author:post123';
   const mockUseIsMobile = vi.mocked(Hooks.useIsMobile);

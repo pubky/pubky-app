@@ -34,15 +34,6 @@ vi.mock('@/core', () => ({
   },
 }));
 
-// Mock Libs
-vi.mock('@/libs', () => ({
-  Logger: {
-    debug: vi.fn(),
-    error: vi.fn(),
-  },
-  isAppError: (err: unknown) => err instanceof Error && 'code' in err,
-}));
-
 describe('useUserStream', () => {
   const mockUserDetails = new Map([
     [

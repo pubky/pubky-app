@@ -1,23 +1,20 @@
 'use client';
 
 import { AnimatePresence, motion } from 'motion/react';
-
 import * as Atoms from '@/atoms';
 import * as Molecules from '@/molecules';
-import * as Icons from '@/libs/icons';
 import { PostInputActionBar } from '../PostInputActionBar';
 import { PostInputTags } from '../PostInputTags';
 import { getButtonLabel } from './PostInputExpandableSection.utils';
 import type { PostInputExpandableSectionProps } from './PostInputExpandableSection.types';
 import { POST_INPUT_VARIANT } from '../PostInput/PostInput.constants';
-
+import { Edit, Repeat, MessageCircle } from 'lucide-react';
 const IconsButton = {
-  [POST_INPUT_VARIANT.EDIT]: Icons.Edit,
-  [POST_INPUT_VARIANT.REPOST]: Icons.Repeat,
+  [POST_INPUT_VARIANT.EDIT]: Edit,
+  [POST_INPUT_VARIANT.REPOST]: Repeat,
   [POST_INPUT_VARIANT.POST]: undefined,
-  [POST_INPUT_VARIANT.REPLY]: Icons.MessageCircle,
+  [POST_INPUT_VARIANT.REPLY]: MessageCircle,
 } as const;
-
 export function PostInputExpandableSection({
   isExpanded,
   content,
@@ -42,37 +39,60 @@ export function PostInputExpandableSection({
   const isUiDisabled = isSubmitting || isDisabled;
   // Use provided isPostDisabled or default to requiring content
   const isPostDisabled = isPostDisabledProp ?? (!hasContent || isUiDisabled);
-
   const postButtonLabel = getButtonLabel(submitMode, isArticle);
   const postButtonAriaLabel = postButtonLabel;
-
   const isEdit = submitMode === POST_INPUT_VARIANT.EDIT;
   const hasParentGapCompensation = parentGapPx > 0;
   const compensatedMarginTop = -parentGapPx;
-
   return (
     <>
       <AnimatePresence initial={false}>
         {isExpanded && (
           <motion.div
-            initial={{ height: 0, opacity: 0 }}
+            initial={{
+              height: 0,
+              opacity: 0,
+            }}
             animate={{
               height: 'auto',
               opacity: 1,
               transition: {
-                height: { duration: 0.2, ease: 'linear' },
-                opacity: { duration: 0.4, ease: 'linear' },
+                height: {
+                  duration: 0.2,
+                  ease: 'linear',
+                },
+                opacity: {
+                  duration: 0.4,
+                  ease: 'linear',
+                },
               },
             }}
             exit={{
               height: 0,
               opacity: 0,
-              ...(hasParentGapCompensation ? { marginTop: compensatedMarginTop } : {}),
+              ...(hasParentGapCompensation
+                ? {
+                    marginTop: compensatedMarginTop,
+                  }
+                : {}),
               // Fade out quickly so less content is repainted while height collapses.
               transition: {
-                opacity: { duration: 0.3, ease: 'linear' },
-                height: { duration: 0.2, ease: 'linear' },
-                ...(hasParentGapCompensation ? { marginTop: { duration: 0.2, ease: 'linear' } } : {}),
+                opacity: {
+                  duration: 0.3,
+                  ease: 'linear',
+                },
+                height: {
+                  duration: 0.2,
+                  ease: 'linear',
+                },
+                ...(hasParentGapCompensation
+                  ? {
+                      marginTop: {
+                        duration: 0.2,
+                        ease: 'linear',
+                      },
+                    }
+                  : {}),
               },
             }}
             className={`overflow-hidden ${className || ''}`}

@@ -1,6 +1,6 @@
 import { SignInStore, signInInitialState, SignInActionTypes } from './signIn.types';
 import type { ZustandSet } from '../stores.types';
-import * as Libs from '@/libs';
+import type { AppError } from '@/libs/error/error';
 
 export const createSignInActions = (set: ZustandSet<SignInStore>) => ({
   setAuthUrlResolved: (value: boolean) =>
@@ -16,7 +16,7 @@ export const createSignInActions = (set: ZustandSet<SignInStore>) => ({
   setHomeserverSynced: (value: boolean) =>
     set({ homeserverSynced: value }, false, SignInActionTypes.SET_HOMESERVER_SYNCED),
 
-  setError: (error: Libs.AppError | null) => set({ error }, false, SignInActionTypes.SET_ERROR),
+  setError: (error: AppError | null) => set({ error }, false, SignInActionTypes.SET_ERROR),
 
   reset: () => set(signInInitialState, false, SignInActionTypes.RESET),
 });

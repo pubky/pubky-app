@@ -5,12 +5,12 @@ import { useRouter } from 'next/navigation';
 import * as Atoms from '@/atoms';
 import * as Hooks from '@/hooks';
 import * as Core from '@/core';
-import * as Libs from '@/libs';
 import { APP_ROUTES } from '@/app/routes';
 import { HOT_TAGS_FEATURED_COUNT } from '@/config';
 import type { HotTagsOverviewProps } from './HotTagsOverview.types';
 import { DEFAULT_TAGS_LIMIT } from './HotTagsOverview.constants';
 import { HotTagsOverviewSkeleton } from './HotTagsOverview.skeleton';
+import { cn } from '@/libs/utils/utils';
 
 /**
  * HotTagsOverview
@@ -45,7 +45,7 @@ export function HotTagsOverview({ limit = DEFAULT_TAGS_LIMIT, className }: HotTa
   return (
     <Atoms.Container
       overrideDefaults
-      className={Libs.cn('flex w-full flex-col gap-2', className)}
+      className={cn('flex w-full flex-col gap-2', className)}
       data-testid="hot-tags-overview"
     >
       {isLoading ? (

@@ -1,5 +1,5 @@
 import * as Core from '@/core';
-import { Logger } from '@/libs/logger';
+import { Logger } from '@/libs/logger/logger';
 
 /**
  * Local Stream Posts Service

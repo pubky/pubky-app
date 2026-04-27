@@ -21,16 +21,6 @@ vi.mock('@/organisms', () => ({
   FeedbackCard: () => <div data-testid="feedback-card">FeedbackCard</div>,
 }));
 
-// Mock Libs icons and utilities
-vi.mock('@/libs', async () => {
-  const actual = await vi.importActual('@/libs');
-  return {
-    ...actual,
-    UsersRound: () => <span>UsersRound</span>,
-    Pencil: () => <span>Pencil</span>,
-  };
-});
-
 describe('HomeFeedRightSidebar', () => {
   it('renders all components', () => {
     render(<HomeFeedRightSidebar />);

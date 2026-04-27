@@ -3,7 +3,6 @@
 import { useState } from 'react';
 import * as Atoms from '@/atoms';
 import * as Hooks from '@/hooks';
-import * as Libs from '@/libs';
 import * as Organisms from '@/organisms';
 
 /**
@@ -19,6 +18,8 @@ import * as Organisms from '@/organisms';
  * - 72px is the current height of the footer navigation bar.
  * - md breakpoint uses 80px for additional spacing.
  */
+import { Plus } from 'lucide-react';
+import { cn } from '@/libs/utils/utils';
 export function NewPostCTA() {
   const [open, setOpen] = useState(false);
   const { isFullyAuthenticated, isLoading } = Hooks.useAuthStatus();
@@ -27,12 +28,10 @@ export function NewPostCTA() {
 
   // Show FAB for authenticated users OR unauthenticated users on public routes
   const shouldShow = isFullyAuthenticated || isPublicRoute;
-
   if (isLoading || !shouldShow) {
     return null;
   }
-
-  const buttonClasses = Libs.cn(
+  const buttonClasses = cn(
     'fixed right-3 bottom-[72px] sm:right-10 md:bottom-20 lg:bottom-6',
     'size-20 rounded-full',
     'flex items-center justify-center',
@@ -43,7 +42,6 @@ export function NewPostCTA() {
     'group cursor-pointer',
     'z-40',
   );
-
   const button = (
     <Atoms.Button
       data-cy="new-post-btn"
@@ -53,7 +51,7 @@ export function NewPostCTA() {
       aria-label="New post"
       onClick={!isFullyAuthenticated ? () => requireAuth(() => setOpen(true)) : undefined}
     >
-      <Libs.Plus className="size-10 transition-colors group-hover:text-black" strokeWidth={0.8} />
+      <Plus className="size-10 transition-colors group-hover:text-black" strokeWidth={0.8} />
     </Atoms.Button>
   );
 

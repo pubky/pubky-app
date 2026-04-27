@@ -2,14 +2,12 @@
 
 import * as React from 'react';
 import { useTranslations } from 'next-intl';
-import * as Libs from '@/libs';
 import * as Core from '@/core';
 import * as Molecules from '@/molecules';
-
+import { Layers, StickyNote, Newspaper, Image, CirclePlay, Link, Download } from 'lucide-react';
 interface FilterContentProps extends Molecules.BaseFilterProps<Core.ContentType> {
   disabledTabs?: Core.ContentType[];
 }
-
 export function FilterContent({
   selectedTab,
   defaultSelectedTab = Core.CONTENT.ALL,
@@ -18,7 +16,6 @@ export function FilterContent({
   disabledTabs = [],
 }: FilterContentProps) {
   const t = useTranslations('filters.content');
-
   const disabledSet = React.useMemo(() => new Set(disabledTabs), [disabledTabs]);
   const isDisabled = React.useCallback(
     (contentType: Core.ContentType) => {
@@ -28,47 +25,51 @@ export function FilterContent({
   );
   const items = React.useMemo(
     () => [
-      { key: Core.CONTENT.ALL, label: t('all'), icon: Libs.Layers, disabled: isDisabled(Core.CONTENT.ALL) },
+      {
+        key: Core.CONTENT.ALL,
+        label: t('all'),
+        icon: Layers,
+        disabled: isDisabled(Core.CONTENT.ALL),
+      },
       {
         key: Core.CONTENT.SHORT,
         label: t('posts'),
-        icon: Libs.StickyNote,
+        icon: StickyNote,
         disabled: isDisabled(Core.CONTENT.SHORT),
       },
       {
         key: Core.CONTENT.LONG,
         label: t('articles'),
-        icon: Libs.Newspaper,
+        icon: Newspaper,
         disabled: isDisabled(Core.CONTENT.LONG),
       },
       {
         key: Core.CONTENT.IMAGES,
         label: t('images'),
-        icon: Libs.Image,
+        icon: Image,
         disabled: isDisabled(Core.CONTENT.IMAGES),
       },
       {
         key: Core.CONTENT.VIDEOS,
         label: t('videos'),
-        icon: Libs.CirclePlay,
+        icon: CirclePlay,
         disabled: isDisabled(Core.CONTENT.VIDEOS),
       },
       {
         key: Core.CONTENT.LINKS,
         label: t('links'),
-        icon: Libs.Link,
+        icon: Link,
         disabled: isDisabled(Core.CONTENT.LINKS),
       },
       {
         key: Core.CONTENT.FILES,
         label: t('files'),
-        icon: Libs.Download,
+        icon: Download,
         disabled: isDisabled(Core.CONTENT.FILES),
       },
     ],
     [t, isDisabled],
   );
-
   return (
     <Molecules.FilterRadioGroup
       title={t('title')}

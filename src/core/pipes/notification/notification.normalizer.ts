@@ -1,7 +1,9 @@
 import { LastReadResult } from 'pubky-app-specs';
 import * as Core from '@/core';
-import { Err, ValidationErrorCode, ErrorService } from '@/libs';
 import { getBusinessKey } from '@/core/models/notification/notification.helpers';
+import { ValidationErrorCode } from '@/libs/error/error.codes';
+import { Err } from '@/libs/error/error.factories';
+import { ErrorService } from '@/libs/error/error.types';
 
 export class NotificationNormalizer {
   private constructor() {}

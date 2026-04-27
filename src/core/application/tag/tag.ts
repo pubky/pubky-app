@@ -1,5 +1,6 @@
 import * as Core from '@/core';
-import { HttpMethod, Logger } from '@/libs';
+import { HttpMethod } from '@/libs/http/http.types';
+import { Logger } from '@/libs/logger/logger';
 
 /**
  * Tag application service implementing local-first architecture with rollback.

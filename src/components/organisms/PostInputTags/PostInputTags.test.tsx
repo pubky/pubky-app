@@ -131,11 +131,6 @@ vi.mock('@/molecules', () => ({
   ),
 }));
 
-vi.mock('@/libs', async () => {
-  const actual = await vi.importActual('@/libs');
-  return { ...actual };
-});
-
 describe('PostInputTags', () => {
   const mockOnTagsChange = vi.fn();
 

@@ -3,8 +3,9 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import * as Core from '@/core';
 import * as Config from '@/config';
-import * as Libs from '@/libs';
 import * as Types from './useStreamPagination.types';
+import { Logger } from '@/libs/logger/logger';
+import { isAppError } from '@/libs/error/error.utils';
 
 /**
  * useStreamPagination
@@ -85,10 +86,10 @@ export function useStreamPagination({
           // Respect reachedEnd flag - only set hasMore to false if we actually
           // reached the end of stream, not just because filters removed all posts
           if (result.reachedEnd) {
-            Libs.Logger.debug('[useStreamPagination] Empty result, reached end of stream');
+            Logger.debug('[useStreamPagination] Empty result, reached end of stream');
             setHasMore(false);
           } else {
-            Libs.Logger.debug('[useStreamPagination] Empty result after filtering, more posts may exist');
+            Logger.debug('[useStreamPagination] Empty result after filtering, more posts may exist');
             setHasMore(true);
           }
 
@@ -126,10 +127,10 @@ export function useStreamPagination({
         postIdsRef.current = updatedPostIds;
         setPostIds(updatedPostIds);
       } catch (err) {
-        const errorMessage = Libs.isAppError(err) ? err.message : 'An unknown error occurred.';
+        const errorMessage = isAppError(err) ? err.message : 'An unknown error occurred.';
         setError(errorMessage);
         setHasMore(false);
-        Libs.Logger.error('Failed to fetch stream slice:', err);
+        Logger.error('Failed to fetch stream slice:', err);
       } finally {
         setLoadingState(isInitialLoad, false);
       }
@@ -190,7 +191,7 @@ export function useStreamPagination({
       postIdsRef.current = sortedIds;
       setPostIds(sortedIds);
     } catch (err) {
-      Libs.Logger.error('Failed to prepend posts:', err);
+      Logger.error('Failed to prepend posts:', err);
       // Fallback: add without sorting
       postIdsRef.current = allIds;
       setPostIds(allIds);

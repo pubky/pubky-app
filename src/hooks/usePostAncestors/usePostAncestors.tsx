@@ -3,8 +3,8 @@
 import { useState, useEffect } from 'react';
 import { useLiveQuery } from 'dexie-react-hooks';
 import * as Core from '@/core';
-import * as Libs from '@/libs';
 import type { Ancestor, UsePostAncestorsResult } from './usePostAncestors.types';
+import { Logger } from '@/libs/logger/logger';
 
 /** Maximum depth to traverse to prevent infinite loops */
 const MAX_ANCESTOR_DEPTH = 10;
@@ -80,7 +80,7 @@ export function usePostAncestors(postId: string | null | undefined): UsePostAnce
         try {
           Core.parseCompositeId(postId);
         } catch (error) {
-          Libs.Logger.error('[usePostAncestors] Invalid postId', { postId, error });
+          Logger.error('[usePostAncestors] Invalid postId', { postId, error });
           return null;
         }
 
@@ -95,7 +95,7 @@ export function usePostAncestors(postId: string | null | undefined): UsePostAnce
             const parsed = Core.parseCompositeId(currentPostId);
             userId = parsed.pubky;
           } catch (error) {
-            Libs.Logger.error('[usePostAncestors] Failed to parse composite ID', {
+            Logger.error('[usePostAncestors] Failed to parse composite ID', {
               currentPostId,
               error,
             });
@@ -127,7 +127,7 @@ export function usePostAncestors(postId: string | null | undefined): UsePostAnce
           });
 
           if (!parentPostId) {
-            Libs.Logger.error('[usePostAncestors] Failed to build composite ID from parent URI', {
+            Logger.error('[usePostAncestors] Failed to build composite ID from parent URI', {
               currentPostId,
               repliedUri: relationships.replied,
             });
@@ -139,7 +139,7 @@ export function usePostAncestors(postId: string | null | undefined): UsePostAnce
         }
 
         if (depth >= MAX_ANCESTOR_DEPTH) {
-          Libs.Logger.warn('[usePostAncestors] Max ancestor depth reached', {
+          Logger.warn('[usePostAncestors] Max ancestor depth reached', {
             postId,
             depth,
           });
@@ -147,7 +147,7 @@ export function usePostAncestors(postId: string | null | undefined): UsePostAnce
 
         return { ancestors, nextMissingPostId: null };
       } catch (error) {
-        Libs.Logger.error('[usePostAncestors] Local traversal failed', {
+        Logger.error('[usePostAncestors] Local traversal failed', {
           postId,
           error,
         });
@@ -184,7 +184,7 @@ export function usePostAncestors(postId: string | null | undefined): UsePostAnce
           // Post doesn't exist anywhere — unresolvable gap in the chain.
           // This is NOT an error: the parent was deleted or never existed.
           // Record the ID so we stop retrying and settle the chain.
-          Libs.Logger.debug('[usePostAncestors] Ancestor not found, chain incomplete', {
+          Logger.debug('[usePostAncestors] Ancestor not found, chain incomplete', {
             compositeId: nextMissingPostId,
           });
           setStalledAtId(nextMissingPostId);
@@ -194,7 +194,7 @@ export function usePostAncestors(postId: string | null | undefined): UsePostAnce
       })
       .catch((error) => {
         if (!cancelled) {
-          Libs.Logger.error('[usePostAncestors] Failed to fetch ancestor', {
+          Logger.error('[usePostAncestors] Failed to fetch ancestor', {
             compositeId: nextMissingPostId,
             error,
           });

@@ -1,4 +1,4 @@
-import * as Libs from '@/libs';
+import type { AppError } from '@/libs/error/error';
 
 export interface SignInState {
   /** Auth URL callback successfully resolved (20%) */
@@ -12,7 +12,7 @@ export interface SignInState {
   /** Homeserver data synced: last_read, settings (100%) */
   homeserverSynced: boolean;
   /** Error that occurred during sign-in, if any */
-  error: Libs.AppError | null;
+  error: AppError | null;
 }
 
 export interface SignInActions {
@@ -21,7 +21,7 @@ export interface SignInActions {
   setBootstrapFetched: (value: boolean) => void;
   setDataPersisted: (value: boolean) => void;
   setHomeserverSynced: (value: boolean) => void;
-  setError: (error: Libs.AppError | null) => void;
+  setError: (error: AppError | null) => void;
   reset: () => void;
 }
 

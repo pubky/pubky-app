@@ -2,8 +2,8 @@
 
 import { useEffect, useState } from 'react';
 import { useLiveQuery } from 'dexie-react-hooks';
-import * as Libs from '@/libs';
 import type { UseLocalFirstQueryParams, UseLocalFirstQueryResult } from './useLocalFirstQuery.types';
+import { Logger } from '@/libs/logger/logger';
 
 /**
  * Shared hook that encapsulates the local-first query pattern (ADR-0011).
@@ -61,7 +61,7 @@ export function useLocalFirstQuery<T>({
       try {
         return await queryFn();
       } catch (error) {
-        Libs.Logger.error('[useLocalFirstQuery] queryFn failed', { error });
+        Logger.error('[useLocalFirstQuery] queryFn failed', { error });
         return null;
       }
     },
@@ -108,7 +108,7 @@ export function useLocalFirstQuery<T>({
     fetchFn()
       .catch((error) => {
         if (!cancelled) {
-          Libs.Logger.error('[useLocalFirstQuery] fetchFn failed', { error });
+          Logger.error('[useLocalFirstQuery] fetchFn failed', { error });
         }
       })
       .finally(() => {

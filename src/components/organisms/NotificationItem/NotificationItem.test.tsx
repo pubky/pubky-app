@@ -3,12 +3,6 @@ import { render, screen, fireEvent } from '@testing-library/react';
 import { NotificationItem } from './NotificationItem';
 import { NotificationType } from '@/core/models/notification/notification.types';
 import * as Core from '@/core';
-import * as Libs from '@/libs';
-
-// Hoisted mocks for isPostDeleted
-const { mockIsPostDeleted } = vi.hoisted(() => ({
-  mockIsPostDeleted: vi.fn(() => false),
-}));
 
 // Mock next/navigation
 const mockPush = vi.fn();
@@ -30,19 +24,10 @@ vi.mock('@/hooks', async (importOriginal) => {
   };
 });
 
-// Mock libs
-vi.mock('@/libs', async () => {
-  const actual = await vi.importActual('@/libs');
+vi.mock('@/libs/logger/logger', async () => {
+  const actual = await vi.importActual<typeof import('@/libs/logger/logger')>('@/libs/logger/logger');
   return {
     ...actual,
-    formatNotificationTime: vi.fn((timestamp: number) => {
-      const diffMs = Date.now() - timestamp;
-      const diffMins = Math.floor(diffMs / (1000 * 60));
-      if (diffMins < 1) return 'now';
-      if (diffMins < 60) return `${diffMins}m`;
-      return '1h';
-    }),
-    isPostDeleted: mockIsPostDeleted,
     Logger: {
       warn: vi.fn(),
       error: vi.fn(),
@@ -148,7 +133,6 @@ describe('NotificationItem', () => {
     mockToast.mockClear();
     mockGetOrFetch.mockClear();
     mockGetOrFetch.mockResolvedValue(null);
-    mockIsPostDeleted.mockReturnValue(false);
   });
 
   const baseNotification = {
@@ -174,8 +158,8 @@ describe('NotificationItem', () => {
 
   it('renders timestamp', () => {
     render(<NotificationItem notification={baseNotification} isUnread={false} />);
-    expect(Libs.formatNotificationTime).toHaveBeenCalledWith(baseNotification.timestamp, false);
-    expect(Libs.formatNotificationTime).toHaveBeenCalledWith(baseNotification.timestamp, true);
+    expect(screen.getByText('30m')).toBeInTheDocument();
+    expect(screen.getByText('30 MINUTES AGO')).toBeInTheDocument();
   });
 
   it('renders notification icon', () => {
@@ -375,7 +359,6 @@ describe('NotificationItem', () => {
   });
 
   it('shows deleted message when post is deleted', async () => {
-    mockIsPostDeleted.mockReturnValue(true);
     mockGetOrFetch.mockResolvedValue({
       kind: 'short',
       content: '[DELETED]',

@@ -1,14 +1,7 @@
-import { describe, it, expect, vi } from 'vitest';
+import { describe, it, expect } from 'vitest';
 import { render, screen, fireEvent } from '@testing-library/react';
 import { PopoverInvite } from './PopoverInvite';
 import { EMAIL_URL, TWITTER_URL, TELEGRAM_URL } from '@/config';
-
-// Mock @/libs to intercept all icons and utilities
-// Mock libs - use actual utility functions and icons from lucide-react
-vi.mock('@/libs', async () => {
-  const actual = await vi.importActual('@/libs');
-  return { ...actual };
-});
 
 describe('InvitePopover', () => {
   it('renders trigger button with gift icon', () => {

@@ -1,5 +1,5 @@
-import { Logger } from '@/libs/logger';
 import * as Core from '@/core';
+import { Logger } from '@/libs/logger/logger';
 
 /**
  * MigrationApplication orchestrates post-DB-recreation re-sync of critical homeserver data.

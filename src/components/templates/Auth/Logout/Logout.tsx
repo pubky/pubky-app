@@ -7,7 +7,7 @@ import * as Atoms from '@/atoms';
 import * as Molecules from '@/molecules';
 import * as Core from '@/core';
 import * as App from '@/app';
-import * as Libs from '@/libs';
+import { Logger } from '@/libs/logger/logger';
 
 type LogoutViewState = 'idle' | 'loading' | 'success' | 'error';
 
@@ -17,7 +17,7 @@ async function handleRouteLogout(setViewState: Dispatch<SetStateAction<LogoutVie
     await Core.AuthController.logout();
     setViewState('success');
   } catch (error) {
-    Libs.Logger.error('Failed to logout from /logout route', { error });
+    Logger.error('Failed to logout from /logout route', { error });
     setViewState('error');
   } finally {
     Core.useAuthStore.getState().setIsLoggingOut(false);

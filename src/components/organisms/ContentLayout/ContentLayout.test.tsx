@@ -107,14 +107,6 @@ vi.mock('@/organisms', () => ({
   RightSidebar: () => <div data-testid="right-sidebar">Right Sidebar</div>,
 }));
 
-// Mock libs - use actual utility functions and icons from lucide-react
-vi.mock('@/libs', async () => {
-  const actual = await vi.importActual('@/libs');
-  return {
-    ...actual,
-  };
-});
-
 describe('ContentLayout', () => {
   beforeEach(() => {
     mockUseCustomFeed.mockReturnValue(undefined);

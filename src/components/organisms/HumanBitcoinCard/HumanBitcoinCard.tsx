@@ -3,11 +3,11 @@
 import * as Atoms from '@/atoms';
 import { useBtcRate } from '@/hooks/useSatUsdRate';
 import { useLnVerificationInfo } from '@/hooks/useLnVerificationInfo';
-import * as Libs from '@/libs';
 import { HumanBitcoinCardSkeleton, PriceSkeleton } from './HumanBitcoinCard.skeleton';
 import type { HumanBitcoinCardProps } from './HumanBitcoinCard.types';
 import { useTranslations } from 'next-intl';
-
+import { Wallet, TriangleAlert } from 'lucide-react';
+import { cn } from '@/libs/utils/utils';
 export const HumanBitcoinCard = ({ onClick }: HumanBitcoinCardProps) => {
   const t = useTranslations('onboarding.bitcoin');
   const satUsdRate = useBtcRate()?.satUsd;
@@ -24,16 +24,14 @@ export const HumanBitcoinCard = ({ onClick }: HumanBitcoinCardProps) => {
   // Price when available
   const priceSat = lnInfo?.available ? lnInfo.amountSat : undefined;
   const dataAvailable = priceSat !== undefined && satUsdRate !== undefined;
-
   if (isLoading) {
     return <HumanBitcoinCardSkeleton />;
   }
-
   return (
     <Atoms.Container className="relative flex-1">
       <Atoms.Card
         data-testid="bitcoin-payment-card"
-        className={Libs.cn('flex-1 gap-0 p-6 md:p-12', isUnavailable && 'pointer-events-none opacity-60 blur-[5px]')}
+        className={cn('flex-1 gap-0 p-6 md:p-12', isUnavailable && 'pointer-events-none opacity-60 blur-[5px]')}
       >
         <Atoms.Container className="flex-col gap-10 lg:flex-row lg:items-start lg:gap-12">
           <Atoms.Container className="hidden w-full flex-1 flex-col items-center gap-3 lg:flex lg:w-auto">
@@ -90,7 +88,7 @@ export const HumanBitcoinCard = ({ onClick }: HumanBitcoinCardProps) => {
               onClick={onClick}
               disabled={!dataAvailable || isUnavailable}
             >
-              <Libs.Wallet className="mr-2 size-4" />
+              <Wallet className="mr-2 size-4" />
               {t('payOnce')}
             </Atoms.Button>
           </Atoms.Container>
@@ -105,7 +103,7 @@ export const HumanBitcoinCard = ({ onClick }: HumanBitcoinCardProps) => {
           className="absolute top-1/2 left-1/2 flex h-11 -translate-x-1/2 -translate-y-1/2 items-center gap-3 rounded-md bg-destructive/60 px-6 py-3 shadow-xl"
         >
           <Atoms.Container overrideDefaults className="pt-0.5">
-            <Libs.TriangleAlert className="size-4 text-destructive-foreground" />
+            <TriangleAlert className="size-4 text-destructive-foreground" />
           </Atoms.Container>
           <Atoms.Typography
             overrideDefaults
@@ -124,7 +122,7 @@ export const HumanBitcoinCard = ({ onClick }: HumanBitcoinCardProps) => {
           className="absolute top-1/2 left-1/2 flex h-11 -translate-x-1/2 -translate-y-1/2 items-center gap-3 rounded-md bg-destructive/60 px-6 py-3 shadow-xl"
         >
           <Atoms.Container overrideDefaults className="pt-0.5">
-            <Libs.TriangleAlert className="size-4 text-destructive-foreground" />
+            <TriangleAlert className="size-4 text-destructive-foreground" />
           </Atoms.Container>
           <Atoms.Typography
             overrideDefaults

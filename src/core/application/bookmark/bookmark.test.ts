@@ -1,9 +1,9 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { BookmarkApplication } from './bookmark';
 import * as Core from '@/core';
-import { HttpMethod } from '@/libs';
 import type { TCreateBookmarkInput, TDeleteBookmarkInput } from './bookmark.types';
 import { mockAuthStore } from '@/test-utils';
+import { HttpMethod } from '@/libs/http/http.types';
 
 // Mock the LocalBookmarkService
 vi.mock('@/core/services/local/bookmark', () => ({

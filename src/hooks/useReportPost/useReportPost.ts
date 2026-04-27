@@ -4,13 +4,14 @@ import { useState, useCallback } from 'react';
 import { useTranslations } from 'next-intl';
 import type { ReportIssueType } from '@/core/pipes/report';
 import * as Core from '@/core';
-import { Logger, postJson } from '@/libs';
 import * as Molecules from '@/molecules';
 import { POST_ROUTES } from '@/app/routes';
 import * as Hooks from '@/hooks';
 import { REPORT_POST_STEPS, REPORT_API_ENDPOINT } from './useReportPost.constants';
 import type { ReportPostStep } from './useReportPost.types';
 import type { UseReportPostReturn } from './useReportPost.types';
+import { Logger } from '@/libs/logger/logger';
+import { postJson } from '@/libs/api/client-request';
 
 /**
  * Hook to handle post reporting to Chatwoot.

@@ -2,8 +2,8 @@
 
 import * as React from 'react';
 import * as Atoms from '@/atoms';
-import * as Libs from '@/libs';
 import type { TagProps } from './Tag.types';
+import { cn, generateRandomColor, hexToRgba } from '@/libs/utils/utils';
 
 export const Tag = ({
   name,
@@ -17,10 +17,10 @@ export const Tag = ({
   const [isHovered, setIsHovered] = React.useState(false);
 
   const { backgroundColor, borderColor } = React.useMemo(() => {
-    const base = Libs.generateRandomColor(name);
+    const base = generateRandomColor(name);
     return {
-      backgroundColor: Libs.hexToRgba(base, 0.3),
-      borderColor: Libs.hexToRgba(base, 0.5),
+      backgroundColor: hexToRgba(base, 0.3),
+      borderColor: hexToRgba(base, 0.5),
     };
   }, [name]);
 
@@ -38,7 +38,7 @@ export const Tag = ({
 
   return (
     <div
-      className={Libs.cn(
+      className={cn(
         'flex h-8 w-fit max-w-full min-w-0 cursor-pointer items-center justify-between rounded-md px-3 transition-all duration-200',
         className,
       )}

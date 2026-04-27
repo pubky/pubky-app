@@ -2,8 +2,10 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { NextRequest } from 'next/server';
 import { POST, GET, OPTIONS } from './route';
 import * as Core from '@/core';
-import * as Libs from '@/libs';
 import * as Config from '@/config';
+import { ServerErrorCode, ValidationErrorCode } from '@/libs/error/error.codes';
+import { Err } from '@/libs/error/error.factories';
+import { ErrorService } from '@/libs/error/error.types';
 
 const testData = {
   userPubky: 'o1gg96ewuojmopcjbz8895478wdtxtzzuxnfjjz8o8e77csa1ngo' as Core.Pubky,
@@ -48,8 +50,8 @@ describe('API Route: /api/feedback', () => {
     });
 
     it('should handle AppError from application layer with correct status code', async () => {
-      const appError = Libs.Err.validation(Libs.ValidationErrorCode.INVALID_INPUT, 'Validation failed', {
-        service: Libs.ErrorService.Local,
+      const appError = Err.validation(ValidationErrorCode.INVALID_INPUT, 'Validation failed', {
+        service: ErrorService.Local,
         operation: 'submit',
         context: { statusCode: 400 },
       });
@@ -69,8 +71,8 @@ describe('API Route: /api/feedback', () => {
     });
 
     it('should handle AppError with different status codes', async () => {
-      const appError = Libs.Err.server(Libs.ServerErrorCode.INTERNAL_ERROR, 'Server error', {
-        service: Libs.ErrorService.Local,
+      const appError = Err.server(ServerErrorCode.INTERNAL_ERROR, 'Server error', {
+        service: ErrorService.Local,
         operation: 'submit',
         context: { statusCode: 500 },
       });
@@ -139,10 +141,10 @@ describe('API Route: /api/feedback', () => {
       });
 
       // The controller will validate and throw AppError
-      const appError = Libs.Err.validation(
-        Libs.ValidationErrorCode.INVALID_INPUT,
+      const appError = Err.validation(
+        ValidationErrorCode.INVALID_INPUT,
         'Pubky is required and must be a non-empty string',
-        { service: Libs.ErrorService.Local, operation: 'submit', context: { statusCode: 400 } },
+        { service: ErrorService.Local, operation: 'submit', context: { statusCode: 400 } },
       );
       vi.spyOn(Core.FeedbackController, 'submit').mockRejectedValue(appError);
 
@@ -160,10 +162,10 @@ describe('API Route: /api/feedback', () => {
       });
 
       // The controller will validate and throw AppError
-      const appError = Libs.Err.validation(
-        Libs.ValidationErrorCode.INVALID_INPUT,
+      const appError = Err.validation(
+        ValidationErrorCode.INVALID_INPUT,
         'Comment is required and must be a non-empty string',
-        { service: Libs.ErrorService.Local, operation: 'submit', context: { statusCode: 400 } },
+        { service: ErrorService.Local, operation: 'submit', context: { statusCode: 400 } },
       );
       vi.spyOn(Core.FeedbackController, 'submit').mockRejectedValue(appError);
 
@@ -181,10 +183,10 @@ describe('API Route: /api/feedback', () => {
       });
 
       // The controller will validate and throw AppError
-      const appError = Libs.Err.validation(
-        Libs.ValidationErrorCode.INVALID_INPUT,
+      const appError = Err.validation(
+        ValidationErrorCode.INVALID_INPUT,
         'Name is required and must be a non-empty string',
-        { service: Libs.ErrorService.Local, operation: 'submit', context: { statusCode: 400 } },
+        { service: ErrorService.Local, operation: 'submit', context: { statusCode: 400 } },
       );
       vi.spyOn(Core.FeedbackController, 'submit').mockRejectedValue(appError);
 
@@ -204,10 +206,10 @@ describe('API Route: /api/feedback', () => {
       });
 
       // The controller will validate and throw AppError
-      const appError = Libs.Err.validation(
-        Libs.ValidationErrorCode.INVALID_INPUT,
+      const appError = Err.validation(
+        ValidationErrorCode.INVALID_INPUT,
         `Comment must be no more than ${Config.FEEDBACK_MAX_CHARACTER_LENGTH} characters`,
-        { service: Libs.ErrorService.Local, operation: 'submit', context: { statusCode: 400 } },
+        { service: ErrorService.Local, operation: 'submit', context: { statusCode: 400 } },
       );
       vi.spyOn(Core.FeedbackController, 'submit').mockRejectedValue(appError);
 

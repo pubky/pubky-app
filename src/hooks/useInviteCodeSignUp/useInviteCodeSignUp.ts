@@ -3,10 +3,10 @@
 import { useTranslations } from 'next-intl';
 
 import * as Core from '@/core';
-import * as Libs from '@/libs';
 import * as Molecules from '@/molecules';
 
 import type { UseInviteCodeSignUpResult } from './useInviteCodeSignUp.types';
+import { getRetryAfter, isAppError, isAuthError, isRetryable } from '@/libs/error/error.utils';
 
 const SIGN_UP_MAX_ATTEMPTS = 4;
 const SIGN_UP_RETRY_BASE_DELAY_MS = 500;
@@ -61,20 +61,20 @@ export function useInviteCodeSignUp(): UseInviteCodeSignUpResult {
       } catch (error) {
         lastError = error;
 
-        const canRetry = Libs.isAppError(error) && Libs.isRetryable(error) && attempt < SIGN_UP_MAX_ATTEMPTS - 1;
+        const canRetry = isAppError(error) && isRetryable(error) && attempt < SIGN_UP_MAX_ATTEMPTS - 1;
         if (canRetry) {
-          const retryAfter = Libs.getRetryAfter(error);
+          const retryAfter = getRetryAfter(error);
           await sleep(getRetryDelayMs(attempt, retryAfter));
           continue;
         }
 
         // Keep secrets for retryable failures to avoid losing a paid signup when transport fails.
-        if (!(Libs.isAppError(error) && Libs.isRetryable(error))) {
+        if (!(isAppError(error) && isRetryable(error))) {
           Core.useOnboardingStore.getState().clearSecrets();
         }
 
-        if (Libs.isAppError(error)) {
-          if (Libs.isAuthError(error)) {
+        if (isAppError(error)) {
+          if (isAuthError(error)) {
             description = t('invalidInvite');
           } else if (error.message) {
             description = error.message;

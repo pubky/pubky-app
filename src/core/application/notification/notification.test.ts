@@ -1,9 +1,10 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import * as Core from '@/core';
-import { HttpMethod, Logger } from '@/libs';
 import { LastReadResult } from 'pubky-app-specs';
 import { NotificationApplication } from './notification';
 import { asInvalid, asOpaque } from '@/test-utils';
+import { HttpMethod } from '@/libs/http/http.types';
+import { Logger } from '@/libs/logger/logger';
 
 const userId = 'pubky_user' as Core.Pubky;
 

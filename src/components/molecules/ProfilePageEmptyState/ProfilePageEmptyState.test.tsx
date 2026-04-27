@@ -8,20 +8,6 @@ vi.mock('next/image', () => ({
   default: ({ src, alt }: { src: string; alt: string }) => <img data-testid="image" src={src} alt={alt} />,
 }));
 
-// Mock lucide-react
-vi.mock('lucide-react', () => ({
-  Frown: ({ className, strokeWidth }: { className?: string; strokeWidth?: number }) => (
-    <svg data-testid="frown-icon" className={className} data-stroke-width={strokeWidth}>
-      Frown
-    </svg>
-  ),
-  Tag: ({ className, strokeWidth }: { className?: string; strokeWidth?: number }) => (
-    <svg data-testid="tag-icon" className={className} data-stroke-width={strokeWidth}>
-      Tag
-    </svg>
-  ),
-}));
-
 // Mock atoms
 vi.mock('@/atoms', () => ({
   Container: ({
@@ -70,7 +56,7 @@ describe('ProfilePageEmptyState', () => {
   });
 
   it('renders icon', () => {
-    render(
+    const { container } = render(
       <ProfilePageEmptyState
         imageSrc="/test.png"
         imageAlt="Test"
@@ -80,8 +66,7 @@ describe('ProfilePageEmptyState', () => {
       />,
     );
 
-    const icon = screen.getByTestId('frown-icon');
-    expect(icon).toBeInTheDocument();
+    expect(container.querySelector('.lucide-frown')).toBeInTheDocument();
   });
 
   it('renders title', () => {
@@ -169,7 +154,7 @@ describe('ProfilePageEmptyState', () => {
   });
 
   it('renders different icons correctly', () => {
-    const { rerender } = render(
+    const { rerender, container } = render(
       <ProfilePageEmptyState
         imageSrc="/test.png"
         imageAlt="Test"
@@ -179,7 +164,7 @@ describe('ProfilePageEmptyState', () => {
       />,
     );
 
-    expect(screen.getByTestId('frown-icon')).toBeInTheDocument();
+    expect(container.querySelector('.lucide-frown')).toBeInTheDocument();
 
     rerender(
       <ProfilePageEmptyState
@@ -191,7 +176,7 @@ describe('ProfilePageEmptyState', () => {
       />,
     );
 
-    expect(screen.getByTestId('tag-icon')).toBeInTheDocument();
+    expect(container.querySelector('.lucide-tag')).toBeInTheDocument();
   });
 });
 

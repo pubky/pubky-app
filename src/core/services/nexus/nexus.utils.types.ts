@@ -1,13 +1,4 @@
-/**
- * Nexus Internal Utility Types
- *
- * This file contains type definitions for internal utility functions
- * used by the Nexus service layer (URL building, fetch options, etc.).
- *
- * For Nexus API contract types (request/response), see `nexus.types.ts`
- */
-
-import { HttpMethod } from '@/libs';
+import { HttpMethod } from '@/libs/http/http.types';
 
 /**
  * Parameters for building a Nexus URL with query string.

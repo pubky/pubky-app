@@ -1,9 +1,9 @@
 'use client';
 
 import * as Atoms from '@/atoms';
-import * as Libs from '@/libs';
 import { TAGS_PER_PAGE } from '@/hooks/usePostTags/usePostTags.constants';
 import type { PostTagsPanelProps } from './PostTagsPanel.types';
+import { cn } from '@/libs/utils/utils';
 
 type PostTagsPanelSkeletonProps = Omit<PostTagsPanelProps, 'postId'>;
 
@@ -12,11 +12,11 @@ export function PostTagsPanelSkeleton({ widthMode = 'fit', className }: PostTags
     <Atoms.Container
       data-cy="post-tags-panel"
       data-testid="post-tags-panel-skeleton"
-      className={Libs.cn('gap-2', className)}
+      className={cn('gap-2', className)}
     >
       <Atoms.Container
         overrideDefaults
-        className={Libs.cn('flex flex-col gap-2', widthMode === 'fit' ? 'w-fit max-w-full' : 'w-full')}
+        className={cn('flex flex-col gap-2', widthMode === 'fit' ? 'w-fit max-w-full' : 'w-full')}
       >
         {/* TagInput area */}
         <Atoms.Skeleton className="h-8 w-full rounded-md" />

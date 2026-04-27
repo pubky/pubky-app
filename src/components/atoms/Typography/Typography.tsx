@@ -1,5 +1,5 @@
 import { ReactNode } from 'react';
-import { cn } from '@/libs';
+import { cn } from '@/libs/utils/utils';
 
 interface TypographyProps {
   as?:

@@ -4,12 +4,6 @@ import { FilterContent } from './FilterContent';
 import { CONTENT, type ContentType } from '@/core/stores/home/home.types';
 import { VISUAL_DISABLED_CONTENT } from '@/organisms/Timeline/Feed/TimelineFeed/TimelineFeedVisual.helpers';
 
-// Mock libs - use actual utility functions and icons from lucide-react
-vi.mock('@/libs', async () => {
-  const actual = await vi.importActual('@/libs');
-  return { ...actual };
-});
-
 describe('FilterContent', () => {
   it('renders with default selected tab', () => {
     render(<FilterContent />);

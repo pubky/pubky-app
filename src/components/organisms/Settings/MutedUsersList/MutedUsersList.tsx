@@ -3,12 +3,13 @@
 import * as React from 'react';
 import { useTranslations } from 'next-intl';
 import * as Atoms from '@/atoms';
-import * as Libs from '@/libs';
 import * as Hooks from '@/hooks';
 import * as Molecules from '@/molecules';
 import { MutedUsersListSkeleton } from './MutedUsersList.skeleton';
 import { mapUserIdsToMutedUsers } from './MutedUsersList.utils';
-
+import { Megaphone } from 'lucide-react';
+import { isAppError } from '@/libs/error/error.utils';
+import { extractInitials, truncateMiddle } from '@/libs/utils/utils';
 export function MutedUsersList() {
   const t = useTranslations('mutedUsers');
   const tCommon = useTranslations('common');
@@ -17,42 +18,41 @@ export function MutedUsersList() {
   const { usersMap, isLoading: isUsersLoading } = Hooks.useBulkUserAvatars(mutedUserIds);
   const { toggleMute, isLoading: isMuteLoading, isUserLoading: isMuteUserLoading } = Hooks.useMuteUser();
   const [isLoadingUnmuteAll, setIsLoadingUnmuteAll] = React.useState(false);
-
   const mutedUsers = mapUserIdsToMutedUsers(mutedUserIds, usersMap);
-
   const isLoading = isMutedLoading || isUsersLoading;
-
   const handleUnmute = async (userId: string, userName?: string) => {
     try {
       await toggleMute(userId, true);
       Molecules.toast({
         title: t('userUnmuted'),
-        description: t('userUnmutedDesc', { username: userName || userId }),
+        description: t('userUnmutedDesc', {
+          username: userName || userId,
+        }),
       });
     } catch (error) {
       Molecules.toast({
         title: tCommon('error'),
-        description: Libs.isAppError(error) ? error.message : tToast('failed'),
+        description: isAppError(error) ? error.message : tToast('failed'),
       });
     }
   };
-
   const handleUnmuteAll = async () => {
     if (mutedUserIds.length === 0) return;
 
     // Capture the current list to avoid issues with reactive updates during iteration
     const idsToUnmute = [...mutedUserIds];
-
     setIsLoadingUnmuteAll(true);
     try {
       // Use Promise.allSettled for parallel execution with graceful error handling
       const results = await Promise.allSettled(idsToUnmute.map((userId) => toggleMute(userId, true)));
-
       const failedCount = results.filter((r) => r.status === 'rejected').length;
       if (failedCount > 0) {
         Molecules.toast({
           title: t('partialSuccess'),
-          description: t('partialSuccessDesc', { success: idsToUnmute.length - failedCount, failed: failedCount }),
+          description: t('partialSuccessDesc', {
+            success: idsToUnmute.length - failedCount,
+            failed: failedCount,
+          }),
         });
       } else {
         Molecules.toast({
@@ -63,13 +63,12 @@ export function MutedUsersList() {
     } catch (error) {
       Molecules.toast({
         title: tCommon('error'),
-        description: Libs.isAppError(error) ? error.message : tToast('failed'),
+        description: isAppError(error) ? error.message : tToast('failed'),
       });
     } finally {
       setIsLoadingUnmuteAll(false);
     }
   };
-
   return (
     <Atoms.Container data-cy="muted-users-root" overrideDefaults className="inline-flex w-full flex-col gap-6">
       {isLoading ? (
@@ -95,7 +94,10 @@ export function MutedUsersList() {
                     <Molecules.FacehashAvatar
                       seed={mutedUser?.id || mutedUser?.name || 'user'}
                       initial={
-                        Libs.extractInitials({ name: mutedUser?.name || '', maxLength: 1 }) ||
+                        extractInitials({
+                          name: mutedUser?.name || '',
+                          maxLength: 1,
+                        }) ||
                         mutedUser?.id?.charAt(0).toUpperCase() ||
                         'U'
                       }
@@ -115,7 +117,7 @@ export function MutedUsersList() {
                     overrideDefaults
                     className="text-xs tracking-widest text-muted-foreground uppercase"
                   >
-                    {Libs.truncateMiddle(mutedUser?.id || '', 12)}
+                    {truncateMiddle(mutedUser?.id || '', 12)}
                   </Atoms.Typography>
                 </Atoms.Container>
               </Atoms.Link>
@@ -127,7 +129,7 @@ export function MutedUsersList() {
                 onClick={() => handleUnmute(mutedUser.id, mutedUser?.name)}
                 disabled={isMuteLoading || isMuteUserLoading(mutedUser.id)}
               >
-                <Libs.Megaphone size={16} />
+                <Megaphone size={16} />
                 {t('unmute')}
               </Atoms.Button>
             </Atoms.Container>
@@ -140,7 +142,7 @@ export function MutedUsersList() {
               onClick={handleUnmuteAll}
               disabled={isLoadingUnmuteAll}
             >
-              <Libs.Megaphone size={16} />
+              <Megaphone size={16} />
               {t('unmuteAll')}
             </Atoms.Button>
           )}

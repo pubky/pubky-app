@@ -5,9 +5,9 @@ import { useRouter } from 'next/navigation';
 import { useTranslations, useLocale } from 'next-intl';
 import * as Atoms from '@/atoms';
 import * as Hooks from '@/hooks';
-import * as Libs from '@/libs';
 import { LANGUAGES } from './LanguageSelector.constants';
-
+import { Check, ChevronDown } from 'lucide-react';
+import { cn } from '@/libs/utils/utils';
 function LanguageOptions({ currentLanguage, onSelect }: { currentLanguage: string; onSelect: (code: string) => void }) {
   return (
     <Atoms.Container overrideDefaults className="flex flex-col">
@@ -19,7 +19,7 @@ function LanguageOptions({ currentLanguage, onSelect }: { currentLanguage: strin
             overrideDefaults
             onClick={() => onSelect(lang.code)}
             disabled={lang.disabled}
-            className={Libs.cn(
+            className={cn(
               'flex w-full items-center gap-3 px-4 py-3 text-left transition-colors',
               lang.disabled ? 'cursor-not-allowed opacity-40' : 'cursor-pointer hover:bg-accent',
               isSelected && 'bg-accent/50',
@@ -31,14 +31,13 @@ function LanguageOptions({ currentLanguage, onSelect }: { currentLanguage: strin
             <Atoms.Typography as="span" overrideDefaults className="font-light">
               {lang.name}
             </Atoms.Typography>
-            {isSelected && <Libs.Check size={16} className="ml-auto" />}
+            {isSelected && <Check size={16} className="ml-auto" />}
           </Atoms.Button>
         );
       })}
     </Atoms.Container>
   );
 }
-
 export function LanguageSelector() {
   const t = useTranslations('language');
   const router = useRouter();
@@ -46,20 +45,16 @@ export function LanguageSelector() {
   const isMobile = Hooks.useIsMobile();
   const { setLanguage } = Hooks.useSettingsActions();
   const [isOpen, setIsOpen] = React.useState(false);
-
   const handleSelect = (code: string) => {
     if (code === serverLocale) {
       setIsOpen(false);
       return;
     }
-
     setLanguage(code);
     setIsOpen(false);
     router.refresh();
   };
-
   const selectedLang = LANGUAGES.find((lang) => lang.code === serverLocale) || LANGUAGES[0];
-
   const trigger = (
     <Atoms.Button
       overrideDefaults
@@ -71,13 +66,9 @@ export function LanguageSelector() {
       <Atoms.Typography as="span" overrideDefaults className="flex-1 text-left text-base leading-6 font-bold">
         {selectedLang.name}
       </Atoms.Typography>
-      <Libs.ChevronDown
-        size={24}
-        className={Libs.cn('shrink-0 transition-transform duration-300', isOpen && 'rotate-180')}
-      />
+      <ChevronDown size={24} className={cn('shrink-0 transition-transform duration-300', isOpen && 'rotate-180')} />
     </Atoms.Button>
   );
-
   return (
     <Atoms.Container overrideDefaults className="flex w-full flex-col gap-4">
       <Atoms.Typography

@@ -48,7 +48,7 @@ function parseEnv(): z.infer<typeof envSchema> {
 Import the validated environment instead of using `process.env` directly:
 
 ```typescript
-import { Env } from '@/libs';
+import { Env } from '@/libs/env/env';
 
 const dbVersion = Env.NEXT_PUBLIC_DB_VERSION; // number
 const debugMode = Env.NEXT_PUBLIC_DEBUG_MODE; // boolean

@@ -1,6 +1,10 @@
 import * as Core from '@/core';
-import * as Libs from '@/libs';
 import { setLocaleCookie } from '@/i18n/utils';
+import type { AppError } from '@/libs/error/error';
+import { Identity } from '@/libs/identity/identity';
+import { Logger } from '@/libs/logger/logger';
+import { clearAllQueryClients } from '@/libs/query-client/query-client.factory';
+import { clearCookies, sleep } from '@/libs/utils/utils';
 
 export class AuthController {
   private constructor() {} // Prevent instantiation
@@ -27,7 +31,7 @@ export class AuthController {
     const { session } = result;
     const initialState = {
       session,
-      currentUserPubky: Libs.Identity.z32FromSession({ session }),
+      currentUserPubky: Identity.z32FromSession({ session }),
       hasProfile: authStore.hasProfile,
     };
     authStore.init(initialState);
@@ -42,14 +46,14 @@ export class AuthController {
    */
   private static async signIn({ keypair }: Core.TKeypairParams): Promise<boolean> {
     // Clear query clients to ensure no stale cache from previous session
-    Libs.clearAllQueryClients();
+    clearAllQueryClients();
     // Clear database before sign in to ensure clean state
     await Core.clearDatabase();
     // Skip post-migration resync — bootstrap runs if user has profile, otherwise no data to resync
     Core.useMigrationStore.getState().reset();
     const session = await Core.AuthApplication.signIn({ keypair });
     if (!session) {
-      Libs.Logger.error('Failed to sign in. Please try again.', { keypair });
+      Logger.error('Failed to sign in. Please try again.', { keypair });
       return false;
     }
     await this.initializeAuthenticatedSession(session);
@@ -94,7 +98,7 @@ export class AuthController {
     if (remoteSettings) {
       Core.useSettingsStore.getState().loadFromHomeserver(remoteSettings);
       setLocaleCookie(remoteSettings.language);
-      Libs.Logger.info('Settings loaded from homeserver', { pubky });
+      Logger.info('Settings loaded from homeserver', { pubky });
     }
   }
 
@@ -112,7 +116,7 @@ export class AuthController {
 
     try {
       this.cancelActiveAuthFlow();
-      const pubky = Libs.Identity.z32FromSession({ session });
+      const pubky = Identity.z32FromSession({ session });
 
       authStore.init({ session, currentUserPubky: pubky, hasProfile: null });
 
@@ -128,7 +132,7 @@ export class AuthController {
     } catch (error) {
       // Clean up early-stored session to prevent dangling state
       authStore.reset();
-      signInStore.setError(error as Libs.AppError);
+      signInStore.setError(error as AppError);
       throw error;
     }
   }
@@ -141,15 +145,15 @@ export class AuthController {
    */
   static async signUp({ secretKey, signupToken }: Core.TSignUpParams) {
     // Clear query clients to ensure no stale cache from previous session
-    Libs.clearAllQueryClients();
+    clearAllQueryClients();
     // Clear database before sign up to ensure clean state
     await Core.clearDatabase();
     // Skip post-migration resync — new user has no homeserver data to resync
     Core.useMigrationStore.getState().reset();
-    const keypair = Libs.Identity.keypairFromSecretKey(secretKey);
+    const keypair = Identity.keypairFromSecretKey(secretKey);
     const { session } = await Core.AuthApplication.signUp({ keypair, signupToken });
     const authStore = Core.useAuthStore.getState();
-    const initialState = { session, currentUserPubky: Libs.Identity.z32FromSession({ session }), hasProfile: false };
+    const initialState = { session, currentUserPubky: Identity.z32FromSession({ session }), hasProfile: false };
     authStore.init(initialState);
   }
 
@@ -160,7 +164,7 @@ export class AuthController {
    * @returns Promise resolving to true if authentication succeeded, false otherwise
    */
   static async loginWithMnemonic({ mnemonic }: Core.TLoginWithMnemonicParams): Promise<boolean> {
-    const keypair = Libs.Identity.keypairFromMnemonic(mnemonic);
+    const keypair = Identity.keypairFromMnemonic(mnemonic);
     return await this.signIn({ keypair });
   }
 
@@ -175,7 +179,7 @@ export class AuthController {
     encryptedFile,
     password,
   }: Core.TLoginWithEncryptedFileParams): Promise<boolean> {
-    const keypair = await Libs.Identity.decryptRecoveryFile({ encryptedFile, passphrase: password });
+    const keypair = await Identity.decryptRecoveryFile({ encryptedFile, passphrase: password });
     return await this.signIn({ keypair });
   }
 
@@ -232,7 +236,7 @@ export class AuthController {
     this.cancelActiveAuthFlow();
 
     // Cancel and clear all query clients (nexus, homegate, exchangerate, and any future ones)
-    Libs.clearAllQueryClients();
+    clearAllQueryClients();
 
     // Reset all Zustand stores.
     // Settings reset() keeps `language`,
@@ -248,7 +252,7 @@ export class AuthController {
     Core.useSettingsStore.getState().reset();
 
     // Clear cookies (locale cookie excluded — device-level UI preference, not sensitive data)
-    Libs.clearCookies(['locale']);
+    clearCookies(['locale']);
 
     await Core.clearDatabase();
     // Skip post-migration resync — full cleanup resets all state
@@ -299,7 +303,7 @@ export class AuthController {
       try {
         await Core.AuthApplication.logout({ session });
       } catch (error) {
-        Libs.Logger.warn('Homeserver logout failed, clearing local state anyway', { error });
+        Logger.warn('Homeserver logout failed, clearing local state anyway', { error });
       }
     }
 
@@ -314,8 +318,8 @@ export class AuthController {
     const authStore = Core.useAuthStore.getState();
     const pubky = authStore.selectCurrentUserPubky();
     // Wait 5 seconds before bootstrap to let Nexus index the user
-    Libs.Logger.info(`Waiting 5 seconds to index ${pubky} profile.json in Nexus before bootstrap...`);
-    await Libs.sleep(5000);
+    Logger.info(`Waiting 5 seconds to index ${pubky} profile.json in Nexus before bootstrap...`);
+    await sleep(5000);
     await this.hydrateMeImAlive({ pubky });
     authStore.setHasProfile(true);
   }

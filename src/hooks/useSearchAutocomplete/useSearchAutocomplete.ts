@@ -3,7 +3,6 @@
 import { useState, useEffect, useRef } from 'react';
 import { debounce } from 'lodash-es';
 import * as Core from '@/core';
-import * as Libs from '@/libs';
 import { useUserDetailsFromIds } from '@/hooks/useUserDetailsFromIds';
 import type {
   UseSearchAutocompleteParams,
@@ -18,6 +17,7 @@ import {
   MIN_USER_ID_SEARCH_LENGTH,
   USER_ID_PREFIXES,
 } from './useSearchAutocomplete.constants';
+import { Logger } from '@/libs/logger/logger';
 
 export function useSearchAutocomplete({
   query,
@@ -59,7 +59,7 @@ export function useSearchAutocomplete({
             prefix: searchQuery,
             limit: AUTOCOMPLETE_TAG_LIMIT,
           }).catch((error) => {
-            Libs.Logger.error('[useSearchAutocomplete] Failed to fetch tags:', error);
+            Logger.error('[useSearchAutocomplete] Failed to fetch tags:', error);
             return [] as string[];
           });
         }
@@ -70,7 +70,7 @@ export function useSearchAutocomplete({
             prefix: searchQuery,
             limit: AUTOCOMPLETE_USER_LIMIT,
           }).catch((error) => {
-            Libs.Logger.error('[useSearchAutocomplete] Failed to fetch users by name:', error);
+            Logger.error('[useSearchAutocomplete] Failed to fetch users by name:', error);
             return [] as string[];
           });
         }
@@ -81,7 +81,7 @@ export function useSearchAutocomplete({
             prefix: userIdPrefix,
             limit: AUTOCOMPLETE_USER_LIMIT,
           }).catch((error) => {
-            Libs.Logger.error('[useSearchAutocomplete] Failed to fetch users by ID:', error);
+            Logger.error('[useSearchAutocomplete] Failed to fetch users by ID:', error);
             return [] as string[];
           });
         }
@@ -113,7 +113,7 @@ export function useSearchAutocomplete({
         // Update user IDs (useUserDetailsFromIds will handle cache reads and prefetching)
         setUserIds(uniqueUserIds);
       } catch (error) {
-        Libs.Logger.error('[useSearchAutocomplete] Search failed:', error);
+        Logger.error('[useSearchAutocomplete] Search failed:', error);
         if (requestId === requestIdRef.current) {
           setTags([]);
           setUserIds([]);

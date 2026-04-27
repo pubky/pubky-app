@@ -1,5 +1,7 @@
-import { Err, ErrorService, ServerErrorCode } from '@/libs';
 import type { TChatwootContact } from './chatwoot.types';
+import { ServerErrorCode } from '@/libs/error/error.codes';
+import { Err } from '@/libs/error/error.factories';
+import { ErrorService } from '@/libs/error/error.types';
 
 /**
  * Email domain for Chatwoot contacts

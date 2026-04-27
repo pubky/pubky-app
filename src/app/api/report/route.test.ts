@@ -2,8 +2,10 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { NextRequest } from 'next/server';
 import { POST, GET, OPTIONS } from './route';
 import * as Core from '@/core';
-import * as Libs from '@/libs';
 import { REPORT_REASON_MAX_LENGTH } from '@/core/pipes/report';
+import { ServerErrorCode, ValidationErrorCode } from '@/libs/error/error.codes';
+import { Err } from '@/libs/error/error.factories';
+import { ErrorService } from '@/libs/error/error.types';
 
 const testData = {
   userPubky: 'o1gg96ewuojmopcjbz8895478wdtxtzzuxnfjjz8o8e77csa1ngo' as Core.Pubky,
@@ -54,8 +56,8 @@ describe('API Route: /api/report', () => {
     });
 
     it('should handle AppError from application layer with correct status code', async () => {
-      const appError = Libs.Err.validation(Libs.ValidationErrorCode.INVALID_INPUT, 'Validation failed', {
-        service: Libs.ErrorService.Local,
+      const appError = Err.validation(ValidationErrorCode.INVALID_INPUT, 'Validation failed', {
+        service: ErrorService.Local,
         operation: 'submit',
         context: { statusCode: 400 },
       });
@@ -77,8 +79,8 @@ describe('API Route: /api/report', () => {
     });
 
     it('should handle AppError with different status codes', async () => {
-      const appError = Libs.Err.server(Libs.ServerErrorCode.INTERNAL_ERROR, 'Server error', {
-        service: Libs.ErrorService.Local,
+      const appError = Err.server(ServerErrorCode.INTERNAL_ERROR, 'Server error', {
+        service: ErrorService.Local,
         operation: 'submit',
         context: { statusCode: 500 },
       });
@@ -144,10 +146,10 @@ describe('API Route: /api/report', () => {
         name: testData.userName,
       });
 
-      const appError = Libs.Err.validation(
-        Libs.ValidationErrorCode.INVALID_INPUT,
+      const appError = Err.validation(
+        ValidationErrorCode.INVALID_INPUT,
         'Pubky is required and must be a non-empty string',
-        { service: Libs.ErrorService.Local, operation: 'submit', context: { statusCode: 400 } },
+        { service: ErrorService.Local, operation: 'submit', context: { statusCode: 400 } },
       );
       vi.spyOn(Core.ReportController, 'submit').mockRejectedValue(appError);
 
@@ -166,10 +168,10 @@ describe('API Route: /api/report', () => {
         name: testData.userName,
       });
 
-      const appError = Libs.Err.validation(
-        Libs.ValidationErrorCode.INVALID_INPUT,
+      const appError = Err.validation(
+        ValidationErrorCode.INVALID_INPUT,
         'Post URL is required and must be a non-empty string',
-        { service: Libs.ErrorService.Local, operation: 'submit', context: { statusCode: 400 } },
+        { service: ErrorService.Local, operation: 'submit', context: { statusCode: 400 } },
       );
       vi.spyOn(Core.ReportController, 'submit').mockRejectedValue(appError);
 
@@ -188,10 +190,10 @@ describe('API Route: /api/report', () => {
         name: testData.userName,
       });
 
-      const appError = Libs.Err.validation(
-        Libs.ValidationErrorCode.INVALID_INPUT,
+      const appError = Err.validation(
+        ValidationErrorCode.INVALID_INPUT,
         'Issue type is required and must be a non-empty string',
-        { service: Libs.ErrorService.Local, operation: 'submit', context: { statusCode: 400 } },
+        { service: ErrorService.Local, operation: 'submit', context: { statusCode: 400 } },
       );
       vi.spyOn(Core.ReportController, 'submit').mockRejectedValue(appError);
 
@@ -211,8 +213,8 @@ describe('API Route: /api/report', () => {
         name: testData.userName,
       });
 
-      const appError = Libs.Err.validation(Libs.ValidationErrorCode.INVALID_INPUT, 'Invalid issue type: invalid-type', {
-        service: Libs.ErrorService.Local,
+      const appError = Err.validation(ValidationErrorCode.INVALID_INPUT, 'Invalid issue type: invalid-type', {
+        service: ErrorService.Local,
         operation: 'submit',
         context: { statusCode: 400 },
       });
@@ -233,10 +235,10 @@ describe('API Route: /api/report', () => {
         name: testData.userName,
       });
 
-      const appError = Libs.Err.validation(
-        Libs.ValidationErrorCode.INVALID_INPUT,
+      const appError = Err.validation(
+        ValidationErrorCode.INVALID_INPUT,
         'Reason is required and must be a non-empty string',
-        { service: Libs.ErrorService.Local, operation: 'submit', context: { statusCode: 400 } },
+        { service: ErrorService.Local, operation: 'submit', context: { statusCode: 400 } },
       );
       vi.spyOn(Core.ReportController, 'submit').mockRejectedValue(appError);
 
@@ -255,10 +257,10 @@ describe('API Route: /api/report', () => {
         reason: testData.reason,
       });
 
-      const appError = Libs.Err.validation(
-        Libs.ValidationErrorCode.INVALID_INPUT,
+      const appError = Err.validation(
+        ValidationErrorCode.INVALID_INPUT,
         'Name is required and must be a non-empty string',
-        { service: Libs.ErrorService.Local, operation: 'submit', context: { statusCode: 400 } },
+        { service: ErrorService.Local, operation: 'submit', context: { statusCode: 400 } },
       );
       vi.spyOn(Core.ReportController, 'submit').mockRejectedValue(appError);
 
@@ -279,10 +281,10 @@ describe('API Route: /api/report', () => {
         name: testData.userName,
       });
 
-      const appError = Libs.Err.validation(
-        Libs.ValidationErrorCode.INVALID_INPUT,
+      const appError = Err.validation(
+        ValidationErrorCode.INVALID_INPUT,
         `Reason must be no more than ${REPORT_REASON_MAX_LENGTH} characters`,
-        { service: Libs.ErrorService.Local, operation: 'submit', context: { statusCode: 400 } },
+        { service: ErrorService.Local, operation: 'submit', context: { statusCode: 400 } },
       );
       vi.spyOn(Core.ReportController, 'submit').mockRejectedValue(appError);
 

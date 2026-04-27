@@ -1,8 +1,11 @@
 import { Table } from 'dexie';
 import * as Core from '@/core';
-import { DatabaseErrorCode, Err, ErrorService, Logger } from '@/libs';
 import * as Config from '@/config';
 import { FlatNotification, NotificationType } from './notification.types';
+import { Logger } from '@/libs/logger/logger';
+import { DatabaseErrorCode } from '@/libs/error/error.codes';
+import { Err } from '@/libs/error/error.factories';
+import { ErrorService } from '@/libs/error/error.types';
 
 // Primary key: business key (id) as string - provides natural deduplication
 export class NotificationModel {

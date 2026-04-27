@@ -1,15 +1,11 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import * as Config from '@/config';
-import {
-  HttpMethod,
-  ErrorCategory,
-  ClientErrorCode,
-  ServerErrorCode,
-  ErrorService,
-  parseResponseOrThrow,
-} from '@/libs';
 import { buildNexusUrl, buildCdnUrl, buildUrlWithQuery, createFetchOptions, queryNexus } from './nexus.utils';
 import { mockResponse, asOpaque } from '@/test-utils';
+import { ClientErrorCode, ServerErrorCode } from '@/libs/error/error.codes';
+import { ErrorCategory, ErrorService } from '@/libs/error/error.types';
+import { HttpMethod } from '@/libs/http/http.types';
+import { parseResponseOrThrow } from '@/libs/http/response.utils';
 
 describe('nexus.utils', () => {
   describe('buildNexusUrl', () => {

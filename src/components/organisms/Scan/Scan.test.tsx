@@ -192,19 +192,6 @@ vi.mock('@/atoms', () => ({
   DialogFooter: ({ children }: { children: React.ReactNode }) => <div data-testid="dialog-footer">{children}</div>,
 }));
 
-// Mock libs - use actual utility functions and icons, override clipboard + logger
-vi.mock('@/libs', async () => {
-  const actual = await vi.importActual('@/libs');
-  return {
-    ...actual,
-    copyToClipboard: mockCopyToClipboard,
-    Logger: {
-      error: vi.fn(),
-      warn: vi.fn(),
-    },
-  };
-});
-
 describe('ScanContent', () => {
   const originalLocation = window.location;
   const clipboardMock = { writeText: vi.fn().mockResolvedValue(undefined) };

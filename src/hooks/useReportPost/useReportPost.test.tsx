@@ -3,7 +3,7 @@ import { renderHook, waitFor, act } from '@testing-library/react';
 import { useReportPost } from './useReportPost';
 import { REPORT_POST_STEPS, REPORT_API_ENDPOINT } from './useReportPost.constants';
 import { REPORT_ISSUE_TYPES, REPORT_REASON_MAX_LENGTH } from '@/core/pipes/report';
-import { HttpMethod, JSON_HEADERS } from '@/libs';
+import { HttpMethod, JSON_HEADERS } from '@/libs/http/http.types';
 
 // Mock fetch
 global.fetch = vi.fn();
@@ -54,8 +54,8 @@ vi.mock('@/molecules', async (importOriginal) => {
 });
 
 // Mock Logger
-vi.mock('@/libs', async (importOriginal) => {
-  const actual = await importOriginal<typeof import('@/libs')>();
+vi.mock('@/libs/logger/logger', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('@/libs/logger/logger')>();
   return {
     ...actual,
     Logger: {

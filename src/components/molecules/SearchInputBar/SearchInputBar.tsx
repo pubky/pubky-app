@@ -3,10 +3,10 @@
 import { useTranslations } from 'next-intl';
 import * as Atoms from '@/atoms';
 import * as Molecules from '@/molecules';
-import * as Libs from '@/libs';
 import { SEARCH_CLOSED_STYLE, SEARCH_INPUT_EXPANDED_STYLE } from '@/config/search';
 import type { SearchInputBarProps } from './SearchInputBar.types';
-
+import { Search } from 'lucide-react';
+import { cn } from '@/libs/utils/utils';
 export function SearchInputBar({
   activeTags,
   inputValue,
@@ -23,12 +23,11 @@ export function SearchInputBar({
 }: SearchInputBarProps) {
   const t = useTranslations('search');
   const hasActiveTags = activeTags.length > 0;
-
   return (
     <Atoms.Container
       data-testid="search-input-bar"
       data-cy="header-search"
-      className={Libs.cn(
+      className={cn(
         'relative flex h-12 min-w-0 items-center gap-3 border border-border px-6 py-3',
         isFocused ? 'rounded-t-2xl rounded-b-none border-b-transparent' : 'rounded-full',
       )}
@@ -70,14 +69,14 @@ export function SearchInputBar({
         aria-controls={suggestionsId || undefined}
         aria-expanded={isExpanded}
         aria-haspopup={suggestionsId ? 'dialog' : undefined}
-        className={Libs.cn(
+        className={cn(
           'h-auto flex-1 border-none bg-transparent pr-0 text-base font-medium text-foreground md:text-base',
           hasActiveTags ? 'min-w-8 pl-2.5' : 'min-w-20 pl-0',
         )}
       />
 
       {/* Search icon */}
-      <Libs.Search className="pointer-events-none size-4 shrink-0 text-muted-foreground" aria-hidden="true" />
+      <Search className="pointer-events-none size-4 shrink-0 text-muted-foreground" aria-hidden="true" />
     </Atoms.Container>
   );
 }

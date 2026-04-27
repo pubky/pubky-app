@@ -10,10 +10,6 @@ vi.mock('@/organisms', () => ({
 }));
 
 // Mock the libs
-vi.mock('@/libs', async () => {
-  const actual = await vi.importActual('@/libs');
-  return { ...actual };
-});
 
 describe('RightSidebar', () => {
   it('renders with default props', () => {

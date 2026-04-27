@@ -2,8 +2,10 @@
 
 import type { ReactNode } from 'react';
 import { useEffect, useRef } from 'react';
-import * as Libs from '@/libs';
 import * as Molecules from '@/molecules';
+import { Logger } from '@/libs/logger/logger';
+import { ErrorService } from '@/libs/error/error.types';
+import { getErrorMessage, toAppError } from '@/libs/error/error.utils';
 
 interface GlobalErrorHandlerProviderProps {
   children: ReactNode;
@@ -16,13 +18,13 @@ export function GlobalErrorHandlerProvider({ children }: GlobalErrorHandlerProvi
 
   useEffect(() => {
     const notifyError = (error: unknown, operation: string, context: Record<string, unknown>) => {
-      const appError = Libs.toAppError(error, Libs.ErrorService.Local, operation);
-      const message = Libs.getErrorMessage(appError);
+      const appError = toAppError(error, ErrorService.Local, operation);
+      const message = getErrorMessage(appError);
       const now = Date.now();
       const toastKey = `${operation}:${message}`;
       const lastToastTime = toastTimestampsRef.current.get(toastKey);
 
-      Libs.Logger.error(`[GlobalErrorHandlerProvider] ${operation}`, {
+      Logger.error(`[GlobalErrorHandlerProvider] ${operation}`, {
         ...context,
         error: appError,
       });

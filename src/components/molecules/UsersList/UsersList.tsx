@@ -2,9 +2,9 @@
 
 import * as React from 'react';
 import * as Atoms from '@/atoms';
-import * as Libs from '@/libs';
 import * as Molecules from '@/molecules';
-
+import { Users } from 'lucide-react';
+import { cn } from '@/libs/utils/utils';
 interface UsersListProps {
   users: Molecules.UserData[];
   onFollow?: (userId: string) => void;
@@ -13,22 +13,18 @@ interface UsersListProps {
   title?: string;
   maxUsers?: number;
 }
-
 export function UsersList({ users, onFollow, onSeeAll, className, title, maxUsers = 3, ...props }: UsersListProps) {
   const displayUsers = users.slice(0, maxUsers);
-
   const handleFollow = (userId: string) => {
     onFollow?.(userId);
   };
-
   const handleSeeAll = () => {
     onSeeAll?.();
   };
-
   return (
-    <Atoms.Container className={Libs.cn('flex flex-col gap-2 bg-background', className)} {...props}>
+    <Atoms.Container className={cn('flex flex-col gap-2 bg-background', className)} {...props}>
       {title && (
-        <Atoms.Heading level={2} size="lg" className={Libs.cn('font-light text-muted-foreground', className)}>
+        <Atoms.Heading level={2} size="lg" className={cn('font-light text-muted-foreground', className)}>
           {title}
         </Atoms.Heading>
       )}
@@ -54,7 +50,7 @@ export function UsersList({ users, onFollow, onSeeAll, className, title, maxUser
           className="flex w-full items-center justify-center gap-2"
           data-testid="see-all-button"
         >
-          <Libs.Users className="h-4 w-4" />
+          <Users className="h-4 w-4" />
           <Atoms.Typography size="sm" className="font-bold">
             See all
           </Atoms.Typography>

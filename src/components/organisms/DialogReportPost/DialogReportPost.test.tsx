@@ -4,15 +4,6 @@ import { DialogReportPost } from './DialogReportPost';
 import { REPORT_POST_STEPS } from '@/hooks/useReportPost';
 import { REPORT_ISSUE_TYPES } from '@/core/pipes/report';
 
-// Mock @/libs - use actual implementations and only stub cn helper
-vi.mock('@/libs', async (importOriginal) => {
-  const actual = await importOriginal<typeof import('@/libs')>();
-  return {
-    ...actual,
-    cn: (...inputs: (string | undefined | null | false)[]) => inputs.filter(Boolean).join(' '),
-  };
-});
-
 // Mock hooks
 const mockUseCurrentUserProfile = vi.fn();
 const mockUseReportPost = vi.fn();

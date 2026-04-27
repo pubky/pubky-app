@@ -1,30 +1,17 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { render, screen, fireEvent, act } from '@testing-library/react';
 import { PostCodeBlock } from './PostCodeBlock';
+import { copyToClipboard } from '@/libs/utils/utils';
 
-// Mock only copyToClipboard from @/libs (uses browser Clipboard API)
+// Mock only copyToClipboard from utils (uses browser Clipboard API)
 // Keep real implementations of pure functions like cn
-vi.mock('@/libs', async () => {
-  const actual = await vi.importActual('@/libs');
+vi.mock('@/libs/utils/utils', async () => {
+  const actual = await vi.importActual<typeof import('@/libs/utils/utils')>('@/libs/utils/utils');
   return {
     ...actual,
     copyToClipboard: vi.fn().mockResolvedValue(undefined),
   };
 });
-
-// Mock @/libs/icons
-vi.mock('@/libs/icons', () => ({
-  Check: ({ size, className }: { size?: number; className?: string }) => (
-    <svg data-testid="check-icon" width={size} className={className}>
-      Check
-    </svg>
-  ),
-  Clipboard: ({ size, className }: { size?: number; className?: string }) => (
-    <svg data-testid="clipboard-icon" width={size} className={className}>
-      Clipboard
-    </svg>
-  ),
-}));
 
 // Mock @/atoms
 vi.mock('@/atoms', () => ({
@@ -64,12 +51,6 @@ vi.mock('@/atoms', () => ({
     </span>
   ),
 }));
-
-// Using real react-syntax-highlighter to test actual rendering behavior
-// This is a deterministic rendering library with no side effects
-
-// Import the mocked module to access the mock function
-import * as Libs from '@/libs';
 
 describe('PostCodeBlock', () => {
   beforeEach(() => {
@@ -153,7 +134,8 @@ describe('PostCodeBlock', () => {
     it('displays copy button with clipboard icon', () => {
       render(<PostCodeBlock className="language-rust">fn main() {}</PostCodeBlock>);
 
-      expect(screen.getByTestId('clipboard-icon')).toBeInTheDocument();
+      const copyButton = screen.getByTestId('copy-button');
+      expect(copyButton.querySelector('.lucide-clipboard')).toBeInTheDocument();
       expect(screen.getByText('Copy')).toBeInTheDocument();
     });
 
@@ -220,7 +202,7 @@ describe('PostCodeBlock', () => {
         fireEvent.click(copyButton);
       });
 
-      expect(Libs.copyToClipboard).toHaveBeenCalledWith({ text: 'const x = 1;' });
+      expect(copyToClipboard).toHaveBeenCalledWith({ text: 'const x = 1;' });
     });
 
     it('shows check icon and "Copied!" text after successful copy', async () => {
@@ -231,7 +213,8 @@ describe('PostCodeBlock', () => {
         fireEvent.click(copyButton);
       });
 
-      expect(screen.getByTestId('check-icon')).toBeInTheDocument();
+      const copyBtnAfter = screen.getByTestId('copy-button');
+      expect(copyBtnAfter.querySelector('.lucide-check')).toBeInTheDocument();
       expect(screen.getByText('Copied!')).toBeInTheDocument();
     });
 
@@ -243,13 +226,13 @@ describe('PostCodeBlock', () => {
         fireEvent.click(copyButton);
       });
 
-      expect(screen.getByTestId('check-icon')).toBeInTheDocument();
+      expect(screen.getByTestId('copy-button').querySelector('.lucide-check')).toBeInTheDocument();
 
       await act(async () => {
         vi.advanceTimersByTime(2000);
       });
 
-      expect(screen.getByTestId('clipboard-icon')).toBeInTheDocument();
+      expect(screen.getByTestId('copy-button').querySelector('.lucide-clipboard')).toBeInTheDocument();
       expect(screen.getByText('Copy')).toBeInTheDocument();
     });
 
@@ -262,13 +245,13 @@ describe('PostCodeBlock', () => {
         fireEvent.click(copyButton);
       });
 
-      expect(Libs.copyToClipboard).toHaveBeenCalledTimes(1);
+      expect(copyToClipboard).toHaveBeenCalledTimes(1);
 
       await act(async () => {
         fireEvent.click(copyButton);
       });
 
-      expect(Libs.copyToClipboard).toHaveBeenCalledTimes(1);
+      expect(copyToClipboard).toHaveBeenCalledTimes(1);
     });
 
     it('allows copying again after timeout resets state', async () => {
@@ -280,7 +263,7 @@ describe('PostCodeBlock', () => {
         fireEvent.click(copyButton);
       });
 
-      expect(Libs.copyToClipboard).toHaveBeenCalledTimes(1);
+      expect(copyToClipboard).toHaveBeenCalledTimes(1);
 
       await act(async () => {
         vi.advanceTimersByTime(2000);
@@ -290,7 +273,7 @@ describe('PostCodeBlock', () => {
         fireEvent.click(copyButton);
       });
 
-      expect(Libs.copyToClipboard).toHaveBeenCalledTimes(2);
+      expect(copyToClipboard).toHaveBeenCalledTimes(2);
     });
 
     it('stops event propagation when clicking copy button', async () => {
@@ -311,7 +294,7 @@ describe('PostCodeBlock', () => {
     });
 
     it('handles copyToClipboard failure gracefully', async () => {
-      vi.mocked(Libs.copyToClipboard).mockRejectedValueOnce(new Error('Copy failed'));
+      vi.mocked(copyToClipboard).mockRejectedValueOnce(new Error('Copy failed'));
 
       render(<PostCodeBlock className="language-javascript">code</PostCodeBlock>);
 
@@ -323,7 +306,7 @@ describe('PostCodeBlock', () => {
       });
 
       // Should still show clipboard icon (not changed to check)
-      expect(screen.getByTestId('clipboard-icon')).toBeInTheDocument();
+      expect(copyButton.querySelector('.lucide-clipboard')).toBeInTheDocument();
     });
   });
 

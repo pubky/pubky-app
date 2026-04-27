@@ -4,13 +4,6 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { DialogRestoreRecoveryPhrase } from './DialogRestoreRecoveryPhrase';
 
 // Mock external dependencies
-// Mock libs - use actual utility functions and icons from lucide-react
-vi.mock('@/libs', async () => {
-  const actual = await vi.importActual('@/libs');
-  return {
-    ...actual,
-  };
-});
 
 vi.mock('@/atoms', () => ({
   Dialog: vi.fn(({ children }) => <div data-testid="dialog">{children}</div>),

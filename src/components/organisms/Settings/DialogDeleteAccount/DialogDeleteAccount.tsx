@@ -1,23 +1,19 @@
 'use client';
 
 import * as Atoms from '@/atoms';
-import * as Libs from '@/libs';
-
+import { Trash2 } from 'lucide-react';
 interface DialogDeleteAccountProps {
   isOpen: boolean;
   onOpenChangeAction: (open: boolean) => void;
   onDeleteAccount?: () => void;
 }
-
 export function DialogDeleteAccount({ isOpen, onOpenChangeAction }: DialogDeleteAccountProps) {
   const handleDeleteAccount = () => {
     onOpenChangeAction(false);
   };
-
   const handleCancel = () => {
     onOpenChangeAction(false);
   };
-
   return (
     <Atoms.Dialog open={isOpen} onOpenChange={onOpenChangeAction}>
       <Atoms.DialogContent className="max-w-md sm:max-w-lg" hiddenTitle="Delete Account">
@@ -35,7 +31,7 @@ export function DialogDeleteAccount({ isOpen, onOpenChangeAction }: DialogDelete
             onClick={handleDeleteAccount}
             className="order-1 sm:order-2"
           >
-            <Libs.Trash2 className="h-4 w-4" />
+            <Trash2 className="h-4 w-4" />
             Delete Account
           </Atoms.Button>
           <Atoms.Button variant="outline" size="lg" onClick={handleCancel} className="order-2 sm:order-1">

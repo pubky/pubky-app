@@ -2,9 +2,9 @@
 
 import * as Atoms from '@/atoms';
 import * as Organisms from '@/organisms';
-import * as Libs from '@/libs';
 import * as Hooks from '@/hooks';
 import type { SearchRecentUserItemProps } from './SearchRecentUserItem.types';
+import { formatPublicKey } from '@/libs/utils/utils';
 
 /**
  * SearchRecentUserItem
@@ -50,7 +50,7 @@ export function SearchRecentUserItem({ user, onClick }: SearchRecentUserItemProp
           overrideDefaults
           data-testid="user-pubky"
         >
-          {Libs.formatPublicKey({ key: user.id })}
+          {formatPublicKey({ key: user.id })}
         </Atoms.Typography>
       </Atoms.Container>
     </Atoms.Container>

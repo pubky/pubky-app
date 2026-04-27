@@ -3,11 +3,9 @@
 import * as Atoms from '@/atoms';
 import * as Config from '@/config';
 import * as Core from '@/core';
-import * as Libs from '@/libs';
 import * as Molecules from '@/molecules';
 import React, { useState } from 'react';
 import { useTranslations } from 'next-intl';
-
 import { formatInviteCode } from './HumanInviteCode.utils';
 import type { HumanInviteCodeProps } from './HumanInviteCode.types';
 
@@ -17,6 +15,10 @@ import type { HumanInviteCodeProps } from './HumanInviteCode.types';
  * @param onBack - Function to call when the user clicks the back button.
  * @param onSuccess - Called with the trimmed invite code; may be async. Throws on validation failure.
  */
+import { CircleCheck, Server, ArrowLeft, Loader2, ArrowRight } from 'lucide-react';
+import { XTwitter, Telegram } from '@/icons';
+import { Logger } from '@/libs/logger/logger';
+import { cn } from '@/libs/utils/utils';
 export const HumanInviteCode = ({ onBack, onSuccess }: HumanInviteCodeProps) => {
   const t = useTranslations('onboarding.inviteCode');
   const tCommon = useTranslations('common');
@@ -24,12 +26,10 @@ export const HumanInviteCode = ({ onBack, onSuccess }: HumanInviteCodeProps) => 
   const [isSubmitting, setIsSubmitting] = useState(false);
   const trimmedInviteCode = inviteCode.trim();
   const isInviteCodeEntered = trimmedInviteCode.length === 14;
-
   async function handleSubmit() {
     if (!isInviteCodeEntered || isSubmitting) {
       return;
     }
-
     setIsSubmitting(true);
     try {
       await onSuccess(trimmedInviteCode);
@@ -43,14 +43,15 @@ export const HumanInviteCode = ({ onBack, onSuccess }: HumanInviteCodeProps) => 
     if (process.env.NODE_ENV === 'development') {
       Core.AuthController.generateSignupToken()
         .then((token) => {
-          Libs.Logger.info(token, token);
+          Logger.info(token, token);
         })
         .catch((error) => {
-          Libs.Logger.error('[HumanInviteCode] Failed to generate signup token', { error });
+          Logger.error('[HumanInviteCode] Failed to generate signup token', {
+            error,
+          });
         });
     }
   }, []);
-
   return (
     <React.Fragment>
       <Atoms.PageHeader>
@@ -62,10 +63,10 @@ export const HumanInviteCode = ({ onBack, onSuccess }: HumanInviteCodeProps) => 
         <Atoms.Container className="flex-row items-center gap-3">
           <Atoms.PageSubtitle>{t('subtitle')}</Atoms.PageSubtitle>
           <Atoms.Link href={Config.TWITTER_URL} target="_blank" className="text-muted-foreground hover:text-brand">
-            <Libs.XTwitter className="h-6 w-6" />
+            <XTwitter className="h-6 w-6" />
           </Atoms.Link>
           <Atoms.Link href={Config.TELEGRAM_URL} target="_blank" className="text-muted-foreground hover:text-brand">
-            <Libs.Telegram className="h-6 w-6" />
+            <Telegram className="h-6 w-6" />
           </Atoms.Link>
         </Atoms.Container>
       </Atoms.PageHeader>
@@ -101,7 +102,7 @@ export const HumanInviteCode = ({ onBack, onSuccess }: HumanInviteCodeProps) => 
           <Atoms.Container className="gap-6">
             {/* Input */}
             <Atoms.Container
-              className={Libs.cn(
+              className={cn(
                 'flex-row items-center gap-3 rounded-md border border-dashed bg-background/10 px-5 py-4 shadow-xs',
                 isInviteCodeEntered ? 'border-brand' : 'border-input',
               )}
@@ -115,7 +116,7 @@ export const HumanInviteCode = ({ onBack, onSuccess }: HumanInviteCodeProps) => 
                 onChange={(e) => setInviteCode(formatInviteCode(e.target.value))}
                 placeholder={t('placeholder')}
                 maxLength={14}
-                className={Libs.cn(
+                className={cn(
                   'h-auto flex-1 border-none bg-transparent p-0 text-base font-medium placeholder:text-muted-foreground focus:ring-0 focus:outline-none',
                   isInviteCodeEntered ? 'font-bold text-brand' : 'text-foreground',
                 )}
@@ -125,7 +126,7 @@ export const HumanInviteCode = ({ onBack, onSuccess }: HumanInviteCodeProps) => 
                   }
                 }}
               />
-              {isInviteCodeEntered && <Libs.CircleCheck className="h-6 w-6 shrink-0 text-brand" />}
+              {isInviteCodeEntered && <CircleCheck className="h-6 w-6 shrink-0 text-brand" />}
             </Atoms.Container>
 
             {/* Custom homeserver row */}
@@ -136,7 +137,7 @@ export const HumanInviteCode = ({ onBack, onSuccess }: HumanInviteCodeProps) => 
                 disabled
                 aria-label={t('customHomeserver')}
               >
-                <Libs.Server className="mr-2 h-4 w-4" />
+                <Server className="mr-2 h-4 w-4" />
                 {t('customHomeserver')}
               </Atoms.Button>
               <Atoms.Typography as="p" className="text-base leading-6 font-medium text-secondary-foreground">
@@ -150,7 +151,7 @@ export const HumanInviteCode = ({ onBack, onSuccess }: HumanInviteCodeProps) => 
       <Molecules.HumanFooter />
 
       {/* Buttons container */}
-      <Atoms.Container className={Libs.cn('mt-6 flex-row justify-between gap-3 lg:gap-6')}>
+      <Atoms.Container className={cn('mt-6 flex-row justify-between gap-3 lg:gap-6')}>
         <Atoms.Button
           id="human-invite-back-btn"
           size="lg"
@@ -158,7 +159,7 @@ export const HumanInviteCode = ({ onBack, onSuccess }: HumanInviteCodeProps) => 
           variant="secondary"
           onClick={onBack}
         >
-          <Libs.ArrowLeft className="mr-2 h-4 w-4" />
+          <ArrowLeft className="mr-2 h-4 w-4" />
           {tCommon('back')}
         </Atoms.Button>
         <Atoms.Button
@@ -170,11 +171,7 @@ export const HumanInviteCode = ({ onBack, onSuccess }: HumanInviteCodeProps) => 
           disabled={!isInviteCodeEntered || isSubmitting}
           onClick={handleSubmit}
         >
-          {isSubmitting ? (
-            <Libs.Loader2 className="mr-2 h-4 w-4 animate-spin" />
-          ) : (
-            <Libs.ArrowRight className="mr-2 h-4 w-4" />
-          )}
+          {isSubmitting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <ArrowRight className="mr-2 h-4 w-4" />}
           {tCommon('continue')}
         </Atoms.Button>
       </Atoms.Container>

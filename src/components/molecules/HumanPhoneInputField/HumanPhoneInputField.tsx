@@ -1,9 +1,7 @@
 import { useTranslations } from 'next-intl';
-
 import * as Atoms from '@/atoms';
-import * as Libs from '@/libs';
 import type { HumanPhoneInputProps } from './HumanPhoneInputField.types';
-
+import { CheckCircle2 } from 'lucide-react';
 export const HumanPhoneInputField = ({
   value,
   onChange,
@@ -13,7 +11,6 @@ export const HumanPhoneInputField = ({
 }: HumanPhoneInputProps) => {
   const t = useTranslations('onboarding.phone');
   const defaultPlaceholder = t('placeholder');
-
   return (
     <Atoms.Card data-testid="human-phone-input-card" className="gap-0 p-6 lg:p-12">
       <Atoms.Container className="flex-col gap-8 lg:flex-row lg:items-center">
@@ -57,7 +54,7 @@ export const HumanPhoneInputField = ({
                 }}
               />
 
-              {isValid && <Libs.CheckCircle2 className="h-6 w-6 shrink-0 text-brand" aria-hidden="true" />}
+              {isValid && <CheckCircle2 className="h-6 w-6 shrink-0 text-brand" aria-hidden="true" />}
             </Atoms.Container>
           </Atoms.Container>
         </Atoms.Container>

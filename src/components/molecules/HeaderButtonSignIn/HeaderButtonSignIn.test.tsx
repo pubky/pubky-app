@@ -31,17 +31,6 @@ vi.mock('@/atoms', () => ({
   ),
 }));
 
-// Mock libs
-vi.mock('@/libs', async () => {
-  const actual = await vi.importActual('@/libs');
-  return {
-    ...actual,
-    UserRoundPlus: ({ className }: { className?: string }) => (
-      <span data-testid="user-round-plus-icon" className={className} />
-    ),
-  };
-});
-
 // Mock app
 vi.mock('@/app', () => ({
   ONBOARDING_ROUTES: {

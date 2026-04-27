@@ -1,9 +1,8 @@
 'use client';
-
-import * as Libs from '@/libs';
 import * as Atoms from '@/atoms';
 import * as Molecules from '@/molecules';
 import * as Organisms from '@/organisms';
+import { cn, formatPublicKey } from '@/libs/utils/utils';
 
 interface PostHeaderUserInfoProps {
   userId: string;
@@ -29,7 +28,7 @@ export function PostHeaderUserInfo({
   timeAgo,
   indexedAt,
 }: PostHeaderUserInfoProps) {
-  const formattedPublicKey = Libs.formatPublicKey({ key: userId });
+  const formattedPublicKey = formatPublicKey({ key: userId });
   const profileUrl = `/profile/${userId}`;
 
   // Prevent click from bubbling to parent post card (which navigates to post)
@@ -38,10 +37,7 @@ export function PostHeaderUserInfo({
   };
 
   const content = (
-    <Atoms.Container
-      overrideDefaults
-      className={Libs.cn('flex min-w-0 items-center', size === 'large' ? 'gap-4' : 'gap-3')}
-    >
+    <Atoms.Container overrideDefaults className={cn('flex min-w-0 items-center', size === 'large' ? 'gap-4' : 'gap-3')}>
       <Atoms.Link href={profileUrl} onClick={handleLinkClick} className="shrink-0">
         <Organisms.AvatarWithFallback
           avatarUrl={avatarUrl}
@@ -53,7 +49,7 @@ export function PostHeaderUserInfo({
       <Atoms.Container overrideDefaults className="min-w-0 flex-1">
         <Atoms.Link href={profileUrl} onClick={handleLinkClick}>
           <Atoms.Typography
-            className={Libs.cn(
+            className={cn(
               'block max-w-full cursor-pointer truncate font-bold text-foreground',
               size === 'large' ? 'text-2xl leading-8' : 'text-base leading-5',
             )}

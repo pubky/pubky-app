@@ -2,11 +2,10 @@
 
 import { Popover as PopoverPrimitive } from 'radix-ui';
 import { useState, useRef, useEffect, createContext, useContext } from 'react';
-
-import * as Libs from '@/libs';
 import * as Hooks from '@/hooks';
 import { DEFAULT_HOVER_CLOSE_DELAY } from './Popover.constants';
 import type { PopoverContextType, PopoverProps } from './Popover.types';
+import { cn } from '@/libs/utils/utils';
 
 const PopoverContext = createContext<PopoverContextType>({});
 
@@ -196,7 +195,7 @@ function PopoverContent({
         sideOffset={sideOffset}
         onMouseEnter={handleMouseEnter}
         onMouseLeave={handleMouseLeave}
-        className={Libs.cn(
+        className={cn(
           'z-50 mx-8 w-72 origin-(--radix-popover-content-transform-origin) rounded-md border bg-popover p-4 text-popover-foreground shadow-[0px_4px_6px_0px_rgba(5,5,10,0.25)] shadow-[0px_10px_15px_0px_rgba(5,5,10,0.50)] outline-hidden data-[side=bottom]:slide-in-from-top-2 data-[side=left]:slide-in-from-right-2 data-[side=right]:slide-in-from-left-2 data-[side=top]:slide-in-from-bottom-2 data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=closed]:zoom-out-95 data-[state=open]:animate-in data-[state=open]:fade-in-0 data-[state=open]:zoom-in-95 sm:mx-0',
           className,
         )}

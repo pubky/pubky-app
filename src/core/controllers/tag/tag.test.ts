@@ -1,9 +1,9 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { TagResult } from 'pubky-app-specs';
 import * as Core from '@/core';
-import { HttpMethod } from '@/libs';
 import type { TTagEventParams } from './tag.types';
 import { asOpaque } from '@/test-utils';
+import { HttpMethod } from '@/libs/http/http.types';
 
 // Mock HomeserverService
 vi.mock('@/core/services/homeserver', () => ({

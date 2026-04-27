@@ -3,20 +3,22 @@
 import * as React from 'react';
 import { useTranslations } from 'next-intl';
 import * as Atoms from '@/components/atoms';
-import * as Libs from '@/libs';
 import * as Hooks from '@/hooks';
 import * as Types from '@/app/profile/types';
 import * as Config from '@/config';
-
+import { Bell, StickyNote, MessageCircle, UsersRound, HeartHandshake, Tag } from 'lucide-react';
+import { UsersRound2 } from '@/icons';
+import { cn } from '@/libs/utils/utils';
 export interface ProfilePageFilterBarItem {
-  icon: React.ComponentType<{ className?: string }>;
+  icon: React.ComponentType<{
+    className?: string;
+  }>;
   labelKey: string;
   count: number | undefined;
   pageType: Types.FilterBarPageType;
   /** Whether this item should only be shown for own profile */
   ownProfileOnly?: boolean;
 }
-
 export interface ProfilePageFilterBarProps {
   items?: ProfilePageFilterBarItem[];
   stats?: Hooks.ProfileStats;
@@ -29,7 +31,9 @@ export interface ProfilePageFilterBarProps {
 // Item configuration - single source of truth for filter items
 // Uses labelKey for i18n translation lookup in 'profile.tabs' namespace
 const FILTER_ITEMS_CONFIG: Array<{
-  icon: React.ComponentType<{ className?: string }>;
+  icon: React.ComponentType<{
+    className?: string;
+  }>;
   labelKey: string;
   pageType: Types.FilterBarPageType;
   statKey: keyof Hooks.ProfileStats;
@@ -37,50 +41,49 @@ const FILTER_ITEMS_CONFIG: Array<{
   ownProfileOnly?: boolean;
 }> = [
   {
-    icon: Libs.Bell,
+    icon: Bell,
     labelKey: 'notifications',
     pageType: Types.PROFILE_PAGE_TYPES.NOTIFICATIONS,
     statKey: 'notifications',
     ownProfileOnly: true, // Notifications only make sense for logged-in user
   },
   {
-    icon: Libs.StickyNote,
+    icon: StickyNote,
     labelKey: 'posts',
     pageType: Types.PROFILE_PAGE_TYPES.POSTS,
     statKey: 'posts',
   },
   {
-    icon: Libs.MessageCircle,
+    icon: MessageCircle,
     labelKey: 'replies',
     pageType: Types.PROFILE_PAGE_TYPES.REPLIES,
     statKey: 'replies',
   },
   {
-    icon: Libs.UsersRound,
+    icon: UsersRound,
     labelKey: 'followers',
     pageType: Types.PROFILE_PAGE_TYPES.FOLLOWERS,
     statKey: 'followers',
   },
   {
-    icon: Libs.UsersRound2,
+    icon: UsersRound2,
     labelKey: 'following',
     pageType: Types.PROFILE_PAGE_TYPES.FOLLOWING,
     statKey: 'following',
   },
   {
-    icon: Libs.HeartHandshake,
+    icon: HeartHandshake,
     labelKey: 'friends',
     pageType: Types.PROFILE_PAGE_TYPES.FRIENDS,
     statKey: 'friends',
   },
   {
-    icon: Libs.Tag,
+    icon: Tag,
     labelKey: 'tagged',
     pageType: Types.PROFILE_PAGE_TYPES.UNIQUE_TAGS,
     statKey: 'uniqueTags',
   },
 ];
-
 export const getDefaultItems = (
   stats?: Hooks.ProfileStats,
   isOwnProfile: boolean = true,
@@ -101,7 +104,6 @@ export const getDefaultItems = (
     ownProfileOnly: config.ownProfileOnly,
   }));
 };
-
 export function ProfilePageFilterBar({
   items,
   stats,
@@ -136,12 +138,11 @@ export function ProfilePageFilterBar({
   const handleItemClick = (pageType: Types.FilterBarPageType) => {
     requireAuth(() => onPageChangeAction(pageType));
   };
-
   return (
     <Atoms.Container
       ref={ref}
       overrideDefaults={true}
-      className={Libs.cn(
+      className={cn(
         'hidden h-fit w-(--filter-bar-width) flex-col self-start lg:flex',
         // Use !== false to treat undefined (SSR) as sticky (optimistic assumption)
         shouldBeSticky !== false && 'sticky top-(--header-height)',
@@ -153,7 +154,6 @@ export function ProfilePageFilterBar({
           const isActive = item.pageType === activePage;
           const isLoading = item.count === undefined;
           const label = t(item.labelKey);
-
           return (
             <Atoms.FilterItem
               key={index}

@@ -1,7 +1,7 @@
 import { ReactNode } from 'react';
 
 import * as Atoms from '@/atoms';
-import * as Libs from '@/libs';
+import { cn } from '@/libs/utils/utils';
 
 interface PageContainerProps {
   children: ReactNode;
@@ -22,7 +22,7 @@ export function PageContainer({ as: Component = 'div', size = 'default', ...prop
   };
 
   return (
-    <Component data-testid="page-container" className={Libs.cn(sizeClasses[size], props.className)}>
+    <Component data-testid="page-container" className={cn(sizeClasses[size], props.className)}>
       {props.children}
     </Component>
   );
@@ -35,7 +35,7 @@ export function PageTitle({ children, className, size = 'large', ...props }: Pag
   };
 
   return (
-    <Atoms.Heading {...props} level={1} size="lg" className={Libs.cn(sizeClasses[size], className)}>
+    <Atoms.Heading {...props} level={1} size="lg" className={cn(sizeClasses[size], className)}>
       {children}
     </Atoms.Heading>
   );

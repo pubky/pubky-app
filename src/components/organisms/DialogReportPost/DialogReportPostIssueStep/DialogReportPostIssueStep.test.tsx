@@ -11,15 +11,6 @@ vi.mock('next/navigation', () => ({
   useRouter: vi.fn(),
 }));
 
-// Mock @/libs - use actual implementations and only stub cn helper
-vi.mock('@/libs', async (importOriginal) => {
-  const actual = await importOriginal<typeof import('@/libs')>();
-  return {
-    ...actual,
-    cn: (...inputs: (string | undefined | null | false)[]) => inputs.filter(Boolean).join(' '),
-  };
-});
-
 const renderWithDialog = (component: React.ReactElement) => {
   return render(
     <Atoms.Dialog open={true}>

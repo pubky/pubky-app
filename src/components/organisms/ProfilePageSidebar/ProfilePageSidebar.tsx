@@ -6,10 +6,10 @@ import * as Atoms from '@/atoms';
 import * as Molecules from '@/molecules';
 import * as Organisms from '@/organisms';
 import * as Hooks from '@/hooks';
-import * as Libs from '@/libs';
 import * as Providers from '@/providers';
 import * as Config from '@/config';
 import { MAX_SIDEBAR_TAGS } from './ProfilePageSidebar.constants';
+import { cn } from '@/libs/utils/utils';
 
 export function ProfilePageSidebar() {
   const pathname = usePathname();
@@ -52,7 +52,7 @@ export function ProfilePageSidebar() {
     <Atoms.Container
       ref={ref}
       overrideDefaults={true}
-      className={Libs.cn('hidden w-(--filter-bar-width) flex-col gap-6 self-start lg:flex', 'sticky')}
+      className={cn('hidden w-(--filter-bar-width) flex-col gap-6 self-start lg:flex', 'sticky')}
       style={{ top: `${stickyTop}px` }}
     >
       {!isTaggedPage && (

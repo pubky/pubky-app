@@ -11,12 +11,6 @@ vi.mock('@/molecules', () => ({
   ),
 }));
 
-// Mock libs - use actual utility functions and icons from lucide-react
-vi.mock('@/libs', async () => {
-  const actual = await vi.importActual('@/libs');
-  return { ...actual };
-});
-
 // Mock Core - component now uses useAuthStore directly for isAuthenticated
 vi.mock('@/core', async () => {
   const actual = await vi.importActual('@/core');

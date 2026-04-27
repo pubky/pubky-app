@@ -1,12 +1,11 @@
 import * as Atoms from '@/atoms';
-import * as Libs from '@/libs';
 import * as Core from '@/core';
-
+import { EyeOff } from 'lucide-react';
+import { cn } from '@/libs/utils/utils';
 interface PostContentBlurredProps {
   postId: string;
   className?: string;
 }
-
 export const PostContentBlurred = ({ postId, className }: PostContentBlurredProps) => {
   return (
     <Atoms.Button
@@ -15,7 +14,7 @@ export const PostContentBlurred = ({ postId, className }: PostContentBlurredProp
         e.stopPropagation();
         Core.ModerationController.unBlur(postId);
       }}
-      className={Libs.cn('group relative w-full cursor-pointer', className)}
+      className={cn('group relative w-full cursor-pointer', className)}
     >
       {/* Blurred background content to simulate hidden post */}
       <Atoms.Typography
@@ -34,7 +33,7 @@ export const PostContentBlurred = ({ postId, className }: PostContentBlurredProp
         overrideDefaults
         className="absolute inset-0 flex flex-col items-center justify-center gap-2 text-muted-foreground transition-colors group-hover:text-secondary-foreground"
       >
-        <Libs.EyeOff className="size-6" />
+        <EyeOff className="size-6" />
 
         <Atoms.Typography overrideDefaults as="p" className="text-sm">
           Post content moderated.

@@ -62,13 +62,6 @@ vi.mock('@/molecules', () => ({
   ),
 }));
 
-vi.mock('@/libs', async () => {
-  const actual = await vi.importActual('@/libs');
-  return {
-    ...actual,
-  };
-});
-
 vi.mock('./PostMenuActionsContent', () => ({
   PostMenuActionsContent: ({
     postId,

@@ -33,13 +33,6 @@ vi.mock('@/atoms', () => ({
   ),
 }));
 
-vi.mock('@/libs', async () => {
-  const actual = await vi.importActual('@/libs');
-  return {
-    ...actual,
-  };
-});
-
 describe('RepostHeader', () => {
   it('renders text and icon', () => {
     render(<RepostHeader />);

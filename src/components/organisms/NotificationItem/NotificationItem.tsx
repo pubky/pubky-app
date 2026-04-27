@@ -8,7 +8,6 @@ import * as Atoms from '@/atoms';
 import * as Molecules from '@/molecules';
 import * as Organisms from '@/organisms';
 import * as Core from '@/core';
-import * as Libs from '@/libs';
 import * as Hooks from '@/hooks';
 import type { ArticleJSON } from '@/hooks';
 import { NotificationType } from '@/core';
@@ -24,6 +23,8 @@ import {
 } from './NotificationItem.utils';
 import { resolvePubkyToNames } from './NotificationItem.helpers';
 import type { NotificationItemProps } from './NotificationItem.types';
+import { Logger } from '@/libs/logger/logger';
+import { formatNotificationTime, isPostDeleted } from '@/libs/utils/utils';
 
 export function NotificationItem({ notification, isUnread }: NotificationItemProps) {
   const t = useTranslations('notifications.actions');
@@ -66,7 +67,7 @@ export function NotificationItem({ notification, isUnread }: NotificationItemPro
     Core.PostController.getOrFetch({ compositeId: postCompositeId, viewerId })
       .then(async (post) => {
         if (!isCancelled && post?.content) {
-          if (Libs.isPostDeleted(post.content)) {
+          if (isPostDeleted(post.content)) {
             setPostContent(tPost('deleted'));
           } else if (post.kind === 'long') {
             try {
@@ -87,7 +88,7 @@ export function NotificationItem({ notification, isUnread }: NotificationItemPro
       })
       .catch((error) => {
         if (!isCancelled) {
-          Libs.Logger.warn('Failed to fetch notification post:', { postCompositeId, error });
+          Logger.warn('Failed to fetch notification post:', { postCompositeId, error });
         }
       });
 
@@ -109,8 +110,8 @@ export function NotificationItem({ notification, isUnread }: NotificationItemPro
   const previewText = hasPostPreview(notification.type) ? formatPreviewText(postContent) : null;
 
   // Format timestamps (short for mobile, long for desktop)
-  const timestampShort = Libs.formatNotificationTime(notification.timestamp, false);
-  const timestampLong = Libs.formatNotificationTime(notification.timestamp, true);
+  const timestampShort = formatNotificationTime(notification.timestamp, false);
+  const timestampLong = formatNotificationTime(notification.timestamp, true);
 
   // Calculate notification links (business logic separated in pure function)
   const { notificationLink, userProfileLink } = getNotificationLink(notification);

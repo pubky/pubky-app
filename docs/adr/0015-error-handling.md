@@ -488,7 +488,7 @@ const postDetails = useLiveQuery(async () => {
     if (!compositeId) return null;
     return await Core.PostController.getDetails({ compositeId });
   } catch (error) {
-    Libs.Logger.error('[usePostDetails] Query failed', { compositeId, error });
+    Logger.error('[usePostDetails] Query failed', { compositeId, error });
     return null; // or undefined, depending on desired behavior
   }
 }, [compositeId]);
@@ -502,7 +502,7 @@ This pattern must be repeated in every hook that uses `useLiveQuery` (~40 hooks)
 // src/hooks/useSafeLiveQuery/useSafeLiveQuery.ts
 import { useState, type DependencyList } from 'react';
 import { useLiveQuery } from 'dexie-react-hooks';
-import * as Libs from '@/libs';
+import { Logger } from '@/libs/logger/logger';
 
 export interface UseSafeLiveQueryResult<T> {
   data: T | undefined;
@@ -522,7 +522,7 @@ export function useSafeLiveQuery<T>(
       setError(null);
       return await queryFn();
     } catch (e) {
-      Libs.Logger.error(`[${context}] Query failed`, { error: e });
+      Logger.error(`[${context}] Query failed`, { error: e });
       setError(e instanceof Error ? e : new Error(String(e)));
       return undefined;
     }

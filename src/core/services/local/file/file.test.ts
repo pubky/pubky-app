@@ -1,9 +1,11 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import type { BlobResult, FileResult } from 'pubky-app-specs';
 import * as Core from '@/core';
-import * as Libs from '@/libs';
 import { LocalFileService } from './file';
 import { asOpaque } from '@/test-utils';
+import { DatabaseErrorCode } from '@/libs/error/error.codes';
+import { Err } from '@/libs/error/error.factories';
+import { ErrorCategory, ErrorService } from '@/libs/error/error.types';
 
 describe('LocalFileService', () => {
   const testPubky: Core.Pubky = 'operrr8wsbpr3ue9d4qj41ge1kcc6r7fdiy6o3ugjrrhi4y77rd0';
@@ -91,11 +93,11 @@ describe('LocalFileService', () => {
 
     it('propagates database error when bulkSave fails', async () => {
       const file = createMockFile(testFileId1);
-      const databaseError = Libs.Err.database(
-        Libs.DatabaseErrorCode.WRITE_FAILED,
+      const databaseError = Err.database(
+        DatabaseErrorCode.WRITE_FAILED,
         'Failed to bulk save records in file_details',
         {
-          service: Libs.ErrorService.Local,
+          service: ErrorService.Local,
           operation: 'bulkSave',
           context: { rowsCount: 1 },
         },
@@ -104,8 +106,8 @@ describe('LocalFileService', () => {
       vi.spyOn(Core.FileDetailsModel, 'bulkSave').mockRejectedValueOnce(databaseError);
 
       await expect(LocalFileService.createMany({ files: [file] })).rejects.toMatchObject({
-        category: Libs.ErrorCategory.Database,
-        code: Libs.DatabaseErrorCode.WRITE_FAILED,
+        category: ErrorCategory.Database,
+        code: DatabaseErrorCode.WRITE_FAILED,
         message: 'Failed to bulk save records in file_details',
       });
     });
@@ -293,21 +295,17 @@ describe('LocalFileService', () => {
     it('propagates database error when create fails', async () => {
       const blobResult = createMockBlobResult(`pubky://${testPubky}/blobs/blob-error`);
       const fileResult = createMockFileResult(testFileId1);
-      const databaseError = Libs.Err.database(
-        Libs.DatabaseErrorCode.WRITE_FAILED,
-        'Failed to create record in file_details',
-        {
-          service: Libs.ErrorService.Local,
-          operation: 'create',
-          context: { error: 'Database constraint violation' },
-        },
-      );
+      const databaseError = Err.database(DatabaseErrorCode.WRITE_FAILED, 'Failed to create record in file_details', {
+        service: ErrorService.Local,
+        operation: 'create',
+        context: { error: 'Database constraint violation' },
+      });
 
       vi.spyOn(Core.FileDetailsModel, 'create').mockRejectedValueOnce(databaseError);
 
       await expect(LocalFileService.create({ blobResult, fileResult })).rejects.toMatchObject({
-        category: Libs.ErrorCategory.Database,
-        code: Libs.DatabaseErrorCode.WRITE_FAILED,
+        category: ErrorCategory.Database,
+        code: DatabaseErrorCode.WRITE_FAILED,
         message: 'Failed to create record in file_details',
       });
     });

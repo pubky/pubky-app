@@ -2,12 +2,6 @@ import { describe, it, expect, vi } from 'vitest';
 import { render } from '@testing-library/react';
 import { PopoverInviteHomeserver } from './PopoverInviteHomeserver';
 
-// Mock libs - use actual utility functions and icons from lucide-react
-vi.mock('@/libs', async () => {
-  const actual = await vi.importActual('@/libs');
-  return { ...actual };
-});
-
 // Mock atoms
 vi.mock('@/atoms', () => ({
   Popover: ({ children }: { children: React.ReactNode }) => <div data-testid="popover">{children}</div>,
