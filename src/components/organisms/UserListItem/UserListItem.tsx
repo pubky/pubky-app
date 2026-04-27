@@ -13,7 +13,7 @@ import type {
   UserStatsProps,
   VariantProps,
 } from './UserListItem.types';
-import { USER_LIST_TAG_MAX_LENGTH, USER_LIST_TAGS_MAX_TOTAL_CHARS, USER_LIST_TAGS_MAX_COUNT } from '@/config';
+import { USER_LIST_TAG_MAX_LENGTH, USER_LIST_TAGS_MAX_TOTAL_CHARS } from '@/config';
 
 // =============================================================================
 // Internal Components
@@ -196,7 +196,6 @@ function TagsList({ userId, className }: { userId: string; className?: string })
     <Organisms.ClickableTagsList
       taggedId={userId}
       taggedKind={Core.TagKind.USER}
-      maxTags={USER_LIST_TAGS_MAX_COUNT}
       maxTagLength={USER_LIST_TAG_MAX_LENGTH}
       maxTotalChars={USER_LIST_TAGS_MAX_TOTAL_CHARS}
       showCount={false}

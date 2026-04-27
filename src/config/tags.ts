@@ -17,9 +17,6 @@ export const USER_LIST_TAG_MAX_LENGTH = 8;
 /** Maximum total characters across all displayed tags in user list items */
 export const USER_LIST_TAGS_MAX_TOTAL_CHARS = 20;
 
-/** Maximum number of tags to display in user list items */
-export const USER_LIST_TAGS_MAX_COUNT = 3;
-
 // =============================================================================
 // Post Tag Display (Feed + Post Lists)
 // =============================================================================

@@ -10,7 +10,6 @@ import type { ClickableTagsListProps } from './ClickableTagsList.types';
 import {
   CLICKABLE_TAGS_DEFAULT_MAX_LENGTH,
   CLICKABLE_TAGS_DEFAULT_MAX_TOTAL_CHARS,
-  CLICKABLE_TAGS_DEFAULT_MAX_TAGS,
   TAG_INPUT_WIDTH_AT_LIMIT,
   TAG_INPUT_WIDTH_DEFAULT,
 } from '@/config';
@@ -38,7 +37,7 @@ export function ClickableTagsList({
   taggedId,
   taggedKind,
   tags: providedTags,
-  maxTags = CLICKABLE_TAGS_DEFAULT_MAX_TAGS,
+  maxTags,
   maxTagLength = CLICKABLE_TAGS_DEFAULT_MAX_LENGTH,
   maxTotalChars = CLICKABLE_TAGS_DEFAULT_MAX_TOTAL_CHARS,
   showCount = true,
@@ -72,7 +71,7 @@ export function ClickableTagsList({
 
   // Determine if input should be shown
   const hasInput = showInput || isAdding;
-  const isAtLimit = enrichedTags.length >= maxTags;
+  const isAtLimit = maxTags ? enrichedTags.length >= maxTags : false;
   const inputWidth = isAtLimit ? TAG_INPUT_WIDTH_AT_LIMIT : TAG_INPUT_WIDTH_DEFAULT;
 
   // Get viewer's own tags for duplicate checking
@@ -128,6 +127,7 @@ export function ClickableTagsList({
 
   // Handle add button click with auth requirement
   const handleAddButtonClick = () => {
+    console.log('handleAddButtonClick');
     requireAuth(() => {
       onAddButtonClick?.();
       if (addMode) setIsAdding(true);
@@ -180,7 +180,7 @@ export function ClickableTagsList({
                 viewerTags={viewerTags}
                 showCloseButton={addMode && !showInput && isAuthenticated}
                 onClose={handleInputClose}
-                disabled={!isAuthenticated || isAtLimit}
+                disabled={!isAuthenticated}
                 maxTags={maxTags}
                 currentTagsCount={enrichedTags.length}
                 onBlur={handleInputBlur}
@@ -197,7 +197,7 @@ export function ClickableTagsList({
               hasAddButton ? (
                 <Molecules.PostTagAddButton
                   variant="plain"
-                  disabled={isAuthenticated && isAtLimit}
+                  disabled={!isAuthenticated}
                   onClick={handleAddButtonClick}
                 />
               ) : null

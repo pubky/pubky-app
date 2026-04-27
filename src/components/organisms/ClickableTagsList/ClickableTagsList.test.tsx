@@ -370,13 +370,13 @@ describe('ClickableTagsList', () => {
           containerVariant: 'plain',
           maxTags: 3,
           currentTagsCount: 3,
-          disabled: true,
+          disabled: false,
         }),
         undefined,
       );
     });
 
-    it('disables add button at max tags for authenticated users', () => {
+    it('keeps add button enabled at max tags for authenticated users', () => {
       render(
         <ClickableTagsList
           taggedId="post-123"
@@ -387,11 +387,11 @@ describe('ClickableTagsList', () => {
         />,
       );
 
-      expect(screen.getByTestId('post-tag-add-button')).toBeDisabled();
+      expect(screen.getByTestId('post-tag-add-button')).toBeEnabled();
       expect(mockPostTagAddButton).toHaveBeenCalledWith(
         expect.objectContaining({
           variant: 'plain',
-          disabled: true,
+          disabled: false,
         }),
         undefined,
       );
