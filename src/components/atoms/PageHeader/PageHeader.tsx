@@ -1,5 +1,5 @@
-import * as Libs from '@/libs';
 import * as Atoms from '@/atoms';
+import { cn } from '@/libs/utils/utils';
 
 interface PageHeaderProps {
   children: React.ReactNode;
@@ -15,7 +15,7 @@ export function PageHeader({
 }: PageHeaderProps & React.HTMLAttributes<HTMLDivElement>) {
   return (
     <Atoms.Container
-      className={Libs.cn('gap-3 pt-2 pb-6', className)}
+      className={cn('gap-3 pt-2 pb-6', className)}
       data-testid={dataTestId || 'container'}
       {...(props as React.ComponentProps<typeof Atoms.Container>)}
     >

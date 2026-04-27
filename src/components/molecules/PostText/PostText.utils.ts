@@ -1,8 +1,8 @@
 import type { Root, Paragraph, Text, Link, PhrasingContent, Parent, RootContent } from 'mdast';
 import { ReactNode } from 'react';
 import { visit } from 'unist-util-visit';
-import { Identity } from '@/libs';
 import { TRUNCATION_LIMIT } from './PostText.constants';
+import { Identity } from '@/libs/identity/identity';
 
 // We assign full code blocks without a language specified as plaintext (ex. ```...```)
 export const remarkPlaintextCodeblock = () => (tree: Root) => {

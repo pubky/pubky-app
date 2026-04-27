@@ -2,12 +2,12 @@
 
 import * as Atoms from '@/atoms';
 import * as Molecules from '@/molecules';
-import * as Utils from '@/libs/utils';
 import type { AttachmentConstructed } from '@/organisms/PostAttachments/PostAttachments.types';
 import type { CarouselApi } from '@/components/atoms/Carousel';
 import { useEffect, useState } from 'react';
 import { useTranslations } from 'next-intl';
 import { X, Maximize } from 'lucide-react';
+import { cn } from '@/libs/utils/utils';
 type PostAttachmentsImagesAndVideosProps = {
   imagesAndVideos: AttachmentConstructed[];
 };
@@ -72,7 +72,7 @@ export const PostAttachmentsImagesAndVideos = ({ imagesAndVideos }: PostAttachme
                   src={media.type === 'image/gif' ? media.urls.main : (media.urls.feed as string)}
                   alt={media.name}
                   fill={!isOnlyMedia}
-                  className={Utils.cn(
+                  className={cn(
                     'rounded-md',
                     isOnlyMedia ? 'max-h-96 w-fit object-contain' : 'object-cover object-center',
                   )}

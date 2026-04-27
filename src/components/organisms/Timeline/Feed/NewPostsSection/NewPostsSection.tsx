@@ -2,9 +2,9 @@
 
 import { useTranslations } from 'next-intl';
 import * as Core from '@/core';
-import * as Libs from '@/libs';
 import * as Molecules from '@/molecules';
 import * as Hooks from '@/hooks';
+import { Logger } from '@/libs/logger/logger';
 
 interface NewPostsSectionProps {
   streamId: Core.PostStreamId;
@@ -46,7 +46,7 @@ export function NewPostsSection({ streamId, postIds, mutedUserIdSet, loading, pr
 
       window.scrollTo({ top: 0, behavior: 'smooth' });
     } catch (error) {
-      Libs.Logger.error('Failed to load new posts:', error);
+      Logger.error('Failed to load new posts:', error);
       Molecules.showErrorToast({
         title: t('failedToLoadPosts'),
         description: t('failedToLoadPostsDesc'),

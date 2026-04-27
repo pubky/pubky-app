@@ -3,7 +3,6 @@
 import { useTranslations } from 'next-intl';
 import * as Core from '@/core';
 import * as Hooks from '@/hooks';
-import * as Libs from '@/libs';
 import * as Molecules from '@/molecules';
 import { POST_ROUTES } from '@/app/routes';
 import { POST_MENU_ACTION_IDS, POST_MENU_ACTION_VARIANTS } from './usePostMenuActions.constants';
@@ -36,6 +35,8 @@ import {
   Edit,
   Trash,
 } from 'lucide-react';
+import { isAppError } from '@/libs/error/error.utils';
+import { stripPubkyPrefix, truncateString, withPubkyPrefix } from '@/libs/utils/utils';
 export function usePostMenuActions(postId: string, options: UsePostMenuActionsOptions): UsePostMenuActionsResult {
   const t = useTranslations('post.actions');
   const tToast = useTranslations('toast');
@@ -46,7 +47,7 @@ export function usePostMenuActions(postId: string, options: UsePostMenuActionsOp
   const parsedId = Core.parseCompositeId(postId);
   // Normalize author ID to ensure consistent format (strip pubky: or pk: prefix)
   // This is necessary because composite IDs may contain prefixed pubky IDs
-  const postAuthorId = Libs.stripPubkyPrefix(parsedId.pubky) as Core.Pubky;
+  const postAuthorId = stripPubkyPrefix(parsedId.pubky) as Core.Pubky;
   const { currentUserPubky } = Hooks.useCurrentUserProfile();
   const { postDetails, isLoading: isPostLoading } = Hooks.usePostDetails(postId);
   const { profile: authorProfile, isLoading: isAuthorLoading } = Hooks.useUserProfile(postAuthorId);
@@ -66,7 +67,7 @@ export function usePostMenuActions(postId: string, options: UsePostMenuActionsOp
   const isOwnPost = currentUserPubky === postAuthorId;
   const isUserMuted = isMuted(postAuthorId);
   const rawUsername = authorProfile?.name || postAuthorId;
-  const username = Libs.truncateString(rawUsername, 15);
+  const username = truncateString(rawUsername, 15);
   const isArticle = postDetails?.kind === 'long';
   const isLoading = isPostLoading || isAuthorLoading || isFollowingLoading || isMutedUsersLoading;
   const postUrl = `${typeof window !== 'undefined' ? window.location.origin : ''}${POST_ROUTES.POST}/${parsedId.pubky}/${parsedId.id}`;
@@ -88,7 +89,7 @@ export function usePostMenuActions(postId: string, options: UsePostMenuActionsOp
         } catch (error) {
           Molecules.toast({
             title: tToast('error'),
-            description: Libs.isAppError(error) ? error.message : tFollow('failed'),
+            description: isAppError(error) ? error.message : tFollow('failed'),
           });
         }
       },
@@ -102,11 +103,11 @@ export function usePostMenuActions(postId: string, options: UsePostMenuActionsOp
     icon: Key,
     onClick: async () => {
       try {
-        await copyPubky(Libs.withPubkyPrefix(postAuthorId));
+        await copyPubky(withPubkyPrefix(postAuthorId));
       } catch (error) {
         Molecules.toast({
           title: tToast('error'),
-          description: Libs.isAppError(error) ? error.message : tCopy('copyFailedDesc'),
+          description: isAppError(error) ? error.message : tCopy('copyFailedDesc'),
         });
       }
     },
@@ -122,7 +123,7 @@ export function usePostMenuActions(postId: string, options: UsePostMenuActionsOp
       } catch (error) {
         Molecules.toast({
           title: tToast('error'),
-          description: Libs.isAppError(error) ? error.message : tCopy('copyFailedDesc'),
+          description: isAppError(error) ? error.message : tCopy('copyFailedDesc'),
         });
       }
     },
@@ -139,7 +140,7 @@ export function usePostMenuActions(postId: string, options: UsePostMenuActionsOp
         } catch (error) {
           Molecules.toast({
             title: tToast('error'),
-            description: Libs.isAppError(error) ? error.message : tCopy('copyFailedDesc'),
+            description: isAppError(error) ? error.message : tCopy('copyFailedDesc'),
           });
         }
       },
@@ -173,7 +174,7 @@ export function usePostMenuActions(postId: string, options: UsePostMenuActionsOp
         } catch (error) {
           Molecules.toast({
             title: tToast('error'),
-            description: Libs.isAppError(error) ? error.message : tMute('failed'),
+            description: isAppError(error) ? error.message : tMute('failed'),
           });
         }
       },

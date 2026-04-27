@@ -1,6 +1,5 @@
 import { clsx, type ClassValue } from 'clsx';
 import { twMerge } from 'tailwind-merge';
-import { formatDistanceToNow } from 'date-fns';
 import type { SnapshotSerializer } from 'vitest';
 import type {
   ExtractInitialsProps,
@@ -227,19 +226,6 @@ export function clearCookies(exclude: string[] = []) {
       document.cookie = `${name.trim()}=;expires=Thu, 01 Jan 1970 00:00:00 GMT;path=/`;
     });
   }
-}
-
-export function timeAgo(date: Date): string {
-  const now = new Date();
-  const diffMs = now.getTime() - date.getTime();
-  const diffMins = Math.floor(diffMs / (1000 * 60));
-  const diffHours = Math.floor(diffMs / (1000 * 60 * 60));
-
-  if (diffMins < 1) return 'now';
-  if (diffMins < 60) return `${diffMins}m`;
-  if (diffHours < 24) return `${diffHours}h`;
-
-  return formatDistanceToNow(date, { addSuffix: true });
 }
 
 /**
@@ -770,7 +756,7 @@ export function generateRandomUsername(): string {
  *
  * @example
  * // In test setup (e.g., vitest.setup.ts):
- * import { radixIdSerializer } from '@/libs/utils';
+ * import { radixIdSerializer } from '@/libs/utils/utils';
  * expect.addSnapshotSerializer(radixIdSerializer);
  */
 export const radixIdSerializer: SnapshotSerializer = {

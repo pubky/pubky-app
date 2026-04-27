@@ -4,12 +4,12 @@ import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import * as Atoms from '@/atoms';
 import * as Organisms from '@/organisms';
-import * as Libs from '@/libs';
 import * as App from '@/app';
 import * as Core from '@/core';
 import * as Hooks from '@/hooks';
 import { useTranslations } from 'next-intl';
 import { Home, Search, Flame, Bookmark, Settings } from 'lucide-react';
+import { cn } from '@/libs/utils/utils';
 export interface MobileFooterProps {
   className?: string;
 }
@@ -75,7 +75,7 @@ export function MobileFooter({ className }: MobileFooterProps) {
   return (
     <Atoms.Container
       overrideDefaults
-      className={Libs.cn(
+      className={cn(
         'fixed bottom-0 z-40 w-full overflow-x-auto bg-gradient-to-t from-background via-background/95 to-transparent px-3 py-4 transition-transform duration-75 lg:hidden',
         className,
       )}
@@ -121,7 +121,7 @@ export function MobileFooter({ className }: MobileFooterProps) {
                   // Ignore storage errors and keep default navigation behavior.
                 }
               }}
-              className={Libs.cn(
+              className={cn(
                 'rounded-full p-3 transition-all',
                 isActive(activePath)
                   ? 'bg-secondary'
@@ -154,7 +154,7 @@ export function MobileFooter({ className }: MobileFooterProps) {
               variant="secondary"
             >
               <Atoms.Typography
-                className={Libs.cn('font-semibold text-primary-foreground', unreadNotifications > 21 && 'text-xs')}
+                className={cn('font-semibold text-primary-foreground', unreadNotifications > 21 && 'text-xs')}
                 size="xs"
               >
                 {unreadNotifications > 21 ? '21+' : unreadNotifications}

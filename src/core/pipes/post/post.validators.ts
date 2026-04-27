@@ -1,5 +1,7 @@
-import { Err, ErrorService, ClientErrorCode } from '@/libs/error';
 import * as Core from '@/core';
+import { ClientErrorCode } from '@/libs/error/error.codes';
+import { Err } from '@/libs/error/error.factories';
+import { ErrorService } from '@/libs/error/error.types';
 
 export type TValidatePostIdParams = {
   postId: string;

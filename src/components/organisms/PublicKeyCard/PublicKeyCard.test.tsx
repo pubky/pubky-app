@@ -2,7 +2,7 @@ import { describe, it, expect, vi, beforeEach, afterAll } from 'vitest';
 import { render, screen, fireEvent } from '@testing-library/react';
 import { PublicKeyCard } from './PublicKeyCard';
 
-// Mock navigator.clipboard (not needed anymore since we mock Libs.copyToClipboard directly)
+// Mock navigator.clipboard (not needed anymore since copy is mocked directly)
 // const mockWriteText = vi.fn();
 // Object.assign(navigator, {
 //   clipboard: {
@@ -175,7 +175,6 @@ vi.mock('@/hooks', () => ({
   useCopyToClipboard: mockUseCopyToClipboard,
 }));
 
-// Mock libs
 const { mockShareWithFallback } = vi.hoisted(() => ({
   mockShareWithFallback: vi.fn(),
 }));
@@ -185,20 +184,19 @@ const { mockLoggerError, mockLoggerInfo } = vi.hoisted(() => ({
   mockLoggerInfo: vi.fn(),
 }));
 
-// Mock libs - use actual utility functions and icons from lucide-react
-vi.mock('@/libs', async () => {
-  const actual = await vi.importActual('@/libs');
+vi.mock('@/libs/share/share', async () => {
+  const actual = await vi.importActual<typeof import('@/libs/share/share')>('@/libs/share/share');
   return {
     ...actual,
-    Identity: {
-      generateKeypair: vi.fn(() => ({
-        keypair: 'test-keypair',
-        mnemonic: 'abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon about',
-      })),
-      pubkyFromKeypair: vi.fn(() => 'generated-pubky'),
-    },
     shareWithFallback: mockShareWithFallback,
+  };
+});
+vi.mock('@/libs/logger/logger', async () => {
+  const actual = await vi.importActual<typeof import('@/libs/logger/logger')>('@/libs/logger/logger');
+  return {
+    ...actual,
     Logger: {
+      ...actual.Logger,
       error: mockLoggerError,
       info: mockLoggerInfo,
     },

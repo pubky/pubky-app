@@ -3,7 +3,6 @@
 import { useLiveQuery } from 'dexie-react-hooks';
 import * as Atoms from '@/atoms';
 import * as Organisms from '@/organisms';
-import * as Libs from '@/libs';
 import * as Hooks from '@/hooks';
 import * as Core from '@/core';
 
@@ -14,6 +13,8 @@ import * as Core from '@/core';
  * No props needed - it fetches user data and manages dialog state internally.
  */
 import { Key, ArrowRight } from 'lucide-react';
+import { Logger } from '@/libs/logger/logger';
+import { formatPublicKey, withPubkyPrefix } from '@/libs/utils/utils';
 export function DialogWelcome() {
   const { currentUserPubky } = Core.useAuthStore();
   const { showWelcomeDialog, setShowWelcomeDialog } = Core.useOnboardingStore();
@@ -27,7 +28,7 @@ export function DialogWelcome() {
       });
       return details || null;
     } catch (error) {
-      Libs.Logger.error('[DialogWelcome] Failed to query user details', {
+      Logger.error('[DialogWelcome] Failed to query user details', {
         error,
       });
       return null;
@@ -39,14 +40,14 @@ export function DialogWelcome() {
   if (!userDetails || !currentUserPubky) {
     return null;
   }
-  const displayPublicKey = Libs.formatPublicKey({
+  const displayPublicKey = formatPublicKey({
     key: currentUserPubky,
   });
   const avatarImage = userDetails.image
     ? Core.FileController.getAvatarUrl(currentUserPubky, userDetails.indexed_at)
     : undefined;
   const handleCopyToClipboard = () => {
-    copyToClipboard(Libs.withPubkyPrefix(currentUserPubky));
+    copyToClipboard(withPubkyPrefix(currentUserPubky));
   };
   const handleExplorePubky = () => {
     // Set welcome dialog to false permanently - it will never show again for this user

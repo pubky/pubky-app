@@ -34,9 +34,9 @@ vi.mock('dexie-react-hooks', () => ({
   },
 }));
 
-// Mock @/libs
+// Mock logger
 const mockLoggerError = vi.fn();
-vi.mock('@/libs', () => ({
+vi.mock('@/libs/logger/logger', () => ({
   Logger: {
     error: (...args: unknown[]) => mockLoggerError(...args),
   },

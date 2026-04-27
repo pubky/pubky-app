@@ -1,12 +1,12 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import * as Core from '@/core';
-import * as Libs from '@/libs';
 import { TEST_PUBKY, restoreMocks, buildPubkyUri } from '../pipes.test-utils';
+import { Logger } from '@/libs/logger/logger';
 
 describe('SettingsNormalizer', () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    vi.spyOn(Libs.Logger, 'debug').mockImplementation(() => {});
+    vi.spyOn(Logger, 'debug').mockImplementation(() => {});
   });
 
   afterEach(restoreMocks);
@@ -139,7 +139,7 @@ describe('SettingsNormalizer', () => {
 
       Core.SettingsNormalizer.to(settings, TEST_PUBKY.USER_1);
 
-      expect(Libs.Logger.debug).toHaveBeenCalledWith('Settings normalized for homeserver', expect.any(Object));
+      expect(Logger.debug).toHaveBeenCalledWith('Settings normalized for homeserver', expect.any(Object));
     });
   });
 

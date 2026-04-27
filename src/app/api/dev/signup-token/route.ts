@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { handleApiError } from '@/libs/api';
+import { handleApiError } from '@/libs/api/route-error-handler';
 
 /**
  * DEV/TEST ONLY: Generates a signup token from the homeserver admin endpoint.

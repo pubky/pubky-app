@@ -4,11 +4,11 @@ import { useState } from 'react';
 import { useTranslations } from 'next-intl';
 import * as Atoms from '@/atoms';
 import * as Hooks from '@/hooks';
-import * as Libs from '@/libs';
 import * as Molecules from '@/molecules';
 import * as Organisms from '@/organisms';
 import { POST_INPUT_VARIANT } from '@/organisms/PostInput/PostInput.constants';
 import type { DialogNewPostProps } from './DialogNewPost.types';
+import { cn } from '@/libs/utils/utils';
 
 export function DialogNewPost({ open, onOpenChangeAction }: DialogNewPostProps) {
   const t = useTranslations('dialogs.newPost');
@@ -25,7 +25,7 @@ export function DialogNewPost({ open, onOpenChangeAction }: DialogNewPostProps) 
   return (
     <Atoms.Dialog open={open} onOpenChange={handleOpenChange}>
       <Atoms.DialogContent
-        className={Libs.cn('w-3xl', isKeyboardVisible && 'transition-transform duration-75')}
+        className={cn('w-3xl', isKeyboardVisible && 'transition-transform duration-75')}
         style={
           isKeyboardVisible && keyboardOffset > 0
             ? {

@@ -31,12 +31,6 @@ vi.mock('@/atoms', () => ({
   ),
 }));
 
-// Mock @/libs - use actual implementations
-vi.mock('@/libs', async () => {
-  const actual = await vi.importActual('@/libs');
-  return { ...actual };
-});
-
 describe('PostThreadConnector', () => {
   describe('Functionality', () => {
     it('renders with regular variant by default', () => {

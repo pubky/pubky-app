@@ -2,8 +2,10 @@
 
 import { useState, useCallback } from 'react';
 import * as Core from '@/core';
-import { HttpMethod, Logger, isAppError } from '@/libs';
 import type { UseFollowUserResult } from './useFollowUser.types';
+import { HttpMethod } from '@/libs/http/http.types';
+import { Logger } from '@/libs/logger/logger';
+import { isAppError } from '@/libs/error/error.utils';
 
 /**
  * useFollowUser

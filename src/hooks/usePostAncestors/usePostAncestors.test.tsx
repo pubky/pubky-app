@@ -40,15 +40,6 @@ vi.mock('@/core', () => ({
   CompositeIdDomain: { POSTS: 'posts' },
 }));
 
-// Mock Libs
-vi.mock('@/libs', () => ({
-  Logger: {
-    error: vi.fn(),
-    warn: vi.fn(),
-    debug: vi.fn(),
-  },
-}));
-
 describe('usePostAncestors', () => {
   const mockPostId = 'user3:post3';
 

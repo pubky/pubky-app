@@ -3,8 +3,8 @@
 import { useCallback, useEffect, useMemo } from 'react';
 import { useLiveQuery } from 'dexie-react-hooks';
 import * as Core from '@/core';
-import * as Libs from '@/libs';
 import type { UseBulkUserAvatarsResult, UserWithAvatar } from './useBulkUserAvatars.types';
+import { Logger } from '@/libs/logger/logger';
 
 /**
  * Hook to get user details with avatar URLs for multiple users.
@@ -32,7 +32,7 @@ export function useBulkUserAvatars(userIds: Core.Pubky[]): UseBulkUserAvatarsRes
         if (uniqueUserIds.length === 0) return new Map<Core.Pubky, Core.NexusUserDetails>();
         return await Core.UserController.getManyDetails({ userIds: uniqueUserIds });
       } catch (error) {
-        Libs.Logger.error('[useBulkUserAvatars] Failed to query user details', { userIds: uniqueUserIds, error });
+        Logger.error('[useBulkUserAvatars] Failed to query user details', { userIds: uniqueUserIds, error });
         return new Map<Core.Pubky, Core.NexusUserDetails>();
       }
     },

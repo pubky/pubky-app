@@ -1,8 +1,8 @@
 'use client';
 
 import * as Atoms from '@/atoms';
-import * as Libs from '@/libs';
 import type { SidebarSectionProps } from './SidebarSection.types';
+import { cn } from '@/libs/utils/utils';
 
 /**
  * SidebarSection
@@ -28,7 +28,7 @@ export function SidebarSection({
   return (
     <Atoms.Container
       overrideDefaults
-      className={Libs.cn('flex w-full min-w-0 flex-col gap-2', className)}
+      className={cn('flex w-full min-w-0 flex-col gap-2', className)}
       data-cy={dataCy}
       data-testid={dataTestId}
     >

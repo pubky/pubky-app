@@ -1,6 +1,10 @@
 import * as Core from '@/core';
-import { HttpMethod, Err, ClientErrorCode, ErrorService, Logger } from '@/libs';
 import { postUriBuilder } from 'pubky-app-specs';
+import { HttpMethod } from '@/libs/http/http.types';
+import { Logger } from '@/libs/logger/logger';
+import { ClientErrorCode } from '@/libs/error/error.codes';
+import { Err } from '@/libs/error/error.factories';
+import { ErrorService } from '@/libs/error/error.types';
 
 export class PostApplication {
   /**

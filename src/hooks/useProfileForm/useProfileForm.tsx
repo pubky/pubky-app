@@ -6,12 +6,15 @@ import { useRouter } from 'next/navigation';
 import { useTranslations } from 'next-intl';
 
 import * as Molecules from '@/molecules';
-import * as Libs from '@/libs';
 import * as Core from '@/core';
 import * as App from '@/app';
 import { USER_NAME_MIN_LENGTH, USER_NAME_MAX_LENGTH, USER_BIO_MAX_LENGTH } from '@/config';
 
 import type { ProfileLink, UseProfileFormProps, UseProfileFormReturn, SubmitTextKey } from './useProfileForm.types';
+import { Logger } from '@/libs/logger/logger';
+import { generateRandomUsername } from '@/libs/utils/utils';
+import { AppError } from '@/libs/error/error';
+import { isAuthError, requiresLogin } from '@/libs/error/error.utils';
 
 const DEFAULT_LINKS: ProfileLink[] = [
   { label: 'WEBSITE', url: '' },
@@ -41,7 +44,7 @@ export function useProfileForm(props: UseProfileFormProps): UseProfileFormReturn
   const fileInputRef = useRef<HTMLInputElement | null>(null);
 
   // Generate a stable initial username for create mode (only generated once)
-  const initialUsername = useMemo(() => (mode === 'create' ? Libs.generateRandomUsername() : ''), [mode]);
+  const initialUsername = useMemo(() => (mode === 'create' ? generateRandomUsername() : ''), [mode]);
 
   // Form state
   const [name, setName] = useState(initialUsername);
@@ -344,10 +347,10 @@ export function useProfileForm(props: UseProfileFormProps): UseProfileFormReturn
         router.push(App.PROFILE_ROUTES.PROFILE);
       }
     } catch (error) {
-      if (error instanceof Libs.AppError) {
+      if (error instanceof AppError) {
         // Handle session expiration - user needs to re-authenticate
-        if (Libs.requiresLogin(error)) {
-          Libs.Logger.error('Session expired while saving profile', error);
+        if (requiresLogin(error)) {
+          Logger.error('Session expired while saving profile', error);
           setSubmitTextKey('tryAgain');
           toast({
             title: tProfile('sessionExpired'),
@@ -357,8 +360,8 @@ export function useProfileForm(props: UseProfileFormProps): UseProfileFormReturn
         }
 
         // Handle auth errors from homeserver
-        if (Libs.isAuthError(error)) {
-          Libs.Logger.error('Failed to save profile in Homeserver', error);
+        if (isAuthError(error)) {
+          Logger.error('Failed to save profile in Homeserver', error);
           setSubmitTextKey('tryAgain');
           toast({
             title: tProfile('saveFailed'),

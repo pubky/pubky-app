@@ -21,20 +21,6 @@ const { mockCurrentUserPubky, setMockCurrentUserPubky, mockUnreadCount, setMockU
   };
 });
 
-// Mock libs
-vi.mock('@/libs', async () => {
-  const actual = await vi.importActual('@/libs');
-  return {
-    ...actual,
-    Logger: {
-      error: vi.fn(),
-      warn: vi.fn(),
-      info: vi.fn(),
-      debug: vi.fn(),
-    },
-  };
-});
-
 // Mock Core
 vi.mock('@/core', async (importOriginal) => {
   const actual = await importOriginal<typeof import('@/core')>();

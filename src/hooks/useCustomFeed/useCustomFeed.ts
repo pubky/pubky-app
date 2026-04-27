@@ -3,8 +3,8 @@
 import { useLiveQuery } from 'dexie-react-hooks';
 import { useParams, usePathname } from 'next/navigation';
 import * as Core from '@/core';
-import * as Libs from '@/libs';
 import { APP_ROUTES } from '@/app/routes';
+import { Logger } from '@/libs/logger/logger';
 
 export function useCustomFeed(): Core.FeedModelSchema | undefined {
   const pathname = usePathname();
@@ -16,7 +16,7 @@ export function useCustomFeed(): Core.FeedModelSchema | undefined {
     try {
       return await Core.FeedController.get({ feedId: id });
     } catch (error) {
-      Libs.Logger.error('[useCustomFeed] Failed to query custom feed', { error });
+      Logger.error('[useCustomFeed] Failed to query custom feed', { error });
       return undefined;
     }
   }, [isFeedRoute, id]);

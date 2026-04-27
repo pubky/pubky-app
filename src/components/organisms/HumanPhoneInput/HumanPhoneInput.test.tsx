@@ -2,7 +2,7 @@ import { describe, it, expect } from 'vitest';
 import { render } from '@testing-library/react';
 
 import { HumanPhoneInput } from './HumanPhoneInput';
-import { parsePhoneNumber } from '@/libs';
+import { parsePhoneNumber } from '@/libs/phone/phone';
 
 describe('HumanPhoneInput', () => {
   it('matches snapshot', () => {

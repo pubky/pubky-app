@@ -3,12 +3,12 @@
 import { useState } from 'react';
 import { useTranslations } from 'next-intl';
 import * as Atoms from '@/atoms';
-import * as Libs from '@/libs';
 import * as Molecules from '@/molecules';
 import * as Organisms from '@/organisms';
 import * as Hooks from '@/hooks';
 import { TIMELINE_FEED_VARIANT } from '@/config';
 import { HotSection } from '@/molecules/HotMobileMenu/HotMobileMenu.types';
+import { cn } from '@/libs/utils/utils';
 
 /**
  * Hot Template
@@ -51,16 +51,16 @@ export function Hot() {
       <Molecules.HotMobileMenu activeSection={activeSection} onSectionChange={setActiveSection} />
 
       {/* Hot Cards - hidden via CSS when another tab is active on mobile */}
-      <Organisms.HotTagsCardsSection className={Libs.cn(hideTags && 'hidden')} />
+      <Organisms.HotTagsCardsSection className={cn(hideTags && 'hidden')} />
 
       {/* Tags Overview - hidden via CSS when another tab is active on mobile */}
-      <Organisms.HotTagsOverview className={Libs.cn(hideTags && 'hidden')} />
+      <Organisms.HotTagsOverview className={cn(hideTags && 'hidden')} />
 
       {/* Active Users - hidden via CSS when another tab is active on mobile */}
-      <Organisms.HotActiveUsers className={Libs.cn(hideUsers && 'hidden')} />
+      <Organisms.HotActiveUsers className={cn(hideUsers && 'hidden')} />
 
       {/* Trending Posts - hidden via CSS when another tab is active on mobile */}
-      <Atoms.Container overrideDefaults className={Libs.cn('flex flex-col gap-2', hidePosts && 'hidden')}>
+      <Atoms.Container overrideDefaults className={cn('flex flex-col gap-2', hidePosts && 'hidden')}>
         <Atoms.Heading level={5} size="lg" className="font-light text-muted-foreground">
           {t('trendingPosts')}
         </Atoms.Heading>

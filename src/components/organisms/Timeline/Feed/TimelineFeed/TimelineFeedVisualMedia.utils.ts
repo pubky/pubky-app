@@ -1,7 +1,6 @@
 'use client';
-
-import * as Libs from '@/libs';
 import type { VisualTile, VisualTileProbeState } from './TimelineFeedVisual.types';
+import { Logger } from '@/libs/logger/logger';
 
 export type ProbeCacheEntry = {
   status: VisualTileProbeState;
@@ -129,7 +128,7 @@ export function ensureVisualTileProbe(tile: VisualTile): Promise<void> {
       });
     })
     .catch((error) => {
-      Libs.Logger.error('[VisualFeed] Failed to probe media dimensions', {
+      Logger.error('[VisualFeed] Failed to probe media dimensions', {
         tileId: tile.id,
         error,
       });

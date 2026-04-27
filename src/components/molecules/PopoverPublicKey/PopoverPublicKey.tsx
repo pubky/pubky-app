@@ -1,11 +1,11 @@
 import * as Atoms from '@/atoms';
-import * as Libs from '@/libs';
 import { CircleHelp } from 'lucide-react';
+import { cn } from '@/libs/utils/utils';
 export function PopoverPublicKey({ ...props }: React.HTMLAttributes<HTMLDivElement>) {
   return (
     <Atoms.Popover hover>
       <Atoms.PopoverTrigger asChild>
-        <Atoms.Button variant="ghost" size="icon" className={Libs.cn('hover:bg-white/10', props.className)}>
+        <Atoms.Button variant="ghost" size="icon" className={cn('hover:bg-white/10', props.className)}>
           <CircleHelp className="h-4 w-4 text-white" data-testid="circle-help-icon" />
         </Atoms.Button>
       </Atoms.PopoverTrigger>

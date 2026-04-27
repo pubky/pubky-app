@@ -3,7 +3,6 @@
 import { useLiveQuery } from 'dexie-react-hooks';
 import { useTranslations } from 'next-intl';
 import * as Core from '@/core';
-import * as Libs from '@/libs';
 import * as Atoms from '@/atoms';
 import * as Organisms from '@/organisms';
 import { APP_ROUTES } from '@/app/routes';
@@ -12,6 +11,8 @@ import { usePathname } from 'next/navigation';
 // Module-level cache: survives remounts within the session so that
 // navigating between /home and /feed/[id] doesn't flash empty tabs.
 import { Pencil, Home, PlusCircle } from 'lucide-react';
+import { Logger } from '@/libs/logger/logger';
+import { cn } from '@/libs/utils/utils';
 let cachedFeeds: Core.FeedModelSchema[] = [];
 interface FeedNavigationProps {
   className?: string;
@@ -27,7 +28,7 @@ export const FeedNavigation = ({ className }: FeedNavigationProps) => {
         cachedFeeds = result;
         return result;
       } catch (error) {
-        Libs.Logger.error('[FeedNavigation] Failed to query custom feeds', {
+        Logger.error('[FeedNavigation] Failed to query custom feeds', {
           error,
         });
         return [] as Core.FeedModelSchema[];
@@ -50,7 +51,7 @@ export const FeedNavigation = ({ className }: FeedNavigationProps) => {
     ...customFeedsMapped,
   ];
   return (
-    <Atoms.Container className={Libs.cn('overflow-x-auto lg:flex-row', className)}>
+    <Atoms.Container className={cn('overflow-x-auto lg:flex-row', className)}>
       <Atoms.Heading level={2} size="lg" className="mb-2 font-light text-muted-foreground lg:hidden">
         {tHeader('feed')}
       </Atoms.Heading>
@@ -60,7 +61,7 @@ export const FeedNavigation = ({ className }: FeedNavigationProps) => {
           overrideDefaults
           key={f.href}
           href={f.href}
-          className={Libs.cn(
+          className={cn(
             'flex min-h-12 w-full min-w-40 items-center gap-x-2 border-b transition-colors hover:text-white lg:justify-center',
             pathname === f.href ? 'border-white text-white' : 'border-muted-foreground text-muted-foreground',
           )}

@@ -3,8 +3,8 @@
 import { ReactNode } from 'react';
 import { useTranslations } from 'next-intl';
 import * as Atoms from '@/atoms';
-import * as Libs from '@/libs';
 import { Loader2 } from 'lucide-react';
+import { cn } from '@/libs/utils/utils';
 interface InputFieldProps {
   id?: string;
   name?: string;
@@ -80,7 +80,7 @@ export function InputField({
   return (
     <>
       <Atoms.Container
-        className={Libs.cn(
+        className={cn(
           '!bg-alpha-90/10 mx-0 mb-2 w-full cursor-pointer flex-row items-center gap-0 rounded-md border bg-transparent',
           icon && iconPosition === 'left' ? 'pl-4.5' : 'pl-2',
           containerClasses,
@@ -98,10 +98,7 @@ export function InputField({
           </Atoms.Container>
         )}
         {!loading && icon && iconPosition === 'left' && (
-          <Atoms.Container
-            onClick={onClickIcon}
-            className={Libs.cn('w-auto cursor-pointer items-center justify-center')}
-          >
+          <Atoms.Container onClick={onClickIcon} className={cn('w-auto cursor-pointer items-center justify-center')}>
             {icon}
           </Atoms.Container>
         )}
@@ -109,7 +106,7 @@ export function InputField({
           id={id}
           name={name}
           type="text"
-          className={Libs.cn('w-full border-none !bg-transparent')}
+          className={cn('w-full border-none !bg-transparent')}
           value={loading ? resolvedLoadingText : value}
           placeholder={placeholder}
           disabled={disabled || loading}
@@ -125,14 +122,14 @@ export function InputField({
         {!loading && icon && iconPosition === 'right' && (
           <Atoms.Container
             onClick={onClickIcon}
-            className={Libs.cn('mr-5 w-auto cursor-pointer items-center justify-center')}
+            className={cn('mr-5 w-auto cursor-pointer items-center justify-center')}
           >
             {icon}
           </Atoms.Container>
         )}
       </Atoms.Container>
       {message && (
-        <Atoms.Typography as="small" size="sm" className={Libs.cn('ml-1', messageClasses[messageType])}>
+        <Atoms.Typography as="small" size="sm" className={cn('ml-1', messageClasses[messageType])}>
           {message}
         </Atoms.Typography>
       )}

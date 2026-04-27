@@ -165,14 +165,6 @@ vi.mock('@/molecules', () => ({
   ),
 }));
 
-// Mock libs — use actual implementations
-vi.mock('@/libs', async () => {
-  const actual = await vi.importActual('@/libs');
-  return {
-    ...actual,
-  };
-});
-
 const createMockFeed = (overrides?: Partial<FeedModelSchema>): FeedModelSchema => ({
   id: 'feed-1',
   name: 'Test Feed',

@@ -2,7 +2,7 @@
 
 import { useEffect } from 'react';
 import * as Atoms from '@/atoms';
-import { Logger } from '@/libs';
+import { Logger } from '@/libs/logger/logger';
 
 export default function Error({ error, reset }: { error: Error & { digest?: string }; reset: () => void }) {
   useEffect(() => {

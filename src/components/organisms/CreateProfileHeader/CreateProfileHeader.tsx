@@ -4,19 +4,19 @@ import { useTranslations } from 'next-intl';
 import * as Molecules from '@/molecules';
 import * as Atoms from '@/atoms';
 import * as Core from '@/core';
-import * as Libs from '@/libs';
 import * as Hooks from '@/hooks';
 import { Key } from 'lucide-react';
+import { formatPublicKey, withPubkyPrefix } from '@/libs/utils/utils';
 export const CreateProfileHeader = () => {
   const t = useTranslations('onboarding.createProfile');
   const authStore = Core.useAuthStore();
   const pubky = authStore.selectCurrentUserPubky();
   const { copyToClipboard } = Hooks.useCopyToClipboard();
-  const displayPublicKey = Libs.formatPublicKey({
+  const displayPublicKey = formatPublicKey({
     key: pubky,
   });
   const handleCopyToClipboard = () => {
-    copyToClipboard(Libs.withPubkyPrefix(pubky));
+    copyToClipboard(withPubkyPrefix(pubky));
   };
   return (
     <Atoms.PageHeader>

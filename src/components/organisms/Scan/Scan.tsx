@@ -6,13 +6,13 @@ import { useRouter } from 'next/navigation';
 import { useEffect } from 'react';
 import { useTranslations } from 'next-intl';
 import * as Atoms from '@/atoms';
-import * as Libs from '@/libs';
 import * as Molecules from '@/molecules';
 import * as Config from '@/config';
 import * as App from '@/app';
 import * as Hooks from '@/hooks';
 import * as Core from '@/core';
 import { Loader2, QrCode, Key } from 'lucide-react';
+import { Logger } from '@/libs/logger/logger';
 export const ScanContent = () => {
   const t = useTranslations('onboarding.scan');
   const router = useRouter();
@@ -20,7 +20,7 @@ export const ScanContent = () => {
   const hasInviteCode = inviteCode.trim().length > 0;
   useEffect(() => {
     if (!hasInviteCode) {
-      Libs.Logger.warn('[Scan] Missing inviteCode on signup screen; redirecting to invite flow');
+      Logger.warn('[Scan] Missing inviteCode on signup screen; redirecting to invite flow');
       router.replace(App.ONBOARDING_ROUTES.HUMAN);
     }
   }, [hasInviteCode, router]);

@@ -2,7 +2,10 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { NextRequest } from 'next/server';
 import { GET } from './route';
 import * as Core from '@/core';
-import * as Libs from '@/libs';
+import { AuthErrorCode, ClientErrorCode, TimeoutErrorCode, ValidationErrorCode } from '@/libs/error/error.codes';
+import { Err } from '@/libs/error/error.factories';
+import { ErrorService } from '@/libs/error/error.types';
+import { HttpStatusCode } from '@/libs/http/http.types';
 
 const createRequest = (url: string) => {
   const searchParams = new URLSearchParams({ url });
@@ -70,10 +73,10 @@ describe('API Route: /api/og-metadata', () => {
     });
 
     it('should return 400 for AppError with statusCode 400', async () => {
-      const appError = Libs.Err.validation(Libs.ValidationErrorCode.MISSING_FIELD, 'Invalid URL', {
-        service: Libs.ErrorService.NextJsServer,
+      const appError = Err.validation(ValidationErrorCode.MISSING_FIELD, 'Invalid URL', {
+        service: ErrorService.NextJsServer,
         operation: 'validate',
-        context: { field: 'url', statusCode: Libs.HttpStatusCode.BAD_REQUEST },
+        context: { field: 'url', statusCode: HttpStatusCode.BAD_REQUEST },
       });
       vi.spyOn(Core.OgMetadataController, 'fetch').mockRejectedValue(appError);
 
@@ -87,10 +90,10 @@ describe('API Route: /api/og-metadata', () => {
     });
 
     it('should return 403 for AppError with statusCode 403', async () => {
-      const appError = Libs.Err.auth(Libs.AuthErrorCode.FORBIDDEN, 'Blocked IP range', {
-        service: Libs.ErrorService.NextJsServer,
+      const appError = Err.auth(AuthErrorCode.FORBIDDEN, 'Blocked IP range', {
+        service: ErrorService.NextJsServer,
         operation: 'validateDns',
-        context: { statusCode: Libs.HttpStatusCode.FORBIDDEN },
+        context: { statusCode: HttpStatusCode.FORBIDDEN },
       });
       vi.spyOn(Core.OgMetadataController, 'fetch').mockRejectedValue(appError);
 
@@ -103,10 +106,10 @@ describe('API Route: /api/og-metadata', () => {
     });
 
     it('should return 408 for AppError with statusCode 408', async () => {
-      const appError = Libs.Err.timeout(Libs.TimeoutErrorCode.REQUEST_TIMEOUT, 'Request timeout', {
-        service: Libs.ErrorService.NextJsServer,
+      const appError = Err.timeout(TimeoutErrorCode.REQUEST_TIMEOUT, 'Request timeout', {
+        service: ErrorService.NextJsServer,
         operation: 'fetchOgMetadata',
-        context: { statusCode: Libs.HttpStatusCode.REQUEST_TIMEOUT },
+        context: { statusCode: HttpStatusCode.REQUEST_TIMEOUT },
       });
       vi.spyOn(Core.OgMetadataController, 'fetch').mockRejectedValue(appError);
 
@@ -119,10 +122,10 @@ describe('API Route: /api/og-metadata', () => {
     });
 
     it('should return 413 for AppError with statusCode 413', async () => {
-      const appError = Libs.Err.client(Libs.ClientErrorCode.PAYLOAD_TOO_LARGE, 'Response too large (max 5MB)', {
-        service: Libs.ErrorService.NextJsServer,
+      const appError = Err.client(ClientErrorCode.PAYLOAD_TOO_LARGE, 'Response too large (max 5MB)', {
+        service: ErrorService.NextJsServer,
         operation: 'readResponseBody',
-        context: { statusCode: Libs.HttpStatusCode.PAYLOAD_TOO_LARGE },
+        context: { statusCode: HttpStatusCode.PAYLOAD_TOO_LARGE },
       });
       vi.spyOn(Core.OgMetadataController, 'fetch').mockRejectedValue(appError);
 

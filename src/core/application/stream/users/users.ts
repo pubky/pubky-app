@@ -1,6 +1,6 @@
 import * as Core from '@/core';
 import * as Config from '@/config';
-import { Logger } from '@/libs';
+import { Logger } from '@/libs/logger/logger';
 /**
  * Internal type for fetchStreamFromNexus parameters
  * Extends the internal fetch params type with optional cached stream data

@@ -3,11 +3,11 @@
 import { useTranslations } from 'next-intl';
 import * as Atoms from '@/atoms';
 import * as Molecules from '@/molecules';
-import * as Libs from '@/libs';
 import * as Config from '@/config';
 import { useState } from 'react';
 import { z } from 'zod';
 import { Link, Clipboard } from 'lucide-react';
+import { copyToClipboard } from '@/libs/utils/utils';
 const labelSchema = z
   .string()
   .trim()
@@ -125,7 +125,7 @@ export function DialogAddLink({ onSave, disabled = false }: DialogAddLinkProps) 
               iconPosition="right"
               onClickIcon={async () => {
                 try {
-                  await Libs.copyToClipboard({
+                  await copyToClipboard({
                     text: url,
                   });
                 } catch {}

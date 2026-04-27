@@ -5,7 +5,6 @@ import * as Atoms from '@/atoms';
 import * as Hooks from '@/hooks';
 import * as Molecules from '@/molecules';
 import * as Organisms from '@/organisms';
-import * as Libs from '@/libs';
 import * as Types from './ProfilePageHeader.types';
 import { FOLLOW_ACTIONS } from '@/hooks/useFollowUser/useFollowUser.types';
 
@@ -19,6 +18,8 @@ import { FOLLOW_ACTIONS } from '@/hooks/useFollowUser/useFollowUser.types';
  * This ensures profile data gets refreshed when stale.
  */
 import { Pencil, KeyRound, Link, Loader2, LogOut, Check, UserMinus, UserRoundPlus, Ellipsis } from 'lucide-react';
+import { extractEmojiFromStatus, parseStatus } from '@/libs/status/status';
+import { cn, formatPublicKey } from '@/libs/utils/utils';
 export function ProfilePageHeader({ profile, actions, isOwnProfile = true, userId }: Types.ProfilePageHeaderProps) {
   const t = useTranslations('profile.actions');
   const tStatus = useTranslations('status');
@@ -43,10 +44,10 @@ export function ProfilePageHeader({ profile, actions, isOwnProfile = true, userI
     type: 'user',
     id: userId,
   });
-  const formattedPublicKey = Libs.formatPublicKey({
+  const formattedPublicKey = formatPublicKey({
     key: publicKey,
   });
-  const displayEmoji = Libs.extractEmojiFromStatus(status || '', emoji);
+  const displayEmoji = extractEmojiFromStatus(status || '', emoji);
   const getLoadingFollowText = () => {
     if (followLoadingAction === FOLLOW_ACTIONS.UNFOLLOW) {
       return t('unfollowing');
@@ -78,7 +79,7 @@ export function ProfilePageHeader({ profile, actions, isOwnProfile = true, userI
       <Atoms.Container overrideDefaults={true} className="flex min-w-0 flex-1 flex-col gap-3">
         <Atoms.Container
           overrideDefaults={true}
-          className={Libs.cn('flex min-w-0 flex-col text-center lg:text-left', bio && 'gap-1')}
+          className={cn('flex min-w-0 flex-col text-center lg:text-left', bio && 'gap-1')}
         >
           <Atoms.Typography
             data-cy="profile-username-header"
@@ -215,7 +216,7 @@ export function ProfilePageHeader({ profile, actions, isOwnProfile = true, userI
                   </Atoms.Typography>
                   <Atoms.Typography as="span" overrideDefaults className="text-base leading-6 font-bold text-white">
                     {(() => {
-                      const parsed = Libs.parseStatus(status);
+                      const parsed = parseStatus(status);
                       return parsed.key ? tStatus(parsed.key as Parameters<typeof tStatus>[0]) : parsed.text;
                     })()}
                   </Atoms.Typography>

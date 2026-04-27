@@ -4,14 +4,14 @@ import { useEffect, useRef } from 'react';
 import { useSearchParams } from 'next/navigation';
 
 import * as Core from '@/core';
-import * as Libs from '@/libs';
 import * as Molecules from '@/molecules';
+import { formatInviteCode } from '@/libs/utils/utils';
 
 export function Install() {
   const searchParams = useSearchParams();
   const { toast } = Molecules.useToast();
   const hasInitialisedFromUrlRef = useRef(false);
-  const inviteCodeFromUrl = Libs.formatInviteCode(searchParams.get('inviteCode') ?? '');
+  const inviteCodeFromUrl = formatInviteCode(searchParams.get('inviteCode') ?? '');
   const hasInviteCodeFromUrl = inviteCodeFromUrl.length === 14;
 
   useEffect(() => {

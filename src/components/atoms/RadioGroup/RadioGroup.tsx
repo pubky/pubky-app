@@ -2,8 +2,8 @@
 
 import * as React from 'react';
 import { RadioGroup as RadioGroupPrimitive } from 'radix-ui';
-import * as Libs from '@/libs';
 import * as Atoms from '@/atoms';
+import { cn } from '@/libs/utils/utils';
 
 type RadioGroupProps = React.ComponentPropsWithoutRef<typeof RadioGroupPrimitive.Root>;
 
@@ -18,7 +18,7 @@ interface RadioGroupItemProps extends React.ComponentPropsWithoutRef<typeof Radi
 
 const RadioGroup = React.forwardRef<React.ComponentRef<typeof RadioGroupPrimitive.Root>, RadioGroupProps>(
   ({ className, ...props }, ref) => {
-    return <RadioGroupPrimitive.Root ref={ref} className={Libs.cn('grid gap-3', className)} {...props} />;
+    return <RadioGroupPrimitive.Root ref={ref} className={cn('grid gap-3', className)} {...props} />;
   },
 );
 RadioGroup.displayName = RadioGroupPrimitive.Root.displayName;
@@ -32,7 +32,7 @@ const RadioGroupItem = React.forwardRef<React.ComponentRef<typeof RadioGroupPrim
       <RadioGroupPrimitive.Item
         ref={ref}
         id={itemId}
-        className={Libs.cn(
+        className={cn(
           'peer size-4 shrink-0 rounded-full',
           'border border-input bg-white/5 shadow-sm',
           'transition-colors',
@@ -76,7 +76,7 @@ const RadioGroupItem = React.forwardRef<React.ComponentRef<typeof RadioGroupPrim
       return (
         <Atoms.Container
           overrideDefaults
-          className={Libs.cn(
+          className={cn(
             'rounded-lg border border-border p-4 transition-colors',
             'has-[[data-state=checked]]:border-brand',
             'has-[[data-disabled]]:cursor-not-allowed has-[[data-disabled]]:opacity-50',

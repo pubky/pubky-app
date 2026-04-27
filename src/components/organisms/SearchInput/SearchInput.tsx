@@ -6,12 +6,12 @@ import { useTranslations } from 'next-intl';
 import * as Molecules from '@/molecules';
 import * as Atoms from '@/atoms';
 import * as Hooks from '@/hooks';
-import * as Libs from '@/libs';
 import * as Core from '@/core';
 import { APP_ROUTES } from '@/app/routes';
 import { CLICKABLE_TAGS_DEFAULT_MAX_LENGTH } from '@/config/tags';
 import { parseTagsFromUrl } from './SearchInput.utils';
 import { SearchInputProps } from './SearchInput.types';
+import { isValidTagLabel } from '@/libs/utils/utils';
 
 export function SearchInput({ autoFocus = false }: SearchInputProps) {
   const router = useRouter();
@@ -24,7 +24,7 @@ export function SearchInput({ autoFocus = false }: SearchInputProps) {
   const isMobile = Hooks.useIsMobile();
 
   const handleEnter = (value: string) => {
-    if (!Libs.isValidTagLabel(value.trim().toLowerCase())) {
+    if (!isValidTagLabel(value.trim().toLowerCase())) {
       Molecules.toast({ description: t('invalidTag') });
       return false;
     }

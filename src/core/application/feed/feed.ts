@@ -8,7 +8,12 @@ import type {
   HomeserverFeedJson,
   RemoteFeedParams,
 } from './feed.types';
-import { AppError, Err, ErrorService, HttpMethod, HttpStatusCode, Logger, ValidationErrorCode } from '@/libs';
+import { HttpMethod, HttpStatusCode } from '@/libs/http/http.types';
+import { Logger } from '@/libs/logger/logger';
+import { AppError } from '@/libs/error/error';
+import { ValidationErrorCode } from '@/libs/error/error.codes';
+import { Err } from '@/libs/error/error.factories';
+import { ErrorService } from '@/libs/error/error.types';
 
 export class FeedApplication {
   private constructor() {}

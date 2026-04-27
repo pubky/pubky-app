@@ -1,6 +1,6 @@
 import * as Core from '@/core';
 import { FeedResult } from 'pubky-app-specs';
-import { HttpMethod } from '@/libs';
+import { HttpMethod } from '@/libs/http/http.types';
 
 export interface FeedDeleteParams {
   userId: string;

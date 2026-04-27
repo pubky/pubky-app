@@ -1,4 +1,4 @@
-import { Env } from '@/libs/env';
+import { Env } from '@/libs/env/env';
 
 /**
  * Chatwoot API Endpoints

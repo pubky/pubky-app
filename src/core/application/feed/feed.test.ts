@@ -8,8 +8,9 @@ import {
 } from 'pubky-app-specs';
 import { FeedApplication } from './feed';
 import * as Core from '@/core';
-import { HttpMethod, Logger } from '@/libs';
 import { asOpaque } from '@/test-utils';
+import { HttpMethod } from '@/libs/http/http.types';
+import { Logger } from '@/libs/logger/logger';
 
 // Mock the LocalFeedService
 vi.mock('@/core/services/local/feed', () => ({

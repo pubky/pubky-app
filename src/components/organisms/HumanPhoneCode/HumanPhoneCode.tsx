@@ -2,12 +2,12 @@
 
 import * as Atoms from '@/atoms';
 import * as Core from '@/core';
-import * as Libs from '@/libs';
 import * as Molecules from '@/molecules';
 import React, { useState } from 'react';
 import { useTranslations } from 'next-intl';
 import type { HumanPhoneCodeProps } from './HumanPhoneCode.types';
 import { RefreshCcw, ArrowRight } from 'lucide-react';
+import { cn } from '@/libs/utils/utils';
 export const HumanPhoneCode = ({ phoneNumber, onBack, onSuccess }: HumanPhoneCodeProps) => {
   const t = useTranslations('onboarding.phoneCode');
   const [code, setCode] = useState<string[]>(['', '', '', '', '', '']);
@@ -108,7 +108,7 @@ export const HumanPhoneCode = ({ phoneNumber, onBack, onSuccess }: HumanPhoneCod
       </Atoms.Card>
 
       {/* Buttons */}
-      <Atoms.Container className={Libs.cn('mt-6 flex-row justify-between gap-3 lg:gap-6')}>
+      <Atoms.Container className={cn('mt-6 flex-row justify-between gap-3 lg:gap-6')}>
         <Atoms.Button
           data-testid="human-phone-resend-code-btn"
           id="human-phone-back-btn"

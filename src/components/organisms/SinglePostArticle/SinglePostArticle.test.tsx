@@ -172,12 +172,6 @@ const createMockLocalFilesStore = (posts: Record<string, AttachmentConstructed[]
   reset: vi.fn(),
 });
 
-// Use real libs
-vi.mock('@/libs', async (importOriginal) => {
-  const actual = await importOriginal<typeof import('@/libs')>();
-  return { ...actual };
-});
-
 const mockUsePostArticle = vi.mocked(Hooks.usePostArticle);
 
 describe('SinglePostArticle', () => {

@@ -10,11 +10,6 @@ vi.mock('@/organisms', () => ({
   DialogAge: () => <span data-testid="dialog-age">over 18 years old.</span>,
 }));
 
-// Mock libs
-vi.mock('@/libs', () => ({
-  cn: (...args: unknown[]) => args.filter(Boolean).join(' '),
-}));
-
 // Mock config
 vi.mock('@/config', () => ({
   PUBKY_CORE_URL: 'https://pubky.core',

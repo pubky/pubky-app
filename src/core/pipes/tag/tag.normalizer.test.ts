@@ -1,6 +1,5 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import * as Core from '@/core';
-import { AppError, ErrorCategory, ValidationErrorCode, ErrorService } from '@/libs';
 import { TagResult, postUriBuilder } from 'pubky-app-specs';
 import { asInvalid, asOpaque } from '@/test-utils';
 import {
@@ -11,6 +10,9 @@ import {
   restoreMocks,
   buildPubkyUri,
 } from '../pipes.test-utils';
+import { AppError } from '@/libs/error/error';
+import { ValidationErrorCode } from '@/libs/error/error.codes';
+import { ErrorCategory, ErrorService } from '@/libs/error/error.types';
 
 describe('TagNormalizer', () => {
   const createMockBuilder = (overrides?: Partial<{ createTag: ReturnType<typeof vi.fn> }>) => ({

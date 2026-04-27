@@ -2,14 +2,6 @@ import { describe, it, expect, vi } from 'vitest';
 import { render, screen, fireEvent } from '@testing-library/react';
 import { PostTagAddButton } from './PostTagAddButton';
 
-// Mock @/libs with partial mock
-vi.mock('@/libs', async () => {
-  const actual = await vi.importActual('@/libs');
-  return {
-    ...actual,
-  };
-});
-
 describe('PostTagAddButton', () => {
   it('renders button element', () => {
     render(<PostTagAddButton />);

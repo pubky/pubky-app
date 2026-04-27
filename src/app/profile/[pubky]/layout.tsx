@@ -5,7 +5,7 @@ import { useParams } from 'next/navigation';
 import * as Organisms from '@/organisms';
 import * as Providers from '@/providers';
 import * as Core from '@/core';
-import { stripPubkyPrefix } from '@/libs';
+import { stripPubkyPrefix } from '@/libs/utils/utils';
 
 /**
  * DynamicProfileLayout - Next.js layout for viewing other users' profiles

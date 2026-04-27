@@ -27,7 +27,7 @@ const triggerCropComplete = () => {
 
 const mockCropImageToBlob = vi.fn();
 
-vi.mock('@/libs', () => ({
+vi.mock('@/libs/image/cropImage', () => ({
   cropImageToBlob: (...args: unknown[]) => mockCropImageToBlob(...args),
 }));
 

@@ -4,12 +4,12 @@ import { useEffect, useRef, useState } from 'react';
 import { useLiveQuery } from 'dexie-react-hooks';
 import * as Core from '@/core';
 import * as Config from '@/config';
-import * as Libs from '@/libs';
 // Direct imports to avoid circular dependency (this hook is exported from @/hooks)
 import { useMutedUsers } from '@/hooks/useMutedUsers';
 import { usePostCounts } from '@/hooks/usePostCounts';
 import { MAX_EXPAND_PAGES } from './useReplyStream.constants';
 import type { UseReplyStreamOptions, UseReplyStreamResult } from './useReplyStream.types';
+import { Logger } from '@/libs/logger/logger';
 
 /**
  * Shared base hook for fetching and displaying reply streams.
@@ -84,7 +84,7 @@ export function useReplyStream(
           localTotalCount: filtered.length,
         };
       } catch (error) {
-        Libs.Logger.error('[useReplyStream] Failed to query replies', { postId, error });
+        Logger.error('[useReplyStream] Failed to query replies', { postId, error });
         return { replyIds: [], mutedRepliesCount: 0, localTotalCount: 0 };
       }
     },
@@ -119,7 +119,7 @@ export function useReplyStream(
           setHasFetched(true);
         }
       } catch (error) {
-        Libs.Logger.error('[useReplyStream] Failed to fetch replies:', error);
+        Logger.error('[useReplyStream] Failed to fetch replies:', error);
         if (!isCancelled) {
           setHasFetched(true);
         }
@@ -186,7 +186,7 @@ export function useReplyStream(
       }
       completed = true;
     } catch (error) {
-      Libs.Logger.error('[useReplyStream] Failed to fetch all replies:', error);
+      Logger.error('[useReplyStream] Failed to fetch all replies:', error);
     } finally {
       isFetchingAllRef.current = false;
       if (isMountedRef.current) {

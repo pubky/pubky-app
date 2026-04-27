@@ -6,9 +6,9 @@ import * as Atoms from '@/atoms';
 import * as Molecules from '@/molecules';
 import * as Hooks from '@/hooks';
 import * as Core from '@/core';
-import * as Libs from '@/libs';
 import * as Config from '@/config';
 import * as Types from './ContentLayout.types';
+import { cn } from '@/libs/utils/utils';
 
 /**
  * Reusable sticky sidebar component for left and right sidebars
@@ -22,7 +22,7 @@ function StickySidebar({ children }: Types.StickySidebarProps) {
   return (
     <Atoms.Container
       overrideDefaults
-      className={Libs.cn(
+      className={cn(
         'hidden flex-col items-start justify-start gap-6 self-start lg:flex',
         'w-(--filter-bar-width) max-w-(--filter-bar-width) min-w-(--filter-bar-width) shrink-0',
         'sticky overflow-x-hidden overflow-y-auto overscroll-contain',
@@ -107,12 +107,7 @@ export function ContentLayout({
       {/* Main content grid with responsive max-widths */}
       <Atoms.Container
         overrideDefaults
-        className={Libs.cn(
-          'container max-w-(--container-max-width)',
-          'm-auto w-full px-6 pb-12 xl:px-0',
-          'pt-0',
-          className,
-        )}
+        className={cn('container max-w-(--container-max-width)', 'm-auto w-full px-6 pb-12 xl:px-0', 'pt-0', className)}
       >
         <Atoms.Container overrideDefaults className="flex gap-6">
           {/* Left sidebar - hidden on mobile (< lg) and in wide-shell layout mode */}
@@ -121,9 +116,7 @@ export function ContentLayout({
           )}
 
           {/* Main content area - grows to fill space, min-w-0 prevents flex overflow */}
-          <Atoms.Container
-            className={Libs.cn('w-full min-w-0 flex-1 gap-6 lg:overflow-hidden', classNameWrapperContent)}
-          >
+          <Atoms.Container className={cn('w-full min-w-0 flex-1 gap-6 lg:overflow-hidden', classNameWrapperContent)}>
             {children}
           </Atoms.Container>
 

@@ -3,6 +3,9 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import { CreateProfileForm } from './CreateProfileForm';
 import * as App from '@/app';
+import { ServerErrorCode } from '@/libs/error/error.codes';
+import { Err } from '@/libs/error/error.factories';
+import { ErrorService } from '@/libs/error/error.types';
 
 vi.mock('facehash', () => ({
   Facehash: ({ name, onRenderMouth }: { name: string; onRenderMouth?: () => React.ReactNode }) => (
@@ -43,14 +46,13 @@ vi.mock('next/navigation', () => ({
   }),
 }));
 
-// Mock libs - use actual utility functions and icons from lucide-react
 const { mockCropImageToBlob, mockToast } = vi.hoisted(() => ({
   mockCropImageToBlob: vi.fn(async () => new Blob(['cropped-image'], { type: 'image/png' })),
   mockToast: vi.fn(),
 }));
 
-vi.mock('@/libs', async () => {
-  const actual = await vi.importActual('@/libs');
+vi.mock('@/libs/image/cropImage', async () => {
+  const actual = await vi.importActual<typeof import('@/libs/image/cropImage')>('@/libs/image/cropImage');
   return {
     ...actual,
     cropImageToBlob: mockCropImageToBlob,
@@ -897,7 +899,6 @@ describe('CreateProfileForm', () => {
     it('should not call setShowWelcomeDialog when profile creation fails', async () => {
       const mockSetShowWelcomeDialog = vi.fn();
       const Core = await import('@/core');
-      const Libs = await import('@/libs');
 
       // Mock the onboarding store to return the setShowWelcomeDialog function
       vi.mocked(Core.useOnboardingStore).mockReturnValue({
@@ -918,8 +919,8 @@ describe('CreateProfileForm', () => {
       });
 
       // Mock ProfileController.commitCreate to throw a server error
-      const profileError = Libs.Err.server(Libs.ServerErrorCode.UNKNOWN_ERROR, 'Failed to create profile', {
-        service: Libs.ErrorService.Homeserver,
+      const profileError = Err.server(ServerErrorCode.UNKNOWN_ERROR, 'Failed to create profile', {
+        service: ErrorService.Homeserver,
         operation: 'commitCreate',
         context: { statusCode: 500 },
       });

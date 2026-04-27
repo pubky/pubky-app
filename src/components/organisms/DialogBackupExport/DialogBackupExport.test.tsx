@@ -28,12 +28,6 @@ vi.mock('qrcode.react', () => ({
   ),
 }));
 
-// Mock @/libs - use actual implementations (no icon stubs)
-vi.mock('@/libs', async () => {
-  const actual = await vi.importActual('@/libs');
-  return { ...actual };
-});
-
 // Mock window.open
 const mockWindowOpen = vi.fn();
 const originalOpen = window.open;

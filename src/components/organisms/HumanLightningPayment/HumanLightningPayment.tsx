@@ -1,7 +1,6 @@
 'use client';
 
 import * as Atoms from '@/atoms';
-import * as Libs from '@/libs';
 import * as Molecules from '@/molecules';
 import React, { useState } from 'react';
 import { QRCodeSVG } from 'qrcode.react';
@@ -12,6 +11,8 @@ import { QRCodeSkeleton, PriceSkeleton } from './HumanLightningPayment.skeleton'
 import type { HumanLightningPaymentProps } from './HumanLightningPayment.types';
 import { useIsMobile } from '@/hooks/useIsMobile';
 import { RefreshCw, Wallet, ArrowLeft, Copy } from 'lucide-react';
+import { isAppError } from '@/libs/error/error.utils';
+import { cn, copyToClipboard } from '@/libs/utils/utils';
 export const HumanLightningPayment = ({ onBack, onSuccess }: HumanLightningPaymentProps) => {
   const t = useTranslations('onboarding.lightning');
   const tCommon = useTranslations('common');
@@ -36,7 +37,7 @@ export const HumanLightningPayment = ({ onBack, onSuccess }: HumanLightningPayme
       const toastVerificationError = (error: unknown) => {
         toast({
           title: tCommon('error'),
-          description: Libs.isAppError(error) ? error.message : t('requestFailedDescription'),
+          description: isAppError(error) ? error.message : t('requestFailedDescription'),
         });
       };
       const onPaymentConfirmed = async (signupCode: string, homeserverPubky: string) => {
@@ -90,9 +91,9 @@ export const HumanLightningPayment = ({ onBack, onSuccess }: HumanLightningPayme
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps -- run once on mount
   }, []);
-  async function copyToClipboard(text: string) {
+  async function copyInvoiceToClipboard(text: string) {
     try {
-      await Libs.copyToClipboard({
+      await copyToClipboard({
         text,
       });
       toast({
@@ -136,7 +137,7 @@ export const HumanLightningPayment = ({ onBack, onSuccess }: HumanLightningPayme
     if (!verification) return null;
     if (isPaymentExpired) {
       return renderExpiredState(
-        Libs.cn(
+        cn(
           'flex h-[192px] items-center justify-center rounded-[9px] bg-secondary p-[9px]',
           isMobile ? 'w-full' : 'w-[192px]',
         ),
@@ -156,7 +157,7 @@ export const HumanLightningPayment = ({ onBack, onSuccess }: HumanLightningPayme
       <Atoms.Container
         overrideDefaults={true}
         className="relative flex cursor-pointer items-center justify-center rounded-[9px] bg-white p-[9px]"
-        onClick={() => copyToClipboard(verification.data.bolt11Invoice)}
+        onClick={() => copyInvoiceToClipboard(verification.data.bolt11Invoice)}
       >
         <QRCodeSVG value={verification.data.bolt11Invoice} size={174} />
         <Atoms.Container
@@ -217,7 +218,7 @@ export const HumanLightningPayment = ({ onBack, onSuccess }: HumanLightningPayme
       </Atoms.Card>
 
       {/* Buttons container */}
-      <Atoms.Container className={Libs.cn('mt-6 justify-between gap-3 sm:flex-row lg:gap-6')}>
+      <Atoms.Container className={cn('mt-6 justify-between gap-3 sm:flex-row lg:gap-6')}>
         <Atoms.Button
           id="human-phone-back-btn"
           size="lg"
@@ -234,7 +235,7 @@ export const HumanLightningPayment = ({ onBack, onSuccess }: HumanLightningPayme
           className="w-full flex-1 rounded-full lg:flex-0"
           variant={isMobile ? 'secondary' : 'default'}
           disabled={!isDataAvailable}
-          onClick={() => verification && copyToClipboard(verification.data.bolt11Invoice)}
+          onClick={() => verification && copyInvoiceToClipboard(verification.data.bolt11Invoice)}
         >
           <Copy className="mr-2 h-4 w-4" />
           {t('copyInvoice')}

@@ -2,14 +2,14 @@
 
 import * as Atoms from '@/atoms';
 import * as Organisms from '@/organisms';
-import * as Libs from '@/libs';
 import * as Config from '@/config';
 import { useTranslations } from 'next-intl';
+import { cn } from '@/libs/utils/utils';
 
 export const HumanFooter = () => {
   const t = useTranslations('onboarding.footer');
   return (
-    <Atoms.Container className={Libs.cn('flex-col gap-0 py-6')}>
+    <Atoms.Container className={cn('flex-col gap-0 py-6')}>
       <Atoms.FooterLinks>
         {t.rich('agreement', {
           pubky: () => <span className="text-brand">Pubky</span>,

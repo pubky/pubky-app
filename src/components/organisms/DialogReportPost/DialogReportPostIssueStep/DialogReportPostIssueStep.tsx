@@ -4,7 +4,6 @@ import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useTranslations } from 'next-intl';
 import * as Atoms from '@/atoms';
-import * as Libs from '@/libs';
 import {
   REPORT_ISSUE_LABEL_KEYS,
   REPORT_ISSUE_TYPES,
@@ -14,6 +13,7 @@ import {
 import { ISSUE_TYPE_ICONS } from './DialogReportPostIssueStep.constants';
 import type { DialogReportPostIssueStepProps } from './DialogReportPostIssueStep.types';
 import { Check } from 'lucide-react';
+import { cn } from '@/libs/utils/utils';
 export function DialogReportPostIssueStep({
   onSelectIssueType,
   onCancel,
@@ -61,7 +61,7 @@ export function DialogReportPostIssueStep({
               role="option"
               aria-selected={isSelected}
               aria-label={label}
-              className={Libs.cn(
+              className={cn(
                 'h-auto w-full justify-start gap-3 rounded-lg px-3 py-3 hover:bg-muted',
                 isSelected && 'bg-muted',
               )}

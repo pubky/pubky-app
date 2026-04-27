@@ -1,8 +1,8 @@
-import { Env } from '@/libs/env';
-import { Logger } from '@/libs/logger';
-import { AppError } from '@/libs/error';
-import { HttpMethod, HttpStatusCode } from '@/libs/http';
 import * as Core from '@/core';
+import { Env } from '@/libs/env/env';
+import { HttpMethod, HttpStatusCode } from '@/libs/http/http.types';
+import { Logger } from '@/libs/logger/logger';
+import { AppError } from '@/libs/error/error';
 
 /**
  * Callback type for reporting bootstrap progress to the Controller layer.

@@ -2,9 +2,9 @@
 
 import { ChangeEvent, Dispatch, SetStateAction, forwardRef, useEffect, useMemo } from 'react';
 import * as Atoms from '@/atoms';
-import * as Utils from '@/libs/utils';
 import { ARTICLE_ATTACHMENT_ACCEPT_STRING, POST_ATTACHMENT_ACCEPT_STRING } from '@/config';
 import { ImagePlus, Plus, Trash2, FileText } from 'lucide-react';
+import { cn } from '@/libs/utils/utils';
 type PostInputAttachmentsProps = {
   attachments: File[];
   setAttachments: Dispatch<SetStateAction<File[]>>;
@@ -92,14 +92,14 @@ export const PostInputAttachments = forwardRef<HTMLInputElement, PostInputAttach
                   size="icon"
                   onClick={() => setAttachments((prev) => prev.filter((_, index) => index !== i))}
                   disabled={isSubmitting}
-                  className={Utils.cn(
+                  className={cn(
                     'absolute right-4 z-10 disabled:pointer-events-auto disabled:cursor-not-allowed disabled:opacity-100',
                     a.type === 'image' || a.type === 'video' ? 'top-4 size-12' : 'top-1/2 -translate-y-1/2',
                     a.type === 'audio' && 'size-6',
                     a.type === 'pdf' && 'size-8',
                   )}
                 >
-                  <Trash2 className={Utils.cn(a.type === 'audio' ? 'size-3' : 'size-4')} />
+                  <Trash2 className={cn(a.type === 'audio' ? 'size-3' : 'size-4')} />
                 </Atoms.Button>
 
                 {a.type === 'image' && (

@@ -1,5 +1,5 @@
 import * as Core from '@/core';
-import * as Libs from '@/libs';
+import { Logger } from '@/libs/logger/logger';
 
 /**
  * Handles mute filtering for post streams.
@@ -54,7 +54,7 @@ export class MuteFilter {
         return !mutedUserIds.has(authorId);
       } catch {
         // Fail-open: include items we can't parse to avoid hiding valid content
-        Libs.Logger.debug('MuteFilter: Failed to parse composite ID for mute filtering', postId);
+        Logger.debug('MuteFilter: Failed to parse composite ID for mute filtering', postId);
         return true;
       }
     });
@@ -75,7 +75,7 @@ export class MuteFilter {
       const { pubky: authorId } = Core.parseCompositeId(postId);
       return mutedUserIds.has(authorId);
     } catch {
-      Libs.Logger.debug('MuteFilter: Failed to parse composite ID for mute check', postId);
+      Logger.debug('MuteFilter: Failed to parse composite ID for mute check', postId);
       return false;
     }
   }

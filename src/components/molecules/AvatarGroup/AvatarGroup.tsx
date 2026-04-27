@@ -3,9 +3,9 @@
 import * as React from 'react';
 import * as Atoms from '@/atoms';
 import * as Organisms from '@/organisms';
-import * as Libs from '@/libs';
 import type { AvatarGroupProps } from './AvatarGroup.types';
 import { MAX_OVERFLOW_DISPLAY } from './AvatarGroup.constants';
+import { cn } from '@/libs/utils/utils';
 
 /**
  * AvatarGroup
@@ -41,7 +41,7 @@ export function AvatarGroup({
   if (items.length === 0) return null;
 
   return (
-    <Atoms.Container overrideDefaults className={Libs.cn('flex items-center', className)} data-testid={dataTestId}>
+    <Atoms.Container overrideDefaults className={cn('flex items-center', className)} data-testid={dataTestId}>
       {visibleItems.map((item, index) => (
         <Atoms.Container
           key={item.id}

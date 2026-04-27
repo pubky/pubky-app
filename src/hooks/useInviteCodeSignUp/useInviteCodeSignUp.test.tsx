@@ -2,7 +2,9 @@ import { renderHook, act } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { useInviteCodeSignUp } from './useInviteCodeSignUp';
 import * as Core from '@/core';
-import * as Libs from '@/libs';
+import { NetworkErrorCode } from '@/libs/error/error.codes';
+import { Err } from '@/libs/error/error.factories';
+import { ErrorService } from '@/libs/error/error.types';
 
 const {
   mockSignUp,
@@ -46,8 +48,8 @@ vi.mock('next-intl', () => ({
   },
 }));
 
-vi.mock('@/libs', async (importOriginal) => {
-  const actual = await importOriginal<typeof import('@/libs')>();
+vi.mock('@/libs/error/error.utils', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('@/libs/error/error.utils')>();
   return {
     ...actual,
     isAppError: mockIsAppError,
@@ -160,8 +162,8 @@ describe('useInviteCodeSignUp', () => {
   });
 
   it('retries transient signup failures and succeeds without clearing secrets', async () => {
-    const transientError = Libs.Err.network(Libs.NetworkErrorCode.CONNECTION_FAILED, 'Network down', {
-      service: Libs.ErrorService.Local,
+    const transientError = Err.network(NetworkErrorCode.CONNECTION_FAILED, 'Network down', {
+      service: ErrorService.Local,
       operation: 'validateAndSignUp',
       context: { retryAfter: 0.001 },
     });
@@ -180,8 +182,8 @@ describe('useInviteCodeSignUp', () => {
   });
 
   it('keeps secrets after exhausted retryable failures to allow retrying paid signup', async () => {
-    const transientError = Libs.Err.network(Libs.NetworkErrorCode.CONNECTION_FAILED, 'Network down', {
-      service: Libs.ErrorService.Local,
+    const transientError = Err.network(NetworkErrorCode.CONNECTION_FAILED, 'Network down', {
+      service: ErrorService.Local,
       operation: 'validateAndSignUp',
       context: { retryAfter: 0.001 },
     });

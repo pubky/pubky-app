@@ -6,10 +6,10 @@ import { useTranslations } from 'next-intl';
 
 import * as Atoms from '@/atoms';
 import * as Organisms from '@/organisms';
-import * as Libs from '@/libs';
 import { POST_INPUT_VARIANT } from '@/organisms/PostInput/PostInput.constants';
 import { APP_ROUTES } from '@/app/routes';
 import { ShareTargetSkeleton } from './ShareTarget.skeleton';
+import { composeShareContent, getSharedFiles } from '@/libs/share/shareTarget';
 
 export function ShareTarget() {
   const searchParams = useSearchParams();
@@ -27,11 +27,11 @@ export function ShareTarget() {
     const url = searchParams.get('url') ?? undefined;
     const hasFiles = searchParams.get('hasFiles') === 'true';
 
-    const content = Libs.composeShareContent({ title, text, url });
+    const content = composeShareContent({ title, text, url });
     setInitialContent(content);
 
     if (hasFiles) {
-      Libs.getSharedFiles()
+      getSharedFiles()
         .then((files) => {
           if (files.length > 0) {
             setInitialAttachments(files);

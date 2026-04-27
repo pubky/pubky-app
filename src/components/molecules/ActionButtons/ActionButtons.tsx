@@ -2,8 +2,8 @@
 
 import { useTranslations } from 'next-intl';
 import * as Atoms from '@/atoms';
-import * as Libs from '@/libs';
 import { LogIn, UserRoundPlus } from 'lucide-react';
+import { cn } from '@/libs/utils/utils';
 interface ActionButtonsProps {
   className?: React.HTMLAttributes<HTMLDivElement>['className'];
   onSignIn?: () => void;
@@ -14,7 +14,7 @@ export function ActionButtons({ className, onSignIn, onCreateAccount, ...props }
   const t = useTranslations('landing');
 
   return (
-    <Atoms.Container className={Libs.cn('gap-3 sm:flex-row sm:items-center', className)} {...props}>
+    <Atoms.Container className={cn('gap-3 sm:flex-row sm:items-center', className)} {...props}>
       <Atoms.Button
         id="sign-in-btn"
         variant="secondary"

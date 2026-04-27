@@ -1,6 +1,10 @@
 import * as Core from '@/core';
-import { DatabaseErrorCode, Err, ErrorService, HttpMethod, Logger } from '@/libs';
 import { postUriBuilder } from 'pubky-app-specs';
+import { HttpMethod } from '@/libs/http/http.types';
+import { Logger } from '@/libs/logger/logger';
+import { DatabaseErrorCode } from '@/libs/error/error.codes';
+import { Err } from '@/libs/error/error.factories';
+import { ErrorService } from '@/libs/error/error.types';
 
 export class LocalPostService {
   private constructor() {}

@@ -3,10 +3,10 @@
 import * as Molecules from '@/molecules';
 import * as Organisms from '@/organisms';
 import * as Core from '@/core';
-import * as Libs from '@/libs';
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { ONBOARDING_ROUTES } from '@/app';
+import { Logger } from '@/libs/logger/logger';
 
 enum States {
   Selection = 'selection',
@@ -53,7 +53,7 @@ export function Human() {
                 const code = await Core.AuthController.generateSignupToken();
                 await onSuccess(code);
               } catch (error) {
-                Libs.Logger.error('[Human] Dev skip failed (generate token or signup):', error);
+                Logger.error('[Human] Dev skip failed (generate token or signup):', error);
               }
             }
           }}

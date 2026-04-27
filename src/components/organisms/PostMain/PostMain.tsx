@@ -1,7 +1,6 @@
 'use client';
 
 import React, { useRef, useState } from 'react';
-import * as Libs from '@/libs';
 import * as Core from '@/core';
 import * as Hooks from '@/hooks';
 import * as Atoms from '@/atoms';
@@ -13,6 +12,7 @@ import { POST_THREAD_CONNECTOR_VARIANTS } from '@/atoms';
 
 import type { PostMainProps } from './PostMain.types';
 import { usePostMainLayout, WIDE_POST_LAYOUT_CLASSES } from './PostMainLayout';
+import { cn, isPostDeleted } from '@/libs/utils/utils';
 
 export function PostMain({ postId, onClick, className, isReply = false, isLastReply = false }: PostMainProps) {
   const isMobile = Hooks.useIsMobile();
@@ -20,7 +20,7 @@ export function PostMain({ postId, onClick, className, isReply = false, isLastRe
   const effectiveTagsLayout = inheritedTagsLayout === 'side' && isMobile ? 'inline' : inheritedTagsLayout;
   const isWideLayout = effectiveTagsLayout === 'side';
   const { postDetails } = Hooks.usePostDetails(postId);
-  const isDeleted = Libs.isPostDeleted(postDetails?.content);
+  const isDeleted = isPostDeleted(postDetails?.content);
 
   const { showRepostHeader, shouldShowPostHeader } = Hooks.usePostHeaderVisibility(postId);
 
@@ -61,20 +61,20 @@ export function PostMain({ postId, onClick, className, isReply = false, isLastRe
         ref={ttlRef}
         overrideDefaults
         onClick={onClick}
-        className={Libs.cn('relative flex min-w-0 cursor-pointer', isReply && 'pl-3')}
+        className={cn('relative flex min-w-0 cursor-pointer', isReply && 'pl-3')}
       >
         {isReply && (
           <Atoms.Container overrideDefaults className="absolute top-0 bottom-0 left-0 w-3">
             <Atoms.PostThreadConnector height={postHeight} variant={connectorVariant} />
           </Atoms.Container>
         )}
-        <Atoms.Card ref={cardRef} className={Libs.cn('min-w-0 flex-1 gap-0 rounded-md py-0', className)}>
+        <Atoms.Card ref={cardRef} className={cn('min-w-0 flex-1 gap-0 rounded-md py-0', className)}>
           {isDeleted ? (
             <Molecules.PostDeleted />
           ) : (
-            <Atoms.CardContent className={Libs.cn('flex min-w-0 flex-col', isWideLayout ? 'p-0' : 'gap-4 p-6')}>
+            <Atoms.CardContent className={cn('flex min-w-0 flex-col', isWideLayout ? 'p-0' : 'gap-4 p-6')}>
               {showRepostHeader && (
-                <Atoms.Container overrideDefaults className={Libs.cn(isWideLayout && 'px-12 pt-12 pb-6')}>
+                <Atoms.Container overrideDefaults className={cn(isWideLayout && 'px-12 pt-12 pb-6')}>
                   <Molecules.RepostHeader />
                 </Atoms.Container>
               )}
@@ -122,7 +122,7 @@ export function PostMain({ postId, onClick, className, isReply = false, isLastRe
                   <Organisms.PostContent postId={postId} />
                   <Atoms.Container
                     onClick={handleFooterClick}
-                    className={Libs.cn(
+                    className={cn(
                       'flex-col items-start gap-2 md:flex-row md:justify-between md:gap-4',
                       tagsExpanded ? 'md:items-end' : 'md:items-start',
                     )}

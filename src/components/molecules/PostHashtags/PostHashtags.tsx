@@ -1,9 +1,9 @@
 import { JSX } from 'react';
 import { RemarkAnchorProps } from '../PostText/PostText.types';
 import { extractTextFromChildren } from '../PostText/PostText.utils';
-import * as Libs from '@/libs';
 import * as Atoms from '@/atoms';
 import { Bitkit, Blocktank, BTCIcon, PubkyIcon, Synonym, Tether } from '@/icons';
+import { cn } from '@/libs/utils/utils';
 
 type TagIcons = {
   [key: string]: JSX.Element | undefined;
@@ -30,7 +30,7 @@ export const PostHashtags = (props: RemarkAnchorProps) => {
       {...rest}
       href={href || ''}
       onClick={(e) => e.stopPropagation()}
-      className={Libs.cn(className, 'inline-flex items-center gap-x-1 text-base')}
+      className={cn(className, 'inline-flex items-center gap-x-1 text-base')}
     >
       {children} {Icon}
     </Atoms.Link>

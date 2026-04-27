@@ -10,11 +10,6 @@ vi.mock('@/core', () => ({
   },
 }));
 
-// Mock Libs
-vi.mock('@/libs', () => ({
-  cn: (...classes: (string | undefined)[]) => classes.filter(Boolean).join(' '),
-}));
-
 // Mock Atoms
 vi.mock('@/atoms', () => ({
   Button: ({

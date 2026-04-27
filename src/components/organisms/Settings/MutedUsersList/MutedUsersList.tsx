@@ -3,12 +3,13 @@
 import * as React from 'react';
 import { useTranslations } from 'next-intl';
 import * as Atoms from '@/atoms';
-import * as Libs from '@/libs';
 import * as Hooks from '@/hooks';
 import * as Molecules from '@/molecules';
 import { MutedUsersListSkeleton } from './MutedUsersList.skeleton';
 import { mapUserIdsToMutedUsers } from './MutedUsersList.utils';
 import { Megaphone } from 'lucide-react';
+import { isAppError } from '@/libs/error/error.utils';
+import { extractInitials, truncateMiddle } from '@/libs/utils/utils';
 export function MutedUsersList() {
   const t = useTranslations('mutedUsers');
   const tCommon = useTranslations('common');
@@ -31,7 +32,7 @@ export function MutedUsersList() {
     } catch (error) {
       Molecules.toast({
         title: tCommon('error'),
-        description: Libs.isAppError(error) ? error.message : tToast('failed'),
+        description: isAppError(error) ? error.message : tToast('failed'),
       });
     }
   };
@@ -62,7 +63,7 @@ export function MutedUsersList() {
     } catch (error) {
       Molecules.toast({
         title: tCommon('error'),
-        description: Libs.isAppError(error) ? error.message : tToast('failed'),
+        description: isAppError(error) ? error.message : tToast('failed'),
       });
     } finally {
       setIsLoadingUnmuteAll(false);
@@ -93,7 +94,7 @@ export function MutedUsersList() {
                     <Molecules.FacehashAvatar
                       seed={mutedUser?.id || mutedUser?.name || 'user'}
                       initial={
-                        Libs.extractInitials({
+                        extractInitials({
                           name: mutedUser?.name || '',
                           maxLength: 1,
                         }) ||
@@ -116,7 +117,7 @@ export function MutedUsersList() {
                     overrideDefaults
                     className="text-xs tracking-widest text-muted-foreground uppercase"
                   >
-                    {Libs.truncateMiddle(mutedUser?.id || '', 12)}
+                    {truncateMiddle(mutedUser?.id || '', 12)}
                   </Atoms.Typography>
                 </Atoms.Container>
               </Atoms.Link>

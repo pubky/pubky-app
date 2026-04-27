@@ -9,12 +9,6 @@ beforeAll(() => {
   Element.prototype.setPointerCapture = vi.fn();
 });
 
-// Mock @/libs - use actual implementations
-vi.mock('@/libs', async () => {
-  const actual = await vi.importActual('@/libs');
-  return { ...actual };
-});
-
 import {
   Select,
   SelectContent,

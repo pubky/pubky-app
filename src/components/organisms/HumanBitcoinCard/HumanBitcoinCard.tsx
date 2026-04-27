@@ -3,11 +3,11 @@
 import * as Atoms from '@/atoms';
 import { useBtcRate } from '@/hooks/useSatUsdRate';
 import { useLnVerificationInfo } from '@/hooks/useLnVerificationInfo';
-import * as Libs from '@/libs';
 import { HumanBitcoinCardSkeleton, PriceSkeleton } from './HumanBitcoinCard.skeleton';
 import type { HumanBitcoinCardProps } from './HumanBitcoinCard.types';
 import { useTranslations } from 'next-intl';
 import { Wallet, TriangleAlert } from 'lucide-react';
+import { cn } from '@/libs/utils/utils';
 export const HumanBitcoinCard = ({ onClick }: HumanBitcoinCardProps) => {
   const t = useTranslations('onboarding.bitcoin');
   const satUsdRate = useBtcRate()?.satUsd;
@@ -31,7 +31,7 @@ export const HumanBitcoinCard = ({ onClick }: HumanBitcoinCardProps) => {
     <Atoms.Container className="relative flex-1">
       <Atoms.Card
         data-testid="bitcoin-payment-card"
-        className={Libs.cn('flex-1 gap-0 p-6 md:p-12', isUnavailable && 'pointer-events-none opacity-60 blur-[5px]')}
+        className={cn('flex-1 gap-0 p-6 md:p-12', isUnavailable && 'pointer-events-none opacity-60 blur-[5px]')}
       >
         <Atoms.Container className="flex-col gap-10 lg:flex-row lg:items-start lg:gap-12">
           <Atoms.Container className="hidden w-full flex-1 flex-col items-center gap-3 lg:flex lg:w-auto">

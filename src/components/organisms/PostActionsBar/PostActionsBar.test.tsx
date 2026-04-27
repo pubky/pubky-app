@@ -16,10 +16,6 @@ vi.mock('@/hooks', () => ({
 }));
 
 // Use real libs - use actual implementations
-vi.mock('@/libs', async () => {
-  const actual = await vi.importActual('@/libs');
-  return { ...actual };
-});
 
 // Mock PostMenuActions
 vi.mock('@/organisms', () => ({

@@ -117,10 +117,6 @@ vi.mock('@/atoms', () => ({
 }));
 
 // Use real libs - use actual implementations
-vi.mock('@/libs', async () => {
-  const actual = await vi.importActual('@/libs');
-  return { ...actual };
-});
 
 // Mock Hooks
 vi.mock('@/hooks', () => {

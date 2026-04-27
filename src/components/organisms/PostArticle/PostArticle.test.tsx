@@ -85,12 +85,6 @@ vi.mock('@/organisms', () => ({
   ),
 }));
 
-// Mock libs - use actual implementations
-vi.mock('@/libs', async () => {
-  const actual = await vi.importActual('@/libs');
-  return { ...actual };
-});
-
 describe('PostArticle', () => {
   const defaultProps = {
     content: '{"title":"Test Article Title","body":"This is the article body content."}',

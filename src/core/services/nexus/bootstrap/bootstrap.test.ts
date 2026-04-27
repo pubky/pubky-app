@@ -1,6 +1,7 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import * as Core from '@/core';
-import * as Libs from '@/libs';
+import { ClientErrorCode, ServerErrorCode } from '@/libs/error/error.codes';
+import { ErrorCategory } from '@/libs/error/error.types';
 
 describe('NexusBootstrapService', () => {
   const mockFetch = vi.fn();
@@ -181,8 +182,8 @@ describe('NexusBootstrapService', () => {
       });
 
       await expect(Core.NexusBootstrapService.fetch(errorPubky)).rejects.toMatchObject({
-        category: Libs.ErrorCategory.Client,
-        code: Libs.ClientErrorCode.BAD_REQUEST,
+        category: ErrorCategory.Client,
+        code: ClientErrorCode.BAD_REQUEST,
       });
     });
 
@@ -199,8 +200,8 @@ describe('NexusBootstrapService', () => {
       });
 
       await expect(Core.NexusBootstrapService.fetch(emptyPubky)).rejects.toMatchObject({
-        category: Libs.ErrorCategory.Server,
-        code: Libs.ServerErrorCode.INVALID_RESPONSE,
+        category: ErrorCategory.Server,
+        code: ServerErrorCode.INVALID_RESPONSE,
       });
     });
   });

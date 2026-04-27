@@ -3,8 +3,7 @@
 import * as React from 'react';
 import { Slot } from 'radix-ui';
 import { cva, type VariantProps } from 'class-variance-authority';
-
-import { cn } from '@/libs';
+import { cn } from '@/libs/utils/utils';
 
 export enum ButtonVariant {
   DEFAULT = 'default',

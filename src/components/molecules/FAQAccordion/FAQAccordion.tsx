@@ -2,12 +2,12 @@
 
 import { Accordion as AccordionPrimitive } from 'radix-ui';
 import Markdown from 'react-markdown';
-import * as Libs from '@/libs';
 import type { FAQAccordionProps } from './FAQAccordion.types';
 import { ChevronRight } from 'lucide-react';
+import { cn } from '@/libs/utils/utils';
 export function FAQAccordion({ items, className }: FAQAccordionProps) {
   return (
-    <AccordionPrimitive.Root type="single" collapsible className={Libs.cn('flex w-full flex-col gap-3', className)}>
+    <AccordionPrimitive.Root type="single" collapsible className={cn('flex w-full flex-col gap-3', className)}>
       {items.map((item) => (
         <AccordionPrimitive.Item
           key={item.id}

@@ -1,6 +1,6 @@
 import * as Core from '@/core';
-import { HttpMethod } from '@/libs';
 import { postUriBuilder } from 'pubky-app-specs';
+import { HttpMethod } from '@/libs/http/http.types';
 
 export class BookmarkController {
   private constructor() {}

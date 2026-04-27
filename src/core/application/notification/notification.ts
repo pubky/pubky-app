@@ -1,6 +1,7 @@
 import * as Core from '@/core';
-import { HttpMethod, Logger } from '@/libs';
 import { LastReadResult } from 'pubky-app-specs';
+import { HttpMethod } from '@/libs/http/http.types';
+import { Logger } from '@/libs/logger/logger';
 
 export class NotificationApplication {
   private constructor() {} // Prevent instantiation

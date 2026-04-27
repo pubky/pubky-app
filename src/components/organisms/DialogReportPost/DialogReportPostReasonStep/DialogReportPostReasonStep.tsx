@@ -3,10 +3,10 @@
 import * as Atoms from '@/atoms';
 import * as Organisms from '@/organisms';
 import * as Hooks from '@/hooks';
-import * as Libs from '@/libs';
 import { REPORT_REASON_MAX_LENGTH } from '@/core/pipes/report';
 import type { DialogReportPostReasonStepProps } from './DialogReportPostReasonStep.types';
 import { Loader2 } from 'lucide-react';
+import { getCharacterCount } from '@/libs/utils/utils';
 export function DialogReportPostReasonStep({
   reason,
   hasContent,
@@ -34,7 +34,7 @@ export function DialogReportPostReasonStep({
                 postId={currentUserPubky}
                 isReplyInput={true}
                 characterLimit={{
-                  count: Libs.getCharacterCount(reason),
+                  count: getCharacterCount(reason),
                   max: REPORT_REASON_MAX_LENGTH,
                 }}
               />

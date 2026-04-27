@@ -6,7 +6,6 @@ import {
   TTL_POST_MAX_BATCH_SIZE,
   TTL_USER_MAX_BATCH_SIZE,
 } from '@/config/sync';
-import { Logger } from '@/libs';
 import type {
   TtlCoordinatorConfig,
   TtlCoordinatorState,
@@ -16,6 +15,7 @@ import type {
   TtlUnsubscribeUserParams,
   EntityOps,
 } from './ttl.types';
+import { Logger } from '@/libs/logger/logger';
 
 /**
  * TtlCoordinator

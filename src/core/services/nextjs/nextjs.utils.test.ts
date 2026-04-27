@@ -1,16 +1,15 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
-import {
-  AppError,
-  ErrorCategory,
-  ErrorService,
-  NetworkErrorCode,
-  AuthErrorCode,
-  ValidationErrorCode,
-  ClientErrorCode,
-  ServerErrorCode,
-  HttpStatusCode,
-} from '@/libs';
 import { validateDns, readResponseBody, normalizeImageUrl } from './nextjs.utils';
+import { AppError } from '@/libs/error/error';
+import {
+  AuthErrorCode,
+  ClientErrorCode,
+  NetworkErrorCode,
+  ServerErrorCode,
+  ValidationErrorCode,
+} from '@/libs/error/error.codes';
+import { ErrorCategory, ErrorService } from '@/libs/error/error.types';
+import { HttpStatusCode } from '@/libs/http/http.types';
 
 // ---------------------------------------------------------------------------
 // Mocks
@@ -34,7 +33,7 @@ vi.mock('net', () => ({
   isIP: mockIsIP,
 }));
 
-vi.mock('@/libs/network', () => ({
+vi.mock('@/libs/network/network', () => ({
   isIpSafe: mockIsIpSafe,
 }));
 
