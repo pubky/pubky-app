@@ -4,7 +4,7 @@ import { PostTag } from './PostTag';
 
 // Mock @/libs with partial mock
 vi.mock('@/libs', async () => {
-  const actual = await vi.importActual('@/libs');
+  const actual = await vi.importActual<typeof import('@/libs')>('@/libs');
   return {
     ...actual,
     generateRandomColor: vi.fn((str: string) => {
@@ -20,11 +20,6 @@ vi.mock('@/libs', async () => {
       const [r, g, b] = hex.match(/\w\w/g)!.map((x) => parseInt(x, 16));
       return `rgba(${r}, ${g}, ${b}, ${alpha})`;
     }),
-    X: ({ className, strokeWidth }: { className?: string; strokeWidth?: number }) => (
-      <div data-testid="x-icon" className={className} data-stroke-width={strokeWidth}>
-        X
-      </div>
-    ),
   };
 });
 

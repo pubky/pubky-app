@@ -2,7 +2,7 @@
 
 import * as Atoms from '@/atoms';
 import * as Libs from '@/libs';
-
+import { ArrowLeft, Loader2, ArrowRight } from 'lucide-react';
 export const ProfileNavigation = ({
   continueButtonDisabled,
   continueText = 'Finish',
@@ -29,7 +29,6 @@ export const ProfileNavigation = ({
   const onHandleContinueButton = () => {
     onContinue();
   };
-
   return (
     <Atoms.Container className={Libs.cn('flex-row justify-between gap-3 py-6 lg:gap-6', className)}>
       {!hiddenBackButton && (
@@ -40,7 +39,7 @@ export const ProfileNavigation = ({
           onClick={onHandleBackButton}
           disabled={backButtonDisabled}
         >
-          <Libs.ArrowLeft className="mr-2 h-4 w-4" />
+          <ArrowLeft className="mr-2 h-4 w-4" />
           {backText}
         </Atoms.Button>
       )}
@@ -54,12 +53,12 @@ export const ProfileNavigation = ({
         >
           {continueButtonLoading ? (
             <>
-              <Libs.Loader2 className="mr-2 h-4 w-4 animate-spin" />
+              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
               {continueText}
             </>
           ) : (
             <>
-              <Libs.ArrowRight className="mr-2 h-4 w-4" />
+              <ArrowRight className="mr-2 h-4 w-4" />
               {continueText}
             </>
           )}

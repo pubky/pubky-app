@@ -1,12 +1,10 @@
 import * as React from 'react';
 import { Dialog as DialogPrimitive } from 'radix-ui';
-
 import * as Libs from '@/libs';
-
+import { X } from 'lucide-react';
 function Dialog({ ...props }: React.ComponentProps<typeof DialogPrimitive.Root>) {
   return <DialogPrimitive.Root data-slot="dialog" data-testid="dialog" {...props} />;
 }
-
 function DialogTrigger({ asChild, ...props }: React.ComponentProps<typeof DialogPrimitive.Trigger>) {
   return (
     <DialogPrimitive.Trigger
@@ -18,11 +16,9 @@ function DialogTrigger({ asChild, ...props }: React.ComponentProps<typeof Dialog
     />
   );
 }
-
 function DialogPortal({ ...props }: React.ComponentProps<typeof DialogPrimitive.Portal>) {
   return <DialogPrimitive.Portal data-slot="dialog-portal" {...props} />;
 }
-
 const DialogClose = React.forwardRef<
   React.ComponentRef<typeof DialogPrimitive.Close>,
   React.ComponentProps<typeof DialogPrimitive.Close>
@@ -30,7 +26,6 @@ const DialogClose = React.forwardRef<
   return <DialogPrimitive.Close ref={ref} data-slot="dialog-close" data-testid="dialog-close" {...props} />;
 });
 DialogClose.displayName = 'DialogClose';
-
 function DialogOverlay({
   className,
   onCloseRef,
@@ -63,7 +58,6 @@ function DialogOverlay({
     />
   );
 }
-
 function DialogContent({
   className,
   children,
@@ -78,7 +72,6 @@ function DialogContent({
 }) {
   const closeRef = React.useRef<HTMLButtonElement>(null);
   const contentRef = React.useRef<HTMLDivElement>(null);
-
   return (
     <DialogPortal data-slot="dialog-portal">
       <DialogOverlay onCloseRef={closeRef} contentRef={contentRef} />
@@ -111,7 +104,7 @@ function DialogContent({
                 : 'hidden',
             )}
           >
-            <Libs.X className="h-4 w-4 text-secondary-foreground opacity-70" />
+            <X className="h-4 w-4 text-secondary-foreground opacity-70" />
             <span className="sr-only">Close</span>
           </DialogClose>
         </DialogPrimitive.Content>
@@ -119,7 +112,6 @@ function DialogContent({
     </DialogPortal>
   );
 }
-
 function DialogHeader({ className, ...props }: React.ComponentProps<'div'>) {
   return (
     <div
@@ -130,7 +122,6 @@ function DialogHeader({ className, ...props }: React.ComponentProps<'div'>) {
     />
   );
 }
-
 function DialogFooter({ className, ...props }: React.ComponentProps<'div'>) {
   return (
     <div
@@ -143,7 +134,6 @@ function DialogFooter({ className, ...props }: React.ComponentProps<'div'>) {
     />
   );
 }
-
 function DialogTitle({ className, ...props }: React.ComponentProps<typeof DialogPrimitive.Title>) {
   return (
     <DialogPrimitive.Title
@@ -154,7 +144,6 @@ function DialogTitle({ className, ...props }: React.ComponentProps<typeof Dialog
     />
   );
 }
-
 function DialogDescription({ className, ...props }: React.ComponentProps<typeof DialogPrimitive.Description>) {
   return (
     <DialogPrimitive.Description
@@ -164,7 +153,6 @@ function DialogDescription({ className, ...props }: React.ComponentProps<typeof 
     />
   );
 }
-
 export {
   Dialog,
   DialogClose,

@@ -77,15 +77,6 @@ vi.mock('@/core', () => ({
   generateTestUserId: vi.fn((index: number) => `test-user-${index}`),
 }));
 
-// Mock lucide-react
-vi.mock('lucide-react', () => ({
-  Check: ({ className }: { className?: string }) => <svg data-testid="check-icon" className={className} />,
-  UserMinus: ({ className }: { className?: string }) => <svg data-testid="user-minus-icon" className={className} />,
-  UserRoundPlus: ({ className }: { className?: string }) => (
-    <svg data-testid="user-round-plus-icon" className={className} />
-  ),
-}));
-
 // Shared mock follower for all tests
 const mockFollower: UserConnectionData = {
   id: 'test-user-1' as Core.Pubky,
@@ -156,9 +147,7 @@ describe('FollowerItem', () => {
     const buttons = screen.getAllByTestId('button');
     const followButton = buttons.find((btn) => btn.getAttribute('aria-label') === 'Follow');
     expect(followButton).toBeInTheDocument();
-    // Button appears twice (desktop and mobile), so we check for at least one
-    const plusIcons = screen.getAllByTestId('user-round-plus-icon');
-    expect(plusIcons.length).toBeGreaterThan(0);
+    expect(document.querySelectorAll('.lucide-user-round-plus').length).toBeGreaterThan(0);
   });
 
   it('renders unfollow button when following', () => {
@@ -166,9 +155,7 @@ describe('FollowerItem', () => {
     const buttons = screen.getAllByTestId('button');
     const unfollowButton = buttons.find((btn) => btn.getAttribute('aria-label') === 'Unfollow');
     expect(unfollowButton).toBeInTheDocument();
-    // Button appears twice (desktop and mobile), so we check for at least one
-    const checkIcons = screen.getAllByTestId('check-icon');
-    expect(checkIcons.length).toBeGreaterThan(0);
+    expect(document.querySelectorAll('.lucide-check').length).toBeGreaterThan(0);
   });
 
   it('calls onFollow when button is clicked', () => {

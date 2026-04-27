@@ -4,7 +4,7 @@ import * as React from 'react';
 import * as Atoms from '@/atoms';
 import * as Organisms from '@/organisms';
 import * as Libs from '@/libs';
-
+import { UserRoundPlus, Tag, StickyNote } from 'lucide-react';
 export interface UserData {
   id: string;
   name: string;
@@ -13,7 +13,6 @@ export interface UserData {
   tagsCount?: number;
   postsCount?: number;
 }
-
 interface UserProps {
   user: UserData;
   onAction?: (userId: string) => void;
@@ -23,11 +22,10 @@ interface UserProps {
   className?: React.HTMLAttributes<HTMLDivElement>['className'];
   'data-testid'?: string;
 }
-
 export function User({
   user,
   onAction,
-  actionIcon = <Libs.UserRoundPlus className="h-4 w-4" />,
+  actionIcon = <UserRoundPlus className="h-4 w-4" />,
   showAction = true,
   actionVariant = Atoms.ButtonVariant.SECONDARY,
   className,
@@ -57,14 +55,14 @@ export function User({
               className="flex items-center justify-center gap-1 truncate text-xs font-medium text-muted-foreground"
               data-testid="user-tags-count"
             >
-              <Libs.Tag className="h-2 w-2" />
+              <Tag className="h-2 w-2" />
               {user.tagsCount}
             </Atoms.Typography>
             <Atoms.Typography
               className="flex items-center justify-center gap-1 truncate text-xs font-medium text-muted-foreground"
               data-testid="user-posts-count"
             >
-              <Libs.StickyNote className="h-2 w-2" />
+              <StickyNote className="h-2 w-2" />
               {user.postsCount}
             </Atoms.Typography>
           </Atoms.Container>

@@ -21,9 +21,36 @@ exports[`PostInputAttachments - Snapshots > matches snapshot in article mode whe
         data-testid="container"
       >
         <svg
-          class="size-8 text-brand"
-          data-testid="image-plus-icon"
-        />
+          aria-hidden="true"
+          class="lucide lucide-image-plus size-8 text-brand"
+          fill="none"
+          height="24"
+          stroke="currentColor"
+          stroke-linecap="round"
+          stroke-linejoin="round"
+          stroke-width="2"
+          viewBox="0 0 24 24"
+          width="24"
+          xmlns="http://www.w3.org/2000/svg"
+        >
+          <path
+            d="M16 5h6"
+          />
+          <path
+            d="M19 2v6"
+          />
+          <path
+            d="M21 11.5V19a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h7.5"
+          />
+          <path
+            d="m21 15-3.086-3.086a2 2 0 0 0-2.828 0L6 21"
+          />
+          <circle
+            cx="9"
+            cy="9"
+            r="2"
+          />
+        </svg>
       </div>
       <button
         data-size="sm"
@@ -32,9 +59,25 @@ exports[`PostInputAttachments - Snapshots > matches snapshot in article mode whe
         disabled=""
       >
         <svg
-          class="size-4"
-          data-testid="plus-icon"
-        />
+          aria-hidden="true"
+          class="lucide lucide-plus size-4"
+          fill="none"
+          height="24"
+          stroke="currentColor"
+          stroke-linecap="round"
+          stroke-linejoin="round"
+          stroke-width="2"
+          viewBox="0 0 24 24"
+          width="24"
+          xmlns="http://www.w3.org/2000/svg"
+        >
+          <path
+            d="M5 12h14"
+          />
+          <path
+            d="M12 5v14"
+          />
+        </svg>
          Add image
       </button>
     </div>
@@ -65,9 +108,34 @@ exports[`PostInputAttachments - Snapshots > matches snapshot in article mode wit
         data-variant="dark"
       >
         <svg
-          class="size-4"
-          data-testid="trash-icon"
-        />
+          aria-hidden="true"
+          class="lucide lucide-trash2 lucide-trash-2 size-4"
+          fill="none"
+          height="24"
+          stroke="currentColor"
+          stroke-linecap="round"
+          stroke-linejoin="round"
+          stroke-width="2"
+          viewBox="0 0 24 24"
+          width="24"
+          xmlns="http://www.w3.org/2000/svg"
+        >
+          <path
+            d="M10 11v6"
+          />
+          <path
+            d="M14 11v6"
+          />
+          <path
+            d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6"
+          />
+          <path
+            d="M3 6h18"
+          />
+          <path
+            d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"
+          />
+        </svg>
       </button>
       <img
         alt="Image preview"
@@ -101,9 +169,36 @@ exports[`PostInputAttachments - Snapshots > matches snapshot in article mode wit
         data-testid="container"
       >
         <svg
-          class="size-8 text-brand"
-          data-testid="image-plus-icon"
-        />
+          aria-hidden="true"
+          class="lucide lucide-image-plus size-8 text-brand"
+          fill="none"
+          height="24"
+          stroke="currentColor"
+          stroke-linecap="round"
+          stroke-linejoin="round"
+          stroke-width="2"
+          viewBox="0 0 24 24"
+          width="24"
+          xmlns="http://www.w3.org/2000/svg"
+        >
+          <path
+            d="M16 5h6"
+          />
+          <path
+            d="M19 2v6"
+          />
+          <path
+            d="M21 11.5V19a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h7.5"
+          />
+          <path
+            d="m21 15-3.086-3.086a2 2 0 0 0-2.828 0L6 21"
+          />
+          <circle
+            cx="9"
+            cy="9"
+            r="2"
+          />
+        </svg>
       </div>
       <button
         data-size="sm"
@@ -111,9 +206,25 @@ exports[`PostInputAttachments - Snapshots > matches snapshot in article mode wit
         data-variant="secondary"
       >
         <svg
-          class="size-4"
-          data-testid="plus-icon"
-        />
+          aria-hidden="true"
+          class="lucide lucide-plus size-4"
+          fill="none"
+          height="24"
+          stroke="currentColor"
+          stroke-linecap="round"
+          stroke-linejoin="round"
+          stroke-width="2"
+          viewBox="0 0 24 24"
+          width="24"
+          xmlns="http://www.w3.org/2000/svg"
+        >
+          <path
+            d="M5 12h14"
+          />
+          <path
+            d="M12 5v14"
+          />
+        </svg>
          Add image
       </button>
     </div>
@@ -146,9 +257,34 @@ exports[`PostInputAttachments - Snapshots > matches snapshot when submitting 1`]
         disabled=""
       >
         <svg
-          class="size-4"
-          data-testid="trash-icon"
-        />
+          aria-hidden="true"
+          class="lucide lucide-trash2 lucide-trash-2 size-4"
+          fill="none"
+          height="24"
+          stroke="currentColor"
+          stroke-linecap="round"
+          stroke-linejoin="round"
+          stroke-width="2"
+          viewBox="0 0 24 24"
+          width="24"
+          xmlns="http://www.w3.org/2000/svg"
+        >
+          <path
+            d="M10 11v6"
+          />
+          <path
+            d="M14 11v6"
+          />
+          <path
+            d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6"
+          />
+          <path
+            d="M3 6h18"
+          />
+          <path
+            d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"
+          />
+        </svg>
       </button>
       <img
         alt="Image preview"
@@ -185,9 +321,34 @@ exports[`PostInputAttachments - Snapshots > matches snapshot with maximum attach
         data-variant="dark"
       >
         <svg
-          class="size-4"
-          data-testid="trash-icon"
-        />
+          aria-hidden="true"
+          class="lucide lucide-trash2 lucide-trash-2 size-4"
+          fill="none"
+          height="24"
+          stroke="currentColor"
+          stroke-linecap="round"
+          stroke-linejoin="round"
+          stroke-width="2"
+          viewBox="0 0 24 24"
+          width="24"
+          xmlns="http://www.w3.org/2000/svg"
+        >
+          <path
+            d="M10 11v6"
+          />
+          <path
+            d="M14 11v6"
+          />
+          <path
+            d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6"
+          />
+          <path
+            d="M3 6h18"
+          />
+          <path
+            d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"
+          />
+        </svg>
       </button>
       <img
         alt="Image preview"
@@ -207,9 +368,34 @@ exports[`PostInputAttachments - Snapshots > matches snapshot with maximum attach
         data-variant="dark"
       >
         <svg
-          class="size-4"
-          data-testid="trash-icon"
-        />
+          aria-hidden="true"
+          class="lucide lucide-trash2 lucide-trash-2 size-4"
+          fill="none"
+          height="24"
+          stroke="currentColor"
+          stroke-linecap="round"
+          stroke-linejoin="round"
+          stroke-width="2"
+          viewBox="0 0 24 24"
+          width="24"
+          xmlns="http://www.w3.org/2000/svg"
+        >
+          <path
+            d="M10 11v6"
+          />
+          <path
+            d="M14 11v6"
+          />
+          <path
+            d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6"
+          />
+          <path
+            d="M3 6h18"
+          />
+          <path
+            d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"
+          />
+        </svg>
       </button>
       <img
         alt="Image preview"
@@ -229,9 +415,34 @@ exports[`PostInputAttachments - Snapshots > matches snapshot with maximum attach
         data-variant="dark"
       >
         <svg
-          class="size-4"
-          data-testid="trash-icon"
-        />
+          aria-hidden="true"
+          class="lucide lucide-trash2 lucide-trash-2 size-4"
+          fill="none"
+          height="24"
+          stroke="currentColor"
+          stroke-linecap="round"
+          stroke-linejoin="round"
+          stroke-width="2"
+          viewBox="0 0 24 24"
+          width="24"
+          xmlns="http://www.w3.org/2000/svg"
+        >
+          <path
+            d="M10 11v6"
+          />
+          <path
+            d="M14 11v6"
+          />
+          <path
+            d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6"
+          />
+          <path
+            d="M3 6h18"
+          />
+          <path
+            d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"
+          />
+        </svg>
       </button>
       <img
         alt="Image preview"
@@ -268,9 +479,34 @@ exports[`PostInputAttachments - Snapshots > matches snapshot with mixed attachme
         data-variant="dark"
       >
         <svg
-          class="size-4"
-          data-testid="trash-icon"
-        />
+          aria-hidden="true"
+          class="lucide lucide-trash2 lucide-trash-2 size-4"
+          fill="none"
+          height="24"
+          stroke="currentColor"
+          stroke-linecap="round"
+          stroke-linejoin="round"
+          stroke-width="2"
+          viewBox="0 0 24 24"
+          width="24"
+          xmlns="http://www.w3.org/2000/svg"
+        >
+          <path
+            d="M10 11v6"
+          />
+          <path
+            d="M14 11v6"
+          />
+          <path
+            d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6"
+          />
+          <path
+            d="M3 6h18"
+          />
+          <path
+            d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"
+          />
+        </svg>
       </button>
       <img
         alt="Image preview"
@@ -290,9 +526,34 @@ exports[`PostInputAttachments - Snapshots > matches snapshot with mixed attachme
         data-variant="dark"
       >
         <svg
-          class="size-4"
-          data-testid="trash-icon"
-        />
+          aria-hidden="true"
+          class="lucide lucide-trash2 lucide-trash-2 size-4"
+          fill="none"
+          height="24"
+          stroke="currentColor"
+          stroke-linecap="round"
+          stroke-linejoin="round"
+          stroke-width="2"
+          viewBox="0 0 24 24"
+          width="24"
+          xmlns="http://www.w3.org/2000/svg"
+        >
+          <path
+            d="M10 11v6"
+          />
+          <path
+            d="M14 11v6"
+          />
+          <path
+            d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6"
+          />
+          <path
+            d="M3 6h18"
+          />
+          <path
+            d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"
+          />
+        </svg>
       </button>
       <video
         class="h-48 w-full cursor-auto"
@@ -311,9 +572,34 @@ exports[`PostInputAttachments - Snapshots > matches snapshot with mixed attachme
         data-variant="dark"
       >
         <svg
-          class="size-3"
-          data-testid="trash-icon"
-        />
+          aria-hidden="true"
+          class="lucide lucide-trash2 lucide-trash-2 size-3"
+          fill="none"
+          height="24"
+          stroke="currentColor"
+          stroke-linecap="round"
+          stroke-linejoin="round"
+          stroke-width="2"
+          viewBox="0 0 24 24"
+          width="24"
+          xmlns="http://www.w3.org/2000/svg"
+        >
+          <path
+            d="M10 11v6"
+          />
+          <path
+            d="M14 11v6"
+          />
+          <path
+            d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6"
+          />
+          <path
+            d="M3 6h18"
+          />
+          <path
+            d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"
+          />
+        </svg>
       </button>
       <audio
         class="w-full cursor-auto"
@@ -333,18 +619,68 @@ exports[`PostInputAttachments - Snapshots > matches snapshot with mixed attachme
         data-variant="dark"
       >
         <svg
-          class="size-4"
-          data-testid="trash-icon"
-        />
+          aria-hidden="true"
+          class="lucide lucide-trash2 lucide-trash-2 size-4"
+          fill="none"
+          height="24"
+          stroke="currentColor"
+          stroke-linecap="round"
+          stroke-linejoin="round"
+          stroke-width="2"
+          viewBox="0 0 24 24"
+          width="24"
+          xmlns="http://www.w3.org/2000/svg"
+        >
+          <path
+            d="M10 11v6"
+          />
+          <path
+            d="M14 11v6"
+          />
+          <path
+            d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6"
+          />
+          <path
+            d="M3 6h18"
+          />
+          <path
+            d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"
+          />
+        </svg>
       </button>
       <div
         class="cursor-auto flex-row items-center gap-x-2 rounded-md bg-muted p-4 pr-14"
         data-testid="container"
       >
         <svg
-          class="size-6 shrink-0"
-          data-testid="file-text-icon"
-        />
+          aria-hidden="true"
+          class="lucide lucide-file-text size-6 shrink-0"
+          fill="none"
+          height="24"
+          stroke="currentColor"
+          stroke-linecap="round"
+          stroke-linejoin="round"
+          stroke-width="2"
+          viewBox="0 0 24 24"
+          width="24"
+          xmlns="http://www.w3.org/2000/svg"
+        >
+          <path
+            d="M6 22a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h8a2.4 2.4 0 0 1 1.704.706l3.588 3.588A2.4 2.4 0 0 1 20 8v12a2 2 0 0 1-2 2z"
+          />
+          <path
+            d="M14 2v5a1 1 0 0 0 1 1h5"
+          />
+          <path
+            d="M10 9H8"
+          />
+          <path
+            d="M16 13H8"
+          />
+          <path
+            d="M16 17H8"
+          />
+        </svg>
         <span
           class="font-bold break-all"
           data-size="sm"
@@ -382,9 +718,34 @@ exports[`PostInputAttachments - Snapshots > matches snapshot with multiple image
         data-variant="dark"
       >
         <svg
-          class="size-4"
-          data-testid="trash-icon"
-        />
+          aria-hidden="true"
+          class="lucide lucide-trash2 lucide-trash-2 size-4"
+          fill="none"
+          height="24"
+          stroke="currentColor"
+          stroke-linecap="round"
+          stroke-linejoin="round"
+          stroke-width="2"
+          viewBox="0 0 24 24"
+          width="24"
+          xmlns="http://www.w3.org/2000/svg"
+        >
+          <path
+            d="M10 11v6"
+          />
+          <path
+            d="M14 11v6"
+          />
+          <path
+            d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6"
+          />
+          <path
+            d="M3 6h18"
+          />
+          <path
+            d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"
+          />
+        </svg>
       </button>
       <img
         alt="Image preview"
@@ -404,9 +765,34 @@ exports[`PostInputAttachments - Snapshots > matches snapshot with multiple image
         data-variant="dark"
       >
         <svg
-          class="size-4"
-          data-testid="trash-icon"
-        />
+          aria-hidden="true"
+          class="lucide lucide-trash2 lucide-trash-2 size-4"
+          fill="none"
+          height="24"
+          stroke="currentColor"
+          stroke-linecap="round"
+          stroke-linejoin="round"
+          stroke-width="2"
+          viewBox="0 0 24 24"
+          width="24"
+          xmlns="http://www.w3.org/2000/svg"
+        >
+          <path
+            d="M10 11v6"
+          />
+          <path
+            d="M14 11v6"
+          />
+          <path
+            d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6"
+          />
+          <path
+            d="M3 6h18"
+          />
+          <path
+            d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"
+          />
+        </svg>
       </button>
       <img
         alt="Image preview"
@@ -426,9 +812,34 @@ exports[`PostInputAttachments - Snapshots > matches snapshot with multiple image
         data-variant="dark"
       >
         <svg
-          class="size-4"
-          data-testid="trash-icon"
-        />
+          aria-hidden="true"
+          class="lucide lucide-trash2 lucide-trash-2 size-4"
+          fill="none"
+          height="24"
+          stroke="currentColor"
+          stroke-linecap="round"
+          stroke-linejoin="round"
+          stroke-width="2"
+          viewBox="0 0 24 24"
+          width="24"
+          xmlns="http://www.w3.org/2000/svg"
+        >
+          <path
+            d="M10 11v6"
+          />
+          <path
+            d="M14 11v6"
+          />
+          <path
+            d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6"
+          />
+          <path
+            d="M3 6h18"
+          />
+          <path
+            d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"
+          />
+        </svg>
       </button>
       <img
         alt="Image preview"
@@ -477,18 +888,68 @@ exports[`PostInputAttachments - Snapshots > matches snapshot with single PDF att
         data-variant="dark"
       >
         <svg
-          class="size-4"
-          data-testid="trash-icon"
-        />
+          aria-hidden="true"
+          class="lucide lucide-trash2 lucide-trash-2 size-4"
+          fill="none"
+          height="24"
+          stroke="currentColor"
+          stroke-linecap="round"
+          stroke-linejoin="round"
+          stroke-width="2"
+          viewBox="0 0 24 24"
+          width="24"
+          xmlns="http://www.w3.org/2000/svg"
+        >
+          <path
+            d="M10 11v6"
+          />
+          <path
+            d="M14 11v6"
+          />
+          <path
+            d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6"
+          />
+          <path
+            d="M3 6h18"
+          />
+          <path
+            d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"
+          />
+        </svg>
       </button>
       <div
         class="cursor-auto flex-row items-center gap-x-2 rounded-md bg-muted p-4 pr-14"
         data-testid="container"
       >
         <svg
-          class="size-6 shrink-0"
-          data-testid="file-text-icon"
-        />
+          aria-hidden="true"
+          class="lucide lucide-file-text size-6 shrink-0"
+          fill="none"
+          height="24"
+          stroke="currentColor"
+          stroke-linecap="round"
+          stroke-linejoin="round"
+          stroke-width="2"
+          viewBox="0 0 24 24"
+          width="24"
+          xmlns="http://www.w3.org/2000/svg"
+        >
+          <path
+            d="M6 22a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h8a2.4 2.4 0 0 1 1.704.706l3.588 3.588A2.4 2.4 0 0 1 20 8v12a2 2 0 0 1-2 2z"
+          />
+          <path
+            d="M14 2v5a1 1 0 0 0 1 1h5"
+          />
+          <path
+            d="M10 9H8"
+          />
+          <path
+            d="M16 13H8"
+          />
+          <path
+            d="M16 17H8"
+          />
+        </svg>
         <span
           class="font-bold break-all"
           data-size="sm"
@@ -526,9 +987,34 @@ exports[`PostInputAttachments - Snapshots > matches snapshot with single audio a
         data-variant="dark"
       >
         <svg
-          class="size-3"
-          data-testid="trash-icon"
-        />
+          aria-hidden="true"
+          class="lucide lucide-trash2 lucide-trash-2 size-3"
+          fill="none"
+          height="24"
+          stroke="currentColor"
+          stroke-linecap="round"
+          stroke-linejoin="round"
+          stroke-width="2"
+          viewBox="0 0 24 24"
+          width="24"
+          xmlns="http://www.w3.org/2000/svg"
+        >
+          <path
+            d="M10 11v6"
+          />
+          <path
+            d="M14 11v6"
+          />
+          <path
+            d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6"
+          />
+          <path
+            d="M3 6h18"
+          />
+          <path
+            d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"
+          />
+        </svg>
       </button>
       <audio
         class="w-full cursor-auto"
@@ -565,9 +1051,34 @@ exports[`PostInputAttachments - Snapshots > matches snapshot with single image a
         data-variant="dark"
       >
         <svg
-          class="size-4"
-          data-testid="trash-icon"
-        />
+          aria-hidden="true"
+          class="lucide lucide-trash2 lucide-trash-2 size-4"
+          fill="none"
+          height="24"
+          stroke="currentColor"
+          stroke-linecap="round"
+          stroke-linejoin="round"
+          stroke-width="2"
+          viewBox="0 0 24 24"
+          width="24"
+          xmlns="http://www.w3.org/2000/svg"
+        >
+          <path
+            d="M10 11v6"
+          />
+          <path
+            d="M14 11v6"
+          />
+          <path
+            d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6"
+          />
+          <path
+            d="M3 6h18"
+          />
+          <path
+            d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"
+          />
+        </svg>
       </button>
       <img
         alt="Image preview"
@@ -604,9 +1115,34 @@ exports[`PostInputAttachments - Snapshots > matches snapshot with single video a
         data-variant="dark"
       >
         <svg
-          class="size-4"
-          data-testid="trash-icon"
-        />
+          aria-hidden="true"
+          class="lucide lucide-trash2 lucide-trash-2 size-4"
+          fill="none"
+          height="24"
+          stroke="currentColor"
+          stroke-linecap="round"
+          stroke-linejoin="round"
+          stroke-width="2"
+          viewBox="0 0 24 24"
+          width="24"
+          xmlns="http://www.w3.org/2000/svg"
+        >
+          <path
+            d="M10 11v6"
+          />
+          <path
+            d="M14 11v6"
+          />
+          <path
+            d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6"
+          />
+          <path
+            d="M3 6h18"
+          />
+          <path
+            d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"
+          />
+        </svg>
       </button>
       <video
         class="h-48 w-full cursor-auto"

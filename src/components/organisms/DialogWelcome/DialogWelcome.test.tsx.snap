@@ -70,9 +70,30 @@ exports[`DialogWelcome - Snapshots > matches snapshot for default DialogWelcome 
               data-variant="secondary"
             >
               <svg
-                class="h-4 w-4"
-                data-testid="key-icon"
-              />
+                aria-hidden="true"
+                class="lucide lucide-key h-4 w-4"
+                fill="none"
+                height="24"
+                stroke="currentColor"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                stroke-width="2"
+                viewBox="0 0 24 24"
+                width="24"
+                xmlns="http://www.w3.org/2000/svg"
+              >
+                <path
+                  d="m15.5 7.5 2.3 2.3a1 1 0 0 0 1.4 0l2.1-2.1a1 1 0 0 0 0-1.4L19 4"
+                />
+                <path
+                  d="m21 2-9.6 9.6"
+                />
+                <circle
+                  cx="7.5"
+                  cy="15.5"
+                  r="5.5"
+                />
+              </svg>
               test...test-pubky-123
             </button>
           </div>
@@ -84,9 +105,25 @@ exports[`DialogWelcome - Snapshots > matches snapshot for default DialogWelcome 
           id="welcome-explore-pubky-btn"
         >
           <svg
-            class="mr-2 h-4 w-4"
-            data-testid="arrow-right-icon"
-          />
+            aria-hidden="true"
+            class="lucide lucide-arrow-right mr-2 h-4 w-4"
+            fill="none"
+            height="24"
+            stroke="currentColor"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+            stroke-width="2"
+            viewBox="0 0 24 24"
+            width="24"
+            xmlns="http://www.w3.org/2000/svg"
+          >
+            <path
+              d="M5 12h14"
+            />
+            <path
+              d="m12 5 7 7-7 7"
+            />
+          </svg>
           Explore Pubky
         </button>
       </div>
@@ -164,9 +201,30 @@ exports[`DialogWelcome - Snapshots > matches snapshot when user has no image 1`]
               data-variant="secondary"
             >
               <svg
-                class="h-4 w-4"
-                data-testid="key-icon"
-              />
+                aria-hidden="true"
+                class="lucide lucide-key h-4 w-4"
+                fill="none"
+                height="24"
+                stroke="currentColor"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                stroke-width="2"
+                viewBox="0 0 24 24"
+                width="24"
+                xmlns="http://www.w3.org/2000/svg"
+              >
+                <path
+                  d="m15.5 7.5 2.3 2.3a1 1 0 0 0 1.4 0l2.1-2.1a1 1 0 0 0 0-1.4L19 4"
+                />
+                <path
+                  d="m21 2-9.6 9.6"
+                />
+                <circle
+                  cx="7.5"
+                  cy="15.5"
+                  r="5.5"
+                />
+              </svg>
               test...test-pubky-123
             </button>
           </div>
@@ -178,9 +236,25 @@ exports[`DialogWelcome - Snapshots > matches snapshot when user has no image 1`]
           id="welcome-explore-pubky-btn"
         >
           <svg
-            class="mr-2 h-4 w-4"
-            data-testid="arrow-right-icon"
-          />
+            aria-hidden="true"
+            class="lucide lucide-arrow-right mr-2 h-4 w-4"
+            fill="none"
+            height="24"
+            stroke="currentColor"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+            stroke-width="2"
+            viewBox="0 0 24 24"
+            width="24"
+            xmlns="http://www.w3.org/2000/svg"
+          >
+            <path
+              d="M5 12h14"
+            />
+            <path
+              d="m12 5 7 7-7 7"
+            />
+          </svg>
           Explore Pubky
         </button>
       </div>

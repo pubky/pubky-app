@@ -5,12 +5,11 @@ import { Checkbox as CheckboxPrimitive } from 'radix-ui';
 import * as Libs from '@/libs';
 import * as Atoms from '@/atoms';
 import type { CheckboxProps } from './Checkbox.types';
-
+import { Check } from 'lucide-react';
 const Checkbox = React.forwardRef<React.ComponentRef<typeof CheckboxPrimitive.Root>, CheckboxProps>(
   ({ className, label, description, id, ...props }, ref) => {
     const generatedId = React.useId();
     const checkboxId = id || generatedId;
-
     const checkboxElement = (
       <CheckboxPrimitive.Root
         ref={ref}
@@ -27,15 +26,13 @@ const Checkbox = React.forwardRef<React.ComponentRef<typeof CheckboxPrimitive.Ro
         {...props}
       >
         <CheckboxPrimitive.Indicator className="flex items-center justify-center">
-          <Libs.Check className="h-3.5 w-3.5 text-background" strokeWidth={3} />
+          <Check className="h-3.5 w-3.5 text-background" strokeWidth={3} />
         </CheckboxPrimitive.Indicator>
       </CheckboxPrimitive.Root>
     );
-
     if (!label && !description) {
       return checkboxElement;
     }
-
     return (
       <Atoms.Container overrideDefaults className="flex items-start gap-2">
         {checkboxElement}
@@ -60,7 +57,5 @@ const Checkbox = React.forwardRef<React.ComponentRef<typeof CheckboxPrimitive.Ro
     );
   },
 );
-
 Checkbox.displayName = CheckboxPrimitive.Root.displayName;
-
 export { Checkbox };

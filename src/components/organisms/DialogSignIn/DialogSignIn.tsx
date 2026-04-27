@@ -3,7 +3,6 @@
 import Link from 'next/link';
 import { useTranslations } from 'next-intl';
 import * as Atoms from '@/atoms';
-import * as Icons from '@/libs/icons';
 import * as Core from '@/core';
 
 /**
@@ -18,13 +17,12 @@ import * as Core from '@/core';
  *
  * Inspired by pubky-app's Join modal but uses Franky's design patterns.
  */
+import { UserPlus, KeyRound } from 'lucide-react';
 export function DialogSignIn() {
   const t = useTranslations('dialogs.signIn');
   const showSignInDialog = Core.useAuthStore((state) => state.showSignInDialog);
   const setShowSignInDialog = Core.useAuthStore((state) => state.setShowSignInDialog);
-
   const handleClose = () => setShowSignInDialog(false);
-
   return (
     <Atoms.Dialog open={showSignInDialog} onOpenChange={setShowSignInDialog}>
       <Atoms.DialogContent className="w-3xl gap-0">
@@ -46,12 +44,12 @@ export function DialogSignIn() {
             </Atoms.Container>
 
             <Atoms.Container className="flex flex-1 items-center justify-center py-4">
-              <Icons.UserPlus className="size-16 text-muted-foreground/50" />
+              <UserPlus className="size-16 text-muted-foreground/50" />
             </Atoms.Container>
 
             <Atoms.Button asChild className="w-full">
               <Link href="/" onClick={handleClose}>
-                <Icons.UserPlus className="mr-2 size-4" />
+                <UserPlus className="mr-2 size-4" />
                 {t('joinButton')}
               </Link>
             </Atoms.Button>
@@ -69,12 +67,12 @@ export function DialogSignIn() {
             </Atoms.Container>
 
             <Atoms.Container className="flex flex-1 items-center justify-center py-4">
-              <Icons.KeyRound className="size-16 text-muted-foreground/50" />
+              <KeyRound className="size-16 text-muted-foreground/50" />
             </Atoms.Container>
 
             <Atoms.Button asChild variant="secondary" className="w-full">
               <Link href="/sign-in" onClick={handleClose}>
-                <Icons.KeyRound className="mr-2 size-4" />
+                <KeyRound className="mr-2 size-4" />
                 {t('signInButton')}
               </Link>
             </Atoms.Button>

@@ -22,9 +22,9 @@ import type { PullToRefreshIndicatorProps } from './PullToRefreshIndicator.types
  * />
  * ```
  */
+import { ChevronDown } from 'lucide-react';
 export function PullToRefreshIndicator({ state, pullDistance }: PullToRefreshIndicatorProps) {
   const t = useTranslations('pullToRefresh');
-
   const isReady = state === 'ready';
   const isRefreshing = state === 'refreshing';
   const isVisible = state !== 'idle';
@@ -36,7 +36,6 @@ export function PullToRefreshIndicator({ state, pullDistance }: PullToRefreshInd
 
   // Determine label text based on state
   const labelText = isRefreshing ? t('refreshing') : isReady ? t('releaseToRefresh') : t('pullToRefresh');
-
   return (
     <Atoms.Container
       overrideDefaults
@@ -45,7 +44,9 @@ export function PullToRefreshIndicator({ state, pullDistance }: PullToRefreshInd
         isRefreshing && 'transition-[top] duration-200 ease-out',
       )}
       // `top` must be in style because it's a dynamic pixel value calculated from pullDistance
-      style={{ top: `${Math.max(pullDistance - 48, -48)}px` }}
+      style={{
+        top: `${Math.max(pullDistance - 48, -48)}px`,
+      }}
       data-testid="pull-to-refresh-indicator"
       aria-hidden={!isVisible}
     >
@@ -56,7 +57,7 @@ export function PullToRefreshIndicator({ state, pullDistance }: PullToRefreshInd
       >
         {/* Arrow icon - visible when not refreshing */}
         {!isRefreshing && (
-          <Libs.ChevronDown
+          <ChevronDown
             className={Libs.cn('size-4 transition-transform duration-150', isReady && 'rotate-180')}
             data-testid="pull-to-refresh-arrow"
           />

@@ -12,9 +12,8 @@ import {
   resolveAvatarFallbackInitial,
 } from './AvatarWithFallback.utils';
 import type { AvatarWithFallbackProps } from './AvatarWithFallback.types';
-
+import { EyeOff } from 'lucide-react';
 export type { AvatarWithFallbackProps };
-
 export function AvatarWithFallback({
   avatarUrl,
   name,
@@ -29,8 +28,15 @@ export function AvatarWithFallback({
 
   // Extract userId from CDN URL for moderation and local avatar resolution
   const userId = extractUserIdFromAvatarUrl(avatarUrl);
-  const resolvedFallbackSeed = resolveAvatarFallbackSeed({ fallbackSeed, userId, name });
-  const fallbackInitial = resolveAvatarFallbackInitial({ name, seed: resolvedFallbackSeed });
+  const resolvedFallbackSeed = resolveAvatarFallbackSeed({
+    fallbackSeed,
+    userId,
+    name,
+  });
+  const fallbackInitial = resolveAvatarFallbackInitial({
+    name,
+    seed: resolvedFallbackSeed,
+  });
 
   // Check if this avatar belongs to the current user
   const currentUserPubky = Core.useAuthStore((s) => s.currentUserPubky);
@@ -42,20 +48,21 @@ export function AvatarWithFallback({
 
   // Use local blob URL for current user if available, otherwise use CDN URL
   const resolvedAvatarUrl = localProfile ?? avatarUrl;
-
   const moderationStatus = useLiveQuery(async () => {
     try {
       if (!userId) return null;
       return await Core.ModerationController.getModerationStatus(userId, Core.ModerationType.PROFILE);
     } catch (error) {
-      Libs.Logger.error('[AvatarWithFallback] Failed to query moderation status', { userId, error });
+      Libs.Logger.error('[AvatarWithFallback] Failed to query moderation status', {
+        userId,
+        error,
+      });
       return null;
     }
   }, [userId]);
 
   // Show image immediately, apply blur only when status confirms
   const shouldBlur = moderationStatus?.is_blurred ?? false;
-
   const handleUnblur = () => {
     if (!userId) return;
     Core.ModerationController.unBlur(userId);
@@ -65,7 +72,6 @@ export function AvatarWithFallback({
   useEffect(() => {
     setImageError(false);
   }, [resolvedAvatarUrl]);
-
   return (
     <Atoms.Avatar size={size} className={className} data-testid={dataTestId}>
       {resolvedAvatarUrl && !imageError && (
@@ -96,7 +102,7 @@ export function AvatarWithFallback({
               }}
               className="absolute inset-0 flex cursor-pointer items-center justify-center"
             >
-              <Libs.EyeOff className="size-1/2 max-h-10 max-w-10" />
+              <EyeOff className="size-1/2 max-h-10 max-w-10" />
             </Atoms.Container>
           )}
         </>

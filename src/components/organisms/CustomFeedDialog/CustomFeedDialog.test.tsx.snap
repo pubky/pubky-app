@@ -83,8 +83,36 @@ exports[`CustomFeedDialog - Snapshots > matches snapshot for create mode default
               data-value="3"
             >
               <svg
-                data-testid="icon"
-              />
+                aria-hidden="true"
+                class="lucide lucide-radio"
+                fill="none"
+                height="24"
+                stroke="currentColor"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                stroke-width="2"
+                viewBox="0 0 24 24"
+                width="24"
+                xmlns="http://www.w3.org/2000/svg"
+              >
+                <path
+                  d="M16.247 7.761a6 6 0 0 1 0 8.478"
+                />
+                <path
+                  d="M19.075 4.933a10 10 0 0 1 0 14.134"
+                />
+                <path
+                  d="M4.925 19.067a10 10 0 0 1 0-14.134"
+                />
+                <path
+                  d="M7.753 16.239a6 6 0 0 1 0-8.478"
+                />
+                <circle
+                  cx="12"
+                  cy="12"
+                  r="2"
+                />
+              </svg>
                
               All
             </div>
@@ -93,8 +121,20 @@ exports[`CustomFeedDialog - Snapshots > matches snapshot for create mode default
               data-value="0"
             >
               <svg
-                data-testid="icon"
-              />
+                fill="none"
+                height="24"
+                viewBox="0 0 20 20"
+                width="24"
+                xmlns="http://www.w3.org/2000/svg"
+              >
+                <path
+                  d="M5.00016 17.5C5.00016 15.7319 5.70254 14.0362 6.95278 12.786C8.20303 11.5357 9.89872 10.8333 11.6668 10.8333M11.6668 10.8333C13.4349 10.8333 15.1306 11.5357 16.3809 12.786C17.6311 14.0362 18.3335 15.7319 18.3335 17.5M11.6668 10.8333C9.36564 10.8333 7.50016 8.96785 7.50016 6.66667C7.50016 4.36548 9.36564 2.5 11.6668 2.5C13.968 2.5 15.8335 4.36548 15.8335 6.66667C15.8335 8.96785 13.968 10.8333 11.6668 10.8333ZM1.66679 16.6666C1.66679 13.8583 3.33346 11.25 5.00012 9.99996C4.45227 9.58893 4.01419 9.0492 3.72465 8.42852C3.43511 7.80784 3.30303 7.12535 3.34011 6.44146C3.37719 5.75757 3.58227 5.09336 3.93723 4.50763C4.29218 3.92189 4.78605 3.43268 5.37512 3.08329"
+                  stroke="currentColor"
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  stroke-width="1.5"
+                />
+              </svg>
                
               Following
             </div>
@@ -103,8 +143,22 @@ exports[`CustomFeedDialog - Snapshots > matches snapshot for create mode default
               data-value="2"
             >
               <svg
-                data-testid="icon"
-              />
+                aria-hidden="true"
+                class="lucide lucide-heart-handshake"
+                fill="none"
+                height="24"
+                stroke="currentColor"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                stroke-width="2"
+                viewBox="0 0 24 24"
+                width="24"
+                xmlns="http://www.w3.org/2000/svg"
+              >
+                <path
+                  d="M19.414 14.414C21 12.828 22 11.5 22 9.5a5.5 5.5 0 0 0-9.591-3.676.6.6 0 0 1-.818.001A5.5 5.5 0 0 0 2 9.5c0 2.3 1.5 4 3 5.5l5.535 5.362a2 2 0 0 0 2.879.052 2.12 2.12 0 0 0-.004-3 2.124 2.124 0 1 0 3-3 2.124 2.124 0 0 0 3.004 0 2 2 0 0 0 0-2.828l-1.881-1.882a2.41 2.41 0 0 0-3.409 0l-1.71 1.71a2 2 0 0 1-2.828 0 2 2 0 0 1 0-2.828l2.823-2.762"
+                />
+              </svg>
                
               Friends
             </div>
@@ -152,8 +206,35 @@ exports[`CustomFeedDialog - Snapshots > matches snapshot for create mode default
               data-value="0"
             >
               <svg
-                data-testid="icon"
-              />
+                aria-hidden="true"
+                class="lucide lucide-square-asterisk"
+                fill="none"
+                height="24"
+                stroke="currentColor"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                stroke-width="2"
+                viewBox="0 0 24 24"
+                width="24"
+                xmlns="http://www.w3.org/2000/svg"
+              >
+                <rect
+                  height="18"
+                  rx="2"
+                  width="18"
+                  x="3"
+                  y="3"
+                />
+                <path
+                  d="M12 8v8"
+                />
+                <path
+                  d="m8.5 14 7-4"
+                />
+                <path
+                  d="m8.5 10 7 4"
+                />
+              </svg>
                
               Recent
             </div>
@@ -162,8 +243,22 @@ exports[`CustomFeedDialog - Snapshots > matches snapshot for create mode default
               data-value="1"
             >
               <svg
-                data-testid="icon"
-              />
+                aria-hidden="true"
+                class="lucide lucide-flame"
+                fill="none"
+                height="24"
+                stroke="currentColor"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                stroke-width="2"
+                viewBox="0 0 24 24"
+                width="24"
+                xmlns="http://www.w3.org/2000/svg"
+              >
+                <path
+                  d="M12 3q1 4 4 6.5t3 5.5a1 1 0 0 1-14 0 5 5 0 0 1 1-3 1 1 0 0 0 5 0c0-2-1.5-3-1.5-5q0-2 2.5-4"
+                />
+              </svg>
                
               Popularity
             </div>
@@ -211,8 +306,32 @@ exports[`CustomFeedDialog - Snapshots > matches snapshot for create mode default
               data-value="0"
             >
               <svg
-                data-testid="icon"
-              />
+                aria-hidden="true"
+                class="lucide lucide-columns3 lucide-columns-3"
+                fill="none"
+                height="24"
+                stroke="currentColor"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                stroke-width="2"
+                viewBox="0 0 24 24"
+                width="24"
+                xmlns="http://www.w3.org/2000/svg"
+              >
+                <rect
+                  height="18"
+                  rx="2"
+                  width="18"
+                  x="3"
+                  y="3"
+                />
+                <path
+                  d="M9 3v18"
+                />
+                <path
+                  d="M15 3v18"
+                />
+              </svg>
                
               Columns
             </div>
@@ -221,8 +340,28 @@ exports[`CustomFeedDialog - Snapshots > matches snapshot for create mode default
               data-value="1"
             >
               <svg
-                data-testid="icon"
-              />
+                aria-hidden="true"
+                class="lucide lucide-menu"
+                fill="none"
+                height="24"
+                stroke="currentColor"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                stroke-width="2"
+                viewBox="0 0 24 24"
+                width="24"
+                xmlns="http://www.w3.org/2000/svg"
+              >
+                <path
+                  d="M4 5h16"
+                />
+                <path
+                  d="M4 12h16"
+                />
+                <path
+                  d="M4 19h16"
+                />
+              </svg>
                
               Wide
             </div>
@@ -231,8 +370,47 @@ exports[`CustomFeedDialog - Snapshots > matches snapshot for create mode default
               data-value="2"
             >
               <svg
-                data-testid="icon"
-              />
+                aria-hidden="true"
+                class="lucide lucide-layout-grid"
+                fill="none"
+                height="24"
+                stroke="currentColor"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                stroke-width="2"
+                viewBox="0 0 24 24"
+                width="24"
+                xmlns="http://www.w3.org/2000/svg"
+              >
+                <rect
+                  height="7"
+                  rx="1"
+                  width="7"
+                  x="3"
+                  y="3"
+                />
+                <rect
+                  height="7"
+                  rx="1"
+                  width="7"
+                  x="14"
+                  y="3"
+                />
+                <rect
+                  height="7"
+                  rx="1"
+                  width="7"
+                  x="14"
+                  y="14"
+                />
+                <rect
+                  height="7"
+                  rx="1"
+                  width="7"
+                  x="3"
+                  y="14"
+                />
+              </svg>
                
               Visual
             </div>
@@ -280,8 +458,28 @@ exports[`CustomFeedDialog - Snapshots > matches snapshot for create mode default
               data-value="ALL"
             >
               <svg
-                data-testid="icon"
-              />
+                aria-hidden="true"
+                class="lucide lucide-layers"
+                fill="none"
+                height="24"
+                stroke="currentColor"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                stroke-width="2"
+                viewBox="0 0 24 24"
+                width="24"
+                xmlns="http://www.w3.org/2000/svg"
+              >
+                <path
+                  d="M12.83 2.18a2 2 0 0 0-1.66 0L2.6 6.08a1 1 0 0 0 0 1.83l8.58 3.91a2 2 0 0 0 1.66 0l8.58-3.9a1 1 0 0 0 0-1.83z"
+                />
+                <path
+                  d="M2 12a1 1 0 0 0 .58.91l8.6 3.91a2 2 0 0 0 1.65 0l8.58-3.9A1 1 0 0 0 22 12"
+                />
+                <path
+                  d="M2 17a1 1 0 0 0 .58.91l8.6 3.91a2 2 0 0 0 1.65 0l8.58-3.9A1 1 0 0 0 22 17"
+                />
+              </svg>
                
               All
             </div>
@@ -290,8 +488,25 @@ exports[`CustomFeedDialog - Snapshots > matches snapshot for create mode default
               data-value="0"
             >
               <svg
-                data-testid="icon"
-              />
+                aria-hidden="true"
+                class="lucide lucide-sticky-note"
+                fill="none"
+                height="24"
+                stroke="currentColor"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                stroke-width="2"
+                viewBox="0 0 24 24"
+                width="24"
+                xmlns="http://www.w3.org/2000/svg"
+              >
+                <path
+                  d="M21 9a2.4 2.4 0 0 0-.706-1.706l-3.588-3.588A2.4 2.4 0 0 0 15 3H5a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2z"
+                />
+                <path
+                  d="M15 3v5a1 1 0 0 0 1 1h5"
+                />
+              </svg>
                
               Posts
             </div>
@@ -300,8 +515,35 @@ exports[`CustomFeedDialog - Snapshots > matches snapshot for create mode default
               data-value="1"
             >
               <svg
-                data-testid="icon"
-              />
+                aria-hidden="true"
+                class="lucide lucide-newspaper"
+                fill="none"
+                height="24"
+                stroke="currentColor"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                stroke-width="2"
+                viewBox="0 0 24 24"
+                width="24"
+                xmlns="http://www.w3.org/2000/svg"
+              >
+                <path
+                  d="M15 18h-5"
+                />
+                <path
+                  d="M18 14h-8"
+                />
+                <path
+                  d="M4 22h16a2 2 0 0 0 2-2V4a2 2 0 0 0-2-2H8a2 2 0 0 0-2 2v16a2 2 0 0 1-4 0v-9a2 2 0 0 1 2-2h2"
+                />
+                <rect
+                  height="4"
+                  rx="1"
+                  width="8"
+                  x="10"
+                  y="6"
+                />
+              </svg>
                
               Articles
             </div>
@@ -310,8 +552,35 @@ exports[`CustomFeedDialog - Snapshots > matches snapshot for create mode default
               data-value="2"
             >
               <svg
-                data-testid="icon"
-              />
+                aria-hidden="true"
+                class="lucide lucide-image"
+                fill="none"
+                height="24"
+                stroke="currentColor"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                stroke-width="2"
+                viewBox="0 0 24 24"
+                width="24"
+                xmlns="http://www.w3.org/2000/svg"
+              >
+                <rect
+                  height="18"
+                  rx="2"
+                  ry="2"
+                  width="18"
+                  x="3"
+                  y="3"
+                />
+                <circle
+                  cx="9"
+                  cy="9"
+                  r="2"
+                />
+                <path
+                  d="m21 15-3.086-3.086a2 2 0 0 0-2.828 0L6 21"
+                />
+              </svg>
                
               Images
             </div>
@@ -320,8 +589,27 @@ exports[`CustomFeedDialog - Snapshots > matches snapshot for create mode default
               data-value="3"
             >
               <svg
-                data-testid="icon"
-              />
+                aria-hidden="true"
+                class="lucide lucide-circle-play"
+                fill="none"
+                height="24"
+                stroke="currentColor"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                stroke-width="2"
+                viewBox="0 0 24 24"
+                width="24"
+                xmlns="http://www.w3.org/2000/svg"
+              >
+                <path
+                  d="M9 9.003a1 1 0 0 1 1.517-.859l4.997 2.997a1 1 0 0 1 0 1.718l-4.997 2.997A1 1 0 0 1 9 14.996z"
+                />
+                <circle
+                  cx="12"
+                  cy="12"
+                  r="10"
+                />
+              </svg>
                
               Videos
             </div>
@@ -330,8 +618,25 @@ exports[`CustomFeedDialog - Snapshots > matches snapshot for create mode default
               data-value="4"
             >
               <svg
-                data-testid="icon"
-              />
+                aria-hidden="true"
+                class="lucide lucide-link"
+                fill="none"
+                height="24"
+                stroke="currentColor"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                stroke-width="2"
+                viewBox="0 0 24 24"
+                width="24"
+                xmlns="http://www.w3.org/2000/svg"
+              >
+                <path
+                  d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"
+                />
+                <path
+                  d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"
+                />
+              </svg>
                
               Links
             </div>
@@ -340,8 +645,28 @@ exports[`CustomFeedDialog - Snapshots > matches snapshot for create mode default
               data-value="5"
             >
               <svg
-                data-testid="icon"
-              />
+                aria-hidden="true"
+                class="lucide lucide-download"
+                fill="none"
+                height="24"
+                stroke="currentColor"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                stroke-width="2"
+                viewBox="0 0 24 24"
+                width="24"
+                xmlns="http://www.w3.org/2000/svg"
+              >
+                <path
+                  d="M12 15V3"
+                />
+                <path
+                  d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"
+                />
+                <path
+                  d="m7 10 5 5 5-5"
+                />
+              </svg>
                
               Files
             </div>
@@ -389,9 +714,22 @@ exports[`CustomFeedDialog - Snapshots > matches snapshot for create mode default
         disabled=""
       >
         <svg
-          class="size-4"
-          data-testid="icon"
-        />
+          aria-hidden="true"
+          class="lucide lucide-activity size-4"
+          fill="none"
+          height="24"
+          stroke="currentColor"
+          stroke-linecap="round"
+          stroke-linejoin="round"
+          stroke-width="2"
+          viewBox="0 0 24 24"
+          width="24"
+          xmlns="http://www.w3.org/2000/svg"
+        >
+          <path
+            d="M22 12h-2.48a2 2 0 0 0-1.93 1.46l-2.35 8.36a.25.25 0 0 1-.48 0L9.24 2.18a.25.25 0 0 0-.48 0l-2.35 8.36A2 2 0 0 1 4.49 12H2"
+          />
+        </svg>
         Save Feed
       </button>
     </div>
@@ -484,8 +822,36 @@ exports[`CustomFeedDialog - Snapshots > matches snapshot for create mode with di
               data-value="3"
             >
               <svg
-                data-testid="icon"
-              />
+                aria-hidden="true"
+                class="lucide lucide-radio"
+                fill="none"
+                height="24"
+                stroke="currentColor"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                stroke-width="2"
+                viewBox="0 0 24 24"
+                width="24"
+                xmlns="http://www.w3.org/2000/svg"
+              >
+                <path
+                  d="M16.247 7.761a6 6 0 0 1 0 8.478"
+                />
+                <path
+                  d="M19.075 4.933a10 10 0 0 1 0 14.134"
+                />
+                <path
+                  d="M4.925 19.067a10 10 0 0 1 0-14.134"
+                />
+                <path
+                  d="M7.753 16.239a6 6 0 0 1 0-8.478"
+                />
+                <circle
+                  cx="12"
+                  cy="12"
+                  r="2"
+                />
+              </svg>
                
               All
             </div>
@@ -494,8 +860,20 @@ exports[`CustomFeedDialog - Snapshots > matches snapshot for create mode with di
               data-value="0"
             >
               <svg
-                data-testid="icon"
-              />
+                fill="none"
+                height="24"
+                viewBox="0 0 20 20"
+                width="24"
+                xmlns="http://www.w3.org/2000/svg"
+              >
+                <path
+                  d="M5.00016 17.5C5.00016 15.7319 5.70254 14.0362 6.95278 12.786C8.20303 11.5357 9.89872 10.8333 11.6668 10.8333M11.6668 10.8333C13.4349 10.8333 15.1306 11.5357 16.3809 12.786C17.6311 14.0362 18.3335 15.7319 18.3335 17.5M11.6668 10.8333C9.36564 10.8333 7.50016 8.96785 7.50016 6.66667C7.50016 4.36548 9.36564 2.5 11.6668 2.5C13.968 2.5 15.8335 4.36548 15.8335 6.66667C15.8335 8.96785 13.968 10.8333 11.6668 10.8333ZM1.66679 16.6666C1.66679 13.8583 3.33346 11.25 5.00012 9.99996C4.45227 9.58893 4.01419 9.0492 3.72465 8.42852C3.43511 7.80784 3.30303 7.12535 3.34011 6.44146C3.37719 5.75757 3.58227 5.09336 3.93723 4.50763C4.29218 3.92189 4.78605 3.43268 5.37512 3.08329"
+                  stroke="currentColor"
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  stroke-width="1.5"
+                />
+              </svg>
                
               Following
             </div>
@@ -504,8 +882,22 @@ exports[`CustomFeedDialog - Snapshots > matches snapshot for create mode with di
               data-value="2"
             >
               <svg
-                data-testid="icon"
-              />
+                aria-hidden="true"
+                class="lucide lucide-heart-handshake"
+                fill="none"
+                height="24"
+                stroke="currentColor"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                stroke-width="2"
+                viewBox="0 0 24 24"
+                width="24"
+                xmlns="http://www.w3.org/2000/svg"
+              >
+                <path
+                  d="M19.414 14.414C21 12.828 22 11.5 22 9.5a5.5 5.5 0 0 0-9.591-3.676.6.6 0 0 1-.818.001A5.5 5.5 0 0 0 2 9.5c0 2.3 1.5 4 3 5.5l5.535 5.362a2 2 0 0 0 2.879.052 2.12 2.12 0 0 0-.004-3 2.124 2.124 0 1 0 3-3 2.124 2.124 0 0 0 3.004 0 2 2 0 0 0 0-2.828l-1.881-1.882a2.41 2.41 0 0 0-3.409 0l-1.71 1.71a2 2 0 0 1-2.828 0 2 2 0 0 1 0-2.828l2.823-2.762"
+                />
+              </svg>
                
               Friends
             </div>
@@ -553,8 +945,35 @@ exports[`CustomFeedDialog - Snapshots > matches snapshot for create mode with di
               data-value="0"
             >
               <svg
-                data-testid="icon"
-              />
+                aria-hidden="true"
+                class="lucide lucide-square-asterisk"
+                fill="none"
+                height="24"
+                stroke="currentColor"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                stroke-width="2"
+                viewBox="0 0 24 24"
+                width="24"
+                xmlns="http://www.w3.org/2000/svg"
+              >
+                <rect
+                  height="18"
+                  rx="2"
+                  width="18"
+                  x="3"
+                  y="3"
+                />
+                <path
+                  d="M12 8v8"
+                />
+                <path
+                  d="m8.5 14 7-4"
+                />
+                <path
+                  d="m8.5 10 7 4"
+                />
+              </svg>
                
               Recent
             </div>
@@ -563,8 +982,22 @@ exports[`CustomFeedDialog - Snapshots > matches snapshot for create mode with di
               data-value="1"
             >
               <svg
-                data-testid="icon"
-              />
+                aria-hidden="true"
+                class="lucide lucide-flame"
+                fill="none"
+                height="24"
+                stroke="currentColor"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                stroke-width="2"
+                viewBox="0 0 24 24"
+                width="24"
+                xmlns="http://www.w3.org/2000/svg"
+              >
+                <path
+                  d="M12 3q1 4 4 6.5t3 5.5a1 1 0 0 1-14 0 5 5 0 0 1 1-3 1 1 0 0 0 5 0c0-2-1.5-3-1.5-5q0-2 2.5-4"
+                />
+              </svg>
                
               Popularity
             </div>
@@ -612,8 +1045,32 @@ exports[`CustomFeedDialog - Snapshots > matches snapshot for create mode with di
               data-value="0"
             >
               <svg
-                data-testid="icon"
-              />
+                aria-hidden="true"
+                class="lucide lucide-columns3 lucide-columns-3"
+                fill="none"
+                height="24"
+                stroke="currentColor"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                stroke-width="2"
+                viewBox="0 0 24 24"
+                width="24"
+                xmlns="http://www.w3.org/2000/svg"
+              >
+                <rect
+                  height="18"
+                  rx="2"
+                  width="18"
+                  x="3"
+                  y="3"
+                />
+                <path
+                  d="M9 3v18"
+                />
+                <path
+                  d="M15 3v18"
+                />
+              </svg>
                
               Columns
             </div>
@@ -622,8 +1079,28 @@ exports[`CustomFeedDialog - Snapshots > matches snapshot for create mode with di
               data-value="1"
             >
               <svg
-                data-testid="icon"
-              />
+                aria-hidden="true"
+                class="lucide lucide-menu"
+                fill="none"
+                height="24"
+                stroke="currentColor"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                stroke-width="2"
+                viewBox="0 0 24 24"
+                width="24"
+                xmlns="http://www.w3.org/2000/svg"
+              >
+                <path
+                  d="M4 5h16"
+                />
+                <path
+                  d="M4 12h16"
+                />
+                <path
+                  d="M4 19h16"
+                />
+              </svg>
                
               Wide
             </div>
@@ -632,8 +1109,47 @@ exports[`CustomFeedDialog - Snapshots > matches snapshot for create mode with di
               data-value="2"
             >
               <svg
-                data-testid="icon"
-              />
+                aria-hidden="true"
+                class="lucide lucide-layout-grid"
+                fill="none"
+                height="24"
+                stroke="currentColor"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                stroke-width="2"
+                viewBox="0 0 24 24"
+                width="24"
+                xmlns="http://www.w3.org/2000/svg"
+              >
+                <rect
+                  height="7"
+                  rx="1"
+                  width="7"
+                  x="3"
+                  y="3"
+                />
+                <rect
+                  height="7"
+                  rx="1"
+                  width="7"
+                  x="14"
+                  y="3"
+                />
+                <rect
+                  height="7"
+                  rx="1"
+                  width="7"
+                  x="14"
+                  y="14"
+                />
+                <rect
+                  height="7"
+                  rx="1"
+                  width="7"
+                  x="3"
+                  y="14"
+                />
+              </svg>
                
               Visual
             </div>
@@ -681,8 +1197,28 @@ exports[`CustomFeedDialog - Snapshots > matches snapshot for create mode with di
               data-value="ALL"
             >
               <svg
-                data-testid="icon"
-              />
+                aria-hidden="true"
+                class="lucide lucide-layers"
+                fill="none"
+                height="24"
+                stroke="currentColor"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                stroke-width="2"
+                viewBox="0 0 24 24"
+                width="24"
+                xmlns="http://www.w3.org/2000/svg"
+              >
+                <path
+                  d="M12.83 2.18a2 2 0 0 0-1.66 0L2.6 6.08a1 1 0 0 0 0 1.83l8.58 3.91a2 2 0 0 0 1.66 0l8.58-3.9a1 1 0 0 0 0-1.83z"
+                />
+                <path
+                  d="M2 12a1 1 0 0 0 .58.91l8.6 3.91a2 2 0 0 0 1.65 0l8.58-3.9A1 1 0 0 0 22 12"
+                />
+                <path
+                  d="M2 17a1 1 0 0 0 .58.91l8.6 3.91a2 2 0 0 0 1.65 0l8.58-3.9A1 1 0 0 0 22 17"
+                />
+              </svg>
                
               All
             </div>
@@ -691,8 +1227,25 @@ exports[`CustomFeedDialog - Snapshots > matches snapshot for create mode with di
               data-value="0"
             >
               <svg
-                data-testid="icon"
-              />
+                aria-hidden="true"
+                class="lucide lucide-sticky-note"
+                fill="none"
+                height="24"
+                stroke="currentColor"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                stroke-width="2"
+                viewBox="0 0 24 24"
+                width="24"
+                xmlns="http://www.w3.org/2000/svg"
+              >
+                <path
+                  d="M21 9a2.4 2.4 0 0 0-.706-1.706l-3.588-3.588A2.4 2.4 0 0 0 15 3H5a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2z"
+                />
+                <path
+                  d="M15 3v5a1 1 0 0 0 1 1h5"
+                />
+              </svg>
                
               Posts
             </div>
@@ -701,8 +1254,35 @@ exports[`CustomFeedDialog - Snapshots > matches snapshot for create mode with di
               data-value="1"
             >
               <svg
-                data-testid="icon"
-              />
+                aria-hidden="true"
+                class="lucide lucide-newspaper"
+                fill="none"
+                height="24"
+                stroke="currentColor"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                stroke-width="2"
+                viewBox="0 0 24 24"
+                width="24"
+                xmlns="http://www.w3.org/2000/svg"
+              >
+                <path
+                  d="M15 18h-5"
+                />
+                <path
+                  d="M18 14h-8"
+                />
+                <path
+                  d="M4 22h16a2 2 0 0 0 2-2V4a2 2 0 0 0-2-2H8a2 2 0 0 0-2 2v16a2 2 0 0 1-4 0v-9a2 2 0 0 1 2-2h2"
+                />
+                <rect
+                  height="4"
+                  rx="1"
+                  width="8"
+                  x="10"
+                  y="6"
+                />
+              </svg>
                
               Articles
             </div>
@@ -711,8 +1291,35 @@ exports[`CustomFeedDialog - Snapshots > matches snapshot for create mode with di
               data-value="2"
             >
               <svg
-                data-testid="icon"
-              />
+                aria-hidden="true"
+                class="lucide lucide-image"
+                fill="none"
+                height="24"
+                stroke="currentColor"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                stroke-width="2"
+                viewBox="0 0 24 24"
+                width="24"
+                xmlns="http://www.w3.org/2000/svg"
+              >
+                <rect
+                  height="18"
+                  rx="2"
+                  ry="2"
+                  width="18"
+                  x="3"
+                  y="3"
+                />
+                <circle
+                  cx="9"
+                  cy="9"
+                  r="2"
+                />
+                <path
+                  d="m21 15-3.086-3.086a2 2 0 0 0-2.828 0L6 21"
+                />
+              </svg>
                
               Images
             </div>
@@ -721,8 +1328,27 @@ exports[`CustomFeedDialog - Snapshots > matches snapshot for create mode with di
               data-value="3"
             >
               <svg
-                data-testid="icon"
-              />
+                aria-hidden="true"
+                class="lucide lucide-circle-play"
+                fill="none"
+                height="24"
+                stroke="currentColor"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                stroke-width="2"
+                viewBox="0 0 24 24"
+                width="24"
+                xmlns="http://www.w3.org/2000/svg"
+              >
+                <path
+                  d="M9 9.003a1 1 0 0 1 1.517-.859l4.997 2.997a1 1 0 0 1 0 1.718l-4.997 2.997A1 1 0 0 1 9 14.996z"
+                />
+                <circle
+                  cx="12"
+                  cy="12"
+                  r="10"
+                />
+              </svg>
                
               Videos
             </div>
@@ -731,8 +1357,25 @@ exports[`CustomFeedDialog - Snapshots > matches snapshot for create mode with di
               data-value="4"
             >
               <svg
-                data-testid="icon"
-              />
+                aria-hidden="true"
+                class="lucide lucide-link"
+                fill="none"
+                height="24"
+                stroke="currentColor"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                stroke-width="2"
+                viewBox="0 0 24 24"
+                width="24"
+                xmlns="http://www.w3.org/2000/svg"
+              >
+                <path
+                  d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"
+                />
+                <path
+                  d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"
+                />
+              </svg>
                
               Links
             </div>
@@ -741,8 +1384,28 @@ exports[`CustomFeedDialog - Snapshots > matches snapshot for create mode with di
               data-value="5"
             >
               <svg
-                data-testid="icon"
-              />
+                aria-hidden="true"
+                class="lucide lucide-download"
+                fill="none"
+                height="24"
+                stroke="currentColor"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                stroke-width="2"
+                viewBox="0 0 24 24"
+                width="24"
+                xmlns="http://www.w3.org/2000/svg"
+              >
+                <path
+                  d="M12 15V3"
+                />
+                <path
+                  d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"
+                />
+                <path
+                  d="m7 10 5 5 5-5"
+                />
+              </svg>
                
               Files
             </div>
@@ -790,9 +1453,22 @@ exports[`CustomFeedDialog - Snapshots > matches snapshot for create mode with di
         disabled=""
       >
         <svg
-          class="size-4"
-          data-testid="icon"
-        />
+          aria-hidden="true"
+          class="lucide lucide-activity size-4"
+          fill="none"
+          height="24"
+          stroke="currentColor"
+          stroke-linecap="round"
+          stroke-linejoin="round"
+          stroke-width="2"
+          viewBox="0 0 24 24"
+          width="24"
+          xmlns="http://www.w3.org/2000/svg"
+        >
+          <path
+            d="M22 12h-2.48a2 2 0 0 0-1.93 1.46l-2.35 8.36a.25.25 0 0 1-.48 0L9.24 2.18a.25.25 0 0 0-.48 0l-2.35 8.36A2 2 0 0 1 4.49 12H2"
+          />
+        </svg>
         Save Feed
       </button>
     </div>
@@ -883,8 +1559,36 @@ exports[`CustomFeedDialog - Snapshots > matches snapshot for edit mode with cust
               data-value="3"
             >
               <svg
-                data-testid="icon"
-              />
+                aria-hidden="true"
+                class="lucide lucide-radio"
+                fill="none"
+                height="24"
+                stroke="currentColor"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                stroke-width="2"
+                viewBox="0 0 24 24"
+                width="24"
+                xmlns="http://www.w3.org/2000/svg"
+              >
+                <path
+                  d="M16.247 7.761a6 6 0 0 1 0 8.478"
+                />
+                <path
+                  d="M19.075 4.933a10 10 0 0 1 0 14.134"
+                />
+                <path
+                  d="M4.925 19.067a10 10 0 0 1 0-14.134"
+                />
+                <path
+                  d="M7.753 16.239a6 6 0 0 1 0-8.478"
+                />
+                <circle
+                  cx="12"
+                  cy="12"
+                  r="2"
+                />
+              </svg>
                
               All
             </div>
@@ -893,8 +1597,20 @@ exports[`CustomFeedDialog - Snapshots > matches snapshot for edit mode with cust
               data-value="0"
             >
               <svg
-                data-testid="icon"
-              />
+                fill="none"
+                height="24"
+                viewBox="0 0 20 20"
+                width="24"
+                xmlns="http://www.w3.org/2000/svg"
+              >
+                <path
+                  d="M5.00016 17.5C5.00016 15.7319 5.70254 14.0362 6.95278 12.786C8.20303 11.5357 9.89872 10.8333 11.6668 10.8333M11.6668 10.8333C13.4349 10.8333 15.1306 11.5357 16.3809 12.786C17.6311 14.0362 18.3335 15.7319 18.3335 17.5M11.6668 10.8333C9.36564 10.8333 7.50016 8.96785 7.50016 6.66667C7.50016 4.36548 9.36564 2.5 11.6668 2.5C13.968 2.5 15.8335 4.36548 15.8335 6.66667C15.8335 8.96785 13.968 10.8333 11.6668 10.8333ZM1.66679 16.6666C1.66679 13.8583 3.33346 11.25 5.00012 9.99996C4.45227 9.58893 4.01419 9.0492 3.72465 8.42852C3.43511 7.80784 3.30303 7.12535 3.34011 6.44146C3.37719 5.75757 3.58227 5.09336 3.93723 4.50763C4.29218 3.92189 4.78605 3.43268 5.37512 3.08329"
+                  stroke="currentColor"
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  stroke-width="1.5"
+                />
+              </svg>
                
               Following
             </div>
@@ -903,8 +1619,22 @@ exports[`CustomFeedDialog - Snapshots > matches snapshot for edit mode with cust
               data-value="2"
             >
               <svg
-                data-testid="icon"
-              />
+                aria-hidden="true"
+                class="lucide lucide-heart-handshake"
+                fill="none"
+                height="24"
+                stroke="currentColor"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                stroke-width="2"
+                viewBox="0 0 24 24"
+                width="24"
+                xmlns="http://www.w3.org/2000/svg"
+              >
+                <path
+                  d="M19.414 14.414C21 12.828 22 11.5 22 9.5a5.5 5.5 0 0 0-9.591-3.676.6.6 0 0 1-.818.001A5.5 5.5 0 0 0 2 9.5c0 2.3 1.5 4 3 5.5l5.535 5.362a2 2 0 0 0 2.879.052 2.12 2.12 0 0 0-.004-3 2.124 2.124 0 1 0 3-3 2.124 2.124 0 0 0 3.004 0 2 2 0 0 0 0-2.828l-1.881-1.882a2.41 2.41 0 0 0-3.409 0l-1.71 1.71a2 2 0 0 1-2.828 0 2 2 0 0 1 0-2.828l2.823-2.762"
+                />
+              </svg>
                
               Friends
             </div>
@@ -952,8 +1682,35 @@ exports[`CustomFeedDialog - Snapshots > matches snapshot for edit mode with cust
               data-value="0"
             >
               <svg
-                data-testid="icon"
-              />
+                aria-hidden="true"
+                class="lucide lucide-square-asterisk"
+                fill="none"
+                height="24"
+                stroke="currentColor"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                stroke-width="2"
+                viewBox="0 0 24 24"
+                width="24"
+                xmlns="http://www.w3.org/2000/svg"
+              >
+                <rect
+                  height="18"
+                  rx="2"
+                  width="18"
+                  x="3"
+                  y="3"
+                />
+                <path
+                  d="M12 8v8"
+                />
+                <path
+                  d="m8.5 14 7-4"
+                />
+                <path
+                  d="m8.5 10 7 4"
+                />
+              </svg>
                
               Recent
             </div>
@@ -962,8 +1719,22 @@ exports[`CustomFeedDialog - Snapshots > matches snapshot for edit mode with cust
               data-value="1"
             >
               <svg
-                data-testid="icon"
-              />
+                aria-hidden="true"
+                class="lucide lucide-flame"
+                fill="none"
+                height="24"
+                stroke="currentColor"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                stroke-width="2"
+                viewBox="0 0 24 24"
+                width="24"
+                xmlns="http://www.w3.org/2000/svg"
+              >
+                <path
+                  d="M12 3q1 4 4 6.5t3 5.5a1 1 0 0 1-14 0 5 5 0 0 1 1-3 1 1 0 0 0 5 0c0-2-1.5-3-1.5-5q0-2 2.5-4"
+                />
+              </svg>
                
               Popularity
             </div>
@@ -1011,8 +1782,32 @@ exports[`CustomFeedDialog - Snapshots > matches snapshot for edit mode with cust
               data-value="0"
             >
               <svg
-                data-testid="icon"
-              />
+                aria-hidden="true"
+                class="lucide lucide-columns3 lucide-columns-3"
+                fill="none"
+                height="24"
+                stroke="currentColor"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                stroke-width="2"
+                viewBox="0 0 24 24"
+                width="24"
+                xmlns="http://www.w3.org/2000/svg"
+              >
+                <rect
+                  height="18"
+                  rx="2"
+                  width="18"
+                  x="3"
+                  y="3"
+                />
+                <path
+                  d="M9 3v18"
+                />
+                <path
+                  d="M15 3v18"
+                />
+              </svg>
                
               Columns
             </div>
@@ -1021,8 +1816,28 @@ exports[`CustomFeedDialog - Snapshots > matches snapshot for edit mode with cust
               data-value="1"
             >
               <svg
-                data-testid="icon"
-              />
+                aria-hidden="true"
+                class="lucide lucide-menu"
+                fill="none"
+                height="24"
+                stroke="currentColor"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                stroke-width="2"
+                viewBox="0 0 24 24"
+                width="24"
+                xmlns="http://www.w3.org/2000/svg"
+              >
+                <path
+                  d="M4 5h16"
+                />
+                <path
+                  d="M4 12h16"
+                />
+                <path
+                  d="M4 19h16"
+                />
+              </svg>
                
               Wide
             </div>
@@ -1031,8 +1846,47 @@ exports[`CustomFeedDialog - Snapshots > matches snapshot for edit mode with cust
               data-value="2"
             >
               <svg
-                data-testid="icon"
-              />
+                aria-hidden="true"
+                class="lucide lucide-layout-grid"
+                fill="none"
+                height="24"
+                stroke="currentColor"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                stroke-width="2"
+                viewBox="0 0 24 24"
+                width="24"
+                xmlns="http://www.w3.org/2000/svg"
+              >
+                <rect
+                  height="7"
+                  rx="1"
+                  width="7"
+                  x="3"
+                  y="3"
+                />
+                <rect
+                  height="7"
+                  rx="1"
+                  width="7"
+                  x="14"
+                  y="3"
+                />
+                <rect
+                  height="7"
+                  rx="1"
+                  width="7"
+                  x="14"
+                  y="14"
+                />
+                <rect
+                  height="7"
+                  rx="1"
+                  width="7"
+                  x="3"
+                  y="14"
+                />
+              </svg>
                
               Visual
             </div>
@@ -1080,8 +1934,28 @@ exports[`CustomFeedDialog - Snapshots > matches snapshot for edit mode with cust
               data-value="ALL"
             >
               <svg
-                data-testid="icon"
-              />
+                aria-hidden="true"
+                class="lucide lucide-layers"
+                fill="none"
+                height="24"
+                stroke="currentColor"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                stroke-width="2"
+                viewBox="0 0 24 24"
+                width="24"
+                xmlns="http://www.w3.org/2000/svg"
+              >
+                <path
+                  d="M12.83 2.18a2 2 0 0 0-1.66 0L2.6 6.08a1 1 0 0 0 0 1.83l8.58 3.91a2 2 0 0 0 1.66 0l8.58-3.9a1 1 0 0 0 0-1.83z"
+                />
+                <path
+                  d="M2 12a1 1 0 0 0 .58.91l8.6 3.91a2 2 0 0 0 1.65 0l8.58-3.9A1 1 0 0 0 22 12"
+                />
+                <path
+                  d="M2 17a1 1 0 0 0 .58.91l8.6 3.91a2 2 0 0 0 1.65 0l8.58-3.9A1 1 0 0 0 22 17"
+                />
+              </svg>
                
               All
             </div>
@@ -1090,8 +1964,25 @@ exports[`CustomFeedDialog - Snapshots > matches snapshot for edit mode with cust
               data-value="0"
             >
               <svg
-                data-testid="icon"
-              />
+                aria-hidden="true"
+                class="lucide lucide-sticky-note"
+                fill="none"
+                height="24"
+                stroke="currentColor"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                stroke-width="2"
+                viewBox="0 0 24 24"
+                width="24"
+                xmlns="http://www.w3.org/2000/svg"
+              >
+                <path
+                  d="M21 9a2.4 2.4 0 0 0-.706-1.706l-3.588-3.588A2.4 2.4 0 0 0 15 3H5a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2z"
+                />
+                <path
+                  d="M15 3v5a1 1 0 0 0 1 1h5"
+                />
+              </svg>
                
               Posts
             </div>
@@ -1100,8 +1991,35 @@ exports[`CustomFeedDialog - Snapshots > matches snapshot for edit mode with cust
               data-value="1"
             >
               <svg
-                data-testid="icon"
-              />
+                aria-hidden="true"
+                class="lucide lucide-newspaper"
+                fill="none"
+                height="24"
+                stroke="currentColor"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                stroke-width="2"
+                viewBox="0 0 24 24"
+                width="24"
+                xmlns="http://www.w3.org/2000/svg"
+              >
+                <path
+                  d="M15 18h-5"
+                />
+                <path
+                  d="M18 14h-8"
+                />
+                <path
+                  d="M4 22h16a2 2 0 0 0 2-2V4a2 2 0 0 0-2-2H8a2 2 0 0 0-2 2v16a2 2 0 0 1-4 0v-9a2 2 0 0 1 2-2h2"
+                />
+                <rect
+                  height="4"
+                  rx="1"
+                  width="8"
+                  x="10"
+                  y="6"
+                />
+              </svg>
                
               Articles
             </div>
@@ -1110,8 +2028,35 @@ exports[`CustomFeedDialog - Snapshots > matches snapshot for edit mode with cust
               data-value="2"
             >
               <svg
-                data-testid="icon"
-              />
+                aria-hidden="true"
+                class="lucide lucide-image"
+                fill="none"
+                height="24"
+                stroke="currentColor"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                stroke-width="2"
+                viewBox="0 0 24 24"
+                width="24"
+                xmlns="http://www.w3.org/2000/svg"
+              >
+                <rect
+                  height="18"
+                  rx="2"
+                  ry="2"
+                  width="18"
+                  x="3"
+                  y="3"
+                />
+                <circle
+                  cx="9"
+                  cy="9"
+                  r="2"
+                />
+                <path
+                  d="m21 15-3.086-3.086a2 2 0 0 0-2.828 0L6 21"
+                />
+              </svg>
                
               Images
             </div>
@@ -1120,8 +2065,27 @@ exports[`CustomFeedDialog - Snapshots > matches snapshot for edit mode with cust
               data-value="3"
             >
               <svg
-                data-testid="icon"
-              />
+                aria-hidden="true"
+                class="lucide lucide-circle-play"
+                fill="none"
+                height="24"
+                stroke="currentColor"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                stroke-width="2"
+                viewBox="0 0 24 24"
+                width="24"
+                xmlns="http://www.w3.org/2000/svg"
+              >
+                <path
+                  d="M9 9.003a1 1 0 0 1 1.517-.859l4.997 2.997a1 1 0 0 1 0 1.718l-4.997 2.997A1 1 0 0 1 9 14.996z"
+                />
+                <circle
+                  cx="12"
+                  cy="12"
+                  r="10"
+                />
+              </svg>
                
               Videos
             </div>
@@ -1130,8 +2094,25 @@ exports[`CustomFeedDialog - Snapshots > matches snapshot for edit mode with cust
               data-value="4"
             >
               <svg
-                data-testid="icon"
-              />
+                aria-hidden="true"
+                class="lucide lucide-link"
+                fill="none"
+                height="24"
+                stroke="currentColor"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                stroke-width="2"
+                viewBox="0 0 24 24"
+                width="24"
+                xmlns="http://www.w3.org/2000/svg"
+              >
+                <path
+                  d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"
+                />
+                <path
+                  d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"
+                />
+              </svg>
                
               Links
             </div>
@@ -1140,8 +2121,28 @@ exports[`CustomFeedDialog - Snapshots > matches snapshot for edit mode with cust
               data-value="5"
             >
               <svg
-                data-testid="icon"
-              />
+                aria-hidden="true"
+                class="lucide lucide-download"
+                fill="none"
+                height="24"
+                stroke="currentColor"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                stroke-width="2"
+                viewBox="0 0 24 24"
+                width="24"
+                xmlns="http://www.w3.org/2000/svg"
+              >
+                <path
+                  d="M12 15V3"
+                />
+                <path
+                  d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"
+                />
+                <path
+                  d="m7 10 5 5 5-5"
+                />
+              </svg>
                
               Files
             </div>
@@ -1225,9 +2226,22 @@ exports[`CustomFeedDialog - Snapshots > matches snapshot for edit mode with cust
         data-variant="secondary"
       >
         <svg
-          class="size-4"
-          data-testid="icon"
-        />
+          aria-hidden="true"
+          class="lucide lucide-activity size-4"
+          fill="none"
+          height="24"
+          stroke="currentColor"
+          stroke-linecap="round"
+          stroke-linejoin="round"
+          stroke-width="2"
+          viewBox="0 0 24 24"
+          width="24"
+          xmlns="http://www.w3.org/2000/svg"
+        >
+          <path
+            d="M22 12h-2.48a2 2 0 0 0-1.93 1.46l-2.35 8.36a.25.25 0 0 1-.48 0L9.24 2.18a.25.25 0 0 0-.48 0l-2.35 8.36A2 2 0 0 1 4.49 12H2"
+          />
+        </svg>
         Save Feed
       </button>
       <button
@@ -1237,9 +2251,28 @@ exports[`CustomFeedDialog - Snapshots > matches snapshot for edit mode with cust
         data-variant="destructive"
       >
         <svg
-          class="size-4"
-          data-testid="icon"
-        />
+          aria-hidden="true"
+          class="lucide lucide-delete size-4"
+          fill="none"
+          height="24"
+          stroke="currentColor"
+          stroke-linecap="round"
+          stroke-linejoin="round"
+          stroke-width="2"
+          viewBox="0 0 24 24"
+          width="24"
+          xmlns="http://www.w3.org/2000/svg"
+        >
+          <path
+            d="M10 5a2 2 0 0 0-1.344.519l-6.328 5.74a1 1 0 0 0 0 1.481l6.328 5.741A2 2 0 0 0 10 19h10a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2z"
+          />
+          <path
+            d="m12 9 6 6"
+          />
+          <path
+            d="m18 9-6 6"
+          />
+        </svg>
         Delete Feed
       </button>
     </div>
@@ -1330,8 +2363,36 @@ exports[`CustomFeedDialog - Snapshots > matches snapshot for edit mode with null
               data-value="3"
             >
               <svg
-                data-testid="icon"
-              />
+                aria-hidden="true"
+                class="lucide lucide-radio"
+                fill="none"
+                height="24"
+                stroke="currentColor"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                stroke-width="2"
+                viewBox="0 0 24 24"
+                width="24"
+                xmlns="http://www.w3.org/2000/svg"
+              >
+                <path
+                  d="M16.247 7.761a6 6 0 0 1 0 8.478"
+                />
+                <path
+                  d="M19.075 4.933a10 10 0 0 1 0 14.134"
+                />
+                <path
+                  d="M4.925 19.067a10 10 0 0 1 0-14.134"
+                />
+                <path
+                  d="M7.753 16.239a6 6 0 0 1 0-8.478"
+                />
+                <circle
+                  cx="12"
+                  cy="12"
+                  r="2"
+                />
+              </svg>
                
               All
             </div>
@@ -1340,8 +2401,20 @@ exports[`CustomFeedDialog - Snapshots > matches snapshot for edit mode with null
               data-value="0"
             >
               <svg
-                data-testid="icon"
-              />
+                fill="none"
+                height="24"
+                viewBox="0 0 20 20"
+                width="24"
+                xmlns="http://www.w3.org/2000/svg"
+              >
+                <path
+                  d="M5.00016 17.5C5.00016 15.7319 5.70254 14.0362 6.95278 12.786C8.20303 11.5357 9.89872 10.8333 11.6668 10.8333M11.6668 10.8333C13.4349 10.8333 15.1306 11.5357 16.3809 12.786C17.6311 14.0362 18.3335 15.7319 18.3335 17.5M11.6668 10.8333C9.36564 10.8333 7.50016 8.96785 7.50016 6.66667C7.50016 4.36548 9.36564 2.5 11.6668 2.5C13.968 2.5 15.8335 4.36548 15.8335 6.66667C15.8335 8.96785 13.968 10.8333 11.6668 10.8333ZM1.66679 16.6666C1.66679 13.8583 3.33346 11.25 5.00012 9.99996C4.45227 9.58893 4.01419 9.0492 3.72465 8.42852C3.43511 7.80784 3.30303 7.12535 3.34011 6.44146C3.37719 5.75757 3.58227 5.09336 3.93723 4.50763C4.29218 3.92189 4.78605 3.43268 5.37512 3.08329"
+                  stroke="currentColor"
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  stroke-width="1.5"
+                />
+              </svg>
                
               Following
             </div>
@@ -1350,8 +2423,22 @@ exports[`CustomFeedDialog - Snapshots > matches snapshot for edit mode with null
               data-value="2"
             >
               <svg
-                data-testid="icon"
-              />
+                aria-hidden="true"
+                class="lucide lucide-heart-handshake"
+                fill="none"
+                height="24"
+                stroke="currentColor"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                stroke-width="2"
+                viewBox="0 0 24 24"
+                width="24"
+                xmlns="http://www.w3.org/2000/svg"
+              >
+                <path
+                  d="M19.414 14.414C21 12.828 22 11.5 22 9.5a5.5 5.5 0 0 0-9.591-3.676.6.6 0 0 1-.818.001A5.5 5.5 0 0 0 2 9.5c0 2.3 1.5 4 3 5.5l5.535 5.362a2 2 0 0 0 2.879.052 2.12 2.12 0 0 0-.004-3 2.124 2.124 0 1 0 3-3 2.124 2.124 0 0 0 3.004 0 2 2 0 0 0 0-2.828l-1.881-1.882a2.41 2.41 0 0 0-3.409 0l-1.71 1.71a2 2 0 0 1-2.828 0 2 2 0 0 1 0-2.828l2.823-2.762"
+                />
+              </svg>
                
               Friends
             </div>
@@ -1399,8 +2486,35 @@ exports[`CustomFeedDialog - Snapshots > matches snapshot for edit mode with null
               data-value="0"
             >
               <svg
-                data-testid="icon"
-              />
+                aria-hidden="true"
+                class="lucide lucide-square-asterisk"
+                fill="none"
+                height="24"
+                stroke="currentColor"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                stroke-width="2"
+                viewBox="0 0 24 24"
+                width="24"
+                xmlns="http://www.w3.org/2000/svg"
+              >
+                <rect
+                  height="18"
+                  rx="2"
+                  width="18"
+                  x="3"
+                  y="3"
+                />
+                <path
+                  d="M12 8v8"
+                />
+                <path
+                  d="m8.5 14 7-4"
+                />
+                <path
+                  d="m8.5 10 7 4"
+                />
+              </svg>
                
               Recent
             </div>
@@ -1409,8 +2523,22 @@ exports[`CustomFeedDialog - Snapshots > matches snapshot for edit mode with null
               data-value="1"
             >
               <svg
-                data-testid="icon"
-              />
+                aria-hidden="true"
+                class="lucide lucide-flame"
+                fill="none"
+                height="24"
+                stroke="currentColor"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                stroke-width="2"
+                viewBox="0 0 24 24"
+                width="24"
+                xmlns="http://www.w3.org/2000/svg"
+              >
+                <path
+                  d="M12 3q1 4 4 6.5t3 5.5a1 1 0 0 1-14 0 5 5 0 0 1 1-3 1 1 0 0 0 5 0c0-2-1.5-3-1.5-5q0-2 2.5-4"
+                />
+              </svg>
                
               Popularity
             </div>
@@ -1458,8 +2586,32 @@ exports[`CustomFeedDialog - Snapshots > matches snapshot for edit mode with null
               data-value="0"
             >
               <svg
-                data-testid="icon"
-              />
+                aria-hidden="true"
+                class="lucide lucide-columns3 lucide-columns-3"
+                fill="none"
+                height="24"
+                stroke="currentColor"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                stroke-width="2"
+                viewBox="0 0 24 24"
+                width="24"
+                xmlns="http://www.w3.org/2000/svg"
+              >
+                <rect
+                  height="18"
+                  rx="2"
+                  width="18"
+                  x="3"
+                  y="3"
+                />
+                <path
+                  d="M9 3v18"
+                />
+                <path
+                  d="M15 3v18"
+                />
+              </svg>
                
               Columns
             </div>
@@ -1468,8 +2620,28 @@ exports[`CustomFeedDialog - Snapshots > matches snapshot for edit mode with null
               data-value="1"
             >
               <svg
-                data-testid="icon"
-              />
+                aria-hidden="true"
+                class="lucide lucide-menu"
+                fill="none"
+                height="24"
+                stroke="currentColor"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                stroke-width="2"
+                viewBox="0 0 24 24"
+                width="24"
+                xmlns="http://www.w3.org/2000/svg"
+              >
+                <path
+                  d="M4 5h16"
+                />
+                <path
+                  d="M4 12h16"
+                />
+                <path
+                  d="M4 19h16"
+                />
+              </svg>
                
               Wide
             </div>
@@ -1478,8 +2650,47 @@ exports[`CustomFeedDialog - Snapshots > matches snapshot for edit mode with null
               data-value="2"
             >
               <svg
-                data-testid="icon"
-              />
+                aria-hidden="true"
+                class="lucide lucide-layout-grid"
+                fill="none"
+                height="24"
+                stroke="currentColor"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                stroke-width="2"
+                viewBox="0 0 24 24"
+                width="24"
+                xmlns="http://www.w3.org/2000/svg"
+              >
+                <rect
+                  height="7"
+                  rx="1"
+                  width="7"
+                  x="3"
+                  y="3"
+                />
+                <rect
+                  height="7"
+                  rx="1"
+                  width="7"
+                  x="14"
+                  y="3"
+                />
+                <rect
+                  height="7"
+                  rx="1"
+                  width="7"
+                  x="14"
+                  y="14"
+                />
+                <rect
+                  height="7"
+                  rx="1"
+                  width="7"
+                  x="3"
+                  y="14"
+                />
+              </svg>
                
               Visual
             </div>
@@ -1527,8 +2738,28 @@ exports[`CustomFeedDialog - Snapshots > matches snapshot for edit mode with null
               data-value="ALL"
             >
               <svg
-                data-testid="icon"
-              />
+                aria-hidden="true"
+                class="lucide lucide-layers"
+                fill="none"
+                height="24"
+                stroke="currentColor"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                stroke-width="2"
+                viewBox="0 0 24 24"
+                width="24"
+                xmlns="http://www.w3.org/2000/svg"
+              >
+                <path
+                  d="M12.83 2.18a2 2 0 0 0-1.66 0L2.6 6.08a1 1 0 0 0 0 1.83l8.58 3.91a2 2 0 0 0 1.66 0l8.58-3.9a1 1 0 0 0 0-1.83z"
+                />
+                <path
+                  d="M2 12a1 1 0 0 0 .58.91l8.6 3.91a2 2 0 0 0 1.65 0l8.58-3.9A1 1 0 0 0 22 12"
+                />
+                <path
+                  d="M2 17a1 1 0 0 0 .58.91l8.6 3.91a2 2 0 0 0 1.65 0l8.58-3.9A1 1 0 0 0 22 17"
+                />
+              </svg>
                
               All
             </div>
@@ -1537,8 +2768,25 @@ exports[`CustomFeedDialog - Snapshots > matches snapshot for edit mode with null
               data-value="0"
             >
               <svg
-                data-testid="icon"
-              />
+                aria-hidden="true"
+                class="lucide lucide-sticky-note"
+                fill="none"
+                height="24"
+                stroke="currentColor"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                stroke-width="2"
+                viewBox="0 0 24 24"
+                width="24"
+                xmlns="http://www.w3.org/2000/svg"
+              >
+                <path
+                  d="M21 9a2.4 2.4 0 0 0-.706-1.706l-3.588-3.588A2.4 2.4 0 0 0 15 3H5a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2z"
+                />
+                <path
+                  d="M15 3v5a1 1 0 0 0 1 1h5"
+                />
+              </svg>
                
               Posts
             </div>
@@ -1547,8 +2795,35 @@ exports[`CustomFeedDialog - Snapshots > matches snapshot for edit mode with null
               data-value="1"
             >
               <svg
-                data-testid="icon"
-              />
+                aria-hidden="true"
+                class="lucide lucide-newspaper"
+                fill="none"
+                height="24"
+                stroke="currentColor"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                stroke-width="2"
+                viewBox="0 0 24 24"
+                width="24"
+                xmlns="http://www.w3.org/2000/svg"
+              >
+                <path
+                  d="M15 18h-5"
+                />
+                <path
+                  d="M18 14h-8"
+                />
+                <path
+                  d="M4 22h16a2 2 0 0 0 2-2V4a2 2 0 0 0-2-2H8a2 2 0 0 0-2 2v16a2 2 0 0 1-4 0v-9a2 2 0 0 1 2-2h2"
+                />
+                <rect
+                  height="4"
+                  rx="1"
+                  width="8"
+                  x="10"
+                  y="6"
+                />
+              </svg>
                
               Articles
             </div>
@@ -1557,8 +2832,35 @@ exports[`CustomFeedDialog - Snapshots > matches snapshot for edit mode with null
               data-value="2"
             >
               <svg
-                data-testid="icon"
-              />
+                aria-hidden="true"
+                class="lucide lucide-image"
+                fill="none"
+                height="24"
+                stroke="currentColor"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                stroke-width="2"
+                viewBox="0 0 24 24"
+                width="24"
+                xmlns="http://www.w3.org/2000/svg"
+              >
+                <rect
+                  height="18"
+                  rx="2"
+                  ry="2"
+                  width="18"
+                  x="3"
+                  y="3"
+                />
+                <circle
+                  cx="9"
+                  cy="9"
+                  r="2"
+                />
+                <path
+                  d="m21 15-3.086-3.086a2 2 0 0 0-2.828 0L6 21"
+                />
+              </svg>
                
               Images
             </div>
@@ -1567,8 +2869,27 @@ exports[`CustomFeedDialog - Snapshots > matches snapshot for edit mode with null
               data-value="3"
             >
               <svg
-                data-testid="icon"
-              />
+                aria-hidden="true"
+                class="lucide lucide-circle-play"
+                fill="none"
+                height="24"
+                stroke="currentColor"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                stroke-width="2"
+                viewBox="0 0 24 24"
+                width="24"
+                xmlns="http://www.w3.org/2000/svg"
+              >
+                <path
+                  d="M9 9.003a1 1 0 0 1 1.517-.859l4.997 2.997a1 1 0 0 1 0 1.718l-4.997 2.997A1 1 0 0 1 9 14.996z"
+                />
+                <circle
+                  cx="12"
+                  cy="12"
+                  r="10"
+                />
+              </svg>
                
               Videos
             </div>
@@ -1577,8 +2898,25 @@ exports[`CustomFeedDialog - Snapshots > matches snapshot for edit mode with null
               data-value="4"
             >
               <svg
-                data-testid="icon"
-              />
+                aria-hidden="true"
+                class="lucide lucide-link"
+                fill="none"
+                height="24"
+                stroke="currentColor"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                stroke-width="2"
+                viewBox="0 0 24 24"
+                width="24"
+                xmlns="http://www.w3.org/2000/svg"
+              >
+                <path
+                  d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"
+                />
+                <path
+                  d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"
+                />
+              </svg>
                
               Links
             </div>
@@ -1587,8 +2925,28 @@ exports[`CustomFeedDialog - Snapshots > matches snapshot for edit mode with null
               data-value="5"
             >
               <svg
-                data-testid="icon"
-              />
+                aria-hidden="true"
+                class="lucide lucide-download"
+                fill="none"
+                height="24"
+                stroke="currentColor"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                stroke-width="2"
+                viewBox="0 0 24 24"
+                width="24"
+                xmlns="http://www.w3.org/2000/svg"
+              >
+                <path
+                  d="M12 15V3"
+                />
+                <path
+                  d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"
+                />
+                <path
+                  d="m7 10 5 5 5-5"
+                />
+              </svg>
                
               Files
             </div>
@@ -1656,9 +3014,22 @@ exports[`CustomFeedDialog - Snapshots > matches snapshot for edit mode with null
         data-variant="secondary"
       >
         <svg
-          class="size-4"
-          data-testid="icon"
-        />
+          aria-hidden="true"
+          class="lucide lucide-activity size-4"
+          fill="none"
+          height="24"
+          stroke="currentColor"
+          stroke-linecap="round"
+          stroke-linejoin="round"
+          stroke-width="2"
+          viewBox="0 0 24 24"
+          width="24"
+          xmlns="http://www.w3.org/2000/svg"
+        >
+          <path
+            d="M22 12h-2.48a2 2 0 0 0-1.93 1.46l-2.35 8.36a.25.25 0 0 1-.48 0L9.24 2.18a.25.25 0 0 0-.48 0l-2.35 8.36A2 2 0 0 1 4.49 12H2"
+          />
+        </svg>
         Save Feed
       </button>
       <button
@@ -1668,9 +3039,28 @@ exports[`CustomFeedDialog - Snapshots > matches snapshot for edit mode with null
         data-variant="destructive"
       >
         <svg
-          class="size-4"
-          data-testid="icon"
-        />
+          aria-hidden="true"
+          class="lucide lucide-delete size-4"
+          fill="none"
+          height="24"
+          stroke="currentColor"
+          stroke-linecap="round"
+          stroke-linejoin="round"
+          stroke-width="2"
+          viewBox="0 0 24 24"
+          width="24"
+          xmlns="http://www.w3.org/2000/svg"
+        >
+          <path
+            d="M10 5a2 2 0 0 0-1.344.519l-6.328 5.74a1 1 0 0 0 0 1.481l6.328 5.741A2 2 0 0 0 10 19h10a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2z"
+          />
+          <path
+            d="m12 9 6 6"
+          />
+          <path
+            d="m18 9-6 6"
+          />
+        </svg>
         Delete Feed
       </button>
     </div>
@@ -1761,8 +3151,36 @@ exports[`CustomFeedDialog - Snapshots > matches snapshot for edit mode without c
               data-value="3"
             >
               <svg
-                data-testid="icon"
-              />
+                aria-hidden="true"
+                class="lucide lucide-radio"
+                fill="none"
+                height="24"
+                stroke="currentColor"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                stroke-width="2"
+                viewBox="0 0 24 24"
+                width="24"
+                xmlns="http://www.w3.org/2000/svg"
+              >
+                <path
+                  d="M16.247 7.761a6 6 0 0 1 0 8.478"
+                />
+                <path
+                  d="M19.075 4.933a10 10 0 0 1 0 14.134"
+                />
+                <path
+                  d="M4.925 19.067a10 10 0 0 1 0-14.134"
+                />
+                <path
+                  d="M7.753 16.239a6 6 0 0 1 0-8.478"
+                />
+                <circle
+                  cx="12"
+                  cy="12"
+                  r="2"
+                />
+              </svg>
                
               All
             </div>
@@ -1771,8 +3189,20 @@ exports[`CustomFeedDialog - Snapshots > matches snapshot for edit mode without c
               data-value="0"
             >
               <svg
-                data-testid="icon"
-              />
+                fill="none"
+                height="24"
+                viewBox="0 0 20 20"
+                width="24"
+                xmlns="http://www.w3.org/2000/svg"
+              >
+                <path
+                  d="M5.00016 17.5C5.00016 15.7319 5.70254 14.0362 6.95278 12.786C8.20303 11.5357 9.89872 10.8333 11.6668 10.8333M11.6668 10.8333C13.4349 10.8333 15.1306 11.5357 16.3809 12.786C17.6311 14.0362 18.3335 15.7319 18.3335 17.5M11.6668 10.8333C9.36564 10.8333 7.50016 8.96785 7.50016 6.66667C7.50016 4.36548 9.36564 2.5 11.6668 2.5C13.968 2.5 15.8335 4.36548 15.8335 6.66667C15.8335 8.96785 13.968 10.8333 11.6668 10.8333ZM1.66679 16.6666C1.66679 13.8583 3.33346 11.25 5.00012 9.99996C4.45227 9.58893 4.01419 9.0492 3.72465 8.42852C3.43511 7.80784 3.30303 7.12535 3.34011 6.44146C3.37719 5.75757 3.58227 5.09336 3.93723 4.50763C4.29218 3.92189 4.78605 3.43268 5.37512 3.08329"
+                  stroke="currentColor"
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  stroke-width="1.5"
+                />
+              </svg>
                
               Following
             </div>
@@ -1781,8 +3211,22 @@ exports[`CustomFeedDialog - Snapshots > matches snapshot for edit mode without c
               data-value="2"
             >
               <svg
-                data-testid="icon"
-              />
+                aria-hidden="true"
+                class="lucide lucide-heart-handshake"
+                fill="none"
+                height="24"
+                stroke="currentColor"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                stroke-width="2"
+                viewBox="0 0 24 24"
+                width="24"
+                xmlns="http://www.w3.org/2000/svg"
+              >
+                <path
+                  d="M19.414 14.414C21 12.828 22 11.5 22 9.5a5.5 5.5 0 0 0-9.591-3.676.6.6 0 0 1-.818.001A5.5 5.5 0 0 0 2 9.5c0 2.3 1.5 4 3 5.5l5.535 5.362a2 2 0 0 0 2.879.052 2.12 2.12 0 0 0-.004-3 2.124 2.124 0 1 0 3-3 2.124 2.124 0 0 0 3.004 0 2 2 0 0 0 0-2.828l-1.881-1.882a2.41 2.41 0 0 0-3.409 0l-1.71 1.71a2 2 0 0 1-2.828 0 2 2 0 0 1 0-2.828l2.823-2.762"
+                />
+              </svg>
                
               Friends
             </div>
@@ -1829,8 +3273,35 @@ exports[`CustomFeedDialog - Snapshots > matches snapshot for edit mode without c
               data-value="0"
             >
               <svg
-                data-testid="icon"
-              />
+                aria-hidden="true"
+                class="lucide lucide-square-asterisk"
+                fill="none"
+                height="24"
+                stroke="currentColor"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                stroke-width="2"
+                viewBox="0 0 24 24"
+                width="24"
+                xmlns="http://www.w3.org/2000/svg"
+              >
+                <rect
+                  height="18"
+                  rx="2"
+                  width="18"
+                  x="3"
+                  y="3"
+                />
+                <path
+                  d="M12 8v8"
+                />
+                <path
+                  d="m8.5 14 7-4"
+                />
+                <path
+                  d="m8.5 10 7 4"
+                />
+              </svg>
                
               Recent
             </div>
@@ -1839,8 +3310,22 @@ exports[`CustomFeedDialog - Snapshots > matches snapshot for edit mode without c
               data-value="1"
             >
               <svg
-                data-testid="icon"
-              />
+                aria-hidden="true"
+                class="lucide lucide-flame"
+                fill="none"
+                height="24"
+                stroke="currentColor"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                stroke-width="2"
+                viewBox="0 0 24 24"
+                width="24"
+                xmlns="http://www.w3.org/2000/svg"
+              >
+                <path
+                  d="M12 3q1 4 4 6.5t3 5.5a1 1 0 0 1-14 0 5 5 0 0 1 1-3 1 1 0 0 0 5 0c0-2-1.5-3-1.5-5q0-2 2.5-4"
+                />
+              </svg>
                
               Popularity
             </div>
@@ -1887,8 +3372,32 @@ exports[`CustomFeedDialog - Snapshots > matches snapshot for edit mode without c
               data-value="0"
             >
               <svg
-                data-testid="icon"
-              />
+                aria-hidden="true"
+                class="lucide lucide-columns3 lucide-columns-3"
+                fill="none"
+                height="24"
+                stroke="currentColor"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                stroke-width="2"
+                viewBox="0 0 24 24"
+                width="24"
+                xmlns="http://www.w3.org/2000/svg"
+              >
+                <rect
+                  height="18"
+                  rx="2"
+                  width="18"
+                  x="3"
+                  y="3"
+                />
+                <path
+                  d="M9 3v18"
+                />
+                <path
+                  d="M15 3v18"
+                />
+              </svg>
                
               Columns
             </div>
@@ -1897,8 +3406,28 @@ exports[`CustomFeedDialog - Snapshots > matches snapshot for edit mode without c
               data-value="1"
             >
               <svg
-                data-testid="icon"
-              />
+                aria-hidden="true"
+                class="lucide lucide-menu"
+                fill="none"
+                height="24"
+                stroke="currentColor"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                stroke-width="2"
+                viewBox="0 0 24 24"
+                width="24"
+                xmlns="http://www.w3.org/2000/svg"
+              >
+                <path
+                  d="M4 5h16"
+                />
+                <path
+                  d="M4 12h16"
+                />
+                <path
+                  d="M4 19h16"
+                />
+              </svg>
                
               Wide
             </div>
@@ -1907,8 +3436,47 @@ exports[`CustomFeedDialog - Snapshots > matches snapshot for edit mode without c
               data-value="2"
             >
               <svg
-                data-testid="icon"
-              />
+                aria-hidden="true"
+                class="lucide lucide-layout-grid"
+                fill="none"
+                height="24"
+                stroke="currentColor"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                stroke-width="2"
+                viewBox="0 0 24 24"
+                width="24"
+                xmlns="http://www.w3.org/2000/svg"
+              >
+                <rect
+                  height="7"
+                  rx="1"
+                  width="7"
+                  x="3"
+                  y="3"
+                />
+                <rect
+                  height="7"
+                  rx="1"
+                  width="7"
+                  x="14"
+                  y="3"
+                />
+                <rect
+                  height="7"
+                  rx="1"
+                  width="7"
+                  x="14"
+                  y="14"
+                />
+                <rect
+                  height="7"
+                  rx="1"
+                  width="7"
+                  x="3"
+                  y="14"
+                />
+              </svg>
                
               Visual
             </div>
@@ -1955,8 +3523,28 @@ exports[`CustomFeedDialog - Snapshots > matches snapshot for edit mode without c
               data-value="ALL"
             >
               <svg
-                data-testid="icon"
-              />
+                aria-hidden="true"
+                class="lucide lucide-layers"
+                fill="none"
+                height="24"
+                stroke="currentColor"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                stroke-width="2"
+                viewBox="0 0 24 24"
+                width="24"
+                xmlns="http://www.w3.org/2000/svg"
+              >
+                <path
+                  d="M12.83 2.18a2 2 0 0 0-1.66 0L2.6 6.08a1 1 0 0 0 0 1.83l8.58 3.91a2 2 0 0 0 1.66 0l8.58-3.9a1 1 0 0 0 0-1.83z"
+                />
+                <path
+                  d="M2 12a1 1 0 0 0 .58.91l8.6 3.91a2 2 0 0 0 1.65 0l8.58-3.9A1 1 0 0 0 22 12"
+                />
+                <path
+                  d="M2 17a1 1 0 0 0 .58.91l8.6 3.91a2 2 0 0 0 1.65 0l8.58-3.9A1 1 0 0 0 22 17"
+                />
+              </svg>
                
               All
             </div>
@@ -1965,8 +3553,25 @@ exports[`CustomFeedDialog - Snapshots > matches snapshot for edit mode without c
               data-value="0"
             >
               <svg
-                data-testid="icon"
-              />
+                aria-hidden="true"
+                class="lucide lucide-sticky-note"
+                fill="none"
+                height="24"
+                stroke="currentColor"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                stroke-width="2"
+                viewBox="0 0 24 24"
+                width="24"
+                xmlns="http://www.w3.org/2000/svg"
+              >
+                <path
+                  d="M21 9a2.4 2.4 0 0 0-.706-1.706l-3.588-3.588A2.4 2.4 0 0 0 15 3H5a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2z"
+                />
+                <path
+                  d="M15 3v5a1 1 0 0 0 1 1h5"
+                />
+              </svg>
                
               Posts
             </div>
@@ -1975,8 +3580,35 @@ exports[`CustomFeedDialog - Snapshots > matches snapshot for edit mode without c
               data-value="1"
             >
               <svg
-                data-testid="icon"
-              />
+                aria-hidden="true"
+                class="lucide lucide-newspaper"
+                fill="none"
+                height="24"
+                stroke="currentColor"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                stroke-width="2"
+                viewBox="0 0 24 24"
+                width="24"
+                xmlns="http://www.w3.org/2000/svg"
+              >
+                <path
+                  d="M15 18h-5"
+                />
+                <path
+                  d="M18 14h-8"
+                />
+                <path
+                  d="M4 22h16a2 2 0 0 0 2-2V4a2 2 0 0 0-2-2H8a2 2 0 0 0-2 2v16a2 2 0 0 1-4 0v-9a2 2 0 0 1 2-2h2"
+                />
+                <rect
+                  height="4"
+                  rx="1"
+                  width="8"
+                  x="10"
+                  y="6"
+                />
+              </svg>
                
               Articles
             </div>
@@ -1985,8 +3617,35 @@ exports[`CustomFeedDialog - Snapshots > matches snapshot for edit mode without c
               data-value="2"
             >
               <svg
-                data-testid="icon"
-              />
+                aria-hidden="true"
+                class="lucide lucide-image"
+                fill="none"
+                height="24"
+                stroke="currentColor"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                stroke-width="2"
+                viewBox="0 0 24 24"
+                width="24"
+                xmlns="http://www.w3.org/2000/svg"
+              >
+                <rect
+                  height="18"
+                  rx="2"
+                  ry="2"
+                  width="18"
+                  x="3"
+                  y="3"
+                />
+                <circle
+                  cx="9"
+                  cy="9"
+                  r="2"
+                />
+                <path
+                  d="m21 15-3.086-3.086a2 2 0 0 0-2.828 0L6 21"
+                />
+              </svg>
                
               Images
             </div>
@@ -1995,8 +3654,27 @@ exports[`CustomFeedDialog - Snapshots > matches snapshot for edit mode without c
               data-value="3"
             >
               <svg
-                data-testid="icon"
-              />
+                aria-hidden="true"
+                class="lucide lucide-circle-play"
+                fill="none"
+                height="24"
+                stroke="currentColor"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                stroke-width="2"
+                viewBox="0 0 24 24"
+                width="24"
+                xmlns="http://www.w3.org/2000/svg"
+              >
+                <path
+                  d="M9 9.003a1 1 0 0 1 1.517-.859l4.997 2.997a1 1 0 0 1 0 1.718l-4.997 2.997A1 1 0 0 1 9 14.996z"
+                />
+                <circle
+                  cx="12"
+                  cy="12"
+                  r="10"
+                />
+              </svg>
                
               Videos
             </div>
@@ -2005,8 +3683,25 @@ exports[`CustomFeedDialog - Snapshots > matches snapshot for edit mode without c
               data-value="4"
             >
               <svg
-                data-testid="icon"
-              />
+                aria-hidden="true"
+                class="lucide lucide-link"
+                fill="none"
+                height="24"
+                stroke="currentColor"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                stroke-width="2"
+                viewBox="0 0 24 24"
+                width="24"
+                xmlns="http://www.w3.org/2000/svg"
+              >
+                <path
+                  d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"
+                />
+                <path
+                  d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"
+                />
+              </svg>
                
               Links
             </div>
@@ -2015,8 +3710,28 @@ exports[`CustomFeedDialog - Snapshots > matches snapshot for edit mode without c
               data-value="5"
             >
               <svg
-                data-testid="icon"
-              />
+                aria-hidden="true"
+                class="lucide lucide-download"
+                fill="none"
+                height="24"
+                stroke="currentColor"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                stroke-width="2"
+                viewBox="0 0 24 24"
+                width="24"
+                xmlns="http://www.w3.org/2000/svg"
+              >
+                <path
+                  d="M12 15V3"
+                />
+                <path
+                  d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"
+                />
+                <path
+                  d="m7 10 5 5 5-5"
+                />
+              </svg>
                
               Files
             </div>
@@ -2064,9 +3779,22 @@ exports[`CustomFeedDialog - Snapshots > matches snapshot for edit mode without c
         disabled=""
       >
         <svg
-          class="size-4"
-          data-testid="icon"
-        />
+          aria-hidden="true"
+          class="lucide lucide-activity size-4"
+          fill="none"
+          height="24"
+          stroke="currentColor"
+          stroke-linecap="round"
+          stroke-linejoin="round"
+          stroke-width="2"
+          viewBox="0 0 24 24"
+          width="24"
+          xmlns="http://www.w3.org/2000/svg"
+        >
+          <path
+            d="M22 12h-2.48a2 2 0 0 0-1.93 1.46l-2.35 8.36a.25.25 0 0 1-.48 0L9.24 2.18a.25.25 0 0 0-.48 0l-2.35 8.36A2 2 0 0 1 4.49 12H2"
+          />
+        </svg>
         Save Feed
       </button>
       <button
@@ -2077,9 +3805,28 @@ exports[`CustomFeedDialog - Snapshots > matches snapshot for edit mode without c
         disabled=""
       >
         <svg
-          class="size-4"
-          data-testid="icon"
-        />
+          aria-hidden="true"
+          class="lucide lucide-delete size-4"
+          fill="none"
+          height="24"
+          stroke="currentColor"
+          stroke-linecap="round"
+          stroke-linejoin="round"
+          stroke-width="2"
+          viewBox="0 0 24 24"
+          width="24"
+          xmlns="http://www.w3.org/2000/svg"
+        >
+          <path
+            d="M10 5a2 2 0 0 0-1.344.519l-6.328 5.74a1 1 0 0 0 0 1.481l6.328 5.741A2 2 0 0 0 10 19h10a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2z"
+          />
+          <path
+            d="m12 9 6 6"
+          />
+          <path
+            d="m18 9-6 6"
+          />
+        </svg>
         Delete Feed
       </button>
     </div>

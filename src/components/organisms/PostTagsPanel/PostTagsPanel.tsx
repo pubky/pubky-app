@@ -10,7 +10,7 @@ import * as Core from '@/core';
 import type { TagInputHandle } from '@/molecules';
 import type { PostTagsPanelProps, PostTagsPanelHandle } from './PostTagsPanel.types';
 import { PostTagsPanelSkeleton } from './PostTagsPanel.skeleton';
-
+import { Tag } from 'lucide-react';
 const INITIAL_VISIBLE_TAGS = 3;
 
 /**
@@ -35,11 +35,9 @@ export const PostTagsPanel = forwardRef<PostTagsPanelHandle, PostTagsPanelProps>
   const t = useTranslations('common');
   const tagInputRef = useRef<TagInputHandle>(null);
   const [isExpanded, setIsExpanded] = useState(widthMode !== 'full');
-
   useImperativeHandle(ref, () => ({
     focus: () => tagInputRef.current?.focus(),
   }));
-
   const { tags, isLoading, handleTagAdd, handleTagToggle, hasMore, isLoadingMore, loadMore } =
     Hooks.usePostTags(postId);
 
@@ -76,7 +74,6 @@ export const PostTagsPanel = forwardRef<PostTagsPanelHandle, PostTagsPanelProps>
     isCollapsedPreview &&
     tags.length > 0 &&
     (tags.length > INITIAL_VISIBLE_TAGS || (hasMore && tags.length >= INITIAL_VISIBLE_TAGS));
-
   return (
     <Atoms.Container data-cy="post-tags-panel" className={Libs.cn('gap-2', className)}>
       <Atoms.Container
@@ -112,7 +109,7 @@ export const PostTagsPanel = forwardRef<PostTagsPanelHandle, PostTagsPanelProps>
         )}
         {showSeeAllButton && (
           <Atoms.SidebarButton
-            icon={Libs.Tag}
+            icon={Tag}
             onClick={() => setIsExpanded(true)}
             data-testid="post-tags-panel-see-all"
             aria-label={t('seeAll')}

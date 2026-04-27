@@ -109,16 +109,6 @@ vi.mock('@/atoms', () => ({
   ),
 }));
 
-// Mock libs
-vi.mock('@/libs', async () => {
-  const actual = await vi.importActual('@/libs');
-  return {
-    ...actual,
-    Send: () => <span data-testid="send-icon">→</span>,
-    Loader2: () => <span data-testid="loader-icon">⟳</span>,
-  };
-});
-
 describe('DialogFeedbackContent', () => {
   const mockHandleChange = vi.fn();
   const mockSubmit = vi.fn();
@@ -207,15 +197,15 @@ describe('DialogFeedbackContent', () => {
   });
 
   it('shows loader icon when isSubmitting is true', () => {
-    render(<DialogFeedbackContent {...defaultProps} hasContent={true} isSubmitting={true} />);
+    const { container } = render(<DialogFeedbackContent {...defaultProps} hasContent={true} isSubmitting={true} />);
 
-    expect(screen.getByTestId('loader-icon')).toBeInTheDocument();
+    expect(container.querySelector('.lucide-loader-circle')).toBeInTheDocument();
   });
 
   it('shows send icon when not submitting', () => {
-    render(<DialogFeedbackContent {...defaultProps} hasContent={true} isSubmitting={false} />);
+    const { container } = render(<DialogFeedbackContent {...defaultProps} hasContent={true} isSubmitting={false} />);
 
-    expect(screen.getByTestId('send-icon')).toBeInTheDocument();
+    expect(container.querySelector('.lucide-send')).toBeInTheDocument();
   });
 
   it('passes characterCount to PostHeader when feedback has content', () => {

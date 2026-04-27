@@ -4,17 +4,16 @@ import { useMemo } from 'react';
 import { useRouter } from 'next/navigation';
 import { useTranslations } from 'next-intl';
 import * as Atoms from '@/atoms';
-import * as Libs from '@/libs';
 import * as Organisms from '@/organisms';
 import * as Hooks from '@/hooks';
 import { SETTINGS_ROUTES } from '@/app/routes';
 import type { ProfilePageLinksProps } from './ProfilePageLinks.types';
-
+import { Link } from 'lucide-react';
+import { getIconFromUrl } from '@/libs/utils';
 export function ProfilePageLinks({ links, isOwnProfile = false }: ProfilePageLinksProps) {
   const t = useTranslations('profile.sidebar');
   const router = useRouter();
   const { dialogOpen, setDialogOpen, clickedLink, handleLinkClick } = Hooks.useLinkConfirmation();
-
   const handleAddLinkClick = () => {
     router.push(SETTINGS_ROUTES.EDIT);
   };
@@ -23,13 +22,12 @@ export function ProfilePageLinks({ links, isOwnProfile = false }: ProfilePageLin
   const transformedLinks = useMemo(
     () =>
       links?.map((link) => ({
-        icon: Libs.getIconFromUrl(link.url),
+        icon: getIconFromUrl(link.url),
         label: link.title,
         url: link.url,
       })) || [],
     [links],
   );
-
   return (
     <>
       <Atoms.Container>
@@ -69,7 +67,7 @@ export function ProfilePageLinks({ links, isOwnProfile = false }: ProfilePageLin
               className="mt-2 border border-border bg-foreground/5"
               onClick={handleAddLinkClick}
             >
-              <Libs.Link size={16} className="text-foreground" />
+              <Link size={16} className="text-foreground" />
               <Atoms.Typography as="span" className="text-sm font-bold">
                 {t('addLink')}
               </Atoms.Typography>

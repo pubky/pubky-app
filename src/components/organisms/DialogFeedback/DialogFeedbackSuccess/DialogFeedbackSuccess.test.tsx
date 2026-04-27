@@ -49,15 +49,6 @@ vi.mock('@/atoms', () => ({
   ),
 }));
 
-// Mock libs
-vi.mock('@/libs', async () => {
-  const actual = await vi.importActual('@/libs');
-  return {
-    ...actual,
-    Check: () => <span data-testid="check-icon">✓</span>,
-  };
-});
-
 describe('DialogFeedbackSuccess', () => {
   const mockOnOpenChange = vi.fn();
 
@@ -83,9 +74,9 @@ describe('DialogFeedbackSuccess', () => {
   });
 
   it('renders check icon', () => {
-    render(<DialogFeedbackSuccess onOpenChange={mockOnOpenChange} />);
+    const { container } = render(<DialogFeedbackSuccess onOpenChange={mockOnOpenChange} />);
 
-    expect(screen.getByTestId('check-icon')).toBeInTheDocument();
+    expect(container.querySelector('.lucide-check')).toBeInTheDocument();
   });
 
   it('calls onOpenChange when close button is clicked', () => {

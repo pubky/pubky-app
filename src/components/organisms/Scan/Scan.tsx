@@ -5,7 +5,6 @@ import { QRCodeSVG } from 'qrcode.react';
 import { useRouter } from 'next/navigation';
 import { useEffect } from 'react';
 import { useTranslations } from 'next-intl';
-
 import * as Atoms from '@/atoms';
 import * as Libs from '@/libs';
 import * as Molecules from '@/molecules';
@@ -13,46 +12,48 @@ import * as Config from '@/config';
 import * as App from '@/app';
 import * as Hooks from '@/hooks';
 import * as Core from '@/core';
-
+import { Loader2, QrCode, Key } from 'lucide-react';
 export const ScanContent = () => {
   const t = useTranslations('onboarding.scan');
   const router = useRouter();
   const inviteCode = Core.useOnboardingStore((state) => state.inviteCode);
   const hasInviteCode = inviteCode.trim().length > 0;
-
   useEffect(() => {
     if (!hasInviteCode) {
       Libs.Logger.warn('[Scan] Missing inviteCode on signup screen; redirecting to invite flow');
       router.replace(App.ONBOARDING_ROUTES.HUMAN);
     }
   }, [hasInviteCode, router]);
-
   const { url, isLoading, isExpired, fetchUrl, isOpeningRing, onAuthorizeClick } = Hooks.useMobileAuth(
-    hasInviteCode ? { type: 'signup', inviteCode } : { autoFetch: false },
+    hasInviteCode
+      ? {
+          type: 'signup',
+          inviteCode,
+        }
+      : {
+          autoFetch: false,
+        },
   );
-
   if (!hasInviteCode) return null;
-
   const isMobileLaunching = isLoading || isOpeningRing;
   const mobileAuthorizeContent = isMobileLaunching ? (
     <>
-      <Libs.Loader2 className="mr-2 size-4 animate-spin" />
+      <Loader2 className="mr-2 size-4 animate-spin" />
       <Atoms.Typography as="span" overrideDefaults aria-live="polite">
         {isOpeningRing ? t('openingRing') : t('generatingShort')}
       </Atoms.Typography>
     </>
   ) : isExpired ? (
     <>
-      <Libs.QrCode className="mr-2 size-4" />
+      <QrCode className="mr-2 size-4" />
       {t('expired')}
     </>
   ) : (
     <>
-      <Libs.Key className="mr-2 size-4" />
+      <Key className="mr-2 size-4" />
       {t('authorize')}
     </>
   );
-
   return (
     <>
       {/** Desktop view */}
@@ -63,14 +64,14 @@ export const ScanContent = () => {
             <div className="relative flex h-[220px] w-[220px] items-center justify-center rounded-lg bg-foreground p-4">
               {isLoading || (!url && !isExpired) ? (
                 <Atoms.Container className="items-center gap-2">
-                  <Libs.Loader2 className="size-8 animate-spin text-background" />
+                  <Loader2 className="size-8 animate-spin text-background" />
                   <Atoms.Typography as="small" size="sm" className="text-background">
                     {t('generating')}
                   </Atoms.Typography>
                 </Atoms.Container>
               ) : isExpired ? (
                 <Atoms.Container className="items-center gap-2">
-                  <Libs.QrCode className="size-8 text-muted-foreground" />
+                  <QrCode className="size-8 text-muted-foreground" />
                   <Atoms.Typography as="small" size="sm" className="text-muted-foreground">
                     {t('expired')}
                   </Atoms.Typography>
@@ -121,7 +122,6 @@ export const ScanContent = () => {
     </>
   );
 };
-
 export const ScanFooter = () => {
   const t = useTranslations('onboarding.scan');
   return (
@@ -141,7 +141,6 @@ export const ScanFooter = () => {
     </Atoms.FooterLinks>
   );
 };
-
 export const ScanHeader = ({ isMobile }: { isMobile: boolean }) => {
   const t = useTranslations('onboarding.scan');
   return (
@@ -159,14 +158,11 @@ export const ScanHeader = ({ isMobile }: { isMobile: boolean }) => {
     </Atoms.PageHeader>
   );
 };
-
 export const ScanNavigation = () => {
   const router = useRouter();
-
   const onHandleBackButton = () => {
     router.push(App.ONBOARDING_ROUTES.INSTALL);
   };
-
   return (
     <Molecules.ButtonsNavigation
       id="scan-navigation"

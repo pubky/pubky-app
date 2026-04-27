@@ -6,7 +6,7 @@ import * as Molecules from '@/molecules';
 import * as Libs from '@/libs';
 import { SEARCH_CLOSED_STYLE, SEARCH_INPUT_EXPANDED_STYLE } from '@/config/search';
 import type { SearchInputBarProps } from './SearchInputBar.types';
-
+import { Search } from 'lucide-react';
 export function SearchInputBar({
   activeTags,
   inputValue,
@@ -23,7 +23,6 @@ export function SearchInputBar({
 }: SearchInputBarProps) {
   const t = useTranslations('search');
   const hasActiveTags = activeTags.length > 0;
-
   return (
     <Atoms.Container
       data-testid="search-input-bar"
@@ -77,7 +76,7 @@ export function SearchInputBar({
       />
 
       {/* Search icon */}
-      <Libs.Search className="pointer-events-none size-4 shrink-0 text-muted-foreground" aria-hidden="true" />
+      <Search className="pointer-events-none size-4 shrink-0 text-muted-foreground" aria-hidden="true" />
     </Atoms.Container>
   );
 }

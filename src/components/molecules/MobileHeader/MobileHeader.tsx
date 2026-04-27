@@ -4,7 +4,7 @@ import * as Atoms from '@/atoms';
 import * as Molecules from '@/molecules';
 import * as Core from '@/core';
 import * as Libs from '@/libs';
-
+import { SlidersHorizontal, UserRound, Activity } from 'lucide-react';
 export interface MobileHeaderProps {
   onLeftIconClick?: () => void;
   onRightIconClick?: () => void;
@@ -13,9 +13,7 @@ export interface MobileHeaderProps {
   hasGradientBackground?: boolean;
   fixed?: boolean;
 }
-
 const Placeholder = () => <Atoms.Container overrideDefaults className="w-10" />;
-
 export function MobileHeader({
   onLeftIconClick,
   onRightIconClick,
@@ -26,9 +24,7 @@ export function MobileHeader({
 }: MobileHeaderProps) {
   const isAuthenticated = Core.useAuthStore((state) => Boolean(state.currentUserPubky));
   const setShowSignInDialog = Core.useAuthStore((state) => state.setShowSignInDialog);
-
   const showLeftIcon = showLeftButton && isAuthenticated;
-
   return (
     <Atoms.Container
       overrideDefaults
@@ -44,7 +40,7 @@ export function MobileHeader({
         {/* Left icon - filters (authenticated only) */}
         {showLeftIcon ? (
           <Atoms.Button variant="ghost" size="icon" onClick={onLeftIconClick}>
-            <Libs.SlidersHorizontal className="size-6" />
+            <SlidersHorizontal className="size-6" />
           </Atoms.Button>
         ) : (
           <Placeholder />
@@ -61,11 +57,11 @@ export function MobileHeader({
             onClick={() => setShowSignInDialog(true)}
             aria-label="Join Pubky"
           >
-            <Libs.UserRound className="size-6" />
+            <UserRound className="size-6" />
           </Atoms.Button>
         ) : showRightButton ? (
           <Atoms.Button variant="ghost" size="icon" onClick={onRightIconClick}>
-            <Libs.Activity className="size-6" />
+            <Activity className="size-6" />
           </Atoms.Button>
         ) : (
           <Placeholder />

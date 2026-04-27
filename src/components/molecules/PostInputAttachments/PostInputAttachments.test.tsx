@@ -162,22 +162,6 @@ vi.mock('@/atoms', () => ({
   ),
 }));
 
-// Mock @/libs/icons
-vi.mock('@/libs/icons', () => ({
-  Trash2: ({ className, 'data-testid': dataTestId }: { className?: string; 'data-testid'?: string }) => (
-    <svg data-testid={dataTestId || 'trash-icon'} className={className} />
-  ),
-  FileText: ({ className, 'data-testid': dataTestId }: { className?: string; 'data-testid'?: string }) => (
-    <svg data-testid={dataTestId || 'file-text-icon'} className={className} />
-  ),
-  ImagePlus: ({ className, 'data-testid': dataTestId }: { className?: string; 'data-testid'?: string }) => (
-    <svg data-testid={dataTestId || 'image-plus-icon'} className={className} />
-  ),
-  Plus: ({ className, 'data-testid': dataTestId }: { className?: string; 'data-testid'?: string }) => (
-    <svg data-testid={dataTestId || 'plus-icon'} className={className} />
-  ),
-}));
-
 // Mock @/libs/utils
 vi.mock('@/libs/utils', async (importOriginal) => {
   const actual = await importOriginal<typeof import('@/libs/utils')>();
@@ -277,9 +261,9 @@ describe('PostInputAttachments', () => {
     });
 
     it('renders ImagePlus icon in placeholder', () => {
-      render(<PostInputAttachments {...defaultProps} isArticle={true} />);
+      const { container } = render(<PostInputAttachments {...defaultProps} isArticle={true} />);
 
-      expect(screen.getByTestId('image-plus-icon')).toBeInTheDocument();
+      expect(container.querySelector('.lucide-image-plus')).toBeInTheDocument();
     });
 
     it('renders Add image button in placeholder', () => {
@@ -402,8 +386,7 @@ describe('PostInputAttachments', () => {
       const attachments = [createMockPdfFile('document.pdf')];
       render(<PostInputAttachments {...defaultProps} attachments={attachments} />);
 
-      const fileIcon = screen.getByTestId('file-text-icon');
-      expect(fileIcon).toBeInTheDocument();
+      expect(document.querySelector('.lucide-file-text')).toBeInTheDocument();
 
       expect(screen.getByText('document.pdf')).toBeInTheDocument();
     });
@@ -412,8 +395,7 @@ describe('PostInputAttachments', () => {
       const attachments = [createMockPdfFile('doc1.pdf'), createMockPdfFile('doc2.pdf')];
       render(<PostInputAttachments {...defaultProps} attachments={attachments} />);
 
-      const fileIcons = screen.getAllByTestId('file-text-icon');
-      expect(fileIcons).toHaveLength(2);
+      expect(document.querySelectorAll('.lucide-file-text')).toHaveLength(2);
     });
   });
 
@@ -425,7 +407,7 @@ describe('PostInputAttachments', () => {
       expect(screen.getByTestId('image')).toBeInTheDocument();
       expect(screen.getByTestId('video')).toBeInTheDocument();
       expect(screen.getByTestId('audio')).toBeInTheDocument();
-      expect(screen.getByTestId('file-text-icon')).toBeInTheDocument();
+      expect(document.querySelector('.lucide-file-text')).toBeInTheDocument();
     });
   });
 
@@ -442,8 +424,8 @@ describe('PostInputAttachments', () => {
       const attachments = [createMockImageFile()];
       render(<PostInputAttachments {...defaultProps} attachments={attachments} />);
 
-      const trashIcon = screen.getByTestId('trash-icon');
-      expect(trashIcon).toBeInTheDocument();
+      const deleteButton = screen.getByTestId('button');
+      expect(deleteButton.querySelector('.lucide-trash-2')).toBeInTheDocument();
     });
 
     it('calls setAttachments when delete button is clicked', () => {
@@ -690,7 +672,7 @@ describe('PostInputAttachments', () => {
 
       expect(screen.queryByTestId('video')).not.toBeInTheDocument();
       expect(screen.queryByTestId('audio')).not.toBeInTheDocument();
-      expect(screen.queryByTestId('file-text-icon')).not.toBeInTheDocument();
+      expect(document.querySelector('.lucide-file-text')).not.toBeInTheDocument();
     });
   });
 });

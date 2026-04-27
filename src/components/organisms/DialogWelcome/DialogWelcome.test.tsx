@@ -52,12 +52,14 @@ vi.mock('@/hooks', () => ({
 }));
 
 // Mock libs
-vi.mock('@/libs', () => ({
-  formatPublicKey: vi.fn(({ key, length }) => `${key.slice(0, 4)}...${key.slice(-length + 4)}`),
-  withPubkyPrefix: (key: string) => `pubky${key}`,
-  Key: ({ className }: { className?: string }) => <svg data-testid="key-icon" className={className} />,
-  ArrowRight: ({ className }: { className?: string }) => <svg data-testid="arrow-right-icon" className={className} />,
-}));
+vi.mock('@/libs', async () => {
+  const actual = await vi.importActual<typeof import('@/libs')>('@/libs');
+  return {
+    ...actual,
+    formatPublicKey: vi.fn(({ key, length }) => `${key.slice(0, 4)}...${key.slice(-length + 4)}`),
+    withPubkyPrefix: (key: string) => `pubky${key}`,
+  };
+});
 
 // Mock atoms
 vi.mock('@/atoms', () => ({

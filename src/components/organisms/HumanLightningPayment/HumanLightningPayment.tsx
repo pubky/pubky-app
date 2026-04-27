@@ -11,7 +11,7 @@ import { VerificationHandler } from './HumanLightningPayment.utils';
 import { QRCodeSkeleton, PriceSkeleton } from './HumanLightningPayment.skeleton';
 import type { HumanLightningPaymentProps } from './HumanLightningPayment.types';
 import { useIsMobile } from '@/hooks/useIsMobile';
-
+import { RefreshCw, Wallet, ArrowLeft, Copy } from 'lucide-react';
 export const HumanLightningPayment = ({ onBack, onSuccess }: HumanLightningPaymentProps) => {
   const t = useTranslations('onboarding.lightning');
   const tCommon = useTranslations('common');
@@ -33,7 +33,6 @@ export const HumanLightningPayment = ({ onBack, onSuccess }: HumanLightningPayme
       if (verificationRef.current) {
         verificationRef.current.abort();
       }
-
       const toastVerificationError = (error: unknown) => {
         toast({
           title: tCommon('error'),
@@ -43,16 +42,19 @@ export const HumanLightningPayment = ({ onBack, onSuccess }: HumanLightningPayme
       const onPaymentConfirmed = async (signupCode: string, homeserverPubky: string) => {
         try {
           await onSuccess(signupCode, homeserverPubky);
-          toast({ title: t('paymentSuccess') });
+          toast({
+            title: t('paymentSuccess'),
+          });
         } catch (error) {
           toastVerificationError(error);
         }
       };
       const onPaymentExpired = () => {
         setIsPaymentExpired(true);
-        toast({ title: t('paymentExpired') });
+        toast({
+          title: t('paymentExpired'),
+        });
       };
-
       const client = await VerificationHandler.create(onPaymentConfirmed, onPaymentExpired, toastVerificationError);
       verificationRef.current = client;
       setVerification(client);
@@ -66,7 +68,6 @@ export const HumanLightningPayment = ({ onBack, onSuccess }: HumanLightningPayme
       setIsLoading(false);
     }
   };
-
   React.useEffect(() => {
     if (typeof window === 'undefined') return; // No SSR
 
@@ -89,10 +90,11 @@ export const HumanLightningPayment = ({ onBack, onSuccess }: HumanLightningPayme
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps -- run once on mount
   }, []);
-
   async function copyToClipboard(text: string) {
     try {
-      await Libs.copyToClipboard({ text });
+      await Libs.copyToClipboard({
+        text,
+      });
       toast({
         title: t('invoiceCopied'),
       });
@@ -102,7 +104,6 @@ export const HumanLightningPayment = ({ onBack, onSuccess }: HumanLightningPayme
       });
     }
   }
-
   const isDataAvailable = verification !== null && !isLoading;
 
   // Format the payment description with optional USD conversion
@@ -111,26 +112,28 @@ export const HumanLightningPayment = ({ onBack, onSuccess }: HumanLightningPayme
     const amountFormatted = verification.data.amountSat.toLocaleString('en-US');
     const usdAmount = rate?.satUsd ? Math.round(rate.satUsd * verification.data.amountSat * 100) / 100 : null;
     return usdAmount
-      ? t('payAmountUsd', { amount: amountFormatted, usdAmount: usdAmount.toString() })
-      : t('payAmount', { amount: amountFormatted });
+      ? t('payAmountUsd', {
+          amount: amountFormatted,
+          usdAmount: usdAmount.toString(),
+        })
+      : t('payAmount', {
+          amount: amountFormatted,
+        });
   };
-
   const renderExpiredState = (containerClassName: string) => (
     <Atoms.Container className={containerClassName}>
       <Atoms.Typography as="p" className="mb-4 text-base leading-6 font-medium text-secondary-foreground/80">
         {t('expired')}
       </Atoms.Typography>
       <Atoms.Button size="sm" className="rounded-full font-bold" variant="default" onClick={requestLightningInvoice}>
-        <Libs.RefreshCw className="mr-1.5 h-3.5 w-3.5" />
+        <RefreshCw className="mr-1.5 h-3.5 w-3.5" />
         {t('newInvoice')}
       </Atoms.Button>
     </Atoms.Container>
   );
-
   const renderPaymentAction = () => {
     if (isLoading) return <QRCodeSkeleton />;
     if (!verification) return null;
-
     if (isPaymentExpired) {
       return renderExpiredState(
         Libs.cn(
@@ -139,18 +142,16 @@ export const HumanLightningPayment = ({ onBack, onSuccess }: HumanLightningPayme
         ),
       );
     }
-
     if (isMobile) {
       return (
         <Atoms.Button asChild className="w-full lg:flex-0">
           <a href={`lightning:${verification.data.bolt11Invoice}`}>
-            <Libs.Wallet className="mr-2 size-4" />
+            <Wallet className="mr-2 size-4" />
             {t('payNow')}
           </a>
         </Atoms.Button>
       );
     }
-
     return (
       <Atoms.Container
         overrideDefaults={true}
@@ -167,7 +168,6 @@ export const HumanLightningPayment = ({ onBack, onSuccess }: HumanLightningPayme
       </Atoms.Container>
     );
   };
-
   return (
     <React.Fragment>
       <Atoms.PageHeader>
@@ -225,7 +225,7 @@ export const HumanLightningPayment = ({ onBack, onSuccess }: HumanLightningPayme
           variant="secondary"
           onClick={onBack}
         >
-          <Libs.ArrowLeft className="mr-2 h-4 w-4" />
+          <ArrowLeft className="mr-2 h-4 w-4" />
           {tCommon('back')}
         </Atoms.Button>
         <Atoms.Button
@@ -236,7 +236,7 @@ export const HumanLightningPayment = ({ onBack, onSuccess }: HumanLightningPayme
           disabled={!isDataAvailable}
           onClick={() => verification && copyToClipboard(verification.data.bolt11Invoice)}
         >
-          <Libs.Copy className="mr-2 h-4 w-4" />
+          <Copy className="mr-2 h-4 w-4" />
           {t('copyInvoice')}
         </Atoms.Button>
       </Atoms.Container>

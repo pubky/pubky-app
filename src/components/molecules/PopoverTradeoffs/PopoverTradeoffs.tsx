@@ -3,15 +3,14 @@
 import { useTranslations } from 'next-intl';
 import * as Atoms from '@/components/atoms';
 import * as Libs from '@/libs';
-
+import { AlertTriangle } from 'lucide-react';
 export function PopoverTradeoffs({ ...props }: React.HTMLAttributes<HTMLDivElement>) {
   const t = useTranslations('tradeoffs');
-
   return (
     <Atoms.Popover hover>
       <Atoms.PopoverTrigger asChild>
         <Atoms.Button variant="ghost" size="icon" className={Libs.cn('rounded-full', props.className)}>
-          <Libs.AlertTriangle className="h-4 w-4" data-testid="alert-triangle-icon" />
+          <AlertTriangle className="h-4 w-4" data-testid="alert-triangle-icon" />
         </Atoms.Button>
       </Atoms.PopoverTrigger>
       <Atoms.PopoverContent>

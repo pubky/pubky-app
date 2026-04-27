@@ -2,6 +2,7 @@ import * as React from 'react';
 import * as Libs from '@/libs';
 import * as Atoms from '@/atoms';
 import type { PostTagAddButtonProps } from './PostTagAddButton.types';
+import { Plus } from 'lucide-react';
 
 export function PostTagAddButton({ onClick, className, disabled, variant = 'dashed' }: PostTagAddButtonProps) {
   return (
@@ -21,7 +22,7 @@ export function PostTagAddButton({ onClick, className, disabled, variant = 'dash
       )}
       aria-label="Add new tag"
     >
-      <Libs.Plus
+      <Plus
         className="pointer-events-none absolute top-1/2 left-1/2 size-4 -translate-x-1/2 -translate-y-1/2 opacity-[0.32]"
         strokeWidth={2}
       />

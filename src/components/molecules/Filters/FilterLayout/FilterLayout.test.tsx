@@ -3,12 +3,6 @@ import { describe, it, expect, vi } from 'vitest';
 import { FilterLayout } from './FilterLayout';
 import { LAYOUT, type LayoutType } from '@/core/stores/home/home.types';
 
-// Mock libs - use actual utility functions and icons from lucide-react
-vi.mock('@/libs', async () => {
-  const actual = await vi.importActual('@/libs');
-  return { ...actual };
-});
-
 describe('FilterLayout', () => {
   it('renders with default selected tab', () => {
     render(<FilterLayout />);

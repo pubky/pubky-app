@@ -10,18 +10,33 @@ import { useTranslations } from 'next-intl';
 import { PubkyAppFeedLayout, PubkyAppFeedReach, PubkyAppFeedSort, PubkyAppPostKind } from 'pubky-app-specs';
 import { useRouter } from 'next/navigation';
 import { APP_ROUTES } from '@/app/routes';
-
+import {
+  Radio,
+  HeartHandshake,
+  SquareAsterisk,
+  Flame,
+  Columns3,
+  Menu,
+  LayoutGrid,
+  Layers,
+  StickyNote,
+  Newspaper,
+  Image,
+  CirclePlay,
+  Link,
+  Download,
+  Activity,
+  Delete,
+} from 'lucide-react';
+import { UsersRound2 } from '@/icons';
 type CustomFeedDialogProps = {
   mode: 'create' | 'edit';
   children: ReactNode;
 };
-
 type CustomFeedDialogContent = PubkyAppPostKind | 'ALL';
-
 function isVisualCustomFeedContentSupported(content?: CustomFeedDialogContent): boolean {
   return content === 'ALL' || content === PubkyAppPostKind.Image || content === PubkyAppPostKind.Video;
 }
-
 export const CustomFeedDialog = ({ mode, children }: CustomFeedDialogProps) => {
   const router = useRouter();
   const { toast } = Molecules.useToast();
@@ -29,7 +44,6 @@ export const CustomFeedDialog = ({ mode, children }: CustomFeedDialogProps) => {
   const tFilter = useTranslations('filters');
   const tDialog = useTranslations('dialogs.customFeed');
   const tToast = useTranslations('toast');
-
   const [open, setOpen] = useState(false);
   const [name, setName] = useState('');
   const [reach, setReach] = useState<PubkyAppFeedReach | undefined>(
@@ -44,12 +58,9 @@ export const CustomFeedDialog = ({ mode, children }: CustomFeedDialogProps) => {
   const [content, setContent] = useState<CustomFeedDialogContent | undefined>(mode === 'create' ? 'ALL' : undefined);
   const [tags, setTags] = useState<string[]>([]);
   const [loading, setLoading] = useState(false);
-
   const disabled = loading || (mode === 'edit' && !customFeed);
-
   useEffect(() => {
     if (open) return;
-
     if (mode === 'create') {
       setName('');
       setReach(PubkyAppFeedReach.All);
@@ -66,48 +77,105 @@ export const CustomFeedDialog = ({ mode, children }: CustomFeedDialogProps) => {
       setTags(customFeed?.tags ?? []);
     }
   }, [open, mode, customFeed]);
-
   const reachFilters = [
-    { value: PubkyAppFeedReach.All, label: tFilter('reach.all'), icon: Libs.Radio },
-    { value: PubkyAppFeedReach.Following, label: tFilter('reach.following'), icon: Libs.UsersRound2 },
-    { value: PubkyAppFeedReach.Friends, label: tFilter('reach.friends'), icon: Libs.HeartHandshake },
+    {
+      value: PubkyAppFeedReach.All,
+      label: tFilter('reach.all'),
+      icon: Radio,
+    },
+    {
+      value: PubkyAppFeedReach.Following,
+      label: tFilter('reach.following'),
+      icon: UsersRound2,
+    },
+    {
+      value: PubkyAppFeedReach.Friends,
+      label: tFilter('reach.friends'),
+      icon: HeartHandshake,
+    },
   ];
-
   const sortFilters = [
-    { value: PubkyAppFeedSort.Recent, label: tFilter('sort.recent'), icon: Libs.SquareAsterisk },
-    { value: PubkyAppFeedSort.Popularity, label: tFilter('sort.popularity'), icon: Libs.Flame },
+    {
+      value: PubkyAppFeedSort.Recent,
+      label: tFilter('sort.recent'),
+      icon: SquareAsterisk,
+    },
+    {
+      value: PubkyAppFeedSort.Popularity,
+      label: tFilter('sort.popularity'),
+      icon: Flame,
+    },
   ];
-
   const layoutFilters = [
-    { value: PubkyAppFeedLayout.Columns, label: tFilter('layout.columns'), icon: Libs.Columns3 },
-    { value: PubkyAppFeedLayout.Wide, label: tFilter('layout.wide'), icon: Libs.Menu },
-    { value: PubkyAppFeedLayout.Visual, label: tFilter('layout.visual'), icon: Libs.LayoutGrid },
+    {
+      value: PubkyAppFeedLayout.Columns,
+      label: tFilter('layout.columns'),
+      icon: Columns3,
+    },
+    {
+      value: PubkyAppFeedLayout.Wide,
+      label: tFilter('layout.wide'),
+      icon: Menu,
+    },
+    {
+      value: PubkyAppFeedLayout.Visual,
+      label: tFilter('layout.visual'),
+      icon: LayoutGrid,
+    },
   ];
-
-  const allContentFilters: Array<{ value: CustomFeedDialogContent; label: string; icon: ComponentType }> = [
-    { value: 'ALL', label: tFilter('content.all'), icon: Libs.Layers },
-    { value: PubkyAppPostKind.Short, label: tFilter('content.posts'), icon: Libs.StickyNote },
-    { value: PubkyAppPostKind.Long, label: tFilter('content.articles'), icon: Libs.Newspaper },
-    { value: PubkyAppPostKind.Image, label: tFilter('content.images'), icon: Libs.Image },
-    { value: PubkyAppPostKind.Video, label: tFilter('content.videos'), icon: Libs.CirclePlay },
-    { value: PubkyAppPostKind.Link, label: tFilter('content.links'), icon: Libs.Link },
-    { value: PubkyAppPostKind.File, label: tFilter('content.files'), icon: Libs.Download },
+  const allContentFilters: Array<{
+    value: CustomFeedDialogContent;
+    label: string;
+    icon: ComponentType;
+  }> = [
+    {
+      value: 'ALL',
+      label: tFilter('content.all'),
+      icon: Layers,
+    },
+    {
+      value: PubkyAppPostKind.Short,
+      label: tFilter('content.posts'),
+      icon: StickyNote,
+    },
+    {
+      value: PubkyAppPostKind.Long,
+      label: tFilter('content.articles'),
+      icon: Newspaper,
+    },
+    {
+      value: PubkyAppPostKind.Image,
+      label: tFilter('content.images'),
+      icon: Image,
+    },
+    {
+      value: PubkyAppPostKind.Video,
+      label: tFilter('content.videos'),
+      icon: CirclePlay,
+    },
+    {
+      value: PubkyAppPostKind.Link,
+      label: tFilter('content.links'),
+      icon: Link,
+    },
+    {
+      value: PubkyAppPostKind.File,
+      label: tFilter('content.files'),
+      icon: Download,
+    },
   ];
   const contentFilters =
     layout === PubkyAppFeedLayout.Visual
       ? allContentFilters.filter((filter) => isVisualCustomFeedContentSupported(filter.value))
       : allContentFilters;
-
   useEffect(() => {
     if (layout !== PubkyAppFeedLayout.Visual) return;
     if (content === undefined || isVisualCustomFeedContentSupported(content)) return;
     setContent('ALL');
   }, [content, layout]);
-
   const handleLayoutChange = (value: string) => {
     const nextLayout = Number(value) as PubkyAppFeedLayout;
     setLayout(nextLayout);
-
     if (
       nextLayout === PubkyAppFeedLayout.Visual &&
       content !== undefined &&
@@ -116,10 +184,8 @@ export const CustomFeedDialog = ({ mode, children }: CustomFeedDialogProps) => {
       setContent('ALL');
     }
   };
-
   const handleSaveFeed = async () => {
     if (reach === undefined || sort === undefined || layout === undefined || content === undefined) return;
-
     if (mode === 'create') {
       try {
         setLoading(true);
@@ -131,11 +197,12 @@ export const CustomFeedDialog = ({ mode, children }: CustomFeedDialogProps) => {
           content: content === 'ALL' ? null : content,
           tags,
         });
-
         setOpen(false);
         toast({
           title: tToast('success'),
-          description: tDialog('feedCreated', { name: feed.name }),
+          description: tDialog('feedCreated', {
+            name: feed.name,
+          }),
         });
         router.push(`${APP_ROUTES.FEED}/${feed.id}`);
       } catch {
@@ -148,18 +215,25 @@ export const CustomFeedDialog = ({ mode, children }: CustomFeedDialogProps) => {
       }
     } else if (mode === 'edit') {
       if (!customFeed) return;
-
       try {
         setLoading(true);
         const feed = await Core.FeedController.commitUpdate({
           feedId: customFeed.id,
-          changes: { name, reach, sort, layout, content: content === 'ALL' ? null : content, tags },
+          changes: {
+            name,
+            reach,
+            sort,
+            layout,
+            content: content === 'ALL' ? null : content,
+            tags,
+          },
         });
-
         setOpen(false);
         toast({
           title: tToast('success'),
-          description: tDialog('feedEdited', { name: feed.name }),
+          description: tDialog('feedEdited', {
+            name: feed.name,
+          }),
         });
         router.push(`${APP_ROUTES.FEED}/${feed.id}`);
       } catch {
@@ -172,18 +246,19 @@ export const CustomFeedDialog = ({ mode, children }: CustomFeedDialogProps) => {
       }
     }
   };
-
   const handleDeleteFeed = async () => {
     if (!customFeed) return;
-
     try {
       setLoading(true);
-      await Core.FeedController.commitDelete({ feedId: customFeed.id });
-
+      await Core.FeedController.commitDelete({
+        feedId: customFeed.id,
+      });
       setOpen(false);
       toast({
         title: tToast('success'),
-        description: tDialog('feedDeleted', { name: customFeed.name }),
+        description: tDialog('feedDeleted', {
+          name: customFeed.name,
+        }),
       });
       router.push(APP_ROUTES.HOME);
     } catch {
@@ -195,7 +270,6 @@ export const CustomFeedDialog = ({ mode, children }: CustomFeedDialogProps) => {
       setLoading(false);
     }
   };
-
   return (
     <Atoms.Dialog open={open} onOpenChange={setOpen}>
       <Atoms.DialogTrigger asChild disabled={mode === 'edit' && !customFeed} data-testid="custom-feed-dialog-trigger">
@@ -339,7 +413,9 @@ export const CustomFeedDialog = ({ mode, children }: CustomFeedDialogProps) => {
 
           <Molecules.TagInput
             onTagAdd={(tag) => setTags([...tags, tag])}
-            existingTags={tags.map((tag) => ({ label: tag }))}
+            existingTags={tags.map((tag) => ({
+              label: tag,
+            }))}
             showCloseButton={false}
             disabled={disabled}
             maxTags={Libs.Env.NEXT_MAX_STREAM_TAGS}
@@ -374,7 +450,7 @@ export const CustomFeedDialog = ({ mode, children }: CustomFeedDialogProps) => {
             className="h-15 w-full"
             data-testid="save-feed-button"
           >
-            <Libs.Activity className="size-4" />
+            <Activity className="size-4" />
             {tDialog('saveFeed')}
           </Atoms.Button>
 
@@ -387,7 +463,7 @@ export const CustomFeedDialog = ({ mode, children }: CustomFeedDialogProps) => {
               className="h-15 w-full"
               data-testid="delete-feed-button"
             >
-              <Libs.Delete className="size-4" />
+              <Delete className="size-4" />
               {tDialog('deleteFeed')}
             </Atoms.Button>
           )}

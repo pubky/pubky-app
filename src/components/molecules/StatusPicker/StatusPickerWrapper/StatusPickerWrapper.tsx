@@ -5,10 +5,9 @@ import { useTranslations } from 'next-intl';
 import * as Atoms from '@/atoms';
 import * as Hooks from '@/hooks';
 import * as Libs from '@/libs';
-import * as Icons from '@/libs/icons';
 import * as Molecules from '@/molecules';
 import * as Types from './index';
-
+import { ChevronDown } from 'lucide-react';
 export function StatusPickerWrapper({
   emoji,
   status,
@@ -25,13 +24,11 @@ export function StatusPickerWrapper({
   const parsed = Libs.parseStatus(currentStatus, emoji);
   // Get translated text for predefined statuses
   const displayText = parsed.key ? t(parsed.key as Parameters<typeof t>[0]) : parsed.text;
-
   const handleStatusSelect = (selectedStatus: string) => {
     setLocalStatus(selectedStatus);
     onStatusChange?.(selectedStatus);
     setOpen(false);
   };
-
   const triggerButton = (
     <Atoms.Button
       variant="ghost"
@@ -40,10 +37,9 @@ export function StatusPickerWrapper({
     >
       {parsed.emoji && <span className="text-base leading-6">{parsed.emoji}</span>}
       <span className="text-base leading-6 font-bold text-white">{displayText}</span>
-      <Icons.ChevronDown className={Libs.cn('size-6 transition-transform duration-300', open && 'rotate-180')} />
+      <ChevronDown className={Libs.cn('size-6 transition-transform duration-300', open && 'rotate-180')} />
     </Atoms.Button>
   );
-
   if (isMobile) {
     return (
       <Atoms.Sheet open={open} onOpenChange={setOpen}>
@@ -60,7 +56,6 @@ export function StatusPickerWrapper({
       </Atoms.Sheet>
     );
   }
-
   return (
     <Atoms.Popover open={open} onOpenChange={setOpen}>
       <Atoms.PopoverTrigger asChild>{triggerButton}</Atoms.PopoverTrigger>

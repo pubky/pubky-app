@@ -39,6 +39,12 @@ Entry points (UI, Coordinators) -> Controllers -> Application -> Services -> Mod
 - Z-index: use standard scale (-z-10, z-10, z-30, z-40, z-50, z-60)
 - Skeleton counts from constants/props, never hardcoded
 
+### Icons
+
+- **Stock Lucide**: `import { IconName } from 'lucide-react'` — never re-export the whole package from `@/libs` or other app barrels (`export * from 'lucide-react'` is forbidden).
+- **Custom / brand SVGs**: `import { CustomMark } from '@/icons'` — alias → `src/libs/icons/icons.tsx` (see `docs/components.md`).
+- **URL → icon / label**: `getIconFromUrl`, `getLabelFromUrl`, etc. from `@/libs/utils` (`src/libs/utils/urlToIcon.ts`), not from `@/icons`.
+
 ## Code Quality
 
 ### No suppressed linter warnings without explanation
