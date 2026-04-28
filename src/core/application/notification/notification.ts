@@ -70,7 +70,7 @@ export class NotificationApplication {
    *
    * When `allowedTypes` is provided (e.g., preference filtering), continues fetching
    * successive pages and accumulates matching notifications until reaching `limit`
-   * or until there are no more pages, capped at NEXUS_NOTIFICATIONS_MAX_FETCH_ROUNDS.
+   * or until there are no more pages, capped at MAX_FETCH_ROUNDS.
    * This handles the case where filtering removes all items from early pages —
    * without looping, the UI would show "no notifications" even though later pages
    * may contain matching items.
@@ -107,7 +107,7 @@ export class NotificationApplication {
 
   /**
    * Get or fetch pages until `limit` filtered notifications are collected or no more pages exist.
-   * Capped at NEXUS_NOTIFICATIONS_MAX_FETCH_ROUNDS to prevent runaway requests.
+   * Capped at MAX_FETCH_ROUNDS to prevent runaway requests.
    */
   private static async collectPages({
     userId,
@@ -123,10 +123,10 @@ export class NotificationApplication {
     let cursor: number | undefined = olderThan;
     const collected: FlatNotification[] = [];
 
-    // TODO(notification): Revisit capped pagination strategy. In extreme distributions
-    // (many consecutive filtered-out pages), MAX_FETCH_ROUNDS can still return an empty
-    // list with a non-undefined cursor, which may require additional UI pagination logic
-    // or a different fetch contract to guarantee reachability of older matching items.
+    // TODO(notification): #1746 - Discuss with Product/UI/UX. This can return no visible
+    // notifications while still allowing "load more" when many pages are filtered out.
+    // Example: user only enables "New Friend", but the next 10 pages (300 items) have none.
+    // Decide what users should see in that case.
     for (let attempt = 0; attempt < MAX_FETCH_ROUNDS && collected.length < limit; attempt++) {
       const remaining = limit - collected.length;
       const response = await this.getOrFetchPage({
@@ -138,7 +138,15 @@ export class NotificationApplication {
       const filtered = this.filterByAllowedTypes(response.flatNotifications, allowedTypes);
 
       if (filtered.length > 0) {
-        collected.push(...filtered.slice(0, remaining));
+        const taken = filtered.slice(0, remaining);
+        collected.push(...taken);
+
+        // When we slice (more matches than remaining), set cursor from the last
+        // included item so skipped matches on this page are reachable on "load more".
+        if (filtered.length > remaining) {
+          cursor = taken[taken.length - 1].timestamp - 1;
+          break;
+        }
       }
 
       cursor = response.olderThan;

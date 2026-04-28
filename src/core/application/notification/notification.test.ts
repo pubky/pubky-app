@@ -389,7 +389,7 @@ describe('NotificationApplication.getOrFetchNotifications (filtered pagination)'
   });
 
   it('should stop when no more pages exist even if filtered result is empty', async () => {
-    vi.spyOn(LocalNotificationService, 'getOlderThan').mockResolvedValue([createFlat(1000)]); // cache miss: nothing in local DB for this page
+    vi.spyOn(LocalNotificationService, 'getOlderThan').mockResolvedValue([createFlat(1000)]); // cache hit: returns a Follow from local DB
     vi.spyOn(NexusUserService, 'notifications').mockResolvedValue([]); // meaning no more notifications to fetch
     mockNormalizer();
     mockFetchMissingEntities();
@@ -422,6 +422,43 @@ describe('NotificationApplication.getOrFetchNotifications (filtered pagination)'
     });
 
     expect(result.flatNotifications).toHaveLength(2);
+    expect(result.olderThan).toBe(3999);
+  });
+
+  it('should set cursor from last included item when page has more matches than remaining', async () => {
+    // Scenario: limit = 2, filter = Reply only
+    //
+    // Round 1: Nexus returns [Reply:5000, Reply:4000, Reply:3000]
+    //   (numbers are timestamps, descending = newest first)
+    //   - All 3 pass the filter, but we only need 2 (remaining = 2)
+    //   - collected = [Reply:5000, Reply:4000] (sliced to remaining)
+    //   - raw page olderThan = 2999 (oldest item timestamp - 1)
+    //
+    // BUG (before fix): cursor = 2999 (end of raw page)
+    //   → "load more" starts at 2999 → Reply:3000 is SKIPPED forever
+    //
+    // EXPECTED (after fix): cursor = 3999 (last included item timestamp - 1)
+    //   → "load more" starts at 3999 → Reply:3000 is reachable on the next page
+    vi.spyOn(Core.LocalNotificationService, 'getOlderThan').mockResolvedValue([]);
+    vi.spyOn(Core.NexusUserService, 'notifications').mockResolvedValueOnce([
+      createNexusReply(5000),
+      createNexusReply(4000),
+      createNexusReply(3000),
+    ]);
+    mockNormalizerWithReply();
+    mockFetchMissingEntities();
+    vi.spyOn(Core.LocalNotificationService, 'bulkSave').mockResolvedValue(undefined);
+
+    const result = await NotificationApplication.getOrFetchNotifications({
+      userId,
+      olderThan: Infinity,
+      limit: 2,
+      allowedTypes: replyOnly,
+    });
+
+    expect(result.flatNotifications).toHaveLength(2);
+    // Cursor must point after the last INCLUDED item (4000), not the last raw item (3000)
+    // so that Reply:3000 is reachable on the next "load more" call.
     expect(result.olderThan).toBe(3999);
   });
 
