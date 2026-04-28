@@ -1,20 +1,19 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, waitFor, fireEvent, screen } from '@testing-library/react';
-
 import { HomegateController } from '@/core';
 import { asOpaque } from '@/test-utils';
 import { HumanLightningPayment } from './HumanLightningPayment';
 import { VerificationHandler } from './HumanLightningPayment.utils';
 
-const mockUseIsMobile = vi.hoisted(() => vi.fn(() => false));
 const mockCopyToClipboard = vi.hoisted(() => vi.fn().mockResolvedValue(undefined));
 const mockToast = vi.hoisted(() => vi.fn());
+const mockUseIsMobile = vi.hoisted(() => vi.fn(() => false));
 
-vi.mock('@/hooks/useIsMobile', () => ({
+vi.mock('@/hooks/useIsMobile/useIsMobile', () => ({
   useIsMobile: mockUseIsMobile,
 }));
 
-vi.mock('@/hooks/useSatUsdRate', () => ({
+vi.mock('@/hooks/useSatUsdRate/useSatUsdRate', () => ({
   useBtcRate: () => ({ satUsd: 0.0005 }),
 }));
 

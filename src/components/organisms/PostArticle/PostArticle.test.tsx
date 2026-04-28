@@ -9,9 +9,12 @@ const mockUsePostArticle = vi.fn();
 const mockHandleLinkClick = vi.fn();
 const mockSetDialogOpen = vi.fn();
 
-vi.mock('@/hooks', () => ({
+vi.mock('@/hooks/usePostArticle/usePostArticle', () => ({
   usePostArticle: (params: { content: string; attachments: string[]; coverImageVariant: Core.FileVariant }) =>
     mockUsePostArticle(params),
+}));
+
+vi.mock('@/hooks/useLinkConfirmation/useLinkConfirmation', () => ({
   useLinkConfirmation: () => ({
     dialogOpen: false,
     setDialogOpen: mockSetDialogOpen,

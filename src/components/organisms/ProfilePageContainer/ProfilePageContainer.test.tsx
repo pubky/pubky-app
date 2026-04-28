@@ -4,6 +4,7 @@ import { ProfilePageContainer } from './ProfilePageContainer';
 import { PROFILE_PAGE_TYPES } from '@/app/profile/types';
 import type { AuthStore } from '@/core/stores/auth/auth.types';
 import { asOpaque, mockAuthStore } from '@/test-utils';
+import { useProfileHeader } from '@/hooks/useProfileHeader/useProfileHeader';
 
 // Mock Core
 const mockCurrentUserPubky = 'user123';
@@ -55,7 +56,7 @@ const mockActions = {
 
 const mockNavigateToPage = vi.fn();
 
-vi.mock('@/hooks', () => ({
+vi.mock('@/hooks/useProfileHeader/useProfileHeader', () => ({
   useProfileHeader: vi.fn(() => ({
     profile: mockProfile,
     stats: mockStats,
@@ -63,21 +64,33 @@ vi.mock('@/hooks', () => ({
     isLoading: false,
     userNotFound: false,
   })),
+}));
+
+vi.mock('@/hooks/useProfileNavigation/useProfileNavigation', () => ({
   useProfileNavigation: vi.fn(() => ({
     activePage: PROFILE_PAGE_TYPES.NOTIFICATIONS,
     filterBarActivePage: PROFILE_PAGE_TYPES.NOTIFICATIONS,
     navigateToPage: mockNavigateToPage,
   })),
+}));
+
+vi.mock('@/hooks/useRequireAuth/useRequireAuth', () => ({
   useRequireAuth: vi.fn(() => ({
     isAuthenticated: true,
     requireAuth: vi.fn((callback) => callback()),
   })),
+}));
+
+vi.mock('@/hooks/useFollowUser/useFollowUser', () => ({
   useFollowUser: vi.fn(() => ({
     toggleFollow: vi.fn(),
     isLoading: false,
     loadingAction: null,
     error: null,
   })),
+}));
+
+vi.mock('@/hooks/useIsFollowing/useIsFollowing', () => ({
   useIsFollowing: vi.fn(() => ({
     isFollowing: false,
     isLoading: false,
@@ -271,8 +284,7 @@ describe('ProfilePageContainer - User not found', () => {
     });
 
     // Mock useProfileHeader to return userNotFound: true
-    const hooks = await import('@/hooks');
-    vi.mocked(hooks.useProfileHeader).mockReturnValue({
+    vi.mocked(useProfileHeader).mockReturnValue({
       profile: {
         name: '',
         bio: '',
@@ -282,8 +294,8 @@ describe('ProfilePageContainer - User not found', () => {
         avatarUrl: undefined,
         link: '',
       },
-      stats: asOpaque<ReturnType<typeof hooks.useProfileHeader>['stats']>(mockStats),
-      actions: asOpaque<ReturnType<typeof hooks.useProfileHeader>['actions']>(mockActions),
+      stats: asOpaque<ReturnType<typeof useProfileHeader>['stats']>(mockStats),
+      actions: asOpaque<ReturnType<typeof useProfileHeader>['actions']>(mockActions),
       isLoading: false,
       userNotFound: true,
     });
@@ -306,12 +318,10 @@ describe('ProfilePageContainer - User not found', () => {
       isOwnProfile: true,
       isLoading: false,
     });
-
-    const hooks = await import('@/hooks');
-    vi.mocked(hooks.useProfileHeader).mockReturnValue({
+    vi.mocked(useProfileHeader).mockReturnValue({
       profile: mockProfile,
-      stats: asOpaque<ReturnType<typeof hooks.useProfileHeader>['stats']>(mockStats),
-      actions: asOpaque<ReturnType<typeof hooks.useProfileHeader>['actions']>(mockActions),
+      stats: asOpaque<ReturnType<typeof useProfileHeader>['stats']>(mockStats),
+      actions: asOpaque<ReturnType<typeof useProfileHeader>['actions']>(mockActions),
       isLoading: false,
       userNotFound: false,
     });
@@ -336,8 +346,7 @@ describe('ProfilePageContainer - User not found', () => {
     });
 
     // Mock useProfileHeader to return userNotFound: true (edge case)
-    const hooks = await import('@/hooks');
-    vi.mocked(hooks.useProfileHeader).mockReturnValue({
+    vi.mocked(useProfileHeader).mockReturnValue({
       profile: {
         name: '',
         bio: '',
@@ -347,8 +356,8 @@ describe('ProfilePageContainer - User not found', () => {
         avatarUrl: undefined,
         link: '',
       },
-      stats: asOpaque<ReturnType<typeof hooks.useProfileHeader>['stats']>(mockStats),
-      actions: asOpaque<ReturnType<typeof hooks.useProfileHeader>['actions']>(mockActions),
+      stats: asOpaque<ReturnType<typeof useProfileHeader>['stats']>(mockStats),
+      actions: asOpaque<ReturnType<typeof useProfileHeader>['actions']>(mockActions),
       isLoading: false,
       userNotFound: true,
     });
@@ -381,8 +390,7 @@ describe('ProfilePageContainer - User not found', () => {
     });
 
     // Mock useProfileHeader to return userNotFound: true
-    const hooks = await import('@/hooks');
-    vi.mocked(hooks.useProfileHeader).mockReturnValue({
+    vi.mocked(useProfileHeader).mockReturnValue({
       profile: {
         name: '',
         bio: '',
@@ -392,8 +400,8 @@ describe('ProfilePageContainer - User not found', () => {
         avatarUrl: undefined,
         link: '',
       },
-      stats: asOpaque<ReturnType<typeof hooks.useProfileHeader>['stats']>(mockStats),
-      actions: asOpaque<ReturnType<typeof hooks.useProfileHeader>['actions']>(mockActions),
+      stats: asOpaque<ReturnType<typeof useProfileHeader>['stats']>(mockStats),
+      actions: asOpaque<ReturnType<typeof useProfileHeader>['actions']>(mockActions),
       isLoading: false,
       userNotFound: true,
     });

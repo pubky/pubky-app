@@ -1,11 +1,10 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen, cleanup } from '@testing-library/react';
-
 import { QuickReply } from './QuickReply';
 import { QUICK_REPLY_PROMPTS_COUNT } from './QuickReply.constants';
 import { POST_MAX_CHARACTER_LENGTH } from '@/config';
 import { PostMainLayoutProvider } from '@/organisms/PostMain/PostMainLayout';
-import * as Hooks from '@/hooks';
+import { useIsMobile } from '@/hooks/useIsMobile/useIsMobile';
 
 // next-intl is mocked globally in src/config/test.ts
 // The global mock uses real translations from messages/en.json
@@ -108,19 +107,33 @@ vi.mock('@/organisms/PostInputExpandableSection', () => ({
   ),
 }));
 
-vi.mock('@/hooks', async (importOriginal) => {
-  const actual = await importOriginal<typeof import('@/hooks')>();
-  return {
-    ...actual,
-    useCurrentUserProfile: () => ({ currentUserPubky: 'user:me' }),
-    useUserDetails: () => ({ userDetails: { name: 'Me' } }),
-    useAvatarUrl: () => 'https://example.com/avatar.png',
-    useElementHeight: () => ({ ref: () => null, height: 123 }),
-    useEnterSubmit: (...args: unknown[]) => mockUseEnterSubmit(...args),
-    usePostInput: (options: unknown) => mockUsePostInput(options),
-    useIsMobile: vi.fn(() => false),
-  };
-});
+vi.mock('@/hooks/useCurrentUserProfile/useCurrentUserProfile', () => ({
+  useCurrentUserProfile: () => ({ currentUserPubky: 'user:me' }),
+}));
+
+vi.mock('@/hooks/useUserDetails/useUserDetails', () => ({
+  useUserDetails: () => ({ userDetails: { name: 'Me' } }),
+}));
+
+vi.mock('@/hooks/useAvatarUrl/useAvatarUrl', () => ({
+  useAvatarUrl: () => 'https://example.com/avatar.png',
+}));
+
+vi.mock('@/hooks/useElementHeight/useElementHeight', () => ({
+  useElementHeight: () => ({ ref: () => null, height: 123 }),
+}));
+
+vi.mock('@/hooks/useEnterSubmit/useEnterSubmit', () => ({
+  useEnterSubmit: (...args: unknown[]) => mockUseEnterSubmit(...args),
+}));
+
+vi.mock('@/hooks/usePostInput/usePostInput', () => ({
+  usePostInput: (options: unknown) => mockUsePostInput(options),
+}));
+
+vi.mock('@/hooks/useIsMobile/useIsMobile', () => ({
+  useIsMobile: vi.fn(() => false),
+}));
 
 describe('QuickReply', () => {
   beforeEach(() => {
@@ -171,7 +184,7 @@ describe('QuickReply', () => {
   });
 
   describe('wide layout', () => {
-    const mockUseIsMobile = vi.mocked(Hooks.useIsMobile);
+    const mockUseIsMobile = vi.mocked(useIsMobile);
 
     beforeEach(() => {
       mockUseIsMobile.mockReturnValue(false);

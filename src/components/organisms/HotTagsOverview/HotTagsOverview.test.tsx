@@ -18,7 +18,7 @@ vi.mock('@/core', () => ({
   }),
 }));
 
-vi.mock('@/hooks', () => ({
+vi.mock('@/hooks/useHotTags/useHotTags', () => ({
   useHotTags: (params: unknown) => mockUseHotTags(params),
 }));
 

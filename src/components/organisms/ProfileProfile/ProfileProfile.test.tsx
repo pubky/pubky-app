@@ -24,51 +24,59 @@ vi.mock('@/core', async (importOriginal) => {
 });
 
 // Mock hooks
-vi.mock('@/hooks', async (importOriginal) => {
-  const actual = await importOriginal<typeof import('@/hooks')>();
-  return {
-    ...actual,
-    useProfileHeader: vi.fn(() => ({
-      profile: {
-        name: 'Satoshi Nakamoto',
-        bio: 'Authored the Bitcoin white paper, developed Bitcoin, mined first block, disappeared.',
-        publicKey: 'pubky1QX7GKW3abcdef1234567890',
-        emoji: '🌴',
-        status: 'Vacationing',
-        avatarUrl: undefined,
-        link: 'http://localhost:3000/profile/1QX7GKW3abcdef1234567890',
-        links: [],
-      },
-      actions: {
-        onEdit: vi.fn(),
-        onCopyPublicKey: vi.fn(),
-        onCopyLink: vi.fn(),
-        onSignOut: vi.fn(() => {
-          mockPush(App.AUTH_ROUTES.LOGOUT);
-        }),
-        onStatusClick: vi.fn(),
-      },
-      isLoading: false,
-    })),
-    useRequireAuth: vi.fn(() => ({
-      isAuthenticated: true,
-      requireAuth: vi.fn((callback) => callback()),
-    })),
-    useFollowUser: vi.fn(() => ({
-      toggleFollow: vi.fn(),
-      isLoading: false,
-      loadingAction: null,
-    })),
-    useIsFollowing: vi.fn(() => ({
-      isFollowing: false,
-    })),
-    useTagged: vi.fn(() => ({
-      tags: [],
-      isLoading: false,
-      handleTagToggle: vi.fn(),
-    })),
-  };
-});
+vi.mock('@/hooks/useProfileHeader/useProfileHeader', () => ({
+  useProfileHeader: vi.fn(() => ({
+    profile: {
+      name: 'Satoshi Nakamoto',
+      bio: 'Authored the Bitcoin white paper, developed Bitcoin, mined first block, disappeared.',
+      publicKey: 'pubky1QX7GKW3abcdef1234567890',
+      emoji: '🌴',
+      status: 'Vacationing',
+      avatarUrl: undefined,
+      link: 'http://localhost:3000/profile/1QX7GKW3abcdef1234567890',
+      links: [],
+    },
+    actions: {
+      onEdit: vi.fn(),
+      onCopyPublicKey: vi.fn(),
+      onCopyLink: vi.fn(),
+      onSignOut: vi.fn(() => {
+        mockPush(App.AUTH_ROUTES.LOGOUT);
+      }),
+      onStatusClick: vi.fn(),
+    },
+    isLoading: false,
+  })),
+}));
+
+vi.mock('@/hooks/useRequireAuth/useRequireAuth', () => ({
+  useRequireAuth: vi.fn(() => ({
+    isAuthenticated: true,
+    requireAuth: vi.fn((callback) => callback()),
+  })),
+}));
+
+vi.mock('@/hooks/useFollowUser/useFollowUser', () => ({
+  useFollowUser: vi.fn(() => ({
+    toggleFollow: vi.fn(),
+    isLoading: false,
+    loadingAction: null,
+  })),
+}));
+
+vi.mock('@/hooks/useIsFollowing/useIsFollowing', () => ({
+  useIsFollowing: vi.fn(() => ({
+    isFollowing: false,
+  })),
+}));
+
+vi.mock('@/hooks/useTagged/useTagged', () => ({
+  useTagged: vi.fn(() => ({
+    tags: [],
+    isLoading: false,
+    handleTagToggle: vi.fn(),
+  })),
+}));
 
 // Mock molecules
 vi.mock('@/molecules', async (importOriginal) => {

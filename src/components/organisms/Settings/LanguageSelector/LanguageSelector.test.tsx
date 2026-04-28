@@ -24,17 +24,13 @@ vi.mock('@/core', async (importOriginal) => {
   };
 });
 
-// Mock @/hooks
+// Mock hooks
 const mockHookSetLanguage = vi.fn();
-vi.mock('@/hooks', async (importOriginal) => {
-  const actual = await importOriginal<typeof import('@/hooks')>();
-  return {
-    ...actual,
-    useSettingsActions: () => ({
-      setLanguage: mockHookSetLanguage,
-    }),
-  };
-});
+vi.mock('@/hooks/useSettingsActions/useSettingsActions', () => ({
+  useSettingsActions: () => ({
+    setLanguage: mockHookSetLanguage,
+  }),
+}));
 
 // Store original location
 const originalLocation = window.location;

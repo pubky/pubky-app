@@ -11,13 +11,22 @@ const mockUsePostMenuActions = vi.fn((_postId: string) => ({
 }));
 const mockRequireAuth = vi.fn((action: () => void) => action());
 
-vi.mock('@/hooks', () => ({
+vi.mock('@/hooks/useIsMobile/useIsMobile', () => ({
   useIsMobile: () => mockUseIsMobile(),
+}));
+
+vi.mock('@/hooks/usePostMenuActions/usePostMenuActions', () => ({
   usePostMenuActions: (postId: string) => mockUsePostMenuActions(postId),
+}));
+
+vi.mock('@/hooks/useRequireAuth/useRequireAuth', () => ({
   useRequireAuth: () => ({
     isAuthenticated: true,
     requireAuth: mockRequireAuth,
   }),
+}));
+
+vi.mock('@/hooks/useDeletePost/useDeletePost', () => ({
   useDeletePost: vi.fn(() => ({
     deletePost: mockDeletePost,
     isDeleting: false,

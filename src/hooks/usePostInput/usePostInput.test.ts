@@ -3,6 +3,7 @@ import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { asOpaque, mockClipboardEvent, mockDragEvent } from '@/test-utils';
 import { usePostInput } from './usePostInput';
 import { POST_INPUT_VARIANT } from '@/organisms/PostInput/PostInput.constants';
+
 import {
   POST_MAX_CHARACTER_LENGTH,
   ARTICLE_TITLE_MAX_CHARACTER_LENGTH,
@@ -39,10 +40,13 @@ let mockIsSubmitting = false;
 
 const mockDeletePost = vi.fn();
 
-vi.mock('@/hooks', () => ({
+vi.mock('@/hooks/useCurrentUserProfile/useCurrentUserProfile', () => ({
   useCurrentUserProfile: vi.fn(() => ({
     currentUserPubky: 'test-user-pubky',
   })),
+}));
+
+vi.mock('@/hooks/usePost/usePost', () => ({
   usePost: vi.fn(() => ({
     content: mockContent,
     setContent: mockSetContent,
@@ -60,11 +64,20 @@ vi.mock('@/hooks', () => ({
     edit: mockEdit,
     isSubmitting: mockIsSubmitting,
   })),
+}));
+
+vi.mock('@/hooks/useEmojiInsert/useEmojiInsert', () => ({
   useEmojiInsert: vi.fn(() => vi.fn()),
+}));
+
+vi.mock('@/hooks/useUserDetails/useUserDetails', () => ({
   useUserDetails: vi.fn(() => ({
     userDetails: { name: 'Test Author' },
     isLoading: false,
   })),
+}));
+
+vi.mock('@/hooks/useDeletePost/useDeletePost', () => ({
   useDeletePost: vi.fn(() => ({
     deletePost: mockDeletePost,
     isDeleting: false,

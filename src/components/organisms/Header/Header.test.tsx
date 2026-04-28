@@ -121,11 +121,14 @@ vi.mock('@/molecules', () => ({
 
 // Mock hooks
 const mockIsPublicRoute = vi.fn();
-vi.mock('@/hooks', () => ({
+vi.mock('@/hooks/useCurrentUserProfile/useCurrentUserProfile', () => ({
   useCurrentUserProfile: vi.fn(() => ({
     userDetails: { name: 'Test User', image: 'test-image.jpg' },
     currentUserPubky: 'test-pubky-123',
   })),
+}));
+
+vi.mock('@/hooks/usePublicRoute/usePublicRoute', () => ({
   usePublicRoute: () => ({ isPublicRoute: mockIsPublicRoute() }),
 }));
 

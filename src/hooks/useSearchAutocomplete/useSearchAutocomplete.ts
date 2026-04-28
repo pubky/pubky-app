@@ -4,12 +4,14 @@ import { useState, useEffect, useRef } from 'react';
 import { debounce } from 'lodash-es';
 import * as Core from '@/core';
 import { useUserDetailsFromIds } from '@/hooks/useUserDetailsFromIds/useUserDetailsFromIds';
+import { TAG_MAX_LENGTH } from '@/config/posts';
+import { Logger } from '@/libs/logger/logger';
+
 import type {
   UseSearchAutocompleteParams,
   UseSearchAutocompleteResult,
   AutocompleteTag,
 } from './useSearchAutocomplete.types';
-import { TAG_MAX_LENGTH } from '@/config/posts';
 import {
   AUTOCOMPLETE_DEBOUNCE_MS,
   AUTOCOMPLETE_TAG_LIMIT,
@@ -17,7 +19,6 @@ import {
   MIN_USER_ID_SEARCH_LENGTH,
   USER_ID_PREFIXES,
 } from './useSearchAutocomplete.constants';
-import { Logger } from '@/libs/logger/logger';
 
 export function useSearchAutocomplete({
   query,

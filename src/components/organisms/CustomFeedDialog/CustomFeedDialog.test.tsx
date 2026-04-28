@@ -15,7 +15,7 @@ vi.mock('next/navigation', () => ({
 
 // Mock hooks
 const mockUseCustomFeed = vi.fn();
-vi.mock('@/hooks', () => ({
+vi.mock('@/hooks/useCustomFeed/useCustomFeed', () => ({
   useCustomFeed: () => mockUseCustomFeed(),
 }));
 

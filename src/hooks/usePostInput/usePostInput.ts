@@ -11,6 +11,12 @@ import { useDebounceCallback } from 'usehooks-ts';
 import { useTranslations } from 'next-intl';
 import * as Molecules from '@/molecules';
 import * as Core from '@/core';
+import { useTimelineFeedContext } from '@/organisms/Timeline/Feed/TimelineFeed';
+import { POST_INPUT_VARIANT } from '@/organisms/PostInput/PostInput.constants';
+import { getContentWithMention } from '@/hooks/useMentionAutocomplete/useMentionAutocomplete.utils';
+import { useMentionAutocomplete } from '@/hooks/useMentionAutocomplete/useMentionAutocomplete';
+import type { UsePostInputOptions, UsePostInputReturn } from './usePostInput.types';
+
 import {
   POST_MAX_CHARACTER_LENGTH,
   ATTACHMENT_MAX_IMAGE_SIZE,
@@ -23,11 +29,6 @@ import {
   ARTICLE_SUPPORTED_ATTACHMENT_MIME_TYPES,
   ARTICLE_TITLE_MAX_CHARACTER_LENGTH,
 } from '@/config';
-import { useTimelineFeedContext } from '@/organisms/Timeline/Feed/TimelineFeed';
-import { POST_INPUT_VARIANT } from '@/organisms/PostInput/PostInput.constants';
-import { getContentWithMention } from '@/hooks/useMentionAutocomplete/useMentionAutocomplete.utils';
-import { useMentionAutocomplete } from '@/hooks/useMentionAutocomplete/useMentionAutocomplete';
-import type { UsePostInputOptions, UsePostInputReturn } from './usePostInput.types';
 
 /**
  * Hook that encapsulates all PostInput logic.

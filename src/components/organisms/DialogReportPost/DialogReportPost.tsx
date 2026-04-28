@@ -2,7 +2,6 @@
 
 import { useReportPost } from '@/hooks/useReportPost/useReportPost';
 import { useEffect } from 'react';
-
 import * as Atoms from '@/atoms';
 import { REPORT_POST_STEPS } from '@/hooks/useReportPost/useReportPost.constants';
 import { DialogReportPostIssueStep } from './DialogReportPostIssueStep';

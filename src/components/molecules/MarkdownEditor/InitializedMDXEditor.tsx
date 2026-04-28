@@ -3,6 +3,18 @@
 import { useEmojiInsert } from '@/hooks/useEmojiInsert/useEmojiInsert';
 import { useState, useRef, type ForwardedRef } from 'react';
 import { useTranslations } from 'next-intl';
+import '@mdxeditor/editor/style.css';
+import { oneDark } from '@codemirror/theme-one-dark';
+import { languages } from '@codemirror/language-data';
+import { AlertTriangle, Smile, Type } from 'lucide-react';
+import { ARTICLE_MAX_CHARACTER_LENGTH } from '@/config';
+import * as Atoms from '@/atoms';
+import * as Molecules from '@/molecules';
+import { MarkdownMark } from '@/icons';
+import { sanitizeCodeBlockLanguages } from './InitializedMDXEditor.utils';
+import { CODE_BLOCK_LANGUAGES } from './InitializedMDXEditor.constants';
+import { cn } from '@/libs/utils/utils';
+
 import {
   BlockTypeSelect,
   BoldItalicUnderlineToggles,
@@ -28,17 +40,6 @@ import {
   toolbarPlugin,
   UndoRedo,
 } from '@mdxeditor/editor';
-import '@mdxeditor/editor/style.css';
-import { oneDark } from '@codemirror/theme-one-dark';
-import { languages } from '@codemirror/language-data';
-import { AlertTriangle, Smile, Type } from 'lucide-react';
-import { ARTICLE_MAX_CHARACTER_LENGTH } from '@/config';
-import * as Atoms from '@/atoms';
-import * as Molecules from '@/molecules';
-import { MarkdownMark } from '@/icons';
-import { sanitizeCodeBlockLanguages } from './InitializedMDXEditor.utils';
-import { CODE_BLOCK_LANGUAGES } from './InitializedMDXEditor.constants';
-import { cn } from '@/libs/utils/utils';
 
 /**
  * Preload all CodeMirror language support modules to prevent layout shift

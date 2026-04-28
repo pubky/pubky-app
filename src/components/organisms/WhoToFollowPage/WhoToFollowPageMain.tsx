@@ -8,6 +8,7 @@ import * as Organisms from '@/organisms';
 import * as Core from '@/core';
 import { USERS_PER_PAGE } from './WhoToFollowPageMain.constants';
 import { Users } from 'lucide-react';
+
 const LOAD_MORE_SKELETON_COUNT = 2;
 
 /**

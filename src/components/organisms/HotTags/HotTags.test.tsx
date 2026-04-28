@@ -21,7 +21,7 @@ const mockTags = [
 ];
 const mockUseHotTags = vi.fn();
 
-vi.mock('@/hooks', () => ({
+vi.mock('@/hooks/useHotTags/useHotTags', () => ({
   useHotTags: () => mockUseHotTags(),
 }));
 

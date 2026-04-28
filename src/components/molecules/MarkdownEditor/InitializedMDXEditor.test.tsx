@@ -152,7 +152,7 @@ vi.mock('@/components/molecules', () => ({
 
 // Mock useEmojiInsert hook
 const mockHandleMarkdownEmojiSelect = vi.fn();
-vi.mock('@/hooks', () => ({
+vi.mock('@/hooks/useEmojiInsert/useEmojiInsert', () => ({
   useEmojiInsert: vi.fn(() => mockHandleMarkdownEmojiSelect),
 }));
 

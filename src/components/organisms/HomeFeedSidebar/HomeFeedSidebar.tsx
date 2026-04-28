@@ -6,11 +6,12 @@ import * as Atoms from '@/atoms';
 import * as Molecules from '@/molecules';
 import * as Core from '@/core';
 import { TIMELINE_FEED_VARIANT } from '@/config';
+import type { HomeFeedSidebarProps } from './HomeFeedSidebar.types';
+
 import {
   resolveVisualFeedContent,
   VISUAL_DISABLED_CONTENT,
 } from '../Timeline/Feed/TimelineFeed/TimelineFeedVisual.helpers';
-import type { HomeFeedSidebarProps } from './HomeFeedSidebar.types';
 
 /**
  * HomeFeedFilters

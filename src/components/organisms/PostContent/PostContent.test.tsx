@@ -3,17 +3,17 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { PostContent } from './PostContent';
 import * as Core from '@/core';
 import * as Organisms from '@/organisms';
-import * as Hooks from '@/hooks';
+import { usePostDetails } from '@/hooks/usePostDetails/usePostDetails';
+import { useRepostInfo } from '@/hooks/useRepostInfo/useRepostInfo';
 
 // Mock hooks used by PostContent
-vi.mock('@/hooks', async (importOriginal) => {
-  const actual = await importOriginal<typeof import('@/hooks')>();
-  return {
-    ...actual,
-    usePostDetails: vi.fn(),
-    useRepostInfo: vi.fn(),
-  };
-});
+vi.mock('@/hooks/usePostDetails/usePostDetails', () => ({
+  usePostDetails: vi.fn(),
+}));
+
+vi.mock('@/hooks/useRepostInfo/useRepostInfo', () => ({
+  useRepostInfo: vi.fn(),
+}));
 
 // Mock PostContentBase
 vi.mock('@/organisms', async (importOriginal) => {
@@ -41,8 +41,8 @@ vi.mock('@/molecules', async (importOriginal) => {
   };
 });
 
-const mockUsePostDetails = vi.mocked(Hooks.usePostDetails);
-const mockUseRepostInfo = vi.mocked(Hooks.useRepostInfo);
+const mockUsePostDetails = vi.mocked(usePostDetails);
+const mockUseRepostInfo = vi.mocked(useRepostInfo);
 
 // Helper to create complete PostDetails mock
 const createMockPostDetails = (

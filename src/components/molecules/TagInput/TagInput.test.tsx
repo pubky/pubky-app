@@ -3,20 +3,18 @@ import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import type { UseTagSuggestionsResult } from '@/hooks/useTagSuggestions/useTagSuggestions.types';
 import { TagInput } from './TagInput';
 
-// Hoist mock for useTagSuggestions
-const { mockUseTagSuggestions } = vi.hoisted(() => ({
-  mockUseTagSuggestions: vi.fn((): UseTagSuggestionsResult => ({ suggestions: [], isLoading: false })),
-}));
+const mockUseTagSuggestions = vi.hoisted(() =>
+  vi.fn((): UseTagSuggestionsResult => ({ suggestions: [], isLoading: false })),
+);
 
 // Use real hooks, only mock useEmojiInsert and useTagSuggestions
-vi.mock('@/hooks', async (importOriginal) => {
-  const actual = await importOriginal<typeof import('@/hooks')>();
-  return {
-    ...actual,
-    useEmojiInsert: vi.fn(() => vi.fn()),
-    useTagSuggestions: mockUseTagSuggestions as typeof actual.useTagSuggestions,
-  };
-});
+vi.mock('@/hooks/useEmojiInsert/useEmojiInsert', () => ({
+  useEmojiInsert: vi.fn(() => vi.fn()),
+}));
+
+vi.mock('@/hooks/useTagSuggestions/useTagSuggestions', () => ({
+  useTagSuggestions: mockUseTagSuggestions,
+}));
 
 vi.mock('@/molecules', async (importOriginal) => {
   const actual = await importOriginal<typeof import('@/molecules')>();

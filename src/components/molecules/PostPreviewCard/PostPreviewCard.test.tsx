@@ -5,10 +5,13 @@ import { PostPreviewCard } from './PostPreviewCard';
 // Mock hooks
 const mockNavigateToPost = vi.fn();
 const mockTtlRef = vi.fn();
-vi.mock('@/hooks', () => ({
+vi.mock('@/hooks/usePostNavigation/usePostNavigation', () => ({
   usePostNavigation: () => ({
     navigateToPost: mockNavigateToPost,
   }),
+}));
+
+vi.mock('@/hooks/useTtlSubscription/useTtlSubscription', () => ({
   useTtlSubscription: () => ({
     ref: mockTtlRef,
     isVisible: false,

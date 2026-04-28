@@ -3,41 +3,44 @@ import { render, screen } from '@testing-library/react';
 import { TIMELINE_FEED_VARIANT } from '@/config';
 import * as Core from '@/core';
 import { TimelineFeedWithStream } from './TimelineFeedContent';
+import type { UsePullToRefreshResult } from '@/hooks/usePullToRefresh/usePullToRefresh.types';
+import { useStreamPagination } from '@/hooks/useStreamPagination/useStreamPagination';
+
+const mockUsePullToRefresh = vi.hoisted(() =>
+  vi.fn(
+    (): UsePullToRefreshResult => ({
+      state: 'idle',
+      pullDistance: 0,
+    }),
+  ),
+);
 
 vi.mock('next-intl', () => ({
   useTranslations: () => (key: string) => key,
 }));
 
-vi.mock('@/hooks', async (importOriginal) => {
-  const actual = await importOriginal<typeof import('@/hooks')>();
-  return {
-    ...actual,
-    useStreamPagination: vi.fn(),
-    useMutedUsers: vi.fn(() => ({
-      mutedUserIds: [],
-      mutedUserIdSet: new Set(),
-      isMuted: vi.fn(() => false),
-      isLoading: false,
-    })),
-  };
-});
-
-vi.mock('@/hooks/useUnreadPosts', () => ({
-  useUnreadPosts: vi.fn(() => ({ unreadPostIds: [], unreadCount: 0 })),
+vi.mock('@/hooks/useStreamPagination/useStreamPagination', () => ({
+  useStreamPagination: vi.fn(),
 }));
 
-vi.mock('@/hooks/useIsScrolledFromTop', () => ({
-  useIsScrolledFromTop: vi.fn(() => false),
-}));
-
-const { mockUsePullToRefresh } = vi.hoisted(() => ({
-  mockUsePullToRefresh: vi.fn((): import('@/hooks/usePullToRefresh/usePullToRefresh.types').UsePullToRefreshResult => ({
-    state: 'idle',
-    pullDistance: 0,
+vi.mock('@/hooks/useMutedUsers/useMutedUsers', () => ({
+  useMutedUsers: vi.fn(() => ({
+    mutedUserIds: [],
+    mutedUserIdSet: new Set(),
+    isMuted: vi.fn(() => false),
+    isLoading: false,
   })),
 }));
 
-vi.mock('@/hooks/usePullToRefresh', () => ({
+vi.mock('@/hooks/useUnreadPosts/useUnreadPosts', () => ({
+  useUnreadPosts: vi.fn(() => ({ unreadPostIds: [], unreadCount: 0 })),
+}));
+
+vi.mock('@/hooks/useIsScrolledFromTop/useIsScrolledFromTop', () => ({
+  useIsScrolledFromTop: vi.fn(() => false),
+}));
+
+vi.mock('@/hooks/usePullToRefresh/usePullToRefresh', () => ({
   usePullToRefresh: mockUsePullToRefresh,
 }));
 
@@ -88,8 +91,6 @@ const defaultPaginationResult = {
   prependPosts: mockPrependPosts,
   removePosts: mockRemovePosts,
 };
-
-const { useStreamPagination } = await import('@/hooks');
 const mockUseStreamPagination = vi.mocked(useStreamPagination);
 
 describe('TimelineFeedContent', () => {

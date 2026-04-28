@@ -4,7 +4,6 @@ import { useAuthStatus } from '@/hooks/useAuthStatus/useAuthStatus';
 import { useEffect, useMemo, useRef } from 'react';
 import { useRouter, usePathname } from 'next/navigation';
 import { useTranslations, useLocale } from 'next-intl';
-
 import * as Providers from '@/providers';
 import * as App from '@/app';
 import * as Atoms from '@/atoms';

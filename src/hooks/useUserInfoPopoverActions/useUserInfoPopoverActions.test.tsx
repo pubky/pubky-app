@@ -10,7 +10,7 @@ vi.mock('next/navigation', () => ({
   useRouter: () => ({ push: mockPush }),
 }));
 
-vi.mock('@/hooks', () => ({
+vi.mock('@/hooks/useFollowUser/useFollowUser', () => ({
   useFollowUser: () => mockUseFollowUser(),
 }));
 

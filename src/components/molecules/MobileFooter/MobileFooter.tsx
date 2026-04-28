@@ -12,6 +12,7 @@ import * as Core from '@/core';
 import { useTranslations } from 'next-intl';
 import { Home, Search, Flame, Bookmark, Settings } from 'lucide-react';
 import { cn } from '@/libs/utils/utils';
+
 export interface MobileFooterProps {
   className?: string;
 }

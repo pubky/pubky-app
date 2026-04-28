@@ -17,19 +17,21 @@ vi.mock('next/navigation', () => ({
   useRouter: () => ({ push: mockRouterPush }),
 }));
 
-vi.mock('@/hooks', async (importOriginal) => {
-  const actual = await importOriginal<typeof import('@/hooks')>();
-  return {
-    ...actual,
-    useIsTouchDevice: () => false,
-    useIsMobile: () => false,
-    usePostTaggers: () => ({
-      taggersByLabel: mockTaggersByLabel,
-      taggerStates: mockTaggerStates,
-      fetchAllTaggers: mockFetchAllTaggers,
-    }),
-  };
-});
+vi.mock('@/hooks/useIsTouchDevice/useIsTouchDevice', () => ({
+  useIsTouchDevice: () => false,
+}));
+
+vi.mock('@/hooks/useIsMobile/useIsMobile', () => ({
+  useIsMobile: () => false,
+}));
+
+vi.mock('@/hooks/usePostTaggers/usePostTaggers', () => ({
+  usePostTaggers: () => ({
+    taggersByLabel: mockTaggersByLabel,
+    taggerStates: mockTaggerStates,
+    fetchAllTaggers: mockFetchAllTaggers,
+  }),
+}));
 
 vi.mock('@/organisms', async (importOriginal) => {
   const actual = await importOriginal<typeof import('@/organisms')>();

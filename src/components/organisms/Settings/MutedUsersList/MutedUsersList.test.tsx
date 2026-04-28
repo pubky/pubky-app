@@ -2,6 +2,12 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen, fireEvent, act, waitFor } from '@testing-library/react';
 import { MutedUsersList } from './MutedUsersList';
 
+const { mockUseMutedUsers, mockUseBulkUserAvatars, mockUseMuteUser } = vi.hoisted(() => ({
+  mockUseMutedUsers: vi.fn(),
+  mockUseBulkUserAvatars: vi.fn(),
+  mockUseMuteUser: vi.fn(),
+}));
+
 vi.mock('facehash', () => ({
   Facehash: ({ name, onRenderMouth }: { name: string; onRenderMouth?: () => React.ReactNode }) => (
     <div data-testid="facehash" data-name={name}>
@@ -10,21 +16,20 @@ vi.mock('facehash', () => ({
   ),
 }));
 
-const { mockUseMutedUsers, mockUseBulkUserAvatars, mockUseMuteUser, mockToast } = vi.hoisted(() => ({
-  mockUseMutedUsers: vi.fn(),
-  mockUseBulkUserAvatars: vi.fn(),
-  mockUseMuteUser: vi.fn(),
-  mockToast: vi.fn(),
+vi.mock('@/hooks/useMutedUsers/useMutedUsers', () => ({
+  useMutedUsers: mockUseMutedUsers,
 }));
 
-vi.mock('@/hooks', () => ({
-  useMutedUsers: () => mockUseMutedUsers(),
-  useBulkUserAvatars: (ids: string[]) => mockUseBulkUserAvatars(ids),
-  useMuteUser: () => mockUseMuteUser(),
+vi.mock('@/hooks/useBulkUserAvatars/useBulkUserAvatars', () => ({
+  useBulkUserAvatars: mockUseBulkUserAvatars,
+}));
+
+vi.mock('@/hooks/useMuteUser/useMuteUser', () => ({
+  useMuteUser: mockUseMuteUser,
 }));
 
 vi.mock('@/molecules', () => ({
-  toast: (props: unknown) => mockToast(props),
+  toast: vi.fn(),
   FacehashAvatar: ({ seed, initial }: { seed: string; initial: string }) => (
     <div data-testid="facehash-avatar" data-seed={seed}>
       {initial}

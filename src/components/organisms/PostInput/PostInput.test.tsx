@@ -7,7 +7,9 @@ import { POST_THREAD_CONNECTOR_VARIANTS } from '@/components/atoms/PostThreadCon
 import { POST_MAX_CHARACTER_LENGTH } from '@/config';
 import type { UsePostInputOptions, UsePostInputReturn } from '@/hooks/usePostInput/usePostInput.types';
 import { PostMainLayoutProvider } from '@/organisms/PostMain/PostMainLayout';
-import * as Hooks from '@/hooks';
+import { useEnterSubmit } from '@/hooks/useEnterSubmit/useEnterSubmit';
+import { useIsMobile } from '@/hooks/useIsMobile/useIsMobile';
+import { usePostInput } from '@/hooks/usePostInput/usePostInput';
 
 // next-intl is mocked globally in src/config/test.ts
 
@@ -367,14 +369,29 @@ function createUsePostInputReturn(options: UsePostInputOptions, overrides: Recor
   } as UsePostInputReturn;
 }
 
-vi.mock('@/hooks', () => ({
+vi.mock('@/hooks/usePost/usePost', () => ({
   usePost: vi.fn(() => mockUsePostReturn),
+}));
+
+vi.mock('@/hooks/useCurrentUserProfile/useCurrentUserProfile', () => ({
   useCurrentUserProfile: vi.fn(() => ({
     currentUserPubky: 'test-user-id:pubkey',
   })),
+}));
+
+vi.mock('@/hooks/useEmojiInsert/useEmojiInsert', () => ({
   useEmojiInsert: vi.fn(() => vi.fn()),
+}));
+
+vi.mock('@/hooks/useEnterSubmit/useEnterSubmit', () => ({
   useEnterSubmit: vi.fn(() => mockEnterSubmitHandler),
+}));
+
+vi.mock('@/hooks/useIsMobile/useIsMobile', () => ({
   useIsMobile: vi.fn(() => false),
+}));
+
+vi.mock('@/hooks/usePostInput/usePostInput', () => ({
   usePostInput: vi.fn((options: UsePostInputOptions) => createUsePostInputReturn(options)),
 }));
 
@@ -385,8 +402,8 @@ describe('PostInput', () => {
   const mockSetAttachments = vi.fn();
   const mockReply = vi.fn();
   const mockPost = vi.fn();
-  const mockUsePostInput = vi.mocked(Hooks.usePostInput);
-  const mockUseEnterSubmit = vi.mocked(Hooks.useEnterSubmit);
+  const mockUsePostInput = vi.mocked(usePostInput);
+  const mockUseEnterSubmit = vi.mocked(useEnterSubmit);
 
   beforeEach(() => {
     vi.clearAllMocks();
@@ -718,7 +735,7 @@ describe('PostInput', () => {
   });
 
   describe('wide layout', () => {
-    const mockUseIsMobile = vi.mocked(Hooks.useIsMobile);
+    const mockUseIsMobile = vi.mocked(useIsMobile);
 
     beforeEach(() => {
       mockUseIsMobile.mockReturnValue(false);

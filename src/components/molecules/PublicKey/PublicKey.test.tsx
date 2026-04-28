@@ -13,7 +13,7 @@ vi.mock('next/navigation', () => ({
 
 // Mock useInviteCodeSignUp hook
 const mockValidateAndSignUp = vi.fn();
-vi.mock('@/hooks', () => ({
+vi.mock('@/hooks/useInviteCodeSignUp/useInviteCodeSignUp', () => ({
   useInviteCodeSignUp: () => ({
     validateAndSignUp: mockValidateAndSignUp,
   }),

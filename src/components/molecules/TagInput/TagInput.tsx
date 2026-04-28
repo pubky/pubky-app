@@ -14,6 +14,7 @@ import type { TagInputProps, TagInputHandle } from './TagInput.types';
 import { TagSuggestionsDropdown } from './TagSuggestionsDropdown';
 import { Smile, X } from 'lucide-react';
 import { cn } from '@/libs/utils/utils';
+
 export const TagInput = forwardRef<TagInputHandle, TagInputProps>(function TagInput(
   {
     onTagAdd,

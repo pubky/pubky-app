@@ -13,16 +13,12 @@ vi.mock('next/navigation', () => ({
 }));
 
 // Mock hooks
-vi.mock('@/hooks', async (importOriginal) => {
-  const actual = await importOriginal<typeof import('@/hooks')>();
-  return {
-    ...actual,
-    useUserProfile: vi.fn(() => ({
-      profile: { name: 'User', avatarUrl: undefined },
-      isLoading: false,
-    })),
-  };
-});
+vi.mock('@/hooks/useUserProfile/useUserProfile', () => ({
+  useUserProfile: vi.fn(() => ({
+    profile: { name: 'User', avatarUrl: undefined },
+    isLoading: false,
+  })),
+}));
 
 vi.mock('@/libs/logger/logger', async () => {
   const actual = await vi.importActual<typeof import('@/libs/logger/logger')>('@/libs/logger/logger');

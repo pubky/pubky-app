@@ -2,20 +2,20 @@ import { act, renderHook } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { useLiveQuery } from 'dexie-react-hooks';
 import * as Core from '@/core';
-import { usePostCounts } from '@/hooks/usePostCounts';
+import { usePostCounts } from '@/hooks/usePostCounts/usePostCounts';
 import { useThreadReplies } from './useThreadReplies';
 
 vi.mock('dexie-react-hooks', () => ({
   useLiveQuery: vi.fn(),
 }));
 
-vi.mock('@/hooks/useMutedUsers', () => ({
+vi.mock('@/hooks/useMutedUsers/useMutedUsers', () => ({
   useMutedUsers: vi.fn(() => ({
     mutedUserIdSet: new Set(),
   })),
 }));
 
-vi.mock('@/hooks/usePostCounts', () => ({
+vi.mock('@/hooks/usePostCounts/usePostCounts', () => ({
   usePostCounts: vi.fn(),
 }));
 

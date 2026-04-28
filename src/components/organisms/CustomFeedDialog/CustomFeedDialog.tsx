@@ -9,6 +9,9 @@ import { useTranslations } from 'next-intl';
 import { PubkyAppFeedLayout, PubkyAppFeedReach, PubkyAppFeedSort, PubkyAppPostKind } from 'pubky-app-specs';
 import { useRouter } from 'next/navigation';
 import { APP_ROUTES } from '@/app/routes';
+import { UsersRound2 } from '@/icons';
+import { Env } from '@/libs/env/env';
+
 import {
   Radio,
   HeartHandshake,
@@ -27,8 +30,6 @@ import {
   Activity,
   Delete,
 } from 'lucide-react';
-import { UsersRound2 } from '@/icons';
-import { Env } from '@/libs/env/env';
 type CustomFeedDialogProps = {
   mode: 'create' | 'edit';
   children: ReactNode;

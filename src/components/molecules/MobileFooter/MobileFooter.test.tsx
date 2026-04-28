@@ -2,6 +2,8 @@ import { render, screen, fireEvent } from '@testing-library/react';
 import { describe, it, expect, vi } from 'vitest';
 import { usePathname } from 'next/navigation';
 import { MobileFooter } from './MobileFooter';
+import { useCurrentUserProfile } from '@/hooks/useCurrentUserProfile/useCurrentUserProfile';
+import { useKeyboardOffset } from '@/hooks/useKeyboardOffset/useKeyboardOffset';
 
 const FORCE_HOME_SCROLL_TOP_KEY = 'pubky:force-home-scroll-top';
 
@@ -77,19 +79,22 @@ vi.mock('@/app', async () => {
 });
 
 // Mock Hooks
-vi.mock('@/hooks', () => {
-  const mockUseKeyboardOffset = vi.fn(() => ({ isKeyboardVisible: false, keyboardOffset: 0 }));
-  return {
-    useCurrentUserProfile: vi.fn(() => ({
-      userDetails: { name: 'Test User', image: null, indexed_at: 123 },
-      currentUserPubky: 'pk:test-user-pubky',
-    })),
-    usePublicRoute: vi.fn(() => ({
-      isPublicRoute: false,
-    })),
-    useKeyboardOffset: mockUseKeyboardOffset,
-  };
-});
+vi.mock('@/hooks/useCurrentUserProfile/useCurrentUserProfile', () => ({
+  useCurrentUserProfile: vi.fn(() => ({
+    userDetails: { name: 'Test User', image: null, indexed_at: 123 },
+    currentUserPubky: 'pk:test-user-pubky',
+  })),
+}));
+
+vi.mock('@/hooks/usePublicRoute/usePublicRoute', () => ({
+  usePublicRoute: vi.fn(() => ({
+    isPublicRoute: false,
+  })),
+}));
+
+vi.mock('@/hooks/useKeyboardOffset/useKeyboardOffset', () => ({
+  useKeyboardOffset: vi.fn(() => ({ isKeyboardVisible: false, keyboardOffset: 0 })),
+}));
 
 // Track notification store mock for per-test overrides
 const mockSelectUnread = vi.fn(() => 0);
@@ -125,7 +130,6 @@ describe('MobileFooter', () => {
     });
 
     // Reset keyboard offset mock
-    const { useKeyboardOffset } = await import('@/hooks');
     vi.mocked(useKeyboardOffset).mockReturnValue({ isKeyboardVisible: false, keyboardOffset: 0 });
   });
 
@@ -200,7 +204,6 @@ describe('MobileFooter', () => {
   });
 
   it('requests avatar URL when user has an avatar set', async () => {
-    const { useCurrentUserProfile } = await import('@/hooks');
     vi.mocked(useCurrentUserProfile).mockReturnValueOnce({
       userDetails: {
         id: 'pk:test-user-pubky',
@@ -350,7 +353,6 @@ describe('MobileFooter', () => {
   });
 
   it('applies transform when keyboard is visible', async () => {
-    const { useKeyboardOffset } = await import('@/hooks');
     vi.mocked(useKeyboardOffset).mockReturnValue({ isKeyboardVisible: true, keyboardOffset: 300 });
 
     const { container } = render(<MobileFooter />);
@@ -361,7 +363,6 @@ describe('MobileFooter', () => {
   });
 
   it('does not apply transform when keyboard is not visible', async () => {
-    const { useKeyboardOffset } = await import('@/hooks');
     vi.mocked(useKeyboardOffset).mockReturnValue({ isKeyboardVisible: false, keyboardOffset: 0 });
 
     const { container } = render(<MobileFooter />);
@@ -372,8 +373,6 @@ describe('MobileFooter', () => {
   });
 
   it('always applies transition classes for smooth keyboard animation', async () => {
-    const { useKeyboardOffset } = await import('@/hooks');
-
     // transition-transform and duration-75 are always present regardless of keyboard state
     vi.mocked(useKeyboardOffset).mockReturnValue({ isKeyboardVisible: false, keyboardOffset: 0 });
     const { container, rerender } = render(<MobileFooter />);
@@ -393,8 +392,6 @@ describe('MobileFooter - Snapshots', () => {
     vi.clearAllMocks();
     vi.mocked(usePathname).mockReturnValue('/home');
     mockSelectUnread.mockReturnValue(0);
-
-    const { useKeyboardOffset } = await import('@/hooks');
     vi.mocked(useKeyboardOffset).mockReturnValue({ isKeyboardVisible: false, keyboardOffset: 0 });
   });
 

@@ -27,10 +27,12 @@ vi.mock('@/core', () => ({
 }));
 
 // Mock the hooks
-vi.mock('@/hooks', () => ({
+vi.mock('@/hooks/useCustomFeed/useCustomFeed', () => ({
   useCustomFeed: () => mockUseCustomFeed(),
+}));
+
+vi.mock('@/hooks/useIsMobile/useIsMobile', () => ({
   useIsMobile: () => false,
-  resolveFeedLayout: (...args: unknown[]) => mockResolveFeedLayout(...args),
 }));
 
 // Mock the molecules

@@ -4,14 +4,10 @@ import { useCustomStreamId } from './useCustomStreamId';
 import { PubkyAppFeedReach, PubkyAppFeedSort, PubkyAppFeedLayout, PubkyAppPostKind } from 'pubky-app-specs';
 import type * as Core from '@/core';
 
-// --- Hoisted mocks ---
+const mockUseCustomFeed = vi.hoisted(() => vi.fn());
 
-const { mockUseCustomFeed } = vi.hoisted(() => ({
-  mockUseCustomFeed: vi.fn(),
-}));
-
-vi.mock('@/hooks/useCustomFeed', () => ({
-  useCustomFeed: () => mockUseCustomFeed(),
+vi.mock('@/hooks/useCustomFeed/useCustomFeed', () => ({
+  useCustomFeed: mockUseCustomFeed,
 }));
 
 // --- Helpers ---

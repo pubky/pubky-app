@@ -10,6 +10,7 @@ import type { TaggedItemProps } from './TaggedItem.types';
 import { MAX_VISIBLE_AVATARS } from './TaggedItem.constants';
 import { Search } from 'lucide-react';
 import { cn, formatPublicKey } from '@/libs/utils/utils';
+
 export function TaggedItem({
   tag,
   onTagClick,

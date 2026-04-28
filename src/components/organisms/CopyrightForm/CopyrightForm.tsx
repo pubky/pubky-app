@@ -9,6 +9,7 @@ import type { CopyrightFormData } from '@/hooks/useCopyrightForm/useCopyrightFor
 import { useTranslations } from 'next-intl';
 import { Loader2 } from 'lucide-react';
 import { formatUSDate } from '@/libs/utils/utils';
+
 export function CopyrightForm() {
   const t = useTranslations('forms.copyright');
   const { form, onSubmit } = useCopyrightForm();

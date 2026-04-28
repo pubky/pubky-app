@@ -26,7 +26,7 @@ vi.mock('@/atoms', () => ({
   ),
 }));
 
-vi.mock('@/hooks', () => ({
+vi.mock('@/hooks/useUserProfile/useUserProfile', () => ({
   useUserProfile: (userId: string) => mockUseUserProfile(userId),
 }));
 

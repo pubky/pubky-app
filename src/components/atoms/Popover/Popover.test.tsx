@@ -1,7 +1,11 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { render, screen, fireEvent, act } from '@testing-library/react';
 import { Popover, PopoverTrigger, PopoverContent } from './Popover';
-import * as Hooks from '@/hooks';
+import { useIsTouchDevice } from '@/hooks/useIsTouchDevice/useIsTouchDevice';
+
+vi.mock('@/hooks/useIsTouchDevice/useIsTouchDevice', () => ({
+  useIsTouchDevice: vi.fn(() => false),
+}));
 
 describe('Popover', () => {
   it('renders with default props', () => {
@@ -35,7 +39,7 @@ describe('Popover - Hover behavior', () => {
 
   beforeEach(() => {
     vi.useFakeTimers();
-    useIsTouchDeviceSpy = vi.spyOn(Hooks, 'useIsTouchDevice').mockReturnValue(false);
+    useIsTouchDeviceSpy = vi.mocked(useIsTouchDevice).mockReturnValue(false);
   });
 
   afterEach(() => {

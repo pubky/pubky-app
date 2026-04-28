@@ -1,7 +1,9 @@
 import React from 'react';
 import { render, screen, fireEvent } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import * as Hooks from '@/hooks';
+import { useIsMobile } from '@/hooks/useIsMobile/useIsMobile';
+import { usePostDetails } from '@/hooks/usePostDetails/usePostDetails';
+import { usePostHeaderVisibility } from '@/hooks/usePostHeaderVisibility/usePostHeaderVisibility';
 import { PostMain } from './PostMain';
 import { PostMainLayoutProvider } from './PostMainLayout';
 import { POST_THREAD_CONNECTOR_VARIANTS } from '@/components/atoms/PostThreadConnector/PostThreadConnector.constants';
@@ -166,12 +168,18 @@ vi.mock('@/molecules', () => ({
 }));
 
 // Mock hooks
-vi.mock('@/hooks', () => ({
+vi.mock('@/hooks/useElementHeight/useElementHeight', () => ({
   useElementHeight: vi.fn(() => ({
     ref: vi.fn(),
     height: 150,
   })),
+}));
+
+vi.mock('@/hooks/useIsMobile/useIsMobile', () => ({
   useIsMobile: vi.fn(() => false),
+}));
+
+vi.mock('@/hooks/usePostDetails/usePostDetails', () => ({
   usePostDetails: vi.fn(() => ({
     postDetails: {
       id: 'post-123',
@@ -184,6 +192,9 @@ vi.mock('@/hooks', () => ({
       is_blurred: false,
     },
   })),
+}));
+
+vi.mock('@/hooks/useRepostInfo/useRepostInfo', () => ({
   useRepostInfo: vi.fn(() => ({
     isRepost: false,
     repostAuthorId: null,
@@ -192,10 +203,16 @@ vi.mock('@/hooks', () => ({
     isLoading: false,
     hasError: false,
   })),
+}));
+
+vi.mock('@/hooks/usePostHeaderVisibility/usePostHeaderVisibility', () => ({
   usePostHeaderVisibility: vi.fn(() => ({
     showRepostHeader: false,
     shouldShowPostHeader: true,
   })),
+}));
+
+vi.mock('@/hooks/useTtlSubscription/useTtlSubscription', () => ({
   useTtlSubscription: vi.fn(() => ({
     ref: vi.fn(),
     isVisible: false,
@@ -203,13 +220,13 @@ vi.mock('@/hooks', () => ({
 }));
 
 describe('PostMain', () => {
-  const mockUseIsMobile = vi.mocked(Hooks.useIsMobile);
+  const mockUseIsMobile = vi.mocked(useIsMobile);
 
   beforeEach(() => {
     vi.clearAllMocks();
     mockPostHeader.mockClear();
     mockUseIsMobile.mockReturnValue(false);
-    vi.mocked(Hooks.usePostDetails).mockReturnValue({
+    vi.mocked(usePostDetails).mockReturnValue({
       postDetails: {
         id: 'post-123',
         indexed_at: 0,
@@ -263,7 +280,7 @@ describe('PostMain', () => {
   });
 
   it('renders PostDeleted when post is deleted', () => {
-    vi.mocked(Hooks.usePostDetails).mockReturnValue({
+    vi.mocked(usePostDetails).mockReturnValue({
       postDetails: {
         id: 'post-deleted',
         indexed_at: 0,
@@ -297,7 +314,7 @@ describe('PostMain', () => {
   });
 
   it('shows repost header when post is a repost by current user', () => {
-    const mockUsePostHeaderVisibility = vi.mocked(Hooks.usePostHeaderVisibility);
+    const mockUsePostHeaderVisibility = vi.mocked(usePostHeaderVisibility);
     mockUsePostHeaderVisibility.mockReturnValue({
       showRepostHeader: true,
       shouldShowPostHeader: true,
@@ -309,7 +326,7 @@ describe('PostMain', () => {
   });
 
   it('hides PostHeader for simple repost (no content) by current user', () => {
-    const mockUsePostHeaderVisibility = vi.mocked(Hooks.usePostHeaderVisibility);
+    const mockUsePostHeaderVisibility = vi.mocked(usePostHeaderVisibility);
     mockUsePostHeaderVisibility.mockReturnValue({
       showRepostHeader: true,
       shouldShowPostHeader: false,
@@ -323,7 +340,7 @@ describe('PostMain', () => {
   });
 
   it('shows PostHeader for quote repost (with content) by current user', () => {
-    const mockUsePostHeaderVisibility = vi.mocked(Hooks.usePostHeaderVisibility);
+    const mockUsePostHeaderVisibility = vi.mocked(usePostHeaderVisibility);
     mockUsePostHeaderVisibility.mockReturnValue({
       showRepostHeader: true,
       shouldShowPostHeader: true,
@@ -337,7 +354,7 @@ describe('PostMain', () => {
   });
 
   it('shows PostHeader and hides repost header for repost by another user even without content', () => {
-    const mockUsePostHeaderVisibility = vi.mocked(Hooks.usePostHeaderVisibility);
+    const mockUsePostHeaderVisibility = vi.mocked(usePostHeaderVisibility);
     mockUsePostHeaderVisibility.mockReturnValue({
       showRepostHeader: false,
       shouldShowPostHeader: true,
@@ -351,7 +368,7 @@ describe('PostMain', () => {
   });
 
   it('shows PostHeader for repost with attachments but no text by current user', () => {
-    const mockUsePostDetails = vi.mocked(Hooks.usePostDetails);
+    const mockUsePostDetails = vi.mocked(usePostDetails);
     mockUsePostDetails.mockReturnValue({
       postDetails: {
         id: 'me:repost-with-attachments-1',
@@ -366,7 +383,7 @@ describe('PostMain', () => {
       isLoading: false,
     });
 
-    const mockUsePostHeaderVisibility = vi.mocked(Hooks.usePostHeaderVisibility);
+    const mockUsePostHeaderVisibility = vi.mocked(usePostHeaderVisibility);
     mockUsePostHeaderVisibility.mockReturnValue({
       showRepostHeader: true,
       shouldShowPostHeader: true,
@@ -380,7 +397,7 @@ describe('PostMain', () => {
   });
 
   it('shows PostHeader when postDetails is loading (undefined)', () => {
-    const mockUsePostHeaderVisibility = vi.mocked(Hooks.usePostHeaderVisibility);
+    const mockUsePostHeaderVisibility = vi.mocked(usePostHeaderVisibility);
     mockUsePostHeaderVisibility.mockReturnValue({
       showRepostHeader: true,
       shouldShowPostHeader: true,
@@ -395,7 +412,7 @@ describe('PostMain', () => {
   });
 
   it('shows PostHeader when postDetails is null', () => {
-    const mockUsePostHeaderVisibility = vi.mocked(Hooks.usePostHeaderVisibility);
+    const mockUsePostHeaderVisibility = vi.mocked(usePostHeaderVisibility);
     mockUsePostHeaderVisibility.mockReturnValue({
       showRepostHeader: true,
       shouldShowPostHeader: true,
@@ -457,7 +474,7 @@ describe('PostMain', () => {
   });
 
   it('applies wide repost-header padding when reposting in side layout', () => {
-    vi.mocked(Hooks.usePostHeaderVisibility).mockReturnValue({
+    vi.mocked(usePostHeaderVisibility).mockReturnValue({
       showRepostHeader: true,
       shouldShowPostHeader: true,
     });
@@ -593,11 +610,11 @@ describe('PostMain - Snapshots', () => {
     // Reset mocked hook return values that are overridden in earlier (non-snapshot) tests.
     // Without this, running the full suite (e.g. CI `test:coverage`) can leak mocked
     // implementations into snapshot tests and cause snapshot drift.
-    vi.mocked(Hooks.usePostHeaderVisibility).mockReturnValue({
+    vi.mocked(usePostHeaderVisibility).mockReturnValue({
       showRepostHeader: false,
       shouldShowPostHeader: true,
     });
-    vi.mocked(Hooks.usePostDetails).mockReturnValue({
+    vi.mocked(usePostDetails).mockReturnValue({
       postDetails: {
         id: 'post-123',
         indexed_at: 0,
@@ -628,7 +645,7 @@ describe('PostMain - Snapshots', () => {
   });
 
   it('matches snapshot with deleted post', () => {
-    vi.mocked(Hooks.usePostDetails).mockReturnValue({
+    vi.mocked(usePostDetails).mockReturnValue({
       postDetails: {
         id: 'post-deleted-123',
         indexed_at: 0,
@@ -646,7 +663,7 @@ describe('PostMain - Snapshots', () => {
   });
 
   it('matches snapshot for simple repost by current user (no content)', () => {
-    const mockUsePostHeaderVisibility = vi.mocked(Hooks.usePostHeaderVisibility);
+    const mockUsePostHeaderVisibility = vi.mocked(usePostHeaderVisibility);
     mockUsePostHeaderVisibility.mockReturnValue({
       showRepostHeader: true,
       shouldShowPostHeader: false,
@@ -657,7 +674,7 @@ describe('PostMain - Snapshots', () => {
   });
 
   it('matches snapshot for quote repost by current user (with content)', () => {
-    const mockUsePostHeaderVisibility = vi.mocked(Hooks.usePostHeaderVisibility);
+    const mockUsePostHeaderVisibility = vi.mocked(usePostHeaderVisibility);
     mockUsePostHeaderVisibility.mockReturnValue({
       showRepostHeader: true,
       shouldShowPostHeader: true,
@@ -668,7 +685,7 @@ describe('PostMain - Snapshots', () => {
   });
 
   it('matches snapshot for repost by another user', () => {
-    const mockUsePostHeaderVisibility = vi.mocked(Hooks.usePostHeaderVisibility);
+    const mockUsePostHeaderVisibility = vi.mocked(usePostHeaderVisibility);
     mockUsePostHeaderVisibility.mockReturnValue({
       showRepostHeader: false,
       shouldShowPostHeader: true,

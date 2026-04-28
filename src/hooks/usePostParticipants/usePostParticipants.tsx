@@ -3,15 +3,14 @@
 import { useMemo } from 'react';
 import { useLiveQuery } from 'dexie-react-hooks';
 import * as Core from '@/core';
-// Direct imports to avoid circular dependency (this hook is exported from @/hooks)
 import { useMutedUsers } from '@/hooks/useMutedUsers/useMutedUsers';
 import { useBulkUserAvatars } from '@/hooks/useBulkUserAvatars/useBulkUserAvatars';
+import { Logger } from '@/libs/logger/logger';
 import type {
   UsePostParticipantsResult,
   UsePostParticipantsOptions,
   PostParticipant,
 } from './usePostParticipants.types';
-import { Logger } from '@/libs/logger/logger';
 
 const DEFAULT_LIMIT = 10;
 

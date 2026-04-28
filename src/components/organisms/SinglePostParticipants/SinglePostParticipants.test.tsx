@@ -15,12 +15,18 @@ const mockUsePostParticipants = vi.fn();
 const mockToggleFollow = vi.fn();
 const mockIsUserLoading = vi.fn(() => false);
 
-vi.mock('@/hooks', () => ({
+vi.mock('@/hooks/usePostParticipants/usePostParticipants', () => ({
   usePostParticipants: () => mockUsePostParticipants(),
+}));
+
+vi.mock('@/hooks/useFollowUser/useFollowUser', () => ({
   useFollowUser: () => ({
     toggleFollow: mockToggleFollow,
     isUserLoading: mockIsUserLoading,
   }),
+}));
+
+vi.mock('@/hooks/useIsFollowing/useIsFollowing', () => ({
   useIsFollowing: () => ({
     isFollowing: false,
     isLoading: false,

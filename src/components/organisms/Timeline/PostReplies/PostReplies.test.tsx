@@ -3,6 +3,9 @@ import { render, screen } from '@testing-library/react';
 import * as Core from '@/core';
 import type { UseRequireAuthResult } from '@/hooks/useRequireAuth/useRequireAuth.types';
 import { TimelinePostReplies } from './PostReplies';
+import { usePostCounts } from '@/hooks/usePostCounts/usePostCounts';
+import { usePostDetails } from '@/hooks/usePostDetails/usePostDetails';
+import { useRequireAuth } from '@/hooks/useRequireAuth/useRequireAuth';
 
 // Mock hooks
 const mockUseRequireAuth = vi.fn(
@@ -26,15 +29,17 @@ const mockUsePostDetails = vi.fn(() => ({
   isLoading: false,
 }));
 
-vi.mock('@/hooks', async (importOriginal) => {
-  const actual = await importOriginal<typeof import('@/hooks')>();
-  return {
-    ...actual,
-    useRequireAuth: vi.fn(),
-    usePostDetails: vi.fn(),
-    usePostCounts: vi.fn(),
-  };
-});
+vi.mock('@/hooks/useRequireAuth/useRequireAuth', () => ({
+  useRequireAuth: vi.fn(),
+}));
+
+vi.mock('@/hooks/usePostDetails/usePostDetails', () => ({
+  usePostDetails: vi.fn(),
+}));
+
+vi.mock('@/hooks/usePostCounts/usePostCounts', () => ({
+  usePostCounts: vi.fn(),
+}));
 
 // Mock atoms
 vi.mock('@/atoms', () => ({
@@ -61,16 +66,14 @@ vi.mock('@/organisms', () => ({
 }));
 
 // Import after mocks
-import * as Hooks from '@/hooks';
-
 describe('TimelinePostReplies', () => {
   const mockPostId = 'author:post123';
 
   beforeEach(() => {
     vi.clearAllMocks();
-    vi.mocked(Hooks.useRequireAuth).mockReturnValue(mockUseRequireAuth());
-    vi.mocked(Hooks.usePostDetails).mockReturnValue(mockUsePostDetails());
-    vi.mocked(Hooks.usePostCounts).mockReturnValue({
+    vi.mocked(useRequireAuth).mockReturnValue(mockUseRequireAuth());
+    vi.mocked(usePostDetails).mockReturnValue(mockUsePostDetails());
+    vi.mocked(usePostCounts).mockReturnValue({
       postCounts: {
         id: mockPostId,
         replies: 3,
@@ -98,7 +101,7 @@ describe('TimelinePostReplies', () => {
   });
 
   it('passes showQuickReply=false when parent is deleted', () => {
-    vi.mocked(Hooks.usePostDetails).mockReturnValue({
+    vi.mocked(usePostDetails).mockReturnValue({
       ...mockUsePostDetails(),
       postDetails: {
         ...mockUsePostDetails().postDetails,
@@ -113,7 +116,7 @@ describe('TimelinePostReplies', () => {
   });
 
   it('renders nothing when not authenticated', () => {
-    vi.mocked(Hooks.useRequireAuth).mockReturnValue({
+    vi.mocked(useRequireAuth).mockReturnValue({
       isAuthenticated: false,
       requireAuth: <T,>(_action: () => T) => undefined,
     });
@@ -124,7 +127,7 @@ describe('TimelinePostReplies', () => {
   });
 
   it('renders nothing when post has no replies', () => {
-    vi.mocked(Hooks.usePostCounts).mockReturnValue({
+    vi.mocked(usePostCounts).mockReturnValue({
       postCounts: {
         id: mockPostId,
         replies: 0,
@@ -153,9 +156,9 @@ describe('TimelinePostReplies - Snapshots', () => {
 
   beforeEach(() => {
     vi.clearAllMocks();
-    vi.mocked(Hooks.useRequireAuth).mockReturnValue(mockUseRequireAuth());
-    vi.mocked(Hooks.usePostDetails).mockReturnValue(mockUsePostDetails());
-    vi.mocked(Hooks.usePostCounts).mockReturnValue({
+    vi.mocked(useRequireAuth).mockReturnValue(mockUseRequireAuth());
+    vi.mocked(usePostDetails).mockReturnValue(mockUsePostDetails());
+    vi.mocked(usePostCounts).mockReturnValue({
       postCounts: {
         id: mockPostId,
         replies: 3,
@@ -173,7 +176,7 @@ describe('TimelinePostReplies - Snapshots', () => {
   });
 
   it('matches snapshot when not authenticated', () => {
-    vi.mocked(Hooks.useRequireAuth).mockReturnValue({
+    vi.mocked(useRequireAuth).mockReturnValue({
       isAuthenticated: false,
       requireAuth: <T,>(_action: () => T) => undefined,
     });
@@ -183,7 +186,7 @@ describe('TimelinePostReplies - Snapshots', () => {
   });
 
   it('matches snapshot when parent post is deleted', () => {
-    vi.mocked(Hooks.usePostDetails).mockReturnValue({
+    vi.mocked(usePostDetails).mockReturnValue({
       ...mockUsePostDetails(),
       postDetails: {
         ...mockUsePostDetails().postDetails,

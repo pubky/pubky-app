@@ -4,15 +4,14 @@ import { asInvalid } from '@/test-utils';
 import type { EmbedData } from '../../Providers/Provider.types';
 import { Generic } from './ProviderGeneric';
 import { GenericPreview } from './GenericPreview';
+import { useOgMetadata } from '@/hooks/useOgMetadata/useOgMetadata';
 
 // Mock the hooks module
-vi.mock('@/hooks', () => ({
+vi.mock('@/hooks/useOgMetadata/useOgMetadata', () => ({
   useOgMetadata: vi.fn(),
 }));
 
 // Import the mocked hook
-import * as Hooks from '@/hooks';
-
 describe('ProviderGeneric', () => {
   beforeEach(() => {
     vi.clearAllMocks();
@@ -154,7 +153,7 @@ describe('ProviderGeneric', () => {
 });
 
 describe('GenericPreview', () => {
-  const mockUseOgMetadata = vi.mocked(Hooks.useOgMetadata);
+  const mockUseOgMetadata = vi.mocked(useOgMetadata);
 
   beforeEach(() => {
     vi.clearAllMocks();
@@ -343,7 +342,7 @@ describe('GenericPreview', () => {
 });
 
 describe('GenericPreview - Snapshots', () => {
-  const mockUseOgMetadata = vi.mocked(Hooks.useOgMetadata);
+  const mockUseOgMetadata = vi.mocked(useOgMetadata);
 
   beforeEach(() => {
     vi.clearAllMocks();

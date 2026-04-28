@@ -12,6 +12,7 @@ import { UserInfoPopoverSkeleton } from './UserInfoPopoverContent.skeleton';
 import { useUserInfoPopoverData } from '@/hooks/useUserInfoPopoverData/useUserInfoPopoverData';
 import { useUserInfoPopoverActions } from '@/hooks/useUserInfoPopoverActions/useUserInfoPopoverActions';
 import { Pencil } from 'lucide-react';
+
 const MAX_AVATARS = 3;
 interface UserInfoPopoverContentProps {
   userId: string;

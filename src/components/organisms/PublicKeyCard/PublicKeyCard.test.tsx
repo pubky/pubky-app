@@ -156,22 +156,13 @@ vi.mock('@/core', () => ({
   ProfileController: mockProfileController,
 }));
 
-// Mock hooks
-const { mockCopyToClipboard, mockUseCopyToClipboard } = vi.hoisted(() => {
-  const mockCopy = vi.fn();
-  const mockUseCopy = vi.fn(() => ({
-    copyToClipboard: mockCopy,
-  }));
-
-  return {
-    mockCopyToClipboard: mockCopy,
-    mockUseCopyToClipboard: mockUseCopy,
-  };
-});
+const mockCopyToClipboard = vi.fn();
 
 const consoleErrorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
 
-vi.mock('@/hooks', () => ({
+const mockUseCopyToClipboard = vi.hoisted(() => vi.fn());
+
+vi.mock('@/hooks/useCopyToClipboard/useCopyToClipboard', () => ({
   useCopyToClipboard: mockUseCopyToClipboard,
 }));
 
@@ -208,6 +199,9 @@ describe('PublicKeyCard', () => {
     vi.clearAllMocks();
     mockToast.mockReturnValue({ dismiss: mockDismiss });
     mockCopyToClipboard.mockResolvedValue(true);
+    mockUseCopyToClipboard.mockReturnValue({
+      copyToClipboard: mockCopyToClipboard,
+    });
     mockShareWithFallback.mockResolvedValue({ success: true, method: 'native' });
     mockUseOnboardingStore.mockReturnValue({
       secretKey: 'test-secret-key',

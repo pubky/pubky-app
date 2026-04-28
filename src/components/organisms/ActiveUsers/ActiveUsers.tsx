@@ -10,6 +10,7 @@ import * as Molecules from '@/molecules';
 import * as Organisms from '@/organisms';
 import { APP_ROUTES } from '@/app/routes';
 import { UsersRound } from 'lucide-react';
+
 const USERS_LIMIT = 3;
 
 /**

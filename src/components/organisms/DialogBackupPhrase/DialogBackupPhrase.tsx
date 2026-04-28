@@ -9,6 +9,7 @@ import * as Stores from '@/core';
 import * as Molecules from '@/molecules';
 import { Eye, ArrowRight, EyeOff, ArrowLeft, Check } from 'lucide-react';
 import { cn } from '@/libs/utils/utils';
+
 interface DialogBackupPhraseProps {
   children?: ReactNode;
 }

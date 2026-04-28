@@ -4,7 +4,7 @@ import React from 'react';
 import { ScanContent, ScanFooter, ScanHeader, ScanNavigation } from './Scan';
 import * as Config from '@/config';
 import * as App from '@/app';
-import * as Hooks from '@/hooks';
+import { useMobileAuth } from '@/hooks/useMobileAuth/useMobileAuth';
 import { asOpaque } from '@/test-utils';
 
 // Mock Next.js router
@@ -55,21 +55,17 @@ const { mockFetchUrl, mockCopyAuthUrl, mockOnAuthorizeClick } = vi.hoisted(() =>
   mockCopyAuthUrl: vi.fn().mockResolvedValue(undefined),
   mockOnAuthorizeClick: vi.fn(),
 }));
-vi.mock('@/hooks', async (importOriginal) => {
-  const actual = await importOriginal<typeof import('@/hooks')>();
-  return {
-    ...actual,
-    useMobileAuth: vi.fn(() => ({
-      url: 'mock-auth-url',
-      isLoading: false,
-      isExpired: false,
-      fetchUrl: mockFetchUrl,
-      copyAuthUrl: mockCopyAuthUrl,
-      isOpeningRing: false,
-      onAuthorizeClick: mockOnAuthorizeClick,
-    })),
-  };
-});
+vi.mock('@/hooks/useMobileAuth/useMobileAuth', () => ({
+  useMobileAuth: vi.fn(() => ({
+    url: 'mock-auth-url',
+    isLoading: false,
+    isExpired: false,
+    fetchUrl: mockFetchUrl,
+    copyAuthUrl: mockCopyAuthUrl,
+    isOpeningRing: false,
+    onAuthorizeClick: mockOnAuthorizeClick,
+  })),
+}));
 
 // Mock molecules - use real DialogAuthExpired (Radix) per component-testing rules
 vi.mock('@/molecules', async (importOriginal) => {
@@ -209,7 +205,7 @@ describe('ScanContent', () => {
     onboardingState.inviteCode = 'A9KM-7MJP-ERM9';
     window.location.href = '';
     clipboardMock.writeText.mockClear();
-    vi.mocked(Hooks.useMobileAuth).mockReturnValue({
+    vi.mocked(useMobileAuth).mockReturnValue({
       url: 'mock-auth-url',
       isLoading: false,
       isExpired: false,
@@ -279,7 +275,7 @@ describe('ScanContent', () => {
   });
 
   it('opens expired dialog when auth flow is expired', async () => {
-    vi.mocked(Hooks.useMobileAuth).mockReturnValue({
+    vi.mocked(useMobileAuth).mockReturnValue({
       url: '',
       isLoading: false,
       isExpired: true,
@@ -298,7 +294,7 @@ describe('ScanContent', () => {
   });
 
   it('calls fetchUrl when expired dialog refresh button is clicked', async () => {
-    vi.mocked(Hooks.useMobileAuth).mockReturnValue({
+    vi.mocked(useMobileAuth).mockReturnValue({
       url: '',
       isLoading: false,
       isExpired: true,
@@ -393,7 +389,7 @@ describe('ScanNavigation', () => {
 describe('Scan Components - Snapshots', () => {
   beforeEach(() => {
     onboardingState.inviteCode = 'A9KM-7MJP-ERM9';
-    vi.mocked(Hooks.useMobileAuth).mockReturnValue({
+    vi.mocked(useMobileAuth).mockReturnValue({
       url: 'mock-auth-url',
       isLoading: false,
       isExpired: false,

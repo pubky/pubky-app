@@ -7,13 +7,9 @@ import { POST_INPUT_VARIANT } from '@/organisms/PostInput/PostInput.constants';
 // Mock hooks
 const mockUseConfirmableDialog = vi.fn();
 
-vi.mock('@/hooks', async (importOriginal) => {
-  const actual = await importOriginal<typeof import('@/hooks')>();
-  return {
-    ...actual,
-    useConfirmableDialog: (opts: unknown) => mockUseConfirmableDialog(opts),
-  };
-});
+vi.mock('@/hooks/useConfirmableDialog/useConfirmableDialog', () => ({
+  useConfirmableDialog: (opts: unknown) => mockUseConfirmableDialog(opts),
+}));
 
 // Mock organisms
 vi.mock('@/organisms', () => ({

@@ -13,7 +13,6 @@ import * as Organisms from '@/organisms';
 import type { PostTagsPanelHandle } from '@/organisms';
 import { POST_TAGS_MAX_COUNT, POST_TAGS_MAX_LENGTH, POST_TAGS_MAX_TOTAL_CHARS } from '@/config';
 import { POST_THREAD_CONNECTOR_VARIANTS } from '@/atoms';
-
 import type { PostMainProps } from './PostMain.types';
 import { usePostMainLayout, WIDE_POST_LAYOUT_CLASSES } from './PostMainLayout';
 import { cn, isPostDeleted } from '@/libs/utils/utils';

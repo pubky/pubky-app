@@ -1,7 +1,9 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen } from '@testing-library/react';
 import { ProfileFollowers } from './ProfileFollowers';
-import * as Hooks from '@/hooks';
+import { useFollowUser } from '@/hooks/useFollowUser/useFollowUser';
+import { useInfiniteScroll } from '@/hooks/useInfiniteScroll/useInfiniteScroll';
+import { useProfileConnections } from '@/hooks/useProfileConnections/useProfileConnections';
 import * as Core from '@/core';
 import { asOpaque } from '@/test-utils';
 
@@ -45,15 +47,20 @@ const mockUseFollowUser = vi.fn(() => ({
   error: null,
 }));
 
-vi.mock('@/hooks', () => ({
-  useProfileConnections: vi.fn(),
+vi.mock('@/hooks/useProfileConnections/useProfileConnections', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('@/hooks/useProfileConnections/useProfileConnections')>();
+  return {
+    ...actual,
+    useProfileConnections: vi.fn(),
+  };
+});
+
+vi.mock('@/hooks/useInfiniteScroll/useInfiniteScroll', () => ({
   useInfiniteScroll: vi.fn(),
+}));
+
+vi.mock('@/hooks/useFollowUser/useFollowUser', () => ({
   useFollowUser: vi.fn(),
-  CONNECTION_TYPE: {
-    FOLLOWERS: 'followers',
-    FOLLOWING: 'following',
-    FRIENDS: 'friends',
-  },
 }));
 
 // Mock Atoms
@@ -135,13 +142,11 @@ const mockConnectionsResult = {
 
 describe('ProfileFollowers', () => {
   beforeEach(() => {
-    vi.mocked(Hooks.useProfileConnections).mockReturnValue(mockUseProfileConnections());
-    vi.mocked(Hooks.useInfiniteScroll).mockReturnValue(
-      asOpaque<ReturnType<typeof Hooks.useInfiniteScroll>>(mockUseInfiniteScroll()),
+    vi.mocked(useProfileConnections).mockReturnValue(mockUseProfileConnections());
+    vi.mocked(useInfiniteScroll).mockReturnValue(
+      asOpaque<ReturnType<typeof useInfiniteScroll>>(mockUseInfiniteScroll()),
     );
-    vi.mocked(Hooks.useFollowUser).mockReturnValue(
-      asOpaque<ReturnType<typeof Hooks.useFollowUser>>(mockUseFollowUser()),
-    );
+    vi.mocked(useFollowUser).mockReturnValue(asOpaque<ReturnType<typeof useFollowUser>>(mockUseFollowUser()));
   });
 
   it('renders empty state when no connections', () => {
@@ -150,7 +155,7 @@ describe('ProfileFollowers', () => {
   });
 
   it('renders loading state with skeleton list when isLoading is true', () => {
-    vi.mocked(Hooks.useProfileConnections).mockReturnValue(mockLoadingConnectionsResult);
+    vi.mocked(useProfileConnections).mockReturnValue(mockLoadingConnectionsResult);
     render(<ProfileFollowers />);
     expect(screen.queryByTestId('spinner')).not.toBeInTheDocument();
     expect(screen.getByTestId('heading')).toHaveTextContent('Followers');
@@ -159,7 +164,7 @@ describe('ProfileFollowers', () => {
   });
 
   it('renders connections when there are items', () => {
-    vi.mocked(Hooks.useProfileConnections).mockReturnValue(mockConnectionsResult);
+    vi.mocked(useProfileConnections).mockReturnValue(mockConnectionsResult);
 
     render(<ProfileFollowers />);
     const userItems = screen.getAllByTestId('user-list-item');
@@ -169,7 +174,7 @@ describe('ProfileFollowers', () => {
   });
 
   it('passes followButtonVariant="icon" to UserListItem', () => {
-    vi.mocked(Hooks.useProfileConnections).mockReturnValue(mockConnectionsResult);
+    vi.mocked(useProfileConnections).mockReturnValue(mockConnectionsResult);
 
     render(<ProfileFollowers />);
     const userItems = screen.getAllByTestId('user-list-item');
@@ -181,13 +186,11 @@ describe('ProfileFollowers', () => {
 
 describe('ProfileFollowers - Snapshots', () => {
   beforeEach(() => {
-    vi.mocked(Hooks.useProfileConnections).mockReturnValue(mockUseProfileConnections());
-    vi.mocked(Hooks.useInfiniteScroll).mockReturnValue(
-      asOpaque<ReturnType<typeof Hooks.useInfiniteScroll>>(mockUseInfiniteScroll()),
+    vi.mocked(useProfileConnections).mockReturnValue(mockUseProfileConnections());
+    vi.mocked(useInfiniteScroll).mockReturnValue(
+      asOpaque<ReturnType<typeof useInfiniteScroll>>(mockUseInfiniteScroll()),
     );
-    vi.mocked(Hooks.useFollowUser).mockReturnValue(
-      asOpaque<ReturnType<typeof Hooks.useFollowUser>>(mockUseFollowUser()),
-    );
+    vi.mocked(useFollowUser).mockReturnValue(asOpaque<ReturnType<typeof useFollowUser>>(mockUseFollowUser()));
   });
 
   it('matches snapshot with no connections', () => {
@@ -196,13 +199,13 @@ describe('ProfileFollowers - Snapshots', () => {
   });
 
   it('matches snapshot when loading', () => {
-    vi.mocked(Hooks.useProfileConnections).mockReturnValue(mockLoadingConnectionsResult);
+    vi.mocked(useProfileConnections).mockReturnValue(mockLoadingConnectionsResult);
     const { container } = render(<ProfileFollowers />);
     expect(container).toMatchSnapshot();
   });
 
   it('matches snapshot with connections', () => {
-    vi.mocked(Hooks.useProfileConnections).mockReturnValue(mockConnectionsResult);
+    vi.mocked(useProfileConnections).mockReturnValue(mockConnectionsResult);
 
     const { container } = render(<ProfileFollowers />);
     expect(container).toMatchSnapshot();

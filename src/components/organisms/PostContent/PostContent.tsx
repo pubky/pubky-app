@@ -2,7 +2,6 @@
 
 import { useRepostInfo } from '@/hooks/useRepostInfo/useRepostInfo';
 import * as Molecules from '@/molecules';
-
 import * as Organisms from '@/organisms';
 import type { PostContentOrganismProps } from './PostContent.types';
 

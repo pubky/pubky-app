@@ -9,7 +9,7 @@ const mockHandleTagToggle = vi.fn();
 const mockHandleTagAdd = vi.fn().mockResolvedValue({ success: true });
 const mockIsViewerTagger = vi.fn((tag: TagWithAvatars) => tag.relationship ?? false);
 
-vi.mock('@/hooks', () => ({
+vi.mock('@/hooks/useEntityTags/useEntityTags', () => ({
   useEntityTags: vi.fn((_entityId, _taggedKind, options) => ({
     tags: options?.providedTags ?? [],
     count: options?.providedTags?.length ?? 0,
@@ -18,14 +18,23 @@ vi.mock('@/hooks', () => ({
     handleTagToggle: mockHandleTagToggle,
     handleTagAdd: mockHandleTagAdd,
   })),
+}));
+
+vi.mock('@/hooks/useTagSuggestions/useTagSuggestions', () => ({
   useTagSuggestions: vi.fn(() => ({
     suggestions: [],
     isLoading: false,
   })),
+}));
+
+vi.mock('@/hooks/useRequireAuth/useRequireAuth', () => ({
   useRequireAuth: () => ({
     isAuthenticated: true,
     requireAuth: <T,>(action: () => T) => action(),
   }),
+}));
+
+vi.mock('@/hooks/useEnrichedTags/useEnrichedTags', () => ({
   useEnrichedTags: vi.fn((tags) => ({
     enrichedTags: tags,
     isLoading: false,

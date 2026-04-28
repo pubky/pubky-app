@@ -18,9 +18,15 @@ vi.mock('@/core', () => ({
 
 const mockUseHotTags = vi.fn();
 
-vi.mock('@/hooks', () => ({
+vi.mock('@/hooks/useHotTags/useHotTags', () => ({
   useHotTags: (params: unknown) => mockUseHotTags(params),
+}));
+
+vi.mock('@/hooks/useIsMobile/useIsMobile', () => ({
   useIsMobile: vi.fn(() => false),
+}));
+
+vi.mock('@/hooks/useBulkUserAvatars/useBulkUserAvatars', () => ({
   useBulkUserAvatars: vi.fn(() => ({
     getUsersWithAvatars: vi.fn(() => []),
   })),

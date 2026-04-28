@@ -3,7 +3,6 @@
 import { usePublicRoute } from '@/hooks/usePublicRoute/usePublicRoute';
 import { usePathname } from 'next/navigation';
 import { useTranslations } from 'next-intl';
-
 import * as Core from '@/core';
 import * as Molecules from '@/molecules';
 import { pathToStepConfig } from './Header.constants';

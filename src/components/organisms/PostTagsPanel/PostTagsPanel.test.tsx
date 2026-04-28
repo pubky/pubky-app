@@ -6,9 +6,15 @@ import { PostTagsPanel } from './PostTagsPanel';
 const mockUsePostTags = vi.fn();
 const mockRequireAuth = vi.fn((action: () => void) => action());
 const mockSetShowSignInDialog = vi.fn();
-vi.mock('@/hooks', () => ({
+vi.mock('@/hooks/usePostTags/usePostTags', () => ({
   usePostTags: () => mockUsePostTags(),
+}));
+
+vi.mock('@/hooks/useEnrichedTags/useEnrichedTags', () => ({
   useEnrichedTags: (tags: unknown[]) => ({ enrichedTags: tags, isLoading: false }),
+}));
+
+vi.mock('@/hooks/useRequireAuth/useRequireAuth', () => ({
   useRequireAuth: () => ({
     isAuthenticated: true,
     requireAuth: mockRequireAuth,

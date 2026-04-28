@@ -1,7 +1,5 @@
 import { useMemo } from 'react';
-
 import * as Core from '@/core';
-// Import directly from local types to avoid circular dependency with @/hooks barrel
 import { AuthStatus, type AuthStatusResult } from './useAuthStatus.types';
 
 export function useAuthStatus(): AuthStatusResult {

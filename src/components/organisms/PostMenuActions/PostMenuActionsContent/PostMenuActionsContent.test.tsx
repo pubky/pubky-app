@@ -3,18 +3,19 @@ import { render, screen } from '@testing-library/react';
 import { Edit, FileText, Flag, Key, Link, MegaphoneOff, Trash, UserRoundPlus } from 'lucide-react';
 import { MENU_VARIANT } from '@/config/ui';
 import { PostMenuActionsContent } from './PostMenuActionsContent';
+import type { PostMenuActionItem } from '@/hooks/usePostMenuActions/usePostMenuActions.types';
+
 import {
   POST_MENU_ACTION_IDS,
   POST_MENU_ACTION_VARIANTS,
 } from '@/hooks/usePostMenuActions/usePostMenuActions.constants';
-import type { PostMenuActionItem } from '@/hooks/usePostMenuActions/usePostMenuActions.types';
 
 const mockUsePostMenuActions = vi.fn(() => ({
   menuItems: [] as PostMenuActionItem[],
   isLoading: false,
 }));
 
-vi.mock('@/hooks', () => ({
+vi.mock('@/hooks/usePostMenuActions/usePostMenuActions', () => ({
   usePostMenuActions: (_postId: string) => mockUsePostMenuActions(),
 }));
 

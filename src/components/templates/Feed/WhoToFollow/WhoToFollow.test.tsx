@@ -3,7 +3,7 @@ import { render, screen } from '@testing-library/react';
 import { WhoToFollow } from './WhoToFollow';
 
 // Mock Hooks
-vi.mock('@/hooks', () => ({
+vi.mock('@/hooks/useLayoutReset/useLayoutReset', () => ({
   useLayoutReset: vi.fn(),
 }));
 

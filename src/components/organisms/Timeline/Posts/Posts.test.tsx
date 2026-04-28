@@ -3,19 +3,19 @@ import { render, screen, waitFor } from '@testing-library/react';
 import { useRouter } from 'next/navigation';
 import { useLiveQuery } from 'dexie-react-hooks';
 import { TimelinePosts } from './Posts';
-import * as Hooks from '@/hooks';
+import { useInfiniteScroll } from '@/hooks/useInfiniteScroll/useInfiniteScroll';
+import { usePostNavigation } from '@/hooks/usePostNavigation/usePostNavigation';
 
 // Mock dependencies
 vi.mock('next/navigation');
 vi.mock('dexie-react-hooks');
-vi.mock('@/hooks', async (importOriginal) => {
-  const actual = await importOriginal<typeof import('@/hooks')>();
-  return {
-    ...actual,
-    usePostNavigation: vi.fn(),
-    useInfiniteScroll: vi.fn(),
-  };
-});
+vi.mock('@/hooks/usePostNavigation/usePostNavigation', () => ({
+  usePostNavigation: vi.fn(),
+}));
+
+vi.mock('@/hooks/useInfiniteScroll/useInfiniteScroll', () => ({
+  useInfiniteScroll: vi.fn(),
+}));
 
 // Mock components
 vi.mock('@/atoms', () => ({
@@ -59,8 +59,8 @@ vi.mock('@/organisms', () => ({
 const mockPush = vi.fn();
 const mockUseLiveQuery = vi.mocked(useLiveQuery);
 const mockUseRouter = vi.mocked(useRouter);
-const mockUsePostNavigation = vi.mocked(Hooks.usePostNavigation);
-const mockUseInfiniteScroll = vi.mocked(Hooks.useInfiniteScroll);
+const mockUsePostNavigation = vi.mocked(usePostNavigation);
+const mockUseInfiniteScroll = vi.mocked(useInfiniteScroll);
 
 const mockPostIds = ['author1:post1', 'author2:post2', 'author3:post3'];
 describe('TimelinePosts', () => {

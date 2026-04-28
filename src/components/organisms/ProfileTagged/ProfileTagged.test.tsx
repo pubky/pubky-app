@@ -1,7 +1,9 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen } from '@testing-library/react';
 import { ProfileTagged } from './ProfileTagged';
-import * as Hooks from '@/hooks';
+import { useCurrentUserProfile } from '@/hooks/useCurrentUserProfile/useCurrentUserProfile';
+import { useTagged } from '@/hooks/useTagged/useTagged';
+import { useUserProfile } from '@/hooks/useUserProfile/useUserProfile';
 
 // Mock providers
 vi.mock('@/providers', () => ({
@@ -13,9 +15,15 @@ vi.mock('@/providers', () => ({
 }));
 
 // Mock hooks
-vi.mock('@/hooks', () => ({
+vi.mock('@/hooks/useCurrentUserProfile/useCurrentUserProfile', () => ({
   useCurrentUserProfile: vi.fn(),
+}));
+
+vi.mock('@/hooks/useUserProfile/useUserProfile', () => ({
   useUserProfile: vi.fn(),
+}));
+
+vi.mock('@/hooks/useTagged/useTagged', () => ({
   useTagged: vi.fn(),
 }));
 
@@ -29,9 +37,9 @@ vi.mock('@/molecules', async (importOriginal) => {
   };
 });
 
-const mockUseCurrentUserProfile = vi.mocked(Hooks.useCurrentUserProfile);
-const mockUseUserProfile = vi.mocked(Hooks.useUserProfile);
-const mockUseTagged = vi.mocked(Hooks.useTagged);
+const mockUseCurrentUserProfile = vi.mocked(useCurrentUserProfile);
+const mockUseUserProfile = vi.mocked(useUserProfile);
+const mockUseTagged = vi.mocked(useTagged);
 
 const mockTaggedOneTag = {
   tags: [
@@ -79,11 +87,11 @@ beforeEach(() => {
   mockUseCurrentUserProfile.mockReturnValue({
     userDetails: { name: 'Satoshi' },
     currentUserPubky: 'test-user-pubky',
-  } as ReturnType<typeof Hooks.useCurrentUserProfile>);
+  } as ReturnType<typeof useCurrentUserProfile>);
   mockUseUserProfile.mockReturnValue({
     profile: { name: 'Satoshi' },
     isLoading: false,
-  } as ReturnType<typeof Hooks.useUserProfile>);
+  } as ReturnType<typeof useUserProfile>);
 });
 
 describe('ProfileTagged', () => {

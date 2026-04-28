@@ -7,12 +7,10 @@ import { PostHeaderTimestamp } from './PostHeaderTimestamp';
 
 const TEST_DATE = new Date('2025-06-01T12:00:00Z');
 
-const { mockUseIsMobile } = vi.hoisted(() => ({
-  mockUseIsMobile: vi.fn(() => true),
-}));
+const mockUseIsMobile = vi.hoisted(() => vi.fn(() => true));
 
-vi.mock('@/hooks/useIsMobile', () => ({
-  useIsMobile: () => mockUseIsMobile(),
+vi.mock('@/hooks/useIsMobile/useIsMobile', () => ({
+  useIsMobile: mockUseIsMobile,
 }));
 
 vi.mock('@/atoms', async (importOriginal) => {

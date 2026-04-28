@@ -26,40 +26,23 @@ let mockActions: ProfileActions = {
 };
 
 // Mock direct imports (used by useProfileHeader)
-vi.mock('@/hooks/useUserProfile', () => ({
+vi.mock('@/hooks/useUserProfile/useUserProfile', () => ({
   useUserProfile: vi.fn(() => ({
     profile: mockProfile,
     isLoading: mockProfileLoading,
   })),
 }));
 
-vi.mock('@/hooks/useProfileStats', () => ({
+vi.mock('@/hooks/useProfileStats/useProfileStats', () => ({
   useProfileStats: vi.fn(() => ({
     stats: mockStats,
     isLoading: mockStatsLoading,
   })),
 }));
 
-vi.mock('@/hooks/useProfileActions', () => ({
+vi.mock('@/hooks/useProfileActions/useProfileActions', () => ({
   useProfileActions: vi.fn(() => mockActions),
 }));
-
-// Mock barrel export (for compatibility)
-vi.mock('@/hooks', async (importOriginal) => {
-  const actual = await importOriginal<typeof import('@/hooks')>();
-  return {
-    ...actual,
-    useUserProfile: vi.fn(() => ({
-      profile: mockProfile,
-      isLoading: mockProfileLoading,
-    })),
-    useProfileStats: vi.fn(() => ({
-      stats: mockStats,
-      isLoading: mockStatsLoading,
-    })),
-    useProfileActions: vi.fn(() => mockActions),
-  };
-});
 
 describe('useProfileHeader', () => {
   beforeEach(() => {

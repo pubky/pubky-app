@@ -3,7 +3,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { useLiveQuery } from 'dexie-react-hooks';
 import { FeedbackCard } from './FeedbackCard';
 import * as Core from '@/core';
-import * as Hooks from '@/hooks';
+import { useCurrentUserProfile } from '@/hooks/useCurrentUserProfile/useCurrentUserProfile';
 
 // Mock dexie-react-hooks
 vi.mock('dexie-react-hooks', () => ({
@@ -29,15 +29,9 @@ vi.mock('@/core', async (importOriginal) => {
   };
 });
 
-// Mock Hooks module - passthrough to the real implementation but using mocked dependencies
-vi.mock('@/hooks', async (importOriginal) => {
-  const actual = await importOriginal<typeof import('@/hooks')>();
-  return {
-    ...actual,
-    useCurrentUserProfile: vi.fn(),
-    // useAvatarUrl will use the real implementation which calls our mocked FileController
-  };
-});
+vi.mock('@/hooks/useCurrentUserProfile/useCurrentUserProfile', () => ({
+  useCurrentUserProfile: vi.fn(),
+}));
 
 // Mock Organisms
 vi.mock('@/organisms', async (importOriginal) => {
@@ -141,12 +135,12 @@ describe('FeedbackCard', () => {
   const mockPubky = 'user123pubky';
   const mockUseLiveQuery = vi.mocked(useLiveQuery);
   const mockUseAuthStore = vi.mocked(Core.useAuthStore);
-  const mockUseCurrentUserProfile = vi.mocked(Hooks.useCurrentUserProfile);
+  const mockUseCurrentUserProfile = vi.mocked(useCurrentUserProfile);
 
   beforeEach(() => {
     vi.clearAllMocks();
     // Make useCurrentUserProfile delegate to the existing mocks
-    mockUseCurrentUserProfile.mockImplementation((): Hooks.UseCurrentUserProfileResult => {
+    mockUseCurrentUserProfile.mockImplementation((): ReturnType<typeof useCurrentUserProfile> => {
       const currentUserPubky = mockUseAuthStore(
         (state: { currentUserPubky: string | null }) => state.currentUserPubky,
       ) as string | null;
@@ -442,12 +436,12 @@ describe('FeedbackCard - Snapshots', () => {
   const mockPubky = 'user123pubky';
   const mockUseLiveQuery = vi.mocked(useLiveQuery);
   const mockUseAuthStore = vi.mocked(Core.useAuthStore);
-  const mockUseCurrentUserProfile = vi.mocked(Hooks.useCurrentUserProfile);
+  const mockUseCurrentUserProfile = vi.mocked(useCurrentUserProfile);
 
   beforeEach(() => {
     vi.clearAllMocks();
     // Make useCurrentUserProfile delegate to the existing mocks
-    mockUseCurrentUserProfile.mockImplementation((): Hooks.UseCurrentUserProfileResult => {
+    mockUseCurrentUserProfile.mockImplementation((): ReturnType<typeof useCurrentUserProfile> => {
       const currentUserPubky = mockUseAuthStore(
         (state: { currentUserPubky: string | null }) => state.currentUserPubky,
       ) as string | null;

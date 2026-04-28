@@ -13,6 +13,7 @@ import type { PostTagsPanelProps, PostTagsPanelHandle } from './PostTagsPanel.ty
 import { PostTagsPanelSkeleton } from './PostTagsPanel.skeleton';
 import { Tag } from 'lucide-react';
 import { cn } from '@/libs/utils/utils';
+
 const INITIAL_VISIBLE_TAGS = 3;
 
 /**

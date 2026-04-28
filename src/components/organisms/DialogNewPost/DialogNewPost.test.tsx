@@ -1,6 +1,7 @@
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { DialogNewPost } from './DialogNewPost';
+import { useKeyboardOffset } from '@/hooks/useKeyboardOffset/useKeyboardOffset';
 
 // Mock molecules
 vi.mock('@/molecules', () => ({
@@ -119,8 +120,19 @@ vi.mock('@/atoms', () => ({
 // Use real libs - use actual implementations
 
 // Mock Hooks
-vi.mock('@/hooks', () => {
-  const mockUseKeyboardOffset = vi.fn((options) => {
+vi.mock('@/hooks/useConfirmableDialog/useConfirmableDialog', () => ({
+  useConfirmableDialog: vi.fn(() => ({
+    showConfirmDialog: false,
+    setShowConfirmDialog: vi.fn(),
+    resetKey: 'test-key',
+    handleContentChange: vi.fn(),
+    handleOpenChange: vi.fn(),
+    handleDiscard: vi.fn(),
+  })),
+}));
+
+vi.mock('@/hooks/useKeyboardOffset/useKeyboardOffset', () => ({
+  useKeyboardOffset: vi.fn((options?: { offsetAdjustment?: number }) => {
     // Mock behavior: if offsetAdjustment is provided, subtract it from a base offset
     const baseOffset = 300;
     const adjustment = options?.offsetAdjustment || 0;
@@ -128,26 +140,14 @@ vi.mock('@/hooks', () => {
       isKeyboardVisible: false,
       keyboardOffset: Math.max(0, baseOffset - adjustment),
     };
-  });
-  return {
-    useConfirmableDialog: vi.fn(() => ({
-      showConfirmDialog: false,
-      setShowConfirmDialog: vi.fn(),
-      resetKey: 'test-key',
-      handleContentChange: vi.fn(),
-      handleOpenChange: vi.fn(),
-      handleDiscard: vi.fn(),
-    })),
-    useKeyboardOffset: mockUseKeyboardOffset,
-  };
-});
+  }),
+}));
 
 describe('DialogNewPost', () => {
   beforeEach(async () => {
     vi.clearAllMocks();
 
     // Reset keyboard offset mock
-    const { useKeyboardOffset } = await import('@/hooks');
     vi.mocked(useKeyboardOffset).mockReturnValue({ isKeyboardVisible: false, keyboardOffset: 0 });
   });
 
@@ -227,7 +227,6 @@ describe('DialogNewPost', () => {
   });
 
   it('applies transform when keyboard is visible with offsetAdjustment', async () => {
-    const { useKeyboardOffset } = await import('@/hooks');
     // Mock returns offset with adjustment already applied (300 - 200 = 100)
     vi.mocked(useKeyboardOffset).mockReturnValue({ isKeyboardVisible: true, keyboardOffset: 100 });
 
@@ -241,7 +240,6 @@ describe('DialogNewPost', () => {
   });
 
   it('does not apply transform when keyboard is not visible', async () => {
-    const { useKeyboardOffset } = await import('@/hooks');
     vi.mocked(useKeyboardOffset).mockReturnValue({ isKeyboardVisible: false, keyboardOffset: 0 });
 
     const onOpenChangeAction = vi.fn();
@@ -253,8 +251,6 @@ describe('DialogNewPost', () => {
   });
 
   it('adds transition class only when keyboard is visible', async () => {
-    const { useKeyboardOffset } = await import('@/hooks');
-
     // When keyboard is not visible, no transition
     vi.mocked(useKeyboardOffset).mockReturnValue({ isKeyboardVisible: false, keyboardOffset: 0 });
     const onOpenChangeAction = vi.fn();
@@ -270,7 +266,6 @@ describe('DialogNewPost', () => {
   });
 
   it('calls useKeyboardOffset with offsetAdjustment of 200', async () => {
-    const { useKeyboardOffset } = await import('@/hooks');
     const onOpenChangeAction = vi.fn();
 
     render(<DialogNewPost open={true} onOpenChangeAction={onOpenChangeAction} />);

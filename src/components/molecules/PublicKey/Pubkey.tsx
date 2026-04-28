@@ -4,7 +4,6 @@ import { useInviteCodeSignUp } from '@/hooks/useInviteCodeSignUp/useInviteCodeSi
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useTranslations } from 'next-intl';
-
 import * as Molecules from '@/molecules';
 import * as Atoms from '@/atoms';
 import * as Core from '@/core';

@@ -8,12 +8,13 @@ import * as Atoms from '@/atoms';
 import * as Molecules from '@/molecules';
 import * as Core from '@/core';
 import type { ClickableTagsListProps } from './ClickableTagsList.types';
+import { cn, generateRandomColor, getDisplayTags } from '@/libs/utils/utils';
+
 import {
   CLICKABLE_TAGS_DEFAULT_MAX_LENGTH,
   CLICKABLE_TAGS_DEFAULT_MAX_TOTAL_CHARS,
   CLICKABLE_TAGS_DEFAULT_MAX_TAGS,
 } from '@/config';
-import { cn, generateRandomColor, getDisplayTags } from '@/libs/utils/utils';
 
 /**
  * ClickableTagsList

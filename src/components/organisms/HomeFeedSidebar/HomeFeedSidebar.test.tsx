@@ -37,7 +37,7 @@ const mockUseFeedLayoutResolution = vi.fn(() => ({
   isPhoneViewport: false,
 }));
 
-vi.mock('@/hooks', () => ({
+vi.mock('@/hooks/useFeedLayoutResolution/useFeedLayoutResolution', () => ({
   useFeedLayoutResolution: () => mockUseFeedLayoutResolution(),
 }));
 

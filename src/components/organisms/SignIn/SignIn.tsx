@@ -8,11 +8,11 @@ import { useTranslations } from 'next-intl';
 import * as Atoms from '@/atoms';
 import * as Molecules from '@/molecules';
 import * as Core from '@/core';
-
-// Step configuration for the progress display (labels are translation keys)
 import { CheckCircle, Loader2, Circle, QrCode, Key } from 'lucide-react';
 import { Logger } from '@/libs/logger/logger';
 import { cn } from '@/libs/utils/utils';
+
+// Step configuration for the progress display (labels are translation keys)
 const SIGN_IN_STEPS = [
   {
     key: 'profileChecked',

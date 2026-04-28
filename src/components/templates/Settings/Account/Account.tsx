@@ -8,6 +8,7 @@ import * as Molecules from '@/molecules';
 import * as Organisms from '@/organisms';
 import * as App from '@/app';
 import { UserRound, LogOut, Pencil, LockKeyhole, Trash2 } from 'lucide-react';
+
 export function Account() {
   const router = useRouter();
   const t = useTranslations('settings.account');

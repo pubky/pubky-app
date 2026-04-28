@@ -3,10 +3,25 @@ import { render, screen, waitFor } from '@testing-library/react';
 import { TIMELINE_FEED_VARIANT } from '@/config';
 import { PubkyAppFeedLayout, PubkyAppFeedReach, PubkyAppFeedSort } from 'pubky-app-specs';
 import { TimelineFeed, useTimelineFeedContext } from './TimelineFeed';
-import * as Hooks from '@/hooks';
+import { useBookmarksStreamId } from '@/hooks/useBookmarksStreamId/useBookmarksStreamId';
+import { useCustomFeed } from '@/hooks/useCustomFeed/useCustomFeed';
+import { useCustomStreamId } from '@/hooks/useCustomStreamId/useCustomStreamId';
+import { useFeedLayoutResolution } from '@/hooks/useFeedLayoutResolution/useFeedLayoutResolution';
+import { useStreamIdFromFilters } from '@/hooks/useStreamIdFromFilters/useStreamIdFromFilters';
+import { useStreamPagination } from '@/hooks/useStreamPagination/useStreamPagination';
 import * as Providers from '@/providers';
 import * as Core from '@/core';
 import { asInvalid } from '@/test-utils';
+import type { UsePullToRefreshResult } from '@/hooks/usePullToRefresh/usePullToRefresh.types';
+
+const mockUsePullToRefresh = vi.hoisted(() =>
+  vi.fn(
+    (): UsePullToRefreshResult => ({
+      state: 'idle',
+      pullDistance: 0,
+    }),
+  ),
+);
 
 // Mock next/navigation for useSearchParams used by useSearchStreamId
 vi.mock('next/navigation', () => ({
@@ -18,55 +33,65 @@ vi.mock('next/navigation', () => ({
 }));
 
 // Mock dependencies
-vi.mock('@/hooks', async (importOriginal) => {
-  const actual = await importOriginal<typeof import('@/hooks')>();
-  return {
-    ...actual,
-    useStreamIdFromFilters: vi.fn(),
-    useBookmarksStreamId: vi.fn(),
-    useHotStreamId: vi.fn(() => 'total_engagement:all:all' as Core.PostStreamId),
-    useCustomFeed: vi.fn(),
-    useCustomStreamId: vi.fn(),
-    useStreamPagination: vi.fn(),
-    useFeedLayoutResolution: vi.fn(() => ({
-      requestedLayout: 'columns',
-      effectiveLayout: 'columns',
-      isVisualRequested: false,
-      isVisualActive: false,
-      isPhoneViewport: false,
-    })),
-    useMutedUsers: vi.fn(() => ({
-      mutedUserIds: [],
-      mutedUserIdSet: new Set(),
-      isMuted: vi.fn(() => false),
-      isLoading: false,
-    })),
-  };
-});
+vi.mock('@/hooks/useStreamIdFromFilters/useStreamIdFromFilters', () => ({
+  useStreamIdFromFilters: vi.fn(),
+}));
+
+vi.mock('@/hooks/useBookmarksStreamId/useBookmarksStreamId', () => ({
+  useBookmarksStreamId: vi.fn(),
+}));
+
+vi.mock('@/hooks/useHotStreamId/useHotStreamId', () => ({
+  useHotStreamId: vi.fn(() => 'total_engagement:all:all' as Core.PostStreamId),
+}));
+
+vi.mock('@/hooks/useCustomFeed/useCustomFeed', () => ({
+  useCustomFeed: vi.fn(),
+}));
+
+vi.mock('@/hooks/useCustomStreamId/useCustomStreamId', () => ({
+  useCustomStreamId: vi.fn(),
+}));
+
+vi.mock('@/hooks/useStreamPagination/useStreamPagination', () => ({
+  useStreamPagination: vi.fn(),
+}));
+
+vi.mock('@/hooks/useFeedLayoutResolution/useFeedLayoutResolution', () => ({
+  useFeedLayoutResolution: vi.fn(() => ({
+    requestedLayout: 'columns',
+    effectiveLayout: 'columns',
+    isVisualRequested: false,
+    isVisualActive: false,
+    isPhoneViewport: false,
+  })),
+}));
+
+vi.mock('@/hooks/useMutedUsers/useMutedUsers', () => ({
+  useMutedUsers: vi.fn(() => ({
+    mutedUserIds: [],
+    mutedUserIdSet: new Set(),
+    isMuted: vi.fn(() => false),
+    isLoading: false,
+  })),
+}));
 
 // Mock useSearchStreamId hook
-vi.mock('@/hooks/useSearchStreamId', () => ({
+vi.mock('@/hooks/useSearchStreamId/useSearchStreamId', () => ({
   useSearchStreamId: vi.fn(() => 'tags:test' as Core.PostStreamId),
   useSearchTags: vi.fn(() => []),
 }));
 
 // Mock the new hooks used in TimelineFeed
-vi.mock('@/hooks/useUnreadPosts', () => ({
+vi.mock('@/hooks/useUnreadPosts/useUnreadPosts', () => ({
   useUnreadPosts: vi.fn(() => ({ unreadPostIds: [], unreadCount: 0 })),
 }));
 
-vi.mock('@/hooks/useIsScrolledFromTop', () => ({
+vi.mock('@/hooks/useIsScrolledFromTop/useIsScrolledFromTop', () => ({
   useIsScrolledFromTop: vi.fn(() => false),
 }));
 
-const { mockUsePullToRefresh } = vi.hoisted(() => ({
-  mockUsePullToRefresh: vi.fn((): import('@/hooks/usePullToRefresh/usePullToRefresh.types').UsePullToRefreshResult => ({
-    state: 'idle',
-    pullDistance: 0,
-  })),
-}));
-
-vi.mock('@/hooks/usePullToRefresh', () => ({
+vi.mock('@/hooks/usePullToRefresh/usePullToRefresh', () => ({
   usePullToRefresh: mockUsePullToRefresh,
 }));
 
@@ -142,12 +167,12 @@ vi.mock('./VisualTimelinePosts', () => ({
   ),
 }));
 
-const mockUseStreamIdFromFilters = vi.mocked(Hooks.useStreamIdFromFilters);
-const mockUseCustomFeed = vi.mocked(Hooks.useCustomFeed);
-const mockUseCustomStreamId = vi.mocked(Hooks.useCustomStreamId);
-const mockUseBookmarksStreamId = vi.mocked(Hooks.useBookmarksStreamId);
-const mockUseStreamPagination = vi.mocked(Hooks.useStreamPagination);
-const mockUseFeedLayoutResolution = vi.mocked(Hooks.useFeedLayoutResolution);
+const mockUseStreamIdFromFilters = vi.mocked(useStreamIdFromFilters);
+const mockUseCustomFeed = vi.mocked(useCustomFeed);
+const mockUseCustomStreamId = vi.mocked(useCustomStreamId);
+const mockUseBookmarksStreamId = vi.mocked(useBookmarksStreamId);
+const mockUseStreamPagination = vi.mocked(useStreamPagination);
+const mockUseFeedLayoutResolution = vi.mocked(useFeedLayoutResolution);
 
 const mockPrependPosts = vi.fn();
 const mockLoadMore = vi.fn();

@@ -6,7 +6,7 @@ import type { FeedModelSchema } from '@/core/models/feed/feed.schema';
 
 // Mock hooks
 const mockUseCustomFeed = vi.fn();
-vi.mock('@/hooks', () => ({
+vi.mock('@/hooks/useCustomFeed/useCustomFeed', () => ({
   useCustomFeed: () => mockUseCustomFeed(),
 }));
 

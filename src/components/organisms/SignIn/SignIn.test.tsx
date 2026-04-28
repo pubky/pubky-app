@@ -4,6 +4,7 @@ import React from 'react';
 import messages from '../../../../messages/en.json';
 import { asOpaque } from '@/test-utils';
 import { SignInContent, SignInFooter } from './SignIn';
+import { useMobileAuth } from '@/hooks/useMobileAuth/useMobileAuth';
 
 // Mock Next.js router
 const mockPush = vi.fn();
@@ -77,21 +78,17 @@ const { mockFetchUrl, mockCopyAuthUrl, mockOnAuthorizeClick } = vi.hoisted(() =>
   mockCopyAuthUrl: vi.fn().mockResolvedValue(undefined),
   mockOnAuthorizeClick: vi.fn(),
 }));
-vi.mock('@/hooks', async (importOriginal) => {
-  const actual = await importOriginal<typeof import('@/hooks')>();
-  return {
-    ...actual,
-    useMobileAuth: vi.fn(() => ({
-      url: 'mock-auth-url',
-      isLoading: false,
-      isExpired: false,
-      fetchUrl: mockFetchUrl,
-      copyAuthUrl: mockCopyAuthUrl,
-      isOpeningRing: false,
-      onAuthorizeClick: mockOnAuthorizeClick,
-    })),
-  };
-});
+vi.mock('@/hooks/useMobileAuth/useMobileAuth', () => ({
+  useMobileAuth: vi.fn(() => ({
+    url: 'mock-auth-url',
+    isLoading: false,
+    isExpired: false,
+    fetchUrl: mockFetchUrl,
+    copyAuthUrl: mockCopyAuthUrl,
+    isOpeningRing: false,
+    onAuthorizeClick: mockOnAuthorizeClick,
+  })),
+}));
 
 // Mock molecules - use real DialogAuthExpired (Radix) per component-testing rules
 vi.mock('@/molecules', async (importOriginal) => {
@@ -338,8 +335,7 @@ describe('SignInContent', () => {
   // Note: Unmount cleanup and request deduplication are tested in useAuthUrl.test.tsx
 
   it('button disabled when loading', async () => {
-    const Hooks = await import('@/hooks');
-    vi.mocked(Hooks.useMobileAuth).mockReturnValue({
+    vi.mocked(useMobileAuth).mockReturnValue({
       url: '',
       isLoading: true,
       isExpired: false,
@@ -371,8 +367,7 @@ describe('SignInContent', () => {
   // Note: Loading state tests removed due to complexity with async mocking
 
   it('copies auth URL to clipboard when QR code is clicked', async () => {
-    const Hooks = await import('@/hooks');
-    vi.mocked(Hooks.useMobileAuth).mockReturnValue({
+    vi.mocked(useMobileAuth).mockReturnValue({
       url: 'pubkyring://authorize?token=test123',
       isLoading: false,
       isExpired: false,
@@ -402,8 +397,7 @@ describe('SignInContent', () => {
   });
 
   it('opens expired dialog and disables authorize action when auth flow is expired', async () => {
-    const Hooks = await import('@/hooks');
-    vi.mocked(Hooks.useMobileAuth).mockReturnValue({
+    vi.mocked(useMobileAuth).mockReturnValue({
       url: '',
       isLoading: false,
       isExpired: true,
@@ -422,8 +416,7 @@ describe('SignInContent', () => {
   });
 
   it('calls fetchUrl when expired dialog refresh button is clicked', async () => {
-    const Hooks = await import('@/hooks');
-    vi.mocked(Hooks.useMobileAuth).mockReturnValue({
+    vi.mocked(useMobileAuth).mockReturnValue({
       url: '',
       isLoading: false,
       isExpired: true,

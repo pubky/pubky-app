@@ -1,6 +1,5 @@
 'use client';
 
-// Direct import to avoid circular dependency (this hook is exported from @/hooks)
 import { useReplyStream } from '@/hooks/useReplyStream/useReplyStream';
 import { DEFAULT_MAX_THREAD_REPLIES } from './useThreadReplies.constants';
 import type { UseThreadRepliesOptions, UseThreadRepliesResult } from './useThreadReplies.types';

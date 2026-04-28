@@ -12,6 +12,7 @@ import { mapUserIdsToMutedUsers } from './MutedUsersList.utils';
 import { Megaphone } from 'lucide-react';
 import { isAppError } from '@/libs/error/error.utils';
 import { extractInitials, truncateMiddle } from '@/libs/utils/utils';
+
 export function MutedUsersList() {
   const t = useTranslations('mutedUsers');
   const tCommon = useTranslations('common');

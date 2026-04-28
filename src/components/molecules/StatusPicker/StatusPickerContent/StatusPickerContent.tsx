@@ -10,6 +10,7 @@ import * as Types from './index';
 import { Check, Smile } from 'lucide-react';
 import { parseStatus } from '@/libs/status/status';
 import { cn } from '@/libs/utils/utils';
+
 export function StatusPickerContent({ onStatusSelect, currentStatus }: Types.StatusPickerContentProps) {
   const t = useTranslations('status');
   const [customStatus, setCustomStatus] = useState('');

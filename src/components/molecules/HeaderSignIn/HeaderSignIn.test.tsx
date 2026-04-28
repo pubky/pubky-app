@@ -8,7 +8,7 @@ const mockUseCurrentUserProfile = vi.fn(() => ({
   currentUserPubky: 'test-pubky-123' as string | null,
 }));
 
-vi.mock('@/hooks', () => ({
+vi.mock('@/hooks/useCurrentUserProfile/useCurrentUserProfile', () => ({
   useCurrentUserProfile: () => mockUseCurrentUserProfile(),
 }));
 

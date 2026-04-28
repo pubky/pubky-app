@@ -3,7 +3,7 @@ import { renderHook, waitFor, act } from '@testing-library/react';
 import { useNotifications } from './useNotifications';
 import { NotificationType } from '@/core';
 import * as Core from '@/core';
-import { useMutedUsers } from '@/hooks/useMutedUsers';
+import { useMutedUsers } from '@/hooks/useMutedUsers/useMutedUsers';
 
 // Hoist mock data
 const { mockCurrentUserPubky, setMockCurrentUserPubky, mockUnreadCount, setMockUnreadCount } = vi.hoisted(() => {
@@ -54,7 +54,7 @@ vi.mock('@/config', async (importOriginal) => {
   };
 });
 
-vi.mock('@/hooks/useMutedUsers', () => ({
+vi.mock('@/hooks/useMutedUsers/useMutedUsers', () => ({
   useMutedUsers: vi.fn(() => ({
     mutedUserIds: [],
     mutedUserIdSet: new Set(),

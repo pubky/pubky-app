@@ -2,7 +2,7 @@ import { describe, it, expect, vi } from 'vitest';
 import { useState, useEffect } from 'react';
 import { render, fireEvent, screen, act } from '@testing-library/react';
 import { DialogBackupPhrase } from './DialogBackupPhrase';
-import { useRecoveryPhraseValidation } from '@/hooks';
+import { useRecoveryPhraseValidation } from '@/hooks/useRecoveryPhraseValidation/useRecoveryPhraseValidation';
 
 const dialogMockControls: {
   onOpenChange?: (open: boolean) => void;

@@ -1,40 +1,39 @@
 import { describe, it, expect, vi } from 'vitest';
 import { render, screen } from '@testing-library/react';
 import { NotificationsContainer } from './NotificationsContainer';
-import * as Hooks from '@/hooks';
+import { useNotifications } from '@/hooks/useNotifications/useNotifications';
 import { NotificationType } from '@/core/models/notification/notification.types';
 
 // Mock useNotifications hook
-vi.mock('@/hooks', async (importOriginal) => {
-  const actual = await importOriginal<typeof import('@/hooks')>();
-  return {
-    ...actual,
-    useNotifications: vi.fn(() => ({
-      notifications: [
-        {
-          id: 'follow:123:user1',
-          type: NotificationType.Follow,
-          timestamp: Date.now() - 1000 * 60 * 30,
-          followed_by: 'user1',
-        },
-      ],
-      unreadNotifications: [],
-      count: 27,
-      unreadCount: 0,
-      isLoading: false,
-      isLoadingMore: false,
-      hasMore: false,
-      error: null,
-      loadMore: vi.fn(),
-      refresh: vi.fn(),
-      markAllAsRead: vi.fn(),
-      isNotificationUnread: vi.fn(() => false),
-    })),
-    useInfiniteScroll: vi.fn(() => ({
-      sentinelRef: vi.fn(),
-    })),
-  };
-});
+vi.mock('@/hooks/useNotifications/useNotifications', () => ({
+  useNotifications: vi.fn(() => ({
+    notifications: [
+      {
+        id: 'follow:123:user1',
+        type: NotificationType.Follow,
+        timestamp: Date.now() - 1000 * 60 * 30,
+        followed_by: 'user1',
+      },
+    ],
+    unreadNotifications: [],
+    count: 27,
+    unreadCount: 0,
+    isLoading: false,
+    isLoadingMore: false,
+    hasMore: false,
+    error: null,
+    loadMore: vi.fn(),
+    refresh: vi.fn(),
+    markAllAsRead: vi.fn(),
+    isNotificationUnread: vi.fn(() => false),
+  })),
+}));
+
+vi.mock('@/hooks/useInfiniteScroll/useInfiniteScroll', () => ({
+  useInfiniteScroll: vi.fn(() => ({
+    sentinelRef: vi.fn(),
+  })),
+}));
 
 // Mock atoms
 vi.mock('@/atoms', () => ({
@@ -89,7 +88,7 @@ describe('NotificationsContainer', () => {
   });
 
   it('shows loading state', () => {
-    vi.mocked(Hooks.useNotifications).mockReturnValueOnce({
+    vi.mocked(useNotifications).mockReturnValueOnce({
       notifications: [],
       unreadNotifications: [],
       count: 0,
@@ -108,7 +107,7 @@ describe('NotificationsContainer', () => {
   });
 
   it('shows empty state when no notifications', () => {
-    vi.mocked(Hooks.useNotifications).mockReturnValueOnce({
+    vi.mocked(useNotifications).mockReturnValueOnce({
       notifications: [],
       unreadNotifications: [],
       count: 0,
@@ -127,7 +126,7 @@ describe('NotificationsContainer', () => {
   });
 
   it('shows error state', () => {
-    vi.mocked(Hooks.useNotifications).mockReturnValueOnce({
+    vi.mocked(useNotifications).mockReturnValueOnce({
       notifications: [],
       unreadNotifications: [],
       count: 0,
@@ -146,7 +145,7 @@ describe('NotificationsContainer', () => {
   });
 
   it('shows loading more indicator when paginating', () => {
-    vi.mocked(Hooks.useNotifications).mockReturnValueOnce({
+    vi.mocked(useNotifications).mockReturnValueOnce({
       notifications: [
         {
           id: 'follow:123:user1',
@@ -173,7 +172,7 @@ describe('NotificationsContainer', () => {
 
   it('calls markAllAsRead on mount and not on unmount', () => {
     const markAllAsRead = vi.fn();
-    vi.mocked(Hooks.useNotifications).mockReturnValue({
+    vi.mocked(useNotifications).mockReturnValue({
       notifications: [
         {
           id: 'follow:123:user1',

@@ -1,11 +1,11 @@
 import { render, screen, fireEvent } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { PostInputActionBar } from './PostInputActionBar';
-import * as Hooks from '@/hooks';
+import { useIsMobile } from '@/hooks/useIsMobile/useIsMobile';
 
 // Use real libs - use actual implementations
 
-vi.mock('@/hooks', () => ({
+vi.mock('@/hooks/useIsMobile/useIsMobile', () => ({
   useIsMobile: vi.fn(() => false),
 }));
 
@@ -76,7 +76,7 @@ vi.mock('@/atoms', () => ({
 }));
 
 describe('PostInputActionBar', () => {
-  const mockUseIsMobile = vi.mocked(Hooks.useIsMobile);
+  const mockUseIsMobile = vi.mocked(useIsMobile);
 
   beforeEach(() => {
     vi.clearAllMocks();

@@ -6,6 +6,8 @@ import { useRequireAuth } from '@/hooks/useRequireAuth/useRequireAuth';
 import { useState } from 'react';
 import * as Atoms from '@/atoms';
 import * as Organisms from '@/organisms';
+import { Plus } from 'lucide-react';
+import { cn } from '@/libs/utils/utils';
 
 /**
  * Floating Action Button (FAB) for creating new posts.
@@ -20,8 +22,6 @@ import * as Organisms from '@/organisms';
  * - 72px is the current height of the footer navigation bar.
  * - md breakpoint uses 80px for additional spacing.
  */
-import { Plus } from 'lucide-react';
-import { cn } from '@/libs/utils/utils';
 export function NewPostCTA() {
   const [open, setOpen] = useState(false);
   const { isFullyAuthenticated, isLoading } = useAuthStatus();

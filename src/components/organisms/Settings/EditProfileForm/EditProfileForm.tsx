@@ -10,6 +10,7 @@ import { useTranslations } from 'next-intl';
 import { EditProfileFormSkeleton } from './EditProfileForm.skeleton';
 import { Trash2, File } from 'lucide-react';
 import { extractInitials } from '@/libs/utils/utils';
+
 export const EditProfileForm = () => {
   const t = useTranslations('forms.profile');
   const tCommon = useTranslations('common');

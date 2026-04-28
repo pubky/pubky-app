@@ -23,13 +23,9 @@ vi.mock('@/molecules', async (importOriginal) => {
 
 // Mock useCurrentUserProfile hook
 const mockUseCurrentUserProfile = vi.fn();
-vi.mock('@/hooks', async (importOriginal) => {
-  const actual = await importOriginal<typeof import('@/hooks')>();
-  return {
-    ...actual,
-    useCurrentUserProfile: () => mockUseCurrentUserProfile(),
-  };
-});
+vi.mock('@/hooks/useCurrentUserProfile/useCurrentUserProfile', () => ({
+  useCurrentUserProfile: () => mockUseCurrentUserProfile(),
+}));
 
 describe('useFeedback', () => {
   beforeEach(() => {

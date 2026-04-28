@@ -4,7 +4,7 @@ import { forwardRef, useImperativeHandle, useRef, type ReactElement } from 'reac
 import { SinglePostCard } from './SinglePostCard';
 import { PostMainLayoutProvider } from '@/organisms/PostMain/PostMainLayout';
 import type { TagsLayout } from '@/organisms/PostMain/PostMain.types';
-import * as Hooks from '@/hooks';
+import { useIsMobile } from '@/hooks/useIsMobile/useIsMobile';
 
 const { mockPostHeader, mockPostTagsPanelFocus } = vi.hoisted(() => ({
   mockPostHeader: vi.fn(
@@ -15,7 +15,7 @@ const { mockPostHeader, mockPostTagsPanelFocus } = vi.hoisted(() => ({
   mockPostTagsPanelFocus: vi.fn(),
 }));
 
-vi.mock('@/hooks', () => ({
+vi.mock('@/hooks/useIsMobile/useIsMobile', () => ({
   useIsMobile: vi.fn(() => false),
 }));
 
@@ -126,7 +126,7 @@ vi.mock('@/atoms', () => ({
 
 describe('SinglePostCard', () => {
   const mockPostId = 'author:post123';
-  const mockUseIsMobile = vi.mocked(Hooks.useIsMobile);
+  const mockUseIsMobile = vi.mocked(useIsMobile);
 
   function renderWithLayout(ui: ReactElement, tagsLayout: TagsLayout = 'inline') {
     return render(<PostMainLayoutProvider tagsLayout={tagsLayout}>{ui}</PostMainLayoutProvider>);

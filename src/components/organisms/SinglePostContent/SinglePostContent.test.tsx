@@ -4,7 +4,11 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { SinglePostContent } from './SinglePostContent';
 import * as Core from '@/core';
 import type { UseRequireAuthResult } from '@/hooks/useRequireAuth/useRequireAuth.types';
-import * as Hooks from '@/hooks';
+import { usePostAncestors } from '@/hooks/usePostAncestors/usePostAncestors';
+import { usePostCounts } from '@/hooks/usePostCounts/usePostCounts';
+import { usePostDetails } from '@/hooks/usePostDetails/usePostDetails';
+import { useRequireAuth } from '@/hooks/useRequireAuth/useRequireAuth';
+import { useUserDetailsFromIds } from '@/hooks/useUserDetailsFromIds/useUserDetailsFromIds';
 
 // Mock hooks
 const mockUseRequireAuth = vi.fn(
@@ -50,11 +54,23 @@ const mockUseUserDetailsFromIds = vi.fn(() => ({
   isLoading: false,
 }));
 
-vi.mock('@/hooks', () => ({
+vi.mock('@/hooks/usePostDetails/usePostDetails', () => ({
   usePostDetails: vi.fn(),
+}));
+
+vi.mock('@/hooks/useRequireAuth/useRequireAuth', () => ({
   useRequireAuth: vi.fn(),
+}));
+
+vi.mock('@/hooks/usePostCounts/usePostCounts', () => ({
   usePostCounts: vi.fn(),
+}));
+
+vi.mock('@/hooks/usePostAncestors/usePostAncestors', () => ({
   usePostAncestors: vi.fn(),
+}));
+
+vi.mock('@/hooks/useUserDetailsFromIds/useUserDetailsFromIds', () => ({
   useUserDetailsFromIds: vi.fn(),
 }));
 
@@ -172,11 +188,11 @@ describe('SinglePostContent', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     Core.useHomeStore.getState().reset();
-    vi.mocked(Hooks.useRequireAuth).mockReturnValue(mockUseRequireAuth());
-    vi.mocked(Hooks.usePostDetails).mockReturnValue(mockUsePostDetails());
-    vi.mocked(Hooks.usePostCounts).mockReturnValue(mockUsePostCounts());
-    vi.mocked(Hooks.usePostAncestors).mockReturnValue(mockUsePostAncestors());
-    vi.mocked(Hooks.useUserDetailsFromIds).mockReturnValue(mockUseUserDetailsFromIds());
+    vi.mocked(useRequireAuth).mockReturnValue(mockUseRequireAuth());
+    vi.mocked(usePostDetails).mockReturnValue(mockUsePostDetails());
+    vi.mocked(usePostCounts).mockReturnValue(mockUsePostCounts());
+    vi.mocked(usePostAncestors).mockReturnValue(mockUsePostAncestors());
+    vi.mocked(useUserDetailsFromIds).mockReturnValue(mockUseUserDetailsFromIds());
   });
 
   describe('rendering', () => {
@@ -198,7 +214,7 @@ describe('SinglePostContent', () => {
     });
 
     it('renders SinglePostArticle for long posts', () => {
-      vi.mocked(Hooks.usePostDetails).mockReturnValue({
+      vi.mocked(usePostDetails).mockReturnValue({
         postDetails: {
           id: mockPostId,
           indexed_at: Date.now(),
@@ -219,7 +235,7 @@ describe('SinglePostContent', () => {
     });
 
     it('renders loading text when postDetails is not available', () => {
-      vi.mocked(Hooks.usePostDetails).mockReturnValue({
+      vi.mocked(usePostDetails).mockReturnValue({
         postDetails: undefined,
         isLoading: true,
       });
@@ -237,7 +253,7 @@ describe('SinglePostContent', () => {
     });
 
     it('renders ThreadTree with showQuickReply=false when parent post is deleted', () => {
-      vi.mocked(Hooks.usePostDetails).mockReturnValue({
+      vi.mocked(usePostDetails).mockReturnValue({
         ...mockUsePostDetails(),
         postDetails: {
           ...mockUsePostDetails().postDetails,
@@ -252,7 +268,7 @@ describe('SinglePostContent', () => {
     });
 
     it('renders PostDeleted component instead of post content when post is deleted', () => {
-      vi.mocked(Hooks.usePostDetails).mockReturnValue({
+      vi.mocked(usePostDetails).mockReturnValue({
         ...mockUsePostDetails(),
         postDetails: {
           ...mockUsePostDetails().postDetails,
@@ -284,7 +300,7 @@ describe('SinglePostContent', () => {
 
   describe('authentication', () => {
     it('hides replies section when not authenticated', () => {
-      vi.mocked(Hooks.useRequireAuth).mockReturnValue({
+      vi.mocked(useRequireAuth).mockReturnValue({
         isAuthenticated: false,
         requireAuth: <T,>(_action: () => T) => undefined,
       });
@@ -301,7 +317,7 @@ describe('SinglePostContent', () => {
     it('calls usePostDetails with the correct postId', () => {
       render(<SinglePostContent postId={mockPostId} />);
 
-      expect(Hooks.usePostDetails).toHaveBeenCalledWith(mockPostId);
+      expect(usePostDetails).toHaveBeenCalledWith(mockPostId);
     });
   });
 });
@@ -311,11 +327,11 @@ describe('SinglePostContent - Snapshots', () => {
 
   beforeEach(() => {
     vi.clearAllMocks();
-    vi.mocked(Hooks.useRequireAuth).mockReturnValue(mockUseRequireAuth());
-    vi.mocked(Hooks.usePostDetails).mockReturnValue(mockUsePostDetails());
-    vi.mocked(Hooks.usePostCounts).mockReturnValue(mockUsePostCounts());
-    vi.mocked(Hooks.usePostAncestors).mockReturnValue(mockUsePostAncestors());
-    vi.mocked(Hooks.useUserDetailsFromIds).mockReturnValue(mockUseUserDetailsFromIds());
+    vi.mocked(useRequireAuth).mockReturnValue(mockUseRequireAuth());
+    vi.mocked(usePostDetails).mockReturnValue(mockUsePostDetails());
+    vi.mocked(usePostCounts).mockReturnValue(mockUsePostCounts());
+    vi.mocked(usePostAncestors).mockReturnValue(mockUsePostAncestors());
+    vi.mocked(useUserDetailsFromIds).mockReturnValue(mockUseUserDetailsFromIds());
   });
 
   it('matches snapshot with short post and no replies', () => {
@@ -324,7 +340,7 @@ describe('SinglePostContent - Snapshots', () => {
   });
 
   it('matches snapshot with long post (article)', () => {
-    vi.mocked(Hooks.usePostDetails).mockReturnValue({
+    vi.mocked(usePostDetails).mockReturnValue({
       postDetails: {
         id: mockPostId,
         indexed_at: Date.now(),
@@ -343,7 +359,7 @@ describe('SinglePostContent - Snapshots', () => {
   });
 
   it('matches snapshot with deleted parent post', () => {
-    vi.mocked(Hooks.usePostDetails).mockReturnValue({
+    vi.mocked(usePostDetails).mockReturnValue({
       ...mockUsePostDetails(),
       postDetails: {
         ...mockUsePostDetails().postDetails,
@@ -356,7 +372,7 @@ describe('SinglePostContent - Snapshots', () => {
   });
 
   it('matches snapshot when not authenticated', () => {
-    vi.mocked(Hooks.useRequireAuth).mockReturnValue({
+    vi.mocked(useRequireAuth).mockReturnValue({
       isAuthenticated: false,
       requireAuth: <T,>(_action: () => T) => undefined,
     });

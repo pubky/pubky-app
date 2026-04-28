@@ -7,6 +7,7 @@ import { REPORT_REASON_MAX_LENGTH } from '@/core/pipes/report';
 import type { DialogReportPostReasonStepProps } from './DialogReportPostReasonStep.types';
 import { Loader2 } from 'lucide-react';
 import { getCharacterCount } from '@/libs/utils/utils';
+
 export function DialogReportPostReasonStep({
   reason,
   hasContent,

@@ -9,6 +9,7 @@ import { PROFILE_ROUTES, getProfileRoute } from '@/app/routes';
 import type { ProfilePageTaggedAsProps } from './ProfilePageTaggedAs.types';
 import { ProfilePageTaggedAsSkeleton } from './ProfilePageTaggedAs.skeleton';
 import { Tag } from 'lucide-react';
+
 export function ProfilePageTaggedAs({ tags, isLoading = false, onTagClick, pubky }: ProfilePageTaggedAsProps) {
   const t = useTranslations('profile.sidebar');
   const router = useRouter();

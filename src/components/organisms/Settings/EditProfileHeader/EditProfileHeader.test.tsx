@@ -4,10 +4,13 @@ import { EditProfileHeader } from './EditProfileHeader';
 
 const mockCopyToClipboard = vi.fn();
 
-vi.mock('@/hooks', () => ({
+vi.mock('@/hooks/useCurrentUserProfile/useCurrentUserProfile', () => ({
   useCurrentUserProfile: () => ({
     currentUserPubky: 'abc123def456ghi789',
   }),
+}));
+
+vi.mock('@/hooks/useCopyToClipboard/useCopyToClipboard', () => ({
   useCopyToClipboard: () => ({
     copyToClipboard: mockCopyToClipboard,
   }),

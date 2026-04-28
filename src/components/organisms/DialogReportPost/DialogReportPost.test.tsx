@@ -1,21 +1,20 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen, fireEvent } from '@testing-library/react';
 import { DialogReportPost } from './DialogReportPost';
-import { REPORT_POST_STEPS } from '@/hooks/useReportPost';
+import { REPORT_POST_STEPS } from '@/hooks/useReportPost/useReportPost.constants';
 import { REPORT_ISSUE_TYPES } from '@/core/pipes/report';
 
 // Mock hooks
 const mockUseCurrentUserProfile = vi.fn();
 const mockUseReportPost = vi.fn();
 
-vi.mock('@/hooks', async (importOriginal) => {
-  const actual = await importOriginal<typeof import('@/hooks')>();
-  return {
-    ...actual,
-    useCurrentUserProfile: () => mockUseCurrentUserProfile(),
-    useReportPost: () => mockUseReportPost(),
-  };
-});
+vi.mock('@/hooks/useCurrentUserProfile/useCurrentUserProfile', () => ({
+  useCurrentUserProfile: () => mockUseCurrentUserProfile(),
+}));
+
+vi.mock('@/hooks/useReportPost/useReportPost', () => ({
+  useReportPost: () => mockUseReportPost(),
+}));
 
 // Mock sub-components
 vi.mock('./DialogReportPostIssueStep', () => ({

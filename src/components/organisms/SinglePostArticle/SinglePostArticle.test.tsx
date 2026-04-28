@@ -1,24 +1,23 @@
 import { render, screen, fireEvent } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { SinglePostArticle } from './SinglePostArticle';
-import * as Hooks from '@/hooks';
+import { usePostArticle } from '@/hooks/usePostArticle/usePostArticle';
 import * as Core from '@/core';
 import type { AttachmentConstructed } from '../PostAttachments/PostAttachments.types';
 
 // Mock hooks
-vi.mock('@/hooks', async (importOriginal) => {
-  const actual = await importOriginal<typeof import('@/hooks')>();
-  return {
-    ...actual,
-    usePostArticle: vi.fn(),
-    useLinkConfirmation: vi.fn().mockReturnValue({
-      dialogOpen: false,
-      setDialogOpen: vi.fn(),
-      clickedLink: '',
-      handleLinkClick: vi.fn(),
-    }),
-  };
-});
+vi.mock('@/hooks/usePostArticle/usePostArticle', () => ({
+  usePostArticle: vi.fn(),
+}));
+
+vi.mock('@/hooks/useLinkConfirmation/useLinkConfirmation', () => ({
+  useLinkConfirmation: vi.fn().mockReturnValue({
+    dialogOpen: false,
+    setDialogOpen: vi.fn(),
+    clickedLink: '',
+    handleLinkClick: vi.fn(),
+  }),
+}));
 
 // Mock atoms
 vi.mock('@/atoms', () => ({
@@ -172,7 +171,7 @@ const createMockLocalFilesStore = (posts: Record<string, AttachmentConstructed[]
   reset: vi.fn(),
 });
 
-const mockUsePostArticle = vi.mocked(Hooks.usePostArticle);
+const mockUsePostArticle = vi.mocked(usePostArticle);
 
 describe('SinglePostArticle', () => {
   const defaultProps = {

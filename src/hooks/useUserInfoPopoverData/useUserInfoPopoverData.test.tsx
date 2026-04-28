@@ -8,14 +8,29 @@ const mockUseProfileStats = vi.fn();
 const mockUseIsFollowing = vi.fn();
 const mockUseProfileConnections = vi.fn();
 
-vi.mock('@/hooks', () => ({
+vi.mock('@/hooks/useCurrentUserProfile/useCurrentUserProfile', () => ({
   useCurrentUserProfile: () => mockUseCurrentUserProfile(),
-  useUserProfile: () => mockUseUserProfile(),
-  useProfileStats: () => mockUseProfileStats(),
-  useIsFollowing: () => mockUseIsFollowing(),
-  useProfileConnections: () => mockUseProfileConnections(),
-  CONNECTION_TYPE: { FOLLOWERS: 'followers', FOLLOWING: 'following' },
 }));
+
+vi.mock('@/hooks/useUserProfile/useUserProfile', () => ({
+  useUserProfile: () => mockUseUserProfile(),
+}));
+
+vi.mock('@/hooks/useProfileStats/useProfileStats', () => ({
+  useProfileStats: () => mockUseProfileStats(),
+}));
+
+vi.mock('@/hooks/useIsFollowing/useIsFollowing', () => ({
+  useIsFollowing: () => mockUseIsFollowing(),
+}));
+
+vi.mock('@/hooks/useProfileConnections/useProfileConnections', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('@/hooks/useProfileConnections/useProfileConnections')>();
+  return {
+    ...actual,
+    useProfileConnections: () => mockUseProfileConnections(),
+  };
+});
 
 describe('useUserInfoPopoverData', () => {
   beforeEach(() => {

@@ -4,6 +4,7 @@ import { useIsMobile } from '@/hooks/useIsMobile/useIsMobile';
 import { useTranslations } from 'next-intl';
 import * as Atoms from '@/atoms';
 import { RefreshCw } from 'lucide-react';
+
 type DialogAuthExpiredProps = {
   open: boolean;
   onRefresh: () => void;

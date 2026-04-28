@@ -44,7 +44,7 @@ vi.mock('dexie-react-hooks', () => ({
 }));
 
 // Mock useNotifications from direct path (used by useProfileStats)
-vi.mock('@/hooks/useNotifications', () => ({
+vi.mock('@/hooks/useNotifications/useNotifications', () => ({
   useNotifications: vi.fn(() => ({
     notifications: [],
     unreadNotifications: [],
@@ -62,32 +62,31 @@ vi.mock('@/hooks/useNotifications', () => ({
 }));
 
 // Mock hooks
-vi.mock('@/hooks', async (importOriginal) => {
-  const actual = await importOriginal<typeof import('@/hooks')>();
-  return {
-    ...actual,
-    useNotifications: vi.fn(() => ({
-      notifications: [],
-      unreadNotifications: [],
-      count: 0,
-      unreadCount: mockNotificationsCount.current,
-      isLoading: false,
-      isLoadingMore: false,
-      hasMore: false,
-      error: null,
-      loadMore: vi.fn(),
-      refresh: vi.fn(),
-      markAllAsRead: vi.fn(),
-      isNotificationUnread: vi.fn(() => false),
-    })),
-    useTagged: vi.fn(() => ({
-      tags: [],
-      count: mockTaggedCount.current,
-      isLoading: false,
-      handleTagAdd: vi.fn(),
-    })),
-  };
-});
+vi.mock('@/hooks/useNotifications/useNotifications', () => ({
+  useNotifications: vi.fn(() => ({
+    notifications: [],
+    unreadNotifications: [],
+    count: 0,
+    unreadCount: mockNotificationsCount.current,
+    isLoading: false,
+    isLoadingMore: false,
+    hasMore: false,
+    error: null,
+    loadMore: vi.fn(),
+    refresh: vi.fn(),
+    markAllAsRead: vi.fn(),
+    isNotificationUnread: vi.fn(() => false),
+  })),
+}));
+
+vi.mock('@/hooks/useTagged/useTagged', () => ({
+  useTagged: vi.fn(() => ({
+    tags: [],
+    count: mockTaggedCount.current,
+    isLoading: false,
+    handleTagAdd: vi.fn(),
+  })),
+}));
 
 // Mock Core controllers
 vi.mock('@/core', async (importOriginal) => {

@@ -3,7 +3,6 @@
 import { useState, useEffect, useCallback, useRef, useMemo } from 'react';
 import * as Core from '@/core';
 import { NotificationType, type FlatNotification } from '@/core';
-// Direct import to avoid circular dependency (this hook is exported from @/hooks)
 import { useMutedUsers } from '@/hooks/useMutedUsers/useMutedUsers';
 import type { UseNotificationsResult } from './useNotifications.types';
 import { Logger } from '@/libs/logger/logger';

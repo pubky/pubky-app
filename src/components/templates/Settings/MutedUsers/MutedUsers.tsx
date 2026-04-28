@@ -5,6 +5,7 @@ import * as Molecules from '@/molecules';
 import * as Organisms from '@/organisms';
 import { useIsMobile } from '@/hooks/useIsMobile/useIsMobile';
 import { MegaphoneOff } from 'lucide-react';
+
 export function MutedUsers() {
   const t = useTranslations('settings.mutedUsers');
   const isMobile = useIsMobile();

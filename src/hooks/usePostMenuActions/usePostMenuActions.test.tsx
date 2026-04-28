@@ -10,6 +10,7 @@ import { isAppError } from '@/libs/error/error.utils';
 const {
   mockIsAppError,
   mockParseCompositeId,
+  mockToast,
   mockUseCurrentUserProfile,
   mockUsePostDetails,
   mockUseUserProfile,
@@ -18,10 +19,10 @@ const {
   mockUseMuteUser,
   mockUseMutedUsers,
   mockUseCopyToClipboard,
-  mockToast,
 } = vi.hoisted(() => ({
   mockIsAppError: vi.fn(),
   mockParseCompositeId: vi.fn(),
+  mockToast: vi.fn(),
   mockUseCurrentUserProfile: vi.fn(),
   mockUsePostDetails: vi.fn(),
   mockUseUserProfile: vi.fn(),
@@ -30,7 +31,6 @@ const {
   mockUseMuteUser: vi.fn(),
   mockUseMutedUsers: vi.fn(),
   mockUseCopyToClipboard: vi.fn(),
-  mockToast: vi.fn(),
 }));
 
 // Mock Core
@@ -39,15 +39,36 @@ vi.mock('@/core', () => ({
 }));
 
 // Mock Hooks
-vi.mock('@/hooks', () => ({
-  useCurrentUserProfile: (props: unknown) => mockUseCurrentUserProfile(props),
-  usePostDetails: (postId: string) => mockUsePostDetails(postId),
-  useUserProfile: (userId: string) => mockUseUserProfile(userId),
-  useIsFollowing: (userId: string) => mockUseIsFollowing(userId),
-  useFollowUser: () => mockUseFollowUser(),
-  useMuteUser: () => mockUseMuteUser(),
-  useMutedUsers: () => mockUseMutedUsers(),
-  useCopyToClipboard: (options: unknown) => mockUseCopyToClipboard(options),
+vi.mock('@/hooks/useCurrentUserProfile/useCurrentUserProfile', () => ({
+  useCurrentUserProfile: mockUseCurrentUserProfile,
+}));
+
+vi.mock('@/hooks/usePostDetails/usePostDetails', () => ({
+  usePostDetails: mockUsePostDetails,
+}));
+
+vi.mock('@/hooks/useUserProfile/useUserProfile', () => ({
+  useUserProfile: mockUseUserProfile,
+}));
+
+vi.mock('@/hooks/useIsFollowing/useIsFollowing', () => ({
+  useIsFollowing: mockUseIsFollowing,
+}));
+
+vi.mock('@/hooks/useFollowUser/useFollowUser', () => ({
+  useFollowUser: mockUseFollowUser,
+}));
+
+vi.mock('@/hooks/useMuteUser/useMuteUser', () => ({
+  useMuteUser: mockUseMuteUser,
+}));
+
+vi.mock('@/hooks/useMutedUsers/useMutedUsers', () => ({
+  useMutedUsers: mockUseMutedUsers,
+}));
+
+vi.mock('@/hooks/useCopyToClipboard/useCopyToClipboard', () => ({
+  useCopyToClipboard: mockUseCopyToClipboard,
 }));
 
 // Mock Molecules

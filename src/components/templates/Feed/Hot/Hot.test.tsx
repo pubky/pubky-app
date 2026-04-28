@@ -16,8 +16,11 @@ vi.mock('@/core', () => ({
 }));
 
 // Mock Hooks
-vi.mock('@/hooks', () => ({
+vi.mock('@/hooks/useLayoutReset/useLayoutReset', () => ({
   useLayoutReset: () => mockUseLayoutReset(),
+}));
+
+vi.mock('@/hooks/useIsMobile/useIsMobile', () => ({
   useIsMobile: () => mockIsMobile,
 }));
 

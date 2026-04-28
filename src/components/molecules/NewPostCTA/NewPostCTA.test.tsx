@@ -14,9 +14,15 @@ const mockUseAuthStatus = vi.fn(() => ({
 const mockIsPublicRoute = vi.fn(() => false);
 const mockRequireAuth = vi.fn((action: () => void) => action());
 
-vi.mock('@/hooks', () => ({
+vi.mock('@/hooks/useAuthStatus/useAuthStatus', () => ({
   useAuthStatus: () => mockUseAuthStatus(),
+}));
+
+vi.mock('@/hooks/usePublicRoute/usePublicRoute', () => ({
   usePublicRoute: () => ({ isPublicRoute: mockIsPublicRoute() }),
+}));
+
+vi.mock('@/hooks/useRequireAuth/useRequireAuth', () => ({
   useRequireAuth: () => ({
     isAuthenticated: mockUseAuthStatus().isFullyAuthenticated,
     requireAuth: mockRequireAuth,

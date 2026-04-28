@@ -6,7 +6,7 @@ vi.mock('next/navigation', () => ({
   usePathname: () => '/settings/account',
 }));
 
-vi.mock('@/hooks', () => ({
+vi.mock('@/hooks/useLayoutReset/useLayoutReset', () => ({
   useLayoutReset: vi.fn(),
 }));
 

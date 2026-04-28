@@ -30,7 +30,7 @@ vi.mock('@/providers', () => ({
 // Mock useIsMobile - default to desktop
 const mockIsMobile = vi.fn(() => false);
 
-vi.mock('@/hooks/useIsMobile', () => ({
+vi.mock('@/hooks/useIsMobile/useIsMobile', () => ({
   useIsMobile: () => mockIsMobile(),
 }));
 

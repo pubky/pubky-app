@@ -1,21 +1,28 @@
 import { render, screen } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { PostHeader } from './PostHeader';
-import * as Hooks from '@/hooks';
+import { useAvatarUrl } from '@/hooks/useAvatarUrl/useAvatarUrl';
+import { usePostDetails } from '@/hooks/usePostDetails/usePostDetails';
+import { useUserDetails } from '@/hooks/useUserDetails/useUserDetails';
 import * as Core from '@/core';
 
-vi.mock('@/hooks', async (importOriginal) => {
-  const actual = await importOriginal<typeof import('@/hooks')>();
-  return {
-    ...actual,
-    usePostDetails: vi.fn(),
-    useUserDetails: vi.fn(),
-    useAvatarUrl: vi.fn(),
-    useRelativeTime: vi.fn(() => ({
-      formatRelativeTime: vi.fn(() => '2h'),
-    })),
-  };
-});
+vi.mock('@/hooks/usePostDetails/usePostDetails', () => ({
+  usePostDetails: vi.fn(),
+}));
+
+vi.mock('@/hooks/useUserDetails/useUserDetails', () => ({
+  useUserDetails: vi.fn(),
+}));
+
+vi.mock('@/hooks/useAvatarUrl/useAvatarUrl', () => ({
+  useAvatarUrl: vi.fn(),
+}));
+
+vi.mock('@/hooks/useRelativeTime/useRelativeTime', () => ({
+  useRelativeTime: vi.fn(() => ({
+    formatRelativeTime: vi.fn(() => '2h'),
+  })),
+}));
 
 vi.mock('@/atoms', async (importOriginal) => {
   const actual = await importOriginal<typeof import('@/atoms')>();
@@ -25,13 +32,13 @@ vi.mock('@/atoms', async (importOriginal) => {
       ({
         children,
         className,
-        overrideDefaults,
+        overrideDefaults: _overrideDefaults,
       }: {
         children: React.ReactNode;
         className?: string;
         overrideDefaults?: boolean;
       }) => (
-        <div data-testid="container" className={className} data-override-defaults={overrideDefaults}>
+        <div data-testid="container" className={className}>
           {children}
         </div>
       ),
@@ -98,9 +105,9 @@ vi.mock('@/molecules', async (importOriginal) => {
 
 // Use real libs - use actual implementations
 
-const mockUsePostDetails = vi.mocked(Hooks.usePostDetails);
-const mockUseUserDetails = vi.mocked(Hooks.useUserDetails);
-const mockUseAvatarUrl = vi.mocked(Hooks.useAvatarUrl);
+const mockUsePostDetails = vi.mocked(usePostDetails);
+const mockUseUserDetails = vi.mocked(useUserDetails);
+const mockUseAvatarUrl = vi.mocked(useAvatarUrl);
 
 describe('PostHeader', () => {
   beforeEach(() => {

@@ -7,24 +7,24 @@ import { isAppError } from '@/libs/error/error.utils';
 // Hoist mocks
 const {
   mockIsAppError,
+  mockToast,
+  mockUseTranslations,
   mockUseUserProfile,
   mockUseIsFollowing,
   mockUseFollowUser,
   mockUseMuteUser,
   mockUseMutedUsers,
   mockUseCopyToClipboard,
-  mockToast,
-  mockUseTranslations,
 } = vi.hoisted(() => ({
   mockIsAppError: vi.fn(),
+  mockToast: vi.fn(),
+  mockUseTranslations: vi.fn(),
   mockUseUserProfile: vi.fn(),
   mockUseIsFollowing: vi.fn(),
   mockUseFollowUser: vi.fn(),
   mockUseMuteUser: vi.fn(),
   mockUseMutedUsers: vi.fn(),
   mockUseCopyToClipboard: vi.fn(),
-  mockToast: vi.fn(),
-  mockUseTranslations: vi.fn(),
 }));
 
 // Mock next-intl
@@ -33,13 +33,28 @@ vi.mock('next-intl', () => ({
 }));
 
 // Mock Hooks
-vi.mock('@/hooks', () => ({
-  useUserProfile: (userId: string) => mockUseUserProfile(userId),
-  useIsFollowing: (userId: string) => mockUseIsFollowing(userId),
-  useFollowUser: () => mockUseFollowUser(),
-  useMuteUser: () => mockUseMuteUser(),
-  useMutedUsers: () => mockUseMutedUsers(),
-  useCopyToClipboard: (options: unknown) => mockUseCopyToClipboard(options),
+vi.mock('@/hooks/useUserProfile/useUserProfile', () => ({
+  useUserProfile: mockUseUserProfile,
+}));
+
+vi.mock('@/hooks/useIsFollowing/useIsFollowing', () => ({
+  useIsFollowing: mockUseIsFollowing,
+}));
+
+vi.mock('@/hooks/useFollowUser/useFollowUser', () => ({
+  useFollowUser: mockUseFollowUser,
+}));
+
+vi.mock('@/hooks/useMuteUser/useMuteUser', () => ({
+  useMuteUser: mockUseMuteUser,
+}));
+
+vi.mock('@/hooks/useMutedUsers/useMutedUsers', () => ({
+  useMutedUsers: mockUseMutedUsers,
+}));
+
+vi.mock('@/hooks/useCopyToClipboard/useCopyToClipboard', () => ({
+  useCopyToClipboard: mockUseCopyToClipboard,
 }));
 
 // Mock Molecules

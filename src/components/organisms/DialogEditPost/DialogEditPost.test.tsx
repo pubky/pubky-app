@@ -3,9 +3,11 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { DialogEditPost } from './DialogEditPost';
 import * as Organisms from '@/organisms';
 import { POST_INPUT_VARIANT } from '@/organisms/PostInput/PostInput.constants';
+import { useConfirmableDialog } from '@/hooks/useConfirmableDialog/useConfirmableDialog';
+import { usePostDetails } from '@/hooks/usePostDetails/usePostDetails';
 
 // Mock hooks
-vi.mock('@/hooks', () => ({
+vi.mock('@/hooks/useConfirmableDialog/useConfirmableDialog', () => ({
   useConfirmableDialog: vi.fn(({ onClose }: { onClose: () => void }) => ({
     showConfirmDialog: false,
     setShowConfirmDialog: vi.fn(),
@@ -16,6 +18,9 @@ vi.mock('@/hooks', () => ({
     }),
     handleDiscard: vi.fn(() => onClose()),
   })),
+}));
+
+vi.mock('@/hooks/usePostDetails/usePostDetails', () => ({
   usePostDetails: vi.fn((postId: string) => ({
     postDetails: {
       id: postId,
@@ -141,18 +146,16 @@ vi.mock('@/atoms', () => ({
 // Use real libs - use actual implementations
 
 // Import hooks after mocking
-import * as Hooks from '@/hooks';
-
 describe('DialogEditPost', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     // Reset to default mock implementation
-    vi.mocked(Hooks.usePostDetails).mockReturnValue({
+    vi.mocked(usePostDetails).mockReturnValue({
       postDetails: {
         id: 'test-post-123',
         content: 'Test post content',
         kind: 'short',
-      } as ReturnType<typeof Hooks.usePostDetails>['postDetails'],
+      } as ReturnType<typeof usePostDetails>['postDetails'],
       isLoading: false,
     });
   });
@@ -168,12 +171,12 @@ describe('DialogEditPost', () => {
   });
 
   it('renders with "Edit Article" title for long posts', () => {
-    vi.mocked(Hooks.usePostDetails).mockReturnValue({
+    vi.mocked(usePostDetails).mockReturnValue({
       postDetails: {
         id: 'test-article-123',
         content: 'Test article content',
         kind: 'long',
-      } as ReturnType<typeof Hooks.usePostDetails>['postDetails'],
+      } as ReturnType<typeof usePostDetails>['postDetails'],
       isLoading: false,
     });
 
@@ -184,7 +187,7 @@ describe('DialogEditPost', () => {
   });
 
   it('returns null when postDetails is not available', () => {
-    vi.mocked(Hooks.usePostDetails).mockReturnValue({
+    vi.mocked(usePostDetails).mockReturnValue({
       postDetails: null,
       isLoading: true,
     });
@@ -216,12 +219,12 @@ describe('DialogEditPost', () => {
   });
 
   it('renders PostInput with editIsArticle true and autoFocusTextarea false for long posts', () => {
-    vi.mocked(Hooks.usePostDetails).mockReturnValue({
+    vi.mocked(usePostDetails).mockReturnValue({
       postDetails: {
         id: 'test-article-123',
         content: 'Test article content',
         kind: 'long',
-      } as ReturnType<typeof Hooks.usePostDetails>['postDetails'],
+      } as ReturnType<typeof usePostDetails>['postDetails'],
       isLoading: false,
     });
 
@@ -278,12 +281,12 @@ describe('DialogEditPost', () => {
   });
 
   it('displays correct description text for article', () => {
-    vi.mocked(Hooks.usePostDetails).mockReturnValue({
+    vi.mocked(usePostDetails).mockReturnValue({
       postDetails: {
         id: 'test-article-123',
         content: 'Test article content',
         kind: 'long',
-      } as ReturnType<typeof Hooks.usePostDetails>['postDetails'],
+      } as ReturnType<typeof usePostDetails>['postDetails'],
       isLoading: false,
     });
 
@@ -297,14 +300,14 @@ describe('DialogEditPost', () => {
     const onOpenChangeAction = vi.fn();
     render(<DialogEditPost postId="specific-post-id" open={true} onOpenChangeAction={onOpenChangeAction} />);
 
-    expect(Hooks.usePostDetails).toHaveBeenCalledWith('specific-post-id');
+    expect(usePostDetails).toHaveBeenCalledWith('specific-post-id');
   });
 
   it('calls useConfirmableDialog with onClose callback', () => {
     const onOpenChangeAction = vi.fn();
     render(<DialogEditPost postId="test-post-123" open={true} onOpenChangeAction={onOpenChangeAction} />);
 
-    expect(Hooks.useConfirmableDialog).toHaveBeenCalledWith({
+    expect(useConfirmableDialog).toHaveBeenCalledWith({
       onClose: expect.any(Function),
     });
   });
@@ -313,12 +316,12 @@ describe('DialogEditPost', () => {
 describe('DialogEditPost - Snapshots', () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    vi.mocked(Hooks.usePostDetails).mockReturnValue({
+    vi.mocked(usePostDetails).mockReturnValue({
       postDetails: {
         id: 'snapshot-post-id',
         content: 'Snapshot post content',
         kind: 'short',
-      } as ReturnType<typeof Hooks.usePostDetails>['postDetails'],
+      } as ReturnType<typeof usePostDetails>['postDetails'],
       isLoading: false,
     });
   });
@@ -332,12 +335,12 @@ describe('DialogEditPost - Snapshots', () => {
   });
 
   it('matches snapshot for long post (Edit Article)', () => {
-    vi.mocked(Hooks.usePostDetails).mockReturnValue({
+    vi.mocked(usePostDetails).mockReturnValue({
       postDetails: {
         id: 'snapshot-article-id',
         content: 'Snapshot article content',
         kind: 'long',
-      } as ReturnType<typeof Hooks.usePostDetails>['postDetails'],
+      } as ReturnType<typeof usePostDetails>['postDetails'],
       isLoading: false,
     });
 
@@ -357,7 +360,7 @@ describe('DialogEditPost - Snapshots', () => {
   });
 
   it('matches snapshot when postDetails is null', () => {
-    vi.mocked(Hooks.usePostDetails).mockReturnValue({
+    vi.mocked(usePostDetails).mockReturnValue({
       postDetails: null,
       isLoading: true,
     });

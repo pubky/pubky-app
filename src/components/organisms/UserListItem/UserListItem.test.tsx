@@ -5,8 +5,11 @@ import { UserListItem } from './UserListItem';
 import type { UserListItemData } from './UserListItem.types';
 
 // Mock Hooks
-vi.mock('@/hooks', () => ({
+vi.mock('@/hooks/useRequireAuth/useRequireAuth', () => ({
   useRequireAuth: () => ({ requireAuth: (fn: () => void) => fn() }),
+}));
+
+vi.mock('@/hooks/useTtlSubscription/useTtlSubscription', () => ({
   useTtlSubscription: () => ({ ref: () => {} }),
 }));
 

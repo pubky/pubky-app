@@ -8,6 +8,8 @@ import * as Atoms from '@/atoms';
 import * as Organisms from '@/organisms';
 import * as Core from '@/core';
 import { USER_LIST_TAG_MAX_LENGTH, USER_LIST_TAGS_MAX_TOTAL_CHARS, USER_LIST_TAGS_MAX_COUNT } from '@/config';
+import { cn, formatPublicKey } from '@/libs/utils/utils';
+
 import type {
   UserListItemProps,
   FollowButtonProps,
@@ -15,7 +17,6 @@ import type {
   UserStatsProps,
   VariantProps,
 } from './UserListItem.types';
-import { cn, formatPublicKey } from '@/libs/utils/utils';
 
 // =============================================================================
 // Internal Components

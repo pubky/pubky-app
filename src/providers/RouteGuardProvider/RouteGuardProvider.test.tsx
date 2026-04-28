@@ -2,6 +2,7 @@ import React from 'react';
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { render, screen, act } from '@testing-library/react';
 import { Logger } from '@/libs/logger/logger';
+import { RouteGuardProvider } from './RouteGuardProvider';
 
 // Hoisted mocks
 const mocks = vi.hoisted(() => {
@@ -44,8 +45,7 @@ vi.mock('next-intl', () => ({
   useLocale: () => mocks.serverLocale,
 }));
 
-// Mock @/hooks
-vi.mock('@/hooks', () => ({
+vi.mock('@/hooks/useAuthStatus/useAuthStatus', () => ({
   useAuthStatus: () => ({ status: mocks.status, isLoading: mocks.isLoading }),
 }));
 
@@ -97,8 +97,6 @@ vi.mock('@/core', () => ({
     resync: mocks.mockResync,
   },
 }));
-
-import { RouteGuardProvider } from './RouteGuardProvider';
 
 describe('RouteGuardProvider — migration resync', () => {
   beforeEach(() => {

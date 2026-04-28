@@ -7,6 +7,7 @@ import * as Atoms from '@/atoms';
 import * as Core from '@/core';
 import * as Molecules from '@/molecules';
 import { FileText, AlertCircle, Loader2, RotateCcw } from 'lucide-react';
+
 interface DialogRestoreRecoveryPhraseProps {
   onRestore?: () => void;
 }

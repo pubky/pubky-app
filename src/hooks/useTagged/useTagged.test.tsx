@@ -2,6 +2,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { act, renderHook, waitFor } from '@testing-library/react';
 import { useTagged } from './useTagged';
 import * as Core from '@/core';
+import { useProfileStats } from '@/hooks/useProfileStats/useProfileStats';
 
 // Hoist mock functions before vi.mock
 const mockMocks = vi.hoisted(() => {
@@ -51,12 +52,11 @@ vi.mock('@/core', async () => {
 });
 
 // Mock useProfileStats
-import { useProfileStats } from '@/hooks/useProfileStats';
 const mockUseProfileStats = vi.fn((_userId: string) => ({
   stats: { uniqueTags: 0, posts: 0, replies: 0, followers: 0, following: 0, friends: 0, notifications: 0 },
   isLoading: false,
 }));
-vi.mock('@/hooks/useProfileStats', () => ({
+vi.mock('@/hooks/useProfileStats/useProfileStats', () => ({
   useProfileStats: (...args: Parameters<typeof useProfileStats>) => mockUseProfileStats(...args),
 }));
 

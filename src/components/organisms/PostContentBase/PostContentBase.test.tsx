@@ -4,7 +4,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { PostContentBase } from './PostContentBase';
 import * as Molecules from '@/molecules';
 import * as Organisms from '@/organisms';
-import * as Hooks from '@/hooks';
+import { usePostDetails } from '@/hooks/usePostDetails/usePostDetails';
 import * as Core from '@/core';
 import { asOpaque } from '@/test-utils';
 
@@ -14,13 +14,9 @@ vi.mock('next/navigation', () => ({
 }));
 
 // Mock hooks used by PostContentBase
-vi.mock('@/hooks', async (importOriginal) => {
-  const actual = await importOriginal<typeof import('@/hooks')>();
-  return {
-    ...actual,
-    usePostDetails: vi.fn(),
-  };
-});
+vi.mock('@/hooks/usePostDetails/usePostDetails', () => ({
+  usePostDetails: vi.fn(),
+}));
 
 // Mock core - useLocalFilesStore
 vi.mock('@/core', async (importOriginal) => {
@@ -69,7 +65,7 @@ vi.mock('@/organisms', () => ({
   PostArticle: vi.fn(() => <div data-testid="post-article" />),
 }));
 
-const mockUsePostDetails = vi.mocked(Hooks.usePostDetails);
+const mockUsePostDetails = vi.mocked(usePostDetails);
 const mockUseLocalFilesStore = vi.mocked(Core.useLocalFilesStore);
 const mockPostAttachments = vi.mocked(Organisms.PostAttachments);
 const mockPostContentBlurred = vi.mocked(Organisms.PostContentBlurred);

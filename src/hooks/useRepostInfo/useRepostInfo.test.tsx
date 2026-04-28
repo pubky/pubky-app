@@ -45,15 +45,11 @@ vi.mock('@/core', async () => {
 
 // Mock hooks
 const mockCurrentUserPubky = 'current-user-pubky';
-vi.mock('@/hooks', async () => {
-  const actual = await vi.importActual('@/hooks');
-  return {
-    ...actual,
-    useCurrentUserProfile: vi.fn(() => ({
-      currentUserPubky: mockCurrentUserPubky,
-    })),
-  };
-});
+vi.mock('@/hooks/useCurrentUserProfile/useCurrentUserProfile', () => ({
+  useCurrentUserProfile: vi.fn(() => ({
+    currentUserPubky: mockCurrentUserPubky,
+  })),
+}));
 
 describe('useRepostInfo', () => {
   const mockPostId = 'author:post-123';

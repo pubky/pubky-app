@@ -12,6 +12,9 @@ import * as Atoms from '@/atoms';
 import * as Core from '@/core';
 import * as Molecules from '@/molecules';
 import * as Organisms from '@/organisms';
+import { useVisualFeedTiles } from './useVisualFeedTiles';
+import { cn } from '@/libs/utils/utils';
+
 import {
   VISUAL_GRID_MAX_WIDTH_PX,
   VISUAL_TILE_ASPECT_RATIOS,
@@ -25,8 +28,6 @@ import type {
   VisualTimelineTileProps,
   VisualTileVideoProps,
 } from './VisualTimelinePosts.types';
-import { useVisualFeedTiles } from './useVisualFeedTiles';
-import { cn } from '@/libs/utils/utils';
 
 function stopPropagation(event: React.SyntheticEvent) {
   event.stopPropagation();

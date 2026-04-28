@@ -4,7 +4,6 @@ import { useAvatarUrl } from '@/hooks/useAvatarUrl/useAvatarUrl';
 import { useCurrentUserProfile } from '@/hooks/useCurrentUserProfile/useCurrentUserProfile';
 import { useState } from 'react';
 import { useTranslations } from 'next-intl';
-
 import * as Atoms from '@/atoms';
 import * as Organisms from '@/organisms';
 import { FeedbackCardSkeleton } from './FeedbackCard.skeleton';

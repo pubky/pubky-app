@@ -5,11 +5,11 @@ import { Search } from './Search';
 const mockUseIsMobile = vi.fn(() => false);
 const mockUseSearchTags = vi.fn(() => ['pubky']);
 
-vi.mock('@/hooks', () => ({
+vi.mock('@/hooks/useIsMobile/useIsMobile', () => ({
   useIsMobile: () => mockUseIsMobile(),
 }));
 
-vi.mock('@/hooks/useSearchStreamId', () => ({
+vi.mock('@/hooks/useSearchStreamId/useSearchStreamId', () => ({
   useSearchTags: () => mockUseSearchTags(),
 }));
 

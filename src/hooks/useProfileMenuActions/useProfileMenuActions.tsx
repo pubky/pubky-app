@@ -11,6 +11,9 @@ import * as Molecules from '@/molecules';
 import { PROFILE_ROUTES } from '@/app/routes';
 import { PROFILE_MENU_ACTION_IDS } from './useProfileMenuActions.constants';
 import type { UseProfileMenuActionsResult, ProfileMenuActionItem } from './useProfileMenuActions.types';
+import { UserRoundMinus, UserRoundPlus, Key, Link, Megaphone, MegaphoneOff } from 'lucide-react';
+import { isAppError } from '@/libs/error/error.utils';
+import { truncateString, withPubkyPrefix } from '@/libs/utils/utils';
 
 /**
  * useProfileMenuActions
@@ -22,9 +25,6 @@ import type { UseProfileMenuActionsResult, ProfileMenuActionItem } from './usePr
  * @param userId - The public key of the profile user
  * @returns Menu items array and loading state
  */
-import { UserRoundMinus, UserRoundPlus, Key, Link, Megaphone, MegaphoneOff } from 'lucide-react';
-import { isAppError } from '@/libs/error/error.utils';
-import { truncateString, withPubkyPrefix } from '@/libs/utils/utils';
 export function useProfileMenuActions(userId: string): UseProfileMenuActionsResult {
   const t = useTranslations('profile.actions');
   const tToast = useTranslations('toast');

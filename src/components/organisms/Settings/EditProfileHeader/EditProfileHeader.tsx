@@ -7,6 +7,7 @@ import * as Molecules from '@/molecules';
 import * as Atoms from '@/atoms';
 import { Key } from 'lucide-react';
 import { formatPublicKey, withPubkyPrefix } from '@/libs/utils/utils';
+
 export const EditProfileHeader = () => {
   const t = useTranslations('forms.profile');
   const { currentUserPubky } = useCurrentUserProfile();

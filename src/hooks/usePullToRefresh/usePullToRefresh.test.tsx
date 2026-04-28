@@ -3,17 +3,12 @@ import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { usePullToRefresh } from './usePullToRefresh';
 import type { UsePullToRefreshResult } from './usePullToRefresh.types';
 import { useRef } from 'react';
+import { useIsTouchDevice } from '@/hooks/useIsTouchDevice/useIsTouchDevice';
 
 // Mock useIsTouchDevice hook
-vi.mock('@/hooks', async () => {
-  const actual = await vi.importActual('@/hooks');
-  return {
-    ...actual,
-    useIsTouchDevice: vi.fn(() => true),
-  };
-});
-
-import * as Hooks from '@/hooks';
+vi.mock('@/hooks/useIsTouchDevice/useIsTouchDevice', () => ({
+  useIsTouchDevice: vi.fn(() => true),
+}));
 
 /**
  * Helper to create a container element and a ref pointing to it.
@@ -46,7 +41,7 @@ describe('usePullToRefresh', () => {
 
   beforeEach(() => {
     vi.clearAllMocks();
-    vi.mocked(Hooks.useIsTouchDevice).mockReturnValue(true);
+    vi.mocked(useIsTouchDevice).mockReturnValue(true);
     // Mock window.scrollY
     Object.defineProperty(window, 'scrollY', { value: 0, writable: true, configurable: true });
     // Mock navigator.vibrate
@@ -100,7 +95,7 @@ describe('usePullToRefresh', () => {
     });
 
     it('should not respond to touch events on non-touch devices', () => {
-      vi.mocked(Hooks.useIsTouchDevice).mockReturnValue(false);
+      vi.mocked(useIsTouchDevice).mockReturnValue(false);
 
       const { result } = renderPullToRefresh(container, { onRefresh: mockOnRefresh });
 

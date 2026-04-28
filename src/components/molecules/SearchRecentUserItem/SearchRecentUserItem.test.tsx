@@ -37,7 +37,7 @@ vi.mock('@/organisms', () => ({
 // Use real utility implementations - formatPublicKey and truncateString are pure functions
 // Pure utility functions should never be mocked per guidelines
 
-vi.mock('@/hooks', () => ({
+vi.mock('@/hooks/useUserDetails/useUserDetails', () => ({
   useUserDetails: (userId: string) => ({
     userDetails: {
       id: userId,
@@ -46,6 +46,9 @@ vi.mock('@/hooks', () => ({
     },
     isLoading: false,
   }),
+}));
+
+vi.mock('@/hooks/useAvatarUrl/useAvatarUrl', () => ({
   useAvatarUrl: () => 'https://example.com/avatar.jpg',
 }));
 

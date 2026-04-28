@@ -1,5 +1,4 @@
 import * as App from '@/app';
-// Import directly from types file to avoid circular dependency with @/hooks barrel
 import { AuthStatus, type RouteAccessMap } from '@/hooks/useAuthStatus/useAuthStatus.types';
 
 // Define which routes each authentication status can access

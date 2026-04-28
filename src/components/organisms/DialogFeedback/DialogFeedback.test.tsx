@@ -7,15 +7,17 @@ const mockUseCurrentUserProfile = vi.fn();
 const mockUseFeedback = vi.fn();
 const mockUseConfirmableDialog = vi.fn();
 
-vi.mock('@/hooks', async (importOriginal) => {
-  const actual = await importOriginal<typeof import('@/hooks')>();
-  return {
-    ...actual,
-    useCurrentUserProfile: () => mockUseCurrentUserProfile(),
-    useFeedback: () => mockUseFeedback(),
-    useConfirmableDialog: (opts: unknown) => mockUseConfirmableDialog(opts),
-  };
-});
+vi.mock('@/hooks/useCurrentUserProfile/useCurrentUserProfile', () => ({
+  useCurrentUserProfile: () => mockUseCurrentUserProfile(),
+}));
+
+vi.mock('@/hooks/useFeedback/useFeedback', () => ({
+  useFeedback: () => mockUseFeedback(),
+}));
+
+vi.mock('@/hooks/useConfirmableDialog/useConfirmableDialog', () => ({
+  useConfirmableDialog: (opts: unknown) => mockUseConfirmableDialog(opts),
+}));
 
 // Mock organisms
 vi.mock('@/organisms', () => ({

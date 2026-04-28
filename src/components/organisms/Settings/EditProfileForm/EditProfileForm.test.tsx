@@ -20,11 +20,14 @@ const mockHandlers = {
 
 const mockUseProfileForm = vi.fn();
 
-vi.mock('@/hooks', () => ({
+vi.mock('@/hooks/useCurrentUserProfile/useCurrentUserProfile', () => ({
   useCurrentUserProfile: () => ({
     userDetails: { name: 'Test User', bio: 'Test bio' },
     currentUserPubky: 'test-pubky-123',
   }),
+}));
+
+vi.mock('@/hooks/useProfileForm/useProfileForm', () => ({
   useProfileForm: (...args: unknown[]) => mockUseProfileForm(...args),
 }));
 

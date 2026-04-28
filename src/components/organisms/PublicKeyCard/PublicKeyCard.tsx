@@ -10,6 +10,7 @@ import { Copy, Share, Key } from 'lucide-react';
 import { Logger } from '@/libs/logger/logger';
 import { shareWithFallback } from '@/libs/share/share';
 import { withPubkyPrefix } from '@/libs/utils/utils';
+
 export function PublicKeyCard() {
   const t = useTranslations('onboarding.pubky');
   const secretKey = Core.useOnboardingStore((state) => state.secretKey);

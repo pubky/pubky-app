@@ -9,6 +9,7 @@ import { FileUp, FileText, Loader2, RotateCcw } from 'lucide-react';
 import { AppError } from '@/libs/error/error';
 import { ErrorService } from '@/libs/error/error.types';
 import { formatFileName } from '@/libs/utils/utils';
+
 export function DialogRestoreEncryptedFile({ onRestore }: { onRestore: () => void }) {
   const t = useTranslations('onboarding.signIn');
   const tRestore = useTranslations('onboarding.signIn.restoreEncryptedFile');

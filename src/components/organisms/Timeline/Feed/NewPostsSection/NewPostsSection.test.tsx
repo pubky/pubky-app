@@ -1,22 +1,22 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import * as Core from '@/core';
-import * as Hooks from '@/hooks';
+import { useUnreadPosts } from '@/hooks/useUnreadPosts/useUnreadPosts';
 import { NewPostsSection } from './NewPostsSection';
 
 vi.mock('next-intl', () => ({
   useTranslations: () => (key: string) => key,
 }));
 
-vi.mock('@/hooks/useIsScrolledFromTop', () => ({
+vi.mock('@/hooks/useIsScrolledFromTop/useIsScrolledFromTop', () => ({
   useIsScrolledFromTop: vi.fn(() => false),
 }));
 
-vi.mock('@/hooks/useUnreadPosts', () => ({
+vi.mock('@/hooks/useUnreadPosts/useUnreadPosts', () => ({
   useUnreadPosts: vi.fn(() => ({ unreadPostIds: [], unreadCount: 0 })),
 }));
 
-const mockUseUnreadPosts = vi.mocked(Hooks.useUnreadPosts);
+const mockUseUnreadPosts = vi.mocked(useUnreadPosts);
 
 vi.mock('@/molecules', () => ({
   NewPostsButton: ({

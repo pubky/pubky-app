@@ -11,6 +11,7 @@ import * as Config from '@/config';
 import { Bell, StickyNote, MessageCircle, UsersRound, HeartHandshake, Tag } from 'lucide-react';
 import { UsersRound2 } from '@/icons';
 import { cn } from '@/libs/utils/utils';
+
 export interface ProfilePageFilterBarItem {
   icon: React.ComponentType<{
     className?: string;

@@ -9,6 +9,7 @@ import { APP_ROUTES } from '@/app/routes';
 import { MAX_TAGS } from './HotTags.constants';
 import type { HotTagsProps } from './HotTags.types';
 import { HotTagsSkeleton } from './HotTags.skeleton';
+import { Tag } from 'lucide-react';
 
 /**
  * HotTags
@@ -19,7 +20,6 @@ import { HotTagsSkeleton } from './HotTags.skeleton';
  * Note: This is an Organism because it interacts with Core via hooks (useHotTags)
  * and handles routing.
  */
-import { Tag } from 'lucide-react';
 export function HotTags({ className }: HotTagsProps) {
   const t = useTranslations('sidebar');
   const tCommon = useTranslations('common');

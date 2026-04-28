@@ -8,7 +8,6 @@ import * as Molecules from '@/molecules';
 import { getTagsLayoutForSurfaceLayout, PostMainLayoutProvider } from '@/organisms/PostMain/PostMainLayout';
 import { SinglePostArticle } from '../SinglePostArticle';
 import { SinglePostCard } from '../SinglePostCard';
-
 import { PostPageHeader } from '../PostPageHeader';
 import { SinglePostContentSkeleton } from './SinglePostContent.skeleton';
 import { ThreadTree } from '../ThreadTree/ThreadTree';

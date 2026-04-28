@@ -15,8 +15,8 @@ vi.mock('@/core', async (importOriginal) => {
   };
 });
 
-vi.mock('@/hooks/useSettingsActions', async (importOriginal) => {
-  const actual = await importOriginal<typeof import('@/hooks/useSettingsActions')>();
+vi.mock('@/hooks/useSettingsActions/useSettingsActions', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('@/hooks/useSettingsActions/useSettingsActions')>();
   return {
     ...actual,
     useSettingsActions: () => ({

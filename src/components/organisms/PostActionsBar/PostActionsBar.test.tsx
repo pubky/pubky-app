@@ -6,9 +6,15 @@ import { PostActionsBar } from './PostActionsBar';
 const mockUsePostCounts = vi.fn();
 const mockUseBookmark = vi.fn();
 
-vi.mock('@/hooks', () => ({
+vi.mock('@/hooks/usePostCounts/usePostCounts', () => ({
   usePostCounts: (postId: string) => mockUsePostCounts(postId),
+}));
+
+vi.mock('@/hooks/useBookmark/useBookmark', () => ({
   useBookmark: (postId: string) => mockUseBookmark(postId),
+}));
+
+vi.mock('@/hooks/useRequireAuth/useRequireAuth', () => ({
   useRequireAuth: () => ({
     isAuthenticated: true,
     requireAuth: <T,>(action: () => T) => action(),

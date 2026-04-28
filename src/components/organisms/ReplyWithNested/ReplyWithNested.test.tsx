@@ -8,7 +8,7 @@ const mocks = vi.hoisted(() => ({
   mockOnPostClick: vi.fn(),
 }));
 
-vi.mock('@/hooks', () => ({
+vi.mock('@/hooks/useNestedReplies/useNestedReplies', () => ({
   useNestedReplies: (...args: unknown[]) => {
     // Depth-aware: only return nested replies at depth 0 to prevent infinite recursion
     const options = args[1] as { depth?: number } | undefined;

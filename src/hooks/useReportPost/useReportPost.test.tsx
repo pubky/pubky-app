@@ -23,13 +23,9 @@ Object.defineProperty(window, 'location', {
 
 // Mock useCurrentUserProfile hook
 const mockUseCurrentUserProfile = vi.fn();
-vi.mock('@/hooks', async (importOriginal) => {
-  const actual = await importOriginal<typeof import('@/hooks')>();
-  return {
-    ...actual,
-    useCurrentUserProfile: () => mockUseCurrentUserProfile(),
-  };
-});
+vi.mock('@/hooks/useCurrentUserProfile/useCurrentUserProfile', () => ({
+  useCurrentUserProfile: () => mockUseCurrentUserProfile(),
+}));
 
 // Mock parseCompositeId
 vi.mock('@/core', async (importOriginal) => {

@@ -1,9 +1,10 @@
 import { render, screen, fireEvent } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { AvatarZoomModal } from './AvatarZoomModal';
+import { useBodyScrollLock } from '@/hooks/useBodyScrollLock/useBodyScrollLock';
 
 // Mock hooks
-vi.mock('@/hooks', () => ({
+vi.mock('@/hooks/useBodyScrollLock/useBodyScrollLock', () => ({
   useBodyScrollLock: vi.fn(),
 }));
 
@@ -151,10 +152,9 @@ describe('AvatarZoomModal', () => {
   });
 
   it('calls useBodyScrollLock with open prop', async () => {
-    const hooks = await import('@/hooks');
     render(<AvatarZoomModal {...mockProps} />);
 
-    expect(hooks.useBodyScrollLock).toHaveBeenCalledWith(true);
+    expect(useBodyScrollLock).toHaveBeenCalledWith(true);
   });
 
   describe('Accessibility and Focus Management', () => {

@@ -6,39 +6,52 @@ import type { VisualRow } from './TimelineFeedVisual.types';
 
 const {
   mockNavigateToPost,
-  mockUseInfiniteScroll,
   mockPostHeaderUserInfo,
+  mockUseInfiniteScroll,
   mockUseVisualFeedTiles,
   mockUseIsTouchDevice,
 } = vi.hoisted(() => ({
   mockNavigateToPost: vi.fn(),
-  mockUseInfiniteScroll: vi.fn(),
   mockPostHeaderUserInfo: vi.fn(({ timeAgo }: { timeAgo?: string }) => (
     <div data-testid="visual-overlay-header">{timeAgo ? `Header:${timeAgo}` : 'Header'}</div>
   )),
+  mockUseInfiniteScroll: vi.fn(),
   mockUseVisualFeedTiles: vi.fn(),
   mockUseIsTouchDevice: vi.fn(() => false),
 }));
 
-vi.mock('@/hooks', async (importOriginal) => {
-  const actual = await importOriginal<typeof import('@/hooks')>();
-  return {
-    ...actual,
-    useVisualFeedTiles: undefined,
-    useInfiniteScroll: mockUseInfiniteScroll,
-    usePostNavigation: () => ({ navigateToPost: mockNavigateToPost }),
-    useIsTouchDevice: () => mockUseIsTouchDevice(),
-    useViewportObserver: () => ({ ref: vi.fn(), isVisible: true }),
-    useUserDetails: () => ({ userDetails: { id: 'author', name: 'Author', image: null } }),
-    useAvatarUrl: () => null,
-    useRelativeTime: () => ({
-      formatRelativeTime: () => '1m',
-    }),
-  };
-});
-
 vi.mock('./useVisualFeedTiles', () => ({
-  useVisualFeedTiles: mockUseVisualFeedTiles as typeof import('./useVisualFeedTiles').useVisualFeedTiles,
+  useVisualFeedTiles: mockUseVisualFeedTiles,
+}));
+
+vi.mock('@/hooks/useInfiniteScroll/useInfiniteScroll', () => ({
+  useInfiniteScroll: mockUseInfiniteScroll,
+}));
+
+vi.mock('@/hooks/usePostNavigation/usePostNavigation', () => ({
+  usePostNavigation: () => ({ navigateToPost: mockNavigateToPost }),
+}));
+
+vi.mock('@/hooks/useIsTouchDevice/useIsTouchDevice', () => ({
+  useIsTouchDevice: mockUseIsTouchDevice,
+}));
+
+vi.mock('@/hooks/useViewportObserver/useViewportObserver', () => ({
+  useViewportObserver: () => ({ ref: vi.fn(), isVisible: true }),
+}));
+
+vi.mock('@/hooks/useUserDetails/useUserDetails', () => ({
+  useUserDetails: () => ({ userDetails: { id: 'author', name: 'Author', image: null } }),
+}));
+
+vi.mock('@/hooks/useAvatarUrl/useAvatarUrl', () => ({
+  useAvatarUrl: () => null,
+}));
+
+vi.mock('@/hooks/useRelativeTime/useRelativeTime', () => ({
+  useRelativeTime: () => ({
+    formatRelativeTime: () => '1m',
+  }),
 }));
 
 vi.mock('@/atoms', () => ({

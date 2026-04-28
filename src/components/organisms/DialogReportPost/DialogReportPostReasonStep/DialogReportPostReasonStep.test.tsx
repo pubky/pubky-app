@@ -7,13 +7,9 @@ import { REPORT_REASON_MAX_LENGTH } from '@/core/pipes/report';
 // Mock hooks
 const mockUseCurrentUserProfile = vi.fn();
 
-vi.mock('@/hooks', async (importOriginal) => {
-  const actual = await importOriginal<typeof import('@/hooks')>();
-  return {
-    ...actual,
-    useCurrentUserProfile: () => mockUseCurrentUserProfile(),
-  };
-});
+vi.mock('@/hooks/useCurrentUserProfile/useCurrentUserProfile', () => ({
+  useCurrentUserProfile: () => mockUseCurrentUserProfile(),
+}));
 
 // Mock organisms
 vi.mock('@/organisms', () => ({

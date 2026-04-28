@@ -4,7 +4,6 @@ import { resolveFeedLayout } from '@/hooks/useFeedLayoutResolution/useFeedLayout
 import { useCustomFeed } from '@/hooks/useCustomFeed/useCustomFeed';
 import { useIsMobile } from '@/hooks/useIsMobile/useIsMobile';
 import { useState, useEffect } from 'react';
-
 import * as Atoms from '@/atoms';
 import * as Molecules from '@/molecules';
 import * as Core from '@/core';

@@ -38,16 +38,12 @@ vi.mock('@/core', async (importOriginal) => {
   };
 });
 
-// Mock @/hooks
-vi.mock('@/hooks', async (importOriginal) => {
-  const actual = await importOriginal<typeof import('@/hooks')>();
-  return {
-    ...actual,
-    useSettingsActions: () => ({
-      setLanguage: vi.fn(),
-    }),
-  };
-});
+// Mock hooks
+vi.mock('@/hooks/useSettingsActions/useSettingsActions', () => ({
+  useSettingsActions: () => ({
+    setLanguage: vi.fn(),
+  }),
+}));
 
 describe('Language', () => {
   it('renders language content', () => {

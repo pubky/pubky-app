@@ -4,6 +4,7 @@ import { useOgMetadata } from '@/hooks/useOgMetadata/useOgMetadata';
 import * as Atoms from '@/atoms';
 import { GenericPreviewSkeleton } from './GenericPreview.skeleton';
 import { Globe } from 'lucide-react';
+
 interface GenericPreviewProps {
   url: string;
 }

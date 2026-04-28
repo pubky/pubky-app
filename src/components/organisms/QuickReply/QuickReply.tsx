@@ -8,7 +8,6 @@ import { useIsMobile } from '@/hooks/useIsMobile/useIsMobile';
 import { usePostInput } from '@/hooks/usePostInput/usePostInput';
 import * as React from 'react';
 import { useTranslations } from 'next-intl';
-
 import * as Atoms from '@/atoms';
 import * as Molecules from '@/molecules';
 import * as Organisms from '@/organisms';
@@ -18,7 +17,6 @@ import { POST_THREAD_CONNECTOR_VARIANTS } from '@/atoms';
 import { PostInputExpandableSection } from '@/organisms/PostInputExpandableSection';
 import { PostInputAttachments } from '@/molecules/PostInputAttachments/PostInputAttachments';
 import { usePostMainLayout, WIDE_POST_LAYOUT_CLASSES } from '@/organisms/PostMain/PostMainLayout';
-
 import { QUICK_REPLY_CONNECTOR_SPACER_HEIGHT } from './QuickReply.constants';
 import type { QuickReplyProps } from './QuickReply.types';
 import { canSubmitPost, cn, getCharacterCount } from '@/libs/utils/utils';

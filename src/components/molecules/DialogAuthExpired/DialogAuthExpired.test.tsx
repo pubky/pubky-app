@@ -15,7 +15,7 @@ vi.mock('next-intl', () => ({
   },
 }));
 
-vi.mock('@/hooks', () => ({
+vi.mock('@/hooks/useIsMobile/useIsMobile', () => ({
   useIsMobile: vi.fn(() => false),
 }));
 
