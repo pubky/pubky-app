@@ -1,8 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { PubkyAppFeedLayout, PubkyAppFeedReach, PubkyAppFeedSort, PubkyAppPostKind } from 'pubky-app-specs';
 
-import { LAYOUT, REACH, SORT, CONTENT } from '@/core/stores/home/home.types';
-
 import {
   pubkyLayoutToHomeLayout,
   homeLayoutToPubkyLayout,
@@ -13,7 +11,7 @@ import {
   pubkyPostKindToHomeContent,
   homeContentToPubkyPostKind,
 } from './pubky-app-spec-feed-mappers';
-
+import { CONTENT, LAYOUT, REACH, SORT } from '@/stores/home/home.types';
 describe('pubky-app-spec-feed-mappers', () => {
   describe('Layout Mappers', () => {
     describe('pubkyLayoutToHomeLayout', () => {

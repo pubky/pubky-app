@@ -3,8 +3,6 @@
 import { useCurrentUserProfile } from '@/hooks/useCurrentUserProfile/useCurrentUserProfile';
 import { useState, useCallback } from 'react';
 import { useTranslations } from 'next-intl';
-import type { ReportIssueType } from '@/core/pipes/report';
-import * as Core from '@/core';
 import * as Molecules from '@/molecules';
 import { POST_ROUTES } from '@/app/routes';
 import { REPORT_POST_STEPS, REPORT_API_ENDPOINT } from './useReportPost.constants';
@@ -12,7 +10,8 @@ import type { ReportPostStep } from './useReportPost.types';
 import type { UseReportPostReturn } from './useReportPost.types';
 import { Logger } from '@/libs/logger/logger';
 import { postJson } from '@/libs/api/client-request';
-
+import { parseCompositeId } from '@/models/models.utils';
+import type { ReportIssueType } from '@/pipes/report/report.types';
 /**
  * Hook to handle post reporting to Chatwoot.
  *
@@ -26,7 +25,7 @@ import { postJson } from '@/libs/api/client-request';
 export function useReportPost(postId: string): UseReportPostReturn {
   const { currentUserPubky, userDetails } = useCurrentUserProfile();
   const tReport = useTranslations('toast.report');
-  const parsedId = Core.parseCompositeId(postId);
+  const parsedId = parseCompositeId(postId);
   const postUrl = `${window.location.origin}${POST_ROUTES.POST}/${parsedId.pubky}/${parsedId.id}`;
 
   const [step, setStep] = useState<ReportPostStep>(REPORT_POST_STEPS.ISSUE_SELECTION);

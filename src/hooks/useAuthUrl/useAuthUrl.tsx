@@ -4,7 +4,6 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import type { Session } from '@synonymdev/pubky';
 import { useTranslations } from 'next-intl';
 
-import * as Core from '@/core';
 import * as Molecules from '@/molecules';
 
 import type { UseAuthUrlOptions, UseAuthUrlReturn } from './useAuthUrl.types';
@@ -12,7 +11,8 @@ import { Logger } from '@/libs/logger/logger';
 import { copyToClipboard } from '@/libs/utils/utils';
 import { AuthErrorCode } from '@/libs/error/error.codes';
 import { isAppError, isAuthError, isTimeoutError } from '@/libs/error/error.utils';
-
+import { AuthController } from '@/controllers/auth/auth';
+import { AUTH_FLOW_CANCELED_ERROR_NAME } from '@/services/homeserver/error.utils';
 /** Returns true if the error indicates the auth flow has expired (timeout or SESSION_EXPIRED). */
 const isAuthFlowExpiredError = (error: unknown): boolean => {
   if (!isAppError(error)) return false;
@@ -44,9 +44,7 @@ export function useAuthUrl(options: UseAuthUrlOptions = {}): UseAuthUrlReturn {
     try {
       // Request auth URL from controller
       const { authorizationUrl, awaitApproval } =
-        type === 'signup'
-          ? await Core.AuthController.getSignupAuthUrl(inviteCode)
-          : await Core.AuthController.getAuthUrl();
+        type === 'signup' ? await AuthController.getSignupAuthUrl(inviteCode) : await AuthController.getAuthUrl();
 
       awaitApproval
         .then(async (session: Session) => {
@@ -54,7 +52,7 @@ export function useAuthUrl(options: UseAuthUrlOptions = {}): UseAuthUrlReturn {
           // and must run even if the component unmounted (e.g., mobile deeplink handoff where
           // the browser may unmount/remount the page while Pubky Ring is open).
           try {
-            await Core.AuthController.initializeAuthenticatedSession({ session });
+            await AuthController.initializeAuthenticatedSession({ session });
           } catch (error) {
             Logger.error('Failed to persist session and check profile:', error);
             if (!isMountedRef.current) return;
@@ -69,7 +67,7 @@ export function useAuthUrl(options: UseAuthUrlOptions = {}): UseAuthUrlReturn {
             typeof error === 'object' &&
             error !== null &&
             'name' in error &&
-            (error as { name?: unknown }).name === Core.AUTH_FLOW_CANCELED_ERROR_NAME
+            (error as { name?: unknown }).name === AUTH_FLOW_CANCELED_ERROR_NAME
           ) {
             return;
           }

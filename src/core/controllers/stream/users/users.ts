@@ -1,6 +1,11 @@
-import * as Core from '@/core';
 import * as Config from '@/config';
-
+import { UserStreamApplication } from '@/application/stream/users/users';
+import type {
+  TGetOrFetchUsersParams,
+  TReadUserStreamChunkParams,
+  TReadUserStreamChunkResponse,
+} from '@/application/stream/users/users.types';
+import { useAuthStore } from '@/stores/auth/auth.store';
 /**
  * Stream User Controller
  *
@@ -23,16 +28,16 @@ export class StreamUserController {
     streamId,
     limit = Config.NEXUS_USERS_PER_PAGE,
     skip,
-  }: Core.TReadUserStreamChunkParams): Promise<Core.TReadUserStreamChunkResponse> {
+  }: TReadUserStreamChunkParams): Promise<TReadUserStreamChunkResponse> {
     // selectCurrentUserPubky() throws an error when user is not authenticated;
     // access currentUserPubky directly to get null instead (unauthenticated users can view profile followers/following)
-    const viewerId = Core.useAuthStore.getState().currentUserPubky;
+    const viewerId = useAuthStore.getState().currentUserPubky;
 
     const {
       nextPageIds,
       cacheMissUserIds,
       skip: nextSkip,
-    } = await Core.UserStreamApplication.getOrFetchStreamSlice({
+    } = await UserStreamApplication.getOrFetchStreamSlice({
       streamId,
       skip,
       limit,
@@ -42,7 +47,7 @@ export class StreamUserController {
     // Background fetch for missing users (non-blocking)
     if (cacheMissUserIds.length > 0) {
       // TODO: When TTL is implemented, we can return to void
-      await Core.UserStreamApplication.fetchMissingUsersFromNexus({
+      await UserStreamApplication.fetchMissingUsersFromNexus({
         cacheMissUserIds,
         viewerId: viewerId ?? undefined,
       });
@@ -57,10 +62,10 @@ export class StreamUserController {
    *
    * @param userIds - Array of user IDs to ensure are cached
    */
-  static async getOrFetchUsers({ userIds }: Pick<Core.TGetOrFetchUsersParams, 'userIds'>): Promise<void> {
-    const viewerId = Core.useAuthStore.getState().currentUserPubky;
+  static async getOrFetchUsers({ userIds }: Pick<TGetOrFetchUsersParams, 'userIds'>): Promise<void> {
+    const viewerId = useAuthStore.getState().currentUserPubky;
 
-    await Core.UserStreamApplication.getOrFetchUsers({
+    await UserStreamApplication.getOrFetchUsers({
       userIds,
       viewerId: viewerId ?? undefined,
     });

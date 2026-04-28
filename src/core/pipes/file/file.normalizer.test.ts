@@ -1,5 +1,4 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import * as Core from '@/core';
 import { BlobResult, FileResult } from 'pubky-app-specs';
 import { asOpaque } from '@/test-utils';
 import {
@@ -12,7 +11,8 @@ import {
 import { AppError } from '@/libs/error/error';
 import { ValidationErrorCode } from '@/libs/error/error.codes';
 import { ErrorCategory, ErrorService } from '@/libs/error/error.types';
-
+import { FileNormalizer } from '@/pipes/file/file.normalizer';
+import { PubkySpecsSingleton } from '@/pipes/pipes.builder';
 // File-specific test data
 const FILE_TEST_DATA = {
   name: 'test-image.png',
@@ -80,7 +80,7 @@ describe('FileNormalizer', () => {
     describe('toFileAttachment - successful creation', () => {
       it('should create file attachment with blobResult and fileResult', async () => {
         const file = createMockFile();
-        const result = await Core.FileNormalizer.toFileAttachment({ file, pubky: TEST_PUBKY.USER_1 });
+        const result = await FileNormalizer.toFileAttachment({ file, pubky: TEST_PUBKY.USER_1 });
 
         expect(result).toHaveProperty('blobResult');
         expect(result).toHaveProperty('fileResult');
@@ -88,7 +88,7 @@ describe('FileNormalizer', () => {
 
       it('should read file content and call createBlob with Uint8Array', async () => {
         const file = createMockFile();
-        await Core.FileNormalizer.toFileAttachment({ file, pubky: TEST_PUBKY.USER_1 });
+        await FileNormalizer.toFileAttachment({ file, pubky: TEST_PUBKY.USER_1 });
 
         expect(file.arrayBuffer).toHaveBeenCalled();
         expect(mockBuilder.createBlob).toHaveBeenCalledWith(expect.any(Uint8Array));
@@ -96,7 +96,7 @@ describe('FileNormalizer', () => {
 
       it('should call createFile with correct parameters using blob URL', async () => {
         const file = createMockFile();
-        await Core.FileNormalizer.toFileAttachment({ file, pubky: TEST_PUBKY.USER_1 });
+        await FileNormalizer.toFileAttachment({ file, pubky: TEST_PUBKY.USER_1 });
 
         expect(mockBuilder.createFile).toHaveBeenCalledWith(
           FILE_TEST_DATA.name,
@@ -108,7 +108,7 @@ describe('FileNormalizer', () => {
 
       it('should return correct structure with blobResult and fileResult', async () => {
         const file = createMockFile();
-        const result = await Core.FileNormalizer.toFileAttachment({ file, pubky: TEST_PUBKY.USER_1 });
+        const result = await FileNormalizer.toFileAttachment({ file, pubky: TEST_PUBKY.USER_1 });
 
         expect(result.blobResult.blob).toBeDefined();
         expect(result.blobResult.meta.url).toBeDefined();
@@ -124,7 +124,7 @@ describe('FileNormalizer', () => {
         ['binary', 'data.bin', 'application/octet-stream', 10_000_000],
       ])('should handle %s', async (_, name, type, size) => {
         const file = createMockFile(name, type, size);
-        await Core.FileNormalizer.toFileAttachment({ file, pubky: TEST_PUBKY.USER_1 });
+        await FileNormalizer.toFileAttachment({ file, pubky: TEST_PUBKY.USER_1 });
 
         expect(mockBuilder.createFile).toHaveBeenCalledWith(name, expect.any(String), type, size);
       });
@@ -134,9 +134,9 @@ describe('FileNormalizer', () => {
         ['USER_2', TEST_PUBKY.USER_2],
       ])('should handle pubky: %s', async (_, pubky) => {
         const file = createMockFile();
-        await Core.FileNormalizer.toFileAttachment({ file, pubky });
+        await FileNormalizer.toFileAttachment({ file, pubky });
 
-        expect(Core.PubkySpecsSingleton.get).toHaveBeenCalledWith(pubky);
+        expect(PubkySpecsSingleton.get).toHaveBeenCalledWith(pubky);
       });
     });
 
@@ -149,7 +149,7 @@ describe('FileNormalizer', () => {
         const file = createMockFile();
 
         try {
-          await Core.FileNormalizer.toFileAttachment({ file, pubky: TEST_PUBKY.USER_1 });
+          await FileNormalizer.toFileAttachment({ file, pubky: TEST_PUBKY.USER_1 });
           expect.fail('Should have thrown');
         } catch (error) {
           expect(error).toBeInstanceOf(AppError);
@@ -169,7 +169,7 @@ describe('FileNormalizer', () => {
         const file = createMockFile();
 
         try {
-          await Core.FileNormalizer.toFileAttachment({ file, pubky: TEST_PUBKY.USER_1 });
+          await FileNormalizer.toFileAttachment({ file, pubky: TEST_PUBKY.USER_1 });
           expect.fail('Should have thrown');
         } catch (error) {
           expect(error).toBeInstanceOf(AppError);
@@ -186,7 +186,7 @@ describe('FileNormalizer', () => {
         (file.arrayBuffer as ReturnType<typeof vi.fn>).mockRejectedValue('Read error');
 
         try {
-          await Core.FileNormalizer.toFileAttachment({ file, pubky: TEST_PUBKY.USER_1 });
+          await FileNormalizer.toFileAttachment({ file, pubky: TEST_PUBKY.USER_1 });
           expect.fail('Should have thrown');
         } catch (error) {
           expect(error).toBeInstanceOf(AppError);
@@ -204,9 +204,7 @@ describe('FileNormalizer', () => {
         });
         const file = createMockFile();
 
-        await expect(Core.FileNormalizer.toFileAttachment({ file, pubky: TEST_PUBKY.USER_1 })).rejects.toThrow(
-          AppError,
-        );
+        await expect(FileNormalizer.toFileAttachment({ file, pubky: TEST_PUBKY.USER_1 })).rejects.toThrow(AppError);
         expect(mockBuilder.createFile).not.toHaveBeenCalled();
       });
     });
@@ -219,7 +217,7 @@ describe('FileNormalizer', () => {
         ['unicode', '图片-测试-🎉.png', 'image/png', 100],
       ])('should handle %s in file metadata', async (_, name, type, size) => {
         const file = createMockFile(name, type, size);
-        await Core.FileNormalizer.toFileAttachment({ file, pubky: TEST_PUBKY.USER_1 });
+        await FileNormalizer.toFileAttachment({ file, pubky: TEST_PUBKY.USER_1 });
 
         expect(mockBuilder.createFile).toHaveBeenCalledWith(name, expect.any(String), type, size);
       });
@@ -236,7 +234,7 @@ describe('FileNormalizer', () => {
     describe('successful creation with real library', () => {
       it('should create valid result with correct URL formats', async () => {
         const file = createMockFile();
-        const result = await Core.FileNormalizer.toFileAttachment({ file, pubky: TEST_PUBKY.USER_1 });
+        const result = await FileNormalizer.toFileAttachment({ file, pubky: TEST_PUBKY.USER_1 });
 
         expect(result.blobResult.meta.url).toMatch(/^pubky:\/\/.+\/pub\/pubky\.app\/blobs\/.+/);
         expect(result.fileResult.meta.url).toMatch(/^pubky:\/\/.+\/pub\/pubky\.app\/files\/.+/);
@@ -244,14 +242,14 @@ describe('FileNormalizer', () => {
 
       it('should link file to blob via src property', async () => {
         const file = createMockFile();
-        const result = await Core.FileNormalizer.toFileAttachment({ file, pubky: TEST_PUBKY.USER_1 });
+        const result = await FileNormalizer.toFileAttachment({ file, pubky: TEST_PUBKY.USER_1 });
 
         expect(result.fileResult.file.toJson().src).toBe(result.blobResult.meta.url);
       });
 
       it('should store correct file metadata', async () => {
         const file = createMockFile('my-image.png', 'image/png', 2048);
-        const result = await Core.FileNormalizer.toFileAttachment({ file, pubky: TEST_PUBKY.USER_1 });
+        const result = await FileNormalizer.toFileAttachment({ file, pubky: TEST_PUBKY.USER_1 });
 
         const fileJson = result.fileResult.file.toJson();
         expect(fileJson.name).toBe('my-image.png');
@@ -263,8 +261,8 @@ describe('FileNormalizer', () => {
         const file1 = createMockFile('f1.png', 'image/png', 5, new Uint8Array([1, 2, 3, 4, 5]));
         const file2 = createMockFile('f2.png', 'image/png', 5, new Uint8Array([6, 7, 8, 9, 10]));
 
-        const result1 = await Core.FileNormalizer.toFileAttachment({ file: file1, pubky: TEST_PUBKY.USER_1 });
-        const result2 = await Core.FileNormalizer.toFileAttachment({ file: file2, pubky: TEST_PUBKY.USER_1 });
+        const result1 = await FileNormalizer.toFileAttachment({ file: file1, pubky: TEST_PUBKY.USER_1 });
+        const result2 = await FileNormalizer.toFileAttachment({ file: file2, pubky: TEST_PUBKY.USER_1 });
 
         expect(result1.blobResult.meta.url).not.toBe(result2.blobResult.meta.url);
       });
@@ -278,7 +276,7 @@ describe('FileNormalizer', () => {
         const emptyFile = createMockFile('empty.txt', 'text/plain', 0, new Uint8Array([]));
 
         try {
-          await Core.FileNormalizer.toFileAttachment({ file: emptyFile, pubky: TEST_PUBKY.USER_1 });
+          await FileNormalizer.toFileAttachment({ file: emptyFile, pubky: TEST_PUBKY.USER_1 });
           expect.fail('Should have thrown');
         } catch (error) {
           expect(error).toBeInstanceOf(AppError);
@@ -291,7 +289,7 @@ describe('FileNormalizer', () => {
 
       it('should handle minimum valid file size', async () => {
         const tinyFile = createMockFile('tiny.bin', 'application/octet-stream', 1, new Uint8Array([1]));
-        const result = await Core.FileNormalizer.toFileAttachment({ file: tinyFile, pubky: TEST_PUBKY.USER_1 });
+        const result = await FileNormalizer.toFileAttachment({ file: tinyFile, pubky: TEST_PUBKY.USER_1 });
 
         expect(result.fileResult.file.toJson().size).toBe(1);
       });
@@ -304,7 +302,7 @@ describe('FileNormalizer', () => {
           moderateContent.length,
           moderateContent,
         );
-        const result = await Core.FileNormalizer.toFileAttachment({ file: moderateFile, pubky: TEST_PUBKY.USER_1 });
+        const result = await FileNormalizer.toFileAttachment({ file: moderateFile, pubky: TEST_PUBKY.USER_1 });
 
         expect(result.fileResult.file.toJson().size).toBe(moderateContent.length);
       });
@@ -313,7 +311,7 @@ describe('FileNormalizer', () => {
         const tenMB = 10 * 1024 * 1024;
         const largeContent = new Uint8Array(tenMB).fill(255);
         const largeFile = createMockFile('large.bin', 'application/octet-stream', largeContent.length, largeContent);
-        const result = await Core.FileNormalizer.toFileAttachment({ file: largeFile, pubky: TEST_PUBKY.USER_1 });
+        const result = await FileNormalizer.toFileAttachment({ file: largeFile, pubky: TEST_PUBKY.USER_1 });
 
         expect(result.fileResult.file.toJson().size).toBe(largeContent.length);
       }, 20000);

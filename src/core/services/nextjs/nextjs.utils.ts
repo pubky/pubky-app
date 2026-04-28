@@ -26,7 +26,7 @@ export function isHttpProtocol(url: URL): boolean {
  */
 export async function validateDns(hostname: string): Promise<void> {
   // webpack bundles Node.js ONLY modules into client code via barrel imports
-  // (e.g., FilterContent.tsx's `import * as Core from '@/core'`). See #1435.
+  // (e.g., FilterContent.tsx's a direct core import). See #1435.
   const { isIP } = await import(/* webpackIgnore: true */ 'net');
   const dns = await import(/* webpackIgnore: true */ 'dns/promises');
 

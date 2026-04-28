@@ -9,9 +9,11 @@ import {
   USER_PATH_PARAMS,
 } from './user.types';
 import { buildUrlWithQuery } from '../nexus.utils';
-import * as Core from '@/core';
 import * as Config from '@/config';
-
+import * as queryNexusModule from '@/services/nexus/nexus.utils';
+import type { Pubky } from '@/models/models.types';
+import type { NexusTag, NexusUserDetails, TUserId } from '@/services/nexus/nexus.types';
+import { NexusUserService } from '@/services/nexus/user/user';
 const testUserId = 'qr3xqyz3e5cyf9npgxc5zfp15ehhcis6gqsxob4une7bwwazekry';
 const testViewerId = 'viewer123';
 
@@ -44,7 +46,7 @@ describe('User API', () => {
 
   describe('USER_API endpoints', () => {
     it('should generate correct URLs for basic endpoints', () => {
-      const params: Core.TUserId = { user_id: testUserId };
+      const params: TUserId = { user_id: testUserId };
 
       expect(userApi.counts(params)).toBe(`${Config.NEXUS_URL}/v0/user/${testUserId}/counts`);
       expect(userApi.details(params)).toBe(`${Config.NEXUS_URL}/v0/user/${testUserId}/details`);
@@ -159,7 +161,7 @@ describe('User API', () => {
 });
 
 describe('NexusUserService', () => {
-  const testUserId = 'qr3xqyz3e5cyf9npgxc5zfp15ehhcis6gqsxob4une7bwwazekry' as Core.Pubky;
+  const testUserId = 'qr3xqyz3e5cyf9npgxc5zfp15ehhcis6gqsxob4une7bwwazekry' as Pubky;
 
   beforeEach(() => {
     vi.clearAllMocks();
@@ -168,12 +170,12 @@ describe('NexusUserService', () => {
   describe('tags', () => {
     it('should construct correct URL and handle successful response', async () => {
       const mockTags = [
-        { label: 'developer', taggers: [] as Core.Pubky[], taggers_count: 0, relationship: false },
-      ] as Core.NexusTag[];
+        { label: 'developer', taggers: [] as Pubky[], taggers_count: 0, relationship: false },
+      ] as NexusTag[];
 
-      const queryNexusSpy = vi.spyOn(Core, 'queryNexus').mockResolvedValue(mockTags);
+      const queryNexusSpy = vi.spyOn(queryNexusModule, 'queryNexus').mockResolvedValue(mockTags);
 
-      const result = await Core.NexusUserService.tags({
+      const result = await NexusUserService.tags({
         user_id: testUserId,
         skip_tags: 5,
         limit_tags: 20,
@@ -188,9 +190,9 @@ describe('NexusUserService', () => {
 
   describe('taggers', () => {
     it('should construct correct URL with encoded label', async () => {
-      const queryNexusSpy = vi.spyOn(Core, 'queryNexus').mockResolvedValue([]);
+      const queryNexusSpy = vi.spyOn(queryNexusModule, 'queryNexus').mockResolvedValue([]);
 
-      await Core.NexusUserService.taggers({
+      await NexusUserService.taggers({
         user_id: testUserId,
         label: 'rust & wasm',
         skip: 10,
@@ -206,7 +208,7 @@ describe('NexusUserService', () => {
 
   describe('details', () => {
     it('should construct correct URL and handle successful response', async () => {
-      const mockUserDetails: Core.NexusUserDetails = {
+      const mockUserDetails: NexusUserDetails = {
         id: testUserId,
         name: 'Test User',
         bio: 'Test bio',
@@ -216,16 +218,16 @@ describe('NexusUserService', () => {
         indexed_at: Date.now(),
       };
 
-      const queryNexusSpy = vi.spyOn(Core, 'queryNexus').mockResolvedValue(mockUserDetails);
+      const queryNexusSpy = vi.spyOn(queryNexusModule, 'queryNexus').mockResolvedValue(mockUserDetails);
 
-      const result = await Core.NexusUserService.details({ user_id: testUserId });
+      const result = await NexusUserService.details({ user_id: testUserId });
 
       expect(result).toEqual(mockUserDetails);
       expect(queryNexusSpy).toHaveBeenCalledWith({ url: `${Config.NEXUS_URL}/v0/user/${testUserId}/details` });
     });
 
     it('should handle user with complete profile data', async () => {
-      const mockUserDetails: Core.NexusUserDetails = {
+      const mockUserDetails: NexusUserDetails = {
         id: testUserId,
         name: 'Satoshi Nakamoto',
         bio: 'Bitcoin creator',
@@ -238,9 +240,9 @@ describe('NexusUserService', () => {
         indexed_at: 1234567890,
       };
 
-      vi.spyOn(Core, 'queryNexus').mockResolvedValue(mockUserDetails);
+      vi.spyOn(queryNexusModule, 'queryNexus').mockResolvedValue(mockUserDetails);
 
-      const result = await Core.NexusUserService.details({ user_id: testUserId });
+      const result = await NexusUserService.details({ user_id: testUserId });
 
       expect(result).toEqual(mockUserDetails);
       expect(result.name).toBe('Satoshi Nakamoto');

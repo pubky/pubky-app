@@ -1,9 +1,10 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
-import * as Core from '@/core';
 import { useUnreadPosts } from '@/hooks/useUnreadPosts/useUnreadPosts';
 import { NewPostsSection } from './NewPostsSection';
-
+import { MuteFilter } from '@/application/stream/posts/muting/mute-filter';
+import { StreamPostsController } from '@/controllers/stream/posts/posts';
+import type { PostStreamId } from '@/models/stream/post/postStream.types';
 vi.mock('next-intl', () => ({
   useTranslations: () => (key: string) => key,
 }));
@@ -38,24 +39,21 @@ vi.mock('@/molecules', () => ({
   showErrorToast: vi.fn(),
 }));
 
-vi.mock('@/core', async (importOriginal) => {
-  const actual = await importOriginal<typeof import('@/core')>();
-  return {
-    ...actual,
-    MuteFilter: {
-      ...actual.MuteFilter,
-      filterPostsSafe: vi.fn((ids: string[]) => ids),
-    },
-    StreamPostsController: {
-      mergeUnreadStreamWithPostStream: vi.fn(),
-      clearUnreadStream: vi.fn(),
-      filterDeletedPosts: vi.fn((ids: string[]) => Promise.resolve(ids)),
-    },
-  };
-});
+vi.mock('@/application/stream/posts/muting/mute-filter', () => ({
+  MuteFilter: {
+    filterPostsSafe: vi.fn((ids: string[]) => ids),
+  },
+}));
+vi.mock('@/controllers/stream/posts/posts', () => ({
+  StreamPostsController: {
+    mergeUnreadStreamWithPostStream: vi.fn(),
+    clearUnreadStream: vi.fn(),
+    filterDeletedPosts: vi.fn((ids: string[]) => Promise.resolve(ids)),
+  },
+}));
 
 const defaultProps = {
-  streamId: 'timeline:all:all' as Core.PostStreamId,
+  streamId: 'timeline:all:all' as PostStreamId,
   postIds: ['post1', 'post2'],
   mutedUserIdSet: new Set<string>(),
   loading: false,
@@ -95,7 +93,7 @@ describe('NewPostsSection', () => {
 
   it('filters muted users from new post count', () => {
     mockUseUnreadPosts.mockReturnValue({ unreadPostIds: ['new1', 'muted1'], unreadCount: 2 });
-    vi.mocked(Core.MuteFilter.filterPostsSafe).mockReturnValue(['new1']);
+    vi.mocked(MuteFilter.filterPostsSafe).mockReturnValue(['new1']);
     render(<NewPostsSection {...defaultProps} />);
     expect(screen.getByTestId('new-posts-button')).toHaveAttribute('data-count', '1');
   });
@@ -108,10 +106,10 @@ describe('NewPostsSection', () => {
     fireEvent.click(screen.getByTestId('new-posts-button'));
 
     await waitFor(() => {
-      expect(Core.StreamPostsController.mergeUnreadStreamWithPostStream).toHaveBeenCalledWith({
+      expect(StreamPostsController.mergeUnreadStreamWithPostStream).toHaveBeenCalledWith({
         streamId: 'timeline:all:all',
       });
-      expect(Core.StreamPostsController.clearUnreadStream).toHaveBeenCalledWith({
+      expect(StreamPostsController.clearUnreadStream).toHaveBeenCalledWith({
         streamId: 'timeline:all:all',
       });
       expect(prependPosts).toHaveBeenCalledWith(['new1']);
@@ -134,7 +132,7 @@ describe('NewPostsSection - Snapshots', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     mockUseUnreadPosts.mockReturnValue({ unreadPostIds: [], unreadCount: 0 });
-    vi.mocked(Core.MuteFilter.filterPostsSafe).mockImplementation((ids: string[]) => ids);
+    vi.mocked(MuteFilter.filterPostsSafe).mockImplementation((ids: string[]) => ids);
   });
 
   it('matches snapshot when hidden', () => {

@@ -1,6 +1,6 @@
-import * as Core from '@/core';
 import * as Types from './report.types';
-
+import { ReportApplication } from '@/application/report/report';
+import { ReportValidators } from '@/pipes/report/report.validators';
 /**
  * Controller for post report submission.
  * Entry point for the report feature, called from the API route.
@@ -22,12 +22,12 @@ export class ReportController {
    */
   static async submit(params: Types.TReportSubmitParams): Promise<void> {
     // Validate and normalize inputs using pipes layer
-    const pubky = Core.ReportValidators.validatePubky(params.pubky);
-    const postUrl = Core.ReportValidators.validatePostUrl(params.postUrl);
-    const issueType = Core.ReportValidators.validateIssueType(params.issueType);
-    const reason = Core.ReportValidators.validateReason(params.reason);
-    const name = Core.ReportValidators.validateName(params.name);
+    const pubky = ReportValidators.validatePubky(params.pubky);
+    const postUrl = ReportValidators.validatePostUrl(params.postUrl);
+    const issueType = ReportValidators.validateIssueType(params.issueType);
+    const reason = ReportValidators.validateReason(params.reason);
+    const name = ReportValidators.validateName(params.name);
 
-    await Core.ReportApplication.submit({ pubky, postUrl, issueType, reason, name });
+    await ReportApplication.submit({ pubky, postUrl, issueType, reason, name });
   }
 }

@@ -9,7 +9,7 @@ vi.mock('next/navigation', () => ({
   }),
 }));
 
-vi.mock('@/core', () => ({
+vi.mock('@/stores/hot/hot.store', () => ({
   useHotStore: vi.fn(() => ({
     reach: 'all',
     timeframe: 'this_month',

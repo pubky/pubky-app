@@ -6,7 +6,7 @@ const mockUseLayoutReset = vi.fn();
 let mockIsMobile = false;
 
 // Mock Core
-vi.mock('@/core', () => ({
+vi.mock('@/stores/hot/hot.store', () => ({
   useHotStore: vi.fn(() => ({
     reach: 'all',
     setReach: vi.fn(),

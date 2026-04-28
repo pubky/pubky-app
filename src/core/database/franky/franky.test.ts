@@ -1,9 +1,8 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { indexedDB } from 'fake-indexeddb';
 import { DB_NAME, DB_VERSION } from '@/config';
-import { AppDatabase } from '@/core';
 import { Logger } from '@/libs/logger/logger';
-
+import { AppDatabase } from '@/database/franky/franky';
 const waitForDatabaseDeletion = async (name: string, onBlocked?: () => void) => {
   await new Promise<void>((resolve, reject) => {
     const deleteRequest = indexedDB.deleteDatabase(name);

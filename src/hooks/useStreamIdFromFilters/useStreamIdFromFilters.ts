@@ -1,5 +1,7 @@
-import * as Core from '@/core';
-
+import type { PostStreamTypes } from '@/models/stream/post/postStream.types';
+import { useHomeStore } from '@/stores/home/home.store';
+import type { ContentType } from '@/stores/home/home.types';
+import { getStreamId } from '@/stores/home/home.utils';
 /**
  * Custom hook that returns the current streamId based on global filter state
  *
@@ -24,11 +26,11 @@ import * as Core from '@/core';
  * }
  * ```
  */
-export function useStreamIdFromFilters(contentOverride?: Core.ContentType): Core.PostStreamTypes {
-  const sort = Core.useHomeStore((state) => state.sort);
-  const reach = Core.useHomeStore((state) => state.reach);
-  const content = Core.useHomeStore((state) => state.content);
+export function useStreamIdFromFilters(contentOverride?: ContentType): PostStreamTypes {
+  const sort = useHomeStore((state) => state.sort);
+  const reach = useHomeStore((state) => state.reach);
+  const content = useHomeStore((state) => state.content);
   const effectiveContent = contentOverride ?? content;
 
-  return Core.getStreamId(sort, reach, effectiveContent);
+  return getStreamId(sort, reach, effectiveContent);
 }

@@ -1,8 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
-import * as Core from '@/core';
 import { HttpStatusCode } from '@/libs/http/http.types';
 import { handleApiError } from '@/libs/api/route-error-handler';
-
+import { ReportController } from '@/controllers/report/report';
 /**
  * API Route for post report submission to Chatwoot
  *
@@ -18,7 +17,7 @@ export async function POST(request: NextRequest) {
     const { pubky, postUrl, issueType, reason, name } = body;
 
     // Delegate to controller - validation happens there
-    await Core.ReportController.submit({ pubky, postUrl, issueType, reason, name });
+    await ReportController.submit({ pubky, postUrl, issueType, reason, name });
 
     return NextResponse.json({ message: 'Success' });
   } catch (error) {

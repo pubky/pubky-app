@@ -2,7 +2,6 @@
 
 import * as Atoms from '@/atoms';
 import * as Config from '@/config';
-import * as Core from '@/core';
 import * as Molecules from '@/molecules';
 import React, { useState } from 'react';
 import { useTranslations } from 'next-intl';
@@ -19,6 +18,7 @@ import { CircleCheck, Server, ArrowLeft, Loader2, ArrowRight } from 'lucide-reac
 import { XTwitter, Telegram } from '@/icons';
 import { Logger } from '@/libs/logger/logger';
 import { cn } from '@/libs/utils/utils';
+import { AuthController } from '@/controllers/auth/auth';
 export const HumanInviteCode = ({ onBack, onSuccess }: HumanInviteCodeProps) => {
   const t = useTranslations('onboarding.inviteCode');
   const tCommon = useTranslations('common');
@@ -41,7 +41,7 @@ export const HumanInviteCode = ({ onBack, onSuccess }: HumanInviteCodeProps) => 
   // generate an invite code and put it in console log if you are in development mode
   React.useEffect(() => {
     if (process.env.NODE_ENV === 'development') {
-      Core.AuthController.generateSignupToken()
+      AuthController.generateSignupToken()
         .then((token) => {
           Logger.info(token, token);
         })

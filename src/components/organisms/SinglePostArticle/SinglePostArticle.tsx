@@ -3,13 +3,13 @@
 import { useLinkConfirmation } from '@/hooks/useLinkConfirmation/useLinkConfirmation';
 import { usePostArticle } from '@/hooks/usePostArticle/usePostArticle';
 import { useRef, useState } from 'react';
-import type { PostDetailsModel } from '@/core';
 import * as Atoms from '@/atoms';
 import * as Molecules from '@/molecules';
 import * as Organisms from '@/organisms';
 import type { PostTagsPanelHandle } from '@/organisms';
-import * as Core from '@/core';
-
+import type { PostDetailsModel } from '@/models/post/details/postDetails';
+import { FileVariant } from '@/services/nexus/file/file.types';
+import { useLocalFilesStore } from '@/stores/localFiles/localFiles.store';
 interface SinglePostArticleProps {
   postId: string;
   content: string;
@@ -44,12 +44,12 @@ export const SinglePostArticle = ({ postId, content, attachments, isBlurred }: S
   const { title, body, coverImage } = usePostArticle({
     content,
     attachments,
-    coverImageVariant: Core.FileVariant.MAIN,
+    coverImageVariant: FileVariant.MAIN,
   });
 
   const { dialogOpen, setDialogOpen, clickedLink, handleLinkClick } = useLinkConfirmation();
 
-  const localAttachments = Core.useLocalFilesStore((s) => s.posts[postId]);
+  const localAttachments = useLocalFilesStore((s) => s.posts[postId]);
 
   const localCoverImage = localAttachments?.[0]?.type.startsWith('image')
     ? { src: localAttachments[0].urls.main, alt: localAttachments[0].name }

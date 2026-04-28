@@ -94,7 +94,7 @@ export class OgMetadataValidators {
 
     // IP addresses and localhost skip domain structure checks
     // webpack bundles Node.js ONLY modules into client code via barrel imports
-    // (e.g., FilterContent.tsx's `import * as Core from '@/core'`). See #1435.
+    // (e.g., FilterContent.tsx's a direct core import). See #1435.
     const { isIP } = await import(/* webpackIgnore: true */ 'net');
     if (isIP(hostname) || hostname === 'localhost') {
       return;

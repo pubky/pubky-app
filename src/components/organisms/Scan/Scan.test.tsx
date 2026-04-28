@@ -43,7 +43,7 @@ const { onboardingState } = vi.hoisted(() => ({
   onboardingState: { inviteCode: 'A9KM-7MJP-ERM9' },
 }));
 
-vi.mock('@/core', () => ({
+vi.mock('@/stores/onboarding/onboarding.store', () => ({
   useOnboardingStore: vi.fn((selector) => {
     return selector ? selector(onboardingState) : onboardingState;
   }),

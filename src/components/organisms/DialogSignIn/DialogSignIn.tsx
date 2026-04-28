@@ -3,7 +3,6 @@
 import Link from 'next/link';
 import { useTranslations } from 'next-intl';
 import * as Atoms from '@/atoms';
-import * as Core from '@/core';
 
 /**
  * DialogSignIn
@@ -18,10 +17,11 @@ import * as Core from '@/core';
  * Inspired by pubky-app's Join modal but uses Franky's design patterns.
  */
 import { UserPlus, KeyRound } from 'lucide-react';
+import { useAuthStore } from '@/stores/auth/auth.store';
 export function DialogSignIn() {
   const t = useTranslations('dialogs.signIn');
-  const showSignInDialog = Core.useAuthStore((state) => state.showSignInDialog);
-  const setShowSignInDialog = Core.useAuthStore((state) => state.setShowSignInDialog);
+  const showSignInDialog = useAuthStore((state) => state.showSignInDialog);
+  const setShowSignInDialog = useAuthStore((state) => state.setShowSignInDialog);
   const handleClose = () => setShowSignInDialog(false);
   return (
     <Atoms.Dialog open={showSignInDialog} onOpenChange={setShowSignInDialog}>

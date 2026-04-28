@@ -1,27 +1,32 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
-import * as Core from '@/core';
 import { Logger } from '@/libs/logger/logger';
-
-const muter = 'pubky_muter' as Core.Pubky;
-const mutee = 'pubky_mutee' as Core.Pubky;
+import { postStreamQueue } from '@/application/stream/posts/muting/post-stream-queue';
+import { db } from '@/database/franky/franky';
+import type { Pubky } from '@/models/models.types';
+import { UserStreamModel } from '@/models/stream/user/userStream';
+import { UserStreamTypes } from '@/models/stream/user/userStream.types';
+import { LocalMuteService } from '@/services/local/mute/mute';
+import { LocalStreamUsersService } from '@/services/local/stream/users/users';
+const muter = 'pubky_muter' as Pubky;
+const mutee = 'pubky_mutee' as Pubky;
 
 async function clearTables() {
-  await Core.db.transaction('rw', [Core.UserStreamModel.table], async () => {
-    await Core.UserStreamModel.table.clear();
+  await db.transaction('rw', [UserStreamModel.table], async () => {
+    await UserStreamModel.table.clear();
   });
 }
 
-const getMutedStreamId = () => Core.UserStreamTypes.MUTED;
+const getMutedStreamId = () => UserStreamTypes.MUTED;
 
-async function isMutedInStream(userId: Core.Pubky): Promise<boolean> {
+async function isMutedInStream(userId: Pubky): Promise<boolean> {
   // @ts-expect-error - BaseStreamModel generic type constraint
-  const stream = await Core.UserStreamModel.findById(getMutedStreamId());
+  const stream = await UserStreamModel.findById(getMutedStreamId());
   return stream?.stream.includes(userId) ?? false;
 }
 
 describe('LocalMuteService', () => {
   beforeEach(async () => {
-    await Core.db.initialize();
+    await db.initialize();
     await clearTables();
   });
 
@@ -29,9 +34,7 @@ describe('LocalMuteService', () => {
     ['create', 'mute', true],
     ['delete', 'unmute', false],
   ])('%s operation', (operation, action, expectedStatus) => {
-    const service = Core.LocalMuteService[
-      operation as keyof typeof Core.LocalMuteService
-    ] as typeof Core.LocalMuteService.create;
+    const service = LocalMuteService[operation as keyof typeof LocalMuteService] as typeof LocalMuteService.create;
 
     it(`should ${action} when stream does not exist`, async () => {
       await service({ muter, mutee });
@@ -44,15 +47,15 @@ describe('LocalMuteService', () => {
       // Set up stream to match expected state by performing the action once first
       if (expectedStatus) {
         // For mute idempotency: user is already in stream
-        await Core.LocalStreamUsersService.prependToStream(Core.UserStreamTypes.MUTED, [mutee]);
+        await LocalStreamUsersService.prependToStream(UserStreamTypes.MUTED, [mutee]);
       } else {
         // For unmute idempotency: mute then unmute, so user has been properly unmuted
-        await Core.LocalMuteService.create({ muter, mutee });
-        await Core.LocalMuteService.delete({ muter, mutee });
+        await LocalMuteService.create({ muter, mutee });
+        await LocalMuteService.delete({ muter, mutee });
       }
 
-      const prependSpy = vi.spyOn(Core.LocalStreamUsersService, 'prependToStream');
-      const removeSpy = vi.spyOn(Core.LocalStreamUsersService, 'removeFromStream');
+      const prependSpy = vi.spyOn(LocalStreamUsersService, 'prependToStream');
+      const removeSpy = vi.spyOn(LocalStreamUsersService, 'removeFromStream');
 
       await service({ muter, mutee });
 
@@ -77,10 +80,10 @@ describe('LocalMuteService', () => {
     it('should log success messages correctly', async () => {
       const debugSpy = vi.spyOn(Logger, 'debug');
 
-      await Core.LocalMuteService.create({ muter, mutee });
+      await LocalMuteService.create({ muter, mutee });
       expect(debugSpy).toHaveBeenCalledWith('Mute created successfully', { muter, mutee });
 
-      await Core.LocalMuteService.delete({ muter, mutee });
+      await LocalMuteService.delete({ muter, mutee });
       expect(debugSpy).toHaveBeenCalledWith('Unmute completed successfully', { muter, mutee });
 
       debugSpy.mockRestore();
@@ -89,10 +92,10 @@ describe('LocalMuteService', () => {
 
   describe('Error Types', () => {
     it('should throw WRITE_FAILED for create operations', async () => {
-      const spy = vi.spyOn(Core.LocalStreamUsersService, 'prependToStream').mockRejectedValueOnce(new Error('fail'));
+      const spy = vi.spyOn(LocalStreamUsersService, 'prependToStream').mockRejectedValueOnce(new Error('fail'));
 
       try {
-        await Core.LocalMuteService.create({ muter, mutee });
+        await LocalMuteService.create({ muter, mutee });
         expect.unreachable('should throw');
       } catch (err: unknown) {
         const e = err as { code?: string };
@@ -104,12 +107,12 @@ describe('LocalMuteService', () => {
 
     it('should throw DELETE_FAILED for delete operations', async () => {
       // First mute so unmute has something to do
-      await Core.LocalMuteService.create({ muter, mutee });
+      await LocalMuteService.create({ muter, mutee });
 
-      const spy = vi.spyOn(Core.LocalStreamUsersService, 'removeFromStream').mockRejectedValueOnce(new Error('fail'));
+      const spy = vi.spyOn(LocalStreamUsersService, 'removeFromStream').mockRejectedValueOnce(new Error('fail'));
 
       try {
-        await Core.LocalMuteService.delete({ muter, mutee });
+        await LocalMuteService.delete({ muter, mutee });
         expect.unreachable('should throw');
       } catch (err: unknown) {
         const e = err as { code?: string };
@@ -124,54 +127,54 @@ describe('LocalMuteService', () => {
   // have complex this-context requirements that don't affect runtime behavior
   describe('Stream Updates', () => {
     it('should add mutee to muted stream on mute', async () => {
-      await Core.LocalMuteService.create({ muter, mutee });
+      await LocalMuteService.create({ muter, mutee });
 
       // @ts-expect-error - BaseStreamModel generic type constraint
-      const mutedStream = await Core.UserStreamModel.findById(getMutedStreamId());
+      const mutedStream = await UserStreamModel.findById(getMutedStreamId());
       expect(mutedStream?.stream).toContain(mutee);
     });
 
     it('should remove mutee from muted stream on unmute', async () => {
       // First mute
-      await Core.LocalMuteService.create({ muter, mutee });
+      await LocalMuteService.create({ muter, mutee });
       // @ts-expect-error - BaseStreamModel generic type constraint
-      expect((await Core.UserStreamModel.findById(getMutedStreamId()))?.stream).toContain(mutee);
+      expect((await UserStreamModel.findById(getMutedStreamId()))?.stream).toContain(mutee);
 
       // Then unmute
-      await Core.LocalMuteService.delete({ muter, mutee });
+      await LocalMuteService.delete({ muter, mutee });
 
       // @ts-expect-error - BaseStreamModel generic type constraint
-      const mutedStream = await Core.UserStreamModel.findById(getMutedStreamId());
+      const mutedStream = await UserStreamModel.findById(getMutedStreamId());
       expect(mutedStream?.stream).not.toContain(mutee);
     });
 
     it('should prepend new muted user to beginning of stream', async () => {
-      const mutee2 = 'pubky_mutee_2' as Core.Pubky;
+      const mutee2 = 'pubky_mutee_2' as Pubky;
 
-      await Core.LocalMuteService.create({ muter, mutee });
-      await Core.LocalMuteService.create({ muter, mutee: mutee2 });
+      await LocalMuteService.create({ muter, mutee });
+      await LocalMuteService.create({ muter, mutee: mutee2 });
 
       // @ts-expect-error - BaseStreamModel generic type constraint
-      const mutedStream = await Core.UserStreamModel.findById(getMutedStreamId());
+      const mutedStream = await UserStreamModel.findById(getMutedStreamId());
       expect(mutedStream?.stream).toEqual([mutee2, mutee]);
     });
 
     it('should not add duplicate users to muted stream', async () => {
-      await Core.LocalMuteService.create({ muter, mutee });
-      await Core.LocalMuteService.create({ muter, mutee });
+      await LocalMuteService.create({ muter, mutee });
+      await LocalMuteService.create({ muter, mutee });
 
       // @ts-expect-error - BaseStreamModel generic type constraint
-      const mutedStream = await Core.UserStreamModel.findById(getMutedStreamId());
+      const mutedStream = await UserStreamModel.findById(getMutedStreamId());
       expect(mutedStream?.stream.filter((id) => id === mutee)).toHaveLength(1);
     });
 
     it('should not update streams when mute status does not change', async () => {
       // Already muted via stream
-      await Core.LocalStreamUsersService.prependToStream(Core.UserStreamTypes.MUTED, [mutee]);
+      await LocalStreamUsersService.prependToStream(UserStreamTypes.MUTED, [mutee]);
 
-      const prependSpy = vi.spyOn(Core.LocalStreamUsersService, 'prependToStream');
+      const prependSpy = vi.spyOn(LocalStreamUsersService, 'prependToStream');
 
-      await Core.LocalMuteService.create({ muter, mutee });
+      await LocalMuteService.create({ muter, mutee });
 
       expect(prependSpy).not.toHaveBeenCalled();
       prependSpy.mockRestore();
@@ -179,18 +182,18 @@ describe('LocalMuteService', () => {
 
     it('should handle unmute when stream does not exist', async () => {
       // Unmute should not throw even if stream doesn't exist
-      await expect(Core.LocalMuteService.delete({ muter, mutee })).resolves.not.toThrow();
+      await expect(LocalMuteService.delete({ muter, mutee })).resolves.not.toThrow();
     });
 
     it('should clear post stream queue when mute status changes', async () => {
-      const clearSpy = vi.spyOn(Core.postStreamQueue, 'clear');
+      const clearSpy = vi.spyOn(postStreamQueue, 'clear');
 
       // Mute should clear queue
-      await Core.LocalMuteService.create({ muter, mutee });
+      await LocalMuteService.create({ muter, mutee });
       expect(clearSpy).toHaveBeenCalledTimes(1);
 
       // Unmute should also clear queue
-      await Core.LocalMuteService.delete({ muter, mutee });
+      await LocalMuteService.delete({ muter, mutee });
       expect(clearSpy).toHaveBeenCalledTimes(2);
 
       clearSpy.mockRestore();
@@ -198,12 +201,12 @@ describe('LocalMuteService', () => {
 
     it('should not clear post stream queue when mute status does not change', async () => {
       // Already muted via stream
-      await Core.LocalStreamUsersService.prependToStream(Core.UserStreamTypes.MUTED, [mutee]);
+      await LocalStreamUsersService.prependToStream(UserStreamTypes.MUTED, [mutee]);
 
-      const clearSpy = vi.spyOn(Core.postStreamQueue, 'clear');
+      const clearSpy = vi.spyOn(postStreamQueue, 'clear');
 
       // Mute again (no-op since already muted)
-      await Core.LocalMuteService.create({ muter, mutee });
+      await LocalMuteService.create({ muter, mutee });
 
       // Queue should not be cleared since status didn't change
       expect(clearSpy).not.toHaveBeenCalled();

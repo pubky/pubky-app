@@ -8,10 +8,12 @@ import { useEffect, useRef } from 'react';
 import * as Atoms from '@/atoms';
 import * as Molecules from '@/molecules';
 import * as Organisms from '@/organisms';
-import * as Core from '@/core';
 import * as Types from './RepliesWithParent.types';
 import { Logger } from '@/libs/logger/logger';
-
+import { PostController } from '@/controllers/post/post';
+import { CompositeIdDomain } from '@/models/models.types';
+import { buildCompositeIdFromPubkyUri } from '@/models/models.utils';
+import { useAuthStore } from '@/stores/auth/auth.store';
 /**
  * RepliesWithParent
  *
@@ -72,15 +74,15 @@ function ReplyWithParent({ replyPostId, onPostClick }: Types.ReplyWithParentProp
   // UI → Controller → Service → Model
   const parentPostId = useLiveQuery(async () => {
     try {
-      const relationships = await Core.PostController.getRelationships({ compositeId: replyPostId });
+      const relationships = await PostController.getRelationships({ compositeId: replyPostId });
 
       if (!relationships?.replied) {
         return null;
       }
 
-      const parentCompositeId = Core.buildCompositeIdFromPubkyUri({
+      const parentCompositeId = buildCompositeIdFromPubkyUri({
         uri: relationships.replied,
-        domain: Core.CompositeIdDomain.POSTS,
+        domain: CompositeIdDomain.POSTS,
       });
 
       return parentCompositeId;
@@ -96,7 +98,7 @@ function ReplyWithParent({ replyPostId, onPostClick }: Types.ReplyWithParentProp
     try {
       if (!parentPostId) return null;
 
-      const post = await Core.PostController.getDetails({ compositeId: parentPostId });
+      const post = await PostController.getDetails({ compositeId: parentPostId });
 
       return post;
     } catch (error) {
@@ -113,11 +115,11 @@ function ReplyWithParent({ replyPostId, onPostClick }: Types.ReplyWithParentProp
 
     if (parentPostId && !parentPost && !fetchingSet.has(parentPostId)) {
       fetchingSet.add(parentPostId);
-      const viewerId = Core.useAuthStore.getState().selectCurrentUserPubky();
+      const viewerId = useAuthStore.getState().selectCurrentUserPubky();
       if (!viewerId) return;
       // Parent post ID exists but post details are missing
       // Fetch via Controller (fire-and-forget, useLiveQuery will react to DB updates)
-      Core.PostController.getOrFetch({ compositeId: parentPostId, viewerId })
+      PostController.getOrFetch({ compositeId: parentPostId, viewerId })
         .catch((error) => {
           Logger.error('[RepliesWithParent] Failed to fetch parent post details', { parentPostId, error });
         })

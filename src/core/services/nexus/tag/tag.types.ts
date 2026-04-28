@@ -1,18 +1,18 @@
-import * as Core from '@/core';
-
+import type { Pubky } from '@/models/models.types';
+import type { TPaginationParams, TUserStreamReachParams } from '@/services/nexus/nexus.types';
 export type TTagViewParams = {
-  taggerId: Core.Pubky;
+  taggerId: Pubky;
   tagId: string;
 };
 
-export type TTagHotParams = Core.TPaginationParams &
-  Core.TUserStreamReachParams & {
+export type TTagHotParams = TPaginationParams &
+  TUserStreamReachParams & {
     user_id?: string;
     taggers_limit?: number;
   };
 
-export type TTagTaggersParams = Core.TPaginationParams &
-  Core.TUserStreamReachParams & {
+export type TTagTaggersParams = TPaginationParams &
+  TUserStreamReachParams & {
     label: string;
     user_id?: string;
   };

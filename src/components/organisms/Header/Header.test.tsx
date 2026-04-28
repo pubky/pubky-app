@@ -58,16 +58,24 @@ vi.mock('@/app', () => ({
   },
 }));
 
-vi.mock('@/core', () => ({
+vi.mock('@/stores/auth/auth.store', () => ({
   useAuthStore: (selector: (state: { currentUserPubky: string | null }) => unknown) =>
     selector({ currentUserPubky: mockCurrentUserPubky }),
+}));
+vi.mock('@/stores/notification/notification.store', () => ({
   useNotificationStore: () => ({ selectUnread: () => 0 }),
+}));
+vi.mock('@/controllers/profile/profile', () => ({
   ProfileController: {
     read: vi.fn(() => Promise.resolve({ name: 'Test User', image: 'test-image.jpg' })),
   },
+}));
+vi.mock('@/controllers/file/file', () => ({
   FileController: {
     getAvatarUrl: vi.fn((pubky: string) => `https://cdn.example.com/avatar/${pubky}`),
   },
+}));
+vi.mock('@/database/franky/franky', () => ({
   db: {
     user_details: {
       get: vi.fn(() => Promise.resolve({ name: 'Test User', image: 'test-image.jpg' })),

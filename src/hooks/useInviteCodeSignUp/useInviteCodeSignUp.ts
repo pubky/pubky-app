@@ -2,12 +2,12 @@
 
 import { useTranslations } from 'next-intl';
 
-import * as Core from '@/core';
 import * as Molecules from '@/molecules';
 
 import type { UseInviteCodeSignUpResult } from './useInviteCodeSignUp.types';
 import { getRetryAfter, isAppError, isAuthError, isRetryable } from '@/libs/error/error.utils';
-
+import { AuthController } from '@/controllers/auth/auth';
+import { useOnboardingStore } from '@/stores/onboarding/onboarding.store';
 const SIGN_UP_MAX_ATTEMPTS = 4;
 const SIGN_UP_RETRY_BASE_DELAY_MS = 500;
 const SIGN_UP_RETRY_MAX_DELAY_MS = 5000;
@@ -26,7 +26,7 @@ const SIGN_UP_RETRY_MAX_DELAY_MS = 5000;
  * @example
  * const { validateAndSignUp } = useInviteCodeSignUp();
  * const onContinue = async () => {
- *   const inviteCode = Core.useOnboardingStore.getState().inviteCode;
+ *   const inviteCode = useOnboardingStore.getState().inviteCode;
  *   await validateAndSignUp(inviteCode);
  *   router.push(ONBOARDING_ROUTES.BACKUP);
  * };
@@ -48,7 +48,7 @@ export function useInviteCodeSignUp(): UseInviteCodeSignUpResult {
   };
 
   async function validateAndSignUp(inviteCode: string) {
-    const secretKey = Core.useOnboardingStore.getState().selectSecretKey();
+    const secretKey = useOnboardingStore.getState().selectSecretKey();
 
     let lastError: unknown;
 
@@ -56,7 +56,7 @@ export function useInviteCodeSignUp(): UseInviteCodeSignUpResult {
       let description = t('signUpError');
 
       try {
-        await Core.AuthController.signUp({ secretKey, signupToken: inviteCode });
+        await AuthController.signUp({ secretKey, signupToken: inviteCode });
         return;
       } catch (error) {
         lastError = error;
@@ -70,7 +70,7 @@ export function useInviteCodeSignUp(): UseInviteCodeSignUpResult {
 
         // Keep secrets for retryable failures to avoid losing a paid signup when transport fails.
         if (!(isAppError(error) && isRetryable(error))) {
-          Core.useOnboardingStore.getState().clearSecrets();
+          useOnboardingStore.getState().clearSecrets();
         }
 
         if (isAppError(error)) {

@@ -141,15 +141,11 @@ vi.mock('@/atoms', () => ({
 
 // Mock core - mock useSettingsStore
 const mockSetShowConfirm = vi.fn();
-vi.mock('@/core', async (importOriginal) => {
-  const actual = await importOriginal<typeof import('@/core')>();
-  return {
-    ...actual,
-    useSettingsStore: () => ({
-      setShowConfirm: mockSetShowConfirm,
-    }),
-  };
-});
+vi.mock('@/stores/settings/settings.store', () => ({
+  useSettingsStore: () => ({
+    setShowConfirm: mockSetShowConfirm,
+  }),
+}));
 
 // Mock window.open
 const mockWindowOpen = vi.fn();

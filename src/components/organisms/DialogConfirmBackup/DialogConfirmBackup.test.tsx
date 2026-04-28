@@ -3,7 +3,7 @@ import { render } from '@testing-library/react';
 import { DialogConfirmBackup } from './DialogConfirmBackup';
 
 // Mock Core module
-vi.mock('@/core', () => ({
+vi.mock('@/stores/onboarding/onboarding.store', () => ({
   useOnboardingStore: vi.fn(() => ({
     clearSecrets: vi.fn(),
   })),

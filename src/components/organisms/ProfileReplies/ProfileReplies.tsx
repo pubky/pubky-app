@@ -1,9 +1,9 @@
 'use client';
 
-import * as Core from '@/core';
 import * as Providers from '@/providers';
 import { RepliesWithParent } from './RepliesWithParent';
-
+import type { AuthorRepliesStreamCompositeId } from '@/models/stream/post/postStream.types';
+import { StreamSource } from '@/services/nexus/stream/posts/postStream.types';
 /**
  * ProfileReplies
  *
@@ -14,9 +14,7 @@ import { RepliesWithParent } from './RepliesWithParent';
 export function ProfileReplies() {
   const { pubky } = Providers.useProfileContext();
 
-  const streamId = pubky
-    ? (`${Core.StreamSource.AUTHOR_REPLIES}:${pubky}` as Core.AuthorRepliesStreamCompositeId)
-    : undefined;
+  const streamId = pubky ? (`${StreamSource.AUTHOR_REPLIES}:${pubky}` as AuthorRepliesStreamCompositeId) : undefined;
 
   if (!streamId) {
     return null;

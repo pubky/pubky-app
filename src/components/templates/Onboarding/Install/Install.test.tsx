@@ -14,7 +14,7 @@ vi.mock('next/navigation', () => ({
   }),
 }));
 
-vi.mock('@/core', () => ({
+vi.mock('@/stores/onboarding/onboarding.store', () => ({
   useOnboardingStore: {
     getState: () => ({
       setInviteCode: mockSetInviteCode,

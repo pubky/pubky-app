@@ -1,11 +1,10 @@
 import { renderHook, act } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { useInviteCodeSignUp } from './useInviteCodeSignUp';
-import * as Core from '@/core';
 import { NetworkErrorCode } from '@/libs/error/error.codes';
 import { Err } from '@/libs/error/error.factories';
 import { ErrorService } from '@/libs/error/error.types';
-
+import { AuthController } from '@/controllers/auth/auth';
 const {
   mockSignUp,
   mockClearSecrets,
@@ -26,9 +25,13 @@ const {
   mockIsAuthError: vi.fn(),
 }));
 
-vi.mock('@/core', () => ({
+vi.mock('@/controllers/auth/auth', () => ({
   AuthController: { signUp: mockSignUp },
+}));
+vi.mock('@/stores/onboarding/onboarding.store', () => ({
   useOnboardingStore: { getState: mockOnboardingGetState },
+}));
+vi.mock('@/stores/auth/auth.store', () => ({
   useAuthStore: { getState: mockAuthGetState },
 }));
 
@@ -89,7 +92,7 @@ describe('useInviteCodeSignUp', () => {
       await result.current.validateAndSignUp(inviteCode);
     });
 
-    expect(Core.AuthController.signUp).toHaveBeenCalledWith({
+    expect(AuthController.signUp).toHaveBeenCalledWith({
       secretKey: mockSecretKey,
       signupToken: inviteCode,
     });

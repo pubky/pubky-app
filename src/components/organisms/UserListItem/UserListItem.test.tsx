@@ -55,7 +55,7 @@ vi.mock('@/organisms', () => ({
 }));
 
 // Mock Core
-vi.mock('@/core', () => ({
+vi.mock('@/application/tag/tag.types', () => ({
   TagKind: { USER: 'user' },
 }));
 

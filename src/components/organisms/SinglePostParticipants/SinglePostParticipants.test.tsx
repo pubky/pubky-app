@@ -93,7 +93,7 @@ vi.mock('@/atoms', () => ({
 }));
 
 // Mock core
-vi.mock('@/core', () => ({
+vi.mock('@/stores/auth/auth.store', () => ({
   useAuthStore: vi.fn((selector) => {
     const mockState = {
       currentUserPubky: 'mock-current-user',

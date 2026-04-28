@@ -2,11 +2,10 @@
 
 import { useTranslations } from 'next-intl';
 import * as Molecules from '@/molecules';
-import { useSettingsStore } from '@/core';
 import { useSettingsActions } from '@/hooks/useSettingsActions/useSettingsActions';
 import { NOTIFICATION_LABEL_KEYS } from './NotificationSettings.constants';
 import type { NotificationType } from './NotificationSettings.types';
-
+import { useSettingsStore } from '@/stores/settings/settings.store';
 export function NotificationSettings() {
   const t = useTranslations('notifications.settings');
   const { notifications } = useSettingsStore();

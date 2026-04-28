@@ -1,7 +1,6 @@
 import { TIMELINE_FEED_VARIANT, type TimelineFeedVariant } from '@/config';
-import type { ContentType } from '@/core';
 import type { VisualRow, VisualTile, VisualTileSize } from './TimelineFeedVisual.types';
-
+import type { ContentType } from '@/stores/home/home.types';
 export const VISUAL_GRID_GAP_PX = 24;
 export const VISUAL_GRID_MAX_WIDTH_PX = 1200;
 export const VISUAL_PENDING_TAIL_LIMIT = 3;

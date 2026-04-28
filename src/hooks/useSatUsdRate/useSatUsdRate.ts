@@ -1,8 +1,8 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-
-import { HomegateController, BtcRate } from '@/core';
+import { HomegateController } from '@/controllers/homegate/homegate';
+import type { BtcRate } from '@/services/exchangerate/exchangerate.types';
 
 /**
  * Fetch the current SAT/USD exchange rate.

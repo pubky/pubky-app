@@ -1,10 +1,11 @@
 'use client';
 
-import * as Core from '@/core';
 import * as Config from '@/config';
 import { useLocalFirstQuery } from '@/hooks/useLocalFirstQuery/useLocalFirstQuery';
 import { withPubkyPrefix } from '@/libs/utils/utils';
-
+import { FileController } from '@/controllers/file/file';
+import { UserController } from '@/controllers/user/user';
+import type { NexusUserDetails, NexusUserLink } from '@/services/nexus/nexus.types';
 export interface UserProfile {
   name: string;
   bio: string;
@@ -14,7 +15,7 @@ export interface UserProfile {
   avatarUrl?: string;
   link: string;
   /** User's external links (social media, websites, etc.) */
-  links?: Core.NexusUserLink[] | null;
+  links?: NexusUserLink[] | null;
 }
 
 export interface UseUserProfileResult {
@@ -37,9 +38,9 @@ export interface UseUserProfileResult {
  * @returns Profile data and loading state
  */
 export function useUserProfile(userId: string): UseUserProfileResult {
-  const { data: userDetails, isLoading } = useLocalFirstQuery<Core.NexusUserDetails>({
-    queryFn: () => Core.UserController.getDetails({ userId }),
-    fetchFn: () => Core.UserController.fetchDetails({ userId }),
+  const { data: userDetails, isLoading } = useLocalFirstQuery<NexusUserDetails>({
+    queryFn: () => UserController.getDetails({ userId }),
+    fetchFn: () => UserController.fetchDetails({ userId }),
     deps: [userId],
     enabled: !!userId,
   });
@@ -48,9 +49,7 @@ export function useUserProfile(userId: string): UseUserProfileResult {
     return { profile: null, isLoading };
   }
 
-  const avatarUrl = userDetails.image
-    ? Core.FileController.getAvatarUrl(userDetails.id, userDetails.indexed_at)
-    : undefined;
+  const avatarUrl = userDetails.image ? FileController.getAvatarUrl(userDetails.id, userDetails.indexed_at) : undefined;
 
   // Build public key with proper format
   const publicKey = withPubkyPrefix(userId);

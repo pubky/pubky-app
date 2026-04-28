@@ -4,16 +4,12 @@ import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useTranslations } from 'next-intl';
 import * as Atoms from '@/atoms';
-import {
-  REPORT_ISSUE_LABEL_KEYS,
-  REPORT_ISSUE_TYPES,
-  REPORT_ISSUE_TYPE_VALUES,
-  type ReportIssueType,
-} from '@/core/pipes/report';
 import { ISSUE_TYPE_ICONS } from './DialogReportPostIssueStep.constants';
 import type { DialogReportPostIssueStepProps } from './DialogReportPostIssueStep.types';
 import { Check } from 'lucide-react';
 import { cn } from '@/libs/utils/utils';
+import { REPORT_ISSUE_LABEL_KEYS, REPORT_ISSUE_TYPE_VALUES, REPORT_ISSUE_TYPES } from '@/pipes/report/report.constants';
+import type { ReportIssueType } from '@/pipes/report/report.types';
 export function DialogReportPostIssueStep({
   onSelectIssueType,
   onCancel,

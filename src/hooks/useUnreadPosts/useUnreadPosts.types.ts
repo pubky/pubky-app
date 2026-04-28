@@ -1,10 +1,9 @@
-import type * as Core from '@/core';
-
+import type { PostStreamId } from '@/models/stream/post/postStream.types';
 export interface UseUnreadPostsOptions {
   /**
    * Stream ID to watch for unread posts
    */
-  streamId: Core.PostStreamId | null;
+  streamId: PostStreamId | null;
 }
 
 export interface UseUnreadPostsResult {

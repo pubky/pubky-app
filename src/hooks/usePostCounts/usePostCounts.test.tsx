@@ -5,7 +5,7 @@ import { usePostCounts } from './usePostCounts';
 // Mock @/core
 const mockGetCounts = vi.fn();
 const mockFetch = vi.fn().mockResolvedValue(undefined);
-vi.mock('@/core', () => ({
+vi.mock('@/controllers/post/post', () => ({
   PostController: {
     getCounts: (params: { compositeId: string }) => mockGetCounts(params),
     fetch: (params: { compositeId: string }) => mockFetch(params),

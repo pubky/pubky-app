@@ -1,3 +1,5 @@
+import type { Pubky, Timestamp } from '@/models/models.types';
+import type { TagModel } from '@/models/shared/tag/tag';
 /**
  * Nexus API Types
  *
@@ -7,8 +9,6 @@
  *
  * For internal utility types (URL building, fetch options), see `nexus.utils.types.ts`
  */
-
-import { type Pubky, type Timestamp, type TagModel } from '@/core';
 
 // =============================================================================
 // Request Parameter Types & Enums

@@ -1,7 +1,9 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import * as Core from '@/core';
 import { mockSession } from '@/test-utils';
-
+import { TtlController } from '@/controllers/ttl/ttl';
+import { TtlCoordinator } from '@/coordinators/ttl/ttl';
+import type { Pubky } from '@/models/models.types';
+import { useAuthStore } from '@/stores/auth/auth.store';
 // =============================================================================
 // Test Helpers
 // =============================================================================
@@ -10,8 +12,8 @@ import { mockSession } from '@/test-utils';
  * Sets up an authenticated user with hasProfile: true
  * Required for TtlCoordinator to tick
  */
-function setupAuthenticatedUser(pubky = 'test-user-pubky' as Core.Pubky) {
-  Core.useAuthStore.getState().init({
+function setupAuthenticatedUser(pubky = 'test-user-pubky' as Pubky) {
+  useAuthStore.getState().init({
     session: mockSession(),
     currentUserPubky: pubky,
     hasProfile: true,
@@ -70,18 +72,18 @@ describe('TtlCoordinator', () => {
     vi.useFakeTimers();
 
     // Reset coordinator singleton and auth store before each test
-    Core.TtlCoordinator.resetInstance();
-    Core.useAuthStore.getState().reset();
+    TtlCoordinator.resetInstance();
+    useAuthStore.getState().reset();
 
     // Setup spies for TtlController methods
-    findStalePostsSpy = vi.spyOn(Core.TtlController, 'findStalePostsByIds').mockResolvedValue([]);
-    findStaleUsersSpy = vi.spyOn(Core.TtlController, 'findStaleUsersByIds').mockResolvedValue([]);
-    forceRefreshPostsSpy = vi.spyOn(Core.TtlController, 'forceRefreshPostsByIds').mockResolvedValue(undefined);
-    forceRefreshUsersSpy = vi.spyOn(Core.TtlController, 'forceRefreshUsersByIds').mockResolvedValue(undefined);
+    findStalePostsSpy = vi.spyOn(TtlController, 'findStalePostsByIds').mockResolvedValue([]);
+    findStaleUsersSpy = vi.spyOn(TtlController, 'findStaleUsersByIds').mockResolvedValue([]);
+    forceRefreshPostsSpy = vi.spyOn(TtlController, 'forceRefreshPostsByIds').mockResolvedValue(undefined);
+    forceRefreshUsersSpy = vi.spyOn(TtlController, 'forceRefreshUsersByIds').mockResolvedValue(undefined);
   });
 
   afterEach(() => {
-    Core.TtlCoordinator.resetInstance();
+    TtlCoordinator.resetInstance();
     // Restore document visibility to visible for subsequent tests
     Object.defineProperty(document, 'visibilityState', {
       configurable: true,
@@ -97,9 +99,9 @@ describe('TtlCoordinator', () => {
 
   describe('Singleton Behavior', () => {
     it('returns the same instance on multiple getInstance() calls', () => {
-      const instance1 = Core.TtlCoordinator.getInstance();
-      const instance2 = Core.TtlCoordinator.getInstance();
-      const instance3 = Core.TtlCoordinator.getInstance();
+      const instance1 = TtlCoordinator.getInstance();
+      const instance2 = TtlCoordinator.getInstance();
+      const instance3 = TtlCoordinator.getInstance();
 
       // All should be the exact same object reference
       expect(instance1).toBe(instance2);
@@ -108,11 +110,11 @@ describe('TtlCoordinator', () => {
     });
 
     it('resetInstance() creates a new instance', () => {
-      const instance1 = Core.TtlCoordinator.getInstance();
+      const instance1 = TtlCoordinator.getInstance();
 
-      Core.TtlCoordinator.resetInstance();
+      TtlCoordinator.resetInstance();
 
-      const instance2 = Core.TtlCoordinator.getInstance();
+      const instance2 = TtlCoordinator.getInstance();
 
       // After reset, we should get a DIFFERENT instance
       expect(instance1).not.toBe(instance2);
@@ -121,8 +123,8 @@ describe('TtlCoordinator', () => {
     it('state is shared across all getInstance() references', async () => {
       setupAuthenticatedUser();
 
-      const coord1 = Core.TtlCoordinator.getInstance();
-      const coord2 = Core.TtlCoordinator.getInstance();
+      const coord1 = TtlCoordinator.getInstance();
+      const coord2 = TtlCoordinator.getInstance();
 
       // Configure through first reference
       coord1.configure({ batchIntervalMs: 1_000 });
@@ -154,7 +156,7 @@ describe('TtlCoordinator', () => {
     it('new instance after reset has fresh state', async () => {
       setupAuthenticatedUser();
 
-      const coord1 = Core.TtlCoordinator.getInstance();
+      const coord1 = TtlCoordinator.getInstance();
       coord1.configure({ batchIntervalMs: 1_000 });
 
       // Subscribe and start
@@ -169,10 +171,10 @@ describe('TtlCoordinator', () => {
       expect(findStalePostsSpy).toHaveBeenCalled();
 
       // Reset creates new instance with fresh state
-      Core.TtlCoordinator.resetInstance();
+      TtlCoordinator.resetInstance();
 
       // New instance should not be ticking (start() was not called)
-      const coord2 = Core.TtlCoordinator.getInstance();
+      const coord2 = TtlCoordinator.getInstance();
       expect(coord2).not.toBe(coord1);
 
       // Advance time - new instance should not tick
@@ -190,7 +192,7 @@ describe('TtlCoordinator', () => {
     it('does not tick before start() is called', async () => {
       setupAuthenticatedUser();
 
-      const coordinator = Core.TtlCoordinator.getInstance();
+      const coordinator = TtlCoordinator.getInstance();
       coordinator.configure({ batchIntervalMs: 1_000 });
 
       // Subscribe a post but do NOT start
@@ -210,7 +212,7 @@ describe('TtlCoordinator', () => {
     it('start() begins ticking when authenticated', async () => {
       setupAuthenticatedUser();
 
-      const coordinator = Core.TtlCoordinator.getInstance();
+      const coordinator = TtlCoordinator.getInstance();
       coordinator.configure({ batchIntervalMs: 1_000 });
 
       // Subscribe a post
@@ -239,7 +241,7 @@ describe('TtlCoordinator', () => {
     it('stop() halts ticking', async () => {
       setupAuthenticatedUser();
 
-      const coordinator = Core.TtlCoordinator.getInstance();
+      const coordinator = TtlCoordinator.getInstance();
       coordinator.configure({ batchIntervalMs: 1_000 });
 
       // Subscribe and start
@@ -265,7 +267,7 @@ describe('TtlCoordinator', () => {
     it('multiple start() calls are idempotent (no duplicate timers)', async () => {
       setupAuthenticatedUser();
 
-      const coordinator = Core.TtlCoordinator.getInstance();
+      const coordinator = TtlCoordinator.getInstance();
       coordinator.configure({ batchIntervalMs: 1_000 });
 
       // Subscribe a post
@@ -293,7 +295,7 @@ describe('TtlCoordinator', () => {
     it('multiple stop() calls are safe (no errors)', async () => {
       setupAuthenticatedUser();
 
-      const coordinator = Core.TtlCoordinator.getInstance();
+      const coordinator = TtlCoordinator.getInstance();
       coordinator.configure({ batchIntervalMs: 1_000 });
 
       // Subscribe and start
@@ -319,7 +321,7 @@ describe('TtlCoordinator', () => {
     it('interleaved start/stop calls work correctly', async () => {
       setupAuthenticatedUser();
 
-      const coordinator = Core.TtlCoordinator.getInstance();
+      const coordinator = TtlCoordinator.getInstance();
       coordinator.configure({ batchIntervalMs: 1_000 });
 
       // Subscribe a post
@@ -355,7 +357,7 @@ describe('TtlCoordinator', () => {
 
     it('start() without authentication does not tick', async () => {
       // Do NOT authenticate
-      const coordinator = Core.TtlCoordinator.getInstance();
+      const coordinator = TtlCoordinator.getInstance();
       coordinator.configure({ batchIntervalMs: 1_000 });
 
       // Subscribe a post
@@ -380,7 +382,7 @@ describe('TtlCoordinator', () => {
     it('subscribePost adds compositePostId to subscribed set', async () => {
       setupAuthenticatedUser();
 
-      const coordinator = Core.TtlCoordinator.getInstance();
+      const coordinator = TtlCoordinator.getInstance();
       coordinator.configure({ batchIntervalMs: 1_000 });
 
       const postId1 = createCompositePostId('author1', 'post1');
@@ -405,7 +407,7 @@ describe('TtlCoordinator', () => {
     it('duplicate subscribePost is idempotent', async () => {
       setupAuthenticatedUser();
 
-      const coordinator = Core.TtlCoordinator.getInstance();
+      const coordinator = TtlCoordinator.getInstance();
       coordinator.configure({ batchIntervalMs: 1_000 });
 
       const postId = createCompositePostId('author1', 'post1');
@@ -432,7 +434,7 @@ describe('TtlCoordinator', () => {
     it('unsubscribePost removes from subscribed set', async () => {
       setupAuthenticatedUser();
 
-      const coordinator = Core.TtlCoordinator.getInstance();
+      const coordinator = TtlCoordinator.getInstance();
       coordinator.configure({ batchIntervalMs: 1_000 });
 
       const postId1 = createCompositePostId('author1', 'post1');
@@ -455,7 +457,7 @@ describe('TtlCoordinator', () => {
     });
 
     it('unsubscribePost on non-existent post is safe', () => {
-      const coordinator = Core.TtlCoordinator.getInstance();
+      const coordinator = TtlCoordinator.getInstance();
 
       const postId = createCompositePostId('author1', 'post1');
 
@@ -468,7 +470,7 @@ describe('TtlCoordinator', () => {
     it('stale post is queued for refresh on subscribe', async () => {
       setupAuthenticatedUser();
 
-      const coordinator = Core.TtlCoordinator.getInstance();
+      const coordinator = TtlCoordinator.getInstance();
       coordinator.configure({ batchIntervalMs: 1_000 });
 
       const postId = createCompositePostId('author1', 'post1');
@@ -496,7 +498,7 @@ describe('TtlCoordinator', () => {
     it('unsubscribe removes post from batch queue', async () => {
       setupAuthenticatedUser();
 
-      const coordinator = Core.TtlCoordinator.getInstance();
+      const coordinator = TtlCoordinator.getInstance();
       coordinator.configure({ batchIntervalMs: 1_000 });
 
       const postId = createCompositePostId('author1', 'post1');
@@ -529,11 +531,11 @@ describe('TtlCoordinator', () => {
     it('subscribeUser adds user to subscribed set', async () => {
       setupAuthenticatedUser();
 
-      const coordinator = Core.TtlCoordinator.getInstance();
+      const coordinator = TtlCoordinator.getInstance();
       coordinator.configure({ batchIntervalMs: 1_000 });
 
-      const user1 = 'user-pubky-1' as Core.Pubky;
-      const user2 = 'user-pubky-2' as Core.Pubky;
+      const user1 = 'user-pubky-1' as Pubky;
+      const user2 = 'user-pubky-2' as Pubky;
 
       // Subscribe two users
       coordinator.subscribeUser({ pubky: user1 });
@@ -554,10 +556,10 @@ describe('TtlCoordinator', () => {
     it('multiple subscriptions to same user increment ref count', async () => {
       setupAuthenticatedUser();
 
-      const coordinator = Core.TtlCoordinator.getInstance();
+      const coordinator = TtlCoordinator.getInstance();
       coordinator.configure({ batchIntervalMs: 1_000 });
 
-      const userId = 'user-pubky-1' as Core.Pubky;
+      const userId = 'user-pubky-1' as Pubky;
 
       // Subscribe the same user multiple times (simulating multiple components)
       coordinator.subscribeUser({ pubky: userId });
@@ -571,7 +573,7 @@ describe('TtlCoordinator', () => {
       // User should only appear once in the subscribed set
       const calls = findStaleUsersSpy.mock.calls;
       const lastCall = calls[calls.length - 1];
-      const params = lastCall[0] as { userIds: Core.Pubky[] };
+      const params = lastCall[0] as { userIds: Pubky[] };
 
       const count = params.userIds.filter((id) => id === userId).length;
       expect(count).toBe(1);
@@ -580,10 +582,10 @@ describe('TtlCoordinator', () => {
     it('unsubscribeUser decrements ref count but keeps user if count > 0', async () => {
       setupAuthenticatedUser();
 
-      const coordinator = Core.TtlCoordinator.getInstance();
+      const coordinator = TtlCoordinator.getInstance();
       coordinator.configure({ batchIntervalMs: 1_000 });
 
-      const userId = 'user-pubky-1' as Core.Pubky;
+      const userId = 'user-pubky-1' as Pubky;
 
       // Subscribe three times
       coordinator.subscribeUser({ pubky: userId });
@@ -609,11 +611,11 @@ describe('TtlCoordinator', () => {
     it('unsubscribeUser removes user when ref count reaches 0', async () => {
       setupAuthenticatedUser();
 
-      const coordinator = Core.TtlCoordinator.getInstance();
+      const coordinator = TtlCoordinator.getInstance();
       coordinator.configure({ batchIntervalMs: 1_000 });
 
-      const userId = 'user-pubky-1' as Core.Pubky;
-      const otherUserId = 'user-pubky-2' as Core.Pubky;
+      const userId = 'user-pubky-1' as Pubky;
+      const otherUserId = 'user-pubky-2' as Pubky;
 
       // Subscribe userId twice, otherUserId once
       coordinator.subscribeUser({ pubky: userId });
@@ -639,9 +641,9 @@ describe('TtlCoordinator', () => {
     });
 
     it('unsubscribeUser on non-existent user is safe', () => {
-      const coordinator = Core.TtlCoordinator.getInstance();
+      const coordinator = TtlCoordinator.getInstance();
 
-      const userId = 'never-subscribed' as Core.Pubky;
+      const userId = 'never-subscribed' as Pubky;
 
       // Unsubscribe a user that was never subscribed - should not throw
       expect(() => {
@@ -652,10 +654,10 @@ describe('TtlCoordinator', () => {
     it('stale user is queued for refresh on subscribe', async () => {
       setupAuthenticatedUser();
 
-      const coordinator = Core.TtlCoordinator.getInstance();
+      const coordinator = TtlCoordinator.getInstance();
       coordinator.configure({ batchIntervalMs: 1_000 });
 
-      const userId = 'user-pubky-1' as Core.Pubky;
+      const userId = 'user-pubky-1' as Pubky;
 
       // Mock findStaleUsersByIds to return the user as stale
       findStaleUsersSpy.mockResolvedValue([userId]);
@@ -680,10 +682,10 @@ describe('TtlCoordinator', () => {
     it('unsubscribe removes user from batch queue when ref count reaches 0', async () => {
       setupAuthenticatedUser();
 
-      const coordinator = Core.TtlCoordinator.getInstance();
+      const coordinator = TtlCoordinator.getInstance();
       coordinator.configure({ batchIntervalMs: 1_000 });
 
-      const userId = 'user-pubky-1' as Core.Pubky;
+      const userId = 'user-pubky-1' as Pubky;
 
       // Mock findStaleUsersByIds to return the user as stale
       findStaleUsersSpy.mockResolvedValue([userId]);
@@ -713,7 +715,7 @@ describe('TtlCoordinator', () => {
     it('setRoute on initial mount (empty → route) does NOT reset subscriptions', async () => {
       setupAuthenticatedUser();
 
-      const coordinator = Core.TtlCoordinator.getInstance();
+      const coordinator = TtlCoordinator.getInstance();
       coordinator.configure({ batchIntervalMs: 1_000 });
 
       // Subscribe a post before setting route
@@ -739,7 +741,7 @@ describe('TtlCoordinator', () => {
     it('setRoute change triggers reset of subscriptions', async () => {
       setupAuthenticatedUser();
 
-      const coordinator = Core.TtlCoordinator.getInstance();
+      const coordinator = TtlCoordinator.getInstance();
       coordinator.configure({ batchIntervalMs: 1_000 });
 
       // Set initial route
@@ -747,7 +749,7 @@ describe('TtlCoordinator', () => {
 
       // Subscribe posts and users
       const postId = createCompositePostId('author1', 'post1');
-      const userId = 'user-pubky-1' as Core.Pubky;
+      const userId = 'user-pubky-1' as Pubky;
       coordinator.subscribePost({ compositePostId: postId });
       coordinator.subscribeUser({ pubky: userId });
 
@@ -773,7 +775,7 @@ describe('TtlCoordinator', () => {
 
       if (userCalls.length > 0) {
         const lastUserCall = userCalls[userCalls.length - 1];
-        const userParams = lastUserCall[0] as { userIds: Core.Pubky[] };
+        const userParams = lastUserCall[0] as { userIds: Pubky[] };
         expect(userParams.userIds).toHaveLength(0);
       }
     });
@@ -781,7 +783,7 @@ describe('TtlCoordinator', () => {
     it('setRoute to same route is a no-op', async () => {
       setupAuthenticatedUser();
 
-      const coordinator = Core.TtlCoordinator.getInstance();
+      const coordinator = TtlCoordinator.getInstance();
       coordinator.configure({ batchIntervalMs: 1_000 });
 
       // Set initial route
@@ -810,7 +812,7 @@ describe('TtlCoordinator', () => {
     it('reset clears all subscriptions, ref counts, and queues', async () => {
       setupAuthenticatedUser();
 
-      const coordinator = Core.TtlCoordinator.getInstance();
+      const coordinator = TtlCoordinator.getInstance();
       coordinator.configure({ batchIntervalMs: 1_000 });
 
       // Set initial route
@@ -819,7 +821,7 @@ describe('TtlCoordinator', () => {
       // Subscribe multiple posts and users with ref counts
       const postId1 = createCompositePostId('author1', 'post1');
       const postId2 = createCompositePostId('author2', 'post2');
-      const userId = 'user-pubky-1' as Core.Pubky;
+      const userId = 'user-pubky-1' as Pubky;
 
       coordinator.subscribePost({ compositePostId: postId1 });
       coordinator.subscribePost({ compositePostId: postId2 });
@@ -845,7 +847,7 @@ describe('TtlCoordinator', () => {
       const calls = findStaleUsersSpy.mock.calls;
       if (calls.length > 0) {
         const lastCall = calls[calls.length - 1];
-        const params = lastCall[0] as { userIds: Core.Pubky[] };
+        const params = lastCall[0] as { userIds: Pubky[] };
         expect(params.userIds).not.toContain(userId);
       }
     });
@@ -859,7 +861,7 @@ describe('TtlCoordinator', () => {
     it('ticking pauses when page becomes hidden', async () => {
       setupAuthenticatedUser();
 
-      const coordinator = Core.TtlCoordinator.getInstance();
+      const coordinator = TtlCoordinator.getInstance();
       coordinator.configure({ batchIntervalMs: 1_000 });
 
       const postId = createCompositePostId('author1', 'post1');
@@ -888,7 +890,7 @@ describe('TtlCoordinator', () => {
     it('ticking resumes when page becomes visible', async () => {
       setupAuthenticatedUser();
 
-      const coordinator = Core.TtlCoordinator.getInstance();
+      const coordinator = TtlCoordinator.getInstance();
       coordinator.configure({ batchIntervalMs: 1_000 });
 
       const postId = createCompositePostId('author1', 'post1');
@@ -926,11 +928,11 @@ describe('TtlCoordinator', () => {
     it('subscriptions persist across visibility changes', async () => {
       setupAuthenticatedUser();
 
-      const coordinator = Core.TtlCoordinator.getInstance();
+      const coordinator = TtlCoordinator.getInstance();
       coordinator.configure({ batchIntervalMs: 1_000 });
 
       const postId = createCompositePostId('author1', 'post1');
-      const userId = 'user-pubky-1' as Core.Pubky;
+      const userId = 'user-pubky-1' as Pubky;
 
       coordinator.subscribePost({ compositePostId: postId });
       coordinator.subscribeUser({ pubky: userId });
@@ -977,7 +979,7 @@ describe('TtlCoordinator', () => {
   describe('Auth State Changes', () => {
     it('does not tick when unauthenticated even if started', async () => {
       // Do NOT authenticate
-      const coordinator = Core.TtlCoordinator.getInstance();
+      const coordinator = TtlCoordinator.getInstance();
       coordinator.configure({ batchIntervalMs: 1_000 });
 
       const postId = createCompositePostId('author1', 'post1');
@@ -992,7 +994,7 @@ describe('TtlCoordinator', () => {
 
     it('starts ticking when conditions are met after start()', async () => {
       // Start unauthenticated - coordinator won't tick
-      const coordinator = Core.TtlCoordinator.getInstance();
+      const coordinator = TtlCoordinator.getInstance();
       coordinator.configure({ batchIntervalMs: 1_000 });
 
       const postId = createCompositePostId('author1', 'post1');
@@ -1020,7 +1022,7 @@ describe('TtlCoordinator', () => {
     it('stop() clears ticking and reset() clears subscriptions', async () => {
       setupAuthenticatedUser();
 
-      const coordinator = Core.TtlCoordinator.getInstance();
+      const coordinator = TtlCoordinator.getInstance();
       coordinator.configure({ batchIntervalMs: 1_000 });
 
       const postId = createCompositePostId('author1', 'post1');
@@ -1054,13 +1056,13 @@ describe('TtlCoordinator', () => {
 
     it('requires hasProfile to be true to tick', async () => {
       // Authenticate but without profile
-      Core.useAuthStore.getState().init({
+      useAuthStore.getState().init({
         session: mockSession(),
-        currentUserPubky: 'test-user' as Core.Pubky,
+        currentUserPubky: 'test-user' as Pubky,
         hasProfile: false, // No profile!
       });
 
-      const coordinator = Core.TtlCoordinator.getInstance();
+      const coordinator = TtlCoordinator.getInstance();
       coordinator.configure({ batchIntervalMs: 1_000 });
 
       const postId = createCompositePostId('author1', 'post1');
@@ -1074,9 +1076,9 @@ describe('TtlCoordinator', () => {
       expect(findStalePostsSpy).not.toHaveBeenCalled();
 
       // Now set hasProfile to true and restart
-      Core.useAuthStore.getState().init({
+      useAuthStore.getState().init({
         session: mockSession(),
-        currentUserPubky: 'test-user' as Core.Pubky,
+        currentUserPubky: 'test-user' as Pubky,
         hasProfile: true,
       });
 
@@ -1100,7 +1102,7 @@ describe('TtlCoordinator', () => {
     it('onBatchTick checks staleness for all subscribed posts', async () => {
       setupAuthenticatedUser();
 
-      const coordinator = Core.TtlCoordinator.getInstance();
+      const coordinator = TtlCoordinator.getInstance();
       coordinator.configure({ batchIntervalMs: 1_000 });
 
       const postId1 = createCompositePostId('author1', 'post1');
@@ -1126,11 +1128,11 @@ describe('TtlCoordinator', () => {
     it('onBatchTick checks staleness for all subscribed users', async () => {
       setupAuthenticatedUser();
 
-      const coordinator = Core.TtlCoordinator.getInstance();
+      const coordinator = TtlCoordinator.getInstance();
       coordinator.configure({ batchIntervalMs: 1_000 });
 
-      const user1 = 'user-1' as Core.Pubky;
-      const user2 = 'user-2' as Core.Pubky;
+      const user1 = 'user-1' as Pubky;
+      const user2 = 'user-2' as Pubky;
 
       coordinator.subscribeUser({ pubky: user1 });
       coordinator.subscribeUser({ pubky: user2 });
@@ -1150,11 +1152,11 @@ describe('TtlCoordinator', () => {
     it('stale entities are added to batch queue and refreshed', async () => {
       const viewerId = setupAuthenticatedUser();
 
-      const coordinator = Core.TtlCoordinator.getInstance();
+      const coordinator = TtlCoordinator.getInstance();
       coordinator.configure({ batchIntervalMs: 1_000 });
 
       const postId = createCompositePostId('author1', 'post1');
-      const userId = 'user-1' as Core.Pubky;
+      const userId = 'user-1' as Pubky;
 
       // Mock to return entities as stale
       findStalePostsSpy.mockResolvedValue([postId]);
@@ -1185,7 +1187,7 @@ describe('TtlCoordinator', () => {
     it('successful refresh removes entities from queue', async () => {
       setupAuthenticatedUser();
 
-      const coordinator = Core.TtlCoordinator.getInstance();
+      const coordinator = TtlCoordinator.getInstance();
       coordinator.configure({ batchIntervalMs: 1_000 });
 
       const postId = createCompositePostId('author1', 'post1');
@@ -1212,7 +1214,7 @@ describe('TtlCoordinator', () => {
     it('failed refresh leaves entities in queue for retry', async () => {
       setupAuthenticatedUser();
 
-      const coordinator = Core.TtlCoordinator.getInstance();
+      const coordinator = TtlCoordinator.getInstance();
       coordinator.configure({ batchIntervalMs: 1_000 });
 
       const postId = createCompositePostId('author1', 'post1');
@@ -1239,7 +1241,7 @@ describe('TtlCoordinator', () => {
     it('respects postMaxBatchSize limit', async () => {
       setupAuthenticatedUser();
 
-      const coordinator = Core.TtlCoordinator.getInstance();
+      const coordinator = TtlCoordinator.getInstance();
       coordinator.configure({ batchIntervalMs: 1_000, postMaxBatchSize: 2 });
 
       // Subscribe 5 posts
@@ -1262,11 +1264,11 @@ describe('TtlCoordinator', () => {
     it('respects userMaxBatchSize limit', async () => {
       setupAuthenticatedUser();
 
-      const coordinator = Core.TtlCoordinator.getInstance();
+      const coordinator = TtlCoordinator.getInstance();
       coordinator.configure({ batchIntervalMs: 1_000, userMaxBatchSize: 2 });
 
       // Subscribe 5 users
-      const userIds = Array.from({ length: 5 }, (_, i) => `user-${i}` as Core.Pubky);
+      const userIds = Array.from({ length: 5 }, (_, i) => `user-${i}` as Pubky);
       userIds.forEach((id) => coordinator.subscribeUser({ pubky: id }));
 
       // All users are stale
@@ -1278,7 +1280,7 @@ describe('TtlCoordinator', () => {
 
       // Should only refresh 2 users (maxBatchSize)
       const call = forceRefreshUsersSpy.mock.calls[0];
-      const params = call[0] as { userIds: Core.Pubky[] };
+      const params = call[0] as { userIds: Pubky[] };
       expect(params.userIds.length).toBeLessThanOrEqual(2);
     });
   });
@@ -1291,7 +1293,7 @@ describe('TtlCoordinator', () => {
     it('configure() updates TTL values', async () => {
       setupAuthenticatedUser();
 
-      const coordinator = Core.TtlCoordinator.getInstance();
+      const coordinator = TtlCoordinator.getInstance();
 
       // Configure with custom TTL values
       coordinator.configure({
@@ -1318,7 +1320,7 @@ describe('TtlCoordinator', () => {
     it('configure() updates batch size values', async () => {
       setupAuthenticatedUser();
 
-      const coordinator = Core.TtlCoordinator.getInstance();
+      const coordinator = TtlCoordinator.getInstance();
       coordinator.configure({
         batchIntervalMs: 1_000,
         postMaxBatchSize: 3,
@@ -1345,7 +1347,7 @@ describe('TtlCoordinator', () => {
     it('changing batchIntervalMs restarts tick loop', async () => {
       setupAuthenticatedUser();
 
-      const coordinator = Core.TtlCoordinator.getInstance();
+      const coordinator = TtlCoordinator.getInstance();
       coordinator.configure({ batchIntervalMs: 2_000 });
 
       const postId = createCompositePostId('author1', 'post1');
@@ -1366,7 +1368,7 @@ describe('TtlCoordinator', () => {
     it('config persists across start/stop cycles', async () => {
       setupAuthenticatedUser();
 
-      const coordinator = Core.TtlCoordinator.getInstance();
+      const coordinator = TtlCoordinator.getInstance();
       coordinator.configure({
         postTtlMs: 99_000,
         batchIntervalMs: 1_000,
@@ -1402,7 +1404,7 @@ describe('TtlCoordinator', () => {
     it('destroy() stops ticking', async () => {
       setupAuthenticatedUser();
 
-      const coordinator = Core.TtlCoordinator.getInstance();
+      const coordinator = TtlCoordinator.getInstance();
       coordinator.configure({ batchIntervalMs: 1_000 });
 
       const postId = createCompositePostId('author1', 'post1');
@@ -1426,7 +1428,7 @@ describe('TtlCoordinator', () => {
       const addEventListenerSpy = vi.spyOn(document, 'addEventListener');
       const removeEventListenerSpy = vi.spyOn(document, 'removeEventListener');
 
-      const coordinator = Core.TtlCoordinator.getInstance();
+      const coordinator = TtlCoordinator.getInstance();
 
       // Should have added visibility listener during construction
       expect(addEventListenerSpy).toHaveBeenCalledWith('visibilitychange', expect.any(Function));
@@ -1443,7 +1445,7 @@ describe('TtlCoordinator', () => {
     });
 
     it('destroy() is safe to call multiple times', () => {
-      const coordinator = Core.TtlCoordinator.getInstance();
+      const coordinator = TtlCoordinator.getInstance();
       coordinator.configure({ batchIntervalMs: 1_000 });
       coordinator.start();
 
@@ -1458,7 +1460,7 @@ describe('TtlCoordinator', () => {
     it('no response to visibility events after destroy', async () => {
       setupAuthenticatedUser();
 
-      const coordinator = Core.TtlCoordinator.getInstance();
+      const coordinator = TtlCoordinator.getInstance();
       coordinator.configure({ batchIntervalMs: 1_000 });
 
       const postId = createCompositePostId('author1', 'post1');
@@ -1499,7 +1501,7 @@ describe('TtlCoordinator', () => {
     it('handles empty subscription sets gracefully', async () => {
       setupAuthenticatedUser();
 
-      const coordinator = Core.TtlCoordinator.getInstance();
+      const coordinator = TtlCoordinator.getInstance();
       coordinator.configure({ batchIntervalMs: 1_000 });
 
       // Start without any subscriptions
@@ -1518,7 +1520,7 @@ describe('TtlCoordinator', () => {
       }
 
       if (userCalls.length > 0) {
-        const params = userCalls[userCalls.length - 1][0] as { userIds: Core.Pubky[] };
+        const params = userCalls[userCalls.length - 1][0] as { userIds: Pubky[] };
         expect(params.userIds).toHaveLength(0);
       }
     });
@@ -1526,7 +1528,7 @@ describe('TtlCoordinator', () => {
     it('findStaleByIds error adds entity to queue (assume stale)', async () => {
       setupAuthenticatedUser();
 
-      const coordinator = Core.TtlCoordinator.getInstance();
+      const coordinator = TtlCoordinator.getInstance();
       coordinator.configure({ batchIntervalMs: 1_000 });
 
       const postId = createCompositePostId('author1', 'post1');
@@ -1550,7 +1552,7 @@ describe('TtlCoordinator', () => {
     it('forceRefresh error leaves entities in queue for retry', async () => {
       setupAuthenticatedUser();
 
-      const coordinator = Core.TtlCoordinator.getInstance();
+      const coordinator = TtlCoordinator.getInstance();
       coordinator.configure({ batchIntervalMs: 1_000 });
 
       const postId = createCompositePostId('author1', 'post1');
@@ -1579,7 +1581,7 @@ describe('TtlCoordinator', () => {
     it('guards against async race: unsubscribe mid-staleness-check', async () => {
       setupAuthenticatedUser();
 
-      const coordinator = Core.TtlCoordinator.getInstance();
+      const coordinator = TtlCoordinator.getInstance();
       coordinator.configure({ batchIntervalMs: 1_000 });
 
       const postId = createCompositePostId('author1', 'post1');
@@ -1613,11 +1615,11 @@ describe('TtlCoordinator', () => {
     it('handles rapid subscribe/unsubscribe without issues', async () => {
       setupAuthenticatedUser();
 
-      const coordinator = Core.TtlCoordinator.getInstance();
+      const coordinator = TtlCoordinator.getInstance();
       coordinator.configure({ batchIntervalMs: 1_000 });
 
       const postId = createCompositePostId('author1', 'post1');
-      const userId = 'user-1' as Core.Pubky;
+      const userId = 'user-1' as Pubky;
 
       // Rapid subscribe/unsubscribe cycles
       for (let i = 0; i < 10; i++) {
@@ -1643,7 +1645,7 @@ describe('TtlCoordinator', () => {
       }
 
       if (userCalls.length > 0) {
-        const params = userCalls[userCalls.length - 1][0] as { userIds: Core.Pubky[] };
+        const params = userCalls[userCalls.length - 1][0] as { userIds: Pubky[] };
         expect(params.userIds).not.toContain(userId);
       }
     });
@@ -1651,7 +1653,7 @@ describe('TtlCoordinator', () => {
     it('handles concurrent ticks gracefully', async () => {
       setupAuthenticatedUser();
 
-      const coordinator = Core.TtlCoordinator.getInstance();
+      const coordinator = TtlCoordinator.getInstance();
       coordinator.configure({ batchIntervalMs: 100 });
 
       const postId = createCompositePostId('author1', 'post1');

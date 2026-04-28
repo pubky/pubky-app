@@ -1,89 +1,90 @@
 import { describe, it, expect, beforeEach } from 'vitest';
-import * as Core from '@/core';
-
+import { db } from '@/database/franky/franky';
+import { ModerationModel } from '@/models/moderation/moderation';
+import { ModerationType } from '@/models/moderation/moderation.schema';
 describe('ModerationModel', () => {
   beforeEach(async () => {
-    await Core.db.initialize();
-    await Core.db.transaction('rw', [Core.ModerationModel.table], async () => {
-      await Core.ModerationModel.table.clear();
+    await db.initialize();
+    await db.transaction('rw', [ModerationModel.table], async () => {
+      await ModerationModel.table.clear();
     });
   });
 
   it('should create and retrieve post moderation records', async () => {
     const postId = 'author:post1';
-    await Core.ModerationModel.upsert({
+    await ModerationModel.upsert({
       id: postId,
-      type: Core.ModerationType.POST,
+      type: ModerationType.POST,
       is_blurred: true,
       created_at: Date.now(),
     });
 
-    const record = await Core.ModerationModel.table.get(postId);
+    const record = await ModerationModel.table.get(postId);
     expect(record).toBeTruthy();
     expect(record!.id).toBe(postId);
-    expect(record!.type).toBe(Core.ModerationType.POST);
+    expect(record!.type).toBe(ModerationType.POST);
     expect(record!.is_blurred).toBe(true);
   });
 
   it('should create and retrieve profile moderation records', async () => {
     const profileId = 'pk:user1';
-    await Core.ModerationModel.upsert({
+    await ModerationModel.upsert({
       id: profileId,
-      type: Core.ModerationType.PROFILE,
+      type: ModerationType.PROFILE,
       is_blurred: true,
       created_at: Date.now(),
     });
 
-    const record = await Core.ModerationModel.table.get(profileId);
+    const record = await ModerationModel.table.get(profileId);
     expect(record).toBeTruthy();
     expect(record!.id).toBe(profileId);
-    expect(record!.type).toBe(Core.ModerationType.PROFILE);
+    expect(record!.type).toBe(ModerationType.PROFILE);
     expect(record!.is_blurred).toBe(true);
   });
 
   it('should delete moderation records', async () => {
     const postId = 'author:post1';
-    await Core.ModerationModel.upsert({
+    await ModerationModel.upsert({
       id: postId,
-      type: Core.ModerationType.POST,
+      type: ModerationType.POST,
       is_blurred: true,
       created_at: Date.now(),
     });
 
-    await Core.ModerationModel.deleteById(postId);
+    await ModerationModel.deleteById(postId);
 
-    const record = await Core.ModerationModel.table.get(postId);
+    const record = await ModerationModel.table.get(postId);
     expect(record).toBeUndefined();
   });
 
   it('should check existence of records', async () => {
     const postId = 'author:post1';
-    await Core.ModerationModel.upsert({
+    await ModerationModel.upsert({
       id: postId,
-      type: Core.ModerationType.POST,
+      type: ModerationType.POST,
       is_blurred: true,
       created_at: Date.now(),
     });
 
-    const exists = await Core.ModerationModel.exists(postId);
+    const exists = await ModerationModel.exists(postId);
     expect(exists).toBe(true);
 
-    const notExists = await Core.ModerationModel.exists('author:post2');
+    const notExists = await ModerationModel.exists('author:post2');
     expect(notExists).toBe(false);
   });
 
   it('should update is_blurred field', async () => {
     const postId = 'author:post1';
-    await Core.ModerationModel.upsert({
+    await ModerationModel.upsert({
       id: postId,
-      type: Core.ModerationType.POST,
+      type: ModerationType.POST,
       is_blurred: true,
       created_at: Date.now(),
     });
 
-    await Core.ModerationModel.update(postId, { is_blurred: false });
+    await ModerationModel.update(postId, { is_blurred: false });
 
-    const record = await Core.ModerationModel.table.get(postId);
+    const record = await ModerationModel.table.get(postId);
     expect(record!.is_blurred).toBe(false);
   });
 });

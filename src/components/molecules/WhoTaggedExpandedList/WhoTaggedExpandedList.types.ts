@@ -1,6 +1,5 @@
-import type { Pubky } from '@/core';
 import type { TaggerWithAvatar } from '@/molecules/TaggedItem/TaggedItem.types';
-
+import type { Pubky } from '@/models/models.types';
 export interface WhoTaggedExpandedListProps {
   /** Tagger IDs to render */
   taggerIds: Pubky[];

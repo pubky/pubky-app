@@ -4,10 +4,9 @@ import { useEnterSubmit } from '@/hooks/useEnterSubmit/useEnterSubmit';
 import { useState, useCallback } from 'react';
 import { useTranslations } from 'next-intl';
 import * as Atoms from '@/atoms';
-import * as Core from '@/core';
 import * as Molecules from '@/molecules';
 import { FileText, AlertCircle, Loader2, RotateCcw } from 'lucide-react';
-
+import { AuthController } from '@/controllers/auth/auth';
 interface DialogRestoreRecoveryPhraseProps {
   onRestore?: () => void;
 }
@@ -34,7 +33,7 @@ export function DialogRestoreRecoveryPhrase({ onRestore }: DialogRestoreRecovery
       const hasErrors = newErrors.some((error) => error);
       const allFilled = userWords.every((word) => word !== '');
       const mnemonic = userWords.join(' ');
-      await Core.AuthController.loginWithMnemonic({
+      await AuthController.loginWithMnemonic({
         mnemonic,
       });
       if (!hasErrors && allFilled) {

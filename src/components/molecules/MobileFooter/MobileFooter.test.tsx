@@ -4,7 +4,7 @@ import { usePathname } from 'next/navigation';
 import { MobileFooter } from './MobileFooter';
 import { useCurrentUserProfile } from '@/hooks/useCurrentUserProfile/useCurrentUserProfile';
 import { useKeyboardOffset } from '@/hooks/useKeyboardOffset/useKeyboardOffset';
-
+import { FileController } from '@/controllers/file/file';
 const FORCE_HOME_SCROLL_TOP_KEY = 'pubky:force-home-scroll-top';
 
 const createSessionStorageMock = () => ({
@@ -98,26 +98,26 @@ vi.mock('@/hooks/useKeyboardOffset/useKeyboardOffset', () => ({
 
 // Track notification store mock for per-test overrides
 const mockSelectUnread = vi.fn(() => 0);
-vi.mock('@/core', async () => {
-  const actual = await vi.importActual('@/core');
-  return {
-    ...actual,
-    FileController: {
-      getAvatarUrl: vi.fn((pubky: string, version?: string | number) =>
-        version ? `https://example.com/avatar/${pubky}?v=${version}` : `https://example.com/avatar/${pubky}`,
-      ),
-    },
-    useAuthStore: vi.fn((selector: (state: { currentUserPubky: string | null }) => unknown) =>
-      selector({ currentUserPubky: 'pk:test-user-pubky' }),
+vi.mock('@/controllers/file/file', () => ({
+  FileController: {
+    getAvatarUrl: vi.fn((pubky: string, version?: string | number) =>
+      version ? `https://example.com/avatar/${pubky}?v=${version}` : `https://example.com/avatar/${pubky}`,
     ),
-    useLocalFilesStore: vi.fn((selector: (state: { profile: string | null }) => unknown) =>
-      selector({ profile: null }),
-    ),
-    useNotificationStore: vi.fn((selector: (state: { selectUnread: () => number }) => unknown) =>
-      selector({ selectUnread: mockSelectUnread }),
-    ),
-  };
-});
+  },
+}));
+vi.mock('@/stores/auth/auth.store', () => ({
+  useAuthStore: vi.fn((selector: (state: { currentUserPubky: string | null }) => unknown) =>
+    selector({ currentUserPubky: 'pk:test-user-pubky' }),
+  ),
+}));
+vi.mock('@/stores/localFiles/localFiles.store', () => ({
+  useLocalFilesStore: vi.fn((selector: (state: { profile: string | null }) => unknown) => selector({ profile: null })),
+}));
+vi.mock('@/stores/notification/notification.store', () => ({
+  useNotificationStore: vi.fn((selector: (state: { selectUnread: () => number }) => unknown) =>
+    selector({ selectUnread: mockSelectUnread }),
+  ),
+}));
 
 describe('MobileFooter', () => {
   beforeEach(async () => {
@@ -197,7 +197,6 @@ describe('MobileFooter', () => {
   it('does not request avatar URL when user has no avatar set', async () => {
     render(<MobileFooter />);
 
-    const { FileController } = await import('@/core');
     expect(vi.mocked(FileController.getAvatarUrl)).not.toHaveBeenCalled();
     expect(screen.queryByTestId('avatar-image')).not.toBeInTheDocument();
     expect(screen.getByTestId('avatar-fallback')).toHaveTextContent('TU');
@@ -219,7 +218,6 @@ describe('MobileFooter', () => {
 
     render(<MobileFooter />);
 
-    const { FileController } = await import('@/core');
     expect(vi.mocked(FileController.getAvatarUrl)).toHaveBeenCalledWith('pk:test-user-pubky', 456);
     expect(screen.getByTestId('avatar-image').getAttribute('src')).toBe(
       'https://example.com/avatar/pk:test-user-pubky?v=456',

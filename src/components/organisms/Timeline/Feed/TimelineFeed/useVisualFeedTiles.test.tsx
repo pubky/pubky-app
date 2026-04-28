@@ -64,21 +64,19 @@ vi.mock('dexie-react-hooks', () => ({
   useLiveQuery: (...args: unknown[]) => mockUseLiveQuery(...args),
 }));
 
-vi.mock('@/core', async () => {
-  const actual = await vi.importActual<typeof import('@/core')>('@/core');
-  return {
-    ...actual,
-    useLocalFilesStore: (selector: (state: { posts: Record<string, unknown[]> }) => unknown) => selector({ posts: {} }),
-    PostController: {
-      ...actual.PostController,
-      getOrFetch: (...args: unknown[]) => mockGetOrFetch(...args),
-    },
-    FileController: {
-      ...actual.FileController,
-      fetchFiles: (...args: unknown[]) => mockFetchFiles(...args),
-    },
-  };
-});
+vi.mock('@/stores/localFiles/localFiles.store', () => ({
+  useLocalFilesStore: (selector: (state: { posts: Record<string, unknown[]> }) => unknown) => selector({ posts: {} }),
+}));
+vi.mock('@/controllers/post/post', () => ({
+  PostController: {
+    getOrFetch: (...args: unknown[]) => mockGetOrFetch(...args),
+  },
+}));
+vi.mock('@/controllers/file/file', () => ({
+  FileController: {
+    fetchFiles: (...args: unknown[]) => mockFetchFiles(...args),
+  },
+}));
 
 vi.mock('@/libs/logger/logger', async () => {
   const actual = await vi.importActual<typeof import('@/libs/logger/logger')>('@/libs/logger/logger');

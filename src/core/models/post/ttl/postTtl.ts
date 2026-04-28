@@ -1,11 +1,10 @@
 import { Table } from 'dexie';
 
-import { Ttl } from '@/core/models/shared';
 import { PostTtlModelSchema } from './postTtl.schema';
-import * as Core from '@/core';
-
+import { db } from '@/database/franky/franky';
+import { Ttl } from '@/models/shared/ttl/ttl';
 export class PostTtlModel extends Ttl<string, PostTtlModelSchema> implements PostTtlModelSchema {
-  static table: Table<PostTtlModelSchema> = Core.db.table('post_ttl');
+  static table: Table<PostTtlModelSchema> = db.table('post_ttl');
 
   constructor(postTtl: PostTtlModelSchema) {
     super(postTtl);

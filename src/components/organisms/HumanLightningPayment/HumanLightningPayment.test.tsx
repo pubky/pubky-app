@@ -1,10 +1,9 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, waitFor, fireEvent, screen } from '@testing-library/react';
-import { HomegateController } from '@/core';
 import { asOpaque } from '@/test-utils';
 import { HumanLightningPayment } from './HumanLightningPayment';
 import { VerificationHandler } from './HumanLightningPayment.utils';
-
+import { HomegateController } from '@/controllers/homegate/homegate';
 const mockCopyToClipboard = vi.hoisted(() => vi.fn().mockResolvedValue(undefined));
 const mockToast = vi.hoisted(() => vi.fn());
 const mockUseIsMobile = vi.hoisted(() => vi.fn(() => false));
@@ -33,21 +32,17 @@ vi.mock('@/molecules', async (importOriginal) => {
   };
 });
 
-vi.mock('@/core', async () => {
-  const actual = await vi.importActual('@/core');
-  return {
-    ...actual,
-    HomegateController: {
-      createLnVerification: vi.fn().mockResolvedValue({
-        id: 'mock-id',
-        bolt11Invoice: 'mock-invoice',
-        amountSat: 1000,
-        expiresAt: Date.now() + 600000,
-      }),
-      awaitLnVerification: vi.fn().mockImplementation(async () => new Promise(() => {})),
-    },
-  };
-});
+vi.mock('@/controllers/homegate/homegate', () => ({
+  HomegateController: {
+    createLnVerification: vi.fn().mockResolvedValue({
+      id: 'mock-id',
+      bolt11Invoice: 'mock-invoice',
+      amountSat: 1000,
+      expiresAt: Date.now() + 600000,
+    }),
+    awaitLnVerification: vi.fn().mockImplementation(async () => new Promise(() => {})),
+  },
+}));
 
 describe('HumanLightningPayment', () => {
   const createMockVerificationClient = () =>

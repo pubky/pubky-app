@@ -1,26 +1,28 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { BookmarkApplication } from './bookmark';
-import * as Core from '@/core';
 import type { TCreateBookmarkInput, TDeleteBookmarkInput } from './bookmark.types';
 import { mockAuthStore } from '@/test-utils';
 import { HttpMethod } from '@/libs/http/http.types';
-
+import type { Pubky } from '@/models/models.types';
+import { HomeserverService } from '@/services/homeserver/homeserver';
+import { LocalBookmarkService } from '@/services/local/bookmark/bookmark';
+import { useAuthStore } from '@/stores/auth/auth.store';
 // Mock the LocalBookmarkService
-vi.mock('@/core/services/local/bookmark', () => ({
+vi.mock('@/services/local/bookmark/bookmark', () => ({
   LocalBookmarkService: {
     persist: vi.fn(),
   },
 }));
 
 // Mock the HomeserverService
-vi.mock('@/core/services/homeserver', () => ({
+vi.mock('@/services/homeserver/homeserver', () => ({
   HomeserverService: {
     request: vi.fn(),
   },
 }));
 
 describe('BookmarkApplication', () => {
-  const testUserId = 'o1gg96ewuojmopcjbz8895478wdtxtzzuxnfjjz8o8e77csa1ngo' as Core.Pubky;
+  const testUserId = 'o1gg96ewuojmopcjbz8895478wdtxtzzuxnfjjz8o8e77csa1ngo' as Pubky;
 
   // Test data factory
   const createMockBookmarkData = (): TCreateBookmarkInput => ({
@@ -36,9 +38,9 @@ describe('BookmarkApplication', () => {
 
   // Helper functions
   const setupMocks = () => ({
-    persistSpy: vi.spyOn(Core.LocalBookmarkService, 'persist'),
-    requestSpy: vi.spyOn(Core.HomeserverService, 'request'),
-    authSpy: vi.spyOn(Core.useAuthStore, 'getState'),
+    persistSpy: vi.spyOn(LocalBookmarkService, 'persist'),
+    requestSpy: vi.spyOn(HomeserverService, 'request'),
+    authSpy: vi.spyOn(useAuthStore, 'getState'),
   });
 
   beforeEach(() => {

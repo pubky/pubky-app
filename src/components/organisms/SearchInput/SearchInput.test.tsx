@@ -1,12 +1,12 @@
 import { render, screen, fireEvent } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { SearchInput } from './SearchInput';
-import type { Pubky } from '@/core';
 import { useHotTags } from '@/hooks/useHotTags/useHotTags';
 import { useSearchAutocomplete } from '@/hooks/useSearchAutocomplete/useSearchAutocomplete';
 import { useSearchInput } from '@/hooks/useSearchInput/useSearchInput';
 import { useTagSearch } from '@/hooks/useTagSearch/useTagSearch';
-
+import type { Pubky } from '@/models/models.types';
+import { useSearchStore } from '@/stores/search/search.store';
 // Mock next/navigation
 const mockPush = vi.fn();
 const mockSearchParams = new URLSearchParams();
@@ -72,7 +72,7 @@ const mockAddTag = vi.fn();
 const mockSetActiveTags = vi.fn();
 const mockAddActiveTag = vi.fn();
 const mockRemoveActiveTag = vi.fn();
-vi.mock('@/core', () => ({
+vi.mock('@/stores/search/search.store', () => ({
   useSearchStore: vi.fn(() => ({
     activeTags: [],
     setActiveTags: mockSetActiveTags,
@@ -245,7 +245,6 @@ describe('SearchInput', () => {
       isReadOnly: false,
     });
     // Reset core mock
-    const { useSearchStore } = await import('@/core');
     vi.mocked(useSearchStore).mockReturnValue({
       activeTags: [],
       setActiveTags: mockSetActiveTags,

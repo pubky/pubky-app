@@ -1,5 +1,5 @@
-import type { Pubky, UserStreamCompositeReach } from '@/core';
-
+import type { Pubky } from '@/models/models.types';
+import type { UserStreamCompositeReach } from '@/services/nexus/nexus.types';
 // User Stream ID Pattern: source:timeframe:reach
 // - SOURCE: followers, following, friends, muted, most_followed, influencers, recommended, post_replies, wot
 // - TIMEFRAME: today, this_week, this_month, all_time, all

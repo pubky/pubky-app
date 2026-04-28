@@ -1,18 +1,14 @@
-import * as Core from '@/core';
-import { REPORT_ISSUE_LABELS, type ReportIssueType } from '@/core/pipes/report';
-import {
-  CHATWOOT_INBOX_IDS,
-  CHATWOOT_REPORT_MESSAGE_PREFIX,
-  buildChatwootEmail,
-  extractSourceId,
-} from '@/core/services/chatwoot';
 import * as Types from './report.types';
 import { Logger } from '@/libs/logger/logger';
 import { AppError } from '@/libs/error/error';
 import { ServerErrorCode } from '@/libs/error/error.codes';
 import { Err } from '@/libs/error/error.factories';
 import { ErrorService } from '@/libs/error/error.types';
-
+import { REPORT_ISSUE_LABELS } from '@/pipes/report/report.constants';
+import type { ReportIssueType } from '@/pipes/report/report.types';
+import { ChatwootService } from '@/services/chatwoot/chatwoot';
+import { CHATWOOT_INBOX_IDS, CHATWOOT_REPORT_MESSAGE_PREFIX } from '@/services/chatwoot/chatwoot.constants';
+import { buildChatwootEmail, extractSourceId } from '@/services/chatwoot/chatwoot.utils';
 /**
  * Report application service.
  *
@@ -96,13 +92,13 @@ export class ReportApplication {
       const content = this.formatMessageContent(sourceLabel, commentBody);
 
       // Create or find contact in Chatwoot
-      const contact = await Core.ChatwootService.createOrFindContact(email, name, inboxId);
+      const contact = await ChatwootService.createOrFindContact(email, name, inboxId);
 
       // Extract source ID (validates inbox associations)
       const sourceId = extractSourceId(contact, email);
 
       // Create conversation with formatted message
-      await Core.ChatwootService.createConversation(sourceId, contact.id, inboxId, content);
+      await ChatwootService.createConversation(sourceId, contact.id, inboxId, content);
     } catch (error) {
       // Log error for observability
       if (error instanceof AppError) {

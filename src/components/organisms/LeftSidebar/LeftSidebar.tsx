@@ -1,15 +1,14 @@
 'use client';
 
 import * as Molecules from '@/molecules';
-import * as Core from '@/core';
 import { cn } from '@/libs/utils/utils';
-
+import { useHomeStore } from '@/stores/home/home.store';
 export interface LeftSidebarProps {
   className?: string;
 }
 
 export function LeftSidebar({ className }: LeftSidebarProps) {
-  const { reach, setReach, sort, setSort, content, setContent, layout, setLayout } = Core.useHomeStore();
+  const { reach, setReach, sort, setSort, content, setContent, layout, setLayout } = useHomeStore();
 
   return (
     <div

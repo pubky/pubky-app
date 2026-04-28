@@ -1,9 +1,10 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen, fireEvent } from '@testing-library/react';
 import { ClickableTagsList } from './ClickableTagsList';
-import * as Core from '@/core';
 import type { TagWithAvatars } from '@/molecules/TaggedItem/TaggedItem.types';
-
+import * as useAuthStoreModule from '@/stores/auth/auth.store';
+import { TagKind } from '@/application/tag/tag.types';
+import type { NexusTag } from '@/services/nexus/nexus.types';
 // Mock hooks
 const mockHandleTagToggle = vi.fn();
 const mockHandleTagAdd = vi.fn().mockResolvedValue({ success: true });
@@ -142,7 +143,7 @@ vi.mock('@/molecules', () => ({
 }));
 
 describe('ClickableTagsList', () => {
-  const mockTags: Core.NexusTag[] = [
+  const mockTags: NexusTag[] = [
     { label: 'bitcoin', taggers_count: 5, taggers: ['user1', 'user2'], relationship: true },
     { label: 'ethereum', taggers_count: 3, taggers: ['user3'], relationship: false },
     { label: 'web3', taggers_count: 10, taggers: [], relationship: false },
@@ -156,7 +157,7 @@ describe('ClickableTagsList', () => {
 
   describe('Rendering', () => {
     it('renders correctly with tags', () => {
-      render(<ClickableTagsList taggedId="post-123" taggedKind={Core.TagKind.POST} tags={mockTags} />);
+      render(<ClickableTagsList taggedId="post-123" taggedKind={TagKind.POST} tags={mockTags} />);
 
       expect(screen.getByTestId('post-tag-bitcoin')).toBeInTheDocument();
       expect(screen.getByTestId('post-tag-ethereum')).toBeInTheDocument();
@@ -164,48 +165,44 @@ describe('ClickableTagsList', () => {
     });
 
     it('returns null when no tags and no input/button', () => {
-      const { container } = render(<ClickableTagsList taggedId="post-123" taggedKind={Core.TagKind.POST} tags={[]} />);
+      const { container } = render(<ClickableTagsList taggedId="post-123" taggedKind={TagKind.POST} tags={[]} />);
 
       expect(container.firstChild).toBeNull();
     });
 
     it('shows tag count when showCount is true', () => {
-      render(<ClickableTagsList taggedId="post-123" taggedKind={Core.TagKind.POST} tags={mockTags} showCount={true} />);
+      render(<ClickableTagsList taggedId="post-123" taggedKind={TagKind.POST} tags={mockTags} showCount={true} />);
 
       expect(screen.getByTestId('post-tag-bitcoin')).toHaveAttribute('data-count', '5');
     });
 
     it('hides tag count when showCount is false', () => {
-      render(
-        <ClickableTagsList taggedId="post-123" taggedKind={Core.TagKind.POST} tags={mockTags} showCount={false} />,
-      );
+      render(<ClickableTagsList taggedId="post-123" taggedKind={TagKind.POST} tags={mockTags} showCount={false} />);
 
       expect(screen.getByTestId('post-tag-bitcoin')).not.toHaveAttribute('data-count');
     });
 
     it('shows selected state for viewer tags', () => {
-      render(<ClickableTagsList taggedId="post-123" taggedKind={Core.TagKind.POST} tags={mockTags} />);
+      render(<ClickableTagsList taggedId="post-123" taggedKind={TagKind.POST} tags={mockTags} />);
 
       expect(screen.getByTestId('post-tag-bitcoin')).toHaveAttribute('data-selected', 'true');
       expect(screen.getByTestId('post-tag-ethereum')).toHaveAttribute('data-selected', 'false');
     });
 
     it('shows close button when showTagClose is true', () => {
-      render(
-        <ClickableTagsList taggedId="post-123" taggedKind={Core.TagKind.POST} tags={mockTags} showTagClose={true} />,
-      );
+      render(<ClickableTagsList taggedId="post-123" taggedKind={TagKind.POST} tags={mockTags} showTagClose={true} />);
 
       expect(screen.getByTestId('close-bitcoin')).toBeInTheDocument();
     });
 
     it('filters out tags when total character count exceeds maxTotalChars', () => {
-      const tagsExceedingLimit: Core.NexusTag[] = [
+      const tagsExceedingLimit: NexusTag[] = [
         { label: 'bitcoin', taggers_count: 5, taggers: ['user1'], relationship: true },
         { label: 'ethereum', taggers_count: 3, taggers: ['user2'], relationship: false },
         { label: 'crypto', taggers_count: 10, taggers: [], relationship: false },
       ];
 
-      render(<ClickableTagsList taggedId="post-123" taggedKind={Core.TagKind.POST} tags={tagsExceedingLimit} />);
+      render(<ClickableTagsList taggedId="post-123" taggedKind={TagKind.POST} tags={tagsExceedingLimit} />);
 
       // First two tags should render (7 + 8 = 15 chars, within 20 limit)
       expect(screen.getByTestId('post-tag-bitcoin')).toBeInTheDocument();
@@ -218,15 +215,13 @@ describe('ClickableTagsList', () => {
 
   describe('Input visibility', () => {
     it('shows input when showInput is true', () => {
-      render(<ClickableTagsList taggedId="post-123" taggedKind={Core.TagKind.POST} tags={mockTags} showInput={true} />);
+      render(<ClickableTagsList taggedId="post-123" taggedKind={TagKind.POST} tags={mockTags} showInput={true} />);
 
       expect(screen.getByTestId('tag-input')).toBeInTheDocument();
     });
 
     it('hides input when showInput is false', () => {
-      render(
-        <ClickableTagsList taggedId="post-123" taggedKind={Core.TagKind.POST} tags={mockTags} showInput={false} />,
-      );
+      render(<ClickableTagsList taggedId="post-123" taggedKind={TagKind.POST} tags={mockTags} showInput={false} />);
 
       expect(screen.queryByTestId('tag-input')).not.toBeInTheDocument();
     });
@@ -235,7 +230,7 @@ describe('ClickableTagsList', () => {
       render(
         <ClickableTagsList
           taggedId="post-123"
-          taggedKind={Core.TagKind.POST}
+          taggedKind={TagKind.POST}
           tags={mockTags}
           showAddButton={true}
           showInput={false}
@@ -249,7 +244,7 @@ describe('ClickableTagsList', () => {
       render(
         <ClickableTagsList
           taggedId="post-123"
-          taggedKind={Core.TagKind.POST}
+          taggedKind={TagKind.POST}
           tags={mockTags}
           showAddButton={true}
           showInput={true}
@@ -263,7 +258,7 @@ describe('ClickableTagsList', () => {
       const { rerender } = render(
         <ClickableTagsList
           taggedId="post-123"
-          taggedKind={Core.TagKind.POST}
+          taggedKind={TagKind.POST}
           tags={mockTags}
           showInput={true}
           showAddButton={false}
@@ -276,7 +271,7 @@ describe('ClickableTagsList', () => {
       rerender(
         <ClickableTagsList
           taggedId="post-123"
-          taggedKind={Core.TagKind.POST}
+          taggedKind={TagKind.POST}
           tags={mockTags}
           showInput={false}
           showAddButton={true}
@@ -291,7 +286,7 @@ describe('ClickableTagsList', () => {
       const { rerender } = render(
         <ClickableTagsList
           taggedId="post-123"
-          taggedKind={Core.TagKind.POST}
+          taggedKind={TagKind.POST}
           tags={mockTags}
           maxTags={10}
           showInput={false}
@@ -304,7 +299,7 @@ describe('ClickableTagsList', () => {
       rerender(
         <ClickableTagsList
           taggedId="post-123"
-          taggedKind={Core.TagKind.POST}
+          taggedKind={TagKind.POST}
           tags={mockTags}
           maxTags={10}
           showInput={true}
@@ -320,7 +315,7 @@ describe('ClickableTagsList', () => {
       render(
         <ClickableTagsList
           taggedId="post-123"
-          taggedKind={Core.TagKind.POST}
+          taggedKind={TagKind.POST}
           tags={mockTags}
           maxTags={10}
           showInput={true}
@@ -340,7 +335,7 @@ describe('ClickableTagsList', () => {
       render(
         <ClickableTagsList
           taggedId="post-123"
-          taggedKind={Core.TagKind.POST}
+          taggedKind={TagKind.POST}
           tags={mockTags}
           maxTags={3}
           showInput={true}
@@ -360,7 +355,7 @@ describe('ClickableTagsList', () => {
       render(
         <ClickableTagsList
           taggedId="post-123"
-          taggedKind={Core.TagKind.POST}
+          taggedKind={TagKind.POST}
           tags={mockTags}
           maxTags={3}
           showInput={true}
@@ -382,7 +377,7 @@ describe('ClickableTagsList', () => {
       render(
         <ClickableTagsList
           taggedId="post-123"
-          taggedKind={Core.TagKind.POST}
+          taggedKind={TagKind.POST}
           tags={mockTags}
           maxTags={3}
           showAddButton={true}
@@ -402,7 +397,7 @@ describe('ClickableTagsList', () => {
       render(
         <ClickableTagsList
           taggedId="post-123"
-          taggedKind={Core.TagKind.POST}
+          taggedKind={TagKind.POST}
           tags={mockTags}
           maxTags={10}
           showInput={true}
@@ -419,7 +414,7 @@ describe('ClickableTagsList', () => {
       render(
         <ClickableTagsList
           taggedId="post-123"
-          taggedKind={Core.TagKind.POST}
+          taggedKind={TagKind.POST}
           tags={mockTags}
           maxTags={10}
           showInput={true}
@@ -436,7 +431,7 @@ describe('ClickableTagsList', () => {
 
   describe('Interactions', () => {
     it('calls handleTagToggle when tag is clicked without custom handler', () => {
-      render(<ClickableTagsList taggedId="post-123" taggedKind={Core.TagKind.POST} tags={mockTags} />);
+      render(<ClickableTagsList taggedId="post-123" taggedKind={TagKind.POST} tags={mockTags} />);
 
       fireEvent.click(screen.getByTestId('post-tag-bitcoin'));
 
@@ -446,12 +441,7 @@ describe('ClickableTagsList', () => {
     it('calls custom onTagClick when provided', () => {
       const customHandler = vi.fn();
       render(
-        <ClickableTagsList
-          taggedId="post-123"
-          taggedKind={Core.TagKind.POST}
-          tags={mockTags}
-          onTagClick={customHandler}
-        />,
+        <ClickableTagsList taggedId="post-123" taggedKind={TagKind.POST} tags={mockTags} onTagClick={customHandler} />,
       );
 
       fireEvent.click(screen.getByTestId('post-tag-bitcoin'));
@@ -465,7 +455,7 @@ describe('ClickableTagsList', () => {
       render(
         <ClickableTagsList
           taggedId="post-123"
-          taggedKind={Core.TagKind.POST}
+          taggedKind={TagKind.POST}
           tags={mockTags}
           showTagClose={true}
           onTagClose={closeHandler}
@@ -482,7 +472,7 @@ describe('ClickableTagsList', () => {
       render(
         <ClickableTagsList
           taggedId="post-123"
-          taggedKind={Core.TagKind.POST}
+          taggedKind={TagKind.POST}
           tags={mockTags}
           showAddButton={true}
           maxTags={10}
@@ -500,7 +490,7 @@ describe('ClickableTagsList', () => {
       render(
         <ClickableTagsList
           taggedId="post-123"
-          taggedKind={Core.TagKind.POST}
+          taggedKind={TagKind.POST}
           tags={mockTags}
           maxTags={10}
           showInput={true}
@@ -518,7 +508,7 @@ describe('ClickableTagsList', () => {
       render(
         <ClickableTagsList
           taggedId="post-123"
-          taggedKind={Core.TagKind.POST}
+          taggedKind={TagKind.POST}
           tags={mockTags}
           maxTags={10}
           showInput={true}
@@ -534,13 +524,13 @@ describe('ClickableTagsList', () => {
       mockIsAuthenticated = false;
       const setShowSignInDialog = vi.fn();
       const useAuthStoreSpy = vi
-        .spyOn(Core, 'useAuthStore')
+        .spyOn(useAuthStoreModule, 'useAuthStore')
         .mockImplementation((selector) => selector({ setShowSignInDialog } as never));
 
       render(
         <ClickableTagsList
           taggedId="post-123"
-          taggedKind={Core.TagKind.POST}
+          taggedKind={TagKind.POST}
           tags={mockTags}
           maxTags={10}
           showInput={true}
@@ -559,7 +549,7 @@ describe('ClickableTagsList', () => {
       render(
         <ClickableTagsList
           taggedId="post-123"
-          taggedKind={Core.TagKind.POST}
+          taggedKind={TagKind.POST}
           tags={mockTags}
           showAddButton={true}
           maxTags={10}
@@ -578,7 +568,7 @@ describe('ClickableTagsList', () => {
       render(
         <ClickableTagsList
           taggedId="post-123"
-          taggedKind={Core.TagKind.POST}
+          taggedKind={TagKind.POST}
           tags={mockTags}
           showAddButton={true}
           maxTags={10}
@@ -600,7 +590,7 @@ describe('ClickableTagsList', () => {
       render(
         <ClickableTagsList
           taggedId="post-123"
-          taggedKind={Core.TagKind.POST}
+          taggedKind={TagKind.POST}
           tags={mockTags}
           showAddButton={true}
           maxTags={10}
@@ -621,7 +611,7 @@ describe('ClickableTagsList', () => {
       render(
         <ClickableTagsList
           taggedId="post-123"
-          taggedKind={Core.TagKind.POST}
+          taggedKind={TagKind.POST}
           tags={mockTags}
           showAddButton={true}
           maxTags={10}
@@ -643,7 +633,7 @@ describe('ClickableTagsList', () => {
       render(
         <ClickableTagsList
           taggedId="post-123"
-          taggedKind={Core.TagKind.POST}
+          taggedKind={TagKind.POST}
           tags={mockTags}
           showAddButton={true}
           maxTags={10}
@@ -662,13 +652,13 @@ describe('ClickableTagsList', () => {
 
   describe('TagKind support', () => {
     it('works with USER tags', () => {
-      render(<ClickableTagsList taggedId="user-123" taggedKind={Core.TagKind.USER} tags={mockTags} />);
+      render(<ClickableTagsList taggedId="user-123" taggedKind={TagKind.USER} tags={mockTags} />);
 
       expect(screen.getByTestId('post-tag-bitcoin')).toBeInTheDocument();
     });
 
     it('works with POST tags', () => {
-      render(<ClickableTagsList taggedId="post-123" taggedKind={Core.TagKind.POST} tags={mockTags} />);
+      render(<ClickableTagsList taggedId="post-123" taggedKind={TagKind.POST} tags={mockTags} />);
 
       expect(screen.getByTestId('post-tag-bitcoin')).toBeInTheDocument();
     });
@@ -677,7 +667,7 @@ describe('ClickableTagsList', () => {
   describe('Snapshots', () => {
     it('matches snapshot with tags and count', () => {
       const { container } = render(
-        <ClickableTagsList taggedId="post-123" taggedKind={Core.TagKind.POST} tags={mockTags} showCount={true} />,
+        <ClickableTagsList taggedId="post-123" taggedKind={TagKind.POST} tags={mockTags} showCount={true} />,
       );
 
       expect(container).toMatchSnapshot();
@@ -685,7 +675,7 @@ describe('ClickableTagsList', () => {
 
     it('matches snapshot with input visible', () => {
       const { container } = render(
-        <ClickableTagsList taggedId="post-123" taggedKind={Core.TagKind.POST} tags={mockTags} showInput={true} />,
+        <ClickableTagsList taggedId="post-123" taggedKind={TagKind.POST} tags={mockTags} showInput={true} />,
       );
 
       expect(container).toMatchSnapshot();
@@ -695,7 +685,7 @@ describe('ClickableTagsList', () => {
       const { container } = render(
         <ClickableTagsList
           taggedId="post-123"
-          taggedKind={Core.TagKind.POST}
+          taggedKind={TagKind.POST}
           tags={mockTags}
           maxTags={10}
           showAddButton={true}
@@ -707,7 +697,7 @@ describe('ClickableTagsList', () => {
 
     it('matches snapshot with close buttons', () => {
       const { container } = render(
-        <ClickableTagsList taggedId="post-123" taggedKind={Core.TagKind.POST} tags={mockTags} showTagClose={true} />,
+        <ClickableTagsList taggedId="post-123" taggedKind={TagKind.POST} tags={mockTags} showTagClose={true} />,
       );
 
       expect(container).toMatchSnapshot();

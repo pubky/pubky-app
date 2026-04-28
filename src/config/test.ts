@@ -9,7 +9,7 @@ import { beforeAll, afterAll, afterEach, beforeEach } from 'vitest';
 
 // Import English messages for i18n mock
 import enMessages from '../../messages/en.json';
-
+import { db } from '@/database/franky/franky';
 // =============================================================================
 // IMPORTANT: Set environment variables BEFORE importing any app code
 // =============================================================================
@@ -283,8 +283,6 @@ vi.mock('next/font/google', () => ({
     className: 'inter-tight',
   })),
 }));
-
-const { db } = await import('@/core');
 
 afterEach(() => {
   cleanup();

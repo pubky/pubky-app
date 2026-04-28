@@ -1,16 +1,16 @@
 import { FollowResult } from 'pubky-app-specs';
-import * as Core from '@/core';
 import { stripPubkyPrefix } from '@/libs/utils/utils';
 import { ValidationErrorCode } from '@/libs/error/error.codes';
 import { Err } from '@/libs/error/error.factories';
 import { ErrorService } from '@/libs/error/error.types';
-
+import type { TFollowParams } from '@/controllers/user/user.type';
+import { PubkySpecsSingleton } from '@/pipes/pipes.builder';
 export class FollowNormalizer {
   private constructor() {}
 
-  static to({ follower, followee }: Core.TFollowParams): FollowResult {
+  static to({ follower, followee }: TFollowParams): FollowResult {
     try {
-      const builder = Core.PubkySpecsSingleton.get(follower);
+      const builder = PubkySpecsSingleton.get(follower);
       // Strip any prefix (pubky or pk:) from the followee ID before passing to createFollow
       // pubky-app-specs expects a raw 52-character z-base-32 encoded public key
       const normalizedFollowee = stripPubkyPrefix(followee);

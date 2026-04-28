@@ -1,9 +1,8 @@
 'use client';
 
 import * as React from 'react';
-import * as Core from '@/core';
 import type { ProfileContextValue, ProfileProviderProps } from './ProfileProvider.types';
-
+import { useAuthStore } from '@/stores/auth/auth.store';
 /**
  * Default context value used when no provider is present
  */
@@ -40,7 +39,7 @@ const ProfileContext = React.createContext<ProfileContextValue>(defaultContextVa
  */
 export function ProfileProvider({ pubky: externalPubky, children }: ProfileProviderProps) {
   // Get current authenticated user
-  const { currentUserPubky } = Core.useAuthStore();
+  const { currentUserPubky } = useAuthStore();
 
   // Determine which pubky to use
   const targetPubky = externalPubky ?? currentUserPubky;

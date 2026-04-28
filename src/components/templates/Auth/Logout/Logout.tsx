@@ -5,33 +5,34 @@ import { useRouter } from 'next/navigation';
 import { useTranslations } from 'next-intl';
 import * as Atoms from '@/atoms';
 import * as Molecules from '@/molecules';
-import * as Core from '@/core';
 import * as App from '@/app';
 import { Logger } from '@/libs/logger/logger';
-
+import { AuthController } from '@/controllers/auth/auth';
+import { useAuthStore } from '@/stores/auth/auth.store';
+import { useOnboardingStore } from '@/stores/onboarding/onboarding.store';
 type LogoutViewState = 'idle' | 'loading' | 'success' | 'error';
 
 async function handleRouteLogout(setViewState: Dispatch<SetStateAction<LogoutViewState>>) {
   setViewState('loading');
   try {
-    await Core.AuthController.logout();
+    await AuthController.logout();
     setViewState('success');
   } catch (error) {
     Logger.error('Failed to logout from /logout route', { error });
     setViewState('error');
   } finally {
-    Core.useAuthStore.getState().setIsLoggingOut(false);
+    useAuthStore.getState().setIsLoggingOut(false);
   }
 }
 
 export function Logout() {
   const router = useRouter();
   const t = useTranslations('logout');
-  const onboardingHasHydrated = Core.useOnboardingStore((state) => state.hasHydrated);
-  const authHasHydrated = Core.useAuthStore((state) => state.hasHydrated);
-  const session = Core.useAuthStore((state) => state.session);
-  const sessionExport = Core.useAuthStore((state) => state.sessionExport);
-  const isLoggingOut = Core.useAuthStore((state) => state.isLoggingOut);
+  const onboardingHasHydrated = useOnboardingStore((state) => state.hasHydrated);
+  const authHasHydrated = useAuthStore((state) => state.hasHydrated);
+  const session = useAuthStore((state) => state.session);
+  const sessionExport = useAuthStore((state) => state.sessionExport);
+  const isLoggingOut = useAuthStore((state) => state.isLoggingOut);
   const [viewState, setViewState] = useState<LogoutViewState>('idle');
 
   const isHydrated = onboardingHasHydrated && authHasHydrated;
@@ -43,7 +44,7 @@ export function Logout() {
     if (viewState !== 'idle') return;
 
     if (isSignedOut) {
-      Core.useAuthStore.getState().setIsLoggingOut(false);
+      useAuthStore.getState().setIsLoggingOut(false);
       setViewState('success');
       return;
     }

@@ -2,7 +2,6 @@
 
 import { useMemo } from 'react';
 import { useLiveQuery } from 'dexie-react-hooks';
-import * as Core from '@/core';
 import { useMutedUsers } from '@/hooks/useMutedUsers/useMutedUsers';
 import { useBulkUserAvatars } from '@/hooks/useBulkUserAvatars/useBulkUserAvatars';
 import { Logger } from '@/libs/logger/logger';
@@ -11,7 +10,9 @@ import type {
   UsePostParticipantsOptions,
   PostParticipant,
 } from './usePostParticipants.types';
-
+import { PostController } from '@/controllers/post/post';
+import type { Pubky } from '@/models/models.types';
+import { parseCompositeId } from '@/models/models.utils';
 const DEFAULT_LIMIT = 10;
 
 /**
@@ -38,7 +39,7 @@ export function usePostParticipants(
   const authorId = useMemo(() => {
     if (!postId) return null;
     try {
-      const { pubky } = Core.parseCompositeId(postId);
+      const { pubky } = parseCompositeId(postId);
       return pubky;
     } catch {
       return null;
@@ -50,7 +51,7 @@ export function usePostParticipants(
     async () => {
       try {
         if (!postId) return [];
-        return await Core.PostController.getReplies({ compositeId: postId });
+        return await PostController.getReplies({ compositeId: postId });
       } catch (error) {
         Logger.error('[usePostParticipants] Failed to query post replies', { postId, error });
         return [];
@@ -72,7 +73,7 @@ export function usePostParticipants(
     // Extract authors from replies
     for (const reply of replyRelationships) {
       try {
-        const { pubky } = Core.parseCompositeId(reply.id);
+        const { pubky } = parseCompositeId(reply.id);
         ids.add(pubky);
       } catch {
         // Skip invalid IDs
@@ -85,12 +86,12 @@ export function usePostParticipants(
   }, [authorId, replyRelationships, limit, mutedUserIdSet]);
 
   // Use existing hook for bulk user avatars and details (cache-first)
-  const { usersMap, isLoading: isLoadingUsers } = useBulkUserAvatars(participantIds as Core.Pubky[]);
+  const { usersMap, isLoading: isLoadingUsers } = useBulkUserAvatars(participantIds as Pubky[]);
 
   // Transform to PostParticipant format
   const participants: PostParticipant[] = useMemo(() => {
     return participantIds.map((id) => {
-      const userWithAvatar = usersMap.get(id as Core.Pubky);
+      const userWithAvatar = usersMap.get(id as Pubky);
       return {
         id,
         name: userWithAvatar?.name,

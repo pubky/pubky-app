@@ -1,12 +1,12 @@
 import { PubkyAppPostKind } from 'pubky-app-specs';
-import * as Core from '@/core';
-
+import type { TFileAttachmentResult } from '@/pipes/file/file.types';
+import type { NexusUserDetails } from '@/services/nexus/nexus.types';
 export type PostValidatorData = {
   content: string;
   kind: PubkyAppPostKind;
   parentUri?: string;
   embed?: string;
-  attachments?: Core.TFileAttachmentResult[];
+  attachments?: TFileAttachmentResult[];
 };
 
-export type UserValidatorData = Omit<Core.NexusUserDetails, 'id' | 'indexed_at'>;
+export type UserValidatorData = Omit<NexusUserDetails, 'id' | 'indexed_at'>;

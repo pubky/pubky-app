@@ -1,12 +1,12 @@
-import * as Core from '@/core';
-import { ModelBase } from '@/core/models/shared/base/baseModel';
 import { Table } from 'dexie';
 import { DatabaseErrorCode } from '@/libs/error/error.codes';
 import { Err } from '@/libs/error/error.factories';
 import { ErrorService } from '@/libs/error/error.types';
-
+import { ModelBase } from '@/models/shared/base/baseModel';
+import type { NexusModelTuple } from '@/models/shared/base/tuple/baseTuple.type';
+import type { TtlModelSchema } from '@/models/shared/ttl/ttl.schema';
 // Each domain row will have its own TTL row. e.g. UserTtlModel, PostTtlModel, etc.
-export abstract class Ttl<Id, Schema extends Core.TtlModelSchema<Id>> extends ModelBase<Id, Schema> {
+export abstract class Ttl<Id, Schema extends TtlModelSchema<Id>> extends ModelBase<Id, Schema> {
   lastUpdatedAt: number;
 
   constructor(data: Schema) {
@@ -14,9 +14,9 @@ export abstract class Ttl<Id, Schema extends Core.TtlModelSchema<Id>> extends Mo
     this.lastUpdatedAt = data.lastUpdatedAt;
   }
 
-  static async bulkSave<TId, TSchema extends Core.TtlModelSchema<TId>>(
+  static async bulkSave<TId, TSchema extends TtlModelSchema<TId>>(
     this: { table: Table<TSchema> },
-    records: Core.NexusModelTuple<Pick<TSchema, 'lastUpdatedAt'>>[],
+    records: NexusModelTuple<Pick<TSchema, 'lastUpdatedAt'>>[],
   ) {
     try {
       const toSave = records.map((tuple) => ({ id: tuple[0] as TId, ...tuple[1] }) as TSchema);

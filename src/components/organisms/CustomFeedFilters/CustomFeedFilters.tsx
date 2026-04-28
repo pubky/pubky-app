@@ -3,22 +3,27 @@
 import { useCustomFeed } from '@/hooks/useCustomFeed/useCustomFeed';
 import * as Atoms from '@/atoms';
 import * as Molecules from '@/molecules';
-import * as Core from '@/core';
-
+import { CONTENT } from '@/stores/home/home.types';
+import {
+  pubkyLayoutToHomeLayout,
+  pubkyPostKindToHomeContent,
+  pubkyReachToHomeReach,
+  pubkySortToHomeSort,
+} from '@/utils/pubky-app-spec-feed-mappers';
 interface CustomFeedFiltersProps {
   variant: 'sidebar' | 'drawer';
 }
 
 export function CustomFeedFilters({ variant }: CustomFeedFiltersProps) {
   const customFeed = useCustomFeed();
-  const reach = customFeed?.reach !== undefined ? Core.pubkyReachToHomeReach(customFeed.reach) : undefined;
-  const sort = customFeed?.sort !== undefined ? Core.pubkySortToHomeSort(customFeed.sort) : undefined;
-  const layout = customFeed?.layout !== undefined ? Core.pubkyLayoutToHomeLayout(customFeed.layout) : undefined;
+  const reach = customFeed?.reach !== undefined ? pubkyReachToHomeReach(customFeed.reach) : undefined;
+  const sort = customFeed?.sort !== undefined ? pubkySortToHomeSort(customFeed.sort) : undefined;
+  const layout = customFeed?.layout !== undefined ? pubkyLayoutToHomeLayout(customFeed.layout) : undefined;
   const content =
     customFeed?.content === null
-      ? Core.CONTENT.ALL
+      ? CONTENT.ALL
       : customFeed?.content !== undefined
-        ? Core.pubkyPostKindToHomeContent(customFeed.content)
+        ? pubkyPostKindToHomeContent(customFeed.content)
         : undefined;
 
   return (

@@ -1,18 +1,18 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import * as Core from '@/core';
-import { REPORT_ISSUE_TYPES, REPORT_ISSUE_LABELS } from '@/core/pipes/report';
-import { CHATWOOT_INBOX_IDS, CHATWOOT_REPORT_MESSAGE_PREFIX } from '@/core/services/chatwoot';
 import type { TReportSubmitInput } from './report.types';
-import type { TChatwootContact } from '@/core/services/chatwoot/chatwoot.types';
 import { asOpaque } from '@/test-utils';
 import { NetworkErrorCode } from '@/libs/error/error.codes';
 import { Err } from '@/libs/error/error.factories';
 import { ErrorService } from '@/libs/error/error.types';
 import { HttpStatusCode } from '@/libs/http/http.types';
 import { Logger } from '@/libs/logger/logger';
-
+import type { Pubky } from '@/models/models.types';
+import { REPORT_ISSUE_LABELS, REPORT_ISSUE_TYPES } from '@/pipes/report/report.constants';
+import { ChatwootService } from '@/services/chatwoot/chatwoot';
+import { CHATWOOT_INBOX_IDS, CHATWOOT_REPORT_MESSAGE_PREFIX } from '@/services/chatwoot/chatwoot.constants';
+import type { TChatwootContact } from '@/services/chatwoot/chatwoot.types';
 const testData = {
-  userPubky: 'o1gg96ewuojmopcjbz8895478wdtxtzzuxnfjjz8o8e77csa1ngo' as Core.Pubky,
+  userPubky: 'o1gg96ewuojmopcjbz8895478wdtxtzzuxnfjjz8o8e77csa1ngo' as Pubky,
   userName: 'Test User',
   postUrl: 'https://example.com/post/abc123',
   contactId: 456,
@@ -47,8 +47,8 @@ describe('ReportApplication', () => {
     vi.clearAllMocks();
 
     // Mock ChatwootService methods
-    vi.spyOn(Core.ChatwootService, 'createOrFindContact').mockResolvedValue(createMockContact());
-    vi.spyOn(Core.ChatwootService, 'createConversation').mockResolvedValue(undefined);
+    vi.spyOn(ChatwootService, 'createOrFindContact').mockResolvedValue(createMockContact());
+    vi.spyOn(ChatwootService, 'createConversation').mockResolvedValue(undefined);
 
     // Mock Logger
     vi.spyOn(Logger, 'error').mockImplementation(() => {});
@@ -61,7 +61,7 @@ describe('ReportApplication', () => {
   describe('submit', () => {
     it('should build email correctly from pubky', async () => {
       const input = createReportInput();
-      const createOrFindContactSpy = vi.spyOn(Core.ChatwootService, 'createOrFindContact');
+      const createOrFindContactSpy = vi.spyOn(ChatwootService, 'createOrFindContact');
 
       await ReportApplication.submit(input);
 
@@ -74,8 +74,8 @@ describe('ReportApplication', () => {
 
     it('should use correct inbox ID for reports', async () => {
       const input = createReportInput();
-      const createOrFindContactSpy = vi.spyOn(Core.ChatwootService, 'createOrFindContact');
-      const createConversationSpy = vi.spyOn(Core.ChatwootService, 'createConversation');
+      const createOrFindContactSpy = vi.spyOn(ChatwootService, 'createOrFindContact');
+      const createConversationSpy = vi.spyOn(ChatwootService, 'createConversation');
 
       await ReportApplication.submit(input);
 
@@ -97,7 +97,7 @@ describe('ReportApplication', () => {
 
     it('should format message with source label prefix', async () => {
       const input = createReportInput();
-      const createConversationSpy = vi.spyOn(Core.ChatwootService, 'createConversation');
+      const createConversationSpy = vi.spyOn(ChatwootService, 'createConversation');
 
       await ReportApplication.submit(input);
 
@@ -112,7 +112,7 @@ describe('ReportApplication', () => {
 
     it('should include post URL and reason in message content', async () => {
       const input = createReportInput();
-      const createConversationSpy = vi.spyOn(Core.ChatwootService, 'createConversation');
+      const createConversationSpy = vi.spyOn(ChatwootService, 'createConversation');
 
       await ReportApplication.submit(input);
 
@@ -131,11 +131,11 @@ describe('ReportApplication', () => {
     });
 
     it('should format source label correctly for each issue type', async () => {
-      const createConversationSpy = vi.spyOn(Core.ChatwootService, 'createConversation');
+      const createConversationSpy = vi.spyOn(ChatwootService, 'createConversation');
 
       for (const issueType of Object.values(REPORT_ISSUE_TYPES)) {
         createConversationSpy.mockClear();
-        vi.spyOn(Core.ChatwootService, 'createOrFindContact').mockResolvedValue(createMockContact());
+        vi.spyOn(ChatwootService, 'createOrFindContact').mockResolvedValue(createMockContact());
 
         const input = createReportInput({ issueType });
         await ReportApplication.submit(input);
@@ -152,7 +152,7 @@ describe('ReportApplication', () => {
 
     it('should call createOrFindContact with correct parameters', async () => {
       const input = createReportInput();
-      const createOrFindContactSpy = vi.spyOn(Core.ChatwootService, 'createOrFindContact');
+      const createOrFindContactSpy = vi.spyOn(ChatwootService, 'createOrFindContact');
 
       await ReportApplication.submit(input);
 
@@ -165,7 +165,7 @@ describe('ReportApplication', () => {
 
     it('should call createConversation with contact data and formatted message', async () => {
       const input = createReportInput();
-      const createConversationSpy = vi.spyOn(Core.ChatwootService, 'createConversation');
+      const createConversationSpy = vi.spyOn(ChatwootService, 'createConversation');
 
       await ReportApplication.submit(input);
 
@@ -180,7 +180,7 @@ describe('ReportApplication', () => {
     it('should throw AppError when contact has empty inbox associations', async () => {
       const input = createReportInput();
       const contactWithoutInbox = createMockContact({ contact_inboxes: [] });
-      vi.spyOn(Core.ChatwootService, 'createOrFindContact').mockResolvedValue(contactWithoutInbox);
+      vi.spyOn(ChatwootService, 'createOrFindContact').mockResolvedValue(contactWithoutInbox);
 
       await expect(ReportApplication.submit(input)).rejects.toThrow('Contact has no inbox associations');
 
@@ -195,7 +195,7 @@ describe('ReportApplication', () => {
         name: testData.userName,
         contact_inboxes: undefined,
       });
-      vi.spyOn(Core.ChatwootService, 'createOrFindContact').mockResolvedValue(contactWithUndefinedInbox);
+      vi.spyOn(ChatwootService, 'createOrFindContact').mockResolvedValue(contactWithUndefinedInbox);
 
       await expect(ReportApplication.submit(input)).rejects.toThrow('Contact has no inbox associations');
 
@@ -209,7 +209,7 @@ describe('ReportApplication', () => {
         operation: 'createOrFindContact',
         context: { statusCode: HttpStatusCode.INTERNAL_SERVER_ERROR },
       });
-      vi.spyOn(Core.ChatwootService, 'createOrFindContact').mockRejectedValue(appError);
+      vi.spyOn(ChatwootService, 'createOrFindContact').mockRejectedValue(appError);
 
       await expect(ReportApplication.submit(input)).rejects.toThrow(appError);
 
@@ -225,7 +225,7 @@ describe('ReportApplication', () => {
     it('should wrap unexpected errors in AppError', async () => {
       const input = createReportInput();
       const unexpectedError = new Error('Unexpected error');
-      vi.spyOn(Core.ChatwootService, 'createOrFindContact').mockRejectedValue(unexpectedError);
+      vi.spyOn(ChatwootService, 'createOrFindContact').mockRejectedValue(unexpectedError);
 
       await expect(ReportApplication.submit(input)).rejects.toThrow('Failed to submit report');
 
@@ -241,7 +241,7 @@ describe('ReportApplication', () => {
         operation: 'createConversation',
         context: { statusCode: HttpStatusCode.INTERNAL_SERVER_ERROR },
       });
-      vi.spyOn(Core.ChatwootService, 'createConversation').mockRejectedValue(appError);
+      vi.spyOn(ChatwootService, 'createConversation').mockRejectedValue(appError);
 
       await expect(ReportApplication.submit(input)).rejects.toThrow(appError);
 

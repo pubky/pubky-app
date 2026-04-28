@@ -4,8 +4,8 @@ import { PostHeader } from './PostHeader';
 import { useAvatarUrl } from '@/hooks/useAvatarUrl/useAvatarUrl';
 import { usePostDetails } from '@/hooks/usePostDetails/usePostDetails';
 import { useUserDetails } from '@/hooks/useUserDetails/useUserDetails';
-import * as Core from '@/core';
-
+import type { EnrichedPostDetails } from '@/application/moderation/moderation.types';
+import type { NexusUserDetails } from '@/services/nexus/nexus.types';
 vi.mock('@/hooks/usePostDetails/usePostDetails', () => ({
   usePostDetails: vi.fn(),
 }));
@@ -134,11 +134,11 @@ describe('PostHeader', () => {
         attachments: null,
         is_moderated: false,
         is_blurred: false,
-      } as Core.EnrichedPostDetails,
+      } as EnrichedPostDetails,
       isLoading: false,
     });
     mockUseUserDetails.mockReturnValue({
-      userDetails: { id: 'userpubkykey', name: 'Test User', image: 'test-image-id' } as Core.NexusUserDetails,
+      userDetails: { id: 'userpubkykey', name: 'Test User', image: 'test-image-id' } as NexusUserDetails,
       isLoading: false,
     });
     mockUseAvatarUrl.mockReturnValue('https://example.com/avatar/userpubkykey.png');
@@ -154,7 +154,7 @@ describe('PostHeader', () => {
     // When isReplyInput is true, postDetails is not fetched
     mockUsePostDetails.mockReturnValue({ postDetails: null, isLoading: false });
     mockUseUserDetails.mockReturnValue({
-      userDetails: { id: 'userpubkykey', name: 'Test User', image: 'test-image-id' } as Core.NexusUserDetails,
+      userDetails: { id: 'userpubkykey', name: 'Test User', image: 'test-image-id' } as NexusUserDetails,
       isLoading: false,
     });
     mockUseAvatarUrl.mockReturnValue('https://example.com/avatar/userpubkykey.png');
@@ -188,11 +188,11 @@ describe('PostHeader', () => {
         attachments: null,
         is_moderated: false,
         is_blurred: false,
-      } as Core.EnrichedPostDetails,
+      } as EnrichedPostDetails,
       isLoading: false,
     });
     mockUseUserDetails.mockReturnValue({
-      userDetails: { id: 'userpubkykey', name: 'Test User', image: 'test-image-id' } as Core.NexusUserDetails,
+      userDetails: { id: 'userpubkykey', name: 'Test User', image: 'test-image-id' } as NexusUserDetails,
       isLoading: false,
     });
     mockUseAvatarUrl.mockReturnValue('https://example.com/avatar/userpubkykey.png');
@@ -213,11 +213,11 @@ describe('PostHeader', () => {
         attachments: null,
         is_moderated: false,
         is_blurred: false,
-      } as Core.EnrichedPostDetails,
+      } as EnrichedPostDetails,
       isLoading: false,
     });
     mockUseUserDetails.mockReturnValue({
-      userDetails: { id: 'userpubkykey', name: 'Test User', image: 'test-image-id' } as Core.NexusUserDetails,
+      userDetails: { id: 'userpubkykey', name: 'Test User', image: 'test-image-id' } as NexusUserDetails,
       isLoading: false,
     });
     mockUseAvatarUrl.mockReturnValue('https://example.com/avatar/userpubkykey.png');
@@ -239,11 +239,11 @@ describe('PostHeader', () => {
         attachments: null,
         is_moderated: false,
         is_blurred: false,
-      } as Core.EnrichedPostDetails,
+      } as EnrichedPostDetails,
       isLoading: false,
     });
     mockUseUserDetails.mockReturnValue({
-      userDetails: { id: 'userpubkykey', name: 'Test User', image: 'test-image-id' } as Core.NexusUserDetails,
+      userDetails: { id: 'userpubkykey', name: 'Test User', image: 'test-image-id' } as NexusUserDetails,
       isLoading: false,
     });
     mockUseAvatarUrl.mockReturnValue('https://example.com/avatar/userpubkykey.png');
@@ -271,7 +271,7 @@ describe('PostHeader - Snapshots', () => {
         attachments: null,
         is_moderated: false,
         is_blurred: false,
-      } as Core.EnrichedPostDetails,
+      } as EnrichedPostDetails,
       isLoading: false,
     });
     mockUseUserDetails.mockReturnValue({
@@ -279,7 +279,7 @@ describe('PostHeader - Snapshots', () => {
         id: 'snapshotUserKey',
         name: 'Snapshot User',
         image: 'snapshot-image-id',
-      } as Core.NexusUserDetails,
+      } as NexusUserDetails,
       isLoading: false,
     });
     mockUseAvatarUrl.mockReturnValue('https://example.com/avatar/snapshotUserKey.png');

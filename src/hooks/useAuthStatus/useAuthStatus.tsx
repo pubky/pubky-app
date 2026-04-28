@@ -1,11 +1,11 @@
 import { useMemo } from 'react';
-import * as Core from '@/core';
 import { AuthStatus, type AuthStatusResult } from './useAuthStatus.types';
-
+import { useAuthStore } from '@/stores/auth/auth.store';
+import { useOnboardingStore } from '@/stores/onboarding/onboarding.store';
 export function useAuthStatus(): AuthStatusResult {
   // Get state from stores
-  const onboardingStore = Core.useOnboardingStore();
-  const authStore = Core.useAuthStore();
+  const onboardingStore = useOnboardingStore();
+  const authStore = useAuthStore();
 
   const authStatusResult = useMemo((): AuthStatusResult => {
     // On page reload sessionExport (serialized credentials in localStorage) is restored

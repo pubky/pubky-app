@@ -9,8 +9,7 @@ import {
 import { ZustandSet } from '../stores.types';
 import { MAX_RECENT_SEARCHES, MAX_ACTIVE_SEARCH_TAGS } from './search.constants';
 import { addTagToArray, addItemToTop } from './search.utils';
-import type { Pubky } from '@/core/models';
-
+import type { Pubky } from '@/models/models.types';
 /**
  * Actions/Mutators - State modification functions
  */

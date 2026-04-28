@@ -2,8 +2,7 @@ import { render, screen } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { CustomFeedFilters } from './CustomFeedFilters';
 import { PubkyAppFeedLayout, PubkyAppFeedReach, PubkyAppFeedSort, PubkyAppPostKind } from 'pubky-app-specs';
-import type { FeedModelSchema } from '@/core/models/feed/feed.schema';
-
+import type { FeedModelSchema } from '@/models/feed/feed.schema';
 // Mock hooks
 const mockUseCustomFeed = vi.fn();
 vi.mock('@/hooks/useCustomFeed/useCustomFeed', () => ({
@@ -11,7 +10,7 @@ vi.mock('@/hooks/useCustomFeed/useCustomFeed', () => ({
 }));
 
 // Mock core — provide constants and mapper functions
-vi.mock('@/core', () => ({
+vi.mock('@/stores/home/home.types', () => ({
   REACH: {
     ALL: 'all',
     FOLLOWING: 'following',
@@ -35,6 +34,8 @@ vi.mock('@/core', () => ({
     LINKS: 'links',
     FILES: 'files',
   },
+}));
+vi.mock('@/utils/pubky-app-spec-feed-mappers', () => ({
   pubkyReachToHomeReach: vi.fn((reach: PubkyAppFeedReach) => {
     const map: Record<number, string> = {
       [PubkyAppFeedReach.All]: 'all',

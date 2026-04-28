@@ -5,7 +5,7 @@ import { useUserDetails } from './useUserDetails';
 // Mock @/core
 const mockGetDetails = vi.fn();
 const mockFetchDetails = vi.fn().mockResolvedValue(undefined);
-vi.mock('@/core', () => ({
+vi.mock('@/controllers/user/user', () => ({
   UserController: {
     getDetails: (params: { userId: string }) => mockGetDetails(params),
     fetchDetails: (params: { userId: string }) => mockFetchDetails(params),

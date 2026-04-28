@@ -1,8 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
-import * as Core from '@/core';
 import { HttpStatusCode } from '@/libs/http/http.types';
 import { handleApiError } from '@/libs/api/route-error-handler';
-
+import { FeedbackController } from '@/controllers/feedback/feedback';
 /**
  * API Route for feedback submission
  *
@@ -18,7 +17,7 @@ export async function POST(request: NextRequest) {
     const { pubky, comment, name } = body;
 
     // Delegate to controller - validation happens there
-    await Core.FeedbackController.submit({ pubky, comment, name });
+    await FeedbackController.submit({ pubky, comment, name });
 
     return NextResponse.json({ message: 'Success' });
   } catch (error) {

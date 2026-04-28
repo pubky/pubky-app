@@ -1,9 +1,10 @@
 import { PublicKey } from '@synonymdev/pubky';
-
-import * as Core from '@/core';
+import type { Pubky } from '@/models/models.types';
+import type { NotificationState } from '@/stores/notification/notification.types';
+import type { SettingsState } from '@/stores/settings/settings.types';
 
 export interface TPubkyParams {
-  pubky: Core.Pubky;
+  pubky: Pubky;
 }
 
 export interface TPublicKeyParams {
@@ -25,6 +26,6 @@ export interface TLoginWithEncryptedFileParams {
 }
 
 export interface TBootstrapResponse {
-  notification: Core.NotificationState;
-  remoteSettings: Core.SettingsState | null;
+  notification: NotificationState;
+  remoteSettings: SettingsState | null;
 }

@@ -25,16 +25,11 @@ const { mockCreateRecoveryFile } = vi.hoisted(() => ({
   mockCreateRecoveryFile: vi.fn(),
 }));
 
-vi.mock('@/core', async (importOriginal) => {
-  const actual = await importOriginal<typeof import('@/core')>();
-  return {
-    ...actual,
-    ProfileController: {
-      ...actual.ProfileController,
-      createRecoveryFile: mockCreateRecoveryFile,
-    },
-  };
-});
+vi.mock('@/controllers/profile/profile', () => ({
+  ProfileController: {
+    createRecoveryFile: mockCreateRecoveryFile,
+  },
+}));
 
 // Mock atoms
 vi.mock('@/components/atoms', () => ({

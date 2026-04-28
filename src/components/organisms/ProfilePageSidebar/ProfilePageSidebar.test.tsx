@@ -17,23 +17,21 @@ vi.mock('dexie-react-hooks', () => ({
 }));
 
 // Mock @/core
-vi.mock('@/core', async (importOriginal) => {
-  const actual = await importOriginal<typeof import('@/core')>();
-  return {
-    ...actual,
-    useAuthStore: vi.fn(() => ({
-      selectCurrentUserPubky: () => 'test-pubky-123',
-    })),
-    ProfileController: {
-      read: vi.fn().mockResolvedValue({
-        links: [
-          { title: 'Example Link', url: 'https://example.com' },
-          { title: 'GitHub', url: 'https://github.com/test' },
-        ],
-      }),
-    },
-  };
-});
+vi.mock('@/stores/auth/auth.store', () => ({
+  useAuthStore: vi.fn(() => ({
+    selectCurrentUserPubky: () => 'test-pubky-123',
+  })),
+}));
+vi.mock('@/controllers/profile/profile', () => ({
+  ProfileController: {
+    read: vi.fn().mockResolvedValue({
+      links: [
+        { title: 'Example Link', url: 'https://example.com' },
+        { title: 'GitHub', url: 'https://github.com/test' },
+      ],
+    }),
+  },
+}));
 
 // Mock @/providers
 vi.mock('@/providers', () => ({
