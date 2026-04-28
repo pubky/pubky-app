@@ -322,7 +322,7 @@ exports[`PostHeaderUserInfo - Snapshots > matches snapshot with all props 1`] = 
             snap...rKey
           </p>
           <p
-            class="shrink-0 text-xs leading-4 font-medium tracking-[0.075rem] whitespace-nowrap text-muted-foreground sm:hidden"
+            class="shrink-0 text-xs leading-4 font-medium tracking-[0.075rem] whitespace-nowrap text-muted-foreground tabular-nums sm:hidden"
             data-testid="typography"
           >
             150
@@ -750,7 +750,7 @@ exports[`PostHeaderUserInfo - Snapshots > matches snapshot without avatarUrl 1`]
             snap...rKey
           </p>
           <p
-            class="shrink-0 text-xs leading-4 font-medium tracking-[0.075rem] whitespace-nowrap text-muted-foreground sm:hidden"
+            class="shrink-0 text-xs leading-4 font-medium tracking-[0.075rem] whitespace-nowrap text-muted-foreground tabular-nums sm:hidden"
             data-testid="typography"
           >
             50

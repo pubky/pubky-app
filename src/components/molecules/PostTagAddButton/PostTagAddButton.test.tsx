@@ -33,6 +33,21 @@ describe('PostTagAddButton', () => {
     expect(button).toBeDisabled();
   });
 
+  it('uses dashed style by default', () => {
+    render(<PostTagAddButton />);
+
+    expect(screen.getByRole('button')).toHaveClass('border-dashed');
+  });
+
+  it('uses plain style when variant is plain', () => {
+    render(<PostTagAddButton variant="plain" />);
+
+    const button = screen.getByRole('button');
+    expect(button).toHaveClass('border-transparent');
+    expect(button).toHaveClass('shadow-none');
+    expect(button).not.toHaveClass('border-dashed');
+  });
+
   it('does not call onClick when disabled', () => {
     const mockOnClick = vi.fn();
     render(<PostTagAddButton onClick={mockOnClick} disabled />);
@@ -52,6 +67,11 @@ describe('PostTagAddButton - Snapshots', () => {
 
   it('matches snapshot when disabled', () => {
     const { container } = render(<PostTagAddButton disabled />);
+    expect(container.firstChild).toMatchSnapshot();
+  });
+
+  it('matches snapshot with plain variant', () => {
+    const { container } = render(<PostTagAddButton variant="plain" />);
     expect(container.firstChild).toMatchSnapshot();
   });
 });

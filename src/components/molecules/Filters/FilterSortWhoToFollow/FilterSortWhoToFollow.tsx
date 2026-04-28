@@ -14,7 +14,7 @@ import type { WhoToFollowSortType } from './FilterSortWhoToFollow.types';
  */
 import { Lightbulb, ArrowLeftRight, Users, AtSign } from 'lucide-react';
 export function FilterSortWhoToFollow() {
-  const items = React.useMemo<Molecules.FilterItem<WhoToFollowSortType>[]>(
+  const items = React.useMemo<Molecules.FilterListItem<WhoToFollowSortType>[]>(
     () => [
       {
         key: WHO_TO_FOLLOW_SORT.SUGGESTED,

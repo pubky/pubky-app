@@ -1,3 +1,3 @@
 export * from './Landing';
-export * from './CopyrightForm';
+export * from './CopyrightFormPage';
 

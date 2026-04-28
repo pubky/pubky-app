@@ -3,13 +3,13 @@
 import { useHotTags } from '@/hooks/useHotTags/useHotTags';
 import { useRouter } from 'next/navigation';
 import { useTranslations } from 'next-intl';
+import { Tag as TagIcon } from 'lucide-react';
 import * as Atoms from '@/atoms';
 import * as Molecules from '@/molecules';
 import { APP_ROUTES } from '@/app/routes';
 import { MAX_TAGS } from './HotTags.constants';
 import type { HotTagsProps } from './HotTags.types';
 import { HotTagsSkeleton } from './HotTags.skeleton';
-import { Tag } from 'lucide-react';
 
 /**
  * HotTags
@@ -35,7 +35,7 @@ export function HotTags({ className }: HotTagsProps) {
   return (
     <Molecules.SidebarSection
       title={t('hotTags')}
-      footerIcon={Tag}
+      footerIcon={TagIcon}
       footerText={tCommon('exploreAll')}
       onFooterClick={handleSeeAll}
       footerTestId="see-all-button"

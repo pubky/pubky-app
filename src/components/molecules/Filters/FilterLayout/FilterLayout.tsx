@@ -43,7 +43,7 @@ export function FilterLayout({
               dataCy: 'visual-layout-toggle',
             }
           : null,
-      ].filter(Boolean) as Molecules.FilterItem<Core.LayoutType>[],
+      ].filter(Boolean) as Molecules.FilterListItem<Core.LayoutType>[],
     [t, disabled, showVisual],
   );
   return (

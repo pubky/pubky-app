@@ -10,7 +10,7 @@ export function RightSidebar({ className }: RightSidebarProps) {
       data-testid="right-sidebar"
       className={cn('hidden w-(--filter-bar-width) flex-col items-start justify-start gap-6 lg:flex', className)}
     >
-      <Organisms.WhoToFollow />
+      <Organisms.WhoToFollowSidebar />
       <Organisms.ActiveUsers />
       <Atoms.Container overrideDefaults className="sticky top-[100px] self-start">
         <Organisms.FeedbackCard />

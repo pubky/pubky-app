@@ -14,10 +14,10 @@ export default function DynamicProfilePage() {
   return (
     <>
       <div className="lg:hidden">
-        <Templates.ProfilePageProfile />
+        <Templates.ProfileOverviewPage />
       </div>
       <div className="hidden lg:block">
-        <Templates.ProfilePagePosts />
+        <Templates.ProfilePostsPage />
       </div>
     </>
   );

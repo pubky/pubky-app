@@ -106,6 +106,7 @@ export * from './EmojiPickerDialog';
 export * from './ProfilePageEmptyState';
 export * from './StatusPicker';
 export * from './TagInput';
+export * from './TagInputToggle';
 export * from './TaggedEmpty';
 export * from './TaggedItem';
 export * from './TaggedList';

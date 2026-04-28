@@ -9,5 +9,5 @@ import * as Templates from '@/templates';
  * copyright infringement claims.
  */
 export default function CopyrightPage() {
-  return <Templates.CopyrightForm />;
+  return <Templates.CopyrightFormPage />;
 }

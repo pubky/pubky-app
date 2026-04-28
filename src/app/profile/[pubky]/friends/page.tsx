@@ -1,5 +1,5 @@
 import * as Templates from '@/templates';
 
 export default function DynamicProfileFriendsPage() {
-  return <Templates.ProfilePageFriends />;
+  return <Templates.ProfileFriendsPage />;
 }

@@ -18,7 +18,7 @@ import { UsersRound, Pencil } from 'lucide-react';
 function HomeFeedContent() {
   return (
     <>
-      <Organisms.WhoToFollow />
+      <Organisms.WhoToFollowSidebar />
       <Organisms.ActiveUsers />
       <Organisms.HotTags />
       <Organisms.FeedbackCard />
@@ -93,7 +93,7 @@ export function HomeFeedRightDrawerMobile() {
 export function HotFeedRightSidebar() {
   return (
     <>
-      <Organisms.WhoToFollow />
+      <Organisms.WhoToFollowSidebar />
       <Atoms.Container overrideDefaults className="sticky top-[100px] self-start">
         <Organisms.FeedbackCard />
       </Atoms.Container>
@@ -109,7 +109,7 @@ export function HotFeedRightSidebar() {
 export function HotFeedRightDrawer() {
   return (
     <Atoms.Container overrideDefaults className="flex flex-col gap-6">
-      <Organisms.WhoToFollow />
+      <Organisms.WhoToFollowSidebar />
       <Organisms.FeedbackCard />
     </Atoms.Container>
   );

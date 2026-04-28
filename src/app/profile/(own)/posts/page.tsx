@@ -1,5 +1,5 @@
 import * as Templates from '@/templates';
 
 export default function ProfilePostsPage() {
-  return <Templates.ProfilePagePosts />;
+  return <Templates.ProfilePostsPage />;
 }

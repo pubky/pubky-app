@@ -1,5 +1,5 @@
 import * as Templates from '@/templates';
 
 export default function ProfileTaggedPage() {
-  return <Templates.ProfilePageTagged />;
+  return <Templates.ProfileTaggedPage />;
 }

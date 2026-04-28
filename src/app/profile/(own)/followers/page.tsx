@@ -1,5 +1,5 @@
 import * as Templates from '@/templates';
 
 export default function ProfileFollowersPage() {
-  return <Templates.ProfilePageFollowers />;
+  return <Templates.ProfileFollowersPage />;
 }
