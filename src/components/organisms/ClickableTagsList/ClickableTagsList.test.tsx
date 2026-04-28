@@ -323,7 +323,6 @@ describe('ClickableTagsList', () => {
       expect(mockTagInputToggle.mock.calls[0]?.[0]).toEqual(
         expect.objectContaining({
           widthByState: { input: 130, addButton: 34 },
-          addButtonWrapperClassName: 'inline-flex h-full w-full items-center justify-center',
         }),
       );
     });

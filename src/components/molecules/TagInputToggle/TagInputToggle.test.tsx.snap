@@ -14,7 +14,7 @@ exports[`TagInputToggle - Snapshots > matches snapshot in button state 1`] = `
 
 exports[`TagInputToggle - Snapshots > matches snapshot in input state 1`] = `
 <div
-  class="shrink-0"
+  class="w-full shrink-0"
 >
   <div
     data-testid="input-content"
