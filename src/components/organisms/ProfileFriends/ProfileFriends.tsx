@@ -1,6 +1,7 @@
 'use client';
 
-import { CONNECTION_TYPE, useProfileConnections } from '@/hooks/useProfileConnections/useProfileConnections';
+import { useProfileConnections } from '@/hooks/useProfileConnections/useProfileConnections';
+import { CONNECTION_TYPE } from '@/hooks/useProfileConnections/useProfileConnections.types';
 import { useFollowUser } from '@/hooks/useFollowUser/useFollowUser';
 import { useInfiniteScroll } from '@/hooks/useInfiniteScroll/useInfiniteScroll';
 import * as Atoms from '@/atoms';

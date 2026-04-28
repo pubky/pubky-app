@@ -1,11 +1,11 @@
 'use client';
 
-import { CONNECTION_TYPE, useProfileConnections } from '@/hooks/useProfileConnections/useProfileConnections';
+import { useProfileConnections } from '@/hooks/useProfileConnections/useProfileConnections';
 import { useCurrentUserProfile } from '@/hooks/useCurrentUserProfile/useCurrentUserProfile';
 import { useIsFollowing } from '@/hooks/useIsFollowing/useIsFollowing';
 import { useProfileStats } from '@/hooks/useProfileStats/useProfileStats';
 import { useUserProfile } from '@/hooks/useUserProfile/useUserProfile';
-import type { UserConnectionData } from '@/hooks/useProfileConnections/useProfileConnections.types';
+import { CONNECTION_TYPE, type UserConnectionData } from '@/hooks/useProfileConnections/useProfileConnections.types';
 
 interface UseUserInfoPopoverDataResult {
   isCurrentUser: boolean;

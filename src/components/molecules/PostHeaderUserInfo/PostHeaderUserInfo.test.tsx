@@ -57,13 +57,9 @@ vi.mock('@/hooks/useProfileStats/useProfileStats', () => ({
   useProfileStats: () => mockUseProfileStats(),
 }));
 
-vi.mock('@/hooks/useProfileConnections/useProfileConnections', async (importOriginal) => {
-  const actual = await importOriginal<typeof import('@/hooks/useProfileConnections/useProfileConnections')>();
-  return {
-    ...actual,
-    useProfileConnections: () => mockUseProfileConnections(),
-  };
-});
+vi.mock('@/hooks/useProfileConnections/useProfileConnections', () => ({
+  useProfileConnections: () => mockUseProfileConnections(),
+}));
 
 vi.mock('@/hooks/useCurrentUserProfile/useCurrentUserProfile', () => ({
   useCurrentUserProfile: () => mockUseCurrentUserProfile(),

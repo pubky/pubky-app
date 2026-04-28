@@ -24,13 +24,9 @@ vi.mock('@/hooks/useIsFollowing/useIsFollowing', () => ({
   useIsFollowing: () => mockUseIsFollowing(),
 }));
 
-vi.mock('@/hooks/useProfileConnections/useProfileConnections', async (importOriginal) => {
-  const actual = await importOriginal<typeof import('@/hooks/useProfileConnections/useProfileConnections')>();
-  return {
-    ...actual,
-    useProfileConnections: () => mockUseProfileConnections(),
-  };
-});
+vi.mock('@/hooks/useProfileConnections/useProfileConnections', () => ({
+  useProfileConnections: () => mockUseProfileConnections(),
+}));
 
 describe('useUserInfoPopoverData', () => {
   beforeEach(() => {

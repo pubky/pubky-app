@@ -22,22 +22,18 @@ vi.mock('@/core', async (importOriginal) => {
   };
 });
 
-vi.mock('@/hooks/useSettingsActions/useSettingsActions', async (importOriginal) => {
-  const actual = await importOriginal<typeof import('@/hooks/useSettingsActions/useSettingsActions')>();
-  return {
-    ...actual,
-    useSettingsActions: () => ({
-      setShowConfirm: mockSetShowConfirm,
-      setBlurCensored: mockSetBlurCensored,
-      setSignOutInactive: mockSetSignOutInactive,
-      setRequirePin: mockSetRequirePin,
-      setHideWhoToFollow: mockSetHideWhoToFollow,
-      setHideActiveFriends: mockSetHideActiveFriends,
-      setHideSearch: mockSetHideSearch,
-      setNeverShowPosts: mockSetNeverShowPosts,
-    }),
-  };
-});
+vi.mock('@/hooks/useSettingsActions/useSettingsActions', () => ({
+  useSettingsActions: () => ({
+    setShowConfirm: mockSetShowConfirm,
+    setBlurCensored: mockSetBlurCensored,
+    setSignOutInactive: mockSetSignOutInactive,
+    setRequirePin: mockSetRequirePin,
+    setHideWhoToFollow: mockSetHideWhoToFollow,
+    setHideActiveFriends: mockSetHideActiveFriends,
+    setHideSearch: mockSetHideSearch,
+    setNeverShowPosts: mockSetNeverShowPosts,
+  }),
+}));
 
 describe('PrivacySettings', () => {
   beforeEach(() => {

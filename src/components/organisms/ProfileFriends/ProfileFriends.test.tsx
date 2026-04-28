@@ -47,13 +47,9 @@ const mockUseFollowUser = vi.fn(() => ({
   error: null,
 }));
 
-vi.mock('@/hooks/useProfileConnections/useProfileConnections', async (importOriginal) => {
-  const actual = await importOriginal<typeof import('@/hooks/useProfileConnections/useProfileConnections')>();
-  return {
-    ...actual,
-    useProfileConnections: vi.fn(),
-  };
-});
+vi.mock('@/hooks/useProfileConnections/useProfileConnections', () => ({
+  useProfileConnections: vi.fn(),
+}));
 
 vi.mock('@/hooks/useInfiniteScroll/useInfiniteScroll', () => ({
   useInfiniteScroll: vi.fn(),
