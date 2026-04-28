@@ -8,7 +8,7 @@ vi.mock('@synonymdev/pubky', () => ({
   decryptRecoveryFile: vi.fn(),
 }));
 
-// Mock @/core
+// Mock auth controller
 vi.mock('@/controllers/auth/auth', () => ({
   AuthController: {
     loginWithEncryptedFile: vi.fn(),

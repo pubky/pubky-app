@@ -7,7 +7,7 @@ const mockState = vi.hoisted(() => ({
   currentUserPubky: null as string | null,
 }));
 
-// Mock @/core
+// Mock direct dependencies
 const mockGetRelationships = vi.fn();
 const mockFetch = vi.fn().mockResolvedValue(undefined);
 vi.mock('@/controllers/user/user', () => ({

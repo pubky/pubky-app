@@ -2,7 +2,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { renderHook } from '@testing-library/react';
 import { useAvatarUrl } from './useAvatarUrl';
 import type { NexusUserDetails } from '@/services/nexus/nexus.types';
-// Mock @/core
+// Mock file controller
 const mockGetAvatarUrl = vi.fn();
 vi.mock('@/controllers/file/file', () => ({
   FileController: {

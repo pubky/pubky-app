@@ -73,7 +73,7 @@ vi.mock('@/libs/logger/logger', () => ({
   Logger: { error: vi.fn(), warn: vi.fn(), info: vi.fn() },
 }));
 
-// Mock @/core
+// Mock auth store
 vi.mock('@/stores/auth/auth.store', () => ({
   useAuthStore: (selector: (state: Record<string, unknown>) => unknown) =>
     selector({

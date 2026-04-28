@@ -10,7 +10,7 @@ vi.mock('next/navigation', () => ({
   }),
 }));
 
-// Mock @/core
+// Mock settings store
 const mockSetLanguage = vi.fn();
 vi.mock('@/stores/settings/settings.store', () => ({
   useSettingsStore: Object.assign(() => ({}), {

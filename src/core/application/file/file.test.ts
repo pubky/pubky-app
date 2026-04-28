@@ -45,7 +45,7 @@ vi.mock('@/services/nexus/file/file', () => ({
   },
 }));
 
-// Mock @/core to include filesApi and FileDetailsModel
+// Mock file API and model dependencies
 vi.mock('@/services/nexus/file/file.api', () => ({
   filesApi: {
     getAvatarUrl: vi.fn(),

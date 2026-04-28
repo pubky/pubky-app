@@ -5,7 +5,7 @@ import { DialogSignIn } from './DialogSignIn';
 const mockShowSignInDialog = vi.hoisted(() => ({ value: false }));
 const mockSetShowSignInDialog = vi.hoisted(() => vi.fn());
 
-// Mock @/core - partial mock to preserve other exports
+// Mock auth store
 vi.mock('@/stores/auth/auth.store', () => ({
   useAuthStore: (
     selector: (state: { showSignInDialog: boolean; setShowSignInDialog: typeof mockSetShowSignInDialog }) => unknown,

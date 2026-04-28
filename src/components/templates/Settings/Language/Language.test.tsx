@@ -24,7 +24,7 @@ vi.mock('next-intl', () => ({
   useLocale: () => 'en',
 }));
 
-// Mock @/core
+// Mock settings store
 const mockSetLanguage = vi.fn();
 vi.mock('@/stores/settings/settings.store', () => ({
   useSettingsStore: Object.assign(() => ({}), {

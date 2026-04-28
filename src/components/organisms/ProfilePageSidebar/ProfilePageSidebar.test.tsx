@@ -16,7 +16,7 @@ vi.mock('dexie-react-hooks', () => ({
   useLiveQuery: vi.fn(() => null),
 }));
 
-// Mock @/core
+// Mock auth store
 vi.mock('@/stores/auth/auth.store', () => ({
   useAuthStore: vi.fn(() => ({
     selectCurrentUserPubky: () => 'test-pubky-123',

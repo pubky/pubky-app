@@ -19,7 +19,7 @@ vi.mock('dexie-react-hooks', () => ({
   }),
 }));
 
-// Mock @/core
+// Mock feed controller
 const mockGetList = vi.fn();
 vi.mock('@/controllers/feed/feed', () => ({
   FeedController: {

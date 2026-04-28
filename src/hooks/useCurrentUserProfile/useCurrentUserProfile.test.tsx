@@ -8,7 +8,7 @@ const mockState = vi.hoisted(() => ({
   userDetails: undefined as unknown,
 }));
 
-// Mock @/core
+// Mock direct dependencies
 const mockGetDetails = vi.fn();
 const mockFetchDetails = vi.fn().mockResolvedValue(undefined);
 vi.mock('@/controllers/user/user', () => ({

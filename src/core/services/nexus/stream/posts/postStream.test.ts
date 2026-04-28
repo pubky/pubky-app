@@ -9,7 +9,7 @@ import { PostStreamTypes } from '@/models/stream/post/postStream.types';
 import type { PostStreamId } from '@/models/stream/post/postStream.types';
 import { StreamSorting } from '@/services/nexus/nexus.types';
 import type { NexusPost, NexusPostsKeyStream } from '@/services/nexus/nexus.types';
-import { StreamKind as StreamKindCore, StreamSource } from '@/services/nexus/stream/posts/postStream.types';
+import { StreamSource } from '@/services/nexus/stream/posts/postStream.types';
 import type {
   TPostStreamFetchParams,
   TStreamAllParams,
@@ -370,12 +370,12 @@ describe('createPostStreamParams', () => {
   describe('Bookmark streams', () => {
     test.each([
       { streamType: PostStreamTypes.TIMELINE_BOOKMARKS_ALL, kind: undefined, name: 'all' },
-      { streamType: PostStreamTypes.TIMELINE_BOOKMARKS_SHORT, kind: StreamKindCore.SHORT, name: 'short' },
-      { streamType: PostStreamTypes.TIMELINE_BOOKMARKS_LONG, kind: StreamKindCore.LONG, name: 'long' },
-      { streamType: PostStreamTypes.TIMELINE_BOOKMARKS_IMAGE, kind: StreamKindCore.IMAGE, name: 'image' },
-      { streamType: PostStreamTypes.TIMELINE_BOOKMARKS_VIDEO, kind: StreamKindCore.VIDEO, name: 'video' },
-      { streamType: PostStreamTypes.TIMELINE_BOOKMARKS_LINK, kind: StreamKindCore.LINK, name: 'link' },
-      { streamType: PostStreamTypes.TIMELINE_BOOKMARKS_FILE, kind: StreamKindCore.FILE, name: 'file' },
+      { streamType: PostStreamTypes.TIMELINE_BOOKMARKS_SHORT, kind: StreamKind.SHORT, name: 'short' },
+      { streamType: PostStreamTypes.TIMELINE_BOOKMARKS_LONG, kind: StreamKind.LONG, name: 'long' },
+      { streamType: PostStreamTypes.TIMELINE_BOOKMARKS_IMAGE, kind: StreamKind.IMAGE, name: 'image' },
+      { streamType: PostStreamTypes.TIMELINE_BOOKMARKS_VIDEO, kind: StreamKind.VIDEO, name: 'video' },
+      { streamType: PostStreamTypes.TIMELINE_BOOKMARKS_LINK, kind: StreamKind.LINK, name: 'link' },
+      { streamType: PostStreamTypes.TIMELINE_BOOKMARKS_FILE, kind: StreamKind.FILE, name: 'file' },
     ])('should handle timeline:bookmarks:$name stream', ({ streamType, kind }) => {
       const result = createPostStreamParams({
         streamId: streamType,
@@ -527,7 +527,7 @@ describe('createPostStreamParams', () => {
       });
 
       expect(result.params.tags).toBeUndefined();
-      expect(result.params.kind).toBe(StreamKindCore.VIDEO);
+      expect(result.params.kind).toBe(StreamKind.VIDEO);
     });
 
     it('should handle tags with special characters', () => {
@@ -574,12 +574,12 @@ describe('createPostStreamParams', () => {
 
   describe('Tags with different content types', () => {
     test.each([
-      { kind: 'short', tags: 'tech,dev', expectedKind: StreamKindCore.SHORT },
-      { kind: 'long', tags: 'essays,articles', expectedKind: StreamKindCore.LONG },
-      { kind: 'image', tags: 'photos,art', expectedKind: StreamKindCore.IMAGE },
-      { kind: 'video', tags: 'tutorials,vlogs', expectedKind: StreamKindCore.VIDEO },
-      { kind: 'link', tags: 'resources,refs', expectedKind: StreamKindCore.LINK },
-      { kind: 'file', tags: 'docs,pdfs', expectedKind: StreamKindCore.FILE },
+      { kind: 'short', tags: 'tech,dev', expectedKind: StreamKind.SHORT },
+      { kind: 'long', tags: 'essays,articles', expectedKind: StreamKind.LONG },
+      { kind: 'image', tags: 'photos,art', expectedKind: StreamKind.IMAGE },
+      { kind: 'video', tags: 'tutorials,vlogs', expectedKind: StreamKind.VIDEO },
+      { kind: 'link', tags: 'resources,refs', expectedKind: StreamKind.LINK },
+      { kind: 'file', tags: 'docs,pdfs', expectedKind: StreamKind.FILE },
     ])('should handle tags in $kind content stream', ({ kind, tags, expectedKind }) => {
       const streamIdWithTags = `timeline:bookmarks:${kind}:${tags}` as PostStreamId;
       const result = createPostStreamParams({

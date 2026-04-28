@@ -2,7 +2,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { renderHook, waitFor } from '@testing-library/react';
 import { useSmsVerificationInfo } from './useSmsVerificationInfo';
 
-// Mock @/core
+// Mock direct dependencies
 const mockGetSmsVerificationInfo = vi.fn();
 const mockGetQueryData = vi.fn();
 vi.mock('@/controllers/homegate/homegate', () => ({

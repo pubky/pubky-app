@@ -2,7 +2,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { renderHook } from '@testing-library/react';
 import { useUserDetails } from './useUserDetails';
 
-// Mock @/core
+// Mock direct dependencies
 const mockGetDetails = vi.fn();
 const mockFetchDetails = vi.fn().mockResolvedValue(undefined);
 vi.mock('@/controllers/user/user', () => ({
