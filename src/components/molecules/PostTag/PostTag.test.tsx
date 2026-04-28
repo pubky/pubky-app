@@ -43,6 +43,11 @@ describe('PostTag', () => {
     expect(screen.getByLabelText(/bitcoin tag \(16 posts\)/i)).toBeInTheDocument();
   });
 
+  it('preserves post-tag count selector for e2e tests', () => {
+    render(<PostTag label="bitcoin" count={16} />);
+    expect(screen.getByText('16')).toHaveAttribute('data-cy', 'post-tag-count');
+  });
+
   it('renders with custom color', () => {
     const { container } = render(<PostTag label="bitcoin" color="#123456" />);
     const tag = screen.getByRole('button');

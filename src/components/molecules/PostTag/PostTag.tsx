@@ -49,6 +49,7 @@ export function PostTag({
       <Atoms.Tag
         name={label}
         count={count}
+        countDataCy="post-tag-count"
         className="px-0"
         style={{ backgroundColor: 'transparent', border: 'none', boxShadow: 'none' }}
       />

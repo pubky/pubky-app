@@ -4,7 +4,7 @@ export interface TagInputHandle {
   focus: () => void;
 }
 
-export type TagInputContainerVariant = 'dashed' | 'plain';
+type TagInputContainerVariant = 'dashed' | 'plain';
 
 export interface TagInputProps {
   /** Callback when a tag is added. Can return a Promise for async handling. */

@@ -169,9 +169,6 @@ export function ClickableTagsList({
           <Molecules.TagInputToggle
             showInput={hasInput}
             widthByState={{ input: inputWidth, addButton: 34 }}
-            containerClassName="h-8"
-            inputWrapperClassName="w-full"
-            addButtonWrapperClassName="inline-flex h-full w-full items-center justify-center"
             inputContent={
               <Molecules.TagInput
                 onTagAdd={handleTagAddFromInput}

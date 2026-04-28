@@ -66,7 +66,7 @@ exports[`PostTag - Snapshots > matches snapshot with all features 1`] = `
     </p>
     <p
       class="text-sm ml-1.5 shrink-0 font-medium text-foreground/50"
-      data-cy="tag-count"
+      data-cy="post-tag-count"
       data-testid="tag-count"
     >
       16
@@ -198,7 +198,7 @@ exports[`PostTag - Snapshots > matches snapshot with counter 1`] = `
     </p>
     <p
       class="text-sm ml-1.5 shrink-0 font-medium text-foreground/50"
-      data-cy="tag-count"
+      data-cy="post-tag-count"
       data-testid="tag-count"
     >
       16

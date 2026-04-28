@@ -1,11 +1,31 @@
 'use client';
 
 import { AnimatePresence, motion } from 'motion/react';
-import type { TagInputToggleProps } from './TagInputToggle.types';
+import type { Transition } from 'motion/react';
 import { cn } from '@/libs/utils/utils';
 
-const SUBTLE_ENTER_TRANSITION = { duration: 0.12, ease: 'easeOut' } as const;
-const SUBTLE_EXIT_TRANSITION = { duration: 0.12, ease: 'easeInOut' } as const;
+const SUBTLE_ENTER_TRANSITION: Transition = { duration: 0.12, ease: 'easeOut' };
+const SUBTLE_EXIT_TRANSITION: Transition = { duration: 0.12, ease: 'easeInOut' };
+
+export interface TagInputToggleProps {
+  /** Whether the input state is active (otherwise the add button state is shown). */
+  showInput: boolean;
+  /** Content rendered for the input state. */
+  inputContent?: React.ReactNode;
+  /** Content rendered for the add button state. */
+  addButtonContent?: React.ReactNode;
+  /** Optional fixed widths (px) for input and add button states. */
+  widthByState?: {
+    input: number;
+    addButton: number;
+  };
+  /** Optional className applied to the outer wrapper container. */
+  containerClassName?: string;
+  /** Optional className applied to the input state wrapper. */
+  inputWrapperClassName?: string;
+  /** Optional className applied to the add button state wrapper. */
+  addButtonWrapperClassName?: string;
+}
 
 export function TagInputToggle({
   showInput,
@@ -36,7 +56,7 @@ export function TagInputToggle({
           initial={inputInitial}
           animate={inputAnimate}
           exit={inputExit}
-          className={cn(hasWidthAnimation ? 'absolute inset-0' : 'shrink-0', inputWrapperClassName)}
+          className={cn('w-full', hasWidthAnimation ? 'absolute inset-0' : 'shrink-0', inputWrapperClassName)}
         >
           {inputContent}
         </motion.div>
@@ -47,6 +67,7 @@ export function TagInputToggle({
           animate={addButtonAnimate}
           exit={addButtonExit}
           className={cn(
+            'inline-flex h-full w-full items-center justify-center',
             hasWidthAnimation
               ? 'absolute inset-0 inline-flex items-center justify-center'
               : 'inline-flex h-full w-full items-center justify-center',
@@ -70,7 +91,7 @@ export function TagInputToggle({
       transition={{ duration: 0.2, ease: 'easeInOut' }}
       style={{ originX: 0 }}
       className={cn(
-        'relative overflow-hidden rounded-md border border-dashed border-input shadow-sm',
+        'relative h-8 overflow-hidden rounded-md border border-dashed border-input shadow-sm',
         containerClassName,
       )}
     >

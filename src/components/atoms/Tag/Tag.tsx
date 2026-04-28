@@ -13,6 +13,7 @@ export const Tag = ({
   className,
   'data-testid': dataTestId,
   'data-cy': dataCy,
+  countDataCy,
   ...props
 }: TagProps) => {
   const [isHovered, setIsHovered] = React.useState(false);
@@ -70,7 +71,7 @@ export const Tag = ({
           size="sm"
           className="ml-1.5 shrink-0 font-medium text-foreground/50"
           data-testid="tag-count"
-          data-cy={`${dataCy || 'tag'}-count`}
+          data-cy={countDataCy || `${dataCy || 'tag'}-count`}
         >
           {count}
         </Atoms.Typography>

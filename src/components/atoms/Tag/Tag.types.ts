@@ -8,5 +8,6 @@ export interface TagProps {
   className?: React.HTMLAttributes<HTMLDivElement>['className'];
   'data-testid'?: string;
   'data-cy'?: string;
+  countDataCy?: string;
   style?: React.CSSProperties;
 }
