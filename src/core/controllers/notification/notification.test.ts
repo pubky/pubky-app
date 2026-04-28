@@ -1,7 +1,9 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
+import { NotificationApplication } from '@/core/application/notification/notification';
 import { NotificationController } from './notification';
 import * as Core from '@/core';
 import * as Config from '@/config';
+import { NotificationType } from '@/core/models/notification/notification.types';
 import { mockAuthStore, mockNotificationStore, asOpaque } from '@/test-utils';
 
 const mockUserId = 'pubky-user-123' as Core.Pubky;
@@ -61,7 +63,7 @@ describe('NotificationController', () => {
         userId: mockUserId,
         lastPolledTimestamp: 500,
         lastRead: 1234,
-        allowedTypes: expect.arrayContaining(Object.values(Core.NotificationType)),
+        allowedTypes: expect.arrayContaining(Object.values(NotificationType)),
       });
       expect(store.setUnread).toHaveBeenCalledWith(5);
       expect(store.setLastPolledTimestamp).toHaveBeenCalledWith(3000);
@@ -80,7 +82,7 @@ describe('NotificationController', () => {
       expect(appSpy).toHaveBeenCalledWith(
         expect.objectContaining({
           lastRead: 1234,
-          allowedTypes: expect.not.arrayContaining([Core.NotificationType.Follow]),
+          allowedTypes: expect.not.arrayContaining([NotificationType.Follow]),
         }),
       );
     });
@@ -137,7 +139,7 @@ describe('NotificationController', () => {
         userId: mockUserId,
         lastPolledTimestamp: undefined,
         lastRead: 1000,
-        allowedTypes: expect.arrayContaining(Object.values(Core.NotificationType)),
+        allowedTypes: expect.arrayContaining(Object.values(NotificationType)),
       });
       expect(setUnread).toHaveBeenCalledWith(2);
       expect(setLastPolledTimestamp).toHaveBeenCalledWith(3000);
@@ -150,7 +152,7 @@ describe('NotificationController', () => {
         userId: mockUserId,
         lastPolledTimestamp: 3000,
         lastRead: 1000,
-        allowedTypes: expect.arrayContaining(Object.values(Core.NotificationType)),
+        allowedTypes: expect.arrayContaining(Object.values(NotificationType)),
       });
       expect(setUnread).toHaveBeenCalledWith(4);
       expect(setLastPolledTimestamp).toHaveBeenCalledWith(5000);
@@ -203,7 +205,7 @@ describe('NotificationController', () => {
   describe('getOrFetchNotifications', () => {
     const mockResponse: Core.TGetOrFetchNotificationsResponse = {
       flatNotifications: [
-        { id: 'follow:3000:user-1', type: Core.NotificationType.Follow, timestamp: 3000, followed_by: 'user-1' },
+        { id: 'follow:3000:user-1', type: NotificationType.Follow, timestamp: 3000, followed_by: 'user-1' },
       ] as Core.FlatNotification[],
       olderThan: 3000,
     };
@@ -218,86 +220,42 @@ describe('NotificationController', () => {
       { params: { olderThan: 5000 }, expectedOlderThan: 5000, expectedLimit: Config.NEXUS_NOTIFICATIONS_LIMIT },
       { params: { limit: 50 }, expectedOlderThan: Infinity, expectedLimit: 50 },
       { params: { olderThan: 8000, limit: 20 }, expectedOlderThan: 8000, expectedLimit: 20 },
-    ])('should call application with params: $params', async ({ params, expectedOlderThan, expectedLimit }) => {
-      const spy = vi.spyOn(Core.NotificationApplication, 'getOrFetchNotifications').mockResolvedValue(mockResponse);
+    ])(
+      'should delegate to NotificationApplication.getOrFetchNotifications with params: $params',
+      async ({ params, expectedOlderThan, expectedLimit }) => {
+        const spy = vi.spyOn(Core.NotificationApplication, 'getOrFetchNotifications').mockResolvedValue(mockResponse);
 
-      await NotificationController.getOrFetchNotifications(params);
+        await NotificationController.getOrFetchNotifications(params);
 
-      expect(spy).toHaveBeenCalledWith({
-        userId: mockUserId,
-        olderThan: expectedOlderThan,
-        limit: expectedLimit,
-      });
+        expect(spy).toHaveBeenCalledWith({
+          userId: mockUserId,
+          olderThan: expectedOlderThan,
+          limit: expectedLimit,
+          allowedTypes: undefined,
+        });
+      },
+    );
+
+    it('should pass allowedTypes derived from preferences', async () => {
+      mockSettingsStore({ follow: false });
+      const spy = vi.spyOn(NotificationApplication, 'getOrFetchNotifications').mockResolvedValue(mockResponse);
+
+      await NotificationController.getOrFetchNotifications({});
+
+      expect(spy).toHaveBeenCalledWith(
+        expect.objectContaining({
+          allowedTypes: expect.not.arrayContaining([NotificationType.Follow]),
+        }),
+      );
     });
 
-    it('should return all notifications when all preferences are enabled (default)', async () => {
-      // mockSettingsStore() defaults to all preferences enabled,
-      // so no notifications should be filtered out
+    it('should return the response from application', async () => {
       vi.spyOn(Core.NotificationApplication, 'getOrFetchNotifications').mockResolvedValue(mockResponse);
 
       const result = await NotificationController.getOrFetchNotifications({});
 
       expect(result.flatNotifications).toHaveLength(1);
       expect(result.olderThan).toBe(3000);
-    });
-
-    it('should filter out disabled notification types', async () => {
-      mockSettingsStore({ follow: false });
-      vi.spyOn(Core.NotificationApplication, 'getOrFetchNotifications').mockResolvedValue(mockResponse);
-
-      const result = await NotificationController.getOrFetchNotifications({});
-
-      expect(result.flatNotifications).toHaveLength(0);
-      expect(result.olderThan).toBe(3000);
-    });
-
-    it('should filter mixed notification types by preferences', async () => {
-      mockSettingsStore({ postDeleted: false });
-      const mixedResponse: Core.TGetOrFetchNotificationsResponse = {
-        flatNotifications: [
-          { id: 'follow:3000:user-1', type: Core.NotificationType.Follow, timestamp: 3000, followed_by: 'user-1' },
-          {
-            id: 'post_deleted:2000:user-2',
-            type: Core.NotificationType.PostDeleted,
-            timestamp: 2000,
-            delete_source: 'reply',
-            deleted_by: 'user-2',
-            deleted_uri: 'pubky://post/1',
-            linked_uri: 'pubky://post/2',
-          },
-          {
-            id: 'reply:1000:user-3',
-            type: Core.NotificationType.Reply,
-            timestamp: 1000,
-            replied_by: 'user-3',
-            parent_post_uri: 'pubky://post/1',
-            reply_uri: 'pubky://post/3',
-          },
-        ] as Core.FlatNotification[],
-        olderThan: 1000,
-      };
-      vi.spyOn(Core.NotificationApplication, 'getOrFetchNotifications').mockResolvedValue(mixedResponse);
-
-      const result = await NotificationController.getOrFetchNotifications({});
-
-      expect(result.flatNotifications).toHaveLength(2);
-      expect(result.flatNotifications.map((n) => n.type)).toEqual([
-        Core.NotificationType.Follow,
-        Core.NotificationType.Reply,
-      ]);
-      expect(result.olderThan).toBe(1000);
-    });
-
-    it('should return empty response when no notifications', async () => {
-      vi.spyOn(Core.NotificationApplication, 'getOrFetchNotifications').mockResolvedValue({
-        flatNotifications: [],
-        olderThan: undefined,
-      });
-
-      const result = await NotificationController.getOrFetchNotifications({});
-
-      expect(result.flatNotifications).toHaveLength(0);
-      expect(result.olderThan).toBeUndefined();
     });
 
     it('should bubble errors from application', async () => {

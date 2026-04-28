@@ -1,6 +1,6 @@
 import * as Core from '@/core';
-import { NotificationType } from '@/core/models/notification/notification.types';
-import { NotificationState } from '@/core/stores/notification/notification.types';
+import type { NotificationType } from '@/core/models/notification/notification.types';
+import type { NotificationState } from '@/core/stores/notification/notification.types';
 import { Env } from '@/libs/env/env';
 import { AppError } from '@/libs/error/error';
 import { HttpMethod, HttpStatusCode } from '@/libs/http/http.types';

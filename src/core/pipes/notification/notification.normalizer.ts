@@ -3,7 +3,6 @@ import * as Core from '@/core';
 import { getBusinessKey } from '@/core/models/notification/notification.helpers';
 import type { NotificationPreferences } from '@/core/stores/settings/settings.types';
 import { NotificationType } from '@/core/models/notification/notification.types';
-import type { FlatNotification } from '@/core/models/notification/notification.types';
 import { ValidationErrorCode } from '@/libs/error/error.codes';
 import { Err } from '@/libs/error/error.factories';
 import { ErrorService } from '@/libs/error/error.types';
@@ -39,20 +38,6 @@ export class NotificationNormalizer {
       ...notificationWithoutId,
       id,
     };
-  }
-
-  /**
-   * Filters notifications by user preferences.
-   * Returns only notifications whose type is enabled in the given preferences.
-   */
-  static filterByPreferences(
-    notifications: FlatNotification[],
-    preferences: NotificationPreferences,
-  ): FlatNotification[] {
-    return notifications.filter((notification) => {
-      const preferenceKey = NOTIFICATION_TYPE_TO_PREFERENCE_KEY[notification.type];
-      return preferences[preferenceKey];
-    });
   }
 
   /**

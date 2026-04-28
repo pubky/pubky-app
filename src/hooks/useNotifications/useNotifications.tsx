@@ -5,6 +5,7 @@ import * as Core from '@/core';
 import { NotificationType, type FlatNotification } from '@/core';
 // Direct import to avoid circular dependency (this hook is exported from @/hooks)
 import { useMutedUsers } from '@/hooks/useMutedUsers';
+import { useSettingsStore } from '@/core/stores/settings/settings.store';
 import type { UseNotificationsResult } from './useNotifications.types';
 import { Logger } from '@/libs/logger/logger';
 
@@ -23,6 +24,8 @@ export function useNotifications(): UseNotificationsResult {
   const loadingRef = useRef(false);
 
   const { currentUserPubky } = Core.useAuthStore();
+  const notificationPreferences = useSettingsStore((s) => s.notifications);
+  const previousPreferencesRef = useRef(notificationPreferences);
 
   /**
    * Mute filtering for notifications.
@@ -215,6 +218,22 @@ export function useNotifications(): UseNotificationsResult {
     if (!currentUserPubky) return;
     performInitialLoad();
   }, [currentUserPubky, performInitialLoad]);
+
+  /**
+   * Reset pagination when notification filter preferences change.
+   * Preference changes create a new query context, so we must restart from
+   * the first page instead of continuing with the previous olderThan cursor.
+   */
+  useEffect(() => {
+    if (!currentUserPubky) return;
+
+    const hasPreferencesChanged = previousPreferencesRef.current !== notificationPreferences;
+    previousPreferencesRef.current = notificationPreferences;
+
+    if (!hasPreferencesChanged) return;
+
+    refresh();
+  }, [currentUserPubky, notificationPreferences, refresh]);
 
   /**
    * Reactively filter notifications when mute state changes.
