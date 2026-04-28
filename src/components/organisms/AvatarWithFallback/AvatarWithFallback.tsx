@@ -74,7 +74,9 @@ export function AvatarWithFallback({
     setImageError(false);
   }, [resolvedAvatarUrl]);
   return (
-    <Atoms.Avatar size={size} className={className} data-testid={dataTestId}>
+    // `key` forces remount so Radix Avatar resets its 'loaded' state and shows the fallback (#526).
+    // TODO: cover with E2E/VRT — jsdom can't reproduce real image loading.
+    <Atoms.Avatar key={resolvedAvatarUrl ?? 'fallback'} size={size} className={className} data-testid={dataTestId}>
       {resolvedAvatarUrl && !imageError && (
         <>
           <Atoms.AvatarImage
