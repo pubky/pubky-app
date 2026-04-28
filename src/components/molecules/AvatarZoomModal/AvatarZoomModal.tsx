@@ -1,9 +1,9 @@
 'use client';
 
+import { useBodyScrollLock } from '@/hooks/useBodyScrollLock/useBodyScrollLock';
 import { useEffect, useRef } from 'react';
 import * as Atoms from '@/atoms';
 import * as Organisms from '@/organisms';
-import * as Hooks from '@/hooks';
 
 export interface AvatarZoomModalProps {
   open: boolean;
@@ -31,7 +31,7 @@ export function AvatarZoomModal({ open, onClose, avatarUrl, name, fallbackSeed }
     onCloseRef.current = onClose;
   }, [onClose]);
 
-  Hooks.useBodyScrollLock(open);
+  useBodyScrollLock(open);
 
   // Focus management: move focus into modal when it opens
   useEffect(() => {

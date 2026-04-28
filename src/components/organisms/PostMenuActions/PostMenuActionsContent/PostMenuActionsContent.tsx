@@ -1,8 +1,8 @@
 'use client';
 
+import { usePostMenuActions } from '@/hooks/usePostMenuActions/usePostMenuActions';
 import * as Atoms from '@/atoms';
 import { MENU_VARIANT } from '@/config/ui';
-import * as Hooks from '@/hooks';
 import { PostMenuActionsContentSkeleton } from './PostMenuActionsContent.skeleton';
 import type { PostMenuActionsContentProps } from './PostMenuActionsContent.types';
 import { cn } from '@/libs/utils/utils';
@@ -16,7 +16,7 @@ export function PostMenuActionsContent({
   onDeleteClick,
   isDeleting,
 }: PostMenuActionsContentProps) {
-  const { menuItems, isLoading } = Hooks.usePostMenuActions(postId, {
+  const { menuItems, isLoading } = usePostMenuActions(postId, {
     onReportClick,
     onEditClick,
     onDeleteClick,

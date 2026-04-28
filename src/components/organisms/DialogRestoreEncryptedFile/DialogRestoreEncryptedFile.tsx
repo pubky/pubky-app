@@ -1,10 +1,10 @@
 'use client';
 
+import { useEnterSubmit } from '@/hooks/useEnterSubmit/useEnterSubmit';
 import { useState, useRef } from 'react';
 import { useTranslations } from 'next-intl';
 import * as Atoms from '@/atoms';
 import * as Core from '@/core';
-import * as Hooks from '@/hooks';
 import { FileUp, FileText, Loader2, RotateCcw } from 'lucide-react';
 import { AppError } from '@/libs/error/error';
 import { ErrorService } from '@/libs/error/error.types';
@@ -84,7 +84,7 @@ export function DialogRestoreEncryptedFile({ onRestore }: { onRestore: () => voi
   const isFormValid = () => {
     return Boolean(selectedFile && password && !isRestoring);
   };
-  const handleKeyDown = Hooks.useEnterSubmit(isFormValid, handleRestore);
+  const handleKeyDown = useEnterSubmit(isFormValid, handleRestore);
   const selectedFileDisplayName = selectedFile ? formatFileName(selectedFile.name) : 'encryptedfile.pkarr';
   return (
     <Atoms.Dialog>

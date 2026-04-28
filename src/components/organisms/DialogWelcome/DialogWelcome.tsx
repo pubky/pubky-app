@@ -1,9 +1,9 @@
 'use client';
 
+import { useCopyToClipboard } from '@/hooks/useCopyToClipboard/useCopyToClipboard';
 import { useLiveQuery } from 'dexie-react-hooks';
 import * as Atoms from '@/atoms';
 import * as Organisms from '@/organisms';
-import * as Hooks from '@/hooks';
 import * as Core from '@/core';
 
 /**
@@ -34,7 +34,7 @@ export function DialogWelcome() {
       return null;
     }
   }, [currentUserPubky]);
-  const { copyToClipboard } = Hooks.useCopyToClipboard();
+  const { copyToClipboard } = useCopyToClipboard();
 
   // Don't render if conditions aren't met
   if (!userDetails || !currentUserPubky) {

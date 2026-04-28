@@ -1,11 +1,15 @@
 'use client';
 
+import { useHotTags } from '@/hooks/useHotTags/useHotTags';
+import { useIsMobile } from '@/hooks/useIsMobile/useIsMobile';
+import { useSearchAutocomplete } from '@/hooks/useSearchAutocomplete/useSearchAutocomplete';
+import { useSearchInput } from '@/hooks/useSearchInput/useSearchInput';
+import { useTagSearch } from '@/hooks/useTagSearch/useTagSearch';
 import { useEffect } from 'react';
 import { useRouter, useSearchParams, usePathname } from 'next/navigation';
 import { useTranslations } from 'next-intl';
 import * as Molecules from '@/molecules';
 import * as Atoms from '@/atoms';
-import * as Hooks from '@/hooks';
 import * as Core from '@/core';
 import { APP_ROUTES } from '@/app/routes';
 import { CLICKABLE_TAGS_DEFAULT_MAX_LENGTH } from '@/config/tags';
@@ -19,9 +23,9 @@ export function SearchInput({ autoFocus = false }: SearchInputProps) {
   const pathname = usePathname();
   const t = useTranslations('search');
 
-  const { addTagToSearch, removeTagFromSearch, activeTags, isReadOnly } = Hooks.useTagSearch();
+  const { addTagToSearch, removeTagFromSearch, activeTags, isReadOnly } = useTagSearch();
   const { setActiveTags, recentUsers, recentTags, addUser, clearRecentSearches } = Core.useSearchStore();
-  const isMobile = Hooks.useIsMobile();
+  const isMobile = useIsMobile();
 
   const handleEnter = (value: string) => {
     if (!isValidTagLabel(value.trim().toLowerCase())) {
@@ -45,7 +49,7 @@ export function SearchInput({ autoFocus = false }: SearchInputProps) {
     handleFocus,
     clearInputValue,
     setFocus,
-  } = Hooks.useSearchInput({ onEnter: handleEnter });
+  } = useSearchInput({ onEnter: handleEnter });
 
   const tagsParam = searchParams.get('tags');
   useEffect(() => {
@@ -53,10 +57,10 @@ export function SearchInput({ autoFocus = false }: SearchInputProps) {
     setActiveTags(urlTags);
   }, [tagsParam, setActiveTags]);
 
-  const { tags: hotTags } = Hooks.useHotTags({ limit: CLICKABLE_TAGS_DEFAULT_MAX_LENGTH });
+  const { tags: hotTags } = useHotTags({ limit: CLICKABLE_TAGS_DEFAULT_MAX_LENGTH });
 
   const hasInput = inputValue.trim().length > 0;
-  const { tags: autocompleteTags, users: autocompleteUserData } = Hooks.useSearchAutocomplete({
+  const { tags: autocompleteTags, users: autocompleteUserData } = useSearchAutocomplete({
     query: inputValue,
     enabled: isFocused && hasInput,
   });

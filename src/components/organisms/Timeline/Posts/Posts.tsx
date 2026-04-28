@@ -1,9 +1,10 @@
 'use client';
 
+import { useInfiniteScroll } from '@/hooks/useInfiniteScroll/useInfiniteScroll';
+import { usePostNavigation } from '@/hooks/usePostNavigation/usePostNavigation';
 import * as Atoms from '@/atoms';
 import * as Molecules from '@/molecules';
 import * as Organisms from '@/organisms';
-import * as Hooks from '@/hooks';
 
 interface TimelinePostsProps {
   postIds: string[];
@@ -24,9 +25,9 @@ interface TimelinePostsProps {
  * PostMain / nested reply inherits the active tags layout via context.
  */
 export function TimelinePosts({ postIds, loading, loadingMore, error, hasMore, loadMore }: TimelinePostsProps) {
-  const { navigateToPost } = Hooks.usePostNavigation();
+  const { navigateToPost } = usePostNavigation();
 
-  const { sentinelRef } = Hooks.useInfiniteScroll({
+  const { sentinelRef } = useInfiniteScroll({
     onLoadMore: loadMore,
     hasMore,
     isLoading: loadingMore,

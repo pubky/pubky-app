@@ -1,7 +1,7 @@
 'use client';
 
 import * as Core from '@/core';
-import { useCustomFeed } from '@/hooks/useCustomFeed';
+import { useCustomFeed } from '@/hooks/useCustomFeed/useCustomFeed';
 
 export function useCustomStreamId(): Core.PostStreamId | undefined {
   const customFeed = useCustomFeed();

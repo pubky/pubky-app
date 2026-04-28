@@ -1,8 +1,8 @@
 'use client';
 
+import { useCustomFeed } from '@/hooks/useCustomFeed/useCustomFeed';
 import * as Atoms from '@/atoms';
 import * as Molecules from '@/molecules';
-import * as Hooks from '@/hooks';
 import * as Core from '@/core';
 
 interface CustomFeedFiltersProps {
@@ -10,7 +10,7 @@ interface CustomFeedFiltersProps {
 }
 
 export function CustomFeedFilters({ variant }: CustomFeedFiltersProps) {
-  const customFeed = Hooks.useCustomFeed();
+  const customFeed = useCustomFeed();
   const reach = customFeed?.reach !== undefined ? Core.pubkyReachToHomeReach(customFeed.reach) : undefined;
   const sort = customFeed?.sort !== undefined ? Core.pubkySortToHomeSort(customFeed.sort) : undefined;
   const layout = customFeed?.layout !== undefined ? Core.pubkyLayoutToHomeLayout(customFeed.layout) : undefined;

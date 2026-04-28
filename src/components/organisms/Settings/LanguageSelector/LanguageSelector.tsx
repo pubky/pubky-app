@@ -1,10 +1,11 @@
 'use client';
 
+import { useIsMobile } from '@/hooks/useIsMobile/useIsMobile';
+import { useSettingsActions } from '@/hooks/useSettingsActions/useSettingsActions';
 import * as React from 'react';
 import { useRouter } from 'next/navigation';
 import { useTranslations, useLocale } from 'next-intl';
 import * as Atoms from '@/atoms';
-import * as Hooks from '@/hooks';
 import { LANGUAGES } from './LanguageSelector.constants';
 import { Check, ChevronDown } from 'lucide-react';
 import { cn } from '@/libs/utils/utils';
@@ -42,8 +43,8 @@ export function LanguageSelector() {
   const t = useTranslations('language');
   const router = useRouter();
   const serverLocale = useLocale();
-  const isMobile = Hooks.useIsMobile();
-  const { setLanguage } = Hooks.useSettingsActions();
+  const isMobile = useIsMobile();
+  const { setLanguage } = useSettingsActions();
   const [isOpen, setIsOpen] = React.useState(false);
   const handleSelect = (code: string) => {
     if (code === serverLocale) {

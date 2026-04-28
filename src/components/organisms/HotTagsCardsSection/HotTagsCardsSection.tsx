@@ -1,11 +1,13 @@
 'use client';
 
+import { useBulkUserAvatars } from '@/hooks/useBulkUserAvatars/useBulkUserAvatars';
+import { useHotTags } from '@/hooks/useHotTags/useHotTags';
+import { useIsMobile } from '@/hooks/useIsMobile/useIsMobile';
 import { useMemo, useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { useTranslations } from 'next-intl';
 import * as Atoms from '@/atoms';
 import * as Molecules from '@/molecules';
-import * as Hooks from '@/hooks';
 import * as Core from '@/core';
 import { APP_ROUTES } from '@/app/routes';
 import { HOT_TAGS_FEATURED_COUNT } from '@/config';
@@ -26,7 +28,7 @@ export function HotTagsCardsSection({ className }: HotTagsCardsSectionProps) {
   const { reach, timeframe } = Core.useHotStore();
 
   // Fetch hot tags using the hook (no limit - get all from endpoint)
-  const { rawTags, isLoading, error } = Hooks.useHotTags({
+  const { rawTags, isLoading, error } = useHotTags({
     reach: reach === 'all' ? undefined : (reach as Core.UserStreamReach),
     timeframe,
   });
@@ -48,8 +50,8 @@ export function HotTagsCardsSection({ className }: HotTagsCardsSectionProps) {
   const featuredTags = useMemo(() => rawTags.slice(0, HOT_TAGS_FEATURED_COUNT), [rawTags]);
 
   // Responsive avatar count based on screen size
-  const isMobile = Hooks.useIsMobile({ breakpoint: 'sm' }); // < 640px
-  const isBelowXL = Hooks.useIsMobile({ breakpoint: 'xl' }); // < 1280px
+  const isMobile = useIsMobile({ breakpoint: 'sm' }); // < 640px
+  const isBelowXL = useIsMobile({ breakpoint: 'xl' }); // < 1280px
 
   const maxAvatars = isMobile ? MAX_AVATARS_MOBILE : isBelowXL ? MAX_AVATARS_DEFAULT : MAX_AVATARS_XL;
 
@@ -65,7 +67,7 @@ export function HotTagsCardsSection({ className }: HotTagsCardsSectionProps) {
   }, [featuredTags]);
 
   // Get user avatars for all taggers
-  const { getUsersWithAvatars } = Hooks.useBulkUserAvatars(allTaggerIds);
+  const { getUsersWithAvatars } = useBulkUserAvatars(allTaggerIds);
 
   const handleTagClick = (tagName: string) => {
     router.push(`${APP_ROUTES.SEARCH}?tags=${encodeURIComponent(tagName)}`);

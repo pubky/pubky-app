@@ -1,9 +1,11 @@
 'use client';
 
+import { useEnrichedTags } from '@/hooks/useEnrichedTags/useEnrichedTags';
+import { useEntityTags } from '@/hooks/useEntityTags/useEntityTags';
+import { useRequireAuth } from '@/hooks/useRequireAuth/useRequireAuth';
 import * as React from 'react';
 import * as Atoms from '@/atoms';
 import * as Molecules from '@/molecules';
-import * as Hooks from '@/hooks';
 import * as Core from '@/core';
 import type { ClickableTagsListProps } from './ClickableTagsList.types';
 import {
@@ -54,7 +56,7 @@ export function ClickableTagsList({
   const [isAdding, setIsAdding] = React.useState(addMode ? false : showInput);
 
   // Auth requirement for tag actions
-  const { isAuthenticated, requireAuth } = Hooks.useRequireAuth();
+  const { isAuthenticated, requireAuth } = useRequireAuth();
   const setShowSignInDialog = Core.useAuthStore((state) => state.setShowSignInDialog);
 
   // Use unified entity tags hook
@@ -63,10 +65,10 @@ export function ClickableTagsList({
     isViewerTagger,
     handleTagToggle,
     handleTagAdd,
-  } = Hooks.useEntityTags(taggedId, taggedKind, { providedTags });
+  } = useEntityTags(taggedId, taggedKind, { providedTags });
 
   // Enrich tags with user details for proper avatar fallbacks
-  const { enrichedTags } = Hooks.useEnrichedTags(fetchedTags);
+  const { enrichedTags } = useEnrichedTags(fetchedTags);
 
   // Determine if input should be shown
   const hasInput = showInput || isAdding;

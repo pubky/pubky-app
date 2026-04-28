@@ -1,16 +1,17 @@
 'use client';
 
+import { useCopyrightForm } from '@/hooks/useCopyrightForm/useCopyrightForm';
 import { Controller } from 'react-hook-form';
 import * as Atoms from '@/atoms';
-import * as Hooks from '@/hooks';
 import * as Molecules from '@/molecules';
-import { COPYRIGHT_FORM_FIELDS, COPYRIGHT_ROLES, type CopyrightFormData } from '@/hooks';
+import { COPYRIGHT_FORM_FIELDS, COPYRIGHT_ROLES } from '@/hooks/useCopyrightForm/useCopyrightForm.constants';
+import type { CopyrightFormData } from '@/hooks/useCopyrightForm/useCopyrightForm.types';
 import { useTranslations } from 'next-intl';
 import { Loader2 } from 'lucide-react';
 import { formatUSDate } from '@/libs/utils/utils';
 export function CopyrightForm() {
   const t = useTranslations('forms.copyright');
-  const { form, onSubmit } = Hooks.useCopyrightForm();
+  const { form, onSubmit } = useCopyrightForm();
   const { isSubmitting, errors } = form.formState;
   const roleError = errors.role?.message;
   const currentDate = formatUSDate();

@@ -1,9 +1,9 @@
 'use client';
 
+import { useUserProfile } from '@/hooks/useUserProfile/useUserProfile';
 import { RemarkAnchorProps } from '@/molecules/PostText/PostText.types';
 import { extractTextFromChildren } from '@/molecules/PostText/PostText.utils';
 import * as Atoms from '@/atoms';
-import * as Hooks from '@/hooks';
 import * as Molecules from '@/molecules';
 import { Identity } from '@/libs/identity/identity';
 import { cn, formatPublicKey, withPubkyPrefix } from '@/libs/utils/utils';
@@ -13,7 +13,7 @@ export const PostMentions = (props: RemarkAnchorProps) => {
 
   const mentionText = extractTextFromChildren(children);
   const userId = Identity.extractPubkyPublicKey(mentionText);
-  const { profile } = Hooks.useUserProfile(userId ?? '');
+  const { profile } = useUserProfile(userId ?? '');
 
   if (!userId) return null;
 

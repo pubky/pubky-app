@@ -1,5 +1,6 @@
 'use client';
 
+import { useMobileAuth } from '@/hooks/useMobileAuth/useMobileAuth';
 import Image from 'next/image';
 import { QRCodeSVG } from 'qrcode.react';
 import { useRouter } from 'next/navigation';
@@ -9,7 +10,6 @@ import * as Atoms from '@/atoms';
 import * as Molecules from '@/molecules';
 import * as Config from '@/config';
 import * as App from '@/app';
-import * as Hooks from '@/hooks';
 import * as Core from '@/core';
 import { Loader2, QrCode, Key } from 'lucide-react';
 import { Logger } from '@/libs/logger/logger';
@@ -24,7 +24,7 @@ export const ScanContent = () => {
       router.replace(App.ONBOARDING_ROUTES.HUMAN);
     }
   }, [hasInviteCode, router]);
-  const { url, isLoading, isExpired, fetchUrl, isOpeningRing, onAuthorizeClick } = Hooks.useMobileAuth(
+  const { url, isLoading, isExpired, fetchUrl, isOpeningRing, onAuthorizeClick } = useMobileAuth(
     hasInviteCode
       ? {
           type: 'signup',

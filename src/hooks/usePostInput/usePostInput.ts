@@ -1,10 +1,14 @@
 'use client';
 
+import { useCurrentUserProfile } from '@/hooks/useCurrentUserProfile/useCurrentUserProfile';
+import { useDeletePost } from '@/hooks/useDeletePost/useDeletePost';
+import { useEmojiInsert } from '@/hooks/useEmojiInsert/useEmojiInsert';
+import { usePost } from '@/hooks/usePost/usePost';
+import { useUserDetails } from '@/hooks/useUserDetails/useUserDetails';
 import { useState, useRef, useCallback, useEffect, useLayoutEffect } from 'react';
 import { type MDXEditorProps, type MDXEditorMethods } from '@mdxeditor/editor';
 import { useDebounceCallback } from 'usehooks-ts';
 import { useTranslations } from 'next-intl';
-import * as Hooks from '@/hooks';
 import * as Molecules from '@/molecules';
 import * as Core from '@/core';
 import {
@@ -21,7 +25,8 @@ import {
 } from '@/config';
 import { useTimelineFeedContext } from '@/organisms/Timeline/Feed/TimelineFeed';
 import { POST_INPUT_VARIANT } from '@/organisms/PostInput/PostInput.constants';
-import { useMentionAutocomplete, getContentWithMention } from '@/hooks/useMentionAutocomplete';
+import { getContentWithMention } from '@/hooks/useMentionAutocomplete/useMentionAutocomplete.utils';
+import { useMentionAutocomplete } from '@/hooks/useMentionAutocomplete/useMentionAutocomplete';
 import type { UsePostInputOptions, UsePostInputReturn } from './usePostInput.types';
 
 /**
@@ -65,7 +70,7 @@ export function usePostInput({
   const t = useTranslations('post.placeholder');
   const tToast = useTranslations('toast');
   const tFile = useTranslations('toast.file');
-  const { currentUserPubky } = Hooks.useCurrentUserProfile();
+  const { currentUserPubky } = useCurrentUserProfile();
   const {
     content,
     setContent,
@@ -82,14 +87,14 @@ export function usePostInput({
     repost,
     edit,
     isSubmitting,
-  } = Hooks.usePost();
+  } = usePost();
   const timelineFeed = useTimelineFeedContext();
   const { toast } = Molecules.useToast();
-  const { deletePost } = Hooks.useDeletePost();
+  const { deletePost } = useDeletePost();
 
   // Get original post author's name for repost toast message
   const originalPostAuthorId = originalPostId ? originalPostId.split(':')[0] : null;
-  const { userDetails: originalPostAuthor } = Hooks.useUserDetails(originalPostAuthorId);
+  const { userDetails: originalPostAuthor } = useUserDetails(originalPostAuthorId);
 
   // Handle mention selection - inserts pubky{userId} into content
   const handleMentionSelect = useCallback(
@@ -283,7 +288,7 @@ export function usePostInput({
   );
 
   // Emoji insert handler
-  const handleEmojiSelect = Hooks.useEmojiInsert({
+  const handleEmojiSelect = useEmojiInsert({
     inputRef: textareaRef,
     value: content,
     onChange: handleEmojiChange,

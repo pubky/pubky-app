@@ -1,15 +1,16 @@
 'use client';
 
+import { useCopyToClipboard } from '@/hooks/useCopyToClipboard/useCopyToClipboard';
+import { useCurrentUserProfile } from '@/hooks/useCurrentUserProfile/useCurrentUserProfile';
 import { useTranslations } from 'next-intl';
 import * as Molecules from '@/molecules';
 import * as Atoms from '@/atoms';
-import * as Hooks from '@/hooks';
 import { Key } from 'lucide-react';
 import { formatPublicKey, withPubkyPrefix } from '@/libs/utils/utils';
 export const EditProfileHeader = () => {
   const t = useTranslations('forms.profile');
-  const { currentUserPubky } = Hooks.useCurrentUserProfile();
-  const { copyToClipboard } = Hooks.useCopyToClipboard();
+  const { currentUserPubky } = useCurrentUserProfile();
+  const { copyToClipboard } = useCopyToClipboard();
   const displayPublicKey = formatPublicKey({
     key: currentUserPubky ?? '',
   });

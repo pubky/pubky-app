@@ -1,12 +1,13 @@
 'use client';
 
+import { useLinkConfirmation } from '@/hooks/useLinkConfirmation/useLinkConfirmation';
+import { usePostArticle } from '@/hooks/usePostArticle/usePostArticle';
 import type { PostDetailsModel } from '@/core';
 import type { AttachmentConstructed } from '../PostAttachments/PostAttachments.types';
 import * as Atoms from '@/atoms';
 import * as Molecules from '@/molecules';
 import * as Organisms from '@/organisms';
 import * as Core from '@/core';
-import * as Hooks from '@/hooks';
 import { cn } from '@/libs/utils/utils';
 
 interface PostArticleProps {
@@ -17,13 +18,13 @@ interface PostArticleProps {
 }
 
 export const PostArticle = ({ content, attachments, localAttachments, className }: PostArticleProps) => {
-  const { title, body, coverImage } = Hooks.usePostArticle({
+  const { title, body, coverImage } = usePostArticle({
     content,
     attachments,
     coverImageVariant: Core.FileVariant.FEED,
   });
 
-  const { dialogOpen, setDialogOpen, clickedLink, handleLinkClick } = Hooks.useLinkConfirmation();
+  const { dialogOpen, setDialogOpen, clickedLink, handleLinkClick } = useLinkConfirmation();
 
   const localCoverImage = localAttachments?.[0]?.type.startsWith('image')
     ? { src: localAttachments[0].urls.main, alt: localAttachments[0].name }

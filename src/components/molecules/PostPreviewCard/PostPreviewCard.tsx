@@ -1,8 +1,9 @@
 'use client';
 
+import { usePostNavigation } from '@/hooks/usePostNavigation/usePostNavigation';
+import { useTtlSubscription } from '@/hooks/useTtlSubscription/useTtlSubscription';
 import * as Atoms from '@/atoms';
 import * as Organisms from '@/organisms';
-import * as Hooks from '@/hooks';
 import type { PostPreviewCardProps } from './PostPreviewCard.types';
 import { cn } from '@/libs/utils/utils';
 
@@ -28,8 +29,8 @@ import { cn } from '@/libs/utils/utils';
  * - Any nested context where a compact post preview is needed
  */
 export function PostPreviewCard({ postId, className }: PostPreviewCardProps) {
-  const { navigateToPost } = Hooks.usePostNavigation();
-  const { ref: ttlRef } = Hooks.useTtlSubscription({
+  const { navigateToPost } = usePostNavigation();
+  const { ref: ttlRef } = useTtlSubscription({
     type: 'post',
     id: postId,
   });

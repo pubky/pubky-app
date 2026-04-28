@@ -1,7 +1,7 @@
 'use client';
 
+import { useRequireAuth } from '@/hooks/useRequireAuth/useRequireAuth';
 import * as React from 'react';
-import * as Hooks from '@/hooks';
 import * as Types from '@/app/profile/types';
 import { Bell, CircleUserRound, HeartHandshake, MessageCircle, StickyNote, Tag, UsersRound } from 'lucide-react';
 import { UsersRound2 } from '@/icons';
@@ -78,7 +78,7 @@ export function ProfilePageMobileMenu({
   onPageChangeAction,
   isOwnProfile = true,
 }: ProfilePageMobileMenuProps) {
-  const { requireAuth } = Hooks.useRequireAuth();
+  const { requireAuth } = useRequireAuth();
 
   // Filter menu items based on isOwnProfile
   const visibleItems = React.useMemo(() => {

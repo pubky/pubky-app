@@ -1,8 +1,12 @@
 'use client';
 
+import { useElementHeight } from '@/hooks/useElementHeight/useElementHeight';
+import { useIsMobile } from '@/hooks/useIsMobile/useIsMobile';
+import { usePostDetails } from '@/hooks/usePostDetails/usePostDetails';
+import { usePostHeaderVisibility } from '@/hooks/usePostHeaderVisibility/usePostHeaderVisibility';
+import { useTtlSubscription } from '@/hooks/useTtlSubscription/useTtlSubscription';
 import React, { useRef, useState } from 'react';
 import * as Core from '@/core';
-import * as Hooks from '@/hooks';
 import * as Atoms from '@/atoms';
 import * as Molecules from '@/molecules';
 import * as Organisms from '@/organisms';
@@ -15,14 +19,14 @@ import { usePostMainLayout, WIDE_POST_LAYOUT_CLASSES } from './PostMainLayout';
 import { cn, isPostDeleted } from '@/libs/utils/utils';
 
 export function PostMain({ postId, onClick, className, isReply = false, isLastReply = false }: PostMainProps) {
-  const isMobile = Hooks.useIsMobile();
+  const isMobile = useIsMobile();
   const inheritedTagsLayout = usePostMainLayout() ?? 'inline';
   const effectiveTagsLayout = inheritedTagsLayout === 'side' && isMobile ? 'inline' : inheritedTagsLayout;
   const isWideLayout = effectiveTagsLayout === 'side';
-  const { postDetails } = Hooks.usePostDetails(postId);
+  const { postDetails } = usePostDetails(postId);
   const isDeleted = isPostDeleted(postDetails?.content);
 
-  const { showRepostHeader, shouldShowPostHeader } = Hooks.usePostHeaderVisibility(postId);
+  const { showRepostHeader, shouldShowPostHeader } = usePostHeaderVisibility(postId);
 
   const [replyDialogOpen, setReplyDialogOpen] = useState(false);
   const [repostDialogOpen, setRepostDialogOpen] = useState(false);
@@ -32,10 +36,10 @@ export function PostMain({ postId, onClick, className, isReply = false, isLastRe
   const desktopTagsPanelRef = useRef<PostTagsPanelHandle>(null);
 
   // Get post height for thread connector
-  const { ref: cardRef, height: postHeight } = Hooks.useElementHeight();
+  const { ref: cardRef, height: postHeight } = useElementHeight();
 
   // Subscribe to TTL coordinator based on viewport visibility
-  const { ref: ttlRef } = Hooks.useTtlSubscription({
+  const { ref: ttlRef } = useTtlSubscription({
     type: 'post',
     id: postId,
   });

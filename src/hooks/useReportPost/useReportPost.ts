@@ -1,12 +1,12 @@
 'use client';
 
+import { useCurrentUserProfile } from '@/hooks/useCurrentUserProfile/useCurrentUserProfile';
 import { useState, useCallback } from 'react';
 import { useTranslations } from 'next-intl';
 import type { ReportIssueType } from '@/core/pipes/report';
 import * as Core from '@/core';
 import * as Molecules from '@/molecules';
 import { POST_ROUTES } from '@/app/routes';
-import * as Hooks from '@/hooks';
 import { REPORT_POST_STEPS, REPORT_API_ENDPOINT } from './useReportPost.constants';
 import type { ReportPostStep } from './useReportPost.types';
 import type { UseReportPostReturn } from './useReportPost.types';
@@ -24,7 +24,7 @@ import { postJson } from '@/libs/api/client-request';
  * @returns Report state and handlers
  */
 export function useReportPost(postId: string): UseReportPostReturn {
-  const { currentUserPubky, userDetails } = Hooks.useCurrentUserProfile();
+  const { currentUserPubky, userDetails } = useCurrentUserProfile();
   const tReport = useTranslations('toast.report');
   const parsedId = Core.parseCompositeId(postId);
   const postUrl = `${window.location.origin}${POST_ROUTES.POST}/${parsedId.pubky}/${parsedId.id}`;

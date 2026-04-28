@@ -1,5 +1,7 @@
 'use client';
 
+import { useLinkConfirmation } from '@/hooks/useLinkConfirmation/useLinkConfirmation';
+import { usePostArticle } from '@/hooks/usePostArticle/usePostArticle';
 import { useRef, useState } from 'react';
 import type { PostDetailsModel } from '@/core';
 import * as Atoms from '@/atoms';
@@ -7,7 +9,6 @@ import * as Molecules from '@/molecules';
 import * as Organisms from '@/organisms';
 import type { PostTagsPanelHandle } from '@/organisms';
 import * as Core from '@/core';
-import * as Hooks from '@/hooks';
 
 interface SinglePostArticleProps {
   postId: string;
@@ -40,13 +41,13 @@ export const SinglePostArticle = ({ postId, content, attachments, isBlurred }: S
     setRepostDialogOpen(true);
   };
 
-  const { title, body, coverImage } = Hooks.usePostArticle({
+  const { title, body, coverImage } = usePostArticle({
     content,
     attachments,
     coverImageVariant: Core.FileVariant.MAIN,
   });
 
-  const { dialogOpen, setDialogOpen, clickedLink, handleLinkClick } = Hooks.useLinkConfirmation();
+  const { dialogOpen, setDialogOpen, clickedLink, handleLinkClick } = useLinkConfirmation();
 
   const localAttachments = Core.useLocalFilesStore((s) => s.posts[postId]);
 

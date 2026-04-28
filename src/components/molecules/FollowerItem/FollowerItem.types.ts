@@ -1,5 +1,5 @@
 import type { Pubky } from '@/core';
-import type { UserConnectionData } from '@/hooks/useProfileConnections';
+import type { UserConnectionData } from '@/hooks/useProfileConnections/useProfileConnections.types';
 
 export interface FollowerItemProps {
   follower: UserConnectionData;

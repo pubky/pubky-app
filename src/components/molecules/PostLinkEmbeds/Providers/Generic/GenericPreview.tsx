@@ -1,7 +1,7 @@
 'use client';
 
+import { useOgMetadata } from '@/hooks/useOgMetadata/useOgMetadata';
 import * as Atoms from '@/atoms';
-import * as Hooks from '@/hooks';
 import { GenericPreviewSkeleton } from './GenericPreview.skeleton';
 import { Globe } from 'lucide-react';
 interface GenericPreviewProps {
@@ -13,7 +13,7 @@ interface GenericPreviewProps {
  * Fetches OpenGraph metadata via /api/og-metadata
  */
 export function GenericPreview({ url }: GenericPreviewProps) {
-  const { metadata, isLoading, error } = Hooks.useOgMetadata(url);
+  const { metadata, isLoading, error } = useOgMetadata(url);
   if (isLoading) {
     return <GenericPreviewSkeleton />;
   }

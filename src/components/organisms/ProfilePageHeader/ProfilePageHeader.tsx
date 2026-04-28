@@ -1,8 +1,8 @@
 'use client';
 
+import { useTtlSubscription } from '@/hooks/useTtlSubscription/useTtlSubscription';
 import { useTranslations } from 'next-intl';
 import * as Atoms from '@/atoms';
-import * as Hooks from '@/hooks';
 import * as Molecules from '@/molecules';
 import * as Organisms from '@/organisms';
 import * as Types from './ProfilePageHeader.types';
@@ -40,7 +40,7 @@ export function ProfilePageHeader({ profile, actions, isOwnProfile = true, userI
 
   // Subscribe to TTL coordinator based on viewport visibility
   // Use raw userId (without prefix) for proper TTL tracking
-  const { ref: ttlRef } = Hooks.useTtlSubscription({
+  const { ref: ttlRef } = useTtlSubscription({
     type: 'user',
     id: userId,
   });

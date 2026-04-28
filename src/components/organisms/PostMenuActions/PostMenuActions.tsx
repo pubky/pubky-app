@@ -1,10 +1,12 @@
 'use client';
 
+import { useDeletePost } from '@/hooks/useDeletePost/useDeletePost';
+import { useIsMobile } from '@/hooks/useIsMobile/useIsMobile';
+import { useRequireAuth } from '@/hooks/useRequireAuth/useRequireAuth';
 import { useState } from 'react';
 import { useTranslations } from 'next-intl';
 import * as Atoms from '@/atoms';
 import { MENU_VARIANT } from '@/config/ui';
-import * as Hooks from '@/hooks';
 import * as Molecules from '@/molecules';
 import * as Organisms from '@/organisms';
 import { PostMenuActionsContent } from './PostMenuActionsContent';
@@ -12,13 +14,13 @@ import type { PostMenuActionsProps } from './PostMenuActions.types';
 
 export function PostMenuActions({ postId, trigger }: PostMenuActionsProps) {
   const t = useTranslations('post.actions');
-  const isMobile = Hooks.useIsMobile();
+  const isMobile = useIsMobile();
   const [open, setOpen] = useState(false);
   const [reportDialogOpen, setReportDialogOpen] = useState(false);
   const [editDialogOpen, setEditDialogOpen] = useState(false);
   const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
-  const { deletePost, isDeleting } = Hooks.useDeletePost();
-  const { requireAuth } = Hooks.useRequireAuth();
+  const { deletePost, isDeleting } = useDeletePost();
+  const { requireAuth } = useRequireAuth();
   const closeMenu = () => setOpen(false);
 
   const handleReportClick = () => {

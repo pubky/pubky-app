@@ -1,9 +1,9 @@
 'use client';
 
+import { useRequireAuth } from '@/hooks/useRequireAuth/useRequireAuth';
 import * as Atoms from '@/atoms';
 import * as Molecules from '@/molecules';
 import * as Organisms from '@/organisms';
-import * as Hooks from '@/hooks';
 import { useRouter } from 'next/navigation';
 import { APP_ROUTES } from '@/app/routes';
 import type { TaggedItemProps } from './TaggedItem.types';
@@ -21,7 +21,7 @@ export function TaggedItem({
   isLoadingTaggers,
 }: TaggedItemProps) {
   const router = useRouter();
-  const { requireAuth } = Hooks.useRequireAuth();
+  const { requireAuth } = useRequireAuth();
   const visibleTaggers = tag.taggers.slice(0, MAX_VISIBLE_AVATARS);
   const totalTaggersCount = tag.taggers_count ?? tag.taggers.length;
   const overflowCount = Math.max(0, totalTaggersCount - MAX_VISIBLE_AVATARS);

@@ -3,7 +3,7 @@
 import { useTranslations } from 'next-intl';
 import * as Molecules from '@/molecules';
 import { useSettingsStore } from '@/core';
-import { useSettingsActions } from '@/hooks/useSettingsActions';
+import { useSettingsActions } from '@/hooks/useSettingsActions/useSettingsActions';
 import { NOTIFICATION_LABEL_KEYS } from './NotificationSettings.constants';
 import type { NotificationType } from './NotificationSettings.types';
 

@@ -1,10 +1,10 @@
 'use client';
 
+import { useReportPost } from '@/hooks/useReportPost/useReportPost';
 import { useEffect } from 'react';
 
 import * as Atoms from '@/atoms';
-import * as Hooks from '@/hooks';
-import { REPORT_POST_STEPS } from '@/hooks/useReportPost';
+import { REPORT_POST_STEPS } from '@/hooks/useReportPost/useReportPost.constants';
 import { DialogReportPostIssueStep } from './DialogReportPostIssueStep';
 import { DialogReportPostReasonStep } from './DialogReportPostReasonStep';
 import { DialogReportPostSuccess } from './DialogReportPostSuccess';
@@ -22,7 +22,7 @@ export function DialogReportPost({ open, onOpenChange, postId }: DialogReportPos
     handleReasonChange,
     submit,
     reset,
-  } = Hooks.useReportPost(postId);
+  } = useReportPost(postId);
 
   // Reset state when the dialog closes
   useEffect(() => {

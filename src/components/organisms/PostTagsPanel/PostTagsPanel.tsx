@@ -1,10 +1,12 @@
 'use client';
 
+import { useEnrichedTags } from '@/hooks/useEnrichedTags/useEnrichedTags';
+import { usePostTags } from '@/hooks/usePostTags/usePostTags';
+import { useRequireAuth } from '@/hooks/useRequireAuth/useRequireAuth';
 import { forwardRef, useImperativeHandle, useRef, useState } from 'react';
 import { useTranslations } from 'next-intl';
 import * as Atoms from '@/atoms';
 import * as Molecules from '@/molecules';
-import * as Hooks from '@/hooks';
 import * as Core from '@/core';
 import type { TagInputHandle } from '@/molecules';
 import type { PostTagsPanelProps, PostTagsPanelHandle } from './PostTagsPanel.types';
@@ -38,14 +40,13 @@ export const PostTagsPanel = forwardRef<PostTagsPanelHandle, PostTagsPanelProps>
   useImperativeHandle(ref, () => ({
     focus: () => tagInputRef.current?.focus(),
   }));
-  const { tags, isLoading, handleTagAdd, handleTagToggle, hasMore, isLoadingMore, loadMore } =
-    Hooks.usePostTags(postId);
+  const { tags, isLoading, handleTagAdd, handleTagToggle, hasMore, isLoadingMore, loadMore } = usePostTags(postId);
 
   // Enrich tags with user details for proper avatar fallbacks
-  const { enrichedTags } = Hooks.useEnrichedTags(tags);
+  const { enrichedTags } = useEnrichedTags(tags);
 
   // Auth requirement for tag actions
-  const { isAuthenticated, requireAuth } = Hooks.useRequireAuth();
+  const { isAuthenticated, requireAuth } = useRequireAuth();
   const setShowSignInDialog = Core.useAuthStore((state) => state.setShowSignInDialog);
 
   // Wrap tag toggle with auth requirement

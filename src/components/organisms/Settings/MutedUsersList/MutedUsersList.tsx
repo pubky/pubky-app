@@ -1,9 +1,11 @@
 'use client';
 
+import { useBulkUserAvatars } from '@/hooks/useBulkUserAvatars/useBulkUserAvatars';
+import { useMuteUser } from '@/hooks/useMuteUser/useMuteUser';
+import { useMutedUsers } from '@/hooks/useMutedUsers/useMutedUsers';
 import * as React from 'react';
 import { useTranslations } from 'next-intl';
 import * as Atoms from '@/atoms';
-import * as Hooks from '@/hooks';
 import * as Molecules from '@/molecules';
 import { MutedUsersListSkeleton } from './MutedUsersList.skeleton';
 import { mapUserIdsToMutedUsers } from './MutedUsersList.utils';
@@ -14,9 +16,9 @@ export function MutedUsersList() {
   const t = useTranslations('mutedUsers');
   const tCommon = useTranslations('common');
   const tToast = useTranslations('toast.mute');
-  const { mutedUserIds, isLoading: isMutedLoading } = Hooks.useMutedUsers();
-  const { usersMap, isLoading: isUsersLoading } = Hooks.useBulkUserAvatars(mutedUserIds);
-  const { toggleMute, isLoading: isMuteLoading, isUserLoading: isMuteUserLoading } = Hooks.useMuteUser();
+  const { mutedUserIds, isLoading: isMutedLoading } = useMutedUsers();
+  const { usersMap, isLoading: isUsersLoading } = useBulkUserAvatars(mutedUserIds);
+  const { toggleMute, isLoading: isMuteLoading, isUserLoading: isMuteUserLoading } = useMuteUser();
   const [isLoadingUnmuteAll, setIsLoadingUnmuteAll] = React.useState(false);
   const mutedUsers = mapUserIdsToMutedUsers(mutedUserIds, usersMap);
   const isLoading = isMutedLoading || isUsersLoading;

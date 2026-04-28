@@ -1,12 +1,15 @@
 'use client';
 
+import { FeedLayoutResolution } from '@/hooks/useFeedLayoutResolution/useFeedLayoutResolution';
+import { useMutedUsers } from '@/hooks/useMutedUsers/useMutedUsers';
+import { usePullToRefresh } from '@/hooks/usePullToRefresh/usePullToRefresh';
+import { useStreamPagination } from '@/hooks/useStreamPagination/useStreamPagination';
 import { useEffect, useRef } from 'react';
 import { TIMELINE_FEED_VARIANT } from '@/config';
 import * as Core from '@/core';
 import * as Atoms from '@/atoms';
 import * as Molecules from '@/molecules';
 import * as Organisms from '@/organisms';
-import * as Hooks from '@/hooks';
 import type { TagsLayout } from '@/organisms/PostMain/PostMain.types';
 import { PostMainLayoutProvider } from '@/organisms/PostMain/PostMainLayout';
 import type { TimelineFeedProps, TimelineFeedContextValue } from '../TimelineFeed/TimelineFeed.types';
@@ -18,7 +21,7 @@ interface TimelineFeedContentProps {
   streamId: Core.PostStreamId;
   variant: TimelineFeedProps['variant'];
   tagsLayout: TagsLayout;
-  layoutResolution?: Hooks.FeedLayoutResolution;
+  layoutResolution?: FeedLayoutResolution;
   children?: TimelineFeedProps['children'];
 }
 
@@ -26,7 +29,7 @@ interface TimelineFeedWithStreamProps {
   streamId: Core.PostStreamId | undefined;
   variant: TimelineFeedProps['variant'];
   tagsLayout: TagsLayout;
-  layoutResolution?: Hooks.FeedLayoutResolution;
+  layoutResolution?: FeedLayoutResolution;
   children?: TimelineFeedProps['children'];
 }
 
@@ -85,19 +88,19 @@ function TimelineFeedContent({ streamId, variant, tagsLayout, layoutResolution, 
     refresh,
     prependPosts,
     removePosts,
-  } = Hooks.useStreamPagination({
+  } = useStreamPagination({
     streamId,
   });
 
   const postIds = [...new Set(rawPostIds)];
 
-  const { mutedUserIdSet } = Hooks.useMutedUsers();
+  const { mutedUserIdSet } = useMutedUsers();
 
   const enablePullToRefresh =
     variant === TIMELINE_FEED_VARIANT.HOME ||
     variant === TIMELINE_FEED_VARIANT.CUSTOM ||
     variant === TIMELINE_FEED_VARIANT.HOT;
-  const { state: pullState, pullDistance } = Hooks.usePullToRefresh({
+  const { state: pullState, pullDistance } = usePullToRefresh({
     containerRef,
     onRefresh: refresh,
     disabled: !enablePullToRefresh,

@@ -1,9 +1,10 @@
 'use client';
 
+import { useIsScrolledFromTop } from '@/hooks/useIsScrolledFromTop/useIsScrolledFromTop';
+import { useUnreadPosts } from '@/hooks/useUnreadPosts/useUnreadPosts';
 import { useTranslations } from 'next-intl';
 import * as Core from '@/core';
 import * as Molecules from '@/molecules';
-import * as Hooks from '@/hooks';
 import { Logger } from '@/libs/logger/logger';
 
 interface NewPostsSectionProps {
@@ -22,9 +23,9 @@ interface NewPostsSectionProps {
  * nor coordinator polls propagate re-renders to the parent feed content.
  */
 export function NewPostsSection({ streamId, postIds, mutedUserIdSet, loading, prependPosts }: NewPostsSectionProps) {
-  const { unreadPostIds } = Hooks.useUnreadPosts({ streamId });
+  const { unreadPostIds } = useUnreadPosts({ streamId });
   const t = useTranslations('toast.post');
-  const isScrolled = Hooks.useIsScrolledFromTop();
+  const isScrolled = useIsScrolledFromTop();
 
   const displayedPostIds = new Set(postIds);
   const notDisplayed = unreadPostIds.filter((id) => !displayedPostIds.has(id));

@@ -1,9 +1,10 @@
 'use client';
 
+import { usePostNavigation } from '@/hooks/usePostNavigation/usePostNavigation';
+import { useThreadReplies } from '@/hooks/useThreadReplies/useThreadReplies';
 import * as Atoms from '@/atoms';
 import * as Molecules from '@/molecules';
 import * as Organisms from '@/organisms';
-import * as Hooks from '@/hooks';
 
 interface ThreadTreeProps {
   /** The composite post ID of the parent (Level 0) post */
@@ -21,8 +22,8 @@ interface ThreadTreeProps {
  * Shared between the feed timeline and the single post page.
  */
 export function ThreadTree({ postId, showQuickReply = true }: ThreadTreeProps) {
-  const { navigateToPost } = Hooks.usePostNavigation();
-  const { replyIds, hasMore, totalCount, isExpandingAll, expandAll } = Hooks.useThreadReplies(postId);
+  const { navigateToPost } = usePostNavigation();
+  const { replyIds, hasMore, totalCount, isExpandingAll, expandAll } = useThreadReplies(postId);
 
   if (replyIds.length === 0 && !hasMore) {
     // No replies -- only show quick reply if enabled

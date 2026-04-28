@@ -1,13 +1,13 @@
 'use client';
 
+import { useProfileMenuActions } from '@/hooks/useProfileMenuActions/useProfileMenuActions';
 import * as Atoms from '@/atoms';
 import { MENU_VARIANT } from '@/config/ui';
-import * as Hooks from '@/hooks';
 import { ProfileMenuActionsContentSkeleton } from './ProfileMenuActionsContent.skeleton';
 import type { ProfileMenuActionsContentProps } from './ProfileMenuActionsContent.types';
 
 export function ProfileMenuActionsContent({ userId, variant, onActionComplete }: ProfileMenuActionsContentProps) {
-  const { menuItems, isLoading } = Hooks.useProfileMenuActions(userId);
+  const { menuItems, isLoading } = useProfileMenuActions(userId);
 
   if (isLoading) {
     return <ProfileMenuActionsContentSkeleton />;

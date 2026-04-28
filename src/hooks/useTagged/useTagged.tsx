@@ -4,7 +4,7 @@ import { useLiveQuery } from 'dexie-react-hooks';
 import { useTranslations } from 'next-intl';
 import * as Core from '@/core';
 // Import directly to avoid circular dependency with @/hooks barrel
-import { useProfileStats } from '@/hooks/useProfileStats';
+import { useProfileStats } from '@/hooks/useProfileStats/useProfileStats';
 import { toast } from '@/molecules/Toaster/use-toast';
 import type { UseTaggedResult, UseTaggedOptions } from './useTagged.types';
 import { transformTagsForViewer } from '@/molecules/TaggedItem/TaggedItem.utils';

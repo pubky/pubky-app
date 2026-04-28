@@ -1,9 +1,9 @@
 'use client';
 
+import { useHotTags } from '@/hooks/useHotTags/useHotTags';
 import { useMemo } from 'react';
 import { useRouter } from 'next/navigation';
 import * as Atoms from '@/atoms';
-import * as Hooks from '@/hooks';
 import * as Core from '@/core';
 import { APP_ROUTES } from '@/app/routes';
 import { HOT_TAGS_FEATURED_COUNT } from '@/config';
@@ -24,7 +24,7 @@ export function HotTagsOverview({ limit = DEFAULT_TAGS_LIMIT, className }: HotTa
   const { reach, timeframe } = Core.useHotStore();
 
   // Fetch hot tags using the hook
-  const { rawTags, isLoading, error } = Hooks.useHotTags({
+  const { rawTags, isLoading, error } = useHotTags({
     reach: reach === 'all' ? undefined : (reach as Core.UserStreamReach),
     timeframe,
     limit,

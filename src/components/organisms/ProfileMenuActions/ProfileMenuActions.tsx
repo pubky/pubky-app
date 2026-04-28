@@ -1,16 +1,17 @@
 'use client';
 
+import { useIsMobile } from '@/hooks/useIsMobile/useIsMobile';
+import { useRequireAuth } from '@/hooks/useRequireAuth/useRequireAuth';
 import { useState } from 'react';
 import * as Atoms from '@/atoms';
 import { MENU_VARIANT } from '@/config/ui';
-import * as Hooks from '@/hooks';
 import { ProfileMenuActionsContent } from './ProfileMenuActionsContent';
 import type { ProfileMenuActionsProps } from './ProfileMenuActions.types';
 
 export function ProfileMenuActions({ userId, trigger }: ProfileMenuActionsProps) {
-  const isMobile = Hooks.useIsMobile();
+  const isMobile = useIsMobile();
   const [open, setOpen] = useState(false);
-  const { requireAuth } = Hooks.useRequireAuth();
+  const { requireAuth } = useRequireAuth();
   const closeMenu = () => setOpen(false);
 
   // Handle open/close with auth check - opens sign-in dialog for unauthenticated users

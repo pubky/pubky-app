@@ -1,8 +1,8 @@
 'use client';
 
+import { useIsTouchDevice } from '@/hooks/useIsTouchDevice/useIsTouchDevice';
 import { Popover as PopoverPrimitive } from 'radix-ui';
 import { useState, useRef, useEffect, createContext, useContext } from 'react';
-import * as Hooks from '@/hooks';
 import { DEFAULT_HOVER_CLOSE_DELAY } from './Popover.constants';
 import type { PopoverContextType, PopoverProps } from './Popover.types';
 import { cn } from '@/libs/utils/utils';
@@ -21,7 +21,7 @@ function Popover({
   const [internalOpen, setInternalOpen] = useState(false);
   const openTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const closeTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const isTouchDevice = Hooks.useIsTouchDevice();
+  const isTouchDevice = useIsTouchDevice();
   const isControlled = open !== undefined;
   const isOpen = isControlled ? open : internalOpen;
   const handleOpenChange = isControlled ? onOpenChange : setInternalOpen;

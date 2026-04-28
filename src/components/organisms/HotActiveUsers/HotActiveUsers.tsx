@@ -1,11 +1,12 @@
 'use client';
 
+import { useFollowUser } from '@/hooks/useFollowUser/useFollowUser';
+import { useUserStream } from '@/hooks/useUserStream/useUserStream';
 import { useMemo } from 'react';
 import { useRouter } from 'next/navigation';
 import { useTranslations } from 'next-intl';
 import * as Atoms from '@/atoms';
 import * as Organisms from '@/organisms';
-import * as Hooks from '@/hooks';
 import * as Core from '@/core';
 import { APP_ROUTES } from '@/app/routes';
 import type { HotActiveUsersProps } from './HotActiveUsers.types';
@@ -45,7 +46,7 @@ export function HotActiveUsers({ limit = DEFAULT_USERS_LIMIT, className }: HotAc
   const currentUserPubky = Core.useAuthStore((state) => state.currentUserPubky);
   const streamId = useActiveUsersStreamId();
 
-  const { users, isLoading, error } = Hooks.useUserStream({
+  const { users, isLoading, error } = useUserStream({
     streamId,
     limit,
     includeCounts: true,
@@ -53,7 +54,7 @@ export function HotActiveUsers({ limit = DEFAULT_USERS_LIMIT, className }: HotAc
     includeTags: true,
   });
 
-  const { toggleFollow, isUserLoading } = Hooks.useFollowUser();
+  const { toggleFollow, isUserLoading } = useFollowUser();
 
   const handleUserClick = (pubky: Core.Pubky) => {
     router.push(`${APP_ROUTES.PROFILE}/${pubky}`);

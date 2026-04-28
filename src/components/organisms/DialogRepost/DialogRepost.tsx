@@ -1,7 +1,7 @@
 'use client';
 
+import { useConfirmableDialog } from '@/hooks/useConfirmableDialog/useConfirmableDialog';
 import * as Atoms from '@/atoms';
-import * as Hooks from '@/hooks';
 import * as Molecules from '@/molecules';
 import * as Organisms from '@/organisms';
 import { POST_INPUT_VARIANT } from '@/organisms/PostInput/PostInput.constants';
@@ -9,7 +9,7 @@ import type { DialogRepostProps } from './DialogRepost.types';
 
 export function DialogRepost({ postId, open, onOpenChangeAction }: DialogRepostProps) {
   const { showConfirmDialog, setShowConfirmDialog, resetKey, handleContentChange, handleOpenChange, handleDiscard } =
-    Hooks.useConfirmableDialog({
+    useConfirmableDialog({
       onClose: () => onOpenChangeAction(false),
     });
 

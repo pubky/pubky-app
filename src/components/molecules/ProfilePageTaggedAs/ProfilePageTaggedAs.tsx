@@ -1,9 +1,9 @@
 'use client';
 
+import { useRequireAuth } from '@/hooks/useRequireAuth/useRequireAuth';
 import { useTranslations } from 'next-intl';
 import * as Atoms from '@/atoms';
 import * as Molecules from '@/molecules';
-import * as Hooks from '@/hooks';
 import { useRouter } from 'next/navigation';
 import { PROFILE_ROUTES, getProfileRoute } from '@/app/routes';
 import type { ProfilePageTaggedAsProps } from './ProfilePageTaggedAs.types';
@@ -12,7 +12,7 @@ import { Tag } from 'lucide-react';
 export function ProfilePageTaggedAs({ tags, isLoading = false, onTagClick, pubky }: ProfilePageTaggedAsProps) {
   const t = useTranslations('profile.sidebar');
   const router = useRouter();
-  const { requireAuth } = Hooks.useRequireAuth();
+  const { requireAuth } = useRequireAuth();
 
   // Handle button click - require auth for unauthenticated users
   const handleButtonClick = () => {

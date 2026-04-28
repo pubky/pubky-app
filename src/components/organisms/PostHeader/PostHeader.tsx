@@ -1,7 +1,10 @@
 'use client';
 
+import { useAvatarUrl } from '@/hooks/useAvatarUrl/useAvatarUrl';
+import { usePostDetails } from '@/hooks/usePostDetails/usePostDetails';
+import { useRelativeTime } from '@/hooks/useRelativeTime/useRelativeTime';
+import { useUserDetails } from '@/hooks/useUserDetails/useUserDetails';
 import * as Atoms from '@/atoms';
-import * as Hooks from '@/hooks';
 import * as Molecules from '@/molecules';
 import { PostHeaderSkeleton } from './PostHeader.skeleton';
 import type { PostHeaderProps } from './PostHeader.types';
@@ -18,15 +21,15 @@ export function PostHeader({
   const userId = isReplyInput ? postId : postId.split(':')[0];
 
   // When isReplyInput is true, skip fetching post details since there's no post yet
-  const { postDetails } = Hooks.usePostDetails(isReplyInput ? null : postId);
+  const { postDetails } = usePostDetails(isReplyInput ? null : postId);
 
   // Fetch user details for avatar and name
-  const { userDetails } = Hooks.useUserDetails(userId);
+  const { userDetails } = useUserDetails(userId);
 
   // Compute avatar URL from user details (only if the user has an image)
-  const avatarUrl = Hooks.useAvatarUrl(userDetails);
+  const avatarUrl = useAvatarUrl(userDetails);
 
-  const { formatRelativeTime } = Hooks.useRelativeTime();
+  const { formatRelativeTime } = useRelativeTime();
 
   const isLoading = !userDetails || (!isReplyInput && !postDetails);
 

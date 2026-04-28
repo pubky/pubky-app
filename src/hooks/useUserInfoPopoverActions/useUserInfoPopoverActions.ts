@@ -1,8 +1,8 @@
 'use client';
 
+import { useFollowUser } from '@/hooks/useFollowUser/useFollowUser';
 import { useRouter } from 'next/navigation';
 import * as App from '@/app';
-import * as Hooks from '@/hooks';
 
 interface UseUserInfoPopoverActionsResult {
   isLoading: boolean;
@@ -22,7 +22,7 @@ export function useUserInfoPopoverActions({
   isFollowingStatusLoading: boolean;
 }): UseUserInfoPopoverActionsResult {
   const router = useRouter();
-  const { toggleFollow, isUserLoading } = Hooks.useFollowUser();
+  const { toggleFollow, isUserLoading } = useFollowUser();
 
   const isLoading = isUserLoading(userId) || isFollowingStatusLoading;
 

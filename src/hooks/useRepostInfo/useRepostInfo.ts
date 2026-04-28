@@ -1,8 +1,8 @@
 'use client';
 
+import { useCurrentUserProfile } from '@/hooks/useCurrentUserProfile/useCurrentUserProfile';
 import * as Core from '@/core';
-import * as Hooks from '@/hooks';
-import { useLocalFirstQuery } from '@/hooks/useLocalFirstQuery';
+import { useLocalFirstQuery } from '@/hooks/useLocalFirstQuery/useLocalFirstQuery';
 import type { UseRepostInfoResult } from './useRepostInfo.types';
 import { Logger } from '@/libs/logger/logger';
 
@@ -41,7 +41,7 @@ import { Logger } from '@/libs/logger/logger';
  * ```
  */
 export function useRepostInfo(postId: string): UseRepostInfoResult {
-  const { currentUserPubky } = Hooks.useCurrentUserProfile();
+  const { currentUserPubky } = useCurrentUserProfile();
 
   // Read relationships via controller using local-first pattern
   const { data: relationships, isLoading } = useLocalFirstQuery<Core.PostRelationshipsModelSchema>({

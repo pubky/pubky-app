@@ -5,7 +5,7 @@ import { usePathname, useRouter } from 'next/navigation';
 import { PROFILE_ROUTES } from '@/app';
 import { PROFILE_PAGE_TYPES, ProfilePageType, FilterBarPageType } from '@/app/profile/types';
 import * as Providers from '@/providers';
-import { useIsMobile } from '@/hooks/useIsMobile';
+import { useIsMobile } from '@/hooks/useIsMobile/useIsMobile';
 
 /**
  * Profile routes configuration - single source of truth

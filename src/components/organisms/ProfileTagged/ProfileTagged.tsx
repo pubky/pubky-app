@@ -1,8 +1,9 @@
 'use client';
 
+import { useTagged } from '@/hooks/useTagged/useTagged';
+import { useUserProfile } from '@/hooks/useUserProfile/useUserProfile';
 import * as Atoms from '@/atoms';
 import * as Molecules from '@/molecules';
-import * as Hooks from '@/hooks';
 import * as Providers from '@/providers';
 import { ProfileTaggedSkeleton } from './ProfileTagged.skeleton';
 
@@ -22,10 +23,9 @@ export function ProfileTagged() {
   const { pubky } = Providers.useProfileContext();
 
   // Get user profile data for the target user
-  const { profile } = Hooks.useUserProfile(pubky ?? '');
+  const { profile } = useUserProfile(pubky ?? '');
 
-  const { tags, count, isLoading, handleTagAdd, handleTagToggle, hasMore, isLoadingMore, loadMore } =
-    Hooks.useTagged(pubky);
+  const { tags, count, isLoading, handleTagAdd, handleTagToggle, hasMore, isLoadingMore, loadMore } = useTagged(pubky);
 
   const userName = profile?.name || '';
 

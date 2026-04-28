@@ -1,9 +1,11 @@
 'use client';
 
+import type { ProfileStats } from '@/hooks/useProfileStats/useProfileStats.types';
+import { useRequireAuth } from '@/hooks/useRequireAuth/useRequireAuth';
+import { useStickyWhenFits } from '@/hooks/useStickyWhenFits/useStickyWhenFits';
 import * as React from 'react';
 import { useTranslations } from 'next-intl';
 import * as Atoms from '@/components/atoms';
-import * as Hooks from '@/hooks';
 import * as Types from '@/app/profile/types';
 import * as Config from '@/config';
 import { Bell, StickyNote, MessageCircle, UsersRound, HeartHandshake, Tag } from 'lucide-react';
@@ -21,7 +23,7 @@ export interface ProfilePageFilterBarItem {
 }
 export interface ProfilePageFilterBarProps {
   items?: ProfilePageFilterBarItem[];
-  stats?: Hooks.ProfileStats;
+  stats?: ProfileStats;
   activePage: Types.FilterBarPageType;
   onPageChangeAction: (page: Types.FilterBarPageType) => void;
   /** Whether this is the logged-in user's own profile */
@@ -36,7 +38,7 @@ const FILTER_ITEMS_CONFIG: Array<{
   }>;
   labelKey: string;
   pageType: Types.FilterBarPageType;
-  statKey: keyof Hooks.ProfileStats;
+  statKey: keyof ProfileStats;
   /** Whether this item should only be shown for own profile */
   ownProfileOnly?: boolean;
 }> = [
@@ -84,10 +86,7 @@ const FILTER_ITEMS_CONFIG: Array<{
     statKey: 'uniqueTags',
   },
 ];
-export const getDefaultItems = (
-  stats?: Hooks.ProfileStats,
-  isOwnProfile: boolean = true,
-): ProfilePageFilterBarItem[] => {
+export const getDefaultItems = (stats?: ProfileStats, isOwnProfile: boolean = true): ProfilePageFilterBarItem[] => {
   return FILTER_ITEMS_CONFIG.filter((config) => {
     // Filter out own-profile-only items when viewing another user's profile
     if (config.ownProfileOnly && !isOwnProfile) {
@@ -112,7 +111,7 @@ export function ProfilePageFilterBar({
   isOwnProfile = true,
 }: ProfilePageFilterBarProps) {
   const t = useTranslations('profile.tabs');
-  const { requireAuth } = Hooks.useRequireAuth();
+  const { requireAuth } = useRequireAuth();
 
   // Use provided items or generate default items with stats
   const filterItems = React.useMemo(() => {
@@ -129,7 +128,7 @@ export function ProfilePageFilterBar({
   }, [items, stats, isOwnProfile]);
 
   // Only apply sticky when content fits in viewport
-  const { ref, shouldBeSticky } = Hooks.useStickyWhenFits({
+  const { ref, shouldBeSticky } = useStickyWhenFits({
     topOffset: Config.LAYOUT.HEADER_HEIGHT_PROFILE,
     bottomOffset: Config.LAYOUT.SIDEBAR_BOTTOM_OFFSET,
   });

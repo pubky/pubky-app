@@ -1,9 +1,10 @@
 'use client';
 
+import { useInfiniteScroll } from '@/hooks/useInfiniteScroll/useInfiniteScroll';
+import { usePostTaggers } from '@/hooks/usePostTaggers/usePostTaggers';
 import { useEffect, useRef, useState } from 'react';
 import * as Atoms from '@/atoms';
 import * as Molecules from '@/molecules';
-import * as Hooks from '@/hooks';
 import * as Core from '@/core';
 import type { TaggedListProps } from './TaggedList.types';
 
@@ -20,9 +21,9 @@ export function TaggedList({
   const [expandedTagLabel, setExpandedTagLabel] = useState<string | null>(null);
 
   const shouldFetchTaggers = taggedKind === Core.TagKind.POST && !!taggedId;
-  const { taggersByLabel, taggerStates, fetchAllTaggers } = Hooks.usePostTaggers(shouldFetchTaggers ? taggedId : null);
+  const { taggersByLabel, taggerStates, fetchAllTaggers } = usePostTaggers(shouldFetchTaggers ? taggedId : null);
 
-  const { sentinelRef } = Hooks.useInfiniteScroll({
+  const { sentinelRef } = useInfiniteScroll({
     onLoadMore: onLoadMore || (() => {}),
     hasMore,
     isLoading: isLoadingMore,

@@ -1,10 +1,10 @@
 'use client';
 
+import { useEnterSubmit } from '@/hooks/useEnterSubmit/useEnterSubmit';
 import { useState, useEffect, useRef } from 'react';
 import { useTranslations } from 'next-intl';
 import * as Atoms from '@/atoms';
 import * as Molecules from '@/molecules';
-import * as Hooks from '@/hooks';
 import * as Config from '@/config';
 import * as Types from './index';
 import { Check, Smile } from 'lucide-react';
@@ -56,7 +56,7 @@ export function StatusPickerContent({ onStatusSelect, currentStatus }: Types.Sta
       inputRef.current?.focus();
     }, 0);
   };
-  const handleKeyDown = Hooks.useEnterSubmit(isValidCustomStatus, handleCustomStatusSave);
+  const handleKeyDown = useEnterSubmit(isValidCustomStatus, handleCustomStatusSave);
   return (
     <Atoms.Container className="gap-2">
       {/* Predefined status options */}

@@ -1,7 +1,11 @@
 'use client';
 
+import { useFollowUser } from '@/hooks/useFollowUser/useFollowUser';
+import { useIsFollowing } from '@/hooks/useIsFollowing/useIsFollowing';
+import { useProfileHeader } from '@/hooks/useProfileHeader/useProfileHeader';
+import { useProfileNavigation } from '@/hooks/useProfileNavigation/useProfileNavigation';
+import { useRequireAuth } from '@/hooks/useRequireAuth/useRequireAuth';
 import * as Core from '@/core';
-import * as Hooks from '@/hooks';
 import * as Molecules from '@/molecules';
 import * as Organisms from '@/organisms';
 import * as Providers from '@/providers';
@@ -51,15 +55,15 @@ export function ProfilePageContainer({ children }: ProfilePageContainerProps) {
 
   // Business logic: Fetch profile data and stats
   // Note: useProfileHeader guarantees a non-null profile with default values during loading
-  const { profile, stats, actions, isLoading, userNotFound } = Hooks.useProfileHeader(pubky ?? '');
+  const { profile, stats, actions, isLoading, userNotFound } = useProfileHeader(pubky ?? '');
 
   // Business logic: Handle navigation state
-  const { activePage, filterBarActivePage, navigateToPage } = Hooks.useProfileNavigation();
+  const { activePage, filterBarActivePage, navigateToPage } = useProfileNavigation();
 
   // Business logic: Handle follow/unfollow for other users' profiles (with auth check)
-  const { requireAuth } = Hooks.useRequireAuth();
-  const { toggleFollow, isLoading: isFollowLoading, loadingAction: followLoadingAction } = Hooks.useFollowUser();
-  const { isFollowing } = Hooks.useIsFollowing(pubky ?? '');
+  const { requireAuth } = useRequireAuth();
+  const { toggleFollow, isLoading: isFollowLoading, loadingAction: followLoadingAction } = useFollowUser();
+  const { isFollowing } = useIsFollowing(pubky ?? '');
 
   const handleFollowToggle = () => {
     if (!pubky) return;

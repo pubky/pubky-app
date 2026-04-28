@@ -1,8 +1,9 @@
 'use client';
 
+import { useConfirmableDialog } from '@/hooks/useConfirmableDialog/useConfirmableDialog';
+import { usePostDetails } from '@/hooks/usePostDetails/usePostDetails';
 import { Dispatch, SetStateAction } from 'react';
 import * as Atoms from '@/atoms';
-import * as Hooks from '@/hooks';
 import * as Molecules from '@/molecules';
 import * as Organisms from '@/organisms';
 import { POST_INPUT_VARIANT } from '@/organisms/PostInput/PostInput.constants';
@@ -15,11 +16,11 @@ interface DialogEditPostProps {
 
 export function DialogEditPost({ open, onOpenChangeAction, postId }: DialogEditPostProps) {
   const { showConfirmDialog, setShowConfirmDialog, resetKey, handleContentChange, handleOpenChange, handleDiscard } =
-    Hooks.useConfirmableDialog({
+    useConfirmableDialog({
       onClose: () => onOpenChangeAction(false),
     });
 
-  const { postDetails } = Hooks.usePostDetails(postId);
+  const { postDetails } = usePostDetails(postId);
 
   if (!postDetails) return null;
 

@@ -1,8 +1,8 @@
 'use client';
 
+import { useConfirmableDialog } from '@/hooks/useConfirmableDialog/useConfirmableDialog';
 import { useTranslations } from 'next-intl';
 import * as Atoms from '@/atoms';
-import * as Hooks from '@/hooks';
 import * as Molecules from '@/molecules';
 import * as Organisms from '@/organisms';
 import { POST_INPUT_VARIANT } from '@/organisms/PostInput/PostInput.constants';
@@ -14,7 +14,7 @@ const REPLY_TEXTAREA_SELECTOR = '#reply-post-input [data-slot="textarea"]';
 export function DialogReply({ postId, open, onOpenChangeAction }: DialogReplyProps) {
   const t = useTranslations('dialogs.reply');
   const { showConfirmDialog, setShowConfirmDialog, resetKey, handleContentChange, handleOpenChange, handleDiscard } =
-    Hooks.useConfirmableDialog({
+    useConfirmableDialog({
       onClose: () => onOpenChangeAction(false),
     });
 

@@ -1,10 +1,12 @@
 'use client';
 
+import { useEnterSubmit } from '@/hooks/useEnterSubmit/useEnterSubmit';
+import { useIsMobile } from '@/hooks/useIsMobile/useIsMobile';
+import { usePostInput } from '@/hooks/usePostInput/usePostInput';
 import * as React from 'react';
 import { useTranslations } from 'next-intl';
 
 import * as Atoms from '@/atoms';
-import * as Hooks from '@/hooks';
 import * as Molecules from '@/molecules';
 import * as Organisms from '@/organisms';
 import { ARTICLE_TITLE_MAX_CHARACTER_LENGTH, POST_MAX_CHARACTER_LENGTH } from '@/config';
@@ -14,7 +16,7 @@ import { POST_INPUT_VARIANT } from './PostInput.constants';
 import type { PostInputProps } from './PostInput.types';
 import { PostInputExpandableSection } from '../PostInputExpandableSection';
 import { PostInputAttachments } from '@/molecules/PostInputAttachments/PostInputAttachments';
-import type { ArticleJSON } from '@/hooks';
+import type { ArticleJSON } from '@/hooks/usePostArticle/usePostArticle.types';
 import { sanitizeCodeBlockLanguages } from '@/molecules/MarkdownEditor/InitializedMDXEditor.utils';
 import { canSubmitPost, cn, getCharacterCount } from '@/libs/utils/utils';
 
@@ -85,7 +87,7 @@ export function PostInput({
     setMentionSelectedIndex,
     handleMentionSelect,
     handleMentionKeyDown,
-  } = Hooks.usePostInput({
+  } = usePostInput({
     variant,
     postId,
     originalPostId,
@@ -101,7 +103,7 @@ export function PostInput({
     return canSubmitPost(variant, content, attachments, isSubmitting, isArticle, articleTitle);
   }, [variant, content, attachments, isSubmitting, isArticle, articleTitle]);
 
-  const enterSubmitHandler = Hooks.useEnterSubmit(isValid, handleSubmit, {
+  const enterSubmitHandler = useEnterSubmit(isValid, handleSubmit, {
     requireModifier: true,
   });
 
@@ -155,7 +157,7 @@ export function PostInput({
 
   const characterLimit = isArticle ? undefined : { count: getCharacterCount(content), max: POST_MAX_CHARACTER_LENGTH };
 
-  const isMobile = Hooks.useIsMobile();
+  const isMobile = useIsMobile();
   const inheritedTagsLayout = usePostMainLayout() ?? 'inline';
   const isWideLayout = !isMobile && inheritedTagsLayout === 'side';
 

@@ -1,9 +1,9 @@
 'use client';
 
+import { useProfileForm } from '@/hooks/useProfileForm/useProfileForm';
 import * as Molecules from '@/molecules';
 import * as Organisms from '@/organisms';
 import * as Atoms from '@/atoms';
-import * as Hooks from '@/hooks';
 import * as Core from '@/core';
 import * as Config from '@/config';
 import { useTranslations } from 'next-intl';
@@ -15,7 +15,7 @@ export const CreateProfileForm = () => {
   const { setShowWelcomeDialog } = Core.useOnboardingStore();
   const authStore = Core.useAuthStore();
   const pubky = authStore.selectCurrentUserPubky();
-  const { state, errors, handlers, cropDialog, fileInputRef, isSubmitDisabled } = Hooks.useProfileForm({
+  const { state, errors, handlers, cropDialog, fileInputRef, isSubmitDisabled } = useProfileForm({
     mode: 'create',
     pubky,
     setShowWelcomeDialog,

@@ -1,5 +1,6 @@
 'use client';
 
+import { useMobileAuth } from '@/hooks/useMobileAuth/useMobileAuth';
 import Image from 'next/image';
 import { QRCodeSVG } from 'qrcode.react';
 import { useEffect } from 'react';
@@ -7,7 +8,6 @@ import { useTranslations } from 'next-intl';
 import * as Atoms from '@/atoms';
 import * as Molecules from '@/molecules';
 import * as Core from '@/core';
-import * as Hooks from '@/hooks';
 
 // Step configuration for the progress display (labels are translation keys)
 import { CheckCircle, Loader2, Circle, QrCode, Key } from 'lucide-react';
@@ -82,7 +82,7 @@ const SignInProgress = () => {
 };
 export const SignInContent = () => {
   const t = useTranslations('onboarding.signIn');
-  const { url, isLoading, isExpired, fetchUrl, copyAuthUrl, isOpeningRing, onAuthorizeClick } = Hooks.useMobileAuth();
+  const { url, isLoading, isExpired, fetchUrl, copyAuthUrl, isOpeningRing, onAuthorizeClick } = useMobileAuth();
   const authUrlResolved = Core.useSignInStore((state) => state.authUrlResolved);
   useEffect(() => {
     // Clear onboarding storage when sign-in flow begins to prevent backup reminders from showing for existing users

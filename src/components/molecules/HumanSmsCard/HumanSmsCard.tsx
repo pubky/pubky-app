@@ -1,7 +1,7 @@
 'use client';
 
 import * as Atoms from '@/atoms';
-import { useSmsVerificationInfo } from '@/hooks/useSmsVerificationInfo';
+import { useSmsVerificationInfo } from '@/hooks/useSmsVerificationInfo/useSmsVerificationInfo';
 import { HumanSmsCardSkeleton } from './HumanSmsCard.skeleton';
 import type { HumanSmsCardProps } from './HumanSmsCard.types';
 import { useTranslations } from 'next-intl';

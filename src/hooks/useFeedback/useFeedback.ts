@@ -1,9 +1,9 @@
 'use client';
 
+import { useCurrentUserProfile } from '@/hooks/useCurrentUserProfile/useCurrentUserProfile';
 import { useState, useCallback, useMemo } from 'react';
 import { useTranslations } from 'next-intl';
 import * as Molecules from '@/molecules';
-import * as Hooks from '@/hooks';
 import { Logger } from '@/libs/logger/logger';
 import { postJson } from '@/libs/api/client-request';
 
@@ -22,7 +22,7 @@ import { postJson } from '@/libs/api/client-request';
  * @returns reset - Resets all state to initial values
  */
 export function useFeedback() {
-  const { currentUserPubky, userDetails } = Hooks.useCurrentUserProfile();
+  const { currentUserPubky, userDetails } = useCurrentUserProfile();
   const tFeedback = useTranslations('toast.feedback');
   const [feedback, setFeedback] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);

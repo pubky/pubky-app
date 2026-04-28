@@ -1,8 +1,9 @@
 'use client';
 
+import { useAvatarUrl } from '@/hooks/useAvatarUrl/useAvatarUrl';
+import { useUserDetails } from '@/hooks/useUserDetails/useUserDetails';
 import * as Atoms from '@/atoms';
 import * as Organisms from '@/organisms';
-import * as Hooks from '@/hooks';
 import type { SearchRecentUserItemProps } from './SearchRecentUserItem.types';
 import { formatPublicKey } from '@/libs/utils/utils';
 
@@ -13,8 +14,8 @@ import { formatPublicKey } from '@/libs/utils/utils';
  * Shows user avatar, name, and pubky.
  */
 export function SearchRecentUserItem({ user, onClick }: SearchRecentUserItemProps) {
-  const { userDetails } = Hooks.useUserDetails(user.id);
-  const avatarUrl = Hooks.useAvatarUrl(userDetails);
+  const { userDetails } = useUserDetails(user.id);
+  const avatarUrl = useAvatarUrl(userDetails);
 
   const handleClick = () => {
     onClick(user.id);

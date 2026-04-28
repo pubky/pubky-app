@@ -1,9 +1,9 @@
 'use client';
 
+import { usePostDetails } from '@/hooks/usePostDetails/usePostDetails';
 import * as Atoms from '@/atoms';
 import * as Molecules from '@/molecules';
 import * as Organisms from '@/organisms';
-import * as Hooks from '@/hooks';
 import * as Core from '@/core';
 import { PostContentBaseSkeleton } from './PostContentBase.skeleton';
 import type { PostContentBaseProps } from './PostContentBase.types';
@@ -18,7 +18,7 @@ export function PostContentBase({ postId, className, textClassName }: PostConten
   const localAttachments = Core.useLocalFilesStore((s) => s.posts[postId]);
 
   // Fetch post details for content
-  const { postDetails } = Hooks.usePostDetails(postId);
+  const { postDetails } = usePostDetails(postId);
 
   if (!postDetails) {
     return <PostContentBaseSkeleton />;

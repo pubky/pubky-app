@@ -1,10 +1,10 @@
 'use client';
 
+import { useAuthStatus } from '@/hooks/useAuthStatus/useAuthStatus';
 import { useEffect, useMemo, useRef } from 'react';
 import { useRouter, usePathname } from 'next/navigation';
 import { useTranslations, useLocale } from 'next-intl';
 
-import * as Hooks from '@/hooks';
 import * as Providers from '@/providers';
 import * as App from '@/app';
 import * as Atoms from '@/atoms';
@@ -40,7 +40,7 @@ export function RouteGuardProvider({ children }: RouteGuardProviderProps) {
   const t = useTranslations('common');
   const router = useRouter();
   const pathname = usePathname();
-  const { status, isLoading } = Hooks.useAuthStatus();
+  const { status, isLoading } = useAuthStatus();
   const hasHydrated = Core.useAuthStore((state) => state.hasHydrated);
   const session = Core.useAuthStore((state) => state.session);
   const sessionExport = Core.useAuthStore((state) => state.sessionExport);

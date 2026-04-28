@@ -4,8 +4,8 @@ import { useMemo } from 'react';
 import { useLiveQuery } from 'dexie-react-hooks';
 import * as Core from '@/core';
 // Direct imports to avoid circular dependency (this hook is exported from @/hooks)
-import { useMutedUsers } from '@/hooks/useMutedUsers';
-import { useBulkUserAvatars } from '@/hooks/useBulkUserAvatars';
+import { useMutedUsers } from '@/hooks/useMutedUsers/useMutedUsers';
+import { useBulkUserAvatars } from '@/hooks/useBulkUserAvatars/useBulkUserAvatars';
 import type {
   UsePostParticipantsResult,
   UsePostParticipantsOptions,

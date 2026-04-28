@@ -1,7 +1,7 @@
 'use client';
 
+import { useIsTouchDevice } from '@/hooks/useIsTouchDevice/useIsTouchDevice';
 import { useState, useEffect, useCallback, useRef } from 'react';
-import * as Hooks from '@/hooks';
 import type { UsePullToRefreshOptions, UsePullToRefreshResult, PullToRefreshState } from './usePullToRefresh.types';
 
 /**
@@ -50,7 +50,7 @@ export function usePullToRefresh({
   const [state, setState] = useState<PullToRefreshState>('idle');
   const [pullDistance, setPullDistance] = useState(0);
 
-  const isTouchDevice = Hooks.useIsTouchDevice();
+  const isTouchDevice = useIsTouchDevice();
 
   // Refs for tracking touch state
   const startYRef = useRef(0);

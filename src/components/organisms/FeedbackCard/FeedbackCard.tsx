@@ -1,18 +1,19 @@
 'use client';
 
+import { useAvatarUrl } from '@/hooks/useAvatarUrl/useAvatarUrl';
+import { useCurrentUserProfile } from '@/hooks/useCurrentUserProfile/useCurrentUserProfile';
 import { useState } from 'react';
 import { useTranslations } from 'next-intl';
 
 import * as Atoms from '@/atoms';
 import * as Organisms from '@/organisms';
-import * as Hooks from '@/hooks';
 import { FeedbackCardSkeleton } from './FeedbackCard.skeleton';
 
 export function FeedbackCard() {
   const t = useTranslations('feedback');
-  const { userDetails, currentUserPubky } = Hooks.useCurrentUserProfile();
+  const { userDetails, currentUserPubky } = useCurrentUserProfile();
   const [isDialogOpen, setIsDialogOpen] = useState(false);
-  const avatarUrl = Hooks.useAvatarUrl(userDetails);
+  const avatarUrl = useAvatarUrl(userDetails);
 
   if (userDetails === undefined) {
     return <FeedbackCardSkeleton />;

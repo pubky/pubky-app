@@ -1,9 +1,9 @@
 'use client';
 
+import { useLayoutReset } from '@/hooks/useLayoutReset/useLayoutReset';
 import { usePathname } from 'next/navigation';
 import * as Organisms from '@/organisms';
 import * as Molecules from '@/molecules';
-import * as Hooks from '@/hooks';
 import * as App from '@/app';
 import type { SettingsProps } from './Settings.types';
 
@@ -17,7 +17,7 @@ export function Settings({ children }: SettingsProps) {
   const isOnHelpPage = pathname === App.SETTINGS_ROUTES.HELP;
 
   // Reset to column layout on mount (settings doesn't support wide layout)
-  Hooks.useLayoutReset();
+  useLayoutReset();
 
   return (
     <>

@@ -5,8 +5,8 @@ import { useLiveQuery } from 'dexie-react-hooks';
 import * as Core from '@/core';
 import * as Config from '@/config';
 // Direct imports to avoid circular dependency (this hook is exported from @/hooks)
-import { useMutedUsers } from '@/hooks/useMutedUsers';
-import { usePostCounts } from '@/hooks/usePostCounts';
+import { useMutedUsers } from '@/hooks/useMutedUsers/useMutedUsers';
+import { usePostCounts } from '@/hooks/usePostCounts/usePostCounts';
 import { MAX_EXPAND_PAGES } from './useReplyStream.constants';
 import type { UseReplyStreamOptions, UseReplyStreamResult } from './useReplyStream.types';
 import { Logger } from '@/libs/logger/logger';

@@ -1,10 +1,12 @@
 'use client';
 
+import { resolveFeedLayout } from '@/hooks/useFeedLayoutResolution/useFeedLayoutResolution';
+import { useCustomFeed } from '@/hooks/useCustomFeed/useCustomFeed';
+import { useIsMobile } from '@/hooks/useIsMobile/useIsMobile';
 import { useState, useEffect } from 'react';
 
 import * as Atoms from '@/atoms';
 import * as Molecules from '@/molecules';
-import * as Hooks from '@/hooks';
 import * as Core from '@/core';
 import * as Config from '@/config';
 import * as Types from './ContentLayout.types';
@@ -53,17 +55,17 @@ export function ContentLayout({
   feedVariant,
 }: Types.ContentLayoutProps) {
   const { layout: homeLayout } = Core.useHomeStore();
-  const customFeed = Hooks.useCustomFeed();
+  const customFeed = useCustomFeed();
   const customFeedLayout =
     customFeed?.layout !== undefined ? Core.pubkyLayoutToHomeLayout(customFeed.layout) : undefined;
   const requestedLayout = customFeedLayout ?? homeLayout;
 
   const [drawerFilterOpen, setDrawerFilterOpen] = useState(false);
   const [drawerRightOpen, setDrawerRightOpen] = useState(false);
-  const isMobile = Hooks.useIsMobile();
-  const isPhoneViewport = Hooks.useIsMobile({ breakpoint: 'md' });
+  const isMobile = useIsMobile();
+  const isPhoneViewport = useIsMobile({ breakpoint: 'md' });
   const { effectiveLayout } = feedVariant
-    ? Hooks.resolveFeedLayout({
+    ? resolveFeedLayout({
         requestedLayout,
         variant: feedVariant,
         isPhoneViewport,

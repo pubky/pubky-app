@@ -1,8 +1,10 @@
 'use client';
 
+import { usePostAncestors } from '@/hooks/usePostAncestors/usePostAncestors';
+import { usePostNavigation } from '@/hooks/usePostNavigation/usePostNavigation';
+import { useUserDetailsFromIds } from '@/hooks/useUserDetailsFromIds/useUserDetailsFromIds';
 import * as React from 'react';
 import * as Atoms from '@/atoms';
-import * as Hooks from '@/hooks';
 import { PostPageHeaderSkeleton } from './PostPageHeader.skeleton';
 import type { PostPageHeaderProps } from './PostPageHeader.types';
 import { PostPageBreadcrumb } from '@/organisms/PostPageBreadcrumb';
@@ -27,14 +29,14 @@ import { PostPageBreadcrumb } from '@/organisms/PostPageBreadcrumb';
  * ```
  */
 export function PostPageHeader({ postId }: PostPageHeaderProps) {
-  const { ancestors, isLoading: ancestorsLoading } = Hooks.usePostAncestors(postId);
-  const { navigateToPost } = Hooks.usePostNavigation();
+  const { ancestors, isLoading: ancestorsLoading } = usePostAncestors(postId);
+  const { navigateToPost } = usePostNavigation();
 
   // Get user IDs from ancestors to fetch their names
   const userIds = React.useMemo(() => ancestors.map((a) => a.userId), [ancestors]);
 
   // Fetch user details for all ancestors
-  const { users: userDetailsArray, isLoading: usersLoading } = Hooks.useUserDetailsFromIds({
+  const { users: userDetailsArray, isLoading: usersLoading } = useUserDetailsFromIds({
     userIds,
     prefetch: true,
   });

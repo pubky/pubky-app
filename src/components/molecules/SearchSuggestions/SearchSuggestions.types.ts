@@ -1,7 +1,7 @@
 import type { Pubky } from '@/core';
 import type { HotTag } from '@/hooks/useHotTags/useHotTags.types';
 import type { AutocompleteTag } from '@/hooks/useSearchAutocomplete/useSearchAutocomplete.types';
-import type { AutocompleteUserData } from '@/hooks/useUserDetailsFromIds';
+import type { AutocompleteUserData } from '@/hooks/useUserDetailsFromIds/useUserDetailsFromIds.types';
 import type { RecentUserSearchItem, RecentTagSearchItem } from '../SearchRecentUserItem/SearchRecentUserItem.types';
 
 export interface SearchSuggestionsProps {

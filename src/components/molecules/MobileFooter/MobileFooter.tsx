@@ -1,12 +1,14 @@
 'use client';
 
+import { useCurrentUserProfile } from '@/hooks/useCurrentUserProfile/useCurrentUserProfile';
+import { useKeyboardOffset } from '@/hooks/useKeyboardOffset/useKeyboardOffset';
+import { usePublicRoute } from '@/hooks/usePublicRoute/usePublicRoute';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import * as Atoms from '@/atoms';
 import * as Organisms from '@/organisms';
 import * as App from '@/app';
 import * as Core from '@/core';
-import * as Hooks from '@/hooks';
 import { useTranslations } from 'next-intl';
 import { Home, Search, Flame, Bookmark, Settings } from 'lucide-react';
 import { cn } from '@/libs/utils/utils';
@@ -25,11 +27,11 @@ export function MobileFooter({ className }: MobileFooterProps) {
   const pathname = usePathname();
   const tCommon = useTranslations('common');
   const isAuthenticated = Core.useAuthStore((state) => Boolean(state.currentUserPubky));
-  const { isPublicRoute } = Hooks.usePublicRoute();
-  const { userDetails, currentUserPubky } = Hooks.useCurrentUserProfile();
+  const { isPublicRoute } = usePublicRoute();
+  const { userDetails, currentUserPubky } = useCurrentUserProfile();
   const unreadNotifications = Core.useNotificationStore((state) => state.selectUnread());
   const localAvatarUrl = Core.useLocalFilesStore((state) => state.profile);
-  const { isKeyboardVisible, keyboardOffset } = Hooks.useKeyboardOffset();
+  const { isKeyboardVisible, keyboardOffset } = useKeyboardOffset();
   const isActive = (path: string) => pathname === path || pathname.startsWith(path + '/');
 
   // Hide footer for unauthenticated users on public routes

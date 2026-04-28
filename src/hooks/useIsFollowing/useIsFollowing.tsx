@@ -1,7 +1,7 @@
 'use client';
 
 import * as Core from '@/core';
-import { useLocalFirstQuery } from '@/hooks/useLocalFirstQuery';
+import { useLocalFirstQuery } from '@/hooks/useLocalFirstQuery/useLocalFirstQuery';
 import type { UseIsFollowingResult } from './useIsFollowing.types';
 
 /**

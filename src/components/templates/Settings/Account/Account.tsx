@@ -1,17 +1,17 @@
 'use client';
 
+import { useSignOut } from '@/hooks/useSignOut/useSignOut';
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useTranslations } from 'next-intl';
 import * as Molecules from '@/molecules';
 import * as Organisms from '@/organisms';
-import * as Hooks from '@/hooks';
 import * as App from '@/app';
 import { UserRound, LogOut, Pencil, LockKeyhole, Trash2 } from 'lucide-react';
 export function Account() {
   const router = useRouter();
   const t = useTranslations('settings.account');
-  const { handleSignOut, isLoading: loadingSignOut } = Hooks.useSignOut();
+  const { handleSignOut, isLoading: loadingSignOut } = useSignOut();
   const [disposableAccount] = useState(false);
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
   const handleOpenDeleteDialog = () => {

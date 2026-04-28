@@ -1,17 +1,17 @@
 'use client';
 
+import { useCopyToClipboard } from '@/hooks/useCopyToClipboard/useCopyToClipboard';
 import { useTranslations } from 'next-intl';
 import * as Molecules from '@/molecules';
 import * as Atoms from '@/atoms';
 import * as Core from '@/core';
-import * as Hooks from '@/hooks';
 import { Key } from 'lucide-react';
 import { formatPublicKey, withPubkyPrefix } from '@/libs/utils/utils';
 export const CreateProfileHeader = () => {
   const t = useTranslations('onboarding.createProfile');
   const authStore = Core.useAuthStore();
   const pubky = authStore.selectCurrentUserPubky();
-  const { copyToClipboard } = Hooks.useCopyToClipboard();
+  const { copyToClipboard } = useCopyToClipboard();
   const displayPublicKey = formatPublicKey({
     key: pubky,
   });

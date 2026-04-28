@@ -3,8 +3,8 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { debounce, type DebouncedFunc } from 'lodash-es';
 import * as Core from '@/core';
-import { useListboxNavigation } from '@/hooks/useListboxNavigation';
-import { useUserDetailsFromIds } from '@/hooks/useUserDetailsFromIds';
+import { useListboxNavigation } from '@/hooks/useListboxNavigation/useListboxNavigation';
+import { useUserDetailsFromIds } from '@/hooks/useUserDetailsFromIds/useUserDetailsFromIds';
 import type { UseMentionAutocompleteParams, UseMentionAutocompleteResult } from './useMentionAutocomplete.types';
 import { MENTION_DEBOUNCE_MS, MENTION_USER_LIMIT } from './useMentionAutocomplete.constants';
 import { extractMentionQuery } from './useMentionAutocomplete.utils';

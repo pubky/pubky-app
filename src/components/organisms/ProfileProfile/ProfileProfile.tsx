@@ -1,9 +1,13 @@
 'use client';
 
+import { useFollowUser } from '@/hooks/useFollowUser/useFollowUser';
+import { useIsFollowing } from '@/hooks/useIsFollowing/useIsFollowing';
+import { useProfileHeader } from '@/hooks/useProfileHeader/useProfileHeader';
+import { useRequireAuth } from '@/hooks/useRequireAuth/useRequireAuth';
+import { useTagged } from '@/hooks/useTagged/useTagged';
 import * as React from 'react';
 import * as Atoms from '@/atoms';
 import * as Molecules from '@/molecules';
-import * as Hooks from '@/hooks';
 import * as Providers from '@/providers';
 import { ProfilePageHeader } from '@/organisms';
 import { MAX_SIDEBAR_TAGS } from '../ProfilePageSidebar/ProfilePageSidebar.constants';
@@ -20,19 +24,19 @@ export function ProfileProfile() {
   const { pubky, isOwnProfile } = Providers.useProfileContext();
 
   // Note: useProfileHeader guarantees a non-null profile with default values during loading
-  const { profile, actions, isLoading } = Hooks.useProfileHeader(pubky ?? '');
+  const { profile, actions, isLoading } = useProfileHeader(pubky ?? '');
 
   // Handle follow/unfollow for other users' profiles (with auth check)
-  const { requireAuth } = Hooks.useRequireAuth();
-  const { toggleFollow, isLoading: isFollowLoading, loadingAction: followLoadingAction } = Hooks.useFollowUser();
-  const { isFollowing } = Hooks.useIsFollowing(pubky ?? '');
+  const { requireAuth } = useRequireAuth();
+  const { toggleFollow, isLoading: isFollowLoading, loadingAction: followLoadingAction } = useFollowUser();
+  const { isFollowing } = useIsFollowing(pubky ?? '');
 
   // Get tags for the user
   const {
     tags: allTags,
     isLoading: isLoadingTags,
     handleTagToggle,
-  } = Hooks.useTagged(pubky, {
+  } = useTagged(pubky, {
     enablePagination: false,
     enableStats: false,
   });

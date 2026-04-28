@@ -1,10 +1,11 @@
 'use client';
 
+import { useInfiniteScroll } from '@/hooks/useInfiniteScroll/useInfiniteScroll';
+import { useNotifications } from '@/hooks/useNotifications/useNotifications';
 import { useEffect } from 'react';
 import * as Atoms from '@/atoms';
 import * as Organisms from '@/organisms';
 import * as Molecules from '@/molecules';
-import * as Hooks from '@/hooks';
 import { NotificationsContainerSkeleton, NotificationsLoadMoreSkeleton } from './NotificationsContainer.skeleton';
 
 /**
@@ -16,10 +17,10 @@ import { NotificationsContainerSkeleton, NotificationsLoadMoreSkeleton } from '.
  */
 export function NotificationsContainer() {
   const { notifications, unreadNotifications, isLoading, isLoadingMore, hasMore, error, loadMore, markAllAsRead } =
-    Hooks.useNotifications();
+    useNotifications();
 
   // Infinite scroll sentinel
-  const { sentinelRef } = Hooks.useInfiniteScroll({
+  const { sentinelRef } = useInfiniteScroll({
     onLoadMore: loadMore,
     hasMore,
     isLoading: isLoadingMore,

@@ -1,11 +1,14 @@
 'use client';
 
+import { useRequireAuth } from '@/hooks/useRequireAuth/useRequireAuth';
+import { useStickyWhenFits } from '@/hooks/useStickyWhenFits/useStickyWhenFits';
+import { useTagged } from '@/hooks/useTagged/useTagged';
+import { useUserProfile } from '@/hooks/useUserProfile/useUserProfile';
 import { useMemo } from 'react';
 import { usePathname } from 'next/navigation';
 import * as Atoms from '@/atoms';
 import * as Molecules from '@/molecules';
 import * as Organisms from '@/organisms';
-import * as Hooks from '@/hooks';
 import * as Providers from '@/providers';
 import * as Config from '@/config';
 import { MAX_SIDEBAR_TAGS } from './ProfilePageSidebar.constants';
@@ -13,19 +16,19 @@ import { cn } from '@/libs/utils/utils';
 
 export function ProfilePageSidebar() {
   const pathname = usePathname();
-  const { isAuthenticated, requireAuth } = Hooks.useRequireAuth();
+  const { isAuthenticated, requireAuth } = useRequireAuth();
 
   // Get the profile pubky and isOwnProfile from context
   const { pubky, isOwnProfile } = Providers.useProfileContext();
 
   // Get user profile data for the target user
-  const { profile } = Hooks.useUserProfile(pubky ?? '');
+  const { profile } = useUserProfile(pubky ?? '');
 
   const {
     tags,
     isLoading: isLoadingTags,
     handleTagToggle,
-  } = Hooks.useTagged(pubky, {
+  } = useTagged(pubky, {
     enablePagination: false,
     enableStats: false,
   });
@@ -38,7 +41,7 @@ export function ProfilePageSidebar() {
   const isTaggedPage = pathname?.endsWith('/tagged');
 
   // Only apply sticky when content fits in viewport
-  const { ref, stickyTop } = Hooks.useStickyWhenFits({
+  const { ref, stickyTop } = useStickyWhenFits({
     topOffset: Config.LAYOUT.HEADER_HEIGHT_PROFILE,
     bottomOffset: Config.LAYOUT.SIDEBAR_BOTTOM_OFFSET,
   });

@@ -1,11 +1,11 @@
 'use client';
 
+import { useEnterSubmit } from '@/hooks/useEnterSubmit/useEnterSubmit';
 import { useState, useCallback } from 'react';
 import { useTranslations } from 'next-intl';
 import * as Atoms from '@/atoms';
 import * as Core from '@/core';
 import * as Molecules from '@/molecules';
-import * as Hooks from '@/hooks';
 import { FileText, AlertCircle, Loader2, RotateCcw } from 'lucide-react';
 interface DialogRestoreRecoveryPhraseProps {
   onRestore?: () => void;
@@ -176,7 +176,7 @@ function RestoreForm({
     const allTouched = touched.every((t) => t);
     return allWordsFilled && noErrors && allTouched && !isRestoring;
   };
-  const handleKeyDown = Hooks.useEnterSubmit(isFormValid, onRestore);
+  const handleKeyDown = useEnterSubmit(isFormValid, onRestore);
   return (
     <>
       <Atoms.DialogHeader className="space-y-1.5 pr-6">

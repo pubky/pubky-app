@@ -1,11 +1,11 @@
 'use client';
 
+import { useIsMobile } from '@/hooks/useIsMobile/useIsMobile';
 import * as Molecules from '@/molecules';
 import * as Organisms from '@/organisms';
 import * as Atoms from '@/atoms';
-import * as Hooks from '@/hooks';
 import { TIMELINE_FEED_VARIANT } from '@/config';
-import { useSearchTags } from '@/hooks/useSearchStreamId';
+import { useSearchTags } from '@/hooks/useSearchStreamId/useSearchStreamId';
 
 /**
  * Search Template
@@ -23,7 +23,7 @@ import { useSearchTags } from '@/hooks/useSearchStreamId';
 export function Search() {
   // Get tags from URL query params
   const tags = useSearchTags();
-  const isMobile = Hooks.useIsMobile();
+  const isMobile = useIsMobile();
   const hasTags = tags.length > 0;
 
   return (

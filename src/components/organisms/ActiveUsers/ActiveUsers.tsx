@@ -1,10 +1,11 @@
 'use client';
 
+import { useFollowUser } from '@/hooks/useFollowUser/useFollowUser';
+import { useUserStream } from '@/hooks/useUserStream/useUserStream';
 import { useRouter } from 'next/navigation';
 import { useTranslations } from 'next-intl';
 import * as Atoms from '@/atoms';
 import * as Core from '@/core';
-import * as Hooks from '@/hooks';
 import * as Molecules from '@/molecules';
 import * as Organisms from '@/organisms';
 import { APP_ROUTES } from '@/app/routes';
@@ -23,13 +24,13 @@ export function ActiveUsers() {
   const t = useTranslations('sidebar');
   const tCommon = useTranslations('common');
   const router = useRouter();
-  const { users, isLoading: isStreamLoading } = Hooks.useUserStream({
+  const { users, isLoading: isStreamLoading } = useUserStream({
     streamId: Core.UserStreamTypes.TODAY_INFLUENCERS_ALL,
     limit: USERS_LIMIT,
     includeCounts: true,
     includeRelationships: true,
   });
-  const { toggleFollow, isUserLoading } = Hooks.useFollowUser();
+  const { toggleFollow, isUserLoading } = useFollowUser();
   const handleUserClick = (pubky: Core.Pubky) => {
     router.push(`${APP_ROUTES.PROFILE}/${pubky}`);
   };

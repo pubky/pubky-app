@@ -47,9 +47,6 @@
       "@/templates/*": [
         "./src/components/templates/*"
       ],
-      "@/hooks": [
-        "./src/hooks/index.ts"
-      ],
       "@/hooks/*": [
         "./src/hooks/*"
       ],

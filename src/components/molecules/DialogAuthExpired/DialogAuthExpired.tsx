@@ -1,8 +1,8 @@
 'use client';
 
+import { useIsMobile } from '@/hooks/useIsMobile/useIsMobile';
 import { useTranslations } from 'next-intl';
 import * as Atoms from '@/atoms';
-import * as Hooks from '@/hooks';
 import { RefreshCw } from 'lucide-react';
 type DialogAuthExpiredProps = {
   open: boolean;
@@ -13,7 +13,7 @@ type DialogAuthExpiredProps = {
 /** Non-dismissible dialog shown when the QR auth session has expired, with a Refresh action. */
 export function DialogAuthExpired({ open, onRefresh, isLoading = false }: DialogAuthExpiredProps) {
   const t = useTranslations('onboarding.authExpired');
-  const isMobile = Hooks.useIsMobile();
+  const isMobile = useIsMobile();
   const title = isMobile ? t('titleMobile') : t('titleDesktop');
   const description = isMobile ? t('descriptionMobile') : t('descriptionDesktop');
   return (

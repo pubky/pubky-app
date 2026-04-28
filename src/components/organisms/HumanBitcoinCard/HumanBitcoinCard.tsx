@@ -1,8 +1,8 @@
 'use client';
 
 import * as Atoms from '@/atoms';
-import { useBtcRate } from '@/hooks/useSatUsdRate';
-import { useLnVerificationInfo } from '@/hooks/useLnVerificationInfo';
+import { useBtcRate } from '@/hooks/useSatUsdRate/useSatUsdRate';
+import { useLnVerificationInfo } from '@/hooks/useLnVerificationInfo/useLnVerificationInfo';
 import { HumanBitcoinCardSkeleton, PriceSkeleton } from './HumanBitcoinCard.skeleton';
 import type { HumanBitcoinCardProps } from './HumanBitcoinCard.types';
 import { useTranslations } from 'next-intl';

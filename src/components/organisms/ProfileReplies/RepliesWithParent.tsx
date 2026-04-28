@@ -1,5 +1,8 @@
 'use client';
 
+import { useInfiniteScroll } from '@/hooks/useInfiniteScroll/useInfiniteScroll';
+import { usePostNavigation } from '@/hooks/usePostNavigation/usePostNavigation';
+import { useStreamPagination } from '@/hooks/useStreamPagination/useStreamPagination';
 import { useLiveQuery } from 'dexie-react-hooks';
 import { useEffect, useRef } from 'react';
 
@@ -7,7 +10,6 @@ import * as Atoms from '@/atoms';
 import * as Molecules from '@/molecules';
 import * as Organisms from '@/organisms';
 import * as Core from '@/core';
-import * as Hooks from '@/hooks';
 import * as Types from './RepliesWithParent.types';
 import { Logger } from '@/libs/logger/logger';
 
@@ -19,11 +21,11 @@ import { Logger } from '@/libs/logger/logger';
  * - Shows the reply post with isReply={true} (with reply line)
  */
 export function RepliesWithParent({ streamId }: Types.RepliesWithParentProps) {
-  const { postIds, loading, loadingMore, error, hasMore, loadMore } = Hooks.useStreamPagination({ streamId });
-  const { navigateToPost } = Hooks.usePostNavigation();
+  const { postIds, loading, loadingMore, error, hasMore, loadMore } = useStreamPagination({ streamId });
+  const { navigateToPost } = usePostNavigation();
 
   // Infinite scroll hook
-  const { sentinelRef } = Hooks.useInfiniteScroll({
+  const { sentinelRef } = useInfiniteScroll({
     onLoadMore: loadMore,
     hasMore,
     isLoading: loadingMore,

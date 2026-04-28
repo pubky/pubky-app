@@ -1,10 +1,12 @@
 'use client';
 
+import { useFollowUser } from '@/hooks/useFollowUser/useFollowUser';
+import { useIsFollowing } from '@/hooks/useIsFollowing/useIsFollowing';
+import { usePostParticipants } from '@/hooks/usePostParticipants/usePostParticipants';
 import { useRouter } from 'next/navigation';
 import { useTranslations } from 'next-intl';
 import * as Molecules from '@/molecules';
 import * as Organisms from '@/organisms';
-import * as Hooks from '@/hooks';
 import * as Core from '@/core';
 import { APP_ROUTES } from '@/app/routes';
 import { SinglePostParticipantsSkeleton } from './SinglePostParticipants.skeleton';
@@ -20,7 +22,7 @@ function ParticipantItem({
   onFollowClick,
   isUserLoading,
 }: ParticipantItemProps) {
-  const { isFollowing, isLoading: isFollowStatusLoading } = Hooks.useIsFollowing(participant.id);
+  const { isFollowing, isLoading: isFollowStatusLoading } = useIsFollowing(participant.id);
   const isCurrentUser = participant.id === currentUserId;
 
   return (
@@ -56,8 +58,8 @@ export function SinglePostParticipants({ postId, className }: SinglePostParticip
   const t = useTranslations('common');
   const router = useRouter();
   const currentUserId = Core.useAuthStore((state) => state.currentUserPubky);
-  const { participants, isLoading } = Hooks.usePostParticipants(postId, { limit: 10 });
-  const { toggleFollow, isUserLoading } = Hooks.useFollowUser();
+  const { participants, isLoading } = usePostParticipants(postId, { limit: 10 });
+  const { toggleFollow, isUserLoading } = useFollowUser();
 
   const handleUserClick = (pubky: string) => {
     router.push(`${APP_ROUTES.PROFILE}/${pubky}`);

@@ -1,5 +1,6 @@
 'use client';
 
+import { useEmojiInsert } from '@/hooks/useEmojiInsert/useEmojiInsert';
 import { useState, useRef, type ForwardedRef } from 'react';
 import { useTranslations } from 'next-intl';
 import {
@@ -34,7 +35,6 @@ import { AlertTriangle, Smile, Type } from 'lucide-react';
 import { ARTICLE_MAX_CHARACTER_LENGTH } from '@/config';
 import * as Atoms from '@/atoms';
 import * as Molecules from '@/molecules';
-import * as Hooks from '@/hooks';
 import { MarkdownMark } from '@/icons';
 import { sanitizeCodeBlockLanguages } from './InitializedMDXEditor.utils';
 import { CODE_BLOCK_LANGUAGES } from './InitializedMDXEditor.constants';
@@ -119,7 +119,7 @@ export default function InitializedMDXEditor({
     updateMaxLengthWarning(newText);
     props.onChange?.(newText, false);
   };
-  const handleMarkdownEmojiSelect = Hooks.useEmojiInsert({
+  const handleMarkdownEmojiSelect = useEmojiInsert({
     inputRef: textareaRef,
     value: markdownText,
     onChange: handleMarkdownTextChange,

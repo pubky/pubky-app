@@ -1,10 +1,10 @@
 'use client';
 
+import { useCustomFeed } from '@/hooks/useCustomFeed/useCustomFeed';
 import { useEffect, useState, type ComponentType, type ReactNode } from 'react';
 import * as Atoms from '@/atoms';
 import * as Molecules from '@/molecules';
 import * as Core from '@/core';
-import * as Hooks from '@/hooks';
 import { useTranslations } from 'next-intl';
 import { PubkyAppFeedLayout, PubkyAppFeedReach, PubkyAppFeedSort, PubkyAppPostKind } from 'pubky-app-specs';
 import { useRouter } from 'next/navigation';
@@ -40,7 +40,7 @@ function isVisualCustomFeedContentSupported(content?: CustomFeedDialogContent): 
 export const CustomFeedDialog = ({ mode, children }: CustomFeedDialogProps) => {
   const router = useRouter();
   const { toast } = Molecules.useToast();
-  const customFeed = Hooks.useCustomFeed();
+  const customFeed = useCustomFeed();
   const tFilter = useTranslations('filters');
   const tDialog = useTranslations('dialogs.customFeed');
   const tToast = useTranslations('toast');

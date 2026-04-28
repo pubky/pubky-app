@@ -3,7 +3,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { debounce } from 'lodash-es';
 import * as Core from '@/core';
-import { useUserDetailsFromIds } from '@/hooks/useUserDetailsFromIds';
+import { useUserDetailsFromIds } from '@/hooks/useUserDetailsFromIds/useUserDetailsFromIds';
 import type {
   UseSearchAutocompleteParams,
   UseSearchAutocompleteResult,

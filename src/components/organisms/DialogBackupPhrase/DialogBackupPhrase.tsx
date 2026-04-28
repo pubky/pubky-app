@@ -1,12 +1,12 @@
 'use client';
 
+import { useRecoveryPhraseValidation } from '@/hooks/useRecoveryPhraseValidation/useRecoveryPhraseValidation';
 import { useState, useEffect, ReactNode } from 'react';
 import Image from 'next/image';
 import { useTranslations } from 'next-intl';
 import * as Atoms from '@/components/atoms';
 import * as Stores from '@/core';
 import * as Molecules from '@/molecules';
-import * as Hooks from '@/hooks';
 import { Eye, ArrowRight, EyeOff, ArrowLeft, Check } from 'lucide-react';
 import { cn } from '@/libs/utils/utils';
 interface DialogBackupPhraseProps {
@@ -167,7 +167,7 @@ function RecoveryStep1({
 }
 function RecoveryStep2({ recoveryWords, setStep }: { recoveryWords: string[]; setStep: (step: number) => void }) {
   const { userWords, errors, remainingWords, handleWordClick, validateWords, clearWord, isComplete } =
-    Hooks.useRecoveryPhraseValidation({
+    useRecoveryPhraseValidation({
       recoveryWords,
     });
   const t = useTranslations('onboarding.backupPhrase');

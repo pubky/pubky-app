@@ -1,9 +1,10 @@
 'use client';
 
+import { useIsMobile } from '@/hooks/useIsMobile/useIsMobile';
+import { usePostTaggers } from '@/hooks/usePostTaggers/usePostTaggers';
 import { useEffect, useMemo, useState } from 'react';
 import * as Atoms from '@/atoms';
 import * as Molecules from '@/molecules';
-import * as Hooks from '@/hooks';
 import type { PostTagPopoverWrapperProps } from './PostTagPopoverWrapper.types';
 import { POPOVER_HOVER_DELAY, MAX_VISIBLE_AVATARS } from './PostTagPopoverWrapper.constants';
 import { TaggerAvatar } from './TaggerAvatar/TaggerAvatar';
@@ -27,9 +28,9 @@ export function PostTagPopoverWrapper({
 }: PostTagPopoverWrapperProps) {
   const [open, setOpen] = useState(false);
   const [showAllTaggers, setShowAllTaggers] = useState(false);
-  const isMobile = Hooks.useIsMobile();
+  const isMobile = useIsMobile();
   const shouldFetchTaggers = Boolean(postId && tagLabel);
-  const { taggersByLabel, taggerStates, fetchAllTaggers } = Hooks.usePostTaggers(shouldFetchTaggers ? postId : null);
+  const { taggersByLabel, taggerStates, fetchAllTaggers } = usePostTaggers(shouldFetchTaggers ? postId : null);
   const initialTaggerIds = useMemo(() => taggers.map((tagger) => tagger.id), [taggers]);
   const labelKey = tagLabel?.toLowerCase();
   const expandedTaggerIds = labelKey ? taggersByLabel.get(labelKey) : undefined;

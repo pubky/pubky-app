@@ -1,10 +1,10 @@
 'use client';
 
+import { useNestedReplies } from '@/hooks/useNestedReplies/useNestedReplies';
 import { useEffect, useState } from 'react';
 import * as Atoms from '@/atoms';
 import * as Molecules from '@/molecules';
 import * as Organisms from '@/organisms';
-import * as Hooks from '@/hooks';
 import { AUTO_COLLAPSE_THRESHOLD, DEFAULT_MAX_DEPTH } from '@/hooks/useNestedReplies/useNestedReplies.constants';
 import { cn } from '@/libs/utils/utils';
 
@@ -38,8 +38,10 @@ export function ReplyWithNested({
   depth = 0,
   maxDepth = DEFAULT_MAX_DEPTH,
 }: ReplyWithNestedProps) {
-  const { nestedReplyIds, hasMoreReplies, hasNestedReplies, replyCount, isExpandingAll, expandAll } =
-    Hooks.useNestedReplies(replyId, { depth, maxDepth });
+  const { nestedReplyIds, hasMoreReplies, hasNestedReplies, replyCount, isExpandingAll, expandAll } = useNestedReplies(
+    replyId,
+    { depth, maxDepth },
+  );
 
   // Local expand/collapse state — set once when replies are first available.
   // Until initialized, we skip rendering the nested section to avoid a flash

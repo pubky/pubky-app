@@ -1,8 +1,8 @@
 'use client';
 
+import { useIsMobile } from '@/hooks/useIsMobile/useIsMobile';
 import React, { useRef, useState } from 'react';
 import * as Core from '@/core';
-import * as Hooks from '@/hooks';
 import * as Atoms from '@/atoms';
 import * as Organisms from '@/organisms';
 import type { PostTagsPanelHandle } from '@/organisms';
@@ -23,7 +23,7 @@ import { cn } from '@/libs/utils/utils';
  * keeping this wrapper aligned with PostMain via the shared context.
  */
 export function SinglePostCard({ postId, className }: SinglePostCardProps) {
-  const isMobile = Hooks.useIsMobile();
+  const isMobile = useIsMobile();
   const inheritedTagsLayout = usePostMainLayout() ?? 'inline';
   const [replyDialogOpen, setReplyDialogOpen] = useState(false);
   const [repostDialogOpen, setRepostDialogOpen] = useState(false);

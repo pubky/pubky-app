@@ -1,8 +1,8 @@
 'use client';
 
+import { useEnterSubmit } from '@/hooks/useEnterSubmit/useEnterSubmit';
 import { useState } from 'react';
 import * as Atoms from '@/components/atoms';
-import * as Hooks from '@/hooks';
 import Image from 'next/image';
 import * as Core from '@/core';
 import { useTranslations } from 'next-intl';
@@ -26,7 +26,7 @@ function RecoveryStep1({ setStep }: { setStep: (step: number) => void }) {
   const isFormValid = () => {
     return Boolean(passphrase && passphraseMatch);
   };
-  const handleKeyDown = Hooks.useEnterSubmit(isFormValid, handleDownload);
+  const handleKeyDown = useEnterSubmit(isFormValid, handleDownload);
   const getStrengthText = (strength: number): string => {
     if (strength === 0) return '';
     if (strength <= 2) return tPassword('weak');

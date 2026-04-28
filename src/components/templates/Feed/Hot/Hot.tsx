@@ -1,11 +1,12 @@
 'use client';
 
+import { useIsMobile } from '@/hooks/useIsMobile/useIsMobile';
+import { useLayoutReset } from '@/hooks/useLayoutReset/useLayoutReset';
 import { useState } from 'react';
 import { useTranslations } from 'next-intl';
 import * as Atoms from '@/atoms';
 import * as Molecules from '@/molecules';
 import * as Organisms from '@/organisms';
-import * as Hooks from '@/hooks';
 import { TIMELINE_FEED_VARIANT } from '@/config';
 import { HotSection } from '@/molecules/HotMobileMenu/HotMobileMenu.types';
 import { cn } from '@/libs/utils/utils';
@@ -29,9 +30,9 @@ import { cn } from '@/libs/utils/utils';
  */
 export function Hot() {
   const t = useTranslations('hot');
-  const isMobile = Hooks.useIsMobile();
+  const isMobile = useIsMobile();
   const [activeSection, setActiveSection] = useState<HotSection>(HotSection.TAGS);
-  Hooks.useLayoutReset();
+  useLayoutReset();
 
   const hideTags = isMobile && activeSection !== HotSection.TAGS;
   const hideUsers = isMobile && activeSection !== HotSection.USERS;

@@ -1,10 +1,10 @@
 'use client';
 
+import { usePublicRoute } from '@/hooks/usePublicRoute/usePublicRoute';
 import { usePathname } from 'next/navigation';
 import { useTranslations } from 'next-intl';
 
 import * as Core from '@/core';
-import * as Hooks from '@/hooks';
 import * as Molecules from '@/molecules';
 import { pathToStepConfig } from './Header.constants';
 
@@ -12,7 +12,7 @@ export function Header() {
   const pathname = usePathname();
   const t = useTranslations('onboarding.steps');
   const isAuthenticated = Core.useAuthStore((state) => Boolean(state.currentUserPubky));
-  const { isPublicRoute } = Hooks.usePublicRoute();
+  const { isPublicRoute } = usePublicRoute();
 
   const isOnboarding = pathname?.startsWith('/onboarding') ?? false;
   const isCopyrightPage = pathname === '/copyright';

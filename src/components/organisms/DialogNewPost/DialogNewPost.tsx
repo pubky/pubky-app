@@ -1,9 +1,10 @@
 'use client';
 
+import { useConfirmableDialog } from '@/hooks/useConfirmableDialog/useConfirmableDialog';
+import { useKeyboardOffset } from '@/hooks/useKeyboardOffset/useKeyboardOffset';
 import { useState } from 'react';
 import { useTranslations } from 'next-intl';
 import * as Atoms from '@/atoms';
-import * as Hooks from '@/hooks';
 import * as Molecules from '@/molecules';
 import * as Organisms from '@/organisms';
 import { POST_INPUT_VARIANT } from '@/organisms/PostInput/PostInput.constants';
@@ -15,12 +16,12 @@ export function DialogNewPost({ open, onOpenChangeAction }: DialogNewPostProps) 
   const [isArticle, setIsArticle] = useState(false);
   const title = isArticle ? t('newArticle') : t('newPost');
   const { showConfirmDialog, setShowConfirmDialog, resetKey, handleContentChange, handleOpenChange, handleDiscard } =
-    Hooks.useConfirmableDialog({
+    useConfirmableDialog({
       onClose: () => onOpenChangeAction(false),
     });
 
   // Dialogs are already centered, so reduce the offset to avoid over-compensation
-  const { isKeyboardVisible, keyboardOffset } = Hooks.useKeyboardOffset({ offsetAdjustment: 200 });
+  const { isKeyboardVisible, keyboardOffset } = useKeyboardOffset({ offsetAdjustment: 200 });
 
   return (
     <Atoms.Dialog open={open} onOpenChange={handleOpenChange}>

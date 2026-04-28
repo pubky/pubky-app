@@ -1,18 +1,20 @@
 'use client';
 
+import { useConfirmableDialog } from '@/hooks/useConfirmableDialog/useConfirmableDialog';
+import { useCurrentUserProfile } from '@/hooks/useCurrentUserProfile/useCurrentUserProfile';
+import { useFeedback } from '@/hooks/useFeedback/useFeedback';
 import { useEffect } from 'react';
 
 import * as Atoms from '@/atoms';
-import * as Hooks from '@/hooks';
 import * as Molecules from '@/molecules';
 import { DialogFeedbackContent } from './DialogFeedbackContent';
 import { DialogFeedbackSuccess } from './DialogFeedbackSuccess';
 import type { DialogFeedbackProps } from './DialogFeedback.types';
 
 export function DialogFeedback({ open, onOpenChange }: DialogFeedbackProps) {
-  const { currentUserPubky } = Hooks.useCurrentUserProfile();
-  const { feedback, handleChange, submit, isSubmitting, isSuccess, hasContent, reset } = Hooks.useFeedback();
-  const { showConfirmDialog, setShowConfirmDialog, handleOpenChange, handleDiscard } = Hooks.useConfirmableDialog({
+  const { currentUserPubky } = useCurrentUserProfile();
+  const { feedback, handleChange, submit, isSubmitting, isSuccess, hasContent, reset } = useFeedback();
+  const { showConfirmDialog, setShowConfirmDialog, handleOpenChange, handleDiscard } = useConfirmableDialog({
     onClose: () => onOpenChange(false),
     hasContent: () => hasContent && !isSuccess,
   });

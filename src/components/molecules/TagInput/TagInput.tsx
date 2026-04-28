@@ -1,11 +1,14 @@
 'use client';
 
+import { useListboxNavigation } from '@/hooks/useListboxNavigation/useListboxNavigation';
+import { useTagInput } from '@/hooks/useTagInput/useTagInput';
+import { useTagSuggestions } from '@/hooks/useTagSuggestions/useTagSuggestions';
 import { forwardRef, useImperativeHandle, useRef } from 'react';
 import { useTranslations } from 'next-intl';
 import * as Atoms from '@/atoms';
 import * as Molecules from '@/molecules';
-import * as Hooks from '@/hooks';
-import { mergeTagSuggestions, TAG_INPUT_BLUR_DELAY_MS } from '@/hooks/useTagInput';
+import { TAG_INPUT_BLUR_DELAY_MS } from '@/hooks/useTagInput/useTagInput.constants';
+import { mergeTagSuggestions } from '@/hooks/useTagInput/useTagInput.utils';
 import { TAG_MAX_LENGTH } from '@/config';
 import type { TagInputProps, TagInputHandle } from './TagInput.types';
 import { TagSuggestionsDropdown } from './TagSuggestionsDropdown';
@@ -60,7 +63,7 @@ export const TagInput = forwardRef<TagInputHandle, TagInputProps>(function TagIn
     handleTagSubmit,
     handleEmojiSelect,
     handlePaste,
-  } = Hooks.useTagInput({
+  } = useTagInput({
     onTagAdd,
     existingTags: tagsForDuplicateCheck.map((t) => t.label),
     allTags: existingTags,
@@ -70,7 +73,7 @@ export const TagInput = forwardRef<TagInputHandle, TagInputProps>(function TagIn
   }));
 
   // Fetch API suggestions when enabled
-  const { suggestions: apiSuggestions } = Hooks.useTagSuggestions({
+  const { suggestions: apiSuggestions } = useTagSuggestions({
     query: inputValue,
     excludeTags: apiExcludeTags,
     enabled: enableApiSuggestions && showSuggestions,
@@ -82,7 +85,7 @@ export const TagInput = forwardRef<TagInputHandle, TagInputProps>(function TagIn
     setSelectedIndex: setSelectedSuggestionIndex,
     handleKeyDown: handleListboxKeyDown,
     resetSelection,
-  } = Hooks.useListboxNavigation({
+  } = useListboxNavigation({
     items: displaySuggestions,
     isOpen: isListboxOpen,
     onSelect: (item) => {

@@ -1,9 +1,9 @@
 'use client';
 
+import { useIsMobile } from '@/hooks/useIsMobile/useIsMobile';
 import { useState } from 'react';
 import { useTranslations } from 'next-intl';
 import * as Atoms from '@/atoms';
-import * as Hooks from '@/hooks';
 import * as Molecules from '@/molecules';
 import * as Types from './index';
 import { ChevronDown } from 'lucide-react';
@@ -18,7 +18,7 @@ export function StatusPickerWrapper({
   const t = useTranslations('status');
   const [open, setOpen] = useState(false);
   const [localStatus, setLocalStatus] = useState<string | null>(null);
-  const isMobile = Hooks.useIsMobile();
+  const isMobile = useIsMobile();
 
   // Use local status if set, otherwise use prop
   const currentStatus = localStatus ?? status;

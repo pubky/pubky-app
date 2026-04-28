@@ -1,10 +1,10 @@
 'use client';
 
+import { useFeedLayoutResolution } from '@/hooks/useFeedLayoutResolution/useFeedLayoutResolution';
 import * as React from 'react';
 import * as Atoms from '@/atoms';
 import * as Molecules from '@/molecules';
 import * as Core from '@/core';
-import * as Hooks from '@/hooks';
 import { TIMELINE_FEED_VARIANT } from '@/config';
 import {
   resolveVisualFeedContent,
@@ -29,7 +29,7 @@ function HomeFeedFilters({
   variant = 'drawer',
 }: HomeFeedSidebarProps) {
   const { layout, setLayout, reach, setReach, sort, setSort, content, setContent } = Core.useHomeStore();
-  const { isPhoneViewport, isVisualActive } = Hooks.useFeedLayoutResolution(feedVariant);
+  const { isPhoneViewport, isVisualActive } = useFeedLayoutResolution(feedVariant);
   const resolvedContent = resolveVisualFeedContent({
     content,
     variant: feedVariant,

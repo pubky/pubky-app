@@ -1,9 +1,10 @@
 'use client';
 
+import { usePostDetails } from '@/hooks/usePostDetails/usePostDetails';
+import { useRequireAuth } from '@/hooks/useRequireAuth/useRequireAuth';
 import * as Core from '@/core';
 import * as Atoms from '@/atoms';
 import * as Molecules from '@/molecules';
-import * as Hooks from '@/hooks';
 import { getTagsLayoutForSurfaceLayout, PostMainLayoutProvider } from '@/organisms/PostMain/PostMainLayout';
 import { SinglePostArticle } from '../SinglePostArticle';
 import { SinglePostCard } from '../SinglePostCard';
@@ -33,10 +34,10 @@ export function SinglePostContent({ postId }: SinglePostContentProps) {
   const tagsLayout = getTagsLayoutForSurfaceLayout(layout);
 
   // Check authentication status - unauthenticated users see limited view
-  const { isAuthenticated } = Hooks.useRequireAuth();
+  const { isAuthenticated } = useRequireAuth();
 
   // Check if parent post is deleted to determine replyability
-  const { postDetails } = Hooks.usePostDetails(postId);
+  const { postDetails } = usePostDetails(postId);
   const isDeleted = isPostDeleted(postDetails?.content);
 
   if (!postDetails) {

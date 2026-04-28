@@ -1,8 +1,10 @@
 'use client';
 
+import { useFollowUser } from '@/hooks/useFollowUser/useFollowUser';
+import { useInfiniteScroll } from '@/hooks/useInfiniteScroll/useInfiniteScroll';
+import { useUserStream } from '@/hooks/useUserStream/useUserStream';
 import * as Atoms from '@/atoms';
 import * as Organisms from '@/organisms';
-import * as Hooks from '@/hooks';
 import * as Core from '@/core';
 import { USERS_PER_PAGE } from './WhoToFollowPageMain.constants';
 import { Users } from 'lucide-react';
@@ -16,17 +18,17 @@ const LOAD_MORE_SKELETON_COUNT = 2;
  */
 export function WhoToFollowPageMain() {
   const currentUserPubky = Core.useAuthStore((state) => state.currentUserPubky);
-  const { users, isLoading, isLoadingMore, hasMore, loadMore } = Hooks.useUserStream({
+  const { users, isLoading, isLoadingMore, hasMore, loadMore } = useUserStream({
     streamId: Core.UserStreamTypes.RECOMMENDED,
     limit: USERS_PER_PAGE,
     paginated: true,
     includeRelationships: true,
     includeCounts: true,
   });
-  const { toggleFollow, isUserLoading } = Hooks.useFollowUser();
+  const { toggleFollow, isUserLoading } = useFollowUser();
 
   // Handle infinite scroll
-  const { sentinelRef } = Hooks.useInfiniteScroll({
+  const { sentinelRef } = useInfiniteScroll({
     onLoadMore: loadMore,
     hasMore,
     isLoading: isLoadingMore,

@@ -1,9 +1,11 @@
 'use client';
 
+import { CONNECTION_TYPE, useProfileConnections } from '@/hooks/useProfileConnections/useProfileConnections';
+import { useFollowUser } from '@/hooks/useFollowUser/useFollowUser';
+import { useInfiniteScroll } from '@/hooks/useInfiniteScroll/useInfiniteScroll';
 import * as Atoms from '@/atoms';
 import * as Molecules from '@/molecules';
 import * as Organisms from '@/organisms';
-import * as Hooks from '@/hooks';
 import * as Core from '@/core';
 import * as Providers from '@/providers';
 import { NEXUS_USERS_PER_PAGE } from '@/config';
@@ -23,14 +25,14 @@ export function ProfileFollowing() {
   // Get the current logged-in user's pubky
   const currentUserPubky = Core.useAuthStore((state) => state.currentUserPubky);
 
-  const { connections, count, isLoading, isLoadingMore, hasMore, loadMore } = Hooks.useProfileConnections(
-    Hooks.CONNECTION_TYPE.FOLLOWING,
+  const { connections, count, isLoading, isLoadingMore, hasMore, loadMore } = useProfileConnections(
+    CONNECTION_TYPE.FOLLOWING,
     pubky ?? undefined,
   );
-  const { toggleFollow, isUserLoading } = Hooks.useFollowUser();
+  const { toggleFollow, isUserLoading } = useFollowUser();
 
   // Handle infinite scroll
-  const { sentinelRef } = Hooks.useInfiniteScroll({
+  const { sentinelRef } = useInfiniteScroll({
     onLoadMore: loadMore,
     hasMore,
     isLoading: isLoadingMore,

@@ -1,10 +1,10 @@
 'use client';
 
+import { useHotTags } from '@/hooks/useHotTags/useHotTags';
 import { useRouter } from 'next/navigation';
 import { useTranslations } from 'next-intl';
 import * as Atoms from '@/atoms';
 import * as Molecules from '@/molecules';
-import * as Hooks from '@/hooks';
 import { APP_ROUTES } from '@/app/routes';
 import { MAX_TAGS } from './HotTags.constants';
 import type { HotTagsProps } from './HotTags.types';
@@ -24,7 +24,7 @@ export function HotTags({ className }: HotTagsProps) {
   const t = useTranslations('sidebar');
   const tCommon = useTranslations('common');
   const router = useRouter();
-  const { tags, isLoading } = Hooks.useHotTags();
+  const { tags, isLoading } = useHotTags();
   const displayTags = tags.slice(0, MAX_TAGS);
   const handleTagClick = (tagName: string) => {
     router.push(`${APP_ROUTES.SEARCH}?tags=${encodeURIComponent(tagName)}`);
