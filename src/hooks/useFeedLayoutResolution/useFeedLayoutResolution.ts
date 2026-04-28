@@ -2,8 +2,8 @@
 
 import * as Core from '@/core';
 import { TimelineFeedVariant, TIMELINE_FEED_VARIANT } from '@/config';
-import { useCustomFeed } from '../useCustomFeed';
-import { useIsMobile } from '../useIsMobile';
+import { useCustomFeed } from '../useCustomFeed/useCustomFeed';
+import { useIsMobile } from '../useIsMobile/useIsMobile';
 
 export interface FeedLayoutResolutionInput {
   requestedLayout: Core.LayoutType;

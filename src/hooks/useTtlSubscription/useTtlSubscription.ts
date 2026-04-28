@@ -2,7 +2,7 @@
 
 import { useEffect, useRef } from 'react';
 import * as Core from '@/core';
-import { useViewportObserver } from '../useViewportObserver';
+import { useViewportObserver } from '../useViewportObserver/useViewportObserver';
 import type { UseTtlSubscriptionOptions, UseTtlSubscriptionResult } from './useTtlSubscription.types';
 
 /**

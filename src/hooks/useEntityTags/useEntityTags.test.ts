@@ -45,11 +45,11 @@ const mockUsePostTagsResult: {
   handleTagToggle: vi.fn().mockResolvedValue(undefined),
 };
 
-vi.mock('../useTagged', () => ({
+vi.mock('../useTagged/useTagged', () => ({
   useTagged: vi.fn(() => mockUseTaggedResult),
 }));
 
-vi.mock('../usePostTags', () => ({
+vi.mock('../usePostTags/usePostTags', () => ({
   usePostTags: vi.fn(() => mockUsePostTagsResult),
 }));
 
@@ -114,7 +114,7 @@ describe('useEntityTags', () => {
   // =============================================================================
 
   it('uses useTagged for USER kind', async () => {
-    const { useTagged } = await import('../useTagged');
+    const { useTagged } = await import('../useTagged/useTagged');
 
     renderHook(() => useEntityTags('user-123', Core.TagKind.USER));
 
@@ -128,7 +128,7 @@ describe('useEntityTags', () => {
   });
 
   it('uses usePostTags for POST kind', async () => {
-    const { usePostTags } = await import('../usePostTags');
+    const { usePostTags } = await import('../usePostTags/usePostTags');
 
     renderHook(() => useEntityTags('post-123', Core.TagKind.POST));
 
@@ -136,7 +136,7 @@ describe('useEntityTags', () => {
   });
 
   it('passes null to useTagged when kind is POST', async () => {
-    const { useTagged } = await import('../useTagged');
+    const { useTagged } = await import('../useTagged/useTagged');
 
     renderHook(() => useEntityTags('post-123', Core.TagKind.POST));
 
@@ -144,7 +144,7 @@ describe('useEntityTags', () => {
   });
 
   it('passes null to usePostTags when kind is USER', async () => {
-    const { usePostTags } = await import('../usePostTags');
+    const { usePostTags } = await import('../usePostTags/usePostTags');
 
     renderHook(() => useEntityTags('user-123', Core.TagKind.USER));
 
@@ -355,7 +355,7 @@ describe('useEntityTags', () => {
   // =============================================================================
 
   it('passes custom viewerId to underlying hooks', async () => {
-    const { useTagged } = await import('../useTagged');
+    const { useTagged } = await import('../useTagged/useTagged');
 
     renderHook(() => useEntityTags('user-123', Core.TagKind.USER, { viewerId: 'custom-viewer' }));
 

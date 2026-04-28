@@ -6,7 +6,7 @@ import { useTagInput } from './useTagInput';
 import { TAG_MAX_LENGTH } from '@/config';
 
 // Mock useEmojiInsert
-vi.mock('../useEmojiInsert', () => ({
+vi.mock('../useEmojiInsert/useEmojiInsert', () => ({
   useEmojiInsert: vi.fn(() => vi.fn()),
 }));
 

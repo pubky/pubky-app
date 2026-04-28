@@ -2,8 +2,8 @@
 
 import { useCallback, useMemo } from 'react';
 import * as Core from '@/core';
-import { useTagged } from '../useTagged';
-import { usePostTags } from '../usePostTags';
+import { useTagged } from '../useTagged/useTagged';
+import { usePostTags } from '../usePostTags/usePostTags';
 import type { TagWithAvatars } from '@/molecules/TaggedItem/TaggedItem.types';
 import type { UseEntityTagsOptions, UseEntityTagsResult } from './useEntityTags.types';
 

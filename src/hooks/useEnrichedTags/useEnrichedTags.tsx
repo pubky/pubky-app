@@ -1,7 +1,7 @@
 'use client';
 
 import * as Core from '@/core';
-import { useBulkUserAvatars } from '../useBulkUserAvatars';
+import { useBulkUserAvatars } from '../useBulkUserAvatars/useBulkUserAvatars';
 import type { TagWithAvatars } from '@/molecules/TaggedItem/TaggedItem.types';
 import type { UseEnrichedTagsResult } from './useEnrichedTags.types';
 
