@@ -1,7 +1,7 @@
 'use client';
 
 import { useLocalFirstQuery } from '@/hooks/useLocalFirstQuery/useLocalFirstQuery';
-import * as Types from './index';
+import type { UseCurrentUserProfileResult } from './useCurrentUserProfile.types';
 import { UserController } from '@/controllers/user/user';
 import type { NexusUserDetails } from '@/services/nexus/nexus.types';
 import { useAuthStore } from '@/stores/auth/auth.store';
@@ -22,7 +22,7 @@ import { useAuthStore } from '@/stores/auth/auth.store';
  * return <div>{userDetails.name}</div>;
  * ```
  */
-export function useCurrentUserProfile(): Types.UseCurrentUserProfileResult {
+export function useCurrentUserProfile(): UseCurrentUserProfileResult {
   const currentUserPubky = useAuthStore((state) => state.currentUserPubky);
 
   const { data: userDetails } = useLocalFirstQuery<NexusUserDetails>({
