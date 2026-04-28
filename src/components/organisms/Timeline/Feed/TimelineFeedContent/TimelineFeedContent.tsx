@@ -1,6 +1,6 @@
 'use client';
 
-import { FeedLayoutResolution } from '@/hooks/useFeedLayoutResolution/useFeedLayoutResolution';
+import type { FeedLayoutResolution } from '@/hooks/useFeedLayoutResolution/useFeedLayoutResolution';
 import { useMutedUsers } from '@/hooks/useMutedUsers/useMutedUsers';
 import { usePullToRefresh } from '@/hooks/usePullToRefresh/usePullToRefresh';
 import { useStreamPagination } from '@/hooks/useStreamPagination/useStreamPagination';
