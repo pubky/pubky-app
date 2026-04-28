@@ -184,7 +184,7 @@ describe('HomeserverService', () => {
 
     // Reset module cache and re-import
     vi.resetModules();
-    HomeserverService = HomeserverService;
+    ({ HomeserverService } = await import('@/services/homeserver/homeserver'));
   });
 
   // ===========================================================================

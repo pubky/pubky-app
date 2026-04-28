@@ -33,6 +33,9 @@ vi.mock('@/services/local/post/post', () => ({
     delete: vi.fn(),
     edit: vi.fn(),
     readDetails: vi.fn(),
+    readCounts: vi.fn(),
+    readTags: vi.fn(),
+    readRelationships: vi.fn(),
   },
 }));
 

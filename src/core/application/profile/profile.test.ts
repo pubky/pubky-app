@@ -5,10 +5,21 @@ import { HttpMethod } from '@/libs/http/http.types';
 import { Logger } from '@/libs/logger/logger';
 import type { Pubky } from '@/models/models.types';
 import { UserDetailsModel } from '@/models/user/details/userDetails';
-import { UserNormalizer } from '@/pipes/user/user.normalizer';
 import { HomeserverService } from '@/services/homeserver/homeserver';
 // Avoid pulling WASM-heavy deps from type-only modules
 vi.mock('pubky-app-specs', () => ({
+  PubkySpecsBuilder: class {
+    createUser(name: string, bio?: string, image?: string | null, links?: unknown, status?: string) {
+      return {
+        user: {
+          toJson: () => ({ name, bio, image, links, status }),
+        },
+        meta: {
+          url: 'pubky://test-pubky/pub/pubky.app/profile.json',
+        },
+      };
+    }
+  },
   getValidMimeTypes: () => ['image/jpeg', 'image/png'],
 }));
 
@@ -29,6 +40,7 @@ vi.mock('@/stores/auth/auth.store', () => ({
 }));
 
 let ProfileApplication: typeof import('./profile').ProfileApplication;
+let UserNormalizer: typeof import('@/pipes/user/user.normalizer').UserNormalizer;
 
 beforeEach(async () => {
   vi.clearAllMocks();
@@ -40,6 +52,7 @@ beforeEach(async () => {
   };
 
   // Re-import after resetModules
+  ({ UserNormalizer } = await import('@/pipes/user/user.normalizer'));
   ({ ProfileApplication } = await import('./profile'));
 
   // Mock Logger to prevent AppError from logging during tests

@@ -86,7 +86,7 @@ describe('OgMetadataApplication (integration)', () => {
     global.fetch = mockFetch;
 
     // Re-import modules after reset so all references are fresh
-    OgMetadataApplication = OgMetadataApplication;
+    ({ OgMetadataApplication } = await import('./og-metadata'));
 
     // Default mock: successful HTML response
     mockFetch.mockResolvedValue(createHtmlResponse(simpleHtml('Test Title')));

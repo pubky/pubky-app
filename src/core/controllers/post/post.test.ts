@@ -27,6 +27,8 @@ vi.mock('@/application/file/file', () => ({
   FileApplication: {
     upload: vi.fn(),
     delete: vi.fn(),
+    commitCreate: vi.fn(),
+    commitDelete: vi.fn(),
   },
 }));
 
@@ -55,12 +57,38 @@ vi.mock('pubky-app-specs', () => ({
           content,
           kind: kindMap[kind] ?? 'short',
           attachments: null,
-          toJson: () => ({ content, kind }),
+          toJson: () => ({ content, kind: kindMap[kind] ?? 'short' }),
         },
         meta: {
           id: 'post123',
           url: `pubky://author/pub/pubky.app/posts/post123`,
         },
+      };
+    }
+
+    createBlob(blob: Uint8Array) {
+      return {
+        blob: { data: blob },
+        meta: { url: 'pubky://author/pub/pubky.app/blobs/blob123' },
+      };
+    }
+
+    createFile(name: string, url: string, contentType: string, size: number) {
+      return {
+        file: {
+          toJson: () => ({ name, src: url, content_type: contentType, size }),
+        },
+        meta: { url: `pubky://author/pub/pubky.app/files/${name}` },
+      };
+    }
+
+    createTag(uri: string, label: string) {
+      return {
+        tag: {
+          label,
+          toJson: () => ({ uri, label }),
+        },
+        meta: { url: `pubky://author/pub/pubky.app/tags/${label}` },
       };
     }
   },

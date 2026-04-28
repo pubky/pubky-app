@@ -76,6 +76,7 @@ const setupNotificationMocks = () => {
   vi.spyOn(useNotificationStore, 'getState').mockReturnValue(
     mockNotificationStore({
       setState: storeMocks.notificationInit,
+      reset: storeMocks.resetNotificationStore,
     }),
   );
 
@@ -90,6 +91,7 @@ const setupAuthAndNotificationStores = () => {
   vi.spyOn(useNotificationStore, 'getState').mockReturnValue(
     mockNotificationStore({
       setState: storeMocks.notificationInit,
+      reset: storeMocks.resetNotificationStore,
     }),
   );
   return authStore;
@@ -1024,7 +1026,8 @@ describe('AuthController', () => {
       const searchStore = storeMocks.getSearchState();
       const notificationStore = storeMocks.getNotificationState();
       const settingsStore = storeMocks.getSettingsState();
-      vi.spyOn(useAuthStore, 'getState').mockReturnValue(createAuthStore());
+      const authStore = createAuthStore();
+      vi.spyOn(useAuthStore, 'getState').mockReturnValue(authStore);
       vi.spyOn(useOnboardingStore, 'getState').mockReturnValue(createOnboardingStore());
       vi.spyOn(useSignInStore, 'getState').mockReturnValue(signInStore);
       vi.spyOn(useLocalFilesStore, 'getState').mockReturnValue(localFilesStore);
@@ -1052,7 +1055,7 @@ describe('AuthController', () => {
 
       // Zustand stores
       expect(storeMocks.resetOnboardingStore).toHaveBeenCalledOnce();
-      expect(storeMocks.resetAuthStore).toHaveBeenCalledOnce();
+      expect(authStore.reset).toHaveBeenCalledOnce();
       expect(signInStore.reset).toHaveBeenCalledOnce();
       expect(localFilesStore.reset).toHaveBeenCalledOnce();
       expect(homeStore.reset).toHaveBeenCalledOnce();
@@ -1080,7 +1083,8 @@ describe('AuthController', () => {
       const warnSpy = vi.spyOn(Logger, 'warn').mockImplementation(() => {});
 
       const localFilesStore = createLocalFilesStore();
-      vi.spyOn(useAuthStore, 'getState').mockReturnValue(createAuthStore());
+      const authStore = createAuthStore();
+      vi.spyOn(useAuthStore, 'getState').mockReturnValue(authStore);
       vi.spyOn(useOnboardingStore, 'getState').mockReturnValue(createOnboardingStore());
       vi.spyOn(useLocalFilesStore, 'getState').mockReturnValue(localFilesStore);
 
@@ -1091,7 +1095,7 @@ describe('AuthController', () => {
       });
       // Local state should still be cleared even if homeserver logout fails
       expect(storeMocks.resetOnboardingStore).toHaveBeenCalled();
-      expect(storeMocks.resetAuthStore).toHaveBeenCalled();
+      expect(authStore.reset).toHaveBeenCalled();
       expect(localFilesStore.reset).toHaveBeenCalled();
       expect(clearCookiesSpy).toHaveBeenCalled();
       expect(clearDatabaseSpy).toHaveBeenCalledTimes(1);

@@ -20,7 +20,7 @@ const mockMocks = vi.hoisted(() => {
   };
 });
 
-// Mock Core
+// Mock direct dependencies
 const mockCurrentUserPubky = 'user123';
 vi.mock('@/stores/auth/auth.store', () => ({
   useAuthStore: vi.fn(() => ({
@@ -70,6 +70,7 @@ vi.mock('@/models/user/counts/userCounts', () => ({
 // Mock Config
 vi.mock('@/config', () => ({
   NEXUS_USERS_PER_PAGE: 20,
+  MODERATED_TAGS: ['nudity'],
 }));
 
 // Mock dexie-react-hooks

@@ -20,7 +20,7 @@ vi.mock('dexie-react-hooks', () => ({
   useLiveQuery: vi.fn(),
 }));
 
-// Mock the core
+// Mock direct dependencies
 vi.mock('@/stores/auth/auth.store', () => ({
   useAuthStore: vi.fn(),
 }));
@@ -51,6 +51,13 @@ vi.mock('@/controllers/file/file', () => ({
 }));
 vi.mock('@/database/franky/franky', () => ({
   db: {
+    table: vi.fn(() => ({
+      where: vi.fn(() => ({
+        equals: vi.fn(() => ({
+          first: vi.fn(),
+        })),
+      })),
+    })),
     user_details: {
       get: vi.fn(),
     },

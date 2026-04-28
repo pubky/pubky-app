@@ -13,14 +13,15 @@ const { mockRelationships, setMockRelationships } = vi.hoisted(() => {
   };
 });
 
-// Mock dexie-react-hooks
-vi.mock('dexie-react-hooks', () => ({
-  useLiveQuery: vi.fn((_queryFn, _deps) => {
-    return mockRelationships.current;
-  }),
+// Mock local-first query hook
+vi.mock('@/hooks/useLocalFirstQuery/useLocalFirstQuery', () => ({
+  useLocalFirstQuery: vi.fn(() => ({
+    data: mockRelationships.current,
+    isLoading: mockRelationships.current === undefined,
+  })),
 }));
 
-// Mock Core
+// Mock direct dependencies
 const { mockBuildCompositeIdFromPubkyUri, mockGetPostRelationships } = vi.hoisted(() => ({
   mockBuildCompositeIdFromPubkyUri: vi.fn(),
   mockGetPostRelationships: vi.fn(),
@@ -38,6 +39,16 @@ vi.mock('@/controllers/post/post', () => ({
 }));
 vi.mock('@/models/models.utils', () => ({
   buildCompositeIdFromPubkyUri: mockBuildCompositeIdFromPubkyUri,
+  parseCompositeId: (compositeId: string) => {
+    const separatorIndex = compositeId.indexOf(':');
+    if (separatorIndex === -1) {
+      throw new Error('Invalid composite ID');
+    }
+    return {
+      pubky: compositeId.slice(0, separatorIndex),
+      id: compositeId.slice(separatorIndex + 1),
+    };
+  },
 }));
 
 // Mock hooks

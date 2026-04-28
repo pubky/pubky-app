@@ -334,14 +334,10 @@ describe('FileApplication', () => {
       const variant = FileVariant.SMALL;
       const expectedUrl = 'https://cdn.example.com/files/encoded-pubky/encoded-file-id/small';
 
-      const parseCompositeIdSpy = vi
-        .spyOn(parseCompositeIdModule, 'parseCompositeId')
-        .mockReturnValue({ pubky: TEST_PUBKY, id: fileId });
       vi.spyOn(filesApi, 'getFileUrl').mockReturnValue(expectedUrl);
 
       const result = FileApplication.getFileUrl({ fileId: compositeId, variant });
 
-      expect(parseCompositeIdSpy).toHaveBeenCalledWith(compositeId);
       expect(filesApi.getFileUrl).toHaveBeenCalledWith({ pubky: TEST_PUBKY, file_id: fileId, variant });
       expect(result).toBe(expectedUrl);
     });
