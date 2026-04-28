@@ -2,7 +2,7 @@
 
 import * as Core from '@/core';
 import { useLocalFirstQuery } from '@/hooks/useLocalFirstQuery/useLocalFirstQuery';
-import * as Types from './index';
+import type { UseCurrentUserProfileResult } from './useCurrentUserProfile.types';
 
 /**
  * Hook to get the current logged-in user's profile details.
@@ -21,7 +21,7 @@ import * as Types from './index';
  * return <div>{userDetails.name}</div>;
  * ```
  */
-export function useCurrentUserProfile(): Types.UseCurrentUserProfileResult {
+export function useCurrentUserProfile(): UseCurrentUserProfileResult {
   const currentUserPubky = Core.useAuthStore((state) => state.currentUserPubky);
 
   const { data: userDetails } = useLocalFirstQuery<Core.NexusUserDetails>({

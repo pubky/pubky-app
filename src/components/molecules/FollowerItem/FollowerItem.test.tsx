@@ -1,7 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen, fireEvent } from '@testing-library/react';
 import { FollowerItem } from './FollowerItem';
-import type { UserConnectionData } from '@/hooks/useProfileConnections/useProfileConnections';
+import type { UserConnectionData } from '@/hooks/useProfileConnections/useProfileConnections.types';
 import * as Core from '@/core';
 
 // Mock atoms
