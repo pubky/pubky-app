@@ -384,7 +384,6 @@ describe('ClickableTagsList', () => {
       expect(mockPostTagAddButton).toHaveBeenCalledWith(
         expect.objectContaining({
           variant: 'plain',
-          disabled: false,
         }),
         undefined,
       );

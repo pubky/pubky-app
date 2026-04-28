@@ -190,13 +190,7 @@ export function ClickableTagsList({
               />
             }
             addButtonContent={
-              hasAddButton ? (
-                <Molecules.PostTagAddButton
-                  variant="plain"
-                  disabled={!isAuthenticated}
-                  onClick={handleAddButtonClick}
-                />
-              ) : null
+              hasAddButton ? <Molecules.PostTagAddButton variant="plain" onClick={handleAddButtonClick} /> : null
             }
           />
         )}

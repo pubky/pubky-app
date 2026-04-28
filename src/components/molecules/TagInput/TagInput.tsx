@@ -174,7 +174,7 @@ export const TagInput = forwardRef<TagInputHandle, TagInputProps>(function TagIn
               maxLength={TAG_MAX_LENGTH}
               autoFocus={autoFocus}
               className={cn(
-                'h-full flex-1 bg-transparent p-0 text-sm leading-5 font-bold caret-white',
+                '-mt-0.5 h-full flex-1 bg-transparent p-0 text-sm leading-8 font-bold caret-white',
                 'border-none shadow-none ring-0 outline-none hover:outline-none focus:ring-0 focus:ring-offset-0 focus:outline-none',
                 'placeholder:font-bold',
                 isAtLimit ? 'placeholder:text-destructive' : 'placeholder:text-input',
