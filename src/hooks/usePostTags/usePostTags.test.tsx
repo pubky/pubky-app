@@ -2,7 +2,7 @@ import { act, renderHook, waitFor } from '@testing-library/react';
 import { vi, describe, it, expect, beforeEach } from 'vitest';
 import { usePostTags } from './usePostTags';
 import { TAGS_PER_PAGE } from './usePostTags.constants';
-import { mockAuthStore } from '@/test-utils';
+import { mockAuthStore } from '@/test-utils/stores';
 import * as DexieHooks from 'dexie-react-hooks';
 import { TagController } from '@/controllers/tag/tag';
 import { useAuthStore } from '@/stores/auth/auth.store';

@@ -6,7 +6,11 @@ import { getLocale, getMessages } from 'next-intl/server';
 import * as Atoms from '@/atoms';
 import * as Molecules from '@/molecules';
 import * as Organisms from '@/organisms';
-import * as Providers from '@/providers';
+import { IntlProvider } from '@/providers/IntlProvider/IntlProvider';
+import { GlobalErrorHandlerProvider } from '@/providers/GlobalErrorHandlerProvider/GlobalErrorHandlerProvider';
+import { ErrorBoundaryProvider } from '@/providers/ErrorBoundaryProvider/ErrorBoundaryProvider';
+import { DatabaseProvider } from '@/providers/DatabaseProvider/DatabaseProvider';
+import { RouteGuardProvider } from '@/providers/RouteGuardProvider/RouteGuardProvider';
 import { TOOLTIP_DELAY_MS } from '@/config';
 
 export const viewport: Viewport = {
@@ -32,24 +36,24 @@ export default async function RootLayout({ children }: { children: React.ReactNo
 
   return (
     <Molecules.RootContainer locale={locale}>
-      <Providers.IntlProvider locale={locale} messages={messages}>
+      <IntlProvider locale={locale} messages={messages}>
         <Atoms.TooltipProvider delayDuration={TOOLTIP_DELAY_MS}>
-          <Providers.GlobalErrorHandlerProvider>
-            <Providers.ErrorBoundaryProvider>
-              <Providers.DatabaseProvider>
-                <Providers.RouteGuardProvider>
+          <GlobalErrorHandlerProvider>
+            <ErrorBoundaryProvider>
+              <DatabaseProvider>
+                <RouteGuardProvider>
                   <Organisms.CoordinatorsManager />
                   <Organisms.Header />
                   {children}
                   <Molecules.NewPostCTA />
                   <Molecules.Toaster />
                   <Organisms.DialogSignIn />
-                </Providers.RouteGuardProvider>
-              </Providers.DatabaseProvider>
-            </Providers.ErrorBoundaryProvider>
-          </Providers.GlobalErrorHandlerProvider>
+                </RouteGuardProvider>
+              </DatabaseProvider>
+            </ErrorBoundaryProvider>
+          </GlobalErrorHandlerProvider>
         </Atoms.TooltipProvider>
-      </Providers.IntlProvider>
+      </IntlProvider>
     </Molecules.RootContainer>
   );
 }

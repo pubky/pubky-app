@@ -1,7 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { LastReadResult } from 'pubky-app-specs';
 import { NotificationApplication } from './notification';
-import { asInvalid, asOpaque } from '@/test-utils';
+import { asInvalid, asOpaque } from '@/test-utils/type-assertions';
 import { HttpMethod } from '@/libs/http/http.types';
 import { Logger } from '@/libs/logger/logger';
 import { PostStreamApplication } from '@/application/stream/posts/post';

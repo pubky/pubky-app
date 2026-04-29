@@ -4,7 +4,7 @@ import { useCallback, useMemo } from 'react';
 import { usePathname, useRouter } from 'next/navigation';
 import { PROFILE_ROUTES } from '@/app';
 import { PROFILE_PAGE_TYPES, ProfilePageType, FilterBarPageType } from '@/app/profile/types';
-import * as Providers from '@/providers';
+import { useProfileContext } from '@/providers/ProfileProvider/ProfileProvider';
 import { useIsMobile } from '@/hooks/useIsMobile/useIsMobile';
 
 /**
@@ -190,7 +190,7 @@ export function useProfileNavigation(): UseProfileNavigationReturn {
   const router = useRouter();
   const isMobile = useIsMobile();
 
-  const { pubky, isOwnProfile } = Providers.useProfileContext();
+  const { pubky, isOwnProfile } = useProfileContext();
 
   /**
    * Determine the active page from the current pathname

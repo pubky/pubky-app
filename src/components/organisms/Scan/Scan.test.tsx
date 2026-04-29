@@ -5,7 +5,7 @@ import { ScanContent, ScanFooter, ScanHeader, ScanNavigation } from './Scan';
 import * as Config from '@/config';
 import * as App from '@/app';
 import { useMobileAuth } from '@/hooks/useMobileAuth/useMobileAuth';
-import { asOpaque } from '@/test-utils';
+import { asOpaque } from '@/test-utils/type-assertions';
 
 // Mock Next.js router
 const mockPush = vi.fn();

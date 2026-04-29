@@ -1,14 +1,13 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import type { BlobResult, FileResult } from 'pubky-app-specs';
-import { asOpaque } from '@/test-utils';
+import { asOpaque } from '@/test-utils/type-assertions';
 import { HttpMethod } from '@/libs/http/http.types';
-import type { Pubky } from '@/models/models.types';
 import { FileVariant } from '@/services/nexus/file/file.types';
 import type { NexusFileDetails } from '@/services/nexus/nexus.types';
 import * as buildCompositeIdFromPubkyUriModule from '@/models/models.utils';
 import * as parseCompositeIdModule from '@/models/models.utils';
 import { FileDetailsModel } from '@/models/file/fileDetails';
-import { CompositeIdDomain } from '@/models/models.types';
+import { CompositeIdDomain, type Pubky } from '@/models/models.types';
 import { buildCompositeId, buildCompositeIdFromPubkyUri } from '@/models/models.utils';
 import { HomeserverService } from '@/services/homeserver/homeserver';
 import { LocalFileService } from '@/services/local/file/file';

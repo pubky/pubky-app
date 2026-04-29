@@ -1,8 +1,8 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { LastReadResult } from 'pubky-app-specs';
 import { AuthController } from './auth';
+import { asOpaque } from '@/test-utils/type-assertions';
 import {
-  asOpaque,
   mockAuthStore,
   mockHomeStore,
   mockHotStore,
@@ -11,10 +11,10 @@ import {
   mockNotificationStore,
   mockOnboardingStore,
   mockSearchStore,
-  mockSession as buildMockSession,
   mockSettingsStore,
   mockSignInStore,
-} from '@/test-utils';
+} from '@/test-utils/stores';
+import { mockSession as buildMockSession } from '@/test-utils/pubky';
 import { Identity } from '@/libs/identity/identity';
 import { Logger } from '@/libs/logger/logger';
 import * as clearDatabaseModule from '@/database/franky/franky.helpers';

@@ -9,7 +9,7 @@ import { useStreamIdFromFilters } from '@/hooks/useStreamIdFromFilters/useStream
 import { useSyncInteractiveVisualContent } from '@/hooks/useSyncInteractiveVisualContent/useSyncInteractiveVisualContent';
 import { TIMELINE_FEED_VARIANT } from '@/config';
 import * as Molecules from '@/molecules';
-import * as Providers from '@/providers';
+import { useProfileContext } from '@/providers/ProfileProvider/ProfileProvider';
 import { getTagsLayoutForSurfaceLayout } from '@/organisms/PostMain/PostMainLayout';
 import type { TimelineFeedProps } from './TimelineFeed.types';
 import { resolveVisualFeedContent } from './TimelineFeedVisual.helpers';
@@ -110,7 +110,7 @@ function BookmarksTimelineFeed({ children }: { children?: TimelineFeedProps['chi
 }
 
 function ProfileTimelineFeed({ children }: { children?: TimelineFeedProps['children'] }) {
-  const { pubky } = Providers.useProfileContext();
+  const { pubky } = useProfileContext();
   const streamId = pubky ? (`${StreamSource.AUTHOR}:${pubky}` as AuthorStreamCompositeId) : undefined;
   const layoutResolution = useFeedLayoutResolution(TIMELINE_FEED_VARIANT.PROFILE);
   const tagsLayout = getTagsLayoutForSurfaceLayout(layoutResolution.effectiveLayout);

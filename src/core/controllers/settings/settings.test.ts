@@ -1,7 +1,8 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { SettingsController } from './settings';
 import * as i18nUtils from '@/i18n/utils';
-import { asOpaque, mockAuthStore, mockSettingsStore } from '@/test-utils';
+import { asOpaque } from '@/test-utils/type-assertions';
+import { mockAuthStore, mockSettingsStore } from '@/test-utils/stores';
 import { SettingsApplication } from '@/application/settings/settings';
 import type { Pubky } from '@/models/models.types';
 import { SettingsNormalizer } from '@/pipes/settings/settings.normalizer';

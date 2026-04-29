@@ -8,7 +8,7 @@ import { useTagged } from '@/hooks/useTagged/useTagged';
 import * as React from 'react';
 import * as Atoms from '@/atoms';
 import * as Molecules from '@/molecules';
-import * as Providers from '@/providers';
+import { useProfileContext } from '@/providers/ProfileProvider/ProfileProvider';
 import { ProfilePageHeader } from '@/organisms';
 import { MAX_SIDEBAR_TAGS } from '../ProfilePageSidebar/ProfilePageSidebar.constants';
 
@@ -21,7 +21,7 @@ import { MAX_SIDEBAR_TAGS } from '../ProfilePageSidebar/ProfilePageSidebar.const
  */
 export function ProfileProfile() {
   // Get the profile pubky and isOwnProfile from context
-  const { pubky, isOwnProfile } = Providers.useProfileContext();
+  const { pubky, isOwnProfile } = useProfileContext();
 
   // Note: useProfileHeader guarantees a non-null profile with default values during loading
   const { profile, actions, isLoading } = useProfileHeader(pubky ?? '');

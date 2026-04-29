@@ -1,6 +1,6 @@
 import * as React from 'react';
 import * as Organisms from '@/organisms';
-import * as Providers from '@/providers';
+import { ProfileProvider } from '@/providers/ProfileProvider/ProfileProvider';
 
 /**
  * ProfileLayout - Next.js layout for profile pages (own profile)
@@ -15,8 +15,8 @@ import * as Providers from '@/providers';
  */
 export default function ProfileLayout({ children }: { children: React.ReactNode }) {
   return (
-    <Providers.ProfileProvider>
+    <ProfileProvider>
       <Organisms.ProfilePageContainer>{children}</Organisms.ProfilePageContainer>
-    </Providers.ProfileProvider>
+    </ProfileProvider>
   );
 }

@@ -2,7 +2,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen, fireEvent, act } from '@testing-library/react';
 import React, { createRef } from 'react';
 import type { MDXEditorMethods } from '@mdxeditor/editor';
-import { asOpaque } from '@/test-utils';
+import { asOpaque } from '@/test-utils/type-assertions';
 import InitializedMDXEditor from './InitializedMDXEditor';
 
 // Mock config - use a smaller value for easier testing

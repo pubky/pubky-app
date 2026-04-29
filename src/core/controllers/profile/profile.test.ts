@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { UserResult } from 'pubky-app-specs';
-import { asOpaque } from '@/test-utils';
+import { asOpaque } from '@/test-utils/type-assertions';
 import type { Pubky } from '@/models/models.types';
 const mockProfileApplication = {
   commitCreate: vi.fn(),

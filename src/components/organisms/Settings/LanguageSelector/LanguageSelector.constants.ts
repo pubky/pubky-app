@@ -1,7 +1,7 @@
 import type { LanguageOption } from './LanguageSelector.types';
 
 // Re-export RTL locales from shared i18n constants
-export { RTL_LOCALES, isRtlLocale } from '@/i18n';
+export { RTL_LOCALES, isRtlLocale } from '@/i18n/constants';
 
 /** Available languages for the application */
 export const LANGUAGES: LanguageOption[] = [

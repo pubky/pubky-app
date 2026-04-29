@@ -9,7 +9,7 @@ import { usePathname } from 'next/navigation';
 import * as Atoms from '@/atoms';
 import * as Molecules from '@/molecules';
 import * as Organisms from '@/organisms';
-import * as Providers from '@/providers';
+import { useProfileContext } from '@/providers/ProfileProvider/ProfileProvider';
 import * as Config from '@/config';
 import { MAX_SIDEBAR_TAGS } from './ProfilePageSidebar.constants';
 import { cn } from '@/libs/utils/utils';
@@ -19,7 +19,7 @@ export function ProfilePageSidebar() {
   const { isAuthenticated, requireAuth } = useRequireAuth();
 
   // Get the profile pubky and isOwnProfile from context
-  const { pubky, isOwnProfile } = Providers.useProfileContext();
+  const { pubky, isOwnProfile } = useProfileContext();
 
   // Get user profile data for the target user
   const { profile } = useUserProfile(pubky ?? '');

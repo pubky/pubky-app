@@ -7,7 +7,7 @@ import {
   PubkySpecsBuilder,
 } from 'pubky-app-specs';
 import { FeedApplication } from './feed';
-import { asOpaque } from '@/test-utils';
+import { asOpaque } from '@/test-utils/type-assertions';
 import { HttpMethod } from '@/libs/http/http.types';
 import { Logger } from '@/libs/logger/logger';
 import type { TFeedPersistCreateParams, TFeedPersistDeleteParams } from '@/application/feed/feed.types';

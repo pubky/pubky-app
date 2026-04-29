@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from 'vitest';
-import { asOpaque } from '@/test-utils';
+import { asOpaque } from '@/test-utils/type-assertions';
 import { probeImageDimensions, probeVideoDimensions } from './TimelineFeedVisualMedia.utils';
 
 describe('TimelineFeedVisualMedia.utils', () => {

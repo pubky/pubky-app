@@ -1,7 +1,7 @@
 import { renderHook, act, waitFor } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { useBookmark } from './useBookmark';
-import { mockAuthStore } from '@/test-utils';
+import { mockAuthStore } from '@/test-utils/stores';
 import { BookmarkController } from '@/controllers/bookmark/bookmark';
 import type { Pubky } from '@/models/models.types';
 import { useAuthStore } from '@/stores/auth/auth.store';

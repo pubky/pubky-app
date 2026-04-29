@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { asInvalid, asOpaque } from '@/test-utils';
+import { asInvalid, asOpaque } from '@/test-utils/type-assertions';
 import { MuteApplication } from './mute';
 import { AppError } from '@/libs/error/error';
 import { ClientErrorCode, ServerErrorCode } from '@/libs/error/error.codes';

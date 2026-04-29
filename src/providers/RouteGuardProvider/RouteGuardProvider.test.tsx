@@ -55,8 +55,8 @@ vi.mock('@/app', () => ({
   isDynamicPublicRoute: (path: string) => path.startsWith('/post/') || path.startsWith('/profile/'),
 }));
 
-// Mock @/providers
-vi.mock('@/providers', () => ({
+// Mock @/providers/RouteGuardProvider/RouteGuardProvider.constants
+vi.mock('@/providers/RouteGuardProvider/RouteGuardProvider.constants', () => ({
   ROUTE_ACCESS_MAP: {
     AUTHENTICATED: { allowedRoutes: ['/feed', '/settings'], redirectTo: '/feed' },
     UNAUTHENTICATED: { allowedRoutes: ['/login', '/landing'], redirectTo: '/login' },

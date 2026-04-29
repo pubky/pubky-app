@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import type { Root, Paragraph, Text, Code, Link, Emphasis } from 'mdast';
-import { asInvalid } from '@/test-utils';
+import { asInvalid } from '@/test-utils/type-assertions';
 import {
   remarkPlaintextCodeblock,
   remarkDisallowMarkdownLinks,

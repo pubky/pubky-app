@@ -9,8 +9,8 @@ import { useCustomStreamId } from '@/hooks/useCustomStreamId/useCustomStreamId';
 import { useFeedLayoutResolution } from '@/hooks/useFeedLayoutResolution/useFeedLayoutResolution';
 import { useStreamIdFromFilters } from '@/hooks/useStreamIdFromFilters/useStreamIdFromFilters';
 import { useStreamPagination } from '@/hooks/useStreamPagination/useStreamPagination';
-import * as Providers from '@/providers';
-import { asInvalid } from '@/test-utils';
+import { ProfileProvider } from '@/providers/ProfileProvider/ProfileProvider';
+import { asInvalid } from '@/test-utils/type-assertions';
 import type { UsePullToRefreshResult } from '@/hooks/usePullToRefresh/usePullToRefresh.types';
 import { PostStreamTypes, type PostStreamId } from '@/models/stream/post/postStream.types';
 import { useHomeStore } from '@/stores/home/home.store';
@@ -95,14 +95,6 @@ vi.mock('@/hooks/useIsScrolledFromTop/useIsScrolledFromTop', () => ({
 vi.mock('@/hooks/usePullToRefresh/usePullToRefresh', () => ({
   usePullToRefresh: mockUsePullToRefresh,
 }));
-
-vi.mock('@/providers', async (importOriginal) => {
-  const actual = await importOriginal<typeof import('@/providers')>();
-  return {
-    ...actual,
-    ProfileContext: actual.ProfileContext,
-  };
-});
 
 // Mock components
 vi.mock('@/molecules', () => ({
@@ -520,9 +512,9 @@ describe('TimelineFeed', () => {
   describe('Profile Variant', () => {
     it('should show loading when profile context has no pubky', () => {
       render(
-        <Providers.ProfileProvider>
+        <ProfileProvider>
           <TimelineFeed variant={TIMELINE_FEED_VARIANT.PROFILE} />
-        </Providers.ProfileProvider>,
+        </ProfileProvider>,
       );
 
       // When pubky is not available, streamId is undefined

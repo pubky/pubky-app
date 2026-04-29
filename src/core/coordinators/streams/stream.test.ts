@@ -1,7 +1,8 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { APP_ROUTES, POST_ROUTES } from '@/app/routes';
 import { PubkyAppFeedReach, PubkyAppFeedSort, PubkyAppFeedLayout } from 'pubky-app-specs';
-import { mockHomeStore, mockSession } from '@/test-utils';
+import { mockHomeStore } from '@/test-utils/stores';
+import { mockSession } from '@/test-utils/pubky';
 import { FeedController } from '@/controllers/feed/feed';
 import { SKIP_FETCH_NEW_POSTS } from '@/controllers/stream/posts/post.constants';
 import { StreamPostsController } from '@/controllers/stream/posts/posts';

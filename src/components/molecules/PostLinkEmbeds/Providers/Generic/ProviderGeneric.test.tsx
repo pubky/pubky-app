@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { render, screen } from '@testing-library/react';
-import { asInvalid } from '@/test-utils';
+import { asInvalid } from '@/test-utils/type-assertions';
 import type { EmbedData } from '../../Providers/Provider.types';
 import { Generic } from './ProviderGeneric';
 import { GenericPreview } from './GenericPreview';

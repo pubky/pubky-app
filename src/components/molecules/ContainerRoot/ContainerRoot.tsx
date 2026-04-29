@@ -3,7 +3,7 @@ import Script from 'next/script';
 
 import * as Atoms from '@/atoms';
 import * as Molecules from '@/molecules';
-import { isRtlLocale } from '@/i18n';
+import { isRtlLocale } from '@/i18n/constants';
 import { Env } from '@/libs/env/env';
 
 const interTight = Inter_Tight({

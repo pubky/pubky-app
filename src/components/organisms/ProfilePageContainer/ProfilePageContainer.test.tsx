@@ -2,9 +2,11 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen } from '@testing-library/react';
 import { ProfilePageContainer } from './ProfilePageContainer';
 import { PROFILE_PAGE_TYPES } from '@/app/profile/types';
-import { asOpaque, mockAuthStore } from '@/test-utils';
+import { asOpaque } from '@/test-utils/type-assertions';
+import { mockAuthStore } from '@/test-utils/stores';
 import { useProfileHeader } from '@/hooks/useProfileHeader/useProfileHeader';
 import { useAuthStore } from '@/stores/auth/auth.store';
+import { useProfileContext } from '@/providers/ProfileProvider/ProfileProvider';
 import type { AuthStore } from '@/stores/auth/auth.types';
 // Mock dependencies
 const mockCurrentUserPubky = 'user123';
@@ -17,7 +19,7 @@ vi.mock('@/stores/auth/auth.store', () => ({
 }));
 
 // Mock Providers
-vi.mock('@/providers', () => ({
+vi.mock('@/providers/ProfileProvider/ProfileProvider', () => ({
   useProfileContext: vi.fn(() => ({
     pubky: mockCurrentUserPubky,
     isOwnProfile: true,
@@ -276,8 +278,7 @@ describe('ProfilePageContainer - User not found', () => {
 
   it('shows UserNotFound when user is not found and not own profile', async () => {
     // Mock useProfileContext to return isOwnProfile: false
-    const providers = await import('@/providers');
-    vi.mocked(providers.useProfileContext).mockReturnValue({
+    vi.mocked(useProfileContext).mockReturnValue({
       pubky: 'nonexistent-user',
       isOwnProfile: false,
       isLoading: false,
@@ -312,8 +313,7 @@ describe('ProfilePageContainer - User not found', () => {
 
   it('shows ProfilePageLayout when user is found', async () => {
     // Reset to default mocks
-    const providers = await import('@/providers');
-    vi.mocked(providers.useProfileContext).mockReturnValue({
+    vi.mocked(useProfileContext).mockReturnValue({
       pubky: mockCurrentUserPubky,
       isOwnProfile: true,
       isLoading: false,
@@ -338,8 +338,7 @@ describe('ProfilePageContainer - User not found', () => {
 
   it('does not show UserNotFound for own profile even if userNotFound is true', async () => {
     // Mock useProfileContext to return isOwnProfile: true
-    const providers = await import('@/providers');
-    vi.mocked(providers.useProfileContext).mockReturnValue({
+    vi.mocked(useProfileContext).mockReturnValue({
       pubky: mockCurrentUserPubky,
       isOwnProfile: true,
       isLoading: false,
@@ -375,8 +374,7 @@ describe('ProfilePageContainer - User not found', () => {
 
   it('does not show UserNotFound during logout even if userNotFound is true', async () => {
     // Mock useProfileContext to return isOwnProfile: false (simulating state after logout clears auth)
-    const providers = await import('@/providers');
-    vi.mocked(providers.useProfileContext).mockReturnValue({
+    vi.mocked(useProfileContext).mockReturnValue({
       pubky: '',
       isOwnProfile: false,
       isLoading: false,

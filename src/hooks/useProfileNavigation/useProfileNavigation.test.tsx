@@ -19,7 +19,7 @@ vi.mock('next/navigation', () => ({
 const mockPubky = 'user123';
 const mockIsOwnProfile = vi.fn(() => true);
 
-vi.mock('@/providers', () => ({
+vi.mock('@/providers/ProfileProvider/ProfileProvider', () => ({
   useProfileContext: () => ({
     pubky: mockPubky,
     isOwnProfile: mockIsOwnProfile(),

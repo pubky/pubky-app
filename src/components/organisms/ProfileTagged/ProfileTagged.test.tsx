@@ -6,7 +6,7 @@ import { useTagged } from '@/hooks/useTagged/useTagged';
 import { useUserProfile } from '@/hooks/useUserProfile/useUserProfile';
 
 // Mock providers
-vi.mock('@/providers', () => ({
+vi.mock('@/providers/ProfileProvider/ProfileProvider', () => ({
   useProfileContext: () => ({
     pubky: 'test-user-pubky',
     isOwnProfile: true,

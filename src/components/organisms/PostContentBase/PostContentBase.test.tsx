@@ -5,7 +5,7 @@ import { PostContentBase } from './PostContentBase';
 import * as Molecules from '@/molecules';
 import * as Organisms from '@/organisms';
 import { usePostDetails } from '@/hooks/usePostDetails/usePostDetails';
-import { asOpaque } from '@/test-utils';
+import { asOpaque } from '@/test-utils/type-assertions';
 import type { EnrichedPostDetails } from '@/application/moderation/moderation.types';
 import { useLocalFilesStore } from '@/stores/localFiles/localFiles.store';
 // Mock next/navigation for usePathname used by PostText

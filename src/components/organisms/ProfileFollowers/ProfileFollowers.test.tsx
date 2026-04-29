@@ -4,10 +4,10 @@ import { ProfileFollowers } from './ProfileFollowers';
 import { useFollowUser } from '@/hooks/useFollowUser/useFollowUser';
 import { useInfiniteScroll } from '@/hooks/useInfiniteScroll/useInfiniteScroll';
 import { useProfileConnections } from '@/hooks/useProfileConnections/useProfileConnections';
-import { asOpaque } from '@/test-utils';
+import { asOpaque } from '@/test-utils/type-assertions';
 import type { Pubky } from '@/models/models.types';
 // Mock Providers
-vi.mock('@/providers', () => ({
+vi.mock('@/providers/ProfileProvider/ProfileProvider', () => ({
   useProfileContext: vi.fn(() => ({
     pubky: 'user123',
     isOwnProfile: true,

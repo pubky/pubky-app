@@ -7,7 +7,7 @@ import { useProfileNavigation } from '@/hooks/useProfileNavigation/useProfileNav
 import { useRequireAuth } from '@/hooks/useRequireAuth/useRequireAuth';
 import * as Molecules from '@/molecules';
 import * as Organisms from '@/organisms';
-import * as Providers from '@/providers';
+import { useProfileContext } from '@/providers/ProfileProvider/ProfileProvider';
 import { useAuthStore } from '@/stores/auth/auth.store';
 export interface ProfilePageContainerProps {
   /** Child pages to render in the main content area */
@@ -47,7 +47,7 @@ export interface ProfilePageContainerProps {
  */
 export function ProfilePageContainer({ children }: ProfilePageContainerProps) {
   // Business logic: Get profile context (pubky and isOwnProfile)
-  const { pubky, isOwnProfile } = Providers.useProfileContext();
+  const { pubky, isOwnProfile } = useProfileContext();
 
   // Check if logout is in progress (global state to prevent flash of weird states)
   const isLoggingOut = useAuthStore((state) => state.isLoggingOut);

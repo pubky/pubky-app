@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { renderHook, act } from '@testing-library/react';
-import { mockMouseEvent } from '@/test-utils';
+import { mockMouseEvent } from '@/test-utils/react-events';
 import { useUserInfoPopoverActions } from './useUserInfoPopoverActions';
 
 const mockPush = vi.fn();

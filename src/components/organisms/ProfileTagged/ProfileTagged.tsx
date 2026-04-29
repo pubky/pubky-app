@@ -4,7 +4,7 @@ import { useTagged } from '@/hooks/useTagged/useTagged';
 import { useUserProfile } from '@/hooks/useUserProfile/useUserProfile';
 import * as Atoms from '@/atoms';
 import * as Molecules from '@/molecules';
-import * as Providers from '@/providers';
+import { useProfileContext } from '@/providers/ProfileProvider/ProfileProvider';
 import { ProfileTaggedSkeleton } from './ProfileTagged.skeleton';
 
 /**
@@ -20,7 +20,7 @@ import { ProfileTaggedSkeleton } from './ProfileTagged.skeleton';
  */
 export function ProfileTagged() {
   // Get the profile pubky from context
-  const { pubky } = Providers.useProfileContext();
+  const { pubky } = useProfileContext();
 
   // Get user profile data for the target user
   const { profile } = useUserProfile(pubky ?? '');

@@ -1,7 +1,7 @@
 import { act, renderHook, waitFor } from '@testing-library/react';
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import type { Session } from '@synonymdev/pubky';
-import { mockSession } from '@/test-utils';
+import { mockSession } from '@/test-utils/pubky';
 import { useAuthUrl } from './useAuthUrl';
 import { AppError } from '@/libs/error/error';
 import { AuthErrorCode, TimeoutErrorCode } from '@/libs/error/error.codes';

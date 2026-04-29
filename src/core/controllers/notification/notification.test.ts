@@ -1,7 +1,8 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { NotificationController } from './notification';
 import * as Config from '@/config';
-import { mockAuthStore, mockNotificationStore, asOpaque } from '@/test-utils';
+import { mockAuthStore, mockNotificationStore } from '@/test-utils/stores';
+import { asOpaque } from '@/test-utils/type-assertions';
 import { NotificationApplication } from '@/application/notification/notification';
 import type { TGetOrFetchNotificationsResponse } from '@/application/notification/notification.types';
 import type { Pubky } from '@/models/models.types';

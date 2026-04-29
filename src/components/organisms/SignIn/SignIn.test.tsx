@@ -2,7 +2,7 @@ import { describe, it, expect, vi, beforeAll, afterAll, beforeEach } from 'vites
 import { render, screen, waitFor, act, fireEvent } from '@testing-library/react';
 import React from 'react';
 import messages from '../../../../messages/en.json';
-import { asOpaque } from '@/test-utils';
+import { asOpaque } from '@/test-utils/type-assertions';
 import { SignInContent, SignInFooter } from './SignIn';
 import { useMobileAuth } from '@/hooks/useMobileAuth/useMobileAuth';
 

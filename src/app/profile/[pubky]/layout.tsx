@@ -3,7 +3,7 @@
 import * as React from 'react';
 import { useParams } from 'next/navigation';
 import * as Organisms from '@/organisms';
-import * as Providers from '@/providers';
+import { ProfileProvider } from '@/providers/ProfileProvider/ProfileProvider';
 import { stripPubkyPrefix } from '@/libs/utils/utils';
 import type { Pubky } from '@/models/models.types';
 /**
@@ -23,8 +23,8 @@ export default function DynamicProfileLayout({ children }: { children: React.Rea
   const pubky = stripPubkyPrefix(decodedParam) as Pubky;
 
   return (
-    <Providers.ProfileProvider pubky={pubky}>
+    <ProfileProvider pubky={pubky}>
       <Organisms.ProfilePageContainer>{children}</Organisms.ProfilePageContainer>
-    </Providers.ProfileProvider>
+    </ProfileProvider>
   );
 }

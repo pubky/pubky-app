@@ -1,6 +1,8 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import type { Session, Keypair } from '@synonymdev/pubky';
-import { asOpaque, mockAuthStore, mockSession } from '@/test-utils';
+import { asOpaque } from '@/test-utils/type-assertions';
+import { mockAuthStore } from '@/test-utils/stores';
+import { mockSession } from '@/test-utils/pubky';
 import { AppError } from '@/libs/error/error';
 import { AuthErrorCode, ClientErrorCode, NetworkErrorCode, ServerErrorCode } from '@/libs/error/error.codes';
 import { Err } from '@/libs/error/error.factories';

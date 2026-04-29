@@ -5,7 +5,7 @@ import { WhoToFollowPageMain } from './WhoToFollowPageMain';
 import { useFollowUser } from '@/hooks/useFollowUser/useFollowUser';
 import { useInfiniteScroll } from '@/hooks/useInfiniteScroll/useInfiniteScroll';
 import { useUserStream } from '@/hooks/useUserStream/useUserStream';
-import { asOpaque } from '@/test-utils';
+import { asOpaque } from '@/test-utils/type-assertions';
 import type { Pubky } from '@/models/models.types';
 // Mock dependencies
 vi.mock('@/stores/auth/auth.store', () => ({

@@ -2,7 +2,7 @@
 
 import { createContext, useEffect, useRef, useState, type ReactNode } from 'react';
 import * as Atoms from '@/atoms';
-import { DatabaseContextType } from '@/providers';
+import { type DatabaseContextType } from '@/providers/DatabaseProvider/DatabaseProvider.types';
 import { AppError } from '@/libs/error/error';
 import { DatabaseErrorCode } from '@/libs/error/error.codes';
 import { Err } from '@/libs/error/error.factories';

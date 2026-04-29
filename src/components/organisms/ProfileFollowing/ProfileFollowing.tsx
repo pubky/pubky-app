@@ -7,7 +7,7 @@ import { useInfiniteScroll } from '@/hooks/useInfiniteScroll/useInfiniteScroll';
 import * as Atoms from '@/atoms';
 import * as Molecules from '@/molecules';
 import * as Organisms from '@/organisms';
-import * as Providers from '@/providers';
+import { useProfileContext } from '@/providers/ProfileProvider/ProfileProvider';
 import { NEXUS_USERS_PER_PAGE } from '@/config';
 import type { Pubky } from '@/models/models.types';
 import { useAuthStore } from '@/stores/auth/auth.store';
@@ -22,7 +22,7 @@ const LOAD_MORE_SKELETON_COUNT = 2;
  */
 export function ProfileFollowing() {
   // Get the profile pubky from context
-  const { pubky } = Providers.useProfileContext();
+  const { pubky } = useProfileContext();
   // Get the current logged-in user's pubky
   const currentUserPubky = useAuthStore((state) => state.currentUserPubky);
 

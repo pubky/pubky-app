@@ -1,7 +1,7 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { FollowResult } from 'pubky-app-specs';
 import { UserController } from './user';
-import { asOpaque } from '@/test-utils';
+import { asOpaque } from '@/test-utils/type-assertions';
 import { HttpMethod } from '@/libs/http/http.types';
 import * as useHomeStoreModule from '@/stores/home/home.store';
 import * as getStreamIdModule from '@/stores/home/home.utils';

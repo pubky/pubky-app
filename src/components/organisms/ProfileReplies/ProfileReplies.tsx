@@ -1,6 +1,6 @@
 'use client';
 
-import * as Providers from '@/providers';
+import { useProfileContext } from '@/providers/ProfileProvider/ProfileProvider';
 import { RepliesWithParent } from './RepliesWithParent';
 import type { AuthorRepliesStreamCompositeId } from '@/models/stream/post/postStream.types';
 import { StreamSource } from '@/services/nexus/stream/posts/postStream.types';
@@ -12,7 +12,7 @@ import { StreamSource } from '@/services/nexus/stream/posts/postStream.types';
  * Uses ProfileContext to get the target user's pubky.
  */
 export function ProfileReplies() {
-  const { pubky } = Providers.useProfileContext();
+  const { pubky } = useProfileContext();
 
   const streamId = pubky ? (`${StreamSource.AUTHOR_REPLIES}:${pubky}` as AuthorRepliesStreamCompositeId) : undefined;
 

@@ -1,7 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import * as Config from '@/config';
 import type { TFeedbackSubmitParams } from './feedback.types';
-import { asInvalid } from '@/test-utils';
+import { asInvalid } from '@/test-utils/type-assertions';
 import { FeedbackApplication } from '@/application/feedback/feedback';
 import type { Pubky } from '@/models/models.types';
 const testData = {

@@ -4,7 +4,7 @@ import { useAuthStatus } from '@/hooks/useAuthStatus/useAuthStatus';
 import { useEffect, useMemo, useRef } from 'react';
 import { useRouter, usePathname } from 'next/navigation';
 import { useTranslations, useLocale } from 'next-intl';
-import * as Providers from '@/providers';
+import { ROUTE_ACCESS_MAP } from '@/providers/RouteGuardProvider/RouteGuardProvider.constants';
 import * as App from '@/app';
 import * as Atoms from '@/atoms';
 import { Logger } from '@/libs/logger/logger';
@@ -138,7 +138,7 @@ export function RouteGuardProvider({ children }: RouteGuardProviderProps) {
     if (isLoading) return false;
 
     // Get the allowed routes for the current authentication status
-    const routeAccess = Providers.ROUTE_ACCESS_MAP[status];
+    const routeAccess = ROUTE_ACCESS_MAP[status];
 
     // Check if current pathname matches any allowed route (exact match or sub-route)
     return routeAccess.allowedRoutes.some((route) => {
@@ -161,7 +161,7 @@ export function RouteGuardProvider({ children }: RouteGuardProviderProps) {
     if (isRouteAccessible) return;
 
     // Redirect user to the appropriate default route for their authentication status
-    const routeAccess = Providers.ROUTE_ACCESS_MAP[status];
+    const routeAccess = ROUTE_ACCESS_MAP[status];
     const redirectTo = routeAccess.redirectTo;
 
     // Runtime validation: ensure redirect target is actually in allowed routes

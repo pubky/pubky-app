@@ -2,7 +2,7 @@ import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import * as Config from '@/config';
 import { postStreamQueue } from './muting/post-stream-queue';
 import { MuteFilter } from './muting/mute-filter';
-import { asInvalid } from '@/test-utils';
+import { asInvalid } from '@/test-utils/type-assertions';
 import { FileApplication } from '@/application/file/file';
 import { PostStreamApplication } from '@/application/stream/posts/post';
 import { FORCE_FETCH_NEW_POSTS, SKIP_FETCH_NEW_POSTS } from '@/controllers/stream/posts/post.constants';
@@ -23,13 +23,13 @@ import { UserRelationshipsModel } from '@/models/user/relationships/userRelation
 import { UserTagsModel } from '@/models/user/tags/userTags';
 import { LocalStreamPostsService } from '@/services/local/stream/posts/posts';
 import { LocalStreamUsersService } from '@/services/local/stream/users/users';
-import { StreamSorting } from '@/services/nexus/nexus.types';
-import type {
-  NexusFileDetails,
-  NexusFileUrls,
-  NexusPost,
-  NexusPostsKeyStream,
-  NexusUser,
+import {
+  StreamSorting,
+  type NexusFileDetails,
+  type NexusFileUrls,
+  type NexusPost,
+  type NexusPostsKeyStream,
+  type NexusUser,
 } from '@/services/nexus/nexus.types';
 import { NexusPostStreamService } from '@/services/nexus/stream/posts/postStream';
 import { NexusUserStreamService } from '@/services/nexus/stream/users/userStream';

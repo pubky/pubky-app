@@ -1,7 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { BookmarkApplication } from './bookmark';
 import type { TCreateBookmarkInput, TDeleteBookmarkInput } from './bookmark.types';
-import { mockAuthStore } from '@/test-utils';
+import { mockAuthStore } from '@/test-utils/stores';
 import { HttpMethod } from '@/libs/http/http.types';
 import type { Pubky } from '@/models/models.types';
 import { HomeserverService } from '@/services/homeserver/homeserver';

@@ -1,6 +1,7 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { APP_ROUTES, AUTH_ROUTES, ONBOARDING_ROUTES, PROFILE_ROUTES } from '@/app';
-import { asInvalid, asOpaque, mockSession } from '@/test-utils';
+import { asInvalid, asOpaque } from '@/test-utils/type-assertions';
+import { mockSession } from '@/test-utils/pubky';
 import { NotificationController } from '@/controllers/notification/notification';
 import type { PollingServiceConfig } from '@/coordinators/base/coordinators.types';
 import { NotificationCoordinator } from '@/coordinators/notifications/notifications';

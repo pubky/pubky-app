@@ -1,7 +1,8 @@
 import { renderHook, act } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import type { RefObject } from 'react';
-import { asOpaque, mockClipboardEvent } from '@/test-utils';
+import { asOpaque } from '@/test-utils/type-assertions';
+import { mockClipboardEvent } from '@/test-utils/react-events';
 import { useTagInput } from './useTagInput';
 import { TAG_MAX_LENGTH } from '@/config';
 

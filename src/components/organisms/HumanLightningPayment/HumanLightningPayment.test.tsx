@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, waitFor, fireEvent, screen } from '@testing-library/react';
-import { asOpaque } from '@/test-utils';
+import { asOpaque } from '@/test-utils/type-assertions';
 import { HumanLightningPayment } from './HumanLightningPayment';
 import { VerificationHandler } from './HumanLightningPayment.utils';
 import { HomegateController } from '@/controllers/homegate/homegate';

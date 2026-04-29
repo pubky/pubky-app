@@ -1,6 +1,7 @@
 import { renderHook, act } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { asOpaque, mockClipboardEvent, mockDragEvent } from '@/test-utils';
+import { asOpaque } from '@/test-utils/type-assertions';
+import { mockClipboardEvent, mockDragEvent } from '@/test-utils/react-events';
 import { usePostInput } from './usePostInput';
 import { POST_INPUT_VARIANT } from '@/organisms/PostInput/PostInput.constants';
 
