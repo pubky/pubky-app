@@ -206,7 +206,7 @@ export const CreateProfileForm = () => {
         </Atoms.Card>
         <Molecules.ProfileNavigation
           className="onboarding-nav mt-auto lg:pt-0"
-          hiddenBackButton={true}
+          backButtonDisabled={true}
           continueButtonDisabled={isSubmitDisabled}
           continueButtonLoading={state.isSaving}
           continueText={t(state.submitTextKey)}
