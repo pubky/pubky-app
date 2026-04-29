@@ -12,8 +12,7 @@ import { PostRelationshipsModel } from '@/models/post/relationships/postRelation
 import { PostTagsModel } from '@/models/post/tags/postTags';
 import { PostTtlModel } from '@/models/post/ttl/postTtl';
 import { TagModel } from '@/models/shared/tag/tag';
-import { PostStreamTypes } from '@/models/stream/post/postStream.types';
-import type { PostStreamId } from '@/models/stream/post/postStream.types';
+import { PostStreamTypes, type PostStreamId } from '@/models/stream/post/postStream.types';
 import { PostStreamModel } from '@/models/stream/post/tables/postStream';
 import { UnreadPostStreamModel } from '@/models/stream/post/tables/postStream.unread';
 import { LocalStreamPostsService } from '@/services/local/stream/posts/posts';

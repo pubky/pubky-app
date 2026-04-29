@@ -14,8 +14,7 @@ import type {
 import { PostStreamApplication } from '@/application/stream/posts/post';
 import { UserStreamApplication } from '@/application/stream/users/users';
 import type { Pubky } from '@/models/models.types';
-import { NotificationType } from '@/models/notification/notification.types';
-import type { FlatNotification } from '@/models/notification/notification.types';
+import { NotificationType, type FlatNotification } from '@/models/notification/notification.types';
 import { NotificationNormalizer } from '@/pipes/notification/notification.normalizer';
 import { HomeserverService } from '@/services/homeserver/homeserver';
 import { LocalNotificationService } from '@/services/local/notification/notification';

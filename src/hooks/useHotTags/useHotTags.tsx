@@ -6,8 +6,7 @@ import { DEFAULT_LIMIT } from './useHotTags.constants';
 import { Logger } from '@/libs/logger/logger';
 import { isAppError } from '@/libs/error/error.utils';
 import { HotController } from '@/controllers/hot/hot';
-import { UserStreamTimeframe } from '@/services/nexus/nexus.types';
-import type { NexusHotTag } from '@/services/nexus/nexus.types';
+import { UserStreamTimeframe, type NexusHotTag } from '@/services/nexus/nexus.types';
 /**
  * useHotTags
  *

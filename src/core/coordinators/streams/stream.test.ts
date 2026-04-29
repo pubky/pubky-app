@@ -12,8 +12,16 @@ import type { FeedModelSchema } from '@/models/feed/feed.schema';
 import type { Pubky } from '@/models/models.types';
 import { useAuthStore } from '@/stores/auth/auth.store';
 import { useHomeStore } from '@/stores/home/home.store';
-import { CONTENT, LAYOUT, REACH, SORT } from '@/stores/home/home.types';
-import type { ContentType, HomeStore, ReachType, SortType } from '@/stores/home/home.types';
+import {
+  CONTENT,
+  LAYOUT,
+  REACH,
+  SORT,
+  type ContentType,
+  type HomeStore,
+  type ReachType,
+  type SortType,
+} from '@/stores/home/home.types';
 // =============================================================================
 // Test Helpers
 // =============================================================================

@@ -5,8 +5,7 @@ import { useMutedUsers } from '@/hooks/useMutedUsers/useMutedUsers';
 import type { UseNotificationsResult } from './useNotifications.types';
 import { Logger } from '@/libs/logger/logger';
 import { NotificationController } from '@/controllers/notification/notification';
-import { NotificationType } from '@/models/notification/notification.types';
-import type { FlatNotification } from '@/models/notification/notification.types';
+import { NotificationType, type FlatNotification } from '@/models/notification/notification.types';
 import { useAuthStore } from '@/stores/auth/auth.store';
 import { useNotificationStore } from '@/stores/notification/notification.store';
 /**

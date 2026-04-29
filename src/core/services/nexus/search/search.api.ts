@@ -1,6 +1,9 @@
 import { buildUrlWithQuery, encodePathSegment } from '@/services/nexus/nexus.utils';
-import { SEARCH_PATH_PARAMS } from '@/services/nexus/search/search.types';
-import type { TPrefixSearchParams, TTagSearchParams } from '@/services/nexus/search/search.types';
+import {
+  SEARCH_PATH_PARAMS,
+  type TPrefixSearchParams,
+  type TTagSearchParams,
+} from '@/services/nexus/search/search.types';
 /**
  * Search API Endpoints
  *

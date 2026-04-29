@@ -1,8 +1,7 @@
 import { useMemo } from 'react';
 import { PostStreamTypes } from '@/models/stream/post/postStream.types';
 import { useHomeStore } from '@/stores/home/home.store';
-import { CONTENT, SORT } from '@/stores/home/home.types';
-import type { ContentType, SortType } from '@/stores/home/home.types';
+import { CONTENT, SORT, type ContentType, type SortType } from '@/stores/home/home.types';
 /**
  * Custom hook that returns the bookmarks streamId based on Sort and Content filters
  *

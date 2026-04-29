@@ -5,45 +5,36 @@ import { Logger } from '@/libs/logger/logger';
 import { DatabaseErrorCode } from '@/libs/error/error.codes';
 import { Err } from '@/libs/error/error.factories';
 import { ErrorService } from '@/libs/error/error.types';
-import { bookmarkTableSchema } from '@/models/bookmark/bookmark.schema';
-import type { BookmarkModelSchema } from '@/models/bookmark/bookmark.schema';
-import { feedTableSchema } from '@/models/feed/feed.schema';
-import type { FeedModelSchema } from '@/models/feed/feed.schema';
-import { fileDetailsTableSchema } from '@/models/file/fileDetails.schema';
-import type { FileDetailsModelSchema } from '@/models/file/fileDetails.schema';
-import { hotTagsTableSchema } from '@/models/hot/hot.schema';
-import type { HotTagsModelSchema } from '@/models/hot/hot.schema';
+import { bookmarkTableSchema, type BookmarkModelSchema } from '@/models/bookmark/bookmark.schema';
+import { feedTableSchema, type FeedModelSchema } from '@/models/feed/feed.schema';
+import { fileDetailsTableSchema, type FileDetailsModelSchema } from '@/models/file/fileDetails.schema';
+import { hotTagsTableSchema, type HotTagsModelSchema } from '@/models/hot/hot.schema';
 import type { Pubky } from '@/models/models.types';
-import { moderationTableSchema } from '@/models/moderation/moderation.schema';
-import type { ModerationModelSchema } from '@/models/moderation/moderation.schema';
+import { moderationTableSchema, type ModerationModelSchema } from '@/models/moderation/moderation.schema';
 import { notificationTableSchema } from '@/models/notification/notification.schema';
 import type { FlatNotification } from '@/models/notification/notification.types';
-import { postCountsTableSchema } from '@/models/post/counts/postCounts.schema';
-import type { PostCountsModelSchema } from '@/models/post/counts/postCounts.schema';
-import { postDetailsTableSchema } from '@/models/post/details/postDetails.schema';
-import type { PostDetailsModelSchema } from '@/models/post/details/postDetails.schema';
-import { postRelationshipsTableSchema } from '@/models/post/relationships/postRelationships.schema';
-import type { PostRelationshipsModelSchema } from '@/models/post/relationships/postRelationships.schema';
-import { postTtlTableSchema } from '@/models/post/ttl/postTtl.schema';
-import type { PostTtlModelSchema } from '@/models/post/ttl/postTtl.schema';
-import { tagCollectionTableSchema } from '@/models/shared/tag/tag.schema';
-import type { TagCollectionModelSchema } from '@/models/shared/tag/tag.schema';
-import { postStreamTableSchema } from '@/models/stream/post/postStream.schema';
-import type { PostStreamModelSchema } from '@/models/stream/post/postStream.schema';
-import { tagStreamTableSchema } from '@/models/stream/tag/tagStream.schema';
-import type { TagStreamModelSchema } from '@/models/stream/tag/tagStream.schema';
-import { userStreamTableSchema } from '@/models/stream/user/userStream.schema';
-import type { UserStreamModelSchema } from '@/models/stream/user/userStream.schema';
-import { userConnectionsTableSchema } from '@/models/user/connections/userConnections.schema';
-import type { UserConnectionsModelSchema } from '@/models/user/connections/userConnections.schema';
-import { userCountsTableSchema } from '@/models/user/counts/userCounts.schema';
-import type { UserCountsModelSchema } from '@/models/user/counts/userCounts.schema';
-import { userDetailsTableSchema } from '@/models/user/details/userDetails.schema';
-import type { UserDetailsModelSchema } from '@/models/user/details/userDetails.schema';
-import { userRelationshipsTableSchema } from '@/models/user/relationships/userRelationships.schema';
-import type { UserRelationshipsModelSchema } from '@/models/user/relationships/userRelationships.schema';
-import { userTtlTableSchema } from '@/models/user/ttl/userTtl.schema';
-import type { UserTtlModelSchema } from '@/models/user/ttl/userTtl.schema';
+import { postCountsTableSchema, type PostCountsModelSchema } from '@/models/post/counts/postCounts.schema';
+import { postDetailsTableSchema, type PostDetailsModelSchema } from '@/models/post/details/postDetails.schema';
+import {
+  postRelationshipsTableSchema,
+  type PostRelationshipsModelSchema,
+} from '@/models/post/relationships/postRelationships.schema';
+import { postTtlTableSchema, type PostTtlModelSchema } from '@/models/post/ttl/postTtl.schema';
+import { tagCollectionTableSchema, type TagCollectionModelSchema } from '@/models/shared/tag/tag.schema';
+import { postStreamTableSchema, type PostStreamModelSchema } from '@/models/stream/post/postStream.schema';
+import { tagStreamTableSchema, type TagStreamModelSchema } from '@/models/stream/tag/tagStream.schema';
+import { userStreamTableSchema, type UserStreamModelSchema } from '@/models/stream/user/userStream.schema';
+import {
+  userConnectionsTableSchema,
+  type UserConnectionsModelSchema,
+} from '@/models/user/connections/userConnections.schema';
+import { userCountsTableSchema, type UserCountsModelSchema } from '@/models/user/counts/userCounts.schema';
+import { userDetailsTableSchema, type UserDetailsModelSchema } from '@/models/user/details/userDetails.schema';
+import {
+  userRelationshipsTableSchema,
+  type UserRelationshipsModelSchema,
+} from '@/models/user/relationships/userRelationships.schema';
+import { userTtlTableSchema, type UserTtlModelSchema } from '@/models/user/ttl/userTtl.schema';
 export class AppDatabase extends Dexie {
   private static readonly DEXIE_VERSION_MULTIPLIER = 10;
 

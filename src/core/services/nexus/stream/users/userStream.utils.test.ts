@@ -1,8 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import { createUserStreamParams, streamRequiresUserId } from './userStream.utils';
 import type { Pubky } from '@/models/models.types';
-import { UserStreamTypes } from '@/models/stream/user/userStream.types';
-import type { UserStreamId } from '@/models/stream/user/userStream.types';
+import { UserStreamTypes, type UserStreamId } from '@/models/stream/user/userStream.types';
 import { userStreamApi } from '@/services/nexus/stream/users/userStream.api';
 import type {
   TUserStreamBase,

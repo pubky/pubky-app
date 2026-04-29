@@ -1,7 +1,6 @@
 import { shouldBlur } from './moderation.utils';
 import type { EnrichedPostDetails, EnrichedUserDetails } from '@/application/moderation/moderation.types';
-import { ModerationType } from '@/models/moderation/moderation.schema';
-import type { ModerationModelSchema } from '@/models/moderation/moderation.schema';
+import { ModerationType, type ModerationModelSchema } from '@/models/moderation/moderation.schema';
 import type { PostDetailsModelSchema } from '@/models/post/details/postDetails.schema';
 import type { UserDetailsModelSchema } from '@/models/user/details/userDetails.schema';
 import { LocalModerationService } from '@/services/local/moderation/moderation';

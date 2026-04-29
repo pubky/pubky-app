@@ -6,8 +6,7 @@ import { clearAllQueryClients } from '@/libs/query-client/query-client.factory';
 import { clearCookies, sleep } from '@/libs/utils/utils';
 import { AuthApplication } from '@/application/auth/auth';
 import type { TKeypairParams } from '@/application/auth/auth.types';
-import { BootstrapApplication } from '@/application/bootstrap/bootstrap';
-import type { BootstrapProgressCallback } from '@/application/bootstrap/bootstrap';
+import { BootstrapApplication, type BootstrapProgressCallback } from '@/application/bootstrap/bootstrap';
 import { postStreamQueue } from '@/application/stream/posts/muting/post-stream-queue';
 import type {
   TLoginWithEncryptedFileParams,

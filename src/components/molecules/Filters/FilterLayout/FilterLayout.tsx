@@ -4,8 +4,7 @@ import * as React from 'react';
 import { useTranslations } from 'next-intl';
 import * as Molecules from '@/molecules';
 import { Columns3, Menu, LayoutGrid } from 'lucide-react';
-import { LAYOUT } from '@/stores/home/home.types';
-import type { LayoutType } from '@/stores/home/home.types';
+import { LAYOUT, type LayoutType } from '@/stores/home/home.types';
 interface FilterLayoutProps extends Molecules.BaseFilterProps<LayoutType> {
   showVisual?: boolean;
 }

@@ -1,7 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { COMPOSITE_ID_DELIMITER } from '@/models/models.defaults';
-import { CompositeIdDomain } from '@/models/models.types';
-import type { Pubky } from '@/models/models.types';
+import { CompositeIdDomain, type Pubky } from '@/models/models.types';
 import { buildCompositeId, buildCompositeIdFromPubkyUri, parseCompositeId } from '@/models/models.utils';
 describe('models.utils (composite id)', () => {
   const author: Pubky = 'operrr8wsbpr3ue9d4qj41ge1kcc6r7fdiy6o3ugjrrhi4y77rd0';

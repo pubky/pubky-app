@@ -4,8 +4,7 @@ import { Logger } from '@/libs/logger/logger';
 import { truncateString } from '@/libs/utils/utils';
 import { CompositeIdDomain } from '@/models/models.types';
 import { buildCompositeIdFromPubkyUri, parseCompositeId } from '@/models/models.utils';
-import { NotificationType } from '@/models/notification/notification.types';
-import type { FlatNotification } from '@/models/notification/notification.types';
+import { NotificationType, type FlatNotification } from '@/models/notification/notification.types';
 // ============================================================================
 // NOTIFICATION TEXT UTILITIES
 // ============================================================================

@@ -5,8 +5,7 @@ import { Calendar, CalendarRange, Clock, Star } from 'lucide-react';
 import * as Atoms from '@/atoms';
 import * as Molecules from '@/molecules';
 import { useHotStore } from '@/stores/hot/hot.store';
-import { TIMEFRAME } from '@/stores/hot/hot.types';
-import type { TimeframeType } from '@/stores/hot/hot.types';
+import { TIMEFRAME, type TimeframeType } from '@/stores/hot/hot.types';
 // ============================================================================
 // FilterTimeframe Component
 // ============================================================================

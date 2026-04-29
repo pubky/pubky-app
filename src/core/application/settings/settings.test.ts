@@ -9,8 +9,11 @@ import { Logger } from '@/libs/logger/logger';
 import type { Pubky } from '@/models/models.types';
 import { SettingsNormalizer } from '@/pipes/settings/settings.normalizer';
 import { HomeserverService } from '@/services/homeserver/homeserver';
-import { defaultNotificationPreferences, defaultPrivacyPreferences } from '@/stores/settings/settings.types';
-import type { SettingsState } from '@/stores/settings/settings.types';
+import {
+  defaultNotificationPreferences,
+  defaultPrivacyPreferences,
+  type SettingsState,
+} from '@/stores/settings/settings.types';
 // Mock the HomeserverService
 vi.mock('@/services/homeserver/homeserver', () => ({
   HomeserverService: {

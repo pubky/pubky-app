@@ -18,8 +18,7 @@ import {
   SKIP_FETCH_NEW_POSTS,
 } from '@/controllers/stream/posts/post.constants';
 import type { TStreamIdParams } from '@/controllers/stream/posts/posts.types';
-import { CompositeIdDomain } from '@/models/models.types';
-import type { Pubky } from '@/models/models.types';
+import { CompositeIdDomain, type Pubky } from '@/models/models.types';
 import { buildCompositeId, buildCompositeIdFromPubkyUri, parseCompositeId } from '@/models/models.utils';
 import { PostDetailsModel } from '@/models/post/details/postDetails';
 import type { PostRelationshipsModelSchema } from '@/models/post/relationships/postRelationships.schema';

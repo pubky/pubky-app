@@ -1,6 +1,5 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { PubkyAppPostKind, PostResult, PubkyAppPostEmbed, PubkyAppPost } from 'pubky-app-specs';
-import type { FileResult } from 'pubky-app-specs';
+import { PubkyAppPostKind, PostResult, PubkyAppPostEmbed, PubkyAppPost, type FileResult } from 'pubky-app-specs';
 import { asInvalid, asOpaque } from '@/test-utils';
 import {
   TEST_PUBKY,

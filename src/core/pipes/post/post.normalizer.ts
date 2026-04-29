@@ -5,8 +5,7 @@ import { AuthErrorCode, ClientErrorCode, ValidationErrorCode } from '@/libs/erro
 import { Err } from '@/libs/error/error.factories';
 import { ErrorService } from '@/libs/error/error.types';
 import type { TEditPostParams } from '@/controllers/post/post.types';
-import { CompositeIdDomain } from '@/models/models.types';
-import type { Pubky } from '@/models/models.types';
+import { CompositeIdDomain, type Pubky } from '@/models/models.types';
 import { buildCompositeIdFromPubkyUri, parseCompositeId } from '@/models/models.utils';
 import { PostDetailsModel } from '@/models/post/details/postDetails';
 import { PostRelationshipsModel } from '@/models/post/relationships/postRelationships';

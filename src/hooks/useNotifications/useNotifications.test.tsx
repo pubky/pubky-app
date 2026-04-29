@@ -3,8 +3,7 @@ import { renderHook, waitFor, act } from '@testing-library/react';
 import { useNotifications } from './useNotifications';
 import { useMutedUsers } from '@/hooks/useMutedUsers/useMutedUsers';
 import { NotificationController } from '@/controllers/notification/notification';
-import { NotificationType } from '@/models/notification/notification.types';
-import type { FlatNotification } from '@/models/notification/notification.types';
+import { NotificationType, type FlatNotification } from '@/models/notification/notification.types';
 // Hoist mock data
 const { mockCurrentUserPubky, setMockCurrentUserPubky, mockUnreadCount, setMockUnreadCount } = vi.hoisted(() => {
   const pubky = { current: 'test-user-pubky' as string | null };

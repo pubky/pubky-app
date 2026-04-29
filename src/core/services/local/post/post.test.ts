@@ -12,8 +12,7 @@ import { PostRelationshipsModel } from '@/models/post/relationships/postRelation
 import type { PostRelationshipsModelSchema } from '@/models/post/relationships/postRelationships.schema';
 import { PostTagsModel } from '@/models/post/tags/postTags';
 import { PostTtlModel } from '@/models/post/ttl/postTtl';
-import { PostStreamTypes } from '@/models/stream/post/postStream.types';
-import type { PostStreamId } from '@/models/stream/post/postStream.types';
+import { PostStreamTypes, type PostStreamId } from '@/models/stream/post/postStream.types';
 import { PostStreamModel } from '@/models/stream/post/tables/postStream';
 import { UserCountsModel } from '@/models/user/counts/userCounts';
 import type { UserCountsModelSchema } from '@/models/user/counts/userCounts.schema';

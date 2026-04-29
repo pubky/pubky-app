@@ -4,8 +4,7 @@ import { ErrorService } from '@/libs/error/error.types';
 import { db } from '@/database/franky/franky';
 import type { Pubky } from '@/models/models.types';
 import { UserCountsModel } from '@/models/user/counts/userCounts';
-import { UserTagsModel } from '@/models/user/tags/userTags';
-import type { UserTagsModelSchema } from '@/models/user/tags/userTags';
+import { UserTagsModel, type UserTagsModelSchema } from '@/models/user/tags/userTags';
 import type { TLocalTagParams } from '@/services/local/tag/tag.types';
 import type { NexusTag } from '@/services/nexus/nexus.types';
 export class LocalUserTagService {

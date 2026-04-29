@@ -2,8 +2,7 @@ import { render, screen, fireEvent } from '@testing-library/react';
 import { describe, it, expect, vi } from 'vitest';
 import { FilterContent } from './FilterContent';
 import { VISUAL_DISABLED_CONTENT } from '@/organisms/Timeline/Feed/TimelineFeed/TimelineFeedVisual.helpers';
-import { CONTENT } from '@/stores/home/home.types';
-import type { ContentType } from '@/stores/home/home.types';
+import { CONTENT, type ContentType } from '@/stores/home/home.types';
 describe('FilterContent', () => {
   it('renders with default selected tab', () => {
     render(<FilterContent />);

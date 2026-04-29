@@ -4,8 +4,7 @@ import * as React from 'react';
 import { useTranslations } from 'next-intl';
 import * as Molecules from '@/molecules';
 import { Layers, StickyNote, Newspaper, Image, CirclePlay, Link, Download } from 'lucide-react';
-import { CONTENT } from '@/stores/home/home.types';
-import type { ContentType } from '@/stores/home/home.types';
+import { CONTENT, type ContentType } from '@/stores/home/home.types';
 interface FilterContentProps extends Molecules.BaseFilterProps<ContentType> {
   disabledTabs?: ContentType[];
 }

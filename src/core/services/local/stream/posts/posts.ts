@@ -7,8 +7,7 @@ import type { BookmarkModelSchema } from '@/models/bookmark/bookmark.schema';
 import { CompositeIdDomain } from '@/models/models.types';
 import { buildCompositeId, buildCompositeIdFromPubkyUri } from '@/models/models.utils';
 import { ModerationModel } from '@/models/moderation/moderation';
-import { ModerationType } from '@/models/moderation/moderation.schema';
-import type { ModerationModelSchema } from '@/models/moderation/moderation.schema';
+import { ModerationType, type ModerationModelSchema } from '@/models/moderation/moderation.schema';
 import { PostCountsModel } from '@/models/post/counts/postCounts';
 import { PostDetailsModel } from '@/models/post/details/postDetails';
 import type { PostDetailsModelSchema } from '@/models/post/details/postDetails.schema';
@@ -17,8 +16,11 @@ import { PostTagsModel } from '@/models/post/tags/postTags';
 import { PostTtlModel } from '@/models/post/ttl/postTtl';
 import type { RecordModelBase } from '@/models/shared/base/record/baseRecord';
 import type { NexusModelTuple } from '@/models/shared/base/tuple/baseTuple.type';
-import { buildPostReplyStreamId } from '@/models/stream/post/postStream.types';
-import type { PostStreamId, ReplyStreamCompositeId } from '@/models/stream/post/postStream.types';
+import {
+  buildPostReplyStreamId,
+  type PostStreamId,
+  type ReplyStreamCompositeId,
+} from '@/models/stream/post/postStream.types';
 import { PostStreamModel } from '@/models/stream/post/tables/postStream';
 import { UnreadPostStreamModel } from '@/models/stream/post/tables/postStream.unread';
 import type {

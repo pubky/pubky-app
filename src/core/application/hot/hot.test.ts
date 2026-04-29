@@ -9,8 +9,7 @@ import type { HotTagsModel } from '@/models/hot/hot';
 import { LocalHotService } from '@/services/local/hot/hot';
 import { LocalStreamUsersService } from '@/services/local/stream/users/users';
 import { NexusHotService } from '@/services/nexus/hot/hot';
-import { UserStreamReach, UserStreamTimeframe } from '@/services/nexus/nexus.types';
-import type { NexusHotTag } from '@/services/nexus/nexus.types';
+import { UserStreamReach, UserStreamTimeframe, type NexusHotTag } from '@/services/nexus/nexus.types';
 import type { TTagHotParams } from '@/services/nexus/tag/tag.types';
 describe('HotApplication', () => {
   beforeEach(() => {

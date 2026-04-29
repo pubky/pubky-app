@@ -1,7 +1,6 @@
 import { HttpMethod } from '@/libs/http/http.types';
 import { Logger } from '@/libs/logger/logger';
-import { TagKind } from '@/application/tag/tag.types';
-import type { TCreateTagListInput, TDeleteTagInput } from '@/application/tag/tag.types';
+import { TagKind, type TCreateTagListInput, type TDeleteTagInput } from '@/application/tag/tag.types';
 import { HomeserverService } from '@/services/homeserver/homeserver';
 import { LocalPostTagService } from '@/services/local/tag/post/tag.post';
 import { LocalUserTagService } from '@/services/local/tag/user/tag.user';

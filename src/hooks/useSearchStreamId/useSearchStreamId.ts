@@ -6,8 +6,7 @@ import { Env } from '@/libs/env/env';
 import type { PostStreamId } from '@/models/stream/post/postStream.types';
 import { POST_STREAM_TAG_DELIMITER } from '@/services/nexus/stream/posts/postStream.constants';
 import { useHomeStore } from '@/stores/home/home.store';
-import { REACH } from '@/stores/home/home.types';
-import type { ContentType } from '@/stores/home/home.types';
+import { REACH, type ContentType } from '@/stores/home/home.types';
 import { getStreamIdFromFilters } from '@/stores/home/home.utils';
 /**
  * Parses tags from a comma-separated string parameter.

@@ -3,8 +3,7 @@ import type {
   TFlatNotifications,
   TParseNotificationsResult,
 } from '@/application/notification/notification.types';
-import { CompositeIdDomain } from '@/models/models.types';
-import type { Pubky } from '@/models/models.types';
+import { CompositeIdDomain, type Pubky } from '@/models/models.types';
 import { buildCompositeIdFromPubkyUri } from '@/models/models.utils';
 import { NotificationModel } from '@/models/notification/notification';
 import { NotificationType } from '@/models/notification/notification.types';

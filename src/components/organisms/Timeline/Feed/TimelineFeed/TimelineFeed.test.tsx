@@ -12,11 +12,9 @@ import { useStreamPagination } from '@/hooks/useStreamPagination/useStreamPagina
 import * as Providers from '@/providers';
 import { asInvalid } from '@/test-utils';
 import type { UsePullToRefreshResult } from '@/hooks/usePullToRefresh/usePullToRefresh.types';
-import { PostStreamTypes } from '@/models/stream/post/postStream.types';
-import type { PostStreamId } from '@/models/stream/post/postStream.types';
+import { PostStreamTypes, type PostStreamId } from '@/models/stream/post/postStream.types';
 import { useHomeStore } from '@/stores/home/home.store';
-import { CONTENT, LAYOUT, REACH, SORT } from '@/stores/home/home.types';
-import type { ContentType } from '@/stores/home/home.types';
+import { CONTENT, LAYOUT, REACH, SORT, type ContentType } from '@/stores/home/home.types';
 const mockUsePullToRefresh = vi.hoisted(() =>
   vi.fn(
     (): UsePullToRefreshResult => ({

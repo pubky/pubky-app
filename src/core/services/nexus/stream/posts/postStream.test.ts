@@ -5,10 +5,8 @@ import { createPostStreamParams, breakDownStreamId } from './postStream.utils';
 import { NexusPostStreamService } from './postStream';
 import * as queryNexusModule from '@/services/nexus/nexus.utils';
 import type { Pubky } from '@/models/models.types';
-import { PostStreamTypes } from '@/models/stream/post/postStream.types';
-import type { PostStreamId } from '@/models/stream/post/postStream.types';
-import { StreamSorting } from '@/services/nexus/nexus.types';
-import type { NexusPost, NexusPostsKeyStream } from '@/services/nexus/nexus.types';
+import { PostStreamTypes, type PostStreamId } from '@/models/stream/post/postStream.types';
+import { StreamSorting, type NexusPost, type NexusPostsKeyStream } from '@/services/nexus/nexus.types';
 import { StreamSource } from '@/services/nexus/stream/posts/postStream.types';
 import type {
   TPostStreamFetchParams,

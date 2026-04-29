@@ -1,6 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { PubkyAppPost, PubkyAppPostKind } from 'pubky-app-specs';
-import type { BlobResult, FileResult } from 'pubky-app-specs';
+import { PubkyAppPost, PubkyAppPostKind, type BlobResult, type FileResult } from 'pubky-app-specs';
 import { asOpaque } from '@/test-utils';
 import { DatabaseErrorCode } from '@/libs/error/error.codes';
 import { Err } from '@/libs/error/error.factories';
@@ -11,8 +10,7 @@ import { PostApplication } from '@/application/post/post';
 import type { TCreatePostInput, TEditPostInput } from '@/application/post/post.types';
 import { PostStreamApplication } from '@/application/stream/posts/post';
 import { TagApplication } from '@/application/tag/tag';
-import { TagKind } from '@/application/tag/tag.types';
-import type { TCreateTagInput } from '@/application/tag/tag.types';
+import { TagKind, type TCreateTagInput } from '@/application/tag/tag.types';
 import type { TFetchPostTaggersParams } from '@/controllers/post/post.types';
 import type { Pubky } from '@/models/models.types';
 import type { PostCountsModelSchema } from '@/models/post/counts/postCounts.schema';

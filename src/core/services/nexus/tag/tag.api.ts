@@ -1,6 +1,10 @@
 import { buildNexusUrl, buildUrlWithQuery, encodePathSegment } from '@/services/nexus/nexus.utils';
-import { TAGS_PATH_PARAMS } from '@/services/nexus/tag/tag.types';
-import type { TTagHotParams, TTagTaggersParams, TTagViewParams } from '@/services/nexus/tag/tag.types';
+import {
+  TAGS_PATH_PARAMS,
+  type TTagHotParams,
+  type TTagTaggersParams,
+  type TTagViewParams,
+} from '@/services/nexus/tag/tag.types';
 /**
  * Tag API Endpoints
  *

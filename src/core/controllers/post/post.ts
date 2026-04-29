@@ -4,8 +4,7 @@ import { ErrorService } from '@/libs/error/error.types';
 import type { EnrichedPostDetails } from '@/application/moderation/moderation.types';
 import { PostApplication } from '@/application/post/post';
 import type { TGetOrFetchPostParams } from '@/application/post/post.types';
-import { TagKind } from '@/application/tag/tag.types';
-import type { TCreateTagInput } from '@/application/tag/tag.types';
+import { TagKind, type TCreateTagInput } from '@/application/tag/tag.types';
 import type {
   TCreatePostParams,
   TDeletePostParams,

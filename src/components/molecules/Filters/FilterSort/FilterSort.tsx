@@ -4,8 +4,7 @@ import * as React from 'react';
 import { useTranslations } from 'next-intl';
 import * as Molecules from '@/molecules';
 import { SquareAsterisk, Flame } from 'lucide-react';
-import { SORT } from '@/stores/home/home.types';
-import type { SortType } from '@/stores/home/home.types';
+import { SORT, type SortType } from '@/stores/home/home.types';
 export function FilterSort({
   selectedTab,
   defaultSelectedTab = SORT.TIMELINE,

@@ -1,8 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { NexusHotService } from './hot';
 import * as queryNexusModule from '@/services/nexus/nexus.utils';
-import { UserStreamReach, UserStreamTimeframe } from '@/services/nexus/nexus.types';
-import type { NexusHotTag } from '@/services/nexus/nexus.types';
+import { UserStreamReach, UserStreamTimeframe, type NexusHotTag } from '@/services/nexus/nexus.types';
 import { tagApi } from '@/services/nexus/tag/tag.api';
 import type { TTagHotParams } from '@/services/nexus/tag/tag.types';
 describe('NexusHotService', () => {

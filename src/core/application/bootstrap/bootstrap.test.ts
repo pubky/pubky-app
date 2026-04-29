@@ -16,8 +16,7 @@ import { SettingsApplication } from '@/application/settings/settings';
 import { TtlCoordinator } from '@/coordinators/ttl/ttl';
 import { buildHotTagsId } from '@/models/hot/hot.helper';
 import type { Pubky } from '@/models/models.types';
-import { NotificationType } from '@/models/notification/notification.types';
-import type { FlatNotification } from '@/models/notification/notification.types';
+import { NotificationType, type FlatNotification } from '@/models/notification/notification.types';
 import { PostStreamTypes } from '@/models/stream/post/postStream.types';
 import { TagStreamTypes } from '@/models/stream/tag/tagStream.types';
 import { UserStreamTypes } from '@/models/stream/user/userStream.types';
@@ -32,10 +31,12 @@ import { LocalStreamUsersService } from '@/services/local/stream/users/users';
 import { LocalUserService } from '@/services/local/user/user';
 import { NexusBootstrapService } from '@/services/nexus/bootstrap/bootstrap';
 import type { NexusBootstrapResponse } from '@/services/nexus/bootstrap/bootstrap.types';
-import { UserStreamTimeframe } from '@/services/nexus/nexus.types';
-import type { NexusFileDetails, NexusNotification } from '@/services/nexus/nexus.types';
-import { defaultNotificationPreferences, defaultPrivacyPreferences } from '@/stores/settings/settings.types';
-import type { SettingsState } from '@/stores/settings/settings.types';
+import { UserStreamTimeframe, type NexusFileDetails, type NexusNotification } from '@/services/nexus/nexus.types';
+import {
+  defaultNotificationPreferences,
+  defaultPrivacyPreferences,
+  type SettingsState,
+} from '@/stores/settings/settings.types';
 // Mock pubky-app-specs to avoid WebAssembly issues
 vi.mock('pubky-app-specs', () => ({
   default: vi.fn(() => Promise.resolve()),

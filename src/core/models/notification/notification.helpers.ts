@@ -1,5 +1,4 @@
-import { NotificationType } from '@/models/notification/notification.types';
-import type { FlatNotification } from '@/models/notification/notification.types';
+import { NotificationType, type FlatNotification } from '@/models/notification/notification.types';
 // Generate business key inline
 // Used for unread lookup to match against unreadNotifications
 export const getBusinessKey = (n: FlatNotification): string => {

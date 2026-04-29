@@ -7,8 +7,11 @@ import type { Pubky } from '@/models/models.types';
 import { SettingsNormalizer } from '@/pipes/settings/settings.normalizer';
 import { useAuthStore } from '@/stores/auth/auth.store';
 import { useSettingsStore } from '@/stores/settings/settings.store';
-import { defaultNotificationPreferences, defaultPrivacyPreferences } from '@/stores/settings/settings.types';
-import type { SettingsState } from '@/stores/settings/settings.types';
+import {
+  defaultNotificationPreferences,
+  defaultPrivacyPreferences,
+  type SettingsState,
+} from '@/stores/settings/settings.types';
 const TEST_PUBKY = 'o1gg96ewuojmopcjbz8895478wdtxtzzuxnfjjz8o8e77csa1ngo' as Pubky;
 
 const mockStoreActions = {
