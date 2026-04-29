@@ -99,7 +99,7 @@ const handleClick = () => {
 
 ### Avoid barrel re-exports
 
-Don't create `index.ts` files whose sole purpose is re-exporting from child modules, and don't re-export constants or functions through intermediate modules without good reason. Barrel files add a layer of indirection that confuses IDE go-to-definition, makes circular dependency bugs harder to trace, and can defeat tree-shaking in bundlers. Import directly from the source module instead. For layered modules, use aliases such as `@/controllers/*`, `@/services/*`, `@/models/*`, and `@/stores/*`.
+Don't create `index.ts` files whose sole purpose is re-exporting from child modules, and don't re-export constants or functions through intermediate modules without good reason. Barrel files add a layer of indirection that confuses IDE go-to-definition, makes circular dependency bugs harder to trace, and can defeat tree-shaking in bundlers. Import directly from the source module instead. For hooks and layered modules, use aliases such as `@/hooks/*`, `@/controllers/*`, `@/services/*`, `@/models/*`, and `@/stores/*`.
 
 ```typescript
 // BAD — barrel that just re-exports

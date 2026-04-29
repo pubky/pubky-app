@@ -26,10 +26,11 @@ Only these can initiate workflows:
 
 ## Import Path Conventions
 
-Modules are imported directly through the layer aliases in `tsconfig.json`. Keep imports pointed at concrete source modules rather than aggregate re-export files.
+Modules are imported directly through the path aliases in `tsconfig.json`. Keep imports pointed at concrete source modules rather than aggregate re-export files.
 
 | Layer        | Alias              |
 | ------------ | ------------------ |
+| Hooks        | `@/hooks/*`        |
 | Application  | `@/application/*`  |
 | Controllers  | `@/controllers/*`  |
 | Coordinators | `@/coordinators/*` |

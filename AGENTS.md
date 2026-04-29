@@ -13,7 +13,7 @@ Coordinators (system) ↗            ↓              ↓
                        Stores     Pipes         Database
 ```
 
-Import modules through the layer aliases in `tsconfig.json` (for example `@/controllers/*`, `@/services/*`, `@/models/*`, `@/stores/*`). Keep imports pointed at concrete source modules rather than aggregate re-export files.
+Import modules through the path aliases in `tsconfig.json` (for example `@/hooks/*`, `@/controllers/*`, `@/services/*`, `@/models/*`, `@/stores/*`). Keep imports pointed at concrete source modules rather than aggregate re-export files.
 
 ### Hard constraints
 
