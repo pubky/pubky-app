@@ -5,9 +5,9 @@ import { PostContentBase } from './PostContentBase';
 import * as Molecules from '@/molecules';
 import * as Organisms from '@/organisms';
 import { usePostDetails } from '@/hooks/usePostDetails/usePostDetails';
-import * as Core from '@/core';
 import { asOpaque } from '@/test-utils';
-
+import type { EnrichedPostDetails } from '@/application/moderation/moderation.types';
+import { useLocalFilesStore } from '@/stores/localFiles/localFiles.store';
 // Mock next/navigation for usePathname used by PostText
 vi.mock('next/navigation', () => ({
   usePathname: vi.fn(() => '/'),
@@ -18,14 +18,10 @@ vi.mock('@/hooks/usePostDetails/usePostDetails', () => ({
   usePostDetails: vi.fn(),
 }));
 
-// Mock core - useLocalFilesStore
-vi.mock('@/core', async (importOriginal) => {
-  const actual = await importOriginal<typeof import('@/core')>();
-  return {
-    ...actual,
-    useLocalFilesStore: vi.fn(),
-  };
-});
+// Mock local files store
+vi.mock('@/stores/localFiles/localFiles.store', () => ({
+  useLocalFilesStore: vi.fn(),
+}));
 
 // Mock atoms
 vi.mock('@/atoms', () => ({
@@ -66,7 +62,7 @@ vi.mock('@/organisms', () => ({
 }));
 
 const mockUsePostDetails = vi.mocked(usePostDetails);
-const mockUseLocalFilesStore = vi.mocked(Core.useLocalFilesStore);
+const mockUseLocalFilesStore = vi.mocked(useLocalFilesStore);
 const mockPostAttachments = vi.mocked(Organisms.PostAttachments);
 const mockPostContentBlurred = vi.mocked(Organisms.PostContentBlurred);
 const mockPostArticle = vi.mocked(Organisms.PostArticle);
@@ -79,7 +75,7 @@ const createMockPostDetails = (
     is_blurred: boolean;
     kind: 'short' | 'long';
   }> = {},
-): Core.EnrichedPostDetails => ({
+): EnrichedPostDetails => ({
   id: 'test-author:test-post',
   indexed_at: Date.now(),
   kind: 'short' as const,

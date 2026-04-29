@@ -2,11 +2,11 @@ import { act, renderHook, waitFor } from '@testing-library/react';
 import { vi, describe, it, expect, beforeEach } from 'vitest';
 import { usePostTags } from './usePostTags';
 import { TAGS_PER_PAGE } from './usePostTags.constants';
-import * as Core from '@/core';
-import type { AuthStore } from '@/core/stores/auth/auth.types';
 import { mockAuthStore } from '@/test-utils';
-import { useLiveQuery } from 'dexie-react-hooks';
-
+import * as DexieHooks from 'dexie-react-hooks';
+import { TagController } from '@/controllers/tag/tag';
+import { useAuthStore } from '@/stores/auth/auth.store';
+import type { AuthStore } from '@/stores/auth/auth.types';
 // Hoisted mock for fetchTags - must be defined before vi.mock
 const { mockFetchTags, mockToast, mockAuthStoreSelector } = vi.hoisted(() => ({
   mockFetchTags: vi.fn().mockResolvedValue([]),
@@ -16,22 +16,30 @@ const { mockFetchTags, mockToast, mockAuthStoreSelector } = vi.hoisted(() => ({
   },
 }));
 
-// Mock Core module
-vi.mock('@/core', () => ({
+// Mock dependencies
+vi.mock('@/stores/auth/auth.store', () => ({
   useAuthStore: vi.fn(mockAuthStoreSelector('mock-user-id')),
+}));
+vi.mock('@/controllers/post/post', () => ({
   PostController: {
     getTags: vi.fn().mockResolvedValue([]),
     getCounts: vi.fn().mockResolvedValue(null),
     fetchTags: mockFetchTags,
   },
+}));
+vi.mock('@/controllers/tag/tag', () => ({
   TagController: {
     commitCreate: vi.fn().mockResolvedValue(undefined),
     commitDelete: vi.fn().mockResolvedValue(undefined),
   },
+}));
+vi.mock('@/application/tag/tag.types', () => ({
   TagKind: {
     POST: 'post',
     USER: 'user',
   },
+}));
+vi.mock('@/controllers/file/file', () => ({
   FileController: {
     getAvatarUrl: vi.fn((id: string) => `https://avatar.test/${id}`),
   },
@@ -101,8 +109,8 @@ vi.mock('@/molecules/TaggedItem/TaggedItem.utils', () => ({
  * order, so the mock stays correct even if a future change reorders or adds
  * additional useLiveQuery calls in the hook.
  */
-function setupLiveQueryMock(tagsValue: unknown, countsValue: unknown) {
-  vi.mocked(useLiveQuery).mockImplementation((queryFn) => {
+function setupLiveQueryMock(dexieHooks: typeof import('dexie-react-hooks'), tagsValue: unknown, countsValue: unknown) {
+  vi.mocked(dexieHooks.useLiveQuery).mockImplementation((queryFn) => {
     const fnStr = queryFn.toString();
     if (fnStr.includes('getTags')) return tagsValue;
     if (fnStr.includes('getCounts')) return countsValue;
@@ -113,8 +121,8 @@ function setupLiveQueryMock(tagsValue: unknown, countsValue: unknown) {
 describe('usePostTags', () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    vi.mocked(Core.useAuthStore).mockImplementation(mockAuthStoreSelector('mock-user-id'));
-    vi.mocked(useLiveQuery).mockReturnValue(undefined);
+    vi.mocked(useAuthStore).mockImplementation(mockAuthStoreSelector('mock-user-id'));
+    vi.mocked(DexieHooks.useLiveQuery).mockReturnValue(undefined);
   });
 
   describe('initialization', () => {
@@ -174,8 +182,10 @@ describe('usePostTags', () => {
 
     it('should return error when not logged in', async () => {
       // Mock useAuthStore to return null (not logged in)
-      vi.mocked(Core.useAuthStore).mockImplementation(mockAuthStoreSelector(null));
-      vi.mocked(useLiveQuery).mockReturnValue(undefined);
+      const dexieHooks = await import('dexie-react-hooks');
+
+      vi.mocked(useAuthStore).mockImplementation(mockAuthStoreSelector(null));
+      vi.mocked(dexieHooks.useLiveQuery).mockReturnValue(undefined);
 
       const { result } = renderHook(() => usePostTags('author:post123'));
 
@@ -201,7 +211,7 @@ describe('usePostTags', () => {
     });
 
     it('shows an error toast when adding a tag fails', async () => {
-      vi.mocked(Core.TagController.commitCreate).mockRejectedValueOnce(new Error('Network error'));
+      vi.mocked(TagController.commitCreate).mockRejectedValueOnce(new Error('Network error'));
 
       const { result } = renderHook(() => usePostTags('author:post123'));
 
@@ -227,8 +237,10 @@ describe('usePostTags', () => {
 
     it('should preserve tag with zero count when last tagger removes their tag', async () => {
       // Setup: Mock a tag with count=1 where the viewer is the tagger
+      const dexieHooks = await import('dexie-react-hooks');
+
       const mockViewerId = 'viewer-123';
-      vi.mocked(Core.useAuthStore).mockImplementation(mockAuthStoreSelector(mockViewerId));
+      vi.mocked(useAuthStore).mockImplementation(mockAuthStoreSelector(mockViewerId));
 
       // Tag with count=1 where viewer is the tagger
       const tagWithOneCount = {
@@ -239,7 +251,7 @@ describe('usePostTags', () => {
       };
 
       // Return the tag in useLiveQuery
-      vi.mocked(useLiveQuery).mockReturnValue([{ tags: [tagWithOneCount] }]);
+      vi.mocked(dexieHooks.useLiveQuery).mockReturnValue([{ tags: [tagWithOneCount] }]);
 
       const { result, rerender } = renderHook(() => usePostTags('author:post123'));
 
@@ -252,7 +264,7 @@ describe('usePostTags', () => {
       await result.current.handleTagToggle({ label: 'solo-tag', relationship: true });
 
       // After delete, simulate IndexedDB returning empty (tag removed from DB)
-      vi.mocked(useLiveQuery).mockReturnValue([{ tags: [] }]);
+      vi.mocked(dexieHooks.useLiveQuery).mockReturnValue([{ tags: [] }]);
       rerender();
 
       // BUG: Currently the tag disappears.
@@ -264,9 +276,11 @@ describe('usePostTags', () => {
     });
 
     it('shows a success toast when removing a tag', async () => {
+      const dexieHooks = await import('dexie-react-hooks');
+
       const mockViewerId = 'viewer-123';
-      vi.mocked(Core.useAuthStore).mockImplementation(mockAuthStoreSelector(mockViewerId));
-      vi.mocked(useLiveQuery).mockReturnValue([
+      vi.mocked(useAuthStore).mockImplementation(mockAuthStoreSelector(mockViewerId));
+      vi.mocked(dexieHooks.useLiveQuery).mockReturnValue([
         {
           tags: [{ label: 'solo-tag', taggers_count: 1, taggers: [mockViewerId], relationship: true }],
         },
@@ -291,7 +305,9 @@ describe('usePostTags', () => {
     });
 
     it('should call fetchTags with correct skip value based on initial tags', async () => {
-      vi.mocked(Core.useAuthStore).mockImplementation(mockAuthStoreSelector('viewer-123'));
+      const dexieHooks = await import('dexie-react-hooks');
+
+      vi.mocked(useAuthStore).mockImplementation(mockAuthStoreSelector('viewer-123'));
 
       // Initial tags from IndexedDB (simulating 25 tags already loaded)
       const initialTags = Array.from({ length: 25 }, (_, i) => ({
@@ -302,7 +318,7 @@ describe('usePostTags', () => {
       }));
 
       // hasMore is derived from postCounts.unique_tags > localTags.length
-      setupLiveQueryMock([{ tags: initialTags }], { unique_tags: 50 });
+      setupLiveQueryMock(dexieHooks, [{ tags: initialTags }], { unique_tags: 50 });
 
       // fetchTags returns a full page of new tags
       mockFetchTags.mockResolvedValueOnce(
@@ -332,7 +348,9 @@ describe('usePostTags', () => {
     });
 
     it('should increment skip value by fetched count after each loadMore call', async () => {
-      vi.mocked(Core.useAuthStore).mockImplementation(mockAuthStoreSelector('viewer-123'));
+      const dexieHooks = await import('dexie-react-hooks');
+
+      vi.mocked(useAuthStore).mockImplementation(mockAuthStoreSelector('viewer-123'));
 
       // Initial tags from IndexedDB
       const initialTags = Array.from({ length: 25 }, (_, i) => ({
@@ -343,7 +361,7 @@ describe('usePostTags', () => {
       }));
 
       // hasMore is derived from postCounts.unique_tags > localTags.length
-      setupLiveQueryMock([{ tags: initialTags }], { unique_tags: 100 });
+      setupLiveQueryMock(dexieHooks, [{ tags: initialTags }], { unique_tags: 100 });
 
       // First loadMore returns a full page of tags
       mockFetchTags.mockResolvedValueOnce(
@@ -387,11 +405,13 @@ describe('usePostTags', () => {
     });
 
     it('should set hasMore to false when fewer than TAGS_PER_PAGE tags are returned', async () => {
-      vi.mocked(Core.useAuthStore).mockImplementation(mockAuthStoreSelector('viewer-123'));
+      const dexieHooks = await import('dexie-react-hooks');
+
+      vi.mocked(useAuthStore).mockImplementation(mockAuthStoreSelector('viewer-123'));
 
       const initialTags = [{ label: 'tag-1', taggers_count: 1, taggers: ['user-1'], relationship: false }];
       // unique_tags > localTags.length so hasMore starts as true
-      setupLiveQueryMock([{ tags: initialTags }], { unique_tags: 20 });
+      setupLiveQueryMock(dexieHooks, [{ tags: initialTags }], { unique_tags: 20 });
 
       // Initial fetch on mount should return a full page so hasMore remains true.
       mockFetchTags.mockResolvedValueOnce(
@@ -425,7 +445,9 @@ describe('usePostTags', () => {
     });
 
     it('should reset skip value when postId changes', async () => {
-      vi.mocked(Core.useAuthStore).mockImplementation(mockAuthStoreSelector('viewer-123'));
+      const dexieHooks = await import('dexie-react-hooks');
+
+      vi.mocked(useAuthStore).mockImplementation(mockAuthStoreSelector('viewer-123'));
 
       // Initial tags for first post
       const initialTags = Array.from({ length: 25 }, (_, i) => ({
@@ -435,7 +457,7 @@ describe('usePostTags', () => {
         relationship: false,
       }));
 
-      setupLiveQueryMock([{ tags: initialTags }], { unique_tags: 50 });
+      setupLiveQueryMock(dexieHooks, [{ tags: initialTags }], { unique_tags: 50 });
 
       mockFetchTags.mockResolvedValue(
         Array.from({ length: TAGS_PER_PAGE }, (_, i) => ({
@@ -468,7 +490,7 @@ describe('usePostTags', () => {
         taggers: ['user-1'],
         relationship: false,
       }));
-      setupLiveQueryMock([{ tags: newPostTags }], { unique_tags: 50 });
+      setupLiveQueryMock(dexieHooks, [{ tags: newPostTags }], { unique_tags: 50 });
 
       rerender({ postId: 'author:post2' });
 

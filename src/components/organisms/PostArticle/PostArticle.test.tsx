@@ -2,15 +2,14 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen } from '@testing-library/react';
 import { PostArticle } from './PostArticle';
 import type { AttachmentConstructed } from '../PostAttachments/PostAttachments.types';
-import * as Core from '@/core';
-
+import { FileVariant } from '@/services/nexus/file/file.types';
 // Mock hooks
 const mockUsePostArticle = vi.fn();
 const mockHandleLinkClick = vi.fn();
 const mockSetDialogOpen = vi.fn();
 
 vi.mock('@/hooks/usePostArticle/usePostArticle', () => ({
-  usePostArticle: (params: { content: string; attachments: string[]; coverImageVariant: Core.FileVariant }) =>
+  usePostArticle: (params: { content: string; attachments: string[]; coverImageVariant: FileVariant }) =>
     mockUsePostArticle(params),
 }));
 
@@ -209,7 +208,7 @@ describe('PostArticle', () => {
       expect(mockUsePostArticle).toHaveBeenCalledWith({
         content: defaultProps.content,
         attachments: defaultProps.attachments,
-        coverImageVariant: Core.FileVariant.FEED,
+        coverImageVariant: FileVariant.FEED,
       });
     });
 
@@ -219,7 +218,7 @@ describe('PostArticle', () => {
       expect(mockUsePostArticle).toHaveBeenCalledWith({
         content: defaultProps.content,
         attachments: [],
-        coverImageVariant: Core.FileVariant.FEED,
+        coverImageVariant: FileVariant.FEED,
       });
     });
 
@@ -236,7 +235,7 @@ describe('PostArticle', () => {
       expect(mockUsePostArticle).toHaveBeenCalledWith({
         content: defaultProps.content,
         attachments: multipleAttachments,
-        coverImageVariant: Core.FileVariant.FEED,
+        coverImageVariant: FileVariant.FEED,
       });
     });
   });

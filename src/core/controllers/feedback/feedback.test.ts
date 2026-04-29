@@ -1,11 +1,11 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import * as Core from '@/core';
 import * as Config from '@/config';
 import type { TFeedbackSubmitParams } from './feedback.types';
 import { asInvalid } from '@/test-utils';
-
+import { FeedbackApplication } from '@/application/feedback/feedback';
+import type { Pubky } from '@/models/models.types';
 const testData = {
-  userPubky: 'o1gg96ewuojmopcjbz8895478wdtxtzzuxnfjjz8o8e77csa1ngo' as Core.Pubky,
+  userPubky: 'o1gg96ewuojmopcjbz8895478wdtxtzzuxnfjjz8o8e77csa1ngo' as Pubky,
   userName: 'Test User',
 };
 
@@ -23,7 +23,7 @@ describe('FeedbackController', () => {
     vi.clearAllMocks();
 
     // Mock FeedbackApplication
-    vi.spyOn(Core.FeedbackApplication, 'submit').mockResolvedValue(undefined);
+    vi.spyOn(FeedbackApplication, 'submit').mockResolvedValue(undefined);
 
     // Import FeedbackController
     const feedbackModule = await import('./feedback');
@@ -33,7 +33,7 @@ describe('FeedbackController', () => {
   describe('submit', () => {
     it('should pass params to application layer', async () => {
       const params = createFeedbackParams();
-      const submitSpy = vi.spyOn(Core.FeedbackApplication, 'submit');
+      const submitSpy = vi.spyOn(FeedbackApplication, 'submit');
 
       await FeedbackController.submit(params);
 
@@ -45,7 +45,7 @@ describe('FeedbackController', () => {
     });
 
     it('should throw when pubky is missing', async () => {
-      const params = createFeedbackParams({ pubky: '' as Core.Pubky });
+      const params = createFeedbackParams({ pubky: '' as Pubky });
 
       await expect(FeedbackController.submit(params)).rejects.toThrow(
         'Pubky is required and must be a non-empty string',
@@ -53,7 +53,7 @@ describe('FeedbackController', () => {
     });
 
     it('should throw when pubky is null', async () => {
-      const params = createFeedbackParams({ pubky: asInvalid<Core.Pubky>(null) });
+      const params = createFeedbackParams({ pubky: asInvalid<Pubky>(null) });
 
       await expect(FeedbackController.submit(params)).rejects.toThrow(
         'Pubky is required and must be a non-empty string',
@@ -93,7 +93,7 @@ describe('FeedbackController', () => {
     });
 
     it('should throw when application layer fails', async () => {
-      vi.spyOn(Core.FeedbackApplication, 'submit').mockRejectedValue(new Error('Application error'));
+      vi.spyOn(FeedbackApplication, 'submit').mockRejectedValue(new Error('Application error'));
 
       const params = createFeedbackParams();
 
@@ -103,7 +103,7 @@ describe('FeedbackController', () => {
     it('should accept comment at max length', async () => {
       const maxLengthComment = 'a'.repeat(Config.FEEDBACK_MAX_CHARACTER_LENGTH);
       const params = createFeedbackParams({ comment: maxLengthComment });
-      const submitSpy = vi.spyOn(Core.FeedbackApplication, 'submit');
+      const submitSpy = vi.spyOn(FeedbackApplication, 'submit');
 
       await FeedbackController.submit(params);
 

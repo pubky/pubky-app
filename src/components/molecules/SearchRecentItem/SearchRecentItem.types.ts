@@ -1,7 +1,6 @@
-import * as Core from '@/core';
 import * as Molecules from '@/molecules';
 import { RECENT_ITEM_TYPE } from './SearchRecentItem.constants';
-
+import type { Pubky } from '@/models/models.types';
 /**
  * Type derived from RECENT_ITEM_TYPE constant values
  */
@@ -18,7 +17,7 @@ export interface SearchRecentItemProps {
   /** Tag data (required if type is 'tag') */
   tag?: Molecules.RecentTagSearchItem;
   /** Callback when user item is clicked (only for type='user') */
-  onUserClick?: (userId: Core.Pubky) => void;
+  onUserClick?: (userId: Pubky) => void;
   /** Callback when tag item is clicked (only for type='tag') */
   onTagClick?: (tag: string) => void;
 }

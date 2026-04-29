@@ -2,33 +2,33 @@
 
 import * as React from 'react';
 import { useTranslations } from 'next-intl';
-import * as Core from '@/core';
 import * as Molecules from '@/molecules';
 import { Radio, HeartHandshake } from 'lucide-react';
 import { UsersRound2 } from '@/icons';
+import { REACH, type ReachType } from '@/stores/home/home.types';
 export function FilterReach({
   selectedTab,
-  defaultSelectedTab = Core.REACH.ALL,
+  defaultSelectedTab = REACH.ALL,
   onTabChange,
   disabled,
-}: Molecules.BaseFilterProps<Core.ReachType>) {
+}: Molecules.BaseFilterProps<ReachType>) {
   const t = useTranslations('filters.reach');
   const items = React.useMemo(
     () => [
       {
-        key: Core.REACH.ALL,
+        key: REACH.ALL,
         label: t('all'),
         icon: Radio,
         disabled,
       },
       {
-        key: Core.REACH.FOLLOWING,
+        key: REACH.FOLLOWING,
         label: t('following'),
         icon: UsersRound2,
         disabled,
       },
       {
-        key: Core.REACH.FRIENDS,
+        key: REACH.FRIENDS,
         label: t('friends'),
         icon: HeartHandshake,
         disabled,

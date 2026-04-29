@@ -1,16 +1,15 @@
-import * as Core from '@/core';
-
+import type { Pubky } from '@/models/models.types';
 export interface UserWithAvatar {
-  id: Core.Pubky;
+  id: Pubky;
   name?: string;
   avatarUrl?: string;
 }
 
 export interface UseBulkUserAvatarsResult {
   /** Map of user ID to user data with avatar */
-  usersMap: Map<Core.Pubky, UserWithAvatar>;
+  usersMap: Map<Pubky, UserWithAvatar>;
   /** Get users with avatars for a list of IDs */
-  getUsersWithAvatars: (userIds: Core.Pubky[]) => UserWithAvatar[];
+  getUsersWithAvatars: (userIds: Pubky[]) => UserWithAvatar[];
   /** Whether the data is still loading */
   isLoading: boolean;
 }

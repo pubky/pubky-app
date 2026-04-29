@@ -1,12 +1,12 @@
 'use client';
 
 import { useCallback, useMemo } from 'react';
-import * as Core from '@/core';
-import { useTagged } from '../useTagged/useTagged';
-import { usePostTags } from '../usePostTags/usePostTags';
+import { useTagged } from '@/hooks/useTagged/useTagged';
+import { usePostTags } from '@/hooks/usePostTags/usePostTags';
 import type { TagWithAvatars } from '@/molecules/TaggedItem/TaggedItem.types';
 import type { UseEntityTagsOptions, UseEntityTagsResult } from './useEntityTags.types';
-
+import { TagKind } from '@/application/tag/tag.types';
+import { useAuthStore } from '@/stores/auth/auth.store';
 /**
  * Unified hook for fetching and managing entity tags (USER or POST).
  * Automatically selects the appropriate underlying hook based on taggedKind.
@@ -19,37 +19,37 @@ import type { UseEntityTagsOptions, UseEntityTagsResult } from './useEntityTags.
  * @example
  * ```tsx
  * // For user tags
- * const { tags, handleTagToggle } = useEntityTags(userId, Core.TagKind.USER);
+ * const { tags, handleTagToggle } = useEntityTags(userId, TagKind.USER);
  *
  * // For post tags
- * const { tags, handleTagToggle } = useEntityTags(postId, Core.TagKind.POST);
+ * const { tags, handleTagToggle } = useEntityTags(postId, TagKind.POST);
  * ```
  */
 export function useEntityTags(
   entityId: string | null | undefined,
-  taggedKind: Core.TagKind,
+  taggedKind: TagKind,
   options: UseEntityTagsOptions = {},
 ): UseEntityTagsResult {
   const { viewerId: customViewerId, providedTags } = options;
 
   // selectCurrentUserPubky() throws an error when user is not authenticated;
   // access currentUserPubky directly to get null instead (unauthenticated views should still render tags)
-  const currentUserId = Core.useAuthStore((state) => state.currentUserPubky);
+  const currentUserId = useAuthStore((state) => state.currentUserPubky);
   const viewerId = customViewerId ?? currentUserId;
 
   // Use the appropriate hook based on kind
-  const userTagsResult = useTagged(taggedKind === Core.TagKind.USER ? entityId : null, {
+  const userTagsResult = useTagged(taggedKind === TagKind.USER ? entityId : null, {
     viewerId: customViewerId,
     enablePagination: false,
     enableStats: false,
   });
 
-  const postTagsResult = usePostTags(taggedKind === Core.TagKind.POST ? entityId : null, {
+  const postTagsResult = usePostTags(taggedKind === TagKind.POST ? entityId : null, {
     viewerId: customViewerId,
   });
 
   // Select the active result based on kind
-  const activeResult = taggedKind === Core.TagKind.USER ? userTagsResult : postTagsResult;
+  const activeResult = taggedKind === TagKind.USER ? userTagsResult : postTagsResult;
 
   // Transform provided NexusTag[] to TagWithAvatars[] if needed
   const transformedProvidedTags = useMemo((): TagWithAvatars[] | null => {

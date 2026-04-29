@@ -1,31 +1,33 @@
-import * as Core from '@/core';
-
+import type { Pubky } from '@/models/models.types';
+import type {
+  TPaginationParams,
+  TPaginationRangeParams,
+  TSkipTagsParams,
+  TTagsPaginationParams,
+  TUserId,
+} from '@/services/nexus/nexus.types';
 export type TUserDepthParams = {
   depth?: number;
-  viewer_id?: Core.Pubky;
+  viewer_id?: Pubky;
 };
 
-export type TUserViewParams = TUserDepthParams & Core.TUserId;
+export type TUserViewParams = TUserDepthParams & TUserId;
 
-export type TUserPaginationParams = Core.TUserId & Core.TPaginationParams & Core.TPaginationRangeParams;
+export type TUserPaginationParams = TUserId & TPaginationParams & TPaginationRangeParams;
 
-export type TUserRelationshipParams = Core.TUserId & {
-  viewer_id: Core.Pubky;
+export type TUserRelationshipParams = TUserId & {
+  viewer_id: Pubky;
 };
 
-export type TUserTaggersParams = Core.TUserId &
-  Core.TPaginationParams &
+export type TUserTaggersParams = TUserId &
+  TPaginationParams &
   TUserDepthParams & {
     label: string;
   };
 
-export type TUserTagsParams = Core.TUserId & Core.TTagsPaginationParams & TUserDepthParams & Core.TSkipTagsParams;
+export type TUserTagsParams = TUserId & TTagsPaginationParams & TUserDepthParams & TSkipTagsParams;
 
-export type TUserQueryParams =
-  | Core.TUserViewParams
-  | Core.TUserPaginationParams
-  | Core.TUserTaggersParams
-  | Core.TUserTagsParams;
+export type TUserQueryParams = TUserViewParams | TUserPaginationParams | TUserTaggersParams | TUserTagsParams;
 
 // Path parameters that should NOT be added to query string
 export const USER_PATH_PARAMS = ['user_id', 'label'] as const;

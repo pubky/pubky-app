@@ -1,5 +1,5 @@
-import * as Core from '@/core';
-
+import type { Pubky } from '@/models/models.types';
+import type { StreamSorting, TPaginationParams, TPaginationRangeParams } from '@/services/nexus/nexus.types';
 export enum STREAM_PREFIX {
   POSTS = 'v0/stream/posts',
   POSTS_KEYS = 'v0/stream/posts/keys',
@@ -32,7 +32,7 @@ export enum StreamOrder {
 }
 
 export type TStreamAuthorId = {
-  author_id: Core.Pubky;
+  author_id: Pubky;
 };
 
 export type TStreamSource = {
@@ -40,11 +40,11 @@ export type TStreamSource = {
 };
 
 // Base parameters that are always optional
-export type TStreamBase = Core.TPaginationParams &
-  Core.TPaginationRangeParams & {
+export type TStreamBase = TPaginationParams &
+  TPaginationRangeParams & {
     // The content viewer (for personalization like bookmarks, relationships)
-    viewer_id?: Core.Pubky;
-    sorting?: Core.StreamSorting;
+    viewer_id?: Pubky;
+    sorting?: StreamSorting;
     kind?: StreamKind;
     order?: StreamOrder;
     tags?: string; // Max 5 tags
@@ -53,7 +53,7 @@ export type TStreamBase = Core.TPaginationParams &
 // Specific parameter types for each source
 export type TStreamWithObserverParams = TStreamBase & {
   // The user whose content stream we're accessing (e.g., "alice_pubky" for Alice's following feed)
-  observer_id: Core.Pubky;
+  observer_id: Pubky;
 };
 
 export type TStreamPostRepliesParams = TStreamBase &
@@ -70,17 +70,17 @@ export type TStreamAllParams = TStreamBase;
 // Posts by IDs endpoint
 export type TStreamPostsByIdsParams = {
   post_ids: string[]; // Required array of post IDs
-  viewer_id?: Core.Pubky; // Optional viewer ID
+  viewer_id?: Pubky; // Optional viewer ID
   include_attachment_metadata?: boolean; // Optional include attachment metadata
 };
 
 export type TStreamQueryParams =
-  | Core.TStreamWithObserverParams
-  | Core.TStreamPostRepliesParams
-  | Core.TStreamAuthorParams
-  | Core.TStreamAuthorRepliesParams
-  | Core.TStreamAllParams
-  | Core.TStreamPostsByIdsParams;
+  | TStreamWithObserverParams
+  | TStreamPostRepliesParams
+  | TStreamAuthorParams
+  | TStreamAuthorRepliesParams
+  | TStreamAllParams
+  | TStreamPostsByIdsParams;
 
 /**
  * Extra parameters needed for specific stream sources

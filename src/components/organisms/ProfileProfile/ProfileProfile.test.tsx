@@ -11,17 +11,15 @@ vi.mock('next/navigation', () => ({
   })),
 }));
 
-// Mock Core
-vi.mock('@/core', async (importOriginal) => {
-  const actual = await importOriginal<typeof import('@/core')>();
-  return {
-    ...actual,
-    useAuthStore: vi.fn(() => ({
-      currentUserPubky: 'pubky1QX7GKW3abcdef1234567890',
-    })),
-    useNotificationStore: vi.fn(() => 0),
-  };
-});
+// Mock dependencies
+vi.mock('@/stores/auth/auth.store', () => ({
+  useAuthStore: vi.fn(() => ({
+    currentUserPubky: 'pubky1QX7GKW3abcdef1234567890',
+  })),
+}));
+vi.mock('@/stores/notification/notification.store', () => ({
+  useNotificationStore: vi.fn(() => 0),
+}));
 
 // Mock hooks
 vi.mock('@/hooks/useProfileHeader/useProfileHeader', () => ({

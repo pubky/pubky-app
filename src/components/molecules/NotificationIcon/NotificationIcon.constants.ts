@@ -1,9 +1,8 @@
-import { NotificationType } from '@/core/models/notification/notification.types';
-
 /**
  * Icon size in pixels
  */
 import { UserRoundPlus, HeartHandshake, Tag, MessageCircle, Repeat, AtSign, Trash2, StickyNote } from 'lucide-react';
+import { NotificationType } from '@/models/notification/notification.types';
 export const ICON_SIZE = 24;
 
 /**

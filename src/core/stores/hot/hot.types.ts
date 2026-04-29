@@ -1,6 +1,5 @@
-import { UserStreamTimeframe } from '@/core/services/nexus/nexus.types';
 import { ReachType, REACH } from '../home/home.types';
-
+import { UserStreamTimeframe } from '@/services/nexus/nexus.types';
 // Hot page constants
 export const TIMEFRAME = {
   TODAY: UserStreamTimeframe.TODAY,

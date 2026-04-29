@@ -3,11 +3,10 @@
 import { useCurrentUserProfile } from '@/hooks/useCurrentUserProfile/useCurrentUserProfile';
 import * as Atoms from '@/atoms';
 import * as Organisms from '@/organisms';
-import { REPORT_REASON_MAX_LENGTH } from '@/core/pipes/report';
 import type { DialogReportPostReasonStepProps } from './DialogReportPostReasonStep.types';
 import { Loader2 } from 'lucide-react';
 import { getCharacterCount } from '@/libs/utils/utils';
-
+import { REPORT_REASON_MAX_LENGTH } from '@/pipes/report/report.constants';
 export function DialogReportPostReasonStep({
   reason,
   hasContent,

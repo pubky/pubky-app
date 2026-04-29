@@ -3,14 +3,13 @@
 import { usePublicRoute } from '@/hooks/usePublicRoute/usePublicRoute';
 import { usePathname } from 'next/navigation';
 import { useTranslations } from 'next-intl';
-import * as Core from '@/core';
 import * as Molecules from '@/molecules';
 import { pathToStepConfig } from './Header.constants';
-
+import { useAuthStore } from '@/stores/auth/auth.store';
 export function Header() {
   const pathname = usePathname();
   const t = useTranslations('onboarding.steps');
-  const isAuthenticated = Core.useAuthStore((state) => Boolean(state.currentUserPubky));
+  const isAuthenticated = useAuthStore((state) => Boolean(state.currentUserPubky));
   const { isPublicRoute } = usePublicRoute();
 
   const isOnboarding = pathname?.startsWith('/onboarding') ?? false;

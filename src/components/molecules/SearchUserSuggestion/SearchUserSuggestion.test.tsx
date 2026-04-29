@@ -1,8 +1,7 @@
 import { render, screen, fireEvent } from '@testing-library/react';
 import { describe, it, expect, vi } from 'vitest';
 import { SearchUserSuggestion } from './SearchUserSuggestion';
-import type { Pubky } from '@/core';
-
+import type { Pubky } from '@/models/models.types';
 vi.mock('@/atoms', () => ({
   Container: ({
     children,

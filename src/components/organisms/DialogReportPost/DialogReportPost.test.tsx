@@ -2,8 +2,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen, fireEvent } from '@testing-library/react';
 import { DialogReportPost } from './DialogReportPost';
 import { REPORT_POST_STEPS } from '@/hooks/useReportPost/useReportPost.constants';
-import { REPORT_ISSUE_TYPES } from '@/core/pipes/report';
-
+import { REPORT_ISSUE_TYPES } from '@/pipes/report/report.constants';
 // Mock hooks
 const mockUseCurrentUserProfile = vi.fn();
 const mockUseReportPost = vi.fn();

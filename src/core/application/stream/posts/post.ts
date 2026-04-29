@@ -1,9 +1,42 @@
-import * as Core from '@/core';
 import * as Config from '@/config';
 import { postStreamQueue } from './muting/post-stream-queue';
 import { MuteFilter } from './muting/mute-filter';
 import { Logger } from '@/libs/logger/logger';
-
+import { FileApplication } from '@/application/file/file';
+import type {
+  TCacheStreamParams,
+  TFetchMissingUsersParams,
+  TFetchStreamParams,
+  TMissingPostsParams,
+  TPartialCacheHitParams,
+  TPersistUnreadNewStreamChunkParams,
+  TPostStreamChunkResponse,
+} from '@/application/stream/posts/post.types';
+import {
+  FORCE_FETCH_NEW_POSTS,
+  NOT_FOUND_CACHED_STREAM,
+  SKIP_FETCH_NEW_POSTS,
+} from '@/controllers/stream/posts/post.constants';
+import type { TStreamIdParams } from '@/controllers/stream/posts/posts.types';
+import { CompositeIdDomain, type Pubky } from '@/models/models.types';
+import { buildCompositeId, buildCompositeIdFromPubkyUri, parseCompositeId } from '@/models/models.utils';
+import { PostDetailsModel } from '@/models/post/details/postDetails';
+import type { PostRelationshipsModelSchema } from '@/models/post/relationships/postRelationships.schema';
+import { PostStreamModel } from '@/models/stream/post/tables/postStream';
+import { UnreadPostStreamModel } from '@/models/stream/post/tables/postStream.unread';
+import { UserStreamTypes } from '@/models/stream/user/userStream.types';
+import type { TUserCountsCountChanges } from '@/models/user/counts/userCounts.types';
+import { UserDetailsModel } from '@/models/user/details/userDetails';
+import { LocalPostService } from '@/services/local/post/post';
+import type { TStreamResult } from '@/services/local/stream/posts/post.types';
+import { LocalStreamPostsService } from '@/services/local/stream/posts/posts';
+import { LocalStreamUsersService } from '@/services/local/stream/users/users';
+import { LocalUserService } from '@/services/local/user/user';
+import { StreamSorting } from '@/services/nexus/nexus.types';
+import { NexusPostStreamService } from '@/services/nexus/stream/posts/postStream';
+import { StreamOrder, StreamSource } from '@/services/nexus/stream/posts/postStream.types';
+import { breakDownStreamId, createPostStreamParams } from '@/services/nexus/stream/posts/postStream.utils';
+import { NexusUserStreamService } from '@/services/nexus/stream/users/userStream';
 export class PostStreamApplication {
   private constructor() {}
 
@@ -11,23 +44,23 @@ export class PostStreamApplication {
   // Public API
   // ============================================================================
 
-  static async getUnreadStream({ streamId }: Core.TStreamIdParams): Promise<Core.TStreamResult | null> {
-    return await Core.LocalStreamPostsService.readUnreadStream({ streamId });
+  static async getUnreadStream({ streamId }: TStreamIdParams): Promise<TStreamResult | null> {
+    return await LocalStreamPostsService.readUnreadStream({ streamId });
   }
 
-  static async getCachedLastPostTimestamp({ streamId }: Core.TStreamIdParams): Promise<number> {
+  static async getCachedLastPostTimestamp({ streamId }: TStreamIdParams): Promise<number> {
     try {
-      const postStream = await Core.LocalStreamPostsService.read({ streamId });
+      const postStream = await LocalStreamPostsService.read({ streamId });
       if (!postStream || postStream.stream.length === 0) {
         Logger.warn('StreamId not found in cache', { streamId });
-        return Core.NOT_FOUND_CACHED_STREAM;
+        return NOT_FOUND_CACHED_STREAM;
       }
 
       // Iterate backwards through the stream to find the last post that has details
       // This handles cases where the last PostDetails might be missing
       for (let i = postStream.stream.length - 1; i >= 0; i--) {
         const postId = postStream.stream[i];
-        const postDetails = await Core.LocalPostService.readDetails({ postId });
+        const postDetails = await LocalPostService.readDetails({ postId });
 
         if (postDetails) {
           return postDetails.indexed_at;
@@ -36,10 +69,10 @@ export class PostStreamApplication {
 
       // No posts in the stream have details, cache is not useful
       Logger.warn('No post details found in cached stream', { streamId, streamLength: postStream.stream.length });
-      return Core.NOT_FOUND_CACHED_STREAM;
+      return NOT_FOUND_CACHED_STREAM;
     } catch (error) {
       Logger.warn('Failed to get timeline initial cursor', { streamId, error });
-      return Core.NOT_FOUND_CACHED_STREAM;
+      return NOT_FOUND_CACHED_STREAM;
     }
   }
 
@@ -48,8 +81,8 @@ export class PostStreamApplication {
    * @param params - The parameters for the stream
    * @returns The postId of the head of the stream
    */
-  static async getStreamHead(params: Core.TStreamIdParams): Promise<number> {
-    return await Core.LocalStreamPostsService.getStreamHead(params);
+  static async getStreamHead(params: TStreamIdParams): Promise<number> {
+    return await LocalStreamPostsService.getStreamHead(params);
   }
 
   /**
@@ -57,16 +90,16 @@ export class PostStreamApplication {
    * @param streamId - The ID of the stream
    * @returns The cached stream or null if not found
    */
-  static async getLocalStream({ streamId }: Core.TStreamIdParams): Promise<Core.TStreamResult | null> {
-    return await Core.LocalStreamPostsService.read({ streamId });
+  static async getLocalStream({ streamId }: TStreamIdParams): Promise<TStreamResult | null> {
+    return await LocalStreamPostsService.read({ streamId });
   }
 
-  static async mergeUnreadStreamWithPostStream(params: Core.TStreamIdParams) {
-    return await Core.LocalStreamPostsService.mergeUnreadStreamWithPostStream(params);
+  static async mergeUnreadStreamWithPostStream(params: TStreamIdParams) {
+    return await LocalStreamPostsService.mergeUnreadStreamWithPostStream(params);
   }
 
-  static async clearUnreadStream(params: Core.TStreamIdParams): Promise<string[]> {
-    return await Core.LocalStreamPostsService.clearUnreadStream(params);
+  static async clearUnreadStream(params: TStreamIdParams): Promise<string[]> {
+    return await LocalStreamPostsService.clearUnreadStream(params);
   }
 
   /**
@@ -77,7 +110,7 @@ export class PostStreamApplication {
    * @returns Array of post IDs that are not deleted
    */
   static async filterDeletedPosts(postIds: string[]): Promise<string[]> {
-    return Core.LocalPostService.filterDeletedPosts(postIds);
+    return LocalPostService.filterDeletedPosts(postIds);
   }
 
   /**
@@ -94,7 +127,7 @@ export class PostStreamApplication {
    *
    * @param streamId - The ID of the stream to prepare
    */
-  static async prepareStreamForInitialLoad({ streamId }: Core.TStreamIdParams): Promise<void> {
+  static async prepareStreamForInitialLoad({ streamId }: TStreamIdParams): Promise<void> {
     // Initial loads and pull-to-refresh should start from the real stream head,
     // not reuse buffered overflow from a previous pagination session.
     postStreamQueue.remove(streamId);
@@ -111,8 +144,8 @@ export class PostStreamApplication {
         maxAgeMs: Config.STREAM_CACHE_MAX_AGE_MS,
       });
       await Promise.all([
-        Core.LocalStreamPostsService.deleteById({ streamId }),
-        Core.LocalStreamPostsService.clearUnreadStream({ streamId }),
+        LocalStreamPostsService.deleteById({ streamId }),
+        LocalStreamPostsService.clearUnreadStream({ streamId }),
       ]);
       return;
     }
@@ -127,13 +160,13 @@ export class PostStreamApplication {
         ageMs: now - unreadStreamHead,
         maxAgeMs: Config.STREAM_CACHE_MAX_AGE_MS,
       });
-      await Core.LocalStreamPostsService.clearUnreadStream({ streamId });
+      await LocalStreamPostsService.clearUnreadStream({ streamId });
       return;
     }
 
     // 3. Both streams are fresh - merge unread posts into main stream and clear unread
-    await Core.LocalStreamPostsService.mergeUnreadStreamWithPostStream({ streamId });
-    await Core.LocalStreamPostsService.clearUnreadStream({ streamId });
+    await LocalStreamPostsService.mergeUnreadStreamWithPostStream({ streamId });
+    await LocalStreamPostsService.clearUnreadStream({ streamId });
   }
 
   /**
@@ -142,7 +175,7 @@ export class PostStreamApplication {
    */
   private static isTimestampStale(timestamp: number, now: number): boolean {
     // Sentinel values indicate empty/missing streams - not stale
-    if (timestamp === Core.SKIP_FETCH_NEW_POSTS || timestamp === Core.FORCE_FETCH_NEW_POSTS) {
+    if (timestamp === SKIP_FETCH_NEW_POSTS || timestamp === FORCE_FETCH_NEW_POSTS) {
       return false;
     }
     const ageMs = now - timestamp;
@@ -152,25 +185,25 @@ export class PostStreamApplication {
   /**
    * Get the head timestamp of the main post stream only (not unread)
    */
-  private static async getMainStreamHeadTimestamp({ streamId }: Core.TStreamIdParams): Promise<number> {
-    const postCompositeId = await Core.PostStreamModel.getStreamHead(streamId);
+  private static async getMainStreamHeadTimestamp({ streamId }: TStreamIdParams): Promise<number> {
+    const postCompositeId = await PostStreamModel.getStreamHead(streamId);
     if (!postCompositeId) {
-      return Core.FORCE_FETCH_NEW_POSTS;
+      return FORCE_FETCH_NEW_POSTS;
     }
-    const postDetails = await Core.PostDetailsModel.findById(postCompositeId);
-    return postDetails?.indexed_at ?? Core.SKIP_FETCH_NEW_POSTS;
+    const postDetails = await PostDetailsModel.findById(postCompositeId);
+    return postDetails?.indexed_at ?? SKIP_FETCH_NEW_POSTS;
   }
 
   /**
    * Get the head timestamp of the unread stream only
    */
-  private static async getUnreadStreamHeadTimestamp({ streamId }: Core.TStreamIdParams): Promise<number> {
-    const unreadCompositePostId = await Core.UnreadPostStreamModel.getStreamHead(streamId);
+  private static async getUnreadStreamHeadTimestamp({ streamId }: TStreamIdParams): Promise<number> {
+    const unreadCompositePostId = await UnreadPostStreamModel.getStreamHead(streamId);
     if (!unreadCompositePostId) {
-      return Core.FORCE_FETCH_NEW_POSTS;
+      return FORCE_FETCH_NEW_POSTS;
     }
-    const postDetails = await Core.PostDetailsModel.findById(unreadCompositePostId);
-    return postDetails?.indexed_at ?? Core.SKIP_FETCH_NEW_POSTS;
+    const postDetails = await PostDetailsModel.findById(unreadCompositePostId);
+    return postDetails?.indexed_at ?? SKIP_FETCH_NEW_POSTS;
   }
 
   /**
@@ -184,18 +217,18 @@ export class PostStreamApplication {
     limit,
     viewerId,
     order,
-  }: Core.TFetchStreamParams): Promise<Core.TPostStreamChunkResponse> {
+  }: TFetchStreamParams): Promise<TPostStreamChunkResponse> {
     // Skip cache for ascending order (chronological) - always fetch from Nexus
     // This is because cache is stored in descending order
     // TODO: Might be a better way to handle this.
-    if (order === Core.StreamOrder.ASCENDING) {
+    if (order === StreamOrder.ASCENDING) {
       return await this.fetchStreamFromNexus({ streamId, limit, streamTail, streamHead, viewerId, order });
     }
 
-    const shouldFilterMuted = !streamId.startsWith(`${Core.StreamSource.AUTHOR}:`);
+    const shouldFilterMuted = !streamId.startsWith(`${StreamSource.AUTHOR}:`);
     const mutedUserIds = shouldFilterMuted
-      ? new Set((await Core.LocalStreamUsersService.findById(Core.UserStreamTypes.MUTED))?.stream ?? [])
-      : new Set<Core.Pubky>();
+      ? new Set((await LocalStreamUsersService.findById(UserStreamTypes.MUTED))?.stream ?? [])
+      : new Set<Pubky>();
 
     let isFirstFetch = true;
     let lastReturnedPostId: string | undefined = lastPostId;
@@ -206,14 +239,14 @@ export class PostStreamApplication {
       filter: async (posts) => {
         // First filter muted users (sync), then filter deleted posts (async)
         const afterMuteFilter = MuteFilter.filterPosts(posts, mutedUserIds);
-        return Core.LocalPostService.filterDeletedPosts(afterMuteFilter);
+        return LocalPostService.filterDeletedPosts(afterMuteFilter);
       },
       fetch: async (cursor) => {
         // Continue reading from cache using lastReturnedPostId to track position
         // This ensures we exhaust cache before going to Nexus
         const result = await this.fetchStreamSliceInternal({
           streamId,
-          streamHead: isFirstFetch ? streamHead : Core.SKIP_FETCH_NEW_POSTS,
+          streamHead: isFirstFetch ? streamHead : SKIP_FETCH_NEW_POSTS,
           streamTail: cursor,
           lastPostId: lastReturnedPostId,
           limit,
@@ -234,9 +267,9 @@ export class PostStreamApplication {
     // Fetch original posts for any reposts served from cache
     // (handles case where repost is cached but original was evicted)
     try {
-      const relationships = await Core.LocalPostService.readRelationshipsByIds(posts);
+      const relationships = await LocalPostService.readRelationshipsByIds(posts);
       const repostedUris = relationships
-        .filter((rel): rel is Core.PostRelationshipsModelSchema => rel !== undefined && rel.reposted !== null)
+        .filter((rel): rel is PostRelationshipsModelSchema => rel !== undefined && rel.reposted !== null)
         .map((rel) => rel.reposted as string);
       await this.fetchOriginalPostsByUris({ repostedUris, viewerId });
     } catch (error) {
@@ -261,7 +294,7 @@ export class PostStreamApplication {
    */
   private static async getPostTimestamp(postId: string): Promise<number | undefined> {
     try {
-      const postDetails = await Core.LocalPostService.readDetails({ postId });
+      const postDetails = await LocalPostService.readDetails({ postId });
       return postDetails?.indexed_at;
     } catch (error) {
       Logger.warn('Failed to get post timestamp', { postId, error });
@@ -281,10 +314,10 @@ export class PostStreamApplication {
     limit,
     viewerId,
     order,
-  }: Core.TFetchStreamParams): Promise<Core.TPostStreamChunkResponse> {
+  }: TFetchStreamParams): Promise<TPostStreamChunkResponse> {
     // Avoid the indexdb query for engagement streams even we do not persist
-    if (streamId.split(':')[0] !== Core.StreamSorting.ENGAGEMENT && !streamHead) {
-      const cachedStream = await Core.LocalStreamPostsService.read({ streamId });
+    if (streamId.split(':')[0] !== StreamSorting.ENGAGEMENT && !streamHead) {
+      const cachedStream = await LocalStreamPostsService.read({ streamId });
 
       if (cachedStream) {
         const cachedStreamChunk = await this.getStreamFromCache({ lastPostId, limit, cachedStream });
@@ -306,7 +339,7 @@ export class PostStreamApplication {
       // force fetching from the beginning by setting streamTail to 0.
       // This ensures correctness even if a non-zero streamTail was incorrectly passed for an initial load.
       if (!lastPostId && (!cachedStream || cachedStream.stream.length === 0)) {
-        streamTail = Core.NOT_FOUND_CACHED_STREAM;
+        streamTail = NOT_FOUND_CACHED_STREAM;
       }
     }
     return await this.fetchStreamFromNexus({ streamId, limit, streamTail, streamHead, viewerId, order });
@@ -319,15 +352,15 @@ export class PostStreamApplication {
    * @param streamHead - Detects if the call is coming from the streamCoordinator.
    * @param streamId - ID of the stream. If not provided, it means that it is a single post operation.
    */
-  static async fetchMissingPostsFromNexus({ cacheMissPostIds, viewerId }: Core.TMissingPostsParams) {
+  static async fetchMissingPostsFromNexus({ cacheMissPostIds, viewerId }: TMissingPostsParams) {
     try {
-      const postBatch = await Core.NexusPostStreamService.fetchByIds({
+      const postBatch = await NexusPostStreamService.fetchByIds({
         post_ids: cacheMissPostIds,
         // Only pass viewer_id if it's a valid string (not null/undefined)
         ...(viewerId ? { viewer_id: viewerId } : {}),
       });
-      const { attachmentMetadata } = await Core.LocalStreamPostsService.persistPosts({ posts: postBatch });
-      await Core.FileApplication.persistFiles(attachmentMetadata);
+      const { attachmentMetadata } = await LocalStreamPostsService.persistPosts({ posts: postBatch });
+      await FileApplication.persistFiles(attachmentMetadata);
       // Persist the missing authors of the posts
       await this.fetchMissingUsersFromNexus({ posts: postBatch, viewerId });
       // Fetch original posts for any reposts (to display embedded repost content)
@@ -341,7 +374,7 @@ export class PostStreamApplication {
   }
 
   /**
-   * Core logic for fetching original posts by their URIs.
+   * Shared logic for fetching original posts by their URIs.
    * Converts URIs to IDs, checks cache, fetches missing posts from Nexus, and persists them.
    * This method is public to allow reuse by TtlApplication for refreshing repost originals.
    * @param repostedUris - Array of pubky URIs pointing to original posts
@@ -353,7 +386,7 @@ export class PostStreamApplication {
   }: {
     repostedUris: string[];
     /** Optional viewer ID for relationship data. Null/undefined for unauthenticated views. */
-    viewerId?: Core.Pubky | null;
+    viewerId?: Pubky | null;
   }) {
     if (repostedUris.length === 0) return;
 
@@ -362,9 +395,9 @@ export class PostStreamApplication {
       new Set(
         repostedUris
           .map((uri) =>
-            Core.buildCompositeIdFromPubkyUri({
+            buildCompositeIdFromPubkyUri({
               uri,
-              domain: Core.CompositeIdDomain.POSTS,
+              domain: CompositeIdDomain.POSTS,
             }),
           )
           .filter((id): id is string => id !== null),
@@ -374,7 +407,7 @@ export class PostStreamApplication {
     if (originalPostIds.length === 0) return;
 
     // Filter out posts already in local DB
-    const missingOriginalPostIds = await Core.LocalStreamPostsService.getNotPersistedPostsInCache(originalPostIds);
+    const missingOriginalPostIds = await LocalStreamPostsService.getNotPersistedPostsInCache(originalPostIds);
 
     if (missingOriginalPostIds.length === 0) return;
 
@@ -385,12 +418,12 @@ export class PostStreamApplication {
     });
 
     try {
-      const originalPosts = await Core.NexusPostStreamService.fetchByIds({
+      const originalPosts = await NexusPostStreamService.fetchByIds({
         post_ids: missingOriginalPostIds,
         viewer_id: viewerId ?? undefined,
       });
-      const { attachmentMetadata } = await Core.LocalStreamPostsService.persistPosts({ posts: originalPosts });
-      await Core.FileApplication.persistFiles(attachmentMetadata);
+      const { attachmentMetadata } = await LocalStreamPostsService.persistPosts({ posts: originalPosts });
+      await FileApplication.persistFiles(attachmentMetadata);
       await this.fetchMissingUsersFromNexus({ posts: originalPosts, viewerId });
     } catch (error) {
       Logger.warn('Failed to fetch original posts for reposts', { missingOriginalPostIds, error });
@@ -412,7 +445,7 @@ export class PostStreamApplication {
     streamTail,
     streamId,
     viewerId,
-  }: Core.TPartialCacheHitParams): Promise<Core.TPostStreamChunkResponse> {
+  }: TPartialCacheHitParams): Promise<TPostStreamChunkResponse> {
     const lastCachedPostId = cachedStreamChunk[cachedStreamChunk.length - 1];
     const remainingLimit = limit - cachedStreamChunk.length;
 
@@ -424,7 +457,7 @@ export class PostStreamApplication {
       streamId,
       limit: remainingLimit,
       streamTail: nextStreamTail,
-      streamHead: Core.SKIP_FETCH_NEW_POSTS,
+      streamHead: SKIP_FETCH_NEW_POSTS,
       viewerId,
       lastPostId: lastCachedPostId,
     });
@@ -441,14 +474,14 @@ export class PostStreamApplication {
     };
   }
 
-  private static async fetchMissingUsersFromNexus({ posts, viewerId }: Core.TFetchMissingUsersParams) {
+  private static async fetchMissingUsersFromNexus({ posts, viewerId }: TFetchMissingUsersParams) {
     const cacheMissUserIds = await this.getNotPersistedUsersInCache(posts.map((post) => post.details.author));
     if (cacheMissUserIds.length > 0) {
-      const userBatch = await Core.NexusUserStreamService.fetchByIds({
+      const userBatch = await NexusUserStreamService.fetchByIds({
         user_ids: cacheMissUserIds,
         viewer_id: viewerId ?? undefined,
       });
-      await Core.LocalStreamUsersService.persistUsers(userBatch);
+      await LocalStreamUsersService.persistUsers(userBatch);
     }
   }
 
@@ -459,8 +492,8 @@ export class PostStreamApplication {
     streamTail,
     viewerId,
     order,
-  }: Core.TFetchStreamParams): Promise<Core.TPostStreamChunkResponse> {
-    const { params, invokeEndpoint, extraParams } = Core.createPostStreamParams({
+  }: TFetchStreamParams): Promise<TPostStreamChunkResponse> {
+    const { params, invokeEndpoint, extraParams } = createPostStreamParams({
       streamId,
       streamTail,
       limit,
@@ -468,18 +501,18 @@ export class PostStreamApplication {
       viewerId,
       order,
     });
-    const postStreamChunk = await Core.NexusPostStreamService.fetch({ invokeEndpoint, params, extraParams });
+    const postStreamChunk = await NexusPostStreamService.fetch({ invokeEndpoint, params, extraParams });
     const { last_post_score: timestamp, post_keys: compositePostIds } = postStreamChunk;
 
     // Do not persist any stream related with engagement sorting
-    if (streamId.split(':')[0] !== Core.StreamSorting.ENGAGEMENT && streamHead === Core.SKIP_FETCH_NEW_POSTS) {
-      await Core.LocalStreamPostsService.persistNewStreamChunk({ stream: compositePostIds, streamId });
+    if (streamId.split(':')[0] !== StreamSorting.ENGAGEMENT && streamHead === SKIP_FETCH_NEW_POSTS) {
+      await LocalStreamPostsService.persistNewStreamChunk({ stream: compositePostIds, streamId });
     }
 
     // When streamHead is greater than 0, it means that it is a streamCoordinator calling this method.
     // In the future, we might need to add some enum param to describe that type of call.
     // For now, that kind of queries comes from the streamCoordinator.
-    if (streamHead > Core.SKIP_FETCH_NEW_POSTS) {
+    if (streamHead > SKIP_FETCH_NEW_POSTS) {
       await this.persistUnreadStreamChunkAndUpdateCounts({
         streamId,
         compositePostIds,
@@ -494,7 +527,7 @@ export class PostStreamApplication {
 
   // Delegate to service for cache miss detection
   private static async getNotPersistedPostsInCache(postIds: string[]): Promise<string[]> {
-    return Core.LocalStreamPostsService.getNotPersistedPostsInCache(postIds);
+    return LocalStreamPostsService.getNotPersistedPostsInCache(postIds);
   }
 
   /**
@@ -505,8 +538,8 @@ export class PostStreamApplication {
   private static async persistUnreadStreamChunkAndUpdateCounts({
     streamId,
     compositePostIds,
-  }: Core.TPersistUnreadNewStreamChunkParams) {
-    const newToUnreadStream = await Core.LocalStreamPostsService.persistUnreadNewStreamChunk({
+  }: TPersistUnreadNewStreamChunkParams) {
+    const newToUnreadStream = await LocalStreamPostsService.persistUnreadNewStreamChunk({
       stream: compositePostIds,
       streamId,
     });
@@ -525,7 +558,7 @@ export class PostStreamApplication {
     // Also filter out posts that are already in the main post stream for this streamId.
     // This catches locally created posts that were added to the stream but might not
     // have been committed to PostDetailsModel yet due to transaction timing.
-    const existingStream = await Core.LocalStreamPostsService.read({ streamId });
+    const existingStream = await LocalStreamPostsService.read({ streamId });
     const existingStreamIds = new Set(existingStream?.stream ?? []);
     const trulyNewPostIds = notInDatabase.filter((id) => !existingStreamIds.has(id));
 
@@ -533,16 +566,16 @@ export class PostStreamApplication {
     if (trulyNewPostIds.length === 0) return;
 
     // The authorId and postId are going to be use to identify the replies parent id
-    const [replyParentAuthorId, invokeEndpoint, replyParentPostId] = Core.breakDownStreamId(streamId);
+    const [replyParentAuthorId, invokeEndpoint, replyParentPostId] = breakDownStreamId(streamId);
 
     // If it is a reply, we need to update the parent post counts
     // TODO: Might happen some edge cases but for now, we can go with this approach.
-    if (invokeEndpoint === Core.StreamSource.REPLIES) {
-      const replyParentPostCompositeId = Core.buildCompositeId({
+    if (invokeEndpoint === StreamSource.REPLIES) {
+      const replyParentPostCompositeId = buildCompositeId({
         pubky: replyParentAuthorId,
         id: replyParentPostId as string,
       });
-      await Core.LocalPostService.updatePostCounts({
+      await LocalPostService.updatePostCounts({
         postCompositeId: replyParentPostCompositeId,
         countChanges: { replies: trulyNewPostIds.length },
       });
@@ -550,31 +583,27 @@ export class PostStreamApplication {
 
     // Update the related user counts of the authors of the posts
     // Only update counts for posts that are truly new (not in unread stream AND not in database)
-    if (invokeEndpoint === Core.StreamSource.REPLIES || invokeEndpoint === Core.StreamSource.ALL) {
+    if (invokeEndpoint === StreamSource.REPLIES || invokeEndpoint === StreamSource.ALL) {
       const countUpdates = trulyNewPostIds.map(async (postId) => {
-        const { pubky: authorId } = Core.parseCompositeId(postId);
-        const countChanges: Core.TUserCountsCountChanges = { posts: 1 };
-        if (invokeEndpoint === Core.StreamSource.REPLIES) {
+        const { pubky: authorId } = parseCompositeId(postId);
+        const countChanges: TUserCountsCountChanges = { posts: 1 };
+        if (invokeEndpoint === StreamSource.REPLIES) {
           countChanges.replies = 1;
         }
-        return Core.LocalUserService.updateCounts({ userId: authorId, countChanges });
+        return LocalUserService.updateCounts({ userId: authorId, countChanges });
       });
       await Promise.all(countUpdates);
     }
   }
 
   // Delegate to service for cache miss detection
-  private static async getNotPersistedUsersInCache(userIds: Core.Pubky[]): Promise<Core.Pubky[]> {
-    const existingUserIds = await Core.UserDetailsModel.findByIdsPreserveOrder(userIds);
+  private static async getNotPersistedUsersInCache(userIds: Pubky[]): Promise<Pubky[]> {
+    const existingUserIds = await UserDetailsModel.findByIdsPreserveOrder(userIds);
     const missingUserIds = userIds.filter((_userId, index) => existingUserIds[index] === undefined);
     return Array.from(new Set(missingUserIds));
   }
 
-  private static async getStreamFromCache({
-    lastPostId,
-    limit,
-    cachedStream,
-  }: Core.TCacheStreamParams): Promise<string[]> {
+  private static async getStreamFromCache({ lastPostId, limit, cachedStream }: TCacheStreamParams): Promise<string[]> {
     // Handle limit 0 case, return empty array immediately
     if (limit === 0) {
       return [];

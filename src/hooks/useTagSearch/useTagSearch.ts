@@ -2,15 +2,14 @@
 
 import { useCallback } from 'react';
 import { useRouter } from 'next/navigation';
-import * as Core from '@/core';
 import { APP_ROUTES } from '@/app/routes';
-import { MAX_ACTIVE_SEARCH_TAGS } from '@/core/stores/search/search.constants';
 import type { TagSearchOptions, UseTagSearchResult } from './useTagSearch.types';
 import { buildSearchUrl, calculateNewTags } from './useTagSearch.utils';
-
+import { MAX_ACTIVE_SEARCH_TAGS } from '@/stores/search/search.constants';
+import { useSearchStore } from '@/stores/search/search.store';
 export function useTagSearch(): UseTagSearchResult {
   const router = useRouter();
-  const { activeTags, setActiveTags, removeActiveTag, addTag } = Core.useSearchStore();
+  const { activeTags, setActiveTags, removeActiveTag, addTag } = useSearchStore();
 
   const addTagToSearch = useCallback(
     (tag: string, options?: TagSearchOptions) => {

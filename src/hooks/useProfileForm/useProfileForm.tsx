@@ -6,7 +6,6 @@ import { useRouter } from 'next/navigation';
 import { useTranslations } from 'next-intl';
 
 import * as Molecules from '@/molecules';
-import * as Core from '@/core';
 import * as App from '@/app';
 import { USER_NAME_MIN_LENGTH, USER_NAME_MAX_LENGTH, USER_BIO_MAX_LENGTH } from '@/config';
 
@@ -15,7 +14,11 @@ import { Logger } from '@/libs/logger/logger';
 import { generateRandomUsername } from '@/libs/utils/utils';
 import { AppError } from '@/libs/error/error';
 import { isAuthError, requiresLogin } from '@/libs/error/error.utils';
-
+import { AuthController } from '@/controllers/auth/auth';
+import { FileController } from '@/controllers/file/file';
+import { ProfileController } from '@/controllers/profile/profile';
+import { UserValidator } from '@/pipes/user/user.validator';
+import { useLocalFilesStore } from '@/stores/localFiles/localFiles.store';
 const DEFAULT_LINKS: ProfileLink[] = [
   { label: 'WEBSITE', url: '' },
   { label: 'X (TWITTER)', url: '' },
@@ -91,7 +94,7 @@ export function useProfileForm(props: UseProfileFormProps): UseProfileFormReturn
       // 2. The cleanup effect may revoke avatarPreview when unmounting
       // 3. The local store is for immediate display, not form state restoration
       if (userDetails.image && pubky) {
-        let avatarUrl = Core.FileController.getAvatarUrl(pubky, userDetails.indexed_at);
+        let avatarUrl = FileController.getAvatarUrl(pubky, userDetails.indexed_at);
         // TODO: Has to be fixed with the ServiceWorker
         // Assign a random number (0-100000) as a query parameter to avatarUrl for cache busting
         avatarUrl = `${avatarUrl}${Math.floor(Math.random() * 100000)}`;
@@ -142,7 +145,7 @@ export function useProfileForm(props: UseProfileFormProps): UseProfileFormReturn
 
   const validateUser = useCallback(() => {
     const avatarToValidate = mode === 'edit' && !avatarChanged ? null : avatarFile;
-    const { data, error } = Core.UserValidator.check(name, bio, links, avatarToValidate);
+    const { data, error } = UserValidator.check(name, bio, links, avatarToValidate);
 
     if (error.length > 0) {
       for (const issue of error) {
@@ -283,7 +286,7 @@ export function useProfileForm(props: UseProfileFormProps): UseProfileFormReturn
       if (mode === 'create') {
         if (avatarFile) {
           setSubmitTextKey('uploadingAvatar');
-          image = await Core.FileController.commitCreate({ file: avatarFile, pubky });
+          image = await FileController.commitCreate({ file: avatarFile, pubky });
           if (!image) {
             setSubmitTextKey('tryAgain');
             return;
@@ -296,7 +299,7 @@ export function useProfileForm(props: UseProfileFormProps): UseProfileFormReturn
         if (avatarChanged) {
           if (avatarFile) {
             setSubmitTextKey('uploadingAvatar');
-            const uploadedImage = await Core.FileController.commitCreate({ file: avatarFile, pubky });
+            const uploadedImage = await FileController.commitCreate({ file: avatarFile, pubky });
             if (!uploadedImage) {
               setSubmitTextKey('tryAgain');
               return;
@@ -311,18 +314,18 @@ export function useProfileForm(props: UseProfileFormProps): UseProfileFormReturn
       setSubmitTextKey('savingProfile');
 
       if (mode === 'create') {
-        await Core.ProfileController.commitCreate({ profile: user, image, pubky });
+        await ProfileController.commitCreate({ profile: user, image, pubky });
         // Store a NEW blob URL globally so all avatar components show the new avatar instantly
         // We create a separate blob URL so the form's cleanup can safely revoke its own
         if (avatarFile) {
           const globalBlobUrl = URL.createObjectURL(avatarFile);
-          Core.useLocalFilesStore.getState().setProfile(globalBlobUrl);
+          useLocalFilesStore.getState().setProfile(globalBlobUrl);
         }
-        await Core.AuthController.bootstrapWithDelay();
+        await AuthController.bootstrapWithDelay();
         setShowWelcomeDialog?.(true);
         router.push(App.HOME_ROUTES.HOME);
       } else {
-        await Core.ProfileController.commitUpdate({
+        await ProfileController.commitUpdate({
           name: user.name,
           bio: user.bio,
           links: user.links,
@@ -334,10 +337,10 @@ export function useProfileForm(props: UseProfileFormProps): UseProfileFormReturn
         if (avatarChanged) {
           if (avatarFile) {
             const globalBlobUrl = URL.createObjectURL(avatarFile);
-            Core.useLocalFilesStore.getState().setProfile(globalBlobUrl);
+            useLocalFilesStore.getState().setProfile(globalBlobUrl);
           } else {
             // Avatar was deleted
-            Core.useLocalFilesStore.getState().setProfile(null);
+            useLocalFilesStore.getState().setProfile(null);
           }
         }
         toast({

@@ -1,9 +1,11 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { postApi } from './post.api';
 import { type TPostViewParams, type TPostBase, type TPostTaggersParams, type TPostTagsParams } from './post.types';
-import * as Core from '@/core';
 import * as Config from '@/config';
-
+import * as queryNexusModule from '@/services/nexus/nexus.utils';
+import type { Pubky } from '@/models/models.types';
+import type { NexusTaggers } from '@/services/nexus/nexus.types';
+import { NexusPostService } from '@/services/nexus/post/post';
 const pubky = 'qr3xqyz3e5cyf9npgxc5zfp15ehhcis6gqsxob4une7bwwazekry';
 const postId = 'test-post-123';
 
@@ -232,7 +234,7 @@ describe('Post API', () => {
 });
 
 describe('NexusPostService', () => {
-  const testViewerId = 'viewer123' as Core.Pubky;
+  const testViewerId = 'viewer123' as Pubky;
 
   beforeEach(() => {
     vi.clearAllMocks();
@@ -240,10 +242,10 @@ describe('NexusPostService', () => {
 
   describe('getPostTaggers', () => {
     it('should construct correct URL and return queryNexus response', async () => {
-      const mockTaggers: Core.NexusTaggers = { relationship: false, users: ['user1' as Core.Pubky] };
-      const queryNexusSpy = vi.spyOn(Core, 'queryNexus').mockResolvedValue(mockTaggers);
+      const mockTaggers: NexusTaggers = { relationship: false, users: ['user1' as Pubky] };
+      const queryNexusSpy = vi.spyOn(queryNexusModule, 'queryNexus').mockResolvedValue(mockTaggers);
 
-      const result = await Core.NexusPostService.getPostTaggers({
+      const result = await NexusPostService.getPostTaggers({
         compositeId: `${pubky}:${postId}`,
         label: 'rust & wasm',
         skip: 10,

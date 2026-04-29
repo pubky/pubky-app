@@ -1,11 +1,10 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { renderHook, act, waitFor } from '@testing-library/react';
-import * as Core from '@/core';
 import { asOpaque } from '@/test-utils';
 import { usePostMenuActions } from './usePostMenuActions';
 import { POST_MENU_ACTION_IDS } from './usePostMenuActions.constants';
 import { isAppError } from '@/libs/error/error.utils';
-
+import type { EnrichedPostDetails } from '@/application/moderation/moderation.types';
 // Hoist mocks
 const {
   mockIsAppError,
@@ -33,8 +32,8 @@ const {
   mockUseCopyToClipboard: vi.fn(),
 }));
 
-// Mock Core
-vi.mock('@/core', () => ({
+// Mock dependencies
+vi.mock('@/models/models.utils', () => ({
   parseCompositeId: (id: string) => mockParseCompositeId(id),
 }));
 
@@ -124,7 +123,7 @@ describe('usePostMenuActions', () => {
       attachments: null,
       is_moderated: false,
       is_blurred: false,
-    } satisfies Core.EnrichedPostDetails,
+    } satisfies EnrichedPostDetails,
     authorProfile: { name: 'Test Author' },
     isFollowing: false,
     toggleFollow: vi.fn().mockResolvedValue(undefined),

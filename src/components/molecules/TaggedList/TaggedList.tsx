@@ -5,9 +5,8 @@ import { usePostTaggers } from '@/hooks/usePostTaggers/usePostTaggers';
 import { useEffect, useRef, useState } from 'react';
 import * as Atoms from '@/atoms';
 import * as Molecules from '@/molecules';
-import * as Core from '@/core';
 import type { TaggedListProps } from './TaggedList.types';
-
+import { TagKind } from '@/application/tag/tag.types';
 export function TaggedList({
   tags,
   taggedId,
@@ -20,7 +19,7 @@ export function TaggedList({
   // Track which tag is currently expanded (only one at a time - accordion behavior)
   const [expandedTagLabel, setExpandedTagLabel] = useState<string | null>(null);
 
-  const shouldFetchTaggers = taggedKind === Core.TagKind.POST && !!taggedId;
+  const shouldFetchTaggers = taggedKind === TagKind.POST && !!taggedId;
   const { taggersByLabel, taggerStates, fetchAllTaggers } = usePostTaggers(shouldFetchTaggers ? taggedId : null);
 
   const { sentinelRef } = useInfiniteScroll({

@@ -2,9 +2,8 @@ import { render, screen, fireEvent } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { SinglePostArticle } from './SinglePostArticle';
 import { usePostArticle } from '@/hooks/usePostArticle/usePostArticle';
-import * as Core from '@/core';
 import type { AttachmentConstructed } from '../PostAttachments/PostAttachments.types';
-
+import { useLocalFilesStore } from '@/stores/localFiles/localFiles.store';
 // Mock hooks
 vi.mock('@/hooks/usePostArticle/usePostArticle', () => ({
   usePostArticle: vi.fn(),
@@ -151,16 +150,12 @@ vi.mock('@/organisms', async (importOriginal) => {
   };
 });
 
-// Mock core with importOriginal to preserve all exports
-vi.mock('@/core', async (importOriginal) => {
-  const actual = await importOriginal<typeof import('@/core')>();
-  return {
-    ...actual,
-    useLocalFilesStore: vi.fn(),
-  };
-});
+// Mock dependencies
+vi.mock('@/stores/localFiles/localFiles.store', () => ({
+  useLocalFilesStore: vi.fn(),
+}));
 
-const mockUseLocalFilesStore = vi.mocked(Core.useLocalFilesStore);
+const mockUseLocalFilesStore = vi.mocked(useLocalFilesStore);
 
 // Helper to create a mock LocalFilesStore state with required actions
 const createMockLocalFilesStore = (posts: Record<string, AttachmentConstructed[] | undefined> = {}) => ({

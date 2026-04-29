@@ -1,13 +1,13 @@
 'use client';
 
 import * as Atoms from '@/atoms';
-import * as Core from '@/core';
 import * as Molecules from '@/molecules';
 import React, { useState } from 'react';
 import { useTranslations } from 'next-intl';
 import type { HumanPhoneCodeProps } from './HumanPhoneCode.types';
 import { RefreshCcw, ArrowRight } from 'lucide-react';
 import { cn } from '@/libs/utils/utils';
+import { HomegateController } from '@/controllers/homegate/homegate';
 export const HumanPhoneCode = ({ phoneNumber, onBack, onSuccess }: HumanPhoneCodeProps) => {
   const t = useTranslations('onboarding.phoneCode');
   const [code, setCode] = useState<string[]>(['', '', '', '', '', '']);
@@ -32,7 +32,7 @@ export const HumanPhoneCode = ({ phoneNumber, onBack, onSuccess }: HumanPhoneCod
     const codeValue = code.join('');
     try {
       setIsVerifyingCode(true);
-      const result = await Core.HomegateController.verifySmsCode({
+      const result = await HomegateController.verifySmsCode({
         phoneNumber,
         code: codeValue,
       });

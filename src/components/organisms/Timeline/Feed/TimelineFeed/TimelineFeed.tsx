@@ -8,14 +8,15 @@ import { useSearchStreamId } from '@/hooks/useSearchStreamId/useSearchStreamId';
 import { useStreamIdFromFilters } from '@/hooks/useStreamIdFromFilters/useStreamIdFromFilters';
 import { useSyncInteractiveVisualContent } from '@/hooks/useSyncInteractiveVisualContent/useSyncInteractiveVisualContent';
 import { TIMELINE_FEED_VARIANT } from '@/config';
-import * as Core from '@/core';
 import * as Molecules from '@/molecules';
 import * as Providers from '@/providers';
 import { getTagsLayoutForSurfaceLayout } from '@/organisms/PostMain/PostMainLayout';
 import type { TimelineFeedProps } from './TimelineFeed.types';
 import { resolveVisualFeedContent } from './TimelineFeedVisual.helpers';
 import { TimelineFeedWithStream } from '../TimelineFeedContent';
-
+import type { AuthorStreamCompositeId } from '@/models/stream/post/postStream.types';
+import { StreamSource } from '@/services/nexus/stream/posts/postStream.types';
+import { useHomeStore } from '@/stores/home/home.store';
 export { useTimelineFeedContext } from './TimelineFeedContext';
 
 /**
@@ -44,7 +45,7 @@ export function TimelineFeed({ variant, children }: TimelineFeedProps) {
 }
 
 function HomeTimelineFeed({ children }: { children?: TimelineFeedProps['children'] }) {
-  const content = Core.useHomeStore((state) => state.content);
+  const content = useHomeStore((state) => state.content);
   const layoutResolution = useFeedLayoutResolution(TIMELINE_FEED_VARIANT.HOME);
   const resolvedContent = resolveVisualFeedContent({
     content,
@@ -85,7 +86,7 @@ function CustomTimelineFeed({ children }: { children?: TimelineFeedProps['childr
 }
 
 function BookmarksTimelineFeed({ children }: { children?: TimelineFeedProps['children'] }) {
-  const content = Core.useHomeStore((state) => state.content);
+  const content = useHomeStore((state) => state.content);
   const layoutResolution = useFeedLayoutResolution(TIMELINE_FEED_VARIANT.BOOKMARKS);
   const resolvedContent = resolveVisualFeedContent({
     content,
@@ -110,7 +111,7 @@ function BookmarksTimelineFeed({ children }: { children?: TimelineFeedProps['chi
 
 function ProfileTimelineFeed({ children }: { children?: TimelineFeedProps['children'] }) {
   const { pubky } = Providers.useProfileContext();
-  const streamId = pubky ? (`${Core.StreamSource.AUTHOR}:${pubky}` as Core.AuthorStreamCompositeId) : undefined;
+  const streamId = pubky ? (`${StreamSource.AUTHOR}:${pubky}` as AuthorStreamCompositeId) : undefined;
   const layoutResolution = useFeedLayoutResolution(TIMELINE_FEED_VARIANT.PROFILE);
   const tagsLayout = getTagsLayoutForSurfaceLayout(layoutResolution.effectiveLayout);
 
@@ -144,7 +145,7 @@ function HotTimelineFeed({ children }: { children?: TimelineFeedProps['children'
 }
 
 function SearchTimelineFeed({ children }: { children?: TimelineFeedProps['children'] }) {
-  const content = Core.useHomeStore((state) => state.content);
+  const content = useHomeStore((state) => state.content);
   const layoutResolution = useFeedLayoutResolution(TIMELINE_FEED_VARIANT.SEARCH);
   const resolvedContent = resolveVisualFeedContent({
     content,

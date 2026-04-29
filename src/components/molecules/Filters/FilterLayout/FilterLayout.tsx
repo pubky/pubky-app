@@ -2,33 +2,33 @@
 
 import * as React from 'react';
 import { useTranslations } from 'next-intl';
-import * as Core from '@/core';
 import * as Molecules from '@/molecules';
 import { Columns3, Menu, LayoutGrid } from 'lucide-react';
-interface FilterLayoutProps extends Molecules.BaseFilterProps<Core.LayoutType> {
+import { LAYOUT, type LayoutType } from '@/stores/home/home.types';
+interface FilterLayoutProps extends Molecules.BaseFilterProps<LayoutType> {
   showVisual?: boolean;
 }
 export function FilterLayout({
   selectedTab,
-  defaultSelectedTab = Core.LAYOUT.COLUMNS,
+  defaultSelectedTab = LAYOUT.COLUMNS,
   onTabChange,
   disabled,
   showVisual = false,
 }: FilterLayoutProps) {
   const t = useTranslations('filters.layout');
-  const displaySelectedTab = !showVisual && selectedTab === Core.LAYOUT.VISUAL ? Core.LAYOUT.COLUMNS : selectedTab;
+  const displaySelectedTab = !showVisual && selectedTab === LAYOUT.VISUAL ? LAYOUT.COLUMNS : selectedTab;
   const items = React.useMemo(
     () =>
       [
         {
-          key: Core.LAYOUT.COLUMNS,
+          key: LAYOUT.COLUMNS,
           label: t('columns'),
           icon: Columns3,
           disabled,
           dataCy: 'columns-layout-toggle',
         },
         {
-          key: Core.LAYOUT.WIDE,
+          key: LAYOUT.WIDE,
           label: t('wide'),
           icon: Menu,
           disabled,
@@ -36,14 +36,14 @@ export function FilterLayout({
         },
         showVisual
           ? {
-              key: Core.LAYOUT.VISUAL,
+              key: LAYOUT.VISUAL,
               label: t('visual'),
               icon: LayoutGrid,
               disabled,
               dataCy: 'visual-layout-toggle',
             }
           : null,
-      ].filter(Boolean) as Molecules.FilterListItem<Core.LayoutType>[],
+      ].filter(Boolean) as Molecules.FilterListItem<LayoutType>[],
     [t, disabled, showVisual],
   );
   return (

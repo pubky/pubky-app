@@ -72,7 +72,7 @@ Coordinators   Workflows
 - Implemented: Polling lifecycle management (start/stop based on auth, visibility, routes)
 - Integrated: Calls `NotificationController.fetchNotifications()` to fetch notifications
 - UI Component: `CoordinatorsManager` manages coordinator lifecycle
-- Exported via: `src/core/index.ts`
+- Consumed via direct alias imports, for example `@/coordinators/notifications/notifications`
 
 ## Consequences
 
@@ -163,9 +163,7 @@ src/core/coordinators/
 ├── notifications/
 │   ├── notifications.ts        # NotificationCoordinator
 │   ├── notifications.types.ts
-│   ├── notifications.test.ts
-│   └── index.ts
-└── index.ts
+│   └── notifications.test.ts
 ```
 
 ### Future Coordinators

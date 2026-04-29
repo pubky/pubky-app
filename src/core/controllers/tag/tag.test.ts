@@ -1,12 +1,20 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { TagResult } from 'pubky-app-specs';
-import * as Core from '@/core';
 import type { TTagEventParams } from './tag.types';
 import { asOpaque } from '@/test-utils';
 import { HttpMethod } from '@/libs/http/http.types';
-
+import { TagKind } from '@/application/tag/tag.types';
+import { db } from '@/database/franky/franky';
+import type { Pubky } from '@/models/models.types';
+import { buildCompositeId } from '@/models/models.utils';
+import { PostCountsModel } from '@/models/post/counts/postCounts';
+import { PostTagsModel } from '@/models/post/tags/postTags';
+import { UserCountsModel } from '@/models/user/counts/userCounts';
+import { UserTagsModel } from '@/models/user/tags/userTags';
+import { TagNormalizer } from '@/pipes/tag/tag.normalizer';
+import { HomeserverService } from '@/services/homeserver/homeserver';
 // Mock HomeserverService
-vi.mock('@/core/services/homeserver', () => ({
+vi.mock('@/services/homeserver/homeserver', () => ({
   HomeserverService: {
     request: vi.fn(),
   },
@@ -28,12 +36,12 @@ vi.mock('pubky-app-specs', () => ({
 
 // Test data
 const testData = {
-  authorPubky: 'pxnu33x7jtpx9ar1ytsi4yxbp6a5o36gwhffs8zoxmbuptici1jy' as Core.Pubky,
-  taggerPubky: 'o1gg96ewuojmopcjbz8895478wdtxtzzuxnfjjz8o8e77csa1ngo' as Core.Pubky,
-  taggedUserPubky: 'y4euc88xboik1ev3axy9m9ajuedo8gx1mh1n7ms8zoxm5s1b1h9y' as Core.Pubky,
+  authorPubky: 'pxnu33x7jtpx9ar1ytsi4yxbp6a5o36gwhffs8zoxmbuptici1jy' as Pubky,
+  taggerPubky: 'o1gg96ewuojmopcjbz8895478wdtxtzzuxnfjjz8o8e77csa1ngo' as Pubky,
+  taggedUserPubky: 'y4euc88xboik1ev3axy9m9ajuedo8gx1mh1n7ms8zoxm5s1b1h9y' as Pubky,
   postId: 'abc123xyz',
   get postTaggedId() {
-    return Core.buildCompositeId({ pubky: this.authorPubky, id: this.postId });
+    return buildCompositeId({ pubky: this.authorPubky, id: this.postId });
   },
   get userTaggedId() {
     return this.taggedUserPubky;
@@ -41,22 +49,22 @@ const testData = {
 };
 
 // Helper functions - Generic tag params builder
-const createTagParams = (label: string, kind: Core.TagKind): TTagEventParams => ({
-  taggedId: kind === Core.TagKind.POST ? testData.postTaggedId : testData.userTaggedId,
+const createTagParams = (label: string, kind: TagKind): TTagEventParams => ({
+  taggedId: kind === TagKind.POST ? testData.postTaggedId : testData.userTaggedId,
   label,
   taggerId: testData.taggerPubky,
   taggedKind: kind,
 });
 
-const getSavedTags = async (kind: Core.TagKind) => {
-  const id = kind === Core.TagKind.POST ? testData.postTaggedId : testData.userTaggedId;
-  const table = kind === Core.TagKind.POST ? Core.PostTagsModel.table : Core.UserTagsModel.table;
+const getSavedTags = async (kind: TagKind) => {
+  const id = kind === TagKind.POST ? testData.postTaggedId : testData.userTaggedId;
+  const table = kind === TagKind.POST ? PostTagsModel.table : UserTagsModel.table;
   return await table.get(id);
 };
 
-const setupExistingTag = async (label: string, kind: Core.TagKind) => {
-  const id = kind === Core.TagKind.POST ? testData.postTaggedId : testData.userTaggedId;
-  const model = kind === Core.TagKind.POST ? Core.PostTagsModel : Core.UserTagsModel;
+const setupExistingTag = async (label: string, kind: TagKind) => {
+  const id = kind === TagKind.POST ? testData.postTaggedId : testData.userTaggedId;
+  const model = kind === TagKind.POST ? PostTagsModel : UserTagsModel;
 
   await model.create({
     id,
@@ -78,9 +86,9 @@ describe('TagController', () => {
     vi.clearAllMocks();
 
     // Mock HomeserverService.request to resolve successfully
-    vi.spyOn(Core.HomeserverService, 'request').mockResolvedValue(undefined);
+    vi.spyOn(HomeserverService, 'request').mockResolvedValue(undefined);
 
-    vi.spyOn(Core.TagNormalizer, 'to').mockImplementation((uri: string, label: string, pubky: Core.Pubky) => {
+    vi.spyOn(TagNormalizer, 'to').mockImplementation((uri: string, label: string, pubky: Pubky) => {
       return asOpaque<TagResult>({
         tag: { label, toJson: () => ({ label }), free: vi.fn() },
         meta: { url: `pubky://${pubky}/pub/pubky.app/tags/${label}` },
@@ -89,15 +97,15 @@ describe('TagController', () => {
     });
 
     // Initialize database and clear tables
-    await Core.db.initialize();
-    await Core.db.transaction(
+    await db.initialize();
+    await db.transaction(
       'rw',
-      [Core.PostTagsModel.table, Core.PostCountsModel.table, Core.UserTagsModel.table, Core.UserCountsModel.table],
+      [PostTagsModel.table, PostCountsModel.table, UserTagsModel.table, UserCountsModel.table],
       async () => {
-        await Core.PostTagsModel.table.clear();
-        await Core.PostCountsModel.table.clear();
-        await Core.UserTagsModel.table.clear();
-        await Core.UserCountsModel.table.clear();
+        await PostTagsModel.table.clear();
+        await PostCountsModel.table.clear();
+        await UserTagsModel.table.clear();
+        await UserCountsModel.table.clear();
       },
     );
 
@@ -109,9 +117,9 @@ describe('TagController', () => {
   describe('commitCreate', () => {
     describe('POST tags', () => {
       it('should save post tag and sync to homeserver', async () => {
-        await TagController.commitCreate(createTagParams('javascript', Core.TagKind.POST));
+        await TagController.commitCreate(createTagParams('javascript', TagKind.POST));
 
-        const savedTags = await getSavedTags(Core.TagKind.POST);
+        const savedTags = await getSavedTags(TagKind.POST);
         expect(savedTags).toBeTruthy();
         expect(savedTags!.tags).toHaveLength(1);
         expect(savedTags!.tags[0].label).toBe('javascript');
@@ -119,7 +127,7 @@ describe('TagController', () => {
         expect(savedTags!.tags[0].relationship).toBe(true);
 
         // Verify homeserver sync was called
-        expect(Core.HomeserverService.request).toHaveBeenCalledWith({
+        expect(HomeserverService.request).toHaveBeenCalledWith({
           method: HttpMethod.PUT,
           url: expect.stringContaining('pubky://'),
           bodyJson: expect.any(Object),
@@ -127,13 +135,13 @@ describe('TagController', () => {
       });
 
       it('should normalize post tag label (trim and lowercase)', async () => {
-        await TagController.commitCreate(createTagParams('  JavaScript  ', Core.TagKind.POST));
+        await TagController.commitCreate(createTagParams('  JavaScript  ', TagKind.POST));
 
-        const savedTags = await getSavedTags(Core.TagKind.POST);
+        const savedTags = await getSavedTags(TagKind.POST);
         expect(savedTags!.tags[0].label).toBe('javascript');
 
         // Verify homeserver sync was called
-        expect(Core.HomeserverService.request).toHaveBeenCalledWith({
+        expect(HomeserverService.request).toHaveBeenCalledWith({
           method: HttpMethod.PUT,
           url: expect.stringContaining('pubky://'),
           bodyJson: expect.any(Object),
@@ -141,31 +149,29 @@ describe('TagController', () => {
       });
 
       it('should rollback post tag when homeserver create fails', async () => {
-        vi.spyOn(Core.HomeserverService, 'request').mockRejectedValueOnce(
-          new Error('Failed to PUT to homeserver: 403'),
-        );
+        vi.spyOn(HomeserverService, 'request').mockRejectedValueOnce(new Error('Failed to PUT to homeserver: 403'));
 
-        await expect(TagController.commitCreate(createTagParams('javascript', Core.TagKind.POST))).rejects.toThrow(
+        await expect(TagController.commitCreate(createTagParams('javascript', TagKind.POST))).rejects.toThrow(
           'Failed to PUT to homeserver: 403',
         );
 
-        const savedTags = await getSavedTags(Core.TagKind.POST);
+        const savedTags = await getSavedTags(TagKind.POST);
         expect(savedTags?.tags ?? []).toHaveLength(0);
       });
     });
 
     describe('USER tags', () => {
       it('should save user tag and sync to homeserver', async () => {
-        await TagController.commitCreate(createTagParams('developer', Core.TagKind.USER));
+        await TagController.commitCreate(createTagParams('developer', TagKind.USER));
 
-        const savedTags = await getSavedTags(Core.TagKind.USER);
+        const savedTags = await getSavedTags(TagKind.USER);
         expect(savedTags).toBeTruthy();
         expect(savedTags!.tags).toHaveLength(1);
         expect(savedTags!.tags[0].label).toBe('developer');
         expect(savedTags!.tags[0].taggers_count).toBe(1);
         expect(savedTags!.tags[0].relationship).toBe(true);
 
-        expect(Core.HomeserverService.request).toHaveBeenCalledWith({
+        expect(HomeserverService.request).toHaveBeenCalledWith({
           method: HttpMethod.PUT,
           url: expect.stringContaining('pubky://'),
           bodyJson: expect.any(Object),
@@ -173,12 +179,12 @@ describe('TagController', () => {
       });
 
       it('should normalize user tag label (trim and lowercase)', async () => {
-        await TagController.commitCreate(createTagParams('  Developer  ', Core.TagKind.USER));
+        await TagController.commitCreate(createTagParams('  Developer  ', TagKind.USER));
 
-        const savedTags = await getSavedTags(Core.TagKind.USER);
+        const savedTags = await getSavedTags(TagKind.USER);
         expect(savedTags!.tags[0].label).toBe('developer');
 
-        expect(Core.HomeserverService.request).toHaveBeenCalledWith({
+        expect(HomeserverService.request).toHaveBeenCalledWith({
           method: HttpMethod.PUT,
           url: expect.stringContaining('pubky://'),
           bodyJson: expect.any(Object),
@@ -186,15 +192,13 @@ describe('TagController', () => {
       });
 
       it('should rollback user tag when homeserver create fails', async () => {
-        vi.spyOn(Core.HomeserverService, 'request').mockRejectedValueOnce(
-          new Error('Failed to PUT to homeserver: 403'),
-        );
+        vi.spyOn(HomeserverService, 'request').mockRejectedValueOnce(new Error('Failed to PUT to homeserver: 403'));
 
-        await expect(TagController.commitCreate(createTagParams('developer', Core.TagKind.USER))).rejects.toThrow(
+        await expect(TagController.commitCreate(createTagParams('developer', TagKind.USER))).rejects.toThrow(
           'Failed to PUT to homeserver: 403',
         );
 
-        const savedTags = await getSavedTags(Core.TagKind.USER);
+        const savedTags = await getSavedTags(TagKind.USER);
         expect(savedTags?.tags ?? []).toHaveLength(0);
       });
     });
@@ -203,45 +207,45 @@ describe('TagController', () => {
   describe('commitDelete', () => {
     describe('POST tags', () => {
       beforeEach(async () => {
-        await setupExistingTag('javascript', Core.TagKind.POST);
+        await setupExistingTag('javascript', TagKind.POST);
       });
 
       it('should remove post tag and sync to homeserver', async () => {
-        await TagController.commitDelete(createTagParams('javascript', Core.TagKind.POST));
+        await TagController.commitDelete(createTagParams('javascript', TagKind.POST));
 
-        const savedTags = await getSavedTags(Core.TagKind.POST);
+        const savedTags = await getSavedTags(TagKind.POST);
         expect(savedTags!.tags).toHaveLength(0);
 
         // Verify homeserver sync was called
-        expect(Core.HomeserverService.request).toHaveBeenCalledWith({
+        expect(HomeserverService.request).toHaveBeenCalledWith({
           method: HttpMethod.DELETE,
           url: expect.stringContaining('pubky://'),
         });
       });
 
       it('should normalize post tag label (trim and lowercase)', async () => {
-        await TagController.commitDelete(createTagParams('  JavaScript  ', Core.TagKind.POST));
+        await TagController.commitDelete(createTagParams('  JavaScript  ', TagKind.POST));
 
-        const savedTags = await getSavedTags(Core.TagKind.POST);
+        const savedTags = await getSavedTags(TagKind.POST);
         expect(savedTags!.tags).toHaveLength(0);
 
         // Verify homeserver sync was called
-        expect(Core.HomeserverService.request).toHaveBeenCalledWith({
+        expect(HomeserverService.request).toHaveBeenCalledWith({
           method: HttpMethod.DELETE,
           url: expect.stringContaining('pubky://'),
         });
       });
 
       it('should rollback post tag when homeserver delete fails', async () => {
-        vi.spyOn(Core.HomeserverService, 'request').mockRejectedValueOnce(
+        vi.spyOn(HomeserverService, 'request').mockRejectedValueOnce(
           new Error('Failed to DELETE from homeserver: 403'),
         );
 
-        await expect(TagController.commitDelete(createTagParams('javascript', Core.TagKind.POST))).rejects.toThrow(
+        await expect(TagController.commitDelete(createTagParams('javascript', TagKind.POST))).rejects.toThrow(
           'Failed to DELETE from homeserver: 403',
         );
 
-        const savedTags = await getSavedTags(Core.TagKind.POST);
+        const savedTags = await getSavedTags(TagKind.POST);
         expect(savedTags!.tags).toHaveLength(1);
         expect(savedTags!.tags[0].label).toBe('javascript');
         expect(savedTags!.tags[0].taggers_count).toBe(1);
@@ -250,43 +254,43 @@ describe('TagController', () => {
 
     describe('USER tags', () => {
       beforeEach(async () => {
-        await setupExistingTag('developer', Core.TagKind.USER);
+        await setupExistingTag('developer', TagKind.USER);
       });
 
       it('should remove user tag and sync to homeserver', async () => {
-        await TagController.commitDelete(createTagParams('developer', Core.TagKind.USER));
+        await TagController.commitDelete(createTagParams('developer', TagKind.USER));
 
-        const savedTags = await getSavedTags(Core.TagKind.USER);
+        const savedTags = await getSavedTags(TagKind.USER);
         expect(savedTags!.tags).toHaveLength(0);
 
-        expect(Core.HomeserverService.request).toHaveBeenCalledWith({
+        expect(HomeserverService.request).toHaveBeenCalledWith({
           method: HttpMethod.DELETE,
           url: expect.stringContaining('pubky://'),
         });
       });
 
       it('should normalize user tag label (trim and lowercase)', async () => {
-        await TagController.commitDelete(createTagParams('  Developer  ', Core.TagKind.USER));
+        await TagController.commitDelete(createTagParams('  Developer  ', TagKind.USER));
 
-        const savedTags = await getSavedTags(Core.TagKind.USER);
+        const savedTags = await getSavedTags(TagKind.USER);
         expect(savedTags!.tags).toHaveLength(0);
 
-        expect(Core.HomeserverService.request).toHaveBeenCalledWith({
+        expect(HomeserverService.request).toHaveBeenCalledWith({
           method: HttpMethod.DELETE,
           url: expect.stringContaining('pubky://'),
         });
       });
 
       it('should rollback user tag when homeserver delete fails', async () => {
-        vi.spyOn(Core.HomeserverService, 'request').mockRejectedValueOnce(
+        vi.spyOn(HomeserverService, 'request').mockRejectedValueOnce(
           new Error('Failed to DELETE from homeserver: 403'),
         );
 
-        await expect(TagController.commitDelete(createTagParams('developer', Core.TagKind.USER))).rejects.toThrow(
+        await expect(TagController.commitDelete(createTagParams('developer', TagKind.USER))).rejects.toThrow(
           'Failed to DELETE from homeserver: 403',
         );
 
-        const savedTags = await getSavedTags(Core.TagKind.USER);
+        const savedTags = await getSavedTags(TagKind.USER);
         expect(savedTags!.tags).toHaveLength(1);
         expect(savedTags!.tags[0].label).toBe('developer');
         expect(savedTags!.tags[0].taggers_count).toBe(1);

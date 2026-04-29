@@ -1,7 +1,9 @@
-import * as Core from '@/core';
 import { HttpMethod } from '@/libs/http/http.types';
 import { Logger } from '@/libs/logger/logger';
-
+import { TagKind, type TCreateTagListInput, type TDeleteTagInput } from '@/application/tag/tag.types';
+import { HomeserverService } from '@/services/homeserver/homeserver';
+import { LocalPostTagService } from '@/services/local/tag/post/tag.post';
+import { LocalUserTagService } from '@/services/local/tag/user/tag.user';
 /**
  * Tag application service implementing local-first architecture with rollback.
  *
@@ -20,27 +22,27 @@ export class TagApplication {
    * Commits the create tag operation to the homeserver and local database.
    * @param tagList - The list of tags to create
    */
-  static async commitCreate({ tagList }: Core.TCreateTagListInput) {
+  static async commitCreate({ tagList }: TCreateTagListInput) {
     // Process tags one at a time so callers never observe hidden in-flight work
     // from later entries after an earlier tag fails.
     for (const { taggerId, taggedId, label, tagUrl, tagJson, taggedKind } of tagList) {
       let didCreateLocally = false;
 
-      if (taggedKind === Core.TagKind.POST) {
-        didCreateLocally = await Core.LocalPostTagService.create({ taggerId, taggedId, label });
+      if (taggedKind === TagKind.POST) {
+        didCreateLocally = await LocalPostTagService.create({ taggerId, taggedId, label });
       } else {
-        didCreateLocally = await Core.LocalUserTagService.create({ taggerId, taggedId, label });
+        didCreateLocally = await LocalUserTagService.create({ taggerId, taggedId, label });
       }
 
       try {
-        await Core.HomeserverService.request({ method: HttpMethod.PUT, url: tagUrl, bodyJson: tagJson });
+        await HomeserverService.request({ method: HttpMethod.PUT, url: tagUrl, bodyJson: tagJson });
       } catch (error) {
         if (didCreateLocally) {
           try {
-            if (taggedKind === Core.TagKind.POST) {
-              await Core.LocalPostTagService.delete({ taggerId, taggedId, label });
+            if (taggedKind === TagKind.POST) {
+              await LocalPostTagService.delete({ taggerId, taggedId, label });
             } else {
-              await Core.LocalUserTagService.delete({ taggerId, taggedId, label });
+              await LocalUserTagService.delete({ taggerId, taggedId, label });
             }
           } catch (rollbackError) {
             Logger.error('[TagApplication.commitCreate] Failed to rollback local tag create', {
@@ -67,25 +69,25 @@ export class TagApplication {
    * @param params.tagUrl - The URL of the tag
    * @param params.taggedKind - The kind of the tagged entity
    */
-  static async commitDelete({ taggerId, taggedId, label, tagUrl, taggedKind }: Core.TDeleteTagInput) {
+  static async commitDelete({ taggerId, taggedId, label, tagUrl, taggedKind }: TDeleteTagInput) {
     let wasDeleted = false;
 
-    if (taggedKind === Core.TagKind.POST) {
-      wasDeleted = await Core.LocalPostTagService.delete({ taggerId, taggedId, label });
+    if (taggedKind === TagKind.POST) {
+      wasDeleted = await LocalPostTagService.delete({ taggerId, taggedId, label });
     } else {
-      wasDeleted = await Core.LocalUserTagService.delete({ taggerId, taggedId, label });
+      wasDeleted = await LocalUserTagService.delete({ taggerId, taggedId, label });
     }
 
     // Only send to homeserver if something was actually deleted locally
     if (wasDeleted) {
       try {
-        await Core.HomeserverService.request({ method: HttpMethod.DELETE, url: tagUrl });
+        await HomeserverService.request({ method: HttpMethod.DELETE, url: tagUrl });
       } catch (error) {
         try {
-          if (taggedKind === Core.TagKind.POST) {
-            await Core.LocalPostTagService.create({ taggerId, taggedId, label });
+          if (taggedKind === TagKind.POST) {
+            await LocalPostTagService.create({ taggerId, taggedId, label });
           } else {
-            await Core.LocalUserTagService.create({ taggerId, taggedId, label });
+            await LocalUserTagService.create({ taggerId, taggedId, label });
           }
         } catch (rollbackError) {
           Logger.error('[TagApplication.commitDelete] Failed to rollback local tag delete', {

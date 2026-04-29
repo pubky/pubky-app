@@ -1,5 +1,4 @@
-import type { FlatNotification } from '@/core';
-
+import type { FlatNotification } from '@/models/notification/notification.types';
 export interface UseNotificationsResult {
   notifications: FlatNotification[];
   /** Notifications that were unread when the user entered the page (for visual styling) */

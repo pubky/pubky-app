@@ -1,7 +1,6 @@
 'use client';
 
 import * as Atoms from '@/atoms';
-import * as Core from '@/core';
 
 /**
  * HeaderJoin component for unauthenticated users on public routes.
@@ -12,8 +11,9 @@ import * as Core from '@/core';
  * Follows pubky-app pattern for minimal header on public view pages.
  */
 import { UserRound } from 'lucide-react';
+import { useAuthStore } from '@/stores/auth/auth.store';
 export function HeaderJoin() {
-  const setShowSignInDialog = Core.useAuthStore((state) => state.setShowSignInDialog);
+  const setShowSignInDialog = useAuthStore((state) => state.setShowSignInDialog);
   const handleJoinClick = () => {
     setShowSignInDialog(true);
   };

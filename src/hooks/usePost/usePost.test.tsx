@@ -28,24 +28,22 @@ const {
   };
 });
 
-// Mock Core
-vi.mock('@/core', async (importOriginal) => {
-  const actual = await importOriginal<typeof import('@/core')>();
-  return {
-    ...actual,
-    PostController: {
-      commitCreate: mockPostControllerCreate,
-      commitEdit: mockPostControllerEdit,
-    },
-    useAuthStore: vi.fn((selector) => {
-      const state = {
-        currentUserPubky: mockCurrentUserId.current,
-        selectCurrentUserPubky: () => mockCurrentUserId.current,
-      };
-      return selector ? selector(state) : state;
-    }),
-  };
-});
+// Mock dependencies
+vi.mock('@/controllers/post/post', () => ({
+  PostController: {
+    commitCreate: mockPostControllerCreate,
+    commitEdit: mockPostControllerEdit,
+  },
+}));
+vi.mock('@/stores/auth/auth.store', () => ({
+  useAuthStore: vi.fn((selector) => {
+    const state = {
+      currentUserPubky: mockCurrentUserId.current,
+      selectCurrentUserPubky: () => mockCurrentUserId.current,
+    };
+    return selector ? selector(state) : state;
+  }),
+}));
 
 // Mock Molecules
 vi.mock('@/molecules', async (importOriginal) => {

@@ -1,12 +1,13 @@
 'use client';
 
 import { useState, useCallback } from 'react';
-import * as Core from '@/core';
 import type { UseMuteUserResult } from './useMuteUser.types';
 import { HttpMethod } from '@/libs/http/http.types';
 import { Logger } from '@/libs/logger/logger';
 import { isAppError } from '@/libs/error/error.utils';
-
+import { MuteController } from '@/controllers/mute/mute';
+import type { Pubky } from '@/models/models.types';
+import { useAuthStore } from '@/stores/auth/auth.store';
 /**
  * useMuteUser
  *
@@ -15,13 +16,13 @@ import { isAppError } from '@/libs/error/error.utils';
  * local database updates and homeserver sync.
  */
 export function useMuteUser(): UseMuteUserResult {
-  const { currentUserPubky } = Core.useAuthStore();
+  const { currentUserPubky } = useAuthStore();
   const [isLoading, setIsLoading] = useState(false);
-  const [loadingUserId, setLoadingUserId] = useState<Core.Pubky | null>(null);
+  const [loadingUserId, setLoadingUserId] = useState<Pubky | null>(null);
   const [error, setError] = useState<string | null>(null);
 
   const toggleMute = useCallback(
-    async (userId: Core.Pubky, isCurrentlyMuted: boolean) => {
+    async (userId: Pubky, isCurrentlyMuted: boolean) => {
       if (!currentUserPubky) {
         setError('User not authenticated');
         return;
@@ -39,7 +40,7 @@ export function useMuteUser(): UseMuteUserResult {
       try {
         const action = isCurrentlyMuted ? HttpMethod.DELETE : HttpMethod.PUT;
 
-        await Core.MuteController.commitMute(action, {
+        await MuteController.commitMute(action, {
           muter: currentUserPubky,
           mutee: userId,
         });
@@ -61,7 +62,7 @@ export function useMuteUser(): UseMuteUserResult {
   );
 
   const isUserLoading = useCallback(
-    (userId: Core.Pubky) => isLoading && loadingUserId === userId,
+    (userId: Pubky) => isLoading && loadingUserId === userId,
     [isLoading, loadingUserId],
   );
 

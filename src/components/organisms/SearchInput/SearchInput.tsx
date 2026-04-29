@@ -10,13 +10,13 @@ import { useRouter, useSearchParams, usePathname } from 'next/navigation';
 import { useTranslations } from 'next-intl';
 import * as Molecules from '@/molecules';
 import * as Atoms from '@/atoms';
-import * as Core from '@/core';
 import { APP_ROUTES } from '@/app/routes';
 import { CLICKABLE_TAGS_DEFAULT_MAX_LENGTH } from '@/config/tags';
 import { parseTagsFromUrl } from './SearchInput.utils';
 import { SearchInputProps } from './SearchInput.types';
 import { isValidTagLabel } from '@/libs/utils/utils';
-
+import type { Pubky } from '@/models/models.types';
+import { useSearchStore } from '@/stores/search/search.store';
 export function SearchInput({ autoFocus = false }: SearchInputProps) {
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -24,7 +24,7 @@ export function SearchInput({ autoFocus = false }: SearchInputProps) {
   const t = useTranslations('search');
 
   const { addTagToSearch, removeTagFromSearch, activeTags, isReadOnly } = useTagSearch();
-  const { setActiveTags, recentUsers, recentTags, addUser, clearRecentSearches } = Core.useSearchStore();
+  const { setActiveTags, recentUsers, recentTags, addUser, clearRecentSearches } = useSearchStore();
   const isMobile = useIsMobile();
 
   const handleEnter = (value: string) => {
@@ -65,7 +65,7 @@ export function SearchInput({ autoFocus = false }: SearchInputProps) {
     enabled: isFocused && hasInput,
   });
 
-  const handleUserClick = (userId: Core.Pubky) => {
+  const handleUserClick = (userId: Pubky) => {
     addUser(userId);
     clearInputValue();
     setFocus(false);

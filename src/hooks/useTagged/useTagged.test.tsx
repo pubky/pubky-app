@@ -1,9 +1,9 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { act, renderHook, waitFor } from '@testing-library/react';
 import { useTagged } from './useTagged';
-import * as Core from '@/core';
 import { useProfileStats } from '@/hooks/useProfileStats/useProfileStats';
-
+import { TagKind } from '@/application/tag/tag.types';
+import type { NexusTag } from '@/services/nexus/nexus.types';
 // Hoist mock functions before vi.mock
 const mockMocks = vi.hoisted(() => {
   const mockGetTags = vi.fn();
@@ -24,32 +24,32 @@ const mockMocks = vi.hoisted(() => {
   };
 });
 
-// Mock Core modules
-vi.mock('@/core', async () => {
-  const actual = await vi.importActual<typeof import('@/core')>('@/core');
-  return {
-    ...actual,
-    UserController: {
-      getTags: mockMocks.mockGetTags,
-      fetchTags: mockMocks.mockFetchTags,
-      upsertTags: mockMocks.mockUpsertTags,
-      getCounts: mockMocks.mockGetCounts,
+// Mock dependencies
+vi.mock('@/controllers/user/user', () => ({
+  UserController: {
+    getTags: mockMocks.mockGetTags,
+    fetchTags: mockMocks.mockFetchTags,
+    upsertTags: mockMocks.mockUpsertTags,
+    getCounts: mockMocks.mockGetCounts,
+  },
+}));
+vi.mock('@/controllers/tag/tag', () => ({
+  TagController: {
+    commitCreate: mockMocks.mockTagCreate,
+    commitDelete: mockMocks.mockTagDelete,
+  },
+}));
+vi.mock('@/stores/auth/auth.store', () => ({
+  useAuthStore: vi.fn(
+    (selector?: (state: { currentUserPubky: string; selectCurrentUserPubky: () => string }) => unknown) => {
+      const mockState = {
+        currentUserPubky: 'mock-current-user',
+        selectCurrentUserPubky: () => 'mock-current-user',
+      };
+      return selector ? selector(mockState) : mockState;
     },
-    TagController: {
-      commitCreate: mockMocks.mockTagCreate,
-      commitDelete: mockMocks.mockTagDelete,
-    },
-    useAuthStore: vi.fn(
-      (selector?: (state: { currentUserPubky: string; selectCurrentUserPubky: () => string }) => unknown) => {
-        const mockState = {
-          currentUserPubky: 'mock-current-user',
-          selectCurrentUserPubky: () => 'mock-current-user',
-        };
-        return selector ? selector(mockState) : mockState;
-      },
-    ),
-  };
-});
+  ),
+}));
 
 // Mock useProfileStats
 const mockUseProfileStats = vi.fn((_userId: string) => ({
@@ -91,7 +91,7 @@ vi.mock('@/molecules/Toaster/use-toast', () => ({
 }));
 
 // Mock dexie-react-hooks
-let mockLocalTags: Core.NexusTag[] | null = null;
+let mockLocalTags: NexusTag[] | null = null;
 
 const mockUseLiveQuery = vi.fn(<T,>(queryFn: () => Promise<T> | T, deps: unknown[], defaultValue: T): T => {
   // For getTags query
@@ -209,7 +209,7 @@ describe('useTagged', () => {
       taggedId: mockUserId,
       label: 'ethereum',
       taggerId: 'mock-current-user',
-      taggedKind: Core.TagKind.USER,
+      taggedKind: TagKind.USER,
     });
     expect(mockMocks.mockToast).toHaveBeenCalledWith({
       title: 'Tag added',
@@ -263,7 +263,7 @@ describe('useTagged', () => {
       taggedId: mockUserId,
       label: 'bitcoin',
       taggerId: 'mock-current-user',
-      taggedKind: Core.TagKind.USER,
+      taggedKind: TagKind.USER,
     });
     expect(mockMocks.mockToast).toHaveBeenCalledWith({
       title: 'Tag removed',

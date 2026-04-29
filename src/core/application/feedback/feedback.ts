@@ -1,17 +1,12 @@
-import * as Core from '@/core';
-import {
-  CHATWOOT_INBOX_IDS,
-  CHATWOOT_FEEDBACK_MESSAGE_PREFIX,
-  buildChatwootEmail,
-  extractSourceId,
-} from '@/core/services/chatwoot';
 import * as Types from './feedback.types';
 import { Logger } from '@/libs/logger/logger';
 import { AppError } from '@/libs/error/error';
 import { ServerErrorCode } from '@/libs/error/error.codes';
 import { Err } from '@/libs/error/error.factories';
 import { ErrorService } from '@/libs/error/error.types';
-
+import { ChatwootService } from '@/services/chatwoot/chatwoot';
+import { CHATWOOT_FEEDBACK_MESSAGE_PREFIX, CHATWOOT_INBOX_IDS } from '@/services/chatwoot/chatwoot.constants';
+import { buildChatwootEmail, extractSourceId } from '@/services/chatwoot/chatwoot.utils';
 /**
  * Feedback application service.
  *
@@ -63,13 +58,13 @@ export class FeedbackApplication {
       const content = this.formatMessageContent(comment);
 
       // Create or find contact in Chatwoot
-      const contact = await Core.ChatwootService.createOrFindContact(email, name, inboxId);
+      const contact = await ChatwootService.createOrFindContact(email, name, inboxId);
 
       // Extract source ID (validates inbox associations)
       const sourceId = extractSourceId(contact, email);
 
       // Create conversation with formatted message
-      await Core.ChatwootService.createConversation(sourceId, contact.id, inboxId, content);
+      await ChatwootService.createConversation(sourceId, contact.id, inboxId, content);
     } catch (error) {
       // Log error for observability
       if (error instanceof AppError) {

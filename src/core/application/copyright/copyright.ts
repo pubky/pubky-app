@@ -1,7 +1,7 @@
-import * as Core from '@/core';
-import { CHATWOOT_INBOX_IDS, extractSourceId } from '@/core/services/chatwoot';
 import * as Types from './copyright.types';
-
+import { ChatwootService } from '@/services/chatwoot/chatwoot';
+import { CHATWOOT_INBOX_IDS } from '@/services/chatwoot/chatwoot.constants';
+import { extractSourceId } from '@/services/chatwoot/chatwoot.utils';
 /**
  * Copyright application service.
  *
@@ -50,9 +50,9 @@ export class CopyrightApplication {
     const formDataJson = this.formatFormData(params);
     const content = this.formatMessageContent(formDataJson);
 
-    const contact = await Core.ChatwootService.createOrFindContact(email, name, inboxId);
+    const contact = await ChatwootService.createOrFindContact(email, name, inboxId);
     const sourceId = extractSourceId(contact, email);
 
-    await Core.ChatwootService.createConversation(sourceId, contact.id, inboxId, content);
+    await ChatwootService.createConversation(sourceId, contact.id, inboxId, content);
   }
 }

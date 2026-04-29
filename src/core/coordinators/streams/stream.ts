@@ -1,15 +1,21 @@
-import * as Core from '@/core';
 import { APP_ROUTES, POST_ROUTES } from '@/app/routes';
-import {
-  Coordinator,
-  routeToRegex,
-  PollingInactiveReason,
-  type StreamCoordinatorConfig,
-  type StreamCoordinatorState,
-} from '@/core/coordinators';
 import { Env } from '@/libs/env/env';
 import { Logger } from '@/libs/logger/logger';
-
+import { postStreamQueue } from '@/application/stream/posts/muting/post-stream-queue';
+import { FeedController } from '@/controllers/feed/feed';
+import { FORCE_FETCH_NEW_POSTS, SKIP_FETCH_NEW_POSTS } from '@/controllers/stream/posts/post.constants';
+import { StreamPostsController } from '@/controllers/stream/posts/posts';
+import { Coordinator } from '@/coordinators/base/coordinator';
+import { PollingInactiveReason } from '@/coordinators/base/coordinators.types';
+import { routeToRegex } from '@/coordinators/base/coordinators.utils';
+import type { StreamCoordinatorConfig, StreamCoordinatorState } from '@/coordinators/streams/stream.types';
+import { buildFeedStreamId } from '@/models/feed/feed.helpers';
+import { buildCompositeId } from '@/models/models.utils';
+import { buildPostReplyStreamId, type PostStreamId } from '@/models/stream/post/postStream.types';
+import { StreamSorting } from '@/services/nexus/nexus.types';
+import { breakDownStreamId } from '@/services/nexus/stream/posts/postStream.utils';
+import { useHomeStore } from '@/stores/home/home.store';
+import { getStreamId } from '@/stores/home/home.utils';
 /**
  * StreamCoordinator
  *
@@ -34,11 +40,11 @@ export class StreamCoordinator extends Coordinator<StreamCoordinatorConfig, Stre
   // Extended state
   private streamState: Required<Pick<StreamCoordinatorState, 'currentStreamId' | 'streamHead'>> = {
     currentStreamId: null,
-    streamHead: Core.SKIP_FETCH_NEW_POSTS,
+    streamHead: SKIP_FETCH_NEW_POSTS,
   };
 
   // Feed stream resolution cache (async Dexie lookup resolved once, then cached)
-  private feedStreamCache: { feedId: string; streamId: Core.PostStreamId } | null = null;
+  private feedStreamCache: { feedId: string; streamId: PostStreamId } | null = null;
   private pendingFeedResolution = false;
 
   /**
@@ -165,8 +171,8 @@ export class StreamCoordinator extends Coordinator<StreamCoordinatorConfig, Stre
 
     // Home route: build from home store state
     if (this.state.currentRoute === APP_ROUTES.HOME) {
-      const { sort, reach, content } = Core.useHomeStore.getState();
-      this.streamState.currentStreamId = Core.getStreamId(sort, reach, content);
+      const { sort, reach, content } = useHomeStore.getState();
+      this.streamState.currentStreamId = getStreamId(sort, reach, content);
       Logger.debug(`Built ${APP_ROUTES.HOME} streamId`, { streamId: this.streamState.currentStreamId });
     }
     // Post route: extract from URL and build reply stream ID
@@ -184,11 +190,11 @@ export class StreamCoordinator extends Coordinator<StreamCoordinatorConfig, Stre
 
     // Reset streamHead if stream ID changed
     if (previousStreamId !== this.streamState.currentStreamId) {
-      this.streamState.streamHead = Core.SKIP_FETCH_NEW_POSTS;
+      this.streamState.streamHead = SKIP_FETCH_NEW_POSTS;
 
       // Clear old queue entry since it's no longer needed
       if (previousStreamId !== null) {
-        Core.postStreamQueue.remove(previousStreamId);
+        postStreamQueue.remove(previousStreamId);
         Logger.debug('Cleared queue for previous stream', { previousStreamId });
       }
 
@@ -204,10 +210,10 @@ export class StreamCoordinator extends Coordinator<StreamCoordinatorConfig, Stre
   /**
    * Resolve the stream head based on current stream ID
    */
-  private async resolveStreamHead(currentStreamId: Core.PostStreamId): Promise<boolean> {
+  private async resolveStreamHead(currentStreamId: PostStreamId): Promise<boolean> {
     try {
-      const streamHead = await Core.StreamPostsController.getStreamHead({ streamId: currentStreamId });
-      if (streamHead === Core.SKIP_FETCH_NEW_POSTS) {
+      const streamHead = await StreamPostsController.getStreamHead({ streamId: currentStreamId });
+      if (streamHead === SKIP_FETCH_NEW_POSTS) {
         Logger.warn('Failed to resolve stream head or the newest cached postId not found', {
           streamId: currentStreamId,
         });
@@ -215,7 +221,7 @@ export class StreamCoordinator extends Coordinator<StreamCoordinatorConfig, Stre
       }
 
       // Validate that we have a valid stream head
-      if (streamHead < Core.FORCE_FETCH_NEW_POSTS) {
+      if (streamHead < FORCE_FETCH_NEW_POSTS) {
         Logger.warn('Invalid stream head value', { streamId: currentStreamId, streamHead });
         return false;
       }
@@ -242,8 +248,8 @@ export class StreamCoordinator extends Coordinator<StreamCoordinatorConfig, Stre
         return;
       }
 
-      const compositePostId = Core.buildCompositeId({ pubky: params.userId, id: params.postId });
-      this.streamState.currentStreamId = Core.buildPostReplyStreamId(compositePostId);
+      const compositePostId = buildCompositeId({ pubky: params.userId, id: params.postId });
+      this.streamState.currentStreamId = buildPostReplyStreamId(compositePostId);
 
       Logger.debug('Built post reply stream ID', { replyStreamId: this.streamState.currentStreamId });
     } catch (error) {
@@ -298,7 +304,7 @@ export class StreamCoordinator extends Coordinator<StreamCoordinatorConfig, Stre
     // evaluateAndStartPolling() synchronously, which may set pendingFeedResolution=true
     // for a NEW feed. A `finally` block would run after that and clobber it back to false.
     try {
-      const feed = await Core.FeedController.get({ feedId });
+      const feed = await FeedController.get({ feedId });
       if (!feed) {
         Logger.warn('Feed not found for stream resolution', { feedId });
         this.pendingFeedResolution = false;
@@ -322,7 +328,7 @@ export class StreamCoordinator extends Coordinator<StreamCoordinatorConfig, Stre
         return;
       }
 
-      const streamId = Core.buildFeedStreamId(feed);
+      const streamId = buildFeedStreamId(feed);
       this.feedStreamCache = { feedId, streamId };
       Logger.debug('Resolved feed stream ID', { feedId, streamId });
 
@@ -364,10 +370,10 @@ export class StreamCoordinator extends Coordinator<StreamCoordinatorConfig, Stre
   /**
    * Check if a stream ID represents an engagement stream
    */
-  private isEngagementStream(streamId: Core.PostStreamId): boolean {
+  private isEngagementStream(streamId: PostStreamId): boolean {
     try {
-      const [sorting] = Core.breakDownStreamId(streamId);
-      return sorting === Core.StreamSorting.ENGAGEMENT;
+      const [sorting] = breakDownStreamId(streamId);
+      return sorting === StreamSorting.ENGAGEMENT;
     } catch (error) {
       Logger.warn('Failed to parse stream ID for engagement check', { streamId, error });
       return false;
@@ -385,7 +391,7 @@ export class StreamCoordinator extends Coordinator<StreamCoordinatorConfig, Stre
     // Call parent to setup base listeners (auth, visibility)
     super.setupListeners();
     // Listen to home store changes (sort, reach, content affect streamId)
-    this.homeStoreUnsubscribe = Core.useHomeStore.subscribe(async (state, prevState) => {
+    this.homeStoreUnsubscribe = useHomeStore.subscribe(async (state, prevState) => {
       // Only re-evaluate if we're on /home and relevant fields changed
       const currentState = this.getState();
       if (currentState.currentRoute === APP_ROUTES.HOME) {
@@ -470,7 +476,7 @@ export class StreamCoordinator extends Coordinator<StreamCoordinatorConfig, Stre
 
       if (!(await this.resolveStreamHead(streamId))) return;
 
-      await Core.StreamPostsController.getOrFetchStreamSlice({
+      await StreamPostsController.getOrFetchStreamSlice({
         streamId,
         streamHead: this.streamState.streamHead,
         limit: this.streamConfig.fetchLimit,

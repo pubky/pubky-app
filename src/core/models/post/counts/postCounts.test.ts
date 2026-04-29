@@ -1,18 +1,21 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
-import * as Core from '@/core';
 import { DatabaseErrorCode } from '@/libs/error/error.codes';
 import { Err } from '@/libs/error/error.factories';
 import { ErrorCategory, ErrorService } from '@/libs/error/error.types';
-
+import { resetDatabase } from '@/database/franky/franky.helpers';
+import { PostCountsModel } from '@/models/post/counts/postCounts';
+import type { PostCountsModelSchema } from '@/models/post/counts/postCounts.schema';
+import type { NexusModelTuple } from '@/models/shared/base/tuple/baseTuple.type';
+import type { NexusPostCounts } from '@/services/nexus/nexus.types';
 describe('PostCountsModel', () => {
   beforeEach(async () => {
-    await Core.resetDatabase();
+    await resetDatabase();
   });
 
   const testPostId1 = 'post-test-1';
   const testPostId2 = 'post-test-2';
 
-  const MOCK_NEXUS_POST_COUNTS: Core.NexusPostCounts = {
+  const MOCK_NEXUS_POST_COUNTS: NexusPostCounts = {
     tags: 5,
     unique_tags: 3,
     replies: 12,
@@ -22,7 +25,7 @@ describe('PostCountsModel', () => {
   describe('Constructor', () => {
     it('should create PostCountsModel instance with all properties', () => {
       const mockPostCountsData = { id: testPostId1, ...MOCK_NEXUS_POST_COUNTS };
-      const postCounts = new Core.PostCountsModel(mockPostCountsData);
+      const postCounts = new PostCountsModel(mockPostCountsData);
 
       expect(postCounts.id).toBe(testPostId1);
       expect(postCounts.tags).toBe(5);
@@ -36,56 +39,56 @@ describe('PostCountsModel', () => {
     const createTestPostCounts = (id: string) => ({ id, ...MOCK_NEXUS_POST_COUNTS });
 
     it('should create post counts', async () => {
-      const result = await Core.PostCountsModel.create(createTestPostCounts(testPostId1));
+      const result = await PostCountsModel.create(createTestPostCounts(testPostId1));
       expect(result).toBe(testPostId1);
     });
 
     it('should find post counts by id', async () => {
-      await Core.PostCountsModel.create(createTestPostCounts(testPostId1));
-      const result = await Core.PostCountsModel.findById(testPostId1);
+      await PostCountsModel.create(createTestPostCounts(testPostId1));
+      const result = await PostCountsModel.findById(testPostId1);
 
-      expect(result).toBeInstanceOf(Core.PostCountsModel);
+      expect(result).toBeInstanceOf(PostCountsModel);
       expect(result!.id).toBe(testPostId1);
       expect(result!.replies).toBe(12);
     });
 
     it('should return null for non-existent post counts', async () => {
       const nonExistentId = 'non-existent-post-999';
-      const result = await Core.PostCountsModel.findById(nonExistentId);
+      const result = await PostCountsModel.findById(nonExistentId);
       expect(result).toBeNull();
     });
 
     it('should bulk save post counts from tuples', async () => {
-      const mockNexusModelTuples: Core.NexusModelTuple<Core.NexusPostCounts>[] = [
+      const mockNexusModelTuples: NexusModelTuple<NexusPostCounts>[] = [
         [testPostId1, MOCK_NEXUS_POST_COUNTS],
         [testPostId2, { ...MOCK_NEXUS_POST_COUNTS, replies: 25 }],
       ];
 
-      await Core.PostCountsModel.bulkSave(mockNexusModelTuples);
+      await PostCountsModel.bulkSave(mockNexusModelTuples);
 
-      const postCounts1 = await Core.PostCountsModel.findById(testPostId1);
-      const postCounts2 = await Core.PostCountsModel.findById(testPostId2);
+      const postCounts1 = await PostCountsModel.findById(testPostId1);
+      const postCounts2 = await PostCountsModel.findById(testPostId2);
 
       expect(postCounts1!.replies).toBe(12);
       expect(postCounts2!.replies).toBe(25);
     });
 
     it('should handle empty array in bulk save', async () => {
-      const result = await Core.PostCountsModel.bulkSave([]);
+      const result = await PostCountsModel.bulkSave([]);
       // bulkPut with empty array returns undefined, which is expected
       expect(result).toBeUndefined();
     });
 
     it('should handle multiple tuples with different data', async () => {
-      const mockTuples: Core.NexusModelTuple<Core.NexusPostCounts>[] = [
+      const mockTuples: NexusModelTuple<NexusPostCounts>[] = [
         [testPostId1, MOCK_NEXUS_POST_COUNTS],
         [testPostId2, { ...MOCK_NEXUS_POST_COUNTS, reposts: 100, tags: 1 }],
       ];
 
-      await Core.PostCountsModel.bulkSave(mockTuples);
+      await PostCountsModel.bulkSave(mockTuples);
 
-      const postCounts1 = await Core.PostCountsModel.findById(testPostId1);
-      const postCounts2 = await Core.PostCountsModel.findById(testPostId2);
+      const postCounts1 = await PostCountsModel.findById(testPostId1);
+      const postCounts2 = await PostCountsModel.findById(testPostId2);
 
       expect(postCounts1!.reposts).toBe(8);
       expect(postCounts1!.tags).toBe(5);
@@ -95,8 +98,8 @@ describe('PostCountsModel', () => {
 
     describe('toSchema', () => {
       it('should convert NexusModelTuple to PostCountsModelSchema', () => {
-        const tuple: Core.NexusModelTuple<Core.NexusPostCounts> = [testPostId1, MOCK_NEXUS_POST_COUNTS];
-        const result = Core.PostCountsModel.toSchema(tuple);
+        const tuple: NexusModelTuple<NexusPostCounts> = [testPostId1, MOCK_NEXUS_POST_COUNTS];
+        const result = PostCountsModel.toSchema(tuple);
 
         expect(result).toEqual({
           id: testPostId1,
@@ -108,8 +111,8 @@ describe('PostCountsModel', () => {
       });
 
       it('should handle different post IDs in toSchema', () => {
-        const tuple: Core.NexusModelTuple<Core.NexusPostCounts> = [testPostId2, MOCK_NEXUS_POST_COUNTS];
-        const result = Core.PostCountsModel.toSchema(tuple);
+        const tuple: NexusModelTuple<NexusPostCounts> = [testPostId2, MOCK_NEXUS_POST_COUNTS];
+        const result = PostCountsModel.toSchema(tuple);
 
         expect(result.id).toBe(testPostId2);
         expect(result).toEqual({ id: testPostId2, ...MOCK_NEXUS_POST_COUNTS });
@@ -118,7 +121,7 @@ describe('PostCountsModel', () => {
 
     describe('updateCounts', () => {
       beforeEach(async () => {
-        await Core.PostCountsModel.create({ id: testPostId1, ...MOCK_NEXUS_POST_COUNTS });
+        await PostCountsModel.create({ id: testPostId1, ...MOCK_NEXUS_POST_COUNTS });
       });
 
       it.each([
@@ -127,22 +130,22 @@ describe('PostCountsModel', () => {
         ['tags', { tags: 3 }, 8],
         ['unique_tags', { unique_tags: -1 }, 2],
       ])('should update %s field', async (field, countChanges, expected) => {
-        await Core.PostCountsModel.updateCounts({
+        await PostCountsModel.updateCounts({
           postCompositeId: testPostId1,
           countChanges,
         });
 
-        const updated = await Core.PostCountsModel.findById(testPostId1);
-        expect(updated![field as keyof Core.PostCountsModelSchema]).toBe(expected);
+        const updated = await PostCountsModel.findById(testPostId1);
+        expect(updated![field as keyof PostCountsModelSchema]).toBe(expected);
       });
 
       it('should update multiple count fields at once', async () => {
-        await Core.PostCountsModel.updateCounts({
+        await PostCountsModel.updateCounts({
           postCompositeId: testPostId1,
           countChanges: { replies: 10, reposts: -3, tags: 2, unique_tags: 1 },
         });
 
-        const updated = await Core.PostCountsModel.findById(testPostId1);
+        const updated = await PostCountsModel.findById(testPostId1);
         expect(updated!.replies).toBe(22);
         expect(updated!.reposts).toBe(5);
         expect(updated!.tags).toBe(7);
@@ -150,80 +153,80 @@ describe('PostCountsModel', () => {
       });
 
       it('should prevent negative values by clamping to 0', async () => {
-        await Core.PostCountsModel.updateCounts({
+        await PostCountsModel.updateCounts({
           postCompositeId: testPostId1,
           countChanges: { replies: -100, reposts: -20 },
         });
 
-        const updated = await Core.PostCountsModel.findById(testPostId1);
+        const updated = await PostCountsModel.findById(testPostId1);
         expect(updated!.replies).toBe(0);
         expect(updated!.reposts).toBe(0);
       });
 
       it('should handle partial updates (only some fields)', async () => {
-        await Core.PostCountsModel.updateCounts({
+        await PostCountsModel.updateCounts({
           postCompositeId: testPostId1,
           countChanges: { replies: 5 },
         });
 
-        const updated = await Core.PostCountsModel.findById(testPostId1);
+        const updated = await PostCountsModel.findById(testPostId1);
         expect(updated!.replies).toBe(17);
         expect(updated!.reposts).toBe(8);
       });
 
       it('should return early if post counts do not exist', async () => {
         const nonExistentId = 'non-existent-post-999';
-        await Core.PostCountsModel.updateCounts({
+        await PostCountsModel.updateCounts({
           postCompositeId: nonExistentId,
           countChanges: { replies: 5 },
         });
 
-        const result = await Core.PostCountsModel.findById(nonExistentId);
+        const result = await PostCountsModel.findById(nonExistentId);
         expect(result).toBeNull();
       });
 
       it('should not update if countChanges is empty', async () => {
-        const beforeUpdate = await Core.PostCountsModel.findById(testPostId1);
-        await Core.PostCountsModel.updateCounts({
+        const beforeUpdate = await PostCountsModel.findById(testPostId1);
+        await PostCountsModel.updateCounts({
           postCompositeId: testPostId1,
           countChanges: {},
         });
 
-        const afterUpdate = await Core.PostCountsModel.findById(testPostId1);
+        const afterUpdate = await PostCountsModel.findById(testPostId1);
         expect(afterUpdate).toEqual(beforeUpdate);
       });
 
       it('should handle zero changes correctly', async () => {
-        await Core.PostCountsModel.updateCounts({
+        await PostCountsModel.updateCounts({
           postCompositeId: testPostId1,
           countChanges: { replies: 0, reposts: 0 },
         });
 
-        const updated = await Core.PostCountsModel.findById(testPostId1);
+        const updated = await PostCountsModel.findById(testPostId1);
         expect(updated!.replies).toBe(12);
         expect(updated!.reposts).toBe(8);
       });
 
       it('should handle multiple sequential updates', async () => {
-        await Core.PostCountsModel.updateCounts({
+        await PostCountsModel.updateCounts({
           postCompositeId: testPostId1,
           countChanges: { replies: 5 },
         });
-        let updated = await Core.PostCountsModel.findById(testPostId1);
+        let updated = await PostCountsModel.findById(testPostId1);
         expect(updated!.replies).toBe(17);
 
-        await Core.PostCountsModel.updateCounts({
+        await PostCountsModel.updateCounts({
           postCompositeId: testPostId1,
           countChanges: { replies: -2 },
         });
-        updated = await Core.PostCountsModel.findById(testPostId1);
+        updated = await PostCountsModel.findById(testPostId1);
         expect(updated!.replies).toBe(15);
 
-        await Core.PostCountsModel.updateCounts({
+        await PostCountsModel.updateCounts({
           postCompositeId: testPostId1,
           countChanges: { reposts: 10 },
         });
-        updated = await Core.PostCountsModel.findById(testPostId1);
+        updated = await PostCountsModel.findById(testPostId1);
         expect(updated!.replies).toBe(15);
         expect(updated!.reposts).toBe(18);
       });
@@ -241,9 +244,9 @@ describe('PostCountsModel', () => {
             context: { id: testPostId1 },
           });
 
-          vi.spyOn(Core.PostCountsModel, 'findById').mockRejectedValueOnce(error);
+          vi.spyOn(PostCountsModel, 'findById').mockRejectedValueOnce(error);
 
-          await expect(Core.PostCountsModel.updateCounts(updateParams)).rejects.toMatchObject({
+          await expect(PostCountsModel.updateCounts(updateParams)).rejects.toMatchObject({
             category: ErrorCategory.Database,
             code: DatabaseErrorCode.QUERY_FAILED,
           });
@@ -256,24 +259,24 @@ describe('PostCountsModel', () => {
             context: { id: testPostId1 },
           });
 
-          vi.spyOn(Core.PostCountsModel, 'update').mockRejectedValueOnce(error);
+          vi.spyOn(PostCountsModel, 'update').mockRejectedValueOnce(error);
 
-          await expect(Core.PostCountsModel.updateCounts(updateParams)).rejects.toMatchObject({
+          await expect(PostCountsModel.updateCounts(updateParams)).rejects.toMatchObject({
             category: ErrorCategory.Database,
             code: DatabaseErrorCode.WRITE_FAILED,
           });
         });
 
         it('should propagate generic errors from findById', async () => {
-          vi.spyOn(Core.PostCountsModel, 'findById').mockRejectedValueOnce(new Error('Database error'));
+          vi.spyOn(PostCountsModel, 'findById').mockRejectedValueOnce(new Error('Database error'));
 
-          await expect(Core.PostCountsModel.updateCounts(updateParams)).rejects.toThrow('Database error');
+          await expect(PostCountsModel.updateCounts(updateParams)).rejects.toThrow('Database error');
         });
 
         it('should propagate generic errors from update', async () => {
-          vi.spyOn(Core.PostCountsModel, 'update').mockRejectedValueOnce(new Error('Update error'));
+          vi.spyOn(PostCountsModel, 'update').mockRejectedValueOnce(new Error('Update error'));
 
-          await expect(Core.PostCountsModel.updateCounts(updateParams)).rejects.toThrow('Update error');
+          await expect(PostCountsModel.updateCounts(updateParams)).rejects.toThrow('Update error');
         });
       });
     });

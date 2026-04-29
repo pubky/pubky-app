@@ -1,8 +1,8 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { renderHook, waitFor } from '@testing-library/react';
 import { useProfileStats } from './useProfileStats';
-import * as Core from '@/core';
-
+import { UserController } from '@/controllers/user/user';
+import type { UserCountsModelSchema } from '@/models/user/counts/userCounts.schema';
 // Hoist mock data using vi.hoisted
 // Note: undefined = query not executed yet (loading), null = query executed but no data found
 const {
@@ -13,12 +13,12 @@ const {
   mockTaggedCount,
   setMockTaggedCount,
 } = vi.hoisted(() => {
-  const data = { current: undefined as Core.UserCountsModelSchema | null | undefined };
+  const data = { current: undefined as UserCountsModelSchema | null | undefined };
   const notificationsCount = { current: 0 };
   const taggedCount = { current: 0 };
   return {
     mockUserCounts: data,
-    setMockUserCounts: (value: Core.UserCountsModelSchema | null | undefined) => {
+    setMockUserCounts: (value: UserCountsModelSchema | null | undefined) => {
       data.current = value;
     },
     mockNotificationsCount: notificationsCount,
@@ -88,23 +88,23 @@ vi.mock('@/hooks/useTagged/useTagged', () => ({
   })),
 }));
 
-// Mock Core controllers
-vi.mock('@/core', async (importOriginal) => {
-  const actual = await importOriginal<typeof import('@/core')>();
-  return {
-    ...actual,
-    UserController: {
-      getCounts: vi.fn().mockImplementation(() => Promise.resolve(mockUserCounts.current)),
-      fetchCounts: vi.fn().mockImplementation(() => Promise.resolve(mockUserCounts.current)),
-    },
-    NotificationController: {
-      getNotificationsCountsNow: vi.fn(() => mockNotificationsCount.current),
-    },
-    useNotificationStore: vi.fn((selector: (state: { selectUnread: () => number }) => number) =>
-      selector({ selectUnread: () => mockNotificationsCount.current }),
-    ),
-  };
-});
+// Mock controllers
+vi.mock('@/controllers/user/user', () => ({
+  UserController: {
+    getCounts: vi.fn().mockImplementation(() => Promise.resolve(mockUserCounts.current)),
+    fetchCounts: vi.fn().mockImplementation(() => Promise.resolve(mockUserCounts.current)),
+  },
+}));
+vi.mock('@/controllers/notification/notification', () => ({
+  NotificationController: {
+    getNotificationsCountsNow: vi.fn(() => mockNotificationsCount.current),
+  },
+}));
+vi.mock('@/stores/notification/notification.store', () => ({
+  useNotificationStore: vi.fn((selector: (state: { selectUnread: () => number }) => number) =>
+    selector({ selectUnread: () => mockNotificationsCount.current }),
+  ),
+}));
 
 describe('useProfileStats', () => {
   beforeEach(() => {
@@ -162,7 +162,7 @@ describe('useProfileStats', () => {
         tags: 0,
         unique_tags: 3,
         bookmarks: 0,
-      } as Core.UserCountsModelSchema);
+      } as UserCountsModelSchema);
 
       const { result } = renderHook(() => useProfileStats('test-user-id'));
 
@@ -189,7 +189,7 @@ describe('useProfileStats', () => {
         tags: 0,
         unique_tags: 0,
         bookmarks: 0,
-      } as Core.UserCountsModelSchema);
+      } as UserCountsModelSchema);
 
       const { result } = renderHook(() => useProfileStats('test-user-id'));
 
@@ -214,7 +214,7 @@ describe('useProfileStats', () => {
         tags: 0,
         unique_tags: 7,
         bookmarks: 0,
-      } as Core.UserCountsModelSchema);
+      } as UserCountsModelSchema);
 
       const { result } = renderHook(() => useProfileStats('test-user-id'));
 
@@ -240,7 +240,7 @@ describe('useProfileStats', () => {
         tags: 0,
         unique_tags: 3,
         bookmarks: 0,
-      } as Core.UserCountsModelSchema);
+      } as UserCountsModelSchema);
 
       setMockNotificationsCount(15);
 
@@ -282,7 +282,7 @@ describe('useProfileStats', () => {
         tags: 0,
         unique_tags: 3,
         bookmarks: 0,
-      } as Core.UserCountsModelSchema);
+      } as UserCountsModelSchema);
 
       const { result } = renderHook(() => useProfileStats('test-user-id'));
 
@@ -314,7 +314,7 @@ describe('useProfileStats', () => {
         tags: 0,
         unique_tags: 444444,
         bookmarks: 0,
-      } as Core.UserCountsModelSchema);
+      } as UserCountsModelSchema);
 
       const { result } = renderHook(() => useProfileStats('test-user-id'));
 
@@ -332,7 +332,7 @@ describe('useProfileStats', () => {
         id: 'test-user-id',
         posts: 10,
         // Missing other fields
-      } as Core.UserCountsModelSchema);
+      } as UserCountsModelSchema);
 
       const { result } = renderHook(() => useProfileStats('test-user-id'));
 
@@ -347,7 +347,7 @@ describe('useProfileStats', () => {
       renderHook(() => useProfileStats('test-user-id'));
 
       // UserController.getCounts should be called with object parameter (queryFn)
-      expect(Core.UserController.getCounts).toHaveBeenCalledWith({ userId: 'test-user-id' });
+      expect(UserController.getCounts).toHaveBeenCalledWith({ userId: 'test-user-id' });
     });
 
     it('does not call UserController.fetchCounts when data is cached (cache hit optimization)', () => {
@@ -355,7 +355,7 @@ describe('useProfileStats', () => {
       // → useLocalFirstQuery skips fetchFn (Phase 1 early-return optimization)
       renderHook(() => useProfileStats('test-user-id'));
 
-      expect(Core.UserController.fetchCounts).not.toHaveBeenCalled();
+      expect(UserController.fetchCounts).not.toHaveBeenCalled();
     });
 
     it('does not call fetchCounts when userId is empty', () => {
@@ -363,7 +363,7 @@ describe('useProfileStats', () => {
       renderHook(() => useProfileStats(''));
 
       // enabled=false when userId is empty, so fetchFn should not fire
-      expect(Core.UserController.fetchCounts).not.toHaveBeenCalled();
+      expect(UserController.fetchCounts).not.toHaveBeenCalled();
     });
   });
 });

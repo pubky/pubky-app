@@ -2,7 +2,6 @@
 
 import { useLiveQuery } from 'dexie-react-hooks';
 import { useTranslations } from 'next-intl';
-import * as Core from '@/core';
 import * as Atoms from '@/atoms';
 import * as Organisms from '@/organisms';
 import { APP_ROUTES } from '@/app/routes';
@@ -13,7 +12,9 @@ import { usePathname } from 'next/navigation';
 import { Pencil, Home, PlusCircle } from 'lucide-react';
 import { Logger } from '@/libs/logger/logger';
 import { cn } from '@/libs/utils/utils';
-let cachedFeeds: Core.FeedModelSchema[] = [];
+import { FeedController } from '@/controllers/feed/feed';
+import type { FeedModelSchema } from '@/models/feed/feed.schema';
+let cachedFeeds: FeedModelSchema[] = [];
 interface FeedNavigationProps {
   className?: string;
 }
@@ -24,14 +25,14 @@ export const FeedNavigation = ({ className }: FeedNavigationProps) => {
   const customFeeds = useLiveQuery(
     async () => {
       try {
-        const result = await Core.FeedController.getList();
+        const result = await FeedController.getList();
         cachedFeeds = result;
         return result;
       } catch (error) {
         Logger.error('[FeedNavigation] Failed to query custom feeds', {
           error,
         });
-        return [] as Core.FeedModelSchema[];
+        return [] as FeedModelSchema[];
       }
     },
     [],

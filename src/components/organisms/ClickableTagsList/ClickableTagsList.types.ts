@@ -1,14 +1,14 @@
 import type { MouseEvent } from 'react';
-import * as Core from '@/core';
 import type { TagWithAvatars } from '@/molecules/TaggedItem/TaggedItem.types';
-
+import type { TagKind } from '@/application/tag/tag.types';
+import type { NexusTag } from '@/services/nexus/nexus.types';
 export interface ClickableTagsListProps {
   /** The ID of the tagged entity (userId or postId) */
   taggedId: string;
   /** The kind of the tagged entity */
-  taggedKind: Core.TagKind;
+  taggedKind: TagKind;
   /** Optional: pre-loaded tags (if not provided, will fetch from IndexedDB) */
-  tags?: Core.NexusTag[];
+  tags?: NexusTag[];
   /** Maximum number of tags to display */
   maxTags?: number;
   /** Maximum character length per tag */

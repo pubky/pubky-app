@@ -4,7 +4,6 @@ import { useFeedLayoutResolution } from '@/hooks/useFeedLayoutResolution/useFeed
 import * as React from 'react';
 import * as Atoms from '@/atoms';
 import * as Molecules from '@/molecules';
-import * as Core from '@/core';
 import { TIMELINE_FEED_VARIANT } from '@/config';
 import type { HomeFeedSidebarProps } from './HomeFeedSidebar.types';
 
@@ -12,11 +11,11 @@ import {
   resolveVisualFeedContent,
   VISUAL_DISABLED_CONTENT,
 } from '../Timeline/Feed/TimelineFeed/TimelineFeedVisual.helpers';
-
+import { useHomeStore } from '@/stores/home/home.store';
 /**
  * HomeFeedFilters
  *
- * Base component for Home feed filters - manages filter state via Core.useHomeStore.
+ * Base component for Home feed filters - manages filter state via useHomeStore.
  * Used by sidebar (desktop) and drawer (tablet/mobile) variants.
  *
  * Order follows Figma design: Reach → Sort → Layout → Content
@@ -29,7 +28,7 @@ function HomeFeedFilters({
   feedVariant = TIMELINE_FEED_VARIANT.HOME,
   variant = 'drawer',
 }: HomeFeedSidebarProps) {
-  const { layout, setLayout, reach, setReach, sort, setSort, content, setContent } = Core.useHomeStore();
+  const { layout, setLayout, reach, setReach, sort, setSort, content, setContent } = useHomeStore();
   const { isPhoneViewport, isVisualActive } = useFeedLayoutResolution(feedVariant);
   const resolvedContent = resolveVisualFeedContent({
     content,
@@ -74,7 +73,7 @@ function HomeFeedFilters({
 /**
  * HomeFeedSidebar
  *
- * Left sidebar for Home feed (desktop) - manages filter state via Core.useHomeStore.
+ * Left sidebar for Home feed (desktop) - manages filter state via useHomeStore.
  * Desktop version with sticky positioning.
  */
 export function HomeFeedSidebar({
@@ -95,7 +94,7 @@ export function HomeFeedSidebar({
 /**
  * HomeFeedDrawer
  *
- * Left drawer for Home feed (tablet) - manages filter state via Core.useHomeStore.
+ * Left drawer for Home feed (tablet) - manages filter state via useHomeStore.
  */
 export function HomeFeedDrawer({
   hideReachFilter = false,
@@ -115,7 +114,7 @@ export function HomeFeedDrawer({
 /**
  * HomeFeedDrawerMobile
  *
- * Left drawer for Home feed (mobile) - manages filter state via Core.useHomeStore.
+ * Left drawer for Home feed (mobile) - manages filter state via useHomeStore.
  * Note: Mobile version doesn't show layout filter.
  */
 export function HomeFeedDrawerMobile({

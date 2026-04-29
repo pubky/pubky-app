@@ -2,14 +2,14 @@
 
 import { useState, useEffect, useMemo } from 'react';
 import * as Atoms from '@/atoms';
-import * as Core from '@/core';
 import * as Config from '@/config';
 import type { DialogCheckLinkProps } from './DialogCheckLink.types';
 import { ExternalLink } from 'lucide-react';
 import { truncateMiddle } from '@/libs/utils/utils';
+import { useSettingsStore } from '@/stores/settings/settings.store';
 export function DialogCheckLink({ open, onOpenChangeAction, linkUrl }: DialogCheckLinkProps) {
   const [dontShowAgain, setDontShowAgain] = useState(false);
-  const { setShowConfirm } = Core.useSettingsStore();
+  const { setShowConfirm } = useSettingsStore();
 
   // Reset checkbox when the dialog opens
   useEffect(() => {

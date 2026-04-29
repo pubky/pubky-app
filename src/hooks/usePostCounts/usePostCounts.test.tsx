@@ -2,10 +2,10 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { renderHook } from '@testing-library/react';
 import { usePostCounts } from './usePostCounts';
 
-// Mock @/core
+// Mock direct dependencies
 const mockGetCounts = vi.fn();
 const mockFetch = vi.fn().mockResolvedValue(undefined);
-vi.mock('@/core', () => ({
+vi.mock('@/controllers/post/post', () => ({
   PostController: {
     getCounts: (params: { compositeId: string }) => mockGetCounts(params),
     fetch: (params: { compositeId: string }) => mockFetch(params),

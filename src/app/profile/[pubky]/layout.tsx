@@ -4,9 +4,8 @@ import * as React from 'react';
 import { useParams } from 'next/navigation';
 import * as Organisms from '@/organisms';
 import * as Providers from '@/providers';
-import * as Core from '@/core';
 import { stripPubkyPrefix } from '@/libs/utils/utils';
-
+import type { Pubky } from '@/models/models.types';
 /**
  * DynamicProfileLayout - Next.js layout for viewing other users' profiles
  *
@@ -21,7 +20,7 @@ export default function DynamicProfileLayout({ children }: { children: React.Rea
   // Decode and normalize the pubky parameter by stripping any prefix (pubky or pk:)
   // This allows URLs like /profile/pubky1abc... or /profile/pk:1abc... to work
   const decodedParam = decodeURIComponent(params.pubky as string);
-  const pubky = stripPubkyPrefix(decodedParam) as Core.Pubky;
+  const pubky = stripPubkyPrefix(decodedParam) as Pubky;
 
   return (
     <Providers.ProfileProvider pubky={pubky}>

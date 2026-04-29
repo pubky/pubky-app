@@ -4,12 +4,11 @@ import { useEnterSubmit } from '@/hooks/useEnterSubmit/useEnterSubmit';
 import { useState, useRef } from 'react';
 import { useTranslations } from 'next-intl';
 import * as Atoms from '@/atoms';
-import * as Core from '@/core';
 import { FileUp, FileText, Loader2, RotateCcw } from 'lucide-react';
 import { AppError } from '@/libs/error/error';
 import { ErrorService } from '@/libs/error/error.types';
 import { formatFileName } from '@/libs/utils/utils';
-
+import { AuthController } from '@/controllers/auth/auth';
 export function DialogRestoreEncryptedFile({ onRestore }: { onRestore: () => void }) {
   const t = useTranslations('onboarding.signIn');
   const tRestore = useTranslations('onboarding.signIn.restoreEncryptedFile');
@@ -43,7 +42,7 @@ export function DialogRestoreEncryptedFile({ onRestore }: { onRestore: () => voi
     setIsRestoring(true);
     setError('');
     try {
-      await Core.AuthController.loginWithEncryptedFile({
+      await AuthController.loginWithEncryptedFile({
         encryptedFile: selectedFile,
         password,
       });

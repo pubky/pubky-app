@@ -1,8 +1,7 @@
 import { Table } from 'dexie';
-// TODO: If we use export * as Core, it happens a circular dependency error
-import { TagCollection } from '@/core/models/shared/tag/tagCollection';
-import { TagCollectionModelSchema } from '@/core/models/shared/tag/tag.schema';
-import { db } from '@/core/database/franky/franky';
+import { db } from '@/database/franky/franky';
+import type { TagCollectionModelSchema } from '@/models/shared/tag/tag.schema';
+import { TagCollection } from '@/models/shared/tag/tagCollection';
 
 export type PostTagsModelSchema = TagCollectionModelSchema<string>;
 

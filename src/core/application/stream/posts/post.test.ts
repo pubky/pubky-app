@@ -1,12 +1,40 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
-import * as Core from '@/core';
 import * as Config from '@/config';
 import { postStreamQueue } from './muting/post-stream-queue';
 import { MuteFilter } from './muting/mute-filter';
 import { asInvalid } from '@/test-utils';
-
+import { FileApplication } from '@/application/file/file';
+import { PostStreamApplication } from '@/application/stream/posts/post';
+import { FORCE_FETCH_NEW_POSTS, SKIP_FETCH_NEW_POSTS } from '@/controllers/stream/posts/post.constants';
+import type { Pubky } from '@/models/models.types';
+import { PostCountsModel } from '@/models/post/counts/postCounts';
+import { PostDetailsModel } from '@/models/post/details/postDetails';
+import { DELETED } from '@/models/post/details/postDetails.constants';
+import { PostRelationshipsModel } from '@/models/post/relationships/postRelationships';
+import { PostStreamTypes, type PostStreamId } from '@/models/stream/post/postStream.types';
+import { PostStreamModel } from '@/models/stream/post/tables/postStream';
+import { UnreadPostStreamModel } from '@/models/stream/post/tables/postStream.unread';
+import { UserStreamModel } from '@/models/stream/user/userStream';
+import { UserStreamTypes } from '@/models/stream/user/userStream.types';
+import { UserCountsModel } from '@/models/user/counts/userCounts';
+import { UserDetailsModel } from '@/models/user/details/userDetails';
+import type { UserDetailsModelSchema } from '@/models/user/details/userDetails.schema';
+import { UserRelationshipsModel } from '@/models/user/relationships/userRelationships';
+import { UserTagsModel } from '@/models/user/tags/userTags';
+import { LocalStreamPostsService } from '@/services/local/stream/posts/posts';
+import { LocalStreamUsersService } from '@/services/local/stream/users/users';
+import { StreamSorting } from '@/services/nexus/nexus.types';
+import type {
+  NexusFileDetails,
+  NexusFileUrls,
+  NexusPost,
+  NexusPostsKeyStream,
+  NexusUser,
+} from '@/services/nexus/nexus.types';
+import { NexusPostStreamService } from '@/services/nexus/stream/posts/postStream';
+import { NexusUserStreamService } from '@/services/nexus/stream/users/userStream';
 describe('PostStreamApplication', () => {
-  const streamId = Core.PostStreamTypes.TIMELINE_ALL_ALL as Core.PostStreamId;
+  const streamId = PostStreamTypes.TIMELINE_ALL_ALL as PostStreamId;
   const DEFAULT_AUTHOR = 'user-1';
   const BASE_TIMESTAMP = 1000000;
 
@@ -18,8 +46,8 @@ describe('PostStreamApplication', () => {
     postId: string,
     author: string = DEFAULT_AUTHOR,
     timestamp: number = BASE_TIMESTAMP,
-    overrides?: Partial<Core.NexusPost>,
-  ): Core.NexusPost => ({
+    overrides?: Partial<NexusPost>,
+  ): NexusPost => ({
     details: {
       id: postId,
       content: `Post ${postId} content`,
@@ -53,7 +81,7 @@ describe('PostStreamApplication', () => {
     startIndex: number = 1,
     author: string = DEFAULT_AUTHOR,
     startTimestamp: number = BASE_TIMESTAMP,
-  ): Core.NexusPost[] => {
+  ): NexusPost[] => {
     return Array.from({ length: count }, (_, i) => {
       const postId = `post-${startIndex + i}`;
       return createMockNexusPost(postId, author, startTimestamp + i);
@@ -65,7 +93,7 @@ describe('PostStreamApplication', () => {
     startIndex: number = 1,
     author: string = DEFAULT_AUTHOR,
     startTimestamp: number = BASE_TIMESTAMP,
-  ): Core.NexusPostsKeyStream => {
+  ): NexusPostsKeyStream => {
     const postKeys = Array.from({ length: count }, (_, i) => `${author}:post-${startIndex + i}`);
     const lastPostScore = startTimestamp + count - 1;
     return {
@@ -74,10 +102,7 @@ describe('PostStreamApplication', () => {
     };
   };
 
-  const createMockNexusUser = (
-    userId: string = DEFAULT_AUTHOR,
-    overrides?: Partial<Core.NexusUser>,
-  ): Core.NexusUser => ({
+  const createMockNexusUser = (userId: string = DEFAULT_AUTHOR, overrides?: Partial<NexusUser>): NexusUser => ({
     details: {
       id: userId,
       name: `User ${userId}`,
@@ -112,7 +137,7 @@ describe('PostStreamApplication', () => {
   const createPostDetails = async (postIds: string[], startTimestamp: number = BASE_TIMESTAMP) => {
     return Promise.all(
       postIds.map((postId, i) =>
-        Core.PostDetailsModel.create({
+        PostDetailsModel.create({
           id: postId,
           content: `Content for ${postId}`,
           kind: 'short',
@@ -125,7 +150,7 @@ describe('PostStreamApplication', () => {
   };
 
   const createPostDetailWithTimestamp = async (postId: string, indexedAt: number) => {
-    await Core.PostDetailsModel.create({
+    await PostDetailsModel.create({
       id: postId,
       content: `Content for ${postId}`,
       kind: 'short',
@@ -136,7 +161,7 @@ describe('PostStreamApplication', () => {
   };
 
   const createStreamWithPosts = async (postIds: string[]) => {
-    await Core.PostStreamModel.create(streamId, postIds);
+    await PostStreamModel.create(streamId, postIds);
   };
 
   const expectPostIds = (result: string[], start: number, count: number, author = DEFAULT_AUTHOR) => {
@@ -150,28 +175,28 @@ describe('PostStreamApplication', () => {
   });
 
   const setupDefaultMocks = () => ({
-    persistPosts: vi.spyOn(Core.LocalStreamPostsService, 'persistPosts').mockResolvedValue({ attachmentMetadata: [] }),
-    persistFiles: vi.spyOn(Core.FileApplication, 'persistFiles').mockResolvedValue(undefined),
-    getUserDetails: vi.spyOn(Core.UserDetailsModel, 'findByIdsPreserveOrder'),
+    persistPosts: vi.spyOn(LocalStreamPostsService, 'persistPosts').mockResolvedValue({ attachmentMetadata: [] }),
+    persistFiles: vi.spyOn(FileApplication, 'persistFiles').mockResolvedValue(undefined),
+    getUserDetails: vi.spyOn(UserDetailsModel, 'findByIdsPreserveOrder'),
   });
 
   const mockAllUsersCached = (count = 1, author = DEFAULT_AUTHOR) => {
-    return Array.from({ length: count }, () => ({ id: author }) as Core.UserDetailsModelSchema);
+    return Array.from({ length: count }, () => ({ id: author }) as UserDetailsModelSchema);
   };
 
   beforeEach(async () => {
     vi.restoreAllMocks();
     vi.clearAllMocks();
 
-    await Core.PostStreamModel.table.clear();
-    await Core.UnreadPostStreamModel.table.clear();
+    await PostStreamModel.table.clear();
+    await UnreadPostStreamModel.table.clear();
     postStreamQueue.clear();
-    await Core.PostDetailsModel.table.clear();
-    await Core.UserDetailsModel.table.clear();
-    await Core.UserCountsModel.table.clear();
-    await Core.UserRelationshipsModel.table.clear();
-    await Core.UserTagsModel.table.clear();
-    await Core.UserStreamModel.table.clear();
+    await PostDetailsModel.table.clear();
+    await UserDetailsModel.table.clear();
+    await UserCountsModel.table.clear();
+    await UserRelationshipsModel.table.clear();
+    await UserTagsModel.table.clear();
+    await UserStreamModel.table.clear();
   });
 
   afterEach(async () => {
@@ -187,12 +212,12 @@ describe('PostStreamApplication', () => {
       const postIds = Array.from({ length: 20 }, (_, i) => `${DEFAULT_AUTHOR}:post-${i + 1}`);
       await createStreamWithPosts(postIds);
 
-      const result = await Core.PostStreamApplication.getOrFetchStreamSlice({
+      const result = await PostStreamApplication.getOrFetchStreamSlice({
         streamId,
         limit: 10,
         streamHead: 0,
         streamTail: 0,
-        viewerId: 'user-viewer' as Core.Pubky,
+        viewerId: 'user-viewer' as Pubky,
       });
 
       expect(result.nextPageIds).toHaveLength(10);
@@ -203,15 +228,15 @@ describe('PostStreamApplication', () => {
 
     it('should fetch from Nexus when cache is empty', async () => {
       const mockNexusPostsKeyStream = createMockNexusPostsKeyStream(5);
-      vi.spyOn(Core.NexusPostStreamService, 'fetch').mockResolvedValue(mockNexusPostsKeyStream);
+      vi.spyOn(NexusPostStreamService, 'fetch').mockResolvedValue(mockNexusPostsKeyStream);
       await createStreamWithPosts([]);
 
-      const result = await Core.PostStreamApplication.getOrFetchStreamSlice({
+      const result = await PostStreamApplication.getOrFetchStreamSlice({
         streamId,
         limit: 10,
         streamHead: 0,
         streamTail: 0,
-        viewerId: 'user-viewer' as Core.Pubky,
+        viewerId: 'user-viewer' as Pubky,
       });
 
       expect(result.nextPageIds).toHaveLength(5);
@@ -220,7 +245,7 @@ describe('PostStreamApplication', () => {
       expect(result.cacheMissPostIds).toHaveLength(5);
       expect(result.cacheMissPostIds).toEqual(result.nextPageIds);
 
-      const cached = await Core.PostStreamModel.findById(streamId);
+      const cached = await PostStreamModel.findById(streamId);
       expect(cached?.stream).toEqual(result.nextPageIds);
     });
 
@@ -230,22 +255,22 @@ describe('PostStreamApplication', () => {
       await createPostDetails(initialPostIds);
 
       const mockNexusPostsKeyStream = createMockNexusPostsKeyStream(5, 6, DEFAULT_AUTHOR, BASE_TIMESTAMP + 5);
-      vi.spyOn(Core.NexusPostStreamService, 'fetch').mockResolvedValue(mockNexusPostsKeyStream);
+      vi.spyOn(NexusPostStreamService, 'fetch').mockResolvedValue(mockNexusPostsKeyStream);
 
-      const result = await Core.PostStreamApplication.getOrFetchStreamSlice({
+      const result = await PostStreamApplication.getOrFetchStreamSlice({
         streamId,
         limit: 10,
         streamHead: 0,
         lastPostId: `${DEFAULT_AUTHOR}:post-5`,
         streamTail: BASE_TIMESTAMP + 4,
-        viewerId: 'user-viewer' as Core.Pubky,
+        viewerId: 'user-viewer' as Pubky,
       });
 
       expect(result.nextPageIds).toHaveLength(5);
       expectPostIds(result.nextPageIds, 6, 5);
       expect(result.timestamp).toBe(BASE_TIMESTAMP + 9);
 
-      const cached = await Core.PostStreamModel.findById(streamId);
+      const cached = await PostStreamModel.findById(streamId);
       expect(cached?.stream).toHaveLength(10);
     });
 
@@ -253,18 +278,18 @@ describe('PostStreamApplication', () => {
       const postIds = [`${DEFAULT_AUTHOR}:post-1`, `${DEFAULT_AUTHOR}:post-2`];
       await createStreamWithPosts(postIds);
       await createPostDetails(postIds);
-      vi.spyOn(Core.NexusPostStreamService, 'fetch').mockResolvedValue({
+      vi.spyOn(NexusPostStreamService, 'fetch').mockResolvedValue({
         post_keys: [],
         last_post_score: 0,
       });
 
-      const result = await Core.PostStreamApplication.getOrFetchStreamSlice({
+      const result = await PostStreamApplication.getOrFetchStreamSlice({
         streamId,
         limit: 10,
         lastPostId: `${DEFAULT_AUTHOR}:post-2`,
         streamHead: 0,
         streamTail: BASE_TIMESTAMP + 1,
-        viewerId: 'user-viewer' as Core.Pubky,
+        viewerId: 'user-viewer' as Pubky,
       });
 
       expect(result.nextPageIds).toHaveLength(0);
@@ -279,15 +304,15 @@ describe('PostStreamApplication', () => {
 
       // Mock more posts from Nexus
       const mockNexusPostsKeyStream = createMockNexusPostsKeyStream(5, 4, DEFAULT_AUTHOR, BASE_TIMESTAMP + 3);
-      vi.spyOn(Core.NexusPostStreamService, 'fetch').mockResolvedValue(mockNexusPostsKeyStream);
+      vi.spyOn(NexusPostStreamService, 'fetch').mockResolvedValue(mockNexusPostsKeyStream);
 
       // Request 10 posts, but cache only has 3
-      const result = await Core.PostStreamApplication.getOrFetchStreamSlice({
+      const result = await PostStreamApplication.getOrFetchStreamSlice({
         streamId,
         limit: 10,
         streamTail: 0,
         streamHead: 0,
-        viewerId: 'user-viewer' as Core.Pubky,
+        viewerId: 'user-viewer' as Pubky,
       });
 
       // Should combine cached posts (3) + fetched posts (5) = 8 total
@@ -302,17 +327,17 @@ describe('PostStreamApplication', () => {
       const postIds = Array.from({ length: 5 }, (_, i) => `${DEFAULT_AUTHOR}:post-${i + 1}`);
       await createStreamWithPosts(postIds);
 
-      vi.spyOn(Core.PostDetailsModel, 'findById').mockRejectedValue(new Error('Database error'));
+      vi.spyOn(PostDetailsModel, 'findById').mockRejectedValue(new Error('Database error'));
       const mockNexusPostsKeyStream = createMockNexusPostsKeyStream(5, 6, DEFAULT_AUTHOR, BASE_TIMESTAMP + 5);
-      vi.spyOn(Core.NexusPostStreamService, 'fetch').mockResolvedValue(mockNexusPostsKeyStream);
+      vi.spyOn(NexusPostStreamService, 'fetch').mockResolvedValue(mockNexusPostsKeyStream);
 
-      const result = await Core.PostStreamApplication.getOrFetchStreamSlice({
+      const result = await PostStreamApplication.getOrFetchStreamSlice({
         streamId,
         limit: 10,
         streamHead: 0,
         lastPostId: `${DEFAULT_AUTHOR}:post-5`,
         streamTail: BASE_TIMESTAMP + 4,
-        viewerId: 'user-viewer' as Core.Pubky,
+        viewerId: 'user-viewer' as Pubky,
       });
 
       expect(result.nextPageIds).toHaveLength(5);
@@ -323,9 +348,9 @@ describe('PostStreamApplication', () => {
       await createStreamWithPosts(postIds);
       await createPostDetails(postIds);
 
-      const nexusFetchSpy = vi.spyOn(Core.NexusPostStreamService, 'fetch');
+      const nexusFetchSpy = vi.spyOn(NexusPostStreamService, 'fetch');
 
-      const result = await Core.PostStreamApplication.getOrFetchStreamSlice({
+      const result = await PostStreamApplication.getOrFetchStreamSlice({
         streamId,
         limit: 10,
         streamTail: 0,
@@ -348,9 +373,9 @@ describe('PostStreamApplication', () => {
       await createPostDetails(postIds);
 
       const mockNexusPostsKeyStream = createMockNexusPostsKeyStream(5, 6, DEFAULT_AUTHOR, BASE_TIMESTAMP + 5);
-      vi.spyOn(Core.NexusPostStreamService, 'fetch').mockResolvedValue(mockNexusPostsKeyStream);
+      vi.spyOn(NexusPostStreamService, 'fetch').mockResolvedValue(mockNexusPostsKeyStream);
 
-      const result = await Core.PostStreamApplication.getOrFetchStreamSlice({
+      const result = await PostStreamApplication.getOrFetchStreamSlice({
         streamId,
         limit: 10,
         streamHead: 0,
@@ -371,10 +396,10 @@ describe('PostStreamApplication', () => {
 
     it('should propagate error when NexusPostStreamService.fetch fails', async () => {
       await createStreamWithPosts([]);
-      vi.spyOn(Core.NexusPostStreamService, 'fetch').mockRejectedValue(new Error('Network error'));
+      vi.spyOn(NexusPostStreamService, 'fetch').mockRejectedValue(new Error('Network error'));
 
       await expect(
-        Core.PostStreamApplication.getOrFetchStreamSlice({
+        PostStreamApplication.getOrFetchStreamSlice({
           streamId,
           limit: 10,
           streamTail: 0,
@@ -387,13 +412,13 @@ describe('PostStreamApplication', () => {
     it('should propagate error when persistNewStreamChunk fails (stream write operation)', async () => {
       await createStreamWithPosts([]);
       const mockNexusPostsKeyStream = createMockNexusPostsKeyStream(5);
-      vi.spyOn(Core.NexusPostStreamService, 'fetch').mockResolvedValue(mockNexusPostsKeyStream);
-      vi.spyOn(Core.LocalStreamPostsService, 'persistNewStreamChunk').mockRejectedValue(
+      vi.spyOn(NexusPostStreamService, 'fetch').mockResolvedValue(mockNexusPostsKeyStream);
+      vi.spyOn(LocalStreamPostsService, 'persistNewStreamChunk').mockRejectedValue(
         new Error('Failed to persist stream chunk'),
       );
 
       await expect(
-        Core.PostStreamApplication.getOrFetchStreamSlice({
+        PostStreamApplication.getOrFetchStreamSlice({
           streamId,
           limit: 10,
           streamTail: 0,
@@ -406,15 +431,15 @@ describe('PostStreamApplication', () => {
     it('should propagate error when getNotPersistedPostsInCache fails (post details read operation)', async () => {
       await createStreamWithPosts([]);
       const mockNexusPostsKeyStream = createMockNexusPostsKeyStream(5);
-      vi.spyOn(Core.NexusPostStreamService, 'fetch').mockResolvedValue(mockNexusPostsKeyStream);
-      vi.spyOn(Core.LocalStreamPostsService, 'persistNewStreamChunk').mockResolvedValue(undefined);
+      vi.spyOn(NexusPostStreamService, 'fetch').mockResolvedValue(mockNexusPostsKeyStream);
+      vi.spyOn(LocalStreamPostsService, 'persistNewStreamChunk').mockResolvedValue(undefined);
 
       const findByIdsSpy = vi
-        .spyOn(Core.PostDetailsModel, 'findByIdsPreserveOrder')
+        .spyOn(PostDetailsModel, 'findByIdsPreserveOrder')
         .mockRejectedValue(new Error('Database query failed'));
 
       await expect(
-        Core.PostStreamApplication.getOrFetchStreamSlice({
+        PostStreamApplication.getOrFetchStreamSlice({
           streamId,
           limit: 10,
           streamTail: 0,
@@ -428,14 +453,14 @@ describe('PostStreamApplication', () => {
 
     it('should handle posts with different authors', async () => {
       await createStreamWithPosts([]);
-      const mockNexusPostsKeyStream: Core.NexusPostsKeyStream = {
+      const mockNexusPostsKeyStream: NexusPostsKeyStream = {
         post_keys: ['author-1:post-1', 'author-2:post-2', 'author-1:post-3'],
         last_post_score: BASE_TIMESTAMP + 2,
       };
-      vi.spyOn(Core.NexusPostStreamService, 'fetch').mockResolvedValue(mockNexusPostsKeyStream);
-      vi.spyOn(Core.PostDetailsModel, 'findByIdsPreserveOrder').mockResolvedValue(Array(3).fill(undefined));
+      vi.spyOn(NexusPostStreamService, 'fetch').mockResolvedValue(mockNexusPostsKeyStream);
+      vi.spyOn(PostDetailsModel, 'findByIdsPreserveOrder').mockResolvedValue(Array(3).fill(undefined));
 
-      const result = await Core.PostStreamApplication.getOrFetchStreamSlice({
+      const result = await PostStreamApplication.getOrFetchStreamSlice({
         streamId,
         limit: 10,
         streamTail: 0,
@@ -452,12 +477,12 @@ describe('PostStreamApplication', () => {
       await createStreamWithPosts(postIds);
       await createPostDetails(postIds);
 
-      const nexusFetchSpy = vi.spyOn(Core.NexusPostStreamService, 'fetch').mockResolvedValue({
+      const nexusFetchSpy = vi.spyOn(NexusPostStreamService, 'fetch').mockResolvedValue({
         post_keys: [],
         last_post_score: 0,
       });
 
-      const result = await Core.PostStreamApplication.getOrFetchStreamSlice({
+      const result = await PostStreamApplication.getOrFetchStreamSlice({
         streamId,
         limit: 0,
         streamHead: 0,
@@ -475,10 +500,10 @@ describe('PostStreamApplication', () => {
     it('should handle when timestamp is provided but post_id is not', async () => {
       await createStreamWithPosts([]);
       const mockNexusPostsKeyStream = createMockNexusPostsKeyStream(5);
-      vi.spyOn(Core.NexusPostStreamService, 'fetch').mockResolvedValue(mockNexusPostsKeyStream);
-      vi.spyOn(Core.PostDetailsModel, 'findByIdsPreserveOrder').mockResolvedValue(Array(5).fill(undefined));
+      vi.spyOn(NexusPostStreamService, 'fetch').mockResolvedValue(mockNexusPostsKeyStream);
+      vi.spyOn(PostDetailsModel, 'findByIdsPreserveOrder').mockResolvedValue(Array(5).fill(undefined));
 
-      const result = await Core.PostStreamApplication.getOrFetchStreamSlice({
+      const result = await PostStreamApplication.getOrFetchStreamSlice({
         streamId,
         limit: 10,
         streamHead: 0,
@@ -493,9 +518,9 @@ describe('PostStreamApplication', () => {
       await createStreamWithPosts([]);
       const staleStreamTail = BASE_TIMESTAMP + 100;
       const mockNexusPostsKeyStream = createMockNexusPostsKeyStream(5);
-      const nexusFetchSpy = vi.spyOn(Core.NexusPostStreamService, 'fetch').mockResolvedValue(mockNexusPostsKeyStream);
+      const nexusFetchSpy = vi.spyOn(NexusPostStreamService, 'fetch').mockResolvedValue(mockNexusPostsKeyStream);
 
-      const result = await Core.PostStreamApplication.getOrFetchStreamSlice({
+      const result = await PostStreamApplication.getOrFetchStreamSlice({
         streamId,
         limit: 10,
         streamHead: 0,
@@ -516,16 +541,16 @@ describe('PostStreamApplication', () => {
     });
 
     it('should skip cache check for engagement streams', async () => {
-      const engagementStreamId = `${Core.StreamSorting.ENGAGEMENT}:all:all` as Core.PostStreamId;
+      const engagementStreamId = `${StreamSorting.ENGAGEMENT}:all:all` as PostStreamId;
       const postIds = Array.from({ length: 10 }, (_, i) => `${DEFAULT_AUTHOR}:post-${i + 1}`);
       // Create cache for engagement stream
-      await Core.PostStreamModel.create(engagementStreamId, postIds);
+      await PostStreamModel.create(engagementStreamId, postIds);
       await createPostDetails(postIds);
 
       const mockNexusPostsKeyStream = createMockNexusPostsKeyStream(5);
-      const nexusFetchSpy = vi.spyOn(Core.NexusPostStreamService, 'fetch').mockResolvedValue(mockNexusPostsKeyStream);
+      const nexusFetchSpy = vi.spyOn(NexusPostStreamService, 'fetch').mockResolvedValue(mockNexusPostsKeyStream);
 
-      const result = await Core.PostStreamApplication.getOrFetchStreamSlice({
+      const result = await PostStreamApplication.getOrFetchStreamSlice({
         streamId: engagementStreamId,
         limit: 10,
         streamHead: 0,
@@ -546,10 +571,10 @@ describe('PostStreamApplication', () => {
       await createPostDetails(postIds);
 
       const mockNexusPostsKeyStream = createMockNexusPostsKeyStream(5, 6, DEFAULT_AUTHOR, BASE_TIMESTAMP + 5);
-      const nexusFetchSpy = vi.spyOn(Core.NexusPostStreamService, 'fetch').mockResolvedValue(mockNexusPostsKeyStream);
+      const nexusFetchSpy = vi.spyOn(NexusPostStreamService, 'fetch').mockResolvedValue(mockNexusPostsKeyStream);
 
       // lastPostId not found in cache
-      const result = await Core.PostStreamApplication.getOrFetchStreamSlice({
+      const result = await PostStreamApplication.getOrFetchStreamSlice({
         streamId,
         limit: 10,
         streamHead: 0,
@@ -572,7 +597,7 @@ describe('PostStreamApplication', () => {
 
       // Nexus returns posts that overlap with cache: [post-3, post-4, post-5]
       // post-3 is already in cache, so it should be deduplicated
-      const mockNexusPostsKeyStream: Core.NexusPostsKeyStream = {
+      const mockNexusPostsKeyStream: NexusPostsKeyStream = {
         post_keys: [
           `${DEFAULT_AUTHOR}:post-3`, // Overlap with cache
           `${DEFAULT_AUTHOR}:post-4`,
@@ -580,9 +605,9 @@ describe('PostStreamApplication', () => {
         ],
         last_post_score: BASE_TIMESTAMP + 4,
       };
-      vi.spyOn(Core.NexusPostStreamService, 'fetch').mockResolvedValue(mockNexusPostsKeyStream);
+      vi.spyOn(NexusPostStreamService, 'fetch').mockResolvedValue(mockNexusPostsKeyStream);
 
-      const result = await Core.PostStreamApplication.getOrFetchStreamSlice({
+      const result = await PostStreamApplication.getOrFetchStreamSlice({
         streamId,
         limit: 5,
         streamTail: 0,
@@ -611,12 +636,12 @@ describe('PostStreamApplication', () => {
       await createPostDetails(cachedPostIds);
 
       // Mock error when getting last post details
-      vi.spyOn(Core.PostDetailsModel, 'findById').mockRejectedValueOnce(new Error('Database error'));
+      vi.spyOn(PostDetailsModel, 'findById').mockRejectedValueOnce(new Error('Database error'));
 
       const mockNexusPostsKeyStream = createMockNexusPostsKeyStream(5, 4, DEFAULT_AUTHOR, BASE_TIMESTAMP + 3);
-      const nexusFetchSpy = vi.spyOn(Core.NexusPostStreamService, 'fetch').mockResolvedValue(mockNexusPostsKeyStream);
+      const nexusFetchSpy = vi.spyOn(NexusPostStreamService, 'fetch').mockResolvedValue(mockNexusPostsKeyStream);
 
-      const result = await Core.PostStreamApplication.getOrFetchStreamSlice({
+      const result = await PostStreamApplication.getOrFetchStreamSlice({
         streamId,
         limit: 10,
         streamHead: 0,
@@ -642,9 +667,9 @@ describe('PostStreamApplication', () => {
 
       // Request 5 posts, cache has 2, so fetch 3 more
       const mockNexusPostsKeyStream = createMockNexusPostsKeyStream(3, 3, DEFAULT_AUTHOR, BASE_TIMESTAMP + 2);
-      vi.spyOn(Core.NexusPostStreamService, 'fetch').mockResolvedValue(mockNexusPostsKeyStream);
+      vi.spyOn(NexusPostStreamService, 'fetch').mockResolvedValue(mockNexusPostsKeyStream);
 
-      const result = await Core.PostStreamApplication.getOrFetchStreamSlice({
+      const result = await PostStreamApplication.getOrFetchStreamSlice({
         streamId,
         limit: 5,
         streamHead: 0,
@@ -674,10 +699,10 @@ describe('PostStreamApplication', () => {
       await createPostDetails(postIds);
 
       const mockNexusPostsKeyStream = createMockNexusPostsKeyStream(5, 6, DEFAULT_AUTHOR, BASE_TIMESTAMP + 5);
-      const nexusFetchSpy = vi.spyOn(Core.NexusPostStreamService, 'fetch').mockResolvedValue(mockNexusPostsKeyStream);
+      const nexusFetchSpy = vi.spyOn(NexusPostStreamService, 'fetch').mockResolvedValue(mockNexusPostsKeyStream);
 
       // lastPostId is the last post in cache (post-5)
-      const result = await Core.PostStreamApplication.getOrFetchStreamSlice({
+      const result = await PostStreamApplication.getOrFetchStreamSlice({
         streamId,
         limit: 10,
         streamHead: 0,
@@ -700,9 +725,9 @@ describe('PostStreamApplication', () => {
       await createPostDetails(postIds);
 
       const mockNexusPostsKeyStream = createMockNexusPostsKeyStream(7, 4, DEFAULT_AUTHOR, BASE_TIMESTAMP + 3);
-      const nexusFetchSpy = vi.spyOn(Core.NexusPostStreamService, 'fetch').mockResolvedValue(mockNexusPostsKeyStream);
+      const nexusFetchSpy = vi.spyOn(NexusPostStreamService, 'fetch').mockResolvedValue(mockNexusPostsKeyStream);
 
-      const result = await Core.PostStreamApplication.getOrFetchStreamSlice({
+      const result = await PostStreamApplication.getOrFetchStreamSlice({
         streamId,
         limit: 10,
         streamHead: 0,
@@ -733,7 +758,7 @@ describe('PostStreamApplication', () => {
       await createStreamWithPosts([repostCompositeId]);
 
       // Create the repost's details in cache
-      await Core.PostDetailsModel.create({
+      await PostDetailsModel.create({
         id: repostCompositeId,
         content: 'This is a repost',
         kind: 'short',
@@ -743,7 +768,7 @@ describe('PostStreamApplication', () => {
       });
 
       // Create the repost's relationships in cache (marking it as a repost)
-      await Core.PostRelationshipsModel.table.put({
+      await PostRelationshipsModel.table.put({
         id: repostCompositeId,
         replied: null,
         reposted: originalPostUri,
@@ -755,24 +780,22 @@ describe('PostStreamApplication', () => {
 
       // Mock the Nexus API to return the original post when fetched
       const originalNexusPost = createMockNexusPost(originalPostId, originalAuthor, BASE_TIMESTAMP - 1000);
-      const fetchByIdsSpy = vi.spyOn(Core.NexusPostStreamService, 'fetchByIds').mockResolvedValue([originalNexusPost]);
+      const fetchByIdsSpy = vi.spyOn(NexusPostStreamService, 'fetchByIds').mockResolvedValue([originalNexusPost]);
 
       // Mock other dependencies
       const mocks = setupDefaultMocks();
-      mocks.getUserDetails.mockResolvedValue([{ id: originalAuthor } as Core.UserDetailsModelSchema]);
+      mocks.getUserDetails.mockResolvedValue([{ id: originalAuthor } as UserDetailsModelSchema]);
 
       // Mock that original post is NOT in local DB
-      vi.spyOn(Core.LocalStreamPostsService, 'getNotPersistedPostsInCache').mockResolvedValue([
-        originalPostCompositeId,
-      ]);
+      vi.spyOn(LocalStreamPostsService, 'getNotPersistedPostsInCache').mockResolvedValue([originalPostCompositeId]);
 
       // Call getOrFetchStreamSlice - should return repost from cache (full cache hit)
-      const result = await Core.PostStreamApplication.getOrFetchStreamSlice({
+      const result = await PostStreamApplication.getOrFetchStreamSlice({
         streamId,
         limit: 1,
         streamHead: 0,
         streamTail: 0,
-        viewerId: 'viewer-user' as Core.Pubky,
+        viewerId: 'viewer-user' as Pubky,
       });
 
       // Verify we got the repost from cache
@@ -792,7 +815,7 @@ describe('PostStreamApplication', () => {
 
   describe('getCachedLastPostTimestamp', () => {
     it('should return 0 when stream does not exist', async () => {
-      const result = await Core.PostStreamApplication.getCachedLastPostTimestamp({ streamId });
+      const result = await PostStreamApplication.getCachedLastPostTimestamp({ streamId });
 
       expect(result).toBe(0);
     });
@@ -800,7 +823,7 @@ describe('PostStreamApplication', () => {
     it('should return 0 when stream is empty', async () => {
       await createStreamWithPosts([]);
 
-      const result = await Core.PostStreamApplication.getCachedLastPostTimestamp({ streamId });
+      const result = await PostStreamApplication.getCachedLastPostTimestamp({ streamId });
 
       expect(result).toBe(0);
     });
@@ -810,7 +833,7 @@ describe('PostStreamApplication', () => {
       await createStreamWithPosts(postIds);
       await createPostDetails(postIds);
 
-      const result = await Core.PostStreamApplication.getCachedLastPostTimestamp({ streamId });
+      const result = await PostStreamApplication.getCachedLastPostTimestamp({ streamId });
 
       // Last post is post-5, which has timestamp BASE_TIMESTAMP + 4
       expect(result).toBe(BASE_TIMESTAMP + 4);
@@ -822,7 +845,7 @@ describe('PostStreamApplication', () => {
       // Only create details for first 3 posts (post-1, post-2, post-3)
       await createPostDetails(postIds.slice(0, 3));
 
-      const result = await Core.PostStreamApplication.getCachedLastPostTimestamp({ streamId });
+      const result = await PostStreamApplication.getCachedLastPostTimestamp({ streamId });
 
       // Should find post-3 (3rd from end), which has timestamp BASE_TIMESTAMP + 2
       expect(result).toBe(BASE_TIMESTAMP + 2);
@@ -833,7 +856,7 @@ describe('PostStreamApplication', () => {
       await createStreamWithPosts(postIds);
       // Don't create any post details
 
-      const result = await Core.PostStreamApplication.getCachedLastPostTimestamp({ streamId });
+      const result = await PostStreamApplication.getCachedLastPostTimestamp({ streamId });
 
       expect(result).toBe(0);
     });
@@ -841,25 +864,25 @@ describe('PostStreamApplication', () => {
     it('should handle database errors gracefully', async () => {
       const postIds = Array.from({ length: 5 }, (_, i) => `${DEFAULT_AUTHOR}:post-${i + 1}`);
       await createStreamWithPosts(postIds);
-      vi.spyOn(Core.PostStreamModel, 'findById').mockRejectedValue(new Error('Database error'));
+      vi.spyOn(PostStreamModel, 'findById').mockRejectedValue(new Error('Database error'));
 
-      const result = await Core.PostStreamApplication.getCachedLastPostTimestamp({ streamId });
+      const result = await PostStreamApplication.getCachedLastPostTimestamp({ streamId });
 
       expect(result).toBe(0);
     });
   });
 
   describe('fetchMissingPostsFromNexus', () => {
-    const viewerId = 'user-viewer' as Core.Pubky;
+    const viewerId = 'user-viewer' as Pubky;
 
     it('should fetch and persist posts when postBatch exists', async () => {
       const { cacheMissPostIds, mockNexusPosts } = createTestData(2);
       const mocks = setupDefaultMocks();
       mocks.getUserDetails.mockResolvedValue(mockAllUsersCached(2));
 
-      const fetchPostsByIdsSpy = vi.spyOn(Core.NexusPostStreamService, 'fetchByIds').mockResolvedValue(mockNexusPosts);
+      const fetchPostsByIdsSpy = vi.spyOn(NexusPostStreamService, 'fetchByIds').mockResolvedValue(mockNexusPosts);
 
-      await Core.PostStreamApplication.fetchMissingPostsFromNexus({
+      await PostStreamApplication.fetchMissingPostsFromNexus({
         cacheMissPostIds,
         viewerId,
       });
@@ -878,12 +901,12 @@ describe('PostStreamApplication', () => {
       const mocks = setupDefaultMocks();
       mocks.getUserDetails.mockResolvedValue([undefined]);
 
-      vi.spyOn(Core.NexusPostStreamService, 'fetchByIds').mockResolvedValue(mockNexusPosts);
-      const fetchUsersByIdsSpy = vi.spyOn(Core.NexusUserStreamService, 'fetchByIds').mockResolvedValue(mockNexusUsers);
+      vi.spyOn(NexusPostStreamService, 'fetchByIds').mockResolvedValue(mockNexusPosts);
+      const fetchUsersByIdsSpy = vi.spyOn(NexusUserStreamService, 'fetchByIds').mockResolvedValue(mockNexusUsers);
 
-      const persistUsersSpy = vi.spyOn(Core.LocalStreamUsersService, 'persistUsers').mockResolvedValue([]);
+      const persistUsersSpy = vi.spyOn(LocalStreamUsersService, 'persistUsers').mockResolvedValue([]);
 
-      await Core.PostStreamApplication.fetchMissingPostsFromNexus({
+      await PostStreamApplication.fetchMissingPostsFromNexus({
         cacheMissPostIds,
         viewerId,
       });
@@ -900,12 +923,12 @@ describe('PostStreamApplication', () => {
       const mocks = setupDefaultMocks();
       mocks.getUserDetails.mockResolvedValue([undefined]);
 
-      vi.spyOn(Core.NexusPostStreamService, 'fetchByIds').mockResolvedValue(mockNexusPosts);
-      vi.spyOn(Core.NexusUserStreamService, 'fetchByIds').mockResolvedValue(asInvalid<Core.NexusUser[]>(undefined));
+      vi.spyOn(NexusPostStreamService, 'fetchByIds').mockResolvedValue(mockNexusPosts);
+      vi.spyOn(NexusUserStreamService, 'fetchByIds').mockResolvedValue(asInvalid<NexusUser[]>(undefined));
 
-      const persistUsersSpy = vi.spyOn(Core.LocalStreamUsersService, 'persistUsers').mockResolvedValue([]);
+      const persistUsersSpy = vi.spyOn(LocalStreamUsersService, 'persistUsers').mockResolvedValue([]);
 
-      await Core.PostStreamApplication.fetchMissingPostsFromNexus({
+      await PostStreamApplication.fetchMissingPostsFromNexus({
         cacheMissPostIds,
         viewerId,
       });
@@ -918,10 +941,10 @@ describe('PostStreamApplication', () => {
       const mocks = setupDefaultMocks();
       mocks.getUserDetails.mockResolvedValue(mockAllUsersCached(1));
 
-      vi.spyOn(Core.NexusPostStreamService, 'fetchByIds').mockResolvedValue(mockNexusPosts);
-      const fetchUsersByIdsSpy = vi.spyOn(Core.NexusUserStreamService, 'fetchByIds');
+      vi.spyOn(NexusPostStreamService, 'fetchByIds').mockResolvedValue(mockNexusPosts);
+      const fetchUsersByIdsSpy = vi.spyOn(NexusUserStreamService, 'fetchByIds');
 
-      await Core.PostStreamApplication.fetchMissingPostsFromNexus({
+      await PostStreamApplication.fetchMissingPostsFromNexus({
         cacheMissPostIds,
         viewerId,
       });
@@ -933,9 +956,9 @@ describe('PostStreamApplication', () => {
       const cacheMissPostIds: string[] = [];
       const mocks = setupDefaultMocks();
 
-      const fetchPostsByIdsSpy = vi.spyOn(Core.NexusPostStreamService, 'fetchByIds').mockResolvedValue([]);
+      const fetchPostsByIdsSpy = vi.spyOn(NexusPostStreamService, 'fetchByIds').mockResolvedValue([]);
 
-      await Core.PostStreamApplication.fetchMissingPostsFromNexus({
+      await PostStreamApplication.fetchMissingPostsFromNexus({
         cacheMissPostIds,
         viewerId,
       });
@@ -951,9 +974,9 @@ describe('PostStreamApplication', () => {
       const { cacheMissPostIds } = createTestData(1);
       const mocks = setupDefaultMocks();
 
-      vi.spyOn(Core.NexusPostStreamService, 'fetchByIds').mockResolvedValue([]);
+      vi.spyOn(NexusPostStreamService, 'fetchByIds').mockResolvedValue([]);
 
-      await Core.PostStreamApplication.fetchMissingPostsFromNexus({
+      await PostStreamApplication.fetchMissingPostsFromNexus({
         cacheMissPostIds,
         viewerId,
       });
@@ -966,12 +989,12 @@ describe('PostStreamApplication', () => {
       const mocks = setupDefaultMocks();
       mocks.getUserDetails.mockResolvedValue([undefined]);
 
-      vi.spyOn(Core.NexusPostStreamService, 'fetchByIds').mockResolvedValue(mockNexusPosts);
-      vi.spyOn(Core.NexusUserStreamService, 'fetchByIds').mockResolvedValue([]);
+      vi.spyOn(NexusPostStreamService, 'fetchByIds').mockResolvedValue(mockNexusPosts);
+      vi.spyOn(NexusUserStreamService, 'fetchByIds').mockResolvedValue([]);
 
-      const persistUsersSpy = vi.spyOn(Core.LocalStreamUsersService, 'persistUsers');
+      const persistUsersSpy = vi.spyOn(LocalStreamUsersService, 'persistUsers');
 
-      await Core.PostStreamApplication.fetchMissingPostsFromNexus({
+      await PostStreamApplication.fetchMissingPostsFromNexus({
         cacheMissPostIds,
         viewerId,
       });
@@ -982,10 +1005,10 @@ describe('PostStreamApplication', () => {
     it('should handle error gracefully when NexusPostStreamService.fetchByIds fails', async () => {
       const { cacheMissPostIds } = createTestData(1);
       const fetchPostsByIdsSpy = vi
-        .spyOn(Core.NexusPostStreamService, 'fetchByIds')
+        .spyOn(NexusPostStreamService, 'fetchByIds')
         .mockRejectedValue(new Error('Network error'));
 
-      await Core.PostStreamApplication.fetchMissingPostsFromNexus({
+      await PostStreamApplication.fetchMissingPostsFromNexus({
         cacheMissPostIds,
         viewerId,
       });
@@ -995,20 +1018,20 @@ describe('PostStreamApplication', () => {
 
     it('should handle error gracefully when persistPosts fails', async () => {
       const { cacheMissPostIds, mockNexusPosts } = createTestData(1);
-      vi.spyOn(Core.NexusPostStreamService, 'fetchByIds').mockResolvedValue(mockNexusPosts);
-      vi.spyOn(Core.LocalStreamPostsService, 'persistPosts').mockRejectedValue(new Error('Failed to persist posts'));
+      vi.spyOn(NexusPostStreamService, 'fetchByIds').mockResolvedValue(mockNexusPosts);
+      vi.spyOn(LocalStreamPostsService, 'persistPosts').mockRejectedValue(new Error('Failed to persist posts'));
 
-      await Core.PostStreamApplication.fetchMissingPostsFromNexus({
+      await PostStreamApplication.fetchMissingPostsFromNexus({
         cacheMissPostIds,
         viewerId,
       });
 
-      expect(Core.LocalStreamPostsService.persistPosts).toHaveBeenCalled();
+      expect(LocalStreamPostsService.persistPosts).toHaveBeenCalled();
     });
 
     it('should handle error gracefully when file persistence fails', async () => {
       const { cacheMissPostIds, mockNexusPosts } = createTestData(1);
-      const mockAttachments: Core.NexusFileDetails[] = [
+      const mockAttachments: NexusFileDetails[] = [
         {
           id: 'file-1',
           name: 'file-1',
@@ -1020,7 +1043,7 @@ describe('PostStreamApplication', () => {
           metadata: {},
           owner_id: 'user-1',
           uri: 'pubky://user-1/pub/pubky.app/files/file-1',
-          urls: {} as Core.NexusFileUrls,
+          urls: {} as NexusFileUrls,
         },
         {
           id: 'file-2',
@@ -1033,22 +1056,22 @@ describe('PostStreamApplication', () => {
           metadata: {},
           owner_id: 'user-1',
           uri: 'pubky://user-1/pub/pubky.app/files/file-2',
-          urls: {} as Core.NexusFileUrls,
+          urls: {} as NexusFileUrls,
         },
       ];
 
-      const fetchPostsByIdsSpy = vi.spyOn(Core.NexusPostStreamService, 'fetchByIds').mockResolvedValue(mockNexusPosts);
-      vi.spyOn(Core.LocalStreamPostsService, 'persistPosts').mockResolvedValue({
+      const fetchPostsByIdsSpy = vi.spyOn(NexusPostStreamService, 'fetchByIds').mockResolvedValue(mockNexusPosts);
+      vi.spyOn(LocalStreamPostsService, 'persistPosts').mockResolvedValue({
         attachmentMetadata: mockAttachments,
       });
       const persistFilesSpy = vi
-        .spyOn(Core.FileApplication, 'persistFiles')
+        .spyOn(FileApplication, 'persistFiles')
         .mockRejectedValue(new Error('Failed to persist files'));
 
-      const getUserDetailsSpy = vi.spyOn(Core.UserDetailsModel, 'findByIdsPreserveOrder');
-      const persistUsersSpy = vi.spyOn(Core.LocalStreamUsersService, 'persistUsers');
+      const getUserDetailsSpy = vi.spyOn(UserDetailsModel, 'findByIdsPreserveOrder');
+      const persistUsersSpy = vi.spyOn(LocalStreamUsersService, 'persistUsers');
 
-      await Core.PostStreamApplication.fetchMissingPostsFromNexus({
+      await PostStreamApplication.fetchMissingPostsFromNexus({
         cacheMissPostIds,
         viewerId,
       });
@@ -1064,12 +1087,12 @@ describe('PostStreamApplication', () => {
       const mocks = setupDefaultMocks();
       mocks.getUserDetails.mockResolvedValue([undefined]);
 
-      vi.spyOn(Core.NexusPostStreamService, 'fetchByIds').mockResolvedValue(mockNexusPosts);
+      vi.spyOn(NexusPostStreamService, 'fetchByIds').mockResolvedValue(mockNexusPosts);
       const fetchUsersByIdsSpy = vi
-        .spyOn(Core.NexusUserStreamService, 'fetchByIds')
+        .spyOn(NexusUserStreamService, 'fetchByIds')
         .mockRejectedValue(new Error('Network error fetching users'));
 
-      await Core.PostStreamApplication.fetchMissingPostsFromNexus({
+      await PostStreamApplication.fetchMissingPostsFromNexus({
         cacheMissPostIds,
         viewerId,
       });
@@ -1083,17 +1106,17 @@ describe('PostStreamApplication', () => {
       const mocks = setupDefaultMocks();
       mocks.getUserDetails.mockResolvedValue([undefined]);
 
-      vi.spyOn(Core.NexusPostStreamService, 'fetchByIds').mockResolvedValue(mockNexusPosts);
-      vi.spyOn(Core.NexusUserStreamService, 'fetchByIds').mockResolvedValue(mockNexusUsers);
+      vi.spyOn(NexusPostStreamService, 'fetchByIds').mockResolvedValue(mockNexusPosts);
+      vi.spyOn(NexusUserStreamService, 'fetchByIds').mockResolvedValue(mockNexusUsers);
 
-      vi.spyOn(Core.LocalStreamUsersService, 'persistUsers').mockRejectedValue(new Error('Failed to persist users'));
+      vi.spyOn(LocalStreamUsersService, 'persistUsers').mockRejectedValue(new Error('Failed to persist users'));
 
-      await Core.PostStreamApplication.fetchMissingPostsFromNexus({
+      await PostStreamApplication.fetchMissingPostsFromNexus({
         cacheMissPostIds,
         viewerId,
       });
 
-      expect(Core.LocalStreamUsersService.persistUsers).toHaveBeenCalled();
+      expect(LocalStreamUsersService.persistUsers).toHaveBeenCalled();
     });
 
     it('should handle multiple posts with same author', async () => {
@@ -1101,11 +1124,11 @@ describe('PostStreamApplication', () => {
       const mocks = setupDefaultMocks();
       mocks.getUserDetails.mockResolvedValue(mockAllUsersCached(2));
 
-      const fetchPostsByIdsSpy = vi.spyOn(Core.NexusPostStreamService, 'fetchByIds').mockResolvedValue(mockNexusPosts);
-      const fetchUsersByIdsSpy = vi.spyOn(Core.NexusUserStreamService, 'fetchByIds');
-      const persistUsersSpy = vi.spyOn(Core.LocalStreamUsersService, 'persistUsers');
+      const fetchPostsByIdsSpy = vi.spyOn(NexusPostStreamService, 'fetchByIds').mockResolvedValue(mockNexusPosts);
+      const fetchUsersByIdsSpy = vi.spyOn(NexusUserStreamService, 'fetchByIds');
+      const persistUsersSpy = vi.spyOn(LocalStreamUsersService, 'persistUsers');
 
-      await Core.PostStreamApplication.fetchMissingPostsFromNexus({
+      await PostStreamApplication.fetchMissingPostsFromNexus({
         cacheMissPostIds,
         viewerId,
       });
@@ -1117,7 +1140,7 @@ describe('PostStreamApplication', () => {
 
     it('should handle posts with different authors', async () => {
       const cacheMissPostIds = [`author-1:post-1`, `author-2:post-2`];
-      const mockNexusPosts: Core.NexusPost[] = [
+      const mockNexusPosts: NexusPost[] = [
         createMockNexusPost('post-1', 'author-1', BASE_TIMESTAMP),
         createMockNexusPost('post-2', 'author-2', BASE_TIMESTAMP + 1),
       ];
@@ -1125,12 +1148,12 @@ describe('PostStreamApplication', () => {
       const mocks = setupDefaultMocks();
       mocks.getUserDetails.mockResolvedValue([undefined, undefined]);
 
-      vi.spyOn(Core.NexusPostStreamService, 'fetchByIds').mockResolvedValue(mockNexusPosts);
-      const fetchUsersByIdsSpy = vi.spyOn(Core.NexusUserStreamService, 'fetchByIds').mockResolvedValue(mockNexusUsers);
+      vi.spyOn(NexusPostStreamService, 'fetchByIds').mockResolvedValue(mockNexusPosts);
+      const fetchUsersByIdsSpy = vi.spyOn(NexusUserStreamService, 'fetchByIds').mockResolvedValue(mockNexusUsers);
 
-      const persistUsersSpy = vi.spyOn(Core.LocalStreamUsersService, 'persistUsers').mockResolvedValue([]);
+      const persistUsersSpy = vi.spyOn(LocalStreamUsersService, 'persistUsers').mockResolvedValue([]);
 
-      await Core.PostStreamApplication.fetchMissingPostsFromNexus({
+      await PostStreamApplication.fetchMissingPostsFromNexus({
         cacheMissPostIds,
         viewerId,
       });
@@ -1141,20 +1164,20 @@ describe('PostStreamApplication', () => {
 
     it('should handle when getNotPersistedUsersInCache returns partial users', async () => {
       const cacheMissPostIds = [`author-1:post-1`, `author-2:post-2`];
-      const mockNexusPosts: Core.NexusPost[] = [
+      const mockNexusPosts: NexusPost[] = [
         createMockNexusPost('post-1', 'author-1', BASE_TIMESTAMP),
         createMockNexusPost('post-2', 'author-2', BASE_TIMESTAMP + 1),
       ];
       const mockNexusUsers = [createMockNexusUser('author-2')];
       const mocks = setupDefaultMocks();
-      mocks.getUserDetails.mockResolvedValue([{ id: 'author-1' } as Core.UserDetailsModelSchema, undefined]);
+      mocks.getUserDetails.mockResolvedValue([{ id: 'author-1' } as UserDetailsModelSchema, undefined]);
 
-      vi.spyOn(Core.NexusPostStreamService, 'fetchByIds').mockResolvedValue(mockNexusPosts);
-      const fetchUsersByIdsSpy = vi.spyOn(Core.NexusUserStreamService, 'fetchByIds').mockResolvedValue(mockNexusUsers);
+      vi.spyOn(NexusPostStreamService, 'fetchByIds').mockResolvedValue(mockNexusPosts);
+      const fetchUsersByIdsSpy = vi.spyOn(NexusUserStreamService, 'fetchByIds').mockResolvedValue(mockNexusUsers);
 
-      const persistUsersSpy = vi.spyOn(Core.LocalStreamUsersService, 'persistUsers').mockResolvedValue([]);
+      const persistUsersSpy = vi.spyOn(LocalStreamUsersService, 'persistUsers').mockResolvedValue([]);
 
-      await Core.PostStreamApplication.fetchMissingPostsFromNexus({
+      await PostStreamApplication.fetchMissingPostsFromNexus({
         cacheMissPostIds,
         viewerId,
       });
@@ -1170,15 +1193,15 @@ describe('PostStreamApplication', () => {
       const { cacheMissPostIds, mockNexusPosts } = createTestData(1);
       setupDefaultMocks();
 
-      vi.spyOn(Core.NexusPostStreamService, 'fetchByIds').mockResolvedValue(mockNexusPosts);
-      vi.spyOn(Core.UserDetailsModel, 'findByIdsPreserveOrder').mockRejectedValue(new Error('Database query failed'));
+      vi.spyOn(NexusPostStreamService, 'fetchByIds').mockResolvedValue(mockNexusPosts);
+      vi.spyOn(UserDetailsModel, 'findByIdsPreserveOrder').mockRejectedValue(new Error('Database query failed'));
 
-      await Core.PostStreamApplication.fetchMissingPostsFromNexus({
+      await PostStreamApplication.fetchMissingPostsFromNexus({
         cacheMissPostIds,
         viewerId,
       });
 
-      expect(Core.UserDetailsModel.findByIdsPreserveOrder).toHaveBeenCalled();
+      expect(UserDetailsModel.findByIdsPreserveOrder).toHaveBeenCalled();
     });
 
     it('should fetch original posts for reposts', async () => {
@@ -1200,23 +1223,21 @@ describe('PostStreamApplication', () => {
       const originalNexusPost = createMockNexusPost('original-post', originalAuthor, BASE_TIMESTAMP - 1000);
 
       const mocks = setupDefaultMocks();
-      mocks.getUserDetails.mockResolvedValue([{ id: repostAuthor } as Core.UserDetailsModelSchema]);
+      mocks.getUserDetails.mockResolvedValue([{ id: repostAuthor } as UserDetailsModelSchema]);
 
       // Mock post fetching service
       const fetchPostsByIdsSpy = vi
-        .spyOn(Core.NexusPostStreamService, 'fetchByIds')
+        .spyOn(NexusPostStreamService, 'fetchByIds')
         .mockResolvedValueOnce([repostNexusPost]) // fetchMissingPostsFromNexus: posts
         .mockResolvedValueOnce([originalNexusPost]); // fetchOriginalPostsByUris: original posts
 
       // Mock user fetching service for original post's author
-      vi.spyOn(Core.NexusUserStreamService, 'fetchByIds').mockResolvedValue([createMockNexusUser(originalAuthor)]);
+      vi.spyOn(NexusUserStreamService, 'fetchByIds').mockResolvedValue([createMockNexusUser(originalAuthor)]);
 
       // Mock that original post is NOT in cache (needs to be fetched)
-      vi.spyOn(Core.LocalStreamPostsService, 'getNotPersistedPostsInCache').mockResolvedValueOnce([
-        originalPostCompositeId,
-      ]);
+      vi.spyOn(LocalStreamPostsService, 'getNotPersistedPostsInCache').mockResolvedValueOnce([originalPostCompositeId]);
 
-      await Core.PostStreamApplication.fetchMissingPostsFromNexus({
+      await PostStreamApplication.fetchMissingPostsFromNexus({
         cacheMissPostIds: [`${repostAuthor}:repost-1`],
         viewerId,
       });
@@ -1244,16 +1265,16 @@ describe('PostStreamApplication', () => {
       });
 
       const mocks = setupDefaultMocks();
-      mocks.getUserDetails.mockResolvedValue([{ id: repostAuthor } as Core.UserDetailsModelSchema]);
+      mocks.getUserDetails.mockResolvedValue([{ id: repostAuthor } as UserDetailsModelSchema]);
 
       const fetchPostsByIdsSpy = vi
-        .spyOn(Core.NexusPostStreamService, 'fetchByIds')
+        .spyOn(NexusPostStreamService, 'fetchByIds')
         .mockResolvedValueOnce([repostNexusPost]);
 
       // Mock that original post IS in cache (no need to fetch)
-      vi.spyOn(Core.LocalStreamPostsService, 'getNotPersistedPostsInCache').mockResolvedValueOnce([]);
+      vi.spyOn(LocalStreamPostsService, 'getNotPersistedPostsInCache').mockResolvedValueOnce([]);
 
-      await Core.PostStreamApplication.fetchMissingPostsFromNexus({
+      await PostStreamApplication.fetchMissingPostsFromNexus({
         cacheMissPostIds: [`${repostAuthor}:repost-1`],
         viewerId,
       });
@@ -1268,11 +1289,9 @@ describe('PostStreamApplication', () => {
       const mocks = setupDefaultMocks();
       mocks.getUserDetails.mockResolvedValue(mockAllUsersCached(2));
 
-      const fetchPostsByIdsSpy = vi
-        .spyOn(Core.NexusPostStreamService, 'fetchByIds')
-        .mockResolvedValueOnce(mockNexusPosts);
+      const fetchPostsByIdsSpy = vi.spyOn(NexusPostStreamService, 'fetchByIds').mockResolvedValueOnce(mockNexusPosts);
 
-      await Core.PostStreamApplication.fetchMissingPostsFromNexus({
+      await PostStreamApplication.fetchMissingPostsFromNexus({
         cacheMissPostIds,
         viewerId,
       });
@@ -1296,19 +1315,17 @@ describe('PostStreamApplication', () => {
       });
 
       const mocks = setupDefaultMocks();
-      mocks.getUserDetails.mockResolvedValue([{ id: repostAuthor } as Core.UserDetailsModelSchema]);
+      mocks.getUserDetails.mockResolvedValue([{ id: repostAuthor } as UserDetailsModelSchema]);
 
-      vi.spyOn(Core.NexusPostStreamService, 'fetchByIds')
+      vi.spyOn(NexusPostStreamService, 'fetchByIds')
         .mockResolvedValueOnce([repostNexusPost]) // fetchMissingPostsFromNexus: posts
         .mockRejectedValueOnce(new Error('Failed to fetch original posts')); // fetchOriginalPostsByUris fails
 
-      vi.spyOn(Core.LocalStreamPostsService, 'getNotPersistedPostsInCache').mockResolvedValueOnce([
-        originalPostCompositeId,
-      ]);
+      vi.spyOn(LocalStreamPostsService, 'getNotPersistedPostsInCache').mockResolvedValueOnce([originalPostCompositeId]);
 
       // Should not throw - error should be handled gracefully
       await expect(
-        Core.PostStreamApplication.fetchMissingPostsFromNexus({
+        PostStreamApplication.fetchMissingPostsFromNexus({
           cacheMissPostIds: [`${repostAuthor}:repost-1`],
           viewerId,
         }),
@@ -1337,24 +1354,24 @@ describe('PostStreamApplication', () => {
       ];
 
       const mocks = setupDefaultMocks();
-      mocks.getUserDetails.mockResolvedValue([{ id: repostAuthor } as Core.UserDetailsModelSchema]);
+      mocks.getUserDetails.mockResolvedValue([{ id: repostAuthor } as UserDetailsModelSchema]);
 
       const fetchPostsByIdsSpy = vi
-        .spyOn(Core.NexusPostStreamService, 'fetchByIds')
+        .spyOn(NexusPostStreamService, 'fetchByIds')
         .mockResolvedValueOnce(repostNexusPosts)
         .mockResolvedValueOnce(originalNexusPosts);
 
-      vi.spyOn(Core.NexusUserStreamService, 'fetchByIds').mockResolvedValue([
+      vi.spyOn(NexusUserStreamService, 'fetchByIds').mockResolvedValue([
         createMockNexusUser(originalAuthor1),
         createMockNexusUser(originalAuthor2),
       ]);
 
-      vi.spyOn(Core.LocalStreamPostsService, 'getNotPersistedPostsInCache').mockResolvedValueOnce([
+      vi.spyOn(LocalStreamPostsService, 'getNotPersistedPostsInCache').mockResolvedValueOnce([
         `${originalAuthor1}:original-1`,
         `${originalAuthor2}:original-2`,
       ]);
 
-      await Core.PostStreamApplication.fetchMissingPostsFromNexus({
+      await PostStreamApplication.fetchMissingPostsFromNexus({
         cacheMissPostIds: [`${repostAuthor}:repost-1`, `${repostAuthor}:repost-2`],
         viewerId,
       });
@@ -1374,7 +1391,7 @@ describe('PostStreamApplication', () => {
       await createStreamWithPosts(postIds);
       await createPostDetails(postIds);
 
-      const result = await Core.PostStreamApplication.getStreamHead({ streamId });
+      const result = await PostStreamApplication.getStreamHead({ streamId });
 
       // Should return the timestamp of the first post (head of stream)
       expect(result).toBe(BASE_TIMESTAMP);
@@ -1385,23 +1402,23 @@ describe('PostStreamApplication', () => {
       const postIds = Array.from({ length: 5 }, (_, i) => `${DEFAULT_AUTHOR}:post-${i + 1}`);
 
       // Create unread stream (should take precedence)
-      await Core.UnreadPostStreamModel.create(streamId, unreadPostIds);
+      await UnreadPostStreamModel.create(streamId, unreadPostIds);
       await createPostDetails(unreadPostIds);
 
       // Create post stream
       await createStreamWithPosts(postIds);
       await createPostDetails(postIds);
 
-      const result = await Core.PostStreamApplication.getStreamHead({ streamId });
+      const result = await PostStreamApplication.getStreamHead({ streamId });
 
       // Should return timestamp from unread stream head (first unread post)
       expect(result).toBe(BASE_TIMESTAMP);
     });
 
     it('should return FORCE_FETCH_NEW_POSTS when stream does not exist', async () => {
-      const result = await Core.PostStreamApplication.getStreamHead({ streamId });
+      const result = await PostStreamApplication.getStreamHead({ streamId });
 
-      expect(result).toBe(Core.FORCE_FETCH_NEW_POSTS);
+      expect(result).toBe(FORCE_FETCH_NEW_POSTS);
     });
 
     it('should return SKIP_FETCH_NEW_POSTS when stream exists but head post has no details', async () => {
@@ -1409,30 +1426,28 @@ describe('PostStreamApplication', () => {
       await createStreamWithPosts(postIds);
       // Don't create post details
 
-      const result = await Core.PostStreamApplication.getStreamHead({ streamId });
+      const result = await PostStreamApplication.getStreamHead({ streamId });
 
-      expect(result).toBe(Core.SKIP_FETCH_NEW_POSTS);
+      expect(result).toBe(SKIP_FETCH_NEW_POSTS);
     });
 
     it('should handle errors from underlying service gracefully', async () => {
       const getStreamHeadSpy = vi
-        .spyOn(Core.LocalStreamPostsService, 'getStreamHead')
+        .spyOn(LocalStreamPostsService, 'getStreamHead')
         .mockRejectedValue(new Error('Database error'));
 
-      await expect(Core.PostStreamApplication.getStreamHead({ streamId })).rejects.toThrow('Database error');
+      await expect(PostStreamApplication.getStreamHead({ streamId })).rejects.toThrow('Database error');
 
       expect(getStreamHeadSpy).toHaveBeenCalledWith({ streamId });
     });
 
     it('should pass streamId parameter correctly to underlying service', async () => {
-      const customStreamId = Core.PostStreamTypes.TIMELINE_FOLLOWING_ALL as Core.PostStreamId;
+      const customStreamId = PostStreamTypes.TIMELINE_FOLLOWING_ALL as PostStreamId;
       const expectedTimestamp = BASE_TIMESTAMP + 50;
 
-      const getStreamHeadSpy = vi
-        .spyOn(Core.LocalStreamPostsService, 'getStreamHead')
-        .mockResolvedValue(expectedTimestamp);
+      const getStreamHeadSpy = vi.spyOn(LocalStreamPostsService, 'getStreamHead').mockResolvedValue(expectedTimestamp);
 
-      const result = await Core.PostStreamApplication.getStreamHead({ streamId: customStreamId });
+      const result = await PostStreamApplication.getStreamHead({ streamId: customStreamId });
 
       expect(getStreamHeadSpy).toHaveBeenCalledWith({ streamId: customStreamId });
       expect(result).toBe(expectedTimestamp);
@@ -1443,7 +1458,7 @@ describe('PostStreamApplication', () => {
     it('should clear pagination queue before preparing the stream', async () => {
       const removeSpy = vi.spyOn(postStreamQueue, 'remove');
 
-      await Core.PostStreamApplication.prepareStreamForInitialLoad({ streamId });
+      await PostStreamApplication.prepareStreamForInitialLoad({ streamId });
 
       expect(removeSpy).toHaveBeenCalledWith(streamId);
     });
@@ -1458,12 +1473,12 @@ describe('PostStreamApplication', () => {
       await createPostDetailWithTimestamp(mainPostId, staleTimestamp);
 
       const unreadPostId = `${DEFAULT_AUTHOR}:unread-1`;
-      await Core.UnreadPostStreamModel.create(streamId, [unreadPostId]);
+      await UnreadPostStreamModel.create(streamId, [unreadPostId]);
 
-      await Core.PostStreamApplication.prepareStreamForInitialLoad({ streamId });
+      await PostStreamApplication.prepareStreamForInitialLoad({ streamId });
 
-      const postStream = await Core.PostStreamModel.findById(streamId);
-      const unreadStream = await Core.UnreadPostStreamModel.findById(streamId);
+      const postStream = await PostStreamModel.findById(streamId);
+      const unreadStream = await UnreadPostStreamModel.findById(streamId);
       expect(postStream).toBeNull();
       expect(unreadStream).toBeNull();
     });
@@ -1479,13 +1494,13 @@ describe('PostStreamApplication', () => {
       await createPostDetailWithTimestamp(mainPostId, freshTimestamp);
 
       const unreadPostId = `${DEFAULT_AUTHOR}:unread-1`;
-      await Core.UnreadPostStreamModel.create(streamId, [unreadPostId]);
+      await UnreadPostStreamModel.create(streamId, [unreadPostId]);
       await createPostDetailWithTimestamp(unreadPostId, staleTimestamp);
 
-      await Core.PostStreamApplication.prepareStreamForInitialLoad({ streamId });
+      await PostStreamApplication.prepareStreamForInitialLoad({ streamId });
 
-      const postStream = await Core.PostStreamModel.findById(streamId);
-      const unreadStream = await Core.UnreadPostStreamModel.findById(streamId);
+      const postStream = await PostStreamModel.findById(streamId);
+      const unreadStream = await UnreadPostStreamModel.findById(streamId);
       expect(postStream?.stream).toEqual([mainPostId]);
       expect(unreadStream).toBeNull();
     });
@@ -1497,7 +1512,7 @@ describe('PostStreamApplication', () => {
       const mainPostIds = [`${DEFAULT_AUTHOR}:post-1`, `${DEFAULT_AUTHOR}:post-2`];
       const unreadPostIds = [`${DEFAULT_AUTHOR}:unread-1`, `${DEFAULT_AUTHOR}:unread-2`];
       await createStreamWithPosts(mainPostIds);
-      await Core.UnreadPostStreamModel.create(streamId, unreadPostIds);
+      await UnreadPostStreamModel.create(streamId, unreadPostIds);
 
       const mainHeadTimestamp = now - Config.STREAM_CACHE_MAX_AGE_MS + 2;
       const mainOlderTimestamp = now - Config.STREAM_CACHE_MAX_AGE_MS + 1;
@@ -1509,10 +1524,10 @@ describe('PostStreamApplication', () => {
       await createPostDetailWithTimestamp(unreadPostIds[0], unreadNewestTimestamp);
       await createPostDetailWithTimestamp(unreadPostIds[1], unreadOlderTimestamp);
 
-      await Core.PostStreamApplication.prepareStreamForInitialLoad({ streamId });
+      await PostStreamApplication.prepareStreamForInitialLoad({ streamId });
 
-      const postStream = await Core.PostStreamModel.findById(streamId);
-      const unreadStream = await Core.UnreadPostStreamModel.findById(streamId);
+      const postStream = await PostStreamModel.findById(streamId);
+      const unreadStream = await UnreadPostStreamModel.findById(streamId);
       expect(postStream?.stream).toEqual([unreadPostIds[0], unreadPostIds[1], mainPostIds[0], mainPostIds[1]]);
       expect(unreadStream).toBeNull();
     });
@@ -1524,14 +1539,14 @@ describe('PostStreamApplication', () => {
       const postIds = Array.from({ length: 5 }, (_, i) => `${DEFAULT_AUTHOR}:post-${i + 1}`);
 
       // Create unread stream
-      await Core.UnreadPostStreamModel.create(streamId, unreadPostIds);
+      await UnreadPostStreamModel.create(streamId, unreadPostIds);
       // Create post stream
       await createStreamWithPosts(postIds);
 
-      await Core.PostStreamApplication.mergeUnreadStreamWithPostStream({ streamId });
+      await PostStreamApplication.mergeUnreadStreamWithPostStream({ streamId });
 
       // Verify the streams were merged: unread posts first, then post stream
-      const mergedStream = await Core.PostStreamModel.findById(streamId);
+      const mergedStream = await PostStreamModel.findById(streamId);
       expect(mergedStream).toBeTruthy();
       expect(mergedStream!.stream).toEqual([...unreadPostIds, ...postIds]);
     });
@@ -1541,38 +1556,38 @@ describe('PostStreamApplication', () => {
       await createStreamWithPosts(postIds);
 
       // Should not throw and should not modify post stream
-      await Core.PostStreamApplication.mergeUnreadStreamWithPostStream({ streamId });
+      await PostStreamApplication.mergeUnreadStreamWithPostStream({ streamId });
 
-      const postStream = await Core.PostStreamModel.findById(streamId);
+      const postStream = await PostStreamModel.findById(streamId);
       expect(postStream).toBeTruthy();
       expect(postStream!.stream).toEqual(postIds);
     });
 
     it('should handle when post stream does not exist (no-op)', async () => {
       const unreadPostIds = Array.from({ length: 3 }, (_, i) => `${DEFAULT_AUTHOR}:unread-${i + 1}`);
-      await Core.UnreadPostStreamModel.create(streamId, unreadPostIds);
+      await UnreadPostStreamModel.create(streamId, unreadPostIds);
 
       // Should not throw and should not create post stream
-      await Core.PostStreamApplication.mergeUnreadStreamWithPostStream({ streamId });
+      await PostStreamApplication.mergeUnreadStreamWithPostStream({ streamId });
 
-      const postStream = await Core.PostStreamModel.findById(streamId);
+      const postStream = await PostStreamModel.findById(streamId);
       expect(postStream).toBeNull();
     });
 
     it('should handle when both streams do not exist (no-op)', async () => {
       // Should not throw
-      await Core.PostStreamApplication.mergeUnreadStreamWithPostStream({ streamId });
+      await PostStreamApplication.mergeUnreadStreamWithPostStream({ streamId });
 
-      const postStream = await Core.PostStreamModel.findById(streamId);
+      const postStream = await PostStreamModel.findById(streamId);
       expect(postStream).toBeNull();
     });
 
     it('should handle errors from underlying service', async () => {
       const mergeSpy = vi
-        .spyOn(Core.LocalStreamPostsService, 'mergeUnreadStreamWithPostStream')
+        .spyOn(LocalStreamPostsService, 'mergeUnreadStreamWithPostStream')
         .mockRejectedValue(new Error('Database error'));
 
-      await expect(Core.PostStreamApplication.mergeUnreadStreamWithPostStream({ streamId })).rejects.toThrow(
+      await expect(PostStreamApplication.mergeUnreadStreamWithPostStream({ streamId })).rejects.toThrow(
         'Database error',
       );
 
@@ -1580,11 +1595,11 @@ describe('PostStreamApplication', () => {
     });
 
     it('should pass streamId parameter correctly to underlying service', async () => {
-      const customStreamId = Core.PostStreamTypes.TIMELINE_FOLLOWING_ALL as Core.PostStreamId;
+      const customStreamId = PostStreamTypes.TIMELINE_FOLLOWING_ALL as PostStreamId;
 
-      const mergeSpy = vi.spyOn(Core.LocalStreamPostsService, 'mergeUnreadStreamWithPostStream').mockResolvedValue();
+      const mergeSpy = vi.spyOn(LocalStreamPostsService, 'mergeUnreadStreamWithPostStream').mockResolvedValue();
 
-      await Core.PostStreamApplication.mergeUnreadStreamWithPostStream({ streamId: customStreamId });
+      await PostStreamApplication.mergeUnreadStreamWithPostStream({ streamId: customStreamId });
 
       expect(mergeSpy).toHaveBeenCalledWith({ streamId: customStreamId });
     });
@@ -1593,39 +1608,39 @@ describe('PostStreamApplication', () => {
   describe('getUnreadStream', () => {
     it('should return unread stream when it exists', async () => {
       const unreadPostIds = Array.from({ length: 3 }, (_, i) => `${DEFAULT_AUTHOR}:unread-${i + 1}`);
-      await Core.UnreadPostStreamModel.create(streamId, unreadPostIds);
+      await UnreadPostStreamModel.create(streamId, unreadPostIds);
 
-      const result = await Core.PostStreamApplication.getUnreadStream({ streamId });
+      const result = await PostStreamApplication.getUnreadStream({ streamId });
 
       expect(result).toBeTruthy();
       expect(result!.stream).toEqual(unreadPostIds);
     });
 
     it('should return null when unread stream does not exist', async () => {
-      const result = await Core.PostStreamApplication.getUnreadStream({ streamId });
+      const result = await PostStreamApplication.getUnreadStream({ streamId });
 
       expect(result).toBeNull();
     });
 
     it('should handle errors from underlying service', async () => {
       const readUnreadStreamSpy = vi
-        .spyOn(Core.LocalStreamPostsService, 'readUnreadStream')
+        .spyOn(LocalStreamPostsService, 'readUnreadStream')
         .mockRejectedValue(new Error('Database error'));
 
-      await expect(Core.PostStreamApplication.getUnreadStream({ streamId })).rejects.toThrow('Database error');
+      await expect(PostStreamApplication.getUnreadStream({ streamId })).rejects.toThrow('Database error');
 
       expect(readUnreadStreamSpy).toHaveBeenCalledWith({ streamId });
     });
 
     it('should pass streamId parameter correctly to underlying service', async () => {
-      const customStreamId = Core.PostStreamTypes.TIMELINE_FOLLOWING_ALL as Core.PostStreamId;
+      const customStreamId = PostStreamTypes.TIMELINE_FOLLOWING_ALL as PostStreamId;
       const mockUnreadStream = { stream: ['post-1', 'post-2'] };
 
       const readUnreadStreamSpy = vi
-        .spyOn(Core.LocalStreamPostsService, 'readUnreadStream')
+        .spyOn(LocalStreamPostsService, 'readUnreadStream')
         .mockResolvedValue(mockUnreadStream);
 
-      const result = await Core.PostStreamApplication.getUnreadStream({ streamId: customStreamId });
+      const result = await PostStreamApplication.getUnreadStream({ streamId: customStreamId });
 
       expect(readUnreadStreamSpy).toHaveBeenCalledWith({ streamId: customStreamId });
       expect(result).toEqual(mockUnreadStream);
@@ -1637,35 +1652,35 @@ describe('PostStreamApplication', () => {
       const postIds = Array.from({ length: 5 }, (_, i) => `${DEFAULT_AUTHOR}:post-${i + 1}`);
       await createStreamWithPosts(postIds);
 
-      const result = await Core.PostStreamApplication.getLocalStream({ streamId });
+      const result = await PostStreamApplication.getLocalStream({ streamId });
 
       expect(result).toBeTruthy();
       expect(result!.stream).toEqual(postIds);
     });
 
     it('should return null when stream does not exist', async () => {
-      const result = await Core.PostStreamApplication.getLocalStream({ streamId });
+      const result = await PostStreamApplication.getLocalStream({ streamId });
 
       expect(result).toBeNull();
     });
 
     it('should handle errors from underlying service', async () => {
       const getLocalStreamSpy = vi
-        .spyOn(Core.LocalStreamPostsService, 'read')
+        .spyOn(LocalStreamPostsService, 'read')
         .mockRejectedValue(new Error('Database error'));
 
-      await expect(Core.PostStreamApplication.getLocalStream({ streamId })).rejects.toThrow('Database error');
+      await expect(PostStreamApplication.getLocalStream({ streamId })).rejects.toThrow('Database error');
 
       expect(getLocalStreamSpy).toHaveBeenCalledWith({ streamId });
     });
 
     it('should pass streamId parameter correctly to underlying service', async () => {
-      const customStreamId = Core.PostStreamTypes.TIMELINE_FOLLOWING_ALL as Core.PostStreamId;
+      const customStreamId = PostStreamTypes.TIMELINE_FOLLOWING_ALL as PostStreamId;
       const mockStream = { stream: ['post-1', 'post-2'] };
 
-      const getLocalStreamSpy = vi.spyOn(Core.LocalStreamPostsService, 'read').mockResolvedValue(mockStream);
+      const getLocalStreamSpy = vi.spyOn(LocalStreamPostsService, 'read').mockResolvedValue(mockStream);
 
-      const result = await Core.PostStreamApplication.getLocalStream({ streamId: customStreamId });
+      const result = await PostStreamApplication.getLocalStream({ streamId: customStreamId });
 
       expect(getLocalStreamSpy).toHaveBeenCalledWith({ streamId: customStreamId });
       expect(result).toEqual(mockStream);
@@ -1675,40 +1690,40 @@ describe('PostStreamApplication', () => {
   describe('clearUnreadStream', () => {
     it('should clear unread stream and return post IDs', async () => {
       const unreadPostIds = Array.from({ length: 3 }, (_, i) => `${DEFAULT_AUTHOR}:unread-${i + 1}`);
-      await Core.UnreadPostStreamModel.create(streamId, unreadPostIds);
+      await UnreadPostStreamModel.create(streamId, unreadPostIds);
 
-      const result = await Core.PostStreamApplication.clearUnreadStream({ streamId });
+      const result = await PostStreamApplication.clearUnreadStream({ streamId });
 
       expect(result).toEqual(unreadPostIds);
-      const clearedStream = await Core.UnreadPostStreamModel.findById(streamId);
+      const clearedStream = await UnreadPostStreamModel.findById(streamId);
       expect(clearedStream).toBeNull();
     });
 
     it('should return empty array when unread stream does not exist', async () => {
-      const result = await Core.PostStreamApplication.clearUnreadStream({ streamId });
+      const result = await PostStreamApplication.clearUnreadStream({ streamId });
 
       expect(result).toEqual([]);
     });
 
     it('should handle errors from underlying service', async () => {
       const clearUnreadStreamSpy = vi
-        .spyOn(Core.LocalStreamPostsService, 'clearUnreadStream')
+        .spyOn(LocalStreamPostsService, 'clearUnreadStream')
         .mockRejectedValue(new Error('Database error'));
 
-      await expect(Core.PostStreamApplication.clearUnreadStream({ streamId })).rejects.toThrow('Database error');
+      await expect(PostStreamApplication.clearUnreadStream({ streamId })).rejects.toThrow('Database error');
 
       expect(clearUnreadStreamSpy).toHaveBeenCalledWith({ streamId });
     });
 
     it('should pass streamId parameter correctly to underlying service', async () => {
-      const customStreamId = Core.PostStreamTypes.TIMELINE_FOLLOWING_ALL as Core.PostStreamId;
+      const customStreamId = PostStreamTypes.TIMELINE_FOLLOWING_ALL as PostStreamId;
       const mockPostIds = ['post-1', 'post-2'];
 
       const clearUnreadStreamSpy = vi
-        .spyOn(Core.LocalStreamPostsService, 'clearUnreadStream')
+        .spyOn(LocalStreamPostsService, 'clearUnreadStream')
         .mockResolvedValue(mockPostIds);
 
-      const result = await Core.PostStreamApplication.clearUnreadStream({ streamId: customStreamId });
+      const result = await PostStreamApplication.clearUnreadStream({ streamId: customStreamId });
 
       expect(clearUnreadStreamSpy).toHaveBeenCalledWith({ streamId: customStreamId });
       expect(result).toEqual(mockPostIds);
@@ -1722,7 +1737,7 @@ describe('PostStreamApplication', () => {
   describe('filterMutedPosts', () => {
     it('should return all posts when no muted users', () => {
       const postIds = ['author-1:post-1', 'author-2:post-2', 'author-3:post-3'];
-      const mutedUserIds = new Set<Core.Pubky>();
+      const mutedUserIds = new Set<Pubky>();
 
       const result = MuteFilter.filterPosts(postIds, mutedUserIds);
 
@@ -1731,7 +1746,7 @@ describe('PostStreamApplication', () => {
 
     it('should filter out posts from muted users', () => {
       const postIds = ['author-1:post-1', 'author-2:post-2', 'author-3:post-3'];
-      const mutedUserIds = new Set(['author-2'] as Core.Pubky[]);
+      const mutedUserIds = new Set(['author-2'] as Pubky[]);
 
       const result = MuteFilter.filterPosts(postIds, mutedUserIds);
 
@@ -1740,7 +1755,7 @@ describe('PostStreamApplication', () => {
 
     it('should filter out all posts when all authors are muted', () => {
       const postIds = ['author-1:post-1', 'author-1:post-2', 'author-1:post-3'];
-      const mutedUserIds = new Set(['author-1'] as Core.Pubky[]);
+      const mutedUserIds = new Set(['author-1'] as Pubky[]);
 
       const result = MuteFilter.filterPosts(postIds, mutedUserIds);
 
@@ -1749,7 +1764,7 @@ describe('PostStreamApplication', () => {
 
     it('should handle multiple muted users', () => {
       const postIds = ['author-1:post-1', 'author-2:post-2', 'author-3:post-3', 'author-4:post-4', 'author-2:post-5'];
-      const mutedUserIds = new Set(['author-2', 'author-4'] as Core.Pubky[]);
+      const mutedUserIds = new Set(['author-2', 'author-4'] as Pubky[]);
 
       const result = MuteFilter.filterPosts(postIds, mutedUserIds);
 
@@ -1758,7 +1773,7 @@ describe('PostStreamApplication', () => {
 
     it('should return empty array when input is empty', () => {
       const postIds: string[] = [];
-      const mutedUserIds = new Set(['author-1'] as Core.Pubky[]);
+      const mutedUserIds = new Set(['author-1'] as Pubky[]);
 
       const result = MuteFilter.filterPosts(postIds, mutedUserIds);
 
@@ -1767,25 +1782,25 @@ describe('PostStreamApplication', () => {
   });
 
   describe('getOrFetchStreamSlice with mute filtering', () => {
-    const viewerId = 'viewer-user' as Core.Pubky;
+    const viewerId = 'viewer-user' as Pubky;
 
-    const setupMutedUsers = async (mutedUsers: Core.Pubky[]) => {
+    const setupMutedUsers = async (mutedUsers: Pubky[]) => {
       // @ts-expect-error - BaseStreamModel generic type constraint
-      await Core.UserStreamModel.upsert(Core.UserStreamTypes.MUTED, mutedUsers);
+      await UserStreamModel.upsert(UserStreamTypes.MUTED, mutedUsers);
     };
 
     it('should filter out posts from muted users', async () => {
       // Mute author-2
-      await setupMutedUsers(['author-2'] as Core.Pubky[]);
+      await setupMutedUsers(['author-2'] as Pubky[]);
 
       // Mock Nexus to return posts from different authors
-      const mockNexusPostsKeyStream: Core.NexusPostsKeyStream = {
+      const mockNexusPostsKeyStream: NexusPostsKeyStream = {
         post_keys: ['author-1:post-1', 'author-2:post-2', 'author-3:post-3'],
         last_post_score: BASE_TIMESTAMP + 2,
       };
-      vi.spyOn(Core.NexusPostStreamService, 'fetch').mockResolvedValue(mockNexusPostsKeyStream);
+      vi.spyOn(NexusPostStreamService, 'fetch').mockResolvedValue(mockNexusPostsKeyStream);
 
-      const result = await Core.PostStreamApplication.getOrFetchStreamSlice({
+      const result = await PostStreamApplication.getOrFetchStreamSlice({
         streamId,
         limit: 10,
         streamHead: 0,
@@ -1799,10 +1814,10 @@ describe('PostStreamApplication', () => {
 
     it('should fetch more posts until limit is reached after mute filtering', async () => {
       // Mute author-2 (7 out of 10 posts are from author-2)
-      await setupMutedUsers(['author-2'] as Core.Pubky[]);
+      await setupMutedUsers(['author-2'] as Pubky[]);
 
       // First batch: 7 posts from muted user, 3 from non-muted (returns 10 posts)
-      const batch1: Core.NexusPostsKeyStream = {
+      const batch1: NexusPostsKeyStream = {
         post_keys: [
           'author-1:post-1',
           'author-2:post-2',
@@ -1819,7 +1834,7 @@ describe('PostStreamApplication', () => {
       };
 
       // Second batch: all non-muted posts (returns 10 posts)
-      const batch2: Core.NexusPostsKeyStream = {
+      const batch2: NexusPostsKeyStream = {
         post_keys: [
           'author-1:post-11',
           'author-3:post-12',
@@ -1836,11 +1851,11 @@ describe('PostStreamApplication', () => {
       };
 
       const nexusFetchSpy = vi
-        .spyOn(Core.NexusPostStreamService, 'fetch')
+        .spyOn(NexusPostStreamService, 'fetch')
         .mockResolvedValueOnce(batch1)
         .mockResolvedValueOnce(batch2);
 
-      const result = await Core.PostStreamApplication.getOrFetchStreamSlice({
+      const result = await PostStreamApplication.getOrFetchStreamSlice({
         streamId,
         limit: 10,
         streamHead: 0,
@@ -1858,17 +1873,17 @@ describe('PostStreamApplication', () => {
     });
 
     it('should use queue for subsequent fetches', async () => {
-      await setupMutedUsers(['author-2'] as Core.Pubky[]);
+      await setupMutedUsers(['author-2'] as Pubky[]);
 
       // Return 15 non-muted posts (enough for first request + some overflow)
-      const mockNexusPostsKeyStream: Core.NexusPostsKeyStream = {
+      const mockNexusPostsKeyStream: NexusPostsKeyStream = {
         post_keys: Array.from({ length: 15 }, (_, i) => `author-1:post-${i + 1}`),
         last_post_score: BASE_TIMESTAMP + 14,
       };
-      vi.spyOn(Core.NexusPostStreamService, 'fetch').mockResolvedValue(mockNexusPostsKeyStream);
+      vi.spyOn(NexusPostStreamService, 'fetch').mockResolvedValue(mockNexusPostsKeyStream);
 
       // First request: get 10 posts
-      const result1 = await Core.PostStreamApplication.getOrFetchStreamSlice({
+      const result1 = await PostStreamApplication.getOrFetchStreamSlice({
         streamId,
         limit: 10,
         streamHead: 0,
@@ -1883,9 +1898,9 @@ describe('PostStreamApplication', () => {
       expect(queue?.posts).toHaveLength(5);
 
       // Second request: should get posts from queue without fetching from Nexus
-      vi.spyOn(Core.NexusPostStreamService, 'fetch').mockClear();
+      vi.spyOn(NexusPostStreamService, 'fetch').mockClear();
 
-      const result2 = await Core.PostStreamApplication.getOrFetchStreamSlice({
+      const result2 = await PostStreamApplication.getOrFetchStreamSlice({
         streamId,
         limit: 5,
         streamHead: 0,
@@ -1896,20 +1911,20 @@ describe('PostStreamApplication', () => {
       // Should return the 5 posts from queue
       expect(result2.nextPageIds).toHaveLength(5);
       // Should not have fetched from Nexus (queue had enough)
-      expect(Core.NexusPostStreamService.fetch).not.toHaveBeenCalled();
+      expect(NexusPostStreamService.fetch).not.toHaveBeenCalled();
     });
 
     it('should handle end of stream gracefully when not enough posts', async () => {
-      await setupMutedUsers(['author-2'] as Core.Pubky[]);
+      await setupMutedUsers(['author-2'] as Pubky[]);
 
       // Return only 3 non-muted posts and indicate end of stream
-      const mockNexusPostsKeyStream: Core.NexusPostsKeyStream = {
+      const mockNexusPostsKeyStream: NexusPostsKeyStream = {
         post_keys: ['author-1:post-1', 'author-2:post-2', 'author-1:post-3', 'author-1:post-4'],
         last_post_score: BASE_TIMESTAMP + 3,
       };
-      vi.spyOn(Core.NexusPostStreamService, 'fetch').mockResolvedValue(mockNexusPostsKeyStream);
+      vi.spyOn(NexusPostStreamService, 'fetch').mockResolvedValue(mockNexusPostsKeyStream);
 
-      const result = await Core.PostStreamApplication.getOrFetchStreamSlice({
+      const result = await PostStreamApplication.getOrFetchStreamSlice({
         streamId,
         limit: 10,
         streamHead: 0,
@@ -1924,7 +1939,7 @@ describe('PostStreamApplication', () => {
 
     it('should re-filter queue when muted users change', async () => {
       // Initial state: no muted users, populate queue with posts from two authors
-      const mockNexusPostsKeyStream: Core.NexusPostsKeyStream = {
+      const mockNexusPostsKeyStream: NexusPostsKeyStream = {
         post_keys: [
           'author-1:post-1',
           'author-2:post-2',
@@ -1944,9 +1959,9 @@ describe('PostStreamApplication', () => {
         ],
         last_post_score: BASE_TIMESTAMP + 14,
       };
-      vi.spyOn(Core.NexusPostStreamService, 'fetch').mockResolvedValue(mockNexusPostsKeyStream);
+      vi.spyOn(NexusPostStreamService, 'fetch').mockResolvedValue(mockNexusPostsKeyStream);
 
-      await Core.PostStreamApplication.getOrFetchStreamSlice({
+      await PostStreamApplication.getOrFetchStreamSlice({
         streamId,
         limit: 10,
         streamHead: 0,
@@ -1959,23 +1974,23 @@ describe('PostStreamApplication', () => {
       expect(queue?.posts).toHaveLength(5);
 
       // Now mute author-1 - the queue should be re-filtered when next fetch occurs
-      await setupMutedUsers(['author-1'] as Core.Pubky[]);
+      await setupMutedUsers(['author-1'] as Pubky[]);
 
       // Queue record still exists in memory (not yet re-filtered)
       queue = postStreamQueue.get(streamId);
       expect(queue?.posts).toHaveLength(5);
 
       // Mock the next fetch to return more posts from author-2
-      const nextBatch: Core.NexusPostsKeyStream = {
+      const nextBatch: NexusPostsKeyStream = {
         post_keys: Array.from({ length: 10 }, (_, i) => `author-2:post-${i + 20}`),
         last_post_score: BASE_TIMESTAMP + 29,
       };
-      vi.spyOn(Core.NexusPostStreamService, 'fetch').mockResolvedValue(nextBatch);
+      vi.spyOn(NexusPostStreamService, 'fetch').mockResolvedValue(nextBatch);
 
       // Request 5 posts - queue has 5 but only 2 are from non-muted author-2
       // (post-12, post-14 from original queue)
       // Should re-filter queue, find only 2, then fetch more from Nexus
-      const result = await Core.PostStreamApplication.getOrFetchStreamSlice({
+      const result = await PostStreamApplication.getOrFetchStreamSlice({
         streamId,
         limit: 5,
         streamHead: 0,
@@ -1991,13 +2006,13 @@ describe('PostStreamApplication', () => {
     it('should work correctly with no muted users', async () => {
       // No muted users setup
 
-      const mockNexusPostsKeyStream: Core.NexusPostsKeyStream = {
+      const mockNexusPostsKeyStream: NexusPostsKeyStream = {
         post_keys: Array.from({ length: 10 }, (_, i) => `author-${i}:post-${i + 1}`),
         last_post_score: BASE_TIMESTAMP + 9,
       };
-      vi.spyOn(Core.NexusPostStreamService, 'fetch').mockResolvedValue(mockNexusPostsKeyStream);
+      vi.spyOn(NexusPostStreamService, 'fetch').mockResolvedValue(mockNexusPostsKeyStream);
 
-      const result = await Core.PostStreamApplication.getOrFetchStreamSlice({
+      const result = await PostStreamApplication.getOrFetchStreamSlice({
         streamId,
         limit: 10,
         streamHead: 0,
@@ -2010,10 +2025,10 @@ describe('PostStreamApplication', () => {
     });
 
     it('should deduplicate posts across multiple fetches in queue', async () => {
-      await setupMutedUsers(['author-muted'] as Core.Pubky[]);
+      await setupMutedUsers(['author-muted'] as Pubky[]);
 
       // First batch has some posts (returns 10 posts, 8 muted)
-      const batch1: Core.NexusPostsKeyStream = {
+      const batch1: NexusPostsKeyStream = {
         post_keys: [
           'author-1:post-1',
           'author-muted:post-m1',
@@ -2030,7 +2045,7 @@ describe('PostStreamApplication', () => {
       };
 
       // Second batch has overlapping post (returns 10 posts)
-      const batch2: Core.NexusPostsKeyStream = {
+      const batch2: NexusPostsKeyStream = {
         post_keys: [
           'author-1:post-3', // Duplicate
           'author-1:post-4',
@@ -2046,9 +2061,9 @@ describe('PostStreamApplication', () => {
         last_post_score: BASE_TIMESTAMP + 19,
       };
 
-      vi.spyOn(Core.NexusPostStreamService, 'fetch').mockResolvedValueOnce(batch1).mockResolvedValueOnce(batch2);
+      vi.spyOn(NexusPostStreamService, 'fetch').mockResolvedValueOnce(batch1).mockResolvedValueOnce(batch2);
 
-      const result = await Core.PostStreamApplication.getOrFetchStreamSlice({
+      const result = await PostStreamApplication.getOrFetchStreamSlice({
         streamId,
         limit: 10,
         streamHead: 0,
@@ -2065,17 +2080,17 @@ describe('PostStreamApplication', () => {
 
     it('should stop at max fetch iterations when heavily muted', async () => {
       // Mute author-muted (all posts will be from muted user)
-      await setupMutedUsers(['author-muted'] as Core.Pubky[]);
+      await setupMutedUsers(['author-muted'] as Pubky[]);
 
       // Every fetch returns only muted posts
-      const mutedBatch: Core.NexusPostsKeyStream = {
+      const mutedBatch: NexusPostsKeyStream = {
         post_keys: Array.from({ length: 10 }, (_, i) => `author-muted:post-${i + 1}`),
         last_post_score: BASE_TIMESTAMP + 9,
       };
 
-      const nexusFetchSpy = vi.spyOn(Core.NexusPostStreamService, 'fetch').mockResolvedValue(mutedBatch);
+      const nexusFetchSpy = vi.spyOn(NexusPostStreamService, 'fetch').mockResolvedValue(mutedBatch);
 
-      const result = await Core.PostStreamApplication.getOrFetchStreamSlice({
+      const result = await PostStreamApplication.getOrFetchStreamSlice({
         streamId,
         limit: 10,
         streamHead: 0,
@@ -2091,11 +2106,11 @@ describe('PostStreamApplication', () => {
     });
 
     it('should return partial results when max fetch iterations reached with some valid posts', async () => {
-      await setupMutedUsers(['author-muted'] as Core.Pubky[]);
+      await setupMutedUsers(['author-muted'] as Pubky[]);
 
       // Each batch has 9 muted posts and 1 valid post
       let callCount = 0;
-      vi.spyOn(Core.NexusPostStreamService, 'fetch').mockImplementation(async () => {
+      vi.spyOn(NexusPostStreamService, 'fetch').mockImplementation(async () => {
         callCount++;
         return {
           post_keys: [
@@ -2106,7 +2121,7 @@ describe('PostStreamApplication', () => {
         };
       });
 
-      const result = await Core.PostStreamApplication.getOrFetchStreamSlice({
+      const result = await PostStreamApplication.getOrFetchStreamSlice({
         streamId,
         limit: 10,
         streamHead: 0,
@@ -2121,18 +2136,18 @@ describe('PostStreamApplication', () => {
     });
 
     it('should have independent queues for different streams', async () => {
-      const stream1 = Core.PostStreamTypes.TIMELINE_ALL_ALL as Core.PostStreamId;
-      const stream2 = Core.PostStreamTypes.TIMELINE_FOLLOWING_ALL as Core.PostStreamId;
+      const stream1 = PostStreamTypes.TIMELINE_ALL_ALL as PostStreamId;
+      const stream2 = PostStreamTypes.TIMELINE_FOLLOWING_ALL as PostStreamId;
 
       // Return 15 posts for each stream
-      const mockBatch: Core.NexusPostsKeyStream = {
+      const mockBatch: NexusPostsKeyStream = {
         post_keys: Array.from({ length: 15 }, (_, i) => `author-1:post-${i + 1}`),
         last_post_score: BASE_TIMESTAMP + 14,
       };
-      vi.spyOn(Core.NexusPostStreamService, 'fetch').mockResolvedValue(mockBatch);
+      vi.spyOn(NexusPostStreamService, 'fetch').mockResolvedValue(mockBatch);
 
       // Fetch from stream1 - should create queue with 5 overflow posts
-      await Core.PostStreamApplication.getOrFetchStreamSlice({
+      await PostStreamApplication.getOrFetchStreamSlice({
         streamId: stream1,
         limit: 10,
         streamHead: 0,
@@ -2141,7 +2156,7 @@ describe('PostStreamApplication', () => {
       });
 
       // Fetch from stream2 - should create separate queue
-      await Core.PostStreamApplication.getOrFetchStreamSlice({
+      await PostStreamApplication.getOrFetchStreamSlice({
         streamId: stream2,
         limit: 10,
         streamHead: 0,
@@ -2158,9 +2173,9 @@ describe('PostStreamApplication', () => {
 
       // Queues should be independent - consuming one doesn't affect the other
       // Request remaining posts from stream1 queue
-      vi.spyOn(Core.NexusPostStreamService, 'fetch').mockClear();
+      vi.spyOn(NexusPostStreamService, 'fetch').mockClear();
 
-      await Core.PostStreamApplication.getOrFetchStreamSlice({
+      await PostStreamApplication.getOrFetchStreamSlice({
         streamId: stream1,
         limit: 5,
         streamHead: 0,
@@ -2178,11 +2193,11 @@ describe('PostStreamApplication', () => {
     });
 
     it('should handle Nexus error mid-loop and propagate error', async () => {
-      await setupMutedUsers(['author-muted'] as Core.Pubky[]);
+      await setupMutedUsers(['author-muted'] as Pubky[]);
 
       // First batch succeeds with some valid posts but not enough (returns 10, only 2 valid)
       // Must return exactly `limit` posts so end-of-stream is NOT triggered
-      const batch1: Core.NexusPostsKeyStream = {
+      const batch1: NexusPostsKeyStream = {
         post_keys: [
           'author-valid:post-1',
           'author-valid:post-2',
@@ -2191,13 +2206,13 @@ describe('PostStreamApplication', () => {
         last_post_score: BASE_TIMESTAMP + 9,
       };
 
-      vi.spyOn(Core.NexusPostStreamService, 'fetch')
+      vi.spyOn(NexusPostStreamService, 'fetch')
         .mockResolvedValueOnce(batch1)
         .mockRejectedValueOnce(new Error('Network error'));
 
       // Should throw because the error propagates
       await expect(
-        Core.PostStreamApplication.getOrFetchStreamSlice({
+        PostStreamApplication.getOrFetchStreamSlice({
           streamId,
           limit: 10,
           streamHead: 0,
@@ -2209,14 +2224,14 @@ describe('PostStreamApplication', () => {
 
     it('should preserve streamTail across multiple pagination calls', async () => {
       // Initial fetch returns 15 posts
-      const batch1: Core.NexusPostsKeyStream = {
+      const batch1: NexusPostsKeyStream = {
         post_keys: Array.from({ length: 15 }, (_, i) => `author-1:post-${i + 1}`),
         last_post_score: BASE_TIMESTAMP + 14,
       };
-      vi.spyOn(Core.NexusPostStreamService, 'fetch').mockResolvedValue(batch1);
+      vi.spyOn(NexusPostStreamService, 'fetch').mockResolvedValue(batch1);
 
       // First call: get 10, queue should have 5 with streamTail = BASE_TIMESTAMP + 14
-      await Core.PostStreamApplication.getOrFetchStreamSlice({
+      await PostStreamApplication.getOrFetchStreamSlice({
         streamId,
         limit: 10,
         streamHead: 0,
@@ -2229,9 +2244,9 @@ describe('PostStreamApplication', () => {
       expect(queue?.posts).toHaveLength(5);
 
       // Second call: should use the stored streamTail for any subsequent Nexus fetches
-      vi.spyOn(Core.NexusPostStreamService, 'fetch').mockClear();
+      vi.spyOn(NexusPostStreamService, 'fetch').mockClear();
 
-      const result = await Core.PostStreamApplication.getOrFetchStreamSlice({
+      const result = await PostStreamApplication.getOrFetchStreamSlice({
         streamId,
         limit: 5,
         streamHead: 0,
@@ -2242,7 +2257,7 @@ describe('PostStreamApplication', () => {
       // Should get posts from queue
       expect(result.nextPageIds).toHaveLength(5);
       // Since queue had enough, no Nexus fetch should have been made
-      expect(Core.NexusPostStreamService.fetch).not.toHaveBeenCalled();
+      expect(NexusPostStreamService.fetch).not.toHaveBeenCalled();
 
       // Queue should be deleted when empty (optimization)
       const queueAfter = postStreamQueue.get(streamId);
@@ -2253,22 +2268,22 @@ describe('PostStreamApplication', () => {
       // This test documents the current behavior - concurrent calls may cause duplicate fetches
       // but should not corrupt data or throw errors
 
-      const mockBatch: Core.NexusPostsKeyStream = {
+      const mockBatch: NexusPostsKeyStream = {
         post_keys: Array.from({ length: 15 }, (_, i) => `author-1:post-${i + 1}`),
         last_post_score: BASE_TIMESTAMP + 14,
       };
-      vi.spyOn(Core.NexusPostStreamService, 'fetch').mockResolvedValue(mockBatch);
+      vi.spyOn(NexusPostStreamService, 'fetch').mockResolvedValue(mockBatch);
 
       // Fire two concurrent requests
       const [result1, result2] = await Promise.all([
-        Core.PostStreamApplication.getOrFetchStreamSlice({
+        PostStreamApplication.getOrFetchStreamSlice({
           streamId,
           limit: 10,
           streamHead: 0,
           streamTail: 0,
           viewerId,
         }),
-        Core.PostStreamApplication.getOrFetchStreamSlice({
+        PostStreamApplication.getOrFetchStreamSlice({
           streamId,
           limit: 10,
           streamHead: 0,
@@ -2289,10 +2304,10 @@ describe('PostStreamApplication', () => {
     });
 
     it('should update queue streamTail when fetching more posts', async () => {
-      await setupMutedUsers(['author-muted'] as Core.Pubky[]);
+      await setupMutedUsers(['author-muted'] as Pubky[]);
 
       // First batch: returns exactly limit (10) posts with only 2 valid, so loop continues
-      const batch1: Core.NexusPostsKeyStream = {
+      const batch1: NexusPostsKeyStream = {
         post_keys: [
           'author-valid:post-1',
           'author-valid:post-2',
@@ -2302,14 +2317,14 @@ describe('PostStreamApplication', () => {
       };
 
       // Second batch: 10 more valid posts (overflow expected)
-      const batch2: Core.NexusPostsKeyStream = {
+      const batch2: NexusPostsKeyStream = {
         post_keys: Array.from({ length: 10 }, (_, i) => `author-valid:post-${i + 10}`),
         last_post_score: BASE_TIMESTAMP + 200,
       };
 
-      vi.spyOn(Core.NexusPostStreamService, 'fetch').mockResolvedValueOnce(batch1).mockResolvedValueOnce(batch2);
+      vi.spyOn(NexusPostStreamService, 'fetch').mockResolvedValueOnce(batch1).mockResolvedValueOnce(batch2);
 
-      await Core.PostStreamApplication.getOrFetchStreamSlice({
+      await PostStreamApplication.getOrFetchStreamSlice({
         streamId,
         limit: 10,
         streamHead: 0,
@@ -2324,7 +2339,7 @@ describe('PostStreamApplication', () => {
   });
 
   describe('getOrFetchStreamSlice with deleted post filtering', () => {
-    const viewerId = 'viewer-user' as Core.Pubky;
+    const viewerId = 'viewer-user' as Pubky;
 
     it('should filter out deleted posts and fetch more to fill the limit', async () => {
       // Setup: Request 3 posts, but first batch has 2 deleted posts
@@ -2340,7 +2355,7 @@ describe('PostStreamApplication', () => {
       ];
 
       // Create post details
-      await Core.PostDetailsModel.create({
+      await PostDetailsModel.create({
         id: 'author-1:post-1',
         content: 'Normal post 1',
         kind: 'short',
@@ -2348,15 +2363,15 @@ describe('PostStreamApplication', () => {
         uri: 'https://pubky.app/author-1/pub/pubky.app/posts/post-1',
         attachments: null,
       });
-      await Core.PostDetailsModel.create({
+      await PostDetailsModel.create({
         id: 'author-2:post-2',
-        content: Core.DELETED, // DELETED
+        content: DELETED, // DELETED
         kind: 'short',
         indexed_at: BASE_TIMESTAMP + 1,
         uri: 'https://pubky.app/author-2/pub/pubky.app/posts/post-2',
         attachments: null,
       });
-      await Core.PostDetailsModel.create({
+      await PostDetailsModel.create({
         id: 'author-3:post-3',
         content: 'Normal post 3',
         kind: 'short',
@@ -2364,15 +2379,15 @@ describe('PostStreamApplication', () => {
         uri: 'https://pubky.app/author-3/pub/pubky.app/posts/post-3',
         attachments: null,
       });
-      await Core.PostDetailsModel.create({
+      await PostDetailsModel.create({
         id: 'author-4:post-4',
-        content: Core.DELETED, // DELETED
+        content: DELETED, // DELETED
         kind: 'short',
         indexed_at: BASE_TIMESTAMP + 3,
         uri: 'https://pubky.app/author-4/pub/pubky.app/posts/post-4',
         attachments: null,
       });
-      await Core.PostDetailsModel.create({
+      await PostDetailsModel.create({
         id: 'author-5:post-5',
         content: 'Normal post 5',
         kind: 'short',
@@ -2385,12 +2400,12 @@ describe('PostStreamApplication', () => {
       await createStreamWithPosts(batch1Posts);
 
       // Mock Nexus to return empty (end of stream)
-      vi.spyOn(Core.NexusPostStreamService, 'fetch').mockResolvedValue({
+      vi.spyOn(NexusPostStreamService, 'fetch').mockResolvedValue({
         post_keys: [],
         last_post_score: 0,
       });
 
-      const result = await Core.PostStreamApplication.getOrFetchStreamSlice({
+      const result = await PostStreamApplication.getOrFetchStreamSlice({
         streamId,
         limit: 3,
         streamHead: 0,
@@ -2411,15 +2426,15 @@ describe('PostStreamApplication', () => {
       const cachePostIds = ['author-1:post-1', 'author-2:post-2', 'author-3:post-3'];
       await createStreamWithPosts(cachePostIds);
 
-      await Core.PostDetailsModel.create({
+      await PostDetailsModel.create({
         id: 'author-1:post-1',
-        content: Core.DELETED, // DELETED
+        content: DELETED, // DELETED
         kind: 'short',
         indexed_at: BASE_TIMESTAMP,
         uri: 'https://pubky.app/author-1/pub/pubky.app/posts/post-1',
         attachments: null,
       });
-      await Core.PostDetailsModel.create({
+      await PostDetailsModel.create({
         id: 'author-2:post-2',
         content: 'Normal post 2',
         kind: 'short',
@@ -2427,9 +2442,9 @@ describe('PostStreamApplication', () => {
         uri: 'https://pubky.app/author-2/pub/pubky.app/posts/post-2',
         attachments: null,
       });
-      await Core.PostDetailsModel.create({
+      await PostDetailsModel.create({
         id: 'author-3:post-3',
-        content: Core.DELETED, // DELETED
+        content: DELETED, // DELETED
         kind: 'short',
         indexed_at: BASE_TIMESTAMP + 2,
         uri: 'https://pubky.app/author-3/pub/pubky.app/posts/post-3',
@@ -2437,13 +2452,13 @@ describe('PostStreamApplication', () => {
       });
 
       // Nexus returns 2 more normal posts
-      const nexusFetchSpy = vi.spyOn(Core.NexusPostStreamService, 'fetch').mockResolvedValue({
+      const nexusFetchSpy = vi.spyOn(NexusPostStreamService, 'fetch').mockResolvedValue({
         post_keys: ['author-4:post-4', 'author-5:post-5'],
         last_post_score: BASE_TIMESTAMP + 4,
       });
 
       // Also create details for Nexus posts
-      await Core.PostDetailsModel.create({
+      await PostDetailsModel.create({
         id: 'author-4:post-4',
         content: 'Normal post 4',
         kind: 'short',
@@ -2451,7 +2466,7 @@ describe('PostStreamApplication', () => {
         uri: 'https://pubky.app/author-4/pub/pubky.app/posts/post-4',
         attachments: null,
       });
-      await Core.PostDetailsModel.create({
+      await PostDetailsModel.create({
         id: 'author-5:post-5',
         content: 'Normal post 5',
         kind: 'short',
@@ -2460,7 +2475,7 @@ describe('PostStreamApplication', () => {
         attachments: null,
       });
 
-      const result = await Core.PostStreamApplication.getOrFetchStreamSlice({
+      const result = await PostStreamApplication.getOrFetchStreamSlice({
         streamId,
         limit: 3,
         streamHead: 0,
@@ -2481,18 +2496,18 @@ describe('PostStreamApplication', () => {
   // When a reply is created locally, it's already counted. When that same reply arrives
   // via the unread stream (from Nexus polling), it should NOT be counted again.
   describe('reply count deduplication', () => {
-    const parentAuthorId = 'parent-author' as Core.Pubky;
+    const parentAuthorId = 'parent-author' as Pubky;
     const parentPostId = 'parent-post-123';
     const parentPostCompositeId = `${parentAuthorId}:${parentPostId}`;
-    const replyStreamId = `post_replies:${parentAuthorId}:${parentPostId}` as Core.PostStreamId;
+    const replyStreamId = `post_replies:${parentAuthorId}:${parentPostId}` as PostStreamId;
 
     beforeEach(async () => {
-      await Core.PostCountsModel.table.clear();
+      await PostCountsModel.table.clear();
     });
 
     it('should not increment reply count when post already exists in database (locally created)', async () => {
       // Setup: Parent post with 1 reply (already counted from local creation)
-      await Core.PostCountsModel.create({
+      await PostCountsModel.create({
         id: parentPostCompositeId,
         replies: 1,
         tags: 0,
@@ -2502,7 +2517,7 @@ describe('PostStreamApplication', () => {
 
       // Setup: The reply post already exists in database (was created locally)
       const replyPostId = `${DEFAULT_AUTHOR}:reply-1`;
-      await Core.PostDetailsModel.create({
+      await PostDetailsModel.create({
         id: replyPostId,
         content: 'This is a reply',
         kind: 'short',
@@ -2512,29 +2527,29 @@ describe('PostStreamApplication', () => {
       });
 
       // Mock Nexus returning the same reply via unread stream polling
-      const mockNexusResponse: Core.NexusPostsKeyStream = {
+      const mockNexusResponse: NexusPostsKeyStream = {
         post_keys: [replyPostId],
         last_post_score: BASE_TIMESTAMP,
       };
-      vi.spyOn(Core.NexusPostStreamService, 'fetch').mockResolvedValue(mockNexusResponse);
+      vi.spyOn(NexusPostStreamService, 'fetch').mockResolvedValue(mockNexusResponse);
 
       // Trigger unread stream path (streamHead > SKIP_FETCH_NEW_POSTS)
-      await Core.PostStreamApplication.getOrFetchStreamSlice({
+      await PostStreamApplication.getOrFetchStreamSlice({
         streamId: replyStreamId,
         limit: 10,
         streamHead: BASE_TIMESTAMP + 1000, // Triggers unread stream code path
         streamTail: 0,
-        viewerId: 'viewer' as Core.Pubky,
+        viewerId: 'viewer' as Pubky,
       });
 
       // Verify: Reply count should still be 1, not 2
-      const parentCounts = await Core.PostCountsModel.findById(parentPostCompositeId);
+      const parentCounts = await PostCountsModel.findById(parentPostCompositeId);
       expect(parentCounts?.replies).toBe(1);
     });
 
     it('should increment reply count only for truly new posts not in database', async () => {
       // Setup: Parent post with 0 replies
-      await Core.PostCountsModel.create({
+      await PostCountsModel.create({
         id: parentPostCompositeId,
         replies: 0,
         tags: 0,
@@ -2546,29 +2561,29 @@ describe('PostStreamApplication', () => {
 
       // Mock Nexus returning a new reply via unread stream
       const newReplyPostId = `${DEFAULT_AUTHOR}:new-reply-1`;
-      const mockNexusResponse: Core.NexusPostsKeyStream = {
+      const mockNexusResponse: NexusPostsKeyStream = {
         post_keys: [newReplyPostId],
         last_post_score: BASE_TIMESTAMP,
       };
-      vi.spyOn(Core.NexusPostStreamService, 'fetch').mockResolvedValue(mockNexusResponse);
+      vi.spyOn(NexusPostStreamService, 'fetch').mockResolvedValue(mockNexusResponse);
 
       // Trigger unread stream path
-      await Core.PostStreamApplication.getOrFetchStreamSlice({
+      await PostStreamApplication.getOrFetchStreamSlice({
         streamId: replyStreamId,
         limit: 10,
         streamHead: BASE_TIMESTAMP + 1000,
         streamTail: 0,
-        viewerId: 'viewer' as Core.Pubky,
+        viewerId: 'viewer' as Pubky,
       });
 
       // Verify: Reply count should be incremented to 1 for the truly new reply
-      const parentCounts = await Core.PostCountsModel.findById(parentPostCompositeId);
+      const parentCounts = await PostCountsModel.findById(parentPostCompositeId);
       expect(parentCounts?.replies).toBe(1);
     });
 
     it('should correctly count mixed batch of new and existing posts', async () => {
       // Setup: Parent post with 2 replies already counted
-      await Core.PostCountsModel.create({
+      await PostCountsModel.create({
         id: parentPostCompositeId,
         replies: 2,
         tags: 0,
@@ -2579,7 +2594,7 @@ describe('PostStreamApplication', () => {
       // Setup: 2 replies already exist in database
       const existingReply1 = `${DEFAULT_AUTHOR}:existing-reply-1`;
       const existingReply2 = `${DEFAULT_AUTHOR}:existing-reply-2`;
-      await Core.PostDetailsModel.create({
+      await PostDetailsModel.create({
         id: existingReply1,
         content: 'Existing reply 1',
         kind: 'short',
@@ -2587,7 +2602,7 @@ describe('PostStreamApplication', () => {
         uri: `https://pubky.app/${DEFAULT_AUTHOR}/pub/pubky.app/posts/existing-reply-1`,
         attachments: null,
       });
-      await Core.PostDetailsModel.create({
+      await PostDetailsModel.create({
         id: existingReply2,
         content: 'Existing reply 2',
         kind: 'short',
@@ -2600,23 +2615,23 @@ describe('PostStreamApplication', () => {
       const newReply1 = `${DEFAULT_AUTHOR}:new-reply-1`;
       const newReply2 = `${DEFAULT_AUTHOR}:new-reply-2`;
       const newReply3 = `${DEFAULT_AUTHOR}:new-reply-3`;
-      const mockNexusResponse: Core.NexusPostsKeyStream = {
+      const mockNexusResponse: NexusPostsKeyStream = {
         post_keys: [existingReply1, newReply1, existingReply2, newReply2, newReply3],
         last_post_score: BASE_TIMESTAMP + 10,
       };
-      vi.spyOn(Core.NexusPostStreamService, 'fetch').mockResolvedValue(mockNexusResponse);
+      vi.spyOn(NexusPostStreamService, 'fetch').mockResolvedValue(mockNexusResponse);
 
       // Trigger unread stream path
-      await Core.PostStreamApplication.getOrFetchStreamSlice({
+      await PostStreamApplication.getOrFetchStreamSlice({
         streamId: replyStreamId,
         limit: 10,
         streamHead: BASE_TIMESTAMP + 1000,
         streamTail: 0,
-        viewerId: 'viewer' as Core.Pubky,
+        viewerId: 'viewer' as Pubky,
       });
 
       // Verify: Reply count should be 2 + 3 = 5 (only new replies counted)
-      const parentCounts = await Core.PostCountsModel.findById(parentPostCompositeId);
+      const parentCounts = await PostCountsModel.findById(parentPostCompositeId);
       expect(parentCounts?.replies).toBe(5);
     });
 
@@ -2627,7 +2642,7 @@ describe('PostStreamApplication', () => {
       // 3. Reply should not be double-counted
 
       // Setup: Parent post with 1 reply (already counted from local creation)
-      await Core.PostCountsModel.create({
+      await PostCountsModel.create({
         id: parentPostCompositeId,
         replies: 1,
         tags: 0,
@@ -2638,26 +2653,26 @@ describe('PostStreamApplication', () => {
       // Setup: The reply is in the stream (added by local create) but NOT in PostDetailsModel
       // This simulates the race condition where stream update happened but DB write didn't commit
       const replyPostId = `${DEFAULT_AUTHOR}:reply-in-stream-only`;
-      await Core.PostStreamModel.upsert(replyStreamId, [replyPostId]);
+      await PostStreamModel.upsert(replyStreamId, [replyPostId]);
 
       // Mock Nexus returning the same reply
-      const mockNexusResponse: Core.NexusPostsKeyStream = {
+      const mockNexusResponse: NexusPostsKeyStream = {
         post_keys: [replyPostId],
         last_post_score: BASE_TIMESTAMP,
       };
-      vi.spyOn(Core.NexusPostStreamService, 'fetch').mockResolvedValue(mockNexusResponse);
+      vi.spyOn(NexusPostStreamService, 'fetch').mockResolvedValue(mockNexusResponse);
 
       // Trigger unread stream path
-      await Core.PostStreamApplication.getOrFetchStreamSlice({
+      await PostStreamApplication.getOrFetchStreamSlice({
         streamId: replyStreamId,
         limit: 10,
         streamHead: BASE_TIMESTAMP + 1000,
         streamTail: 0,
-        viewerId: 'viewer' as Core.Pubky,
+        viewerId: 'viewer' as Pubky,
       });
 
       // Verify: Reply count should still be 1 (not double-counted)
-      const parentCounts = await Core.PostCountsModel.findById(parentPostCompositeId);
+      const parentCounts = await PostCountsModel.findById(parentPostCompositeId);
       expect(parentCounts?.replies).toBe(1);
     });
   });

@@ -3,7 +3,7 @@ import { describe, it, expect, vi } from 'vitest';
 import { LeftSidebar } from './LeftSidebar';
 
 // Mock the home store
-vi.mock('@/core', () => ({
+vi.mock('@/stores/home/home.store', () => ({
   useHomeStore: () => ({
     reach: 'all',
     setReach: vi.fn(),

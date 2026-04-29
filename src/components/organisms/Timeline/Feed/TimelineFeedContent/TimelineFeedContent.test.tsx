@@ -1,11 +1,10 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { render, screen } from '@testing-library/react';
 import { TIMELINE_FEED_VARIANT } from '@/config';
-import * as Core from '@/core';
 import { TimelineFeedWithStream } from './TimelineFeedContent';
 import type { UsePullToRefreshResult } from '@/hooks/usePullToRefresh/usePullToRefresh.types';
 import { useStreamPagination } from '@/hooks/useStreamPagination/useStreamPagination';
-
+import { PostStreamTypes } from '@/models/stream/post/postStream.types';
 const mockUsePullToRefresh = vi.hoisted(() =>
   vi.fn(
     (): UsePullToRefreshResult => ({
@@ -110,7 +109,7 @@ describe('TimelineFeedContent', () => {
     it('renders content when streamId is provided', () => {
       render(
         <TimelineFeedWithStream
-          streamId={Core.PostStreamTypes.TIMELINE_ALL_ALL}
+          streamId={PostStreamTypes.TIMELINE_ALL_ALL}
           variant={TIMELINE_FEED_VARIANT.HOME}
           tagsLayout="inline"
         />,
@@ -122,7 +121,7 @@ describe('TimelineFeedContent', () => {
     it('renders children above post list', () => {
       render(
         <TimelineFeedWithStream
-          streamId={Core.PostStreamTypes.TIMELINE_ALL_ALL}
+          streamId={PostStreamTypes.TIMELINE_ALL_ALL}
           variant={TIMELINE_FEED_VARIANT.HOME}
           tagsLayout="inline"
         >
@@ -138,13 +137,13 @@ describe('TimelineFeedContent', () => {
     it('passes streamId to useStreamPagination', () => {
       render(
         <TimelineFeedWithStream
-          streamId={Core.PostStreamTypes.TIMELINE_ALL_ALL}
+          streamId={PostStreamTypes.TIMELINE_ALL_ALL}
           variant={TIMELINE_FEED_VARIANT.HOME}
           tagsLayout="inline"
         />,
       );
       expect(mockUseStreamPagination).toHaveBeenCalledWith({
-        streamId: Core.PostStreamTypes.TIMELINE_ALL_ALL,
+        streamId: PostStreamTypes.TIMELINE_ALL_ALL,
       });
     });
 
@@ -155,7 +154,7 @@ describe('TimelineFeedContent', () => {
       });
       render(
         <TimelineFeedWithStream
-          streamId={Core.PostStreamTypes.TIMELINE_ALL_ALL}
+          streamId={PostStreamTypes.TIMELINE_ALL_ALL}
           variant={TIMELINE_FEED_VARIANT.HOME}
           tagsLayout="inline"
         />,
@@ -166,7 +165,7 @@ describe('TimelineFeedContent', () => {
     it('passes post count to TimelinePosts', () => {
       render(
         <TimelineFeedWithStream
-          streamId={Core.PostStreamTypes.TIMELINE_ALL_ALL}
+          streamId={PostStreamTypes.TIMELINE_ALL_ALL}
           variant={TIMELINE_FEED_VARIANT.HOME}
           tagsLayout="inline"
         />,
@@ -179,7 +178,7 @@ describe('TimelineFeedContent', () => {
     it('enables pull-to-refresh for home variant', () => {
       render(
         <TimelineFeedWithStream
-          streamId={Core.PostStreamTypes.TIMELINE_ALL_ALL}
+          streamId={PostStreamTypes.TIMELINE_ALL_ALL}
           variant={TIMELINE_FEED_VARIANT.HOME}
           tagsLayout="inline"
         />,
@@ -195,7 +194,7 @@ describe('TimelineFeedContent', () => {
     it('disables pull-to-refresh for bookmarks variant', () => {
       render(
         <TimelineFeedWithStream
-          streamId={Core.PostStreamTypes.TIMELINE_BOOKMARKS_ALL}
+          streamId={PostStreamTypes.TIMELINE_BOOKMARKS_ALL}
           variant={TIMELINE_FEED_VARIANT.BOOKMARKS}
           tagsLayout="inline"
         />,
@@ -209,7 +208,7 @@ describe('TimelineFeedContent', () => {
       mockUsePullToRefresh.mockReturnValue({ state: 'pulling' as const, pullDistance: 50 });
       render(
         <TimelineFeedWithStream
-          streamId={Core.PostStreamTypes.TIMELINE_ALL_ALL}
+          streamId={PostStreamTypes.TIMELINE_ALL_ALL}
           variant={TIMELINE_FEED_VARIANT.HOME}
           tagsLayout="inline"
         />,
@@ -221,7 +220,7 @@ describe('TimelineFeedContent', () => {
       mockUsePullToRefresh.mockReturnValue({ state: 'pulling' as const, pullDistance: 50 });
       render(
         <TimelineFeedWithStream
-          streamId={Core.PostStreamTypes.TIMELINE_BOOKMARKS_ALL}
+          streamId={PostStreamTypes.TIMELINE_BOOKMARKS_ALL}
           variant={TIMELINE_FEED_VARIANT.BOOKMARKS}
           tagsLayout="inline"
         />,
@@ -248,7 +247,7 @@ describe('TimelineFeedContent - Snapshots', () => {
   it('matches snapshot with posts', () => {
     const { container } = render(
       <TimelineFeedWithStream
-        streamId={Core.PostStreamTypes.TIMELINE_ALL_ALL}
+        streamId={PostStreamTypes.TIMELINE_ALL_ALL}
         variant={TIMELINE_FEED_VARIANT.HOME}
         tagsLayout="inline"
       />,
@@ -259,7 +258,7 @@ describe('TimelineFeedContent - Snapshots', () => {
   it('matches snapshot with children', () => {
     const { container } = render(
       <TimelineFeedWithStream
-        streamId={Core.PostStreamTypes.TIMELINE_ALL_ALL}
+        streamId={PostStreamTypes.TIMELINE_ALL_ALL}
         variant={TIMELINE_FEED_VARIANT.HOME}
         tagsLayout="inline"
       >

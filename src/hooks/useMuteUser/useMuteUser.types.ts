@@ -1,5 +1,4 @@
-import type { Pubky } from '@/core';
-
+import type { Pubky } from '@/models/models.types';
 export interface UseMuteUserResult {
   /** Toggles mute status for a user */
   toggleMute: (userId: Pubky, isCurrentlyMuted: boolean) => Promise<void>;

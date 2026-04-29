@@ -8,8 +8,7 @@ import {
 } from './TimelineFeedVisual.helpers';
 import type { VisualTile } from './TimelineFeedVisual.types';
 import { TIMELINE_FEED_VARIANT } from '@/config';
-import * as Core from '@/core';
-
+import { CONTENT } from '@/stores/home/home.types';
 function createTile(id: string, preferredSize: NonNullable<VisualTile['preferredSize']>): VisualTile {
   return {
     id,
@@ -142,21 +141,21 @@ describe('resolveVisualFeedContent', () => {
   it('coerces unsupported content to all for interactive visual feeds', () => {
     expect(
       resolveVisualFeedContent({
-        content: Core.CONTENT.SHORT,
+        content: CONTENT.SHORT,
         variant: TIMELINE_FEED_VARIANT.HOME,
         isVisualActive: true,
       }),
-    ).toBe(Core.CONTENT.ALL);
+    ).toBe(CONTENT.ALL);
   });
 
   it('leaves read-only custom feed content untouched in visual mode', () => {
     expect(
       resolveVisualFeedContent({
-        content: Core.CONTENT.SHORT,
+        content: CONTENT.SHORT,
         variant: TIMELINE_FEED_VARIANT.CUSTOM,
         isVisualActive: true,
       }),
-    ).toBe(Core.CONTENT.SHORT);
+    ).toBe(CONTENT.SHORT);
   });
 });
 

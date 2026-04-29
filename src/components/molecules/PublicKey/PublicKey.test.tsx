@@ -20,7 +20,7 @@ vi.mock('@/hooks/useInviteCodeSignUp/useInviteCodeSignUp', () => ({
 }));
 
 // Mock onboarding store
-vi.mock('@/core', () => ({
+vi.mock('@/stores/onboarding/onboarding.store', () => ({
   useOnboardingStore: Object.assign(() => ({}), {
     getState: () => ({
       inviteCode: 'TEST-CODE-123',

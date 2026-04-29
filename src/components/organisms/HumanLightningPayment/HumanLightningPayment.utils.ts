@@ -1,7 +1,10 @@
-import { HomegateController, THomegateAwaitLnVerificationResult, THomegateCreateLnVerificationResult } from '@/core';
 import { TimeoutErrorCode } from '@/libs/error/error.codes';
 import { getRetryAfter, isAppError, isRetryable } from '@/libs/error/error.utils';
-
+import type {
+  THomegateAwaitLnVerificationResult,
+  THomegateCreateLnVerificationResult,
+} from '@/application/homegate/homegate.types';
+import { HomegateController } from '@/controllers/homegate/homegate';
 /**
  * Simple verification handler that manages the verification process and payment confirmation.
  */

@@ -7,12 +7,15 @@ import { useTranslations, useLocale } from 'next-intl';
 import * as Providers from '@/providers';
 import * as App from '@/app';
 import * as Atoms from '@/atoms';
-import * as Core from '@/core';
 import { Logger } from '@/libs/logger/logger';
 import { TimeoutErrorCode } from '@/libs/error/error.codes';
 import { Err } from '@/libs/error/error.factories';
 import { ErrorService } from '@/libs/error/error.types';
-
+import { AuthController } from '@/controllers/auth/auth';
+import { MigrationController } from '@/controllers/migration/migration';
+import { useAuthStore } from '@/stores/auth/auth.store';
+import { useMigrationStore } from '@/stores/migration/migration.store';
+import { useSettingsStore } from '@/stores/settings/settings.store';
 // Migration resync timeout in milliseconds
 const MIGRATION_RESYNC_TIMEOUT_MS = 10_000;
 
@@ -40,14 +43,14 @@ export function RouteGuardProvider({ children }: RouteGuardProviderProps) {
   const router = useRouter();
   const pathname = usePathname();
   const { status, isLoading } = useAuthStatus();
-  const hasHydrated = Core.useAuthStore((state) => state.hasHydrated);
-  const session = Core.useAuthStore((state) => state.session);
-  const sessionExport = Core.useAuthStore((state) => state.sessionExport);
-  const currentUserPubky = Core.useAuthStore((state) => state.currentUserPubky);
-  const wasDbReset = Core.useMigrationStore((state) => state.wasDbReset);
+  const hasHydrated = useAuthStore((state) => state.hasHydrated);
+  const session = useAuthStore((state) => state.session);
+  const sessionExport = useAuthStore((state) => state.sessionExport);
+  const currentUserPubky = useAuthStore((state) => state.currentUserPubky);
+  const wasDbReset = useMigrationStore((state) => state.wasDbReset);
   const serverLocale = useLocale();
 
-  const storeLanguage = Core.useSettingsStore((state) => state.language);
+  const storeLanguage = useSettingsStore((state) => state.language);
 
   // Prevents running resync more than once at a time (ex: React Strict Mode and effect re-fires mid-resync)
   const isMigrationResyncRunningRef = useRef(false);
@@ -57,7 +60,7 @@ export function RouteGuardProvider({ children }: RouteGuardProviderProps) {
     if (!hasHydrated) return;
     if (session) return;
     if (!sessionExport) return;
-    Core.AuthController.restorePersistedSession().catch((error) => {
+    AuthController.restorePersistedSession().catch((error) => {
       Logger.error('[RouteGuardProvider] Failed to restore persisted session', { error });
     });
   }, [hasHydrated, session, sessionExport]);
@@ -70,7 +73,7 @@ export function RouteGuardProvider({ children }: RouteGuardProviderProps) {
     if (isMigrationResyncRunningRef.current) return; // No need to resync if the resync is ALREADY running
     if (!currentUserPubky) {
       // No need to resync if the user is NOT logged in
-      Core.useMigrationStore.getState().reset();
+      useMigrationStore.getState().reset();
       return;
     }
 
@@ -94,7 +97,7 @@ export function RouteGuardProvider({ children }: RouteGuardProviderProps) {
           );
         });
         // Unblock the app when either resync finishes or the timeout fires.
-        await Promise.race([Core.MigrationController.resync(currentUserPubky), timeoutPromise]);
+        await Promise.race([MigrationController.resync(currentUserPubky), timeoutPromise]);
       } catch (error) {
         Logger.warn('Migration re-sync degraded', {
           error,
@@ -105,7 +108,7 @@ export function RouteGuardProvider({ children }: RouteGuardProviderProps) {
         if (timeoutId !== undefined) {
           clearTimeout(timeoutId);
         }
-        Core.useMigrationStore.getState().reset();
+        useMigrationStore.getState().reset();
         isMigrationResyncRunningRef.current = false;
       }
     };

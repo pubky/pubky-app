@@ -1,13 +1,12 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { NextRequest } from 'next/server';
 import { POST, GET, OPTIONS } from './route';
-import * as Core from '@/core';
 import { ServerErrorCode, ValidationErrorCode } from '@/libs/error/error.codes';
 import { Err } from '@/libs/error/error.factories';
 import { ErrorService } from '@/libs/error/error.types';
 import { HttpStatusCode } from '@/libs/http/http.types';
 import { Logger } from '@/libs/logger/logger';
-
+import { CopyrightController } from '@/controllers/copyright/copyright';
 const testData = {
   nameOwner: 'John Doe',
   originalContentUrls: 'https://example.com/original',
@@ -38,7 +37,7 @@ const createPostRequest = (body: Record<string, unknown>) => {
 describe('API Route: /api/copyright', () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    vi.spyOn(Core.CopyrightController, 'submit').mockResolvedValue(undefined);
+    vi.spyOn(CopyrightController, 'submit').mockResolvedValue(undefined);
     vi.spyOn(Logger, 'error').mockImplementation(() => {});
   });
 
@@ -51,7 +50,7 @@ describe('API Route: /api/copyright', () => {
 
       expect(response.status).toBe(200);
       expect(data.message).toBe('Success');
-      expect(Core.CopyrightController.submit).toHaveBeenCalledWith(testData);
+      expect(CopyrightController.submit).toHaveBeenCalledWith(testData);
     });
 
     it('should handle validation errors with 500 status (no statusCode in context)', async () => {
@@ -59,7 +58,7 @@ describe('API Route: /api/copyright', () => {
         service: ErrorService.Local,
         operation: 'validateNameOwner',
       });
-      vi.spyOn(Core.CopyrightController, 'submit').mockRejectedValue(appError);
+      vi.spyOn(CopyrightController, 'submit').mockRejectedValue(appError);
 
       const request = createPostRequest(testData);
       const response = await POST(request);
@@ -75,7 +74,7 @@ describe('API Route: /api/copyright', () => {
         operation: 'createConversation',
         context: { statusCode: 503 },
       });
-      vi.spyOn(Core.CopyrightController, 'submit').mockRejectedValue(appError);
+      vi.spyOn(CopyrightController, 'submit').mockRejectedValue(appError);
 
       const request = createPostRequest(testData);
       const response = await POST(request);
@@ -86,7 +85,7 @@ describe('API Route: /api/copyright', () => {
     });
 
     it('should handle unexpected errors with 500 status', async () => {
-      vi.spyOn(Core.CopyrightController, 'submit').mockRejectedValue(new Error('Unexpected error'));
+      vi.spyOn(CopyrightController, 'submit').mockRejectedValue(new Error('Unexpected error'));
 
       const request = createPostRequest(testData);
       const response = await POST(request);

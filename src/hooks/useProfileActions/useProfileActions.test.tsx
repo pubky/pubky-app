@@ -1,11 +1,12 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { renderHook, act, waitFor } from '@testing-library/react';
-import * as Core from '@/core';
 import * as Molecules from '@/molecules';
 import { useProfileActions } from './useProfileActions';
 import { ErrorMessages } from '@/libs/error/error.messages';
 import { Logger } from '@/libs/logger/logger';
-
+import * as useAuthStoreModule from '@/stores/auth/auth.store';
+import { ProfileController } from '@/controllers/profile/profile';
+import { useAuthStore } from '@/stores/auth/auth.store';
 // Mock next/navigation
 const mockPush = vi.fn();
 vi.mock('next/navigation', () => ({
@@ -16,16 +17,11 @@ vi.mock('next/navigation', () => ({
 
 // Mock AuthController.logout
 const mockLogout = vi.fn();
-vi.mock('@/core', async (importOriginal) => {
-  const actual = await importOriginal<typeof import('@/core')>();
-  return {
-    ...actual,
-    AuthController: {
-      ...actual.AuthController,
-      logout: () => mockLogout(),
-    },
-  };
-});
+vi.mock('@/controllers/auth/auth', () => ({
+  AuthController: {
+    logout: () => mockLogout(),
+  },
+}));
 
 // Mock useCopyToClipboard hook
 const mockCopyToClipboard = vi.fn();
@@ -210,13 +206,13 @@ describe('useProfileActions', () => {
 
   describe('onStatusChange', () => {
     it('calls ProfileController.commitUpdateStatus with status', async () => {
-      const mockUpdateStatus = vi.spyOn(Core.ProfileController, 'commitUpdateStatus').mockResolvedValue(undefined);
+      const mockUpdateStatus = vi.spyOn(ProfileController, 'commitUpdateStatus').mockResolvedValue(undefined);
       const mockAuthStore = {
         currentUserPubky: 'test-user',
         setCurrentUserPubky: vi.fn(),
         setAuthenticated: vi.fn(),
       };
-      vi.spyOn(Core, 'useAuthStore').mockReturnValue(mockAuthStore as ReturnType<typeof Core.useAuthStore>);
+      vi.spyOn(useAuthStoreModule, 'useAuthStore').mockReturnValue(mockAuthStore as ReturnType<typeof useAuthStore>);
 
       const { result } = renderHook(() => useProfileActions(defaultProps));
 

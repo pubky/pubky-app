@@ -1,9 +1,9 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import * as Core from '@/core';
 import { LocalNotificationService } from './notification';
-
-const createFlat = (timestamp: number): Core.FlatNotification =>
-  ({ type: Core.NotificationType.Follow, timestamp, followed_by: `user-${timestamp}` }) as Core.FlatNotification;
+import { NotificationModel } from '@/models/notification/notification';
+import { NotificationType, type FlatNotification } from '@/models/notification/notification.types';
+const createFlat = (timestamp: number): FlatNotification =>
+  ({ type: NotificationType.Follow, timestamp, followed_by: `user-${timestamp}` }) as FlatNotification;
 
 describe('LocalNotificationService', () => {
   beforeEach(() => vi.clearAllMocks());
@@ -11,7 +11,7 @@ describe('LocalNotificationService', () => {
   describe('getOlderThan', () => {
     it('should delegate to NotificationModel.getOlderThan', async () => {
       const expected = [createFlat(4000), createFlat(3000)];
-      const modelSpy = vi.spyOn(Core.NotificationModel, 'getOlderThan').mockResolvedValue(expected);
+      const modelSpy = vi.spyOn(NotificationModel, 'getOlderThan').mockResolvedValue(expected);
 
       const result = await LocalNotificationService.getOlderThan({ olderThan: 5000, limit: 10 });
 
@@ -20,7 +20,7 @@ describe('LocalNotificationService', () => {
     });
 
     it('should return empty array when no notifications found', async () => {
-      vi.spyOn(Core.NotificationModel, 'getOlderThan').mockResolvedValue([]);
+      vi.spyOn(NotificationModel, 'getOlderThan').mockResolvedValue([]);
 
       const result = await LocalNotificationService.getOlderThan({ olderThan: 1000, limit: 10 });
 
@@ -28,7 +28,7 @@ describe('LocalNotificationService', () => {
     });
 
     it('should bubble model errors', async () => {
-      vi.spyOn(Core.NotificationModel, 'getOlderThan').mockRejectedValue(new Error('query-failed'));
+      vi.spyOn(NotificationModel, 'getOlderThan').mockRejectedValue(new Error('query-failed'));
 
       await expect(LocalNotificationService.getOlderThan({ olderThan: 1000, limit: 10 })).rejects.toThrow(
         'query-failed',
@@ -39,7 +39,7 @@ describe('LocalNotificationService', () => {
   describe('getAll', () => {
     it('should delegate to NotificationModel.getAll', async () => {
       const expected = [createFlat(3000), createFlat(2000), createFlat(1000)];
-      const modelSpy = vi.spyOn(Core.NotificationModel, 'getAll').mockResolvedValue(expected);
+      const modelSpy = vi.spyOn(NotificationModel, 'getAll').mockResolvedValue(expected);
 
       const result = await LocalNotificationService.getAll();
 
@@ -48,7 +48,7 @@ describe('LocalNotificationService', () => {
     });
 
     it('should return empty array when no notifications exist', async () => {
-      vi.spyOn(Core.NotificationModel, 'getAll').mockResolvedValue([]);
+      vi.spyOn(NotificationModel, 'getAll').mockResolvedValue([]);
 
       const result = await LocalNotificationService.getAll();
 
@@ -56,7 +56,7 @@ describe('LocalNotificationService', () => {
     });
 
     it('should bubble model errors', async () => {
-      vi.spyOn(Core.NotificationModel, 'getAll').mockRejectedValue(new Error('query-failed'));
+      vi.spyOn(NotificationModel, 'getAll').mockRejectedValue(new Error('query-failed'));
 
       await expect(LocalNotificationService.getAll()).rejects.toThrow('query-failed');
     });
@@ -64,7 +64,7 @@ describe('LocalNotificationService', () => {
 
   describe('countUnreadSince', () => {
     it('should delegate to NotificationModel.countNewerThan with the correct argument', async () => {
-      const modelSpy = vi.spyOn(Core.NotificationModel, 'countNewerThan').mockResolvedValue(3);
+      const modelSpy = vi.spyOn(NotificationModel, 'countNewerThan').mockResolvedValue(3);
 
       const result = await LocalNotificationService.countUnreadSince(1000);
 
@@ -73,7 +73,7 @@ describe('LocalNotificationService', () => {
     });
 
     it('should return 0 when no unread notifications exist', async () => {
-      vi.spyOn(Core.NotificationModel, 'countNewerThan').mockResolvedValue(0);
+      vi.spyOn(NotificationModel, 'countNewerThan').mockResolvedValue(0);
 
       const result = await LocalNotificationService.countUnreadSince(5000);
 
@@ -81,7 +81,7 @@ describe('LocalNotificationService', () => {
     });
 
     it('should bubble model errors', async () => {
-      vi.spyOn(Core.NotificationModel, 'countNewerThan').mockRejectedValue(new Error('count-failed'));
+      vi.spyOn(NotificationModel, 'countNewerThan').mockRejectedValue(new Error('count-failed'));
 
       await expect(LocalNotificationService.countUnreadSince(1000)).rejects.toThrow('count-failed');
     });

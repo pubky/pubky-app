@@ -4,11 +4,10 @@ import { useEnterSubmit } from '@/hooks/useEnterSubmit/useEnterSubmit';
 import { useState } from 'react';
 import * as Atoms from '@/components/atoms';
 import Image from 'next/image';
-import * as Core from '@/core';
 import { useTranslations } from 'next-intl';
 import { Download, ArrowRight } from 'lucide-react';
 import { calculatePasswordStrength, getStrengthColor } from '@/libs/password/password';
-
+import { ProfileController } from '@/controllers/profile/profile';
 interface DialogBackupEncryptedProps {
   children?: React.ReactNode;
 }
@@ -21,7 +20,7 @@ function RecoveryStep1({ setStep }: { setStep: (step: number) => void }) {
   const passphraseStrength = calculatePasswordStrength(passphrase);
   const passphraseMatch = passphrase === confirmPassphrase && passphrase !== '';
   const handleDownload = () => {
-    Core.ProfileController.createRecoveryFile(passphrase);
+    ProfileController.createRecoveryFile(passphrase);
     setStep(2);
   };
   const isFormValid = () => {

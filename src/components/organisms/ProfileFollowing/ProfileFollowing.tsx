@@ -7,10 +7,10 @@ import { useInfiniteScroll } from '@/hooks/useInfiniteScroll/useInfiniteScroll';
 import * as Atoms from '@/atoms';
 import * as Molecules from '@/molecules';
 import * as Organisms from '@/organisms';
-import * as Core from '@/core';
 import * as Providers from '@/providers';
 import { NEXUS_USERS_PER_PAGE } from '@/config';
-
+import type { Pubky } from '@/models/models.types';
+import { useAuthStore } from '@/stores/auth/auth.store';
 const LOAD_MORE_SKELETON_COUNT = 2;
 
 /**
@@ -24,7 +24,7 @@ export function ProfileFollowing() {
   // Get the profile pubky from context
   const { pubky } = Providers.useProfileContext();
   // Get the current logged-in user's pubky
-  const currentUserPubky = Core.useAuthStore((state) => state.currentUserPubky);
+  const currentUserPubky = useAuthStore((state) => state.currentUserPubky);
 
   const { connections, count, isLoading, isLoadingMore, hasMore, loadMore } = useProfileConnections(
     CONNECTION_TYPE.FOLLOWING,
@@ -40,7 +40,7 @@ export function ProfileFollowing() {
   });
 
   // Handle follow/unfollow action
-  const handleFollow = async (userId: Core.Pubky, isCurrentlyFollowing: boolean) => {
+  const handleFollow = async (userId: Pubky, isCurrentlyFollowing: boolean) => {
     await toggleFollow(userId, isCurrentlyFollowing);
   };
 

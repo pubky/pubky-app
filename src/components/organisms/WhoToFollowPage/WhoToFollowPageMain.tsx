@@ -5,10 +5,11 @@ import { useInfiniteScroll } from '@/hooks/useInfiniteScroll/useInfiniteScroll';
 import { useUserStream } from '@/hooks/useUserStream/useUserStream';
 import * as Atoms from '@/atoms';
 import * as Organisms from '@/organisms';
-import * as Core from '@/core';
 import { USERS_PER_PAGE } from './WhoToFollowPageMain.constants';
 import { Users } from 'lucide-react';
-
+import type { Pubky } from '@/models/models.types';
+import { UserStreamTypes } from '@/models/stream/user/userStream.types';
+import { useAuthStore } from '@/stores/auth/auth.store';
 const LOAD_MORE_SKELETON_COUNT = 2;
 
 /**
@@ -18,9 +19,9 @@ const LOAD_MORE_SKELETON_COUNT = 2;
  * Displays recommended users with infinite scroll pagination.
  */
 export function WhoToFollowPageMain() {
-  const currentUserPubky = Core.useAuthStore((state) => state.currentUserPubky);
+  const currentUserPubky = useAuthStore((state) => state.currentUserPubky);
   const { users, isLoading, isLoadingMore, hasMore, loadMore } = useUserStream({
-    streamId: Core.UserStreamTypes.RECOMMENDED,
+    streamId: UserStreamTypes.RECOMMENDED,
     limit: USERS_PER_PAGE,
     paginated: true,
     includeRelationships: true,
@@ -36,7 +37,7 @@ export function WhoToFollowPageMain() {
   });
 
   // Handle follow/unfollow action
-  const handleFollow = async (userId: Core.Pubky, isCurrentlyFollowing: boolean) => {
+  const handleFollow = async (userId: Pubky, isCurrentlyFollowing: boolean) => {
     await toggleFollow(userId, isCurrentlyFollowing);
   };
   if (isLoading) {

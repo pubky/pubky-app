@@ -1,5 +1,4 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import * as Core from '@/core';
 import { LastReadResult } from 'pubky-app-specs';
 import { asOpaque } from '@/test-utils';
 import {
@@ -13,7 +12,10 @@ import {
 import { AppError } from '@/libs/error/error';
 import { ValidationErrorCode } from '@/libs/error/error.codes';
 import { ErrorCategory, ErrorService } from '@/libs/error/error.types';
-
+import { NotificationType } from '@/models/notification/notification.types';
+import { NotificationNormalizer } from '@/pipes/notification/notification.normalizer';
+import { PubkySpecsSingleton } from '@/pipes/pipes.builder';
+import type { NexusNotification } from '@/services/nexus/nexus.types';
 describe('NotificationNormalizer', () => {
   /**
    * Tests for `to` method - Creates LastRead result (same as LastReadNormalizer)
@@ -44,16 +46,16 @@ describe('NotificationNormalizer', () => {
       afterEach(restoreMocks);
 
       it('should create last read with last_read and meta properties', () => {
-        const result = Core.NotificationNormalizer.to(TEST_PUBKY.USER_1);
+        const result = NotificationNormalizer.to(TEST_PUBKY.USER_1);
 
         expect(result).toHaveProperty('last_read');
         expect(result).toHaveProperty('meta');
       });
 
       it('should call PubkySpecsSingleton.get with pubky and createLastRead without params', () => {
-        Core.NotificationNormalizer.to(TEST_PUBKY.USER_1);
+        NotificationNormalizer.to(TEST_PUBKY.USER_1);
 
-        expect(Core.PubkySpecsSingleton.get).toHaveBeenCalledWith(TEST_PUBKY.USER_1);
+        expect(PubkySpecsSingleton.get).toHaveBeenCalledWith(TEST_PUBKY.USER_1);
         expect(mockBuilder.createLastRead).toHaveBeenCalledWith();
       });
 
@@ -64,7 +66,7 @@ describe('NotificationNormalizer', () => {
         });
 
         try {
-          Core.NotificationNormalizer.to(TEST_PUBKY.USER_1);
+          NotificationNormalizer.to(TEST_PUBKY.USER_1);
           expect.fail('Should have thrown');
         } catch (error) {
           expect(error).toBeInstanceOf(AppError);
@@ -79,11 +81,11 @@ describe('NotificationNormalizer', () => {
       });
 
       it('should throw AppError when PubkySpecsSingleton.get fails', () => {
-        vi.spyOn(Core.PubkySpecsSingleton, 'get').mockImplementation(() => {
+        vi.spyOn(PubkySpecsSingleton, 'get').mockImplementation(() => {
           throw 'Singleton error';
         });
 
-        expect(() => Core.NotificationNormalizer.to(TEST_PUBKY.USER_1)).toThrow(AppError);
+        expect(() => NotificationNormalizer.to(TEST_PUBKY.USER_1)).toThrow(AppError);
       });
     });
 
@@ -92,14 +94,14 @@ describe('NotificationNormalizer', () => {
       afterEach(restoreMocks);
 
       it('should create valid result with correct URL format', () => {
-        const result = Core.NotificationNormalizer.to(TEST_PUBKY.USER_1);
+        const result = NotificationNormalizer.to(TEST_PUBKY.USER_1);
 
         expect(result.last_read).toBeDefined();
         expect(result.meta.url).toMatch(/^pubky:\/\/.+\/pub\/pubky\.app\/last_read$/);
       });
 
       it('should have BigInt timestamp', () => {
-        const result = Core.NotificationNormalizer.to(TEST_PUBKY.USER_1);
+        const result = NotificationNormalizer.to(TEST_PUBKY.USER_1);
         expect(typeof result.last_read.timestamp).toBe('bigint');
       });
 
@@ -112,8 +114,8 @@ describe('NotificationNormalizer', () => {
         ['null', INVALID_INPUTS.NULL],
         ['undefined', INVALID_INPUTS.UNDEFINED],
       ])('should not throw for %s pubky (singleton already initialized)', (_, invalidPubky) => {
-        Core.NotificationNormalizer.to(TEST_PUBKY.USER_1); // Initialize
-        const result = Core.NotificationNormalizer.to(invalidPubky);
+        NotificationNormalizer.to(TEST_PUBKY.USER_1); // Initialize
+        const result = NotificationNormalizer.to(invalidPubky);
         expect(result).toBeDefined();
       });
     });
@@ -125,38 +127,38 @@ describe('NotificationNormalizer', () => {
   describe('toFlatNotification', () => {
     // Sample notification data for different types
     const createNexusNotification = (
-      type: Core.NotificationType,
+      type: NotificationType,
       body: Record<string, unknown>,
       timestamp = 1700000000000,
-    ): Core.NexusNotification => ({
+    ): NexusNotification => ({
       timestamp,
       body: { type, ...body },
     });
 
     const sampleNotifications = {
-      follow: createNexusNotification(Core.NotificationType.Follow, {
+      follow: createNexusNotification(NotificationType.Follow, {
         followed_by: TEST_PUBKY.USER_2,
       }),
-      newFriend: createNexusNotification(Core.NotificationType.NewFriend, {
+      newFriend: createNexusNotification(NotificationType.NewFriend, {
         followed_by: TEST_PUBKY.USER_2,
       }),
-      reply: createNexusNotification(Core.NotificationType.Reply, {
+      reply: createNexusNotification(NotificationType.Reply, {
         replied_by: TEST_PUBKY.USER_2,
         reply_uri: 'pubky://author/pub/pubky.app/posts/reply123',
       }),
-      repost: createNexusNotification(Core.NotificationType.Repost, {
+      repost: createNexusNotification(NotificationType.Repost, {
         reposted_by: TEST_PUBKY.USER_2,
         repost_uri: 'pubky://author/pub/pubky.app/posts/repost123',
       }),
-      mention: createNexusNotification(Core.NotificationType.Mention, {
+      mention: createNexusNotification(NotificationType.Mention, {
         mentioned_by: TEST_PUBKY.USER_2,
         post_uri: 'pubky://author/pub/pubky.app/posts/mention123',
       }),
-      tagPost: createNexusNotification(Core.NotificationType.TagPost, {
+      tagPost: createNexusNotification(NotificationType.TagPost, {
         tagged_by: TEST_PUBKY.USER_2,
         post_uri: 'pubky://author/pub/pubky.app/posts/tagged123',
       }),
-      tagProfile: createNexusNotification(Core.NotificationType.TagProfile, {
+      tagProfile: createNexusNotification(NotificationType.TagProfile, {
         tagged_by: TEST_PUBKY.USER_2,
         tag_label: 'developer',
       }),
@@ -164,30 +166,30 @@ describe('NotificationNormalizer', () => {
 
     describe('transformation', () => {
       it('should transform NexusNotification to FlatNotification', () => {
-        const result = Core.NotificationNormalizer.toFlatNotification(sampleNotifications.follow);
+        const result = NotificationNormalizer.toFlatNotification(sampleNotifications.follow);
 
         expect(result).toHaveProperty('timestamp', sampleNotifications.follow.timestamp);
-        expect(result).toHaveProperty('type', Core.NotificationType.Follow);
+        expect(result).toHaveProperty('type', NotificationType.Follow);
       });
 
       it('should spread body properties into flat structure', () => {
-        const result = Core.NotificationNormalizer.toFlatNotification(sampleNotifications.reply);
+        const result = NotificationNormalizer.toFlatNotification(sampleNotifications.reply);
 
-        expect(result.type).toBe(Core.NotificationType.Reply);
+        expect(result.type).toBe(NotificationType.Reply);
         expect(result).toHaveProperty('replied_by', TEST_PUBKY.USER_2);
         expect(result).toHaveProperty('reply_uri');
       });
 
       it.each([
-        ['Follow', sampleNotifications.follow, Core.NotificationType.Follow],
-        ['NewFriend', sampleNotifications.newFriend, Core.NotificationType.NewFriend],
-        ['Reply', sampleNotifications.reply, Core.NotificationType.Reply],
-        ['Repost', sampleNotifications.repost, Core.NotificationType.Repost],
-        ['Mention', sampleNotifications.mention, Core.NotificationType.Mention],
-        ['TagPost', sampleNotifications.tagPost, Core.NotificationType.TagPost],
-        ['TagProfile', sampleNotifications.tagProfile, Core.NotificationType.TagProfile],
+        ['Follow', sampleNotifications.follow, NotificationType.Follow],
+        ['NewFriend', sampleNotifications.newFriend, NotificationType.NewFriend],
+        ['Reply', sampleNotifications.reply, NotificationType.Reply],
+        ['Repost', sampleNotifications.repost, NotificationType.Repost],
+        ['Mention', sampleNotifications.mention, NotificationType.Mention],
+        ['TagPost', sampleNotifications.tagPost, NotificationType.TagPost],
+        ['TagProfile', sampleNotifications.tagProfile, NotificationType.TagProfile],
       ])('should handle %s notification type', (_, notification, expectedType) => {
-        const result = Core.NotificationNormalizer.toFlatNotification(notification);
+        const result = NotificationNormalizer.toFlatNotification(notification);
 
         expect(result.type).toBe(expectedType);
         expect(result.timestamp).toBeDefined();
@@ -196,29 +198,29 @@ describe('NotificationNormalizer', () => {
 
     describe('edge cases', () => {
       it('should handle notification with minimal body', () => {
-        const minimalNotification: Core.NexusNotification = {
+        const minimalNotification: NexusNotification = {
           timestamp: 1700000000000,
-          body: { type: Core.NotificationType.Follow, followed_by: TEST_PUBKY.USER_2 },
+          body: { type: NotificationType.Follow, followed_by: TEST_PUBKY.USER_2 },
         };
 
-        const result = Core.NotificationNormalizer.toFlatNotification(minimalNotification);
+        const result = NotificationNormalizer.toFlatNotification(minimalNotification);
 
         expect(result.timestamp).toBe(1700000000000);
-        expect(result.type).toBe(Core.NotificationType.Follow);
+        expect(result.type).toBe(NotificationType.Follow);
       });
 
       it('should preserve all body properties in flat notification', () => {
-        const notificationWithExtra: Core.NexusNotification = {
+        const notificationWithExtra: NexusNotification = {
           timestamp: 1700000000000,
           body: {
-            type: Core.NotificationType.Reply,
+            type: NotificationType.Reply,
             replied_by: TEST_PUBKY.USER_2,
             reply_uri: 'pubky://uri',
             extra_field: 'extra_value',
           },
         };
 
-        const result = Core.NotificationNormalizer.toFlatNotification(notificationWithExtra);
+        const result = NotificationNormalizer.toFlatNotification(notificationWithExtra);
 
         expect(result).toHaveProperty('extra_field', 'extra_value');
       });

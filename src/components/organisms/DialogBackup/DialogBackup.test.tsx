@@ -2,8 +2,8 @@ import { describe, it, expect, vi } from 'vitest';
 import { render, screen } from '@testing-library/react';
 import { DialogBackup } from './DialogBackup';
 
-// Mock Core module
-vi.mock('@/core', () => ({
+// Mock dependencies
+vi.mock('@/stores/onboarding/onboarding.store', () => ({
   useOnboardingStore: vi.fn(() => ({
     mnemonic: 'test mnemonic phrase',
   })),

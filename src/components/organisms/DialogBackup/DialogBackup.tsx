@@ -3,10 +3,9 @@
 import React from 'react';
 import { useTranslations } from 'next-intl';
 import * as Atoms from '@/atoms';
-import * as Core from '@/core';
 import Image from 'next/image';
 import * as Organisms from '@/organisms';
-
+import { useOnboardingStore } from '@/stores/onboarding/onboarding.store';
 interface DialogBackupProps {
   open?: boolean;
   onOpenChange?: (open: boolean) => void;
@@ -43,7 +42,7 @@ function BackupMethodCard({ title, imageSrc, imageAlt, dialog }: BackupMethodCar
 }
 
 export function DialogBackup({ open, onOpenChange }: DialogBackupProps = {}) {
-  const { mnemonic } = Core.useOnboardingStore();
+  const { mnemonic } = useOnboardingStore();
   const t = useTranslations('settings.backup');
 
   return (

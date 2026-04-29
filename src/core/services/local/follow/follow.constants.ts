@@ -1,5 +1,4 @@
-import * as Core from '@/core';
-
+import { PostStreamTypes } from '@/models/stream/post/postStream.types';
 /**
  * Timeline stream groups for invalidation
  * Grouped by reach type (following/friends) for efficient cache clearing
@@ -8,21 +7,21 @@ import * as Core from '@/core';
  * POPULARITY (engagement) streams are not cached, so no need to invalidate them.
  */
 export const FOLLOWING_TIMELINE_STREAMS = [
-  Core.PostStreamTypes.TIMELINE_FOLLOWING_ALL,
-  Core.PostStreamTypes.TIMELINE_FOLLOWING_SHORT,
-  Core.PostStreamTypes.TIMELINE_FOLLOWING_LONG,
-  Core.PostStreamTypes.TIMELINE_FOLLOWING_IMAGE,
-  Core.PostStreamTypes.TIMELINE_FOLLOWING_VIDEO,
-  Core.PostStreamTypes.TIMELINE_FOLLOWING_LINK,
-  Core.PostStreamTypes.TIMELINE_FOLLOWING_FILE,
+  PostStreamTypes.TIMELINE_FOLLOWING_ALL,
+  PostStreamTypes.TIMELINE_FOLLOWING_SHORT,
+  PostStreamTypes.TIMELINE_FOLLOWING_LONG,
+  PostStreamTypes.TIMELINE_FOLLOWING_IMAGE,
+  PostStreamTypes.TIMELINE_FOLLOWING_VIDEO,
+  PostStreamTypes.TIMELINE_FOLLOWING_LINK,
+  PostStreamTypes.TIMELINE_FOLLOWING_FILE,
 ] as const;
 
 export const FRIENDS_TIMELINE_STREAMS = [
-  Core.PostStreamTypes.TIMELINE_FRIENDS_ALL,
-  Core.PostStreamTypes.TIMELINE_FRIENDS_SHORT,
-  Core.PostStreamTypes.TIMELINE_FRIENDS_LONG,
-  Core.PostStreamTypes.TIMELINE_FRIENDS_IMAGE,
-  Core.PostStreamTypes.TIMELINE_FRIENDS_VIDEO,
-  Core.PostStreamTypes.TIMELINE_FRIENDS_LINK,
-  Core.PostStreamTypes.TIMELINE_FRIENDS_FILE,
+  PostStreamTypes.TIMELINE_FRIENDS_ALL,
+  PostStreamTypes.TIMELINE_FRIENDS_SHORT,
+  PostStreamTypes.TIMELINE_FRIENDS_LONG,
+  PostStreamTypes.TIMELINE_FRIENDS_IMAGE,
+  PostStreamTypes.TIMELINE_FRIENDS_VIDEO,
+  PostStreamTypes.TIMELINE_FRIENDS_LINK,
+  PostStreamTypes.TIMELINE_FRIENDS_FILE,
 ] as const;

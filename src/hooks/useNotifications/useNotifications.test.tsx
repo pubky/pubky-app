@@ -1,10 +1,9 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { renderHook, waitFor, act } from '@testing-library/react';
 import { useNotifications } from './useNotifications';
-import { NotificationType } from '@/core';
-import * as Core from '@/core';
 import { useMutedUsers } from '@/hooks/useMutedUsers/useMutedUsers';
-
+import { NotificationController } from '@/controllers/notification/notification';
+import { NotificationType, type FlatNotification } from '@/models/notification/notification.types';
 // Hoist mock data
 const { mockCurrentUserPubky, setMockCurrentUserPubky, mockUnreadCount, setMockUnreadCount } = vi.hoisted(() => {
   const pubky = { current: 'test-user-pubky' as string | null };
@@ -21,29 +20,29 @@ const { mockCurrentUserPubky, setMockCurrentUserPubky, mockUnreadCount, setMockU
   };
 });
 
-// Mock Core
-vi.mock('@/core', async (importOriginal) => {
-  const actual = await importOriginal<typeof import('@/core')>();
-  return {
-    ...actual,
-    NotificationController: {
-      getOrFetchNotifications: vi.fn(() =>
-        Promise.resolve({
-          flatNotifications: [],
-          olderThan: undefined,
-        }),
-      ),
-      markAllAsRead: vi.fn(),
-    },
-    useAuthStore: vi.fn(() => ({
-      currentUserPubky: mockCurrentUserPubky.current,
-    })),
-    useNotificationStore: vi.fn((selector) => {
-      const state = { lastRead: 0, unread: mockUnreadCount.current, setLastRead: vi.fn() };
-      return selector ? selector(state) : state.lastRead;
-    }),
-  };
-});
+// Mock dependencies
+vi.mock('@/controllers/notification/notification', () => ({
+  NotificationController: {
+    getOrFetchNotifications: vi.fn(() =>
+      Promise.resolve({
+        flatNotifications: [],
+        olderThan: undefined,
+      }),
+    ),
+    markAllAsRead: vi.fn(),
+  },
+}));
+vi.mock('@/stores/auth/auth.store', () => ({
+  useAuthStore: vi.fn(() => ({
+    currentUserPubky: mockCurrentUserPubky.current,
+  })),
+}));
+vi.mock('@/stores/notification/notification.store', () => ({
+  useNotificationStore: vi.fn((selector) => {
+    const state = { lastRead: 0, unread: mockUnreadCount.current, setLastRead: vi.fn() };
+    return selector ? selector(state) : state.lastRead;
+  }),
+}));
 
 // Mock config
 vi.mock('@/config', async (importOriginal) => {
@@ -105,7 +104,7 @@ describe('useNotifications', () => {
 
     // Should not be loading since there's no user
     expect(result.current.isLoading).toBe(false);
-    expect(Core.NotificationController.getOrFetchNotifications).not.toHaveBeenCalled();
+    expect(NotificationController.getOrFetchNotifications).not.toHaveBeenCalled();
   });
 
   it('should return isLoading as false when data is available', async () => {
@@ -135,7 +134,7 @@ describe('useNotifications', () => {
     });
 
     expect(() => result.current.markAllAsRead()).not.toThrow();
-    expect(Core.NotificationController.markAllAsRead).toHaveBeenCalled();
+    expect(NotificationController.markAllAsRead).toHaveBeenCalled();
   });
 
   it('should return consistent counts', async () => {
@@ -174,9 +173,9 @@ describe('useNotifications', () => {
   it('should return notifications from controller', async () => {
     const mockNotifications = [
       { id: 'test-1', type: NotificationType.Follow, timestamp: Date.now(), followed_by: 'user1' },
-    ] as Core.FlatNotification[];
+    ] as FlatNotification[];
 
-    vi.mocked(Core.NotificationController.getOrFetchNotifications).mockResolvedValueOnce({
+    vi.mocked(NotificationController.getOrFetchNotifications).mockResolvedValueOnce({
       flatNotifications: mockNotifications,
       olderThan: mockNotifications[0].timestamp - 1,
     });
@@ -195,7 +194,7 @@ describe('useNotifications', () => {
     const mockNotifications = [
       { id: 'test-1', type: NotificationType.Follow, timestamp: 1000, followed_by: 'muted-user' },
       { id: 'test-2', type: NotificationType.Follow, timestamp: 1001, followed_by: 'active-user' },
-    ] as Core.FlatNotification[];
+    ] as FlatNotification[];
 
     vi.mocked(useMutedUsers).mockReturnValue({
       mutedUserIds: ['muted-user'],
@@ -204,7 +203,7 @@ describe('useNotifications', () => {
       isLoading: false,
     });
 
-    vi.mocked(Core.NotificationController.getOrFetchNotifications).mockResolvedValueOnce({
+    vi.mocked(NotificationController.getOrFetchNotifications).mockResolvedValueOnce({
       flatNotifications: mockNotifications,
       olderThan: 999,
     });
@@ -222,9 +221,9 @@ describe('useNotifications', () => {
   it('should call loadMore with olderThan parameter', async () => {
     const mockNotifications = [
       { id: 'test-1', type: NotificationType.Follow, timestamp: 1000, followed_by: 'user1' },
-    ] as Core.FlatNotification[];
+    ] as FlatNotification[];
 
-    vi.mocked(Core.NotificationController.getOrFetchNotifications)
+    vi.mocked(NotificationController.getOrFetchNotifications)
       .mockResolvedValueOnce({
         flatNotifications: mockNotifications,
         olderThan: 999,
@@ -244,7 +243,7 @@ describe('useNotifications', () => {
       await result.current.loadMore();
     });
 
-    expect(Core.NotificationController.getOrFetchNotifications).toHaveBeenCalledWith({
+    expect(NotificationController.getOrFetchNotifications).toHaveBeenCalledWith({
       olderThan: 999,
     });
   });
@@ -253,15 +252,15 @@ describe('useNotifications', () => {
     // Initial notifications
     const initialNotifications = [
       { id: 'test-1', type: NotificationType.Follow, timestamp: 1000, followed_by: 'user1' },
-    ] as Core.FlatNotification[];
+    ] as FlatNotification[];
 
     // Updated notifications (includes a new notification)
     const updatedNotifications = [
       { id: 'test-2', type: NotificationType.Follow, timestamp: 2000, followed_by: 'user2' },
       { id: 'test-1', type: NotificationType.Follow, timestamp: 1000, followed_by: 'user1' },
-    ] as Core.FlatNotification[];
+    ] as FlatNotification[];
 
-    vi.mocked(Core.NotificationController.getOrFetchNotifications)
+    vi.mocked(NotificationController.getOrFetchNotifications)
       .mockResolvedValueOnce({
         flatNotifications: initialNotifications,
         olderThan: 999,
@@ -298,6 +297,6 @@ describe('useNotifications', () => {
 
     expect(result.current.count).toBe(2);
     // Should have called getOrFetchNotifications twice: once on mount, once on unread count change
-    expect(Core.NotificationController.getOrFetchNotifications).toHaveBeenCalledTimes(2);
+    expect(NotificationController.getOrFetchNotifications).toHaveBeenCalledTimes(2);
   });
 });

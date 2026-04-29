@@ -1,12 +1,12 @@
 'use client';
 
-import * as Core from '@/core';
 import * as Atoms from '@/atoms';
 import * as Molecules from '@/molecules';
 import { useEffect, useState } from 'react';
 import { useTranslations } from 'next-intl';
 import type { AttachmentConstructed, PostAttachmentsProps } from './PostAttachments.types';
-
+import { FileController } from '@/controllers/file/file';
+import { FileVariant } from '@/services/nexus/file/file.types';
 export const PostAttachments = ({ attachments, localAttachments }: PostAttachmentsProps) => {
   const [imagesAndVideos, setImagesAndVideos] = useState<AttachmentConstructed[]>([]);
   const [audios, setAudios] = useState<AttachmentConstructed[]>([]);
@@ -21,7 +21,7 @@ export const PostAttachments = ({ attachments, localAttachments }: PostAttachmen
       if (!attachments?.length) return;
 
       try {
-        const result = await Core.FileController.getMetadata({ fileAttachments: attachments });
+        const result = await FileController.getMetadata({ fileAttachments: attachments });
 
         const imagesAndVideos: AttachmentConstructed[] = [];
         const audios: AttachmentConstructed[] = [];
@@ -39,23 +39,21 @@ export const PostAttachments = ({ attachments, localAttachments }: PostAttachmen
               type: content_type,
               name,
               urls: {
-                main: Core.FileController.getFileUrl({ fileId: id, variant: Core.FileVariant.MAIN }),
-                feed: isImage
-                  ? Core.FileController.getFileUrl({ fileId: id, variant: Core.FileVariant.FEED })
-                  : undefined,
+                main: FileController.getFileUrl({ fileId: id, variant: FileVariant.MAIN }),
+                feed: isImage ? FileController.getFileUrl({ fileId: id, variant: FileVariant.FEED }) : undefined,
               },
             });
           } else if (isAudio) {
             audios.push({
               type: content_type,
               name,
-              urls: { main: Core.FileController.getFileUrl({ fileId: id, variant: Core.FileVariant.MAIN }) },
+              urls: { main: FileController.getFileUrl({ fileId: id, variant: FileVariant.MAIN }) },
             });
           } else {
             genericFiles.push({
               type: content_type,
               name,
-              urls: { main: Core.FileController.getFileUrl({ fileId: id, variant: Core.FileVariant.MAIN }) },
+              urls: { main: FileController.getFileUrl({ fileId: id, variant: FileVariant.MAIN }) },
             });
           }
         });

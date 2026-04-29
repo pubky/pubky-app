@@ -1,8 +1,8 @@
 import { renderHook, act } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import * as Core from '@/core';
 import { useSearchStreamId, useSearchTags } from './useSearchStreamId';
-
+import { useHomeStore } from '@/stores/home/home.store';
+import { CONTENT, SORT } from '@/stores/home/home.types';
 // Mock next/navigation
 const mockGet = vi.fn();
 vi.mock('next/navigation', () => ({
@@ -16,9 +16,9 @@ describe('useSearchStreamId', () => {
     // Reset mocks and store to default state before each test
     mockGet.mockReset();
     act(() => {
-      Core.useHomeStore.setState({
-        sort: Core.SORT.TIMELINE,
-        content: Core.CONTENT.ALL,
+      useHomeStore.setState({
+        sort: SORT.TIMELINE,
+        content: CONTENT.ALL,
       });
     });
   });
@@ -80,7 +80,7 @@ describe('useSearchStreamId', () => {
     it('should use engagement sorting when sort is ENGAGEMENT', () => {
       mockGet.mockReturnValue('pubky');
       act(() => {
-        Core.useHomeStore.setState({ sort: Core.SORT.ENGAGEMENT });
+        useHomeStore.setState({ sort: SORT.ENGAGEMENT });
       });
       const { result } = renderHook(() => useSearchStreamId());
       expect(result.current).toBe('total_engagement:all:all:pubky');
@@ -89,7 +89,7 @@ describe('useSearchStreamId', () => {
     it('should use timeline sorting when sort is TIMELINE', () => {
       mockGet.mockReturnValue('pubky');
       act(() => {
-        Core.useHomeStore.setState({ sort: Core.SORT.TIMELINE });
+        useHomeStore.setState({ sort: SORT.TIMELINE });
       });
       const { result } = renderHook(() => useSearchStreamId());
       expect(result.current).toBe('timeline:all:all:pubky');
@@ -100,7 +100,7 @@ describe('useSearchStreamId', () => {
     it('should use short kind for SHORT content', () => {
       mockGet.mockReturnValue('pubky');
       act(() => {
-        Core.useHomeStore.setState({ content: Core.CONTENT.SHORT });
+        useHomeStore.setState({ content: CONTENT.SHORT });
       });
       const { result } = renderHook(() => useSearchStreamId());
       expect(result.current).toBe('timeline:all:short:pubky');
@@ -109,7 +109,7 @@ describe('useSearchStreamId', () => {
     it('should use long kind for LONG content', () => {
       mockGet.mockReturnValue('pubky');
       act(() => {
-        Core.useHomeStore.setState({ content: Core.CONTENT.LONG });
+        useHomeStore.setState({ content: CONTENT.LONG });
       });
       const { result } = renderHook(() => useSearchStreamId());
       expect(result.current).toBe('timeline:all:long:pubky');
@@ -118,7 +118,7 @@ describe('useSearchStreamId', () => {
     it('should use image kind for IMAGES content', () => {
       mockGet.mockReturnValue('pubky');
       act(() => {
-        Core.useHomeStore.setState({ content: Core.CONTENT.IMAGES });
+        useHomeStore.setState({ content: CONTENT.IMAGES });
       });
       const { result } = renderHook(() => useSearchStreamId());
       expect(result.current).toBe('timeline:all:image:pubky');
@@ -127,7 +127,7 @@ describe('useSearchStreamId', () => {
     it('should use video kind for VIDEOS content', () => {
       mockGet.mockReturnValue('pubky');
       act(() => {
-        Core.useHomeStore.setState({ content: Core.CONTENT.VIDEOS });
+        useHomeStore.setState({ content: CONTENT.VIDEOS });
       });
       const { result } = renderHook(() => useSearchStreamId());
       expect(result.current).toBe('timeline:all:video:pubky');
@@ -136,7 +136,7 @@ describe('useSearchStreamId', () => {
     it('should use link kind for LINKS content', () => {
       mockGet.mockReturnValue('pubky');
       act(() => {
-        Core.useHomeStore.setState({ content: Core.CONTENT.LINKS });
+        useHomeStore.setState({ content: CONTENT.LINKS });
       });
       const { result } = renderHook(() => useSearchStreamId());
       expect(result.current).toBe('timeline:all:link:pubky');
@@ -145,7 +145,7 @@ describe('useSearchStreamId', () => {
     it('should use file kind for FILES content', () => {
       mockGet.mockReturnValue('pubky');
       act(() => {
-        Core.useHomeStore.setState({ content: Core.CONTENT.FILES });
+        useHomeStore.setState({ content: CONTENT.FILES });
       });
       const { result } = renderHook(() => useSearchStreamId());
       expect(result.current).toBe('timeline:all:file:pubky');
@@ -156,9 +156,9 @@ describe('useSearchStreamId', () => {
     it('should combine engagement sort with image content', () => {
       mockGet.mockReturnValue('pubky,bitcoin');
       act(() => {
-        Core.useHomeStore.setState({
-          sort: Core.SORT.ENGAGEMENT,
-          content: Core.CONTENT.IMAGES,
+        useHomeStore.setState({
+          sort: SORT.ENGAGEMENT,
+          content: CONTENT.IMAGES,
         });
       });
       const { result } = renderHook(() => useSearchStreamId());

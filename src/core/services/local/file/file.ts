@@ -1,22 +1,27 @@
-import * as Core from '@/core';
-
+import { FileDetailsModel } from '@/models/file/fileDetails';
+import { CompositeIdDomain } from '@/models/models.types';
+import { buildCompositeIdFromPubkyUri } from '@/models/models.utils';
+import type { TFileAttachmentResult } from '@/pipes/file/file.types';
+import type { TPersistFilesParams } from '@/services/local/file/file.types';
+import { buildUrls } from '@/services/local/file/file.utils';
+import type { NexusFileDetails } from '@/services/nexus/nexus.types';
 export class LocalFileService {
   private constructor() {} // Prevent instantiation
 
-  static async createMany({ files }: Core.TPersistFilesParams) {
-    await Core.FileDetailsModel.bulkSave(files);
+  static async createMany({ files }: TPersistFilesParams) {
+    await FileDetailsModel.bulkSave(files);
   }
 
-  static async read(compositeFileId: string): Promise<Core.NexusFileDetails | null> {
-    return await Core.FileDetailsModel.findById(compositeFileId);
+  static async read(compositeFileId: string): Promise<NexusFileDetails | null> {
+    return await FileDetailsModel.findById(compositeFileId);
   }
 
-  static async findByIds(compositeFileIds: string[]): Promise<Core.NexusFileDetails[]> {
-    return await Core.FileDetailsModel.findByIds(compositeFileIds);
+  static async findByIds(compositeFileIds: string[]): Promise<NexusFileDetails[]> {
+    return await FileDetailsModel.findByIds(compositeFileIds);
   }
 
   static async deleteById(compositeFileId: string) {
-    await Core.FileDetailsModel.deleteById(compositeFileId);
+    await FileDetailsModel.deleteById(compositeFileId);
   }
 
   /**
@@ -28,12 +33,12 @@ export class LocalFileService {
    * @param blobResult - Blob result
    * @param fileResult - File result
    */
-  static async create({ blobResult, fileResult }: Core.TFileAttachmentResult) {
+  static async create({ blobResult, fileResult }: TFileAttachmentResult) {
     const uri = fileResult.meta.url;
-    const fileCompositeId = Core.buildCompositeIdFromPubkyUri({ uri, domain: Core.CompositeIdDomain.FILES });
+    const fileCompositeId = buildCompositeIdFromPubkyUri({ uri, domain: CompositeIdDomain.FILES });
 
     if (fileCompositeId) {
-      const file: Core.NexusFileDetails = {
+      const file: NexusFileDetails = {
         id: fileCompositeId,
         name: fileResult.file.name,
         src: blobResult.meta.url,
@@ -44,9 +49,9 @@ export class LocalFileService {
         indexed_at: Number(fileResult.file.created_at),
         metadata: {},
         owner_id: fileCompositeId.split(':')[0],
-        urls: Core.buildUrls(fileCompositeId),
+        urls: buildUrls(fileCompositeId),
       };
-      await Core.FileDetailsModel.create(file);
+      await FileDetailsModel.create(file);
     }
   }
 }

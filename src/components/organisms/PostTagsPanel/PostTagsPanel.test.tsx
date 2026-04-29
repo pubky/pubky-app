@@ -28,8 +28,10 @@ vi.mock('next-intl', () => ({
   },
 }));
 
-vi.mock('@/core', () => ({
+vi.mock('@/application/tag/tag.types', () => ({
   TagKind: { POST: 'post' },
+}));
+vi.mock('@/stores/auth/auth.store', () => ({
   useAuthStore: (selector: (state: { setShowSignInDialog: (open: boolean) => void }) => unknown) =>
     selector({ setShowSignInDialog: mockSetShowSignInDialog }),
 }));

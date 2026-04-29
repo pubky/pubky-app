@@ -6,7 +6,12 @@ import * as App from '@/app';
 import { ServerErrorCode } from '@/libs/error/error.codes';
 import { Err } from '@/libs/error/error.factories';
 import { ErrorService } from '@/libs/error/error.types';
-
+import { AuthController } from '@/controllers/auth/auth';
+import { FileController } from '@/controllers/file/file';
+import { ProfileController } from '@/controllers/profile/profile';
+import { UserValidator } from '@/pipes/user/user.validator';
+import { useAuthStore } from '@/stores/auth/auth.store';
+import { useOnboardingStore } from '@/stores/onboarding/onboarding.store';
 vi.mock('facehash', () => ({
   Facehash: ({ name, onRenderMouth }: { name: string; onRenderMouth?: () => React.ReactNode }) => (
     <div data-testid="facehash" data-name={name}>
@@ -15,28 +20,34 @@ vi.mock('facehash', () => ({
   ),
 }));
 
-vi.mock('@/core', async (importOriginal) => {
-  const actual = await importOriginal<typeof import('@/core')>();
-  return {
-    ...actual,
-    useOnboardingStore: vi.fn(),
-    useAuthStore: vi.fn(),
-    ProfileController: {
-      upload: vi.fn(),
-      create: vi.fn(),
-      commitCreate: vi.fn(),
-    },
-    FileController: {
-      commitCreate: vi.fn(),
-    },
-    UserValidator: {
-      check: vi.fn(),
-    },
-    AuthController: {
-      bootstrapWithDelay: vi.fn(),
-    },
-  };
-});
+vi.mock('@/stores/onboarding/onboarding.store', () => ({
+  useOnboardingStore: vi.fn(),
+}));
+vi.mock('@/stores/auth/auth.store', () => ({
+  useAuthStore: vi.fn(),
+}));
+vi.mock('@/controllers/profile/profile', () => ({
+  ProfileController: {
+    upload: vi.fn(),
+    create: vi.fn(),
+    commitCreate: vi.fn(),
+  },
+}));
+vi.mock('@/controllers/file/file', () => ({
+  FileController: {
+    commitCreate: vi.fn(),
+  },
+}));
+vi.mock('@/pipes/user/user.validator', () => ({
+  UserValidator: {
+    check: vi.fn(),
+  },
+}));
+vi.mock('@/controllers/auth/auth', () => ({
+  AuthController: {
+    bootstrapWithDelay: vi.fn(),
+  },
+}));
 
 // Mock Next.js router
 const mockPush = vi.fn();
@@ -424,21 +435,20 @@ describe('CreateProfileForm', () => {
     vi.clearAllMocks();
 
     // Get the mocked modules
-    const Core = await import('@/core');
-    vi.mocked(Core.useOnboardingStore).mockReturnValue({
+    vi.mocked(useOnboardingStore).mockReturnValue({
       setShowWelcomeDialog: vi.fn(),
     });
-    vi.mocked(Core.useAuthStore).mockReturnValue({
+    vi.mocked(useAuthStore).mockReturnValue({
       selectCurrentUserPubky: vi.fn(() => mockPubky),
     });
 
     // Reset all mock functions
     mockPush.mockReset();
     mockToast.mockReset();
-    vi.mocked(Core.FileController.commitCreate).mockReset();
-    vi.mocked(Core.ProfileController.commitCreate).mockReset();
-    vi.mocked(Core.UserValidator.check).mockReset();
-    vi.mocked(Core.AuthController.bootstrapWithDelay).mockReset();
+    vi.mocked(FileController.commitCreate).mockReset();
+    vi.mocked(ProfileController.commitCreate).mockReset();
+    vi.mocked(UserValidator.check).mockReset();
+    vi.mocked(AuthController.bootstrapWithDelay).mockReset();
   });
 
   it('renders with default state', () => {
@@ -786,21 +796,17 @@ describe('CreateProfileForm', () => {
       expect(profileNavigation).toBeInTheDocument();
     });
 
-    it('should test Core module integration exists', async () => {
-      const Core = await import('@/core');
-
+    it('should expose controller and validator integrations', async () => {
       // Verify that the mocked functions exist
-      expect(typeof Core.ProfileController.commitCreate).toBe('function');
-      expect(typeof Core.FileController.commitCreate).toBe('function');
-      expect(typeof Core.UserValidator.check).toBe('function');
-      expect(typeof Core.AuthController.bootstrapWithDelay).toBe('function');
+      expect(typeof ProfileController.commitCreate).toBe('function');
+      expect(typeof FileController.commitCreate).toBe('function');
+      expect(typeof UserValidator.check).toBe('function');
+      expect(typeof AuthController.bootstrapWithDelay).toBe('function');
     });
 
     it('should handle bootstrapWithDelay error and show error state', async () => {
-      const Core = await import('@/core');
-
       // Mock successful validation and profile save
-      vi.mocked(Core.UserValidator.check).mockReturnValue({
+      vi.mocked(UserValidator.check).mockReturnValue({
         data: {
           name: 'Test User',
           bio: 'Test bio',
@@ -809,11 +815,11 @@ describe('CreateProfileForm', () => {
         error: [],
       });
 
-      vi.mocked(Core.ProfileController.commitCreate).mockResolvedValue(undefined);
+      vi.mocked(ProfileController.commitCreate).mockResolvedValue(undefined);
 
       // Mock bootstrapWithDelay to throw an error
       const bootstrapError = new Error('Failed to fetch user data');
-      vi.mocked(Core.AuthController.bootstrapWithDelay).mockRejectedValue(bootstrapError);
+      vi.mocked(AuthController.bootstrapWithDelay).mockRejectedValue(bootstrapError);
 
       render(<CreateProfileForm />);
 
@@ -837,27 +843,26 @@ describe('CreateProfileForm', () => {
       });
 
       // Verify the mocks were called in the correct order
-      expect(Core.UserValidator.check).toHaveBeenCalled();
-      expect(Core.ProfileController.commitCreate).toHaveBeenCalled();
-      expect(Core.AuthController.bootstrapWithDelay).toHaveBeenCalled();
+      expect(UserValidator.check).toHaveBeenCalled();
+      expect(ProfileController.commitCreate).toHaveBeenCalled();
+      expect(AuthController.bootstrapWithDelay).toHaveBeenCalled();
     });
   });
 
   describe('Welcome Dialog Integration', () => {
     it('should call setShowWelcomeDialog(true) when profile creation is successful', async () => {
       const mockSetShowWelcomeDialog = vi.fn();
-      const Core = await import('@/core');
 
       // Mock the onboarding store to return the setShowWelcomeDialog function
-      vi.mocked(Core.useOnboardingStore).mockReturnValue({
+      vi.mocked(useOnboardingStore).mockReturnValue({
         setShowWelcomeDialog: mockSetShowWelcomeDialog,
       });
-      vi.mocked(Core.useAuthStore).mockReturnValue({
+      vi.mocked(useAuthStore).mockReturnValue({
         selectCurrentUserPubky: vi.fn(() => 'test-pubky-123'),
       });
 
       // Mock successful validation and profile save
-      vi.mocked(Core.UserValidator.check).mockReturnValue({
+      vi.mocked(UserValidator.check).mockReturnValue({
         data: {
           name: 'Test User',
           bio: 'Test bio',
@@ -866,10 +871,10 @@ describe('CreateProfileForm', () => {
         error: [],
       });
 
-      vi.mocked(Core.ProfileController.commitCreate).mockResolvedValue(undefined);
+      vi.mocked(ProfileController.commitCreate).mockResolvedValue(undefined);
 
       // Mock successful bootstrap
-      vi.mocked(Core.AuthController.bootstrapWithDelay).mockResolvedValue(undefined);
+      vi.mocked(AuthController.bootstrapWithDelay).mockResolvedValue(undefined);
 
       render(<CreateProfileForm />);
 
@@ -891,25 +896,24 @@ describe('CreateProfileForm', () => {
       expect(mockSetShowWelcomeDialog).toHaveBeenCalledWith(true);
 
       // Verify the flow was completed successfully
-      expect(Core.UserValidator.check).toHaveBeenCalled();
-      expect(Core.ProfileController.commitCreate).toHaveBeenCalled();
-      expect(Core.AuthController.bootstrapWithDelay).toHaveBeenCalled();
+      expect(UserValidator.check).toHaveBeenCalled();
+      expect(ProfileController.commitCreate).toHaveBeenCalled();
+      expect(AuthController.bootstrapWithDelay).toHaveBeenCalled();
     });
 
     it('should not call setShowWelcomeDialog when profile creation fails', async () => {
       const mockSetShowWelcomeDialog = vi.fn();
-      const Core = await import('@/core');
 
       // Mock the onboarding store to return the setShowWelcomeDialog function
-      vi.mocked(Core.useOnboardingStore).mockReturnValue({
+      vi.mocked(useOnboardingStore).mockReturnValue({
         setShowWelcomeDialog: mockSetShowWelcomeDialog,
       });
-      vi.mocked(Core.useAuthStore).mockReturnValue({
+      vi.mocked(useAuthStore).mockReturnValue({
         selectCurrentUserPubky: vi.fn(() => 'test-pubky-123'),
       });
 
       // Mock successful validation but failed profile save
-      vi.mocked(Core.UserValidator.check).mockReturnValue({
+      vi.mocked(UserValidator.check).mockReturnValue({
         data: {
           name: 'Test User',
           bio: 'Test bio',
@@ -924,7 +928,7 @@ describe('CreateProfileForm', () => {
         operation: 'commitCreate',
         context: { statusCode: 500 },
       });
-      vi.mocked(Core.ProfileController.commitCreate).mockRejectedValue(profileError);
+      vi.mocked(ProfileController.commitCreate).mockRejectedValue(profileError);
 
       render(<CreateProfileForm />);
 
@@ -946,23 +950,22 @@ describe('CreateProfileForm', () => {
       expect(mockSetShowWelcomeDialog).not.toHaveBeenCalled();
 
       // Verify that bootstrap was not called due to profile save failure
-      expect(Core.AuthController.bootstrapWithDelay).not.toHaveBeenCalled();
+      expect(AuthController.bootstrapWithDelay).not.toHaveBeenCalled();
     });
 
     it('should not call setShowWelcomeDialog when bootstrap fails', async () => {
       const mockSetShowWelcomeDialog = vi.fn();
-      const Core = await import('@/core');
 
       // Mock the onboarding store to return the setShowWelcomeDialog function
-      vi.mocked(Core.useOnboardingStore).mockReturnValue({
+      vi.mocked(useOnboardingStore).mockReturnValue({
         setShowWelcomeDialog: mockSetShowWelcomeDialog,
       });
-      vi.mocked(Core.useAuthStore).mockReturnValue({
+      vi.mocked(useAuthStore).mockReturnValue({
         selectCurrentUserPubky: vi.fn(() => 'test-pubky-123'),
       });
 
       // Mock successful validation and profile save
-      vi.mocked(Core.UserValidator.check).mockReturnValue({
+      vi.mocked(UserValidator.check).mockReturnValue({
         data: {
           name: 'Test User',
           bio: 'Test bio',
@@ -971,10 +974,10 @@ describe('CreateProfileForm', () => {
         error: [],
       });
 
-      vi.mocked(Core.ProfileController.commitCreate).mockResolvedValue(undefined);
+      vi.mocked(ProfileController.commitCreate).mockResolvedValue(undefined);
 
       // Mock bootstrap failure
-      vi.mocked(Core.AuthController.bootstrapWithDelay).mockRejectedValue(new Error('Bootstrap failed'));
+      vi.mocked(AuthController.bootstrapWithDelay).mockRejectedValue(new Error('Bootstrap failed'));
 
       render(<CreateProfileForm />);
 
@@ -996,18 +999,17 @@ describe('CreateProfileForm', () => {
       expect(mockSetShowWelcomeDialog).not.toHaveBeenCalled();
 
       // Verify bootstrap was attempted
-      expect(Core.AuthController.bootstrapWithDelay).toHaveBeenCalled();
+      expect(AuthController.bootstrapWithDelay).toHaveBeenCalled();
     });
 
     it('should have access to setShowWelcomeDialog from onboarding store', async () => {
       const mockSetShowWelcomeDialog = vi.fn();
-      const Core = await import('@/core');
 
       // Mock the onboarding store
-      vi.mocked(Core.useOnboardingStore).mockReturnValue({
+      vi.mocked(useOnboardingStore).mockReturnValue({
         setShowWelcomeDialog: mockSetShowWelcomeDialog,
       });
-      vi.mocked(Core.useAuthStore).mockReturnValue({
+      vi.mocked(useAuthStore).mockReturnValue({
         selectCurrentUserPubky: vi.fn(() => 'test-pubky-123'),
       });
 

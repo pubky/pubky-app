@@ -1,15 +1,14 @@
 'use client';
 
 import * as React from 'react';
-import * as Core from '@/core';
 import type { TagsLayout } from './PostMain.types';
-
+import { LAYOUT, type LayoutType } from '@/stores/home/home.types';
 /**
  * Canonical mapping from app layout mode to post tags layout.
  * Surface entry points derive this once, then downstream post renderers inherit it.
  */
-export function getTagsLayoutForSurfaceLayout(layout: Core.LayoutType): TagsLayout {
-  return layout === Core.LAYOUT.WIDE ? 'side' : 'inline';
+export function getTagsLayoutForSurfaceLayout(layout: LayoutType): TagsLayout {
+  return layout === LAYOUT.WIDE ? 'side' : 'inline';
 }
 
 /**

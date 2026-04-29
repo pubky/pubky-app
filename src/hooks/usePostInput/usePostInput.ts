@@ -10,7 +10,6 @@ import { type MDXEditorProps, type MDXEditorMethods } from '@mdxeditor/editor';
 import { useDebounceCallback } from 'usehooks-ts';
 import { useTranslations } from 'next-intl';
 import * as Molecules from '@/molecules';
-import * as Core from '@/core';
 import { useTimelineFeedContext } from '@/organisms/Timeline/Feed/TimelineFeed';
 import { POST_INPUT_VARIANT } from '@/organisms/PostInput/PostInput.constants';
 import { getContentWithMention } from '@/hooks/useMentionAutocomplete/useMentionAutocomplete.utils';
@@ -29,7 +28,7 @@ import {
   ARTICLE_SUPPORTED_ATTACHMENT_MIME_TYPES,
   ARTICLE_TITLE_MAX_CHARACTER_LENGTH,
 } from '@/config';
-
+import { useLocalFilesStore } from '@/stores/localFiles/localFiles.store';
 /**
  * Hook that encapsulates all PostInput logic.
  *
@@ -201,7 +200,7 @@ export function usePostInput({
           return { type: a.type, name: a.name, urls: { main: url, feed: isImage ? url : undefined } };
         });
 
-        Core.useLocalFilesStore.getState().setPostAttachments(createdPostId, localAttachments);
+        useLocalFilesStore.getState().setPostAttachments(createdPostId, localAttachments);
       }
 
       // Only prepend to timeline for posts and reposts, not replies or edits

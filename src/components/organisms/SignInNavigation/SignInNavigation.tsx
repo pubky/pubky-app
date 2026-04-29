@@ -5,11 +5,10 @@ import { useRouter } from 'next/navigation';
 import * as Atoms from '@/atoms';
 import * as Organisms from '@/organisms';
 import * as App from '@/app';
-import * as Core from '@/core';
-
+import { useSignInStore } from '@/stores/signIn/signIn.store';
 export const SignInNavigation = () => {
   const router = useRouter();
-  const authUrlResolved = Core.useSignInStore((state) => state.authUrlResolved);
+  const authUrlResolved = useSignInStore((state) => state.authUrlResolved);
 
   if (authUrlResolved) return null;
 

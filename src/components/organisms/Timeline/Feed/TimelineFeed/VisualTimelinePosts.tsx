@@ -9,7 +9,6 @@ import { useUserDetails } from '@/hooks/useUserDetails/useUserDetails';
 import { useViewportObserver } from '@/hooks/useViewportObserver/useViewportObserver';
 import * as React from 'react';
 import * as Atoms from '@/atoms';
-import * as Core from '@/core';
 import * as Molecules from '@/molecules';
 import * as Organisms from '@/organisms';
 import { useVisualFeedTiles } from './useVisualFeedTiles';
@@ -28,7 +27,8 @@ import type {
   VisualTimelineTileProps,
   VisualTileVideoProps,
 } from './VisualTimelinePosts.types';
-
+import { TagKind } from '@/application/tag/tag.types';
+import { parseCompositeId } from '@/models/models.utils';
 function stopPropagation(event: React.SyntheticEvent) {
   event.stopPropagation();
 }
@@ -105,7 +105,7 @@ function VisualTileImage({ tile }: VisualTileImageProps) {
 }
 
 function VisualTimelineTileOverlay({ tile, size, onReplyClick, onRepostClick }: VisualTimelineTileOverlayProps) {
-  const userId = React.useMemo(() => Core.parseCompositeId(tile.postId).pubky, [tile.postId]);
+  const userId = React.useMemo(() => parseCompositeId(tile.postId).pubky, [tile.postId]);
   const { userDetails } = useUserDetails(userId);
   const avatarUrl = useAvatarUrl(userDetails);
   const { formatRelativeTime } = useRelativeTime();
@@ -185,7 +185,7 @@ function VisualTimelineTileOverlay({ tile, size, onReplyClick, onRepostClick }: 
       >
         <Organisms.ClickableTagsList
           taggedId={tile.postId}
-          taggedKind={Core.TagKind.POST}
+          taggedKind={TagKind.POST}
           showCount={true}
           showInput={tagsExpanded}
           showAddButton={!tagsExpanded}

@@ -9,7 +9,6 @@ import { useMutedUsers } from '@/hooks/useMutedUsers/useMutedUsers';
 import { usePostDetails } from '@/hooks/usePostDetails/usePostDetails';
 import { useUserProfile } from '@/hooks/useUserProfile/useUserProfile';
 import { useTranslations } from 'next-intl';
-import * as Core from '@/core';
 import * as Molecules from '@/molecules';
 import { POST_ROUTES } from '@/app/routes';
 import { POST_MENU_ACTION_IDS, POST_MENU_ACTION_VARIANTS } from './usePostMenuActions.constants';
@@ -45,6 +44,8 @@ import {
   Edit,
   Trash,
 } from 'lucide-react';
+import type { Pubky } from '@/models/models.types';
+import { parseCompositeId } from '@/models/models.utils';
 export function usePostMenuActions(postId: string, options: UsePostMenuActionsOptions): UsePostMenuActionsResult {
   const t = useTranslations('post.actions');
   const tToast = useTranslations('toast');
@@ -52,10 +53,10 @@ export function usePostMenuActions(postId: string, options: UsePostMenuActionsOp
   const tCopy = useTranslations('toast.copy');
   const tFollow = useTranslations('toast.follow');
   const { onReportClick, onEditClick, onDeleteClick, isDeleting = false } = options;
-  const parsedId = Core.parseCompositeId(postId);
+  const parsedId = parseCompositeId(postId);
   // Normalize author ID to ensure consistent format (strip pubky: or pk: prefix)
   // This is necessary because composite IDs may contain prefixed pubky IDs
-  const postAuthorId = stripPubkyPrefix(parsedId.pubky) as Core.Pubky;
+  const postAuthorId = stripPubkyPrefix(parsedId.pubky) as Pubky;
   const { currentUserPubky } = useCurrentUserProfile();
   const { postDetails, isLoading: isPostLoading } = usePostDetails(postId);
   const { profile: authorProfile, isLoading: isAuthorLoading } = useUserProfile(postAuthorId);

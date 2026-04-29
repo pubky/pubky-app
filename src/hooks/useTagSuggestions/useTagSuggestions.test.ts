@@ -12,8 +12,8 @@ const { mockGetTagsByPrefix } = vi.hoisted(() => {
   };
 });
 
-// Mock Core
-vi.mock('@/core', () => ({
+// Mock dependencies
+vi.mock('@/controllers/search/search', () => ({
   SearchController: {
     getTagsByPrefix: (...args: unknown[]) => mockGetTagsByPrefix(...args),
   },

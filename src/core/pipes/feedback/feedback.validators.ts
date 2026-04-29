@@ -1,9 +1,8 @@
 import * as Config from '@/config';
-import * as Core from '@/core';
 import { ValidationErrorCode } from '@/libs/error/error.codes';
 import { Err } from '@/libs/error/error.factories';
 import { ErrorService } from '@/libs/error/error.types';
-
+import type { Pubky } from '@/models/models.types';
 export class FeedbackValidators {
   private constructor() {}
 
@@ -15,7 +14,7 @@ export class FeedbackValidators {
    * @returns Normalized pubky (trimmed)
    * @throws AppError if pubky is invalid
    */
-  static validatePubky(pubky: string | undefined | null): Core.Pubky {
+  static validatePubky(pubky: string | undefined | null): Pubky {
     if (!pubky || pubky.trim() === '') {
       throw Err.validation(ValidationErrorCode.MISSING_FIELD, 'Pubky is required and must be a non-empty string', {
         service: ErrorService.NextJsServer,
@@ -23,7 +22,7 @@ export class FeedbackValidators {
         context: { field: 'pubky' },
       });
     }
-    return pubky.trim() as Core.Pubky;
+    return pubky.trim() as Pubky;
   }
 
   /**

@@ -92,7 +92,7 @@ class MuteFilter {
 
 ### Deleted Post Filtering
 
-Deleted posts (content === `Core.DELETED`) are also filtered from streams. This filtering:
+Deleted posts (content === `DELETED`) are also filtered from streams. This filtering:
 
 1. **Chains with mute filtering**: Mute filter runs first (sync), then deleted filter (async)
 2. **Fails open**: Posts without cached details are kept (avoids hiding valid posts)
@@ -131,7 +131,7 @@ const { posts } = await postStreamQueue.collect(streamId, {
 
 ```typescript
 // From a React component, use the controller layer:
-import { MuteController } from '@/core/controllers/mute/mute';
+import { MuteController } from '@/controllers/mute/mute';
 
 // Mute a user
 await MuteController.commitMute('mute', { muter: currentUserId, mutee: targetUserId });
@@ -146,7 +146,7 @@ const mutedUsers = await MuteController.getMutedUsers();
 **Checking mute status** for UI display (e.g., showing "Muted" badge):
 
 ```typescript
-import { UserController } from '@/core/controllers/user/user';
+import { UserController } from '@/controllers/user/user';
 
 const relationship = await UserController.getRelationships({ userId: targetUserId });
 const isMuted = relationship?.muted ?? false;
@@ -160,7 +160,7 @@ const isMuted = relationship?.muted ?? false;
 
 ```typescript
 // Access muted users list from settings store
-import { useSettingsStore } from '@/core/stores/settings/settings.store';
+import { useSettingsStore } from '@/stores/settings/settings.store';
 
 const mutedUsers = useSettingsStore((state) => state.muted);
 ```

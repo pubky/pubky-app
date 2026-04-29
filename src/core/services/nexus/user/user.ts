@@ -1,5 +1,14 @@
-import * as Core from '@/core';
-
+import type {
+  NexusNotification,
+  NexusTag,
+  NexusTaggers,
+  NexusUserCounts,
+  NexusUserDetails,
+  TUserId,
+} from '@/services/nexus/nexus.types';
+import { queryNexus } from '@/services/nexus/nexus.utils';
+import { userApi } from '@/services/nexus/user/user.api';
+import type { TUserPaginationParams, TUserTaggersParams, TUserTagsParams } from '@/services/nexus/user/user.types';
 /**
  * Nexus User Service
  *
@@ -12,9 +21,9 @@ export class NexusUserService {
    * @param pubky - User's public key
    * @returns user data (users, posts, streams)
    */
-  static async notifications(params: Core.TUserPaginationParams): Promise<Core.NexusNotification[]> {
-    const url = Core.userApi.notifications(params);
-    return await Core.queryNexus<Core.NexusNotification[]>({ url });
+  static async notifications(params: TUserPaginationParams): Promise<NexusNotification[]> {
+    const url = userApi.notifications(params);
+    return await queryNexus<NexusNotification[]>({ url });
   }
 
   /**
@@ -23,9 +32,9 @@ export class NexusUserService {
    * @param params - Parameters containing user ID and pagination options
    * @returns Array of tags assigned to the user
    */
-  static async tags(params: Core.TUserTagsParams): Promise<Core.NexusTag[]> {
-    const url = Core.userApi.tags(params);
-    return await Core.queryNexus<Core.NexusTag[]>({ url });
+  static async tags(params: TUserTagsParams): Promise<NexusTag[]> {
+    const url = userApi.tags(params);
+    return await queryNexus<NexusTag[]>({ url });
   }
 
   /**
@@ -34,9 +43,9 @@ export class NexusUserService {
    * @param params - Parameters containing user ID, label, and pagination options
    * @returns Array of users who tagged the user with the specified label
    */
-  static async taggers(params: Core.TUserTaggersParams): Promise<Core.NexusTaggers[]> {
-    const url = Core.userApi.taggers(params);
-    return await Core.queryNexus<Core.NexusTaggers[]>({ url });
+  static async taggers(params: TUserTaggersParams): Promise<NexusTaggers[]> {
+    const url = userApi.taggers(params);
+    return await queryNexus<NexusTaggers[]>({ url });
   }
 
   /**
@@ -45,9 +54,9 @@ export class NexusUserService {
    * @param params - Parameters containing user ID
    * @returns User details including name, bio, status, image, and links
    */
-  static async details(params: Core.TUserId): Promise<Core.NexusUserDetails> {
-    const url = Core.userApi.details(params);
-    return await Core.queryNexus<Core.NexusUserDetails>({ url });
+  static async details(params: TUserId): Promise<NexusUserDetails> {
+    const url = userApi.details(params);
+    return await queryNexus<NexusUserDetails>({ url });
   }
 
   /**
@@ -56,8 +65,8 @@ export class NexusUserService {
    * @param params - Parameters containing user ID
    * @returns User counts including followers, following, and friends
    */
-  static async counts(params: Core.TUserId): Promise<Core.NexusUserCounts> {
-    const url = Core.userApi.counts(params);
-    return await Core.queryNexus<Core.NexusUserCounts>({ url });
+  static async counts(params: TUserId): Promise<NexusUserCounts> {
+    const url = userApi.counts(params);
+    return await queryNexus<NexusUserCounts>({ url });
   }
 }
