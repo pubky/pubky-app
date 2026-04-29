@@ -28,7 +28,7 @@ const {
   };
 });
 
-// Mock Core
+// Mock dependencies
 vi.mock('@/controllers/post/post', () => ({
   PostController: {
     commitCreate: mockPostControllerCreate,

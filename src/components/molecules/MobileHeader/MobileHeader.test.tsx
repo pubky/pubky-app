@@ -11,7 +11,7 @@ vi.mock('@/molecules', () => ({
   ),
 }));
 
-// Mock Core - component now uses useAuthStore directly for isAuthenticated
+// Mock auth store - component uses useAuthStore directly for isAuthenticated
 vi.mock('@/stores/auth/auth.store', () => ({
   useAuthStore: vi.fn((selector) => {
     const state = {

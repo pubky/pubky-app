@@ -15,7 +15,7 @@ vi.mock('@/providers', () => ({
   })),
 }));
 
-// Mock Core
+// Mock dependencies
 vi.mock('@/stores/auth/auth.store', () => ({
   useAuthStore: vi.fn((selector) => {
     const state = { currentUserPubky: 'current-user-123' };

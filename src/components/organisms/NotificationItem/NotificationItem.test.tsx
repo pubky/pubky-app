@@ -32,7 +32,7 @@ vi.mock('@/libs/logger/logger', async () => {
   };
 });
 
-// Mock Core module
+// Mock dependencies
 vi.mock('@/controllers/profile/profile', () => ({
   ProfileController: {
     read: vi.fn(() => Promise.resolve(null)),

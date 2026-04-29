@@ -796,7 +796,7 @@ describe('CreateProfileForm', () => {
       expect(profileNavigation).toBeInTheDocument();
     });
 
-    it('should test Core module integration exists', async () => {
+    it('should expose controller and validator integrations', async () => {
       // Verify that the mocked functions exist
       expect(typeof ProfileController.commitCreate).toBe('function');
       expect(typeof FileController.commitCreate).toBe('function');

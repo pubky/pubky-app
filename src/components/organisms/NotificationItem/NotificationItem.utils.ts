@@ -66,7 +66,7 @@ export function getUserIdFromNotification(notification: FlatNotification): strin
 
 /**
  * Convert a pubky URI or composite ID to a URL path format (userId/postId).
- * Uses Core's buildCompositeIdFromPubkyUri and parseCompositeId utilities.
+ * Uses shared composite ID utilities.
  * Supports:
  * - pubky:// URI format: pubky://userId/pub/pubky.app/posts/postId
  * - Composite ID format: userId:postId
@@ -223,7 +223,7 @@ export function getPostUriFromNotification(notification: FlatNotification): stri
 
 /**
  * Convert a pubky URI to a composite ID format.
- * Uses Core's buildCompositeIdFromPubkyUri utility.
+ * Uses the shared buildCompositeIdFromPubkyUri utility.
  * URI format: pubky://userId/pub/pubky.app/posts/postId
  * Composite format: userId:postId
  */
@@ -233,7 +233,7 @@ export function pubkyUriToCompositeId(uri: string): string | null {
     return uri;
   }
 
-  // Use Core function to convert URI to composite ID
+  // Use the shared utility to convert URI to composite ID
   return buildCompositeIdFromPubkyUri({ uri, domain: CompositeIdDomain.POSTS });
 }
 

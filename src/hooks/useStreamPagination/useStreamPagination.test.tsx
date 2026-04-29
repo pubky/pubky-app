@@ -5,7 +5,7 @@ import { StreamPostsController } from '@/controllers/stream/posts/posts';
 import { PostDetailsModel } from '@/models/post/details/postDetails';
 import type { PostStreamId } from '@/models/stream/post/postStream.types';
 import { sortPostIdsByTimestamp } from '@/utils/sorting';
-// Mock Core modules
+// Mock dependencies
 vi.mock('@/controllers/stream/posts/posts', () => ({
   StreamPostsController: {
     getCachedLastPostTimestamp: vi.fn(),

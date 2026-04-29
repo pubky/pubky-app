@@ -23,7 +23,7 @@ vi.mock('dexie-react-hooks', () => ({
   }),
 }));
 
-// Mock Core
+// Mock dependencies
 vi.mock('@/controllers/stream/posts/posts', () => ({
   StreamPostsController: {
     getUnreadStream: vi.fn(() => Promise.resolve(mockUnreadStream.current)),

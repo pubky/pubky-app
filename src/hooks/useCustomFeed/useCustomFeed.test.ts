@@ -24,7 +24,7 @@ vi.mock('next/navigation', () => ({
   useParams: () => mockUseParams(),
 }));
 
-// Mock Core (FeedController + Logger)
+// Mock FeedController and Logger
 vi.mock('@/controllers/feed/feed', () => ({
   FeedController: {
     get: vi.fn(),

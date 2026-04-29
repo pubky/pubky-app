@@ -41,7 +41,7 @@ vi.mock('dexie-react-hooks', () => ({
   }),
 }));
 
-// Mock Core
+// Mock dependencies
 vi.mock('@/controllers/search/search', () => ({
   SearchController: {
     getTagsByPrefix: (...args: unknown[]) => mockGetTagsByPrefix(...args),

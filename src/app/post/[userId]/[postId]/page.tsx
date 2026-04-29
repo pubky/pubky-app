@@ -46,7 +46,7 @@ export async function generateMetadata({ params }: PostPageProps): Promise<NextM
   try {
     const { userId, postId } = await params;
 
-    // fetch user and post information concurrently using Core URL builders
+    // Fetch user and post information concurrently using Nexus URL builders
     const [user, post] = await Promise.all([
       fetchWithValidation<NexusUserDetails>(userApi.details({ user_id: userId }), 'fetchUserDetails'),
       fetchWithValidation<NexusPostDetails>(

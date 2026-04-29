@@ -150,7 +150,7 @@ vi.mock('@/organisms', async (importOriginal) => {
   };
 });
 
-// Mock core with importOriginal to preserve all exports
+// Mock dependencies
 vi.mock('@/stores/localFiles/localFiles.store', () => ({
   useLocalFilesStore: vi.fn(),
 }));

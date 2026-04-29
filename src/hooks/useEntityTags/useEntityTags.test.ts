@@ -53,7 +53,7 @@ vi.mock('../usePostTags/usePostTags', () => ({
   usePostTags: vi.fn(() => mockUsePostTagsResult),
 }));
 
-// Mock Core auth store
+// Mock auth store
 vi.mock('@/stores/auth/auth.store', () => ({
   useAuthStore: vi.fn((selector) => {
     const mockState = {

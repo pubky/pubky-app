@@ -24,7 +24,7 @@ vi.mock('dexie-react-hooks', () => ({
   useLiveQuery: (...args: unknown[]) => mockUseLiveQuery(...args),
 }));
 
-// Mock Core - including stores for local avatar resolution
+// Mock stores for local avatar resolution
 const mockGetModerationStatus = vi.fn();
 const mockUnblur = vi.fn();
 const mockUseAuthStore = vi.fn();

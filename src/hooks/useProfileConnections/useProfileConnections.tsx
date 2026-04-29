@@ -26,7 +26,7 @@ export { CONNECTION_TYPE } from './useProfileConnections.types';
  * useProfileConnections
  *
  * Hook for fetching and managing profile connections (followers, following, friends).
- * Uses Core StreamUserController for pagination and Dexie for reactive user details.
+ * Uses StreamUserController for pagination and Dexie for reactive user details.
  *
  * @param type - Type of connections to fetch: 'followers', 'following', or 'friends'
  * @param userId - Optional user ID (defaults to current authenticated user)

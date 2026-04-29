@@ -11,7 +11,7 @@ vi.mock('next/navigation', () => ({
   useRouter: () => mockUseRouter(),
 }));
 
-// Mock Core - use selector pattern (component calls useAuthStore with selector function)
+// Mock auth store - use selector pattern (component calls useAuthStore with selector function)
 let mockCurrentUserPubky: string | null = null;
 // Mock dexie-react-hooks
 vi.mock('dexie-react-hooks', () => ({

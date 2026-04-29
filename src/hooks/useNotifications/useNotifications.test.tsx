@@ -21,7 +21,7 @@ const { mockCurrentUserPubky, setMockCurrentUserPubky, mockUnreadCount, setMockU
   };
 });
 
-// Mock Core
+// Mock dependencies
 vi.mock('@/controllers/notification/notification', () => ({
   NotificationController: {
     getOrFetchNotifications: vi.fn(() =>

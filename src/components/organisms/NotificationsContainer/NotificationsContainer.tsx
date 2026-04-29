@@ -10,7 +10,7 @@ import { NotificationsContainerSkeleton, NotificationsLoadMoreSkeleton } from '.
 
 /**
  * Organism that handles all notification business logic:
- * - Fetching notifications via Core
+ * - Fetching notifications via useNotifications
  * - Marking as read
  * - Infinite scroll pagination
  * - Loading/error/empty states

@@ -65,7 +65,7 @@ export function TimelineFeedWithStream({
 /**
  * TimelineFeedContent
  *
- * Core component that manages stream pagination, muting, pull-to-refresh,
+ * Primary component that manages stream pagination, muting, pull-to-refresh,
  * and provides the TimelineFeedContext to children.
  *
  * The outermost Atoms.Container carries the containerRef so that pull-to-refresh

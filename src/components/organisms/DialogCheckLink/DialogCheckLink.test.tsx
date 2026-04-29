@@ -139,7 +139,7 @@ vi.mock('@/atoms', () => ({
   ),
 }));
 
-// Mock core - mock useSettingsStore
+// Mock settings store
 const mockSetShowConfirm = vi.fn();
 vi.mock('@/stores/settings/settings.store', () => ({
   useSettingsStore: () => ({

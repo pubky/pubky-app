@@ -38,7 +38,7 @@ vi.mock('qrcode.react', () => ({
   ),
 }));
 
-// Mock Core modules
+// Mock dependencies
 const { onboardingState } = vi.hoisted(() => ({
   onboardingState: { inviteCode: 'A9KM-7MJP-ERM9' },
 }));

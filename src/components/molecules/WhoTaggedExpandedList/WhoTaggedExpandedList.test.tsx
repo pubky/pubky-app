@@ -35,7 +35,7 @@ vi.mock('@/hooks/useBulkUserAvatars/useBulkUserAvatars', () => ({
   })),
 }));
 
-// Mock core auth store
+// Mock auth store
 vi.mock('@/stores/auth/auth.store', () => ({
   useAuthStore: vi.fn(() => ({
     currentUserPubky: 'current-user-pubky',

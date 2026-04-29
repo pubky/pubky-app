@@ -92,7 +92,7 @@ vi.mock('@/atoms', () => ({
   Skeleton: ({ className }: { className?: string }) => <div data-testid="skeleton" className={className} />,
 }));
 
-// Mock core
+// Mock dependencies
 vi.mock('@/stores/auth/auth.store', () => ({
   useAuthStore: vi.fn((selector) => {
     const mockState = {

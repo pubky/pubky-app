@@ -18,7 +18,7 @@ const USERS_LIMIT = 3;
  * Sidebar section showing recommended users to follow.
  * Uses SidebarSection and UserListItem for consistent layout.
  *
- * Note: This is an Organism because it interacts with Core via hooks (useUserStream, useFollowUser).
+ * Note: This is an Organism because it interacts with data hooks (useUserStream, useFollowUser).
  */
 export function WhoToFollowSidebar() {
   const t = useTranslations('sidebar');

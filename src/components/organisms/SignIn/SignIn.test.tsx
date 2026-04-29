@@ -57,7 +57,7 @@ const resetMockSignInState = () => {
   };
 };
 
-// Mock Core modules
+// Mock dependencies
 vi.mock('@/stores/onboarding/onboarding.store', () => ({
   useOnboardingStore: {
     getState: vi.fn().mockReturnValue({

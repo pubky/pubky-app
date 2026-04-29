@@ -7,7 +7,7 @@ import { useInfiniteScroll } from '@/hooks/useInfiniteScroll/useInfiniteScroll';
 import { useUserStream } from '@/hooks/useUserStream/useUserStream';
 import { asOpaque } from '@/test-utils';
 import type { Pubky } from '@/models/models.types';
-// Mock Core
+// Mock dependencies
 vi.mock('@/stores/auth/auth.store', () => ({
   useAuthStore: vi.fn((selector) => {
     const state = { currentUserPubky: 'current-user-123' as Pubky };

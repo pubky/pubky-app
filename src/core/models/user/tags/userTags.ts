@@ -3,7 +3,6 @@ import { db } from '@/database/franky/franky';
 import type { Pubky } from '@/models/models.types';
 import type { TagCollectionModelSchema } from '@/models/shared/tag/tag.schema';
 import { TagCollection } from '@/models/shared/tag/tagCollection';
-// TODO: If we use export * as Core, it happens a circular dependency error
 
 export type UserTagsModelSchema = TagCollectionModelSchema<Pubky>;
 

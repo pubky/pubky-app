@@ -16,7 +16,7 @@ const { mockFetchTags, mockToast, mockAuthStoreSelector } = vi.hoisted(() => ({
   },
 }));
 
-// Mock Core module
+// Mock dependencies
 vi.mock('@/stores/auth/auth.store', () => ({
   useAuthStore: vi.fn(mockAuthStoreSelector('mock-user-id')),
 }));

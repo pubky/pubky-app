@@ -32,7 +32,7 @@ const {
   mockUseCopyToClipboard: vi.fn(),
 }));
 
-// Mock Core
+// Mock dependencies
 vi.mock('@/models/models.utils', () => ({
   parseCompositeId: (id: string) => mockParseCompositeId(id),
 }));

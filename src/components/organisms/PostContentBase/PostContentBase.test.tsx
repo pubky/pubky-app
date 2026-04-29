@@ -18,7 +18,7 @@ vi.mock('@/hooks/usePostDetails/usePostDetails', () => ({
   usePostDetails: vi.fn(),
 }));
 
-// Mock core - useLocalFilesStore
+// Mock local files store
 vi.mock('@/stores/localFiles/localFiles.store', () => ({
   useLocalFilesStore: vi.fn(),
 }));

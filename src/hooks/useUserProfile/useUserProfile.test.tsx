@@ -29,7 +29,7 @@ vi.mock('dexie-react-hooks', () => ({
   }),
 }));
 
-// Mock Core controllers and services
+// Mock controllers and services
 vi.mock('@/controllers/user/user', () => ({
   UserController: {
     getDetails: mockMocks.mockGetDetails,

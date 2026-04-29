@@ -88,7 +88,7 @@ vi.mock('@/hooks/useTagged/useTagged', () => ({
   })),
 }));
 
-// Mock Core controllers
+// Mock controllers
 vi.mock('@/controllers/user/user', () => ({
   UserController: {
     getCounts: vi.fn().mockImplementation(() => Promise.resolve(mockUserCounts.current)),

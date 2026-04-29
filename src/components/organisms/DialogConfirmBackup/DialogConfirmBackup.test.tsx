@@ -2,7 +2,7 @@ import { describe, it, expect, vi } from 'vitest';
 import { render } from '@testing-library/react';
 import { DialogConfirmBackup } from './DialogConfirmBackup';
 
-// Mock Core module
+// Mock dependencies
 vi.mock('@/stores/onboarding/onboarding.store', () => ({
   useOnboardingStore: vi.fn(() => ({
     clearSecrets: vi.fn(),

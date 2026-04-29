@@ -137,7 +137,7 @@ vi.mock('@/atoms', () => ({
   ),
 }));
 
-// Mock core
+// Mock dependencies
 const mockSetKeypair = vi.fn();
 const mockSetMnemonic = vi.fn();
 const { mockUseOnboardingStore, mockUseAuthStore, mockProfileController } = vi.hoisted(() => ({

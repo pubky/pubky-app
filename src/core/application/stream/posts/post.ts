@@ -375,7 +375,7 @@ export class PostStreamApplication {
   }
 
   /**
-   * Core logic for fetching original posts by their URIs.
+   * Shared logic for fetching original posts by their URIs.
    * Converts URIs to IDs, checks cache, fetches missing posts from Nexus, and persists them.
    * This method is public to allow reuse by TtlApplication for refreshing repost originals.
    * @param repostedUris - Array of pubky URIs pointing to original posts

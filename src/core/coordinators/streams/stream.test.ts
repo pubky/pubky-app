@@ -830,7 +830,7 @@ describe('StreamCoordinator', () => {
     });
   });
 
-  describe('Core Polling Behavior', () => {
+  describe('Main Polling Behavior', () => {
     it('polls on interval when started', async () => {
       const { getOrFetchStreamSliceSpy, coordinator } = setupIntegrationTest();
       coordinator.configure({ pollOnStart: false, intervalMs: 1_000 } as Partial<CoordinatorConfigWithBase>);

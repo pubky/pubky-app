@@ -24,7 +24,7 @@ const mockMocks = vi.hoisted(() => {
   };
 });
 
-// Mock Core modules
+// Mock dependencies
 vi.mock('@/controllers/user/user', () => ({
   UserController: {
     getTags: mockMocks.mockGetTags,

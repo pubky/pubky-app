@@ -13,7 +13,7 @@ vi.mock('dexie-react-hooks', () => ({
   useLiveQuery: (...args: unknown[]) => mockUseLiveQuery(...args),
 }));
 
-// Mock Core
+// Mock dependencies
 vi.mock('@/controllers/stream/users/users', () => ({
   StreamUserController: {
     getOrFetchStreamSlice: (...args: unknown[]) => mockGetOrFetchStreamSlice(...args),

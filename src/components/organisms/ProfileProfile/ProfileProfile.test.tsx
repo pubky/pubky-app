@@ -11,7 +11,7 @@ vi.mock('next/navigation', () => ({
   })),
 }));
 
-// Mock Core
+// Mock dependencies
 vi.mock('@/stores/auth/auth.store', () => ({
   useAuthStore: vi.fn(() => ({
     currentUserPubky: 'pubky1QX7GKW3abcdef1234567890',

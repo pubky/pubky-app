@@ -19,7 +19,7 @@ const USERS_LIMIT = 3;
  * Sidebar section showing active users (influencers) with their post/tag counts.
  * Uses SidebarSection and UserListItem for consistent layout.
  *
- * Note: This is an Organism because it interacts with Core via hooks (useUserStream, useFollowUser).
+ * Note: This is an Organism because it interacts with data hooks (useUserStream, useFollowUser).
  */
 export function ActiveUsers() {
   const t = useTranslations('sidebar');

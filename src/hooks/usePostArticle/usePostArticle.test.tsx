@@ -10,7 +10,7 @@ vi.mock('@/molecules', () => ({
   useToast: () => ({ toast: mockToast }),
 }));
 
-// Mock core
+// Mock dependencies
 vi.mock('@/controllers/file/file', () => ({
   FileController: {
     getMetadata: vi.fn(),

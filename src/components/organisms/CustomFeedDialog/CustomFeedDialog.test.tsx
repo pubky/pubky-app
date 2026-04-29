@@ -75,7 +75,7 @@ vi.mock('@/molecules', () => ({
   ),
 }));
 
-// Mock core
+// Mock dependencies
 const mockCommitCreate = vi.fn();
 const mockCommitUpdate = vi.fn();
 const mockCommitDelete = vi.fn();

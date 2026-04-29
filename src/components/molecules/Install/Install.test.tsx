@@ -19,7 +19,7 @@ vi.mock('next/navigation', () => ({
   }),
 }));
 
-// Mock Core
+// Mock dependencies
 const mockReset = vi.fn();
 vi.mock('@/stores/onboarding/onboarding.store', () => ({
   useOnboardingStore: () => ({

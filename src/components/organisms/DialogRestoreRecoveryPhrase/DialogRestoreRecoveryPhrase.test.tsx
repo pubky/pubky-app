@@ -83,7 +83,7 @@ vi.mock('@/atoms', () => ({
   )),
 }));
 
-// Mock Core module
+// Mock dependencies
 vi.mock('@/controllers/auth/auth', () => ({
   AuthController: {
     loginWithMnemonic: vi.fn(),

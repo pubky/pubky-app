@@ -27,7 +27,7 @@ vi.mock('dexie-react-hooks', () => ({
   }),
 }));
 
-// Mock Core
+// Mock dependencies
 const mockGetRelationships = vi.fn();
 const mockFetch = vi.fn().mockResolvedValue({ id: 'mock-post' });
 vi.mock('@/controllers/post/post', () => ({

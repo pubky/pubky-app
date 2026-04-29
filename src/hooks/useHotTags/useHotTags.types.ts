@@ -1,8 +1,4 @@
-import type {
-  NexusHotTag as NexusHotTagCore,
-  UserStreamReach,
-  UserStreamTimeframe,
-} from '@/services/nexus/nexus.types';
+import type { NexusHotTag, UserStreamReach, UserStreamTimeframe } from '@/services/nexus/nexus.types';
 export interface HotTag {
   name: string;
   count: number;
@@ -23,7 +19,7 @@ export interface UseHotTagsResult {
   /** Array of hot tags (simplified format) */
   tags: HotTag[];
   /** Array of raw hot tags (full NexusHotTag format, only when raw=true) */
-  rawTags: NexusHotTagCore[];
+  rawTags: NexusHotTag[];
   /** Whether the hook is currently loading data */
   isLoading: boolean;
   /** Error message if fetch failed */
@@ -32,4 +28,4 @@ export interface UseHotTagsResult {
   refetch: () => Promise<void>;
 }
 
-export type NexusHotTag = NexusHotTagCore;
+export type { NexusHotTag };

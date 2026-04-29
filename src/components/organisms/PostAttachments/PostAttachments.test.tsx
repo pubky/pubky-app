@@ -35,7 +35,7 @@ vi.mock('@/atoms', () => ({
   ),
 }));
 
-// Mock core
+// Mock dependencies
 vi.mock('@/controllers/file/file', () => ({
   FileController: {
     getMetadata: vi.fn(),

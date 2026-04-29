@@ -6,7 +6,7 @@ import { asOpaque, mockAuthStore } from '@/test-utils';
 import { useProfileHeader } from '@/hooks/useProfileHeader/useProfileHeader';
 import { useAuthStore } from '@/stores/auth/auth.store';
 import type { AuthStore } from '@/stores/auth/auth.types';
-// Mock Core
+// Mock dependencies
 const mockCurrentUserPubky = 'user123';
 const mockAuthStoreState = {
   currentUserPubky: mockCurrentUserPubky,

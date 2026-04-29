@@ -5,7 +5,7 @@ import { mockAuthStore } from '@/test-utils';
 import { BookmarkController } from '@/controllers/bookmark/bookmark';
 import type { Pubky } from '@/models/models.types';
 import { useAuthStore } from '@/stores/auth/auth.store';
-// Mock Core
+// Mock dependencies
 vi.mock('@/stores/auth/auth.store', () => ({
   useAuthStore: vi.fn(),
 }));

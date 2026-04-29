@@ -71,7 +71,7 @@ vi.mock('@/organisms', () => ({
   ),
 }));
 
-// Mock core
+// Mock dependencies
 vi.mock('@/models/user/users.helpers', () => ({
   generateTestUserId: vi.fn((index: number) => `test-user-${index}`),
 }));

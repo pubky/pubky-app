@@ -66,7 +66,7 @@ vi.mock('@/hooks/useIsMobile/useIsMobile', () => ({
   useIsMobile: () => false,
 }));
 
-// Mock core
+// Mock dependencies
 const mockAddUser = vi.fn();
 const mockAddTag = vi.fn();
 const mockSetActiveTags = vi.fn();
@@ -244,7 +244,7 @@ describe('SearchInput', () => {
       activeTags: [],
       isReadOnly: false,
     });
-    // Reset core mock
+    // Reset dependency mocks
     vi.mocked(useSearchStore).mockReturnValue({
       activeTags: [],
       setActiveTags: mockSetActiveTags,

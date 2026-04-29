@@ -3,7 +3,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { useDeletePost } from './useDeletePost';
 import * as Organisms from '@/organisms';
 import { PostController } from '@/controllers/post/post';
-// Mock Core
+// Mock dependencies
 const mockDelete = vi.fn();
 const mockGetPostDetails = vi.fn();
 vi.mock('@/controllers/post/post', () => ({
