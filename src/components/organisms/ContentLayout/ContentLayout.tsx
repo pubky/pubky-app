@@ -16,8 +16,8 @@ import { cn } from '@/libs/utils/utils';
  * from the center column when viewport height is limited.
  */
 function StickySidebar({ children }: Types.StickySidebarProps) {
-  const stickyTop = Config.LAYOUT.HEADER_OFFSET_MAIN;
-  const sidebarMaxHeight = `calc(100svh - ${stickyTop}px - ${Config.LAYOUT.SIDEBAR_BOTTOM_OFFSET}px)`;
+  const stickyTop = Config.LAYOUT_DIMENSIONS.HEADER_OFFSET_MAIN;
+  const sidebarMaxHeight = `calc(100svh - ${stickyTop}px - ${Config.LAYOUT_DIMENSIONS.SIDEBAR_BOTTOM_OFFSET}px)`;
 
   return (
     <Atoms.Container

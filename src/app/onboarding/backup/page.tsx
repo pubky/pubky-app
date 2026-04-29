@@ -7,5 +7,5 @@ export const metadata = Molecules.Metadata({
 });
 
 export default function BackupPage() {
-  return <Templates.Backup />;
+  return <Templates.BackupPage />;
 }

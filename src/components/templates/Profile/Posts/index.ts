@@ -1,1 +1,1 @@
-export * from './ProfilePagePosts';
+export * from './ProfilePostsPage';

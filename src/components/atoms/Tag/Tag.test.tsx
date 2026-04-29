@@ -12,6 +12,11 @@ describe('Tag', () => {
     expect(screen.getByTestId('tag-count')).toBeInTheDocument();
   });
 
+  it('allows overriding count data-cy selector', () => {
+    render(<Tag name="bitcoin" count={16} countDataCy="post-tag-count" />);
+    expect(screen.getByText('16')).toHaveAttribute('data-cy', 'post-tag-count');
+  });
+
   it('does not render count when not provided', () => {
     render(<Tag name="bitcoin" />);
 

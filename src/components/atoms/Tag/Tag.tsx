@@ -12,6 +12,8 @@ export const Tag = ({
   onClick,
   className,
   'data-testid': dataTestId,
+  'data-cy': dataCy,
+  countDataCy,
   ...props
 }: TagProps) => {
   const [isHovered, setIsHovered] = React.useState(false);
@@ -52,9 +54,15 @@ export const Tag = ({
       onMouseLeave={handleMouseLeave}
       title={name}
       data-testid={dataTestId || 'tag'}
+      data-cy={dataCy || 'tag'}
       {...props}
     >
-      <Atoms.Typography size="sm" className="truncate" data-testid="tag-name">
+      <Atoms.Typography
+        size="sm"
+        className="truncate font-bold"
+        data-testid="tag-name"
+        data-cy={`${dataCy || 'tag'}-name`}
+      >
         {name}
       </Atoms.Typography>
 
@@ -62,8 +70,8 @@ export const Tag = ({
         <Atoms.Typography
           size="sm"
           className="ml-1.5 shrink-0 font-medium text-foreground/50"
-          data-cy="post-tag-count"
           data-testid="tag-count"
+          data-cy={countDataCy || `${dataCy || 'tag'}-count`}
         >
           {count}
         </Atoms.Typography>

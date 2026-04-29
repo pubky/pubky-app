@@ -130,8 +130,8 @@ export function ProfilePageFilterBar({
 
   // Only apply sticky when content fits in viewport
   const { ref, shouldBeSticky } = Hooks.useStickyWhenFits({
-    topOffset: Config.LAYOUT.HEADER_HEIGHT_PROFILE,
-    bottomOffset: Config.LAYOUT.SIDEBAR_BOTTOM_OFFSET,
+    topOffset: Config.LAYOUT_DIMENSIONS.HEADER_HEIGHT_PROFILE,
+    bottomOffset: Config.LAYOUT_DIMENSIONS.SIDEBAR_BOTTOM_OFFSET,
   });
 
   // Handle item click - require auth for unauthenticated users

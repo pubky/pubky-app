@@ -1,20 +1,20 @@
 'use client';
 
 import { useRef, useEffect, useState, useCallback } from 'react';
-import { LAYOUT } from '@/config';
+import { LAYOUT_DIMENSIONS } from '@/config';
 
 interface UseStickyWhenFitsOptions {
   /**
    * Offset from top of viewport (e.g., header height)
    * Should match the CSS variable for header height:
-   * - Profile pages: LAYOUT.HEADER_HEIGHT_PROFILE (146px, --header-height)
-   * - Main content areas: LAYOUT.HEADER_OFFSET_MAIN (144px, --header-offset-main)
-   * Default: LAYOUT.HEADER_OFFSET_MAIN (144px)
+   * - Profile pages: LAYOUT_DIMENSIONS.HEADER_HEIGHT_PROFILE (146px, --header-height)
+   * - Main content areas: LAYOUT_DIMENSIONS.HEADER_OFFSET_MAIN (144px, --header-offset-main)
+   * Default: LAYOUT_DIMENSIONS.HEADER_OFFSET_MAIN (144px)
    */
   topOffset?: number;
   /**
    * Extra padding/margin to account for at bottom
-   * Default: LAYOUT.SIDEBAR_BOTTOM_OFFSET (48px, pb-12 = 3rem)
+   * Default: LAYOUT_DIMENSIONS.SIDEBAR_BOTTOM_OFFSET (48px, pb-12 = 3rem)
    */
   bottomOffset?: number;
   /**
@@ -101,8 +101,8 @@ interface UseStickyWhenFitsResult {
  */
 export function useStickyWhenFits(options: UseStickyWhenFitsOptions = {}): UseStickyWhenFitsResult {
   const {
-    topOffset = LAYOUT.HEADER_OFFSET_MAIN,
-    bottomOffset = LAYOUT.SIDEBAR_BOTTOM_OFFSET,
+    topOffset = LAYOUT_DIMENSIONS.HEADER_OFFSET_MAIN,
+    bottomOffset = LAYOUT_DIMENSIONS.SIDEBAR_BOTTOM_OFFSET,
     debounceMs = 100,
   } = options;
 

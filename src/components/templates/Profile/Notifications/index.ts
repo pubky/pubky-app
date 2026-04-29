@@ -1,1 +1,1 @@
-export * from './ProfilePageNotifications';
+export * from './ProfileNotificationsPage';

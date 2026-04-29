@@ -43,6 +43,24 @@ describe('TagInput', () => {
     expect(screen.getByLabelText('Open emoji picker')).toBeInTheDocument();
   });
 
+  it('uses dashed container chrome by default', () => {
+    const { container } = render(<TagInput onTagAdd={mockOnTagAdd} />);
+    const tagInputContainer = container.querySelector('div.relative');
+
+    expect(tagInputContainer).toHaveClass('border-dashed');
+    expect(tagInputContainer).toHaveClass('shadow-sm');
+    expect(screen.getByLabelText('Open emoji picker')).toHaveClass('shadow-xs-dark');
+  });
+
+  it('removes dashed and shadow chrome in plain variant', () => {
+    const { container } = render(<TagInput onTagAdd={mockOnTagAdd} containerVariant="plain" />);
+    const tagInputContainer = container.querySelector('div.relative');
+
+    expect(tagInputContainer).not.toHaveClass('border-dashed');
+    expect(tagInputContainer).not.toHaveClass('shadow-sm');
+    expect(screen.getByLabelText('Open emoji picker')).not.toHaveClass('shadow-xs-dark');
+  });
+
   it('calls onTagAdd when Enter is pressed with valid tag', async () => {
     render(<TagInput onTagAdd={mockOnTagAdd} />);
     const input = screen.getByPlaceholderText('add tag') as HTMLInputElement;
@@ -127,6 +145,11 @@ describe('TagInput - Snapshots', () => {
 
   it('matches snapshot', () => {
     const { container } = render(<TagInput onTagAdd={mockOnTagAdd} />);
+    expect(container.firstChild).toMatchSnapshot();
+  });
+
+  it('matches snapshot in plain variant', () => {
+    const { container } = render(<TagInput onTagAdd={mockOnTagAdd} containerVariant="plain" />);
     expect(container.firstChild).toMatchSnapshot();
   });
 });

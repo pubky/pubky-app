@@ -29,7 +29,9 @@ export const TagInput = forwardRef<TagInputHandle, TagInputProps>(function TagIn
     excludeFromApiSuggestions = [],
     addOnSuggestionClick = false,
     autoFocus = false,
+    containerVariant = 'dashed',
     className,
+    style,
   },
   ref,
 ) {
@@ -43,6 +45,7 @@ export const TagInput = forwardRef<TagInputHandle, TagInputProps>(function TagIn
   const apiExcludeTags = [...new Set([...excludeFromApiSuggestions, ...existingTagLabels])];
   const isAtLimit = maxTags !== undefined && currentTagsCount >= maxTags;
   const isDisabled = disabled || isAtLimit;
+  const isDashedVariant = containerVariant === 'dashed';
 
   // Use viewerTags for duplicate checking, fallback to existingTags
   const tagsForDuplicateCheck = viewerTags ?? existingTags;
@@ -147,10 +150,13 @@ export const TagInput = forwardRef<TagInputHandle, TagInputProps>(function TagIn
             ref={containerRef}
             overrideDefaults={true}
             className={cn(
-              'relative flex h-8 w-full items-center gap-1 rounded-md border border-dashed border-input pr-1 pl-3 shadow-sm',
+              'relative flex h-8 w-full items-center gap-1 rounded-md pr-1 pl-3',
+              isDashedVariant && 'border border-dashed border-input shadow-sm transition-all duration-300',
               onClick && 'cursor-pointer',
               className,
+              isAtLimit && 'w-40',
             )}
+            style={style}
             onClick={onClick}
           >
             <Atoms.Input
@@ -168,7 +174,7 @@ export const TagInput = forwardRef<TagInputHandle, TagInputProps>(function TagIn
               maxLength={TAG_MAX_LENGTH}
               autoFocus={autoFocus}
               className={cn(
-                'flex-1 bg-transparent p-0 text-sm leading-5 font-bold caret-white',
+                '-mt-0.5 h-full flex-1 bg-transparent p-0 text-sm leading-8 font-bold caret-white',
                 'border-none shadow-none ring-0 outline-none hover:outline-none focus:ring-0 focus:ring-offset-0 focus:outline-none',
                 'placeholder:font-bold',
                 isAtLimit ? 'placeholder:text-destructive' : 'placeholder:text-input',
@@ -182,7 +188,8 @@ export const TagInput = forwardRef<TagInputHandle, TagInputProps>(function TagIn
               onMouseDown={preventBlur}
               onClick={() => setShowEmojiPicker(true)}
               className={cn(
-                'shadow-xs-dark hover:shadow-xs-dark inline-flex size-5 cursor-pointer items-center justify-center rounded-full p-1',
+                'inline-flex size-5 cursor-pointer items-center justify-center rounded-full p-1',
+                isDashedVariant && 'shadow-xs-dark hover:shadow-xs-dark',
                 isDisabled && onClick && 'pointer-events-none',
               )}
               aria-label="Open emoji picker"

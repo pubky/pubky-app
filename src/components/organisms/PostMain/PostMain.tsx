@@ -7,7 +7,7 @@ import * as Atoms from '@/atoms';
 import * as Molecules from '@/molecules';
 import * as Organisms from '@/organisms';
 import type { PostTagsPanelHandle } from '@/organisms';
-import { POST_TAGS_MAX_COUNT, POST_TAGS_MAX_LENGTH, POST_TAGS_MAX_TOTAL_CHARS } from '@/config';
+import { POST_TAGS_MAX_LENGTH, POST_TAGS_MAX_TOTAL_CHARS } from '@/config';
 import { POST_THREAD_CONNECTOR_VARIANTS } from '@/atoms';
 
 import type { PostMainProps } from './PostMain.types';
@@ -139,7 +139,6 @@ export function PostMain({ postId, onClick, className, isReply = false, isLastRe
                       <Organisms.ClickableTagsList
                         taggedId={postId}
                         taggedKind={Core.TagKind.POST}
-                        maxTags={POST_TAGS_MAX_COUNT}
                         maxTagLength={POST_TAGS_MAX_LENGTH}
                         maxTotalChars={POST_TAGS_MAX_TOTAL_CHARS}
                         showCount={true}

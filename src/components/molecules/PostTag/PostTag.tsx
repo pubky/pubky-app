@@ -32,7 +32,7 @@ export function PostTag({
       data-tag-label={label}
       className={cn(
         'group relative h-8 max-w-full gap-1 rounded-md px-3 backdrop-blur-lg',
-        'border-0 text-sm leading-5 font-bold text-white',
+        'border-0 text-sm leading-5 font-bold text-white subpixel-antialiased',
         'transition-all duration-200',
         // Override Toggle default hover styles - keep text white
         'hover:bg-transparent hover:text-white',
@@ -46,17 +46,13 @@ export function PostTag({
       }}
       aria-label={count !== undefined ? `${label} tag (${count} posts)` : `${label} tag`}
     >
-      {/* Tag content */}
-      <span className="flex min-w-0 items-center gap-1.5 text-sm leading-5">
-        <span data-cy="post-tag-label" className="truncate font-bold">
-          {label}
-        </span>
-        {count !== undefined && (
-          <span data-cy="post-tag-count" className="shrink-0 font-medium opacity-50">
-            {count}
-          </span>
-        )}
-      </span>
+      <Atoms.Tag
+        name={label}
+        count={count}
+        countDataCy="post-tag-count"
+        className="px-0"
+        style={{ backgroundColor: 'transparent', border: 'none', boxShadow: 'none' }}
+      />
 
       {/* Close button */}
       {showClose && (

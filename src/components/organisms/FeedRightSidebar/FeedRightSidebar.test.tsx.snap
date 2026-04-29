@@ -9,7 +9,7 @@ exports[`HomeFeedRightDrawer > matches snapshot 1`] = `
     <div
       data-testid="who-to-follow"
     >
-      WhoToFollow
+      WhoToFollowSidebar
     </div>
     <div
       data-testid="active-users"
@@ -45,7 +45,7 @@ exports[`HomeFeedRightSidebar > matches snapshot 1`] = `
   <div
     data-testid="who-to-follow"
   >
-    WhoToFollow
+    WhoToFollowSidebar
   </div>
   <div
     data-testid="active-users"
@@ -74,7 +74,7 @@ exports[`HotFeedRightDrawer > matches snapshot 1`] = `
     <div
       data-testid="who-to-follow"
     >
-      WhoToFollow
+      WhoToFollowSidebar
     </div>
     <div
       data-testid="feedback-card"
@@ -90,7 +90,7 @@ exports[`HotFeedRightSidebar > matches snapshot 1`] = `
   <div
     data-testid="who-to-follow"
   >
-    WhoToFollow
+    WhoToFollowSidebar
   </div>
   <div
     class="sticky top-[100px] self-start"

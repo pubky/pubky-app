@@ -328,6 +328,35 @@ describe('AvatarWithFallback', () => {
     });
   });
 
+  describe('Avatar root key', () => {
+    // Verifies the consumer passes `key={resolvedAvatarUrl ?? 'fallback'}` to
+    // <Atoms.Avatar>. React doesn't expose `key` to the rendered component, so we
+    // assert the observable effect: the avatar DOM node is replaced when the key
+    // changes, and preserved when it doesn't. See issue #526 for the underlying
+    // Radix state issue this workaround addresses.
+    it('replaces the avatar root node when avatarUrl changes', () => {
+      const { rerender } = render(<AvatarWithFallback {...mockProps} avatarUrl={validAvatarUrl} />);
+      const firstRoot = screen.getByTestId('avatar');
+
+      // Note: undefined avatarUrl triggers the fallback (image not shown)
+      rerender(<AvatarWithFallback {...mockProps} avatarUrl={undefined} />);
+      const secondRoot = screen.getByTestId('avatar');
+
+      expect(secondRoot).not.toBe(firstRoot);
+    });
+
+    it('preserves the avatar root node when avatarUrl is unchanged', () => {
+      const { rerender } = render(<AvatarWithFallback {...mockProps} avatarUrl={validAvatarUrl} />);
+      const firstRoot = screen.getByTestId('avatar');
+
+      // Note: name change doesn't trigger a remount, so the avatar root node is preserved.
+      rerender(<AvatarWithFallback {...mockProps} avatarUrl={validAvatarUrl} name="Updated Name" />);
+      const secondRoot = screen.getByTestId('avatar');
+
+      expect(secondRoot).toBe(firstRoot);
+    });
+  });
+
   describe('Local Avatar Resolution', () => {
     const localBlobUrl = 'blob:http://localhost/local-avatar-123';
 

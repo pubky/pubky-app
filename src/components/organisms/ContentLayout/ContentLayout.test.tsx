@@ -96,7 +96,7 @@ vi.mock('@/molecules', () => ({
       </button>
     </div>
   ),
-  WhoToFollow: () => <div data-testid="who-to-follow">Who to Follow</div>,
+  WhoToFollowSidebar: () => <div data-testid="who-to-follow">Who to Follow</div>,
   ActiveUsers: () => <div data-testid="active-users">Active Users</div>,
   FeedbackCard: () => <div data-testid="feedback-card">Feedback Card</div>,
 }));

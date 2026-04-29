@@ -6,7 +6,7 @@ import * as Hooks from '@/hooks';
 import * as Atoms from '@/atoms';
 import * as Organisms from '@/organisms';
 import type { PostTagsPanelHandle } from '@/organisms';
-import { POST_TAGS_MAX_COUNT, POST_TAGS_MAX_LENGTH, POST_TAGS_MAX_TOTAL_CHARS } from '@/config';
+import { POST_TAGS_MAX_LENGTH, POST_TAGS_MAX_TOTAL_CHARS } from '@/config';
 import { usePostMainLayout, WIDE_POST_LAYOUT_CLASSES } from '@/organisms/PostMain/PostMainLayout';
 import type { SinglePostCardProps } from './SinglePostCard.types';
 import { cn } from '@/libs/utils/utils';
@@ -60,7 +60,6 @@ export function SinglePostCard({ postId, className }: SinglePostCardProps) {
     <Organisms.ClickableTagsList
       taggedId={postId}
       taggedKind={Core.TagKind.POST}
-      maxTags={POST_TAGS_MAX_COUNT}
       maxTagLength={POST_TAGS_MAX_LENGTH}
       maxTotalChars={POST_TAGS_MAX_TOTAL_CHARS}
       showCount={true}

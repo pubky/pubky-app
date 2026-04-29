@@ -1,5 +1,5 @@
 import * as Templates from '@/templates';
 
 export default function DynamicProfilePostsPage() {
-  return <Templates.ProfilePagePosts />;
+  return <Templates.ProfilePostsPage />;
 }

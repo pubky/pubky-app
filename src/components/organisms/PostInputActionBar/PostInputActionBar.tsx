@@ -85,7 +85,7 @@ export function PostInputActionBar({
         {characterLimit ? (
           <Atoms.Typography
             data-cy="post-input-action-bar-character-count"
-            className="hidden shrink-0 text-xs leading-4 font-medium tracking-[0.075rem] whitespace-nowrap text-muted-foreground sm:block"
+            className="hidden shrink-0 text-xs leading-4 font-medium tracking-[0.075rem] whitespace-nowrap text-muted-foreground tabular-nums sm:block"
             overrideDefaults
           >
             {characterLimit.count}/{characterLimit.max}

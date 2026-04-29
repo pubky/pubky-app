@@ -3,9 +3,11 @@ import './globals.css';
 import type { Viewport } from 'next';
 import { getLocale, getMessages } from 'next-intl/server';
 
+import * as Atoms from '@/atoms';
 import * as Molecules from '@/molecules';
 import * as Organisms from '@/organisms';
 import * as Providers from '@/providers';
+import { TOOLTIP_DELAY_MS } from '@/config';
 
 export const viewport: Viewport = {
   width: 'device-width',
@@ -31,7 +33,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
   return (
     <Molecules.RootContainer locale={locale}>
       <Providers.IntlProvider locale={locale} messages={messages}>
-        <Providers.TooltipProvider>
+        <Atoms.TooltipProvider delayDuration={TOOLTIP_DELAY_MS}>
           <Providers.GlobalErrorHandlerProvider>
             <Providers.ErrorBoundaryProvider>
               <Providers.DatabaseProvider>
@@ -46,7 +48,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
               </Providers.DatabaseProvider>
             </Providers.ErrorBoundaryProvider>
           </Providers.GlobalErrorHandlerProvider>
-        </Providers.TooltipProvider>
+        </Atoms.TooltipProvider>
       </Providers.IntlProvider>
     </Molecules.RootContainer>
   );

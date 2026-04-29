@@ -9,7 +9,8 @@ import type { ClickableTagsListProps } from './ClickableTagsList.types';
 import {
   CLICKABLE_TAGS_DEFAULT_MAX_LENGTH,
   CLICKABLE_TAGS_DEFAULT_MAX_TOTAL_CHARS,
-  CLICKABLE_TAGS_DEFAULT_MAX_TAGS,
+  TAG_INPUT_WIDTH_AT_LIMIT,
+  TAG_INPUT_WIDTH_DEFAULT,
 } from '@/config';
 import { cn, generateRandomColor, getDisplayTags } from '@/libs/utils/utils';
 
@@ -36,7 +37,7 @@ export function ClickableTagsList({
   taggedId,
   taggedKind,
   tags: providedTags,
-  maxTags = CLICKABLE_TAGS_DEFAULT_MAX_TAGS,
+  maxTags,
   maxTagLength = CLICKABLE_TAGS_DEFAULT_MAX_LENGTH,
   maxTotalChars = CLICKABLE_TAGS_DEFAULT_MAX_TOTAL_CHARS,
   showCount = true,
@@ -70,6 +71,8 @@ export function ClickableTagsList({
 
   // Determine if input should be shown
   const hasInput = showInput || isAdding;
+  const isAtLimit = maxTags ? enrichedTags.length >= maxTags : false;
+  const inputWidth = isAtLimit ? TAG_INPUT_WIDTH_AT_LIMIT : TAG_INPUT_WIDTH_DEFAULT;
 
   // Get viewer's own tags for duplicate checking
   // This allows adding a tag that others have used but the viewer hasn't
@@ -103,6 +106,10 @@ export function ClickableTagsList({
     if (addMode) setIsAdding(false);
   };
 
+  const handleInputClose = () => {
+    if (addMode) setIsAdding(false);
+  };
+
   // Apply smart limiting based on character budget
   const tagLabels = enrichedTags.map((tag) => tag.label);
   const displayLabels = getDisplayTags(tagLabels, {
@@ -130,51 +137,64 @@ export function ClickableTagsList({
   const handleInputClick = !isAuthenticated ? () => setShowSignInDialog(true) : undefined;
 
   return (
-    <Atoms.Container
-      overrideDefaults
-      data-cy="clickable-tags-list"
-      className={cn('flex flex-wrap items-center gap-2', className)}
-    >
-      {/* Render existing tags with hover popover for tagger avatars */}
-      {visibleTags.map((tag, index) => (
-        <Molecules.PostTagPopoverWrapper
-          key={`${taggedId}-${tag.label}`}
-          taggers={tag.taggers}
-          taggersCount={tag.taggers_count}
-          postId={taggedKind === Core.TagKind.POST ? taggedId : null}
-          tagLabel={tag.label}
-        >
-          <Molecules.PostTag
-            label={tag.label}
-            count={showCount ? tag.taggers_count : undefined}
-            color={generateRandomColor(tag.label)}
-            selected={isViewerTagger(tag)}
-            showClose={showTagClose}
-            onClick={(e) => handleTagClick(tag, index, e)}
-            onClose={(e) => onTagClose?.(tag, index, e)}
+    <Atoms.Container overrideDefaults className="flex flex-col gap-1">
+      <Atoms.Container
+        overrideDefaults
+        data-cy="clickable-tags-list"
+        className={cn('flex flex-wrap items-center gap-2', className)}
+      >
+        {/* Render existing tags with hover popover for tagger avatars */}
+        {visibleTags.map((tag, index) => (
+          <Molecules.PostTagPopoverWrapper
+            key={`${taggedId}-${tag.label}`}
+            taggers={tag.taggers}
+            taggersCount={tag.taggers_count}
+            postId={taggedKind === Core.TagKind.POST ? taggedId : null}
+            tagLabel={tag.label}
+          >
+            <Molecules.PostTag
+              label={tag.label}
+              count={showCount ? tag.taggers_count : undefined}
+              color={generateRandomColor(tag.label)}
+              selected={isViewerTagger(tag)}
+              showClose={showTagClose}
+              onClick={(e) => handleTagClick(tag, index, e)}
+              onClose={(e) => onTagClose?.(tag, index, e)}
+            />
+          </Molecules.PostTagPopoverWrapper>
+        ))}
+
+        {/* Add tag input / add button switch with shared animation */}
+        {(hasInput || hasAddButton) && (
+          <Molecules.TagInputToggle
+            showInput={hasInput}
+            widthByState={{ input: inputWidth, addButton: 34 }}
+            inputContent={
+              <Molecules.TagInput
+                onTagAdd={handleTagAddFromInput}
+                existingTags={enrichedTags}
+                viewerTags={viewerTags}
+                showCloseButton={addMode && !showInput && isAuthenticated}
+                onClose={handleInputClose}
+                disabled={!isAuthenticated}
+                maxTags={maxTags}
+                currentTagsCount={enrichedTags.length}
+                onBlur={handleInputBlur}
+                onClick={handleInputClick}
+                enableApiSuggestions={isAuthenticated}
+                excludeFromApiSuggestions={enrichedTags.map((t) => t.label)}
+                addOnSuggestionClick={true}
+                autoFocus={isAuthenticated && isAdding}
+                containerVariant="plain"
+                className="w-full shrink-0"
+              />
+            }
+            addButtonContent={
+              hasAddButton ? <Molecules.PostTagAddButton variant="plain" onClick={handleAddButtonClick} /> : null
+            }
           />
-        </Molecules.PostTagPopoverWrapper>
-      ))}
-
-      {/* Add tag input - visible to all, clicks open dialog for unauthenticated */}
-      {hasInput && (
-        <Molecules.TagInput
-          onTagAdd={handleTagAddFromInput}
-          existingTags={enrichedTags}
-          viewerTags={viewerTags}
-          enableApiSuggestions={isAuthenticated}
-          excludeFromApiSuggestions={enrichedTags.map((t) => t.label)}
-          addOnSuggestionClick={true}
-          className="w-32 shrink-0"
-          autoFocus={isAuthenticated && isAdding}
-          disabled={!isAuthenticated}
-          onClick={handleInputClick}
-          onBlur={handleInputBlur}
-        />
-      )}
-
-      {/* Add button (alternative to input) - shows sign-in dialog for unauthenticated */}
-      {hasAddButton && <Molecules.PostTagAddButton onClick={handleAddButtonClick} />}
+        )}
+      </Atoms.Container>
     </Atoms.Container>
   );
 }

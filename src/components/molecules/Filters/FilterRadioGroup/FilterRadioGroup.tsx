@@ -7,7 +7,7 @@ import * as Molecules from '@/molecules';
 
 export interface FilterRadioGroupProps<T = string> {
   title: string;
-  items: Molecules.FilterItem<T>[];
+  items: Molecules.FilterListItem<T>[];
   selectedValue?: T;
   defaultValue?: T;
   onChange?: (value: T) => void;
