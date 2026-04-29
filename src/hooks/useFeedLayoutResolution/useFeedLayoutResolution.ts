@@ -1,8 +1,8 @@
 'use client';
 
 import { TimelineFeedVariant, TIMELINE_FEED_VARIANT } from '@/config';
-import { useCustomFeed } from '../useCustomFeed';
-import { useIsMobile } from '../useIsMobile';
+import { useCustomFeed } from '@/hooks/useCustomFeed/useCustomFeed';
+import { useIsMobile } from '@/hooks/useIsMobile/useIsMobile';
 import { useHomeStore } from '@/stores/home/home.store';
 import { LAYOUT } from '@/stores/home/home.types';
 import type { LayoutType } from '@/stores/home/home.types';

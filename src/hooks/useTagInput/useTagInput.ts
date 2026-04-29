@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useRef } from 'react';
-import { useEmojiInsert } from '../useEmojiInsert';
+import { useEmojiInsert } from '../useEmojiInsert/useEmojiInsert';
 import { filterSuggestions } from './useTagInput.utils';
 import { TAG_MAX_LENGTH } from '@/config';
 import type { UseTagInputOptions, UseTagInputReturn } from './useTagInput.types';

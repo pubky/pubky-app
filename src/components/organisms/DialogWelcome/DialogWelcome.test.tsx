@@ -1,5 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen, fireEvent } from '@testing-library/react';
+import { useLiveQuery } from 'dexie-react-hooks';
 import { DialogWelcome } from './DialogWelcome';
 
 const { mockGetAvatarUrl, mockCopyToClipboard, mockSetShowWelcomeDialog } = vi.hoisted(() => ({
@@ -228,8 +229,7 @@ describe('DialogWelcome', () => {
     expect(mockGetAvatarUrl).toHaveBeenCalledWith('test-pubky-123', 1234567890);
   });
 
-  it('does not generate avatar url when user has no image', async () => {
-    const { useLiveQuery } = await import('dexie-react-hooks');
+  it('does not generate avatar url when user has no image', () => {
     vi.mocked(useLiveQuery).mockReturnValue({
       name: 'Test User',
       bio: 'Test bio',
@@ -245,9 +245,8 @@ describe('DialogWelcome', () => {
 });
 
 describe('DialogWelcome - Snapshots', () => {
-  beforeEach(async () => {
+  beforeEach(() => {
     vi.clearAllMocks();
-    const { useLiveQuery } = await import('dexie-react-hooks');
     vi.mocked(useLiveQuery).mockReturnValue({
       name: 'Test User',
       bio: 'Test bio',
@@ -261,8 +260,7 @@ describe('DialogWelcome - Snapshots', () => {
     expect(container.firstChild).toMatchSnapshot();
   });
 
-  it('matches snapshot when user has no image', async () => {
-    const { useLiveQuery } = await import('dexie-react-hooks');
+  it('matches snapshot when user has no image', () => {
     vi.mocked(useLiveQuery).mockReturnValue({
       name: 'Test User',
       bio: 'Test bio',

@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useRef } from 'react';
-import { useViewportObserver } from '../useViewportObserver';
+import { useViewportObserver } from '@/hooks/useViewportObserver/useViewportObserver';
 import type { UseTtlSubscriptionOptions, UseTtlSubscriptionResult } from './useTtlSubscription.types';
 import { TtlCoordinator } from '@/coordinators/ttl/ttl';
 import type { Pubky } from '@/models/models.types';

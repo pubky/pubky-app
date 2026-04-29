@@ -1,8 +1,8 @@
 'use client';
 
 import { useCallback, useMemo } from 'react';
-import { useTagged } from '../useTagged';
-import { usePostTags } from '../usePostTags';
+import { useTagged } from '@/hooks/useTagged/useTagged';
+import { usePostTags } from '@/hooks/usePostTags/usePostTags';
 import type { TagWithAvatars } from '@/molecules/TaggedItem/TaggedItem.types';
 import type { UseEntityTagsOptions, UseEntityTagsResult } from './useEntityTags.types';
 import { TagKind } from '@/application/tag/tag.types';

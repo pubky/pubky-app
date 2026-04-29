@@ -1,6 +1,6 @@
 'use client';
 
-import { useBulkUserAvatars } from '../useBulkUserAvatars';
+import { useBulkUserAvatars } from '@/hooks/useBulkUserAvatars/useBulkUserAvatars';
 import type { TagWithAvatars } from '@/molecules/TaggedItem/TaggedItem.types';
 import type { UseEnrichedTagsResult } from './useEnrichedTags.types';
 import type { Pubky } from '@/models/models.types';
