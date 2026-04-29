@@ -12,7 +12,7 @@ vi.mock('@/hooks/useCurrentUserProfile/useCurrentUserProfile', () => ({
   useCurrentUserProfile: () => mockUseCurrentUserProfile(),
 }));
 
-// Mock core
+// Mock dependencies
 vi.mock('@/stores/notification/notification.store', () => ({
   useNotificationStore: vi.fn((selector: (state: { selectUnread: () => number }) => number) => {
     const state = {
@@ -24,13 +24,6 @@ vi.mock('@/stores/notification/notification.store', () => ({
 vi.mock('@/controllers/file/file', () => ({
   FileController: {
     getAvatarUrl: vi.fn((pubky: string) => `https://cdn.example.com/avatar/${pubky}`),
-  },
-}));
-vi.mock('@/stores/hot/hot.types', () => ({
-  TIMEFRAME: {
-    TODAY: 'today',
-    THIS_MONTH: 'this_month',
-    ALL_TIME: 'all_time',
   },
 }));
 

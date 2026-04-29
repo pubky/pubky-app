@@ -6,12 +6,6 @@ import { Err } from '@/libs/error/error.factories';
 import { ErrorCategory, ErrorService } from '@/libs/error/error.types';
 import { db } from '@/database/franky/franky';
 import { useMigrationStore } from '@/stores/migration/migration.store';
-// Mock the database
-vi.mock('@/database', () => ({
-  db: {
-    initialize: vi.fn(),
-  },
-}));
 
 describe('DatabaseProvider', () => {
   beforeEach(() => {

@@ -9,7 +9,7 @@ vi.mock('@/hooks/useCustomFeed/useCustomFeed', () => ({
   useCustomFeed: () => mockUseCustomFeed(),
 }));
 
-// Mock core — provide constants and mapper functions
+// Mock store constants
 vi.mock('@/stores/home/home.types', () => ({
   REACH: {
     ALL: 'all',
@@ -34,42 +34,6 @@ vi.mock('@/stores/home/home.types', () => ({
     LINKS: 'links',
     FILES: 'files',
   },
-}));
-vi.mock('@/utils/pubky-app-spec-feed-mappers', () => ({
-  pubkyReachToHomeReach: vi.fn((reach: PubkyAppFeedReach) => {
-    const map: Record<number, string> = {
-      [PubkyAppFeedReach.All]: 'all',
-      [PubkyAppFeedReach.Following]: 'following',
-      [PubkyAppFeedReach.Friends]: 'friends',
-    };
-    return map[reach];
-  }),
-  pubkySortToHomeSort: vi.fn((sort: PubkyAppFeedSort) => {
-    const map: Record<number, string> = {
-      [PubkyAppFeedSort.Recent]: 'timeline',
-      [PubkyAppFeedSort.Popularity]: 'total_engagement',
-    };
-    return map[sort];
-  }),
-  pubkyLayoutToHomeLayout: vi.fn((layout: PubkyAppFeedLayout) => {
-    const map: Record<number, string> = {
-      [PubkyAppFeedLayout.Columns]: 'columns',
-      [PubkyAppFeedLayout.Wide]: 'wide',
-      [PubkyAppFeedLayout.Visual]: 'visual',
-    };
-    return map[layout];
-  }),
-  pubkyPostKindToHomeContent: vi.fn((postKind: PubkyAppPostKind) => {
-    const map: Record<number, string> = {
-      [PubkyAppPostKind.Short]: 'short',
-      [PubkyAppPostKind.Long]: 'long',
-      [PubkyAppPostKind.Image]: 'images',
-      [PubkyAppPostKind.Video]: 'videos',
-      [PubkyAppPostKind.Link]: 'links',
-      [PubkyAppPostKind.File]: 'files',
-    };
-    return map[postKind];
-  }),
 }));
 
 // Mock atoms

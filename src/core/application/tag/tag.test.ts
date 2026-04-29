@@ -7,13 +7,6 @@ import type { Pubky } from '@/models/models.types';
 import { HomeserverService } from '@/services/homeserver/homeserver';
 import { LocalPostTagService } from '@/services/local/tag/post/tag.post';
 import { LocalUserTagService } from '@/services/local/tag/user/tag.user';
-// Mock the Local.Tag service
-vi.mock('@/services/local/tag', () => ({
-  LocalTagService: {
-    create: vi.fn(),
-    delete: vi.fn(),
-  },
-}));
 
 // Mock the HomeserverService
 vi.mock('@/services/homeserver/homeserver', () => ({

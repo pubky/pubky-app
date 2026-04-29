@@ -2,15 +2,8 @@ import { describe, it, expect, vi } from 'vitest';
 import { render, screen, fireEvent } from '@testing-library/react';
 import { FilterTimeframe, HotFeedSidebar, HotFeedDrawer } from './HotFeedFilters';
 import { TIMEFRAME } from '@/stores/hot/hot.types';
-// Mock Core
-vi.mock('@/stores/hot/hot.types', () => ({
-  TIMEFRAME: {
-    TODAY: 'today',
-    THIS_WEEK: 'this_week',
-    THIS_MONTH: 'this_month',
-    ALL_TIME: 'all_time',
-  },
-}));
+
+// Mock store
 vi.mock('@/stores/hot/hot.store', () => ({
   useHotStore: vi.fn(() => ({
     reach: 'all',
