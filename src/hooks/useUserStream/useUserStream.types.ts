@@ -1,5 +1,5 @@
-import * as Core from '@/core';
-
+import type { Pubky } from '@/models/models.types';
+import type { UserStreamId } from '@/models/stream/user/userStream.types';
 export interface UserStreamUserCounts {
   posts: number;
   tags: number;
@@ -8,7 +8,7 @@ export interface UserStreamUserCounts {
 }
 
 export interface UserStreamUser {
-  id: Core.Pubky;
+  id: Pubky;
   name: string;
   bio: string;
   image: string | null;
@@ -24,7 +24,7 @@ export interface UserStreamUser {
 
 export interface UseUserStreamParams {
   /** Stream ID to fetch (e.g., UserStreamTypes.TODAY_INFLUENCERS_ALL) */
-  streamId: Core.UserStreamId;
+  streamId: UserStreamId;
   /** Number of users to fetch (or per page when paginated). Default: 3 */
   limit?: number;
   /** Whether to also fetch user counts (posts, tags, etc). Default: false */
@@ -41,7 +41,7 @@ export interface UseUserStreamResult {
   /** Array of user details */
   users: UserStreamUser[];
   /** User IDs in the stream */
-  userIds: Core.Pubky[];
+  userIds: Pubky[];
   /** Whether the initial load is in progress */
   isLoading: boolean;
   /** Whether more data is being loaded (only when paginated) */

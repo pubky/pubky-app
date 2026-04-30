@@ -1,19 +1,15 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { TagApplication } from './tag';
-import * as Core from '@/core';
 import type { TCreateTagInput, TDeleteTagInput } from './tag.types';
 import { HttpMethod } from '@/libs/http/http.types';
-
-// Mock the Local.Tag service
-vi.mock('@/core/services/local/tag', () => ({
-  LocalTagService: {
-    create: vi.fn(),
-    delete: vi.fn(),
-  },
-}));
+import { TagKind } from '@/application/tag/tag.types';
+import type { Pubky } from '@/models/models.types';
+import { HomeserverService } from '@/services/homeserver/homeserver';
+import { LocalPostTagService } from '@/services/local/tag/post/tag.post';
+import { LocalUserTagService } from '@/services/local/tag/user/tag.user';
 
 // Mock the HomeserverService
-vi.mock('@/core/services/homeserver', () => ({
+vi.mock('@/services/homeserver/homeserver', () => ({
   HomeserverService: {
     request: vi.fn(),
   },
@@ -21,41 +17,41 @@ vi.mock('@/core/services/homeserver', () => ({
 
 describe('Tag Application', () => {
   // Test data factory
-  const createMockTagData = (taggedKind: Core.TagKind = Core.TagKind.POST): TCreateTagInput => ({
-    taggedId: taggedKind === Core.TagKind.POST ? 'author:post123' : ('tagged-user-123' as Core.Pubky),
+  const createMockTagData = (taggedKind: TagKind = TagKind.POST): TCreateTagInput => ({
+    taggedId: taggedKind === TagKind.POST ? 'author:post123' : ('tagged-user-123' as Pubky),
     label: 'test-tag',
-    taggerId: 'tagger123' as Core.Pubky,
+    taggerId: 'tagger123' as Pubky,
     tagUrl: 'pubky://tagger123/pub/pubky.app/tags/test-tag',
     tagJson: { label: 'test-tag' },
     taggedKind,
   });
 
-  const createMockTagBatch = (labels: string[], taggedKind: Core.TagKind = Core.TagKind.POST): TCreateTagInput[] =>
+  const createMockTagBatch = (labels: string[], taggedKind: TagKind = TagKind.POST): TCreateTagInput[] =>
     labels.map((label, index) => ({
-      taggedId: taggedKind === Core.TagKind.POST ? 'author:post123' : ('tagged-user-123' as Core.Pubky),
+      taggedId: taggedKind === TagKind.POST ? 'author:post123' : ('tagged-user-123' as Pubky),
       label,
-      taggerId: `tagger${index + 1}` as Core.Pubky,
+      taggerId: `tagger${index + 1}` as Pubky,
       tagUrl: `pubky://tagger${index + 1}/pub/pubky.app/tags/${label}`,
       tagJson: { label },
       taggedKind,
     }));
 
-  const createMockDeleteData = (taggedKind: Core.TagKind = Core.TagKind.POST): TDeleteTagInput => ({
-    taggedId: taggedKind === Core.TagKind.POST ? 'author:post123' : ('tagged-user-123' as Core.Pubky),
+  const createMockDeleteData = (taggedKind: TagKind = TagKind.POST): TDeleteTagInput => ({
+    taggedId: taggedKind === TagKind.POST ? 'author:post123' : ('tagged-user-123' as Pubky),
     label: 'test-tag',
-    taggerId: 'tagger123' as Core.Pubky,
+    taggerId: 'tagger123' as Pubky,
     tagUrl: 'pubky://tagger123/pub/pubky.app/tags/test-tag',
     taggedKind,
   });
 
   // Helper functions
-  const setupMocks = (taggedKind: Core.TagKind = Core.TagKind.POST) => {
-    const localTagService = taggedKind === Core.TagKind.POST ? Core.LocalPostTagService : Core.LocalUserTagService;
+  const setupMocks = (taggedKind: TagKind = TagKind.POST) => {
+    const localTagService = taggedKind === TagKind.POST ? LocalPostTagService : LocalUserTagService;
 
     return {
       createSpy: vi.spyOn(localTagService, 'create'),
       deleteSpy: vi.spyOn(localTagService, 'delete'),
-      requestSpy: vi.spyOn(Core.HomeserverService, 'request'),
+      requestSpy: vi.spyOn(HomeserverService, 'request'),
     };
   };
 
@@ -117,8 +113,8 @@ describe('Tag Application', () => {
     });
 
     it('should rollback local create for user tags when homeserver sync fails', async () => {
-      const mockData = createMockTagData(Core.TagKind.USER);
-      const { createSpy, deleteSpy, requestSpy } = setupMocks(Core.TagKind.USER);
+      const mockData = createMockTagData(TagKind.USER);
+      const { createSpy, deleteSpy, requestSpy } = setupMocks(TagKind.USER);
 
       createSpy.mockResolvedValue(true);
       deleteSpy.mockResolvedValue(true);
@@ -223,8 +219,8 @@ describe('Tag Application', () => {
     });
 
     it('should rollback local delete for user tags when homeserver sync fails', async () => {
-      const mockData = createMockDeleteData(Core.TagKind.USER);
-      const { createSpy, deleteSpy, requestSpy } = setupMocks(Core.TagKind.USER);
+      const mockData = createMockDeleteData(TagKind.USER);
+      const { createSpy, deleteSpy, requestSpy } = setupMocks(TagKind.USER);
 
       deleteSpy.mockResolvedValue(true);
       createSpy.mockResolvedValue(true);

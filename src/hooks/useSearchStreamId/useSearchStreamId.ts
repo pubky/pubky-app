@@ -2,9 +2,12 @@
 
 import { useMemo } from 'react';
 import { useSearchParams } from 'next/navigation';
-import * as Core from '@/core';
 import { Env } from '@/libs/env/env';
-
+import type { PostStreamId } from '@/models/stream/post/postStream.types';
+import { POST_STREAM_TAG_DELIMITER } from '@/services/nexus/stream/posts/postStream.constants';
+import { useHomeStore } from '@/stores/home/home.store';
+import { REACH, type ContentType } from '@/stores/home/home.types';
+import { getStreamIdFromFilters } from '@/stores/home/home.utils';
 /**
  * Parses tags from a comma-separated string parameter.
  * Trims whitespace, filters empty values, and limits to MAX_STREAM_TAGS.
@@ -55,10 +58,10 @@ function parseTags(tagsParam: string | null): string[] {
  * }
  * ```
  */
-export function useSearchStreamId(contentOverride?: Core.ContentType): Core.PostStreamId | undefined {
+export function useSearchStreamId(contentOverride?: ContentType): PostStreamId | undefined {
   const searchParams = useSearchParams();
-  const sort = Core.useHomeStore((state) => state.sort);
-  const storeContent = Core.useHomeStore((state) => state.content);
+  const sort = useHomeStore((state) => state.sort);
+  const storeContent = useHomeStore((state) => state.content);
   const content = contentOverride ?? storeContent;
 
   const streamId = useMemo(() => {
@@ -69,10 +72,10 @@ export function useSearchStreamId(contentOverride?: Core.ContentType): Core.Post
     }
 
     // Get base stream ID from filters (always use 'all' reach for search)
-    const baseStreamId = Core.getStreamIdFromFilters(sort, Core.REACH.ALL, content);
+    const baseStreamId = getStreamIdFromFilters(sort, REACH.ALL, content);
 
     // Append tags to the stream ID
-    return `${baseStreamId}:${tags.join(Core.POST_STREAM_TAG_DELIMITER)}` as Core.PostStreamId;
+    return `${baseStreamId}:${tags.join(POST_STREAM_TAG_DELIMITER)}` as PostStreamId;
   }, [searchParams, sort, content]);
 
   return streamId;

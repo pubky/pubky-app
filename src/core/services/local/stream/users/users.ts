@@ -1,5 +1,18 @@
-import * as Core from '@/core';
-
+import { detectModerationFromTags } from '@/application/moderation/moderation.utils';
+import type { Pubky } from '@/models/models.types';
+import { ModerationModel } from '@/models/moderation/moderation';
+import { ModerationType, type ModerationModelSchema } from '@/models/moderation/moderation.schema';
+import type { NexusModelTuple } from '@/models/shared/base/tuple/baseTuple.type';
+import { UserStreamModel } from '@/models/stream/user/userStream';
+import type { UserStreamId } from '@/models/stream/user/userStream.types';
+import { UserCountsModel } from '@/models/user/counts/userCounts';
+import { UserDetailsModel } from '@/models/user/details/userDetails';
+import type { UserDetailsModelSchema } from '@/models/user/details/userDetails.schema';
+import { UserRelationshipsModel } from '@/models/user/relationships/userRelationships';
+import { UserTagsModel } from '@/models/user/tags/userTags';
+import { UserTtlModel } from '@/models/user/ttl/userTtl';
+import type { TUserStreamUpsertParams } from '@/services/local/stream/users/users.types';
+import type { NexusTag, NexusUser, NexusUserCounts, NexusUserRelationship } from '@/services/nexus/nexus.types';
 /**
  * Local Stream Users Service
  *
@@ -14,16 +27,16 @@ export class LocalStreamUsersService {
    * Save or update a stream of user IDs
    * @param streamId - Composite ID in format 'userId:streamType' (e.g., 'user-ABC:followers')
    */
-  static async upsert({ streamId, stream }: Core.TUserStreamUpsertParams): Promise<void> {
-    await Core.UserStreamModel.upsert(streamId, stream);
+  static async upsert({ streamId, stream }: TUserStreamUpsertParams): Promise<void> {
+    await UserStreamModel.upsert(streamId, stream);
   }
 
   /**
    * Get a stream of user IDs by stream ID
    * @param streamId - Composite ID in format 'userId:streamType' (e.g., 'user-ABC:followers')
    */
-  static async findById(streamId: string): Promise<{ stream: Core.Pubky[] } | null> {
-    return await Core.UserStreamModel.findById(streamId);
+  static async findById(streamId: string): Promise<{ stream: Pubky[] } | null> {
+    return await UserStreamModel.findById(streamId);
   }
 
   /**
@@ -31,7 +44,7 @@ export class LocalStreamUsersService {
    * @param streamId - Composite ID in format 'userId:streamType' (e.g., 'user-ABC:followers')
    */
   static async deleteById(streamId: string): Promise<void> {
-    await Core.UserStreamModel.deleteById(streamId);
+    await UserStreamModel.deleteById(streamId);
   }
 
   /**
@@ -41,8 +54,8 @@ export class LocalStreamUsersService {
    * @param streamId - The stream to prepend to
    * @param userIds - The user ID(s) to prepend
    */
-  static async prependToStream(streamId: Core.UserStreamId, userIds: Core.Pubky[]): Promise<void> {
-    await Core.UserStreamModel.prependItems(streamId, userIds);
+  static async prependToStream(streamId: UserStreamId, userIds: Pubky[]): Promise<void> {
+    await UserStreamModel.prependItems(streamId, userIds);
   }
 
   /**
@@ -51,8 +64,8 @@ export class LocalStreamUsersService {
    * @param streamId - The stream to remove from
    * @param userIds - The user ID(s) to remove
    */
-  static async removeFromStream(streamId: Core.UserStreamId, userIds: Core.Pubky[]): Promise<void> {
-    await Core.UserStreamModel.removeItems(streamId, userIds);
+  static async removeFromStream(streamId: UserStreamId, userIds: Pubky[]): Promise<void> {
+    await UserStreamModel.removeItems(streamId, userIds);
   }
 
   /**
@@ -62,8 +75,8 @@ export class LocalStreamUsersService {
    * @param userIds - Array of user IDs to check
    * @returns Array of user IDs that are not persisted in cache
    */
-  static async getNotPersistedUsersInCache(userIds: Core.Pubky[]): Promise<Core.Pubky[]> {
-    const existingUserIds = await Core.UserDetailsModel.findByIdsPreserveOrder(userIds);
+  static async getNotPersistedUsersInCache(userIds: Pubky[]): Promise<Pubky[]> {
+    const existingUserIds = await UserDetailsModel.findByIdsPreserveOrder(userIds);
     return userIds.filter((_userId, index) => existingUserIds[index] === undefined);
   }
 
@@ -75,15 +88,15 @@ export class LocalStreamUsersService {
    * @param users - Array of users from Nexus API
    * @returns Array of user IDs (Pubky)
    */
-  static async persistUsers(users: Core.NexusUser[]): Promise<Core.Pubky[]> {
-    const userCounts: Core.NexusModelTuple<Core.NexusUserCounts>[] = [];
-    const userRelationships: Core.NexusModelTuple<Core.NexusUserRelationship>[] = [];
-    const userTags: Core.NexusModelTuple<Core.NexusTag[]>[] = [];
-    const userDetails: Core.UserDetailsModelSchema[] = [];
-    const userModerations: Core.ModerationModelSchema[] = [];
-    const userTtl: Core.NexusModelTuple<{ lastUpdatedAt: number }>[] = [];
+  static async persistUsers(users: NexusUser[]): Promise<Pubky[]> {
+    const userCounts: NexusModelTuple<NexusUserCounts>[] = [];
+    const userRelationships: NexusModelTuple<NexusUserRelationship>[] = [];
+    const userTags: NexusModelTuple<NexusTag[]>[] = [];
+    const userDetails: UserDetailsModelSchema[] = [];
+    const userModerations: ModerationModelSchema[] = [];
+    const userTtl: NexusModelTuple<{ lastUpdatedAt: number }>[] = [];
 
-    const userIds: Core.Pubky[] = [];
+    const userIds: Pubky[] = [];
     const now = Date.now();
 
     for (const user of users) {
@@ -96,11 +109,11 @@ export class LocalStreamUsersService {
       userTtl.push([userId, { lastUpdatedAt: now }]);
 
       // Detect moderation from user tags
-      const isModerated = Core.detectModerationFromTags(user.tags);
+      const isModerated = detectModerationFromTags(user.tags);
       if (isModerated) {
         userModerations.push({
           id: userId,
-          type: Core.ModerationType.PROFILE,
+          type: ModerationType.PROFILE,
           is_blurred: true,
           created_at: Date.now(),
         });
@@ -109,13 +122,13 @@ export class LocalStreamUsersService {
 
     // Bulk save to normalized tables
     await Promise.all([
-      Core.UserDetailsModel.bulkSave(userDetails),
-      Core.UserCountsModel.bulkSave(userCounts),
-      Core.UserTagsModel.bulkSave(userTags),
-      Core.UserRelationshipsModel.bulkSave(userRelationships),
-      Core.UserTtlModel.bulkSave(userTtl),
+      UserDetailsModel.bulkSave(userDetails),
+      UserCountsModel.bulkSave(userCounts),
+      UserTagsModel.bulkSave(userTags),
+      UserRelationshipsModel.bulkSave(userRelationships),
+      UserTtlModel.bulkSave(userTtl),
       // Persist moderation records for flagged profiles
-      userModerations.length > 0 ? Core.ModerationModel.bulkSave(userModerations) : Promise.resolve(),
+      userModerations.length > 0 ? ModerationModel.bulkSave(userModerations) : Promise.resolve(),
     ]);
 
     return userIds;

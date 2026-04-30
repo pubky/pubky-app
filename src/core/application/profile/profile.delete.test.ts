@@ -1,6 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import type { Pubky } from '@/core';
-
+import type { Pubky } from '@/models/models.types';
+import { HomeserverService } from '@/services/homeserver/homeserver';
+import { LocalProfileService } from '@/services/local/profile/profile';
 // Avoid pulling WASM-heavy deps from type-only modules
 vi.mock('pubky-app-specs', () => ({
   baseUriBuilder: vi.fn((pubky: string) => `pubky://${pubky}/pub/pubky.app/`),
@@ -8,7 +9,7 @@ vi.mock('pubky-app-specs', () => ({
 }));
 
 // Mock HomeserverService methods
-vi.mock('@/core/services/homeserver', () => ({
+vi.mock('@/services/homeserver/homeserver', () => ({
   HomeserverService: {
     list: vi.fn(),
     delete: vi.fn(),
@@ -16,20 +17,18 @@ vi.mock('@/core/services/homeserver', () => ({
 }));
 
 // Mock LocalProfileService
-vi.mock('@/core/services/local/profile', () => ({
+vi.mock('@/services/local/profile/profile', () => ({
   LocalProfileService: {
     deleteAll: vi.fn(),
   },
 }));
 
 let ProfileApplication: typeof import('./profile').ProfileApplication;
-let Core: typeof import('@/core');
 
 beforeEach(async () => {
   vi.clearAllMocks();
   vi.resetModules();
 
-  Core = await import('@/core');
   ({ ProfileApplication } = await import('./profile'));
 });
 
@@ -46,9 +45,9 @@ describe('ProfileApplication.commitDelete', () => {
       `${baseDirectory}tags/tag1`,
     ];
 
-    const localDeleteSpy = vi.spyOn(Core.LocalProfileService, 'deleteAll').mockResolvedValue(undefined);
-    const listSpy = vi.spyOn(Core.HomeserverService, 'list').mockResolvedValue(fileList);
-    const deleteSpy = vi.spyOn(Core.HomeserverService, 'delete').mockResolvedValue(undefined);
+    const localDeleteSpy = vi.spyOn(LocalProfileService, 'deleteAll').mockResolvedValue(undefined);
+    const listSpy = vi.spyOn(HomeserverService, 'list').mockResolvedValue(fileList);
+    const deleteSpy = vi.spyOn(HomeserverService, 'delete').mockResolvedValue(undefined);
 
     await ProfileApplication.commitDelete({ pubky });
 
@@ -65,9 +64,9 @@ describe('ProfileApplication.commitDelete', () => {
   it('calls setProgress with correct percentages', async () => {
     const fileList = [`${baseDirectory}file1`, `${baseDirectory}file2`, `${baseDirectory}profile.json`];
 
-    vi.spyOn(Core.LocalProfileService, 'deleteAll').mockResolvedValue(undefined);
-    vi.spyOn(Core.HomeserverService, 'list').mockResolvedValue(fileList);
-    vi.spyOn(Core.HomeserverService, 'delete').mockResolvedValue(undefined);
+    vi.spyOn(LocalProfileService, 'deleteAll').mockResolvedValue(undefined);
+    vi.spyOn(HomeserverService, 'list').mockResolvedValue(fileList);
+    vi.spyOn(HomeserverService, 'delete').mockResolvedValue(undefined);
 
     const setProgress = vi.fn();
     await ProfileApplication.commitDelete({ pubky, setProgress });
@@ -80,9 +79,9 @@ describe('ProfileApplication.commitDelete', () => {
   it('works without setProgress callback', async () => {
     const fileList = [`${baseDirectory}file1`, `${baseDirectory}profile.json`];
 
-    vi.spyOn(Core.LocalProfileService, 'deleteAll').mockResolvedValue(undefined);
-    vi.spyOn(Core.HomeserverService, 'list').mockResolvedValue(fileList);
-    const deleteSpy = vi.spyOn(Core.HomeserverService, 'delete').mockResolvedValue(undefined);
+    vi.spyOn(LocalProfileService, 'deleteAll').mockResolvedValue(undefined);
+    vi.spyOn(HomeserverService, 'list').mockResolvedValue(fileList);
+    const deleteSpy = vi.spyOn(HomeserverService, 'delete').mockResolvedValue(undefined);
 
     await ProfileApplication.commitDelete({ pubky });
 
@@ -92,9 +91,9 @@ describe('ProfileApplication.commitDelete', () => {
   it('handles empty file list and only deletes profile.json', async () => {
     const fileList = [`${baseDirectory}profile.json`];
 
-    vi.spyOn(Core.LocalProfileService, 'deleteAll').mockResolvedValue(undefined);
-    const listSpy = vi.spyOn(Core.HomeserverService, 'list').mockResolvedValue(fileList);
-    const deleteSpy = vi.spyOn(Core.HomeserverService, 'delete').mockResolvedValue(undefined);
+    vi.spyOn(LocalProfileService, 'deleteAll').mockResolvedValue(undefined);
+    const listSpy = vi.spyOn(HomeserverService, 'list').mockResolvedValue(fileList);
+    const deleteSpy = vi.spyOn(HomeserverService, 'delete').mockResolvedValue(undefined);
 
     await ProfileApplication.commitDelete({ pubky });
     // TODO: Using undefined, false, and Infinity here as a temporary workaround since
@@ -106,10 +105,10 @@ describe('ProfileApplication.commitDelete', () => {
 
   it('propagates errors when local delete fails', async () => {
     const localDeleteSpy = vi
-      .spyOn(Core.LocalProfileService, 'deleteAll')
+      .spyOn(LocalProfileService, 'deleteAll')
       .mockRejectedValue(new Error('local delete failed'));
-    const listSpy = vi.spyOn(Core.HomeserverService, 'list');
-    const deleteSpy = vi.spyOn(Core.HomeserverService, 'delete');
+    const listSpy = vi.spyOn(HomeserverService, 'list');
+    const deleteSpy = vi.spyOn(HomeserverService, 'delete');
 
     await expect(ProfileApplication.commitDelete({ pubky })).rejects.toThrow('local delete failed');
 
@@ -119,9 +118,9 @@ describe('ProfileApplication.commitDelete', () => {
   });
 
   it('propagates errors when list fails', async () => {
-    vi.spyOn(Core.LocalProfileService, 'deleteAll').mockResolvedValue(undefined);
-    const listSpy = vi.spyOn(Core.HomeserverService, 'list').mockRejectedValue(new Error('list failed'));
-    const deleteSpy = vi.spyOn(Core.HomeserverService, 'delete');
+    vi.spyOn(LocalProfileService, 'deleteAll').mockResolvedValue(undefined);
+    const listSpy = vi.spyOn(HomeserverService, 'list').mockRejectedValue(new Error('list failed'));
+    const deleteSpy = vi.spyOn(HomeserverService, 'delete');
 
     await expect(ProfileApplication.commitDelete({ pubky })).rejects.toThrow('list failed');
 
@@ -132,9 +131,9 @@ describe('ProfileApplication.commitDelete', () => {
   it('propagates errors when delete fails', async () => {
     const fileList = [`${baseDirectory}file1`, `${baseDirectory}profile.json`];
 
-    vi.spyOn(Core.LocalProfileService, 'deleteAll').mockResolvedValue(undefined);
-    vi.spyOn(Core.HomeserverService, 'list').mockResolvedValue(fileList);
-    const deleteSpy = vi.spyOn(Core.HomeserverService, 'delete').mockRejectedValueOnce(new Error('delete failed'));
+    vi.spyOn(LocalProfileService, 'deleteAll').mockResolvedValue(undefined);
+    vi.spyOn(HomeserverService, 'list').mockResolvedValue(fileList);
+    const deleteSpy = vi.spyOn(HomeserverService, 'delete').mockRejectedValueOnce(new Error('delete failed'));
 
     await expect(ProfileApplication.commitDelete({ pubky })).rejects.toThrow('delete failed');
 
@@ -149,9 +148,9 @@ describe('ProfileApplication.commitDelete', () => {
       `${baseDirectory}profile.json`,
     ];
 
-    vi.spyOn(Core.LocalProfileService, 'deleteAll').mockResolvedValue(undefined);
-    vi.spyOn(Core.HomeserverService, 'list').mockResolvedValue(fileList);
-    const deleteSpy = vi.spyOn(Core.HomeserverService, 'delete').mockResolvedValue(undefined);
+    vi.spyOn(LocalProfileService, 'deleteAll').mockResolvedValue(undefined);
+    vi.spyOn(HomeserverService, 'list').mockResolvedValue(fileList);
+    const deleteSpy = vi.spyOn(HomeserverService, 'delete').mockResolvedValue(undefined);
 
     await ProfileApplication.commitDelete({ pubky });
 
@@ -168,9 +167,9 @@ describe('ProfileApplication.commitDelete', () => {
       `${baseDirectory}profile.json`,
     ];
 
-    vi.spyOn(Core.LocalProfileService, 'deleteAll').mockResolvedValue(undefined);
-    const listSpy = vi.spyOn(Core.HomeserverService, 'list').mockResolvedValue(largeFileList);
-    vi.spyOn(Core.HomeserverService, 'delete').mockResolvedValue(undefined);
+    vi.spyOn(LocalProfileService, 'deleteAll').mockResolvedValue(undefined);
+    const listSpy = vi.spyOn(HomeserverService, 'list').mockResolvedValue(largeFileList);
+    vi.spyOn(HomeserverService, 'delete').mockResolvedValue(undefined);
 
     await ProfileApplication.commitDelete({ pubky });
 

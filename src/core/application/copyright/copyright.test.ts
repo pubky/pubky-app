@@ -1,12 +1,11 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import * as Core from '@/core';
-import { CHATWOOT_INBOX_IDS } from '@/core/services/chatwoot';
 import type { TCopyrightSubmitInput } from './copyright.types';
-import type { TChatwootContact } from '@/core/services/chatwoot/chatwoot.types';
 import { ServerErrorCode } from '@/libs/error/error.codes';
 import { Err } from '@/libs/error/error.factories';
 import { ErrorService } from '@/libs/error/error.types';
-
+import { ChatwootService } from '@/services/chatwoot/chatwoot';
+import { CHATWOOT_INBOX_IDS } from '@/services/chatwoot/chatwoot.constants';
+import type { TChatwootContact } from '@/services/chatwoot/chatwoot.types';
 const testData = {
   nameOwner: 'John Doe',
   originalContentUrls: 'https://example.com/original',
@@ -46,8 +45,8 @@ describe('CopyrightApplication', () => {
 
   beforeEach(async () => {
     vi.clearAllMocks();
-    vi.spyOn(Core.ChatwootService, 'createOrFindContact').mockResolvedValue(createMockContact());
-    vi.spyOn(Core.ChatwootService, 'createConversation').mockResolvedValue(undefined);
+    vi.spyOn(ChatwootService, 'createOrFindContact').mockResolvedValue(createMockContact());
+    vi.spyOn(ChatwootService, 'createConversation').mockResolvedValue(undefined);
 
     const copyrightModule = await import('./copyright');
     CopyrightApplication = copyrightModule.CopyrightApplication;
@@ -56,7 +55,7 @@ describe('CopyrightApplication', () => {
   describe('submit', () => {
     it('should call createOrFindContact with email, name, and inbox ID', async () => {
       const input = createCopyrightInput();
-      const spy = vi.spyOn(Core.ChatwootService, 'createOrFindContact');
+      const spy = vi.spyOn(ChatwootService, 'createOrFindContact');
 
       await CopyrightApplication.submit(input);
 
@@ -69,7 +68,7 @@ describe('CopyrightApplication', () => {
 
     it('should call createConversation with contact data and formatted message', async () => {
       const input = createCopyrightInput();
-      const spy = vi.spyOn(Core.ChatwootService, 'createConversation');
+      const spy = vi.spyOn(ChatwootService, 'createConversation');
 
       await CopyrightApplication.submit(input);
 
@@ -83,7 +82,7 @@ describe('CopyrightApplication', () => {
 
     it('should include form data as JSON in message content', async () => {
       const input = createCopyrightInput();
-      const spy = vi.spyOn(Core.ChatwootService, 'createConversation');
+      const spy = vi.spyOn(ChatwootService, 'createConversation');
 
       await CopyrightApplication.submit(input);
 
@@ -95,9 +94,7 @@ describe('CopyrightApplication', () => {
 
     it('should throw when contact has empty inbox associations', async () => {
       const input = createCopyrightInput();
-      vi.spyOn(Core.ChatwootService, 'createOrFindContact').mockResolvedValue(
-        createMockContact({ contact_inboxes: [] }),
-      );
+      vi.spyOn(ChatwootService, 'createOrFindContact').mockResolvedValue(createMockContact({ contact_inboxes: [] }));
 
       await expect(CopyrightApplication.submit(input)).rejects.toThrow('Contact has no inbox associations');
     });
@@ -108,7 +105,7 @@ describe('CopyrightApplication', () => {
         service: ErrorService.Chatwoot,
         operation: 'createOrFindContact',
       });
-      vi.spyOn(Core.ChatwootService, 'createOrFindContact').mockRejectedValue(appError);
+      vi.spyOn(ChatwootService, 'createOrFindContact').mockRejectedValue(appError);
 
       await expect(CopyrightApplication.submit(input)).rejects.toThrow(appError);
     });
@@ -119,7 +116,7 @@ describe('CopyrightApplication', () => {
         service: ErrorService.Chatwoot,
         operation: 'createConversation',
       });
-      vi.spyOn(Core.ChatwootService, 'createConversation').mockRejectedValue(appError);
+      vi.spyOn(ChatwootService, 'createConversation').mockRejectedValue(appError);
 
       await expect(CopyrightApplication.submit(input)).rejects.toThrow(appError);
     });

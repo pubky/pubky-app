@@ -5,7 +5,7 @@ import { BackupMethodCard } from './BackupMethodCard';
 
 // Mock onboarding store
 const mockUseOnboardingStore = vi.fn();
-vi.mock('@/core', () => ({
+vi.mock('@/stores/onboarding/onboarding.store', () => ({
   useOnboardingStore: () => mockUseOnboardingStore(),
 }));
 

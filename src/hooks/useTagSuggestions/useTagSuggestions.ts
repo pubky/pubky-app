@@ -2,7 +2,6 @@
 
 import { useState, useEffect, useRef, useMemo } from 'react';
 import { debounce } from 'lodash-es';
-import * as Core from '@/core';
 import type { UseTagSuggestionsParams, UseTagSuggestionsResult } from './useTagSuggestions.types';
 import {
   TAG_SUGGESTIONS_DEBOUNCE_MS,
@@ -10,7 +9,7 @@ import {
   TAG_SUGGESTIONS_MIN_QUERY_LENGTH,
 } from './useTagSuggestions.constants';
 import { Logger } from '@/libs/logger/logger';
-
+import { SearchController } from '@/controllers/search/search';
 /**
  * Hook for fetching tag suggestions from the API
  *
@@ -47,7 +46,7 @@ export function useTagSuggestions({
       setIsLoading(true);
 
       try {
-        const results = await Core.SearchController.getTagsByPrefix({
+        const results = await SearchController.getTagsByPrefix({
           prefix: searchQuery,
           limit: searchLimit,
         });

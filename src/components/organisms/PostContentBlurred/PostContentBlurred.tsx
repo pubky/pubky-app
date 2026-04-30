@@ -1,7 +1,7 @@
 import * as Atoms from '@/atoms';
-import * as Core from '@/core';
 import { EyeOff } from 'lucide-react';
 import { cn } from '@/libs/utils/utils';
+import { ModerationController } from '@/controllers/moderation/moderation';
 interface PostContentBlurredProps {
   postId: string;
   className?: string;
@@ -12,7 +12,7 @@ export const PostContentBlurred = ({ postId, className }: PostContentBlurredProp
       overrideDefaults
       onClick={(e) => {
         e.stopPropagation();
-        Core.ModerationController.unBlur(postId);
+        ModerationController.unBlur(postId);
       }}
       className={cn('group relative w-full cursor-pointer', className)}
     >

@@ -1,17 +1,30 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import type { Pubky } from '@/core';
 import type { PubkyAppUser, UserResult } from 'pubky-app-specs';
 import { asOpaque } from '@/test-utils';
 import { HttpMethod } from '@/libs/http/http.types';
 import { Logger } from '@/libs/logger/logger';
-
+import type { Pubky } from '@/models/models.types';
+import { UserDetailsModel } from '@/models/user/details/userDetails';
+import { HomeserverService } from '@/services/homeserver/homeserver';
 // Avoid pulling WASM-heavy deps from type-only modules
 vi.mock('pubky-app-specs', () => ({
+  PubkySpecsBuilder: class {
+    createUser(name: string, bio?: string, image?: string | null, links?: unknown, status?: string) {
+      return {
+        user: {
+          toJson: () => ({ name, bio, image, links, status }),
+        },
+        meta: {
+          url: 'pubky://test-pubky/pub/pubky.app/profile.json',
+        },
+      };
+    }
+  },
   getValidMimeTypes: () => ['image/jpeg', 'image/png'],
 }));
 
 // Mock HomeserverService methods
-vi.mock('@/core/services/homeserver', () => ({
+vi.mock('@/services/homeserver/homeserver', () => ({
   HomeserverService: {
     putBlob: vi.fn(),
     request: vi.fn(),
@@ -20,14 +33,14 @@ vi.mock('@/core/services/homeserver', () => ({
 
 // Mock auth store used by application layer
 let mockAuthState: { setCurrentUserPubky: ReturnType<typeof vi.fn>; setHasProfile: ReturnType<typeof vi.fn> };
-vi.mock('@/core/stores', () => ({
+vi.mock('@/stores/auth/auth.store', () => ({
   useAuthStore: {
     getState: vi.fn(() => mockAuthState),
   },
 }));
 
 let ProfileApplication: typeof import('./profile').ProfileApplication;
-let Core: typeof import('@/core');
+let UserNormalizer: typeof import('@/pipes/user/user.normalizer').UserNormalizer;
 
 beforeEach(async () => {
   vi.clearAllMocks();
@@ -39,7 +52,7 @@ beforeEach(async () => {
   };
 
   // Re-import after resetModules
-  Core = await import('@/core');
+  ({ UserNormalizer } = await import('@/pipes/user/user.normalizer'));
   ({ ProfileApplication } = await import('./profile'));
 
   // Mock Logger to prevent AppError from logging during tests
@@ -57,7 +70,7 @@ describe('ProfileApplication', () => {
       const url = 'pubky://user/pub/pubky.app/user';
       const pubky = 'test-pubky' as Pubky;
 
-      const requestSpy = vi.spyOn(Core.HomeserverService, 'request').mockResolvedValue(undefined);
+      const requestSpy = vi.spyOn(HomeserverService, 'request').mockResolvedValue(undefined);
 
       await ProfileApplication.commitCreate({ profile, url, pubky });
 
@@ -73,7 +86,7 @@ describe('ProfileApplication', () => {
       const url = 'pubky://user/pub/pubky.app/user';
       const pubky = 'test-pubky' as Pubky;
 
-      vi.spyOn(Core.HomeserverService, 'request').mockRejectedValue(new Error('create failed'));
+      vi.spyOn(HomeserverService, 'request').mockRejectedValue(new Error('create failed'));
 
       await expect(ProfileApplication.commitCreate({ profile, url, pubky })).rejects.toThrow('create failed');
 
@@ -87,7 +100,7 @@ describe('ProfileApplication', () => {
     const testPubky = 'pxnu33x7jtpx9ar1ytsi4yxbp6a5o36gwhffs8zoxmbuptici1jy' as Pubky;
 
     beforeEach(async () => {
-      await Core.UserDetailsModel.table.clear();
+      await UserDetailsModel.table.clear();
     });
 
     it('updates status in both homeserver and local database', async () => {
@@ -101,7 +114,7 @@ describe('ProfileApplication', () => {
         links: [{ title: 'Website', url: 'https://example.com' }],
         indexed_at: Date.now(),
       };
-      await Core.UserDetailsModel.create(existingUser);
+      await UserDetailsModel.create(existingUser);
 
       // Mock UserNormalizer
       const mockUserResult = {
@@ -116,10 +129,10 @@ describe('ProfileApplication', () => {
         },
         meta: { url: `pubky://${testPubky}/pub/pubky.app/profile.json` },
       };
-      const normalizerSpy = vi.spyOn(Core.UserNormalizer, 'to').mockReturnValue(asOpaque<UserResult>(mockUserResult));
+      const normalizerSpy = vi.spyOn(UserNormalizer, 'to').mockReturnValue(asOpaque<UserResult>(mockUserResult));
 
       // Mock HomeserverService
-      const requestSpy = vi.spyOn(Core.HomeserverService, 'request').mockResolvedValue(undefined);
+      const requestSpy = vi.spyOn(HomeserverService, 'request').mockResolvedValue(undefined);
 
       // Execute
       await ProfileApplication.commitUpdateStatus({ pubky: testPubky, status: 'vacationing' });
@@ -144,7 +157,7 @@ describe('ProfileApplication', () => {
       });
 
       // Verify local database update
-      const updatedUser = await Core.UserDetailsModel.findById(testPubky);
+      const updatedUser = await UserDetailsModel.findById(testPubky);
       expect(updatedUser).not.toBeNull();
       expect(updatedUser!.status).toBe('vacationing');
     });
@@ -159,18 +172,18 @@ describe('ProfileApplication', () => {
         links: null,
         indexed_at: Date.now(),
       };
-      await Core.UserDetailsModel.create(existingUser);
+      await UserDetailsModel.create(existingUser);
 
       const mockUserResult = {
         user: { toJson: vi.fn(() => ({ name: 'Test User', bio: '', image: '', links: [], status: '' })) },
         meta: { url: `pubky://${testPubky}/pub/pubky.app/profile.json` },
       };
-      vi.spyOn(Core.UserNormalizer, 'to').mockReturnValue(asOpaque<UserResult>(mockUserResult));
-      vi.spyOn(Core.HomeserverService, 'request').mockResolvedValue(undefined);
+      vi.spyOn(UserNormalizer, 'to').mockReturnValue(asOpaque<UserResult>(mockUserResult));
+      vi.spyOn(HomeserverService, 'request').mockResolvedValue(undefined);
 
       await ProfileApplication.commitUpdateStatus({ pubky: testPubky, status: '' });
 
-      const updatedUser = await Core.UserDetailsModel.findById(testPubky);
+      const updatedUser = await UserDetailsModel.findById(testPubky);
       expect(updatedUser!.status).toBeNull();
     });
 
@@ -190,21 +203,21 @@ describe('ProfileApplication', () => {
         links: null,
         indexed_at: Date.now(),
       };
-      await Core.UserDetailsModel.create(existingUser);
+      await UserDetailsModel.create(existingUser);
 
       const mockUserResult = {
         user: { toJson: vi.fn(() => ({ name: 'Test User', status: 'vacationing' })) },
         meta: { url: `pubky://${testPubky}/pub/pubky.app/profile.json` },
       };
-      vi.spyOn(Core.UserNormalizer, 'to').mockReturnValue(asOpaque<UserResult>(mockUserResult));
-      vi.spyOn(Core.HomeserverService, 'request').mockRejectedValue(new Error('Network error'));
+      vi.spyOn(UserNormalizer, 'to').mockReturnValue(asOpaque<UserResult>(mockUserResult));
+      vi.spyOn(HomeserverService, 'request').mockRejectedValue(new Error('Network error'));
 
       await expect(ProfileApplication.commitUpdateStatus({ pubky: testPubky, status: 'vacationing' })).rejects.toThrow(
         'Network error',
       );
 
       // Verify local DB was NOT updated
-      const unchangedUser = await Core.UserDetailsModel.findById(testPubky);
+      const unchangedUser = await UserDetailsModel.findById(testPubky);
       expect(unchangedUser!.status).toBe('available'); // Still the old status
     });
 
@@ -218,14 +231,14 @@ describe('ProfileApplication', () => {
         links: null,
         indexed_at: Date.now(),
       };
-      await Core.UserDetailsModel.create(existingUser);
+      await UserDetailsModel.create(existingUser);
 
       const mockUserResult = {
         user: { toJson: vi.fn(() => ({ name: 'Minimal User', bio: '', image: null, links: [], status: 'busy' })) },
         meta: { url: `pubky://${testPubky}/pub/pubky.app/profile.json` },
       };
-      const normalizerSpy = vi.spyOn(Core.UserNormalizer, 'to').mockReturnValue(asOpaque<UserResult>(mockUserResult));
-      vi.spyOn(Core.HomeserverService, 'request').mockResolvedValue(undefined);
+      const normalizerSpy = vi.spyOn(UserNormalizer, 'to').mockReturnValue(asOpaque<UserResult>(mockUserResult));
+      vi.spyOn(HomeserverService, 'request').mockResolvedValue(undefined);
 
       await ProfileApplication.commitUpdateStatus({ pubky: testPubky, status: 'busy' });
 

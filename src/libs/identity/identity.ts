@@ -1,11 +1,12 @@
 import { Keypair } from '@synonymdev/pubky';
 import * as bip39 from 'bip39';
-import * as Core from '@/core';
 import type { TMnemonicWords, TCreateRecoveryFileParams, TDecryptRecoveryFileParams } from './identity.types';
 import { ClientErrorCode, ServerErrorCode, ValidationErrorCode } from '@/libs/error/error.codes';
 import { Err } from '@/libs/error/error.factories';
 import { ErrorService } from '@/libs/error/error.types';
-
+import type { Pubky } from '@/models/models.types';
+import type { THomeserverSessionResult } from '@/services/homeserver/homeserver.types';
+import type { TOnboardingSecrets } from '@/stores/onboarding/onboarding.types';
 export class Identity {
   // Mention pattern: pk: or pubky followed by exactly 52 lowercase alphanumeric characters
   static readonly PUBKY_IDENTIFIER_WITH_PREFIX_SOURCE = '(?:pk:|pubky)[a-z0-9]{52}';
@@ -95,7 +96,7 @@ export class Identity {
    * @param keypair - The keypair to convert
    * @returns The z-base32 encoding of this public key
    */
-  static z32FromKeypair(keypair: Keypair): Core.Pubky {
+  static z32FromKeypair(keypair: Keypair): Pubky {
     return keypair.publicKey.z32();
   }
 
@@ -104,7 +105,7 @@ export class Identity {
    * @param secretKey - The secret key to convert
    * @returns The z-base32 encoding of this public key
    */
-  static z32FromSecret(secretKey: string): Core.Pubky {
+  static z32FromSecret(secretKey: string): Pubky {
     const secretKeyUint8Array = this.secretKeyFromHex(secretKey);
     const keypair = Keypair.fromSecret(secretKeyUint8Array);
     return keypair.publicKey.z32();
@@ -214,7 +215,7 @@ export class Identity {
    * Generates a new pair of secret key and mnemonic
    * @returns The secret key and mnemonic
    */
-  static generateSecrets(): Core.TOnboardingSecrets {
+  static generateSecrets(): TOnboardingSecrets {
     // Generate mnemonic first, then create secret key from it
     const mnemonic = this.generateMnemonic();
     const secretKey = this.generateSecretKeyFromMnemonic(mnemonic);
@@ -293,7 +294,7 @@ export class Identity {
    * @param session - The session to get the pubky from
    * @returns The z32 pubky
    */
-  static z32FromSession({ session }: Core.THomeserverSessionResult): Core.Pubky {
+  static z32FromSession({ session }: THomeserverSessionResult): Pubky {
     return session.info.publicKey.z32();
   }
 
@@ -302,7 +303,7 @@ export class Identity {
    * @param session - The session to get the pubky from
    * @returns The pubky string with prefix
    */
-  static pubkyFromSession({ session }: Core.THomeserverSessionResult): string {
+  static pubkyFromSession({ session }: THomeserverSessionResult): string {
     return session.info.publicKey.toString();
   }
 

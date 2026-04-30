@@ -1,5 +1,4 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import * as Core from '@/core';
 import { LastReadResult } from 'pubky-app-specs';
 import { asOpaque } from '@/test-utils';
 import {
@@ -13,7 +12,8 @@ import {
 import { AppError } from '@/libs/error/error';
 import { ValidationErrorCode } from '@/libs/error/error.codes';
 import { ErrorCategory, ErrorService } from '@/libs/error/error.types';
-
+import { LastReadNormalizer } from '@/pipes/lastRead/lastRead.normalizer';
+import { PubkySpecsSingleton } from '@/pipes/pipes.builder';
 describe('LastReadNormalizer', () => {
   // Mock builder factory
   const createMockBuilder = (overrides?: Partial<{ createLastRead: ReturnType<typeof vi.fn> }>) => ({
@@ -45,21 +45,21 @@ describe('LastReadNormalizer', () => {
 
     describe('to - successful creation', () => {
       it('should create last read with last_read and meta properties', () => {
-        const result = Core.LastReadNormalizer.to(TEST_PUBKY.USER_1);
+        const result = LastReadNormalizer.to(TEST_PUBKY.USER_1);
 
         expect(result).toHaveProperty('last_read');
         expect(result).toHaveProperty('meta');
       });
 
       it('should call PubkySpecsSingleton.get with pubky and createLastRead without params', () => {
-        Core.LastReadNormalizer.to(TEST_PUBKY.USER_1);
+        LastReadNormalizer.to(TEST_PUBKY.USER_1);
 
-        expect(Core.PubkySpecsSingleton.get).toHaveBeenCalledWith(TEST_PUBKY.USER_1);
+        expect(PubkySpecsSingleton.get).toHaveBeenCalledWith(TEST_PUBKY.USER_1);
         expect(mockBuilder.createLastRead).toHaveBeenCalledWith();
       });
 
       it('should return correct structure with timestamp and URL', () => {
-        const result = Core.LastReadNormalizer.to(TEST_PUBKY.USER_1);
+        const result = LastReadNormalizer.to(TEST_PUBKY.USER_1);
 
         expect(result.last_read.timestamp).toBeDefined();
         expect(typeof result.last_read.toJson).toBe('function');
@@ -76,7 +76,7 @@ describe('LastReadNormalizer', () => {
         });
 
         try {
-          Core.LastReadNormalizer.to(TEST_PUBKY.USER_1);
+          LastReadNormalizer.to(TEST_PUBKY.USER_1);
           expect.fail('Should have thrown');
         } catch (error) {
           expect(error).toBeInstanceOf(AppError);
@@ -91,11 +91,11 @@ describe('LastReadNormalizer', () => {
       });
 
       it('should throw AppError when PubkySpecsSingleton.get fails', () => {
-        vi.spyOn(Core.PubkySpecsSingleton, 'get').mockImplementation(() => {
+        vi.spyOn(PubkySpecsSingleton, 'get').mockImplementation(() => {
           throw 'Singleton error';
         });
 
-        expect(() => Core.LastReadNormalizer.to(TEST_PUBKY.USER_1)).toThrow(AppError);
+        expect(() => LastReadNormalizer.to(TEST_PUBKY.USER_1)).toThrow(AppError);
       });
     });
 
@@ -104,8 +104,8 @@ describe('LastReadNormalizer', () => {
         ['USER_1', TEST_PUBKY.USER_1],
         ['USER_2', TEST_PUBKY.USER_2],
       ])('should handle %s pubky', (_, pubky) => {
-        Core.LastReadNormalizer.to(pubky);
-        expect(Core.PubkySpecsSingleton.get).toHaveBeenCalledWith(pubky);
+        LastReadNormalizer.to(pubky);
+        expect(PubkySpecsSingleton.get).toHaveBeenCalledWith(pubky);
       });
     });
   });
@@ -119,7 +119,7 @@ describe('LastReadNormalizer', () => {
 
     describe('successful creation with real library', () => {
       it('should create valid result with correct URL format', () => {
-        const result = Core.LastReadNormalizer.to(TEST_PUBKY.USER_1);
+        const result = LastReadNormalizer.to(TEST_PUBKY.USER_1);
 
         expect(result.last_read).toBeDefined();
         expect(result.meta.url).toMatch(/^pubky:\/\/.+\/pub\/pubky\.app\/last_read$/);
@@ -128,7 +128,7 @@ describe('LastReadNormalizer', () => {
 
       it('should have BigInt timestamp close to current time', () => {
         const before = BigInt(Date.now());
-        const result = Core.LastReadNormalizer.to(TEST_PUBKY.USER_1);
+        const result = LastReadNormalizer.to(TEST_PUBKY.USER_1);
         const after = BigInt(Date.now());
 
         expect(typeof result.last_read.timestamp).toBe('bigint');
@@ -137,7 +137,7 @@ describe('LastReadNormalizer', () => {
       });
 
       it('should produce valid JSON with numeric timestamp', () => {
-        const result = Core.LastReadNormalizer.to(TEST_PUBKY.USER_1);
+        const result = LastReadNormalizer.to(TEST_PUBKY.USER_1);
         const json = result.last_read.toJson();
 
         expect(typeof json.timestamp).toBe('number');
@@ -158,19 +158,19 @@ describe('LastReadNormalizer', () => {
         ['invalid format', INVALID_INPUTS.INVALID_FORMAT],
       ])('should not throw for %s pubky (singleton already initialized)', (_, invalidPubky) => {
         // Ensure singleton is initialized first
-        Core.LastReadNormalizer.to(TEST_PUBKY.USER_1);
+        LastReadNormalizer.to(TEST_PUBKY.USER_1);
 
         // Invalid pubky doesn't throw due to singleton caching
-        const result = Core.LastReadNormalizer.to(invalidPubky);
+        const result = LastReadNormalizer.to(invalidPubky);
         expect(result).toBeDefined();
       });
     });
 
     describe('sequential calls', () => {
       it('should generate different timestamps for sequential calls', async () => {
-        const result1 = Core.LastReadNormalizer.to(TEST_PUBKY.USER_1);
+        const result1 = LastReadNormalizer.to(TEST_PUBKY.USER_1);
         await new Promise((r) => setTimeout(r, 10));
-        const result2 = Core.LastReadNormalizer.to(TEST_PUBKY.USER_1);
+        const result2 = LastReadNormalizer.to(TEST_PUBKY.USER_1);
 
         expect(result2.last_read.timestamp).toBeGreaterThanOrEqual(result1.last_read.timestamp);
       });

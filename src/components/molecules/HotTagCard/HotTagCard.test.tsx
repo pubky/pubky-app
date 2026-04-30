@@ -1,8 +1,7 @@
 import { render, screen, fireEvent, within } from '@testing-library/react';
 import { describe, it, expect, vi } from 'vitest';
 import { HotTagCard } from './HotTagCard';
-import { TIMEFRAME } from '@/core/stores/hot/hot.types';
-
+import { TIMEFRAME } from '@/stores/hot/hot.types';
 describe('HotTagCard', () => {
   const defaultProps = {
     rank: 1,

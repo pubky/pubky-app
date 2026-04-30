@@ -1,9 +1,9 @@
 'use client';
 
-import * as Core from '@/core';
 import { useLocalFirstQuery } from '@/hooks/useLocalFirstQuery/useLocalFirstQuery';
 import * as Types from './useUserDetails.types';
-
+import { UserController } from '@/controllers/user/user';
+import type { NexusUserDetails } from '@/services/nexus/nexus.types';
 /**
  * Hook to get user details from local database with live updates.
  * If the user is not in cache, it will trigger a fetch from Nexus.
@@ -23,9 +23,9 @@ import * as Types from './useUserDetails.types';
  * ```
  */
 export function useUserDetails(userId: string | null | undefined): Types.UseUserDetailsResult {
-  const { data, isLoading } = useLocalFirstQuery<Core.NexusUserDetails>({
-    queryFn: () => Core.UserController.getDetails({ userId: userId! }),
-    fetchFn: () => Core.UserController.fetchDetails({ userId: userId! }),
+  const { data, isLoading } = useLocalFirstQuery<NexusUserDetails>({
+    queryFn: () => UserController.getDetails({ userId: userId! }),
+    fetchFn: () => UserController.fetchDetails({ userId: userId! }),
     deps: [userId],
     enabled: !!userId,
   });

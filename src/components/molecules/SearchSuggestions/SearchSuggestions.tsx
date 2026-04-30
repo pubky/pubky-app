@@ -4,9 +4,8 @@ import { useTranslations } from 'next-intl';
 import * as Atoms from '@/atoms';
 import * as Molecules from '@/molecules';
 import { SEARCH_EXPANDED_STYLE } from '@/config/search';
-import { MAX_RECENT_SEARCHES } from '@/core/stores/search/search.constants';
 import type { SearchSuggestionsProps } from './SearchSuggestions.types';
-
+import { MAX_RECENT_SEARCHES } from '@/stores/search/search.constants';
 export function SearchSuggestions({
   id,
   'aria-label': ariaLabel,

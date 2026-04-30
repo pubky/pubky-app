@@ -1,35 +1,48 @@
 import { describe, it, expect, test, vi, beforeEach } from 'vitest';
-import * as Core from '@/core';
 import { postStreamApi } from './postStream.api';
 import { StreamKind, StreamOrder } from './postStream.types';
 import { createPostStreamParams, breakDownStreamId } from './postStream.utils';
 import { NexusPostStreamService } from './postStream';
-
+import * as queryNexusModule from '@/services/nexus/nexus.utils';
+import type { Pubky } from '@/models/models.types';
+import { PostStreamTypes, type PostStreamId } from '@/models/stream/post/postStream.types';
+import { StreamSorting, type NexusPost, type NexusPostsKeyStream } from '@/services/nexus/nexus.types';
+import { StreamSource } from '@/services/nexus/stream/posts/postStream.types';
+import type {
+  TPostStreamFetchParams,
+  TStreamAllParams,
+  TStreamAuthorParams,
+  TStreamAuthorRepliesParams,
+  TStreamPostRepliesParams,
+  TStreamPostsByIdsParams,
+  TStreamQueryParams,
+  TStreamWithObserverParams,
+} from '@/services/nexus/stream/posts/postStream.types';
 //TODO: Split the suite by module (postStream.api.test.ts, postStream.utils.test.ts, postStream.service.test.ts) so each file targets the key behaviours of that module under @posts.
 
 function callStreamEndpoint(
   endpoint: keyof typeof postStreamApi,
-  params: Core.TStreamQueryParams,
+  params: TStreamQueryParams,
 ): string | { body: { post_ids: string[]; viewer_id?: string }; url: string } {
   switch (endpoint) {
     case 'all':
-      return postStreamApi.all(params as Core.TStreamAllParams);
+      return postStreamApi.all(params as TStreamAllParams);
     case 'following':
-      return postStreamApi.following(params as Core.TStreamWithObserverParams);
+      return postStreamApi.following(params as TStreamWithObserverParams);
     case 'followers':
-      return postStreamApi.followers(params as Core.TStreamWithObserverParams);
+      return postStreamApi.followers(params as TStreamWithObserverParams);
     case 'friends':
-      return postStreamApi.friends(params as Core.TStreamWithObserverParams);
+      return postStreamApi.friends(params as TStreamWithObserverParams);
     case 'bookmarks':
-      return postStreamApi.bookmarks(params as Core.TStreamWithObserverParams);
+      return postStreamApi.bookmarks(params as TStreamWithObserverParams);
     case 'post_replies':
-      return postStreamApi.post_replies(params as Core.TStreamPostRepliesParams);
+      return postStreamApi.post_replies(params as TStreamPostRepliesParams);
     case 'author':
-      return postStreamApi.author(params as Core.TStreamAuthorParams);
+      return postStreamApi.author(params as TStreamAuthorParams);
     case 'author_replies':
-      return postStreamApi.author_replies(params as Core.TStreamAuthorRepliesParams);
+      return postStreamApi.author_replies(params as TStreamAuthorRepliesParams);
     case 'postsByIds':
-      return postStreamApi.postsByIds(params as Core.TStreamPostsByIdsParams);
+      return postStreamApi.postsByIds(params as TStreamPostsByIdsParams);
     default:
       throw new Error(`Unknown endpoint: ${endpoint}`);
   }
@@ -46,7 +59,7 @@ describe('Stream API URL Generation', () => {
       {
         name: 'all',
         endpoint: 'all' as const,
-        params: { viewer_id: mockViewerId, sorting: Core.StreamSorting.ENGAGEMENT, kind: StreamKind.VIDEO, limit: 50 },
+        params: { viewer_id: mockViewerId, sorting: StreamSorting.ENGAGEMENT, kind: StreamKind.VIDEO, limit: 50 },
         expectedInUrl: [
           'source=all',
           `viewer_id=${mockViewerId}`,
@@ -61,7 +74,7 @@ describe('Stream API URL Generation', () => {
         params: {
           observer_id: mockObserverId,
           viewer_id: mockViewerId,
-          sorting: Core.StreamSorting.TIMELINE,
+          sorting: StreamSorting.TIMELINE,
           limit: 10,
         },
         expectedInUrl: [
@@ -75,7 +88,7 @@ describe('Stream API URL Generation', () => {
       {
         name: 'followers',
         endpoint: 'followers' as const,
-        params: { observer_id: mockObserverId, sorting: Core.StreamSorting.ENGAGEMENT },
+        params: { observer_id: mockObserverId, sorting: StreamSorting.ENGAGEMENT },
         expectedInUrl: ['source=followers', `observer_id=${mockObserverId}`, 'sorting=total_engagement'],
       },
       {
@@ -111,7 +124,7 @@ describe('Stream API URL Generation', () => {
       {
         name: 'author',
         endpoint: 'author' as const,
-        params: { author_id: mockAuthorId, sorting: Core.StreamSorting.TIMELINE, kind: StreamKind.IMAGE },
+        params: { author_id: mockAuthorId, sorting: StreamSorting.TIMELINE, kind: StreamKind.IMAGE },
         expectedInUrl: ['source=author', `author_id=${mockAuthorId}`, 'sorting=timeline', 'kind=image'],
       },
       {
@@ -207,7 +220,7 @@ describe('Stream API URL Generation', () => {
       const url = postStreamApi.following({
         observer_id: mockObserverId,
         viewer_id: mockViewerId,
-        sorting: Core.StreamSorting.TIMELINE,
+        sorting: StreamSorting.TIMELINE,
         order: StreamOrder.DESCENDING,
         tags: 'dev,test',
         kind: StreamKind.SHORT,
@@ -350,17 +363,17 @@ describe('Stream API URL Generation', () => {
 });
 
 describe('createPostStreamParams', () => {
-  const mockViewerId = 'viewer-pubky-id' as Core.Pubky;
+  const mockViewerId = 'viewer-pubky-id' as Pubky;
 
   describe('Bookmark streams', () => {
     test.each([
-      { streamType: Core.PostStreamTypes.TIMELINE_BOOKMARKS_ALL, kind: undefined, name: 'all' },
-      { streamType: Core.PostStreamTypes.TIMELINE_BOOKMARKS_SHORT, kind: Core.StreamKind.SHORT, name: 'short' },
-      { streamType: Core.PostStreamTypes.TIMELINE_BOOKMARKS_LONG, kind: Core.StreamKind.LONG, name: 'long' },
-      { streamType: Core.PostStreamTypes.TIMELINE_BOOKMARKS_IMAGE, kind: Core.StreamKind.IMAGE, name: 'image' },
-      { streamType: Core.PostStreamTypes.TIMELINE_BOOKMARKS_VIDEO, kind: Core.StreamKind.VIDEO, name: 'video' },
-      { streamType: Core.PostStreamTypes.TIMELINE_BOOKMARKS_LINK, kind: Core.StreamKind.LINK, name: 'link' },
-      { streamType: Core.PostStreamTypes.TIMELINE_BOOKMARKS_FILE, kind: Core.StreamKind.FILE, name: 'file' },
+      { streamType: PostStreamTypes.TIMELINE_BOOKMARKS_ALL, kind: undefined, name: 'all' },
+      { streamType: PostStreamTypes.TIMELINE_BOOKMARKS_SHORT, kind: StreamKind.SHORT, name: 'short' },
+      { streamType: PostStreamTypes.TIMELINE_BOOKMARKS_LONG, kind: StreamKind.LONG, name: 'long' },
+      { streamType: PostStreamTypes.TIMELINE_BOOKMARKS_IMAGE, kind: StreamKind.IMAGE, name: 'image' },
+      { streamType: PostStreamTypes.TIMELINE_BOOKMARKS_VIDEO, kind: StreamKind.VIDEO, name: 'video' },
+      { streamType: PostStreamTypes.TIMELINE_BOOKMARKS_LINK, kind: StreamKind.LINK, name: 'link' },
+      { streamType: PostStreamTypes.TIMELINE_BOOKMARKS_FILE, kind: StreamKind.FILE, name: 'file' },
     ])('should handle timeline:bookmarks:$name stream', ({ streamType, kind }) => {
       const result = createPostStreamParams({
         streamId: streamType,
@@ -370,11 +383,11 @@ describe('createPostStreamParams', () => {
         viewerId: mockViewerId,
       });
 
-      expect(result.params.sorting).toBe(Core.StreamSorting.TIMELINE);
+      expect(result.params.sorting).toBe(StreamSorting.TIMELINE);
       expect(result.params.kind).toBe(kind);
       expect(result.params.viewer_id).toBe(mockViewerId);
       expect(result.params.limit).toBe(20);
-      expect(result.invokeEndpoint).toBe(Core.StreamSource.BOOKMARKS);
+      expect(result.invokeEndpoint).toBe(StreamSource.BOOKMARKS);
     });
   });
 
@@ -382,7 +395,7 @@ describe('createPostStreamParams', () => {
     describe('Timeline sorting - Uses timestamp-based pagination', () => {
       it('should NOT set start parameter when streamTail is 0 (initial load - fetch most recent)', () => {
         const result = createPostStreamParams({
-          streamId: Core.PostStreamTypes.TIMELINE_BOOKMARKS_ALL,
+          streamId: PostStreamTypes.TIMELINE_BOOKMARKS_ALL,
           streamTail: 0, // streamTail = 0 means initial load
           streamHead: 0,
           limit: 20,
@@ -397,7 +410,7 @@ describe('createPostStreamParams', () => {
       it('should DECREMENT streamTail by 1 when streamTail > 0 to prevent duplicate boundary post', () => {
         const streamTail = 1234567890; // Last post timestamp from previous fetch
         const result = createPostStreamParams({
-          streamId: Core.PostStreamTypes.TIMELINE_BOOKMARKS_ALL,
+          streamId: PostStreamTypes.TIMELINE_BOOKMARKS_ALL,
           streamTail,
           streamHead: 0,
           limit: 20,
@@ -411,7 +424,7 @@ describe('createPostStreamParams', () => {
 
       it('should handle streamTail = 1 (edge case: very first post)', () => {
         const result = createPostStreamParams({
-          streamId: Core.PostStreamTypes.TIMELINE_BOOKMARKS_ALL,
+          streamId: PostStreamTypes.TIMELINE_BOOKMARKS_ALL,
           streamTail: 1,
           streamHead: 0,
           limit: 20,
@@ -424,7 +437,7 @@ describe('createPostStreamParams', () => {
     });
 
     describe('Engagement sorting - Uses offset-based pagination', () => {
-      const engagementStreamId = 'total_engagement:bookmarks:all' as Core.PostStreamId;
+      const engagementStreamId = 'total_engagement:bookmarks:all' as PostStreamId;
 
       it('should use skip (NOT start) when sorting by engagement', () => {
         const streamTail = 20; // Number of posts already loaded
@@ -473,7 +486,7 @@ describe('createPostStreamParams', () => {
   describe('Tags handling in stream IDs', () => {
     it('should parse tags from stream ID', () => {
       // Stream ID format: sorting:endpoint:kind:tags
-      const streamIdWithTags = 'timeline:bookmarks:all:tech,ai,web3' as Core.PostStreamId;
+      const streamIdWithTags = 'timeline:bookmarks:all:tech,ai,web3' as PostStreamId;
       const result = createPostStreamParams({
         streamId: streamIdWithTags,
         streamHead: 0,
@@ -483,12 +496,12 @@ describe('createPostStreamParams', () => {
       });
 
       expect(result.params.tags).toBe('tech,ai,web3');
-      expect(result.params.sorting).toBe(Core.StreamSorting.TIMELINE);
-      expect(result.invokeEndpoint).toBe(Core.StreamSource.BOOKMARKS);
+      expect(result.params.sorting).toBe(StreamSorting.TIMELINE);
+      expect(result.invokeEndpoint).toBe(StreamSource.BOOKMARKS);
     });
 
     it('should limit tags to maximum 5 (NEXT_MAX_STREAM_TAGS)', () => {
-      const streamIdWithManyTags = 'timeline:bookmarks:all:tag1,tag2,tag3,tag4,tag5,tag6,tag7' as Core.PostStreamId;
+      const streamIdWithManyTags = 'timeline:bookmarks:all:tag1,tag2,tag3,tag4,tag5,tag6,tag7' as PostStreamId;
       const result = createPostStreamParams({
         streamId: streamIdWithManyTags,
         streamTail: 0,
@@ -502,7 +515,7 @@ describe('createPostStreamParams', () => {
     });
 
     it('should handle stream ID without tags', () => {
-      const streamIdWithoutTags = 'timeline:bookmarks:video' as Core.PostStreamId;
+      const streamIdWithoutTags = 'timeline:bookmarks:video' as PostStreamId;
       const result = createPostStreamParams({
         streamId: streamIdWithoutTags,
         streamTail: 0,
@@ -512,11 +525,11 @@ describe('createPostStreamParams', () => {
       });
 
       expect(result.params.tags).toBeUndefined();
-      expect(result.params.kind).toBe(Core.StreamKind.VIDEO);
+      expect(result.params.kind).toBe(StreamKind.VIDEO);
     });
 
     it('should handle tags with special characters', () => {
-      const streamIdWithSpecialTags = 'timeline:bookmarks:all:machine-learning,ai/ml,web3.0' as Core.PostStreamId;
+      const streamIdWithSpecialTags = 'timeline:bookmarks:all:machine-learning,ai/ml,web3.0' as PostStreamId;
       const result = createPostStreamParams({
         streamId: streamIdWithSpecialTags,
         streamTail: 0,
@@ -529,7 +542,7 @@ describe('createPostStreamParams', () => {
     });
 
     it('should preserve tag order from stream ID', () => {
-      const streamIdWithOrderedTags = 'timeline:bookmarks:all:first,second,third' as Core.PostStreamId;
+      const streamIdWithOrderedTags = 'timeline:bookmarks:all:first,second,third' as PostStreamId;
       const result = createPostStreamParams({
         streamId: streamIdWithOrderedTags,
         streamTail: 0,
@@ -543,7 +556,7 @@ describe('createPostStreamParams', () => {
 
     it('should handle empty tag in stream ID', () => {
       // Stream ID with empty string after last colon
-      const streamIdWithEmptyTag = 'timeline:bookmarks:all:' as Core.PostStreamId;
+      const streamIdWithEmptyTag = 'timeline:bookmarks:all:' as PostStreamId;
       const result = createPostStreamParams({
         streamId: streamIdWithEmptyTag,
         streamTail: 0,
@@ -559,14 +572,14 @@ describe('createPostStreamParams', () => {
 
   describe('Tags with different content types', () => {
     test.each([
-      { kind: 'short', tags: 'tech,dev', expectedKind: Core.StreamKind.SHORT },
-      { kind: 'long', tags: 'essays,articles', expectedKind: Core.StreamKind.LONG },
-      { kind: 'image', tags: 'photos,art', expectedKind: Core.StreamKind.IMAGE },
-      { kind: 'video', tags: 'tutorials,vlogs', expectedKind: Core.StreamKind.VIDEO },
-      { kind: 'link', tags: 'resources,refs', expectedKind: Core.StreamKind.LINK },
-      { kind: 'file', tags: 'docs,pdfs', expectedKind: Core.StreamKind.FILE },
+      { kind: 'short', tags: 'tech,dev', expectedKind: StreamKind.SHORT },
+      { kind: 'long', tags: 'essays,articles', expectedKind: StreamKind.LONG },
+      { kind: 'image', tags: 'photos,art', expectedKind: StreamKind.IMAGE },
+      { kind: 'video', tags: 'tutorials,vlogs', expectedKind: StreamKind.VIDEO },
+      { kind: 'link', tags: 'resources,refs', expectedKind: StreamKind.LINK },
+      { kind: 'file', tags: 'docs,pdfs', expectedKind: StreamKind.FILE },
     ])('should handle tags in $kind content stream', ({ kind, tags, expectedKind }) => {
-      const streamIdWithTags = `timeline:bookmarks:${kind}:${tags}` as Core.PostStreamId;
+      const streamIdWithTags = `timeline:bookmarks:${kind}:${tags}` as PostStreamId;
       const result = createPostStreamParams({
         streamId: streamIdWithTags,
         streamHead: 0,
@@ -577,7 +590,7 @@ describe('createPostStreamParams', () => {
 
       expect(result.params.tags).toBe(tags);
       expect(result.params.kind).toBe(expectedKind);
-      expect(result.params.sorting).toBe(Core.StreamSorting.TIMELINE);
+      expect(result.params.sorting).toBe(StreamSorting.TIMELINE);
     });
   });
 });
@@ -585,56 +598,56 @@ describe('createPostStreamParams', () => {
 describe('breakDownStreamId', () => {
   describe('Timeline pattern', () => {
     it('should parse timeline:endpoint:kind:tags', () => {
-      const result = breakDownStreamId('timeline:bookmarks:all:tech,ai' as Core.PostStreamId);
-      expect(result).toEqual(['timeline', Core.StreamSource.BOOKMARKS, 'all', 'tech,ai']);
+      const result = breakDownStreamId('timeline:bookmarks:all:tech,ai' as PostStreamId);
+      expect(result).toEqual(['timeline', StreamSource.BOOKMARKS, 'all', 'tech,ai']);
     });
 
     it('should parse without tags', () => {
-      const result = breakDownStreamId('timeline:following:short' as Core.PostStreamId);
-      expect(result).toEqual(['timeline', Core.StreamSource.FOLLOWING, 'short', undefined]);
+      const result = breakDownStreamId('timeline:following:short' as PostStreamId);
+      expect(result).toEqual(['timeline', StreamSource.FOLLOWING, 'short', undefined]);
     });
   });
 
   describe('Replies pattern', () => {
     it('should parse post_replies:pubky:postId', () => {
-      const result = breakDownStreamId('post_replies:pubky:post123' as Core.PostStreamId);
-      expect(result).toEqual(['pubky', Core.StreamSource.REPLIES, 'post123', undefined]);
+      const result = breakDownStreamId('post_replies:pubky:post123' as PostStreamId);
+      expect(result).toEqual(['pubky', StreamSource.REPLIES, 'post123', undefined]);
     });
 
     it('should parse with tags', () => {
-      const result = breakDownStreamId('post_replies:pubky:post123:tag1,tag2' as Core.PostStreamId);
-      expect(result).toEqual(['pubky', Core.StreamSource.REPLIES, 'post123', 'tag1,tag2']);
+      const result = breakDownStreamId('post_replies:pubky:post123:tag1,tag2' as PostStreamId);
+      expect(result).toEqual(['pubky', StreamSource.REPLIES, 'post123', 'tag1,tag2']);
     });
   });
 
   describe('Author patterns', () => {
     it('should parse author:pubky', () => {
-      const result = breakDownStreamId('author:pubky' as Core.PostStreamId);
-      expect(result).toEqual(['pubky', Core.StreamSource.AUTHOR, undefined, undefined]);
+      const result = breakDownStreamId('author:pubky' as PostStreamId);
+      expect(result).toEqual(['pubky', StreamSource.AUTHOR, undefined, undefined]);
     });
 
     it('should parse author_replies:pubky', () => {
-      const result = breakDownStreamId('author_replies:pubky' as Core.PostStreamId);
-      expect(result).toEqual(['pubky', Core.StreamSource.AUTHOR_REPLIES, undefined, undefined]);
+      const result = breakDownStreamId('author_replies:pubky' as PostStreamId);
+      expect(result).toEqual(['pubky', StreamSource.AUTHOR_REPLIES, undefined, undefined]);
     });
   });
 
   describe('Tag limiting', () => {
     it('should limit to 5 tags', () => {
-      const result = breakDownStreamId('timeline:all:all:tag1,tag2,tag3,tag4,tag5,tag6,tag7' as Core.PostStreamId);
+      const result = breakDownStreamId('timeline:all:all:tag1,tag2,tag3,tag4,tag5,tag6,tag7' as PostStreamId);
       expect(result[3]).toBe('tag1,tag2,tag3,tag4,tag5');
     });
 
     it('should handle empty tags string', () => {
-      const result = breakDownStreamId('timeline:all:all:' as Core.PostStreamId);
+      const result = breakDownStreamId('timeline:all:all:' as PostStreamId);
       expect(result[3]).toBeUndefined();
     });
   });
 });
 
 describe('NexusPostStreamService', () => {
-  const mockViewerId = 'viewer-pubky-id' as Core.Pubky;
-  const mockAuthorId = 'author-pubky-id' as Core.Pubky;
+  const mockViewerId = 'viewer-pubky-id' as Pubky;
+  const mockAuthorId = 'author-pubky-id' as Pubky;
   const mockPostId = 'post-pubky-id';
 
   // Mock the queryNexus function
@@ -646,61 +659,61 @@ describe('NexusPostStreamService', () => {
     test.each([
       {
         name: 'ALL',
-        invokeEndpoint: Core.StreamSource.ALL,
+        invokeEndpoint: StreamSource.ALL,
         params: { limit: 10, viewer_id: mockViewerId },
         extraParams: {},
         expectedInUrl: ['source=all', 'limit=10'],
       },
       {
         name: 'FOLLOWING',
-        invokeEndpoint: Core.StreamSource.FOLLOWING,
+        invokeEndpoint: StreamSource.FOLLOWING,
         params: { limit: 20, viewer_id: mockViewerId },
         extraParams: {},
         expectedInUrl: ['source=following', 'observer_id=viewer-pubky-id', 'limit=20'],
       },
       {
         name: 'FRIENDS',
-        invokeEndpoint: Core.StreamSource.FRIENDS,
+        invokeEndpoint: StreamSource.FRIENDS,
         params: { limit: 15, viewer_id: mockViewerId, tags: 'tech,dev' },
         extraParams: {},
         expectedInUrl: ['source=friends', 'observer_id=viewer-pubky-id', 'tags=tech%2Cdev'],
       },
       {
         name: 'BOOKMARKS',
-        invokeEndpoint: Core.StreamSource.BOOKMARKS,
-        params: { limit: 25, viewer_id: mockViewerId, sorting: Core.StreamSorting.TIMELINE },
+        invokeEndpoint: StreamSource.BOOKMARKS,
+        params: { limit: 25, viewer_id: mockViewerId, sorting: StreamSorting.TIMELINE },
         extraParams: {},
         expectedInUrl: ['source=bookmarks', 'observer_id=viewer-pubky-id', 'sorting=timeline'],
       },
       {
         name: 'REPLIES',
-        invokeEndpoint: Core.StreamSource.REPLIES,
+        invokeEndpoint: StreamSource.REPLIES,
         params: { limit: 30, viewer_id: mockViewerId },
         extraParams: { author_id: mockAuthorId, post_id: mockPostId },
         expectedInUrl: ['source=post_replies', 'author_id=author-pubky-id', 'post_id=post-pubky-id'],
       },
       {
         name: 'AUTHOR',
-        invokeEndpoint: Core.StreamSource.AUTHOR,
-        params: { limit: 40, sorting: Core.StreamSorting.ENGAGEMENT },
+        invokeEndpoint: StreamSource.AUTHOR,
+        params: { limit: 40, sorting: StreamSorting.ENGAGEMENT },
         extraParams: { author_id: mockAuthorId },
         expectedInUrl: ['source=author', 'author_id=author-pubky-id', 'sorting=total_engagement'],
       },
       {
         name: 'AUTHOR_REPLIES',
-        invokeEndpoint: Core.StreamSource.AUTHOR_REPLIES,
+        invokeEndpoint: StreamSource.AUTHOR_REPLIES,
         params: { limit: 50, tags: 'coding' },
         extraParams: { author_id: mockAuthorId },
         expectedInUrl: ['source=author_replies', 'author_id=author-pubky-id', 'tags=coding'],
       },
     ])('routes $name stream correctly', async ({ invokeEndpoint, params, extraParams, expectedInUrl }) => {
-      const mockResponse: Core.NexusPostsKeyStream = {
+      const mockResponse: NexusPostsKeyStream = {
         post_keys: [],
         last_post_score: 0,
       };
-      const queryNexusSpy = vi.spyOn(Core, 'queryNexus').mockResolvedValue(mockResponse);
+      const queryNexusSpy = vi.spyOn(queryNexusModule, 'queryNexus').mockResolvedValue(mockResponse);
 
-      const fetchParams: Core.TPostStreamFetchParams = {
+      const fetchParams: TPostStreamFetchParams = {
         params,
         invokeEndpoint,
         extraParams,
@@ -721,27 +734,27 @@ describe('NexusPostStreamService', () => {
     test.each([
       {
         name: 'FOLLOWING requires viewer_id',
-        invokeEndpoint: Core.StreamSource.FOLLOWING,
+        invokeEndpoint: StreamSource.FOLLOWING,
         params: { limit: 10 }, // Missing viewer_id
         extraParams: {},
         expectedError: 'Viewer ID is required',
       },
       {
         name: 'FRIENDS requires viewer_id',
-        invokeEndpoint: Core.StreamSource.FRIENDS,
+        invokeEndpoint: StreamSource.FRIENDS,
         params: { limit: 10 }, // Missing viewer_id
         extraParams: {},
         expectedError: 'Viewer ID is required',
       },
       {
         name: 'BOOKMARKS requires viewer_id',
-        invokeEndpoint: Core.StreamSource.BOOKMARKS,
+        invokeEndpoint: StreamSource.BOOKMARKS,
         params: { limit: 10 }, // Missing viewer_id
         extraParams: {},
         expectedError: 'Viewer ID is required',
       },
     ])('$name', async ({ invokeEndpoint, params, extraParams, expectedError }) => {
-      const fetchParams: Core.TPostStreamFetchParams = {
+      const fetchParams: TPostStreamFetchParams = {
         params,
         invokeEndpoint,
         extraParams,
@@ -753,11 +766,11 @@ describe('NexusPostStreamService', () => {
     it('should throw error for invalid stream type', async () => {
       const params = {
         params: { limit: 10 },
-        invokeEndpoint: 'invalid_stream_type' as Core.StreamSource,
+        invokeEndpoint: 'invalid_stream_type' as StreamSource,
         extraParams: {},
       };
 
-      await expect(NexusPostStreamService.fetch(params as Core.TPostStreamFetchParams)).rejects.toThrow(
+      await expect(NexusPostStreamService.fetch(params as TPostStreamFetchParams)).rejects.toThrow(
         'Invalid stream type',
       );
     });
@@ -765,16 +778,16 @@ describe('NexusPostStreamService', () => {
 
   describe('fetch - Return values', () => {
     it('should return the response from queryNexus', async () => {
-      const mockResponse: Core.NexusPostsKeyStream = {
+      const mockResponse: NexusPostsKeyStream = {
         post_keys: ['author1:post1', 'author1:post2', 'author2:post3'],
         last_post_score: 123456,
       };
 
-      vi.spyOn(Core, 'queryNexus').mockResolvedValue(mockResponse);
+      vi.spyOn(queryNexusModule, 'queryNexus').mockResolvedValue(mockResponse);
 
-      const params: Core.TPostStreamFetchParams = {
+      const params: TPostStreamFetchParams = {
         params: { limit: 10, viewer_id: mockViewerId },
-        invokeEndpoint: Core.StreamSource.ALL,
+        invokeEndpoint: StreamSource.ALL,
         extraParams: {},
       };
 
@@ -790,12 +803,12 @@ describe('NexusPostStreamService', () => {
     it('should fetch posts by IDs with viewer_id', async () => {
       // Arrange
       const mockPostIds = ['author1:post1', 'author1:post2', 'author2:post3'];
-      const mockPosts: Core.NexusPost[] = [
-        { details: { id: 'post1', author: 'author1' } } as Core.NexusPost,
-        { details: { id: 'post2', author: 'author1' } } as Core.NexusPost,
-        { details: { id: 'post3', author: 'author2' } } as Core.NexusPost,
+      const mockPosts: NexusPost[] = [
+        { details: { id: 'post1', author: 'author1' } } as NexusPost,
+        { details: { id: 'post2', author: 'author1' } } as NexusPost,
+        { details: { id: 'post3', author: 'author2' } } as NexusPost,
       ];
-      const queryNexusSpy = vi.spyOn(Core, 'queryNexus').mockResolvedValue(mockPosts);
+      const queryNexusSpy = vi.spyOn(queryNexusModule, 'queryNexus').mockResolvedValue(mockPosts);
 
       // Act
       const result = await NexusPostStreamService.fetchByIds({
@@ -816,8 +829,8 @@ describe('NexusPostStreamService', () => {
     it('should fetch posts by IDs without viewer_id', async () => {
       // Arrange
       const mockPostIds = ['author1:post1'];
-      const mockPosts: Core.NexusPost[] = [{ details: { id: 'post1', author: 'author1' } } as Core.NexusPost];
-      const queryNexusSpy = vi.spyOn(Core, 'queryNexus').mockResolvedValue(mockPosts);
+      const mockPosts: NexusPost[] = [{ details: { id: 'post1', author: 'author1' } } as NexusPost];
+      const queryNexusSpy = vi.spyOn(queryNexusModule, 'queryNexus').mockResolvedValue(mockPosts);
 
       // Act
       const result = await NexusPostStreamService.fetchByIds({ post_ids: mockPostIds });
@@ -833,7 +846,7 @@ describe('NexusPostStreamService', () => {
 
     it('should return empty array when fetching empty post IDs', async () => {
       // Arrange
-      const queryNexusSpy = vi.spyOn(Core, 'queryNexus').mockResolvedValue([]);
+      const queryNexusSpy = vi.spyOn(queryNexusModule, 'queryNexus').mockResolvedValue([]);
 
       // Act
       const result = await NexusPostStreamService.fetchByIds({ post_ids: [] });

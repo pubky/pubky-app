@@ -5,11 +5,10 @@ import { useIsFollowing } from '@/hooks/useIsFollowing/useIsFollowing';
 import { useProfileHeader } from '@/hooks/useProfileHeader/useProfileHeader';
 import { useProfileNavigation } from '@/hooks/useProfileNavigation/useProfileNavigation';
 import { useRequireAuth } from '@/hooks/useRequireAuth/useRequireAuth';
-import * as Core from '@/core';
 import * as Molecules from '@/molecules';
 import * as Organisms from '@/organisms';
 import * as Providers from '@/providers';
-
+import { useAuthStore } from '@/stores/auth/auth.store';
 export interface ProfilePageContainerProps {
   /** Child pages to render in the main content area */
   children: React.ReactNode;
@@ -51,7 +50,7 @@ export function ProfilePageContainer({ children }: ProfilePageContainerProps) {
   const { pubky, isOwnProfile } = Providers.useProfileContext();
 
   // Check if logout is in progress (global state to prevent flash of weird states)
-  const isLoggingOut = Core.useAuthStore((state) => state.isLoggingOut);
+  const isLoggingOut = useAuthStore((state) => state.isLoggingOut);
 
   // Business logic: Fetch profile data and stats
   // Note: useProfileHeader guarantees a non-null profile with default values during loading

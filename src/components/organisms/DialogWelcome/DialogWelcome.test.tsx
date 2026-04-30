@@ -9,14 +9,18 @@ const { mockGetAvatarUrl, mockCopyToClipboard, mockSetShowWelcomeDialog } = vi.h
   mockSetShowWelcomeDialog: vi.fn(),
 }));
 
-vi.mock('@/core', () => ({
+vi.mock('@/stores/auth/auth.store', () => ({
   useAuthStore: vi.fn(() => ({
     currentUserPubky: 'test-pubky-123',
   })),
+}));
+vi.mock('@/stores/onboarding/onboarding.store', () => ({
   useOnboardingStore: vi.fn(() => ({
     showWelcomeDialog: true,
     setShowWelcomeDialog: mockSetShowWelcomeDialog,
   })),
+}));
+vi.mock('@/controllers/profile/profile', () => ({
   ProfileController: {
     read: vi.fn(() =>
       Promise.resolve({
@@ -26,6 +30,8 @@ vi.mock('@/core', () => ({
       }),
     ),
   },
+}));
+vi.mock('@/controllers/file/file', () => ({
   FileController: {
     getAvatarUrl: mockGetAvatarUrl,
   },

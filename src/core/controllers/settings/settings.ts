@@ -1,6 +1,9 @@
-import * as Core from '@/core';
 import { setLocaleCookie } from '@/i18n/utils';
-
+import { SettingsApplication } from '@/application/settings/settings';
+import { SettingsNormalizer } from '@/pipes/settings/settings.normalizer';
+import { useAuthStore } from '@/stores/auth/auth.store';
+import { useSettingsStore } from '@/stores/settings/settings.store';
+import type { NotificationPreferences } from '@/stores/settings/settings.types';
 /**
  * Settings controller.
  *
@@ -26,9 +29,9 @@ export class SettingsController {
     this.pendingCommit = this.pendingCommit
       .catch(() => {})
       .then(async () => {
-        const pubky = Core.useAuthStore.getState().selectCurrentUserPubky();
-        const settings = Core.SettingsNormalizer.extractState(Core.useSettingsStore.getState());
-        await Core.SettingsApplication.commitUpdate(settings, pubky);
+        const pubky = useAuthStore.getState().selectCurrentUserPubky();
+        const settings = SettingsNormalizer.extractState(useSettingsStore.getState());
+        await SettingsApplication.commitUpdate(settings, pubky);
       });
     await this.pendingCommit;
   }
@@ -36,16 +39,16 @@ export class SettingsController {
   /**
    * Updates a notification preference and syncs to homeserver.
    */
-  static async setNotificationPreference(type: keyof Core.NotificationPreferences, enabled: boolean): Promise<void> {
-    Core.useSettingsStore.getState().setNotificationPreference(type, enabled);
+  static async setNotificationPreference(type: keyof NotificationPreferences, enabled: boolean): Promise<void> {
+    useSettingsStore.getState().setNotificationPreference(type, enabled);
     await this.commitUpdate();
   }
 
   /**
    * Updates all notification preferences and syncs to homeserver.
    */
-  static async setAllNotifications(preferences: Core.NotificationPreferences): Promise<void> {
-    Core.useSettingsStore.getState().setAllNotifications(preferences);
+  static async setAllNotifications(preferences: NotificationPreferences): Promise<void> {
+    useSettingsStore.getState().setAllNotifications(preferences);
     await this.commitUpdate();
   }
 
@@ -53,42 +56,42 @@ export class SettingsController {
    * Updates privacy settings and syncs to homeserver.
    */
   static async setShowConfirm(showConfirm: boolean): Promise<void> {
-    Core.useSettingsStore.getState().setShowConfirm(showConfirm);
+    useSettingsStore.getState().setShowConfirm(showConfirm);
     await this.commitUpdate();
   }
 
   static async setBlurCensored(blurCensored: boolean): Promise<void> {
-    Core.useSettingsStore.getState().setBlurCensored(blurCensored);
+    useSettingsStore.getState().setBlurCensored(blurCensored);
     await this.commitUpdate();
   }
 
   static async setSignOutInactive(signOutInactive: boolean): Promise<void> {
-    Core.useSettingsStore.getState().setSignOutInactive(signOutInactive);
+    useSettingsStore.getState().setSignOutInactive(signOutInactive);
     await this.commitUpdate();
   }
 
   static async setRequirePin(requirePin: boolean): Promise<void> {
-    Core.useSettingsStore.getState().setRequirePin(requirePin);
+    useSettingsStore.getState().setRequirePin(requirePin);
     await this.commitUpdate();
   }
 
   static async setHideWhoToFollow(hideWhoToFollow: boolean): Promise<void> {
-    Core.useSettingsStore.getState().setHideWhoToFollow(hideWhoToFollow);
+    useSettingsStore.getState().setHideWhoToFollow(hideWhoToFollow);
     await this.commitUpdate();
   }
 
   static async setHideActiveFriends(hideActiveFriends: boolean): Promise<void> {
-    Core.useSettingsStore.getState().setHideActiveFriends(hideActiveFriends);
+    useSettingsStore.getState().setHideActiveFriends(hideActiveFriends);
     await this.commitUpdate();
   }
 
   static async setHideSearch(hideSearch: boolean): Promise<void> {
-    Core.useSettingsStore.getState().setHideSearch(hideSearch);
+    useSettingsStore.getState().setHideSearch(hideSearch);
     await this.commitUpdate();
   }
 
   static async setNeverShowPosts(neverShowPosts: boolean): Promise<void> {
-    Core.useSettingsStore.getState().setNeverShowPosts(neverShowPosts);
+    useSettingsStore.getState().setNeverShowPosts(neverShowPosts);
     await this.commitUpdate();
   }
 
@@ -98,26 +101,26 @@ export class SettingsController {
    * a homeserver sync since muted users are device-specific.
    */
   static addMutedUser(userId: string): void {
-    Core.useSettingsStore.getState().addMutedUser(userId);
+    useSettingsStore.getState().addMutedUser(userId);
   }
 
   static removeMutedUser(userId: string): void {
-    Core.useSettingsStore.getState().removeMutedUser(userId);
+    useSettingsStore.getState().removeMutedUser(userId);
   }
 
   static setMutedUsers(userIds: string[]): void {
-    Core.useSettingsStore.getState().setMutedUsers(userIds);
+    useSettingsStore.getState().setMutedUsers(userIds);
   }
 
   static clearMutedUsers(): void {
-    Core.useSettingsStore.getState().clearMutedUsers();
+    useSettingsStore.getState().clearMutedUsers();
   }
 
   /**
    * Updates language preference and syncs to homeserver.
    */
   static async setLanguage(language: string): Promise<void> {
-    Core.useSettingsStore.getState().setLanguage(language);
+    useSettingsStore.getState().setLanguage(language);
     setLocaleCookie(language);
     await this.commitUpdate();
   }

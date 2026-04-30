@@ -1,18 +1,18 @@
-import * as Core from '@/core';
-
+import type { PostStreamId } from '@/models/stream/post/postStream.types';
+import type { StreamOrder } from '@/services/nexus/stream/posts/postStream.types';
 export type TReadPostStreamChunkParams = {
-  streamId: Core.PostStreamId;
+  streamId: PostStreamId;
   streamHead?: number;
   streamTail?: number;
   lastPostId?: string;
   tags?: string[];
   limit?: number;
   /** Order of results: 'ascending' (oldest first) or 'descending' (newest first, default) */
-  order?: Core.StreamOrder;
+  order?: StreamOrder;
 };
 
 export type TStreamIdParams = {
-  streamId: Core.PostStreamId;
+  streamId: PostStreamId;
 };
 
 export type TReadPostStreamChunkResponse = {

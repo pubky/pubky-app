@@ -2,32 +2,35 @@ import { render, screen, waitFor } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { useLiveQuery } from 'dexie-react-hooks';
 import { FeedbackCard } from './FeedbackCard';
-import * as Core from '@/core';
 import { useCurrentUserProfile } from '@/hooks/useCurrentUserProfile/useCurrentUserProfile';
-
+import { FileController } from '@/controllers/file/file';
+import type { NexusUserDetails } from '@/services/nexus/nexus.types';
+import { useAuthStore } from '@/stores/auth/auth.store';
 // Mock dexie-react-hooks
 vi.mock('dexie-react-hooks', () => ({
   useLiveQuery: vi.fn(),
 }));
 
-// Mock Core module
-vi.mock('@/core', async (importOriginal) => {
-  const actual = await importOriginal<typeof import('@/core')>();
-  return {
-    ...actual,
-    useAuthStore: vi.fn(),
-    ProfileController: {
-      read: vi.fn(),
-    },
-    UserController: {
-      getDetails: vi.fn().mockResolvedValue(null),
-      getOrFetchDetails: vi.fn().mockResolvedValue(null),
-    },
-    FileController: {
-      getAvatarUrl: vi.fn((pubky: string) => `https://cdn.example.com/avatar/${pubky}`),
-    },
-  };
-});
+// Mock dependencies
+vi.mock('@/stores/auth/auth.store', () => ({
+  useAuthStore: vi.fn(),
+}));
+vi.mock('@/controllers/profile/profile', () => ({
+  ProfileController: {
+    read: vi.fn(),
+  },
+}));
+vi.mock('@/controllers/user/user', () => ({
+  UserController: {
+    getDetails: vi.fn().mockResolvedValue(null),
+    getOrFetchDetails: vi.fn().mockResolvedValue(null),
+  },
+}));
+vi.mock('@/controllers/file/file', () => ({
+  FileController: {
+    getAvatarUrl: vi.fn((pubky: string) => `https://cdn.example.com/avatar/${pubky}`),
+  },
+}));
 
 vi.mock('@/hooks/useCurrentUserProfile/useCurrentUserProfile', () => ({
   useCurrentUserProfile: vi.fn(),
@@ -134,7 +137,7 @@ vi.mock('@/atoms', async (importOriginal) => {
 describe('FeedbackCard', () => {
   const mockPubky = 'user123pubky';
   const mockUseLiveQuery = vi.mocked(useLiveQuery);
-  const mockUseAuthStore = vi.mocked(Core.useAuthStore);
+  const mockUseAuthStore = vi.mocked(useAuthStore);
   const mockUseCurrentUserProfile = vi.mocked(useCurrentUserProfile);
 
   beforeEach(() => {
@@ -144,7 +147,7 @@ describe('FeedbackCard', () => {
       const currentUserPubky = mockUseAuthStore(
         (state: { currentUserPubky: string | null }) => state.currentUserPubky,
       ) as string | null;
-      const userDetails = mockUseLiveQuery(() => null, [], null) as Core.NexusUserDetails | null | undefined;
+      const userDetails = mockUseLiveQuery(() => null, [], null) as NexusUserDetails | null | undefined;
       return { userDetails, currentUserPubky };
     });
   });
@@ -293,7 +296,7 @@ describe('FeedbackCard', () => {
     });
 
     it('does not call getAvatarUrl when image is not available', async () => {
-      const mockGetAvatarUrl = vi.mocked(Core.FileController.getAvatarUrl);
+      const mockGetAvatarUrl = vi.mocked(FileController.getAvatarUrl);
       mockUseAuthStore.mockReturnValue({ currentUserPubky: mockPubky } as never);
       mockUseLiveQuery.mockReturnValue({
         name: 'Miguel',
@@ -311,7 +314,7 @@ describe('FeedbackCard', () => {
     });
 
     it('calls getAvatarUrl with correct pubky when image exists', async () => {
-      const mockGetAvatarUrl = vi.mocked(Core.FileController.getAvatarUrl);
+      const mockGetAvatarUrl = vi.mocked(FileController.getAvatarUrl);
       mockUseAuthStore.mockReturnValue({ currentUserPubky: mockPubky } as never);
       mockUseLiveQuery.mockReturnValue({
         id: mockPubky,
@@ -327,7 +330,7 @@ describe('FeedbackCard', () => {
     });
 
     it('does not call getAvatarUrl when currentUserPubky is null', async () => {
-      const mockGetAvatarUrl = vi.mocked(Core.FileController.getAvatarUrl);
+      const mockGetAvatarUrl = vi.mocked(FileController.getAvatarUrl);
       mockUseAuthStore.mockReturnValue({ currentUserPubky: null } as never);
       mockUseLiveQuery.mockReturnValue(null as never); // When no pubky, userDetails should be null
 
@@ -435,7 +438,7 @@ describe('FeedbackCard', () => {
 describe('FeedbackCard - Snapshots', () => {
   const mockPubky = 'user123pubky';
   const mockUseLiveQuery = vi.mocked(useLiveQuery);
-  const mockUseAuthStore = vi.mocked(Core.useAuthStore);
+  const mockUseAuthStore = vi.mocked(useAuthStore);
   const mockUseCurrentUserProfile = vi.mocked(useCurrentUserProfile);
 
   beforeEach(() => {
@@ -445,7 +448,7 @@ describe('FeedbackCard - Snapshots', () => {
       const currentUserPubky = mockUseAuthStore(
         (state: { currentUserPubky: string | null }) => state.currentUserPubky,
       ) as string | null;
-      const userDetails = mockUseLiveQuery(() => null, [], null) as Core.NexusUserDetails | null | undefined;
+      const userDetails = mockUseLiveQuery(() => null, [], null) as NexusUserDetails | null | undefined;
       return { userDetails, currentUserPubky };
     });
   });

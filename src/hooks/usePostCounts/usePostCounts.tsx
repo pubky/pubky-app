@@ -1,9 +1,9 @@
 'use client';
 
-import * as Core from '@/core';
 import { useLocalFirstQuery } from '@/hooks/useLocalFirstQuery/useLocalFirstQuery';
 import type { UsePostCountsResult } from './usePostCounts.types';
-
+import { PostController } from '@/controllers/post/post';
+import type { PostCountsModelSchema } from '@/models/post/counts/postCounts.schema';
 /**
  * Hook to get post counts from local database with live updates.
  * If the post counts are not in cache, it will trigger a fetch from Nexus.
@@ -23,9 +23,9 @@ import type { UsePostCountsResult } from './usePostCounts.types';
  * ```
  */
 export function usePostCounts(compositeId: string | null | undefined): UsePostCountsResult {
-  const { data, isLoading } = useLocalFirstQuery<Core.PostCountsModelSchema>({
-    queryFn: () => Core.PostController.getCounts({ compositeId: compositeId! }),
-    fetchFn: () => Core.PostController.fetch({ compositeId: compositeId! }),
+  const { data, isLoading } = useLocalFirstQuery<PostCountsModelSchema>({
+    queryFn: () => PostController.getCounts({ compositeId: compositeId! }),
+    fetchFn: () => PostController.fetch({ compositeId: compositeId! }),
     deps: [compositeId],
     enabled: !!compositeId,
   });

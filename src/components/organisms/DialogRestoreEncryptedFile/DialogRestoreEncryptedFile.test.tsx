@@ -2,30 +2,25 @@ import React from 'react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import { DialogRestoreEncryptedFile } from './DialogRestoreEncryptedFile';
-
+import { AuthController } from '@/controllers/auth/auth';
 // Mock @synonymdev/pubky
 vi.mock('@synonymdev/pubky', () => ({
   decryptRecoveryFile: vi.fn(),
 }));
 
-// Mock @/core
-vi.mock('@/core', async (importOriginal) => {
-  const actual = await importOriginal<typeof import('@/core')>();
-  return {
-    ...actual,
-    AuthController: {
-      loginWithEncryptedFile: vi.fn(),
-    },
-    BootstrapController: {
-      run: vi.fn().mockResolvedValue({}),
-    },
-    useAuthStore: {
-      getState: vi.fn().mockReturnValue({
-        currentUserPubky: 'mock-user-pubkey-123',
-      }),
-    },
-  };
-});
+// Mock auth controller
+vi.mock('@/controllers/auth/auth', () => ({
+  AuthController: {
+    loginWithEncryptedFile: vi.fn(),
+  },
+}));
+vi.mock('@/stores/auth/auth.store', () => ({
+  useAuthStore: {
+    getState: vi.fn().mockReturnValue({
+      currentUserPubky: 'mock-user-pubkey-123',
+    }),
+  },
+}));
 
 // Mock atoms
 vi.mock('@/components/atoms', () => ({
@@ -184,7 +179,6 @@ File.prototype.arrayBuffer = vi.fn().mockImplementation(function (this: File) {
 });
 
 // Get the mocked functions
-const { AuthController } = await import('@/core');
 const mockLoginWithEncryptedFile = vi.mocked(AuthController.loginWithEncryptedFile);
 
 // Mock types for tests that match the actual library interfaces

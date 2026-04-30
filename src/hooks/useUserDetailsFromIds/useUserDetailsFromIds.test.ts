@@ -2,15 +2,15 @@ import { renderHook, waitFor } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { asInvalid } from '@/test-utils';
 import { useUserDetailsFromIds } from './useUserDetailsFromIds';
-import type * as Core from '@/core';
-
+import type { Pubky } from '@/models/models.types';
+import type { NexusUserDetails } from '@/services/nexus/nexus.types';
 // Hoist mock data
 const { mockUserDetailsMap, setMockUserDetailsMap, mockGetManyDetails, mockGetOrFetchDetails, mockGetAvatarUrl } =
   vi.hoisted(() => {
-    const userDetailsMap = { current: new Map<Core.Pubky, Core.NexusUserDetails>() };
+    const userDetailsMap = { current: new Map<Pubky, NexusUserDetails>() };
     return {
       mockUserDetailsMap: userDetailsMap,
-      setMockUserDetailsMap: (value: Map<Core.Pubky, Core.NexusUserDetails>) => {
+      setMockUserDetailsMap: (value: Map<Pubky, NexusUserDetails>) => {
         userDetailsMap.current = value;
       },
       mockGetManyDetails: vi.fn(),
@@ -29,12 +29,14 @@ vi.mock('dexie-react-hooks', () => ({
   }),
 }));
 
-// Mock Core
-vi.mock('@/core', () => ({
+// Mock dependencies
+vi.mock('@/controllers/user/user', () => ({
   UserController: {
     getManyDetails: (...args: unknown[]) => mockGetManyDetails(...args),
     getOrFetchDetails: (...args: unknown[]) => mockGetOrFetchDetails(...args),
   },
+}));
+vi.mock('@/controllers/file/file', () => ({
   FileController: {
     getAvatarUrl: (...args: unknown[]) => mockGetAvatarUrl(...args),
   },
@@ -42,8 +44,8 @@ vi.mock('@/core', () => ({
 
 describe('useUserDetailsFromIds', () => {
   beforeEach(() => {
-    mockGetManyDetails.mockImplementation(({ userIds }: { userIds: Core.Pubky[] }) => {
-      const map = new Map<Core.Pubky, Core.NexusUserDetails>();
+    mockGetManyDetails.mockImplementation(({ userIds }: { userIds: Pubky[] }) => {
+      const map = new Map<Pubky, NexusUserDetails>();
       for (const userId of userIds) {
         const details = mockUserDetailsMap.current.get(userId);
         if (details) {
@@ -74,12 +76,12 @@ describe('useUserDetailsFromIds', () => {
     it('transforms user details map to AutocompleteUserData array', () => {
       setMockUserDetailsMap(
         new Map([
-          ['user1', { id: 'user1', name: 'Alice', image: 'avatar1.jpg' } as Core.NexusUserDetails],
-          ['user2', { id: 'user2', name: 'Bob', image: 'avatar2.jpg' } as Core.NexusUserDetails],
+          ['user1', { id: 'user1', name: 'Alice', image: 'avatar1.jpg' } as NexusUserDetails],
+          ['user2', { id: 'user2', name: 'Bob', image: 'avatar2.jpg' } as NexusUserDetails],
         ]),
       );
 
-      const { result } = renderHook(() => useUserDetailsFromIds({ userIds: ['user1', 'user2'] as Core.Pubky[] }));
+      const { result } = renderHook(() => useUserDetailsFromIds({ userIds: ['user1', 'user2'] as Pubky[] }));
 
       expect(result.current.users).toHaveLength(2);
       expect(result.current.users[0]).toEqual({
@@ -97,15 +99,13 @@ describe('useUserDetailsFromIds', () => {
     it('preserves order of userIds in output', () => {
       setMockUserDetailsMap(
         new Map([
-          ['user1', { id: 'user1', name: 'Alice', image: 'avatar.jpg' } as Core.NexusUserDetails],
-          ['user2', { id: 'user2', name: 'Bob', image: 'avatar.jpg' } as Core.NexusUserDetails],
-          ['user3', { id: 'user3', name: 'Charlie', image: 'avatar.jpg' } as Core.NexusUserDetails],
+          ['user1', { id: 'user1', name: 'Alice', image: 'avatar.jpg' } as NexusUserDetails],
+          ['user2', { id: 'user2', name: 'Bob', image: 'avatar.jpg' } as NexusUserDetails],
+          ['user3', { id: 'user3', name: 'Charlie', image: 'avatar.jpg' } as NexusUserDetails],
         ]),
       );
 
-      const { result } = renderHook(() =>
-        useUserDetailsFromIds({ userIds: ['user3', 'user1', 'user2'] as Core.Pubky[] }),
-      );
+      const { result } = renderHook(() => useUserDetailsFromIds({ userIds: ['user3', 'user1', 'user2'] as Pubky[] }));
 
       expect(result.current.users[0].id).toBe('user3');
       expect(result.current.users[1].id).toBe('user1');
@@ -115,21 +115,21 @@ describe('useUserDetailsFromIds', () => {
     it('uses fallback name when user name is not available', () => {
       setMockUserDetailsMap(
         new Map([
-          ['user1', { id: 'user1', name: '', image: null } as Core.NexusUserDetails],
-          ['user2', asInvalid<Core.NexusUserDetails>({ id: 'user2', name: null, image: null })],
+          ['user1', { id: 'user1', name: '', image: null } as NexusUserDetails],
+          ['user2', asInvalid<NexusUserDetails>({ id: 'user2', name: null, image: null })],
         ]),
       );
 
-      const { result } = renderHook(() => useUserDetailsFromIds({ userIds: ['user1', 'user2'] as Core.Pubky[] }));
+      const { result } = renderHook(() => useUserDetailsFromIds({ userIds: ['user1', 'user2'] as Pubky[] }));
 
       expect(result.current.users[0].name).toBe('Unknown User');
       expect(result.current.users[1].name).toBe('Unknown User');
     });
 
     it('sets avatarUrl to undefined when user has no image', () => {
-      setMockUserDetailsMap(new Map([['user1', { id: 'user1', name: 'Alice', image: null } as Core.NexusUserDetails]]));
+      setMockUserDetailsMap(new Map([['user1', { id: 'user1', name: 'Alice', image: null } as NexusUserDetails]]));
 
-      const { result } = renderHook(() => useUserDetailsFromIds({ userIds: ['user1'] as Core.Pubky[] }));
+      const { result } = renderHook(() => useUserDetailsFromIds({ userIds: ['user1'] as Pubky[] }));
 
       expect(result.current.users[0].avatarUrl).toBeUndefined();
     });
@@ -137,12 +137,12 @@ describe('useUserDetailsFromIds', () => {
     it('skips users not found in details map', () => {
       setMockUserDetailsMap(
         new Map([
-          ['user1', { id: 'user1', name: 'Alice', image: null } as Core.NexusUserDetails],
+          ['user1', { id: 'user1', name: 'Alice', image: null } as NexusUserDetails],
           // user2 is not in the map
         ]),
       );
 
-      const { result } = renderHook(() => useUserDetailsFromIds({ userIds: ['user1', 'user2'] as Core.Pubky[] }));
+      const { result } = renderHook(() => useUserDetailsFromIds({ userIds: ['user1', 'user2'] as Pubky[] }));
 
       expect(result.current.users).toHaveLength(1);
       expect(result.current.users[0].id).toBe('user1');
@@ -154,15 +154,15 @@ describe('useUserDetailsFromIds', () => {
       // Details map is empty but we have userIds
       setMockUserDetailsMap(new Map());
 
-      const { result } = renderHook(() => useUserDetailsFromIds({ userIds: ['user1', 'user2'] as Core.Pubky[] }));
+      const { result } = renderHook(() => useUserDetailsFromIds({ userIds: ['user1', 'user2'] as Pubky[] }));
 
       expect(result.current.isLoading).toBe(true);
     });
 
     it('returns isLoading false when details are loaded', () => {
-      setMockUserDetailsMap(new Map([['user1', { id: 'user1', name: 'Alice', image: null } as Core.NexusUserDetails]]));
+      setMockUserDetailsMap(new Map([['user1', { id: 'user1', name: 'Alice', image: null } as NexusUserDetails]]));
 
-      const { result } = renderHook(() => useUserDetailsFromIds({ userIds: ['user1'] as Core.Pubky[] }));
+      const { result } = renderHook(() => useUserDetailsFromIds({ userIds: ['user1'] as Pubky[] }));
 
       expect(result.current.isLoading).toBe(false);
     });
@@ -170,7 +170,7 @@ describe('useUserDetailsFromIds', () => {
 
   describe('prefetching', () => {
     it('prefetches user details by default', async () => {
-      const { result } = renderHook(() => useUserDetailsFromIds({ userIds: ['user1', 'user2'] as Core.Pubky[] }));
+      const { result } = renderHook(() => useUserDetailsFromIds({ userIds: ['user1', 'user2'] as Pubky[] }));
 
       await waitFor(() => {
         expect(mockGetOrFetchDetails).toHaveBeenCalledTimes(2);
@@ -184,7 +184,7 @@ describe('useUserDetailsFromIds', () => {
     it('does not prefetch when prefetch is false', () => {
       renderHook(() =>
         useUserDetailsFromIds({
-          userIds: ['user1', 'user2'] as Core.Pubky[],
+          userIds: ['user1', 'user2'] as Pubky[],
           prefetch: false,
         }),
       );
@@ -203,19 +203,19 @@ describe('useUserDetailsFromIds', () => {
     it('updates users when userIds change', () => {
       setMockUserDetailsMap(
         new Map([
-          ['user1', { id: 'user1', name: 'Alice', image: null } as Core.NexusUserDetails],
-          ['user2', { id: 'user2', name: 'Bob', image: null } as Core.NexusUserDetails],
+          ['user1', { id: 'user1', name: 'Alice', image: null } as NexusUserDetails],
+          ['user2', { id: 'user2', name: 'Bob', image: null } as NexusUserDetails],
         ]),
       );
 
       const { result, rerender } = renderHook(({ userIds }) => useUserDetailsFromIds({ userIds }), {
-        initialProps: { userIds: ['user1'] as Core.Pubky[] },
+        initialProps: { userIds: ['user1'] as Pubky[] },
       });
 
       expect(result.current.users).toHaveLength(1);
       expect(result.current.users[0].id).toBe('user1');
 
-      rerender({ userIds: ['user1', 'user2'] as Core.Pubky[] });
+      rerender({ userIds: ['user1', 'user2'] as Pubky[] });
 
       expect(result.current.users).toHaveLength(2);
     });

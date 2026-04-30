@@ -1,8 +1,34 @@
-import * as Core from '@/core';
 import { ClientErrorCode } from '@/libs/error/error.codes';
 import { Err } from '@/libs/error/error.factories';
 import { ErrorService } from '@/libs/error/error.types';
-
+import type { EnrichedPostDetails } from '@/application/moderation/moderation.types';
+import { PostApplication } from '@/application/post/post';
+import type { TGetOrFetchPostParams } from '@/application/post/post.types';
+import { TagKind, type TCreateTagInput } from '@/application/tag/tag.types';
+import type {
+  TCreatePostParams,
+  TDeletePostParams,
+  TEditPostParams,
+  TFetchMorePostTagsParams,
+  TFetchPostTaggersParams,
+  TFileAttachmentsParams,
+  TNormalizeTagsParams,
+} from '@/controllers/post/post.types';
+import type { TTagEventParams } from '@/controllers/tag/tag.types';
+import { buildCompositeId, parseCompositeId } from '@/models/models.utils';
+import type { PostCountsModelSchema } from '@/models/post/counts/postCounts.schema';
+import type { PostDetailsModelSchema } from '@/models/post/details/postDetails.schema';
+import type { PostRelationshipsModelSchema } from '@/models/post/relationships/postRelationships.schema';
+import type { TagCollectionModelSchema } from '@/models/shared/tag/tag.schema';
+import { FileNormalizer } from '@/pipes/file/file.normalizer';
+import type { TFileAttachmentResult } from '@/pipes/file/file.types';
+import { inferPostKindForCreate, resolveTagTargetCompositeIdForPostCreate } from '@/pipes/post/post.kind';
+import { PostNormalizer } from '@/pipes/post/post.normalizer';
+import { PostValidators } from '@/pipes/post/post.validators';
+import { TagNormalizer } from '@/pipes/tag/tag.normalizer';
+import type { NexusTag, NexusTaggers } from '@/services/nexus/nexus.types';
+import type { TCompositeId } from '@/services/nexus/post/post.types';
+import { useAuthStore } from '@/stores/auth/auth.store';
 export class PostController {
   private constructor() {} // Prevent instantiation
 
@@ -12,8 +38,8 @@ export class PostController {
    * @param params.compositeId - Composite post ID in format "authorId:postId"
    * @returns Post details or null if not found
    */
-  static async getDetails({ compositeId }: Core.TCompositeId): Promise<Core.EnrichedPostDetails | null> {
-    return await Core.PostApplication.getDetails({ compositeId });
+  static async getDetails({ compositeId }: TCompositeId): Promise<EnrichedPostDetails | null> {
+    return await PostApplication.getDetails({ compositeId });
   }
 
   /**
@@ -22,8 +48,8 @@ export class PostController {
    * @param params.compositeId - Composite post ID in format "authorId:postId"
    * @returns Post counts or null if not found
    */
-  static async getCounts({ compositeId }: Core.TCompositeId): Promise<Core.PostCountsModelSchema | null> {
-    return await Core.PostApplication.getCounts({ compositeId });
+  static async getCounts({ compositeId }: TCompositeId): Promise<PostCountsModelSchema | null> {
+    return await PostApplication.getCounts({ compositeId });
   }
 
   /**
@@ -32,8 +58,8 @@ export class PostController {
    * @param params.compositeId - Composite post ID in format "authorId:postId"
    * @returns Post tags
    */
-  static async getTags({ compositeId }: Core.TCompositeId): Promise<Core.TagCollectionModelSchema<string>[]> {
-    return await Core.PostApplication.getTags({ compositeId });
+  static async getTags({ compositeId }: TCompositeId): Promise<TagCollectionModelSchema<string>[]> {
+    return await PostApplication.getTags({ compositeId });
   }
 
   /**
@@ -42,8 +68,8 @@ export class PostController {
    * @param params.compositeId - Composite post ID in format "authorId:postId"
    * @returns Post relationships or null if not found
    */
-  static async getRelationships({ compositeId }: Core.TCompositeId): Promise<Core.PostRelationshipsModelSchema | null> {
-    return await Core.PostApplication.getRelationships({ compositeId });
+  static async getRelationships({ compositeId }: TCompositeId): Promise<PostRelationshipsModelSchema | null> {
+    return await PostApplication.getRelationships({ compositeId });
   }
 
   /**
@@ -52,8 +78,8 @@ export class PostController {
    * @param params.compositeId - Composite post ID to read replies for
    * @returns Array of post relationships that replied to this post
    */
-  static async getReplies({ compositeId }: Core.TCompositeId): Promise<Core.PostRelationshipsModelSchema[]> {
-    return await Core.PostApplication.getReplies({ compositeId });
+  static async getReplies({ compositeId }: TCompositeId): Promise<PostRelationshipsModelSchema[]> {
+    return await PostApplication.getReplies({ compositeId });
   }
 
   /**
@@ -64,8 +90,8 @@ export class PostController {
    * @param params.viewerId - Optional viewer ID for relationship data
    * @returns Post details or null if not found
    */
-  static async getOrFetch(params: Core.TGetOrFetchPostParams): Promise<Core.PostDetailsModelSchema | null> {
-    return await Core.PostApplication.getOrFetch(params);
+  static async getOrFetch(params: TGetOrFetchPostParams): Promise<PostDetailsModelSchema | null> {
+    return await PostApplication.getOrFetch(params);
   }
 
   /**
@@ -76,8 +102,8 @@ export class PostController {
    * @param params.viewerId - Optional viewer ID for relationship data
    * @returns Post details or null if not found
    */
-  static async fetch(params: Core.TGetOrFetchPostParams): Promise<Core.PostDetailsModelSchema | null> {
-    return await Core.PostApplication.fetch(params);
+  static async fetch(params: TGetOrFetchPostParams): Promise<PostDetailsModelSchema | null> {
+    return await PostApplication.fetch(params);
   }
 
   /**
@@ -88,8 +114,8 @@ export class PostController {
    * @param params.limit - Maximum number of tags to return
    * @returns Array of tags from Nexus
    */
-  static async fetchTags({ compositeId, skip, limit }: Core.TFetchMorePostTagsParams): Promise<Core.NexusTag[]> {
-    return await Core.PostApplication.fetchTags({ compositeId, skip, limit });
+  static async fetchTags({ compositeId, skip, limit }: TFetchMorePostTagsParams): Promise<NexusTag[]> {
+    return await PostApplication.fetchTags({ compositeId, skip, limit });
   }
 
   /**
@@ -97,8 +123,8 @@ export class PostController {
    * @param params - Parameters containing composite post ID, label, and pagination options
    * @returns Tagger payload for the label ({ users, relationship })
    */
-  static async fetchTaggers(params: Core.TFetchPostTaggersParams): Promise<Core.NexusTaggers> {
-    return await Core.PostApplication.fetchTaggers(params);
+  static async fetchTaggers(params: TFetchPostTaggersParams): Promise<NexusTaggers> {
+    return await PostApplication.fetchTaggers(params);
   }
 
   /**
@@ -121,25 +147,25 @@ export class PostController {
     attachments,
     parentPostId,
     originalPostId,
-  }: Core.TCreatePostParams): Promise<string> {
+  }: TCreatePostParams): Promise<string> {
     let parentUri: string | undefined = undefined;
     let repostedUri: string | undefined = undefined;
-    let tagList: Core.TCreateTagInput[] = [];
+    let tagList: TCreateTagInput[] = [];
 
     // Validate and set parent URI if this is a reply
     if (parentPostId) {
-      parentUri = await Core.PostValidators.validatePostId({ postId: parentPostId, message: 'Parent post' });
+      parentUri = await PostValidators.validatePostId({ postId: parentPostId, message: 'Parent post' });
     }
     if (originalPostId) {
-      repostedUri = await Core.PostValidators.validatePostId({ postId: originalPostId, message: 'Original post' });
+      repostedUri = await PostValidators.validatePostId({ postId: originalPostId, message: 'Original post' });
     }
 
-    const postKind = Core.inferPostKindForCreate({ content, attachments, isArticle });
+    const postKind = inferPostKindForCreate({ content, attachments, isArticle });
 
     // TODO: In the future, we could decouple that action and do it asyncronously in the moment that we add a file to the post
     const fileAttachments = attachments ? await this.normalizeFileAttachments({ attachments, pubky: authorId }) : [];
 
-    const { post, meta } = await Core.PostNormalizer.to(
+    const { post, meta } = await PostNormalizer.to(
       {
         content: content.trim(),
         kind: postKind,
@@ -153,7 +179,7 @@ export class PostController {
     const { id: postId } = meta;
 
     if (tags) {
-      const tagTargetCompositeId = Core.resolveTagTargetCompositeIdForPostCreate({
+      const tagTargetCompositeId = resolveTagTargetCompositeIdForPostCreate({
         authorId,
         newPostId: postId,
         originalPostId,
@@ -165,15 +191,15 @@ export class PostController {
           taggerId: authorId,
           taggedId: tagTargetCompositeId,
           label: tag,
-          taggedKind: Core.TagKind.POST,
+          taggedKind: TagKind.POST,
         };
       });
       tagList = this.normalizeTags({ tags: tagsMetadata });
     }
 
-    const compositePostId = Core.buildCompositeId({ pubky: authorId, id: postId });
+    const compositePostId = buildCompositeId({ pubky: authorId, id: postId });
 
-    await Core.PostApplication.commitCreate({
+    await PostApplication.commitCreate({
       compositePostId,
       post,
       postUrl: meta.url,
@@ -189,9 +215,9 @@ export class PostController {
    * @param params - Parameters object
    * @param params.postId - ID of the post to delete
    */
-  static async commitDelete({ compositePostId }: Core.TDeletePostParams) {
-    const { pubky: authorId, id: postId } = Core.parseCompositeId(compositePostId);
-    const userId = Core.useAuthStore.getState().selectCurrentUserPubky();
+  static async commitDelete({ compositePostId }: TDeletePostParams) {
+    const { pubky: authorId, id: postId } = parseCompositeId(compositePostId);
+    const userId = useAuthStore.getState().selectCurrentUserPubky();
 
     if (authorId !== userId) {
       throw Err.client(ClientErrorCode.NOT_FOUND, 'User is not the author of this post', {
@@ -201,14 +227,14 @@ export class PostController {
       });
     }
 
-    await Core.PostApplication.commitDelete({ compositePostId });
+    await PostApplication.commitDelete({ compositePostId });
   }
 
-  static async commitEdit({ compositePostId, content }: Core.TEditPostParams) {
-    const currentUserPubky = Core.useAuthStore.getState().selectCurrentUserPubky();
-    const { post, meta } = await Core.PostNormalizer.toEdit({ compositePostId, content, currentUserPubky });
+  static async commitEdit({ compositePostId, content }: TEditPostParams) {
+    const currentUserPubky = useAuthStore.getState().selectCurrentUserPubky();
+    const { post, meta } = await PostNormalizer.toEdit({ compositePostId, content, currentUserPubky });
 
-    await Core.PostApplication.commitEdit({ compositePostId, post, postUrl: meta.url });
+    await PostApplication.commitEdit({ compositePostId, post, postUrl: meta.url });
   }
 
   /**
@@ -221,10 +247,10 @@ export class PostController {
   private static async normalizeFileAttachments({
     attachments,
     pubky,
-  }: Core.TFileAttachmentsParams): Promise<Core.TFileAttachmentResult[]> {
+  }: TFileAttachmentsParams): Promise<TFileAttachmentResult[]> {
     return await Promise.all(
       attachments.map(async (attachment) => {
-        return await Core.FileNormalizer.toFileAttachment({ file: attachment, pubky });
+        return await FileNormalizer.toFileAttachment({ file: attachment, pubky });
       }),
     );
   }
@@ -235,9 +261,9 @@ export class PostController {
    * @param params.tags - Tags to normalize
    * @returns Normalized tags
    */
-  private static normalizeTags({ tags }: Core.TNormalizeTagsParams): Core.TCreateTagInput[] {
-    return tags.map((param: Core.TTagEventParams) => {
-      return Core.TagNormalizer.from(param);
+  private static normalizeTags({ tags }: TNormalizeTagsParams): TCreateTagInput[] {
+    return tags.map((param: TTagEventParams) => {
+      return TagNormalizer.from(param);
     });
   }
 }

@@ -1,63 +1,72 @@
 import Dexie from 'dexie';
 import * as Config from '@/config';
-import * as Core from '@/core';
 
-import { PostStreamModelSchema, postStreamTableSchema } from '@/core/models/stream/post/postStream.schema';
-import { userDetailsTableSchema } from '@/core/models/user/details/userDetails.schema';
-import { userCountsTableSchema } from '@/core/models/user/counts/userCounts.schema';
-import { userRelationshipsTableSchema } from '@/core/models/user/relationships/userRelationships.schema';
-import { userConnectionsTableSchema } from '@/core/models/user/connections/userConnections.schema';
-import { userTtlTableSchema } from '@/core/models/user/ttl/userTtl.schema';
-import { postCountsTableSchema } from '@/core/models/post/counts/postCounts.schema';
-import { postDetailsTableSchema } from '@/core/models/post/details/postDetails.schema';
-import { postRelationshipsTableSchema } from '@/core/models/post/relationships/postRelationships.schema';
-import { postTtlTableSchema } from '@/core/models/post/ttl/postTtl.schema';
-import { fileDetailsTableSchema } from '@/core/models/file/fileDetails.schema';
-import { tagCollectionTableSchema } from '@/core/models/shared/tag/tag.schema';
-import { UserStreamModelSchema, userStreamTableSchema } from '@/core/models/stream/user/userStream.schema';
-import { TagStreamModelSchema, tagStreamTableSchema } from '@/core/models/stream/tag/tagStream.schema';
-import { HotTagsModelSchema, hotTagsTableSchema } from '@/core/models/hot/hot.schema';
-import { notificationTableSchema } from '@/core/models/notification/notification.schema';
-import { bookmarkTableSchema } from '@/core/models/bookmark/bookmark.schema';
-import { feedTableSchema } from '@/core/models/feed/feed.schema';
-import { moderationTableSchema } from '@/core/models/moderation/moderation.schema';
 import { Logger } from '@/libs/logger/logger';
 import { DatabaseErrorCode } from '@/libs/error/error.codes';
 import { Err } from '@/libs/error/error.factories';
 import { ErrorService } from '@/libs/error/error.types';
-
+import { bookmarkTableSchema, type BookmarkModelSchema } from '@/models/bookmark/bookmark.schema';
+import { feedTableSchema, type FeedModelSchema } from '@/models/feed/feed.schema';
+import { fileDetailsTableSchema, type FileDetailsModelSchema } from '@/models/file/fileDetails.schema';
+import { hotTagsTableSchema, type HotTagsModelSchema } from '@/models/hot/hot.schema';
+import type { Pubky } from '@/models/models.types';
+import { moderationTableSchema, type ModerationModelSchema } from '@/models/moderation/moderation.schema';
+import { notificationTableSchema } from '@/models/notification/notification.schema';
+import type { FlatNotification } from '@/models/notification/notification.types';
+import { postCountsTableSchema, type PostCountsModelSchema } from '@/models/post/counts/postCounts.schema';
+import { postDetailsTableSchema, type PostDetailsModelSchema } from '@/models/post/details/postDetails.schema';
+import {
+  postRelationshipsTableSchema,
+  type PostRelationshipsModelSchema,
+} from '@/models/post/relationships/postRelationships.schema';
+import { postTtlTableSchema, type PostTtlModelSchema } from '@/models/post/ttl/postTtl.schema';
+import { tagCollectionTableSchema, type TagCollectionModelSchema } from '@/models/shared/tag/tag.schema';
+import { postStreamTableSchema, type PostStreamModelSchema } from '@/models/stream/post/postStream.schema';
+import { tagStreamTableSchema, type TagStreamModelSchema } from '@/models/stream/tag/tagStream.schema';
+import { userStreamTableSchema, type UserStreamModelSchema } from '@/models/stream/user/userStream.schema';
+import {
+  userConnectionsTableSchema,
+  type UserConnectionsModelSchema,
+} from '@/models/user/connections/userConnections.schema';
+import { userCountsTableSchema, type UserCountsModelSchema } from '@/models/user/counts/userCounts.schema';
+import { userDetailsTableSchema, type UserDetailsModelSchema } from '@/models/user/details/userDetails.schema';
+import {
+  userRelationshipsTableSchema,
+  type UserRelationshipsModelSchema,
+} from '@/models/user/relationships/userRelationships.schema';
+import { userTtlTableSchema, type UserTtlModelSchema } from '@/models/user/ttl/userTtl.schema';
 export class AppDatabase extends Dexie {
   private static readonly DEXIE_VERSION_MULTIPLIER = 10;
 
   // User
-  user_counts!: Dexie.Table<Core.UserCountsModelSchema>;
-  user_details!: Dexie.Table<Core.UserDetailsModelSchema>;
-  user_relationships!: Dexie.Table<Core.UserRelationshipsModelSchema>;
-  user_tags!: Dexie.Table<Core.TagCollectionModelSchema<Core.Pubky>>;
-  user_connections!: Dexie.Table<Core.UserConnectionsModelSchema>;
-  user_ttl!: Dexie.Table<Core.UserTtlModelSchema>;
-  notifications!: Dexie.Table<Core.FlatNotification>;
+  user_counts!: Dexie.Table<UserCountsModelSchema>;
+  user_details!: Dexie.Table<UserDetailsModelSchema>;
+  user_relationships!: Dexie.Table<UserRelationshipsModelSchema>;
+  user_tags!: Dexie.Table<TagCollectionModelSchema<Pubky>>;
+  user_connections!: Dexie.Table<UserConnectionsModelSchema>;
+  user_ttl!: Dexie.Table<UserTtlModelSchema>;
+  notifications!: Dexie.Table<FlatNotification>;
   // Post
-  post_counts!: Dexie.Table<Core.PostCountsModelSchema>;
-  post_details!: Dexie.Table<Core.PostDetailsModelSchema>;
-  post_relationships!: Dexie.Table<Core.PostRelationshipsModelSchema>;
-  post_tags!: Dexie.Table<Core.TagCollectionModelSchema<string>>;
-  post_ttl!: Dexie.Table<Core.PostTtlModelSchema>;
+  post_counts!: Dexie.Table<PostCountsModelSchema>;
+  post_details!: Dexie.Table<PostDetailsModelSchema>;
+  post_relationships!: Dexie.Table<PostRelationshipsModelSchema>;
+  post_tags!: Dexie.Table<TagCollectionModelSchema<string>>;
+  post_ttl!: Dexie.Table<PostTtlModelSchema>;
   // File
-  file_details!: Dexie.Table<Core.FileDetailsModelSchema>;
+  file_details!: Dexie.Table<FileDetailsModelSchema>;
   // Streams
   post_streams!: Dexie.Table<PostStreamModelSchema>;
   unread_post_streams!: Dexie.Table<PostStreamModelSchema>;
   user_streams!: Dexie.Table<UserStreamModelSchema>;
   tag_streams!: Dexie.Table<TagStreamModelSchema>;
   // Bookmarks
-  bookmarks!: Dexie.Table<Core.BookmarkModelSchema>;
+  bookmarks!: Dexie.Table<BookmarkModelSchema>;
   // Hot tags
   hot_tags!: Dexie.Table<HotTagsModelSchema>;
   // Feeds
-  feeds!: Dexie.Table<Core.FeedModelSchema>;
+  feeds!: Dexie.Table<FeedModelSchema>;
   // Moderation
-  moderation!: Dexie.Table<Core.ModerationModelSchema>;
+  moderation!: Dexie.Table<ModerationModelSchema>;
 
   constructor(databaseName: string = Config.DB_NAME) {
     super(databaseName);

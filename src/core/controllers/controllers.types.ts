@@ -1,7 +1,6 @@
-import * as Core from '@/core';
-
+import type { Pubky } from '@/models/models.types';
 export type TCreateTagParams = {
   targetId: string;
   label: string;
-  taggerId: Core.Pubky;
+  taggerId: Pubky;
 };

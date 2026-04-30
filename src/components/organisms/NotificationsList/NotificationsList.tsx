@@ -4,8 +4,7 @@ import { useMemo } from 'react';
 import * as Atoms from '@/atoms';
 import * as Organisms from '@/organisms';
 import type { NotificationsListProps } from './NotificationsList.types';
-import { getBusinessKey } from '@/core/models/notification/notification.helpers';
-
+import { getBusinessKey } from '@/models/notification/notification.helpers';
 export function NotificationsList({ notifications, unreadNotifications }: NotificationsListProps) {
   // Create a Set of unread notification business keys for O(1) lookup
   // Early return optimization for empty unread list

@@ -6,7 +6,6 @@ import { usePullToRefresh } from '@/hooks/usePullToRefresh/usePullToRefresh';
 import { useStreamPagination } from '@/hooks/useStreamPagination/useStreamPagination';
 import { useEffect, useRef } from 'react';
 import { TIMELINE_FEED_VARIANT } from '@/config';
-import * as Core from '@/core';
 import * as Atoms from '@/atoms';
 import * as Molecules from '@/molecules';
 import * as Organisms from '@/organisms';
@@ -16,9 +15,10 @@ import type { TimelineFeedProps, TimelineFeedContextValue } from '../TimelineFee
 import { TimelineFeedContext } from '../TimelineFeed/TimelineFeedContext';
 import { NewPostsSection } from '../NewPostsSection';
 import { VisualTimelinePosts } from '../TimelineFeed/VisualTimelinePosts';
-
+import { MuteFilter } from '@/application/stream/posts/muting/mute-filter';
+import type { PostStreamId } from '@/models/stream/post/postStream.types';
 interface TimelineFeedContentProps {
-  streamId: Core.PostStreamId;
+  streamId: PostStreamId;
   variant: TimelineFeedProps['variant'];
   tagsLayout: TagsLayout;
   layoutResolution?: FeedLayoutResolution;
@@ -26,7 +26,7 @@ interface TimelineFeedContentProps {
 }
 
 interface TimelineFeedWithStreamProps {
-  streamId: Core.PostStreamId | undefined;
+  streamId: PostStreamId | undefined;
   variant: TimelineFeedProps['variant'];
   tagsLayout: TagsLayout;
   layoutResolution?: FeedLayoutResolution;
@@ -65,7 +65,7 @@ export function TimelineFeedWithStream({
 /**
  * TimelineFeedContent
  *
- * Core component that manages stream pagination, muting, pull-to-refresh,
+ * Primary component that manages stream pagination, muting, pull-to-refresh,
  * and provides the TimelineFeedContext to children.
  *
  * The outermost Atoms.Container carries the containerRef so that pull-to-refresh
@@ -110,7 +110,7 @@ function TimelineFeedContent({ streamId, variant, tagsLayout, layoutResolution, 
     if (variant === TIMELINE_FEED_VARIANT.PROFILE) return;
     if (mutedUserIdSet.size === 0) return;
 
-    const postIdsToRemove = rawPostIds.filter((id) => Core.MuteFilter.isPostMuted(id, mutedUserIdSet));
+    const postIdsToRemove = rawPostIds.filter((id) => MuteFilter.isPostMuted(id, mutedUserIdSet));
 
     if (postIdsToRemove.length > 0) {
       removePosts(postIdsToRemove);

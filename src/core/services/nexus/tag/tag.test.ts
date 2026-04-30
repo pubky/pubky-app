@@ -2,8 +2,7 @@ import { describe, it, expect } from 'vitest';
 import { tagApi } from './tag.api';
 import { TTagViewParams, TTagHotParams, TTagTaggersParams } from './tag.types';
 import * as Config from '@/config';
-import * as Core from '@/core';
-
+import { UserStreamReach } from '@/services/nexus/nexus.types';
 const testTaggerId = 'qr3xqyz3e5cyf9npgxc5zfp15ehhcis6gqsxob4une7bwwazekry';
 const testTagId = 'test_tag';
 
@@ -34,7 +33,7 @@ describe('Tag API', () => {
     it('should generate correct URL', () => {
       const params: TTagHotParams = {
         user_id: 'test_user',
-        reach: Core.UserStreamReach.FOLLOWERS,
+        reach: UserStreamReach.FOLLOWERS,
         limit: 20,
       };
       const result = tagApi.hot(params);
@@ -46,7 +45,7 @@ describe('Tag API', () => {
     it('should generate correct URL', () => {
       const params: TTagTaggersParams = {
         label: 'test_label',
-        reach: Core.UserStreamReach.FRIENDS,
+        reach: UserStreamReach.FRIENDS,
         limit: 30,
       };
       const result = tagApi.taggers(params);

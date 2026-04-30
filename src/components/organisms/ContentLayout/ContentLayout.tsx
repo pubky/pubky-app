@@ -6,11 +6,12 @@ import { useIsMobile } from '@/hooks/useIsMobile/useIsMobile';
 import { useState, useEffect } from 'react';
 import * as Atoms from '@/atoms';
 import * as Molecules from '@/molecules';
-import * as Core from '@/core';
 import * as Config from '@/config';
 import * as Types from './ContentLayout.types';
 import { cn } from '@/libs/utils/utils';
-
+import { useHomeStore } from '@/stores/home/home.store';
+import { LAYOUT } from '@/stores/home/home.types';
+import { pubkyLayoutToHomeLayout } from '@/utils/pubky-app-spec-feed-mappers';
 /**
  * Reusable sticky sidebar component for left and right sidebars
  * Sidebars stay pinned below the main header and scroll independently
@@ -53,10 +54,9 @@ export function ContentLayout({
   classNameWrapperContent,
   feedVariant,
 }: Types.ContentLayoutProps) {
-  const { layout: homeLayout } = Core.useHomeStore();
+  const { layout: homeLayout } = useHomeStore();
   const customFeed = useCustomFeed();
-  const customFeedLayout =
-    customFeed?.layout !== undefined ? Core.pubkyLayoutToHomeLayout(customFeed.layout) : undefined;
+  const customFeedLayout = customFeed?.layout !== undefined ? pubkyLayoutToHomeLayout(customFeed.layout) : undefined;
   const requestedLayout = customFeedLayout ?? homeLayout;
 
   const [drawerFilterOpen, setDrawerFilterOpen] = useState(false);
@@ -73,7 +73,7 @@ export function ContentLayout({
         effectiveLayout: requestedLayout,
       };
   const usesWideShellLayout =
-    effectiveLayout === Core.LAYOUT.WIDE || (feedVariant !== undefined && effectiveLayout === Core.LAYOUT.VISUAL);
+    effectiveLayout === LAYOUT.WIDE || (feedVariant !== undefined && effectiveLayout === LAYOUT.VISUAL);
 
   // Close drawers when switching from wide-shell to inline sidebars on desktop
   // This prevents the drawer from staying open when sidebars become visible inline

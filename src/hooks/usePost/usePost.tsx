@@ -3,7 +3,6 @@
 import { useState, useEffect } from 'react';
 import { useTranslations } from 'next-intl';
 import * as Atoms from '@/atoms';
-import * as Core from '@/core';
 import * as Molecules from '@/molecules';
 import type {
   UsePostReplyOptions,
@@ -13,7 +12,8 @@ import type {
   UsePostReturn,
 } from './usePost.types';
 import { Logger } from '@/libs/logger/logger';
-
+import { PostController } from '@/controllers/post/post';
+import { useAuthStore } from '@/stores/auth/auth.store';
 /**
  * Custom hook to handle post creation or edits (replies, reposts, and root posts)
  *
@@ -45,7 +45,7 @@ export function usePost(): UsePostReturn {
   const [isSubmitting, setIsSubmitting] = useState(false);
   // selectCurrentUserPubky() throws an error when user is not authenticated;
   // access currentUserPubky directly to get null instead (post actions return early if null)
-  const currentUserId = Core.useAuthStore((state) => state.currentUserPubky);
+  const currentUserId = useAuthStore((state) => state.currentUserPubky);
   const { toast } = Molecules.useToast();
   const tToast = useTranslations('toast');
   const tPost = useTranslations('toast.post');
@@ -72,7 +72,7 @@ export function usePost(): UsePostReturn {
     setIsSubmitting(true);
 
     try {
-      const createdPostId = await Core.PostController.commitCreate({
+      const createdPostId = await PostController.commitCreate({
         parentPostId: postId,
         content: content.trim(),
         authorId: currentUserId,
@@ -108,7 +108,7 @@ export function usePost(): UsePostReturn {
     setIsSubmitting(true);
 
     try {
-      const createdPostId = await Core.PostController.commitCreate({
+      const createdPostId = await PostController.commitCreate({
         content: isArticle ? JSON.stringify({ title: articleTitle.trim(), body: content.trim() }) : content.trim(),
         authorId: currentUserId,
         tags: tags.length > 0 ? tags : undefined,
@@ -140,7 +140,7 @@ export function usePost(): UsePostReturn {
     setIsSubmitting(true);
 
     try {
-      const createdPostId = await Core.PostController.commitCreate({
+      const createdPostId = await PostController.commitCreate({
         originalPostId,
         content: content.trim(),
         authorId: currentUserId,
@@ -186,7 +186,7 @@ export function usePost(): UsePostReturn {
     setIsSubmitting(true);
 
     try {
-      await Core.PostController.commitEdit({
+      await PostController.commitEdit({
         compositePostId: editPostId,
         content: isArticle ? JSON.stringify({ title: articleTitle.trim(), body: content.trim() }) : content.trim(),
       });

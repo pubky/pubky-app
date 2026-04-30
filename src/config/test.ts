@@ -9,7 +9,6 @@ import { beforeAll, afterAll, afterEach, beforeEach } from 'vitest';
 
 // Import English messages for i18n mock
 import enMessages from '../../messages/en.json';
-
 // =============================================================================
 // IMPORTANT: Set environment variables BEFORE importing any app code
 // =============================================================================
@@ -44,6 +43,8 @@ process.env.SUPPORT_FEEDBACK_INBOX_ID = '26';
 // =============================================================================
 // NOW we can safely import app code that depends on Env
 // =============================================================================
+
+const { db } = await import('@/database/franky/franky');
 
 // Global snapshot serializer to normalize Radix UI generated IDs
 // This ensures snapshot tests are consistent across test runs
@@ -283,8 +284,6 @@ vi.mock('next/font/google', () => ({
     className: 'inter-tight',
   })),
 }));
-
-const { db } = await import('@/core');
 
 afterEach(() => {
   cleanup();

@@ -2,11 +2,14 @@ import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { render, screen, waitFor } from '@testing-library/react';
 import { useLiveQuery } from 'dexie-react-hooks';
 import { RepliesWithParent } from './RepliesWithParent';
-import * as Core from '@/core';
 import { useInfiniteScroll } from '@/hooks/useInfiniteScroll/useInfiniteScroll';
 import { usePostNavigation } from '@/hooks/usePostNavigation/usePostNavigation';
 import { useStreamPagination } from '@/hooks/useStreamPagination/useStreamPagination';
-
+import { PostController } from '@/controllers/post/post';
+import type { Pubky } from '@/models/models.types';
+import type { PostDetailsModelSchema } from '@/models/post/details/postDetails.schema';
+import type { PostStreamId } from '@/models/stream/post/postStream.types';
+import { useAuthStore } from '@/stores/auth/auth.store';
 // Mock dependencies
 vi.mock('dexie-react-hooks');
 vi.mock('@/hooks/useStreamPagination/useStreamPagination', () => ({
@@ -66,17 +69,17 @@ const mockUsePostNavigation = vi.mocked(usePostNavigation);
 const mockUseInfiniteScroll = vi.mocked(useInfiniteScroll);
 
 describe('RepliesWithParent', () => {
-  const mockStreamId = 'author_replies:test-user-id' as Core.PostStreamId;
+  const mockStreamId = 'author_replies:test-user-id' as PostStreamId;
   const mockNavigateToPost = vi.fn();
-  const mockViewerId = 'test-viewer-id' as Core.Pubky;
+  const mockViewerId = 'test-viewer-id' as Pubky;
 
   beforeEach(() => {
     vi.clearAllMocks();
 
     // Mock auth store to provide viewerId
-    vi.spyOn(Core.useAuthStore, 'getState').mockReturnValue({
+    vi.spyOn(useAuthStore, 'getState').mockReturnValue({
       selectCurrentUserPubky: () => mockViewerId,
-    } as ReturnType<typeof Core.useAuthStore.getState>);
+    } as ReturnType<typeof useAuthStore.getState>);
 
     // Mock useStreamPagination
     mockUseStreamPagination.mockReturnValue({
@@ -409,9 +412,9 @@ describe('RepliesWithParent', () => {
 
       // Mock a pending fetch scenario
       const mockGetOrFetchDetails = vi.fn(
-        (): Promise<Core.PostDetailsModelSchema | null> => new Promise(() => {}), // Never resolves
+        (): Promise<PostDetailsModelSchema | null> => new Promise(() => {}), // Never resolves
       );
-      vi.spyOn(Core.PostController, 'getOrFetch').mockImplementation(mockGetOrFetchDetails);
+      vi.spyOn(PostController, 'getOrFetch').mockImplementation(mockGetOrFetchDetails);
 
       mockUseStreamPagination.mockReturnValue({
         postIds: [mockReplyId],

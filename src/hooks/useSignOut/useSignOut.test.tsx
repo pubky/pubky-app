@@ -12,7 +12,7 @@ vi.mock('next/navigation', () => ({
   }),
 }));
 
-vi.mock('@/core', () => ({
+vi.mock('@/controllers/auth/auth', () => ({
   AuthController: { logout: (...args: unknown[]) => mockLogout(...args) },
 }));
 

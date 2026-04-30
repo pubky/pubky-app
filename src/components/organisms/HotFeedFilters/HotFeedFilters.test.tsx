@@ -1,16 +1,10 @@
 import { describe, it, expect, vi } from 'vitest';
 import { render, screen, fireEvent } from '@testing-library/react';
 import { FilterTimeframe, HotFeedSidebar, HotFeedDrawer } from './HotFeedFilters';
-import * as Core from '@/core';
+import { TIMEFRAME } from '@/stores/hot/hot.types';
 
-// Mock Core
-vi.mock('@/core', () => ({
-  TIMEFRAME: {
-    TODAY: 'today',
-    THIS_WEEK: 'this_week',
-    THIS_MONTH: 'this_month',
-    ALL_TIME: 'all_time',
-  },
+// Mock store
+vi.mock('@/stores/hot/hot.store', () => ({
   useHotStore: vi.fn(() => ({
     reach: 'all',
     setReach: vi.fn(),
@@ -62,14 +56,14 @@ describe('FilterTimeframe', () => {
 
   it('calls onTabChange when clicking an option', () => {
     const onTabChange = vi.fn();
-    render(<FilterTimeframe selectedTab={Core.TIMEFRAME.TODAY} onTabChange={onTabChange} />);
+    render(<FilterTimeframe selectedTab={TIMEFRAME.TODAY} onTabChange={onTabChange} />);
 
     fireEvent.click(screen.getByText('This Month'));
-    expect(onTabChange).toHaveBeenCalledWith(Core.TIMEFRAME.THIS_MONTH);
+    expect(onTabChange).toHaveBeenCalledWith(TIMEFRAME.THIS_MONTH);
   });
 
   it('matches snapshot', () => {
-    const { container } = render(<FilterTimeframe selectedTab={Core.TIMEFRAME.TODAY} />);
+    const { container } = render(<FilterTimeframe selectedTab={TIMEFRAME.TODAY} />);
     expect(container).toMatchSnapshot();
   });
 });

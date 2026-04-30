@@ -1,16 +1,16 @@
-import * as Core from '@/core';
-
+import type { Pubky } from '@/models/models.types';
+import type { RecentTagSearch, RecentUserSearch } from '@/stores/search/search.types';
 /**
  * Recent user search item data
- * Matches Core.RecentUserSearch from search store
+ * Matches RecentUserSearch from search store
  */
-export type RecentUserSearchItem = Core.RecentUserSearch;
+export type RecentUserSearchItem = RecentUserSearch;
 
 /**
  * Recent tag search item data
- * Matches Core.RecentTagSearch from search store
+ * Matches RecentTagSearch from search store
  */
-export type RecentTagSearchItem = Core.RecentTagSearch;
+export type RecentTagSearchItem = RecentTagSearch;
 
 /**
  * Props for SearchRecentUserItem component
@@ -19,5 +19,5 @@ export interface SearchRecentUserItemProps {
   /** User data */
   user: RecentUserSearchItem;
   /** Callback when user item is clicked */
-  onClick: (userId: Core.Pubky) => void;
+  onClick: (userId: Pubky) => void;
 }

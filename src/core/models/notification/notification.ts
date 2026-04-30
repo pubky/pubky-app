@@ -1,15 +1,14 @@
 import { Table } from 'dexie';
-import * as Core from '@/core';
 import * as Config from '@/config';
 import { FlatNotification, NotificationType } from './notification.types';
 import { Logger } from '@/libs/logger/logger';
 import { DatabaseErrorCode } from '@/libs/error/error.codes';
 import { Err } from '@/libs/error/error.factories';
 import { ErrorService } from '@/libs/error/error.types';
-
+import { db } from '@/database/franky/franky';
 // Primary key: business key (id) as string - provides natural deduplication
 export class NotificationModel {
-  static table: Table<FlatNotification> = Core.db.table('notifications');
+  static table: Table<FlatNotification> = db.table('notifications');
 
   type!: NotificationType;
   timestamp!: number;

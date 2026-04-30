@@ -3,10 +3,9 @@
 import { useEffect, useRef } from 'react';
 import { useSearchParams } from 'next/navigation';
 
-import * as Core from '@/core';
 import * as Molecules from '@/molecules';
 import { formatInviteCode } from '@/libs/utils/utils';
-
+import { useOnboardingStore } from '@/stores/onboarding/onboarding.store';
 export function Install() {
   const searchParams = useSearchParams();
   const { toast } = Molecules.useToast();
@@ -21,7 +20,7 @@ export function Install() {
 
     hasInitialisedFromUrlRef.current = true;
 
-    Core.useOnboardingStore.getState().setInviteCode(inviteCodeFromUrl);
+    useOnboardingStore.getState().setInviteCode(inviteCodeFromUrl);
     toast({
       title: 'Invite code applied',
       description: `Your invite code ${inviteCodeFromUrl} has been applied.`,

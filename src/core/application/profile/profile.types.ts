@@ -1,6 +1,6 @@
 import { BlobResult, FileResult, PubkyAppUser } from 'pubky-app-specs';
-import type { Pubky, NexusUserLink } from '@/core';
-
+import type { Pubky } from '@/models/models.types';
+import type { NexusUserLink } from '@/services/nexus/nexus.types';
 export type TUploadAvatarInput = {
   blobResult: BlobResult;
   fileResult: FileResult;

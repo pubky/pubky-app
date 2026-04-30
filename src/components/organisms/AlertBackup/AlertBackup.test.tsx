@@ -2,8 +2,8 @@ import { describe, it, expect, vi } from 'vitest';
 import { render, screen } from '@testing-library/react';
 import { AlertBackup } from './AlertBackup';
 
-// Mock Core module
-vi.mock('@/core', () => ({
+// Mock dependencies
+vi.mock('@/stores/onboarding/onboarding.store', () => ({
   useOnboardingStore: vi.fn(() => ({
     secretKey: 'test-secret-key-value',
   })),

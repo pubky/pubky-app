@@ -1,5 +1,4 @@
-import type { NotificationType } from '@/core/models/notification/notification.types';
-
+import type { NotificationType } from '@/models/notification/notification.types';
 /**
  * Props for the NotificationIcon component
  */

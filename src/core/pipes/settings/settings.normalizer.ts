@@ -1,14 +1,20 @@
 import * as Specs from 'pubky-app-specs';
-import * as Core from '@/core';
 import { Logger } from '@/libs/logger/logger';
-
+import type { Pubky } from '@/models/models.types';
+import { defaultNotificationPreferences, defaultPrivacyPreferences } from '@/stores/settings/settings.types';
+import type {
+  NotificationPreferences,
+  PrivacyPreferences,
+  SettingsState,
+  SettingsStore,
+} from '@/stores/settings/settings.types';
 /**
  * Settings JSON structure for homeserver persistence.
  * This matches the SettingsState structure used in the store.
  */
 export interface SettingsJson {
-  notifications: Core.NotificationPreferences;
-  privacy: Core.PrivacyPreferences;
+  notifications: NotificationPreferences;
+  privacy: PrivacyPreferences;
   language: string;
   updatedAt: number;
   version: number;
@@ -20,8 +26,8 @@ export interface SettingsJson {
  * when new fields are added to notifications or privacy.
  */
 export interface SettingsJsonInput {
-  notifications?: Partial<Core.NotificationPreferences>;
-  privacy?: Partial<Core.PrivacyPreferences>;
+  notifications?: Partial<NotificationPreferences>;
+  privacy?: Partial<PrivacyPreferences>;
   language?: string;
   updatedAt?: number;
   version?: number;
@@ -50,7 +56,7 @@ export class SettingsNormalizer {
    * @param store, The settings store or state object
    * @returns A clean SettingsState object
    */
-  static extractState(store: Core.SettingsState | Core.SettingsStore): Core.SettingsState {
+  static extractState(store: SettingsState | SettingsStore): SettingsState {
     return {
       notifications: store.notifications,
       privacy: store.privacy,
@@ -65,7 +71,7 @@ export class SettingsNormalizer {
    * Builds the settings URL for a given pubky.
    * URL format: pubky://{pubky}/pub/pubky.app/settings.json
    */
-  static buildUrl(pubky: Core.Pubky): string {
+  static buildUrl(pubky: Pubky): string {
     const baseUri = Specs.baseUriBuilder(pubky);
     return `${baseUri}settings.json`;
   }
@@ -76,7 +82,7 @@ export class SettingsNormalizer {
    * @param pubky, The user's public key
    * @returns SettingsNormalizerResult containing settings JSON and metadata
    */
-  static to(settings: Core.SettingsState, pubky: Core.Pubky): SettingsNormalizerResult {
+  static to(settings: SettingsState, pubky: Pubky): SettingsNormalizerResult {
     const url = this.buildUrl(pubky);
 
     const settingsJson: SettingsJson = {
@@ -104,14 +110,14 @@ export class SettingsNormalizer {
    * @param json, The settings JSON from the homeserver
    * @returns SettingsState for the store
    */
-  static from(json: SettingsJsonInput): Core.SettingsState {
+  static from(json: SettingsJsonInput): SettingsState {
     return {
       notifications: {
-        ...Core.defaultNotificationPreferences,
+        ...defaultNotificationPreferences,
         ...json.notifications,
       },
       privacy: {
-        ...Core.defaultPrivacyPreferences,
+        ...defaultPrivacyPreferences,
         ...json.privacy,
       },
       muted: [], // Muted is not synced to homeserver, always defaults to empty

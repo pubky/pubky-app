@@ -1,11 +1,10 @@
 import { render, screen } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { PostContent } from './PostContent';
-import * as Core from '@/core';
 import * as Organisms from '@/organisms';
 import { usePostDetails } from '@/hooks/usePostDetails/usePostDetails';
 import { useRepostInfo } from '@/hooks/useRepostInfo/useRepostInfo';
-
+import type { EnrichedPostDetails } from '@/application/moderation/moderation.types';
 // Mock hooks used by PostContent
 vi.mock('@/hooks/usePostDetails/usePostDetails', () => ({
   usePostDetails: vi.fn(),
@@ -47,7 +46,7 @@ const mockUseRepostInfo = vi.mocked(useRepostInfo);
 // Helper to create complete PostDetails mock
 const createMockPostDetails = (
   overrides: Partial<{ content: string; attachments: string[] | null }> = {},
-): Core.EnrichedPostDetails => ({
+): EnrichedPostDetails => ({
   id: 'test-author:test-post',
   indexed_at: Date.now(),
   kind: 'short' as const,

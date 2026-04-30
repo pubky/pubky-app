@@ -3,7 +3,6 @@
 import { useState, useEffect } from 'react';
 import { useTranslations } from 'next-intl';
 import * as Atoms from '@/atoms';
-import * as Core from '@/core';
 import * as Organisms from '@/organisms';
 
 /**
@@ -14,8 +13,9 @@ import * as Organisms from '@/organisms';
  * No props needed - manages its own state internally.
  */
 import { TriangleAlert } from 'lucide-react';
+import { useOnboardingStore } from '@/stores/onboarding/onboarding.store';
 export const AlertBackup = () => {
-  const { secretKey } = Core.useOnboardingStore();
+  const { secretKey } = useOnboardingStore();
   const [showAlert, setShowAlert] = useState(false);
   const t = useTranslations('settings.backup');
   useEffect(() => {

@@ -1,7 +1,6 @@
-import * as Core from '@/core';
 import * as Types from './models.types';
 import * as Defaults from './models.defaults';
-
+import type { Pubky } from '@/models/models.types';
 /**
  * Parses a pubky:// URI to extract the author and ID,
  * then builds a composite ID in the format "author:id"
@@ -41,7 +40,7 @@ export function parseCompositeId(compositeId: string): Types.CompositeIdResult {
   if (sep <= 0 || sep === compositeId.length - 1) {
     throw new Error(`Invalid composite id: ${compositeId}`);
   }
-  const pubky = compositeId.substring(0, sep) as Core.Pubky;
+  const pubky = compositeId.substring(0, sep) as Pubky;
   const id = compositeId.substring(sep + 1);
   return { pubky, id };
 }

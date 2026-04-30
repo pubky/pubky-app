@@ -7,13 +7,23 @@ import {
   PubkySpecsBuilder,
 } from 'pubky-app-specs';
 import { FeedApplication } from './feed';
-import * as Core from '@/core';
 import { asOpaque } from '@/test-utils';
 import { HttpMethod } from '@/libs/http/http.types';
 import { Logger } from '@/libs/logger/logger';
-
+import type { TFeedPersistCreateParams, TFeedPersistDeleteParams } from '@/application/feed/feed.types';
+import { db } from '@/database/franky/franky';
+import { FeedModel } from '@/models/feed/feed';
+import { buildFeedStreamId } from '@/models/feed/feed.helpers';
+import type { FeedModelSchema } from '@/models/feed/feed.schema';
+import type { Pubky } from '@/models/models.types';
+import { PostStreamModel } from '@/models/stream/post/tables/postStream';
+import { UnreadPostStreamModel } from '@/models/stream/post/tables/postStream.unread';
+import { PubkySpecsSingleton } from '@/pipes/pipes.builder';
+import { HomeserverService } from '@/services/homeserver/homeserver';
+import { LocalFeedService } from '@/services/local/feed/feed';
+import { LocalStreamPostsService } from '@/services/local/stream/posts/posts';
 // Mock the LocalFeedService
-vi.mock('@/core/services/local/feed', () => ({
+vi.mock('@/services/local/feed/feed', () => ({
   LocalFeedService: {
     createOrUpdate: vi.fn(),
     createOrUpdateMany: vi.fn(),
@@ -23,7 +33,7 @@ vi.mock('@/core/services/local/feed', () => ({
 }));
 
 // Mock the HomeserverService
-vi.mock('@/core/services/homeserver', () => ({
+vi.mock('@/services/homeserver/homeserver', () => ({
   HomeserverService: {
     request: vi.fn(),
     list: vi.fn(),
@@ -31,7 +41,7 @@ vi.mock('@/core/services/homeserver', () => ({
 }));
 
 // Mock the LocalStreamPostsService
-vi.mock('@/core/services/local/stream/posts', () => ({
+vi.mock('@/services/local/stream/posts/posts', () => ({
   LocalStreamPostsService: {
     deleteById: vi.fn(),
     clearUnreadStream: vi.fn(),
@@ -49,7 +59,7 @@ vi.mock('pubky-app-specs', async () => {
 });
 
 describe('FeedApplication', () => {
-  const testUserId = 'o1gg96ewuojmopcjbz8895478wdtxtzzuxnfjjz8o8e77csa1ngo' as Core.Pubky;
+  const testUserId = 'o1gg96ewuojmopcjbz8895478wdtxtzzuxnfjjz8o8e77csa1ngo' as Pubky;
 
   // Test data factory
   const createMockFeedResult = (): FeedResult =>
@@ -75,15 +85,15 @@ describe('FeedApplication', () => {
       },
     });
 
-  const createMockCreateParams = (): Core.TFeedPersistCreateParams => ({
+  const createMockCreateParams = (): TFeedPersistCreateParams => ({
     feed: createMockFeedResult(),
   });
 
-  const createMockDeleteParams = (): Core.TFeedPersistDeleteParams => ({
+  const createMockDeleteParams = (): TFeedPersistDeleteParams => ({
     feedId: 'feed123',
   });
 
-  const createMockFeedSchema = (overrides: Partial<Core.FeedModelSchema> = {}): Core.FeedModelSchema => ({
+  const createMockFeedSchema = (overrides: Partial<FeedModelSchema> = {}): FeedModelSchema => ({
     id: 'feed123',
     name: 'Bitcoin News',
     tags: ['bitcoin', 'lightning'],
@@ -99,20 +109,20 @@ describe('FeedApplication', () => {
   // Helper functions
   const setupMocks = () => {
     return {
-      createOrUpdateSpy: vi.spyOn(Core.LocalFeedService, 'createOrUpdate'),
-      createOrUpdateManySpy: vi.spyOn(Core.LocalFeedService, 'createOrUpdateMany'),
-      deleteSpy: vi.spyOn(Core.LocalFeedService, 'delete'),
-      readSpy: vi.spyOn(Core.LocalFeedService, 'read'),
-      requestSpy: vi.spyOn(Core.HomeserverService, 'request'),
-      listSpy: vi.spyOn(Core.HomeserverService, 'list'),
-      streamDeleteSpy: vi.spyOn(Core.LocalStreamPostsService, 'deleteById'),
-      streamClearUnreadSpy: vi.spyOn(Core.LocalStreamPostsService, 'clearUnreadStream'),
-      dbTransactionSpy: vi.spyOn(Core.db, 'transaction'),
-      feedUpsertSpy: vi.spyOn(Core.FeedModel, 'upsert'),
-      feedDeleteByIdSpy: vi.spyOn(Core.FeedModel, 'deleteById'),
-      feedFindByIdOrThrowSpy: vi.spyOn(Core.FeedModel, 'findByIdOrThrow'),
-      postStreamDeleteByIdSpy: vi.spyOn(Core.PostStreamModel, 'deleteById'),
-      unreadPostStreamDeleteByIdSpy: vi.spyOn(Core.UnreadPostStreamModel, 'deleteById'),
+      createOrUpdateSpy: vi.spyOn(LocalFeedService, 'createOrUpdate'),
+      createOrUpdateManySpy: vi.spyOn(LocalFeedService, 'createOrUpdateMany'),
+      deleteSpy: vi.spyOn(LocalFeedService, 'delete'),
+      readSpy: vi.spyOn(LocalFeedService, 'read'),
+      requestSpy: vi.spyOn(HomeserverService, 'request'),
+      listSpy: vi.spyOn(HomeserverService, 'list'),
+      streamDeleteSpy: vi.spyOn(LocalStreamPostsService, 'deleteById'),
+      streamClearUnreadSpy: vi.spyOn(LocalStreamPostsService, 'clearUnreadStream'),
+      dbTransactionSpy: vi.spyOn(db, 'transaction'),
+      feedUpsertSpy: vi.spyOn(FeedModel, 'upsert'),
+      feedDeleteByIdSpy: vi.spyOn(FeedModel, 'deleteById'),
+      feedFindByIdOrThrowSpy: vi.spyOn(FeedModel, 'findByIdOrThrow'),
+      postStreamDeleteByIdSpy: vi.spyOn(PostStreamModel, 'deleteById'),
+      unreadPostStreamDeleteByIdSpy: vi.spyOn(UnreadPostStreamModel, 'deleteById'),
       loggerWarnSpy: vi.spyOn(Logger, 'warn'),
     };
   };
@@ -126,7 +136,7 @@ describe('FeedApplication', () => {
       const mockParams = createMockCreateParams();
       const { createOrUpdateSpy, requestSpy } = setupMocks();
 
-      const mockPersistedFeed: Core.FeedModelSchema = {
+      const mockPersistedFeed: FeedModelSchema = {
         id: 'feed123',
         name: 'Bitcoin News',
         tags: ['bitcoin', 'lightning'],
@@ -159,7 +169,7 @@ describe('FeedApplication', () => {
     });
 
     it('should migrate to new ID and preserve created_at when updating config', async () => {
-      const mockParams: Core.TFeedPersistCreateParams = {
+      const mockParams: TFeedPersistCreateParams = {
         feed: createMockFeedResult(),
         existingId: 'feed-existing',
       };
@@ -174,7 +184,7 @@ describe('FeedApplication', () => {
         unreadPostStreamDeleteByIdSpy,
       } = setupMocks();
 
-      const existingFeed: Core.FeedModelSchema = {
+      const existingFeed: FeedModelSchema = {
         id: 'feed-existing',
         name: 'Existing Feed',
         tags: ['bitcoin'],
@@ -210,7 +220,7 @@ describe('FeedApplication', () => {
       expect(dbTransactionSpy).toHaveBeenCalledTimes(1);
       expect(feedUpsertSpy).toHaveBeenCalledWith(expect.objectContaining({ id: 'feed123' }));
       expect(feedDeleteByIdSpy).toHaveBeenCalledWith('feed-existing');
-      const oldStreamId = Core.buildFeedStreamId(existingFeed);
+      const oldStreamId = buildFeedStreamId(existingFeed);
       expect(postStreamDeleteByIdSpy).toHaveBeenCalledWith(oldStreamId);
       expect(unreadPostStreamDeleteByIdSpy).toHaveBeenCalledWith(oldStreamId);
     });
@@ -230,7 +240,7 @@ describe('FeedApplication', () => {
       const mockParams = createMockCreateParams();
       const { createOrUpdateSpy, requestSpy } = setupMocks();
 
-      const mockPersistedFeed: Core.FeedModelSchema = {
+      const mockPersistedFeed: FeedModelSchema = {
         id: 'feed123',
         name: 'Bitcoin News',
         tags: ['bitcoin', 'lightning'],
@@ -250,7 +260,7 @@ describe('FeedApplication', () => {
     });
 
     it('should not mutate local state when migration PUT fails', async () => {
-      const mockParams: Core.TFeedPersistCreateParams = {
+      const mockParams: TFeedPersistCreateParams = {
         feed: createMockFeedResult(),
         existingId: 'feed-existing',
       };
@@ -273,7 +283,7 @@ describe('FeedApplication', () => {
     });
 
     it('should keep local migration committed when old homeserver delete fails', async () => {
-      const mockParams: Core.TFeedPersistCreateParams = {
+      const mockParams: TFeedPersistCreateParams = {
         feed: createMockFeedResult(),
         existingId: 'feed-existing',
       };
@@ -314,7 +324,7 @@ describe('FeedApplication', () => {
       expect(dbTransactionSpy).toHaveBeenCalledTimes(1);
       expect(feedUpsertSpy).toHaveBeenCalledWith(expect.objectContaining({ id: 'feed123' }));
       expect(feedDeleteByIdSpy).toHaveBeenCalledWith('feed-existing');
-      const oldStreamId = Core.buildFeedStreamId(existingFeed);
+      const oldStreamId = buildFeedStreamId(existingFeed);
       expect(postStreamDeleteByIdSpy).toHaveBeenCalledWith(oldStreamId);
       expect(unreadPostStreamDeleteByIdSpy).toHaveBeenCalledWith(oldStreamId);
       expect(loggerWarnSpy).toHaveBeenCalledWith(
@@ -384,7 +394,7 @@ describe('FeedApplication', () => {
 
       await FeedApplication.commitDelete({ userId: testUserId, params: mockParams });
 
-      const expectedStreamId = Core.buildFeedStreamId(feed);
+      const expectedStreamId = buildFeedStreamId(feed);
       expect(streamDeleteSpy).toHaveBeenCalledWith({ streamId: expectedStreamId });
       expect(streamClearUnreadSpy).toHaveBeenCalledWith({ streamId: expectedStreamId });
     });
@@ -450,9 +460,7 @@ describe('FeedApplication', () => {
       const mockBuilder = {
         createFeed: vi.fn().mockReturnValue(createMockFeedResult()),
       };
-      const specsSpy = vi
-        .spyOn(Core.PubkySpecsSingleton, 'get')
-        .mockReturnValue(asOpaque<PubkySpecsBuilder>(mockBuilder));
+      const specsSpy = vi.spyOn(PubkySpecsSingleton, 'get').mockReturnValue(asOpaque<PubkySpecsBuilder>(mockBuilder));
       return { ...mocks, mockBuilder, specsSpy };
     };
 

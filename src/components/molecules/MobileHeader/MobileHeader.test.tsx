@@ -11,20 +11,16 @@ vi.mock('@/molecules', () => ({
   ),
 }));
 
-// Mock Core - component now uses useAuthStore directly for isAuthenticated
-vi.mock('@/core', async () => {
-  const actual = await vi.importActual('@/core');
-  return {
-    ...actual,
-    useAuthStore: vi.fn((selector) => {
-      const state = {
-        currentUserPubky: 'pk:test-user-pubky',
-        setShowSignInDialog: vi.fn(),
-      };
-      return selector(state);
-    }),
-  };
-});
+// Mock auth store - component uses useAuthStore directly for isAuthenticated
+vi.mock('@/stores/auth/auth.store', () => ({
+  useAuthStore: vi.fn((selector) => {
+    const state = {
+      currentUserPubky: 'pk:test-user-pubky',
+      setShowSignInDialog: vi.fn(),
+    };
+    return selector(state);
+  }),
+}));
 
 describe('MobileHeader', () => {
   it('renders with default props', () => {

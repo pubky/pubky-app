@@ -5,15 +5,16 @@ import { WhoToFollowPageMain } from './WhoToFollowPageMain';
 import { useFollowUser } from '@/hooks/useFollowUser/useFollowUser';
 import { useInfiniteScroll } from '@/hooks/useInfiniteScroll/useInfiniteScroll';
 import { useUserStream } from '@/hooks/useUserStream/useUserStream';
-import * as Core from '@/core';
 import { asOpaque } from '@/test-utils';
-
-// Mock Core
-vi.mock('@/core', () => ({
+import type { Pubky } from '@/models/models.types';
+// Mock dependencies
+vi.mock('@/stores/auth/auth.store', () => ({
   useAuthStore: vi.fn((selector) => {
-    const state = { currentUserPubky: 'current-user-123' as Core.Pubky };
+    const state = { currentUserPubky: 'current-user-123' as Pubky };
     return selector ? selector(state) : state;
   }),
+}));
+vi.mock('@/models/stream/user/userStream.types', () => ({
   UserStreamTypes: {
     RECOMMENDED: 'recommended',
   },
@@ -89,7 +90,7 @@ vi.mock('@/organisms', () => ({
 
 const mockUsers = [
   {
-    id: 'user-1' as Core.Pubky,
+    id: 'user-1' as Pubky,
     name: 'John Doe',
     bio: 'Test bio',
     image: null,
@@ -99,7 +100,7 @@ const mockUsers = [
     isFollowing: false,
   },
   {
-    id: 'user-2' as Core.Pubky,
+    id: 'user-2' as Pubky,
     name: 'Jane Smith',
     bio: 'Another bio',
     image: null,

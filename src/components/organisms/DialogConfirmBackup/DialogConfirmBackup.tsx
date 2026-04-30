@@ -2,16 +2,16 @@
 
 import { useState } from 'react';
 import * as Atoms from '@/atoms';
-import * as Core from '@/core';
 import * as Organisms from '@/organisms';
 import { TriangleAlert, ShieldCheck, Check } from 'lucide-react';
+import { useOnboardingStore } from '@/stores/onboarding/onboarding.store';
 interface DialogConfirmBackupProps {
   onConfirm?: () => void;
 }
 export function DialogConfirmBackup({ onConfirm }: DialogConfirmBackupProps) {
   const [isOpen, setIsOpen] = useState(false);
   const [isBackupOpen, setIsBackupOpen] = useState(false);
-  const { clearSecrets } = Core.useOnboardingStore();
+  const { clearSecrets } = useOnboardingStore();
   const handleConfirm = () => {
     clearSecrets();
     setIsOpen(false);

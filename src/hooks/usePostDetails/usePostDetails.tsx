@@ -1,9 +1,9 @@
 'use client';
 
-import * as Core from '@/core';
 import { useLocalFirstQuery } from '@/hooks/useLocalFirstQuery/useLocalFirstQuery';
 import type { UsePostDetailsResult } from './usePostDetails.types';
-
+import type { EnrichedPostDetails } from '@/application/moderation/moderation.types';
+import { PostController } from '@/controllers/post/post';
 /**
  * Hook to get post details from local database with live updates.
  * If the post is not in cache, it will trigger a fetch from Nexus.
@@ -13,9 +13,9 @@ import type { UsePostDetailsResult } from './usePostDetails.types';
  * 2. queryFn (useLiveQuery): Reads current data reactively from local DB
  */
 export function usePostDetails(compositeId: string | null | undefined): UsePostDetailsResult {
-  const { data, isLoading } = useLocalFirstQuery<Core.EnrichedPostDetails>({
-    queryFn: () => Core.PostController.getDetails({ compositeId: compositeId! }),
-    fetchFn: () => Core.PostController.fetch({ compositeId: compositeId! }),
+  const { data, isLoading } = useLocalFirstQuery<EnrichedPostDetails>({
+    queryFn: () => PostController.getDetails({ compositeId: compositeId! }),
+    fetchFn: () => PostController.fetch({ compositeId: compositeId! }),
     deps: [compositeId],
     enabled: !!compositeId,
   });

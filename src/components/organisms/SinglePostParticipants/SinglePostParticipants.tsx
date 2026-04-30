@@ -7,11 +7,10 @@ import { useRouter } from 'next/navigation';
 import { useTranslations } from 'next-intl';
 import * as Molecules from '@/molecules';
 import * as Organisms from '@/organisms';
-import * as Core from '@/core';
 import { APP_ROUTES } from '@/app/routes';
 import { SinglePostParticipantsSkeleton } from './SinglePostParticipants.skeleton';
 import type { SinglePostParticipantsProps, ParticipantItemProps } from './SinglePostParticipants.types';
-
+import { useAuthStore } from '@/stores/auth/auth.store';
 /**
  * Individual participant item with reactive follow status
  */
@@ -57,7 +56,7 @@ function ParticipantItem({
 export function SinglePostParticipants({ postId, className }: SinglePostParticipantsProps) {
   const t = useTranslations('common');
   const router = useRouter();
-  const currentUserId = Core.useAuthStore((state) => state.currentUserPubky);
+  const currentUserId = useAuthStore((state) => state.currentUserPubky);
   const { participants, isLoading } = usePostParticipants(postId, { limit: 10 });
   const { toggleFollow, isUserLoading } = useFollowUser();
 

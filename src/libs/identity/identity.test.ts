@@ -1,5 +1,6 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { Identity } from './identity';
+import { Keypair } from '@synonymdev/pubky';
 import * as bip39 from 'bip39';
 import { asInvalid } from '@/test-utils';
 import { ClientErrorCode, ValidationErrorCode } from '@/libs/error/error.codes';
@@ -210,12 +211,18 @@ describe('Identity', () => {
 
     it('should throw error for invalid secret key format', () => {
       const invalidSecretKey = 'invalid-hex-string';
+      vi.mocked(Keypair.fromSecret).mockImplementationOnce(() => {
+        throw new Error('Invalid secret key');
+      });
 
       expect(() => Identity.keypairFromSecretKey(invalidSecretKey)).toThrow();
     });
 
     it('should throw AppError with proper error type for invalid secret key', () => {
       const invalidSecretKey = 'invalid-hex-string';
+      vi.mocked(Keypair.fromSecret).mockImplementationOnce(() => {
+        throw new Error('Invalid secret key');
+      });
 
       try {
         Identity.keypairFromSecretKey(invalidSecretKey);

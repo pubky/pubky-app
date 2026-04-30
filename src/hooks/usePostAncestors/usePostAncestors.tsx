@@ -2,10 +2,11 @@
 
 import { useState, useEffect } from 'react';
 import { useLiveQuery } from 'dexie-react-hooks';
-import * as Core from '@/core';
 import type { Ancestor, UsePostAncestorsResult } from './usePostAncestors.types';
 import { Logger } from '@/libs/logger/logger';
-
+import { PostController } from '@/controllers/post/post';
+import { CompositeIdDomain } from '@/models/models.types';
+import { buildCompositeIdFromPubkyUri, parseCompositeId } from '@/models/models.utils';
 /** Maximum depth to traverse to prevent infinite loops */
 const MAX_ANCESTOR_DEPTH = 10;
 
@@ -78,7 +79,7 @@ export function usePostAncestors(postId: string | null | undefined): UsePostAnce
       try {
         // Validate the input postId before traversing
         try {
-          Core.parseCompositeId(postId);
+          parseCompositeId(postId);
         } catch (error) {
           Logger.error('[usePostAncestors] Invalid postId', { postId, error });
           return null;
@@ -92,7 +93,7 @@ export function usePostAncestors(postId: string | null | undefined): UsePostAnce
           // Parse the composite ID to get the userId
           let userId: string;
           try {
-            const parsed = Core.parseCompositeId(currentPostId);
+            const parsed = parseCompositeId(currentPostId);
             userId = parsed.pubky;
           } catch (error) {
             Logger.error('[usePostAncestors] Failed to parse composite ID', {
@@ -103,7 +104,7 @@ export function usePostAncestors(postId: string | null | undefined): UsePostAnce
           }
 
           // Read relationships from local DB (read-only)
-          const relationships = await Core.PostController.getRelationships({
+          const relationships = await PostController.getRelationships({
             compositeId: currentPostId,
           });
 
@@ -121,9 +122,9 @@ export function usePostAncestors(postId: string | null | undefined): UsePostAnce
           }
 
           // Convert parent URI to composite ID and continue up the chain
-          const parentPostId = Core.buildCompositeIdFromPubkyUri({
+          const parentPostId = buildCompositeIdFromPubkyUri({
             uri: relationships.replied,
-            domain: Core.CompositeIdDomain.POSTS,
+            domain: CompositeIdDomain.POSTS,
           });
 
           if (!parentPostId) {
@@ -177,7 +178,7 @@ export function usePostAncestors(postId: string | null | undefined): UsePostAnce
 
     let cancelled = false;
 
-    Core.PostController.fetch({ compositeId: nextMissingPostId })
+    PostController.fetch({ compositeId: nextMissingPostId })
       .then((fetchedPost) => {
         if (cancelled) return;
         if (!fetchedPost) {

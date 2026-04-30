@@ -1,11 +1,10 @@
-import type * as Core from '@/core';
 import type { TagWithAvatars } from '@/molecules/TaggedItem/TaggedItem.types';
-
+import type { NexusTag } from '@/services/nexus/nexus.types';
 export interface UseEntityTagsOptions {
   /** Custom viewer ID (defaults to current user) */
   viewerId?: string;
   /** Tags to use instead of fetching (for controlled mode) */
-  providedTags?: Core.NexusTag[];
+  providedTags?: NexusTag[];
 }
 
 export interface UseEntityTagsResult {

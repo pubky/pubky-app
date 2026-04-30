@@ -24,20 +24,26 @@ vi.mock('dexie-react-hooks', () => ({
   useLiveQuery: (...args: unknown[]) => mockUseLiveQuery(...args),
 }));
 
-// Mock Core - including stores for local avatar resolution
+// Mock stores for local avatar resolution
 const mockGetModerationStatus = vi.fn();
 const mockUnblur = vi.fn();
 const mockUseAuthStore = vi.fn();
 const mockUseLocalFilesStore = vi.fn();
-vi.mock('@/core', () => ({
+vi.mock('@/controllers/moderation/moderation', () => ({
   ModerationController: {
     getModerationStatus: (...args: unknown[]) => mockGetModerationStatus(...args),
     unBlur: (...args: unknown[]) => mockUnblur(...args),
   },
+}));
+vi.mock('@/models/moderation/moderation.schema', () => ({
   ModerationType: {
     PROFILE: 'PROFILE',
   },
+}));
+vi.mock('@/stores/auth/auth.store', () => ({
   useAuthStore: (selector: (state: { currentUserPubky: string | null }) => unknown) => mockUseAuthStore(selector),
+}));
+vi.mock('@/stores/localFiles/localFiles.store', () => ({
   useLocalFilesStore: (selector: (state: { profile: string | null }) => unknown) => mockUseLocalFilesStore(selector),
 }));
 

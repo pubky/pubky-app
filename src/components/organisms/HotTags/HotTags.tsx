@@ -17,7 +17,7 @@ import { HotTagsSkeleton } from './HotTags.skeleton';
  * Sidebar section showing trending tags.
  * Fetches tags via useHotTags hook and handles navigation.
  *
- * Note: This is an Organism because it interacts with Core via hooks (useHotTags)
+ * Note: This is an Organism because it interacts with data hooks (useHotTags)
  * and handles routing.
  */
 export function HotTags({ className }: HotTagsProps) {

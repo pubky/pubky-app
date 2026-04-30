@@ -8,7 +8,7 @@ import type { UseNestedRepliesOptions, UseNestedRepliesResult } from './useNeste
  * Hook for fetching and displaying nested replies for a post.
  *
  * This hook:
- * - Delegates core reply stream logic to `useReplyStream`
+ * - Delegates shared reply stream logic to `useReplyStream`
  * - Adds depth gating: disables fetching when `depth >= maxDepth`
  * - Returns replies in chronological order (oldest first)
  *

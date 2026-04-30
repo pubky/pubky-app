@@ -1,9 +1,10 @@
 import { render, screen, waitFor } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { PostAttachments } from './PostAttachments';
-import * as Core from '@/core';
 import { asInvalid } from '@/test-utils';
-
+import { FileController } from '@/controllers/file/file';
+import { FileVariant } from '@/services/nexus/file/file.types';
+import type { NexusFileDetails } from '@/services/nexus/nexus.types';
 // Mock useToast
 const mockToast = vi.fn();
 vi.mock('@/molecules', () => ({
@@ -34,12 +35,14 @@ vi.mock('@/atoms', () => ({
   ),
 }));
 
-// Mock core
-vi.mock('@/core', () => ({
+// Mock dependencies
+vi.mock('@/controllers/file/file', () => ({
   FileController: {
     getMetadata: vi.fn(),
     getFileUrl: vi.fn(),
   },
+}));
+vi.mock('@/services/nexus/file/file.types', () => ({
   FileVariant: {
     MAIN: 'main',
     FEED: 'feed',
@@ -47,11 +50,11 @@ vi.mock('@/core', () => ({
   },
 }));
 
-const mockGetMetadata = vi.mocked(Core.FileController.getMetadata);
-const mockGetFileUrl = vi.mocked(Core.FileController.getFileUrl);
+const mockGetMetadata = vi.mocked(FileController.getMetadata);
+const mockGetFileUrl = vi.mocked(FileController.getFileUrl);
 
 // Helper to create mock metadata
-const createMockFileBase = (id: string, name: string, content_type: string, size: number): Core.NexusFileDetails => ({
+const createMockFileBase = (id: string, name: string, content_type: string, size: number): NexusFileDetails => ({
   id,
   name,
   content_type,
@@ -270,8 +273,8 @@ describe('PostAttachments', () => {
       render(<PostAttachments attachments={attachments} localAttachments={undefined} />);
 
       await waitFor(() => {
-        expect(mockGetFileUrl).toHaveBeenCalledWith({ fileId: 'user1:image1', variant: Core.FileVariant.MAIN });
-        expect(mockGetFileUrl).toHaveBeenCalledWith({ fileId: 'user1:image1', variant: Core.FileVariant.FEED });
+        expect(mockGetFileUrl).toHaveBeenCalledWith({ fileId: 'user1:image1', variant: FileVariant.MAIN });
+        expect(mockGetFileUrl).toHaveBeenCalledWith({ fileId: 'user1:image1', variant: FileVariant.FEED });
       });
     });
 
@@ -282,12 +285,12 @@ describe('PostAttachments', () => {
       render(<PostAttachments attachments={attachments} localAttachments={undefined} />);
 
       await waitFor(() => {
-        expect(mockGetFileUrl).toHaveBeenCalledWith({ fileId: 'user1:video1', variant: Core.FileVariant.MAIN });
+        expect(mockGetFileUrl).toHaveBeenCalledWith({ fileId: 'user1:video1', variant: FileVariant.MAIN });
       });
 
       // Videos should not have feed variant
       const feedCalls = mockGetFileUrl.mock.calls.filter(
-        (call) => call[0].fileId === 'user1:video1' && call[0].variant === Core.FileVariant.FEED,
+        (call) => call[0].fileId === 'user1:video1' && call[0].variant === FileVariant.FEED,
       );
       expect(feedCalls).toHaveLength(0);
     });
@@ -299,7 +302,7 @@ describe('PostAttachments', () => {
       render(<PostAttachments attachments={attachments} localAttachments={undefined} />);
 
       await waitFor(() => {
-        expect(mockGetFileUrl).toHaveBeenCalledWith({ fileId: 'user1:audio1', variant: Core.FileVariant.MAIN });
+        expect(mockGetFileUrl).toHaveBeenCalledWith({ fileId: 'user1:audio1', variant: FileVariant.MAIN });
       });
     });
 
@@ -310,7 +313,7 @@ describe('PostAttachments', () => {
       render(<PostAttachments attachments={attachments} localAttachments={undefined} />);
 
       await waitFor(() => {
-        expect(mockGetFileUrl).toHaveBeenCalledWith({ fileId: 'user1:doc1', variant: Core.FileVariant.MAIN });
+        expect(mockGetFileUrl).toHaveBeenCalledWith({ fileId: 'user1:doc1', variant: FileVariant.MAIN });
       });
     });
   });

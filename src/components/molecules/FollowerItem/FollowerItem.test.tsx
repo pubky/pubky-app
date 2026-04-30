@@ -2,8 +2,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen, fireEvent } from '@testing-library/react';
 import { FollowerItem } from './FollowerItem';
 import type { UserConnectionData } from '@/hooks/useProfileConnections/useProfileConnections.types';
-import * as Core from '@/core';
-
+import type { Pubky } from '@/models/models.types';
 // Mock atoms
 vi.mock('@/atoms', () => ({
   Container: ({ children, className }: { children: React.ReactNode; className?: string }) => (
@@ -72,14 +71,14 @@ vi.mock('@/organisms', () => ({
   ),
 }));
 
-// Mock core
-vi.mock('@/core', () => ({
+// Mock dependencies
+vi.mock('@/models/user/users.helpers', () => ({
   generateTestUserId: vi.fn((index: number) => `test-user-${index}`),
 }));
 
 // Shared mock follower for all tests
 const mockFollower: UserConnectionData = {
-  id: 'test-user-1' as Core.Pubky,
+  id: 'test-user-1' as Pubky,
   name: 'John Doe',
   bio: 'Test bio',
   image: null,

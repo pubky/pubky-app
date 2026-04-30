@@ -2,7 +2,6 @@
 
 import { useState, useEffect, useRef } from 'react';
 import { debounce } from 'lodash-es';
-import * as Core from '@/core';
 import { useUserDetailsFromIds } from '@/hooks/useUserDetailsFromIds/useUserDetailsFromIds';
 import { TAG_MAX_LENGTH } from '@/config/posts';
 import { Logger } from '@/libs/logger/logger';
@@ -19,13 +18,14 @@ import {
   MIN_USER_ID_SEARCH_LENGTH,
   USER_ID_PREFIXES,
 } from './useSearchAutocomplete.constants';
-
+import { SearchController } from '@/controllers/search/search';
+import type { Pubky } from '@/models/models.types';
 export function useSearchAutocomplete({
   query,
   enabled = true,
 }: UseSearchAutocompleteParams): UseSearchAutocompleteResult {
   const [tags, setTags] = useState<AutocompleteTag[]>([]);
-  const [userIds, setUserIds] = useState<Core.Pubky[]>([]);
+  const [userIds, setUserIds] = useState<Pubky[]>([]);
   const [isSearching, setIsSearching] = useState(false);
   // Guards against out-of-order async responses overwriting newer results.
   const requestIdRef = useRef(0);
@@ -56,7 +56,7 @@ export function useSearchAutocomplete({
 
         // Search tags (skip for explicit user ID searches and over-length queries)
         if (!isExplicitIdSearch && searchQuery.length <= TAG_MAX_LENGTH) {
-          tagPromise = Core.SearchController.getTagsByPrefix({
+          tagPromise = SearchController.getTagsByPrefix({
             prefix: searchQuery,
             limit: AUTOCOMPLETE_TAG_LIMIT,
           }).catch((error) => {
@@ -67,7 +67,7 @@ export function useSearchAutocomplete({
 
         // Search users by name (skip for explicit user ID searches)
         if (!isExplicitIdSearch) {
-          userByNamePromise = Core.SearchController.getUsersByName({
+          userByNamePromise = SearchController.getUsersByName({
             prefix: searchQuery,
             limit: AUTOCOMPLETE_USER_LIMIT,
           }).catch((error) => {
@@ -78,7 +78,7 @@ export function useSearchAutocomplete({
 
         // Search users by ID (works for explicit prefix or raw pubky input)
         if (shouldSearchUserId) {
-          userByIdPromise = Core.SearchController.fetchUsersById({
+          userByIdPromise = SearchController.fetchUsersById({
             prefix: userIdPrefix,
             limit: AUTOCOMPLETE_USER_LIMIT,
           }).catch((error) => {
@@ -108,7 +108,7 @@ export function useSearchAutocomplete({
         // Combine and deduplicate user results
         const allUserResults = [...(nameResults as string[]), ...(idResults as string[])];
         const uniqueUserIds = Array.from(new Set(allUserResults))
-          .map((id) => id as Core.Pubky)
+          .map((id) => id as Pubky)
           .slice(0, AUTOCOMPLETE_USER_LIMIT);
 
         // Update user IDs (useUserDetailsFromIds will handle cache reads and prefetching)

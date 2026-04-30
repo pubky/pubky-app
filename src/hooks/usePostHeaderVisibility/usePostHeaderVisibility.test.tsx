@@ -1,10 +1,9 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { renderHook } from '@testing-library/react';
 import { usePostHeaderVisibility } from './usePostHeaderVisibility';
-import * as Core from '@/core';
 import { usePostDetails } from '@/hooks/usePostDetails/usePostDetails';
 import { useRepostInfo } from '@/hooks/useRepostInfo/useRepostInfo';
-
+import type { EnrichedPostDetails } from '@/application/moderation/moderation.types';
 // Mock the hooks that usePostHeaderVisibility depends on
 vi.mock('@/hooks/usePostDetails/usePostDetails', () => ({
   usePostDetails: vi.fn(),
@@ -17,7 +16,7 @@ vi.mock('@/hooks/useRepostInfo/useRepostInfo', () => ({
 // Helper to create complete PostDetails mock
 const createMockPostDetails = (
   overrides: Partial<{ content: string; attachments: string[] | null }> = {},
-): Core.EnrichedPostDetails => ({
+): EnrichedPostDetails => ({
   id: 'test-author:test-post',
   indexed_at: Date.now(),
   kind: 'short' as const,

@@ -99,7 +99,7 @@ const handleClick = () => {
 
 ### Avoid barrel re-exports
 
-Don't create `index.ts` files whose sole purpose is re-exporting from child modules, and don't re-export constants or functions through intermediate modules without good reason. Barrel files add a layer of indirection that confuses IDE go-to-definition, makes circular dependency bugs harder to trace, and can defeat tree-shaking in bundlers. Import directly from the source module instead.
+Don't create `index.ts` files whose sole purpose is re-exporting from child modules, and don't re-export constants or functions through intermediate modules without good reason. Barrel files add a layer of indirection that confuses IDE go-to-definition, makes circular dependency bugs harder to trace, and can defeat tree-shaking in bundlers. Import directly from the source module instead. For hooks and layered modules, use aliases such as `@/hooks/*`, `@/controllers/*`, `@/services/*`, `@/models/*`, and `@/stores/*`.
 
 ```typescript
 // BAD — barrel that just re-exports
@@ -108,7 +108,7 @@ export { PostController } from './controllers/post.controller';
 export { PostApplication } from './application/post.application';
 
 // GOOD — import from the actual file
-import { PostController } from '@/core/controllers/post/post';
+import { PostController } from '@/controllers/post/post';
 ```
 
 Exception: the top-level `src/components/atoms/index.ts` barrel is intentional for grouping atomic components — that pattern is established and acceptable.

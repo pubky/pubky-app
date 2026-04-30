@@ -1,5 +1,9 @@
-import * as Core from '@/core';
-
+import type { TFetchMorePostTagsParams, TFetchPostTaggersParams } from '@/controllers/post/post.types';
+import { parseCompositeId } from '@/models/models.utils';
+import type { NexusPost, NexusTag, NexusTaggers } from '@/services/nexus/nexus.types';
+import { queryNexus } from '@/services/nexus/nexus.utils';
+import { postApi } from '@/services/nexus/post/post.api';
+import type { TCompositeId } from '@/services/nexus/post/post.types';
 export class NexusPostService {
   private constructor() {}
 
@@ -10,11 +14,11 @@ export class NexusPostService {
    * @returns Complete post view (details, tags, counts, relationships)
    * @throws {NexusError} When post is not found or request fails
    */
-  static async getPost({ compositeId }: Core.TCompositeId): Promise<Core.NexusPost> {
-    const { pubky: author_id, id: post_id } = Core.parseCompositeId(compositeId);
+  static async getPost({ compositeId }: TCompositeId): Promise<NexusPost> {
+    const { pubky: author_id, id: post_id } = parseCompositeId(compositeId);
 
-    const url = Core.postApi.view({ author_id, post_id });
-    return await Core.queryNexus<Core.NexusPost>({ url });
+    const url = postApi.view({ author_id, post_id });
+    return await queryNexus<NexusPost>({ url });
   }
 
   /**
@@ -25,11 +29,11 @@ export class NexusPostService {
    * @returns An array of tags (empty array if post has no tags)
    * @throws {NexusError} When post is not found or request fails
    */
-  static async getPostTags({ compositeId, skip, limit }: Core.TFetchMorePostTagsParams): Promise<Core.NexusTag[]> {
-    const { pubky: author_id, id: post_id } = Core.parseCompositeId(compositeId);
+  static async getPostTags({ compositeId, skip, limit }: TFetchMorePostTagsParams): Promise<NexusTag[]> {
+    const { pubky: author_id, id: post_id } = parseCompositeId(compositeId);
 
-    const url = Core.postApi.tags({ author_id, post_id, skip_tags: skip, limit_tags: limit });
-    return await Core.queryNexus<Core.NexusTag[]>({ url });
+    const url = postApi.tags({ author_id, post_id, skip_tags: skip, limit_tags: limit });
+    return await queryNexus<NexusTag[]>({ url });
   }
 
   /**
@@ -47,10 +51,10 @@ export class NexusPostService {
     skip,
     limit,
     viewerId,
-  }: Core.TFetchPostTaggersParams): Promise<Core.NexusTaggers> {
-    const { pubky: author_id, id: post_id } = Core.parseCompositeId(compositeId);
+  }: TFetchPostTaggersParams): Promise<NexusTaggers> {
+    const { pubky: author_id, id: post_id } = parseCompositeId(compositeId);
 
-    const url = Core.postApi.taggers({
+    const url = postApi.taggers({
       author_id,
       post_id,
       label,
@@ -58,6 +62,6 @@ export class NexusPostService {
       limit,
       viewer_id: viewerId,
     });
-    return await Core.queryNexus<Core.NexusTaggers>({ url });
+    return await queryNexus<NexusTaggers>({ url });
   }
 }

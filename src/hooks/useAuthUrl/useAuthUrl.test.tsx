@@ -53,17 +53,21 @@ vi.mock('@/libs/utils/utils', async () => {
   };
 });
 
-vi.mock('@/core', () => ({
+vi.mock('@/controllers/auth/auth', () => ({
   AuthController: {
     getAuthUrl: (...args: unknown[]) => mockGetAuthUrl(...args),
     getSignupAuthUrl: (...args: unknown[]) => mockGetSignupAuthUrl(...args),
     initializeAuthenticatedSession: (...args: unknown[]) => mockInitializeAuthenticatedSession(...args),
     cancelActiveAuthFlow: (...args: unknown[]) => mockCancelActiveAuthFlow(...args),
   },
+}));
+vi.mock('@/stores/auth/auth.store', () => ({
   useAuthStore: (selector?: (state: { session: Session | null }) => unknown) => {
     const state = { session: null };
     return selector ? selector(state) : state;
   },
+}));
+vi.mock('@/services/homeserver/error.utils', () => ({
   AUTH_FLOW_CANCELED_ERROR_NAME: 'AuthFlowCanceled',
 }));
 

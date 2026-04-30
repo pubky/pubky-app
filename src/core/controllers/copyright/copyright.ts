@@ -1,6 +1,6 @@
-import * as Core from '@/core';
 import * as Types from './copyright.types';
-
+import { CopyrightApplication } from '@/application/copyright/copyright';
+import { CopyrightValidators } from '@/pipes/copyright/copyright.validators';
 /**
  * Controller for copyright/DMCA takedown request submission.
  * Entry point for the copyright feature, called from the API route.
@@ -18,26 +18,26 @@ export class CopyrightController {
    */
   static async submit(params: Types.TCopyrightSubmitParams): Promise<void> {
     // Validate and normalize inputs using pipes layer
-    const nameOwner = Core.CopyrightValidators.validateNameOwner(params.nameOwner);
-    const originalContentUrls = Core.CopyrightValidators.validateOriginalContentUrls(params.originalContentUrls);
-    const briefDescription = Core.CopyrightValidators.validateBriefDescription(params.briefDescription);
-    const infringingContentUrl = Core.CopyrightValidators.validateInfringingContentUrl(params.infringingContentUrl);
-    const firstName = Core.CopyrightValidators.validateFirstName(params.firstName);
-    const lastName = Core.CopyrightValidators.validateLastName(params.lastName);
-    const email = Core.CopyrightValidators.validateEmail(params.email);
-    const phoneNumber = Core.CopyrightValidators.validatePhoneNumber(params.phoneNumber);
-    const streetAddress = Core.CopyrightValidators.validateStreetAddress(params.streetAddress);
-    const country = Core.CopyrightValidators.validateCountry(params.country);
-    const city = Core.CopyrightValidators.validateCity(params.city);
-    const stateProvince = Core.CopyrightValidators.validateStateProvince(params.stateProvince);
-    const zipCode = Core.CopyrightValidators.validateZipCode(params.zipCode);
-    const signature = Core.CopyrightValidators.validateSignature(params.signature);
+    const nameOwner = CopyrightValidators.validateNameOwner(params.nameOwner);
+    const originalContentUrls = CopyrightValidators.validateOriginalContentUrls(params.originalContentUrls);
+    const briefDescription = CopyrightValidators.validateBriefDescription(params.briefDescription);
+    const infringingContentUrl = CopyrightValidators.validateInfringingContentUrl(params.infringingContentUrl);
+    const firstName = CopyrightValidators.validateFirstName(params.firstName);
+    const lastName = CopyrightValidators.validateLastName(params.lastName);
+    const email = CopyrightValidators.validateEmail(params.email);
+    const phoneNumber = CopyrightValidators.validatePhoneNumber(params.phoneNumber);
+    const streetAddress = CopyrightValidators.validateStreetAddress(params.streetAddress);
+    const country = CopyrightValidators.validateCountry(params.country);
+    const city = CopyrightValidators.validateCity(params.city);
+    const stateProvince = CopyrightValidators.validateStateProvince(params.stateProvince);
+    const zipCode = CopyrightValidators.validateZipCode(params.zipCode);
+    const signature = CopyrightValidators.validateSignature(params.signature);
 
     // Validate role selection
-    Core.CopyrightValidators.validateRole(params.isRightsOwner, params.isReportingOnBehalf);
+    CopyrightValidators.validateRole(params.isRightsOwner, params.isReportingOnBehalf);
 
     // Delegate to application layer
-    await Core.CopyrightApplication.submit({
+    await CopyrightApplication.submit({
       nameOwner,
       originalContentUrls,
       briefDescription,

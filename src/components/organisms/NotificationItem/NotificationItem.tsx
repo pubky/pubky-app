@@ -8,9 +8,7 @@ import { useTranslations } from 'next-intl';
 import * as Atoms from '@/atoms';
 import * as Molecules from '@/molecules';
 import * as Organisms from '@/organisms';
-import * as Core from '@/core';
 import type { ArticleJSON } from '@/hooks/usePostArticle/usePostArticle.types';
-import { NotificationType } from '@/core';
 import { buildSearchUrl } from '@/hooks/useTagSearch/useTagSearch.utils';
 import { resolvePubkyToNames } from './NotificationItem.helpers';
 import type { NotificationItemProps } from './NotificationItem.types';
@@ -26,7 +24,9 @@ import {
   formatPreviewText,
   hasPostPreview,
 } from './NotificationItem.utils';
-
+import { PostController } from '@/controllers/post/post';
+import { NotificationType } from '@/models/notification/notification.types';
+import { useAuthStore } from '@/stores/auth/auth.store';
 export function NotificationItem({ notification, isUnread }: NotificationItemProps) {
   const t = useTranslations('notifications.actions');
   const tCommon = useTranslations('common');
@@ -56,7 +56,7 @@ export function NotificationItem({ notification, isUnread }: NotificationItemPro
   useEffect(() => {
     if (!postCompositeId) return;
 
-    const viewerId = Core.useAuthStore.getState().currentUserPubky;
+    const viewerId = useAuthStore.getState().currentUserPubky;
     if (!viewerId) return;
 
     let isCancelled = false;
@@ -65,7 +65,7 @@ export function NotificationItem({ notification, isUnread }: NotificationItemPro
     // 1. Check local DB first
     // 2. If missing, fetch from Nexus
     // 3. Write to local DB
-    Core.PostController.getOrFetch({ compositeId: postCompositeId, viewerId })
+    PostController.getOrFetch({ compositeId: postCompositeId, viewerId })
       .then(async (post) => {
         if (!isCancelled && post?.content) {
           if (isPostDeleted(post.content)) {

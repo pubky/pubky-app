@@ -54,8 +54,8 @@ vi.mock('@/organisms', () => ({
   ClickableTagsList: () => <div data-testid="tags-list" />,
 }));
 
-// Mock Core
-vi.mock('@/core', () => ({
+// Mock dependencies
+vi.mock('@/application/tag/tag.types', () => ({
   TagKind: { USER: 'user' },
 }));
 

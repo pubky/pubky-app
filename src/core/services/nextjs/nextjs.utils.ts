@@ -25,8 +25,8 @@ export function isHttpProtocol(url: URL): boolean {
  * Prevents SSRF attacks by checking IP before the actual fetch.
  */
 export async function validateDns(hostname: string): Promise<void> {
-  // webpack bundles Node.js ONLY modules into client code via barrel imports
-  // (e.g., FilterContent.tsx's `import * as Core from '@/core'`). See #1435.
+  // Keep Node.js-only modules out of client bundles if this helper is imported from UI code.
+  // See #1435.
   const { isIP } = await import(/* webpackIgnore: true */ 'net');
   const dns = await import(/* webpackIgnore: true */ 'dns/promises');
 

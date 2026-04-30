@@ -2,7 +2,7 @@ import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { DialogRestoreRecoveryPhrase } from './DialogRestoreRecoveryPhrase';
-
+import { AuthController } from '@/controllers/auth/auth';
 // Mock external dependencies
 
 vi.mock('@/atoms', () => ({
@@ -83,24 +83,19 @@ vi.mock('@/atoms', () => ({
   )),
 }));
 
-// Mock Core module
-vi.mock('@/core', async (importOriginal) => {
-  const actual = await importOriginal<typeof import('@/core')>();
-  return {
-    ...actual,
-    AuthController: {
-      loginWithMnemonic: vi.fn(),
-    },
-    BootstrapController: {
-      run: vi.fn().mockResolvedValue({}),
-    },
-    useAuthStore: {
-      getState: vi.fn().mockReturnValue({
-        currentUserPubky: 'mock-user-pubkey-123',
-      }),
-    },
-  };
-});
+// Mock dependencies
+vi.mock('@/controllers/auth/auth', () => ({
+  AuthController: {
+    loginWithMnemonic: vi.fn(),
+  },
+}));
+vi.mock('@/stores/auth/auth.store', () => ({
+  useAuthStore: {
+    getState: vi.fn().mockReturnValue({
+      currentUserPubky: 'mock-user-pubkey-123',
+    }),
+  },
+}));
 
 // Mock Molecules module
 const mockToast = vi.fn();
@@ -146,7 +141,6 @@ describe('DialogRestoreRecoveryPhrase', () => {
     vi.clearAllMocks();
 
     // Get the mocked function
-    const { AuthController } = await import('@/core');
     mockLoginWithMnemonic = vi.mocked(AuthController.loginWithMnemonic);
   });
 

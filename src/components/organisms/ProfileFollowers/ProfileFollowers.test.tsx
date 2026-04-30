@@ -4,9 +4,8 @@ import { ProfileFollowers } from './ProfileFollowers';
 import { useFollowUser } from '@/hooks/useFollowUser/useFollowUser';
 import { useInfiniteScroll } from '@/hooks/useInfiniteScroll/useInfiniteScroll';
 import { useProfileConnections } from '@/hooks/useProfileConnections/useProfileConnections';
-import * as Core from '@/core';
 import { asOpaque } from '@/test-utils';
-
+import type { Pubky } from '@/models/models.types';
 // Mock Providers
 vi.mock('@/providers', () => ({
   useProfileContext: vi.fn(() => ({
@@ -16,8 +15,8 @@ vi.mock('@/providers', () => ({
   })),
 }));
 
-// Mock Core
-vi.mock('@/core', () => ({
+// Mock dependencies
+vi.mock('@/stores/auth/auth.store', () => ({
   useAuthStore: vi.fn((selector) => {
     const state = { currentUserPubky: 'current-user-123' };
     return selector ? selector(state) : state;
@@ -87,7 +86,7 @@ vi.mock('@/organisms', () => ({
 
 const mockConnections = [
   {
-    id: 'user-1' as Core.Pubky,
+    id: 'user-1' as Pubky,
     name: 'John Doe',
     bio: 'Test bio',
     image: null,
@@ -100,7 +99,7 @@ const mockConnections = [
     isFollowing: false,
   },
   {
-    id: 'user-2' as Core.Pubky,
+    id: 'user-2' as Pubky,
     name: 'Jane Smith',
     bio: 'Another bio',
     image: null,

@@ -1,22 +1,23 @@
-import * as Core from '@/core';
-
-export interface CreateFollowParams extends Core.TFollowParams {
-  activeStreamId?: Core.PostStreamTypes | null;
+import type { TFollowParams } from '@/controllers/user/user.type';
+import type { Pubky } from '@/models/models.types';
+import type { PostStreamTypes } from '@/models/stream/post/postStream.types';
+export interface CreateFollowParams extends TFollowParams {
+  activeStreamId?: PostStreamTypes | null;
 }
 
-export interface DeleteFollowParams extends Core.TFollowParams {
-  activeStreamId?: Core.PostStreamTypes | null;
+export interface DeleteFollowParams extends TFollowParams {
+  activeStreamId?: PostStreamTypes | null;
 }
 
 export interface InvalidateTimelineStreamsParams {
   includeFriends: boolean;
-  activeStreamId?: Core.PostStreamTypes | null;
+  activeStreamId?: PostStreamTypes | null;
 }
 
 export interface UpdateUserStreamsParams {
   isFollowing: boolean;
-  follower: Core.Pubky;
-  followee: Core.Pubky;
+  follower: Pubky;
+  followee: Pubky;
   friendshipChanged: boolean;
-  activeStreamId?: Core.PostStreamTypes | null;
+  activeStreamId?: PostStreamTypes | null;
 }

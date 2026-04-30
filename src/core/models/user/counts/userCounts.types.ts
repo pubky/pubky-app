@@ -1,7 +1,6 @@
-import * as Core from '@/core';
-
+import type { Pubky } from '@/models/models.types';
 export interface TUserCountsParams {
-  userId: Core.Pubky;
+  userId: Pubky;
   countChanges: TUserCountsCountChanges;
 }
 

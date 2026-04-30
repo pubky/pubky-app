@@ -1,13 +1,29 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
-import * as Core from '@/core';
 import { PubkyAppPostKind, PubkyAppPost, PubkyAppPostEmbed } from 'pubky-app-specs';
-
+import { db } from '@/database/franky/franky';
+import type { Pubky } from '@/models/models.types';
+import { buildCompositeId, parseCompositeId } from '@/models/models.utils';
+import { PostCountsModel } from '@/models/post/counts/postCounts';
+import type { PostCountsModelSchema } from '@/models/post/counts/postCounts.schema';
+import { PostDetailsModel } from '@/models/post/details/postDetails';
+import { DELETED } from '@/models/post/details/postDetails.constants';
+import type { PostDetailsModelSchema } from '@/models/post/details/postDetails.schema';
+import { PostRelationshipsModel } from '@/models/post/relationships/postRelationships';
+import type { PostRelationshipsModelSchema } from '@/models/post/relationships/postRelationships.schema';
+import { PostTagsModel } from '@/models/post/tags/postTags';
+import { PostTtlModel } from '@/models/post/ttl/postTtl';
+import { PostStreamTypes, type PostStreamId } from '@/models/stream/post/postStream.types';
+import { PostStreamModel } from '@/models/stream/post/tables/postStream';
+import { UserCountsModel } from '@/models/user/counts/userCounts';
+import type { UserCountsModelSchema } from '@/models/user/counts/userCounts.schema';
+import { LocalPostService } from '@/services/local/post/post';
+import type { TLocalSavePostParams } from '@/services/local/post/post.types';
 // Test data
 const testData = {
-  authorPubky: 'pxnu33x7jtpx9ar1ytsi4yxbp6a5o36gwhffs8zoxmbuptici1jy' as Core.Pubky,
+  authorPubky: 'pxnu33x7jtpx9ar1ytsi4yxbp6a5o36gwhffs8zoxmbuptici1jy' as Pubky,
   postId1: 'abc123xyz',
   get fullPostId1() {
-    return Core.buildCompositeId({ pubky: this.authorPubky, id: this.postId1 });
+    return buildCompositeId({ pubky: this.authorPubky, id: this.postId1 });
   },
 };
 
@@ -16,7 +32,7 @@ const createSaveParams = (
   content: string,
   compositePostId?: string,
   kind: PubkyAppPostKind = PubkyAppPostKind.Short,
-): Core.TLocalSavePostParams => {
+): TLocalSavePostParams => {
   return {
     compositePostId: compositePostId || testData.fullPostId1,
     post: new PubkyAppPost(content, kind, undefined, undefined, undefined),
@@ -24,28 +40,28 @@ const createSaveParams = (
 };
 
 const getSavedPost = async (postId: string) => {
-  return await Core.PostDetailsModel.table.get(postId);
+  return await PostDetailsModel.table.get(postId);
 };
 
 const getSavedCounts = async (postId: string) => {
-  return await Core.PostCountsModel.table.get(postId);
+  return await PostCountsModel.table.get(postId);
 };
 
 const getSavedRelationships = async (postId: string) => {
-  return await Core.PostRelationshipsModel.table.get(postId);
+  return await PostRelationshipsModel.table.get(postId);
 };
 
 const getSavedTags = async (postId: string) => {
-  return await Core.PostTagsModel.table.get(postId);
+  return await PostTagsModel.table.get(postId);
 };
 
 const getPostTtl = async (postId: string) => {
-  return await Core.PostTtlModel.findById(postId);
+  return await PostTtlModel.findById(postId);
 };
 
 const setupExistingPost = async (postId: string, content: string, parentUri?: string) => {
-  const { pubky, id: postIdPart } = Core.parseCompositeId(postId);
-  const postDetails: Core.PostDetailsModelSchema = {
+  const { pubky, id: postIdPart } = parseCompositeId(postId);
+  const postDetails: PostDetailsModelSchema = {
     id: postId,
     content,
     indexed_at: Date.now(),
@@ -54,7 +70,7 @@ const setupExistingPost = async (postId: string, content: string, parentUri?: st
     attachments: null,
   };
 
-  const postCounts: Core.PostCountsModelSchema = {
+  const postCounts: PostCountsModelSchema = {
     id: postId,
     tags: 0,
     unique_tags: 0,
@@ -62,21 +78,21 @@ const setupExistingPost = async (postId: string, content: string, parentUri?: st
     reposts: 0,
   };
 
-  const postRelationships: Core.PostRelationshipsModelSchema = {
+  const postRelationships: PostRelationshipsModelSchema = {
     id: postId,
     replied: parentUri || null,
     reposted: null,
     mentioned: [],
   };
 
-  await Core.PostDetailsModel.table.add(postDetails);
-  await Core.PostCountsModel.table.add(postCounts);
-  await Core.PostRelationshipsModel.table.add(postRelationships);
-  await Core.PostTagsModel.create({ id: postId, tags: [] });
+  await PostDetailsModel.table.add(postDetails);
+  await PostCountsModel.table.add(postCounts);
+  await PostRelationshipsModel.table.add(postRelationships);
+  await PostTagsModel.create({ id: postId, tags: [] });
 };
 
-const setupUserCounts = async (userId: Core.Pubky) => {
-  const userCounts: Core.UserCountsModelSchema = {
+const setupUserCounts = async (userId: Pubky) => {
+  const userCounts: UserCountsModelSchema = {
     id: userId,
     tagged: 0,
     tags: 0,
@@ -88,31 +104,31 @@ const setupUserCounts = async (userId: Core.Pubky) => {
     friends: 0,
     bookmarks: 0,
   };
-  await Core.UserCountsModel.table.add(userCounts);
+  await UserCountsModel.table.add(userCounts);
 };
 
 describe('LocalPostService', () => {
   beforeEach(async () => {
-    await Core.db.initialize();
-    await Core.db.transaction(
+    await db.initialize();
+    await db.transaction(
       'rw',
       [
-        Core.PostDetailsModel.table,
-        Core.PostCountsModel.table,
-        Core.PostRelationshipsModel.table,
-        Core.PostTagsModel.table,
-        Core.UserCountsModel.table,
-        Core.PostStreamModel.table,
-        Core.PostTtlModel.table,
+        PostDetailsModel.table,
+        PostCountsModel.table,
+        PostRelationshipsModel.table,
+        PostTagsModel.table,
+        UserCountsModel.table,
+        PostStreamModel.table,
+        PostTtlModel.table,
       ],
       async () => {
-        await Core.PostDetailsModel.table.clear();
-        await Core.PostCountsModel.table.clear();
-        await Core.PostRelationshipsModel.table.clear();
-        await Core.PostTagsModel.table.clear();
-        await Core.UserCountsModel.table.clear();
-        await Core.PostStreamModel.table.clear();
-        await Core.PostTtlModel.table.clear();
+        await PostDetailsModel.table.clear();
+        await PostCountsModel.table.clear();
+        await PostRelationshipsModel.table.clear();
+        await PostTagsModel.table.clear();
+        await UserCountsModel.table.clear();
+        await PostStreamModel.table.clear();
+        await PostTtlModel.table.clear();
       },
     );
   });
@@ -120,9 +136,9 @@ describe('LocalPostService', () => {
   describe('create', () => {
     it('should save post with all related models initialized', async () => {
       await setupUserCounts(testData.authorPubky);
-      const userCountsSpy = vi.spyOn(Core.UserCountsModel, 'updateCounts');
+      const userCountsSpy = vi.spyOn(UserCountsModel, 'updateCounts');
 
-      await Core.LocalPostService.create(createSaveParams('Hello, world!'));
+      await LocalPostService.create(createSaveParams('Hello, world!'));
 
       const [details, counts, relationships, tags] = await Promise.all([
         getSavedPost(testData.fullPostId1),
@@ -163,15 +179,15 @@ describe('LocalPostService', () => {
       await setupExistingPost(parentPostId, 'Parent post');
       await setupUserCounts(testData.authorPubky);
 
-      const userCountsSpy = vi.spyOn(Core.UserCountsModel, 'updateCounts');
+      const userCountsSpy = vi.spyOn(UserCountsModel, 'updateCounts');
 
       const baseParams = createSaveParams('This is a reply', testData.fullPostId1);
-      const saveParams: Core.TLocalSavePostParams = {
+      const saveParams: TLocalSavePostParams = {
         ...baseParams,
         post: new PubkyAppPost(baseParams.post.content, PubkyAppPostKind.Short, parentUri, undefined, undefined),
       };
 
-      await Core.LocalPostService.create(saveParams);
+      await LocalPostService.create(saveParams);
 
       const parentCounts = await getSavedCounts(parentPostId);
       expect(parentCounts!.replies).toBe(1);
@@ -189,13 +205,13 @@ describe('LocalPostService', () => {
       const parentUri = `pubky://nonexistent/pub/pubky.app/posts/missing123`;
 
       const baseParams = createSaveParams('Reply to missing parent', testData.fullPostId1);
-      const saveParams: Core.TLocalSavePostParams = {
+      const saveParams: TLocalSavePostParams = {
         ...baseParams,
         post: new PubkyAppPost(baseParams.post.content, PubkyAppPostKind.Short, parentUri, undefined, undefined),
       };
 
       // Should not throw - just silently skips incrementing non-existent parent
-      await expect(Core.LocalPostService.create(saveParams)).resolves.not.toThrow();
+      await expect(LocalPostService.create(saveParams)).resolves.not.toThrow();
 
       const savedPost = await getSavedPost(testData.fullPostId1);
       expect(savedPost).toBeTruthy();
@@ -209,7 +225,7 @@ describe('LocalPostService', () => {
         PubkyAppPostKind.Long,
       );
 
-      await Core.LocalPostService.create(saveParams);
+      await LocalPostService.create(saveParams);
 
       const savedPost = await getSavedPost(testData.fullPostId1);
       expect(savedPost!.kind).toBe('long');
@@ -217,12 +233,12 @@ describe('LocalPostService', () => {
 
     it('should write atomically across tables (rollback on error)', async () => {
       // Arrange: spy to throw on PostTagsModel.create
-      const spy = vi.spyOn(Core.PostTagsModel, 'create').mockRejectedValueOnce(new Error('Simulated failure'));
+      const spy = vi.spyOn(PostTagsModel, 'create').mockRejectedValueOnce(new Error('Simulated failure'));
       const params = createSaveParams('Atomic write test');
 
       try {
         // Act + Assert
-        await expect(Core.LocalPostService.create(params)).rejects.toThrow('Failed to save post');
+        await expect(LocalPostService.create(params)).rejects.toThrow('Failed to save post');
 
         // Validate no partial data remains
         const [details, counts, relationships, tags] = await Promise.all([
@@ -243,25 +259,25 @@ describe('LocalPostService', () => {
 
     it('should throw WRITE_FAILED error on failure', async () => {
       // Force a failure early
-      const originalCreate = Core.PostDetailsModel.create;
-      vi.spyOn(Core.PostDetailsModel, 'create').mockRejectedValueOnce(new Error('boom'));
+      const originalCreate = PostDetailsModel.create;
+      vi.spyOn(PostDetailsModel, 'create').mockRejectedValueOnce(new Error('boom'));
 
       const params = createSaveParams('Will fail');
-      await expect(Core.LocalPostService.create(params)).rejects.toMatchObject({
+      await expect(LocalPostService.create(params)).rejects.toMatchObject({
         name: 'AppError',
         code: 'WRITE_FAILED',
         message: 'Failed to save post',
       });
 
       // Restore
-      vi.spyOn(Core.PostDetailsModel, 'create').mockImplementation(originalCreate);
+      vi.spyOn(PostDetailsModel, 'create').mockImplementation(originalCreate);
     });
 
     it('should touch post TTL when creating a root post', async () => {
       await setupUserCounts(testData.authorPubky);
 
       const beforeTimestamp = Date.now();
-      await Core.LocalPostService.create(createSaveParams('Hello, world!'));
+      await LocalPostService.create(createSaveParams('Hello, world!'));
       const afterTimestamp = Date.now();
 
       const postTtl = await getPostTtl(testData.fullPostId1);
@@ -278,13 +294,13 @@ describe('LocalPostService', () => {
       await setupUserCounts(testData.authorPubky);
 
       const baseParams = createSaveParams('This is a reply', testData.fullPostId1);
-      const saveParams: Core.TLocalSavePostParams = {
+      const saveParams: TLocalSavePostParams = {
         ...baseParams,
         post: new PubkyAppPost(baseParams.post.content, PubkyAppPostKind.Short, parentUri, undefined, undefined),
       };
 
       const beforeTimestamp = Date.now();
-      await Core.LocalPostService.create(saveParams);
+      await LocalPostService.create(saveParams);
       const afterTimestamp = Date.now();
 
       // Reply post TTL should be touched
@@ -311,7 +327,7 @@ describe('LocalPostService', () => {
       await setupExistingPost(originalPostId, 'Original post content');
 
       // Create repost
-      const saveParams: Core.TLocalSavePostParams = {
+      const saveParams: TLocalSavePostParams = {
         compositePostId: testData.fullPostId1,
         post: new PubkyAppPost(
           '',
@@ -322,7 +338,7 @@ describe('LocalPostService', () => {
         ),
       };
 
-      await Core.LocalPostService.create(saveParams);
+      await LocalPostService.create(saveParams);
 
       const savedRelationships = await getSavedRelationships(repostId);
       expect(savedRelationships!.reposted).toBe(originalUri);
@@ -336,7 +352,7 @@ describe('LocalPostService', () => {
       await setupExistingPost(originalPostId, 'Original post');
 
       // Create repost
-      const saveParams: Core.TLocalSavePostParams = {
+      const saveParams: TLocalSavePostParams = {
         compositePostId: testData.fullPostId1,
         post: new PubkyAppPost(
           '',
@@ -347,7 +363,7 @@ describe('LocalPostService', () => {
         ),
       };
 
-      await Core.LocalPostService.create(saveParams);
+      await LocalPostService.create(saveParams);
 
       const originalCounts = await getSavedCounts(originalPostId);
       expect(originalCounts!.reposts).toBe(1);
@@ -360,7 +376,7 @@ describe('LocalPostService', () => {
       await setupExistingPost(originalPostId, 'Original post');
       await setupUserCounts(testData.authorPubky);
 
-      const saveParams: Core.TLocalSavePostParams = {
+      const saveParams: TLocalSavePostParams = {
         compositePostId: testData.fullPostId1,
         post: new PubkyAppPost(
           '',
@@ -372,7 +388,7 @@ describe('LocalPostService', () => {
       };
 
       const beforeTimestamp = Date.now();
-      await Core.LocalPostService.create(saveParams);
+      await LocalPostService.create(saveParams);
       const afterTimestamp = Date.now();
 
       // Repost TTL should be touched
@@ -398,7 +414,7 @@ describe('LocalPostService', () => {
       await setupExistingPost(originalPostId, 'Original post');
 
       // Create quote repost
-      const saveParams: Core.TLocalSavePostParams = {
+      const saveParams: TLocalSavePostParams = {
         compositePostId: testData.fullPostId1,
         post: new PubkyAppPost(
           quoteContent,
@@ -409,7 +425,7 @@ describe('LocalPostService', () => {
         ),
       };
 
-      await Core.LocalPostService.create(saveParams);
+      await LocalPostService.create(saveParams);
 
       const savedPost = await getSavedPost(repostId);
       expect(savedPost!.content).toBe(quoteContent);
@@ -427,9 +443,9 @@ describe('LocalPostService', () => {
       await setupExistingPost(postId, 'Test post');
       await setupUserCounts(testData.authorPubky);
 
-      const userCountsSpy = vi.spyOn(Core.UserCountsModel, 'updateCounts');
+      const userCountsSpy = vi.spyOn(UserCountsModel, 'updateCounts');
 
-      await Core.LocalPostService.delete({
+      await LocalPostService.delete({
         compositePostId: postId,
       });
 
@@ -462,7 +478,7 @@ describe('LocalPostService', () => {
 
       // Should not throw - just silently skips decrementing non-existent parent
       await expect(
-        Core.LocalPostService.delete({
+        LocalPostService.delete({
           compositePostId: replyId,
         }),
       ).resolves.not.toThrow();
@@ -478,16 +494,16 @@ describe('LocalPostService', () => {
 
       // Setup parent post
       await setupExistingPost(parentPostId, 'Parent post');
-      await Core.PostCountsModel.update(parentPostId, { replies: 1 });
+      await PostCountsModel.update(parentPostId, { replies: 1 });
 
       // Setup reply
       await setupExistingPost(replyId, 'Reply post', parentUri);
       await setupUserCounts(testData.authorPubky);
 
-      const userCountsSpy = vi.spyOn(Core.UserCountsModel, 'updateCounts');
+      const userCountsSpy = vi.spyOn(UserCountsModel, 'updateCounts');
 
       // Delete reply
-      await Core.LocalPostService.delete({
+      await LocalPostService.delete({
         compositePostId: replyId,
       });
 
@@ -510,14 +526,14 @@ describe('LocalPostService', () => {
 
       // Setup original post
       await setupExistingPost(originalPostId, 'Original post');
-      await Core.PostCountsModel.update(originalPostId, { reposts: 1 });
+      await PostCountsModel.update(originalPostId, { reposts: 1 });
 
       // Setup repost
       await setupExistingPost(repostId, '');
-      await Core.PostRelationshipsModel.update(repostId, { reposted: originalUri });
+      await PostRelationshipsModel.update(repostId, { reposted: originalUri });
 
       // Delete repost
-      await Core.LocalPostService.delete({
+      await LocalPostService.delete({
         compositePostId: repostId,
       });
 
@@ -532,14 +548,14 @@ describe('LocalPostService', () => {
 
       // Setup parent post
       await setupExistingPost(parentPostId, 'Parent post');
-      await Core.PostCountsModel.update(parentPostId, { replies: 1 });
+      await PostCountsModel.update(parentPostId, { replies: 1 });
 
       // Setup reply
       await setupExistingPost(replyId, 'Reply post', parentUri);
       await setupUserCounts(testData.authorPubky);
 
       const beforeTimestamp = Date.now();
-      await Core.LocalPostService.delete({ compositePostId: replyId });
+      await LocalPostService.delete({ compositePostId: replyId });
       const afterTimestamp = Date.now();
 
       // Parent post TTL should be touched
@@ -556,15 +572,15 @@ describe('LocalPostService', () => {
 
       // Setup original post
       await setupExistingPost(originalPostId, 'Original post');
-      await Core.PostCountsModel.update(originalPostId, { reposts: 1 });
+      await PostCountsModel.update(originalPostId, { reposts: 1 });
 
       // Setup repost
       await setupExistingPost(repostId, '');
-      await Core.PostRelationshipsModel.update(repostId, { reposted: originalUri });
+      await PostRelationshipsModel.update(repostId, { reposted: originalUri });
       await setupUserCounts(testData.authorPubky);
 
       const beforeTimestamp = Date.now();
-      await Core.LocalPostService.delete({ compositePostId: repostId });
+      await LocalPostService.delete({ compositePostId: repostId });
       const afterTimestamp = Date.now();
 
       // Original post TTL should be touched
@@ -584,7 +600,7 @@ describe('LocalPostService', () => {
       await setupExistingPost(replyId, 'Reply post', parentUri);
 
       // Delete reply
-      await Core.LocalPostService.delete({
+      await LocalPostService.delete({
         compositePostId: replyId,
       });
 
@@ -601,16 +617,16 @@ describe('LocalPostService', () => {
 
       // Setup parent and original posts
       await setupExistingPost(parentPostId, 'Parent post');
-      await Core.PostCountsModel.update(parentPostId, { replies: 1 });
+      await PostCountsModel.update(parentPostId, { replies: 1 });
       await setupExistingPost(originalPostId, 'Original post');
-      await Core.PostCountsModel.update(originalPostId, { reposts: 1 });
+      await PostCountsModel.update(originalPostId, { reposts: 1 });
 
       // Setup post that is both reply and repost
       await setupExistingPost(postId, 'Quote repost as reply', parentUri);
-      await Core.PostRelationshipsModel.update(postId, { reposted: originalUri });
+      await PostRelationshipsModel.update(postId, { reposted: originalUri });
 
       // Delete post
-      await Core.LocalPostService.delete({
+      await LocalPostService.delete({
         compositePostId: postId,
       });
 
@@ -627,15 +643,15 @@ describe('LocalPostService', () => {
 
       // Setup parent and reply
       await setupExistingPost(parentPostId, 'Parent post');
-      await Core.PostCountsModel.update(parentPostId, { replies: 1 });
+      await PostCountsModel.update(parentPostId, { replies: 1 });
       await setupExistingPost(replyId, 'Reply post', parentUri);
 
       // Spy to force failure during transaction
-      const spy = vi.spyOn(Core.PostDetailsModel, 'deleteById').mockRejectedValueOnce(new Error('Simulated failure'));
+      const spy = vi.spyOn(PostDetailsModel, 'deleteById').mockRejectedValueOnce(new Error('Simulated failure'));
 
       try {
         await expect(
-          Core.LocalPostService.delete({
+          LocalPostService.delete({
             compositePostId: replyId,
           }),
         ).rejects.toThrow('Failed to delete post');
@@ -667,16 +683,16 @@ describe('LocalPostService', () => {
       await setupUserCounts(testData.authorPubky);
 
       // Update counts to indicate post has replies
-      await Core.PostCountsModel.update(postId, { replies: 1 });
+      await PostCountsModel.update(postId, { replies: 1 });
 
       // Delete should return true (soft delete)
-      const result = await Core.LocalPostService.delete({ compositePostId: postId });
+      const result = await LocalPostService.delete({ compositePostId: postId });
       expect(result).toBe(true);
 
       // Post should still exist but with DELETED content
       const postDetails = await getSavedPost(postId);
       expect(postDetails).toBeTruthy();
-      expect(postDetails!.content).toBe(Core.DELETED);
+      expect(postDetails!.content).toBe(DELETED);
 
       // All related records should still exist
       const [counts, relationships, tags] = await Promise.all([
@@ -695,16 +711,16 @@ describe('LocalPostService', () => {
       await setupUserCounts(testData.authorPubky);
 
       // Update counts to indicate post has reposts
-      await Core.PostCountsModel.update(postId, { reposts: 5 });
+      await PostCountsModel.update(postId, { reposts: 5 });
 
       // Delete should return true (soft delete)
-      const result = await Core.LocalPostService.delete({ compositePostId: postId });
+      const result = await LocalPostService.delete({ compositePostId: postId });
       expect(result).toBe(true);
 
       // Post should still exist but with DELETED content
       const postDetails = await getSavedPost(postId);
       expect(postDetails).toBeTruthy();
-      expect(postDetails!.content).toBe(Core.DELETED);
+      expect(postDetails!.content).toBe(DELETED);
     });
 
     it('should soft delete post when it has tags (mark as DELETED)', async () => {
@@ -713,16 +729,16 @@ describe('LocalPostService', () => {
       await setupUserCounts(testData.authorPubky);
 
       // Update counts to indicate post has tags
-      await Core.PostCountsModel.update(postId, { tags: 3 });
+      await PostCountsModel.update(postId, { tags: 3 });
 
       // Delete should return true (soft delete)
-      const result = await Core.LocalPostService.delete({ compositePostId: postId });
+      const result = await LocalPostService.delete({ compositePostId: postId });
       expect(result).toBe(true);
 
       // Post should still exist but with DELETED content
       const postDetails = await getSavedPost(postId);
       expect(postDetails).toBeTruthy();
-      expect(postDetails!.content).toBe(Core.DELETED);
+      expect(postDetails!.content).toBe(DELETED);
     });
 
     it('should hard delete post when it has no links and return false', async () => {
@@ -731,7 +747,7 @@ describe('LocalPostService', () => {
       await setupUserCounts(testData.authorPubky);
 
       // Delete should return false (hard delete)
-      const result = await Core.LocalPostService.delete({ compositePostId: postId });
+      const result = await LocalPostService.delete({ compositePostId: postId });
       expect(result).toBe(false);
 
       // Post should be completely removed
@@ -743,7 +759,7 @@ describe('LocalPostService', () => {
       const nonExistentPostId = 'nonexistent:post123';
 
       // Should not throw - delete is idempotent, returns false for hard delete path
-      const result = await Core.LocalPostService.delete({ compositePostId: nonExistentPostId });
+      const result = await LocalPostService.delete({ compositePostId: nonExistentPostId });
       expect(result).toBe(false);
     });
   });
@@ -754,14 +770,14 @@ describe('LocalPostService', () => {
       await setupExistingPost(postId, 'Test post');
 
       // Update some counts
-      await Core.PostCountsModel.update(postId, {
+      await PostCountsModel.update(postId, {
         tags: 5,
         unique_tags: 3,
         replies: 10,
         reposts: 2,
       });
 
-      const counts = await Core.LocalPostService.readCounts(postId);
+      const counts = await LocalPostService.readCounts(postId);
 
       expect(counts).toBeTruthy();
       expect(counts!.id).toBe(postId);
@@ -774,7 +790,7 @@ describe('LocalPostService', () => {
     it('should return null when post does not exist', async () => {
       const nonExistentPostId = 'nonexistent:post123';
 
-      const counts = await Core.LocalPostService.readCounts(nonExistentPostId);
+      const counts = await LocalPostService.readCounts(nonExistentPostId);
 
       expect(counts).toBeNull();
     });
@@ -783,12 +799,10 @@ describe('LocalPostService', () => {
       const postId = testData.fullPostId1;
 
       // Mock findById to throw an error - model layer handles error wrapping
-      const spy = vi
-        .spyOn(Core.PostCountsModel, 'findById')
-        .mockRejectedValueOnce(new Error('Database connection lost'));
+      const spy = vi.spyOn(PostCountsModel, 'findById').mockRejectedValueOnce(new Error('Database connection lost'));
 
       // Service is pass-through, error bubbles up from model
-      await expect(Core.LocalPostService.readCounts(postId)).rejects.toThrow('Database connection lost');
+      await expect(LocalPostService.readCounts(postId)).rejects.toThrow('Database connection lost');
 
       spy.mockRestore();
     });
@@ -800,20 +814,16 @@ describe('LocalPostService', () => {
         const postId = testData.fullPostId1;
         await setupUserCounts(testData.authorPubky);
 
-        await Core.LocalPostService.create(createSaveParams('Test post'));
+        await LocalPostService.create(createSaveParams('Test post'));
 
         // Verify post was added to timeline streams
-        const timelineAllAll = await Core.PostStreamModel.table.get(Core.PostStreamTypes.TIMELINE_ALL_ALL);
-        const timelineAllShort = await Core.PostStreamModel.table.get(Core.PostStreamTypes.TIMELINE_ALL_SHORT);
-        const timelineFollowingAll = await Core.PostStreamModel.table.get(Core.PostStreamTypes.TIMELINE_FOLLOWING_ALL);
-        const timelineFollowingShort = await Core.PostStreamModel.table.get(
-          Core.PostStreamTypes.TIMELINE_FOLLOWING_SHORT,
-        );
-        const timelineFriendsAll = await Core.PostStreamModel.table.get(Core.PostStreamTypes.TIMELINE_FRIENDS_ALL);
-        const timelineFriendsShort = await Core.PostStreamModel.table.get(Core.PostStreamTypes.TIMELINE_FRIENDS_SHORT);
-        const authorStream = await Core.PostStreamModel.table.get(
-          `author:${testData.authorPubky}` as Core.PostStreamId,
-        );
+        const timelineAllAll = await PostStreamModel.table.get(PostStreamTypes.TIMELINE_ALL_ALL);
+        const timelineAllShort = await PostStreamModel.table.get(PostStreamTypes.TIMELINE_ALL_SHORT);
+        const timelineFollowingAll = await PostStreamModel.table.get(PostStreamTypes.TIMELINE_FOLLOWING_ALL);
+        const timelineFollowingShort = await PostStreamModel.table.get(PostStreamTypes.TIMELINE_FOLLOWING_SHORT);
+        const timelineFriendsAll = await PostStreamModel.table.get(PostStreamTypes.TIMELINE_FRIENDS_ALL);
+        const timelineFriendsShort = await PostStreamModel.table.get(PostStreamTypes.TIMELINE_FRIENDS_SHORT);
+        const authorStream = await PostStreamModel.table.get(`author:${testData.authorPubky}` as PostStreamId);
 
         expect(timelineAllAll?.stream).toContain(postId);
         expect(timelineAllShort?.stream).toContain(postId);
@@ -828,21 +838,19 @@ describe('LocalPostService', () => {
         const postId = testData.fullPostId1;
         await setupUserCounts(testData.authorPubky);
 
-        await Core.LocalPostService.create(createSaveParams('Long post', undefined, PubkyAppPostKind.Long));
+        await LocalPostService.create(createSaveParams('Long post', undefined, PubkyAppPostKind.Long));
 
         // Verify post was added to long-form streams
-        const timelineAllLong = await Core.PostStreamModel.table.get(Core.PostStreamTypes.TIMELINE_ALL_LONG);
-        const timelineFollowingLong = await Core.PostStreamModel.table.get(
-          Core.PostStreamTypes.TIMELINE_FOLLOWING_LONG,
-        );
-        const timelineFriendsLong = await Core.PostStreamModel.table.get(Core.PostStreamTypes.TIMELINE_FRIENDS_LONG);
+        const timelineAllLong = await PostStreamModel.table.get(PostStreamTypes.TIMELINE_ALL_LONG);
+        const timelineFollowingLong = await PostStreamModel.table.get(PostStreamTypes.TIMELINE_FOLLOWING_LONG);
+        const timelineFriendsLong = await PostStreamModel.table.get(PostStreamTypes.TIMELINE_FRIENDS_LONG);
 
         expect(timelineAllLong?.stream).toContain(postId);
         expect(timelineFollowingLong?.stream).toContain(postId);
         expect(timelineFriendsLong?.stream).toContain(postId);
 
         // Should also be in 'all' kind streams
-        const timelineAllAll = await Core.PostStreamModel.table.get(Core.PostStreamTypes.TIMELINE_ALL_ALL);
+        const timelineAllAll = await PostStreamModel.table.get(PostStreamTypes.TIMELINE_ALL_ALL);
         expect(timelineAllAll?.stream).toContain(postId);
       });
 
@@ -855,42 +863,40 @@ describe('LocalPostService', () => {
         await setupUserCounts(testData.authorPubky);
 
         const baseParams = createSaveParams('This is a reply', replyId);
-        const saveParams: Core.TLocalSavePostParams = {
+        const saveParams: TLocalSavePostParams = {
           ...baseParams,
           post: new PubkyAppPost(baseParams.post.content, PubkyAppPostKind.Short, parentUri, undefined, undefined),
         };
 
-        await Core.LocalPostService.create(saveParams);
+        await LocalPostService.create(saveParams);
 
         // Verify reply was added to reply streams
-        const authorRepliesStream = await Core.PostStreamModel.table.get(
-          `author_replies:${testData.authorPubky}` as Core.PostStreamId,
+        const authorRepliesStream = await PostStreamModel.table.get(
+          `author_replies:${testData.authorPubky}` as PostStreamId,
         );
-        const postRepliesStream = await Core.PostStreamModel.table.get(
-          `post_replies:${parentPostId}` as Core.PostStreamId,
-        );
+        const postRepliesStream = await PostStreamModel.table.get(`post_replies:${parentPostId}` as PostStreamId);
 
         expect(authorRepliesStream?.stream).toContain(replyId);
         expect(postRepliesStream?.stream).toContain(replyId);
 
         // Verify reply was NOT added to timeline streams (replies don't go to timelines)
-        const timelineAllAll = await Core.PostStreamModel.table.get(Core.PostStreamTypes.TIMELINE_ALL_ALL);
+        const timelineAllAll = await PostStreamModel.table.get(PostStreamTypes.TIMELINE_ALL_ALL);
         expect(timelineAllAll?.stream || []).not.toContain(replyId);
       });
 
       it('should prepend posts to beginning of stream (most recent first)', async () => {
         const postId1 = testData.fullPostId1;
-        const postId2 = Core.buildCompositeId({ pubky: testData.authorPubky, id: 'xyz789' });
+        const postId2 = buildCompositeId({ pubky: testData.authorPubky, id: 'xyz789' });
 
         await setupUserCounts(testData.authorPubky);
 
         // Create first post
-        await Core.LocalPostService.create(createSaveParams('First post', postId1));
+        await LocalPostService.create(createSaveParams('First post', postId1));
 
         // Create second post
-        await Core.LocalPostService.create(createSaveParams('Second post', postId2));
+        await LocalPostService.create(createSaveParams('Second post', postId2));
 
-        const timelineAllAll = await Core.PostStreamModel.table.get(Core.PostStreamTypes.TIMELINE_ALL_ALL);
+        const timelineAllAll = await PostStreamModel.table.get(PostStreamTypes.TIMELINE_ALL_ALL);
 
         // Second post should be at index 0 (most recent)
         expect(timelineAllAll?.stream[0]).toBe(postId2);
@@ -905,19 +911,17 @@ describe('LocalPostService', () => {
         await setupUserCounts(testData.authorPubky);
 
         // Manually add post to streams first
-        await Core.PostStreamModel.prependItems(Core.PostStreamTypes.TIMELINE_ALL_ALL as Core.PostStreamId, [postId]);
-        await Core.PostStreamModel.prependItems(Core.PostStreamTypes.TIMELINE_ALL_SHORT as Core.PostStreamId, [postId]);
-        await Core.PostStreamModel.prependItems(`author:${testData.authorPubky}` as Core.PostStreamId, [postId]);
+        await PostStreamModel.prependItems(PostStreamTypes.TIMELINE_ALL_ALL as PostStreamId, [postId]);
+        await PostStreamModel.prependItems(PostStreamTypes.TIMELINE_ALL_SHORT as PostStreamId, [postId]);
+        await PostStreamModel.prependItems(`author:${testData.authorPubky}` as PostStreamId, [postId]);
 
         // Delete the post
-        await Core.LocalPostService.delete({ compositePostId: postId });
+        await LocalPostService.delete({ compositePostId: postId });
 
         // Verify post was removed from streams
-        const timelineAllAll = await Core.PostStreamModel.table.get(Core.PostStreamTypes.TIMELINE_ALL_ALL);
-        const timelineAllShort = await Core.PostStreamModel.table.get(Core.PostStreamTypes.TIMELINE_ALL_SHORT);
-        const authorStream = await Core.PostStreamModel.table.get(
-          `author:${testData.authorPubky}` as Core.PostStreamId,
-        );
+        const timelineAllAll = await PostStreamModel.table.get(PostStreamTypes.TIMELINE_ALL_ALL);
+        const timelineAllShort = await PostStreamModel.table.get(PostStreamTypes.TIMELINE_ALL_SHORT);
+        const authorStream = await PostStreamModel.table.get(`author:${testData.authorPubky}` as PostStreamId);
 
         expect(timelineAllAll?.stream || []).not.toContain(postId);
         expect(timelineAllShort?.stream || []).not.toContain(postId);
@@ -934,21 +938,17 @@ describe('LocalPostService', () => {
         await setupUserCounts(testData.authorPubky);
 
         // Manually add reply to streams first
-        await Core.PostStreamModel.prependItems(`author_replies:${testData.authorPubky}` as Core.PostStreamId, [
-          replyId,
-        ]);
-        await Core.PostStreamModel.prependItems(`post_replies:${parentPostId}` as Core.PostStreamId, [replyId]);
+        await PostStreamModel.prependItems(`author_replies:${testData.authorPubky}` as PostStreamId, [replyId]);
+        await PostStreamModel.prependItems(`post_replies:${parentPostId}` as PostStreamId, [replyId]);
 
         // Delete the reply
-        await Core.LocalPostService.delete({ compositePostId: replyId });
+        await LocalPostService.delete({ compositePostId: replyId });
 
         // Verify reply was removed from streams
-        const authorRepliesStream = await Core.PostStreamModel.table.get(
-          `author_replies:${testData.authorPubky}` as Core.PostStreamId,
+        const authorRepliesStream = await PostStreamModel.table.get(
+          `author_replies:${testData.authorPubky}` as PostStreamId,
         );
-        const postRepliesStream = await Core.PostStreamModel.table.get(
-          `post_replies:${parentPostId}` as Core.PostStreamId,
-        );
+        const postRepliesStream = await PostStreamModel.table.get(`post_replies:${parentPostId}` as PostStreamId);
 
         expect(authorRepliesStream?.stream || []).not.toContain(replyId);
         expect(postRepliesStream?.stream || []).not.toContain(replyId);
@@ -960,7 +960,7 @@ describe('LocalPostService', () => {
         await setupUserCounts(testData.authorPubky);
 
         // Delete without pre-creating streams - should not throw
-        await expect(Core.LocalPostService.delete({ compositePostId: postId })).resolves.not.toThrow();
+        await expect(LocalPostService.delete({ compositePostId: postId })).resolves.not.toThrow();
       });
 
       it('should remove all occurrences of post from stream', async () => {
@@ -969,16 +969,13 @@ describe('LocalPostService', () => {
         await setupUserCounts(testData.authorPubky);
 
         // Manually add post multiple times (edge case / data integrity issue)
-        await Core.PostStreamModel.prependItems(Core.PostStreamTypes.TIMELINE_ALL_ALL as Core.PostStreamId, [
-          postId,
-          postId,
-        ]);
+        await PostStreamModel.prependItems(PostStreamTypes.TIMELINE_ALL_ALL as PostStreamId, [postId, postId]);
 
         // Delete the post
-        await Core.LocalPostService.delete({ compositePostId: postId });
+        await LocalPostService.delete({ compositePostId: postId });
 
         // Verify all occurrences removed
-        const timelineAllAll = await Core.PostStreamModel.table.get(Core.PostStreamTypes.TIMELINE_ALL_ALL);
+        const timelineAllAll = await PostStreamModel.table.get(PostStreamTypes.TIMELINE_ALL_ALL);
         expect(timelineAllAll?.stream || []).not.toContain(postId);
       });
     });
@@ -989,16 +986,16 @@ describe('LocalPostService', () => {
         await setupUserCounts(testData.authorPubky);
 
         // Create post
-        await Core.LocalPostService.create(createSaveParams('Test post', postId));
+        await LocalPostService.create(createSaveParams('Test post', postId));
 
-        let timelineAllAll = await Core.PostStreamModel.table.get(Core.PostStreamTypes.TIMELINE_ALL_ALL);
+        let timelineAllAll = await PostStreamModel.table.get(PostStreamTypes.TIMELINE_ALL_ALL);
         const initialCount = timelineAllAll?.stream.length || 0;
         expect(timelineAllAll?.stream).toContain(postId);
 
         // Delete post
-        await Core.LocalPostService.delete({ compositePostId: postId });
+        await LocalPostService.delete({ compositePostId: postId });
 
-        timelineAllAll = await Core.PostStreamModel.table.get(Core.PostStreamTypes.TIMELINE_ALL_ALL);
+        timelineAllAll = await PostStreamModel.table.get(PostStreamTypes.TIMELINE_ALL_ALL);
         const finalCount = timelineAllAll?.stream.length || 0;
 
         // Stream should be back to original state
@@ -1014,7 +1011,7 @@ describe('LocalPostService', () => {
       const parentUri = 'pubky://parent/pub/pubky.app/posts/parent123';
       await setupExistingPost(postId, 'Test post', parentUri);
 
-      const relationships = await Core.LocalPostService.readRelationships(postId);
+      const relationships = await LocalPostService.readRelationships(postId);
 
       expect(relationships).not.toBeNull();
       expect(relationships?.id).toBe(postId);
@@ -1026,7 +1023,7 @@ describe('LocalPostService', () => {
     it('should return null when post relationships do not exist', async () => {
       const nonExistentPostId = 'nonexistent:post123';
 
-      const relationships = await Core.LocalPostService.readRelationships(nonExistentPostId);
+      const relationships = await LocalPostService.readRelationships(nonExistentPostId);
 
       expect(relationships).toBeNull();
     });
@@ -1035,10 +1032,10 @@ describe('LocalPostService', () => {
       const postId = testData.fullPostId1;
 
       // Mock findById to throw an error - service is pass-through
-      const findByIdSpy = vi.spyOn(Core.PostRelationshipsModel, 'findById').mockRejectedValue(new Error('DB error'));
+      const findByIdSpy = vi.spyOn(PostRelationshipsModel, 'findById').mockRejectedValue(new Error('DB error'));
 
       // Error bubbles up from model layer
-      await expect(Core.LocalPostService.readRelationships(postId)).rejects.toThrow('DB error');
+      await expect(LocalPostService.readRelationships(postId)).rejects.toThrow('DB error');
 
       findByIdSpy.mockRestore();
     });
@@ -1047,12 +1044,12 @@ describe('LocalPostService', () => {
   describe('readRelationshipsByIds', () => {
     it('should return post relationships for multiple posts', async () => {
       const postId1 = testData.fullPostId1;
-      const postId2 = Core.buildCompositeId({ pubky: testData.authorPubky, id: 'post-2' });
+      const postId2 = buildCompositeId({ pubky: testData.authorPubky, id: 'post-2' });
       const parentUri = 'pubky://parent/pub/pubky.app/posts/parent123';
       await setupExistingPost(postId1, 'Test post 1', parentUri);
       await setupExistingPost(postId2, 'Test post 2', undefined);
 
-      const relationships = await Core.LocalPostService.readRelationshipsByIds([postId1, postId2]);
+      const relationships = await LocalPostService.readRelationshipsByIds([postId1, postId2]);
 
       expect(relationships).toHaveLength(2);
       expect(relationships[0]?.id).toBe(postId1);
@@ -1066,7 +1063,7 @@ describe('LocalPostService', () => {
       const nonExistentPostId = 'nonexistent:post123';
       await setupExistingPost(postId1, 'Test post 1', undefined);
 
-      const relationships = await Core.LocalPostService.readRelationshipsByIds([postId1, nonExistentPostId]);
+      const relationships = await LocalPostService.readRelationshipsByIds([postId1, nonExistentPostId]);
 
       expect(relationships).toHaveLength(2);
       expect(relationships[0]?.id).toBe(postId1);
@@ -1074,7 +1071,7 @@ describe('LocalPostService', () => {
     });
 
     it('should return empty array for empty input', async () => {
-      const relationships = await Core.LocalPostService.readRelationshipsByIds([]);
+      const relationships = await LocalPostService.readRelationshipsByIds([]);
 
       expect(relationships).toEqual([]);
     });
@@ -1083,11 +1080,9 @@ describe('LocalPostService', () => {
       const postId = testData.fullPostId1;
 
       // Mock bulkGet to throw an error
-      const bulkGetSpy = vi
-        .spyOn(Core.PostRelationshipsModel.table, 'bulkGet')
-        .mockRejectedValue(new Error('DB error'));
+      const bulkGetSpy = vi.spyOn(PostRelationshipsModel.table, 'bulkGet').mockRejectedValue(new Error('DB error'));
 
-      await expect(Core.LocalPostService.readRelationshipsByIds([postId])).rejects.toThrow(
+      await expect(LocalPostService.readRelationshipsByIds([postId])).rejects.toThrow(
         'Failed to read post relationships by ids',
       );
 

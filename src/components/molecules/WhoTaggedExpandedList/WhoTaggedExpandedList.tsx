@@ -6,12 +6,11 @@ import { useRequireAuth } from '@/hooks/useRequireAuth/useRequireAuth';
 import { useRouter } from 'next/navigation';
 import * as Atoms from '@/atoms';
 import * as Molecules from '@/molecules';
-import * as Core from '@/core';
 import { APP_ROUTES } from '@/app/routes';
 import type { TaggerWithAvatar } from '@/molecules/TaggedItem/TaggedItem.types';
 import type { WhoTaggedExpandedListProps } from './WhoTaggedExpandedList.types';
 import { WhoTaggedExpandedListSkeleton } from './WhoTaggedExpandedList.skeleton';
-
+import { useAuthStore } from '@/stores/auth/auth.store';
 /**
  * WhoTaggedExpandedList
  *
@@ -28,7 +27,7 @@ export function WhoTaggedExpandedList({
   const router = useRouter();
   const { toggleFollow, isUserLoading } = useFollowUser();
   const { requireAuth } = useRequireAuth();
-  const { currentUserPubky } = Core.useAuthStore();
+  const { currentUserPubky } = useAuthStore();
   const { getUsersWithAvatars } = useBulkUserAvatars(taggerIds);
 
   // Build fallback map for user data not yet in IndexedDB

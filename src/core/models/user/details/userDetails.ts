@@ -1,22 +1,21 @@
 import { Table } from 'dexie';
+import { db } from '@/database/franky/franky';
+import type { Pubky } from '@/models/models.types';
+import { RecordModelBase } from '@/models/shared/base/record/baseRecord';
+import type { UserDetailsModelSchema } from '@/models/user/details/userDetails.schema';
+import type { NexusUserLink } from '@/services/nexus/nexus.types';
 
-import * as Core from '@/core';
-import { RecordModelBase } from '@/core/models/shared/base/record/baseRecord';
-
-export class UserDetailsModel
-  extends RecordModelBase<Core.Pubky, Core.UserDetailsModelSchema>
-  implements Core.UserDetailsModelSchema
-{
-  static table: Table<Core.UserDetailsModelSchema> = Core.db.table('user_details');
+export class UserDetailsModel extends RecordModelBase<Pubky, UserDetailsModelSchema> implements UserDetailsModelSchema {
+  static table: Table<UserDetailsModelSchema> = db.table('user_details');
 
   name: string;
   bio: string;
   image: string | null;
   indexed_at: number;
-  links: Core.NexusUserLink[] | null;
+  links: NexusUserLink[] | null;
   status: string | null;
 
-  constructor(userDetails: Core.UserDetailsModelSchema) {
+  constructor(userDetails: UserDetailsModelSchema) {
     super(userDetails);
     this.name = userDetails.name;
     this.bio = userDetails.bio;

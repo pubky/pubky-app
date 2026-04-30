@@ -1,6 +1,13 @@
-import * as Core from '@/core';
 import * as Config from '@/config';
-
+import { PostStreamApplication } from '@/application/stream/posts/post';
+import { NOT_FOUND_CACHED_STREAM, SKIP_FETCH_NEW_POSTS } from '@/controllers/stream/posts/post.constants';
+import type {
+  TReadPostStreamChunkParams,
+  TReadPostStreamChunkResponse,
+  TStreamIdParams,
+} from '@/controllers/stream/posts/posts.types';
+import type { TStreamResult } from '@/services/local/stream/posts/post.types';
+import { useAuthStore } from '@/stores/auth/auth.store';
 // -=-=-=-=-=-=-=-=-=-=-=-=-=- POPULARITY STREAMS -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
 // If we are in engagement mode, we might not have background live updates. There is no
 // identifier to fetch updates from redis. Always the top post has the max engagement
@@ -45,35 +52,34 @@ export class StreamPostsController {
    */
   static async getOrFetchStreamSlice({
     streamId,
-    streamHead = Core.SKIP_FETCH_NEW_POSTS,
-    streamTail = Core.NOT_FOUND_CACHED_STREAM,
+    streamHead = SKIP_FETCH_NEW_POSTS,
+    streamTail = NOT_FOUND_CACHED_STREAM,
     lastPostId,
     limit = Config.NEXUS_POSTS_PER_PAGE,
     order,
-  }: Core.TReadPostStreamChunkParams): Promise<Core.TReadPostStreamChunkResponse> {
+  }: TReadPostStreamChunkParams): Promise<TReadPostStreamChunkResponse> {
     // selectCurrentUserPubky() throws an error when user is not authenticated;
     // access currentUserPubky directly to get null instead (unauthenticated users can view profile posts)
-    const viewerId = Core.useAuthStore.getState().currentUserPubky;
-    const { nextPageIds, cacheMissPostIds, timestamp, reachedEnd } =
-      await Core.PostStreamApplication.getOrFetchStreamSlice({
-        streamId,
-        limit,
-        streamHead,
-        streamTail,
-        lastPostId,
-        viewerId,
-        order,
-      });
+    const viewerId = useAuthStore.getState().currentUserPubky;
+    const { nextPageIds, cacheMissPostIds, timestamp, reachedEnd } = await PostStreamApplication.getOrFetchStreamSlice({
+      streamId,
+      limit,
+      streamHead,
+      streamTail,
+      lastPostId,
+      viewerId,
+      order,
+    });
     // Query nexus to get the cacheMissPostIds
     if (cacheMissPostIds.length > 0) {
       // TODO: When TTL is implemented, we can return to void
-      await Core.PostStreamApplication.fetchMissingPostsFromNexus({
+      await PostStreamApplication.fetchMissingPostsFromNexus({
         cacheMissPostIds,
         viewerId,
       });
       // Second-pass: cache-miss details are now resolved,
       // re-filter to catch posts that were fail-open in the first pass
-      const validIds = await Core.PostStreamApplication.filterDeletedPosts(nextPageIds);
+      const validIds = await PostStreamApplication.filterDeletedPosts(nextPageIds);
       return { nextPageIds: validIds, timestamp, reachedEnd };
     }
     return { nextPageIds, timestamp, reachedEnd };
@@ -88,8 +94,8 @@ export class StreamPostsController {
    * @param streamId - The ID of the post stream to query
    * @returns Promise resolving to the timestamp (number) or 0 if not found
    */
-  static async getCachedLastPostTimestamp(params: Core.TStreamIdParams): Promise<number> {
-    return await Core.PostStreamApplication.getCachedLastPostTimestamp(params);
+  static async getCachedLastPostTimestamp(params: TStreamIdParams): Promise<number> {
+    return await PostStreamApplication.getCachedLastPostTimestamp(params);
   }
 
   /**
@@ -101,8 +107,8 @@ export class StreamPostsController {
    * @param streamId - The stream ID to get the head timestamp for
    * @returns The indexed_at timestamp of the head post, or 0 if the stream is empty or head post not found
    */
-  static async getStreamHead(params: Core.TStreamIdParams): Promise<number> {
-    return await Core.PostStreamApplication.getStreamHead(params);
+  static async getStreamHead(params: TStreamIdParams): Promise<number> {
+    return await PostStreamApplication.getStreamHead(params);
   }
 
   /**
@@ -110,8 +116,8 @@ export class StreamPostsController {
    * @param streamId - The ID of the stream
    * @returns The cached stream or null if not found
    */
-  static async getLocalStream(params: Core.TStreamIdParams): Promise<Core.TStreamResult | null> {
-    return await Core.PostStreamApplication.getLocalStream(params);
+  static async getLocalStream(params: TStreamIdParams): Promise<TStreamResult | null> {
+    return await PostStreamApplication.getLocalStream(params);
   }
 
   /**
@@ -119,16 +125,16 @@ export class StreamPostsController {
    * @param streamId - The ID of the stream
    * @returns The unread stream or null if not found
    */
-  static async getUnreadStream(params: Core.TStreamIdParams): Promise<Core.TStreamResult | null> {
-    return await Core.PostStreamApplication.getUnreadStream(params);
+  static async getUnreadStream(params: TStreamIdParams): Promise<TStreamResult | null> {
+    return await PostStreamApplication.getUnreadStream(params);
   }
 
   /**
    * Merge the unread stream with the post stream
    * @param params - The stream ID to merge the unread stream with the post stream
    */
-  static async mergeUnreadStreamWithPostStream(params: Core.TStreamIdParams) {
-    return await Core.PostStreamApplication.mergeUnreadStreamWithPostStream(params);
+  static async mergeUnreadStreamWithPostStream(params: TStreamIdParams) {
+    return await PostStreamApplication.mergeUnreadStreamWithPostStream(params);
   }
 
   /**
@@ -136,8 +142,8 @@ export class StreamPostsController {
    * @param params - The stream ID to clear the unread stream for
    * @returns Array of post IDs that were in the unread stream
    */
-  static async clearUnreadStream(params: Core.TStreamIdParams): Promise<string[]> {
-    return await Core.PostStreamApplication.clearUnreadStream(params);
+  static async clearUnreadStream(params: TStreamIdParams): Promise<string[]> {
+    return await PostStreamApplication.clearUnreadStream(params);
   }
 
   /**
@@ -154,8 +160,8 @@ export class StreamPostsController {
    *
    * @param params.streamId - The ID of the stream to prepare
    */
-  static async prepareStreamForInitialLoad(params: Core.TStreamIdParams): Promise<void> {
-    await Core.PostStreamApplication.prepareStreamForInitialLoad(params);
+  static async prepareStreamForInitialLoad(params: TStreamIdParams): Promise<void> {
+    await PostStreamApplication.prepareStreamForInitialLoad(params);
   }
 
   /**
@@ -166,6 +172,6 @@ export class StreamPostsController {
    * @returns Array of post IDs that are not deleted
    */
   static async filterDeletedPosts(postIds: string[]): Promise<string[]> {
-    return Core.PostStreamApplication.filterDeletedPosts(postIds);
+    return PostStreamApplication.filterDeletedPosts(postIds);
   }
 }

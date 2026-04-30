@@ -137,7 +137,7 @@ vi.mock('@/atoms', () => ({
   ),
 }));
 
-// Mock core
+// Mock dependencies
 const mockSetKeypair = vi.fn();
 const mockSetMnemonic = vi.fn();
 const { mockUseOnboardingStore, mockUseAuthStore, mockProfileController } = vi.hoisted(() => ({
@@ -150,9 +150,13 @@ const { mockUseOnboardingStore, mockUseAuthStore, mockProfileController } = vi.h
 
 const mockPubky = 'pubky1234567890abcdef';
 
-vi.mock('@/core', () => ({
+vi.mock('@/stores/onboarding/onboarding.store', () => ({
   useOnboardingStore: mockUseOnboardingStore,
+}));
+vi.mock('@/stores/auth/auth.store', () => ({
   useAuthStore: mockUseAuthStore,
+}));
+vi.mock('@/controllers/profile/profile', () => ({
   ProfileController: mockProfileController,
 }));
 

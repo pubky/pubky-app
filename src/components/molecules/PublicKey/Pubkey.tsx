@@ -6,9 +6,8 @@ import { useRouter } from 'next/navigation';
 import { useTranslations } from 'next-intl';
 import * as Molecules from '@/molecules';
 import * as Atoms from '@/atoms';
-import * as Core from '@/core';
 import * as App from '@/app';
-
+import { useOnboardingStore } from '@/stores/onboarding/onboarding.store';
 export const PublicKeyHeader = () => {
   const t = useTranslations('onboarding.pubky');
   return (
@@ -37,7 +36,7 @@ export const PublicKeyNavigation = () => {
     try {
       // Signup happens here after the user has created their browser keypair.
       // The invite code was saved in the onboarding store during the human verification step.
-      const inviteCode = Core.useOnboardingStore.getState().inviteCode;
+      const inviteCode = useOnboardingStore.getState().inviteCode;
       await validateAndSignUp(inviteCode);
       router.push(App.ONBOARDING_ROUTES.BACKUP);
     } catch {

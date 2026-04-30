@@ -1,13 +1,13 @@
 import { Table } from 'dexie';
 import { PubkyAppFeedLayout, PubkyAppFeedReach, PubkyAppFeedSort, PubkyAppPostKind } from 'pubky-app-specs';
-import * as Core from '@/core';
-import { RecordModelBase } from '@/core/models/shared/base/record/baseRecord';
 import { DatabaseErrorCode } from '@/libs/error/error.codes';
 import { Err } from '@/libs/error/error.factories';
 import { ErrorService } from '@/libs/error/error.types';
-
-export class FeedModel extends RecordModelBase<string, Core.FeedModelSchema> implements Core.FeedModelSchema {
-  static table: Table<Core.FeedModelSchema, string> = Core.db.table('feeds');
+import { db } from '@/database/franky/franky';
+import type { FeedModelSchema } from '@/models/feed/feed.schema';
+import { RecordModelBase } from '@/models/shared/base/record/baseRecord';
+export class FeedModel extends RecordModelBase<string, FeedModelSchema> implements FeedModelSchema {
+  static table: Table<FeedModelSchema, string> = db.table('feeds');
 
   name: string;
   tags: string[];
@@ -18,7 +18,7 @@ export class FeedModel extends RecordModelBase<string, Core.FeedModelSchema> imp
   created_at: number;
   updated_at: number;
 
-  constructor(feed: Core.FeedModelSchema) {
+  constructor(feed: FeedModelSchema) {
     super(feed);
     this.name = feed.name;
     this.tags = feed.tags;
@@ -34,7 +34,7 @@ export class FeedModel extends RecordModelBase<string, Core.FeedModelSchema> imp
    * Find a feed by ID or throw RECORD_NOT_FOUND if it doesn't exist.
    * Use this when the record MUST exist (e.g., read operations).
    */
-  static async findByIdOrThrow(id: string): Promise<Core.FeedModelSchema> {
+  static async findByIdOrThrow(id: string): Promise<FeedModelSchema> {
     const record = await this.findById(id);
     if (!record) {
       throw Err.database(DatabaseErrorCode.RECORD_NOT_FOUND, 'Feed not found', {
@@ -46,7 +46,7 @@ export class FeedModel extends RecordModelBase<string, Core.FeedModelSchema> imp
     return record;
   }
 
-  static async findAllSorted(): Promise<Core.FeedModelSchema[]> {
+  static async findAllSorted(): Promise<FeedModelSchema[]> {
     try {
       return await this.table.orderBy('created_at').reverse().toArray();
     } catch (error) {

@@ -1,13 +1,14 @@
 import { Table } from 'dexie';
+import { db } from '@/database/franky/franky';
+import type { Pubky } from '@/models/models.types';
+import { TupleModelBase } from '@/models/shared/base/tuple/baseTuple';
+import type { NexusModelTuple } from '@/models/shared/base/tuple/baseTuple.type';
+import type { UserCountsModelSchema } from '@/models/user/counts/userCounts.schema';
+import type { TUserCountsParams } from '@/models/user/counts/userCounts.types';
+import type { NexusUserCounts } from '@/services/nexus/nexus.types';
 
-import * as Core from '@/core';
-import { TupleModelBase } from '@/core/models/shared/base/tuple/baseTuple';
-
-export class UserCountsModel
-  extends TupleModelBase<Core.Pubky, Core.UserCountsModelSchema>
-  implements Core.UserCountsModelSchema
-{
-  static table: Table<Core.UserCountsModelSchema> = Core.db.table('user_counts');
+export class UserCountsModel extends TupleModelBase<Pubky, UserCountsModelSchema> implements UserCountsModelSchema {
+  static table: Table<UserCountsModelSchema> = db.table('user_counts');
 
   tagged: number;
   tags: number;
@@ -19,7 +20,7 @@ export class UserCountsModel
   friends: number;
   bookmarks: number;
 
-  constructor(userCounts: Core.UserCountsModelSchema) {
+  constructor(userCounts: UserCountsModelSchema) {
     super(userCounts);
     this.tagged = userCounts.tagged;
     this.tags = userCounts.tags;
@@ -33,15 +34,15 @@ export class UserCountsModel
   }
 
   // Adapter function to convert NexusUserCounts to UserCountsModelSchema
-  static toSchema(data: Core.NexusModelTuple<Core.NexusUserCounts>): Core.UserCountsModelSchema {
+  static toSchema(data: NexusModelTuple<NexusUserCounts>): UserCountsModelSchema {
     return { id: data[0], ...data[1] };
   }
 
-  static async updateCounts({ userId, countChanges }: Core.TUserCountsParams): Promise<void> {
-    const userCounts = await Core.UserCountsModel.findById(userId);
+  static async updateCounts({ userId, countChanges }: TUserCountsParams): Promise<void> {
+    const userCounts = await UserCountsModel.findById(userId);
     if (!userCounts) return;
 
-    const updates: Partial<Core.UserCountsModelSchema> = {};
+    const updates: Partial<UserCountsModelSchema> = {};
 
     if (countChanges.tagged !== undefined) {
       updates.tagged = Math.max(0, userCounts.tagged + countChanges.tagged);

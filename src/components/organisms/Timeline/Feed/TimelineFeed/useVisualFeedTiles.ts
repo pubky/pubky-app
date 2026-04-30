@@ -2,7 +2,6 @@
 
 import * as React from 'react';
 import { useLiveQuery } from 'dexie-react-hooks';
-import * as Core from '@/core';
 import type { AttachmentConstructed } from '@/organisms/PostAttachments/PostAttachments.types';
 import {
   composeVisualRows,
@@ -22,7 +21,17 @@ import {
 import type { VisualTile } from './TimelineFeedVisual.types';
 import { Logger } from '@/libs/logger/logger';
 import { isPostDeleted } from '@/libs/utils/utils';
-
+import type { EnrichedPostDetails } from '@/application/moderation/moderation.types';
+import { FileController } from '@/controllers/file/file';
+import { ModerationController } from '@/controllers/moderation/moderation';
+import { PostController } from '@/controllers/post/post';
+import type { FileDetailsModelSchema } from '@/models/file/fileDetails.schema';
+import { CompositeIdDomain } from '@/models/models.types';
+import { buildCompositeIdFromPubkyUri } from '@/models/models.utils';
+import { PostDetailsModel } from '@/models/post/details/postDetails';
+import type { PostDetailsModelSchema } from '@/models/post/details/postDetails.schema';
+import { FileVariant } from '@/services/nexus/file/file.types';
+import { useLocalFilesStore } from '@/stores/localFiles/localFiles.store';
 type VisualFeedSnapshot = {
   tiles: VisualTile[];
   missingFileUris: string[];
@@ -34,7 +43,7 @@ const EMPTY_SNAPSHOT: VisualFeedSnapshot = {
 };
 
 function buildLocalTile(
-  post: Core.EnrichedPostDetails,
+  post: EnrichedPostDetails,
   attachment: AttachmentConstructed,
   index: number,
 ): VisualTile | null {
@@ -63,18 +72,18 @@ function buildLocalTile(
   };
 }
 
-function buildRemoteTile(post: Core.EnrichedPostDetails, file: Core.FileDetailsModelSchema): VisualTile | null {
+function buildRemoteTile(post: EnrichedPostDetails, file: FileDetailsModelSchema): VisualTile | null {
   if (!isVisualMediaContentType(file.content_type)) {
     return null;
   }
 
   const metadataWidth = parseMediaDimension(file.metadata?.width);
   const metadataHeight = parseMediaDimension(file.metadata?.height);
-  const mainSrc = Core.FileController.getFileUrl({ fileId: file.id, variant: Core.FileVariant.MAIN });
+  const mainSrc = FileController.getFileUrl({ fileId: file.id, variant: FileVariant.MAIN });
   const previewSrc =
     file.content_type === 'image/gif'
       ? mainSrc
-      : Core.FileController.getFileUrl({ fileId: file.id, variant: Core.FileVariant.FEED });
+      : FileController.getFileUrl({ fileId: file.id, variant: FileVariant.FEED });
 
   return {
     id: `${post.id}:${file.id}`,
@@ -167,7 +176,7 @@ function resolveTileProbeState(tile: VisualTile): VisualTile {
 }
 
 export function useVisualFeedTiles({ postIds, hasMore }: { postIds: string[]; hasMore: boolean }) {
-  const localPostAttachments = Core.useLocalFilesStore((state) => state.posts);
+  const localPostAttachments = useLocalFilesStore((state) => state.posts);
   const postIdsKey = React.useMemo(() => postIds.join('|'), [postIds]);
   const [, forceProbeRefresh] = React.useReducer((count) => count + 1, 0);
 
@@ -179,7 +188,7 @@ export function useVisualFeedTiles({ postIds, hasMore }: { postIds: string[]; ha
     void Promise.all(
       requestedPostIds.map(async (postId) => {
         try {
-          await Core.PostController.getOrFetch({ compositeId: postId });
+          await PostController.getOrFetch({ compositeId: postId });
         } catch (error) {
           Logger.error('[VisualFeed] Failed to ensure post details', {
             postId,
@@ -196,9 +205,9 @@ export function useVisualFeedTiles({ postIds, hasMore }: { postIds: string[]; ha
         return EMPTY_SNAPSHOT;
       }
 
-      const rawPosts = await Core.PostDetailsModel.findByIdsPreserveOrder(postIds);
-      const existingPosts = rawPosts.filter(Boolean) as Core.PostDetailsModelSchema[];
-      const enrichedPosts = await Core.ModerationController.enrichPosts(existingPosts);
+      const rawPosts = await PostDetailsModel.findByIdsPreserveOrder(postIds);
+      const existingPosts = rawPosts.filter(Boolean) as PostDetailsModelSchema[];
+      const enrichedPosts = await ModerationController.enrichPosts(existingPosts);
       const enrichedPostsById = new Map(enrichedPosts.map((post) => [post.id, post]));
 
       const missingFileUris = new Set<string>();
@@ -218,7 +227,7 @@ export function useVisualFeedTiles({ postIds, hasMore }: { postIds: string[]; ha
       );
 
       const remoteFiles = remoteAttachmentUris.length
-        ? await Core.FileController.getMetadata({ fileAttachments: remoteAttachmentUris })
+        ? await FileController.getMetadata({ fileAttachments: remoteAttachmentUris })
         : [];
       const remoteFilesById = new Map(remoteFiles.map((file) => [file.id, file]));
 
@@ -237,9 +246,9 @@ export function useVisualFeedTiles({ postIds, hasMore }: { postIds: string[]; ha
         }
 
         return (post.attachments ?? []).flatMap((attachmentUri) => {
-          const attachmentId = Core.buildCompositeIdFromPubkyUri({
+          const attachmentId = buildCompositeIdFromPubkyUri({
             uri: attachmentUri,
-            domain: Core.CompositeIdDomain.FILES,
+            domain: CompositeIdDomain.FILES,
           });
 
           if (!attachmentId) {
@@ -271,7 +280,7 @@ export function useVisualFeedTiles({ postIds, hasMore }: { postIds: string[]; ha
   React.useEffect(() => {
     if (!missingFileUris.length) return;
 
-    void Core.FileController.fetchFiles({ fileUris: missingFileUris }).catch((error) => {
+    void FileController.fetchFiles({ fileUris: missingFileUris }).catch((error) => {
       Logger.error('[VisualFeed] Failed to fetch missing file metadata', {
         fileUris: missingFileUris,
         error,

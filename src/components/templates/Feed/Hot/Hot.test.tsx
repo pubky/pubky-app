@@ -5,8 +5,8 @@ import { Hot } from './Hot';
 const mockUseLayoutReset = vi.fn();
 let mockIsMobile = false;
 
-// Mock Core
-vi.mock('@/core', () => ({
+// Mock dependencies
+vi.mock('@/stores/hot/hot.store', () => ({
   useHotStore: vi.fn(() => ({
     reach: 'all',
     setReach: vi.fn(),

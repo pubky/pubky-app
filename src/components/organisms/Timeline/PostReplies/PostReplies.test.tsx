@@ -1,12 +1,12 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { render, screen } from '@testing-library/react';
-import * as Core from '@/core';
 import type { UseRequireAuthResult } from '@/hooks/useRequireAuth/useRequireAuth.types';
 import { TimelinePostReplies } from './PostReplies';
 import { usePostCounts } from '@/hooks/usePostCounts/usePostCounts';
 import { usePostDetails } from '@/hooks/usePostDetails/usePostDetails';
 import { useRequireAuth } from '@/hooks/useRequireAuth/useRequireAuth';
-
+import type { EnrichedPostDetails } from '@/application/moderation/moderation.types';
+import type { PostCountsModelSchema } from '@/models/post/counts/postCounts.schema';
 // Mock hooks
 const mockUseRequireAuth = vi.fn(
   (): UseRequireAuthResult => ({
@@ -25,7 +25,7 @@ const mockUsePostDetails = vi.fn(() => ({
     attachments: null,
     is_moderated: false,
     is_blurred: false,
-  } satisfies Core.EnrichedPostDetails,
+  } satisfies EnrichedPostDetails,
   isLoading: false,
 }));
 
@@ -80,7 +80,7 @@ describe('TimelinePostReplies', () => {
         tags: 0,
         unique_tags: 0,
         reposts: 0,
-      } satisfies Core.PostCountsModelSchema,
+      } satisfies PostCountsModelSchema,
       isLoading: false,
     });
   });
@@ -134,7 +134,7 @@ describe('TimelinePostReplies', () => {
         tags: 0,
         unique_tags: 0,
         reposts: 0,
-      } satisfies Core.PostCountsModelSchema,
+      } satisfies PostCountsModelSchema,
       isLoading: false,
     });
 
@@ -165,7 +165,7 @@ describe('TimelinePostReplies - Snapshots', () => {
         tags: 0,
         unique_tags: 0,
         reposts: 0,
-      } satisfies Core.PostCountsModelSchema,
+      } satisfies PostCountsModelSchema,
       isLoading: false,
     });
   });

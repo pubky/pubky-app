@@ -7,11 +7,12 @@ import { useEffect } from 'react';
 import { useTranslations } from 'next-intl';
 import * as Atoms from '@/atoms';
 import * as Molecules from '@/molecules';
-import * as Core from '@/core';
 import { CheckCircle, Loader2, Circle, QrCode, Key } from 'lucide-react';
 import { Logger } from '@/libs/logger/logger';
 import { cn } from '@/libs/utils/utils';
-
+import { useOnboardingStore } from '@/stores/onboarding/onboarding.store';
+import { useSignInStore } from '@/stores/signIn/signIn.store';
+import type { SignInState } from '@/stores/signIn/signIn.types';
 // Step configuration for the progress display (labels are translation keys)
 const SIGN_IN_STEPS = [
   {
@@ -33,7 +34,7 @@ const SIGN_IN_STEPS = [
 ] as const;
 type StepKey = (typeof SIGN_IN_STEPS)[number]['key'];
 type StepStatus = 'completed' | 'running' | 'pending';
-const getStepStatus = (stepKey: StepKey, state: Core.SignInState): StepStatus => {
+const getStepStatus = (stepKey: StepKey, state: SignInState): StepStatus => {
   if (state[stepKey]) return 'completed';
 
   // Find the first false step (currently running)
@@ -52,7 +53,7 @@ const StepIcon = ({ status }: { status: StepStatus }) => {
   }
 };
 const SignInProgress = () => {
-  const state = Core.useSignInStore();
+  const state = useSignInStore();
   const t = useTranslations('onboarding.signIn');
   return (
     <Atoms.Container className="items-start justify-center">
@@ -83,10 +84,10 @@ const SignInProgress = () => {
 export const SignInContent = () => {
   const t = useTranslations('onboarding.signIn');
   const { url, isLoading, isExpired, fetchUrl, copyAuthUrl, isOpeningRing, onAuthorizeClick } = useMobileAuth();
-  const authUrlResolved = Core.useSignInStore((state) => state.authUrlResolved);
+  const authUrlResolved = useSignInStore((state) => state.authUrlResolved);
   useEffect(() => {
     // Clear onboarding storage when sign-in flow begins to prevent backup reminders from showing for existing users
-    Core.useOnboardingStore.getState().reset();
+    useOnboardingStore.getState().reset();
   }, []);
   const handleQRClick = async () => {
     if (!url) return;
@@ -209,7 +210,7 @@ export const SignInContent = () => {
   );
 };
 export const SignInFooter = () => {
-  const authUrlResolved = Core.useSignInStore((state) => state.authUrlResolved);
+  const authUrlResolved = useSignInStore((state) => state.authUrlResolved);
   const t = useTranslations('onboarding.signIn');
   if (authUrlResolved) return null;
   return (

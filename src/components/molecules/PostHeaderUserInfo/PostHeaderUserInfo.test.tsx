@@ -65,13 +65,9 @@ vi.mock('@/hooks/useCurrentUserProfile/useCurrentUserProfile', () => ({
   useCurrentUserProfile: () => mockUseCurrentUserProfile(),
 }));
 
-vi.mock('@/core', async (importOriginal) => {
-  const actual = await importOriginal<typeof import('@/core')>();
-  return {
-    ...actual,
-    useAuthStore: () => mockUseAuthStore(),
-  };
-});
+vi.mock('@/stores/auth/auth.store', () => ({
+  useAuthStore: () => mockUseAuthStore(),
+}));
 
 // Mock atoms
 vi.mock('@/atoms', async (importOriginal) => {

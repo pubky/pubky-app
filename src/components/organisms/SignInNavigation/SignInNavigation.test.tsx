@@ -38,7 +38,7 @@ vi.mock('@/organisms', () => ({
 
 let mockSignInState = { authUrlResolved: false };
 
-vi.mock('@/core', () => ({
+vi.mock('@/stores/signIn/signIn.store', () => ({
   useSignInStore: vi.fn((selector) => {
     if (typeof selector === 'function') {
       return selector(mockSignInState);

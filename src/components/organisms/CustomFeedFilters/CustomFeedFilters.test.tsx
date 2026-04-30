@@ -2,16 +2,15 @@ import { render, screen } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { CustomFeedFilters } from './CustomFeedFilters';
 import { PubkyAppFeedLayout, PubkyAppFeedReach, PubkyAppFeedSort, PubkyAppPostKind } from 'pubky-app-specs';
-import type { FeedModelSchema } from '@/core/models/feed/feed.schema';
-
+import type { FeedModelSchema } from '@/models/feed/feed.schema';
 // Mock hooks
 const mockUseCustomFeed = vi.fn();
 vi.mock('@/hooks/useCustomFeed/useCustomFeed', () => ({
   useCustomFeed: () => mockUseCustomFeed(),
 }));
 
-// Mock core — provide constants and mapper functions
-vi.mock('@/core', () => ({
+// Mock store constants
+vi.mock('@/stores/home/home.types', () => ({
   REACH: {
     ALL: 'all',
     FOLLOWING: 'following',
@@ -35,40 +34,6 @@ vi.mock('@/core', () => ({
     LINKS: 'links',
     FILES: 'files',
   },
-  pubkyReachToHomeReach: vi.fn((reach: PubkyAppFeedReach) => {
-    const map: Record<number, string> = {
-      [PubkyAppFeedReach.All]: 'all',
-      [PubkyAppFeedReach.Following]: 'following',
-      [PubkyAppFeedReach.Friends]: 'friends',
-    };
-    return map[reach];
-  }),
-  pubkySortToHomeSort: vi.fn((sort: PubkyAppFeedSort) => {
-    const map: Record<number, string> = {
-      [PubkyAppFeedSort.Recent]: 'timeline',
-      [PubkyAppFeedSort.Popularity]: 'total_engagement',
-    };
-    return map[sort];
-  }),
-  pubkyLayoutToHomeLayout: vi.fn((layout: PubkyAppFeedLayout) => {
-    const map: Record<number, string> = {
-      [PubkyAppFeedLayout.Columns]: 'columns',
-      [PubkyAppFeedLayout.Wide]: 'wide',
-      [PubkyAppFeedLayout.Visual]: 'visual',
-    };
-    return map[layout];
-  }),
-  pubkyPostKindToHomeContent: vi.fn((postKind: PubkyAppPostKind) => {
-    const map: Record<number, string> = {
-      [PubkyAppPostKind.Short]: 'short',
-      [PubkyAppPostKind.Long]: 'long',
-      [PubkyAppPostKind.Image]: 'images',
-      [PubkyAppPostKind.Video]: 'videos',
-      [PubkyAppPostKind.Link]: 'links',
-      [PubkyAppPostKind.File]: 'files',
-    };
-    return map[postKind];
-  }),
 }));
 
 // Mock atoms

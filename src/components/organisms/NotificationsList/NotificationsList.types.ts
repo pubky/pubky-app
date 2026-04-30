@@ -1,5 +1,4 @@
-import type { FlatNotification } from '@/core';
-
+import type { FlatNotification } from '@/models/notification/notification.types';
 /**
  * Props for the NotificationsList component
  */

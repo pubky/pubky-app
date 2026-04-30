@@ -1,11 +1,18 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { SettingsController } from './settings';
 import * as i18nUtils from '@/i18n/utils';
-import * as Core from '@/core';
-import { defaultNotificationPreferences, defaultPrivacyPreferences } from '@/core/stores/settings/settings.types';
 import { asOpaque, mockAuthStore, mockSettingsStore } from '@/test-utils';
-
-const TEST_PUBKY = 'o1gg96ewuojmopcjbz8895478wdtxtzzuxnfjjz8o8e77csa1ngo' as Core.Pubky;
+import { SettingsApplication } from '@/application/settings/settings';
+import type { Pubky } from '@/models/models.types';
+import { SettingsNormalizer } from '@/pipes/settings/settings.normalizer';
+import { useAuthStore } from '@/stores/auth/auth.store';
+import { useSettingsStore } from '@/stores/settings/settings.store';
+import {
+  defaultNotificationPreferences,
+  defaultPrivacyPreferences,
+  type SettingsState,
+} from '@/stores/settings/settings.types';
+const TEST_PUBKY = 'o1gg96ewuojmopcjbz8895478wdtxtzzuxnfjjz8o8e77csa1ngo' as Pubky;
 
 const mockStoreActions = {
   setNotificationPreference: vi.fn(),
@@ -31,7 +38,7 @@ const mockStoreActions = {
   version: 1,
 };
 
-const mockSettingsState: Core.SettingsState = {
+const mockSettingsState: SettingsState = {
   notifications: defaultNotificationPreferences,
   privacy: defaultPrivacyPreferences,
   muted: [],
@@ -52,14 +59,12 @@ describe('SettingsController', () => {
     // pendingCommit is private; an opaque cast is needed to reset static state between tests
     asOpaque<{ pendingCommit: Promise<void> }>(SettingsController).pendingCommit = Promise.resolve();
 
-    vi.spyOn(Core.useSettingsStore, 'getState').mockReturnValue(mockSettingsStore(mockStoreActions));
+    vi.spyOn(useSettingsStore, 'getState').mockReturnValue(mockSettingsStore(mockStoreActions));
 
-    vi.spyOn(Core.useAuthStore, 'getState').mockReturnValue(
-      mockAuthStore({ selectCurrentUserPubky: () => TEST_PUBKY }),
-    );
+    vi.spyOn(useAuthStore, 'getState').mockReturnValue(mockAuthStore({ selectCurrentUserPubky: () => TEST_PUBKY }));
 
-    extractStateSpy = vi.spyOn(Core.SettingsNormalizer, 'extractState').mockReturnValue(mockSettingsState);
-    commitUpdateSpy = vi.spyOn(Core.SettingsApplication, 'commitUpdate').mockResolvedValue(undefined);
+    extractStateSpy = vi.spyOn(SettingsNormalizer, 'extractState').mockReturnValue(mockSettingsState);
+    commitUpdateSpy = vi.spyOn(SettingsApplication, 'commitUpdate').mockResolvedValue(undefined);
     setLocaleCookieSpy = vi.spyOn(i18nUtils, 'setLocaleCookie').mockImplementation(() => {});
   });
 

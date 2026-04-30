@@ -28,8 +28,10 @@ const mockAuthStore = {
   setHasHydrated: vi.fn(),
 };
 
-vi.mock('@/core', () => ({
+vi.mock('@/stores/onboarding/onboarding.store', () => ({
   useOnboardingStore: () => mockOnboardingStore,
+}));
+vi.mock('@/stores/auth/auth.store', () => ({
   useAuthStore: () => mockAuthStore,
 }));
 

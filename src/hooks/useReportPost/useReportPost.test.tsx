@@ -2,9 +2,8 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { renderHook, waitFor, act } from '@testing-library/react';
 import { useReportPost } from './useReportPost';
 import { REPORT_POST_STEPS, REPORT_API_ENDPOINT } from './useReportPost.constants';
-import { REPORT_ISSUE_TYPES, REPORT_REASON_MAX_LENGTH } from '@/core/pipes/report';
 import { HttpMethod, JSON_HEADERS } from '@/libs/http/http.types';
-
+import { REPORT_ISSUE_TYPES, REPORT_REASON_MAX_LENGTH } from '@/pipes/report/report.constants';
 // Mock fetch
 global.fetch = vi.fn();
 
@@ -28,16 +27,12 @@ vi.mock('@/hooks/useCurrentUserProfile/useCurrentUserProfile', () => ({
 }));
 
 // Mock parseCompositeId
-vi.mock('@/core', async (importOriginal) => {
-  const actual = await importOriginal<typeof import('@/core')>();
-  return {
-    ...actual,
-    parseCompositeId: (id: string) => {
-      const [pubky, postId] = id.split(':');
-      return { pubky, id: postId };
-    },
-  };
-});
+vi.mock('@/models/models.utils', () => ({
+  parseCompositeId: (id: string) => {
+    const [pubky, postId] = id.split(':');
+    return { pubky, id: postId };
+  },
+}));
 
 // Mock toast helpers
 const mockShowErrorToast = vi.fn();
