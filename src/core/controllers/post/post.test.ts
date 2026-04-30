@@ -260,6 +260,23 @@ describe('PostController', () => {
   });
 
   describe('commitCreate', () => {
+    beforeEach(() => {
+      vi.spyOn(Core.FileNormalizer, 'toFileAttachment').mockImplementation(async ({ file }) => {
+        const safeName = encodeURIComponent(file.name || 'upload');
+
+        return {
+          blobResult: {
+            blob: { data: new Uint8Array([1, 2, 3]) },
+            meta: { url: `pubky://mock-author/pub/pubky.app/blobs/${safeName}` },
+          } as Core.TFileAttachmentResult['blobResult'],
+          fileResult: {
+            file: { toJson: () => ({}) },
+            meta: { url: `pubky://mock-author/pub/pubky.app/files/${safeName}` },
+          } as Core.TFileAttachmentResult['fileResult'],
+        };
+      });
+    });
+
     it('should create a post and sync to homeserver', async () => {
       const { PostController } = await import('./post');
 

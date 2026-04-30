@@ -12,6 +12,7 @@ import {
 import { AppError } from '@/libs/error/error';
 import { ValidationErrorCode } from '@/libs/error/error.codes';
 import { ErrorCategory, ErrorService } from '@/libs/error/error.types';
+import * as ImageSanitizer from '@/libs/image/stripImageMetadata';
 
 // File-specific test data
 const FILE_TEST_DATA = {
@@ -73,6 +74,7 @@ describe('FileNormalizer', () => {
     beforeEach(() => {
       mockBuilder = createMockBuilder();
       setupUnitTestMocks(mockBuilder);
+      vi.spyOn(ImageSanitizer, 'stripImageMetadata').mockImplementation(async (file: File) => file);
     });
 
     afterEach(restoreMocks);
@@ -114,6 +116,36 @@ describe('FileNormalizer', () => {
         expect(result.blobResult.meta.url).toBeDefined();
         expect(result.fileResult.file).toBeDefined();
         expect(result.fileResult.meta.url).toBeDefined();
+      });
+
+      it('should obfuscate image filename before createFile when image is sanitized', async () => {
+        const file = createMockFile('photo.jpg', 'image/jpeg', 5000);
+        const sanitizedFile = createMockFile('obfuscated123.jpg', 'image/jpeg', 5000);
+        vi.mocked(ImageSanitizer.stripImageMetadata).mockResolvedValueOnce(sanitizedFile);
+
+        await Core.FileNormalizer.toFileAttachment({ file, pubky: TEST_PUBKY.USER_1 });
+
+        expect(ImageSanitizer.stripImageMetadata).toHaveBeenCalledWith(file);
+        expect(mockBuilder.createFile).toHaveBeenCalledWith(
+          'obfuscated123.jpg',
+          FILE_TEST_DATA.blobUrl,
+          'image/jpeg',
+          5000,
+        );
+      });
+
+      it('should keep original filename for non-image uploads', async () => {
+        const file = createMockFile('document.pdf', 'application/pdf', 2048);
+        vi.mocked(ImageSanitizer.stripImageMetadata).mockResolvedValueOnce(file);
+
+        await Core.FileNormalizer.toFileAttachment({ file, pubky: TEST_PUBKY.USER_1 });
+
+        expect(mockBuilder.createFile).toHaveBeenCalledWith(
+          'document.pdf',
+          FILE_TEST_DATA.blobUrl,
+          'application/pdf',
+          2048,
+        );
       });
     });
 
@@ -198,6 +230,23 @@ describe('FileNormalizer', () => {
         }
       });
 
+      it('should surface metadata stripping errors as INVALID_INPUT validation errors', async () => {
+        const file = createMockFile('photo.png', 'image/png', 100);
+        vi.mocked(ImageSanitizer.stripImageMetadata).mockRejectedValueOnce(new Error('sanitize failed'));
+
+        try {
+          await Core.FileNormalizer.toFileAttachment({ file, pubky: TEST_PUBKY.USER_1 });
+          expect.fail('Should have thrown');
+        } catch (error) {
+          expect(error).toBeInstanceOf(AppError);
+          const appError = error as AppError;
+          expect(appError.category).toBe(ErrorCategory.Validation);
+          expect(appError.code).toBe(ValidationErrorCode.INVALID_INPUT);
+          expect(appError.service).toBe(ErrorService.PubkyAppSpecs);
+          expect(appError.operation).toBe('toFileAttachment');
+        }
+      });
+
       it('should not call createFile when createBlob throws', async () => {
         mockBuilder.createBlob.mockImplementation(() => {
           throw 'Blob error';
@@ -230,7 +279,10 @@ describe('FileNormalizer', () => {
    * Integration Tests - Real pubky-app-specs library
    */
   describe('Integration Tests', () => {
-    beforeEach(setupIntegrationTestMocks);
+    beforeEach(() => {
+      setupIntegrationTestMocks();
+      vi.spyOn(ImageSanitizer, 'stripImageMetadata').mockImplementation(async (file: File) => file);
+    });
     afterEach(restoreMocks);
 
     describe('successful creation with real library', () => {
