@@ -1,5 +1,6 @@
 import * as React from 'react';
-import * as Organisms from '@/organisms';
+import { ProfilePageContainer } from '@/organisms/ProfilePageContainer/ProfilePageContainer';
+
 import { ProfileProvider } from '@/providers/ProfileProvider/ProfileProvider';
 
 /**
@@ -16,7 +17,7 @@ import { ProfileProvider } from '@/providers/ProfileProvider/ProfileProvider';
 export default function ProfileLayout({ children }: { children: React.ReactNode }) {
   return (
     <ProfileProvider>
-      <Organisms.ProfilePageContainer>{children}</Organisms.ProfilePageContainer>
+      <ProfilePageContainer>{children}</ProfilePageContainer>
     </ProfileProvider>
   );
 }

@@ -11,25 +11,27 @@ vi.mock('next/navigation', () => ({
 }));
 
 // Mock atoms
-vi.mock('@/atoms', () => ({
-  Button: ({
-    children,
-    onClick,
-    id,
-    variant,
-    ...props
-  }: {
-    children: React.ReactNode;
-    onClick?: () => void;
-    id?: string;
-    variant?: string;
-    [key: string]: unknown;
-  }) => (
-    <button id={id} onClick={onClick} data-variant={variant} {...props}>
-      {children}
-    </button>
-  ),
-}));
+vi.mock('@/atoms/Button/Button', async () => {
+  return {
+    Button: ({
+      children,
+      onClick,
+      id,
+      variant,
+      ...props
+    }: {
+      children: React.ReactNode;
+      onClick?: () => void;
+      id?: string;
+      variant?: string;
+      [key: string]: unknown;
+    }) => (
+      <button id={id} onClick={onClick} data-variant={variant} {...props}>
+        {children}
+      </button>
+    ),
+  };
+});
 
 // Mock app
 vi.mock('@/app', () => ({

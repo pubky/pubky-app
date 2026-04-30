@@ -87,7 +87,7 @@ vi.mock('@/hooks/useDeletePost/useDeletePost', () => ({
 
 // Mock TimelineFeed context
 const mockPrependPosts = vi.fn();
-vi.mock('@/organisms/Timeline/Feed/TimelineFeed', () => ({
+vi.mock('@/organisms/Timeline/Feed/TimelineFeed/TimelineFeedContext', () => ({
   useTimelineFeedContext: vi.fn(() => ({
     prependPosts: mockPrependPosts,
     removePosts: vi.fn(),
@@ -96,11 +96,13 @@ vi.mock('@/organisms/Timeline/Feed/TimelineFeed', () => ({
 
 // Mock useToast
 const mockToast = vi.fn();
-vi.mock('@/molecules', () => ({
-  useToast: vi.fn(() => ({
-    toast: mockToast,
-  })),
-}));
+vi.mock('@/molecules/Toaster/use-toast', async () => {
+  return {
+    useToast: vi.fn(() => ({
+      toast: mockToast,
+    })),
+  };
+});
 
 // Mock useLocalFilesStore
 const mockSetPostAttachments = vi.fn();

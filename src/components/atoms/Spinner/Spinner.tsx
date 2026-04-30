@@ -1,10 +1,11 @@
 'use client';
 
 import * as React from 'react';
-import * as Atoms from '@/atoms';
+import { Container } from '../Container/Container';
+
 import { cn } from '@/libs/utils/utils';
 
-export interface SpinnerProps extends React.ComponentProps<typeof Atoms.Container> {
+export interface SpinnerProps extends React.ComponentProps<typeof Container> {
   size?: 'sm' | 'md' | 'lg';
 }
 
@@ -17,7 +18,7 @@ const sizeClasses = {
 export const Spinner = React.forwardRef<HTMLDivElement, SpinnerProps>(
   ({ className, size = 'md', overrideDefaults = true, ...props }, ref) => {
     return (
-      <Atoms.Container
+      <Container
         ref={ref}
         overrideDefaults={overrideDefaults}
         className={cn('animate-spin rounded-full border-b-2 border-brand', sizeClasses[size], className)}

@@ -13,25 +13,39 @@ vi.mock('next/navigation', () => ({
 }));
 
 // Mock molecules
-vi.mock('@/molecules', () => ({
-  ActionButtons: ({ onSignIn, onCreateAccount }: { onSignIn: () => void; onCreateAccount: () => void }) => (
-    <div data-testid="action-buttons">
-      <button data-testid="sign-in-button" onClick={onSignIn}>
-        Sign In
-      </button>
-      <button data-testid="create-account-button" onClick={onCreateAccount}>
-        Create Account
-      </button>
-    </div>
-  ),
-}));
+vi.mock('@/molecules/ActionButtons/ActionButtons', async () => {
+  return {
+    ActionButtons: ({ onSignIn, onCreateAccount }: { onSignIn: () => void; onCreateAccount: () => void }) => (
+      <div data-testid="action-buttons">
+        <button data-testid="sign-in-button" onClick={onSignIn}>
+          Sign In
+        </button>
+        <button data-testid="create-account-button" onClick={onCreateAccount}>
+          Create Account
+        </button>
+      </div>
+    ),
+  };
+});
 
 // Mock organisms
-vi.mock('@/organisms', () => ({
-  DialogTerms: () => <span data-testid="dialog-terms">Terms of Service</span>,
-  DialogPrivacy: () => <span data-testid="dialog-privacy">Privacy Policy</span>,
-  DialogAge: () => <span data-testid="dialog-age">over 18 years old</span>,
-}));
+vi.mock('@/organisms/DialogAge/DialogAge', async () => {
+  return {
+    DialogAge: () => <span data-testid="dialog-age">over 18 years old</span>,
+  };
+});
+
+vi.mock('@/organisms/DialogPrivacy/DialogPrivacy', async () => {
+  return {
+    DialogPrivacy: () => <span data-testid="dialog-privacy">Privacy Policy</span>,
+  };
+});
+
+vi.mock('@/organisms/DialogTerms/DialogTerms', async () => {
+  return {
+    DialogTerms: () => <span data-testid="dialog-terms">Terms of Service</span>,
+  };
+});
 
 // Mock config
 vi.mock('@/config', () => ({
@@ -39,55 +53,82 @@ vi.mock('@/config', () => ({
 }));
 
 // Mock atoms
-vi.mock('@/atoms', () => ({
-  FooterLinks: ({ children }: { children: React.ReactNode }) => <div data-testid="footer-links">{children}</div>,
-  Link: ({
-    children,
-    href,
-    target,
-    className,
-  }: {
-    children: React.ReactNode;
-    href: string;
-    target?: string;
-    className?: string;
-  }) => (
-    <a data-testid="link" href={href} target={target} className={className}>
-      {children}
-    </a>
-  ),
-  Container: ({ children, className }: { children: React.ReactNode; className?: string }) => (
-    <div data-testid="container" className={className}>
-      {children}
-    </div>
-  ),
-  Typography: ({
-    children,
-    as,
-    size,
-    className,
-  }: {
-    children: React.ReactNode;
-    as?: ElementType;
-    size?: string;
-    className?: string;
-  }) => {
-    const Tag = (as ?? 'p') as ElementType;
-    return (
-      <Tag data-testid="typography" data-size={size} className={className}>
+vi.mock('@/atoms/Container/Container', async () => {
+  return {
+    Container: ({ children, className }: { children: React.ReactNode; className?: string }) => (
+      <div data-testid="container" className={className}>
         {children}
-      </Tag>
-    );
-  },
-  Image: ({ src, alt, width, height }: { src: string; alt: string; width?: number; height?: number }) => (
-    <img data-testid="image" src={src} alt={alt} width={width} height={height} />
-  ),
-  Heading: ({ children, level, size }: { children: React.ReactNode; level: number; size?: string }) => (
-    <div data-testid={`heading-${level}`} data-size={size}>
-      {children}
-    </div>
-  ),
-}));
+      </div>
+    ),
+  };
+});
+
+vi.mock('@/atoms/FooterLinks/FooterLinks', async () => {
+  return {
+    FooterLinks: ({ children }: { children: React.ReactNode }) => <div data-testid="footer-links">{children}</div>,
+  };
+});
+
+vi.mock('@/atoms/Heading/Heading', async () => {
+  return {
+    Heading: ({ children, level, size }: { children: React.ReactNode; level: number; size?: string }) => (
+      <div data-testid={`heading-${level}`} data-size={size}>
+        {children}
+      </div>
+    ),
+  };
+});
+
+vi.mock('@/atoms/Image/Image', async () => {
+  return {
+    Image: ({ src, alt, width, height }: { src: string; alt: string; width?: number; height?: number }) => (
+      <img data-testid="image" src={src} alt={alt} width={width} height={height} />
+    ),
+  };
+});
+
+vi.mock('@/atoms/Link/Link', async () => {
+  return {
+    Link: ({
+      children,
+      href,
+      target,
+      className,
+    }: {
+      children: React.ReactNode;
+      href: string;
+      target?: string;
+      className?: string;
+    }) => (
+      <a data-testid="link" href={href} target={target} className={className}>
+        {children}
+      </a>
+    ),
+  };
+});
+
+vi.mock('@/atoms/Typography/Typography', async () => {
+  return {
+    Typography: ({
+      children,
+      as,
+      size,
+      className,
+    }: {
+      children: React.ReactNode;
+      as?: ElementType;
+      size?: string;
+      className?: string;
+    }) => {
+      const Tag = (as ?? 'p') as ElementType;
+      return (
+        <Tag data-testid="typography" data-size={size} className={className}>
+          {children}
+        </Tag>
+      );
+    },
+  };
+});
 
 describe('HomeActions', () => {
   beforeEach(() => {

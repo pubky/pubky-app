@@ -5,9 +5,12 @@ import { usePostTags } from '@/hooks/usePostTags/usePostTags';
 import { useRequireAuth } from '@/hooks/useRequireAuth/useRequireAuth';
 import { forwardRef, useImperativeHandle, useRef, useState } from 'react';
 import { useTranslations } from 'next-intl';
-import * as Atoms from '@/atoms';
-import * as Molecules from '@/molecules';
-import type { TagInputHandle } from '@/molecules';
+import { Container } from '@/atoms/Container/Container';
+import { SidebarButton } from '@/atoms/SidebarButton/SidebarButton';
+import { TaggedList } from '@/molecules/TaggedList/TaggedList';
+import { TagInput } from '@/molecules/TagInput/TagInput';
+import type { TagInputHandle } from '@/molecules/TagInput/TagInput.types';
+
 import type { PostTagsPanelProps, PostTagsPanelHandle } from './PostTagsPanel.types';
 import { PostTagsPanelSkeleton } from './PostTagsPanel.skeleton';
 import { Tag } from 'lucide-react';
@@ -77,13 +80,13 @@ export const PostTagsPanel = forwardRef<PostTagsPanelHandle, PostTagsPanelProps>
     tags.length > 0 &&
     (tags.length > INITIAL_VISIBLE_TAGS || (hasMore && tags.length >= INITIAL_VISIBLE_TAGS));
   return (
-    <Atoms.Container data-cy="post-tags-panel" className={cn('gap-2', className)}>
-      <Atoms.Container
+    <Container data-cy="post-tags-panel" className={cn('gap-2', className)}>
+      <Container
         overrideDefaults
         className={cn('flex flex-col gap-2', widthMode === 'fit' ? 'w-fit max-w-full' : 'w-full')}
       >
         {/* TagInput visible for all users - clicking opens sign-in for unauthenticated */}
-        <Molecules.TagInput
+        <TagInput
           ref={tagInputRef}
           onTagAdd={handleTagAddWithAuth}
           existingTags={tags}
@@ -97,8 +100,8 @@ export const PostTagsPanel = forwardRef<PostTagsPanelHandle, PostTagsPanelProps>
         />
 
         {tags.length > 0 && (
-          <Atoms.Container overrideDefaults className="max-h-80 overflow-x-hidden overflow-y-auto pr-1">
-            <Molecules.TaggedList
+          <Container overrideDefaults className="max-h-80 overflow-x-hidden overflow-y-auto pr-1">
+            <TaggedList
               tags={visibleTags}
               taggedId={postId}
               taggedKind={TagKind.POST}
@@ -107,19 +110,19 @@ export const PostTagsPanel = forwardRef<PostTagsPanelHandle, PostTagsPanelProps>
               onLoadMore={isCollapsedPreview ? undefined : loadMore}
               onTagToggle={handleTagToggleWithAuth}
             />
-          </Atoms.Container>
+          </Container>
         )}
         {showSeeAllButton && (
-          <Atoms.SidebarButton
+          <SidebarButton
             icon={Tag}
             onClick={() => setIsExpanded(true)}
             data-testid="post-tags-panel-see-all"
             aria-label={t('seeAll')}
           >
             {t('seeAll')}
-          </Atoms.SidebarButton>
+          </SidebarButton>
         )}
-      </Atoms.Container>
-    </Atoms.Container>
+      </Container>
+    </Container>
   );
 });

@@ -3,9 +3,13 @@
 import { useIsMobile } from '@/hooks/useIsMobile/useIsMobile';
 import { useRequireAuth } from '@/hooks/useRequireAuth/useRequireAuth';
 import { useState } from 'react';
-import * as Atoms from '@/atoms';
+import { Container } from '@/atoms/Container/Container';
+import { DropdownMenu, DropdownMenuContent, DropdownMenuTrigger } from '@/atoms/DropdownMenu/DropdownMenu';
+import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from '@/atoms/Sheet/Sheet';
+
 import { MENU_VARIANT } from '@/config/ui';
-import { ProfileMenuActionsContent } from './ProfileMenuActionsContent';
+import { ProfileMenuActionsContent } from './ProfileMenuActionsContent/ProfileMenuActionsContent';
+
 import type { ProfileMenuActionsProps } from './ProfileMenuActions.types';
 
 export function ProfileMenuActions({ userId, trigger }: ProfileMenuActionsProps) {
@@ -26,28 +30,28 @@ export function ProfileMenuActions({ userId, trigger }: ProfileMenuActionsProps)
   return (
     <>
       {isMobile ? (
-        <Atoms.Sheet open={open} onOpenChange={handleOpenChange}>
-          <Atoms.SheetTrigger asChild>{trigger}</Atoms.SheetTrigger>
-          <Atoms.SheetContent side="bottom" onOpenAutoFocus={(e) => e.preventDefault()}>
-            <Atoms.SheetHeader>
-              <Atoms.SheetTitle className="sr-only">Profile Actions</Atoms.SheetTitle>
-            </Atoms.SheetHeader>
-            <Atoms.Container overrideDefaults className="flex flex-col gap-2">
+        <Sheet open={open} onOpenChange={handleOpenChange}>
+          <SheetTrigger asChild>{trigger}</SheetTrigger>
+          <SheetContent side="bottom" onOpenAutoFocus={(e) => e.preventDefault()}>
+            <SheetHeader>
+              <SheetTitle className="sr-only">Profile Actions</SheetTitle>
+            </SheetHeader>
+            <Container overrideDefaults className="flex flex-col gap-2">
               <ProfileMenuActionsContent userId={userId} variant={MENU_VARIANT.SHEET} onActionComplete={closeMenu} />
-            </Atoms.Container>
-          </Atoms.SheetContent>
-        </Atoms.Sheet>
+            </Container>
+          </SheetContent>
+        </Sheet>
       ) : (
-        <Atoms.DropdownMenu open={open} onOpenChange={handleOpenChange}>
-          <Atoms.DropdownMenuTrigger asChild>{trigger}</Atoms.DropdownMenuTrigger>
-          <Atoms.DropdownMenuContent
+        <DropdownMenu open={open} onOpenChange={handleOpenChange}>
+          <DropdownMenuTrigger asChild>{trigger}</DropdownMenuTrigger>
+          <DropdownMenuContent
             align="end"
             className="flex w-56 flex-col gap-2.5"
             onCloseAutoFocus={(e) => e.preventDefault()}
           >
             <ProfileMenuActionsContent userId={userId} variant={MENU_VARIANT.DROPDOWN} onActionComplete={closeMenu} />
-          </Atoms.DropdownMenuContent>
-        </Atoms.DropdownMenu>
+          </DropdownMenuContent>
+        </DropdownMenu>
       )}
     </>
   );

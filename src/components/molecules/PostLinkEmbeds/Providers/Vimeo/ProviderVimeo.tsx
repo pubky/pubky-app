@@ -1,4 +1,6 @@
-import * as Atoms from '@/atoms';
+import { Container } from '@/atoms/Container/Container';
+import { Iframe } from '@/atoms/Iframe/Iframe';
+
 import * as ProviderTypes from '../Provider.types';
 import { VIDEO_EMBED_PROPS } from '../Provider.constants';
 import { convertHmsToSeconds } from '@/libs/utils/utils';
@@ -143,8 +145,8 @@ export const Vimeo: ProviderTypes.EmbedProvider = {
     const videoId = extractVideoIdFromEmbedUrl(embedUrl);
 
     return (
-      <Atoms.Container data-testid="vimeo-aspect-ratio-wrapper" className="relative pt-[56.25%]">
-        <Atoms.Iframe
+      <Container data-testid="vimeo-aspect-ratio-wrapper" className="relative pt-[56.25%]">
+        <Iframe
           {...VIDEO_EMBED_PROPS}
           sandbox={`${VIDEO_EMBED_PROPS.sandbox} allow-popups-to-escape-sandbox`}
           src={embedUrl}
@@ -153,7 +155,7 @@ export const Vimeo: ProviderTypes.EmbedProvider = {
           height="auto"
           className="absolute top-0 left-0 h-full w-full"
         />
-      </Atoms.Container>
+      </Container>
     );
   },
 };

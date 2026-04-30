@@ -3,7 +3,8 @@
 import { useCallback, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useTranslations } from 'next-intl';
-import * as Molecules from '@/molecules';
+import { showErrorToast } from '@/molecules/Toaster/showErrorToast';
+
 import { AUTH_ROUTES, SETTINGS_ROUTES } from '@/app';
 import { useCopyToClipboard } from '@/hooks/useCopyToClipboard/useCopyToClipboard';
 import { Logger } from '@/libs/logger/logger';
@@ -60,7 +61,7 @@ export function useProfileActions({ publicKey, link }: UseProfileActionsProps): 
       router.push(AUTH_ROUTES.LOGOUT);
     } catch (error) {
       Logger.error('Failed to logout:', error);
-      Molecules.showErrorToast({ description: tLogout('failed') });
+      showErrorToast({ description: tLogout('failed') });
       setIsLoggingOut(false);
     }
   }, [router, tLogout]);
@@ -70,7 +71,7 @@ export function useProfileActions({ publicKey, link }: UseProfileActionsProps): 
       const currentUserPubky = authStore.currentUserPubky;
       if (!currentUserPubky) {
         Logger.error('No authenticated user found');
-        Molecules.showErrorToast({ description: tStatus('userNotLoaded') });
+        showErrorToast({ description: tStatus('userNotLoaded') });
         return;
       }
 
@@ -78,7 +79,7 @@ export function useProfileActions({ publicKey, link }: UseProfileActionsProps): 
         await ProfileController.commitUpdateStatus({ pubky: currentUserPubky, status });
       } catch (error) {
         Logger.error('Failed to update status:', error);
-        Molecules.showErrorToast({ description: tStatus('updateFailed') });
+        showErrorToast({ description: tStatus('updateFailed') });
       }
     },
     [authStore, tStatus],

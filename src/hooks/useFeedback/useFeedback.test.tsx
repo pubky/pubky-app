@@ -10,11 +10,10 @@ const TEST_USER_PUBKY = 'test-user-123';
 const TEST_USER_NAME = 'Test User';
 
 // Mock molecules
-const mockToast = vi.fn();
-vi.mock('@/molecules', async (importOriginal) => {
-  const actual = await importOriginal<typeof import('@/molecules')>();
+const mockToast = vi.hoisted(() => vi.fn());
+vi.mock('@/molecules/Toaster/use-toast', async () => {
   return {
-    ...actual,
+    toast: mockToast,
     useToast: vi.fn(() => ({
       toast: mockToast,
     })),

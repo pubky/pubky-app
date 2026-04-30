@@ -1,5 +1,5 @@
-import * as Templates from '@/templates';
+import { Settings } from '@/templates/Settings/Settings';
 
 export default function SettingsLayout({ children }: { children: React.ReactNode }) {
-  return <Templates.Settings>{children}</Templates.Settings>;
+  return <Settings>{children}</Settings>;
 }

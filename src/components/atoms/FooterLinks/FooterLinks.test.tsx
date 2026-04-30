@@ -1,23 +1,6 @@
-import { describe, it, expect, vi } from 'vitest';
+import { describe, it, expect } from 'vitest';
 import { render, screen } from '@testing-library/react';
 import { FooterLinks } from './FooterLinks';
-
-// Mock UI components
-vi.mock('@/components/ui', () => ({
-  Typography: ({
-    children,
-    className,
-    ...props
-  }: {
-    children: React.ReactNode;
-    className?: string;
-    [key: string]: unknown;
-  }) => (
-    <p data-testid="typography" className={className} {...props}>
-      {children}
-    </p>
-  ),
-}));
 
 describe('FooterLinks', () => {
   it('renders with default props', () => {

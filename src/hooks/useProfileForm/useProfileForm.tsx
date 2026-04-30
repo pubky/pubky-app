@@ -4,8 +4,8 @@ import { useEffect, useRef, useState, useCallback, useMemo } from 'react';
 import { z } from 'zod';
 import { useRouter } from 'next/navigation';
 import { useTranslations } from 'next-intl';
+import { useToast } from '@/molecules/Toaster/use-toast';
 
-import * as Molecules from '@/molecules';
 import * as App from '@/app';
 import { USER_NAME_MIN_LENGTH, USER_NAME_MAX_LENGTH, USER_BIO_MAX_LENGTH } from '@/config';
 
@@ -42,7 +42,7 @@ export function useProfileForm(props: UseProfileFormProps): UseProfileFormReturn
   const setShowWelcomeDialog = props.mode === 'create' ? props.setShowWelcomeDialog : undefined;
 
   const router = useRouter();
-  const { toast } = Molecules.useToast();
+  const { toast } = useToast();
   const tProfile = useTranslations('toast.profile');
   const fileInputRef = useRef<HTMLInputElement | null>(null);
 

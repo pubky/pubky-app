@@ -3,21 +3,25 @@
 import { useRouter } from 'next/navigation';
 import { useTranslations } from 'next-intl';
 import Image from 'next/image';
+import { Container } from '@/atoms/Container/Container';
+import { PageHeader } from '@/atoms/PageHeader/PageHeader';
+import { PageSubtitle } from '@/atoms/PageSubtitle/PageSubtitle';
+import { ButtonsNavigation } from '../ButtonsNavigation/ButtonsNavigation';
+import { ContentCard } from '../Content/Content';
+import { PageTitle } from '../Page/Page';
 
-import * as Atoms from '@/atoms';
-import * as Molecules from '@/molecules';
 import * as App from '@/app';
 
 export const LogoutContent = () => {
   return (
-    <Atoms.Container size="container" className="mb-6">
+    <Container size="container" className="mb-6">
       <LogoutHeader />
-      <Molecules.ContentCard layout="column">
-        <Atoms.Container className="items-center justify-center">
+      <ContentCard layout="column">
+        <Container className="items-center justify-center">
           <Image src="/images/tag.webp" alt="Pubky Ring" width={192} height={192} />
-        </Atoms.Container>
-      </Molecules.ContentCard>
-    </Atoms.Container>
+        </Container>
+      </ContentCard>
+    </Container>
   );
 };
 
@@ -25,14 +29,14 @@ export const LogoutHeader = () => {
   const t = useTranslations('logout');
 
   return (
-    <Atoms.PageHeader>
-      <Molecules.PageTitle size="large">
+    <PageHeader>
+      <PageTitle size="large">
         {t.rich('title', {
           highlight: (chunks) => <span className="text-brand">{chunks}</span>,
         })}
-      </Molecules.PageTitle>
-      <Atoms.PageSubtitle>{t('subtitle')}</Atoms.PageSubtitle>
-    </Atoms.PageHeader>
+      </PageTitle>
+      <PageSubtitle>{t('subtitle')}</PageSubtitle>
+    </PageHeader>
   );
 };
 
@@ -49,7 +53,7 @@ export const LogoutNavigation = () => {
   };
 
   return (
-    <Molecules.ButtonsNavigation
+    <ButtonsNavigation
       id="logout-navigation"
       backText={t('homepage')}
       continueText={t('signBackIn')}

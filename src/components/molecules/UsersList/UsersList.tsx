@@ -1,12 +1,16 @@
 'use client';
 
 import * as React from 'react';
-import * as Atoms from '@/atoms';
-import * as Molecules from '@/molecules';
+import { Button } from '@/atoms/Button/Button';
+import { Container } from '@/atoms/Container/Container';
+import { Heading } from '@/atoms/Heading/Heading';
+import { Typography } from '@/atoms/Typography/Typography';
+import { User, UserData } from '../User/User';
+
 import { Users } from 'lucide-react';
 import { cn } from '@/libs/utils/utils';
 interface UsersListProps {
-  users: Molecules.UserData[];
+  users: UserData[];
   onFollow?: (userId: string) => void;
   onSeeAll?: () => void;
   className?: React.HTMLAttributes<HTMLDivElement>['className'];
@@ -22,17 +26,17 @@ export function UsersList({ users, onFollow, onSeeAll, className, title, maxUser
     onSeeAll?.();
   };
   return (
-    <Atoms.Container className={cn('flex flex-col gap-2 bg-background', className)} {...props}>
+    <Container className={cn('flex flex-col gap-2 bg-background', className)} {...props}>
       {title && (
-        <Atoms.Heading level={2} size="lg" className={cn('font-light text-muted-foreground', className)}>
+        <Heading level={2} size="lg" className={cn('font-light text-muted-foreground', className)}>
           {title}
-        </Atoms.Heading>
+        </Heading>
       )}
 
       {/* Users List */}
-      <Atoms.Container className="flex flex-col items-center justify-center gap-2">
+      <Container className="flex flex-col items-center justify-center gap-2">
         {displayUsers.map((user) => (
-          <Molecules.User
+          <User
             key={user.id}
             user={user}
             onAction={handleFollow}
@@ -40,22 +44,22 @@ export function UsersList({ users, onFollow, onSeeAll, className, title, maxUser
             data-testid={`user-${user.id}`}
           />
         ))}
-      </Atoms.Container>
+      </Container>
 
       {/* See All Button */}
       {users.length > maxUsers && (
-        <Atoms.Button
+        <Button
           variant="outline"
           onClick={handleSeeAll}
           className="flex w-full items-center justify-center gap-2"
           data-testid="see-all-button"
         >
           <Users className="h-4 w-4" />
-          <Atoms.Typography size="sm" className="font-bold">
+          <Typography size="sm" className="font-bold">
             See all
-          </Atoms.Typography>
-        </Atoms.Button>
+          </Typography>
+        </Button>
       )}
-    </Atoms.Container>
+    </Container>
   );
 }

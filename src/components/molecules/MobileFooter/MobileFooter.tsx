@@ -5,8 +5,11 @@ import { useKeyboardOffset } from '@/hooks/useKeyboardOffset/useKeyboardOffset';
 import { usePublicRoute } from '@/hooks/usePublicRoute/usePublicRoute';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import * as Atoms from '@/atoms';
-import * as Organisms from '@/organisms';
+import { Badge } from '@/atoms/Badge/Badge';
+import { Container } from '@/atoms/Container/Container';
+import { Typography } from '@/atoms/Typography/Typography';
+import { AvatarWithFallback } from '@/organisms/AvatarWithFallback/AvatarWithFallback';
+
 import * as App from '@/app';
 import { useTranslations } from 'next-intl';
 import { Home, Search, Flame, Bookmark, Settings } from 'lucide-react';
@@ -78,7 +81,7 @@ export function MobileFooter({ className }: MobileFooterProps) {
     },
   ];
   return (
-    <Atoms.Container
+    <Container
       overrideDefaults
       className={cn(
         'fixed bottom-0 z-40 w-full overflow-x-auto bg-gradient-to-t from-background via-background/95 to-transparent px-3 py-4 transition-transform duration-75 lg:hidden',
@@ -92,7 +95,7 @@ export function MobileFooter({ className }: MobileFooterProps) {
           : undefined
       }
     >
-      <Atoms.Container
+      <Container
         overrideDefaults
         className="mx-auto flex max-w-[380px] items-center justify-between sm:max-w-[600px] md:max-w-[720px]"
       >
@@ -143,7 +146,7 @@ export function MobileFooter({ className }: MobileFooterProps) {
           aria-label={tCommon('profile')}
           className="relative shrink-0 rounded-full"
         >
-          <Organisms.AvatarWithFallback
+          <AvatarWithFallback
             avatarUrl={avatarUrl}
             name={avatarName}
             fallbackSeed={currentUserPubky || avatarName}
@@ -152,22 +155,22 @@ export function MobileFooter({ className }: MobileFooterProps) {
             alt={tCommon('profile')}
           />
           {unreadNotifications > 0 && (
-            <Atoms.Badge
+            <Badge
               data-testid="mobile-notification-counter"
               data-cy="mobile-notification-counter"
               className="absolute right-0 bottom-0 h-5 w-5 rounded-full bg-brand shadow-sm"
               variant="secondary"
             >
-              <Atoms.Typography
+              <Typography
                 className={cn('font-semibold text-primary-foreground', unreadNotifications > 21 && 'text-xs')}
                 size="xs"
               >
                 {unreadNotifications > 21 ? '21+' : unreadNotifications}
-              </Atoms.Typography>
-            </Atoms.Badge>
+              </Typography>
+            </Badge>
           )}
         </Link>
-      </Atoms.Container>
-    </Atoms.Container>
+      </Container>
+    </Container>
   );
 }

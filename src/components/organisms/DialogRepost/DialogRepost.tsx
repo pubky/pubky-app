@@ -1,9 +1,11 @@
 'use client';
 
 import { useConfirmableDialog } from '@/hooks/useConfirmableDialog/useConfirmableDialog';
-import * as Atoms from '@/atoms';
-import * as Molecules from '@/molecules';
-import * as Organisms from '@/organisms';
+import { Container } from '@/atoms/Container/Container';
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/atoms/Dialog/Dialog';
+import { DialogConfirmDiscard } from '@/molecules/DialogConfirmDiscard/DialogConfirmDiscard';
+import { PostInput } from '../PostInput/PostInput';
+
 import { POST_INPUT_VARIANT } from '@/organisms/PostInput/PostInput.constants';
 import type { DialogRepostProps } from './DialogRepost.types';
 
@@ -14,15 +16,15 @@ export function DialogRepost({ postId, open, onOpenChangeAction }: DialogRepostP
     });
 
   return (
-    <Atoms.Dialog open={open} onOpenChange={handleOpenChange}>
-      <Atoms.DialogContent className="w-3xl" hiddenTitle="Repost">
-        <Atoms.DialogHeader>
-          <Atoms.DialogTitle>Repost</Atoms.DialogTitle>
-          <Atoms.DialogDescription className="sr-only">Repost dialog</Atoms.DialogDescription>
-        </Atoms.DialogHeader>
-        <Atoms.Container className="gap-3">
+    <Dialog open={open} onOpenChange={handleOpenChange}>
+      <DialogContent className="w-3xl" hiddenTitle="Repost">
+        <DialogHeader>
+          <DialogTitle>Repost</DialogTitle>
+          <DialogDescription className="sr-only">Repost dialog</DialogDescription>
+        </DialogHeader>
+        <Container className="gap-3">
           {/* Repost input - repost preview is rendered inside PostInput */}
-          <Organisms.PostInput
+          <PostInput
             dataCy="repost-post-input"
             key={resetKey}
             variant={POST_INPUT_VARIANT.REPOST}
@@ -34,14 +36,14 @@ export function DialogRepost({ postId, open, onOpenChangeAction }: DialogRepostP
             expanded={true}
             onContentChange={handleContentChange}
           />
-        </Atoms.Container>
+        </Container>
         {/* Nested inside parent dialog to avoid mobile touch event issues with sibling portals */}
-        <Molecules.DialogConfirmDiscard
+        <DialogConfirmDiscard
           open={showConfirmDialog}
           onOpenChange={() => setShowConfirmDialog(false)}
           onConfirm={handleDiscard}
         />
-      </Atoms.DialogContent>
-    </Atoms.Dialog>
+      </DialogContent>
+    </Dialog>
   );
 }

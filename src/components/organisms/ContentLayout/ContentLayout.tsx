@@ -4,8 +4,12 @@ import { resolveFeedLayout } from '@/hooks/useFeedLayoutResolution/useFeedLayout
 import { useCustomFeed } from '@/hooks/useCustomFeed/useCustomFeed';
 import { useIsMobile } from '@/hooks/useIsMobile/useIsMobile';
 import { useState, useEffect } from 'react';
-import * as Atoms from '@/atoms';
-import * as Molecules from '@/molecules';
+import { Container } from '@/atoms/Container/Container';
+import { ButtonFilters } from '@/molecules/ButtonFilters/ButtonFilters';
+import { MobileFooter } from '@/molecules/MobileFooter/MobileFooter';
+import { MobileHeader } from '@/molecules/MobileHeader/MobileHeader';
+import { SideDrawer } from '@/molecules/SideDrawer/SideDrawer';
+
 import * as Config from '@/config';
 import * as Types from './ContentLayout.types';
 import { cn } from '@/libs/utils/utils';
@@ -22,7 +26,7 @@ function StickySidebar({ children }: Types.StickySidebarProps) {
   const sidebarMaxHeight = `calc(100svh - ${stickyTop}px - ${Config.LAYOUT_DIMENSIONS.SIDEBAR_BOTTOM_OFFSET}px)`;
 
   return (
-    <Atoms.Container
+    <Container
       overrideDefaults
       className={cn(
         'hidden flex-col items-start justify-start gap-6 self-start lg:flex',
@@ -32,7 +36,7 @@ function StickySidebar({ children }: Types.StickySidebarProps) {
       style={{ top: `${stickyTop}px`, maxHeight: sidebarMaxHeight }}
     >
       {children}
-    </Atoms.Container>
+    </Container>
   );
 }
 
@@ -88,7 +92,7 @@ export function ContentLayout({
     <>
       {/* Mobile header with drawer icons - hidden on desktop */}
       {renderMobileHeader && (
-        <Molecules.MobileHeader
+        <MobileHeader
           onLeftIconClick={showLeftMobileButton ? () => setDrawerFilterOpen(true) : undefined}
           onRightIconClick={showRightMobileButton ? () => setDrawerRightOpen(true) : undefined}
           showLeftButton={showLeftMobileButton}
@@ -99,50 +103,50 @@ export function ContentLayout({
 
       {/* Buttons to open drawers - visible on desktop when using the wide shell */}
       {usesWideShellLayout && showLeftSidebar && leftDrawerContent && (
-        <Molecules.ButtonFilters onClick={() => setDrawerFilterOpen(true)} position="left" />
+        <ButtonFilters onClick={() => setDrawerFilterOpen(true)} position="left" />
       )}
       {usesWideShellLayout && showRightSidebar && rightDrawerContent && (
-        <Molecules.ButtonFilters onClick={() => setDrawerRightOpen(true)} position="right" />
+        <ButtonFilters onClick={() => setDrawerRightOpen(true)} position="right" />
       )}
 
       {/* Main content grid with responsive max-widths */}
-      <Atoms.Container
+      <Container
         overrideDefaults
         className={cn('container max-w-(--container-max-width)', 'm-auto w-full px-6 pb-12 xl:px-0', 'pt-0', className)}
       >
-        <Atoms.Container overrideDefaults className="flex gap-6">
+        <Container overrideDefaults className="flex gap-6">
           {/* Left sidebar - hidden on mobile (< lg) and in wide-shell layout mode */}
           {showLeftSidebar && !usesWideShellLayout && leftSidebarContent && (
             <StickySidebar>{leftSidebarContent}</StickySidebar>
           )}
 
           {/* Main content area - grows to fill space, min-w-0 prevents flex overflow */}
-          <Atoms.Container className={cn('w-full min-w-0 flex-1 gap-6 lg:overflow-hidden', classNameWrapperContent)}>
+          <Container className={cn('w-full min-w-0 flex-1 gap-6 lg:overflow-hidden', classNameWrapperContent)}>
             {children}
-          </Atoms.Container>
+          </Container>
 
           {/* Right sidebar - hidden on mobile (< lg) and in wide-shell layout mode */}
           {showRightSidebar && !usesWideShellLayout && rightSidebarContent && (
             <StickySidebar>{rightSidebarContent}</StickySidebar>
           )}
-        </Atoms.Container>
-      </Atoms.Container>
+        </Container>
+      </Container>
 
       {/* Mobile footer navigation */}
-      <Molecules.MobileFooter />
+      <MobileFooter />
 
       {/* Drawer for left sidebar - slides in from left */}
       {(leftDrawerContent || leftDrawerContentMobile) && (
-        <Molecules.SideDrawer open={drawerFilterOpen} onOpenChangeAction={setDrawerFilterOpen} position="left">
+        <SideDrawer open={drawerFilterOpen} onOpenChangeAction={setDrawerFilterOpen} position="left">
           {isMobile && leftDrawerContentMobile ? leftDrawerContentMobile : leftDrawerContent}
-        </Molecules.SideDrawer>
+        </SideDrawer>
       )}
 
       {/* Drawer for right sidebar - slides in from right */}
       {(rightDrawerContent || rightDrawerContentMobile) && (
-        <Molecules.SideDrawer open={drawerRightOpen} onOpenChangeAction={setDrawerRightOpen} position="right">
+        <SideDrawer open={drawerRightOpen} onOpenChangeAction={setDrawerRightOpen} position="right">
           {isMobile && rightDrawerContentMobile ? rightDrawerContentMobile : rightDrawerContent}
-        </Molecules.SideDrawer>
+        </SideDrawer>
       )}
     </>
   );

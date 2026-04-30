@@ -4,8 +4,12 @@ import { useAvatarUrl } from '@/hooks/useAvatarUrl/useAvatarUrl';
 import { useCurrentUserProfile } from '@/hooks/useCurrentUserProfile/useCurrentUserProfile';
 import { useState } from 'react';
 import { useTranslations } from 'next-intl';
-import * as Atoms from '@/atoms';
-import * as Organisms from '@/organisms';
+import { Button } from '@/atoms/Button/Button';
+import { Container } from '@/atoms/Container/Container';
+import { Heading } from '@/atoms/Heading/Heading';
+import { AvatarWithFallback } from '../AvatarWithFallback/AvatarWithFallback';
+import { DialogFeedback } from '../DialogFeedback/DialogFeedback';
+
 import { FeedbackCardSkeleton } from './FeedbackCard.skeleton';
 
 export function FeedbackCard() {
@@ -22,45 +26,45 @@ export function FeedbackCard() {
 
   return (
     <>
-      <Atoms.Container
+      <Container
         overrideDefaults={true}
         data-testid="feedback-card"
         className="flex w-full max-w-(--filter-bar-width) flex-col gap-2"
       >
-        <Atoms.Heading level={2} size="lg" className="font-light text-muted-foreground">
+        <Heading level={2} size="lg" className="font-light text-muted-foreground">
           {t('cardTitle')}
-        </Atoms.Heading>
+        </Heading>
 
-        <Atoms.Container
+        <Container
           overrideDefaults={true}
           className="flex w-full min-w-0 cursor-pointer flex-col gap-4 rounded-lg border border-dashed border-input p-6"
           onClick={() => setIsDialogOpen(true)}
         >
-          <Atoms.Container overrideDefaults={true} className="flex w-full min-w-0 items-center gap-2">
-            <Atoms.Container
+          <Container overrideDefaults={true} className="flex w-full min-w-0 items-center gap-2">
+            <Container
               overrideDefaults={true}
               className="flex size-12 shrink-0 items-center justify-center rounded-md p-2 shadow-xs"
             >
-              <Organisms.AvatarWithFallback
+              <AvatarWithFallback
                 avatarUrl={avatarUrl}
                 name={name}
                 fallbackSeed={currentUserPubky || name}
                 className="h-12 w-12"
                 fallbackClassName="text-sm"
               />
-            </Atoms.Container>
-          </Atoms.Container>
+            </Container>
+          </Container>
 
-          <Atoms.Button
+          <Button
             overrideDefaults
             className="w-full cursor-pointer text-left text-base leading-normal font-medium break-words text-muted-foreground"
           >
             {t('cardButton')}
-          </Atoms.Button>
-        </Atoms.Container>
-      </Atoms.Container>
+          </Button>
+        </Container>
+      </Container>
 
-      <Organisms.DialogFeedback open={isDialogOpen} onOpenChange={setIsDialogOpen} />
+      <DialogFeedback open={isDialogOpen} onOpenChange={setIsDialogOpen} />
     </>
   );
 }

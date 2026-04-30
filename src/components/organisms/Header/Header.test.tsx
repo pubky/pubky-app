@@ -19,22 +19,49 @@ vi.mock('dexie-react-hooks', () => ({
 }));
 
 // Mock atoms, libs, config, and app
-vi.mock('@/atoms', () => ({
-  Container: ({ children, className }: { children: React.ReactNode; className?: string }) => (
-    <div className={className}>{children}</div>
-  ),
-  Button: ({ children, onClick, variant }: { children: React.ReactNode; onClick?: () => void; variant?: string }) => (
-    <button onClick={onClick} data-variant={variant}>
-      {children}
-    </button>
-  ),
-  Link: ({ children, href }: { children: React.ReactNode; href?: string }) => <a href={href}>{children}</a>,
-  Avatar: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
-  AvatarImage: ({ src }: { src?: string }) => <img src={src} alt="avatar" />,
-  AvatarFallback: ({ children }: { children: React.ReactNode }) => <span>{children}</span>,
-  Badge: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
-  Typography: ({ children }: { children: React.ReactNode }) => <span>{children}</span>,
-}));
+vi.mock('@/atoms/Avatar/Avatar', async () => {
+  return {
+    Avatar: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
+    AvatarImage: ({ src }: { src?: string }) => <img src={src} alt="avatar" />,
+    AvatarFallback: ({ children }: { children: React.ReactNode }) => <span>{children}</span>,
+  };
+});
+
+vi.mock('@/atoms/Badge/Badge', async () => {
+  return {
+    Badge: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
+  };
+});
+
+vi.mock('@/atoms/Button/Button', async () => {
+  return {
+    Button: ({ children, onClick, variant }: { children: React.ReactNode; onClick?: () => void; variant?: string }) => (
+      <button onClick={onClick} data-variant={variant}>
+        {children}
+      </button>
+    ),
+  };
+});
+
+vi.mock('@/atoms/Container/Container', async () => {
+  return {
+    Container: ({ children, className }: { children: React.ReactNode; className?: string }) => (
+      <div className={className}>{children}</div>
+    ),
+  };
+});
+
+vi.mock('@/atoms/Link/Link', async () => {
+  return {
+    Link: ({ children, href }: { children: React.ReactNode; href?: string }) => <a href={href}>{children}</a>,
+  };
+});
+
+vi.mock('@/atoms/Typography/Typography', async () => {
+  return {
+    Typography: ({ children }: { children: React.ReactNode }) => <span>{children}</span>,
+  };
+});
 
 // Keep real libs for icons and utilities; only stub helpers we rely on for deterministic tests
 
@@ -84,48 +111,75 @@ vi.mock('@/database/franky/franky', () => ({
 }));
 
 // Mock molecules
-vi.mock('@/molecules', () => ({
-  HeaderContainer: ({ children, className }: { children: React.ReactNode; className?: string }) => (
-    <div data-testid="header-container" data-class-name={className}>
-      {children}
-    </div>
-  ),
-  Logo: ({ noLink }: { noLink?: boolean }) => (
-    <div data-testid="logo" data-no-link={noLink}>
-      Logo
-    </div>
-  ),
-  HeaderTitle: ({ currentTitle }: { currentTitle: string }) => <div data-testid="header-title">{currentTitle}</div>,
-  HeaderOnboarding: ({ currentStep }: { currentStep: number }) => (
-    <div data-testid="onboarding-header" data-step={currentStep}>
-      Onboarding Step {currentStep}
-    </div>
-  ),
-  HeaderSocialLinks: () => <div data-testid="header-social-links">Social Links</div>,
-  HeaderNavigationButtons: ({ avatarImage, avatarInitial }: { avatarImage?: string; avatarInitial?: string }) => (
-    <div data-testid="header-navigation-buttons" data-avatar-image={avatarImage} data-avatar-initial={avatarInitial}>
-      Navigation Buttons
-    </div>
-  ),
-  SearchInput: () => <div data-testid="search-input">Search Input</div>,
-  HeaderHome: () => (
-    <div data-testid="header-home">
-      <div data-testid="header-social-links">Social Links</div>
-      <button>Sign in</button>
-    </div>
-  ),
-  HeaderSignIn: () => (
-    <div data-testid="header-sign-in">
-      <div data-testid="search-input">Search Input</div>
-      <div data-testid="header-navigation-buttons">Navigation Buttons</div>
-    </div>
-  ),
-  HeaderJoin: () => (
-    <div data-testid="header-join">
-      <button aria-label="Join Pubky">Join</button>
-    </div>
-  ),
-}));
+vi.mock('@/molecules/Header/Header', async () => {
+  return {
+    HeaderContainer: ({ children, className }: { children: React.ReactNode; className?: string }) => (
+      <div data-testid="header-container" data-class-name={className}>
+        {children}
+      </div>
+    ),
+    HeaderTitle: ({ currentTitle }: { currentTitle: string }) => <div data-testid="header-title">{currentTitle}</div>,
+    HeaderOnboarding: ({ currentStep }: { currentStep: number }) => (
+      <div data-testid="onboarding-header" data-step={currentStep}>
+        Onboarding Step {currentStep}
+      </div>
+    ),
+    HeaderSocialLinks: () => <div data-testid="header-social-links">Social Links</div>,
+    HeaderNavigationButtons: ({ avatarImage, avatarInitial }: { avatarImage?: string; avatarInitial?: string }) => (
+      <div data-testid="header-navigation-buttons" data-avatar-image={avatarImage} data-avatar-initial={avatarInitial}>
+        Navigation Buttons
+      </div>
+    ),
+  };
+});
+
+vi.mock('@/molecules/HeaderHome/HeaderHome', async () => {
+  return {
+    HeaderHome: () => (
+      <div data-testid="header-home">
+        <div data-testid="header-social-links">Social Links</div>
+        <button>Sign in</button>
+      </div>
+    ),
+  };
+});
+
+vi.mock('@/molecules/HeaderJoin/HeaderJoin', async () => {
+  return {
+    HeaderJoin: () => (
+      <div data-testid="header-join">
+        <button aria-label="Join Pubky">Join</button>
+      </div>
+    ),
+  };
+});
+
+vi.mock('@/molecules/HeaderSignIn/HeaderSignIn', async () => {
+  return {
+    HeaderSignIn: () => (
+      <div data-testid="header-sign-in">
+        <div data-testid="search-input">Search Input</div>
+        <div data-testid="header-navigation-buttons">Navigation Buttons</div>
+      </div>
+    ),
+  };
+});
+
+vi.mock('@/molecules/Logo/Logo', async () => {
+  return {
+    Logo: ({ noLink }: { noLink?: boolean }) => (
+      <div data-testid="logo" data-no-link={noLink}>
+        Logo
+      </div>
+    ),
+  };
+});
+
+vi.mock('@/organisms/SearchInput/SearchInput', async () => {
+  return {
+    SearchInput: () => <div data-testid="search-input">Search Input</div>,
+  };
+});
 
 // Mock hooks
 const mockIsPublicRoute = vi.fn();

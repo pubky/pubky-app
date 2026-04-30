@@ -2,8 +2,10 @@
 
 import { useState, useEffect } from 'react';
 import { useLiveQuery } from 'dexie-react-hooks';
-import * as Atoms from '@/atoms';
-import { FacehashAvatar } from '@/molecules/FacehashAvatar';
+import { Avatar, AvatarFallback, AvatarImage } from '@/atoms/Avatar/Avatar';
+import { Container } from '@/atoms/Container/Container';
+import { FacehashAvatar } from '@/molecules/FacehashAvatar/FacehashAvatar';
+
 import {
   extractUserIdFromAvatarUrl,
   resolveAvatarFallbackSeed,
@@ -79,10 +81,10 @@ export function AvatarWithFallback({
   return (
     // `key` forces remount so Radix Avatar resets its 'loaded' state and shows the fallback (#526).
     // TODO: cover with E2E/VRT — jsdom can't reproduce real image loading.
-    <Atoms.Avatar key={resolvedAvatarUrl ?? 'fallback'} size={size} className={className} data-testid={dataTestId}>
+    <Avatar key={resolvedAvatarUrl ?? 'fallback'} size={size} className={className} data-testid={dataTestId}>
       {resolvedAvatarUrl && !imageError && (
         <>
-          <Atoms.AvatarImage
+          <AvatarImage
             src={resolvedAvatarUrl}
             alt={alt || name}
             onError={() => setImageError(true)}
@@ -90,7 +92,7 @@ export function AvatarWithFallback({
           />
 
           {shouldBlur && (
-            <Atoms.Container
+            <Container
               overrideDefaults
               role="button"
               tabIndex={0}
@@ -109,14 +111,14 @@ export function AvatarWithFallback({
               className="absolute inset-0 flex cursor-pointer items-center justify-center"
             >
               <EyeOff className="size-1/2 max-h-10 max-w-10" />
-            </Atoms.Container>
+            </Container>
           )}
         </>
       )}
       {/* Always render fallback - Radix shows it while image loads or if image fails */}
-      <Atoms.AvatarFallback className={cn('overflow-hidden border-none', fallbackClassName)}>
+      <AvatarFallback className={cn('overflow-hidden border-none', fallbackClassName)}>
         <FacehashAvatar seed={resolvedFallbackSeed} initial={fallbackInitial} />
-      </Atoms.AvatarFallback>
-    </Atoms.Avatar>
+      </AvatarFallback>
+    </Avatar>
   );
 }

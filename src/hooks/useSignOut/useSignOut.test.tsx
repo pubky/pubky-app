@@ -16,9 +16,11 @@ vi.mock('@/controllers/auth/auth', () => ({
   AuthController: { logout: (...args: unknown[]) => mockLogout(...args) },
 }));
 
-vi.mock('@/molecules', () => ({
-  useToast: () => ({ toast: mockToast }),
-}));
+vi.mock('@/molecules/Toaster/use-toast', async () => {
+  return {
+    useToast: () => ({ toast: mockToast }),
+  };
+});
 
 vi.mock('@/app', async (importOriginal) => {
   const actual = await importOriginal<typeof import('@/app')>();

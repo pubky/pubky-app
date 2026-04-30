@@ -3,14 +3,15 @@
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useTranslations } from 'next-intl';
-import * as Molecules from '@/molecules';
+import { useToast } from '@/molecules/Toaster/use-toast';
+
 import * as App from '@/app';
 import type { UseSignOutResult } from './useSignOut.types';
 import { Logger } from '@/libs/logger/logger';
 import { AuthController } from '@/controllers/auth/auth';
 export function useSignOut(): UseSignOutResult {
   const router = useRouter();
-  const { toast } = Molecules.useToast();
+  const { toast } = useToast();
   const tCommon = useTranslations('common');
   const tErrors = useTranslations('errors');
   const [isLoading, setIsLoading] = useState(false);

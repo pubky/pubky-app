@@ -5,9 +5,14 @@ import { usePostNavigation } from '@/hooks/usePostNavigation/usePostNavigation';
 import { useStreamPagination } from '@/hooks/useStreamPagination/useStreamPagination';
 import { useLiveQuery } from 'dexie-react-hooks';
 import { useEffect, useRef } from 'react';
-import * as Atoms from '@/atoms';
-import * as Molecules from '@/molecules';
-import * as Organisms from '@/organisms';
+import { Container } from '@/atoms/Container/Container';
+import { PostThreadSpacer } from '@/atoms/PostThreadSpacer/PostThreadSpacer';
+import { TimelineEndMessage } from '@/molecules/Timeline/TimelineEndMessage';
+import { TimelineError } from '@/molecules/Timeline/TimelineError';
+import { TimelineLoadingMore } from '@/molecules/Timeline/TimelineLoadingMore';
+import { TimelineStateWrapper } from '@/molecules/Timeline/TimelineStateWrapper/TimelineStateWrapper';
+import { PostMain } from '../PostMain/PostMain';
+
 import * as Types from './RepliesWithParent.types';
 import { Logger } from '@/libs/logger/logger';
 import { PostController } from '@/controllers/post/post';
@@ -35,27 +40,27 @@ export function RepliesWithParent({ streamId }: Types.RepliesWithParentProps) {
   });
 
   return (
-    <Molecules.TimelineStateWrapper loading={loading} error={error} hasItems={postIds.length > 0}>
-      <Atoms.Container>
-        <Atoms.Container overrideDefaults className="space-y-4">
+    <TimelineStateWrapper loading={loading} error={error} hasItems={postIds.length > 0}>
+      <Container>
+        <Container overrideDefaults className="space-y-4">
           {postIds.map((postId: string) => (
             <ReplyWithParent key={`reply_${postId}`} replyPostId={postId} onPostClick={navigateToPost} />
           ))}
 
           {/* Loading More Indicator */}
-          {loadingMore && <Molecules.TimelineLoadingMore />}
+          {loadingMore && <TimelineLoadingMore />}
 
           {/* Error on loading more */}
-          {error && postIds.length > 0 && <Molecules.TimelineError message={error} />}
+          {error && postIds.length > 0 && <TimelineError message={error} />}
 
           {/* End of posts message */}
-          {!hasMore && !loadingMore && postIds.length > 0 && <Molecules.TimelineEndMessage />}
+          {!hasMore && !loadingMore && postIds.length > 0 && <TimelineEndMessage />}
 
           {/* Infinite scroll sentinel */}
-          <Atoms.Container overrideDefaults className="h-[20px]" ref={sentinelRef} />
-        </Atoms.Container>
-      </Atoms.Container>
-    </Molecules.TimelineStateWrapper>
+          <Container overrideDefaults className="h-[20px]" ref={sentinelRef} />
+        </Container>
+      </Container>
+    </TimelineStateWrapper>
   );
 }
 
@@ -141,26 +146,21 @@ function ReplyWithParent({ replyPostId, onPostClick }: Types.ReplyWithParentProp
   const shouldShowParent = !!parentPostId;
 
   return (
-    <Atoms.Container overrideDefaults className="flex flex-col">
+    <Container overrideDefaults className="flex flex-col">
       {/* Show parent post if it exists */}
       {shouldShowParent && (
         <>
-          <Organisms.PostMain postId={parentPostId} onClick={() => onPostClick(parentPostId)} isReply={false} />
-          <Atoms.Container overrideDefaults className="pl-3">
-            <Atoms.PostThreadSpacer />
-          </Atoms.Container>
+          <PostMain postId={parentPostId} onClick={() => onPostClick(parentPostId)} isReply={false} />
+          <Container overrideDefaults className="pl-3">
+            <PostThreadSpacer />
+          </Container>
         </>
       )}
 
       {/* Show the reply with isReply={true} */}
-      <Atoms.Container overrideDefaults className={shouldShowParent ? 'pl-3' : ''}>
-        <Organisms.PostMain
-          postId={replyPostId}
-          onClick={() => onPostClick(replyPostId)}
-          isReply={true}
-          isLastReply={true}
-        />
-      </Atoms.Container>
-    </Atoms.Container>
+      <Container overrideDefaults className={shouldShowParent ? 'pl-3' : ''}>
+        <PostMain postId={replyPostId} onClick={() => onPostClick(replyPostId)} isReply={true} isLastReply={true} />
+      </Container>
+    </Container>
   );
 }

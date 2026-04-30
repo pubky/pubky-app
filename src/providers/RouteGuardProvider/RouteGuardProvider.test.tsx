@@ -65,9 +65,11 @@ vi.mock('@/providers/RouteGuardProvider/RouteGuardProvider.constants', () => ({
 }));
 
 // Mock @/atoms
-vi.mock('@/atoms', () => ({
-  Spinner: (props: Record<string, unknown>) => <div data-testid="spinner" {...props} />,
-}));
+vi.mock('@/atoms/Spinner/Spinner', async () => {
+  return {
+    Spinner: (props: Record<string, unknown>) => <div data-testid="spinner" {...props} />,
+  };
+});
 
 vi.mock('@/libs/logger/logger', () => ({
   Logger: { error: vi.fn(), warn: vi.fn(), info: vi.fn() },

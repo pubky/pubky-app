@@ -6,7 +6,8 @@ import { useRouter, usePathname } from 'next/navigation';
 import { useTranslations, useLocale } from 'next-intl';
 import { ROUTE_ACCESS_MAP } from '@/providers/RouteGuardProvider/RouteGuardProvider.constants';
 import * as App from '@/app';
-import * as Atoms from '@/atoms';
+import { Spinner } from '@/atoms/Spinner/Spinner';
+
 import { Logger } from '@/libs/logger/logger';
 import { TimeoutErrorCode } from '@/libs/error/error.codes';
 import { Err } from '@/libs/error/error.factories';
@@ -186,7 +187,7 @@ export function RouteGuardProvider({ children }: RouteGuardProviderProps) {
     return (
       <div className="flex min-h-screen items-center justify-center">
         <div className="text-center">
-          <Atoms.Spinner className="mx-auto" />
+          <Spinner className="mx-auto" />
           <p className="mt-2 text-muted-foreground">{isLoading || wasDbReset ? t('loading') : t('redirecting')}</p>
         </div>
       </div>

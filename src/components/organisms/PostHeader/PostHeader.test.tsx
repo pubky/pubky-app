@@ -24,10 +24,8 @@ vi.mock('@/hooks/useRelativeTime/useRelativeTime', () => ({
   })),
 }));
 
-vi.mock('@/atoms', async (importOriginal) => {
-  const actual = await importOriginal<typeof import('@/atoms')>();
+vi.mock('@/atoms/Container/Container', async () => {
   return {
-    ...actual,
     Container: vi.fn(
       ({
         children,
@@ -43,6 +41,11 @@ vi.mock('@/atoms', async (importOriginal) => {
         </div>
       ),
     ),
+  };
+});
+
+vi.mock('@/atoms/Typography/Typography', async () => {
+  return {
     Typography: vi.fn(
       ({
         children,
@@ -63,10 +66,19 @@ vi.mock('@/atoms', async (importOriginal) => {
   };
 });
 
-vi.mock('@/molecules', async (importOriginal) => {
-  const actual = await importOriginal<typeof import('@/molecules')>();
+vi.mock('@/molecules/PostHeaderTimestamp/PostHeaderTimestamp', async () => {
   return {
-    ...actual,
+    PostHeaderTimestamp: vi.fn(({ timeAgo }: { timeAgo: string; indexedAt: Date }) => (
+      <div data-testid="post-header-timestamp">
+        <svg data-testid="clock-icon" />
+        <span>{timeAgo}</span>
+      </div>
+    )),
+  };
+});
+
+vi.mock('@/molecules/PostHeaderUserInfo/PostHeaderUserInfo', async () => {
+  return {
     PostHeaderUserInfo: vi.fn(
       ({
         userId,
@@ -94,12 +106,6 @@ vi.mock('@/molecules', async (importOriginal) => {
         </div>
       ),
     ),
-    PostHeaderTimestamp: vi.fn(({ timeAgo }: { timeAgo: string; indexedAt: Date }) => (
-      <div data-testid="post-header-timestamp">
-        <svg data-testid="clock-icon" />
-        <span>{timeAgo}</span>
-      </div>
-    )),
   };
 });
 

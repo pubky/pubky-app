@@ -2,14 +2,27 @@ import { render, screen, fireEvent } from '@testing-library/react';
 import { describe, it, expect, vi } from 'vitest';
 import { HelpContent } from './HelpContent';
 
-vi.mock('@/organisms', async (importOriginal) => {
-  const actual = await importOriginal<typeof import('@/organisms')>();
+vi.mock('@/organisms/DialogFeedback/DialogFeedback', async () => {
   return {
-    ...actual,
-    DialogTerms: ({ trigger }: { trigger: React.ReactNode }) => <div data-testid="dialog-terms">{trigger}</div>,
-    DialogPrivacy: ({ trigger }: { trigger: React.ReactNode }) => <div data-testid="dialog-privacy">{trigger}</div>,
     DialogFeedback: ({ open }: { open: boolean; onOpenChange: (open: boolean) => void }) =>
       open ? <div data-testid="dialog-feedback" /> : null,
+  };
+});
+
+vi.mock('@/organisms/DialogPrivacy/DialogPrivacy', async () => {
+  return {
+    DialogPrivacy: ({ trigger }: { trigger: React.ReactNode }) => <div data-testid="dialog-privacy">{trigger}</div>,
+  };
+});
+
+vi.mock('@/organisms/DialogTerms/DialogTerms', async () => {
+  return {
+    DialogTerms: ({ trigger }: { trigger: React.ReactNode }) => <div data-testid="dialog-terms">{trigger}</div>,
+  };
+});
+
+vi.mock('@/organisms/FeedbackCard/FeedbackCard', async () => {
+  return {
     FeedbackCard: () => null,
   };
 });

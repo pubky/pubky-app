@@ -101,6 +101,20 @@ const handleClick = () => {
 
 Don't create `index.ts` files whose sole purpose is re-exporting from child modules, and don't re-export constants or functions through intermediate modules without good reason. Barrel files add a layer of indirection that confuses IDE go-to-definition, makes circular dependency bugs harder to trace, and can defeat tree-shaking in bundlers. Import directly from the source module instead. For hooks and layered modules, use aliases such as `@/hooks/*`, `@/controllers/*`, `@/services/*`, `@/models/*`, and `@/stores/*`.
 
+Components follow the same rule. There are no component barrels under `src/components`; import components from concrete files with the atomic namespace aliases:
+
+```typescript
+// BAD — tier or folder barrel
+import { Button } from '@/atoms';
+import { Button } from '@/components/atoms';
+import { Filters } from '@/molecules/Filters';
+
+// GOOD — concrete component module
+import { Button } from '@/atoms/Button/Button';
+import { FilterContent } from '@/molecules/Filters/FilterContent/FilterContent';
+import { PostHeader } from '@/organisms/PostHeader/PostHeader';
+```
+
 ```typescript
 // BAD — barrel that just re-exports
 // src/core/post/index.ts
@@ -111,7 +125,7 @@ export { PostApplication } from './application/post.application';
 import { PostController } from '@/controllers/post/post';
 ```
 
-Exception: the top-level `src/components/atoms/index.ts` barrel is intentional for grouping atomic components — that pattern is established and acceptable.
+There is no exception for component barrels: do not add `src/components/**/index.ts` or `src/components/**/index.tsx`.
 
 ### Scrutinize optional parameters
 

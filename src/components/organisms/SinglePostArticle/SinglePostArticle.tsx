@@ -3,10 +3,19 @@
 import { useLinkConfirmation } from '@/hooks/useLinkConfirmation/useLinkConfirmation';
 import { usePostArticle } from '@/hooks/usePostArticle/usePostArticle';
 import { useRef, useState } from 'react';
-import * as Atoms from '@/atoms';
-import * as Molecules from '@/molecules';
-import * as Organisms from '@/organisms';
-import type { PostTagsPanelHandle } from '@/organisms';
+import { Container } from '@/atoms/Container/Container';
+import { Image } from '@/atoms/Image/Image';
+import { Typography } from '@/atoms/Typography/Typography';
+import { PostText } from '@/molecules/PostText/PostText';
+import { DialogCheckLink } from '../DialogCheckLink/DialogCheckLink';
+import { DialogReply } from '../DialogReply/DialogReply';
+import { DialogRepost } from '../DialogRepost/DialogRepost';
+import { PostActionsBar } from '../PostActionsBar/PostActionsBar';
+import { PostContentBlurred } from '../PostContentBlurred/PostContentBlurred';
+import { PostHeader } from '../PostHeader/PostHeader';
+import { PostTagsPanel } from '../PostTagsPanel/PostTagsPanel';
+import type { PostTagsPanelHandle } from '../PostTagsPanel/PostTagsPanel.types';
+
 import type { PostDetailsModel } from '@/models/post/details/postDetails';
 import { FileVariant } from '@/services/nexus/file/file.types';
 import { useLocalFilesStore } from '@/stores/localFiles/localFiles.store';
@@ -59,16 +68,16 @@ export const SinglePostArticle = ({ postId, content, attachments, isBlurred }: S
 
   return (
     <>
-      <Atoms.Container className="mb-6 grid grid-cols-1 gap-6 lg:grid-cols-3">
+      <Container className="mb-6 grid grid-cols-1 gap-6 lg:grid-cols-3">
         {/* Left column - Post content */}
-        <Atoms.Container className="lg:col-span-2">
-          <Atoms.Typography as="h1" size="2xl" className="mb-6 wrap-anywhere hyphens-auto">
+        <Container className="lg:col-span-2">
+          <Typography as="h1" size="2xl" className="mb-6 wrap-anywhere hyphens-auto">
             {title}
-          </Atoms.Typography>
+          </Typography>
 
-          <Organisms.PostHeader postId={postId} size="large" timeAgoPlacement="bottom-left" />
+          <PostHeader postId={postId} size="large" timeAgoPlacement="bottom-left" />
 
-          <Organisms.PostActionsBar
+          <PostActionsBar
             postId={postId}
             onTagClick={handleTagClick}
             onReplyClick={handleReplyClick}
@@ -77,40 +86,30 @@ export const SinglePostArticle = ({ postId, content, attachments, isBlurred }: S
           />
 
           {isBlurred ? (
-            <Organisms.PostContentBlurred postId={postId} />
+            <PostContentBlurred postId={postId} />
           ) : (
             <>
               {finalCoverImage && (
-                <Atoms.Image src={finalCoverImage.src} alt={finalCoverImage.alt} className="mb-6 w-full rounded-md" />
+                <Image src={finalCoverImage.src} alt={finalCoverImage.alt} className="mb-6 w-full rounded-md" />
               )}
 
-              <Molecules.PostText content={body} isArticle onLinkClick={handleLinkClick} />
+              <PostText content={body} isArticle onLinkClick={handleLinkClick} />
             </>
           )}
 
           {/* Tags on mobile */}
-          <Organisms.PostTagsPanel
-            ref={mobileTagsPanelRef}
-            postId={postId}
-            widthMode="full"
-            className="mt-6 flex lg:hidden"
-          />
-        </Atoms.Container>
+          <PostTagsPanel ref={mobileTagsPanelRef} postId={postId} widthMode="full" className="mt-6 flex lg:hidden" />
+        </Container>
 
         {/* Right column - Tags (desktop only) */}
-        <Organisms.PostTagsPanel
-          ref={desktopTagsPanelRef}
-          postId={postId}
-          widthMode="full"
-          className="hidden lg:flex"
-        />
-      </Atoms.Container>
+        <PostTagsPanel ref={desktopTagsPanelRef} postId={postId} widthMode="full" className="hidden lg:flex" />
+      </Container>
 
-      <Organisms.DialogReply postId={postId} open={replyDialogOpen} onOpenChangeAction={setReplyDialogOpen} />
-      <Organisms.DialogRepost postId={postId} open={repostDialogOpen} onOpenChangeAction={setRepostDialogOpen} />
-      <Organisms.DialogCheckLink open={dialogOpen} onOpenChangeAction={setDialogOpen} linkUrl={clickedLink} />
+      <DialogReply postId={postId} open={replyDialogOpen} onOpenChangeAction={setReplyDialogOpen} />
+      <DialogRepost postId={postId} open={repostDialogOpen} onOpenChangeAction={setRepostDialogOpen} />
+      <DialogCheckLink open={dialogOpen} onOpenChangeAction={setDialogOpen} linkUrl={clickedLink} />
 
-      <Atoms.Typography className="text-2xl font-light text-muted-foreground">Replies</Atoms.Typography>
+      <Typography className="text-2xl font-light text-muted-foreground">Replies</Typography>
     </>
   );
 };

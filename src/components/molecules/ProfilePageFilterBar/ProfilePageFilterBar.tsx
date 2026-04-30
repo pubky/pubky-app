@@ -5,7 +5,11 @@ import { useRequireAuth } from '@/hooks/useRequireAuth/useRequireAuth';
 import { useStickyWhenFits } from '@/hooks/useStickyWhenFits/useStickyWhenFits';
 import * as React from 'react';
 import { useTranslations } from 'next-intl';
-import * as Atoms from '@/components/atoms';
+import { Container } from '@/atoms/Container/Container';
+import { FilterItem, FilterItemIcon, FilterItemLabel } from '@/atoms/Filter/Filter';
+import { Spinner } from '@/atoms/Spinner/Spinner';
+import { Typography } from '@/atoms/Typography/Typography';
+
 import * as Types from '@/app/profile/types';
 import * as Config from '@/config';
 import { Bell, StickyNote, MessageCircle, UsersRound, HeartHandshake, Tag } from 'lucide-react';
@@ -139,7 +143,7 @@ export function ProfilePageFilterBar({
     requireAuth(() => onPageChangeAction(pageType));
   };
   return (
-    <Atoms.Container
+    <Container
       ref={ref}
       overrideDefaults={true}
       className={cn(
@@ -148,42 +152,42 @@ export function ProfilePageFilterBar({
         shouldBeSticky !== false && 'sticky top-(--header-height)',
       )}
     >
-      <Atoms.Container overrideDefaults={true} className="flex flex-col gap-0">
+      <Container overrideDefaults={true} className="flex flex-col gap-0">
         {filterItems.map((item, index) => {
           const Icon = item.icon;
           const isActive = item.pageType === activePage;
           const isLoading = item.count === undefined;
           const label = t(item.labelKey);
           return (
-            <Atoms.FilterItem
+            <FilterItem
               key={index}
               isSelected={isActive}
               onClick={() => handleItemClick(item.pageType)}
               className="w-full items-start justify-between px-0 py-1"
             >
-              <Atoms.Container
+              <Container
                 data-cy={`profile-filter-item-${item.labelKey}`}
                 overrideDefaults={true}
                 className="flex items-center gap-2"
               >
-                <Atoms.FilterItemIcon icon={Icon} />
-                <Atoms.FilterItemLabel>{label}</Atoms.FilterItemLabel>
-              </Atoms.Container>
+                <FilterItemIcon icon={Icon} />
+                <FilterItemLabel>{label}</FilterItemLabel>
+              </Container>
               {isLoading ? (
-                <Atoms.Spinner size="sm" className="size-4" />
+                <Spinner size="sm" className="size-4" />
               ) : (
-                <Atoms.Typography
+                <Typography
                   data-cy={`profile-filter-item-${item.labelKey}-count`}
                   as="span"
                   className={`text-base font-medium ${isActive ? 'text-foreground' : 'text-muted-foreground'}`}
                 >
                   {item.count}
-                </Atoms.Typography>
+                </Typography>
               )}
-            </Atoms.FilterItem>
+            </FilterItem>
           );
         })}
-      </Atoms.Container>
-    </Atoms.Container>
+      </Container>
+    </Container>
   );
 }

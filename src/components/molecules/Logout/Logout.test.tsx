@@ -19,38 +19,64 @@ vi.mock('next/image', () => ({
 }));
 
 // Mock the atoms and molecules
-vi.mock('@/atoms', () => ({
-  Container: ({ children, className, size }: { children: React.ReactNode; className?: string; size?: string }) => (
-    <div className={className} data-size={size}>
-      {children}
-    </div>
-  ),
-  PageHeader: ({ children }: { children: React.ReactNode }) => <header>{children}</header>,
-  PageSubtitle: ({ children }: { children: React.ReactNode }) => <h2>{children}</h2>,
-}));
+vi.mock('@/atoms/Container/Container', async () => {
+  return {
+    Container: ({ children, className, size }: { children: React.ReactNode; className?: string; size?: string }) => (
+      <div className={className} data-size={size}>
+        {children}
+      </div>
+    ),
+  };
+});
 
-vi.mock('@/molecules', () => ({
-  ContentCard: ({ children, layout }: { children: React.ReactNode; layout?: string }) => (
-    <div data-layout={layout}>{children}</div>
-  ),
-  PageTitle: ({ children, size }: { children: React.ReactNode; size?: string }) => <h1 data-size={size}>{children}</h1>,
-  ButtonsNavigation: ({
-    backText,
-    continueText,
-    onHandleBackButton,
-    onHandleContinueButton,
-  }: {
-    backText: string;
-    continueText: string;
-    onHandleBackButton: () => void;
-    onHandleContinueButton: () => void;
-  }) => (
-    <div>
-      <button onClick={onHandleBackButton}>{backText}</button>
-      <button onClick={onHandleContinueButton}>{continueText}</button>
-    </div>
-  ),
-}));
+vi.mock('@/atoms/PageHeader/PageHeader', async () => {
+  return {
+    PageHeader: ({ children }: { children: React.ReactNode }) => <header>{children}</header>,
+  };
+});
+
+vi.mock('@/atoms/PageSubtitle/PageSubtitle', async () => {
+  return {
+    PageSubtitle: ({ children }: { children: React.ReactNode }) => <h2>{children}</h2>,
+  };
+});
+
+vi.mock('@/molecules/ButtonsNavigation/ButtonsNavigation', async () => {
+  return {
+    ButtonsNavigation: ({
+      backText,
+      continueText,
+      onHandleBackButton,
+      onHandleContinueButton,
+    }: {
+      backText: string;
+      continueText: string;
+      onHandleBackButton: () => void;
+      onHandleContinueButton: () => void;
+    }) => (
+      <div>
+        <button onClick={onHandleBackButton}>{backText}</button>
+        <button onClick={onHandleContinueButton}>{continueText}</button>
+      </div>
+    ),
+  };
+});
+
+vi.mock('@/molecules/Content/Content', async () => {
+  return {
+    ContentCard: ({ children, layout }: { children: React.ReactNode; layout?: string }) => (
+      <div data-layout={layout}>{children}</div>
+    ),
+  };
+});
+
+vi.mock('@/molecules/Page/Page', async () => {
+  return {
+    PageTitle: ({ children, size }: { children: React.ReactNode; size?: string }) => (
+      <h1 data-size={size}>{children}</h1>
+    ),
+  };
+});
 
 describe('LogoutContent', () => {
   it('renders without errors', () => {

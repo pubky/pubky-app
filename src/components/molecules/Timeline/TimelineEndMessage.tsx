@@ -1,7 +1,8 @@
 'use client';
 
 import { useTranslations } from 'next-intl';
-import * as Atoms from '@/atoms';
+import { Container } from '@/atoms/Container/Container';
+import { Typography } from '@/atoms/Typography/Typography';
 
 /**
  * TimelineEndMessage
@@ -12,10 +13,10 @@ export function TimelineEndMessage() {
   const t = useTranslations('empty');
 
   return (
-    <Atoms.Container className="flex items-center justify-center py-8">
-      <Atoms.Typography size="md" className="text-muted-foreground">
+    <Container className="flex items-center justify-center py-8">
+      <Typography size="md" className="text-muted-foreground">
         {t('endOfFeed')}
-      </Atoms.Typography>
-    </Atoms.Container>
+      </Typography>
+    </Container>
   );
 }

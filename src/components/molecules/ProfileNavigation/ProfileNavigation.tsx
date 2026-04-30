@@ -1,6 +1,7 @@
 'use client';
+import { Button } from '@/atoms/Button/Button';
+import { Container } from '@/atoms/Container/Container';
 
-import * as Atoms from '@/atoms';
 import { ArrowLeft, Loader2, ArrowRight } from 'lucide-react';
 import { cn } from '@/libs/utils/utils';
 export const ProfileNavigation = ({
@@ -30,9 +31,9 @@ export const ProfileNavigation = ({
     onContinue();
   };
   return (
-    <Atoms.Container className={cn('flex-row justify-between gap-3 py-6 lg:gap-6', className)}>
+    <Container className={cn('flex-row justify-between gap-3 py-6 lg:gap-6', className)}>
       {!hiddenBackButton && (
-        <Atoms.Button
+        <Button
           size="lg"
           className="rounded-full"
           variant={'secondary'}
@@ -41,10 +42,10 @@ export const ProfileNavigation = ({
         >
           <ArrowLeft className="mr-2 h-4 w-4" />
           {backText}
-        </Atoms.Button>
+        </Button>
       )}
       {!hiddenContinueButton && (
-        <Atoms.Button
+        <Button
           id="profile-finish-btn"
           size="lg"
           className={cn('w-full rounded-full sm:w-auto')}
@@ -62,8 +63,8 @@ export const ProfileNavigation = ({
               {continueText}
             </>
           )}
-        </Atoms.Button>
+        </Button>
       )}
-    </Atoms.Container>
+    </Container>
   );
 };

@@ -4,8 +4,21 @@ import { useRecoveryPhraseValidation } from '@/hooks/useRecoveryPhraseValidation
 import { useState, useEffect, ReactNode } from 'react';
 import Image from 'next/image';
 import { useTranslations } from 'next-intl';
-import * as Atoms from '@/components/atoms';
-import * as Molecules from '@/molecules';
+import { Badge } from '@/atoms/Badge/Badge';
+import { Button } from '@/atoms/Button/Button';
+import { Container } from '@/atoms/Container/Container';
+import {
+  Dialog,
+  DialogClose,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from '@/atoms/Dialog/Dialog';
+import { WordSlot } from '@/molecules/WordSlot/WordSlot';
+
 import { Eye, ArrowRight, EyeOff, ArrowLeft, Check } from 'lucide-react';
 import { cn } from '@/libs/utils/utils';
 import { useOnboardingStore } from '@/stores/onboarding/onboarding.store';
@@ -30,7 +43,7 @@ export function DialogBackupPhrase({ children }: DialogBackupPhraseProps) {
     }
   }, [mnemonic]);
   return (
-    <Atoms.Dialog
+    <Dialog
       onOpenChange={(open) => {
         if (!open) {
           handleClose();
@@ -38,13 +51,13 @@ export function DialogBackupPhrase({ children }: DialogBackupPhraseProps) {
       }}
     >
       {children ? (
-        <Atoms.DialogTrigger asChild>{children}</Atoms.DialogTrigger>
+        <DialogTrigger asChild>{children}</DialogTrigger>
       ) : (
-        <Atoms.DialogTrigger asChild>
-          <Atoms.Button id="backup-recovery-phrase-btn">{tCommon('continue')}</Atoms.Button>
-        </Atoms.DialogTrigger>
+        <DialogTrigger asChild>
+          <Button id="backup-recovery-phrase-btn">{tCommon('continue')}</Button>
+        </DialogTrigger>
       )}
-      <Atoms.DialogContent className="max-w-sm md:max-w-2xl" hiddenTitle={t('title')}>
+      <DialogContent className="max-w-sm md:max-w-2xl" hiddenTitle={t('title')}>
         {step === 1 && (
           <RecoveryStep1
             recoveryWords={recoveryWords}
@@ -55,8 +68,8 @@ export function DialogBackupPhrase({ children }: DialogBackupPhraseProps) {
         )}
         {step === 2 && <RecoveryStep2 recoveryWords={recoveryWords} setStep={setStep} />}
         {step === 3 && <RecoveryStep3 handleClose={handleClose} />}
-      </Atoms.DialogContent>
-    </Atoms.Dialog>
+      </DialogContent>
+    </Dialog>
   );
 }
 function RecoveryStep1({
@@ -74,44 +87,44 @@ function RecoveryStep1({
   const tCommon = useTranslations('common');
   return (
     <>
-      <Atoms.DialogHeader>
-        <Atoms.DialogTitle>{t('title')}</Atoms.DialogTitle>
-        <Atoms.DialogDescription>
+      <DialogHeader>
+        <DialogTitle>{t('title')}</DialogTitle>
+        <DialogDescription>
           <span className="hidden md:inline">{t('subtitle')} </span>
           <span className="md:hidden">{t('writeDown')} </span>
           <span className="font-bold text-brand">{t('neverShare')}</span>
-        </Atoms.DialogDescription>
-      </Atoms.DialogHeader>
+        </DialogDescription>
+      </DialogHeader>
 
-      <Atoms.Container className={cn(isHidden && 'blur-md')}>
-        <Atoms.Container display="grid" className="grid-cols-2 gap-1.5 md:grid-cols-3 md:gap-3">
+      <Container className={cn(isHidden && 'blur-md')}>
+        <Container display="grid" className="grid-cols-2 gap-1.5 md:grid-cols-3 md:gap-3">
           {recoveryWords.map((word, index) => (
-            <Atoms.Container
+            <Container
               key={index}
               className="flex-row items-center gap-2 rounded-md bg-secondary px-3 py-3 sm:gap-3 sm:px-5 sm:py-4"
             >
-              <Atoms.Badge
+              <Badge
                 id={`backup-recovery-phrase-word-${index + 1}`}
                 variant="outline"
                 className="h-5 min-w-[20px] shrink-0 rounded-full px-1 font-semibold"
               >
                 {index + 1}
-              </Atoms.Badge>
+              </Badge>
               <span className="text-sm font-medium sm:text-base">{word}</span>
-            </Atoms.Container>
+            </Container>
           ))}
-        </Atoms.Container>
-      </Atoms.Container>
+        </Container>
+      </Container>
 
-      <Atoms.DialogFooter>
+      <DialogFooter>
         {isHidden ? (
           <>
-            <Atoms.DialogClose asChild>
-              <Atoms.Button id="backup-recovery-phrase-cancel-btn" variant="outline" size="lg">
+            <DialogClose asChild>
+              <Button id="backup-recovery-phrase-cancel-btn" variant="outline" size="lg">
                 {tCommon('cancel')}
-              </Atoms.Button>
-            </Atoms.DialogClose>
-            <Atoms.Button
+              </Button>
+            </DialogClose>
+            <Button
               id="backup-recovery-phrase-reveal-btn"
               size="lg"
               onClick={() => {
@@ -121,16 +134,16 @@ function RecoveryStep1({
             >
               <Eye className="h-4 w-4" />
               {t('reveal')}
-            </Atoms.Button>
+            </Button>
           </>
         ) : (
           <>
             <div className="contents md:hidden">
-              <Atoms.Button id="backup-recovery-phrase-confirm-btn-mobile" size="lg" onClick={() => setStep(2)}>
+              <Button id="backup-recovery-phrase-confirm-btn-mobile" size="lg" onClick={() => setStep(2)}>
                 <ArrowRight className="h-4 w-4" />
                 {t('confirmTitle')}
-              </Atoms.Button>
-              <Atoms.Button
+              </Button>
+              <Button
                 variant="outline"
                 size="lg"
                 onClick={() => {
@@ -140,10 +153,10 @@ function RecoveryStep1({
               >
                 <EyeOff className="h-4 w-4" />
                 {t('hide')}
-              </Atoms.Button>
+              </Button>
             </div>
             <div className="hidden md:contents">
-              <Atoms.Button
+              <Button
                 variant="outline"
                 size="lg"
                 onClick={() => {
@@ -153,15 +166,15 @@ function RecoveryStep1({
               >
                 <EyeOff className="h-4 w-4" />
                 {t('hide')}
-              </Atoms.Button>
-              <Atoms.Button id="backup-recovery-phrase-confirm-btn-desktop" size="lg" onClick={() => setStep(2)}>
+              </Button>
+              <Button id="backup-recovery-phrase-confirm-btn-desktop" size="lg" onClick={() => setStep(2)}>
                 <ArrowRight className="h-4 w-4" />
                 {t('confirmTitle')}
-              </Atoms.Button>
+              </Button>
             </div>
           </>
         )}
-      </Atoms.DialogFooter>
+      </DialogFooter>
     </>
   );
 }
@@ -179,15 +192,15 @@ function RecoveryStep2({ recoveryWords, setStep }: { recoveryWords: string[]; se
   };
   return (
     <>
-      <Atoms.DialogHeader>
-        <Atoms.DialogTitle>{t('confirmTitle')}</Atoms.DialogTitle>
-        <Atoms.DialogDescription>{t('confirmSubtitle')}</Atoms.DialogDescription>
-      </Atoms.DialogHeader>
+      <DialogHeader>
+        <DialogTitle>{t('confirmTitle')}</DialogTitle>
+        <DialogDescription>{t('confirmSubtitle')}</DialogDescription>
+      </DialogHeader>
 
-      <Atoms.Container className="space-y-6">
-        <Atoms.Container className="flex-row flex-wrap gap-2">
+      <Container className="space-y-6">
+        <Container className="flex-row flex-wrap gap-2">
           {remainingWords.map(({ word, index, isUsed }) => (
-            <Atoms.Button
+            <Button
               id={`backup-recovery-phrase-word-${word}-${index + 1}`}
               key={`${word}-${index}`}
               variant={isUsed ? 'secondary' : 'outline'}
@@ -196,16 +209,16 @@ function RecoveryStep2({ recoveryWords, setStep }: { recoveryWords: string[]; se
               disabled={isUsed}
             >
               {word}
-            </Atoms.Button>
+            </Button>
           ))}
-        </Atoms.Container>
+        </Container>
 
-        <Atoms.Container display="grid" className="grid-cols-2 gap-1.5 sm:grid-cols-3 md:gap-3">
+        <Container display="grid" className="grid-cols-2 gap-1.5 sm:grid-cols-3 md:gap-3">
           {userWords.map((word, i) => {
             const isCorrect = word !== '' && word === recoveryWords[i];
             const isError = errors[i];
             return (
-              <Molecules.WordSlot
+              <WordSlot
                 key={i}
                 mode="readonly"
                 index={i}
@@ -216,24 +229,19 @@ function RecoveryStep2({ recoveryWords, setStep }: { recoveryWords: string[]; se
               />
             );
           })}
-        </Atoms.Container>
-      </Atoms.Container>
+        </Container>
+      </Container>
 
-      <Atoms.DialogFooter>
-        <Atoms.Button variant="outline" size="lg" onClick={() => setStep(1)}>
+      <DialogFooter>
+        <Button variant="outline" size="lg" onClick={() => setStep(1)}>
           <ArrowLeft className="h-4 w-4" />
           {tCommon('back')}
-        </Atoms.Button>
-        <Atoms.Button
-          id="backup-recovery-phrase-validate-btn"
-          size="lg"
-          onClick={handleValidate}
-          disabled={!isComplete}
-        >
+        </Button>
+        <Button id="backup-recovery-phrase-validate-btn" size="lg" onClick={handleValidate} disabled={!isComplete}>
           <Check className="h-4 w-4" />
           {t('validate')}
-        </Atoms.Button>
-      </Atoms.DialogFooter>
+        </Button>
+      </DialogFooter>
     </>
   );
 }
@@ -242,28 +250,28 @@ function RecoveryStep3({ handleClose }: { handleClose: () => void }) {
   const tCommon = useTranslations('common');
   return (
     <>
-      <Atoms.DialogHeader>
-        <Atoms.DialogTitle>{t('completeTitle')}</Atoms.DialogTitle>
-        <Atoms.DialogDescription>{t('completeSubtitle')}</Atoms.DialogDescription>
-      </Atoms.DialogHeader>
+      <DialogHeader>
+        <DialogTitle>{t('completeTitle')}</DialogTitle>
+        <DialogDescription>{t('completeSubtitle')}</DialogDescription>
+      </DialogHeader>
 
-      <Atoms.Container className="flex w-full items-center justify-center rounded-md bg-card p-12">
+      <Container className="flex w-full items-center justify-center rounded-md bg-card p-12">
         <Image src="/images/check.webp" alt={t('completeTitle')} width={180} height={180} className="h-48 w-48" />
-      </Atoms.Container>
+      </Container>
 
-      <Atoms.DialogFooter className="flex-col gap-3">
-        <Atoms.DialogClose asChild>
-          <Atoms.Button id="backup-recovery-phrase-finish-btn" size="lg" className="w-full" onClick={handleClose}>
+      <DialogFooter className="flex-col gap-3">
+        <DialogClose asChild>
+          <Button id="backup-recovery-phrase-finish-btn" size="lg" className="w-full" onClick={handleClose}>
             <ArrowRight className="h-4 w-4" />
             {tCommon('finish')}
-          </Atoms.Button>
-        </Atoms.DialogClose>
-        <Atoms.DialogClose asChild>
-          <Atoms.Button variant="outline" size="lg" className="w-full" onClick={handleClose}>
+          </Button>
+        </DialogClose>
+        <DialogClose asChild>
+          <Button variant="outline" size="lg" className="w-full" onClick={handleClose}>
             {tCommon('cancel')}
-          </Atoms.Button>
-        </Atoms.DialogClose>
-      </Atoms.DialogFooter>
+          </Button>
+        </DialogClose>
+      </DialogFooter>
     </>
   );
 }

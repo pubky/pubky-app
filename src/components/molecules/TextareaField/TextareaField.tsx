@@ -1,4 +1,7 @@
-import * as Atoms from '@/atoms';
+import { Container } from '@/atoms/Container/Container';
+import { Textarea } from '@/atoms/Textarea/Textarea';
+import { Typography } from '@/atoms/Typography/Typography';
+
 import { cn } from '@/libs/utils/utils';
 
 interface TextareaFieldProps {
@@ -64,8 +67,8 @@ export function TextareaField({
 
   return (
     <>
-      <Atoms.Container className={cn(containerClasses, statusClasses[status], className)}>
-        <Atoms.Textarea
+      <Container className={cn(containerClasses, statusClasses[status], className)}>
+        <Textarea
           id={id}
           name={name}
           variant="inline"
@@ -82,11 +85,11 @@ export function TextareaField({
           rows={rows}
           aria-invalid={status === 'error'}
         />
-      </Atoms.Container>
+      </Container>
       {message && (
-        <Atoms.Typography as="small" size="sm" className={cn('ml-1', messageClasses[messageType])}>
+        <Typography as="small" size="sm" className={cn('ml-1', messageClasses[messageType])}>
           {message}
-        </Atoms.Typography>
+        </Typography>
       )}
     </>
   );

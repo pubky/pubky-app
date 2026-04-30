@@ -62,7 +62,7 @@
     },
     {
       "id": "no-barrel-reexports",
-      "rule": "Avoid barrel files (index.ts that only re-export) and re-exporting symbols through intermediate modules. They add indirection, confuse IDE go-to-definition, make circular deps harder to trace, and defeat tree-shaking. Import directly from the source module. For hooks and layered modules, use aliases such as @/hooks/*, @/controllers/*, @/services/*, @/models/*, and @/stores/*. Exception: src/components/atoms/index.ts barrel is intentional.",
+      "rule": "Avoid barrel files (index.ts that only re-export) and re-exporting symbols through intermediate modules. They add indirection, confuse IDE go-to-definition, make circular deps harder to trace, and defeat tree-shaking. Import directly from the source module. For hooks and layered modules, use aliases such as @/hooks/*, @/controllers/*, @/services/*, @/models/*, and @/stores/*. Components have no barrel exception: do not add src/components/**/index.ts or index.tsx; import components from concrete files via @/atoms/*, @/molecules/*, @/organisms/*, or @/templates/* (for example @/atoms/Button/Button).",
       "scope": ["src/**"],
       "severity": "medium"
     },

@@ -1,9 +1,12 @@
 'use client';
 
 import { useLayoutReset } from '@/hooks/useLayoutReset/useLayoutReset';
-import * as Atoms from '@/atoms';
-import * as Molecules from '@/molecules';
-import * as Organisms from '@/organisms';
+import { Container } from '@/atoms/Container/Container';
+import { FilterSortWhoToFollow } from '@/molecules/Filters/FilterSortWhoToFollow/FilterSortWhoToFollow';
+import { ActiveUsers } from '@/organisms/ActiveUsers/ActiveUsers';
+import { ContentLayout } from '@/organisms/ContentLayout/ContentLayout';
+import { FeedbackCard } from '@/organisms/FeedbackCard/FeedbackCard';
+import { WhoToFollowPageMain } from '@/organisms/WhoToFollowPage/WhoToFollowPageMain';
 
 /**
  * WhoToFollowPage
@@ -21,29 +24,29 @@ export function WhoToFollowPage() {
   useLayoutReset();
 
   return (
-    <Organisms.ContentLayout
-      leftSidebarContent={<Molecules.FilterSortWhoToFollow />}
+    <ContentLayout
+      leftSidebarContent={<FilterSortWhoToFollow />}
       rightSidebarContent={
         <>
-          <Organisms.ActiveUsers />
-          <Atoms.Container overrideDefaults className="sticky top-25 self-start">
-            <Organisms.FeedbackCard />
-          </Atoms.Container>
+          <ActiveUsers />
+          <Container overrideDefaults className="sticky top-25 self-start">
+            <FeedbackCard />
+          </Container>
         </>
       }
       leftDrawerContent={
-        <Atoms.Container overrideDefaults className="flex flex-col gap-6">
-          <Molecules.FilterSortWhoToFollow />
-        </Atoms.Container>
+        <Container overrideDefaults className="flex flex-col gap-6">
+          <FilterSortWhoToFollow />
+        </Container>
       }
       rightDrawerContent={
-        <Atoms.Container overrideDefaults className="flex flex-col gap-6">
-          <Organisms.ActiveUsers />
-          <Organisms.FeedbackCard />
-        </Atoms.Container>
+        <Container overrideDefaults className="flex flex-col gap-6">
+          <ActiveUsers />
+          <FeedbackCard />
+        </Container>
       }
     >
-      <Organisms.WhoToFollowPageMain />
-    </Organisms.ContentLayout>
+      <WhoToFollowPageMain />
+    </ContentLayout>
   );
 }

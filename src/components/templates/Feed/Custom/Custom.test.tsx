@@ -3,58 +3,90 @@ import { render, screen } from '@testing-library/react';
 import { Custom } from './Custom';
 
 // Mock Organisms
-vi.mock('@/organisms', () => ({
-  ContentLayout: ({
-    children,
-    leftSidebarContent,
-    rightSidebarContent,
-    leftDrawerContent,
-    rightDrawerContent,
-    leftDrawerContentMobile,
-    rightDrawerContentMobile,
-  }: {
-    children: React.ReactNode;
-    leftSidebarContent: React.ReactNode;
-    rightSidebarContent: React.ReactNode;
-    leftDrawerContent: React.ReactNode;
-    rightDrawerContent: React.ReactNode;
-    leftDrawerContentMobile: React.ReactNode;
-    rightDrawerContentMobile: React.ReactNode;
-  }) => (
-    <div data-testid="content-layout">
-      <div data-testid="left-sidebar">{leftSidebarContent}</div>
-      <div data-testid="right-sidebar">{rightSidebarContent}</div>
-      <div data-testid="left-drawer">{leftDrawerContent}</div>
-      <div data-testid="right-drawer">{rightDrawerContent}</div>
-      <div data-testid="left-drawer-mobile">{leftDrawerContentMobile}</div>
-      <div data-testid="right-drawer-mobile">{rightDrawerContentMobile}</div>
-      {children}
-    </div>
-  ),
-  CustomFeedFilters: ({ variant }: { variant: string }) => (
-    <div data-testid="custom-feed-filters" data-variant={variant}>
-      CustomFeedFilters
-    </div>
-  ),
-  HomeFeedRightSidebar: () => <div data-testid="home-feed-right-sidebar">HomeFeedRightSidebar</div>,
-  HomeFeedRightDrawer: () => <div data-testid="home-feed-right-drawer">HomeFeedRightDrawer</div>,
-  AlertBackup: () => <div data-testid="alert-backup">AlertBackup</div>,
-  FeedNavigation: ({ className }: { className?: string }) => (
-    <div data-testid="feed-navigation" data-classname={className}>
-      FeedNavigation
-    </div>
-  ),
-  TimelineFeed: ({ children, variant }: { children: React.ReactNode; variant: string }) => (
-    <div data-testid="timeline-feed" data-variant={variant}>
-      {children}
-    </div>
-  ),
-  PostInput: ({ variant }: { variant?: string }) => (
-    <div data-testid="post-input" data-variant={variant}>
-      PostInput
-    </div>
-  ),
-}));
+vi.mock('@/organisms/AlertBackup/AlertBackup', async () => {
+  return {
+    AlertBackup: () => <div data-testid="alert-backup">AlertBackup</div>,
+  };
+});
+
+vi.mock('@/organisms/ContentLayout/ContentLayout', async () => {
+  return {
+    ContentLayout: ({
+      children,
+      leftSidebarContent,
+      rightSidebarContent,
+      leftDrawerContent,
+      rightDrawerContent,
+      leftDrawerContentMobile,
+      rightDrawerContentMobile,
+    }: {
+      children: React.ReactNode;
+      leftSidebarContent: React.ReactNode;
+      rightSidebarContent: React.ReactNode;
+      leftDrawerContent: React.ReactNode;
+      rightDrawerContent: React.ReactNode;
+      leftDrawerContentMobile: React.ReactNode;
+      rightDrawerContentMobile: React.ReactNode;
+    }) => (
+      <div data-testid="content-layout">
+        <div data-testid="left-sidebar">{leftSidebarContent}</div>
+        <div data-testid="right-sidebar">{rightSidebarContent}</div>
+        <div data-testid="left-drawer">{leftDrawerContent}</div>
+        <div data-testid="right-drawer">{rightDrawerContent}</div>
+        <div data-testid="left-drawer-mobile">{leftDrawerContentMobile}</div>
+        <div data-testid="right-drawer-mobile">{rightDrawerContentMobile}</div>
+        {children}
+      </div>
+    ),
+  };
+});
+
+vi.mock('@/organisms/CustomFeedFilters/CustomFeedFilters', async () => {
+  return {
+    CustomFeedFilters: ({ variant }: { variant: string }) => (
+      <div data-testid="custom-feed-filters" data-variant={variant}>
+        CustomFeedFilters
+      </div>
+    ),
+  };
+});
+
+vi.mock('@/organisms/FeedNavigation/FeedNavigation', async () => {
+  return {
+    FeedNavigation: ({ className }: { className?: string }) => (
+      <div data-testid="feed-navigation" data-classname={className}>
+        FeedNavigation
+      </div>
+    ),
+  };
+});
+
+vi.mock('@/organisms/FeedRightSidebar/FeedRightSidebar', async () => {
+  return {
+    HomeFeedRightSidebar: () => <div data-testid="home-feed-right-sidebar">HomeFeedRightSidebar</div>,
+    HomeFeedRightDrawer: () => <div data-testid="home-feed-right-drawer">HomeFeedRightDrawer</div>,
+  };
+});
+
+vi.mock('@/organisms/PostInput/PostInput', async () => {
+  return {
+    PostInput: ({ variant }: { variant?: string }) => (
+      <div data-testid="post-input" data-variant={variant}>
+        PostInput
+      </div>
+    ),
+  };
+});
+
+vi.mock('@/organisms/Timeline/Feed/TimelineFeed/TimelineFeed', async () => {
+  return {
+    TimelineFeed: ({ children, variant }: { children: React.ReactNode; variant: string }) => (
+      <div data-testid="timeline-feed" data-variant={variant}>
+        {children}
+      </div>
+    ),
+  };
+});
 
 // Mock constants
 vi.mock('@/organisms/PostInput/PostInput.constants', () => ({

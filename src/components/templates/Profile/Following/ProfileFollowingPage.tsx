@@ -1,4 +1,4 @@
-import * as Organisms from '@/organisms';
+import { ProfileFollowing } from '@/organisms/ProfileFollowing/ProfileFollowing';
 
 /**
  * ProfileFollowingPage Template
@@ -7,5 +7,5 @@ import * as Organisms from '@/organisms';
  * Delegates all logic to the ProfileFollowing organism.
  */
 export function ProfileFollowingPage() {
-  return <Organisms.ProfileFollowing />;
+  return <ProfileFollowing />;
 }

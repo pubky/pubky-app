@@ -1,7 +1,8 @@
 'use client';
+import { Button } from '@/atoms/Button/Button';
+import { Container } from '@/atoms/Container/Container';
+import { Logo } from '../Logo/Logo';
 
-import * as Atoms from '@/atoms';
-import * as Molecules from '@/molecules';
 import { SlidersHorizontal, UserRound, Activity } from 'lucide-react';
 import { cn } from '@/libs/utils/utils';
 import { useAuthStore } from '@/stores/auth/auth.store';
@@ -13,7 +14,7 @@ export interface MobileHeaderProps {
   hasGradientBackground?: boolean;
   fixed?: boolean;
 }
-const Placeholder = () => <Atoms.Container overrideDefaults className="w-10" />;
+const Placeholder = () => <Container overrideDefaults className="w-10" />;
 export function MobileHeader({
   onLeftIconClick,
   onRightIconClick,
@@ -26,7 +27,7 @@ export function MobileHeader({
   const setShowSignInDialog = useAuthStore((state) => state.setShowSignInDialog);
   const showLeftIcon = showLeftButton && isAuthenticated;
   return (
-    <Atoms.Container
+    <Container
       overrideDefaults
       className={cn(
         fixed ? 'fixed inset-x-0' : 'sticky',
@@ -36,21 +37,21 @@ export function MobileHeader({
           : 'bg-background shadow-xs',
       )}
     >
-      <Atoms.Container overrideDefaults className="flex w-full items-center justify-between p-6">
+      <Container overrideDefaults className="flex w-full items-center justify-between p-6">
         {/* Left icon - filters (authenticated only) */}
         {showLeftIcon ? (
-          <Atoms.Button variant="ghost" size="icon" onClick={onLeftIconClick}>
+          <Button variant="ghost" size="icon" onClick={onLeftIconClick}>
             <SlidersHorizontal className="size-6" />
-          </Atoms.Button>
+          </Button>
         ) : (
           <Placeholder />
         )}
 
-        <Molecules.Logo />
+        <Logo />
 
         {/* Right icon - Join for unauthenticated, Activity for authenticated */}
         {!isAuthenticated ? (
-          <Atoms.Button
+          <Button
             variant="secondary"
             size="icon"
             className="size-12"
@@ -58,15 +59,15 @@ export function MobileHeader({
             aria-label="Join Pubky"
           >
             <UserRound className="size-6" />
-          </Atoms.Button>
+          </Button>
         ) : showRightButton ? (
-          <Atoms.Button variant="ghost" size="icon" onClick={onRightIconClick}>
+          <Button variant="ghost" size="icon" onClick={onRightIconClick}>
             <Activity className="size-6" />
-          </Atoms.Button>
+          </Button>
         ) : (
           <Placeholder />
         )}
-      </Atoms.Container>
-    </Atoms.Container>
+      </Container>
+    </Container>
   );
 }

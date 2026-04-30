@@ -2,8 +2,12 @@
 
 import { useLayoutReset } from '@/hooks/useLayoutReset/useLayoutReset';
 import { usePathname } from 'next/navigation';
-import * as Organisms from '@/organisms';
-import * as Molecules from '@/molecules';
+import { ContentLayout } from '@/organisms/ContentLayout/ContentLayout';
+import { MobileHeader } from '@/molecules/MobileHeader/MobileHeader';
+import { SettingsInfo } from '@/molecules/Settings/SettingsInfo/SettingsInfo';
+import { SettingsMenu } from '@/molecules/Settings/SettingsMenu/SettingsMenu';
+import { SettingsMobileMenu } from '@/molecules/Settings/SettingsMobileMenu/SettingsMobileMenu';
+
 import * as App from '@/app';
 import type { SettingsProps } from './Settings.types';
 
@@ -22,23 +26,23 @@ export function Settings({ children }: SettingsProps) {
   return (
     <>
       {/* Mobile header - rendered here for control over hasGradientBackground */}
-      <Molecules.MobileHeader hasGradientBackground={false} showLeftButton={false} showRightButton={false} fixed />
+      <MobileHeader hasGradientBackground={false} showLeftButton={false} showRightButton={false} fixed />
 
       {/* Mobile tab navigation - visible only on mobile (< lg) */}
-      <Molecules.SettingsMobileMenu />
+      <SettingsMobileMenu />
 
-      <Organisms.ContentLayout
+      <ContentLayout
         renderMobileHeader={false}
         showLeftMobileButton={false}
         showRightMobileButton={false}
-        leftSidebarContent={<Molecules.SettingsMenu />}
-        rightSidebarContent={<Molecules.SettingsInfo hideFAQ={isOnHelpPage} />}
-        leftDrawerContent={<Molecules.SettingsMenu />}
-        rightDrawerContent={<Molecules.SettingsInfo hideFAQ={isOnHelpPage} />}
+        leftSidebarContent={<SettingsMenu />}
+        rightSidebarContent={<SettingsInfo hideFAQ={isOnHelpPage} />}
+        leftDrawerContent={<SettingsMenu />}
+        rightDrawerContent={<SettingsInfo hideFAQ={isOnHelpPage} />}
         className="pt-[calc(var(--header-height-mobile)+5rem)] lg:pt-0"
       >
         {children}
-      </Organisms.ContentLayout>
+      </ContentLayout>
     </>
   );
 }

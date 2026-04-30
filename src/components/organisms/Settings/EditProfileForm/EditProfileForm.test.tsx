@@ -31,11 +31,14 @@ vi.mock('@/hooks/useProfileForm/useProfileForm', () => ({
   useProfileForm: (...args: unknown[]) => mockUseProfileForm(...args),
 }));
 
-vi.mock('@/organisms', async (importOriginal) => {
-  const actual = await importOriginal<typeof import('@/organisms')>();
+vi.mock('@/organisms/DialogAddLink/DialogAddLink', async () => {
   return {
-    ...actual,
     DialogAddLink: () => <div data-testid="dialog-add-link" />,
+  };
+});
+
+vi.mock('@/organisms/DialogCropImage/DialogCropImage', async () => {
+  return {
     DialogCropImage: () => <div data-testid="dialog-crop-image" />,
   };
 });

@@ -28,86 +28,110 @@ vi.mock('@/controllers/feed/feed', () => ({
 }));
 
 // Mock @/atoms — lightweight forwarding mocks
-vi.mock('@/atoms', () => ({
-  Container: ({ children, className }: { children: React.ReactNode; className?: string }) => (
-    <div data-testid="container" className={className}>
-      {children}
-    </div>
-  ),
-  Link: ({
-    children,
-    href,
-    className,
-    overrideDefaults,
-  }: {
-    children: React.ReactNode;
-    href?: string;
-    className?: string;
-    overrideDefaults?: boolean;
-  }) => (
-    <a data-testid="link" href={href} className={className} data-override-defaults={overrideDefaults}>
-      {children}
-    </a>
-  ),
-  Button: ({
-    children,
-    variant,
-    size,
-    className,
-    overrideDefaults,
-  }: {
-    children: React.ReactNode;
-    variant?: string;
-    size?: string;
-    className?: string;
-    overrideDefaults?: boolean;
-  }) => (
-    <button
-      data-testid="button"
-      data-variant={variant}
-      data-size={size}
-      className={className}
-      data-override-defaults={overrideDefaults}
-    >
-      {children}
-    </button>
-  ),
-  Typography: ({
-    children,
-    className,
-    overrideDefaults,
-  }: {
-    children: React.ReactNode;
-    className?: string;
-    overrideDefaults?: boolean;
-  }) => (
-    <span data-testid="typography" className={className} data-override-defaults={overrideDefaults}>
-      {children}
-    </span>
-  ),
-  Heading: ({
-    children,
-    level,
-    size,
-    className,
-  }: {
-    children: React.ReactNode;
-    level?: number;
-    size?: string;
-    className?: string;
-  }) => (
-    <div data-testid="heading" data-level={level} data-size={size} className={className}>
-      {children}
-    </div>
-  ),
-}));
+vi.mock('@/atoms/Button/Button', async () => {
+  return {
+    Button: ({
+      children,
+      variant,
+      size,
+      className,
+      overrideDefaults,
+    }: {
+      children: React.ReactNode;
+      variant?: string;
+      size?: string;
+      className?: string;
+      overrideDefaults?: boolean;
+    }) => (
+      <button
+        data-testid="button"
+        data-variant={variant}
+        data-size={size}
+        className={className}
+        data-override-defaults={overrideDefaults}
+      >
+        {children}
+      </button>
+    ),
+  };
+});
+
+vi.mock('@/atoms/Container/Container', async () => {
+  return {
+    Container: ({ children, className }: { children: React.ReactNode; className?: string }) => (
+      <div data-testid="container" className={className}>
+        {children}
+      </div>
+    ),
+  };
+});
+
+vi.mock('@/atoms/Heading/Heading', async () => {
+  return {
+    Heading: ({
+      children,
+      level,
+      size,
+      className,
+    }: {
+      children: React.ReactNode;
+      level?: number;
+      size?: string;
+      className?: string;
+    }) => (
+      <div data-testid="heading" data-level={level} data-size={size} className={className}>
+        {children}
+      </div>
+    ),
+  };
+});
+
+vi.mock('@/atoms/Link/Link', async () => {
+  return {
+    Link: ({
+      children,
+      href,
+      className,
+      overrideDefaults,
+    }: {
+      children: React.ReactNode;
+      href?: string;
+      className?: string;
+      overrideDefaults?: boolean;
+    }) => (
+      <a data-testid="link" href={href} className={className} data-override-defaults={overrideDefaults}>
+        {children}
+      </a>
+    ),
+  };
+});
+
+vi.mock('@/atoms/Typography/Typography', async () => {
+  return {
+    Typography: ({
+      children,
+      className,
+      overrideDefaults,
+    }: {
+      children: React.ReactNode;
+      className?: string;
+      overrideDefaults?: boolean;
+    }) => (
+      <span data-testid="typography" className={className} data-override-defaults={overrideDefaults}>
+        {children}
+      </span>
+    ),
+  };
+});
 
 // Mock @/organisms — CustomFeedDialog is a complex component; mock it as a transparent wrapper
-vi.mock('@/organisms', () => ({
-  CustomFeedDialog: ({ children, mode }: { children: React.ReactNode; mode: string }) => (
-    <div data-testid={`custom-feed-dialog-${mode}`}>{children}</div>
-  ),
-}));
+vi.mock('@/organisms/CustomFeedDialog/CustomFeedDialog', async () => {
+  return {
+    CustomFeedDialog: ({ children, mode }: { children: React.ReactNode; mode: string }) => (
+      <div data-testid={`custom-feed-dialog-${mode}`}>{children}</div>
+    ),
+  };
+});
 
 // Mock @/app/routes
 vi.mock('@/app/routes', () => ({

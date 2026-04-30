@@ -12,29 +12,44 @@ vi.mock('next/navigation', () => ({
 }));
 
 // Minimal atoms
-vi.mock('@/atoms', () => ({
-  Container: ({ children, className }: { children: React.ReactNode; className?: string }) => (
-    <div data-testid="container" data-class-name={className}>
-      {children}
-    </div>
-  ),
-}));
+vi.mock('@/atoms/Container/Container', async () => {
+  return {
+    Container: ({ children, className }: { children: React.ReactNode; className?: string }) => (
+      <div data-testid="container" data-class-name={className}>
+        {children}
+      </div>
+    ),
+  };
+});
 
 // Use real libs - use actual implementations
 
 // Stub child dialogs so we can trigger onRestore
-vi.mock('@/organisms', () => ({
-  DialogRestoreRecoveryPhrase: ({ onRestore }: { onRestore?: () => void }) => (
-    <button data-testid="restore-phrase" onClick={onRestore}>
-      Restore Phrase
-    </button>
-  ),
-  DialogRestoreEncryptedFile: ({ onRestore }: { onRestore?: () => void }) => (
-    <button data-testid="restore-file" onClick={onRestore}>
-      Restore File
-    </button>
-  ),
-}));
+vi.mock('@/organisms/DialogRestoreEncryptedFile/DialogRestoreEncryptedFile', async (importOriginal) => {
+  const actual =
+    await importOriginal<typeof import('@/organisms/DialogRestoreEncryptedFile/DialogRestoreEncryptedFile')>();
+  return {
+    ...actual,
+    DialogRestoreEncryptedFile: ({ onRestore }: { onRestore?: () => void }) => (
+      <button data-testid="restore-file" onClick={onRestore}>
+        Restore File
+      </button>
+    ),
+  };
+});
+
+vi.mock('@/organisms/DialogRestoreRecoveryPhrase/DialogRestoreRecoveryPhrase', async (importOriginal) => {
+  const actual =
+    await importOriginal<typeof import('@/organisms/DialogRestoreRecoveryPhrase/DialogRestoreRecoveryPhrase')>();
+  return {
+    ...actual,
+    DialogRestoreRecoveryPhrase: ({ onRestore }: { onRestore?: () => void }) => (
+      <button data-testid="restore-phrase" onClick={onRestore}>
+        Restore Phrase
+      </button>
+    ),
+  };
+});
 
 let mockSignInState = { authUrlResolved: false };
 

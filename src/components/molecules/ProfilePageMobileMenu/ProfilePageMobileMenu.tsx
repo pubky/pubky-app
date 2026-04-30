@@ -5,7 +5,8 @@ import * as React from 'react';
 import * as Types from '@/app/profile/types';
 import { Bell, CircleUserRound, HeartHandshake, MessageCircle, StickyNote, Tag, UsersRound } from 'lucide-react';
 import { UsersRound2 } from '@/icons';
-import { MobileTabBar, type MobileTabBarItem } from '../MobileTabBar';
+import { MobileTabBar } from '../MobileTabBar/MobileTabBar';
+import type { MobileTabBarItem } from '../MobileTabBar/MobileTabBar.types';
 
 export interface ProfileMenuItem {
   icon: React.ComponentType<{ size?: number; className?: string }>;

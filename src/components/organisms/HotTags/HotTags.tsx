@@ -4,8 +4,11 @@ import { useHotTags } from '@/hooks/useHotTags/useHotTags';
 import { useRouter } from 'next/navigation';
 import { useTranslations } from 'next-intl';
 import { Tag as TagIcon } from 'lucide-react';
-import * as Atoms from '@/atoms';
-import * as Molecules from '@/molecules';
+import { Container } from '@/atoms/Container/Container';
+import { Tag } from '@/atoms/Tag/Tag';
+import { Typography } from '@/atoms/Typography/Typography';
+import { SidebarSection } from '@/molecules/SidebarSection/SidebarSection';
+
 import { APP_ROUTES } from '@/app/routes';
 import { MAX_TAGS } from './HotTags.constants';
 import type { HotTagsProps } from './HotTags.types';
@@ -33,7 +36,7 @@ export function HotTags({ className }: HotTagsProps) {
     router.push(APP_ROUTES.HOT);
   };
   return (
-    <Molecules.SidebarSection
+    <SidebarSection
       title={t('hotTags')}
       footerIcon={TagIcon}
       footerText={tCommon('exploreAll')}
@@ -46,11 +49,11 @@ export function HotTags({ className }: HotTagsProps) {
       {isLoading ? (
         <HotTagsSkeleton />
       ) : displayTags.length === 0 ? (
-        <Atoms.Typography className="font-light text-muted-foreground">{t('noTags')}</Atoms.Typography>
+        <Typography className="font-light text-muted-foreground">{t('noTags')}</Typography>
       ) : (
-        <Atoms.Container overrideDefaults className="flex w-full flex-col gap-2" data-cy="hot-tags-list">
+        <Container overrideDefaults className="flex w-full flex-col gap-2" data-cy="hot-tags-list">
           {displayTags.map((tag, index) => (
-            <Atoms.Tag
+            <Tag
               key={tag.name}
               name={tag.name}
               count={tag.count}
@@ -58,8 +61,8 @@ export function HotTags({ className }: HotTagsProps) {
               data-testid={`tag-${index}`}
             />
           ))}
-        </Atoms.Container>
+        </Container>
       )}
-    </Molecules.SidebarSection>
+    </SidebarSection>
   );
 }

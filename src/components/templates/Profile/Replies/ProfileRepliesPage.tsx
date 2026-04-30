@@ -1,4 +1,4 @@
-import * as Organisms from '@/organisms';
+import { ProfileReplies } from '@/organisms/ProfileReplies/ProfileReplies';
 
 /**
  * ProfileRepliesPage Template
@@ -7,5 +7,5 @@ import * as Organisms from '@/organisms';
  * Delegates all logic to the ProfileReplies organism.
  */
 export function ProfileRepliesPage() {
-  return <Organisms.ProfileReplies />;
+  return <ProfileReplies />;
 }

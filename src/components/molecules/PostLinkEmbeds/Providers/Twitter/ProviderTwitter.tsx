@@ -1,5 +1,6 @@
 import { useEffect, useRef } from 'react';
-import * as Atoms from '@/atoms';
+import { Container } from '@/atoms/Container/Container';
+
 import * as ProviderTypes from '../Provider.types';
 import { Tweet } from 'react-tweet';
 
@@ -76,14 +77,14 @@ const TwitterEmbed = ({ tweetId, tweetUrl }: { tweetId: string; tweetUrl: string
   }, [tweetUrl]);
 
   return (
-    <Atoms.Container
+    <Container
       ref={containerRef}
       data-testid="twitter-container"
       data-theme="dark"
       className="mx-0 max-w-70 sm:mx-auto sm:max-w-none [&_.react-tweet-theme]:m-0! [&_.tweet-media\_root\_\_k6gQ2]:max-h-75! [&_.tweet-media\_root\_\_k6gQ2]:overflow-y-auto!"
     >
       <Tweet id={tweetId} />
-    </Atoms.Container>
+    </Container>
   );
 };
 

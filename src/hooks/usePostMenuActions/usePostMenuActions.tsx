@@ -9,7 +9,8 @@ import { useMutedUsers } from '@/hooks/useMutedUsers/useMutedUsers';
 import { usePostDetails } from '@/hooks/usePostDetails/usePostDetails';
 import { useUserProfile } from '@/hooks/useUserProfile/useUserProfile';
 import { useTranslations } from 'next-intl';
-import * as Molecules from '@/molecules';
+import { toast } from '@/molecules/Toaster/use-toast';
+
 import { POST_ROUTES } from '@/app/routes';
 import { POST_MENU_ACTION_IDS, POST_MENU_ACTION_VARIANTS } from './usePostMenuActions.constants';
 import { isAppError } from '@/libs/error/error.utils';
@@ -96,7 +97,7 @@ export function usePostMenuActions(postId: string, options: UsePostMenuActionsOp
         try {
           await toggleFollow(postAuthorId, isFollowing);
         } catch (error) {
-          Molecules.toast({
+          toast({
             title: tToast('error'),
             description: isAppError(error) ? error.message : tFollow('failed'),
           });
@@ -114,7 +115,7 @@ export function usePostMenuActions(postId: string, options: UsePostMenuActionsOp
       try {
         await copyPubky(withPubkyPrefix(postAuthorId));
       } catch (error) {
-        Molecules.toast({
+        toast({
           title: tToast('error'),
           description: isAppError(error) ? error.message : tCopy('copyFailedDesc'),
         });
@@ -130,7 +131,7 @@ export function usePostMenuActions(postId: string, options: UsePostMenuActionsOp
       try {
         await copyLink(postUrl);
       } catch (error) {
-        Molecules.toast({
+        toast({
           title: tToast('error'),
           description: isAppError(error) ? error.message : tCopy('copyFailedDesc'),
         });
@@ -147,7 +148,7 @@ export function usePostMenuActions(postId: string, options: UsePostMenuActionsOp
         try {
           await copyText(postDetails?.content ?? '');
         } catch (error) {
-          Molecules.toast({
+          toast({
             title: tToast('error'),
             description: isAppError(error) ? error.message : tCopy('copyFailedDesc'),
           });
@@ -170,7 +171,7 @@ export function usePostMenuActions(postId: string, options: UsePostMenuActionsOp
       onClick: async () => {
         try {
           await toggleMute(postAuthorId, isUserMuted);
-          Molecules.toast({
+          toast({
             title: isUserMuted ? tMute('unmuted') : tMute('muted'),
             description: isUserMuted
               ? tMute('unmutedDesc', {
@@ -181,7 +182,7 @@ export function usePostMenuActions(postId: string, options: UsePostMenuActionsOp
                 }),
           });
         } catch (error) {
-          Molecules.toast({
+          toast({
             title: tToast('error'),
             description: isAppError(error) ? error.message : tMute('failed'),
           });

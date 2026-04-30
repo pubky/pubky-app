@@ -28,51 +28,57 @@ vi.mock('@/controllers/file/file', () => ({
 }));
 
 // Mock organisms
-vi.mock('@/organisms', () => ({
-  SearchInput: () => <div data-testid="search-input">Search Input</div>,
-}));
+vi.mock('@/organisms/SearchInput/SearchInput', async () => {
+  return {
+    SearchInput: () => <div data-testid="search-input">Search Input</div>,
+  };
+});
 
 // Mock molecules
-vi.mock('@/molecules', () => ({
-  HeaderNavigationButtons: ({
-    avatarImage,
-    avatarName,
-    avatarSeed,
-    counter,
-  }: {
-    avatarImage?: string;
-    avatarName?: string;
-    avatarSeed?: string;
-    counter?: number;
-  }) => (
-    <div
-      data-testid="header-navigation-buttons"
-      data-avatar-image={avatarImage}
-      data-avatar-name={avatarName}
-      data-avatar-seed={avatarSeed}
-      data-counter={counter?.toString()}
-    >
-      Navigation Buttons
-    </div>
-  ),
-}));
+vi.mock('@/molecules/Header/Header', async () => {
+  return {
+    HeaderNavigationButtons: ({
+      avatarImage,
+      avatarName,
+      avatarSeed,
+      counter,
+    }: {
+      avatarImage?: string;
+      avatarName?: string;
+      avatarSeed?: string;
+      counter?: number;
+    }) => (
+      <div
+        data-testid="header-navigation-buttons"
+        data-avatar-image={avatarImage}
+        data-avatar-name={avatarName}
+        data-avatar-seed={avatarSeed}
+        data-counter={counter?.toString()}
+      >
+        Navigation Buttons
+      </div>
+    ),
+  };
+});
 
 // Mock atoms
-vi.mock('@/atoms', () => ({
-  Container: ({
-    children,
-    className,
-    ...props
-  }: {
-    children: React.ReactNode;
-    className?: string;
-    [key: string]: unknown;
-  }) => (
-    <div className={className} {...props}>
-      {children}
-    </div>
-  ),
-}));
+vi.mock('@/atoms/Container/Container', async () => {
+  return {
+    Container: ({
+      children,
+      className,
+      ...props
+    }: {
+      children: React.ReactNode;
+      className?: string;
+      [key: string]: unknown;
+    }) => (
+      <div className={className} {...props}>
+        {children}
+      </div>
+    ),
+  };
+});
 
 describe('HeaderSignIn', () => {
   it('renders search input and navigation buttons', () => {

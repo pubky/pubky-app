@@ -1,7 +1,7 @@
 'use client';
 
 import { useTranslations } from 'next-intl';
-import * as Molecules from '@/molecules';
+import { ProfilePageEmptyState } from '../ProfilePageEmptyState/ProfilePageEmptyState';
 
 /**
  * Search Empty State Component
@@ -13,7 +13,7 @@ import { Search } from 'lucide-react';
 export function SearchEmptyState() {
   const t = useTranslations('search.empty');
   return (
-    <Molecules.ProfilePageEmptyState
+    <ProfilePageEmptyState
       imageSrc="/images/tagged-empty-state.webp"
       imageAlt={t('alt')}
       icon={Search}

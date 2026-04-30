@@ -5,8 +5,9 @@ import { useIsFollowing } from '@/hooks/useIsFollowing/useIsFollowing';
 import { usePostParticipants } from '@/hooks/usePostParticipants/usePostParticipants';
 import { useRouter } from 'next/navigation';
 import { useTranslations } from 'next-intl';
-import * as Molecules from '@/molecules';
-import * as Organisms from '@/organisms';
+import { SidebarSection } from '@/molecules/SidebarSection/SidebarSection';
+import { UserListItem } from '../UserListItem/UserListItem';
+
 import { APP_ROUTES } from '@/app/routes';
 import { SinglePostParticipantsSkeleton } from './SinglePostParticipants.skeleton';
 import type { SinglePostParticipantsProps, ParticipantItemProps } from './SinglePostParticipants.types';
@@ -25,7 +26,7 @@ function ParticipantItem({
   const isCurrentUser = participant.id === currentUserId;
 
   return (
-    <Organisms.UserListItem
+    <UserListItem
       user={{
         id: participant.id,
         name: participant.name,
@@ -78,7 +79,7 @@ export function SinglePostParticipants({ postId, className }: SinglePostParticip
   }
 
   return (
-    <Molecules.SidebarSection title={t('participants')} className={className} data-testid="single-post-participants">
+    <SidebarSection title={t('participants')} className={className} data-testid="single-post-participants">
       {participants.map((participant) => (
         <ParticipantItem
           key={participant.id}
@@ -89,6 +90,6 @@ export function SinglePostParticipants({ postId, className }: SinglePostParticip
           isUserLoading={isUserLoading}
         />
       ))}
-    </Molecules.SidebarSection>
+    </SidebarSection>
   );
 }

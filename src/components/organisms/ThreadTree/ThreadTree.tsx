@@ -2,9 +2,11 @@
 
 import { usePostNavigation } from '@/hooks/usePostNavigation/usePostNavigation';
 import { useThreadReplies } from '@/hooks/useThreadReplies/useThreadReplies';
-import * as Atoms from '@/atoms';
-import * as Molecules from '@/molecules';
-import * as Organisms from '@/organisms';
+import { Container } from '@/atoms/Container/Container';
+import { PostThreadSpacer } from '@/atoms/PostThreadSpacer/PostThreadSpacer';
+import { ShowMoreReplies } from '@/molecules/ShowMoreReplies/ShowMoreReplies';
+import { QuickReply } from '../QuickReply/QuickReply';
+import { ReplyWithNested } from '../ReplyWithNested/ReplyWithNested';
 
 interface ThreadTreeProps {
   /** The composite post ID of the parent (Level 0) post */
@@ -28,43 +30,36 @@ export function ThreadTree({ postId, showQuickReply = true }: ThreadTreeProps) {
   if (replyIds.length === 0 && !hasMore) {
     // No replies -- only show quick reply if enabled
     return showQuickReply ? (
-      <Atoms.Container overrideDefaults>
-        <Atoms.PostThreadSpacer />
-        <Organisms.QuickReply parentPostId={postId} />
-      </Atoms.Container>
+      <Container overrideDefaults>
+        <PostThreadSpacer />
+        <QuickReply parentPostId={postId} />
+      </Container>
     ) : null;
   }
 
   const remaining = Math.max(0, totalCount - replyIds.length);
 
   return (
-    <Atoms.Container overrideDefaults>
+    <Container overrideDefaults>
       {/* Level 1 replies */}
       {replyIds.map((replyId, index) => {
         const isLastReply = index === replyIds.length - 1 && !hasMore && !showQuickReply;
 
         return (
-          <Organisms.ReplyWithNested
-            key={replyId}
-            replyId={replyId}
-            isLastReply={isLastReply}
-            onPostClick={navigateToPost}
-          />
+          <ReplyWithNested key={replyId} replyId={replyId} isLastReply={isLastReply} onPostClick={navigateToPost} />
         );
       })}
 
       {/* "+N more replies" button for Level 1 */}
-      {hasMore && !isExpandingAll && (
-        <Molecules.ShowMoreReplies count={remaining} onClick={expandAll} isLast={!showQuickReply} />
-      )}
+      {hasMore && !isExpandingAll && <ShowMoreReplies count={remaining} onClick={expandAll} isLast={!showQuickReply} />}
 
       {/* Quick reply at the end */}
       {showQuickReply && (
         <>
-          <Atoms.PostThreadSpacer />
-          <Organisms.QuickReply parentPostId={postId} />
+          <PostThreadSpacer />
+          <QuickReply parentPostId={postId} />
         </>
       )}
-    </Atoms.Container>
+    </Container>
   );
 }

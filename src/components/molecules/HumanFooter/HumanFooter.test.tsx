@@ -4,11 +4,23 @@ import { render, screen } from '@testing-library/react';
 import { HumanFooter } from './HumanFooter';
 
 // Mock organisms
-vi.mock('@/organisms', () => ({
-  DialogTerms: () => <span data-testid="dialog-terms">Terms of Service</span>,
-  DialogPrivacy: () => <span data-testid="dialog-privacy">Privacy Policy</span>,
-  DialogAge: () => <span data-testid="dialog-age">over 18 years old.</span>,
-}));
+vi.mock('@/organisms/DialogAge/DialogAge', async () => {
+  return {
+    DialogAge: () => <span data-testid="dialog-age">over 18 years old.</span>,
+  };
+});
+
+vi.mock('@/organisms/DialogPrivacy/DialogPrivacy', async () => {
+  return {
+    DialogPrivacy: () => <span data-testid="dialog-privacy">Privacy Policy</span>,
+  };
+});
+
+vi.mock('@/organisms/DialogTerms/DialogTerms', async () => {
+  return {
+    DialogTerms: () => <span data-testid="dialog-terms">Terms of Service</span>,
+  };
+});
 
 // Mock config
 vi.mock('@/config', () => ({
@@ -16,23 +28,35 @@ vi.mock('@/config', () => ({
 }));
 
 // Mock atoms
-vi.mock('@/atoms', () => ({
-  FooterLinks: ({ children, className }: { children: React.ReactNode; className?: string }) => (
-    <div data-testid="footer-links" className={className}>
-      {children}
-    </div>
-  ),
-  Link: ({ children, href, target }: { children: React.ReactNode; href: string; target?: string }) => (
-    <a data-testid="link" href={href} target={target}>
-      {children}
-    </a>
-  ),
-  Container: ({ children, className }: { children: React.ReactNode; className?: string }) => (
-    <div data-testid="container" className={className}>
-      {children}
-    </div>
-  ),
-}));
+vi.mock('@/atoms/Container/Container', async () => {
+  return {
+    Container: ({ children, className }: { children: React.ReactNode; className?: string }) => (
+      <div data-testid="container" className={className}>
+        {children}
+      </div>
+    ),
+  };
+});
+
+vi.mock('@/atoms/FooterLinks/FooterLinks', async () => {
+  return {
+    FooterLinks: ({ children, className }: { children: React.ReactNode; className?: string }) => (
+      <div data-testid="footer-links" className={className}>
+        {children}
+      </div>
+    ),
+  };
+});
+
+vi.mock('@/atoms/Link/Link', async () => {
+  return {
+    Link: ({ children, href, target }: { children: React.ReactNode; href: string; target?: string }) => (
+      <a data-testid="link" href={href} target={target}>
+        {children}
+      </a>
+    ),
+  };
+});
 
 describe('HumanFooter', () => {
   it('renders the footer text with Pubky brand highlight', () => {

@@ -1,6 +1,8 @@
 'use client';
+import { Container } from '@/atoms/Container/Container';
+import { Tooltip, TooltipContent, TooltipPortal, TooltipTrigger } from '@/atoms/Tooltip/Tooltip';
+import { Typography } from '@/atoms/Typography/Typography';
 
-import * as Atoms from '@/atoms';
 import { useIsMobile } from '@/hooks/useIsMobile/useIsMobile';
 import { Clock } from 'lucide-react';
 
@@ -14,21 +16,21 @@ export function PostHeaderTimestamp({ timeAgo, indexedAt }: PostHeaderTimestampP
   const inner = (
     <>
       <Clock className="size-4 text-muted-foreground" />
-      <Atoms.Typography
+      <Typography
         as="span"
         className="text-xs leading-4 font-medium tracking-[0.075rem] whitespace-nowrap text-muted-foreground"
         overrideDefaults
       >
         {timeAgo}
-      </Atoms.Typography>
+      </Typography>
     </>
   );
   const showTooltip = !isMobile && !!indexedAt;
   if (!showTooltip) {
     return (
-      <Atoms.Container className="flex flex-shrink-0 items-center gap-1" overrideDefaults>
+      <Container className="flex flex-shrink-0 items-center gap-1" overrideDefaults>
         {inner}
-      </Atoms.Container>
+      </Container>
     );
   }
   const exactTimeLabel = indexedAt.toLocaleString(undefined, {
@@ -36,15 +38,15 @@ export function PostHeaderTimestamp({ timeAgo, indexedAt }: PostHeaderTimestampP
     timeStyle: 'medium',
   });
   return (
-    <Atoms.Container className="flex flex-shrink-0 items-center gap-1" overrideDefaults>
-      <Atoms.Tooltip>
-        <Atoms.TooltipTrigger asChild>
+    <Container className="flex flex-shrink-0 items-center gap-1" overrideDefaults>
+      <Tooltip>
+        <TooltipTrigger asChild>
           <span className="flex flex-shrink-0 items-center gap-1">{inner}</span>
-        </Atoms.TooltipTrigger>
-        <Atoms.TooltipPortal>
-          <Atoms.TooltipContent>{exactTimeLabel}</Atoms.TooltipContent>
-        </Atoms.TooltipPortal>
-      </Atoms.Tooltip>
-    </Atoms.Container>
+        </TooltipTrigger>
+        <TooltipPortal>
+          <TooltipContent>{exactTimeLabel}</TooltipContent>
+        </TooltipPortal>
+      </Tooltip>
+    </Container>
   );
 }

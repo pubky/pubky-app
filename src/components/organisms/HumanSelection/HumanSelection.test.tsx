@@ -3,21 +3,20 @@ import { render, screen } from '@testing-library/react';
 
 import { HumanSelection } from './HumanSelection';
 
-vi.mock('@/molecules', async () => {
-  const actual = await vi.importActual<Record<string, unknown>>('@/molecules');
-
+vi.mock('@/molecules/HumanFooter/HumanFooter', async () => {
   return {
-    ...actual,
-    HumanSmsCard: () => <div data-testid="mock-sms-card">SMS Verification Card</div>,
     HumanFooter: () => <div data-testid="mock-human-footer">Human Footer</div>,
   };
 });
 
-vi.mock('@/organisms', async () => {
-  const actual = await vi.importActual<Record<string, unknown>>('@/organisms');
-
+vi.mock('@/molecules/HumanSmsCard/HumanSmsCard', async () => {
   return {
-    ...actual,
+    HumanSmsCard: () => <div data-testid="mock-sms-card">SMS Verification Card</div>,
+  };
+});
+
+vi.mock('@/organisms/HumanBitcoinCard/HumanBitcoinCard', async () => {
+  return {
     HumanBitcoinCard: () => <div data-testid="mock-bitcoin-card">Bitcoin Payment Card</div>,
   };
 });

@@ -1,7 +1,7 @@
 'use client';
 
 import { UserX } from 'lucide-react';
-import * as Molecules from '@/molecules';
+import { ProfilePageEmptyState } from '../ProfilePageEmptyState/ProfilePageEmptyState';
 
 /**
  * UserNotFound - Empty state component for when a user profile is not found
@@ -10,7 +10,7 @@ import * as Molecules from '@/molecules';
  */
 export function UserNotFound() {
   return (
-    <Molecules.ProfilePageEmptyState
+    <ProfilePageEmptyState
       imageSrc="/images/connections-empty-state.webp"
       imageAlt="User not found"
       icon={UserX}

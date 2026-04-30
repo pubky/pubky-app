@@ -4,21 +4,24 @@ import { useInviteCodeSignUp } from '@/hooks/useInviteCodeSignUp/useInviteCodeSi
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useTranslations } from 'next-intl';
-import * as Molecules from '@/molecules';
-import * as Atoms from '@/atoms';
+import { ButtonsNavigation } from '../ButtonsNavigation/ButtonsNavigation';
+import { PageTitle } from '../Page/Page';
+import { PageHeader } from '@/atoms/PageHeader/PageHeader';
+import { PageSubtitle } from '@/atoms/PageSubtitle/PageSubtitle';
+
 import * as App from '@/app';
 import { useOnboardingStore } from '@/stores/onboarding/onboarding.store';
 export const PublicKeyHeader = () => {
   const t = useTranslations('onboarding.pubky');
   return (
-    <Atoms.PageHeader>
-      <Molecules.PageTitle size="large">
+    <PageHeader>
+      <PageTitle size="large">
         {t.rich('uniqueTitle', {
           highlight: (chunks) => <span className="text-brand">{chunks}</span>,
         })}
-      </Molecules.PageTitle>
-      <Atoms.PageSubtitle>{t('uniqueSubtitle')}</Atoms.PageSubtitle>
-    </Atoms.PageHeader>
+      </PageTitle>
+      <PageSubtitle>{t('uniqueSubtitle')}</PageSubtitle>
+    </PageHeader>
   );
 };
 
@@ -45,7 +48,7 @@ export const PublicKeyNavigation = () => {
   };
 
   return (
-    <Molecules.ButtonsNavigation
+    <ButtonsNavigation
       id="public-key-navigation"
       onHandleBackButton={onHandleBackButton}
       onHandleContinueButton={onHandleContinueButton}

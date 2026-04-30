@@ -99,48 +99,77 @@ vi.mock('@/hooks/useEnrichedTags/useEnrichedTags', () => ({
 }));
 
 // Mock atoms
-vi.mock('@/atoms', () => ({
-  Container: ({ children, className }: { children: React.ReactNode; className?: string }) => (
-    <div data-testid="container" className={className}>
-      {children}
-    </div>
-  ),
-  Typography: ({ children, className }: { children: React.ReactNode; className?: string }) => (
-    <span className={className}>{children}</span>
-  ),
-}));
+vi.mock('@/atoms/Container/Container', async () => {
+  return {
+    Container: ({ children, className }: { children: React.ReactNode; className?: string }) => (
+      <div data-testid="container" className={className}>
+        {children}
+      </div>
+    ),
+  };
+});
+
+vi.mock('@/atoms/Typography/Typography', async () => {
+  return {
+    Typography: ({ children, className }: { children: React.ReactNode; className?: string }) => (
+      <span className={className}>{children}</span>
+    ),
+  };
+});
 
 // Mock molecules
-vi.mock('@/molecules', () => ({
-  PostTag: ({
-    label,
-    count,
-    selected,
-    showClose,
-    onClick,
-    onClose,
-  }: {
-    label: string;
-    count?: number;
-    selected?: boolean;
-    showClose?: boolean;
-    onClick?: (e: React.MouseEvent) => void;
-    onClose?: (e: React.MouseEvent) => void;
-  }) => (
-    <button data-testid={`post-tag-${label}`} data-selected={selected} data-count={count} onClick={onClick}>
-      {label}
-      {showClose && (
-        <span data-testid={`close-${label}`} onClick={onClose}>
-          ×
-        </span>
-      )}
-    </button>
-  ),
-  TagInput: mockTagInput,
-  PostTagAddButton: mockPostTagAddButton,
-  TagInputToggle: mockTagInputToggle,
-  PostTagPopoverWrapper: ({ children }: { children: React.ReactNode }) => <>{children}</>,
-}));
+vi.mock('@/molecules/PostTag/PostTag', async () => {
+  return {
+    PostTag: ({
+      label,
+      count,
+      selected,
+      showClose,
+      onClick,
+      onClose,
+    }: {
+      label: string;
+      count?: number;
+      selected?: boolean;
+      showClose?: boolean;
+      onClick?: (e: React.MouseEvent) => void;
+      onClose?: (e: React.MouseEvent) => void;
+    }) => (
+      <button data-testid={`post-tag-${label}`} data-selected={selected} data-count={count} onClick={onClick}>
+        {label}
+        {showClose && (
+          <span data-testid={`close-${label}`} onClick={onClose}>
+            ×
+          </span>
+        )}
+      </button>
+    ),
+  };
+});
+
+vi.mock('@/molecules/PostTagAddButton/PostTagAddButton', async () => {
+  return {
+    PostTagAddButton: mockPostTagAddButton,
+  };
+});
+
+vi.mock('@/molecules/PostTagPopoverWrapper/PostTagPopoverWrapper', async () => {
+  return {
+    PostTagPopoverWrapper: ({ children }: { children: React.ReactNode }) => <>{children}</>,
+  };
+});
+
+vi.mock('@/molecules/TagInput/TagInput', async () => {
+  return {
+    TagInput: mockTagInput,
+  };
+});
+
+vi.mock('@/molecules/TagInputToggle/TagInputToggle', async () => {
+  return {
+    TagInputToggle: mockTagInputToggle,
+  };
+});
 
 describe('ClickableTagsList', () => {
   const mockTags: NexusTag[] = [

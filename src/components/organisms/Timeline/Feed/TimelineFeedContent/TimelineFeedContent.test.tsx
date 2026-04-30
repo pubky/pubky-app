@@ -43,36 +43,55 @@ vi.mock('@/hooks/usePullToRefresh/usePullToRefresh', () => ({
   usePullToRefresh: mockUsePullToRefresh,
 }));
 
-vi.mock('@/molecules', () => ({
-  TimelineLoading: () => <div data-testid="timeline-loading">Loading...</div>,
-  NewPostsButton: ({ visible, count }: { visible: boolean; count: number }) =>
-    visible ? <div data-testid="new-posts-button">{count} new posts</div> : null,
-  PullToRefreshIndicator: ({ state }: { state: string }) =>
-    state !== 'idle' ? <div data-testid="pull-to-refresh">{state}</div> : null,
-  showErrorToast: vi.fn(),
-}));
+vi.mock('@/molecules/NewPostsButton/NewPostsButton', async () => {
+  return {
+    NewPostsButton: ({ visible, count }: { visible: boolean; count: number }) =>
+      visible ? <div data-testid="new-posts-button">{count} new posts</div> : null,
+  };
+});
 
-vi.mock('@/organisms', () => ({
-  TimelinePosts: ({
-    postIds,
-    loading,
-    hasMore,
-  }: {
-    postIds: string[];
-    loading: boolean;
-    loadingMore: boolean;
-    error: string | null;
-    hasMore: boolean;
-    loadMore: () => void;
-    tagsLayout: string;
-  }) => (
-    <div data-testid="timeline-posts">
-      <span data-testid="post-count">{postIds.length}</span>
-      <span data-testid="loading">{loading.toString()}</span>
-      <span data-testid="has-more">{hasMore.toString()}</span>
-    </div>
-  ),
-}));
+vi.mock('@/molecules/PullToRefreshIndicator/PullToRefreshIndicator', async () => {
+  return {
+    PullToRefreshIndicator: ({ state }: { state: string }) =>
+      state !== 'idle' ? <div data-testid="pull-to-refresh">{state}</div> : null,
+  };
+});
+
+vi.mock('@/molecules/Timeline/TimelineLoading', async () => {
+  return {
+    TimelineLoading: () => <div data-testid="timeline-loading">Loading...</div>,
+  };
+});
+
+vi.mock('@/molecules/Toaster/showErrorToast', async () => {
+  return {
+    showErrorToast: vi.fn(),
+  };
+});
+
+vi.mock('@/organisms/Timeline/Posts/Posts', async () => {
+  return {
+    TimelinePosts: ({
+      postIds,
+      loading,
+      hasMore,
+    }: {
+      postIds: string[];
+      loading: boolean;
+      loadingMore: boolean;
+      error: string | null;
+      hasMore: boolean;
+      loadMore: () => void;
+      tagsLayout: string;
+    }) => (
+      <div data-testid="timeline-posts">
+        <span data-testid="post-count">{postIds.length}</span>
+        <span data-testid="loading">{loading.toString()}</span>
+        <span data-testid="has-more">{hasMore.toString()}</span>
+      </div>
+    ),
+  };
+});
 
 const mockLoadMore = vi.fn();
 const mockRefresh = vi.fn();

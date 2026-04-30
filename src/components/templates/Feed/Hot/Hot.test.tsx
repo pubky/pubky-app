@@ -25,84 +25,125 @@ vi.mock('@/hooks/useIsMobile/useIsMobile', () => ({
 }));
 
 // Mock Molecules
-vi.mock('@/molecules', () => ({
-  HotMobileMenu: ({
-    activeSection,
-    onSectionChange,
-  }: {
-    activeSection: string;
-    onSectionChange: (section: string) => void;
-  }) => (
-    <div data-testid="hot-mobile-menu" data-active-section={activeSection}>
-      <button data-testid="tab-tags" onClick={() => onSectionChange('tags')}>
-        Tags
-      </button>
-      <button data-testid="tab-users" onClick={() => onSectionChange('users')}>
-        Users
-      </button>
-      <button data-testid="tab-posts" onClick={() => onSectionChange('posts')}>
-        Posts
-      </button>
-    </div>
-  ),
-}));
+vi.mock('@/molecules/HotMobileMenu/HotMobileMenu', async () => {
+  return {
+    HotMobileMenu: ({
+      activeSection,
+      onSectionChange,
+    }: {
+      activeSection: string;
+      onSectionChange: (section: string) => void;
+    }) => (
+      <div data-testid="hot-mobile-menu" data-active-section={activeSection}>
+        <button data-testid="tab-tags" onClick={() => onSectionChange('tags')}>
+          Tags
+        </button>
+        <button data-testid="tab-users" onClick={() => onSectionChange('users')}>
+          Users
+        </button>
+        <button data-testid="tab-posts" onClick={() => onSectionChange('posts')}>
+          Posts
+        </button>
+      </div>
+    ),
+  };
+});
 
 // Mock Organisms
-vi.mock('@/organisms', () => ({
-  ContentLayout: ({
-    children,
-    hasGradientBackground,
-    className,
-  }: {
-    children: React.ReactNode;
-    hasGradientBackground?: boolean;
-    className?: string;
-  }) => (
-    <div data-testid="content-layout" data-has-gradient-background={hasGradientBackground} className={className}>
-      {children}
-    </div>
-  ),
-  HotFeedSidebar: () => <div data-testid="hot-feed-sidebar">HotFeedSidebar</div>,
-  HotFeedRightSidebar: () => <div data-testid="hot-feed-right-sidebar">HotFeedRightSidebar</div>,
-  HotFeedDrawer: () => <div data-testid="hot-feed-drawer">HotFeedDrawer</div>,
-  HotFeedRightDrawer: () => <div data-testid="hot-feed-right-drawer">HotFeedRightDrawer</div>,
-  HotTagsCardsSection: ({ className }: { className?: string }) => (
-    <div data-testid="hot-tags-cards-section" className={className}>
-      HotTagsCardsSection
-    </div>
-  ),
-  HotTagsOverview: ({ className }: { className?: string }) => (
-    <div data-testid="hot-tags-overview" className={className}>
-      HotTagsOverview
-    </div>
-  ),
-  HotActiveUsers: ({ className }: { className?: string }) => (
-    <div data-testid="hot-active-users" className={className}>
-      HotActiveUsers
-    </div>
-  ),
-  TimelineFeed: () => <div data-testid="timeline-feed">TimelineFeed</div>,
-}));
+vi.mock('@/organisms/ContentLayout/ContentLayout', async () => {
+  return {
+    ContentLayout: ({
+      children,
+      hasGradientBackground,
+      className,
+    }: {
+      children: React.ReactNode;
+      hasGradientBackground?: boolean;
+      className?: string;
+    }) => (
+      <div data-testid="content-layout" data-has-gradient-background={hasGradientBackground} className={className}>
+        {children}
+      </div>
+    ),
+  };
+});
+
+vi.mock('@/organisms/FeedRightSidebar/FeedRightSidebar', async () => {
+  return {
+    HotFeedRightSidebar: () => <div data-testid="hot-feed-right-sidebar">HotFeedRightSidebar</div>,
+    HotFeedRightDrawer: () => <div data-testid="hot-feed-right-drawer">HotFeedRightDrawer</div>,
+  };
+});
+
+vi.mock('@/organisms/HotActiveUsers/HotActiveUsers', async () => {
+  return {
+    HotActiveUsers: ({ className }: { className?: string }) => (
+      <div data-testid="hot-active-users" className={className}>
+        HotActiveUsers
+      </div>
+    ),
+  };
+});
+
+vi.mock('@/organisms/HotFeedFilters/HotFeedFilters', async () => {
+  return {
+    HotFeedSidebar: () => <div data-testid="hot-feed-sidebar">HotFeedSidebar</div>,
+    HotFeedDrawer: () => <div data-testid="hot-feed-drawer">HotFeedDrawer</div>,
+  };
+});
+
+vi.mock('@/organisms/HotTagsCardsSection/HotTagsCardsSection', async () => {
+  return {
+    HotTagsCardsSection: ({ className }: { className?: string }) => (
+      <div data-testid="hot-tags-cards-section" className={className}>
+        HotTagsCardsSection
+      </div>
+    ),
+  };
+});
+
+vi.mock('@/organisms/HotTagsOverview/HotTagsOverview', async () => {
+  return {
+    HotTagsOverview: ({ className }: { className?: string }) => (
+      <div data-testid="hot-tags-overview" className={className}>
+        HotTagsOverview
+      </div>
+    ),
+  };
+});
+
+vi.mock('@/organisms/Timeline/Feed/TimelineFeed/TimelineFeed', async () => {
+  return {
+    TimelineFeed: () => <div data-testid="timeline-feed">TimelineFeed</div>,
+  };
+});
 
 // Mock Atoms
-vi.mock('@/atoms', () => ({
-  Container: ({
-    children,
-    overrideDefaults: _overrideDefaults,
-    ...props
-  }: {
-    children: React.ReactNode;
-    overrideDefaults?: boolean;
-    [key: string]: unknown;
-  }) => (
-    <div data-testid="container" {...props}>
-      {children}
-    </div>
-  ),
-  Heading: ({ children, level }: { children: React.ReactNode; level: number }) => (
-    <div data-testid={`heading-${level}`}>{children}</div>
-  ),
-}));
+vi.mock('@/atoms/Container/Container', async () => {
+  return {
+    Container: ({
+      children,
+      overrideDefaults: _overrideDefaults,
+      ...props
+    }: {
+      children: React.ReactNode;
+      overrideDefaults?: boolean;
+      [key: string]: unknown;
+    }) => (
+      <div data-testid="container" {...props}>
+        {children}
+      </div>
+    ),
+  };
+});
+
+vi.mock('@/atoms/Heading/Heading', async () => {
+  return {
+    Heading: ({ children, level }: { children: React.ReactNode; level: number }) => (
+      <div data-testid={`heading-${level}`}>{children}</div>
+    ),
+  };
+});
 
 describe('Hot', () => {
   beforeEach(() => {

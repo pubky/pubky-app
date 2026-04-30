@@ -1,6 +1,8 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { renderHook, act, waitFor } from '@testing-library/react';
-import * as Molecules from '@/molecules';
+import * as MoleculesshowErrorToastModule from '@/molecules/Toaster/showErrorToast';
+import { showErrorToast } from '@/molecules/Toaster/showErrorToast';
+
 import { useProfileActions } from './useProfileActions';
 import { ErrorMessages } from '@/libs/error/error.messages';
 import { Logger } from '@/libs/logger/logger';
@@ -41,7 +43,7 @@ describe('useProfileActions', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     vi.spyOn(Logger, 'error').mockImplementation(() => {});
-    vi.spyOn(Molecules, 'showErrorToast').mockImplementation(() => {});
+    vi.spyOn(MoleculesshowErrorToastModule, 'showErrorToast').mockImplementation(() => {});
   });
 
   describe('Action handlers', () => {
@@ -186,7 +188,7 @@ describe('useProfileActions', () => {
       });
 
       expect(Logger.error).toHaveBeenCalledWith('Failed to logout:', expect.any(Error));
-      expect(Molecules.showErrorToast).toHaveBeenCalledWith({
+      expect(showErrorToast).toHaveBeenCalledWith({
         description: ErrorMessages.LOGOUT_FAILED,
       });
       expect(mockPush).not.toHaveBeenCalled();

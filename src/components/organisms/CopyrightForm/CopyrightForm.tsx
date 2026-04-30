@@ -2,8 +2,14 @@
 
 import { useCopyrightForm } from '@/hooks/useCopyrightForm/useCopyrightForm';
 import { Controller } from 'react-hook-form';
-import * as Atoms from '@/atoms';
-import * as Molecules from '@/molecules';
+import { Button } from '@/atoms/Button/Button';
+import { Card } from '@/atoms/Card/Card';
+import { Container } from '@/atoms/Container/Container';
+import { RadioGroup, RadioGroupItem } from '@/atoms/RadioGroup/RadioGroup';
+import { Typography } from '@/atoms/Typography/Typography';
+import { ControlledInputField } from '@/molecules/ControlledInputField/ControlledInputField';
+import { ControlledTextareaField } from '@/molecules/ControlledTextareaField/ControlledTextareaField';
+
 import { COPYRIGHT_FORM_FIELDS, COPYRIGHT_ROLES } from '@/hooks/useCopyrightForm/useCopyrightForm.constants';
 import type { CopyrightFormData } from '@/hooks/useCopyrightForm/useCopyrightForm.types';
 import { useTranslations } from 'next-intl';
@@ -17,45 +23,45 @@ export function CopyrightForm() {
   const roleError = errors.role?.message;
   const currentDate = formatUSDate();
   return (
-    <Atoms.Container size="container" className="px-6 pb-12 xl:px-0">
+    <Container size="container" className="px-6 pb-12 xl:px-0">
       <form onSubmit={onSubmit}>
-        <Atoms.Card className="rounded-t-lg rounded-b-none border border-border p-8 md:p-12">
-          <Atoms.Container className="gap-6">
-            <Atoms.Typography as="h1" size="lg">
+        <Card className="rounded-t-lg rounded-b-none border border-border p-8 md:p-12">
+          <Container className="gap-6">
+            <Typography as="h1" size="lg">
               {t('title')}
-            </Atoms.Typography>
+            </Typography>
 
-            <Atoms.Typography size="sm" className="font-normal text-muted-foreground">
+            <Typography size="sm" className="font-normal text-muted-foreground">
               {t('date', {
                 date: currentDate,
               })}
-            </Atoms.Typography>
+            </Typography>
 
-            <Atoms.Typography size="sm" className="font-normal text-muted-foreground">
+            <Typography size="sm" className="font-normal text-muted-foreground">
               {t('companyInfo')}
               <br />
               87 avenida norte, calle El Mirador, edificio Torre Futura, oficina 06, nivel 11, colonia Escalón, del
               municipio de San Salvador, departamento de San Salvador. Código postal 01101, República de El Salvador.
-            </Atoms.Typography>
+            </Typography>
 
-            <Atoms.Container overrideDefaults className="my-3 h-px w-full bg-border" aria-hidden="true" />
+            <Container overrideDefaults className="my-3 h-px w-full bg-border" aria-hidden="true" />
 
-            <Atoms.Container className="gap-6 rounded-lg bg-muted p-4">
-              <Atoms.Typography size="sm" className="font-normal text-muted-foreground">
+            <Container className="gap-6 rounded-lg bg-muted p-4">
+              <Typography size="sm" className="font-normal text-muted-foreground">
                 {t('greeting')}
                 <br />
                 <br />
                 {t('onBehalfOf')}
-              </Atoms.Typography>
-            </Atoms.Container>
+              </Typography>
+            </Container>
 
-            <Atoms.Typography size="md">{t('rightsOwner')}</Atoms.Typography>
+            <Typography size="md">{t('rightsOwner')}</Typography>
 
             <Controller
               control={form.control}
               name={COPYRIGHT_FORM_FIELDS.ROLE}
               render={({ field }) => (
-                <Atoms.RadioGroup
+                <RadioGroup
                   name={field.name}
                   value={field.value ?? ''}
                   onValueChange={field.onChange}
@@ -67,50 +73,45 @@ export function CopyrightForm() {
                   aria-errormessage={roleError ? 'copyright-role-error' : undefined}
                   aria-describedby={roleError ? 'copyright-role-error' : undefined}
                 >
-                  <Atoms.RadioGroupItem value={COPYRIGHT_ROLES.RIGHTS_OWNER} label={t('iAmOwner')} />
-                  <Atoms.RadioGroupItem value={COPYRIGHT_ROLES.REPORTING_ON_BEHALF} label={t('iAmReporting')} />
-                </Atoms.RadioGroup>
+                  <RadioGroupItem value={COPYRIGHT_ROLES.RIGHTS_OWNER} label={t('iAmOwner')} />
+                  <RadioGroupItem value={COPYRIGHT_ROLES.REPORTING_ON_BEHALF} label={t('iAmReporting')} />
+                </RadioGroup>
               )}
             />
 
             {roleError && (
-              <Atoms.Typography
-                id="copyright-role-error"
-                size="sm"
-                className="font-normal text-destructive"
-                role="alert"
-              >
+              <Typography id="copyright-role-error" size="sm" className="font-normal text-destructive" role="alert">
                 {roleError}
-              </Atoms.Typography>
+              </Typography>
             )}
 
-            <Molecules.ControlledInputField<CopyrightFormData>
+            <ControlledInputField<CopyrightFormData>
               name="nameOwner"
               control={form.control}
               label={t('ownerName')}
               labelHint={
-                <Atoms.Typography as="span" overrideDefaults className="text-xs normal-case">
+                <Typography as="span" overrideDefaults className="text-xs normal-case">
                   {' '}
                   {t('ownerNameHint')}
-                </Atoms.Typography>
+                </Typography>
               }
               placeholder={t('ownerName')}
               maxLength={50}
               disabled={isSubmitting}
             />
 
-            <Atoms.Container overrideDefaults className="my-3 h-px w-full bg-border" aria-hidden="true" />
+            <Container overrideDefaults className="my-3 h-px w-full bg-border" aria-hidden="true" />
 
-            <Atoms.Container className="gap-6 rounded-lg bg-muted p-4">
-              <Atoms.Typography size="sm" className="font-normal text-muted-foreground">
+            <Container className="gap-6 rounded-lg bg-muted p-4">
+              <Typography size="sm" className="font-normal text-muted-foreground">
                 We hereby provide notice of copyright infringements pursuant to the terms of the Digital Millennium
                 Copyright Act (the &quot;Act&quot;) and the Pubky Terms and Conditions. Copyright Owner is the owner of
                 the copyrights in the following work(s) (collectively, the &quot;Work(s)&quot;):
-              </Atoms.Typography>
-            </Atoms.Container>
+              </Typography>
+            </Container>
 
-            <Atoms.Container className="gap-8 xl:flex-row xl:justify-between">
-              <Molecules.ControlledTextareaField<CopyrightFormData>
+            <Container className="gap-8 xl:flex-row xl:justify-between">
+              <ControlledTextareaField<CopyrightFormData>
                 name="originalContentUrls"
                 control={form.control}
                 label={t('originalUrls')}
@@ -120,7 +121,7 @@ export function CopyrightForm() {
                 textareaClassName="overflow-y-auto overflow-x-hidden break-words"
               />
 
-              <Molecules.ControlledTextareaField<CopyrightFormData>
+              <ControlledTextareaField<CopyrightFormData>
                 name="briefDescription"
                 control={form.control}
                 label={t('description')}
@@ -129,22 +130,22 @@ export function CopyrightForm() {
                 className="min-w-0"
                 textareaClassName="overflow-y-auto overflow-x-hidden"
               />
-            </Atoms.Container>
+            </Container>
 
-            <Atoms.Container overrideDefaults className="my-3 h-px w-full bg-border" aria-hidden="true" />
+            <Container overrideDefaults className="my-3 h-px w-full bg-border" aria-hidden="true" />
 
-            <Atoms.Container className="gap-6 rounded-lg bg-muted p-4">
-              <Atoms.Typography size="sm" className="font-normal text-muted-foreground">
+            <Container className="gap-6 rounded-lg bg-muted p-4">
+              <Typography size="sm" className="font-normal text-muted-foreground">
                 It has come to Copyright Owner&apos;s attention that your platform (the &quot;Platform&quot;) displays,
                 provides access to or caches materials that infringe Copyright Owner&apos;s copyrights in the Work(s).
                 The following is a list of the infringing material(s) and the URL(s), if applicable, at which the
                 infringing material(s) are accessible on the Platform:
-              </Atoms.Typography>
-            </Atoms.Container>
+              </Typography>
+            </Container>
 
-            <Atoms.Typography size="md">{t('infringingTitle')}</Atoms.Typography>
+            <Typography size="md">{t('infringingTitle')}</Typography>
 
-            <Molecules.ControlledTextareaField<CopyrightFormData>
+            <ControlledTextareaField<CopyrightFormData>
               name="infringingContentUrl"
               control={form.control}
               label={t('infringingUrls')}
@@ -154,10 +155,10 @@ export function CopyrightForm() {
               textareaClassName="overflow-y-auto overflow-x-hidden break-words"
             />
 
-            <Atoms.Container overrideDefaults className="my-3 h-px w-full bg-border" aria-hidden="true" />
+            <Container overrideDefaults className="my-3 h-px w-full bg-border" aria-hidden="true" />
 
-            <Atoms.Container className="gap-6 rounded-lg bg-muted p-4">
-              <Atoms.Typography size="sm" className="font-normal text-muted-foreground">
+            <Container className="gap-6 rounded-lg bg-muted p-4">
+              <Typography size="sm" className="font-normal text-muted-foreground">
                 We have a good faith belief that the use of the Works described in this letter are not authorized by
                 Copyright Owner, any agent of Copyright Owner or any applicable law. The information in this
                 notification is accurate. We swear under penalty of perjury that we are authorized to act on behalf of
@@ -170,13 +171,13 @@ export function CopyrightForm() {
                 the date of this copyright removal request to confirm that the infringing materials have been removed or
                 access disabled. The undersigned may be contacted at the telephone number, address and email address set
                 forth below, as follows:
-              </Atoms.Typography>
-            </Atoms.Container>
+              </Typography>
+            </Container>
 
-            <Atoms.Typography size="md">{t('contact')}</Atoms.Typography>
+            <Typography size="md">{t('contact')}</Typography>
 
-            <Atoms.Container className="gap-8 xl:flex-row xl:justify-between">
-              <Molecules.ControlledInputField<CopyrightFormData>
+            <Container className="gap-8 xl:flex-row xl:justify-between">
+              <ControlledInputField<CopyrightFormData>
                 name="firstName"
                 control={form.control}
                 label={t('firstName')}
@@ -185,7 +186,7 @@ export function CopyrightForm() {
                 disabled={isSubmitting}
               />
 
-              <Molecules.ControlledInputField<CopyrightFormData>
+              <ControlledInputField<CopyrightFormData>
                 name="lastName"
                 control={form.control}
                 label={t('lastName')}
@@ -193,10 +194,10 @@ export function CopyrightForm() {
                 maxLength={30}
                 disabled={isSubmitting}
               />
-            </Atoms.Container>
+            </Container>
 
-            <Atoms.Container className="gap-8 xl:flex-row xl:justify-between">
-              <Molecules.ControlledInputField<CopyrightFormData>
+            <Container className="gap-8 xl:flex-row xl:justify-between">
+              <ControlledInputField<CopyrightFormData>
                 name="email"
                 control={form.control}
                 label={t('email')}
@@ -205,7 +206,7 @@ export function CopyrightForm() {
                 disabled={isSubmitting}
               />
 
-              <Molecules.ControlledInputField<CopyrightFormData>
+              <ControlledInputField<CopyrightFormData>
                 name="phoneNumber"
                 control={form.control}
                 label={t('phone')}
@@ -213,12 +214,12 @@ export function CopyrightForm() {
                 maxLength={30}
                 disabled={isSubmitting}
               />
-            </Atoms.Container>
+            </Container>
 
-            <Atoms.Typography size="md">{t('address')}</Atoms.Typography>
+            <Typography size="md">{t('address')}</Typography>
 
-            <Atoms.Container className="gap-8 xl:flex-row xl:justify-between">
-              <Molecules.ControlledInputField<CopyrightFormData>
+            <Container className="gap-8 xl:flex-row xl:justify-between">
+              <ControlledInputField<CopyrightFormData>
                 name="streetAddress"
                 control={form.control}
                 label={t('street')}
@@ -227,7 +228,7 @@ export function CopyrightForm() {
                 disabled={isSubmitting}
               />
 
-              <Molecules.ControlledInputField<CopyrightFormData>
+              <ControlledInputField<CopyrightFormData>
                 name="country"
                 control={form.control}
                 label={t('country')}
@@ -235,10 +236,10 @@ export function CopyrightForm() {
                 maxLength={50}
                 disabled={isSubmitting}
               />
-            </Atoms.Container>
+            </Container>
 
-            <Atoms.Container className="gap-8 xl:flex-row xl:justify-between">
-              <Molecules.ControlledInputField<CopyrightFormData>
+            <Container className="gap-8 xl:flex-row xl:justify-between">
+              <ControlledInputField<CopyrightFormData>
                 name="city"
                 control={form.control}
                 label={t('city')}
@@ -247,7 +248,7 @@ export function CopyrightForm() {
                 disabled={isSubmitting}
               />
 
-              <Molecules.ControlledInputField<CopyrightFormData>
+              <ControlledInputField<CopyrightFormData>
                 name="stateProvince"
                 control={form.control}
                 label={t('state')}
@@ -255,9 +256,9 @@ export function CopyrightForm() {
                 maxLength={50}
                 disabled={isSubmitting}
               />
-            </Atoms.Container>
+            </Container>
 
-            <Molecules.ControlledInputField<CopyrightFormData>
+            <ControlledInputField<CopyrightFormData>
               name="zipCode"
               control={form.control}
               label={t('zip')}
@@ -266,13 +267,13 @@ export function CopyrightForm() {
               disabled={isSubmitting}
             />
 
-            <Atoms.Container overrideDefaults className="my-3 h-px w-full bg-border" aria-hidden="true" />
+            <Container overrideDefaults className="my-3 h-px w-full bg-border" aria-hidden="true" />
 
-            <Atoms.Typography as="h2" size="md">
+            <Typography as="h2" size="md">
               {t('signature')}
-            </Atoms.Typography>
+            </Typography>
 
-            <Molecules.ControlledInputField<CopyrightFormData>
+            <ControlledInputField<CopyrightFormData>
               name="signature"
               control={form.control}
               label={t('signatureName')}
@@ -280,12 +281,12 @@ export function CopyrightForm() {
               maxLength={100}
               disabled={isSubmitting}
             />
-          </Atoms.Container>
-        </Atoms.Card>
+          </Container>
+        </Card>
 
-        <Atoms.Card className="rounded-t-none rounded-b-lg border border-t-0 border-border p-8">
-          <Atoms.Container className="flex-row justify-end">
-            <Atoms.Button
+        <Card className="rounded-t-none rounded-b-lg border border-t-0 border-border p-8">
+          <Container className="flex-row justify-end">
+            <Button
               type="submit"
               disabled={isSubmitting}
               size="lg"
@@ -300,10 +301,10 @@ export function CopyrightForm() {
               ) : (
                 t('submitForm')
               )}
-            </Atoms.Button>
-          </Atoms.Container>
-        </Atoms.Card>
+            </Button>
+          </Container>
+        </Card>
       </form>
-    </Atoms.Container>
+    </Container>
   );
 }

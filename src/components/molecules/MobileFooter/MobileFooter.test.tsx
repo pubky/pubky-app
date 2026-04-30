@@ -22,38 +22,40 @@ vi.mock('next/navigation', () => ({
 }));
 
 // Mock the organisms
-vi.mock('@/organisms', () => ({
-  AvatarWithFallback: ({
-    avatarUrl,
-    name,
-    size,
-    className,
-    alt,
-  }: {
-    avatarUrl?: string;
-    name: string;
-    size?: string;
-    className?: string;
-    alt?: string;
-  }) => (
-    <div data-testid="avatar-with-fallback" className={className} data-size={size}>
-      {avatarUrl ? (
-        <img data-testid="avatar-image" src={avatarUrl} alt={alt || name} />
-      ) : (
-        <span data-testid="avatar-fallback">
-          {name
-            .trim()
-            .split(/\s+/)
-            .filter(Boolean)
-            .slice(0, 2)
-            .map((part) => part[0]?.toUpperCase())
-            .join('') || 'U'}
-        </span>
-      )}
-      <span data-testid="avatar-name">{name}</span>
-    </div>
-  ),
-}));
+vi.mock('@/organisms/AvatarWithFallback/AvatarWithFallback', async () => {
+  return {
+    AvatarWithFallback: ({
+      avatarUrl,
+      name,
+      size,
+      className,
+      alt,
+    }: {
+      avatarUrl?: string;
+      name: string;
+      size?: string;
+      className?: string;
+      alt?: string;
+    }) => (
+      <div data-testid="avatar-with-fallback" className={className} data-size={size}>
+        {avatarUrl ? (
+          <img data-testid="avatar-image" src={avatarUrl} alt={alt || name} />
+        ) : (
+          <span data-testid="avatar-fallback">
+            {name
+              .trim()
+              .split(/\s+/)
+              .filter(Boolean)
+              .slice(0, 2)
+              .map((part) => part[0]?.toUpperCase())
+              .join('') || 'U'}
+          </span>
+        )}
+        <span data-testid="avatar-name">{name}</span>
+      </div>
+    ),
+  };
+});
 
 // Mock the libs - use actual implementations
 

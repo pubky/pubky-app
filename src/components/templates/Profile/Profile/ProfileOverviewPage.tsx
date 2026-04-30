@@ -1,4 +1,4 @@
-import * as Organisms from '@/organisms';
+import { ProfileProfile } from '@/organisms/ProfileProfile/ProfileProfile';
 
 /**
  * ProfileOverviewPage Template
@@ -7,5 +7,5 @@ import * as Organisms from '@/organisms';
  * Delegates all logic to the ProfileProfile organism.
  */
 export function ProfileOverviewPage() {
-  return <Organisms.ProfileProfile />;
+  return <ProfileProfile />;
 }

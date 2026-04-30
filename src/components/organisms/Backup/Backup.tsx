@@ -3,9 +3,11 @@
 import { useRouter } from 'next/navigation';
 import { useTranslations } from 'next-intl';
 import { useState } from 'react';
+import { PageHeader } from '@/atoms/PageHeader/PageHeader';
+import { PageSubtitle } from '@/atoms/PageSubtitle/PageSubtitle';
+import { ButtonsNavigation } from '@/molecules/ButtonsNavigation/ButtonsNavigation';
+import { PageTitle } from '@/molecules/Page/Page';
 
-import * as Atoms from '@/atoms';
-import * as Molecules from '@/molecules';
 import * as App from '@/app';
 
 export const BackupNavigation = () => {
@@ -19,7 +21,7 @@ export const BackupNavigation = () => {
   };
 
   return (
-    <Molecules.ButtonsNavigation
+    <ButtonsNavigation
       id="backup-navigation"
       loadingContinueButton={loading}
       onHandleContinueButton={onHandleContinueButton}
@@ -32,13 +34,13 @@ export const BackupNavigation = () => {
 export const BackupPageHeader = () => {
   const t = useTranslations('onboarding.backup');
   return (
-    <Atoms.PageHeader data-testid="backup-page-header">
-      <Molecules.PageTitle size="large">
+    <PageHeader data-testid="backup-page-header">
+      <PageTitle size="large">
         {t.rich('title', {
           highlight: (chunks) => <span className="text-brand">{chunks}</span>,
         })}
-      </Molecules.PageTitle>
-      <Atoms.PageSubtitle>{t('subtitle')}</Atoms.PageSubtitle>
-    </Atoms.PageHeader>
+      </PageTitle>
+      <PageSubtitle>{t('subtitle')}</PageSubtitle>
+    </PageHeader>
   );
 };

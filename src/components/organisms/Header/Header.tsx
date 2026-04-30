@@ -3,7 +3,12 @@
 import { usePublicRoute } from '@/hooks/usePublicRoute/usePublicRoute';
 import { usePathname } from 'next/navigation';
 import { useTranslations } from 'next-intl';
-import * as Molecules from '@/molecules';
+import { HeaderContainer, HeaderOnboarding, HeaderTitle } from '@/molecules/Header/Header';
+import { HeaderHome } from '@/molecules/HeaderHome/HeaderHome';
+import { HeaderJoin } from '@/molecules/HeaderJoin/HeaderJoin';
+import { HeaderSignIn } from '@/molecules/HeaderSignIn/HeaderSignIn';
+import { Logo } from '@/molecules/Logo/Logo';
+
 import { pathToStepConfig } from './Header.constants';
 import { useAuthStore } from '@/stores/auth/auth.store';
 export function Header() {
@@ -37,15 +42,15 @@ export function Header() {
   // - Unauthenticated on landing/other: HeaderHome (social links + sign in)
   const renderHeaderContent = () => {
     if (isOnboarding) {
-      return <Molecules.HeaderOnboarding currentStep={currentStep} />;
+      return <HeaderOnboarding currentStep={currentStep} />;
     }
     if (isAuthenticated) {
-      return <Molecules.HeaderSignIn />;
+      return <HeaderSignIn />;
     }
     if (isPublicRoute) {
-      return <Molecules.HeaderJoin />;
+      return <HeaderJoin />;
     }
-    return <Molecules.HeaderHome />;
+    return <HeaderHome />;
   };
 
   // Copyright page shows only logo (minimal header).
@@ -53,20 +58,17 @@ export function Header() {
   // horizontally when navigating between the app and /copyright.
   if (isCopyrightPage) {
     return (
-      <Molecules.HeaderContainer classNameNav={classNameNav}>
-        <Molecules.Logo />
-      </Molecules.HeaderContainer>
+      <HeaderContainer classNameNav={classNameNav}>
+        <Logo />
+      </HeaderContainer>
     );
   }
 
   return (
-    <Molecules.HeaderContainer
-      classNameNav={classNameNav}
-      className={shouldHideHeaderOnMobile ? 'hidden lg:block' : undefined}
-    >
-      <Molecules.Logo noLink={currentStep === 5} />
-      {shouldShowTitle && <Molecules.HeaderTitle currentTitle={currentTitle} />}
+    <HeaderContainer classNameNav={classNameNav} className={shouldHideHeaderOnMobile ? 'hidden lg:block' : undefined}>
+      <Logo noLink={currentStep === 5} />
+      {shouldShowTitle && <HeaderTitle currentTitle={currentTitle} />}
       {renderHeaderContent()}
-    </Molecules.HeaderContainer>
+    </HeaderContainer>
   );
 }

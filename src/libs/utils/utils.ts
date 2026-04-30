@@ -7,7 +7,8 @@ import type {
   FormatPublicKeyProps,
   GetDisplayTagsOptions,
 } from './utils.types';
-import type { PostInputVariant } from '@/organisms';
+import type { PostInputVariant } from '@/organisms/PostInput/PostInput.types';
+
 import * as Config from '@/config';
 import { RADIX_ID_REGEX, RADIX_ID_TEST_REGEX, TAG_BANNED_CHARS } from './utils.constants';
 

@@ -77,20 +77,21 @@ vi.mock('@/hooks/useTagged/useTagged', () => ({
 }));
 
 // Mock molecules
-vi.mock('@/molecules', async (importOriginal) => {
-  const actual = await importOriginal<typeof import('@/molecules')>();
+vi.mock('@/molecules/ProfilePageLinks/ProfilePageLinks', async () => {
   return {
-    ...actual,
-    ProfilePageTaggedAs: () => <div data-testid="profile-page-tagged-as">Tagged as section</div>,
     ProfilePageLinks: () => <div data-testid="profile-page-links">Links section</div>,
   };
 });
 
-// Mock organisms
-vi.mock('@/organisms', async (importOriginal) => {
-  const actual = await importOriginal<typeof import('@/organisms')>();
+vi.mock('@/molecules/ProfilePageTaggedAs/ProfilePageTaggedAs', async () => {
   return {
-    ...actual,
+    ProfilePageTaggedAs: () => <div data-testid="profile-page-tagged-as">Tagged as section</div>,
+  };
+});
+
+// Mock organisms
+vi.mock('@/organisms/ProfilePageHeader/ProfilePageHeader', async () => {
+  return {
     ProfilePageHeader: ({
       profile,
       actions,

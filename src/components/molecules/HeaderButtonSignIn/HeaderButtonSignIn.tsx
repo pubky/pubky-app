@@ -3,7 +3,8 @@
 import { useRouter } from 'next/navigation';
 import { useTranslations } from 'next-intl';
 import * as React from 'react';
-import * as Atoms from '@/atoms';
+import { Button } from '@/atoms/Button/Button';
+
 import * as App from '@/app';
 import { UserRoundPlus } from 'lucide-react';
 export function HeaderButtonSignIn({ ...props }: React.HTMLAttributes<HTMLButtonElement>) {
@@ -13,7 +14,7 @@ export function HeaderButtonSignIn({ ...props }: React.HTMLAttributes<HTMLButton
     router.push(App.ONBOARDING_ROUTES.HUMAN);
   };
   return (
-    <Atoms.Button
+    <Button
       id="header-sign-in-btn"
       data-testid="header-sign-in-btn"
       variant="secondary"
@@ -23,6 +24,6 @@ export function HeaderButtonSignIn({ ...props }: React.HTMLAttributes<HTMLButton
     >
       <UserRoundPlus className="size-4" />
       {t('newHere')}
-    </Atoms.Button>
+    </Button>
   );
 }

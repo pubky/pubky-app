@@ -29,42 +29,56 @@ vi.mock('@/stores/onboarding/onboarding.store', () => ({
 }));
 
 // Mock molecules
-vi.mock('@/molecules', () => ({
-  PageTitle: ({ children, size }: { children: React.ReactNode; size?: string }) => (
-    <div data-testid="page-title" data-size={size}>
-      {children}
-    </div>
-  ),
-  ButtonsNavigation: ({
-    onHandleBackButton,
-    onHandleContinueButton,
-    loadingContinueButton,
-  }: {
-    onHandleBackButton: () => void;
-    onHandleContinueButton: () => void;
-    loadingContinueButton?: boolean;
-  }) => (
-    <div data-testid="buttons-navigation">
-      <button data-testid="back-button" onClick={onHandleBackButton}>
-        Back
-      </button>
-      <button
-        data-testid="continue-button"
-        onClick={onHandleContinueButton}
-        disabled={loadingContinueButton}
-        data-loading={loadingContinueButton}
-      >
-        {loadingContinueButton ? 'Loading...' : 'Continue'}
-      </button>
-    </div>
-  ),
-}));
+vi.mock('@/molecules/ButtonsNavigation/ButtonsNavigation', async () => {
+  return {
+    ButtonsNavigation: ({
+      onHandleBackButton,
+      onHandleContinueButton,
+      loadingContinueButton,
+    }: {
+      onHandleBackButton: () => void;
+      onHandleContinueButton: () => void;
+      loadingContinueButton?: boolean;
+    }) => (
+      <div data-testid="buttons-navigation">
+        <button data-testid="back-button" onClick={onHandleBackButton}>
+          Back
+        </button>
+        <button
+          data-testid="continue-button"
+          onClick={onHandleContinueButton}
+          disabled={loadingContinueButton}
+          data-loading={loadingContinueButton}
+        >
+          {loadingContinueButton ? 'Loading...' : 'Continue'}
+        </button>
+      </div>
+    ),
+  };
+});
+
+vi.mock('@/molecules/Page/Page', async () => {
+  return {
+    PageTitle: ({ children, size }: { children: React.ReactNode; size?: string }) => (
+      <div data-testid="page-title" data-size={size}>
+        {children}
+      </div>
+    ),
+  };
+});
 
 // Mock atoms
-vi.mock('@/atoms', () => ({
-  PageHeader: ({ children }: { children: React.ReactNode }) => <div data-testid="page-header">{children}</div>,
-  PageSubtitle: ({ children }: { children: React.ReactNode }) => <div data-testid="page-subtitle">{children}</div>,
-}));
+vi.mock('@/atoms/PageHeader/PageHeader', async () => {
+  return {
+    PageHeader: ({ children }: { children: React.ReactNode }) => <div data-testid="page-header">{children}</div>,
+  };
+});
+
+vi.mock('@/atoms/PageSubtitle/PageSubtitle', async () => {
+  return {
+    PageSubtitle: ({ children }: { children: React.ReactNode }) => <div data-testid="page-subtitle">{children}</div>,
+  };
+});
 
 describe('PublicKeyHeader', () => {
   it('renders page header with title and subtitle', () => {

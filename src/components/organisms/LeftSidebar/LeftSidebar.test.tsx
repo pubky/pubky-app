@@ -17,28 +17,45 @@ vi.mock('@/stores/home/home.store', () => ({
 }));
 
 // Mock the molecules
-vi.mock('@/molecules', () => ({
-  FilterReach: ({ onTabChange }: { onTabChange?: (tab: string) => void }) => (
-    <div data-testid="filter-reach">
-      <button onClick={() => onTabChange?.('all')}>All</button>
-    </div>
-  ),
-  FilterSort: ({ onTabChange }: { onTabChange?: (tab: string) => void }) => (
-    <div data-testid="filter-sort">
-      <button onClick={() => onTabChange?.('recent')}>Recent</button>
-    </div>
-  ),
-  FilterContent: ({ onTabChange }: { onTabChange?: (tab: string) => void }) => (
-    <div data-testid="filter-root">
-      <button onClick={() => onTabChange?.('all')}>All</button>
-    </div>
-  ),
-  FilterLayout: ({ onTabChange }: { onTabChange?: (tab: string) => void }) => (
-    <div data-testid="filter-root">
-      <button onClick={() => onTabChange?.('columns')}>Columns</button>
-    </div>
-  ),
-}));
+vi.mock('@/molecules/Filters/FilterContent/FilterContent', async () => {
+  return {
+    FilterContent: ({ onTabChange }: { onTabChange?: (tab: string) => void }) => (
+      <div data-testid="filter-root">
+        <button onClick={() => onTabChange?.('all')}>All</button>
+      </div>
+    ),
+  };
+});
+
+vi.mock('@/molecules/Filters/FilterLayout/FilterLayout', async () => {
+  return {
+    FilterLayout: ({ onTabChange }: { onTabChange?: (tab: string) => void }) => (
+      <div data-testid="filter-root">
+        <button onClick={() => onTabChange?.('columns')}>Columns</button>
+      </div>
+    ),
+  };
+});
+
+vi.mock('@/molecules/Filters/FilterReach/FilterReach', async () => {
+  return {
+    FilterReach: ({ onTabChange }: { onTabChange?: (tab: string) => void }) => (
+      <div data-testid="filter-reach">
+        <button onClick={() => onTabChange?.('all')}>All</button>
+      </div>
+    ),
+  };
+});
+
+vi.mock('@/molecules/Filters/FilterSort/FilterSort', async () => {
+  return {
+    FilterSort: ({ onTabChange }: { onTabChange?: (tab: string) => void }) => (
+      <div data-testid="filter-sort">
+        <button onClick={() => onTabChange?.('recent')}>Recent</button>
+      </div>
+    ),
+  };
+});
 
 // Mock the libs
 

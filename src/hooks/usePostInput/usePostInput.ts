@@ -9,8 +9,9 @@ import { useState, useRef, useCallback, useEffect, useLayoutEffect } from 'react
 import { type MDXEditorProps, type MDXEditorMethods } from '@mdxeditor/editor';
 import { useDebounceCallback } from 'usehooks-ts';
 import { useTranslations } from 'next-intl';
-import * as Molecules from '@/molecules';
-import { useTimelineFeedContext } from '@/organisms/Timeline/Feed/TimelineFeed';
+import { useToast } from '@/molecules/Toaster/use-toast';
+import { useTimelineFeedContext } from '@/organisms/Timeline/Feed/TimelineFeed/TimelineFeedContext';
+
 import { POST_INPUT_VARIANT } from '@/organisms/PostInput/PostInput.constants';
 import { getContentWithMention } from '@/hooks/useMentionAutocomplete/useMentionAutocomplete.utils';
 import { useMentionAutocomplete } from '@/hooks/useMentionAutocomplete/useMentionAutocomplete';
@@ -89,7 +90,7 @@ export function usePostInput({
     isSubmitting,
   } = usePost();
   const timelineFeed = useTimelineFeedContext();
-  const { toast } = Molecules.useToast();
+  const { toast } = useToast();
   const { deletePost } = useDeletePost();
 
   // Get original post author's name for repost toast message

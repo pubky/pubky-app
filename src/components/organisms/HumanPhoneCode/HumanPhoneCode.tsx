@@ -1,7 +1,15 @@
 'use client';
+import { Button } from '@/atoms/Button/Button';
+import { Card } from '@/atoms/Card/Card';
+import { Container } from '@/atoms/Container/Container';
+import { Image } from '@/atoms/Image/Image';
+import { PageHeader } from '@/atoms/PageHeader/PageHeader';
+import { PageSubtitle } from '@/atoms/PageSubtitle/PageSubtitle';
+import { Typography } from '@/atoms/Typography/Typography';
+import { HumanPhoneCodeInput } from '@/molecules/HumanPhoneCodeInput/HumanPhoneCodeInput';
+import { PageTitle } from '@/molecules/Page/Page';
+import { useToast } from '@/molecules/Toaster/use-toast';
 
-import * as Atoms from '@/atoms';
-import * as Molecules from '@/molecules';
 import React, { useState } from 'react';
 import { useTranslations } from 'next-intl';
 import type { HumanPhoneCodeProps } from './HumanPhoneCode.types';
@@ -12,7 +20,7 @@ export const HumanPhoneCode = ({ phoneNumber, onBack, onSuccess }: HumanPhoneCod
   const t = useTranslations('onboarding.phoneCode');
   const [code, setCode] = useState<string[]>(['', '', '', '', '', '']);
   const [isVerifyingCode, setIsVerifyingCode] = useState(false);
-  const { toast } = Molecules.useToast();
+  const { toast } = useToast();
   const [resendTimer, setResendTimer] = useState<number>(60);
   React.useEffect(() => {
     const intervalId = setInterval(() => {
@@ -58,58 +66,58 @@ export const HumanPhoneCode = ({ phoneNumber, onBack, onSuccess }: HumanPhoneCod
   const isCodeComplete = code.every((digit) => digit !== '') && code.join('').length === 6;
   return (
     <React.Fragment>
-      <Atoms.PageHeader>
-        <Molecules.PageTitle size="large">
+      <PageHeader>
+        <PageTitle size="large">
           {t.rich('title', {
             highlight: (chunks) => <span className="text-brand">{chunks}</span>,
           })}
-        </Molecules.PageTitle>
-        <Atoms.PageSubtitle>
+        </PageTitle>
+        <PageSubtitle>
           {t('subtitle', {
             phoneNumber,
           })}
-        </Atoms.PageSubtitle>
-      </Atoms.PageHeader>
+        </PageSubtitle>
+      </PageHeader>
 
       {/* Verification code card */}
-      <Atoms.Card data-testid="human-phone-code-card" className="gap-0 p-6 lg:p-12">
-        <Atoms.Container className="flex-col gap-12 lg:flex-row lg:items-start">
+      <Card data-testid="human-phone-code-card" className="gap-0 p-6 lg:p-12">
+        <Container className="flex-col gap-12 lg:flex-row lg:items-start">
           {/* Phone image */}
-          <Atoms.Container className="flex hidden h-full w-full items-center lg:block lg:w-auto">
-            <Atoms.Image
+          <Container className="flex hidden h-full w-full items-center lg:block lg:w-auto">
+            <Image
               priority={true}
               src="/images/sms-verification-phone.webp"
               alt="Pubky phone representing phone verification"
               className="h-auto w-[192px] max-w-full"
             />
-          </Atoms.Container>
+          </Container>
 
           {/* Content section */}
-          <Atoms.Container className="w-full flex-1 flex-col gap-6">
+          <Container className="w-full flex-1 flex-col gap-6">
             {/* Card header */}
-            <Atoms.Container className="flex-col gap-3">
-              <Atoms.Typography as="h3" className="text-2xl leading-[32px] font-semibold text-foreground">
+            <Container className="flex-col gap-3">
+              <Typography as="h3" className="text-2xl leading-[32px] font-semibold text-foreground">
                 {t('label')}
-              </Atoms.Typography>
-              <Atoms.Typography as="p" className="text-base leading-6 font-medium text-secondary-foreground/80">
+              </Typography>
+              <Typography as="p" className="text-base leading-6 font-medium text-secondary-foreground/80">
                 {t('hint', {
                   phoneNumber,
                 })}
-              </Atoms.Typography>
-            </Atoms.Container>
+              </Typography>
+            </Container>
 
-            <Molecules.HumanPhoneCodeInput
+            <HumanPhoneCodeInput
               value={code}
               onChange={setCode}
               onEnter={() => isCodeComplete && !isVerifyingCode && onVerifyCode()}
             />
-          </Atoms.Container>
-        </Atoms.Container>
-      </Atoms.Card>
+          </Container>
+        </Container>
+      </Card>
 
       {/* Buttons */}
-      <Atoms.Container className={cn('mt-6 flex-row justify-between gap-3 lg:gap-6')}>
-        <Atoms.Button
+      <Container className={cn('mt-6 flex-row justify-between gap-3 lg:gap-6')}>
+        <Button
           data-testid="human-phone-resend-code-btn"
           id="human-phone-back-btn"
           size="lg"
@@ -124,8 +132,8 @@ export const HumanPhoneCode = ({ phoneNumber, onBack, onSuccess }: HumanPhoneCod
                 seconds: resendTimer,
               })
             : t('resend')}
-        </Atoms.Button>
-        <Atoms.Button
+        </Button>
+        <Button
           data-testid="human-phone-send-code-btn"
           id="human-phone-send-code-btn"
           size="lg"
@@ -136,8 +144,8 @@ export const HumanPhoneCode = ({ phoneNumber, onBack, onSuccess }: HumanPhoneCod
         >
           <ArrowRight className="mr-2 h-4 w-4" />
           {t('verify')}
-        </Atoms.Button>
-      </Atoms.Container>
+        </Button>
+      </Container>
     </React.Fragment>
   );
 };
