@@ -1,4 +1,4 @@
-import * as Types from './copyright.types';
+import type { TCopyrightSubmitParams } from './copyright.types';
 import { CopyrightApplication } from '@/application/copyright/copyright';
 import { CopyrightValidators } from '@/pipes/copyright/copyright.validators';
 /**
@@ -16,7 +16,7 @@ export class CopyrightController {
    * @param params - Copyright form data
    * @throws AppError if validation fails or submission fails
    */
-  static async submit(params: Types.TCopyrightSubmitParams): Promise<void> {
+  static async submit(params: TCopyrightSubmitParams): Promise<void> {
     // Validate and normalize inputs using pipes layer
     const nameOwner = CopyrightValidators.validateNameOwner(params.nameOwner);
     const originalContentUrls = CopyrightValidators.validateOriginalContentUrls(params.originalContentUrls);

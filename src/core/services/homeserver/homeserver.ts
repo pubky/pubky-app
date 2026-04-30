@@ -1,4 +1,4 @@
-import * as Config from '@/config';
+import { DEFAULT_HTTP_RELAY, HOMESERVER, PKARR_RELAYS, TESTNET } from '@/config/network';
 import {
   Pubky,
   PublicKey,
@@ -48,7 +48,7 @@ import type {
   THomeserverSignUpParams,
 } from '@/services/homeserver/homeserver.types';
 import { useAuthStore } from '@/stores/auth/auth.store';
-const TESTNET = Config.TESTNET.toString() === 'true';
+const IS_TESTNET = TESTNET.toString() === 'true';
 
 const CAPABILITIES = '/pub/pubky.app/:rw';
 const PUB_PATH_PREFIX = '/pub/' as const;
@@ -65,10 +65,10 @@ export class HomeserverService {
    */
   private static getPubkySdk(): Pubky {
     if (!this.pubkySdk) {
-      if (TESTNET) {
+      if (IS_TESTNET) {
         this.pubkySdk = Pubky.testnet();
       } else {
-        const client = new Client({ pkarr: { relays: Config.PKARR_RELAYS } });
+        const client = new Client({ pkarr: { relays: PKARR_RELAYS } });
         this.pubkySdk = Pubky.withClient(client);
       }
     }
@@ -120,7 +120,7 @@ export class HomeserverService {
    */
   static async signUp({ keypair, signupToken }: THomeserverSignUpParams): Promise<THomeserverSessionResult> {
     try {
-      const homeserverPublicKey = PublicKey.from(Config.HOMESERVER);
+      const homeserverPublicKey = PublicKey.from(HOMESERVER);
       const signer = this.getSigner(keypair);
       const session = await signer.signup(homeserverPublicKey, signupToken);
 
@@ -156,7 +156,7 @@ export class HomeserverService {
     } catch (signinError) {
       try {
         // Republish keypair's homeserver
-        const homeserverPublicKey = PublicKey.from(Config.HOMESERVER);
+        const homeserverPublicKey = PublicKey.from(HOMESERVER);
         await signer.pkdns.publishHomeserverForce(homeserverPublicKey);
         Logger.debug('Republish homeserver successful', { keypair: Identity.pubkyFromKeypair(keypair) });
         // Return undefined to signal caller should retry signin after republish
@@ -182,7 +182,7 @@ export class HomeserverService {
 
     try {
       const pubkySdk = this.getPubkySdk();
-      const flow = pubkySdk.startAuthFlow(capabilities, AuthFlowKind.signin(), Config.DEFAULT_HTTP_RELAY);
+      const flow = pubkySdk.startAuthFlow(capabilities, AuthFlowKind.signin(), DEFAULT_HTTP_RELAY);
       const approval = createCancelableAuthApproval(flow);
 
       return {
@@ -191,7 +191,7 @@ export class HomeserverService {
         cancelAuthFlow: approval.cancel,
       };
     } catch (error) {
-      return handleError({ error, additionalContext: { capabilities, relay: Config.DEFAULT_HTTP_RELAY } });
+      return handleError({ error, additionalContext: { capabilities, relay: DEFAULT_HTTP_RELAY } });
     }
   }
 

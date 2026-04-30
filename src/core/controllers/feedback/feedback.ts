@@ -1,4 +1,4 @@
-import * as Types from './feedback.types';
+import type { TFeedbackSubmitParams } from './feedback.types';
 import { FeedbackApplication } from '@/application/feedback/feedback';
 import { FeedbackValidators } from '@/pipes/feedback/feedback.validators';
 /**
@@ -18,7 +18,7 @@ export class FeedbackController {
    * @param params.name - User's display name
    * @throws AppError if validation fails or submission fails
    */
-  static async submit(params: Types.TFeedbackSubmitParams): Promise<void> {
+  static async submit(params: TFeedbackSubmitParams): Promise<void> {
     // Validate and normalize inputs using pipes layer
     const pubky = FeedbackValidators.validatePubky(params.pubky);
     const comment = FeedbackValidators.validateComment(params.comment);

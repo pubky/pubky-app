@@ -1,4 +1,4 @@
-import * as Types from './report.types';
+import type { TReportSubmitParams } from './report.types';
 import { ReportApplication } from '@/application/report/report';
 import { ReportValidators } from '@/pipes/report/report.validators';
 /**
@@ -20,7 +20,7 @@ export class ReportController {
    * @param params.name - Reporter's display name
    * @throws AppError if validation fails or submission fails
    */
-  static async submit(params: Types.TReportSubmitParams): Promise<void> {
+  static async submit(params: TReportSubmitParams): Promise<void> {
     // Validate and normalize inputs using pipes layer
     const pubky = ReportValidators.validatePubky(params.pubky);
     const postUrl = ReportValidators.validatePostUrl(params.postUrl);

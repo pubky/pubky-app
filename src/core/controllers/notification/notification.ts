@@ -1,4 +1,4 @@
-import * as Config from '@/config';
+import { NEXUS_NOTIFICATIONS_LIMIT } from '@/config/nexus';
 import { NotificationApplication } from '@/application/notification/notification';
 import type { TGetOrFetchNotificationsResponse } from '@/application/notification/notification.types';
 import type { TGetNotificationsParams } from '@/controllers/notification/notification.types';
@@ -73,7 +73,7 @@ export class NotificationController {
    */
   static async getOrFetchNotifications({
     olderThan = Infinity,
-    limit = Config.NEXUS_NOTIFICATIONS_LIMIT,
+    limit = NEXUS_NOTIFICATIONS_LIMIT,
   }: TGetNotificationsParams): Promise<TGetOrFetchNotificationsResponse> {
     const userId = useAuthStore.getState().selectCurrentUserPubky();
 

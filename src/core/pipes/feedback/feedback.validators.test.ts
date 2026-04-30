@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { FeedbackValidators } from './feedback.validators';
-import { FEEDBACK_MAX_CHARACTER_LENGTH } from '@/config';
+import { FEEDBACK_MAX_CHARACTER_LENGTH } from '@/config/posts';
 import { AppError } from '@/libs/error/error';
 import { ValidationErrorCode } from '@/libs/error/error.codes';
 import { ErrorCategory, ErrorService } from '@/libs/error/error.types';

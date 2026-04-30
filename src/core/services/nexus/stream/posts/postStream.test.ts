@@ -3,7 +3,7 @@ import { postStreamApi } from './postStream.api';
 import { StreamKind, StreamOrder } from './postStream.types';
 import { createPostStreamParams, breakDownStreamId } from './postStream.utils';
 import { NexusPostStreamService } from './postStream';
-import * as queryNexusModule from '@/services/nexus/nexus.utils';
+import { queryNexus } from '@/services/nexus/nexus.utils';
 import type { Pubky } from '@/models/models.types';
 import { PostStreamTypes, type PostStreamId } from '@/models/stream/post/postStream.types';
 import { StreamSorting, type NexusPost, type NexusPostsKeyStream } from '@/services/nexus/nexus.types';
@@ -19,6 +19,16 @@ import type {
   TStreamWithObserverParams,
 } from '@/services/nexus/stream/posts/postStream.types';
 //TODO: Split the suite by module (postStream.api.test.ts, postStream.utils.test.ts, postStream.service.test.ts) so each file targets the key behaviours of that module under @posts.
+
+vi.mock('@/services/nexus/nexus.utils', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('@/services/nexus/nexus.utils')>();
+  return {
+    ...actual,
+    queryNexus: vi.fn(),
+  };
+});
+
+const mockQueryNexus = vi.mocked(queryNexus);
 
 function callStreamEndpoint(
   endpoint: keyof typeof postStreamApi,
@@ -711,7 +721,7 @@ describe('NexusPostStreamService', () => {
         post_keys: [],
         last_post_score: 0,
       };
-      const queryNexusSpy = vi.spyOn(queryNexusModule, 'queryNexus').mockResolvedValue(mockResponse);
+      const queryNexusSpy = mockQueryNexus.mockResolvedValue(mockResponse);
 
       const fetchParams: TPostStreamFetchParams = {
         params,
@@ -783,7 +793,7 @@ describe('NexusPostStreamService', () => {
         last_post_score: 123456,
       };
 
-      vi.spyOn(queryNexusModule, 'queryNexus').mockResolvedValue(mockResponse);
+      mockQueryNexus.mockResolvedValue(mockResponse);
 
       const params: TPostStreamFetchParams = {
         params: { limit: 10, viewer_id: mockViewerId },
@@ -808,7 +818,7 @@ describe('NexusPostStreamService', () => {
         { details: { id: 'post2', author: 'author1' } } as NexusPost,
         { details: { id: 'post3', author: 'author2' } } as NexusPost,
       ];
-      const queryNexusSpy = vi.spyOn(queryNexusModule, 'queryNexus').mockResolvedValue(mockPosts);
+      const queryNexusSpy = mockQueryNexus.mockResolvedValue(mockPosts);
 
       // Act
       const result = await NexusPostStreamService.fetchByIds({
@@ -830,7 +840,7 @@ describe('NexusPostStreamService', () => {
       // Arrange
       const mockPostIds = ['author1:post1'];
       const mockPosts: NexusPost[] = [{ details: { id: 'post1', author: 'author1' } } as NexusPost];
-      const queryNexusSpy = vi.spyOn(queryNexusModule, 'queryNexus').mockResolvedValue(mockPosts);
+      const queryNexusSpy = mockQueryNexus.mockResolvedValue(mockPosts);
 
       // Act
       const result = await NexusPostStreamService.fetchByIds({ post_ids: mockPostIds });
@@ -846,7 +856,7 @@ describe('NexusPostStreamService', () => {
 
     it('should return empty array when fetching empty post IDs', async () => {
       // Arrange
-      const queryNexusSpy = vi.spyOn(queryNexusModule, 'queryNexus').mockResolvedValue([]);
+      const queryNexusSpy = mockQueryNexus.mockResolvedValue([]);
 
       // Act
       const result = await NexusPostStreamService.fetchByIds({ post_ids: [] });

@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { SettingsController } from './settings';
-import * as i18nUtils from '@/i18n/utils';
+import { setLocaleCookie } from '@/i18n/utils';
 import { asOpaque } from '@/test-utils/type-assertions';
 import { mockAuthStore, mockSettingsStore } from '@/test-utils/stores';
 import { SettingsApplication } from '@/application/settings/settings';
@@ -13,7 +13,13 @@ import {
   defaultPrivacyPreferences,
   type SettingsState,
 } from '@/stores/settings/settings.types';
+
+vi.mock('@/i18n/utils', () => ({
+  setLocaleCookie: vi.fn(),
+}));
+
 const TEST_PUBKY = 'o1gg96ewuojmopcjbz8895478wdtxtzzuxnfjjz8o8e77csa1ngo' as Pubky;
+const mockSetLocaleCookie = vi.mocked(setLocaleCookie);
 
 const mockStoreActions = {
   setNotificationPreference: vi.fn(),
@@ -51,10 +57,10 @@ const mockSettingsState: SettingsState = {
 describe('SettingsController', () => {
   let commitUpdateSpy: ReturnType<typeof vi.spyOn>;
   let extractStateSpy: ReturnType<typeof vi.spyOn>;
-  let setLocaleCookieSpy: ReturnType<typeof vi.spyOn>;
 
   beforeEach(() => {
     vi.clearAllMocks();
+    mockSetLocaleCookie.mockImplementation(() => {});
 
     // Reset pendingCommit between tests to avoid chaining across tests
     // pendingCommit is private; an opaque cast is needed to reset static state between tests
@@ -66,7 +72,6 @@ describe('SettingsController', () => {
 
     extractStateSpy = vi.spyOn(SettingsNormalizer, 'extractState').mockReturnValue(mockSettingsState);
     commitUpdateSpy = vi.spyOn(SettingsApplication, 'commitUpdate').mockResolvedValue(undefined);
-    setLocaleCookieSpy = vi.spyOn(i18nUtils, 'setLocaleCookie').mockImplementation(() => {});
   });
 
   afterEach(() => {
@@ -106,7 +111,7 @@ describe('SettingsController', () => {
       await SettingsController.setLanguage('es');
 
       expect(mockStoreActions.setLanguage).toHaveBeenCalledWith('es');
-      expect(setLocaleCookieSpy).toHaveBeenCalledWith('es');
+      expect(mockSetLocaleCookie).toHaveBeenCalledWith('es');
       expect(commitUpdateSpy).toHaveBeenCalledWith(mockSettingsState, TEST_PUBKY);
     });
   });

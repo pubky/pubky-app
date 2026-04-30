@@ -1,4 +1,4 @@
-import * as Config from '@/config';
+import { STREAM_CACHE_MAX_AGE_MS } from '@/config/nexus';
 import { postStreamQueue } from './muting/post-stream-queue';
 import { MuteFilter } from './muting/mute-filter';
 import { Logger } from '@/libs/logger/logger';
@@ -141,7 +141,7 @@ export class PostStreamApplication {
         streamId,
         headTimestamp: mainStreamHead,
         ageMs: now - mainStreamHead,
-        maxAgeMs: Config.STREAM_CACHE_MAX_AGE_MS,
+        maxAgeMs: STREAM_CACHE_MAX_AGE_MS,
       });
       await Promise.all([
         LocalStreamPostsService.deleteById({ streamId }),
@@ -158,7 +158,7 @@ export class PostStreamApplication {
         streamId,
         headTimestamp: unreadStreamHead,
         ageMs: now - unreadStreamHead,
-        maxAgeMs: Config.STREAM_CACHE_MAX_AGE_MS,
+        maxAgeMs: STREAM_CACHE_MAX_AGE_MS,
       });
       await LocalStreamPostsService.clearUnreadStream({ streamId });
       return;
@@ -179,7 +179,7 @@ export class PostStreamApplication {
       return false;
     }
     const ageMs = now - timestamp;
-    return ageMs > Config.STREAM_CACHE_MAX_AGE_MS;
+    return ageMs > STREAM_CACHE_MAX_AGE_MS;
   }
 
   /**

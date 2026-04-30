@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { NotificationController } from './notification';
-import * as Config from '@/config';
+import { NEXUS_NOTIFICATIONS_LIMIT } from '@/config/nexus';
 import { mockAuthStore, mockNotificationStore } from '@/test-utils/stores';
 import { asOpaque } from '@/test-utils/type-assertions';
 import { NotificationApplication } from '@/application/notification/notification';
@@ -173,8 +173,8 @@ describe('NotificationController', () => {
     beforeEach(() => setupAuthStore());
 
     it.each([
-      { params: {}, expectedOlderThan: Infinity, expectedLimit: Config.NEXUS_NOTIFICATIONS_LIMIT },
-      { params: { olderThan: 5000 }, expectedOlderThan: 5000, expectedLimit: Config.NEXUS_NOTIFICATIONS_LIMIT },
+      { params: {}, expectedOlderThan: Infinity, expectedLimit: NEXUS_NOTIFICATIONS_LIMIT },
+      { params: { olderThan: 5000 }, expectedOlderThan: 5000, expectedLimit: NEXUS_NOTIFICATIONS_LIMIT },
       { params: { limit: 50 }, expectedOlderThan: Infinity, expectedLimit: 50 },
       { params: { olderThan: 8000, limit: 20 }, expectedOlderThan: 8000, expectedLimit: 20 },
     ])('should call application with params: $params', async ({ params, expectedOlderThan, expectedLimit }) => {

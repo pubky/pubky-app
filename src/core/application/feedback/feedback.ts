@@ -1,4 +1,4 @@
-import * as Types from './feedback.types';
+import type { TFeedbackSubmitInput } from './feedback.types';
 import { Logger } from '@/libs/logger/logger';
 import { AppError } from '@/libs/error/error';
 import { ServerErrorCode } from '@/libs/error/error.codes';
@@ -46,7 +46,7 @@ export class FeedbackApplication {
    * @param params.name - User's display name
    * @throws AppError if submission fails
    */
-  static async submit({ pubky, comment, name }: Types.TFeedbackSubmitInput): Promise<void> {
+  static async submit({ pubky, comment, name }: TFeedbackSubmitInput): Promise<void> {
     try {
       // Build email from pubky
       const email = buildChatwootEmail(pubky);
