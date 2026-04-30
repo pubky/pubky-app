@@ -1,10 +1,10 @@
 'use client';
 
 import { forwardRef, useEffect, useRef } from 'react';
-import * as Types from './Video.types';
+import type { VideoProps } from './Video.types';
 import { cn } from '@/libs/utils/utils';
 
-export const Video = forwardRef<HTMLVideoElement, Types.VideoProps>(function Video(
+export const Video = forwardRef<HTMLVideoElement, VideoProps>(function Video(
   {
     'data-testid': dataTestId,
     className,
@@ -13,7 +13,7 @@ export const Video = forwardRef<HTMLVideoElement, Types.VideoProps>(function Vid
     preload = 'metadata',
     pauseVideo,
     ...props
-  }: Types.VideoProps,
+  }: VideoProps,
   ref,
 ) {
   const internalRef = useRef<HTMLVideoElement>(null);

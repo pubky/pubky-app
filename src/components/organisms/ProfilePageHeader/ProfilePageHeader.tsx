@@ -11,7 +11,7 @@ import { StatusPickerWrapper } from '@/molecules/StatusPicker/StatusPickerWrappe
 import { AvatarWithFallback } from '../AvatarWithFallback/AvatarWithFallback';
 import { ProfileMenuActions } from '../ProfileMenuActions/ProfileMenuActions';
 
-import * as Types from './ProfilePageHeader.types';
+import type { ProfilePageHeaderProps } from './ProfilePageHeader.types';
 import { FOLLOW_ACTIONS } from '@/hooks/useFollowUser/useFollowUser.types';
 import { Pencil, KeyRound, Link, Loader2, LogOut, Check, UserMinus, UserRoundPlus, Ellipsis } from 'lucide-react';
 import { extractEmojiFromStatus, parseStatus } from '@/libs/status/status';
@@ -26,7 +26,7 @@ import { cn, formatPublicKey } from '@/libs/utils/utils';
  * Subscribes the profile user to TTL tracking when visible in the viewport.
  * This ensures profile data gets refreshed when stale.
  */
-export function ProfilePageHeader({ profile, actions, isOwnProfile = true, userId }: Types.ProfilePageHeaderProps) {
+export function ProfilePageHeader({ profile, actions, isOwnProfile = true, userId }: ProfilePageHeaderProps) {
   const t = useTranslations('profile.actions');
   const tStatus = useTranslations('status');
   const { avatarUrl, emoji = '🌴', name, bio, publicKey, status } = profile;

@@ -13,7 +13,7 @@ import { TimelineLoadingMore } from '@/molecules/Timeline/TimelineLoadingMore';
 import { TimelineStateWrapper } from '@/molecules/Timeline/TimelineStateWrapper/TimelineStateWrapper';
 import { PostMain } from '../PostMain/PostMain';
 
-import * as Types from './RepliesWithParent.types';
+import type { RepliesWithParentProps, ReplyWithParentProps } from './RepliesWithParent.types';
 import { Logger } from '@/libs/logger/logger';
 import { PostController } from '@/controllers/post/post';
 import { CompositeIdDomain } from '@/models/models.types';
@@ -26,7 +26,7 @@ import { useAuthStore } from '@/stores/auth/auth.store';
  * - Shows the parent post first (without reply line)
  * - Shows the reply post with isReply={true} (with reply line)
  */
-export function RepliesWithParent({ streamId }: Types.RepliesWithParentProps) {
+export function RepliesWithParent({ streamId }: RepliesWithParentProps) {
   const { postIds, loading, loadingMore, error, hasMore, loadMore } = useStreamPagination({ streamId });
   const { navigateToPost } = usePostNavigation();
 
@@ -70,7 +70,7 @@ export function RepliesWithParent({ streamId }: Types.RepliesWithParentProps) {
  * Component that fetches and displays a reply post along with its parent.
  * Always shows the parent post if it exists.
  */
-function ReplyWithParent({ replyPostId, onPostClick }: Types.ReplyWithParentProps) {
+function ReplyWithParent({ replyPostId, onPostClick }: ReplyWithParentProps) {
   // Component-level cache to track in-flight parent post fetches
   // Using useRef to avoid SSR memory leaks and state pollution
   const fetchingParentPostsRef = useRef(new Set<string>());

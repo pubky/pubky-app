@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { NEXUS_POSTS_PER_PAGE } from '@/config/nexus';
-import * as Types from './useStreamPagination.types';
+import type { UseStreamPaginationOptions, UseStreamPaginationResult } from './useStreamPagination.types';
 import { Logger } from '@/libs/logger/logger';
 import { isAppError } from '@/libs/error/error.utils';
 import { NOT_FOUND_CACHED_STREAM } from '@/controllers/stream/posts/post.constants';
@@ -20,7 +20,7 @@ export function useStreamPagination({
   streamId,
   limit = NEXUS_POSTS_PER_PAGE,
   resetOnStreamChange = true,
-}: Types.UseStreamPaginationOptions): Types.UseStreamPaginationResult {
+}: UseStreamPaginationOptions): UseStreamPaginationResult {
   const [postIds, setPostIds] = useState<string[]>([]);
   const [lastPostId, setLastPostId] = useState<string | undefined>(undefined);
   const [streamTail, setStreamTail] = useState<number>(NOT_FOUND_CACHED_STREAM);

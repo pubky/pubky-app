@@ -1,9 +1,9 @@
 import * as React from 'react';
 import NextImage from 'next/image';
-import * as Types from './Image.types';
+import type { ImageProps } from './Image.types';
 import { cn } from '@/libs/utils/utils';
 
-export const Image = React.forwardRef<HTMLImageElement, Types.ImageProps>(
+export const Image = React.forwardRef<HTMLImageElement, ImageProps>(
   ({ className, src, alt, fill, unoptimized = true, width, height, ...props }, ref) => {
     // For external URLs or when fill is not used, we need width/height
     // If width/height are not provided, use unoptimized mode

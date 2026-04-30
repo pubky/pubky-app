@@ -11,7 +11,7 @@ import { MobileHeader } from '@/molecules/MobileHeader/MobileHeader';
 import { SideDrawer } from '@/molecules/SideDrawer/SideDrawer';
 
 import { LAYOUT_DIMENSIONS } from '@/config/layoutDimensions';
-import * as Types from './ContentLayout.types';
+import type { ContentLayoutProps, StickySidebarProps } from './ContentLayout.types';
 import { cn } from '@/libs/utils/utils';
 import { useHomeStore } from '@/stores/home/home.store';
 import { LAYOUT } from '@/stores/home/home.types';
@@ -21,7 +21,7 @@ import { pubkyLayoutToHomeLayout } from '@/utils/pubky-app-spec-feed-mappers';
  * Sidebars stay pinned below the main header and scroll independently
  * from the center column when viewport height is limited.
  */
-function StickySidebar({ children }: Types.StickySidebarProps) {
+function StickySidebar({ children }: StickySidebarProps) {
   const stickyTop = LAYOUT_DIMENSIONS.HEADER_OFFSET_MAIN;
   const sidebarMaxHeight = `calc(100svh - ${stickyTop}px - ${LAYOUT_DIMENSIONS.SIDEBAR_BOTTOM_OFFSET}px)`;
 
@@ -57,7 +57,7 @@ export function ContentLayout({
   className,
   classNameWrapperContent,
   feedVariant,
-}: Types.ContentLayoutProps) {
+}: ContentLayoutProps) {
   const { layout: homeLayout } = useHomeStore();
   const customFeed = useCustomFeed();
   const customFeedLayout = customFeed?.layout !== undefined ? pubkyLayoutToHomeLayout(customFeed.layout) : undefined;

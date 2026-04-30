@@ -2,10 +2,10 @@ import { Badge } from '@/atoms/Badge/Badge';
 import { Container } from '@/atoms/Container/Container';
 import { Input } from '@/atoms/Input/Input';
 
-import * as Types from './WordSlot.types';
+import type { WordSlotProps } from './WordSlot.types';
 import { cn } from '@/libs/utils/utils';
 
-export const WordSlot = (props: Types.WordSlotProps) => {
+export const WordSlot = (props: WordSlotProps) => {
   const { index, word, mode } = props;
 
   if (mode === 'editable') {

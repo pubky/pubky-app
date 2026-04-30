@@ -10,7 +10,7 @@ import { FilterItem, FilterItemIcon, FilterItemLabel } from '@/atoms/Filter/Filt
 import { Spinner } from '@/atoms/Spinner/Spinner';
 import { Typography } from '@/atoms/Typography/Typography';
 
-import * as Types from '@/app/profile/types';
+import { PROFILE_PAGE_TYPES, type FilterBarPageType } from '@/app/profile/types';
 import { LAYOUT_DIMENSIONS } from '@/config/layoutDimensions';
 import { Bell, StickyNote, MessageCircle, UsersRound, HeartHandshake, Tag } from 'lucide-react';
 import { UsersRound2 } from '@/icons';
@@ -22,15 +22,15 @@ export interface ProfilePageFilterBarItem {
   }>;
   labelKey: string;
   count: number | undefined;
-  pageType: Types.FilterBarPageType;
+  pageType: FilterBarPageType;
   /** Whether this item should only be shown for own profile */
   ownProfileOnly?: boolean;
 }
 export interface ProfilePageFilterBarProps {
   items?: ProfilePageFilterBarItem[];
   stats?: ProfileStats;
-  activePage: Types.FilterBarPageType;
-  onPageChangeAction: (page: Types.FilterBarPageType) => void;
+  activePage: FilterBarPageType;
+  onPageChangeAction: (page: FilterBarPageType) => void;
   /** Whether this is the logged-in user's own profile */
   isOwnProfile?: boolean;
 }
@@ -42,7 +42,7 @@ const FILTER_ITEMS_CONFIG: Array<{
     className?: string;
   }>;
   labelKey: string;
-  pageType: Types.FilterBarPageType;
+  pageType: FilterBarPageType;
   statKey: keyof ProfileStats;
   /** Whether this item should only be shown for own profile */
   ownProfileOnly?: boolean;
@@ -50,44 +50,44 @@ const FILTER_ITEMS_CONFIG: Array<{
   {
     icon: Bell,
     labelKey: 'notifications',
-    pageType: Types.PROFILE_PAGE_TYPES.NOTIFICATIONS,
+    pageType: PROFILE_PAGE_TYPES.NOTIFICATIONS,
     statKey: 'notifications',
     ownProfileOnly: true, // Notifications only make sense for logged-in user
   },
   {
     icon: StickyNote,
     labelKey: 'posts',
-    pageType: Types.PROFILE_PAGE_TYPES.POSTS,
+    pageType: PROFILE_PAGE_TYPES.POSTS,
     statKey: 'posts',
   },
   {
     icon: MessageCircle,
     labelKey: 'replies',
-    pageType: Types.PROFILE_PAGE_TYPES.REPLIES,
+    pageType: PROFILE_PAGE_TYPES.REPLIES,
     statKey: 'replies',
   },
   {
     icon: UsersRound,
     labelKey: 'followers',
-    pageType: Types.PROFILE_PAGE_TYPES.FOLLOWERS,
+    pageType: PROFILE_PAGE_TYPES.FOLLOWERS,
     statKey: 'followers',
   },
   {
     icon: UsersRound2,
     labelKey: 'following',
-    pageType: Types.PROFILE_PAGE_TYPES.FOLLOWING,
+    pageType: PROFILE_PAGE_TYPES.FOLLOWING,
     statKey: 'following',
   },
   {
     icon: HeartHandshake,
     labelKey: 'friends',
-    pageType: Types.PROFILE_PAGE_TYPES.FRIENDS,
+    pageType: PROFILE_PAGE_TYPES.FRIENDS,
     statKey: 'friends',
   },
   {
     icon: Tag,
     labelKey: 'tagged',
-    pageType: Types.PROFILE_PAGE_TYPES.UNIQUE_TAGS,
+    pageType: PROFILE_PAGE_TYPES.UNIQUE_TAGS,
     statKey: 'uniqueTags',
   },
 ];
@@ -139,7 +139,7 @@ export function ProfilePageFilterBar({
   });
 
   // Handle item click - require auth for unauthenticated users
-  const handleItemClick = (pageType: Types.FilterBarPageType) => {
+  const handleItemClick = (pageType: FilterBarPageType) => {
     requireAuth(() => onPageChangeAction(pageType));
   };
   return (

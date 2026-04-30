@@ -1,7 +1,7 @@
 import { Container } from '@/atoms/Container/Container';
 import { Iframe } from '@/atoms/Iframe/Iframe';
 
-import * as ProviderTypes from '../Provider.types';
+import type { EmbedData, EmbedProvider } from '../Provider.types';
 import { VIDEO_EMBED_PROPS } from '../Provider.constants';
 import { convertHmsToSeconds } from '@/libs/utils/utils';
 import { HMS_TIMESTAMP_REGEX } from '@/libs/utils/utils.constants';
@@ -111,7 +111,7 @@ const VIMEO_DOMAINS = ['vimeo.com', 'www.vimeo.com', 'player.vimeo.com'] as cons
  * Vimeo embed provider
  * Implements the standard EmbedProvider interface
  */
-export const Vimeo: ProviderTypes.EmbedProvider = {
+export const Vimeo: EmbedProvider = {
   /**
    * List of supported Vimeo domains
    */
@@ -120,7 +120,7 @@ export const Vimeo: ProviderTypes.EmbedProvider = {
   /**
    * Parse Vimeo URL and return embed information
    */
-  parseEmbed: (url: string): ProviderTypes.EmbedData | null => {
+  parseEmbed: (url: string): EmbedData | null => {
     const id = extractVimeoId(url);
 
     if (!id) return null;
@@ -137,7 +137,7 @@ export const Vimeo: ProviderTypes.EmbedProvider = {
    * Render Vimeo iframe embed with responsive aspect ratio wrapper
    * Following Vimeo's official embed pattern
    */
-  renderEmbed: (embedData: ProviderTypes.EmbedData) => {
+  renderEmbed: (embedData: EmbedData) => {
     // Type guard: ensure we have a URL type
     if (embedData.type !== 'url') return null;
 
