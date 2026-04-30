@@ -6,7 +6,6 @@ import { Container } from '@/atoms/Container/Container';
 import { Heading } from '@/atoms/Heading/Heading';
 import { TaggedEmpty } from '@/molecules/TaggedEmpty/TaggedEmpty';
 import { TaggedSection } from '@/molecules/TaggedSection/TaggedSection';
-
 import { useProfileContext } from '@/providers/ProfileProvider/ProfileProvider';
 import { ProfileTaggedSkeleton } from './ProfileTagged.skeleton';
 

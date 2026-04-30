@@ -10,7 +10,6 @@ import { Container } from '@/atoms/Container/Container';
 import { ProfilePageLinks } from '@/molecules/ProfilePageLinks/ProfilePageLinks';
 import { ProfilePageTaggedAs } from '@/molecules/ProfilePageTaggedAs/ProfilePageTaggedAs';
 import { FeedbackCard } from '../FeedbackCard/FeedbackCard';
-
 import { useProfileContext } from '@/providers/ProfileProvider/ProfileProvider';
 import * as Config from '@/config';
 import { MAX_SIDEBAR_TAGS } from './ProfilePageSidebar.constants';

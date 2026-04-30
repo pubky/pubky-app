@@ -9,7 +9,6 @@ import { Heading } from '@/atoms/Heading/Heading';
 import { FollowingEmpty } from '@/molecules/FollowingEmpty/FollowingEmpty';
 import { FullUserListItemSkeleton } from '../FullUserListItemSkeleton/FullUserListItemSkeleton';
 import { UserListItem } from '../UserListItem/UserListItem';
-
 import { useProfileContext } from '@/providers/ProfileProvider/ProfileProvider';
 import { NEXUS_USERS_PER_PAGE } from '@/config';
 import type { Pubky } from '@/models/models.types';

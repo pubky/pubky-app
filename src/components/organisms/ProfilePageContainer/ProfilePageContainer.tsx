@@ -10,7 +10,6 @@ import { MobileHeader } from '@/molecules/MobileHeader/MobileHeader';
 import { ProfilePageLayoutWrapper } from '@/molecules/ProfilePageLayoutWrapper/ProfilePageLayoutWrapper';
 import { UserNotFound } from '@/molecules/UserNotFound/UserNotFound';
 import { ProfilePageLayout } from '../ProfilePageLayout/ProfilePageLayout';
-
 import { useProfileContext } from '@/providers/ProfileProvider/ProfileProvider';
 import { useAuthStore } from '@/stores/auth/auth.store';
 export interface ProfilePageContainerProps {

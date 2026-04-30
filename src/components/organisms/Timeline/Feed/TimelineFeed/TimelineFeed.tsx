@@ -9,7 +9,6 @@ import { useStreamIdFromFilters } from '@/hooks/useStreamIdFromFilters/useStream
 import { useSyncInteractiveVisualContent } from '@/hooks/useSyncInteractiveVisualContent/useSyncInteractiveVisualContent';
 import { TIMELINE_FEED_VARIANT } from '@/config';
 import { TimelineLoading } from '@/molecules/Timeline/TimelineLoading';
-
 import { useProfileContext } from '@/providers/ProfileProvider/ProfileProvider';
 import { getTagsLayoutForSurfaceLayout } from '@/organisms/PostMain/PostMainLayout';
 import type { TimelineFeedProps } from './TimelineFeed.types';

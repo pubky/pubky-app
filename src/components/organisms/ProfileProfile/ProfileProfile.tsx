@@ -9,10 +9,8 @@ import * as React from 'react';
 import { Container } from '@/atoms/Container/Container';
 import { ProfilePageLinks } from '@/molecules/ProfilePageLinks/ProfilePageLinks';
 import { ProfilePageTaggedAs } from '@/molecules/ProfilePageTaggedAs/ProfilePageTaggedAs';
-
 import { useProfileContext } from '@/providers/ProfileProvider/ProfileProvider';
 import { ProfilePageHeader } from '../ProfilePageHeader/ProfilePageHeader';
-
 import { MAX_SIDEBAR_TAGS } from '../ProfilePageSidebar/ProfilePageSidebar.constants';
 
 /**

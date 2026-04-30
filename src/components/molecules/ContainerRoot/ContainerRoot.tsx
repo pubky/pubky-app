@@ -2,7 +2,6 @@ import { Inter_Tight } from 'next/font/google';
 import Script from 'next/script';
 import { Container } from '@/atoms/Container/Container';
 import { PageContainer } from '../Page/Page';
-
 import { isRtlLocale } from '@/i18n/constants';
 import { Env } from '@/libs/env/env';
 

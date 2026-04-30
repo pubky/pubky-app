@@ -3,7 +3,6 @@
 import { createContext, useEffect, useRef, useState, type ReactNode } from 'react';
 import { Container } from '@/atoms/Container/Container';
 import { Spinner } from '@/atoms/Spinner/Spinner';
-
 import { type DatabaseContextType } from '@/providers/DatabaseProvider/DatabaseProvider.types';
 import { AppError } from '@/libs/error/error';
 import { DatabaseErrorCode } from '@/libs/error/error.codes';

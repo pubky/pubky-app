@@ -1,6 +1,5 @@
 import * as React from 'react';
 import { ProfilePageContainer } from '@/organisms/ProfilePageContainer/ProfilePageContainer';
-
 import { ProfileProvider } from '@/providers/ProfileProvider/ProfileProvider';
 
 /**
