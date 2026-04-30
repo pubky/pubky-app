@@ -25,13 +25,19 @@ vi.mock('@/config', async (importOriginal) => {
   };
 });
 
-// Mock the Env module (admin credentials are now server-side only)
-vi.mock('@/libs/env/env', () => ({
-  Env: {
-    HOMESERVER_ADMIN_URL: 'http://test-admin.com',
-    HOMESERVER_ADMIN_PASSWORD: 'test-password',
-  },
-}));
+// Mock the Env module (admin credentials are now server-side only).
+// Merge with real Env so @/config/database still gets NEXT_PUBLIC_DB_NAME / NEXT_PUBLIC_DB_VERSION
+// (franky is loaded via the module graph; a partial Env would break Dexie.version()).
+vi.mock('@/libs/env/env', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('@/libs/env/env')>();
+  return {
+    Env: {
+      ...actual.Env,
+      HOMESERVER_ADMIN_URL: 'http://test-admin.com',
+      HOMESERVER_ADMIN_PASSWORD: 'test-password',
+    },
+  };
+});
 
 // Mock HomeserverService methods
 vi.mock('@/services/homeserver/homeserver', () => ({
