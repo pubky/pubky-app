@@ -10,7 +10,7 @@ import { MobileFooter } from '@/molecules/MobileFooter/MobileFooter';
 import { MobileHeader } from '@/molecules/MobileHeader/MobileHeader';
 import { SideDrawer } from '@/molecules/SideDrawer/SideDrawer';
 
-import * as Config from '@/config';
+import { LAYOUT_DIMENSIONS } from '@/config/layoutDimensions';
 import * as Types from './ContentLayout.types';
 import { cn } from '@/libs/utils/utils';
 import { useHomeStore } from '@/stores/home/home.store';
@@ -22,8 +22,8 @@ import { pubkyLayoutToHomeLayout } from '@/utils/pubky-app-spec-feed-mappers';
  * from the center column when viewport height is limited.
  */
 function StickySidebar({ children }: Types.StickySidebarProps) {
-  const stickyTop = Config.LAYOUT_DIMENSIONS.HEADER_OFFSET_MAIN;
-  const sidebarMaxHeight = `calc(100svh - ${stickyTop}px - ${Config.LAYOUT_DIMENSIONS.SIDEBAR_BOTTOM_OFFSET}px)`;
+  const stickyTop = LAYOUT_DIMENSIONS.HEADER_OFFSET_MAIN;
+  const sidebarMaxHeight = `calc(100svh - ${stickyTop}px - ${LAYOUT_DIMENSIONS.SIDEBAR_BOTTOM_OFFSET}px)`;
 
   return (
     <Container

@@ -68,8 +68,11 @@ vi.mock('@/models/user/counts/userCounts', () => ({
 }));
 
 // Mock Config
-vi.mock('@/config', () => ({
+vi.mock('@/config/nexus', () => ({
   NEXUS_USERS_PER_PAGE: 20,
+}));
+
+vi.mock('@/config/moderation', () => ({
   MODERATED_TAGS: ['nudity'],
 }));
 

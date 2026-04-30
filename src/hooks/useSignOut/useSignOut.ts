@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation';
 import { useTranslations } from 'next-intl';
 import { useToast } from '@/molecules/Toaster/use-toast';
 
-import * as App from '@/app';
+import { AUTH_ROUTES } from '@/app/routes';
 import type { UseSignOutResult } from './useSignOut.types';
 import { Logger } from '@/libs/logger/logger';
 import { AuthController } from '@/controllers/auth/auth';
@@ -28,7 +28,7 @@ export function useSignOut(): UseSignOutResult {
     setIsLoading(true);
     try {
       await AuthController.logout();
-      router.push(App.AUTH_ROUTES.LOGOUT);
+      router.push(AUTH_ROUTES.LOGOUT);
     } catch (error) {
       Logger.error('Failed to sign out:', { error });
       showErrorToast(tErrors('signOutFailed'));

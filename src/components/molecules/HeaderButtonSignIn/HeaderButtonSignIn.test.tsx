@@ -34,7 +34,7 @@ vi.mock('@/atoms/Button/Button', async () => {
 });
 
 // Mock app
-vi.mock('@/app', () => ({
+vi.mock('@/app/routes', () => ({
   ONBOARDING_ROUTES: {
     HUMAN: '/onboarding/human',
   },

@@ -14,7 +14,7 @@ import {
 } from '@/atoms/Dialog/Dialog';
 import { Typography } from '@/atoms/Typography/Typography';
 
-import * as Config from '@/config';
+import { URL_TRUNCATE_LENGTH } from '@/config/urls';
 import type { DialogCheckLinkProps } from './DialogCheckLink.types';
 import { ExternalLink } from 'lucide-react';
 import { truncateMiddle } from '@/libs/utils/utils';
@@ -46,7 +46,7 @@ export function DialogCheckLink({ open, onOpenChangeAction, linkUrl }: DialogChe
   };
 
   // Truncate URL for display (preserves beginning and end)
-  const displayUrl = useMemo(() => truncateMiddle(linkUrl, Config.URL_TRUNCATE_LENGTH), [linkUrl]);
+  const displayUrl = useMemo(() => truncateMiddle(linkUrl, URL_TRUNCATE_LENGTH), [linkUrl]);
   return (
     <Dialog open={open} onOpenChange={onOpenChangeAction}>
       <DialogContent className="w-2xl" hiddenTitle="Double-check this link" onClick={(e) => e.stopPropagation()}>

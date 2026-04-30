@@ -14,7 +14,7 @@ import enMessages from '../../messages/en.json';
 // =============================================================================
 // The Env singleton in @/libs/env/env is parsed at module load time.
 // If we import from @/libs/utils/utils before setting process.env, the import chain
-// (@/libs/utils/utils -> @/config -> @/libs/env/env) will initialize Env with wrong values.
+// (@/libs/utils/utils -> @/config/<module> -> @/libs/env/env) will initialize Env with wrong values.
 // See: https://github.com/pubky/pubky-app/issues/1101
 
 process.env.NEXT_PUBLIC_DB_VERSION = '1';

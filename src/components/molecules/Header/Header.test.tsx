@@ -114,8 +114,8 @@ vi.mock('@/molecules/ProgressSteps/ProgressSteps', async () => {
 // Mock the libs - keep real implementations and only stub helpers we need
 
 // Mock the config
-vi.mock('@/config', async (importOriginal) => {
-  const actual = await importOriginal<typeof import('@/config')>();
+vi.mock('@/config/externalLinks', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('@/config/externalLinks')>();
   return {
     ...actual,
     GITHUB_URL: 'https://github.com',
@@ -125,8 +125,8 @@ vi.mock('@/config', async (importOriginal) => {
 });
 
 // Mock the app routes
-vi.mock('@/app', async (importOriginal) => {
-  const actual = await importOriginal<typeof import('@/app')>();
+vi.mock('@/app/routes', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('@/app/routes')>();
   return {
     ...actual,
     AUTH_ROUTES: {

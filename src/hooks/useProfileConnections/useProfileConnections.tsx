@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useCallback, useRef, useMemo } from 'react';
 import { useLiveQuery } from 'dexie-react-hooks';
-import * as Config from '@/config';
+import { NEXUS_USERS_PER_PAGE } from '@/config/nexus';
 import type { ConnectionType, UserConnectionData, UseProfileConnectionsResult } from './useProfileConnections.types';
 import { Logger } from '@/libs/logger/logger';
 import { isAppError } from '@/libs/error/error.utils';
@@ -76,7 +76,7 @@ export function useProfileConnections(type: ConnectionType, userId?: Pubky): Use
   // Sync userIds when stream changes in cache (e.g., after follow/unfollow)
   useEffect(() => {
     if (cachedStream !== null && !isLoading) {
-      const hasPaginated = skip > Config.NEXUS_USERS_PER_PAGE;
+      const hasPaginated = skip > NEXUS_USERS_PER_PAGE;
       if (hasPaginated) return;
 
       // For own following list: only sync when cache has MORE users (new follows)
@@ -231,7 +231,7 @@ export function useProfileConnections(type: ConnectionType, userId?: Pubky): Use
         const result = await StreamUserController.getOrFetchStreamSlice({
           streamId,
           skip: currentSkip,
-          limit: Config.NEXUS_USERS_PER_PAGE,
+          limit: NEXUS_USERS_PER_PAGE,
         });
 
         let pageIds = result.nextPageIds;
@@ -271,7 +271,7 @@ export function useProfileConnections(type: ConnectionType, userId?: Pubky): Use
         setSkip(nextSkip);
 
         // Check hasMore based on response length
-        const hasMoreConnections = pageIds.length >= Config.NEXUS_USERS_PER_PAGE;
+        const hasMoreConnections = pageIds.length >= NEXUS_USERS_PER_PAGE;
         setHasMore(hasMoreConnections);
 
         // Update state with all IDs (including duplicates for cursor tracking)

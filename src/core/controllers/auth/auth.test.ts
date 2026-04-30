@@ -259,13 +259,16 @@ vi.mock('@synonymdev/pubky', () => ({
   createRecoveryFile: vi.fn(() => new Uint8Array([1, 2, 3, 4, 5])),
 }));
 
-// Admin credentials are now server-side only (not exposed to client)
-vi.mock('@/libs/env/env', () => ({
-  Env: {
-    HOMESERVER_ADMIN_URL: 'http://test-admin.com',
-    HOMESERVER_ADMIN_PASSWORD: 'test-password',
-  },
-}));
+vi.mock('@/libs/env/env', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('@/libs/env/env')>();
+  return {
+    Env: {
+      ...actual.Env,
+      HOMESERVER_ADMIN_URL: 'http://test-admin.com',
+      HOMESERVER_ADMIN_PASSWORD: 'test-password',
+    },
+  };
+});
 
 describe('AuthController', () => {
   beforeEach(() => {

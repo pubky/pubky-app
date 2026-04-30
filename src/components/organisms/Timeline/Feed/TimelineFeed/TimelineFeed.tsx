@@ -7,7 +7,7 @@ import { useHotStreamId } from '@/hooks/useHotStreamId/useHotStreamId';
 import { useSearchStreamId } from '@/hooks/useSearchStreamId/useSearchStreamId';
 import { useStreamIdFromFilters } from '@/hooks/useStreamIdFromFilters/useStreamIdFromFilters';
 import { useSyncInteractiveVisualContent } from '@/hooks/useSyncInteractiveVisualContent/useSyncInteractiveVisualContent';
-import { TIMELINE_FEED_VARIANT } from '@/config';
+import { TIMELINE_FEED_VARIANT } from '@/config/feed';
 import { TimelineLoading } from '@/molecules/Timeline/TimelineLoading';
 import { useProfileContext } from '@/providers/ProfileProvider/ProfileProvider';
 import { getTagsLayoutForSurfaceLayout } from '@/organisms/PostMain/PostMainLayout';

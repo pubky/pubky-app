@@ -13,7 +13,7 @@ import { EmojiPickerDialog } from '../EmojiPickerDialog/EmojiPickerDialog';
 
 import { TAG_INPUT_BLUR_DELAY_MS } from '@/hooks/useTagInput/useTagInput.constants';
 import { mergeTagSuggestions } from '@/hooks/useTagInput/useTagInput.utils';
-import { TAG_MAX_LENGTH } from '@/config';
+import { TAG_MAX_LENGTH } from '@/config/posts';
 import type { TagInputProps, TagInputHandle } from './TagInput.types';
 import { TagSuggestionsDropdown } from './TagSuggestionsDropdown/TagSuggestionsDropdown';
 

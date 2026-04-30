@@ -16,8 +16,8 @@ import { PageTitle } from '../Page/Page';
 import { PopoverTradeoffs } from '../PopoverTradeoffs/PopoverTradeoffs';
 import { DialogDownloadPubkyRing } from '@/organisms/DialogDownloadPubkyRing/DialogDownloadPubkyRing';
 
-import * as Config from '@/config';
-import * as App from '@/app';
+import { PUBKY_RING_URL, PUBKY_CORE_URL } from '@/config/externalLinks';
+import { ONBOARDING_ROUTES } from '@/app/routes';
 import { Loader2, AppWindow, ArrowRight } from 'lucide-react';
 import { cn } from '@/libs/utils/utils';
 export const InstallCard = () => {
@@ -55,12 +55,12 @@ export const InstallFooter = () => {
     <FooterLinks className="py-6">
       {t.rich('alternative', {
         pubkyRing: (chunks) => (
-          <Link href={Config.PUBKY_RING_URL} target="_blank">
+          <Link href={PUBKY_RING_URL} target="_blank">
             {chunks}
           </Link>
         ),
         pubkyCore: (chunks) => (
-          <Link href={Config.PUBKY_CORE_URL} target="_blank">
+          <Link href={PUBKY_CORE_URL} target="_blank">
             {chunks}
           </Link>
         ),
@@ -93,11 +93,11 @@ export const InstallNavigation = ({ ...props }: React.HTMLAttributes<HTMLDivElem
   const handleCreate = () => {
     // Reset any existing keypair to ensure a fresh one is generated
     setLoadingCreate(true);
-    router.push(App.ONBOARDING_ROUTES.PUBKY);
+    router.push(ONBOARDING_ROUTES.PUBKY);
   };
   const handleContinue = () => {
     setLoadingContinue(true);
-    router.push(App.ONBOARDING_ROUTES.SCAN);
+    router.push(ONBOARDING_ROUTES.SCAN);
   };
   return (
     <Container className={cn('flex-col-reverse gap-3 md:flex-row lg:gap-6', props.className)}>

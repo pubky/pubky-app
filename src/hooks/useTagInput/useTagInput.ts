@@ -3,7 +3,7 @@
 import { useState, useRef } from 'react';
 import { useEmojiInsert } from '../useEmojiInsert/useEmojiInsert';
 import { filterSuggestions } from './useTagInput.utils';
-import { TAG_MAX_LENGTH } from '@/config';
+import { TAG_MAX_LENGTH } from '@/config/posts';
 import type { UseTagInputOptions, UseTagInputReturn } from './useTagInput.types';
 import { Logger } from '@/libs/logger/logger';
 import { getCharacterCount, sanitizeTagInput } from '@/libs/utils/utils';

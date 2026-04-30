@@ -10,7 +10,7 @@ import { Container } from '@/atoms/Container/Container';
 import { Typography } from '@/atoms/Typography/Typography';
 import { AvatarWithFallback } from '@/organisms/AvatarWithFallback/AvatarWithFallback';
 
-import * as App from '@/app';
+import { APP_ROUTES, SETTINGS_ROUTES } from '@/app/routes';
 import { useTranslations } from 'next-intl';
 import { Home, Search, Flame, Bookmark, Settings } from 'lucide-react';
 import { cn } from '@/libs/utils/utils';
@@ -54,28 +54,28 @@ export function MobileFooter({ className }: MobileFooterProps) {
   const avatarName = userDetails?.name || 'U';
   const navItems = [
     {
-      href: App.APP_ROUTES.HOME,
+      href: APP_ROUTES.HOME,
       icon: Home,
       label: 'Home',
     },
     {
-      href: App.APP_ROUTES.SEARCH,
+      href: APP_ROUTES.SEARCH,
       icon: Search,
       label: 'Search',
     },
     {
-      href: App.APP_ROUTES.HOT,
+      href: APP_ROUTES.HOT,
       icon: Flame,
       label: 'Hot',
     },
     {
-      href: App.APP_ROUTES.BOOKMARKS,
+      href: APP_ROUTES.BOOKMARKS,
       icon: Bookmark,
       label: 'Bookmarks',
     },
     {
-      href: App.SETTINGS_ROUTES.ACCOUNT,
-      activePrefix: App.APP_ROUTES.SETTINGS,
+      href: SETTINGS_ROUTES.ACCOUNT,
+      activePrefix: APP_ROUTES.SETTINGS,
       icon: Settings,
       label: 'Settings',
     },
@@ -102,7 +102,7 @@ export function MobileFooter({ className }: MobileFooterProps) {
         {navItems.map((item) => {
           const Icon = item.icon;
           const activePath = item.activePrefix ?? item.href;
-          const isHome = item.href === App.APP_ROUTES.HOME;
+          const isHome = item.href === APP_ROUTES.HOME;
           const isHomeActive = isHome && isActive(item.href);
           return (
             <Link
@@ -142,7 +142,7 @@ export function MobileFooter({ className }: MobileFooterProps) {
         })}
         <Link
           data-cy="footer-nav-profile-btn"
-          href={App.APP_ROUTES.PROFILE}
+          href={APP_ROUTES.PROFILE}
           aria-label={tCommon('profile')}
           className="relative shrink-0 rounded-full"
         >

@@ -8,7 +8,7 @@ import { PageSubtitle } from '@/atoms/PageSubtitle/PageSubtitle';
 import { ButtonsNavigation } from '@/molecules/ButtonsNavigation/ButtonsNavigation';
 import { PageTitle } from '@/molecules/Page/Page';
 
-import * as App from '@/app';
+import { ONBOARDING_ROUTES } from '@/app/routes';
 
 export const BackupNavigation = () => {
   const router = useRouter();
@@ -17,7 +17,7 @@ export const BackupNavigation = () => {
   const onHandleContinueButton = () => {
     setLoading(true);
     // Signup already happened at the pubky step; just navigate to profile
-    router.push(App.ONBOARDING_ROUTES.PROFILE);
+    router.push(ONBOARDING_ROUTES.PROFILE);
   };
 
   return (

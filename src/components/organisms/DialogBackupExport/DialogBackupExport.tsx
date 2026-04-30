@@ -14,7 +14,7 @@ import {
 } from '@/atoms/Dialog/Dialog';
 import { Link } from '@/atoms/Link/Link';
 
-import * as Config from '@/config';
+import { APP_STORE_URL, PLAY_STORE_URL, PUBKY_CORE_URL } from '@/config/externalLinks';
 import { generatePubkyRingDeeplink } from '@/libs/deeplink/deeplink';
 import type { TMnemonicWords } from '@/libs/identity/identity.types';
 
@@ -48,14 +48,14 @@ const MOBILE_IMPORT_DESCRIPTION =
   'Tap the button below to import your recovery phrase into Pubky Ring for a safer and easier sign-in experience.';
 
 export function DialogBackupExport({ mnemonic, children }: DialogBackupExportProps) {
-  const qrValue = mnemonic ? generatePubkyRingDeeplink(mnemonic) : Config.PUBKY_CORE_URL;
+  const qrValue = mnemonic ? generatePubkyRingDeeplink(mnemonic) : PUBKY_CORE_URL;
   const descriptionContent = mnemonic ? IMPORT_DESCRIPTION : EXPORT_DESCRIPTION;
   const mobileDescription = mnemonic ? MOBILE_IMPORT_DESCRIPTION : MOBILE_EXPORT_DESCRIPTION;
   const dialogTitle = mnemonic ? 'Import recovery phrase' : 'Pubky Ring export';
 
   const handleMobileButtonClick = () => {
     if (typeof window !== 'undefined') {
-      const url = mnemonic ? generatePubkyRingDeeplink(mnemonic) : Config.PUBKY_CORE_URL;
+      const url = mnemonic ? generatePubkyRingDeeplink(mnemonic) : PUBKY_CORE_URL;
       window.open(url, '_blank');
     }
   };
@@ -95,10 +95,10 @@ export function DialogBackupExport({ mnemonic, children }: DialogBackupExportPro
                   />
                 </Container>
                 <Container className="gap-4">
-                  <Link href={Config.APP_STORE_URL} target="_blank">
+                  <Link href={APP_STORE_URL} target="_blank">
                     <Image src="/images/badge-apple.webp" alt="App Store" width={120} height={40} />
                   </Link>
-                  <Link href={Config.PLAY_STORE_URL} target="_blank">
+                  <Link href={PLAY_STORE_URL} target="_blank">
                     <Image src="/images/badge-android.webp" alt="Google Play" width={135} height={40} />
                   </Link>
                 </Container>

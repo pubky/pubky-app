@@ -16,7 +16,7 @@ import { PostPreviewCard } from '@/molecules/PostPreviewCard/PostPreviewCard';
 import { useToast } from '@/molecules/Toaster/use-toast';
 import { PostHeader } from '../PostHeader/PostHeader';
 
-import { ARTICLE_TITLE_MAX_CHARACTER_LENGTH, POST_MAX_CHARACTER_LENGTH } from '@/config';
+import { ARTICLE_TITLE_MAX_CHARACTER_LENGTH, POST_MAX_CHARACTER_LENGTH } from '@/config/posts';
 import { POST_THREAD_CONNECTOR_VARIANTS } from '@/atoms/PostThreadConnector/PostThreadConnector.constants';
 
 import { usePostMainLayout, WIDE_POST_LAYOUT_CLASSES } from '@/organisms/PostMain/PostMainLayout';

@@ -51,13 +51,6 @@ vi.mock('@/organisms/SinglePostContent/SinglePostContent', () => ({
   ),
 }));
 
-vi.mock('@/config', async (importOriginal) => {
-  const actual = await importOriginal<typeof import('@/config')>();
-  return {
-    ...actual,
-  };
-});
-
 describe('SinglePost', () => {
   it('renders content layout shell', () => {
     render(<SinglePost postId="author:post-1" />);

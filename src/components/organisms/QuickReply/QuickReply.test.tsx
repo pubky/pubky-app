@@ -2,7 +2,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen, cleanup } from '@testing-library/react';
 import { QuickReply } from './QuickReply';
 import { QUICK_REPLY_PROMPTS_COUNT } from './QuickReply.constants';
-import { POST_MAX_CHARACTER_LENGTH } from '@/config';
+import { POST_MAX_CHARACTER_LENGTH } from '@/config/posts';
 import { PostMainLayoutProvider } from '@/organisms/PostMain/PostMainLayout';
 import { useIsMobile } from '@/hooks/useIsMobile/useIsMobile';
 

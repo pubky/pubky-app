@@ -4,7 +4,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { PostInput } from './PostInput';
 import { POST_INPUT_VARIANT } from './PostInput.constants';
 import { POST_THREAD_CONNECTOR_VARIANTS } from '@/atoms/PostThreadConnector/PostThreadConnector.constants';
-import { POST_MAX_CHARACTER_LENGTH } from '@/config';
+import { POST_MAX_CHARACTER_LENGTH } from '@/config/posts';
 import type { UsePostInputOptions, UsePostInputReturn } from '@/hooks/usePostInput/usePostInput.types';
 import { PostMainLayoutProvider } from '@/organisms/PostMain/PostMainLayout';
 import { useEnterSubmit } from '@/hooks/useEnterSubmit/useEnterSubmit';

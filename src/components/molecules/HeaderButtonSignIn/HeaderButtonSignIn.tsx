@@ -5,13 +5,13 @@ import { useTranslations } from 'next-intl';
 import * as React from 'react';
 import { Button } from '@/atoms/Button/Button';
 
-import * as App from '@/app';
+import { ONBOARDING_ROUTES } from '@/app/routes';
 import { UserRoundPlus } from 'lucide-react';
 export function HeaderButtonSignIn({ ...props }: React.HTMLAttributes<HTMLButtonElement>) {
   const t = useTranslations('header');
   const router = useRouter();
   const handleNewHere = () => {
-    router.push(App.ONBOARDING_ROUTES.HUMAN);
+    router.push(ONBOARDING_ROUTES.HUMAN);
   };
   return (
     <Button

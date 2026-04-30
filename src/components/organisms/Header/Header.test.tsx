@@ -1,7 +1,7 @@
 import { describe, it, expect, vi } from 'vitest';
 import { render, screen } from '@testing-library/react';
 import { Header } from './Header';
-import * as App from '@/app';
+import { AUTH_ROUTES, HOME_ROUTES, ONBOARDING_ROUTES, ROOT_ROUTES } from '@/app/routes';
 
 // Mock Next.js navigation
 const mockUsePathname = vi.fn();
@@ -65,13 +65,13 @@ vi.mock('@/atoms/Typography/Typography', async () => {
 
 // Keep real libs for icons and utilities; only stub helpers we rely on for deterministic tests
 
-vi.mock('@/config', () => ({
+vi.mock('@/config/externalLinks', () => ({
   GITHUB_URL: 'https://github.com',
   TWITTER_GETPUBKY_URL: 'https://twitter.com',
   TELEGRAM_URL: 'https://telegram.com',
 }));
 
-vi.mock('@/app', () => ({
+vi.mock('@/app/routes', () => ({
   AUTH_ROUTES: { SIGN_IN: '/sign-in', LOGOUT: '/logout' },
   HOME_ROUTES: { HOME: '/home' },
   ROOT_ROUTES: '/',
@@ -199,13 +199,13 @@ describe('Header', () => {
     vi.clearAllMocks();
     // Default mock return values
     mockCurrentUserPubky = null; // Not authenticated by default
-    mockUsePathname.mockReturnValue(App.ROOT_ROUTES);
+    mockUsePathname.mockReturnValue(ROOT_ROUTES);
     mockUseRouter.mockReturnValue({ push: vi.fn() });
     mockIsPublicRoute.mockReturnValue(false);
   });
 
   it('renders header container with logo and home header', () => {
-    mockUsePathname.mockReturnValue(App.ROOT_ROUTES);
+    mockUsePathname.mockReturnValue(ROOT_ROUTES);
 
     render(<Header />);
 
@@ -218,7 +218,7 @@ describe('Header', () => {
 
   it('hides header container on mobile when signed in outside onboarding', () => {
     mockCurrentUserPubky = 'test-pubky-123';
-    mockUsePathname.mockReturnValue(App.HOME_ROUTES.HOME);
+    mockUsePathname.mockReturnValue(HOME_ROUTES.HOME);
 
     render(<Header />);
 
@@ -228,7 +228,7 @@ describe('Header', () => {
 
   it('keeps header visible on mobile during onboarding when signed in', () => {
     mockCurrentUserPubky = 'test-pubky-123';
-    mockUsePathname.mockReturnValue(App.ONBOARDING_ROUTES.PROFILE);
+    mockUsePathname.mockReturnValue(ONBOARDING_ROUTES.PROFILE);
 
     render(<Header />);
 
@@ -237,7 +237,7 @@ describe('Header', () => {
   });
 
   it('shows home header for non-onboarding paths', () => {
-    mockUsePathname.mockReturnValue(App.ROOT_ROUTES);
+    mockUsePathname.mockReturnValue(ROOT_ROUTES);
 
     render(<Header />);
 
@@ -248,7 +248,7 @@ describe('Header', () => {
   });
 
   it('shows onboarding header for onboarding paths', () => {
-    mockUsePathname.mockReturnValue(App.ONBOARDING_ROUTES.INSTALL);
+    mockUsePathname.mockReturnValue(ONBOARDING_ROUTES.INSTALL);
 
     render(<Header />);
 
@@ -257,7 +257,7 @@ describe('Header', () => {
   });
 
   it('displays correct step for install path', () => {
-    mockUsePathname.mockReturnValue(App.ONBOARDING_ROUTES.INSTALL);
+    mockUsePathname.mockReturnValue(ONBOARDING_ROUTES.INSTALL);
 
     render(<Header />);
 
@@ -267,7 +267,7 @@ describe('Header', () => {
   });
 
   it('displays correct step for scan path', () => {
-    mockUsePathname.mockReturnValue(App.ONBOARDING_ROUTES.SCAN);
+    mockUsePathname.mockReturnValue(ONBOARDING_ROUTES.SCAN);
 
     render(<Header />);
 
@@ -277,7 +277,7 @@ describe('Header', () => {
   });
 
   it('displays correct step for pubky path', () => {
-    mockUsePathname.mockReturnValue(App.ONBOARDING_ROUTES.PUBKY);
+    mockUsePathname.mockReturnValue(ONBOARDING_ROUTES.PUBKY);
 
     render(<Header />);
 
@@ -287,7 +287,7 @@ describe('Header', () => {
   });
 
   it('displays correct step for backup path', () => {
-    mockUsePathname.mockReturnValue(App.ONBOARDING_ROUTES.BACKUP);
+    mockUsePathname.mockReturnValue(ONBOARDING_ROUTES.BACKUP);
 
     render(<Header />);
 
@@ -306,7 +306,7 @@ describe('Header', () => {
   });
 
   it('updates when pathname changes', () => {
-    mockUsePathname.mockReturnValue(App.ONBOARDING_ROUTES.INSTALL);
+    mockUsePathname.mockReturnValue(ONBOARDING_ROUTES.INSTALL);
 
     const { rerender } = render(<Header />);
 
@@ -315,7 +315,7 @@ describe('Header', () => {
     expect(onboardingHeader).toHaveAttribute('data-step', '2');
 
     // Change pathname
-    mockUsePathname.mockReturnValue(App.ROOT_ROUTES);
+    mockUsePathname.mockReturnValue(ROOT_ROUTES);
     rerender(<Header />);
 
     expect(screen.getByRole('button', { name: /sign in/i })).toBeInTheDocument();
@@ -324,10 +324,10 @@ describe('Header', () => {
 
   it('correctly identifies onboarding paths', () => {
     const onboardingPaths = [
-      App.ONBOARDING_ROUTES.INSTALL,
-      App.ONBOARDING_ROUTES.SCAN,
-      App.ONBOARDING_ROUTES.PUBKY,
-      App.ONBOARDING_ROUTES.BACKUP,
+      ONBOARDING_ROUTES.INSTALL,
+      ONBOARDING_ROUTES.SCAN,
+      ONBOARDING_ROUTES.PUBKY,
+      ONBOARDING_ROUTES.BACKUP,
     ];
 
     onboardingPaths.forEach((path) => {
@@ -344,7 +344,7 @@ describe('Header', () => {
 
   it('correctly identifies non-onboarding paths', () => {
     // TODO: Is it in purpose sigin? or it should be sign-in?
-    const nonOnboardingPaths = [App.ROOT_ROUTES, '/about', '/contact', '/signin'];
+    const nonOnboardingPaths = [ROOT_ROUTES, '/about', '/contact', '/signin'];
 
     nonOnboardingPaths.forEach((path) => {
       mockUsePathname.mockReturnValue(path);
@@ -361,7 +361,7 @@ describe('Header', () => {
   describe('Authentication Logic', () => {
     it('renders SignInHeader when user is authenticated', () => {
       mockCurrentUserPubky = 'test-pubky-123';
-      mockUsePathname.mockReturnValue(App.ROOT_ROUTES);
+      mockUsePathname.mockReturnValue(ROOT_ROUTES);
 
       render(<Header />);
 
@@ -373,7 +373,7 @@ describe('Header', () => {
 
     it('renders HomeHeader when user is not authenticated', () => {
       mockCurrentUserPubky = null;
-      mockUsePathname.mockReturnValue(App.ROOT_ROUTES);
+      mockUsePathname.mockReturnValue(ROOT_ROUTES);
 
       render(<Header />);
 
@@ -384,7 +384,7 @@ describe('Header', () => {
 
     it('does not render HeaderTitle when user is authenticated', () => {
       mockCurrentUserPubky = 'test-pubky-123';
-      mockUsePathname.mockReturnValue(App.ROOT_ROUTES);
+      mockUsePathname.mockReturnValue(ROOT_ROUTES);
 
       render(<Header />);
 
@@ -393,7 +393,7 @@ describe('Header', () => {
 
     it('renders HomeHeader when user is not authenticated', () => {
       mockCurrentUserPubky = null;
-      mockUsePathname.mockReturnValue(App.ROOT_ROUTES);
+      mockUsePathname.mockReturnValue(ROOT_ROUTES);
 
       render(<Header />);
 
@@ -403,7 +403,7 @@ describe('Header', () => {
 
     it('prioritizes onboarding header over authentication state', () => {
       mockCurrentUserPubky = 'test-pubky-123';
-      mockUsePathname.mockReturnValue(App.ONBOARDING_ROUTES.INSTALL);
+      mockUsePathname.mockReturnValue(ONBOARDING_ROUTES.INSTALL);
 
       render(<Header />);
 
@@ -415,7 +415,7 @@ describe('Header', () => {
 
   describe('Logo Configuration', () => {
     it('renders logo with noLink=true when on profile step (step 5)', () => {
-      mockUsePathname.mockReturnValue(App.ONBOARDING_ROUTES.PROFILE);
+      mockUsePathname.mockReturnValue(ONBOARDING_ROUTES.PROFILE);
 
       render(<Header />);
 
@@ -424,7 +424,7 @@ describe('Header', () => {
     });
 
     it('renders logo with noLink=false when not on profile step', () => {
-      mockUsePathname.mockReturnValue(App.ONBOARDING_ROUTES.INSTALL);
+      mockUsePathname.mockReturnValue(ONBOARDING_ROUTES.INSTALL);
 
       render(<Header />);
 
@@ -435,7 +435,7 @@ describe('Header', () => {
 
   describe('Logout Path Configuration', () => {
     it('handles logout path correctly', () => {
-      mockUsePathname.mockReturnValue(App.AUTH_ROUTES.LOGOUT);
+      mockUsePathname.mockReturnValue(AUTH_ROUTES.LOGOUT);
 
       render(<Header />);
 
@@ -445,7 +445,7 @@ describe('Header', () => {
     });
 
     it('sets correct step for logout path', () => {
-      mockUsePathname.mockReturnValue(App.AUTH_ROUTES.LOGOUT);
+      mockUsePathname.mockReturnValue(AUTH_ROUTES.LOGOUT);
 
       render(<Header />);
 
@@ -457,7 +457,7 @@ describe('Header', () => {
 
   describe('Path Configuration', () => {
     it('displays correct step for human path', () => {
-      mockUsePathname.mockReturnValue(App.ONBOARDING_ROUTES.HUMAN);
+      mockUsePathname.mockReturnValue(ONBOARDING_ROUTES.HUMAN);
 
       render(<Header />);
 
@@ -467,7 +467,7 @@ describe('Header', () => {
     });
 
     it('displays correct step for profile path', () => {
-      mockUsePathname.mockReturnValue(App.ONBOARDING_ROUTES.PROFILE);
+      mockUsePathname.mockReturnValue(ONBOARDING_ROUTES.PROFILE);
 
       render(<Header />);
 
@@ -480,7 +480,7 @@ describe('Header', () => {
   describe('HeaderTitle Display Logic', () => {
     it('does not render HeaderTitle for unauthenticated users on public routes', () => {
       mockCurrentUserPubky = null;
-      mockUsePathname.mockReturnValue(App.ROOT_ROUTES);
+      mockUsePathname.mockReturnValue(ROOT_ROUTES);
 
       render(<Header />);
 
@@ -491,7 +491,7 @@ describe('Header', () => {
 
     it('renders HeaderTitle for unauthenticated users on logout route', () => {
       mockCurrentUserPubky = null;
-      mockUsePathname.mockReturnValue(App.AUTH_ROUTES.LOGOUT);
+      mockUsePathname.mockReturnValue(AUTH_ROUTES.LOGOUT);
 
       render(<Header />);
 
@@ -501,7 +501,7 @@ describe('Header', () => {
 
     it('renders HeaderTitle when on step 5 (profile) even if signed in', () => {
       mockCurrentUserPubky = 'test-pubky-123';
-      mockUsePathname.mockReturnValue(App.ONBOARDING_ROUTES.PROFILE);
+      mockUsePathname.mockReturnValue(ONBOARDING_ROUTES.PROFILE);
 
       render(<Header />);
 
@@ -511,7 +511,7 @@ describe('Header', () => {
 
     it('does not render HeaderTitle when signed in and not on step 5', () => {
       mockCurrentUserPubky = 'test-pubky-123';
-      mockUsePathname.mockReturnValue(App.ROOT_ROUTES);
+      mockUsePathname.mockReturnValue(ROOT_ROUTES);
 
       render(<Header />);
 
@@ -520,13 +520,13 @@ describe('Header', () => {
 
     it('renders HeaderTitle with correct title for each onboarding step', () => {
       const testCases = [
-        { path: App.ONBOARDING_ROUTES.HUMAN, expectedTitle: 'Create account' },
-        { path: App.ONBOARDING_ROUTES.INSTALL, expectedTitle: 'Identity keys' },
-        { path: App.ONBOARDING_ROUTES.SCAN, expectedTitle: 'Use Pubky Ring' },
-        { path: App.ONBOARDING_ROUTES.PUBKY, expectedTitle: 'Your pubky' },
-        { path: App.ONBOARDING_ROUTES.BACKUP, expectedTitle: 'Backup' },
-        { path: App.ONBOARDING_ROUTES.PROFILE, expectedTitle: 'Profile' },
-        { path: App.AUTH_ROUTES.LOGOUT, expectedTitle: 'Signed out' },
+        { path: ONBOARDING_ROUTES.HUMAN, expectedTitle: 'Create account' },
+        { path: ONBOARDING_ROUTES.INSTALL, expectedTitle: 'Identity keys' },
+        { path: ONBOARDING_ROUTES.SCAN, expectedTitle: 'Use Pubky Ring' },
+        { path: ONBOARDING_ROUTES.PUBKY, expectedTitle: 'Your pubky' },
+        { path: ONBOARDING_ROUTES.BACKUP, expectedTitle: 'Backup' },
+        { path: ONBOARDING_ROUTES.PROFILE, expectedTitle: 'Profile' },
+        { path: AUTH_ROUTES.LOGOUT, expectedTitle: 'Signed out' },
       ];
 
       testCases.forEach(({ path, expectedTitle }) => {
@@ -545,7 +545,7 @@ describe('Header', () => {
 
   describe('Step 5 (Profile) Specific Logic', () => {
     it('renders logo with noLink=true only on step 5 (profile)', () => {
-      mockUsePathname.mockReturnValue(App.ONBOARDING_ROUTES.PROFILE);
+      mockUsePathname.mockReturnValue(ONBOARDING_ROUTES.PROFILE);
 
       render(<Header />);
 
@@ -555,13 +555,13 @@ describe('Header', () => {
 
     it('renders logo with noLink=false on all other steps', () => {
       const nonProfilePaths = [
-        App.ONBOARDING_ROUTES.INSTALL,
-        App.ONBOARDING_ROUTES.SCAN,
-        App.ONBOARDING_ROUTES.PUBKY,
-        App.ONBOARDING_ROUTES.BACKUP,
-        App.ONBOARDING_ROUTES.HUMAN,
-        App.ROOT_ROUTES,
-        App.AUTH_ROUTES.LOGOUT,
+        ONBOARDING_ROUTES.INSTALL,
+        ONBOARDING_ROUTES.SCAN,
+        ONBOARDING_ROUTES.PUBKY,
+        ONBOARDING_ROUTES.BACKUP,
+        ONBOARDING_ROUTES.HUMAN,
+        ROOT_ROUTES,
+        AUTH_ROUTES.LOGOUT,
       ];
 
       nonProfilePaths.forEach((path) => {
@@ -579,7 +579,7 @@ describe('Header', () => {
     it('shows HeaderTitle on step 5 regardless of authentication state', () => {
       // Test with authenticated user
       mockCurrentUserPubky = 'test-pubky-123';
-      mockUsePathname.mockReturnValue(App.ONBOARDING_ROUTES.PROFILE);
+      mockUsePathname.mockReturnValue(ONBOARDING_ROUTES.PROFILE);
 
       const { rerender } = render(<Header />);
 
@@ -610,7 +610,7 @@ describe('Header', () => {
     it('renders HeaderHome when unauthenticated on non-public route', () => {
       mockCurrentUserPubky = null;
       mockIsPublicRoute.mockReturnValue(false);
-      mockUsePathname.mockReturnValue(App.ROOT_ROUTES);
+      mockUsePathname.mockReturnValue(ROOT_ROUTES);
 
       render(<Header />);
 
@@ -632,7 +632,7 @@ describe('Header', () => {
     it('prioritizes onboarding header over public route state', () => {
       mockCurrentUserPubky = null;
       mockIsPublicRoute.mockReturnValue(true);
-      mockUsePathname.mockReturnValue(App.ONBOARDING_ROUTES.INSTALL);
+      mockUsePathname.mockReturnValue(ONBOARDING_ROUTES.INSTALL);
 
       render(<Header />);
 
@@ -644,7 +644,7 @@ describe('Header', () => {
   describe('State Updates', () => {
     it('updates authentication state when isAuthenticated changes', () => {
       mockCurrentUserPubky = null;
-      mockUsePathname.mockReturnValue(App.ROOT_ROUTES);
+      mockUsePathname.mockReturnValue(ROOT_ROUTES);
 
       const { rerender } = render(<Header />);
 
@@ -659,7 +659,7 @@ describe('Header', () => {
     });
 
     it('updates path configuration when pathname changes', () => {
-      mockUsePathname.mockReturnValue(App.ONBOARDING_ROUTES.INSTALL);
+      mockUsePathname.mockReturnValue(ONBOARDING_ROUTES.INSTALL);
 
       const { rerender } = render(<Header />);
 
@@ -667,7 +667,7 @@ describe('Header', () => {
       expect(onboardingHeader).toHaveAttribute('data-step', '2');
 
       // Change pathname
-      mockUsePathname.mockReturnValue(App.ONBOARDING_ROUTES.BACKUP);
+      mockUsePathname.mockReturnValue(ONBOARDING_ROUTES.BACKUP);
       rerender(<Header />);
 
       onboardingHeader = screen.getByTestId('onboarding-header');
@@ -676,7 +676,7 @@ describe('Header', () => {
 
     it('updates HeaderTitle visibility when authentication state changes on configured routes', () => {
       // Use logout route which has a title configured
-      mockUsePathname.mockReturnValue(App.AUTH_ROUTES.LOGOUT);
+      mockUsePathname.mockReturnValue(AUTH_ROUTES.LOGOUT);
       mockCurrentUserPubky = null;
 
       const { rerender } = render(<Header />);
@@ -695,7 +695,7 @@ describe('Header', () => {
 
     it('updates HeaderTitle visibility when moving to/from step 5', () => {
       mockCurrentUserPubky = 'test-pubky-123';
-      mockUsePathname.mockReturnValue(App.ROOT_ROUTES);
+      mockUsePathname.mockReturnValue(ROOT_ROUTES);
 
       const { rerender } = render(<Header />);
 
@@ -703,7 +703,7 @@ describe('Header', () => {
       expect(screen.queryByTestId('header-title')).not.toBeInTheDocument();
 
       // Move to step 5 (profile)
-      mockUsePathname.mockReturnValue(App.ONBOARDING_ROUTES.PROFILE);
+      mockUsePathname.mockReturnValue(ONBOARDING_ROUTES.PROFILE);
       rerender(<Header />);
 
       // Should show HeaderTitle when on step 5, even if authenticated

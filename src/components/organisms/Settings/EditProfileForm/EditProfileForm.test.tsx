@@ -43,8 +43,8 @@ vi.mock('@/organisms/DialogCropImage/DialogCropImage', async () => {
   };
 });
 
-vi.mock('@/config', async (importOriginal) => {
-  const actual = await importOriginal<typeof import('@/config')>();
+vi.mock('@/config/user', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('@/config/user')>();
   return {
     ...actual,
     USER_MAX_LINKS: 5,

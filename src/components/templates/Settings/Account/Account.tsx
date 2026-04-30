@@ -9,7 +9,7 @@ import { SettingsSection } from '@/molecules/Settings/SettingsSection/SettingsSe
 import { SettingsSectionCard } from '@/molecules/Settings/SettingsSectionCard/SettingsSectionCard';
 import { DialogDeleteAccount } from '@/organisms/Settings/DialogDeleteAccount/DialogDeleteAccount';
 
-import * as App from '@/app';
+import { SETTINGS_ROUTES } from '@/app/routes';
 import { UserRound, LogOut, Pencil, LockKeyhole, Trash2 } from 'lucide-react';
 
 export function Account() {
@@ -22,7 +22,7 @@ export function Account() {
     setShowDeleteDialog(true);
   };
   const handleEditProfile = () => {
-    router.push(App.SETTINGS_ROUTES.EDIT);
+    router.push(SETTINGS_ROUTES.EDIT);
   };
   return (
     <>

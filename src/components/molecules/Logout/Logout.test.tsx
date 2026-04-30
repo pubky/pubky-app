@@ -1,7 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen, fireEvent } from '@testing-library/react';
 import { LogoutContent, LogoutHeader, LogoutNavigation } from './Logout';
-import * as App from '@/app';
+import { AUTH_ROUTES, ROOT_ROUTES } from '@/app/routes';
 
 // Mock Next.js router
 const mockPush = vi.fn();
@@ -128,13 +128,13 @@ describe('LogoutNavigation', () => {
     render(<LogoutNavigation />);
     const backButton = screen.getByText('Homepage');
     fireEvent.click(backButton);
-    expect(mockPush).toHaveBeenCalledWith(App.ROOT_ROUTES);
+    expect(mockPush).toHaveBeenCalledWith(ROOT_ROUTES);
   });
 
   it('navigates to sign-in page when continue button is clicked', () => {
     render(<LogoutNavigation />);
     const continueButton = screen.getByText('Sign back in');
     fireEvent.click(continueButton);
-    expect(mockPush).toHaveBeenCalledWith(App.AUTH_ROUTES.SIGN_IN);
+    expect(mockPush).toHaveBeenCalledWith(AUTH_ROUTES.SIGN_IN);
   });
 });

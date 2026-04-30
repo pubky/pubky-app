@@ -15,7 +15,7 @@ import { GlobalErrorHandlerProvider } from '@/providers/GlobalErrorHandlerProvid
 import { ErrorBoundaryProvider } from '@/providers/ErrorBoundaryProvider/ErrorBoundaryProvider';
 import { DatabaseProvider } from '@/providers/DatabaseProvider/DatabaseProvider';
 import { RouteGuardProvider } from '@/providers/RouteGuardProvider/RouteGuardProvider';
-import { TOOLTIP_DELAY_MS } from '@/config';
+import { TOOLTIP_DELAY_MS } from '@/config/ui';
 
 export const viewport: Viewport = {
   width: 'device-width',

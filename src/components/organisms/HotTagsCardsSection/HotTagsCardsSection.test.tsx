@@ -32,7 +32,7 @@ vi.mock('@/hooks/useBulkUserAvatars/useBulkUserAvatars', () => ({
   })),
 }));
 
-vi.mock('@/config', () => ({
+vi.mock('@/config/tags', () => ({
   HOT_TAGS_FEATURED_COUNT: 3,
 }));
 

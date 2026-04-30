@@ -11,7 +11,7 @@ import { SearchInput } from '@/organisms/SearchInput/SearchInput';
 import { TimelineFeed } from '@/organisms/Timeline/Feed/TimelineFeed/TimelineFeed';
 import { Container } from '@/atoms/Container/Container';
 
-import { TIMELINE_FEED_VARIANT } from '@/config';
+import { TIMELINE_FEED_VARIANT } from '@/config/feed';
 import { useSearchTags } from '@/hooks/useSearchStreamId/useSearchStreamId';
 
 /**

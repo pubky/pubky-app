@@ -1,7 +1,7 @@
 import { render, screen, fireEvent } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { SignInNavigation } from './SignInNavigation';
-import * as App from '@/app';
+import { HOME_ROUTES } from '@/app/routes';
 
 // Mock Next.js router
 const mockPush = vi.fn();
@@ -79,14 +79,14 @@ describe('SignInNavigation', () => {
     render(<SignInNavigation />);
 
     fireEvent.click(screen.getByTestId('restore-phrase'));
-    expect(mockPush).toHaveBeenCalledWith(App.HOME_ROUTES.HOME);
+    expect(mockPush).toHaveBeenCalledWith(HOME_ROUTES.HOME);
   });
 
   it('pushes to HOME on restore (file)', () => {
     render(<SignInNavigation />);
 
     fireEvent.click(screen.getByTestId('restore-file'));
-    expect(mockPush).toHaveBeenCalledWith(App.HOME_ROUTES.HOME);
+    expect(mockPush).toHaveBeenCalledWith(HOME_ROUTES.HOME);
   });
 
   it('does not render when sign-in progress is active', () => {

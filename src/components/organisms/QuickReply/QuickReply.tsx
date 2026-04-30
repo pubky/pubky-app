@@ -15,7 +15,7 @@ import { Typography } from '@/atoms/Typography/Typography';
 import { MentionPopover } from '@/molecules/MentionPopover/MentionPopover';
 import { AvatarWithFallback } from '../AvatarWithFallback/AvatarWithFallback';
 
-import { POST_MAX_CHARACTER_LENGTH } from '@/config';
+import { POST_MAX_CHARACTER_LENGTH } from '@/config/posts';
 import { POST_INPUT_VARIANT } from '@/organisms/PostInput/PostInput.constants';
 import { POST_THREAD_CONNECTOR_VARIANTS } from '@/atoms/PostThreadConnector/PostThreadConnector.constants';
 import { PostInputExpandableSection } from '../PostInputExpandableSection/PostInputExpandableSection';

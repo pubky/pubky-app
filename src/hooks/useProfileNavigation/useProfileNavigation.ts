@@ -2,7 +2,7 @@
 
 import { useCallback, useMemo } from 'react';
 import { usePathname, useRouter } from 'next/navigation';
-import { PROFILE_ROUTES } from '@/app';
+import { PROFILE_ROUTES } from '@/app/routes';
 import { PROFILE_PAGE_TYPES, ProfilePageType, FilterBarPageType } from '@/app/profile/types';
 import { useProfileContext } from '@/providers/ProfileProvider/ProfileProvider';
 import { useIsMobile } from '@/hooks/useIsMobile/useIsMobile';

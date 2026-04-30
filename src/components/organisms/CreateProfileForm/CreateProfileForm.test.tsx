@@ -2,7 +2,7 @@ import React from 'react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import { CreateProfileForm } from './CreateProfileForm';
-import * as App from '@/app';
+import { HOME_ROUTES } from '@/app/routes';
 import { ServerErrorCode } from '@/libs/error/error.codes';
 import { Err } from '@/libs/error/error.factories';
 import { ErrorService } from '@/libs/error/error.types';
@@ -848,7 +848,7 @@ describe('CreateProfileForm', () => {
         expect(continueButton).toHaveTextContent('Try again!');
 
         // Should not navigate to feed page
-        expect(mockPush).not.toHaveBeenCalledWith(App.HOME_ROUTES.HOME);
+        expect(mockPush).not.toHaveBeenCalledWith(HOME_ROUTES.HOME);
       });
 
       // Verify the mocks were called in the correct order
@@ -898,7 +898,7 @@ describe('CreateProfileForm', () => {
       // Wait for the success handling to complete
       await waitFor(() => {
         // Should navigate to feed page
-        expect(mockPush).toHaveBeenCalledWith(App.HOME_ROUTES.HOME);
+        expect(mockPush).toHaveBeenCalledWith(HOME_ROUTES.HOME);
       });
 
       // Verify that setShowWelcomeDialog(true) was called

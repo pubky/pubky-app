@@ -7,7 +7,7 @@ import { Container } from '@/atoms/Container/Container';
 import { Tag } from '@/atoms/Tag/Tag';
 
 import { APP_ROUTES } from '@/app/routes';
-import { HOT_TAGS_FEATURED_COUNT } from '@/config';
+import { HOT_TAGS_FEATURED_COUNT } from '@/config/tags';
 import type { HotTagsOverviewProps } from './HotTagsOverview.types';
 import { DEFAULT_TAGS_LIMIT } from './HotTagsOverview.constants';
 import { HotTagsOverviewSkeleton } from './HotTagsOverview.skeleton';

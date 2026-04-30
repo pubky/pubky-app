@@ -7,7 +7,7 @@ import { HomeFeedDrawer, HomeFeedDrawerMobile, HomeFeedSidebar } from '@/organis
 import { PostInput } from '@/organisms/PostInput/PostInput';
 import { TimelineFeed } from '@/organisms/Timeline/Feed/TimelineFeed/TimelineFeed';
 
-import { TIMELINE_FEED_VARIANT } from '@/config';
+import { TIMELINE_FEED_VARIANT } from '@/config/feed';
 import { POST_INPUT_VARIANT } from '@/organisms/PostInput/PostInput.constants';
 
 export function Home() {

@@ -15,7 +15,7 @@ import { Heading } from '@/atoms/Heading/Heading';
 import { Label } from '@/atoms/Label/Label';
 import { Typography } from '@/atoms/Typography/Typography';
 
-import * as Config from '@/config';
+import { USER_MAX_LINKS } from '@/config/user';
 import { useTranslations } from 'next-intl';
 import { Trash2, File } from 'lucide-react';
 import { extractInitials } from '@/libs/utils/utils';
@@ -137,7 +137,7 @@ export const CreateProfileForm = () => {
                     },
                   ]);
                 }}
-                disabled={state.links.length >= Config.USER_MAX_LINKS}
+                disabled={state.links.length >= USER_MAX_LINKS}
               />
             </Container>
           </Container>

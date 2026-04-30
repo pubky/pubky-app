@@ -1,4 +1,4 @@
-import { TIMELINE_FEED_VARIANT } from '@/config';
+import { TIMELINE_FEED_VARIANT } from '@/config/feed';
 import { ContentLayout } from '@/organisms/ContentLayout/ContentLayout';
 import { HomeFeedRightDrawer, HomeFeedRightSidebar } from '@/organisms/FeedRightSidebar/FeedRightSidebar';
 import { HomeFeedDrawer, HomeFeedDrawerMobile, HomeFeedSidebar } from '@/organisms/HomeFeedSidebar/HomeFeedSidebar';

@@ -1,7 +1,7 @@
 'use client';
 
 import { useRef, useEffect, useState, useCallback } from 'react';
-import { LAYOUT_DIMENSIONS } from '@/config';
+import { LAYOUT_DIMENSIONS } from '@/config/layoutDimensions';
 
 interface UseStickyWhenFitsOptions {
   /**

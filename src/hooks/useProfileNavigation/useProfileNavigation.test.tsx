@@ -2,7 +2,7 @@ import { renderHook, act } from '@testing-library/react';
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { useProfileNavigation } from './useProfileNavigation';
 import { PROFILE_PAGE_TYPES } from '@/app/profile/types';
-import { PROFILE_ROUTES } from '@/app';
+import { PROFILE_ROUTES } from '@/app/routes';
 
 // Mock Next.js navigation hooks
 const mockPush = vi.fn();

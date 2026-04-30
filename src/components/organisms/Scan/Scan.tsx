@@ -18,8 +18,8 @@ import { ContentCard } from '@/molecules/Content/Content';
 import { DialogAuthExpired } from '@/molecules/DialogAuthExpired/DialogAuthExpired';
 import { PageTitle } from '@/molecules/Page/Page';
 
-import * as Config from '@/config';
-import * as App from '@/app';
+import { PUBKY_RING_URL, PUBKY_CORE_URL } from '@/config/externalLinks';
+import { ONBOARDING_ROUTES } from '@/app/routes';
 import { Loader2, QrCode, Key } from 'lucide-react';
 import { Logger } from '@/libs/logger/logger';
 import { useOnboardingStore } from '@/stores/onboarding/onboarding.store';
@@ -31,7 +31,7 @@ export const ScanContent = () => {
   useEffect(() => {
     if (!hasInviteCode) {
       Logger.warn('[Scan] Missing inviteCode on signup screen; redirecting to invite flow');
-      router.replace(App.ONBOARDING_ROUTES.HUMAN);
+      router.replace(ONBOARDING_ROUTES.HUMAN);
     }
   }, [hasInviteCode, router]);
   const { url, isLoading, isExpired, fetchUrl, isOpeningRing, onAuthorizeClick } = useMobileAuth(
@@ -138,12 +138,12 @@ export const ScanFooter = () => {
     <FooterLinks className="py-6">
       {t.rich('authorizeSub', {
         pubkyRing: (chunks) => (
-          <Link href={Config.PUBKY_RING_URL} target="_blank">
+          <Link href={PUBKY_RING_URL} target="_blank">
             {chunks}
           </Link>
         ),
         pubkyCore: (chunks) => (
-          <Link href={Config.PUBKY_CORE_URL} target="_blank">
+          <Link href={PUBKY_CORE_URL} target="_blank">
             {chunks}
           </Link>
         ),
@@ -171,7 +171,7 @@ export const ScanHeader = ({ isMobile }: { isMobile: boolean }) => {
 export const ScanNavigation = () => {
   const router = useRouter();
   const onHandleBackButton = () => {
-    router.push(App.ONBOARDING_ROUTES.INSTALL);
+    router.push(ONBOARDING_ROUTES.INSTALL);
   };
   return (
     <ButtonsNavigation

@@ -13,8 +13,8 @@ import { DialogAge } from '@/organisms/DialogAge/DialogAge';
 import { DialogPrivacy } from '@/organisms/DialogPrivacy/DialogPrivacy';
 import { DialogTerms } from '@/organisms/DialogTerms/DialogTerms';
 
-import * as Config from '@/config';
-import * as App from '@/app';
+import { PUBKY_CORE_URL } from '@/config/externalLinks';
+import { AUTH_ROUTES, ONBOARDING_ROUTES } from '@/app/routes';
 import { cn } from '@/libs/utils/utils';
 
 export const HomeActions = () => {
@@ -22,11 +22,11 @@ export const HomeActions = () => {
   const router = useRouter();
 
   const handleCreateAccount = () => {
-    router.push(App.ONBOARDING_ROUTES.HUMAN);
+    router.push(ONBOARDING_ROUTES.HUMAN);
   };
 
   const handleSignIn = () => {
-    router.push(App.AUTH_ROUTES.SIGN_IN);
+    router.push(AUTH_ROUTES.SIGN_IN);
   };
 
   return (
@@ -52,7 +52,7 @@ export const HomeFooter = ({ ...props }: React.HTMLAttributes<HTMLDivElement>) =
         {tFooter('andConfirmAge')} <DialogAge />{' '}
         {tFooter.rich('copyright', {
           pubkyCore: (chunks) => (
-            <Link href={Config.PUBKY_CORE_URL} target="_blank">
+            <Link href={PUBKY_CORE_URL} target="_blank">
               {chunks}
             </Link>
           ),

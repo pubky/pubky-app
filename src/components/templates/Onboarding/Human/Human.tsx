@@ -8,7 +8,7 @@ import { HumanSelection } from '@/organisms/HumanSelection/HumanSelection';
 
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { ONBOARDING_ROUTES } from '@/app';
+import { ONBOARDING_ROUTES } from '@/app/routes';
 import { Logger } from '@/libs/logger/logger';
 import { AuthController } from '@/controllers/auth/auth';
 import { useOnboardingStore } from '@/stores/onboarding/onboarding.store';

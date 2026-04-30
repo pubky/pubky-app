@@ -28,7 +28,7 @@ import {
   POST_SUPPORTED_ATTACHMENT_MIME_TYPES,
   ARTICLE_SUPPORTED_ATTACHMENT_MIME_TYPES,
   ARTICLE_TITLE_MAX_CHARACTER_LENGTH,
-} from '@/config';
+} from '@/config/posts';
 import { useLocalFilesStore } from '@/stores/localFiles/localFiles.store';
 /**
  * Hook that encapsulates all PostInput logic.

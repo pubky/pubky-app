@@ -11,7 +11,7 @@ import { Typography } from '@/atoms/Typography/Typography';
 import { AvatarWithFallback } from '../AvatarWithFallback/AvatarWithFallback';
 import { ClickableTagsList } from '../ClickableTagsList/ClickableTagsList';
 
-import { USER_LIST_TAG_MAX_LENGTH, USER_LIST_TAGS_MAX_TOTAL_CHARS } from '@/config';
+import { USER_LIST_TAG_MAX_LENGTH, USER_LIST_TAGS_MAX_TOTAL_CHARS } from '@/config/tags';
 import { cn, formatPublicKey } from '@/libs/utils/utils';
 import type {
   UserListItemProps,

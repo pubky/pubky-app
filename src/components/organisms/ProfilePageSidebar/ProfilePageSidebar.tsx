@@ -11,7 +11,7 @@ import { ProfilePageLinks } from '@/molecules/ProfilePageLinks/ProfilePageLinks'
 import { ProfilePageTaggedAs } from '@/molecules/ProfilePageTaggedAs/ProfilePageTaggedAs';
 import { FeedbackCard } from '../FeedbackCard/FeedbackCard';
 import { useProfileContext } from '@/providers/ProfileProvider/ProfileProvider';
-import * as Config from '@/config';
+import { LAYOUT_DIMENSIONS } from '@/config/layoutDimensions';
 import { MAX_SIDEBAR_TAGS } from './ProfilePageSidebar.constants';
 import { cn } from '@/libs/utils/utils';
 
@@ -43,8 +43,8 @@ export function ProfilePageSidebar() {
 
   // Only apply sticky when content fits in viewport
   const { ref, stickyTop } = useStickyWhenFits({
-    topOffset: Config.LAYOUT_DIMENSIONS.HEADER_HEIGHT_PROFILE,
-    bottomOffset: Config.LAYOUT_DIMENSIONS.SIDEBAR_BOTTOM_OFFSET,
+    topOffset: LAYOUT_DIMENSIONS.HEADER_HEIGHT_PROFILE,
+    bottomOffset: LAYOUT_DIMENSIONS.SIDEBAR_BOTTOM_OFFSET,
   });
 
   // Handle tag click - require auth for unauthenticated users

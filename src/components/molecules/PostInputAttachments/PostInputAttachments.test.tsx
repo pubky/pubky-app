@@ -2,7 +2,7 @@ import { createRef } from 'react';
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { render, screen, fireEvent } from '@testing-library/react';
 import { PostInputAttachments } from './PostInputAttachments';
-import { POST_ATTACHMENT_ACCEPT_STRING } from '@/config';
+import { POST_ATTACHMENT_ACCEPT_STRING } from '@/config/posts';
 
 // Mock URL.createObjectURL and URL.revokeObjectURL
 const mockCreateObjectURL = vi.fn();

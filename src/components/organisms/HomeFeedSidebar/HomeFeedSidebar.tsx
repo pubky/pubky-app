@@ -8,7 +8,7 @@ import { FilterLayout } from '@/molecules/Filters/FilterLayout/FilterLayout';
 import { FilterReach } from '@/molecules/Filters/FilterReach/FilterReach';
 import { FilterSort } from '@/molecules/Filters/FilterSort/FilterSort';
 
-import { TIMELINE_FEED_VARIANT } from '@/config';
+import { TIMELINE_FEED_VARIANT } from '@/config/feed';
 import type { HomeFeedSidebarProps } from './HomeFeedSidebar.types';
 
 import {

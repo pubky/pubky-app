@@ -10,7 +10,7 @@ import { Input } from '@/atoms/Input/Input';
 import { Typography } from '@/atoms/Typography/Typography';
 import { Video } from '@/atoms/Video/Video';
 
-import { ARTICLE_ATTACHMENT_ACCEPT_STRING, POST_ATTACHMENT_ACCEPT_STRING } from '@/config';
+import { ARTICLE_ATTACHMENT_ACCEPT_STRING, POST_ATTACHMENT_ACCEPT_STRING } from '@/config/posts';
 import { ImagePlus, Plus, Trash2, FileText } from 'lucide-react';
 import { cn } from '@/libs/utils/utils';
 type PostInputAttachmentsProps = {

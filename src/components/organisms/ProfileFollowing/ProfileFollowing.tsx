@@ -10,7 +10,7 @@ import { FollowingEmpty } from '@/molecules/FollowingEmpty/FollowingEmpty';
 import { FullUserListItemSkeleton } from '../FullUserListItemSkeleton/FullUserListItemSkeleton';
 import { UserListItem } from '../UserListItem/UserListItem';
 import { useProfileContext } from '@/providers/ProfileProvider/ProfileProvider';
-import { NEXUS_USERS_PER_PAGE } from '@/config';
+import { NEXUS_USERS_PER_PAGE } from '@/config/nexus';
 import type { Pubky } from '@/models/models.types';
 import { useAuthStore } from '@/stores/auth/auth.store';
 const LOAD_MORE_SKELETON_COUNT = 2;

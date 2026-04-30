@@ -7,7 +7,7 @@ import '@mdxeditor/editor/style.css';
 import { oneDark } from '@codemirror/theme-one-dark';
 import { languages } from '@codemirror/language-data';
 import { AlertTriangle, Smile, Type } from 'lucide-react';
-import { ARTICLE_MAX_CHARACTER_LENGTH } from '@/config';
+import { ARTICLE_MAX_CHARACTER_LENGTH } from '@/config/posts';
 import { Button } from '@/atoms/Button/Button';
 import { Container } from '@/atoms/Container/Container';
 import { Textarea } from '@/atoms/Textarea/Textarea';

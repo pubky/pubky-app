@@ -1,7 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import { PublicKeyHeader, PublicKeyNavigation } from './Pubkey';
-import * as App from '@/app';
+import { ONBOARDING_ROUTES } from '@/app/routes';
 
 // Mock Next.js router
 const mockPush = vi.fn();
@@ -110,7 +110,7 @@ describe('PublicKeyNavigation', () => {
     const backButton = screen.getByTestId('back-button');
     fireEvent.click(backButton);
 
-    expect(mockPush).toHaveBeenCalledWith(App.ONBOARDING_ROUTES.INSTALL);
+    expect(mockPush).toHaveBeenCalledWith(ONBOARDING_ROUTES.INSTALL);
   });
 
   it('handles continue button click - signs up then navigates to backup', async () => {
@@ -121,7 +121,7 @@ describe('PublicKeyNavigation', () => {
 
     await waitFor(() => {
       expect(mockValidateAndSignUp).toHaveBeenCalledWith('TEST-CODE-123');
-      expect(mockPush).toHaveBeenCalledWith(App.ONBOARDING_ROUTES.BACKUP);
+      expect(mockPush).toHaveBeenCalledWith(ONBOARDING_ROUTES.BACKUP);
     });
   });
 
@@ -151,7 +151,7 @@ describe('PublicKeyNavigation', () => {
       expect(continueButton).toHaveAttribute('data-loading', 'false');
     });
 
-    expect(mockPush).not.toHaveBeenCalledWith(App.ONBOARDING_ROUTES.BACKUP);
+    expect(mockPush).not.toHaveBeenCalledWith(ONBOARDING_ROUTES.BACKUP);
   });
 });
 

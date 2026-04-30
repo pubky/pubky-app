@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect, useCallback, useRef } from 'react';
-import * as Config from '@/config';
+import { NEXUS_POSTS_PER_PAGE } from '@/config/nexus';
 import * as Types from './useStreamPagination.types';
 import { Logger } from '@/libs/logger/logger';
 import { isAppError } from '@/libs/error/error.utils';
@@ -18,7 +18,7 @@ import { sortPostIdsByTimestamp } from '@/utils/sorting';
  */
 export function useStreamPagination({
   streamId,
-  limit = Config.NEXUS_POSTS_PER_PAGE,
+  limit = NEXUS_POSTS_PER_PAGE,
   resetOnStreamChange = true,
 }: Types.UseStreamPaginationOptions): Types.UseStreamPaginationResult {
   const [postIds, setPostIds] = useState<string[]>([]);

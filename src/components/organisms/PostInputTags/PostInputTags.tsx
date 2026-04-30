@@ -6,7 +6,8 @@ import { PostTagAddButton } from '@/molecules/PostTagAddButton/PostTagAddButton'
 import { TagInput } from '@/molecules/TagInput/TagInput';
 import { TagInputToggle } from '@/molecules/TagInputToggle/TagInputToggle';
 
-import { POST_MAX_TAGS, TAG_INPUT_WIDTH_AT_LIMIT, TAG_INPUT_WIDTH_DEFAULT } from '@/config';
+import { POST_MAX_TAGS } from '@/config/posts';
+import { TAG_INPUT_WIDTH_AT_LIMIT, TAG_INPUT_WIDTH_DEFAULT } from '@/config/tags';
 import type { PostInputTagsProps } from './PostInputTags.types';
 
 export function PostInputTags({ tags, onTagsChange, maxTags = POST_MAX_TAGS, disabled = false }: PostInputTagsProps) {

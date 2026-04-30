@@ -10,7 +10,7 @@ import { ButtonsNavigation } from '../ButtonsNavigation/ButtonsNavigation';
 import { ContentCard } from '../Content/Content';
 import { PageTitle } from '../Page/Page';
 
-import * as App from '@/app';
+import { AUTH_ROUTES, ROOT_ROUTES } from '@/app/routes';
 
 export const LogoutContent = () => {
   return (
@@ -45,11 +45,11 @@ export const LogoutNavigation = () => {
   const t = useTranslations('logout');
 
   const onHandleBackButton = () => {
-    router.push(App.ROOT_ROUTES);
+    router.push(ROOT_ROUTES);
   };
 
   const onHandleContinueButton = () => {
-    router.push(App.AUTH_ROUTES.SIGN_IN);
+    router.push(AUTH_ROUTES.SIGN_IN);
   };
 
   return (

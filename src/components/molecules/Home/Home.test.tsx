@@ -2,7 +2,7 @@ import type { ElementType } from 'react';
 import { describe, it, expect, vi } from 'vitest';
 import { render, screen, fireEvent } from '@testing-library/react';
 import { HomeActions, HomeFooter, HomeSectionTitle, HomePageHeading } from './Home';
-import * as App from '@/app';
+import { AUTH_ROUTES, ONBOARDING_ROUTES } from '@/app/routes';
 
 // Mock Next.js router
 const mockPush = vi.fn();
@@ -48,7 +48,7 @@ vi.mock('@/organisms/DialogTerms/DialogTerms', async () => {
 });
 
 // Mock config
-vi.mock('@/config', () => ({
+vi.mock('@/config/externalLinks', () => ({
   PUBKY_CORE_URL: 'https://github.com/pubky/pubky-core',
 }));
 
@@ -149,7 +149,7 @@ describe('HomeActions', () => {
     const createAccountButton = screen.getByTestId('create-account-button');
     fireEvent.click(createAccountButton);
 
-    expect(mockPush).toHaveBeenCalledWith(App.ONBOARDING_ROUTES.HUMAN);
+    expect(mockPush).toHaveBeenCalledWith(ONBOARDING_ROUTES.HUMAN);
   });
 
   it('handles sign in button click', () => {
@@ -158,7 +158,7 @@ describe('HomeActions', () => {
     const signInButton = screen.getByTestId('sign-in-button');
     fireEvent.click(signInButton);
 
-    expect(mockPush).toHaveBeenCalledWith(App.AUTH_ROUTES.SIGN_IN);
+    expect(mockPush).toHaveBeenCalledWith(AUTH_ROUTES.SIGN_IN);
   });
 });
 

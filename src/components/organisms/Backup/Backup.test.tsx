@@ -117,7 +117,7 @@ vi.mock('@/molecules/Page/Page', async () => {
 });
 
 // Mock app
-vi.mock('@/app', () => ({
+vi.mock('@/app/routes', () => ({
   ONBOARDING_ROUTES: {
     HOMESERVER: '/homeserver',
     PUBKY: '/pubky',

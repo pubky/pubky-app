@@ -7,7 +7,7 @@ import InitializedMDXEditor from './InitializedMDXEditor';
 
 // Mock config - use a smaller value for easier testing
 const MOCK_MAX_LENGTH = 1000;
-vi.mock('@/config', () => ({
+vi.mock('@/config/posts', () => ({
   ARTICLE_MAX_CHARACTER_LENGTH: 1000,
 }));
 

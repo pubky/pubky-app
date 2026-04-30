@@ -1,7 +1,7 @@
 import { Tag } from '@/atoms/Tag/Tag';
 import { Toggle } from '@/atoms/Toggle/Toggle';
 
-import { COLORS } from '@/config';
+import { COLORS } from '@/config/theme';
 import type { PostTagProps } from './PostTag.types';
 import { X } from 'lucide-react';
 import { cn, generateRandomColor, hexToRgba } from '@/libs/utils/utils';

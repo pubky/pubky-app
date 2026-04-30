@@ -12,8 +12,8 @@ import { Typography } from '@/atoms/Typography/Typography';
 import { ProgressSteps } from '../ProgressSteps/ProgressSteps';
 import { AvatarWithFallback } from '@/organisms/AvatarWithFallback/AvatarWithFallback';
 
-import * as Config from '@/config';
-import * as App from '@/app';
+import { GITHUB_URL, TWITTER_GETPUBKY_URL, TELEGRAM_URL } from '@/config/externalLinks';
+import { APP_ROUTES, SETTINGS_ROUTES } from '@/app/routes';
 import { Home, Flame, Bookmark, Settings } from 'lucide-react';
 import { Github2, XTwitter, Telegram } from '@/icons';
 import { cn } from '@/libs/utils/utils';
@@ -64,13 +64,13 @@ export function HeaderSocialLinks({ ...props }: React.HTMLAttributes<HTMLDivElem
       data-testid="header-social-links"
       className={cn('mr-6 hidden flex-row justify-end gap-6 md:flex', props.className)}
     >
-      <Link href={Config.GITHUB_URL} target="_blank" variant="muted" size="default">
+      <Link href={GITHUB_URL} target="_blank" variant="muted" size="default">
         <Github2 className="h-6 w-6" />
       </Link>
-      <Link href={Config.TWITTER_GETPUBKY_URL} target="_blank" variant="muted" size="default">
+      <Link href={TWITTER_GETPUBKY_URL} target="_blank" variant="muted" size="default">
         <XTwitter className="h-6 w-6" />
       </Link>
-      <Link href={Config.TELEGRAM_URL} target="_blank" variant="muted" size="default">
+      <Link href={TELEGRAM_URL} target="_blank" variant="muted" size="default">
         <Telegram className="h-6 w-6" />
       </Link>
     </Container>
@@ -92,25 +92,25 @@ type HeaderNavigationButtonsProps = {
 };
 const NAVIGATION_ITEMS: NavigationItemConfig[] = [
   {
-    href: App.APP_ROUTES.HOME,
+    href: APP_ROUTES.HOME,
     icon: Home,
     labelKey: 'home',
     dataCy: 'header-home-btn',
   },
   {
-    href: App.APP_ROUTES.HOT,
+    href: APP_ROUTES.HOT,
     icon: Flame,
     labelKey: 'hot',
     dataCy: 'header-hot-btn',
   },
   {
-    href: App.APP_ROUTES.BOOKMARKS,
+    href: APP_ROUTES.BOOKMARKS,
     icon: Bookmark,
     labelKey: 'bookmarks',
     dataCy: 'header-bookmarks-btn',
   },
   {
-    href: App.SETTINGS_ROUTES.ACCOUNT,
+    href: SETTINGS_ROUTES.ACCOUNT,
     icon: Settings,
     labelKey: 'settings',
     dataCy: 'header-settings-btn',
@@ -160,7 +160,7 @@ export function HeaderNavigationButtons({
         />
       ))}
 
-      <Link data-cy="header-nav-profile-btn" className="relative" href={App.APP_ROUTES.PROFILE}>
+      <Link data-cy="header-nav-profile-btn" className="relative" href={APP_ROUTES.PROFILE}>
         <AvatarWithFallback
           avatarUrl={avatarImage}
           name={avatarName}

@@ -12,7 +12,7 @@ import { ContentCard } from '@/molecules/Content/Content';
 import { LogoutContent, LogoutNavigation } from '@/molecules/Logout/Logout';
 import { PageTitle } from '@/molecules/Page/Page';
 
-import * as App from '@/app';
+import { ROOT_ROUTES } from '@/app/routes';
 import { Logger } from '@/libs/logger/logger';
 import { AuthController } from '@/controllers/auth/auth';
 import { useAuthStore } from '@/stores/auth/auth.store';
@@ -64,7 +64,7 @@ export function Logout() {
   }, [isHydrated, isLoggingOut, isSignedOut, viewState]);
 
   const onHandleHome = () => {
-    router.push(App.ROOT_ROUTES);
+    router.push(ROOT_ROUTES);
   };
 
   const onHandleRetry = () => {

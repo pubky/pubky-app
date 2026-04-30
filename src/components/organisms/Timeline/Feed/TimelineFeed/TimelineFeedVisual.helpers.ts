@@ -1,4 +1,4 @@
-import { TIMELINE_FEED_VARIANT, type TimelineFeedVariant } from '@/config';
+import { TIMELINE_FEED_VARIANT, type TimelineFeedVariant } from '@/config/feed';
 import type { VisualRow, VisualTile, VisualTileSize } from './TimelineFeedVisual.types';
 import type { ContentType } from '@/stores/home/home.types';
 export const VISUAL_GRID_GAP_PX = 24;

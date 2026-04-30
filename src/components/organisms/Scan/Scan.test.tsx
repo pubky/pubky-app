@@ -2,8 +2,8 @@ import { describe, it, expect, vi, beforeEach, beforeAll, afterAll } from 'vites
 import { render, screen, fireEvent, waitFor, act } from '@testing-library/react';
 import React from 'react';
 import { ScanContent, ScanFooter, ScanHeader, ScanNavigation } from './Scan';
-import * as Config from '@/config';
-import * as App from '@/app';
+import { PUBKY_CORE_URL } from '@/config/externalLinks';
+import { ONBOARDING_ROUTES } from '@/app/routes';
 import { useMobileAuth } from '@/hooks/useMobileAuth/useMobileAuth';
 import { asOpaque } from '@/test-utils/type-assertions';
 vi.mock('@/atoms/Dialog/Dialog', async () => {
@@ -366,7 +366,7 @@ describe('ScanContent', () => {
     });
 
     await waitFor(() => {
-      expect(mockReplace).toHaveBeenCalledWith(App.ONBOARDING_ROUTES.HUMAN);
+      expect(mockReplace).toHaveBeenCalledWith(ONBOARDING_ROUTES.HUMAN);
     });
   });
 });
@@ -385,7 +385,7 @@ describe('ScanFooter', () => {
     const links = screen.getAllByRole('link');
     expect(links.length).toBeGreaterThanOrEqual(1);
 
-    const coreLink = links.find((link) => link.getAttribute('href') === Config.PUBKY_CORE_URL);
+    const coreLink = links.find((link) => link.getAttribute('href') === PUBKY_CORE_URL);
     expect(coreLink).toBeDefined();
   });
 });
@@ -425,7 +425,7 @@ describe('ScanNavigation', () => {
     const backButton = screen.getByTestId('back-button');
     fireEvent.click(backButton);
 
-    expect(mockPush).toHaveBeenCalledWith(App.ONBOARDING_ROUTES.INSTALL);
+    expect(mockPush).toHaveBeenCalledWith(ONBOARDING_ROUTES.INSTALL);
   });
 });
 

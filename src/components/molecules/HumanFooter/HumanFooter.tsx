@@ -6,7 +6,7 @@ import { DialogAge } from '@/organisms/DialogAge/DialogAge';
 import { DialogPrivacy } from '@/organisms/DialogPrivacy/DialogPrivacy';
 import { DialogTerms } from '@/organisms/DialogTerms/DialogTerms';
 
-import * as Config from '@/config';
+import { PUBKY_CORE_URL } from '@/config/externalLinks';
 import { useTranslations } from 'next-intl';
 import { cn } from '@/libs/utils/utils';
 
@@ -24,7 +24,7 @@ export const HumanFooter = () => {
       <FooterLinks>
         {t.rich('copyright', {
           pubkyCore: (chunks) => (
-            <Link href={Config.PUBKY_CORE_URL} target="_blank">
+            <Link href={PUBKY_CORE_URL} target="_blank">
               {chunks}
             </Link>
           ),

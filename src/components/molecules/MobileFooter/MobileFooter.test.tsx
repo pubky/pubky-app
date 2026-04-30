@@ -60,8 +60,8 @@ vi.mock('@/organisms/AvatarWithFallback/AvatarWithFallback', async () => {
 // Mock the libs - use actual implementations
 
 // Mock the app routes
-vi.mock('@/app', async () => {
-  const actual = await vi.importActual('@/app');
+vi.mock('@/app/routes', async () => {
+  const actual = await vi.importActual('@/app/routes');
   return {
     ...actual,
     APP_ROUTES: {

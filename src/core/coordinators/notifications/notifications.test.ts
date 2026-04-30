@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { APP_ROUTES, AUTH_ROUTES, ONBOARDING_ROUTES, PROFILE_ROUTES } from '@/app';
+import { APP_ROUTES, AUTH_ROUTES, ONBOARDING_ROUTES, PROFILE_ROUTES } from '@/app/routes';
 import { asInvalid, asOpaque } from '@/test-utils/type-assertions';
 import { mockSession } from '@/test-utils/pubky';
 import { NotificationController } from '@/controllers/notification/notification';

@@ -10,7 +10,7 @@ import { Label } from '@/atoms/Label/Label';
 import { Typography } from '@/atoms/Typography/Typography';
 import { EmojiPickerDialog } from '../../EmojiPickerDialog/EmojiPickerDialog';
 
-import * as Config from '@/config';
+import { USER_STATUS_MAX_LENGTH } from '@/config/user';
 import { STATUS_OPTIONS } from './StatusPickerContent.constants';
 import { StatusPickerContentProps } from './StatusPickerContent.types';
 
@@ -136,7 +136,7 @@ export function StatusPickerContent({ onStatusSelect, currentStatus }: StatusPic
               type="text"
               value={customStatus}
               placeholder={t('addStatus')}
-              maxLength={Config.USER_STATUS_MAX_LENGTH}
+              maxLength={USER_STATUS_MAX_LENGTH}
               onChange={(e) => setCustomStatus(e.target.value)}
               onKeyDown={handleKeyDown}
               className={cn(

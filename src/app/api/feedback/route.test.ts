@@ -1,7 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { NextRequest } from 'next/server';
 import { POST, GET, OPTIONS } from './route';
-import * as Config from '@/config';
+import { FEEDBACK_MAX_CHARACTER_LENGTH } from '@/config/posts';
 import { ServerErrorCode, ValidationErrorCode } from '@/libs/error/error.codes';
 import { Err } from '@/libs/error/error.factories';
 import { ErrorService } from '@/libs/error/error.types';
@@ -198,7 +198,7 @@ describe('API Route: /api/feedback', () => {
     });
 
     it('should handle comment exceeding max length', async () => {
-      const longComment = 'a'.repeat(Config.FEEDBACK_MAX_CHARACTER_LENGTH + 1);
+      const longComment = 'a'.repeat(FEEDBACK_MAX_CHARACTER_LENGTH + 1);
       const request = createPostRequest({
         pubky: testData.userPubky,
         comment: longComment,
@@ -208,7 +208,7 @@ describe('API Route: /api/feedback', () => {
       // The controller will validate and throw AppError
       const appError = Err.validation(
         ValidationErrorCode.INVALID_INPUT,
-        `Comment must be no more than ${Config.FEEDBACK_MAX_CHARACTER_LENGTH} characters`,
+        `Comment must be no more than ${FEEDBACK_MAX_CHARACTER_LENGTH} characters`,
         { service: ErrorService.Local, operation: 'submit', context: { statusCode: 400 } },
       );
       vi.spyOn(FeedbackController, 'submit').mockRejectedValue(appError);
@@ -217,7 +217,7 @@ describe('API Route: /api/feedback', () => {
       const data = await response.json();
 
       expect(response.status).toBe(400);
-      expect(data.error).toBe(`Comment must be no more than ${Config.FEEDBACK_MAX_CHARACTER_LENGTH} characters`);
+      expect(data.error).toBe(`Comment must be no more than ${FEEDBACK_MAX_CHARACTER_LENGTH} characters`);
     });
   });
 

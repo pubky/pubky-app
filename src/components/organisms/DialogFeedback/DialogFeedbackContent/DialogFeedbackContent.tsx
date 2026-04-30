@@ -8,7 +8,7 @@ import { Textarea } from '@/atoms/Textarea/Textarea';
 import { Typography } from '@/atoms/Typography/Typography';
 import { PostHeader } from '../../PostHeader/PostHeader';
 
-import { FEEDBACK_MAX_CHARACTER_LENGTH } from '@/config';
+import { FEEDBACK_MAX_CHARACTER_LENGTH } from '@/config/posts';
 import type { DialogFeedbackContentProps } from './DialogFeedbackContent.types';
 import { Loader2, Send } from 'lucide-react';
 import { getCharacterCount } from '@/libs/utils/utils';

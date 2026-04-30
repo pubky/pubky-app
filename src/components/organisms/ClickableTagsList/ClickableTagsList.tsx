@@ -19,7 +19,7 @@ import {
   CLICKABLE_TAGS_DEFAULT_MAX_TOTAL_CHARS,
   TAG_INPUT_WIDTH_AT_LIMIT,
   TAG_INPUT_WIDTH_DEFAULT,
-} from '@/config';
+} from '@/config/tags';
 import { TagKind } from '@/application/tag/tag.types';
 import { useAuthStore } from '@/stores/auth/auth.store';
 /**

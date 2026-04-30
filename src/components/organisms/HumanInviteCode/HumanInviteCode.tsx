@@ -9,7 +9,7 @@ import { PageHeader } from '@/atoms/PageHeader/PageHeader';
 import { PageSubtitle } from '@/atoms/PageSubtitle/PageSubtitle';
 import { Typography } from '@/atoms/Typography/Typography';
 
-import * as Config from '@/config';
+import { TWITTER_URL, TELEGRAM_URL } from '@/config/externalLinks';
 import { HumanFooter } from '@/molecules/HumanFooter/HumanFooter';
 import { PageTitle } from '@/molecules/Page/Page';
 import { PopoverInviteHomeserver } from '@/molecules/PopoverInviteHomeserver/PopoverInviteHomeserver';
@@ -73,10 +73,10 @@ export const HumanInviteCode = ({ onBack, onSuccess }: HumanInviteCodeProps) => 
         </PageTitle>
         <Container className="flex-row items-center gap-3">
           <PageSubtitle>{t('subtitle')}</PageSubtitle>
-          <Link href={Config.TWITTER_URL} target="_blank" className="text-muted-foreground hover:text-brand">
+          <Link href={TWITTER_URL} target="_blank" className="text-muted-foreground hover:text-brand">
             <XTwitter className="h-6 w-6" />
           </Link>
-          <Link href={Config.TELEGRAM_URL} target="_blank" className="text-muted-foreground hover:text-brand">
+          <Link href={TELEGRAM_URL} target="_blank" className="text-muted-foreground hover:text-brand">
             <Telegram className="h-6 w-6" />
           </Link>
         </Container>

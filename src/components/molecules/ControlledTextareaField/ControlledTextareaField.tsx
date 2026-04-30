@@ -4,7 +4,7 @@ import { Controller, FieldValues } from 'react-hook-form';
 import { Container } from '@/atoms/Container/Container';
 import { Label } from '@/atoms/Label/Label';
 
-import * as Config from '@/config';
+import { FORM_LABEL_CLASSES } from '@/config/forms';
 import { TextareaField } from '../TextareaField/TextareaField';
 
 import type { ControlledTextareaFieldProps } from './ControlledTextareaField.types';
@@ -23,7 +23,7 @@ export function ControlledTextareaField<T extends FieldValues>({
 }: ControlledTextareaFieldProps<T>) {
   return (
     <Container className="gap-2">
-      <Label htmlFor={name} className={Config.FORM_LABEL_CLASSES}>
+      <Label htmlFor={name} className={FORM_LABEL_CLASSES}>
         {label}
       </Label>
       <Controller

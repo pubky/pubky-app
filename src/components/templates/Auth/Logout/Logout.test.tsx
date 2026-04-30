@@ -48,7 +48,7 @@ vi.mock('next-intl', () => ({
   },
 }));
 
-vi.mock('@/app', () => ({
+vi.mock('@/app/routes', () => ({
   ROOT_ROUTES: '/',
 }));
 

@@ -14,16 +14,19 @@ vi.mock('pubky-app-specs', () => ({
 }));
 
 // Mock config
-vi.mock('@/config', async (importOriginal) => {
-  const actual = await importOriginal<typeof import('@/config')>();
+vi.mock('@/config/database', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('@/config/database')>();
   return {
     ...actual,
     DB_NAME: 'test-db',
     DB_VERSION: 1,
-    MODERATED_TAGS: [],
-    MODERATION_ID: 'test-moderation-id',
   };
 });
+
+vi.mock('@/config/moderation', () => ({
+  MODERATED_TAGS: [],
+  MODERATION_ID: 'test-moderation-id',
+}));
 
 // Mock the Env module (admin credentials are now server-side only).
 // Merge with real Env so @/config/database still gets NEXT_PUBLIC_DB_NAME / NEXT_PUBLIC_DB_VERSION

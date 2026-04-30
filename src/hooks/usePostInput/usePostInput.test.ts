@@ -11,7 +11,7 @@ import {
   POST_ATTACHMENT_MAX_FILES,
   ARTICLE_ATTACHMENT_MAX_FILES,
   ATTACHMENT_MAX_OTHER_SIZE,
-} from '@/config';
+} from '@/config/posts';
 
 // next-intl is mocked globally in src/config/test.ts
 // Real placeholders from messages/en.json for test assertions

@@ -10,7 +10,7 @@ import { FooterLinks } from '@/atoms/FooterLinks/FooterLinks';
 import { PageHeader } from '@/atoms/PageHeader/PageHeader';
 import { PageSubtitle } from '@/atoms/PageSubtitle/PageSubtitle';
 
-import * as App from '@/app';
+import { ONBOARDING_ROUTES } from '@/app/routes';
 
 export const HomeserverHeader = () => {
   return (
@@ -45,7 +45,7 @@ export const HomeserverNavigation = ({
   const router = useRouter();
 
   const onHandleBackButton = () => {
-    router.push(App.ONBOARDING_ROUTES.BACKUP);
+    router.push(ONBOARDING_ROUTES.BACKUP);
   };
 
   return (

@@ -5,7 +5,7 @@ import { useMutedUsers } from '@/hooks/useMutedUsers/useMutedUsers';
 import { usePullToRefresh } from '@/hooks/usePullToRefresh/usePullToRefresh';
 import { useStreamPagination } from '@/hooks/useStreamPagination/useStreamPagination';
 import { useEffect, useRef } from 'react';
-import { TIMELINE_FEED_VARIANT } from '@/config';
+import { TIMELINE_FEED_VARIANT } from '@/config/feed';
 import { Container } from '@/atoms/Container/Container';
 import { PullToRefreshIndicator } from '@/molecules/PullToRefreshIndicator/PullToRefreshIndicator';
 import { TimelineLoading } from '@/molecules/Timeline/TimelineLoading';

@@ -5,7 +5,7 @@ import { Container } from '@/atoms/Container/Container';
 import { DialogRestoreEncryptedFile } from '../DialogRestoreEncryptedFile/DialogRestoreEncryptedFile';
 import { DialogRestoreRecoveryPhrase } from '../DialogRestoreRecoveryPhrase/DialogRestoreRecoveryPhrase';
 
-import * as App from '@/app';
+import { HOME_ROUTES } from '@/app/routes';
 import { useSignInStore } from '@/stores/signIn/signIn.store';
 export const SignInNavigation = () => {
   const router = useRouter();
@@ -14,7 +14,7 @@ export const SignInNavigation = () => {
   if (authUrlResolved) return null;
 
   const handleRestore = () => {
-    router.push(App.HOME_ROUTES.HOME);
+    router.push(HOME_ROUTES.HOME);
   };
 
   return (

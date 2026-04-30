@@ -12,8 +12,9 @@ import { DialogPrivacy } from '@/organisms/DialogPrivacy/DialogPrivacy';
 import { DialogTerms } from '@/organisms/DialogTerms/DialogTerms';
 import { FeedbackCard } from '@/organisms/FeedbackCard/FeedbackCard';
 
-import * as App from '@/app';
-import { APP_RELEASE_URL, APP_VERSION } from '@/config';
+import { SETTINGS_ROUTES } from '@/app/routes';
+import { APP_VERSION } from '@/config/app';
+import { APP_RELEASE_URL } from '@/config/externalLinks';
 import type { SettingsInfoProps } from './SettingsInfo.types';
 import { FAQ_QUESTION_KEYS, COPYRIGHT_TEXT } from './SettingsInfo.constants';
 import { FileText, LockKeyhole, ChevronRight, MessageCircleQuestion } from 'lucide-react';
@@ -39,7 +40,7 @@ export function SettingsInfo({ className, hideFAQ = false }: SettingsInfoProps) 
           <FilterHeader title={t('faq.title')} />
           <FilterList className="gap-2">
             {FAQ_QUESTION_KEYS.map((key) => (
-              <Link key={key} href={App.SETTINGS_ROUTES.HELP}>
+              <Link key={key} href={SETTINGS_ROUTES.HELP}>
                 <Container
                   overrideDefaults
                   className="relative w-full min-w-0 cursor-pointer rounded-md border border-border p-4 transition-colors hover:border-white"
@@ -58,7 +59,7 @@ export function SettingsInfo({ className, hideFAQ = false }: SettingsInfoProps) 
                 </Container>
               </Link>
             ))}
-            <Link href={App.SETTINGS_ROUTES.HELP} className="w-full">
+            <Link href={SETTINGS_ROUTES.HELP} className="w-full">
               <SidebarButton icon={MessageCircleQuestion}>{t('faq.moreFaq')}</SidebarButton>
             </Link>
           </FilterList>

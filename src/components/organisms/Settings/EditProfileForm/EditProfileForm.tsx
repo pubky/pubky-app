@@ -16,7 +16,7 @@ import { Label } from '@/atoms/Label/Label';
 import { Spinner } from '@/atoms/Spinner/Spinner';
 import { Typography } from '@/atoms/Typography/Typography';
 
-import * as Config from '@/config';
+import { USER_MAX_LINKS } from '@/config/user';
 import { useTranslations } from 'next-intl';
 import { EditProfileFormSkeleton } from './EditProfileForm.skeleton';
 import { Trash2, File } from 'lucide-react';
@@ -140,7 +140,7 @@ export const EditProfileForm = () => {
                     },
                   ]);
                 }}
-                disabled={state.links.length >= Config.USER_MAX_LINKS}
+                disabled={state.links.length >= USER_MAX_LINKS}
               />
             </Container>
           </Container>

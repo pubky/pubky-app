@@ -48,7 +48,7 @@ vi.mock('@/stores/localFiles/localFiles.store', () => ({
 }));
 
 // Mock Config
-vi.mock('@/config', () => ({
+vi.mock('@/config/nexus', () => ({
   CDN_URL: 'https://cdn.example.com',
 }));
 

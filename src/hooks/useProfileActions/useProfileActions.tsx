@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation';
 import { useTranslations } from 'next-intl';
 import { showErrorToast } from '@/molecules/Toaster/showErrorToast';
 
-import { AUTH_ROUTES, SETTINGS_ROUTES } from '@/app';
+import { AUTH_ROUTES, SETTINGS_ROUTES } from '@/app/routes';
 import { useCopyToClipboard } from '@/hooks/useCopyToClipboard/useCopyToClipboard';
 import { Logger } from '@/libs/logger/logger';
 import { withPubkyPrefix } from '@/libs/utils/utils';

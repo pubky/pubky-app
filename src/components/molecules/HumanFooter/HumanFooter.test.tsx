@@ -23,7 +23,7 @@ vi.mock('@/organisms/DialogTerms/DialogTerms', async () => {
 });
 
 // Mock config
-vi.mock('@/config', () => ({
+vi.mock('@/config/externalLinks', () => ({
   PUBKY_CORE_URL: 'https://pubky.core',
 }));
 

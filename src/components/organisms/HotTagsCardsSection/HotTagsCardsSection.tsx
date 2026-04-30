@@ -12,7 +12,7 @@ import { Typography } from '@/atoms/Typography/Typography';
 import { HotTagCard } from '@/molecules/HotTagCard/HotTagCard';
 
 import { APP_ROUTES } from '@/app/routes';
-import { HOT_TAGS_FEATURED_COUNT } from '@/config';
+import { HOT_TAGS_FEATURED_COUNT } from '@/config/tags';
 import { HotTagsCardsSectionSkeleton } from './HotTagsCardsSection.skeleton';
 import type { HotTagsCardsSectionProps } from './HotTagsCardsSection.types';
 import { MAX_AVATARS_MOBILE, MAX_AVATARS_DEFAULT, MAX_AVATARS_XL } from './HotTagsCardsSection.constants';

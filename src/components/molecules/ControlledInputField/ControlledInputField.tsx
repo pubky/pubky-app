@@ -4,7 +4,7 @@ import { Controller, FieldValues } from 'react-hook-form';
 import { Container } from '@/atoms/Container/Container';
 import { Label } from '@/atoms/Label/Label';
 
-import * as Config from '@/config';
+import { FORM_LABEL_CLASSES } from '@/config/forms';
 import { InputField } from '../InputField/InputField';
 
 import type { ControlledInputFieldProps } from './ControlledInputField.types';
@@ -24,7 +24,7 @@ export function ControlledInputField<T extends FieldValues>({
 }: ControlledInputFieldProps<T>) {
   return (
     <Container className="gap-2">
-      <Label htmlFor={name} className={Config.FORM_LABEL_CLASSES}>
+      <Label htmlFor={name} className={FORM_LABEL_CLASSES}>
         {label}
         {labelHint}
       </Label>

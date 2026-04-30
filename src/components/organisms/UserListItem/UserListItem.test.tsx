@@ -84,10 +84,9 @@ vi.mock('@/application/tag/tag.types', () => ({
 }));
 
 // Mock Config
-vi.mock('@/config', () => ({
+vi.mock('@/config/tags', () => ({
   USER_LIST_TAG_MAX_LENGTH: 8,
   USER_LIST_TAGS_MAX_TOTAL_CHARS: 20,
-  USER_LIST_TAGS_MAX_COUNT: 3,
 }));
 
 const mockUser: UserListItemData = {

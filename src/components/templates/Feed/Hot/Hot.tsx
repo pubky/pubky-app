@@ -15,7 +15,7 @@ import { HotTagsCardsSection } from '@/organisms/HotTagsCardsSection/HotTagsCard
 import { HotTagsOverview } from '@/organisms/HotTagsOverview/HotTagsOverview';
 import { TimelineFeed } from '@/organisms/Timeline/Feed/TimelineFeed/TimelineFeed';
 
-import { TIMELINE_FEED_VARIANT } from '@/config';
+import { TIMELINE_FEED_VARIANT } from '@/config/feed';
 import { HotSection } from '@/molecules/HotMobileMenu/HotMobileMenu.types';
 import { cn } from '@/libs/utils/utils';
 

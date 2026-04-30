@@ -9,7 +9,7 @@ import { PageTitle } from '../Page/Page';
 import { PageHeader } from '@/atoms/PageHeader/PageHeader';
 import { PageSubtitle } from '@/atoms/PageSubtitle/PageSubtitle';
 
-import * as App from '@/app';
+import { ONBOARDING_ROUTES } from '@/app/routes';
 import { useOnboardingStore } from '@/stores/onboarding/onboarding.store';
 export const PublicKeyHeader = () => {
   const t = useTranslations('onboarding.pubky');
@@ -31,7 +31,7 @@ export const PublicKeyNavigation = () => {
   const { validateAndSignUp } = useInviteCodeSignUp();
 
   const onHandleBackButton = () => {
-    router.push(App.ONBOARDING_ROUTES.INSTALL);
+    router.push(ONBOARDING_ROUTES.INSTALL);
   };
 
   const onHandleContinueButton = async () => {
@@ -41,7 +41,7 @@ export const PublicKeyNavigation = () => {
       // The invite code was saved in the onboarding store during the human verification step.
       const inviteCode = useOnboardingStore.getState().inviteCode;
       await validateAndSignUp(inviteCode);
-      router.push(App.ONBOARDING_ROUTES.BACKUP);
+      router.push(ONBOARDING_ROUTES.BACKUP);
     } catch {
       setLoading(false);
     }

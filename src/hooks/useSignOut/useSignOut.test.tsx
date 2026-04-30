@@ -22,8 +22,8 @@ vi.mock('@/molecules/Toaster/use-toast', async () => {
   };
 });
 
-vi.mock('@/app', async (importOriginal) => {
-  const actual = await importOriginal<typeof import('@/app')>();
+vi.mock('@/app/routes', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('@/app/routes')>();
   return {
     ...actual,
     AUTH_ROUTES: { LOGOUT: '/logout' },

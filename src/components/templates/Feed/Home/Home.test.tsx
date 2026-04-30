@@ -99,8 +99,8 @@ vi.mock('@/organisms/PostInput/PostInput.constants', () => ({
   },
 }));
 
-vi.mock('@/config', async (importOriginal) => {
-  const actual = await importOriginal<typeof import('@/config')>();
+vi.mock('@/config/feed', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('@/config/feed')>();
   return {
     ...actual,
     TIMELINE_FEED_VARIANT: {

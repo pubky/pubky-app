@@ -50,7 +50,7 @@ vi.mock('@/hooks/useAuthStatus/useAuthStatus', () => ({
 }));
 
 // Mock @/app
-vi.mock('@/app', () => ({
+vi.mock('@/app/routes', () => ({
   PUBLIC_ROUTES: ['/landing'],
   isDynamicPublicRoute: (path: string) => path.startsWith('/post/') || path.startsWith('/profile/'),
 }));

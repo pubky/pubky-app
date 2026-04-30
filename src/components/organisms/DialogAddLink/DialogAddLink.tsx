@@ -15,7 +15,7 @@ import {
 import { Label } from '@/atoms/Label/Label';
 import { InputField } from '@/molecules/InputField/InputField';
 
-import * as Config from '@/config';
+import { USER_LINK_LABEL_MAX_LENGTH, USER_LINK_URL_MAX_LENGTH } from '@/config/user';
 import { useState } from 'react';
 import { z } from 'zod';
 import { Link, Clipboard } from 'lucide-react';
@@ -24,13 +24,13 @@ const labelSchema = z
   .string()
   .trim()
   .min(1, 'Label is required')
-  .max(Config.USER_LINK_LABEL_MAX_LENGTH, `Max ${Config.USER_LINK_LABEL_MAX_LENGTH} characters`)
+  .max(USER_LINK_LABEL_MAX_LENGTH, `Max ${USER_LINK_LABEL_MAX_LENGTH} characters`)
   .regex(/^[a-zA-Z0-9]+$/, 'Alphanumeric only');
 const urlSchema = z
   .string()
   .trim()
   .url('Invalid URL')
-  .max(Config.USER_LINK_URL_MAX_LENGTH, `Max ${Config.USER_LINK_URL_MAX_LENGTH} characters`);
+  .max(USER_LINK_URL_MAX_LENGTH, `Max ${USER_LINK_URL_MAX_LENGTH} characters`);
 interface DialogAddLinkProps {
   onSave: (label: string, url: string) => void;
   disabled?: boolean;
@@ -108,7 +108,7 @@ export function DialogAddLink({ onSave, disabled = false }: DialogAddLinkProps) 
                 validateLabel(value);
               }}
               size="lg"
-              maxLength={Config.USER_LINK_LABEL_MAX_LENGTH}
+              maxLength={USER_LINK_LABEL_MAX_LENGTH}
               status={labelError ? 'error' : 'default'}
               message={labelError ?? undefined}
               messageType={labelError ? 'error' : 'default'}
@@ -128,7 +128,7 @@ export function DialogAddLink({ onSave, disabled = false }: DialogAddLinkProps) 
                 validateUrl(value);
               }}
               size="lg"
-              maxLength={Config.USER_LINK_URL_MAX_LENGTH}
+              maxLength={USER_LINK_URL_MAX_LENGTH}
               icon={<Clipboard className="h-4 w-4" />}
               iconPosition="right"
               onClickIcon={async () => {

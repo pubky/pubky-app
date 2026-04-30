@@ -11,7 +11,7 @@ import { Spinner } from '@/atoms/Spinner/Spinner';
 import { Typography } from '@/atoms/Typography/Typography';
 
 import * as Types from '@/app/profile/types';
-import * as Config from '@/config';
+import { LAYOUT_DIMENSIONS } from '@/config/layoutDimensions';
 import { Bell, StickyNote, MessageCircle, UsersRound, HeartHandshake, Tag } from 'lucide-react';
 import { UsersRound2 } from '@/icons';
 import { cn } from '@/libs/utils/utils';
@@ -134,8 +134,8 @@ export function ProfilePageFilterBar({
 
   // Only apply sticky when content fits in viewport
   const { ref, shouldBeSticky } = useStickyWhenFits({
-    topOffset: Config.LAYOUT_DIMENSIONS.HEADER_HEIGHT_PROFILE,
-    bottomOffset: Config.LAYOUT_DIMENSIONS.SIDEBAR_BOTTOM_OFFSET,
+    topOffset: LAYOUT_DIMENSIONS.HEADER_HEIGHT_PROFILE,
+    bottomOffset: LAYOUT_DIMENSIONS.SIDEBAR_BOTTOM_OFFSET,
   });
 
   // Handle item click - require auth for unauthenticated users
