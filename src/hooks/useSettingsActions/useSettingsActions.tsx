@@ -1,10 +1,10 @@
 'use client';
 
 import { useState } from 'react';
-import { SettingsController, NotificationPreferences } from '@/core';
 import type { UseSettingsActionsResult } from './useSettingsActions.types';
 import { isAppError } from '@/libs/error/error.utils';
-
+import { SettingsController } from '@/controllers/settings/settings';
+import type { NotificationPreferences } from '@/stores/settings/settings.types';
 /**
  * useSettingsActions
  *

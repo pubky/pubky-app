@@ -1,8 +1,8 @@
 import { renderHook, act, waitFor } from '@testing-library/react';
 import { vi, describe, it, expect, beforeEach } from 'vitest';
 import { usePostTaggers } from './usePostTaggers';
-
-vi.mock('@/core', () => ({
+import { PostController } from '@/controllers/post/post';
+vi.mock('@/controllers/post/post', () => ({
   PostController: {
     fetchTaggers: vi.fn(),
   },
@@ -32,8 +32,7 @@ describe('usePostTaggers', () => {
   });
 
   it('fetches all taggers across pages', async () => {
-    const Core = await import('@/core');
-    const fetchTaggers = vi.mocked(Core.PostController.fetchTaggers);
+    const fetchTaggers = vi.mocked(PostController.fetchTaggers);
 
     fetchTaggers
       .mockResolvedValueOnce({ users: ['a', 'b'], relationship: false })

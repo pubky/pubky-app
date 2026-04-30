@@ -10,7 +10,7 @@ The core architecture enforces distinct responsibilities (controllers, pipes, ap
 
 ## Decision
 
-Codify dependency boundaries: UI → controllers → pipes/application → services → models. Services split into local, homeserver, and nexus responsibilities; models interact only with Dexie. Stores expose UI state without business logic. Public access to core flows through `src/core/index.ts`.
+Codify dependency boundaries: UI → controllers → pipes/application → services → models. Services split into local, homeserver, and nexus responsibilities; models interact only with Dexie. Stores expose UI state without business logic. Public access uses direct layer aliases such as `@/controllers/*`, `@/services/*`, `@/models/*`, and `@/stores/*`.
 
 ## Consequences
 

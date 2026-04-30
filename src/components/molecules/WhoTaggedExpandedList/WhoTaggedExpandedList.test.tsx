@@ -35,16 +35,12 @@ vi.mock('@/hooks/useBulkUserAvatars/useBulkUserAvatars', () => ({
   })),
 }));
 
-// Mock core auth store
-vi.mock('@/core', async (importOriginal) => {
-  const actual = await importOriginal<typeof import('@/core')>();
-  return {
-    ...actual,
-    useAuthStore: vi.fn(() => ({
-      currentUserPubky: 'current-user-pubky',
-    })),
-  };
-});
+// Mock auth store
+vi.mock('@/stores/auth/auth.store', () => ({
+  useAuthStore: vi.fn(() => ({
+    currentUserPubky: 'current-user-pubky',
+  })),
+}));
 
 // Mock TaggerUserRow - this is what WhoTaggedExpandedList directly uses
 vi.mock('@/molecules', async (importOriginal) => {

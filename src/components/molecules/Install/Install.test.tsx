@@ -19,17 +19,13 @@ vi.mock('next/navigation', () => ({
   }),
 }));
 
-// Mock Core
+// Mock dependencies
 const mockReset = vi.fn();
-vi.mock('@/core', async (importOriginal) => {
-  const actual = await importOriginal<typeof import('@/core')>();
-  return {
-    ...actual,
-    useOnboardingStore: () => ({
-      reset: mockReset,
-    }),
-  };
-});
+vi.mock('@/stores/onboarding/onboarding.store', () => ({
+  useOnboardingStore: () => ({
+    reset: mockReset,
+  }),
+}));
 
 describe('InstallCard - Snapshots', () => {
   it('matches snapshot', () => {

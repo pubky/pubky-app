@@ -1,136 +1,147 @@
 import { describe, it, expect } from 'vitest';
 import { PubkyAppFeedLayout, PubkyAppFeedReach, PubkyAppFeedSort, PubkyAppPostKind } from 'pubky-app-specs';
-import * as Core from '@/core';
-
+import {
+  buildFeedStreamId,
+  contentToStreamKind,
+  layoutToString,
+  postKindToString,
+  reachToStreamSource,
+  reachToString,
+  sortToStreamSorting,
+  sortToString,
+} from '@/models/feed/feed.helpers';
+import type { FeedModelSchema } from '@/models/feed/feed.schema';
+import { StreamSorting } from '@/services/nexus/nexus.types';
+import { StreamKind, StreamSource } from '@/services/nexus/stream/posts/postStream.types';
 describe('Feed Helpers', () => {
   describe('reachToString', () => {
     it('should convert Following to "following"', () => {
-      expect(Core.reachToString(PubkyAppFeedReach.Following)).toBe('following');
+      expect(reachToString(PubkyAppFeedReach.Following)).toBe('following');
     });
 
     it('should convert Followers to "followers"', () => {
-      expect(Core.reachToString(PubkyAppFeedReach.Followers)).toBe('followers');
+      expect(reachToString(PubkyAppFeedReach.Followers)).toBe('followers');
     });
 
     it('should convert Friends to "friends"', () => {
-      expect(Core.reachToString(PubkyAppFeedReach.Friends)).toBe('friends');
+      expect(reachToString(PubkyAppFeedReach.Friends)).toBe('friends');
     });
 
     it('should convert All to "all"', () => {
-      expect(Core.reachToString(PubkyAppFeedReach.All)).toBe('all');
+      expect(reachToString(PubkyAppFeedReach.All)).toBe('all');
     });
   });
 
   describe('layoutToString', () => {
     it('should convert Columns to "columns"', () => {
-      expect(Core.layoutToString(PubkyAppFeedLayout.Columns)).toBe('columns');
+      expect(layoutToString(PubkyAppFeedLayout.Columns)).toBe('columns');
     });
 
     it('should convert Wide to "wide"', () => {
-      expect(Core.layoutToString(PubkyAppFeedLayout.Wide)).toBe('wide');
+      expect(layoutToString(PubkyAppFeedLayout.Wide)).toBe('wide');
     });
 
     it('should convert Visual to "visual"', () => {
-      expect(Core.layoutToString(PubkyAppFeedLayout.Visual)).toBe('visual');
+      expect(layoutToString(PubkyAppFeedLayout.Visual)).toBe('visual');
     });
   });
 
   describe('sortToString', () => {
     it('should convert Recent to "recent"', () => {
-      expect(Core.sortToString(PubkyAppFeedSort.Recent)).toBe('recent');
+      expect(sortToString(PubkyAppFeedSort.Recent)).toBe('recent');
     });
 
     it('should convert Popularity to "popularity"', () => {
-      expect(Core.sortToString(PubkyAppFeedSort.Popularity)).toBe('popularity');
+      expect(sortToString(PubkyAppFeedSort.Popularity)).toBe('popularity');
     });
   });
 
   describe('postKindToString', () => {
     it('should convert Short to "short"', () => {
-      expect(Core.postKindToString(PubkyAppPostKind.Short)).toBe('short');
+      expect(postKindToString(PubkyAppPostKind.Short)).toBe('short');
     });
 
     it('should convert Long to "long"', () => {
-      expect(Core.postKindToString(PubkyAppPostKind.Long)).toBe('long');
+      expect(postKindToString(PubkyAppPostKind.Long)).toBe('long');
     });
 
     it('should convert Image to "image"', () => {
-      expect(Core.postKindToString(PubkyAppPostKind.Image)).toBe('image');
+      expect(postKindToString(PubkyAppPostKind.Image)).toBe('image');
     });
 
     it('should convert Video to "video"', () => {
-      expect(Core.postKindToString(PubkyAppPostKind.Video)).toBe('video');
+      expect(postKindToString(PubkyAppPostKind.Video)).toBe('video');
     });
 
     it('should convert Link to "link"', () => {
-      expect(Core.postKindToString(PubkyAppPostKind.Link)).toBe('link');
+      expect(postKindToString(PubkyAppPostKind.Link)).toBe('link');
     });
 
     it('should convert File to "file"', () => {
-      expect(Core.postKindToString(PubkyAppPostKind.File)).toBe('file');
+      expect(postKindToString(PubkyAppPostKind.File)).toBe('file');
     });
   });
 
   describe('reachToStreamSource', () => {
     it('should convert All to StreamSource.ALL', () => {
-      expect(Core.reachToStreamSource(PubkyAppFeedReach.All)).toBe(Core.StreamSource.ALL);
+      expect(reachToStreamSource(PubkyAppFeedReach.All)).toBe(StreamSource.ALL);
     });
 
     it('should convert Following to StreamSource.FOLLOWING', () => {
-      expect(Core.reachToStreamSource(PubkyAppFeedReach.Following)).toBe(Core.StreamSource.FOLLOWING);
+      expect(reachToStreamSource(PubkyAppFeedReach.Following)).toBe(StreamSource.FOLLOWING);
     });
 
     it('should convert Friends to StreamSource.FRIENDS', () => {
-      expect(Core.reachToStreamSource(PubkyAppFeedReach.Friends)).toBe(Core.StreamSource.FRIENDS);
+      expect(reachToStreamSource(PubkyAppFeedReach.Friends)).toBe(StreamSource.FRIENDS);
     });
 
     it('should convert Followers to StreamSource.FOLLOWERS', () => {
-      expect(Core.reachToStreamSource(PubkyAppFeedReach.Followers)).toBe(Core.StreamSource.FOLLOWERS);
+      expect(reachToStreamSource(PubkyAppFeedReach.Followers)).toBe(StreamSource.FOLLOWERS);
     });
   });
 
   describe('sortToStreamSorting', () => {
     it('should convert Recent to StreamSorting.TIMELINE', () => {
-      expect(Core.sortToStreamSorting(PubkyAppFeedSort.Recent)).toBe(Core.StreamSorting.TIMELINE);
+      expect(sortToStreamSorting(PubkyAppFeedSort.Recent)).toBe(StreamSorting.TIMELINE);
     });
 
     it('should convert Popularity to StreamSorting.ENGAGEMENT', () => {
-      expect(Core.sortToStreamSorting(PubkyAppFeedSort.Popularity)).toBe(Core.StreamSorting.ENGAGEMENT);
+      expect(sortToStreamSorting(PubkyAppFeedSort.Popularity)).toBe(StreamSorting.ENGAGEMENT);
     });
   });
 
   describe('contentToStreamKind', () => {
     it('should return undefined for null (All content)', () => {
-      expect(Core.contentToStreamKind(null)).toBeUndefined();
+      expect(contentToStreamKind(null)).toBeUndefined();
     });
 
     it('should convert Short to StreamKind.SHORT', () => {
-      expect(Core.contentToStreamKind(PubkyAppPostKind.Short)).toBe(Core.StreamKind.SHORT);
+      expect(contentToStreamKind(PubkyAppPostKind.Short)).toBe(StreamKind.SHORT);
     });
 
     it('should convert Long to StreamKind.LONG', () => {
-      expect(Core.contentToStreamKind(PubkyAppPostKind.Long)).toBe(Core.StreamKind.LONG);
+      expect(contentToStreamKind(PubkyAppPostKind.Long)).toBe(StreamKind.LONG);
     });
 
     it('should convert Image to StreamKind.IMAGE', () => {
-      expect(Core.contentToStreamKind(PubkyAppPostKind.Image)).toBe(Core.StreamKind.IMAGE);
+      expect(contentToStreamKind(PubkyAppPostKind.Image)).toBe(StreamKind.IMAGE);
     });
 
     it('should convert Video to StreamKind.VIDEO', () => {
-      expect(Core.contentToStreamKind(PubkyAppPostKind.Video)).toBe(Core.StreamKind.VIDEO);
+      expect(contentToStreamKind(PubkyAppPostKind.Video)).toBe(StreamKind.VIDEO);
     });
 
     it('should convert Link to StreamKind.LINK', () => {
-      expect(Core.contentToStreamKind(PubkyAppPostKind.Link)).toBe(Core.StreamKind.LINK);
+      expect(contentToStreamKind(PubkyAppPostKind.Link)).toBe(StreamKind.LINK);
     });
 
     it('should convert File to StreamKind.FILE', () => {
-      expect(Core.contentToStreamKind(PubkyAppPostKind.File)).toBe(Core.StreamKind.FILE);
+      expect(contentToStreamKind(PubkyAppPostKind.File)).toBe(StreamKind.FILE);
     });
   });
 
   describe('buildFeedStreamId', () => {
-    const createFeed = (overrides: Partial<Core.FeedModelSchema> = {}): Core.FeedModelSchema => ({
+    const createFeed = (overrides: Partial<FeedModelSchema> = {}): FeedModelSchema => ({
       id: '123',
       name: 'Test Feed',
       tags: ['bitcoin'],
@@ -151,7 +162,7 @@ describe('Feed Helpers', () => {
         tags: ['bitcoin'],
       });
 
-      expect(Core.buildFeedStreamId(feed)).toBe('timeline:all:all:bitcoin');
+      expect(buildFeedStreamId(feed)).toBe('timeline:all:all:bitcoin');
     });
 
     it('should build stream ID with multiple tags', () => {
@@ -159,7 +170,7 @@ describe('Feed Helpers', () => {
         tags: ['bitcoin', 'lightning', 'tech'],
       });
 
-      expect(Core.buildFeedStreamId(feed)).toBe('timeline:all:all:bitcoin,lightning,tech');
+      expect(buildFeedStreamId(feed)).toBe('timeline:all:all:bitcoin,lightning,tech');
     });
 
     it('should build stream ID for following source', () => {
@@ -167,7 +178,7 @@ describe('Feed Helpers', () => {
         reach: PubkyAppFeedReach.Following,
       });
 
-      expect(Core.buildFeedStreamId(feed)).toBe('timeline:following:all:bitcoin');
+      expect(buildFeedStreamId(feed)).toBe('timeline:following:all:bitcoin');
     });
 
     it('should build stream ID for friends source', () => {
@@ -175,7 +186,7 @@ describe('Feed Helpers', () => {
         reach: PubkyAppFeedReach.Friends,
       });
 
-      expect(Core.buildFeedStreamId(feed)).toBe('timeline:friends:all:bitcoin');
+      expect(buildFeedStreamId(feed)).toBe('timeline:friends:all:bitcoin');
     });
 
     it('should build stream ID for followers source', () => {
@@ -183,7 +194,7 @@ describe('Feed Helpers', () => {
         reach: PubkyAppFeedReach.Followers,
       });
 
-      expect(Core.buildFeedStreamId(feed)).toBe('timeline:followers:all:bitcoin');
+      expect(buildFeedStreamId(feed)).toBe('timeline:followers:all:bitcoin');
     });
 
     it('should build stream ID for popularity sorting', () => {
@@ -191,7 +202,7 @@ describe('Feed Helpers', () => {
         sort: PubkyAppFeedSort.Popularity,
       });
 
-      expect(Core.buildFeedStreamId(feed)).toBe('total_engagement:all:all:bitcoin');
+      expect(buildFeedStreamId(feed)).toBe('total_engagement:all:all:bitcoin');
     });
 
     it('should build stream ID with specific content type', () => {
@@ -199,7 +210,7 @@ describe('Feed Helpers', () => {
         content: PubkyAppPostKind.Image,
       });
 
-      expect(Core.buildFeedStreamId(feed)).toBe('timeline:all:image:bitcoin');
+      expect(buildFeedStreamId(feed)).toBe('timeline:all:image:bitcoin');
     });
 
     it('should build complex stream ID with all options', () => {
@@ -210,7 +221,7 @@ describe('Feed Helpers', () => {
         tags: ['crypto', 'news'],
       });
 
-      expect(Core.buildFeedStreamId(feed)).toBe('total_engagement:following:video:crypto,news');
+      expect(buildFeedStreamId(feed)).toBe('total_engagement:following:video:crypto,news');
     });
   });
 });

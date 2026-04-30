@@ -6,7 +6,6 @@ import { usePostDetails } from '@/hooks/usePostDetails/usePostDetails';
 import { usePostHeaderVisibility } from '@/hooks/usePostHeaderVisibility/usePostHeaderVisibility';
 import { useTtlSubscription } from '@/hooks/useTtlSubscription/useTtlSubscription';
 import React, { useRef, useState } from 'react';
-import * as Core from '@/core';
 import * as Atoms from '@/atoms';
 import * as Molecules from '@/molecules';
 import * as Organisms from '@/organisms';
@@ -16,7 +15,7 @@ import { POST_THREAD_CONNECTOR_VARIANTS } from '@/atoms';
 import type { PostMainProps } from './PostMain.types';
 import { usePostMainLayout, WIDE_POST_LAYOUT_CLASSES } from './PostMainLayout';
 import { cn, isPostDeleted } from '@/libs/utils/utils';
-
+import { TagKind } from '@/application/tag/tag.types';
 export function PostMain({ postId, onClick, className, isReply = false, isLastReply = false }: PostMainProps) {
   const isMobile = useIsMobile();
   const inheritedTagsLayout = usePostMainLayout() ?? 'inline';
@@ -141,7 +140,7 @@ export function PostMain({ postId, onClick, className, isReply = false, isLastRe
                     ) : (
                       <Organisms.ClickableTagsList
                         taggedId={postId}
-                        taggedKind={Core.TagKind.POST}
+                        taggedKind={TagKind.POST}
                         maxTagLength={POST_TAGS_MAX_LENGTH}
                         maxTotalChars={POST_TAGS_MAX_TOTAL_CHARS}
                         showCount={true}

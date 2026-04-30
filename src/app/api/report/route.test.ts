@@ -1,14 +1,14 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { NextRequest } from 'next/server';
 import { POST, GET, OPTIONS } from './route';
-import * as Core from '@/core';
-import { REPORT_REASON_MAX_LENGTH } from '@/core/pipes/report';
 import { ServerErrorCode, ValidationErrorCode } from '@/libs/error/error.codes';
 import { Err } from '@/libs/error/error.factories';
 import { ErrorService } from '@/libs/error/error.types';
-
+import { ReportController } from '@/controllers/report/report';
+import type { Pubky } from '@/models/models.types';
+import { REPORT_REASON_MAX_LENGTH } from '@/pipes/report/report.constants';
 const testData = {
-  userPubky: 'o1gg96ewuojmopcjbz8895478wdtxtzzuxnfjjz8o8e77csa1ngo' as Core.Pubky,
+  userPubky: 'o1gg96ewuojmopcjbz8895478wdtxtzzuxnfjjz8o8e77csa1ngo' as Pubky,
   userName: 'Test User',
   postUrl: 'https://example.com/post/123',
   issueType: 'hate-speech',
@@ -28,7 +28,7 @@ const createPostRequest = (body: Record<string, unknown>) => {
 describe('API Route: /api/report', () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    vi.spyOn(Core.ReportController, 'submit').mockResolvedValue(undefined);
+    vi.spyOn(ReportController, 'submit').mockResolvedValue(undefined);
   });
 
   describe('POST', () => {
@@ -46,7 +46,7 @@ describe('API Route: /api/report', () => {
 
       expect(response.status).toBe(200);
       expect(data.message).toBe('Success');
-      expect(Core.ReportController.submit).toHaveBeenCalledWith({
+      expect(ReportController.submit).toHaveBeenCalledWith({
         pubky: testData.userPubky,
         postUrl: testData.postUrl,
         issueType: testData.issueType,
@@ -61,7 +61,7 @@ describe('API Route: /api/report', () => {
         operation: 'submit',
         context: { statusCode: 400 },
       });
-      vi.spyOn(Core.ReportController, 'submit').mockRejectedValue(appError);
+      vi.spyOn(ReportController, 'submit').mockRejectedValue(appError);
 
       const request = createPostRequest({
         pubky: testData.userPubky,
@@ -84,7 +84,7 @@ describe('API Route: /api/report', () => {
         operation: 'submit',
         context: { statusCode: 500 },
       });
-      vi.spyOn(Core.ReportController, 'submit').mockRejectedValue(appError);
+      vi.spyOn(ReportController, 'submit').mockRejectedValue(appError);
 
       const request = createPostRequest({
         pubky: testData.userPubky,
@@ -102,7 +102,7 @@ describe('API Route: /api/report', () => {
     });
 
     it('should handle unexpected errors with 500 status', async () => {
-      vi.spyOn(Core.ReportController, 'submit').mockRejectedValue(new Error('Unexpected error'));
+      vi.spyOn(ReportController, 'submit').mockRejectedValue(new Error('Unexpected error'));
 
       const request = createPostRequest({
         pubky: testData.userPubky,
@@ -151,7 +151,7 @@ describe('API Route: /api/report', () => {
         'Pubky is required and must be a non-empty string',
         { service: ErrorService.Local, operation: 'submit', context: { statusCode: 400 } },
       );
-      vi.spyOn(Core.ReportController, 'submit').mockRejectedValue(appError);
+      vi.spyOn(ReportController, 'submit').mockRejectedValue(appError);
 
       const response = await POST(request);
       const data = await response.json();
@@ -173,7 +173,7 @@ describe('API Route: /api/report', () => {
         'Post URL is required and must be a non-empty string',
         { service: ErrorService.Local, operation: 'submit', context: { statusCode: 400 } },
       );
-      vi.spyOn(Core.ReportController, 'submit').mockRejectedValue(appError);
+      vi.spyOn(ReportController, 'submit').mockRejectedValue(appError);
 
       const response = await POST(request);
       const data = await response.json();
@@ -195,7 +195,7 @@ describe('API Route: /api/report', () => {
         'Issue type is required and must be a non-empty string',
         { service: ErrorService.Local, operation: 'submit', context: { statusCode: 400 } },
       );
-      vi.spyOn(Core.ReportController, 'submit').mockRejectedValue(appError);
+      vi.spyOn(ReportController, 'submit').mockRejectedValue(appError);
 
       const response = await POST(request);
       const data = await response.json();
@@ -218,7 +218,7 @@ describe('API Route: /api/report', () => {
         operation: 'submit',
         context: { statusCode: 400 },
       });
-      vi.spyOn(Core.ReportController, 'submit').mockRejectedValue(appError);
+      vi.spyOn(ReportController, 'submit').mockRejectedValue(appError);
 
       const response = await POST(request);
       const data = await response.json();
@@ -240,7 +240,7 @@ describe('API Route: /api/report', () => {
         'Reason is required and must be a non-empty string',
         { service: ErrorService.Local, operation: 'submit', context: { statusCode: 400 } },
       );
-      vi.spyOn(Core.ReportController, 'submit').mockRejectedValue(appError);
+      vi.spyOn(ReportController, 'submit').mockRejectedValue(appError);
 
       const response = await POST(request);
       const data = await response.json();
@@ -262,7 +262,7 @@ describe('API Route: /api/report', () => {
         'Name is required and must be a non-empty string',
         { service: ErrorService.Local, operation: 'submit', context: { statusCode: 400 } },
       );
-      vi.spyOn(Core.ReportController, 'submit').mockRejectedValue(appError);
+      vi.spyOn(ReportController, 'submit').mockRejectedValue(appError);
 
       const response = await POST(request);
       const data = await response.json();
@@ -286,7 +286,7 @@ describe('API Route: /api/report', () => {
         `Reason must be no more than ${REPORT_REASON_MAX_LENGTH} characters`,
         { service: ErrorService.Local, operation: 'submit', context: { statusCode: 400 } },
       );
-      vi.spyOn(Core.ReportController, 'submit').mockRejectedValue(appError);
+      vi.spyOn(ReportController, 'submit').mockRejectedValue(appError);
 
       const response = await POST(request);
       const data = await response.json();

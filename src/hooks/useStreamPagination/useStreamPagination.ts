@@ -1,12 +1,15 @@
 'use client';
 
 import { useState, useEffect, useCallback, useRef } from 'react';
-import * as Core from '@/core';
 import * as Config from '@/config';
 import * as Types from './useStreamPagination.types';
 import { Logger } from '@/libs/logger/logger';
 import { isAppError } from '@/libs/error/error.utils';
-
+import { NOT_FOUND_CACHED_STREAM } from '@/controllers/stream/posts/post.constants';
+import { StreamPostsController } from '@/controllers/stream/posts/posts';
+import type { TReadPostStreamChunkResponse } from '@/controllers/stream/posts/posts.types';
+import { SORT } from '@/stores/home/home.types';
+import { sortPostIdsByTimestamp } from '@/utils/sorting';
 /**
  * useStreamPagination
  *
@@ -20,7 +23,7 @@ export function useStreamPagination({
 }: Types.UseStreamPaginationOptions): Types.UseStreamPaginationResult {
   const [postIds, setPostIds] = useState<string[]>([]);
   const [lastPostId, setLastPostId] = useState<string | undefined>(undefined);
-  const [streamTail, setStreamTail] = useState<number>(Core.NOT_FOUND_CACHED_STREAM);
+  const [streamTail, setStreamTail] = useState<number>(NOT_FOUND_CACHED_STREAM);
 
   const [loading, setLoading] = useState(true);
   const [loadingMore, setLoadingMore] = useState(false);
@@ -49,26 +52,26 @@ export function useStreamPagination({
       setError(null);
 
       try {
-        let result: Core.TReadPostStreamChunkResponse;
+        let result: TReadPostStreamChunkResponse;
 
         if (isInitialLoad) {
           // Prepare stream for initial load: clear stale cache, merge unread posts, clear unread stream
-          await Core.StreamPostsController.prepareStreamForInitialLoad({ streamId });
+          await StreamPostsController.prepareStreamForInitialLoad({ streamId });
 
-          const cachedLastPostTimestamp = await Core.StreamPostsController.getCachedLastPostTimestamp({ streamId });
+          const cachedLastPostTimestamp = await StreamPostsController.getCachedLastPostTimestamp({ streamId });
           setStreamTail(cachedLastPostTimestamp);
 
-          result = await Core.StreamPostsController.getOrFetchStreamSlice({
+          result = await StreamPostsController.getOrFetchStreamSlice({
             streamId,
             lastPostId: undefined,
             streamTail: cachedLastPostTimestamp,
             limit,
           });
         } else {
-          const isEngagementStream = streamId.startsWith(Core.SORT.ENGAGEMENT);
+          const isEngagementStream = streamId.startsWith(SORT.ENGAGEMENT);
           const cursorValue = isEngagementStream ? postIdsRef.current.length : streamTail;
 
-          result = await Core.StreamPostsController.getOrFetchStreamSlice({
+          result = await StreamPostsController.getOrFetchStreamSlice({
             streamId,
             lastPostId,
             streamTail: cursorValue,
@@ -187,7 +190,7 @@ export function useStreamPagination({
 
     try {
       // Fetch post details to get timestamps and sort
-      const sortedIds = await Core.sortPostIdsByTimestamp(allIds);
+      const sortedIds = await sortPostIdsByTimestamp(allIds);
       postIdsRef.current = sortedIds;
       setPostIds(sortedIds);
     } catch (err) {

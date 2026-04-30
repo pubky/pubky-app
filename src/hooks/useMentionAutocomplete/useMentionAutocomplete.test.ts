@@ -2,8 +2,8 @@ import { renderHook, act } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { mockKeyboardEvent } from '@/test-utils';
 import { useMentionAutocomplete } from './useMentionAutocomplete';
-import type * as Core from '@/core';
-
+import type { Pubky } from '@/models/models.types';
+import type { NexusUserDetails } from '@/services/nexus/nexus.types';
 // Hoist mock data
 const {
   mockUserDetailsMap,
@@ -14,10 +14,10 @@ const {
   mockGetOrFetchDetails,
   mockGetAvatarUrl,
 } = vi.hoisted(() => {
-  const userDetailsMap = { current: new Map<Core.Pubky, Core.NexusUserDetails>() };
+  const userDetailsMap = { current: new Map<Pubky, NexusUserDetails>() };
   return {
     mockUserDetailsMap: userDetailsMap,
-    setMockUserDetailsMap: (value: Map<Core.Pubky, Core.NexusUserDetails>) => {
+    setMockUserDetailsMap: (value: Map<Pubky, NexusUserDetails>) => {
       userDetailsMap.current = value;
     },
     mockGetUsersByName: vi.fn(),
@@ -38,16 +38,20 @@ vi.mock('dexie-react-hooks', () => ({
   }),
 }));
 
-// Mock Core
-vi.mock('@/core', () => ({
+// Mock dependencies
+vi.mock('@/controllers/search/search', () => ({
   SearchController: {
     getUsersByName: (...args: unknown[]) => mockGetUsersByName(...args),
     fetchUsersById: (...args: unknown[]) => mockFetchUsersById(...args),
   },
+}));
+vi.mock('@/controllers/user/user', () => ({
   UserController: {
     getManyDetails: (...args: unknown[]) => mockGetManyDetails(...args),
     getOrFetchDetails: (...args: unknown[]) => mockGetOrFetchDetails(...args),
   },
+}));
+vi.mock('@/controllers/file/file', () => ({
   FileController: {
     getAvatarUrl: (...args: unknown[]) => mockGetAvatarUrl(...args),
   },
@@ -67,15 +71,15 @@ describe('useMentionAutocomplete', () => {
     vi.useFakeTimers();
     mockGetUsersByName.mockResolvedValue(['user1', 'user2']);
     mockFetchUsersById.mockResolvedValue(['abc123']);
-    mockGetManyDetails.mockImplementation(({ userIds }: { userIds: Core.Pubky[] }) => {
-      const map = new Map<Core.Pubky, Core.NexusUserDetails>();
+    mockGetManyDetails.mockImplementation(({ userIds }: { userIds: Pubky[] }) => {
+      const map = new Map<Pubky, NexusUserDetails>();
       for (const userId of userIds) {
         if (userId === 'user1') {
-          map.set(userId, { id: 'user1', name: 'User One', image: 'avatar1.jpg' } as Core.NexusUserDetails);
+          map.set(userId, { id: 'user1', name: 'User One', image: 'avatar1.jpg' } as NexusUserDetails);
         } else if (userId === 'user2') {
-          map.set(userId, { id: 'user2', name: 'User Two', image: null } as Core.NexusUserDetails);
+          map.set(userId, { id: 'user2', name: 'User Two', image: null } as NexusUserDetails);
         } else if (userId === 'abc123') {
-          map.set(userId, { id: 'abc123', name: 'ABC User', image: 'avatar2.jpg' } as Core.NexusUserDetails);
+          map.set(userId, { id: 'abc123', name: 'ABC User', image: 'avatar2.jpg' } as NexusUserDetails);
         }
       }
       return Promise.resolve(map);
@@ -205,9 +209,7 @@ describe('useMentionAutocomplete', () => {
   });
 
   it('closes popover when close is called', async () => {
-    setMockUserDetailsMap(
-      new Map([['user1', { id: 'user1', name: 'User One', image: null } as Core.NexusUserDetails]]),
-    );
+    setMockUserDetailsMap(new Map([['user1', { id: 'user1', name: 'User One', image: null } as NexusUserDetails]]));
 
     const { result, rerender } = renderHook(({ content }) => useMentionAutocomplete({ content }), {
       initialProps: { content: 'Hello @jo' },

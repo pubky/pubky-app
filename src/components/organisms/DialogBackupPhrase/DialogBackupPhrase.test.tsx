@@ -27,16 +27,12 @@ vi.mock('next/image', () => ({
 }));
 
 // Mock stores
-vi.mock('@/core', async (importOriginal) => {
-  const actual = await importOriginal<typeof import('@/core')>();
-  return {
-    ...actual,
-    useOnboardingStore: () => ({
-      secretKey: 'mock-secret-key',
-      mnemonic: 'tube tube resource mass door firm genius parrot girl orphan window world',
-    }),
-  };
-});
+vi.mock('@/stores/onboarding/onboarding.store', () => ({
+  useOnboardingStore: () => ({
+    secretKey: 'mock-secret-key',
+    mnemonic: 'tube tube resource mass door firm genius parrot girl orphan window world',
+  }),
+}));
 
 // Mock atoms
 vi.mock('@/atoms', () => ({

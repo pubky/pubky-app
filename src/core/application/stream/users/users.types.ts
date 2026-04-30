@@ -1,5 +1,5 @@
-import * as Core from '@/core';
-
+import type { Pubky } from '@/models/models.types';
+import type { UserStreamId } from '@/models/stream/user/userStream.types';
 /**
  * Parameters for reading a user stream chunk (followers, following, friends, etc.)
  * streamId can be:
@@ -10,7 +10,7 @@ import * as Core from '@/core';
  * viewerId is not included as it's extracted from auth store by the controller
  */
 export type TReadUserStreamChunkParams = {
-  streamId: Core.UserStreamId;
+  streamId: UserStreamId;
   limit: number;
   skip: number;
 };
@@ -21,14 +21,14 @@ export type TReadUserStreamChunkParams = {
  */
 export type TFetchUserStreamChunkParams = TReadUserStreamChunkParams & {
   limit: number;
-  viewerId?: Core.Pubky;
+  viewerId?: Pubky;
 };
 
 /**
  * Response from reading a user stream chunk
  */
 export type TReadUserStreamChunkResponse = {
-  nextPageIds: Core.Pubky[];
+  nextPageIds: Pubky[];
   skip: number | undefined;
 };
 
@@ -36,8 +36,8 @@ export type TReadUserStreamChunkResponse = {
  * Internal response type with cache miss tracking
  */
 export type TUserStreamChunkResponse = {
-  nextPageIds: Core.Pubky[];
-  cacheMissUserIds: Core.Pubky[];
+  nextPageIds: Pubky[];
+  cacheMissUserIds: Pubky[];
   skip: number | undefined;
 };
 
@@ -45,12 +45,12 @@ export type TUserStreamChunkResponse = {
  * Parameters for fetching missing users
  */
 export type TMissingUsersParams = {
-  cacheMissUserIds: Core.Pubky[];
-  viewerId?: Core.Pubky;
+  cacheMissUserIds: Pubky[];
+  viewerId?: Pubky;
 };
 
 export type TFetchStreamFromNexusParams = TFetchUserStreamChunkParams & {
-  cachedStream?: { stream: Core.Pubky[] } | null;
+  cachedStream?: { stream: Pubky[] } | null;
 };
 
 /**
@@ -58,6 +58,6 @@ export type TFetchStreamFromNexusParams = TFetchUserStreamChunkParams & {
  * Used by controller (without viewerId) and application (with viewerId)
  */
 export type TGetOrFetchUsersParams = {
-  userIds: Core.Pubky[];
-  viewerId?: Core.Pubky;
+  userIds: Pubky[];
+  viewerId?: Pubky;
 };

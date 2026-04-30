@@ -2,14 +2,16 @@ import React from 'react';
 import { render, screen } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { SinglePostContent } from './SinglePostContent';
-import * as Core from '@/core';
 import type { UseRequireAuthResult } from '@/hooks/useRequireAuth/useRequireAuth.types';
 import { usePostAncestors } from '@/hooks/usePostAncestors/usePostAncestors';
 import { usePostCounts } from '@/hooks/usePostCounts/usePostCounts';
 import { usePostDetails } from '@/hooks/usePostDetails/usePostDetails';
 import { useRequireAuth } from '@/hooks/useRequireAuth/useRequireAuth';
 import { useUserDetailsFromIds } from '@/hooks/useUserDetailsFromIds/useUserDetailsFromIds';
-
+import type { EnrichedPostDetails } from '@/application/moderation/moderation.types';
+import type { PostCountsModelSchema } from '@/models/post/counts/postCounts.schema';
+import { useHomeStore } from '@/stores/home/home.store';
+import { LAYOUT } from '@/stores/home/home.types';
 // Mock hooks
 const mockUseRequireAuth = vi.fn(
   (): UseRequireAuthResult => ({
@@ -28,7 +30,7 @@ const mockUsePostDetails = vi.fn(() => ({
     attachments: [],
     is_moderated: false,
     is_blurred: false,
-  } satisfies Core.EnrichedPostDetails,
+  } satisfies EnrichedPostDetails,
   isLoading: false,
 }));
 
@@ -39,7 +41,7 @@ const mockUsePostCounts = vi.fn(() => ({
     tags: 0,
     unique_tags: 0,
     reposts: 0,
-  } satisfies Core.PostCountsModelSchema,
+  } satisfies PostCountsModelSchema,
   isLoading: false,
 }));
 
@@ -187,7 +189,7 @@ describe('SinglePostContent', () => {
 
   beforeEach(() => {
     vi.clearAllMocks();
-    Core.useHomeStore.getState().reset();
+    useHomeStore.getState().reset();
     vi.mocked(useRequireAuth).mockReturnValue(mockUseRequireAuth());
     vi.mocked(usePostDetails).mockReturnValue(mockUsePostDetails());
     vi.mocked(usePostCounts).mockReturnValue(mockUsePostCounts());
@@ -206,7 +208,7 @@ describe('SinglePostContent', () => {
     });
 
     it('derives side tags layout for the single-post surface when the app is in wide mode', () => {
-      Core.useHomeStore.getState().setLayout(Core.LAYOUT.WIDE);
+      useHomeStore.getState().setLayout(LAYOUT.WIDE);
 
       render(<SinglePostContent postId={mockPostId} />);
 
@@ -224,7 +226,7 @@ describe('SinglePostContent', () => {
           attachments: [],
           is_moderated: false,
           is_blurred: false,
-        } satisfies Core.EnrichedPostDetails,
+        } satisfies EnrichedPostDetails,
         isLoading: false,
       });
 
@@ -350,7 +352,7 @@ describe('SinglePostContent - Snapshots', () => {
         attachments: [],
         is_moderated: false,
         is_blurred: false,
-      } satisfies Core.EnrichedPostDetails,
+      } satisfies EnrichedPostDetails,
       isLoading: false,
     });
 

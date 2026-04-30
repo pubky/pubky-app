@@ -2,10 +2,10 @@
 
 import { useCallback, useEffect, useState } from 'react';
 import { useTranslations } from 'next-intl';
-import * as Core from '@/core';
 import * as Molecules from '@/molecules';
 import { Logger } from '@/libs/logger/logger';
-
+import { BookmarkController } from '@/controllers/bookmark/bookmark';
+import { useAuthStore } from '@/stores/auth/auth.store';
 export interface UseBookmarkResult {
   isBookmarked: boolean;
   isLoading: boolean;
@@ -36,7 +36,7 @@ export function useBookmark(postId: string): UseBookmarkResult {
   const { toast } = Molecules.useToast();
   const tToast = useTranslations('toast');
   const tBookmark = useTranslations('toast.bookmark');
-  const currentUserPubky = Core.useAuthStore((state) => state.currentUserPubky);
+  const currentUserPubky = useAuthStore((state) => state.currentUserPubky);
 
   const [isBookmarked, setIsBookmarked] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
@@ -51,7 +51,7 @@ export function useBookmark(postId: string): UseBookmarkResult {
     }
 
     setIsLoading(true);
-    Core.BookmarkController.exists(postId)
+    BookmarkController.exists(postId)
       .then((exists) => {
         setIsBookmarked(exists);
         setIsLoading(false);
@@ -77,14 +77,14 @@ export function useBookmark(postId: string): UseBookmarkResult {
     setIsToggling(true);
     try {
       if (isBookmarked) {
-        await Core.BookmarkController.commitDelete({ postId, userId: currentUserPubky });
+        await BookmarkController.commitDelete({ postId, userId: currentUserPubky });
         setIsBookmarked(false);
         toast({
           title: tBookmark('removed'),
           description: tBookmark('removedDesc'),
         });
       } else {
-        await Core.BookmarkController.commitCreate({ postId, userId: currentUserPubky });
+        await BookmarkController.commitCreate({ postId, userId: currentUserPubky });
         setIsBookmarked(true);
         toast({
           title: tBookmark('added'),

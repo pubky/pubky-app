@@ -1,10 +1,9 @@
 'use client';
 
-import * as Core from '@/core';
-import { useBulkUserAvatars } from '../useBulkUserAvatars/useBulkUserAvatars';
+import { useBulkUserAvatars } from '@/hooks/useBulkUserAvatars/useBulkUserAvatars';
 import type { TagWithAvatars } from '@/molecules/TaggedItem/TaggedItem.types';
 import type { UseEnrichedTagsResult } from './useEnrichedTags.types';
-
+import type { Pubky } from '@/models/models.types';
 /**
  * Hook to enrich tags with user details for tagger avatars.
  * Fetches user names and avatar URLs for all taggers in the provided tags.
@@ -22,7 +21,7 @@ import type { UseEnrichedTagsResult } from './useEnrichedTags.types';
 export function useEnrichedTags(tags: TagWithAvatars[]): UseEnrichedTagsResult {
   // Collect all unique tagger IDs for bulk user details lookup
   const allTaggerIds = (() => {
-    const ids = new Set<Core.Pubky>();
+    const ids = new Set<Pubky>();
     for (const tag of tags) {
       for (const tagger of tag.taggers) {
         ids.add(tagger.id);

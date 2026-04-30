@@ -1,8 +1,12 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import * as Core from '@/core';
 import { TEST_PUBKY, restoreMocks, buildPubkyUri } from '../pipes.test-utils';
 import { Logger } from '@/libs/logger/logger';
-
+import { SettingsNormalizer, type SettingsJson } from '@/pipes/settings/settings.normalizer';
+import {
+  defaultNotificationPreferences,
+  defaultPrivacyPreferences,
+  type SettingsState,
+} from '@/stores/settings/settings.types';
 describe('SettingsNormalizer', () => {
   beforeEach(() => {
     vi.clearAllMocks();
@@ -12,9 +16,9 @@ describe('SettingsNormalizer', () => {
   afterEach(restoreMocks);
 
   // Test data factory
-  const createMockSettingsState = (overrides?: Partial<Core.SettingsState>): Core.SettingsState => ({
-    notifications: Core.defaultNotificationPreferences,
-    privacy: Core.defaultPrivacyPreferences,
+  const createMockSettingsState = (overrides?: Partial<SettingsState>): SettingsState => ({
+    notifications: defaultNotificationPreferences,
+    privacy: defaultPrivacyPreferences,
     muted: [],
     language: 'en',
     updatedAt: 1700000000000,
@@ -29,7 +33,7 @@ describe('SettingsNormalizer', () => {
         language: 'es',
       });
 
-      const result = Core.SettingsNormalizer.extractState(input);
+      const result = SettingsNormalizer.extractState(input);
 
       expect(result).toEqual({
         notifications: input.notifications,
@@ -43,7 +47,7 @@ describe('SettingsNormalizer', () => {
 
     it('should create a new object (not reference)', () => {
       const input = createMockSettingsState();
-      const result = Core.SettingsNormalizer.extractState(input);
+      const result = SettingsNormalizer.extractState(input);
 
       expect(result).not.toBe(input);
       expect(result).toEqual(input);
@@ -57,7 +61,7 @@ describe('SettingsNormalizer', () => {
         syncToHomeserver: vi.fn(),
       };
 
-      const result = Core.SettingsNormalizer.extractState(storeWithActions);
+      const result = SettingsNormalizer.extractState(storeWithActions);
 
       expect(result).not.toHaveProperty('setLanguage');
       expect(result).not.toHaveProperty('syncToHomeserver');
@@ -67,26 +71,26 @@ describe('SettingsNormalizer', () => {
 
   describe('buildUrl', () => {
     it('should generate correct URL format', () => {
-      const result = Core.SettingsNormalizer.buildUrl(TEST_PUBKY.USER_1);
+      const result = SettingsNormalizer.buildUrl(TEST_PUBKY.USER_1);
 
       expect(result).toBe(buildPubkyUri(TEST_PUBKY.USER_1, 'settings.json'));
     });
 
     it('should include pubky in URL', () => {
-      const result = Core.SettingsNormalizer.buildUrl(TEST_PUBKY.USER_1);
+      const result = SettingsNormalizer.buildUrl(TEST_PUBKY.USER_1);
 
       expect(result).toContain(TEST_PUBKY.USER_1);
     });
 
     it('should end with settings.json', () => {
-      const result = Core.SettingsNormalizer.buildUrl(TEST_PUBKY.USER_1);
+      const result = SettingsNormalizer.buildUrl(TEST_PUBKY.USER_1);
 
       expect(result).toMatch(/settings\.json$/);
     });
 
     it('should handle different pubkys', () => {
-      const result1 = Core.SettingsNormalizer.buildUrl(TEST_PUBKY.USER_1);
-      const result2 = Core.SettingsNormalizer.buildUrl(TEST_PUBKY.USER_2);
+      const result1 = SettingsNormalizer.buildUrl(TEST_PUBKY.USER_1);
+      const result2 = SettingsNormalizer.buildUrl(TEST_PUBKY.USER_2);
 
       expect(result1).toContain(TEST_PUBKY.USER_1);
       expect(result2).toContain(TEST_PUBKY.USER_2);
@@ -98,7 +102,7 @@ describe('SettingsNormalizer', () => {
     it('should convert settings state to normalizer result', () => {
       const settings = createMockSettingsState();
 
-      const result = Core.SettingsNormalizer.to(settings, TEST_PUBKY.USER_1);
+      const result = SettingsNormalizer.to(settings, TEST_PUBKY.USER_1);
 
       expect(result).toHaveProperty('settings');
       expect(result).toHaveProperty('meta');
@@ -109,7 +113,7 @@ describe('SettingsNormalizer', () => {
         language: 'fr',
       });
 
-      const result = Core.SettingsNormalizer.to(settings, TEST_PUBKY.USER_1);
+      const result = SettingsNormalizer.to(settings, TEST_PUBKY.USER_1);
 
       expect(result.settings.notifications).toEqual(settings.notifications);
       expect(result.settings.privacy).toEqual(settings.privacy);
@@ -121,7 +125,7 @@ describe('SettingsNormalizer', () => {
     it('should include correct meta URL', () => {
       const settings = createMockSettingsState();
 
-      const result = Core.SettingsNormalizer.to(settings, TEST_PUBKY.USER_1);
+      const result = SettingsNormalizer.to(settings, TEST_PUBKY.USER_1);
 
       expect(result.meta.url).toBe(buildPubkyUri(TEST_PUBKY.USER_1, 'settings.json'));
     });
@@ -129,7 +133,7 @@ describe('SettingsNormalizer', () => {
     it('should include correct meta path', () => {
       const settings = createMockSettingsState();
 
-      const result = Core.SettingsNormalizer.to(settings, TEST_PUBKY.USER_1);
+      const result = SettingsNormalizer.to(settings, TEST_PUBKY.USER_1);
 
       expect(result.meta.path).toBe('pub/pubky.app/settings.json');
     });
@@ -137,7 +141,7 @@ describe('SettingsNormalizer', () => {
     it('should log debug message', () => {
       const settings = createMockSettingsState();
 
-      Core.SettingsNormalizer.to(settings, TEST_PUBKY.USER_1);
+      SettingsNormalizer.to(settings, TEST_PUBKY.USER_1);
 
       expect(Logger.debug).toHaveBeenCalledWith('Settings normalized for homeserver', expect.any(Object));
     });
@@ -145,13 +149,13 @@ describe('SettingsNormalizer', () => {
 
   describe('from', () => {
     it('should convert full JSON to settings state', () => {
-      const json: Core.SettingsJson = {
+      const json: SettingsJson = {
         notifications: {
-          ...Core.defaultNotificationPreferences,
+          ...defaultNotificationPreferences,
           follow: false,
         },
         privacy: {
-          ...Core.defaultPrivacyPreferences,
+          ...defaultPrivacyPreferences,
           blurCensored: false,
         },
         language: 'de',
@@ -159,7 +163,7 @@ describe('SettingsNormalizer', () => {
         version: 2,
       };
 
-      const result = Core.SettingsNormalizer.from(json);
+      const result = SettingsNormalizer.from(json);
 
       expect(result.notifications.follow).toBe(false);
       expect(result.privacy.blurCensored).toBe(false);
@@ -174,11 +178,11 @@ describe('SettingsNormalizer', () => {
         notifications: { follow: false },
       };
 
-      const result = Core.SettingsNormalizer.from(json);
+      const result = SettingsNormalizer.from(json);
 
       expect(result.notifications.follow).toBe(false);
-      expect(result.notifications.newFriend).toBe(Core.defaultNotificationPreferences.newFriend);
-      expect(result.notifications.reply).toBe(Core.defaultNotificationPreferences.reply);
+      expect(result.notifications.newFriend).toBe(defaultNotificationPreferences.newFriend);
+      expect(result.notifications.reply).toBe(defaultNotificationPreferences.reply);
     });
 
     it('should apply default privacy preferences for missing fields', () => {
@@ -186,27 +190,27 @@ describe('SettingsNormalizer', () => {
         privacy: { showConfirm: false },
       };
 
-      const result = Core.SettingsNormalizer.from(json);
+      const result = SettingsNormalizer.from(json);
 
       expect(result.privacy.showConfirm).toBe(false);
-      expect(result.privacy.blurCensored).toBe(Core.defaultPrivacyPreferences.blurCensored);
+      expect(result.privacy.blurCensored).toBe(defaultPrivacyPreferences.blurCensored);
     });
 
     it('should default language to en', () => {
-      const result = Core.SettingsNormalizer.from({});
+      const result = SettingsNormalizer.from({});
 
       expect(result.language).toBe('en');
     });
 
     it('should default version to 1', () => {
-      const result = Core.SettingsNormalizer.from({});
+      const result = SettingsNormalizer.from({});
 
       expect(result.version).toBe(1);
     });
 
     it('should set updatedAt to current time if missing', () => {
       const before = Date.now();
-      const result = Core.SettingsNormalizer.from({});
+      const result = SettingsNormalizer.from({});
       const after = Date.now();
 
       expect(result.updatedAt).toBeGreaterThanOrEqual(before);
@@ -214,11 +218,11 @@ describe('SettingsNormalizer', () => {
     });
 
     it('should handle empty object gracefully', () => {
-      const result = Core.SettingsNormalizer.from({});
+      const result = SettingsNormalizer.from({});
 
       expect(result).toEqual({
-        notifications: Core.defaultNotificationPreferences,
-        privacy: Core.defaultPrivacyPreferences,
+        notifications: defaultNotificationPreferences,
+        privacy: defaultPrivacyPreferences,
         muted: [],
         language: 'en',
         updatedAt: expect.any(Number),
@@ -227,7 +231,7 @@ describe('SettingsNormalizer', () => {
     });
 
     it('should always return empty muted array (muted not synced to homeserver)', () => {
-      const result = Core.SettingsNormalizer.from({});
+      const result = SettingsNormalizer.from({});
 
       expect(result.muted).toEqual([]);
     });
@@ -236,15 +240,15 @@ describe('SettingsNormalizer', () => {
   describe('round-trip conversion', () => {
     it('should preserve data through to/from cycle (except muted which is not synced)', () => {
       const original = createMockSettingsState({
-        notifications: { ...Core.defaultNotificationPreferences, follow: false },
-        privacy: { ...Core.defaultPrivacyPreferences, showConfirm: false },
+        notifications: { ...defaultNotificationPreferences, follow: false },
+        privacy: { ...defaultPrivacyPreferences, showConfirm: false },
         muted: ['user1'], // This won't be preserved - muted is not synced to homeserver
         language: 'ja',
         version: 3,
       });
 
-      const normalized = Core.SettingsNormalizer.to(original, TEST_PUBKY.USER_1);
-      const restored = Core.SettingsNormalizer.from(normalized.settings);
+      const normalized = SettingsNormalizer.to(original, TEST_PUBKY.USER_1);
+      const restored = SettingsNormalizer.from(normalized.settings);
 
       // Muted is not synced to homeserver, so it defaults to empty on restore
       expect(restored).toEqual({
@@ -258,7 +262,7 @@ describe('SettingsNormalizer', () => {
         muted: ['user1', 'user2'],
       });
 
-      const normalized = Core.SettingsNormalizer.to(original, TEST_PUBKY.USER_1);
+      const normalized = SettingsNormalizer.to(original, TEST_PUBKY.USER_1);
 
       expect(normalized.settings).not.toHaveProperty('muted');
     });

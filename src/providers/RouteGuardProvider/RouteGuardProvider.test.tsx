@@ -73,8 +73,8 @@ vi.mock('@/libs/logger/logger', () => ({
   Logger: { error: vi.fn(), warn: vi.fn(), info: vi.fn() },
 }));
 
-// Mock @/core
-vi.mock('@/core', () => ({
+// Mock auth store
+vi.mock('@/stores/auth/auth.store', () => ({
   useAuthStore: (selector: (state: Record<string, unknown>) => unknown) =>
     selector({
       hasHydrated: mocks.hasHydrated,
@@ -82,17 +82,25 @@ vi.mock('@/core', () => ({
       sessionExport: mocks.sessionExport,
       currentUserPubky: mocks.currentUserPubky,
     }),
+}));
+vi.mock('@/stores/migration/migration.store', () => ({
   useMigrationStore: Object.assign(
     (selector: (state: Record<string, unknown>) => unknown) => selector({ wasDbReset: mocks.wasDbReset }),
     {
       getState: () => ({ reset: mocks.resetMigrationStore, wasDbReset: mocks.wasDbReset }),
     },
   ),
+}));
+vi.mock('@/stores/settings/settings.store', () => ({
   useSettingsStore: (selector: (state: Record<string, unknown>) => unknown) =>
     selector({ language: mocks.storeLanguage }),
+}));
+vi.mock('@/controllers/auth/auth', () => ({
   AuthController: {
     restorePersistedSession: vi.fn().mockResolvedValue(true),
   },
+}));
+vi.mock('@/controllers/migration/migration', () => ({
   MigrationController: {
     resync: mocks.mockResync,
   },

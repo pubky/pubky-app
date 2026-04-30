@@ -7,13 +7,13 @@ import { forwardRef, useImperativeHandle, useRef, useState } from 'react';
 import { useTranslations } from 'next-intl';
 import * as Atoms from '@/atoms';
 import * as Molecules from '@/molecules';
-import * as Core from '@/core';
 import type { TagInputHandle } from '@/molecules';
 import type { PostTagsPanelProps, PostTagsPanelHandle } from './PostTagsPanel.types';
 import { PostTagsPanelSkeleton } from './PostTagsPanel.skeleton';
 import { Tag } from 'lucide-react';
 import { cn } from '@/libs/utils/utils';
-
+import { TagKind } from '@/application/tag/tag.types';
+import { useAuthStore } from '@/stores/auth/auth.store';
 const INITIAL_VISIBLE_TAGS = 3;
 
 /**
@@ -48,7 +48,7 @@ export const PostTagsPanel = forwardRef<PostTagsPanelHandle, PostTagsPanelProps>
 
   // Auth requirement for tag actions
   const { isAuthenticated, requireAuth } = useRequireAuth();
-  const setShowSignInDialog = Core.useAuthStore((state) => state.setShowSignInDialog);
+  const setShowSignInDialog = useAuthStore((state) => state.setShowSignInDialog);
 
   // Wrap tag toggle with auth requirement
   const handleTagToggleWithAuth = (tag: Parameters<typeof handleTagToggle>[0]) => {
@@ -101,7 +101,7 @@ export const PostTagsPanel = forwardRef<PostTagsPanelHandle, PostTagsPanelProps>
             <Molecules.TaggedList
               tags={visibleTags}
               taggedId={postId}
-              taggedKind={Core.TagKind.POST}
+              taggedKind={TagKind.POST}
               hasMore={isCollapsedPreview ? false : hasMore}
               isLoadingMore={isCollapsedPreview ? false : isLoadingMore}
               onLoadMore={isCollapsedPreview ? undefined : loadMore}

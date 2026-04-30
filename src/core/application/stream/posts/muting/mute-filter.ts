@@ -1,6 +1,6 @@
-import * as Core from '@/core';
 import { Logger } from '@/libs/logger/logger';
-
+import type { Pubky } from '@/models/models.types';
+import { parseCompositeId } from '@/models/models.utils';
 /**
  * Handles mute filtering for post streams.
  *
@@ -23,12 +23,12 @@ export class MuteFilter {
    * @param mutedUserIds - Set of muted user IDs (pubkeys)
    * @returns Filtered array of post IDs excluding posts from muted users
    */
-  static filterPosts(postIds: string[], mutedUserIds: Set<Core.Pubky>): string[] {
+  static filterPosts(postIds: string[], mutedUserIds: Set<Pubky>): string[] {
     if (mutedUserIds.size === 0) {
       return postIds;
     }
     return postIds.filter((postId) => {
-      const { pubky: authorId } = Core.parseCompositeId(postId);
+      const { pubky: authorId } = parseCompositeId(postId);
       return !mutedUserIds.has(authorId);
     });
   }
@@ -44,13 +44,13 @@ export class MuteFilter {
    * @param mutedUserIds - Set of muted user IDs (pubkeys)
    * @returns Filtered array of post IDs excluding posts from muted users
    */
-  static filterPostsSafe(postIds: string[], mutedUserIds: Set<Core.Pubky>): string[] {
+  static filterPostsSafe(postIds: string[], mutedUserIds: Set<Pubky>): string[] {
     if (mutedUserIds.size === 0) {
       return postIds;
     }
     return postIds.filter((postId) => {
       try {
-        const { pubky: authorId } = Core.parseCompositeId(postId);
+        const { pubky: authorId } = parseCompositeId(postId);
         return !mutedUserIds.has(authorId);
       } catch {
         // Fail-open: include items we can't parse to avoid hiding valid content
@@ -67,12 +67,12 @@ export class MuteFilter {
    * @param mutedUserIds - Set of muted user IDs (pubkeys)
    * @returns true if the post author is muted, false otherwise (including on parse error)
    */
-  static isPostMuted(postId: string, mutedUserIds: Set<Core.Pubky>): boolean {
+  static isPostMuted(postId: string, mutedUserIds: Set<Pubky>): boolean {
     if (mutedUserIds.size === 0) {
       return false;
     }
     try {
-      const { pubky: authorId } = Core.parseCompositeId(postId);
+      const { pubky: authorId } = parseCompositeId(postId);
       return mutedUserIds.has(authorId);
     } catch {
       Logger.debug('MuteFilter: Failed to parse composite ID for mute check', postId);

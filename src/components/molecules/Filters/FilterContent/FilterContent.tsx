@@ -2,15 +2,15 @@
 
 import * as React from 'react';
 import { useTranslations } from 'next-intl';
-import * as Core from '@/core';
 import * as Molecules from '@/molecules';
 import { Layers, StickyNote, Newspaper, Image, CirclePlay, Link, Download } from 'lucide-react';
-interface FilterContentProps extends Molecules.BaseFilterProps<Core.ContentType> {
-  disabledTabs?: Core.ContentType[];
+import { CONTENT, type ContentType } from '@/stores/home/home.types';
+interface FilterContentProps extends Molecules.BaseFilterProps<ContentType> {
+  disabledTabs?: ContentType[];
 }
 export function FilterContent({
   selectedTab,
-  defaultSelectedTab = Core.CONTENT.ALL,
+  defaultSelectedTab = CONTENT.ALL,
   onTabChange,
   disabled,
   disabledTabs = [],
@@ -18,7 +18,7 @@ export function FilterContent({
   const t = useTranslations('filters.content');
   const disabledSet = React.useMemo(() => new Set(disabledTabs), [disabledTabs]);
   const isDisabled = React.useCallback(
-    (contentType: Core.ContentType) => {
+    (contentType: ContentType) => {
       return disabled || disabledSet.has(contentType) ? true : undefined;
     },
     [disabled, disabledSet],
@@ -26,46 +26,46 @@ export function FilterContent({
   const items = React.useMemo(
     () => [
       {
-        key: Core.CONTENT.ALL,
+        key: CONTENT.ALL,
         label: t('all'),
         icon: Layers,
-        disabled: isDisabled(Core.CONTENT.ALL),
+        disabled: isDisabled(CONTENT.ALL),
       },
       {
-        key: Core.CONTENT.SHORT,
+        key: CONTENT.SHORT,
         label: t('posts'),
         icon: StickyNote,
-        disabled: isDisabled(Core.CONTENT.SHORT),
+        disabled: isDisabled(CONTENT.SHORT),
       },
       {
-        key: Core.CONTENT.LONG,
+        key: CONTENT.LONG,
         label: t('articles'),
         icon: Newspaper,
-        disabled: isDisabled(Core.CONTENT.LONG),
+        disabled: isDisabled(CONTENT.LONG),
       },
       {
-        key: Core.CONTENT.IMAGES,
+        key: CONTENT.IMAGES,
         label: t('images'),
         icon: Image,
-        disabled: isDisabled(Core.CONTENT.IMAGES),
+        disabled: isDisabled(CONTENT.IMAGES),
       },
       {
-        key: Core.CONTENT.VIDEOS,
+        key: CONTENT.VIDEOS,
         label: t('videos'),
         icon: CirclePlay,
-        disabled: isDisabled(Core.CONTENT.VIDEOS),
+        disabled: isDisabled(CONTENT.VIDEOS),
       },
       {
-        key: Core.CONTENT.LINKS,
+        key: CONTENT.LINKS,
         label: t('links'),
         icon: Link,
-        disabled: isDisabled(Core.CONTENT.LINKS),
+        disabled: isDisabled(CONTENT.LINKS),
       },
       {
-        key: Core.CONTENT.FILES,
+        key: CONTENT.FILES,
         label: t('files'),
         icon: Download,
-        disabled: isDisabled(Core.CONTENT.FILES),
+        disabled: isDisabled(CONTENT.FILES),
       },
     ],
     [t, isDisabled],

@@ -1,18 +1,28 @@
 import { describe, it, expect, beforeEach } from 'vitest';
-import * as Core from '@/core';
 import * as Config from '@/config';
-
+import type { Pubky } from '@/models/models.types';
+import { ModerationModel } from '@/models/moderation/moderation';
+import { ModerationType } from '@/models/moderation/moderation.schema';
+import { UserStreamModel } from '@/models/stream/user/userStream';
+import { buildUserCompositeId } from '@/models/stream/user/userStream.helper';
+import { UserCountsModel } from '@/models/user/counts/userCounts';
+import { UserDetailsModel } from '@/models/user/details/userDetails';
+import { UserRelationshipsModel } from '@/models/user/relationships/userRelationships';
+import { UserTagsModel } from '@/models/user/tags/userTags';
+import { UserTtlModel } from '@/models/user/ttl/userTtl';
+import { LocalStreamUsersService } from '@/services/local/stream/users/users';
+import type { NexusTag, NexusUser } from '@/services/nexus/nexus.types';
 describe('LocalStreamUsersService', () => {
-  const targetUserId = 'user-target' as Core.Pubky;
-  const streamId = Core.buildUserCompositeId({ userId: targetUserId, reach: 'followers' });
-  const NON_EXISTENT_STREAM_ID = Core.buildUserCompositeId({ userId: 'non-existent', reach: 'followers' });
+  const targetUserId = 'user-target' as Pubky;
+  const streamId = buildUserCompositeId({ userId: targetUserId, reach: 'followers' });
+  const NON_EXISTENT_STREAM_ID = buildUserCompositeId({ userId: 'non-existent', reach: 'followers' });
   const BASE_TIMESTAMP = 1000000;
 
   // ============================================================================
   // Test Helpers
   // ============================================================================
 
-  const createMockNexusUser = (userId: Core.Pubky, overrides?: Partial<Core.NexusUser>): Core.NexusUser => ({
+  const createMockNexusUser = (userId: Pubky, overrides?: Partial<NexusUser>): NexusUser => ({
     details: {
       id: userId,
       name: `User ${userId}`,
@@ -44,43 +54,43 @@ describe('LocalStreamUsersService', () => {
     ...overrides,
   });
 
-  const createStream = async (userIds: Core.Pubky[], customStreamId?: string) => {
-    await Core.LocalStreamUsersService.upsert({ streamId: customStreamId || streamId, stream: userIds });
+  const createStream = async (userIds: Pubky[], customStreamId?: string) => {
+    await LocalStreamUsersService.upsert({ streamId: customStreamId || streamId, stream: userIds });
   };
 
-  const verifyStream = async (expectedUserIds: Core.Pubky[], customStreamId?: string) => {
-    const result = await Core.UserStreamModel.findById(customStreamId || streamId);
+  const verifyStream = async (expectedUserIds: Pubky[], customStreamId?: string) => {
+    const result = await UserStreamModel.findById(customStreamId || streamId);
     expect(result).toBeTruthy();
     expect(result!.stream).toEqual(expectedUserIds);
   };
 
   const verifyStreamDoesNotExist = async (customStreamId?: string) => {
-    const result = await Core.UserStreamModel.findById(customStreamId || streamId);
+    const result = await UserStreamModel.findById(customStreamId || streamId);
     expect(result).toBeNull();
   };
 
-  const verifyUserPersisted = async (userId: Core.Pubky, expectedName: string) => {
-    const details = await Core.UserDetailsModel.findById(userId);
+  const verifyUserPersisted = async (userId: Pubky, expectedName: string) => {
+    const details = await UserDetailsModel.findById(userId);
     expect(details).toBeTruthy();
     expect(details?.name).toBe(expectedName);
 
-    const counts = await Core.UserCountsModel.findById(userId);
+    const counts = await UserCountsModel.findById(userId);
     expect(counts).toBeTruthy();
 
-    const relationships = await Core.UserRelationshipsModel.findById(userId);
+    const relationships = await UserRelationshipsModel.findById(userId);
     expect(relationships).toBeTruthy();
 
-    const tags = await Core.UserTagsModel.findById(userId);
+    const tags = await UserTagsModel.findById(userId);
     expect(tags).toBeTruthy();
 
-    const ttl = await Core.UserTtlModel.findById(userId);
+    const ttl = await UserTtlModel.findById(userId);
     expect(ttl).toBeTruthy();
     expect(ttl?.lastUpdatedAt).toBeGreaterThan(0);
   };
 
-  const persistAndVerifyUser = async (userId: Core.Pubky, overrides?: Partial<Core.NexusUser>) => {
+  const persistAndVerifyUser = async (userId: Pubky, overrides?: Partial<NexusUser>) => {
     const mockUser = createMockNexusUser(userId, overrides);
-    const result = await Core.LocalStreamUsersService.persistUsers([mockUser]);
+    const result = await LocalStreamUsersService.persistUsers([mockUser]);
 
     expect(result).toEqual([userId]);
     return { userId, mockUser };
@@ -88,18 +98,18 @@ describe('LocalStreamUsersService', () => {
 
   beforeEach(async () => {
     // Clear all relevant tables
-    await Core.UserStreamModel.table.clear();
-    await Core.UserDetailsModel.table.clear();
-    await Core.UserCountsModel.table.clear();
-    await Core.UserRelationshipsModel.table.clear();
-    await Core.UserTagsModel.table.clear();
-    await Core.ModerationModel.table.clear();
-    await Core.UserTtlModel.table.clear();
+    await UserStreamModel.table.clear();
+    await UserDetailsModel.table.clear();
+    await UserCountsModel.table.clear();
+    await UserRelationshipsModel.table.clear();
+    await UserTagsModel.table.clear();
+    await ModerationModel.table.clear();
+    await UserTtlModel.table.clear();
   });
 
   describe('upsert', () => {
     it('should create a new stream with user IDs', async () => {
-      const userIds: Core.Pubky[] = ['follower-1', 'follower-2', 'follower-3'];
+      const userIds: Pubky[] = ['follower-1', 'follower-2', 'follower-3'];
 
       await createStream(userIds);
 
@@ -107,8 +117,8 @@ describe('LocalStreamUsersService', () => {
     });
 
     it('should update an existing stream with new user IDs', async () => {
-      const initialUserIds: Core.Pubky[] = ['follower-1', 'follower-2'];
-      const updatedUserIds: Core.Pubky[] = ['follower-3', 'follower-4', 'follower-5'];
+      const initialUserIds: Pubky[] = ['follower-1', 'follower-2'];
+      const updatedUserIds: Pubky[] = ['follower-3', 'follower-4', 'follower-5'];
 
       await createStream(initialUserIds);
       await verifyStream(initialUserIds);
@@ -124,21 +134,21 @@ describe('LocalStreamUsersService', () => {
     });
 
     it('should handle composite IDs (userId:reach format)', async () => {
-      const followingStreamId = Core.buildUserCompositeId({ userId: targetUserId, reach: 'following' });
-      const userIds: Core.Pubky[] = ['following-1', 'following-2'];
+      const followingStreamId = buildUserCompositeId({ userId: targetUserId, reach: 'following' });
+      const userIds: Pubky[] = ['following-1', 'following-2'];
 
       await createStream(userIds, followingStreamId);
       await verifyStream(userIds, followingStreamId);
     });
 
     it('should handle different reach types', async () => {
-      const followersIds: Core.Pubky[] = ['follower-1'];
-      const followingIds: Core.Pubky[] = ['following-1'];
-      const friendsIds: Core.Pubky[] = ['friend-1'];
+      const followersIds: Pubky[] = ['follower-1'];
+      const followingIds: Pubky[] = ['following-1'];
+      const friendsIds: Pubky[] = ['friend-1'];
 
-      const followersStreamId = Core.buildUserCompositeId({ userId: targetUserId, reach: 'followers' });
-      const followingStreamId = Core.buildUserCompositeId({ userId: targetUserId, reach: 'following' });
-      const friendsStreamId = Core.buildUserCompositeId({ userId: targetUserId, reach: 'friends' });
+      const followersStreamId = buildUserCompositeId({ userId: targetUserId, reach: 'followers' });
+      const followingStreamId = buildUserCompositeId({ userId: targetUserId, reach: 'following' });
+      const friendsStreamId = buildUserCompositeId({ userId: targetUserId, reach: 'friends' });
 
       await createStream(followersIds, followersStreamId);
       await createStream(followingIds, followingStreamId);
@@ -152,29 +162,29 @@ describe('LocalStreamUsersService', () => {
 
   describe('findById', () => {
     it('should return stream when it exists', async () => {
-      const userIds: Core.Pubky[] = ['follower-1', 'follower-2', 'follower-3'];
+      const userIds: Pubky[] = ['follower-1', 'follower-2', 'follower-3'];
 
       await createStream(userIds);
 
-      const result = await Core.LocalStreamUsersService.findById(streamId);
+      const result = await LocalStreamUsersService.findById(streamId);
 
       expect(result).toBeTruthy();
       expect(result!.stream).toEqual(userIds);
     });
 
     it('should return null when stream does not exist', async () => {
-      const result = await Core.LocalStreamUsersService.findById(NON_EXISTENT_STREAM_ID);
+      const result = await LocalStreamUsersService.findById(NON_EXISTENT_STREAM_ID);
 
       expect(result).toBeNull();
     });
 
     it('should handle composite IDs correctly', async () => {
-      const followingStreamId = Core.buildUserCompositeId({ userId: targetUserId, reach: 'following' });
-      const userIds: Core.Pubky[] = ['following-1', 'following-2'];
+      const followingStreamId = buildUserCompositeId({ userId: targetUserId, reach: 'following' });
+      const userIds: Pubky[] = ['following-1', 'following-2'];
 
       await createStream(userIds, followingStreamId);
 
-      const result = await Core.LocalStreamUsersService.findById(followingStreamId);
+      const result = await LocalStreamUsersService.findById(followingStreamId);
 
       expect(result).toBeTruthy();
       expect(result!.stream).toEqual(userIds);
@@ -183,18 +193,18 @@ describe('LocalStreamUsersService', () => {
 
   describe('deleteById', () => {
     it('should delete an existing stream', async () => {
-      const userIds: Core.Pubky[] = ['follower-1', 'follower-2'];
+      const userIds: Pubky[] = ['follower-1', 'follower-2'];
 
       await createStream(userIds);
       await verifyStream(userIds);
 
-      await Core.LocalStreamUsersService.deleteById(streamId);
+      await LocalStreamUsersService.deleteById(streamId);
 
       await verifyStreamDoesNotExist();
     });
 
     it('should not throw error when deleting non-existent stream', async () => {
-      await expect(Core.LocalStreamUsersService.deleteById(NON_EXISTENT_STREAM_ID)).resolves.not.toThrow();
+      await expect(LocalStreamUsersService.deleteById(NON_EXISTENT_STREAM_ID)).resolves.not.toThrow();
 
       await verifyStreamDoesNotExist(NON_EXISTENT_STREAM_ID);
     });
@@ -202,24 +212,24 @@ describe('LocalStreamUsersService', () => {
 
   describe('persistUsers', () => {
     it('should persist users to normalized tables (details, counts, tags, relationships, ttl)', async () => {
-      const userId = 'user-1' as Core.Pubky;
+      const userId = 'user-1' as Pubky;
       const { mockUser } = await persistAndVerifyUser(userId);
 
       await verifyUserPersisted(userId, mockUser.details.name);
     });
 
     it('should return array of user IDs (Pubky[])', async () => {
-      const userIds: Core.Pubky[] = ['user-1', 'user-2', 'user-3'];
+      const userIds: Pubky[] = ['user-1', 'user-2', 'user-3'];
       const mockUsers = userIds.map((id) => createMockNexusUser(id));
 
-      const result = await Core.LocalStreamUsersService.persistUsers(mockUsers);
+      const result = await LocalStreamUsersService.persistUsers(mockUsers);
 
       expect(result).toEqual(userIds);
     });
 
     it('should handle users with tags', async () => {
-      const userId = 'user-1' as Core.Pubky;
-      const mockTags: Core.NexusTag[] = [
+      const userId = 'user-1' as Pubky;
+      const mockTags: NexusTag[] = [
         {
           label: 'developer',
           taggers: ['tagger-1', 'tagger-2'],
@@ -236,7 +246,7 @@ describe('LocalStreamUsersService', () => {
 
       await persistAndVerifyUser(userId, { tags: mockTags });
 
-      const savedTagsModel = await Core.UserTagsModel.findById(userId);
+      const savedTagsModel = await UserTagsModel.findById(userId);
       expect(savedTagsModel).toBeTruthy();
       const savedTags = savedTagsModel!.tags;
       expect(savedTags).toHaveLength(2);
@@ -245,7 +255,7 @@ describe('LocalStreamUsersService', () => {
     });
 
     it('should handle users with relationships', async () => {
-      const userId = 'user-1' as Core.Pubky;
+      const userId = 'user-1' as Pubky;
       const mockRelationship = {
         following: true,
         followed_by: true,
@@ -253,15 +263,15 @@ describe('LocalStreamUsersService', () => {
 
       await persistAndVerifyUser(userId, { relationship: mockRelationship });
 
-      const savedRelationship = await Core.UserRelationshipsModel.findById(userId);
+      const savedRelationship = await UserRelationshipsModel.findById(userId);
       expect(savedRelationship).toBeTruthy();
       expect(savedRelationship!.following).toBe(true);
       expect(savedRelationship!.followed_by).toBe(true);
     });
 
     it('should convert NexusTag format correctly', async () => {
-      const userId = 'user-1' as Core.Pubky;
-      const mockUserTags: Core.NexusTag[] = [
+      const userId = 'user-1' as Pubky;
+      const mockUserTags: NexusTag[] = [
         {
           label: 'expert',
           taggers: ['tagger-1'],
@@ -272,7 +282,7 @@ describe('LocalStreamUsersService', () => {
 
       await persistAndVerifyUser(userId, { tags: mockUserTags });
 
-      const savedTagsModel = await Core.UserTagsModel.findById(userId);
+      const savedTagsModel = await UserTagsModel.findById(userId);
       expect(savedTagsModel).toBeTruthy();
       const savedTags = savedTagsModel!.tags;
       expect(savedTags[0]).toHaveProperty('label');
@@ -283,39 +293,39 @@ describe('LocalStreamUsersService', () => {
     });
 
     it('should handle empty array', async () => {
-      const result = await Core.LocalStreamUsersService.persistUsers([]);
+      const result = await LocalStreamUsersService.persistUsers([]);
 
       expect(result).toEqual([]);
     });
 
     it('should bulk save to all 5 tables in parallel (details, counts, tags, relationships, ttl)', async () => {
-      const userIds: Core.Pubky[] = ['user-1', 'user-2', 'user-3'];
+      const userIds: Pubky[] = ['user-1', 'user-2', 'user-3'];
       const mockUsers = userIds.map((id) => createMockNexusUser(id));
 
-      await Core.LocalStreamUsersService.persistUsers(mockUsers);
+      await LocalStreamUsersService.persistUsers(mockUsers);
 
       // Verify all tables have data
       for (const userId of userIds) {
-        const details = await Core.UserDetailsModel.findById(userId);
+        const details = await UserDetailsModel.findById(userId);
         expect(details).toBeTruthy();
 
-        const counts = await Core.UserCountsModel.findById(userId);
+        const counts = await UserCountsModel.findById(userId);
         expect(counts).toBeTruthy();
 
-        const relationships = await Core.UserRelationshipsModel.findById(userId);
+        const relationships = await UserRelationshipsModel.findById(userId);
         expect(relationships).toBeTruthy();
 
-        const tags = await Core.UserTagsModel.findById(userId);
+        const tags = await UserTagsModel.findById(userId);
         expect(tags).toBeTruthy();
 
-        const ttl = await Core.UserTtlModel.findById(userId);
+        const ttl = await UserTtlModel.findById(userId);
         expect(ttl).toBeTruthy();
         expect(ttl?.lastUpdatedAt).toBeGreaterThan(0);
       }
     });
 
     it('should persist user details correctly', async () => {
-      const userId = 'user-1' as Core.Pubky;
+      const userId = 'user-1' as Pubky;
       const mockUser = createMockNexusUser(userId, {
         details: {
           id: userId,
@@ -328,9 +338,9 @@ describe('LocalStreamUsersService', () => {
         },
       });
 
-      await Core.LocalStreamUsersService.persistUsers([mockUser]);
+      await LocalStreamUsersService.persistUsers([mockUser]);
 
-      const details = await Core.UserDetailsModel.findById(userId);
+      const details = await UserDetailsModel.findById(userId);
       expect(details).toBeTruthy();
       expect(details!.name).toBe('John Doe');
       expect(details!.bio).toBe('Software Engineer');
@@ -340,7 +350,7 @@ describe('LocalStreamUsersService', () => {
     });
 
     it('should persist user counts correctly', async () => {
-      const userId = 'user-1' as Core.Pubky;
+      const userId = 'user-1' as Pubky;
       const mockUser = createMockNexusUser(userId, {
         counts: {
           tagged: 5,
@@ -355,9 +365,9 @@ describe('LocalStreamUsersService', () => {
         },
       });
 
-      await Core.LocalStreamUsersService.persistUsers([mockUser]);
+      await LocalStreamUsersService.persistUsers([mockUser]);
 
-      const counts = await Core.UserCountsModel.findById(userId);
+      const counts = await UserCountsModel.findById(userId);
       expect(counts).toBeTruthy();
       expect(counts!.posts).toBe(100);
       expect(counts!.replies).toBe(50);
@@ -367,8 +377,8 @@ describe('LocalStreamUsersService', () => {
 
     describe('moderation detection', () => {
       it('should create moderation record for user with moderation tag', async () => {
-        const userId = 'user-moderated' as Core.Pubky;
-        const moderatedTags: Core.NexusTag[] = [
+        const userId = 'user-moderated' as Pubky;
+        const moderatedTags: NexusTag[] = [
           {
             label: Config.MODERATED_TAGS[0],
             taggers: [Config.MODERATION_ID],
@@ -378,17 +388,17 @@ describe('LocalStreamUsersService', () => {
         ];
 
         const mockUser = createMockNexusUser(userId, { tags: moderatedTags });
-        await Core.LocalStreamUsersService.persistUsers([mockUser]);
+        await LocalStreamUsersService.persistUsers([mockUser]);
 
-        const moderationRecord = await Core.ModerationModel.findById(userId);
+        const moderationRecord = await ModerationModel.findById(userId);
         expect(moderationRecord).toBeTruthy();
-        expect(moderationRecord!.type).toBe(Core.ModerationType.PROFILE);
+        expect(moderationRecord!.type).toBe(ModerationType.PROFILE);
         expect(moderationRecord!.is_blurred).toBe(true);
       });
 
       it('should not create moderation record for user without moderation tag', async () => {
-        const userId = 'user-normal' as Core.Pubky;
-        const normalTags: Core.NexusTag[] = [
+        const userId = 'user-normal' as Pubky;
+        const normalTags: NexusTag[] = [
           {
             label: 'developer',
             taggers: ['tagger-1'],
@@ -398,15 +408,15 @@ describe('LocalStreamUsersService', () => {
         ];
 
         const mockUser = createMockNexusUser(userId, { tags: normalTags });
-        await Core.LocalStreamUsersService.persistUsers([mockUser]);
+        await LocalStreamUsersService.persistUsers([mockUser]);
 
-        const moderationRecord = await Core.ModerationModel.findById(userId);
+        const moderationRecord = await ModerationModel.findById(userId);
         expect(moderationRecord).toBeNull();
       });
 
       it('should not create moderation record when tag has wrong tagger', async () => {
-        const userId = 'user-wrong-tagger' as Core.Pubky;
-        const tagsWithWrongTagger: Core.NexusTag[] = [
+        const userId = 'user-wrong-tagger' as Pubky;
+        const tagsWithWrongTagger: NexusTag[] = [
           {
             label: Config.MODERATED_TAGS[0],
             taggers: ['wrong-tagger-id'],
@@ -416,15 +426,15 @@ describe('LocalStreamUsersService', () => {
         ];
 
         const mockUser = createMockNexusUser(userId, { tags: tagsWithWrongTagger });
-        await Core.LocalStreamUsersService.persistUsers([mockUser]);
+        await LocalStreamUsersService.persistUsers([mockUser]);
 
-        const moderationRecord = await Core.ModerationModel.findById(userId);
+        const moderationRecord = await ModerationModel.findById(userId);
         expect(moderationRecord).toBeNull();
       });
 
       it('should handle mixed moderated and non-moderated users', async () => {
-        const moderatedUserId = 'user-moderated' as Core.Pubky;
-        const normalUserId = 'user-normal' as Core.Pubky;
+        const moderatedUserId = 'user-moderated' as Pubky;
+        const normalUserId = 'user-normal' as Pubky;
 
         const moderatedUser = createMockNexusUser(moderatedUserId, {
           tags: [
@@ -439,13 +449,13 @@ describe('LocalStreamUsersService', () => {
 
         const normalUser = createMockNexusUser(normalUserId, { tags: [] });
 
-        await Core.LocalStreamUsersService.persistUsers([moderatedUser, normalUser]);
+        await LocalStreamUsersService.persistUsers([moderatedUser, normalUser]);
 
-        const moderatedRecord = await Core.ModerationModel.findById(moderatedUserId);
+        const moderatedRecord = await ModerationModel.findById(moderatedUserId);
         expect(moderatedRecord).toBeTruthy();
-        expect(moderatedRecord!.type).toBe(Core.ModerationType.PROFILE);
+        expect(moderatedRecord!.type).toBe(ModerationType.PROFILE);
 
-        const normalRecord = await Core.ModerationModel.findById(normalUserId);
+        const normalRecord = await ModerationModel.findById(normalUserId);
         expect(normalRecord).toBeNull();
       });
     });

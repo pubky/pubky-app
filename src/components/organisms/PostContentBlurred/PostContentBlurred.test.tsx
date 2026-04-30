@@ -2,9 +2,9 @@ import { render, screen, fireEvent } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { PostContentBlurred } from './PostContentBlurred';
 
-// Mock Core
+// Mock dependencies
 const mockUnblur = vi.fn();
-vi.mock('@/core', () => ({
+vi.mock('@/controllers/moderation/moderation', () => ({
   ModerationController: {
     unBlur: (...args: unknown[]) => mockUnblur(...args),
   },

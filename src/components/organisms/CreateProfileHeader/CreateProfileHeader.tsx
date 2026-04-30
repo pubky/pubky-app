@@ -4,13 +4,12 @@ import { useCopyToClipboard } from '@/hooks/useCopyToClipboard/useCopyToClipboar
 import { useTranslations } from 'next-intl';
 import * as Molecules from '@/molecules';
 import * as Atoms from '@/atoms';
-import * as Core from '@/core';
 import { Key } from 'lucide-react';
 import { formatPublicKey, withPubkyPrefix } from '@/libs/utils/utils';
-
+import { useAuthStore } from '@/stores/auth/auth.store';
 export const CreateProfileHeader = () => {
   const t = useTranslations('onboarding.createProfile');
-  const authStore = Core.useAuthStore();
+  const authStore = useAuthStore();
   const pubky = authStore.selectCurrentUserPubky();
   const { copyToClipboard } = useCopyToClipboard();
   const displayPublicKey = formatPublicKey({

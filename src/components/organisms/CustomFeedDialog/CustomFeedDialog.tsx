@@ -4,7 +4,6 @@ import { useCustomFeed } from '@/hooks/useCustomFeed/useCustomFeed';
 import { useEffect, useState, type ComponentType, type ReactNode } from 'react';
 import * as Atoms from '@/atoms';
 import * as Molecules from '@/molecules';
-import * as Core from '@/core';
 import { useTranslations } from 'next-intl';
 import { PubkyAppFeedLayout, PubkyAppFeedReach, PubkyAppFeedSort, PubkyAppPostKind } from 'pubky-app-specs';
 import { useRouter } from 'next/navigation';
@@ -30,6 +29,7 @@ import {
   Activity,
   Delete,
 } from 'lucide-react';
+import { FeedController } from '@/controllers/feed/feed';
 type CustomFeedDialogProps = {
   mode: 'create' | 'edit';
   children: ReactNode;
@@ -190,7 +190,7 @@ export const CustomFeedDialog = ({ mode, children }: CustomFeedDialogProps) => {
     if (mode === 'create') {
       try {
         setLoading(true);
-        const feed = await Core.FeedController.commitCreate({
+        const feed = await FeedController.commitCreate({
           name,
           reach,
           sort,
@@ -218,7 +218,7 @@ export const CustomFeedDialog = ({ mode, children }: CustomFeedDialogProps) => {
       if (!customFeed) return;
       try {
         setLoading(true);
-        const feed = await Core.FeedController.commitUpdate({
+        const feed = await FeedController.commitUpdate({
           feedId: customFeed.id,
           changes: {
             name,
@@ -251,7 +251,7 @@ export const CustomFeedDialog = ({ mode, children }: CustomFeedDialogProps) => {
     if (!customFeed) return;
     try {
       setLoading(true);
-      await Core.FeedController.commitDelete({
+      await FeedController.commitDelete({
         feedId: customFeed.id,
       });
       setOpen(false);

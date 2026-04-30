@@ -1,5 +1,7 @@
-import * as Core from '@/core';
-
+import type { PostStreamTypes } from '@/models/stream/post/postStream.types';
+import { CONTENT, SORT } from '@/stores/home/home.types';
+import { getStreamId } from '@/stores/home/home.utils';
+import { useHotStore } from '@/stores/hot/hot.store';
 /**
  * useHotStreamId
  *
@@ -16,10 +18,10 @@ import * as Core from '@/core';
  * // Returns PostStreamTypes.POPULARITY_FRIENDS_ALL when reach is 'friends'
  * ```
  */
-export function useHotStreamId(): Core.PostStreamTypes {
-  const reach = Core.useHotStore((state) => state.reach);
+export function useHotStreamId(): PostStreamTypes {
+  const reach = useHotStore((state) => state.reach);
 
   // Hot/Trending posts use engagement sorting (POPULARITY)
   // Content is always 'all' for hot posts
-  return Core.getStreamId(Core.SORT.ENGAGEMENT, reach, Core.CONTENT.ALL);
+  return getStreamId(SORT.ENGAGEMENT, reach, CONTENT.ALL);
 }

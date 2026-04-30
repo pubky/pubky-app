@@ -1,8 +1,25 @@
-import * as Core from '@/core';
 import { HttpMethod } from '@/libs/http/http.types';
 import { Logger } from '@/libs/logger/logger';
 import { stripPubkyPrefix } from '@/libs/utils/utils';
-
+import { UserApplication } from '@/application/user/user';
+import type { TUserCountsOrFetchResult } from '@/application/user/user.types';
+import type { TReadProfileParams } from '@/controllers/profile/profile.types';
+import type { TFollowParams, TPubkyListParams } from '@/controllers/user/user.type';
+import type { Pubky } from '@/models/models.types';
+import type { PostStreamTypes } from '@/models/stream/post/postStream.types';
+import type { UserCountsModel } from '@/models/user/counts/userCounts';
+import type { UserRelationshipsModelSchema } from '@/models/user/relationships/userRelationships.schema';
+import { FollowNormalizer } from '@/pipes/follow/follow.normalizer';
+import type {
+  NexusTag,
+  NexusTaggers,
+  NexusUserCounts,
+  NexusUserDetails,
+  NexusUserRelationship,
+} from '@/services/nexus/nexus.types';
+import type { TUserTaggersParams, TUserTagsParams } from '@/services/nexus/user/user.types';
+import { useHomeStore } from '@/stores/home/home.store';
+import { getStreamId } from '@/stores/home/home.utils';
 export class UserController {
   private constructor() {} // Prevent instantiation
 
@@ -10,47 +27,47 @@ export class UserController {
    * Get user details from local database
    * This is a read-only operation that queries the local cache
    */
-  static async getDetails(params: Core.TReadProfileParams): Promise<Core.NexusUserDetails | null> {
-    return await Core.UserApplication.getDetails(params);
+  static async getDetails(params: TReadProfileParams): Promise<NexusUserDetails | null> {
+    return await UserApplication.getDetails(params);
   }
 
   /**
    * Get multiple user details from local database (bulk operation)
    * This is a read-only operation that queries the local cache
    */
-  static async getManyDetails(params: Core.TPubkyListParams): Promise<Map<Core.Pubky, Core.NexusUserDetails>> {
-    return await Core.UserApplication.getManyDetails(params);
+  static async getManyDetails(params: TPubkyListParams): Promise<Map<Pubky, NexusUserDetails>> {
+    return await UserApplication.getManyDetails(params);
   }
 
   /**
    * Get user counts from local database.
    * This is a read-only operation that queries the local cache.
    */
-  static async getCounts(params: Core.TReadProfileParams): Promise<Core.UserCountsModel | null> {
-    return await Core.UserApplication.getCounts(params);
+  static async getCounts(params: TReadProfileParams): Promise<UserCountsModel | null> {
+    return await UserApplication.getCounts(params);
   }
 
   /**
    * Get user counts from local database, fetching from Nexus API if not found.
    */
-  static async getOrFetchCounts(params: Core.TReadProfileParams): Promise<Core.TUserCountsOrFetchResult | null> {
-    return await Core.UserApplication.getOrFetchCounts(params);
+  static async getOrFetchCounts(params: TReadProfileParams): Promise<TUserCountsOrFetchResult | null> {
+    return await UserApplication.getOrFetchCounts(params);
   }
 
   /**
    * Fetch user counts from Nexus and persist locally (network-only, no local read).
    * Use instead of `getOrFetchCounts` when the caller already knows counts are not cached.
    */
-  static async fetchCounts(params: Core.TReadProfileParams): Promise<Core.NexusUserCounts | null> {
-    return await Core.UserApplication.fetchCounts(params);
+  static async fetchCounts(params: TReadProfileParams): Promise<NexusUserCounts | null> {
+    return await UserApplication.fetchCounts(params);
   }
 
   /**
    * Get multiple user counts from local database (bulk operation).
    * This is a read-only operation that queries the local cache.
    */
-  static async getManyCounts(params: Core.TPubkyListParams): Promise<Map<Core.Pubky, Core.NexusUserCounts>> {
-    return await Core.UserApplication.getManyCounts(params);
+  static async getManyCounts(params: TPubkyListParams): Promise<Map<Pubky, NexusUserCounts>> {
+    return await UserApplication.getManyCounts(params);
   }
 
   /**
@@ -58,8 +75,8 @@ export class UserController {
    * @param userId - User ID to get tags for
    * @returns Promise resolving to an array of tags or empty array if not found
    */
-  static async getTags(params: Core.TReadProfileParams): Promise<Core.NexusTag[]> {
-    return await Core.UserApplication.getTags(params);
+  static async getTags(params: TReadProfileParams): Promise<NexusTag[]> {
+    return await UserApplication.getTags(params);
   }
 
   /**
@@ -67,8 +84,8 @@ export class UserController {
    * @param userId - User ID to save tags for
    * @param tags - Array of tags to save
    */
-  static async upsertTags(userId: Core.Pubky, tags: Core.NexusTag[]): Promise<void> {
-    await Core.UserApplication.upsertTags(userId, tags);
+  static async upsertTags(userId: Pubky, tags: NexusTag[]): Promise<void> {
+    await UserApplication.upsertTags(userId, tags);
   }
 
   /**
@@ -76,8 +93,8 @@ export class UserController {
    * @param params - The parameters for fetching tags
    * @returns The tags for the user
    */
-  static async fetchTags(params: Core.TUserTagsParams): Promise<Core.NexusTag[]> {
-    return await Core.UserApplication.fetchTags(params);
+  static async fetchTags(params: TUserTagsParams): Promise<NexusTag[]> {
+    return await UserApplication.fetchTags(params);
   }
 
   /**
@@ -85,26 +102,24 @@ export class UserController {
    * @param params - The parameters for fetching taggers
    * @returns The taggers for the user
    */
-  static async fetchTaggers(params: Core.TUserTaggersParams): Promise<Core.NexusTaggers[]> {
-    return await Core.UserApplication.fetchTaggers(params);
+  static async fetchTaggers(params: TUserTaggersParams): Promise<NexusTaggers[]> {
+    return await UserApplication.fetchTaggers(params);
   }
 
   /**
    * Get user relationships from local database
    * This is a read-only operation that queries the local cache
    */
-  static async getRelationships(params: Core.TReadProfileParams): Promise<Core.NexusUserRelationship | null> {
-    return await Core.UserApplication.getRelationships(params);
+  static async getRelationships(params: TReadProfileParams): Promise<NexusUserRelationship | null> {
+    return await UserApplication.getRelationships(params);
   }
 
   /**
    * Get multiple user relationships from local database (bulk operation)
    * This is a read-only operation that queries the local cache
    */
-  static async getManyRelationships(
-    params: Core.TPubkyListParams,
-  ): Promise<Map<Core.Pubky, Core.UserRelationshipsModelSchema>> {
-    return await Core.UserApplication.getManyRelationships(params);
+  static async getManyRelationships(params: TPubkyListParams): Promise<Map<Pubky, UserRelationshipsModelSchema>> {
+    return await UserApplication.getManyRelationships(params);
   }
 
   /**
@@ -112,40 +127,40 @@ export class UserController {
    * Persists details, counts, relationships, tags, TTL, and moderation.
    * Preferred over `getOrFetchDetails` when the caller needs the full entity cached.
    */
-  static async getOrFetch(params: Core.TReadProfileParams): Promise<Core.NexusUserDetails | null> {
-    return await Core.UserApplication.getOrFetch(params);
+  static async getOrFetch(params: TReadProfileParams): Promise<NexusUserDetails | null> {
+    return await UserApplication.getOrFetch(params);
   }
 
   /**
    * Fetch full user entity from Nexus batch API and persist locally (network-only, no local read).
    * Use instead of `getOrFetch` when the caller already knows the user is not cached.
    */
-  static async fetch(params: Core.TReadProfileParams): Promise<Core.NexusUserDetails | null> {
-    return await Core.UserApplication.fetch(params);
+  static async fetch(params: TReadProfileParams): Promise<NexusUserDetails | null> {
+    return await UserApplication.fetch(params);
   }
 
   /**
    * Get user details from local database or fetch from Nexus API
    * This is a read-only operation that queries the local cache
    */
-  static async getOrFetchDetails(param: Core.TReadProfileParams): Promise<Core.NexusUserDetails | null> {
-    return await Core.UserApplication.getOrFetchDetails(param);
+  static async getOrFetchDetails(param: TReadProfileParams): Promise<NexusUserDetails | null> {
+    return await UserApplication.getOrFetchDetails(param);
   }
 
   /**
    * Fetch user details from Nexus and persist locally (network-only, no local read).
    * Use instead of `getOrFetchDetails` when the caller already knows the user is not cached.
    */
-  static async fetchDetails(param: Core.TReadProfileParams): Promise<Core.NexusUserDetails | null> {
-    return await Core.UserApplication.fetchDetails(param);
+  static async fetchDetails(param: TReadProfileParams): Promise<NexusUserDetails | null> {
+    return await UserApplication.fetchDetails(param);
   }
 
   /**
    * Get multiple user tags with local-first strategy (bulk operation)
    * Reads from cache first, fetches from API only for missing users
    */
-  static async getManyTagsOrFetch(params: Core.TPubkyListParams): Promise<Map<Core.Pubky, Core.NexusTag[]>> {
-    return await Core.UserApplication.getManyTagsOrFetch(params);
+  static async getManyTagsOrFetch(params: TPubkyListParams): Promise<Map<Pubky, NexusTag[]>> {
+    return await UserApplication.getManyTagsOrFetch(params);
   }
 
   /**
@@ -154,16 +169,16 @@ export class UserController {
    * @param follower - The follower user ID
    * @param followee - The followee user ID
    */
-  static async commitFollow(eventType: HttpMethod, { follower, followee }: Core.TFollowParams) {
+  static async commitFollow(eventType: HttpMethod, { follower, followee }: TFollowParams) {
     // Normalize pubky IDs to ensure consistent format for storage and comparison
     // This strips any prefix (pubky or pk:) to get the raw 52-character key
-    const normalizedFollowee = stripPubkyPrefix(followee) as Core.Pubky;
-    const { meta, follow } = Core.FollowNormalizer.to({ follower, followee: normalizedFollowee });
+    const normalizedFollowee = stripPubkyPrefix(followee) as Pubky;
+    const { meta, follow } = FollowNormalizer.to({ follower, followee: normalizedFollowee });
 
     // Get active stream ID from store (controller layer responsibility)
     const activeStreamId = this.getActiveStreamId();
 
-    await Core.UserApplication.commitFollow({
+    await UserApplication.commitFollow({
       eventType,
       followUrl: meta.url,
       followJson: follow.toJson(),
@@ -179,14 +194,14 @@ export class UserController {
    *
    * @returns The active stream ID, or null if not on /home route or if retrieval fails
    */
-  private static getActiveStreamId(): Core.PostStreamTypes | null {
+  private static getActiveStreamId(): PostStreamTypes | null {
     if (typeof window === 'undefined' || window.location.pathname !== '/home') {
       return null;
     }
 
     try {
-      const homeState = Core.useHomeStore.getState();
-      return Core.getStreamId(homeState.sort, homeState.reach, homeState.content);
+      const homeState = useHomeStore.getState();
+      return getStreamId(homeState.sort, homeState.reach, homeState.content);
     } catch (error) {
       Logger.warn('Failed to get active stream ID', { error });
       return null;

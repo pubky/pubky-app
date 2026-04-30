@@ -1,8 +1,18 @@
 import { describe, expect, it, vi, beforeEach } from 'vitest';
 
-import * as Core from '@/core';
 import { asOpaque } from '@/test-utils';
-
+import * as queryNexusModule from '@/services/nexus/nexus.utils';
+import { FileApplication } from '@/application/file/file';
+import { PostStreamApplication } from '@/application/stream/posts/post';
+import { TtlApplication } from '@/application/ttl/ttl';
+import type { Pubky } from '@/models/models.types';
+import { PostTtlModel } from '@/models/post/ttl/postTtl';
+import { LocalStreamPostsService } from '@/services/local/stream/posts/posts';
+import { LocalStreamUsersService } from '@/services/local/stream/users/users';
+import type { NexusPost, NexusUser } from '@/services/nexus/nexus.types';
+import { postStreamApi } from '@/services/nexus/stream/posts/postStream.api';
+import { NexusUserStreamService } from '@/services/nexus/stream/users/userStream';
+import { userStreamApi } from '@/services/nexus/stream/users/userStream.api';
 describe('TtlApplication', () => {
   beforeEach(() => {
     vi.restoreAllMocks();
@@ -14,34 +24,34 @@ describe('TtlApplication', () => {
       vi.spyOn(Date, 'now').mockReturnValue(now);
 
       const postIds = ['alice:1', 'bob:2', 'carol:3'];
-      vi.spyOn(Core.PostTtlModel, 'findByIds').mockResolvedValue([
+      vi.spyOn(PostTtlModel, 'findByIds').mockResolvedValue([
         // alice fresh
-        asOpaque<Core.PostTtlModel>({ id: 'alice:1', lastUpdatedAt: now - 1_000 }),
+        asOpaque<PostTtlModel>({ id: 'alice:1', lastUpdatedAt: now - 1_000 }),
         // bob stale
-        asOpaque<Core.PostTtlModel>({ id: 'bob:2', lastUpdatedAt: now - 10_000 }),
+        asOpaque<PostTtlModel>({ id: 'bob:2', lastUpdatedAt: now - 10_000 }),
         // carol missing
       ]);
 
-      const stale = await Core.TtlApplication.findStalePostsByIds({ postIds, ttlMs: 5_000 });
+      const stale = await TtlApplication.findStalePostsByIds({ postIds, ttlMs: 5_000 });
       expect(stale.sort()).toEqual(['bob:2', 'carol:3'].sort());
     });
   });
 
   describe('forceRefreshPostsByIds', () => {
     it('fetches and persists posts (TTL handled by persistPosts)', async () => {
-      const viewerId = 'viewer' as Core.Pubky;
+      const viewerId = 'viewer' as Pubky;
 
       const postIds = ['alice:1', 'bob:2'];
-      vi.spyOn(Core.postStreamApi, 'postsByIds').mockReturnValue({
+      vi.spyOn(postStreamApi, 'postsByIds').mockReturnValue({
         url: '/stream/posts/by_ids',
         body: { post_ids: postIds, viewer_id: viewerId },
-      } as ReturnType<typeof Core.postStreamApi.postsByIds>);
+      } as ReturnType<typeof postStreamApi.postsByIds>);
 
-      const nexusPosts: Core.NexusPost[] = [
+      const nexusPosts: NexusPost[] = [
         {
           details: {
             id: '1',
-            author: 'alice' as Core.Pubky,
+            author: 'alice' as Pubky,
             content: '',
             indexed_at: 0,
             kind: 'note',
@@ -56,7 +66,7 @@ describe('TtlApplication', () => {
         {
           details: {
             id: '2',
-            author: 'bob' as Core.Pubky,
+            author: 'bob' as Pubky,
             content: '',
             indexed_at: 0,
             kind: 'note',
@@ -70,16 +80,16 @@ describe('TtlApplication', () => {
         },
       ];
 
-      const queryNexusSpy = vi.spyOn(Core, 'queryNexus').mockResolvedValue(nexusPosts);
+      const queryNexusSpy = vi.spyOn(queryNexusModule, 'queryNexus').mockResolvedValue(nexusPosts);
       const persistPostsSpy = vi
-        .spyOn(Core.LocalStreamPostsService, 'persistPosts')
+        .spyOn(LocalStreamPostsService, 'persistPosts')
         .mockResolvedValue(
-          asOpaque<Awaited<ReturnType<typeof Core.LocalStreamPostsService.persistPosts>>>({ attachmentMetadata: [] }),
+          asOpaque<Awaited<ReturnType<typeof LocalStreamPostsService.persistPosts>>>({ attachmentMetadata: [] }),
         );
-      const persistFilesSpy = vi.spyOn(Core.FileApplication, 'persistFiles').mockResolvedValue(undefined);
-      vi.spyOn(Core.LocalStreamUsersService, 'getNotPersistedUsersInCache').mockResolvedValue([]);
+      const persistFilesSpy = vi.spyOn(FileApplication, 'persistFiles').mockResolvedValue(undefined);
+      vi.spyOn(LocalStreamUsersService, 'getNotPersistedUsersInCache').mockResolvedValue([]);
 
-      await Core.TtlApplication.forceRefreshPostsByIds({ postIds, viewerId });
+      await TtlApplication.forceRefreshPostsByIds({ postIds, viewerId });
 
       expect(queryNexusSpy).toHaveBeenCalledWith({
         url: '/stream/posts/by_ids',
@@ -92,34 +102,34 @@ describe('TtlApplication', () => {
     });
 
     it('does not persist when fetch fails', async () => {
-      const viewerId = 'viewer' as Core.Pubky;
-      vi.spyOn(Core.postStreamApi, 'postsByIds').mockReturnValue({
+      const viewerId = 'viewer' as Pubky;
+      vi.spyOn(postStreamApi, 'postsByIds').mockReturnValue({
         url: '/stream/posts/by_ids',
         body: { post_ids: ['alice:1'], viewer_id: viewerId },
-      } as ReturnType<typeof Core.postStreamApi.postsByIds>);
+      } as ReturnType<typeof postStreamApi.postsByIds>);
 
-      vi.spyOn(Core, 'queryNexus').mockRejectedValue(new Error('Network down'));
+      vi.spyOn(queryNexusModule, 'queryNexus').mockRejectedValue(new Error('Network down'));
       const persistPostsSpy = vi
-        .spyOn(Core.LocalStreamPostsService, 'persistPosts')
+        .spyOn(LocalStreamPostsService, 'persistPosts')
         .mockResolvedValue({ attachmentMetadata: [] });
 
-      await expect(Core.TtlApplication.forceRefreshPostsByIds({ postIds: ['alice:1'], viewerId })).rejects.toThrow(
+      await expect(TtlApplication.forceRefreshPostsByIds({ postIds: ['alice:1'], viewerId })).rejects.toThrow(
         'Network down',
       );
       expect(persistPostsSpy).not.toHaveBeenCalled();
     });
 
     it('fetches original posts for reposts when refreshing', async () => {
-      const viewerId = 'viewer' as Core.Pubky;
+      const viewerId = 'viewer' as Pubky;
       const originalAuthor = 'original-author';
       const originalPostId = 'original-post-123';
       const originalPostUri = `pubky://${originalAuthor}/pub/pubky.app/posts/${originalPostId}`;
 
       // The repost that will be refreshed
-      const repostNexusPost: Core.NexusPost = {
+      const repostNexusPost: NexusPost = {
         details: {
           id: 'repost-1',
-          author: 'reposter' as Core.Pubky,
+          author: 'reposter' as Pubky,
           content: '',
           indexed_at: 0,
           kind: 'short',
@@ -132,24 +142,24 @@ describe('TtlApplication', () => {
         bookmark: null,
       };
 
-      vi.spyOn(Core.postStreamApi, 'postsByIds').mockReturnValue({
+      vi.spyOn(postStreamApi, 'postsByIds').mockReturnValue({
         url: '/stream/posts/by_ids',
         body: { post_ids: ['reposter:repost-1'], viewer_id: viewerId },
-      } as ReturnType<typeof Core.postStreamApi.postsByIds>);
+      } as ReturnType<typeof postStreamApi.postsByIds>);
 
-      vi.spyOn(Core, 'queryNexus').mockResolvedValue([repostNexusPost]);
-      vi.spyOn(Core.LocalStreamPostsService, 'persistPosts').mockResolvedValue(
-        asOpaque<Awaited<ReturnType<typeof Core.LocalStreamPostsService.persistPosts>>>({ attachmentMetadata: [] }),
+      vi.spyOn(queryNexusModule, 'queryNexus').mockResolvedValue([repostNexusPost]);
+      vi.spyOn(LocalStreamPostsService, 'persistPosts').mockResolvedValue(
+        asOpaque<Awaited<ReturnType<typeof LocalStreamPostsService.persistPosts>>>({ attachmentMetadata: [] }),
       );
-      vi.spyOn(Core.FileApplication, 'persistFiles').mockResolvedValue(undefined);
-      vi.spyOn(Core.LocalStreamUsersService, 'getNotPersistedUsersInCache').mockResolvedValue([]);
+      vi.spyOn(FileApplication, 'persistFiles').mockResolvedValue(undefined);
+      vi.spyOn(LocalStreamUsersService, 'getNotPersistedUsersInCache').mockResolvedValue([]);
 
       // Mock the shared helper to verify it's called with correct URIs
       const fetchOriginalsSpy = vi
-        .spyOn(Core.PostStreamApplication, 'fetchOriginalPostsByUris')
+        .spyOn(PostStreamApplication, 'fetchOriginalPostsByUris')
         .mockResolvedValue(undefined);
 
-      await Core.TtlApplication.forceRefreshPostsByIds({ postIds: ['reposter:repost-1'], viewerId });
+      await TtlApplication.forceRefreshPostsByIds({ postIds: ['reposter:repost-1'], viewerId });
 
       // Verify fetchOriginalPostsByUris is called with the reposted URI
       expect(fetchOriginalsSpy).toHaveBeenCalledWith({
@@ -159,12 +169,12 @@ describe('TtlApplication', () => {
     });
 
     it('does not call fetchOriginalPostsByUris when post is not a repost', async () => {
-      const viewerId = 'viewer' as Core.Pubky;
+      const viewerId = 'viewer' as Pubky;
 
-      const regularPost: Core.NexusPost = {
+      const regularPost: NexusPost = {
         details: {
           id: 'post-1',
-          author: 'alice' as Core.Pubky,
+          author: 'alice' as Pubky,
           content: 'Regular post',
           indexed_at: 0,
           kind: 'short',
@@ -177,23 +187,23 @@ describe('TtlApplication', () => {
         bookmark: null,
       };
 
-      vi.spyOn(Core.postStreamApi, 'postsByIds').mockReturnValue({
+      vi.spyOn(postStreamApi, 'postsByIds').mockReturnValue({
         url: '/stream/posts/by_ids',
         body: { post_ids: ['alice:post-1'], viewer_id: viewerId },
-      } as ReturnType<typeof Core.postStreamApi.postsByIds>);
+      } as ReturnType<typeof postStreamApi.postsByIds>);
 
-      vi.spyOn(Core, 'queryNexus').mockResolvedValue([regularPost]);
-      vi.spyOn(Core.LocalStreamPostsService, 'persistPosts').mockResolvedValue(
-        asOpaque<Awaited<ReturnType<typeof Core.LocalStreamPostsService.persistPosts>>>({ attachmentMetadata: [] }),
+      vi.spyOn(queryNexusModule, 'queryNexus').mockResolvedValue([regularPost]);
+      vi.spyOn(LocalStreamPostsService, 'persistPosts').mockResolvedValue(
+        asOpaque<Awaited<ReturnType<typeof LocalStreamPostsService.persistPosts>>>({ attachmentMetadata: [] }),
       );
-      vi.spyOn(Core.FileApplication, 'persistFiles').mockResolvedValue(undefined);
-      vi.spyOn(Core.LocalStreamUsersService, 'getNotPersistedUsersInCache').mockResolvedValue([]);
+      vi.spyOn(FileApplication, 'persistFiles').mockResolvedValue(undefined);
+      vi.spyOn(LocalStreamUsersService, 'getNotPersistedUsersInCache').mockResolvedValue([]);
 
       const fetchOriginalsSpy = vi
-        .spyOn(Core.PostStreamApplication, 'fetchOriginalPostsByUris')
+        .spyOn(PostStreamApplication, 'fetchOriginalPostsByUris')
         .mockResolvedValue(undefined);
 
-      await Core.TtlApplication.forceRefreshPostsByIds({ postIds: ['alice:post-1'], viewerId });
+      await TtlApplication.forceRefreshPostsByIds({ postIds: ['alice:post-1'], viewerId });
 
       // Verify fetchOriginalPostsByUris is called with empty array (no reposts)
       expect(fetchOriginalsSpy).toHaveBeenCalledWith({
@@ -205,16 +215,16 @@ describe('TtlApplication', () => {
 
   describe('forceRefreshUsersByIds', () => {
     it('fetches and persists users (TTL handled by persistUsers)', async () => {
-      const userIds = ['alice' as Core.Pubky, 'bob' as Core.Pubky];
-      vi.spyOn(Core.userStreamApi, 'usersByIds').mockReturnValue({
+      const userIds = ['alice' as Pubky, 'bob' as Pubky];
+      vi.spyOn(userStreamApi, 'usersByIds').mockReturnValue({
         url: '/stream/users/by_ids',
         body: { user_ids: userIds, viewer_id: undefined },
-      } as ReturnType<typeof Core.userStreamApi.usersByIds>);
+      } as ReturnType<typeof userStreamApi.usersByIds>);
 
-      const nexusUsers: Core.NexusUser[] = [
+      const nexusUsers: NexusUser[] = [
         {
           details: {
-            id: 'alice' as Core.Pubky,
+            id: 'alice' as Pubky,
             name: '',
             bio: '',
             links: null,
@@ -238,7 +248,7 @@ describe('TtlApplication', () => {
         },
         {
           details: {
-            id: 'bob' as Core.Pubky,
+            id: 'bob' as Pubky,
             name: '',
             bio: '',
             links: null,
@@ -262,22 +272,22 @@ describe('TtlApplication', () => {
         },
       ];
 
-      vi.spyOn(Core.NexusUserStreamService, 'fetchByIds').mockResolvedValue(nexusUsers);
-      const persistUsersSpy = vi.spyOn(Core.LocalStreamUsersService, 'persistUsers').mockResolvedValue([]);
+      vi.spyOn(NexusUserStreamService, 'fetchByIds').mockResolvedValue(nexusUsers);
+      const persistUsersSpy = vi.spyOn(LocalStreamUsersService, 'persistUsers').mockResolvedValue([]);
 
-      await Core.TtlApplication.forceRefreshUsersByIds({ userIds });
+      await TtlApplication.forceRefreshUsersByIds({ userIds });
 
       // persistUsers handles TTL updates internally
       expect(persistUsersSpy).toHaveBeenCalledWith(nexusUsers);
     });
 
     it('does not persist when fetch fails', async () => {
-      const userIds = ['alice' as Core.Pubky];
+      const userIds = ['alice' as Pubky];
 
-      vi.spyOn(Core.NexusUserStreamService, 'fetchByIds').mockRejectedValue(new Error('Network down'));
-      const persistUsersSpy = vi.spyOn(Core.LocalStreamUsersService, 'persistUsers').mockResolvedValue([]);
+      vi.spyOn(NexusUserStreamService, 'fetchByIds').mockRejectedValue(new Error('Network down'));
+      const persistUsersSpy = vi.spyOn(LocalStreamUsersService, 'persistUsers').mockResolvedValue([]);
 
-      await expect(Core.TtlApplication.forceRefreshUsersByIds({ userIds })).rejects.toThrow('Network down');
+      await expect(TtlApplication.forceRefreshUsersByIds({ userIds })).rejects.toThrow('Network down');
       expect(persistUsersSpy).not.toHaveBeenCalled();
     });
   });

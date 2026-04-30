@@ -7,7 +7,7 @@ const mockResolveFeedLayout = vi.fn();
 let mockHomeLayout = 'columns';
 
 // Mock the home store
-vi.mock('@/core', () => ({
+vi.mock('@/stores/home/home.store', () => ({
   useHomeStore: () => ({
     layout: mockHomeLayout,
     setLayout: vi.fn(),
@@ -18,11 +18,15 @@ vi.mock('@/core', () => ({
     content: 'all',
     setContent: vi.fn(),
   }),
+}));
+vi.mock('@/stores/home/home.types', () => ({
   LAYOUT: {
     COLUMNS: 'columns',
     WIDE: 'wide',
     VISUAL: 'visual',
   },
+}));
+vi.mock('@/utils/pubky-app-spec-feed-mappers', () => ({
   pubkyLayoutToHomeLayout: vi.fn((layout: string) => layout),
 }));
 

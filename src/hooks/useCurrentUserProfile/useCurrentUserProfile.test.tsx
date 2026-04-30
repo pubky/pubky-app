@@ -8,14 +8,16 @@ const mockState = vi.hoisted(() => ({
   userDetails: undefined as unknown,
 }));
 
-// Mock @/core
+// Mock direct dependencies
 const mockGetDetails = vi.fn();
 const mockFetchDetails = vi.fn().mockResolvedValue(undefined);
-vi.mock('@/core', () => ({
+vi.mock('@/controllers/user/user', () => ({
   UserController: {
     getDetails: (params: { userId: string }) => mockGetDetails(params),
     fetchDetails: (params: { userId: string }) => mockFetchDetails(params),
   },
+}));
+vi.mock('@/stores/auth/auth.store', () => ({
   useAuthStore: vi.fn((selector?: (state: { currentUserPubky: string | null }) => unknown) => {
     const state = { currentUserPubky: mockState.currentUserPubky };
     return selector ? selector(state) : state;

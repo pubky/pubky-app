@@ -2,11 +2,10 @@
 
 import { useTranslations } from 'next-intl';
 import * as Molecules from '@/molecules';
-import { useSettingsStore } from '@/core';
 import { useSettingsActions } from '@/hooks/useSettingsActions/useSettingsActions';
 import { PRIVACY_SETTINGS } from './PrivacySettings.constants';
 import type { PrivacyType } from './PrivacySettings.types';
-
+import { useSettingsStore } from '@/stores/settings/settings.store';
 export function PrivacySettings() {
   const t = useTranslations('privacy');
   const { privacy } = useSettingsStore();

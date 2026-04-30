@@ -325,11 +325,9 @@ src/core/coordinators/
 ├── ttl/
 │   ├── ttl.ts              # TtlCoordinator class
 │   ├── ttl.types.ts        # Types and interfaces
-│   ├── ttl.test.ts         # Unit tests
-│   └── index.ts            # Exports
+│   └── ttl.test.ts         # Unit tests
 ├── base/
 │   └── ...                 # Shared coordinator utilities
-└── index.ts                # Updated exports
 ```
 
 ### Integration Points
@@ -345,8 +343,10 @@ UI components call the coordinator directly based on Intersection Observer:
 
 ```typescript
 // Pseudocode for feed item component
+import { TtlCoordinator } from '@/coordinators/ttl/ttl';
+
 useEffect(() => {
-  const ttl = Core.TtlCoordinator.getInstance();
+  const ttl = TtlCoordinator.getInstance();
   const observer = new IntersectionObserver(([entry]) => {
     if (entry.isIntersecting) {
       ttl.subscribePost({ compositePostId });

@@ -1,8 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
-import * as Core from '@/core';
 import { HttpStatusCode } from '@/libs/http/http.types';
 import { handleApiError } from '@/libs/api/route-error-handler';
-
+import { CopyrightController } from '@/controllers/copyright/copyright';
 /**
  * API Route for copyright/DMCA takedown request submission to Chatwoot
  *
@@ -35,7 +34,7 @@ export async function POST(request: NextRequest) {
     } = body;
 
     // Delegate to controller - validation happens there
-    await Core.CopyrightController.submit({
+    await CopyrightController.submit({
       nameOwner,
       originalContentUrls,
       briefDescription,

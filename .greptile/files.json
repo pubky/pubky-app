@@ -2,7 +2,7 @@
   "files": [
     {
       "path": "docs/architecture.md",
-      "description": "Layered architecture rules, dependency constraints, and anti-patterns for src/core/",
+      "description": "Layered architecture rules, dependency constraints, import path conventions, and anti-patterns for src/core/",
       "scope": ["src/core/**"]
     },
     {

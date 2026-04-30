@@ -4,11 +4,13 @@ import { useCopyToClipboard } from '@/hooks/useCopyToClipboard/useCopyToClipboar
 import { useLiveQuery } from 'dexie-react-hooks';
 import * as Atoms from '@/atoms';
 import * as Organisms from '@/organisms';
-import * as Core from '@/core';
 import { Key, ArrowRight } from 'lucide-react';
 import { Logger } from '@/libs/logger/logger';
 import { formatPublicKey, withPubkyPrefix } from '@/libs/utils/utils';
-
+import { FileController } from '@/controllers/file/file';
+import { UserController } from '@/controllers/user/user';
+import { useAuthStore } from '@/stores/auth/auth.store';
+import { useOnboardingStore } from '@/stores/onboarding/onboarding.store';
 /**
  * DialogWelcome
  *
@@ -16,14 +18,14 @@ import { formatPublicKey, withPubkyPrefix } from '@/libs/utils/utils';
  * No props needed - it fetches user data and manages dialog state internally.
  */
 export function DialogWelcome() {
-  const { currentUserPubky } = Core.useAuthStore();
-  const { showWelcomeDialog, setShowWelcomeDialog } = Core.useOnboardingStore();
+  const { currentUserPubky } = useAuthStore();
+  const { showWelcomeDialog, setShowWelcomeDialog } = useOnboardingStore();
 
   // Fetch current user details from database
   const userDetails = useLiveQuery(async () => {
     try {
       if (!currentUserPubky) return null;
-      const details = await Core.UserController.getDetails({
+      const details = await UserController.getDetails({
         userId: currentUserPubky,
       });
       return details || null;
@@ -44,7 +46,7 @@ export function DialogWelcome() {
     key: currentUserPubky,
   });
   const avatarImage = userDetails.image
-    ? Core.FileController.getAvatarUrl(currentUserPubky, userDetails.indexed_at)
+    ? FileController.getAvatarUrl(currentUserPubky, userDetails.indexed_at)
     : undefined;
   const handleCopyToClipboard = () => {
     copyToClipboard(withPubkyPrefix(currentUserPubky));

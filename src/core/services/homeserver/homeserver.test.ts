@@ -5,7 +5,6 @@ import { AppError } from '@/libs/error/error';
 import { AuthErrorCode, ClientErrorCode, ServerErrorCode, ValidationErrorCode } from '@/libs/error/error.codes';
 import { ErrorCategory, ErrorService } from '@/libs/error/error.types';
 import { HttpMethod } from '@/libs/http/http.types';
-
 // =============================================================================
 // HOISTED MOCKS - Must be hoisted to run before module imports
 // =============================================================================
@@ -57,20 +56,16 @@ vi.mock('@/libs/logger/logger', () => ({
 }));
 
 // Mock useAuthStore to provide session
-vi.mock('@/core', async (importOriginal) => {
-  const actual = await importOriginal<typeof import('@/core')>();
-  return {
-    ...actual,
-    useAuthStore: {
-      getState: () => ({
-        selectSession: () => {
-          // Access mockState.currentSession at call time, not at mock creation time
-          return mockState.currentSession;
-        },
-      }),
-    },
-  };
-});
+vi.mock('@/stores/auth/auth.store', () => ({
+  useAuthStore: {
+    getState: () => ({
+      selectSession: () => {
+        // Access mockState.currentSession at call time, not at mock creation time
+        return mockState.currentSession;
+      },
+    }),
+  },
+}));
 
 // =============================================================================
 // MOCK @synonymdev/pubky MODULE
@@ -158,7 +153,7 @@ const createMockKeypair = (): Keypair =>
 // =============================================================================
 
 describe('HomeserverService', () => {
-  let HomeserverService: typeof import('@/core/services/homeserver/homeserver').HomeserverService;
+  let HomeserverService: typeof import('@/services/homeserver/homeserver').HomeserverService;
 
   beforeEach(async () => {
     // Reset all mocks
@@ -189,8 +184,7 @@ describe('HomeserverService', () => {
 
     // Reset module cache and re-import
     vi.resetModules();
-    const homeserverModule = await import('@/core/services/homeserver/homeserver');
-    HomeserverService = homeserverModule.HomeserverService;
+    ({ HomeserverService } = await import('@/services/homeserver/homeserver'));
   });
 
   // ===========================================================================

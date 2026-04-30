@@ -7,15 +7,17 @@ import {
   FeedResult,
   PubkySpecsBuilder,
 } from 'pubky-app-specs';
-import * as Core from '@/core';
 import { asOpaque } from '@/test-utils';
 import { AppError } from '@/libs/error/error';
 import { ValidationErrorCode } from '@/libs/error/error.codes';
 import { ErrorCategory, ErrorService } from '@/libs/error/error.types';
-
+import type { TFeedCreateParams } from '@/controllers/feed/feed.types';
+import type { Pubky } from '@/models/models.types';
+import { FeedNormalizer } from '@/pipes/feed/feed.normalizer';
+import { PubkySpecsSingleton } from '@/pipes/pipes.builder';
 describe('FeedNormalizer', () => {
   const testData = {
-    userPubky: 'pxnu33x7jtpx9ar1ytsi4yxbp6a5o36gwhffs8zoxmbuptici1jy' as Core.Pubky,
+    userPubky: 'pxnu33x7jtpx9ar1ytsi4yxbp6a5o36gwhffs8zoxmbuptici1jy' as Pubky,
     feedName: 'Bitcoin News',
     tags: ['bitcoin', 'lightning'],
   };
@@ -52,7 +54,7 @@ describe('FeedNormalizer', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     mockBuilder = createMockBuilder();
-    vi.spyOn(Core.PubkySpecsSingleton, 'get').mockReturnValue(asOpaque<PubkySpecsBuilder>(mockBuilder));
+    vi.spyOn(PubkySpecsSingleton, 'get').mockReturnValue(asOpaque<PubkySpecsBuilder>(mockBuilder));
   });
 
   afterEach(() => {
@@ -60,7 +62,7 @@ describe('FeedNormalizer', () => {
   });
 
   describe('to', () => {
-    const createValidParams = (): Core.TFeedCreateParams => ({
+    const createValidParams = (): TFeedCreateParams => ({
       name: testData.feedName,
       tags: testData.tags,
       reach: PubkyAppFeedReach.All,
@@ -72,7 +74,7 @@ describe('FeedNormalizer', () => {
     it('should create feed using builder with correct parameters', () => {
       const params = createValidParams();
 
-      const result = Core.FeedNormalizer.to({ params, userId: testData.userPubky });
+      const result = FeedNormalizer.to({ params, userId: testData.userPubky });
 
       expect(mockBuilder.createFeed).toHaveBeenCalledWith(
         ['bitcoin', 'lightning'],
@@ -89,7 +91,7 @@ describe('FeedNormalizer', () => {
       const params = createValidParams();
       params.tags = ['BITCOIN', 'Lightning', 'TECH'];
 
-      Core.FeedNormalizer.to({ params, userId: testData.userPubky });
+      FeedNormalizer.to({ params, userId: testData.userPubky });
 
       expect(mockBuilder.createFeed).toHaveBeenCalledWith(
         ['bitcoin', 'lightning', 'tech'],
@@ -105,7 +107,7 @@ describe('FeedNormalizer', () => {
       const params = createValidParams();
       params.tags = ['  bitcoin  ', ' lightning '];
 
-      Core.FeedNormalizer.to({ params, userId: testData.userPubky });
+      FeedNormalizer.to({ params, userId: testData.userPubky });
 
       expect(mockBuilder.createFeed).toHaveBeenCalledWith(
         ['bitcoin', 'lightning'],
@@ -121,7 +123,7 @@ describe('FeedNormalizer', () => {
       const params = createValidParams();
       params.tags = ['bitcoin', 'BITCOIN', 'Bitcoin'];
 
-      Core.FeedNormalizer.to({ params, userId: testData.userPubky });
+      FeedNormalizer.to({ params, userId: testData.userPubky });
 
       expect(mockBuilder.createFeed).toHaveBeenCalledWith(
         ['bitcoin'],
@@ -137,7 +139,7 @@ describe('FeedNormalizer', () => {
       const params = createValidParams();
       params.name = '  Bitcoin News  ';
 
-      Core.FeedNormalizer.to({ params, userId: testData.userPubky });
+      FeedNormalizer.to({ params, userId: testData.userPubky });
 
       expect(mockBuilder.createFeed).toHaveBeenCalledWith(
         expect.any(Array),
@@ -153,7 +155,7 @@ describe('FeedNormalizer', () => {
       const params = createValidParams();
       params.reach = PubkyAppFeedReach.Following;
 
-      Core.FeedNormalizer.to({ params, userId: testData.userPubky });
+      FeedNormalizer.to({ params, userId: testData.userPubky });
 
       expect(mockBuilder.createFeed).toHaveBeenCalledWith(
         expect.any(Array),
@@ -169,7 +171,7 @@ describe('FeedNormalizer', () => {
       const params = createValidParams();
       params.sort = PubkyAppFeedSort.Popularity;
 
-      Core.FeedNormalizer.to({ params, userId: testData.userPubky });
+      FeedNormalizer.to({ params, userId: testData.userPubky });
 
       expect(mockBuilder.createFeed).toHaveBeenCalledWith(
         expect.any(Array),
@@ -185,7 +187,7 @@ describe('FeedNormalizer', () => {
       const params = createValidParams();
       params.content = PubkyAppPostKind.Image;
 
-      Core.FeedNormalizer.to({ params, userId: testData.userPubky });
+      FeedNormalizer.to({ params, userId: testData.userPubky });
 
       expect(mockBuilder.createFeed).toHaveBeenCalledWith(
         expect.any(Array),
@@ -201,7 +203,7 @@ describe('FeedNormalizer', () => {
       const params = createValidParams();
       params.content = null;
 
-      Core.FeedNormalizer.to({ params, userId: testData.userPubky });
+      FeedNormalizer.to({ params, userId: testData.userPubky });
 
       expect(mockBuilder.createFeed).toHaveBeenCalledWith(
         expect.any(Array),
@@ -218,7 +220,7 @@ describe('FeedNormalizer', () => {
         const params = createValidParams();
         params.tags = [];
 
-        const result = Core.FeedNormalizer.to({ params, userId: testData.userPubky });
+        const result = FeedNormalizer.to({ params, userId: testData.userPubky });
 
         expect(mockBuilder.createFeed).toHaveBeenCalledWith([], 'all', 'columns', 'recent', null, testData.feedName);
         expect(result).toBeTruthy();
@@ -228,7 +230,7 @@ describe('FeedNormalizer', () => {
         const params = createValidParams();
         params.tags = ['  BITCOIN  ', '  Lightning  ', 'TECH'];
 
-        Core.FeedNormalizer.to({ params, userId: testData.userPubky });
+        FeedNormalizer.to({ params, userId: testData.userPubky });
 
         expect(mockBuilder.createFeed).toHaveBeenCalledWith(
           ['bitcoin', 'lightning', 'tech'],
@@ -244,7 +246,7 @@ describe('FeedNormalizer', () => {
         const params = createValidParams();
         params.tags = ['bitcoin', 'Bitcoin', 'BITCOIN', 'lightning'];
 
-        Core.FeedNormalizer.to({ params, userId: testData.userPubky });
+        FeedNormalizer.to({ params, userId: testData.userPubky });
 
         expect(mockBuilder.createFeed).toHaveBeenCalledWith(
           ['bitcoin', 'lightning'],
@@ -260,7 +262,7 @@ describe('FeedNormalizer', () => {
         const params = createValidParams();
         params.tags = ['bitcoin', '   ', 'lightning', ''];
 
-        Core.FeedNormalizer.to({ params, userId: testData.userPubky });
+        FeedNormalizer.to({ params, userId: testData.userPubky });
 
         expect(mockBuilder.createFeed).toHaveBeenCalledWith(
           ['bitcoin', 'lightning'],
@@ -281,7 +283,7 @@ describe('FeedNormalizer', () => {
       });
 
       try {
-        Core.FeedNormalizer.to({ params, userId: testData.userPubky });
+        FeedNormalizer.to({ params, userId: testData.userPubky });
         expect.fail('Should have thrown');
       } catch (error) {
         expect(error).toBeInstanceOf(AppError);

@@ -3,12 +3,12 @@
 import { createContext, useEffect, useRef, useState, type ReactNode } from 'react';
 import * as Atoms from '@/atoms';
 import { DatabaseContextType } from '@/providers';
-import { db, useMigrationStore } from '@/core';
 import { AppError } from '@/libs/error/error';
 import { DatabaseErrorCode } from '@/libs/error/error.codes';
 import { Err } from '@/libs/error/error.factories';
 import { ErrorService } from '@/libs/error/error.types';
-
+import { db } from '@/database/franky/franky';
+import { useMigrationStore } from '@/stores/migration/migration.store';
 export const DatabaseContext = createContext<DatabaseContextType>({
   isReady: false,
   error: null,

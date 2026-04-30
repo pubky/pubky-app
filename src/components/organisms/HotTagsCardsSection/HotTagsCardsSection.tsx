@@ -8,14 +8,15 @@ import { useRouter } from 'next/navigation';
 import { useTranslations } from 'next-intl';
 import * as Atoms from '@/atoms';
 import * as Molecules from '@/molecules';
-import * as Core from '@/core';
 import { APP_ROUTES } from '@/app/routes';
 import { HOT_TAGS_FEATURED_COUNT } from '@/config';
 import { HotTagsCardsSectionSkeleton } from './HotTagsCardsSection.skeleton';
 import type { HotTagsCardsSectionProps } from './HotTagsCardsSection.types';
 import { MAX_AVATARS_MOBILE, MAX_AVATARS_DEFAULT, MAX_AVATARS_XL } from './HotTagsCardsSection.constants';
 import { cn } from '@/libs/utils/utils';
-
+import type { Pubky } from '@/models/models.types';
+import type { UserStreamReach } from '@/services/nexus/nexus.types';
+import { useHotStore } from '@/stores/hot/hot.store';
 /**
  * HotTagsCardsSection
  *
@@ -25,11 +26,11 @@ import { cn } from '@/libs/utils/utils';
 export function HotTagsCardsSection({ className }: HotTagsCardsSectionProps) {
   const t = useTranslations('hot');
   const router = useRouter();
-  const { reach, timeframe } = Core.useHotStore();
+  const { reach, timeframe } = useHotStore();
 
   // Fetch hot tags using the hook (no limit - get all from endpoint)
   const { rawTags, isLoading, error } = useHotTags({
-    reach: reach === 'all' ? undefined : (reach as Core.UserStreamReach),
+    reach: reach === 'all' ? undefined : (reach as UserStreamReach),
     timeframe,
   });
 
@@ -57,7 +58,7 @@ export function HotTagsCardsSection({ className }: HotTagsCardsSectionProps) {
 
   // Collect all unique tagger IDs from featured tags only
   const allTaggerIds = useMemo(() => {
-    const ids = new Set<Core.Pubky>();
+    const ids = new Set<Pubky>();
     for (const tag of featuredTags) {
       for (const taggerId of tag.taggers_id) {
         ids.add(taggerId);

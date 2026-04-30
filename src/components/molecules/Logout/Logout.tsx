@@ -10,7 +10,7 @@ import * as App from '@/app';
 
 export const LogoutContent = () => {
   return (
-    <Atoms.Container size="container" className="mb-6">
+    <Atoms.Container size="container">
       <LogoutHeader />
       <Molecules.ContentCard layout="column">
         <Atoms.Container className="items-center justify-center">

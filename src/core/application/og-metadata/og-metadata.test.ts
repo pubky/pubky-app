@@ -1,5 +1,4 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-
 // Create stable mock references via vi.hoisted so they're shared
 // between the vi.mock factories and the test assertions
 const { mockResolve4, mockIsIP, mockIsIpSafe } = vi.hoisted(() => ({
@@ -87,8 +86,7 @@ describe('OgMetadataApplication (integration)', () => {
     global.fetch = mockFetch;
 
     // Re-import modules after reset so all references are fresh
-    const Core = await import('@/core');
-    OgMetadataApplication = Core.OgMetadataApplication;
+    ({ OgMetadataApplication } = await import('./og-metadata'));
 
     // Default mock: successful HTML response
     mockFetch.mockResolvedValue(createHtmlResponse(simpleHtml('Test Title')));

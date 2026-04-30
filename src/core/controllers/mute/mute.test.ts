@@ -1,13 +1,14 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { MuteResult } from 'pubky-app-specs';
 import { MuteController } from './mute';
-import * as Core from '@/core';
 import { asOpaque } from '@/test-utils';
 import { HttpMethod } from '@/libs/http/http.types';
-
+import { MuteApplication } from '@/application/mute/mute';
+import type { Pubky } from '@/models/models.types';
+import { MuteNormalizer } from '@/pipes/mute/mute.normalizer';
 const TEST_PUBKY = {
-  USER_1: '5a1diz4pghi47ywdfyfzpit5f3bdomzt4pugpbmq4rngdd4iub4y' as Core.Pubky,
-  USER_2: 'o1gg96ewuojmopcjbz8895478wdtxtzzuxnfjjz8o8e77csa1ngo' as Core.Pubky,
+  USER_1: '5a1diz4pghi47ywdfyfzpit5f3bdomzt4pugpbmq4rngdd4iub4y' as Pubky,
+  USER_2: 'o1gg96ewuojmopcjbz8895478wdtxtzzuxnfjjz8o8e77csa1ngo' as Pubky,
 };
 
 describe('MuteController', () => {
@@ -28,14 +29,14 @@ describe('MuteController', () => {
       const mockToJson = vi.fn(() => mockMuteJson);
       const mockMeta = { url: 'pubky://muter/pub/pubky.app/mutes/mutee' } as { url: string };
 
-      const toSpy = vi.spyOn(Core.MuteNormalizer, 'to').mockReturnValue(
+      const toSpy = vi.spyOn(MuteNormalizer, 'to').mockReturnValue(
         asOpaque<MuteResult>({
           meta: mockMeta,
           mute: { toJson: mockToJson },
         }),
       );
 
-      const commitMuteSpy = vi.spyOn(Core.MuteApplication, 'commitMute').mockResolvedValue(undefined);
+      const commitMuteSpy = vi.spyOn(MuteApplication, 'commitMute').mockResolvedValue(undefined);
 
       await MuteController.commitMute(HttpMethod.PUT, { muter, mutee });
 
@@ -58,14 +59,14 @@ describe('MuteController', () => {
       const mockToJson = vi.fn(() => mockMuteJson);
       const mockMeta = { url: 'pubky://muter/pub/pubky.app/mutes/mutee' } as { url: string };
 
-      vi.spyOn(Core.MuteNormalizer, 'to').mockReturnValue(
+      vi.spyOn(MuteNormalizer, 'to').mockReturnValue(
         asOpaque<MuteResult>({
           meta: mockMeta,
           mute: { toJson: mockToJson },
         }),
       );
 
-      const commitMuteSpy = vi.spyOn(Core.MuteApplication, 'commitMute').mockResolvedValue(undefined);
+      const commitMuteSpy = vi.spyOn(MuteApplication, 'commitMute').mockResolvedValue(undefined);
 
       await MuteController.commitMute(HttpMethod.DELETE, { muter, mutee });
 
@@ -80,19 +81,19 @@ describe('MuteController', () => {
 
     it('should normalize mutee pubky by stripping prefix', async () => {
       const muter = TEST_PUBKY.USER_1;
-      const prefixedMutee = `pubky${TEST_PUBKY.USER_2}` as Core.Pubky;
+      const prefixedMutee = `pubky${TEST_PUBKY.USER_2}` as Pubky;
 
       const mockToJson = vi.fn(() => ({}));
       const mockMeta = { url: 'pubky://muter/pub/pubky.app/mutes/mutee' } as { url: string };
 
-      const toSpy = vi.spyOn(Core.MuteNormalizer, 'to').mockReturnValue(
+      const toSpy = vi.spyOn(MuteNormalizer, 'to').mockReturnValue(
         asOpaque<MuteResult>({
           meta: mockMeta,
           mute: { toJson: mockToJson },
         }),
       );
 
-      const commitMuteSpy = vi.spyOn(Core.MuteApplication, 'commitMute').mockResolvedValue(undefined);
+      const commitMuteSpy = vi.spyOn(MuteApplication, 'commitMute').mockResolvedValue(undefined);
 
       await MuteController.commitMute(HttpMethod.PUT, { muter, mutee: prefixedMutee });
 
@@ -104,10 +105,10 @@ describe('MuteController', () => {
       const muter = TEST_PUBKY.USER_1;
       const mutee = TEST_PUBKY.USER_2;
 
-      vi.spyOn(Core.MuteNormalizer, 'to').mockImplementation(() => {
+      vi.spyOn(MuteNormalizer, 'to').mockImplementation(() => {
         throw new Error('normalize-fail');
       });
-      const commitMuteSpy = vi.spyOn(Core.MuteApplication, 'commitMute').mockResolvedValue(undefined);
+      const commitMuteSpy = vi.spyOn(MuteApplication, 'commitMute').mockResolvedValue(undefined);
 
       await expect(MuteController.commitMute(HttpMethod.PUT, { muter, mutee })).rejects.toThrow('normalize-fail');
 
@@ -118,14 +119,14 @@ describe('MuteController', () => {
       const muter = TEST_PUBKY.USER_1;
       const mutee = TEST_PUBKY.USER_2;
 
-      vi.spyOn(Core.MuteNormalizer, 'to').mockReturnValue(
+      vi.spyOn(MuteNormalizer, 'to').mockReturnValue(
         asOpaque<MuteResult>({
           meta: { url: 'pubky://muter/pub/pubky.app/mutes/mutee' },
           mute: { toJson: () => ({}) },
         }),
       );
 
-      vi.spyOn(Core.MuteApplication, 'commitMute').mockRejectedValue(new Error('commit-fail'));
+      vi.spyOn(MuteApplication, 'commitMute').mockRejectedValue(new Error('commit-fail'));
 
       await expect(MuteController.commitMute(HttpMethod.PUT, { muter, mutee })).rejects.toThrow('commit-fail');
     });
@@ -134,9 +135,9 @@ describe('MuteController', () => {
   describe('fetchMutedUsers', () => {
     it('should delegate to MuteApplication.fetchMutedUsers', async () => {
       const pubky = TEST_PUBKY.USER_1;
-      const mockMutedUsers: Core.Pubky[] = ['muted-1' as Core.Pubky, 'muted-2' as Core.Pubky];
+      const mockMutedUsers: Pubky[] = ['muted-1' as Pubky, 'muted-2' as Pubky];
 
-      const fetchSpy = vi.spyOn(Core.MuteApplication, 'fetchMutedUsers').mockResolvedValue(mockMutedUsers);
+      const fetchSpy = vi.spyOn(MuteApplication, 'fetchMutedUsers').mockResolvedValue(mockMutedUsers);
 
       const result = await MuteController.fetchMutedUsers(pubky);
 
@@ -147,7 +148,7 @@ describe('MuteController', () => {
     it('should propagate errors from application layer', async () => {
       const pubky = TEST_PUBKY.USER_1;
 
-      vi.spyOn(Core.MuteApplication, 'fetchMutedUsers').mockRejectedValue(new Error('fetch-fail'));
+      vi.spyOn(MuteApplication, 'fetchMutedUsers').mockRejectedValue(new Error('fetch-fail'));
 
       await expect(MuteController.fetchMutedUsers(pubky)).rejects.toThrow('fetch-fail');
     });

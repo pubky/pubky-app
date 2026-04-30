@@ -1,9 +1,10 @@
 import { describe, it, expect, beforeEach } from 'vitest';
-import * as Core from '@/core';
-
+import { resetDatabase } from '@/database/franky/franky.helpers';
+import { PostTtlModel } from '@/models/post/ttl/postTtl';
+import type { NexusModelTuple } from '@/models/shared/base/tuple/baseTuple.type';
 describe('PostTtlModel', () => {
   beforeEach(async () => {
-    await Core.resetDatabase();
+    await resetDatabase();
   });
 
   const testPostId1 = 'post-test-1';
@@ -24,7 +25,7 @@ describe('PostTtlModel', () => {
         ...MOCK_TTL_1,
       };
 
-      const model = new Core.PostTtlModel(mockData);
+      const model = new PostTtlModel(mockData);
 
       expect(model.id).toBe(mockData.id);
       expect(model.lastUpdatedAt).toBe(MOCK_TTL_1.lastUpdatedAt);
@@ -38,7 +39,7 @@ describe('PostTtlModel', () => {
         ...MOCK_TTL_1,
       };
 
-      const result = await Core.PostTtlModel.create(mockData);
+      const result = await PostTtlModel.create(mockData);
       expect(result).toBe(mockData.id);
     });
 
@@ -48,52 +49,52 @@ describe('PostTtlModel', () => {
         ...MOCK_TTL_1,
       };
 
-      await Core.PostTtlModel.create(mockData);
-      const result = await Core.PostTtlModel.findById(testPostId1);
+      await PostTtlModel.create(mockData);
+      const result = await PostTtlModel.findById(testPostId1);
 
-      expect(result).toBeInstanceOf(Core.PostTtlModel);
+      expect(result).toBeInstanceOf(PostTtlModel);
       expect(result?.id).toBe(testPostId1);
       expect(result?.lastUpdatedAt).toBe(MOCK_TTL_1.lastUpdatedAt);
     });
 
     it('should return null for non-existent post ttl', async () => {
       const nonExistentId = 'non-existent-post-999';
-      const result = await Core.PostTtlModel.findById(nonExistentId);
+      const result = await PostTtlModel.findById(nonExistentId);
       expect(result).toBeNull();
     });
 
     it('should bulk save post ttl from tuples', async () => {
-      const mockTuples: Core.NexusModelTuple<{ lastUpdatedAt: number }>[] = [
+      const mockTuples: NexusModelTuple<{ lastUpdatedAt: number }>[] = [
         [testPostId1, MOCK_TTL_1],
         [testPostId2, MOCK_TTL_2],
       ];
 
-      await Core.PostTtlModel.bulkSave(mockTuples);
+      await PostTtlModel.bulkSave(mockTuples);
 
-      const postTtl1 = await Core.PostTtlModel.findById(testPostId1);
-      const postTtl2 = await Core.PostTtlModel.findById(testPostId2);
+      const postTtl1 = await PostTtlModel.findById(testPostId1);
+      const postTtl2 = await PostTtlModel.findById(testPostId2);
 
       expect(postTtl1?.lastUpdatedAt).toBe(MOCK_TTL_1.lastUpdatedAt);
       expect(postTtl2?.lastUpdatedAt).toBe(MOCK_TTL_2.lastUpdatedAt);
     });
 
     it('should handle empty array in bulk save', async () => {
-      const result = await Core.PostTtlModel.bulkSave([]);
+      const result = await PostTtlModel.bulkSave([]);
       // bulkPut with empty array returns undefined, which is expected
       expect(result).toBeUndefined();
     });
 
     it('should handle multiple tuples with different lastUpdatedAt values', async () => {
       const currentTime = Date.now();
-      const mockTuples: Core.NexusModelTuple<{ lastUpdatedAt: number }>[] = [
+      const mockTuples: NexusModelTuple<{ lastUpdatedAt: number }>[] = [
         [testPostId1, { lastUpdatedAt: currentTime - 1000 }],
         [testPostId2, { lastUpdatedAt: currentTime - 5000 }],
       ];
 
-      await Core.PostTtlModel.bulkSave(mockTuples);
+      await PostTtlModel.bulkSave(mockTuples);
 
-      const postTtl1 = await Core.PostTtlModel.findById(testPostId1);
-      const postTtl2 = await Core.PostTtlModel.findById(testPostId2);
+      const postTtl1 = await PostTtlModel.findById(testPostId1);
+      const postTtl2 = await PostTtlModel.findById(testPostId2);
 
       expect(postTtl1?.lastUpdatedAt).toBe(currentTime - 1000);
       expect(postTtl2?.lastUpdatedAt).toBe(currentTime - 5000);
@@ -106,11 +107,11 @@ describe('PostTtlModel', () => {
       // staleUpdate: 10 minutes ago (should be stale with 5-minute TTL)
       const staleUpdate = { id: testPostId2, lastUpdatedAt: currentTime - 600000 };
 
-      await Core.PostTtlModel.create(recentlyUpdated);
-      await Core.PostTtlModel.create(staleUpdate);
+      await PostTtlModel.create(recentlyUpdated);
+      await PostTtlModel.create(staleUpdate);
 
-      const recent = await Core.PostTtlModel.findById(testPostId1);
-      const stale = await Core.PostTtlModel.findById(testPostId2);
+      const recent = await PostTtlModel.findById(testPostId1);
+      const stale = await PostTtlModel.findById(testPostId2);
 
       expect(recent?.lastUpdatedAt).toBe(recentlyUpdated.lastUpdatedAt);
       expect(stale?.lastUpdatedAt).toBe(staleUpdate.lastUpdatedAt);
@@ -124,17 +125,17 @@ describe('PostTtlModel', () => {
       const refreshTime = Date.now();
 
       // Create initial record
-      await Core.PostTtlModel.create({ id: testPostId1, lastUpdatedAt: initialTime });
+      await PostTtlModel.create({ id: testPostId1, lastUpdatedAt: initialTime });
 
       // Verify initial state
-      const before = await Core.PostTtlModel.findById(testPostId1);
+      const before = await PostTtlModel.findById(testPostId1);
       expect(before?.lastUpdatedAt).toBe(initialTime);
 
       // Simulate refresh by upserting with new lastUpdatedAt
-      await Core.PostTtlModel.upsert({ id: testPostId1, lastUpdatedAt: refreshTime });
+      await PostTtlModel.upsert({ id: testPostId1, lastUpdatedAt: refreshTime });
 
       // Verify updated state
-      const after = await Core.PostTtlModel.findById(testPostId1);
+      const after = await PostTtlModel.findById(testPostId1);
       expect(after?.lastUpdatedAt).toBe(refreshTime);
       expect(after?.lastUpdatedAt).toBeGreaterThan(before?.lastUpdatedAt ?? 0);
     });

@@ -1,5 +1,5 @@
-import * as Core from '@/core';
-
+import type { TOgMetadataResult } from '@/application/og-metadata/og-metadata.types';
+import { NextJsOgMetadataService } from '@/services/nextjs/og-metadata/og-metadata';
 /**
  * OG metadata application service.
  *
@@ -17,7 +17,7 @@ export class OgMetadataApplication {
    * @returns Normalized OG metadata result
    * @throws AppError on DNS failure, blocked IP, fetch failure, or invalid content
    */
-  static async fetch(validatedUrl: URL): Promise<Core.TOgMetadataResult> {
-    return Core.NextJsOgMetadataService.fetch(validatedUrl);
+  static async fetch(validatedUrl: URL): Promise<TOgMetadataResult> {
+    return NextJsOgMetadataService.fetch(validatedUrl);
   }
 }

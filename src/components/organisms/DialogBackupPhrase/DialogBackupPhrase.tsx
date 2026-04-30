@@ -5,11 +5,10 @@ import { useState, useEffect, ReactNode } from 'react';
 import Image from 'next/image';
 import { useTranslations } from 'next-intl';
 import * as Atoms from '@/components/atoms';
-import * as Stores from '@/core';
 import * as Molecules from '@/molecules';
 import { Eye, ArrowRight, EyeOff, ArrowLeft, Check } from 'lucide-react';
 import { cn } from '@/libs/utils/utils';
-
+import { useOnboardingStore } from '@/stores/onboarding/onboarding.store';
 interface DialogBackupPhraseProps {
   children?: ReactNode;
 }
@@ -17,7 +16,7 @@ export function DialogBackupPhrase({ children }: DialogBackupPhraseProps) {
   const [isHidden, setIsHidden] = useState(true);
   const [recoveryWords, setRecoveryWords] = useState<string[]>([]);
   const [step, setStep] = useState(1);
-  const { mnemonic } = Stores.useOnboardingStore();
+  const { mnemonic } = useOnboardingStore();
   const t = useTranslations('onboarding.backupPhrase');
   const tCommon = useTranslations('common');
   const handleClose = () => {

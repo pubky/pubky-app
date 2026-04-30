@@ -1,15 +1,16 @@
 import { describe, it, expect, beforeEach } from 'vitest';
 import { renderHook, act } from '@testing-library/react';
-import * as Core from '@/core';
 import { useBookmarksStreamId } from './useBookmarksStreamId';
-
+import { PostStreamTypes } from '@/models/stream/post/postStream.types';
+import { useHomeStore } from '@/stores/home/home.store';
+import { CONTENT, SORT } from '@/stores/home/home.types';
 describe('useBookmarksStreamId', () => {
   beforeEach(() => {
     // Reset store to default state before each test
     act(() => {
-      Core.useHomeStore.setState({
-        sort: Core.SORT.TIMELINE,
-        content: Core.CONTENT.ALL,
+      useHomeStore.setState({
+        sort: SORT.TIMELINE,
+        content: CONTENT.ALL,
       });
     });
   });
@@ -17,129 +18,129 @@ describe('useBookmarksStreamId', () => {
   describe('with TIMELINE sort', () => {
     it('should return TIMELINE_BOOKMARKS_ALL for default filters', () => {
       const { result } = renderHook(() => useBookmarksStreamId());
-      expect(result.current).toBe(Core.PostStreamTypes.TIMELINE_BOOKMARKS_ALL);
+      expect(result.current).toBe(PostStreamTypes.TIMELINE_BOOKMARKS_ALL);
     });
 
     it('should return TIMELINE_BOOKMARKS_SHORT for short content', () => {
       act(() => {
-        Core.useHomeStore.setState({ content: Core.CONTENT.SHORT });
+        useHomeStore.setState({ content: CONTENT.SHORT });
       });
       const { result } = renderHook(() => useBookmarksStreamId());
-      expect(result.current).toBe(Core.PostStreamTypes.TIMELINE_BOOKMARKS_SHORT);
+      expect(result.current).toBe(PostStreamTypes.TIMELINE_BOOKMARKS_SHORT);
     });
 
     it('should return TIMELINE_BOOKMARKS_LONG for long content', () => {
       act(() => {
-        Core.useHomeStore.setState({ content: Core.CONTENT.LONG });
+        useHomeStore.setState({ content: CONTENT.LONG });
       });
       const { result } = renderHook(() => useBookmarksStreamId());
-      expect(result.current).toBe(Core.PostStreamTypes.TIMELINE_BOOKMARKS_LONG);
+      expect(result.current).toBe(PostStreamTypes.TIMELINE_BOOKMARKS_LONG);
     });
 
     it('should return TIMELINE_BOOKMARKS_IMAGE for images content', () => {
       act(() => {
-        Core.useHomeStore.setState({ content: Core.CONTENT.IMAGES });
+        useHomeStore.setState({ content: CONTENT.IMAGES });
       });
       const { result } = renderHook(() => useBookmarksStreamId());
-      expect(result.current).toBe(Core.PostStreamTypes.TIMELINE_BOOKMARKS_IMAGE);
+      expect(result.current).toBe(PostStreamTypes.TIMELINE_BOOKMARKS_IMAGE);
     });
 
     it('should return TIMELINE_BOOKMARKS_VIDEO for videos content', () => {
       act(() => {
-        Core.useHomeStore.setState({ content: Core.CONTENT.VIDEOS });
+        useHomeStore.setState({ content: CONTENT.VIDEOS });
       });
       const { result } = renderHook(() => useBookmarksStreamId());
-      expect(result.current).toBe(Core.PostStreamTypes.TIMELINE_BOOKMARKS_VIDEO);
+      expect(result.current).toBe(PostStreamTypes.TIMELINE_BOOKMARKS_VIDEO);
     });
 
     it('should return TIMELINE_BOOKMARKS_LINK for links content', () => {
       act(() => {
-        Core.useHomeStore.setState({ content: Core.CONTENT.LINKS });
+        useHomeStore.setState({ content: CONTENT.LINKS });
       });
       const { result } = renderHook(() => useBookmarksStreamId());
-      expect(result.current).toBe(Core.PostStreamTypes.TIMELINE_BOOKMARKS_LINK);
+      expect(result.current).toBe(PostStreamTypes.TIMELINE_BOOKMARKS_LINK);
     });
 
     it('should return TIMELINE_BOOKMARKS_FILE for files content', () => {
       act(() => {
-        Core.useHomeStore.setState({ content: Core.CONTENT.FILES });
+        useHomeStore.setState({ content: CONTENT.FILES });
       });
       const { result } = renderHook(() => useBookmarksStreamId());
-      expect(result.current).toBe(Core.PostStreamTypes.TIMELINE_BOOKMARKS_FILE);
+      expect(result.current).toBe(PostStreamTypes.TIMELINE_BOOKMARKS_FILE);
     });
   });
 
   describe('with ENGAGEMENT sort', () => {
     beforeEach(() => {
       act(() => {
-        Core.useHomeStore.setState({ sort: Core.SORT.ENGAGEMENT });
+        useHomeStore.setState({ sort: SORT.ENGAGEMENT });
       });
     });
 
     it('should return POPULARITY_BOOKMARKS_ALL for all content', () => {
       const { result } = renderHook(() => useBookmarksStreamId());
-      expect(result.current).toBe(Core.PostStreamTypes.POPULARITY_BOOKMARKS_ALL);
+      expect(result.current).toBe(PostStreamTypes.POPULARITY_BOOKMARKS_ALL);
     });
 
     it('should return POPULARITY_BOOKMARKS_SHORT for short content', () => {
       act(() => {
-        Core.useHomeStore.setState({ content: Core.CONTENT.SHORT });
+        useHomeStore.setState({ content: CONTENT.SHORT });
       });
       const { result } = renderHook(() => useBookmarksStreamId());
-      expect(result.current).toBe(Core.PostStreamTypes.POPULARITY_BOOKMARKS_SHORT);
+      expect(result.current).toBe(PostStreamTypes.POPULARITY_BOOKMARKS_SHORT);
     });
 
     it('should return POPULARITY_BOOKMARKS_LONG for long content', () => {
       act(() => {
-        Core.useHomeStore.setState({ content: Core.CONTENT.LONG });
+        useHomeStore.setState({ content: CONTENT.LONG });
       });
       const { result } = renderHook(() => useBookmarksStreamId());
-      expect(result.current).toBe(Core.PostStreamTypes.POPULARITY_BOOKMARKS_LONG);
+      expect(result.current).toBe(PostStreamTypes.POPULARITY_BOOKMARKS_LONG);
     });
 
     it('should return POPULARITY_BOOKMARKS_IMAGE for images content', () => {
       act(() => {
-        Core.useHomeStore.setState({ content: Core.CONTENT.IMAGES });
+        useHomeStore.setState({ content: CONTENT.IMAGES });
       });
       const { result } = renderHook(() => useBookmarksStreamId());
-      expect(result.current).toBe(Core.PostStreamTypes.POPULARITY_BOOKMARKS_IMAGE);
+      expect(result.current).toBe(PostStreamTypes.POPULARITY_BOOKMARKS_IMAGE);
     });
 
     it('should return POPULARITY_BOOKMARKS_VIDEO for videos content', () => {
       act(() => {
-        Core.useHomeStore.setState({ content: Core.CONTENT.VIDEOS });
+        useHomeStore.setState({ content: CONTENT.VIDEOS });
       });
       const { result } = renderHook(() => useBookmarksStreamId());
-      expect(result.current).toBe(Core.PostStreamTypes.POPULARITY_BOOKMARKS_VIDEO);
+      expect(result.current).toBe(PostStreamTypes.POPULARITY_BOOKMARKS_VIDEO);
     });
 
     it('should return POPULARITY_BOOKMARKS_LINK for links content', () => {
       act(() => {
-        Core.useHomeStore.setState({ content: Core.CONTENT.LINKS });
+        useHomeStore.setState({ content: CONTENT.LINKS });
       });
       const { result } = renderHook(() => useBookmarksStreamId());
-      expect(result.current).toBe(Core.PostStreamTypes.POPULARITY_BOOKMARKS_LINK);
+      expect(result.current).toBe(PostStreamTypes.POPULARITY_BOOKMARKS_LINK);
     });
 
     it('should return POPULARITY_BOOKMARKS_FILE for files content', () => {
       act(() => {
-        Core.useHomeStore.setState({ content: Core.CONTENT.FILES });
+        useHomeStore.setState({ content: CONTENT.FILES });
       });
       const { result } = renderHook(() => useBookmarksStreamId());
-      expect(result.current).toBe(Core.PostStreamTypes.POPULARITY_BOOKMARKS_FILE);
+      expect(result.current).toBe(PostStreamTypes.POPULARITY_BOOKMARKS_FILE);
     });
   });
 
   it('prefers the provided content override over store content', () => {
     act(() => {
-      Core.useHomeStore.setState({
-        sort: Core.SORT.TIMELINE,
-        content: Core.CONTENT.SHORT,
+      useHomeStore.setState({
+        sort: SORT.TIMELINE,
+        content: CONTENT.SHORT,
       });
     });
 
-    const { result } = renderHook(() => useBookmarksStreamId(Core.CONTENT.ALL));
+    const { result } = renderHook(() => useBookmarksStreamId(CONTENT.ALL));
 
-    expect(result.current).toBe(Core.PostStreamTypes.TIMELINE_BOOKMARKS_ALL);
+    expect(result.current).toBe(PostStreamTypes.TIMELINE_BOOKMARKS_ALL);
   });
 });

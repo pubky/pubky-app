@@ -1,12 +1,12 @@
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
-import * as Core from '@/core';
 import type { UseHotTagsParams, UseHotTagsResult, HotTag } from './useHotTags.types';
 import { DEFAULT_LIMIT } from './useHotTags.constants';
 import { Logger } from '@/libs/logger/logger';
 import { isAppError } from '@/libs/error/error.utils';
-
+import { HotController } from '@/controllers/hot/hot';
+import { UserStreamTimeframe, type NexusHotTag } from '@/services/nexus/nexus.types';
 /**
  * useHotTags
  *
@@ -35,10 +35,10 @@ import { isAppError } from '@/libs/error/error.utils';
 export function useHotTags({
   limit = DEFAULT_LIMIT,
   reach,
-  timeframe = Core.UserStreamTimeframe.THIS_MONTH,
+  timeframe = UserStreamTimeframe.THIS_MONTH,
 }: UseHotTagsParams = {}): UseHotTagsResult {
   const [tags, setTags] = useState<HotTag[]>([]);
-  const [rawTags, setRawTags] = useState<Core.NexusHotTag[]>([]);
+  const [rawTags, setRawTags] = useState<NexusHotTag[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -47,7 +47,7 @@ export function useHotTags({
     setError(null);
 
     try {
-      const hotTags = await Core.HotController.getOrFetch({
+      const hotTags = await HotController.getOrFetch({
         reach,
         timeframe,
         limit,

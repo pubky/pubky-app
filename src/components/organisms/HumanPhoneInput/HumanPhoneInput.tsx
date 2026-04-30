@@ -6,11 +6,11 @@ import { useTranslations } from 'next-intl';
 import { ArrowLeft, ArrowRight } from 'lucide-react';
 
 import * as Atoms from '@/atoms';
-import * as Core from '@/core';
 import * as Molecules from '@/molecules';
 import { parsePhoneNumber } from '@/libs/phone/phone';
 import { cn } from '@/libs/utils/utils';
-
+import { HomegateController } from '@/controllers/homegate/homegate';
+import { SmsCodeErrorType } from '@/services/homegate/homegate.constants';
 type HumanPhoneInputProps = {
   onBack: () => void;
   onCodeSent: (phoneNumber: string) => void;
@@ -32,16 +32,16 @@ export const HumanPhoneInput = ({ onBack, onCodeSent, initialPhoneNumber }: Huma
     }
     try {
       setIsSendingCode(true);
-      const result = await Core.HomegateController.sendSmsCode(phoneNumber);
+      const result = await HomegateController.sendSmsCode(phoneNumber);
       if (!result.success) {
         switch (result.errorType) {
-          case Core.SmsCodeErrorType.BLOCKED:
+          case SmsCodeErrorType.BLOCKED:
             Molecules.toast({
               title: t('blocked'),
               description: t('blockedDescription'),
             });
             break;
-          case Core.SmsCodeErrorType.RATE_LIMITED_TEMPORARY: {
+          case SmsCodeErrorType.RATE_LIMITED_TEMPORARY: {
             const retryMessage = result.retryAfter
               ? t('rateLimitedWithRetry', {
                   seconds: result.retryAfter,
@@ -53,13 +53,13 @@ export const HumanPhoneInput = ({ onBack, onCodeSent, initialPhoneNumber }: Huma
             });
             break;
           }
-          case Core.SmsCodeErrorType.RATE_LIMITED_WEEKLY:
+          case SmsCodeErrorType.RATE_LIMITED_WEEKLY:
             Molecules.toast({
               title: t('weeklyLimitReached'),
               description: t('weeklyLimitDescription'),
             });
             break;
-          case Core.SmsCodeErrorType.RATE_LIMITED_YEARLY:
+          case SmsCodeErrorType.RATE_LIMITED_YEARLY:
             Molecules.toast({
               title: t('yearlyLimitReached'),
               description: t('yearlyLimitDescription'),

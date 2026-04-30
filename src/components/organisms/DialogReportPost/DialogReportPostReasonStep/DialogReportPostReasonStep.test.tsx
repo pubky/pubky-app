@@ -2,8 +2,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen, fireEvent } from '@testing-library/react';
 import * as Atoms from '@/atoms';
 import { DialogReportPostReasonStep } from './DialogReportPostReasonStep';
-import { REPORT_REASON_MAX_LENGTH } from '@/core/pipes/report';
-
+import { REPORT_REASON_MAX_LENGTH } from '@/pipes/report/report.constants';
 // Mock hooks
 const mockUseCurrentUserProfile = vi.fn();
 

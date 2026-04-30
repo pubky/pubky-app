@@ -2,8 +2,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen } from '@testing-library/react';
 import { FeedNavigation } from './FeedNavigation';
 import { PubkyAppFeedLayout, PubkyAppFeedReach, PubkyAppFeedSort } from 'pubky-app-specs';
-import type { FeedModelSchema } from '@/core/models/feed/feed.schema';
-
+import type { FeedModelSchema } from '@/models/feed/feed.schema';
 // Mock next/navigation
 const mockUsePathname = vi.fn();
 vi.mock('next/navigation', () => ({
@@ -20,9 +19,9 @@ vi.mock('dexie-react-hooks', () => ({
   }),
 }));
 
-// Mock @/core
+// Mock feed controller
 const mockGetList = vi.fn();
-vi.mock('@/core', () => ({
+vi.mock('@/controllers/feed/feed', () => ({
   FeedController: {
     getList: (...args: unknown[]) => mockGetList(...args),
   },

@@ -1,6 +1,7 @@
-import * as Core from '@/core';
 import type * as Types from './homegate.types';
-
+import { ExchangerateService } from '@/services/exchangerate/exchangerate';
+import type { BtcRate } from '@/services/exchangerate/exchangerate.types';
+import { HomegateService } from '@/services/homegate/homegate';
 /**
  * Homegate application service.
  *
@@ -21,7 +22,7 @@ export class HomegateApplication {
    * @throws AppError if retrieval fails
    */
   static async getSmsVerificationInfo(): Promise<Types.THomegateSmsInfoResult> {
-    return await Core.HomegateService.getSmsVerificationInfo();
+    return await HomegateService.getSmsVerificationInfo();
   }
 
   /**
@@ -31,7 +32,7 @@ export class HomegateApplication {
    * @throws AppError if retrieval fails
    */
   static async getLnVerificationInfo(): Promise<Types.THomegateLnInfoResult> {
-    return await Core.HomegateService.getLnVerificationInfo();
+    return await HomegateService.getLnVerificationInfo();
   }
 
   /**
@@ -41,7 +42,7 @@ export class HomegateApplication {
    * @throws AppError if creation fails
    */
   static async createLnVerification(): Promise<Types.THomegateCreateLnVerificationResult> {
-    return Core.HomegateService.createLnVerification();
+    return HomegateService.createLnVerification();
   }
 
   /**
@@ -58,9 +59,9 @@ export class HomegateApplication {
     signal?: AbortSignal,
   ): Promise<Types.THomegateAwaitLnVerificationResult> {
     if (signal) {
-      return Core.HomegateService.awaitLnVerification(verificationId, signal);
+      return HomegateService.awaitLnVerification(verificationId, signal);
     }
-    return Core.HomegateService.awaitLnVerification(verificationId);
+    return HomegateService.awaitLnVerification(verificationId);
   }
 
   /**
@@ -75,7 +76,7 @@ export class HomegateApplication {
     phoneNumber,
     code,
   }: Types.THomegateVerifySmsCodeParams): Promise<Types.THomegateVerifySmsCodeResult> {
-    return Core.HomegateService.verifySmsCode({ phoneNumber, code });
+    return HomegateService.verifySmsCode({ phoneNumber, code });
   }
 
   /**
@@ -86,7 +87,7 @@ export class HomegateApplication {
    * @throws AppError if sending fails
    */
   static async sendSmsCode(phoneNumber: string): Promise<Types.THomegateSendSmsCodeResult> {
-    return Core.HomegateService.sendSmsCode(phoneNumber);
+    return HomegateService.sendSmsCode(phoneNumber);
   }
 
   /**
@@ -95,7 +96,7 @@ export class HomegateApplication {
    * @returns The BTC rate with satUsd, btcUsd, and lastUpdatedAt
    * @throws AppError if retrieval fails
    */
-  static async getBtcRate(): Promise<Core.BtcRate> {
-    return Core.ExchangerateService.getSatoshiUsdRate();
+  static async getBtcRate(): Promise<BtcRate> {
+    return ExchangerateService.getSatoshiUsdRate();
   }
 }

@@ -4,7 +4,7 @@ import { HeaderJoin } from './HeaderJoin';
 
 // Mock auth store
 const mockSetShowSignInDialog = vi.fn();
-vi.mock('@/core', () => ({
+vi.mock('@/stores/auth/auth.store', () => ({
   useAuthStore: (selector: (state: { setShowSignInDialog: typeof mockSetShowSignInDialog }) => unknown) =>
     selector({ setShowSignInDialog: mockSetShowSignInDialog }),
 }));

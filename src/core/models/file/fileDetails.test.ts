@@ -1,16 +1,18 @@
 import { describe, it, expect, beforeEach } from 'vitest';
-import * as Core from '@/core';
-
+import { resetDatabase } from '@/database/franky/franky.helpers';
+import { FileDetailsModel } from '@/models/file/fileDetails';
+import type { Pubky } from '@/models/models.types';
+import type { NexusFileDetails } from '@/services/nexus/nexus.types';
 describe('FileDetailsModel', () => {
   beforeEach(async () => {
-    await Core.resetDatabase();
+    await resetDatabase();
   });
 
   const testFileId1 = 'file-test-1';
   const testFileId2 = 'file-test-2';
-  const testPubky: Core.Pubky = 'operrr8wsbpr3ue9d4qj41ge1kcc6r7fdiy6o3ugjrrhi4y77rd0';
+  const testPubky: Pubky = 'operrr8wsbpr3ue9d4qj41ge1kcc6r7fdiy6o3ugjrrhi4y77rd0';
 
-  const MOCK_FILE_DETAILS: Core.NexusFileDetails = {
+  const MOCK_FILE_DETAILS: NexusFileDetails = {
     id: testFileId1,
     name: 'test-image.jpg',
     src: 'https://example.com/files/test-image.jpg',
@@ -30,7 +32,7 @@ describe('FileDetailsModel', () => {
 
   describe('Constructor', () => {
     it('should create FileDetailsModel instance with all properties', () => {
-      const fileDetails = new Core.FileDetailsModel(MOCK_FILE_DETAILS);
+      const fileDetails = new FileDetailsModel(MOCK_FILE_DETAILS);
 
       expect(fileDetails.id).toBe(MOCK_FILE_DETAILS.id);
       expect(fileDetails.name).toBe(MOCK_FILE_DETAILS.name);
@@ -42,22 +44,22 @@ describe('FileDetailsModel', () => {
 
   describe('Static Methods', () => {
     it('should create file details', async () => {
-      const result = await Core.FileDetailsModel.create(MOCK_FILE_DETAILS);
+      const result = await FileDetailsModel.create(MOCK_FILE_DETAILS);
       expect(result).toBe(MOCK_FILE_DETAILS.id);
     });
 
     it('should find file details by id', async () => {
-      await Core.FileDetailsModel.create(MOCK_FILE_DETAILS);
-      const result = await Core.FileDetailsModel.findById(testFileId1);
+      await FileDetailsModel.create(MOCK_FILE_DETAILS);
+      const result = await FileDetailsModel.findById(testFileId1);
 
       expect(result).not.toBeNull();
-      expect(result!).toBeInstanceOf(Core.FileDetailsModel);
+      expect(result!).toBeInstanceOf(FileDetailsModel);
       expect(result!.id).toBe(testFileId1);
       expect(result!.name).toBe(MOCK_FILE_DETAILS.name);
     });
 
     it('should return null for non-existent file details', async () => {
-      const result = await Core.FileDetailsModel.findById('non-existent-file-999');
+      const result = await FileDetailsModel.findById('non-existent-file-999');
       expect(result).toBeNull();
     });
 
@@ -70,11 +72,11 @@ describe('FileDetailsModel', () => {
         uri: `pubky://${testPubky}/pub/pubky.app/files/${testFileId2}`,
       };
 
-      const result = await Core.FileDetailsModel.bulkSave([MOCK_FILE_DETAILS, fileDetails2]);
+      const result = await FileDetailsModel.bulkSave([MOCK_FILE_DETAILS, fileDetails2]);
       expect(result).toBeDefined();
 
-      const file1 = await Core.FileDetailsModel.findById(testFileId1);
-      const file2 = await Core.FileDetailsModel.findById(testFileId2);
+      const file1 = await FileDetailsModel.findById(testFileId1);
+      const file2 = await FileDetailsModel.findById(testFileId2);
 
       expect(file1).not.toBeNull();
       expect(file2).not.toBeNull();
@@ -83,7 +85,7 @@ describe('FileDetailsModel', () => {
     });
 
     it('should handle empty array in bulk save', async () => {
-      const result = await Core.FileDetailsModel.bulkSave([]);
+      const result = await FileDetailsModel.bulkSave([]);
       expect(result).toBeUndefined();
     });
   });

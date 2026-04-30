@@ -1,41 +1,47 @@
-import * as Core from '@/core';
 import { HttpMethod } from '@/libs/http/http.types';
 import { Logger } from '@/libs/logger/logger';
 import { DatabaseErrorCode } from '@/libs/error/error.codes';
 import { Err } from '@/libs/error/error.factories';
 import { ErrorService } from '@/libs/error/error.types';
-
+import type { TBookmarkEventParams } from '@/controllers/bookmark/bookmark.types';
+import { db } from '@/database/franky/franky';
+import { BookmarkModel } from '@/models/bookmark/bookmark';
+import { PostDetailsModel } from '@/models/post/details/postDetails';
+import { PostStreamTypes } from '@/models/stream/post/postStream.types';
+import { PostStreamModel } from '@/models/stream/post/tables/postStream';
+import { UserCountsModel } from '@/models/user/counts/userCounts';
+import { LocalStreamPostsService } from '@/services/local/stream/posts/posts';
 /**
  * Mapping of post kinds to their corresponding bookmark stream types.
  * The 'all' key represents the stream containing all bookmarks.
  */
-const BOOKMARK_STREAMS: Record<string, Core.PostStreamTypes> = {
-  all: Core.PostStreamTypes.TIMELINE_BOOKMARKS_ALL,
-  short: Core.PostStreamTypes.TIMELINE_BOOKMARKS_SHORT,
-  long: Core.PostStreamTypes.TIMELINE_BOOKMARKS_LONG,
-  image: Core.PostStreamTypes.TIMELINE_BOOKMARKS_IMAGE,
-  video: Core.PostStreamTypes.TIMELINE_BOOKMARKS_VIDEO,
-  file: Core.PostStreamTypes.TIMELINE_BOOKMARKS_FILE,
-  link: Core.PostStreamTypes.TIMELINE_BOOKMARKS_LINK,
+const BOOKMARK_STREAMS: Record<string, PostStreamTypes> = {
+  all: PostStreamTypes.TIMELINE_BOOKMARKS_ALL,
+  short: PostStreamTypes.TIMELINE_BOOKMARKS_SHORT,
+  long: PostStreamTypes.TIMELINE_BOOKMARKS_LONG,
+  image: PostStreamTypes.TIMELINE_BOOKMARKS_IMAGE,
+  video: PostStreamTypes.TIMELINE_BOOKMARKS_VIDEO,
+  file: PostStreamTypes.TIMELINE_BOOKMARKS_FILE,
+  link: PostStreamTypes.TIMELINE_BOOKMARKS_LINK,
 };
 
 export class LocalBookmarkService {
   private static readonly BOOKMARK_TABLES = [
-    Core.BookmarkModel.table,
-    Core.UserCountsModel.table,
-    Core.PostStreamModel.table,
-    Core.PostDetailsModel.table,
+    BookmarkModel.table,
+    UserCountsModel.table,
+    PostStreamModel.table,
+    PostDetailsModel.table,
   ] as const;
 
   /**
    * Persists a bookmark operation (create or delete).
    */
-  static async persist(action: HttpMethod, { userId, postId }: Core.TBookmarkEventParams) {
+  static async persist(action: HttpMethod, { userId, postId }: TBookmarkEventParams) {
     const isCreate = action === HttpMethod.PUT;
 
     try {
-      await Core.db.transaction('rw', this.BOOKMARK_TABLES, async () => {
-        const existingBookmark = await Core.BookmarkModel.findById(postId);
+      await db.transaction('rw', this.BOOKMARK_TABLES, async () => {
+        const existingBookmark = await BookmarkModel.findById(postId);
         const bookmarkExists = !!existingBookmark;
 
         // Skip if already in desired state (idempotent operation)
@@ -45,24 +51,24 @@ export class LocalBookmarkService {
         }
 
         // Fetch post details to determine which streams to update
-        const postDetails = await Core.PostDetailsModel.findById(postId);
+        const postDetails = await PostDetailsModel.findById(postId);
         const kind = postDetails?.kind;
 
         if (isCreate) {
           await Promise.all([
-            Core.BookmarkModel.upsert({
+            BookmarkModel.upsert({
               id: postId,
               created_at: Date.now(),
             }),
-            Core.UserCountsModel.updateCounts({ userId, countChanges: { bookmarks: 1 } }),
+            UserCountsModel.updateCounts({ userId, countChanges: { bookmarks: 1 } }),
             this.addToBookmarkStreams(postId, kind),
           ]);
 
           Logger.debug('Bookmark created', { postId });
         } else {
           await Promise.all([
-            Core.BookmarkModel.deleteById(postId),
-            Core.UserCountsModel.updateCounts({ userId, countChanges: { bookmarks: -1 } }),
+            BookmarkModel.deleteById(postId),
+            UserCountsModel.updateCounts({ userId, countChanges: { bookmarks: -1 } }),
             this.removeFromBookmarkStreams(postId, kind),
           ]);
 
@@ -86,7 +92,7 @@ export class LocalBookmarkService {
    * @returns boolean indicating if the post is bookmarked
    */
   static async exists(postId: string): Promise<boolean> {
-    const bookmark = await Core.BookmarkModel.findById(postId);
+    const bookmark = await BookmarkModel.findById(postId);
     return bookmark !== null;
   }
 
@@ -96,7 +102,7 @@ export class LocalBookmarkService {
    * @returns Array of bookmarked post IDs
    */
   static async getAllBookmarks(): Promise<string[]> {
-    return await Core.BookmarkModel.findAll();
+    return await BookmarkModel.findAll();
   }
 
   /**
@@ -115,7 +121,7 @@ export class LocalBookmarkService {
     }
 
     await Promise.all(
-      streams.map((streamId) => Core.LocalStreamPostsService.prependToStream({ streamId, compositePostId: postId })),
+      streams.map((streamId) => LocalStreamPostsService.prependToStream({ streamId, compositePostId: postId })),
     );
   }
 
@@ -137,7 +143,7 @@ export class LocalBookmarkService {
     }
 
     await Promise.all(
-      streams.map((streamId) => Core.LocalStreamPostsService.removeFromStream({ streamId, compositePostId: postId })),
+      streams.map((streamId) => LocalStreamPostsService.removeFromStream({ streamId, compositePostId: postId })),
     );
   }
 }

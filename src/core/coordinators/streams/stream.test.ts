@@ -1,10 +1,27 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import * as Core from '@/core';
-import type { PollingServiceConfig } from '@/core/coordinators/base';
 import { APP_ROUTES, POST_ROUTES } from '@/app/routes';
 import { PubkyAppFeedReach, PubkyAppFeedSort, PubkyAppFeedLayout } from 'pubky-app-specs';
 import { mockHomeStore, mockSession } from '@/test-utils';
-
+import { FeedController } from '@/controllers/feed/feed';
+import { SKIP_FETCH_NEW_POSTS } from '@/controllers/stream/posts/post.constants';
+import { StreamPostsController } from '@/controllers/stream/posts/posts';
+import type { PollingServiceConfig } from '@/coordinators/base/coordinators.types';
+import { StreamCoordinator } from '@/coordinators/streams/stream';
+import type { StreamCoordinatorConfig } from '@/coordinators/streams/stream.types';
+import type { FeedModelSchema } from '@/models/feed/feed.schema';
+import type { Pubky } from '@/models/models.types';
+import { useAuthStore } from '@/stores/auth/auth.store';
+import { useHomeStore } from '@/stores/home/home.store';
+import {
+  CONTENT,
+  LAYOUT,
+  REACH,
+  SORT,
+  type ContentType,
+  type HomeStore,
+  type ReachType,
+  type SortType,
+} from '@/stores/home/home.types';
 // =============================================================================
 // Test Helpers
 // =============================================================================
@@ -12,15 +29,15 @@ import { mockHomeStore, mockSession } from '@/test-utils';
 /**
  * Type helper for coordinator config that includes base polling config properties
  */
-type CoordinatorConfigWithBase = Core.StreamCoordinatorConfig & PollingServiceConfig;
+type CoordinatorConfigWithBase = StreamCoordinatorConfig & PollingServiceConfig;
 
 /**
  * Options for setting up the home store state
  */
 interface HomeStoreOptions {
-  sort?: Core.SortType;
-  reach?: Core.ReachType;
-  content?: Core.ContentType;
+  sort?: SortType;
+  reach?: ReachType;
+  content?: ContentType;
 }
 
 /**
@@ -35,7 +52,7 @@ interface ControllerSpies {
  * Return type for home store setup
  */
 interface HomeStoreSetup {
-  homeStoreState: Core.HomeStore;
+  homeStoreState: HomeStore;
   unsubscribeSpy: ReturnType<typeof vi.fn>;
 }
 
@@ -45,9 +62,9 @@ interface HomeStoreSetup {
 
 /** Sets up authentication for a user */
 function setupAuth(userId = 'user123'): string {
-  Core.useAuthStore.getState().init({
+  useAuthStore.getState().init({
     session: mockSession(),
-    currentUserPubky: userId as Core.Pubky,
+    currentUserPubky: userId as Pubky,
     hasProfile: true,
   });
   return userId;
@@ -57,10 +74,10 @@ function setupAuth(userId = 'user123'): string {
 function setupHomeStore(options: HomeStoreOptions = {}): HomeStoreSetup {
   const unsubscribeSpy = vi.fn();
   const homeStoreState = mockHomeStore({
-    sort: options.sort ?? Core.SORT.TIMELINE,
-    reach: options.reach ?? Core.REACH.ALL,
-    content: options.content ?? Core.CONTENT.ALL,
-    layout: Core.LAYOUT.COLUMNS,
+    sort: options.sort ?? SORT.TIMELINE,
+    reach: options.reach ?? REACH.ALL,
+    content: options.content ?? CONTENT.ALL,
+    layout: LAYOUT.COLUMNS,
     setLayout: vi.fn(),
     setSort: vi.fn(),
     setReach: vi.fn(),
@@ -68,18 +85,18 @@ function setupHomeStore(options: HomeStoreOptions = {}): HomeStoreSetup {
     reset: vi.fn(),
   });
 
-  vi.spyOn(Core.useHomeStore, 'getState').mockReturnValue(homeStoreState);
-  vi.spyOn(Core.useHomeStore, 'subscribe').mockReturnValue(unsubscribeSpy);
+  vi.spyOn(useHomeStore, 'getState').mockReturnValue(homeStoreState);
+  vi.spyOn(useHomeStore, 'subscribe').mockReturnValue(unsubscribeSpy);
 
   return { homeStoreState, unsubscribeSpy };
 }
 
 /** Sets up controller spies (mocks IO boundaries only, not utilities) */
 function setupControllerSpies(streamHeadValue = 1_000_000_000): ControllerSpies {
-  const getStreamHeadSpy = vi.spyOn(Core.StreamPostsController, 'getStreamHead').mockResolvedValue(streamHeadValue);
+  const getStreamHeadSpy = vi.spyOn(StreamPostsController, 'getStreamHead').mockResolvedValue(streamHeadValue);
 
   const getOrFetchStreamSliceSpy = vi
-    .spyOn(Core.StreamPostsController, 'getOrFetchStreamSlice')
+    .spyOn(StreamPostsController, 'getOrFetchStreamSlice')
     .mockResolvedValue({ nextPageIds: [], timestamp: 0 });
 
   return { getStreamHeadSpy, getOrFetchStreamSliceSpy };
@@ -107,7 +124,7 @@ function setupIntegrationTest(
   const { getStreamHeadSpy, getOrFetchStreamSliceSpy } = setupControllerSpies(options.streamHead);
 
   // Get coordinator instance
-  const coordinator = Core.StreamCoordinator.getInstance();
+  const coordinator = StreamCoordinator.getInstance();
 
   return {
     coordinator,
@@ -125,7 +142,7 @@ async function flushPromises() {
 }
 
 /** Sets up a post route with valid params (uses real utilities) */
-function setupPostRoute(coordinator: Core.StreamCoordinator, userId = 'user123', postId = 'post456') {
+function setupPostRoute(coordinator: StreamCoordinator, userId = 'user123', postId = 'post456') {
   const route = `${POST_ROUTES.POST}/${userId}/${postId}`;
   coordinator.setRoute(route);
   return route;
@@ -139,16 +156,16 @@ describe('StreamCoordinator', () => {
   beforeEach(() => {
     vi.useFakeTimers();
     // Reset coordinator singleton and auth store before each test
-    Core.StreamCoordinator.resetInstance();
-    Core.useAuthStore.getState().reset();
+    StreamCoordinator.resetInstance();
+    useAuthStore.getState().reset();
     vi.clearAllMocks();
   });
 
   describe('Singleton Behavior', () => {
     it('always returns the same instance', () => {
-      const instance1 = Core.StreamCoordinator.getInstance();
-      const instance2 = Core.StreamCoordinator.getInstance();
-      const instance3 = Core.StreamCoordinator.getInstance();
+      const instance1 = StreamCoordinator.getInstance();
+      const instance2 = StreamCoordinator.getInstance();
+      const instance3 = StreamCoordinator.getInstance();
 
       expect(instance1).toBe(instance2);
       expect(instance2).toBe(instance3);
@@ -157,8 +174,8 @@ describe('StreamCoordinator', () => {
 
     it('shares state across all references', async () => {
       const { getOrFetchStreamSliceSpy } = setupIntegrationTest();
-      const coord1 = Core.StreamCoordinator.getInstance();
-      const coord2 = Core.StreamCoordinator.getInstance();
+      const coord1 = StreamCoordinator.getInstance();
+      const coord2 = StreamCoordinator.getInstance();
 
       coord1.configure({ pollOnStart: false, intervalMs: 1_000 } as Partial<CoordinatorConfigWithBase>);
       coord1.setRoute(APP_ROUTES.HOME);
@@ -178,16 +195,16 @@ describe('StreamCoordinator', () => {
     });
 
     it('creates a new instance after resetInstance()', () => {
-      const instance1 = Core.StreamCoordinator.getInstance();
-      Core.StreamCoordinator.resetInstance();
-      const instance2 = Core.StreamCoordinator.getInstance();
+      const instance1 = StreamCoordinator.getInstance();
+      StreamCoordinator.resetInstance();
+      const instance2 = StreamCoordinator.getInstance();
 
       expect(instance1).not.toBe(instance2);
     });
 
     it('new instance has fresh state after reset', async () => {
       const { getOrFetchStreamSliceSpy } = setupIntegrationTest();
-      const coord1 = Core.StreamCoordinator.getInstance();
+      const coord1 = StreamCoordinator.getInstance();
       coord1.configure({ pollOnStart: false, intervalMs: 1_000 } as Partial<CoordinatorConfigWithBase>);
       coord1.setRoute(APP_ROUTES.HOME);
       coord1.start();
@@ -197,8 +214,8 @@ describe('StreamCoordinator', () => {
       await flushPromises();
       const callCountBeforeReset = getOrFetchStreamSliceSpy.mock.calls.length;
 
-      Core.StreamCoordinator.resetInstance();
-      Core.StreamCoordinator.getInstance();
+      StreamCoordinator.resetInstance();
+      StreamCoordinator.getInstance();
 
       vi.advanceTimersByTime(5_000);
       expect(getOrFetchStreamSliceSpy.mock.calls.length).toBe(callCountBeforeReset);
@@ -292,7 +309,7 @@ describe('StreamCoordinator', () => {
       const addEventListenerSpy = vi.spyOn(document, 'addEventListener');
       const removeEventListenerSpy = vi.spyOn(document, 'removeEventListener');
 
-      const coordinator = Core.StreamCoordinator.getInstance();
+      const coordinator = StreamCoordinator.getInstance();
       coordinator.configure({ respectPageVisibility: true } as Partial<CoordinatorConfigWithBase>);
 
       expect(addEventListenerSpy).toHaveBeenCalledWith('visibilitychange', expect.any(Function));
@@ -309,17 +326,17 @@ describe('StreamCoordinator', () => {
 
     it('removes home store subscription on destroy()', () => {
       const unsubscribeSpy = vi.fn();
-      vi.spyOn(Core.StreamPostsController, 'getStreamHead').mockResolvedValue(1_000_000_000);
-      vi.spyOn(Core.StreamPostsController, 'getOrFetchStreamSlice').mockResolvedValue({
+      vi.spyOn(StreamPostsController, 'getStreamHead').mockResolvedValue(1_000_000_000);
+      vi.spyOn(StreamPostsController, 'getOrFetchStreamSlice').mockResolvedValue({
         nextPageIds: [],
         timestamp: 0,
       });
 
       const homeStoreState = mockHomeStore({
-        sort: Core.SORT.TIMELINE,
-        reach: Core.REACH.ALL,
-        content: Core.CONTENT.ALL,
-        layout: Core.LAYOUT.COLUMNS,
+        sort: SORT.TIMELINE,
+        reach: REACH.ALL,
+        content: CONTENT.ALL,
+        layout: LAYOUT.COLUMNS,
         setLayout: vi.fn(),
         setSort: vi.fn(),
         setReach: vi.fn(),
@@ -327,18 +344,18 @@ describe('StreamCoordinator', () => {
         reset: vi.fn(),
       });
 
-      Core.useAuthStore.getState().init({
+      useAuthStore.getState().init({
         session: mockSession(),
-        currentUserPubky: 'user123' as Core.Pubky,
+        currentUserPubky: 'user123' as Pubky,
         hasProfile: true,
       });
 
-      Core.StreamCoordinator.resetInstance();
+      StreamCoordinator.resetInstance();
 
-      vi.spyOn(Core.useHomeStore, 'getState').mockReturnValue(homeStoreState);
-      const subscribeSpyAfterReset = vi.spyOn(Core.useHomeStore, 'subscribe').mockReturnValue(unsubscribeSpy);
+      vi.spyOn(useHomeStore, 'getState').mockReturnValue(homeStoreState);
+      const subscribeSpyAfterReset = vi.spyOn(useHomeStore, 'subscribe').mockReturnValue(unsubscribeSpy);
 
-      const newCoordinator = Core.StreamCoordinator.getInstance();
+      const newCoordinator = StreamCoordinator.getInstance();
 
       expect(subscribeSpyAfterReset).toHaveBeenCalled();
 
@@ -360,7 +377,7 @@ describe('StreamCoordinator', () => {
 
       coordinator.destroy();
 
-      Core.useAuthStore.getState().init({
+      useAuthStore.getState().init({
         session: null,
         currentUserPubky: null,
         hasProfile: false,
@@ -404,7 +421,7 @@ describe('StreamCoordinator', () => {
     });
 
     it('can be safely destroyed multiple times', () => {
-      const coordinator = Core.StreamCoordinator.getInstance();
+      const coordinator = StreamCoordinator.getInstance();
       coordinator.configure({ pollOnStart: false, intervalMs: 1_000 } as Partial<CoordinatorConfigWithBase>);
       coordinator.setRoute(APP_ROUTES.HOME);
       coordinator.start();
@@ -420,7 +437,7 @@ describe('StreamCoordinator', () => {
     it('resetInstance() properly cleans up before creating new instance', () => {
       const { getOrFetchStreamSliceSpy } = setupIntegrationTest();
 
-      const coord1 = Core.StreamCoordinator.getInstance();
+      const coord1 = StreamCoordinator.getInstance();
       coord1.configure({ pollOnStart: false, intervalMs: 1_000 } as Partial<CoordinatorConfigWithBase>);
       coord1.setRoute(APP_ROUTES.HOME);
       coord1.start();
@@ -429,14 +446,14 @@ describe('StreamCoordinator', () => {
       const callCount = getOrFetchStreamSliceSpy.mock.calls.length;
 
       // Reset (should call destroy internally)
-      Core.StreamCoordinator.resetInstance();
+      StreamCoordinator.resetInstance();
 
       // Old instance should not poll anymore
       vi.advanceTimersByTime(10_000);
       expect(getOrFetchStreamSliceSpy.mock.calls.length).toBe(callCount);
 
       // New instance should be clean
-      const coord2 = Core.StreamCoordinator.getInstance();
+      const coord2 = StreamCoordinator.getInstance();
       expect(coord2).not.toBe(coord1);
     });
   });
@@ -471,9 +488,9 @@ describe('StreamCoordinator', () => {
       // User changes filter reach: ALL → FOLLOWING (simulates clicking filter)
       const updatedHomeState = {
         ...homeStoreState,
-        reach: Core.REACH.FOLLOWING,
+        reach: REACH.FOLLOWING,
       };
-      vi.spyOn(Core.useHomeStore, 'getState').mockReturnValue(updatedHomeState);
+      vi.spyOn(useHomeStore, 'getState').mockReturnValue(updatedHomeState);
       await coordinator.setRoute(APP_ROUTES.HOME);
 
       await flushPromises();
@@ -644,7 +661,7 @@ describe('StreamCoordinator', () => {
 
       // User changes to engagement sort (simulates clicking "Most Engaged" tab)
       setupIntegrationTest({
-        homeStore: { sort: Core.SORT.ENGAGEMENT },
+        homeStore: { sort: SORT.ENGAGEMENT },
       });
 
       // Trigger stream switch via home store subscription
@@ -664,16 +681,16 @@ describe('StreamCoordinator', () => {
       const { getOrFetchStreamSliceSpy, homeStoreState } = setupIntegrationTest();
 
       // Set up a real subscription spy to verify it's being used
-      type HomeStoreSubscriber = (state: Core.HomeStore, prevState: Core.HomeStore) => void;
+      type HomeStoreSubscriber = (state: HomeStore, prevState: HomeStore) => void;
       let subscriptionCallback: HomeStoreSubscriber | null = null;
-      vi.spyOn(Core.useHomeStore, 'subscribe').mockImplementation((callback) => {
+      vi.spyOn(useHomeStore, 'subscribe').mockImplementation((callback) => {
         subscriptionCallback = callback as HomeStoreSubscriber;
         return vi.fn();
       });
 
       // Reset and recreate coordinator to pick up the new subscribe mock
-      Core.StreamCoordinator.resetInstance();
-      const newCoordinator = Core.StreamCoordinator.getInstance();
+      StreamCoordinator.resetInstance();
+      const newCoordinator = StreamCoordinator.getInstance();
 
       newCoordinator.configure({ pollOnStart: false, intervalMs: 1_000 } as Partial<CoordinatorConfigWithBase>);
       newCoordinator.setRoute(APP_ROUTES.HOME);
@@ -687,16 +704,13 @@ describe('StreamCoordinator', () => {
       // Update home store state and trigger subscription callback naturally
       const updatedHomeState = {
         ...homeStoreState,
-        sort: Core.SORT.ENGAGEMENT,
+        sort: SORT.ENGAGEMENT,
       };
-      vi.spyOn(Core.useHomeStore, 'getState').mockReturnValue(updatedHomeState);
+      vi.spyOn(useHomeStore, 'getState').mockReturnValue(updatedHomeState);
 
       // Trigger the subscription callback that was registered
       if (subscriptionCallback) {
-        (subscriptionCallback as (state: Core.HomeStore, prevState: Core.HomeStore) => void)(
-          updatedHomeState,
-          homeStoreState,
-        );
+        (subscriptionCallback as (state: HomeStore, prevState: HomeStore) => void)(updatedHomeState, homeStoreState);
       }
 
       await flushPromises();
@@ -710,16 +724,16 @@ describe('StreamCoordinator', () => {
       const { getOrFetchStreamSliceSpy, homeStoreState } = setupIntegrationTest();
 
       // Set up a real subscription spy
-      type HomeStoreSubscriber = (state: Core.HomeStore, prevState: Core.HomeStore) => void;
+      type HomeStoreSubscriber = (state: HomeStore, prevState: HomeStore) => void;
       let subscriptionCallback: HomeStoreSubscriber | null = null;
-      vi.spyOn(Core.useHomeStore, 'subscribe').mockImplementation((callback) => {
+      vi.spyOn(useHomeStore, 'subscribe').mockImplementation((callback) => {
         subscriptionCallback = callback as HomeStoreSubscriber;
         return vi.fn();
       });
 
       // Reset and recreate coordinator
-      Core.StreamCoordinator.resetInstance();
-      const newCoordinator = Core.StreamCoordinator.getInstance();
+      StreamCoordinator.resetInstance();
+      const newCoordinator = StreamCoordinator.getInstance();
 
       newCoordinator.configure({ pollOnStart: false, intervalMs: 1_000 } as Partial<CoordinatorConfigWithBase>);
       newCoordinator.setRoute('/profile');
@@ -730,14 +744,11 @@ describe('StreamCoordinator', () => {
       // Update home store state and trigger subscription
       const updatedHomeState = {
         ...homeStoreState,
-        sort: Core.SORT.ENGAGEMENT,
+        sort: SORT.ENGAGEMENT,
       };
 
       if (subscriptionCallback) {
-        (subscriptionCallback as (state: Core.HomeStore, prevState: Core.HomeStore) => void)(
-          updatedHomeState,
-          homeStoreState,
-        );
+        (subscriptionCallback as (state: HomeStore, prevState: HomeStore) => void)(updatedHomeState, homeStoreState);
       }
 
       await flushPromises();
@@ -750,7 +761,7 @@ describe('StreamCoordinator', () => {
   describe('Stream Head Resolution', () => {
     it('does not poll when stream head cannot be resolved', async () => {
       const { getStreamHeadSpy, getOrFetchStreamSliceSpy, coordinator } = setupIntegrationTest({
-        streamHead: Core.SKIP_FETCH_NEW_POSTS,
+        streamHead: SKIP_FETCH_NEW_POSTS,
       });
 
       coordinator.configure({ pollOnStart: true, intervalMs: 1_000 } as Partial<CoordinatorConfigWithBase>);
@@ -797,7 +808,7 @@ describe('StreamCoordinator', () => {
   describe('Engagement Stream Skipping', () => {
     it('skips polling for engagement streams', async () => {
       const { getOrFetchStreamSliceSpy, coordinator } = setupIntegrationTest({
-        homeStore: { sort: Core.SORT.ENGAGEMENT }, // Creates 'total_engagement:all:all'
+        homeStore: { sort: SORT.ENGAGEMENT }, // Creates 'total_engagement:all:all'
       });
 
       coordinator.configure({ pollOnStart: true, intervalMs: 1_000 } as Partial<CoordinatorConfigWithBase>);
@@ -827,7 +838,7 @@ describe('StreamCoordinator', () => {
     });
   });
 
-  describe('Core Polling Behavior', () => {
+  describe('Main Polling Behavior', () => {
     it('polls on interval when started', async () => {
       const { getOrFetchStreamSliceSpy, coordinator } = setupIntegrationTest();
       coordinator.configure({ pollOnStart: false, intervalMs: 1_000 } as Partial<CoordinatorConfigWithBase>);
@@ -944,7 +955,7 @@ describe('StreamCoordinator', () => {
       const pollsWhileAuthenticated = getOrFetchStreamSliceSpy.mock.calls.length;
       expect(pollsWhileAuthenticated).toBeGreaterThan(0);
 
-      Core.useAuthStore.getState().init({
+      useAuthStore.getState().init({
         session: null,
         currentUserPubky: null,
         hasProfile: false,
@@ -953,9 +964,9 @@ describe('StreamCoordinator', () => {
       vi.advanceTimersByTime(2_000);
       expect(getOrFetchStreamSliceSpy.mock.calls.length).toBe(pollsWhileAuthenticated);
 
-      Core.useAuthStore.getState().init({
+      useAuthStore.getState().init({
         session: mockSession(),
-        currentUserPubky: 'user123' as Core.Pubky,
+        currentUserPubky: 'user123' as Pubky,
         hasProfile: true,
       });
 
@@ -1011,7 +1022,7 @@ describe('StreamCoordinator', () => {
     it('continues polling despite transient errors', async () => {
       const { coordinator } = setupIntegrationTest();
       const getStreamHeadSpy = vi
-        .spyOn(Core.StreamPostsController, 'getStreamHead')
+        .spyOn(StreamPostsController, 'getStreamHead')
         .mockRejectedValueOnce(new Error('network timeout'))
         .mockResolvedValue(1_000_000_000);
 
@@ -1030,7 +1041,7 @@ describe('StreamCoordinator', () => {
     it('recovers automatically from multiple consecutive network failures', async () => {
       const { getOrFetchStreamSliceSpy, coordinator } = setupIntegrationTest();
       const getStreamHeadSpy = vi
-        .spyOn(Core.StreamPostsController, 'getStreamHead')
+        .spyOn(StreamPostsController, 'getStreamHead')
         .mockRejectedValueOnce(new Error('network timeout'))
         .mockRejectedValueOnce(new Error('network timeout'))
         .mockResolvedValue(1_000_000_000); // Network recovers
@@ -1095,7 +1106,7 @@ describe('StreamCoordinator', () => {
   });
 
   describe('Feed Route Polling', () => {
-    const mockFeed: Core.FeedModelSchema = {
+    const mockFeed: FeedModelSchema = {
       id: 'feed123',
       name: 'Test Feed',
       tags: ['bitcoin'],
@@ -1107,8 +1118,8 @@ describe('StreamCoordinator', () => {
       updated_at: 1000,
     };
 
-    function setupFeedControllerSpy(feed?: Core.FeedModelSchema) {
-      return vi.spyOn(Core.FeedController, 'get').mockResolvedValue(feed);
+    function setupFeedControllerSpy(feed?: FeedModelSchema) {
+      return vi.spyOn(FeedController, 'get').mockResolvedValue(feed);
     }
 
     it('polls on /feed route when feed is resolved', async () => {
@@ -1193,7 +1204,7 @@ describe('StreamCoordinator', () => {
       expect(callsOnFirstFeed).toBeGreaterThan(0);
 
       // Navigate to a different feed
-      const secondFeed: Core.FeedModelSchema = {
+      const secondFeed: FeedModelSchema = {
         ...mockFeed,
         id: 'feed456',
         tags: ['lightning', 'tech'],
@@ -1216,10 +1227,10 @@ describe('StreamCoordinator', () => {
       const { getOrFetchStreamSliceSpy, coordinator } = setupIntegrationTest();
 
       // Feed A resolves slowly — we control when it resolves via the spy
-      const feedA: Core.FeedModelSchema = { ...mockFeed, id: 'feedA', tags: ['alpha'] };
-      const feedB: Core.FeedModelSchema = { ...mockFeed, id: 'feedB', tags: ['beta'] };
+      const feedA: FeedModelSchema = { ...mockFeed, id: 'feedA', tags: ['alpha'] };
+      const feedB: FeedModelSchema = { ...mockFeed, id: 'feedB', tags: ['beta'] };
 
-      const feedGetSpy = vi.spyOn(Core.FeedController, 'get').mockResolvedValue(feedA);
+      const feedGetSpy = vi.spyOn(FeedController, 'get').mockResolvedValue(feedA);
       coordinator.configure({ pollOnStart: false, intervalMs: 1_000 } as Partial<CoordinatorConfigWithBase>);
       coordinator.setRoute('/feed/feedA');
       coordinator.start();
@@ -1267,7 +1278,7 @@ describe('StreamCoordinator', () => {
 
     it('does not get stuck when FeedController.get throws an error', async () => {
       const { getOrFetchStreamSliceSpy, coordinator } = setupIntegrationTest();
-      vi.spyOn(Core.FeedController, 'get').mockRejectedValue(new Error('Dexie read failed'));
+      vi.spyOn(FeedController, 'get').mockRejectedValue(new Error('Dexie read failed'));
       coordinator.configure({ pollOnStart: false, intervalMs: 1_000 } as Partial<CoordinatorConfigWithBase>);
       coordinator.setRoute('/feed/feed123');
       coordinator.start();
@@ -1282,7 +1293,7 @@ describe('StreamCoordinator', () => {
       expect(getOrFetchStreamSliceSpy).not.toHaveBeenCalled();
 
       // Now fix the mock and trigger a re-evaluation via a visibility change
-      const feedGetSpy = vi.spyOn(Core.FeedController, 'get').mockResolvedValue(mockFeed);
+      const feedGetSpy = vi.spyOn(FeedController, 'get').mockResolvedValue(mockFeed);
       coordinator.configure({ respectPageVisibility: true } as Partial<CoordinatorConfigWithBase>);
       // Simulate visibility change to re-trigger evaluation
       Object.defineProperty(document, 'visibilityState', { configurable: true, get: () => 'hidden' });
@@ -1367,7 +1378,7 @@ describe('StreamCoordinator', () => {
   });
 
   afterEach(() => {
-    Core.StreamCoordinator.resetInstance();
+    StreamCoordinator.resetInstance();
     // Restore document visibility to visible for subsequent tests
     Object.defineProperty(document, 'visibilityState', {
       configurable: true,

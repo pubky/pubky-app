@@ -15,8 +15,8 @@ const mockFilterContent = vi.fn(({ disabledTabs, selectedTab }: { disabledTabs?:
   </div>
 ));
 
-// Mock Core.useHomeStore
-vi.mock('@/core', () => ({
+// Mock useHomeStore
+vi.mock('@/stores/home/home.types', () => ({
   CONTENT: {
     ALL: 'all',
     SHORT: 'short',
@@ -26,6 +26,8 @@ vi.mock('@/core', () => ({
     LINKS: 'links',
     FILES: 'files',
   },
+}));
+vi.mock('@/stores/home/home.store', () => ({
   useHomeStore: () => mockUseHomeStore(),
 }));
 

@@ -7,7 +7,7 @@ import type { UseThreadRepliesOptions, UseThreadRepliesResult } from './useThrea
 /**
  * Hook for fetching Level 1 replies with a max-3 + show-more pattern.
  *
- * Delegates core reply stream logic to `useReplyStream`.
+ * Delegates shared reply stream logic to `useReplyStream`.
  *
  * @param postId - The composite post ID to get replies for
  * @param options - Configuration options

@@ -2,7 +2,6 @@
 
 import { usePostDetails } from '@/hooks/usePostDetails/usePostDetails';
 import { useRequireAuth } from '@/hooks/useRequireAuth/useRequireAuth';
-import * as Core from '@/core';
 import * as Atoms from '@/atoms';
 import * as Molecules from '@/molecules';
 import { getTagsLayoutForSurfaceLayout, PostMainLayoutProvider } from '@/organisms/PostMain/PostMainLayout';
@@ -13,7 +12,7 @@ import { SinglePostContentSkeleton } from './SinglePostContent.skeleton';
 import { ThreadTree } from '../ThreadTree/ThreadTree';
 import type { SinglePostContentProps } from './SinglePostContent.types';
 import { isPostDeleted } from '@/libs/utils/utils';
-
+import { useHomeStore } from '@/stores/home/home.store';
 /**
  * SinglePostContent Organism
  *
@@ -29,7 +28,7 @@ import { isPostDeleted } from '@/libs/utils/utils';
  * following the atomic design pattern where only organisms can call hooks.
  */
 export function SinglePostContent({ postId }: SinglePostContentProps) {
-  const layout = Core.useHomeStore((state) => state.layout);
+  const layout = useHomeStore((state) => state.layout);
   const tagsLayout = getTagsLayoutForSurfaceLayout(layout);
 
   // Check authentication status - unauthenticated users see limited view

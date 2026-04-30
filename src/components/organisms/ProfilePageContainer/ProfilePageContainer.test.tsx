@@ -2,17 +2,17 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen } from '@testing-library/react';
 import { ProfilePageContainer } from './ProfilePageContainer';
 import { PROFILE_PAGE_TYPES } from '@/app/profile/types';
-import type { AuthStore } from '@/core/stores/auth/auth.types';
 import { asOpaque, mockAuthStore } from '@/test-utils';
 import { useProfileHeader } from '@/hooks/useProfileHeader/useProfileHeader';
-
-// Mock Core
+import { useAuthStore } from '@/stores/auth/auth.store';
+import type { AuthStore } from '@/stores/auth/auth.types';
+// Mock dependencies
 const mockCurrentUserPubky = 'user123';
 const mockAuthStoreState = {
   currentUserPubky: mockCurrentUserPubky,
   isLoggingOut: false,
 };
-vi.mock('@/core', () => ({
+vi.mock('@/stores/auth/auth.store', () => ({
   useAuthStore: vi.fn((selector: (state: AuthStore) => unknown) => selector(mockAuthStore(mockAuthStoreState))),
 }));
 
@@ -383,8 +383,7 @@ describe('ProfilePageContainer - User not found', () => {
     });
 
     // Mock useAuthStore to return isLoggingOut: true (global logout state)
-    const core = await import('@/core');
-    vi.mocked(core.useAuthStore).mockImplementation((selector: (state: AuthStore) => unknown) => {
+    vi.mocked(useAuthStore).mockImplementation((selector: (state: AuthStore) => unknown) => {
       const stateWithLogout = mockAuthStore({ ...mockAuthStoreState, isLoggingOut: true });
       return selector(stateWithLogout);
     });

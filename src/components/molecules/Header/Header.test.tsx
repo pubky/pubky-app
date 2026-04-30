@@ -2,10 +2,10 @@ import { render, screen, fireEvent } from '@testing-library/react';
 import { describe, it, expect, vi } from 'vitest';
 import { useRouter } from 'next/navigation';
 import { useLiveQuery } from 'dexie-react-hooks';
-import * as Core from '@/core';
 import { HeaderContainer, HeaderTitle, HeaderOnboarding, HeaderSocialLinks, HeaderNavigationButtons } from './Header';
 import { HeaderButtonSignIn, HeaderHome, HeaderSignIn } from '@/molecules';
-
+import { useAuthStore } from '@/stores/auth/auth.store';
+import { useNotificationStore } from '@/stores/notification/notification.store';
 // Mock Next.js router
 vi.mock('next/navigation', () => ({
   useRouter: vi.fn(),
@@ -20,36 +20,49 @@ vi.mock('dexie-react-hooks', () => ({
   useLiveQuery: vi.fn(),
 }));
 
-// Mock the core
-vi.mock('@/core', async (importOriginal) => {
-  const actual = await importOriginal<typeof import('@/core')>();
-  return {
-    ...actual,
-    useAuthStore: vi.fn(),
-    useNotificationStore: vi.fn(),
-    useSearchStore: vi.fn(() => ({
-      recentUsers: [],
-      recentTags: [],
-      activeTags: [],
-      addUser: vi.fn(),
-      addTag: vi.fn(),
-      setActiveTags: vi.fn(),
-      addActiveTag: vi.fn(),
-      removeActiveTag: vi.fn(),
+// Mock direct dependencies
+vi.mock('@/stores/auth/auth.store', () => ({
+  useAuthStore: vi.fn(),
+}));
+vi.mock('@/stores/notification/notification.store', () => ({
+  useNotificationStore: vi.fn(),
+}));
+vi.mock('@/stores/search/search.store', () => ({
+  useSearchStore: vi.fn(() => ({
+    recentUsers: [],
+    recentTags: [],
+    activeTags: [],
+    addUser: vi.fn(),
+    addTag: vi.fn(),
+    setActiveTags: vi.fn(),
+    addActiveTag: vi.fn(),
+    removeActiveTag: vi.fn(),
+  })),
+}));
+vi.mock('@/controllers/profile/profile', () => ({
+  ProfileController: {
+    read: vi.fn(() => Promise.resolve({ name: 'Test User', image: 'test-image.jpg' })),
+  },
+}));
+vi.mock('@/controllers/file/file', () => ({
+  FileController: {
+    getAvatarUrl: vi.fn((pubky: string) => `https://cdn.example.com/avatar/${pubky}`),
+  },
+}));
+vi.mock('@/database/franky/franky', () => ({
+  db: {
+    table: vi.fn(() => ({
+      where: vi.fn(() => ({
+        equals: vi.fn(() => ({
+          first: vi.fn(),
+        })),
+      })),
     })),
-    ProfileController: {
-      read: vi.fn(() => Promise.resolve({ name: 'Test User', image: 'test-image.jpg' })),
+    user_details: {
+      get: vi.fn(),
     },
-    FileController: {
-      getAvatarUrl: vi.fn((pubky: string) => `https://cdn.example.com/avatar/${pubky}`),
-    },
-    db: {
-      user_details: {
-        get: vi.fn(),
-      },
-    },
-  };
-});
+  },
+}));
 
 // Mock the components
 vi.mock('@/components', () => ({
@@ -186,8 +199,8 @@ describe('Header Components', () => {
 
   beforeEach(() => {
     vi.mocked(useRouter).mockReturnValue(mockRouter as ReturnType<typeof useRouter>);
-    vi.mocked(Core.useAuthStore).mockReturnValue({ currentUserPubky: 'test-pubky' });
-    vi.mocked(Core.useNotificationStore).mockReturnValue({ selectUnread: () => 0 });
+    vi.mocked(useAuthStore).mockReturnValue({ currentUserPubky: 'test-pubky' });
+    vi.mocked(useNotificationStore).mockReturnValue({ selectUnread: () => 0 });
     vi.mocked(useLiveQuery).mockReturnValue({ name: 'Test User', image: 'test-image.jpg' });
   });
 
@@ -456,7 +469,7 @@ describe('Header Components', () => {
 
   describe('HeaderSignIn - Avatar Logic', () => {
     beforeEach(() => {
-      vi.mocked(Core.useAuthStore).mockReturnValue({ currentUserPubky: 'test-pubky' });
+      vi.mocked(useAuthStore).mockReturnValue({ currentUserPubky: 'test-pubky' });
     });
 
     it('passes name to AvatarWithFallback for valid name', () => {
@@ -533,8 +546,8 @@ describe('Header Components - Snapshots', () => {
 
   beforeEach(() => {
     vi.mocked(useRouter).mockReturnValue(mockRouter as ReturnType<typeof useRouter>);
-    vi.mocked(Core.useAuthStore).mockReturnValue({ currentUserPubky: 'test-pubky' });
-    vi.mocked(Core.useNotificationStore).mockReturnValue({ selectUnread: () => 0 });
+    vi.mocked(useAuthStore).mockReturnValue({ currentUserPubky: 'test-pubky' });
+    vi.mocked(useNotificationStore).mockReturnValue({ selectUnread: () => 0 });
     vi.mocked(useLiveQuery).mockReturnValue({ name: 'Test User', image: 'test-image.jpg' });
   });
 

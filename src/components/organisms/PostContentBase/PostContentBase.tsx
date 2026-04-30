@@ -4,18 +4,17 @@ import { usePostDetails } from '@/hooks/usePostDetails/usePostDetails';
 import * as Atoms from '@/atoms';
 import * as Molecules from '@/molecules';
 import * as Organisms from '@/organisms';
-import * as Core from '@/core';
 import { PostContentBaseSkeleton } from './PostContentBase.skeleton';
 import type { PostContentBaseProps } from './PostContentBase.types';
 import { cn, isPostDeleted } from '@/libs/utils/utils';
-
+import { useLocalFilesStore } from '@/stores/localFiles/localFiles.store';
 /**
  * PostContentBase - Base component that renders post content without repost handling.
  * This component is used internally by PostContent and PostPreviewCard.
  * It only renders the content elements: text, link embeds, and attachments.
  */
 export function PostContentBase({ postId, className, textClassName }: PostContentBaseProps) {
-  const localAttachments = Core.useLocalFilesStore((s) => s.posts[postId]);
+  const localAttachments = useLocalFilesStore((s) => s.posts[postId]);
 
   // Fetch post details for content
   const { postDetails } = usePostDetails(postId);

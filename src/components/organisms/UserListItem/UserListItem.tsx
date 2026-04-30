@@ -6,7 +6,6 @@ import { useTranslations } from 'next-intl';
 import { Check, Loader2, StickyNote, Tag, UserMinus, UserRound, UserRoundPlus } from 'lucide-react';
 import * as Atoms from '@/atoms';
 import * as Organisms from '@/organisms';
-import * as Core from '@/core';
 import { USER_LIST_TAG_MAX_LENGTH, USER_LIST_TAGS_MAX_TOTAL_CHARS } from '@/config';
 import { cn, formatPublicKey } from '@/libs/utils/utils';
 import type {
@@ -16,7 +15,7 @@ import type {
   UserStatsProps,
   VariantProps,
 } from './UserListItem.types';
-
+import { TagKind } from '@/application/tag/tag.types';
 // =============================================================================
 // Internal Components
 // =============================================================================
@@ -193,7 +192,7 @@ function TagsList({ userId, className }: { userId: string; className?: string })
   return (
     <Organisms.ClickableTagsList
       taggedId={userId}
-      taggedKind={Core.TagKind.USER}
+      taggedKind={TagKind.USER}
       maxTagLength={USER_LIST_TAG_MAX_LENGTH}
       maxTotalChars={USER_LIST_TAGS_MAX_TOTAL_CHARS}
       showCount={false}

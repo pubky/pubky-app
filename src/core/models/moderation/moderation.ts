@@ -1,19 +1,16 @@
 import { Table } from 'dexie';
-import * as Core from '@/core';
-import { RecordModelBase } from '@/core/models/shared/base/record/baseRecord';
 import { ModerationType } from './moderation.schema';
-
-export class ModerationModel
-  extends RecordModelBase<string, Core.ModerationModelSchema>
-  implements Core.ModerationModelSchema
-{
-  static table: Table<Core.ModerationModelSchema> = Core.db.table('moderation');
+import { db } from '@/database/franky/franky';
+import type { ModerationModelSchema } from '@/models/moderation/moderation.schema';
+import { RecordModelBase } from '@/models/shared/base/record/baseRecord';
+export class ModerationModel extends RecordModelBase<string, ModerationModelSchema> implements ModerationModelSchema {
+  static table: Table<ModerationModelSchema> = db.table('moderation');
 
   type: ModerationType;
   is_blurred: boolean;
   created_at: number;
 
-  constructor(data: Core.ModerationModelSchema) {
+  constructor(data: ModerationModelSchema) {
     super(data);
     this.type = data.type;
     this.is_blurred = data.is_blurred;

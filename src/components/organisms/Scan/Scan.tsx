@@ -10,14 +10,13 @@ import * as Atoms from '@/atoms';
 import * as Molecules from '@/molecules';
 import * as Config from '@/config';
 import * as App from '@/app';
-import * as Core from '@/core';
 import { Loader2, QrCode, Key } from 'lucide-react';
 import { Logger } from '@/libs/logger/logger';
-
+import { useOnboardingStore } from '@/stores/onboarding/onboarding.store';
 export const ScanContent = () => {
   const t = useTranslations('onboarding.scan');
   const router = useRouter();
-  const inviteCode = Core.useOnboardingStore((state) => state.inviteCode);
+  const inviteCode = useOnboardingStore((state) => state.inviteCode);
   const hasInviteCode = inviteCode.trim().length > 0;
   useEffect(() => {
     if (!hasInviteCode) {

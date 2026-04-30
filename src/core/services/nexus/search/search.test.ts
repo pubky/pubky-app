@@ -1,7 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import * as Core from '@/core';
 import { NexusSearchService } from './search';
-
+import * as queryNexusModule from '@/services/nexus/nexus.utils';
 describe('NexusSearchService', () => {
   beforeEach(() => {
     vi.clearAllMocks();
@@ -10,7 +9,7 @@ describe('NexusSearchService', () => {
   describe('usersById', () => {
     it('should call queryNexus with correct URL and return user IDs', async () => {
       const mockUserIds = ['user1', 'user2'];
-      const queryNexusSpy = vi.spyOn(Core, 'queryNexus').mockResolvedValue(mockUserIds);
+      const queryNexusSpy = vi.spyOn(queryNexusModule, 'queryNexus').mockResolvedValue(mockUserIds);
 
       const result = await NexusSearchService.usersById({ prefix: 'pxnu33', skip: 0, limit: 5 });
 
@@ -21,7 +20,7 @@ describe('NexusSearchService', () => {
     });
 
     it('should return empty array when queryNexus returns empty array', async () => {
-      vi.spyOn(Core, 'queryNexus').mockResolvedValue([]);
+      vi.spyOn(queryNexusModule, 'queryNexus').mockResolvedValue([]);
 
       const result = await NexusSearchService.usersById({ prefix: 'nonexistent', skip: 0, limit: 5 });
 
@@ -29,7 +28,7 @@ describe('NexusSearchService', () => {
     });
 
     it('should include pagination params in URL', async () => {
-      const queryNexusSpy = vi.spyOn(Core, 'queryNexus').mockResolvedValue([]);
+      const queryNexusSpy = vi.spyOn(queryNexusModule, 'queryNexus').mockResolvedValue([]);
 
       await NexusSearchService.usersById({ prefix: 'test', skip: 10, limit: 20 });
 
@@ -45,7 +44,7 @@ describe('NexusSearchService', () => {
   describe('usersByName', () => {
     it('should call queryNexus with correct URL and return user IDs', async () => {
       const mockUserIds = ['user1', 'user2'];
-      const queryNexusSpy = vi.spyOn(Core, 'queryNexus').mockResolvedValue(mockUserIds);
+      const queryNexusSpy = vi.spyOn(queryNexusModule, 'queryNexus').mockResolvedValue(mockUserIds);
 
       const result = await NexusSearchService.usersByName({ prefix: 'Test', skip: 0, limit: 5 });
 
@@ -56,7 +55,7 @@ describe('NexusSearchService', () => {
     });
 
     it('should return empty array when queryNexus returns empty array', async () => {
-      vi.spyOn(Core, 'queryNexus').mockResolvedValue([]);
+      vi.spyOn(queryNexusModule, 'queryNexus').mockResolvedValue([]);
 
       const result = await NexusSearchService.usersByName({ prefix: 'nonexistent', skip: 0, limit: 5 });
 
@@ -67,7 +66,7 @@ describe('NexusSearchService', () => {
   describe('tags', () => {
     it('should call queryNexus with correct URL and return tags', async () => {
       const mockTags = ['bitcoin', 'bitkit', 'bits'];
-      const queryNexusSpy = vi.spyOn(Core, 'queryNexus').mockResolvedValue(mockTags);
+      const queryNexusSpy = vi.spyOn(queryNexusModule, 'queryNexus').mockResolvedValue(mockTags);
 
       const result = await NexusSearchService.tags({ prefix: 'bit', skip: 0, limit: 5 });
 
@@ -78,7 +77,7 @@ describe('NexusSearchService', () => {
     });
 
     it('should return empty array when queryNexus returns empty array', async () => {
-      vi.spyOn(Core, 'queryNexus').mockResolvedValue([]);
+      vi.spyOn(queryNexusModule, 'queryNexus').mockResolvedValue([]);
 
       const result = await NexusSearchService.tags({ prefix: 'xyz', skip: 0, limit: 5 });
 
@@ -86,7 +85,7 @@ describe('NexusSearchService', () => {
     });
 
     it('should handle special characters in prefix', async () => {
-      const queryNexusSpy = vi.spyOn(Core, 'queryNexus').mockResolvedValue([]);
+      const queryNexusSpy = vi.spyOn(queryNexusModule, 'queryNexus').mockResolvedValue([]);
 
       await NexusSearchService.tags({ prefix: 'tag#123', skip: 0, limit: 5 });
 

@@ -1,10 +1,10 @@
 import { act, renderHook } from '@testing-library/react';
 import { useLiveQuery } from 'dexie-react-hooks';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import * as Core from '@/core';
 import { usePostCounts } from '@/hooks/usePostCounts/usePostCounts';
 import { useNestedReplies } from './useNestedReplies';
-
+import * as buildPostReplyStreamIdModule from '@/models/stream/post/postStream.types';
+import { StreamPostsController } from '@/controllers/stream/posts/posts';
 vi.mock('dexie-react-hooks', () => ({
   useLiveQuery: vi.fn(),
 }));
@@ -69,9 +69,9 @@ describe('useNestedReplies', () => {
       localTotalCount: 3,
     });
 
-    vi.spyOn(Core, 'buildPostReplyStreamId').mockReturnValue('post_replies:author:reply-1');
+    vi.spyOn(buildPostReplyStreamIdModule, 'buildPostReplyStreamId').mockReturnValue('post_replies:author:reply-1');
     const getOrFetchSpy = vi
-      .spyOn(Core.StreamPostsController, 'getOrFetchStreamSlice')
+      .spyOn(StreamPostsController, 'getOrFetchStreamSlice')
       .mockResolvedValueOnce({
         nextPageIds: Array.from({ length: 10 }, (_, index) => `author:nested-${index + 3}`),
         timestamp: 11,
@@ -105,8 +105,8 @@ describe('useNestedReplies', () => {
       localTotalCount: 2,
     });
 
-    vi.spyOn(Core, 'buildPostReplyStreamId').mockReturnValue('post_replies:author:reply-1');
-    const getOrFetchSpy = vi.spyOn(Core.StreamPostsController, 'getOrFetchStreamSlice').mockResolvedValue({
+    vi.spyOn(buildPostReplyStreamIdModule, 'buildPostReplyStreamId').mockReturnValue('post_replies:author:reply-1');
+    const getOrFetchSpy = vi.spyOn(StreamPostsController, 'getOrFetchStreamSlice').mockResolvedValue({
       nextPageIds: Array.from({ length: 10 }, (_, index) => `author:nested-${index + 3}`),
       timestamp: 0,
       reachedEnd: false,

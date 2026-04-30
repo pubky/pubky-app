@@ -47,6 +47,33 @@
       "@/templates/*": [
         "./src/components/templates/*"
       ],
+      "@/application/*": [
+        "./src/core/application/*"
+      ],
+      "@/controllers/*": [
+        "./src/core/controllers/*"
+      ],
+      "@/coordinators/*": [
+        "./src/core/coordinators/*"
+      ],
+      "@/database/*": [
+        "./src/core/database/*"
+      ],
+      "@/models/*": [
+        "./src/core/models/*"
+      ],
+      "@/services/*": [
+        "./src/core/services/*"
+      ],
+      "@/pipes/*": [
+        "./src/core/pipes/*"
+      ],
+      "@/stores/*": [
+        "./src/core/stores/*"
+      ],
+      "@/utils/*": [
+        "./src/core/utils/*"
+      ],
       "@/hooks/*": [
         "./src/hooks/*"
       ],

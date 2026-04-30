@@ -3,8 +3,7 @@ import { within } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { CustomFeedDialog } from './CustomFeedDialog';
 import { PubkyAppFeedLayout, PubkyAppFeedReach, PubkyAppFeedSort, PubkyAppPostKind } from 'pubky-app-specs';
-import type { FeedModelSchema } from '@/core/models/feed/feed.schema';
-
+import type { FeedModelSchema } from '@/models/feed/feed.schema';
 // Mock router
 const mockPush = vi.fn();
 vi.mock('next/navigation', () => ({
@@ -76,11 +75,11 @@ vi.mock('@/molecules', () => ({
   ),
 }));
 
-// Mock core
+// Mock dependencies
 const mockCommitCreate = vi.fn();
 const mockCommitUpdate = vi.fn();
 const mockCommitDelete = vi.fn();
-vi.mock('@/core', () => ({
+vi.mock('@/controllers/feed/feed', () => ({
   FeedController: {
     commitCreate: (...args: unknown[]) => mockCommitCreate(...args),
     commitUpdate: (...args: unknown[]) => mockCommitUpdate(...args),

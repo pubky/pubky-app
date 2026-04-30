@@ -1,8 +1,9 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { renderHook, waitFor } from '@testing-library/react';
 import { useProfileConnections, CONNECTION_TYPE } from './useProfileConnections';
-import * as Core from '@/core';
-
+import type { Pubky } from '@/models/models.types';
+import type { UserRelationshipsModelSchema } from '@/models/user/relationships/userRelationships.schema';
+import type { NexusUserCounts, NexusUserDetails } from '@/services/nexus/nexus.types';
 // Hoist mock functions before vi.mock
 const mockMocks = vi.hoisted(() => {
   const mockGetOrFetchStreamSlice = vi.fn();
@@ -19,56 +20,63 @@ const mockMocks = vi.hoisted(() => {
   };
 });
 
-// Mock Core
+// Mock direct dependencies
 const mockCurrentUserPubky = 'user123';
-vi.mock('@/core', async (importOriginal) => {
-  const actual = await importOriginal<typeof import('@/core')>();
-  return {
-    ...actual,
-    useAuthStore: vi.fn(() => ({
-      currentUserPubky: mockCurrentUserPubky,
-    })),
-    StreamUserController: {
-      getOrFetchStreamSlice: mockMocks.mockGetOrFetchStreamSlice,
-    },
-    UserController: {
-      bulkGetDetails: mockMocks.mockBulkGetDetails,
-      bulkGetCounts: mockMocks.mockBulkGetCounts,
-      bulkGetRelationships: mockMocks.mockBulkGetRelationships,
-    },
-    FileController: {
-      getAvatarUrl: mockMocks.mockGetAvatarUrl,
-    },
-    UserDetailsModel: {
-      table: {
-        where: vi.fn(() => ({
-          anyOf: vi.fn(() => ({
-            toArray: vi.fn().mockResolvedValue([]),
-          })),
+vi.mock('@/stores/auth/auth.store', () => ({
+  useAuthStore: vi.fn(() => ({
+    currentUserPubky: mockCurrentUserPubky,
+  })),
+}));
+vi.mock('@/controllers/stream/users/users', () => ({
+  StreamUserController: {
+    getOrFetchStreamSlice: mockMocks.mockGetOrFetchStreamSlice,
+  },
+}));
+vi.mock('@/controllers/user/user', () => ({
+  UserController: {
+    bulkGetDetails: mockMocks.mockBulkGetDetails,
+    bulkGetCounts: mockMocks.mockBulkGetCounts,
+    bulkGetRelationships: mockMocks.mockBulkGetRelationships,
+  },
+}));
+vi.mock('@/controllers/file/file', () => ({
+  FileController: {
+    getAvatarUrl: mockMocks.mockGetAvatarUrl,
+  },
+}));
+vi.mock('@/models/user/details/userDetails', () => ({
+  UserDetailsModel: {
+    table: {
+      where: vi.fn(() => ({
+        anyOf: vi.fn(() => ({
+          toArray: vi.fn().mockResolvedValue([]),
         })),
-      },
+      })),
     },
-    UserCountsModel: {
-      table: {
-        where: vi.fn(() => ({
-          anyOf: vi.fn(() => ({
-            toArray: vi.fn().mockResolvedValue([]),
-          })),
+  },
+}));
+vi.mock('@/models/user/counts/userCounts', () => ({
+  UserCountsModel: {
+    table: {
+      where: vi.fn(() => ({
+        anyOf: vi.fn(() => ({
+          toArray: vi.fn().mockResolvedValue([]),
         })),
-      },
+      })),
     },
-  };
-});
+  },
+}));
 
 // Mock Config
 vi.mock('@/config', () => ({
   NEXUS_USERS_PER_PAGE: 20,
+  MODERATED_TAGS: ['nudity'],
 }));
 
 // Mock dexie-react-hooks
-let mockUserDetailsMap = new Map<Core.Pubky, Core.NexusUserDetails>();
-let mockUserCountsMap = new Map<Core.Pubky, Core.NexusUserCounts>();
-let mockUserRelationshipsMap = new Map<Core.Pubky, Core.UserRelationshipsModelSchema>();
+let mockUserDetailsMap = new Map<Pubky, NexusUserDetails>();
+let mockUserCountsMap = new Map<Pubky, NexusUserCounts>();
+let mockUserRelationshipsMap = new Map<Pubky, UserRelationshipsModelSchema>();
 
 const mockUseLiveQuery = vi.fn(<T,>(queryFn: () => Promise<T> | T, deps: unknown[], defaultValue: T): T => {
   // Check which query function is being called based on dependencies
@@ -180,17 +188,17 @@ describe('useProfileConnections', () => {
 
   describe('with data', () => {
     beforeEach(() => {
-      const userIds: Core.Pubky[] = ['user-1', 'user-2'] as Core.Pubky[];
+      const userIds: Pubky[] = ['user-1', 'user-2'] as Pubky[];
       mockMocks.mockGetOrFetchStreamSlice.mockResolvedValue({
         nextPageIds: userIds,
         skip: 2,
       });
 
-      mockUserDetailsMap = new Map<Core.Pubky, Core.NexusUserDetails>([
+      mockUserDetailsMap = new Map<Pubky, NexusUserDetails>([
         [
           'user-1',
           {
-            id: 'user-1' as Core.Pubky,
+            id: 'user-1' as Pubky,
             name: 'John Doe',
             bio: 'Test bio',
             image: 'image-1',
@@ -202,7 +210,7 @@ describe('useProfileConnections', () => {
         [
           'user-2',
           {
-            id: 'user-2' as Core.Pubky,
+            id: 'user-2' as Pubky,
             name: 'Jane Smith',
             bio: 'Another bio',
             image: null,
@@ -213,7 +221,7 @@ describe('useProfileConnections', () => {
         ],
       ]);
 
-      mockUserCountsMap = new Map<Core.Pubky, Core.NexusUserCounts>([
+      mockUserCountsMap = new Map<Pubky, NexusUserCounts>([
         [
           'user-1',
           {
@@ -244,12 +252,12 @@ describe('useProfileConnections', () => {
         ],
       ]);
 
-      mockUserRelationshipsMap = new Map<Core.Pubky, Core.UserRelationshipsModelSchema>([
-        ['user-1', { id: 'user-1' as Core.Pubky, following: false, followed_by: false }],
-        ['user-2', { id: 'user-2' as Core.Pubky, following: true, followed_by: false }],
+      mockUserRelationshipsMap = new Map<Pubky, UserRelationshipsModelSchema>([
+        ['user-1', { id: 'user-1' as Pubky, following: false, followed_by: false }],
+        ['user-2', { id: 'user-2' as Pubky, following: true, followed_by: false }],
       ]);
 
-      mockMocks.mockGetAvatarUrl.mockImplementation((id: Core.Pubky) => {
+      mockMocks.mockGetAvatarUrl.mockImplementation((id: Pubky) => {
         if (id === 'user-1') return 'https://cdn.example.com/avatar/user-1.png';
         return null;
       });
@@ -320,7 +328,7 @@ describe('useProfileConnections', () => {
 
     it('sets hasMore correctly when more connections available', async () => {
       // Mock response with full page (20 items)
-      const fullPageIds = Array.from({ length: 20 }, (_, i) => `user-${i}` as Core.Pubky);
+      const fullPageIds = Array.from({ length: 20 }, (_, i) => `user-${i}` as Pubky);
       mockMocks.mockGetOrFetchStreamSlice.mockResolvedValue({
         nextPageIds: fullPageIds,
         skip: 20,
@@ -337,7 +345,7 @@ describe('useProfileConnections', () => {
 
     it('sets hasMore to false when fewer than page size returned', async () => {
       // Mock response with less than page size
-      const smallPageIds = ['user-1', 'user-2'] as Core.Pubky[];
+      const smallPageIds = ['user-1', 'user-2'] as Pubky[];
       mockMocks.mockGetOrFetchStreamSlice.mockResolvedValue({
         nextPageIds: smallPageIds,
         skip: 2,

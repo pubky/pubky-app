@@ -101,9 +101,9 @@ vi.mock('@/molecules', () => ({
   })),
 }));
 
-// Mock Core.useLocalFilesStore
+// Mock useLocalFilesStore
 const mockSetPostAttachments = vi.fn();
-vi.mock('@/core', () => ({
+vi.mock('@/stores/localFiles/localFiles.store', () => ({
   useLocalFilesStore: {
     getState: vi.fn(() => ({
       setPostAttachments: mockSetPostAttachments,

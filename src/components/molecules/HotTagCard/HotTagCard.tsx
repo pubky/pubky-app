@@ -4,10 +4,9 @@ import * as React from 'react';
 import { useTranslations } from 'next-intl';
 import * as Atoms from '@/atoms';
 import * as Molecules from '@/molecules';
-import { TIMEFRAME } from '@/core/stores/hot/hot.types';
 import type { HotTagCardProps } from './HotTagCard.types';
 import { cn, generateRandomColor } from '@/libs/utils/utils';
-
+import { TIMEFRAME } from '@/stores/hot/hot.types';
 const TIMEFRAME_TRANSLATION_KEY = {
   [TIMEFRAME.TODAY]: 'postsCountToday',
   [TIMEFRAME.THIS_WEEK]: 'postsCountThisWeek',

@@ -1,15 +1,15 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import Dexie, { Table } from 'dexie';
 import { indexedDB, IDBKeyRange } from 'fake-indexeddb';
-import * as Core from '@/core';
 import { Ttl } from './ttl';
 import { AppError } from '@/libs/error/error';
 import { DatabaseErrorCode } from '@/libs/error/error.codes';
 import { ErrorCategory, ErrorService } from '@/libs/error/error.types';
+import type { NexusModelTuple } from '@/models/shared/base/tuple/baseTuple.type';
+import type { TtlModelSchema } from '@/models/shared/ttl/ttl.schema';
+type TestTtlSchema = TtlModelSchema<string>;
 
-type TestTtlSchema = Core.TtlModelSchema<string>;
-
-type TestTtlTuple = Core.NexusModelTuple<Pick<TestTtlSchema, 'lastUpdatedAt'>>;
+type TestTtlTuple = NexusModelTuple<Pick<TestTtlSchema, 'lastUpdatedAt'>>;
 
 class TestTtlModel extends Ttl<string, TestTtlSchema> implements TestTtlSchema {
   static table: Table<TestTtlSchema>;

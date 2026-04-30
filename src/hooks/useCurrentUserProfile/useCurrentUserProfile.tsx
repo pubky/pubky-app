@@ -1,9 +1,10 @@
 'use client';
 
-import * as Core from '@/core';
 import { useLocalFirstQuery } from '@/hooks/useLocalFirstQuery/useLocalFirstQuery';
 import type { UseCurrentUserProfileResult } from './useCurrentUserProfile.types';
-
+import { UserController } from '@/controllers/user/user';
+import type { NexusUserDetails } from '@/services/nexus/nexus.types';
+import { useAuthStore } from '@/stores/auth/auth.store';
 /**
  * Hook to get the current logged-in user's profile details.
  * Combines authentication state with live database queries.
@@ -22,11 +23,11 @@ import type { UseCurrentUserProfileResult } from './useCurrentUserProfile.types'
  * ```
  */
 export function useCurrentUserProfile(): UseCurrentUserProfileResult {
-  const currentUserPubky = Core.useAuthStore((state) => state.currentUserPubky);
+  const currentUserPubky = useAuthStore((state) => state.currentUserPubky);
 
-  const { data: userDetails } = useLocalFirstQuery<Core.NexusUserDetails>({
-    queryFn: () => Core.UserController.getDetails({ userId: currentUserPubky! }),
-    fetchFn: () => Core.UserController.fetchDetails({ userId: currentUserPubky! }),
+  const { data: userDetails } = useLocalFirstQuery<NexusUserDetails>({
+    queryFn: () => UserController.getDetails({ userId: currentUserPubky! }),
+    fetchFn: () => UserController.fetchDetails({ userId: currentUserPubky! }),
     deps: [currentUserPubky],
     enabled: !!currentUserPubky,
   });

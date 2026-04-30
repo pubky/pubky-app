@@ -1,19 +1,14 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen, fireEvent } from '@testing-library/react';
 import { NotificationSettings } from './NotificationSettings';
-import { defaultNotificationPreferences } from '@/core/stores/settings/settings.types';
-
+import { defaultNotificationPreferences } from '@/stores/settings/settings.types';
 // Mock settings store and hook
 const mockSetNotificationPreference = vi.fn();
 const mockUseSettingsStore = vi.fn();
 
-vi.mock('@/core', async (importOriginal) => {
-  const actual = await importOriginal<typeof import('@/core')>();
-  return {
-    ...actual,
-    useSettingsStore: () => mockUseSettingsStore(),
-  };
-});
+vi.mock('@/stores/settings/settings.store', () => ({
+  useSettingsStore: () => mockUseSettingsStore(),
+}));
 
 vi.mock('@/hooks/useSettingsActions/useSettingsActions', () => ({
   useSettingsActions: () => ({

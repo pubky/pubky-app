@@ -1,19 +1,20 @@
 'use client';
 
-import * as Core from '@/core';
 import { TimelineFeedVariant, TIMELINE_FEED_VARIANT } from '@/config';
-import { useCustomFeed } from '../useCustomFeed/useCustomFeed';
-import { useIsMobile } from '../useIsMobile/useIsMobile';
-
+import { useCustomFeed } from '@/hooks/useCustomFeed/useCustomFeed';
+import { useIsMobile } from '@/hooks/useIsMobile/useIsMobile';
+import { useHomeStore } from '@/stores/home/home.store';
+import { LAYOUT, type LayoutType } from '@/stores/home/home.types';
+import { pubkyLayoutToHomeLayout } from '@/utils/pubky-app-spec-feed-mappers';
 export interface FeedLayoutResolutionInput {
-  requestedLayout: Core.LayoutType;
+  requestedLayout: LayoutType;
   variant: TimelineFeedVariant;
   isPhoneViewport: boolean;
 }
 
 export interface FeedLayoutResolution {
-  requestedLayout: Core.LayoutType;
-  effectiveLayout: Core.LayoutType;
+  requestedLayout: LayoutType;
+  effectiveLayout: LayoutType;
   isVisualRequested: boolean;
   isVisualActive: boolean;
   isPhoneViewport: boolean;
@@ -31,26 +32,26 @@ export function resolveFeedLayout({
   variant,
   isPhoneViewport,
 }: FeedLayoutResolutionInput): FeedLayoutResolution {
-  const isVisualRequested = requestedLayout === Core.LAYOUT.VISUAL;
+  const isVisualRequested = requestedLayout === LAYOUT.VISUAL;
   const isVisualSupported = !isPhoneViewport && VISUAL_SUPPORTED_FEED_VARIANTS.has(variant);
-  const effectiveLayout = isVisualRequested && !isVisualSupported ? Core.LAYOUT.COLUMNS : requestedLayout;
+  const effectiveLayout = isVisualRequested && !isVisualSupported ? LAYOUT.COLUMNS : requestedLayout;
 
   return {
     requestedLayout,
     effectiveLayout,
     isVisualRequested,
-    isVisualActive: effectiveLayout === Core.LAYOUT.VISUAL,
+    isVisualActive: effectiveLayout === LAYOUT.VISUAL,
     isPhoneViewport,
   };
 }
 
 export function useFeedLayoutResolution(variant: TimelineFeedVariant): FeedLayoutResolution {
-  const homeLayout = Core.useHomeStore((state) => state.layout);
+  const homeLayout = useHomeStore((state) => state.layout);
   const customFeed = useCustomFeed();
   const isPhoneViewport = useIsMobile({ breakpoint: 'md' });
   const customFeedLayout =
     variant === TIMELINE_FEED_VARIANT.CUSTOM && customFeed?.layout !== undefined
-      ? Core.pubkyLayoutToHomeLayout(customFeed.layout)
+      ? pubkyLayoutToHomeLayout(customFeed.layout)
       : undefined;
 
   const requestedLayout = customFeedLayout ?? homeLayout;

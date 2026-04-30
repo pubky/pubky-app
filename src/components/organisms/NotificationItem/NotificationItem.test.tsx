@@ -1,9 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen, fireEvent } from '@testing-library/react';
 import { NotificationItem } from './NotificationItem';
-import { NotificationType } from '@/core/models/notification/notification.types';
-import * as Core from '@/core';
-
+import { NotificationType, type FlatNotification } from '@/models/notification/notification.types';
 // Mock next/navigation
 const mockPush = vi.fn();
 vi.mock('next/navigation', () => ({
@@ -33,39 +31,47 @@ vi.mock('@/libs/logger/logger', async () => {
   };
 });
 
-// Mock Core module
-vi.mock('@/core', async (importOriginal) => {
-  const actual = await importOriginal<typeof import('@/core')>();
-  return {
-    ...actual,
-    ProfileController: {
-      read: vi.fn(() => Promise.resolve(null)),
+// Mock dependencies
+vi.mock('@/controllers/profile/profile', () => ({
+  ProfileController: {
+    read: vi.fn(() => Promise.resolve(null)),
+  },
+}));
+vi.mock('@/controllers/user/user', () => ({
+  UserController: {
+    getDetails: vi.fn(() => Promise.resolve(null)),
+  },
+}));
+vi.mock('@/services/local/post/post', () => ({
+  LocalPostService: {
+    readPostDetails: vi.fn(() => Promise.resolve(null)),
+  },
+}));
+vi.mock('@/controllers/post/post', () => ({
+  PostController: {
+    get getOrFetch() {
+      return mockGetOrFetch;
     },
-    UserController: {
-      getDetails: vi.fn(() => Promise.resolve(null)),
-    },
-    LocalPostService: {
-      readPostDetails: vi.fn(() => Promise.resolve(null)),
-    },
-    PostController: {
-      get getOrFetch() {
-        return mockGetOrFetch;
-      },
-    },
-    FileController: {
-      getAvatarUrl: vi.fn((id: string) => `https://cdn.example.com/avatar/${id}`),
-    },
-    useAuthStore: {
-      getState: vi.fn(() => ({
-        currentUserPubky: 'test-user-pubky',
-      })),
-    },
-    useNotificationStore: vi.fn((selector) => {
-      const state = { lastRead: 0, setLastRead: vi.fn() };
-      return selector ? selector(state) : state;
-    }),
-  };
-});
+  },
+}));
+vi.mock('@/controllers/file/file', () => ({
+  FileController: {
+    getAvatarUrl: vi.fn((id: string) => `https://cdn.example.com/avatar/${id}`),
+  },
+}));
+vi.mock('@/stores/auth/auth.store', () => ({
+  useAuthStore: {
+    getState: vi.fn(() => ({
+      currentUserPubky: 'test-user-pubky',
+    })),
+  },
+}));
+vi.mock('@/stores/notification/notification.store', () => ({
+  useNotificationStore: vi.fn((selector) => {
+    const state = { lastRead: 0, setLastRead: vi.fn() };
+    return selector ? selector(state) : state;
+  }),
+}));
 
 // Mock organisms
 vi.mock('@/organisms', () => ({
@@ -136,7 +142,7 @@ describe('NotificationItem', () => {
     type: NotificationType.Follow,
     timestamp: Date.now() - 1000 * 60 * 30, // 30 minutes ago
     followed_by: 'user1',
-  } as Core.FlatNotification;
+  } as FlatNotification;
 
   it('renders notification text correctly', () => {
     render(<NotificationItem notification={baseNotification} isUnread={false} />);
@@ -192,7 +198,7 @@ describe('NotificationItem', () => {
       tagged_by: 'user1',
       tag_label: 'bitcoin',
       post_uri: 'user1:post123',
-    } as Core.FlatNotification;
+    } as FlatNotification;
     render(<NotificationItem notification={tagNotification} isUnread={false} />);
     expect(screen.getByTestId('post-tag')).toBeInTheDocument();
     expect(screen.getByText('bitcoin')).toBeInTheDocument();
@@ -206,7 +212,7 @@ describe('NotificationItem', () => {
       timestamp: Date.now() - 1000 * 60 * 30,
       mentioned_by: 'user1',
       post_uri: 'user1:post123',
-    } as Core.FlatNotification;
+    } as FlatNotification;
     render(<NotificationItem notification={mentionNotification} isUnread={false} />);
     // Username and action text are now separate links
     expect(screen.getByText('User')).toBeInTheDocument();
@@ -233,7 +239,7 @@ describe('NotificationItem', () => {
       tagged_by: 'user1',
       tag_label: 'bitcoin',
       post_uri: 'user1:post123',
-    } as Core.FlatNotification;
+    } as FlatNotification;
     render(<NotificationItem notification={tagNotification} isUnread={false} />);
 
     const tag = screen.getByTestId('post-tag');
@@ -250,7 +256,7 @@ describe('NotificationItem', () => {
       tagged_by: 'user1',
       tag_label: 'developer',
       profile_uri: 'user1',
-    } as Core.FlatNotification;
+    } as FlatNotification;
     render(<NotificationItem notification={tagNotification} isUnread={false} />);
 
     const tag = screen.getByTestId('post-tag');
@@ -267,7 +273,7 @@ describe('NotificationItem', () => {
       tagged_by: 'user1',
       tag_label: 'c++',
       post_uri: 'user1:post123',
-    } as Core.FlatNotification;
+    } as FlatNotification;
     render(<NotificationItem notification={tagNotification} isUnread={false} />);
 
     const tag = screen.getByTestId('post-tag');
@@ -293,7 +299,7 @@ describe('NotificationItem', () => {
       timestamp: Date.now() - 1000 * 60 * 30,
       mentioned_by: 'user1',
       post_uri: 'pubky://user1/pub/pubky.app/posts/post123',
-    } as Core.FlatNotification;
+    } as FlatNotification;
 
     render(<NotificationItem notification={mentionNotification} isUnread={false} />);
 
@@ -318,7 +324,7 @@ describe('NotificationItem', () => {
       timestamp: Date.now() - 1000 * 60 * 30,
       mentioned_by: 'user1',
       post_uri: 'pubky://user1/pub/pubky.app/posts/post123',
-    } as Core.FlatNotification;
+    } as FlatNotification;
 
     render(<NotificationItem notification={mentionNotification} isUnread={false} />);
 
@@ -343,7 +349,7 @@ describe('NotificationItem', () => {
       timestamp: Date.now() - 1000 * 60 * 30,
       mentioned_by: 'user1',
       post_uri: 'pubky://user1/pub/pubky.app/posts/post123',
-    } as Core.FlatNotification;
+    } as FlatNotification;
 
     render(<NotificationItem notification={mentionNotification} isUnread={false} />);
 
@@ -366,7 +372,7 @@ describe('NotificationItem', () => {
       timestamp: Date.now() - 1000 * 60 * 30,
       mentioned_by: 'user1',
       post_uri: 'pubky://user1/pub/pubky.app/posts/post123',
-    } as Core.FlatNotification;
+    } as FlatNotification;
 
     render(<NotificationItem notification={mentionNotification} isUnread={false} />);
 
@@ -388,7 +394,7 @@ describe('NotificationItem', () => {
       replied_by: 'replier-user',
       parent_post_uri: 'pubky://original-author/pub/pubky.app/posts/parent-post-id',
       reply_uri: 'pubky://replier-user/pub/pubky.app/posts/reply-post-id',
-    } as Core.FlatNotification;
+    } as FlatNotification;
 
     render(<NotificationItem notification={replyNotification} isUnread={false} />);
 
@@ -431,7 +437,7 @@ describe('NotificationItem', () => {
       tagged_by: 'user1',
       tag_label: 'bitcoin',
       post_uri: 'user1:post123',
-    } as Core.FlatNotification;
+    } as FlatNotification;
     render(<NotificationItem notification={tagNotification} isUnread={false} />);
 
     // PostTag mock renders a span, but let's verify the closest('a, button') guard
@@ -451,7 +457,7 @@ describe('NotificationItem', () => {
       replied_by: 'user1',
       parent_post_uri: 'pubky://original-author/pub/pubky.app/posts/parent-post-id',
       reply_uri: 'pubky://user1/pub/pubky.app/posts/reply-post-id',
-    } as Core.FlatNotification;
+    } as FlatNotification;
     render(<NotificationItem notification={replyNotification} isUnread={false} />);
 
     const actionLink = screen.getByText('replied to your post').closest('a')!;
@@ -466,7 +472,7 @@ describe('NotificationItem', () => {
       type: NotificationType.NewFriend,
       timestamp: Date.now() - 1000 * 60 * 30,
       followed_by: 'user1',
-    } as Core.FlatNotification;
+    } as FlatNotification;
     render(<NotificationItem notification={friendNotification} isUnread={false} />);
 
     const actionLink = screen.getByText('is now your friend').closest('a')!;
@@ -482,7 +488,7 @@ describe('NotificationItem', () => {
       timestamp: Date.now() - 1000 * 60 * 30,
       tagged_by: 'user1',
       tag_label: 'developer',
-    } as Core.FlatNotification;
+    } as FlatNotification;
     render(<NotificationItem notification={tagProfileNotification} isUnread={false} />);
 
     const actionLink = screen.getByText('tagged your profile').closest('a')!;
@@ -499,7 +505,7 @@ describe('NotificationItem', () => {
       replied_by: 'user1',
       parent_post_uri: 'pubky://original-author/pub/pubky.app/posts/parent-post-id',
       reply_uri: 'pubky://user1/pub/pubky.app/posts/reply-post-id',
-    } as Core.FlatNotification;
+    } as FlatNotification;
     render(<NotificationItem notification={replyNotification} isUnread={false} />);
 
     // The timestamp and icon share the same parent Link — use the icon as a stable selector
@@ -524,7 +530,7 @@ describe('NotificationItem - Snapshots', () => {
       type: NotificationType.Follow,
       timestamp: Date.now() - 1000 * 60 * 30,
       followed_by: 'user1',
-    } as Core.FlatNotification;
+    } as FlatNotification;
     const { container } = render(<NotificationItem notification={notification} isUnread={false} />);
     expect(container.firstChild).toMatchSnapshot();
   });
@@ -537,7 +543,7 @@ describe('NotificationItem - Snapshots', () => {
       tagged_by: 'user1',
       tag_label: 'bitcoin',
       post_uri: 'user1:post123',
-    } as Core.FlatNotification;
+    } as FlatNotification;
     const { container } = render(<NotificationItem notification={notification} isUnread={false} />);
     expect(container.firstChild).toMatchSnapshot();
   });
@@ -549,7 +555,7 @@ describe('NotificationItem - Snapshots', () => {
       timestamp: Date.now() - 1000 * 60 * 30,
       mentioned_by: 'user1',
       post_uri: 'user1:post123',
-    } as Core.FlatNotification;
+    } as FlatNotification;
     const { container } = render(<NotificationItem notification={notification} isUnread={false} />);
     expect(container.firstChild).toMatchSnapshot();
   });

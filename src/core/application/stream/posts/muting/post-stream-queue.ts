@@ -1,8 +1,8 @@
-import * as Core from '@/core';
 import { TQueueEntry } from '../post.types';
 import { CollectParams, CollectResult } from './post-stream-queue.types';
 import { Logger } from '@/libs/logger/logger';
-
+import type { PostStreamId } from '@/models/stream/post/postStream.types';
+import { LocalPostService } from '@/services/local/post/post';
 // Safety valve to prevent infinite loops when filters remove many posts.
 // At 20 iterations with limit=30, we scan up to 600 posts before giving up.
 // This handles extreme cases like a muted user having 500+ consecutive posts.
@@ -13,13 +13,13 @@ const MAX_FETCH_ITERATIONS = 20;
  * Handles fetching until we have enough posts after filtering.
  */
 export class PostStreamQueue {
-  private entries = new Map<Core.PostStreamId, TQueueEntry>();
+  private entries = new Map<PostStreamId, TQueueEntry>();
 
-  get(streamId: Core.PostStreamId): TQueueEntry | undefined {
+  get(streamId: PostStreamId): TQueueEntry | undefined {
     return this.entries.get(streamId);
   }
 
-  private save(streamId: Core.PostStreamId, posts: string[], cursor: number): void {
+  private save(streamId: PostStreamId, posts: string[], cursor: number): void {
     this.entries.set(streamId, { posts, cursor });
   }
 
@@ -31,7 +31,7 @@ export class PostStreamQueue {
    * Remove a specific stream's queue entry.
    * Called when navigating away from a stream or when streamId changes.
    */
-  remove(streamId: Core.PostStreamId): void {
+  remove(streamId: PostStreamId): void {
     this.entries.delete(streamId);
   }
 
@@ -39,7 +39,7 @@ export class PostStreamQueue {
    * Collects enough posts to satisfy the limit, fetching more if needed.
    * Handles deduplication, filtering, and saves overflow back to queue.
    */
-  async collect(streamId: Core.PostStreamId, params: CollectParams): Promise<CollectResult> {
+  async collect(streamId: PostStreamId, params: CollectParams): Promise<CollectResult> {
     const { limit, filter, fetch } = params;
 
     // Load from queue and filter
@@ -113,7 +113,7 @@ export class PostStreamQueue {
 
     try {
       const lastPostId = toReturn[toReturn.length - 1];
-      const postDetails = await Core.LocalPostService.readDetails({ postId: lastPostId });
+      const postDetails = await LocalPostService.readDetails({ postId: lastPostId });
       return postDetails?.indexed_at;
     } catch (error) {
       // Log but don't fail - caller can fall back to cursor
@@ -124,7 +124,7 @@ export class PostStreamQueue {
   }
 
   private finalize(
-    streamId: Core.PostStreamId,
+    streamId: PostStreamId,
     posts: string[],
     limit: number,
     cursor: number,

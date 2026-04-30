@@ -1,8 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { UserResult } from 'pubky-app-specs';
-import type { Pubky } from '@/core/models/models.types';
 import { asOpaque } from '@/test-utils';
-
+import type { Pubky } from '@/models/models.types';
 const mockProfileApplication = {
   commitCreate: vi.fn(),
   commitDelete: vi.fn(),
@@ -41,16 +40,18 @@ const mockIdentity = {
   createRecoveryFile: vi.fn(),
 };
 
-vi.mock('@/core', async () => {
-  const actual = await vi.importActual('@/core');
-  return {
-    ...actual,
-    ProfileApplication: mockProfileApplication,
-    UserNormalizer: mockUserNormalizer,
-    useOnboardingStore: mockOnboardingStore,
-    useAuthStore: mockAuthStore,
-  };
-});
+vi.mock('@/application/profile/profile', () => ({
+  ProfileApplication: mockProfileApplication,
+}));
+vi.mock('@/pipes/user/user.normalizer', () => ({
+  UserNormalizer: mockUserNormalizer,
+}));
+vi.mock('@/stores/onboarding/onboarding.store', () => ({
+  useOnboardingStore: mockOnboardingStore,
+}));
+vi.mock('@/stores/auth/auth.store', () => ({
+  useAuthStore: mockAuthStore,
+}));
 
 vi.mock('@/libs/identity/identity', async () => {
   const actual = await vi.importActual<typeof import('@/libs/identity/identity')>('@/libs/identity/identity');

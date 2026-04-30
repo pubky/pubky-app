@@ -6,7 +6,6 @@ import { useRequireAuth } from '@/hooks/useRequireAuth/useRequireAuth';
 import * as React from 'react';
 import * as Atoms from '@/atoms';
 import * as Molecules from '@/molecules';
-import * as Core from '@/core';
 import type { ClickableTagsListProps } from './ClickableTagsList.types';
 import { cn, generateRandomColor, getDisplayTags } from '@/libs/utils/utils';
 
@@ -16,7 +15,8 @@ import {
   TAG_INPUT_WIDTH_AT_LIMIT,
   TAG_INPUT_WIDTH_DEFAULT,
 } from '@/config';
-
+import { TagKind } from '@/application/tag/tag.types';
+import { useAuthStore } from '@/stores/auth/auth.store';
 /**
  * ClickableTagsList
  *
@@ -59,7 +59,7 @@ export function ClickableTagsList({
 
   // Auth requirement for tag actions
   const { isAuthenticated, requireAuth } = useRequireAuth();
-  const setShowSignInDialog = Core.useAuthStore((state) => state.setShowSignInDialog);
+  const setShowSignInDialog = useAuthStore((state) => state.setShowSignInDialog);
 
   // Use unified entity tags hook
   const {
@@ -152,7 +152,7 @@ export function ClickableTagsList({
             key={`${taggedId}-${tag.label}`}
             taggers={tag.taggers}
             taggersCount={tag.taggers_count}
-            postId={taggedKind === Core.TagKind.POST ? taggedId : null}
+            postId={taggedKind === TagKind.POST ? taggedId : null}
             tagLabel={tag.label}
           >
             <Molecules.PostTag

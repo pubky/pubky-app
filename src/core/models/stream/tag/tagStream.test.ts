@@ -1,10 +1,9 @@
-import { db } from '@/core/database';
 import { describe, it, expect, beforeEach } from 'vitest';
 import { createDefaultTagStream } from './tagStream.helper';
 import { TagStreamModel } from './tagStream';
 import { TagStreamTypes } from './tagStream.types';
-import { NexusHotTag } from '@/core/services/nexus/nexus.types';
-
+import { db } from '@/database/franky/franky';
+import type { NexusHotTag } from '@/services/nexus/nexus.types';
 describe('TagStreamModel', () => {
   // Mock NexusHotTag objects for testing
   const mockTag1: NexusHotTag = {

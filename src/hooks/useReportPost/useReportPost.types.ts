@@ -1,6 +1,5 @@
-import type { ReportIssueType } from '@/core/pipes/report';
 import { REPORT_POST_STEPS } from './useReportPost.constants';
-
+import type { ReportIssueType } from '@/pipes/report/report.types';
 export type ReportPostStep = (typeof REPORT_POST_STEPS)[keyof typeof REPORT_POST_STEPS];
 
 /**

@@ -4,7 +4,7 @@
   "triggerOnUpdates": false,
   "ignorePatterns": "**/__snapshots__/**\n**/*.generated.*\ndist/**\nnode_modules/**\npublic/sw.js\npublic/sw.js.map\n**/*.snap",
   "excludeAuthors": ["dependabot[bot]"],
-  "instructions": "This is a local-first decentralized social app using Dexie (IndexedDB), Zustand, Next.js, Tailwind CSS, Shadcn UI. Architecture enforcement is critical: check layer boundary violations (controllers->application->services->models). Review .greptile/rules.md for recurring patterns and docs/architecture.md for the full architecture reference.",
+  "instructions": "This is a local-first decentralized social app using Dexie (IndexedDB), Zustand, Next.js, Tailwind CSS, Shadcn UI. Architecture enforcement is critical: check layer boundary violations (controllers->application->services->models). Modules must be imported through the tsconfig path aliases (for example @/hooks/*, @/controllers/*, @/services/*, @/models/*, @/stores/*) and point at concrete source modules. Review .greptile/rules.md for recurring patterns and docs/architecture.md for the full architecture reference.",
   "rules": [
     {
       "id": "no-service-from-controller",
@@ -62,7 +62,7 @@
     },
     {
       "id": "no-barrel-reexports",
-      "rule": "Avoid barrel files (index.ts that only re-export) and re-exporting symbols through intermediate modules. They add indirection, confuse IDE go-to-definition, make circular deps harder to trace, and defeat tree-shaking. Import directly from the source module. Exception: src/components/atoms/index.ts barrel is intentional.",
+      "rule": "Avoid barrel files (index.ts that only re-export) and re-exporting symbols through intermediate modules. They add indirection, confuse IDE go-to-definition, make circular deps harder to trace, and defeat tree-shaking. Import directly from the source module. For hooks and layered modules, use aliases such as @/hooks/*, @/controllers/*, @/services/*, @/models/*, and @/stores/*. Exception: src/components/atoms/index.ts barrel is intentional.",
       "scope": ["src/**"],
       "severity": "medium"
     },
