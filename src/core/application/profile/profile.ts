@@ -1,6 +1,6 @@
 import JSZip from 'jszip';
 
-import * as Specs from 'pubky-app-specs';
+import { baseUriBuilder } from 'pubky-app-specs';
 import { HttpMethod } from '@/libs/http/http.types';
 import { ClientErrorCode } from '@/libs/error/error.codes';
 import { Err } from '@/libs/error/error.factories';
@@ -120,7 +120,7 @@ export class ProfileApplication {
     // Clear local IndexedDB data first
     await LocalProfileService.deleteAll();
 
-    const baseDirectory = Specs.baseUriBuilder(pubky);
+    const baseDirectory = baseUriBuilder(pubky);
     // TODO: Using undefined, false, and Infinity here as a temporary workaround since
     // homeserver.list does not yet support pagination. This ensures all files are deleted.
     const dataList = await HomeserverService.list({ baseDirectory, reverse: false, limit: Infinity });
@@ -161,7 +161,7 @@ export class ProfileApplication {
    * @param params - Parameters containing user's public key and optional progress callback
    */
   static async downloadData({ pubky, setProgress }: TDownloadDataParams) {
-    const baseDirectory = Specs.baseUriBuilder(pubky);
+    const baseDirectory = baseUriBuilder(pubky);
 
     // TODO: Using undefined, false, and Infinity here as a temporary workaround since homeserver.list does not yet
     // support pagination. This ensures all files are retrieved.

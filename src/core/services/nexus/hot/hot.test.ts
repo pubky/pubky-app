@@ -1,9 +1,20 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { NexusHotService } from './hot';
-import * as queryNexusModule from '@/services/nexus/nexus.utils';
+import { queryNexus } from '@/services/nexus/nexus.utils';
 import { UserStreamReach, UserStreamTimeframe, type NexusHotTag } from '@/services/nexus/nexus.types';
 import { tagApi } from '@/services/nexus/tag/tag.api';
 import type { TTagHotParams } from '@/services/nexus/tag/tag.types';
+
+vi.mock('@/services/nexus/nexus.utils', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('@/services/nexus/nexus.utils')>();
+  return {
+    ...actual,
+    queryNexus: vi.fn(),
+  };
+});
+
+const mockQueryNexus = vi.mocked(queryNexus);
+
 describe('NexusHotService', () => {
   beforeEach(() => {
     vi.clearAllMocks();
@@ -31,7 +42,7 @@ describe('NexusHotService', () => {
         limit: 10,
       };
 
-      const queryNexusSpy = vi.spyOn(queryNexusModule, 'queryNexus').mockResolvedValue(mockHotTags);
+      const queryNexusSpy = mockQueryNexus.mockResolvedValue(mockHotTags);
 
       const result = await NexusHotService.fetch(params);
 
@@ -56,7 +67,7 @@ describe('NexusHotService', () => {
         limit: 20,
       };
 
-      const queryNexusSpy = vi.spyOn(queryNexusModule, 'queryNexus').mockResolvedValue(mockHotTags);
+      const queryNexusSpy = mockQueryNexus.mockResolvedValue(mockHotTags);
 
       const result = await NexusHotService.fetch(params);
 
@@ -69,7 +80,7 @@ describe('NexusHotService', () => {
         timeframe: UserStreamTimeframe.TODAY,
       };
 
-      vi.spyOn(queryNexusModule, 'queryNexus').mockResolvedValue([]);
+      mockQueryNexus.mockResolvedValue([]);
 
       const result = await NexusHotService.fetch(params);
 
@@ -91,7 +102,7 @@ describe('NexusHotService', () => {
         user_id: 'user-123',
       };
 
-      const queryNexusSpy = vi.spyOn(queryNexusModule, 'queryNexus').mockResolvedValue(mockHotTags);
+      const queryNexusSpy = mockQueryNexus.mockResolvedValue(mockHotTags);
       const tagApiHotSpy = vi.spyOn(tagApi, 'hot');
 
       const result = await NexusHotService.fetch(params);
@@ -116,7 +127,7 @@ describe('NexusHotService', () => {
         taggers_limit: 2,
       };
 
-      const queryNexusSpy = vi.spyOn(queryNexusModule, 'queryNexus').mockResolvedValue(mockHotTags);
+      const queryNexusSpy = mockQueryNexus.mockResolvedValue(mockHotTags);
       const tagApiHotSpy = vi.spyOn(tagApi, 'hot');
 
       const result = await NexusHotService.fetch(params);
@@ -134,7 +145,7 @@ describe('NexusHotService', () => {
         limit: 0,
       };
 
-      const queryNexusSpy = vi.spyOn(queryNexusModule, 'queryNexus').mockResolvedValue(mockHotTags);
+      const queryNexusSpy = mockQueryNexus.mockResolvedValue(mockHotTags);
       const tagApiHotSpy = vi.spyOn(tagApi, 'hot');
 
       const result = await NexusHotService.fetch(params);
@@ -152,7 +163,7 @@ describe('NexusHotService', () => {
         skip: 0,
       };
 
-      const queryNexusSpy = vi.spyOn(queryNexusModule, 'queryNexus').mockResolvedValue(mockHotTags);
+      const queryNexusSpy = mockQueryNexus.mockResolvedValue(mockHotTags);
       const tagApiHotSpy = vi.spyOn(tagApi, 'hot');
 
       const result = await NexusHotService.fetch(params);
@@ -170,7 +181,7 @@ describe('NexusHotService', () => {
         limit: 10_000,
       };
 
-      const queryNexusSpy = vi.spyOn(queryNexusModule, 'queryNexus').mockResolvedValue(mockHotTags);
+      const queryNexusSpy = mockQueryNexus.mockResolvedValue(mockHotTags);
       const tagApiHotSpy = vi.spyOn(tagApi, 'hot');
 
       const result = await NexusHotService.fetch(params);
@@ -199,7 +210,7 @@ describe('NexusHotService', () => {
         taggers_limit: 3,
       };
 
-      const queryNexusSpy = vi.spyOn(queryNexusModule, 'queryNexus').mockResolvedValue(mockHotTags);
+      const queryNexusSpy = mockQueryNexus.mockResolvedValue(mockHotTags);
       const tagApiHotSpy = vi.spyOn(tagApi, 'hot');
 
       const result = await NexusHotService.fetch(params);
@@ -215,14 +226,14 @@ describe('NexusHotService', () => {
         timeframe: UserStreamTimeframe.TODAY,
       };
 
-      vi.spyOn(queryNexusModule, 'queryNexus').mockRejectedValue(new Error('nexus-fail'));
+      mockQueryNexus.mockRejectedValue(new Error('nexus-fail'));
 
       await expect(NexusHotService.fetch(params)).rejects.toThrow('nexus-fail');
     });
 
     it('should handle different reach values', async () => {
       const mockHotTags = [] as NexusHotTag[];
-      const queryNexusSpy = vi.spyOn(queryNexusModule, 'queryNexus').mockResolvedValue(mockHotTags);
+      const queryNexusSpy = mockQueryNexus.mockResolvedValue(mockHotTags);
 
       await NexusHotService.fetch({ reach: UserStreamReach.FOLLOWING, timeframe: UserStreamTimeframe.TODAY });
       await NexusHotService.fetch({ reach: UserStreamReach.FRIENDS, timeframe: UserStreamTimeframe.TODAY });
@@ -233,7 +244,7 @@ describe('NexusHotService', () => {
 
     it('should handle different timeframe values', async () => {
       const mockHotTags = [] as NexusHotTag[];
-      const queryNexusSpy = vi.spyOn(queryNexusModule, 'queryNexus').mockResolvedValue(mockHotTags);
+      const queryNexusSpy = mockQueryNexus.mockResolvedValue(mockHotTags);
 
       await NexusHotService.fetch({ timeframe: UserStreamTimeframe.TODAY });
       await NexusHotService.fetch({ timeframe: UserStreamTimeframe.THIS_WEEK });

@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
-import * as Config from '@/config';
+import { STREAM_CACHE_MAX_AGE_MS } from '@/config/nexus';
 import { postStreamQueue } from './muting/post-stream-queue';
 import { MuteFilter } from './muting/mute-filter';
 import { asInvalid } from '@/test-utils/type-assertions';
@@ -1464,8 +1464,8 @@ describe('PostStreamApplication', () => {
     });
 
     it('should clear both streams when main stream cache is stale', async () => {
-      const now = BASE_TIMESTAMP + Config.STREAM_CACHE_MAX_AGE_MS + 10;
-      const staleTimestamp = now - Config.STREAM_CACHE_MAX_AGE_MS - 1;
+      const now = BASE_TIMESTAMP + STREAM_CACHE_MAX_AGE_MS + 10;
+      const staleTimestamp = now - STREAM_CACHE_MAX_AGE_MS - 1;
       vi.spyOn(Date, 'now').mockReturnValue(now);
 
       const mainPostId = `${DEFAULT_AUTHOR}:post-main`;
@@ -1484,9 +1484,9 @@ describe('PostStreamApplication', () => {
     });
 
     it('should clear unread stream when unread cache is stale and main is fresh', async () => {
-      const now = BASE_TIMESTAMP + Config.STREAM_CACHE_MAX_AGE_MS + 10;
-      const freshTimestamp = now - Config.STREAM_CACHE_MAX_AGE_MS + 1;
-      const staleTimestamp = now - Config.STREAM_CACHE_MAX_AGE_MS - 1;
+      const now = BASE_TIMESTAMP + STREAM_CACHE_MAX_AGE_MS + 10;
+      const freshTimestamp = now - STREAM_CACHE_MAX_AGE_MS + 1;
+      const staleTimestamp = now - STREAM_CACHE_MAX_AGE_MS - 1;
       vi.spyOn(Date, 'now').mockReturnValue(now);
 
       const mainPostId = `${DEFAULT_AUTHOR}:post-main`;
@@ -1506,7 +1506,7 @@ describe('PostStreamApplication', () => {
     });
 
     it('should merge unread into main and clear unread when both streams are fresh', async () => {
-      const now = BASE_TIMESTAMP + Config.STREAM_CACHE_MAX_AGE_MS + 10;
+      const now = BASE_TIMESTAMP + STREAM_CACHE_MAX_AGE_MS + 10;
       vi.spyOn(Date, 'now').mockReturnValue(now);
 
       const mainPostIds = [`${DEFAULT_AUTHOR}:post-1`, `${DEFAULT_AUTHOR}:post-2`];
@@ -1514,10 +1514,10 @@ describe('PostStreamApplication', () => {
       await createStreamWithPosts(mainPostIds);
       await UnreadPostStreamModel.create(streamId, unreadPostIds);
 
-      const mainHeadTimestamp = now - Config.STREAM_CACHE_MAX_AGE_MS + 2;
-      const mainOlderTimestamp = now - Config.STREAM_CACHE_MAX_AGE_MS + 1;
-      const unreadNewestTimestamp = now - Config.STREAM_CACHE_MAX_AGE_MS + 4;
-      const unreadOlderTimestamp = now - Config.STREAM_CACHE_MAX_AGE_MS + 3;
+      const mainHeadTimestamp = now - STREAM_CACHE_MAX_AGE_MS + 2;
+      const mainOlderTimestamp = now - STREAM_CACHE_MAX_AGE_MS + 1;
+      const unreadNewestTimestamp = now - STREAM_CACHE_MAX_AGE_MS + 4;
+      const unreadOlderTimestamp = now - STREAM_CACHE_MAX_AGE_MS + 3;
 
       await createPostDetailWithTimestamp(mainPostIds[0], mainHeadTimestamp);
       await createPostDetailWithTimestamp(mainPostIds[1], mainOlderTimestamp);

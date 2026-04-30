@@ -1,4 +1,8 @@
-import * as Types from './chatwoot.types';
+import type {
+  TChatwootContact,
+  TChatwootContactSearchResponse,
+  TChatwootCreateContactResponse,
+} from './chatwoot.types';
 import { chatwootApi } from './chatwoot.api';
 import { Env } from '@/libs/env/env';
 import { HttpMethod, JSON_HEADERS } from '@/libs/http/http.types';
@@ -85,7 +89,7 @@ export class ChatwootService {
    * @returns Chatwoot contact object
    * @throws AppError if API calls fail
    */
-  static async createOrFindContact(email: string, name: string, inboxId: number): Promise<Types.TChatwootContact> {
+  static async createOrFindContact(email: string, name: string, inboxId: number): Promise<TChatwootContact> {
     const config = this.getBaseConfig();
 
     // Search for existing contact
@@ -101,7 +105,7 @@ export class ChatwootService {
       throw httpResponseToError(searchResponse, ErrorService.Chatwoot, 'searchContact', searchUrl);
     }
 
-    const searchData = await parseResponseOrThrow<Types.TChatwootContactSearchResponse>(
+    const searchData = await parseResponseOrThrow<TChatwootContactSearchResponse>(
       searchResponse,
       ErrorService.Chatwoot,
       'searchContact',
@@ -137,7 +141,7 @@ export class ChatwootService {
       throw httpResponseToError(createResponse, ErrorService.Chatwoot, 'createContact', createUrl);
     }
 
-    const createData = await parseResponseOrThrow<Types.TChatwootCreateContactResponse>(
+    const createData = await parseResponseOrThrow<TChatwootCreateContactResponse>(
       createResponse,
       ErrorService.Chatwoot,
       'createContact',

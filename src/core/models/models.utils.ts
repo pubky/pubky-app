@@ -1,5 +1,5 @@
-import * as Types from './models.types';
-import * as Defaults from './models.defaults';
+import { COMPOSITE_ID_DELIMITER } from './models.defaults';
+import type { CompositeIdParams, CompositeIdResult } from './models.types';
 import type { Pubky } from '@/models/models.types';
 /**
  * Parses a pubky:// URI to extract the author and ID,
@@ -13,7 +13,7 @@ import type { Pubky } from '@/models/models.types';
  * buildCompositeIdFromUri("pubky://author123/pub/pubky.app/files/file456")
  * // Returns: "author123:file456"
  */
-export function buildCompositeIdFromPubkyUri({ uri, domain }: Types.CompositeIdParams): string | null {
+export function buildCompositeIdFromPubkyUri({ uri, domain }: CompositeIdParams): string | null {
   try {
     const parsed = new URL(uri);
     const pubky = parsed.hostname;
@@ -31,12 +31,12 @@ export function buildCompositeIdFromPubkyUri({ uri, domain }: Types.CompositeIdP
   }
 }
 
-export function buildCompositeId({ pubky, id }: Types.CompositeIdResult): string {
-  return `${pubky}${Defaults.COMPOSITE_ID_DELIMITER}${id}`;
+export function buildCompositeId({ pubky, id }: CompositeIdResult): string {
+  return `${pubky}${COMPOSITE_ID_DELIMITER}${id}`;
 }
 
-export function parseCompositeId(compositeId: string): Types.CompositeIdResult {
-  const sep = compositeId.indexOf(Defaults.COMPOSITE_ID_DELIMITER);
+export function parseCompositeId(compositeId: string): CompositeIdResult {
+  const sep = compositeId.indexOf(COMPOSITE_ID_DELIMITER);
   if (sep <= 0 || sep === compositeId.length - 1) {
     throw new Error(`Invalid composite id: ${compositeId}`);
   }

@@ -1,4 +1,4 @@
-import * as Config from '@/config';
+import { CDN_URL, NEXUS_URL } from '@/config/nexus';
 import { nexusQueryClient } from './nexus.query-client';
 import type {
   TBuildUrlWithQueryParams,
@@ -12,11 +12,11 @@ import { httpResponseToError, safeFetch } from '@/libs/error/error.http';
 import { ErrorService } from '@/libs/error/error.types';
 
 export function buildNexusUrl(endpoint: string): string {
-  return `${Config.NEXUS_URL}/${endpoint}`;
+  return `${NEXUS_URL}/${endpoint}`;
 }
 
 export function buildCdnUrl(endpoint: string): string {
-  return `${Config.CDN_URL}/${endpoint}`;
+  return `${CDN_URL}/${endpoint}`;
 }
 
 /**
