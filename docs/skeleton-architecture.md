@@ -39,7 +39,7 @@ src/components/organisms/HotTagsCardsSection/
 - Component name: `XxxSkeleton`.
 - Private file name: `Xxx.skeleton.tsx`.
 - Reusable file name: `XxxSkeleton.tsx` in its own folder.
-- Do not add skeleton barrel files. Import reusable skeletons directly from their concrete file (for example `@/organisms/FullUserListItemSkeleton/FullUserListItemSkeleton`).
+- Do not add skeleton-only `index.ts` files that only re-export other skeletons. Import reusable skeletons directly from their concrete file (for example `@/organisms/FullUserListItemSkeleton/FullUserListItemSkeleton`).
 - Do not expose feature-private skeletons as reusable public modules. Keep them colocated and import them relatively from their owning component.
 
 ## Implementation Rules
@@ -61,7 +61,7 @@ src/components/organisms/HotTagsCardsSection/
 - [ ] Is this skeleton reused by multiple parents? If yes, standalone component.
 - [ ] If single-owner, is it colocated as `*.skeleton.tsx`?
 - [ ] Does it use `@/atoms/Skeleton/Skeleton` consistently?
-- [ ] Are imports direct and concrete, with no barrel exports?
+- [ ] Are imports direct and concrete, with no re-export-only aggregate files?
 - [ ] Are loading states covered by tests (direct or parent-level)?
 - [ ] If queried by `data-testid` in a test, does the skeleton component itself set that attribute (not just the mock)?
 - [ ] Are all counts/quantities sourced from constants or props — no hardcoded literals?

@@ -42,7 +42,12 @@ src/components/atoms/Button/
 └── Button.types.ts      # Type definitions
 ```
 
-Do not add `index.ts` / `index.tsx` barrel files under `src/components`. Component folders expose their symbols directly from concrete files.
+Do not add `index.ts` / `index.tsx` under `src/components` whose sole job is re-exporting from child folders. Component folders expose their symbols directly from concrete files (for example `Button/Button.tsx`, not `Button/index.ts` that only re-exports).
+
+### Config and app routes
+
+- **Config:** import from `@/config/<topic>` (concrete modules under `src/config/`, such as `@/config/nexus`, `@/config/posts`). Do not introduce an aggregate `src/config/index.ts` that re-exports the whole tree.
+- **Routes:** import route constants and helpers from `@/app/routes` (implemented in `src/app/routes.ts`). Use named imports; use `import type` when you only need types from a colocated `*.types.ts` file.
 
 ## Component Template
 
@@ -222,7 +227,7 @@ When migrating/creating a component:
 - [ ] Shadcn installed if available
 - [ ] Placed at correct atomic level
 - [ ] Utilities from concrete `@/libs/*` files (e.g. `cn` from `@/libs/utils/utils`); **icons** from `lucide-react` or `@/icons` per [Icons (Lucide and custom)](#icons-lucide-and-custom)
-- [ ] Component imports point at concrete files (e.g. `@/atoms/Button/Button`), not barrels or folder indexes
+- [ ] Component imports point at concrete files (e.g. `@/atoms/Button/Button`), not aggregate folder indexes or re-export-only paths
 - [ ] All Figma variants implemented
 - [ ] CVA used for variant management
 - [ ] Tests created (unit + snapshot) — see `docs/component-testing.md`
@@ -239,5 +244,5 @@ When creating/modifying components:
 - [ ] Design tokens (not hardcoded colors)?
 - [ ] Figma sizing/spacing matched?
 - [ ] Tests created (unit + snapshot)?
-- [ ] No `index.ts` / `index.tsx` barrel added?
+- [ ] No re-export-only `index.ts` / `index.tsx` added under `src/components`?
 - [ ] Build passes?

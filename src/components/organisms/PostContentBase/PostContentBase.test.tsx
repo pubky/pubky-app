@@ -300,7 +300,7 @@ describe('PostContentBase - Snapshots', () => {
   beforeEach(async () => {
     vi.clearAllMocks();
     mockUseLocalFilesStore.mockReturnValue(undefined);
-    // Import specific modules directly to avoid barrel export timeout (loading all 70+ molecules)
+    // Import concrete molecule paths to avoid pulling the whole tier through one entrypoint (timeout loading 70+ modules)
     const actualPostText = await vi.importActual<{ PostText: typeof PostText }>('@/molecules/PostText/PostText');
     const actualPostLinkEmbeds = await vi.importActual<{ PostLinkEmbeds: typeof PostLinkEmbeds }>(
       '@/molecules/PostLinkEmbeds/PostLinkEmbeds',

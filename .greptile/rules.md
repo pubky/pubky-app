@@ -97,14 +97,18 @@ const handleClick = () => {
 };
 ```
 
-### Avoid barrel re-exports
+### Avoid aggregate re-exports
 
-Don't create `index.ts` files whose sole purpose is re-exporting from child modules, and don't re-export constants or functions through intermediate modules without good reason. Barrel files add a layer of indirection that confuses IDE go-to-definition, makes circular dependency bugs harder to trace, and can defeat tree-shaking in bundlers. Import directly from the source module instead. For hooks and layered modules, use aliases such as `@/hooks/*`, `@/controllers/*`, `@/services/*`, `@/models/*`, and `@/stores/*`.
+Do not add `index.ts` / `index.tsx` files whose only job is re-exporting from child modules, and do not re-export constants or functions through intermediate modules without a strong reason. Those aggregates add indirection (harder go-to-definition), make circular dependency bugs harder to trace, and can defeat tree-shaking. Import from the defining source file instead. For hooks and layered code, use path aliases such as `@/hooks/*`, `@/controllers/*`, `@/services/*`, `@/models/*`, and `@/stores/*`.
 
-Components follow the same rule. There are no component barrels under `src/components`; import components from concrete files with the atomic namespace aliases:
+**Config:** import from `@/config/<module>` (files under `src/config/`). Do not add `src/config/index.ts` that re-exports the whole config surface.
+
+**App routes:** import route enums, maps, and helpers from `@/app/routes` (`src/app/routes.ts`).
+
+Components follow the same rule: under `src/components`, import concrete modules with the atomic path aliases:
 
 ```typescript
-// BAD — tier or folder barrel
+// BAD — aggregate path (folder or alias that hides the real file)
 import { Button } from '@/atoms';
 import { Button } from '@/components/atoms';
 import { Filters } from '@/molecules/Filters';
@@ -116,7 +120,7 @@ import { PostHeader } from '@/organisms/PostHeader/PostHeader';
 ```
 
 ```typescript
-// BAD — barrel that just re-exports
+// BAD — index file that only re-exports
 // src/core/post/index.ts
 export { PostController } from './controllers/post.controller';
 export { PostApplication } from './application/post.application';
@@ -125,7 +129,7 @@ export { PostApplication } from './application/post.application';
 import { PostController } from '@/controllers/post/post';
 ```
 
-There is no exception for component barrels: do not add `src/components/**/index.ts` or `src/components/**/index.tsx`.
+Do not add `src/components/**/index.ts` or `src/components/**/index.tsx` that only re-export; there is no exception for components.
 
 ### Scrutinize optional parameters
 
