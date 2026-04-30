@@ -4,12 +4,11 @@ import { useMemo } from 'react';
 import LinkifyIt from 'linkify-it';
 import { Container } from '@/atoms/Container/Container';
 import { Generic } from './Providers/Generic/ProviderGeneric';
-import { EmbedProvider } from './Providers/Provider.types';
+import type { EmbedProvider } from './Providers/Provider.types';
 import { Twitter } from './Providers/Twitter/ProviderTwitter';
 import { Vimeo } from './Providers/Vimeo/ProviderVimeo';
 import { Youtube } from './Providers/Youtube/ProviderYoutube';
-
-import * as Types from './PostLinkEmbeds.types';
+import type { ParseUrlForLinkEmbedResult, PostLinkEmbedsProps } from './PostLinkEmbeds.types';
 
 // Register all embed providers here
 const EMBED_PROVIDERS: EmbedProvider[] = [
@@ -18,7 +17,7 @@ const EMBED_PROVIDERS: EmbedProvider[] = [
   Twitter,
   Generic,
   // Add more providers here:
-  // Providers.Twitch,
+  // Twitch,
 ];
 
 // Protocol types to ignore when parsing links
@@ -72,7 +71,7 @@ const parseContentForUrl = (content: string) => {
  * Parse content for embeddable links
  * Returns the first embeddable link and its provider
  */
-const parseContentForLinkEmbed = (content: string): Types.ParseUrlForLinkEmbedResult => {
+const parseContentForLinkEmbed = (content: string): ParseUrlForLinkEmbedResult => {
   try {
     const url = parseContentForUrl(content);
     if (!url) return { embed: null, provider: null };
@@ -102,7 +101,7 @@ const parseContentForLinkEmbed = (content: string): Types.ParseUrlForLinkEmbedRe
   }
 };
 
-export const PostLinkEmbeds = ({ content }: Types.PostLinkEmbedsProps) => {
+export const PostLinkEmbeds = ({ content }: PostLinkEmbedsProps) => {
   const { embed, provider } = useMemo(() => parseContentForLinkEmbed(content), [content]);
 
   if (!embed || !provider) return null;

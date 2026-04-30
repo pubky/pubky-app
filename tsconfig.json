@@ -65,6 +65,9 @@
       "@/hooks/*": [
         "./src/hooks/*"
       ],
+      "@/providers/*": [
+        "./src/providers/*"
+      ],
       "@/libs/*": [
         "./src/libs/*"
       ],
