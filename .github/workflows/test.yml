@@ -47,7 +47,7 @@ jobs:
         env:
           VITEST_MAX_WORKERS: 4
         # 1. Force Vitest to output raw 'json' coverage data
-        run: npx vitest run --coverage --coverage.reporter=json --shard=${{ matrix.shard }}/5 --pool=forks
+        run: npx vitest run --project unit --coverage --coverage.reporter=json --shard=${{ matrix.shard }}/5 --pool=forks
 
       - name: Rename coverage file
         if: always()
