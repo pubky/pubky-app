@@ -1,34 +1,22 @@
 import { defineConfig } from 'vitest/config';
 import react from '@vitejs/plugin-react';
 import tsconfigPaths from 'vite-tsconfig-paths';
+import { playwright } from '@vitest/browser-playwright';
 
 export default defineConfig({
   plugins: [react(), tsconfigPaths()],
   test: {
-    // react-tweet is ESM-only with CSS module imports that Node.js can't resolve
-    // without bundling. Inlining forces Vitest to transform it through Vite's pipeline.
-    server: { deps: { inline: ['react-tweet'] } },
-    environment: 'jsdom',
-    setupFiles: ['./src/config/test.ts'],
-    globals: true,
-    exclude: ['**/node_modules/**'],
     coverage: {
       provider: 'v8',
       reporter: ['text', 'json', 'html'],
       reportOnFailure: true,
     },
-    // Snapshot testing configuration
     snapshotFormat: {
       escapeString: true,
       printBasicPrototype: false,
     },
-    // Configure snapshots to be placed alongside test files
-    resolveSnapshotPath: (testPath, snapExtension) => {
-      return testPath + snapExtension;
-    },
-    // Suppress specific warnings
+    resolveSnapshotPath: (testPath, snapExtension) => testPath + snapExtension,
     onConsoleLog(log) {
-      // Suppress WebAssembly warnings
       if (
         log.includes('WebAssembly.instantiateStreaming') ||
         log.includes('application/wasm') ||
@@ -36,15 +24,50 @@ export default defineConfig({
       ) {
         return false;
       }
-      // Suppress JSDOM navigation warnings
       if (log.includes('Not implemented: navigation')) {
         return false;
       }
       return true;
     },
-    // Configure to better handle unhandled rejections
     dangerouslyIgnoreUnhandledErrors: false,
-    // Silence some types of warnings in stderr
     silent: false,
+    projects: [
+      // Unit tests run in jsdom.
+      {
+        plugins: [react(), tsconfigPaths()],
+        test: {
+          name: 'unit',
+          environment: 'jsdom',
+          setupFiles: ['./src/config/test.ts'],
+          globals: true,
+          include: ['**/*.test.{ts,tsx}'],
+          exclude: ['**/node_modules/**', '**/*.vrt.test.{ts,tsx}'],
+          server: { deps: { inline: ['react-tweet'] } },
+        },
+      },
+      // VRT(Visual Regression Tests) run in a real Chromium browser via Playwright.
+      {
+        plugins: [react(), tsconfigPaths()],
+        test: {
+          name: 'vrt',
+          globals: true,
+          include: ['**/*.vrt.test.{ts,tsx}'],
+          exclude: ['**/node_modules/**'],
+          setupFiles: ['./src/test-utils/vrt.setup.ts'],
+          server: { deps: { inline: ['react-tweet'] } },
+          browser: {
+            enabled: true,
+            provider: playwright(),
+            headless: true,
+            instances: [
+              {
+                browser: 'chromium',
+                viewport: { width: 1440, height: 900 },
+              },
+            ],
+          },
+        },
+      },
+    ],
   },
 });

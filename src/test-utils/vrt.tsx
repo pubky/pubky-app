@@ -1,0 +1,78 @@
+'use client';
+
+import type { ReactNode } from 'react';
+import { render } from 'vitest-browser-react';
+import { page } from 'vitest/browser';
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { NextIntlClientProvider } from 'next-intl';
+import { TooltipProvider } from '@/atoms';
+import { TOOLTIP_DELAY_MS } from '@/config/ui';
+import { freezeNow } from './vrt.clock';
+import enMessages from '../../messages/en.json';
+
+export interface RenderForVRTOptions {
+  viewport: { width: number; height: number };
+}
+
+export const VRT_ROOT_TESTID = 'vrt-root';
+
+function VRTProviders({ children, viewport }: { children: ReactNode; viewport: { width: number; height: number } }) {
+  const queryClient = new QueryClient({
+    defaultOptions: {
+      queries: { retry: false, gcTime: Infinity, staleTime: Infinity },
+      mutations: { retry: false },
+    },
+  });
+
+  // The wrapper clamps the rendered tree to the requested viewport so
+  // `locator.screenshot()` returns a viewport-sized image instead of the full
+  // scrollable document height. The data-testid lets tests target this element
+  // via `screen.getByTestId(VRT_ROOT_TESTID)` for a deterministic crop.
+  const rootStyle: React.CSSProperties = {
+    width: viewport.width,
+    height: viewport.height,
+    overflow: 'hidden',
+  };
+
+  return (
+    <NextIntlClientProvider locale="en" messages={enMessages}>
+      <TooltipProvider delayDuration={TOOLTIP_DELAY_MS}>
+        <QueryClientProvider client={queryClient}>
+          <div data-testid={VRT_ROOT_TESTID} style={rootStyle}>
+            {children}
+          </div>
+        </QueryClientProvider>
+      </TooltipProvider>
+    </NextIntlClientProvider>
+  );
+}
+
+export async function renderForVRT(ui: ReactNode, options: RenderForVRTOptions) {
+  await page.viewport(options.viewport.width, options.viewport.height);
+  freezeNow();
+  mockMathRandom(0xdeadbeef);
+  const screen = render(<VRTProviders viewport={options.viewport}>{ui}</VRTProviders>);
+  // Wait for Inter Tight (loaded in vrt.setup.ts via Google Fonts) to be
+  // ready so the screenshot is never taken while the browser is still
+  // showing the fallback face.
+  await document.fonts.ready;
+  return screen;
+}
+
+// VRT compares pixels, so random values must be stable across runs. This
+// replaces Math.random with a seeded pseudo-random generator: it does not return
+// the same number every time, but the sequence is identical on every test run
+// when calls happen in the same order. In other words, calls are not “truly
+// random”; given the seed and the call order, every return value is predictable
+// ahead of time (deterministic / reproducible). For example, QuickReply
+// component chooses a random placeholder prompt; without a stable sequence,
+// text and line wrapping can change between screenshots.
+// Vitest calls out random values as dynamic content that should be mocked:
+// https://vitest.dev/guide/browser/visual-regression-testing#handle-dynamic-content
+function mockMathRandom(seed: number) {
+  let state = seed >>> 0;
+  Math.random = () => {
+    state = (state * 1664525 + 1013904223) >>> 0;
+    return state / 0x100000000;
+  };
+}
