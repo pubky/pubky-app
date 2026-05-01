@@ -5,7 +5,7 @@ import { render } from 'vitest-browser-react';
 import { page } from 'vitest/browser';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { NextIntlClientProvider } from 'next-intl';
-import { TooltipProvider } from '@/atoms';
+import { TooltipProvider } from '@/atoms/Tooltip/Tooltip';
 import { TOOLTIP_DELAY_MS } from '@/config/ui';
 import { freezeNow } from './vrt.clock';
 import enMessages from '../../messages/en.json';
