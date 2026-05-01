@@ -1,8 +1,11 @@
 'use client';
 
 import { useTranslations } from 'next-intl';
-import * as Atoms from '@/atoms';
-import * as Molecules from '@/molecules';
+import { Button } from '@/atoms/Button/Button';
+import { Container } from '@/atoms/Container/Container';
+import { Typography } from '@/atoms/Typography/Typography';
+import { PostText } from '../../../PostText/PostText';
+
 import type { AvatarGroupItem } from '@/molecules/AvatarGroup/AvatarGroup.types';
 import type { UserConnectionData } from '@/hooks/useProfileConnections/useProfileConnections.types';
 import { UserInfoPopoverHeader } from '../UserInfoPopoverHeader/UserInfoPopoverHeader';
@@ -69,7 +72,7 @@ export function UserInfoPopoverContent({
   const followersAvatars = transformConnectionsToAvatarItems(followers, MAX_AVATARS);
   const followingAvatars = transformConnectionsToAvatarItems(following, MAX_AVATARS);
   return (
-    <Atoms.Container className="gap-3">
+    <Container className="gap-3">
       <UserInfoPopoverHeader
         userId={userId}
         userName={userName}
@@ -77,9 +80,9 @@ export function UserInfoPopoverContent({
         avatarUrl={profileAvatarUrl || avatarUrl}
       />
       {profileBio ? (
-        <Atoms.Container className="max-h-(--popover-bio-max-height) overflow-y-auto" overrideDefaults>
-          <Molecules.PostText content={profileBio} />
-        </Atoms.Container>
+        <Container className="max-h-(--popover-bio-max-height) overflow-y-auto" overrideDefaults>
+          <PostText content={profileBio} />
+        </Container>
       ) : null}
       <UserInfoPopoverStats
         followersCount={normalizedFollowers}
@@ -89,15 +92,15 @@ export function UserInfoPopoverContent({
         maxAvatars={MAX_AVATARS}
       />
       {isCurrentUser ? (
-        <Atoms.Button variant="secondary" size="sm" onClick={onEditClick} aria-label={t('editProfile')}>
+        <Button variant="secondary" size="sm" onClick={onEditClick} aria-label={t('editProfile')}>
           <Pencil className="size-4" />
-          <Atoms.Typography className="text-xs leading-4 font-bold" overrideDefaults>
+          <Typography className="text-xs leading-4 font-bold" overrideDefaults>
             {t('editProfile')}
-          </Atoms.Typography>
-        </Atoms.Button>
+          </Typography>
+        </Button>
       ) : (
         <UserInfoPopoverFollowButton isFollowing={isFollowing} isLoading={isActionLoading} onClick={onFollowClick} />
       )}
-    </Atoms.Container>
+    </Container>
   );
 }

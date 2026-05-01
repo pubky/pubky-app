@@ -32,32 +32,51 @@ vi.mock('@/hooks/useBulkUserAvatars/useBulkUserAvatars', () => ({
   })),
 }));
 
-vi.mock('@/config', () => ({
+vi.mock('@/config/tags', () => ({
   HOT_TAGS_FEATURED_COUNT: 3,
 }));
 
-vi.mock('@/atoms', () => ({
-  Container: ({
-    children,
-    overrideDefaults: _overrideDefaults,
-    ...props
-  }: {
-    children: React.ReactNode;
-    overrideDefaults?: boolean;
-    [key: string]: unknown;
-  }) => <div {...props}>{children}</div>,
-  Heading: ({ children }: { children: React.ReactNode }) => <h5>{children}</h5>,
-  Typography: ({ children, className }: { children: React.ReactNode; className?: string }) => (
-    <p className={className}>{children}</p>
-  ),
-  Skeleton: ({ className, ...props }: { className?: string; [key: string]: unknown }) => (
-    <div className={className} data-slot="skeleton" {...props} />
-  ),
-}));
+vi.mock('@/atoms/Container/Container', () => {
+  return {
+    Container: ({
+      children,
+      overrideDefaults: _overrideDefaults,
+      ...props
+    }: {
+      children: React.ReactNode;
+      overrideDefaults?: boolean;
+      [key: string]: unknown;
+    }) => <div {...props}>{children}</div>,
+  };
+});
 
-vi.mock('@/molecules', () => ({
-  HotTagCard: ({ tagName }: { tagName: string }) => <div data-testid={`hot-tag-card-${tagName}`}>{tagName}</div>,
-}));
+vi.mock('@/atoms/Heading/Heading', () => {
+  return {
+    Heading: ({ children }: { children: React.ReactNode }) => <h5>{children}</h5>,
+  };
+});
+
+vi.mock('@/atoms/Skeleton/Skeleton', () => {
+  return {
+    Skeleton: ({ className, ...props }: { className?: string; [key: string]: unknown }) => (
+      <div className={className} data-slot="skeleton" {...props} />
+    ),
+  };
+});
+
+vi.mock('@/atoms/Typography/Typography', () => {
+  return {
+    Typography: ({ children, className }: { children: React.ReactNode; className?: string }) => (
+      <p className={className}>{children}</p>
+    ),
+  };
+});
+
+vi.mock('@/molecules/HotTagCard/HotTagCard', () => {
+  return {
+    HotTagCard: ({ tagName }: { tagName: string }) => <div data-testid={`hot-tag-card-${tagName}`}>{tagName}</div>,
+  };
+});
 
 describe('HotTagsCardsSection', () => {
   beforeEach(() => {

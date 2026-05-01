@@ -4,10 +4,13 @@ import { usePostAncestors } from '@/hooks/usePostAncestors/usePostAncestors';
 import { usePostNavigation } from '@/hooks/usePostNavigation/usePostNavigation';
 import { useUserDetailsFromIds } from '@/hooks/useUserDetailsFromIds/useUserDetailsFromIds';
 import * as React from 'react';
-import * as Atoms from '@/atoms';
+import { Container } from '@/atoms/Container/Container';
+import { PageHeader } from '@/atoms/PageHeader/PageHeader';
+import { Typography } from '@/atoms/Typography/Typography';
+
 import { PostPageHeaderSkeleton } from './PostPageHeader.skeleton';
 import type { PostPageHeaderProps } from './PostPageHeader.types';
-import { PostPageBreadcrumb } from '@/organisms/PostPageBreadcrumb';
+import { PostPageBreadcrumb } from '../PostPageBreadcrumb/PostPageBreadcrumb';
 
 /**
  * PostPageHeader Organism
@@ -66,26 +69,26 @@ export function PostPageHeader({ postId }: PostPageHeaderProps) {
   const titlePrefix = hasParents ? 'Reply by' : 'Post by';
 
   return (
-    <Atoms.PageHeader data-testid="post-page-header" className="pt-0 pb-3">
-      <Atoms.Container
+    <PageHeader data-testid="post-page-header" className="pt-0 pb-3">
+      <Container
         className="flex flex-col gap-2 md:flex-row md:items-center md:justify-between md:gap-4"
         overrideDefaults
       >
         {/* Title */}
-        <Atoms.Typography
+        <Typography
           as="h1"
           overrideDefaults
           className="text-2xl leading-8 font-light text-muted-foreground"
           data-testid="post-page-title"
         >
           {titlePrefix} {authorName}
-        </Atoms.Typography>
+        </Typography>
 
         {/* Breadcrumb (only for replies) */}
         {hasParents && (
           <PostPageBreadcrumb ancestors={ancestors} userDetailsMap={userDetailsMap} onNavigate={navigateToPost} />
         )}
-      </Atoms.Container>
-    </Atoms.PageHeader>
+      </Container>
+    </PageHeader>
   );
 }

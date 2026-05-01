@@ -1,7 +1,9 @@
 'use client';
 
 import React, { useCallback, useEffect, useRef } from 'react';
-import * as Atoms from '@/atoms';
+import { Container } from '@/atoms/Container/Container';
+import { Input } from '@/atoms/Input/Input';
+
 import { DIGITS } from './HumanPhoneCodeInput.constants';
 import type { HumanPhoneCodeInputProps } from './HumanPhoneCodeInput.types';
 import { cn } from '@/libs/utils/utils';
@@ -91,9 +93,9 @@ export const HumanPhoneCodeInput = ({ value, onChange, onEnter = () => {} }: Hum
   );
 
   return (
-    <Atoms.Container className={cn('flex-row flex-wrap gap-3')} data-testid="code-input-container">
+    <Container className={cn('flex-row flex-wrap gap-3')} data-testid="code-input-container">
       {value.map((digit, index) => (
-        <Atoms.Container
+        <Container
           key={index}
           overrideDefaults={true}
           data-testid={`human-phone-code-input-${index}`}
@@ -104,7 +106,7 @@ export const HumanPhoneCodeInput = ({ value, onChange, onEnter = () => {} }: Hum
             'w-[33px] flex-shrink-0 flex-grow-0 md:w-[50px]',
           )}
         >
-          <Atoms.Input
+          <Input
             ref={(el) => {
               inputRefs.current[index] = el;
             }}
@@ -123,8 +125,8 @@ export const HumanPhoneCodeInput = ({ value, onChange, onEnter = () => {} }: Hum
               'focus:ring-0 focus:outline-none',
             )}
           />
-        </Atoms.Container>
+        </Container>
       ))}
-    </Atoms.Container>
+    </Container>
   );
 };

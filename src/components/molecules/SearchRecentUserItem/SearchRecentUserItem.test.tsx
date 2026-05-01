@@ -2,36 +2,45 @@ import { render, screen, fireEvent } from '@testing-library/react';
 import { describe, it, expect, vi } from 'vitest';
 import { SearchRecentUserItem } from './SearchRecentUserItem';
 import type { Pubky } from '@/models/models.types';
-vi.mock('@/atoms', () => ({
-  Container: ({
-    children,
-    className,
-    onClick,
-    ...props
-  }: React.PropsWithChildren<{ className?: string; onClick?: () => void }>) => (
-    <div className={className} onClick={onClick} {...props}>
-      {children}
-    </div>
-  ),
-  Typography: ({
-    children,
-    className,
-    as: Component = 'span',
-    ...props
-  }: React.PropsWithChildren<{ className?: string; as?: React.ElementType }>) => (
-    <Component className={className} {...props}>
-      {children}
-    </Component>
-  ),
-}));
+vi.mock('@/atoms/Container/Container', () => {
+  return {
+    Container: ({
+      children,
+      className,
+      onClick,
+      ...props
+    }: React.PropsWithChildren<{ className?: string; onClick?: () => void }>) => (
+      <div className={className} onClick={onClick} {...props}>
+        {children}
+      </div>
+    ),
+  };
+});
 
-vi.mock('@/organisms', () => ({
-  AvatarWithFallback: ({ name, avatarUrl, size }: { name: string; avatarUrl?: string; size: string }) => (
-    <div data-testid="avatar" data-name={name} data-avatar-url={avatarUrl || ''} data-size={size}>
-      Avatar
-    </div>
-  ),
-}));
+vi.mock('@/atoms/Typography/Typography', () => {
+  return {
+    Typography: ({
+      children,
+      className,
+      as: Component = 'span',
+      ...props
+    }: React.PropsWithChildren<{ className?: string; as?: React.ElementType }>) => (
+      <Component className={className} {...props}>
+        {children}
+      </Component>
+    ),
+  };
+});
+
+vi.mock('@/organisms/AvatarWithFallback/AvatarWithFallback', () => {
+  return {
+    AvatarWithFallback: ({ name, avatarUrl, size }: { name: string; avatarUrl?: string; size: string }) => (
+      <div data-testid="avatar" data-name={name} data-avatar-url={avatarUrl || ''} data-size={size}>
+        Avatar
+      </div>
+    ),
+  };
+});
 
 // Use real utility implementations - formatPublicKey and truncateString are pure functions
 // Pure utility functions should never be mocked per guidelines

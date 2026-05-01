@@ -1,5 +1,1 @@
-import * as Templates from '@/templates';
-
-export default function SettingsHelpPage() {
-  return <Templates.Help />;
-}
+export { Help as default } from '@/templates/Settings/Help/Help';

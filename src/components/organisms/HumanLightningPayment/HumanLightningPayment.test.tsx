@@ -24,10 +24,8 @@ vi.mock('@/libs/utils/utils', async (importOriginal) => {
   };
 });
 
-vi.mock('@/molecules', async (importOriginal) => {
-  const actual = await importOriginal<typeof import('@/molecules')>();
+vi.mock('@/molecules/Toaster/use-toast', () => {
   return {
-    ...actual,
     useToast: () => ({ toast: mockToast }),
   };
 });

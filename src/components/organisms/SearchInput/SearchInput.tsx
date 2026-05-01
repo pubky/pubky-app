@@ -8,8 +8,11 @@ import { useTagSearch } from '@/hooks/useTagSearch/useTagSearch';
 import { useEffect } from 'react';
 import { useRouter, useSearchParams, usePathname } from 'next/navigation';
 import { useTranslations } from 'next-intl';
-import * as Molecules from '@/molecules';
-import * as Atoms from '@/atoms';
+import { SearchInputBar } from '@/molecules/SearchInputBar/SearchInputBar';
+import { SearchSuggestions } from '@/molecules/SearchSuggestions/SearchSuggestions';
+import { toast } from '@/molecules/Toaster/use-toast';
+import { Container } from '@/atoms/Container/Container';
+
 import { APP_ROUTES } from '@/app/routes';
 import { CLICKABLE_TAGS_DEFAULT_MAX_LENGTH } from '@/config/tags';
 import { parseTagsFromUrl } from './SearchInput.utils';
@@ -29,7 +32,7 @@ export function SearchInput({ autoFocus = false }: SearchInputProps) {
 
   const handleEnter = (value: string) => {
     if (!isValidTagLabel(value.trim().toLowerCase())) {
-      Molecules.toast({ description: t('invalidTag') });
+      toast({ description: t('invalidTag') });
       return false;
     }
 
@@ -87,9 +90,9 @@ export function SearchInput({ autoFocus = false }: SearchInputProps) {
   const suggestionsId = 'search-suggestions';
 
   return (
-    <Atoms.Container ref={containerRef} data-testid="search-input" className="relative min-w-0">
+    <Container ref={containerRef} data-testid="search-input" className="relative min-w-0">
       {/* Input bar with active tags */}
-      <Molecules.SearchInputBar
+      <SearchInputBar
         activeTags={activeTags}
         inputValue={inputValue}
         isFocused={isFocused}
@@ -106,7 +109,7 @@ export function SearchInput({ autoFocus = false }: SearchInputProps) {
 
       {/* Suggestions dropdown */}
       {hasSuggestions && (
-        <Molecules.SearchSuggestions
+        <SearchSuggestions
           id={suggestionsId}
           aria-label="Search suggestions"
           hotTags={hotTags}
@@ -120,6 +123,6 @@ export function SearchInput({ autoFocus = false }: SearchInputProps) {
           onClearRecentSearches={clearRecentSearches}
         />
       )}
-    </Atoms.Container>
+    </Container>
   );
 }

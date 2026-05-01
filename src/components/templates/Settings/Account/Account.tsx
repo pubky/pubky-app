@@ -4,9 +4,12 @@ import { useSignOut } from '@/hooks/useSignOut/useSignOut';
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useTranslations } from 'next-intl';
-import * as Molecules from '@/molecules';
-import * as Organisms from '@/organisms';
-import * as App from '@/app';
+import { SettingsDivider } from '@/molecules/Settings/SettingsDivider/SettingsDivider';
+import { SettingsSection } from '@/molecules/Settings/SettingsSection/SettingsSection';
+import { SettingsSectionCard } from '@/molecules/Settings/SettingsSectionCard/SettingsSectionCard';
+import { DialogDeleteAccount } from '@/organisms/Settings/DialogDeleteAccount/DialogDeleteAccount';
+
+import { SETTINGS_ROUTES } from '@/app/routes';
 import { UserRound, LogOut, Pencil, LockKeyhole, Trash2 } from 'lucide-react';
 
 export function Account() {
@@ -19,12 +22,12 @@ export function Account() {
     setShowDeleteDialog(true);
   };
   const handleEditProfile = () => {
-    router.push(App.SETTINGS_ROUTES.EDIT);
+    router.push(SETTINGS_ROUTES.EDIT);
   };
   return (
     <>
-      <Molecules.SettingsSectionCard icon={UserRound} title={t('title')}>
-        <Molecules.SettingsSection
+      <SettingsSectionCard icon={UserRound} title={t('title')}>
+        <SettingsSection
           title={t('signOut.title')}
           description={t('signOut.description')}
           buttonText={loadingSignOut ? t('signOut.buttonLoading') : t('signOut.button')}
@@ -34,9 +37,9 @@ export function Account() {
           buttonOnClick={handleSignOut}
         />
 
-        <Molecules.SettingsDivider />
+        <SettingsDivider />
 
-        <Molecules.SettingsSection
+        <SettingsSection
           title={t('editProfile.title')}
           description={t('editProfile.description')}
           buttonText={t('editProfile.button')}
@@ -45,9 +48,9 @@ export function Account() {
           buttonOnClick={handleEditProfile}
         />
 
-        <Molecules.SettingsDivider />
+        <SettingsDivider />
 
-        <Molecules.SettingsSection
+        <SettingsSection
           title={t('backup.title')}
           description={disposableAccount ? t('backup.descriptionNeeded') : t('backup.descriptionDone')}
           buttonText={t('backup.button')}
@@ -57,9 +60,9 @@ export function Account() {
           buttonOnClick={() => {}}
         />
 
-        <Molecules.SettingsDivider />
+        <SettingsDivider />
 
-        <Molecules.SettingsSection
+        <SettingsSection
           title={t('deleteAccount.title')}
           description={t('deleteAccount.description')}
           buttonText={t('deleteAccount.button')}
@@ -68,9 +71,9 @@ export function Account() {
           buttonVariant="destructive"
           buttonOnClick={handleOpenDeleteDialog}
         />
-      </Molecules.SettingsSectionCard>
+      </SettingsSectionCard>
 
-      <Organisms.DialogDeleteAccount isOpen={showDeleteDialog} onOpenChangeAction={setShowDeleteDialog} />
+      <DialogDeleteAccount isOpen={showDeleteDialog} onOpenChangeAction={setShowDeleteDialog} />
     </>
   );
 }

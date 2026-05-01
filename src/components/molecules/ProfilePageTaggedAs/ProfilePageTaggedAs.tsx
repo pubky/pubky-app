@@ -2,8 +2,12 @@
 
 import { useRequireAuth } from '@/hooks/useRequireAuth/useRequireAuth';
 import { useTranslations } from 'next-intl';
-import * as Atoms from '@/atoms';
-import * as Molecules from '@/molecules';
+import { Button } from '@/atoms/Button/Button';
+import { Container } from '@/atoms/Container/Container';
+import { Heading } from '@/atoms/Heading/Heading';
+import { Typography } from '@/atoms/Typography/Typography';
+import { TaggedItem } from '../TaggedItem/TaggedItem';
+
 import { useRouter } from 'next/navigation';
 import { PROFILE_ROUTES, getProfileRoute } from '@/app/routes';
 import type { ProfilePageTaggedAsProps } from './ProfilePageTaggedAs.types';
@@ -20,29 +24,29 @@ export function ProfilePageTaggedAs({ tags, isLoading = false, onTagClick, pubky
     requireAuth(() => router.push(getProfileRoute(PROFILE_ROUTES.UNIQUE_TAGS, pubky)));
   };
   return (
-    <Atoms.Container data-cy="profile-tagged-section" overrideDefaults={true} className="flex flex-col gap-2">
-      <Atoms.Heading level={2} size="lg" className="font-light text-muted-foreground">
+    <Container data-cy="profile-tagged-section" overrideDefaults={true} className="flex flex-col gap-2">
+      <Heading level={2} size="lg" className="font-light text-muted-foreground">
         {t('taggedAs')}
-      </Atoms.Heading>
+      </Heading>
 
-      <Atoms.Container overrideDefaults={true} className="flex flex-col gap-2">
+      <Container overrideDefaults={true} className="flex flex-col gap-2">
         {isLoading ? (
           <ProfilePageTaggedAsSkeleton />
         ) : (
           <>
             {tags.map((tag) => (
-              <Molecules.TaggedItem key={tag.label} tag={tag} onTagClick={onTagClick} hideAvatars />
+              <TaggedItem key={tag.label} tag={tag} onTagClick={onTagClick} hideAvatars />
             ))}
             {tags.length === 0 && (
-              <Atoms.Typography as="span" className="text-sm font-medium text-muted-foreground">
+              <Typography as="span" className="text-sm font-medium text-muted-foreground">
                 {t('noTags')}
-              </Atoms.Typography>
+              </Typography>
             )}
           </>
         )}
-      </Atoms.Container>
+      </Container>
 
-      <Atoms.Button
+      <Button
         data-cy="profile-tag-btn"
         variant="outline"
         size="sm"
@@ -50,10 +54,10 @@ export function ProfilePageTaggedAs({ tags, isLoading = false, onTagClick, pubky
         onClick={handleButtonClick}
       >
         <Tag size={16} className="text-foreground" />
-        <Atoms.Typography as="span" className="text-sm font-bold">
+        <Typography as="span" className="text-sm font-bold">
           {t('addTag')}
-        </Atoms.Typography>
-      </Atoms.Button>
-    </Atoms.Container>
+        </Typography>
+      </Button>
+    </Container>
   );
 }

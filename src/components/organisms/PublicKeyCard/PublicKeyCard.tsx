@@ -3,8 +3,14 @@
 import { useCopyToClipboard } from '@/hooks/useCopyToClipboard/useCopyToClipboard';
 import { useEffect } from 'react';
 import { useTranslations } from 'next-intl';
-import * as Molecules from '@/molecules';
-import * as Atoms from '@/atoms';
+import { ActionSection } from '@/molecules/ActionSection/ActionSection';
+import { ContentCard } from '@/molecules/Content/Content';
+import { InputField } from '@/molecules/InputField/InputField';
+import { PopoverPublicKey } from '@/molecules/PopoverPublicKey/PopoverPublicKey';
+import { useToast } from '@/molecules/Toaster/use-toast';
+import { Container } from '@/atoms/Container/Container';
+import { Heading } from '@/atoms/Heading/Heading';
+
 import { Copy, Share, Key } from 'lucide-react';
 import { Logger } from '@/libs/logger/logger';
 import { shareWithFallback } from '@/libs/share/share';
@@ -18,7 +24,7 @@ export function PublicKeyCard() {
   const pubky = useAuthStore((state) => state.currentUserPubky);
   const displayPubky = pubky ? withPubkyPrefix(pubky) : '';
   const { copyToClipboard } = useCopyToClipboard();
-  const { toast } = Molecules.useToast();
+  const { toast } = useToast();
   useEffect(() => {
     if (!secretKey) {
       ProfileController.generateSecrets();
@@ -92,7 +98,7 @@ export function PublicKeyCard() {
     },
   ];
   return (
-    <Molecules.ContentCard
+    <ContentCard
       image={{
         src: '/images/key.webp',
         alt: 'Key',
@@ -100,14 +106,14 @@ export function PublicKeyCard() {
         height: 192,
       }}
     >
-      <Atoms.Container className="flex-row items-center gap-1">
-        <Atoms.Heading level={3} size="lg">
+      <Container className="flex-row items-center gap-1">
+        <Heading level={3} size="lg">
           {t('title')}
-        </Atoms.Heading>
-        <Molecules.PopoverPublicKey />
-      </Atoms.Container>
-      <Molecules.ActionSection actions={actions} className="w-full flex-col items-start justify-start gap-3">
-        <Molecules.InputField
+        </Heading>
+        <PopoverPublicKey />
+      </Container>
+      <ActionSection actions={actions} className="w-full flex-col items-start justify-start gap-3">
+        <InputField
           value={displayPubky}
           variant="dashed"
           readOnly
@@ -119,7 +125,7 @@ export function PublicKeyCard() {
           className="w-full max-w-[576px]"
           dataCy="pubky-display"
         />
-      </Molecules.ActionSection>
-    </Molecules.ContentCard>
+      </ActionSection>
+    </ContentCard>
   );
 }

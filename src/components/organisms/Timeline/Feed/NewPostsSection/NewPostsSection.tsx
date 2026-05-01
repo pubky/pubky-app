@@ -3,7 +3,9 @@
 import { useIsScrolledFromTop } from '@/hooks/useIsScrolledFromTop/useIsScrolledFromTop';
 import { useUnreadPosts } from '@/hooks/useUnreadPosts/useUnreadPosts';
 import { useTranslations } from 'next-intl';
-import * as Molecules from '@/molecules';
+import { NewPostsButton } from '@/molecules/NewPostsButton/NewPostsButton';
+import { showErrorToast } from '@/molecules/Toaster/showErrorToast';
+
 import { Logger } from '@/libs/logger/logger';
 import { MuteFilter } from '@/application/stream/posts/muting/mute-filter';
 import { StreamPostsController } from '@/controllers/stream/posts/posts';
@@ -49,7 +51,7 @@ export function NewPostsSection({ streamId, postIds, mutedUserIdSet, loading, pr
       window.scrollTo({ top: 0, behavior: 'smooth' });
     } catch (error) {
       Logger.error('Failed to load new posts:', error);
-      Molecules.showErrorToast({
+      showErrorToast({
         title: t('failedToLoadPosts'),
         description: t('failedToLoadPostsDesc'),
       });
@@ -57,7 +59,7 @@ export function NewPostsSection({ streamId, postIds, mutedUserIdSet, loading, pr
   };
 
   return (
-    <Molecules.NewPostsButton
+    <NewPostsButton
       count={actualNewCount}
       onClick={handleNewPostsClick}
       visible={actualNewCount > 0 && !loading}

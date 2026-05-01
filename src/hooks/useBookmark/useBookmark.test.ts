@@ -19,9 +19,11 @@ vi.mock('@/controllers/bookmark/bookmark', () => ({
 
 // Mock molecules (useToast)
 const mockToast = vi.fn();
-vi.mock('@/molecules', () => ({
-  useToast: () => ({ toast: mockToast }),
-}));
+vi.mock('@/molecules/Toaster/use-toast', () => {
+  return {
+    useToast: () => ({ toast: mockToast }),
+  };
+});
 
 describe('useBookmark', () => {
   const mockUserId = 'user-123' as Pubky;

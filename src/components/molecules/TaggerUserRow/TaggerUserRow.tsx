@@ -1,7 +1,8 @@
 'use client';
 
 import { useIsFollowing } from '@/hooks/useIsFollowing/useIsFollowing';
-import * as Organisms from '@/organisms';
+import { UserListItem } from '@/organisms/UserListItem/UserListItem';
+
 import type { TaggerUserRowProps } from './TaggerUserRow.types';
 
 /**
@@ -15,7 +16,7 @@ export function TaggerUserRow({ tagger, isLoading, isCurrentUser, onUserClick, o
   const { isFollowing, isLoading: isStatusLoading } = useIsFollowing(tagger.id);
 
   return (
-    <Organisms.UserListItem
+    <UserListItem
       user={{
         id: tagger.id,
         name: tagger.name,

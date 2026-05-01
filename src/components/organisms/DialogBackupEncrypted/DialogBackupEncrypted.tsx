@@ -2,7 +2,22 @@
 
 import { useEnterSubmit } from '@/hooks/useEnterSubmit/useEnterSubmit';
 import { useState } from 'react';
-import * as Atoms from '@/components/atoms';
+import { Button } from '@/atoms/Button/Button';
+import { Container } from '@/atoms/Container/Container';
+import {
+  Dialog,
+  DialogClose,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from '@/atoms/Dialog/Dialog';
+import { Input } from '@/atoms/Input/Input';
+import { Label } from '@/atoms/Label/Label';
+import { Typography } from '@/atoms/Typography/Typography';
+
 import Image from 'next/image';
 import { useTranslations } from 'next-intl';
 import { Download, ArrowRight } from 'lucide-react';
@@ -36,25 +51,25 @@ function RecoveryStep1({ setStep }: { setStep: (step: number) => void }) {
   };
   return (
     <>
-      <Atoms.DialogHeader>
-        <Atoms.DialogTitle>{t('title')}</Atoms.DialogTitle>
-        <Atoms.DialogDescription>
+      <DialogHeader>
+        <DialogTitle>{t('title')}</DialogTitle>
+        <DialogDescription>
           {t('subtitle')}{' '}
           <span className="font-bold text-foreground">
             <span className="hidden sm:inline">{t('neverShareDesktop')}</span>
             <span className="sm:hidden">{t('neverShareMobile')}</span>
           </span>
-        </Atoms.DialogDescription>
-      </Atoms.DialogHeader>
+        </DialogDescription>
+      </DialogHeader>
 
-      <Atoms.Container className="gap-6">
-        <Atoms.Container>
-          <Atoms.Label htmlFor="password" className="pb-4 text-xs font-medium tracking-widest text-muted-foreground">
+      <Container className="gap-6">
+        <Container>
+          <Label htmlFor="password" className="pb-4 text-xs font-medium tracking-widest text-muted-foreground">
             {t('password')}
-          </Atoms.Label>
-          <Atoms.Container>
-            <Atoms.Container className="relative pb-3">
-              <Atoms.Input
+          </Label>
+          <Container>
+            <Container className="relative pb-3">
+              <Input
                 id="password"
                 type="password"
                 value={passphrase}
@@ -65,20 +80,16 @@ function RecoveryStep1({ setStep }: { setStep: (step: number) => void }) {
                 autoComplete="new-password"
                 aria-describedby="password-help"
               />
-            </Atoms.Container>
-            <Atoms.Typography
-              id="password-help"
-              size="sm"
-              className="text-xs leading-none font-medium text-muted-foreground"
-            >
+            </Container>
+            <Typography id="password-help" size="sm" className="text-xs leading-none font-medium text-muted-foreground">
               {t('passwordHint')}
-            </Atoms.Typography>
-          </Atoms.Container>
-        </Atoms.Container>
+            </Typography>
+          </Container>
+        </Container>
 
-        <Atoms.Container className="items-start">
+        <Container className="items-start">
           {passphrase && (
-            <Atoms.Container className="flex-row items-center justify-start gap-3">
+            <Container className="flex-row items-center justify-start gap-3">
               {[1, 2, 3, 4, 5].map((index) => (
                 <div
                   key={index}
@@ -92,19 +103,16 @@ function RecoveryStep1({ setStep }: { setStep: (step: number) => void }) {
               >
                 {getStrengthText(passphraseStrength.strength)}
               </span>
-            </Atoms.Container>
+            </Container>
           )}
-        </Atoms.Container>
+        </Container>
 
-        <Atoms.Container>
-          <Atoms.Label
-            htmlFor="confirmPassword"
-            className="pb-4 text-xs font-medium tracking-widest text-muted-foreground"
-          >
+        <Container>
+          <Label htmlFor="confirmPassword" className="pb-4 text-xs font-medium tracking-widest text-muted-foreground">
             {t('repeatPassword')}
-          </Atoms.Label>
-          <Atoms.Container className="pb-3">
-            <Atoms.Input
+          </Label>
+          <Container className="pb-3">
+            <Input
               id="confirmPassword"
               type="password"
               value={confirmPassphrase}
@@ -117,20 +125,20 @@ function RecoveryStep1({ setStep }: { setStep: (step: number) => void }) {
               aria-describedby={confirmPassphrase && !passphraseMatch ? 'confirm-password-error' : undefined}
             />
             {confirmPassphrase && !passphraseMatch && (
-              <Atoms.Typography
+              <Typography
                 id="confirm-password-error"
                 size="sm"
                 className="pt-3 text-xs leading-3 font-medium text-destructive"
               >
                 {t('passwordsDoNotMatch')}
-              </Atoms.Typography>
+              </Typography>
             )}
-          </Atoms.Container>
-        </Atoms.Container>
-      </Atoms.Container>
+          </Container>
+        </Container>
+      </Container>
 
-      <Atoms.DialogFooter>
-        <Atoms.Button
+      <DialogFooter>
+        <Button
           id="download-file-btn"
           size="lg"
           onClick={handleDownload}
@@ -139,9 +147,9 @@ function RecoveryStep1({ setStep }: { setStep: (step: number) => void }) {
         >
           <Download className="h-4 w-4" />
           {t('downloadFile')}
-        </Atoms.Button>
-        <Atoms.DialogClose asChild>
-          <Atoms.Button
+        </Button>
+        <DialogClose asChild>
+          <Button
             variant="outline"
             size="lg"
             onClick={() => {
@@ -150,9 +158,9 @@ function RecoveryStep1({ setStep }: { setStep: (step: number) => void }) {
             className="order-1 sm:order-2"
           >
             {tCommon('cancel')}
-          </Atoms.Button>
-        </Atoms.DialogClose>
-      </Atoms.DialogFooter>
+          </Button>
+        </DialogClose>
+      </DialogFooter>
     </>
   );
 }
@@ -161,30 +169,30 @@ function RecoveryStep2({ handleClose }: { handleClose: () => void }) {
   const tCommon = useTranslations('common');
   return (
     <>
-      <Atoms.DialogHeader>
-        <Atoms.DialogTitle>{t('completeTitle')}</Atoms.DialogTitle>
-        <Atoms.DialogDescription>{t('completeSubtitle')}</Atoms.DialogDescription>
-      </Atoms.DialogHeader>
+      <DialogHeader>
+        <DialogTitle>{t('completeTitle')}</DialogTitle>
+        <DialogDescription>{t('completeSubtitle')}</DialogDescription>
+      </DialogHeader>
 
-      <Atoms.Container>
-        <Atoms.Container className="flex w-full items-center justify-center rounded-md bg-card p-12">
+      <Container>
+        <Container className="flex w-full items-center justify-center rounded-md bg-card p-12">
           <Image src="/images/check.webp" alt="Backup Complete" width={180} height={180} className="h-48 w-48" />
-        </Atoms.Container>
-      </Atoms.Container>
+        </Container>
+      </Container>
 
-      <Atoms.DialogFooter>
-        <Atoms.DialogClose asChild>
-          <Atoms.Button variant="outline" size="lg" onClick={handleClose}>
+      <DialogFooter>
+        <DialogClose asChild>
+          <Button variant="outline" size="lg" onClick={handleClose}>
             {tCommon('cancel')}
-          </Atoms.Button>
-        </Atoms.DialogClose>
-        <Atoms.DialogClose asChild>
-          <Atoms.Button id="backup-successful-ok-btn" size="lg" onClick={handleClose}>
+          </Button>
+        </DialogClose>
+        <DialogClose asChild>
+          <Button id="backup-successful-ok-btn" size="lg" onClick={handleClose}>
             <ArrowRight className="h-4 w-4" />
             {tCommon('finish')}
-          </Atoms.Button>
-        </Atoms.DialogClose>
-      </Atoms.DialogFooter>
+          </Button>
+        </DialogClose>
+      </DialogFooter>
     </>
   );
 }
@@ -197,22 +205,22 @@ export function DialogBackupEncrypted({ children }: DialogBackupEncryptedProps) 
     }, 1000);
   };
   return (
-    <Atoms.Dialog
+    <Dialog
       onOpenChange={(open) => {
         if (!open) setStep(1);
       }}
     >
       {children ? (
-        <Atoms.DialogTrigger asChild>{children}</Atoms.DialogTrigger>
+        <DialogTrigger asChild>{children}</DialogTrigger>
       ) : (
-        <Atoms.DialogTrigger asChild>
-          <Atoms.Button id="backup-encrypted-file-btn">Continue</Atoms.Button>
-        </Atoms.DialogTrigger>
+        <DialogTrigger asChild>
+          <Button id="backup-encrypted-file-btn">Continue</Button>
+        </DialogTrigger>
       )}
-      <Atoms.DialogContent className="max-w-md sm:max-w-lg" hiddenTitle="Backup as encrypted file">
+      <DialogContent className="max-w-md sm:max-w-lg" hiddenTitle="Backup as encrypted file">
         {step === 1 && <RecoveryStep1 setStep={setStep} />}
         {step === 2 && <RecoveryStep2 handleClose={handleClose} />}
-      </Atoms.DialogContent>
-    </Atoms.Dialog>
+      </DialogContent>
+    </Dialog>
   );
 }

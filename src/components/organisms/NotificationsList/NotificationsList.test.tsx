@@ -3,7 +3,7 @@ import { render, screen } from '@testing-library/react';
 import { NotificationsList } from './NotificationsList';
 import { NotificationType, type FlatNotification } from '@/models/notification/notification.types';
 // Mock NotificationItem
-vi.mock('@/organisms/NotificationItem', () => ({
+vi.mock('@/organisms/NotificationItem/NotificationItem', () => ({
   NotificationItem: ({ notification }: { notification: FlatNotification }) => (
     <div data-testid="notification-item" data-type={notification.type}>
       {notification.type}
@@ -12,13 +12,15 @@ vi.mock('@/organisms/NotificationItem', () => ({
 }));
 
 // Mock atoms
-vi.mock('@/atoms', () => ({
-  Container: ({ children, className }: { children: React.ReactNode; className?: string }) => (
-    <div data-testid="container" className={className}>
-      {children}
-    </div>
-  ),
-}));
+vi.mock('@/atoms/Container/Container', () => {
+  return {
+    Container: ({ children, className }: { children: React.ReactNode; className?: string }) => (
+      <div data-testid="container" className={className}>
+        {children}
+      </div>
+    ),
+  };
+});
 
 describe('NotificationsList', () => {
   const mockNotifications: FlatNotification[] = [

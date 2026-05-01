@@ -28,12 +28,15 @@ vi.mock('@/hooks/useTagged/useTagged', () => ({
 }));
 
 // Mock molecules
-vi.mock('@/molecules', async (importOriginal) => {
-  const actual = await importOriginal<typeof import('@/molecules')>();
+vi.mock('@/molecules/TaggedEmpty/TaggedEmpty', () => {
   return {
-    ...actual,
-    TaggedSection: () => <div data-testid="tagged-section">TaggedSection</div>,
     TaggedEmpty: () => <div data-testid="tagged-empty">TaggedEmpty</div>,
+  };
+});
+
+vi.mock('@/molecules/TaggedSection/TaggedSection', () => {
+  return {
+    TaggedSection: () => <div data-testid="tagged-section">TaggedSection</div>,
   };
 });
 

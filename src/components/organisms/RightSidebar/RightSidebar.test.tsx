@@ -3,11 +3,23 @@ import { describe, it, expect, vi } from 'vitest';
 import { RightSidebar } from './RightSidebar';
 
 // Mock the organisms (WhoToFollow and ActiveUsers were moved from molecules to organisms)
-vi.mock('@/organisms', () => ({
-  WhoToFollowSidebar: () => <div data-testid="who-to-follow">Who to Follow</div>,
-  ActiveUsers: () => <div data-testid="active-users">Active Users</div>,
-  FeedbackCard: () => <div data-testid="feedback-card">Feedback Card</div>,
-}));
+vi.mock('@/organisms/ActiveUsers/ActiveUsers', () => {
+  return {
+    ActiveUsers: () => <div data-testid="active-users">Active Users</div>,
+  };
+});
+
+vi.mock('@/organisms/FeedbackCard/FeedbackCard', () => {
+  return {
+    FeedbackCard: () => <div data-testid="feedback-card">Feedback Card</div>,
+  };
+});
+
+vi.mock('@/organisms/WhoToFollowSidebar/WhoToFollowSidebar', () => {
+  return {
+    WhoToFollowSidebar: () => <div data-testid="who-to-follow">Who to Follow</div>,
+  };
+});
 
 // Mock the libs
 

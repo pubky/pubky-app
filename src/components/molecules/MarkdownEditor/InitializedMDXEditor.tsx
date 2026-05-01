@@ -7,9 +7,13 @@ import '@mdxeditor/editor/style.css';
 import { oneDark } from '@codemirror/theme-one-dark';
 import { languages } from '@codemirror/language-data';
 import { AlertTriangle, Smile, Type } from 'lucide-react';
-import { ARTICLE_MAX_CHARACTER_LENGTH } from '@/config';
-import * as Atoms from '@/atoms';
-import * as Molecules from '@/molecules';
+import { ARTICLE_MAX_CHARACTER_LENGTH } from '@/config/posts';
+import { Button } from '@/atoms/Button/Button';
+import { Container } from '@/atoms/Container/Container';
+import { Textarea } from '@/atoms/Textarea/Textarea';
+import { Typography } from '@/atoms/Typography/Typography';
+import { EmojiPickerDialog } from '../EmojiPickerDialog/EmojiPickerDialog';
+
 import { MarkdownMark } from '@/icons';
 import { sanitizeCodeBlockLanguages } from './InitializedMDXEditor.utils';
 import { CODE_BLOCK_LANGUAGES } from './InitializedMDXEditor.constants';
@@ -137,17 +141,17 @@ export default function InitializedMDXEditor({
     }
   };
   return (
-    <Atoms.Container className="gap-4">
+    <Container className="gap-4">
       {/* Markdown mode: custom toolbar + textarea — hidden via CSS in rich text mode */}
-      <Atoms.Container overrideDefaults className={cn(mode === 'richtext' && 'hidden')}>
-        <Atoms.Container
+      <Container overrideDefaults className={cn(mode === 'richtext' && 'hidden')}>
+        <Container
           overrideDefaults
           className="flex min-h-10.75 cursor-auto flex-wrap items-center gap-2 rounded-md border bg-background px-2.5 py-1.5"
           role="toolbar"
           aria-label={t('toolbarAriaLabel')}
           data-testid="markdown-toolbar"
         >
-          <Atoms.Button
+          <Button
             variant="ghost"
             size="icon"
             title={t('emoji')}
@@ -157,9 +161,9 @@ export default function InitializedMDXEditor({
             data-testid="markdown-emoji-button"
           >
             <Smile className="size-6" />
-          </Atoms.Button>
+          </Button>
 
-          <Atoms.Button
+          <Button
             variant="ghost"
             size="icon"
             title={t('richText')}
@@ -169,10 +173,10 @@ export default function InitializedMDXEditor({
             data-testid="markdown-richtext-button"
           >
             <Type className="size-6" />
-          </Atoms.Button>
-        </Atoms.Container>
+          </Button>
+        </Container>
 
-        <Atoms.Textarea
+        <Textarea
           ref={textareaRef}
           value={markdownText}
           onChange={(e) => handleMarkdownTextChange(e.target.value)}
@@ -183,7 +187,7 @@ export default function InitializedMDXEditor({
           className="max-h-[60dvh] min-h-11 rounded-none pt-4 font-normal text-foreground placeholder:text-muted-foreground/70"
           data-testid="markdown-textarea"
         />
-      </Atoms.Container>
+      </Container>
 
       {/* Rich text mode: MDXEditor (includes its own toolbar) — hidden via CSS in markdown mode */}
       <MDXEditor
@@ -239,14 +243,10 @@ export default function InitializedMDXEditor({
         ref={editorRef}
       />
 
-      <Molecules.EmojiPickerDialog
-        open={showEmojiPicker}
-        onOpenChange={setShowEmojiPicker}
-        onEmojiSelect={handleEmojiSelect}
-      />
+      <EmojiPickerDialog open={showEmojiPicker} onOpenChange={setShowEmojiPicker} onEmojiSelect={handleEmojiSelect} />
 
       {maxLengthWarning && (
-        <Atoms.Container
+        <Container
           className={cn(
             'cursor-auto flex-row items-center gap-x-2 rounded-md p-2',
             maxLengthWarning === 'approaching' && 'bg-yellow-500/15 text-yellow-500',
@@ -256,12 +256,12 @@ export default function InitializedMDXEditor({
         >
           <AlertTriangle className="size-4 shrink-0" />
 
-          <Atoms.Typography overrideDefaults className="text-sm">
+          <Typography overrideDefaults className="text-sm">
             {maxLengthWarning === 'approaching' && t('warningApproaching')}
             {maxLengthWarning === 'reached' && t('warningReached')}
-          </Atoms.Typography>
-        </Atoms.Container>
+          </Typography>
+        </Container>
       )}
-    </Atoms.Container>
+    </Container>
   );
 }

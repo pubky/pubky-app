@@ -2,13 +2,12 @@
 
 import { useMemo } from 'react';
 import LinkifyIt from 'linkify-it';
-
-import * as Atoms from '@/atoms';
-import { Generic } from '@/molecules/PostLinkEmbeds/Providers/Generic/ProviderGeneric';
-import type { EmbedProvider } from '@/molecules/PostLinkEmbeds/Providers/Provider.types';
-import { Twitter } from '@/molecules/PostLinkEmbeds/Providers/Twitter/ProviderTwitter';
-import { Vimeo } from '@/molecules/PostLinkEmbeds/Providers/Vimeo/ProviderVimeo';
-import { Youtube } from '@/molecules/PostLinkEmbeds/Providers/Youtube/ProviderYoutube';
+import { Container } from '@/atoms/Container/Container';
+import { Generic } from './Providers/Generic/ProviderGeneric';
+import type { EmbedProvider } from './Providers/Provider.types';
+import { Twitter } from './Providers/Twitter/ProviderTwitter';
+import { Vimeo } from './Providers/Vimeo/ProviderVimeo';
+import { Youtube } from './Providers/Youtube/ProviderYoutube';
 import type { ParseUrlForLinkEmbedResult, PostLinkEmbedsProps } from './PostLinkEmbeds.types';
 
 // Register all embed providers here
@@ -108,8 +107,8 @@ export const PostLinkEmbeds = ({ content }: PostLinkEmbedsProps) => {
   if (!embed || !provider) return null;
 
   return (
-    <Atoms.Container className="w-full overflow-hidden" onClick={(e) => e.stopPropagation()}>
+    <Container className="w-full overflow-hidden" onClick={(e) => e.stopPropagation()}>
       {provider.renderEmbed(embed)}
-    </Atoms.Container>
+    </Container>
   );
 };

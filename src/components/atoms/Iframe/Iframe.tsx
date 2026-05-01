@@ -1,9 +1,9 @@
 import { forwardRef } from 'react';
-import * as Types from './Iframe.types';
+import type { IframeProps } from './Iframe.types';
 import { cn } from '@/libs/utils/utils';
 
-export const Iframe = forwardRef<HTMLIFrameElement, Types.IframeProps>(function Iframe(
-  { 'data-testid': dataTestId, className, width = '100%', height = '315', ...props }: Types.IframeProps,
+export const Iframe = forwardRef<HTMLIFrameElement, IframeProps>(function Iframe(
+  { 'data-testid': dataTestId, className, width = '100%', height = '315', ...props }: IframeProps,
   ref,
 ) {
   return (

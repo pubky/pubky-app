@@ -1,10 +1,11 @@
 'use client';
 
 import { useRouter } from 'next/navigation';
+import { Container } from '@/atoms/Container/Container';
+import { DialogRestoreEncryptedFile } from '../DialogRestoreEncryptedFile/DialogRestoreEncryptedFile';
+import { DialogRestoreRecoveryPhrase } from '../DialogRestoreRecoveryPhrase/DialogRestoreRecoveryPhrase';
 
-import * as Atoms from '@/atoms';
-import * as Organisms from '@/organisms';
-import * as App from '@/app';
+import { HOME_ROUTES } from '@/app/routes';
 import { useSignInStore } from '@/stores/signIn/signIn.store';
 export const SignInNavigation = () => {
   const router = useRouter();
@@ -13,15 +14,15 @@ export const SignInNavigation = () => {
   if (authUrlResolved) return null;
 
   const handleRestore = () => {
-    router.push(App.HOME_ROUTES.HOME);
+    router.push(HOME_ROUTES.HOME);
   };
 
   return (
-    <Atoms.Container className="flex-col-reverse justify-start gap-3 md:flex-row lg:gap-6">
-      <Atoms.Container className="mx-0 w-auto flex-col items-start justify-start gap-3 sm:mx-auto sm:w-full sm:flex-row">
-        <Organisms.DialogRestoreRecoveryPhrase onRestore={handleRestore} />
-        <Organisms.DialogRestoreEncryptedFile onRestore={handleRestore} />
-      </Atoms.Container>
-    </Atoms.Container>
+    <Container className="flex-col-reverse justify-start gap-3 md:flex-row lg:gap-6">
+      <Container className="mx-0 w-auto flex-col items-start justify-start gap-3 sm:mx-auto sm:w-full sm:flex-row">
+        <DialogRestoreRecoveryPhrase onRestore={handleRestore} />
+        <DialogRestoreEncryptedFile onRestore={handleRestore} />
+      </Container>
+    </Container>
   );
 };

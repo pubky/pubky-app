@@ -4,7 +4,7 @@ import { StatusPickerWrapper } from './StatusPickerWrapper';
 import { STATUS_LABELS } from '@/libs/status/status.constants';
 
 // Mock StatusPickerContent
-vi.mock('../StatusPickerContent', () => ({
+vi.mock('../StatusPickerContent/StatusPickerContent', () => ({
   StatusPickerContent: ({
     onStatusSelect,
     currentStatus,

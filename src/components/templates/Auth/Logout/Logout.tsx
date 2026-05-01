@@ -3,9 +3,16 @@
 import { useEffect, useState, type Dispatch, type SetStateAction } from 'react';
 import { useRouter } from 'next/navigation';
 import { useTranslations } from 'next-intl';
-import * as Atoms from '@/atoms';
-import * as Molecules from '@/molecules';
-import * as App from '@/app';
+import { Container } from '@/atoms/Container/Container';
+import { PageHeader } from '@/atoms/PageHeader/PageHeader';
+import { PageSubtitle } from '@/atoms/PageSubtitle/PageSubtitle';
+import { Spinner } from '@/atoms/Spinner/Spinner';
+import { ButtonsNavigation } from '@/molecules/ButtonsNavigation/ButtonsNavigation';
+import { ContentCard } from '@/molecules/Content/Content';
+import { LogoutContent, LogoutNavigation } from '@/molecules/Logout/Logout';
+import { PageTitle } from '@/molecules/Page/Page';
+
+import { ROOT_ROUTES } from '@/app/routes';
 import { Logger } from '@/libs/logger/logger';
 import { AuthController } from '@/controllers/auth/auth';
 import { useAuthStore } from '@/stores/auth/auth.store';
@@ -57,7 +64,7 @@ export function Logout() {
   }, [isHydrated, isLoggingOut, isSignedOut, viewState]);
 
   const onHandleHome = () => {
-    router.push(App.ROOT_ROUTES);
+    router.push(ROOT_ROUTES);
   };
 
   const onHandleRetry = () => {
@@ -65,29 +72,29 @@ export function Logout() {
   };
 
   const renderLoadingState = () => (
-    <Atoms.Container size="container">
-      <Atoms.PageHeader>
-        <Molecules.PageTitle size="large">{t('loadingTitle')}</Molecules.PageTitle>
-        <Atoms.PageSubtitle>{t('loadingSubtitle')}</Atoms.PageSubtitle>
-      </Atoms.PageHeader>
-      <Molecules.ContentCard layout="column">
-        <Atoms.Container className="items-center justify-center gap-4 py-10">
-          <Atoms.Spinner size="lg" />
-        </Atoms.Container>
-      </Molecules.ContentCard>
-    </Atoms.Container>
+    <Container size="container" className="mb-6">
+      <PageHeader>
+        <PageTitle size="large">{t('loadingTitle')}</PageTitle>
+        <PageSubtitle>{t('loadingSubtitle')}</PageSubtitle>
+      </PageHeader>
+      <ContentCard layout="column">
+        <Container className="items-center justify-center gap-4 py-10">
+          <Spinner size="lg" />
+        </Container>
+      </ContentCard>
+    </Container>
   );
 
   const renderErrorState = () => (
     <>
-      <Atoms.Container size="container">
-        <Atoms.PageHeader>
-          <Molecules.PageTitle size="large">{t('errorTitle')}</Molecules.PageTitle>
-          <Atoms.PageSubtitle>{t('errorSubtitle')}</Atoms.PageSubtitle>
-        </Atoms.PageHeader>
-      </Atoms.Container>
+      <Container size="container" className="mb-6">
+        <PageHeader>
+          <PageTitle size="large">{t('errorTitle')}</PageTitle>
+          <PageSubtitle>{t('errorSubtitle')}</PageSubtitle>
+        </PageHeader>
+      </Container>
       <div className="onboarding-nav mt-auto w-full lg:mt-0">
-        <Molecules.ButtonsNavigation
+        <ButtonsNavigation
           id="logout-error-navigation"
           backText={t('homepage')}
           continueText={t('retry')}
@@ -100,9 +107,9 @@ export function Logout() {
 
   const renderSuccessState = () => (
     <>
-      <Molecules.LogoutContent />
+      <LogoutContent />
       <div className="onboarding-nav mt-auto w-full lg:mt-0">
-        <Molecules.LogoutNavigation />
+        <LogoutNavigation />
       </div>
     </>
   );
@@ -116,8 +123,8 @@ export function Logout() {
       : renderSuccessState();
 
   return (
-    <Atoms.Container size="container" className="h-screen-without-page-header-auth-pages gap-0 px-6">
+    <Container size="container" className="h-screen-without-page-header-auth-pages gap-0 px-6">
       {content}
-    </Atoms.Container>
+    </Container>
   );
 }

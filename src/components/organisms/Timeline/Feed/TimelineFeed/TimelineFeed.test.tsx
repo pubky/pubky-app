@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { render, screen, waitFor } from '@testing-library/react';
-import { TIMELINE_FEED_VARIANT } from '@/config';
+import { TIMELINE_FEED_VARIANT } from '@/config/feed';
 import { PubkyAppFeedLayout, PubkyAppFeedReach, PubkyAppFeedSort } from 'pubky-app-specs';
 import { TimelineFeed, useTimelineFeedContext } from './TimelineFeed';
 import { useBookmarksStreamId } from '@/hooks/useBookmarksStreamId/useBookmarksStreamId';
@@ -97,44 +97,58 @@ vi.mock('@/hooks/usePullToRefresh/usePullToRefresh', () => ({
 }));
 
 // Mock components
-vi.mock('@/molecules', () => ({
-  TimelineLoading: () => <div data-testid="timeline-loading">Loading...</div>,
-  NewPostsButton: ({
-    count,
-    visible,
-  }: {
-    count: number;
-    onClick: () => void;
-    visible: boolean;
-    isScrolled?: boolean;
-  }) => (visible && count > 0 ? <div data-testid="new-posts-button">{count} new posts</div> : null),
-  PullToRefreshIndicator: ({ state }: { state: string; pullDistance: number }) =>
-    state !== 'idle' ? <div data-testid="pull-to-refresh-indicator">{state}</div> : null,
-}));
+vi.mock('@/molecules/NewPostsButton/NewPostsButton', () => {
+  return {
+    NewPostsButton: ({
+      count,
+      visible,
+    }: {
+      count: number;
+      onClick: () => void;
+      visible: boolean;
+      isScrolled?: boolean;
+    }) => (visible && count > 0 ? <div data-testid="new-posts-button">{count} new posts</div> : null),
+  };
+});
 
-vi.mock('@/organisms', () => ({
-  TimelinePosts: ({
-    postIds,
-    loading,
-    loadingMore,
-    error,
-    hasMore,
-  }: {
-    postIds: string[];
-    loading: boolean;
-    loadingMore: boolean;
-    error: string | null;
-    hasMore: boolean;
-  }) => (
-    <div data-testid="timeline-posts">
-      <span data-testid="post-count">{postIds.length}</span>
-      <span data-testid="loading">{loading.toString()}</span>
-      <span data-testid="loading-more">{loadingMore.toString()}</span>
-      <span data-testid="error">{error || 'none'}</span>
-      <span data-testid="has-more">{hasMore.toString()}</span>
-    </div>
-  ),
-}));
+vi.mock('@/molecules/PullToRefreshIndicator/PullToRefreshIndicator', () => {
+  return {
+    PullToRefreshIndicator: ({ state }: { state: string; pullDistance: number }) =>
+      state !== 'idle' ? <div data-testid="pull-to-refresh-indicator">{state}</div> : null,
+  };
+});
+
+vi.mock('@/molecules/Timeline/TimelineLoading', () => {
+  return {
+    TimelineLoading: () => <div data-testid="timeline-loading">Loading...</div>,
+  };
+});
+
+vi.mock('@/organisms/Timeline/Posts/Posts', () => {
+  return {
+    TimelinePosts: ({
+      postIds,
+      loading,
+      loadingMore,
+      error,
+      hasMore,
+    }: {
+      postIds: string[];
+      loading: boolean;
+      loadingMore: boolean;
+      error: string | null;
+      hasMore: boolean;
+    }) => (
+      <div data-testid="timeline-posts">
+        <span data-testid="post-count">{postIds.length}</span>
+        <span data-testid="loading">{loading.toString()}</span>
+        <span data-testid="loading-more">{loadingMore.toString()}</span>
+        <span data-testid="error">{error || 'none'}</span>
+        <span data-testid="has-more">{hasMore.toString()}</span>
+      </div>
+    ),
+  };
+});
 
 vi.mock('./VisualTimelinePosts', () => ({
   VisualTimelinePosts: ({

@@ -4,10 +4,10 @@ import { useEffect, useRef, useState, useCallback, useMemo } from 'react';
 import { z } from 'zod';
 import { useRouter } from 'next/navigation';
 import { useTranslations } from 'next-intl';
+import { useToast } from '@/molecules/Toaster/use-toast';
 
-import * as Molecules from '@/molecules';
-import * as App from '@/app';
-import { USER_NAME_MIN_LENGTH, USER_NAME_MAX_LENGTH, USER_BIO_MAX_LENGTH } from '@/config';
+import { HOME_ROUTES, PROFILE_ROUTES, SETTINGS_ROUTES } from '@/app/routes';
+import { USER_NAME_MIN_LENGTH, USER_NAME_MAX_LENGTH, USER_BIO_MAX_LENGTH } from '@/config/user';
 
 import type { ProfileLink, UseProfileFormProps, UseProfileFormReturn, SubmitTextKey } from './useProfileForm.types';
 import { Logger } from '@/libs/logger/logger';
@@ -42,7 +42,7 @@ export function useProfileForm(props: UseProfileFormProps): UseProfileFormReturn
   const setShowWelcomeDialog = props.mode === 'create' ? props.setShowWelcomeDialog : undefined;
 
   const router = useRouter();
-  const { toast } = Molecules.useToast();
+  const { toast } = useToast();
   const tProfile = useTranslations('toast.profile');
   const fileInputRef = useRef<HTMLInputElement | null>(null);
 
@@ -323,7 +323,7 @@ export function useProfileForm(props: UseProfileFormProps): UseProfileFormReturn
         }
         await AuthController.bootstrapWithDelay();
         setShowWelcomeDialog?.(true);
-        router.push(App.HOME_ROUTES.HOME);
+        router.push(HOME_ROUTES.HOME);
       } else {
         await ProfileController.commitUpdate({
           name: user.name,
@@ -347,7 +347,7 @@ export function useProfileForm(props: UseProfileFormProps): UseProfileFormReturn
           title: tProfile('updated'),
           description: tProfile('updatedDesc'),
         });
-        router.push(App.PROFILE_ROUTES.PROFILE);
+        router.push(PROFILE_ROUTES.PROFILE);
       }
     } catch (error) {
       if (error instanceof AppError) {
@@ -403,7 +403,7 @@ export function useProfileForm(props: UseProfileFormProps): UseProfileFormReturn
       router.back();
     } else {
       // Fallback to settings account page if no history (direct URL access)
-      router.push(App.SETTINGS_ROUTES.ACCOUNT);
+      router.push(SETTINGS_ROUTES.ACCOUNT);
     }
   }, [router]);
 

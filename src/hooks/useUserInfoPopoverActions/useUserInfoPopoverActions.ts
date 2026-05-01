@@ -2,7 +2,7 @@
 
 import { useFollowUser } from '@/hooks/useFollowUser/useFollowUser';
 import { useRouter } from 'next/navigation';
-import * as App from '@/app';
+import { SETTINGS_ROUTES } from '@/app/routes';
 
 interface UseUserInfoPopoverActionsResult {
   isLoading: boolean;
@@ -29,7 +29,7 @@ export function useUserInfoPopoverActions({
   const onEditClick = (e: React.MouseEvent) => {
     e.preventDefault();
     e.stopPropagation();
-    router.push(App.SETTINGS_ROUTES.EDIT);
+    router.push(SETTINGS_ROUTES.EDIT);
   };
 
   const onFollowClick = async (e: React.MouseEvent) => {

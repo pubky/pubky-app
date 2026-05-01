@@ -6,11 +6,12 @@ import { useTagged } from '@/hooks/useTagged/useTagged';
 import { useUserProfile } from '@/hooks/useUserProfile/useUserProfile';
 import { useMemo } from 'react';
 import { usePathname } from 'next/navigation';
-import * as Atoms from '@/atoms';
-import * as Molecules from '@/molecules';
-import * as Organisms from '@/organisms';
+import { Container } from '@/atoms/Container/Container';
+import { ProfilePageLinks } from '@/molecules/ProfilePageLinks/ProfilePageLinks';
+import { ProfilePageTaggedAs } from '@/molecules/ProfilePageTaggedAs/ProfilePageTaggedAs';
+import { FeedbackCard } from '../FeedbackCard/FeedbackCard';
 import { useProfileContext } from '@/providers/ProfileProvider/ProfileProvider';
-import * as Config from '@/config';
+import { LAYOUT_DIMENSIONS } from '@/config/layoutDimensions';
 import { MAX_SIDEBAR_TAGS } from './ProfilePageSidebar.constants';
 import { cn } from '@/libs/utils/utils';
 
@@ -42,8 +43,8 @@ export function ProfilePageSidebar() {
 
   // Only apply sticky when content fits in viewport
   const { ref, stickyTop } = useStickyWhenFits({
-    topOffset: Config.LAYOUT_DIMENSIONS.HEADER_HEIGHT_PROFILE,
-    bottomOffset: Config.LAYOUT_DIMENSIONS.SIDEBAR_BOTTOM_OFFSET,
+    topOffset: LAYOUT_DIMENSIONS.HEADER_HEIGHT_PROFILE,
+    bottomOffset: LAYOUT_DIMENSIONS.SIDEBAR_BOTTOM_OFFSET,
   });
 
   // Handle tag click - require auth for unauthenticated users
@@ -52,22 +53,17 @@ export function ProfilePageSidebar() {
   };
 
   return (
-    <Atoms.Container
+    <Container
       ref={ref}
       overrideDefaults={true}
       className={cn('hidden w-(--filter-bar-width) flex-col gap-6 self-start lg:flex', 'sticky')}
       style={{ top: `${stickyTop}px` }}
     >
       {!isTaggedPage && (
-        <Molecules.ProfilePageTaggedAs
-          tags={topTags}
-          isLoading={isLoadingTags}
-          onTagClick={handleTagClick}
-          pubky={pubky ?? ''}
-        />
+        <ProfilePageTaggedAs tags={topTags} isLoading={isLoadingTags} onTagClick={handleTagClick} pubky={pubky ?? ''} />
       )}
-      <Molecules.ProfilePageLinks links={profile?.links} isOwnProfile={isOwnProfile} />
-      {isAuthenticated && <Organisms.FeedbackCard />}
-    </Atoms.Container>
+      <ProfilePageLinks links={profile?.links} isOwnProfile={isOwnProfile} />
+      {isAuthenticated && <FeedbackCard />}
+    </Container>
   );
 }

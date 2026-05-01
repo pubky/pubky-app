@@ -1,8 +1,9 @@
 'use client';
 
 import { useMemo } from 'react';
-import * as Atoms from '@/atoms';
-import * as Organisms from '@/organisms';
+import { Container } from '@/atoms/Container/Container';
+import { NotificationItem } from '../NotificationItem/NotificationItem';
+
 import type { NotificationsListProps } from './NotificationsList.types';
 import { getBusinessKey } from '@/models/notification/notification.helpers';
 export function NotificationsList({ notifications, unreadNotifications }: NotificationsListProps) {
@@ -14,14 +15,14 @@ export function NotificationsList({ notifications, unreadNotifications }: Notifi
   }, [unreadNotifications]);
 
   return (
-    <Atoms.Container data-cy="notifications-list" className="gap-3 rounded-md bg-card p-6">
+    <Container data-cy="notifications-list" className="gap-3 rounded-md bg-card p-6">
       {notifications.map((notification) => {
         // Use business key for unread lookup (to match unreadNotifications)
         const businessKey = getBusinessKey(notification);
         const isUnread = unreadKeys.has(businessKey);
 
-        return <Organisms.NotificationItem key={businessKey} notification={notification} isUnread={isUnread} />;
+        return <NotificationItem key={businessKey} notification={notification} isUnread={isUnread} />;
       })}
-    </Atoms.Container>
+    </Container>
   );
 }

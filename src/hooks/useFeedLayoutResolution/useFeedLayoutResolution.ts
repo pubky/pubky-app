@@ -1,6 +1,6 @@
 'use client';
 
-import { TimelineFeedVariant, TIMELINE_FEED_VARIANT } from '@/config';
+import { TIMELINE_FEED_VARIANT, type TimelineFeedVariant } from '@/config/feed';
 import { useCustomFeed } from '@/hooks/useCustomFeed/useCustomFeed';
 import { useIsMobile } from '@/hooks/useIsMobile/useIsMobile';
 import { useHomeStore } from '@/stores/home/home.store';

@@ -1,7 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { renderHook, waitFor, act } from '@testing-library/react';
 import { useFeedback } from './useFeedback';
-import { FEEDBACK_MAX_CHARACTER_LENGTH } from '@/config';
+import { FEEDBACK_MAX_CHARACTER_LENGTH } from '@/config/posts';
 
 // Mock fetch
 global.fetch = vi.fn();
@@ -10,11 +10,10 @@ const TEST_USER_PUBKY = 'test-user-123';
 const TEST_USER_NAME = 'Test User';
 
 // Mock molecules
-const mockToast = vi.fn();
-vi.mock('@/molecules', async (importOriginal) => {
-  const actual = await importOriginal<typeof import('@/molecules')>();
+const mockToast = vi.hoisted(() => vi.fn());
+vi.mock('@/molecules/Toaster/use-toast', () => {
   return {
-    ...actual,
+    toast: mockToast,
     useToast: vi.fn(() => ({
       toast: mockToast,
     })),

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { TIMELINE_FEED_VARIANT } from '@/config';
+import { TIMELINE_FEED_VARIANT } from '@/config/feed';
 import { resolveFeedLayout } from './useFeedLayoutResolution';
 import { LAYOUT } from '@/stores/home/home.types';
 describe('resolveFeedLayout', () => {

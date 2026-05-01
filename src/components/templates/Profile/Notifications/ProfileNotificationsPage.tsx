@@ -1,5 +1,5 @@
-import * as Atoms from '@/atoms';
-import * as Organisms from '@/organisms';
+import { Container } from '@/atoms/Container/Container';
+import { NotificationsContainer } from '@/organisms/NotificationsContainer/NotificationsContainer';
 
 /**
  * Template for the notifications page.
@@ -7,8 +7,8 @@ import * as Organisms from '@/organisms';
  */
 export function ProfileNotificationsPage() {
   return (
-    <Atoms.Container className="mt-6 gap-4 lg:mt-0">
-      <Organisms.NotificationsContainer />
-    </Atoms.Container>
+    <Container className="mt-6 gap-4 lg:mt-0">
+      <NotificationsContainer />
+    </Container>
   );
 }

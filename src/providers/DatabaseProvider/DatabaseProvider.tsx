@@ -1,7 +1,8 @@
 'use client';
 
 import { createContext, useEffect, useRef, useState, type ReactNode } from 'react';
-import * as Atoms from '@/atoms';
+import { Container } from '@/atoms/Container/Container';
+import { Spinner } from '@/atoms/Spinner/Spinner';
 import { type DatabaseContextType } from '@/providers/DatabaseProvider/DatabaseProvider.types';
 import { AppError } from '@/libs/error/error';
 import { DatabaseErrorCode } from '@/libs/error/error.codes';
@@ -77,9 +78,9 @@ export function DatabaseProvider({ children }: { children: ReactNode }) {
   // This prevents components from querying before initialization
   if (!isReady && !error) {
     return (
-      <Atoms.Container overrideDefaults className="flex min-h-screen items-center justify-center">
-        <Atoms.Spinner />
-      </Atoms.Container>
+      <Container overrideDefaults className="flex min-h-screen items-center justify-center">
+        <Spinner />
+      </Container>
     );
   }
 

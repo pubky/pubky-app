@@ -13,9 +13,12 @@ import {
 } from './PostText.utils';
 import { PostTextProps, RemarkAnchorProps } from './PostText.types';
 import { TRUNCATION_LIMIT } from './PostText.constants';
-import * as Atoms from '@/atoms';
-import * as Molecules from '@/molecules';
-import * as Organisms from '@/organisms';
+import { Button } from '@/atoms/Button/Button';
+import { Container } from '@/atoms/Container/Container';
+import { PostCodeBlock } from '../PostCodeBlock/PostCodeBlock';
+import { PostHashtags } from '../PostHashtags/PostHashtags';
+import { PostMentions } from '@/organisms/PostMentions/PostMentions';
+
 import { usePathname } from 'next/navigation';
 import { POST_ROUTES } from '@/app/routes';
 import { cn } from '@/libs/utils/utils';
@@ -76,7 +79,7 @@ export const PostText = memo(function PostText({ content, isArticle, onLinkClick
   );
 
   return (
-    <Atoms.Container
+    <Container
       data-cy="post-text"
       overrideDefaults
       className={cn(
@@ -92,8 +95,8 @@ export const PostText = memo(function PostText({ content, isArticle, onLinkClick
           a(props: RemarkAnchorProps) {
             const { children, className, 'data-type': dataType, node: _node, ref: _ref, ...rest } = props;
 
-            if (dataType === 'hashtag') return <Molecules.PostHashtags {...props} />;
-            if (dataType === 'mention') return <Organisms.PostMentions {...props} />;
+            if (dataType === 'hashtag') return <PostHashtags {...props} />;
+            if (dataType === 'mention') return <PostMentions {...props} />;
 
             return (
               <a
@@ -141,7 +144,7 @@ export const PostText = memo(function PostText({ content, isArticle, onLinkClick
             );
           },
           code(props) {
-            return <Molecules.PostCodeBlock {...props} />;
+            return <PostCodeBlock {...props} />;
           },
           h1(props) {
             const { children, className, node: _node, ref: _ref, ...rest } = props;
@@ -204,14 +207,14 @@ export const PostText = memo(function PostText({ content, isArticle, onLinkClick
 
       {/* No stopPropagation on this element therefore click takes user to post via parent element */}
       {contentTruncated && (
-        <Atoms.Button
+        <Button
           overrideDefaults
           aria-label="Show full post content"
           className="mt-4 cursor-pointer text-brand transition-colors hover:text-brand/80"
         >
           Show more
-        </Atoms.Button>
+        </Button>
       )}
-    </Atoms.Container>
+    </Container>
   );
 });

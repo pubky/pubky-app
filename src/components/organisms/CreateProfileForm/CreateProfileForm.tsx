@@ -1,10 +1,21 @@
 'use client';
 
 import { useProfileForm } from '@/hooks/useProfileForm/useProfileForm';
-import * as Molecules from '@/molecules';
-import * as Organisms from '@/organisms';
-import * as Atoms from '@/atoms';
-import * as Config from '@/config';
+import { FacehashAvatar } from '@/molecules/FacehashAvatar/FacehashAvatar';
+import { InputField } from '@/molecules/InputField/InputField';
+import { ProfileNavigation } from '@/molecules/ProfileNavigation/ProfileNavigation';
+import { TextareaField } from '@/molecules/TextareaField/TextareaField';
+import { DialogAddLink } from '../DialogAddLink/DialogAddLink';
+import { DialogCropImage } from '../DialogCropImage/DialogCropImage';
+import { Avatar, AvatarFallback, AvatarImage } from '@/atoms/Avatar/Avatar';
+import { Button } from '@/atoms/Button/Button';
+import { Card } from '@/atoms/Card/Card';
+import { Container } from '@/atoms/Container/Container';
+import { Heading } from '@/atoms/Heading/Heading';
+import { Label } from '@/atoms/Label/Label';
+import { Typography } from '@/atoms/Typography/Typography';
+
+import { USER_MAX_LINKS } from '@/config/user';
 import { useTranslations } from 'next-intl';
 import { Trash2, File } from 'lucide-react';
 import { extractInitials } from '@/libs/utils/utils';
@@ -31,22 +42,20 @@ export const CreateProfileForm = () => {
     'U';
   return (
     <>
-      <Atoms.Container className="flex w-full flex-1 flex-col gap-6 lg:flex-none" data-testid="create-profile-form">
-        <Atoms.Card className="rounded-md bg-card p-6 md:p-12 lg:flex lg:flex-row lg:gap-12">
+      <Container className="flex w-full flex-1 flex-col gap-6 lg:flex-none" data-testid="create-profile-form">
+        <Card className="rounded-md bg-card p-6 md:p-12 lg:flex lg:flex-row lg:gap-12">
           {/* Profile Section */}
-          <Atoms.Container className="w-full gap-6">
-            <Atoms.Container className="gap-3">
-              <Atoms.Heading level={3} size="xl" className="text-2xl">
+          <Container className="w-full gap-6">
+            <Container className="gap-3">
+              <Heading level={3} size="xl" className="text-2xl">
                 {tCommon('profile')}
-              </Atoms.Heading>
-            </Atoms.Container>
+              </Heading>
+            </Container>
 
-            <Atoms.Container className="gap-6">
-              <Atoms.Container className="gap-2">
-                <Atoms.Label className="text-xs font-medium tracking-wide text-muted-foreground">
-                  {t('name')}
-                </Atoms.Label>
-                <Molecules.InputField
+            <Container className="gap-6">
+              <Container className="gap-2">
+                <Label className="text-xs font-medium tracking-wide text-muted-foreground">{t('name')}</Label>
+                <InputField
                   id="profile-name-input"
                   placeholder={t('namePlaceholder')}
                   variant="dashed"
@@ -56,13 +65,11 @@ export const CreateProfileForm = () => {
                   message={errors.nameError ?? undefined}
                   messageType={errors.nameError ? 'error' : 'default'}
                 />
-              </Atoms.Container>
+              </Container>
 
-              <Atoms.Container className="gap-2">
-                <Atoms.Label className="text-xs font-medium tracking-wide text-muted-foreground">
-                  {t('bio')}
-                </Atoms.Label>
-                <Molecules.TextareaField
+              <Container className="gap-2">
+                <Label className="text-xs font-medium tracking-wide text-muted-foreground">{t('bio')}</Label>
+                <TextareaField
                   id="profile-bio-input"
                   placeholder={t('bioPlaceholder')}
                   value={state.bio}
@@ -73,25 +80,25 @@ export const CreateProfileForm = () => {
                   message={errors.bioError ?? undefined}
                   messageType={errors.bioError ? 'error' : 'default'}
                 />
-              </Atoms.Container>
-            </Atoms.Container>
-          </Atoms.Container>
+              </Container>
+            </Container>
+          </Container>
 
           {/* Links Section */}
-          <Atoms.Container className="mt-6 w-full gap-6 lg:mt-0">
-            <Atoms.Container className="gap-3">
-              <Atoms.Heading level={3} size="xl" className="text-2xl">
+          <Container className="mt-6 w-full gap-6 lg:mt-0">
+            <Container className="gap-3">
+              <Heading level={3} size="xl" className="text-2xl">
                 {t('linksTitle')}
-              </Atoms.Heading>
-            </Atoms.Container>
+              </Heading>
+            </Container>
 
-            <Atoms.Container className="gap-6">
+            <Container className="gap-6">
               {state.links.map((link, index) => (
-                <Atoms.Container className="gap-2" key={`${link.label}-${index}`}>
-                  <Atoms.Label className="text-xs font-medium tracking-wide text-muted-foreground uppercase">
+                <Container className="gap-2" key={`${link.label}-${index}`}>
+                  <Label className="text-xs font-medium tracking-wide text-muted-foreground uppercase">
                     {link.label}
-                  </Atoms.Label>
-                  <Molecules.InputField
+                  </Label>
+                  <InputField
                     id={`profile-links-input-${index}`}
                     placeholder={link.label.toUpperCase().includes('TWITTER') ? '@user' : 'https://'}
                     value={link.url}
@@ -117,10 +124,10 @@ export const CreateProfileForm = () => {
                     message={errors.linkUrlErrors[index] ?? undefined}
                     messageType={errors.linkUrlErrors[index] ? 'error' : 'default'}
                   />
-                </Atoms.Container>
+                </Container>
               ))}
 
-              <Organisms.DialogAddLink
+              <DialogAddLink
                 onSave={(label, url) => {
                   handlers.setLinks([
                     ...state.links,
@@ -130,21 +137,21 @@ export const CreateProfileForm = () => {
                     },
                   ]);
                 }}
-                disabled={state.links.length >= Config.USER_MAX_LINKS}
+                disabled={state.links.length >= USER_MAX_LINKS}
               />
-            </Atoms.Container>
-          </Atoms.Container>
+            </Container>
+          </Container>
 
           {/* Avatar Section */}
-          <Atoms.Container className="mt-6 w-full gap-6 lg:mt-0">
-            <Atoms.Container className="gap-3 md:text-center">
-              <Atoms.Heading level={3} size="xl" className="text-2xl">
+          <Container className="mt-6 w-full gap-6 lg:mt-0">
+            <Container className="gap-3 md:text-center">
+              <Heading level={3} size="xl" className="text-2xl">
                 {t('avatarTitle')}
-              </Atoms.Heading>
-            </Atoms.Container>
+              </Heading>
+            </Container>
 
-            <Atoms.Container className="flex-row justify-center">
-              <Atoms.Avatar
+            <Container className="flex-row justify-center">
+              <Avatar
                 key={state.avatarPreview ? 'with-image' : 'without-image'}
                 className="h-48 w-48 cursor-pointer bg-muted"
                 onClick={handlers.handleChooseFileClick}
@@ -152,7 +159,7 @@ export const CreateProfileForm = () => {
                 aria-label={t('chooseAvatar')}
               >
                 {state.avatarPreview ? (
-                  <Atoms.AvatarImage
+                  <AvatarImage
                     src={state.avatarPreview}
                     alt={
                       state.avatarFile
@@ -163,14 +170,14 @@ export const CreateProfileForm = () => {
                     }
                   />
                 ) : (
-                  <Atoms.AvatarFallback className="overflow-hidden border-none text-4xl">
-                    <Molecules.FacehashAvatar seed={avatarFallbackSeed} initial={avatarFallbackInitial} />
-                  </Atoms.AvatarFallback>
+                  <AvatarFallback className="overflow-hidden border-none text-4xl">
+                    <FacehashAvatar seed={avatarFallbackSeed} initial={avatarFallbackInitial} />
+                  </AvatarFallback>
                 )}
-              </Atoms.Avatar>
-            </Atoms.Container>
+              </Avatar>
+            </Container>
 
-            <Atoms.Container className="justify-center">
+            <Container className="justify-center">
               <input
                 ref={fileInputRef}
                 type="file"
@@ -178,7 +185,7 @@ export const CreateProfileForm = () => {
                 className="hidden"
                 onChange={handlers.handleFileChange}
               />
-              <Atoms.Button
+              <Button
                 variant="secondary"
                 size="sm"
                 className="mx-auto rounded-full"
@@ -195,16 +202,16 @@ export const CreateProfileForm = () => {
                     <span>{t('chooseFile')}</span>
                   </>
                 )}
-              </Atoms.Button>
+              </Button>
               {errors.avatarError && (
-                <Atoms.Typography as="small" size="sm" className="ml-1 text-red-500">
+                <Typography as="small" size="sm" className="ml-1 text-red-500">
                   {errors.avatarError}
-                </Atoms.Typography>
+                </Typography>
               )}
-            </Atoms.Container>
-          </Atoms.Container>
-        </Atoms.Card>
-        <Molecules.ProfileNavigation
+            </Container>
+          </Container>
+        </Card>
+        <ProfileNavigation
           className="onboarding-nav mt-auto lg:pt-0"
           hiddenBackButton={true}
           continueButtonDisabled={isSubmitDisabled}
@@ -212,9 +219,9 @@ export const CreateProfileForm = () => {
           continueText={t(state.submitTextKey)}
           onContinue={handlers.handleSubmit}
         />
-      </Atoms.Container>
+      </Container>
 
-      <Organisms.DialogCropImage
+      <DialogCropImage
         open={cropDialog.cropDialogOpen}
         imageSrc={cropDialog.pendingAvatarPreview}
         fileName={cropDialog.pendingAvatarFile?.name ?? 'avatar.png'}

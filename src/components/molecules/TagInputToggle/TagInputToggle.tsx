@@ -1,7 +1,6 @@
 'use client';
 
-import { AnimatePresence, motion } from 'motion/react';
-import type { Transition } from 'motion/react';
+import { AnimatePresence, motion, type Transition } from 'motion/react';
 import { cn } from '@/libs/utils/utils';
 
 const SUBTLE_ENTER_TRANSITION: Transition = { duration: 0.12, ease: 'easeOut' };

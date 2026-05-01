@@ -1,9 +1,10 @@
 import { Suspense } from 'react';
-import * as Atoms from '@/atoms';
-import * as Molecules from '@/molecules';
-import * as Templates from '@/templates';
+import { Container } from '@/atoms/Container/Container';
+import { Spinner } from '@/atoms/Spinner/Spinner';
+import { Metadata } from '@/molecules/Metadata/Metadata';
+import { ShareTarget } from '@/templates/Feed/ShareTarget/ShareTarget';
 
-export const metadata = Molecules.Metadata({
+export const metadata = Metadata({
   title: 'Share to Pubky',
   description: 'Share content to Pubky App.',
   robots: false,
@@ -11,16 +12,16 @@ export const metadata = Molecules.Metadata({
 
 function ShareLoadingFallback() {
   return (
-    <Atoms.Container className="flex min-h-[50vh] items-center justify-center">
-      <Atoms.Spinner />
-    </Atoms.Container>
+    <Container className="flex min-h-[50vh] items-center justify-center">
+      <Spinner />
+    </Container>
   );
 }
 
 export default function SharePage() {
   return (
     <Suspense fallback={<ShareLoadingFallback />}>
-      <Templates.ShareTarget />
+      <ShareTarget />
     </Suspense>
   );
 }

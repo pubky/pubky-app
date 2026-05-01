@@ -28,7 +28,7 @@ vi.mock('next-intl', () => ({
   useTranslations: () => mockTranslate,
 }));
 
-vi.mock('@/atoms/Button', () => ({
+vi.mock('@/atoms/Button/Button', () => ({
   Button: ({
     children,
     onClick,

@@ -1,4 +1,4 @@
-import type { EmbedData, EmbedProvider } from '@/molecules/PostLinkEmbeds/Providers/Provider.types';
+import type { EmbedData, EmbedProvider } from './Providers/Provider.types';
 
 export type PostLinkEmbedsProps = {
   content: string;

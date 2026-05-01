@@ -4,8 +4,10 @@ import { useFollowUser } from '@/hooks/useFollowUser/useFollowUser';
 import { useUserStream } from '@/hooks/useUserStream/useUserStream';
 import { useRouter } from 'next/navigation';
 import { useTranslations } from 'next-intl';
-import * as Molecules from '@/molecules';
-import * as Organisms from '@/organisms';
+import { SidebarSection } from '@/molecules/SidebarSection/SidebarSection';
+import { CompactUserListItemSkeleton } from '../CompactUserListItemSkeleton/CompactUserListItemSkeleton';
+import { UserListItem } from '../UserListItem/UserListItem';
+
 import { APP_ROUTES } from '@/app/routes';
 import { UsersRound } from 'lucide-react';
 import type { Pubky } from '@/models/models.types';
@@ -40,7 +42,7 @@ export function WhoToFollowSidebar() {
     router.push(APP_ROUTES.WHO_TO_FOLLOW);
   };
   return (
-    <Molecules.SidebarSection
+    <SidebarSection
       title={t('whoToFollow')}
       footerIcon={UsersRound}
       footerText={tCommon('seeAll')}
@@ -52,9 +54,9 @@ export function WhoToFollowSidebar() {
       {isStreamLoading
         ? Array.from({
             length: USERS_LIMIT,
-          }).map((_, index) => <Organisms.CompactUserListItemSkeleton key={`who-to-follow-skeleton-${index}`} />)
+          }).map((_, index) => <CompactUserListItemSkeleton key={`who-to-follow-skeleton-${index}`} />)
         : users.map((user) => (
-            <Organisms.UserListItem
+            <UserListItem
               key={user.id}
               user={user}
               variant="compact"
@@ -64,6 +66,6 @@ export function WhoToFollowSidebar() {
               onFollowClick={handleFollowClick}
             />
           ))}
-    </Molecules.SidebarSection>
+    </SidebarSection>
   );
 }

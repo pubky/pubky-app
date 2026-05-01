@@ -7,33 +7,58 @@ import { FileVariant } from '@/services/nexus/file/file.types';
 import type { NexusFileDetails } from '@/services/nexus/nexus.types';
 // Mock useToast
 const mockToast = vi.fn();
-vi.mock('@/molecules', () => ({
-  useToast: () => ({ toast: mockToast }),
-  PostAttachmentsImagesAndVideos: vi.fn(({ imagesAndVideos }) => (
-    <div data-testid="post-attachments-images-and-videos" data-count={imagesAndVideos.length}>
-      ImagesAndVideos
-    </div>
-  )),
-  PostAttachmentsAudios: vi.fn(({ audios }) => (
-    <div data-testid="post-attachments-audios" data-count={audios.length}>
-      Audios
-    </div>
-  )),
-  PostAttachmentsGenericFiles: vi.fn(({ genericFiles }) => (
-    <div data-testid="post-attachments-generic-files" data-count={genericFiles.length}>
-      GenericFiles
-    </div>
-  )),
-}));
+vi.mock('@/molecules/PostAttachmentsAudios/PostAttachmentsAudios', () => {
+  return {
+    PostAttachmentsAudios: vi.fn(({ audios }) => (
+      <div data-testid="post-attachments-audios" data-count={audios.length}>
+        Audios
+      </div>
+    )),
+  };
+});
+
+vi.mock('@/molecules/PostAttachmentsGenericFiles/PostAttachmentsGenericFiles', async (importOriginal) => {
+  const actual =
+    await importOriginal<typeof import('@/molecules/PostAttachmentsGenericFiles/PostAttachmentsGenericFiles')>();
+  return {
+    ...actual,
+    PostAttachmentsGenericFiles: vi.fn(({ genericFiles }) => (
+      <div data-testid="post-attachments-generic-files" data-count={genericFiles.length}>
+        GenericFiles
+      </div>
+    )),
+  };
+});
+
+vi.mock('@/molecules/PostAttachmentsImagesAndVideos/PostAttachmentsImagesAndVideos', async (importOriginal) => {
+  const actual =
+    await importOriginal<typeof import('@/molecules/PostAttachmentsImagesAndVideos/PostAttachmentsImagesAndVideos')>();
+  return {
+    ...actual,
+    PostAttachmentsImagesAndVideos: vi.fn(({ imagesAndVideos }) => (
+      <div data-testid="post-attachments-images-and-videos" data-count={imagesAndVideos.length}>
+        ImagesAndVideos
+      </div>
+    )),
+  };
+});
+
+vi.mock('@/molecules/Toaster/use-toast', () => {
+  return {
+    useToast: () => ({ toast: mockToast }),
+  };
+});
 
 // Mock atoms
-vi.mock('@/atoms', () => ({
-  Container: ({ children, className }: { children: React.ReactNode; className?: string }) => (
-    <div data-testid="container" className={className}>
-      {children}
-    </div>
-  ),
-}));
+vi.mock('@/atoms/Container/Container', () => {
+  return {
+    Container: ({ children, className }: { children: React.ReactNode; className?: string }) => (
+      <div data-testid="container" className={className}>
+        {children}
+      </div>
+    ),
+  };
+});
 
 // Mock dependencies
 vi.mock('@/controllers/file/file', () => ({

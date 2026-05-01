@@ -1,12 +1,13 @@
 'use client';
 
 import { useAuthStatus } from '@/hooks/useAuthStatus/useAuthStatus';
-import { useEffect, useMemo, useRef } from 'react';
+import { useEffect, useMemo, useRef, type ReactNode } from 'react';
 import { useRouter, usePathname } from 'next/navigation';
 import { useTranslations, useLocale } from 'next-intl';
 import { ROUTE_ACCESS_MAP } from '@/providers/RouteGuardProvider/RouteGuardProvider.constants';
-import * as App from '@/app';
-import * as Atoms from '@/atoms';
+import { isDynamicPublicRoute, PUBLIC_ROUTES } from '@/app/routes';
+import { Spinner } from '@/atoms/Spinner/Spinner';
+
 import { Logger } from '@/libs/logger/logger';
 import { TimeoutErrorCode } from '@/libs/error/error.codes';
 import { Err } from '@/libs/error/error.factories';
@@ -20,7 +21,7 @@ import { useSettingsStore } from '@/stores/settings/settings.store';
 const MIGRATION_RESYNC_TIMEOUT_MS = 10_000;
 
 interface RouteGuardProviderProps {
-  children: React.ReactNode;
+  children: ReactNode;
 }
 
 /**
@@ -129,10 +130,10 @@ export function RouteGuardProvider({ children }: RouteGuardProviderProps) {
   // Determine if the current route is accessible based on authentication status
   const isRouteAccessible = useMemo(() => {
     // Static public routes are ALWAYS accessible, even during loading
-    if (App.PUBLIC_ROUTES.includes(pathname)) return true;
+    if (PUBLIC_ROUTES.includes(pathname)) return true;
 
     // Dynamic public routes (e.g., /post/[x]/[y], /profile/[pubky]) are also always accessible
-    if (App.isDynamicPublicRoute(pathname)) return true;
+    if (isDynamicPublicRoute(pathname)) return true;
 
     // Wait for authentication status to be determined before allowing access to protected routes
     if (isLoading) return false;
@@ -149,10 +150,10 @@ export function RouteGuardProvider({ children }: RouteGuardProviderProps) {
   // Handle automatic redirects when user tries to access unauthorized routes
   useEffect(() => {
     // Static public routes never redirect
-    if (App.PUBLIC_ROUTES.includes(pathname)) return;
+    if (PUBLIC_ROUTES.includes(pathname)) return;
 
     // Dynamic public routes never redirect
-    if (App.isDynamicPublicRoute(pathname)) return;
+    if (isDynamicPublicRoute(pathname)) return;
 
     // Wait for authentication status to be determined for protected routes
     if (isLoading) return;
@@ -186,7 +187,7 @@ export function RouteGuardProvider({ children }: RouteGuardProviderProps) {
     return (
       <div className="flex min-h-screen items-center justify-center">
         <div className="text-center">
-          <Atoms.Spinner className="mx-auto" />
+          <Spinner className="mx-auto" />
           <p className="mt-2 text-muted-foreground">{isLoading || wasDbReset ? t('loading') : t('redirecting')}</p>
         </div>
       </div>

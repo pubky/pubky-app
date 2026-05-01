@@ -1,10 +1,13 @@
 'use client';
 
 import { useState } from 'react';
+import { Container } from '@/atoms/Container/Container';
+import { PostTagAddButton } from '@/molecules/PostTagAddButton/PostTagAddButton';
+import { TagInput } from '@/molecules/TagInput/TagInput';
+import { TagInputToggle } from '@/molecules/TagInputToggle/TagInputToggle';
 
-import * as Atoms from '@/atoms';
-import * as Molecules from '@/molecules';
-import { POST_MAX_TAGS, TAG_INPUT_WIDTH_AT_LIMIT, TAG_INPUT_WIDTH_DEFAULT } from '@/config';
+import { POST_MAX_TAGS } from '@/config/posts';
+import { TAG_INPUT_WIDTH_AT_LIMIT, TAG_INPUT_WIDTH_DEFAULT } from '@/config/tags';
 import type { PostInputTagsProps } from './PostInputTags.types';
 
 export function PostInputTags({ tags, onTagsChange, maxTags = POST_MAX_TAGS, disabled = false }: PostInputTagsProps) {
@@ -29,13 +32,13 @@ export function PostInputTags({ tags, onTagsChange, maxTags = POST_MAX_TAGS, dis
   };
 
   return (
-    <Atoms.Container overrideDefaults className="flex flex-col gap-1">
-      <Atoms.Container overrideDefaults className="flex flex-wrap items-center gap-2">
-        <Molecules.TagInputToggle
+    <Container overrideDefaults className="flex flex-col gap-1">
+      <Container overrideDefaults className="flex flex-wrap items-center gap-2">
+        <TagInputToggle
           showInput={isAddingTag}
           widthByState={{ input: inputWidth, addButton: 34 }}
           inputContent={
-            <Molecules.TagInput
+            <TagInput
               onTagAdd={handleTagAdd}
               existingTags={tags.map((tag) => ({ label: tag }))}
               showCloseButton={!disabled}
@@ -53,7 +56,7 @@ export function PostInputTags({ tags, onTagsChange, maxTags = POST_MAX_TAGS, dis
             />
           }
           addButtonContent={
-            <Molecules.PostTagAddButton
+            <PostTagAddButton
               onClick={() => {
                 setIsAddingTag(true);
               }}
@@ -62,7 +65,7 @@ export function PostInputTags({ tags, onTagsChange, maxTags = POST_MAX_TAGS, dis
             />
           }
         />
-      </Atoms.Container>
-    </Atoms.Container>
+      </Container>
+    </Container>
   );
 }

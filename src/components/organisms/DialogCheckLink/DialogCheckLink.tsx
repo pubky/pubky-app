@@ -1,8 +1,20 @@
 'use client';
 
 import { useState, useEffect, useMemo } from 'react';
-import * as Atoms from '@/atoms';
-import * as Config from '@/config';
+import { Button } from '@/atoms/Button/Button';
+import { Checkbox } from '@/atoms/Checkbox/Checkbox';
+import { Container } from '@/atoms/Container/Container';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '@/atoms/Dialog/Dialog';
+import { Typography } from '@/atoms/Typography/Typography';
+
+import { URL_TRUNCATE_LENGTH } from '@/config/urls';
 import type { DialogCheckLinkProps } from './DialogCheckLink.types';
 import { ExternalLink } from 'lucide-react';
 import { truncateMiddle } from '@/libs/utils/utils';
@@ -34,36 +46,34 @@ export function DialogCheckLink({ open, onOpenChangeAction, linkUrl }: DialogChe
   };
 
   // Truncate URL for display (preserves beginning and end)
-  const displayUrl = useMemo(() => truncateMiddle(linkUrl, Config.URL_TRUNCATE_LENGTH), [linkUrl]);
+  const displayUrl = useMemo(() => truncateMiddle(linkUrl, URL_TRUNCATE_LENGTH), [linkUrl]);
   return (
-    <Atoms.Dialog open={open} onOpenChange={onOpenChangeAction}>
-      <Atoms.DialogContent className="w-2xl" hiddenTitle="Double-check this link" onClick={(e) => e.stopPropagation()}>
-        <Atoms.DialogHeader>
-          <Atoms.DialogTitle>Double-check this link</Atoms.DialogTitle>
-          <Atoms.DialogDescription>The link is taking you to another site:</Atoms.DialogDescription>
-        </Atoms.DialogHeader>
-        <Atoms.Container className="gap-3">
-          <Atoms.Typography className="text-sm font-bold break-all text-foreground">{displayUrl}</Atoms.Typography>
-          <Atoms.Typography className="text-sm text-muted-foreground">
-            Are you sure you want to continue?
-          </Atoms.Typography>
-          <Atoms.Checkbox
+    <Dialog open={open} onOpenChange={onOpenChangeAction}>
+      <DialogContent className="w-2xl" hiddenTitle="Double-check this link" onClick={(e) => e.stopPropagation()}>
+        <DialogHeader>
+          <DialogTitle>Double-check this link</DialogTitle>
+          <DialogDescription>The link is taking you to another site:</DialogDescription>
+        </DialogHeader>
+        <Container className="gap-3">
+          <Typography className="text-sm font-bold break-all text-foreground">{displayUrl}</Typography>
+          <Typography className="text-sm text-muted-foreground">Are you sure you want to continue?</Typography>
+          <Checkbox
             id="dont-show-again"
             checked={dontShowAgain}
             onCheckedChange={(checked) => setDontShowAgain(checked === true)}
             label="Don't show this again"
           />
-        </Atoms.Container>
-        <Atoms.DialogFooter>
-          <Atoms.Button variant="outline" size="lg" onClick={handleCancel}>
+        </Container>
+        <DialogFooter>
+          <Button variant="outline" size="lg" onClick={handleCancel}>
             Cancel
-          </Atoms.Button>
-          <Atoms.Button size="lg" onClick={handleContinue}>
+          </Button>
+          <Button size="lg" onClick={handleContinue}>
             <ExternalLink className="h-4 w-4" />
             Continue
-          </Atoms.Button>
-        </Atoms.DialogFooter>
-      </Atoms.DialogContent>
-    </Atoms.Dialog>
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
   );
 }

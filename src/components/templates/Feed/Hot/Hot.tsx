@@ -4,10 +4,18 @@ import { useIsMobile } from '@/hooks/useIsMobile/useIsMobile';
 import { useLayoutReset } from '@/hooks/useLayoutReset/useLayoutReset';
 import { useState } from 'react';
 import { useTranslations } from 'next-intl';
-import * as Atoms from '@/atoms';
-import * as Molecules from '@/molecules';
-import * as Organisms from '@/organisms';
-import { TIMELINE_FEED_VARIANT } from '@/config';
+import { Container } from '@/atoms/Container/Container';
+import { Heading } from '@/atoms/Heading/Heading';
+import { HotMobileMenu } from '@/molecules/HotMobileMenu/HotMobileMenu';
+import { ContentLayout } from '@/organisms/ContentLayout/ContentLayout';
+import { HotFeedRightDrawer, HotFeedRightSidebar } from '@/organisms/FeedRightSidebar/FeedRightSidebar';
+import { HotActiveUsers } from '@/organisms/HotActiveUsers/HotActiveUsers';
+import { HotFeedDrawer, HotFeedSidebar } from '@/organisms/HotFeedFilters/HotFeedFilters';
+import { HotTagsCardsSection } from '@/organisms/HotTagsCardsSection/HotTagsCardsSection';
+import { HotTagsOverview } from '@/organisms/HotTagsOverview/HotTagsOverview';
+import { TimelineFeed } from '@/organisms/Timeline/Feed/TimelineFeed/TimelineFeed';
+
+import { TIMELINE_FEED_VARIANT } from '@/config/feed';
 import { HotSection } from '@/molecules/HotMobileMenu/HotMobileMenu.types';
 import { cn } from '@/libs/utils/utils';
 
@@ -39,34 +47,34 @@ export function Hot() {
   const hidePosts = isMobile && activeSection !== HotSection.POSTS;
 
   return (
-    <Organisms.ContentLayout
+    <ContentLayout
       showRightMobileButton={false}
       hasGradientBackground={false}
-      leftSidebarContent={<Organisms.HotFeedSidebar />}
-      rightSidebarContent={<Organisms.HotFeedRightSidebar />}
-      leftDrawerContent={<Organisms.HotFeedDrawer />}
-      rightDrawerContent={<Organisms.HotFeedRightDrawer />}
+      leftSidebarContent={<HotFeedSidebar />}
+      rightSidebarContent={<HotFeedRightSidebar />}
+      leftDrawerContent={<HotFeedDrawer />}
+      rightDrawerContent={<HotFeedRightDrawer />}
       className="pb-24 lg:pb-12"
     >
       {/* Mobile section navigation - visible only on mobile (< lg) */}
-      <Molecules.HotMobileMenu activeSection={activeSection} onSectionChange={setActiveSection} />
+      <HotMobileMenu activeSection={activeSection} onSectionChange={setActiveSection} />
 
       {/* Hot Cards - hidden via CSS when another tab is active on mobile */}
-      <Organisms.HotTagsCardsSection className={cn(hideTags && 'hidden')} />
+      <HotTagsCardsSection className={cn(hideTags && 'hidden')} />
 
       {/* Tags Overview - hidden via CSS when another tab is active on mobile */}
-      <Organisms.HotTagsOverview className={cn(hideTags && 'hidden')} />
+      <HotTagsOverview className={cn(hideTags && 'hidden')} />
 
       {/* Active Users - hidden via CSS when another tab is active on mobile */}
-      <Organisms.HotActiveUsers className={cn(hideUsers && 'hidden')} />
+      <HotActiveUsers className={cn(hideUsers && 'hidden')} />
 
       {/* Trending Posts - hidden via CSS when another tab is active on mobile */}
-      <Atoms.Container overrideDefaults className={cn('flex flex-col gap-2', hidePosts && 'hidden')}>
-        <Atoms.Heading level={5} size="lg" className="font-light text-muted-foreground">
+      <Container overrideDefaults className={cn('flex flex-col gap-2', hidePosts && 'hidden')}>
+        <Heading level={5} size="lg" className="font-light text-muted-foreground">
           {t('trendingPosts')}
-        </Atoms.Heading>
-        <Organisms.TimelineFeed variant={TIMELINE_FEED_VARIANT.HOT} />
-      </Atoms.Container>
-    </Organisms.ContentLayout>
+        </Heading>
+        <TimelineFeed variant={TIMELINE_FEED_VARIANT.HOT} />
+      </Container>
+    </ContentLayout>
   );
 }

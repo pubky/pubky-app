@@ -2,16 +2,20 @@ import './globals.css';
 
 import type { Viewport } from 'next';
 import { getLocale, getMessages } from 'next-intl/server';
-
-import * as Atoms from '@/atoms';
-import * as Molecules from '@/molecules';
-import * as Organisms from '@/organisms';
+import { TooltipProvider } from '@/atoms/Tooltip/Tooltip';
+import { RootContainer } from '@/molecules/ContainerRoot/ContainerRoot';
+import { Metadata } from '@/molecules/Metadata/Metadata';
+import { NewPostCTA } from '@/molecules/NewPostCTA/NewPostCTA';
+import { Toaster } from '@/molecules/Toaster/Toaster';
+import { CoordinatorsManager } from '@/organisms/CoordinatorsManager/CoordinatorsManager';
+import { DialogSignIn } from '@/organisms/DialogSignIn/DialogSignIn';
+import { Header } from '@/organisms/Header/Header';
 import { IntlProvider } from '@/providers/IntlProvider/IntlProvider';
 import { GlobalErrorHandlerProvider } from '@/providers/GlobalErrorHandlerProvider/GlobalErrorHandlerProvider';
 import { ErrorBoundaryProvider } from '@/providers/ErrorBoundaryProvider/ErrorBoundaryProvider';
 import { DatabaseProvider } from '@/providers/DatabaseProvider/DatabaseProvider';
 import { RouteGuardProvider } from '@/providers/RouteGuardProvider/RouteGuardProvider';
-import { TOOLTIP_DELAY_MS } from '@/config';
+import { TOOLTIP_DELAY_MS } from '@/config/ui';
 
 export const viewport: Viewport = {
   width: 'device-width',
@@ -21,7 +25,7 @@ export const viewport: Viewport = {
   themeColor: '#000000',
 };
 
-export const metadata = Molecules.Metadata({
+export const metadata = Metadata({
   title: 'Pubky App - Unlock the web',
   description:
     'Pubky App is a social-media-like experience built over Pubky Core. It serves as a working example on how to build over Pubky Core to create simple or complex applications.',
@@ -35,25 +39,25 @@ export default async function RootLayout({ children }: { children: React.ReactNo
   const messages = await getMessages();
 
   return (
-    <Molecules.RootContainer locale={locale}>
+    <RootContainer locale={locale}>
       <IntlProvider locale={locale} messages={messages}>
-        <Atoms.TooltipProvider delayDuration={TOOLTIP_DELAY_MS}>
+        <TooltipProvider delayDuration={TOOLTIP_DELAY_MS}>
           <GlobalErrorHandlerProvider>
             <ErrorBoundaryProvider>
               <DatabaseProvider>
                 <RouteGuardProvider>
-                  <Organisms.CoordinatorsManager />
-                  <Organisms.Header />
+                  <CoordinatorsManager />
+                  <Header />
                   {children}
-                  <Molecules.NewPostCTA />
-                  <Molecules.Toaster />
-                  <Organisms.DialogSignIn />
+                  <NewPostCTA />
+                  <Toaster />
+                  <DialogSignIn />
                 </RouteGuardProvider>
               </DatabaseProvider>
             </ErrorBoundaryProvider>
           </GlobalErrorHandlerProvider>
-        </Atoms.TooltipProvider>
+        </TooltipProvider>
       </IntlProvider>
-    </Molecules.RootContainer>
+    </RootContainer>
   );
 }

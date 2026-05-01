@@ -1,7 +1,10 @@
 'use client';
 
 import { useTranslations } from 'next-intl';
-import * as Atoms from '@/atoms';
+import { Button } from '@/atoms/Button/Button';
+import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from '@/atoms/Dialog/Dialog';
+import { Typography } from '@/atoms/Typography/Typography';
+
 import { Trash2 } from 'lucide-react';
 interface DialogConfirmDeleteProps {
   open: boolean;
@@ -18,22 +21,22 @@ export function DialogConfirmDelete({ open, onOpenChange, onConfirm }: DialogCon
     onOpenChange(false);
   };
   return (
-    <Atoms.Dialog open={open} onOpenChange={onOpenChange}>
-      <Atoms.DialogContent className="w-xl" hiddenTitle={t('title')}>
-        <Atoms.DialogHeader>
-          <Atoms.DialogTitle>{t('title')}</Atoms.DialogTitle>
-        </Atoms.DialogHeader>
-        <Atoms.Typography className="text-base tracking-wide text-white/80">{t('description')}</Atoms.Typography>
-        <Atoms.DialogFooter>
-          <Atoms.Button variant="destructive" size="lg" onClick={handleDelete} data-cy="dialog-confirm-delete-btn">
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="w-xl" hiddenTitle={t('title')}>
+        <DialogHeader>
+          <DialogTitle>{t('title')}</DialogTitle>
+        </DialogHeader>
+        <Typography className="text-base tracking-wide text-white/80">{t('description')}</Typography>
+        <DialogFooter>
+          <Button variant="destructive" size="lg" onClick={handleDelete} data-cy="dialog-confirm-delete-btn">
             <Trash2 className="h-4 w-4" />
             {t('confirmButton')}
-          </Atoms.Button>
-          <Atoms.Button variant="outline" size="lg" onClick={handleCancel}>
+          </Button>
+          <Button variant="outline" size="lg" onClick={handleCancel}>
             {t('cancelButton')}
-          </Atoms.Button>
-        </Atoms.DialogFooter>
-      </Atoms.DialogContent>
-    </Atoms.Dialog>
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
   );
 }

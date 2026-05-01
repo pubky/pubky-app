@@ -1,6 +1,6 @@
 'use client';
+import { Button } from '@/atoms/Button/Button';
 
-import * as Atoms from '@/atoms';
 import { Settings2, Lightbulb } from 'lucide-react';
 import { cn } from '@/libs/utils/utils';
 export interface ButtonFiltersProps {
@@ -15,7 +15,7 @@ export function ButtonFilters({ onClick, className, position = 'left' }: ButtonF
   const Icon = isLeft ? Settings2 : Lightbulb;
   return (
     <div className={cn('fixed top-[150px] z-10', positionClasses)}>
-      <Atoms.Button
+      <Button
         variant="secondary"
         size="icon"
         onClick={onClick}
@@ -26,7 +26,7 @@ export function ButtonFilters({ onClick, className, position = 'left' }: ButtonF
         )}
       >
         <Icon className="h-6 w-6" />
-      </Atoms.Button>
+      </Button>
     </div>
   );
 }

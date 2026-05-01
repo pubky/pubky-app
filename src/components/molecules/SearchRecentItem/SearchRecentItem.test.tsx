@@ -4,24 +4,31 @@ import { SearchRecentItem } from './SearchRecentItem';
 import { RECENT_ITEM_TYPE } from './SearchRecentItem.constants';
 import type { RecentUserSearchItem, RecentTagSearchItem } from '../SearchRecentUserItem/SearchRecentUserItem.types';
 import type { Pubky } from '@/models/models.types';
-vi.mock('@/molecules', () => ({
-  PostTag: ({ label, onClick, ...props }: { label: string; onClick?: () => void }) => (
-    <button onClick={onClick} {...props}>
-      {label}
-    </button>
-  ),
-  SearchRecentUserItem: ({
-    user,
-    onClick,
-  }: {
-    user: RecentUserSearchItem;
-    onClick: (user: RecentUserSearchItem) => void;
-  }) => (
-    <div data-testid={`user-item-${user.id}`} onClick={() => onClick(user)}>
-      User Item
-    </div>
-  ),
-}));
+vi.mock('@/molecules/PostTag/PostTag', () => {
+  return {
+    PostTag: ({ label, onClick, ...props }: { label: string; onClick?: () => void }) => (
+      <button onClick={onClick} {...props}>
+        {label}
+      </button>
+    ),
+  };
+});
+
+vi.mock('@/molecules/SearchRecentUserItem/SearchRecentUserItem', () => {
+  return {
+    SearchRecentUserItem: ({
+      user,
+      onClick,
+    }: {
+      user: RecentUserSearchItem;
+      onClick: (user: RecentUserSearchItem) => void;
+    }) => (
+      <div data-testid={`user-item-${user.id}`} onClick={() => onClick(user)}>
+        User Item
+      </div>
+    ),
+  };
+});
 
 describe('SearchRecentItem', () => {
   const mockUser: RecentUserSearchItem = {

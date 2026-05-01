@@ -3,7 +3,11 @@
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useTranslations } from 'next-intl';
-import * as Atoms from '@/atoms';
+import { Button } from '@/atoms/Button/Button';
+import { Container } from '@/atoms/Container/Container';
+import { DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/atoms/Dialog/Dialog';
+import { Typography } from '@/atoms/Typography/Typography';
+
 import { ISSUE_TYPE_ICONS } from './DialogReportPostIssueStep.constants';
 import type { DialogReportPostIssueStepProps } from './DialogReportPostIssueStep.types';
 import { Check } from 'lucide-react';
@@ -38,19 +42,19 @@ export function DialogReportPostIssueStep({
   };
   return (
     <>
-      <Atoms.DialogHeader>
-        <Atoms.DialogTitle>{t('issueStep.title')}</Atoms.DialogTitle>
-        <Atoms.DialogDescription>{t('issueStep.question')}</Atoms.DialogDescription>
-      </Atoms.DialogHeader>
+      <DialogHeader>
+        <DialogTitle>{t('issueStep.title')}</DialogTitle>
+        <DialogDescription>{t('issueStep.question')}</DialogDescription>
+      </DialogHeader>
 
-      <Atoms.Container className="gap-1 py-2" role="listbox" aria-label={t('issueStep.label')}>
+      <Container className="gap-1 py-2" role="listbox" aria-label={t('issueStep.label')}>
         {REPORT_ISSUE_TYPE_VALUES.map((issueType) => {
           const Icon = ISSUE_TYPE_ICONS[issueType as ReportIssueType];
           const isSelected = selectedType === issueType;
           const labelKey = REPORT_ISSUE_LABEL_KEYS[issueType as ReportIssueType];
           const label = tIssues(labelKey);
           return (
-            <Atoms.Button
+            <Button
               key={issueType}
               data-cy={`report-issue-${issueType}`}
               variant="ghost"
@@ -64,17 +68,17 @@ export function DialogReportPostIssueStep({
               onClick={() => handleSelect(issueType as ReportIssueType)}
             >
               <Icon className="size-5 shrink-0 text-muted-foreground" aria-hidden="true" />
-              <Atoms.Typography as="span" size="sm" className="flex-1 text-left text-foreground">
+              <Typography as="span" size="sm" className="flex-1 text-left text-foreground">
                 {label}
-              </Atoms.Typography>
+              </Typography>
               {isSelected && <Check className="size-5 shrink-0 text-foreground" aria-hidden="true" />}
-            </Atoms.Button>
+            </Button>
           );
         })}
-      </Atoms.Container>
+      </Container>
 
-      <Atoms.DialogFooter>
-        <Atoms.Button
+      <DialogFooter>
+        <Button
           data-cy="report-issue-step-cancel"
           variant="secondary"
           size="lg"
@@ -82,8 +86,8 @@ export function DialogReportPostIssueStep({
           aria-label={tCommon('cancel')}
         >
           {tCommon('cancel')}
-        </Atoms.Button>
-        <Atoms.Button
+        </Button>
+        <Button
           data-cy="report-issue-step-next"
           variant="dark-outline"
           size="lg"
@@ -92,8 +96,8 @@ export function DialogReportPostIssueStep({
           aria-label={tCommon('next')}
         >
           {tCommon('next')}
-        </Atoms.Button>
-      </Atoms.DialogFooter>
+        </Button>
+      </DialogFooter>
     </>
   );
 }

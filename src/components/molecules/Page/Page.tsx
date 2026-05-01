@@ -1,6 +1,6 @@
 import { ReactNode } from 'react';
+import { Heading } from '@/atoms/Heading/Heading';
 
-import * as Atoms from '@/atoms';
 import { cn } from '@/libs/utils/utils';
 
 interface PageContainerProps {
@@ -35,8 +35,8 @@ export function PageTitle({ children, className, size = 'large', ...props }: Pag
   };
 
   return (
-    <Atoms.Heading {...props} level={1} size="lg" className={cn(sizeClasses[size], className)}>
+    <Heading {...props} level={1} size="lg" className={cn(sizeClasses[size], className)}>
       {children}
-    </Atoms.Heading>
+    </Heading>
   );
 }

@@ -3,7 +3,12 @@
 import * as React from 'react';
 import { Slot } from 'radix-ui';
 import { cva } from 'class-variance-authority';
-import * as Types from './Breadcrumb.types';
+import type {
+  BreadcrumbEllipsisProps,
+  BreadcrumbItemProps,
+  BreadcrumbProps,
+  BreadcrumbSeparatorProps,
+} from './Breadcrumb.types';
 
 // Shadcn-based Breadcrumb with custom variants
 import { ChevronDown, ChevronRight, MoreHorizontal } from 'lucide-react';
@@ -47,7 +52,7 @@ const breadcrumbSeparatorVariants = cva('text-muted-foreground shrink-0', {
 });
 
 // Main Breadcrumb container - based on Shadcn
-export const Breadcrumb = React.forwardRef<HTMLElement, Types.BreadcrumbProps>(
+export const Breadcrumb = React.forwardRef<HTMLElement, BreadcrumbProps>(
   ({ className, size, children, ...props }, ref) => (
     <nav ref={ref} aria-label="breadcrumb" className={cn('inline-flex', className)} {...props}>
       <ol
@@ -78,7 +83,7 @@ export const BreadcrumbList = React.forwardRef<HTMLOListElement, React.Component
 BreadcrumbList.displayName = 'BreadcrumbList';
 
 // BreadcrumbItem - Custom implementation with Shadcn base
-export const BreadcrumbItem = React.forwardRef<HTMLLIElement, Types.BreadcrumbItemProps>(
+export const BreadcrumbItem = React.forwardRef<HTMLLIElement, BreadcrumbItemProps>(
   ({ className, variant, children, href, dropdown, onClick, ...props }, ref) => {
     const itemVariant = variant || (dropdown ? 'dropdown' : 'link');
     const content = (
@@ -127,7 +132,7 @@ export const BreadcrumbLink = React.forwardRef<
 BreadcrumbLink.displayName = 'BreadcrumbLink';
 
 // BreadcrumbSeparator - Custom implementation with Shadcn base
-export const BreadcrumbSeparator = React.forwardRef<HTMLLIElement, Types.BreadcrumbSeparatorProps>(
+export const BreadcrumbSeparator = React.forwardRef<HTMLLIElement, BreadcrumbSeparatorProps>(
   ({ className, icon, size, ...props }, ref) => (
     <li
       ref={ref}
@@ -148,7 +153,7 @@ export const BreadcrumbSeparator = React.forwardRef<HTMLLIElement, Types.Breadcr
 BreadcrumbSeparator.displayName = 'BreadcrumbSeparator';
 
 // BreadcrumbEllipsis - Shadcn primitive with custom styling
-export const BreadcrumbEllipsis = React.forwardRef<HTMLSpanElement, Types.BreadcrumbEllipsisProps>(
+export const BreadcrumbEllipsis = React.forwardRef<HTMLSpanElement, BreadcrumbEllipsisProps>(
   ({ className, ...props }, ref) => (
     <span
       ref={ref}

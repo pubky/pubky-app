@@ -8,13 +8,18 @@ import { useIsMobile } from '@/hooks/useIsMobile/useIsMobile';
 import { usePostInput } from '@/hooks/usePostInput/usePostInput';
 import * as React from 'react';
 import { useTranslations } from 'next-intl';
-import * as Atoms from '@/atoms';
-import * as Molecules from '@/molecules';
-import * as Organisms from '@/organisms';
-import { POST_MAX_CHARACTER_LENGTH } from '@/config';
+import { Container } from '@/atoms/Container/Container';
+import { PostThreadConnector } from '@/atoms/PostThreadConnector/PostThreadConnector';
+import { Textarea } from '@/atoms/Textarea/Textarea';
+import { Typography } from '@/atoms/Typography/Typography';
+import { MentionPopover } from '@/molecules/MentionPopover/MentionPopover';
+import { AvatarWithFallback } from '../AvatarWithFallback/AvatarWithFallback';
+
+import { POST_MAX_CHARACTER_LENGTH } from '@/config/posts';
 import { POST_INPUT_VARIANT } from '@/organisms/PostInput/PostInput.constants';
-import { POST_THREAD_CONNECTOR_VARIANTS } from '@/atoms';
-import { PostInputExpandableSection } from '@/organisms/PostInputExpandableSection';
+import { POST_THREAD_CONNECTOR_VARIANTS } from '@/atoms/PostThreadConnector/PostThreadConnector.constants';
+import { PostInputExpandableSection } from '../PostInputExpandableSection/PostInputExpandableSection';
+
 import { PostInputAttachments } from '@/molecules/PostInputAttachments/PostInputAttachments';
 import { usePostMainLayout, WIDE_POST_LAYOUT_CLASSES } from '@/organisms/PostMain/PostMainLayout';
 import { QUICK_REPLY_CONNECTOR_SPACER_HEIGHT } from './QuickReply.constants';
@@ -101,16 +106,12 @@ export function QuickReply({
   const isWideLayout = !isMobile && inheritedTagsLayout === 'side';
 
   return (
-    <Atoms.Container overrideDefaults className="relative flex" data-testid="quick-reply" aria-busy={isSubmitting}>
-      <Atoms.Container overrideDefaults className="-mt-4 w-3 shrink-0">
-        <Atoms.PostThreadConnector
-          height={connectorHeight}
-          variant={connectorVariant}
-          data-testid="quick-reply-connector"
-        />
-      </Atoms.Container>
+    <Container overrideDefaults className="relative flex" data-testid="quick-reply" aria-busy={isSubmitting}>
+      <Container overrideDefaults className="-mt-4 w-3 shrink-0">
+        <PostThreadConnector height={connectorHeight} variant={connectorVariant} data-testid="quick-reply-connector" />
+      </Container>
 
-      <Atoms.Container
+      <Container
         ref={containerRef}
         className={cn(
           'relative w-full cursor-pointer rounded-md border border-dashed transition-colors duration-200',
@@ -126,26 +127,26 @@ export function QuickReply({
       >
         {/* Drag overlay */}
         {isDragging && (
-          <Atoms.Container
+          <Container
             className="absolute inset-0 z-10 flex items-center justify-center rounded-md bg-brand/10"
             overrideDefaults
           >
-            <Atoms.Typography className="text-brand">Drop files here</Atoms.Typography>
-          </Atoms.Container>
+            <Typography className="text-brand">Drop files here</Typography>
+          </Container>
         )}
 
-        <Atoms.Container ref={cardRef} className="gap-2" overrideDefaults>
+        <Container ref={cardRef} className="gap-2" overrideDefaults>
           {/* Collapsed header row (avatar + input) */}
-          <Atoms.Container className="flex items-center gap-4" overrideDefaults>
-            <Organisms.AvatarWithFallback
+          <Container className="flex items-center gap-4" overrideDefaults>
+            <AvatarWithFallback
               avatarUrl={avatarUrl}
               name={userDetails?.name || ''}
               fallbackSeed={currentUserPubky || userDetails?.name || 'user'}
               size={isWideLayout ? 'xl' : 'default'}
             />
 
-            <Atoms.Container overrideDefaults className="relative flex-1">
-              <Atoms.Textarea
+            <Container overrideDefaults className="relative flex-1">
+              <Textarea
                 ref={textareaRef}
                 aria-label="Reply"
                 placeholder={displayPlaceholder}
@@ -163,15 +164,15 @@ export function QuickReply({
 
               {/* Mention autocomplete popover */}
               {mentionIsOpen && (
-                <Molecules.MentionPopover
+                <MentionPopover
                   users={mentionUsers}
                   selectedIndex={mentionSelectedIndex}
                   onSelect={handleMentionSelect}
                   onHover={setMentionSelectedIndex}
                 />
               )}
-            </Atoms.Container>
-          </Atoms.Container>
+            </Container>
+          </Container>
 
           <PostInputAttachments
             ref={fileInputRef}
@@ -198,8 +199,8 @@ export function QuickReply({
             className={isExpanded ? 'mt-4' : ''}
             characterLimit={characterLimit}
           />
-        </Atoms.Container>
-      </Atoms.Container>
-    </Atoms.Container>
+        </Container>
+      </Container>
+    </Container>
   );
 }

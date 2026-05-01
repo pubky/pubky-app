@@ -1,113 +1,136 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen, fireEvent } from '@testing-library/react';
 import { DialogFeedbackContent } from './DialogFeedbackContent';
+vi.mock('@/atoms/Dialog/Dialog', () => {
+  return {
+    DialogHeader: ({ children }: { children: React.ReactNode }) => <div data-testid="dialog-header">{children}</div>,
+    DialogTitle: ({ children }: { children: React.ReactNode }) => <h2 data-testid="dialog-title">{children}</h2>,
+    DialogDescription: ({ children, className }: { children: React.ReactNode; className?: string }) => (
+      <p data-testid="dialog-description" className={className}>
+        {children}
+      </p>
+    ),
+  };
+});
 
 // Mock organisms
-vi.mock('@/organisms', () => ({
-  PostHeader: vi.fn(
-    ({ postId, characterLimit }: { postId: string; characterLimit?: { count: number; max: number } }) => (
-      <div
-        data-testid="post-header"
-        data-post-id={postId}
-        data-character-count={characterLimit?.count}
-        data-max-length={characterLimit?.max}
-      >
-        PostHeader
-      </div>
+vi.mock('@/organisms/PostHeader/PostHeader', () => {
+  return {
+    PostHeader: vi.fn(
+      ({ postId, characterLimit }: { postId: string; characterLimit?: { count: number; max: number } }) => (
+        <div
+          data-testid="post-header"
+          data-post-id={postId}
+          data-character-count={characterLimit?.count}
+          data-max-length={characterLimit?.max}
+        >
+          PostHeader
+        </div>
+      ),
     ),
-  ),
-}));
+  };
+});
 
 // Mock atoms
-vi.mock('@/atoms', () => ({
-  DialogHeader: ({ children }: { children: React.ReactNode }) => <div data-testid="dialog-header">{children}</div>,
-  DialogTitle: ({ children }: { children: React.ReactNode }) => <h2 data-testid="dialog-title">{children}</h2>,
-  DialogDescription: ({ children, className }: { children: React.ReactNode; className?: string }) => (
-    <p data-testid="dialog-description" className={className}>
-      {children}
-    </p>
-  ),
-  Container: ({
-    children,
-    className,
-    overrideDefaults,
-  }: {
-    children: React.ReactNode;
-    className?: string;
-    overrideDefaults?: boolean;
-  }) => (
-    <div data-testid="container" className={className} data-override-defaults={overrideDefaults}>
-      {children}
-    </div>
-  ),
-  Textarea: ({
-    placeholder,
-    value,
-    onChange,
-    disabled,
-    maxLength,
-    className,
-  }: {
-    ref?: React.Ref<HTMLTextAreaElement>;
-    placeholder?: string;
-    value?: string;
-    onChange?: (e: React.ChangeEvent<HTMLTextAreaElement>) => void;
-    disabled?: boolean;
-    maxLength?: number;
-    className?: string;
-  }) => (
-    <textarea
-      data-testid="textarea"
-      placeholder={placeholder}
-      value={value}
-      onChange={onChange}
-      disabled={disabled}
-      maxLength={maxLength}
-      className={className}
-    />
-  ),
-  Button: ({
-    children,
-    variant,
-    size,
-    className,
-    onClick,
-    disabled,
-  }: {
-    children: React.ReactNode;
-    variant?: string;
-    size?: string;
-    className?: string;
-    onClick?: () => void;
-    disabled?: boolean;
-  }) => (
-    <button
-      data-testid="button"
-      data-variant={variant}
-      data-size={size}
-      className={className}
-      onClick={onClick}
-      disabled={disabled}
-    >
-      {children}
-    </button>
-  ),
-  Typography: ({
-    children,
-    as: _as,
-    size,
-    className,
-  }: {
-    children: React.ReactNode;
-    as?: React.ElementType;
-    size?: string;
-    className?: string;
-  }) => (
-    <p data-testid="typography" data-size={size} className={className}>
-      {children}
-    </p>
-  ),
-}));
+vi.mock('@/atoms/Button/Button', () => {
+  return {
+    Button: ({
+      children,
+      variant,
+      size,
+      className,
+      onClick,
+      disabled,
+    }: {
+      children: React.ReactNode;
+      variant?: string;
+      size?: string;
+      className?: string;
+      onClick?: () => void;
+      disabled?: boolean;
+    }) => (
+      <button
+        data-testid="button"
+        data-variant={variant}
+        data-size={size}
+        className={className}
+        onClick={onClick}
+        disabled={disabled}
+      >
+        {children}
+      </button>
+    ),
+  };
+});
+
+vi.mock('@/atoms/Container/Container', () => {
+  return {
+    Container: ({
+      children,
+      className,
+      overrideDefaults,
+    }: {
+      children: React.ReactNode;
+      className?: string;
+      overrideDefaults?: boolean;
+    }) => (
+      <div data-testid="container" className={className} data-override-defaults={overrideDefaults}>
+        {children}
+      </div>
+    ),
+  };
+});
+
+vi.mock('@/atoms/Textarea/Textarea', () => {
+  return {
+    Textarea: ({
+      placeholder,
+      value,
+      onChange,
+      disabled,
+      maxLength,
+      className,
+    }: {
+      ref?: React.Ref<HTMLTextAreaElement>;
+      placeholder?: string;
+      value?: string;
+      onChange?: (e: React.ChangeEvent<HTMLTextAreaElement>) => void;
+      disabled?: boolean;
+      maxLength?: number;
+      className?: string;
+    }) => (
+      <textarea
+        data-testid="textarea"
+        placeholder={placeholder}
+        value={value}
+        onChange={onChange}
+        disabled={disabled}
+        maxLength={maxLength}
+        className={className}
+      />
+    ),
+  };
+});
+
+vi.mock('@/atoms/Typography/Typography', () => {
+  return {
+    Typography: ({
+      children,
+      as: _as,
+      size,
+      className,
+    }: {
+      children: React.ReactNode;
+      as?: React.ElementType;
+      size?: string;
+      className?: string;
+    }) => (
+      <p data-testid="typography" data-size={size} className={className}>
+        {children}
+      </p>
+    ),
+  };
+});
 
 describe('DialogFeedbackContent', () => {
   const mockHandleChange = vi.fn();

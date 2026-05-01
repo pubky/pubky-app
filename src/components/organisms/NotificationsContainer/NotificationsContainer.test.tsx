@@ -35,34 +35,53 @@ vi.mock('@/hooks/useInfiniteScroll/useInfiniteScroll', () => ({
 }));
 
 // Mock atoms
-vi.mock('@/atoms', () => ({
-  Heading: ({ children, level, className }: { children: React.ReactNode; level?: number; className?: string }) => {
-    const Tag = `h${level || 1}` as 'h1' | 'h2' | 'h3' | 'h4' | 'h5' | 'h6';
-    return (
-      <Tag data-testid={`heading-${level || 1}`} className={className}>
-        {children}
-      </Tag>
-    );
-  },
-  Spinner: ({ size }: { size?: string }) => <div data-testid="spinner" data-size={size} />,
-  Skeleton: ({ className }: { className?: string }) => <div data-testid="skeleton" className={className} />,
-  Container: ({
-    children,
-    className,
-  }: {
-    children: React.ReactNode;
-    className?: string;
-    overrideDefaults?: boolean;
-  }) => <div className={className}>{children}</div>,
-}));
+vi.mock('@/atoms/Container/Container', () => {
+  return {
+    Container: ({
+      children,
+      className,
+    }: {
+      children: React.ReactNode;
+      className?: string;
+      overrideDefaults?: boolean;
+    }) => <div className={className}>{children}</div>,
+  };
+});
+
+vi.mock('@/atoms/Heading/Heading', () => {
+  return {
+    Heading: ({ children, level, className }: { children: React.ReactNode; level?: number; className?: string }) => {
+      const Tag = `h${level || 1}` as 'h1' | 'h2' | 'h3' | 'h4' | 'h5' | 'h6';
+      return (
+        <Tag data-testid={`heading-${level || 1}`} className={className}>
+          {children}
+        </Tag>
+      );
+    },
+  };
+});
+
+vi.mock('@/atoms/Skeleton/Skeleton', () => {
+  return {
+    Skeleton: ({ className }: { className?: string }) => <div data-testid="skeleton" className={className} />,
+  };
+});
+
+vi.mock('@/atoms/Spinner/Spinner', () => {
+  return {
+    Spinner: ({ size }: { size?: string }) => <div data-testid="spinner" data-size={size} />,
+  };
+});
 
 // Mock molecules
-vi.mock('@/molecules', () => ({
-  NotificationsEmpty: () => <div data-testid="notifications-empty">Nothing to see here yet</div>,
-}));
+vi.mock('@/molecules/NotificationsEmpty/NotificationsEmpty', () => {
+  return {
+    NotificationsEmpty: () => <div data-testid="notifications-empty">Nothing to see here yet</div>,
+  };
+});
 
 // Mock organisms (NotificationsList is now in organisms)
-vi.mock('@/organisms/NotificationsList', () => ({
+vi.mock('@/organisms/NotificationsList/NotificationsList', () => ({
   NotificationsList: ({ notifications }: { notifications: unknown[] }) => (
     <div data-testid="notifications-list">{notifications.length} notifications</div>
   ),

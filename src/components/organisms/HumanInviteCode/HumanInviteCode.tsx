@@ -1,8 +1,19 @@
 'use client';
+import { Button } from '@/atoms/Button/Button';
+import { Card } from '@/atoms/Card/Card';
+import { Container } from '@/atoms/Container/Container';
+import { Image } from '@/atoms/Image/Image';
+import { Input } from '@/atoms/Input/Input';
+import { Link } from '@/atoms/Link/Link';
+import { PageHeader } from '@/atoms/PageHeader/PageHeader';
+import { PageSubtitle } from '@/atoms/PageSubtitle/PageSubtitle';
+import { Typography } from '@/atoms/Typography/Typography';
 
-import * as Atoms from '@/atoms';
-import * as Config from '@/config';
-import * as Molecules from '@/molecules';
+import { TWITTER_URL, TELEGRAM_URL } from '@/config/externalLinks';
+import { HumanFooter } from '@/molecules/HumanFooter/HumanFooter';
+import { PageTitle } from '@/molecules/Page/Page';
+import { PopoverInviteHomeserver } from '@/molecules/PopoverInviteHomeserver/PopoverInviteHomeserver';
+
 import React, { useState } from 'react';
 import { useTranslations } from 'next-intl';
 import { formatInviteCode } from './HumanInviteCode.utils';
@@ -54,60 +65,54 @@ export const HumanInviteCode = ({ onBack, onSuccess }: HumanInviteCodeProps) => 
   }, []);
   return (
     <React.Fragment>
-      <Atoms.PageHeader>
-        <Molecules.PageTitle size="large">
+      <PageHeader>
+        <PageTitle size="large">
           {t.rich('title', {
             highlight: (chunks) => <span className="text-brand">{chunks}</span>,
           })}
-        </Molecules.PageTitle>
-        <Atoms.Container className="flex-row items-center gap-3">
-          <Atoms.PageSubtitle>{t('subtitle')}</Atoms.PageSubtitle>
-          <Atoms.Link href={Config.TWITTER_URL} target="_blank" className="text-muted-foreground hover:text-brand">
+        </PageTitle>
+        <Container className="flex-row items-center gap-3">
+          <PageSubtitle>{t('subtitle')}</PageSubtitle>
+          <Link href={TWITTER_URL} target="_blank" className="text-muted-foreground hover:text-brand">
             <XTwitter className="h-6 w-6" />
-          </Atoms.Link>
-          <Atoms.Link href={Config.TELEGRAM_URL} target="_blank" className="text-muted-foreground hover:text-brand">
+          </Link>
+          <Link href={TELEGRAM_URL} target="_blank" className="text-muted-foreground hover:text-brand">
             <Telegram className="h-6 w-6" />
-          </Atoms.Link>
-        </Atoms.Container>
-      </Atoms.PageHeader>
+          </Link>
+        </Container>
+      </PageHeader>
 
-      <Atoms.Card data-testid="human-invite-code-card" className="flex-row items-start gap-12 overflow-hidden p-12">
+      <Card data-testid="human-invite-code-card" className="flex-row items-start gap-12 overflow-hidden p-12">
         {/* Gift Image */}
-        <Atoms.Container className="hidden shrink-0 lg:flex lg:h-48 lg:w-48">
-          <Atoms.Image
-            src="/images/gift.webp"
-            alt="Gift"
-            width={192}
-            height={192}
-            className="h-full w-full object-cover"
-          />
-        </Atoms.Container>
+        <Container className="hidden shrink-0 lg:flex lg:h-48 lg:w-48">
+          <Image src="/images/gift.webp" alt="Gift" width={192} height={192} className="h-full w-full object-cover" />
+        </Container>
 
         {/* Content */}
-        <Atoms.Container className="flex max-w-xl min-w-0 flex-1 flex-col gap-6">
+        <Container className="flex max-w-xl min-w-0 flex-1 flex-col gap-6">
           {/* Header */}
-          <Atoms.Container className="gap-3">
-            <Atoms.Container className="flex-row items-center gap-1">
-              <Atoms.Typography as="h3" className="text-2xl leading-8 font-bold text-foreground">
+          <Container className="gap-3">
+            <Container className="flex-row items-center gap-1">
+              <Typography as="h3" className="text-2xl leading-8 font-bold text-foreground">
                 {t('label')}
-              </Atoms.Typography>
-              <Molecules.PopoverInviteHomeserver className="h-6 w-6 opacity-80" />
-            </Atoms.Container>
-            <Atoms.Typography as="p" className="text-base leading-6 font-medium text-secondary-foreground/80">
+              </Typography>
+              <PopoverInviteHomeserver className="h-6 w-6 opacity-80" />
+            </Container>
+            <Typography as="p" className="text-base leading-6 font-medium text-secondary-foreground/80">
               {t('hint')}
-            </Atoms.Typography>
-          </Atoms.Container>
+            </Typography>
+          </Container>
 
           {/* Form */}
-          <Atoms.Container className="gap-6">
+          <Container className="gap-6">
             {/* Input */}
-            <Atoms.Container
+            <Container
               className={cn(
                 'flex-row items-center gap-3 rounded-md border border-dashed bg-background/10 px-5 py-4 shadow-xs',
                 isInviteCodeEntered ? 'border-brand' : 'border-input',
               )}
             >
-              <Atoms.Input
+              <Input
                 data-testid="human-invite-code-input"
                 data-cy="human-invite-code-input"
                 type="text"
@@ -127,11 +132,11 @@ export const HumanInviteCode = ({ onBack, onSuccess }: HumanInviteCodeProps) => 
                 }}
               />
               {isInviteCodeEntered && <CircleCheck className="h-6 w-6 shrink-0 text-brand" />}
-            </Atoms.Container>
+            </Container>
 
             {/* Custom homeserver row */}
-            <Atoms.Container className="flex-col items-center gap-4 sm:flex-row">
-              <Atoms.Button
+            <Container className="flex-col items-center gap-4 sm:flex-row">
+              <Button
                 variant="secondary"
                 className="shrink-0 rounded-full opacity-40"
                 disabled
@@ -139,20 +144,20 @@ export const HumanInviteCode = ({ onBack, onSuccess }: HumanInviteCodeProps) => 
               >
                 <Server className="mr-2 h-4 w-4" />
                 {t('customHomeserver')}
-              </Atoms.Button>
-              <Atoms.Typography as="p" className="text-base leading-6 font-medium text-secondary-foreground">
+              </Button>
+              <Typography as="p" className="text-base leading-6 font-medium text-secondary-foreground">
                 {t('customHomeserverHint')}
-              </Atoms.Typography>
-            </Atoms.Container>
-          </Atoms.Container>
-        </Atoms.Container>
-      </Atoms.Card>
+              </Typography>
+            </Container>
+          </Container>
+        </Container>
+      </Card>
 
-      <Molecules.HumanFooter />
+      <HumanFooter />
 
       {/* Buttons container */}
-      <Atoms.Container className={cn('mt-6 flex-row justify-between gap-3 lg:gap-6')}>
-        <Atoms.Button
+      <Container className={cn('mt-6 flex-row justify-between gap-3 lg:gap-6')}>
+        <Button
           id="human-invite-back-btn"
           size="lg"
           className="w-full flex-1 rounded-full md:flex-0"
@@ -161,8 +166,8 @@ export const HumanInviteCode = ({ onBack, onSuccess }: HumanInviteCodeProps) => 
         >
           <ArrowLeft className="mr-2 h-4 w-4" />
           {tCommon('back')}
-        </Atoms.Button>
-        <Atoms.Button
+        </Button>
+        <Button
           id="human-invite-continue-btn"
           data-cy="human-invite-code-continue-btn"
           size="lg"
@@ -173,8 +178,8 @@ export const HumanInviteCode = ({ onBack, onSuccess }: HumanInviteCodeProps) => 
         >
           {isSubmitting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <ArrowRight className="mr-2 h-4 w-4" />}
           {tCommon('continue')}
-        </Atoms.Button>
-      </Atoms.Container>
+        </Button>
+      </Container>
     </React.Fragment>
   );
 };

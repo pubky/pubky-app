@@ -2,7 +2,10 @@
 
 import * as React from 'react';
 import { RadioGroup as RadioGroupPrimitive } from 'radix-ui';
-import * as Atoms from '@/atoms';
+import { Container } from '../Container/Container';
+import { Label } from '../Label/Label';
+import { Typography } from '../Typography/Typography';
+
 import { cn } from '@/libs/utils/utils';
 
 type RadioGroupProps = React.ComponentPropsWithoutRef<typeof RadioGroupPrimitive.Root>;
@@ -54,27 +57,27 @@ const RadioGroupItem = React.forwardRef<React.ComponentRef<typeof RadioGroupPrim
     }
 
     const content = (
-      <Atoms.Container overrideDefaults className="flex items-start gap-2">
+      <Container overrideDefaults className="flex items-start gap-2">
         {radioElement}
-        <Atoms.Container overrideDefaults className="flex flex-col gap-1.5">
+        <Container overrideDefaults className="flex flex-col gap-1.5">
           {label && (
-            <Atoms.Label
+            <Label
               htmlFor={itemId}
               className="cursor-pointer text-base leading-none font-medium text-foreground peer-disabled:cursor-not-allowed peer-disabled:opacity-50"
             >
               {label}
-            </Atoms.Label>
+            </Label>
           )}
           {description && (
-            <Atoms.Typography className="text-sm leading-normal text-muted-foreground">{description}</Atoms.Typography>
+            <Typography className="text-sm leading-normal text-muted-foreground">{description}</Typography>
           )}
-        </Atoms.Container>
-      </Atoms.Container>
+        </Container>
+      </Container>
     );
 
     if (variant === 'box') {
       return (
-        <Atoms.Container
+        <Container
           overrideDefaults
           className={cn(
             'rounded-lg border border-border p-4 transition-colors',
@@ -83,7 +86,7 @@ const RadioGroupItem = React.forwardRef<React.ComponentRef<typeof RadioGroupPrim
           )}
         >
           {content}
-        </Atoms.Container>
+        </Container>
       );
     }
 

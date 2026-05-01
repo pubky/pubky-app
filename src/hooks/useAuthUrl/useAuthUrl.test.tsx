@@ -31,9 +31,11 @@ vi.mock('next-intl', () => ({
   useTranslations: () => mockTranslations,
 }));
 
-vi.mock('@/molecules', () => ({
-  toast: (...args: unknown[]) => mockToast(...args),
-}));
+vi.mock('@/molecules/Toaster/use-toast', () => {
+  return {
+    toast: (...args: unknown[]) => mockToast(...args),
+  };
+});
 
 vi.mock('@/libs/logger/logger', async () => {
   const actual = await vi.importActual<typeof import('@/libs/logger/logger')>('@/libs/logger/logger');

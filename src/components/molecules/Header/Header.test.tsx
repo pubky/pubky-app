@@ -3,7 +3,10 @@ import { describe, it, expect, vi } from 'vitest';
 import { useRouter } from 'next/navigation';
 import { useLiveQuery } from 'dexie-react-hooks';
 import { HeaderContainer, HeaderTitle, HeaderOnboarding, HeaderSocialLinks, HeaderNavigationButtons } from './Header';
-import { HeaderButtonSignIn, HeaderHome, HeaderSignIn } from '@/molecules';
+import { HeaderButtonSignIn } from '../HeaderButtonSignIn/HeaderButtonSignIn';
+import { HeaderHome } from '../HeaderHome/HeaderHome';
+import { HeaderSignIn } from '../HeaderSignIn/HeaderSignIn';
+
 import { useAuthStore } from '@/stores/auth/auth.store';
 import { useNotificationStore } from '@/stores/notification/notification.store';
 // Mock Next.js router
@@ -64,106 +67,55 @@ vi.mock('@/database/franky/franky', () => ({
   },
 }));
 
-// Mock the components
-vi.mock('@/components', () => ({
-  Button: ({
-    children,
-    onClick,
-    className,
-    variant,
-    size,
-    ...props
-  }: {
-    children: React.ReactNode;
-    onClick?: () => void;
-    className?: string;
-    variant?: string;
-    size?: string;
-    [key: string]: unknown;
-  }) => (
-    <button onClick={onClick} className={className} data-variant={variant} data-size={size} {...props}>
-      {children}
-    </button>
-  ),
-  Link: ({
-    children,
-    href,
-    target,
-    variant,
-    size,
-    className,
-    ...props
-  }: {
-    children: React.ReactNode;
-    href?: string;
-    target?: string;
-    variant?: string;
-    size?: string;
-    className?: string;
-    [key: string]: unknown;
-  }) => (
-    <a href={href} target={target} className={className} data-variant={variant} data-size={size} {...props}>
-      {children}
-    </a>
-  ),
-  Avatar: ({ children, className }: { children: React.ReactNode; className?: string }) => (
-    <div className={className}>{children}</div>
-  ),
-  AvatarImage: ({ src }: { src?: string }) => <img data-testid="avatar-image" src={src} alt="User avatar" />,
-  AvatarFallback: ({ children }: { children: React.ReactNode }) => <div data-testid="avatar-fallback">{children}</div>,
-  Badge: ({ children, className, variant }: { children: React.ReactNode; className?: string; variant?: string }) => (
-    <div className={className} data-variant={variant}>
-      {children}
-    </div>
-  ),
-  Typography: ({ children, className, size }: { children: React.ReactNode; className?: string; size?: string }) => (
-    <span className={className} data-size={size}>
-      {children}
-    </span>
-  ),
-}));
-
 // Mock the organisms
-vi.mock('@/organisms', () => ({
-  AvatarWithFallback: ({
-    name,
-    avatarUrl,
-    alt,
-    className,
-  }: {
-    name: string;
-    avatarUrl?: string;
-    alt?: string;
-    size?: string;
-    className?: string;
-  }) => (
-    <div data-testid="avatar-with-fallback" data-name={name} data-url={avatarUrl} data-alt={alt} className={className}>
-      {name}
-    </div>
-  ),
-  SearchInput: () => <div data-testid="search-input">Search Input</div>,
-}));
-
-// Mock the molecules
-vi.mock('@/molecules', async (importOriginal) => {
-  const actual = await importOriginal<typeof import('@/molecules')>();
+vi.mock('@/organisms/AvatarWithFallback/AvatarWithFallback', () => {
   return {
-    ...actual,
+    AvatarWithFallback: ({
+      name,
+      avatarUrl,
+      alt,
+      className,
+    }: {
+      name: string;
+      avatarUrl?: string;
+      alt?: string;
+      size?: string;
+      className?: string;
+    }) => (
+      <div
+        data-testid="avatar-with-fallback"
+        data-name={name}
+        data-url={avatarUrl}
+        data-alt={alt}
+        className={className}
+      >
+        {name}
+      </div>
+    ),
+  };
+});
+
+vi.mock('@/organisms/SearchInput/SearchInput', () => {
+  return {
+    SearchInput: () => <div data-testid="search-input">Search Input</div>,
+  };
+});
+
+vi.mock('@/molecules/ProgressSteps/ProgressSteps', () => {
+  return {
     ProgressSteps: ({ currentStep, totalSteps }: { currentStep: number; totalSteps: number }) => (
       <div data-testid="progress-steps" data-current={currentStep} data-total={totalSteps}>
         Progress Steps
       </div>
     ),
-    SearchInput: () => <div data-testid="search-input">Search Input</div>,
-    HeaderSocialLinks: () => <div data-testid="header-social-links">Social Links</div>,
   };
 });
 
 // Mock the libs - keep real implementations and only stub helpers we need
 
 // Mock the config
-vi.mock('@/config', async (importOriginal) => {
-  const actual = await importOriginal<typeof import('@/config')>();
+vi.mock('@/config/externalLinks', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('@/config/externalLinks')>();
   return {
     ...actual,
     GITHUB_URL: 'https://github.com',
@@ -173,8 +125,8 @@ vi.mock('@/config', async (importOriginal) => {
 });
 
 // Mock the app routes
-vi.mock('@/app', async (importOriginal) => {
-  const actual = await importOriginal<typeof import('@/app')>();
+vi.mock('@/app/routes', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('@/app/routes')>();
   return {
     ...actual,
     AUTH_ROUTES: {

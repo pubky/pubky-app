@@ -1,98 +1,105 @@
 import { render, screen, fireEvent } from '@testing-library/react';
 import { describe, it, expect, vi } from 'vitest';
 import { PopoverPublicKey } from './PopoverPublicKey';
-
-// Mock atoms and molecules
-vi.mock('@/atoms', () => ({
-  Button: ({
-    children,
-    variant,
-    size,
-    className,
-    onClick,
-    ...props
-  }: {
-    children: React.ReactNode;
-    variant?: string;
-    size?: string;
-    className?: string;
-    onClick?: () => void;
-    [key: string]: unknown;
-  }) => (
-    <button
-      data-testid="popover-button"
-      data-variant={variant}
-      data-size={size}
-      className={className !== undefined ? className : 'hover:bg-white/10'}
-      onClick={onClick}
-      {...props}
-    >
-      {children}
-    </button>
-  ),
-  Container: ({ children, className }: { children: React.ReactNode; className?: string }) => (
-    <div data-testid="container" className={`flex flex-col ${className}`}>
-      {children}
-    </div>
-  ),
-  Heading: ({
-    children,
-    level = 1,
-    size,
-    className,
-  }: {
-    children: React.ReactNode;
-    level?: number;
-    size?: string;
-    className?: string;
-  }) => {
-    const sizeClasses = size === 'sm' ? 'text-lg font-semibold' : '';
-    return (
-      <div
-        role="heading"
-        aria-level={level}
-        data-testid={`heading-${level}`}
-        data-size={size}
-        className={`${sizeClasses} text-foreground ${className}`}
-      >
+vi.mock('@/atoms/Popover/Popover', () => {
+  return {
+    Popover: ({ children }: { children: React.ReactNode }) => <div data-testid="popover">{children}</div>,
+    PopoverTrigger: ({ children, asChild }: { children: React.ReactNode; asChild?: boolean }) => (
+      <div data-testid="popover-trigger" data-as-child={asChild}>
         {children}
       </div>
-    );
-  },
-  Typography: ({ children, size, className }: { children: React.ReactNode; size?: string; className?: string }) => {
-    const sizeClasses = size === 'sm' ? 'text-lg font-semibold' : '';
-    return (
-      <p data-testid="typography" data-size={size} className={`${sizeClasses} text-foreground ${className}`}>
+    ),
+    PopoverContent: ({ children, className }: { children: React.ReactNode; className?: string }) => (
+      <div data-testid="popover-content" className={className}>
         {children}
-      </p>
-    );
-  },
-  Popover: ({ children }: { children: React.ReactNode }) => <div data-testid="popover">{children}</div>,
-  PopoverTrigger: ({ children, asChild }: { children: React.ReactNode; asChild?: boolean }) => (
-    <div data-testid="popover-trigger" data-as-child={asChild}>
-      {children}
-    </div>
-  ),
-  PopoverContent: ({ children, className }: { children: React.ReactNode; className?: string }) => (
-    <div data-testid="popover-content" className={className}>
-      {children}
-    </div>
-  ),
-}));
+      </div>
+    ),
+  };
+});
 
-vi.mock('@/molecules', () => ({
-  Popover: ({ children }: { children: React.ReactNode }) => <div data-testid="popover">{children}</div>,
-  PopoverTrigger: ({ children, asChild }: { children: React.ReactNode; asChild?: boolean }) => (
-    <div data-testid="popover-trigger" data-as-child={asChild}>
-      {children}
-    </div>
-  ),
-  PopoverContent: ({ children, className }: { children: React.ReactNode; className?: string }) => (
-    <div data-testid="popover-content" className={className}>
-      {children}
-    </div>
-  ),
-}));
+// Mock atoms and molecules
+vi.mock('@/atoms/Button/Button', () => {
+  return {
+    Button: ({
+      children,
+      variant,
+      size,
+      className,
+      onClick,
+      ...props
+    }: {
+      children: React.ReactNode;
+      variant?: string;
+      size?: string;
+      className?: string;
+      onClick?: () => void;
+      [key: string]: unknown;
+    }) => (
+      <button
+        data-testid="popover-button"
+        data-variant={variant}
+        data-size={size}
+        className={className !== undefined ? className : 'hover:bg-white/10'}
+        onClick={onClick}
+        {...props}
+      >
+        {children}
+      </button>
+    ),
+  };
+});
+
+vi.mock('@/atoms/Container/Container', () => {
+  return {
+    Container: ({ children, className }: { children: React.ReactNode; className?: string }) => (
+      <div data-testid="container" className={`flex flex-col ${className}`}>
+        {children}
+      </div>
+    ),
+  };
+});
+
+vi.mock('@/atoms/Heading/Heading', () => {
+  return {
+    Heading: ({
+      children,
+      level = 1,
+      size,
+      className,
+    }: {
+      children: React.ReactNode;
+      level?: number;
+      size?: string;
+      className?: string;
+    }) => {
+      const sizeClasses = size === 'sm' ? 'text-lg font-semibold' : '';
+      return (
+        <div
+          role="heading"
+          aria-level={level}
+          data-testid={`heading-${level}`}
+          data-size={size}
+          className={`${sizeClasses} text-foreground ${className}`}
+        >
+          {children}
+        </div>
+      );
+    },
+  };
+});
+
+vi.mock('@/atoms/Typography/Typography', () => {
+  return {
+    Typography: ({ children, size, className }: { children: React.ReactNode; size?: string; className?: string }) => {
+      const sizeClasses = size === 'sm' ? 'text-lg font-semibold' : '';
+      return (
+        <p data-testid="typography" data-size={size} className={`${sizeClasses} text-foreground ${className}`}>
+          {children}
+        </p>
+      );
+    },
+  };
+});
 
 describe('PopoverPublicKey', () => {
   it('renders with default props', () => {

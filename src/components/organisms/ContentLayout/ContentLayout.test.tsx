@@ -40,78 +40,137 @@ vi.mock('@/hooks/useIsMobile/useIsMobile', () => ({
 }));
 
 // Mock the molecules
-vi.mock('@/molecules', () => ({
-  MobileHeader: ({
-    onLeftIconClick,
-    onRightIconClick,
-  }: {
-    onLeftIconClick?: () => void;
-    onRightIconClick?: () => void;
-  }) => (
-    <div data-testid="mobile-header">
-      <button onClick={onLeftIconClick}>Left</button>
-      <button onClick={onRightIconClick}>Right</button>
-    </div>
-  ),
-  ButtonFilters: ({ onClick, position }: { onClick?: () => void; position?: 'left' | 'right' }) => (
-    <button data-testid={`button-filters-${position}`} onClick={onClick}>
-      Filter Button {position}
-    </button>
-  ),
-  MobileFooter: () => <div data-testid="mobile-footer">Mobile Footer</div>,
-  SideDrawer: ({
-    open,
-    onOpenChangeAction,
-    children,
-    position,
-  }: {
-    open: boolean;
-    onOpenChangeAction: (open: boolean) => void;
-    children: React.ReactNode;
-    position?: 'left' | 'right';
-  }) => (
-    <div data-testid={`side-drawer-${position}`} data-open={open}>
-      <button onClick={() => onOpenChangeAction(false)}>Close</button>
-      {children}
-    </div>
-  ),
-  FilterReach: ({ onTabChange }: { onTabChange?: (tab: string) => void }) => (
-    <div data-testid="filter-reach">
-      <button onClick={() => onTabChange?.('all')}>All</button>
-    </div>
-  ),
-  FilterSort: ({ onTabChange }: { onTabChange?: (tab: string) => void }) => (
-    <div data-testid="filter-sort">
-      <button onClick={() => onTabChange?.('recent')}>Recent</button>
-    </div>
-  ),
-  FilterContent: ({ onTabChange }: { onTabChange?: (tab: string) => void }) => (
-    <div data-testid="filter-content">
-      <button onClick={() => onTabChange?.('all')}>All</button>
-    </div>
-  ),
-  FilterLayout: ({ onTabChange, onClose }: { onTabChange?: (tab: string) => void; onClose?: () => void }) => (
-    <div data-testid="filter-layout">
-      <button
-        onClick={() => {
-          onTabChange?.('columns');
-          onClose?.();
-        }}
-      >
-        Columns
+vi.mock('@/molecules/ButtonFilters/ButtonFilters', () => {
+  return {
+    ButtonFilters: ({ onClick, position }: { onClick?: () => void; position?: 'left' | 'right' }) => (
+      <button data-testid={`button-filters-${position}`} onClick={onClick}>
+        Filter Button {position}
       </button>
-    </div>
-  ),
-  WhoToFollowSidebar: () => <div data-testid="who-to-follow">Who to Follow</div>,
-  ActiveUsers: () => <div data-testid="active-users">Active Users</div>,
-  FeedbackCard: () => <div data-testid="feedback-card">Feedback Card</div>,
-}));
+    ),
+  };
+});
+
+vi.mock('@/molecules/Filters/FilterContent/FilterContent', () => {
+  return {
+    FilterContent: ({ onTabChange }: { onTabChange?: (tab: string) => void }) => (
+      <div data-testid="filter-content">
+        <button onClick={() => onTabChange?.('all')}>All</button>
+      </div>
+    ),
+  };
+});
+
+vi.mock('@/molecules/Filters/FilterLayout/FilterLayout', () => {
+  return {
+    FilterLayout: ({ onTabChange, onClose }: { onTabChange?: (tab: string) => void; onClose?: () => void }) => (
+      <div data-testid="filter-layout">
+        <button
+          onClick={() => {
+            onTabChange?.('columns');
+            onClose?.();
+          }}
+        >
+          Columns
+        </button>
+      </div>
+    ),
+  };
+});
+
+vi.mock('@/molecules/Filters/FilterReach/FilterReach', () => {
+  return {
+    FilterReach: ({ onTabChange }: { onTabChange?: (tab: string) => void }) => (
+      <div data-testid="filter-reach">
+        <button onClick={() => onTabChange?.('all')}>All</button>
+      </div>
+    ),
+  };
+});
+
+vi.mock('@/molecules/Filters/FilterSort/FilterSort', () => {
+  return {
+    FilterSort: ({ onTabChange }: { onTabChange?: (tab: string) => void }) => (
+      <div data-testid="filter-sort">
+        <button onClick={() => onTabChange?.('recent')}>Recent</button>
+      </div>
+    ),
+  };
+});
+
+vi.mock('@/molecules/MobileFooter/MobileFooter', () => {
+  return {
+    MobileFooter: () => <div data-testid="mobile-footer">Mobile Footer</div>,
+  };
+});
+
+vi.mock('@/molecules/MobileHeader/MobileHeader', () => {
+  return {
+    MobileHeader: ({
+      onLeftIconClick,
+      onRightIconClick,
+    }: {
+      onLeftIconClick?: () => void;
+      onRightIconClick?: () => void;
+    }) => (
+      <div data-testid="mobile-header">
+        <button onClick={onLeftIconClick}>Left</button>
+        <button onClick={onRightIconClick}>Right</button>
+      </div>
+    ),
+  };
+});
+
+vi.mock('@/molecules/SideDrawer/SideDrawer', () => {
+  return {
+    SideDrawer: ({
+      open,
+      onOpenChangeAction,
+      children,
+      position,
+    }: {
+      open: boolean;
+      onOpenChangeAction: (open: boolean) => void;
+      children: React.ReactNode;
+      position?: 'left' | 'right';
+    }) => (
+      <div data-testid={`side-drawer-${position}`} data-open={open}>
+        <button onClick={() => onOpenChangeAction(false)}>Close</button>
+        {children}
+      </div>
+    ),
+  };
+});
+
+vi.mock('@/organisms/ActiveUsers/ActiveUsers', () => {
+  return {
+    ActiveUsers: () => <div data-testid="active-users">Active Users</div>,
+  };
+});
+
+vi.mock('@/organisms/FeedbackCard/FeedbackCard', () => {
+  return {
+    FeedbackCard: () => <div data-testid="feedback-card">Feedback Card</div>,
+  };
+});
+
+vi.mock('@/organisms/WhoToFollowSidebar/WhoToFollowSidebar', () => {
+  return {
+    WhoToFollowSidebar: () => <div data-testid="who-to-follow">Who to Follow</div>,
+  };
+});
 
 // Mock the organisms
-vi.mock('@/organisms', () => ({
-  LeftSidebar: () => <div data-testid="left-sidebar">Left Sidebar</div>,
-  RightSidebar: () => <div data-testid="right-sidebar">Right Sidebar</div>,
-}));
+vi.mock('@/organisms/LeftSidebar/LeftSidebar', () => {
+  return {
+    LeftSidebar: () => <div data-testid="left-sidebar">Left Sidebar</div>,
+  };
+});
+
+vi.mock('@/organisms/RightSidebar/RightSidebar', () => {
+  return {
+    RightSidebar: () => <div data-testid="right-sidebar">Right Sidebar</div>,
+  };
+});
 
 describe('ContentLayout', () => {
   beforeEach(() => {

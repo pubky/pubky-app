@@ -1,6 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen, fireEvent } from '@testing-library/react';
-import * as Atoms from '@/atoms';
+import { Dialog, DialogContent } from '@/atoms/Dialog/Dialog';
+
 import { DialogReportPostReasonStep } from './DialogReportPostReasonStep';
 import { REPORT_REASON_MAX_LENGTH } from '@/pipes/report/report.constants';
 // Mock hooks
@@ -11,31 +12,33 @@ vi.mock('@/hooks/useCurrentUserProfile/useCurrentUserProfile', () => ({
 }));
 
 // Mock organisms
-vi.mock('@/organisms', () => ({
-  PostHeader: ({
-    postId,
-    characterLimit,
-  }: {
-    postId: string;
-    isReplyInput?: boolean;
-    characterLimit?: { count: number; max: number };
-  }) => (
-    <div
-      data-testid="post-header"
-      data-post-id={postId}
-      data-character-count={characterLimit?.count}
-      data-max-length={characterLimit?.max}
-    >
-      PostHeader
-    </div>
-  ),
-}));
+vi.mock('@/organisms/PostHeader/PostHeader', () => {
+  return {
+    PostHeader: ({
+      postId,
+      characterLimit,
+    }: {
+      postId: string;
+      isReplyInput?: boolean;
+      characterLimit?: { count: number; max: number };
+    }) => (
+      <div
+        data-testid="post-header"
+        data-post-id={postId}
+        data-character-count={characterLimit?.count}
+        data-max-length={characterLimit?.max}
+      >
+        PostHeader
+      </div>
+    ),
+  };
+});
 
 const renderWithDialog = (component: React.ReactElement) => {
   return render(
-    <Atoms.Dialog open={true}>
-      <Atoms.DialogContent>{component}</Atoms.DialogContent>
-    </Atoms.Dialog>,
+    <Dialog open={true}>
+      <DialogContent>{component}</DialogContent>
+    </Dialog>,
   );
 };
 

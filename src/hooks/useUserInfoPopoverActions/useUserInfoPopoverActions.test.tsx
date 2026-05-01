@@ -14,7 +14,7 @@ vi.mock('@/hooks/useFollowUser/useFollowUser', () => ({
   useFollowUser: () => mockUseFollowUser(),
 }));
 
-vi.mock('@/app', () => ({
+vi.mock('@/app/routes', () => ({
   SETTINGS_ROUTES: { EDIT: '/settings/edit' },
 }));
 

@@ -2,9 +2,13 @@
 
 import { useFeedLayoutResolution } from '@/hooks/useFeedLayoutResolution/useFeedLayoutResolution';
 import * as React from 'react';
-import * as Atoms from '@/atoms';
-import * as Molecules from '@/molecules';
-import { TIMELINE_FEED_VARIANT } from '@/config';
+import { Container } from '@/atoms/Container/Container';
+import { FilterContent } from '@/molecules/Filters/FilterContent/FilterContent';
+import { FilterLayout } from '@/molecules/Filters/FilterLayout/FilterLayout';
+import { FilterReach } from '@/molecules/Filters/FilterReach/FilterReach';
+import { FilterSort } from '@/molecules/Filters/FilterSort/FilterSort';
+
+import { TIMELINE_FEED_VARIANT } from '@/config/feed';
 import type { HomeFeedSidebarProps } from './HomeFeedSidebar.types';
 
 import {
@@ -40,33 +44,25 @@ function HomeFeedFilters({
   const showVisualLayout = allowVisualLayout && !isPhoneViewport;
 
   return (
-    <Atoms.Container overrideDefaults className="flex flex-col gap-6">
-      {!hideReachFilter && <Molecules.FilterReach selectedTab={reach} onTabChange={setReach} />}
-      <Molecules.FilterSort selectedTab={sort} onTabChange={setSort} />
+    <Container overrideDefaults className="flex flex-col gap-6">
+      {!hideReachFilter && <FilterReach selectedTab={reach} onTabChange={setReach} />}
+      <FilterSort selectedTab={sort} onTabChange={setSort} />
       {variant === 'sidebar' ? (
-        <Atoms.Container overrideDefaults className="sticky top-[100px] flex w-full flex-col gap-6 self-start">
+        <Container overrideDefaults className="sticky top-[100px] flex w-full flex-col gap-6 self-start">
           {!hideLayoutFilter && (
-            <Molecules.FilterLayout selectedTab={layout} onTabChange={setLayout} showVisual={showVisualLayout} />
+            <FilterLayout selectedTab={layout} onTabChange={setLayout} showVisual={showVisualLayout} />
           )}
-          <Molecules.FilterContent
-            selectedTab={resolvedContent}
-            onTabChange={setContent}
-            disabledTabs={disabledContentTabs}
-          />
-        </Atoms.Container>
+          <FilterContent selectedTab={resolvedContent} onTabChange={setContent} disabledTabs={disabledContentTabs} />
+        </Container>
       ) : (
         <>
           {!hideLayoutFilter && (
-            <Molecules.FilterLayout selectedTab={layout} onTabChange={setLayout} showVisual={showVisualLayout} />
+            <FilterLayout selectedTab={layout} onTabChange={setLayout} showVisual={showVisualLayout} />
           )}
-          <Molecules.FilterContent
-            selectedTab={resolvedContent}
-            onTabChange={setContent}
-            disabledTabs={disabledContentTabs}
-          />
+          <FilterContent selectedTab={resolvedContent} onTabChange={setContent} disabledTabs={disabledContentTabs} />
         </>
       )}
-    </Atoms.Container>
+    </Container>
   );
 }
 

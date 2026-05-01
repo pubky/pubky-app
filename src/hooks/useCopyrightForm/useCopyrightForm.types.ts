@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import { VALIDATION_PATTERNS, VALIDATION_MESSAGES } from '@/config';
+import { VALIDATION_PATTERNS, VALIDATION_MESSAGES } from '@/config/forms';
 import { COPYRIGHT_ROLES } from './useCopyrightForm.constants';
 
 /**

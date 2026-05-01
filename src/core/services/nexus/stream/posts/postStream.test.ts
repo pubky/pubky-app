@@ -7,16 +7,16 @@ import { queryNexus } from '@/services/nexus/nexus.utils';
 import type { Pubky } from '@/models/models.types';
 import { PostStreamTypes, type PostStreamId } from '@/models/stream/post/postStream.types';
 import { StreamSorting, type NexusPost, type NexusPostsKeyStream } from '@/services/nexus/nexus.types';
-import { StreamSource } from '@/services/nexus/stream/posts/postStream.types';
-import type {
-  TPostStreamFetchParams,
-  TStreamAllParams,
-  TStreamAuthorParams,
-  TStreamAuthorRepliesParams,
-  TStreamPostRepliesParams,
-  TStreamPostsByIdsParams,
-  TStreamQueryParams,
-  TStreamWithObserverParams,
+import {
+  StreamSource,
+  type TPostStreamFetchParams,
+  type TStreamAllParams,
+  type TStreamAuthorParams,
+  type TStreamAuthorRepliesParams,
+  type TStreamPostRepliesParams,
+  type TStreamPostsByIdsParams,
+  type TStreamQueryParams,
+  type TStreamWithObserverParams,
 } from '@/services/nexus/stream/posts/postStream.types';
 //TODO: Split the suite by module (postStream.api.test.ts, postStream.utils.test.ts, postStream.service.test.ts) so each file targets the key behaviours of that module under @posts.
 

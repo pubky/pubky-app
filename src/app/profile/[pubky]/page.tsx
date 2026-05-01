@@ -1,4 +1,5 @@
-import * as Templates from '@/templates';
+import { ProfilePostsPage } from '@/templates/Profile/Posts/ProfilePostsPage';
+import { ProfileOverviewPage } from '@/templates/Profile/Profile/ProfileOverviewPage';
 
 /**
  * Default page for /profile/[pubky]/ route
@@ -14,10 +15,10 @@ export default function DynamicProfilePage() {
   return (
     <>
       <div className="lg:hidden">
-        <Templates.ProfileOverviewPage />
+        <ProfileOverviewPage />
       </div>
       <div className="hidden lg:block">
-        <Templates.ProfilePostsPage />
+        <ProfilePostsPage />
       </div>
     </>
   );

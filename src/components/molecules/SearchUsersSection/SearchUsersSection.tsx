@@ -1,5 +1,7 @@
-import * as Atoms from '@/atoms';
-import * as Molecules from '@/molecules';
+import { Container } from '@/atoms/Container/Container';
+import { Typography } from '@/atoms/Typography/Typography';
+import { SearchUserSuggestion } from '../SearchUserSuggestion/SearchUserSuggestion';
+
 import type { SearchUsersSectionProps } from './SearchUsersSection.types';
 
 /**
@@ -12,15 +14,15 @@ export function SearchUsersSection({ title, users, onUserClick }: SearchUsersSec
   if (users.length === 0) return null;
 
   return (
-    <Atoms.Container overrideDefaults className="flex flex-col gap-2">
-      <Atoms.Typography size="xs" className="tracking-widest text-muted-foreground uppercase">
+    <Container overrideDefaults className="flex flex-col gap-2">
+      <Typography size="xs" className="tracking-widest text-muted-foreground uppercase">
         {title}
-      </Atoms.Typography>
-      <Atoms.Container data-cy="search-users-section" overrideDefaults className="flex flex-wrap gap-3">
+      </Typography>
+      <Container data-cy="search-users-section" overrideDefaults className="flex flex-wrap gap-3">
         {users.map((user) => (
-          <Molecules.SearchUserSuggestion key={user.id} user={user} onClick={onUserClick} />
+          <SearchUserSuggestion key={user.id} user={user} onClick={onUserClick} />
         ))}
-      </Atoms.Container>
-    </Atoms.Container>
+      </Container>
+    </Container>
   );
 }

@@ -6,12 +6,15 @@ import { COPYRIGHT_ROLES } from './useCopyrightForm.constants';
 
 const mockToast = vi.fn();
 const mockShowErrorToast = vi.fn();
-vi.mock('@/molecules', async (importOriginal) => {
-  const actual = await importOriginal<typeof import('@/molecules')>();
+vi.mock('@/molecules/Toaster/showErrorToast', () => {
   return {
-    ...actual,
-    toast: (...args: unknown[]) => mockToast(...args),
     showErrorToast: (params: { title?: string; description: string }) => mockShowErrorToast(params),
+  };
+});
+
+vi.mock('@/molecules/Toaster/use-toast', () => {
+  return {
+    toast: (...args: unknown[]) => mockToast(...args),
   };
 });
 

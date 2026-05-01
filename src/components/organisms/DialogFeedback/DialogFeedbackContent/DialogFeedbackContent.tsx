@@ -1,9 +1,14 @@
 'use client';
 
 import { useTranslations } from 'next-intl';
-import * as Atoms from '@/atoms';
-import * as Organisms from '@/organisms';
-import { FEEDBACK_MAX_CHARACTER_LENGTH } from '@/config';
+import { Button } from '@/atoms/Button/Button';
+import { Container } from '@/atoms/Container/Container';
+import { DialogDescription, DialogHeader, DialogTitle } from '@/atoms/Dialog/Dialog';
+import { Textarea } from '@/atoms/Textarea/Textarea';
+import { Typography } from '@/atoms/Typography/Typography';
+import { PostHeader } from '../../PostHeader/PostHeader';
+
+import { FEEDBACK_MAX_CHARACTER_LENGTH } from '@/config/posts';
 import type { DialogFeedbackContentProps } from './DialogFeedbackContent.types';
 import { Loader2, Send } from 'lucide-react';
 import { getCharacterCount } from '@/libs/utils/utils';
@@ -26,21 +31,21 @@ export function DialogFeedbackContent({
       : undefined;
   return (
     <>
-      <Atoms.DialogHeader>
-        <Atoms.DialogTitle>{t('title')}</Atoms.DialogTitle>
-        <Atoms.DialogDescription className="sr-only">{t('description')}</Atoms.DialogDescription>
-      </Atoms.DialogHeader>
-      <Atoms.Container className="gap-3">
-        <Atoms.Container overrideDefaults className="rounded-md border border-dashed border-input p-6">
-          <Atoms.Container className="gap-4 contain-inline-size" overrideDefaults>
-            <Organisms.PostHeader
+      <DialogHeader>
+        <DialogTitle>{t('title')}</DialogTitle>
+        <DialogDescription className="sr-only">{t('description')}</DialogDescription>
+      </DialogHeader>
+      <Container className="gap-3">
+        <Container overrideDefaults className="rounded-md border border-dashed border-input p-6">
+          <Container className="gap-4 contain-inline-size" overrideDefaults>
+            <PostHeader
               postId={currentUserPubky}
               isReplyInput={true}
               characterLimit={characterLimit}
               showPopover={false}
             />
 
-            <Atoms.Textarea
+            <Textarea
               placeholder={t('placeholder')}
               variant="inline"
               className="px-0 py-2 text-base"
@@ -51,11 +56,11 @@ export function DialogFeedbackContent({
               disabled={isSubmitting}
             />
 
-            <Atoms.Container
+            <Container
               className={`flex items-center justify-end transition-all duration-300 ease-in-out ${hasContent ? 'translate-y-0 opacity-100' : 'pointer-events-none -translate-y-2 opacity-0'}`}
               overrideDefaults
             >
-              <Atoms.Button
+              <Button
                 variant="secondary"
                 size="sm"
                 onClick={submit}
@@ -65,22 +70,18 @@ export function DialogFeedbackContent({
                 {isSubmitting ? (
                   <Loader2 className="size-4 animate-spin text-secondary-foreground" strokeWidth={2} />
                 ) : (
-                  <Atoms.Container className="flex items-center gap-2" overrideDefaults>
+                  <Container className="flex items-center gap-2" overrideDefaults>
                     <Send className="size-4 text-secondary-foreground" strokeWidth={2} />
-                    <Atoms.Typography
-                      as="span"
-                      size="sm"
-                      className="text-xs leading-4 font-bold text-secondary-foreground"
-                    >
+                    <Typography as="span" size="sm" className="text-xs leading-4 font-bold text-secondary-foreground">
                       {tCommon('send')}
-                    </Atoms.Typography>
-                  </Atoms.Container>
+                    </Typography>
+                  </Container>
                 )}
-              </Atoms.Button>
-            </Atoms.Container>
-          </Atoms.Container>
-        </Atoms.Container>
-      </Atoms.Container>
+              </Button>
+            </Container>
+          </Container>
+        </Container>
+      </Container>
     </>
   );
 }

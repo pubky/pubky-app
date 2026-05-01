@@ -13,23 +13,25 @@ vi.mock('next/navigation', () => ({
 }));
 
 // Mock organisms
-vi.mock('@/organisms', () => ({
-  DialogCheckLink: ({
-    open,
-    onOpenChangeAction,
-    linkUrl,
-  }: {
-    open: boolean;
-    onOpenChangeAction: (open: boolean) => void;
-    linkUrl: string;
-  }) => (
-    <div data-testid="dialog-check-link" data-open={open} data-link-url={linkUrl}>
-      <button data-testid="dialog-close" onClick={() => onOpenChangeAction(false)}>
-        Close
-      </button>
-    </div>
-  ),
-}));
+vi.mock('@/organisms/DialogCheckLink/DialogCheckLink', () => {
+  return {
+    DialogCheckLink: ({
+      open,
+      onOpenChangeAction,
+      linkUrl,
+    }: {
+      open: boolean;
+      onOpenChangeAction: (open: boolean) => void;
+      linkUrl: string;
+    }) => (
+      <div data-testid="dialog-check-link" data-open={open} data-link-url={linkUrl}>
+        <button data-testid="dialog-close" onClick={() => onOpenChangeAction(false)}>
+          Close
+        </button>
+      </div>
+    ),
+  };
+});
 
 // Mock settings store
 const mockUseSettingsStore = vi.fn();

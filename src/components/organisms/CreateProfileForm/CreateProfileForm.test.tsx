@@ -2,7 +2,7 @@ import React from 'react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import { CreateProfileForm } from './CreateProfileForm';
-import * as App from '@/app';
+import { HOME_ROUTES } from '@/app/routes';
 import { ServerErrorCode } from '@/libs/error/error.codes';
 import { Err } from '@/libs/error/error.factories';
 import { ErrorService } from '@/libs/error/error.types';
@@ -12,6 +12,46 @@ import { ProfileController } from '@/controllers/profile/profile';
 import { UserValidator } from '@/pipes/user/user.validator';
 import { useAuthStore } from '@/stores/auth/auth.store';
 import { useOnboardingStore } from '@/stores/onboarding/onboarding.store';
+vi.mock('@/atoms/Dialog/Dialog', () => {
+  return {
+    Dialog: ({ children, open }: { children: React.ReactNode; open?: boolean }) => (
+      <div data-testid="dialog" data-open={open}>
+        {children}
+      </div>
+    ),
+    DialogTrigger: ({ children }: { children: React.ReactNode }) => <div data-testid="dialog-trigger">{children}</div>,
+    DialogContent: ({ children, className }: { children: React.ReactNode; className?: string }) => (
+      <div data-testid="dialog-content" className={className}>
+        {children}
+      </div>
+    ),
+    DialogHeader: ({ children, className }: { children: React.ReactNode; className?: string }) => (
+      <div data-testid="dialog-header" className={className}>
+        {children}
+      </div>
+    ),
+    DialogFooter: ({ children, className }: { children: React.ReactNode; className?: string }) => (
+      <div data-testid="dialog-footer" className={className}>
+        {children}
+      </div>
+    ),
+    DialogTitle: ({ children, className }: { children: React.ReactNode; className?: string }) => (
+      <h2 data-testid="dialog-title" className={className}>
+        {children}
+      </h2>
+    ),
+    DialogDescription: ({ children, className }: { children: React.ReactNode; className?: string }) => (
+      <p data-testid="dialog-description" className={className}>
+        {children}
+      </p>
+    ),
+    DialogClose: ({ children }: { children: React.ReactNode }) => (
+      <button data-testid="dialog-close">{children}</button>
+    ),
+    DialogOverlay: ({ children }: { children: React.ReactNode }) => <div data-testid="dialog-overlay">{children}</div>,
+  };
+});
+
 vi.mock('facehash', () => ({
   Facehash: ({ name, onRenderMouth }: { name: string; onRenderMouth?: () => React.ReactNode }) => (
     <div data-testid="facehash" data-name={name}>
@@ -71,190 +111,139 @@ vi.mock('@/libs/image/cropImage', async () => {
 });
 
 // Mock atoms
-vi.mock('@/atoms', () => ({
-  Card: ({ children, className }: { children: React.ReactNode; className?: string }) => (
-    <div data-testid="card" className={className}>
-      {children}
-    </div>
-  ),
-  Container: ({ children, className }: { children: React.ReactNode; className?: string }) => (
-    <div data-testid="container" className={className}>
-      {children}
-    </div>
-  ),
-  Heading: ({ children, level, className }: { children: React.ReactNode; level?: number; className?: string }) => (
-    <div data-testid={`heading-${level || 1}`} className={className}>
-      {children}
-    </div>
-  ),
-  Avatar: ({
-    children,
-    className,
-    onClick,
-    role,
-    ...props
-  }: {
-    children: React.ReactNode;
-    className?: string;
-    onClick?: () => void;
-    role?: string;
-    [key: string]: unknown;
-  }) => (
-    <div data-testid="avatar" className={className} onClick={onClick} role={role} {...props}>
-      {children}
-    </div>
-  ),
-  AvatarImage: ({ src, alt }: { src: string; alt: string }) => <img data-testid="avatar-image" src={src} alt={alt} />,
-  AvatarFallback: ({ children, className }: { children: React.ReactNode; className?: string }) => (
-    <div data-testid="avatar-fallback" className={className}>
-      {children}
-    </div>
-  ),
-  Button: ({
-    children,
-    variant,
-    size,
-    className,
-    onClick,
-    disabled,
-    ...props
-  }: {
-    children: React.ReactNode;
-    variant?: string;
-    size?: string;
-    className?: string;
-    onClick?: () => void;
-    disabled?: boolean;
-    [key: string]: unknown;
-  }) => (
-    <button
-      data-testid={variant ? `button-${variant}` : 'button'}
-      data-variant={variant}
-      data-size={size}
-      className={className}
-      onClick={onClick}
-      disabled={disabled}
-      {...props}
-    >
-      {children}
-    </button>
-  ),
-  Typography: ({
-    children,
-    as,
-    size,
-    className,
-  }: {
-    children: React.ReactNode;
-    as?: React.ElementType;
-    size?: string;
-    className?: string;
-  }) => {
-    if (as === 'small') {
-      return (
-        <small data-testid="typography" data-as={as} data-size={size} className={className}>
-          {children}
-        </small>
-      );
-    }
-    return (
-      <p data-testid="typography" data-as={as} data-size={size} className={className}>
-        {children}
-      </p>
-    );
-  },
-  InputField: ({
-    label,
-    placeholder,
-    value,
-    onChange,
-    error,
-  }: {
-    label: string;
-    placeholder?: string;
-    value: string;
-    onChange: (value: string) => void;
-    error?: string | null;
-  }) => (
-    <div data-testid="input-field">
-      <label>{label}</label>
-      <input data-testid="input" placeholder={placeholder} value={value} onChange={(e) => onChange(e.target.value)} />
-      {error && <span data-testid="input-error">{error}</span>}
-    </div>
-  ),
-  TextareaField: ({
-    label,
-    placeholder,
-    value,
-    onChange,
-    error,
-  }: {
-    label: string;
-    placeholder?: string;
-    value: string;
-    onChange: (value: string) => void;
-    error?: string | null;
-  }) => (
-    <div data-testid="textarea-field">
-      <label>{label}</label>
-      <textarea
-        data-testid="textarea"
-        placeholder={placeholder}
-        value={value}
-        onChange={(e) => onChange(e.target.value)}
-      />
-      {error && <span data-testid="textarea-error">{error}</span>}
-    </div>
-  ),
-  Label: ({ children, className }: { children: React.ReactNode; className?: string }) => (
-    <label data-testid="label" className={className}>
-      {children}
-    </label>
-  ),
-  Dialog: ({ children, open }: { children: React.ReactNode; open?: boolean }) => (
-    <div data-testid="dialog" data-open={open}>
-      {children}
-    </div>
-  ),
-  DialogTrigger: ({ children }: { children: React.ReactNode }) => <div data-testid="dialog-trigger">{children}</div>,
-  DialogContent: ({ children, className }: { children: React.ReactNode; className?: string }) => (
-    <div data-testid="dialog-content" className={className}>
-      {children}
-    </div>
-  ),
-  DialogHeader: ({ children, className }: { children: React.ReactNode; className?: string }) => (
-    <div data-testid="dialog-header" className={className}>
-      {children}
-    </div>
-  ),
-  DialogFooter: ({ children, className }: { children: React.ReactNode; className?: string }) => (
-    <div data-testid="dialog-footer" className={className}>
-      {children}
-    </div>
-  ),
-  DialogTitle: ({ children, className }: { children: React.ReactNode; className?: string }) => (
-    <h2 data-testid="dialog-title" className={className}>
-      {children}
-    </h2>
-  ),
-  DialogDescription: ({ children, className }: { children: React.ReactNode; className?: string }) => (
-    <p data-testid="dialog-description" className={className}>
-      {children}
-    </p>
-  ),
-  DialogClose: ({ children }: { children: React.ReactNode }) => <button data-testid="dialog-close">{children}</button>,
-  DialogOverlay: ({ children }: { children: React.ReactNode }) => <div data-testid="dialog-overlay">{children}</div>,
-}));
-
-// Mock molecules
-vi.mock('@/molecules', async (importOriginal) => {
-  const actual = await importOriginal<typeof import('@/molecules')>();
-
+vi.mock('@/atoms/Avatar/Avatar', () => {
   return {
-    ...actual,
-    useToast: () => ({
-      toast: mockToast,
-    }),
+    Avatar: ({
+      children,
+      className,
+      onClick,
+      role,
+      ...props
+    }: {
+      children: React.ReactNode;
+      className?: string;
+      onClick?: () => void;
+      role?: string;
+      [key: string]: unknown;
+    }) => (
+      <div data-testid="avatar" className={className} onClick={onClick} role={role} {...props}>
+        {children}
+      </div>
+    ),
+    AvatarImage: ({ src, alt }: { src: string; alt: string }) => <img data-testid="avatar-image" src={src} alt={alt} />,
+    AvatarFallback: ({ children, className }: { children: React.ReactNode; className?: string }) => (
+      <div data-testid="avatar-fallback" className={className}>
+        {children}
+      </div>
+    ),
+  };
+});
+
+vi.mock('@/atoms/Button/Button', () => {
+  return {
+    Button: ({
+      children,
+      variant,
+      size,
+      className,
+      onClick,
+      disabled,
+      ...props
+    }: {
+      children: React.ReactNode;
+      variant?: string;
+      size?: string;
+      className?: string;
+      onClick?: () => void;
+      disabled?: boolean;
+      [key: string]: unknown;
+    }) => (
+      <button
+        data-testid={variant ? `button-${variant}` : 'button'}
+        data-variant={variant}
+        data-size={size}
+        className={className}
+        onClick={onClick}
+        disabled={disabled}
+        {...props}
+      >
+        {children}
+      </button>
+    ),
+  };
+});
+
+vi.mock('@/atoms/Card/Card', () => {
+  return {
+    Card: ({ children, className }: { children: React.ReactNode; className?: string }) => (
+      <div data-testid="card" className={className}>
+        {children}
+      </div>
+    ),
+  };
+});
+
+vi.mock('@/atoms/Container/Container', () => {
+  return {
+    Container: ({ children, className }: { children: React.ReactNode; className?: string }) => (
+      <div data-testid="container" className={className}>
+        {children}
+      </div>
+    ),
+  };
+});
+
+vi.mock('@/atoms/Heading/Heading', () => {
+  return {
+    Heading: ({ children, level, className }: { children: React.ReactNode; level?: number; className?: string }) => (
+      <div data-testid={`heading-${level || 1}`} className={className}>
+        {children}
+      </div>
+    ),
+  };
+});
+
+vi.mock('@/atoms/Label/Label', () => {
+  return {
+    Label: ({ children, className }: { children: React.ReactNode; className?: string }) => (
+      <label data-testid="label" className={className}>
+        {children}
+      </label>
+    ),
+  };
+});
+
+vi.mock('@/atoms/Typography/Typography', () => {
+  return {
+    Typography: ({
+      children,
+      as,
+      size,
+      className,
+    }: {
+      children: React.ReactNode;
+      as?: React.ElementType;
+      size?: string;
+      className?: string;
+    }) => {
+      if (as === 'small') {
+        return (
+          <small data-testid="typography" data-as={as} data-size={size} className={className}>
+            {children}
+          </small>
+        );
+      }
+      return (
+        <p data-testid="typography" data-as={as} data-size={size} className={className}>
+          {children}
+        </p>
+      );
+    },
+  };
+});
+
+vi.mock('@/molecules/InputField/InputField', () => {
+  return {
     InputField: ({
       placeholder,
       value = '',
@@ -303,6 +292,11 @@ vi.mock('@/molecules', async (importOriginal) => {
         )}
       </div>
     ),
+  };
+});
+
+vi.mock('@/molecules/TextareaField/TextareaField', () => {
+  return {
     TextareaField: ({
       placeholder,
       value = '',
@@ -331,6 +325,11 @@ vi.mock('@/molecules', async (importOriginal) => {
         />
       </div>
     ),
+  };
+});
+
+vi.mock('@/molecules/ProfileNavigation/ProfileNavigation', () => {
+  return {
     ProfileNavigation: ({
       children,
       continueButtonDisabled,
@@ -358,16 +357,26 @@ vi.mock('@/molecules', async (importOriginal) => {
   };
 });
 
-vi.mock('@/organisms', async (importOriginal) => {
-  const actual = await importOriginal<typeof import('@/organisms')>();
-
+vi.mock('@/molecules/Toaster/use-toast', () => {
   return {
-    ...actual,
+    useToast: () => ({
+      toast: mockToast,
+    }),
+  };
+});
+
+vi.mock('@/organisms/DialogAddLink/DialogAddLink', () => {
+  return {
     DialogAddLink: ({ onSave }: { onSave: (label: string, url: string) => void }) => (
       <div data-testid="dialog-add-link">
         <button onClick={() => onSave('Test Label', 'https://test.com')}>Add Link</button>
       </div>
     ),
+  };
+});
+
+vi.mock('@/organisms/DialogCropImage/DialogCropImage', () => {
+  return {
     DialogCropImage: ({
       open,
       onClose,
@@ -839,7 +848,7 @@ describe('CreateProfileForm', () => {
         expect(continueButton).toHaveTextContent('Try again!');
 
         // Should not navigate to feed page
-        expect(mockPush).not.toHaveBeenCalledWith(App.HOME_ROUTES.HOME);
+        expect(mockPush).not.toHaveBeenCalledWith(HOME_ROUTES.HOME);
       });
 
       // Verify the mocks were called in the correct order
@@ -889,7 +898,7 @@ describe('CreateProfileForm', () => {
       // Wait for the success handling to complete
       await waitFor(() => {
         // Should navigate to feed page
-        expect(mockPush).toHaveBeenCalledWith(App.HOME_ROUTES.HOME);
+        expect(mockPush).toHaveBeenCalledWith(HOME_ROUTES.HOME);
       });
 
       // Verify that setShowWelcomeDialog(true) was called

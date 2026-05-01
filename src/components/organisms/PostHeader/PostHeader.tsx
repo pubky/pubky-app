@@ -4,8 +4,10 @@ import { useAvatarUrl } from '@/hooks/useAvatarUrl/useAvatarUrl';
 import { usePostDetails } from '@/hooks/usePostDetails/usePostDetails';
 import { useRelativeTime } from '@/hooks/useRelativeTime/useRelativeTime';
 import { useUserDetails } from '@/hooks/useUserDetails/useUserDetails';
-import * as Atoms from '@/atoms';
-import * as Molecules from '@/molecules';
+import { Container } from '@/atoms/Container/Container';
+import { PostHeaderTimestamp } from '@/molecules/PostHeaderTimestamp/PostHeaderTimestamp';
+import { PostHeaderUserInfo } from '@/molecules/PostHeaderUserInfo/PostHeaderUserInfo';
+
 import { PostHeaderSkeleton } from './PostHeader.skeleton';
 import type { PostHeaderProps } from './PostHeader.types';
 
@@ -41,8 +43,8 @@ export function PostHeader({
   const timeAgo = indexedAt ? formatRelativeTime(indexedAt) : null;
 
   return (
-    <Atoms.Container className="flex min-w-0 items-start justify-between gap-3" overrideDefaults>
-      <Molecules.PostHeaderUserInfo
+    <Container className="flex min-w-0 items-start justify-between gap-3" overrideDefaults>
+      <PostHeaderUserInfo
         userId={userId}
         userName={userDetails.name || ''}
         avatarUrl={avatarUrl}
@@ -52,9 +54,7 @@ export function PostHeader({
         timeAgo={timeAgoPlacement === 'bottom-left' ? timeAgo : null}
         indexedAt={timeAgoPlacement === 'bottom-left' ? indexedAt : null}
       />
-      {timeAgo && timeAgoPlacement === 'top-right' && (
-        <Molecules.PostHeaderTimestamp timeAgo={timeAgo} indexedAt={indexedAt} />
-      )}
-    </Atoms.Container>
+      {timeAgo && timeAgoPlacement === 'top-right' && <PostHeaderTimestamp timeAgo={timeAgo} indexedAt={indexedAt} />}
+    </Container>
   );
 }

@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { render, screen } from '@testing-library/react';
-import { TIMELINE_FEED_VARIANT } from '@/config';
+import { TIMELINE_FEED_VARIANT } from '@/config/feed';
 import { TimelineFeedWithStream } from './TimelineFeedContent';
 import type { UsePullToRefreshResult } from '@/hooks/usePullToRefresh/usePullToRefresh.types';
 import { useStreamPagination } from '@/hooks/useStreamPagination/useStreamPagination';
@@ -43,36 +43,55 @@ vi.mock('@/hooks/usePullToRefresh/usePullToRefresh', () => ({
   usePullToRefresh: mockUsePullToRefresh,
 }));
 
-vi.mock('@/molecules', () => ({
-  TimelineLoading: () => <div data-testid="timeline-loading">Loading...</div>,
-  NewPostsButton: ({ visible, count }: { visible: boolean; count: number }) =>
-    visible ? <div data-testid="new-posts-button">{count} new posts</div> : null,
-  PullToRefreshIndicator: ({ state }: { state: string }) =>
-    state !== 'idle' ? <div data-testid="pull-to-refresh">{state}</div> : null,
-  showErrorToast: vi.fn(),
-}));
+vi.mock('@/molecules/NewPostsButton/NewPostsButton', () => {
+  return {
+    NewPostsButton: ({ visible, count }: { visible: boolean; count: number }) =>
+      visible ? <div data-testid="new-posts-button">{count} new posts</div> : null,
+  };
+});
 
-vi.mock('@/organisms', () => ({
-  TimelinePosts: ({
-    postIds,
-    loading,
-    hasMore,
-  }: {
-    postIds: string[];
-    loading: boolean;
-    loadingMore: boolean;
-    error: string | null;
-    hasMore: boolean;
-    loadMore: () => void;
-    tagsLayout: string;
-  }) => (
-    <div data-testid="timeline-posts">
-      <span data-testid="post-count">{postIds.length}</span>
-      <span data-testid="loading">{loading.toString()}</span>
-      <span data-testid="has-more">{hasMore.toString()}</span>
-    </div>
-  ),
-}));
+vi.mock('@/molecules/PullToRefreshIndicator/PullToRefreshIndicator', () => {
+  return {
+    PullToRefreshIndicator: ({ state }: { state: string }) =>
+      state !== 'idle' ? <div data-testid="pull-to-refresh">{state}</div> : null,
+  };
+});
+
+vi.mock('@/molecules/Timeline/TimelineLoading', () => {
+  return {
+    TimelineLoading: () => <div data-testid="timeline-loading">Loading...</div>,
+  };
+});
+
+vi.mock('@/molecules/Toaster/showErrorToast', () => {
+  return {
+    showErrorToast: vi.fn(),
+  };
+});
+
+vi.mock('@/organisms/Timeline/Posts/Posts', () => {
+  return {
+    TimelinePosts: ({
+      postIds,
+      loading,
+      hasMore,
+    }: {
+      postIds: string[];
+      loading: boolean;
+      loadingMore: boolean;
+      error: string | null;
+      hasMore: boolean;
+      loadMore: () => void;
+      tagsLayout: string;
+    }) => (
+      <div data-testid="timeline-posts">
+        <span data-testid="post-count">{postIds.length}</span>
+        <span data-testid="loading">{loading.toString()}</span>
+        <span data-testid="has-more">{hasMore.toString()}</span>
+      </div>
+    ),
+  };
+});
 
 const mockLoadMore = vi.fn();
 const mockRefresh = vi.fn();

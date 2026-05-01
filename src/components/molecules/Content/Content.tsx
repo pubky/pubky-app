@@ -1,7 +1,8 @@
 import { ReactNode } from 'react';
 import Image, { ImageProps } from 'next/image';
+import { Card } from '@/atoms/Card/Card';
+import { Container } from '@/atoms/Container/Container';
 
-import * as Atoms from '@/atoms';
 import { cn } from '@/libs/utils/utils';
 
 interface ContentCardProps {
@@ -25,8 +26,8 @@ export function ContentCard({ children, className, classNameImage, image, layout
   };
 
   return (
-    <Atoms.Card className={cn('p-6 md:p-12', className)}>
-      <Atoms.Container className={cn('gap-12', layoutClasses[layout])}>
+    <Card className={cn('p-6 md:p-12', className)}>
+      <Container className={cn('gap-12', layoutClasses[layout])}>
         {image && (
           <ContentImage
             src={image.src}
@@ -36,9 +37,9 @@ export function ContentCard({ children, className, classNameImage, image, layout
             containerClassName={classNameImage}
           />
         )}
-        <Atoms.Container className="w-full justify-start gap-4">{children}</Atoms.Container>
-      </Atoms.Container>
-    </Atoms.Card>
+        <Container className="w-full justify-start gap-4">{children}</Container>
+      </Container>
+    </Card>
   );
 }
 
@@ -63,9 +64,7 @@ export function ContentContainer({ children, className, maxWidth = 'lg', gap = '
     lg: 'gap-8',
   };
 
-  return (
-    <Atoms.Container className={cn(maxWidthClasses[maxWidth], gapClasses[gap], className)}>{children}</Atoms.Container>
-  );
+  return <Container className={cn(maxWidthClasses[maxWidth], gapClasses[gap], className)}>{children}</Container>;
 }
 
 interface ContentImageProps extends Omit<ImageProps, 'className'> {

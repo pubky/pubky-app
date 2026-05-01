@@ -4,8 +4,10 @@ import { useAuthStatus } from '@/hooks/useAuthStatus/useAuthStatus';
 import { usePublicRoute } from '@/hooks/usePublicRoute/usePublicRoute';
 import { useRequireAuth } from '@/hooks/useRequireAuth/useRequireAuth';
 import { useState } from 'react';
-import * as Atoms from '@/atoms';
-import * as Organisms from '@/organisms';
+import { Button } from '@/atoms/Button/Button';
+import { Dialog, DialogTrigger } from '@/atoms/Dialog/Dialog';
+import { DialogNewPost } from '@/organisms/DialogNewPost/DialogNewPost';
+
 import { Plus } from 'lucide-react';
 import { cn } from '@/libs/utils/utils';
 
@@ -45,7 +47,7 @@ export function NewPostCTA() {
     'z-40',
   );
   const button = (
-    <Atoms.Button
+    <Button
       data-cy="new-post-btn"
       overrideDefaults
       data-testid="new-post-cta"
@@ -54,7 +56,7 @@ export function NewPostCTA() {
       onClick={!isFullyAuthenticated ? () => requireAuth(() => setOpen(true)) : undefined}
     >
       <Plus className="size-10 transition-colors group-hover:text-black" strokeWidth={0.8} />
-    </Atoms.Button>
+    </Button>
   );
 
   // Unauthenticated: button opens sign-in dialog via requireAuth
@@ -64,9 +66,9 @@ export function NewPostCTA() {
 
   // Authenticated: wrap button with dialog
   return (
-    <Atoms.Dialog open={open} onOpenChange={setOpen}>
-      <Atoms.DialogTrigger asChild>{button}</Atoms.DialogTrigger>
-      <Organisms.DialogNewPost open={open} onOpenChangeAction={setOpen} />
-    </Atoms.Dialog>
+    <Dialog open={open} onOpenChange={setOpen}>
+      <DialogTrigger asChild>{button}</DialogTrigger>
+      <DialogNewPost open={open} onOpenChangeAction={setOpen} />
+    </Dialog>
   );
 }

@@ -2,8 +2,13 @@
 
 import { useCopyToClipboard } from '@/hooks/useCopyToClipboard/useCopyToClipboard';
 import { useLiveQuery } from 'dexie-react-hooks';
-import * as Atoms from '@/atoms';
-import * as Organisms from '@/organisms';
+import { Button } from '@/atoms/Button/Button';
+import { Card } from '@/atoms/Card/Card';
+import { Container } from '@/atoms/Container/Container';
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/atoms/Dialog/Dialog';
+import { Typography } from '@/atoms/Typography/Typography';
+import { AvatarWithFallback } from '../AvatarWithFallback/AvatarWithFallback';
+
 import { Key, ArrowRight } from 'lucide-react';
 import { Logger } from '@/libs/logger/logger';
 import { formatPublicKey, withPubkyPrefix } from '@/libs/utils/utils';
@@ -56,51 +61,49 @@ export function DialogWelcome() {
     setShowWelcomeDialog(false);
   };
   return (
-    <Atoms.Dialog open={showWelcomeDialog} onOpenChange={setShowWelcomeDialog}>
-      <Atoms.DialogContent className="sm:max-w-2xl" hiddenTitle="Welcome to Pubky!">
-        <Atoms.DialogHeader className="mb-3 gap-0 pr-6 text-left">
-          <Atoms.DialogTitle id="welcome-title">Welcome to Pubky!</Atoms.DialogTitle>
-          <Atoms.DialogDescription className="font-medium">
-            Your keys, your content, your rules.
-          </Atoms.DialogDescription>
-        </Atoms.DialogHeader>
-        <Atoms.Container className="max-h-[420px] overflow-y-auto">
-          <Atoms.Container className="flex flex-col gap-4">
-            <Atoms.Card className="flex flex-col items-center justify-center gap-4 self-stretch overflow-hidden rounded-lg bg-card p-6 sm:flex-row sm:items-start sm:justify-start">
-              <Organisms.AvatarWithFallback
+    <Dialog open={showWelcomeDialog} onOpenChange={setShowWelcomeDialog}>
+      <DialogContent className="sm:max-w-2xl" hiddenTitle="Welcome to Pubky!">
+        <DialogHeader className="mb-3 gap-0 pr-6 text-left">
+          <DialogTitle id="welcome-title">Welcome to Pubky!</DialogTitle>
+          <DialogDescription className="font-medium">Your keys, your content, your rules.</DialogDescription>
+        </DialogHeader>
+        <Container className="max-h-[420px] overflow-y-auto">
+          <Container className="flex flex-col gap-4">
+            <Card className="flex flex-col items-center justify-center gap-4 self-stretch overflow-hidden rounded-lg bg-card p-6 sm:flex-row sm:items-start sm:justify-start">
+              <AvatarWithFallback
                 avatarUrl={avatarImage}
                 name={userDetails.name}
                 fallbackSeed={currentUserPubky}
                 className="h-24 w-24"
                 fallbackClassName="text-4xl"
               />
-              <Atoms.Container className="flex w-full min-w-0 flex-col items-center justify-center sm:items-start sm:justify-start">
-                <Atoms.Typography size="lg" className="w-full truncate">
+              <Container className="flex w-full min-w-0 flex-col items-center justify-center sm:items-start sm:justify-start">
+                <Typography size="lg" className="w-full truncate">
                   {userDetails.name}
-                </Atoms.Typography>
-                <Atoms.Typography
+                </Typography>
+                <Typography
                   size="sm"
                   className="w-full truncate text-center font-medium text-muted-foreground sm:text-left"
                 >
                   {userDetails.bio}
-                </Atoms.Typography>
-                <Atoms.Button
+                </Typography>
+                <Button
                   variant="secondary"
                   className="mt-2 h-8 w-fit gap-2 rounded-full uppercase"
                   onClick={handleCopyToClipboard}
                 >
                   <Key className="h-4 w-4" />
                   {displayPublicKey || '...'}
-                </Atoms.Button>
-              </Atoms.Container>
-            </Atoms.Card>
-            <Atoms.Button id="welcome-explore-pubky-btn" className="w-auto" size="lg" onClick={handleExplorePubky}>
+                </Button>
+              </Container>
+            </Card>
+            <Button id="welcome-explore-pubky-btn" className="w-auto" size="lg" onClick={handleExplorePubky}>
               <ArrowRight className="mr-2 h-4 w-4" />
               Explore Pubky
-            </Atoms.Button>
-          </Atoms.Container>
-        </Atoms.Container>
-      </Atoms.DialogContent>
-    </Atoms.Dialog>
+            </Button>
+          </Container>
+        </Container>
+      </DialogContent>
+    </Dialog>
   );
 }

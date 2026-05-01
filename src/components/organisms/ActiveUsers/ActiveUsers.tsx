@@ -4,9 +4,11 @@ import { useFollowUser } from '@/hooks/useFollowUser/useFollowUser';
 import { useUserStream } from '@/hooks/useUserStream/useUserStream';
 import { useRouter } from 'next/navigation';
 import { useTranslations } from 'next-intl';
-import * as Atoms from '@/atoms';
-import * as Molecules from '@/molecules';
-import * as Organisms from '@/organisms';
+import { Typography } from '@/atoms/Typography/Typography';
+import { SidebarSection } from '@/molecules/SidebarSection/SidebarSection';
+import { CompactUserListItemSkeleton } from '../CompactUserListItemSkeleton/CompactUserListItemSkeleton';
+import { UserListItem } from '../UserListItem/UserListItem';
+
 import { APP_ROUTES } from '@/app/routes';
 import { UsersRound } from 'lucide-react';
 import type { Pubky } from '@/models/models.types';
@@ -42,7 +44,7 @@ export function ActiveUsers() {
     router.push(`${APP_ROUTES.HOT}`);
   };
   return (
-    <Molecules.SidebarSection
+    <SidebarSection
       title={t('activeUsers')}
       footerIcon={UsersRound}
       footerText={tCommon('seeAll')}
@@ -52,12 +54,12 @@ export function ActiveUsers() {
       {isStreamLoading ? (
         Array.from({
           length: USERS_LIMIT,
-        }).map((_, index) => <Organisms.CompactUserListItemSkeleton key={`active-users-skeleton-${index}`} />)
+        }).map((_, index) => <CompactUserListItemSkeleton key={`active-users-skeleton-${index}`} />)
       ) : users.length === 0 ? (
-        <Atoms.Typography className="font-light text-muted-foreground">{t('noUsers')}</Atoms.Typography>
+        <Typography className="font-light text-muted-foreground">{t('noUsers')}</Typography>
       ) : (
         users.map((user) => (
-          <Organisms.UserListItem
+          <UserListItem
             key={user.id}
             user={user}
             variant="compact"
@@ -69,6 +71,6 @@ export function ActiveUsers() {
           />
         ))
       )}
-    </Molecules.SidebarSection>
+    </SidebarSection>
   );
 }

@@ -3,8 +3,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import type { Session } from '@synonymdev/pubky';
 import { useTranslations } from 'next-intl';
-
-import * as Molecules from '@/molecules';
+import { toast } from '@/molecules/Toaster/use-toast';
 
 import type { UseAuthUrlOptions, UseAuthUrlReturn } from './useAuthUrl.types';
 import { Logger } from '@/libs/logger/logger';
@@ -56,7 +55,7 @@ export function useAuthUrl(options: UseAuthUrlOptions = {}): UseAuthUrlReturn {
           } catch (error) {
             Logger.error('Failed to persist session and check profile:', error);
             if (!isMountedRef.current) return;
-            Molecules.toast({
+            toast({
               title: t('authInitFailedTitle'),
               description: t('authInitFailedDescription'),
             });
@@ -81,7 +80,7 @@ export function useAuthUrl(options: UseAuthUrlOptions = {}): UseAuthUrlReturn {
             return;
           }
 
-          Molecules.toast({
+          toast({
             title: t('authNotCompletedTitle'),
             description: t('authNotCompletedDescription'),
           });
@@ -92,7 +91,7 @@ export function useAuthUrl(options: UseAuthUrlOptions = {}): UseAuthUrlReturn {
     } catch (error) {
       Logger.error('Failed to generate auth URL:', error);
       if (!isMountedRef.current) return;
-      Molecules.toast({
+      toast({
         title: t('qrGenerationFailedTitle'),
         description: t('qrGenerationFailedDescription'),
       });

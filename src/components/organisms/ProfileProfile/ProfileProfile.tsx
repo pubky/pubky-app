@@ -6,10 +6,11 @@ import { useProfileHeader } from '@/hooks/useProfileHeader/useProfileHeader';
 import { useRequireAuth } from '@/hooks/useRequireAuth/useRequireAuth';
 import { useTagged } from '@/hooks/useTagged/useTagged';
 import * as React from 'react';
-import * as Atoms from '@/atoms';
-import * as Molecules from '@/molecules';
+import { Container } from '@/atoms/Container/Container';
+import { ProfilePageLinks } from '@/molecules/ProfilePageLinks/ProfilePageLinks';
+import { ProfilePageTaggedAs } from '@/molecules/ProfilePageTaggedAs/ProfilePageTaggedAs';
 import { useProfileContext } from '@/providers/ProfileProvider/ProfileProvider';
-import { ProfilePageHeader } from '@/organisms';
+import { ProfilePageHeader } from '../ProfilePageHeader/ProfilePageHeader';
 import { MAX_SIDEBAR_TAGS } from '../ProfilePageSidebar/ProfilePageSidebar.constants';
 
 /**
@@ -62,24 +63,16 @@ export function ProfileProfile() {
   };
 
   return (
-    <Atoms.Container
-      overrideDefaults={true}
-      className="mt-6 flex min-w-0 flex-col gap-6 overflow-hidden lg:mt-0 lg:hidden"
-    >
+    <Container overrideDefaults={true} className="mt-6 flex min-w-0 flex-col gap-6 overflow-hidden lg:mt-0 lg:hidden">
       {!isLoading && (
         <ProfilePageHeader profile={profile} actions={mergedActions} isOwnProfile={isOwnProfile} userId={pubky ?? ''} />
       )}
 
       {/* Tagged as section */}
-      <Molecules.ProfilePageTaggedAs
-        tags={tags}
-        isLoading={isLoadingTags}
-        onTagClick={handleTagToggle}
-        pubky={pubky ?? ''}
-      />
+      <ProfilePageTaggedAs tags={tags} isLoading={isLoadingTags} onTagClick={handleTagToggle} pubky={pubky ?? ''} />
 
       {/* Links section */}
-      <Molecules.ProfilePageLinks links={profile?.links} isOwnProfile={isOwnProfile} />
-    </Atoms.Container>
+      <ProfilePageLinks links={profile?.links} isOwnProfile={isOwnProfile} />
+    </Container>
   );
 }

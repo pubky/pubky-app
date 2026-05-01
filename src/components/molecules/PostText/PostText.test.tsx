@@ -10,59 +10,75 @@ vi.mock('next/navigation', () => ({
 }));
 
 // Mock @/atoms
-vi.mock('@/atoms', () => ({
-  Container: ({
-    children,
-    className,
-    overrideDefaults,
-  }: {
-    children: React.ReactNode;
-    className?: string;
-    overrideDefaults?: boolean;
-  }) => (
-    <div data-testid="container" data-override-defaults={overrideDefaults} className={className}>
-      {children}
-    </div>
-  ),
-  Button: ({
-    children,
-    className,
-    'aria-label': ariaLabel,
-    overrideDefaults,
-  }: {
-    children: React.ReactNode;
-    className?: string;
-    'aria-label'?: string;
-    overrideDefaults?: boolean;
-  }) => (
-    <button data-override-defaults={overrideDefaults} className={className} aria-label={ariaLabel}>
-      {children}
-    </button>
-  ),
-}));
+vi.mock('@/atoms/Button/Button', () => {
+  return {
+    Button: ({
+      children,
+      className,
+      'aria-label': ariaLabel,
+      overrideDefaults,
+    }: {
+      children: React.ReactNode;
+      className?: string;
+      'aria-label'?: string;
+      overrideDefaults?: boolean;
+    }) => (
+      <button data-override-defaults={overrideDefaults} className={className} aria-label={ariaLabel}>
+        {children}
+      </button>
+    ),
+  };
+});
+
+vi.mock('@/atoms/Container/Container', () => {
+  return {
+    Container: ({
+      children,
+      className,
+      overrideDefaults,
+    }: {
+      children: React.ReactNode;
+      className?: string;
+      overrideDefaults?: boolean;
+    }) => (
+      <div data-testid="container" data-override-defaults={overrideDefaults} className={className}>
+        {children}
+      </div>
+    ),
+  };
+});
 
 // Mock @/molecules
-vi.mock('@/molecules', () => ({
-  PostCodeBlock: ({ children, className }: { children?: React.ReactNode; className?: string }) => (
-    <code data-testid="post-code-block" className={className}>
-      {children}
-    </code>
-  ),
-  PostHashtags: ({ children, href }: { children?: React.ReactNode; href?: string }) => (
-    <a data-testid="post-hashtag" href={href}>
-      {children}
-    </a>
-  ),
-}));
+vi.mock('@/molecules/PostCodeBlock/PostCodeBlock', () => {
+  return {
+    PostCodeBlock: ({ children, className }: { children?: React.ReactNode; className?: string }) => (
+      <code data-testid="post-code-block" className={className}>
+        {children}
+      </code>
+    ),
+  };
+});
+
+vi.mock('@/molecules/PostHashtags/PostHashtags', () => {
+  return {
+    PostHashtags: ({ children, href }: { children?: React.ReactNode; href?: string }) => (
+      <a data-testid="post-hashtag" href={href}>
+        {children}
+      </a>
+    ),
+  };
+});
 
 // Mock @/organisms
-vi.mock('@/organisms', () => ({
-  PostMentions: ({ children, href }: { children?: React.ReactNode; href?: string }) => (
-    <a data-testid="post-mention" href={href}>
-      {children}
-    </a>
-  ),
-}));
+vi.mock('@/organisms/PostMentions/PostMentions', () => {
+  return {
+    PostMentions: ({ children, href }: { children?: React.ReactNode; href?: string }) => (
+      <a data-testid="post-mention" href={href}>
+        {children}
+      </a>
+    ),
+  };
+});
 
 // Helper to generate content of specific length
 const generateContent = (length: number): string => {

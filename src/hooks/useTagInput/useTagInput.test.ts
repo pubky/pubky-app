@@ -4,7 +4,7 @@ import type { RefObject } from 'react';
 import { asOpaque } from '@/test-utils/type-assertions';
 import { mockClipboardEvent } from '@/test-utils/react-events';
 import { useTagInput } from './useTagInput';
-import { TAG_MAX_LENGTH } from '@/config';
+import { TAG_MAX_LENGTH } from '@/config/posts';
 
 // Mock useEmojiInsert
 vi.mock('../useEmojiInsert/useEmojiInsert', () => ({

@@ -100,50 +100,69 @@ vi.mock('@/hooks/useIsFollowing/useIsFollowing', () => ({
 }));
 
 // Mock Molecules for UserNotFound component
-vi.mock('@/molecules', () => ({
-  MobileHeader: ({ showLeftButton, showRightButton }: { showLeftButton: boolean; showRightButton: boolean }) => (
-    <div data-testid="mobile-header" data-left={showLeftButton} data-right={showRightButton} />
-  ),
-  MobileFooter: () => <div data-testid="mobile-footer" />,
-  ProfilePageLayoutWrapper: ({ children }: { children: React.ReactNode }) => (
-    <div data-testid="profile-page-layout-wrapper">{children}</div>
-  ),
-  UserNotFound: () => <div data-testid="user-not-found">User not found</div>,
-}));
+vi.mock('@/molecules/MobileFooter/MobileFooter', () => {
+  return {
+    MobileFooter: () => <div data-testid="mobile-footer" />,
+  };
+});
+
+vi.mock('@/molecules/MobileHeader/MobileHeader', () => {
+  return {
+    MobileHeader: ({ showLeftButton, showRightButton }: { showLeftButton: boolean; showRightButton: boolean }) => (
+      <div data-testid="mobile-header" data-left={showLeftButton} data-right={showRightButton} />
+    ),
+  };
+});
+
+vi.mock('@/molecules/ProfilePageLayoutWrapper/ProfilePageLayoutWrapper', () => {
+  return {
+    ProfilePageLayoutWrapper: ({ children }: { children: React.ReactNode }) => (
+      <div data-testid="profile-page-layout-wrapper">{children}</div>
+    ),
+  };
+});
+
+vi.mock('@/molecules/UserNotFound/UserNotFound', () => {
+  return {
+    UserNotFound: () => <div data-testid="user-not-found">User not found</div>,
+  };
+});
 
 // Mock Organisms - ProfilePageLayout
-vi.mock('@/organisms', () => ({
-  ProfilePageLayout: ({
-    children,
-    profile,
-    stats,
-    actions,
-    activePage,
-    filterBarActivePage,
-    isLoading,
-  }: {
-    children: React.ReactNode;
-    profile: Record<string, unknown>;
-    stats: Record<string, unknown>;
-    actions: Record<string, unknown>;
-    activePage: string;
-    filterBarActivePage: string;
-    navigateToPage: (page: string) => void;
-    isLoading: boolean;
-  }) => (
-    <div
-      data-testid="profile-page-layout"
-      data-profile={JSON.stringify(profile)}
-      data-stats={JSON.stringify(stats)}
-      data-actions-count={Object.keys(actions).length}
-      data-active-page={activePage}
-      data-filter-bar-page={filterBarActivePage}
-      data-is-loading={isLoading}
-    >
-      {children}
-    </div>
-  ),
-}));
+vi.mock('@/organisms/ProfilePageLayout/ProfilePageLayout', () => {
+  return {
+    ProfilePageLayout: ({
+      children,
+      profile,
+      stats,
+      actions,
+      activePage,
+      filterBarActivePage,
+      isLoading,
+    }: {
+      children: React.ReactNode;
+      profile: Record<string, unknown>;
+      stats: Record<string, unknown>;
+      actions: Record<string, unknown>;
+      activePage: string;
+      filterBarActivePage: string;
+      navigateToPage: (page: string) => void;
+      isLoading: boolean;
+    }) => (
+      <div
+        data-testid="profile-page-layout"
+        data-profile={JSON.stringify(profile)}
+        data-stats={JSON.stringify(stats)}
+        data-actions-count={Object.keys(actions).length}
+        data-active-page={activePage}
+        data-filter-bar-page={filterBarActivePage}
+        data-is-loading={isLoading}
+      >
+        {children}
+      </div>
+    ),
+  };
+});
 
 describe('ProfilePageContainer', () => {
   beforeEach(() => {

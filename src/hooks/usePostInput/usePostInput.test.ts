@@ -11,7 +11,7 @@ import {
   POST_ATTACHMENT_MAX_FILES,
   ARTICLE_ATTACHMENT_MAX_FILES,
   ATTACHMENT_MAX_OTHER_SIZE,
-} from '@/config';
+} from '@/config/posts';
 
 // next-intl is mocked globally in src/config/test.ts
 // Real placeholders from messages/en.json for test assertions
@@ -87,7 +87,7 @@ vi.mock('@/hooks/useDeletePost/useDeletePost', () => ({
 
 // Mock TimelineFeed context
 const mockPrependPosts = vi.fn();
-vi.mock('@/organisms/Timeline/Feed/TimelineFeed', () => ({
+vi.mock('@/organisms/Timeline/Feed/TimelineFeed/TimelineFeedContext', () => ({
   useTimelineFeedContext: vi.fn(() => ({
     prependPosts: mockPrependPosts,
     removePosts: vi.fn(),
@@ -96,11 +96,13 @@ vi.mock('@/organisms/Timeline/Feed/TimelineFeed', () => ({
 
 // Mock useToast
 const mockToast = vi.fn();
-vi.mock('@/molecules', () => ({
-  useToast: vi.fn(() => ({
-    toast: mockToast,
-  })),
-}));
+vi.mock('@/molecules/Toaster/use-toast', () => {
+  return {
+    useToast: vi.fn(() => ({
+      toast: mockToast,
+    })),
+  };
+});
 
 // Mock useLocalFilesStore
 const mockSetPostAttachments = vi.fn();

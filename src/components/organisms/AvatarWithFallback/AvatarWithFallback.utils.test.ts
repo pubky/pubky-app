@@ -6,7 +6,7 @@ import {
 } from './AvatarWithFallback.utils';
 
 // Mock the config module
-vi.mock('@/config', () => ({
+vi.mock('@/config/nexus', () => ({
   CDN_URL: 'https://nexus.staging.pubky.app/static',
 }));
 

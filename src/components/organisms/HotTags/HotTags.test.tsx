@@ -26,56 +26,75 @@ vi.mock('@/hooks/useHotTags/useHotTags', () => ({
 }));
 
 // Mock molecules
-vi.mock('@/molecules', () => ({
-  SidebarSection: ({
-    children,
-    title,
-    footerText,
-    onFooterClick,
-    footerTestId,
-  }: {
-    children: React.ReactNode;
-    title: string;
-    footerText: string;
-    onFooterClick?: () => void;
-    footerTestId?: string;
-  }) => (
-    <div data-testid="sidebar-section">
-      <h3>{title}</h3>
-      {children}
-      <button data-testid={footerTestId} onClick={onFooterClick}>
-        {footerText}
-      </button>
-    </div>
-  ),
-}));
+vi.mock('@/molecules/SidebarSection/SidebarSection', () => {
+  return {
+    SidebarSection: ({
+      children,
+      title,
+      footerText,
+      onFooterClick,
+      footerTestId,
+    }: {
+      children: React.ReactNode;
+      title: string;
+      footerText: string;
+      onFooterClick?: () => void;
+      footerTestId?: string;
+    }) => (
+      <div data-testid="sidebar-section">
+        <h3>{title}</h3>
+        {children}
+        <button data-testid={footerTestId} onClick={onFooterClick}>
+          {footerText}
+        </button>
+      </div>
+    ),
+  };
+});
 
 // Mock atoms
-vi.mock('@/atoms', () => ({
-  Container: ({ children, className }: { children: React.ReactNode; className?: string }) => (
-    <div className={className}>{children}</div>
-  ),
-  Skeleton: ({ className, 'data-testid': testId }: { className?: string; 'data-testid'?: string }) => (
-    <div data-testid={testId} className={className} />
-  ),
-  Typography: ({ children }: { children: React.ReactNode }) => <p>{children}</p>,
-  Tag: ({
-    name,
-    count,
-    onClick,
-    'data-testid': testId,
-  }: {
-    name: string;
-    count?: number;
-    onClick?: (name: string) => void;
-    'data-testid'?: string;
-  }) => (
-    <button data-testid={testId} onClick={() => onClick?.(name)}>
-      {name}
-      {count && <span>{count}</span>}
-    </button>
-  ),
-}));
+vi.mock('@/atoms/Container/Container', () => {
+  return {
+    Container: ({ children, className }: { children: React.ReactNode; className?: string }) => (
+      <div className={className}>{children}</div>
+    ),
+  };
+});
+
+vi.mock('@/atoms/Skeleton/Skeleton', () => {
+  return {
+    Skeleton: ({ className, 'data-testid': testId }: { className?: string; 'data-testid'?: string }) => (
+      <div data-testid={testId} className={className} />
+    ),
+  };
+});
+
+vi.mock('@/atoms/Tag/Tag', () => {
+  return {
+    Tag: ({
+      name,
+      count,
+      onClick,
+      'data-testid': testId,
+    }: {
+      name: string;
+      count?: number;
+      onClick?: (name: string) => void;
+      'data-testid'?: string;
+    }) => (
+      <button data-testid={testId} onClick={() => onClick?.(name)}>
+        {name}
+        {count && <span>{count}</span>}
+      </button>
+    ),
+  };
+});
+
+vi.mock('@/atoms/Typography/Typography', () => {
+  return {
+    Typography: ({ children }: { children: React.ReactNode }) => <p>{children}</p>,
+  };
+});
 
 describe('HotTags', () => {
   beforeEach(() => {

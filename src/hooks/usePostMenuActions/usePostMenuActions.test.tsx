@@ -71,26 +71,12 @@ vi.mock('@/hooks/useCopyToClipboard/useCopyToClipboard', () => ({
 }));
 
 // Mock Molecules
-vi.mock('@/molecules', () => ({
-  toast: (props: unknown) => mockToast(props),
-}));
-
-vi.mock('lucide-react', async () => {
-  const actual = await vi.importActual<typeof import('lucide-react')>('lucide-react');
+vi.mock('@/molecules/Toaster/use-toast', () => {
   return {
-    ...actual,
-    UserRoundPlus: vi.fn(() => <span>UserRoundPlus</span>),
-    UserRoundMinus: vi.fn(() => <span>UserRoundMinus</span>),
-    Key: vi.fn(() => <span>Key</span>),
-    Link: vi.fn(() => <span>Link</span>),
-    FileText: vi.fn(() => <span>FileText</span>),
-    MegaphoneOff: vi.fn(() => <span>MegaphoneOff</span>),
-    Megaphone: vi.fn(() => <span>Megaphone</span>),
-    Flag: vi.fn(() => <span>Flag</span>),
-    Edit: vi.fn(() => <span>Edit</span>),
-    Trash: vi.fn(() => <span>Trash</span>),
+    toast: (props: unknown) => mockToast(props),
   };
 });
+
 vi.mock('@/libs/error/error.utils', async () => {
   const actual = await vi.importActual<typeof import('@/libs/error/error.utils')>('@/libs/error/error.utils');
   return {

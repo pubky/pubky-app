@@ -1,6 +1,8 @@
 'use client';
+import { Button } from '@/atoms/Button/Button';
+import { Container } from '@/atoms/Container/Container';
+import { PostThreadSpacer } from '@/atoms/PostThreadSpacer/PostThreadSpacer';
 
-import * as Atoms from '@/atoms';
 import { useTranslations } from 'next-intl';
 import { CirclePlus } from 'lucide-react';
 import { RoundedCorner } from '@/icons';
@@ -27,35 +29,35 @@ export function ShowMoreReplies({ count, onClick, isLast = false }: ShowMoreRepl
   const tThreadTree = useTranslations('common.threadTree');
   const connectorVariant = isLast ? 'last' : 'regular';
   return (
-    <Atoms.Container overrideDefaults>
-      <Atoms.PostThreadSpacer />
-      <Atoms.Container overrideDefaults className="relative flex min-w-0">
+    <Container overrideDefaults>
+      <PostThreadSpacer />
+      <Container overrideDefaults className="relative flex min-w-0">
         {/* Thread connector column — stretches to match button height via flex row */}
-        <Atoms.Container
+        <Container
           overrideDefaults
           className={cn('flex w-3 shrink-0 flex-col items-start', !isLast && 'border-l border-border')}
           data-variant={connectorVariant}
         >
-          <Atoms.Container
+          <Container
             overrideDefaults
             className={cn(
               'flex min-h-px shrink-0 grow basis-0 flex-col items-start',
               isLast ? 'w-full min-w-px' : 'min-w-3',
             )}
           >
-            <Atoms.Container
+            <Container
               overrideDefaults
               className={cn('min-h-px w-full min-w-px shrink-0 grow basis-0', isLast && 'border-l border-border')}
             />
-            <Atoms.Container overrideDefaults className="relative size-3 shrink-0">
+            <Container overrideDefaults className="relative size-3 shrink-0">
               <RoundedCorner />
-            </Atoms.Container>
-          </Atoms.Container>
-          <Atoms.Container overrideDefaults className="min-h-px w-3 min-w-px shrink-0 grow basis-0" />
-        </Atoms.Container>
+            </Container>
+          </Container>
+          <Container overrideDefaults className="min-h-px w-3 min-w-px shrink-0 grow basis-0" />
+        </Container>
         {/* Button content — determines the actual row height */}
-        <Atoms.Container overrideDefaults className="flex-1">
-          <Atoms.Button
+        <Container overrideDefaults className="flex-1">
+          <Button
             variant="ghost"
             size="sm"
             type="button"
@@ -68,9 +70,9 @@ export function ShowMoreReplies({ count, onClick, isLast = false }: ShowMoreRepl
                 count,
               })}
             </span>
-          </Atoms.Button>
-        </Atoms.Container>
-      </Atoms.Container>
-    </Atoms.Container>
+          </Button>
+        </Container>
+      </Container>
+    </Container>
   );
 }

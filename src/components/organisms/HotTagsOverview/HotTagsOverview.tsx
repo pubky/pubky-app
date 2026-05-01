@@ -3,9 +3,11 @@
 import { useHotTags } from '@/hooks/useHotTags/useHotTags';
 import { useMemo } from 'react';
 import { useRouter } from 'next/navigation';
-import * as Atoms from '@/atoms';
+import { Container } from '@/atoms/Container/Container';
+import { Tag } from '@/atoms/Tag/Tag';
+
 import { APP_ROUTES } from '@/app/routes';
-import { HOT_TAGS_FEATURED_COUNT } from '@/config';
+import { HOT_TAGS_FEATURED_COUNT } from '@/config/tags';
 import type { HotTagsOverviewProps } from './HotTagsOverview.types';
 import { DEFAULT_TAGS_LIMIT } from './HotTagsOverview.constants';
 import { HotTagsOverviewSkeleton } from './HotTagsOverview.skeleton';
@@ -43,20 +45,16 @@ export function HotTagsOverview({ limit = DEFAULT_TAGS_LIMIT, className }: HotTa
   }
 
   return (
-    <Atoms.Container
-      overrideDefaults
-      className={cn('flex w-full flex-col gap-2', className)}
-      data-testid="hot-tags-overview"
-    >
+    <Container overrideDefaults className={cn('flex w-full flex-col gap-2', className)} data-testid="hot-tags-overview">
       {isLoading ? (
         <HotTagsOverviewSkeleton />
       ) : (
-        <Atoms.Container overrideDefaults className="flex flex-wrap content-start gap-2">
+        <Container overrideDefaults className="flex flex-wrap content-start gap-2">
           {tags.map((tag) => (
-            <Atoms.Tag key={tag.label} name={tag.label} count={tag.tagged_count} onClick={handleTagClick} />
+            <Tag key={tag.label} name={tag.label} count={tag.tagged_count} onClick={handleTagClick} />
           ))}
-        </Atoms.Container>
+        </Container>
       )}
-    </Atoms.Container>
+    </Container>
   );
 }

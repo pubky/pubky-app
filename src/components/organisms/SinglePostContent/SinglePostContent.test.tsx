@@ -77,50 +77,79 @@ vi.mock('@/hooks/useUserDetailsFromIds/useUserDetailsFromIds', () => ({
 }));
 
 // Mock atoms
-vi.mock('@/atoms', () => ({
-  Container: ({
-    children,
-    className,
-    overrideDefaults,
-  }: {
-    children: React.ReactNode;
-    className?: string;
-    overrideDefaults?: boolean;
-  }) => (
-    <div data-testid="container" data-class-name={className} data-override-defaults={overrideDefaults}>
-      {children}
-    </div>
-  ),
-  Card: ({ children, className }: { children: React.ReactNode; className?: string }) => (
-    <div data-testid="card" data-class-name={className}>
-      {children}
-    </div>
-  ),
-  PostThreadSpacer: () => <div data-testid="post-thread-spacer" />,
-  POST_THREAD_CONNECTOR_VARIANTS: {
-    REGULAR: 'regular',
-    LAST: 'last',
-  },
-  Skeleton: ({ className }: { className?: string }) => <div data-testid="skeleton" className={className} />,
-  CardContent: ({ children, className }: { children: React.ReactNode; className?: string }) => (
-    <div data-testid="card-content" className={className}>
-      {children}
-    </div>
-  ),
-  PageHeader: ({ children, ...props }: { children: React.ReactNode; [key: string]: unknown }) => (
-    <div data-testid="page-header" {...props}>
-      {children}
-    </div>
-  ),
-}));
+vi.mock('@/atoms/Card/Card', () => {
+  return {
+    Card: ({ children, className }: { children: React.ReactNode; className?: string }) => (
+      <div data-testid="card" data-class-name={className}>
+        {children}
+      </div>
+    ),
+    CardContent: ({ children, className }: { children: React.ReactNode; className?: string }) => (
+      <div data-testid="card-content" className={className}>
+        {children}
+      </div>
+    ),
+  };
+});
+
+vi.mock('@/atoms/Container/Container', () => {
+  return {
+    Container: ({
+      children,
+      className,
+      overrideDefaults,
+    }: {
+      children: React.ReactNode;
+      className?: string;
+      overrideDefaults?: boolean;
+    }) => (
+      <div data-testid="container" data-class-name={className} data-override-defaults={overrideDefaults}>
+        {children}
+      </div>
+    ),
+  };
+});
+
+vi.mock('@/atoms/PageHeader/PageHeader', () => {
+  return {
+    PageHeader: ({ children, ...props }: { children: React.ReactNode; [key: string]: unknown }) => (
+      <div data-testid="page-header" {...props}>
+        {children}
+      </div>
+    ),
+  };
+});
+
+vi.mock('@/atoms/PostThreadConnector/PostThreadConnector.constants', () => {
+  return {
+    POST_THREAD_CONNECTOR_VARIANTS: {
+      REGULAR: 'regular',
+      LAST: 'last',
+    },
+  };
+});
+
+vi.mock('@/atoms/PostThreadSpacer/PostThreadSpacer', () => {
+  return {
+    PostThreadSpacer: () => <div data-testid="post-thread-spacer" />,
+  };
+});
+
+vi.mock('@/atoms/Skeleton/Skeleton', () => {
+  return {
+    Skeleton: ({ className }: { className?: string }) => <div data-testid="skeleton" className={className} />,
+  };
+});
 
 // Mock molecules
-vi.mock('@/molecules', () => ({
-  PostDeleted: () => <div data-testid="post-deleted">Post deleted</div>,
-}));
+vi.mock('@/molecules/PostDeleted/PostDeleted', () => {
+  return {
+    PostDeleted: () => <div data-testid="post-deleted">Post deleted</div>,
+  };
+});
 
 // Mock organisms used by SinglePostContent
-vi.mock('../SinglePostArticle', () => ({
+vi.mock('../SinglePostArticle/SinglePostArticle', () => ({
   SinglePostArticle: ({
     postId,
     content,
@@ -137,7 +166,7 @@ vi.mock('../SinglePostArticle', () => ({
   ),
 }));
 
-vi.mock('../SinglePostCard', async () => {
+vi.mock('../SinglePostCard/SinglePostCard', async () => {
   const { usePostMainLayout } = await import('@/organisms/PostMain/PostMainLayout');
 
   return {
@@ -152,7 +181,7 @@ vi.mock('../SinglePostCard', async () => {
   };
 });
 
-vi.mock('../PostPageHeader', () => ({
+vi.mock('../PostPageHeader/PostPageHeader', () => ({
   PostPageHeader: ({ postId }: { postId: string }) => (
     <div data-testid="post-page-header" data-post-id={postId}>
       PostPageHeader
@@ -160,7 +189,7 @@ vi.mock('../PostPageHeader', () => ({
   ),
 }));
 
-vi.mock('../SinglePostParticipants', () => ({
+vi.mock('../SinglePostParticipants/SinglePostParticipants', () => ({
   SinglePostParticipants: ({ postId }: { postId: string }) => (
     <div data-testid="single-post-participants" data-post-id={postId}>
       SinglePostParticipants
@@ -168,7 +197,7 @@ vi.mock('../SinglePostParticipants', () => ({
   ),
 }));
 
-vi.mock('../QuickReply', () => ({
+vi.mock('../QuickReply/QuickReply', () => ({
   QuickReply: ({ parentPostId, connectorVariant }: { parentPostId: string; connectorVariant?: string }) => (
     <div data-testid="quick-reply" data-parent-post-id={parentPostId} data-connector-variant={connectorVariant}>
       QuickReply

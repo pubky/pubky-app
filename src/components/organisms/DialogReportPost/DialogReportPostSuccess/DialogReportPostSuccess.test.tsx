@@ -1,13 +1,14 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen, fireEvent } from '@testing-library/react';
-import * as Atoms from '@/atoms';
+import { Dialog, DialogContent } from '@/atoms/Dialog/Dialog';
+
 import { DialogReportPostSuccess } from './DialogReportPostSuccess';
 
 const renderWithDialog = (component: React.ReactElement) => {
   return render(
-    <Atoms.Dialog open={true}>
-      <Atoms.DialogContent>{component}</Atoms.DialogContent>
-    </Atoms.Dialog>,
+    <Dialog open={true}>
+      <DialogContent>{component}</DialogContent>
+    </Dialog>,
   );
 };
 

@@ -3,85 +3,107 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { DialogRestoreRecoveryPhrase } from './DialogRestoreRecoveryPhrase';
 import { AuthController } from '@/controllers/auth/auth';
+vi.mock('@/atoms/Dialog/Dialog', () => {
+  return {
+    Dialog: vi.fn(({ children }) => <div data-testid="dialog">{children}</div>),
+    DialogTrigger: vi.fn(({ children, asChild }) => (
+      <div data-testid="dialog-trigger" data-as-child={asChild}>
+        {children}
+      </div>
+    )),
+    DialogContent: vi.fn(({ children, className, hiddenTitle }) => (
+      <div data-testid="dialog-content" className={className} data-hidden-title={hiddenTitle}>
+        {hiddenTitle && (
+          <h2 className="sr-only" data-testid="dialog-hidden-title">
+            {hiddenTitle}
+          </h2>
+        )}
+        {children}
+      </div>
+    )),
+    DialogHeader: vi.fn(({ children, className }) => (
+      <div data-testid="dialog-header" className={className}>
+        {children}
+      </div>
+    )),
+    DialogTitle: vi.fn(({ children, className }) => (
+      <h2 data-testid="dialog-title" className={className}>
+        {children}
+      </h2>
+    )),
+    DialogDescription: vi.fn(({ children, className }) => (
+      <p data-testid="dialog-description" className={className}>
+        {children}
+      </p>
+    )),
+    DialogClose: vi.fn(({ children, asChild }) => (
+      <div data-testid="dialog-close" data-as-child={asChild}>
+        {children}
+      </div>
+    )),
+    DialogFooter: vi.fn(({ children, className }) => (
+      <div data-testid="dialog-footer" className={className}>
+        {children}
+      </div>
+    )),
+  };
+});
+
 // Mock external dependencies
 
-vi.mock('@/atoms', () => ({
-  Dialog: vi.fn(({ children }) => <div data-testid="dialog">{children}</div>),
-  DialogTrigger: vi.fn(({ children, asChild }) => (
-    <div data-testid="dialog-trigger" data-as-child={asChild}>
-      {children}
-    </div>
-  )),
-  DialogContent: vi.fn(({ children, className, hiddenTitle }) => (
-    <div data-testid="dialog-content" className={className} data-hidden-title={hiddenTitle}>
-      {hiddenTitle && (
-        <h2 className="sr-only" data-testid="dialog-hidden-title">
-          {hiddenTitle}
-        </h2>
-      )}
-      {children}
-    </div>
-  )),
-  DialogHeader: vi.fn(({ children, className }) => (
-    <div data-testid="dialog-header" className={className}>
-      {children}
-    </div>
-  )),
-  DialogTitle: vi.fn(({ children, className }) => (
-    <h2 data-testid="dialog-title" className={className}>
-      {children}
-    </h2>
-  )),
-  DialogDescription: vi.fn(({ children, className }) => (
-    <p data-testid="dialog-description" className={className}>
-      {children}
-    </p>
-  )),
-  DialogClose: vi.fn(({ children, asChild }) => (
-    <div data-testid="dialog-close" data-as-child={asChild}>
-      {children}
-    </div>
-  )),
-  DialogFooter: vi.fn(({ children, className }) => (
-    <div data-testid="dialog-footer" className={className}>
-      {children}
-    </div>
-  )),
-  Button: vi.fn(({ children, variant, className, size, onClick, disabled, ...props }) => (
-    <button
-      data-testid="button"
-      data-variant={variant}
-      data-size={size}
-      className={className}
-      onClick={onClick}
-      disabled={disabled}
-      {...props}
-    >
-      {children}
-    </button>
-  )),
-  Container: vi.fn(({ children, className, display, ...props }) => (
-    <div data-testid="container" className={className} data-display={display} {...props}>
-      {children}
-    </div>
-  )),
-  Badge: vi.fn(({ children, variant, className }) => (
-    <span data-testid="badge" data-variant={variant} className={className}>
-      {children}
-    </span>
-  )),
-  Input: vi.fn(({ value, placeholder, className, onChange, onBlur, ...props }) => (
-    <input
-      data-testid="input"
-      value={value}
-      placeholder={placeholder}
-      className={className}
-      onChange={onChange}
-      onBlur={onBlur}
-      {...props}
-    />
-  )),
-}));
+vi.mock('@/atoms/Badge/Badge', () => {
+  return {
+    Badge: vi.fn(({ children, variant, className }) => (
+      <span data-testid="badge" data-variant={variant} className={className}>
+        {children}
+      </span>
+    )),
+  };
+});
+
+vi.mock('@/atoms/Button/Button', () => {
+  return {
+    Button: vi.fn(({ children, variant, className, size, onClick, disabled, ...props }) => (
+      <button
+        data-testid="button"
+        data-variant={variant}
+        data-size={size}
+        className={className}
+        onClick={onClick}
+        disabled={disabled}
+        {...props}
+      >
+        {children}
+      </button>
+    )),
+  };
+});
+
+vi.mock('@/atoms/Container/Container', () => {
+  return {
+    Container: vi.fn(({ children, className, display, ...props }) => (
+      <div data-testid="container" className={className} data-display={display} {...props}>
+        {children}
+      </div>
+    )),
+  };
+});
+
+vi.mock('@/atoms/Input/Input', () => {
+  return {
+    Input: vi.fn(({ value, placeholder, className, onChange, onBlur, ...props }) => (
+      <input
+        data-testid="input"
+        value={value}
+        placeholder={placeholder}
+        className={className}
+        onChange={onChange}
+        onBlur={onBlur}
+        {...props}
+      />
+    )),
+  };
+});
 
 // Mock dependencies
 vi.mock('@/controllers/auth/auth', () => ({
@@ -99,37 +121,44 @@ vi.mock('@/stores/auth/auth.store', () => ({
 
 // Mock Molecules module
 const mockToast = vi.fn();
-vi.mock('@/molecules', () => ({
-  useToast: vi.fn(() => ({
-    toast: mockToast,
-  })),
-  WordSlot: vi.fn(
-    ({ index, word, isError, showError, isRestoring, onChange, onValidate, onKeyDown, mode, ...props }) => (
-      <div
-        data-testid="word-slot"
-        data-index={index}
-        data-mode={mode}
-        data-error={isError}
-        data-show-error={showError}
-        data-restoring={isRestoring}
-      >
-        <span data-testid="badge" data-variant="outline">
-          {index + 1}
-        </span>
-        <input
-          data-testid="word-input"
-          value={word}
-          placeholder="word"
-          onChange={(e) => onChange?.(index, e.target.value.toLowerCase().trim())}
-          onBlur={() => onValidate?.(index, word)}
-          onKeyDown={onKeyDown}
-          disabled={isRestoring}
-          {...props}
-        />
-      </div>
+vi.mock('@/molecules/Toaster/use-toast', () => {
+  return {
+    useToast: vi.fn(() => ({
+      toast: mockToast,
+    })),
+  };
+});
+
+vi.mock('@/molecules/WordSlot/WordSlot', () => {
+  return {
+    WordSlot: vi.fn(
+      ({ index, word, isError, showError, isRestoring, onChange, onValidate, onKeyDown, mode, ...props }) => (
+        <div
+          data-testid="word-slot"
+          data-index={index}
+          data-mode={mode}
+          data-error={isError}
+          data-show-error={showError}
+          data-restoring={isRestoring}
+        >
+          <span data-testid="badge" data-variant="outline">
+            {index + 1}
+          </span>
+          <input
+            data-testid="word-input"
+            value={word}
+            placeholder="word"
+            onChange={(e) => onChange?.(index, e.target.value.toLowerCase().trim())}
+            onBlur={() => onValidate?.(index, word)}
+            onKeyDown={onKeyDown}
+            disabled={isRestoring}
+            {...props}
+          />
+        </div>
+      ),
     ),
-  ),
-}));
+  };
+});
 
 describe('DialogRestoreRecoveryPhrase', () => {
   const mockOnRestore = vi.fn();

@@ -2,7 +2,8 @@
 
 import { useCallback, useEffect, useState } from 'react';
 import { useTranslations } from 'next-intl';
-import * as Molecules from '@/molecules';
+import { useToast } from '@/molecules/Toaster/use-toast';
+
 import { Logger } from '@/libs/logger/logger';
 import { BookmarkController } from '@/controllers/bookmark/bookmark';
 import { useAuthStore } from '@/stores/auth/auth.store';
@@ -33,7 +34,7 @@ export interface UseBookmarkResult {
  * ```
  */
 export function useBookmark(postId: string): UseBookmarkResult {
-  const { toast } = Molecules.useToast();
+  const { toast } = useToast();
   const tToast = useTranslations('toast');
   const tBookmark = useTranslations('toast.bookmark');
   const currentUserPubky = useAuthStore((state) => state.currentUserPubky);

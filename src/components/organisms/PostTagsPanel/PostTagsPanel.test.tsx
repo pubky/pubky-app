@@ -38,51 +38,80 @@ vi.mock('@/stores/auth/auth.store', () => ({
 
 // Mock molecules
 const mockTaggedList = vi.fn();
-vi.mock('@/molecules', () => ({
-  TagInput: () => <input data-testid="tag-input" />,
-  TaggedList: (props: { tags: unknown[]; hasMore?: boolean; isLoadingMore?: boolean; onLoadMore?: () => void }) => {
-    mockTaggedList(props);
-    return <div data-testid="tagged-list">Tags: {props.tags.length}</div>;
-  },
-}));
+vi.mock('@/molecules/TaggedList/TaggedList', () => {
+  return {
+    TaggedList: (props: { tags: unknown[]; hasMore?: boolean; isLoadingMore?: boolean; onLoadMore?: () => void }) => {
+      mockTaggedList(props);
+      return <div data-testid="tagged-list">Tags: {props.tags.length}</div>;
+    },
+  };
+});
+
+vi.mock('@/molecules/TagInput/TagInput', () => {
+  return {
+    TagInput: () => <input data-testid="tag-input" />,
+  };
+});
 
 // Mock atoms
-vi.mock('@/atoms', () => ({
-  Container: ({
-    children,
-    className,
-    overrideDefaults,
-    ...props
-  }: {
-    children: React.ReactNode;
-    className?: string;
-    overrideDefaults?: boolean;
-  }) => (
-    <div className={className} data-override-defaults={overrideDefaults} {...props}>
-      {children}
-    </div>
-  ),
-  Typography: ({ children, as: Tag = 'span' }: { children: React.ReactNode; as?: React.ElementType }) => {
-    return <Tag>{children}</Tag>;
-  },
-  SidebarButton: ({
-    children,
-    onClick,
-    'data-testid': dataTestId,
-  }: {
-    children: React.ReactNode;
-    onClick?: () => void;
-    'data-testid'?: string;
-  }) => (
-    <button data-testid={dataTestId} onClick={onClick}>
-      {children}
-    </button>
-  ),
-  Spinner: ({ size }: { size: string }) => <div data-testid="spinner" data-size={size} />,
-  Skeleton: ({ className, ...props }: { className?: string; children?: React.ReactNode }) => (
-    <div data-slot="skeleton" className={className} {...props} />
-  ),
-}));
+vi.mock('@/atoms/Container/Container', () => {
+  return {
+    Container: ({
+      children,
+      className,
+      overrideDefaults,
+      ...props
+    }: {
+      children: React.ReactNode;
+      className?: string;
+      overrideDefaults?: boolean;
+    }) => (
+      <div className={className} data-override-defaults={overrideDefaults} {...props}>
+        {children}
+      </div>
+    ),
+  };
+});
+
+vi.mock('@/atoms/SidebarButton/SidebarButton', () => {
+  return {
+    SidebarButton: ({
+      children,
+      onClick,
+      'data-testid': dataTestId,
+    }: {
+      children: React.ReactNode;
+      onClick?: () => void;
+      'data-testid'?: string;
+    }) => (
+      <button data-testid={dataTestId} onClick={onClick}>
+        {children}
+      </button>
+    ),
+  };
+});
+
+vi.mock('@/atoms/Skeleton/Skeleton', () => {
+  return {
+    Skeleton: ({ className, ...props }: { className?: string; children?: React.ReactNode }) => (
+      <div data-slot="skeleton" className={className} {...props} />
+    ),
+  };
+});
+
+vi.mock('@/atoms/Spinner/Spinner', () => {
+  return {
+    Spinner: ({ size }: { size: string }) => <div data-testid="spinner" data-size={size} />,
+  };
+});
+
+vi.mock('@/atoms/Typography/Typography', () => {
+  return {
+    Typography: ({ children, as: Tag = 'span' }: { children: React.ReactNode; as?: React.ElementType }) => {
+      return <Tag>{children}</Tag>;
+    },
+  };
+});
 
 describe('PostTagsPanel', () => {
   const mockLoadMore = vi.fn();

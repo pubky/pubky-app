@@ -1,7 +1,10 @@
 'use client';
+import { Container } from '@/atoms/Container/Container';
+import { PostAttachmentsAudios } from '@/molecules/PostAttachmentsAudios/PostAttachmentsAudios';
+import { PostAttachmentsGenericFiles } from '@/molecules/PostAttachmentsGenericFiles/PostAttachmentsGenericFiles';
+import { PostAttachmentsImagesAndVideos } from '@/molecules/PostAttachmentsImagesAndVideos/PostAttachmentsImagesAndVideos';
+import { useToast } from '@/molecules/Toaster/use-toast';
 
-import * as Atoms from '@/atoms';
-import * as Molecules from '@/molecules';
 import { useEffect, useState } from 'react';
 import { useTranslations } from 'next-intl';
 import type { AttachmentConstructed, PostAttachmentsProps } from './PostAttachments.types';
@@ -12,7 +15,7 @@ export const PostAttachments = ({ attachments, localAttachments }: PostAttachmen
   const [audios, setAudios] = useState<AttachmentConstructed[]>([]);
   const [genericFiles, setGenericFiles] = useState<AttachmentConstructed[]>([]);
 
-  const { toast } = Molecules.useToast();
+  const { toast } = useToast();
   const tToast = useTranslations('toast');
   const tPost = useTranslations('toast.post');
 
@@ -106,10 +109,10 @@ export const PostAttachments = ({ attachments, localAttachments }: PostAttachmen
   if (!imagesAndVideos.length && !audios.length && !genericFiles.length) return null;
 
   return (
-    <Atoms.Container className="gap-3">
-      {imagesAndVideos.length ? <Molecules.PostAttachmentsImagesAndVideos imagesAndVideos={imagesAndVideos} /> : null}
-      {audios.length ? <Molecules.PostAttachmentsAudios audios={audios} /> : null}
-      {genericFiles.length ? <Molecules.PostAttachmentsGenericFiles genericFiles={genericFiles} /> : null}
-    </Atoms.Container>
+    <Container className="gap-3">
+      {imagesAndVideos.length ? <PostAttachmentsImagesAndVideos imagesAndVideos={imagesAndVideos} /> : null}
+      {audios.length ? <PostAttachmentsAudios audios={audios} /> : null}
+      {genericFiles.length ? <PostAttachmentsGenericFiles genericFiles={genericFiles} /> : null}
+    </Container>
   );
 };

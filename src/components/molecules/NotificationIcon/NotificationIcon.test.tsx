@@ -3,23 +3,25 @@ import { render } from '@testing-library/react';
 import { NotificationIcon } from './NotificationIcon';
 import { NotificationType } from '@/models/notification/notification.types';
 // Mock atoms
-vi.mock('@/atoms', () => ({
-  Container: ({
-    children,
-    className,
-    style,
-    overrideDefaults,
-  }: {
-    children: React.ReactNode;
-    className?: string;
-    style?: React.CSSProperties;
-    overrideDefaults?: boolean;
-  }) => (
-    <div data-testid="container" className={className} style={style} data-override={overrideDefaults}>
-      {children}
-    </div>
-  ),
-}));
+vi.mock('@/atoms/Container/Container', () => {
+  return {
+    Container: ({
+      children,
+      className,
+      style,
+      overrideDefaults,
+    }: {
+      children: React.ReactNode;
+      className?: string;
+      style?: React.CSSProperties;
+      overrideDefaults?: boolean;
+    }) => (
+      <div data-testid="container" className={className} style={style} data-override={overrideDefaults}>
+        {children}
+      </div>
+    ),
+  };
+});
 
 describe('NotificationIcon', () => {
   it('renders Follow icon for Follow notification type', () => {

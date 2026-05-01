@@ -5,8 +5,11 @@ import { useIsFollowing } from '@/hooks/useIsFollowing/useIsFollowing';
 import { useProfileHeader } from '@/hooks/useProfileHeader/useProfileHeader';
 import { useProfileNavigation } from '@/hooks/useProfileNavigation/useProfileNavigation';
 import { useRequireAuth } from '@/hooks/useRequireAuth/useRequireAuth';
-import * as Molecules from '@/molecules';
-import * as Organisms from '@/organisms';
+import { MobileFooter } from '@/molecules/MobileFooter/MobileFooter';
+import { MobileHeader } from '@/molecules/MobileHeader/MobileHeader';
+import { ProfilePageLayoutWrapper } from '@/molecules/ProfilePageLayoutWrapper/ProfilePageLayoutWrapper';
+import { UserNotFound } from '@/molecules/UserNotFound/UserNotFound';
+import { ProfilePageLayout } from '../ProfilePageLayout/ProfilePageLayout';
 import { useProfileContext } from '@/providers/ProfileProvider/ProfileProvider';
 import { useAuthStore } from '@/stores/auth/auth.store';
 export interface ProfilePageContainerProps {
@@ -84,18 +87,18 @@ export function ProfilePageContainer({ children }: ProfilePageContainerProps) {
   if (userNotFound && !isOwnProfile && !isLoggingOut) {
     return (
       <>
-        <Molecules.MobileHeader showLeftButton={false} showRightButton={false} />
-        <Molecules.ProfilePageLayoutWrapper>
-          <Molecules.UserNotFound />
-        </Molecules.ProfilePageLayoutWrapper>
-        <Molecules.MobileFooter />
+        <MobileHeader showLeftButton={false} showRightButton={false} />
+        <ProfilePageLayoutWrapper>
+          <UserNotFound />
+        </ProfilePageLayoutWrapper>
+        <MobileFooter />
       </>
     );
   }
 
   // Delegate presentation to layout organism
   return (
-    <Organisms.ProfilePageLayout
+    <ProfilePageLayout
       profile={profile}
       stats={stats}
       actions={mergedActions}
@@ -107,6 +110,6 @@ export function ProfilePageContainer({ children }: ProfilePageContainerProps) {
       userId={pubky ?? ''}
     >
       {children}
-    </Organisms.ProfilePageLayout>
+    </ProfilePageLayout>
   );
 }

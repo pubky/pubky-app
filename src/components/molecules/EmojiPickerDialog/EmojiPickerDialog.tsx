@@ -1,12 +1,13 @@
 'use client';
-
-import * as Atoms from '@/components/atoms';
-import * as Molecules from '@/components/molecules';
+import { Container } from '@/atoms/Container/Container';
+import { Dialog, DialogContent, DialogDescription } from '@/atoms/Dialog/Dialog';
+import { EmojiPicker } from '../EmojiPicker/EmojiPicker';
+import { EmojiPickerProps } from '../EmojiPicker/EmojiPicker.types';
 
 export interface EmojiPickerDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  onEmojiSelect: Molecules.EmojiPickerProps['onEmojiSelect'];
+  onEmojiSelect: EmojiPickerProps['onEmojiSelect'];
   maxLength?: number;
   currentInput?: string;
 }
@@ -24,23 +25,19 @@ export function EmojiPickerDialog({
   };
 
   return (
-    <Atoms.Dialog open={open} onOpenChange={onOpenChange}>
-      <Atoms.DialogContent
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent
         className="max-w-sm overflow-hidden p-0 outline-none sm:p-0"
         showCloseButton={false}
         hiddenTitle="Emoji Picker"
       >
-        <Atoms.DialogDescription className="sr-only">Select an emoji</Atoms.DialogDescription>
-        <Atoms.Container overrideDefaults={true} className="flex justify-center overflow-hidden">
-          <Atoms.Container overrideDefaults={true} className="w-full max-w-full overflow-hidden">
-            <Molecules.EmojiPicker
-              onEmojiSelect={handleEmojiSelect}
-              maxLength={maxLength}
-              currentInput={currentInput}
-            />
-          </Atoms.Container>
-        </Atoms.Container>
-      </Atoms.DialogContent>
-    </Atoms.Dialog>
+        <DialogDescription className="sr-only">Select an emoji</DialogDescription>
+        <Container overrideDefaults={true} className="flex justify-center overflow-hidden">
+          <Container overrideDefaults={true} className="w-full max-w-full overflow-hidden">
+            <EmojiPicker onEmojiSelect={handleEmojiSelect} maxLength={maxLength} currentInput={currentInput} />
+          </Container>
+        </Container>
+      </DialogContent>
+    </Dialog>
   );
 }

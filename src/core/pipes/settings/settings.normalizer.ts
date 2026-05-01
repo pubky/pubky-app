@@ -1,12 +1,13 @@
 import { baseUriBuilder } from 'pubky-app-specs';
 import { Logger } from '@/libs/logger/logger';
 import type { Pubky } from '@/models/models.types';
-import { defaultNotificationPreferences, defaultPrivacyPreferences } from '@/stores/settings/settings.types';
-import type {
-  NotificationPreferences,
-  PrivacyPreferences,
-  SettingsState,
-  SettingsStore,
+import {
+  defaultNotificationPreferences,
+  defaultPrivacyPreferences,
+  type NotificationPreferences,
+  type PrivacyPreferences,
+  type SettingsState,
+  type SettingsStore,
 } from '@/stores/settings/settings.types';
 /**
  * Settings JSON structure for homeserver persistence.

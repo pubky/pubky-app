@@ -45,8 +45,8 @@ vi.mock('@/stores/notification/notification.store', () => ({
 }));
 
 // Mock config
-vi.mock('@/config', async (importOriginal) => {
-  const actual = await importOriginal<typeof import('@/config')>();
+vi.mock('@/config/nexus', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('@/config/nexus')>();
   return {
     ...actual,
     NEXUS_NOTIFICATIONS_LIMIT: 30,
