@@ -12,7 +12,7 @@ vi.mock('next/navigation', () => ({
 }));
 
 // Mock Atoms.Tag and Button
-vi.mock('@/atoms/Button/Button', async () => {
+vi.mock('@/atoms/Button/Button', () => {
   return {
     Button: ({
       children,
@@ -41,7 +41,7 @@ vi.mock('@/atoms/Button/Button', async () => {
   };
 });
 
-vi.mock('@/atoms/Tag/Tag', async () => {
+vi.mock('@/atoms/Tag/Tag', () => {
   return {
     Tag: ({ name, count }: { name: string; count?: number }) => (
       <div data-testid="tag">
@@ -52,7 +52,7 @@ vi.mock('@/atoms/Tag/Tag', async () => {
 });
 
 // Mock AvatarWithFallback
-vi.mock('@/organisms/AvatarWithFallback/AvatarWithFallback', async () => {
+vi.mock('@/organisms/AvatarWithFallback/AvatarWithFallback', () => {
   return {
     AvatarWithFallback: ({ name }: { name: string }) => (
       <div data-testid="avatar" data-name={name}>
@@ -63,7 +63,7 @@ vi.mock('@/organisms/AvatarWithFallback/AvatarWithFallback', async () => {
 });
 
 // Mock WhoTaggedExpandedList
-vi.mock('@/molecules/WhoTaggedExpandedList/WhoTaggedExpandedList', async () => {
+vi.mock('@/molecules/WhoTaggedExpandedList/WhoTaggedExpandedList', () => {
   return {
     WhoTaggedExpandedList: ({ taggerIds }: { taggerIds: Array<string> }) => (
       <div data-testid="who-tagged-expanded-list">Expanded List ({taggerIds.length} users)</div>

@@ -14,7 +14,7 @@ vi.mock('@/hooks/useIsMobile/useIsMobile', () => ({
   useIsMobile: mockUseIsMobile,
 }));
 
-vi.mock('@/atoms/Container/Container', async () => {
+vi.mock('@/atoms/Container/Container', () => {
   return {
     Container: ({ children, className }: { children: React.ReactNode; className?: string }) => (
       <div data-testid="container" className={className}>
@@ -24,7 +24,7 @@ vi.mock('@/atoms/Container/Container', async () => {
   };
 });
 
-vi.mock('@/atoms/Typography/Typography', async () => {
+vi.mock('@/atoms/Typography/Typography', () => {
   return {
     Typography: ({
       children,

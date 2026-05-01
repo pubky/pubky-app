@@ -2,7 +2,7 @@ import { render, screen, fireEvent } from '@testing-library/react';
 import { describe, it, expect, vi } from 'vitest';
 import { SearchSuggestions } from './SearchSuggestions';
 
-vi.mock('@/atoms/Container/Container', async () => {
+vi.mock('@/atoms/Container/Container', () => {
   return {
     Container: ({
       children,
@@ -24,7 +24,7 @@ vi.mock('@/atoms/Container/Container', async () => {
   };
 });
 
-vi.mock('@/molecules/SearchTagSection/SearchTagSection', async () => {
+vi.mock('@/molecules/SearchTagSection/SearchTagSection', () => {
   return {
     SearchTagSection: ({
       title,

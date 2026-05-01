@@ -38,7 +38,7 @@ vi.mock('@/stores/auth/auth.store', () => ({
 
 // Mock molecules
 const mockTaggedList = vi.fn();
-vi.mock('@/molecules/TaggedList/TaggedList', async () => {
+vi.mock('@/molecules/TaggedList/TaggedList', () => {
   return {
     TaggedList: (props: { tags: unknown[]; hasMore?: boolean; isLoadingMore?: boolean; onLoadMore?: () => void }) => {
       mockTaggedList(props);
@@ -47,14 +47,14 @@ vi.mock('@/molecules/TaggedList/TaggedList', async () => {
   };
 });
 
-vi.mock('@/molecules/TagInput/TagInput', async () => {
+vi.mock('@/molecules/TagInput/TagInput', () => {
   return {
     TagInput: () => <input data-testid="tag-input" />,
   };
 });
 
 // Mock atoms
-vi.mock('@/atoms/Container/Container', async () => {
+vi.mock('@/atoms/Container/Container', () => {
   return {
     Container: ({
       children,
@@ -73,7 +73,7 @@ vi.mock('@/atoms/Container/Container', async () => {
   };
 });
 
-vi.mock('@/atoms/SidebarButton/SidebarButton', async () => {
+vi.mock('@/atoms/SidebarButton/SidebarButton', () => {
   return {
     SidebarButton: ({
       children,
@@ -91,7 +91,7 @@ vi.mock('@/atoms/SidebarButton/SidebarButton', async () => {
   };
 });
 
-vi.mock('@/atoms/Skeleton/Skeleton', async () => {
+vi.mock('@/atoms/Skeleton/Skeleton', () => {
   return {
     Skeleton: ({ className, ...props }: { className?: string; children?: React.ReactNode }) => (
       <div data-slot="skeleton" className={className} {...props} />
@@ -99,13 +99,13 @@ vi.mock('@/atoms/Skeleton/Skeleton', async () => {
   };
 });
 
-vi.mock('@/atoms/Spinner/Spinner', async () => {
+vi.mock('@/atoms/Spinner/Spinner', () => {
   return {
     Spinner: ({ size }: { size: string }) => <div data-testid="spinner" data-size={size} />,
   };
 });
 
-vi.mock('@/atoms/Typography/Typography', async () => {
+vi.mock('@/atoms/Typography/Typography', () => {
   return {
     Typography: ({ children, as: Tag = 'span' }: { children: React.ReactNode; as?: React.ElementType }) => {
       return <Tag>{children}</Tag>;

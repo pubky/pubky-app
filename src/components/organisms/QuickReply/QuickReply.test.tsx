@@ -53,7 +53,7 @@ function createUsePostInputReturn(options: unknown, overrides: Record<string, un
   };
 }
 
-vi.mock('@/atoms/Container/Container', async () => {
+vi.mock('@/atoms/Container/Container', () => {
   return {
     Container: ({ children, ...props }: { children?: React.ReactNode; [key: string]: unknown }) => (
       <div data-testid="container" {...props}>
@@ -63,7 +63,7 @@ vi.mock('@/atoms/Container/Container', async () => {
   };
 });
 
-vi.mock('@/atoms/PostThreadConnector/PostThreadConnector', async () => {
+vi.mock('@/atoms/PostThreadConnector/PostThreadConnector', () => {
   return {
     PostThreadConnector: ({ ...props }: { [key: string]: unknown }) => (
       <div data-testid="thread-connector" {...props} />
@@ -71,13 +71,13 @@ vi.mock('@/atoms/PostThreadConnector/PostThreadConnector', async () => {
   };
 });
 
-vi.mock('@/atoms/PostThreadConnector/PostThreadConnector.constants', async () => {
+vi.mock('@/atoms/PostThreadConnector/PostThreadConnector.constants', () => {
   return {
     POST_THREAD_CONNECTOR_VARIANTS: { LAST: 'last', REGULAR: 'regular', DIALOG_REPLY: 'dialog-reply' },
   };
 });
 
-vi.mock('@/atoms/Textarea/Textarea', async () => {
+vi.mock('@/atoms/Textarea/Textarea', () => {
   return {
     Textarea: ({ 'data-testid': dataTestId, ...props }: { 'data-testid'?: string; [key: string]: unknown }) => (
       <textarea data-testid={dataTestId ?? 'textarea'} {...props} />
@@ -85,25 +85,25 @@ vi.mock('@/atoms/Textarea/Textarea', async () => {
   };
 });
 
-vi.mock('@/organisms/AvatarWithFallback/AvatarWithFallback', async () => {
+vi.mock('@/organisms/AvatarWithFallback/AvatarWithFallback', () => {
   return {
     AvatarWithFallback: ({ size }: { size?: string }) => <div data-testid="avatar" data-size={size} />,
   };
 });
 
-vi.mock('@/molecules/EmojiPickerDialog/EmojiPickerDialog', async () => {
+vi.mock('@/molecules/EmojiPickerDialog/EmojiPickerDialog', () => {
   return {
     EmojiPickerDialog: ({ ...props }: { [key: string]: unknown }) => <div data-testid="emoji-dialog" {...props} />,
   };
 });
 
-vi.mock('@/molecules/PostLinkEmbeds/PostLinkEmbeds', async () => {
+vi.mock('@/molecules/PostLinkEmbeds/PostLinkEmbeds', () => {
   return {
     PostLinkEmbeds: ({ ...props }: { [key: string]: unknown }) => <div data-testid="link-embeds" {...props} />,
   };
 });
 
-vi.mock('@/molecules/PostTag/PostTag', async () => {
+vi.mock('@/molecules/PostTag/PostTag', () => {
   return {
     PostTag: ({ label }: { label: string }) => <div data-testid="tag">{label}</div>,
   };

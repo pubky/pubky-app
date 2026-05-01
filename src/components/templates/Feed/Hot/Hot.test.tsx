@@ -25,7 +25,7 @@ vi.mock('@/hooks/useIsMobile/useIsMobile', () => ({
 }));
 
 // Mock Molecules
-vi.mock('@/molecules/HotMobileMenu/HotMobileMenu', async () => {
+vi.mock('@/molecules/HotMobileMenu/HotMobileMenu', () => {
   return {
     HotMobileMenu: ({
       activeSection,
@@ -50,7 +50,7 @@ vi.mock('@/molecules/HotMobileMenu/HotMobileMenu', async () => {
 });
 
 // Mock Organisms
-vi.mock('@/organisms/ContentLayout/ContentLayout', async () => {
+vi.mock('@/organisms/ContentLayout/ContentLayout', () => {
   return {
     ContentLayout: ({
       children,
@@ -68,14 +68,14 @@ vi.mock('@/organisms/ContentLayout/ContentLayout', async () => {
   };
 });
 
-vi.mock('@/organisms/FeedRightSidebar/FeedRightSidebar', async () => {
+vi.mock('@/organisms/FeedRightSidebar/FeedRightSidebar', () => {
   return {
     HotFeedRightSidebar: () => <div data-testid="hot-feed-right-sidebar">HotFeedRightSidebar</div>,
     HotFeedRightDrawer: () => <div data-testid="hot-feed-right-drawer">HotFeedRightDrawer</div>,
   };
 });
 
-vi.mock('@/organisms/HotActiveUsers/HotActiveUsers', async () => {
+vi.mock('@/organisms/HotActiveUsers/HotActiveUsers', () => {
   return {
     HotActiveUsers: ({ className }: { className?: string }) => (
       <div data-testid="hot-active-users" className={className}>
@@ -85,14 +85,14 @@ vi.mock('@/organisms/HotActiveUsers/HotActiveUsers', async () => {
   };
 });
 
-vi.mock('@/organisms/HotFeedFilters/HotFeedFilters', async () => {
+vi.mock('@/organisms/HotFeedFilters/HotFeedFilters', () => {
   return {
     HotFeedSidebar: () => <div data-testid="hot-feed-sidebar">HotFeedSidebar</div>,
     HotFeedDrawer: () => <div data-testid="hot-feed-drawer">HotFeedDrawer</div>,
   };
 });
 
-vi.mock('@/organisms/HotTagsCardsSection/HotTagsCardsSection', async () => {
+vi.mock('@/organisms/HotTagsCardsSection/HotTagsCardsSection', () => {
   return {
     HotTagsCardsSection: ({ className }: { className?: string }) => (
       <div data-testid="hot-tags-cards-section" className={className}>
@@ -102,7 +102,7 @@ vi.mock('@/organisms/HotTagsCardsSection/HotTagsCardsSection', async () => {
   };
 });
 
-vi.mock('@/organisms/HotTagsOverview/HotTagsOverview', async () => {
+vi.mock('@/organisms/HotTagsOverview/HotTagsOverview', () => {
   return {
     HotTagsOverview: ({ className }: { className?: string }) => (
       <div data-testid="hot-tags-overview" className={className}>
@@ -112,14 +112,14 @@ vi.mock('@/organisms/HotTagsOverview/HotTagsOverview', async () => {
   };
 });
 
-vi.mock('@/organisms/Timeline/Feed/TimelineFeed/TimelineFeed', async () => {
+vi.mock('@/organisms/Timeline/Feed/TimelineFeed/TimelineFeed', () => {
   return {
     TimelineFeed: () => <div data-testid="timeline-feed">TimelineFeed</div>,
   };
 });
 
 // Mock Atoms
-vi.mock('@/atoms/Container/Container', async () => {
+vi.mock('@/atoms/Container/Container', () => {
   return {
     Container: ({
       children,
@@ -137,7 +137,7 @@ vi.mock('@/atoms/Container/Container', async () => {
   };
 });
 
-vi.mock('@/atoms/Heading/Heading', async () => {
+vi.mock('@/atoms/Heading/Heading', () => {
   return {
     Heading: ({ children, level }: { children: React.ReactNode; level: number }) => (
       <div data-testid={`heading-${level}`}>{children}</div>

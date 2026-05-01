@@ -11,7 +11,7 @@ vi.mock('next/navigation', () => ({
 }));
 
 // Mock molecules
-vi.mock('@/molecules/ButtonsNavigation/ButtonsNavigation', async () => {
+vi.mock('@/molecules/ButtonsNavigation/ButtonsNavigation', () => {
   return {
     ButtonsNavigation: ({
       className,
@@ -38,7 +38,7 @@ vi.mock('@/molecules/ButtonsNavigation/ButtonsNavigation', async () => {
   };
 });
 
-vi.mock('@/molecules/Page/Page', async () => {
+vi.mock('@/molecules/Page/Page', () => {
   return {
     PageTitle: ({ children, size }: { children: React.ReactNode; size?: string }) => (
       <div data-testid="page-title" data-size={size}>
@@ -49,31 +49,31 @@ vi.mock('@/molecules/Page/Page', async () => {
 });
 
 // Mock organisms
-vi.mock('@/organisms/DialogAge/DialogAge', async () => {
+vi.mock('@/organisms/DialogAge/DialogAge', () => {
   return {
     DialogAge: () => <span data-testid="dialog-age">over 18 years old.</span>,
   };
 });
 
-vi.mock('@/organisms/DialogPrivacy/DialogPrivacy', async () => {
+vi.mock('@/organisms/DialogPrivacy/DialogPrivacy', () => {
   return {
     DialogPrivacy: () => <span data-testid="dialog-privacy">Privacy Policy</span>,
   };
 });
 
-vi.mock('@/organisms/DialogTerms/DialogTerms', async () => {
+vi.mock('@/organisms/DialogTerms/DialogTerms', () => {
   return {
     DialogTerms: () => <span data-testid="dialog-terms">Terms of Service</span>,
   };
 });
 
-vi.mock('@/atoms/PageHeader/PageHeader', async () => {
+vi.mock('@/atoms/PageHeader/PageHeader', () => {
   return {
     PageHeader: ({ children }: { children: React.ReactNode }) => <div data-testid="page-header">{children}</div>,
   };
 });
 
-vi.mock('@/atoms/PageSubtitle/PageSubtitle', async () => {
+vi.mock('@/atoms/PageSubtitle/PageSubtitle', () => {
   return {
     PageSubtitle: ({ children }: { children: React.ReactNode }) => <div data-testid="page-subtitle">{children}</div>,
   };

@@ -99,8 +99,7 @@ import { PostHeader } from '@/organisms/PostHeader/PostHeader';
 // WRONG
 import { cn } from 'src/lib/utils';
 import { cn } from '../../libs/utils';
-import { Button } from '@/atoms';
-import { Button } from '@/components/atoms';
+// Do not import components through folder indexes or aggregate modules.
 ```
 
 Use the component namespace aliases from `tsconfig.json` for non-local component imports:

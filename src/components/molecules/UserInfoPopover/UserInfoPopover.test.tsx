@@ -2,7 +2,7 @@ import { render, screen, fireEvent } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import React from 'react';
 import { UserInfoPopover } from './UserInfoPopover';
-vi.mock('@/atoms/Popover/Popover', async () => {
+vi.mock('@/atoms/Popover/Popover', () => {
   return {
     Popover: ({
       children,

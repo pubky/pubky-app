@@ -12,7 +12,7 @@ vi.mock('@/stores/onboarding/onboarding.store', () => ({
 // Mock atoms - use actual implementations
 
 // Mock organisms
-vi.mock('@/organisms/DialogBackup/DialogBackup', async () => {
+vi.mock('@/organisms/DialogBackup/DialogBackup', () => {
   return {
     DialogBackup: vi.fn(() => <div data-testid="dialog-backup">DialogBackup</div>),
   };

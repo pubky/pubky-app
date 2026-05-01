@@ -3,20 +3,20 @@ import { render, screen } from '@testing-library/react';
 import { HeaderHome } from './HeaderHome';
 
 // Mock molecules
-vi.mock('@/molecules/Header/Header', async () => {
+vi.mock('@/molecules/Header/Header', () => {
   return {
     HeaderSocialLinks: () => <div data-testid="header-social-links">Social Links</div>,
   };
 });
 
-vi.mock('@/molecules/HeaderButtonSignIn/HeaderButtonSignIn', async () => {
+vi.mock('@/molecules/HeaderButtonSignIn/HeaderButtonSignIn', () => {
   return {
     HeaderButtonSignIn: () => <button data-testid="header-button-sign-in">Sign in</button>,
   };
 });
 
 // Mock atoms
-vi.mock('@/atoms/Container/Container', async () => {
+vi.mock('@/atoms/Container/Container', () => {
   return {
     Container: ({
       children,

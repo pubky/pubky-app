@@ -11,7 +11,7 @@ vi.mock('@/controllers/moderation/moderation', () => ({
 }));
 
 // Mock Atoms
-vi.mock('@/atoms/Button/Button', async () => {
+vi.mock('@/atoms/Button/Button', () => {
   return {
     Button: ({
       children,
@@ -38,7 +38,7 @@ vi.mock('@/atoms/Button/Button', async () => {
   };
 });
 
-vi.mock('@/atoms/Container/Container', async () => {
+vi.mock('@/atoms/Container/Container', () => {
   return {
     Container: ({
       children,
@@ -57,7 +57,7 @@ vi.mock('@/atoms/Container/Container', async () => {
   };
 });
 
-vi.mock('@/atoms/Typography/Typography', async () => {
+vi.mock('@/atoms/Typography/Typography', () => {
   return {
     Typography: ({
       children,

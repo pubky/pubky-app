@@ -120,7 +120,7 @@ vi.mock('@codemirror/language-data', () => ({
 let capturedOnEmojiSelect: ((emoji: { native: string }) => void) | null = null;
 
 // Mock EmojiPickerDialog
-vi.mock('@/molecules/EmojiPickerDialog/EmojiPickerDialog', async () => {
+vi.mock('@/molecules/EmojiPickerDialog/EmojiPickerDialog', () => {
   return {
     EmojiPickerDialog: ({
       open,
@@ -159,7 +159,7 @@ vi.mock('@/hooks/useEmojiInsert/useEmojiInsert', () => ({
 }));
 
 // Mock @/atoms
-vi.mock('@/atoms/Button/Button', async () => {
+vi.mock('@/atoms/Button/Button', () => {
   return {
     Button: ({
       children,
@@ -184,7 +184,7 @@ vi.mock('@/atoms/Button/Button', async () => {
   };
 });
 
-vi.mock('@/atoms/Container/Container', async () => {
+vi.mock('@/atoms/Container/Container', () => {
   return {
     Container: ({
       children,
@@ -203,7 +203,7 @@ vi.mock('@/atoms/Container/Container', async () => {
   };
 });
 
-vi.mock('@/atoms/Textarea/Textarea', async () => {
+vi.mock('@/atoms/Textarea/Textarea', () => {
   return {
     Textarea: vi.fn(({ className, readOnly, ...props }: Record<string, unknown>) => (
       <textarea className={className as string} readOnly={readOnly as boolean} {...(props as Record<string, string>)} />
@@ -211,7 +211,7 @@ vi.mock('@/atoms/Textarea/Textarea', async () => {
   };
 });
 
-vi.mock('@/atoms/Typography/Typography', async () => {
+vi.mock('@/atoms/Typography/Typography', () => {
   return {
     Typography: ({
       children,

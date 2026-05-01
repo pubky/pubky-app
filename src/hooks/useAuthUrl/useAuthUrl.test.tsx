@@ -31,7 +31,7 @@ vi.mock('next-intl', () => ({
   useTranslations: () => mockTranslations,
 }));
 
-vi.mock('@/molecules/Toaster/use-toast', async () => {
+vi.mock('@/molecules/Toaster/use-toast', () => {
   return {
     toast: (...args: unknown[]) => mockToast(...args),
   };

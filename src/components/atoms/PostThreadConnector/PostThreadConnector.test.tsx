@@ -3,7 +3,7 @@ import { render } from '@testing-library/react';
 import { PostThreadConnector } from './PostThreadConnector';
 import { POST_THREAD_CONNECTOR_VARIANTS } from './PostThreadConnector.constants';
 
-vi.mock('@/atoms/Container/Container', async () => {
+vi.mock('@/atoms/Container/Container', () => {
   return {
     Container: ({
       children,

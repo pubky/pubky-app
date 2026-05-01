@@ -2,7 +2,7 @@ import { render, screen, fireEvent } from '@testing-library/react';
 import { describe, it, expect, vi } from 'vitest';
 import { MentionPopover } from './MentionPopover';
 import type { Pubky } from '@/models/models.types';
-vi.mock('@/atoms/Container/Container', async () => {
+vi.mock('@/atoms/Container/Container', () => {
   return {
     Container: ({
       children,
@@ -17,13 +17,13 @@ vi.mock('@/atoms/Container/Container', async () => {
   };
 });
 
-vi.mock('@/atoms/Spinner/Spinner', async () => {
+vi.mock('@/atoms/Spinner/Spinner', () => {
   return {
     Spinner: ({ size }: { size: string }) => <div data-testid="spinner" data-size={size} />,
   };
 });
 
-vi.mock('@/molecules/SearchUserSuggestion/SearchUserSuggestion', async () => {
+vi.mock('@/molecules/SearchUserSuggestion/SearchUserSuggestion', () => {
   return {
     SearchUserSuggestion: ({
       user,

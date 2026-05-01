@@ -16,7 +16,7 @@ vi.mock('@/hooks/useRepostInfo/useRepostInfo', () => ({
 }));
 
 // Mock molecules - PostPreviewCard, PostText, PostLinkEmbeds
-vi.mock('@/molecules/PostPreviewCard/PostPreviewCard', async () => {
+vi.mock('@/molecules/PostPreviewCard/PostPreviewCard', () => {
   return {
     PostPreviewCard: vi.fn(({ postId, className }: { postId: string; className?: string }) => (
       <div data-testid="post-preview-card" data-post-id={postId} className={className}>

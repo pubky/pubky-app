@@ -18,7 +18,7 @@ vi.mock('@/hooks/useInfiniteScroll/useInfiniteScroll', () => ({
 }));
 
 // Mock components
-vi.mock('@/atoms/Container/Container', async () => {
+vi.mock('@/atoms/Container/Container', () => {
   return {
     Container: ({ children, ...props }: { children?: React.ReactNode; [key: string]: unknown }) => (
       <div data-testid="container" {...props}>
@@ -28,25 +28,25 @@ vi.mock('@/atoms/Container/Container', async () => {
   };
 });
 
-vi.mock('@/molecules/Timeline/TimelineEndMessage', async () => {
+vi.mock('@/molecules/Timeline/TimelineEndMessage', () => {
   return {
     TimelineEndMessage: () => <div data-testid="timeline-end-message">End of timeline</div>,
   };
 });
 
-vi.mock('@/molecules/Timeline/TimelineError', async () => {
+vi.mock('@/molecules/Timeline/TimelineError', () => {
   return {
     TimelineError: ({ message }: { message: string }) => <div data-testid="timeline-error">Error: {message}</div>,
   };
 });
 
-vi.mock('@/molecules/Timeline/TimelineLoading', async () => {
+vi.mock('@/molecules/Timeline/TimelineLoading', () => {
   return {
     TimelineLoading: () => <div data-testid="timeline-loading">Loading...</div>,
   };
 });
 
-vi.mock('@/molecules/Timeline/TimelineLoadingMore', async () => {
+vi.mock('@/molecules/Timeline/TimelineLoadingMore', () => {
   return {
     TimelineLoadingMore: () => <div data-testid="timeline-loading-more">Loading more...</div>,
   };
@@ -76,7 +76,7 @@ vi.mock('@/molecules/Timeline/TimelineStateWrapper/TimelineStateWrapper', async 
   };
 });
 
-vi.mock('@/organisms/PostMain/PostMain', async () => {
+vi.mock('@/organisms/PostMain/PostMain', () => {
   return {
     PostMain: ({ postId, onClick, ...props }: { postId: string; onClick: () => void; [key: string]: unknown }) => (
       <div data-testid={`post-${postId}`} onClick={onClick} {...props} />
@@ -84,7 +84,7 @@ vi.mock('@/organisms/PostMain/PostMain', async () => {
   };
 });
 
-vi.mock('@/organisms/Timeline/PostReplies/PostReplies', async () => {
+vi.mock('@/organisms/Timeline/PostReplies/PostReplies', () => {
   return {
     TimelinePostReplies: ({ postId }: { postId: string }) => <div data-testid={`replies-${postId}`} />,
   };

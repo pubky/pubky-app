@@ -12,7 +12,7 @@ vi.mock('@/hooks/useThreadReplies/useThreadReplies', () => ({
   useThreadReplies: vi.fn(),
 }));
 
-vi.mock('@/organisms/QuickReply/QuickReply', async () => {
+vi.mock('@/organisms/QuickReply/QuickReply', () => {
   return {
     QuickReply: ({ parentPostId }: { parentPostId: string }) => (
       <div data-testid="quick-reply" data-parent-post-id={parentPostId} />
@@ -20,7 +20,7 @@ vi.mock('@/organisms/QuickReply/QuickReply', async () => {
   };
 });
 
-vi.mock('@/organisms/ReplyWithNested/ReplyWithNested', async () => {
+vi.mock('@/organisms/ReplyWithNested/ReplyWithNested', () => {
   return {
     ReplyWithNested: ({ replyId, isLastReply }: { replyId: string; isLastReply: boolean }) => (
       <div data-testid="reply-with-nested" data-reply-id={replyId} data-is-last-reply={String(isLastReply)} />
@@ -28,7 +28,7 @@ vi.mock('@/organisms/ReplyWithNested/ReplyWithNested', async () => {
   };
 });
 
-vi.mock('@/molecules/ShowMoreReplies/ShowMoreReplies', async () => {
+vi.mock('@/molecules/ShowMoreReplies/ShowMoreReplies', () => {
   return {
     ShowMoreReplies: ({ count, isLast, onClick }: { count: number; isLast: boolean; onClick: () => void }) => (
       <button

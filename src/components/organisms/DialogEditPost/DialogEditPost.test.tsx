@@ -6,7 +6,7 @@ import { PostInput } from '../PostInput/PostInput';
 import { POST_INPUT_VARIANT } from '@/organisms/PostInput/PostInput.constants';
 import { useConfirmableDialog } from '@/hooks/useConfirmableDialog/useConfirmableDialog';
 import { usePostDetails } from '@/hooks/usePostDetails/usePostDetails';
-vi.mock('@/atoms/Dialog/Dialog', async () => {
+vi.mock('@/atoms/Dialog/Dialog', () => {
   return {
     Dialog: ({
       children,
@@ -74,7 +74,7 @@ vi.mock('@/hooks/usePostDetails/usePostDetails', () => ({
 }));
 
 // Mock molecules
-vi.mock('@/molecules/DialogConfirmDiscard/DialogConfirmDiscard', async () => {
+vi.mock('@/molecules/DialogConfirmDiscard/DialogConfirmDiscard', () => {
   return {
     DialogConfirmDiscard: ({
       open,

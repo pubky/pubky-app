@@ -3,7 +3,7 @@ import { render, screen } from '@testing-library/react';
 import { PostDeleted } from './PostDeleted';
 
 // Mock atoms
-vi.mock('@/atoms/Card/Card', async () => {
+vi.mock('@/atoms/Card/Card', () => {
   return {
     CardContent: ({ children, className }: { children: React.ReactNode; className?: string }) => (
       <div data-testid="card-content" className={className}>
@@ -13,7 +13,7 @@ vi.mock('@/atoms/Card/Card', async () => {
   };
 });
 
-vi.mock('@/atoms/Typography/Typography', async () => {
+vi.mock('@/atoms/Typography/Typography', () => {
   return {
     Typography: ({ children, size, className }: { children: React.ReactNode; size?: string; className?: string }) => (
       <p data-testid="typography" data-size={size} className={className}>

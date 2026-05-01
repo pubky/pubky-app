@@ -20,7 +20,7 @@ vi.mock('next/image', () => ({
 }));
 
 // Mock atoms
-vi.mock('@/atoms/Card/Card', async () => {
+vi.mock('@/atoms/Card/Card', () => {
   return {
     Card: ({ children, className }: { children: React.ReactNode; className?: string }) => (
       <div data-testid="card" className={className}>
@@ -30,7 +30,7 @@ vi.mock('@/atoms/Card/Card', async () => {
   };
 });
 
-vi.mock('@/atoms/Container/Container', async () => {
+vi.mock('@/atoms/Container/Container', () => {
   return {
     Container: ({ children, className }: { children: React.ReactNode; className?: string }) => (
       <div data-testid="container" className={className}>

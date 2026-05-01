@@ -9,32 +9,32 @@ import {
 } from './FeedRightSidebar';
 
 // Mock Molecules
-vi.mock('@/molecules/FeedSection/FeedSection', async () => {
+vi.mock('@/molecules/FeedSection/FeedSection', () => {
   return {
     FeedSection: () => <div data-testid="feed-section">FeedSection</div>,
   };
 });
 
 // Mock Organisms
-vi.mock('@/organisms/ActiveUsers/ActiveUsers', async () => {
+vi.mock('@/organisms/ActiveUsers/ActiveUsers', () => {
   return {
     ActiveUsers: () => <div data-testid="active-users">ActiveUsers</div>,
   };
 });
 
-vi.mock('@/organisms/FeedbackCard/FeedbackCard', async () => {
+vi.mock('@/organisms/FeedbackCard/FeedbackCard', () => {
   return {
     FeedbackCard: () => <div data-testid="feedback-card">FeedbackCard</div>,
   };
 });
 
-vi.mock('@/organisms/HotTags/HotTags', async () => {
+vi.mock('@/organisms/HotTags/HotTags', () => {
   return {
     HotTags: () => <div data-testid="hot-tags">HotTags</div>,
   };
 });
 
-vi.mock('@/organisms/WhoToFollowSidebar/WhoToFollowSidebar', async () => {
+vi.mock('@/organisms/WhoToFollowSidebar/WhoToFollowSidebar', () => {
   return {
     WhoToFollowSidebar: () => <div data-testid="who-to-follow">WhoToFollowSidebar</div>,
   };

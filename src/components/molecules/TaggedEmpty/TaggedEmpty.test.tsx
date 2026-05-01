@@ -5,7 +5,7 @@ import { TaggedEmpty } from './TaggedEmpty';
 const mockHandleTagAdd = vi.fn().mockResolvedValue({ success: true });
 
 // Mock ProfilePageEmptyState and TagInput
-vi.mock('@/molecules/ProfilePageEmptyState/ProfilePageEmptyState', async () => {
+vi.mock('@/molecules/ProfilePageEmptyState/ProfilePageEmptyState', () => {
   return {
     ProfilePageEmptyState: ({
       imageSrc,
@@ -33,7 +33,7 @@ vi.mock('@/molecules/ProfilePageEmptyState/ProfilePageEmptyState', async () => {
   };
 });
 
-vi.mock('@/molecules/TagInput/TagInput', async () => {
+vi.mock('@/molecules/TagInput/TagInput', () => {
   return {
     TagInput: ({ onTagAdd }: { onTagAdd: (tag: string) => void }) => (
       <div data-testid="tag-input" onClick={() => onTagAdd('test-tag')}>

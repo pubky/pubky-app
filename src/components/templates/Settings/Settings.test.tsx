@@ -10,25 +10,25 @@ vi.mock('@/hooks/useLayoutReset/useLayoutReset', () => ({
   useLayoutReset: vi.fn(),
 }));
 
-vi.mock('@/molecules/MobileHeader/MobileHeader', async () => {
+vi.mock('@/molecules/MobileHeader/MobileHeader', () => {
   return {
     MobileHeader: () => <div data-testid="mobile-header" />,
   };
 });
 
-vi.mock('@/molecules/Settings/SettingsInfo/SettingsInfo', async () => {
+vi.mock('@/molecules/Settings/SettingsInfo/SettingsInfo', () => {
   return {
     SettingsInfo: () => <div data-testid="settings-info" />,
   };
 });
 
-vi.mock('@/molecules/Settings/SettingsMenu/SettingsMenu', async () => {
+vi.mock('@/molecules/Settings/SettingsMenu/SettingsMenu', () => {
   return {
     SettingsMenu: () => <div data-testid="settings-menu" />,
   };
 });
 
-vi.mock('@/molecules/Settings/SettingsMobileMenu/SettingsMobileMenu', async () => {
+vi.mock('@/molecules/Settings/SettingsMobileMenu/SettingsMobileMenu', () => {
   return {
     SettingsMobileMenu: ({ className }: { className?: string }) => (
       <div data-testid="settings-mobile-menu" className={className} />
@@ -36,7 +36,7 @@ vi.mock('@/molecules/Settings/SettingsMobileMenu/SettingsMobileMenu', async () =
   };
 });
 
-vi.mock('@/organisms/ContentLayout/ContentLayout', async () => {
+vi.mock('@/organisms/ContentLayout/ContentLayout', () => {
   return {
     ContentLayout: ({ children }: { children: React.ReactNode }) => <div data-testid="content-layout">{children}</div>,
   };

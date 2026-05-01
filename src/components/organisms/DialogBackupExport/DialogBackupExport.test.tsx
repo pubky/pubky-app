@@ -1,7 +1,7 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { render, screen, fireEvent } from '@testing-library/react';
 import { DialogBackupExport } from './DialogBackupExport';
-vi.mock('@/atoms/Dialog/Dialog', async () => {
+vi.mock('@/atoms/Dialog/Dialog', () => {
   return {
     Dialog: ({ children }: { children: React.ReactNode }) => <div data-testid="dialog">{children}</div>,
     DialogTrigger: ({ children, asChild }: { children: React.ReactNode; asChild?: boolean }) => (
@@ -63,7 +63,7 @@ const mockWindowOpen = vi.fn();
 const originalOpen = window.open;
 
 // Mock atoms
-vi.mock('@/atoms/Button/Button', async () => {
+vi.mock('@/atoms/Button/Button', () => {
   return {
     Button: ({
       children,
@@ -94,7 +94,7 @@ vi.mock('@/atoms/Button/Button', async () => {
   };
 });
 
-vi.mock('@/atoms/Container/Container', async () => {
+vi.mock('@/atoms/Container/Container', () => {
   return {
     Container: ({ children, className }: { children: React.ReactNode; className?: string }) => (
       <div data-testid="container" className={className}>
@@ -104,7 +104,7 @@ vi.mock('@/atoms/Container/Container', async () => {
   };
 });
 
-vi.mock('@/atoms/Link/Link', async () => {
+vi.mock('@/atoms/Link/Link', () => {
   return {
     Link: ({
       children,

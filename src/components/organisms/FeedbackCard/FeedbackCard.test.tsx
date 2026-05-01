@@ -37,7 +37,7 @@ vi.mock('@/hooks/useCurrentUserProfile/useCurrentUserProfile', () => ({
 }));
 
 // Mock Organisms
-vi.mock('@/organisms/AvatarWithFallback/AvatarWithFallback', async () => {
+vi.mock('@/organisms/AvatarWithFallback/AvatarWithFallback', () => {
   return {
     AvatarWithFallback: ({
       avatarUrl,
@@ -68,7 +68,7 @@ vi.mock('@/organisms/AvatarWithFallback/AvatarWithFallback', async () => {
   };
 });
 
-vi.mock('@/organisms/DialogFeedback/DialogFeedback', async () => {
+vi.mock('@/organisms/DialogFeedback/DialogFeedback', () => {
   return {
     DialogFeedback: () => <div data-testid="dialog-feedback" />,
   };
@@ -76,7 +76,7 @@ vi.mock('@/organisms/DialogFeedback/DialogFeedback', async () => {
 
 // Mock Molecules
 const mockToast = vi.fn();
-vi.mock('@/molecules/Toaster/use-toast', async () => {
+vi.mock('@/molecules/Toaster/use-toast', () => {
   return {
     useToast: vi.fn(() => ({
       toast: mockToast,
@@ -85,7 +85,7 @@ vi.mock('@/molecules/Toaster/use-toast', async () => {
 });
 
 // Mock Atoms
-vi.mock('@/atoms/Button/Button', async () => {
+vi.mock('@/atoms/Button/Button', () => {
   return {
     Button: ({
       children,
@@ -103,7 +103,7 @@ vi.mock('@/atoms/Button/Button', async () => {
   };
 });
 
-vi.mock('@/atoms/Container/Container', async () => {
+vi.mock('@/atoms/Container/Container', () => {
   return {
     Container: ({
       children,
@@ -123,7 +123,7 @@ vi.mock('@/atoms/Container/Container', async () => {
   };
 });
 
-vi.mock('@/atoms/Heading/Heading', async () => {
+vi.mock('@/atoms/Heading/Heading', () => {
   return {
     Heading: ({
       children,

@@ -59,7 +59,7 @@ vi.mock('@/hooks/useFollowUser/useFollowUser', () => ({
 }));
 
 // Mock Atoms
-vi.mock('@/atoms/Container/Container', async () => {
+vi.mock('@/atoms/Container/Container', () => {
   return {
     Container: ({ children, className }: { children: React.ReactNode; className?: string }) => (
       <div data-testid="container" className={className}>
@@ -69,33 +69,33 @@ vi.mock('@/atoms/Container/Container', async () => {
   };
 });
 
-vi.mock('@/atoms/Heading/Heading', async () => {
+vi.mock('@/atoms/Heading/Heading', () => {
   return {
     Heading: ({ children }: { children: React.ReactNode }) => <h5 data-testid="heading">{children}</h5>,
   };
 });
 
-vi.mock('@/atoms/Spinner/Spinner', async () => {
+vi.mock('@/atoms/Spinner/Spinner', () => {
   return {
     Spinner: () => <div data-testid="spinner">Loading...</div>,
   };
 });
 
 // Mock Molecules
-vi.mock('@/molecules/FriendsEmpty/FriendsEmpty', async () => {
+vi.mock('@/molecules/FriendsEmpty/FriendsEmpty', () => {
   return {
     FriendsEmpty: () => <div data-testid="friends-empty">No friends</div>,
   };
 });
 
 // Mock Organisms
-vi.mock('@/organisms/FullUserListItemSkeleton/FullUserListItemSkeleton', async () => {
+vi.mock('@/organisms/FullUserListItemSkeleton/FullUserListItemSkeleton', () => {
   return {
     FullUserListItemSkeleton: () => <div data-testid="user-list-item-skeleton-full">Skeleton</div>,
   };
 });
 
-vi.mock('@/organisms/UserListItem/UserListItem', async () => {
+vi.mock('@/organisms/UserListItem/UserListItem', () => {
   return {
     UserListItem: ({ user, followButtonVariant }: { user: { id: string }; followButtonVariant?: string }) => (
       <div data-testid="user-list-item" data-user-id={user.id} data-follow-button-variant={followButtonVariant}>

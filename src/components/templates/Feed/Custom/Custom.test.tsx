@@ -3,13 +3,13 @@ import { render, screen } from '@testing-library/react';
 import { Custom } from './Custom';
 
 // Mock Organisms
-vi.mock('@/organisms/AlertBackup/AlertBackup', async () => {
+vi.mock('@/organisms/AlertBackup/AlertBackup', () => {
   return {
     AlertBackup: () => <div data-testid="alert-backup">AlertBackup</div>,
   };
 });
 
-vi.mock('@/organisms/ContentLayout/ContentLayout', async () => {
+vi.mock('@/organisms/ContentLayout/ContentLayout', () => {
   return {
     ContentLayout: ({
       children,
@@ -41,7 +41,7 @@ vi.mock('@/organisms/ContentLayout/ContentLayout', async () => {
   };
 });
 
-vi.mock('@/organisms/CustomFeedFilters/CustomFeedFilters', async () => {
+vi.mock('@/organisms/CustomFeedFilters/CustomFeedFilters', () => {
   return {
     CustomFeedFilters: ({ variant }: { variant: string }) => (
       <div data-testid="custom-feed-filters" data-variant={variant}>
@@ -51,7 +51,7 @@ vi.mock('@/organisms/CustomFeedFilters/CustomFeedFilters', async () => {
   };
 });
 
-vi.mock('@/organisms/FeedNavigation/FeedNavigation', async () => {
+vi.mock('@/organisms/FeedNavigation/FeedNavigation', () => {
   return {
     FeedNavigation: ({ className }: { className?: string }) => (
       <div data-testid="feed-navigation" data-classname={className}>
@@ -61,14 +61,14 @@ vi.mock('@/organisms/FeedNavigation/FeedNavigation', async () => {
   };
 });
 
-vi.mock('@/organisms/FeedRightSidebar/FeedRightSidebar', async () => {
+vi.mock('@/organisms/FeedRightSidebar/FeedRightSidebar', () => {
   return {
     HomeFeedRightSidebar: () => <div data-testid="home-feed-right-sidebar">HomeFeedRightSidebar</div>,
     HomeFeedRightDrawer: () => <div data-testid="home-feed-right-drawer">HomeFeedRightDrawer</div>,
   };
 });
 
-vi.mock('@/organisms/PostInput/PostInput', async () => {
+vi.mock('@/organisms/PostInput/PostInput', () => {
   return {
     PostInput: ({ variant }: { variant?: string }) => (
       <div data-testid="post-input" data-variant={variant}>
@@ -78,7 +78,7 @@ vi.mock('@/organisms/PostInput/PostInput', async () => {
   };
 });
 
-vi.mock('@/organisms/Timeline/Feed/TimelineFeed/TimelineFeed', async () => {
+vi.mock('@/organisms/Timeline/Feed/TimelineFeed/TimelineFeed', () => {
   return {
     TimelineFeed: ({ children, variant }: { children: React.ReactNode; variant: string }) => (
       <div data-testid="timeline-feed" data-variant={variant}>

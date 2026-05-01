@@ -31,7 +31,7 @@ interface ActionProps {
 }
 
 // Mock molecules
-vi.mock('@/molecules/ActionSection/ActionSection', async () => {
+vi.mock('@/molecules/ActionSection/ActionSection', () => {
   return {
     ActionSection: ({
       children,
@@ -61,7 +61,7 @@ vi.mock('@/molecules/ActionSection/ActionSection', async () => {
   };
 });
 
-vi.mock('@/molecules/Content/Content', async () => {
+vi.mock('@/molecules/Content/Content', () => {
   return {
     ContentCard: ({ children, image }: { children: React.ReactNode; image?: ImageProps }) => (
       <div data-testid="content-card">
@@ -72,7 +72,7 @@ vi.mock('@/molecules/Content/Content', async () => {
   };
 });
 
-vi.mock('@/molecules/InputField/InputField', async () => {
+vi.mock('@/molecules/InputField/InputField', () => {
   return {
     InputField: ({
       value,
@@ -110,13 +110,13 @@ vi.mock('@/molecules/InputField/InputField', async () => {
   };
 });
 
-vi.mock('@/molecules/PopoverPublicKey/PopoverPublicKey', async () => {
+vi.mock('@/molecules/PopoverPublicKey/PopoverPublicKey', () => {
   return {
     PopoverPublicKey: () => <div data-testid="popover-public-key">Popover</div>,
   };
 });
 
-vi.mock('@/molecules/Toaster/use-toast', async () => {
+vi.mock('@/molecules/Toaster/use-toast', () => {
   return {
     useToast: () => ({
       toast: mockToast,
@@ -126,7 +126,7 @@ vi.mock('@/molecules/Toaster/use-toast', async () => {
 });
 
 // Mock atoms
-vi.mock('@/atoms/Button/Button', async () => {
+vi.mock('@/atoms/Button/Button', () => {
   return {
     Button: ({
       children,
@@ -151,7 +151,7 @@ vi.mock('@/atoms/Button/Button', async () => {
   };
 });
 
-vi.mock('@/atoms/Container/Container', async () => {
+vi.mock('@/atoms/Container/Container', () => {
   return {
     Container: ({ children, className }: { children: React.ReactNode; className?: string }) => (
       <div data-testid="container" className={className}>
@@ -161,7 +161,7 @@ vi.mock('@/atoms/Container/Container', async () => {
   };
 });
 
-vi.mock('@/atoms/Heading/Heading', async () => {
+vi.mock('@/atoms/Heading/Heading', () => {
   return {
     Heading: ({ children, level, size }: { children: React.ReactNode; level: number; size?: string }) => (
       <div data-testid={`heading-${level}`} data-size={size}>

@@ -2,7 +2,7 @@ import { render, screen, fireEvent } from '@testing-library/react';
 import { describe, it, expect, vi } from 'vitest';
 import { SearchInputBar } from './SearchInputBar';
 
-vi.mock('@/atoms/Container/Container', async () => {
+vi.mock('@/atoms/Container/Container', () => {
   return {
     Container: ({
       children,
@@ -17,7 +17,7 @@ vi.mock('@/atoms/Container/Container', async () => {
   };
 });
 
-vi.mock('@/atoms/Input/Input', async () => {
+vi.mock('@/atoms/Input/Input', () => {
   return {
     Input: ({
       type,
@@ -45,7 +45,7 @@ vi.mock('@/atoms/Input/Input', async () => {
   };
 });
 
-vi.mock('@/molecules/PostTag/PostTag', async () => {
+vi.mock('@/molecules/PostTag/PostTag', () => {
   return {
     PostTag: ({ label, showClose, onClose }: { label: string; showClose?: boolean; onClose?: () => void }) => (
       <span data-testid={`active-tag-${label}`}>

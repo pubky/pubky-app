@@ -3,7 +3,7 @@ import { describe, it, expect, vi } from 'vitest';
 import { SettingsSection } from './SettingsSection';
 
 // Mock Atoms
-vi.mock('@/atoms/Button/Button', async () => {
+vi.mock('@/atoms/Button/Button', () => {
   return {
     Button: ({
       children,
@@ -34,7 +34,7 @@ vi.mock('@/atoms/Button/Button', async () => {
   };
 });
 
-vi.mock('@/atoms/Container/Container', async () => {
+vi.mock('@/atoms/Container/Container', () => {
   return {
     Container: ({
       children,
@@ -52,7 +52,7 @@ vi.mock('@/atoms/Container/Container', async () => {
   };
 });
 
-vi.mock('@/atoms/Heading/Heading', async () => {
+vi.mock('@/atoms/Heading/Heading', () => {
   return {
     Heading: ({
       children,
@@ -79,7 +79,7 @@ vi.mock('@/atoms/Heading/Heading', async () => {
   };
 });
 
-vi.mock('@/atoms/Typography/Typography', async () => {
+vi.mock('@/atoms/Typography/Typography', () => {
   return {
     Typography: ({ children, size, className }: { children: React.ReactNode; size?: string; className?: string }) => (
       <p data-testid="typography" data-size={size} className={className}>

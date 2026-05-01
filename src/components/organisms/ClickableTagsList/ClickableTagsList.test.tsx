@@ -2,7 +2,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen, fireEvent } from '@testing-library/react';
 import { ClickableTagsList } from './ClickableTagsList';
 import type { TagWithAvatars } from '@/molecules/TaggedItem/TaggedItem.types';
-import * as useAuthStoreModule from '@/stores/auth/auth.store';
+import { useAuthStore } from '@/stores/auth/auth.store';
 import { TagKind } from '@/application/tag/tag.types';
 import type { NexusTag } from '@/services/nexus/nexus.types';
 // Mock hooks
@@ -99,7 +99,7 @@ vi.mock('@/hooks/useEnrichedTags/useEnrichedTags', () => ({
 }));
 
 // Mock atoms
-vi.mock('@/atoms/Container/Container', async () => {
+vi.mock('@/atoms/Container/Container', () => {
   return {
     Container: ({ children, className }: { children: React.ReactNode; className?: string }) => (
       <div data-testid="container" className={className}>
@@ -109,7 +109,7 @@ vi.mock('@/atoms/Container/Container', async () => {
   };
 });
 
-vi.mock('@/atoms/Typography/Typography', async () => {
+vi.mock('@/atoms/Typography/Typography', () => {
   return {
     Typography: ({ children, className }: { children: React.ReactNode; className?: string }) => (
       <span className={className}>{children}</span>
@@ -118,7 +118,7 @@ vi.mock('@/atoms/Typography/Typography', async () => {
 });
 
 // Mock molecules
-vi.mock('@/molecules/PostTag/PostTag', async () => {
+vi.mock('@/molecules/PostTag/PostTag', () => {
   return {
     PostTag: ({
       label,
@@ -147,25 +147,25 @@ vi.mock('@/molecules/PostTag/PostTag', async () => {
   };
 });
 
-vi.mock('@/molecules/PostTagAddButton/PostTagAddButton', async () => {
+vi.mock('@/molecules/PostTagAddButton/PostTagAddButton', () => {
   return {
     PostTagAddButton: mockPostTagAddButton,
   };
 });
 
-vi.mock('@/molecules/PostTagPopoverWrapper/PostTagPopoverWrapper', async () => {
+vi.mock('@/molecules/PostTagPopoverWrapper/PostTagPopoverWrapper', () => {
   return {
     PostTagPopoverWrapper: ({ children }: { children: React.ReactNode }) => <>{children}</>,
   };
 });
 
-vi.mock('@/molecules/TagInput/TagInput', async () => {
+vi.mock('@/molecules/TagInput/TagInput', () => {
   return {
     TagInput: mockTagInput,
   };
 });
 
-vi.mock('@/molecules/TagInputToggle/TagInputToggle', async () => {
+vi.mock('@/molecules/TagInputToggle/TagInputToggle', () => {
   return {
     TagInputToggle: mockTagInputToggle,
   };
@@ -182,6 +182,7 @@ describe('ClickableTagsList', () => {
     vi.clearAllMocks();
     mockIsAuthenticated = true;
     mockIsViewerTagger.mockImplementation((tag: TagWithAvatars) => tag.relationship ?? false);
+    useAuthStore.setState({ setShowSignInDialog: vi.fn() });
   });
 
   describe('Rendering', () => {
@@ -552,9 +553,7 @@ describe('ClickableTagsList', () => {
     it('opens sign-in dialog when unauthenticated user clicks input', () => {
       mockIsAuthenticated = false;
       const setShowSignInDialog = vi.fn();
-      const useAuthStoreSpy = vi
-        .spyOn(useAuthStoreModule, 'useAuthStore')
-        .mockImplementation((selector) => selector({ setShowSignInDialog } as never));
+      useAuthStore.setState({ setShowSignInDialog });
 
       render(
         <ClickableTagsList
@@ -569,7 +568,6 @@ describe('ClickableTagsList', () => {
       fireEvent.click(screen.getByTestId('tag-input'));
 
       expect(setShowSignInDialog).toHaveBeenCalledWith(true);
-      useAuthStoreSpy.mockRestore();
     });
   });
 

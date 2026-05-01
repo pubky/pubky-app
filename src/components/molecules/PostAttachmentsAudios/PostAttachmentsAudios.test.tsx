@@ -4,7 +4,7 @@ import { PostAttachmentsAudios } from './PostAttachmentsAudios';
 import type { AttachmentConstructed } from '@/organisms/PostAttachments/PostAttachments.types';
 
 // Mock @/atoms
-vi.mock('@/atoms/Audio/Audio', async () => {
+vi.mock('@/atoms/Audio/Audio', () => {
   return {
     Audio: ({
       src,
@@ -20,7 +20,7 @@ vi.mock('@/atoms/Audio/Audio', async () => {
   };
 });
 
-vi.mock('@/atoms/Container/Container', async () => {
+vi.mock('@/atoms/Container/Container', () => {
   return {
     Container: ({
       children,

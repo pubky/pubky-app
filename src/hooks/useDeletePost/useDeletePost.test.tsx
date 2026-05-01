@@ -16,7 +16,7 @@ vi.mock('@/controllers/post/post', () => ({
 
 // Mock molecules (useToast)
 const mockToast = vi.fn();
-vi.mock('@/molecules/Toaster/use-toast', async () => {
+vi.mock('@/molecules/Toaster/use-toast', () => {
   return {
     useToast: () => ({
       toast: mockToast,
@@ -32,7 +32,7 @@ const mockTimelineFeed = {
   prependPosts: mockPrependPosts,
 };
 
-vi.mock('@/organisms/Timeline/Feed/TimelineFeed/TimelineFeedContext', async () => {
+vi.mock('@/organisms/Timeline/Feed/TimelineFeed/TimelineFeedContext', () => {
   return {
     useTimelineFeedContext: vi.fn(),
   };

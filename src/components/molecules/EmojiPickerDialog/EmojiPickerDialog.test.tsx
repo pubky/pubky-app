@@ -1,7 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen, waitFor } from '@testing-library/react';
 import { EmojiPickerDialog } from './EmojiPickerDialog';
-vi.mock('@/atoms/Dialog/Dialog', async () => {
+vi.mock('@/atoms/Dialog/Dialog', () => {
   return {
     Dialog: ({
       children,
@@ -28,7 +28,7 @@ vi.mock('@/atoms/Dialog/Dialog', async () => {
 
 // Mock EmojiPicker
 const mockOnEmojiSelect = vi.fn();
-vi.mock('@/molecules/EmojiPicker/EmojiPicker', async () => {
+vi.mock('@/molecules/EmojiPicker/EmojiPicker', () => {
   return {
     EmojiPicker: ({
       onEmojiSelect,
@@ -55,7 +55,7 @@ vi.mock('@/molecules/EmojiPicker/EmojiPicker', async () => {
 });
 
 // Mock Dialog components
-vi.mock('@/atoms/Container/Container', async () => {
+vi.mock('@/atoms/Container/Container', () => {
   return {
     Container: ({ children, className }: { children: React.ReactNode; className?: string }) => (
       <div data-testid="container" className={className}>

@@ -46,7 +46,7 @@ vi.mock('@/stores/auth/auth.store', () => ({
 }));
 
 // Mock Molecules
-vi.mock('@/molecules/Toaster/use-toast', async () => {
+vi.mock('@/molecules/Toaster/use-toast', () => {
   return {
     useToast: vi.fn(() => ({
       toast: mockToast,

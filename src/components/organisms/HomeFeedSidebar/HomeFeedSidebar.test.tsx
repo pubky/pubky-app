@@ -44,7 +44,7 @@ vi.mock('@/hooks/useFeedLayoutResolution/useFeedLayoutResolution', () => ({
 }));
 
 // Mock Atoms
-vi.mock('@/atoms/Container/Container', async () => {
+vi.mock('@/atoms/Container/Container', () => {
   return {
     Container: ({ children, className }: { children: React.ReactNode; className?: string }) => (
       <div data-testid="container" className={className}>
@@ -55,13 +55,13 @@ vi.mock('@/atoms/Container/Container', async () => {
 });
 
 // Mock Molecules
-vi.mock('@/molecules/Filters/FilterContent/FilterContent', async () => {
+vi.mock('@/molecules/Filters/FilterContent/FilterContent', () => {
   return {
     FilterContent: (props: { disabledTabs?: string[]; selectedTab?: string }) => mockFilterContent(props),
   };
 });
 
-vi.mock('@/molecules/Filters/FilterLayout/FilterLayout', async () => {
+vi.mock('@/molecules/Filters/FilterLayout/FilterLayout', () => {
   return {
     FilterLayout: ({ showVisual }: { showVisual?: boolean }) => (
       <div data-testid="filter-layout" data-show-visual={showVisual ? 'true' : undefined}>
@@ -71,13 +71,13 @@ vi.mock('@/molecules/Filters/FilterLayout/FilterLayout', async () => {
   };
 });
 
-vi.mock('@/molecules/Filters/FilterReach/FilterReach', async () => {
+vi.mock('@/molecules/Filters/FilterReach/FilterReach', () => {
   return {
     FilterReach: () => <div data-testid="filter-reach">FilterReach</div>,
   };
 });
 
-vi.mock('@/molecules/Filters/FilterSort/FilterSort', async () => {
+vi.mock('@/molecules/Filters/FilterSort/FilterSort', () => {
   return {
     FilterSort: () => <div data-testid="filter-sort">FilterSort</div>,
   };

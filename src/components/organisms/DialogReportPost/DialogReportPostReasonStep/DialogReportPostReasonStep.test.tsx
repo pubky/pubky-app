@@ -12,7 +12,7 @@ vi.mock('@/hooks/useCurrentUserProfile/useCurrentUserProfile', () => ({
 }));
 
 // Mock organisms
-vi.mock('@/organisms/PostHeader/PostHeader', async () => {
+vi.mock('@/organisms/PostHeader/PostHeader', () => {
   return {
     PostHeader: ({
       postId,

@@ -12,7 +12,7 @@ vi.mock('next/navigation', () => ({
 }));
 
 // Mock atoms
-vi.mock('@/atoms/Button/Button', async () => {
+vi.mock('@/atoms/Button/Button', () => {
   return {
     Button: ({
       children,
@@ -43,7 +43,7 @@ vi.mock('@/atoms/Button/Button', async () => {
   };
 });
 
-vi.mock('@/atoms/Container/Container', async () => {
+vi.mock('@/atoms/Container/Container', () => {
   return {
     Container: ({ children, className }: { children: React.ReactNode; className?: string }) => (
       <div data-testid="container" className={className}>
@@ -53,20 +53,20 @@ vi.mock('@/atoms/Container/Container', async () => {
   };
 });
 
-vi.mock('@/atoms/PageHeader/PageHeader', async () => {
+vi.mock('@/atoms/PageHeader/PageHeader', () => {
   return {
     PageHeader: ({ children }: { children: React.ReactNode }) => <div data-testid="page-header">{children}</div>,
   };
 });
 
-vi.mock('@/atoms/PageSubtitle/PageSubtitle', async () => {
+vi.mock('@/atoms/PageSubtitle/PageSubtitle', () => {
   return {
     PageSubtitle: ({ children }: { children: React.ReactNode }) => <div data-testid="page-subtitle">{children}</div>,
   };
 });
 
 // Mock molecules
-vi.mock('@/molecules/ButtonsNavigation/ButtonsNavigation', async () => {
+vi.mock('@/molecules/ButtonsNavigation/ButtonsNavigation', () => {
   return {
     ButtonsNavigation: ({
       className,
@@ -106,7 +106,7 @@ vi.mock('@/molecules/ButtonsNavigation/ButtonsNavigation', async () => {
   };
 });
 
-vi.mock('@/molecules/Page/Page', async () => {
+vi.mock('@/molecules/Page/Page', () => {
   return {
     PageTitle: ({ children, size }: { children: React.ReactNode; size?: string }) => (
       <h1 data-testid="page-title" data-size={size}>

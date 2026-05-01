@@ -19,7 +19,7 @@ vi.mock('next/image', () => ({
 }));
 
 // Mock the atoms and molecules
-vi.mock('@/atoms/Container/Container', async () => {
+vi.mock('@/atoms/Container/Container', () => {
   return {
     Container: ({ children, className, size }: { children: React.ReactNode; className?: string; size?: string }) => (
       <div className={className} data-size={size}>
@@ -29,19 +29,19 @@ vi.mock('@/atoms/Container/Container', async () => {
   };
 });
 
-vi.mock('@/atoms/PageHeader/PageHeader', async () => {
+vi.mock('@/atoms/PageHeader/PageHeader', () => {
   return {
     PageHeader: ({ children }: { children: React.ReactNode }) => <header>{children}</header>,
   };
 });
 
-vi.mock('@/atoms/PageSubtitle/PageSubtitle', async () => {
+vi.mock('@/atoms/PageSubtitle/PageSubtitle', () => {
   return {
     PageSubtitle: ({ children }: { children: React.ReactNode }) => <h2>{children}</h2>,
   };
 });
 
-vi.mock('@/molecules/ButtonsNavigation/ButtonsNavigation', async () => {
+vi.mock('@/molecules/ButtonsNavigation/ButtonsNavigation', () => {
   return {
     ButtonsNavigation: ({
       backText,
@@ -62,7 +62,7 @@ vi.mock('@/molecules/ButtonsNavigation/ButtonsNavigation', async () => {
   };
 });
 
-vi.mock('@/molecules/Content/Content', async () => {
+vi.mock('@/molecules/Content/Content', () => {
   return {
     ContentCard: ({ children, layout }: { children: React.ReactNode; layout?: string }) => (
       <div data-layout={layout}>{children}</div>
@@ -70,7 +70,7 @@ vi.mock('@/molecules/Content/Content', async () => {
   };
 });
 
-vi.mock('@/molecules/Page/Page', async () => {
+vi.mock('@/molecules/Page/Page', () => {
   return {
     PageTitle: ({ children, size }: { children: React.ReactNode; size?: string }) => (
       <h1 data-size={size}>{children}</h1>

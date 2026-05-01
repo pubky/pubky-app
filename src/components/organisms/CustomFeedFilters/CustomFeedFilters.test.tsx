@@ -37,7 +37,7 @@ vi.mock('@/stores/home/home.types', () => ({
 }));
 
 // Mock atoms
-vi.mock('@/atoms/Container/Container', async () => {
+vi.mock('@/atoms/Container/Container', () => {
   return {
     Container: ({
       children,
@@ -57,7 +57,7 @@ vi.mock('@/atoms/Container/Container', async () => {
 });
 
 // Mock molecules — filter components capture their props for assertion
-vi.mock('@/molecules/Filters/FilterContent/FilterContent', async () => {
+vi.mock('@/molecules/Filters/FilterContent/FilterContent', () => {
   return {
     FilterContent: ({
       selectedTab,
@@ -80,7 +80,7 @@ vi.mock('@/molecules/Filters/FilterContent/FilterContent', async () => {
   };
 });
 
-vi.mock('@/molecules/Filters/FilterLayout/FilterLayout', async () => {
+vi.mock('@/molecules/Filters/FilterLayout/FilterLayout', () => {
   return {
     FilterLayout: ({
       selectedTab,
@@ -103,7 +103,7 @@ vi.mock('@/molecules/Filters/FilterLayout/FilterLayout', async () => {
   };
 });
 
-vi.mock('@/molecules/Filters/FilterReach/FilterReach', async () => {
+vi.mock('@/molecules/Filters/FilterReach/FilterReach', () => {
   return {
     FilterReach: ({
       selectedTab,
@@ -126,7 +126,7 @@ vi.mock('@/molecules/Filters/FilterReach/FilterReach', async () => {
   };
 });
 
-vi.mock('@/molecules/Filters/FilterSort/FilterSort', async () => {
+vi.mock('@/molecules/Filters/FilterSort/FilterSort', () => {
   return {
     FilterSort: ({
       selectedTab,

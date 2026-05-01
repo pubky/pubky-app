@@ -10,7 +10,7 @@ vi.mock('../TimelineLoading', () => ({
   TimelineLoading: () => <div data-testid="default-loading">Default Loading...</div>,
 }));
 
-vi.mock('@/atoms/Container/Container', async () => {
+vi.mock('@/atoms/Container/Container', () => {
   return {
     Container: ({ children, ...props }: { children?: React.ReactNode; [key: string]: unknown }) => (
       <div {...props}>{children}</div>
@@ -18,7 +18,7 @@ vi.mock('@/atoms/Container/Container', async () => {
   };
 });
 
-vi.mock('@/atoms/Typography/Typography', async () => {
+vi.mock('@/atoms/Typography/Typography', () => {
   return {
     Typography: ({ children, ...props }: { children?: React.ReactNode; [key: string]: unknown }) => (
       <span {...props}>{children}</span>

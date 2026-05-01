@@ -5,7 +5,7 @@ import { ProfilePageLayoutProps } from './ProfilePageLayout.types';
 import { PROFILE_PAGE_TYPES } from '@/app/profile/types';
 
 // Mock molecules and organisms
-vi.mock('@/atoms/Container/Container', async () => {
+vi.mock('@/atoms/Container/Container', () => {
   return {
     Container: ({
       children,
@@ -25,7 +25,7 @@ vi.mock('@/atoms/Container/Container', async () => {
   };
 });
 
-vi.mock('@/molecules/AvatarZoomModal/AvatarZoomModal', async () => {
+vi.mock('@/molecules/AvatarZoomModal/AvatarZoomModal', () => {
   return {
     AvatarZoomModal: ({
       open,
@@ -55,13 +55,13 @@ vi.mock('@/molecules/AvatarZoomModal/AvatarZoomModal', async () => {
   };
 });
 
-vi.mock('@/molecules/MobileFooter/MobileFooter', async () => {
+vi.mock('@/molecules/MobileFooter/MobileFooter', () => {
   return {
     MobileFooter: () => <div data-testid="mobile-footer">Footer</div>,
   };
 });
 
-vi.mock('@/molecules/MobileHeader/MobileHeader', async () => {
+vi.mock('@/molecules/MobileHeader/MobileHeader', () => {
   return {
     MobileHeader: ({ showLeftButton, showRightButton }: { showLeftButton?: boolean; showRightButton?: boolean }) => (
       <div data-testid="mobile-header" data-left={showLeftButton} data-right={showRightButton}>
@@ -71,7 +71,7 @@ vi.mock('@/molecules/MobileHeader/MobileHeader', async () => {
   };
 });
 
-vi.mock('@/molecules/ProfilePageFilterBar/ProfilePageFilterBar', async () => {
+vi.mock('@/molecules/ProfilePageFilterBar/ProfilePageFilterBar', () => {
   return {
     ProfilePageFilterBar: ({
       activePage,
@@ -88,7 +88,7 @@ vi.mock('@/molecules/ProfilePageFilterBar/ProfilePageFilterBar', async () => {
   };
 });
 
-vi.mock('@/molecules/ProfilePageLayoutWrapper/ProfilePageLayoutWrapper', async () => {
+vi.mock('@/molecules/ProfilePageLayoutWrapper/ProfilePageLayoutWrapper', () => {
   return {
     ProfilePageLayoutWrapper: ({ children }: { children: React.ReactNode }) => (
       <div data-testid="profile-page-layout-wrapper">{children}</div>
@@ -96,7 +96,7 @@ vi.mock('@/molecules/ProfilePageLayoutWrapper/ProfilePageLayoutWrapper', async (
   };
 });
 
-vi.mock('@/molecules/ProfilePageMobileMenu/ProfilePageMobileMenu', async () => {
+vi.mock('@/molecules/ProfilePageMobileMenu/ProfilePageMobileMenu', () => {
   return {
     ProfilePageMobileMenu: ({ activePage }: { activePage: string; onPageChangeAction: (page: string) => void }) => (
       <div data-testid="profile-mobile-menu" data-active={activePage}>
@@ -106,7 +106,7 @@ vi.mock('@/molecules/ProfilePageMobileMenu/ProfilePageMobileMenu', async () => {
   };
 });
 
-vi.mock('@/organisms/ProfilePageHeader/ProfilePageHeader', async () => {
+vi.mock('@/organisms/ProfilePageHeader/ProfilePageHeader', () => {
   return {
     ProfilePageHeader: ({
       profile,
@@ -132,7 +132,7 @@ vi.mock('@/organisms/ProfilePageHeader/ProfilePageHeader', async () => {
   };
 });
 
-vi.mock('@/organisms/ProfilePageSidebar/ProfilePageSidebar', async () => {
+vi.mock('@/organisms/ProfilePageSidebar/ProfilePageSidebar', () => {
   return {
     ProfilePageSidebar: () => <div data-testid="profile-sidebar">Sidebar</div>,
   };

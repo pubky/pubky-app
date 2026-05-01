@@ -19,7 +19,7 @@ vi.mock('@/hooks/useLinkConfirmation/useLinkConfirmation', () => ({
 }));
 
 // Mock atoms
-vi.mock('@/atoms/Container/Container', async () => {
+vi.mock('@/atoms/Container/Container', () => {
   return {
     Container: ({ children, className }: { children: React.ReactNode; className?: string }) => (
       <div data-testid="container" className={className}>
@@ -29,7 +29,7 @@ vi.mock('@/atoms/Container/Container', async () => {
   };
 });
 
-vi.mock('@/atoms/Image/Image', async () => {
+vi.mock('@/atoms/Image/Image', () => {
   return {
     Image: ({ src, alt, className }: { src: string; alt: string; className?: string }) => (
       <img data-testid="cover-image" src={src} alt={alt} className={className} />
@@ -37,7 +37,7 @@ vi.mock('@/atoms/Image/Image', async () => {
   };
 });
 
-vi.mock('@/atoms/Typography/Typography', async () => {
+vi.mock('@/atoms/Typography/Typography', () => {
   return {
     Typography: ({
       children,
@@ -58,7 +58,7 @@ vi.mock('@/atoms/Typography/Typography', async () => {
 });
 
 // Mock molecules
-vi.mock('@/molecules/PostText/PostText', async () => {
+vi.mock('@/molecules/PostText/PostText', () => {
   return {
     PostText: ({
       content,
@@ -77,7 +77,7 @@ vi.mock('@/molecules/PostText/PostText', async () => {
 });
 
 // Mock organisms
-vi.mock('@/organisms/DialogCheckLink/DialogCheckLink', async () => {
+vi.mock('@/organisms/DialogCheckLink/DialogCheckLink', () => {
   return {
     DialogCheckLink: ({
       open,
@@ -97,7 +97,7 @@ vi.mock('@/organisms/DialogCheckLink/DialogCheckLink', async () => {
   };
 });
 
-vi.mock('@/organisms/DialogReply/DialogReply', async () => {
+vi.mock('@/organisms/DialogReply/DialogReply', () => {
   return {
     DialogReply: ({
       postId,
@@ -117,7 +117,7 @@ vi.mock('@/organisms/DialogReply/DialogReply', async () => {
   };
 });
 
-vi.mock('@/organisms/DialogRepost/DialogRepost', async () => {
+vi.mock('@/organisms/DialogRepost/DialogRepost', () => {
   return {
     DialogRepost: ({
       postId,
@@ -137,7 +137,7 @@ vi.mock('@/organisms/DialogRepost/DialogRepost', async () => {
   };
 });
 
-vi.mock('@/organisms/PostActionsBar/PostActionsBar', async () => {
+vi.mock('@/organisms/PostActionsBar/PostActionsBar', () => {
   return {
     PostActionsBar: ({
       postId,
@@ -162,7 +162,7 @@ vi.mock('@/organisms/PostActionsBar/PostActionsBar', async () => {
   };
 });
 
-vi.mock('@/organisms/PostContentBlurred/PostContentBlurred', async () => {
+vi.mock('@/organisms/PostContentBlurred/PostContentBlurred', () => {
   return {
     PostContentBlurred: ({ postId }: { postId: string }) => (
       <div data-testid="post-content-blurred" data-post-id={postId}>
@@ -172,7 +172,7 @@ vi.mock('@/organisms/PostContentBlurred/PostContentBlurred', async () => {
   };
 });
 
-vi.mock('@/organisms/PostHeader/PostHeader', async () => {
+vi.mock('@/organisms/PostHeader/PostHeader', () => {
   return {
     PostHeader: ({ postId, size, timeAgoPlacement }: { postId: string; size?: string; timeAgoPlacement?: string }) => (
       <div data-testid="post-header" data-post-id={postId} data-size={size} data-time-placement={timeAgoPlacement}>
@@ -182,7 +182,7 @@ vi.mock('@/organisms/PostHeader/PostHeader', async () => {
   };
 });
 
-vi.mock('@/organisms/PostTagsPanel/PostTagsPanel', async () => {
+vi.mock('@/organisms/PostTagsPanel/PostTagsPanel', () => {
   return {
     PostTagsPanel: ({ postId, className }: { postId: string; className?: string }) => (
       <div data-testid="post-tags-panel" data-post-id={postId} className={className}>

@@ -14,7 +14,7 @@ vi.mock('@/hooks/useTtlSubscription/useTtlSubscription', () => ({
 }));
 
 // Mock Atoms - lightweight pass-through components
-vi.mock('@/atoms/Button/Button', async () => {
+vi.mock('@/atoms/Button/Button', () => {
   return {
     Button: ({
       children,
@@ -30,7 +30,7 @@ vi.mock('@/atoms/Button/Button', async () => {
   };
 });
 
-vi.mock('@/atoms/Container/Container', async () => {
+vi.mock('@/atoms/Container/Container', () => {
   return {
     Container: ({
       children,
@@ -40,7 +40,7 @@ vi.mock('@/atoms/Container/Container', async () => {
   };
 });
 
-vi.mock('@/atoms/Link/Link', async () => {
+vi.mock('@/atoms/Link/Link', () => {
   return {
     Link: ({
       children,
@@ -50,7 +50,7 @@ vi.mock('@/atoms/Link/Link', async () => {
   };
 });
 
-vi.mock('@/atoms/Typography/Typography', async () => {
+vi.mock('@/atoms/Typography/Typography', () => {
   return {
     Typography: ({
       children,
@@ -66,13 +66,13 @@ vi.mock('@/atoms/Typography/Typography', async () => {
 });
 
 // Mock Organisms
-vi.mock('@/organisms/AvatarWithFallback/AvatarWithFallback', async () => {
+vi.mock('@/organisms/AvatarWithFallback/AvatarWithFallback', () => {
   return {
     AvatarWithFallback: () => <div data-testid="avatar" />,
   };
 });
 
-vi.mock('@/organisms/ClickableTagsList/ClickableTagsList', async () => {
+vi.mock('@/organisms/ClickableTagsList/ClickableTagsList', () => {
   return {
     ClickableTagsList: () => <div data-testid="tags-list" />,
   };

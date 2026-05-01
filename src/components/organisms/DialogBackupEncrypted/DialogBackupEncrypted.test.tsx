@@ -1,7 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen, fireEvent } from '@testing-library/react';
 import { DialogBackupEncrypted } from './DialogBackupEncrypted';
-vi.mock('@/atoms/Dialog/Dialog', async () => {
+vi.mock('@/atoms/Dialog/Dialog', () => {
   return {
     Dialog: ({ children }: { children: React.ReactNode }) => <div data-testid="dialog">{children}</div>,
     DialogTrigger: ({ children, asChild }: { children: React.ReactNode; asChild?: boolean }) => (
@@ -85,7 +85,7 @@ vi.mock('@/controllers/profile/profile', () => ({
 }));
 
 // Mock atoms
-vi.mock('@/atoms/Button/Button', async () => {
+vi.mock('@/atoms/Button/Button', () => {
   return {
     Button: ({
       children,
@@ -112,7 +112,7 @@ vi.mock('@/atoms/Button/Button', async () => {
   };
 });
 
-vi.mock('@/atoms/Container/Container', async () => {
+vi.mock('@/atoms/Container/Container', () => {
   return {
     Container: ({
       children,
@@ -132,7 +132,7 @@ vi.mock('@/atoms/Container/Container', async () => {
   };
 });
 
-vi.mock('@/atoms/Input/Input', async () => {
+vi.mock('@/atoms/Input/Input', () => {
   return {
     Input: ({
       id,
@@ -171,7 +171,7 @@ vi.mock('@/atoms/Input/Input', async () => {
   };
 });
 
-vi.mock('@/atoms/Label/Label', async () => {
+vi.mock('@/atoms/Label/Label', () => {
   return {
     Label: ({ children, className, htmlFor }: { children: React.ReactNode; className?: string; htmlFor?: string }) => (
       <label data-testid="label" className={className} htmlFor={htmlFor}>
@@ -181,7 +181,7 @@ vi.mock('@/atoms/Label/Label', async () => {
   };
 });
 
-vi.mock('@/atoms/Typography/Typography', async () => {
+vi.mock('@/atoms/Typography/Typography', () => {
   return {
     Typography: ({ children, size, className }: { children: React.ReactNode; size?: string; className?: string }) => (
       <p data-testid="typography" data-size={size} className={className}>

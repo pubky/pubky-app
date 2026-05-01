@@ -53,7 +53,7 @@ vi.mock('@/config/nexus', () => ({
 }));
 
 // Mock Atoms components
-vi.mock('@/atoms/Avatar/Avatar', async () => {
+vi.mock('@/atoms/Avatar/Avatar', () => {
   return {
     Avatar: ({
       children,
@@ -87,7 +87,7 @@ vi.mock('@/atoms/Avatar/Avatar', async () => {
   };
 });
 
-vi.mock('@/atoms/Container/Container', async () => {
+vi.mock('@/atoms/Container/Container', () => {
   return {
     Container: ({
       children,
@@ -122,7 +122,7 @@ vi.mock('@/atoms/Container/Container', async () => {
   };
 });
 
-vi.mock('@/atoms/Typography/Typography', async () => {
+vi.mock('@/atoms/Typography/Typography', () => {
   return {
     Typography: ({
       as: Tag = 'p',

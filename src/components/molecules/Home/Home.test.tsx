@@ -13,7 +13,7 @@ vi.mock('next/navigation', () => ({
 }));
 
 // Mock molecules
-vi.mock('@/molecules/ActionButtons/ActionButtons', async () => {
+vi.mock('@/molecules/ActionButtons/ActionButtons', () => {
   return {
     ActionButtons: ({ onSignIn, onCreateAccount }: { onSignIn: () => void; onCreateAccount: () => void }) => (
       <div data-testid="action-buttons">
@@ -29,19 +29,19 @@ vi.mock('@/molecules/ActionButtons/ActionButtons', async () => {
 });
 
 // Mock organisms
-vi.mock('@/organisms/DialogAge/DialogAge', async () => {
+vi.mock('@/organisms/DialogAge/DialogAge', () => {
   return {
     DialogAge: () => <span data-testid="dialog-age">over 18 years old</span>,
   };
 });
 
-vi.mock('@/organisms/DialogPrivacy/DialogPrivacy', async () => {
+vi.mock('@/organisms/DialogPrivacy/DialogPrivacy', () => {
   return {
     DialogPrivacy: () => <span data-testid="dialog-privacy">Privacy Policy</span>,
   };
 });
 
-vi.mock('@/organisms/DialogTerms/DialogTerms', async () => {
+vi.mock('@/organisms/DialogTerms/DialogTerms', () => {
   return {
     DialogTerms: () => <span data-testid="dialog-terms">Terms of Service</span>,
   };
@@ -53,7 +53,7 @@ vi.mock('@/config/externalLinks', () => ({
 }));
 
 // Mock atoms
-vi.mock('@/atoms/Container/Container', async () => {
+vi.mock('@/atoms/Container/Container', () => {
   return {
     Container: ({ children, className }: { children: React.ReactNode; className?: string }) => (
       <div data-testid="container" className={className}>
@@ -63,13 +63,13 @@ vi.mock('@/atoms/Container/Container', async () => {
   };
 });
 
-vi.mock('@/atoms/FooterLinks/FooterLinks', async () => {
+vi.mock('@/atoms/FooterLinks/FooterLinks', () => {
   return {
     FooterLinks: ({ children }: { children: React.ReactNode }) => <div data-testid="footer-links">{children}</div>,
   };
 });
 
-vi.mock('@/atoms/Heading/Heading', async () => {
+vi.mock('@/atoms/Heading/Heading', () => {
   return {
     Heading: ({ children, level, size }: { children: React.ReactNode; level: number; size?: string }) => (
       <div data-testid={`heading-${level}`} data-size={size}>
@@ -79,7 +79,7 @@ vi.mock('@/atoms/Heading/Heading', async () => {
   };
 });
 
-vi.mock('@/atoms/Image/Image', async () => {
+vi.mock('@/atoms/Image/Image', () => {
   return {
     Image: ({ src, alt, width, height }: { src: string; alt: string; width?: number; height?: number }) => (
       <img data-testid="image" src={src} alt={alt} width={width} height={height} />
@@ -87,7 +87,7 @@ vi.mock('@/atoms/Image/Image', async () => {
   };
 });
 
-vi.mock('@/atoms/Link/Link', async () => {
+vi.mock('@/atoms/Link/Link', () => {
   return {
     Link: ({
       children,
@@ -107,7 +107,7 @@ vi.mock('@/atoms/Link/Link', async () => {
   };
 });
 
-vi.mock('@/atoms/Typography/Typography', async () => {
+vi.mock('@/atoms/Typography/Typography', () => {
   return {
     Typography: ({
       children,

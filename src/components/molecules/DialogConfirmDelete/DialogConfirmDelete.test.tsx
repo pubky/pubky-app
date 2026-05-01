@@ -2,7 +2,7 @@ import { describe, it, expect, vi } from 'vitest';
 import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { DialogConfirmDelete } from './DialogConfirmDelete';
-vi.mock('@/atoms/Dialog/Dialog', async () => {
+vi.mock('@/atoms/Dialog/Dialog', () => {
   return {
     Dialog: ({
       children,
@@ -21,7 +21,7 @@ vi.mock('@/atoms/Dialog/Dialog', async () => {
   };
 });
 
-vi.mock('@/atoms/Button/Button', async () => {
+vi.mock('@/atoms/Button/Button', () => {
   return {
     Button: ({
       children,
@@ -42,7 +42,7 @@ vi.mock('@/atoms/Button/Button', async () => {
   };
 });
 
-vi.mock('@/atoms/Typography/Typography', async () => {
+vi.mock('@/atoms/Typography/Typography', () => {
   return {
     Typography: ({ children, className }: { children: React.ReactNode; className?: string }) => (
       <p className={className} data-testid="dialog-description">

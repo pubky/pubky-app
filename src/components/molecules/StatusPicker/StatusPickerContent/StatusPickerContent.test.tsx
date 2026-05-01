@@ -4,7 +4,7 @@ import { StatusPickerContent } from './StatusPickerContent';
 import { STATUS_EMOJIS, STATUS_LABELS } from '@/libs/status/status.constants';
 
 // Mock EmojiPickerDialog
-vi.mock('@/molecules/EmojiPickerDialog/EmojiPickerDialog', async () => {
+vi.mock('@/molecules/EmojiPickerDialog/EmojiPickerDialog', () => {
   return {
     EmojiPickerDialog: ({
       open,

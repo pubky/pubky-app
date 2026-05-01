@@ -7,7 +7,7 @@ const validPubkyKey = 'o1gg96ewuojmopcjbz8895478wdtxtzzber7aezq6ror5a91j7dy';
 
 const mockUseUserProfile = vi.fn();
 
-vi.mock('@/atoms/Link/Link', async () => {
+vi.mock('@/atoms/Link/Link', () => {
   return {
     Link: ({
       children,
@@ -32,7 +32,7 @@ vi.mock('@/hooks/useUserProfile/useUserProfile', () => ({
   useUserProfile: (userId: string) => mockUseUserProfile(userId),
 }));
 
-vi.mock('@/molecules/UserInfoPopover/UserInfoPopover', async () => {
+vi.mock('@/molecules/UserInfoPopover/UserInfoPopover', () => {
   return {
     UserInfoPopover: ({ children }: { children: React.ReactNode }) => <>{children}</>,
   };

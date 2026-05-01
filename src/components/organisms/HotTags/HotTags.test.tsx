@@ -26,7 +26,7 @@ vi.mock('@/hooks/useHotTags/useHotTags', () => ({
 }));
 
 // Mock molecules
-vi.mock('@/molecules/SidebarSection/SidebarSection', async () => {
+vi.mock('@/molecules/SidebarSection/SidebarSection', () => {
   return {
     SidebarSection: ({
       children,
@@ -53,7 +53,7 @@ vi.mock('@/molecules/SidebarSection/SidebarSection', async () => {
 });
 
 // Mock atoms
-vi.mock('@/atoms/Container/Container', async () => {
+vi.mock('@/atoms/Container/Container', () => {
   return {
     Container: ({ children, className }: { children: React.ReactNode; className?: string }) => (
       <div className={className}>{children}</div>
@@ -61,7 +61,7 @@ vi.mock('@/atoms/Container/Container', async () => {
   };
 });
 
-vi.mock('@/atoms/Skeleton/Skeleton', async () => {
+vi.mock('@/atoms/Skeleton/Skeleton', () => {
   return {
     Skeleton: ({ className, 'data-testid': testId }: { className?: string; 'data-testid'?: string }) => (
       <div data-testid={testId} className={className} />
@@ -69,7 +69,7 @@ vi.mock('@/atoms/Skeleton/Skeleton', async () => {
   };
 });
 
-vi.mock('@/atoms/Tag/Tag', async () => {
+vi.mock('@/atoms/Tag/Tag', () => {
   return {
     Tag: ({
       name,
@@ -90,7 +90,7 @@ vi.mock('@/atoms/Tag/Tag', async () => {
   };
 });
 
-vi.mock('@/atoms/Typography/Typography', async () => {
+vi.mock('@/atoms/Typography/Typography', () => {
   return {
     Typography: ({ children }: { children: React.ReactNode }) => <p>{children}</p>,
   };

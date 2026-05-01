@@ -23,7 +23,7 @@ vi.mock('@/hooks/useLinkConfirmation/useLinkConfirmation', () => ({
 }));
 
 // Mock atoms
-vi.mock('@/atoms/Container/Container', async () => {
+vi.mock('@/atoms/Container/Container', () => {
   return {
     Container: ({ children, className }: { children: React.ReactNode; className?: string }) => (
       <div data-testid="container" className={className}>
@@ -33,7 +33,7 @@ vi.mock('@/atoms/Container/Container', async () => {
   };
 });
 
-vi.mock('@/atoms/Image/Image', async () => {
+vi.mock('@/atoms/Image/Image', () => {
   return {
     Image: ({
       src,
@@ -51,7 +51,7 @@ vi.mock('@/atoms/Image/Image', async () => {
   };
 });
 
-vi.mock('@/atoms/Typography/Typography', async () => {
+vi.mock('@/atoms/Typography/Typography', () => {
   return {
     Typography: ({ children, size, className }: { children: React.ReactNode; size?: string; className?: string }) => (
       <span data-testid="typography" data-size={size} className={className}>
@@ -62,7 +62,7 @@ vi.mock('@/atoms/Typography/Typography', async () => {
 });
 
 // Mock molecules
-vi.mock('@/molecules/PostText/PostText', async () => {
+vi.mock('@/molecules/PostText/PostText', () => {
   return {
     PostText: ({
       content,
@@ -88,7 +88,7 @@ vi.mock('@/molecules/PostText/PostText', async () => {
 });
 
 // Mock organisms
-vi.mock('@/organisms/DialogCheckLink/DialogCheckLink', async () => {
+vi.mock('@/organisms/DialogCheckLink/DialogCheckLink', () => {
   return {
     DialogCheckLink: ({
       open,

@@ -28,7 +28,7 @@ vi.mock('@/controllers/feed/feed', () => ({
 }));
 
 // Mock @/atoms — lightweight forwarding mocks
-vi.mock('@/atoms/Button/Button', async () => {
+vi.mock('@/atoms/Button/Button', () => {
   return {
     Button: ({
       children,
@@ -56,7 +56,7 @@ vi.mock('@/atoms/Button/Button', async () => {
   };
 });
 
-vi.mock('@/atoms/Container/Container', async () => {
+vi.mock('@/atoms/Container/Container', () => {
   return {
     Container: ({ children, className }: { children: React.ReactNode; className?: string }) => (
       <div data-testid="container" className={className}>
@@ -66,7 +66,7 @@ vi.mock('@/atoms/Container/Container', async () => {
   };
 });
 
-vi.mock('@/atoms/Heading/Heading', async () => {
+vi.mock('@/atoms/Heading/Heading', () => {
   return {
     Heading: ({
       children,
@@ -86,7 +86,7 @@ vi.mock('@/atoms/Heading/Heading', async () => {
   };
 });
 
-vi.mock('@/atoms/Link/Link', async () => {
+vi.mock('@/atoms/Link/Link', () => {
   return {
     Link: ({
       children,
@@ -106,7 +106,7 @@ vi.mock('@/atoms/Link/Link', async () => {
   };
 });
 
-vi.mock('@/atoms/Typography/Typography', async () => {
+vi.mock('@/atoms/Typography/Typography', () => {
   return {
     Typography: ({
       children,
@@ -125,7 +125,7 @@ vi.mock('@/atoms/Typography/Typography', async () => {
 });
 
 // Mock @/organisms — CustomFeedDialog is a complex component; mock it as a transparent wrapper
-vi.mock('@/organisms/CustomFeedDialog/CustomFeedDialog', async () => {
+vi.mock('@/organisms/CustomFeedDialog/CustomFeedDialog', () => {
   return {
     CustomFeedDialog: ({ children, mode }: { children: React.ReactNode; mode: string }) => (
       <div data-testid={`custom-feed-dialog-${mode}`}>{children}</div>

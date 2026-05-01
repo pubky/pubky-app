@@ -5,7 +5,7 @@ import { WordSlot } from './WordSlot';
 
 // Mock external dependencies
 
-vi.mock('@/atoms/Badge/Badge', async () => {
+vi.mock('@/atoms/Badge/Badge', () => {
   return {
     Badge: vi.fn(({ children, variant, className }) => (
       <span data-testid="badge" data-variant={variant} className={className}>
@@ -15,7 +15,7 @@ vi.mock('@/atoms/Badge/Badge', async () => {
   };
 });
 
-vi.mock('@/atoms/Container/Container', async () => {
+vi.mock('@/atoms/Container/Container', () => {
   return {
     Container: vi.fn(({ children, className, ...props }) => (
       <div data-testid="container" className={className} {...props}>
@@ -25,7 +25,7 @@ vi.mock('@/atoms/Container/Container', async () => {
   };
 });
 
-vi.mock('@/atoms/Input/Input', async () => {
+vi.mock('@/atoms/Input/Input', () => {
   return {
     Input: vi.fn(({ value, placeholder, className, onChange, onBlur, disabled, readOnly, onClick, ...props }) => (
       <input

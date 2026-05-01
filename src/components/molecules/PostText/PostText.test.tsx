@@ -10,7 +10,7 @@ vi.mock('next/navigation', () => ({
 }));
 
 // Mock @/atoms
-vi.mock('@/atoms/Button/Button', async () => {
+vi.mock('@/atoms/Button/Button', () => {
   return {
     Button: ({
       children,
@@ -30,7 +30,7 @@ vi.mock('@/atoms/Button/Button', async () => {
   };
 });
 
-vi.mock('@/atoms/Container/Container', async () => {
+vi.mock('@/atoms/Container/Container', () => {
   return {
     Container: ({
       children,
@@ -49,7 +49,7 @@ vi.mock('@/atoms/Container/Container', async () => {
 });
 
 // Mock @/molecules
-vi.mock('@/molecules/PostCodeBlock/PostCodeBlock', async () => {
+vi.mock('@/molecules/PostCodeBlock/PostCodeBlock', () => {
   return {
     PostCodeBlock: ({ children, className }: { children?: React.ReactNode; className?: string }) => (
       <code data-testid="post-code-block" className={className}>
@@ -59,7 +59,7 @@ vi.mock('@/molecules/PostCodeBlock/PostCodeBlock', async () => {
   };
 });
 
-vi.mock('@/molecules/PostHashtags/PostHashtags', async () => {
+vi.mock('@/molecules/PostHashtags/PostHashtags', () => {
   return {
     PostHashtags: ({ children, href }: { children?: React.ReactNode; href?: string }) => (
       <a data-testid="post-hashtag" href={href}>
@@ -70,7 +70,7 @@ vi.mock('@/molecules/PostHashtags/PostHashtags', async () => {
 });
 
 // Mock @/organisms
-vi.mock('@/organisms/PostMentions/PostMentions', async () => {
+vi.mock('@/organisms/PostMentions/PostMentions', () => {
   return {
     PostMentions: ({ children, href }: { children?: React.ReactNode; href?: string }) => (
       <a data-testid="post-mention" href={href}>

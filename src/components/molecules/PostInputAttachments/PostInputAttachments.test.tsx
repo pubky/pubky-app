@@ -19,7 +19,7 @@ afterEach(() => {
 });
 
 // Mock @/atoms
-vi.mock('@/atoms/Audio/Audio', async () => {
+vi.mock('@/atoms/Audio/Audio', () => {
   return {
     Audio: ({
       src,
@@ -33,7 +33,7 @@ vi.mock('@/atoms/Audio/Audio', async () => {
   };
 });
 
-vi.mock('@/atoms/Button/Button', async () => {
+vi.mock('@/atoms/Button/Button', () => {
   return {
     Button: ({
       children,
@@ -66,7 +66,7 @@ vi.mock('@/atoms/Button/Button', async () => {
   };
 });
 
-vi.mock('@/atoms/Card/Card', async () => {
+vi.mock('@/atoms/Card/Card', () => {
   return {
     Card: ({
       children,
@@ -97,7 +97,7 @@ vi.mock('@/atoms/Card/Card', async () => {
   };
 });
 
-vi.mock('@/atoms/Container/Container', async () => {
+vi.mock('@/atoms/Container/Container', () => {
   return {
     Container: ({
       children,
@@ -115,7 +115,7 @@ vi.mock('@/atoms/Container/Container', async () => {
   };
 });
 
-vi.mock('@/atoms/Image/Image', async () => {
+vi.mock('@/atoms/Image/Image', () => {
   return {
     Image: ({
       src,
@@ -131,7 +131,7 @@ vi.mock('@/atoms/Image/Image', async () => {
   };
 });
 
-vi.mock('@/atoms/Input/Input', async () => {
+vi.mock('@/atoms/Input/Input', () => {
   return {
     Input: vi.fn(
       ({
@@ -165,7 +165,7 @@ vi.mock('@/atoms/Input/Input', async () => {
   };
 });
 
-vi.mock('@/atoms/Typography/Typography', async () => {
+vi.mock('@/atoms/Typography/Typography', () => {
   return {
     Typography: ({
       children,
@@ -185,7 +185,7 @@ vi.mock('@/atoms/Typography/Typography', async () => {
   };
 });
 
-vi.mock('@/atoms/Video/Video', async () => {
+vi.mock('@/atoms/Video/Video', () => {
   return {
     Video: ({
       src,

@@ -2,7 +2,7 @@ import { render, screen, fireEvent } from '@testing-library/react';
 import { describe, it, expect, vi } from 'vitest';
 import { SearchUserSuggestion } from './SearchUserSuggestion';
 import type { Pubky } from '@/models/models.types';
-vi.mock('@/atoms/Container/Container', async () => {
+vi.mock('@/atoms/Container/Container', () => {
   return {
     Container: ({
       children,
@@ -17,7 +17,7 @@ vi.mock('@/atoms/Container/Container', async () => {
   };
 });
 
-vi.mock('@/atoms/Typography/Typography', async () => {
+vi.mock('@/atoms/Typography/Typography', () => {
   return {
     Typography: ({
       children,
@@ -32,7 +32,7 @@ vi.mock('@/atoms/Typography/Typography', async () => {
   };
 });
 
-vi.mock('@/organisms/AvatarWithFallback/AvatarWithFallback', async () => {
+vi.mock('@/organisms/AvatarWithFallback/AvatarWithFallback', () => {
   return {
     AvatarWithFallback: ({ name, size }: { name: string; avatarUrl?: string; size: string }) => (
       <div data-testid="avatar" data-name={name} data-size={size}>

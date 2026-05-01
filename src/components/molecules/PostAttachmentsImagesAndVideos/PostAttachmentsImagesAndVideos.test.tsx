@@ -3,7 +3,7 @@ import { render, screen, fireEvent } from '@testing-library/react';
 import { useEffect } from 'react';
 import { PostAttachmentsImagesAndVideos } from './PostAttachmentsImagesAndVideos';
 import type { AttachmentConstructed } from '@/organisms/PostAttachments/PostAttachments.types';
-vi.mock('@/atoms/Dialog/Dialog', async () => {
+vi.mock('@/atoms/Dialog/Dialog', () => {
   return {
     Dialog: ({
       children,
@@ -93,7 +93,7 @@ vi.mock('@/molecules/PostAttachmentsCarouselImage/PostAttachmentsCarouselImage',
   };
 });
 
-vi.mock('@/molecules/Toaster/use-toast', async () => {
+vi.mock('@/molecules/Toaster/use-toast', () => {
   return {
     useToast: () => ({ toast: mockToast }),
   };
@@ -105,7 +105,7 @@ let dialogOpenState = false;
 let dialogOpenStateSetByTest = false;
 
 // Mock @/atoms
-vi.mock('@/atoms/Button/Button', async () => {
+vi.mock('@/atoms/Button/Button', () => {
   return {
     Button: ({
       children,
@@ -141,7 +141,7 @@ vi.mock('@/atoms/Button/Button', async () => {
   };
 });
 
-vi.mock('@/atoms/Carousel/Carousel', async () => {
+vi.mock('@/atoms/Carousel/Carousel', () => {
   return {
     Carousel: ({
       children,
@@ -199,7 +199,7 @@ vi.mock('@/atoms/Carousel/Carousel', async () => {
   };
 });
 
-vi.mock('@/atoms/Container/Container', async () => {
+vi.mock('@/atoms/Container/Container', () => {
   return {
     Container: ({
       children,
@@ -221,7 +221,7 @@ vi.mock('@/atoms/Container/Container', async () => {
   };
 });
 
-vi.mock('@/atoms/Image/Image', async () => {
+vi.mock('@/atoms/Image/Image', () => {
   return {
     Image: ({
       src,
@@ -239,7 +239,7 @@ vi.mock('@/atoms/Image/Image', async () => {
   };
 });
 
-vi.mock('@/atoms/Typography/Typography', async () => {
+vi.mock('@/atoms/Typography/Typography', () => {
   return {
     Typography: ({ children, size, className }: { children: React.ReactNode; size?: string; className?: string }) => (
       <span data-testid="typography" data-size={size} className={className}>
@@ -249,7 +249,7 @@ vi.mock('@/atoms/Typography/Typography', async () => {
   };
 });
 
-vi.mock('@/atoms/Video/Video', async () => {
+vi.mock('@/atoms/Video/Video', () => {
   return {
     Video: ({
       src,

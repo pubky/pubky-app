@@ -22,7 +22,7 @@ const mockSetArticleTitle = vi.fn();
 const mockSetMentionSelectedIndex = vi.fn();
 const mockHandleMentionSelect = vi.fn();
 
-vi.mock('@/atoms/Button/Button', async () => {
+vi.mock('@/atoms/Button/Button', () => {
   return {
     Button: vi.fn(({ children, onClick, disabled, className, 'aria-label': ariaLabel }) => (
       <button onClick={onClick} disabled={disabled} className={className} aria-label={ariaLabel}>
@@ -32,7 +32,7 @@ vi.mock('@/atoms/Button/Button', async () => {
   };
 });
 
-vi.mock('@/atoms/Container/Container', async () => {
+vi.mock('@/atoms/Container/Container', () => {
   return {
     Container: ({
       children,
@@ -72,7 +72,7 @@ vi.mock('@/atoms/Container/Container', async () => {
   };
 });
 
-vi.mock('@/atoms/Input/Input', async () => {
+vi.mock('@/atoms/Input/Input', () => {
   return {
     Input: vi.fn(({ type, accept, multiple, onChange, ref, className, id, placeholder, defaultValue, disabled }) => (
       <input
@@ -92,7 +92,7 @@ vi.mock('@/atoms/Input/Input', async () => {
   };
 });
 
-vi.mock('@/atoms/PostThreadConnector/PostThreadConnector', async () => {
+vi.mock('@/atoms/PostThreadConnector/PostThreadConnector', () => {
   return {
     PostThreadConnector: vi.fn(({ height, variant }) => (
       <div data-testid="thread-connector" data-height={height} data-variant={variant} />
@@ -100,7 +100,7 @@ vi.mock('@/atoms/PostThreadConnector/PostThreadConnector', async () => {
   };
 });
 
-vi.mock('@/atoms/Textarea/Textarea', async () => {
+vi.mock('@/atoms/Textarea/Textarea', () => {
   return {
     Textarea: vi.fn(({ value, onChange, placeholder, disabled, ref, onFocus, onKeyDown, autoFocus, className }) => (
       <textarea
@@ -119,7 +119,7 @@ vi.mock('@/atoms/Textarea/Textarea', async () => {
   };
 });
 
-vi.mock('@/atoms/Typography/Typography', async () => {
+vi.mock('@/atoms/Typography/Typography', () => {
   return {
     Typography: vi.fn(({ children, as, size, className }) => {
       const Tag = (as || 'p') as React.ElementType;
@@ -132,7 +132,7 @@ vi.mock('@/atoms/Typography/Typography', async () => {
   };
 });
 
-vi.mock('@/organisms/PostHeader/PostHeader', async () => {
+vi.mock('@/organisms/PostHeader/PostHeader', () => {
   return {
     PostHeader: vi.fn(({ postId, isReplyInput, characterLimit, size }) => (
       <div
@@ -190,7 +190,7 @@ vi.mock('../PostInputActionBar/PostInputActionBar', () => ({
   ),
 }));
 
-vi.mock('@/molecules/EmojiPickerDialog/EmojiPickerDialog', async () => {
+vi.mock('@/molecules/EmojiPickerDialog/EmojiPickerDialog', () => {
   return {
     EmojiPickerDialog: vi.fn(
       ({
@@ -216,7 +216,7 @@ vi.mock('@/molecules/EmojiPickerDialog/EmojiPickerDialog', async () => {
   };
 });
 
-vi.mock('@/molecules/MarkdownEditor/MarkdownEditor', async () => {
+vi.mock('@/molecules/MarkdownEditor/MarkdownEditor', () => {
   return {
     MarkdownEditor: vi.fn(({ markdown, onChange, readOnly }) => (
       <div
@@ -231,7 +231,7 @@ vi.mock('@/molecules/MarkdownEditor/MarkdownEditor', async () => {
   };
 });
 
-vi.mock('@/molecules/MentionPopover/MentionPopover', async () => {
+vi.mock('@/molecules/MentionPopover/MentionPopover', () => {
   return {
     MentionPopover: vi.fn(
       ({
@@ -249,7 +249,7 @@ vi.mock('@/molecules/MentionPopover/MentionPopover', async () => {
   };
 });
 
-vi.mock('@/molecules/PostInputAttachments/PostInputAttachments', async () => {
+vi.mock('@/molecules/PostInputAttachments/PostInputAttachments', () => {
   return {
     PostInputAttachments: vi.fn(
       ({
@@ -277,7 +277,7 @@ vi.mock('@/molecules/PostInputAttachments/PostInputAttachments', async () => {
   };
 });
 
-vi.mock('@/molecules/PostLinkEmbeds/PostLinkEmbeds', async () => {
+vi.mock('@/molecules/PostLinkEmbeds/PostLinkEmbeds', () => {
   return {
     PostLinkEmbeds: vi.fn(({ content }: { content: string }) => {
       // Only render if content contains a URL-like pattern
@@ -289,7 +289,7 @@ vi.mock('@/molecules/PostLinkEmbeds/PostLinkEmbeds', async () => {
   };
 });
 
-vi.mock('@/molecules/PostPreviewCard/PostPreviewCard', async () => {
+vi.mock('@/molecules/PostPreviewCard/PostPreviewCard', () => {
   return {
     PostPreviewCard: vi.fn(({ postId, className }: { postId: string; className?: string }) => (
       <div data-testid="post-preview-card" data-post-id={postId} className={className}>
@@ -299,13 +299,13 @@ vi.mock('@/molecules/PostPreviewCard/PostPreviewCard', async () => {
   };
 });
 
-vi.mock('@/molecules/PostTag/PostTag', async () => {
+vi.mock('@/molecules/PostTag/PostTag', () => {
   return {
     PostTag: vi.fn(({ label }) => <div data-testid={`post-tag-${label}`}>{label}</div>),
   };
 });
 
-vi.mock('@/molecules/PostTagAddButton/PostTagAddButton', async () => {
+vi.mock('@/molecules/PostTagAddButton/PostTagAddButton', () => {
   return {
     PostTagAddButton: vi.fn(({ onClick, disabled }) => (
       <button data-testid="add-tag-button" onClick={onClick} disabled={disabled}>
@@ -315,13 +315,13 @@ vi.mock('@/molecules/PostTagAddButton/PostTagAddButton', async () => {
   };
 });
 
-vi.mock('@/molecules/TagInput/TagInput', async () => {
+vi.mock('@/molecules/TagInput/TagInput', () => {
   return {
     TagInput: vi.fn(() => <div data-testid="tag-input" />),
   };
 });
 
-vi.mock('@/molecules/Toaster/use-toast', async () => {
+vi.mock('@/molecules/Toaster/use-toast', () => {
   return {
     useToast: vi.fn(() => ({ toast: mockToast })),
   };

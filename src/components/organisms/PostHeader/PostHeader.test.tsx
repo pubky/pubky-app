@@ -24,7 +24,7 @@ vi.mock('@/hooks/useRelativeTime/useRelativeTime', () => ({
   })),
 }));
 
-vi.mock('@/atoms/Container/Container', async () => {
+vi.mock('@/atoms/Container/Container', () => {
   return {
     Container: vi.fn(
       ({
@@ -44,7 +44,7 @@ vi.mock('@/atoms/Container/Container', async () => {
   };
 });
 
-vi.mock('@/atoms/Typography/Typography', async () => {
+vi.mock('@/atoms/Typography/Typography', () => {
   return {
     Typography: vi.fn(
       ({
@@ -66,7 +66,7 @@ vi.mock('@/atoms/Typography/Typography', async () => {
   };
 });
 
-vi.mock('@/molecules/PostHeaderTimestamp/PostHeaderTimestamp', async () => {
+vi.mock('@/molecules/PostHeaderTimestamp/PostHeaderTimestamp', () => {
   return {
     PostHeaderTimestamp: vi.fn(({ timeAgo }: { timeAgo: string; indexedAt: Date }) => (
       <div data-testid="post-header-timestamp">
@@ -77,7 +77,7 @@ vi.mock('@/molecules/PostHeaderTimestamp/PostHeaderTimestamp', async () => {
   };
 });
 
-vi.mock('@/molecules/PostHeaderUserInfo/PostHeaderUserInfo', async () => {
+vi.mock('@/molecules/PostHeaderUserInfo/PostHeaderUserInfo', () => {
   return {
     PostHeaderUserInfo: vi.fn(
       ({

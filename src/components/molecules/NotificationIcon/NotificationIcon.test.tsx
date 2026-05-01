@@ -3,7 +3,7 @@ import { render } from '@testing-library/react';
 import { NotificationIcon } from './NotificationIcon';
 import { NotificationType } from '@/models/notification/notification.types';
 // Mock atoms
-vi.mock('@/atoms/Container/Container', async () => {
+vi.mock('@/atoms/Container/Container', () => {
   return {
     Container: ({
       children,

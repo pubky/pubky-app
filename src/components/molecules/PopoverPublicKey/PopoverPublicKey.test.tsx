@@ -1,7 +1,7 @@
 import { render, screen, fireEvent } from '@testing-library/react';
 import { describe, it, expect, vi } from 'vitest';
 import { PopoverPublicKey } from './PopoverPublicKey';
-vi.mock('@/atoms/Popover/Popover', async () => {
+vi.mock('@/atoms/Popover/Popover', () => {
   return {
     Popover: ({ children }: { children: React.ReactNode }) => <div data-testid="popover">{children}</div>,
     PopoverTrigger: ({ children, asChild }: { children: React.ReactNode; asChild?: boolean }) => (
@@ -18,7 +18,7 @@ vi.mock('@/atoms/Popover/Popover', async () => {
 });
 
 // Mock atoms and molecules
-vi.mock('@/atoms/Button/Button', async () => {
+vi.mock('@/atoms/Button/Button', () => {
   return {
     Button: ({
       children,
@@ -49,7 +49,7 @@ vi.mock('@/atoms/Button/Button', async () => {
   };
 });
 
-vi.mock('@/atoms/Container/Container', async () => {
+vi.mock('@/atoms/Container/Container', () => {
   return {
     Container: ({ children, className }: { children: React.ReactNode; className?: string }) => (
       <div data-testid="container" className={`flex flex-col ${className}`}>
@@ -59,7 +59,7 @@ vi.mock('@/atoms/Container/Container', async () => {
   };
 });
 
-vi.mock('@/atoms/Heading/Heading', async () => {
+vi.mock('@/atoms/Heading/Heading', () => {
   return {
     Heading: ({
       children,
@@ -88,7 +88,7 @@ vi.mock('@/atoms/Heading/Heading', async () => {
   };
 });
 
-vi.mock('@/atoms/Typography/Typography', async () => {
+vi.mock('@/atoms/Typography/Typography', () => {
   return {
     Typography: ({ children, size, className }: { children: React.ReactNode; size?: string; className?: string }) => {
       const sizeClasses = size === 'sm' ? 'text-lg font-semibold' : '';

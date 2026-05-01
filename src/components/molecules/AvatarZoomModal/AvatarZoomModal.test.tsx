@@ -9,7 +9,7 @@ vi.mock('@/hooks/useBodyScrollLock/useBodyScrollLock', () => ({
 }));
 
 // Mock Atoms components
-vi.mock('@/atoms/Avatar/Avatar', async () => {
+vi.mock('@/atoms/Avatar/Avatar', () => {
   return {
     Avatar: ({ children, className }: { children: React.ReactNode; className?: string }) => (
       <div data-testid="avatar" className={className}>
@@ -23,7 +23,7 @@ vi.mock('@/atoms/Avatar/Avatar', async () => {
   };
 });
 
-vi.mock('@/atoms/Container/Container', async () => {
+vi.mock('@/atoms/Container/Container', () => {
   return {
     Container: ({
       children,
@@ -48,7 +48,7 @@ vi.mock('@/atoms/Container/Container', async () => {
 });
 
 // Mock Organisms components
-vi.mock('@/organisms/AvatarWithFallback/AvatarWithFallback', async () => {
+vi.mock('@/organisms/AvatarWithFallback/AvatarWithFallback', () => {
   return {
     AvatarWithFallback: ({
       avatarUrl,

@@ -19,7 +19,7 @@ vi.mock('@/controllers/bookmark/bookmark', () => ({
 
 // Mock molecules (useToast)
 const mockToast = vi.fn();
-vi.mock('@/molecules/Toaster/use-toast', async () => {
+vi.mock('@/molecules/Toaster/use-toast', () => {
   return {
     useToast: () => ({ toast: mockToast }),
   };

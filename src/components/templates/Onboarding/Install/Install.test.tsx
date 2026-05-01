@@ -22,7 +22,7 @@ vi.mock('@/stores/onboarding/onboarding.store', () => ({
   },
 }));
 
-vi.mock('@/molecules/Install/Install', async () => {
+vi.mock('@/molecules/Install/Install', () => {
   return {
     InstallNavigation: () => <div data-testid="install-navigation">Install Navigation</div>,
     InstallHeader: () => <div data-testid="install-header">Install Header</div>,
@@ -31,13 +31,13 @@ vi.mock('@/molecules/Install/Install', async () => {
   };
 });
 
-vi.mock('@/molecules/OnboardingLayout/OnboardingLayout', async () => {
+vi.mock('@/molecules/OnboardingLayout/OnboardingLayout', () => {
   return {
     OnboardingLayout: ({ children }: { children: ReactNode }) => <div data-testid="install-layout">{children}</div>,
   };
 });
 
-vi.mock('@/molecules/Toaster/use-toast', async () => {
+vi.mock('@/molecules/Toaster/use-toast', () => {
   return {
     useToast: () => ({
       toast: mockToast,

@@ -4,13 +4,13 @@ import { TaggedSection } from './TaggedSection';
 import type { TaggedSectionProps } from './TaggedSection.types';
 
 // Mock TagInput and TaggedList
-vi.mock('@/molecules/TaggedList/TaggedList', async () => {
+vi.mock('@/molecules/TaggedList/TaggedList', () => {
   return {
     TaggedList: ({ tags }: { tags: unknown[] }) => <div data-testid="tagged-list">{tags.length} tags</div>,
   };
 });
 
-vi.mock('@/molecules/TagInput/TagInput', async () => {
+vi.mock('@/molecules/TagInput/TagInput', () => {
   return {
     TagInput: () => <div data-testid="tag-input">TagInput</div>,
   };

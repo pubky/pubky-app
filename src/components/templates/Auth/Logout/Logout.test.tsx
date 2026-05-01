@@ -58,7 +58,7 @@ vi.mock('@/libs/logger/logger', () => ({
   },
 }));
 
-vi.mock('@/atoms/Container/Container', async () => {
+vi.mock('@/atoms/Container/Container', () => {
   return {
     Container: ({ children, className, size }: { children: React.ReactNode; className?: string; size?: string }) => (
       <div data-testid="container" data-class={className} data-size={size}>
@@ -68,25 +68,25 @@ vi.mock('@/atoms/Container/Container', async () => {
   };
 });
 
-vi.mock('@/atoms/PageHeader/PageHeader', async () => {
+vi.mock('@/atoms/PageHeader/PageHeader', () => {
   return {
     PageHeader: ({ children }: { children: React.ReactNode }) => <div data-testid="page-header">{children}</div>,
   };
 });
 
-vi.mock('@/atoms/PageSubtitle/PageSubtitle', async () => {
+vi.mock('@/atoms/PageSubtitle/PageSubtitle', () => {
   return {
     PageSubtitle: ({ children }: { children: React.ReactNode }) => <p>{children}</p>,
   };
 });
 
-vi.mock('@/atoms/Spinner/Spinner', async () => {
+vi.mock('@/atoms/Spinner/Spinner', () => {
   return {
     Spinner: ({ size }: { size?: string }) => <div data-testid="spinner" data-size={size} />,
   };
 });
 
-vi.mock('@/molecules/ButtonsNavigation/ButtonsNavigation', async () => {
+vi.mock('@/molecules/ButtonsNavigation/ButtonsNavigation', () => {
   return {
     ButtonsNavigation: ({
       backText,
@@ -107,20 +107,20 @@ vi.mock('@/molecules/ButtonsNavigation/ButtonsNavigation', async () => {
   };
 });
 
-vi.mock('@/molecules/Content/Content', async () => {
+vi.mock('@/molecules/Content/Content', () => {
   return {
     ContentCard: ({ children }: { children: React.ReactNode }) => <div data-testid="content-card">{children}</div>,
   };
 });
 
-vi.mock('@/molecules/Logout/Logout', async () => {
+vi.mock('@/molecules/Logout/Logout', () => {
   return {
     LogoutContent: () => <div data-testid="logout-content">Logout content</div>,
     LogoutNavigation: () => <div data-testid="logout-navigation">Logout navigation</div>,
   };
 });
 
-vi.mock('@/molecules/Page/Page', async () => {
+vi.mock('@/molecules/Page/Page', () => {
   return {
     PageTitle: ({ children }: { children: React.ReactNode }) => <h1>{children}</h1>,
   };

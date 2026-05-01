@@ -1,7 +1,7 @@
 import { describe, it, expect, vi } from 'vitest';
 import { render } from '@testing-library/react';
 import { DialogAddLink } from './DialogAddLink';
-vi.mock('@/atoms/Dialog/Dialog', async () => {
+vi.mock('@/atoms/Dialog/Dialog', () => {
   return {
     Dialog: ({ children }: { children: React.ReactNode }) => <div data-testid="dialog">{children}</div>,
     DialogTrigger: ({ children, asChild }: { children: React.ReactNode; asChild?: boolean }) => (
@@ -38,7 +38,7 @@ vi.mock('@/atoms/Dialog/Dialog', async () => {
 });
 
 // Mock molecules
-vi.mock('@/molecules/InputField/InputField', async () => {
+vi.mock('@/molecules/InputField/InputField', () => {
   return {
     InputField: ({
       placeholder,
@@ -94,7 +94,7 @@ vi.mock('@/molecules/InputField/InputField', async () => {
 });
 
 // Mock atoms
-vi.mock('@/atoms/Button/Button', async () => {
+vi.mock('@/atoms/Button/Button', () => {
   return {
     Button: ({
       children,
@@ -124,7 +124,7 @@ vi.mock('@/atoms/Button/Button', async () => {
   };
 });
 
-vi.mock('@/atoms/Container/Container', async () => {
+vi.mock('@/atoms/Container/Container', () => {
   return {
     Container: ({ children, className }: { children: React.ReactNode; className?: string }) => (
       <div data-testid="container" className={className}>
@@ -134,7 +134,7 @@ vi.mock('@/atoms/Container/Container', async () => {
   };
 });
 
-vi.mock('@/atoms/Label/Label', async () => {
+vi.mock('@/atoms/Label/Label', () => {
   return {
     Label: ({ children, className, htmlFor }: { children: React.ReactNode; className?: string; htmlFor?: string }) => (
       <label data-testid="label" className={className} htmlFor={htmlFor}>

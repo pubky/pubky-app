@@ -3,7 +3,7 @@ import { useState, useEffect } from 'react';
 import { render, fireEvent, screen, act } from '@testing-library/react';
 import { DialogBackupPhrase } from './DialogBackupPhrase';
 import { useRecoveryPhraseValidation } from '@/hooks/useRecoveryPhraseValidation/useRecoveryPhraseValidation';
-vi.mock('@/atoms/Dialog/Dialog', async () => {
+vi.mock('@/atoms/Dialog/Dialog', () => {
   return {
     Dialog: ({ children, onOpenChange }: { children: React.ReactNode; onOpenChange?: (open: boolean) => void }) => {
       dialogMockControls.onOpenChange = onOpenChange;
@@ -91,7 +91,7 @@ vi.mock('@/stores/onboarding/onboarding.store', () => ({
 }));
 
 // Mock atoms
-vi.mock('@/atoms/Badge/Badge', async () => {
+vi.mock('@/atoms/Badge/Badge', () => {
   return {
     Badge: ({ children, variant, className }: { children: React.ReactNode; variant?: string; className?: string }) => (
       <span data-testid="badge" data-variant={variant} className={className}>
@@ -101,7 +101,7 @@ vi.mock('@/atoms/Badge/Badge', async () => {
   };
 });
 
-vi.mock('@/atoms/Button/Button', async () => {
+vi.mock('@/atoms/Button/Button', () => {
   return {
     Button: ({
       children,
@@ -131,7 +131,7 @@ vi.mock('@/atoms/Button/Button', async () => {
   };
 });
 
-vi.mock('@/atoms/Card/Card', async () => {
+vi.mock('@/atoms/Card/Card', () => {
   return {
     Card: ({ children, className }: { children: React.ReactNode; className?: string }) => (
       <div data-testid="card" className={className}>
@@ -141,7 +141,7 @@ vi.mock('@/atoms/Card/Card', async () => {
   };
 });
 
-vi.mock('@/atoms/Container/Container', async () => {
+vi.mock('@/atoms/Container/Container', () => {
   return {
     Container: ({ children, className }: { children: React.ReactNode; className?: string }) => (
       <div data-testid="container" className={className}>
@@ -151,7 +151,7 @@ vi.mock('@/atoms/Container/Container', async () => {
   };
 });
 
-vi.mock('@/atoms/Typography/Typography', async () => {
+vi.mock('@/atoms/Typography/Typography', () => {
   return {
     Typography: ({ children, size, className }: { children: React.ReactNode; size?: string; className?: string }) => (
       <p data-testid="typography" data-size={size} className={className}>
@@ -162,7 +162,7 @@ vi.mock('@/atoms/Typography/Typography', async () => {
 });
 
 // Mock molecules
-vi.mock('@/molecules/WordSlot/WordSlot', async () => {
+vi.mock('@/molecules/WordSlot/WordSlot', () => {
   return {
     WordSlot: ({
       mode,

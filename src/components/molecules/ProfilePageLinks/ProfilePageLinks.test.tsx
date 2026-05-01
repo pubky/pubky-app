@@ -13,7 +13,7 @@ vi.mock('next/navigation', () => ({
 }));
 
 // Mock organisms
-vi.mock('@/organisms/DialogCheckLink/DialogCheckLink', async () => {
+vi.mock('@/organisms/DialogCheckLink/DialogCheckLink', () => {
   return {
     DialogCheckLink: ({
       open,

@@ -19,7 +19,7 @@ vi.mock('@/hooks/useTtlSubscription/useTtlSubscription', () => ({
 }));
 
 // Mock organisms
-vi.mock('@/organisms/PostContentBase/PostContentBase', async () => {
+vi.mock('@/organisms/PostContentBase/PostContentBase', () => {
   return {
     PostContentBase: vi.fn(({ postId }: { postId: string }) => (
       <div data-testid="post-content-base" data-post-id={postId}>
@@ -29,7 +29,7 @@ vi.mock('@/organisms/PostContentBase/PostContentBase', async () => {
   };
 });
 
-vi.mock('@/organisms/PostHeader/PostHeader', async () => {
+vi.mock('@/organisms/PostHeader/PostHeader', () => {
   return {
     PostHeader: vi.fn(({ postId }: { postId: string }) => (
       <div data-testid="post-header" data-post-id={postId}>
@@ -40,7 +40,7 @@ vi.mock('@/organisms/PostHeader/PostHeader', async () => {
 });
 
 // Mock atoms
-vi.mock('@/atoms/Card/Card', async () => {
+vi.mock('@/atoms/Card/Card', () => {
   return {
     Card: ({
       children,

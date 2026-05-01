@@ -2,7 +2,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen, fireEvent } from '@testing-library/react';
 import { useLiveQuery } from 'dexie-react-hooks';
 import { DialogWelcome } from './DialogWelcome';
-vi.mock('@/atoms/Dialog/Dialog', async () => {
+vi.mock('@/atoms/Dialog/Dialog', () => {
   return {
     Dialog: ({
       children,
@@ -104,7 +104,7 @@ vi.mock('@/hooks/useCopyToClipboard/useCopyToClipboard', () => ({
 }));
 
 // Mock atoms
-vi.mock('@/atoms/Button/Button', async () => {
+vi.mock('@/atoms/Button/Button', () => {
   return {
     Button: ({
       children,
@@ -135,7 +135,7 @@ vi.mock('@/atoms/Button/Button', async () => {
   };
 });
 
-vi.mock('@/atoms/Card/Card', async () => {
+vi.mock('@/atoms/Card/Card', () => {
   return {
     Card: ({ children, className }: { children: React.ReactNode; className?: string }) => (
       <div data-testid="card" className={className}>
@@ -145,7 +145,7 @@ vi.mock('@/atoms/Card/Card', async () => {
   };
 });
 
-vi.mock('@/atoms/Container/Container', async () => {
+vi.mock('@/atoms/Container/Container', () => {
   return {
     Container: ({ children, className }: { children: React.ReactNode; className?: string }) => (
       <div data-testid="container" className={className}>
@@ -155,7 +155,7 @@ vi.mock('@/atoms/Container/Container', async () => {
   };
 });
 
-vi.mock('@/atoms/Typography/Typography', async () => {
+vi.mock('@/atoms/Typography/Typography', () => {
   return {
     Typography: ({
       children,
@@ -177,7 +177,7 @@ vi.mock('@/atoms/Typography/Typography', async () => {
 });
 
 // Mock organisms
-vi.mock('@/organisms/AvatarWithFallback/AvatarWithFallback', async () => {
+vi.mock('@/organisms/AvatarWithFallback/AvatarWithFallback', () => {
   return {
     AvatarWithFallback: ({
       avatarUrl,
@@ -202,7 +202,7 @@ vi.mock('@/organisms/AvatarWithFallback/AvatarWithFallback', async () => {
 });
 
 // Mock molecules
-vi.mock('@/molecules/Toaster/use-toast', async () => {
+vi.mock('@/molecules/Toaster/use-toast', () => {
   return {
     toast: vi.fn(() => ({
       dismiss: vi.fn(),

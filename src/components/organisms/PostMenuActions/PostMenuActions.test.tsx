@@ -2,7 +2,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { PostMenuActions } from './PostMenuActions';
-vi.mock('@/atoms/DropdownMenu/DropdownMenu', async () => {
+vi.mock('@/atoms/DropdownMenu/DropdownMenu', () => {
   return {
     DropdownMenu: ({
       children,
@@ -38,7 +38,7 @@ vi.mock('@/atoms/DropdownMenu/DropdownMenu', async () => {
   };
 });
 
-vi.mock('@/atoms/Sheet/Sheet', async () => {
+vi.mock('@/atoms/Sheet/Sheet', () => {
   return {
     Sheet: ({
       children,
@@ -107,7 +107,7 @@ vi.mock('@/hooks/useDeletePost/useDeletePost', () => ({
 }));
 
 // Mock DialogReportPost and DialogEditPost
-vi.mock('@/organisms/DialogEditPost/DialogEditPost', async () => {
+vi.mock('@/organisms/DialogEditPost/DialogEditPost', () => {
   return {
     DialogEditPost: ({
       open,
@@ -124,7 +124,7 @@ vi.mock('@/organisms/DialogEditPost/DialogEditPost', async () => {
   };
 });
 
-vi.mock('@/organisms/DialogReportPost/DialogReportPost', async () => {
+vi.mock('@/organisms/DialogReportPost/DialogReportPost', () => {
   return {
     DialogReportPost: ({ open, postId }: { open: boolean; onOpenChange: (open: boolean) => void; postId: string }) => (
       <div data-testid="dialog-report-post" data-open={open.toString()} data-post-id={postId}>
@@ -134,7 +134,7 @@ vi.mock('@/organisms/DialogReportPost/DialogReportPost', async () => {
   };
 });
 
-vi.mock('@/molecules/DialogConfirmDelete/DialogConfirmDelete', async () => {
+vi.mock('@/molecules/DialogConfirmDelete/DialogConfirmDelete', () => {
   return {
     DialogConfirmDelete: ({
       open,
@@ -185,7 +185,7 @@ vi.mock('./PostMenuActionsContent/PostMenuActionsContent', () => ({
   ),
 }));
 
-vi.mock('@/atoms/Button/Button', async () => {
+vi.mock('@/atoms/Button/Button', () => {
   return {
     Button: ({
       children,
@@ -203,7 +203,7 @@ vi.mock('@/atoms/Button/Button', async () => {
   };
 });
 
-vi.mock('@/atoms/Container/Container', async () => {
+vi.mock('@/atoms/Container/Container', () => {
   return {
     Container: ({
       children,

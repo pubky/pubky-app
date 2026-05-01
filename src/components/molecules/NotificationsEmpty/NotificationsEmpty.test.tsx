@@ -3,7 +3,7 @@ import { render, screen } from '@testing-library/react';
 import { NotificationsEmpty } from './NotificationsEmpty';
 
 // Mock ProfilePageEmptyState
-vi.mock('@/molecules/ProfilePageEmptyState/ProfilePageEmptyState', async () => {
+vi.mock('@/molecules/ProfilePageEmptyState/ProfilePageEmptyState', () => {
   return {
     ProfilePageEmptyState: ({
       imageSrc,

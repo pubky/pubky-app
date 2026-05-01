@@ -24,7 +24,7 @@ vi.mock('@/hooks/useRequireAuth/useRequireAuth', () => ({
 // Use real libs - use actual implementations
 
 // Mock PostMenuActions
-vi.mock('@/organisms/PostMenuActions/PostMenuActions', async () => {
+vi.mock('@/organisms/PostMenuActions/PostMenuActions', () => {
   return {
     PostMenuActions: ({ postId, trigger }: { postId: string; trigger: React.ReactNode }) => (
       <div data-testid="post-menu-actions" data-post-id={postId}>
@@ -35,7 +35,7 @@ vi.mock('@/organisms/PostMenuActions/PostMenuActions', async () => {
 });
 
 // Minimal atoms used by PostActionsBar
-vi.mock('@/atoms/Button/Button', async () => {
+vi.mock('@/atoms/Button/Button', () => {
   return {
     Button: ({
       children,
@@ -68,7 +68,7 @@ vi.mock('@/atoms/Button/Button', async () => {
   };
 });
 
-vi.mock('@/atoms/Container/Container', async () => {
+vi.mock('@/atoms/Container/Container', () => {
   return {
     Container: ({ children, className }: { children: React.ReactNode; className?: string }) => (
       <div data-testid="actions-container" data-class-name={className}>
@@ -78,13 +78,13 @@ vi.mock('@/atoms/Container/Container', async () => {
   };
 });
 
-vi.mock('@/atoms/Skeleton/Skeleton', async () => {
+vi.mock('@/atoms/Skeleton/Skeleton', () => {
   return {
     Skeleton: ({ className }: { className?: string }) => <div data-testid="skeleton" className={className} />,
   };
 });
 
-vi.mock('@/atoms/Typography/Typography', async () => {
+vi.mock('@/atoms/Typography/Typography', () => {
   return {
     Typography: ({
       children,

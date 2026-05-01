@@ -14,7 +14,7 @@ vi.mock('@/stores/hot/hot.store', () => ({
 }));
 
 // Mock Atoms
-vi.mock('@/atoms/Filter/Filter', async () => {
+vi.mock('@/atoms/Filter/Filter', () => {
   return {
     FilterRoot: ({ children }: { children: React.ReactNode }) => <div data-testid="filter-root">{children}</div>,
     FilterHeader: ({ title }: { title: string }) => <div data-testid="filter-header">{title}</div>,
@@ -44,7 +44,7 @@ vi.mock('@/atoms/Filter/Filter', async () => {
 });
 
 // Mock Molecules
-vi.mock('@/molecules/Filters/FilterReach/FilterReach', async () => {
+vi.mock('@/molecules/Filters/FilterReach/FilterReach', () => {
   return {
     FilterReach: () => <div data-testid="filter-reach">FilterReach</div>,
   };

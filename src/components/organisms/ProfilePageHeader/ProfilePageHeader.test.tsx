@@ -5,14 +5,14 @@ import { ProfilePageHeaderProps } from './ProfilePageHeader.types';
 import { FOLLOW_ACTIONS } from '@/hooks/useFollowUser/useFollowUser.types';
 
 // Mock Molecules components
-vi.mock('@/molecules/PostText/PostText', async () => {
+vi.mock('@/molecules/PostText/PostText', () => {
   return {
     PostText: ({ content }: { content: string }) => <div data-testid="post-text">{content}</div>,
   };
 });
 
 // Mock Organisms components
-vi.mock('@/molecules/AvatarZoomModal/AvatarZoomModal', async () => {
+vi.mock('@/molecules/AvatarZoomModal/AvatarZoomModal', () => {
   return {
     AvatarZoomModal: ({
       open,
@@ -45,7 +45,7 @@ vi.mock('@/molecules/AvatarZoomModal/AvatarZoomModal', async () => {
   };
 });
 
-vi.mock('@/organisms/AvatarWithFallback/AvatarWithFallback', async () => {
+vi.mock('@/organisms/AvatarWithFallback/AvatarWithFallback', () => {
   return {
     AvatarWithFallback: ({
       avatarUrl,

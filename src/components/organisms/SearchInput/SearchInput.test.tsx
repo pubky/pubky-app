@@ -86,7 +86,7 @@ vi.mock('@/stores/search/search.store', () => ({
 }));
 
 // Mock atoms
-vi.mock('@/atoms/Container/Container', async () => {
+vi.mock('@/atoms/Container/Container', () => {
   return {
     Container: ({
       children,
@@ -101,7 +101,7 @@ vi.mock('@/atoms/Container/Container', async () => {
   };
 });
 
-vi.mock('@/atoms/Input/Input', async () => {
+vi.mock('@/atoms/Input/Input', () => {
   return {
     Input: ({
       type,
@@ -130,7 +130,7 @@ vi.mock('@/atoms/Input/Input', async () => {
 });
 
 // Mock molecules
-vi.mock('@/molecules/SearchInputBar/SearchInputBar', async () => {
+vi.mock('@/molecules/SearchInputBar/SearchInputBar', () => {
   return {
     SearchInputBar: ({
       activeTags,
@@ -191,14 +191,14 @@ vi.mock('@/molecules/SearchInputBar/SearchInputBar', async () => {
   };
 });
 
-vi.mock('@/molecules/SearchRecentUserItem/SearchRecentUserItem.types', async () => {
+vi.mock('@/molecules/SearchRecentUserItem/SearchRecentUserItem.types', () => {
   return {
     RecentUserSearchItem: {} as { id: Pubky; searchedAt: number },
     RecentTagSearchItem: {} as { tag: string; searchedAt: number },
   };
 });
 
-vi.mock('@/molecules/SearchSuggestions/SearchSuggestions', async () => {
+vi.mock('@/molecules/SearchSuggestions/SearchSuggestions', () => {
   return {
     SearchSuggestions: ({
       hotTags,

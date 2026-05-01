@@ -16,7 +16,7 @@ vi.mock('@/libs/logger/logger', async (importOriginal) => {
   };
 });
 
-vi.mock('@/molecules/Toaster/showErrorToast', async () => {
+vi.mock('@/molecules/Toaster/showErrorToast', () => {
   return {
     showErrorToast: vi.fn(),
   };

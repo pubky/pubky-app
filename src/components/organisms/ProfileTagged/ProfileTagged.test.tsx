@@ -28,13 +28,13 @@ vi.mock('@/hooks/useTagged/useTagged', () => ({
 }));
 
 // Mock molecules
-vi.mock('@/molecules/TaggedEmpty/TaggedEmpty', async () => {
+vi.mock('@/molecules/TaggedEmpty/TaggedEmpty', () => {
   return {
     TaggedEmpty: () => <div data-testid="tagged-empty">TaggedEmpty</div>,
   };
 });
 
-vi.mock('@/molecules/TaggedSection/TaggedSection', async () => {
+vi.mock('@/molecules/TaggedSection/TaggedSection', () => {
   return {
     TaggedSection: () => <div data-testid="tagged-section">TaggedSection</div>,
   };

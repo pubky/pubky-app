@@ -4,19 +4,19 @@ import { render, screen } from '@testing-library/react';
 import { HumanFooter } from './HumanFooter';
 
 // Mock organisms
-vi.mock('@/organisms/DialogAge/DialogAge', async () => {
+vi.mock('@/organisms/DialogAge/DialogAge', () => {
   return {
     DialogAge: () => <span data-testid="dialog-age">over 18 years old.</span>,
   };
 });
 
-vi.mock('@/organisms/DialogPrivacy/DialogPrivacy', async () => {
+vi.mock('@/organisms/DialogPrivacy/DialogPrivacy', () => {
   return {
     DialogPrivacy: () => <span data-testid="dialog-privacy">Privacy Policy</span>,
   };
 });
 
-vi.mock('@/organisms/DialogTerms/DialogTerms', async () => {
+vi.mock('@/organisms/DialogTerms/DialogTerms', () => {
   return {
     DialogTerms: () => <span data-testid="dialog-terms">Terms of Service</span>,
   };
@@ -28,7 +28,7 @@ vi.mock('@/config/externalLinks', () => ({
 }));
 
 // Mock atoms
-vi.mock('@/atoms/Container/Container', async () => {
+vi.mock('@/atoms/Container/Container', () => {
   return {
     Container: ({ children, className }: { children: React.ReactNode; className?: string }) => (
       <div data-testid="container" className={className}>
@@ -38,7 +38,7 @@ vi.mock('@/atoms/Container/Container', async () => {
   };
 });
 
-vi.mock('@/atoms/FooterLinks/FooterLinks', async () => {
+vi.mock('@/atoms/FooterLinks/FooterLinks', () => {
   return {
     FooterLinks: ({ children, className }: { children: React.ReactNode; className?: string }) => (
       <div data-testid="footer-links" className={className}>
@@ -48,7 +48,7 @@ vi.mock('@/atoms/FooterLinks/FooterLinks', async () => {
   };
 });
 
-vi.mock('@/atoms/Link/Link', async () => {
+vi.mock('@/atoms/Link/Link', () => {
   return {
     Link: ({ children, href, target }: { children: React.ReactNode; href: string; target?: string }) => (
       <a data-testid="link" href={href} target={target}>

@@ -11,7 +11,7 @@ const TEST_USER_NAME = 'Test User';
 
 // Mock molecules
 const mockToast = vi.hoisted(() => vi.fn());
-vi.mock('@/molecules/Toaster/use-toast', async () => {
+vi.mock('@/molecules/Toaster/use-toast', () => {
   return {
     toast: mockToast,
     useToast: vi.fn(() => ({

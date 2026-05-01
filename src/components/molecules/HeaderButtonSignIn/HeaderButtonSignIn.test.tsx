@@ -11,7 +11,7 @@ vi.mock('next/navigation', () => ({
 }));
 
 // Mock atoms
-vi.mock('@/atoms/Button/Button', async () => {
+vi.mock('@/atoms/Button/Button', () => {
   return {
     Button: ({
       children,

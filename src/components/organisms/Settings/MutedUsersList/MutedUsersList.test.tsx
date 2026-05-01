@@ -28,7 +28,7 @@ vi.mock('@/hooks/useMuteUser/useMuteUser', () => ({
   useMuteUser: mockUseMuteUser,
 }));
 
-vi.mock('@/molecules/FacehashAvatar/FacehashAvatar', async () => {
+vi.mock('@/molecules/FacehashAvatar/FacehashAvatar', () => {
   return {
     FacehashAvatar: ({ seed, initial }: { seed: string; initial: string }) => (
       <div data-testid="facehash-avatar" data-seed={seed}>
@@ -38,7 +38,7 @@ vi.mock('@/molecules/FacehashAvatar/FacehashAvatar', async () => {
   };
 });
 
-vi.mock('@/molecules/Toaster/use-toast', async () => {
+vi.mock('@/molecules/Toaster/use-toast', () => {
   return {
     toast: vi.fn(),
   };

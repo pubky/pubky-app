@@ -32,7 +32,7 @@ vi.mock('@/hooks/useNestedReplies/useNestedReplies.constants', () => ({
   AUTO_COLLAPSE_THRESHOLD: 4,
 }));
 
-vi.mock('@/atoms/Container/Container', async () => {
+vi.mock('@/atoms/Container/Container', () => {
   return {
     Container: ({ children, className }: { children?: React.ReactNode; className?: string }) => (
       <div className={className}>{children}</div>
@@ -40,13 +40,13 @@ vi.mock('@/atoms/Container/Container', async () => {
   };
 });
 
-vi.mock('@/atoms/PostThreadSpacer/PostThreadSpacer', async () => {
+vi.mock('@/atoms/PostThreadSpacer/PostThreadSpacer', () => {
   return {
     PostThreadSpacer: () => <div data-testid="post-thread-spacer" />,
   };
 });
 
-vi.mock('@/organisms/PostMain/PostMain', async () => {
+vi.mock('@/organisms/PostMain/PostMain', () => {
   return {
     PostMain: ({ postId, isLastReply, onClick }: { postId: string; isLastReply: boolean; onClick: () => void }) => {
       const tagsLayout = usePostMainLayout();
@@ -67,7 +67,7 @@ vi.mock('@/organisms/PostMain/PostMain', async () => {
   };
 });
 
-vi.mock('@/molecules/ShowMoreReplies/ShowMoreReplies', async () => {
+vi.mock('@/molecules/ShowMoreReplies/ShowMoreReplies', () => {
   return {
     ShowMoreReplies: ({ count, onClick }: { count: number; onClick: () => void }) => (
       <button type="button" data-testid="show-more-nested" data-count={String(count)} onClick={onClick}>
@@ -77,7 +77,7 @@ vi.mock('@/molecules/ShowMoreReplies/ShowMoreReplies', async () => {
   };
 });
 
-vi.mock('@/molecules/ThreadExpandToggle/ThreadExpandToggle', async () => {
+vi.mock('@/molecules/ThreadExpandToggle/ThreadExpandToggle', () => {
   return {
     ThreadExpandToggle: ({ expanded, onToggle }: { expanded: boolean; onToggle: () => void }) => (
       <button type="button" data-testid="thread-expand-toggle" data-expanded={String(expanded)} onClick={onToggle}>

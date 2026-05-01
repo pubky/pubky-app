@@ -36,7 +36,7 @@ vi.mock('@/config/tags', () => ({
   HOT_TAGS_FEATURED_COUNT: 3,
 }));
 
-vi.mock('@/atoms/Container/Container', async () => {
+vi.mock('@/atoms/Container/Container', () => {
   return {
     Container: ({
       children,
@@ -50,13 +50,13 @@ vi.mock('@/atoms/Container/Container', async () => {
   };
 });
 
-vi.mock('@/atoms/Heading/Heading', async () => {
+vi.mock('@/atoms/Heading/Heading', () => {
   return {
     Heading: ({ children }: { children: React.ReactNode }) => <h5>{children}</h5>,
   };
 });
 
-vi.mock('@/atoms/Skeleton/Skeleton', async () => {
+vi.mock('@/atoms/Skeleton/Skeleton', () => {
   return {
     Skeleton: ({ className, ...props }: { className?: string; [key: string]: unknown }) => (
       <div className={className} data-slot="skeleton" {...props} />
@@ -64,7 +64,7 @@ vi.mock('@/atoms/Skeleton/Skeleton', async () => {
   };
 });
 
-vi.mock('@/atoms/Typography/Typography', async () => {
+vi.mock('@/atoms/Typography/Typography', () => {
   return {
     Typography: ({ children, className }: { children: React.ReactNode; className?: string }) => (
       <p className={className}>{children}</p>
@@ -72,7 +72,7 @@ vi.mock('@/atoms/Typography/Typography', async () => {
   };
 });
 
-vi.mock('@/molecules/HotTagCard/HotTagCard', async () => {
+vi.mock('@/molecules/HotTagCard/HotTagCard', () => {
   return {
     HotTagCard: ({ tagName }: { tagName: string }) => <div data-testid={`hot-tag-card-${tagName}`}>{tagName}</div>,
   };

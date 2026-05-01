@@ -77,20 +77,20 @@ vi.mock('@/hooks/useTagged/useTagged', () => ({
 }));
 
 // Mock molecules
-vi.mock('@/molecules/ProfilePageLinks/ProfilePageLinks', async () => {
+vi.mock('@/molecules/ProfilePageLinks/ProfilePageLinks', () => {
   return {
     ProfilePageLinks: () => <div data-testid="profile-page-links">Links section</div>,
   };
 });
 
-vi.mock('@/molecules/ProfilePageTaggedAs/ProfilePageTaggedAs', async () => {
+vi.mock('@/molecules/ProfilePageTaggedAs/ProfilePageTaggedAs', () => {
   return {
     ProfilePageTaggedAs: () => <div data-testid="profile-page-tagged-as">Tagged as section</div>,
   };
 });
 
 // Mock organisms
-vi.mock('@/organisms/ProfilePageHeader/ProfilePageHeader', async () => {
+vi.mock('@/organisms/ProfilePageHeader/ProfilePageHeader', () => {
   return {
     ProfilePageHeader: ({
       profile,

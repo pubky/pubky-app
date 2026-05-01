@@ -1,7 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen, fireEvent } from '@testing-library/react';
 import { DialogFeedbackContent } from './DialogFeedbackContent';
-vi.mock('@/atoms/Dialog/Dialog', async () => {
+vi.mock('@/atoms/Dialog/Dialog', () => {
   return {
     DialogHeader: ({ children }: { children: React.ReactNode }) => <div data-testid="dialog-header">{children}</div>,
     DialogTitle: ({ children }: { children: React.ReactNode }) => <h2 data-testid="dialog-title">{children}</h2>,
@@ -14,7 +14,7 @@ vi.mock('@/atoms/Dialog/Dialog', async () => {
 });
 
 // Mock organisms
-vi.mock('@/organisms/PostHeader/PostHeader', async () => {
+vi.mock('@/organisms/PostHeader/PostHeader', () => {
   return {
     PostHeader: vi.fn(
       ({ postId, characterLimit }: { postId: string; characterLimit?: { count: number; max: number } }) => (
@@ -32,7 +32,7 @@ vi.mock('@/organisms/PostHeader/PostHeader', async () => {
 });
 
 // Mock atoms
-vi.mock('@/atoms/Button/Button', async () => {
+vi.mock('@/atoms/Button/Button', () => {
   return {
     Button: ({
       children,
@@ -63,7 +63,7 @@ vi.mock('@/atoms/Button/Button', async () => {
   };
 });
 
-vi.mock('@/atoms/Container/Container', async () => {
+vi.mock('@/atoms/Container/Container', () => {
   return {
     Container: ({
       children,
@@ -81,7 +81,7 @@ vi.mock('@/atoms/Container/Container', async () => {
   };
 });
 
-vi.mock('@/atoms/Textarea/Textarea', async () => {
+vi.mock('@/atoms/Textarea/Textarea', () => {
   return {
     Textarea: ({
       placeholder,
@@ -112,7 +112,7 @@ vi.mock('@/atoms/Textarea/Textarea', async () => {
   };
 });
 
-vi.mock('@/atoms/Typography/Typography', async () => {
+vi.mock('@/atoms/Typography/Typography', () => {
   return {
     Typography: ({
       children,

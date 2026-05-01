@@ -19,7 +19,7 @@ vi.mock('@/hooks/useUnreadPosts/useUnreadPosts', () => ({
 
 const mockUseUnreadPosts = vi.mocked(useUnreadPosts);
 
-vi.mock('@/molecules/NewPostsButton/NewPostsButton', async () => {
+vi.mock('@/molecules/NewPostsButton/NewPostsButton', () => {
   return {
     NewPostsButton: ({
       count,
@@ -40,7 +40,7 @@ vi.mock('@/molecules/NewPostsButton/NewPostsButton', async () => {
   };
 });
 
-vi.mock('@/molecules/Toaster/showErrorToast', async () => {
+vi.mock('@/molecules/Toaster/showErrorToast', () => {
   return {
     showErrorToast: vi.fn(),
   };

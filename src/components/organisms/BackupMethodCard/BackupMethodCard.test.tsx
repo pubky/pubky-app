@@ -2,7 +2,7 @@ import React from 'react';
 import { describe, it, expect, vi } from 'vitest';
 import { render, screen } from '@testing-library/react';
 import { BackupMethodCard } from './BackupMethodCard';
-vi.mock('@/atoms/Dialog/Dialog', async () => {
+vi.mock('@/atoms/Dialog/Dialog', () => {
   return {
     Dialog: vi.fn(({ children }: { children: React.ReactNode }) => <div data-testid="dialog">{children}</div>),
     DialogTrigger: vi.fn(({ children }: { children: React.ReactNode }) => (
@@ -29,7 +29,7 @@ vi.mock('@/stores/onboarding/onboarding.store', () => ({
 }));
 
 // Mock atoms
-vi.mock('@/atoms/Button/Button', async () => {
+vi.mock('@/atoms/Button/Button', () => {
   return {
     Button: ({
       children,
@@ -49,7 +49,7 @@ vi.mock('@/atoms/Button/Button', async () => {
   };
 });
 
-vi.mock('@/atoms/Card/Card', async () => {
+vi.mock('@/atoms/Card/Card', () => {
   return {
     Card: ({ children, className }: { children: React.ReactNode; className?: string }) => (
       <div data-testid="card" className={className}>
@@ -59,7 +59,7 @@ vi.mock('@/atoms/Card/Card', async () => {
   };
 });
 
-vi.mock('@/atoms/Container/Container', async () => {
+vi.mock('@/atoms/Container/Container', () => {
   return {
     Container: ({ children, className }: { children: React.ReactNode; className?: string }) => (
       <div data-testid="container" className={className}>
@@ -69,7 +69,7 @@ vi.mock('@/atoms/Container/Container', async () => {
   };
 });
 
-vi.mock('@/atoms/Heading/Heading', async () => {
+vi.mock('@/atoms/Heading/Heading', () => {
   return {
     Heading: ({
       children,
@@ -89,7 +89,7 @@ vi.mock('@/atoms/Heading/Heading', async () => {
   };
 });
 
-vi.mock('@/atoms/Input/Input', async () => {
+vi.mock('@/atoms/Input/Input', () => {
   return {
     Input: ({
       type,
@@ -119,7 +119,7 @@ vi.mock('@/atoms/Input/Input', async () => {
   };
 });
 
-vi.mock('@/atoms/Label/Label', async () => {
+vi.mock('@/atoms/Label/Label', () => {
   return {
     Label: ({ children, htmlFor, className }: { children: React.ReactNode; htmlFor?: string; className?: string }) => (
       <label data-testid="label" htmlFor={htmlFor} className={className}>
@@ -129,7 +129,7 @@ vi.mock('@/atoms/Label/Label', async () => {
   };
 });
 
-vi.mock('@/atoms/Typography/Typography', async () => {
+vi.mock('@/atoms/Typography/Typography', () => {
   return {
     Typography: ({ children, size, className }: { children: React.ReactNode; size?: string; className?: string }) => (
       <div data-testid="typography" data-size={size} className={className}>
@@ -140,7 +140,7 @@ vi.mock('@/atoms/Typography/Typography', async () => {
 });
 
 // Mock molecules
-vi.mock('@/molecules/Content/Content', async () => {
+vi.mock('@/molecules/Content/Content', () => {
   return {
     ContentCard: ({
       children,
@@ -156,14 +156,14 @@ vi.mock('@/molecules/Content/Content', async () => {
   };
 });
 
-vi.mock('@/molecules/PopoverBackup/PopoverBackup', async () => {
+vi.mock('@/molecules/PopoverBackup/PopoverBackup', () => {
   return {
     PopoverBackup: () => <div data-testid="popover-backup">Backup Info</div>,
   };
 });
 
 // Mock organisms
-vi.mock('@/organisms/DialogBackupEncrypted/DialogBackupEncrypted', async () => {
+vi.mock('@/organisms/DialogBackupEncrypted/DialogBackupEncrypted', () => {
   return {
     DialogBackupEncrypted: ({ children }: { children?: React.ReactNode }) => (
       <div data-testid="dialog-backup-encrypted">{children || 'Backup Encrypted'}</div>
@@ -171,7 +171,7 @@ vi.mock('@/organisms/DialogBackupEncrypted/DialogBackupEncrypted', async () => {
   };
 });
 
-vi.mock('@/organisms/DialogBackupExport/DialogBackupExport', async () => {
+vi.mock('@/organisms/DialogBackupExport/DialogBackupExport', () => {
   return {
     DialogBackupExport: ({ mnemonic, children }: { mnemonic?: string; children?: React.ReactNode }) => (
       <div data-testid="dialog-export" data-mnemonic={mnemonic || ''}>
@@ -181,7 +181,7 @@ vi.mock('@/organisms/DialogBackupExport/DialogBackupExport', async () => {
   };
 });
 
-vi.mock('@/organisms/DialogBackupPhrase/DialogBackupPhrase', async () => {
+vi.mock('@/organisms/DialogBackupPhrase/DialogBackupPhrase', () => {
   return {
     DialogBackupPhrase: ({ children }: { children?: React.ReactNode }) => (
       <div data-testid="dialog-backup-phrase">{children || 'Backup Phrase'}</div>

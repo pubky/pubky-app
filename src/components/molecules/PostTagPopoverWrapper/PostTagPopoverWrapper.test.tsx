@@ -33,7 +33,7 @@ vi.mock('@/hooks/usePostTaggers/usePostTaggers', () => ({
   }),
 }));
 
-vi.mock('@/organisms/AvatarWithFallback/AvatarWithFallback', async () => {
+vi.mock('@/organisms/AvatarWithFallback/AvatarWithFallback', () => {
   return {
     AvatarWithFallback: ({ name }: { name: string }) => <div data-testid={`avatar-${name}`}>Avatar</div>,
   };

@@ -2,7 +2,7 @@ import { render, screen } from '@testing-library/react';
 import { describe, it, expect, vi } from 'vitest';
 import { SearchUsersSection } from './SearchUsersSection';
 import type { Pubky } from '@/models/models.types';
-vi.mock('@/atoms/Container/Container', async () => {
+vi.mock('@/atoms/Container/Container', () => {
   return {
     Container: ({ children, className, ...props }: React.PropsWithChildren<{ className?: string }>) => (
       <div className={className} {...props}>
@@ -12,7 +12,7 @@ vi.mock('@/atoms/Container/Container', async () => {
   };
 });
 
-vi.mock('@/atoms/Typography/Typography', async () => {
+vi.mock('@/atoms/Typography/Typography', () => {
   return {
     Typography: ({
       children,
@@ -27,7 +27,7 @@ vi.mock('@/atoms/Typography/Typography', async () => {
   };
 });
 
-vi.mock('@/molecules/SearchUserSuggestion/SearchUserSuggestion', async () => {
+vi.mock('@/molecules/SearchUserSuggestion/SearchUserSuggestion', () => {
   return {
     SearchUserSuggestion: ({
       user,

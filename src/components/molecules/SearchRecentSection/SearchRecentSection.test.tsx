@@ -2,7 +2,7 @@ import { render, screen, fireEvent } from '@testing-library/react';
 import { describe, it, expect, vi } from 'vitest';
 import { SearchRecentSection } from './SearchRecentSection';
 import type { Pubky } from '@/models/models.types';
-vi.mock('@/atoms/Button/Button', async () => {
+vi.mock('@/atoms/Button/Button', () => {
   return {
     Button: ({
       children,
@@ -17,7 +17,7 @@ vi.mock('@/atoms/Button/Button', async () => {
   };
 });
 
-vi.mock('@/atoms/Container/Container', async () => {
+vi.mock('@/atoms/Container/Container', () => {
   return {
     Container: ({
       children,
@@ -32,7 +32,7 @@ vi.mock('@/atoms/Container/Container', async () => {
   };
 });
 
-vi.mock('@/atoms/Typography/Typography', async () => {
+vi.mock('@/atoms/Typography/Typography', () => {
   return {
     Typography: ({
       children,
@@ -47,7 +47,7 @@ vi.mock('@/atoms/Typography/Typography', async () => {
   };
 });
 
-vi.mock('@/molecules/SearchRecentItem/SearchRecentItem', async () => {
+vi.mock('@/molecules/SearchRecentItem/SearchRecentItem', () => {
   return {
     SearchRecentItem: ({
       type,
@@ -75,7 +75,7 @@ vi.mock('@/molecules/SearchRecentItem/SearchRecentItem', async () => {
   };
 });
 
-vi.mock('@/molecules/SearchRecentItem/SearchRecentItem.constants', async () => {
+vi.mock('@/molecules/SearchRecentItem/SearchRecentItem.constants', () => {
   return {
     RECENT_ITEM_TYPE: {
       USER: 'user',

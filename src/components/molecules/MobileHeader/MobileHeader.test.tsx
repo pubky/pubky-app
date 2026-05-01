@@ -3,7 +3,7 @@ import { describe, it, expect, vi } from 'vitest';
 import { MobileHeader } from './MobileHeader';
 
 // Mock the molecules
-vi.mock('@/molecules/Logo/Logo', async () => {
+vi.mock('@/molecules/Logo/Logo', () => {
   return {
     Logo: ({ width, height }: { width?: number; height?: number }) => (
       <div data-testid="logo" data-width={width} data-height={height}>

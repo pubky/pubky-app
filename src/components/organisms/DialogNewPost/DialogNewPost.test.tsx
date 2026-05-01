@@ -2,7 +2,7 @@ import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { DialogNewPost } from './DialogNewPost';
 import { useKeyboardOffset } from '@/hooks/useKeyboardOffset/useKeyboardOffset';
-vi.mock('@/atoms/Dialog/Dialog', async () => {
+vi.mock('@/atoms/Dialog/Dialog', () => {
   return {
     Dialog: ({
       children,
@@ -49,7 +49,7 @@ vi.mock('@/atoms/Dialog/Dialog', async () => {
 });
 
 // Mock molecules
-vi.mock('@/molecules/DialogConfirmDiscard/DialogConfirmDiscard', async () => {
+vi.mock('@/molecules/DialogConfirmDiscard/DialogConfirmDiscard', () => {
   return {
     DialogConfirmDiscard: ({
       open,
@@ -73,7 +73,7 @@ vi.mock('@/molecules/DialogConfirmDiscard/DialogConfirmDiscard', async () => {
 });
 
 // Mock organisms
-vi.mock('@/organisms/PostInput/PostInput', async () => {
+vi.mock('@/organisms/PostInput/PostInput', () => {
   return {
     PostInput: vi.fn(
       ({
@@ -109,7 +109,7 @@ vi.mock('@/organisms/PostInput/PostInput', async () => {
 });
 
 // Mock atoms
-vi.mock('@/atoms/Container/Container', async () => {
+vi.mock('@/atoms/Container/Container', () => {
   return {
     Container: ({
       children,

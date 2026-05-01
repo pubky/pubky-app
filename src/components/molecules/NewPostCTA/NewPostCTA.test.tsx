@@ -1,7 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen, fireEvent } from '@testing-library/react';
 import { NewPostCTA } from './NewPostCTA';
-vi.mock('@/atoms/Dialog/Dialog', async () => {
+vi.mock('@/atoms/Dialog/Dialog', () => {
   return {
     Dialog: ({
       children,
@@ -52,7 +52,7 @@ vi.mock('@/hooks/useRequireAuth/useRequireAuth', () => ({
 }));
 
 // Mock organisms
-vi.mock('@/organisms/DialogNewPost/DialogNewPost', async () => {
+vi.mock('@/organisms/DialogNewPost/DialogNewPost', () => {
   return {
     DialogNewPost: vi.fn(
       ({ open, onOpenChangeAction }: { open: boolean; onOpenChangeAction: (open: boolean) => void }) => (
@@ -67,7 +67,7 @@ vi.mock('@/organisms/DialogNewPost/DialogNewPost', async () => {
 });
 
 // Mock atoms
-vi.mock('@/atoms/Button/Button', async () => {
+vi.mock('@/atoms/Button/Button', () => {
   return {
     Button: ({
       children,

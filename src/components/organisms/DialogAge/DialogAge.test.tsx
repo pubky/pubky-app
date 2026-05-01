@@ -1,7 +1,7 @@
 import { describe, it, expect, vi } from 'vitest';
 import { render, screen } from '@testing-library/react';
 import { DialogAge } from './DialogAge';
-vi.mock('@/atoms/Dialog/Dialog', async () => {
+vi.mock('@/atoms/Dialog/Dialog', () => {
   return {
     Dialog: ({ children }: { children: React.ReactNode }) => <div data-testid="dialog">{children}</div>,
     DialogContent: ({ children, className }: { children: React.ReactNode; className?: string }) => (
@@ -24,7 +24,7 @@ vi.mock('@/atoms/Dialog/Dialog', async () => {
 });
 
 // Mock atoms
-vi.mock('@/atoms/Container/Container', async () => {
+vi.mock('@/atoms/Container/Container', () => {
   return {
     Container: ({ children, className }: { children: React.ReactNode; className?: string }) => (
       <div data-testid="container" className={className}>
@@ -34,7 +34,7 @@ vi.mock('@/atoms/Container/Container', async () => {
   };
 });
 
-vi.mock('@/atoms/Link/Link', async () => {
+vi.mock('@/atoms/Link/Link', () => {
   return {
     Link: ({ children, href, className }: { children: React.ReactNode; href: string; className?: string }) => (
       <a data-testid="link" href={href} className={className}>
@@ -44,7 +44,7 @@ vi.mock('@/atoms/Link/Link', async () => {
   };
 });
 
-vi.mock('@/atoms/Typography/Typography', async () => {
+vi.mock('@/atoms/Typography/Typography', () => {
   return {
     Typography: ({
       children,

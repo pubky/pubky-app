@@ -7,7 +7,7 @@ import { POST_MAX_TAGS, TAG_MAX_LENGTH } from '@/config/posts';
 let mockTagInputValue = '';
 let mockShowEmojiPicker = false;
 
-vi.mock('@/atoms/Container/Container', async () => {
+vi.mock('@/atoms/Container/Container', () => {
   return {
     Container: ({
       children,
@@ -25,7 +25,7 @@ vi.mock('@/atoms/Container/Container', async () => {
   };
 });
 
-vi.mock('@/atoms/Typography/Typography', async () => {
+vi.mock('@/atoms/Typography/Typography', () => {
   return {
     Typography: vi.fn(
       ({
@@ -47,7 +47,7 @@ vi.mock('@/atoms/Typography/Typography', async () => {
   };
 });
 
-vi.mock('@/molecules/PostTagAddButton/PostTagAddButton', async () => {
+vi.mock('@/molecules/PostTagAddButton/PostTagAddButton', () => {
   return {
     PostTagAddButton: vi.fn(
       ({ onClick, disabled, variant }: { onClick: () => void; disabled?: boolean; variant?: string }) => (
@@ -59,7 +59,7 @@ vi.mock('@/molecules/PostTagAddButton/PostTagAddButton', async () => {
   };
 });
 
-vi.mock('@/molecules/TagInput/TagInput', async () => {
+vi.mock('@/molecules/TagInput/TagInput', () => {
   return {
     TagInput: vi.fn(
       ({
@@ -151,7 +151,7 @@ vi.mock('@/molecules/TagInput/TagInput', async () => {
   };
 });
 
-vi.mock('@/molecules/TagInputToggle/TagInputToggle', async () => {
+vi.mock('@/molecules/TagInputToggle/TagInputToggle', () => {
   return {
     TagInputToggle: ({
       showInput,

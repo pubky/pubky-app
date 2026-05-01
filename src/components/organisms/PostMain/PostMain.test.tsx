@@ -18,7 +18,7 @@ const { mockPostHeader } = vi.hoisted(() => ({
 }));
 
 // Minimal atoms used by PostMain
-vi.mock('@/atoms/Card/Card', async () => {
+vi.mock('@/atoms/Card/Card', () => {
   return {
     Card: vi.fn(({ children, className }: { children: React.ReactNode; className?: string }) => (
       <div data-testid="card" data-class-name={className}>
@@ -33,7 +33,7 @@ vi.mock('@/atoms/Card/Card', async () => {
   };
 });
 
-vi.mock('@/atoms/Container/Container', async () => {
+vi.mock('@/atoms/Container/Container', () => {
   return {
     Container: (
       props: React.PropsWithChildren<{
@@ -59,7 +59,7 @@ vi.mock('@/atoms/Container/Container', async () => {
   };
 });
 
-vi.mock('@/atoms/PostThreadConnector/PostThreadConnector', async () => {
+vi.mock('@/atoms/PostThreadConnector/PostThreadConnector', () => {
   return {
     PostThreadConnector: ({ height, variant }: { height: number; variant?: string }) => (
       <div data-testid="thread-connector" data-height={height} data-variant={variant}>
@@ -70,7 +70,7 @@ vi.mock('@/atoms/PostThreadConnector/PostThreadConnector', async () => {
 });
 
 // Stub organisms composed inside PostMain
-vi.mock('@/organisms/ClickableTagsList/ClickableTagsList', async () => {
+vi.mock('@/organisms/ClickableTagsList/ClickableTagsList', () => {
   return {
     ClickableTagsList: ({
       taggedId,
@@ -100,7 +100,7 @@ vi.mock('@/organisms/ClickableTagsList/ClickableTagsList', async () => {
   };
 });
 
-vi.mock('@/organisms/DialogReply/DialogReply', async () => {
+vi.mock('@/organisms/DialogReply/DialogReply', () => {
   return {
     DialogReply: ({
       postId,
@@ -118,7 +118,7 @@ vi.mock('@/organisms/DialogReply/DialogReply', async () => {
   };
 });
 
-vi.mock('@/organisms/DialogRepost/DialogRepost', async () => {
+vi.mock('@/organisms/DialogRepost/DialogRepost', () => {
   return {
     DialogRepost: ({
       postId,
@@ -136,7 +136,7 @@ vi.mock('@/organisms/DialogRepost/DialogRepost', async () => {
   };
 });
 
-vi.mock('@/organisms/PostActionsBar/PostActionsBar', async () => {
+vi.mock('@/organisms/PostActionsBar/PostActionsBar', () => {
   return {
     PostActionsBar: ({
       postId,
@@ -165,7 +165,7 @@ vi.mock('@/organisms/PostActionsBar/PostActionsBar', async () => {
   };
 });
 
-vi.mock('@/organisms/PostContent/PostContent', async () => {
+vi.mock('@/organisms/PostContent/PostContent', () => {
   return {
     PostContent: ({ postId, textClassName }: { postId: string; textClassName?: string }) => (
       <div data-testid="post-content" data-text-class-name={textClassName}>
@@ -175,7 +175,7 @@ vi.mock('@/organisms/PostContent/PostContent', async () => {
   };
 });
 
-vi.mock('@/organisms/PostHeader/PostHeader', async () => {
+vi.mock('@/organisms/PostHeader/PostHeader', () => {
   return {
     PostHeader: ({
       postId,
@@ -189,7 +189,7 @@ vi.mock('@/organisms/PostHeader/PostHeader', async () => {
   };
 });
 
-vi.mock('@/organisms/PostTagsPanel/PostTagsPanel', async () => {
+vi.mock('@/organisms/PostTagsPanel/PostTagsPanel', () => {
   return {
     PostTagsPanel: ({ postId, className }: { postId: string; className?: string }) => (
       <div data-testid="post-tags-panel" data-post-id={postId} data-class-name={className}>
@@ -200,13 +200,13 @@ vi.mock('@/organisms/PostTagsPanel/PostTagsPanel', async () => {
 });
 
 // Stub molecules used by PostMain
-vi.mock('@/molecules/PostDeleted/PostDeleted', async () => {
+vi.mock('@/molecules/PostDeleted/PostDeleted', () => {
   return {
     PostDeleted: () => <div data-testid="post-deleted">PostDeleted</div>,
   };
 });
 
-vi.mock('@/molecules/RepostHeader/RepostHeader', async () => {
+vi.mock('@/molecules/RepostHeader/RepostHeader', () => {
   return {
     RepostHeader: () => <div data-testid="repost-header">You reposted</div>,
   };

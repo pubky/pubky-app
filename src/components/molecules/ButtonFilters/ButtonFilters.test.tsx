@@ -3,7 +3,7 @@ import { describe, it, expect, vi } from 'vitest';
 import { ButtonFilters } from './ButtonFilters';
 
 // Mock the atoms
-vi.mock('@/atoms/Button/Button', async () => {
+vi.mock('@/atoms/Button/Button', () => {
   return {
     Button: ({
       children,

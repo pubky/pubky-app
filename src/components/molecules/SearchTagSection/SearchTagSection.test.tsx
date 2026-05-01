@@ -2,7 +2,7 @@ import { render, screen, fireEvent } from '@testing-library/react';
 import { describe, it, expect, vi } from 'vitest';
 import { SearchTagSection } from './SearchTagSection';
 
-vi.mock('@/atoms/Container/Container', async () => {
+vi.mock('@/atoms/Container/Container', () => {
   return {
     Container: ({
       children,
@@ -17,7 +17,7 @@ vi.mock('@/atoms/Container/Container', async () => {
   };
 });
 
-vi.mock('@/atoms/Typography/Typography', async () => {
+vi.mock('@/atoms/Typography/Typography', () => {
   return {
     Typography: ({ children, className, size }: React.PropsWithChildren<{ className?: string; size?: string }>) => (
       <span data-testid="typography" className={className} data-size={size}>
@@ -27,7 +27,7 @@ vi.mock('@/atoms/Typography/Typography', async () => {
   };
 });
 
-vi.mock('@/molecules/PostTag/PostTag', async () => {
+vi.mock('@/molecules/PostTag/PostTag', () => {
   return {
     PostTag: ({ label, color, onClick }: { label: string; color?: string; onClick?: () => void }) => (
       <button data-testid={`tag-${label}`} data-color={color} onClick={onClick}>

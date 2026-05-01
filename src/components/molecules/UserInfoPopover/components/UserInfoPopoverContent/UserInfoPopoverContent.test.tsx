@@ -27,7 +27,7 @@ vi.mock('@/hooks/useUserInfoPopoverActions/useUserInfoPopoverActions', () => ({
   }),
 }));
 
-vi.mock('@/molecules/PostText/PostText', async () => {
+vi.mock('@/molecules/PostText/PostText', () => {
   return {
     PostText: ({ content }: { content: string }) => <div data-testid="post-text">{content}</div>,
   };

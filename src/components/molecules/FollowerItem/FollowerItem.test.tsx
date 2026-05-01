@@ -4,7 +4,7 @@ import { FollowerItem } from './FollowerItem';
 import type { UserConnectionData } from '@/hooks/useProfileConnections/useProfileConnections.types';
 import type { Pubky } from '@/models/models.types';
 // Mock atoms
-vi.mock('@/atoms/Button/Button', async () => {
+vi.mock('@/atoms/Button/Button', () => {
   return {
     Button: ({
       children,
@@ -24,7 +24,7 @@ vi.mock('@/atoms/Button/Button', async () => {
   };
 });
 
-vi.mock('@/atoms/Container/Container', async () => {
+vi.mock('@/atoms/Container/Container', () => {
   return {
     Container: ({ children, className }: { children: React.ReactNode; className?: string }) => (
       <div data-testid="container" className={className}>
@@ -34,7 +34,7 @@ vi.mock('@/atoms/Container/Container', async () => {
   };
 });
 
-vi.mock('@/atoms/Link/Link', async () => {
+vi.mock('@/atoms/Link/Link', () => {
   return {
     Link: ({ children, href, className }: { children: React.ReactNode; href: string; className?: string }) => (
       <a data-testid="link" href={href} className={className}>
@@ -44,13 +44,13 @@ vi.mock('@/atoms/Link/Link', async () => {
   };
 });
 
-vi.mock('@/atoms/Tag/Tag', async () => {
+vi.mock('@/atoms/Tag/Tag', () => {
   return {
     Tag: ({ name }: { name: string }) => <span data-testid="tag">{name}</span>,
   };
 });
 
-vi.mock('@/atoms/Typography/Typography', async () => {
+vi.mock('@/atoms/Typography/Typography', () => {
   return {
     Typography: ({
       children,
@@ -69,7 +69,7 @@ vi.mock('@/atoms/Typography/Typography', async () => {
 });
 
 // Mock organisms
-vi.mock('@/organisms/AvatarWithFallback/AvatarWithFallback', async () => {
+vi.mock('@/organisms/AvatarWithFallback/AvatarWithFallback', () => {
   return {
     AvatarWithFallback: ({
       avatarUrl,

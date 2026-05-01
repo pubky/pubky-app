@@ -3,7 +3,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import React from 'react';
 import { PostHeaderUserInfo } from './PostHeaderUserInfo';
 import { formatPublicKey } from '@/libs/utils/utils';
-vi.mock('@/atoms/Popover/Popover', async () => {
+vi.mock('@/atoms/Popover/Popover', () => {
   return {
     Popover: ({ children, hover }: { children: React.ReactNode; hover?: boolean }) => (
       <div data-testid="popover" data-hover={hover}>
@@ -100,7 +100,7 @@ vi.mock('@/stores/auth/auth.store', () => ({
 }));
 
 // Mock atoms
-vi.mock('@/atoms/Button/Button', async () => {
+vi.mock('@/atoms/Button/Button', () => {
   return {
     Button: ({
       children,
@@ -134,7 +134,7 @@ vi.mock('@/atoms/Button/Button', async () => {
   };
 });
 
-vi.mock('@/atoms/Container/Container', async () => {
+vi.mock('@/atoms/Container/Container', () => {
   return {
     Container: React.forwardRef<
       HTMLDivElement,
@@ -153,7 +153,7 @@ vi.mock('@/atoms/Container/Container', async () => {
   };
 });
 
-vi.mock('@/atoms/Link/Link', async () => {
+vi.mock('@/atoms/Link/Link', () => {
   return {
     Link: ({
       children,
@@ -173,7 +173,7 @@ vi.mock('@/atoms/Link/Link', async () => {
   };
 });
 
-vi.mock('@/atoms/Typography/Typography', async () => {
+vi.mock('@/atoms/Typography/Typography', () => {
   return {
     Typography: ({ children, className }: { children: React.ReactNode; className?: string }) => (
       <p data-testid="typography" className={className}>
@@ -184,7 +184,7 @@ vi.mock('@/atoms/Typography/Typography', async () => {
 });
 
 // Mock organisms
-vi.mock('@/organisms/AvatarWithFallback/AvatarWithFallback', async () => {
+vi.mock('@/organisms/AvatarWithFallback/AvatarWithFallback', () => {
   return {
     AvatarWithFallback: ({ avatarUrl, name, size }: { avatarUrl?: string; name: string; size?: string }) => (
       <div data-testid="avatar" data-size={size}>
@@ -196,7 +196,7 @@ vi.mock('@/organisms/AvatarWithFallback/AvatarWithFallback', async () => {
 });
 
 // Mock molecules
-vi.mock('@/molecules/PostHeaderTimestamp/PostHeaderTimestamp', async () => {
+vi.mock('@/molecules/PostHeaderTimestamp/PostHeaderTimestamp', () => {
   return {
     PostHeaderTimestamp: ({ timeAgo }: { timeAgo: string; indexedAt: Date }) => (
       <span data-testid="post-header-timestamp">{timeAgo}</span>
@@ -204,7 +204,7 @@ vi.mock('@/molecules/PostHeaderTimestamp/PostHeaderTimestamp', async () => {
   };
 });
 
-vi.mock('@/molecules/UserInfoPopover/UserInfoPopover', async () => {
+vi.mock('@/molecules/UserInfoPopover/UserInfoPopover', () => {
   return {
     UserInfoPopover: (props: Parameters<typeof mockUserInfoPopover>[0]) => mockUserInfoPopover(props),
   };

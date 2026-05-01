@@ -97,7 +97,7 @@ vi.mock('@/hooks/usePullToRefresh/usePullToRefresh', () => ({
 }));
 
 // Mock components
-vi.mock('@/molecules/NewPostsButton/NewPostsButton', async () => {
+vi.mock('@/molecules/NewPostsButton/NewPostsButton', () => {
   return {
     NewPostsButton: ({
       count,
@@ -111,20 +111,20 @@ vi.mock('@/molecules/NewPostsButton/NewPostsButton', async () => {
   };
 });
 
-vi.mock('@/molecules/PullToRefreshIndicator/PullToRefreshIndicator', async () => {
+vi.mock('@/molecules/PullToRefreshIndicator/PullToRefreshIndicator', () => {
   return {
     PullToRefreshIndicator: ({ state }: { state: string; pullDistance: number }) =>
       state !== 'idle' ? <div data-testid="pull-to-refresh-indicator">{state}</div> : null,
   };
 });
 
-vi.mock('@/molecules/Timeline/TimelineLoading', async () => {
+vi.mock('@/molecules/Timeline/TimelineLoading', () => {
   return {
     TimelineLoading: () => <div data-testid="timeline-loading">Loading...</div>,
   };
 });
 
-vi.mock('@/organisms/Timeline/Posts/Posts', async () => {
+vi.mock('@/organisms/Timeline/Posts/Posts', () => {
   return {
     TimelinePosts: ({
       postIds,

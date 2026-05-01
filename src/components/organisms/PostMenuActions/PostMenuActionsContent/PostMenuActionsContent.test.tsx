@@ -9,7 +9,7 @@ import {
   POST_MENU_ACTION_IDS,
   POST_MENU_ACTION_VARIANTS,
 } from '@/hooks/usePostMenuActions/usePostMenuActions.constants';
-vi.mock('@/atoms/DropdownMenu/DropdownMenu', async () => {
+vi.mock('@/atoms/DropdownMenu/DropdownMenu', () => {
   return {
     DropdownMenuItem: ({
       children,
@@ -58,7 +58,7 @@ vi.mock('@/controllers/post/post', () => ({
   },
 }));
 
-vi.mock('@/atoms/Button/Button', async () => {
+vi.mock('@/atoms/Button/Button', () => {
   return {
     Button: ({
       children,
@@ -78,7 +78,7 @@ vi.mock('@/atoms/Button/Button', async () => {
   };
 });
 
-vi.mock('@/atoms/Container/Container', async () => {
+vi.mock('@/atoms/Container/Container', () => {
   return {
     Container: ({
       children,
@@ -100,13 +100,13 @@ vi.mock('@/atoms/Container/Container', async () => {
   };
 });
 
-vi.mock('@/atoms/Skeleton/Skeleton', async () => {
+vi.mock('@/atoms/Skeleton/Skeleton', () => {
   return {
     Skeleton: ({ className }: { className?: string }) => <div data-testid="skeleton" className={className} />,
   };
 });
 
-vi.mock('@/atoms/Typography/Typography', async () => {
+vi.mock('@/atoms/Typography/Typography', () => {
   return {
     Typography: ({
       children,

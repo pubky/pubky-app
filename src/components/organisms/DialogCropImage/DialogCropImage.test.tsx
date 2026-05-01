@@ -2,7 +2,7 @@ import { describe, it, expect, vi, afterEach } from 'vitest';
 import { render, screen, fireEvent, waitFor, act } from '@testing-library/react';
 import type { Area } from 'react-easy-crop';
 import { DialogCropImage } from './DialogCropImage';
-vi.mock('@/atoms/Dialog/Dialog', async () => {
+vi.mock('@/atoms/Dialog/Dialog', () => {
   return {
     Dialog: ({ children }: { children: React.ReactNode }) => <div data-testid="dialog">{children}</div>,
     DialogContent: ({ children, className }: { children: React.ReactNode; className?: string }) => (
@@ -59,7 +59,7 @@ vi.mock('@/libs/image/cropImage', () => ({
   cropImageToBlob: (...args: unknown[]) => mockCropImageToBlob(...args),
 }));
 
-vi.mock('@/atoms/Button/Button', async () => {
+vi.mock('@/atoms/Button/Button', () => {
   return {
     Button: ({
       children,

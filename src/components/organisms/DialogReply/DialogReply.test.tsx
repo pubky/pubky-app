@@ -5,7 +5,7 @@ import { DialogContent } from '@/atoms/Dialog/Dialog';
 import { PostInput } from '../PostInput/PostInput';
 
 import { POST_INPUT_VARIANT } from '@/organisms/PostInput/PostInput.constants';
-vi.mock('@/atoms/Dialog/Dialog', async () => {
+vi.mock('@/atoms/Dialog/Dialog', () => {
   return {
     Dialog: ({
       children,
@@ -60,7 +60,7 @@ vi.mock('@/hooks/useConfirmableDialog/useConfirmableDialog', () => ({
 }));
 
 // Mock organisms
-vi.mock('@/organisms/PostContent/PostContent', async () => {
+vi.mock('@/organisms/PostContent/PostContent', () => {
   return {
     PostContent: vi.fn(({ postId }: { postId: string }) => (
       <div data-testid="post-content" data-post-id={postId}>
@@ -70,7 +70,7 @@ vi.mock('@/organisms/PostContent/PostContent', async () => {
   };
 });
 
-vi.mock('@/organisms/PostHeader/PostHeader', async () => {
+vi.mock('@/organisms/PostHeader/PostHeader', () => {
   return {
     PostHeader: vi.fn(({ postId }: { postId: string }) => (
       <div data-testid="post-header" data-post-id={postId}>
@@ -80,14 +80,14 @@ vi.mock('@/organisms/PostHeader/PostHeader', async () => {
   };
 });
 
-vi.mock('@/organisms/Timeline/Feed/TimelineFeed/TimelineFeed', async () => {
+vi.mock('@/organisms/Timeline/Feed/TimelineFeed/TimelineFeed', () => {
   return {
     useTimelineFeedContext: vi.fn(() => null),
   };
 });
 
 // Mock atoms
-vi.mock('@/atoms/Card/Card', async () => {
+vi.mock('@/atoms/Card/Card', () => {
   return {
     Card: ({ children, className }: { children: React.ReactNode; className?: string }) => (
       <div data-testid="card" className={className}>
@@ -102,7 +102,7 @@ vi.mock('@/atoms/Card/Card', async () => {
   };
 });
 
-vi.mock('@/atoms/Container/Container', async () => {
+vi.mock('@/atoms/Container/Container', () => {
   return {
     Container: ({
       children,
@@ -137,7 +137,7 @@ vi.mock('../PostInput/PostInput', () => ({
 }));
 
 // Mock molecules
-vi.mock('@/molecules/DialogConfirmDiscard/DialogConfirmDiscard', async () => {
+vi.mock('@/molecules/DialogConfirmDiscard/DialogConfirmDiscard', () => {
   return {
     DialogConfirmDiscard: vi.fn(
       ({ open, onOpenChange, onConfirm }: { open: boolean; onOpenChange: () => void; onConfirm: () => void }) => (
@@ -154,7 +154,7 @@ vi.mock('@/molecules/DialogConfirmDiscard/DialogConfirmDiscard', async () => {
   };
 });
 
-vi.mock('@/molecules/PostPreviewCard/PostPreviewCard', async () => {
+vi.mock('@/molecules/PostPreviewCard/PostPreviewCard', () => {
   return {
     PostPreviewCard: vi.fn(({ postId, className }: { postId: string; className?: string }) => (
       <div data-testid="post-preview-card" data-post-id={postId} className={className}>

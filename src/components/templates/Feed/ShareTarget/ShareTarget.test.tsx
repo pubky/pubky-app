@@ -40,7 +40,7 @@ vi.mock('@/libs/share/shareTarget', async () => {
 });
 
 // Mock Atoms
-vi.mock('@/atoms/Button/Button', async () => {
+vi.mock('@/atoms/Button/Button', () => {
   return {
     Button: ({
       children,
@@ -60,7 +60,7 @@ vi.mock('@/atoms/Button/Button', async () => {
   };
 });
 
-vi.mock('@/atoms/Container/Container', async () => {
+vi.mock('@/atoms/Container/Container', () => {
   return {
     Container: ({ children, className }: { children: React.ReactNode; className?: string }) => (
       <div data-testid="container" className={className}>
@@ -70,19 +70,19 @@ vi.mock('@/atoms/Container/Container', async () => {
   };
 });
 
-vi.mock('@/atoms/Skeleton/Skeleton', async () => {
+vi.mock('@/atoms/Skeleton/Skeleton', () => {
   return {
     Skeleton: ({ className }: { className?: string }) => <div data-testid="skeleton" className={className} />,
   };
 });
 
-vi.mock('@/atoms/Spinner/Spinner', async () => {
+vi.mock('@/atoms/Spinner/Spinner', () => {
   return {
     Spinner: () => <div data-testid="spinner">Loading...</div>,
   };
 });
 
-vi.mock('@/atoms/Typography/Typography', async () => {
+vi.mock('@/atoms/Typography/Typography', () => {
   return {
     Typography: ({ children, as: Tag = 'span' }: { children: React.ReactNode; as?: ElementType; size?: string }) => {
       const Comp = Tag as ElementType;
@@ -92,13 +92,13 @@ vi.mock('@/atoms/Typography/Typography', async () => {
 });
 
 // Mock Organisms
-vi.mock('@/organisms/ContentLayout/ContentLayout', async () => {
+vi.mock('@/organisms/ContentLayout/ContentLayout', () => {
   return {
     ContentLayout: ({ children }: { children: React.ReactNode }) => <div data-testid="content-layout">{children}</div>,
   };
 });
 
-vi.mock('@/organisms/PostInput/PostInput', async () => {
+vi.mock('@/organisms/PostInput/PostInput', () => {
   return {
     PostInput: ({
       dataCy,

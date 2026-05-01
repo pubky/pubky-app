@@ -4,7 +4,7 @@ import { PostAttachmentsCarouselImage } from './PostAttachmentsCarouselImage';
 import type { AttachmentConstructed } from '@/organisms/PostAttachments/PostAttachments.types';
 
 // Mock @/atoms
-vi.mock('@/atoms/Image/Image', async () => {
+vi.mock('@/atoms/Image/Image', () => {
   return {
     Image: ({
       src,

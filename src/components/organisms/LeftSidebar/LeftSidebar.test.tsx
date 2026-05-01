@@ -17,7 +17,7 @@ vi.mock('@/stores/home/home.store', () => ({
 }));
 
 // Mock the molecules
-vi.mock('@/molecules/Filters/FilterContent/FilterContent', async () => {
+vi.mock('@/molecules/Filters/FilterContent/FilterContent', () => {
   return {
     FilterContent: ({ onTabChange }: { onTabChange?: (tab: string) => void }) => (
       <div data-testid="filter-root">
@@ -27,7 +27,7 @@ vi.mock('@/molecules/Filters/FilterContent/FilterContent', async () => {
   };
 });
 
-vi.mock('@/molecules/Filters/FilterLayout/FilterLayout', async () => {
+vi.mock('@/molecules/Filters/FilterLayout/FilterLayout', () => {
   return {
     FilterLayout: ({ onTabChange }: { onTabChange?: (tab: string) => void }) => (
       <div data-testid="filter-root">
@@ -37,7 +37,7 @@ vi.mock('@/molecules/Filters/FilterLayout/FilterLayout', async () => {
   };
 });
 
-vi.mock('@/molecules/Filters/FilterReach/FilterReach', async () => {
+vi.mock('@/molecules/Filters/FilterReach/FilterReach', () => {
   return {
     FilterReach: ({ onTabChange }: { onTabChange?: (tab: string) => void }) => (
       <div data-testid="filter-reach">
@@ -47,7 +47,7 @@ vi.mock('@/molecules/Filters/FilterReach/FilterReach', async () => {
   };
 });
 
-vi.mock('@/molecules/Filters/FilterSort/FilterSort', async () => {
+vi.mock('@/molecules/Filters/FilterSort/FilterSort', () => {
   return {
     FilterSort: ({ onTabChange }: { onTabChange?: (tab: string) => void }) => (
       <div data-testid="filter-sort">

@@ -19,7 +19,7 @@ vi.mock('dexie-react-hooks', () => ({
 }));
 
 // Mock atoms, libs, config, and app
-vi.mock('@/atoms/Avatar/Avatar', async () => {
+vi.mock('@/atoms/Avatar/Avatar', () => {
   return {
     Avatar: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
     AvatarImage: ({ src }: { src?: string }) => <img src={src} alt="avatar" />,
@@ -27,13 +27,13 @@ vi.mock('@/atoms/Avatar/Avatar', async () => {
   };
 });
 
-vi.mock('@/atoms/Badge/Badge', async () => {
+vi.mock('@/atoms/Badge/Badge', () => {
   return {
     Badge: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
   };
 });
 
-vi.mock('@/atoms/Button/Button', async () => {
+vi.mock('@/atoms/Button/Button', () => {
   return {
     Button: ({ children, onClick, variant }: { children: React.ReactNode; onClick?: () => void; variant?: string }) => (
       <button onClick={onClick} data-variant={variant}>
@@ -43,7 +43,7 @@ vi.mock('@/atoms/Button/Button', async () => {
   };
 });
 
-vi.mock('@/atoms/Container/Container', async () => {
+vi.mock('@/atoms/Container/Container', () => {
   return {
     Container: ({ children, className }: { children: React.ReactNode; className?: string }) => (
       <div className={className}>{children}</div>
@@ -51,13 +51,13 @@ vi.mock('@/atoms/Container/Container', async () => {
   };
 });
 
-vi.mock('@/atoms/Link/Link', async () => {
+vi.mock('@/atoms/Link/Link', () => {
   return {
     Link: ({ children, href }: { children: React.ReactNode; href?: string }) => <a href={href}>{children}</a>,
   };
 });
 
-vi.mock('@/atoms/Typography/Typography', async () => {
+vi.mock('@/atoms/Typography/Typography', () => {
   return {
     Typography: ({ children }: { children: React.ReactNode }) => <span>{children}</span>,
   };
@@ -111,7 +111,7 @@ vi.mock('@/database/franky/franky', () => ({
 }));
 
 // Mock molecules
-vi.mock('@/molecules/Header/Header', async () => {
+vi.mock('@/molecules/Header/Header', () => {
   return {
     HeaderContainer: ({ children, className }: { children: React.ReactNode; className?: string }) => (
       <div data-testid="header-container" data-class-name={className}>
@@ -133,7 +133,7 @@ vi.mock('@/molecules/Header/Header', async () => {
   };
 });
 
-vi.mock('@/molecules/HeaderHome/HeaderHome', async () => {
+vi.mock('@/molecules/HeaderHome/HeaderHome', () => {
   return {
     HeaderHome: () => (
       <div data-testid="header-home">
@@ -144,7 +144,7 @@ vi.mock('@/molecules/HeaderHome/HeaderHome', async () => {
   };
 });
 
-vi.mock('@/molecules/HeaderJoin/HeaderJoin', async () => {
+vi.mock('@/molecules/HeaderJoin/HeaderJoin', () => {
   return {
     HeaderJoin: () => (
       <div data-testid="header-join">
@@ -154,7 +154,7 @@ vi.mock('@/molecules/HeaderJoin/HeaderJoin', async () => {
   };
 });
 
-vi.mock('@/molecules/HeaderSignIn/HeaderSignIn', async () => {
+vi.mock('@/molecules/HeaderSignIn/HeaderSignIn', () => {
   return {
     HeaderSignIn: () => (
       <div data-testid="header-sign-in">
@@ -165,7 +165,7 @@ vi.mock('@/molecules/HeaderSignIn/HeaderSignIn', async () => {
   };
 });
 
-vi.mock('@/molecules/Logo/Logo', async () => {
+vi.mock('@/molecules/Logo/Logo', () => {
   return {
     Logo: ({ noLink }: { noLink?: boolean }) => (
       <div data-testid="logo" data-no-link={noLink}>
@@ -175,7 +175,7 @@ vi.mock('@/molecules/Logo/Logo', async () => {
   };
 });
 
-vi.mock('@/organisms/SearchInput/SearchInput', async () => {
+vi.mock('@/organisms/SearchInput/SearchInput', () => {
   return {
     SearchInput: () => <div data-testid="search-input">Search Input</div>,
   };

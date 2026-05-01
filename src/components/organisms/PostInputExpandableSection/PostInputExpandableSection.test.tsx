@@ -27,7 +27,7 @@ vi.mock('motion/react', () => ({
 // Use real libs - use actual implementations
 
 // Mock atoms
-vi.mock('@/atoms/Container/Container', async () => {
+vi.mock('@/atoms/Container/Container', () => {
   return {
     Container: ({
       children,
@@ -46,7 +46,7 @@ vi.mock('@/atoms/Container/Container', async () => {
 });
 
 // Mock molecules
-vi.mock('@/molecules/EmojiPickerDialog/EmojiPickerDialog', async () => {
+vi.mock('@/molecules/EmojiPickerDialog/EmojiPickerDialog', () => {
   return {
     EmojiPickerDialog: ({
       open,
@@ -70,13 +70,13 @@ vi.mock('@/molecules/EmojiPickerDialog/EmojiPickerDialog', async () => {
   };
 });
 
-vi.mock('@/molecules/PostLinkEmbeds/PostLinkEmbeds', async () => {
+vi.mock('@/molecules/PostLinkEmbeds/PostLinkEmbeds', () => {
   return {
     PostLinkEmbeds: ({ content }: { content: string }) => <div data-testid="post-link-embeds">{content}</div>,
   };
 });
 
-vi.mock('@/molecules/PostTag/PostTag', async () => {
+vi.mock('@/molecules/PostTag/PostTag', () => {
   return {
     PostTag: ({ label, showClose, onClose }: { label: string; showClose?: boolean; onClose?: () => void }) => (
       <div data-testid="post-tag">

@@ -22,7 +22,7 @@ vi.mock('next/navigation', () => ({
 }));
 
 // Mock the organisms
-vi.mock('@/organisms/AvatarWithFallback/AvatarWithFallback', async () => {
+vi.mock('@/organisms/AvatarWithFallback/AvatarWithFallback', () => {
   return {
     AvatarWithFallback: ({
       avatarUrl,

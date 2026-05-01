@@ -28,7 +28,7 @@ vi.mock('@/stores/localFiles/localFiles.store', () => ({
 }));
 
 // Mock atoms
-vi.mock('@/atoms/Button/Button', async () => {
+vi.mock('@/atoms/Button/Button', () => {
   return {
     Button: ({
       children,
@@ -48,7 +48,7 @@ vi.mock('@/atoms/Button/Button', async () => {
   };
 });
 
-vi.mock('@/atoms/Container/Container', async () => {
+vi.mock('@/atoms/Container/Container', () => {
   return {
     Container: ({ children, className }: { children: React.ReactNode; className?: string }) => (
       <div data-testid="container" className={className}>
@@ -58,20 +58,20 @@ vi.mock('@/atoms/Container/Container', async () => {
   };
 });
 
-vi.mock('@/atoms/Skeleton/Skeleton', async () => {
+vi.mock('@/atoms/Skeleton/Skeleton', () => {
   return {
     Skeleton: ({ className }: { className?: string }) => <div data-testid="skeleton" className={className} />,
   };
 });
 
 // Mock molecules - PostText, PostLinkEmbeds
-vi.mock('@/molecules/PostLinkEmbeds/PostLinkEmbeds', async () => {
+vi.mock('@/molecules/PostLinkEmbeds/PostLinkEmbeds', () => {
   return {
     PostLinkEmbeds: vi.fn(() => null),
   };
 });
 
-vi.mock('@/molecules/PostText/PostText', async () => {
+vi.mock('@/molecules/PostText/PostText', () => {
   return {
     PostText: vi.fn(() => null),
   };

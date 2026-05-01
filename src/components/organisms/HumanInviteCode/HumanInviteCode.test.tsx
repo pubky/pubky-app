@@ -3,7 +3,7 @@ import { render, screen, fireEvent } from '@testing-library/react';
 
 import { HumanInviteCode } from './HumanInviteCode';
 
-vi.mock('@/molecules/HumanFooter/HumanFooter', async () => {
+vi.mock('@/molecules/HumanFooter/HumanFooter', () => {
   return {
     HumanFooter: () => <div data-testid="mock-human-footer">Human Footer</div>,
   };

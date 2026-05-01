@@ -8,13 +8,13 @@ vi.mock('@/hooks/useLayoutReset/useLayoutReset', () => ({
 }));
 
 // Mock Organisms - ContentLayout renders all props
-vi.mock('@/organisms/ActiveUsers/ActiveUsers', async () => {
+vi.mock('@/organisms/ActiveUsers/ActiveUsers', () => {
   return {
     ActiveUsers: () => <div data-testid="active-users">ActiveUsers</div>,
   };
 });
 
-vi.mock('@/organisms/ContentLayout/ContentLayout', async () => {
+vi.mock('@/organisms/ContentLayout/ContentLayout', () => {
   return {
     ContentLayout: ({
       children,
@@ -40,13 +40,13 @@ vi.mock('@/organisms/ContentLayout/ContentLayout', async () => {
   };
 });
 
-vi.mock('@/organisms/FeedbackCard/FeedbackCard', async () => {
+vi.mock('@/organisms/FeedbackCard/FeedbackCard', () => {
   return {
     FeedbackCard: () => <div data-testid="feedback-card">FeedbackCard</div>,
   };
 });
 
-vi.mock('@/organisms/WhoToFollowPage/WhoToFollowPageMain', async () => {
+vi.mock('@/organisms/WhoToFollowPage/WhoToFollowPageMain', () => {
   return {
     WhoToFollowPageMain: () => <div data-testid="who-to-follow-page-main">WhoToFollowPageMain</div>,
   };
@@ -63,7 +63,7 @@ vi.mock('@/molecules/Filters/FilterSortWhoToFollow/FilterSortWhoToFollow', async
 });
 
 // Mock Atoms
-vi.mock('@/atoms/Container/Container', async () => {
+vi.mock('@/atoms/Container/Container', () => {
   return {
     Container: ({ children, ...props }: { children: React.ReactNode; [key: string]: unknown }) => (
       <div data-testid="container" {...props}>

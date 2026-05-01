@@ -108,11 +108,6 @@ Do not add `index.ts` / `index.tsx` files whose only job is re-exporting from ch
 Components follow the same rule: under `src/components`, import concrete modules with the atomic path aliases:
 
 ```typescript
-// BAD — aggregate path (folder or alias that hides the real file)
-import { Button } from '@/atoms';
-import { Button } from '@/components/atoms';
-import { Filters } from '@/molecules/Filters';
-
 // GOOD — concrete component module
 import { Button } from '@/atoms/Button/Button';
 import { FilterContent } from '@/molecules/Filters/FilterContent/FilterContent';
@@ -120,12 +115,7 @@ import { PostHeader } from '@/organisms/PostHeader/PostHeader';
 ```
 
 ```typescript
-// BAD — index file that only re-exports
-// src/core/post/index.ts
-export { PostController } from './controllers/post.controller';
-export { PostApplication } from './application/post.application';
-
-// GOOD — import from the actual file
+// Import from the actual file
 import { PostController } from '@/controllers/post/post';
 ```
 

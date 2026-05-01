@@ -3,19 +3,19 @@ import { render, screen } from '@testing-library/react';
 
 import { HumanSelection } from './HumanSelection';
 
-vi.mock('@/molecules/HumanFooter/HumanFooter', async () => {
+vi.mock('@/molecules/HumanFooter/HumanFooter', () => {
   return {
     HumanFooter: () => <div data-testid="mock-human-footer">Human Footer</div>,
   };
 });
 
-vi.mock('@/molecules/HumanSmsCard/HumanSmsCard', async () => {
+vi.mock('@/molecules/HumanSmsCard/HumanSmsCard', () => {
   return {
     HumanSmsCard: () => <div data-testid="mock-sms-card">SMS Verification Card</div>,
   };
 });
 
-vi.mock('@/organisms/HumanBitcoinCard/HumanBitcoinCard', async () => {
+vi.mock('@/organisms/HumanBitcoinCard/HumanBitcoinCard', () => {
   return {
     HumanBitcoinCard: () => <div data-testid="mock-bitcoin-card">Bitcoin Payment Card</div>,
   };

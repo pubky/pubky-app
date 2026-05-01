@@ -3,7 +3,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen, fireEvent } from '@testing-library/react';
 import { PostLinkEmbeds } from './PostLinkEmbeds';
 
-vi.mock('@/atoms/Container/Container', async () => {
+vi.mock('@/atoms/Container/Container', () => {
   return {
     Container: React.forwardRef(function MockContainer(
       {
@@ -36,7 +36,7 @@ vi.mock('@/atoms/Container/Container', async () => {
   };
 });
 
-vi.mock('@/atoms/Iframe/Iframe', async () => {
+vi.mock('@/atoms/Iframe/Iframe', () => {
   return {
     Iframe: ({
       'data-testid': dataTestId,
@@ -58,7 +58,7 @@ vi.mock('@/atoms/Iframe/Iframe', async () => {
   };
 });
 
-vi.mock('@/atoms/Image/Image', async () => {
+vi.mock('@/atoms/Image/Image', () => {
   return {
     Image: ({ src, alt, className }: React.ImgHTMLAttributes<HTMLImageElement>) => (
       <img src={src} alt={alt} className={className} />
@@ -66,7 +66,7 @@ vi.mock('@/atoms/Image/Image', async () => {
   };
 });
 
-vi.mock('@/atoms/Link/Link', async () => {
+vi.mock('@/atoms/Link/Link', () => {
   return {
     Link: ({
       children,
@@ -81,7 +81,7 @@ vi.mock('@/atoms/Link/Link', async () => {
   };
 });
 
-vi.mock('@/atoms/Typography/Typography', async () => {
+vi.mock('@/atoms/Typography/Typography', () => {
   return {
     Typography: ({ children, className }: { children: React.ReactNode; className?: string; size?: string }) => (
       <span className={className}>{children}</span>

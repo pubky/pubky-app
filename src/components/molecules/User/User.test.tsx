@@ -4,7 +4,7 @@ import { User, type UserData } from './User';
 import { ButtonVariant } from '@/atoms/Button/Button';
 
 // Mock AvatarWithFallback to isolate User component tests
-vi.mock('@/organisms/AvatarWithFallback/AvatarWithFallback', async () => {
+vi.mock('@/organisms/AvatarWithFallback/AvatarWithFallback', () => {
   return {
     AvatarWithFallback: ({
       name,

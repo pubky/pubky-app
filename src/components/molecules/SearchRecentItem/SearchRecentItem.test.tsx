@@ -4,7 +4,7 @@ import { SearchRecentItem } from './SearchRecentItem';
 import { RECENT_ITEM_TYPE } from './SearchRecentItem.constants';
 import type { RecentUserSearchItem, RecentTagSearchItem } from '../SearchRecentUserItem/SearchRecentUserItem.types';
 import type { Pubky } from '@/models/models.types';
-vi.mock('@/molecules/PostTag/PostTag', async () => {
+vi.mock('@/molecules/PostTag/PostTag', () => {
   return {
     PostTag: ({ label, onClick, ...props }: { label: string; onClick?: () => void }) => (
       <button onClick={onClick} {...props}>
@@ -14,7 +14,7 @@ vi.mock('@/molecules/PostTag/PostTag', async () => {
   };
 });
 
-vi.mock('@/molecules/SearchRecentUserItem/SearchRecentUserItem', async () => {
+vi.mock('@/molecules/SearchRecentUserItem/SearchRecentUserItem', () => {
   return {
     SearchRecentUserItem: ({
       user,

@@ -96,7 +96,7 @@ vi.mock('@/organisms/Timeline/Feed/TimelineFeed/TimelineFeedContext', () => ({
 
 // Mock useToast
 const mockToast = vi.fn();
-vi.mock('@/molecules/Toaster/use-toast', async () => {
+vi.mock('@/molecules/Toaster/use-toast', () => {
   return {
     useToast: vi.fn(() => ({
       toast: mockToast,

@@ -20,7 +20,7 @@ vi.mock('@/hooks/useIsMobile/useIsMobile', () => ({
 }));
 
 // Mock organisms
-vi.mock('@/organisms/ClickableTagsList/ClickableTagsList', async () => {
+vi.mock('@/organisms/ClickableTagsList/ClickableTagsList', () => {
   return {
     ClickableTagsList: ({ taggedId }: { taggedId: string }) => (
       <div data-testid="clickable-tags-list">ClickableTagsList {taggedId}</div>
@@ -28,7 +28,7 @@ vi.mock('@/organisms/ClickableTagsList/ClickableTagsList', async () => {
   };
 });
 
-vi.mock('@/organisms/DialogReply/DialogReply', async () => {
+vi.mock('@/organisms/DialogReply/DialogReply', () => {
   return {
     DialogReply: ({ postId, open }: { postId: string; open: boolean }) => (
       <div data-testid="dialog-reply" data-open={open}>
@@ -38,7 +38,7 @@ vi.mock('@/organisms/DialogReply/DialogReply', async () => {
   };
 });
 
-vi.mock('@/organisms/DialogRepost/DialogRepost', async () => {
+vi.mock('@/organisms/DialogRepost/DialogRepost', () => {
   return {
     DialogRepost: ({ postId, open }: { postId: string; open: boolean }) => (
       <div data-testid="dialog-repost" data-open={open}>
@@ -48,7 +48,7 @@ vi.mock('@/organisms/DialogRepost/DialogRepost', async () => {
   };
 });
 
-vi.mock('@/organisms/PostActionsBar/PostActionsBar', async () => {
+vi.mock('@/organisms/PostActionsBar/PostActionsBar', () => {
   return {
     PostActionsBar: ({
       postId,
@@ -77,7 +77,7 @@ vi.mock('@/organisms/PostActionsBar/PostActionsBar', async () => {
   };
 });
 
-vi.mock('@/organisms/PostContent/PostContent', async () => {
+vi.mock('@/organisms/PostContent/PostContent', () => {
   return {
     PostContent: ({ postId, textClassName }: { postId: string; textClassName?: string }) => (
       <div data-testid="post-content" data-text-class-name={textClassName}>
@@ -87,7 +87,7 @@ vi.mock('@/organisms/PostContent/PostContent', async () => {
   };
 });
 
-vi.mock('@/organisms/PostHeader/PostHeader', async () => {
+vi.mock('@/organisms/PostHeader/PostHeader', () => {
   return {
     PostHeader: ({
       postId,
@@ -101,7 +101,7 @@ vi.mock('@/organisms/PostHeader/PostHeader', async () => {
   };
 });
 
-vi.mock('@/organisms/PostTagsPanel/PostTagsPanel', async () => {
+vi.mock('@/organisms/PostTagsPanel/PostTagsPanel', () => {
   return {
     PostTagsPanel: forwardRef<
       { focus: () => void },
@@ -130,7 +130,7 @@ vi.mock('@/organisms/PostTagsPanel/PostTagsPanel', async () => {
 });
 
 // Mock atoms
-vi.mock('@/atoms/Card/Card', async () => {
+vi.mock('@/atoms/Card/Card', () => {
   return {
     Card: ({ children, className }: { children: React.ReactNode; className?: string }) => (
       <div data-testid="card" className={className}>
@@ -145,7 +145,7 @@ vi.mock('@/atoms/Card/Card', async () => {
   };
 });
 
-vi.mock('@/atoms/Container/Container', async () => {
+vi.mock('@/atoms/Container/Container', () => {
   return {
     Container: ({
       children,

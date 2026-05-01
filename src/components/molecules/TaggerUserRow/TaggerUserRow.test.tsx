@@ -10,7 +10,7 @@ vi.mock('@/hooks/useIsFollowing/useIsFollowing', () => ({
 }));
 
 // Mock UserListItem organism
-vi.mock('@/organisms/UserListItem/UserListItem', async () => {
+vi.mock('@/organisms/UserListItem/UserListItem', () => {
   return {
     UserListItem: ({
       user,

@@ -7,7 +7,7 @@ import { FileVariant } from '@/services/nexus/file/file.types';
 import type { NexusFileDetails } from '@/services/nexus/nexus.types';
 // Mock useToast
 const mockToast = vi.fn();
-vi.mock('@/molecules/PostAttachmentsAudios/PostAttachmentsAudios', async () => {
+vi.mock('@/molecules/PostAttachmentsAudios/PostAttachmentsAudios', () => {
   return {
     PostAttachmentsAudios: vi.fn(({ audios }) => (
       <div data-testid="post-attachments-audios" data-count={audios.length}>
@@ -43,14 +43,14 @@ vi.mock('@/molecules/PostAttachmentsImagesAndVideos/PostAttachmentsImagesAndVide
   };
 });
 
-vi.mock('@/molecules/Toaster/use-toast', async () => {
+vi.mock('@/molecules/Toaster/use-toast', () => {
   return {
     useToast: () => ({ toast: mockToast }),
   };
 });
 
 // Mock atoms
-vi.mock('@/atoms/Container/Container', async () => {
+vi.mock('@/atoms/Container/Container', () => {
   return {
     Container: ({ children, className }: { children: React.ReactNode; className?: string }) => (
       <div data-testid="container" className={className}>

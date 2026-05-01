@@ -3,7 +3,7 @@ import { render, screen, fireEvent } from '@testing-library/react';
 import { TextareaField } from './TextareaField';
 
 // Mock atoms
-vi.mock('@/atoms/Container/Container', async () => {
+vi.mock('@/atoms/Container/Container', () => {
   return {
     Container: ({ children, className }: { children: React.ReactNode; className?: string }) => (
       <div data-testid="container" className={className}>
@@ -13,7 +13,7 @@ vi.mock('@/atoms/Container/Container', async () => {
   };
 });
 
-vi.mock('@/atoms/Textarea/Textarea', async () => {
+vi.mock('@/atoms/Textarea/Textarea', () => {
   return {
     Textarea: ({
       className,
@@ -55,7 +55,7 @@ vi.mock('@/atoms/Textarea/Textarea', async () => {
   };
 });
 
-vi.mock('@/atoms/Typography/Typography', async () => {
+vi.mock('@/atoms/Typography/Typography', () => {
   return {
     Typography: ({ children, className }: { children: React.ReactNode; className?: string }) => (
       <div data-testid="typography" className={className}>

@@ -12,7 +12,7 @@ import { ProfileController } from '@/controllers/profile/profile';
 import { UserValidator } from '@/pipes/user/user.validator';
 import { useAuthStore } from '@/stores/auth/auth.store';
 import { useOnboardingStore } from '@/stores/onboarding/onboarding.store';
-vi.mock('@/atoms/Dialog/Dialog', async () => {
+vi.mock('@/atoms/Dialog/Dialog', () => {
   return {
     Dialog: ({ children, open }: { children: React.ReactNode; open?: boolean }) => (
       <div data-testid="dialog" data-open={open}>
@@ -111,7 +111,7 @@ vi.mock('@/libs/image/cropImage', async () => {
 });
 
 // Mock atoms
-vi.mock('@/atoms/Avatar/Avatar', async () => {
+vi.mock('@/atoms/Avatar/Avatar', () => {
   return {
     Avatar: ({
       children,
@@ -139,7 +139,7 @@ vi.mock('@/atoms/Avatar/Avatar', async () => {
   };
 });
 
-vi.mock('@/atoms/Button/Button', async () => {
+vi.mock('@/atoms/Button/Button', () => {
   return {
     Button: ({
       children,
@@ -173,7 +173,7 @@ vi.mock('@/atoms/Button/Button', async () => {
   };
 });
 
-vi.mock('@/atoms/Card/Card', async () => {
+vi.mock('@/atoms/Card/Card', () => {
   return {
     Card: ({ children, className }: { children: React.ReactNode; className?: string }) => (
       <div data-testid="card" className={className}>
@@ -183,7 +183,7 @@ vi.mock('@/atoms/Card/Card', async () => {
   };
 });
 
-vi.mock('@/atoms/Container/Container', async () => {
+vi.mock('@/atoms/Container/Container', () => {
   return {
     Container: ({ children, className }: { children: React.ReactNode; className?: string }) => (
       <div data-testid="container" className={className}>
@@ -193,7 +193,7 @@ vi.mock('@/atoms/Container/Container', async () => {
   };
 });
 
-vi.mock('@/atoms/Heading/Heading', async () => {
+vi.mock('@/atoms/Heading/Heading', () => {
   return {
     Heading: ({ children, level, className }: { children: React.ReactNode; level?: number; className?: string }) => (
       <div data-testid={`heading-${level || 1}`} className={className}>
@@ -203,7 +203,7 @@ vi.mock('@/atoms/Heading/Heading', async () => {
   };
 });
 
-vi.mock('@/atoms/Label/Label', async () => {
+vi.mock('@/atoms/Label/Label', () => {
   return {
     Label: ({ children, className }: { children: React.ReactNode; className?: string }) => (
       <label data-testid="label" className={className}>
@@ -213,7 +213,7 @@ vi.mock('@/atoms/Label/Label', async () => {
   };
 });
 
-vi.mock('@/atoms/Typography/Typography', async () => {
+vi.mock('@/atoms/Typography/Typography', () => {
   return {
     Typography: ({
       children,
@@ -242,7 +242,7 @@ vi.mock('@/atoms/Typography/Typography', async () => {
   };
 });
 
-vi.mock('@/molecules/InputField/InputField', async () => {
+vi.mock('@/molecules/InputField/InputField', () => {
   return {
     InputField: ({
       placeholder,
@@ -295,7 +295,7 @@ vi.mock('@/molecules/InputField/InputField', async () => {
   };
 });
 
-vi.mock('@/molecules/TextareaField/TextareaField', async () => {
+vi.mock('@/molecules/TextareaField/TextareaField', () => {
   return {
     TextareaField: ({
       placeholder,
@@ -328,7 +328,7 @@ vi.mock('@/molecules/TextareaField/TextareaField', async () => {
   };
 });
 
-vi.mock('@/molecules/ProfileNavigation/ProfileNavigation', async () => {
+vi.mock('@/molecules/ProfileNavigation/ProfileNavigation', () => {
   return {
     ProfileNavigation: ({
       children,
@@ -357,7 +357,7 @@ vi.mock('@/molecules/ProfileNavigation/ProfileNavigation', async () => {
   };
 });
 
-vi.mock('@/molecules/Toaster/use-toast', async () => {
+vi.mock('@/molecules/Toaster/use-toast', () => {
   return {
     useToast: () => ({
       toast: mockToast,
@@ -365,7 +365,7 @@ vi.mock('@/molecules/Toaster/use-toast', async () => {
   };
 });
 
-vi.mock('@/organisms/DialogAddLink/DialogAddLink', async () => {
+vi.mock('@/organisms/DialogAddLink/DialogAddLink', () => {
   return {
     DialogAddLink: ({ onSave }: { onSave: (label: string, url: string) => void }) => (
       <div data-testid="dialog-add-link">
@@ -375,7 +375,7 @@ vi.mock('@/organisms/DialogAddLink/DialogAddLink', async () => {
   };
 });
 
-vi.mock('@/organisms/DialogCropImage/DialogCropImage', async () => {
+vi.mock('@/organisms/DialogCropImage/DialogCropImage', () => {
   return {
     DialogCropImage: ({
       open,

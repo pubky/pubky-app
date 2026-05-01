@@ -2,7 +2,7 @@ import { describe, it, expect, vi } from 'vitest';
 import { render, screen } from '@testing-library/react';
 import { UserInfoPopoverStats } from './UserInfoPopoverStats';
 
-vi.mock('@/molecules/AvatarGroup/AvatarGroup', async () => {
+vi.mock('@/molecules/AvatarGroup/AvatarGroup', () => {
   return {
     AvatarGroup: ({ totalCount }: { totalCount: number }) => <div data-testid="avatar-group">{totalCount}</div>,
   };

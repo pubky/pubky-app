@@ -4,7 +4,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { CustomFeedDialog } from './CustomFeedDialog';
 import { PubkyAppFeedLayout, PubkyAppFeedReach, PubkyAppFeedSort, PubkyAppPostKind } from 'pubky-app-specs';
 import type { FeedModelSchema } from '@/models/feed/feed.schema';
-vi.mock('@/atoms/Dialog/Dialog', async () => {
+vi.mock('@/atoms/Dialog/Dialog', () => {
   return {
     Dialog: ({
       children,
@@ -73,7 +73,7 @@ vi.mock('@/hooks/useCustomFeed/useCustomFeed', () => ({
 
 // Mock toast
 const mockToast = vi.fn();
-vi.mock('@/molecules/PostTag/PostTag', async () => {
+vi.mock('@/molecules/PostTag/PostTag', () => {
   return {
     PostTag: ({ label, showClose, onClose }: { label: string; showClose?: boolean; onClose?: () => void }) => (
       <span data-testid={`post-tag-${label}`} data-show-close={showClose}>
@@ -88,7 +88,7 @@ vi.mock('@/molecules/PostTag/PostTag', async () => {
   };
 });
 
-vi.mock('@/molecules/TagInput/TagInput', async () => {
+vi.mock('@/molecules/TagInput/TagInput', () => {
   return {
     TagInput: ({
       onTagAdd,
@@ -134,7 +134,7 @@ vi.mock('@/molecules/TagInput/TagInput', async () => {
   };
 });
 
-vi.mock('@/molecules/Toaster/use-toast', async () => {
+vi.mock('@/molecules/Toaster/use-toast', () => {
   return {
     useToast: () => ({ toast: mockToast }),
   };
@@ -153,7 +153,7 @@ vi.mock('@/controllers/feed/feed', () => ({
 }));
 
 // Mock atoms — use lightweight mocks that forward data-testid attributes
-vi.mock('@/atoms/Button/Button', async () => {
+vi.mock('@/atoms/Button/Button', () => {
   return {
     Button: ({
       children,
@@ -186,7 +186,7 @@ vi.mock('@/atoms/Button/Button', async () => {
   };
 });
 
-vi.mock('@/atoms/Container/Container', async () => {
+vi.mock('@/atoms/Container/Container', () => {
   return {
     Container: ({
       children,
@@ -206,7 +206,7 @@ vi.mock('@/atoms/Container/Container', async () => {
   };
 });
 
-vi.mock('@/atoms/Input/Input', async () => {
+vi.mock('@/atoms/Input/Input', () => {
   return {
     Input: ({
       required,
@@ -238,7 +238,7 @@ vi.mock('@/atoms/Input/Input', async () => {
   };
 });
 
-vi.mock('@/atoms/Label/Label', async () => {
+vi.mock('@/atoms/Label/Label', () => {
   return {
     Label: ({ children, className }: { children: React.ReactNode; className?: string }) => (
       <label data-testid="label" className={className}>
@@ -248,7 +248,7 @@ vi.mock('@/atoms/Label/Label', async () => {
   };
 });
 
-vi.mock('@/atoms/Select/Select', async () => {
+vi.mock('@/atoms/Select/Select', () => {
   return {
     Select: ({
       children,
@@ -290,7 +290,7 @@ vi.mock('@/atoms/Select/Select', async () => {
   };
 });
 
-vi.mock('@/atoms/Typography/Typography', async () => {
+vi.mock('@/atoms/Typography/Typography', () => {
   return {
     Typography: ({
       children,

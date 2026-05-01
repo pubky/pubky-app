@@ -28,14 +28,14 @@ vi.mock('@/controllers/file/file', () => ({
 }));
 
 // Mock organisms
-vi.mock('@/organisms/SearchInput/SearchInput', async () => {
+vi.mock('@/organisms/SearchInput/SearchInput', () => {
   return {
     SearchInput: () => <div data-testid="search-input">Search Input</div>,
   };
 });
 
 // Mock molecules
-vi.mock('@/molecules/Header/Header', async () => {
+vi.mock('@/molecules/Header/Header', () => {
   return {
     HeaderNavigationButtons: ({
       avatarImage,
@@ -62,7 +62,7 @@ vi.mock('@/molecules/Header/Header', async () => {
 });
 
 // Mock atoms
-vi.mock('@/atoms/Container/Container', async () => {
+vi.mock('@/atoms/Container/Container', () => {
   return {
     Container: ({
       children,

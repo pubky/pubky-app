@@ -68,7 +68,7 @@ vi.mock('@/database/franky/franky', () => ({
 }));
 
 // Mock the organisms
-vi.mock('@/organisms/AvatarWithFallback/AvatarWithFallback', async () => {
+vi.mock('@/organisms/AvatarWithFallback/AvatarWithFallback', () => {
   return {
     AvatarWithFallback: ({
       name,
@@ -95,13 +95,13 @@ vi.mock('@/organisms/AvatarWithFallback/AvatarWithFallback', async () => {
   };
 });
 
-vi.mock('@/organisms/SearchInput/SearchInput', async () => {
+vi.mock('@/organisms/SearchInput/SearchInput', () => {
   return {
     SearchInput: () => <div data-testid="search-input">Search Input</div>,
   };
 });
 
-vi.mock('@/molecules/ProgressSteps/ProgressSteps', async () => {
+vi.mock('@/molecules/ProgressSteps/ProgressSteps', () => {
   return {
     ProgressSteps: ({ currentStep, totalSteps }: { currentStep: number; totalSteps: number }) => (
       <div data-testid="progress-steps" data-current={currentStep} data-total={totalSteps}>

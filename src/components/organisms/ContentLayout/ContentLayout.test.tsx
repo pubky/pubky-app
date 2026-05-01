@@ -40,7 +40,7 @@ vi.mock('@/hooks/useIsMobile/useIsMobile', () => ({
 }));
 
 // Mock the molecules
-vi.mock('@/molecules/ButtonFilters/ButtonFilters', async () => {
+vi.mock('@/molecules/ButtonFilters/ButtonFilters', () => {
   return {
     ButtonFilters: ({ onClick, position }: { onClick?: () => void; position?: 'left' | 'right' }) => (
       <button data-testid={`button-filters-${position}`} onClick={onClick}>
@@ -50,7 +50,7 @@ vi.mock('@/molecules/ButtonFilters/ButtonFilters', async () => {
   };
 });
 
-vi.mock('@/molecules/Filters/FilterContent/FilterContent', async () => {
+vi.mock('@/molecules/Filters/FilterContent/FilterContent', () => {
   return {
     FilterContent: ({ onTabChange }: { onTabChange?: (tab: string) => void }) => (
       <div data-testid="filter-content">
@@ -60,7 +60,7 @@ vi.mock('@/molecules/Filters/FilterContent/FilterContent', async () => {
   };
 });
 
-vi.mock('@/molecules/Filters/FilterLayout/FilterLayout', async () => {
+vi.mock('@/molecules/Filters/FilterLayout/FilterLayout', () => {
   return {
     FilterLayout: ({ onTabChange, onClose }: { onTabChange?: (tab: string) => void; onClose?: () => void }) => (
       <div data-testid="filter-layout">
@@ -77,7 +77,7 @@ vi.mock('@/molecules/Filters/FilterLayout/FilterLayout', async () => {
   };
 });
 
-vi.mock('@/molecules/Filters/FilterReach/FilterReach', async () => {
+vi.mock('@/molecules/Filters/FilterReach/FilterReach', () => {
   return {
     FilterReach: ({ onTabChange }: { onTabChange?: (tab: string) => void }) => (
       <div data-testid="filter-reach">
@@ -87,7 +87,7 @@ vi.mock('@/molecules/Filters/FilterReach/FilterReach', async () => {
   };
 });
 
-vi.mock('@/molecules/Filters/FilterSort/FilterSort', async () => {
+vi.mock('@/molecules/Filters/FilterSort/FilterSort', () => {
   return {
     FilterSort: ({ onTabChange }: { onTabChange?: (tab: string) => void }) => (
       <div data-testid="filter-sort">
@@ -97,13 +97,13 @@ vi.mock('@/molecules/Filters/FilterSort/FilterSort', async () => {
   };
 });
 
-vi.mock('@/molecules/MobileFooter/MobileFooter', async () => {
+vi.mock('@/molecules/MobileFooter/MobileFooter', () => {
   return {
     MobileFooter: () => <div data-testid="mobile-footer">Mobile Footer</div>,
   };
 });
 
-vi.mock('@/molecules/MobileHeader/MobileHeader', async () => {
+vi.mock('@/molecules/MobileHeader/MobileHeader', () => {
   return {
     MobileHeader: ({
       onLeftIconClick,
@@ -120,7 +120,7 @@ vi.mock('@/molecules/MobileHeader/MobileHeader', async () => {
   };
 });
 
-vi.mock('@/molecules/SideDrawer/SideDrawer', async () => {
+vi.mock('@/molecules/SideDrawer/SideDrawer', () => {
   return {
     SideDrawer: ({
       open,
@@ -141,32 +141,32 @@ vi.mock('@/molecules/SideDrawer/SideDrawer', async () => {
   };
 });
 
-vi.mock('@/organisms/ActiveUsers/ActiveUsers', async () => {
+vi.mock('@/organisms/ActiveUsers/ActiveUsers', () => {
   return {
     ActiveUsers: () => <div data-testid="active-users">Active Users</div>,
   };
 });
 
-vi.mock('@/organisms/FeedbackCard/FeedbackCard', async () => {
+vi.mock('@/organisms/FeedbackCard/FeedbackCard', () => {
   return {
     FeedbackCard: () => <div data-testid="feedback-card">Feedback Card</div>,
   };
 });
 
-vi.mock('@/organisms/WhoToFollowSidebar/WhoToFollowSidebar', async () => {
+vi.mock('@/organisms/WhoToFollowSidebar/WhoToFollowSidebar', () => {
   return {
     WhoToFollowSidebar: () => <div data-testid="who-to-follow">Who to Follow</div>,
   };
 });
 
 // Mock the organisms
-vi.mock('@/organisms/LeftSidebar/LeftSidebar', async () => {
+vi.mock('@/organisms/LeftSidebar/LeftSidebar', () => {
   return {
     LeftSidebar: () => <div data-testid="left-sidebar">Left Sidebar</div>,
   };
 });
 
-vi.mock('@/organisms/RightSidebar/RightSidebar', async () => {
+vi.mock('@/organisms/RightSidebar/RightSidebar', () => {
   return {
     RightSidebar: () => <div data-testid="right-sidebar">Right Sidebar</div>,
   };

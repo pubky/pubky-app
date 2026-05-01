@@ -41,7 +41,7 @@ vi.mock('@/app/routes', () => ({
 }));
 
 // Mock molecules
-vi.mock('@/molecules/SidebarSection/SidebarSection', async () => {
+vi.mock('@/molecules/SidebarSection/SidebarSection', () => {
   return {
     SidebarSection: ({
       title,
@@ -63,7 +63,7 @@ vi.mock('@/molecules/SidebarSection/SidebarSection', async () => {
 });
 
 // Mock organisms
-vi.mock('@/organisms/UserListItem/UserListItem', async () => {
+vi.mock('@/organisms/UserListItem/UserListItem', () => {
   return {
     UserListItem: ({
       user,
@@ -87,7 +87,7 @@ vi.mock('@/organisms/UserListItem/UserListItem', async () => {
 });
 
 // Mock atoms
-vi.mock('@/atoms/Container/Container', async () => {
+vi.mock('@/atoms/Container/Container', () => {
   return {
     Container: ({ children, className }: { children: React.ReactNode; className?: string }) => (
       <div className={className}>{children}</div>
@@ -95,19 +95,19 @@ vi.mock('@/atoms/Container/Container', async () => {
   };
 });
 
-vi.mock('@/atoms/Skeleton/Skeleton', async () => {
+vi.mock('@/atoms/Skeleton/Skeleton', () => {
   return {
     Skeleton: ({ className }: { className?: string }) => <div data-testid="skeleton" className={className} />,
   };
 });
 
-vi.mock('@/atoms/Spinner/Spinner', async () => {
+vi.mock('@/atoms/Spinner/Spinner', () => {
   return {
     Spinner: ({ size }: { size: string }) => <div data-testid="spinner" data-size={size} />,
   };
 });
 
-vi.mock('@/atoms/Typography/Typography', async () => {
+vi.mock('@/atoms/Typography/Typography', () => {
   return {
     Typography: ({ children }: { children: React.ReactNode }) => <span>{children}</span>,
   };

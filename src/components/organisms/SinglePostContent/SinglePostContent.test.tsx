@@ -77,7 +77,7 @@ vi.mock('@/hooks/useUserDetailsFromIds/useUserDetailsFromIds', () => ({
 }));
 
 // Mock atoms
-vi.mock('@/atoms/Card/Card', async () => {
+vi.mock('@/atoms/Card/Card', () => {
   return {
     Card: ({ children, className }: { children: React.ReactNode; className?: string }) => (
       <div data-testid="card" data-class-name={className}>
@@ -92,7 +92,7 @@ vi.mock('@/atoms/Card/Card', async () => {
   };
 });
 
-vi.mock('@/atoms/Container/Container', async () => {
+vi.mock('@/atoms/Container/Container', () => {
   return {
     Container: ({
       children,
@@ -110,7 +110,7 @@ vi.mock('@/atoms/Container/Container', async () => {
   };
 });
 
-vi.mock('@/atoms/PageHeader/PageHeader', async () => {
+vi.mock('@/atoms/PageHeader/PageHeader', () => {
   return {
     PageHeader: ({ children, ...props }: { children: React.ReactNode; [key: string]: unknown }) => (
       <div data-testid="page-header" {...props}>
@@ -120,7 +120,7 @@ vi.mock('@/atoms/PageHeader/PageHeader', async () => {
   };
 });
 
-vi.mock('@/atoms/PostThreadConnector/PostThreadConnector.constants', async () => {
+vi.mock('@/atoms/PostThreadConnector/PostThreadConnector.constants', () => {
   return {
     POST_THREAD_CONNECTOR_VARIANTS: {
       REGULAR: 'regular',
@@ -129,20 +129,20 @@ vi.mock('@/atoms/PostThreadConnector/PostThreadConnector.constants', async () =>
   };
 });
 
-vi.mock('@/atoms/PostThreadSpacer/PostThreadSpacer', async () => {
+vi.mock('@/atoms/PostThreadSpacer/PostThreadSpacer', () => {
   return {
     PostThreadSpacer: () => <div data-testid="post-thread-spacer" />,
   };
 });
 
-vi.mock('@/atoms/Skeleton/Skeleton', async () => {
+vi.mock('@/atoms/Skeleton/Skeleton', () => {
   return {
     Skeleton: ({ className }: { className?: string }) => <div data-testid="skeleton" className={className} />,
   };
 });
 
 // Mock molecules
-vi.mock('@/molecules/PostDeleted/PostDeleted', async () => {
+vi.mock('@/molecules/PostDeleted/PostDeleted', () => {
   return {
     PostDeleted: () => <div data-testid="post-deleted">Post deleted</div>,
   };

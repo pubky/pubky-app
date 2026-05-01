@@ -35,7 +35,7 @@ vi.mock('@/hooks/useInfiniteScroll/useInfiniteScroll', () => ({
 }));
 
 // Mock atoms
-vi.mock('@/atoms/Container/Container', async () => {
+vi.mock('@/atoms/Container/Container', () => {
   return {
     Container: ({
       children,
@@ -48,7 +48,7 @@ vi.mock('@/atoms/Container/Container', async () => {
   };
 });
 
-vi.mock('@/atoms/Heading/Heading', async () => {
+vi.mock('@/atoms/Heading/Heading', () => {
   return {
     Heading: ({ children, level, className }: { children: React.ReactNode; level?: number; className?: string }) => {
       const Tag = `h${level || 1}` as 'h1' | 'h2' | 'h3' | 'h4' | 'h5' | 'h6';
@@ -61,20 +61,20 @@ vi.mock('@/atoms/Heading/Heading', async () => {
   };
 });
 
-vi.mock('@/atoms/Skeleton/Skeleton', async () => {
+vi.mock('@/atoms/Skeleton/Skeleton', () => {
   return {
     Skeleton: ({ className }: { className?: string }) => <div data-testid="skeleton" className={className} />,
   };
 });
 
-vi.mock('@/atoms/Spinner/Spinner', async () => {
+vi.mock('@/atoms/Spinner/Spinner', () => {
   return {
     Spinner: ({ size }: { size?: string }) => <div data-testid="spinner" data-size={size} />,
   };
 });
 
 // Mock molecules
-vi.mock('@/molecules/NotificationsEmpty/NotificationsEmpty', async () => {
+vi.mock('@/molecules/NotificationsEmpty/NotificationsEmpty', () => {
   return {
     NotificationsEmpty: () => <div data-testid="notifications-empty">Nothing to see here yet</div>,
   };

@@ -2,7 +2,7 @@ import { render, screen } from '@testing-library/react';
 import { describe, it, expect, vi } from 'vitest';
 import { EditProfile } from './EditProfile';
 
-vi.mock('@/molecules/OnboardingLayout/OnboardingLayout', async () => {
+vi.mock('@/molecules/OnboardingLayout/OnboardingLayout', () => {
   return {
     OnboardingLayout: ({ children, testId }: { children: React.ReactNode; testId?: string }) => (
       <div data-testid={testId}>{children}</div>
@@ -10,13 +10,13 @@ vi.mock('@/molecules/OnboardingLayout/OnboardingLayout', async () => {
   };
 });
 
-vi.mock('@/organisms/Settings/EditProfileForm/EditProfileForm', async () => {
+vi.mock('@/organisms/Settings/EditProfileForm/EditProfileForm', () => {
   return {
     EditProfileForm: () => <div data-testid="edit-profile-form" />,
   };
 });
 
-vi.mock('@/organisms/Settings/EditProfileHeader/EditProfileHeader', async () => {
+vi.mock('@/organisms/Settings/EditProfileHeader/EditProfileHeader', () => {
   return {
     EditProfileHeader: () => <div data-testid="edit-profile-header" />,
   };

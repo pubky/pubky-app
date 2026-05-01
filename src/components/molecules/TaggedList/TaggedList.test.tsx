@@ -4,7 +4,7 @@ import { TaggedList } from './TaggedList';
 import type { TagWithAvatars } from '@/molecules/TaggedItem/TaggedItem.types';
 
 // Mock TaggedItem
-vi.mock('@/molecules/TaggedItem/TaggedItem', async () => {
+vi.mock('@/molecules/TaggedItem/TaggedItem', () => {
   return {
     TaggedItem: ({ tag }: { tag: TagWithAvatars }) => <div data-testid="tagged-item">{tag.label}</div>,
   };

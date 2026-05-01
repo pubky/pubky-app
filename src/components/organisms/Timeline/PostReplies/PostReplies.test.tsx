@@ -42,7 +42,7 @@ vi.mock('@/hooks/usePostCounts/usePostCounts', () => ({
 }));
 
 // Mock atoms
-vi.mock('@/atoms/Container/Container', async () => {
+vi.mock('@/atoms/Container/Container', () => {
   return {
     Container: ({
       children,
@@ -61,7 +61,7 @@ vi.mock('@/atoms/Container/Container', async () => {
 });
 
 // Mock ThreadTree organism
-vi.mock('@/organisms/ThreadTree/ThreadTree', async () => {
+vi.mock('@/organisms/ThreadTree/ThreadTree', () => {
   return {
     ThreadTree: ({ postId, showQuickReply }: { postId: string; showQuickReply?: boolean }) => (
       <div data-testid="thread-tree" data-post-id={postId} data-show-quick-reply={String(showQuickReply)} />

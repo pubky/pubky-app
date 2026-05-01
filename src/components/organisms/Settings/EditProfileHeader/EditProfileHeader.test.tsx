@@ -16,7 +16,7 @@ vi.mock('@/hooks/useCopyToClipboard/useCopyToClipboard', () => ({
   }),
 }));
 
-vi.mock('@/molecules/Page/Page', async () => {
+vi.mock('@/molecules/Page/Page', () => {
   return {
     PageTitle: ({ children, size }: { children: React.ReactNode; size?: string }) => (
       <h1 data-testid="page-title" data-size={size}>
@@ -26,7 +26,7 @@ vi.mock('@/molecules/Page/Page', async () => {
   };
 });
 
-vi.mock('@/molecules/PopoverPublicKey/PopoverPublicKey', async () => {
+vi.mock('@/molecules/PopoverPublicKey/PopoverPublicKey', () => {
   return {
     PopoverPublicKey: ({ className }: { className?: string }) => (
       <div data-testid="popover-public-key" className={className} />

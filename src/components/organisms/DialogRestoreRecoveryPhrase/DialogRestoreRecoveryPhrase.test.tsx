@@ -3,7 +3,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { DialogRestoreRecoveryPhrase } from './DialogRestoreRecoveryPhrase';
 import { AuthController } from '@/controllers/auth/auth';
-vi.mock('@/atoms/Dialog/Dialog', async () => {
+vi.mock('@/atoms/Dialog/Dialog', () => {
   return {
     Dialog: vi.fn(({ children }) => <div data-testid="dialog">{children}</div>),
     DialogTrigger: vi.fn(({ children, asChild }) => (
@@ -51,7 +51,7 @@ vi.mock('@/atoms/Dialog/Dialog', async () => {
 
 // Mock external dependencies
 
-vi.mock('@/atoms/Badge/Badge', async () => {
+vi.mock('@/atoms/Badge/Badge', () => {
   return {
     Badge: vi.fn(({ children, variant, className }) => (
       <span data-testid="badge" data-variant={variant} className={className}>
@@ -61,7 +61,7 @@ vi.mock('@/atoms/Badge/Badge', async () => {
   };
 });
 
-vi.mock('@/atoms/Button/Button', async () => {
+vi.mock('@/atoms/Button/Button', () => {
   return {
     Button: vi.fn(({ children, variant, className, size, onClick, disabled, ...props }) => (
       <button
@@ -79,7 +79,7 @@ vi.mock('@/atoms/Button/Button', async () => {
   };
 });
 
-vi.mock('@/atoms/Container/Container', async () => {
+vi.mock('@/atoms/Container/Container', () => {
   return {
     Container: vi.fn(({ children, className, display, ...props }) => (
       <div data-testid="container" className={className} data-display={display} {...props}>
@@ -89,7 +89,7 @@ vi.mock('@/atoms/Container/Container', async () => {
   };
 });
 
-vi.mock('@/atoms/Input/Input', async () => {
+vi.mock('@/atoms/Input/Input', () => {
   return {
     Input: vi.fn(({ value, placeholder, className, onChange, onBlur, ...props }) => (
       <input
@@ -121,7 +121,7 @@ vi.mock('@/stores/auth/auth.store', () => ({
 
 // Mock Molecules module
 const mockToast = vi.fn();
-vi.mock('@/molecules/Toaster/use-toast', async () => {
+vi.mock('@/molecules/Toaster/use-toast', () => {
   return {
     useToast: vi.fn(() => ({
       toast: mockToast,
@@ -129,7 +129,7 @@ vi.mock('@/molecules/Toaster/use-toast', async () => {
   };
 });
 
-vi.mock('@/molecules/WordSlot/WordSlot', async () => {
+vi.mock('@/molecules/WordSlot/WordSlot', () => {
   return {
     WordSlot: vi.fn(
       ({ index, word, isError, showError, isRestoring, onChange, onValidate, onKeyDown, mode, ...props }) => (

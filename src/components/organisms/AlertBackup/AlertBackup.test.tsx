@@ -1,7 +1,7 @@
 import { describe, it, expect, vi } from 'vitest';
 import { render, screen } from '@testing-library/react';
 import { AlertBackup } from './AlertBackup';
-vi.mock('@/atoms/Dialog/Dialog', async () => {
+vi.mock('@/atoms/Dialog/Dialog', () => {
   return {
     Dialog: vi.fn(({ children }: { children: React.ReactNode }) => <div data-testid="dialog">{children}</div>),
     DialogTrigger: vi.fn(({ children }: { children: React.ReactNode }) => (
@@ -33,7 +33,7 @@ vi.mock('@/stores/onboarding/onboarding.store', () => ({
 }));
 
 // Mock atoms
-vi.mock('@/atoms/Button/Button', async () => {
+vi.mock('@/atoms/Button/Button', () => {
   return {
     Button: ({
       children,
@@ -53,7 +53,7 @@ vi.mock('@/atoms/Button/Button', async () => {
   };
 });
 
-vi.mock('@/atoms/Card/Card', async () => {
+vi.mock('@/atoms/Card/Card', () => {
   return {
     Card: ({ children, className }: { children: React.ReactNode; className?: string }) => (
       <div data-testid="card" className={className}>
@@ -63,7 +63,7 @@ vi.mock('@/atoms/Card/Card', async () => {
   };
 });
 
-vi.mock('@/atoms/Container/Container', async () => {
+vi.mock('@/atoms/Container/Container', () => {
   return {
     Container: ({ children, className }: { children: React.ReactNode; className?: string }) => (
       <div data-testid="container" className={className}>
@@ -73,7 +73,7 @@ vi.mock('@/atoms/Container/Container', async () => {
   };
 });
 
-vi.mock('@/atoms/Input/Input', async () => {
+vi.mock('@/atoms/Input/Input', () => {
   return {
     Input: ({
       type,
@@ -103,7 +103,7 @@ vi.mock('@/atoms/Input/Input', async () => {
   };
 });
 
-vi.mock('@/atoms/Label/Label', async () => {
+vi.mock('@/atoms/Label/Label', () => {
   return {
     Label: ({ children, htmlFor, className }: { children: React.ReactNode; htmlFor?: string; className?: string }) => (
       <label data-testid="label" htmlFor={htmlFor} className={className}>
@@ -113,7 +113,7 @@ vi.mock('@/atoms/Label/Label', async () => {
   };
 });
 
-vi.mock('@/atoms/Typography/Typography', async () => {
+vi.mock('@/atoms/Typography/Typography', () => {
   return {
     Typography: ({ children, size, className }: { children: React.ReactNode; size?: string; className?: string }) => (
       <p data-testid="typography" data-size={size} className={className}>
@@ -124,32 +124,32 @@ vi.mock('@/atoms/Typography/Typography', async () => {
 });
 
 // Mock molecules
-vi.mock('@/organisms/DialogBackupExport/DialogBackupExport', async () => {
+vi.mock('@/organisms/DialogBackupExport/DialogBackupExport', () => {
   return {
     DialogBackupExport: vi.fn(() => <div data-testid="dialog-export">DialogBackupExport</div>),
   };
 });
 
 // Mock organisms
-vi.mock('@/organisms/DialogBackup/DialogBackup', async () => {
+vi.mock('@/organisms/DialogBackup/DialogBackup', () => {
   return {
     DialogBackup: vi.fn(() => <div data-testid="dialog-backup">DialogBackup</div>),
   };
 });
 
-vi.mock('@/organisms/DialogBackupEncrypted/DialogBackupEncrypted', async () => {
+vi.mock('@/organisms/DialogBackupEncrypted/DialogBackupEncrypted', () => {
   return {
     DialogBackupEncrypted: vi.fn(() => <div data-testid="dialog-backup-encrypted">DialogBackupEncrypted</div>),
   };
 });
 
-vi.mock('@/organisms/DialogBackupPhrase/DialogBackupPhrase', async () => {
+vi.mock('@/organisms/DialogBackupPhrase/DialogBackupPhrase', () => {
   return {
     DialogBackupPhrase: vi.fn(() => <div data-testid="dialog-backup-phrase">DialogBackupPhrase</div>),
   };
 });
 
-vi.mock('@/organisms/DialogConfirmBackup/DialogConfirmBackup', async () => {
+vi.mock('@/organisms/DialogConfirmBackup/DialogConfirmBackup', () => {
   return {
     DialogConfirmBackup: vi.fn(() => <div data-testid="dialog-confirm-backup">DialogConfirmBackup</div>),
   };

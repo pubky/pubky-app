@@ -3,13 +3,13 @@ import { renderToString } from 'react-dom/server';
 import { describe, expect, it, vi } from 'vitest';
 import DynamicProfilePage from './page';
 
-vi.mock('@/templates/Profile/Posts/ProfilePostsPage', async () => {
+vi.mock('@/templates/Profile/Posts/ProfilePostsPage', () => {
   return {
     ProfilePostsPage: () => <div data-testid="profile-page-posts">Posts</div>,
   };
 });
 
-vi.mock('@/templates/Profile/Profile/ProfileOverviewPage', async () => {
+vi.mock('@/templates/Profile/Profile/ProfileOverviewPage', () => {
   return {
     ProfileOverviewPage: () => <div data-testid="profile-page-profile">Profile</div>,
   };

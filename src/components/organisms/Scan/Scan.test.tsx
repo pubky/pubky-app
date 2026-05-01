@@ -6,7 +6,7 @@ import { PUBKY_CORE_URL } from '@/config/externalLinks';
 import { ONBOARDING_ROUTES } from '@/app/routes';
 import { useMobileAuth } from '@/hooks/useMobileAuth/useMobileAuth';
 import { asOpaque } from '@/test-utils/type-assertions';
-vi.mock('@/atoms/Dialog/Dialog', async () => {
+vi.mock('@/atoms/Dialog/Dialog', () => {
   return {
     Dialog: ({ children, open }: { children: React.ReactNode; open?: boolean }) =>
       open ? (
@@ -87,7 +87,7 @@ vi.mock('@/hooks/useMobileAuth/useMobileAuth', () => ({
 }));
 
 // Mock molecules - use real DialogAuthExpired (Radix) per component-testing rules
-vi.mock('@/molecules/ButtonsNavigation/ButtonsNavigation', async () => {
+vi.mock('@/molecules/ButtonsNavigation/ButtonsNavigation', () => {
   return {
     ButtonsNavigation: ({
       onHandleBackButton,
@@ -112,7 +112,7 @@ vi.mock('@/molecules/ButtonsNavigation/ButtonsNavigation', async () => {
   };
 });
 
-vi.mock('@/molecules/Content/Content', async () => {
+vi.mock('@/molecules/Content/Content', () => {
   return {
     ContentCard: ({ children, layout }: { children: React.ReactNode; layout?: string }) => (
       <div data-testid="content-card" data-layout={layout}>
@@ -122,7 +122,7 @@ vi.mock('@/molecules/Content/Content', async () => {
   };
 });
 
-vi.mock('@/molecules/Page/Page', async () => {
+vi.mock('@/molecules/Page/Page', () => {
   return {
     PageTitle: ({ children, size }: { children: React.ReactNode; size?: string }) => (
       <h1 data-testid="page-title" data-size={size}>
@@ -132,7 +132,7 @@ vi.mock('@/molecules/Page/Page', async () => {
   };
 });
 
-vi.mock('@/molecules/Toaster/use-toast', async () => {
+vi.mock('@/molecules/Toaster/use-toast', () => {
   return {
     toast: vi.fn(),
   };
@@ -144,7 +144,7 @@ const { mockCopyToClipboard } = vi.hoisted(() => ({
 }));
 
 // Mock atoms
-vi.mock('@/atoms/Button/Button', async () => {
+vi.mock('@/atoms/Button/Button', () => {
   return {
     Button: ({
       asChild,
@@ -174,7 +174,7 @@ vi.mock('@/atoms/Button/Button', async () => {
   };
 });
 
-vi.mock('@/atoms/Container/Container', async () => {
+vi.mock('@/atoms/Container/Container', () => {
   return {
     Container: ({ children, className }: { children: React.ReactNode; className?: string }) => (
       <div data-testid="container" className={className}>
@@ -184,13 +184,13 @@ vi.mock('@/atoms/Container/Container', async () => {
   };
 });
 
-vi.mock('@/atoms/FooterLinks/FooterLinks', async () => {
+vi.mock('@/atoms/FooterLinks/FooterLinks', () => {
   return {
     FooterLinks: ({ children }: { children: React.ReactNode }) => <div data-testid="footer-links">{children}</div>,
   };
 });
 
-vi.mock('@/atoms/Link/Link', async () => {
+vi.mock('@/atoms/Link/Link', () => {
   return {
     Link: ({ children, href, target }: { children: React.ReactNode; href: string; target?: string }) => (
       <a data-testid="link" href={href} target={target}>
@@ -200,19 +200,19 @@ vi.mock('@/atoms/Link/Link', async () => {
   };
 });
 
-vi.mock('@/atoms/PageHeader/PageHeader', async () => {
+vi.mock('@/atoms/PageHeader/PageHeader', () => {
   return {
     PageHeader: ({ children }: { children: React.ReactNode }) => <div data-testid="page-header">{children}</div>,
   };
 });
 
-vi.mock('@/atoms/PageSubtitle/PageSubtitle', async () => {
+vi.mock('@/atoms/PageSubtitle/PageSubtitle', () => {
   return {
     PageSubtitle: ({ children }: { children: React.ReactNode }) => <div data-testid="page-subtitle">{children}</div>,
   };
 });
 
-vi.mock('@/atoms/Typography/Typography', async () => {
+vi.mock('@/atoms/Typography/Typography', () => {
   return {
     Typography: ({
       children,

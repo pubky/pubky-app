@@ -74,7 +74,7 @@ vi.mock('@/stores/notification/notification.store', () => ({
 }));
 
 // Mock organisms
-vi.mock('@/organisms/AvatarWithFallback/AvatarWithFallback', async () => {
+vi.mock('@/organisms/AvatarWithFallback/AvatarWithFallback', () => {
   return {
     AvatarWithFallback: ({ name, avatarUrl, className }: { name: string; avatarUrl?: string; className?: string }) => (
       <div data-testid="avatar-with-fallback" data-name={name} data-avatar={avatarUrl} className={className}>
@@ -87,7 +87,7 @@ vi.mock('@/organisms/AvatarWithFallback/AvatarWithFallback', async () => {
 // Mock molecules
 const mockToast = vi.fn();
 const mockGetOrFetch = vi.fn<() => Promise<{ kind: string; content: string } | null>>(() => Promise.resolve(null));
-vi.mock('@/molecules/NotificationIcon/NotificationIcon', async () => {
+vi.mock('@/molecules/NotificationIcon/NotificationIcon', () => {
   return {
     NotificationIcon: ({ type, showBadge }: { type: NotificationType; showBadge?: boolean }) => (
       <div data-testid="notification-icon" data-type={type} data-badge={showBadge ? 'true' : 'false'}>
@@ -97,7 +97,7 @@ vi.mock('@/molecules/NotificationIcon/NotificationIcon', async () => {
   };
 });
 
-vi.mock('@/molecules/PostTag/PostTag', async () => {
+vi.mock('@/molecules/PostTag/PostTag', () => {
   return {
     PostTag: ({ label, onClick }: { label: string; onClick?: (e: React.MouseEvent) => void }) => (
       <span data-testid="post-tag" onClick={onClick}>
@@ -107,14 +107,14 @@ vi.mock('@/molecules/PostTag/PostTag', async () => {
   };
 });
 
-vi.mock('@/molecules/Toaster/use-toast', async () => {
+vi.mock('@/molecules/Toaster/use-toast', () => {
   return {
     useToast: () => ({ toast: mockToast }),
   };
 });
 
 // Mock atoms
-vi.mock('@/atoms/Container/Container', async () => {
+vi.mock('@/atoms/Container/Container', () => {
   return {
     Container: ({
       children,
@@ -132,7 +132,7 @@ vi.mock('@/atoms/Container/Container', async () => {
   };
 });
 
-vi.mock('@/atoms/Typography/Typography', async () => {
+vi.mock('@/atoms/Typography/Typography', () => {
   return {
     Typography: ({
       children,

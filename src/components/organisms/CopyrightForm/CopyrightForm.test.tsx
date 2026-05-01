@@ -8,13 +8,13 @@ const { mockToast, mockShowErrorToast } = vi.hoisted(() => ({
   mockToast: vi.fn(),
   mockShowErrorToast: vi.fn(),
 }));
-vi.mock('@/molecules/Toaster/showErrorToast', async () => {
+vi.mock('@/molecules/Toaster/showErrorToast', () => {
   return {
     showErrorToast: mockShowErrorToast,
   };
 });
 
-vi.mock('@/molecules/Toaster/use-toast', async () => {
+vi.mock('@/molecules/Toaster/use-toast', () => {
   return {
     toast: mockToast,
   };

@@ -12,7 +12,7 @@ vi.mock('next/navigation', () => ({
 }));
 
 // Mock TaggedItem
-vi.mock('@/molecules/TaggedItem/TaggedItem', async () => {
+vi.mock('@/molecules/TaggedItem/TaggedItem', () => {
   return {
     TaggedItem: ({ tag }: { tag: TagWithAvatars }) => <div data-testid="tagged-item">{tag.label}</div>,
   };

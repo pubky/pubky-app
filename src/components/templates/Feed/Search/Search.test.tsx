@@ -13,7 +13,7 @@ vi.mock('@/hooks/useSearchStreamId/useSearchStreamId', () => ({
   useSearchTags: () => mockUseSearchTags(),
 }));
 
-vi.mock('@/organisms/ContentLayout/ContentLayout', async () => {
+vi.mock('@/organisms/ContentLayout/ContentLayout', () => {
   return {
     ContentLayout: ({ children, feedVariant }: { children: React.ReactNode; feedVariant?: string }) => (
       <div data-testid="content-layout" data-feed-variant={feedVariant}>
@@ -23,20 +23,20 @@ vi.mock('@/organisms/ContentLayout/ContentLayout', async () => {
   };
 });
 
-vi.mock('@/organisms/DialogWelcome/DialogWelcome', async () => {
+vi.mock('@/organisms/DialogWelcome/DialogWelcome', () => {
   return {
     DialogWelcome: () => <div data-testid="dialog-welcome">DialogWelcome</div>,
   };
 });
 
-vi.mock('@/organisms/FeedRightSidebar/FeedRightSidebar', async () => {
+vi.mock('@/organisms/FeedRightSidebar/FeedRightSidebar', () => {
   return {
     HomeFeedRightSidebar: () => <div data-testid="home-feed-right-sidebar">HomeFeedRightSidebar</div>,
     HomeFeedRightDrawer: () => <div data-testid="home-feed-right-drawer">HomeFeedRightDrawer</div>,
   };
 });
 
-vi.mock('@/organisms/HomeFeedSidebar/HomeFeedSidebar', async () => {
+vi.mock('@/organisms/HomeFeedSidebar/HomeFeedSidebar', () => {
   return {
     HomeFeedSidebar: () => <div data-testid="home-feed-sidebar">HomeFeedSidebar</div>,
     HomeFeedDrawer: () => <div data-testid="home-feed-drawer">HomeFeedDrawer</div>,
@@ -44,31 +44,31 @@ vi.mock('@/organisms/HomeFeedSidebar/HomeFeedSidebar', async () => {
   };
 });
 
-vi.mock('@/organisms/SearchInput/SearchInput', async () => {
+vi.mock('@/organisms/SearchInput/SearchInput', () => {
   return {
     SearchInput: () => <div data-testid="search-input">SearchInput</div>,
   };
 });
 
-vi.mock('@/organisms/Timeline/Feed/TimelineFeed/TimelineFeed', async () => {
+vi.mock('@/organisms/Timeline/Feed/TimelineFeed/TimelineFeed', () => {
   return {
     TimelineFeed: () => <div data-testid="timeline-feed">TimelineFeed</div>,
   };
 });
 
-vi.mock('@/molecules/SearchEmptyState/SearchEmptyState', async () => {
+vi.mock('@/molecules/SearchEmptyState/SearchEmptyState', () => {
   return {
     SearchEmptyState: () => <div data-testid="search-empty-state">SearchEmptyState</div>,
   };
 });
 
-vi.mock('@/molecules/SearchHeader/SearchHeader', async () => {
+vi.mock('@/molecules/SearchHeader/SearchHeader', () => {
   return {
     SearchHeader: () => <div data-testid="search-header">SearchHeader</div>,
   };
 });
 
-vi.mock('@/atoms/Container/Container', async () => {
+vi.mock('@/atoms/Container/Container', () => {
   return {
     Container: ({
       children,

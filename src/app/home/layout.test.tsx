@@ -9,7 +9,7 @@ vi.mock('next/navigation', () => ({
   useSelectedLayoutSegments: vi.fn(),
 }));
 
-vi.mock('@/atoms/Container/Container', async () => {
+vi.mock('@/atoms/Container/Container', () => {
   return {
     Container: ({
       children,

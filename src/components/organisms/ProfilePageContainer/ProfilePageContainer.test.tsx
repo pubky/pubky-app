@@ -100,13 +100,13 @@ vi.mock('@/hooks/useIsFollowing/useIsFollowing', () => ({
 }));
 
 // Mock Molecules for UserNotFound component
-vi.mock('@/molecules/MobileFooter/MobileFooter', async () => {
+vi.mock('@/molecules/MobileFooter/MobileFooter', () => {
   return {
     MobileFooter: () => <div data-testid="mobile-footer" />,
   };
 });
 
-vi.mock('@/molecules/MobileHeader/MobileHeader', async () => {
+vi.mock('@/molecules/MobileHeader/MobileHeader', () => {
   return {
     MobileHeader: ({ showLeftButton, showRightButton }: { showLeftButton: boolean; showRightButton: boolean }) => (
       <div data-testid="mobile-header" data-left={showLeftButton} data-right={showRightButton} />
@@ -114,7 +114,7 @@ vi.mock('@/molecules/MobileHeader/MobileHeader', async () => {
   };
 });
 
-vi.mock('@/molecules/ProfilePageLayoutWrapper/ProfilePageLayoutWrapper', async () => {
+vi.mock('@/molecules/ProfilePageLayoutWrapper/ProfilePageLayoutWrapper', () => {
   return {
     ProfilePageLayoutWrapper: ({ children }: { children: React.ReactNode }) => (
       <div data-testid="profile-page-layout-wrapper">{children}</div>
@@ -122,14 +122,14 @@ vi.mock('@/molecules/ProfilePageLayoutWrapper/ProfilePageLayoutWrapper', async (
   };
 });
 
-vi.mock('@/molecules/UserNotFound/UserNotFound', async () => {
+vi.mock('@/molecules/UserNotFound/UserNotFound', () => {
   return {
     UserNotFound: () => <div data-testid="user-not-found">User not found</div>,
   };
 });
 
 // Mock Organisms - ProfilePageLayout
-vi.mock('@/organisms/ProfilePageLayout/ProfilePageLayout', async () => {
+vi.mock('@/organisms/ProfilePageLayout/ProfilePageLayout', () => {
   return {
     ProfilePageLayout: ({
       children,
