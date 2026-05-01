@@ -4,14 +4,10 @@ import { useRouter } from 'next/navigation';
 import { useLiveQuery } from 'dexie-react-hooks';
 import { TimelinePosts } from './Posts';
 import { useInfiniteScroll } from '@/hooks/useInfiniteScroll/useInfiniteScroll';
-import { usePostNavigation } from '@/hooks/usePostNavigation/usePostNavigation';
 
 // Mock dependencies
 vi.mock('next/navigation');
 vi.mock('dexie-react-hooks');
-vi.mock('@/hooks/usePostNavigation/usePostNavigation', () => ({
-  usePostNavigation: vi.fn(),
-}));
 
 vi.mock('@/hooks/useInfiniteScroll/useInfiniteScroll', () => ({
   useInfiniteScroll: vi.fn(),
@@ -93,7 +89,6 @@ vi.mock('@/organisms/Timeline/PostReplies/PostReplies', () => {
 const mockPush = vi.fn();
 const mockUseLiveQuery = vi.mocked(useLiveQuery);
 const mockUseRouter = vi.mocked(useRouter);
-const mockUsePostNavigation = vi.mocked(usePostNavigation);
 const mockUseInfiniteScroll = vi.mocked(useInfiniteScroll);
 
 const mockPostIds = ['author1:post1', 'author2:post2', 'author3:post3'];
@@ -110,11 +105,6 @@ describe('TimelinePosts', () => {
       replace: vi.fn(),
       prefetch: vi.fn(),
     } as ReturnType<typeof useRouter>);
-
-    // Mock usePostNavigation
-    mockUsePostNavigation.mockReturnValue({
-      navigateToPost: mockPush,
-    });
 
     mockUseInfiniteScroll.mockReturnValue({
       sentinelRef: vi.fn(),
@@ -338,48 +328,6 @@ describe('TimelinePosts', () => {
     });
   });
 
-  describe('Navigation', () => {
-    it('should navigate to post detail when post is clicked', async () => {
-      render(
-        <TimelinePosts
-          postIds={['author1:post123']}
-          loading={false}
-          loadingMore={false}
-          error={null}
-          hasMore={true}
-          loadMore={vi.fn()}
-        />,
-      );
-
-      await waitFor(() => {
-        const post = screen.getByTestId('post-author1:post123');
-        post.click();
-      });
-
-      expect(mockPush).toHaveBeenCalledWith('author1:post123');
-    });
-
-    it('should navigate with correct URL format for different posts', async () => {
-      render(
-        <TimelinePosts
-          postIds={mockPostIds}
-          loading={false}
-          loadingMore={false}
-          error={null}
-          hasMore={true}
-          loadMore={vi.fn()}
-        />,
-      );
-
-      await waitFor(() => {
-        const post1 = screen.getByTestId('post-author1:post1');
-        post1.click();
-      });
-
-      expect(mockPush).toHaveBeenCalledWith('author1:post1');
-    });
-  });
-
   describe('Pagination', () => {
     it('should call loadMore when infinite scroll triggers', async () => {
       const mockLoadMore = vi.fn();
@@ -577,11 +525,6 @@ describe('TimelinePosts - Snapshots', () => {
       replace: vi.fn(),
       prefetch: vi.fn(),
     } as ReturnType<typeof useRouter>);
-
-    // Mock usePostNavigation
-    mockUsePostNavigation.mockReturnValue({
-      navigateToPost: mockPush,
-    });
 
     mockUseInfiniteScroll.mockReturnValue({
       sentinelRef: vi.fn(),

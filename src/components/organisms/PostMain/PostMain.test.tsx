@@ -4,6 +4,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { useIsMobile } from '@/hooks/useIsMobile/useIsMobile';
 import { usePostDetails } from '@/hooks/usePostDetails/usePostDetails';
 import { usePostHeaderVisibility } from '@/hooks/usePostHeaderVisibility/usePostHeaderVisibility';
+import { usePostNavigation } from '@/hooks/usePostNavigation/usePostNavigation';
 import { PostMain } from './PostMain';
 import { PostMainLayoutProvider } from './PostMainLayout';
 import { POST_THREAD_CONNECTOR_VARIANTS } from '@/atoms/PostThreadConnector/PostThreadConnector.constants';
@@ -264,13 +265,25 @@ vi.mock('@/hooks/useTtlSubscription/useTtlSubscription', () => ({
   })),
 }));
 
+vi.mock('@/hooks/usePostNavigation/usePostNavigation', () => ({
+  usePostNavigation: vi.fn(),
+}));
+
 describe('PostMain', () => {
   const mockUseIsMobile = vi.mocked(useIsMobile);
+  const mockHandlePostClick = vi.fn();
+  const mockHandlePostAuxClick = vi.fn();
 
   beforeEach(() => {
     vi.clearAllMocks();
     mockPostHeader.mockClear();
     mockUseIsMobile.mockReturnValue(false);
+    vi.mocked(usePostNavigation).mockReturnValue({
+      getPostHref: vi.fn(() => '/post/author/post-abc'),
+      navigateToPost: vi.fn(),
+      handlePostClick: mockHandlePostClick,
+      handlePostAuxClick: mockHandlePostAuxClick,
+    });
     vi.mocked(usePostDetails).mockReturnValue({
       postDetails: {
         id: 'post-123',
@@ -296,16 +309,25 @@ describe('PostMain', () => {
     expect(screen.getByTestId('post-actions')).toBeInTheDocument();
   });
 
-  it('invokes onClick handler when clickable area is clicked', () => {
-    const onClick = vi.fn();
+  it('invokes navigation click handler when clickable area is clicked', () => {
+    render(<PostMain postId="post-abc" />);
 
-    render(<PostMain postId="post-abc" onClick={onClick} />);
-
-    // Click the cursor-pointer div (second child of relative container)
     const clickableArea = screen.getByTestId('card').parentElement;
     if (clickableArea) {
       fireEvent.click(clickableArea);
-      expect(onClick).toHaveBeenCalledTimes(1);
+      expect(mockHandlePostClick).toHaveBeenCalledTimes(1);
+      expect(mockHandlePostClick.mock.calls[0][0]).toBe('post-abc');
+    }
+  });
+
+  it('invokes aux-click handler for middle-click on the clickable area', () => {
+    render(<PostMain postId="post-abc" />);
+
+    const clickableArea = screen.getByTestId('card').parentElement;
+    if (clickableArea) {
+      fireEvent(clickableArea, new MouseEvent('auxclick', { bubbles: true, button: 1 }));
+      expect(mockHandlePostAuxClick).toHaveBeenCalledTimes(1);
+      expect(mockHandlePostAuxClick.mock.calls[0][0]).toBe('post-abc');
     }
   });
 

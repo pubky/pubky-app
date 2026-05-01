@@ -4,6 +4,7 @@ import { useElementHeight } from '@/hooks/useElementHeight/useElementHeight';
 import { useIsMobile } from '@/hooks/useIsMobile/useIsMobile';
 import { usePostDetails } from '@/hooks/usePostDetails/usePostDetails';
 import { usePostHeaderVisibility } from '@/hooks/usePostHeaderVisibility/usePostHeaderVisibility';
+import { usePostNavigation } from '@/hooks/usePostNavigation/usePostNavigation';
 import { useTtlSubscription } from '@/hooks/useTtlSubscription/useTtlSubscription';
 import React, { useRef, useState } from 'react';
 import { Card, CardContent } from '@/atoms/Card/Card';
@@ -27,13 +28,15 @@ import type { PostMainProps } from './PostMain.types';
 import { usePostMainLayout, WIDE_POST_LAYOUT_CLASSES } from './PostMainLayout';
 import { cn, isPostDeleted } from '@/libs/utils/utils';
 import { TagKind } from '@/application/tag/tag.types';
-export function PostMain({ postId, onClick, className, isReply = false, isLastReply = false }: PostMainProps) {
+export function PostMain({ postId, className, isReply = false, isLastReply = false }: PostMainProps) {
   const isMobile = useIsMobile();
   const inheritedTagsLayout = usePostMainLayout() ?? 'inline';
   const effectiveTagsLayout = inheritedTagsLayout === 'side' && isMobile ? 'inline' : inheritedTagsLayout;
   const isWideLayout = effectiveTagsLayout === 'side';
   const { postDetails } = usePostDetails(postId);
   const isDeleted = isPostDeleted(postDetails?.content);
+
+  const { handlePostClick, handlePostAuxClick } = usePostNavigation();
 
   const { showRepostHeader, shouldShowPostHeader } = usePostHeaderVisibility(postId);
 
@@ -73,7 +76,8 @@ export function PostMain({ postId, onClick, className, isReply = false, isLastRe
       <Container
         ref={ttlRef}
         overrideDefaults
-        onClick={onClick}
+        onClick={(e) => handlePostClick(postId, e)}
+        onAuxClick={(e) => handlePostAuxClick(postId, e)}
         className={cn('relative flex min-w-0 cursor-pointer', isReply && 'pl-3')}
       >
         {isReply && (
@@ -96,7 +100,12 @@ export function PostMain({ postId, onClick, className, isReply = false, isLastRe
                   <Container className={WIDE_POST_LAYOUT_CLASSES.leftColumn}>
                     {shouldShowPostHeader && <PostHeader postId={postId} size="large" timeAgoPlacement="bottom-left" />}
                     <PostContent postId={postId} textClassName={WIDE_POST_LAYOUT_CLASSES.bodyText} />
-                    <Container overrideDefaults onClick={handleFooterClick} className="flex flex-col gap-4">
+                    <Container
+                      overrideDefaults
+                      onAuxClick={handleFooterClick}
+                      onClick={handleFooterClick}
+                      className="flex flex-col gap-4"
+                    >
                       <PostTagsPanel ref={mobileTagsPanelRef} postId={postId} widthMode="full" className="lg:hidden" />
                       <PostActionsBar
                         postId={postId}
@@ -112,6 +121,7 @@ export function PostMain({ postId, onClick, className, isReply = false, isLastRe
                   <Container
                     overrideDefaults
                     onClick={handleFooterClick}
+                    onAuxClick={handleFooterClick}
                     className={WIDE_POST_LAYOUT_CLASSES.rightColumn}
                   >
                     <PostTagsPanel ref={desktopTagsPanelRef} postId={postId} widthMode="full" className="w-full" />
@@ -123,6 +133,7 @@ export function PostMain({ postId, onClick, className, isReply = false, isLastRe
                   <PostContent postId={postId} />
                   <Container
                     onClick={handleFooterClick}
+                    onAuxClick={handleFooterClick}
                     className={cn(
                       'flex-col items-start gap-2 md:flex-row md:justify-between md:gap-4',
                       tagsExpanded ? 'md:items-end' : 'md:items-start',

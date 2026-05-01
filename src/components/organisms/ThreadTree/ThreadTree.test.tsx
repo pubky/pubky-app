@@ -1,12 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { fireEvent, render, screen } from '@testing-library/react';
 import { ThreadTree } from './ThreadTree';
-import { usePostNavigation } from '@/hooks/usePostNavigation/usePostNavigation';
 import { useThreadReplies } from '@/hooks/useThreadReplies/useThreadReplies';
-
-vi.mock('@/hooks/usePostNavigation/usePostNavigation', () => ({
-  usePostNavigation: vi.fn(),
-}));
 
 vi.mock('@/hooks/useThreadReplies/useThreadReplies', () => ({
   useThreadReplies: vi.fn(),
@@ -50,9 +45,6 @@ describe('ThreadTree', () => {
   });
 
   it('renders quick reply only when no replies and quick reply is enabled', () => {
-    vi.mocked(usePostNavigation).mockReturnValue({
-      navigateToPost: vi.fn(),
-    });
     vi.mocked(useThreadReplies).mockReturnValue({
       replyIds: [],
       totalCount: 0,
@@ -69,9 +61,6 @@ describe('ThreadTree', () => {
   });
 
   it('renders null when no replies and quick reply is disabled', () => {
-    vi.mocked(usePostNavigation).mockReturnValue({
-      navigateToPost: vi.fn(),
-    });
     vi.mocked(useThreadReplies).mockReturnValue({
       replyIds: [],
       totalCount: 0,
@@ -87,10 +76,6 @@ describe('ThreadTree', () => {
   });
 
   it('renders replies and show-more with expected props', () => {
-    const navigateToPost = vi.fn();
-    vi.mocked(usePostNavigation).mockReturnValue({
-      navigateToPost,
-    });
     vi.mocked(useThreadReplies).mockReturnValue({
       replyIds: ['author:reply-1', 'author:reply-2'],
       totalCount: 5,
@@ -112,9 +97,6 @@ describe('ThreadTree', () => {
 
   it('calls expandAll when show-more is clicked', () => {
     const expandAll = vi.fn(async () => {});
-    vi.mocked(usePostNavigation).mockReturnValue({
-      navigateToPost: vi.fn(),
-    });
     vi.mocked(useThreadReplies).mockReturnValue({
       replyIds: ['author:reply-1'],
       totalCount: 2,
@@ -131,9 +113,6 @@ describe('ThreadTree', () => {
   });
 
   it('hides show-more button while expand-all is in progress', () => {
-    vi.mocked(usePostNavigation).mockReturnValue({
-      navigateToPost: vi.fn(),
-    });
     vi.mocked(useThreadReplies).mockReturnValue({
       replyIds: ['author:reply-1'],
       totalCount: 2,
@@ -151,9 +130,6 @@ describe('ThreadTree', () => {
 
 describe('ThreadTree - Snapshots', () => {
   it('matches snapshot with replies and show-more', () => {
-    vi.mocked(usePostNavigation).mockReturnValue({
-      navigateToPost: vi.fn(),
-    });
     vi.mocked(useThreadReplies).mockReturnValue({
       replyIds: ['author:reply-1'],
       totalCount: 2,

@@ -1,7 +1,6 @@
 'use client';
 
 import { useInfiniteScroll } from '@/hooks/useInfiniteScroll/useInfiniteScroll';
-import { usePostNavigation } from '@/hooks/usePostNavigation/usePostNavigation';
 import { useStreamPagination } from '@/hooks/useStreamPagination/useStreamPagination';
 import { useLiveQuery } from 'dexie-react-hooks';
 import { useEffect, useRef } from 'react';
@@ -28,7 +27,6 @@ import { useAuthStore } from '@/stores/auth/auth.store';
  */
 export function RepliesWithParent({ streamId }: RepliesWithParentProps) {
   const { postIds, loading, loadingMore, error, hasMore, loadMore } = useStreamPagination({ streamId });
-  const { navigateToPost } = usePostNavigation();
 
   // Infinite scroll hook
   const { sentinelRef } = useInfiniteScroll({
@@ -44,7 +42,7 @@ export function RepliesWithParent({ streamId }: RepliesWithParentProps) {
       <Container>
         <Container overrideDefaults className="space-y-4">
           {postIds.map((postId: string) => (
-            <ReplyWithParent key={`reply_${postId}`} replyPostId={postId} onPostClick={navigateToPost} />
+            <ReplyWithParent key={`reply_${postId}`} replyPostId={postId} />
           ))}
 
           {/* Loading More Indicator */}
@@ -70,7 +68,7 @@ export function RepliesWithParent({ streamId }: RepliesWithParentProps) {
  * Component that fetches and displays a reply post along with its parent.
  * Always shows the parent post if it exists.
  */
-function ReplyWithParent({ replyPostId, onPostClick }: ReplyWithParentProps) {
+function ReplyWithParent({ replyPostId }: ReplyWithParentProps) {
   // Component-level cache to track in-flight parent post fetches
   // Using useRef to avoid SSR memory leaks and state pollution
   const fetchingParentPostsRef = useRef(new Set<string>());
@@ -150,7 +148,7 @@ function ReplyWithParent({ replyPostId, onPostClick }: ReplyWithParentProps) {
       {/* Show parent post if it exists */}
       {shouldShowParent && (
         <>
-          <PostMain postId={parentPostId} onClick={() => onPostClick(parentPostId)} isReply={false} />
+          <PostMain postId={parentPostId} isReply={false} />
           <Container overrideDefaults className="pl-3">
             <PostThreadSpacer />
           </Container>
@@ -159,7 +157,7 @@ function ReplyWithParent({ replyPostId, onPostClick }: ReplyWithParentProps) {
 
       {/* Show the reply with isReply={true} */}
       <Container overrideDefaults className={shouldShowParent ? 'pl-3' : ''}>
-        <PostMain postId={replyPostId} onClick={() => onPostClick(replyPostId)} isReply={true} isLastReply={true} />
+        <PostMain postId={replyPostId} isReply={true} isLastReply={true} />
       </Container>
     </Container>
   );

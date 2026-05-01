@@ -1,7 +1,6 @@
 'use client';
 
 import { useInfiniteScroll } from '@/hooks/useInfiniteScroll/useInfiniteScroll';
-import { usePostNavigation } from '@/hooks/usePostNavigation/usePostNavigation';
 import { Container } from '@/atoms/Container/Container';
 import { TimelineEndMessage } from '@/molecules/Timeline/TimelineEndMessage';
 import { TimelineError } from '@/molecules/Timeline/TimelineError';
@@ -29,8 +28,6 @@ interface TimelinePostsProps {
  * PostMain / nested reply inherits the active tags layout via context.
  */
 export function TimelinePosts({ postIds, loading, loadingMore, error, hasMore, loadMore }: TimelinePostsProps) {
-  const { navigateToPost } = usePostNavigation();
-
   const { sentinelRef } = useInfiniteScroll({
     onLoadMore: loadMore,
     hasMore,
@@ -45,7 +42,7 @@ export function TimelinePosts({ postIds, loading, loadingMore, error, hasMore, l
         <Container data-cy="timeline-posts" overrideDefaults className="space-y-4">
           {postIds.map((postId) => (
             <Container key={`main_${postId}`} data-cy="post-card">
-              <PostMain postId={postId} onClick={() => navigateToPost(postId)} isReply={false} />
+              <PostMain postId={postId} isReply={false} />
               <TimelinePostReplies postId={postId} />
             </Container>
           ))}

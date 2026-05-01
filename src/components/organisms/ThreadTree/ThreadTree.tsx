@@ -1,6 +1,5 @@
 'use client';
 
-import { usePostNavigation } from '@/hooks/usePostNavigation/usePostNavigation';
 import { useThreadReplies } from '@/hooks/useThreadReplies/useThreadReplies';
 import { Container } from '@/atoms/Container/Container';
 import { PostThreadSpacer } from '@/atoms/PostThreadSpacer/PostThreadSpacer';
@@ -24,7 +23,6 @@ interface ThreadTreeProps {
  * Shared between the feed timeline and the single post page.
  */
 export function ThreadTree({ postId, showQuickReply = true }: ThreadTreeProps) {
-  const { navigateToPost } = usePostNavigation();
   const { replyIds, hasMore, totalCount, isExpandingAll, expandAll } = useThreadReplies(postId);
 
   if (replyIds.length === 0 && !hasMore) {
@@ -45,9 +43,7 @@ export function ThreadTree({ postId, showQuickReply = true }: ThreadTreeProps) {
       {replyIds.map((replyId, index) => {
         const isLastReply = index === replyIds.length - 1 && !hasMore && !showQuickReply;
 
-        return (
-          <ReplyWithNested key={replyId} replyId={replyId} isLastReply={isLastReply} onPostClick={navigateToPost} />
-        );
+        return <ReplyWithNested key={replyId} replyId={replyId} isLastReply={isLastReply} />;
       })}
 
       {/* "+N more replies" button for Level 1 */}
