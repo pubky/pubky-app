@@ -1,5 +1,3 @@
-'use client';
-
 import type { ReactNode } from 'react';
 import { render } from 'vitest-browser-react';
 import { page } from 'vitest/browser';
@@ -16,14 +14,13 @@ export interface RenderForVRTOptions {
 
 export const VRT_ROOT_TESTID = 'vrt-root';
 
-function VRTProviders({ children, viewport }: { children: ReactNode; viewport: { width: number; height: number } }) {
-  const queryClient = new QueryClient({
-    defaultOptions: {
-      queries: { retry: false, gcTime: Infinity, staleTime: Infinity },
-      mutations: { retry: false },
-    },
-  });
+interface VRTProvidersProps {
+  children: ReactNode;
+  viewport: { width: number; height: number };
+  queryClient: QueryClient;
+}
 
+function VRTProviders({ children, viewport, queryClient }: VRTProvidersProps) {
   // The wrapper clamps the rendered tree to the requested viewport so
   // `locator.screenshot()` returns a viewport-sized image instead of the full
   // scrollable document height. The data-testid lets tests target this element
@@ -51,7 +48,19 @@ export async function renderForVRT(ui: ReactNode, options: RenderForVRTOptions) 
   await page.viewport(options.viewport.width, options.viewport.height);
   freezeNow();
   mockMathRandom(0xdeadbeef);
-  const screen = render(<VRTProviders viewport={options.viewport}>{ui}</VRTProviders>);
+  // Fresh QueryClient per test keeps cache state isolated; instantiating here
+  // (rather than in the component body) avoids re-creation on every React render.
+  const queryClient = new QueryClient({
+    defaultOptions: {
+      queries: { retry: false, gcTime: Infinity, staleTime: Infinity },
+      mutations: { retry: false },
+    },
+  });
+  const screen = render(
+    <VRTProviders viewport={options.viewport} queryClient={queryClient}>
+      {ui}
+    </VRTProviders>,
+  );
   // Wait for Inter Tight (loaded in vrt.setup.ts via Google Fonts) to be
   // ready so the screenshot is never taken while the browser is still
   // showing the fallback face.
