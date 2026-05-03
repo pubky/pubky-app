@@ -110,11 +110,11 @@ describe('SettingsController', () => {
       expect(commitUpdateSpy).toHaveBeenCalledWith(mockSettingsState, TEST_PUBKY);
     });
 
-    it('should bubble errors from badge recalculation and skip homeserver sync', async () => {
+    it('should still sync to homeserver when badge recalculation fails', async () => {
       countFilteredSpy.mockRejectedValue(new Error('db-fail'));
 
       await expect(SettingsController.setNotificationPreference('follow', false)).rejects.toThrow('db-fail');
-      expect(commitUpdateSpy).not.toHaveBeenCalled();
+      expect(commitUpdateSpy).toHaveBeenCalledWith(mockSettingsState, TEST_PUBKY);
     });
   });
 
@@ -151,11 +151,11 @@ describe('SettingsController', () => {
       expect(commitUpdateSpy).toHaveBeenCalledWith(mockSettingsState, TEST_PUBKY);
     });
 
-    it('should bubble errors from badge recalculation and skip homeserver sync', async () => {
+    it('should still sync to homeserver when badge recalculation fails', async () => {
       countFilteredSpy.mockRejectedValue(new Error('db-fail'));
 
       await expect(SettingsController.setAllNotifications(defaultNotificationPreferences)).rejects.toThrow('db-fail');
-      expect(commitUpdateSpy).not.toHaveBeenCalled();
+      expect(commitUpdateSpy).toHaveBeenCalledWith(mockSettingsState, TEST_PUBKY);
     });
   });
 

@@ -43,8 +43,11 @@ export class SettingsController {
    */
   static async setNotificationPreference(type: keyof Core.NotificationPreferences, enabled: boolean): Promise<void> {
     Core.useSettingsStore.getState().setNotificationPreference(type, enabled);
-    await this.recalculateUnreadBadge();
-    await this.commitUpdate();
+    try {
+      await this.recalculateUnreadBadge();
+    } finally {
+      await this.commitUpdate();
+    }
   }
 
   /**
@@ -53,8 +56,11 @@ export class SettingsController {
    */
   static async setAllNotifications(preferences: Core.NotificationPreferences): Promise<void> {
     Core.useSettingsStore.getState().setAllNotifications(preferences);
-    await this.recalculateUnreadBadge();
-    await this.commitUpdate();
+    try {
+      await this.recalculateUnreadBadge();
+    } finally {
+      await this.commitUpdate();
+    }
   }
 
   /**
