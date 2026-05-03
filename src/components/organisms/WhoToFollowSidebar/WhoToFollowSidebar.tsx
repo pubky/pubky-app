@@ -1,13 +1,17 @@
 'use client';
 
+import { useFollowUser } from '@/hooks/useFollowUser/useFollowUser';
+import { useUserStream } from '@/hooks/useUserStream/useUserStream';
 import { useRouter } from 'next/navigation';
 import { useTranslations } from 'next-intl';
-import * as Core from '@/core';
-import * as Hooks from '@/hooks';
-import * as Molecules from '@/molecules';
-import * as Organisms from '@/organisms';
+import { SidebarSection } from '@/molecules/SidebarSection/SidebarSection';
+import { CompactUserListItemSkeleton } from '../CompactUserListItemSkeleton/CompactUserListItemSkeleton';
+import { UserListItem } from '../UserListItem/UserListItem';
+
 import { APP_ROUTES } from '@/app/routes';
 import { UsersRound } from 'lucide-react';
+import type { Pubky } from '@/models/models.types';
+import { UserStreamTypes } from '@/models/stream/user/userStream.types';
 const USERS_LIMIT = 3;
 
 /**
@@ -16,29 +20,29 @@ const USERS_LIMIT = 3;
  * Sidebar section showing recommended users to follow.
  * Uses SidebarSection and UserListItem for consistent layout.
  *
- * Note: This is an Organism because it interacts with Core via hooks (useUserStream, useFollowUser).
+ * Note: This is an Organism because it interacts with data hooks (useUserStream, useFollowUser).
  */
 export function WhoToFollowSidebar() {
   const t = useTranslations('sidebar');
   const tCommon = useTranslations('common');
   const router = useRouter();
-  const { users, isLoading: isStreamLoading } = Hooks.useUserStream({
-    streamId: Core.UserStreamTypes.RECOMMENDED,
+  const { users, isLoading: isStreamLoading } = useUserStream({
+    streamId: UserStreamTypes.RECOMMENDED,
     limit: USERS_LIMIT,
     includeRelationships: true,
   });
-  const { toggleFollow, isUserLoading } = Hooks.useFollowUser();
-  const handleUserClick = (pubky: Core.Pubky) => {
+  const { toggleFollow, isUserLoading } = useFollowUser();
+  const handleUserClick = (pubky: Pubky) => {
     router.push(`${APP_ROUTES.PROFILE}/${pubky}`);
   };
-  const handleFollowClick = async (userId: Core.Pubky, isFollowing: boolean) => {
+  const handleFollowClick = async (userId: Pubky, isFollowing: boolean) => {
     await toggleFollow(userId, isFollowing);
   };
   const handleSeeAll = () => {
     router.push(APP_ROUTES.WHO_TO_FOLLOW);
   };
   return (
-    <Molecules.SidebarSection
+    <SidebarSection
       title={t('whoToFollow')}
       footerIcon={UsersRound}
       footerText={tCommon('seeAll')}
@@ -50,9 +54,9 @@ export function WhoToFollowSidebar() {
       {isStreamLoading
         ? Array.from({
             length: USERS_LIMIT,
-          }).map((_, index) => <Organisms.CompactUserListItemSkeleton key={`who-to-follow-skeleton-${index}`} />)
+          }).map((_, index) => <CompactUserListItemSkeleton key={`who-to-follow-skeleton-${index}`} />)
         : users.map((user) => (
-            <Organisms.UserListItem
+            <UserListItem
               key={user.id}
               user={user}
               variant="compact"
@@ -62,6 +66,6 @@ export function WhoToFollowSidebar() {
               onFollowClick={handleFollowClick}
             />
           ))}
-    </Molecules.SidebarSection>
+    </SidebarSection>
   );
 }

@@ -1,4 +1,5 @@
-import * as Atoms from '@/atoms';
+import { Container } from '../Container/Container';
+
 import { cn } from '@/libs/utils/utils';
 
 interface PageHeaderProps {
@@ -14,12 +15,12 @@ export function PageHeader({
   ...props
 }: PageHeaderProps & React.HTMLAttributes<HTMLDivElement>) {
   return (
-    <Atoms.Container
+    <Container
       className={cn('gap-3 pt-2 pb-6', className)}
       data-testid={dataTestId || 'container'}
-      {...(props as React.ComponentProps<typeof Atoms.Container>)}
+      {...(props as React.ComponentProps<typeof Container>)}
     >
       {children}
-    </Atoms.Container>
+    </Container>
   );
 }

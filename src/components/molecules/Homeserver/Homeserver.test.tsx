@@ -11,53 +11,73 @@ vi.mock('next/navigation', () => ({
 }));
 
 // Mock molecules
-vi.mock('@/molecules', () => ({
-  PageTitle: ({ children, size }: { children: React.ReactNode; size?: string }) => (
-    <div data-testid="page-title" data-size={size}>
-      {children}
-    </div>
-  ),
-  ButtonsNavigation: ({
-    className,
-    onHandleBackButton,
-    onHandleContinueButton,
-    continueButtonDisabled,
-    continueText,
-  }: {
-    className?: string;
-    onHandleBackButton: () => void;
-    onHandleContinueButton: () => void;
-    continueButtonDisabled: boolean;
-    continueText: string;
-  }) => (
-    <div data-testid="buttons-navigation" className={className}>
-      <button data-testid="back-button" onClick={onHandleBackButton}>
-        Back
-      </button>
-      <button data-testid="continue-button" onClick={onHandleContinueButton} disabled={continueButtonDisabled}>
-        {continueText}
-      </button>
-    </div>
-  ),
-}));
+vi.mock('@/molecules/ButtonsNavigation/ButtonsNavigation', () => {
+  return {
+    ButtonsNavigation: ({
+      className,
+      onHandleBackButton,
+      onHandleContinueButton,
+      continueButtonDisabled,
+      continueText,
+    }: {
+      className?: string;
+      onHandleBackButton: () => void;
+      onHandleContinueButton: () => void;
+      continueButtonDisabled: boolean;
+      continueText: string;
+    }) => (
+      <div data-testid="buttons-navigation" className={className}>
+        <button data-testid="back-button" onClick={onHandleBackButton}>
+          Back
+        </button>
+        <button data-testid="continue-button" onClick={onHandleContinueButton} disabled={continueButtonDisabled}>
+          {continueText}
+        </button>
+      </div>
+    ),
+  };
+});
+
+vi.mock('@/molecules/Page/Page', () => {
+  return {
+    PageTitle: ({ children, size }: { children: React.ReactNode; size?: string }) => (
+      <div data-testid="page-title" data-size={size}>
+        {children}
+      </div>
+    ),
+  };
+});
 
 // Mock organisms
-vi.mock('@/organisms', () => ({
-  DialogTerms: () => <span data-testid="dialog-terms">Terms of Service</span>,
-  DialogPrivacy: () => <span data-testid="dialog-privacy">Privacy Policy</span>,
-  DialogAge: () => <span data-testid="dialog-age">over 18 years old.</span>,
-}));
+vi.mock('@/organisms/DialogAge/DialogAge', () => {
+  return {
+    DialogAge: () => <span data-testid="dialog-age">over 18 years old.</span>,
+  };
+});
 
-// Mock atoms
-vi.mock('@/atoms', () => ({
-  PageHeader: ({ children }: { children: React.ReactNode }) => <div data-testid="page-header">{children}</div>,
-  PageSubtitle: ({ children }: { children: React.ReactNode }) => <div data-testid="page-subtitle">{children}</div>,
-  FooterLinks: ({ children, className }: { children: React.ReactNode; className?: string }) => (
-    <div data-testid="footer-links" className={className}>
-      {children}
-    </div>
-  ),
-}));
+vi.mock('@/organisms/DialogPrivacy/DialogPrivacy', () => {
+  return {
+    DialogPrivacy: () => <span data-testid="dialog-privacy">Privacy Policy</span>,
+  };
+});
+
+vi.mock('@/organisms/DialogTerms/DialogTerms', () => {
+  return {
+    DialogTerms: () => <span data-testid="dialog-terms">Terms of Service</span>,
+  };
+});
+
+vi.mock('@/atoms/PageHeader/PageHeader', () => {
+  return {
+    PageHeader: ({ children }: { children: React.ReactNode }) => <div data-testid="page-header">{children}</div>,
+  };
+});
+
+vi.mock('@/atoms/PageSubtitle/PageSubtitle', () => {
+  return {
+    PageSubtitle: ({ children }: { children: React.ReactNode }) => <div data-testid="page-subtitle">{children}</div>,
+  };
+});
 
 describe('Homeserver Components - Snapshots', () => {
   describe('HomeserverHeader - Snapshots', () => {

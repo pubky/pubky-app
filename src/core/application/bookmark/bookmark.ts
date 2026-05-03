@@ -1,6 +1,8 @@
-import * as Core from '@/core';
 import { HttpMethod } from '@/libs/http/http.types';
-
+import type { TBookmarkPersistInput } from '@/application/bookmark/bookmark.types';
+import { HomeserverService } from '@/services/homeserver/homeserver';
+import { LocalBookmarkService } from '@/services/local/bookmark/bookmark';
+import { useAuthStore } from '@/stores/auth/auth.store';
 /**
  * Bookmark application service.
  *
@@ -19,19 +21,19 @@ export class BookmarkApplication {
    * @returns boolean indicating if the post is bookmarked
    */
   static async exists(postId: string): Promise<boolean> {
-    return Core.LocalBookmarkService.exists(postId);
+    return LocalBookmarkService.exists(postId);
   }
 
-  static async persist(action: HttpMethod, params: Core.TBookmarkPersistInput) {
+  static async persist(action: HttpMethod, params: TBookmarkPersistInput) {
     // Get current user ID for user counts update
-    const userId = Core.useAuthStore.getState().selectCurrentUserPubky();
+    const userId = useAuthStore.getState().selectCurrentUserPubky();
 
     const { postId, bookmarkUrl, bookmarkJson } = params;
 
     // Execute local and homeserver operations in parallel
     await Promise.all([
-      Core.LocalBookmarkService.persist(action, { userId, postId }),
-      Core.HomeserverService.request({ method: action, url: bookmarkUrl, bodyJson: bookmarkJson }),
+      LocalBookmarkService.persist(action, { userId, postId }),
+      HomeserverService.request({ method: action, url: bookmarkUrl, bodyJson: bookmarkJson }),
     ]);
   }
 }

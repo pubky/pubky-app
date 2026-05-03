@@ -1,19 +1,27 @@
 'use client';
 
+import { useEnrichedTags } from '@/hooks/useEnrichedTags/useEnrichedTags';
+import { useEntityTags } from '@/hooks/useEntityTags/useEntityTags';
+import { useRequireAuth } from '@/hooks/useRequireAuth/useRequireAuth';
 import * as React from 'react';
-import * as Atoms from '@/atoms';
-import * as Molecules from '@/molecules';
-import * as Hooks from '@/hooks';
-import * as Core from '@/core';
+import { Container } from '@/atoms/Container/Container';
+import { PostTag } from '@/molecules/PostTag/PostTag';
+import { PostTagAddButton } from '@/molecules/PostTagAddButton/PostTagAddButton';
+import { PostTagPopoverWrapper } from '@/molecules/PostTagPopoverWrapper/PostTagPopoverWrapper';
+import { TagInput } from '@/molecules/TagInput/TagInput';
+import { TagInputToggle } from '@/molecules/TagInputToggle/TagInputToggle';
+
 import type { ClickableTagsListProps } from './ClickableTagsList.types';
+import { cn, generateRandomColor, getDisplayTags } from '@/libs/utils/utils';
+
 import {
   CLICKABLE_TAGS_DEFAULT_MAX_LENGTH,
   CLICKABLE_TAGS_DEFAULT_MAX_TOTAL_CHARS,
   TAG_INPUT_WIDTH_AT_LIMIT,
   TAG_INPUT_WIDTH_DEFAULT,
-} from '@/config';
-import { cn, generateRandomColor, getDisplayTags } from '@/libs/utils/utils';
-
+} from '@/config/tags';
+import { TagKind } from '@/application/tag/tag.types';
+import { useAuthStore } from '@/stores/auth/auth.store';
 /**
  * ClickableTagsList
  *
@@ -55,8 +63,8 @@ export function ClickableTagsList({
   const [isAdding, setIsAdding] = React.useState(addMode ? false : showInput);
 
   // Auth requirement for tag actions
-  const { isAuthenticated, requireAuth } = Hooks.useRequireAuth();
-  const setShowSignInDialog = Core.useAuthStore((state) => state.setShowSignInDialog);
+  const { isAuthenticated, requireAuth } = useRequireAuth();
+  const setShowSignInDialog = useAuthStore((state) => state.setShowSignInDialog);
 
   // Use unified entity tags hook
   const {
@@ -64,10 +72,10 @@ export function ClickableTagsList({
     isViewerTagger,
     handleTagToggle,
     handleTagAdd,
-  } = Hooks.useEntityTags(taggedId, taggedKind, { providedTags });
+  } = useEntityTags(taggedId, taggedKind, { providedTags });
 
   // Enrich tags with user details for proper avatar fallbacks
-  const { enrichedTags } = Hooks.useEnrichedTags(fetchedTags);
+  const { enrichedTags } = useEnrichedTags(fetchedTags);
 
   // Determine if input should be shown
   const hasInput = showInput || isAdding;
@@ -137,22 +145,22 @@ export function ClickableTagsList({
   const handleInputClick = !isAuthenticated ? () => setShowSignInDialog(true) : undefined;
 
   return (
-    <Atoms.Container overrideDefaults className="flex flex-col gap-1">
-      <Atoms.Container
+    <Container overrideDefaults className="flex flex-col gap-1">
+      <Container
         overrideDefaults
         data-cy="clickable-tags-list"
         className={cn('flex flex-wrap items-center gap-2', className)}
       >
         {/* Render existing tags with hover popover for tagger avatars */}
         {visibleTags.map((tag, index) => (
-          <Molecules.PostTagPopoverWrapper
+          <PostTagPopoverWrapper
             key={`${taggedId}-${tag.label}`}
             taggers={tag.taggers}
             taggersCount={tag.taggers_count}
-            postId={taggedKind === Core.TagKind.POST ? taggedId : null}
+            postId={taggedKind === TagKind.POST ? taggedId : null}
             tagLabel={tag.label}
           >
-            <Molecules.PostTag
+            <PostTag
               label={tag.label}
               count={showCount ? tag.taggers_count : undefined}
               color={generateRandomColor(tag.label)}
@@ -161,16 +169,16 @@ export function ClickableTagsList({
               onClick={(e) => handleTagClick(tag, index, e)}
               onClose={(e) => onTagClose?.(tag, index, e)}
             />
-          </Molecules.PostTagPopoverWrapper>
+          </PostTagPopoverWrapper>
         ))}
 
         {/* Add tag input / add button switch with shared animation */}
         {(hasInput || hasAddButton) && (
-          <Molecules.TagInputToggle
+          <TagInputToggle
             showInput={hasInput}
             widthByState={{ input: inputWidth, addButton: 34 }}
             inputContent={
-              <Molecules.TagInput
+              <TagInput
                 onTagAdd={handleTagAddFromInput}
                 existingTags={enrichedTags}
                 viewerTags={viewerTags}
@@ -189,12 +197,10 @@ export function ClickableTagsList({
                 className="w-full shrink-0"
               />
             }
-            addButtonContent={
-              hasAddButton ? <Molecules.PostTagAddButton variant="plain" onClick={handleAddButtonClick} /> : null
-            }
+            addButtonContent={hasAddButton ? <PostTagAddButton variant="plain" onClick={handleAddButtonClick} /> : null}
           />
         )}
-      </Atoms.Container>
-    </Atoms.Container>
+      </Container>
+    </Container>
   );
 }

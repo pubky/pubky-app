@@ -1,13 +1,18 @@
 'use client';
 
-import * as Atoms from '@/atoms';
-import * as Molecules from '@/molecules';
-import * as Organisms from '@/organisms';
-import * as Hooks from '@/hooks';
-import * as Core from '@/core';
-import * as Providers from '@/providers';
-import { NEXUS_USERS_PER_PAGE } from '@/config';
-
+import { useProfileConnections } from '@/hooks/useProfileConnections/useProfileConnections';
+import { CONNECTION_TYPE } from '@/hooks/useProfileConnections/useProfileConnections.types';
+import { useFollowUser } from '@/hooks/useFollowUser/useFollowUser';
+import { useInfiniteScroll } from '@/hooks/useInfiniteScroll/useInfiniteScroll';
+import { Container } from '@/atoms/Container/Container';
+import { Heading } from '@/atoms/Heading/Heading';
+import { FriendsEmpty } from '@/molecules/FriendsEmpty/FriendsEmpty';
+import { FullUserListItemSkeleton } from '../FullUserListItemSkeleton/FullUserListItemSkeleton';
+import { UserListItem } from '../UserListItem/UserListItem';
+import { useProfileContext } from '@/providers/ProfileProvider/ProfileProvider';
+import { NEXUS_USERS_PER_PAGE } from '@/config/nexus';
+import type { Pubky } from '@/models/models.types';
+import { useAuthStore } from '@/stores/auth/auth.store';
 const LOAD_MORE_SKELETON_COUNT = 2;
 
 /**
@@ -21,65 +26,65 @@ const LOAD_MORE_SKELETON_COUNT = 2;
  */
 export function ProfileFriends() {
   // Get the profile pubky from context
-  const { pubky } = Providers.useProfileContext();
+  const { pubky } = useProfileContext();
   // Get the current logged-in user's pubky
-  const currentUserPubky = Core.useAuthStore((state) => state.currentUserPubky);
+  const currentUserPubky = useAuthStore((state) => state.currentUserPubky);
 
-  const { connections, count, isLoading, isLoadingMore, hasMore, loadMore } = Hooks.useProfileConnections(
-    Hooks.CONNECTION_TYPE.FRIENDS,
+  const { connections, count, isLoading, isLoadingMore, hasMore, loadMore } = useProfileConnections(
+    CONNECTION_TYPE.FRIENDS,
     pubky ?? undefined,
   );
-  const { toggleFollow, isUserLoading } = Hooks.useFollowUser();
+  const { toggleFollow, isUserLoading } = useFollowUser();
 
   // Handle infinite scroll
-  const { sentinelRef } = Hooks.useInfiniteScroll({
+  const { sentinelRef } = useInfiniteScroll({
     onLoadMore: loadMore,
     hasMore,
     isLoading: isLoadingMore,
   });
 
   // Handle follow/unfollow action
-  const handleFollow = async (userId: Core.Pubky, isCurrentlyFollowing: boolean) => {
+  const handleFollow = async (userId: Pubky, isCurrentlyFollowing: boolean) => {
     await toggleFollow(userId, isCurrentlyFollowing);
   };
 
   if (isLoading) {
     return (
-      <Atoms.Container className="mt-6 gap-4 lg:mt-0">
-        <Atoms.Heading level={5} size="lg" className="leading-normal font-light text-muted-foreground lg:hidden">
+      <Container className="mt-6 gap-4 lg:mt-0">
+        <Heading level={5} size="lg" className="leading-normal font-light text-muted-foreground lg:hidden">
           Friends
-        </Atoms.Heading>
-        <Atoms.Container
+        </Heading>
+        <Container
           data-cy="profile-connections-list"
           className="gap-3.5 rounded-md bg-transparent p-0 lg:gap-3 lg:bg-card lg:p-6"
         >
           {Array.from({ length: NEXUS_USERS_PER_PAGE }).map((_, index) => (
-            <Organisms.FullUserListItemSkeleton key={`profile-friends-skeleton-${index}`} />
+            <FullUserListItemSkeleton key={`profile-friends-skeleton-${index}`} />
           ))}
-        </Atoms.Container>
-      </Atoms.Container>
+        </Container>
+      </Container>
     );
   }
 
   if (connections.length === 0) {
     return (
-      <Atoms.Container className="mt-6 lg:mt-0">
-        <Molecules.FriendsEmpty />
-      </Atoms.Container>
+      <Container className="mt-6 lg:mt-0">
+        <FriendsEmpty />
+      </Container>
     );
   }
 
   return (
-    <Atoms.Container className="mt-6 gap-4 lg:mt-0">
-      <Atoms.Heading level={5} size="lg" className="leading-normal font-light text-muted-foreground lg:hidden">
+    <Container className="mt-6 gap-4 lg:mt-0">
+      <Heading level={5} size="lg" className="leading-normal font-light text-muted-foreground lg:hidden">
         Friends {count > 0 && `(${count})`}
-      </Atoms.Heading>
-      <Atoms.Container
+      </Heading>
+      <Container
         data-cy="profile-connections-list"
         className="gap-3.5 rounded-md bg-transparent p-0 lg:gap-3 lg:bg-card lg:p-6"
       >
         {connections.map((connection) => (
-          <Organisms.UserListItem
+          <UserListItem
             key={connection.id}
             user={connection}
             variant="full"
@@ -90,18 +95,18 @@ export function ProfileFriends() {
             onFollowClick={handleFollow}
           />
         ))}
-      </Atoms.Container>
+      </Container>
 
       {/* Infinite scroll trigger */}
       <div ref={sentinelRef} className="h-1" />
 
       {isLoadingMore && (
-        <Atoms.Container className="gap-4 py-4">
+        <Container className="gap-4 py-4">
           {Array.from({ length: LOAD_MORE_SKELETON_COUNT }).map((_, i) => (
-            <Organisms.FullUserListItemSkeleton key={`friends-load-more-skeleton-${i}`} />
+            <FullUserListItemSkeleton key={`friends-load-more-skeleton-${i}`} />
           ))}
-        </Atoms.Container>
+        </Container>
       )}
-    </Atoms.Container>
+    </Container>
   );
 }

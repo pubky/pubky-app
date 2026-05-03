@@ -24,6 +24,24 @@ Only these can initiate workflows:
 | **UI**           | User actions (clicks, forms)             | Controllers |
 | **Coordinators** | System events (timers, auth, visibility) | Controllers |
 
+## Import Path Conventions
+
+Modules are imported directly through the path aliases in `tsconfig.json`. Keep imports pointed at concrete source modules rather than aggregate re-export files.
+
+**App configuration** lives under `src/config/`: import from `@/config/<module>` (for example `@/config/nexus`). Do not add `src/config/index.ts` that re-exports the entire config surface.
+
+**Route constants and helpers** live in `src/app/routes.ts`: import from `@/app/routes` (named imports; use `import type` when a colocated `*.types.ts` file only contributes types).
+| ------------ | ------------------ |
+| Hooks | `@/hooks/*` |
+| Application | `@/application/*` |
+| Controllers | `@/controllers/*` |
+| Coordinators | `@/coordinators/*` |
+| Database | `@/database/*` |
+| Models | `@/models/*` |
+| Pipes | `@/pipes/*` |
+| Services | `@/services/*` |
+| Stores | `@/stores/*` |
+
 ## Layer Responsibilities
 
 ### Controllers (`src/core/controllers/`)
@@ -217,9 +235,11 @@ class NotificationCoordinator {
 
 // GOOD — coordinator goes through controller
 // Real: src/core/coordinators/notifications/notifications.ts
+import { useAuthStore } from '@/stores/auth/auth.store';
+
 class NotificationCoordinator {
   protected async poll() {
-    const userId = Core.useAuthStore.getState().selectCurrentUserPubky();
+    const userId = useAuthStore.getState().selectCurrentUserPubky();
     await NotificationController.fetchNotifications({ userId }); // Through controller
   }
 }
@@ -256,8 +276,7 @@ src/core/
 ├── models/[domain]/       # Dexie tables
 ├── stores/[domain]/       # UI state (Zustand)
 ├── database/              # Dexie schema and migrations
-├── utils/                 # Utility functions
-└── index.ts               # Public API
+└── utils/                 # Utility functions
 ```
 
 ## Architecture Decision Records

@@ -1,19 +1,16 @@
 import { Table } from 'dexie';
-import * as Core from '@/core';
-import { RecordModelBase } from '@/core/models/shared/base/record/baseRecord';
 import { DatabaseErrorCode } from '@/libs/error/error.codes';
 import { Err } from '@/libs/error/error.factories';
 import { ErrorService } from '@/libs/error/error.types';
-
-export class BookmarkModel
-  extends RecordModelBase<string, Core.BookmarkModelSchema>
-  implements Core.BookmarkModelSchema
-{
-  static table: Table<Core.BookmarkModelSchema> = Core.db.table('bookmarks');
+import { db } from '@/database/franky/franky';
+import type { BookmarkModelSchema } from '@/models/bookmark/bookmark.schema';
+import { RecordModelBase } from '@/models/shared/base/record/baseRecord';
+export class BookmarkModel extends RecordModelBase<string, BookmarkModelSchema> implements BookmarkModelSchema {
+  static table: Table<BookmarkModelSchema> = db.table('bookmarks');
 
   created_at: number;
 
-  constructor(bookmark: Core.BookmarkModelSchema) {
+  constructor(bookmark: BookmarkModelSchema) {
     super(bookmark);
     this.created_at = bookmark.created_at;
   }
@@ -39,7 +36,7 @@ export class BookmarkModel
   /**
    * Get bookmarks sorted by creation time (most recent first)
    */
-  static async findAllSorted(): Promise<Core.BookmarkModelSchema[]> {
+  static async findAllSorted(): Promise<BookmarkModelSchema[]> {
     try {
       return await this.table.orderBy('created_at').reverse().toArray();
     } catch (error) {

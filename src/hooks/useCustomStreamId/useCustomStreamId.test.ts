@@ -2,21 +2,16 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { renderHook } from '@testing-library/react';
 import { useCustomStreamId } from './useCustomStreamId';
 import { PubkyAppFeedReach, PubkyAppFeedSort, PubkyAppFeedLayout, PubkyAppPostKind } from 'pubky-app-specs';
-import type * as Core from '@/core';
+import type { FeedModelSchema } from '@/models/feed/feed.schema';
+const mockUseCustomFeed = vi.hoisted(() => vi.fn());
 
-// --- Hoisted mocks ---
-
-const { mockUseCustomFeed } = vi.hoisted(() => ({
-  mockUseCustomFeed: vi.fn(),
-}));
-
-vi.mock('@/hooks/useCustomFeed', () => ({
-  useCustomFeed: () => mockUseCustomFeed(),
+vi.mock('@/hooks/useCustomFeed/useCustomFeed', () => ({
+  useCustomFeed: mockUseCustomFeed,
 }));
 
 // --- Helpers ---
 
-const createMockFeed = (overrides: Partial<Core.FeedModelSchema> = {}): Core.FeedModelSchema => ({
+const createMockFeed = (overrides: Partial<FeedModelSchema> = {}): FeedModelSchema => ({
   id: 'feed-abc123',
   name: 'Bitcoin News',
   tags: ['bitcoin', 'lightning'],

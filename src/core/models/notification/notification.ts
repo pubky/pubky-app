@@ -1,15 +1,14 @@
 import { Table } from 'dexie';
-import * as Core from '@/core';
-import * as Config from '@/config';
+import { NEXUS_NOTIFICATIONS_LIMIT } from '@/config/nexus';
 import { FlatNotification, NotificationType } from './notification.types';
 import { Logger } from '@/libs/logger/logger';
 import { DatabaseErrorCode } from '@/libs/error/error.codes';
 import { Err } from '@/libs/error/error.factories';
 import { ErrorService } from '@/libs/error/error.types';
-
+import { db } from '@/database/franky/franky';
 // Primary key: business key (id) as string - provides natural deduplication
 export class NotificationModel {
-  static table: Table<FlatNotification> = Core.db.table('notifications');
+  static table: Table<FlatNotification> = db.table('notifications');
 
   type!: NotificationType;
   timestamp!: number;
@@ -84,7 +83,7 @@ export class NotificationModel {
     }
   }
 
-  static async getRecent(limit: number = Config.NEXUS_NOTIFICATIONS_LIMIT): Promise<FlatNotification[]> {
+  static async getRecent(limit: number = NEXUS_NOTIFICATIONS_LIMIT): Promise<FlatNotification[]> {
     try {
       return await this.table.orderBy('timestamp').reverse().limit(limit).toArray();
     } catch (error) {
@@ -120,7 +119,7 @@ export class NotificationModel {
 
   static async getRecentByType(
     type: NotificationType,
-    limit: number = Config.NEXUS_NOTIFICATIONS_LIMIT,
+    limit: number = NEXUS_NOTIFICATIONS_LIMIT,
   ): Promise<FlatNotification[]> {
     try {
       return await this.table
@@ -177,10 +176,7 @@ export class NotificationModel {
    * @param limit - Maximum number of notifications to return
    * @returns Promise resolving to array of notifications ordered by timestamp descending
    */
-  static async getOlderThan(
-    olderThan: number,
-    limit: number = Config.NEXUS_NOTIFICATIONS_LIMIT,
-  ): Promise<FlatNotification[]> {
+  static async getOlderThan(olderThan: number, limit: number = NEXUS_NOTIFICATIONS_LIMIT): Promise<FlatNotification[]> {
     try {
       return await this.table.where('timestamp').below(olderThan).reverse().limit(limit).toArray();
     } catch (error) {

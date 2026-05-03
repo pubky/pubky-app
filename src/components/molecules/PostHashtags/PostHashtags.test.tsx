@@ -3,24 +3,26 @@ import { render, screen, fireEvent } from '@testing-library/react';
 import { PostHashtags } from './PostHashtags';
 
 // Mock @/atoms
-vi.mock('@/atoms', () => ({
-  Link: ({
-    children,
-    href,
-    className,
-    onClick,
-    ...props
-  }: {
-    children: React.ReactNode;
-    href: string;
-    className?: string;
-    onClick?: (e: React.MouseEvent) => void;
-  }) => (
-    <a data-testid="link" href={href} className={className} onClick={onClick} {...props}>
-      {children}
-    </a>
-  ),
-}));
+vi.mock('@/atoms/Link/Link', () => {
+  return {
+    Link: ({
+      children,
+      href,
+      className,
+      onClick,
+      ...props
+    }: {
+      children: React.ReactNode;
+      href: string;
+      className?: string;
+      onClick?: (e: React.MouseEvent) => void;
+    }) => (
+      <a data-testid="link" href={href} className={className} onClick={onClick} {...props}>
+        {children}
+      </a>
+    ),
+  };
+});
 
 describe('PostHashtags', () => {
   describe('Basic rendering', () => {

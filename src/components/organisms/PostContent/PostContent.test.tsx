@@ -1,38 +1,23 @@
 import { render, screen } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { PostContent } from './PostContent';
-import * as Core from '@/core';
-import * as Organisms from '@/organisms';
-import * as Hooks from '@/hooks';
+import { PostContentBase } from '../PostContentBase/PostContentBase';
 
+import { usePostDetails } from '@/hooks/usePostDetails/usePostDetails';
+import { useRepostInfo } from '@/hooks/useRepostInfo/useRepostInfo';
+import type { EnrichedPostDetails } from '@/application/moderation/moderation.types';
 // Mock hooks used by PostContent
-vi.mock('@/hooks', async (importOriginal) => {
-  const actual = await importOriginal<typeof import('@/hooks')>();
-  return {
-    ...actual,
-    usePostDetails: vi.fn(),
-    useRepostInfo: vi.fn(),
-  };
-});
+vi.mock('@/hooks/usePostDetails/usePostDetails', () => ({
+  usePostDetails: vi.fn(),
+}));
 
-// Mock PostContentBase
-vi.mock('@/organisms', async (importOriginal) => {
-  const actual = await importOriginal<typeof import('@/organisms')>();
-  return {
-    ...actual,
-    PostContentBase: vi.fn(({ postId, className }: { postId: string; className?: string }) => (
-      <div data-testid="post-content-base" data-post-id={postId} className={className}>
-        PostContentBase {postId}
-      </div>
-    )),
-  };
-});
+vi.mock('@/hooks/useRepostInfo/useRepostInfo', () => ({
+  useRepostInfo: vi.fn(),
+}));
 
 // Mock molecules - PostPreviewCard, PostText, PostLinkEmbeds
-vi.mock('@/molecules', async (importOriginal) => {
-  const actual = await importOriginal<typeof import('@/molecules')>();
+vi.mock('@/molecules/PostPreviewCard/PostPreviewCard', () => {
   return {
-    ...actual,
     PostPreviewCard: vi.fn(({ postId, className }: { postId: string; className?: string }) => (
       <div data-testid="post-preview-card" data-post-id={postId} className={className}>
         PostPreviewCard {postId}
@@ -41,13 +26,21 @@ vi.mock('@/molecules', async (importOriginal) => {
   };
 });
 
-const mockUsePostDetails = vi.mocked(Hooks.usePostDetails);
-const mockUseRepostInfo = vi.mocked(Hooks.useRepostInfo);
+vi.mock('../PostContentBase/PostContentBase', () => ({
+  PostContentBase: vi.fn(({ postId, className }: { postId: string; className?: string }) => (
+    <div data-testid="post-content-base" data-post-id={postId} className={className}>
+      PostContentBase {postId}
+    </div>
+  )),
+}));
+
+const mockUsePostDetails = vi.mocked(usePostDetails);
+const mockUseRepostInfo = vi.mocked(useRepostInfo);
 
 // Helper to create complete PostDetails mock
 const createMockPostDetails = (
   overrides: Partial<{ content: string; attachments: string[] | null }> = {},
-): Core.EnrichedPostDetails => ({
+): EnrichedPostDetails => ({
   id: 'test-author:test-post',
   indexed_at: Date.now(),
   kind: 'short' as const,
@@ -154,13 +147,11 @@ describe('PostContent', () => {
 describe('PostContent - Snapshots', () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    vi.mocked(Organisms.PostContentBase).mockImplementation(
-      ({ postId, className }: { postId: string; className?: string }) => (
-        <div data-testid="post-content-base" data-post-id={postId} className={className}>
-          PostContentBase {postId}
-        </div>
-      ),
-    );
+    vi.mocked(PostContentBase).mockImplementation(({ postId, className }: { postId: string; className?: string }) => (
+      <div data-testid="post-content-base" data-post-id={postId} className={className}>
+        PostContentBase {postId}
+      </div>
+    ));
   });
 
   it('matches snapshot with single-line content', () => {

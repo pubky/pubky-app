@@ -5,15 +5,11 @@ import userEvent from '@testing-library/user-event';
 import { ProfilePageMobileMenu, PROFILE_MENU_ITEMS } from './ProfilePageMobileMenu';
 import { PROFILE_PAGE_TYPES } from '@/app/profile/types';
 
-vi.mock('@/hooks', async () => {
-  const actual = await vi.importActual<typeof import('@/hooks')>('@/hooks');
-  return {
-    ...actual,
-    useRequireAuth: () => ({
-      requireAuth: (cb: () => void) => cb(),
-    }),
-  };
-});
+vi.mock('@/hooks/useRequireAuth/useRequireAuth', () => ({
+  useRequireAuth: () => ({
+    requireAuth: (cb: () => void) => cb(),
+  }),
+}));
 
 describe('ProfilePageMobileMenu', () => {
   it('renders all menu items for own profile', () => {

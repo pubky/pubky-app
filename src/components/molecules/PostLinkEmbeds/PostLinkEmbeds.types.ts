@@ -1,10 +1,10 @@
-import * as Providers from './Providers';
+import type { EmbedData, EmbedProvider } from './Providers/Provider.types';
 
 export type PostLinkEmbedsProps = {
   content: string;
 };
 
 export type ParseUrlForLinkEmbedResult = {
-  embed: Providers.EmbedData | null;
-  provider: Providers.EmbedProvider | null;
+  embed: EmbedData | null;
+  provider: EmbedProvider | null;
 };

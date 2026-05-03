@@ -3,11 +3,13 @@ import { render, screen } from '@testing-library/react';
 import ProfileLayout from './layout';
 
 // Mock ProfilePageContainer organism
-vi.mock('@/organisms', () => ({
-  ProfilePageContainer: ({ children }: { children: React.ReactNode }) => (
-    <div data-testid="profile-page-container">{children}</div>
-  ),
-}));
+vi.mock('@/organisms/ProfilePageContainer/ProfilePageContainer', () => {
+  return {
+    ProfilePageContainer: ({ children }: { children: React.ReactNode }) => (
+      <div data-testid="profile-page-container">{children}</div>
+    ),
+  };
+});
 
 describe('ProfileLayout', () => {
   it('renders without errors', () => {

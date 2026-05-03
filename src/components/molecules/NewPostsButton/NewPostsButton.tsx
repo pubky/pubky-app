@@ -1,7 +1,8 @@
 'use client';
 
 import { useTranslations } from 'next-intl';
-import * as Atoms from '@/atoms';
+import { Button } from '@/atoms/Button/Button';
+
 import type { NewPostsButtonProps } from './NewPostsButton.types';
 
 /**
@@ -27,7 +28,7 @@ export function NewPostsButton({ count, onClick, visible, isScrolled = false }: 
   const t = useTranslations('post');
   if (!visible || count === 0) return null;
   return (
-    <Atoms.Button
+    <Button
       variant={isScrolled ? 'brand' : 'default'}
       onClick={onClick}
       data-cy="new-posts-button"
@@ -50,6 +51,6 @@ export function NewPostsButton({ count, onClick, visible, isScrolled = false }: 
               count,
             })}
       </span>
-    </Atoms.Button>
+    </Button>
   );
 }

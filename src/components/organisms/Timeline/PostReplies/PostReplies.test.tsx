@@ -1,9 +1,12 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { render, screen } from '@testing-library/react';
-import * as Core from '@/core';
 import type { UseRequireAuthResult } from '@/hooks/useRequireAuth/useRequireAuth.types';
 import { TimelinePostReplies } from './PostReplies';
-
+import { usePostCounts } from '@/hooks/usePostCounts/usePostCounts';
+import { usePostDetails } from '@/hooks/usePostDetails/usePostDetails';
+import { useRequireAuth } from '@/hooks/useRequireAuth/useRequireAuth';
+import type { EnrichedPostDetails } from '@/application/moderation/moderation.types';
+import type { PostCountsModelSchema } from '@/models/post/counts/postCounts.schema';
 // Mock hooks
 const mockUseRequireAuth = vi.fn(
   (): UseRequireAuthResult => ({
@@ -22,62 +25,66 @@ const mockUsePostDetails = vi.fn(() => ({
     attachments: null,
     is_moderated: false,
     is_blurred: false,
-  } satisfies Core.EnrichedPostDetails,
+  } satisfies EnrichedPostDetails,
   isLoading: false,
 }));
 
-vi.mock('@/hooks', async (importOriginal) => {
-  const actual = await importOriginal<typeof import('@/hooks')>();
+vi.mock('@/hooks/useRequireAuth/useRequireAuth', () => ({
+  useRequireAuth: vi.fn(),
+}));
+
+vi.mock('@/hooks/usePostDetails/usePostDetails', () => ({
+  usePostDetails: vi.fn(),
+}));
+
+vi.mock('@/hooks/usePostCounts/usePostCounts', () => ({
+  usePostCounts: vi.fn(),
+}));
+
+// Mock atoms
+vi.mock('@/atoms/Container/Container', () => {
   return {
-    ...actual,
-    useRequireAuth: vi.fn(),
-    usePostDetails: vi.fn(),
-    usePostCounts: vi.fn(),
+    Container: ({
+      children,
+      overrideDefaults: _overrideDefaults,
+      ...props
+    }: {
+      children?: React.ReactNode;
+      overrideDefaults?: boolean;
+      [key: string]: unknown;
+    }) => (
+      <div data-testid="container" {...props}>
+        {children}
+      </div>
+    ),
   };
 });
 
-// Mock atoms
-vi.mock('@/atoms', () => ({
-  Container: ({
-    children,
-    overrideDefaults: _overrideDefaults,
-    ...props
-  }: {
-    children?: React.ReactNode;
-    overrideDefaults?: boolean;
-    [key: string]: unknown;
-  }) => (
-    <div data-testid="container" {...props}>
-      {children}
-    </div>
-  ),
-}));
-
 // Mock ThreadTree organism
-vi.mock('@/organisms', () => ({
-  ThreadTree: ({ postId, showQuickReply }: { postId: string; showQuickReply?: boolean }) => (
-    <div data-testid="thread-tree" data-post-id={postId} data-show-quick-reply={String(showQuickReply)} />
-  ),
-}));
+vi.mock('@/organisms/ThreadTree/ThreadTree', () => {
+  return {
+    ThreadTree: ({ postId, showQuickReply }: { postId: string; showQuickReply?: boolean }) => (
+      <div data-testid="thread-tree" data-post-id={postId} data-show-quick-reply={String(showQuickReply)} />
+    ),
+  };
+});
 
 // Import after mocks
-import * as Hooks from '@/hooks';
-
 describe('TimelinePostReplies', () => {
   const mockPostId = 'author:post123';
 
   beforeEach(() => {
     vi.clearAllMocks();
-    vi.mocked(Hooks.useRequireAuth).mockReturnValue(mockUseRequireAuth());
-    vi.mocked(Hooks.usePostDetails).mockReturnValue(mockUsePostDetails());
-    vi.mocked(Hooks.usePostCounts).mockReturnValue({
+    vi.mocked(useRequireAuth).mockReturnValue(mockUseRequireAuth());
+    vi.mocked(usePostDetails).mockReturnValue(mockUsePostDetails());
+    vi.mocked(usePostCounts).mockReturnValue({
       postCounts: {
         id: mockPostId,
         replies: 3,
         tags: 0,
         unique_tags: 0,
         reposts: 0,
-      } satisfies Core.PostCountsModelSchema,
+      } satisfies PostCountsModelSchema,
       isLoading: false,
     });
   });
@@ -98,7 +105,7 @@ describe('TimelinePostReplies', () => {
   });
 
   it('passes showQuickReply=false when parent is deleted', () => {
-    vi.mocked(Hooks.usePostDetails).mockReturnValue({
+    vi.mocked(usePostDetails).mockReturnValue({
       ...mockUsePostDetails(),
       postDetails: {
         ...mockUsePostDetails().postDetails,
@@ -113,7 +120,7 @@ describe('TimelinePostReplies', () => {
   });
 
   it('renders nothing when not authenticated', () => {
-    vi.mocked(Hooks.useRequireAuth).mockReturnValue({
+    vi.mocked(useRequireAuth).mockReturnValue({
       isAuthenticated: false,
       requireAuth: <T,>(_action: () => T) => undefined,
     });
@@ -124,14 +131,14 @@ describe('TimelinePostReplies', () => {
   });
 
   it('renders nothing when post has no replies', () => {
-    vi.mocked(Hooks.usePostCounts).mockReturnValue({
+    vi.mocked(usePostCounts).mockReturnValue({
       postCounts: {
         id: mockPostId,
         replies: 0,
         tags: 0,
         unique_tags: 0,
         reposts: 0,
-      } satisfies Core.PostCountsModelSchema,
+      } satisfies PostCountsModelSchema,
       isLoading: false,
     });
 
@@ -153,16 +160,16 @@ describe('TimelinePostReplies - Snapshots', () => {
 
   beforeEach(() => {
     vi.clearAllMocks();
-    vi.mocked(Hooks.useRequireAuth).mockReturnValue(mockUseRequireAuth());
-    vi.mocked(Hooks.usePostDetails).mockReturnValue(mockUsePostDetails());
-    vi.mocked(Hooks.usePostCounts).mockReturnValue({
+    vi.mocked(useRequireAuth).mockReturnValue(mockUseRequireAuth());
+    vi.mocked(usePostDetails).mockReturnValue(mockUsePostDetails());
+    vi.mocked(usePostCounts).mockReturnValue({
       postCounts: {
         id: mockPostId,
         replies: 3,
         tags: 0,
         unique_tags: 0,
         reposts: 0,
-      } satisfies Core.PostCountsModelSchema,
+      } satisfies PostCountsModelSchema,
       isLoading: false,
     });
   });
@@ -173,7 +180,7 @@ describe('TimelinePostReplies - Snapshots', () => {
   });
 
   it('matches snapshot when not authenticated', () => {
-    vi.mocked(Hooks.useRequireAuth).mockReturnValue({
+    vi.mocked(useRequireAuth).mockReturnValue({
       isAuthenticated: false,
       requireAuth: <T,>(_action: () => T) => undefined,
     });
@@ -183,7 +190,7 @@ describe('TimelinePostReplies - Snapshots', () => {
   });
 
   it('matches snapshot when parent post is deleted', () => {
-    vi.mocked(Hooks.usePostDetails).mockReturnValue({
+    vi.mocked(usePostDetails).mockReturnValue({
       ...mockUsePostDetails(),
       postDetails: {
         ...mockUsePostDetails().postDetails,

@@ -1,4 +1,4 @@
-import * as Atoms from '@/atoms';
+import { Container } from '../Container/Container';
 
 interface PostThreadSpacerProps {
   'data-testid'?: string;
@@ -6,9 +6,9 @@ interface PostThreadSpacerProps {
 
 export const PostThreadSpacer = ({ 'data-testid': dataTestId }: PostThreadSpacerProps) => {
   return (
-    <Atoms.Container overrideDefaults className="flex h-3" data-testid={dataTestId}>
-      <Atoms.Container overrideDefaults className="w-3 border-l border-border" />
-      <Atoms.Container overrideDefaults className="flex-1" />
-    </Atoms.Container>
+    <Container overrideDefaults className="flex h-3" data-testid={dataTestId}>
+      <Container overrideDefaults className="w-3 border-l border-border" />
+      <Container overrideDefaults className="flex-1" />
+    </Container>
   );
 };

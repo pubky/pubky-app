@@ -10,11 +10,20 @@ const { mockUseMutedUsers, mockUseBulkUserAvatars, mockUseMuteUser, mockUseIsMob
   mockUseIsMobile: vi.fn(() => false),
 }));
 
-vi.mock('@/hooks', () => ({
-  useMutedUsers: () => mockUseMutedUsers(),
-  useBulkUserAvatars: (ids: string[]) => mockUseBulkUserAvatars(ids),
-  useMuteUser: () => mockUseMuteUser(),
-  useIsMobile: () => mockUseIsMobile(),
+vi.mock('@/hooks/useMutedUsers/useMutedUsers', () => ({
+  useMutedUsers: mockUseMutedUsers,
+}));
+
+vi.mock('@/hooks/useBulkUserAvatars/useBulkUserAvatars', () => ({
+  useBulkUserAvatars: mockUseBulkUserAvatars,
+}));
+
+vi.mock('@/hooks/useMuteUser/useMuteUser', () => ({
+  useMuteUser: mockUseMuteUser,
+}));
+
+vi.mock('@/hooks/useIsMobile/useIsMobile', () => ({
+  useIsMobile: mockUseIsMobile,
 }));
 
 describe('MutedUsers', () => {

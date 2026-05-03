@@ -1,11 +1,16 @@
 import { PostResult, PubkyAppPostEmbed, PubkyAppPostKind, PubkyAppPost } from 'pubky-app-specs';
-import * as Core from '@/core';
 import { Logger } from '@/libs/logger/logger';
 import { AppError } from '@/libs/error/error';
 import { AuthErrorCode, ClientErrorCode, ValidationErrorCode } from '@/libs/error/error.codes';
 import { Err } from '@/libs/error/error.factories';
 import { ErrorService } from '@/libs/error/error.types';
-
+import type { TEditPostParams } from '@/controllers/post/post.types';
+import { CompositeIdDomain, type Pubky } from '@/models/models.types';
+import { buildCompositeIdFromPubkyUri, parseCompositeId } from '@/models/models.utils';
+import { PostDetailsModel } from '@/models/post/details/postDetails';
+import { PostRelationshipsModel } from '@/models/post/relationships/postRelationships';
+import { PubkySpecsSingleton } from '@/pipes/pipes.builder';
+import type { PostValidatorData } from '@/pipes/pipes.types';
 export class PostNormalizer {
   private constructor() {}
 
@@ -26,19 +31,19 @@ export class PostNormalizer {
     return PubkyAppPostKind.Short;
   }
 
-  static async to(post: Core.PostValidatorData, specsPubky: Core.Pubky): Promise<PostResult> {
+  static async to(post: PostValidatorData, specsPubky: Pubky): Promise<PostResult> {
     try {
-      const builder = Core.PubkySpecsSingleton.get(specsPubky);
+      const builder = PubkySpecsSingleton.get(specsPubky);
 
       // Create embed object if embed URI is provided
       let embedObject: PubkyAppPostEmbed | null = null;
       if (post.embed) {
-        const embeddedPostId = Core.buildCompositeIdFromPubkyUri({
+        const embeddedPostId = buildCompositeIdFromPubkyUri({
           uri: post.embed,
-          domain: Core.CompositeIdDomain.POSTS,
+          domain: CompositeIdDomain.POSTS,
         });
         if (embeddedPostId) {
-          const embeddedPost = await Core.PostDetailsModel.findById(embeddedPostId);
+          const embeddedPost = await PostDetailsModel.findById(embeddedPostId);
           if (embeddedPost) {
             embedObject = new PubkyAppPostEmbed(post.embed, embeddedPost.kind as unknown as PubkyAppPostKind);
           }
@@ -68,8 +73,8 @@ export class PostNormalizer {
     compositePostId,
     content,
     currentUserPubky,
-  }: Core.TEditPostParams & { currentUserPubky: Core.Pubky }): Promise<PostResult> {
-    const { pubky: authorId, id: postId } = Core.parseCompositeId(compositePostId);
+  }: TEditPostParams & { currentUserPubky: Pubky }): Promise<PostResult> {
+    const { pubky: authorId, id: postId } = parseCompositeId(compositePostId);
 
     if (authorId !== currentUserPubky) {
       throw Err.auth(AuthErrorCode.FORBIDDEN, 'Current user is not the author of this post', {
@@ -79,9 +84,9 @@ export class PostNormalizer {
       });
     }
 
-    const builder = Core.PubkySpecsSingleton.get(authorId);
+    const builder = PubkySpecsSingleton.get(authorId);
 
-    const postDetails = await Core.PostDetailsModel.findById(compositePostId);
+    const postDetails = await PostDetailsModel.findById(compositePostId);
     if (!postDetails) {
       throw Err.client(ClientErrorCode.NOT_FOUND, 'Post not found', {
         service: ErrorService.Local,
@@ -90,18 +95,18 @@ export class PostNormalizer {
       });
     }
 
-    const postRelationships = await Core.PostRelationshipsModel.findById(compositePostId);
+    const postRelationships = await PostRelationshipsModel.findById(compositePostId);
 
     // Reconstruct the original PubkyAppPost from stored data
     let embedObject: PubkyAppPostEmbed | undefined;
     if (postRelationships?.reposted) {
       // Get the embedded post's kind if available
-      const embeddedPostId = Core.buildCompositeIdFromPubkyUri({
+      const embeddedPostId = buildCompositeIdFromPubkyUri({
         uri: postRelationships.reposted,
-        domain: Core.CompositeIdDomain.POSTS,
+        domain: CompositeIdDomain.POSTS,
       });
       if (embeddedPostId) {
-        const embeddedPost = await Core.PostDetailsModel.findById(embeddedPostId);
+        const embeddedPost = await PostDetailsModel.findById(embeddedPostId);
         if (embeddedPost) {
           embedObject = new PubkyAppPostEmbed(postRelationships.reposted, this.mapKindToEnum(embeddedPost.kind));
         }

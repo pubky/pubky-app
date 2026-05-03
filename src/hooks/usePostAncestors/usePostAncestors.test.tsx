@@ -27,16 +27,20 @@ vi.mock('dexie-react-hooks', () => ({
   }),
 }));
 
-// Mock Core
+// Mock dependencies
 const mockGetRelationships = vi.fn();
 const mockFetch = vi.fn().mockResolvedValue({ id: 'mock-post' });
-vi.mock('@/core', () => ({
+vi.mock('@/controllers/post/post', () => ({
   PostController: {
     getRelationships: (params: { compositeId: string }) => mockGetRelationships(params),
     fetch: (params: { compositeId: string }) => mockFetch(params),
   },
+}));
+vi.mock('@/models/models.utils', () => ({
   parseCompositeId: vi.fn(),
   buildCompositeIdFromPubkyUri: vi.fn(),
+}));
+vi.mock('@/models/models.types', () => ({
   CompositeIdDomain: { POSTS: 'posts' },
 }));
 

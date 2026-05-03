@@ -1,8 +1,8 @@
 'use client';
 
 import { useMemo } from 'react';
-import * as Core from '@/core';
-
+import { FileController } from '@/controllers/file/file';
+import type { NexusUserDetails } from '@/services/nexus/nexus.types';
 /**
  * Hook to compute avatar URL from user details.
  * Returns undefined if user has no image.
@@ -17,9 +17,9 @@ import * as Core from '@/core';
  * return <Avatar src={avatarUrl} />;
  * ```
  */
-export function useAvatarUrl(userDetails: Core.NexusUserDetails | null | undefined): string | undefined {
+export function useAvatarUrl(userDetails: NexusUserDetails | null | undefined): string | undefined {
   return useMemo(() => {
     if (!userDetails?.image) return undefined;
-    return Core.FileController.getAvatarUrl(userDetails.id);
+    return FileController.getAvatarUrl(userDetails.id);
   }, [userDetails]);
 }

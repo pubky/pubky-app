@@ -27,58 +27,72 @@ vi.mock('motion/react', () => ({
 // Use real libs - use actual implementations
 
 // Mock atoms
-vi.mock('@/atoms', () => ({
-  Container: ({
-    children,
-    className,
-    overrideDefaults,
-  }: {
-    children: React.ReactNode;
-    className?: string;
-    overrideDefaults?: boolean;
-  }) => (
-    <div data-testid="container" className={className} data-override-defaults={overrideDefaults}>
-      {children}
-    </div>
-  ),
-}));
+vi.mock('@/atoms/Container/Container', () => {
+  return {
+    Container: ({
+      children,
+      className,
+      overrideDefaults,
+    }: {
+      children: React.ReactNode;
+      className?: string;
+      overrideDefaults?: boolean;
+    }) => (
+      <div data-testid="container" className={className} data-override-defaults={overrideDefaults}>
+        {children}
+      </div>
+    ),
+  };
+});
 
 // Mock molecules
-vi.mock('@/molecules', () => ({
-  PostLinkEmbeds: ({ content }: { content: string }) => <div data-testid="post-link-embeds">{content}</div>,
-  PostTag: ({ label, showClose, onClose }: { label: string; showClose?: boolean; onClose?: () => void }) => (
-    <div data-testid="post-tag">
-      {label}
-      {showClose && (
-        <button data-testid={`tag-close-${label}`} onClick={onClose}>
-          ×
-        </button>
-      )}
-    </div>
-  ),
-  EmojiPickerDialog: ({
-    open,
-    onOpenChange,
-    onEmojiSelect,
-  }: {
-    open: boolean;
-    onOpenChange: (open: boolean) => void;
-    onEmojiSelect: (emoji: { native: string }) => void;
-  }) =>
-    open ? (
-      <div data-testid="emoji-picker-dialog">
-        <button data-testid="emoji-select" onClick={() => onEmojiSelect({ native: '😀' })}>
-          Select Emoji
-        </button>
-        <button data-testid="emoji-close" onClick={() => onOpenChange(false)}>
-          Close
-        </button>
+vi.mock('@/molecules/EmojiPickerDialog/EmojiPickerDialog', () => {
+  return {
+    EmojiPickerDialog: ({
+      open,
+      onOpenChange,
+      onEmojiSelect,
+    }: {
+      open: boolean;
+      onOpenChange: (open: boolean) => void;
+      onEmojiSelect: (emoji: { native: string }) => void;
+    }) =>
+      open ? (
+        <div data-testid="emoji-picker-dialog">
+          <button data-testid="emoji-select" onClick={() => onEmojiSelect({ native: '😀' })}>
+            Select Emoji
+          </button>
+          <button data-testid="emoji-close" onClick={() => onOpenChange(false)}>
+            Close
+          </button>
+        </div>
+      ) : null,
+  };
+});
+
+vi.mock('@/molecules/PostLinkEmbeds/PostLinkEmbeds', () => {
+  return {
+    PostLinkEmbeds: ({ content }: { content: string }) => <div data-testid="post-link-embeds">{content}</div>,
+  };
+});
+
+vi.mock('@/molecules/PostTag/PostTag', () => {
+  return {
+    PostTag: ({ label, showClose, onClose }: { label: string; showClose?: boolean; onClose?: () => void }) => (
+      <div data-testid="post-tag">
+        {label}
+        {showClose && (
+          <button data-testid={`tag-close-${label}`} onClick={onClose}>
+            ×
+          </button>
+        )}
       </div>
-    ) : null,
-}));
+    ),
+  };
+});
 
 // Mock PostInputTags
-vi.mock('../PostInputTags', () => ({
+vi.mock('../PostInputTags/PostInputTags', () => ({
   PostInputTags: ({
     tags,
     onTagsChange: _onTagsChange,
@@ -98,7 +112,7 @@ vi.mock('../PostInputTags', () => ({
 
 // Mock PostInputActionBar
 const mockOnPostClick = vi.fn();
-vi.mock('../PostInputActionBar', () => ({
+vi.mock('../PostInputActionBar/PostInputActionBar', () => ({
   PostInputActionBar: ({
     onPostClick,
     onEmojiClick,

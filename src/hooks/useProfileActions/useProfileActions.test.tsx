@@ -1,11 +1,13 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { renderHook, act, waitFor } from '@testing-library/react';
-import * as Core from '@/core';
-import * as Molecules from '@/molecules';
+import { showErrorToast } from '@/molecules/Toaster/showErrorToast';
+
 import { useProfileActions } from './useProfileActions';
 import { ErrorMessages } from '@/libs/error/error.messages';
 import { Logger } from '@/libs/logger/logger';
-
+import { ProfileController } from '@/controllers/profile/profile';
+import { useAuthStore } from '@/stores/auth/auth.store';
+import type { Pubky } from '@/models/models.types';
 // Mock next/navigation
 const mockPush = vi.fn();
 vi.mock('next/navigation', () => ({
@@ -14,39 +16,26 @@ vi.mock('next/navigation', () => ({
   }),
 }));
 
+vi.mock('@/molecules/Toaster/showErrorToast', () => ({
+  showErrorToast: vi.fn(),
+}));
+
 // Mock AuthController.logout
 const mockLogout = vi.fn();
-vi.mock('@/core', async (importOriginal) => {
-  const actual = await importOriginal<typeof import('@/core')>();
-  return {
-    ...actual,
-    AuthController: {
-      ...actual.AuthController,
-      logout: () => mockLogout(),
-    },
-  };
-});
+vi.mock('@/controllers/auth/auth', () => ({
+  AuthController: {
+    logout: () => mockLogout(),
+  },
+}));
 
-// Mock useCopyToClipboard hook - mock both paths
+// Mock useCopyToClipboard hook
 const mockCopyToClipboard = vi.fn();
 
-// Mock direct import path (used by useProfileActions)
-vi.mock('@/hooks/useCopyToClipboard', () => ({
+vi.mock('@/hooks/useCopyToClipboard/useCopyToClipboard', () => ({
   useCopyToClipboard: () => ({
     copyToClipboard: mockCopyToClipboard,
   }),
 }));
-
-// Mock barrel export
-vi.mock('@/hooks', async (importOriginal) => {
-  const actual = await importOriginal<typeof import('@/hooks')>();
-  return {
-    ...actual,
-    useCopyToClipboard: () => ({
-      copyToClipboard: mockCopyToClipboard,
-    }),
-  };
-});
 
 describe('useProfileActions', () => {
   const defaultProps = {
@@ -57,7 +46,8 @@ describe('useProfileActions', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     vi.spyOn(Logger, 'error').mockImplementation(() => {});
-    vi.spyOn(Molecules, 'showErrorToast').mockImplementation(() => {});
+    vi.mocked(showErrorToast).mockImplementation(() => {});
+    useAuthStore.setState({ currentUserPubky: null });
   });
 
   describe('Action handlers', () => {
@@ -202,7 +192,7 @@ describe('useProfileActions', () => {
       });
 
       expect(Logger.error).toHaveBeenCalledWith('Failed to logout:', expect.any(Error));
-      expect(Molecules.showErrorToast).toHaveBeenCalledWith({
+      expect(showErrorToast).toHaveBeenCalledWith({
         description: ErrorMessages.LOGOUT_FAILED,
       });
       expect(mockPush).not.toHaveBeenCalled();
@@ -222,13 +212,8 @@ describe('useProfileActions', () => {
 
   describe('onStatusChange', () => {
     it('calls ProfileController.commitUpdateStatus with status', async () => {
-      const mockUpdateStatus = vi.spyOn(Core.ProfileController, 'commitUpdateStatus').mockResolvedValue(undefined);
-      const mockAuthStore = {
-        currentUserPubky: 'test-user',
-        setCurrentUserPubky: vi.fn(),
-        setAuthenticated: vi.fn(),
-      };
-      vi.spyOn(Core, 'useAuthStore').mockReturnValue(mockAuthStore as ReturnType<typeof Core.useAuthStore>);
+      const mockUpdateStatus = vi.spyOn(ProfileController, 'commitUpdateStatus').mockResolvedValue(undefined);
+      useAuthStore.setState({ currentUserPubky: 'test-user' as Pubky });
 
       const { result } = renderHook(() => useProfileActions(defaultProps));
 

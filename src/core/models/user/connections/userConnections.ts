@@ -1,20 +1,21 @@
 import { Table } from 'dexie';
 
-import * as Core from '@/core';
 import { UserConnectionsFields, UserConnectionsModelSchema } from './userConnections.schema';
-import { TupleModelBase } from '@/core/models/shared/base/tuple/baseTuple';
 import { DatabaseErrorCode } from '@/libs/error/error.codes';
 import { Err } from '@/libs/error/error.factories';
 import { ErrorService } from '@/libs/error/error.types';
-
+import { db } from '@/database/franky/franky';
+import type { Pubky } from '@/models/models.types';
+import { TupleModelBase } from '@/models/shared/base/tuple/baseTuple';
+import type { NexusModelTuple } from '@/models/shared/base/tuple/baseTuple.type';
 export class UserConnectionsModel
-  extends TupleModelBase<Core.Pubky, UserConnectionsModelSchema>
+  extends TupleModelBase<Pubky, UserConnectionsModelSchema>
   implements UserConnectionsModelSchema
 {
-  static table: Table<UserConnectionsModelSchema> = Core.db.table('user_connections');
+  static table: Table<UserConnectionsModelSchema> = db.table('user_connections');
 
-  following: Core.Pubky[];
-  followers: Core.Pubky[];
+  following: Pubky[];
+  followers: Pubky[];
 
   constructor(userConnections: UserConnectionsModelSchema) {
     super(userConnections);
@@ -23,7 +24,7 @@ export class UserConnectionsModel
   }
 
   static toSchema(
-    data: Core.NexusModelTuple<Pick<UserConnectionsModelSchema, 'following' | 'followers'>>,
+    data: NexusModelTuple<Pick<UserConnectionsModelSchema, 'following' | 'followers'>>,
   ): UserConnectionsModelSchema {
     return { id: data[0], ...data[1] } as UserConnectionsModelSchema;
   }
@@ -39,7 +40,7 @@ export class UserConnectionsModel
    * @param to - The user to add to the connection list
    * @param key - The type of connection list: `following` or `followers`
    */
-  static async createConnection(from: Core.Pubky, to: Core.Pubky, key: UserConnectionsFields): Promise<boolean> {
+  static async createConnection(from: Pubky, to: Pubky, key: UserConnectionsFields): Promise<boolean> {
     try {
       let didChange = false;
       const exists = await this.findById(from);
@@ -76,7 +77,7 @@ export class UserConnectionsModel
     }
   }
 
-  static async deleteConnection(from: Core.Pubky, to: Core.Pubky, key: UserConnectionsFields): Promise<boolean> {
+  static async deleteConnection(from: Pubky, to: Pubky, key: UserConnectionsFields): Promise<boolean> {
     try {
       let didChange = false;
       const exists = await this.findById(from);

@@ -1,5 +1,1 @@
-import * as Templates from '@/templates';
-
-export default function SettingsMutedUsersPage() {
-  return <Templates.MutedUsers />;
-}
+export { MutedUsers as default } from '@/templates/Settings/MutedUsers/MutedUsers';

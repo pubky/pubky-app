@@ -1,7 +1,9 @@
-import * as Core from '@/core';
 import { HttpMethod } from '@/libs/http/http.types';
 import { stripPubkyPrefix } from '@/libs/utils/utils';
-
+import { MuteApplication } from '@/application/mute/mute';
+import type { TMuteParams } from '@/controllers/mute/mute.types';
+import type { Pubky } from '@/models/models.types';
+import { MuteNormalizer } from '@/pipes/mute/mute.normalizer';
 export class MuteController {
   private constructor() {}
 
@@ -11,10 +13,10 @@ export class MuteController {
    * @param muter - The muter user ID
    * @param mutee - The mutee user ID
    */
-  static async commitMute(eventType: HttpMethod, { muter, mutee }: Core.TMuteParams) {
-    const normalizedMutee = stripPubkyPrefix(mutee) as Core.Pubky;
-    const { meta, mute } = Core.MuteNormalizer.to({ muter, mutee: normalizedMutee });
-    await Core.MuteApplication.commitMute({
+  static async commitMute(eventType: HttpMethod, { muter, mutee }: TMuteParams) {
+    const normalizedMutee = stripPubkyPrefix(mutee) as Pubky;
+    const { meta, mute } = MuteNormalizer.to({ muter, mutee: normalizedMutee });
+    await MuteApplication.commitMute({
       eventType,
       muteUrl: meta.url,
       muteJson: mute.toJson(),
@@ -28,7 +30,7 @@ export class MuteController {
    * @param pubky - The user's pubky to fetch mutes for
    * @returns Array of muted user pubkeys
    */
-  static async fetchMutedUsers(pubky: Core.Pubky): Promise<Core.Pubky[]> {
-    return Core.MuteApplication.fetchMutedUsers(pubky);
+  static async fetchMutedUsers(pubky: Pubky): Promise<Pubky[]> {
+    return MuteApplication.fetchMutedUsers(pubky);
   }
 }

@@ -3,7 +3,6 @@
 exports[`PostHeader - Snapshots > matches snapshot in loaded state 1`] = `
 <div
   class="flex min-w-0 items-start justify-between gap-3"
-  data-override-defaults="true"
   data-testid="container"
 >
   <div

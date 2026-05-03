@@ -9,7 +9,7 @@ const { mockGetOrFetchDetails } = vi.hoisted(() => ({
   mockGetOrFetchDetails: vi.fn(),
 }));
 
-vi.mock('@/core/controllers/user/user', () => ({
+vi.mock('@/controllers/user/user', () => ({
   UserController: {
     getOrFetchDetails: mockGetOrFetchDetails,
   },

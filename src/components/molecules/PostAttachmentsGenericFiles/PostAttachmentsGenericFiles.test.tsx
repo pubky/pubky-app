@@ -4,83 +4,100 @@ import { PostAttachmentsGenericFiles } from './PostAttachmentsGenericFiles';
 import type { AttachmentConstructed } from '@/organisms/PostAttachments/PostAttachments.types';
 
 // Mock @/atoms
-vi.mock('@/atoms', () => ({
-  Container: ({
-    children,
-    className,
-    onClick,
-    overrideDefaults,
-    'data-testid': dataTestId,
-  }: {
-    children: React.ReactNode;
-    className?: string;
-    onClick?: (e: React.MouseEvent) => void;
-    overrideDefaults?: boolean;
-    'data-testid'?: string;
-  }) => {
-    const testId = dataTestId || (overrideDefaults ? 'inner-container' : onClick ? 'click-container' : 'container');
-    return (
-      <div data-testid={testId} className={className} onClick={onClick}>
+vi.mock('@/atoms/Button/Button', () => {
+  return {
+    Button: ({
+      children,
+      asChild,
+      variant,
+      size,
+      className,
+      'data-testid': dataTestId,
+    }: {
+      children: React.ReactNode;
+      asChild?: boolean;
+      variant?: string;
+      size?: string;
+      className?: string;
+      'data-testid'?: string;
+    }) => (
+      <button
+        data-testid={dataTestId || 'button'}
+        data-variant={variant}
+        data-size={size}
+        data-aschild={asChild}
+        className={className}
+      >
         {children}
-      </div>
-    );
-  },
-  Typography: ({
-    children,
-    size,
-    className,
-    'data-testid': dataTestId,
-  }: {
-    children: React.ReactNode;
-    size?: string;
-    className?: string;
-    'data-testid'?: string;
-  }) => (
-    <span data-testid={dataTestId || 'typography'} data-size={size} className={className}>
-      {children}
-    </span>
-  ),
-  Button: ({
-    children,
-    asChild,
-    variant,
-    size,
-    className,
-    'data-testid': dataTestId,
-  }: {
-    children: React.ReactNode;
-    asChild?: boolean;
-    variant?: string;
-    size?: string;
-    className?: string;
-    'data-testid'?: string;
-  }) => (
-    <button
-      data-testid={dataTestId || 'button'}
-      data-variant={variant}
-      data-size={size}
-      data-aschild={asChild}
-      className={className}
-    >
-      {children}
-    </button>
-  ),
-  Link: ({
-    children,
-    href,
-    overrideDefaults,
-    'data-testid': dataTestId,
-  }: {
-    children: React.ReactNode;
-    href: string;
-    overrideDefaults?: boolean;
-    'data-testid'?: string;
-  }) => (
-    <a data-testid={dataTestId || 'link'} href={href} data-override-defaults={overrideDefaults}>
-      {children}
-    </a>
-  ),
-}));
+      </button>
+    ),
+  };
+});
+
+vi.mock('@/atoms/Container/Container', () => {
+  return {
+    Container: ({
+      children,
+      className,
+      onClick,
+      overrideDefaults,
+      'data-testid': dataTestId,
+    }: {
+      children: React.ReactNode;
+      className?: string;
+      onClick?: (e: React.MouseEvent) => void;
+      overrideDefaults?: boolean;
+      'data-testid'?: string;
+    }) => {
+      const testId = dataTestId || (overrideDefaults ? 'inner-container' : onClick ? 'click-container' : 'container');
+      return (
+        <div data-testid={testId} className={className} onClick={onClick}>
+          {children}
+        </div>
+      );
+    },
+  };
+});
+
+vi.mock('@/atoms/Link/Link', () => {
+  return {
+    Link: ({
+      children,
+      href,
+      overrideDefaults,
+      'data-testid': dataTestId,
+    }: {
+      children: React.ReactNode;
+      href: string;
+      overrideDefaults?: boolean;
+      'data-testid'?: string;
+    }) => (
+      <a data-testid={dataTestId || 'link'} href={href} data-override-defaults={overrideDefaults}>
+        {children}
+      </a>
+    ),
+  };
+});
+
+vi.mock('@/atoms/Typography/Typography', () => {
+  return {
+    Typography: ({
+      children,
+      size,
+      className,
+      'data-testid': dataTestId,
+    }: {
+      children: React.ReactNode;
+      size?: string;
+      className?: string;
+      'data-testid'?: string;
+    }) => (
+      <span data-testid={dataTestId || 'typography'} data-size={size} className={className}>
+        {children}
+      </span>
+    ),
+  };
+});
 
 const createMockFile = (overrides: Partial<AttachmentConstructed> = {}): AttachmentConstructed => {
   const type = overrides.type ?? 'application/pdf';

@@ -1,14 +1,15 @@
 'use client';
 
 import { useTranslations } from 'next-intl';
-import * as Molecules from '@/molecules';
-import * as Organisms from '@/organisms';
+import { SettingsSectionCard } from '@/molecules/Settings/SettingsSectionCard/SettingsSectionCard';
+import { LanguageSelector } from '@/organisms/Settings/LanguageSelector/LanguageSelector';
+
 import { Globe } from 'lucide-react';
 export function Language() {
   const t = useTranslations('settings.language');
   return (
-    <Molecules.SettingsSectionCard icon={Globe} title={t('title')} description={t('description')}>
-      <Organisms.LanguageSelector />
-    </Molecules.SettingsSectionCard>
+    <SettingsSectionCard icon={Globe} title={t('title')} description={t('description')}>
+      <LanguageSelector />
+    </SettingsSectionCard>
   );
 }

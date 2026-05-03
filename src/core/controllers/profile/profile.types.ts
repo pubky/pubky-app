@@ -1,32 +1,34 @@
-import * as Core from '@/core';
 import z from 'zod';
-
-export type UserControllerNewData = Omit<Core.NexusUserDetails, 'id' | 'indexed_at' | 'status'>;
+import type { Pubky } from '@/models/models.types';
+import type { UiLink } from '@/pipes/user/user.normalizer';
+import type { UiUserSchema } from '@/pipes/user/user.validator';
+import type { NexusUserDetails } from '@/services/nexus/nexus.types';
+export type UserControllerNewData = Omit<NexusUserDetails, 'id' | 'indexed_at' | 'status'>;
 
 export type TReadProfileParams = {
-  userId: Core.Pubky;
+  userId: Pubky;
 };
 
 export type TDeleteAccountInput = {
-  pubky: Core.Pubky;
+  pubky: Pubky;
   setProgress?: (progress: number) => void;
 };
 
 export type TDownloadDataInput = {
-  pubky: Core.Pubky;
+  pubky: Pubky;
   setProgress?: (progress: number) => void;
 };
 
 export type TCommitSetDetailsParams = {
-  profile: z.infer<typeof Core.UiUserSchema>;
+  profile: z.infer<typeof UiUserSchema>;
   image: string | null;
-  pubky: Core.Pubky;
+  pubky: Pubky;
 };
 
 export type TCommitUpdateDetailsParams = {
   name: string;
   bio: string | undefined;
-  links: Core.UiLink[] | undefined | null;
+  links: UiLink[] | undefined | null;
   image: string | null;
-  pubky: Core.Pubky;
+  pubky: Pubky;
 };

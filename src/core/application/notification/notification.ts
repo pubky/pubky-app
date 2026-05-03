@@ -1,10 +1,27 @@
-import * as Core from '@/core';
-import { FlatNotification, NotificationType } from '@/core/models/notification/notification.types';
 import { LastReadResult } from 'pubky-app-specs';
 import { HttpMethod } from '@/libs/http/http.types';
 import { Logger } from '@/libs/logger/logger';
-import type { Pubky } from '@/core/models/models.types';
-import type { TGetOrFetchNotificationsResponse } from './notification.types';
+import type {
+  TFetchMissingEntitiesParams,
+  TFetchNotificationsResult,
+  TFlatNotificationList,
+  TGetOrFetchNotificationsParams,
+  TGetOrFetchNotificationsResponse,
+  TNotificationApplicationNotificationsParams,
+  TNotificationsPartialCacheHitParams,
+  TPersistAndSummarizeParams,
+} from '@/application/notification/notification.types';
+import { PostStreamApplication } from '@/application/stream/posts/post';
+import { UserStreamApplication } from '@/application/stream/users/users';
+import type { Pubky } from '@/models/models.types';
+import { NotificationType, type FlatNotification } from '@/models/notification/notification.types';
+import { NotificationNormalizer } from '@/pipes/notification/notification.normalizer';
+import { HomeserverService } from '@/services/homeserver/homeserver';
+import { LocalNotificationService } from '@/services/local/notification/notification';
+import { LocalStreamPostsService } from '@/services/local/stream/posts/posts';
+import { LocalStreamUsersService } from '@/services/local/stream/users/users';
+import type { NexusNotification } from '@/services/nexus/nexus.types';
+import { NexusUserService } from '@/services/nexus/user/user';
 
 const MAX_FETCH_ROUNDS = 10;
 
@@ -26,8 +43,8 @@ export class NotificationApplication {
     lastPolledTimestamp,
     lastRead,
     allowedTypes,
-  }: Core.TNotificationApplicationNotificationsParams): Promise<Core.TFetchNotificationsResult> {
-    const notifications = await Core.NexusUserService.notifications({ user_id: userId, end: lastPolledTimestamp });
+  }: TNotificationApplicationNotificationsParams): Promise<TFetchNotificationsResult> {
+    const notifications = await NexusUserService.notifications({ user_id: userId, end: lastPolledTimestamp });
     const flatNotifications = await this.fetchMissingEntities({ notifications, viewerId: userId });
     return this.persistAndSummarize({ notifications, lastRead, allowedTypes, flatNotifications });
   }
@@ -39,8 +56,8 @@ export class NotificationApplication {
    * @returns The new lastRead timestamp
    */
   static markAllAsRead({ meta, last_read }: LastReadResult) {
-    Core.HomeserverService.request({ method: HttpMethod.PUT, url: meta.url, bodyJson: last_read.toJson() }).catch(
-      (error) => Logger.warn('Failed to update lastRead on homeserver', { error }),
+    HomeserverService.request({ method: HttpMethod.PUT, url: meta.url, bodyJson: last_read.toJson() }).catch((error) =>
+      Logger.warn('Failed to update lastRead on homeserver', { error }),
     );
   }
 
@@ -48,8 +65,8 @@ export class NotificationApplication {
    * Retrieves all notifications from the local cache.
    * @returns Promise resolving to all notifications ordered by timestamp descending
    */
-  static async getAllFromCache(): Promise<Core.FlatNotification[]> {
-    return await Core.LocalNotificationService.getAll();
+  static async getAllFromCache(): Promise<FlatNotification[]> {
+    return await LocalNotificationService.getAll();
   }
 
   /**
@@ -60,8 +77,8 @@ export class NotificationApplication {
    * @param allowedTypes - Notification types to include in the count
    * @returns Promise resolving to the filtered unread count
    */
-  static async countFilteredUnreadSince(lastRead: number, allowedTypes: Core.NotificationType[]): Promise<number> {
-    return await Core.LocalNotificationService.countFilteredUnreadSince(lastRead, allowedTypes);
+  static async countFilteredUnreadSince(lastRead: number, allowedTypes: NotificationType[]): Promise<number> {
+    return await LocalNotificationService.countFilteredUnreadSince(lastRead, allowedTypes);
   }
 
   /**
@@ -91,7 +108,7 @@ export class NotificationApplication {
     olderThan,
     limit,
     allowedTypes,
-  }: Core.TGetOrFetchNotificationsParams): Promise<Core.TGetOrFetchNotificationsResponse> {
+  }: TGetOrFetchNotificationsParams): Promise<TGetOrFetchNotificationsResponse> {
     if (allowedTypes === undefined) {
       // No preference constraints are applied (e.g., all notification settings are enabled),
       // so use the normal single-page fetch path.
@@ -115,11 +132,11 @@ export class NotificationApplication {
     limit,
     allowedTypes,
   }: {
-    userId: Core.Pubky;
+    userId: Pubky;
     olderThan: number;
     limit: number;
     allowedTypes: NotificationType[];
-  }): Promise<Core.TGetOrFetchNotificationsResponse> {
+  }): Promise<TGetOrFetchNotificationsResponse> {
     let cursor: number | undefined = olderThan;
     const collected: FlatNotification[] = [];
 
@@ -170,7 +187,7 @@ export class NotificationApplication {
     limit: number;
   }): Promise<TGetOrFetchNotificationsResponse> {
     // Try to get notifications from cache
-    const flatNotifications = await Core.LocalNotificationService.getOlderThan({ olderThan, limit });
+    const flatNotifications = await LocalNotificationService.getOlderThan({ olderThan, limit });
 
     // Full cache hit - return cached results
     if (flatNotifications.length === limit) {
@@ -196,10 +213,10 @@ export class NotificationApplication {
     lastRead,
     allowedTypes,
     flatNotifications: precomputed,
-  }: Core.TPersistAndSummarizeParams): Promise<Core.TFetchNotificationsResult> {
+  }: TPersistAndSummarizeParams): Promise<TFetchNotificationsResult> {
     const flatNotifications = precomputed ?? this.toSupportedFlatNotifications(notifications);
-    await Core.LocalNotificationService.bulkSave({ flatNotifications });
-    const unread = await Core.LocalNotificationService.countFilteredUnreadSince(lastRead, allowedTypes);
+    await LocalNotificationService.bulkSave({ flatNotifications });
+    const unread = await LocalNotificationService.countFilteredUnreadSince(lastRead, allowedTypes);
     const nextPollCursor = notifications.length > 0 ? notifications[0].timestamp + 1 : undefined;
     return { unread, nextPollCursor };
   }
@@ -215,7 +232,7 @@ export class NotificationApplication {
     userId,
     limit,
     flatNotifications,
-  }: Core.TNotificationsPartialCacheHitParams): Promise<Core.TGetOrFetchNotificationsResponse> {
+  }: TNotificationsPartialCacheHitParams): Promise<TGetOrFetchNotificationsResponse> {
     const lastCachedTimestamp = flatNotifications[flatNotifications.length - 1]?.timestamp;
     const remainingLimit = limit - flatNotifications.length;
 
@@ -242,13 +259,13 @@ export class NotificationApplication {
     olderThan,
     limit,
   }: {
-    userId: Core.Pubky;
+    userId: Pubky;
     olderThan: number;
     limit: number;
-  }): Promise<Core.TGetOrFetchNotificationsResponse> {
+  }): Promise<TGetOrFetchNotificationsResponse> {
     try {
       // Fetch from Nexus using skip/limit pagination
-      const notifications = await Core.NexusUserService.notifications({
+      const notifications = await NexusUserService.notifications({
         user_id: userId,
         limit,
         start: olderThan === Infinity ? undefined : olderThan,
@@ -265,7 +282,7 @@ export class NotificationApplication {
       // available yet, causing incomplete UI states. By persisting related entities first, everything is
       // ready when the re-render happens.
       try {
-        await Core.LocalNotificationService.bulkSave({ flatNotifications });
+        await LocalNotificationService.bulkSave({ flatNotifications });
       } catch (error) {
         Logger.warn('Failed to persist notifications to cache', { error });
         // Continue - we still return the fetched notifications for display
@@ -290,23 +307,23 @@ export class NotificationApplication {
   static async fetchMissingEntities({
     notifications,
     viewerId,
-  }: Core.TFetchMissingEntitiesParams): Promise<Core.TFlatNotificationList> {
+  }: TFetchMissingEntitiesParams): Promise<TFlatNotificationList> {
     const flatNotifications = this.toSupportedFlatNotifications(notifications);
 
-    const { relatedPostIds, relatedUserIds } = Core.LocalNotificationService.parseNotifications({ flatNotifications });
+    const { relatedPostIds, relatedUserIds } = LocalNotificationService.parseNotifications({ flatNotifications });
 
-    const notPersistedPostIds = await Core.LocalStreamPostsService.getNotPersistedPostsInCache(relatedPostIds);
-    const notPersistedUserIds = await Core.LocalStreamUsersService.getNotPersistedUsersInCache(relatedUserIds);
+    const notPersistedPostIds = await LocalStreamPostsService.getNotPersistedPostsInCache(relatedPostIds);
+    const notPersistedUserIds = await LocalStreamUsersService.getNotPersistedUsersInCache(relatedUserIds);
 
     if (notPersistedPostIds.length > 0) {
-      await Core.PostStreamApplication.fetchMissingPostsFromNexus({
+      await PostStreamApplication.fetchMissingPostsFromNexus({
         cacheMissPostIds: notPersistedPostIds,
         viewerId,
       });
     }
 
     if (notPersistedUserIds.length > 0) {
-      await Core.UserStreamApplication.fetchMissingUsersFromNexus({ cacheMissUserIds: notPersistedUserIds, viewerId });
+      await UserStreamApplication.fetchMissingUsersFromNexus({ cacheMissUserIds: notPersistedUserIds, viewerId });
     }
     return flatNotifications;
   }
@@ -315,10 +332,10 @@ export class NotificationApplication {
    * Transforms Nexus notifications to flat format and filters out unsupported types
    * (e.g., lost_friend from the server).
    */
-  static toSupportedFlatNotifications(notifications: Core.NexusNotification[]): Core.TFlatNotificationList {
+  static toSupportedFlatNotifications(notifications: NexusNotification[]): TFlatNotificationList {
     const supportedTypes = Object.values(NotificationType) as string[];
     return notifications
-      .map((n) => Core.NotificationNormalizer.toFlatNotification(n))
+      .map((n) => NotificationNormalizer.toFlatNotification(n))
       .filter((n) => supportedTypes.includes(n.type));
   }
 

@@ -14,7 +14,7 @@ vi.mock('next/navigation', () => ({
   }),
 }));
 
-vi.mock('@/core', () => ({
+vi.mock('@/stores/onboarding/onboarding.store', () => ({
   useOnboardingStore: {
     getState: () => ({
       setInviteCode: mockSetInviteCode,
@@ -22,16 +22,28 @@ vi.mock('@/core', () => ({
   },
 }));
 
-vi.mock('@/molecules', () => ({
-  OnboardingLayout: ({ children }: { children: ReactNode }) => <div data-testid="install-layout">{children}</div>,
-  InstallNavigation: () => <div data-testid="install-navigation">Install Navigation</div>,
-  InstallHeader: () => <div data-testid="install-header">Install Header</div>,
-  InstallCard: () => <div data-testid="install-card">Install Card</div>,
-  InstallFooter: () => <div data-testid="install-footer">Install Footer</div>,
-  useToast: () => ({
-    toast: mockToast,
-  }),
-}));
+vi.mock('@/molecules/Install/Install', () => {
+  return {
+    InstallNavigation: () => <div data-testid="install-navigation">Install Navigation</div>,
+    InstallHeader: () => <div data-testid="install-header">Install Header</div>,
+    InstallCard: () => <div data-testid="install-card">Install Card</div>,
+    InstallFooter: () => <div data-testid="install-footer">Install Footer</div>,
+  };
+});
+
+vi.mock('@/molecules/OnboardingLayout/OnboardingLayout', () => {
+  return {
+    OnboardingLayout: ({ children }: { children: ReactNode }) => <div data-testid="install-layout">{children}</div>,
+  };
+});
+
+vi.mock('@/molecules/Toaster/use-toast', () => {
+  return {
+    useToast: () => ({
+      toast: mockToast,
+    }),
+  };
+});
 
 describe('Install template', () => {
   beforeEach(() => {

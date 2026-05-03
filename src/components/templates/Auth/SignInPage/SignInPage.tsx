@@ -1,12 +1,13 @@
-import * as Atoms from '@/atoms';
-import * as Organisms from '@/organisms';
+import { Container } from '@/atoms/Container/Container';
+import { SignInContent, SignInFooter } from '@/organisms/SignIn/SignIn';
+import { SignInNavigation } from '@/organisms/SignInNavigation/SignInNavigation';
 
 export function SignInPage() {
   return (
-    <Atoms.Container size="container" className="px-6">
-      <Organisms.SignInContent />
-      <Organisms.SignInFooter />
-      <Organisms.SignInNavigation />
-    </Atoms.Container>
+    <Container size="container" className="px-6">
+      <SignInContent />
+      <SignInFooter />
+      <SignInNavigation />
+    </Container>
   );
 }

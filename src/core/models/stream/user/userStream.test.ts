@@ -1,5 +1,3 @@
-import { db } from '@/core/database';
-import * as Core from '@/core';
 import { describe, it, expect, beforeEach } from 'vitest';
 import {
   createDefaultUserStream,
@@ -9,9 +7,10 @@ import {
 } from './userStream.helper';
 import { UserStreamModel } from './userStream';
 import { UserStreamTypes } from './userStream.types';
-
+import { db } from '@/database/franky/franky';
+import type { Pubky } from '@/models/models.types';
 describe('UserStreamModel', () => {
-  const targetUserId = 'user-target' as Core.Pubky;
+  const targetUserId = 'user-target' as Pubky;
 
   beforeEach(async () => {
     await db.initialize();
@@ -145,7 +144,7 @@ describe('UserStreamModel', () => {
 
 describe('buildUserCompositeId', () => {
   it('should build correct format (userId:reach)', () => {
-    const userId = 'user-123' as Core.Pubky;
+    const userId = 'user-123' as Pubky;
     const reach = 'followers';
 
     const compositeId = buildUserCompositeId({ userId, reach });
@@ -154,7 +153,7 @@ describe('buildUserCompositeId', () => {
   });
 
   it('should handle all UserStreamSource enum values', () => {
-    const userId = 'user-123' as Core.Pubky;
+    const userId = 'user-123' as Pubky;
 
     expect(buildUserCompositeId({ userId, reach: 'followers' })).toBe('user-123:followers');
     expect(buildUserCompositeId({ userId, reach: 'following' })).toBe('user-123:following');
@@ -163,7 +162,7 @@ describe('buildUserCompositeId', () => {
   });
 
   it('should use correct delimiter', () => {
-    const userId = 'user-123' as Core.Pubky;
+    const userId = 'user-123' as Pubky;
     const reach = 'followers';
 
     const compositeId = buildUserCompositeId({ userId, reach });
@@ -173,7 +172,7 @@ describe('buildUserCompositeId', () => {
   });
 
   it('should handle special characters in userId', () => {
-    const userId = 'user_with-special.chars' as Core.Pubky;
+    const userId = 'user_with-special.chars' as Pubky;
     const reach = 'followers';
 
     const compositeId = buildUserCompositeId({ userId, reach });
@@ -238,7 +237,7 @@ describe('parseUserCompositeId', () => {
 describe('createDefaultUserStream', () => {
   it('should create stream with UserStreamId (composite)', () => {
     const streamId = buildUserCompositeId({ userId: 'user-123', reach: 'followers' });
-    const stream: Core.Pubky[] = ['follower-1', 'follower-2'];
+    const stream: Pubky[] = ['follower-1', 'follower-2'];
 
     const result = createDefaultUserStream(streamId, stream);
 
@@ -248,7 +247,7 @@ describe('createDefaultUserStream', () => {
 
   it('should create stream with UserStreamId (enum)', () => {
     const streamId = UserStreamTypes.TODAY_INFLUENCERS_ALL;
-    const stream: Core.Pubky[] = ['influencer-1'];
+    const stream: Pubky[] = ['influencer-1'];
 
     const result = createDefaultUserStream(streamId, stream);
 

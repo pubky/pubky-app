@@ -1,15 +1,36 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { LastReadResult } from 'pubky-app-specs';
 import { BootstrapApplication } from './bootstrap';
-import * as Core from '@/core';
-import { asOpaque } from '@/test-utils';
+import { asOpaque } from '@/test-utils/type-assertions';
 import { Env } from '@/libs/env/env';
 import { ClientErrorCode, ServerErrorCode } from '@/libs/error/error.codes';
 import { Err } from '@/libs/error/error.factories';
 import { ErrorCategory, ErrorService } from '@/libs/error/error.types';
 import { HttpMethod, HttpStatusCode } from '@/libs/http/http.types';
 import { Logger } from '@/libs/logger/logger';
-
+import type { TBootstrapParams } from '@/application/bootstrap/bootstrap.types';
+import { FeedApplication } from '@/application/feed/feed';
+import { FileApplication } from '@/application/file/file';
+import { MuteApplication } from '@/application/mute/mute';
+import { TtlCoordinator } from '@/coordinators/ttl/ttl';
+import { buildHotTagsId } from '@/models/hot/hot.helper';
+import type { Pubky } from '@/models/models.types';
+import { NotificationType, type FlatNotification } from '@/models/notification/notification.types';
+import { PostStreamTypes } from '@/models/stream/post/postStream.types';
+import { TagStreamTypes } from '@/models/stream/tag/tagStream.types';
+import { UserStreamTypes } from '@/models/stream/user/userStream.types';
+import { LastReadNormalizer } from '@/pipes/lastRead/lastRead.normalizer';
+import { NotificationNormalizer } from '@/pipes/notification/notification.normalizer';
+import { HomeserverService } from '@/services/homeserver/homeserver';
+import { LocalHotService } from '@/services/local/hot/hot';
+import { LocalNotificationService } from '@/services/local/notification/notification';
+import { LocalStreamPostsService } from '@/services/local/stream/posts/posts';
+import { LocalStreamTagsService } from '@/services/local/stream/tags/tags';
+import { LocalStreamUsersService } from '@/services/local/stream/users/users';
+import { LocalUserService } from '@/services/local/user/user';
+import { NexusBootstrapService } from '@/services/nexus/bootstrap/bootstrap';
+import type { NexusBootstrapResponse } from '@/services/nexus/bootstrap/bootstrap.types';
+import { UserStreamTimeframe, type NexusFileDetails, type NexusNotification } from '@/services/nexus/nexus.types';
 // Mock pubky-app-specs to avoid WebAssembly issues
 vi.mock('pubky-app-specs', () => ({
   default: vi.fn(() => Promise.resolve()),
@@ -18,9 +39,9 @@ vi.mock('pubky-app-specs', () => ({
 const TEST_PUBKY = '5a1diz4pghi47ywdfyfzpit5f3bdomzt4pugpbmq4rngdd4iub4y';
 const MOCK_LAST_READ_URL = 'http://example.com/last-read';
 const MOCK_LAST_READ = 1234567890;
-const MOCK_ALLOWED_TYPES = [Core.NotificationType.Follow, Core.NotificationType.Reply];
+const MOCK_ALLOWED_TYPES = [NotificationType.Follow, NotificationType.Reply];
 
-const emptyBootstrap = (): Core.NexusBootstrapResponse => ({
+const emptyBootstrap = (): NexusBootstrapResponse => ({
   users: [],
   posts: [],
   files: [],
@@ -29,7 +50,7 @@ const emptyBootstrap = (): Core.NexusBootstrapResponse => ({
   notifications: [],
 });
 
-const createMockBootstrapData = (): Core.NexusBootstrapResponse => ({
+const createMockBootstrapData = (): NexusBootstrapResponse => ({
   users: [
     {
       details: {
@@ -85,27 +106,27 @@ const createMockBootstrapData = (): Core.NexusBootstrapResponse => ({
   notifications: [],
 });
 
-const createMockNotification = (): Core.NexusNotification => ({
+const createMockNotification = (): NexusNotification => ({
   timestamp: Date.now(),
   body: { type: 'like', user_id: 'user-2', post_id: 'post-1' },
 });
 
-const createFlatNotification = (timestamp: number): Core.FlatNotification =>
+const createFlatNotification = (timestamp: number): FlatNotification =>
   ({
-    type: Core.NotificationType.Follow,
+    type: NotificationType.Follow,
     timestamp,
     followed_by: `user-${timestamp}`,
-  }) as Core.FlatNotification;
+  }) as FlatNotification;
 
-const getBootstrapParams = (pubky: string): Core.TBootstrapParams & { allowedTypes: Core.NotificationType[] } => {
+const getBootstrapParams = (pubky: string): TBootstrapParams & { allowedTypes: NotificationType[] } => {
   const {
     meta: { url },
-  } = Core.NotificationNormalizer.to(pubky);
+  } = NotificationNormalizer.to(pubky);
   return { pubky, lastReadUrl: url, allowedTypes: MOCK_ALLOWED_TYPES };
 };
 
 type MockConfig = {
-  bootstrapData?: Core.NexusBootstrapResponse | null;
+  bootstrapData?: NexusBootstrapResponse | null;
   bootstrapError?: Error;
   homeserverError?: Error;
   unreadCount?: number;
@@ -117,7 +138,7 @@ type MockConfig = {
   persistFilesError?: Error;
   bulkSaveError?: Error;
   countFilteredError?: Error;
-  mutedUsers?: Core.Pubky[];
+  mutedUsers?: Pubky[];
   fetchMutedUsersError?: Error;
   fetchFeedsError?: Error;
 };
@@ -161,62 +182,62 @@ const setupMocks = (config: MockConfig = {}): ServiceMocks => {
 
   return {
     nexusFetch: vi
-      .spyOn(Core.NexusBootstrapService, 'fetch')
+      .spyOn(NexusBootstrapService, 'fetch')
       .mockImplementation(
         bootstrapError
           ? () => Promise.reject(bootstrapError)
-          : () => Promise.resolve(bootstrapData as Core.NexusBootstrapResponse),
+          : () => Promise.resolve(bootstrapData as NexusBootstrapResponse),
       ),
     homeserverRequest: vi
-      .spyOn(Core.HomeserverService, 'request')
+      .spyOn(HomeserverService, 'request')
       .mockImplementation(
         homeserverError ? () => Promise.reject(homeserverError) : () => Promise.resolve({ timestamp: MOCK_LAST_READ }),
       ),
     fetchMutedUsers: vi
-      .spyOn(Core.MuteApplication, 'fetchMutedUsers')
+      .spyOn(MuteApplication, 'fetchMutedUsers')
       .mockImplementation(
         fetchMutedUsersError ? () => Promise.reject(fetchMutedUsersError) : () => Promise.resolve(mutedUsers),
       ),
     fetchFeeds: vi
-      .spyOn(Core.FeedApplication, 'fetchFeeds')
+      .spyOn(FeedApplication, 'fetchFeeds')
       .mockImplementation(fetchFeedsError ? () => Promise.reject(fetchFeedsError) : () => Promise.resolve([])),
     persistUsers: vi
-      .spyOn(Core.LocalStreamUsersService, 'persistUsers')
+      .spyOn(LocalStreamUsersService, 'persistUsers')
       .mockImplementation(persistUsersError ? () => Promise.reject(persistUsersError) : () => Promise.resolve([])),
     persistPosts: vi
-      .spyOn(Core.LocalStreamPostsService, 'persistPosts')
+      .spyOn(LocalStreamPostsService, 'persistPosts')
       .mockImplementation(
         persistPostsError ? () => Promise.reject(persistPostsError) : () => Promise.resolve({ attachmentMetadata: [] }),
       ),
     persistFiles: vi
-      .spyOn(Core.FileApplication, 'persistFiles')
+      .spyOn(FileApplication, 'persistFiles')
       .mockImplementation(
         persistFilesError ? () => Promise.reject(persistFilesError) : () => Promise.resolve(undefined),
       ),
     upsertPostsStream: vi
-      .spyOn(Core.LocalStreamPostsService, 'upsert')
+      .spyOn(LocalStreamPostsService, 'upsert')
       .mockImplementation(upsertPostsError ? () => Promise.reject(upsertPostsError) : () => Promise.resolve(undefined)),
     upsertInfluencersStream: vi
-      .spyOn(Core.LocalStreamUsersService, 'upsert')
+      .spyOn(LocalStreamUsersService, 'upsert')
       .mockImplementation(
         upsertInfluencersError ? () => Promise.reject(upsertInfluencersError) : () => Promise.resolve(undefined),
       ),
-    upsertHotTags: vi.spyOn(Core.LocalHotService, 'upsert').mockResolvedValue(undefined),
+    upsertHotTags: vi.spyOn(LocalHotService, 'upsert').mockResolvedValue(undefined),
     upsertTagsStream: vi
-      .spyOn(Core.LocalStreamTagsService, 'upsert')
+      .spyOn(LocalStreamTagsService, 'upsert')
       .mockImplementation(upsertTagsError ? () => Promise.reject(upsertTagsError) : () => Promise.resolve(undefined)),
     bulkSave: vi
-      .spyOn(Core.LocalNotificationService, 'bulkSave')
+      .spyOn(LocalNotificationService, 'bulkSave')
       .mockImplementation(bulkSaveError ? () => Promise.reject(bulkSaveError) : () => Promise.resolve(undefined)),
     countFilteredUnreadSince: vi
-      .spyOn(Core.LocalNotificationService, 'countFilteredUnreadSince')
+      .spyOn(LocalNotificationService, 'countFilteredUnreadSince')
       .mockImplementation(
         countFilteredError ? () => Promise.reject(countFilteredError) : () => Promise.resolve(unreadCount),
       ),
   };
 };
 
-const assertCommonCalls = (mocks: ServiceMocks, bootstrapData: Core.NexusBootstrapResponse) => {
+const assertCommonCalls = (mocks: ServiceMocks, bootstrapData: NexusBootstrapResponse) => {
   expect(mocks.nexusFetch).toHaveBeenCalledWith(TEST_PUBKY);
   expect(mocks.homeserverRequest).toHaveBeenCalledWith({ method: HttpMethod.GET, url: MOCK_LAST_READ_URL });
   expect(mocks.fetchMutedUsers).toHaveBeenCalledWith(TEST_PUBKY);
@@ -224,22 +245,22 @@ const assertCommonCalls = (mocks: ServiceMocks, bootstrapData: Core.NexusBootstr
   expect(mocks.persistUsers).toHaveBeenCalledWith(bootstrapData.users);
   expect(mocks.persistPosts).toHaveBeenCalledWith({ posts: bootstrapData.posts });
   expect(mocks.upsertPostsStream).toHaveBeenCalledWith({
-    streamId: Core.PostStreamTypes.TIMELINE_ALL_ALL,
+    streamId: PostStreamTypes.TIMELINE_ALL_ALL,
     stream: bootstrapData.ids.stream,
   });
   expect(mocks.upsertInfluencersStream).toHaveBeenCalledWith({
-    streamId: Core.UserStreamTypes.TODAY_INFLUENCERS_ALL,
+    streamId: UserStreamTypes.TODAY_INFLUENCERS_ALL,
     stream: bootstrapData.ids.influencers,
   });
   expect(mocks.upsertInfluencersStream).toHaveBeenCalledWith({
-    streamId: Core.UserStreamTypes.RECOMMENDED,
+    streamId: UserStreamTypes.RECOMMENDED,
     stream: bootstrapData.ids.recommended,
   });
   expect(mocks.upsertHotTags).toHaveBeenCalledWith(
-    Core.buildHotTagsId(Core.UserStreamTimeframe.TODAY, 'all'),
+    buildHotTagsId(UserStreamTimeframe.TODAY, 'all'),
     bootstrapData.ids.hot_tags,
   );
-  expect(mocks.upsertTagsStream).toHaveBeenCalledWith(Core.TagStreamTypes.TODAY_ALL, bootstrapData.ids.hot_tags);
+  expect(mocks.upsertTagsStream).toHaveBeenCalledWith(TagStreamTypes.TODAY_ALL, bootstrapData.ids.hot_tags);
   expect(mocks.persistFiles).toHaveBeenCalledWith(bootstrapData.files);
   const flatNotifications = bootstrapData.notifications.map((n) => createFlatNotification(n.timestamp));
   expect(mocks.bulkSave).toHaveBeenCalledWith({ flatNotifications });
@@ -250,10 +271,10 @@ describe('BootstrapApplication', () => {
   beforeEach(() => {
     vi.restoreAllMocks();
     vi.clearAllMocks();
-    vi.spyOn(Core.NotificationNormalizer, 'to').mockReturnValue({
+    vi.spyOn(NotificationNormalizer, 'to').mockReturnValue({
       meta: { url: MOCK_LAST_READ_URL },
     } as LastReadResult);
-    vi.spyOn(Core.NotificationNormalizer, 'toFlatNotification').mockImplementation((n) =>
+    vi.spyOn(NotificationNormalizer, 'toFlatNotification').mockImplementation((n) =>
       createFlatNotification(n.timestamp),
     );
   });
@@ -345,7 +366,7 @@ describe('BootstrapApplication', () => {
       };
 
       const mocks = setupMocks({ bootstrapData });
-      const homeserverRequestSpy = vi.spyOn(Core.HomeserverService, 'request').mockImplementation(({ method, url }) => {
+      const homeserverRequestSpy = vi.spyOn(HomeserverService, 'request').mockImplementation(({ method, url }) => {
         if (method === HttpMethod.GET) {
           return Promise.reject(
             Err.client(ClientErrorCode.NOT_FOUND, 'Not found', {
@@ -360,7 +381,7 @@ describe('BootstrapApplication', () => {
       mocks.homeserverRequest = homeserverRequestSpy;
 
       const lastReadNormalizerSpy = vi
-        .spyOn(Core.LastReadNormalizer, 'to')
+        .spyOn(LastReadNormalizer, 'to')
         .mockReturnValue(asOpaque<LastReadResult>(mockLastReadResult));
       const loggerInfoSpy = vi.spyOn(Logger, 'info').mockImplementation(() => {});
 
@@ -390,7 +411,7 @@ describe('BootstrapApplication', () => {
       const bootstrapData = emptyBootstrap();
       const mocks = setupMocks({ bootstrapData });
 
-      const homeserverRequestSpy = vi.spyOn(Core.HomeserverService, 'request').mockImplementation(({ method, url }) => {
+      const homeserverRequestSpy = vi.spyOn(HomeserverService, 'request').mockImplementation(({ method, url }) => {
         if (method === HttpMethod.GET) {
           return Promise.reject(
             Err.server(ServerErrorCode.INTERNAL_ERROR, 'Internal server error', {
@@ -428,7 +449,7 @@ describe('BootstrapApplication', () => {
       const bootstrapData = emptyBootstrap();
       const mocks = setupMocks({ bootstrapData });
 
-      const homeserverRequestSpy = vi.spyOn(Core.HomeserverService, 'request').mockImplementation(({ method }) => {
+      const homeserverRequestSpy = vi.spyOn(HomeserverService, 'request').mockImplementation(({ method }) => {
         if (method === HttpMethod.GET) {
           return Promise.reject(new Error('Network timeout'));
         }
@@ -472,7 +493,7 @@ describe('BootstrapApplication', () => {
       );
 
       expect(mocks.upsertPostsStream).toHaveBeenCalledWith({
-        streamId: Core.PostStreamTypes.TIMELINE_ALL_ALL,
+        streamId: PostStreamTypes.TIMELINE_ALL_ALL,
         stream: bootstrapData.ids.stream,
       });
     });
@@ -518,7 +539,7 @@ describe('BootstrapApplication', () => {
       );
 
       expect(mocks.upsertInfluencersStream).toHaveBeenCalledWith({
-        streamId: Core.UserStreamTypes.TODAY_INFLUENCERS_ALL,
+        streamId: UserStreamTypes.TODAY_INFLUENCERS_ALL,
         stream: bootstrapData.ids.influencers,
       });
     });
@@ -534,12 +555,12 @@ describe('BootstrapApplication', () => {
         'Tags stream upsert error',
       );
 
-      expect(mocks.upsertTagsStream).toHaveBeenCalledWith(Core.TagStreamTypes.TODAY_ALL, bootstrapData.ids.hot_tags);
+      expect(mocks.upsertTagsStream).toHaveBeenCalledWith(TagStreamTypes.TODAY_ALL, bootstrapData.ids.hot_tags);
     });
 
     it('should persist files from bootstrap payload', async () => {
       const bootstrapData = createMockBootstrapData();
-      const mockFiles = asOpaque<Core.NexusFileDetails[]>([{ id: 'file-1' }, { id: 'file-2' }]);
+      const mockFiles = asOpaque<NexusFileDetails[]>([{ id: 'file-1' }, { id: 'file-2' }]);
       bootstrapData.files = mockFiles;
       bootstrapData.notifications = [createMockNotification()];
 
@@ -571,7 +592,7 @@ describe('BootstrapApplication', () => {
 
     it('should fetch muted users during bootstrap (persist is inside fetchMutedUsers)', async () => {
       const bootstrapData = emptyBootstrap();
-      const mutedUsers = ['muted-user-1', 'muted-user-2'] as Core.Pubky[];
+      const mutedUsers = ['muted-user-1', 'muted-user-2'] as Pubky[];
       const mocks = setupMocks({ bootstrapData, mutedUsers });
 
       const result = await BootstrapApplication.initialize(getBootstrapParams(TEST_PUBKY));
@@ -606,10 +627,10 @@ describe('BootstrapApplication', () => {
 
       const mocks = setupMocks({ bootstrapData });
 
-      const upsertTtlSpy = vi.spyOn(Core.LocalUserService, 'upsertTtlWithDelay').mockResolvedValue(undefined);
+      const upsertTtlSpy = vi.spyOn(LocalUserService, 'upsertTtlWithDelay').mockResolvedValue(undefined);
       const mockSubscribeUser = vi.fn();
-      const mockGetInstance = vi.spyOn(Core.TtlCoordinator, 'getInstance').mockReturnValue(
-        asOpaque<Core.TtlCoordinator>({
+      const mockGetInstance = vi.spyOn(TtlCoordinator, 'getInstance').mockReturnValue(
+        asOpaque<TtlCoordinator>({
           subscribeUser: mockSubscribeUser,
         }),
       );
@@ -634,10 +655,10 @@ describe('BootstrapApplication', () => {
 
       setupMocks({ bootstrapData });
 
-      const upsertTtlSpy = vi.spyOn(Core.LocalUserService, 'upsertTtlWithDelay').mockResolvedValue(undefined);
+      const upsertTtlSpy = vi.spyOn(LocalUserService, 'upsertTtlWithDelay').mockResolvedValue(undefined);
       const mockSubscribeUser = vi.fn();
-      vi.spyOn(Core.TtlCoordinator, 'getInstance').mockReturnValue(
-        asOpaque<Core.TtlCoordinator>({
+      vi.spyOn(TtlCoordinator, 'getInstance').mockReturnValue(
+        asOpaque<TtlCoordinator>({
           subscribeUser: mockSubscribeUser,
         }),
       );

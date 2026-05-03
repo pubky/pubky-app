@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { useLocalFilesStore } from './localFiles.store';
-import type { AttachmentConstructed } from '@/components/organisms/PostAttachments/PostAttachments.types';
+import type { AttachmentConstructed } from '@/organisms/PostAttachments/PostAttachments.types';
 
 // Helper to create mock attachments
 const createMockAttachment = (mainUrl: string, feedUrl?: string): AttachmentConstructed => ({

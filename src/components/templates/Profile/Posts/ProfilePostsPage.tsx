@@ -1,5 +1,6 @@
-import * as Organisms from '@/organisms';
-import { TIMELINE_FEED_VARIANT } from '@/config';
+import { TimelineFeed } from '@/organisms/Timeline/Feed/TimelineFeed/TimelineFeed';
+
+import { TIMELINE_FEED_VARIANT } from '@/config/feed';
 
 /**
  * ProfilePostsPage Template
@@ -8,5 +9,5 @@ import { TIMELINE_FEED_VARIANT } from '@/config';
  * Delegates all logic to the ProfilePosts organism.
  */
 export function ProfilePostsPage() {
-  return <Organisms.TimelineFeed variant={TIMELINE_FEED_VARIANT.PROFILE} />;
+  return <TimelineFeed variant={TIMELINE_FEED_VARIANT.PROFILE} />;
 }

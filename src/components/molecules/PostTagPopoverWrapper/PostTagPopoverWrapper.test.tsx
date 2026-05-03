@@ -17,29 +17,29 @@ vi.mock('next/navigation', () => ({
   useRouter: () => ({ push: mockRouterPush }),
 }));
 
-vi.mock('@/hooks', async (importOriginal) => {
-  const actual = await importOriginal<typeof import('@/hooks')>();
-  return {
-    ...actual,
-    useIsTouchDevice: () => false,
-    useIsMobile: () => false,
-    usePostTaggers: () => ({
-      taggersByLabel: mockTaggersByLabel,
-      taggerStates: mockTaggerStates,
-      fetchAllTaggers: mockFetchAllTaggers,
-    }),
-  };
-});
+vi.mock('@/hooks/useIsTouchDevice/useIsTouchDevice', () => ({
+  useIsTouchDevice: () => false,
+}));
 
-vi.mock('@/organisms', async (importOriginal) => {
-  const actual = await importOriginal<typeof import('@/organisms')>();
+vi.mock('@/hooks/useIsMobile/useIsMobile', () => ({
+  useIsMobile: () => false,
+}));
+
+vi.mock('@/hooks/usePostTaggers/usePostTaggers', () => ({
+  usePostTaggers: () => ({
+    taggersByLabel: mockTaggersByLabel,
+    taggerStates: mockTaggerStates,
+    fetchAllTaggers: mockFetchAllTaggers,
+  }),
+}));
+
+vi.mock('@/organisms/AvatarWithFallback/AvatarWithFallback', () => {
   return {
-    ...actual,
     AvatarWithFallback: ({ name }: { name: string }) => <div data-testid={`avatar-${name}`}>Avatar</div>,
   };
 });
 
-vi.mock('../UserInfoPopover', () => ({
+vi.mock('../UserInfoPopover/UserInfoPopover', () => ({
   UserInfoPopover: ({ children }: { children: React.ReactNode }) => (
     <div data-testid="user-info-popover">{children}</div>
   ),

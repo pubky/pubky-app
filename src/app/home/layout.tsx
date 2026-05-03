@@ -1,9 +1,6 @@
 'use client';
+import { Container } from '@/atoms/Container/Container';
 
-// Learn more about Next.js parallel and intercepted routes:
-// https://nextjs.org/docs/app/api-reference/file-conventions/parallel-routes#modals
-
-import * as Atoms from '@/atoms';
 import { useSelectedLayoutSegments } from 'next/navigation';
 import { useEffect } from 'react';
 
@@ -27,9 +24,9 @@ export default function HomeLayout({ post, children }: { post: React.ReactNode; 
   return (
     <>
       {/* Hide children (feed) but keep mounted to preserve scroll position */}
-      <Atoms.Container overrideDefaults className={isPostActive ? 'hidden' : 'contents'}>
+      <Container overrideDefaults className={isPostActive ? 'hidden' : 'contents'}>
         {children}
-      </Atoms.Container>
+      </Container>
 
       {/* Parallel route @post - renders intercepted post page when active */}
       {post}

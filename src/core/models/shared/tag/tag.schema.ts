@@ -1,8 +1,7 @@
-import * as Core from '@/core';
-
+import type { NexusTag } from '@/services/nexus/nexus.types';
 export interface TagCollectionModelSchema<Id> {
   id: Id;
-  tags: Core.NexusTag[];
+  tags: NexusTag[];
 }
 
 // Keep only the primary key index. Tag arrays are read/updated by id.

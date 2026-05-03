@@ -1,7 +1,7 @@
 import { act, renderHook, waitFor } from '@testing-library/react';
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import type { Session } from '@synonymdev/pubky';
-import { mockSession } from '@/test-utils';
+import { mockSession } from '@/test-utils/pubky';
 import { useAuthUrl } from './useAuthUrl';
 import { AppError } from '@/libs/error/error';
 import { AuthErrorCode, TimeoutErrorCode } from '@/libs/error/error.codes';
@@ -31,9 +31,11 @@ vi.mock('next-intl', () => ({
   useTranslations: () => mockTranslations,
 }));
 
-vi.mock('@/molecules', () => ({
-  toast: (...args: unknown[]) => mockToast(...args),
-}));
+vi.mock('@/molecules/Toaster/use-toast', () => {
+  return {
+    toast: (...args: unknown[]) => mockToast(...args),
+  };
+});
 
 vi.mock('@/libs/logger/logger', async () => {
   const actual = await vi.importActual<typeof import('@/libs/logger/logger')>('@/libs/logger/logger');
@@ -53,17 +55,21 @@ vi.mock('@/libs/utils/utils', async () => {
   };
 });
 
-vi.mock('@/core', () => ({
+vi.mock('@/controllers/auth/auth', () => ({
   AuthController: {
     getAuthUrl: (...args: unknown[]) => mockGetAuthUrl(...args),
     getSignupAuthUrl: (...args: unknown[]) => mockGetSignupAuthUrl(...args),
     initializeAuthenticatedSession: (...args: unknown[]) => mockInitializeAuthenticatedSession(...args),
     cancelActiveAuthFlow: (...args: unknown[]) => mockCancelActiveAuthFlow(...args),
   },
+}));
+vi.mock('@/stores/auth/auth.store', () => ({
   useAuthStore: (selector?: (state: { session: Session | null }) => unknown) => {
     const state = { session: null };
     return selector ? selector(state) : state;
   },
+}));
+vi.mock('@/services/homeserver/error.utils', () => ({
   AUTH_FLOW_CANCELED_ERROR_NAME: 'AuthFlowCanceled',
 }));
 

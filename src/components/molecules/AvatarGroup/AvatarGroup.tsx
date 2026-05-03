@@ -1,8 +1,9 @@
 'use client';
 
 import * as React from 'react';
-import * as Atoms from '@/atoms';
-import * as Organisms from '@/organisms';
+import { Container } from '@/atoms/Container/Container';
+import { AvatarWithFallback } from '@/organisms/AvatarWithFallback/AvatarWithFallback';
+
 import type { AvatarGroupProps } from './AvatarGroup.types';
 import { MAX_OVERFLOW_DISPLAY } from './AvatarGroup.constants';
 import { cn } from '@/libs/utils/utils';
@@ -41,31 +42,26 @@ export function AvatarGroup({
   if (items.length === 0) return null;
 
   return (
-    <Atoms.Container overrideDefaults className={cn('flex items-center', className)} data-testid={dataTestId}>
+    <Container overrideDefaults className={cn('flex items-center', className)} data-testid={dataTestId}>
       {visibleItems.map((item, index) => (
-        <Atoms.Container
+        <Container
           key={item.id}
           overrideDefaults
           className="relative rounded-full shadow-xs"
           style={{ marginLeft: index === 0 ? 0 : '-8px', zIndex: visibleItems.length + index }}
         >
-          <Organisms.AvatarWithFallback
-            avatarUrl={item.avatarUrl}
-            name={item.name || 'User'}
-            fallbackSeed={item.id}
-            size="md"
-          />
-        </Atoms.Container>
+          <AvatarWithFallback avatarUrl={item.avatarUrl} name={item.name || 'User'} fallbackSeed={item.id} size="md" />
+        </Container>
       ))}
       {overflowCount > 0 && (
-        <Atoms.Container
+        <Container
           overrideDefaults
           className="relative flex size-8 items-center justify-center rounded-full border border-muted-foreground bg-background text-sm font-medium shadow-xs"
           style={{ marginLeft: '-8px', zIndex: visibleItems.length + 1 }}
         >
           {displayOverflow}
-        </Atoms.Container>
+        </Container>
       )}
-    </Atoms.Container>
+    </Container>
   );
 }

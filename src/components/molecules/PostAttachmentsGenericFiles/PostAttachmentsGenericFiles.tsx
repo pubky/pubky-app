@@ -1,4 +1,8 @@
-import * as Atoms from '@/atoms';
+import { Button } from '@/atoms/Button/Button';
+import { Container } from '@/atoms/Container/Container';
+import { Link } from '@/atoms/Link/Link';
+import { Typography } from '@/atoms/Typography/Typography';
+
 import type { AttachmentConstructed } from '@/organisms/PostAttachments/PostAttachments.types';
 import { FileText, Download } from 'lucide-react';
 type PostAttachmentsGenericFilesProps = {
@@ -8,35 +12,30 @@ export const PostAttachmentsGenericFiles = ({ genericFiles }: PostAttachmentsGen
   const pdfs = genericFiles.filter((f) => f.type === 'application/pdf');
   if (!pdfs.length) return null;
   return (
-    <Atoms.Container className="gap-3">
+    <Container className="gap-3">
       {pdfs.map((pdf, i) => (
-        <Atoms.Container
+        <Container
           key={i}
           onClick={(e) => {
             e.stopPropagation();
           }}
           className="cursor-auto flex-row items-center justify-between gap-2 rounded-md bg-muted p-4"
         >
-          <Atoms.Container overrideDefaults className="flex items-center gap-x-2">
+          <Container overrideDefaults className="flex items-center gap-x-2">
             <FileText className="size-6 shrink-0" />
 
-            <Atoms.Typography size="sm" className="font-bold break-all">
+            <Typography size="sm" className="font-bold break-all">
               {pdf.name}
-            </Atoms.Typography>
-          </Atoms.Container>
+            </Typography>
+          </Container>
 
-          <Atoms.Button
-            asChild
-            variant="dark"
-            size="icon"
-            className="h-8 w-10 shrink-0 border-none bg-card hover:bg-card/70"
-          >
-            <Atoms.Link overrideDefaults href={pdf.urls.main}>
+          <Button asChild variant="dark" size="icon" className="h-8 w-10 shrink-0 border-none bg-card hover:bg-card/70">
+            <Link overrideDefaults href={pdf.urls.main}>
               <Download className="size-4" />
-            </Atoms.Link>
-          </Atoms.Button>
-        </Atoms.Container>
+            </Link>
+          </Button>
+        </Container>
       ))}
-    </Atoms.Container>
+    </Container>
   );
 };

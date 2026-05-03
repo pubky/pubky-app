@@ -1,12 +1,12 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { NextRequest } from 'next/server';
 import { GET } from './route';
-import * as Core from '@/core';
 import { AuthErrorCode, ClientErrorCode, TimeoutErrorCode, ValidationErrorCode } from '@/libs/error/error.codes';
 import { Err } from '@/libs/error/error.factories';
 import { ErrorService } from '@/libs/error/error.types';
 import { HttpStatusCode } from '@/libs/http/http.types';
-
+import type { TOgMetadataResult } from '@/application/og-metadata/og-metadata.types';
+import { OgMetadataController } from '@/controllers/og-metadata/og-metadata';
 const createRequest = (url: string) => {
   const searchParams = new URLSearchParams({ url });
   return new NextRequest(`http://localhost:3000/api/og-metadata?${searchParams.toString()}`, {
@@ -18,7 +18,7 @@ const createRequestWithoutUrl = () => {
   return new NextRequest('http://localhost:3000/api/og-metadata', { method: 'GET' });
 };
 
-const mockMetadata: Core.TOgMetadataResult = {
+const mockMetadata: TOgMetadataResult = {
   url: 'https://example.com',
   type: 'website',
   title: 'Example Title',
@@ -28,7 +28,7 @@ const mockMetadata: Core.TOgMetadataResult = {
 describe('API Route: /api/og-metadata', () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    vi.spyOn(Core.OgMetadataController, 'fetch').mockResolvedValue(mockMetadata);
+    vi.spyOn(OgMetadataController, 'fetch').mockResolvedValue(mockMetadata);
   });
 
   describe('GET', () => {
@@ -55,7 +55,7 @@ describe('API Route: /api/og-metadata', () => {
     });
 
     it('should pass url search param to controller', async () => {
-      const fetchSpy = vi.spyOn(Core.OgMetadataController, 'fetch');
+      const fetchSpy = vi.spyOn(OgMetadataController, 'fetch');
       const request = createRequest('https://example.com/test');
 
       await GET(request);
@@ -64,7 +64,7 @@ describe('API Route: /api/og-metadata', () => {
     });
 
     it('should pass null url to controller when param is missing', async () => {
-      const fetchSpy = vi.spyOn(Core.OgMetadataController, 'fetch');
+      const fetchSpy = vi.spyOn(OgMetadataController, 'fetch');
       const request = createRequestWithoutUrl();
 
       await GET(request);
@@ -78,7 +78,7 @@ describe('API Route: /api/og-metadata', () => {
         operation: 'validate',
         context: { field: 'url', statusCode: HttpStatusCode.BAD_REQUEST },
       });
-      vi.spyOn(Core.OgMetadataController, 'fetch').mockRejectedValue(appError);
+      vi.spyOn(OgMetadataController, 'fetch').mockRejectedValue(appError);
 
       const request = createRequest('');
       const response = await GET(request);
@@ -95,7 +95,7 @@ describe('API Route: /api/og-metadata', () => {
         operation: 'validateDns',
         context: { statusCode: HttpStatusCode.FORBIDDEN },
       });
-      vi.spyOn(Core.OgMetadataController, 'fetch').mockRejectedValue(appError);
+      vi.spyOn(OgMetadataController, 'fetch').mockRejectedValue(appError);
 
       const request = createRequest('http://localhost');
       const response = await GET(request);
@@ -111,7 +111,7 @@ describe('API Route: /api/og-metadata', () => {
         operation: 'fetchOgMetadata',
         context: { statusCode: HttpStatusCode.REQUEST_TIMEOUT },
       });
-      vi.spyOn(Core.OgMetadataController, 'fetch').mockRejectedValue(appError);
+      vi.spyOn(OgMetadataController, 'fetch').mockRejectedValue(appError);
 
       const request = createRequest('https://slow-site.com');
       const response = await GET(request);
@@ -127,7 +127,7 @@ describe('API Route: /api/og-metadata', () => {
         operation: 'readResponseBody',
         context: { statusCode: HttpStatusCode.PAYLOAD_TOO_LARGE },
       });
-      vi.spyOn(Core.OgMetadataController, 'fetch').mockRejectedValue(appError);
+      vi.spyOn(OgMetadataController, 'fetch').mockRejectedValue(appError);
 
       const request = createRequest('https://huge-page.com');
       const response = await GET(request);
@@ -138,7 +138,7 @@ describe('API Route: /api/og-metadata', () => {
     });
 
     it('should return 500 for unexpected errors', async () => {
-      vi.spyOn(Core.OgMetadataController, 'fetch').mockRejectedValue(new Error('Unexpected'));
+      vi.spyOn(OgMetadataController, 'fetch').mockRejectedValue(new Error('Unexpected'));
 
       const request = createRequest('https://example.com');
       const response = await GET(request);

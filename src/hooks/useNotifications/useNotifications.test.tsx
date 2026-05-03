@@ -1,11 +1,10 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { renderHook, waitFor, act } from '@testing-library/react';
 import { useNotifications } from './useNotifications';
-import { NotificationType } from '@/core';
-import type { FlatNotification } from '@/core/models/notification/notification.types';
+import { useMutedUsers } from '@/hooks/useMutedUsers/useMutedUsers';
+import { NotificationController } from '@/controllers/notification/notification';
+import { NotificationType, type FlatNotification } from '@/models/notification/notification.types';
 
-import * as Core from '@/core';
-import { useMutedUsers } from '@/hooks/useMutedUsers';
 function createAllEnabledNotificationPreferences() {
   return {
     follow: true,
@@ -61,44 +60,38 @@ const {
   };
 });
 
-vi.mock('@/core/controllers/notification/notification', () => ({
+// Mock dependencies
+vi.mock('@/controllers/notification/notification', () => ({
   NotificationController: mockNotificationController,
 }));
-
-vi.mock('@/core/stores/settings/settings.store', () => ({
+vi.mock('@/stores/auth/auth.store', () => ({
+  useAuthStore: vi.fn(() => ({
+    currentUserPubky: mockCurrentUserPubky.current,
+  })),
+}));
+vi.mock('@/stores/notification/notification.store', () => ({
+  useNotificationStore: vi.fn((selector) => {
+    const state = { lastRead: 0, unread: mockUnreadCount.current, setLastRead: vi.fn() };
+    return selector ? selector(state) : state.lastRead;
+  }),
+}));
+vi.mock('@/stores/settings/settings.store', () => ({
   useSettingsStore: vi.fn((selector) => {
     const state = { notifications: mockNotificationPreferences.current };
     return selector ? selector(state) : state;
   }),
 }));
 
-// Mock Core
-// TODO(refactor): Remove Core.* test access once direct-path imports replace the core barrel. #1722
-vi.mock('@/core', async (importOriginal) => {
-  const actual = await importOriginal<typeof import('@/core')>();
-  return {
-    ...actual,
-    NotificationController: mockNotificationController,
-    useAuthStore: vi.fn(() => ({
-      currentUserPubky: mockCurrentUserPubky.current,
-    })),
-    useNotificationStore: vi.fn((selector) => {
-      const state = { lastRead: 0, unread: mockUnreadCount.current, setLastRead: vi.fn() };
-      return selector ? selector(state) : state.lastRead;
-    }),
-  };
-});
-
 // Mock config
-vi.mock('@/config', async (importOriginal) => {
-  const actual = await importOriginal<typeof import('@/config')>();
+vi.mock('@/config/nexus', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('@/config/nexus')>();
   return {
     ...actual,
     NEXUS_NOTIFICATIONS_LIMIT: 30,
   };
 });
 
-vi.mock('@/hooks/useMutedUsers', () => ({
+vi.mock('@/hooks/useMutedUsers/useMutedUsers', () => ({
   useMutedUsers: vi.fn(() => ({
     mutedUserIds: [],
     mutedUserIdSet: new Set(),
@@ -150,7 +143,7 @@ describe('useNotifications', () => {
 
     // Should not be loading since there's no user
     expect(result.current.isLoading).toBe(false);
-    expect(Core.NotificationController.getOrFetchNotifications).not.toHaveBeenCalled();
+    expect(NotificationController.getOrFetchNotifications).not.toHaveBeenCalled();
   });
 
   it('should return isLoading as false when data is available', async () => {
@@ -180,7 +173,7 @@ describe('useNotifications', () => {
     });
 
     expect(() => result.current.markAllAsRead()).not.toThrow();
-    expect(Core.NotificationController.markAllAsRead).toHaveBeenCalled();
+    expect(NotificationController.markAllAsRead).toHaveBeenCalled();
   });
 
   it('should return consistent counts', async () => {
@@ -219,9 +212,9 @@ describe('useNotifications', () => {
   it('should return notifications from controller', async () => {
     const mockNotifications = [
       { id: 'test-1', type: NotificationType.Follow, timestamp: Date.now(), followed_by: 'user1' },
-    ] as Core.FlatNotification[];
+    ] as FlatNotification[];
 
-    vi.mocked(Core.NotificationController.getOrFetchNotifications).mockResolvedValueOnce({
+    vi.mocked(NotificationController.getOrFetchNotifications).mockResolvedValueOnce({
       flatNotifications: mockNotifications,
       olderThan: mockNotifications[0].timestamp - 1,
     });
@@ -240,7 +233,7 @@ describe('useNotifications', () => {
     const mockNotifications = [
       { id: 'test-1', type: NotificationType.Follow, timestamp: 1000, followed_by: 'muted-user' },
       { id: 'test-2', type: NotificationType.Follow, timestamp: 1001, followed_by: 'active-user' },
-    ] as Core.FlatNotification[];
+    ] as FlatNotification[];
 
     vi.mocked(useMutedUsers).mockReturnValue({
       mutedUserIds: ['muted-user'],
@@ -249,7 +242,7 @@ describe('useNotifications', () => {
       isLoading: false,
     });
 
-    vi.mocked(Core.NotificationController.getOrFetchNotifications).mockResolvedValueOnce({
+    vi.mocked(NotificationController.getOrFetchNotifications).mockResolvedValueOnce({
       flatNotifications: mockNotifications,
       olderThan: 999,
     });
@@ -267,9 +260,9 @@ describe('useNotifications', () => {
   it('should call loadMore with olderThan parameter', async () => {
     const mockNotifications = [
       { id: 'test-1', type: NotificationType.Follow, timestamp: 1000, followed_by: 'user1' },
-    ] as Core.FlatNotification[];
+    ] as FlatNotification[];
 
-    vi.mocked(Core.NotificationController.getOrFetchNotifications)
+    vi.mocked(NotificationController.getOrFetchNotifications)
       .mockResolvedValueOnce({
         flatNotifications: mockNotifications,
         olderThan: 999,
@@ -289,7 +282,7 @@ describe('useNotifications', () => {
       await result.current.loadMore();
     });
 
-    expect(Core.NotificationController.getOrFetchNotifications).toHaveBeenCalledWith({
+    expect(NotificationController.getOrFetchNotifications).toHaveBeenCalledWith({
       olderThan: 999,
     });
   });
@@ -298,15 +291,15 @@ describe('useNotifications', () => {
     // Initial notifications
     const initialNotifications = [
       { id: 'test-1', type: NotificationType.Follow, timestamp: 1000, followed_by: 'user1' },
-    ] as Core.FlatNotification[];
+    ] as FlatNotification[];
 
     // Updated notifications (includes a new notification)
     const updatedNotifications = [
       { id: 'test-2', type: NotificationType.Follow, timestamp: 2000, followed_by: 'user2' },
       { id: 'test-1', type: NotificationType.Follow, timestamp: 1000, followed_by: 'user1' },
-    ] as Core.FlatNotification[];
+    ] as FlatNotification[];
 
-    vi.mocked(Core.NotificationController.getOrFetchNotifications)
+    vi.mocked(NotificationController.getOrFetchNotifications)
       .mockResolvedValueOnce({
         flatNotifications: initialNotifications,
         olderThan: 999,
@@ -343,7 +336,7 @@ describe('useNotifications', () => {
 
     expect(result.current.count).toBe(2);
     // Should have called getOrFetchNotifications twice: once on mount, once on unread count change
-    expect(Core.NotificationController.getOrFetchNotifications).toHaveBeenCalledTimes(2);
+    expect(NotificationController.getOrFetchNotifications).toHaveBeenCalledTimes(2);
   });
 
   it('should reset pagination and refetch first page when notification filter changes', async () => {
@@ -358,7 +351,7 @@ describe('useNotifications', () => {
       { id: 'latest-1', type: NotificationType.Reply, timestamp: 3000, replied_by: 'user2' },
     ] as FlatNotification[];
 
-    vi.mocked(Core.NotificationController.getOrFetchNotifications)
+    vi.mocked(NotificationController.getOrFetchNotifications)
       .mockResolvedValueOnce({
         flatNotifications: olderPageNotifications,
         olderThan: 999,
@@ -376,7 +369,7 @@ describe('useNotifications', () => {
 
     // Initial render reflects current paginated snapshot.
     expect(result.current.notifications).toEqual(olderPageNotifications);
-    expect(Core.NotificationController.getOrFetchNotifications).toHaveBeenCalledTimes(1);
+    expect(NotificationController.getOrFetchNotifications).toHaveBeenCalledTimes(1);
 
     await act(async () => {
       // Simulate user toggling one notification type in Settings.
@@ -391,10 +384,10 @@ describe('useNotifications', () => {
     // so newest matching items are shown again.
     await waitFor(() => {
       // Includes the initial mount call + one refetch after filter change.
-      expect(Core.NotificationController.getOrFetchNotifications).toHaveBeenCalledTimes(2);
+      expect(NotificationController.getOrFetchNotifications).toHaveBeenCalledTimes(2);
     });
 
-    expect(Core.NotificationController.getOrFetchNotifications).toHaveBeenNthCalledWith(2, {});
+    expect(NotificationController.getOrFetchNotifications).toHaveBeenNthCalledWith(2, {});
     expect(result.current.notifications).toEqual(latestPageNotifications);
   });
 });

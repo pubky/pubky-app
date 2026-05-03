@@ -1,8 +1,11 @@
 'use client';
 
-import * as Atoms from '@/atoms';
-import * as Organisms from '@/organisms';
-import * as Hooks from '@/hooks';
+import { usePostCounts } from '@/hooks/usePostCounts/usePostCounts';
+import { usePostDetails } from '@/hooks/usePostDetails/usePostDetails';
+import { useRequireAuth } from '@/hooks/useRequireAuth/useRequireAuth';
+import { Container } from '@/atoms/Container/Container';
+import { ThreadTree } from '../../ThreadTree/ThreadTree';
+
 import { isPostDeleted } from '@/libs/utils/utils';
 
 interface TimelinePostRepliesProps {
@@ -24,11 +27,11 @@ interface TimelinePostRepliesProps {
  */
 
 export function TimelinePostReplies({ postId }: TimelinePostRepliesProps) {
-  const { isAuthenticated } = Hooks.useRequireAuth();
-  const { postCounts } = Hooks.usePostCounts(postId);
+  const { isAuthenticated } = useRequireAuth();
+  const { postCounts } = usePostCounts(postId);
 
   // Check if parent post is deleted to determine replyability
-  const { postDetails } = Hooks.usePostDetails(postId);
+  const { postDetails } = usePostDetails(postId);
   const isParentDeleted = isPostDeleted(postDetails?.content);
 
   const shouldShowQuickReply = !isParentDeleted;
@@ -40,8 +43,8 @@ export function TimelinePostReplies({ postId }: TimelinePostRepliesProps) {
   }
 
   return (
-    <Atoms.Container overrideDefaults className="ml-3">
-      <Organisms.ThreadTree postId={postId} showQuickReply={shouldShowQuickReply} />
-    </Atoms.Container>
+    <Container overrideDefaults className="ml-3">
+      <ThreadTree postId={postId} showQuickReply={shouldShowQuickReply} />
+    </Container>
   );
 }

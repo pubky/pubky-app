@@ -1,5 +1,1 @@
-import * as Templates from '@/templates';
-
-export default function ProfilePostsPage() {
-  return <Templates.ProfilePostsPage />;
-}
+export { ProfilePostsPage as default } from '@/templates/Profile/Posts/ProfilePostsPage';

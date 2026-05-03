@@ -24,30 +24,22 @@ vi.mock('next-intl', () => ({
   useLocale: () => 'en',
 }));
 
-// Mock @/core
+// Mock settings store
 const mockSetLanguage = vi.fn();
-vi.mock('@/core', async (importOriginal) => {
-  const actual = await importOriginal<typeof import('@/core')>();
-  return {
-    ...actual,
-    useSettingsStore: Object.assign(() => ({}), {
-      getState: () => ({
-        setLanguage: mockSetLanguage,
-      }),
+vi.mock('@/stores/settings/settings.store', () => ({
+  useSettingsStore: Object.assign(() => ({}), {
+    getState: () => ({
+      setLanguage: mockSetLanguage,
     }),
-  };
-});
+  }),
+}));
 
-// Mock @/hooks
-vi.mock('@/hooks', async (importOriginal) => {
-  const actual = await importOriginal<typeof import('@/hooks')>();
-  return {
-    ...actual,
-    useSettingsActions: () => ({
-      setLanguage: vi.fn(),
-    }),
-  };
-});
+// Mock hooks
+vi.mock('@/hooks/useSettingsActions/useSettingsActions', () => ({
+  useSettingsActions: () => ({
+    setLanguage: vi.fn(),
+  }),
+}));
 
 describe('Language', () => {
   it('renders language content', () => {

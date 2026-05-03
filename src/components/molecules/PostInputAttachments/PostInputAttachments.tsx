@@ -1,8 +1,16 @@
 'use client';
 
 import { ChangeEvent, Dispatch, SetStateAction, forwardRef, useEffect, useMemo } from 'react';
-import * as Atoms from '@/atoms';
-import { ARTICLE_ATTACHMENT_ACCEPT_STRING, POST_ATTACHMENT_ACCEPT_STRING } from '@/config';
+import { Audio } from '@/atoms/Audio/Audio';
+import { Button } from '@/atoms/Button/Button';
+import { Card, CardContent } from '@/atoms/Card/Card';
+import { Container } from '@/atoms/Container/Container';
+import { Image } from '@/atoms/Image/Image';
+import { Input } from '@/atoms/Input/Input';
+import { Typography } from '@/atoms/Typography/Typography';
+import { Video } from '@/atoms/Video/Video';
+
+import { ARTICLE_ATTACHMENT_ACCEPT_STRING, POST_ATTACHMENT_ACCEPT_STRING } from '@/config/posts';
 import { ImagePlus, Plus, Trash2, FileText } from 'lucide-react';
 import { cn } from '@/libs/utils/utils';
 type PostInputAttachmentsProps = {
@@ -57,7 +65,7 @@ export const PostInputAttachments = forwardRef<HTMLInputElement, PostInputAttach
     };
     return (
       <>
-        <Atoms.Input
+        <Input
           ref={ref}
           type="file"
           accept={isArticle ? ARTICLE_ATTACHMENT_ACCEPT_STRING : POST_ATTACHMENT_ACCEPT_STRING}
@@ -67,27 +75,24 @@ export const PostInputAttachments = forwardRef<HTMLInputElement, PostInputAttach
         />
 
         {isArticle && !attachmentsWithPreviews.length ? (
-          <Atoms.Card className="h-39 w-full cursor-auto items-center justify-center rounded-md">
-            <Atoms.CardContent className="flex flex-col items-center justify-center gap-3">
-              <Atoms.Container
-                overrideDefaults
-                className="flex size-16 items-center justify-center rounded-full bg-brand/15"
-              >
+          <Card className="h-39 w-full cursor-auto items-center justify-center rounded-md">
+            <CardContent className="flex flex-col items-center justify-center gap-3">
+              <Container overrideDefaults className="flex size-16 items-center justify-center rounded-full bg-brand/15">
                 <ImagePlus className="size-8 text-brand" />
-              </Atoms.Container>
+              </Container>
 
-              <Atoms.Button variant="secondary" size="sm" onClick={handleFileClick} disabled={isSubmitting}>
+              <Button variant="secondary" size="sm" onClick={handleFileClick} disabled={isSubmitting}>
                 <Plus className="size-4" /> Add image
-              </Atoms.Button>
-            </Atoms.CardContent>
-          </Atoms.Card>
+              </Button>
+            </CardContent>
+          </Card>
         ) : null}
 
         {attachmentsWithPreviews.length ? (
-          <Atoms.Container className="gap-4">
+          <Container className="gap-4">
             {attachmentsWithPreviews.map((a, i) => (
-              <Atoms.Container key={a.previewUrl} className="relative">
-                <Atoms.Button
+              <Container key={a.previewUrl} className="relative">
+                <Button
                   variant="dark"
                   size="icon"
                   onClick={() => setAttachments((prev) => prev.filter((_, index) => index !== i))}
@@ -100,32 +105,32 @@ export const PostInputAttachments = forwardRef<HTMLInputElement, PostInputAttach
                   )}
                 >
                   <Trash2 className={cn(a.type === 'audio' ? 'size-3' : 'size-4')} />
-                </Atoms.Button>
+                </Button>
 
                 {a.type === 'image' && (
-                  <Atoms.Image
+                  <Image
                     src={a.previewUrl}
                     alt="Image preview"
                     className="h-48 w-full cursor-auto rounded-md bg-black object-contain"
                   />
                 )}
 
-                {a.type === 'video' && <Atoms.Video src={a.previewUrl} className="h-48 w-full cursor-auto" />}
+                {a.type === 'video' && <Video src={a.previewUrl} className="h-48 w-full cursor-auto" />}
 
-                {a.type === 'audio' && <Atoms.Audio src={a.previewUrl} className="w-full cursor-auto" />}
+                {a.type === 'audio' && <Audio src={a.previewUrl} className="w-full cursor-auto" />}
 
                 {a.type === 'pdf' && (
-                  <Atoms.Container className="cursor-auto flex-row items-center gap-x-2 rounded-md bg-muted p-4 pr-14">
+                  <Container className="cursor-auto flex-row items-center gap-x-2 rounded-md bg-muted p-4 pr-14">
                     <FileText className="size-6 shrink-0" />
 
-                    <Atoms.Typography size="sm" className="font-bold break-all">
+                    <Typography size="sm" className="font-bold break-all">
                       {a.file.name}
-                    </Atoms.Typography>
-                  </Atoms.Container>
+                    </Typography>
+                  </Container>
                 )}
-              </Atoms.Container>
+              </Container>
             ))}
-          </Atoms.Container>
+          </Container>
         ) : null}
       </>
     );

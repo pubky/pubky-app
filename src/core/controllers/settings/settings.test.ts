@@ -1,14 +1,32 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { SettingsController } from './settings';
-import * as i18nUtils from '@/i18n/utils';
-import * as Core from '@/core';
-import { defaultNotificationPreferences, defaultPrivacyPreferences } from '@/core/stores/settings/settings.types';
-import { NotificationNormalizer } from '@/core/pipes/notification/notification.normalizer';
-import { asOpaque, mockAuthStore, mockSettingsStore } from '@/test-utils';
+import { setLocaleCookie } from '@/i18n/utils';
+import { asOpaque } from '@/test-utils/type-assertions';
+import { mockAuthStore, mockSettingsStore } from '@/test-utils/stores';
+import { NotificationApplication } from '@/application/notification/notification';
+import { SettingsApplication } from '@/application/settings/settings';
+import type { Pubky } from '@/models/models.types';
+import { NotificationType } from '@/models/notification/notification.types';
+import { NotificationNormalizer } from '@/pipes/notification/notification.normalizer';
+import { SettingsNormalizer } from '@/pipes/settings/settings.normalizer';
+import { useAuthStore } from '@/stores/auth/auth.store';
+import { useNotificationStore } from '@/stores/notification/notification.store';
+import type { NotificationStore } from '@/stores/notification/notification.types';
+import { useSettingsStore } from '@/stores/settings/settings.store';
+import {
+  defaultNotificationPreferences,
+  defaultPrivacyPreferences,
+  type SettingsState,
+} from '@/stores/settings/settings.types';
 
-const TEST_PUBKY = 'o1gg96ewuojmopcjbz8895478wdtxtzzuxnfjjz8o8e77csa1ngo' as Core.Pubky;
+vi.mock('@/i18n/utils', () => ({
+  setLocaleCookie: vi.fn(),
+}));
+
+const TEST_PUBKY = 'o1gg96ewuojmopcjbz8895478wdtxtzzuxnfjjz8o8e77csa1ngo' as Pubky;
 const MOCK_LAST_READ = 5000;
-const MOCK_ALLOWED_TYPES = [Core.NotificationType.Follow, Core.NotificationType.Reply];
+const MOCK_ALLOWED_TYPES = [NotificationType.Follow, NotificationType.Reply];
+const mockSetLocaleCookie = vi.mocked(setLocaleCookie);
 
 const mockNotificationStoreActions = {
   selectLastRead: () => MOCK_LAST_READ,
@@ -39,7 +57,7 @@ const mockStoreActions = {
   version: 1,
 };
 
-const mockSettingsState: Core.SettingsState = {
+const mockSettingsState: SettingsState = {
   notifications: defaultNotificationPreferences,
   privacy: defaultPrivacyPreferences,
   muted: [],
@@ -50,31 +68,28 @@ const mockSettingsState: Core.SettingsState = {
 
 describe('SettingsController', () => {
   let commitUpdateSpy: ReturnType<typeof vi.spyOn>;
-  let setLocaleCookieSpy: ReturnType<typeof vi.spyOn>;
   let countFilteredSpy: ReturnType<typeof vi.spyOn>;
 
   beforeEach(() => {
     vi.clearAllMocks();
+    mockSetLocaleCookie.mockImplementation(() => {});
 
     // Reset pendingCommit between tests to avoid chaining across tests
     // pendingCommit is private; an opaque cast is needed to reset static state between tests
     asOpaque<{ pendingCommit: Promise<void> }>(SettingsController).pendingCommit = Promise.resolve();
 
-    vi.spyOn(Core.useSettingsStore, 'getState').mockReturnValue(mockSettingsStore(mockStoreActions));
+    vi.spyOn(useSettingsStore, 'getState').mockReturnValue(mockSettingsStore(mockStoreActions));
 
-    vi.spyOn(Core.useAuthStore, 'getState').mockReturnValue(
-      mockAuthStore({ selectCurrentUserPubky: () => TEST_PUBKY }),
+    vi.spyOn(useAuthStore, 'getState').mockReturnValue(mockAuthStore({ selectCurrentUserPubky: () => TEST_PUBKY }));
+
+    vi.spyOn(useNotificationStore, 'getState').mockReturnValue(
+      asOpaque<NotificationStore>(mockNotificationStoreActions),
     );
 
-    vi.spyOn(Core.useNotificationStore, 'getState').mockReturnValue(
-      asOpaque<Core.NotificationStore>(mockNotificationStoreActions),
-    );
-
-    vi.spyOn(Core.SettingsNormalizer, 'extractState').mockReturnValue(mockSettingsState);
+    vi.spyOn(SettingsNormalizer, 'extractState').mockReturnValue(mockSettingsState);
     vi.spyOn(NotificationNormalizer, 'toEnabledTypes').mockReturnValue(MOCK_ALLOWED_TYPES);
-    commitUpdateSpy = vi.spyOn(Core.SettingsApplication, 'commitUpdate').mockResolvedValue(undefined);
-    countFilteredSpy = vi.spyOn(Core.NotificationApplication, 'countFilteredUnreadSince').mockResolvedValue(3);
-    setLocaleCookieSpy = vi.spyOn(i18nUtils, 'setLocaleCookie').mockImplementation(() => {});
+    commitUpdateSpy = vi.spyOn(SettingsApplication, 'commitUpdate').mockResolvedValue(undefined);
+    countFilteredSpy = vi.spyOn(NotificationApplication, 'countFilteredUnreadSince').mockResolvedValue(3);
   });
 
   afterEach(() => {
@@ -182,7 +197,7 @@ describe('SettingsController', () => {
       await SettingsController.setLanguage('es');
 
       expect(mockStoreActions.setLanguage).toHaveBeenCalledWith('es');
-      expect(setLocaleCookieSpy).toHaveBeenCalledWith('es');
+      expect(mockSetLocaleCookie).toHaveBeenCalledWith('es');
       expect(commitUpdateSpy).toHaveBeenCalledWith(mockSettingsState, TEST_PUBKY);
     });
   });

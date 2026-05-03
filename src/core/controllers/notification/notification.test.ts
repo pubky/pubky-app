@@ -1,15 +1,24 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { NotificationApplication } from '@/core/application/notification/notification';
 import { NotificationController } from './notification';
-import * as Core from '@/core';
-import * as Config from '@/config';
-import { NotificationType } from '@/core/models/notification/notification.types';
-import { mockAuthStore, mockNotificationStore, asOpaque } from '@/test-utils';
+import { NEXUS_NOTIFICATIONS_LIMIT } from '@/config/nexus';
+import { mockAuthStore, mockNotificationStore } from '@/test-utils/stores';
+import { asOpaque } from '@/test-utils/type-assertions';
+import { NotificationApplication } from '@/application/notification/notification';
+import type { TGetOrFetchNotificationsResponse } from '@/application/notification/notification.types';
+import type { Pubky } from '@/models/models.types';
+import { NotificationType, type FlatNotification } from '@/models/notification/notification.types';
+import { LastReadNormalizer } from '@/pipes/lastRead/lastRead.normalizer';
+import { useAuthStore } from '@/stores/auth/auth.store';
+import { useNotificationStore } from '@/stores/notification/notification.store';
+import { useSettingsStore } from '@/stores/settings/settings.store';
+import {
+  defaultNotificationPreferences,
+  type NotificationPreferences,
+} from '@/stores/settings/settings.types';
+const mockUserId = 'pubky-user-123' as Pubky;
 
-const mockUserId = 'pubky-user-123' as Core.Pubky;
-
-const setupAuthStore = (userId: Core.Pubky = mockUserId) => {
-  vi.spyOn(Core.useAuthStore, 'getState').mockReturnValue(mockAuthStore({ selectCurrentUserPubky: () => userId }));
+const setupAuthStore = (userId: Pubky = mockUserId) => {
+  vi.spyOn(useAuthStore, 'getState').mockReturnValue(mockAuthStore({ selectCurrentUserPubky: () => userId }));
 };
 
 /**
@@ -17,10 +26,10 @@ const setupAuthStore = (userId: Core.Pubky = mockUserId) => {
  * The controller reads preferences to filter out disabled notification types.
  * Defaults to all enabled; pass overrides to disable specific types (e.g., { follow: false }).
  */
-const mockSettingsStore = (overrides: Partial<Core.NotificationPreferences> = {}) => {
-  vi.spyOn(Core.useSettingsStore, 'getState').mockReturnValue({
-    notifications: { ...Core.defaultNotificationPreferences, ...overrides },
-  } as ReturnType<typeof Core.useSettingsStore.getState>);
+const mockSettingsStore = (overrides: Partial<NotificationPreferences> = {}) => {
+  vi.spyOn(useSettingsStore, 'getState').mockReturnValue({
+    notifications: { ...defaultNotificationPreferences, ...overrides },
+  } as ReturnType<typeof useSettingsStore.getState>);
 };
 
 describe('NotificationController', () => {
@@ -39,7 +48,7 @@ describe('NotificationController', () => {
       const selectLastPolledTimestamp = vi.fn(() => lastPolledTimestamp);
       const setUnread = vi.fn();
       const setLastPolledTimestamp = vi.fn();
-      vi.spyOn(Core.useNotificationStore, 'getState').mockReturnValue(
+      vi.spyOn(useNotificationStore, 'getState').mockReturnValue(
         mockNotificationStore({
           selectLastRead,
           selectLastPolledTimestamp,
@@ -52,7 +61,7 @@ describe('NotificationController', () => {
 
     it('should poll notifications, update unread count, and advance lastPolledTimestamp', async () => {
       const store = setupNotificationStore({ lastRead: 1234, lastPolledTimestamp: 500 });
-      const appSpy = vi.spyOn(Core.NotificationApplication, 'fetchNotifications').mockResolvedValue({
+      const appSpy = vi.spyOn(NotificationApplication, 'fetchNotifications').mockResolvedValue({
         unread: 5,
         nextPollCursor: 3000,
       });
@@ -72,7 +81,7 @@ describe('NotificationController', () => {
     it('should pass lastRead and preferences to application for filtered counting', async () => {
       mockSettingsStore({ follow: false });
       setupNotificationStore({ lastRead: 1234, lastPolledTimestamp: 500 });
-      const appSpy = vi.spyOn(Core.NotificationApplication, 'fetchNotifications').mockResolvedValue({
+      const appSpy = vi.spyOn(NotificationApplication, 'fetchNotifications').mockResolvedValue({
         unread: 3,
         nextPollCursor: 3000,
       });
@@ -89,7 +98,7 @@ describe('NotificationController', () => {
 
     it('should pass lastPolledTimestamp (not lastRead) to application', async () => {
       setupNotificationStore({ lastRead: 9000, lastPolledTimestamp: 2000 });
-      const appSpy = vi.spyOn(Core.NotificationApplication, 'fetchNotifications').mockResolvedValue({
+      const appSpy = vi.spyOn(NotificationApplication, 'fetchNotifications').mockResolvedValue({
         unread: 0,
         nextPollCursor: undefined,
       });
@@ -101,7 +110,7 @@ describe('NotificationController', () => {
 
     it('should not call setLastPolledTimestamp when nextPollCursor is undefined', async () => {
       const store = setupNotificationStore({ lastRead: 1234, lastPolledTimestamp: 500 });
-      vi.spyOn(Core.NotificationApplication, 'fetchNotifications').mockResolvedValue({
+      vi.spyOn(NotificationApplication, 'fetchNotifications').mockResolvedValue({
         unread: 0,
         nextPollCursor: undefined,
       });
@@ -120,7 +129,7 @@ describe('NotificationController', () => {
       const setLastPolledTimestamp = vi.fn((ts: number | undefined) => {
         currentLastPolledTimestamp = ts;
       });
-      vi.spyOn(Core.useNotificationStore, 'getState').mockReturnValue(
+      vi.spyOn(useNotificationStore, 'getState').mockReturnValue(
         mockNotificationStore({
           selectLastRead,
           selectLastPolledTimestamp,
@@ -129,7 +138,7 @@ describe('NotificationController', () => {
         }),
       );
 
-      const appSpy = vi.spyOn(Core.NotificationApplication, 'fetchNotifications');
+      const appSpy = vi.spyOn(NotificationApplication, 'fetchNotifications');
 
       // Poll 1: 2 new unread notifications
       appSpy.mockResolvedValueOnce({ unread: 2, nextPollCursor: 3000 });
@@ -165,7 +174,7 @@ describe('NotificationController', () => {
       const setLastPolledTimestamp = vi.fn((ts: number | undefined) => {
         currentLastPolledTimestamp = ts;
       });
-      vi.spyOn(Core.useNotificationStore, 'getState').mockReturnValue(
+      vi.spyOn(useNotificationStore, 'getState').mockReturnValue(
         mockNotificationStore({
           selectLastRead: vi.fn(() => 1000),
           selectLastPolledTimestamp,
@@ -174,7 +183,7 @@ describe('NotificationController', () => {
         }),
       );
 
-      const appSpy = vi.spyOn(Core.NotificationApplication, 'fetchNotifications');
+      const appSpy = vi.spyOn(NotificationApplication, 'fetchNotifications');
 
       // Simulate two overlapping polls: poll A (slow) and poll B (fast).
       // Poll B resolves first with a newer timestamp, then poll A resolves with an older one.
@@ -194,7 +203,7 @@ describe('NotificationController', () => {
 
     it('should bubble errors and not update store', async () => {
       const store = setupNotificationStore({ lastRead: 1234, lastPolledTimestamp: 500 });
-      vi.spyOn(Core.NotificationApplication, 'fetchNotifications').mockRejectedValue(new Error('poll-fail'));
+      vi.spyOn(NotificationApplication, 'fetchNotifications').mockRejectedValue(new Error('poll-fail'));
 
       await expect(NotificationController.fetchNotifications({ userId: mockUserId })).rejects.toThrow('poll-fail');
       expect(store.setUnread).not.toHaveBeenCalled();
@@ -203,10 +212,10 @@ describe('NotificationController', () => {
   });
 
   describe('getOrFetchNotifications', () => {
-    const mockResponse: Core.TGetOrFetchNotificationsResponse = {
+    const mockResponse: TGetOrFetchNotificationsResponse = {
       flatNotifications: [
         { id: 'follow:3000:user-1', type: NotificationType.Follow, timestamp: 3000, followed_by: 'user-1' },
-      ] as Core.FlatNotification[],
+      ] as FlatNotification[],
       olderThan: 3000,
     };
 
@@ -216,14 +225,14 @@ describe('NotificationController', () => {
     });
 
     it.each([
-      { params: {}, expectedOlderThan: Infinity, expectedLimit: Config.NEXUS_NOTIFICATIONS_LIMIT },
-      { params: { olderThan: 5000 }, expectedOlderThan: 5000, expectedLimit: Config.NEXUS_NOTIFICATIONS_LIMIT },
+      { params: {}, expectedOlderThan: Infinity, expectedLimit: NEXUS_NOTIFICATIONS_LIMIT },
+      { params: { olderThan: 5000 }, expectedOlderThan: 5000, expectedLimit: NEXUS_NOTIFICATIONS_LIMIT },
       { params: { limit: 50 }, expectedOlderThan: Infinity, expectedLimit: 50 },
       { params: { olderThan: 8000, limit: 20 }, expectedOlderThan: 8000, expectedLimit: 20 },
     ])(
       'should delegate to NotificationApplication.getOrFetchNotifications with params: $params',
       async ({ params, expectedOlderThan, expectedLimit }) => {
-        const spy = vi.spyOn(Core.NotificationApplication, 'getOrFetchNotifications').mockResolvedValue(mockResponse);
+        const spy = vi.spyOn(NotificationApplication, 'getOrFetchNotifications').mockResolvedValue(mockResponse);
 
         await NotificationController.getOrFetchNotifications(params);
 
@@ -250,7 +259,7 @@ describe('NotificationController', () => {
     });
 
     it('should return the response from application', async () => {
-      vi.spyOn(Core.NotificationApplication, 'getOrFetchNotifications').mockResolvedValue(mockResponse);
+      vi.spyOn(NotificationApplication, 'getOrFetchNotifications').mockResolvedValue(mockResponse);
 
       const result = await NotificationController.getOrFetchNotifications({});
 
@@ -258,8 +267,20 @@ describe('NotificationController', () => {
       expect(result.olderThan).toBe(3000);
     });
 
+    it('should return empty response when no notifications', async () => {
+      vi.spyOn(NotificationApplication, 'getOrFetchNotifications').mockResolvedValue({
+        flatNotifications: [],
+        olderThan: undefined,
+      });
+
+      const result = await NotificationController.getOrFetchNotifications({});
+
+      expect(result.flatNotifications).toHaveLength(0);
+      expect(result.olderThan).toBeUndefined();
+    });
+
     it('should bubble errors from application', async () => {
-      vi.spyOn(Core.NotificationApplication, 'getOrFetchNotifications').mockRejectedValue(new Error('fetch-fail'));
+      vi.spyOn(NotificationApplication, 'getOrFetchNotifications').mockRejectedValue(new Error('fetch-fail'));
 
       await expect(NotificationController.getOrFetchNotifications({})).rejects.toThrow('fetch-fail');
     });
@@ -269,11 +290,11 @@ describe('NotificationController', () => {
     const mockTimestamp = 1234567890;
     const mockLastReadUrl = 'pubky://test-user/pub/pubky.app/last-read';
 
-    const setupStores = (pubky: Core.Pubky | null) => {
+    const setupStores = (pubky: Pubky | null) => {
       const setLastRead = vi.fn();
       const setUnread = vi.fn();
 
-      vi.spyOn(Core.useAuthStore, 'getState').mockReturnValue(
+      vi.spyOn(useAuthStore, 'getState').mockReturnValue(
         mockAuthStore({
           currentUserPubky: pubky,
           selectCurrentUserPubky: () => {
@@ -283,7 +304,7 @@ describe('NotificationController', () => {
         }),
       );
 
-      vi.spyOn(Core.useNotificationStore, 'getState').mockReturnValue(
+      vi.spyOn(useNotificationStore, 'getState').mockReturnValue(
         mockNotificationStore({
           setLastRead,
           setUnread,
@@ -304,14 +325,14 @@ describe('NotificationController', () => {
         meta: { url: mockLastReadUrl },
       };
 
-      vi.spyOn(Core.LastReadNormalizer, 'to').mockReturnValue(
-        asOpaque<ReturnType<typeof Core.LastReadNormalizer.to>>(mockLastReadResult),
+      vi.spyOn(LastReadNormalizer, 'to').mockReturnValue(
+        asOpaque<ReturnType<typeof LastReadNormalizer.to>>(mockLastReadResult),
       );
-      const applicationSpy = vi.spyOn(Core.NotificationApplication, 'markAllAsRead').mockImplementation(() => {});
+      const applicationSpy = vi.spyOn(NotificationApplication, 'markAllAsRead').mockImplementation(() => {});
 
       NotificationController.markAllAsRead();
 
-      expect(Core.LastReadNormalizer.to).toHaveBeenCalledWith(mockUserId);
+      expect(LastReadNormalizer.to).toHaveBeenCalledWith(mockUserId);
       expect(applicationSpy).toHaveBeenCalledWith(mockLastReadResult);
       expect(setLastRead).toHaveBeenCalledWith(mockTimestamp);
       expect(setUnread).toHaveBeenCalledWith(0);
@@ -320,8 +341,8 @@ describe('NotificationController', () => {
     it('should skip processing when no user is authenticated', () => {
       const { setLastRead, setUnread } = setupStores(null);
 
-      const normalizerSpy = vi.spyOn(Core.LastReadNormalizer, 'to');
-      const applicationSpy = vi.spyOn(Core.NotificationApplication, 'markAllAsRead');
+      const normalizerSpy = vi.spyOn(LastReadNormalizer, 'to');
+      const applicationSpy = vi.spyOn(NotificationApplication, 'markAllAsRead');
 
       NotificationController.markAllAsRead();
 
@@ -336,10 +357,10 @@ describe('NotificationController', () => {
   describe('getAllFromCache', () => {
     it('should delegate to NotificationApplication.getAllFromCache', async () => {
       const expected = [
-        { type: Core.NotificationType.Follow, timestamp: 3000, followed_by: 'user-1' },
-        { type: Core.NotificationType.Follow, timestamp: 2000, followed_by: 'user-2' },
-      ] as Core.FlatNotification[];
-      const applicationSpy = vi.spyOn(Core.NotificationApplication, 'getAllFromCache').mockResolvedValue(expected);
+        { type: NotificationType.Follow, timestamp: 3000, followed_by: 'user-1' },
+        { type: NotificationType.Follow, timestamp: 2000, followed_by: 'user-2' },
+      ] as FlatNotification[];
+      const applicationSpy = vi.spyOn(NotificationApplication, 'getAllFromCache').mockResolvedValue(expected);
 
       const result = await NotificationController.getAllFromCache();
 
@@ -348,7 +369,7 @@ describe('NotificationController', () => {
     });
 
     it('should return empty array when no notifications exist', async () => {
-      vi.spyOn(Core.NotificationApplication, 'getAllFromCache').mockResolvedValue([]);
+      vi.spyOn(NotificationApplication, 'getAllFromCache').mockResolvedValue([]);
 
       const result = await NotificationController.getAllFromCache();
 
@@ -356,7 +377,7 @@ describe('NotificationController', () => {
     });
 
     it('should bubble application errors', async () => {
-      vi.spyOn(Core.NotificationApplication, 'getAllFromCache').mockRejectedValue(new Error('app-fail'));
+      vi.spyOn(NotificationApplication, 'getAllFromCache').mockRejectedValue(new Error('app-fail'));
 
       await expect(NotificationController.getAllFromCache()).rejects.toThrow('app-fail');
     });

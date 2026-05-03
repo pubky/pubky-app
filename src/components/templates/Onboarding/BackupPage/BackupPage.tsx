@@ -1,11 +1,12 @@
-import * as Molecules from '@/molecules';
-import * as Organisms from '@/organisms';
+import { OnboardingLayout } from '@/molecules/OnboardingLayout/OnboardingLayout';
+import { BackupNavigation, BackupPageHeader } from '@/organisms/Backup/Backup';
+import { BackupMethodCard } from '@/organisms/BackupMethodCard/BackupMethodCard';
 
 export function BackupPage() {
   return (
-    <Molecules.OnboardingLayout testId="backup-content" navigation={<Organisms.BackupNavigation />}>
-      <Organisms.BackupPageHeader />
-      <Organisms.BackupMethodCard />
-    </Molecules.OnboardingLayout>
+    <OnboardingLayout testId="backup-content" navigation={<BackupNavigation />}>
+      <BackupPageHeader />
+      <BackupMethodCard />
+    </OnboardingLayout>
   );
 }

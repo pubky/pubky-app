@@ -1,6 +1,5 @@
 'use client';
-
-import * as Templates from '@/templates';
+import { CopyrightFormPage } from '@/templates/Public/CopyrightFormPage/CopyrightFormPage';
 
 /**
  * Copyright/DMCA takedown request page
@@ -9,5 +8,5 @@ import * as Templates from '@/templates';
  * copyright infringement claims.
  */
 export default function CopyrightPage() {
-  return <Templates.CopyrightFormPage />;
+  return <CopyrightFormPage />;
 }

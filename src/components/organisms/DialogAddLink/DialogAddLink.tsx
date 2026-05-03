@@ -1,9 +1,21 @@
 'use client';
 
 import { useTranslations } from 'next-intl';
-import * as Atoms from '@/atoms';
-import * as Molecules from '@/molecules';
-import * as Config from '@/config';
+import { Button } from '@/atoms/Button/Button';
+import { Container } from '@/atoms/Container/Container';
+import {
+  Dialog,
+  DialogClose,
+  DialogContent,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from '@/atoms/Dialog/Dialog';
+import { Label } from '@/atoms/Label/Label';
+import { InputField } from '@/molecules/InputField/InputField';
+
+import { USER_LINK_LABEL_MAX_LENGTH, USER_LINK_URL_MAX_LENGTH } from '@/config/user';
 import { useState } from 'react';
 import { z } from 'zod';
 import { Link, Clipboard } from 'lucide-react';
@@ -12,13 +24,13 @@ const labelSchema = z
   .string()
   .trim()
   .min(1, 'Label is required')
-  .max(Config.USER_LINK_LABEL_MAX_LENGTH, `Max ${Config.USER_LINK_LABEL_MAX_LENGTH} characters`)
+  .max(USER_LINK_LABEL_MAX_LENGTH, `Max ${USER_LINK_LABEL_MAX_LENGTH} characters`)
   .regex(/^[a-zA-Z0-9]+$/, 'Alphanumeric only');
 const urlSchema = z
   .string()
   .trim()
   .url('Invalid URL')
-  .max(Config.USER_LINK_URL_MAX_LENGTH, `Max ${Config.USER_LINK_URL_MAX_LENGTH} characters`);
+  .max(USER_LINK_URL_MAX_LENGTH, `Max ${USER_LINK_URL_MAX_LENGTH} characters`);
 interface DialogAddLinkProps {
   onSave: (label: string, url: string) => void;
   disabled?: boolean;
@@ -67,27 +79,25 @@ export function DialogAddLink({ onSave, disabled = false }: DialogAddLinkProps) 
     return null;
   }
   return (
-    <Atoms.Dialog>
-      <Atoms.DialogTrigger asChild>
-        <Atoms.Button data-cy="edit-profile-add-link-btn" variant="secondary" size="sm" className="w-fit rounded-full">
+    <Dialog>
+      <DialogTrigger asChild>
+        <Button data-cy="edit-profile-add-link-btn" variant="secondary" size="sm" className="w-fit rounded-full">
           <Link className="h-4 w-4" />
           <span>{t('title')}</span>
-        </Atoms.Button>
-      </Atoms.DialogTrigger>
-      <Atoms.DialogContent
+        </Button>
+      </DialogTrigger>
+      <DialogContent
         className="max-w-xl rounded-xl border bg-popover p-8 sm:rounded-lg sm:p-6"
         hiddenTitle={t('title')}
       >
-        <Atoms.DialogHeader className="pr-6">
-          <Atoms.DialogTitle className="text-2xl font-bold text-foreground sm:text-xl">{t('title')}</Atoms.DialogTitle>
-        </Atoms.DialogHeader>
+        <DialogHeader className="pr-6">
+          <DialogTitle className="text-2xl font-bold text-foreground sm:text-xl">{t('title')}</DialogTitle>
+        </DialogHeader>
 
-        <Atoms.Container className="gap-6">
-          <Atoms.Container className="gap-2">
-            <Atoms.Label className="text-xs font-medium tracking-wide text-muted-foreground">
-              {t('labelField')}
-            </Atoms.Label>
-            <Molecules.InputField
+        <Container className="gap-6">
+          <Container className="gap-2">
+            <Label className="text-xs font-medium tracking-wide text-muted-foreground">{t('labelField')}</Label>
+            <InputField
               dataCy="add-profile-link-label-input"
               placeholder={t('labelPlaceholder')}
               variant="dashed"
@@ -98,18 +108,16 @@ export function DialogAddLink({ onSave, disabled = false }: DialogAddLinkProps) 
                 validateLabel(value);
               }}
               size="lg"
-              maxLength={Config.USER_LINK_LABEL_MAX_LENGTH}
+              maxLength={USER_LINK_LABEL_MAX_LENGTH}
               status={labelError ? 'error' : 'default'}
               message={labelError ?? undefined}
               messageType={labelError ? 'error' : 'default'}
             />
-          </Atoms.Container>
+          </Container>
 
-          <Atoms.Container className="gap-2">
-            <Atoms.Label className="text-xs font-medium tracking-wide text-muted-foreground">
-              {t('urlField')}
-            </Atoms.Label>
-            <Molecules.InputField
+          <Container className="gap-2">
+            <Label className="text-xs font-medium tracking-wide text-muted-foreground">{t('urlField')}</Label>
+            <InputField
               dataCy="add-profile-link-url-input"
               placeholder={t('urlPlaceholder')}
               variant="dashed"
@@ -120,7 +128,7 @@ export function DialogAddLink({ onSave, disabled = false }: DialogAddLinkProps) 
                 validateUrl(value);
               }}
               size="lg"
-              maxLength={Config.USER_LINK_URL_MAX_LENGTH}
+              maxLength={USER_LINK_URL_MAX_LENGTH}
               icon={<Clipboard className="h-4 w-4" />}
               iconPosition="right"
               onClickIcon={async () => {
@@ -134,21 +142,21 @@ export function DialogAddLink({ onSave, disabled = false }: DialogAddLinkProps) 
               message={urlError ?? undefined}
               messageType={urlError ? 'error' : 'default'}
             />
-          </Atoms.Container>
-        </Atoms.Container>
+          </Container>
+        </Container>
 
-        <Atoms.DialogFooter className="flex-row gap-4">
-          <Atoms.DialogClose asChild>
-            <Atoms.Button
+        <DialogFooter className="flex-row gap-4">
+          <DialogClose asChild>
+            <Button
               variant="outline"
               size="lg"
               className="sm:size-default flex-1 rounded-full border border-border bg-background"
             >
               {tCommon('cancel')}
-            </Atoms.Button>
-          </Atoms.DialogClose>
-          <Atoms.DialogClose asChild>
-            <Atoms.Button
+            </Button>
+          </DialogClose>
+          <DialogClose asChild>
+            <Button
               data-cy="add-profile-link-submit-btn"
               size="lg"
               className="sm:size-default flex-1 rounded-full border-brand text-brand"
@@ -156,10 +164,10 @@ export function DialogAddLink({ onSave, disabled = false }: DialogAddLinkProps) 
               disabled={!isValid}
             >
               {t('saveButton')}
-            </Atoms.Button>
-          </Atoms.DialogClose>
-        </Atoms.DialogFooter>
-      </Atoms.DialogContent>
-    </Atoms.Dialog>
+            </Button>
+          </DialogClose>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
   );
 }

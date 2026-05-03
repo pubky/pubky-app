@@ -5,7 +5,7 @@
  * both posts and users via a discriminated union type.
  */
 
-import type { UseViewportObserverOptions } from '../useViewportObserver';
+import type { UseViewportObserverOptions } from '../useViewportObserver/useViewportObserver.types';
 
 /**
  * Entity types supported by the TTL subscription hook

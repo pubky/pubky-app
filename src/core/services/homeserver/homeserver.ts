@@ -1,5 +1,4 @@
-import * as Core from '@/core';
-import * as Config from '@/config';
+import { DEFAULT_HTTP_RELAY, HOMESERVER, PKARR_RELAYS, TESTNET } from '@/config/network';
 import {
   Pubky,
   PublicKey,
@@ -40,8 +39,16 @@ import { ServerErrorCode, ValidationErrorCode } from '@/libs/error/error.codes';
 import { Err } from '@/libs/error/error.factories';
 import { httpResponseToError } from '@/libs/error/error.http';
 import { ErrorService } from '@/libs/error/error.types';
-
-const TESTNET = Config.TESTNET.toString() === 'true';
+import type { TKeypairParams } from '@/application/auth/auth.types';
+import type { TPublicKeyParams } from '@/controllers/auth/auth.types';
+import type {
+  TGenerateAuthUrlResult,
+  THomeserverRestoreSessionParams,
+  THomeserverSessionResult,
+  THomeserverSignUpParams,
+} from '@/services/homeserver/homeserver.types';
+import { useAuthStore } from '@/stores/auth/auth.store';
+const IS_TESTNET = TESTNET.toString() === 'true';
 
 const CAPABILITIES = '/pub/pubky.app/:rw';
 const PUB_PATH_PREFIX = '/pub/' as const;
@@ -58,10 +65,10 @@ export class HomeserverService {
    */
   private static getPubkySdk(): Pubky {
     if (!this.pubkySdk) {
-      if (TESTNET) {
+      if (IS_TESTNET) {
         this.pubkySdk = Pubky.testnet();
       } else {
-        const client = new Client({ pkarr: { relays: Config.PKARR_RELAYS } });
+        const client = new Client({ pkarr: { relays: PKARR_RELAYS } });
         this.pubkySdk = Pubky.withClient(client);
       }
     }
@@ -69,7 +76,7 @@ export class HomeserverService {
   }
 
   private static resolveOwnedSessionPath(url: string): TOwnedSessionPath | null {
-    const session = Core.useAuthStore.getState().selectSession();
+    const session = useAuthStore.getState().selectSession();
     return resolveOwnedSessionPath({ url, session, pubPathPrefix: PUB_PATH_PREFIX });
   }
 
@@ -88,7 +95,7 @@ export class HomeserverService {
    * @param publicKey - The public key to check
    * @returns The homeserver
    */
-  private static async checkHomeserver({ publicKey }: Core.TPublicKeyParams) {
+  private static async checkHomeserver({ publicKey }: TPublicKeyParams) {
     try {
       const pubkySdk = this.getPubkySdk();
       const homeserver = await pubkySdk.getHomeserverOf(publicKey);
@@ -111,9 +118,9 @@ export class HomeserverService {
    * @param signupToken - The signup token to use
    * @returns The session
    */
-  static async signUp({ keypair, signupToken }: Core.THomeserverSignUpParams): Promise<Core.THomeserverSessionResult> {
+  static async signUp({ keypair, signupToken }: THomeserverSignUpParams): Promise<THomeserverSessionResult> {
     try {
-      const homeserverPublicKey = PublicKey.from(Config.HOMESERVER);
+      const homeserverPublicKey = PublicKey.from(HOMESERVER);
       const signer = this.getSigner(keypair);
       const session = await signer.signup(homeserverPublicKey, signupToken);
 
@@ -139,7 +146,7 @@ export class HomeserverService {
    * @param keypair - The keypair to sign in with
    * @returns The session result, or `undefined` if homeserver was republished and caller should retry
    */
-  static async signIn({ keypair }: Core.TKeypairParams): Promise<Core.THomeserverSessionResult | undefined> {
+  static async signIn({ keypair }: TKeypairParams): Promise<THomeserverSessionResult | undefined> {
     const signer = this.getSigner(keypair);
     try {
       // get homeserver from pkarr records
@@ -149,7 +156,7 @@ export class HomeserverService {
     } catch (signinError) {
       try {
         // Republish keypair's homeserver
-        const homeserverPublicKey = PublicKey.from(Config.HOMESERVER);
+        const homeserverPublicKey = PublicKey.from(HOMESERVER);
         await signer.pkdns.publishHomeserverForce(homeserverPublicKey);
         Logger.debug('Republish homeserver successful', { keypair: Identity.pubkyFromKeypair(keypair) });
         // Return undefined to signal caller should retry signin after republish
@@ -170,12 +177,12 @@ export class HomeserverService {
    * @param caps - The capabilities to use
    * @returns The authentication URL and approval promise
    */
-  static async generateAuthUrl(caps?: Capabilities): Promise<Core.TGenerateAuthUrlResult> {
+  static async generateAuthUrl(caps?: Capabilities): Promise<TGenerateAuthUrlResult> {
     const capabilities: Capabilities = caps || CAPABILITIES;
 
     try {
       const pubkySdk = this.getPubkySdk();
-      const flow = pubkySdk.startAuthFlow(capabilities, AuthFlowKind.signin(), Config.DEFAULT_HTTP_RELAY);
+      const flow = pubkySdk.startAuthFlow(capabilities, AuthFlowKind.signin(), DEFAULT_HTTP_RELAY);
       const approval = createCancelableAuthApproval(flow);
 
       return {
@@ -184,7 +191,7 @@ export class HomeserverService {
         cancelAuthFlow: approval.cancel,
       };
     } catch (error) {
-      return handleError({ error, additionalContext: { capabilities, relay: Config.DEFAULT_HTTP_RELAY } });
+      return handleError({ error, additionalContext: { capabilities, relay: DEFAULT_HTTP_RELAY } });
     }
   }
 
@@ -201,7 +208,7 @@ export class HomeserverService {
   static async generateSignupAuthUrl({
     inviteCode,
     caps,
-  }: TGenerateSignupAuthUrlParams): Promise<Core.TGenerateAuthUrlResult> {
+  }: TGenerateSignupAuthUrlParams): Promise<TGenerateAuthUrlResult> {
     const res = await this.generateAuthUrl(caps);
     const url = URL.parse(res.authorizationUrl);
     if (!url) {
@@ -224,7 +231,7 @@ export class HomeserverService {
    * @param session - The authenticated Session to sign out
    * @returns Void
    */
-  static async logout({ session }: Core.THomeserverSessionResult) {
+  static async logout({ session }: THomeserverSessionResult) {
     try {
       await session.signout();
     } catch (error) {
@@ -424,7 +431,7 @@ export class HomeserverService {
   /**
    * Restore an authenticated Session from a previous `session.export()` snapshot.
    */
-  static async restoreSession({ sessionExport }: Core.THomeserverRestoreSessionParams): Promise<Session> {
+  static async restoreSession({ sessionExport }: THomeserverRestoreSessionParams): Promise<Session> {
     try {
       const pubkySdk = this.getPubkySdk();
       return await pubkySdk.restoreSession(sessionExport);

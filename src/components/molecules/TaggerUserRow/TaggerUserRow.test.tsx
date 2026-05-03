@@ -5,19 +5,13 @@ import type { TaggerWithAvatar } from '@/molecules/TaggedItem/TaggedItem.types';
 
 // Mock useIsFollowing hook
 const mockUseIsFollowing = vi.fn();
-vi.mock('@/hooks', async (importOriginal) => {
-  const actual = await importOriginal<typeof import('@/hooks')>();
-  return {
-    ...actual,
-    useIsFollowing: (userId: string) => mockUseIsFollowing(userId),
-  };
-});
+vi.mock('@/hooks/useIsFollowing/useIsFollowing', () => ({
+  useIsFollowing: (userId: string) => mockUseIsFollowing(userId),
+}));
 
 // Mock UserListItem organism
-vi.mock('@/organisms', async (importOriginal) => {
-  const actual = await importOriginal<typeof import('@/organisms')>();
+vi.mock('@/organisms/UserListItem/UserListItem', () => {
   return {
-    ...actual,
     UserListItem: ({
       user,
       variant,

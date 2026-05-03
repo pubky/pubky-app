@@ -1,6 +1,11 @@
-import * as Core from '@/core';
 import { Logger } from '@/libs/logger/logger';
-
+import { UserStreamApplication } from '@/application/stream/users/users';
+import { buildHotTagsId } from '@/models/hot/hot.helper';
+import { LocalHotService } from '@/services/local/hot/hot';
+import { LocalStreamUsersService } from '@/services/local/stream/users/users';
+import { NexusHotService } from '@/services/nexus/hot/hot';
+import { UserStreamTimeframe, type NexusHotTag } from '@/services/nexus/nexus.types';
+import type { TTagHotParams } from '@/services/nexus/tag/tag.types';
 const TOP_TAGS_TO_FETCH_USERS = 3;
 
 export class HotApplication {
@@ -19,18 +24,18 @@ export class HotApplication {
    * @param params - Parameters for fetching hot tags (includes reach, timeframe, skip, limit)
    * @returns Array of hot tags
    */
-  static async getOrFetch(params: Core.TTagHotParams): Promise<Core.NexusHotTag[]> {
+  static async getOrFetch(params: TTagHotParams): Promise<NexusHotTag[]> {
     try {
       // Build composite ID from params: timeframe:reach
-      const timeframe = params.timeframe || Core.UserStreamTimeframe.THIS_MONTH;
+      const timeframe = params.timeframe || UserStreamTimeframe.THIS_MONTH;
       const reach = params.reach || 'all';
 
-      const id = Core.buildHotTagsId(timeframe, reach);
+      const id = buildHotTagsId(timeframe, reach);
 
       // Skip cache for pagination
       if (params.skip && params.skip > 0) {
         Logger.debug('Fetching hot tags from Nexus (pagination)', { id, skip: params.skip });
-        const tags = await Core.NexusHotService.fetch(params);
+        const tags = await NexusHotService.fetch(params);
 
         // Fetch missing tagger users
         await this.fetchUsersForTags(tags.slice(0, TOP_TAGS_TO_FETCH_USERS), params.user_id);
@@ -39,7 +44,7 @@ export class HotApplication {
       }
 
       // Check cache first
-      const cached = await Core.LocalHotService.findById(id);
+      const cached = await LocalHotService.findById(id);
 
       if (cached && cached.tags.length > 0) {
         Logger.debug('Hot tags cache hit', { id, count: cached.tags.length });
@@ -61,13 +66,13 @@ export class HotApplication {
       // share the same cache entry (e.g., HotTagsCardsSection with limit=5 vs HotTagsOverview with limit=50).
       Logger.debug('Hot tags cache miss, fetching from Nexus', { id });
       const { limit, ...fetchParams } = params;
-      const tags = await Core.NexusHotService.fetch(fetchParams);
+      const tags = await NexusHotService.fetch(fetchParams);
 
       if (tags.length > 0) {
         // Fetch and persist users first, then persist hot tags.
         // This prevents excessive rerender where liveQuery triggers before users are cached
         await this.fetchUsersForTags(tags.slice(0, TOP_TAGS_TO_FETCH_USERS), params.user_id);
-        await Core.LocalHotService.upsert(id, tags);
+        await LocalHotService.upsert(id, tags);
       }
 
       // Apply caller's limit only on return, not on what gets cached
@@ -87,7 +92,7 @@ export class HotApplication {
    * @param id - Composite ID (timeframe:reach)
    * @param params - Parameters for fetching hot tags
    */
-  private static async refreshCacheInBackground(id: string, params: Core.TTagHotParams) {
+  private static async refreshCacheInBackground(id: string, params: TTagHotParams) {
     try {
       // Strip limit so the full tag set is fetched and cached, preventing cache pollution
       // when different consumers request different limits for the same cache entry.
@@ -95,10 +100,10 @@ export class HotApplication {
 
       // Fetch and persist users first, then persist hot tags (blocking within this background task)
       // This prevents excessive rerender where liveQuery triggers before users are cached
-      const tags = await Core.NexusHotService.fetch(fetchParams);
+      const tags = await NexusHotService.fetch(fetchParams);
       if (tags.length > 0) {
         await this.fetchUsersForTags(tags.slice(0, TOP_TAGS_TO_FETCH_USERS), params.user_id);
-        await Core.LocalHotService.upsert(id, tags);
+        await LocalHotService.upsert(id, tags);
       }
     } catch (error) {
       Logger.error('Failed to refresh cache in background', { id, error });
@@ -114,7 +119,7 @@ export class HotApplication {
    * @param tags - Array of hot tags containing tagger IDs (sorted by score)
    * @param userId - Optional user ID for relationship data
    */
-  private static async fetchUsersForTags(tags: Core.NexusHotTag[], userId?: string) {
+  private static async fetchUsersForTags(tags: NexusHotTag[], userId?: string) {
     // Extract all unique tagger IDs from tags
     const allTaggerIds = [...new Set(tags.flatMap((tag) => tag.taggers_id))];
     if (allTaggerIds.length === 0) {
@@ -122,13 +127,13 @@ export class HotApplication {
     }
 
     // Check which users are not already in cache
-    const cacheMissUserIds = await Core.LocalStreamUsersService.getNotPersistedUsersInCache(allTaggerIds);
+    const cacheMissUserIds = await LocalStreamUsersService.getNotPersistedUsersInCache(allTaggerIds);
     if (cacheMissUserIds.length === 0) {
       return;
     }
 
     // Fetch only missing users
-    await Core.UserStreamApplication.fetchMissingUsersFromNexus({
+    await UserStreamApplication.fetchMissingUsersFromNexus({
       cacheMissUserIds,
       viewerId: userId,
     });

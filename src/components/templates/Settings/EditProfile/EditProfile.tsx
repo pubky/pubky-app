@@ -1,11 +1,12 @@
-import * as Molecules from '@/molecules';
-import * as Organisms from '@/organisms';
+import { OnboardingLayout } from '@/molecules/OnboardingLayout/OnboardingLayout';
+import { EditProfileForm } from '@/organisms/Settings/EditProfileForm/EditProfileForm';
+import { EditProfileHeader } from '@/organisms/Settings/EditProfileHeader/EditProfileHeader';
 
 export function EditProfile() {
   return (
-    <Molecules.OnboardingLayout testId="edit-profile-content">
-      <Organisms.EditProfileHeader />
-      <Organisms.EditProfileForm />
-    </Molecules.OnboardingLayout>
+    <OnboardingLayout testId="edit-profile-content">
+      <EditProfileHeader />
+      <EditProfileForm />
+    </OnboardingLayout>
   );
 }

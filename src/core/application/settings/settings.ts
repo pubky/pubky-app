@@ -1,8 +1,10 @@
-import * as Core from '@/core';
 import { HttpMethod, HttpStatusCode } from '@/libs/http/http.types';
 import { Logger } from '@/libs/logger/logger';
 import { AppError } from '@/libs/error/error';
-
+import type { Pubky } from '@/models/models.types';
+import { SettingsNormalizer, type SettingsJson } from '@/pipes/settings/settings.normalizer';
+import { HomeserverService } from '@/services/homeserver/homeserver';
+import type { SettingsState } from '@/stores/settings/settings.types';
 /**
  * Settings application service.
  *
@@ -18,12 +20,12 @@ export class SettingsApplication {
    * @param settings, The current settings state to persist
    * @param pubky, The user's public key
    */
-  static async commitUpdate(settings: Core.SettingsState, pubky: Core.Pubky): Promise<void> {
-    const { settings: settingsJson, meta } = Core.SettingsNormalizer.to(settings, pubky);
+  static async commitUpdate(settings: SettingsState, pubky: Pubky): Promise<void> {
+    const { settings: settingsJson, meta } = SettingsNormalizer.to(settings, pubky);
 
     Logger.info('[Settings] Pushing to homeserver', { url: meta.url, settings: settingsJson });
 
-    await Core.HomeserverService.request({
+    await HomeserverService.request({
       method: HttpMethod.PUT,
       url: meta.url,
       bodyJson: settingsJson as unknown as Record<string, unknown>,
@@ -39,20 +41,20 @@ export class SettingsApplication {
    * @param pubky, The user's public key
    * @returns The settings state from homeserver, or null if not found
    */
-  static async fetchFromHomeserver(pubky: Core.Pubky): Promise<Core.SettingsState | null> {
-    const url = Core.SettingsNormalizer.buildUrl(pubky);
+  static async fetchFromHomeserver(pubky: Pubky): Promise<SettingsState | null> {
+    const url = SettingsNormalizer.buildUrl(pubky);
 
     Logger.info('[Settings] Pulling from homeserver', { url });
 
     try {
-      const settingsJson = await Core.HomeserverService.request<Core.SettingsJson>({ method: HttpMethod.GET, url });
+      const settingsJson = await HomeserverService.request<SettingsJson>({ method: HttpMethod.GET, url });
 
       if (!settingsJson) {
         Logger.info('[Settings] Pull complete, no settings found');
         return null;
       }
 
-      const settings = Core.SettingsNormalizer.from(settingsJson);
+      const settings = SettingsNormalizer.from(settingsJson);
       Logger.info('[Settings] Pull complete', { settings });
       return settings;
     } catch (error) {
@@ -74,10 +76,7 @@ export class SettingsApplication {
    * @returns The remote settings if newer than local, or null if local is newer/equal
    * @throws If fetch or sync operations fail, caller should handle errors
    */
-  static async initializeSettings(
-    pubky: Core.Pubky,
-    localSettings: Core.SettingsState,
-  ): Promise<Core.SettingsState | null> {
+  static async initializeSettings(pubky: Pubky, localSettings: SettingsState): Promise<SettingsState | null> {
     Logger.info('[Settings] Initializing settings sync');
     const remoteSettings = await this.fetchFromHomeserver(pubky);
 

@@ -1,5 +1,1 @@
-import * as Templates from '@/templates';
-
-export default function HotPage() {
-  return <Templates.Hot />;
-}
+export { Hot as default } from '@/templates/Feed/Hot/Hot';

@@ -2,12 +2,13 @@
 
 import { useState } from 'react';
 import { useTranslations } from 'next-intl';
-import * as Core from '@/core';
-import * as Molecules from '@/molecules';
-import * as Organisms from '@/organisms';
+import { useToast } from '@/molecules/Toaster/use-toast';
+import { useTimelineFeedContext } from '@/organisms/Timeline/Feed/TimelineFeed/TimelineFeedContext';
+
 import type { UseDeletePostResult } from './useDeletePost.types';
 import { Logger } from '@/libs/logger/logger';
-
+import { PostController } from '@/controllers/post/post';
+import type { PostDetailsModelSchema } from '@/models/post/details/postDetails.schema';
 /**
  * Hook to handle post deletion with optimistic UI updates and error recovery.
  *
@@ -30,10 +31,10 @@ import { Logger } from '@/libs/logger/logger';
  */
 export function useDeletePost(): UseDeletePostResult {
   const [isDeleting, setIsDeleting] = useState(false);
-  const { toast } = Molecules.useToast();
+  const { toast } = useToast();
   const tToast = useTranslations('toast');
   const tPost = useTranslations('toast.post');
-  const timelineFeed = Organisms.useTimelineFeedContext();
+  const timelineFeed = useTimelineFeedContext();
 
   const deletePost = async (postId: string) => {
     if (isDeleting) {
@@ -57,7 +58,7 @@ export function useDeletePost(): UseDeletePostResult {
     timelineFeed?.removePosts(postId);
 
     try {
-      await Core.PostController.commitDelete({ compositePostId: postId });
+      await PostController.commitDelete({ compositePostId: postId });
       Logger.info('[useDeletePost] Post deleted successfully', { postId });
       toast({
         title: tPost('postDeleted'),
@@ -74,9 +75,9 @@ export function useDeletePost(): UseDeletePostResult {
       // Check if post still exists before restoring (prevents ghost posts)
       // If local DB deletion succeeded but homeserver sync failed, post won't exist.
       // If we cannot verify, prefer restoring to avoid silently dropping content from the UI.
-      let postStillExists: Core.PostDetailsModelSchema | null | 'unknown' = 'unknown';
+      let postStillExists: PostDetailsModelSchema | null | 'unknown' = 'unknown';
       try {
-        postStillExists = await Core.PostController.getDetails({ compositeId: postId });
+        postStillExists = await PostController.getDetails({ compositeId: postId });
         Logger.debug('[useDeletePost] Post existence check completed', {
           postId,
           exists: postStillExists !== null,

@@ -1,6 +1,15 @@
-import * as Core from '@/core';
 import { Identity } from '@/libs/identity/identity';
-
+import { ProfileApplication } from '@/application/profile/profile';
+import type {
+  TCommitSetDetailsParams,
+  TCommitUpdateDetailsParams,
+  TDeleteAccountInput,
+  TDownloadDataInput,
+} from '@/controllers/profile/profile.types';
+import type { Pubky } from '@/models/models.types';
+import { UserNormalizer } from '@/pipes/user/user.normalizer';
+import { useAuthStore } from '@/stores/auth/auth.store';
+import { useOnboardingStore } from '@/stores/onboarding/onboarding.store';
 // Operations related with the profile.json file in the homeserver
 export class ProfileController {
   private constructor() {} // Prevent instantiation
@@ -11,19 +20,19 @@ export class ProfileController {
    * @param image - The image to create
    * @param pubky - The public key of the user
    */
-  static async commitCreate({ profile, image, pubky }: Core.TCommitSetDetailsParams) {
-    const { user, meta } = Core.UserNormalizer.to(
+  static async commitCreate({ profile, image, pubky }: TCommitSetDetailsParams) {
+    const { user, meta } = UserNormalizer.to(
       {
         name: profile.name,
         bio: profile.bio ?? '',
         image,
-        links: Core.UserNormalizer.linksFromUi(profile.links),
+        links: UserNormalizer.linksFromUi(profile.links),
         status: '', // default is blank
       },
       pubky,
     );
 
-    await Core.ProfileApplication.commitCreate({ profile: user, url: meta.url, pubky });
+    await ProfileApplication.commitCreate({ profile: user, url: meta.url, pubky });
   }
 
   /**
@@ -31,8 +40,8 @@ export class ProfileController {
    * @param pubky - The public key of the user
    * @param status - The status to update
    */
-  static async commitUpdateStatus({ pubky, status }: { pubky: Core.Pubky; status: string }) {
-    return await Core.ProfileApplication.commitUpdateStatus({ pubky, status });
+  static async commitUpdateStatus({ pubky, status }: { pubky: Pubky; status: string }) {
+    return await ProfileApplication.commitUpdateStatus({ pubky, status });
   }
 
   /**
@@ -43,13 +52,13 @@ export class ProfileController {
    * @param image - The image to update
    * @param pubky - The public key of the user
    */
-  static async commitUpdate({ name, bio, links, image, pubky }: Core.TCommitUpdateDetailsParams) {
-    await Core.ProfileApplication.commitUpdate({
+  static async commitUpdate({ name, bio, links, image, pubky }: TCommitUpdateDetailsParams) {
+    await ProfileApplication.commitUpdate({
       pubky,
       name,
       bio,
       image,
-      links: Core.UserNormalizer.linksFromUi(links),
+      links: UserNormalizer.linksFromUi(links),
     });
   }
 
@@ -58,8 +67,8 @@ export class ProfileController {
    */
   static generateSecrets() {
     const secrets = Identity.generateSecrets();
-    Core.useOnboardingStore.getState().setSecrets(secrets);
-    Core.useAuthStore.getState().setCurrentUserPubky(Identity.z32FromSecret(secrets.secretKey));
+    useOnboardingStore.getState().setSecrets(secrets);
+    useAuthStore.getState().setCurrentUserPubky(Identity.z32FromSecret(secrets.secretKey));
   }
 
   /**
@@ -67,7 +76,7 @@ export class ProfileController {
    * @param passphrase - The passphrase to use to create the recovery file
    */
   static createRecoveryFile(passphrase: string) {
-    const secretKey = Core.useOnboardingStore.getState().selectSecretKey();
+    const secretKey = useOnboardingStore.getState().selectSecretKey();
     const keypair = Identity.keypairFromSecretKey(secretKey);
     Identity.createRecoveryFile({ keypair, passphrase });
   }
@@ -77,8 +86,8 @@ export class ProfileController {
    * @param pubky - The public key of the user
    * @param setProgress - The function to set the progress
    */
-  static async commitDelete({ pubky, setProgress }: Core.TDeleteAccountInput) {
-    await Core.ProfileApplication.commitDelete({ pubky, setProgress });
+  static async commitDelete({ pubky, setProgress }: TDeleteAccountInput) {
+    await ProfileApplication.commitDelete({ pubky, setProgress });
   }
 
   /**
@@ -86,7 +95,7 @@ export class ProfileController {
    * @param pubky - The public key of the user
    * @param setProgress - The function to set the progress
    */
-  static async downloadData({ pubky, setProgress }: Core.TDownloadDataInput) {
-    await Core.ProfileApplication.downloadData({ pubky, setProgress });
+  static async downloadData({ pubky, setProgress }: TDownloadDataInput) {
+    await ProfileApplication.downloadData({ pubky, setProgress });
   }
 }

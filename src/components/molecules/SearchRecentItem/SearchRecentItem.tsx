@@ -1,6 +1,7 @@
 'use client';
+import { PostTag } from '../PostTag/PostTag';
+import { SearchRecentUserItem } from '../SearchRecentUserItem/SearchRecentUserItem';
 
-import * as Molecules from '@/molecules';
 import type { SearchRecentItemProps } from './SearchRecentItem.types';
 import { RECENT_ITEM_TYPE } from './SearchRecentItem.constants';
 
@@ -13,7 +14,7 @@ import { RECENT_ITEM_TYPE } from './SearchRecentItem.constants';
  */
 export function SearchRecentItem({ type, user, tag, onUserClick, onTagClick }: SearchRecentItemProps) {
   if (type === RECENT_ITEM_TYPE.USER && user && onUserClick) {
-    return <Molecules.SearchRecentUserItem user={user} onClick={onUserClick} />;
+    return <SearchRecentUserItem user={user} onClick={onUserClick} />;
   }
 
   if (type === RECENT_ITEM_TYPE.TAG && tag && onTagClick) {
@@ -21,7 +22,7 @@ export function SearchRecentItem({ type, user, tag, onUserClick, onTagClick }: S
       onTagClick(tag.tag);
     };
 
-    return <Molecules.PostTag label={tag.tag} onClick={handleClick} data-testid={`recent-tag-${tag.tag}`} />;
+    return <PostTag label={tag.tag} onClick={handleClick} data-testid={`recent-tag-${tag.tag}`} />;
   }
 
   return null;

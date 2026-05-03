@@ -12,17 +12,16 @@ vi.mock('next/navigation', () => ({
   }),
 }));
 
-vi.mock('@/hooks', async () => {
-  const actual = await vi.importActual('@/hooks');
-  return {
-    ...actual,
-    useUserStream: hooksMocks.useUserStream,
-    useFollowUser: () => ({
-      toggleFollow: vi.fn(),
-      isUserLoading: () => false,
-    }),
-  };
-});
+vi.mock('@/hooks/useUserStream/useUserStream', () => ({
+  useUserStream: hooksMocks.useUserStream,
+}));
+
+vi.mock('@/hooks/useFollowUser/useFollowUser', () => ({
+  useFollowUser: () => ({
+    toggleFollow: vi.fn(),
+    isUserLoading: () => false,
+  }),
+}));
 
 describe('WhoToFollowSidebar', () => {
   beforeEach(() => {

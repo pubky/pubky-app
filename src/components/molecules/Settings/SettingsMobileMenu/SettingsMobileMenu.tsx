@@ -2,7 +2,9 @@
 
 import { usePathname, useRouter } from 'next/navigation';
 import { useTranslations } from 'next-intl';
-import { MobileTabBar, type MobileTabBarItem } from '../../MobileTabBar';
+import { MobileTabBar } from '../../MobileTabBar/MobileTabBar';
+import type { MobileTabBarItem } from '../../MobileTabBar/MobileTabBar.types';
+
 import { SETTINGS_MOBILE_ITEMS } from './SettingsMobileMenu.constants';
 
 /**

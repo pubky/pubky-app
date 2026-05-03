@@ -14,7 +14,7 @@ import { parseRetryAfterHeader } from '../http/response.utils';
 
 /**
  * Creates appropriate AppError from HTTP status code.
- * Core mapping function used by httpResponseToError and for cases
+ * Primary mapping function used by httpResponseToError and for cases
  * where you have a status code without a Response object.
  *
  * @param statusCode - The HTTP status code

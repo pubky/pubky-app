@@ -1,5 +1,4 @@
-import * as Core from '@/core';
-
+import { PostDetailsModel } from '@/models/post/details/postDetails';
 /**
  * Sort post IDs by their timestamp (indexed_at) in descending order (most recent first)
  *
@@ -13,7 +12,7 @@ import * as Core from '@/core';
 export async function sortPostIdsByTimestamp(postIds: string[]): Promise<string[]> {
   if (postIds.length === 0) return [];
 
-  const posts = await Core.PostDetailsModel.findByIdsPreserveOrder(postIds);
+  const posts = await PostDetailsModel.findByIdsPreserveOrder(postIds);
 
   // Build array with raw timestamps (null for missing posts)
   const timestampedPosts = postIds.map((postId, index) => ({

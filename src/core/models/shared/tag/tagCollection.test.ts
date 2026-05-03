@@ -1,32 +1,35 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import Dexie, { Table } from 'dexie';
 import { indexedDB, IDBKeyRange } from 'fake-indexeddb';
-import * as Core from '@/core';
 import { TagCollection } from './tagCollection';
 import { AppError } from '@/libs/error/error';
 import { DatabaseErrorCode } from '@/libs/error/error.codes';
 import { ErrorCategory, ErrorService } from '@/libs/error/error.types';
+import type { Pubky } from '@/models/models.types';
+import type { NexusModelTuple } from '@/models/shared/base/tuple/baseTuple.type';
+import { TagModel } from '@/models/shared/tag/tag';
+import type { TagCollectionModelSchema } from '@/models/shared/tag/tag.schema';
+import type { NexusTag } from '@/services/nexus/nexus.types';
+type TestTagSchema = TagCollectionModelSchema<string>;
 
-type TestTagSchema = Core.TagCollectionModelSchema<string>;
-
-type TestTagTuple = Core.NexusModelTuple<Core.NexusTag[]>;
+type TestTagTuple = NexusModelTuple<NexusTag[]>;
 
 class TestTagCollection extends TagCollection<string, TestTagSchema> implements TestTagSchema {
   static table: Table<TestTagSchema>;
   id: string;
-  tags: Core.TagModel[];
+  tags: TagModel[];
 
   constructor(data: TestTagSchema) {
     super(data);
     this.id = data.id;
-    this.tags = data.tags.map((t) => new Core.TagModel(t));
+    this.tags = data.tags.map((t) => new TagModel(t));
   }
 }
 
 describe('TagCollection', () => {
   let db: Dexie;
 
-  const makeTag = (label: string, taggers: Core.Pubky[] = []): Core.NexusTag => ({
+  const makeTag = (label: string, taggers: Pubky[] = []): NexusTag => ({
     label,
     taggers,
     taggers_count: taggers.length,
@@ -93,7 +96,7 @@ describe('TagCollection', () => {
 describe('TagCollection error handling', () => {
   let db: Dexie;
 
-  const makeTag = (label: string, taggers: Core.Pubky[] = []): Core.NexusTag => ({
+  const makeTag = (label: string, taggers: Pubky[] = []): NexusTag => ({
     label,
     taggers,
     taggers_count: taggers.length,

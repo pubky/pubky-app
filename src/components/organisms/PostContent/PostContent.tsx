@@ -1,9 +1,9 @@
 'use client';
 
-import * as Molecules from '@/molecules';
+import { useRepostInfo } from '@/hooks/useRepostInfo/useRepostInfo';
+import { PostPreviewCard } from '@/molecules/PostPreviewCard/PostPreviewCard';
+import { PostContentBase } from '../PostContentBase/PostContentBase';
 
-import * as Hooks from '@/hooks';
-import * as Organisms from '@/organisms';
 import type { PostContentOrganismProps } from './PostContent.types';
 
 /**
@@ -16,7 +16,7 @@ import type { PostContentOrganismProps } from './PostContent.types';
  */
 export function PostContent({ postId, className, textClassName }: PostContentOrganismProps) {
   // Get repost information
-  const { isRepost, originalPostId } = Hooks.useRepostInfo(postId);
+  const { isRepost, originalPostId } = useRepostInfo(postId);
 
   // Determine if we should render the repost preview
   const shouldRenderRepostPreview = isRepost && !!originalPostId;
@@ -24,10 +24,10 @@ export function PostContent({ postId, className, textClassName }: PostContentOrg
   return (
     <>
       {/* Always render PostContentBase - it's a structural wrapper for content elements */}
-      <Organisms.PostContentBase postId={postId} className={className} textClassName={textClassName} />
+      <PostContentBase postId={postId} className={className} textClassName={textClassName} />
 
       {/* Show original post preview for reposts */}
-      {shouldRenderRepostPreview && <Molecules.PostPreviewCard postId={originalPostId} className={'bg-muted'} />}
+      {shouldRenderRepostPreview && <PostPreviewCard postId={originalPostId} className={'bg-muted'} />}
     </>
   );
 }

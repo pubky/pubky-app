@@ -1,8 +1,13 @@
 'use client';
 
 import { useTranslations } from 'next-intl';
-import * as Atoms from '@/atoms';
-import * as Organisms from '@/organisms';
+import { Button } from '@/atoms/Button/Button';
+import { Container } from '@/atoms/Container/Container';
+import { Link } from '@/atoms/Link/Link';
+import { Tag } from '@/atoms/Tag/Tag';
+import { Typography } from '@/atoms/Typography/Typography';
+import { AvatarWithFallback } from '@/organisms/AvatarWithFallback/AvatarWithFallback';
+
 import { Check, UserMinus, UserRoundPlus } from 'lucide-react';
 import type { FollowerItemProps } from './FollowerItem.types';
 import { formatPublicKey } from '@/libs/utils/utils';
@@ -24,59 +29,56 @@ export function FollowerItem({ follower, isFollowing = false, onFollow, isCurren
   };
 
   return (
-    <Atoms.Container className="gap-3 rounded-md bg-card p-6 lg:bg-transparent lg:p-0">
-      <Atoms.Container
-        overrideDefaults={true}
-        className="flex flex-wrap items-center justify-between gap-6 lg:flex-nowrap"
-      >
-        <Atoms.Link href={`/profile/${follower.id}`} className="flex min-w-0 flex-1 items-center gap-2">
-          <Organisms.AvatarWithFallback avatarUrl={avatarUrl} name={displayName} fallbackSeed={follower.id} size="md" />
+    <Container className="gap-3 rounded-md bg-card p-6 lg:bg-transparent lg:p-0">
+      <Container overrideDefaults={true} className="flex flex-wrap items-center justify-between gap-6 lg:flex-nowrap">
+        <Link href={`/profile/${follower.id}`} className="flex min-w-0 flex-1 items-center gap-2">
+          <AvatarWithFallback avatarUrl={avatarUrl} name={displayName} fallbackSeed={follower.id} size="md" />
 
-          <Atoms.Container overrideDefaults={true}>
-            <Atoms.Typography data-cy="profile-follower-item-name" size="sm" className="truncate font-bold">
+          <Container overrideDefaults={true}>
+            <Typography data-cy="profile-follower-item-name" size="sm" className="truncate font-bold">
               {displayName}
-            </Atoms.Typography>
-            <Atoms.Typography
+            </Typography>
+            <Typography
               data-cy="profile-follower-item-pubky"
               className="truncate text-xs font-medium tracking-[1.2px] text-muted-foreground uppercase"
             >
               {formattedPublicKey}
-            </Atoms.Typography>
-          </Atoms.Container>
-        </Atoms.Link>
+            </Typography>
+          </Container>
+        </Link>
 
         {/* Desktop: Tags (inline) */}
         {tags.length > 0 && (
-          <Atoms.Container overrideDefaults={true} className="hidden flex-wrap items-center gap-2 lg:flex">
+          <Container overrideDefaults={true} className="hidden flex-wrap items-center gap-2 lg:flex">
             {tags.slice(0, 3).map((tag, index) => (
-              <Atoms.Tag key={index} name={tag} />
+              <Tag key={index} name={tag} />
             ))}
-          </Atoms.Container>
+          </Container>
         )}
 
         {/* Stats */}
-        <Atoms.Container overrideDefaults={true} className="flex shrink-0 items-center gap-3">
-          <Atoms.Container className="items-start">
-            <Atoms.Typography className="text-xs font-medium tracking-[1.2px] text-muted-foreground uppercase">
+        <Container overrideDefaults={true} className="flex shrink-0 items-center gap-3">
+          <Container className="items-start">
+            <Typography className="text-xs font-medium tracking-[1.2px] text-muted-foreground uppercase">
               {t('tags')}
-            </Atoms.Typography>
-            <Atoms.Typography data-cy="profile-follower-item-tags-count" size="sm" className="font-bold">
+            </Typography>
+            <Typography data-cy="profile-follower-item-tags-count" size="sm" className="font-bold">
               {stats.tags}
-            </Atoms.Typography>
-          </Atoms.Container>
-          <Atoms.Container className="items-start">
-            <Atoms.Typography className="text-xs font-medium tracking-[1.2px] text-muted-foreground uppercase">
+            </Typography>
+          </Container>
+          <Container className="items-start">
+            <Typography className="text-xs font-medium tracking-[1.2px] text-muted-foreground uppercase">
               {t('posts')}
-            </Atoms.Typography>
-            <Atoms.Typography data-cy="profile-follower-item-posts-count" size="sm" className="font-bold">
+            </Typography>
+            <Typography data-cy="profile-follower-item-posts-count" size="sm" className="font-bold">
               {stats.posts}
-            </Atoms.Typography>
-          </Atoms.Container>
-        </Atoms.Container>
+            </Typography>
+          </Container>
+        </Container>
 
         {/* Desktop: Follow Button */}
         {isCurrentUser ? (
-          <Atoms.Button
+          <Button
             data-cy="user-list-item-me-btn"
             variant="secondary"
             size="sm"
@@ -85,9 +87,9 @@ export function FollowerItem({ follower, isFollowing = false, onFollow, isCurren
             aria-label={tProfile('thisIsYou')}
           >
             <span>{t('me')}</span>
-          </Atoms.Button>
+          </Button>
         ) : (
-          <Atoms.Button
+          <Button
             data-cy="user-list-item-follow-toggle-btn"
             variant="secondary"
             size="sm"
@@ -97,44 +99,44 @@ export function FollowerItem({ follower, isFollowing = false, onFollow, isCurren
           >
             {isFollowing ? (
               <>
-                <Atoms.Container overrideDefaults className="flex items-center gap-1.5 group-hover:hidden">
+                <Container overrideDefaults className="flex items-center gap-1.5 group-hover:hidden">
                   <Check className="size-4" />
                   <span>{t('following')}</span>
-                </Atoms.Container>
-                <Atoms.Container overrideDefaults className="hidden items-center gap-1.5 group-hover:flex">
+                </Container>
+                <Container overrideDefaults className="hidden items-center gap-1.5 group-hover:flex">
                   <UserMinus className="size-4" />
                   <span>{t('unfollow')}</span>
-                </Atoms.Container>
+                </Container>
               </>
             ) : (
               <>
-                <Atoms.Container overrideDefaults className="flex items-center gap-1.5 group-hover:hidden">
+                <Container overrideDefaults className="flex items-center gap-1.5 group-hover:hidden">
                   <UserRoundPlus className="size-4" />
                   <span>{t('follow')}</span>
-                </Atoms.Container>
-                <Atoms.Container overrideDefaults className="hidden items-center gap-1.5 group-hover:flex">
+                </Container>
+                <Container overrideDefaults className="hidden items-center gap-1.5 group-hover:flex">
                   <Check className="size-4" />
                   <span>{t('follow')}</span>
-                </Atoms.Container>
+                </Container>
               </>
             )}
-          </Atoms.Button>
+          </Button>
         )}
-      </Atoms.Container>
+      </Container>
 
       {/* Mobile: Bottom row - Tags and Follow Button */}
-      <Atoms.Container overrideDefaults={true} className="flex flex-wrap items-center justify-between gap-3 lg:hidden">
+      <Container overrideDefaults={true} className="flex flex-wrap items-center justify-between gap-3 lg:hidden">
         {/* Left: Tags */}
         {tags.length > 0 && (
-          <Atoms.Container overrideDefaults={true} className="flex flex-1 flex-wrap items-center gap-2">
+          <Container overrideDefaults={true} className="flex flex-1 flex-wrap items-center gap-2">
             {tags.slice(0, 3).map((tag, index) => (
-              <Atoms.Tag key={index} name={tag} />
+              <Tag key={index} name={tag} />
             ))}
-          </Atoms.Container>
+          </Container>
         )}
         {/* Right: Follow Button */}
         {isCurrentUser ? (
-          <Atoms.Button
+          <Button
             variant="secondary"
             size="sm"
             className="w-[110px] justify-center"
@@ -142,9 +144,9 @@ export function FollowerItem({ follower, isFollowing = false, onFollow, isCurren
             aria-label={tProfile('thisIsYou')}
           >
             <span>{t('me')}</span>
-          </Atoms.Button>
+          </Button>
         ) : (
-          <Atoms.Button
+          <Button
             variant="secondary"
             size="sm"
             className="group w-[110px] justify-center"
@@ -153,30 +155,30 @@ export function FollowerItem({ follower, isFollowing = false, onFollow, isCurren
           >
             {isFollowing ? (
               <>
-                <Atoms.Container overrideDefaults className="flex items-center gap-1.5 group-hover:hidden">
+                <Container overrideDefaults className="flex items-center gap-1.5 group-hover:hidden">
                   <Check className="size-4" />
                   <span>{t('following')}</span>
-                </Atoms.Container>
-                <Atoms.Container overrideDefaults className="hidden items-center gap-1.5 group-hover:flex">
+                </Container>
+                <Container overrideDefaults className="hidden items-center gap-1.5 group-hover:flex">
                   <UserMinus className="size-4" />
                   <span>{t('unfollow')}</span>
-                </Atoms.Container>
+                </Container>
               </>
             ) : (
               <>
-                <Atoms.Container overrideDefaults className="flex items-center gap-1.5 group-hover:hidden">
+                <Container overrideDefaults className="flex items-center gap-1.5 group-hover:hidden">
                   <UserRoundPlus className="size-4" />
                   <span>{t('follow')}</span>
-                </Atoms.Container>
-                <Atoms.Container overrideDefaults className="hidden items-center gap-1.5 group-hover:flex">
+                </Container>
+                <Container overrideDefaults className="hidden items-center gap-1.5 group-hover:flex">
                   <Check className="size-4" />
                   <span>{t('follow')}</span>
-                </Atoms.Container>
+                </Container>
               </>
             )}
-          </Atoms.Button>
+          </Button>
         )}
-      </Atoms.Container>
-    </Atoms.Container>
+      </Container>
+    </Container>
   );
 }

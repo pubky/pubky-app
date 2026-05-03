@@ -2,9 +2,13 @@
 
 import { useLiveQuery } from 'dexie-react-hooks';
 import { useTranslations } from 'next-intl';
-import * as Core from '@/core';
-import * as Atoms from '@/atoms';
-import * as Organisms from '@/organisms';
+import { Button } from '@/atoms/Button/Button';
+import { Container } from '@/atoms/Container/Container';
+import { Heading } from '@/atoms/Heading/Heading';
+import { Link } from '@/atoms/Link/Link';
+import { Typography } from '@/atoms/Typography/Typography';
+import { CustomFeedDialog } from '../CustomFeedDialog/CustomFeedDialog';
+
 import { APP_ROUTES } from '@/app/routes';
 import { usePathname } from 'next/navigation';
 
@@ -13,7 +17,9 @@ import { usePathname } from 'next/navigation';
 import { Pencil, Home, PlusCircle } from 'lucide-react';
 import { Logger } from '@/libs/logger/logger';
 import { cn } from '@/libs/utils/utils';
-let cachedFeeds: Core.FeedModelSchema[] = [];
+import { FeedController } from '@/controllers/feed/feed';
+import type { FeedModelSchema } from '@/models/feed/feed.schema';
+let cachedFeeds: FeedModelSchema[] = [];
 interface FeedNavigationProps {
   className?: string;
 }
@@ -24,14 +30,14 @@ export const FeedNavigation = ({ className }: FeedNavigationProps) => {
   const customFeeds = useLiveQuery(
     async () => {
       try {
-        const result = await Core.FeedController.getList();
+        const result = await FeedController.getList();
         cachedFeeds = result;
         return result;
       } catch (error) {
         Logger.error('[FeedNavigation] Failed to query custom feeds', {
           error,
         });
-        return [] as Core.FeedModelSchema[];
+        return [] as FeedModelSchema[];
       }
     },
     [],
@@ -51,13 +57,13 @@ export const FeedNavigation = ({ className }: FeedNavigationProps) => {
     ...customFeedsMapped,
   ];
   return (
-    <Atoms.Container className={cn('overflow-x-auto lg:flex-row', className)}>
-      <Atoms.Heading level={2} size="lg" className="mb-2 font-light text-muted-foreground lg:hidden">
+    <Container className={cn('overflow-x-auto lg:flex-row', className)}>
+      <Heading level={2} size="lg" className="mb-2 font-light text-muted-foreground lg:hidden">
         {tHeader('feed')}
-      </Atoms.Heading>
+      </Heading>
 
       {feeds.map((f) => (
-        <Atoms.Link
+        <Link
           overrideDefaults
           key={f.href}
           href={f.href}
@@ -67,33 +73,33 @@ export const FeedNavigation = ({ className }: FeedNavigationProps) => {
           )}
         >
           {f.href !== APP_ROUTES.HOME && f.href === pathname ? (
-            <Organisms.CustomFeedDialog mode="edit">
-              <Atoms.Button overrideDefaults className="cursor-pointer">
+            <CustomFeedDialog mode="edit">
+              <Button overrideDefaults className="cursor-pointer">
                 {f.icon}
-              </Atoms.Button>
-            </Organisms.CustomFeedDialog>
+              </Button>
+            </CustomFeedDialog>
           ) : (
             f.icon
           )}
 
-          <Atoms.Typography overrideDefaults className="font-medium lg:text-sm">
+          <Typography overrideDefaults className="font-medium lg:text-sm">
             {f.name}
-          </Atoms.Typography>
-        </Atoms.Link>
+          </Typography>
+        </Link>
       ))}
 
-      <Organisms.CustomFeedDialog mode="create">
-        <Atoms.Button
+      <CustomFeedDialog mode="create">
+        <Button
           overrideDefaults
           className="flex min-h-12 w-full min-w-40 cursor-pointer items-center gap-x-2 border-b border-muted-foreground text-muted-foreground transition-colors hover:text-white lg:justify-center"
         >
           <PlusCircle className="size-5 shrink-0" />
 
-          <Atoms.Typography overrideDefaults className="font-medium lg:text-sm">
+          <Typography overrideDefaults className="font-medium lg:text-sm">
             {tDialog('createTitle')}
-          </Atoms.Typography>
-        </Atoms.Button>
-      </Organisms.CustomFeedDialog>
-    </Atoms.Container>
+          </Typography>
+        </Button>
+      </CustomFeedDialog>
+    </Container>
   );
 };

@@ -9,34 +9,41 @@ vi.mock('next/image', () => ({
 }));
 
 // Mock atoms
-vi.mock('@/atoms', () => ({
-  Container: ({
-    children,
-    className,
-    overrideDefaults,
-  }: {
-    children: React.ReactNode;
-    className?: string;
-    overrideDefaults?: boolean;
-  }) => (
-    <div data-testid="container" className={className} data-override-defaults={overrideDefaults}>
-      {children}
-    </div>
-  ),
-  Typography: ({
-    children,
-    as: Tag = 'p',
-    className,
-  }: {
-    children: React.ReactNode;
-    as?: React.ElementType;
-    className?: string;
-  }) => (
-    <Tag data-testid="typography" className={className}>
-      {children}
-    </Tag>
-  ),
-}));
+vi.mock('@/atoms/Container/Container', () => {
+  return {
+    Container: ({
+      children,
+      className,
+      overrideDefaults,
+    }: {
+      children: React.ReactNode;
+      className?: string;
+      overrideDefaults?: boolean;
+    }) => (
+      <div data-testid="container" className={className} data-override-defaults={overrideDefaults}>
+        {children}
+      </div>
+    ),
+  };
+});
+
+vi.mock('@/atoms/Typography/Typography', () => {
+  return {
+    Typography: ({
+      children,
+      as: Tag = 'p',
+      className,
+    }: {
+      children: React.ReactNode;
+      as?: React.ElementType;
+      className?: string;
+    }) => (
+      <Tag data-testid="typography" className={className}>
+        {children}
+      </Tag>
+    ),
+  };
+});
 
 describe('ProfilePageEmptyState', () => {
   it('renders image with correct src and alt', () => {

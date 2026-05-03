@@ -1,15 +1,18 @@
 import { describe, it, expect, beforeEach } from 'vitest';
-import * as Core from '@/core';
-
+import { resetDatabase } from '@/database/franky/franky.helpers';
+import type { NexusModelTuple } from '@/models/shared/base/tuple/baseTuple.type';
+import { UserRelationshipsModel } from '@/models/user/relationships/userRelationships';
+import { generateTestUserId } from '@/models/user/users.helpers';
+import type { NexusUserRelationship } from '@/services/nexus/nexus.types';
 describe('UserRelationshipsModel', () => {
   beforeEach(async () => {
-    await Core.resetDatabase();
+    await resetDatabase();
   });
 
-  const testUserId1 = Core.generateTestUserId(1);
-  const testUserId2 = Core.generateTestUserId(2);
+  const testUserId1 = generateTestUserId(1);
+  const testUserId2 = generateTestUserId(2);
 
-  const MOCK_NEXUS_USER_RELATIONSHIP: Omit<Core.NexusUserRelationship, 'id'> = {
+  const MOCK_NEXUS_USER_RELATIONSHIP: Omit<NexusUserRelationship, 'id'> = {
     following: true,
     followed_by: false,
   };
@@ -21,7 +24,7 @@ describe('UserRelationshipsModel', () => {
         ...MOCK_NEXUS_USER_RELATIONSHIP,
       };
 
-      const userRelationships = new Core.UserRelationshipsModel(mockUserRelationshipsData);
+      const userRelationships = new UserRelationshipsModel(mockUserRelationshipsData);
 
       expect(userRelationships.id).toBe(mockUserRelationshipsData.id);
       expect(userRelationships.following).toBe(mockUserRelationshipsData.following);
@@ -36,7 +39,7 @@ describe('UserRelationshipsModel', () => {
         ...MOCK_NEXUS_USER_RELATIONSHIP,
       };
 
-      const result = await Core.UserRelationshipsModel.create(mockUserRelationshipsData);
+      const result = await UserRelationshipsModel.create(mockUserRelationshipsData);
       expect(result).toBe(mockUserRelationshipsData.id);
     });
 
@@ -46,34 +49,34 @@ describe('UserRelationshipsModel', () => {
         ...MOCK_NEXUS_USER_RELATIONSHIP,
       };
 
-      await Core.UserRelationshipsModel.create(mockUserRelationshipsData);
-      const result = await Core.UserRelationshipsModel.findById(testUserId1);
+      await UserRelationshipsModel.create(mockUserRelationshipsData);
+      const result = await UserRelationshipsModel.findById(testUserId1);
 
       expect(result).not.toBeNull();
-      expect(result!).toBeInstanceOf(Core.UserRelationshipsModel);
+      expect(result!).toBeInstanceOf(UserRelationshipsModel);
       expect(result!.id).toBe(testUserId1);
       expect(result!.following).toBe(MOCK_NEXUS_USER_RELATIONSHIP.following);
       expect(result!.followed_by).toBe(MOCK_NEXUS_USER_RELATIONSHIP.followed_by);
     });
 
     it('should return null for non-existent user relationships', async () => {
-      const nonExistentId = Core.generateTestUserId(999);
-      const result = await Core.UserRelationshipsModel.findById(nonExistentId);
+      const nonExistentId = generateTestUserId(999);
+      const result = await UserRelationshipsModel.findById(nonExistentId);
       expect(result).toBeNull();
     });
 
     it('should bulk save user relationships from tuples', async () => {
-      const mockNexusModelTuples: Core.NexusModelTuple<Core.NexusUserRelationship>[] = [
+      const mockNexusModelTuples: NexusModelTuple<NexusUserRelationship>[] = [
         [testUserId1, MOCK_NEXUS_USER_RELATIONSHIP],
         [testUserId2, { following: false, followed_by: true }],
       ];
 
-      const result = await Core.UserRelationshipsModel.bulkSave(mockNexusModelTuples);
+      const result = await UserRelationshipsModel.bulkSave(mockNexusModelTuples);
       expect(result).toBeDefined();
 
       // Verify the data was saved correctly
-      const userRelationships1 = await Core.UserRelationshipsModel.findById(testUserId1);
-      const userRelationships2 = await Core.UserRelationshipsModel.findById(testUserId2);
+      const userRelationships1 = await UserRelationshipsModel.findById(testUserId1);
+      const userRelationships2 = await UserRelationshipsModel.findById(testUserId2);
 
       expect(userRelationships1).not.toBeNull();
       expect(userRelationships2).not.toBeNull();
@@ -84,21 +87,21 @@ describe('UserRelationshipsModel', () => {
     });
 
     it('should handle empty array in bulk save', async () => {
-      const result = await Core.UserRelationshipsModel.bulkSave([]);
+      const result = await UserRelationshipsModel.bulkSave([]);
       // bulkPut with empty array returns undefined, which is expected
       expect(result).toBeUndefined();
     });
 
     it('should handle multiple tuples with different relationship states', async () => {
-      const mockTuples: Core.NexusModelTuple<Core.NexusUserRelationship>[] = [
+      const mockTuples: NexusModelTuple<NexusUserRelationship>[] = [
         [testUserId1, { following: true, followed_by: true }],
         [testUserId2, { following: false, followed_by: false }],
       ];
 
-      await Core.UserRelationshipsModel.bulkSave(mockTuples);
+      await UserRelationshipsModel.bulkSave(mockTuples);
 
-      const userRelationships1 = await Core.UserRelationshipsModel.findById(testUserId1);
-      const userRelationships2 = await Core.UserRelationshipsModel.findById(testUserId2);
+      const userRelationships1 = await UserRelationshipsModel.findById(testUserId1);
+      const userRelationships2 = await UserRelationshipsModel.findById(testUserId2);
 
       // User 1: mutual following
       expect(userRelationships1).not.toBeNull();

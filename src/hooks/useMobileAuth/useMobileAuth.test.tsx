@@ -6,7 +6,7 @@ const mockFetchUrl = vi.fn();
 const mockCopyAuthUrl = vi.fn();
 const mockUseAuthUrl = vi.fn();
 
-vi.mock('../useAuthUrl', () => ({
+vi.mock('../useAuthUrl/useAuthUrl', () => ({
   useAuthUrl: (...args: unknown[]) => mockUseAuthUrl(...args),
 }));
 

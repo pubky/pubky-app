@@ -1,8 +1,10 @@
 'use client';
 
 import { useTranslations } from 'next-intl';
-import * as Atoms from '@/atoms';
-import * as Molecules from '@/molecules';
+import { Container } from '@/atoms/Container/Container';
+import { Input } from '@/atoms/Input/Input';
+import { PostTag } from '../PostTag/PostTag';
+
 import { SEARCH_CLOSED_STYLE, SEARCH_INPUT_EXPANDED_STYLE } from '@/config/search';
 import type { SearchInputBarProps } from './SearchInputBar.types';
 import { Search } from 'lucide-react';
@@ -24,7 +26,7 @@ export function SearchInputBar({
   const t = useTranslations('search');
   const hasActiveTags = activeTags.length > 0;
   return (
-    <Atoms.Container
+    <Container
       data-testid="search-input-bar"
       data-cy="header-search"
       className={cn(
@@ -35,25 +37,19 @@ export function SearchInputBar({
       overrideDefaults
     >
       {hasActiveTags && (
-        <Atoms.Container
+        <Container
           overrideDefaults
           className="flex min-w-0 items-center gap-2.5 overflow-x-auto py-2"
           role="list"
           aria-label={t('activeTags')}
         >
           {activeTags.map((tag) => (
-            <Molecules.PostTag
-              key={tag}
-              label={tag}
-              showClose
-              onClose={() => onTagRemove(tag)}
-              className="max-w-none shrink-0"
-            />
+            <PostTag key={tag} label={tag} showClose onClose={() => onTagRemove(tag)} className="max-w-none shrink-0" />
           ))}
-        </Atoms.Container>
+        </Container>
       )}
 
-      <Atoms.Input
+      <Input
         ref={inputRef}
         type="text"
         placeholder={hasActiveTags ? '' : t('placeholder')}
@@ -77,6 +73,6 @@ export function SearchInputBar({
 
       {/* Search icon */}
       <Search className="pointer-events-none size-4 shrink-0 text-muted-foreground" aria-hidden="true" />
-    </Atoms.Container>
+    </Container>
   );
 }

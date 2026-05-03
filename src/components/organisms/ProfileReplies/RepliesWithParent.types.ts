@@ -1,10 +1,9 @@
-import * as Core from '@/core';
-
+import type { PostStreamId } from '@/models/stream/post/postStream.types';
 export interface RepliesWithParentProps {
   /**
    * Stream ID for the replies timeline
    */
-  streamId: Core.PostStreamId;
+  streamId: PostStreamId;
 }
 
 export interface ReplyWithParentProps {

@@ -1,7 +1,6 @@
-import { Pubky } from '@/core';
 import { UserStreamModelSchema } from './userStream.schema';
 import { UserStreamCompositeId, UserStreamId } from './userStream.types';
-
+import type { Pubky } from '@/models/models.types';
 export const USER_STREAM_ID_DELIMITER = ':' as const;
 
 /**

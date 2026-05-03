@@ -28,7 +28,7 @@ import {
   radixIdSerializer,
 } from './utils';
 import { RADIX_ID_TEST_REGEX, RADIX_ID_REGEX, TAG_BANNED_CHARS } from './utils.constants';
-import { asInvalid } from '@/test-utils';
+import { asInvalid } from '@/test-utils/type-assertions';
 
 describe('Utils', () => {
   describe('radixIdSerializer', () => {

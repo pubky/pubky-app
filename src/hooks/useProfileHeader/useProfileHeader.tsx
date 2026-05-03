@@ -1,9 +1,9 @@
 'use client';
 
-// Import directly to avoid circular dependency with @/hooks barrel
-import { useUserProfile, type UserProfile } from '@/hooks/useUserProfile';
-import { useProfileStats, type ProfileStats } from '@/hooks/useProfileStats';
-import { useProfileActions, type ProfileActions } from '@/hooks/useProfileActions';
+import { useUserProfile, UserProfile } from '@/hooks/useUserProfile/useUserProfile';
+import type { ProfileStats } from '@/hooks/useProfileStats/useProfileStats.types';
+import { useProfileStats } from '@/hooks/useProfileStats/useProfileStats';
+import { useProfileActions, ProfileActions } from '@/hooks/useProfileActions/useProfileActions';
 
 // Re-export types from composed hooks for backwards compatibility
 export type { ProfileStats, UserProfile, ProfileActions };

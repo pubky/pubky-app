@@ -1,9 +1,11 @@
 import { UserResult } from 'pubky-app-specs';
-import * as Core from '@/core';
 import { ValidationErrorCode } from '@/libs/error/error.codes';
 import { Err } from '@/libs/error/error.factories';
 import { ErrorService } from '@/libs/error/error.types';
-
+import type { Pubky } from '@/models/models.types';
+import { PubkySpecsSingleton } from '@/pipes/pipes.builder';
+import type { UserValidatorData } from '@/pipes/pipes.types';
+import type { NexusUserLink } from '@/services/nexus/nexus.types';
 export type UiLink = { label: string; url: string };
 
 export class UserNormalizer {
@@ -13,13 +15,13 @@ export class UserNormalizer {
    * Converts UI link format ({ label, url }) to API format ({ title, url })
    * Used when transforming user input before sending to homeserver
    */
-  static linksFromUi(uiLinks: UiLink[] | undefined | null): Core.NexusUserLink[] {
+  static linksFromUi(uiLinks: UiLink[] | undefined | null): NexusUserLink[] {
     return (uiLinks ?? []).map((link) => ({ title: link.label, url: link.url }));
   }
 
-  static to(user: Core.UserValidatorData, pubky: Core.Pubky): UserResult {
+  static to(user: UserValidatorData, pubky: Pubky): UserResult {
     try {
-      const builder = Core.PubkySpecsSingleton.get(pubky);
+      const builder = PubkySpecsSingleton.get(pubky);
       return builder.createUser(user.name, user.bio, user.image, user.links, user.status || undefined);
     } catch (error) {
       throw Err.validation(ValidationErrorCode.INVALID_INPUT, error as string, {

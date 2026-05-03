@@ -1,9 +1,15 @@
 'use client';
 
+import { useAuthStatus } from '@/hooks/useAuthStatus/useAuthStatus';
+import { usePublicRoute } from '@/hooks/usePublicRoute/usePublicRoute';
+import { useRequireAuth } from '@/hooks/useRequireAuth/useRequireAuth';
 import { useState } from 'react';
-import * as Atoms from '@/atoms';
-import * as Hooks from '@/hooks';
-import * as Organisms from '@/organisms';
+import { Button } from '@/atoms/Button/Button';
+import { Dialog, DialogTrigger } from '@/atoms/Dialog/Dialog';
+import { DialogNewPost } from '@/organisms/DialogNewPost/DialogNewPost';
+
+import { Plus } from 'lucide-react';
+import { cn } from '@/libs/utils/utils';
 
 /**
  * Floating Action Button (FAB) for creating new posts.
@@ -18,13 +24,11 @@ import * as Organisms from '@/organisms';
  * - 72px is the current height of the footer navigation bar.
  * - md breakpoint uses 80px for additional spacing.
  */
-import { Plus } from 'lucide-react';
-import { cn } from '@/libs/utils/utils';
 export function NewPostCTA() {
   const [open, setOpen] = useState(false);
-  const { isFullyAuthenticated, isLoading } = Hooks.useAuthStatus();
-  const { isPublicRoute } = Hooks.usePublicRoute();
-  const { requireAuth } = Hooks.useRequireAuth();
+  const { isFullyAuthenticated, isLoading } = useAuthStatus();
+  const { isPublicRoute } = usePublicRoute();
+  const { requireAuth } = useRequireAuth();
 
   // Show FAB for authenticated users OR unauthenticated users on public routes
   const shouldShow = isFullyAuthenticated || isPublicRoute;
@@ -43,7 +47,7 @@ export function NewPostCTA() {
     'z-40',
   );
   const button = (
-    <Atoms.Button
+    <Button
       data-cy="new-post-btn"
       overrideDefaults
       data-testid="new-post-cta"
@@ -52,7 +56,7 @@ export function NewPostCTA() {
       onClick={!isFullyAuthenticated ? () => requireAuth(() => setOpen(true)) : undefined}
     >
       <Plus className="size-10 transition-colors group-hover:text-black" strokeWidth={0.8} />
-    </Atoms.Button>
+    </Button>
   );
 
   // Unauthenticated: button opens sign-in dialog via requireAuth
@@ -62,9 +66,9 @@ export function NewPostCTA() {
 
   // Authenticated: wrap button with dialog
   return (
-    <Atoms.Dialog open={open} onOpenChange={setOpen}>
-      <Atoms.DialogTrigger asChild>{button}</Atoms.DialogTrigger>
-      <Organisms.DialogNewPost open={open} onOpenChangeAction={setOpen} />
-    </Atoms.Dialog>
+    <Dialog open={open} onOpenChange={setOpen}>
+      <DialogTrigger asChild>{button}</DialogTrigger>
+      <DialogNewPost open={open} onOpenChangeAction={setOpen} />
+    </Dialog>
   );
 }

@@ -7,17 +7,19 @@ const mockNavigateToPost = vi.fn();
 const mockAncestors = vi.fn();
 const mockUsers = vi.fn();
 
-vi.mock('@/hooks', async (importOriginal) => {
-  const actual = await importOriginal<typeof import('@/hooks')>();
-  return {
-    ...actual,
-    usePostAncestors: vi.fn(() => mockAncestors()),
-    usePostNavigation: vi.fn(() => ({
-      navigateToPost: mockNavigateToPost,
-    })),
-    useUserDetailsFromIds: vi.fn(() => mockUsers()),
-  };
-});
+vi.mock('@/hooks/usePostAncestors/usePostAncestors', () => ({
+  usePostAncestors: vi.fn(() => mockAncestors()),
+}));
+
+vi.mock('@/hooks/usePostNavigation/usePostNavigation', () => ({
+  usePostNavigation: vi.fn(() => ({
+    navigateToPost: mockNavigateToPost,
+  })),
+}));
+
+vi.mock('@/hooks/useUserDetailsFromIds/useUserDetailsFromIds', () => ({
+  useUserDetailsFromIds: vi.fn(() => mockUsers()),
+}));
 
 describe('PostPageHeader', () => {
   const mockPostId = 'user3:post3';

@@ -3,10 +3,9 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen, fireEvent } from '@testing-library/react';
 import { PostLinkEmbeds } from './PostLinkEmbeds';
 
-vi.mock('@/atoms', () => ({
-  // eslint-disable-next-line react/display-name -- forwardRef with anonymous render fn; display name is irrelevant in test mocks
-  Container: React.forwardRef(
-    (
+vi.mock('@/atoms/Container/Container', () => {
+  return {
+    Container: React.forwardRef(function MockContainer(
       {
         children,
         className,
@@ -21,62 +20,74 @@ vi.mock('@/atoms', () => ({
         'data-theme'?: string;
       },
       ref: React.Ref<HTMLDivElement>,
-    ) => (
-      <div
-        ref={ref}
-        data-testid={dataTestId || 'container'}
-        data-theme={dataTheme}
-        className={className}
-        onClick={onClick}
-      >
-        {children}
-      </div>
+    ) {
+      return (
+        <div
+          ref={ref}
+          data-testid={dataTestId || 'container'}
+          data-theme={dataTheme}
+          className={className}
+          onClick={onClick}
+        >
+          {children}
+        </div>
+      );
+    }),
+  };
+});
+
+vi.mock('@/atoms/Iframe/Iframe', () => {
+  return {
+    Iframe: ({
+      'data-testid': dataTestId,
+      width = '100%',
+      height = '315',
+      className,
+      ...props
+    }: React.IframeHTMLAttributes<HTMLIFrameElement> & { 'data-testid'?: string }) => (
+      <iframe
+        data-testid={dataTestId}
+        loading="lazy"
+        allowFullScreen
+        className={`rounded-md ${className || ''}`.trim()}
+        width={width}
+        height={height}
+        {...props}
+      />
     ),
-  ),
-  Iframe: ({
-    'data-testid': dataTestId,
-    width = '100%',
-    height = '315',
-    className,
-    ...props
-  }: React.IframeHTMLAttributes<HTMLIFrameElement> & { 'data-testid'?: string }) => (
-    <iframe
-      data-testid={dataTestId}
-      loading="lazy"
-      allowFullScreen
-      className={`rounded-md ${className || ''}`.trim()}
-      width={width}
-      height={height}
-      {...props}
-    />
-  ),
-  Anchor: ({
-    children,
-    href,
-    'data-testid': dataTestId,
-    ...props
-  }: React.AnchorHTMLAttributes<HTMLAnchorElement> & { 'data-testid'?: string }) => (
-    <a data-testid={dataTestId} href={href} {...props}>
-      {children}
-    </a>
-  ),
-  Link: ({
-    children,
-    href,
-    'data-testid': dataTestId,
-    ...props
-  }: React.AnchorHTMLAttributes<HTMLAnchorElement> & { 'data-testid'?: string }) => (
-    <a data-testid={dataTestId} href={href?.toString()} {...props}>
-      {children}
-    </a>
-  ),
-  Typography: ({ children, className }: { children: React.ReactNode; className?: string; size?: string }) => (
-    <span className={className}>{children}</span>
-  ),
-  Image: ({ src, alt, className }: React.ImgHTMLAttributes<HTMLImageElement>) => (
-    <img src={src} alt={alt} className={className} />
-  ),
-}));
+  };
+});
+
+vi.mock('@/atoms/Image/Image', () => {
+  return {
+    Image: ({ src, alt, className }: React.ImgHTMLAttributes<HTMLImageElement>) => (
+      <img src={src} alt={alt} className={className} />
+    ),
+  };
+});
+
+vi.mock('@/atoms/Link/Link', () => {
+  return {
+    Link: ({
+      children,
+      href,
+      'data-testid': dataTestId,
+      ...props
+    }: React.AnchorHTMLAttributes<HTMLAnchorElement> & { 'data-testid'?: string }) => (
+      <a data-testid={dataTestId} href={href?.toString()} {...props}>
+        {children}
+      </a>
+    ),
+  };
+});
+
+vi.mock('@/atoms/Typography/Typography', () => {
+  return {
+    Typography: ({ children, className }: { children: React.ReactNode; className?: string; size?: string }) => (
+      <span className={className}>{children}</span>
+    ),
+  };
+});
 
 vi.mock('react-tweet', () => ({
   Tweet: ({ id }: { id: string }) => (

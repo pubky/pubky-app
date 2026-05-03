@@ -1,6 +1,9 @@
 'use client';
+import { Button } from '@/atoms/Button/Button';
+import { Container } from '@/atoms/Container/Container';
+import { Heading } from '@/atoms/Heading/Heading';
+import { SidebarButton } from '@/atoms/SidebarButton/SidebarButton';
 
-import * as Atoms from '@/atoms';
 import type { SidebarSectionProps } from './SidebarSection.types';
 import { cn } from '@/libs/utils/utils';
 
@@ -26,45 +29,40 @@ export function SidebarSection({
   'data-testid': dataTestId,
 }: SidebarSectionProps) {
   return (
-    <Atoms.Container
+    <Container
       overrideDefaults
       className={cn('flex w-full min-w-0 flex-col gap-2', className)}
       data-cy={dataCy}
       data-testid={dataTestId}
     >
       {/* Header */}
-      <Atoms.Container overrideDefaults className="flex w-full items-center justify-between">
-        <Atoms.Heading level={2} size="lg" className="font-light text-muted-foreground">
+      <Container overrideDefaults className="flex w-full items-center justify-between">
+        <Heading level={2} size="lg" className="font-light text-muted-foreground">
           {title}
-        </Atoms.Heading>
+        </Heading>
         {HeaderActionIcon && onHeaderAction && (
-          <Atoms.Button
+          <Button
             overrideDefaults
             onClick={onHeaderAction}
             className="flex size-8 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-secondary hover:text-foreground"
             aria-label={headerActionLabel || 'Action'}
           >
             <HeaderActionIcon className="size-5" />
-          </Atoms.Button>
+          </Button>
         )}
-      </Atoms.Container>
+      </Container>
 
       {/* Content */}
-      <Atoms.Container overrideDefaults className="flex w-full min-w-0 flex-col gap-2">
+      <Container overrideDefaults className="flex w-full min-w-0 flex-col gap-2">
         {children}
-      </Atoms.Container>
+      </Container>
 
       {/* Footer */}
       {footerIcon && footerText && (
-        <Atoms.SidebarButton
-          icon={footerIcon}
-          onClick={onFooterClick}
-          data-cy={footerDataCy}
-          data-testid={footerTestId}
-        >
+        <SidebarButton icon={footerIcon} onClick={onFooterClick} data-cy={footerDataCy} data-testid={footerTestId}>
           {footerText}
-        </Atoms.SidebarButton>
+        </SidebarButton>
       )}
-    </Atoms.Container>
+    </Container>
   );
 }

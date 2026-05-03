@@ -1,9 +1,14 @@
-import * as Core from '@/core';
-import * as Config from '@/config';
-import { NotificationType } from '@/core/models/notification/notification.types';
-import { NotificationNormalizer } from '@/core/pipes/notification/notification.normalizer';
-import { useSettingsStore } from '@/core/stores/settings/settings.store';
-
+import { NEXUS_NOTIFICATIONS_LIMIT } from '@/config/nexus';
+import { NotificationApplication } from '@/application/notification/notification';
+import type { TGetOrFetchNotificationsResponse } from '@/application/notification/notification.types';
+import type { TGetNotificationsParams } from '@/controllers/notification/notification.types';
+import type { TReadProfileParams } from '@/controllers/profile/profile.types';
+import { NotificationType, type FlatNotification } from '@/models/notification/notification.types';
+import { LastReadNormalizer } from '@/pipes/lastRead/lastRead.normalizer';
+import { NotificationNormalizer } from '@/pipes/notification/notification.normalizer';
+import { useAuthStore } from '@/stores/auth/auth.store';
+import { useNotificationStore } from '@/stores/notification/notification.store';
+import { useSettingsStore } from '@/stores/settings/settings.store';
 export class NotificationController {
   private constructor() {} // Prevent instantiation
 
@@ -15,14 +20,14 @@ export class NotificationController {
    * @param userId - The user ID to fetch notifications for
    * @returns Promise resolving when notifications are updated
    */
-  static async fetchNotifications({ userId }: Core.TReadProfileParams) {
-    const notificationStore = Core.useNotificationStore.getState();
+  static async fetchNotifications({ userId }: TReadProfileParams) {
+    const notificationStore = useNotificationStore.getState();
     const lastPolledTimestamp = notificationStore.selectLastPolledTimestamp();
     const lastRead = notificationStore.selectLastRead();
     const preferences = useSettingsStore.getState().notifications;
 
     const allowedTypes = NotificationNormalizer.toEnabledTypes(preferences);
-    const { unread, nextPollCursor } = await Core.NotificationApplication.fetchNotifications({
+    const { unread, nextPollCursor } = await NotificationApplication.fetchNotifications({
       userId,
       lastPolledTimestamp,
       lastRead,
@@ -43,19 +48,19 @@ export class NotificationController {
    * Should be called when the user enters the notifications page.
    */
   static markAllAsRead() {
-    const authStore = Core.useAuthStore.getState();
+    const authStore = useAuthStore.getState();
     const pubky = authStore.currentUserPubky;
 
     // Skip if user is not authenticated (e.g., during logout)
     if (!pubky) return;
 
     // Create new lastRead with current timestamp using normalizer
-    const lastRead = Core.LastReadNormalizer.to(pubky);
+    const lastRead = LastReadNormalizer.to(pubky);
 
-    Core.NotificationApplication.markAllAsRead(lastRead);
+    NotificationApplication.markAllAsRead(lastRead);
 
     // Update local store
-    const notificationStore = Core.useNotificationStore.getState();
+    const notificationStore = useNotificationStore.getState();
     notificationStore.setLastRead(Number(lastRead.last_read.timestamp));
     notificationStore.setUnread(0);
   }
@@ -79,14 +84,14 @@ export class NotificationController {
    */
   static async getOrFetchNotifications({
     olderThan = Infinity,
-    limit = Config.NEXUS_NOTIFICATIONS_LIMIT,
-  }: Core.TGetNotificationsParams): Promise<Core.TGetOrFetchNotificationsResponse> {
-    const userId = Core.useAuthStore.getState().selectCurrentUserPubky();
+    limit = NEXUS_NOTIFICATIONS_LIMIT,
+  }: TGetNotificationsParams): Promise<TGetOrFetchNotificationsResponse> {
+    const userId = useAuthStore.getState().selectCurrentUserPubky();
     const preferences = useSettingsStore.getState().notifications;
     const allowedTypes = NotificationNormalizer.toEnabledTypes(preferences);
     const shouldFilterByPreferences = allowedTypes.length < Object.values(NotificationType).length;
 
-    return Core.NotificationApplication.getOrFetchNotifications({
+    return await NotificationApplication.getOrFetchNotifications({
       userId,
       olderThan,
       limit,
@@ -100,12 +105,12 @@ export class NotificationController {
    *
    * @returns Promise resolving to all notifications ordered by timestamp descending
    */
-  static async getAllFromCache(): Promise<Core.FlatNotification[]> {
-    return await Core.NotificationApplication.getAllFromCache();
+  static async getAllFromCache(): Promise<FlatNotification[]> {
+    return await NotificationApplication.getAllFromCache();
   }
 
   static getNotificationsCountsNow(): number {
-    const notificationStore = Core.useNotificationStore.getState();
+    const notificationStore = useNotificationStore.getState();
     return notificationStore.selectUnread();
   }
 }

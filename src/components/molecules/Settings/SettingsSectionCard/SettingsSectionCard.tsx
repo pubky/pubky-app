@@ -1,7 +1,10 @@
 'use client';
 
 import * as React from 'react';
-import * as Atoms from '@/atoms';
+import { Container } from '@/atoms/Container/Container';
+import { Heading } from '@/atoms/Heading/Heading';
+import { Typography } from '@/atoms/Typography/Typography';
+
 import type { SettingsSectionCardProps } from './SettingsSectionCard.types';
 import { cn } from '@/libs/utils/utils';
 
@@ -16,42 +19,42 @@ export function SettingsSectionCard({
   const hasHeader = Icon && title;
 
   return (
-    <Atoms.Container
+    <Container
       overrideDefaults
       className={cn('flex w-full flex-col items-start gap-8 rounded-md bg-card px-6 py-8 shadow-lg md:p-12', className)}
     >
       {(hasHeader || description) && (
-        <Atoms.Container overrideDefaults className="flex w-full flex-col items-start gap-6">
+        <Container overrideDefaults className="flex w-full flex-col items-start gap-6">
           {hasHeader && (
-            <Atoms.Container overrideDefaults className="inline-flex items-center justify-start gap-3">
+            <Container overrideDefaults className="inline-flex items-center justify-start gap-3">
               <Icon size={24} />
-              <Atoms.Heading level={2} size="lg" className="leading-8">
+              <Heading level={2} size="lg" className="leading-8">
                 {title}
-              </Atoms.Heading>
-            </Atoms.Container>
+              </Heading>
+            </Container>
           )}
           {description && (
-            <Atoms.Typography
+            <Typography
               as="p"
               size="md"
               overrideDefaults
               className="text-base leading-6 font-medium text-secondary-foreground"
             >
               {description}
-            </Atoms.Typography>
+            </Typography>
           )}
-        </Atoms.Container>
+        </Container>
       )}
       {wrapChildren ? (
-        <Atoms.Container
+        <Container
           overrideDefaults
           className="flex w-full flex-col items-start gap-8 rounded-md border border-border bg-card p-6 shadow-lg md:gap-6"
         >
           {children}
-        </Atoms.Container>
+        </Container>
       ) : (
         children
       )}
-    </Atoms.Container>
+    </Container>
   );
 }

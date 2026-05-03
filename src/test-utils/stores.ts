@@ -1,5 +1,13 @@
-import type * as Core from '@/core';
-
+import type { AuthStore } from '@/stores/auth/auth.types';
+import type { HomeStore } from '@/stores/home/home.types';
+import type { HotStore } from '@/stores/hot/hot.types';
+import type { LocalFilesStore } from '@/stores/localFiles/localFiles.types';
+import type { MigrationStore } from '@/stores/migration/migration.types';
+import type { NotificationStore } from '@/stores/notification/notification.types';
+import type { OnboardingStore } from '@/stores/onboarding/onboarding.types';
+import type { SearchStore } from '@/stores/search/search.types';
+import type { SettingsStore } from '@/stores/settings/settings.types';
+import type { SignInStore } from '@/stores/signIn/signIn.types';
 /**
  * Build a partial Zustand store double for tests.
  *
@@ -10,26 +18,23 @@ import type * as Core from '@/core';
  */
 const buildStore = <TStore>(partial: Partial<TStore>): TStore => partial as TStore;
 
-export const mockAuthStore = (partial: Partial<Core.AuthStore> = {}): Core.AuthStore => buildStore(partial);
+export const mockAuthStore = (partial: Partial<AuthStore> = {}): AuthStore => buildStore(partial);
 
-export const mockOnboardingStore = (partial: Partial<Core.OnboardingStore> = {}): Core.OnboardingStore =>
+export const mockOnboardingStore = (partial: Partial<OnboardingStore> = {}): OnboardingStore => buildStore(partial);
+
+export const mockMigrationStore = (partial: Partial<MigrationStore> = {}): MigrationStore => buildStore(partial);
+
+export const mockNotificationStore = (partial: Partial<NotificationStore> = {}): NotificationStore =>
   buildStore(partial);
 
-export const mockMigrationStore = (partial: Partial<Core.MigrationStore> = {}): Core.MigrationStore =>
-  buildStore(partial);
+export const mockHomeStore = (partial: Partial<HomeStore> = {}): HomeStore => buildStore(partial);
 
-export const mockNotificationStore = (partial: Partial<Core.NotificationStore> = {}): Core.NotificationStore =>
-  buildStore(partial);
+export const mockSettingsStore = (partial: Partial<SettingsStore> = {}): SettingsStore => buildStore(partial);
 
-export const mockHomeStore = (partial: Partial<Core.HomeStore> = {}): Core.HomeStore => buildStore(partial);
+export const mockSignInStore = (partial: Partial<SignInStore> = {}): SignInStore => buildStore(partial);
 
-export const mockSettingsStore = (partial: Partial<Core.SettingsStore> = {}): Core.SettingsStore => buildStore(partial);
+export const mockLocalFilesStore = (partial: Partial<LocalFilesStore> = {}): LocalFilesStore => buildStore(partial);
 
-export const mockSignInStore = (partial: Partial<Core.SignInStore> = {}): Core.SignInStore => buildStore(partial);
+export const mockHotStore = (partial: Partial<HotStore> = {}): HotStore => buildStore(partial);
 
-export const mockLocalFilesStore = (partial: Partial<Core.LocalFilesStore> = {}): Core.LocalFilesStore =>
-  buildStore(partial);
-
-export const mockHotStore = (partial: Partial<Core.HotStore> = {}): Core.HotStore => buildStore(partial);
-
-export const mockSearchStore = (partial: Partial<Core.SearchStore> = {}): Core.SearchStore => buildStore(partial);
+export const mockSearchStore = (partial: Partial<SearchStore> = {}): SearchStore => buildStore(partial);

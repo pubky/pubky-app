@@ -7,7 +7,7 @@ import type { TagWithAvatars } from '@/molecules/TaggedItem/TaggedItem.types';
 const mockUsersMap = new Map();
 const mockIsLoading = { value: false };
 
-vi.mock('../useBulkUserAvatars', () => ({
+vi.mock('../useBulkUserAvatars/useBulkUserAvatars', () => ({
   useBulkUserAvatars: () => ({
     usersMap: mockUsersMap,
     isLoading: mockIsLoading.value,

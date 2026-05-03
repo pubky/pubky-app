@@ -1,9 +1,8 @@
 import { PublicKey } from '@synonymdev/pubky';
-
-import * as Core from '@/core';
+import type { Pubky } from '@/models/models.types';
 
 export interface TPubkyParams {
-  pubky: Core.Pubky;
+  pubky: Pubky;
 }
 
 export interface TPublicKeyParams {

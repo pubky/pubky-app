@@ -5,102 +5,138 @@ import { ProfilePageLayoutProps } from './ProfilePageLayout.types';
 import { PROFILE_PAGE_TYPES } from '@/app/profile/types';
 
 // Mock molecules and organisms
-vi.mock('@/atoms', () => ({
-  Container: ({
-    children,
-    className,
-    overrideDefaults,
-    ...props
-  }: {
-    children: React.ReactNode;
-    className?: string;
-    overrideDefaults?: boolean;
-    [key: string]: unknown;
-  }) => (
-    <div data-testid="container" data-override={overrideDefaults} className={className} {...props}>
-      {children}
-    </div>
-  ),
-}));
-
-vi.mock('@/molecules', () => ({
-  MobileHeader: ({ showLeftButton, showRightButton }: { showLeftButton?: boolean; showRightButton?: boolean }) => (
-    <div data-testid="mobile-header" data-left={showLeftButton} data-right={showRightButton}>
-      Mobile Header
-    </div>
-  ),
-  ProfilePageMobileMenu: ({ activePage }: { activePage: string; onPageChangeAction: (page: string) => void }) => (
-    <div data-testid="profile-mobile-menu" data-active={activePage}>
-      Profile Mobile Menu
-    </div>
-  ),
-  ProfilePageFilterBar: ({
-    activePage,
-    stats,
-  }: {
-    activePage: string;
-    onPageChangeAction: (page: string) => void;
-    stats: Record<string, number>;
-  }) => (
-    <div data-testid="profile-filter-bar" data-active={activePage} data-stats={JSON.stringify(stats)}>
-      Filter Bar
-    </div>
-  ),
-  ProfilePageLayoutWrapper: ({ children }: { children: React.ReactNode }) => (
-    <div data-testid="profile-page-layout-wrapper">{children}</div>
-  ),
-  MobileFooter: () => <div data-testid="mobile-footer">Footer</div>,
-  AvatarZoomModal: ({
-    open,
-    onClose,
-    avatarUrl,
-    name,
-    fallbackSeed,
-  }: {
-    open: boolean;
-    onClose: () => void;
-    avatarUrl?: string;
-    name: string;
-    fallbackSeed?: string;
-  }) =>
-    open ? (
-      <div
-        data-testid="avatar-zoom-modal"
-        data-avatar-url={avatarUrl}
-        data-name={name}
-        data-fallback-seed={fallbackSeed}
-      >
-        <button data-testid="modal-close" onClick={onClose}>
-          Close
-        </button>
+vi.mock('@/atoms/Container/Container', () => {
+  return {
+    Container: ({
+      children,
+      className,
+      overrideDefaults,
+      ...props
+    }: {
+      children: React.ReactNode;
+      className?: string;
+      overrideDefaults?: boolean;
+      [key: string]: unknown;
+    }) => (
+      <div data-testid="container" data-override={overrideDefaults} className={className} {...props}>
+        {children}
       </div>
-    ) : null,
-}));
+    ),
+  };
+});
 
-vi.mock('@/organisms', () => ({
-  ProfilePageHeader: ({
-    profile,
-    actions,
-  }: {
-    profile: Record<string, unknown>;
-    actions: Record<string, () => void>;
-  }) => {
-    const handleAvatarClick = actions.onAvatarClick || (() => {});
-    return (
-      <div
-        data-testid="profile-page-header"
-        data-profile={JSON.stringify(profile)}
-        data-actions={JSON.stringify(Object.keys(actions))}
-      >
-        <button data-testid="avatar-button" onClick={handleAvatarClick}>
-          Click Avatar
-        </button>
-        Profile Header
+vi.mock('@/molecules/AvatarZoomModal/AvatarZoomModal', () => {
+  return {
+    AvatarZoomModal: ({
+      open,
+      onClose,
+      avatarUrl,
+      name,
+      fallbackSeed,
+    }: {
+      open: boolean;
+      onClose: () => void;
+      avatarUrl?: string;
+      name: string;
+      fallbackSeed?: string;
+    }) =>
+      open ? (
+        <div
+          data-testid="avatar-zoom-modal"
+          data-avatar-url={avatarUrl}
+          data-name={name}
+          data-fallback-seed={fallbackSeed}
+        >
+          <button data-testid="modal-close" onClick={onClose}>
+            Close
+          </button>
+        </div>
+      ) : null,
+  };
+});
+
+vi.mock('@/molecules/MobileFooter/MobileFooter', () => {
+  return {
+    MobileFooter: () => <div data-testid="mobile-footer">Footer</div>,
+  };
+});
+
+vi.mock('@/molecules/MobileHeader/MobileHeader', () => {
+  return {
+    MobileHeader: ({ showLeftButton, showRightButton }: { showLeftButton?: boolean; showRightButton?: boolean }) => (
+      <div data-testid="mobile-header" data-left={showLeftButton} data-right={showRightButton}>
+        Mobile Header
       </div>
-    );
-  },
-  ProfilePageSidebar: () => <div data-testid="profile-sidebar">Sidebar</div>,
-}));
+    ),
+  };
+});
+
+vi.mock('@/molecules/ProfilePageFilterBar/ProfilePageFilterBar', () => {
+  return {
+    ProfilePageFilterBar: ({
+      activePage,
+      stats,
+    }: {
+      activePage: string;
+      onPageChangeAction: (page: string) => void;
+      stats: Record<string, number>;
+    }) => (
+      <div data-testid="profile-filter-bar" data-active={activePage} data-stats={JSON.stringify(stats)}>
+        Filter Bar
+      </div>
+    ),
+  };
+});
+
+vi.mock('@/molecules/ProfilePageLayoutWrapper/ProfilePageLayoutWrapper', () => {
+  return {
+    ProfilePageLayoutWrapper: ({ children }: { children: React.ReactNode }) => (
+      <div data-testid="profile-page-layout-wrapper">{children}</div>
+    ),
+  };
+});
+
+vi.mock('@/molecules/ProfilePageMobileMenu/ProfilePageMobileMenu', () => {
+  return {
+    ProfilePageMobileMenu: ({ activePage }: { activePage: string; onPageChangeAction: (page: string) => void }) => (
+      <div data-testid="profile-mobile-menu" data-active={activePage}>
+        Profile Mobile Menu
+      </div>
+    ),
+  };
+});
+
+vi.mock('@/organisms/ProfilePageHeader/ProfilePageHeader', () => {
+  return {
+    ProfilePageHeader: ({
+      profile,
+      actions,
+    }: {
+      profile: Record<string, unknown>;
+      actions: Record<string, () => void>;
+    }) => {
+      const handleAvatarClick = actions.onAvatarClick || (() => {});
+      return (
+        <div
+          data-testid="profile-page-header"
+          data-profile={JSON.stringify(profile)}
+          data-actions={JSON.stringify(Object.keys(actions))}
+        >
+          <button data-testid="avatar-button" onClick={handleAvatarClick}>
+            Click Avatar
+          </button>
+          Profile Header
+        </div>
+      );
+    },
+  };
+});
+
+vi.mock('@/organisms/ProfilePageSidebar/ProfilePageSidebar', () => {
+  return {
+    ProfilePageSidebar: () => <div data-testid="profile-sidebar">Sidebar</div>,
+  };
+});
 
 const mockProfile = {
   name: 'Test User',

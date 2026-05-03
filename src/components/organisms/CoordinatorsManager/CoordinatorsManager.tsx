@@ -2,8 +2,9 @@
 
 import { useEffect } from 'react';
 import { usePathname } from 'next/navigation';
-
-import * as Core from '@/core';
+import { NotificationCoordinator } from '@/coordinators/notifications/notifications';
+import { StreamCoordinator } from '@/coordinators/streams/stream';
+import { TtlCoordinator } from '@/coordinators/ttl/ttl';
 
 /**
  * CoordinatorsManager
@@ -27,9 +28,9 @@ export function CoordinatorsManager() {
 
   // Start coordinators on mount, stop on unmount
   useEffect(() => {
-    const notificationCoordinator = Core.NotificationCoordinator.getInstance();
-    const streamCoordinator = Core.StreamCoordinator.getInstance();
-    const ttlCoordinator = Core.TtlCoordinator.getInstance();
+    const notificationCoordinator = NotificationCoordinator.getInstance();
+    const streamCoordinator = StreamCoordinator.getInstance();
+    const ttlCoordinator = TtlCoordinator.getInstance();
 
     // Start the coordinators
     notificationCoordinator.start();
@@ -46,9 +47,9 @@ export function CoordinatorsManager() {
 
   // Update coordinators with current route for route-based activation/deactivation
   useEffect(() => {
-    const notificationCoordinator = Core.NotificationCoordinator.getInstance();
-    const streamCoordinator = Core.StreamCoordinator.getInstance();
-    const ttlCoordinator = Core.TtlCoordinator.getInstance();
+    const notificationCoordinator = NotificationCoordinator.getInstance();
+    const streamCoordinator = StreamCoordinator.getInstance();
+    const ttlCoordinator = TtlCoordinator.getInstance();
 
     notificationCoordinator.setRoute(pathname);
     streamCoordinator.setRoute(pathname);

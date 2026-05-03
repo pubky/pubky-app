@@ -4,29 +4,31 @@ import { StatusPickerContent } from './StatusPickerContent';
 import { STATUS_EMOJIS, STATUS_LABELS } from '@/libs/status/status.constants';
 
 // Mock EmojiPickerDialog
-vi.mock('@/components/molecules', () => ({
-  EmojiPickerDialog: ({
-    open,
-    onOpenChange,
-    onEmojiSelect,
-  }: {
-    open: boolean;
-    onOpenChange: (open: boolean) => void;
-    onEmojiSelect: (emoji: { native: string }) => void;
-  }) => {
-    if (!open) return null;
-    return (
-      <div data-testid="emoji-picker-dialog">
-        <button data-testid="emoji-select-button" onClick={() => onEmojiSelect({ native: '😊' })}>
-          Select Emoji
-        </button>
-        <button data-testid="emoji-close-button" onClick={() => onOpenChange(false)}>
-          Close
-        </button>
-      </div>
-    );
-  },
-}));
+vi.mock('@/molecules/EmojiPickerDialog/EmojiPickerDialog', () => {
+  return {
+    EmojiPickerDialog: ({
+      open,
+      onOpenChange,
+      onEmojiSelect,
+    }: {
+      open: boolean;
+      onOpenChange: (open: boolean) => void;
+      onEmojiSelect: (emoji: { native: string }) => void;
+    }) => {
+      if (!open) return null;
+      return (
+        <div data-testid="emoji-picker-dialog">
+          <button data-testid="emoji-select-button" onClick={() => onEmojiSelect({ native: '😊' })}>
+            Select Emoji
+          </button>
+          <button data-testid="emoji-close-button" onClick={() => onOpenChange(false)}>
+            Close
+          </button>
+        </div>
+      );
+    },
+  };
+});
 
 describe('StatusPickerContent', () => {
   const mockOnStatusSelect = vi.fn();

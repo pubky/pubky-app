@@ -1,7 +1,8 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
-import * as Config from '@/config';
+import { CDN_URL, NEXUS_URL } from '@/config/nexus';
 import { buildNexusUrl, buildCdnUrl, buildUrlWithQuery, createFetchOptions, queryNexus } from './nexus.utils';
-import { mockResponse, asOpaque } from '@/test-utils';
+import { mockResponse } from '@/test-utils/dom';
+import { asOpaque } from '@/test-utils/type-assertions';
 import { ClientErrorCode, ServerErrorCode } from '@/libs/error/error.codes';
 import { ErrorCategory, ErrorService } from '@/libs/error/error.types';
 import { HttpMethod } from '@/libs/http/http.types';
@@ -10,13 +11,13 @@ import { parseResponseOrThrow } from '@/libs/http/response.utils';
 describe('nexus.utils', () => {
   describe('buildNexusUrl', () => {
     it('should build correct Nexus URL', () => {
-      expect(buildNexusUrl('v0/users')).toBe(`${Config.NEXUS_URL}/v0/users`);
+      expect(buildNexusUrl('v0/users')).toBe(`${NEXUS_URL}/v0/users`);
     });
   });
 
   describe('buildCdnUrl', () => {
     it('should build correct CDN URL', () => {
-      expect(buildCdnUrl('avatar/user123')).toBe(`${Config.CDN_URL}/avatar/user123`);
+      expect(buildCdnUrl('avatar/user123')).toBe(`${CDN_URL}/avatar/user123`);
     });
   });
 

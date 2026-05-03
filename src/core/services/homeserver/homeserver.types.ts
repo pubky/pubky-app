@@ -1,14 +1,13 @@
 import type { Capabilities, Session } from '@synonymdev/pubky';
 
-import * as Core from '@/core';
 import { HttpMethod } from '@/libs/http/http.types';
-
+import type { TKeypairParams } from '@/application/auth/auth.types';
 export type FetchOptions = {
   method?: HttpMethod;
   body?: string | Uint8Array;
 };
 
-export type THomeserverSignUpParams = Core.TKeypairParams & {
+export type THomeserverSignUpParams = TKeypairParams & {
   signupToken: string;
 };
 

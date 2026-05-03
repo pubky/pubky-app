@@ -1,11 +1,20 @@
 'use client';
 
+import { useCopyToClipboard } from '@/hooks/useCopyToClipboard/useCopyToClipboard';
+import { useFollowUser } from '@/hooks/useFollowUser/useFollowUser';
+import { useIsFollowing } from '@/hooks/useIsFollowing/useIsFollowing';
+import { useMuteUser } from '@/hooks/useMuteUser/useMuteUser';
+import { useMutedUsers } from '@/hooks/useMutedUsers/useMutedUsers';
+import { useUserProfile } from '@/hooks/useUserProfile/useUserProfile';
 import { useTranslations } from 'next-intl';
-import * as Hooks from '@/hooks';
-import * as Molecules from '@/molecules';
+import { toast } from '@/molecules/Toaster/use-toast';
+
 import { PROFILE_ROUTES } from '@/app/routes';
 import { PROFILE_MENU_ACTION_IDS } from './useProfileMenuActions.constants';
 import type { UseProfileMenuActionsResult, ProfileMenuActionItem } from './useProfileMenuActions.types';
+import { UserRoundMinus, UserRoundPlus, Key, Link, Megaphone, MegaphoneOff } from 'lucide-react';
+import { isAppError } from '@/libs/error/error.utils';
+import { truncateString, withPubkyPrefix } from '@/libs/utils/utils';
 
 /**
  * useProfileMenuActions
@@ -17,22 +26,19 @@ import type { UseProfileMenuActionsResult, ProfileMenuActionItem } from './usePr
  * @param userId - The public key of the profile user
  * @returns Menu items array and loading state
  */
-import { UserRoundMinus, UserRoundPlus, Key, Link, Megaphone, MegaphoneOff } from 'lucide-react';
-import { isAppError } from '@/libs/error/error.utils';
-import { truncateString, withPubkyPrefix } from '@/libs/utils/utils';
 export function useProfileMenuActions(userId: string): UseProfileMenuActionsResult {
   const t = useTranslations('profile.actions');
   const tToast = useTranslations('toast');
   const tErrors = useTranslations('errors');
-  const { profile, isLoading: isProfileLoading } = Hooks.useUserProfile(userId);
-  const { isFollowing, isLoading: isFollowingLoading } = Hooks.useIsFollowing(userId);
-  const { toggleFollow, isLoading: isFollowLoading, isUserLoading } = Hooks.useFollowUser();
-  const { toggleMute, isLoading: isMuteLoading, isUserLoading: isMuteUserLoading } = Hooks.useMuteUser();
-  const { isMuted } = Hooks.useMutedUsers();
-  const { copyToClipboard: copyPubky } = Hooks.useCopyToClipboard({
+  const { profile, isLoading: isProfileLoading } = useUserProfile(userId);
+  const { isFollowing, isLoading: isFollowingLoading } = useIsFollowing(userId);
+  const { toggleFollow, isLoading: isFollowLoading, isUserLoading } = useFollowUser();
+  const { toggleMute, isLoading: isMuteLoading, isUserLoading: isMuteUserLoading } = useMuteUser();
+  const { isMuted } = useMutedUsers();
+  const { copyToClipboard: copyPubky } = useCopyToClipboard({
     successTitle: tToast('copy.pubkyCopied'),
   });
-  const { copyToClipboard: copyLink } = Hooks.useCopyToClipboard({
+  const { copyToClipboard: copyLink } = useCopyToClipboard({
     successTitle: tToast('copy.profileLinkCopied'),
   });
   const isUserMuted = isMuted(userId);
@@ -57,7 +63,7 @@ export function useProfileMenuActions(userId: string): UseProfileMenuActionsResu
       try {
         await toggleFollow(userId, isFollowing);
       } catch (error) {
-        Molecules.toast({
+        toast({
           title: tErrors('title'),
           description: isAppError(error) ? error.message : tToast('follow.failed'),
         });
@@ -75,7 +81,7 @@ export function useProfileMenuActions(userId: string): UseProfileMenuActionsResu
       try {
         await copyPubky(withPubkyPrefix(userId));
       } catch (error) {
-        Molecules.toast({
+        toast({
           title: tErrors('title'),
           description: isAppError(error) ? error.message : tToast('copy.copyFailed'),
         });
@@ -92,7 +98,7 @@ export function useProfileMenuActions(userId: string): UseProfileMenuActionsResu
       try {
         await copyLink(profileUrl);
       } catch (error) {
-        Molecules.toast({
+        toast({
           title: tErrors('title'),
           description: isAppError(error) ? error.message : tToast('copy.copyFailed'),
         });
@@ -114,7 +120,7 @@ export function useProfileMenuActions(userId: string): UseProfileMenuActionsResu
     onClick: async () => {
       try {
         await toggleMute(userId, isUserMuted);
-        Molecules.toast({
+        toast({
           title: isUserMuted ? tToast('mute.unmuted') : tToast('mute.muted'),
           description: isUserMuted
             ? tToast('mute.unmutedDesc', {
@@ -125,7 +131,7 @@ export function useProfileMenuActions(userId: string): UseProfileMenuActionsResu
               }),
         });
       } catch (error) {
-        Molecules.toast({
+        toast({
           title: tErrors('title'),
           description: isAppError(error) ? error.message : tToast('mute.failed'),
         });
