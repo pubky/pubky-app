@@ -125,10 +125,7 @@ export class AuthController {
     const preferences = (remoteSettings ?? localSettings).notifications;
     const allowedTypes = NotificationNormalizer.toEnabledTypes(preferences);
 
-    const notification = await BootstrapApplication.initialize(
-      { pubky, lastReadUrl: url, allowedTypes },
-      onProgress,
-    );
+    const notification = await BootstrapApplication.initialize({ pubky, lastReadUrl: url, allowedTypes }, onProgress);
     useNotificationStore.getState().setState(notification);
 
     // Apply remote settings to store + cookie (store mutation stays in Controller layer)

@@ -287,7 +287,8 @@ describe('BootstrapApplication', () => {
   describe('read', () => {
     it('should successfully fetch and persist bootstrap data with notifications', async () => {
       const bootstrapData = createMockBootstrapData();
-      bootstrapData.notifications = [createMockNotification()];
+      const notification = createMockNotification();
+      bootstrapData.notifications = [notification];
       const mocks = setupMocks({ bootstrapData, unreadCount: 1 });
 
       const onProgress = vi.fn();
@@ -298,7 +299,7 @@ describe('BootstrapApplication', () => {
       expect(result).toEqual({
         unread: 1,
         lastRead: MOCK_LAST_READ,
-        lastPolledTimestamp: expect.any(Number),
+        lastPolledTimestamp: notification.timestamp + 1,
       });
 
       expect(onProgress).toHaveBeenCalledWith('bootstrapFetched');
@@ -308,7 +309,8 @@ describe('BootstrapApplication', () => {
 
     it('should work without progress callback', async () => {
       const bootstrapData = createMockBootstrapData();
-      bootstrapData.notifications = [createMockNotification()];
+      const notification = createMockNotification();
+      bootstrapData.notifications = [notification];
       const mocks = setupMocks({ bootstrapData, unreadCount: 1 });
 
       const result = await BootstrapApplication.initialize(getBootstrapParams(TEST_PUBKY));
@@ -317,7 +319,7 @@ describe('BootstrapApplication', () => {
       expect(result).toEqual({
         unread: 1,
         lastRead: MOCK_LAST_READ,
-        lastPolledTimestamp: expect.any(Number),
+        lastPolledTimestamp: notification.timestamp + 1,
       });
     });
 
@@ -433,13 +435,16 @@ describe('BootstrapApplication', () => {
         message: 'Internal server error',
       });
 
-      expect(loggerErrorSpy).toHaveBeenCalledWith('Failed to fetch last read timestamp', expect.any(Error));
+      expect(loggerErrorSpy).toHaveBeenCalledWith(
+        'Failed to fetch last read timestamp',
+        expect.objectContaining({
+          category: ErrorCategory.Server,
+          code: ServerErrorCode.INTERNAL_ERROR,
+          message: 'Internal server error',
+        }),
+      );
+      expect(homeserverRequestSpy).toHaveBeenCalledTimes(1);
       expect(homeserverRequestSpy).toHaveBeenCalledWith({ method: HttpMethod.GET, url: MOCK_LAST_READ_URL });
-      expect(homeserverRequestSpy).not.toHaveBeenCalledWith({
-        method: HttpMethod.PUT,
-        url: expect.any(String),
-        bodyJson: expect.any(Object),
-      });
 
       // fetchOrPutLastRead fails in the first Promise.all, so persistence is never reached
       expect(mocks.persistUsers).not.toHaveBeenCalled();
@@ -461,13 +466,12 @@ describe('BootstrapApplication', () => {
 
       await expect(BootstrapApplication.initialize(getBootstrapParams(TEST_PUBKY))).rejects.toThrow('Network timeout');
 
-      expect(loggerErrorSpy).toHaveBeenCalledWith('Failed to fetch last read timestamp', expect.any(Error));
+      expect(loggerErrorSpy).toHaveBeenCalledWith(
+        'Failed to fetch last read timestamp',
+        expect.objectContaining({ message: 'Network timeout' }),
+      );
+      expect(homeserverRequestSpy).toHaveBeenCalledTimes(1);
       expect(homeserverRequestSpy).toHaveBeenCalledWith({ method: HttpMethod.GET, url: MOCK_LAST_READ_URL });
-      expect(homeserverRequestSpy).not.toHaveBeenCalledWith({
-        method: HttpMethod.PUT,
-        url: expect.any(String),
-        bodyJson: expect.any(Object),
-      });
 
       // fetchOrPutLastRead fails in the first Promise.all, so persistence is never reached
       expect(mocks.persistUsers).not.toHaveBeenCalled();
@@ -562,7 +566,8 @@ describe('BootstrapApplication', () => {
       const bootstrapData = createMockBootstrapData();
       const mockFiles = asOpaque<NexusFileDetails[]>([{ id: 'file-1' }, { id: 'file-2' }]);
       bootstrapData.files = mockFiles;
-      bootstrapData.notifications = [createMockNotification()];
+      const notification = createMockNotification();
+      bootstrapData.notifications = [notification];
 
       const mocks = setupMocks({ bootstrapData, unreadCount: 1 });
 
@@ -572,7 +577,7 @@ describe('BootstrapApplication', () => {
       expect(result).toEqual({
         unread: 1,
         lastRead: MOCK_LAST_READ,
-        lastPolledTimestamp: expect.any(Number),
+        lastPolledTimestamp: notification.timestamp + 1,
       });
     });
 
@@ -666,10 +671,7 @@ describe('BootstrapApplication', () => {
 
       await BootstrapApplication.initialize(getBootstrapParams(TEST_PUBKY));
 
-      expect(loggerWarnSpy).not.toHaveBeenCalledWith(
-        'User is not indexed in Nexus. Scheduling TTL retry',
-        expect.any(Object),
-      );
+      expect(loggerWarnSpy).not.toHaveBeenCalled();
       expect(upsertTtlSpy).not.toHaveBeenCalled();
       expect(mockSubscribeUser).not.toHaveBeenCalled();
     });

@@ -16,10 +16,7 @@ import { NotificationType } from '@/models/notification/notification.types';
 import { NotificationNormalizer } from '@/pipes/notification/notification.normalizer';
 import { PubkySpecsSingleton } from '@/pipes/pipes.builder';
 import type { NexusNotification } from '@/services/nexus/nexus.types';
-import {
-  defaultNotificationPreferences,
-  type NotificationPreferences,
-} from '@/stores/settings/settings.types';
+import { defaultNotificationPreferences, type NotificationPreferences } from '@/stores/settings/settings.types';
 describe('NotificationNormalizer', () => {
   /**
    * Tests for `to` method - Creates LastRead result (same as LastReadNormalizer)

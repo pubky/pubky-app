@@ -11,10 +11,7 @@ import { LastReadNormalizer } from '@/pipes/lastRead/lastRead.normalizer';
 import { useAuthStore } from '@/stores/auth/auth.store';
 import { useNotificationStore } from '@/stores/notification/notification.store';
 import { useSettingsStore } from '@/stores/settings/settings.store';
-import {
-  defaultNotificationPreferences,
-  type NotificationPreferences,
-} from '@/stores/settings/settings.types';
+import { defaultNotificationPreferences, type NotificationPreferences } from '@/stores/settings/settings.types';
 const mockUserId = 'pubky-user-123' as Pubky;
 
 const setupAuthStore = (userId: Pubky = mockUserId) => {
