@@ -1,8 +1,7 @@
 import { useCallback } from 'react';
 import { useTranslations } from 'next-intl';
-import { toast } from '@/molecules/Toaster/use-toast';
-
 import { copyToClipboard } from '@/libs/utils/utils';
+import { toast } from '@/molecules/Toaster/use-toast';
 
 interface UseCopyToClipboardOptions {
   onSuccess?: (text: string) => void;

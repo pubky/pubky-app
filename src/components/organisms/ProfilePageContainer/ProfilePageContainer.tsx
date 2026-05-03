@@ -9,9 +9,10 @@ import { MobileFooter } from '@/molecules/MobileFooter/MobileFooter';
 import { MobileHeader } from '@/molecules/MobileHeader/MobileHeader';
 import { ProfilePageLayoutWrapper } from '@/molecules/ProfilePageLayoutWrapper/ProfilePageLayoutWrapper';
 import { UserNotFound } from '@/molecules/UserNotFound/UserNotFound';
-import { ProfilePageLayout } from '../ProfilePageLayout/ProfilePageLayout';
 import { useProfileContext } from '@/providers/ProfileProvider/ProfileProvider';
 import { useAuthStore } from '@/stores/auth/auth.store';
+import { ProfilePageLayout } from '../ProfilePageLayout/ProfilePageLayout';
+
 export interface ProfilePageContainerProps {
   /** Child pages to render in the main content area */
   children: React.ReactNode;

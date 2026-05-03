@@ -1,21 +1,19 @@
 'use client';
 
-import { useDeletePost } from '@/hooks/useDeletePost/useDeletePost';
-import { useIsMobile } from '@/hooks/useIsMobile/useIsMobile';
-import { useRequireAuth } from '@/hooks/useRequireAuth/useRequireAuth';
 import { useState } from 'react';
 import { useTranslations } from 'next-intl';
 import { Container } from '@/atoms/Container/Container';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuTrigger } from '@/atoms/DropdownMenu/DropdownMenu';
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from '@/atoms/Sheet/Sheet';
-
 import { MENU_VARIANT } from '@/config/ui';
+import { useDeletePost } from '@/hooks/useDeletePost/useDeletePost';
+import { useIsMobile } from '@/hooks/useIsMobile/useIsMobile';
+import { useRequireAuth } from '@/hooks/useRequireAuth/useRequireAuth';
 import { DialogConfirmDelete } from '@/molecules/DialogConfirmDelete/DialogConfirmDelete';
 import { DialogEditPost } from '../DialogEditPost/DialogEditPost';
 import { DialogReportPost } from '../DialogReportPost/DialogReportPost';
-import { PostMenuActionsContent } from './PostMenuActionsContent/PostMenuActionsContent';
-
 import type { PostMenuActionsProps } from './PostMenuActions.types';
+import { PostMenuActionsContent } from './PostMenuActionsContent/PostMenuActionsContent';
 
 export function PostMenuActions({ postId, trigger }: PostMenuActionsProps) {
   const t = useTranslations('post.actions');

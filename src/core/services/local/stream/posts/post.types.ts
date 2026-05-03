@@ -2,6 +2,7 @@ import type { Pubky } from '@/models/models.types';
 import type { PostStreamId, ReplyStreamCompositeId } from '@/models/stream/post/postStream.types';
 import type { NexusFileDetails, NexusPostWithAttachmentMetadata } from '@/services/nexus/nexus.types';
 import type { TStreamBase } from '@/services/nexus/stream/posts/postStream.types';
+
 export interface TStreamResult {
   stream: string[];
 }

@@ -1,7 +1,7 @@
 'use client';
 
-import { useEnterSubmit } from '@/hooks/useEnterSubmit/useEnterSubmit';
-import { useState, useCallback } from 'react';
+import { useCallback, useState } from 'react';
+import { AlertCircle, FileText, Loader2, RotateCcw } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 import { Button } from '@/atoms/Button/Button';
 import { Container } from '@/atoms/Container/Container';
@@ -15,11 +15,11 @@ import {
   DialogTitle,
   DialogTrigger,
 } from '@/atoms/Dialog/Dialog';
+import { AuthController } from '@/controllers/auth/auth';
+import { useEnterSubmit } from '@/hooks/useEnterSubmit/useEnterSubmit';
 import { useToast } from '@/molecules/Toaster/use-toast';
 import { WordSlot } from '@/molecules/WordSlot/WordSlot';
 
-import { FileText, AlertCircle, Loader2, RotateCcw } from 'lucide-react';
-import { AuthController } from '@/controllers/auth/auth';
 interface DialogRestoreRecoveryPhraseProps {
   onRestore?: () => void;
 }

@@ -1,21 +1,22 @@
 'use client';
 
-import { useState, useEffect, useCallback, useRef, useMemo } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useLiveQuery } from 'dexie-react-hooks';
 import { NEXUS_USERS_PER_PAGE } from '@/config/nexus';
-import type { ConnectionType, UserConnectionData, UseProfileConnectionsResult } from './useProfileConnections.types';
-import { Logger } from '@/libs/logger/logger';
-import { isAppError } from '@/libs/error/error.utils';
 import { FileController } from '@/controllers/file/file';
 import { StreamUserController } from '@/controllers/stream/users/users';
 import { UserController } from '@/controllers/user/user';
+import { isAppError } from '@/libs/error/error.utils';
+import { Logger } from '@/libs/logger/logger';
 import type { Pubky } from '@/models/models.types';
 import type { UserStreamCompositeId } from '@/models/stream/user/userStream.types';
 import type { UserRelationshipsModelSchema } from '@/models/user/relationships/userRelationships.schema';
 import { LocalStreamUsersService } from '@/services/local/stream/users/users';
 import type { NexusTag, NexusUserCounts, NexusUserDetails } from '@/services/nexus/nexus.types';
 import { useAuthStore } from '@/stores/auth/auth.store';
-export type { ConnectionType, UserConnectionData, UseProfileConnectionsResult };
+import type { ConnectionType, UseProfileConnectionsResult, UserConnectionData } from './useProfileConnections.types';
+
+export type { ConnectionType, UseProfileConnectionsResult, UserConnectionData };
 export { CONNECTION_TYPE } from './useProfileConnections.types';
 
 // ============================================================================

@@ -1,14 +1,15 @@
-import { describe, it, expect, beforeEach } from 'vitest';
+import { beforeEach, describe, expect, it } from 'vitest';
+import { db } from '@/database/franky/franky';
+import type { Pubky } from '@/models/models.types';
+import { UserStreamModel } from './userStream';
 import {
-  createDefaultUserStream,
   buildUserCompositeId,
+  createDefaultUserStream,
   parseUserCompositeId,
   USER_STREAM_ID_DELIMITER,
 } from './userStream.helper';
-import { UserStreamModel } from './userStream';
 import { UserStreamTypes } from './userStream.types';
-import { db } from '@/database/franky/franky';
-import type { Pubky } from '@/models/models.types';
+
 describe('UserStreamModel', () => {
   const targetUserId = 'user-target' as Pubky;
 

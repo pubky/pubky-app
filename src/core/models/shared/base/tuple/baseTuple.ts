@@ -1,9 +1,10 @@
 import { Table } from 'dexie';
-import { NexusModelTuple } from './baseTuple.type';
 import { DatabaseErrorCode } from '@/libs/error/error.codes';
 import { Err } from '@/libs/error/error.factories';
 import { ErrorService } from '@/libs/error/error.types';
 import { ModelBase } from '@/models/shared/base/baseModel';
+import { NexusModelTuple } from './baseTuple.type';
+
 /**
  * Base class for tuple-oriented models, where bulk operations accept tuples [id, data].
  */

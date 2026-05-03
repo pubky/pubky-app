@@ -1,7 +1,9 @@
 'use client';
 
-import { useEnterSubmit } from '@/hooks/useEnterSubmit/useEnterSubmit';
 import { useState } from 'react';
+import Image from 'next/image';
+import { ArrowRight, Download } from 'lucide-react';
+import { useTranslations } from 'next-intl';
 import { Button } from '@/atoms/Button/Button';
 import { Container } from '@/atoms/Container/Container';
 import {
@@ -17,12 +19,10 @@ import {
 import { Input } from '@/atoms/Input/Input';
 import { Label } from '@/atoms/Label/Label';
 import { Typography } from '@/atoms/Typography/Typography';
-
-import Image from 'next/image';
-import { useTranslations } from 'next-intl';
-import { Download, ArrowRight } from 'lucide-react';
-import { calculatePasswordStrength, getStrengthColor } from '@/libs/password/password';
 import { ProfileController } from '@/controllers/profile/profile';
+import { useEnterSubmit } from '@/hooks/useEnterSubmit/useEnterSubmit';
+import { calculatePasswordStrength, getStrengthColor } from '@/libs/password/password';
+
 interface DialogBackupEncryptedProps {
   children?: React.ReactNode;
 }

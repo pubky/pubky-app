@@ -1,5 +1,6 @@
 import type { Pubky, Timestamp } from '@/models/models.types';
 import type { TagModel } from '@/models/shared/tag/tag';
+
 /**
  * Nexus API Types
  *

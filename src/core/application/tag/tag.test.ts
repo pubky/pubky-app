@@ -1,12 +1,12 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { TagApplication } from './tag';
-import type { TCreateTagInput, TDeleteTagInput } from './tag.types';
-import { HttpMethod } from '@/libs/http/http.types';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { TagKind } from '@/application/tag/tag.types';
+import { HttpMethod } from '@/libs/http/http.types';
 import type { Pubky } from '@/models/models.types';
 import { HomeserverService } from '@/services/homeserver/homeserver';
 import { LocalPostTagService } from '@/services/local/tag/post/tag.post';
 import { LocalUserTagService } from '@/services/local/tag/user/tag.user';
+import { TagApplication } from './tag';
+import type { TCreateTagInput, TDeleteTagInput } from './tag.types';
 
 // Mock the HomeserverService
 vi.mock('@/services/homeserver/homeserver', () => ({

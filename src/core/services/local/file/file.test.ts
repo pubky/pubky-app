@@ -1,16 +1,17 @@
-import { describe, it, expect, beforeEach, vi } from 'vitest';
 import type { BlobResult, FileResult } from 'pubky-app-specs';
-import { LocalFileService } from './file';
-import { asOpaque } from '@/test-utils/type-assertions';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { resetDatabase } from '@/database/franky/franky.helpers';
 import { DatabaseErrorCode } from '@/libs/error/error.codes';
 import { Err } from '@/libs/error/error.factories';
 import { ErrorCategory, ErrorService } from '@/libs/error/error.types';
-import { resetDatabase } from '@/database/franky/franky.helpers';
 import { FileDetailsModel } from '@/models/file/fileDetails';
 import type { Pubky } from '@/models/models.types';
 import { buildCompositeId } from '@/models/models.utils';
 import { buildUrls } from '@/services/local/file/file.utils';
 import type { NexusFileDetails } from '@/services/nexus/nexus.types';
+import { asOpaque } from '@/test-utils/type-assertions';
+import { LocalFileService } from './file';
+
 describe('LocalFileService', () => {
   const testPubky: Pubky = 'operrr8wsbpr3ue9d4qj41ge1kcc6r7fdiy6o3ugjrrhi4y77rd0';
   const testFileId1 = 'file-test-1';

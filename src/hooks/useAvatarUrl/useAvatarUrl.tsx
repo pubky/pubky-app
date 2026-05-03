@@ -3,6 +3,7 @@
 import { useMemo } from 'react';
 import { FileController } from '@/controllers/file/file';
 import type { NexusUserDetails } from '@/services/nexus/nexus.types';
+
 /**
  * Hook to compute avatar URL from user details.
  * Returns undefined if user has no image.

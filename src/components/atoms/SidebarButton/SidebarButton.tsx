@@ -1,5 +1,4 @@
 import { Button } from '../Button/Button';
-
 import type { SidebarButtonProps } from './SidebarButton.types';
 
 export function SidebarButton({ icon: Icon, children, ...props }: SidebarButtonProps) {

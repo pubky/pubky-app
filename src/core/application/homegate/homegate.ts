@@ -1,3 +1,6 @@
+import { ExchangerateService } from '@/services/exchangerate/exchangerate';
+import type { BtcRate } from '@/services/exchangerate/exchangerate.types';
+import { HomegateService } from '@/services/homegate/homegate';
 import type {
   THomegateAwaitLnVerificationResult,
   THomegateCreateLnVerificationResult,
@@ -7,9 +10,7 @@ import type {
   THomegateVerifySmsCodeParams,
   THomegateVerifySmsCodeResult,
 } from './homegate.types';
-import { ExchangerateService } from '@/services/exchangerate/exchangerate';
-import type { BtcRate } from '@/services/exchangerate/exchangerate.types';
-import { HomegateService } from '@/services/homegate/homegate';
+
 /**
  * Homegate application service.
  *

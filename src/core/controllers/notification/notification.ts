@@ -1,12 +1,13 @@
-import { NEXUS_NOTIFICATIONS_LIMIT } from '@/config/nexus';
 import { NotificationApplication } from '@/application/notification/notification';
 import type { TGetOrFetchNotificationsResponse } from '@/application/notification/notification.types';
+import { NEXUS_NOTIFICATIONS_LIMIT } from '@/config/nexus';
 import type { TGetNotificationsParams } from '@/controllers/notification/notification.types';
 import type { TReadProfileParams } from '@/controllers/profile/profile.types';
 import type { FlatNotification } from '@/models/notification/notification.types';
 import { LastReadNormalizer } from '@/pipes/lastRead/lastRead.normalizer';
 import { useAuthStore } from '@/stores/auth/auth.store';
 import { useNotificationStore } from '@/stores/notification/notification.store';
+
 export class NotificationController {
   private constructor() {} // Prevent instantiation
 

@@ -1,10 +1,11 @@
 'use client';
 
+import { ChevronRight } from 'lucide-react';
 import { Accordion as AccordionPrimitive } from 'radix-ui';
 import Markdown from 'react-markdown';
-import type { FAQAccordionProps } from './FAQAccordion.types';
-import { ChevronRight } from 'lucide-react';
 import { cn } from '@/libs/utils/utils';
+import type { FAQAccordionProps } from './FAQAccordion.types';
+
 export function FAQAccordion({ items, className }: FAQAccordionProps) {
   return (
     <AccordionPrimitive.Root type="single" collapsible className={cn('flex w-full flex-col gap-3', className)}>

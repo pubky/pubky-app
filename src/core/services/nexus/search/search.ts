@@ -1,6 +1,7 @@
 import { queryNexus } from '@/services/nexus/nexus.utils';
 import { searchApi } from '@/services/nexus/search/search.api';
 import type { TPrefixSearchParams, TSearchResult } from '@/services/nexus/search/search.types';
+
 /**
  * Nexus Search Service
  *

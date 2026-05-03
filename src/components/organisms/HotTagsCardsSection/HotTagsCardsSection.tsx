@@ -1,25 +1,25 @@
 'use client';
 
-import { useBulkUserAvatars } from '@/hooks/useBulkUserAvatars/useBulkUserAvatars';
-import { useHotTags } from '@/hooks/useHotTags/useHotTags';
-import { useIsMobile } from '@/hooks/useIsMobile/useIsMobile';
-import { useMemo, useState, useEffect } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useTranslations } from 'next-intl';
+import { APP_ROUTES } from '@/app/routes';
 import { Container } from '@/atoms/Container/Container';
 import { Heading } from '@/atoms/Heading/Heading';
 import { Typography } from '@/atoms/Typography/Typography';
-import { HotTagCard } from '@/molecules/HotTagCard/HotTagCard';
-
-import { APP_ROUTES } from '@/app/routes';
 import { HOT_TAGS_FEATURED_COUNT } from '@/config/tags';
-import { HotTagsCardsSectionSkeleton } from './HotTagsCardsSection.skeleton';
-import type { HotTagsCardsSectionProps } from './HotTagsCardsSection.types';
-import { MAX_AVATARS_MOBILE, MAX_AVATARS_DEFAULT, MAX_AVATARS_XL } from './HotTagsCardsSection.constants';
+import { useBulkUserAvatars } from '@/hooks/useBulkUserAvatars/useBulkUserAvatars';
+import { useHotTags } from '@/hooks/useHotTags/useHotTags';
+import { useIsMobile } from '@/hooks/useIsMobile/useIsMobile';
 import { cn } from '@/libs/utils/utils';
 import type { Pubky } from '@/models/models.types';
+import { HotTagCard } from '@/molecules/HotTagCard/HotTagCard';
 import type { UserStreamReach } from '@/services/nexus/nexus.types';
 import { useHotStore } from '@/stores/hot/hot.store';
+import { MAX_AVATARS_DEFAULT, MAX_AVATARS_MOBILE, MAX_AVATARS_XL } from './HotTagsCardsSection.constants';
+import { HotTagsCardsSectionSkeleton } from './HotTagsCardsSection.skeleton';
+import type { HotTagsCardsSectionProps } from './HotTagsCardsSection.types';
+
 /**
  * HotTagsCardsSection
  *

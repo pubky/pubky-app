@@ -1,11 +1,12 @@
-import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { MuteResult } from 'pubky-app-specs';
-import { MuteController } from './mute';
-import { asOpaque } from '@/test-utils/type-assertions';
-import { HttpMethod } from '@/libs/http/http.types';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { MuteApplication } from '@/application/mute/mute';
+import { HttpMethod } from '@/libs/http/http.types';
 import type { Pubky } from '@/models/models.types';
 import { MuteNormalizer } from '@/pipes/mute/mute.normalizer';
+import { asOpaque } from '@/test-utils/type-assertions';
+import { MuteController } from './mute';
+
 const TEST_PUBKY = {
   USER_1: '5a1diz4pghi47ywdfyfzpit5f3bdomzt4pugpbmq4rngdd4iub4y' as Pubky,
   USER_2: 'o1gg96ewuojmopcjbz8895478wdtxtzzuxnfjjz8o8e77csa1ngo' as Pubky,

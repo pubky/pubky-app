@@ -1,7 +1,7 @@
 import React from 'react';
-import { describe, it, expect } from 'vitest';
 import { render } from '@testing-library/react';
-import { Avatar, AvatarImage, AvatarFallback } from './Avatar';
+import { describe, expect, it } from 'vitest';
+import { Avatar, AvatarFallback, AvatarImage } from './Avatar';
 
 describe('AvatarImage', () => {
   it('component exists and can be imported', () => {

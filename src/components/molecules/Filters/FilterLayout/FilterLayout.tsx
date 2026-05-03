@@ -1,12 +1,12 @@
 'use client';
 
 import * as React from 'react';
+import { Columns3, LayoutGrid, Menu } from 'lucide-react';
 import { useTranslations } from 'next-intl';
+import { LAYOUT, type LayoutType } from '@/stores/home/home.types';
 import { FilterRadioGroup } from '../FilterRadioGroup/FilterRadioGroup';
 import { BaseFilterProps, FilterListItem } from '../Filters.types';
 
-import { Columns3, Menu, LayoutGrid } from 'lucide-react';
-import { LAYOUT, type LayoutType } from '@/stores/home/home.types';
 interface FilterLayoutProps extends BaseFilterProps<LayoutType> {
   showVisual?: boolean;
 }

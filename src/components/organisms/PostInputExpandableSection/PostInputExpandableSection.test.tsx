@@ -1,7 +1,7 @@
-import { render, screen, fireEvent } from '@testing-library/react';
-import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { PostInputExpandableSection } from './PostInputExpandableSection';
+import { fireEvent, render, screen } from '@testing-library/react';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { POST_INPUT_VARIANT } from '../PostInput/PostInput.constants';
+import { PostInputExpandableSection } from './PostInputExpandableSection';
 
 vi.mock('motion/react', () => ({
   AnimatePresence: ({ children }: { children: React.ReactNode }) => <>{children}</>,

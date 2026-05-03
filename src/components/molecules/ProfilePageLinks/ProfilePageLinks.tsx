@@ -1,19 +1,18 @@
 'use client';
 
-import { useLinkConfirmation } from '@/hooks/useLinkConfirmation/useLinkConfirmation';
 import { useMemo } from 'react';
 import { useRouter } from 'next/navigation';
+import { Link } from 'lucide-react';
 import { useTranslations } from 'next-intl';
+import { SETTINGS_ROUTES } from '@/app/routes';
 import { Button } from '@/atoms/Button/Button';
 import { Container } from '@/atoms/Container/Container';
 import { Heading } from '@/atoms/Heading/Heading';
 import { Typography } from '@/atoms/Typography/Typography';
-import { DialogCheckLink } from '@/organisms/DialogCheckLink/DialogCheckLink';
-
-import { SETTINGS_ROUTES } from '@/app/routes';
-import type { ProfilePageLinksProps } from './ProfilePageLinks.types';
-import { Link } from 'lucide-react';
+import { useLinkConfirmation } from '@/hooks/useLinkConfirmation/useLinkConfirmation';
 import { getIconFromUrl } from '@/libs/utils/urlToIcon';
+import { DialogCheckLink } from '@/organisms/DialogCheckLink/DialogCheckLink';
+import type { ProfilePageLinksProps } from './ProfilePageLinks.types';
 
 export function ProfilePageLinks({ links, isOwnProfile = false }: ProfilePageLinksProps) {
   const t = useTranslations('profile.sidebar');

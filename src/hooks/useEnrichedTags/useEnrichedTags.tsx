@@ -1,9 +1,10 @@
 'use client';
 
 import { useBulkUserAvatars } from '@/hooks/useBulkUserAvatars/useBulkUserAvatars';
+import type { Pubky } from '@/models/models.types';
 import type { TagWithAvatars } from '@/molecules/TaggedItem/TaggedItem.types';
 import type { UseEnrichedTagsResult } from './useEnrichedTags.types';
-import type { Pubky } from '@/models/models.types';
+
 /**
  * Hook to enrich tags with user details for tagger avatars.
  * Fetches user names and avatar URLs for all taggers in the provided tags.

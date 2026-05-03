@@ -1,12 +1,13 @@
-import { render, screen, fireEvent } from '@testing-library/react';
-import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { SearchInput } from './SearchInput';
+import { fireEvent, render, screen } from '@testing-library/react';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { useHotTags } from '@/hooks/useHotTags/useHotTags';
 import { useSearchAutocomplete } from '@/hooks/useSearchAutocomplete/useSearchAutocomplete';
 import { useSearchInput } from '@/hooks/useSearchInput/useSearchInput';
 import { useTagSearch } from '@/hooks/useTagSearch/useTagSearch';
 import type { Pubky } from '@/models/models.types';
 import { useSearchStore } from '@/stores/search/search.store';
+import { SearchInput } from './SearchInput';
+
 // Mock next/navigation
 const mockPush = vi.fn();
 const mockSearchParams = new URLSearchParams();

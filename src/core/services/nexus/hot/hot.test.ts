@@ -1,9 +1,9 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { NexusHotService } from './hot';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { type NexusHotTag, UserStreamReach, UserStreamTimeframe } from '@/services/nexus/nexus.types';
 import { queryNexus } from '@/services/nexus/nexus.utils';
-import { UserStreamReach, UserStreamTimeframe, type NexusHotTag } from '@/services/nexus/nexus.types';
 import { tagApi } from '@/services/nexus/tag/tag.api';
 import type { TTagHotParams } from '@/services/nexus/tag/tag.types';
+import { NexusHotService } from './hot';
 
 vi.mock('@/services/nexus/nexus.utils', async (importOriginal) => {
   const actual = await importOriginal<typeof import('@/services/nexus/nexus.utils')>();

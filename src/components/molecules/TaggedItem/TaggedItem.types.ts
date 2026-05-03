@@ -1,5 +1,6 @@
 import type { Pubky } from '@/models/models.types';
 import type { NexusTag } from '@/services/nexus/nexus.types';
+
 export interface TaggerWithAvatar {
   id: Pubky;
   /** Avatar URL - may be undefined if user has no avatar */

@@ -1,5 +1,5 @@
-import { Profile } from '@/templates/Onboarding/Profile/Profile';
 import { Metadata } from '@/molecules/Metadata/Metadata';
+import { Profile } from '@/templates/Onboarding/Profile/Profile';
 
 export const metadata = Metadata({
   title: 'Profile - Onboarding',

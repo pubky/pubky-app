@@ -4,6 +4,8 @@
  * Returns available false when geoblocked (403).
  * Returns available false with error true for generic errors (network failure, server error, etc.)
  */
+import { SmsCodeErrorType } from './homegate.constants';
+
 export type TSmsInfoResult = { available: boolean; error?: boolean };
 
 /**
@@ -127,8 +129,6 @@ export type TAwaitLnVerificationResult =
   | { success: false; timeout: true }
   | { success: false; notFound: true }
   | { success: false; rateLimited: true; retryAfter?: number };
-
-import { SmsCodeErrorType } from './homegate.constants';
 
 /**
  * Error types for SMS code sending failures.

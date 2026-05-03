@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState, useCallback } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import type { UseViewportObserverOptions, UseViewportObserverResult } from './useViewportObserver.types';
 
 /**

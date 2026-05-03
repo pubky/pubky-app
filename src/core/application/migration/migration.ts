@@ -1,9 +1,10 @@
-import { Logger } from '@/libs/logger/logger';
 import { FeedApplication } from '@/application/feed/feed';
 import { MuteApplication } from '@/application/mute/mute';
 import { SettingsApplication } from '@/application/settings/settings';
+import { Logger } from '@/libs/logger/logger';
 import type { Pubky } from '@/models/models.types';
 import type { SettingsState } from '@/stores/settings/settings.types';
+
 /**
  * MigrationApplication orchestrates post-DB-recreation re-sync of critical homeserver data.
  *

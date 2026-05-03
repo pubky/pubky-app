@@ -1,8 +1,9 @@
 import { act, renderHook } from '@testing-library/react';
 import { beforeEach, describe, expect, it } from 'vitest';
-import { useLayoutReset } from './useLayoutReset';
 import { useHomeStore } from '@/stores/home/home.store';
 import { LAYOUT } from '@/stores/home/home.types';
+import { useLayoutReset } from './useLayoutReset';
+
 describe('useLayoutReset', () => {
   beforeEach(() => {
     const { result } = renderHook(() => useHomeStore((state) => state.reset));

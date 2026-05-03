@@ -8,6 +8,7 @@ import { buildCompositeIdFromPubkyUri } from '@/models/models.utils';
 import { NotificationModel } from '@/models/notification/notification';
 import { NotificationType } from '@/models/notification/notification.types';
 import type { TOlderThanQueryParams } from '@/services/local/notification/notification.types';
+
 export class LocalNotificationService {
   private constructor() {}
 

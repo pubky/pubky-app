@@ -1,6 +1,5 @@
 import { Audio } from '@/atoms/Audio/Audio';
 import { Container } from '@/atoms/Container/Container';
-
 import type { AttachmentConstructed } from '@/organisms/PostAttachments/PostAttachments.types';
 
 type PostAttachmentsAudiosProps = {

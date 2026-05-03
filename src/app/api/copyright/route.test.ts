@@ -1,12 +1,13 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { NextRequest } from 'next/server';
-import { POST, GET, OPTIONS } from './route';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { CopyrightController } from '@/controllers/copyright/copyright';
 import { ServerErrorCode, ValidationErrorCode } from '@/libs/error/error.codes';
 import { Err } from '@/libs/error/error.factories';
 import { ErrorService } from '@/libs/error/error.types';
 import { HttpStatusCode } from '@/libs/http/http.types';
 import { Logger } from '@/libs/logger/logger';
-import { CopyrightController } from '@/controllers/copyright/copyright';
+import { GET, OPTIONS, POST } from './route';
+
 const testData = {
   nameOwner: 'John Doe',
   originalContentUrls: 'https://example.com/original',

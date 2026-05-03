@@ -1,10 +1,11 @@
-import { describe, it, expect, beforeEach, vi } from 'vitest';
-import { LocalProfileService } from './profile';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 import type { Pubky } from '@/models/models.types';
 import { UserCountsModel } from '@/models/user/counts/userCounts';
 import { UserDetailsModel } from '@/models/user/details/userDetails';
 import { LocalUserService } from '@/services/local/user/user';
 import type { NexusUserCounts, NexusUserDetails } from '@/services/nexus/nexus.types';
+import { LocalProfileService } from './profile';
+
 describe('LocalProfileService', () => {
   beforeEach(async () => {
     vi.clearAllMocks();

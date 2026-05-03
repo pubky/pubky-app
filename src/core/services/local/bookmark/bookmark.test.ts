@@ -1,7 +1,7 @@
-import { describe, it, expect, beforeEach } from 'vitest';
-import { HttpMethod } from '@/libs/http/http.types';
+import { beforeEach, describe, expect, it } from 'vitest';
 import type { TBookmarkEventParams } from '@/controllers/bookmark/bookmark.types';
 import { db } from '@/database/franky/franky';
+import { HttpMethod } from '@/libs/http/http.types';
 import { BookmarkModel } from '@/models/bookmark/bookmark';
 import type { Pubky } from '@/models/models.types';
 import { buildCompositeId } from '@/models/models.utils';
@@ -11,6 +11,7 @@ import { PostStreamModel } from '@/models/stream/post/tables/postStream';
 import { UserCountsModel } from '@/models/user/counts/userCounts';
 import { LocalBookmarkService } from '@/services/local/bookmark/bookmark';
 import { LocalStreamPostsService } from '@/services/local/stream/posts/posts';
+
 // Test data
 const testData = {
   userPubky: 'o1gg96ewuojmopcjbz8895478wdtxtzzuxnfjjz8o8e77csa1ngo' as Pubky,

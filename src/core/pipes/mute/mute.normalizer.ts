@@ -1,10 +1,11 @@
 import { MuteResult } from 'pubky-app-specs';
-import { stripPubkyPrefix } from '@/libs/utils/utils';
+import type { TMuteParams } from '@/controllers/mute/mute.types';
 import { ValidationErrorCode } from '@/libs/error/error.codes';
 import { Err } from '@/libs/error/error.factories';
 import { ErrorService } from '@/libs/error/error.types';
-import type { TMuteParams } from '@/controllers/mute/mute.types';
+import { stripPubkyPrefix } from '@/libs/utils/utils';
 import { PubkySpecsSingleton } from '@/pipes/pipes.builder';
+
 export class MuteNormalizer {
   private constructor() {}
 

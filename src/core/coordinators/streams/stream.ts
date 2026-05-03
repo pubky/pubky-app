@@ -1,6 +1,4 @@
 import { APP_ROUTES, POST_ROUTES } from '@/app/routes';
-import { Env } from '@/libs/env/env';
-import { Logger } from '@/libs/logger/logger';
 import { postStreamQueue } from '@/application/stream/posts/muting/post-stream-queue';
 import { FeedController } from '@/controllers/feed/feed';
 import { FORCE_FETCH_NEW_POSTS, SKIP_FETCH_NEW_POSTS } from '@/controllers/stream/posts/post.constants';
@@ -9,6 +7,8 @@ import { Coordinator } from '@/coordinators/base/coordinator';
 import { PollingInactiveReason } from '@/coordinators/base/coordinators.types';
 import { routeToRegex } from '@/coordinators/base/coordinators.utils';
 import type { StreamCoordinatorConfig, StreamCoordinatorState } from '@/coordinators/streams/stream.types';
+import { Env } from '@/libs/env/env';
+import { Logger } from '@/libs/logger/logger';
 import { buildFeedStreamId } from '@/models/feed/feed.helpers';
 import { buildCompositeId } from '@/models/models.utils';
 import { buildPostReplyStreamId, type PostStreamId } from '@/models/stream/post/postStream.types';
@@ -16,6 +16,7 @@ import { StreamSorting } from '@/services/nexus/nexus.types';
 import { breakDownStreamId } from '@/services/nexus/stream/posts/postStream.utils';
 import { useHomeStore } from '@/stores/home/home.store';
 import { getStreamId } from '@/stores/home/home.utils';
+
 /**
  * StreamCoordinator
  *

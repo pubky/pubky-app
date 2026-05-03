@@ -1,10 +1,9 @@
 import { Container } from '@/atoms/Container/Container';
+import { cn } from '@/libs/utils/utils';
 import { ActiveUsers } from '../ActiveUsers/ActiveUsers';
 import { FeedbackCard } from '../FeedbackCard/FeedbackCard';
 import { WhoToFollowSidebar } from '../WhoToFollowSidebar/WhoToFollowSidebar';
-
 import type { RightSidebarProps } from './RightSidebar.types';
-import { cn } from '@/libs/utils/utils';
 
 export function RightSidebar({ className }: RightSidebarProps) {
   return (

@@ -1,6 +1,6 @@
-import { renderHook } from '@testing-library/react';
 import type { Session } from '@synonymdev/pubky';
-import { describe, it, expect, beforeEach, vi } from 'vitest';
+import { renderHook } from '@testing-library/react';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { mockSession as buildSession } from '@/test-utils/pubky';
 import { useAuthStatus } from './useAuthStatus';
 

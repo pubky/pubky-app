@@ -1,6 +1,7 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest';
-import type { TCopyrightSubmitParams } from './copyright.types';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { CopyrightApplication } from '@/application/copyright/copyright';
+import type { TCopyrightSubmitParams } from './copyright.types';
+
 const testData = {
   nameOwner: 'John Doe',
   originalContentUrls: 'https://example.com/original',

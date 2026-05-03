@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeEach } from 'vitest';
+import { beforeEach, describe, expect, it } from 'vitest';
 import { db } from '@/database/franky/franky';
 import type { Pubky } from '@/models/models.types';
 import { PostCountsModel } from '@/models/post/counts/postCounts';
@@ -7,6 +7,7 @@ import { PostTtlModel } from '@/models/post/ttl/postTtl';
 import { UserCountsModel } from '@/models/user/counts/userCounts';
 import { LocalPostTagService } from '@/services/local/tag/post/tag.post';
 import type { TLocalTagParams } from '@/services/local/tag/tag.types';
+
 // Test data
 const testData = {
   authorPubky: 'pxnu33x7jtpx9ar1ytsi4yxbp6a5o36gwhffs8zoxmbuptici1jy' as Pubky,

@@ -1,29 +1,14 @@
-import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { LastReadResult } from 'pubky-app-specs';
-import { AuthController } from './auth';
-import { asOpaque } from '@/test-utils/type-assertions';
-import {
-  mockAuthStore,
-  mockHomeStore,
-  mockHotStore,
-  mockLocalFilesStore,
-  mockMigrationStore,
-  mockNotificationStore,
-  mockOnboardingStore,
-  mockSearchStore,
-  mockSettingsStore,
-  mockSignInStore,
-} from '@/test-utils/stores';
-import { mockSession as buildMockSession } from '@/test-utils/pubky';
-import { Identity } from '@/libs/identity/identity';
-import { Logger } from '@/libs/logger/logger';
-import { clearDatabase } from '@/database/franky/franky.helpers';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { AuthApplication } from '@/application/auth/auth';
 import { BootstrapApplication } from '@/application/bootstrap/bootstrap';
 import { postStreamQueue } from '@/application/stream/posts/muting/post-stream-queue';
 import { NotificationCoordinator } from '@/coordinators/notifications/notifications';
 import { StreamCoordinator } from '@/coordinators/streams/stream';
 import { TtlCoordinator } from '@/coordinators/ttl/ttl';
+import { clearDatabase } from '@/database/franky/franky.helpers';
+import { Identity } from '@/libs/identity/identity';
+import { Logger } from '@/libs/logger/logger';
 import type { Pubky } from '@/models/models.types';
 import { NotificationNormalizer } from '@/pipes/notification/notification.normalizer';
 import { PubkySpecsSingleton } from '@/pipes/pipes.builder';
@@ -39,6 +24,22 @@ import { useOnboardingStore } from '@/stores/onboarding/onboarding.store';
 import { useSearchStore } from '@/stores/search/search.store';
 import { useSettingsStore } from '@/stores/settings/settings.store';
 import { useSignInStore } from '@/stores/signIn/signIn.store';
+import { mockSession as buildMockSession } from '@/test-utils/pubky';
+import {
+  mockAuthStore,
+  mockHomeStore,
+  mockHotStore,
+  mockLocalFilesStore,
+  mockMigrationStore,
+  mockNotificationStore,
+  mockOnboardingStore,
+  mockSearchStore,
+  mockSettingsStore,
+  mockSignInStore,
+} from '@/test-utils/stores';
+import { asOpaque } from '@/test-utils/type-assertions';
+import { AuthController } from './auth';
+
 const TEST_SECRET_KEY = Buffer.from(new Uint8Array(32).fill(1)).toString('hex');
 const TEST_PUBKY = '5a1diz4pghi47ywdfyfzpit5f3bdomzt4pugpbmq4rngdd4iub4y';
 

@@ -2,6 +2,7 @@ import type { Pubky } from '@/models/models.types';
 import type { FlatNotification } from '@/models/notification/notification.types';
 import type { TOlderThanQueryParams } from '@/services/local/notification/notification.types';
 import type { NexusNotification } from '@/services/nexus/nexus.types';
+
 export type TNotificationApplicationNotificationsParams = {
   userId: Pubky;
   lastPolledTimestamp: number | undefined;

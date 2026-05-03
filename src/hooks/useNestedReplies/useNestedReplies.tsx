@@ -1,7 +1,7 @@
 'use client';
 
 import { useReplyStream } from '@/hooks/useReplyStream/useReplyStream';
-import { DEFAULT_MAX_NESTED, DEFAULT_MAX_DEPTH } from './useNestedReplies.constants';
+import { DEFAULT_MAX_DEPTH, DEFAULT_MAX_NESTED } from './useNestedReplies.constants';
 import type { UseNestedRepliesOptions, UseNestedRepliesResult } from './useNestedReplies.types';
 
 /**

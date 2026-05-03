@@ -1,22 +1,20 @@
 'use client';
 
-import { useEnterSubmit } from '@/hooks/useEnterSubmit/useEnterSubmit';
-import { useState, useEffect, useRef } from 'react';
+import { useEffect, useRef, useState } from 'react';
+import { Check, Smile } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 import { Button } from '@/atoms/Button/Button';
 import { Container } from '@/atoms/Container/Container';
 import { Input } from '@/atoms/Input/Input';
 import { Label } from '@/atoms/Label/Label';
 import { Typography } from '@/atoms/Typography/Typography';
-import { EmojiPickerDialog } from '../../EmojiPickerDialog/EmojiPickerDialog';
-
 import { USER_STATUS_MAX_LENGTH } from '@/config/user';
-import { STATUS_OPTIONS } from './StatusPickerContent.constants';
-import { StatusPickerContentProps } from './StatusPickerContent.types';
-
-import { Check, Smile } from 'lucide-react';
+import { useEnterSubmit } from '@/hooks/useEnterSubmit/useEnterSubmit';
 import { parseStatus } from '@/libs/status/status';
 import { cn } from '@/libs/utils/utils';
+import { EmojiPickerDialog } from '../../EmojiPickerDialog/EmojiPickerDialog';
+import { STATUS_OPTIONS } from './StatusPickerContent.constants';
+import { StatusPickerContentProps } from './StatusPickerContent.types';
 
 export function StatusPickerContent({ onStatusSelect, currentStatus }: StatusPickerContentProps) {
   const t = useTranslations('status');

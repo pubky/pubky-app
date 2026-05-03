@@ -2,11 +2,12 @@ import type { Pubky } from '@/models/models.types';
 import type { UserStreamId } from '@/models/stream/user/userStream.types';
 import type { UserStreamReach, UserStreamTimeframe } from '@/services/nexus/nexus.types';
 import {
-  UserStreamSource,
   type TUserStreamBase,
   type TUserStreamInfluencersParams,
   type TUserStreamWithUserIdParams,
+  UserStreamSource,
 } from '@/services/nexus/stream/users/userStream.types';
+
 const DELIMITER = ':';
 
 /**

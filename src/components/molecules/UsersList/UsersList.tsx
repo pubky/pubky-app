@@ -1,14 +1,14 @@
 'use client';
 
 import * as React from 'react';
+import { Users } from 'lucide-react';
 import { Button } from '@/atoms/Button/Button';
 import { Container } from '@/atoms/Container/Container';
 import { Heading } from '@/atoms/Heading/Heading';
 import { Typography } from '@/atoms/Typography/Typography';
+import { cn } from '@/libs/utils/utils';
 import { User, UserData } from '../User/User';
 
-import { Users } from 'lucide-react';
-import { cn } from '@/libs/utils/utils';
 interface UsersListProps {
   users: UserData[];
   onFollow?: (userId: string) => void;

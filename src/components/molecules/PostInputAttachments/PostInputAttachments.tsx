@@ -1,6 +1,7 @@
 'use client';
 
-import { ChangeEvent, Dispatch, SetStateAction, forwardRef, useEffect, useMemo } from 'react';
+import { ChangeEvent, Dispatch, forwardRef, SetStateAction, useEffect, useMemo } from 'react';
+import { FileText, ImagePlus, Plus, Trash2 } from 'lucide-react';
 import { Audio } from '@/atoms/Audio/Audio';
 import { Button } from '@/atoms/Button/Button';
 import { Card, CardContent } from '@/atoms/Card/Card';
@@ -9,10 +10,9 @@ import { Image } from '@/atoms/Image/Image';
 import { Input } from '@/atoms/Input/Input';
 import { Typography } from '@/atoms/Typography/Typography';
 import { Video } from '@/atoms/Video/Video';
-
 import { ARTICLE_ATTACHMENT_ACCEPT_STRING, POST_ATTACHMENT_ACCEPT_STRING } from '@/config/posts';
-import { ImagePlus, Plus, Trash2, FileText } from 'lucide-react';
 import { cn } from '@/libs/utils/utils';
+
 type PostInputAttachmentsProps = {
   attachments: File[];
   setAttachments: Dispatch<SetStateAction<File[]>>;

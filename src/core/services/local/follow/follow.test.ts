@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeEach, vi } from 'vitest';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { db } from '@/database/franky/franky';
 import type { Pubky } from '@/models/models.types';
 import { PostStreamTypes } from '@/models/stream/post/postStream.types';
@@ -9,6 +9,7 @@ import { UserCountsModel } from '@/models/user/counts/userCounts';
 import { UserRelationshipsModel } from '@/models/user/relationships/userRelationships';
 import { LocalFollowService } from '@/services/local/follow/follow';
 import type { NexusUserCounts } from '@/services/nexus/nexus.types';
+
 const DEFAULT_USER_COUNTS: NexusUserCounts = {
   tagged: 0,
   tags: 0,

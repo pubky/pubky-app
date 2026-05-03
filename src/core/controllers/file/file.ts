@@ -7,6 +7,7 @@ import type {
 } from '@/controllers/file/file.types';
 import type { Pubky } from '@/models/models.types';
 import { FileNormalizer } from '@/pipes/file/file.normalizer';
+
 /**
  * File Controller
  *

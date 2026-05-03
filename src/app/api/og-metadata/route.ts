@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { handleApiError } from '@/libs/api/route-error-handler';
 import { OgMetadataController } from '@/controllers/og-metadata/og-metadata';
+import { handleApiError } from '@/libs/api/route-error-handler';
+
 /**
  * API Route for secure OpenGraph metadata fetching.
  *

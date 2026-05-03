@@ -1,7 +1,3 @@
-import { STREAM_CACHE_MAX_AGE_MS } from '@/config/nexus';
-import { postStreamQueue } from './muting/post-stream-queue';
-import { MuteFilter } from './muting/mute-filter';
-import { Logger } from '@/libs/logger/logger';
 import { FileApplication } from '@/application/file/file';
 import type {
   TCacheStreamParams,
@@ -12,12 +8,14 @@ import type {
   TPersistUnreadNewStreamChunkParams,
   TPostStreamChunkResponse,
 } from '@/application/stream/posts/post.types';
+import { STREAM_CACHE_MAX_AGE_MS } from '@/config/nexus';
 import {
   FORCE_FETCH_NEW_POSTS,
   NOT_FOUND_CACHED_STREAM,
   SKIP_FETCH_NEW_POSTS,
 } from '@/controllers/stream/posts/post.constants';
 import type { TStreamIdParams } from '@/controllers/stream/posts/posts.types';
+import { Logger } from '@/libs/logger/logger';
 import { CompositeIdDomain, type Pubky } from '@/models/models.types';
 import { buildCompositeId, buildCompositeIdFromPubkyUri, parseCompositeId } from '@/models/models.utils';
 import { PostDetailsModel } from '@/models/post/details/postDetails';
@@ -37,6 +35,9 @@ import { NexusPostStreamService } from '@/services/nexus/stream/posts/postStream
 import { StreamOrder, StreamSource } from '@/services/nexus/stream/posts/postStream.types';
 import { breakDownStreamId, createPostStreamParams } from '@/services/nexus/stream/posts/postStream.utils';
 import { NexusUserStreamService } from '@/services/nexus/stream/users/userStream';
+import { MuteFilter } from './muting/mute-filter';
+import { postStreamQueue } from './muting/post-stream-queue';
+
 export class PostStreamApplication {
   private constructor() {}
 

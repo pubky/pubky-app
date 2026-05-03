@@ -1,10 +1,11 @@
 import { render, screen, waitFor } from '@testing-library/react';
-import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { PostAttachments } from './PostAttachments';
-import { asInvalid } from '@/test-utils/type-assertions';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { FileController } from '@/controllers/file/file';
 import { FileVariant } from '@/services/nexus/file/file.types';
 import type { NexusFileDetails } from '@/services/nexus/nexus.types';
+import { asInvalid } from '@/test-utils/type-assertions';
+import { PostAttachments } from './PostAttachments';
+
 // Mock useToast
 const mockToast = vi.fn();
 vi.mock('@/molecules/PostAttachmentsAudios/PostAttachmentsAudios', () => {

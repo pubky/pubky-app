@@ -1,7 +1,3 @@
-import { Env } from '@/libs/env/env';
-import { HttpMethod, HttpStatusCode } from '@/libs/http/http.types';
-import { Logger } from '@/libs/logger/logger';
-import { AppError } from '@/libs/error/error';
 import type { TBootstrapParams } from '@/application/bootstrap/bootstrap.types';
 import { FeedApplication } from '@/application/feed/feed';
 import { FileApplication } from '@/application/file/file';
@@ -10,6 +6,10 @@ import { NotificationApplication } from '@/application/notification/notification
 import { SettingsApplication } from '@/application/settings/settings';
 import type { TBootstrapResponse } from '@/controllers/auth/auth.types';
 import { TtlCoordinator } from '@/coordinators/ttl/ttl';
+import { Env } from '@/libs/env/env';
+import { AppError } from '@/libs/error/error';
+import { HttpMethod, HttpStatusCode } from '@/libs/http/http.types';
+import { Logger } from '@/libs/logger/logger';
 import { buildHotTagsId } from '@/models/hot/hot.helper';
 import type { Pubky } from '@/models/models.types';
 import { PostStreamTypes } from '@/models/stream/post/postStream.types';
@@ -25,6 +25,7 @@ import { LocalUserService } from '@/services/local/user/user';
 import { NexusBootstrapService } from '@/services/nexus/bootstrap/bootstrap';
 import { UserStreamTimeframe } from '@/services/nexus/nexus.types';
 import type { SettingsState } from '@/stores/settings/settings.types';
+
 /**
  * Callback type for reporting bootstrap progress to the Controller layer.
  * This allows the Controller to update stores without violating architecture rules.

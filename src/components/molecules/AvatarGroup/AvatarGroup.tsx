@@ -2,11 +2,10 @@
 
 import * as React from 'react';
 import { Container } from '@/atoms/Container/Container';
-import { AvatarWithFallback } from '@/organisms/AvatarWithFallback/AvatarWithFallback';
-
-import type { AvatarGroupProps } from './AvatarGroup.types';
-import { MAX_OVERFLOW_DISPLAY } from './AvatarGroup.constants';
 import { cn } from '@/libs/utils/utils';
+import { AvatarWithFallback } from '@/organisms/AvatarWithFallback/AvatarWithFallback';
+import { MAX_OVERFLOW_DISPLAY } from './AvatarGroup.constants';
+import type { AvatarGroupProps } from './AvatarGroup.types';
 
 /**
  * AvatarGroup

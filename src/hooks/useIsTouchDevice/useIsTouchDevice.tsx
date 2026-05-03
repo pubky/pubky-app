@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useEffect, useState } from 'react';
 
 /**
  * Hook to detect touch devices in a SSR-safe manner.

@@ -1,10 +1,11 @@
-import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { render, screen } from '@testing-library/react';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { TIMELINE_FEED_VARIANT } from '@/config/feed';
-import { TimelineFeedWithStream } from './TimelineFeedContent';
 import type { UsePullToRefreshResult } from '@/hooks/usePullToRefresh/usePullToRefresh.types';
 import { useStreamPagination } from '@/hooks/useStreamPagination/useStreamPagination';
 import { PostStreamTypes } from '@/models/stream/post/postStream.types';
+import { TimelineFeedWithStream } from './TimelineFeedContent';
+
 const mockUsePullToRefresh = vi.hoisted(() =>
   vi.fn(
     (): UsePullToRefreshResult => ({

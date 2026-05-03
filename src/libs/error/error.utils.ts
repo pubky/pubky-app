@@ -1,7 +1,7 @@
 import { AppError, isAppError } from './error';
-import { ErrorCategory, ErrorService } from './error.types';
-import { ClientErrorCode, AuthErrorCode, DatabaseErrorCode, ServerErrorCode } from './error.codes';
+import { AuthErrorCode, ClientErrorCode, DatabaseErrorCode, ServerErrorCode } from './error.codes';
 import { Err } from './error.factories';
+import { ErrorCategory, ErrorService } from './error.types';
 
 // Re-export isAppError for convenience
 export { isAppError };

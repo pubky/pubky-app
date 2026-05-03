@@ -3,12 +3,12 @@
 import { useMemo } from 'react';
 import LinkifyIt from 'linkify-it';
 import { Container } from '@/atoms/Container/Container';
+import type { ParseUrlForLinkEmbedResult, PostLinkEmbedsProps } from './PostLinkEmbeds.types';
 import { Generic } from './Providers/Generic/ProviderGeneric';
 import type { EmbedProvider } from './Providers/Provider.types';
 import { Twitter } from './Providers/Twitter/ProviderTwitter';
 import { Vimeo } from './Providers/Vimeo/ProviderVimeo';
 import { Youtube } from './Providers/Youtube/ProviderYoutube';
-import type { ParseUrlForLinkEmbedResult, PostLinkEmbedsProps } from './PostLinkEmbeds.types';
 
 // Register all embed providers here
 const EMBED_PROVIDERS: EmbedProvider[] = [

@@ -1,7 +1,4 @@
 'use client';
-import { Button } from '@/atoms/Button/Button';
-import { Container } from '@/atoms/Container/Container';
-
 /**
  * HeaderJoin component for unauthenticated users on public routes.
  *
@@ -11,7 +8,10 @@ import { Container } from '@/atoms/Container/Container';
  * Follows pubky-app pattern for minimal header on public view pages.
  */
 import { UserRound } from 'lucide-react';
+import { Button } from '@/atoms/Button/Button';
+import { Container } from '@/atoms/Container/Container';
 import { useAuthStore } from '@/stores/auth/auth.store';
+
 export function HeaderJoin() {
   const setShowSignInDialog = useAuthStore((state) => state.setShowSignInDialog);
   const handleJoinClick = () => {

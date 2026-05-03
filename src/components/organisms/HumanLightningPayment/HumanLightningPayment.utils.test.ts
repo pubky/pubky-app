@@ -1,7 +1,8 @@
-import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { VerificationHandler } from './HumanLightningPayment.utils';
-import { asOpaque } from '@/test-utils/type-assertions';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { HomegateController } from '@/controllers/homegate/homegate';
+import { asOpaque } from '@/test-utils/type-assertions';
+import { VerificationHandler } from './HumanLightningPayment.utils';
+
 type VerificationHandlerInternals = { checkPaymentStatus: () => Promise<void> };
 
 vi.mock('@/controllers/homegate/homegate', () => ({

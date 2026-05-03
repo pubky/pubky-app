@@ -1,11 +1,12 @@
-import { describe, it, expect, beforeEach, vi } from 'vitest';
-import { NEXUS_USERS_PER_PAGE } from '@/config/nexus';
-import { StreamUserController } from './users';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { UserStreamApplication } from '@/application/stream/users/users';
+import { NEXUS_USERS_PER_PAGE } from '@/config/nexus';
 import type { Pubky } from '@/models/models.types';
 import { buildUserCompositeId } from '@/models/stream/user/userStream.helper';
 import { UserStreamTypes } from '@/models/stream/user/userStream.types';
 import { useAuthStore } from '@/stores/auth/auth.store';
+import { StreamUserController } from './users';
+
 describe('StreamUserController', () => {
   const targetUserId = 'user-target' as Pubky;
   const viewerId = 'user-viewer' as Pubky;

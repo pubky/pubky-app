@@ -1,21 +1,20 @@
 'use client';
 
-import { useTtlSubscription } from '@/hooks/useTtlSubscription/useTtlSubscription';
+import { Check, Ellipsis, KeyRound, Link, Loader2, LogOut, Pencil, UserMinus, UserRoundPlus } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 import { AvatarEmojiBadge } from '@/atoms/AvatarEmojiBadge/AvatarEmojiBadge';
 import { Button } from '@/atoms/Button/Button';
 import { Container } from '@/atoms/Container/Container';
 import { Typography } from '@/atoms/Typography/Typography';
+import { FOLLOW_ACTIONS } from '@/hooks/useFollowUser/useFollowUser.types';
+import { useTtlSubscription } from '@/hooks/useTtlSubscription/useTtlSubscription';
+import { extractEmojiFromStatus, parseStatus } from '@/libs/status/status';
+import { cn, formatPublicKey } from '@/libs/utils/utils';
 import { PostText } from '@/molecules/PostText/PostText';
 import { StatusPickerWrapper } from '@/molecules/StatusPicker/StatusPickerWrapper/StatusPickerWrapper';
 import { AvatarWithFallback } from '../AvatarWithFallback/AvatarWithFallback';
 import { ProfileMenuActions } from '../ProfileMenuActions/ProfileMenuActions';
-
 import type { ProfilePageHeaderProps } from './ProfilePageHeader.types';
-import { FOLLOW_ACTIONS } from '@/hooks/useFollowUser/useFollowUser.types';
-import { Pencil, KeyRound, Link, Loader2, LogOut, Check, UserMinus, UserRoundPlus, Ellipsis } from 'lucide-react';
-import { extractEmojiFromStatus, parseStatus } from '@/libs/status/status';
-import { cn, formatPublicKey } from '@/libs/utils/utils';
 
 /**
  * ProfilePageHeader

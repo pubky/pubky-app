@@ -1,46 +1,26 @@
-import { DEFAULT_HTTP_RELAY, HOMESERVER, PKARR_RELAYS, TESTNET } from '@/config/network';
 import {
+  Address,
+  AuthFlowKind,
+  Capabilities,
+  Client,
+  Keypair,
   Pubky,
   PublicKey,
-  Keypair,
-  Capabilities,
-  Signer,
-  Address,
   resolvePubky,
-  AuthFlowKind,
   Session,
-  Client,
+  Signer,
 } from '@synonymdev/pubky';
-import {
-  isHttpUrl,
-  parseResponseOrUndefined,
-  createCancelableAuthApproval,
-  resolveOwnedSessionPath,
-  assertOk,
-  getOwnedResponse,
-  PUBKY_PREFIX,
-} from './homeserver.utils';
-import { handleError } from './error.utils';
-
-import type {
-  PubPath,
-  TOwnedSessionPath,
-  TGenerateSignupAuthUrlParams,
-  THomeserverFetchParams,
-  THomeserverRequestParams,
-  TPutBlobParams,
-  THomeserverListParams,
-} from './homeserver.types';
+import type { TKeypairParams } from '@/application/auth/auth.types';
+import { DEFAULT_HTTP_RELAY, HOMESERVER, PKARR_RELAYS, TESTNET } from '@/config/network';
+import type { TPublicKeyParams } from '@/controllers/auth/auth.types';
 import { Env } from '@/libs/env/env';
-import { HttpMethod, HttpStatusCode } from '@/libs/http/http.types';
-import { Identity } from '@/libs/identity/identity';
-import { Logger } from '@/libs/logger/logger';
 import { ServerErrorCode, ValidationErrorCode } from '@/libs/error/error.codes';
 import { Err } from '@/libs/error/error.factories';
 import { httpResponseToError } from '@/libs/error/error.http';
 import { ErrorService } from '@/libs/error/error.types';
-import type { TKeypairParams } from '@/application/auth/auth.types';
-import type { TPublicKeyParams } from '@/controllers/auth/auth.types';
+import { HttpMethod, HttpStatusCode } from '@/libs/http/http.types';
+import { Identity } from '@/libs/identity/identity';
+import { Logger } from '@/libs/logger/logger';
 import type {
   TGenerateAuthUrlResult,
   THomeserverRestoreSessionParams,
@@ -48,6 +28,26 @@ import type {
   THomeserverSignUpParams,
 } from '@/services/homeserver/homeserver.types';
 import { useAuthStore } from '@/stores/auth/auth.store';
+import { handleError } from './error.utils';
+import type {
+  PubPath,
+  TGenerateSignupAuthUrlParams,
+  THomeserverFetchParams,
+  THomeserverListParams,
+  THomeserverRequestParams,
+  TOwnedSessionPath,
+  TPutBlobParams,
+} from './homeserver.types';
+import {
+  assertOk,
+  createCancelableAuthApproval,
+  getOwnedResponse,
+  isHttpUrl,
+  parseResponseOrUndefined,
+  PUBKY_PREFIX,
+  resolveOwnedSessionPath,
+} from './homeserver.utils';
+
 const IS_TESTNET = TESTNET.toString() === 'true';
 
 const CAPABILITIES = '/pub/pubky.app/:rw';

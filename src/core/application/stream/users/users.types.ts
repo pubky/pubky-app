@@ -1,5 +1,6 @@
 import type { Pubky } from '@/models/models.types';
 import type { UserStreamId } from '@/models/stream/user/userStream.types';
+
 /**
  * Parameters for reading a user stream chunk (followers, following, friends, etc.)
  * streamId can be:

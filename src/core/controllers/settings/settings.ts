@@ -1,9 +1,10 @@
-import { setLocaleCookie } from '@/i18n/utils';
 import { SettingsApplication } from '@/application/settings/settings';
+import { setLocaleCookie } from '@/i18n/utils';
 import { SettingsNormalizer } from '@/pipes/settings/settings.normalizer';
 import { useAuthStore } from '@/stores/auth/auth.store';
 import { useSettingsStore } from '@/stores/settings/settings.store';
 import type { NotificationPreferences } from '@/stores/settings/settings.types';
+
 /**
  * Settings controller.
  *

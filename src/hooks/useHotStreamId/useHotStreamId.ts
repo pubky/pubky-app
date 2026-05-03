@@ -2,6 +2,7 @@ import type { PostStreamTypes } from '@/models/stream/post/postStream.types';
 import { CONTENT, SORT } from '@/stores/home/home.types';
 import { getStreamId } from '@/stores/home/home.utils';
 import { useHotStore } from '@/stores/hot/hot.store';
+
 /**
  * useHotStreamId
  *

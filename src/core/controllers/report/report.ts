@@ -1,6 +1,7 @@
-import type { TReportSubmitParams } from './report.types';
 import { ReportApplication } from '@/application/report/report';
 import { ReportValidators } from '@/pipes/report/report.validators';
+import type { TReportSubmitParams } from './report.types';
+
 /**
  * Controller for post report submission.
  * Entry point for the report feature, called from the API route.

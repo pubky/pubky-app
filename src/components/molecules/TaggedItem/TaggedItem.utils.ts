@@ -1,7 +1,8 @@
-import type { TagWithAvatars } from './TaggedItem.types';
 import { FileController } from '@/controllers/file/file';
 import type { Pubky } from '@/models/models.types';
 import type { NexusTag } from '@/services/nexus/nexus.types';
+import type { TagWithAvatars } from './TaggedItem.types';
+
 /**
  * Transform NexusTag to TagWithAvatars by resolving avatar URLs
  */

@@ -1,13 +1,14 @@
-import { describe, it, expect } from 'vitest';
-import { createUserStreamParams, streamRequiresUserId } from './userStream.utils';
+import { describe, expect, it } from 'vitest';
 import type { Pubky } from '@/models/models.types';
-import { UserStreamTypes, type UserStreamId } from '@/models/stream/user/userStream.types';
+import { type UserStreamId, UserStreamTypes } from '@/models/stream/user/userStream.types';
 import { userStreamApi } from '@/services/nexus/stream/users/userStream.api';
 import type {
   TUserStreamBase,
   TUserStreamInfluencersParams,
   TUserStreamWithUserIdParams,
 } from '@/services/nexus/stream/users/userStream.types';
+import { createUserStreamParams, streamRequiresUserId } from './userStream.utils';
+
 describe('createUserStreamParams', () => {
   const baseParams: TUserStreamBase = {
     skip: 0,

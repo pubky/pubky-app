@@ -1,5 +1,4 @@
 import { redirect } from 'next/navigation';
-
 import { ONBOARDING_ROUTES } from '@/app/routes';
 import { formatInviteCode } from '@/libs/utils/utils';
 

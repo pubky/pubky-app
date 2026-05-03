@@ -1,12 +1,12 @@
 'use client';
 
-import { useUserProfile, UserProfile } from '@/hooks/useUserProfile/useUserProfile';
-import type { ProfileStats } from '@/hooks/useProfileStats/useProfileStats.types';
+import { ProfileActions, useProfileActions } from '@/hooks/useProfileActions/useProfileActions';
 import { useProfileStats } from '@/hooks/useProfileStats/useProfileStats';
-import { useProfileActions, ProfileActions } from '@/hooks/useProfileActions/useProfileActions';
+import type { ProfileStats } from '@/hooks/useProfileStats/useProfileStats.types';
+import { UserProfile, useUserProfile } from '@/hooks/useUserProfile/useUserProfile';
 
 // Re-export types from composed hooks for backwards compatibility
-export type { ProfileStats, UserProfile, ProfileActions };
+export type { ProfileActions, ProfileStats, UserProfile };
 
 /**
  * Default profile data used during loading state or when profile is unavailable.

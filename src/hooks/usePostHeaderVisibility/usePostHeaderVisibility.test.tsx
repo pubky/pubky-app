@@ -1,9 +1,10 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { renderHook } from '@testing-library/react';
-import { usePostHeaderVisibility } from './usePostHeaderVisibility';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
+import type { EnrichedPostDetails } from '@/application/moderation/moderation.types';
 import { usePostDetails } from '@/hooks/usePostDetails/usePostDetails';
 import { useRepostInfo } from '@/hooks/useRepostInfo/useRepostInfo';
-import type { EnrichedPostDetails } from '@/application/moderation/moderation.types';
+import { usePostHeaderVisibility } from './usePostHeaderVisibility';
+
 // Mock the hooks that usePostHeaderVisibility depends on
 vi.mock('@/hooks/usePostDetails/usePostDetails', () => ({
   usePostDetails: vi.fn(),

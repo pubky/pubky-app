@@ -5,6 +5,7 @@ import type { FeedModelSchema } from '@/models/feed/feed.schema';
 import { FeedNormalizer } from '@/pipes/feed/feed.normalizer';
 import { FeedValidators } from '@/pipes/feed/feed.validators';
 import { useAuthStore } from '@/stores/auth/auth.store';
+
 export class FeedController {
   private constructor() {}
 

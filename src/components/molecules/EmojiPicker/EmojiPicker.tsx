@@ -4,7 +4,6 @@ import { useEffect, useRef } from 'react';
 import data from '@emoji-mart/data';
 import { Picker } from 'emoji-mart';
 import { Container } from '@/atoms/Container/Container';
-
 import type { EmojiData, EmojiPickerProps, PickerOptions } from './EmojiPicker.types';
 
 export function EmojiPicker({ onEmojiSelect, maxLength, currentInput }: EmojiPickerProps) {

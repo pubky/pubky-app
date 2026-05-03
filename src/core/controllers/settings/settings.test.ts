@@ -1,9 +1,6 @@
-import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { SettingsController } from './settings';
-import { setLocaleCookie } from '@/i18n/utils';
-import { asOpaque } from '@/test-utils/type-assertions';
-import { mockAuthStore, mockSettingsStore } from '@/test-utils/stores';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { SettingsApplication } from '@/application/settings/settings';
+import { setLocaleCookie } from '@/i18n/utils';
 import type { Pubky } from '@/models/models.types';
 import { SettingsNormalizer } from '@/pipes/settings/settings.normalizer';
 import { useAuthStore } from '@/stores/auth/auth.store';
@@ -13,6 +10,9 @@ import {
   defaultPrivacyPreferences,
   type SettingsState,
 } from '@/stores/settings/settings.types';
+import { mockAuthStore, mockSettingsStore } from '@/test-utils/stores';
+import { asOpaque } from '@/test-utils/type-assertions';
+import { SettingsController } from './settings';
 
 vi.mock('@/i18n/utils', () => ({
   setLocaleCookie: vi.fn(),

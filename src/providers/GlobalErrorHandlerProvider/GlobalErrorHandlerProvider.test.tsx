@@ -1,9 +1,8 @@
-import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { act, render } from '@testing-library/react';
-import { GlobalErrorHandlerProvider } from './GlobalErrorHandlerProvider';
-import { showErrorToast } from '@/molecules/Toaster/showErrorToast';
-
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { Logger } from '@/libs/logger/logger';
+import { showErrorToast } from '@/molecules/Toaster/showErrorToast';
+import { GlobalErrorHandlerProvider } from './GlobalErrorHandlerProvider';
 
 vi.mock('@/libs/logger/logger', async (importOriginal) => {
   const actual = await importOriginal<typeof import('@/libs/logger/logger')>();

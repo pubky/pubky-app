@@ -1,20 +1,19 @@
 'use client';
 
+import { Key, Link, Megaphone, MegaphoneOff, UserRoundMinus, UserRoundPlus } from 'lucide-react';
+import { useTranslations } from 'next-intl';
+import { PROFILE_ROUTES } from '@/app/routes';
 import { useCopyToClipboard } from '@/hooks/useCopyToClipboard/useCopyToClipboard';
 import { useFollowUser } from '@/hooks/useFollowUser/useFollowUser';
 import { useIsFollowing } from '@/hooks/useIsFollowing/useIsFollowing';
-import { useMuteUser } from '@/hooks/useMuteUser/useMuteUser';
 import { useMutedUsers } from '@/hooks/useMutedUsers/useMutedUsers';
+import { useMuteUser } from '@/hooks/useMuteUser/useMuteUser';
 import { useUserProfile } from '@/hooks/useUserProfile/useUserProfile';
-import { useTranslations } from 'next-intl';
-import { toast } from '@/molecules/Toaster/use-toast';
-
-import { PROFILE_ROUTES } from '@/app/routes';
-import { PROFILE_MENU_ACTION_IDS } from './useProfileMenuActions.constants';
-import type { UseProfileMenuActionsResult, ProfileMenuActionItem } from './useProfileMenuActions.types';
-import { UserRoundMinus, UserRoundPlus, Key, Link, Megaphone, MegaphoneOff } from 'lucide-react';
 import { isAppError } from '@/libs/error/error.utils';
 import { truncateString, withPubkyPrefix } from '@/libs/utils/utils';
+import { toast } from '@/molecules/Toaster/use-toast';
+import { PROFILE_MENU_ACTION_IDS } from './useProfileMenuActions.constants';
+import type { ProfileMenuActionItem, UseProfileMenuActionsResult } from './useProfileMenuActions.types';
 
 /**
  * useProfileMenuActions

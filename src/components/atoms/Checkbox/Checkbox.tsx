@@ -1,14 +1,14 @@
 'use client';
 
 import * as React from 'react';
+import { Check } from 'lucide-react';
 import { Checkbox as CheckboxPrimitive } from 'radix-ui';
+import { cn } from '@/libs/utils/utils';
 import { Container } from '../Container/Container';
 import { Label } from '../Label/Label';
 import { Typography } from '../Typography/Typography';
-
 import type { CheckboxProps } from './Checkbox.types';
-import { Check } from 'lucide-react';
-import { cn } from '@/libs/utils/utils';
+
 const Checkbox = React.forwardRef<React.ComponentRef<typeof CheckboxPrimitive.Root>, CheckboxProps>(
   ({ className, label, description, id, ...props }, ref) => {
     const generatedId = React.useId();

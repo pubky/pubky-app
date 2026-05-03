@@ -1,14 +1,5 @@
-import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { PubkyAppPostKind, PostResult, PubkyAppPostEmbed, PubkyAppPost, type FileResult } from 'pubky-app-specs';
-import { asInvalid, asOpaque } from '@/test-utils/type-assertions';
-import {
-  TEST_PUBKY,
-  TEST_POST_IDS,
-  setupUnitTestMocks,
-  setupIntegrationTestMocks,
-  restoreMocks,
-  buildPubkyUri,
-} from '../pipes.test-utils';
+import { type FileResult, PostResult, PubkyAppPost, PubkyAppPostEmbed, PubkyAppPostKind } from 'pubky-app-specs';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { Logger } from '@/libs/logger/logger';
 import { PostDetailsModel } from '@/models/post/details/postDetails';
 import type { PostDetailsModelSchema } from '@/models/post/details/postDetails.schema';
@@ -18,6 +9,15 @@ import type { TFileAttachmentResult } from '@/pipes/file/file.types';
 import { PubkySpecsSingleton } from '@/pipes/pipes.builder';
 import type { PostValidatorData } from '@/pipes/pipes.types';
 import { PostNormalizer } from '@/pipes/post/post.normalizer';
+import { asInvalid, asOpaque } from '@/test-utils/type-assertions';
+import {
+  buildPubkyUri,
+  restoreMocks,
+  setupIntegrationTestMocks,
+  setupUnitTestMocks,
+  TEST_POST_IDS,
+  TEST_PUBKY,
+} from '../pipes.test-utils';
 
 const spyOnBuildCompositeIdFromPubkyUri = async () =>
   vi.spyOn(await import('@/models/models.utils'), 'buildCompositeIdFromPubkyUri');

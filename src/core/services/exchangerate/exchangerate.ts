@@ -1,12 +1,12 @@
 import { EXCHANGE_RATE_API } from '@/config/network';
-import { exchangerateQueryClient } from './exchangerate.query-client';
-import { BlockTankResponse, BtcRate } from './exchangerate.types';
-import { HttpMethod } from '@/libs/http/http.types';
-import { parseResponseOrThrow } from '@/libs/http/response.utils';
 import { ServerErrorCode } from '@/libs/error/error.codes';
 import { Err } from '@/libs/error/error.factories';
 import { httpResponseToError, safeFetch } from '@/libs/error/error.http';
 import { ErrorService } from '@/libs/error/error.types';
+import { HttpMethod } from '@/libs/http/http.types';
+import { parseResponseOrThrow } from '@/libs/http/response.utils';
+import { exchangerateQueryClient } from './exchangerate.query-client';
+import { BlockTankResponse, BtcRate } from './exchangerate.types';
 
 /**
  * Exchange rate service class.

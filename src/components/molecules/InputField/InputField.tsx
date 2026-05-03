@@ -1,13 +1,13 @@
 'use client';
 
 import { ReactNode } from 'react';
+import { Loader2 } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 import { Container } from '@/atoms/Container/Container';
 import { Input } from '@/atoms/Input/Input';
 import { Typography } from '@/atoms/Typography/Typography';
-
-import { Loader2 } from 'lucide-react';
 import { cn } from '@/libs/utils/utils';
+
 interface InputFieldProps {
   id?: string;
   name?: string;

@@ -3,10 +3,9 @@
 import React, { useCallback, useEffect, useRef } from 'react';
 import { Container } from '@/atoms/Container/Container';
 import { Input } from '@/atoms/Input/Input';
-
+import { cn } from '@/libs/utils/utils';
 import { DIGITS } from './HumanPhoneCodeInput.constants';
 import type { HumanPhoneCodeInputProps } from './HumanPhoneCodeInput.types';
-import { cn } from '@/libs/utils/utils';
 
 /**
  * HumanPhoneCodeInput component. Takes a 6 digit verification code and displays it as a grid of input fields.

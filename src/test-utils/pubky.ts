@@ -1,7 +1,7 @@
 import type { Keypair, Session } from '@synonymdev/pubky';
-
-import { asOpaque } from './type-assertions';
 import type { Pubky } from '@/models/models.types';
+import { asOpaque } from './type-assertions';
+
 /**
  * Minimal `@synonymdev/pubky` `Session` double.
  *

@@ -1,13 +1,13 @@
 'use client';
 
+import { AlertTriangle } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 import { Button } from '@/atoms/Button/Button';
 import { Container } from '@/atoms/Container/Container';
 import { Heading } from '@/atoms/Heading/Heading';
 import { Popover, PopoverContent, PopoverTrigger } from '@/atoms/Popover/Popover';
-
-import { AlertTriangle } from 'lucide-react';
 import { cn } from '@/libs/utils/utils';
+
 export function PopoverTradeoffs({ ...props }: React.HTMLAttributes<HTMLDivElement>) {
   const t = useTranslations('tradeoffs');
   return (

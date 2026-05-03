@@ -1,10 +1,11 @@
-import { describe, it, expect, beforeEach, vi } from 'vitest';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { db } from '@/database/franky/franky';
 import type { Pubky } from '@/models/models.types';
 import { UserCountsModel } from '@/models/user/counts/userCounts';
 import { UserTagsModel } from '@/models/user/tags/userTags';
 import type { TLocalTagParams } from '@/services/local/tag/tag.types';
 import { LocalUserTagService } from '@/services/local/tag/user/tag.user';
+
 // Test data
 const testData = {
   taggerPubky: 'o1gg96ewuojmopcjbz8895478wdtxtzzuxnfjjz8o8e77csa1ngo' as Pubky,

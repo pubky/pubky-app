@@ -1,16 +1,16 @@
 'use client';
 
-import { useInviteCodeSignUp } from '@/hooks/useInviteCodeSignUp/useInviteCodeSignUp';
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useTranslations } from 'next-intl';
-import { ButtonsNavigation } from '../ButtonsNavigation/ButtonsNavigation';
-import { PageTitle } from '../Page/Page';
+import { ONBOARDING_ROUTES } from '@/app/routes';
 import { PageHeader } from '@/atoms/PageHeader/PageHeader';
 import { PageSubtitle } from '@/atoms/PageSubtitle/PageSubtitle';
-
-import { ONBOARDING_ROUTES } from '@/app/routes';
+import { useInviteCodeSignUp } from '@/hooks/useInviteCodeSignUp/useInviteCodeSignUp';
 import { useOnboardingStore } from '@/stores/onboarding/onboarding.store';
+import { ButtonsNavigation } from '../ButtonsNavigation/ButtonsNavigation';
+import { PageTitle } from '../Page/Page';
+
 export const PublicKeyHeader = () => {
   const t = useTranslations('onboarding.pubky');
   return (

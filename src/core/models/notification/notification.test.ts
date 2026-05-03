@@ -1,6 +1,6 @@
-import { describe, it, expect } from 'vitest';
+import { describe, expect, it } from 'vitest';
 import { NotificationModel } from './notification';
-import { NotificationType, FlatNotification } from './notification.types';
+import { FlatNotification, NotificationType } from './notification.types';
 
 // Factory for creating test notifications with business key as id
 const createNotification = (timestamp: number, type = NotificationType.Follow): FlatNotification => {

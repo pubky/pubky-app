@@ -1,10 +1,10 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { render, screen, cleanup } from '@testing-library/react';
+import { cleanup, render, screen } from '@testing-library/react';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { POST_MAX_CHARACTER_LENGTH } from '@/config/posts';
+import { useIsMobile } from '@/hooks/useIsMobile/useIsMobile';
+import { PostMainLayoutProvider } from '@/organisms/PostMain/PostMainLayout';
 import { QuickReply } from './QuickReply';
 import { QUICK_REPLY_PROMPTS_COUNT } from './QuickReply.constants';
-import { POST_MAX_CHARACTER_LENGTH } from '@/config/posts';
-import { PostMainLayoutProvider } from '@/organisms/PostMain/PostMainLayout';
-import { useIsMobile } from '@/hooks/useIsMobile/useIsMobile';
 
 // next-intl is mocked globally in src/config/test.ts
 // The global mock uses real translations from messages/en.json

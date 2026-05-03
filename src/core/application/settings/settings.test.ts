@@ -1,5 +1,4 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { SettingsApplication } from './settings';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { ServerErrorCode } from '@/libs/error/error.codes';
 import { Err } from '@/libs/error/error.factories';
 import { httpStatusCodeToError } from '@/libs/error/error.http';
@@ -14,6 +13,8 @@ import {
   defaultPrivacyPreferences,
   type SettingsState,
 } from '@/stores/settings/settings.types';
+import { SettingsApplication } from './settings';
+
 // Mock the HomeserverService
 vi.mock('@/services/homeserver/homeserver', () => ({
   HomeserverService: {

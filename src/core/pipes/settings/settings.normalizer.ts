@@ -9,6 +9,7 @@ import {
   type SettingsState,
   type SettingsStore,
 } from '@/stores/settings/settings.types';
+
 /**
  * Settings JSON structure for homeserver persistence.
  * This matches the SettingsState structure used in the store.

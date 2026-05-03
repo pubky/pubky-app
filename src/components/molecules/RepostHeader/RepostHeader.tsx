@@ -1,10 +1,10 @@
 'use client';
 
+import { Repeat } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 import { Container } from '@/atoms/Container/Container';
 import { Typography } from '@/atoms/Typography/Typography';
 
-import { Repeat } from 'lucide-react';
 /**
  * RepostHeader
  *

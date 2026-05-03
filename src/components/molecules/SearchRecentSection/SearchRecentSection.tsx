@@ -1,14 +1,5 @@
 'use client';
 
-import { useTranslations } from 'next-intl';
-import { Button } from '@/atoms/Button/Button';
-import { Container } from '@/atoms/Container/Container';
-import { Typography } from '@/atoms/Typography/Typography';
-import { SearchRecentItem } from '../SearchRecentItem/SearchRecentItem';
-import { RECENT_ITEM_TYPE } from '../SearchRecentItem/SearchRecentItem.constants';
-
-import type { SearchRecentSectionProps } from './SearchRecentSection.types';
-
 /**
  * SearchRecentSection
  *
@@ -18,6 +9,14 @@ import type { SearchRecentSectionProps } from './SearchRecentSection.types';
  * Note: Data is already limited by parent component.
  */
 import { X } from 'lucide-react';
+import { useTranslations } from 'next-intl';
+import { Button } from '@/atoms/Button/Button';
+import { Container } from '@/atoms/Container/Container';
+import { Typography } from '@/atoms/Typography/Typography';
+import { SearchRecentItem } from '../SearchRecentItem/SearchRecentItem';
+import { RECENT_ITEM_TYPE } from '../SearchRecentItem/SearchRecentItem.constants';
+import type { SearchRecentSectionProps } from './SearchRecentSection.types';
+
 export function SearchRecentSection({ users, tags, onUserClick, onTagClick, onClearAll }: SearchRecentSectionProps) {
   const t = useTranslations('search.recent');
   const hasItems = users.length > 0 || tags.length > 0;

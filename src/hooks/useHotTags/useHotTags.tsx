@@ -1,12 +1,13 @@
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
-import type { UseHotTagsParams, UseHotTagsResult, HotTag } from './useHotTags.types';
-import { DEFAULT_LIMIT } from './useHotTags.constants';
-import { Logger } from '@/libs/logger/logger';
-import { isAppError } from '@/libs/error/error.utils';
+import { useCallback, useEffect, useState } from 'react';
 import { HotController } from '@/controllers/hot/hot';
-import { UserStreamTimeframe, type NexusHotTag } from '@/services/nexus/nexus.types';
+import { isAppError } from '@/libs/error/error.utils';
+import { Logger } from '@/libs/logger/logger';
+import { type NexusHotTag, UserStreamTimeframe } from '@/services/nexus/nexus.types';
+import { DEFAULT_LIMIT } from './useHotTags.constants';
+import type { HotTag, UseHotTagsParams, UseHotTagsResult } from './useHotTags.types';
+
 /**
  * useHotTags
  *

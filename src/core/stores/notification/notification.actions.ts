@@ -1,11 +1,11 @@
-import {
-  NotificationStore,
-  NotificationActions,
-  notificationInitialState,
-  NotificationActionTypes,
-  NotificationState,
-} from './notification.types';
 import { ZustandSet } from '../stores.types';
+import {
+  NotificationActions,
+  NotificationActionTypes,
+  notificationInitialState,
+  NotificationState,
+  NotificationStore,
+} from './notification.types';
 
 // Actions/Mutators - State modification functions
 export const createNotificationActions = (set: ZustandSet<NotificationStore>): NotificationActions => ({

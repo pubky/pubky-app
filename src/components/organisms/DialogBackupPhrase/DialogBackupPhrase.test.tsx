@@ -1,8 +1,9 @@
-import { describe, it, expect, vi } from 'vitest';
-import { useState, useEffect } from 'react';
-import { render, fireEvent, screen, act } from '@testing-library/react';
-import { DialogBackupPhrase } from './DialogBackupPhrase';
+import { useEffect, useState } from 'react';
+import { act, fireEvent, render, screen } from '@testing-library/react';
+import { describe, expect, it, vi } from 'vitest';
 import { useRecoveryPhraseValidation } from '@/hooks/useRecoveryPhraseValidation/useRecoveryPhraseValidation';
+import { DialogBackupPhrase } from './DialogBackupPhrase';
+
 vi.mock('@/atoms/Dialog/Dialog', () => {
   return {
     Dialog: ({ children, onOpenChange }: { children: React.ReactNode; onOpenChange?: (open: boolean) => void }) => {

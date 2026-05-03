@@ -1,9 +1,10 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { renderHook, waitFor } from '@testing-library/react';
-import { useProfileConnections, CONNECTION_TYPE } from './useProfileConnections';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 import type { Pubky } from '@/models/models.types';
 import type { UserRelationshipsModelSchema } from '@/models/user/relationships/userRelationships.schema';
 import type { NexusUserCounts, NexusUserDetails } from '@/services/nexus/nexus.types';
+import { CONNECTION_TYPE, useProfileConnections } from './useProfileConnections';
+
 // Hoist mock functions before vi.mock
 const mockMocks = vi.hoisted(() => {
   const mockGetOrFetchStreamSlice = vi.fn();

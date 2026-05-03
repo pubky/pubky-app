@@ -1,5 +1,6 @@
 import { APP_ROUTES } from '@/app/routes';
 import { addTagToArray } from '@/stores/search/search.utils';
+
 /**
  * Builds search URL from tags array
  * Note: Tags should be normalized (lowercase, trimmed) before calling

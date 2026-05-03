@@ -1,8 +1,8 @@
 import React from 'react';
-import { describe, it, expect, vi } from 'vitest';
 import { render, screen } from '@testing-library/react';
-import { ProfilePageTaggedAs } from './ProfilePageTaggedAs';
+import { describe, expect, it, vi } from 'vitest';
 import type { TagWithAvatars } from '@/molecules/TaggedItem/TaggedItem.types';
+import { ProfilePageTaggedAs } from './ProfilePageTaggedAs';
 
 // Mock next/navigation
 vi.mock('next/navigation', () => ({

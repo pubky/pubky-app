@@ -1,15 +1,16 @@
-import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { render, screen, waitFor } from '@testing-library/react';
 import { useLiveQuery } from 'dexie-react-hooks';
-import { RepliesWithParent } from './RepliesWithParent';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { PostController } from '@/controllers/post/post';
 import { useInfiniteScroll } from '@/hooks/useInfiniteScroll/useInfiniteScroll';
 import { usePostNavigation } from '@/hooks/usePostNavigation/usePostNavigation';
 import { useStreamPagination } from '@/hooks/useStreamPagination/useStreamPagination';
-import { PostController } from '@/controllers/post/post';
 import type { Pubky } from '@/models/models.types';
 import type { PostDetailsModelSchema } from '@/models/post/details/postDetails.schema';
 import type { PostStreamId } from '@/models/stream/post/postStream.types';
 import { useAuthStore } from '@/stores/auth/auth.store';
+import { RepliesWithParent } from './RepliesWithParent';
+
 // Mock dependencies
 vi.mock('dexie-react-hooks');
 vi.mock('@/hooks/useStreamPagination/useStreamPagination', () => ({

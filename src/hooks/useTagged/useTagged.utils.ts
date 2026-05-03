@@ -1,8 +1,9 @@
-import { Logger } from '@/libs/logger/logger';
 import { TagKind } from '@/application/tag/tag.types';
 import { TagController } from '@/controllers/tag/tag';
+import { Logger } from '@/libs/logger/logger';
 import type { Pubky } from '@/models/models.types';
 import type { NexusTag } from '@/services/nexus/nexus.types';
+
 /**
  * Adds a user as tagger to a tag (optimistically)
  */

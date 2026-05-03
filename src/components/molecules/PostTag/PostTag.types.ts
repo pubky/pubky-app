@@ -1,4 +1,4 @@
-import type { MouseEvent, HTMLAttributes } from 'react';
+import type { HTMLAttributes, MouseEvent } from 'react';
 
 export interface PostTagProps extends Omit<HTMLAttributes<HTMLButtonElement>, 'onClick' | 'color'> {
   /** Tag label text */

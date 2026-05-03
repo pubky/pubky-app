@@ -1,13 +1,14 @@
 'use client';
 
-import { useState, useCallback } from 'react';
-import type { UseMuteUserResult } from './useMuteUser.types';
+import { useCallback, useState } from 'react';
+import { MuteController } from '@/controllers/mute/mute';
+import { isAppError } from '@/libs/error/error.utils';
 import { HttpMethod } from '@/libs/http/http.types';
 import { Logger } from '@/libs/logger/logger';
-import { isAppError } from '@/libs/error/error.utils';
-import { MuteController } from '@/controllers/mute/mute';
 import type { Pubky } from '@/models/models.types';
 import { useAuthStore } from '@/stores/auth/auth.store';
+import type { UseMuteUserResult } from './useMuteUser.types';
+
 /**
  * useMuteUser
  *

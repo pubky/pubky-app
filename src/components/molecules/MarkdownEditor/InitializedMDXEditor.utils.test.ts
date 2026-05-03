@@ -1,6 +1,6 @@
-import { describe, it, expect } from 'vitest';
-import { sanitizeCodeBlockLanguages, resolveCodeBlockLanguage } from './InitializedMDXEditor.utils';
+import { describe, expect, it } from 'vitest';
 import { CODE_BLOCK_LANGUAGES, LANGUAGE_ALIASES } from './InitializedMDXEditor.constants';
+import { resolveCodeBlockLanguage, sanitizeCodeBlockLanguages } from './InitializedMDXEditor.utils';
 
 describe('resolveCodeBlockLanguage', () => {
   it('returns the language as-is when directly supported', () => {

@@ -1,6 +1,9 @@
 'use client';
 
+import { Container } from '@/atoms/Container/Container';
+import { TIMELINE_FEED_VARIANT } from '@/config/feed';
 import { useIsMobile } from '@/hooks/useIsMobile/useIsMobile';
+import { useSearchTags } from '@/hooks/useSearchStreamId/useSearchStreamId';
 import { SearchEmptyState } from '@/molecules/SearchEmptyState/SearchEmptyState';
 import { SearchHeader } from '@/molecules/SearchHeader/SearchHeader';
 import { ContentLayout } from '@/organisms/ContentLayout/ContentLayout';
@@ -9,10 +12,6 @@ import { HomeFeedRightDrawer, HomeFeedRightSidebar } from '@/organisms/FeedRight
 import { HomeFeedDrawer, HomeFeedDrawerMobile, HomeFeedSidebar } from '@/organisms/HomeFeedSidebar/HomeFeedSidebar';
 import { SearchInput } from '@/organisms/SearchInput/SearchInput';
 import { TimelineFeed } from '@/organisms/Timeline/Feed/TimelineFeed/TimelineFeed';
-import { Container } from '@/atoms/Container/Container';
-
-import { TIMELINE_FEED_VARIANT } from '@/config/feed';
-import { useSearchTags } from '@/hooks/useSearchStreamId/useSearchStreamId';
 
 /**
  * Search Template

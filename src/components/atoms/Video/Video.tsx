@@ -1,8 +1,8 @@
 'use client';
 
 import { forwardRef, useEffect, useRef } from 'react';
-import type { VideoProps } from './Video.types';
 import { cn } from '@/libs/utils/utils';
+import type { VideoProps } from './Video.types';
 
 export const Video = forwardRef<HTMLVideoElement, VideoProps>(function Video(
   {

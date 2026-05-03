@@ -1,6 +1,5 @@
-import { Skeleton } from '@/atoms/Skeleton/Skeleton';
-
 import React from 'react';
+import { Skeleton } from '@/atoms/Skeleton/Skeleton';
 
 /**
  * Skeleton for QR code while loading invoice.

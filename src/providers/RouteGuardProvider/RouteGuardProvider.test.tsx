@@ -1,6 +1,6 @@
 import React from 'react';
-import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
-import { render, screen, act } from '@testing-library/react';
+import { act, render, screen } from '@testing-library/react';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { Logger } from '@/libs/logger/logger';
 import { RouteGuardProvider } from './RouteGuardProvider';
 

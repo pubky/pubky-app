@@ -2,7 +2,6 @@
 
 import { useTranslations } from 'next-intl';
 import { Toast, ToastAction, ToastDescription, ToastProvider, ToastTitle, ToastViewport } from '@/atoms/Toast/Toast';
-
 import { useToast } from './use-toast';
 
 export function Toaster() {

@@ -1,9 +1,10 @@
 'use client';
 
 import { useLiveQuery } from 'dexie-react-hooks';
-import type { UseUnreadPostsOptions, UseUnreadPostsResult } from './useUnreadPosts.types';
-import { Logger } from '@/libs/logger/logger';
 import { StreamPostsController } from '@/controllers/stream/posts/posts';
+import { Logger } from '@/libs/logger/logger';
+import type { UseUnreadPostsOptions, UseUnreadPostsResult } from './useUnreadPosts.types';
+
 /**
  * useUnreadPosts
  *

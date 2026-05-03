@@ -1,5 +1,6 @@
 import type { Pubky } from '@/models/models.types';
 import type { NexusTag } from '@/services/nexus/nexus.types';
+
 export class TagModel implements NexusTag {
   label: string;
   taggers: Pubky[];

@@ -3,6 +3,7 @@ import type { Pubky } from '@/models/models.types';
 import { bootstrapApi } from '@/services/nexus/bootstrap/bootstrap.api';
 import type { NexusBootstrapResponse } from '@/services/nexus/bootstrap/bootstrap.types';
 import { queryNexus } from '@/services/nexus/nexus.utils';
+
 /**
  * Nexus Bootstrap Service
  *

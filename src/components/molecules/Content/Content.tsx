@@ -2,7 +2,6 @@ import { ReactNode } from 'react';
 import Image, { ImageProps } from 'next/image';
 import { Card } from '@/atoms/Card/Card';
 import { Container } from '@/atoms/Container/Container';
-
 import { cn } from '@/libs/utils/utils';
 
 interface ContentCardProps {

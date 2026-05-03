@@ -1,6 +1,6 @@
-import { SignInStore, signInInitialState, SignInActionTypes } from './signIn.types';
-import type { ZustandSet } from '../stores.types';
 import type { AppError } from '@/libs/error/error';
+import type { ZustandSet } from '../stores.types';
+import { SignInActionTypes, signInInitialState, SignInStore } from './signIn.types';
 
 export const createSignInActions = (set: ZustandSet<SignInStore>) => ({
   setAuthUrlResolved: (value: boolean) =>

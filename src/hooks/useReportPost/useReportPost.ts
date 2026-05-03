@@ -1,18 +1,18 @@
 'use client';
 
-import { useCurrentUserProfile } from '@/hooks/useCurrentUserProfile/useCurrentUserProfile';
-import { useState, useCallback } from 'react';
+import { useCallback, useState } from 'react';
 import { useTranslations } from 'next-intl';
-import { showErrorToast as showErrorToastMessage } from '@/molecules/Toaster/showErrorToast';
-
 import { POST_ROUTES } from '@/app/routes';
-import { REPORT_POST_STEPS, REPORT_API_ENDPOINT } from './useReportPost.constants';
+import { useCurrentUserProfile } from '@/hooks/useCurrentUserProfile/useCurrentUserProfile';
+import { postJson } from '@/libs/api/client-request';
+import { Logger } from '@/libs/logger/logger';
+import { parseCompositeId } from '@/models/models.utils';
+import { showErrorToast as showErrorToastMessage } from '@/molecules/Toaster/showErrorToast';
+import type { ReportIssueType } from '@/pipes/report/report.types';
+import { REPORT_API_ENDPOINT, REPORT_POST_STEPS } from './useReportPost.constants';
 import type { ReportPostStep } from './useReportPost.types';
 import type { UseReportPostReturn } from './useReportPost.types';
-import { Logger } from '@/libs/logger/logger';
-import { postJson } from '@/libs/api/client-request';
-import { parseCompositeId } from '@/models/models.utils';
-import type { ReportIssueType } from '@/pipes/report/report.types';
+
 /**
  * Hook to handle post reporting to Chatwoot.
  *

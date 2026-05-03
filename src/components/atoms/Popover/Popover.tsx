@@ -1,11 +1,11 @@
 'use client';
 
-import { useIsTouchDevice } from '@/hooks/useIsTouchDevice/useIsTouchDevice';
+import { createContext, useContext, useEffect, useRef, useState } from 'react';
 import { Popover as PopoverPrimitive } from 'radix-ui';
-import { useState, useRef, useEffect, createContext, useContext } from 'react';
+import { useIsTouchDevice } from '@/hooks/useIsTouchDevice/useIsTouchDevice';
+import { cn } from '@/libs/utils/utils';
 import { DEFAULT_HOVER_CLOSE_DELAY } from './Popover.constants';
 import type { PopoverContextType, PopoverProps } from './Popover.types';
-import { cn } from '@/libs/utils/utils';
 
 const PopoverContext = createContext<PopoverContextType>({});
 
@@ -209,4 +209,4 @@ function PopoverAnchor({ ...props }: React.ComponentProps<typeof PopoverPrimitiv
   return <PopoverPrimitive.Anchor data-slot="popover-anchor" {...props} />;
 }
 
-export { Popover, PopoverTrigger, PopoverContent, PopoverAnchor };
+export { Popover, PopoverAnchor, PopoverContent, PopoverTrigger };

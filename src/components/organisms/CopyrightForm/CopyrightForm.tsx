@@ -1,20 +1,19 @@
 'use client';
 
-import { useCopyrightForm } from '@/hooks/useCopyrightForm/useCopyrightForm';
+import { Loader2 } from 'lucide-react';
+import { useTranslations } from 'next-intl';
 import { Controller } from 'react-hook-form';
 import { Button } from '@/atoms/Button/Button';
 import { Card } from '@/atoms/Card/Card';
 import { Container } from '@/atoms/Container/Container';
 import { RadioGroup, RadioGroupItem } from '@/atoms/RadioGroup/RadioGroup';
 import { Typography } from '@/atoms/Typography/Typography';
-import { ControlledInputField } from '@/molecules/ControlledInputField/ControlledInputField';
-import { ControlledTextareaField } from '@/molecules/ControlledTextareaField/ControlledTextareaField';
-
+import { useCopyrightForm } from '@/hooks/useCopyrightForm/useCopyrightForm';
 import { COPYRIGHT_FORM_FIELDS, COPYRIGHT_ROLES } from '@/hooks/useCopyrightForm/useCopyrightForm.constants';
 import type { CopyrightFormData } from '@/hooks/useCopyrightForm/useCopyrightForm.types';
-import { useTranslations } from 'next-intl';
-import { Loader2 } from 'lucide-react';
 import { formatUSDate } from '@/libs/utils/utils';
+import { ControlledInputField } from '@/molecules/ControlledInputField/ControlledInputField';
+import { ControlledTextareaField } from '@/molecules/ControlledTextareaField/ControlledTextareaField';
 
 export function CopyrightForm() {
   const t = useTranslations('forms.copyright');

@@ -1,10 +1,10 @@
-import { describe, it, expect, beforeEach, vi, afterEach } from 'vitest';
-import { render, screen, waitFor } from '@testing-library/react';
 import { useRouter } from 'next/navigation';
+import { render, screen, waitFor } from '@testing-library/react';
 import { useLiveQuery } from 'dexie-react-hooks';
-import { TimelinePosts } from './Posts';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { useInfiniteScroll } from '@/hooks/useInfiniteScroll/useInfiniteScroll';
 import { usePostNavigation } from '@/hooks/usePostNavigation/usePostNavigation';
+import { TimelinePosts } from './Posts';
 
 // Mock dependencies
 vi.mock('next/navigation');

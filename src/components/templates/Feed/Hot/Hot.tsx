@@ -1,12 +1,15 @@
 'use client';
 
-import { useIsMobile } from '@/hooks/useIsMobile/useIsMobile';
-import { useLayoutReset } from '@/hooks/useLayoutReset/useLayoutReset';
 import { useState } from 'react';
 import { useTranslations } from 'next-intl';
 import { Container } from '@/atoms/Container/Container';
 import { Heading } from '@/atoms/Heading/Heading';
+import { TIMELINE_FEED_VARIANT } from '@/config/feed';
+import { useIsMobile } from '@/hooks/useIsMobile/useIsMobile';
+import { useLayoutReset } from '@/hooks/useLayoutReset/useLayoutReset';
+import { cn } from '@/libs/utils/utils';
 import { HotMobileMenu } from '@/molecules/HotMobileMenu/HotMobileMenu';
+import { HotSection } from '@/molecules/HotMobileMenu/HotMobileMenu.types';
 import { ContentLayout } from '@/organisms/ContentLayout/ContentLayout';
 import { HotFeedRightDrawer, HotFeedRightSidebar } from '@/organisms/FeedRightSidebar/FeedRightSidebar';
 import { HotActiveUsers } from '@/organisms/HotActiveUsers/HotActiveUsers';
@@ -14,10 +17,6 @@ import { HotFeedDrawer, HotFeedSidebar } from '@/organisms/HotFeedFilters/HotFee
 import { HotTagsCardsSection } from '@/organisms/HotTagsCardsSection/HotTagsCardsSection';
 import { HotTagsOverview } from '@/organisms/HotTagsOverview/HotTagsOverview';
 import { TimelineFeed } from '@/organisms/Timeline/Feed/TimelineFeed/TimelineFeed';
-
-import { TIMELINE_FEED_VARIANT } from '@/config/feed';
-import { HotSection } from '@/molecules/HotMobileMenu/HotMobileMenu.types';
-import { cn } from '@/libs/utils/utils';
 
 /**
  * Hot Template

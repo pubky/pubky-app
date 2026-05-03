@@ -7,6 +7,7 @@ import { getBusinessKey } from '@/models/notification/notification.helpers';
 import type { FlatNotification } from '@/models/notification/notification.types';
 import { PubkySpecsSingleton } from '@/pipes/pipes.builder';
 import type { NexusNotification } from '@/services/nexus/nexus.types';
+
 export class NotificationNormalizer {
   private constructor() {}
 

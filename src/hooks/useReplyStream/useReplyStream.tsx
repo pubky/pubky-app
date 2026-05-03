@@ -2,16 +2,17 @@
 
 import { useEffect, useRef, useState } from 'react';
 import { useLiveQuery } from 'dexie-react-hooks';
+import { MuteFilter } from '@/application/stream/posts/muting/mute-filter';
 import { NEXUS_POSTS_PER_PAGE } from '@/config/nexus';
+import { StreamPostsController } from '@/controllers/stream/posts/posts';
 import { useMutedUsers } from '@/hooks/useMutedUsers/useMutedUsers';
 import { usePostCounts } from '@/hooks/usePostCounts/usePostCounts';
-import { MAX_EXPAND_PAGES } from './useReplyStream.constants';
-import type { UseReplyStreamOptions, UseReplyStreamResult } from './useReplyStream.types';
 import { Logger } from '@/libs/logger/logger';
-import { MuteFilter } from '@/application/stream/posts/muting/mute-filter';
-import { StreamPostsController } from '@/controllers/stream/posts/posts';
 import { buildPostReplyStreamId } from '@/models/stream/post/postStream.types';
 import { StreamOrder } from '@/services/nexus/stream/posts/postStream.types';
+import { MAX_EXPAND_PAGES } from './useReplyStream.constants';
+import type { UseReplyStreamOptions, UseReplyStreamResult } from './useReplyStream.types';
+
 /**
  * Shared base hook for fetching and displaying reply streams.
  *

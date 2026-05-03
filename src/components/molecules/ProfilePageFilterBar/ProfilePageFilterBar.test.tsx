@@ -1,9 +1,9 @@
 import React from 'react';
-import { describe, it, expect } from 'vitest';
 import { render, screen } from '@testing-library/react';
-import { ProfilePageFilterBar, getDefaultItems } from './ProfilePageFilterBar';
+import { describe, expect, it } from 'vitest';
 import { PROFILE_PAGE_TYPES } from '@/app/profile/types';
 import type { ProfileStats } from '@/hooks/useProfileStats/useProfileStats.types';
+import { getDefaultItems, ProfilePageFilterBar } from './ProfilePageFilterBar';
 
 const mockStats: ProfileStats = {
   notifications: 2,

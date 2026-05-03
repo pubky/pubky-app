@@ -1,22 +1,22 @@
 'use client';
 
-import { useEffect, useState, type Dispatch, type SetStateAction } from 'react';
+import { type Dispatch, type SetStateAction, useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useTranslations } from 'next-intl';
+import { ROOT_ROUTES } from '@/app/routes';
 import { Container } from '@/atoms/Container/Container';
 import { PageHeader } from '@/atoms/PageHeader/PageHeader';
 import { PageSubtitle } from '@/atoms/PageSubtitle/PageSubtitle';
 import { Spinner } from '@/atoms/Spinner/Spinner';
+import { AuthController } from '@/controllers/auth/auth';
+import { Logger } from '@/libs/logger/logger';
 import { ButtonsNavigation } from '@/molecules/ButtonsNavigation/ButtonsNavigation';
 import { ContentCard } from '@/molecules/Content/Content';
 import { LogoutContent, LogoutNavigation } from '@/molecules/Logout/Logout';
 import { PageTitle } from '@/molecules/Page/Page';
-
-import { ROOT_ROUTES } from '@/app/routes';
-import { Logger } from '@/libs/logger/logger';
-import { AuthController } from '@/controllers/auth/auth';
 import { useAuthStore } from '@/stores/auth/auth.store';
 import { useOnboardingStore } from '@/stores/onboarding/onboarding.store';
+
 type LogoutViewState = 'idle' | 'loading' | 'success' | 'error';
 
 async function handleRouteLogout(setViewState: Dispatch<SetStateAction<LogoutViewState>>) {

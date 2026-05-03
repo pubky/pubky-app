@@ -1,5 +1,6 @@
 import type { Pubky } from '@/models/models.types';
 import type { RecentTagSearch, RecentUserSearch } from '@/stores/search/search.types';
+
 /**
  * Recent user search item data
  * Matches RecentUserSearch from search store

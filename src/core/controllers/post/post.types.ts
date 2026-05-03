@@ -1,6 +1,7 @@
 import type { TTagEventParams } from '@/controllers/tag/tag.types';
 import type { Pubky } from '@/models/models.types';
 import type { TCompositeId } from '@/services/nexus/post/post.types';
+
 export interface TCreatePostParams {
   authorId: Pubky;
   content: string;

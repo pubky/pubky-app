@@ -1,6 +1,5 @@
 import { ReactNode } from 'react';
 import { Heading } from '@/atoms/Heading/Heading';
-
 import { cn } from '@/libs/utils/utils';
 
 interface PageContainerProps {

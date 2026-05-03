@@ -1,4 +1,5 @@
 import type { Pubky } from '@/models/models.types';
+
 export type TFileBody = {
   uris: Pubky[];
 };

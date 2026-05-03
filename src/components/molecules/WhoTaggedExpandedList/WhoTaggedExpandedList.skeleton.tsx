@@ -1,7 +1,6 @@
 'use client';
 import { Container } from '@/atoms/Container/Container';
 import { Skeleton } from '@/atoms/Skeleton/Skeleton';
-
 import { TAGS_PER_PAGE } from '@/hooks/usePostTags/usePostTags.constants';
 
 export function WhoTaggedExpandedListSkeleton() {

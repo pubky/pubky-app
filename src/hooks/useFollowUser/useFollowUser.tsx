@@ -1,13 +1,14 @@
 'use client';
 
-import { useState, useCallback } from 'react';
-import type { UseFollowUserResult } from './useFollowUser.types';
+import { useCallback, useState } from 'react';
+import { UserController } from '@/controllers/user/user';
+import { isAppError } from '@/libs/error/error.utils';
 import { HttpMethod } from '@/libs/http/http.types';
 import { Logger } from '@/libs/logger/logger';
-import { isAppError } from '@/libs/error/error.utils';
-import { UserController } from '@/controllers/user/user';
 import type { Pubky } from '@/models/models.types';
 import { useAuthStore } from '@/stores/auth/auth.store';
+import type { UseFollowUserResult } from './useFollowUser.types';
+
 /**
  * useFollowUser
  *

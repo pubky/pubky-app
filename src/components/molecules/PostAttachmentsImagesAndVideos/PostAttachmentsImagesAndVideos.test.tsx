@@ -1,8 +1,9 @@
-import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { render, screen, fireEvent } from '@testing-library/react';
 import { useEffect } from 'react';
-import { PostAttachmentsImagesAndVideos } from './PostAttachmentsImagesAndVideos';
+import { fireEvent, render, screen } from '@testing-library/react';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { AttachmentConstructed } from '@/organisms/PostAttachments/PostAttachments.types';
+import { PostAttachmentsImagesAndVideos } from './PostAttachmentsImagesAndVideos';
+
 vi.mock('@/atoms/Dialog/Dialog', () => {
   return {
     Dialog: ({

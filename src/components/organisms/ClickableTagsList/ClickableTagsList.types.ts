@@ -1,7 +1,8 @@
 import type { MouseEvent } from 'react';
-import type { TagWithAvatars } from '@/molecules/TaggedItem/TaggedItem.types';
 import type { TagKind } from '@/application/tag/tag.types';
+import type { TagWithAvatars } from '@/molecules/TaggedItem/TaggedItem.types';
 import type { NexusTag } from '@/services/nexus/nexus.types';
+
 export interface ClickableTagsListProps {
   /** The ID of the tagged entity (userId or postId) */
   taggedId: string;

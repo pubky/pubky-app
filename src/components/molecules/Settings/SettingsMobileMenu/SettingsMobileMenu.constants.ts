@@ -1,6 +1,7 @@
+import { Bell, CircleHelp, Globe, MegaphoneOff, Shield, UserRound } from 'lucide-react';
 import { SETTINGS_ROUTES } from '@/app/routes';
 import type { SettingsMenuItem } from '../SettingsMenu/SettingsMenu.types';
-import { UserRound, Bell, Shield, MegaphoneOff, Globe, CircleHelp } from 'lucide-react';
+
 export const SETTINGS_MOBILE_ITEMS: SettingsMenuItem[] = [
   {
     icon: UserRound,

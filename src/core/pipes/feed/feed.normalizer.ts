@@ -1,11 +1,12 @@
 import { FeedResult } from 'pubky-app-specs';
+import type { TFeedCreateParams } from '@/controllers/feed/feed.types';
 import { ValidationErrorCode } from '@/libs/error/error.codes';
 import { Err } from '@/libs/error/error.factories';
 import { ErrorService } from '@/libs/error/error.types';
-import type { TFeedCreateParams } from '@/controllers/feed/feed.types';
 import { layoutToString, postKindToString, reachToString, sortToString } from '@/models/feed/feed.helpers';
 import type { Pubky } from '@/models/models.types';
 import { PubkySpecsSingleton } from '@/pipes/pipes.builder';
+
 export type TFeedNormalizerInput = {
   params: TFeedCreateParams;
   userId: Pubky;

@@ -1,7 +1,7 @@
-import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { render, screen, fireEvent, act } from '@testing-library/react';
-import { Popover, PopoverTrigger, PopoverContent } from './Popover';
+import { act, fireEvent, render, screen } from '@testing-library/react';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { useIsTouchDevice } from '@/hooks/useIsTouchDevice/useIsTouchDevice';
+import { Popover, PopoverContent, PopoverTrigger } from './Popover';
 
 vi.mock('@/hooks/useIsTouchDevice/useIsTouchDevice', () => ({
   useIsTouchDevice: vi.fn(() => false),

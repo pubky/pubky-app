@@ -1,4 +1,14 @@
 'use client';
+// ============================================================================
+// Shared Components
+// ============================================================================
+/**
+ * HomeFeedContent
+ *
+ * Shared content for Home feed sidebars - WhoToFollow, ActiveUsers, HotTags, FeedbackCard.
+ * Used by both HomeFeedRightSidebar (desktop) and HomeFeedRightDrawer (tablet).
+ */
+import { Pencil, UsersRound } from 'lucide-react';
 import { Container } from '@/atoms/Container/Container';
 import { FeedSection } from '@/molecules/FeedSection/FeedSection';
 import { ActiveUsers } from '../ActiveUsers/ActiveUsers';
@@ -6,17 +16,6 @@ import { FeedbackCard } from '../FeedbackCard/FeedbackCard';
 import { HotTags } from '../HotTags/HotTags';
 import { WhoToFollowSidebar } from '../WhoToFollowSidebar/WhoToFollowSidebar';
 
-// ============================================================================
-// Shared Components
-// ============================================================================
-
-/**
- * HomeFeedContent
- *
- * Shared content for Home feed sidebars - WhoToFollow, ActiveUsers, HotTags, FeedbackCard.
- * Used by both HomeFeedRightSidebar (desktop) and HomeFeedRightDrawer (tablet).
- */
-import { UsersRound, Pencil } from 'lucide-react';
 function HomeFeedContent() {
   return (
     <>

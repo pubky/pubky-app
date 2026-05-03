@@ -1,17 +1,17 @@
-import { AppError, type AppErrorParams } from './error';
-import { ErrorCategory, ErrorService } from './error.types';
 import { Logger } from '../logger/logger';
+import { AppError, type AppErrorParams } from './error';
 import type {
+  AuthErrorCode,
+  ClientErrorCode,
+  DatabaseErrorCode,
   ErrorCodeByCategory,
   NetworkErrorCode,
-  TimeoutErrorCode,
-  ServerErrorCode,
-  ClientErrorCode,
-  AuthErrorCode,
   RateLimitErrorCode,
+  ServerErrorCode,
+  TimeoutErrorCode,
   ValidationErrorCode,
-  DatabaseErrorCode,
 } from './error.codes';
+import { ErrorCategory, ErrorService } from './error.types';
 
 /**
  * Common parameters for all error factories.

@@ -1,8 +1,7 @@
 import { useEffect, useRef } from 'react';
-import { Container } from '@/atoms/Container/Container';
-
-import type { EmbedData, EmbedProvider } from '../Provider.types';
 import { Tweet } from 'react-tweet';
+import { Container } from '@/atoms/Container/Container';
+import type { EmbedData, EmbedProvider } from '../Provider.types';
 
 /**
  * Extract Twitter/X post ID from URL

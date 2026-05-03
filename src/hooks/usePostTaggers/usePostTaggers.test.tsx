@@ -1,7 +1,8 @@
-import { renderHook, act, waitFor } from '@testing-library/react';
-import { vi, describe, it, expect, beforeEach } from 'vitest';
-import { usePostTaggers } from './usePostTaggers';
+import { act, renderHook, waitFor } from '@testing-library/react';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { PostController } from '@/controllers/post/post';
+import { usePostTaggers } from './usePostTaggers';
+
 vi.mock('@/controllers/post/post', () => ({
   PostController: {
     fetchTaggers: vi.fn(),

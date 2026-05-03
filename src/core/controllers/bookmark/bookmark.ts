@@ -1,9 +1,10 @@
 import { postUriBuilder } from 'pubky-app-specs';
-import { HttpMethod } from '@/libs/http/http.types';
 import { BookmarkApplication } from '@/application/bookmark/bookmark';
 import type { TBookmarkEventParams } from '@/controllers/bookmark/bookmark.types';
+import { HttpMethod } from '@/libs/http/http.types';
 import { parseCompositeId } from '@/models/models.utils';
 import { BookmarkNormalizer } from '@/pipes/bookmark/bookmark.normalizer';
+
 export class BookmarkController {
   private constructor() {}
 

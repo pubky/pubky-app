@@ -1,6 +1,5 @@
 import { Container } from '@/atoms/Container/Container';
 import { Skeleton } from '@/atoms/Skeleton/Skeleton';
-
 import { cn } from '@/libs/utils/utils';
 
 const ACTION_BUTTON_COUNT = 5;

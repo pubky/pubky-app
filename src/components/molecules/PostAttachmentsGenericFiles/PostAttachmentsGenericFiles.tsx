@@ -1,10 +1,10 @@
+import { Download, FileText } from 'lucide-react';
 import { Button } from '@/atoms/Button/Button';
 import { Container } from '@/atoms/Container/Container';
 import { Link } from '@/atoms/Link/Link';
 import { Typography } from '@/atoms/Typography/Typography';
-
 import type { AttachmentConstructed } from '@/organisms/PostAttachments/PostAttachments.types';
-import { FileText, Download } from 'lucide-react';
+
 type PostAttachmentsGenericFilesProps = {
   genericFiles: AttachmentConstructed[];
 };

@@ -1,9 +1,8 @@
 'use client';
 import { Container } from '@/atoms/Container/Container';
 import { Typography } from '@/atoms/Typography/Typography';
-
-import type { TagSuggestionsDropdownProps } from './TagSuggestionsDropdown.types';
 import { cn } from '@/libs/utils/utils';
+import type { TagSuggestionsDropdownProps } from './TagSuggestionsDropdown.types';
 
 export function TagSuggestionsDropdown({
   suggestions,

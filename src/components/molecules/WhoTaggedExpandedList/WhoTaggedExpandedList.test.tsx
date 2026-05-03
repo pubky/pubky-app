@@ -1,7 +1,7 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { render, screen, fireEvent } from '@testing-library/react';
-import { WhoTaggedExpandedList } from './WhoTaggedExpandedList';
+import { fireEvent, render, screen } from '@testing-library/react';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 import type { TaggerWithAvatar } from '@/molecules/TaggedItem/TaggedItem.types';
+import { WhoTaggedExpandedList } from './WhoTaggedExpandedList';
 
 // Mock next/navigation
 const mockPush = vi.fn();

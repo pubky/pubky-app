@@ -1,11 +1,12 @@
-import { describe, it, expect, vi, beforeEach, beforeAll, afterAll } from 'vitest';
-import { render, screen, fireEvent, waitFor, act } from '@testing-library/react';
 import React from 'react';
-import { ScanContent, ScanFooter, ScanHeader, ScanNavigation } from './Scan';
-import { PUBKY_CORE_URL } from '@/config/externalLinks';
+import { act, fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { afterAll, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
 import { ONBOARDING_ROUTES } from '@/app/routes';
+import { PUBKY_CORE_URL } from '@/config/externalLinks';
 import { useMobileAuth } from '@/hooks/useMobileAuth/useMobileAuth';
 import { asOpaque } from '@/test-utils/type-assertions';
+import { ScanContent, ScanFooter, ScanHeader, ScanNavigation } from './Scan';
+
 vi.mock('@/atoms/Dialog/Dialog', () => {
   return {
     Dialog: ({ children, open }: { children: React.ReactNode; open?: boolean }) =>

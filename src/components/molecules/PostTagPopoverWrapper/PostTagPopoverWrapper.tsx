@@ -1,15 +1,14 @@
 'use client';
 
-import { useIsMobile } from '@/hooks/useIsMobile/useIsMobile';
-import { usePostTaggers } from '@/hooks/usePostTaggers/usePostTaggers';
 import { useEffect, useMemo, useState } from 'react';
 import { Button } from '@/atoms/Button/Button';
 import { Container } from '@/atoms/Container/Container';
 import { Popover, PopoverContent, PopoverTrigger } from '@/atoms/Popover/Popover';
+import { useIsMobile } from '@/hooks/useIsMobile/useIsMobile';
+import { usePostTaggers } from '@/hooks/usePostTaggers/usePostTaggers';
 import { WhoTaggedExpandedList } from '../WhoTaggedExpandedList/WhoTaggedExpandedList';
-
+import { MAX_VISIBLE_AVATARS, POPOVER_HOVER_DELAY } from './PostTagPopoverWrapper.constants';
 import type { PostTagPopoverWrapperProps } from './PostTagPopoverWrapper.types';
-import { POPOVER_HOVER_DELAY, MAX_VISIBLE_AVATARS } from './PostTagPopoverWrapper.constants';
 import { TaggerAvatar } from './TaggerAvatar/TaggerAvatar';
 
 /**

@@ -1,9 +1,10 @@
 import { renderHook, waitFor } from '@testing-library/react';
-import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { asInvalid } from '@/test-utils/type-assertions';
-import { useUserDetailsFromIds } from './useUserDetailsFromIds';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { Pubky } from '@/models/models.types';
 import type { NexusUserDetails } from '@/services/nexus/nexus.types';
+import { asInvalid } from '@/test-utils/type-assertions';
+import { useUserDetailsFromIds } from './useUserDetailsFromIds';
+
 // Hoist mock data
 const { mockUserDetailsMap, setMockUserDetailsMap, mockGetManyDetails, mockGetOrFetchDetails, mockGetAvatarUrl } =
   vi.hoisted(() => {

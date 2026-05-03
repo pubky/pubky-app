@@ -1,7 +1,6 @@
-import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { render, screen } from '@testing-library/react';
 import type { ReactNode } from 'react';
-
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { Install } from './Install';
 
 const mockSearchParamsGet = vi.fn<(key: string) => string | null>(() => null);
