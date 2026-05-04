@@ -70,7 +70,7 @@ exports[`RepliesWithParent > Snapshots > should match snapshot with replies (no 
         class="rounded-md outline-none focus-visible:ring-2 focus-visible:ring-ring"
         data-testid="container"
         role="article"
-        tabindex="-1"
+        tabindex="0"
       >
         <div
           class="flex flex-col"
@@ -147,7 +147,7 @@ exports[`RepliesWithParent > Snapshots > should match snapshot with replies and 
         class="rounded-md outline-none focus-visible:ring-2 focus-visible:ring-ring"
         data-testid="container"
         role="article"
-        tabindex="-1"
+        tabindex="0"
       >
         <div
           class="flex flex-col"

@@ -27,7 +27,7 @@ interface ThreadTreeProps {
 export function ThreadTree({ postId, showQuickReply = true }: ThreadTreeProps) {
   const { replyIds, hasMore, totalCount, isExpandingAll, expandAll } = useThreadReplies(postId);
   const { handlePostKeyDown } = usePostNavigation();
-  const { focusedIndex, setCardRef, onListKeyDown, onCardFocus } = usePostListKeyboard(replyIds.length);
+  const { setCardRef, onListKeyDown, onCardFocus } = usePostListKeyboard(replyIds.length);
 
   if (replyIds.length === 0 && !hasMore) {
     // No replies -- only show quick reply if enabled
@@ -55,7 +55,7 @@ export function ThreadTree({ postId, showQuickReply = true }: ThreadTreeProps) {
             role="article"
             aria-posinset={index + 1}
             aria-setsize={replyIds.length}
-            tabIndex={focusedIndex === index ? 0 : -1}
+            tabIndex={0}
             onFocus={() => onCardFocus(index)}
             onKeyDown={(e) => handlePostKeyDown(replyId, e)}
             className="rounded-md outline-none focus-visible:ring-2 focus-visible:ring-ring"

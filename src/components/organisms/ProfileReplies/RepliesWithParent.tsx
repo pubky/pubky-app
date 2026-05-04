@@ -40,7 +40,7 @@ export function RepliesWithParent({ streamId }: RepliesWithParentProps) {
   });
 
   const { handlePostKeyDown } = usePostNavigation();
-  const { focusedIndex, setCardRef, onListKeyDown, onCardFocus } = usePostListKeyboard(postIds.length);
+  const { setCardRef, onListKeyDown, onCardFocus } = usePostListKeyboard(postIds.length);
 
   return (
     <TimelineStateWrapper loading={loading} error={error} hasItems={postIds.length > 0}>
@@ -54,7 +54,7 @@ export function RepliesWithParent({ streamId }: RepliesWithParentProps) {
               role="article"
               aria-posinset={index + 1}
               aria-setsize={postIds.length}
-              tabIndex={focusedIndex === index ? 0 : -1}
+              tabIndex={0}
               onFocus={() => onCardFocus(index)}
               onKeyDown={(e) => handlePostKeyDown(postId, e)}
               className="rounded-md outline-none focus-visible:ring-2 focus-visible:ring-ring"
