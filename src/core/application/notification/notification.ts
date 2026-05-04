@@ -22,26 +22,31 @@ import { LocalStreamPostsService } from '@/services/local/stream/posts/posts';
 import { LocalStreamUsersService } from '@/services/local/stream/users/users';
 import type { NexusNotification } from '@/services/nexus/nexus.types';
 import { NexusUserService } from '@/services/nexus/user/user';
+
+const MAX_FETCH_ROUNDS = 10;
+
 export class NotificationApplication {
   private constructor() {} // Prevent instantiation
 
   /**
    * Retrieves notifications from the nexus service and persists them locally,
-   * then returns the count of unread notifications and the newest notification timestamp.
+   * then returns the preference-filtered unread count and the newest notification timestamp.
    *
    * @param params.userId - The user ID to fetch notifications for
    * @param params.lastPolledTimestamp - Polling cursor passed as `end` to Nexus (advances after each poll)
    * @param params.lastRead - Read/unread boundary used to count unread notifications
-   * @returns Promise resolving to unread count and the newest notification timestamp
+   * @param params.allowedTypes - Notification types to include in the unread count
+   * @returns Promise resolving to filtered unread count and the newest notification timestamp
    */
   static async fetchNotifications({
     userId,
     lastPolledTimestamp,
     lastRead,
+    allowedTypes,
   }: TNotificationApplicationNotificationsParams): Promise<TFetchNotificationsResult> {
     const notifications = await NexusUserService.notifications({ user_id: userId, end: lastPolledTimestamp });
     const flatNotifications = await this.fetchMissingEntities({ notifications, viewerId: userId });
-    return this.persistAndSummarize({ notifications, lastRead, flatNotifications });
+    return this.persistAndSummarize({ notifications, lastRead, allowedTypes, flatNotifications });
   }
   /**
    * Updates the lastRead timestamp on the homeserver to mark all notifications as read.
@@ -65,24 +70,122 @@ export class NotificationApplication {
   }
 
   /**
+   * Counts unread notifications filtered by allowed types.
+   * Used by Controllers to compute the preference-filtered badge count.
+   *
+   * @param lastRead - Timestamp of the last read notification
+   * @param allowedTypes - Notification types to include in the count
+   * @returns Promise resolving to the filtered unread count
+   */
+  static async countFilteredUnreadSince(lastRead: number, allowedTypes: NotificationType[]): Promise<number> {
+    return await LocalNotificationService.countFilteredUnreadSince(lastRead, allowedTypes);
+  }
+
+  /**
    * Retrieves notifications from cache if available, otherwise fetches from Nexus.
    * Follows a cache-first pattern similar to stream posts.
    *
-   * Flow:
+   * When `allowedTypes` is provided (e.g., preference filtering), continues fetching
+   * successive pages and accumulates matching notifications until reaching `limit`
+   * or until there are no more pages, capped at MAX_FETCH_ROUNDS.
+   * This handles the case where filtering removes all items from early pages —
+   * without looping, the UI would show "no notifications" even though later pages
+   * may contain matching items.
+   * Follows the same pattern as PostStreamQueue.collect().
+   *
+   * Flow (per page):
    * 1. Query cache for notifications older than the given timestamp
    * 2. If cache has enough items, return immediately (full cache hit)
    * 3. If cache has partial items, fetch remaining from Nexus (partial cache hit)
    * 4. If cache is empty, fetch all from Nexus (cache miss)
    * 5. Persist fetched notifications and return combined result
    *
-   * @param params - Parameters containing userId, olderThan timestamp, and limit
+   * @param params - Parameters containing userId, olderThan timestamp, limit, and optional allowedTypes
    * @returns Promise resolving to notifications and next olderThan for pagination
    */
   static async getOrFetchNotifications({
     userId,
     olderThan,
     limit,
+    allowedTypes,
   }: TGetOrFetchNotificationsParams): Promise<TGetOrFetchNotificationsResponse> {
+    if (allowedTypes === undefined) {
+      // No preference constraints are applied (e.g., all notification settings are enabled),
+      // so use the normal single-page fetch path.
+      return this.getOrFetchPage({ userId, olderThan, limit });
+    }
+    if (allowedTypes.length === 0) {
+      // All notification types are disabled by user preferences, so skip pagination calls.
+      return { flatNotifications: [], olderThan: undefined };
+    }
+    // Preference filtering - fetch filtered notifications
+    return this.collectPages({ userId, olderThan, limit, allowedTypes });
+  }
+
+  /**
+   * Get or fetch pages until `limit` filtered notifications are collected or no more pages exist.
+   * Capped at MAX_FETCH_ROUNDS to prevent runaway requests.
+   */
+  private static async collectPages({
+    userId,
+    olderThan,
+    limit,
+    allowedTypes,
+  }: {
+    userId: Pubky;
+    olderThan: number;
+    limit: number;
+    allowedTypes: NotificationType[];
+  }): Promise<TGetOrFetchNotificationsResponse> {
+    let cursor: number | undefined = olderThan;
+    const collected: FlatNotification[] = [];
+
+    // TODO(notification): #1746 - Discuss with Product/UI/UX. This can return no visible
+    // notifications while still allowing "load more" when many pages are filtered out.
+    // Example: user only enables "New Friend", but the next 10 pages (300 items) have none.
+    // Decide what users should see in that case.
+    for (let attempt = 0; attempt < MAX_FETCH_ROUNDS && collected.length < limit; attempt++) {
+      const remaining = limit - collected.length;
+      const response = await this.getOrFetchPage({
+        userId,
+        olderThan: cursor ?? Infinity,
+        limit,
+      });
+
+      const filtered = this.filterByAllowedTypes(response.flatNotifications, allowedTypes);
+
+      if (filtered.length > 0) {
+        const taken = filtered.slice(0, remaining);
+        collected.push(...taken);
+
+        // When we slice (more matches than remaining), set cursor from the last
+        // included item so skipped matches on this page are reachable on "load more".
+        if (filtered.length > remaining) {
+          cursor = taken[taken.length - 1].timestamp - 1;
+          break;
+        }
+      }
+
+      cursor = response.olderThan;
+      // cursor === undefined means no more pages to fetch
+      if (cursor === undefined) break;
+    }
+
+    return { flatNotifications: collected, olderThan: cursor };
+  }
+
+  /**
+   * Fetches a single page of notifications using cache-first strategy.
+   */
+  private static async getOrFetchPage({
+    userId,
+    olderThan,
+    limit,
+  }: {
+    userId: Pubky;
+    olderThan: number;
+    limit: number;
+  }): Promise<TGetOrFetchNotificationsResponse> {
     // Try to get notifications from cache
     const flatNotifications = await LocalNotificationService.getOlderThan({ olderThan, limit });
 
@@ -102,17 +205,18 @@ export class NotificationApplication {
   }
 
   /**
-   * Persists flat notifications to IndexedDB, counts unread, and computes the
-   * next poll cursor
+   * Persists flat notifications to IndexedDB, counts preference-filtered unread,
+   * and computes the next poll cursor.
    */
   static async persistAndSummarize({
     notifications,
     lastRead,
+    allowedTypes,
     flatNotifications: precomputed,
   }: TPersistAndSummarizeParams): Promise<TFetchNotificationsResult> {
     const flatNotifications = precomputed ?? this.toSupportedFlatNotifications(notifications);
     await LocalNotificationService.bulkSave({ flatNotifications });
-    const unread = await LocalNotificationService.countUnreadSince(lastRead);
+    const unread = await LocalNotificationService.countFilteredUnreadSince(lastRead, allowedTypes);
     const nextPollCursor = notifications.length > 0 ? notifications[0].timestamp + 1 : undefined;
     return { unread, nextPollCursor };
   }
@@ -233,5 +337,16 @@ export class NotificationApplication {
     return notifications
       .map((n) => NotificationNormalizer.toFlatNotification(n))
       .filter((n) => supportedTypes.includes(n.type));
+  }
+
+  /**
+   * Applies user preference filtering to a page of notifications.
+   * Only called from collectPages where allowedTypes is guaranteed non-empty.
+   */
+  private static filterByAllowedTypes(
+    notifications: FlatNotification[],
+    allowedTypes: NotificationType[],
+  ): FlatNotification[] {
+    return notifications.filter((notification) => allowedTypes.includes(notification.type));
   }
 }

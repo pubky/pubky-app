@@ -28,13 +28,40 @@ const createFlat = (timestamp: number): FlatNotification => {
   } as FlatNotification;
 };
 
+const createReplyFlat = (timestamp: number): FlatNotification =>
+  ({
+    id: `reply:${timestamp}:user-${timestamp}`,
+    type: NotificationType.Reply,
+    timestamp,
+    replied_by: `user-${timestamp}`,
+    parent_post_uri: 'pubky://post/1',
+    reply_uri: 'pubky://post/2',
+  }) as FlatNotification;
+
 const createNexus = (timestamp: number): NexusNotification => ({
   timestamp,
   body: { type: NotificationType.Follow, followed_by: `user-${timestamp}` },
 });
 
+const createNexusReply = (timestamp: number): NexusNotification => ({
+  timestamp,
+  body: {
+    type: NotificationType.Reply,
+    replied_by: `user-${timestamp}`,
+    parent_post_uri: 'pubky://post/1',
+    reply_uri: 'pubky://post/2',
+  },
+});
+
 const mockNormalizer = () =>
   vi.spyOn(NotificationNormalizer, 'toFlatNotification').mockImplementation((n) => createFlat(n.timestamp));
+
+const mockNormalizerWithReply = () =>
+  vi
+    .spyOn(NotificationNormalizer, 'toFlatNotification')
+    .mockImplementation((n) =>
+      n.body.type === NotificationType.Reply ? createReplyFlat(n.timestamp) : createFlat(n.timestamp),
+    );
 
 const mockFetchMissingEntities = () => {
   vi.spyOn(LocalNotificationService, 'parseNotifications').mockReturnValue({
@@ -49,32 +76,30 @@ const mockFetchMissingEntities = () => {
 
 describe('NotificationApplication.persistAndSummarize', () => {
   const lastRead = 1234;
+  const allowedTypes = Object.values(NotificationType);
 
-  beforeEach(() => vi.clearAllMocks());
+  beforeEach(() => vi.restoreAllMocks());
 
-  it('should bulkSave, count unread, and return nextPollCursor', async () => {
+  it('should bulkSave, count filtered unread, and return nextPollCursor', async () => {
     const notifications = [createNexus(2000), createNexus(1000)];
     const flatNotifications = [createFlat(2000), createFlat(1000)];
     mockNormalizer();
     const bulkSaveSpy = vi.spyOn(LocalNotificationService, 'bulkSave').mockResolvedValue(undefined);
-    const countSpy = vi.spyOn(LocalNotificationService, 'countUnreadSince').mockResolvedValue(1);
+    const countSpy = vi.spyOn(LocalNotificationService, 'countFilteredUnreadSince').mockResolvedValue(1);
 
-    const result = await NotificationApplication.persistAndSummarize({ notifications, lastRead });
+    const result = await NotificationApplication.persistAndSummarize({ notifications, lastRead, allowedTypes });
 
     expect(bulkSaveSpy).toHaveBeenCalledWith({ flatNotifications });
-    expect(countSpy).toHaveBeenCalledWith(lastRead);
+    expect(countSpy).toHaveBeenCalledWith(lastRead, allowedTypes);
     expect(result).toEqual({ unread: 1, nextPollCursor: 2001 });
   });
 
   it('should return nextPollCursor undefined when notifications are empty', async () => {
     mockNormalizer();
     vi.spyOn(LocalNotificationService, 'bulkSave').mockResolvedValue(undefined);
-    vi.spyOn(LocalNotificationService, 'countUnreadSince').mockResolvedValue(0);
+    vi.spyOn(LocalNotificationService, 'countFilteredUnreadSince').mockResolvedValue(0);
 
-    const result = await NotificationApplication.persistAndSummarize({
-      notifications: [],
-      lastRead,
-    });
+    const result = await NotificationApplication.persistAndSummarize({ notifications: [], lastRead, allowedTypes });
 
     expect(result).toEqual({ unread: 0, nextPollCursor: undefined });
   });
@@ -84,23 +109,17 @@ describe('NotificationApplication.persistAndSummarize', () => {
     vi.spyOn(LocalNotificationService, 'bulkSave').mockRejectedValue(new Error('save-fail'));
 
     await expect(
-      NotificationApplication.persistAndSummarize({
-        notifications: [createNexus(1000)],
-        lastRead,
-      }),
+      NotificationApplication.persistAndSummarize({ notifications: [createNexus(1000)], lastRead, allowedTypes }),
     ).rejects.toThrow('save-fail');
   });
 
-  it('should bubble countUnreadSince errors', async () => {
+  it('should bubble countFilteredUnreadSince errors', async () => {
     mockNormalizer();
     vi.spyOn(LocalNotificationService, 'bulkSave').mockResolvedValue(undefined);
-    vi.spyOn(LocalNotificationService, 'countUnreadSince').mockRejectedValue(new Error('count-fail'));
+    vi.spyOn(LocalNotificationService, 'countFilteredUnreadSince').mockRejectedValue(new Error('count-fail'));
 
     await expect(
-      NotificationApplication.persistAndSummarize({
-        notifications: [createNexus(1000)],
-        lastRead,
-      }),
+      NotificationApplication.persistAndSummarize({ notifications: [createNexus(1000)], lastRead, allowedTypes }),
     ).rejects.toThrow('count-fail');
   });
 });
@@ -108,34 +127,36 @@ describe('NotificationApplication.persistAndSummarize', () => {
 describe('NotificationApplication.fetchNotifications', () => {
   const lastPolledTimestamp = 500;
   const lastRead = 1234;
+  const allowedTypes = Object.values(NotificationType);
+  const fetchParams = { userId, lastPolledTimestamp, lastRead, allowedTypes };
 
   beforeEach(() => vi.clearAllMocks());
 
-  it('should fetch, persist via bulkSave, count unread from IndexedDB, and return result', async () => {
+  it('should fetch, persist via bulkSave, count filtered unread from IndexedDB, and return result', async () => {
     const notifications = [createNexus(2000), createNexus(1000)];
     const flatNotifications = [createFlat(2000), createFlat(1000)];
     const nexusSpy = vi.spyOn(NexusUserService, 'notifications').mockResolvedValue(notifications);
     const bulkSaveSpy = vi.spyOn(LocalNotificationService, 'bulkSave').mockResolvedValue(undefined);
-    const countSpy = vi.spyOn(LocalNotificationService, 'countUnreadSince').mockResolvedValue(1);
+    const countSpy = vi.spyOn(LocalNotificationService, 'countFilteredUnreadSince').mockResolvedValue(1);
     mockNormalizer();
     mockFetchMissingEntities();
 
-    const result = await NotificationApplication.fetchNotifications({ userId, lastPolledTimestamp, lastRead });
+    const result = await NotificationApplication.fetchNotifications(fetchParams);
 
     expect(nexusSpy).toHaveBeenCalledWith({ user_id: userId, end: lastPolledTimestamp });
     expect(bulkSaveSpy).toHaveBeenCalledWith({ flatNotifications });
-    expect(countSpy).toHaveBeenCalledWith(lastRead);
+    expect(countSpy).toHaveBeenCalledWith(lastRead, expect.arrayContaining(Object.values(NotificationType)));
     expect(result).toEqual({ unread: 1, nextPollCursor: 2001 });
   });
 
   it('should use lastPolledTimestamp as Nexus end param, not lastRead', async () => {
     const nexusSpy = vi.spyOn(NexusUserService, 'notifications').mockResolvedValue([]);
     vi.spyOn(LocalNotificationService, 'bulkSave').mockResolvedValue(undefined);
-    vi.spyOn(LocalNotificationService, 'countUnreadSince').mockResolvedValue(0);
+    vi.spyOn(LocalNotificationService, 'countFilteredUnreadSince').mockResolvedValue(0);
     mockNormalizer();
     mockFetchMissingEntities();
 
-    await NotificationApplication.fetchNotifications({ userId, lastPolledTimestamp, lastRead });
+    await NotificationApplication.fetchNotifications(fetchParams);
 
     expect(nexusSpy).toHaveBeenCalledWith({ user_id: userId, end: lastPolledTimestamp });
   });
@@ -143,11 +164,11 @@ describe('NotificationApplication.fetchNotifications', () => {
   it('should omit end param when lastPolledTimestamp is undefined (first poll after bootstrap with no notifications)', async () => {
     const nexusSpy = vi.spyOn(NexusUserService, 'notifications').mockResolvedValue([]);
     vi.spyOn(LocalNotificationService, 'bulkSave').mockResolvedValue(undefined);
-    vi.spyOn(LocalNotificationService, 'countUnreadSince').mockResolvedValue(0);
+    vi.spyOn(LocalNotificationService, 'countFilteredUnreadSince').mockResolvedValue(0);
     mockNormalizer();
     mockFetchMissingEntities();
 
-    await NotificationApplication.fetchNotifications({ userId, lastPolledTimestamp: undefined, lastRead });
+    await NotificationApplication.fetchNotifications({ ...fetchParams, lastPolledTimestamp: undefined });
 
     expect(nexusSpy).toHaveBeenCalledWith({ user_id: userId, end: undefined });
   });
@@ -155,11 +176,11 @@ describe('NotificationApplication.fetchNotifications', () => {
   it('should return nextPollCursor undefined when Nexus returns empty array', async () => {
     vi.spyOn(NexusUserService, 'notifications').mockResolvedValue([]);
     vi.spyOn(LocalNotificationService, 'bulkSave').mockResolvedValue(undefined);
-    vi.spyOn(LocalNotificationService, 'countUnreadSince').mockResolvedValue(0);
+    vi.spyOn(LocalNotificationService, 'countFilteredUnreadSince').mockResolvedValue(0);
     mockNormalizer();
     mockFetchMissingEntities();
 
-    const result = await NotificationApplication.fetchNotifications({ userId, lastPolledTimestamp, lastRead });
+    const result = await NotificationApplication.fetchNotifications(fetchParams);
 
     expect(result).toEqual({ unread: 0, nextPollCursor: undefined });
   });
@@ -168,9 +189,7 @@ describe('NotificationApplication.fetchNotifications', () => {
     vi.spyOn(NexusUserService, 'notifications').mockRejectedValue(new Error('nexus-fail'));
     const bulkSaveSpy = vi.spyOn(LocalNotificationService, 'bulkSave');
 
-    await expect(NotificationApplication.fetchNotifications({ userId, lastPolledTimestamp, lastRead })).rejects.toThrow(
-      'nexus-fail',
-    );
+    await expect(NotificationApplication.fetchNotifications(fetchParams)).rejects.toThrow('nexus-fail');
     expect(bulkSaveSpy).not.toHaveBeenCalled();
   });
 
@@ -180,21 +199,17 @@ describe('NotificationApplication.fetchNotifications', () => {
     mockNormalizer();
     mockFetchMissingEntities();
 
-    await expect(NotificationApplication.fetchNotifications({ userId, lastPolledTimestamp, lastRead })).rejects.toThrow(
-      'save-fail',
-    );
+    await expect(NotificationApplication.fetchNotifications(fetchParams)).rejects.toThrow('save-fail');
   });
 
-  it('should bubble countUnreadSince errors', async () => {
+  it('should bubble countFilteredUnreadSince errors', async () => {
     vi.spyOn(NexusUserService, 'notifications').mockResolvedValue([]);
     vi.spyOn(LocalNotificationService, 'bulkSave').mockResolvedValue(undefined);
-    vi.spyOn(LocalNotificationService, 'countUnreadSince').mockRejectedValue(new Error('count-fail'));
+    vi.spyOn(LocalNotificationService, 'countFilteredUnreadSince').mockRejectedValue(new Error('count-fail'));
     mockNormalizer();
     mockFetchMissingEntities();
 
-    await expect(NotificationApplication.fetchNotifications({ userId, lastPolledTimestamp, lastRead })).rejects.toThrow(
-      'count-fail',
-    );
+    await expect(NotificationApplication.fetchNotifications(fetchParams)).rejects.toThrow('count-fail');
   });
 });
 
@@ -327,6 +342,186 @@ describe('NotificationApplication.getOrFetchNotifications', () => {
 
       expect(result.flatNotifications).toHaveLength(1);
     });
+  });
+});
+
+describe('NotificationApplication.getOrFetchNotifications (filtered pagination)', () => {
+  const limit = 30;
+  const allTypes = Object.values(NotificationType);
+  const replyOnly = [NotificationType.Reply];
+
+  beforeEach(() => vi.clearAllMocks());
+
+  it('should return immediately when filtered results are found on first page', async () => {
+    vi.spyOn(LocalNotificationService, 'getOlderThan').mockResolvedValue([createFlat(3000)]);
+    vi.spyOn(NexusUserService, 'notifications').mockResolvedValue([]);
+    mockNormalizer();
+    mockFetchMissingEntities();
+
+    const result = await NotificationApplication.getOrFetchNotifications({
+      userId,
+      olderThan: Infinity,
+      limit,
+      allowedTypes: allTypes,
+    });
+
+    expect(result.flatNotifications).toHaveLength(1);
+    expect(result.olderThan).toBeUndefined();
+  });
+
+  it('should fetch next pages when filter removes all items from a page', async () => {
+    const getOlderThanSpy = vi.spyOn(LocalNotificationService, 'getOlderThan').mockResolvedValue([]);
+
+    vi.spyOn(NexusUserService, 'notifications')
+      .mockResolvedValueOnce([createNexus(3000)]) // create a Follow notification which will be filtered out
+      .mockResolvedValueOnce([createNexusReply(2000)]) // create a Reply notification which is allowed by filter
+      .mockResolvedValueOnce([]); // no more notifications to fetch
+
+    mockNormalizerWithReply();
+    mockFetchMissingEntities();
+    vi.spyOn(LocalNotificationService, 'bulkSave').mockResolvedValue(undefined);
+
+    const result = await NotificationApplication.getOrFetchNotifications({
+      userId,
+      olderThan: Infinity,
+      limit,
+      allowedTypes: replyOnly,
+    });
+
+    expect(getOlderThanSpy).toHaveBeenCalledTimes(3); // first page filtered out, second page yields reply, third stops
+    expect(getOlderThanSpy).toHaveBeenNthCalledWith(2, { olderThan: 2999, limit });
+    expect(result.flatNotifications).toHaveLength(1);
+    expect(result.flatNotifications[0].type).toBe(NotificationType.Reply);
+    expect(result.olderThan).toBeUndefined(); // no more pages to fetch
+  });
+
+  it('should stop when no more pages exist even if filtered result is empty', async () => {
+    vi.spyOn(LocalNotificationService, 'getOlderThan').mockResolvedValue([createFlat(1000)]); // cache hit: returns a Follow from local DB
+    vi.spyOn(NexusUserService, 'notifications').mockResolvedValue([]); // meaning no more notifications to fetch
+    mockNormalizer();
+    mockFetchMissingEntities();
+
+    const result = await NotificationApplication.getOrFetchNotifications({
+      userId,
+      olderThan: Infinity,
+      limit,
+      allowedTypes: replyOnly,
+    });
+
+    expect(result.flatNotifications).toHaveLength(0);
+    expect(result.olderThan).toBeUndefined(); // no more pages to fetch
+  });
+
+  it('should accumulate filtered results across pages until limit is filled', async () => {
+    vi.spyOn(LocalNotificationService, 'getOlderThan').mockResolvedValue([]); // cache miss: nothing in local DB for this page
+    vi.spyOn(NexusUserService, 'notifications')
+      .mockResolvedValueOnce([createNexusReply(5000)])
+      .mockResolvedValueOnce([createNexusReply(4000)]);
+    mockNormalizerWithReply();
+    mockFetchMissingEntities();
+    vi.spyOn(LocalNotificationService, 'bulkSave').mockResolvedValue(undefined);
+
+    const result = await NotificationApplication.getOrFetchNotifications({
+      userId,
+      olderThan: Infinity,
+      limit: 2, // Request exactly two filtered items; collection should stop once two replies are found.
+      allowedTypes: replyOnly,
+    });
+
+    expect(result.flatNotifications).toHaveLength(2);
+    expect(result.olderThan).toBe(3999);
+  });
+
+  it('should set cursor from last included item when page has more matches than remaining', async () => {
+    // Scenario: limit = 2, filter = Reply only
+    //
+    // Round 1: Nexus returns [Reply:5000, Reply:4000, Reply:3000]
+    //   (numbers are timestamps, descending = newest first)
+    //   - All 3 pass the filter, but we only need 2 (remaining = 2)
+    //   - collected = [Reply:5000, Reply:4000] (sliced to remaining)
+    //   - raw page olderThan = 2999 (oldest item timestamp - 1)
+    //
+    // BUG (before fix): cursor = 2999 (end of raw page)
+    //   → "load more" starts at 2999 → Reply:3000 is SKIPPED forever
+    //
+    // EXPECTED (after fix): cursor = 3999 (last included item timestamp - 1)
+    //   → "load more" starts at 3999 → Reply:3000 is reachable on the next page
+    vi.spyOn(LocalNotificationService, 'getOlderThan').mockResolvedValue([]);
+    vi.spyOn(NexusUserService, 'notifications').mockResolvedValueOnce([
+      createNexusReply(5000),
+      createNexusReply(4000),
+      createNexusReply(3000),
+    ]);
+    mockNormalizerWithReply();
+    mockFetchMissingEntities();
+    vi.spyOn(LocalNotificationService, 'bulkSave').mockResolvedValue(undefined);
+
+    const result = await NotificationApplication.getOrFetchNotifications({
+      userId,
+      olderThan: Infinity,
+      limit: 2,
+      allowedTypes: replyOnly,
+    });
+
+    expect(result.flatNotifications).toHaveLength(2);
+    // Cursor must point after the last INCLUDED item (4000), not the last raw item (3000)
+    // so that Reply:3000 is reachable on the next "load more" call.
+    expect(result.olderThan).toBe(3999);
+  });
+
+  it('should stop after MAX_FETCH_ROUNDS even if no results pass the filter', async () => {
+    const getOlderThanSpy = vi.spyOn(LocalNotificationService, 'getOlderThan').mockResolvedValue([]); // cache miss: nothing in local DB for this page
+    vi.spyOn(NexusUserService, 'notifications').mockResolvedValue([createNexus(1000)]);
+    mockNormalizer();
+    mockFetchMissingEntities();
+    vi.spyOn(LocalNotificationService, 'bulkSave').mockResolvedValue(undefined);
+
+    const result = await NotificationApplication.getOrFetchNotifications({
+      userId,
+      olderThan: Infinity,
+      limit,
+      allowedTypes: replyOnly,
+    });
+
+    expect(getOlderThanSpy).toHaveBeenCalledTimes(10); // MAX_FETCH_ROUNDS = 10
+    expect(result.flatNotifications).toHaveLength(0);
+    expect(result.olderThan).toBe(999);
+  });
+
+  it('should return empty when first page returns no notifications', async () => {
+    const getOlderThanSpy = vi.spyOn(LocalNotificationService, 'getOlderThan').mockResolvedValue([]); // No local items for this page.
+    vi.spyOn(NexusUserService, 'notifications').mockResolvedValue([]); // Nexus also has no items to return.
+    mockNormalizer();
+    mockFetchMissingEntities();
+
+    const result = await NotificationApplication.getOrFetchNotifications({
+      userId,
+      olderThan: Infinity,
+      limit,
+      allowedTypes: allTypes,
+    });
+
+    expect(getOlderThanSpy).toHaveBeenCalledTimes(1);
+    expect(result.flatNotifications).toHaveLength(0);
+    expect(result.olderThan).toBeUndefined();
+  });
+
+  it('should return empty when allowedTypes is empty', async () => {
+    const disabledAll: NotificationType[] = [];
+    const getOlderThanSpy = vi.spyOn(LocalNotificationService, 'getOlderThan');
+    const nexusSpy = vi.spyOn(NexusUserService, 'notifications');
+
+    const result = await NotificationApplication.getOrFetchNotifications({
+      userId,
+      olderThan: Infinity,
+      limit,
+      allowedTypes: disabledAll,
+    });
+
+    expect(getOlderThanSpy).not.toHaveBeenCalled();
+    expect(nexusSpy).not.toHaveBeenCalled();
+    expect(result.flatNotifications).toHaveLength(0);
+    expect(result.olderThan).toBeUndefined();
   });
 });
 
