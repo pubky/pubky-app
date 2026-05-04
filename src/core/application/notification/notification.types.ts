@@ -1,17 +1,19 @@
 import type { Pubky } from '@/models/models.types';
-import type { FlatNotification } from '@/models/notification/notification.types';
+import type { FlatNotification, NotificationType } from '@/models/notification/notification.types';
 import type { TOlderThanQueryParams } from '@/services/local/notification/notification.types';
 import type { NexusNotification } from '@/services/nexus/nexus.types';
+
 export type TNotificationApplicationNotificationsParams = {
   userId: Pubky;
   lastPolledTimestamp: number | undefined;
   lastRead: number;
+  allowedTypes: NotificationType[];
 };
 
 /**
- * Result from fetchNotifications containing unread count and the next poll cursor.
+ * Result from fetchNotifications containing the filtered unread count and next poll cursor.
  *
- * @property unread - Number of unread notifications (those newer than lastRead)
+ * @property unread - Number of unread notifications (newer than lastRead) filtered by user preferences
  * @property nextPollCursor - Next polling cursor (newest timestamp + 1 to avoid refetch), undefined if no notifications
  */
 export type TFetchNotificationsResult = {
@@ -36,6 +38,7 @@ export type TNotificationsPartialCacheHitParams = {
  */
 export type TGetOrFetchNotificationsParams = TOlderThanQueryParams & {
   userId: Pubky;
+  allowedTypes?: NotificationType[];
 };
 
 export type TFlatNotificationList = FlatNotification[];
@@ -57,6 +60,7 @@ export type TGetOrFetchNotificationsResponse = TFlatNotifications & {
 export type TPersistAndSummarizeParams = {
   notifications: NexusNotification[];
   lastRead: number;
+  allowedTypes: NotificationType[];
   flatNotifications?: TFlatNotificationList;
 };
 

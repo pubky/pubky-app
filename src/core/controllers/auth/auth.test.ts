@@ -1,6 +1,10 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { LastReadResult } from 'pubky-app-specs';
 import { AuthController } from './auth';
+import * as i18nUtils from '@/i18n/utils';
+import { AppError } from '@/libs/error/error';
+import { ServerErrorCode } from '@/libs/error/error.codes';
+import { ErrorCategory, ErrorService } from '@/libs/error/error.types';
 import { asOpaque } from '@/test-utils/type-assertions';
 import {
   mockAuthStore,
@@ -20,13 +24,16 @@ import { Logger } from '@/libs/logger/logger';
 import { clearDatabase } from '@/database/franky/franky.helpers';
 import { AuthApplication } from '@/application/auth/auth';
 import { BootstrapApplication } from '@/application/bootstrap/bootstrap';
+import { SettingsApplication } from '@/application/settings/settings';
 import { postStreamQueue } from '@/application/stream/posts/muting/post-stream-queue';
 import { NotificationCoordinator } from '@/coordinators/notifications/notifications';
 import { StreamCoordinator } from '@/coordinators/streams/stream';
 import { TtlCoordinator } from '@/coordinators/ttl/ttl';
 import type { Pubky } from '@/models/models.types';
+import { NotificationType } from '@/models/notification/notification.types';
 import { NotificationNormalizer } from '@/pipes/notification/notification.normalizer';
 import { PubkySpecsSingleton } from '@/pipes/pipes.builder';
+import { SettingsNormalizer } from '@/pipes/settings/settings.normalizer';
 import { useAuthStore } from '@/stores/auth/auth.store';
 import type { AuthStore } from '@/stores/auth/auth.types';
 import { useHomeStore } from '@/stores/home/home.store';
@@ -38,9 +45,16 @@ import type { NotificationState } from '@/stores/notification/notification.types
 import { useOnboardingStore } from '@/stores/onboarding/onboarding.store';
 import { useSearchStore } from '@/stores/search/search.store';
 import { useSettingsStore } from '@/stores/settings/settings.store';
+import {
+  defaultNotificationPreferences,
+  defaultPrivacyPreferences,
+  type NotificationPreferences,
+  type SettingsState,
+} from '@/stores/settings/settings.types';
 import { useSignInStore } from '@/stores/signIn/signIn.store';
 const TEST_SECRET_KEY = Buffer.from(new Uint8Array(32).fill(1)).toString('hex');
 const TEST_PUBKY = '5a1diz4pghi47ywdfyfzpit5f3bdomzt4pugpbmq4rngdd4iub4y';
+const MOCK_ALLOWED_TYPES = [NotificationType.Follow, NotificationType.Reply];
 
 const spyOnSleep = async () => vi.spyOn(await import('@/libs/utils/utils'), 'sleep').mockResolvedValue(undefined);
 const spyOnClearCookies = async () =>
@@ -51,6 +65,16 @@ const spyOnClearAllQueryClients = async () =>
     .mockImplementation(() => {});
 
 const getLastReadUrl = (pubky: string) => `pubky://${pubky}/pub/pubky.app/last_read`;
+
+const createMockSettingsState = (overrides?: Partial<SettingsState>): SettingsState => ({
+  notifications: defaultNotificationPreferences,
+  privacy: defaultPrivacyPreferences,
+  muted: [],
+  language: 'en',
+  updatedAt: 0,
+  version: 1,
+  ...overrides,
+});
 
 const createMockKeypair = () =>
   asOpaque<import('@synonymdev/pubky').Keypair>({
@@ -83,6 +107,10 @@ const setupNotificationMocks = () => {
   vi.spyOn(NotificationNormalizer, 'to').mockImplementation(
     (pubky: string) => ({ meta: { url: getLastReadUrl(pubky) } }) as LastReadResult,
   );
+
+  // Settings sync is now handled in the controller (hydrateMeImAlive)
+  vi.spyOn(SettingsApplication, 'initializeSettings').mockResolvedValue(null);
+  vi.spyOn(NotificationNormalizer, 'toEnabledTypes').mockReturnValue(MOCK_ALLOWED_TYPES);
 };
 
 const setupAuthAndNotificationStores = () => {
@@ -94,6 +122,9 @@ const setupAuthAndNotificationStores = () => {
       reset: storeMocks.resetNotificationStore,
     }),
   );
+  // Settings sync is now handled in the controller (hydrateMeImAlive)
+  vi.spyOn(SettingsApplication, 'initializeSettings').mockResolvedValue(null);
+  vi.spyOn(NotificationNormalizer, 'toEnabledTypes').mockReturnValue(MOCK_ALLOWED_TYPES);
   return authStore;
 };
 
@@ -125,6 +156,43 @@ const storeMocks = vi.hoisted(() => {
   const setSignInError = vi.fn();
   const resetMigrationStore = vi.fn();
 
+  // Factories are kept as separate constants so they can be reapplied in
+  // beforeEach — vitest 4.1's restoreAllMocks() can clear vi.fn implementations
+  // when a property has been spied on, so we need to re-establish defaults.
+  const authStateFactory = () => ({
+    init: initAuthStore,
+    setSession: vi.fn(),
+    setCurrentUserPubky: vi.fn(),
+    setHasProfile: vi.fn(),
+    setIsRestoringSession: vi.fn(),
+    setHasHydrated: vi.fn(),
+    reset: resetAuthStore,
+    selectCurrentUserPubky: vi.fn(() => TEST_PUBKY),
+    selectIsAuthenticated: vi.fn(() => false),
+  });
+  const onboardingStateFactory = () => ({ reset: resetOnboardingStore });
+  const notificationStateFactory = () => ({
+    setState: notificationInit,
+    reset: resetNotificationStore,
+  });
+  const signInStateFactory = () => ({
+    reset: resetSignInStore,
+    setAuthUrlResolved,
+    setProfileChecked,
+    setError: setSignInError,
+    authUrlResolved: false,
+    profileChecked: false,
+    bootstrapFetched: false,
+    dataPersisted: false,
+    homeserverSynced: false,
+    error: null,
+  });
+  const localFilesStateFactory = () => ({ reset: resetLocalFilesStore });
+  const homeStateFactory = () => ({ reset: resetHomeStore });
+  const hotStateFactory = () => ({ reset: resetHotStore });
+  const searchStateFactory = () => ({ reset: resetSearchStore });
+  const settingsStateFactory = () => ({ reset: resetSettingsStore });
+
   return {
     resetAuthStore,
     resetOnboardingStore,
@@ -141,51 +209,24 @@ const storeMocks = vi.hoisted(() => {
     setProfileChecked,
     setSignInError,
     resetMigrationStore,
-    getAuthState: vi.fn(() => ({
-      init: initAuthStore,
-      setSession: vi.fn(),
-      setCurrentUserPubky: vi.fn(),
-      setHasProfile: vi.fn(),
-      setIsRestoringSession: vi.fn(),
-      setHasHydrated: vi.fn(),
-      reset: resetAuthStore,
-      selectCurrentUserPubky: vi.fn(() => TEST_PUBKY),
-      selectIsAuthenticated: vi.fn(() => false),
-    })),
-    getOnboardingState: vi.fn(() => ({
-      reset: resetOnboardingStore,
-    })),
-    getNotificationState: vi.fn(() => ({
-      setState: notificationInit,
-      reset: resetNotificationStore,
-    })),
-    getSignInState: vi.fn(() => ({
-      reset: resetSignInStore,
-      setAuthUrlResolved,
-      setProfileChecked,
-      setError: setSignInError,
-      authUrlResolved: false,
-      profileChecked: false,
-      bootstrapFetched: false,
-      dataPersisted: false,
-      homeserverSynced: false,
-      error: null,
-    })),
-    getLocalFilesState: vi.fn(() => ({
-      reset: resetLocalFilesStore,
-    })),
-    getHomeState: vi.fn(() => ({
-      reset: resetHomeStore,
-    })),
-    getHotState: vi.fn(() => ({
-      reset: resetHotStore,
-    })),
-    getSearchState: vi.fn(() => ({
-      reset: resetSearchStore,
-    })),
-    getSettingsState: vi.fn(() => ({
-      reset: resetSettingsStore,
-    })),
+    authStateFactory,
+    onboardingStateFactory,
+    notificationStateFactory,
+    signInStateFactory,
+    localFilesStateFactory,
+    homeStateFactory,
+    hotStateFactory,
+    searchStateFactory,
+    settingsStateFactory,
+    getAuthState: vi.fn(authStateFactory),
+    getOnboardingState: vi.fn(onboardingStateFactory),
+    getNotificationState: vi.fn(notificationStateFactory),
+    getSignInState: vi.fn(signInStateFactory),
+    getLocalFilesState: vi.fn(localFilesStateFactory),
+    getHomeState: vi.fn(homeStateFactory),
+    getHotState: vi.fn(hotStateFactory),
+    getSearchState: vi.fn(searchStateFactory),
+    getSettingsState: vi.fn(settingsStateFactory),
   };
 });
 
@@ -274,6 +315,18 @@ describe('AuthController', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     mockClearDatabase.mockReset();
+    // Re-apply factory implementations: vi.restoreAllMocks() in afterEach can
+    // clear vi.fn implementations whenever a property has been spied on, which
+    // would leave subsequent tests with empty mocks returning undefined.
+    storeMocks.getAuthState.mockImplementation(storeMocks.authStateFactory);
+    storeMocks.getOnboardingState.mockImplementation(storeMocks.onboardingStateFactory);
+    storeMocks.getNotificationState.mockImplementation(storeMocks.notificationStateFactory);
+    storeMocks.getSignInState.mockImplementation(storeMocks.signInStateFactory);
+    storeMocks.getLocalFilesState.mockImplementation(storeMocks.localFilesStateFactory);
+    storeMocks.getHomeState.mockImplementation(storeMocks.homeStateFactory);
+    storeMocks.getHotState.mockImplementation(storeMocks.hotStateFactory);
+    storeMocks.getSearchState.mockImplementation(storeMocks.searchStateFactory);
+    storeMocks.getSettingsState.mockImplementation(storeMocks.settingsStateFactory);
     // Ensure migration store mock is always available
     vi.spyOn(useMigrationStore, 'getState').mockReturnValue(
       mockMigrationStore({
@@ -294,8 +347,7 @@ describe('AuthController', () => {
 
     it('should wait 5 seconds, initialize bootstrap, and setState notification store', async () => {
       const notification: NotificationState = { unread: 2, lastRead: 123, lastPolledTimestamp: undefined };
-      const bootstrapResponse = { notification, remoteSettings: null };
-      const initializeSpy = vi.spyOn(BootstrapApplication, 'initialize').mockResolvedValue(bootstrapResponse);
+      const initializeSpy = vi.spyOn(BootstrapApplication, 'initialize').mockResolvedValue(notification);
       const sleepSpy = await spyOnSleep();
 
       const authStoreState = mockAuthStore({
@@ -324,12 +376,104 @@ describe('AuthController', () => {
         expect.objectContaining({
           pubky: TEST_PUBKY,
           lastReadUrl: getLastReadUrl(TEST_PUBKY),
-          localSettings: expect.any(Object),
+          allowedTypes: MOCK_ALLOWED_TYPES,
         }),
         expect.any(Function), // onProgress callback
       );
       expect(storeMocks.notificationInit).toHaveBeenCalledWith(notification);
       expect(authStoreState.setHasProfile).toHaveBeenCalledWith(true);
+    });
+
+    it('should use remote settings when initializeSettings returns non-null', async () => {
+      // Goal: prove that bootstrap prefers fresher remote settings and derives
+      // notification bootstrap inputs from that remote snapshot.
+      const remoteNotificationPrefs: NotificationPreferences = {
+        newFriend: true,
+        tagProfile: true,
+        mention: true,
+        reply: true,
+        postDeleted: true,
+        follow: false,
+        tagPost: false,
+        repost: false,
+        postEdited: false,
+      };
+      const remoteSettings = createMockSettingsState({
+        notifications: remoteNotificationPrefs,
+        language: 'fr',
+      });
+      const remoteAllowedTypes = [NotificationType.Reply, NotificationType.Mention];
+
+      // Override global mocks: initializeSettings returns remote, toEnabledTypes uses remote prefs
+      vi.spyOn(SettingsApplication, 'initializeSettings').mockResolvedValue(remoteSettings);
+      vi.spyOn(NotificationNormalizer, 'toEnabledTypes').mockReturnValue(remoteAllowedTypes);
+      vi.spyOn(SettingsNormalizer, 'extractState').mockReturnValue(createMockSettingsState());
+
+      const notification: NotificationState = { unread: 5, lastRead: 999, lastPolledTimestamp: undefined };
+      const initializeSpy = vi.spyOn(BootstrapApplication, 'initialize').mockResolvedValue(notification);
+      await spyOnSleep();
+
+      const loadFromHomeserverSpy = vi.fn();
+      const setLocaleCookieSpy = vi.spyOn(i18nUtils, 'setLocaleCookie').mockImplementation(() => {});
+      const settingsStoreState = mockSettingsStore({ loadFromHomeserver: loadFromHomeserverSpy });
+      vi.spyOn(useSettingsStore, 'getState').mockReturnValue(settingsStoreState);
+
+      const authStoreState = mockAuthStore({
+        ...storeMocks.getAuthState(),
+        selectCurrentUserPubky: vi.fn(() => TEST_PUBKY),
+        setHasProfile: vi.fn(),
+      });
+      vi.spyOn(useAuthStore, 'getState').mockReturnValue(authStoreState);
+
+      await AuthController.bootstrapWithDelay();
+
+      // toEnabledTypes should have been called with remote notification preferences
+      expect(NotificationNormalizer.toEnabledTypes).toHaveBeenCalledWith(remoteNotificationPrefs);
+      // Bootstrap should use remote-derived allowedTypes
+      expect(initializeSpy.mock.calls[0][0]).toEqual(expect.objectContaining({ allowedTypes: remoteAllowedTypes }));
+      // Remote settings should be applied to the store and locale cookie
+      expect(loadFromHomeserverSpy).toHaveBeenCalledWith(remoteSettings);
+      expect(setLocaleCookieSpy).toHaveBeenCalledWith('fr');
+    });
+
+    it('should complete bootstrap when settings sync fails with AppError', async () => {
+      // Goal: prove that settings sync failures are non-blocking and bootstrap
+      // still finishes with local settings as the fallback source of truth.
+      const appError = new AppError({
+        category: ErrorCategory.Server,
+        code: ServerErrorCode.UNKNOWN_ERROR,
+        message: 'settings sync failed',
+        service: ErrorService.Homeserver,
+        operation: 'initializeSettings',
+      });
+      vi.spyOn(SettingsApplication, 'initializeSettings').mockRejectedValue(appError);
+      vi.spyOn(SettingsNormalizer, 'extractState').mockReturnValue(createMockSettingsState());
+
+      const notification: NotificationState = { unread: 0, lastRead: 0, lastPolledTimestamp: undefined };
+      const initializeSpy = vi.spyOn(BootstrapApplication, 'initialize').mockResolvedValue(notification);
+      await spyOnSleep();
+      const setLocaleCookieSpy = vi.spyOn(i18nUtils, 'setLocaleCookie').mockImplementation(() => {});
+
+      const loadFromHomeserverSpy = vi.fn();
+      const settingsStoreState = mockSettingsStore({ loadFromHomeserver: loadFromHomeserverSpy });
+      vi.spyOn(useSettingsStore, 'getState').mockReturnValue(settingsStoreState);
+
+      const authStoreState = mockAuthStore({
+        ...storeMocks.getAuthState(),
+        selectCurrentUserPubky: vi.fn(() => TEST_PUBKY),
+        setHasProfile: vi.fn(),
+      });
+      vi.spyOn(useAuthStore, 'getState').mockReturnValue(authStoreState);
+
+      await AuthController.bootstrapWithDelay();
+
+      // Bootstrap should still complete despite settings sync failure
+      expect(initializeSpy).toHaveBeenCalled();
+      expect(storeMocks.notificationInit).toHaveBeenCalledWith(notification);
+      expect(authStoreState.setHasProfile).toHaveBeenCalledWith(true);
+      // Remote settings should NOT be applied (sync failed, fell back to local)
+      expect(loadFromHomeserverSpy).not.toHaveBeenCalled();
+      expect(setLocaleCookieSpy).not.toHaveBeenCalled();
     });
   });
 
@@ -412,13 +556,12 @@ describe('AuthController', () => {
       const mockPubky = 'test-pubky' as Pubky;
       const mockData = { session: mockSession };
       const mockNotification: NotificationState = { unread: 0, lastRead: 123, lastPolledTimestamp: 0 };
-      const bootstrapResponse = { notification: mockNotification, remoteSettings: null };
 
       const keypairSpy = vi.spyOn(Identity, 'keypairFromMnemonic').mockReturnValue(mockKeypair);
       const signInSpy = vi.spyOn(AuthApplication, 'signIn').mockResolvedValue(mockData);
       const z32FromSessionSpy = vi.spyOn(Identity, 'z32FromSession').mockReturnValue(mockPubky);
       const userIsSignedUpSpy = vi.spyOn(AuthApplication, 'userIsSignedUp').mockResolvedValue(true);
-      const initializeSpy = vi.spyOn(BootstrapApplication, 'initialize').mockResolvedValue(bootstrapResponse);
+      const initializeSpy = vi.spyOn(BootstrapApplication, 'initialize').mockResolvedValue(mockNotification);
       const clearDatabaseSpy = mockClearDatabase.mockResolvedValue(undefined);
       const clearAllQueryClientsSpy = await spyOnClearAllQueryClients();
 
@@ -438,7 +581,7 @@ describe('AuthController', () => {
         expect.objectContaining({
           pubky: mockPubky,
           lastReadUrl: getLastReadUrl('test-pubky'),
-          localSettings: expect.any(Object),
+          allowedTypes: MOCK_ALLOWED_TYPES,
         }),
         expect.any(Function), // onProgress callback
       );
@@ -536,13 +679,12 @@ describe('AuthController', () => {
       const mockPubky = 'test-pubky' as Pubky;
       const mockData = { session: mockSession };
       const mockNotification: NotificationState = { unread: 0, lastRead: 123, lastPolledTimestamp: 0 };
-      const bootstrapResponse = { notification: mockNotification, remoteSettings: null };
 
       const decryptSpy = vi.spyOn(Identity, 'decryptRecoveryFile').mockResolvedValue(mockKeypair);
       const signInSpy = vi.spyOn(AuthApplication, 'signIn').mockResolvedValue(mockData);
       const z32FromSessionSpy = vi.spyOn(Identity, 'z32FromSession').mockReturnValue(mockPubky);
       const userIsSignedUpSpy = vi.spyOn(AuthApplication, 'userIsSignedUp').mockResolvedValue(true);
-      const initializeSpy = vi.spyOn(BootstrapApplication, 'initialize').mockResolvedValue(bootstrapResponse);
+      const initializeSpy = vi.spyOn(BootstrapApplication, 'initialize').mockResolvedValue(mockNotification);
       const clearDatabaseSpy = mockClearDatabase.mockResolvedValue(undefined);
       const clearAllQueryClientsSpy = await spyOnClearAllQueryClients();
 
@@ -560,7 +702,7 @@ describe('AuthController', () => {
         expect.objectContaining({
           pubky: mockPubky,
           lastReadUrl: getLastReadUrl('test-pubky'),
-          localSettings: expect.any(Object),
+          allowedTypes: MOCK_ALLOWED_TYPES,
         }),
         expect.any(Function), // onProgress callback
       );
@@ -914,11 +1056,10 @@ describe('AuthController', () => {
       const mockSession = buildMockSession();
       const mockPubky = TEST_PUBKY as Pubky;
       const notification: NotificationState = { unread: 0, lastRead: 456, lastPolledTimestamp: 0 };
-      const bootstrapResponse = { notification, remoteSettings: null };
 
       const z32FromSessionSpy = vi.spyOn(Identity, 'z32FromSession').mockReturnValue(mockPubky);
       const userIsSignedUpSpy = vi.spyOn(AuthApplication, 'userIsSignedUp').mockResolvedValue(true);
-      const initializeSpy = vi.spyOn(BootstrapApplication, 'initialize').mockResolvedValue(bootstrapResponse);
+      const initializeSpy = vi.spyOn(BootstrapApplication, 'initialize').mockResolvedValue(notification);
 
       const authStore = storeMocks.getAuthState();
       const signInStore = storeMocks.getSignInState();
@@ -936,7 +1077,7 @@ describe('AuthController', () => {
         expect.objectContaining({
           pubky: mockPubky,
           lastReadUrl: getLastReadUrl(TEST_PUBKY),
-          localSettings: expect.any(Object),
+          allowedTypes: MOCK_ALLOWED_TYPES,
         }),
         expect.any(Function), // onProgress callback
       );
@@ -978,6 +1119,106 @@ describe('AuthController', () => {
         hasProfile: null,
       });
       expect(authStore.setHasProfile).toHaveBeenCalledWith(false);
+    });
+
+    it('should use remote settings for allowedTypes and apply them to store when initializeSettings returns non-null', async () => {
+      // Goal: prove that, during session initialization, fresher remote settings
+      // drive allowedTypes computation and are applied to settings state/cookie.
+      const mockSession = buildMockSession();
+      const mockPubky = TEST_PUBKY as Pubky;
+      const remoteNotificationPrefs: NotificationPreferences = {
+        newFriend: true,
+        mention: true,
+        reply: true,
+        follow: false,
+        tagPost: false,
+        tagProfile: false,
+        repost: false,
+        postDeleted: false,
+        postEdited: false,
+      };
+      const remoteSettings = createMockSettingsState({
+        notifications: remoteNotificationPrefs,
+        language: 'fr',
+      });
+      const remoteAllowedTypes = [NotificationType.Reply, NotificationType.Mention];
+      const notification: NotificationState = { unread: 3, lastRead: 789, lastPolledTimestamp: 0 };
+
+      vi.spyOn(Identity, 'z32FromSession').mockReturnValue(mockPubky);
+      vi.spyOn(AuthApplication, 'userIsSignedUp').mockResolvedValue(true);
+      vi.spyOn(SettingsApplication, 'initializeSettings').mockResolvedValue(remoteSettings);
+      vi.spyOn(NotificationNormalizer, 'toEnabledTypes').mockReturnValue(remoteAllowedTypes);
+      vi.spyOn(SettingsNormalizer, 'extractState').mockReturnValue(createMockSettingsState());
+      const initializeSpy = vi.spyOn(BootstrapApplication, 'initialize').mockResolvedValue(notification);
+
+      const loadFromHomeserverSpy = vi.fn();
+      const setLocaleCookieSpy = vi.spyOn(i18nUtils, 'setLocaleCookie').mockImplementation(() => {});
+      vi.spyOn(useSettingsStore, 'getState').mockReturnValue(
+        mockSettingsStore({ loadFromHomeserver: loadFromHomeserverSpy }),
+      );
+
+      const authStore = storeMocks.getAuthState();
+      const signInStore = storeMocks.getSignInState();
+      vi.spyOn(useAuthStore, 'getState').mockReturnValue(mockAuthStore(authStore));
+      vi.spyOn(useSignInStore, 'getState').mockReturnValue(mockSignInStore(signInStore));
+
+      await AuthController.initializeAuthenticatedSession({ session: mockSession });
+
+      // toEnabledTypes should receive remote notification preferences
+      expect(NotificationNormalizer.toEnabledTypes).toHaveBeenCalledWith(remoteNotificationPrefs);
+      // Bootstrap should use remote-derived allowedTypes
+      expect(initializeSpy.mock.calls[0][0]).toEqual(expect.objectContaining({ allowedTypes: remoteAllowedTypes }));
+      // Remote settings applied to store and locale cookie
+      expect(loadFromHomeserverSpy).toHaveBeenCalledWith(remoteSettings);
+      expect(setLocaleCookieSpy).toHaveBeenCalledWith('fr');
+    });
+
+    it('should complete bootstrap when settings sync fails with AppError', async () => {
+      // Goal: prove that settings-sync failures do not block authenticated-session
+      // bootstrap and that local settings are used as the fallback source.
+      const mockSession = buildMockSession();
+      const mockPubky = TEST_PUBKY as Pubky;
+      const localSettings = createMockSettingsState();
+
+      vi.spyOn(Identity, 'z32FromSession').mockReturnValue(mockPubky);
+      vi.spyOn(AuthApplication, 'userIsSignedUp').mockResolvedValue(true);
+      vi.spyOn(SettingsApplication, 'initializeSettings').mockRejectedValue(
+        new AppError({
+          category: ErrorCategory.Server,
+          code: ServerErrorCode.UNKNOWN_ERROR,
+          message: 'homeserver unreachable',
+          service: ErrorService.Homeserver,
+          operation: 'initializeSettings',
+        }),
+      );
+      vi.spyOn(SettingsNormalizer, 'extractState').mockReturnValue(localSettings);
+
+      const notification: NotificationState = { unread: 0, lastRead: 0, lastPolledTimestamp: 0 };
+      const initializeSpy = vi.spyOn(BootstrapApplication, 'initialize').mockResolvedValue(notification);
+      const setLocaleCookieSpy = vi.spyOn(i18nUtils, 'setLocaleCookie').mockImplementation(() => {});
+
+      const loadFromHomeserverSpy = vi.fn();
+      vi.spyOn(useSettingsStore, 'getState').mockReturnValue(
+        mockSettingsStore({ loadFromHomeserver: loadFromHomeserverSpy }),
+      );
+
+      const authStore = storeMocks.getAuthState();
+      const signInStore = storeMocks.getSignInState();
+      vi.spyOn(useAuthStore, 'getState').mockReturnValue(mockAuthStore(authStore));
+      vi.spyOn(useSignInStore, 'getState').mockReturnValue(mockSignInStore(signInStore));
+
+      await AuthController.initializeAuthenticatedSession({ session: mockSession });
+
+      // Bootstrap should still complete
+      expect(initializeSpy).toHaveBeenCalled();
+      expect(storeMocks.notificationInit).toHaveBeenCalledWith(notification);
+      // toEnabledTypes should use local preferences (fallback)
+      expect(NotificationNormalizer.toEnabledTypes).toHaveBeenCalledWith(localSettings.notifications);
+      // Remote settings should NOT be applied
+      expect(loadFromHomeserverSpy).not.toHaveBeenCalled();
+      expect(setLocaleCookieSpy).not.toHaveBeenCalled();
+      // Session flow completes normally
+      expect(authStore.setHasProfile).toHaveBeenCalledWith(true);
     });
   });
 

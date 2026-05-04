@@ -3,10 +3,15 @@ import { SettingsController } from './settings';
 import { setLocaleCookie } from '@/i18n/utils';
 import { asOpaque } from '@/test-utils/type-assertions';
 import { mockAuthStore, mockSettingsStore } from '@/test-utils/stores';
+import { NotificationApplication } from '@/application/notification/notification';
 import { SettingsApplication } from '@/application/settings/settings';
 import type { Pubky } from '@/models/models.types';
+import { NotificationType } from '@/models/notification/notification.types';
+import { NotificationNormalizer } from '@/pipes/notification/notification.normalizer';
 import { SettingsNormalizer } from '@/pipes/settings/settings.normalizer';
 import { useAuthStore } from '@/stores/auth/auth.store';
+import { useNotificationStore } from '@/stores/notification/notification.store';
+import type { NotificationStore } from '@/stores/notification/notification.types';
 import { useSettingsStore } from '@/stores/settings/settings.store';
 import {
   defaultNotificationPreferences,
@@ -19,7 +24,14 @@ vi.mock('@/i18n/utils', () => ({
 }));
 
 const TEST_PUBKY = 'o1gg96ewuojmopcjbz8895478wdtxtzzuxnfjjz8o8e77csa1ngo' as Pubky;
+const MOCK_LAST_READ = 5000;
+const MOCK_ALLOWED_TYPES = [NotificationType.Follow, NotificationType.Reply];
 const mockSetLocaleCookie = vi.mocked(setLocaleCookie);
+
+const mockNotificationStoreActions = {
+  selectLastRead: () => MOCK_LAST_READ,
+  setUnread: vi.fn(),
+};
 
 const mockStoreActions = {
   setNotificationPreference: vi.fn(),
@@ -56,7 +68,7 @@ const mockSettingsState: SettingsState = {
 
 describe('SettingsController', () => {
   let commitUpdateSpy: ReturnType<typeof vi.spyOn>;
-  let extractStateSpy: ReturnType<typeof vi.spyOn>;
+  let countFilteredSpy: ReturnType<typeof vi.spyOn>;
 
   beforeEach(() => {
     vi.clearAllMocks();
@@ -70,8 +82,14 @@ describe('SettingsController', () => {
 
     vi.spyOn(useAuthStore, 'getState').mockReturnValue(mockAuthStore({ selectCurrentUserPubky: () => TEST_PUBKY }));
 
-    extractStateSpy = vi.spyOn(SettingsNormalizer, 'extractState').mockReturnValue(mockSettingsState);
+    vi.spyOn(useNotificationStore, 'getState').mockReturnValue(
+      asOpaque<NotificationStore>(mockNotificationStoreActions),
+    );
+
+    vi.spyOn(SettingsNormalizer, 'extractState').mockReturnValue(mockSettingsState);
+    vi.spyOn(NotificationNormalizer, 'toEnabledTypes').mockReturnValue(MOCK_ALLOWED_TYPES);
     commitUpdateSpy = vi.spyOn(SettingsApplication, 'commitUpdate').mockResolvedValue(undefined);
+    countFilteredSpy = vi.spyOn(NotificationApplication, 'countFilteredUnreadSince').mockResolvedValue(3);
   });
 
   afterEach(() => {
@@ -79,11 +97,79 @@ describe('SettingsController', () => {
   });
 
   describe('setNotificationPreference', () => {
-    it('should update zustand store and sync to homeserver', async () => {
+    it('should update zustand store', async () => {
       await SettingsController.setNotificationPreference('follow', false);
 
       expect(mockStoreActions.setNotificationPreference).toHaveBeenCalledWith('follow', false);
-      expect(extractStateSpy).toHaveBeenCalled();
+    });
+
+    it('should recalculate unread badge count when types are enabled', async () => {
+      countFilteredSpy.mockResolvedValue(3);
+      await SettingsController.setNotificationPreference('follow', true);
+
+      expect(countFilteredSpy).toHaveBeenCalledWith(MOCK_LAST_READ, MOCK_ALLOWED_TYPES);
+      expect(mockNotificationStoreActions.setUnread).toHaveBeenCalledWith(3);
+    });
+
+    it('should recalculate unread badge count to 0 when no types match', async () => {
+      countFilteredSpy.mockResolvedValue(0);
+      await SettingsController.setNotificationPreference('follow', false);
+
+      expect(countFilteredSpy).toHaveBeenCalledWith(MOCK_LAST_READ, MOCK_ALLOWED_TYPES);
+      expect(mockNotificationStoreActions.setUnread).toHaveBeenCalledWith(0);
+    });
+
+    it('should sync to homeserver', async () => {
+      await SettingsController.setNotificationPreference('follow', false);
+
+      expect(commitUpdateSpy).toHaveBeenCalledWith(mockSettingsState, TEST_PUBKY);
+    });
+
+    it('should still sync to homeserver when badge recalculation fails', async () => {
+      countFilteredSpy.mockRejectedValue(new Error('db-fail'));
+
+      await expect(SettingsController.setNotificationPreference('follow', false)).rejects.toThrow('db-fail');
+      expect(commitUpdateSpy).toHaveBeenCalledWith(mockSettingsState, TEST_PUBKY);
+    });
+  });
+
+  describe('setAllNotifications', () => {
+    it('should update zustand store', async () => {
+      const preferences = { ...defaultNotificationPreferences, follow: false };
+      await SettingsController.setAllNotifications(preferences);
+
+      expect(mockStoreActions.setAllNotifications).toHaveBeenCalledWith(preferences);
+    });
+
+    it('should recalculate unread badge count when types are enabled', async () => {
+      countFilteredSpy.mockResolvedValue(3);
+      const preferences = { ...defaultNotificationPreferences, follow: false };
+      await SettingsController.setAllNotifications(preferences);
+
+      expect(countFilteredSpy).toHaveBeenCalledWith(MOCK_LAST_READ, MOCK_ALLOWED_TYPES);
+      expect(mockNotificationStoreActions.setUnread).toHaveBeenCalledWith(3);
+    });
+
+    it('should recalculate unread badge count to 0 when no types match', async () => {
+      countFilteredSpy.mockResolvedValue(0);
+      const preferences = { ...defaultNotificationPreferences, follow: false };
+      await SettingsController.setAllNotifications(preferences);
+
+      expect(countFilteredSpy).toHaveBeenCalledWith(MOCK_LAST_READ, MOCK_ALLOWED_TYPES);
+      expect(mockNotificationStoreActions.setUnread).toHaveBeenCalledWith(0);
+    });
+
+    it('should sync to homeserver', async () => {
+      const preferences = { ...defaultNotificationPreferences, follow: false };
+      await SettingsController.setAllNotifications(preferences);
+
+      expect(commitUpdateSpy).toHaveBeenCalledWith(mockSettingsState, TEST_PUBKY);
+    });
+
+    it('should still sync to homeserver when badge recalculation fails', async () => {
+      countFilteredSpy.mockRejectedValue(new Error('db-fail'));
+
+      await expect(SettingsController.setAllNotifications(defaultNotificationPreferences)).rejects.toThrow('db-fail');
       expect(commitUpdateSpy).toHaveBeenCalledWith(mockSettingsState, TEST_PUBKY);
     });
   });

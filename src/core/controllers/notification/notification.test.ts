@@ -10,10 +10,23 @@ import { NotificationType, type FlatNotification } from '@/models/notification/n
 import { LastReadNormalizer } from '@/pipes/lastRead/lastRead.normalizer';
 import { useAuthStore } from '@/stores/auth/auth.store';
 import { useNotificationStore } from '@/stores/notification/notification.store';
+import { useSettingsStore } from '@/stores/settings/settings.store';
+import { defaultNotificationPreferences, type NotificationPreferences } from '@/stores/settings/settings.types';
 const mockUserId = 'pubky-user-123' as Pubky;
 
 const setupAuthStore = (userId: Pubky = mockUserId) => {
   vi.spyOn(useAuthStore, 'getState').mockReturnValue(mockAuthStore({ selectCurrentUserPubky: () => userId }));
+};
+
+/**
+ * Mocks the settings store with notification preferences.
+ * The controller reads preferences to filter out disabled notification types.
+ * Defaults to all enabled; pass overrides to disable specific types (e.g., { follow: false }).
+ */
+const mockSettingsStore = (overrides: Partial<NotificationPreferences> = {}) => {
+  vi.spyOn(useSettingsStore, 'getState').mockReturnValue({
+    notifications: { ...defaultNotificationPreferences, ...overrides },
+  } as ReturnType<typeof useSettingsStore.getState>);
 };
 
 describe('NotificationController', () => {
@@ -52,9 +65,32 @@ describe('NotificationController', () => {
 
       await NotificationController.fetchNotifications({ userId: mockUserId });
 
-      expect(appSpy).toHaveBeenCalledWith({ userId: mockUserId, lastPolledTimestamp: 500, lastRead: 1234 });
+      expect(appSpy).toHaveBeenCalledWith({
+        userId: mockUserId,
+        lastPolledTimestamp: 500,
+        lastRead: 1234,
+        allowedTypes: expect.arrayContaining(Object.values(NotificationType)),
+      });
       expect(store.setUnread).toHaveBeenCalledWith(5);
       expect(store.setLastPolledTimestamp).toHaveBeenCalledWith(3000);
+    });
+
+    it('should pass lastRead and preferences to application for filtered counting', async () => {
+      mockSettingsStore({ follow: false });
+      setupNotificationStore({ lastRead: 1234, lastPolledTimestamp: 500 });
+      const appSpy = vi.spyOn(NotificationApplication, 'fetchNotifications').mockResolvedValue({
+        unread: 3,
+        nextPollCursor: 3000,
+      });
+
+      await NotificationController.fetchNotifications({ userId: mockUserId });
+
+      expect(appSpy).toHaveBeenCalledWith(
+        expect.objectContaining({
+          lastRead: 1234,
+          allowedTypes: expect.not.arrayContaining([NotificationType.Follow]),
+        }),
+      );
     });
 
     it('should pass lastPolledTimestamp (not lastRead) to application', async () => {
@@ -105,7 +141,12 @@ describe('NotificationController', () => {
       appSpy.mockResolvedValueOnce({ unread: 2, nextPollCursor: 3000 });
       await NotificationController.fetchNotifications({ userId: mockUserId });
 
-      expect(appSpy).toHaveBeenCalledWith({ userId: mockUserId, lastPolledTimestamp: undefined, lastRead: 1000 });
+      expect(appSpy).toHaveBeenCalledWith({
+        userId: mockUserId,
+        lastPolledTimestamp: undefined,
+        lastRead: 1000,
+        allowedTypes: expect.arrayContaining(Object.values(NotificationType)),
+      });
       expect(setUnread).toHaveBeenCalledWith(2);
       expect(setLastPolledTimestamp).toHaveBeenCalledWith(3000);
 
@@ -113,7 +154,12 @@ describe('NotificationController', () => {
       appSpy.mockResolvedValueOnce({ unread: 4, nextPollCursor: 5000 });
       await NotificationController.fetchNotifications({ userId: mockUserId });
 
-      expect(appSpy).toHaveBeenCalledWith({ userId: mockUserId, lastPolledTimestamp: 3000, lastRead: 1000 });
+      expect(appSpy).toHaveBeenCalledWith({
+        userId: mockUserId,
+        lastPolledTimestamp: 3000,
+        lastRead: 1000,
+        allowedTypes: expect.arrayContaining(Object.values(NotificationType)),
+      });
       expect(setUnread).toHaveBeenCalledWith(4);
       expect(setLastPolledTimestamp).toHaveBeenCalledWith(5000);
     });
@@ -170,31 +216,52 @@ describe('NotificationController', () => {
       olderThan: 3000,
     };
 
-    beforeEach(() => setupAuthStore());
+    beforeEach(() => {
+      setupAuthStore();
+      mockSettingsStore();
+    });
 
     it.each([
       { params: {}, expectedOlderThan: Infinity, expectedLimit: NEXUS_NOTIFICATIONS_LIMIT },
       { params: { olderThan: 5000 }, expectedOlderThan: 5000, expectedLimit: NEXUS_NOTIFICATIONS_LIMIT },
       { params: { limit: 50 }, expectedOlderThan: Infinity, expectedLimit: 50 },
       { params: { olderThan: 8000, limit: 20 }, expectedOlderThan: 8000, expectedLimit: 20 },
-    ])('should call application with params: $params', async ({ params, expectedOlderThan, expectedLimit }) => {
+    ])(
+      'should delegate to NotificationApplication.getOrFetchNotifications with params: $params',
+      async ({ params, expectedOlderThan, expectedLimit }) => {
+        const spy = vi.spyOn(NotificationApplication, 'getOrFetchNotifications').mockResolvedValue(mockResponse);
+
+        await NotificationController.getOrFetchNotifications(params);
+
+        expect(spy).toHaveBeenCalledWith({
+          userId: mockUserId,
+          olderThan: expectedOlderThan,
+          limit: expectedLimit,
+          allowedTypes: undefined,
+        });
+      },
+    );
+
+    it('should pass allowedTypes derived from preferences', async () => {
+      mockSettingsStore({ follow: false });
       const spy = vi.spyOn(NotificationApplication, 'getOrFetchNotifications').mockResolvedValue(mockResponse);
 
-      await NotificationController.getOrFetchNotifications(params);
+      await NotificationController.getOrFetchNotifications({});
 
-      expect(spy).toHaveBeenCalledWith({
-        userId: mockUserId,
-        olderThan: expectedOlderThan,
-        limit: expectedLimit,
-      });
+      expect(spy).toHaveBeenCalledWith(
+        expect.objectContaining({
+          allowedTypes: expect.not.arrayContaining([NotificationType.Follow]),
+        }),
+      );
     });
 
-    it('should return response from application', async () => {
+    it('should return the response from application', async () => {
       vi.spyOn(NotificationApplication, 'getOrFetchNotifications').mockResolvedValue(mockResponse);
 
       const result = await NotificationController.getOrFetchNotifications({});
 
-      expect(result).toEqual(mockResponse);
+      expect(result.flatNotifications).toHaveLength(1);
+      expect(result.olderThan).toBe(3000);
     });
 
     it('should return empty response when no notifications', async () => {

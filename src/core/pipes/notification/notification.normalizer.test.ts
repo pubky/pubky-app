@@ -16,6 +16,7 @@ import { NotificationType } from '@/models/notification/notification.types';
 import { NotificationNormalizer } from '@/pipes/notification/notification.normalizer';
 import { PubkySpecsSingleton } from '@/pipes/pipes.builder';
 import type { NexusNotification } from '@/services/nexus/nexus.types';
+import { defaultNotificationPreferences, type NotificationPreferences } from '@/stores/settings/settings.types';
 describe('NotificationNormalizer', () => {
   /**
    * Tests for `to` method - Creates LastRead result (same as LastReadNormalizer)
@@ -224,6 +225,47 @@ describe('NotificationNormalizer', () => {
 
         expect(result).toHaveProperty('extra_field', 'extra_value');
       });
+    });
+  });
+
+  describe('toEnabledTypes', () => {
+    it('should return all types when all preferences are enabled', () => {
+      const result = NotificationNormalizer.toEnabledTypes(defaultNotificationPreferences);
+
+      expect(result).toHaveLength(Object.values(NotificationType).length);
+      expect(result).toEqual(expect.arrayContaining(Object.values(NotificationType)));
+    });
+
+    it('should exclude disabled types', () => {
+      const preferences: NotificationPreferences = {
+        ...defaultNotificationPreferences,
+        follow: false,
+        repost: false,
+      };
+
+      const result = NotificationNormalizer.toEnabledTypes(preferences);
+
+      expect(result).not.toContain(NotificationType.Follow);
+      expect(result).not.toContain(NotificationType.Repost);
+      expect(result).toHaveLength(Object.values(NotificationType).length - 2);
+    });
+
+    it('should return empty array when all preferences are disabled', () => {
+      const preferences: NotificationPreferences = {
+        follow: false,
+        newFriend: false,
+        tagPost: false,
+        tagProfile: false,
+        mention: false,
+        reply: false,
+        repost: false,
+        postDeleted: false,
+        postEdited: false,
+      };
+
+      const result = NotificationNormalizer.toEnabledTypes(preferences);
+
+      expect(result).toHaveLength(0);
     });
   });
 });

@@ -12,7 +12,6 @@ import type { TBootstrapParams } from '@/application/bootstrap/bootstrap.types';
 import { FeedApplication } from '@/application/feed/feed';
 import { FileApplication } from '@/application/file/file';
 import { MuteApplication } from '@/application/mute/mute';
-import { SettingsApplication } from '@/application/settings/settings';
 import { TtlCoordinator } from '@/coordinators/ttl/ttl';
 import { buildHotTagsId } from '@/models/hot/hot.helper';
 import type { Pubky } from '@/models/models.types';
@@ -32,11 +31,6 @@ import { LocalUserService } from '@/services/local/user/user';
 import { NexusBootstrapService } from '@/services/nexus/bootstrap/bootstrap';
 import type { NexusBootstrapResponse } from '@/services/nexus/bootstrap/bootstrap.types';
 import { UserStreamTimeframe, type NexusFileDetails, type NexusNotification } from '@/services/nexus/nexus.types';
-import {
-  defaultNotificationPreferences,
-  defaultPrivacyPreferences,
-  type SettingsState,
-} from '@/stores/settings/settings.types';
 // Mock pubky-app-specs to avoid WebAssembly issues
 vi.mock('pubky-app-specs', () => ({
   default: vi.fn(() => Promise.resolve()),
@@ -45,6 +39,7 @@ vi.mock('pubky-app-specs', () => ({
 const TEST_PUBKY = '5a1diz4pghi47ywdfyfzpit5f3bdomzt4pugpbmq4rngdd4iub4y';
 const MOCK_LAST_READ_URL = 'http://example.com/last-read';
 const MOCK_LAST_READ = 1234567890;
+const MOCK_ALLOWED_TYPES = [NotificationType.Follow, NotificationType.Reply];
 
 const emptyBootstrap = (): NexusBootstrapResponse => ({
   users: [],
@@ -123,20 +118,11 @@ const createFlatNotification = (timestamp: number): FlatNotification =>
     followed_by: `user-${timestamp}`,
   }) as FlatNotification;
 
-const MOCK_LOCAL_SETTINGS: SettingsState = {
-  notifications: defaultNotificationPreferences,
-  privacy: defaultPrivacyPreferences,
-  muted: [],
-  language: 'en',
-  updatedAt: 0,
-  version: 1,
-};
-
-const getBootstrapParams = (pubky: string): TBootstrapParams & { localSettings: SettingsState } => {
+const getBootstrapParams = (pubky: string): TBootstrapParams & { allowedTypes: NotificationType[] } => {
   const {
     meta: { url },
   } = NotificationNormalizer.to(pubky);
-  return { pubky, lastReadUrl: url, localSettings: MOCK_LOCAL_SETTINGS };
+  return { pubky, lastReadUrl: url, allowedTypes: MOCK_ALLOWED_TYPES };
 };
 
 type MockConfig = {
@@ -151,9 +137,7 @@ type MockConfig = {
   upsertTagsError?: Error;
   persistFilesError?: Error;
   bulkSaveError?: Error;
-  countUnreadError?: Error;
-  settingsInitError?: Error;
-  remoteSettings?: SettingsState | null;
+  countFilteredError?: Error;
   mutedUsers?: Pubky[];
   fetchMutedUsersError?: Error;
   fetchFeedsError?: Error;
@@ -172,8 +156,7 @@ type ServiceMocks = {
   upsertHotTags: unknown;
   upsertTagsStream: unknown;
   bulkSave: unknown;
-  countUnreadSince: unknown;
-  initializeSettings: unknown;
+  countFilteredUnreadSince: unknown;
 };
 
 const setupMocks = (config: MockConfig = {}): ServiceMocks => {
@@ -189,9 +172,7 @@ const setupMocks = (config: MockConfig = {}): ServiceMocks => {
     upsertTagsError,
     persistFilesError,
     bulkSaveError,
-    countUnreadError,
-    settingsInitError,
-    remoteSettings = null,
+    countFilteredError,
     mutedUsers = [],
     fetchMutedUsersError,
     fetchFeedsError,
@@ -248,15 +229,10 @@ const setupMocks = (config: MockConfig = {}): ServiceMocks => {
     bulkSave: vi
       .spyOn(LocalNotificationService, 'bulkSave')
       .mockImplementation(bulkSaveError ? () => Promise.reject(bulkSaveError) : () => Promise.resolve(undefined)),
-    countUnreadSince: vi
-      .spyOn(LocalNotificationService, 'countUnreadSince')
+    countFilteredUnreadSince: vi
+      .spyOn(LocalNotificationService, 'countFilteredUnreadSince')
       .mockImplementation(
-        countUnreadError ? () => Promise.reject(countUnreadError) : () => Promise.resolve(unreadCount),
-      ),
-    initializeSettings: vi
-      .spyOn(SettingsApplication, 'initializeSettings')
-      .mockImplementation(
-        settingsInitError ? () => Promise.reject(settingsInitError) : () => Promise.resolve(remoteSettings),
+        countFilteredError ? () => Promise.reject(countFilteredError) : () => Promise.resolve(unreadCount),
       ),
   };
 };
@@ -288,7 +264,7 @@ const assertCommonCalls = (mocks: ServiceMocks, bootstrapData: NexusBootstrapRes
   expect(mocks.persistFiles).toHaveBeenCalledWith(bootstrapData.files);
   const flatNotifications = bootstrapData.notifications.map((n) => createFlatNotification(n.timestamp));
   expect(mocks.bulkSave).toHaveBeenCalledWith({ flatNotifications });
-  expect(mocks.countUnreadSince).toHaveBeenCalledWith(MOCK_LAST_READ);
+  expect(mocks.countFilteredUnreadSince).toHaveBeenCalledWith(MOCK_LAST_READ, MOCK_ALLOWED_TYPES);
 };
 
 describe('BootstrapApplication', () => {
@@ -311,7 +287,8 @@ describe('BootstrapApplication', () => {
   describe('read', () => {
     it('should successfully fetch and persist bootstrap data with notifications', async () => {
       const bootstrapData = createMockBootstrapData();
-      bootstrapData.notifications = [createMockNotification()];
+      const notification = createMockNotification();
+      bootstrapData.notifications = [notification];
       const mocks = setupMocks({ bootstrapData, unreadCount: 1 });
 
       const onProgress = vi.fn();
@@ -320,8 +297,9 @@ describe('BootstrapApplication', () => {
 
       assertCommonCalls(mocks, bootstrapData);
       expect(result).toEqual({
-        notification: { unread: 1, lastRead: MOCK_LAST_READ, lastPolledTimestamp: expect.any(Number) },
-        remoteSettings: null,
+        unread: 1,
+        lastRead: MOCK_LAST_READ,
+        lastPolledTimestamp: notification.timestamp + 1,
       });
 
       expect(onProgress).toHaveBeenCalledWith('bootstrapFetched');
@@ -331,15 +309,17 @@ describe('BootstrapApplication', () => {
 
     it('should work without progress callback', async () => {
       const bootstrapData = createMockBootstrapData();
-      bootstrapData.notifications = [createMockNotification()];
+      const notification = createMockNotification();
+      bootstrapData.notifications = [notification];
       const mocks = setupMocks({ bootstrapData, unreadCount: 1 });
 
       const result = await BootstrapApplication.initialize(getBootstrapParams(TEST_PUBKY));
 
       assertCommonCalls(mocks, bootstrapData);
       expect(result).toEqual({
-        notification: { unread: 1, lastRead: MOCK_LAST_READ, lastPolledTimestamp: expect.any(Number) },
-        remoteSettings: null,
+        unread: 1,
+        lastRead: MOCK_LAST_READ,
+        lastPolledTimestamp: notification.timestamp + 1,
       });
     });
 
@@ -369,8 +349,9 @@ describe('BootstrapApplication', () => {
 
       assertCommonCalls(mocks, bootstrapData);
       expect(result).toEqual({
-        notification: { unread: 0, lastRead: MOCK_LAST_READ, lastPolledTimestamp: undefined },
-        remoteSettings: null,
+        unread: 0,
+        lastRead: MOCK_LAST_READ,
+        lastPolledTimestamp: undefined,
       });
     });
 
@@ -422,8 +403,9 @@ describe('BootstrapApplication', () => {
       expect(mocks.persistUsers).toHaveBeenCalledWith(bootstrapData.users);
       expect(mocks.persistPosts).toHaveBeenCalledWith({ posts: bootstrapData.posts });
       expect(result).toEqual({
-        notification: { unread: 0, lastRead: MOCK_NORMALIZED_TIMESTAMP, lastPolledTimestamp: undefined },
-        remoteSettings: null,
+        unread: 0,
+        lastRead: MOCK_NORMALIZED_TIMESTAMP,
+        lastPolledTimestamp: undefined,
       });
     });
 
@@ -453,13 +435,16 @@ describe('BootstrapApplication', () => {
         message: 'Internal server error',
       });
 
-      expect(loggerErrorSpy).toHaveBeenCalledWith('Failed to fetch last read timestamp', expect.any(Error));
+      expect(loggerErrorSpy).toHaveBeenCalledWith(
+        'Failed to fetch last read timestamp',
+        expect.objectContaining({
+          category: ErrorCategory.Server,
+          code: ServerErrorCode.INTERNAL_ERROR,
+          message: 'Internal server error',
+        }),
+      );
+      expect(homeserverRequestSpy).toHaveBeenCalledTimes(1);
       expect(homeserverRequestSpy).toHaveBeenCalledWith({ method: HttpMethod.GET, url: MOCK_LAST_READ_URL });
-      expect(homeserverRequestSpy).not.toHaveBeenCalledWith({
-        method: HttpMethod.PUT,
-        url: expect.any(String),
-        bodyJson: expect.any(Object),
-      });
 
       // fetchOrPutLastRead fails in the first Promise.all, so persistence is never reached
       expect(mocks.persistUsers).not.toHaveBeenCalled();
@@ -481,13 +466,12 @@ describe('BootstrapApplication', () => {
 
       await expect(BootstrapApplication.initialize(getBootstrapParams(TEST_PUBKY))).rejects.toThrow('Network timeout');
 
-      expect(loggerErrorSpy).toHaveBeenCalledWith('Failed to fetch last read timestamp', expect.any(Error));
+      expect(loggerErrorSpy).toHaveBeenCalledWith(
+        'Failed to fetch last read timestamp',
+        expect.objectContaining({ message: 'Network timeout' }),
+      );
+      expect(homeserverRequestSpy).toHaveBeenCalledTimes(1);
       expect(homeserverRequestSpy).toHaveBeenCalledWith({ method: HttpMethod.GET, url: MOCK_LAST_READ_URL });
-      expect(homeserverRequestSpy).not.toHaveBeenCalledWith({
-        method: HttpMethod.PUT,
-        url: expect.any(String),
-        bodyJson: expect.any(Object),
-      });
 
       // fetchOrPutLastRead fails in the first Promise.all, so persistence is never reached
       expect(mocks.persistUsers).not.toHaveBeenCalled();
@@ -532,11 +516,11 @@ describe('BootstrapApplication', () => {
       expect(mocks.bulkSave).toHaveBeenCalledWith({ flatNotifications: [] });
     });
 
-    it('should throw error when countUnreadSince fails', async () => {
+    it('should throw error when countFilteredUnreadSince fails', async () => {
       const bootstrapData = emptyBootstrap();
       const mocks = setupMocks({
         bootstrapData,
-        countUnreadError: new Error('Count unread error'),
+        countFilteredError: new Error('Count unread error'),
       });
 
       await expect(BootstrapApplication.initialize(getBootstrapParams(TEST_PUBKY))).rejects.toThrow(
@@ -544,7 +528,7 @@ describe('BootstrapApplication', () => {
       );
 
       expect(mocks.bulkSave).toHaveBeenCalledWith({ flatNotifications: [] });
-      expect(mocks.countUnreadSince).toHaveBeenCalledWith(MOCK_LAST_READ);
+      expect(mocks.countFilteredUnreadSince).toHaveBeenCalledWith(MOCK_LAST_READ, MOCK_ALLOWED_TYPES);
     });
 
     it('should throw error when upsert influencers stream fails', async () => {
@@ -582,7 +566,8 @@ describe('BootstrapApplication', () => {
       const bootstrapData = createMockBootstrapData();
       const mockFiles = asOpaque<NexusFileDetails[]>([{ id: 'file-1' }, { id: 'file-2' }]);
       bootstrapData.files = mockFiles;
-      bootstrapData.notifications = [createMockNotification()];
+      const notification = createMockNotification();
+      bootstrapData.notifications = [notification];
 
       const mocks = setupMocks({ bootstrapData, unreadCount: 1 });
 
@@ -590,8 +575,9 @@ describe('BootstrapApplication', () => {
 
       expect(mocks.persistFiles).toHaveBeenCalledWith(mockFiles);
       expect(result).toEqual({
-        notification: { unread: 1, lastRead: MOCK_LAST_READ, lastPolledTimestamp: expect.any(Number) },
-        remoteSettings: null,
+        unread: 1,
+        lastRead: MOCK_LAST_READ,
+        lastPolledTimestamp: notification.timestamp + 1,
       });
     });
 
@@ -603,8 +589,9 @@ describe('BootstrapApplication', () => {
 
       expect(mocks.fetchMutedUsers).toHaveBeenCalledWith(TEST_PUBKY);
       expect(result).toEqual({
-        notification: { unread: 0, lastRead: MOCK_LAST_READ, lastPolledTimestamp: undefined },
-        remoteSettings: null,
+        unread: 0,
+        lastRead: MOCK_LAST_READ,
+        lastPolledTimestamp: undefined,
       });
     });
 
@@ -617,8 +604,9 @@ describe('BootstrapApplication', () => {
 
       expect(mocks.fetchMutedUsers).toHaveBeenCalledWith(TEST_PUBKY);
       expect(result).toEqual({
-        notification: { unread: 0, lastRead: MOCK_LAST_READ, lastPolledTimestamp: undefined },
-        remoteSettings: null,
+        unread: 0,
+        lastRead: MOCK_LAST_READ,
+        lastPolledTimestamp: undefined,
       });
     });
 
@@ -683,78 +671,9 @@ describe('BootstrapApplication', () => {
 
       await BootstrapApplication.initialize(getBootstrapParams(TEST_PUBKY));
 
-      expect(loggerWarnSpy).not.toHaveBeenCalledWith(
-        'User is not indexed in Nexus. Scheduling TTL retry',
-        expect.any(Object),
-      );
+      expect(loggerWarnSpy).not.toHaveBeenCalled();
       expect(upsertTtlSpy).not.toHaveBeenCalled();
       expect(mockSubscribeUser).not.toHaveBeenCalled();
-    });
-  });
-
-  describe('settings initialization', () => {
-    it('should call initializeSettings during bootstrap', async () => {
-      const bootstrapData = emptyBootstrap();
-      const mocks = setupMocks({ bootstrapData });
-
-      await BootstrapApplication.initialize(getBootstrapParams(TEST_PUBKY));
-
-      expect(mocks.initializeSettings).toHaveBeenCalledWith(TEST_PUBKY, MOCK_LOCAL_SETTINGS);
-    });
-
-    it('should return remote settings when remote settings are newer', async () => {
-      const bootstrapData = emptyBootstrap();
-      const remoteSettings: SettingsState = {
-        notifications: defaultNotificationPreferences,
-        privacy: defaultPrivacyPreferences,
-        muted: [],
-        language: 'fr',
-        updatedAt: Date.now(),
-        version: 2,
-      };
-
-      setupMocks({ bootstrapData, remoteSettings });
-
-      const result = await BootstrapApplication.initialize(getBootstrapParams(TEST_PUBKY));
-
-      expect(result.remoteSettings).toEqual(remoteSettings);
-    });
-
-    it('should return null remoteSettings when remote returns null', async () => {
-      const bootstrapData = emptyBootstrap();
-
-      setupMocks({ bootstrapData, remoteSettings: null });
-
-      const result = await BootstrapApplication.initialize(getBootstrapParams(TEST_PUBKY));
-
-      expect(result.remoteSettings).toBeNull();
-    });
-
-    it('should not fail bootstrap when settings initialization fails', async () => {
-      const bootstrapData = emptyBootstrap();
-      const settingsInitError = new Error('Settings sync failed');
-
-      const loggerErrorSpy = vi.spyOn(Logger, 'error').mockImplementation(() => {});
-      const mocks = setupMocks({ bootstrapData, settingsInitError });
-
-      const result = await BootstrapApplication.initialize(getBootstrapParams(TEST_PUBKY));
-
-      expect(result).toEqual({
-        notification: { unread: 0, lastRead: MOCK_LAST_READ, lastPolledTimestamp: undefined },
-        remoteSettings: null,
-      });
-      expect(loggerErrorSpy).toHaveBeenCalledWith('Failed to initialize settings during bootstrap', expect.any(Object));
-      expect(mocks.initializeSettings).toHaveBeenCalledWith(TEST_PUBKY, MOCK_LOCAL_SETTINGS);
-    });
-
-    it('should initialize settings in parallel with bootstrap fetch', async () => {
-      const bootstrapData = emptyBootstrap();
-      const mocks = setupMocks({ bootstrapData });
-
-      await BootstrapApplication.initialize(getBootstrapParams(TEST_PUBKY));
-
-      expect(mocks.initializeSettings).toHaveBeenCalledWith(TEST_PUBKY, MOCK_LOCAL_SETTINGS);
-      expect(mocks.nexusFetch).toHaveBeenCalledWith(TEST_PUBKY);
     });
   });
 });

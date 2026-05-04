@@ -8,6 +8,7 @@ import { NotificationController } from '@/controllers/notification/notification'
 import { NotificationType, type FlatNotification } from '@/models/notification/notification.types';
 import { useAuthStore } from '@/stores/auth/auth.store';
 import { useNotificationStore } from '@/stores/notification/notification.store';
+import { useSettingsStore } from '@/stores/settings/settings.store';
 /**
  * Hook for notifications with infinite scroll pagination.
  * Fetches directly from NotificationController using timestamp-based pagination.
@@ -23,6 +24,8 @@ export function useNotifications(): UseNotificationsResult {
   const loadingRef = useRef(false);
 
   const { currentUserPubky } = useAuthStore();
+  const notificationPreferences = useSettingsStore((s) => s.notifications);
+  const previousPreferencesRef = useRef(notificationPreferences);
 
   /**
    * Mute filtering for notifications.
@@ -209,6 +212,22 @@ export function useNotifications(): UseNotificationsResult {
     if (!currentUserPubky) return;
     performInitialLoad();
   }, [currentUserPubky, performInitialLoad]);
+
+  /**
+   * Reset pagination when notification filter preferences change.
+   * Preference changes create a new query context, so we must restart from
+   * the first page instead of continuing with the previous olderThan cursor.
+   */
+  useEffect(() => {
+    if (!currentUserPubky) return;
+
+    const hasPreferencesChanged = previousPreferencesRef.current !== notificationPreferences;
+    previousPreferencesRef.current = notificationPreferences;
+
+    if (!hasPreferencesChanged) return;
+
+    refresh();
+  }, [currentUserPubky, notificationPreferences, refresh]);
 
   /**
    * Reactively filter notifications when mute state changes.

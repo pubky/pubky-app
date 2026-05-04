@@ -4,9 +4,12 @@ import { Err } from '@/libs/error/error.factories';
 import { ErrorService } from '@/libs/error/error.types';
 import type { Pubky } from '@/models/models.types';
 import { getBusinessKey } from '@/models/notification/notification.helpers';
-import type { FlatNotification } from '@/models/notification/notification.types';
+import { NotificationType, type FlatNotification } from '@/models/notification/notification.types';
 import { PubkySpecsSingleton } from '@/pipes/pipes.builder';
 import type { NexusNotification } from '@/services/nexus/nexus.types';
+import type { NotificationPreferences } from '@/stores/settings/settings.types';
+import { NOTIFICATION_TYPE_TO_PREFERENCE_KEY } from './notification.constants';
+
 export class NotificationNormalizer {
   private constructor() {}
 
@@ -37,5 +40,13 @@ export class NotificationNormalizer {
       ...notificationWithoutId,
       id,
     };
+  }
+
+  /**
+   * Returns the list of NotificationType values that are enabled in the given preferences.
+   * Used by callers that need to convert settings preferences to domain notification types.
+   */
+  static toEnabledTypes(preferences: NotificationPreferences): NotificationType[] {
+    return Object.values(NotificationType).filter((type) => preferences[NOTIFICATION_TYPE_TO_PREFERENCE_KEY[type]]);
   }
 }
