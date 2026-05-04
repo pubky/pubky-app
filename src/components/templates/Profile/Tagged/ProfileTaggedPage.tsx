@@ -1,5 +1,5 @@
-import * as Atoms from '@/atoms';
-import * as Organisms from '@/organisms';
+import { Container } from '@/atoms/Container/Container';
+import { ProfileTagged } from '@/organisms/ProfileTagged/ProfileTagged';
 
 /**
  * ProfileTaggedPage Template
@@ -9,8 +9,8 @@ import * as Organisms from '@/organisms';
  */
 export function ProfileTaggedPage() {
   return (
-    <Atoms.Container className="mt-6 lg:mt-0">
-      <Organisms.ProfileTagged />
-    </Atoms.Container>
+    <Container className="mt-6 lg:mt-0">
+      <ProfileTagged />
+    </Container>
   );
 }

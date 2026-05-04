@@ -74,60 +74,81 @@ vi.mock('@/stores/notification/notification.store', () => ({
 }));
 
 // Mock organisms
-vi.mock('@/organisms', () => ({
-  AvatarWithFallback: ({ name, avatarUrl, className }: { name: string; avatarUrl?: string; className?: string }) => (
-    <div data-testid="avatar-with-fallback" data-name={name} data-avatar={avatarUrl} className={className}>
-      {avatarUrl ? <img src={avatarUrl} alt={name} /> : <span>{name[0]}</span>}
-    </div>
-  ),
-}));
+vi.mock('@/organisms/AvatarWithFallback/AvatarWithFallback', () => {
+  return {
+    AvatarWithFallback: ({ name, avatarUrl, className }: { name: string; avatarUrl?: string; className?: string }) => (
+      <div data-testid="avatar-with-fallback" data-name={name} data-avatar={avatarUrl} className={className}>
+        {avatarUrl ? <img src={avatarUrl} alt={name} /> : <span>{name[0]}</span>}
+      </div>
+    ),
+  };
+});
 
 // Mock molecules
 const mockToast = vi.fn();
 const mockGetOrFetch = vi.fn<() => Promise<{ kind: string; content: string } | null>>(() => Promise.resolve(null));
-vi.mock('@/molecules', () => ({
-  PostTag: ({ label, onClick }: { label: string; onClick?: (e: React.MouseEvent) => void }) => (
-    <span data-testid="post-tag" onClick={onClick}>
-      {label}
-    </span>
-  ),
-  NotificationIcon: ({ type, showBadge }: { type: NotificationType; showBadge?: boolean }) => (
-    <div data-testid="notification-icon" data-type={type} data-badge={showBadge ? 'true' : 'false'}>
-      Icon
-    </div>
-  ),
-  useToast: () => ({ toast: mockToast }),
-}));
+vi.mock('@/molecules/NotificationIcon/NotificationIcon', () => {
+  return {
+    NotificationIcon: ({ type, showBadge }: { type: NotificationType; showBadge?: boolean }) => (
+      <div data-testid="notification-icon" data-type={type} data-badge={showBadge ? 'true' : 'false'}>
+        Icon
+      </div>
+    ),
+  };
+});
+
+vi.mock('@/molecules/PostTag/PostTag', () => {
+  return {
+    PostTag: ({ label, onClick }: { label: string; onClick?: (e: React.MouseEvent) => void }) => (
+      <span data-testid="post-tag" onClick={onClick}>
+        {label}
+      </span>
+    ),
+  };
+});
+
+vi.mock('@/molecules/Toaster/use-toast', () => {
+  return {
+    useToast: () => ({ toast: mockToast }),
+  };
+});
 
 // Mock atoms
-vi.mock('@/atoms', () => ({
-  Container: ({
-    children,
-    className,
-    onClick,
-  }: {
-    children: React.ReactNode;
-    className?: string;
-    onClick?: React.MouseEventHandler;
-  }) => (
-    <div data-testid="container" className={className} onClick={onClick}>
-      {children}
-    </div>
-  ),
-  Typography: ({
-    children,
-    as: Tag = 'p',
-    className,
-  }: {
-    children: React.ReactNode;
-    as?: React.ElementType;
-    className?: string;
-  }) => (
-    <Tag data-testid="typography" className={className}>
-      {children}
-    </Tag>
-  ),
-}));
+vi.mock('@/atoms/Container/Container', () => {
+  return {
+    Container: ({
+      children,
+      className,
+      onClick,
+    }: {
+      children: React.ReactNode;
+      className?: string;
+      onClick?: React.MouseEventHandler;
+    }) => (
+      <div data-testid="container" className={className} onClick={onClick}>
+        {children}
+      </div>
+    ),
+  };
+});
+
+vi.mock('@/atoms/Typography/Typography', () => {
+  return {
+    Typography: ({
+      children,
+      as: Tag = 'p',
+      className,
+    }: {
+      children: React.ReactNode;
+      as?: React.ElementType;
+      className?: string;
+    }) => (
+      <Tag data-testid="typography" className={className}>
+        {children}
+      </Tag>
+    ),
+  };
+});
 
 describe('NotificationItem', () => {
   beforeEach(() => {

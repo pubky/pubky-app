@@ -456,12 +456,11 @@ exports[`DialogTerms - Snapshots > matches snapshot for default DialogTerms 1`] 
           data-testid="typography"
         >
           To report any violation of our Terms, please email
-           
           <a
             data-testid="link"
             href="mailto:report@synonym.to"
           >
-            report@synonym.to
+             report@synonym.to
           </a>
           . Please use the word “
           <strong>
@@ -582,13 +581,12 @@ exports[`DialogTerms - Snapshots > matches snapshot for default DialogTerms 1`] 
           >
             Takedown Notice
           </a>
-          . We respond to notices of alleged copyright infringement according to the process laid out in the
-           
+          . We respond to notices of alleged copyright infringement according to the process laid out in
           <a
             data-testid="link"
             href="/copyright"
           >
-            Takedown Notice
+             Takedown Notice
           </a>
           .
         </p>
@@ -976,20 +974,18 @@ exports[`DialogTerms - Snapshots > matches snapshot for default DialogTerms 1`] 
               Privacy Policy
             </strong>
             ” means the Pubky
-             
             <a
               data-testid="link"
               href="/settings/privacy-safety"
             >
-              Privacy Policy
+               Privacy Policy
             </a>
              located at:
-             
             <a
               data-testid="link"
               href="/settings/privacy-safety"
             >
-              https://pubky.app/privacy
+               https://pubky.app/privacy
             </a>
             .
           </li>

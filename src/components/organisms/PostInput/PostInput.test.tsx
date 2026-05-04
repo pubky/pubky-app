@@ -3,8 +3,8 @@ import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { PostInput } from './PostInput';
 import { POST_INPUT_VARIANT } from './PostInput.constants';
-import { POST_THREAD_CONNECTOR_VARIANTS } from '@/components/atoms/PostThreadConnector/PostThreadConnector.constants';
-import { POST_MAX_CHARACTER_LENGTH } from '@/config';
+import { POST_THREAD_CONNECTOR_VARIANTS } from '@/atoms/PostThreadConnector/PostThreadConnector.constants';
+import { POST_MAX_CHARACTER_LENGTH } from '@/config/posts';
 import type { UsePostInputOptions, UsePostInputReturn } from '@/hooks/usePostInput/usePostInput.types';
 import { PostMainLayoutProvider } from '@/organisms/PostMain/PostMainLayout';
 import { useEnterSubmit } from '@/hooks/useEnterSubmit/useEnterSubmit';
@@ -22,9 +22,17 @@ const mockSetArticleTitle = vi.fn();
 const mockSetMentionSelectedIndex = vi.fn();
 const mockHandleMentionSelect = vi.fn();
 
-vi.mock('@/atoms', async () => {
-  const { POST_THREAD_CONNECTOR_VARIANTS } =
-    await import('@/components/atoms/PostThreadConnector/PostThreadConnector.constants');
+vi.mock('@/atoms/Button/Button', () => {
+  return {
+    Button: vi.fn(({ children, onClick, disabled, className, 'aria-label': ariaLabel }) => (
+      <button onClick={onClick} disabled={disabled} className={className} aria-label={ariaLabel}>
+        {children}
+      </button>
+    )),
+  };
+});
+
+vi.mock('@/atoms/Container/Container', () => {
   return {
     Container: ({
       children,
@@ -61,37 +69,11 @@ vi.mock('@/atoms', async () => {
         {children}
       </div>
     ),
-    Textarea: vi.fn(({ value, onChange, placeholder, disabled, ref, onFocus, onKeyDown, autoFocus, className }) => (
-      <textarea
-        ref={ref}
-        data-testid="textarea"
-        data-class-name={className}
-        value={value}
-        onChange={onChange}
-        onFocus={onFocus}
-        onKeyDown={onKeyDown}
-        placeholder={placeholder}
-        disabled={disabled}
-        autoFocus={autoFocus}
-      />
-    )),
-    PostThreadConnector: vi.fn(({ height, variant }) => (
-      <div data-testid="thread-connector" data-height={height} data-variant={variant} />
-    )),
-    POST_THREAD_CONNECTOR_VARIANTS,
-    Button: vi.fn(({ children, onClick, disabled, className, 'aria-label': ariaLabel }) => (
-      <button onClick={onClick} disabled={disabled} className={className} aria-label={ariaLabel}>
-        {children}
-      </button>
-    )),
-    Typography: vi.fn(({ children, as, size, className }) => {
-      const Tag = (as || 'p') as React.ElementType;
-      return (
-        <Tag data-testid="typography" data-as={as} data-size={size} className={className}>
-          {children}
-        </Tag>
-      );
-    }),
+  };
+});
+
+vi.mock('@/atoms/Input/Input', () => {
+  return {
     Input: vi.fn(({ type, accept, multiple, onChange, ref, className, id, placeholder, defaultValue, disabled }) => (
       <input
         ref={ref}
@@ -110,24 +92,66 @@ vi.mock('@/atoms', async () => {
   };
 });
 
-vi.mock('@/organisms', () => ({
-  PostHeader: vi.fn(({ postId, isReplyInput, characterLimit, size }) => (
-    <div
-      data-testid="post-header"
-      data-post-id={postId}
-      data-is-reply={isReplyInput}
-      data-count={characterLimit?.count}
-      data-max={characterLimit?.max}
-      data-size={size}
-    />
-  )),
-}));
+vi.mock('@/atoms/PostThreadConnector/PostThreadConnector', () => {
+  return {
+    PostThreadConnector: vi.fn(({ height, variant }) => (
+      <div data-testid="thread-connector" data-height={height} data-variant={variant} />
+    )),
+  };
+});
 
-vi.mock('../Timeline/Feed/TimelineFeed', () => ({
+vi.mock('@/atoms/Textarea/Textarea', () => {
+  return {
+    Textarea: vi.fn(({ value, onChange, placeholder, disabled, ref, onFocus, onKeyDown, autoFocus, className }) => (
+      <textarea
+        ref={ref}
+        data-testid="textarea"
+        data-class-name={className}
+        value={value}
+        onChange={onChange}
+        onFocus={onFocus}
+        onKeyDown={onKeyDown}
+        placeholder={placeholder}
+        disabled={disabled}
+        autoFocus={autoFocus}
+      />
+    )),
+  };
+});
+
+vi.mock('@/atoms/Typography/Typography', () => {
+  return {
+    Typography: vi.fn(({ children, as, size, className }) => {
+      const Tag = (as || 'p') as React.ElementType;
+      return (
+        <Tag data-testid="typography" data-as={as} data-size={size} className={className}>
+          {children}
+        </Tag>
+      );
+    }),
+  };
+});
+
+vi.mock('@/organisms/PostHeader/PostHeader', () => {
+  return {
+    PostHeader: vi.fn(({ postId, isReplyInput, characterLimit, size }) => (
+      <div
+        data-testid="post-header"
+        data-post-id={postId}
+        data-is-reply={isReplyInput}
+        data-count={characterLimit?.count}
+        data-max={characterLimit?.max}
+        data-size={size}
+      />
+    )),
+  };
+});
+
+vi.mock('../Timeline/Feed/TimelineFeed/TimelineFeedContext', () => ({
   useTimelineFeedContext: vi.fn(() => null),
 }));
 
-vi.mock('../PostInputTags', () => ({
+vi.mock('../PostInputTags/PostInputTags', () => ({
   PostInputTags: vi.fn(({ tags, disabled }) => (
     <div data-testid="post-input-tags" data-disabled={disabled}>
       {tags.map((tag: string, index: number) => (
@@ -139,7 +163,7 @@ vi.mock('../PostInputTags', () => ({
   )),
 }));
 
-vi.mock('../PostInputActionBar', () => ({
+vi.mock('../PostInputActionBar/PostInputActionBar', () => ({
   PostInputActionBar: vi.fn(
     ({ onPostClick, onEmojiClick, onImageClick, isPostDisabled, isSubmitting, characterLimit }) => (
       <div
@@ -166,122 +190,142 @@ vi.mock('../PostInputActionBar', () => ({
   ),
 }));
 
-vi.mock('@/molecules', () => ({
-  PostTagAddButton: vi.fn(({ onClick, disabled }) => (
-    <button data-testid="add-tag-button" onClick={onClick} disabled={disabled}>
-      +
-    </button>
-  )),
-  TagInput: vi.fn(() => <div data-testid="tag-input" />),
-  PostTag: vi.fn(({ label }) => <div data-testid={`post-tag-${label}`}>{label}</div>),
-  PostPreviewCard: vi.fn(({ postId, className }: { postId: string; className?: string }) => (
-    <div data-testid="post-preview-card" data-post-id={postId} className={className}>
-      Original Post: {postId}
-    </div>
-  )),
-  MarkdownEditor: vi.fn(({ markdown, onChange, readOnly }) => (
-    <div
-      data-testid="markdown-editor"
-      data-readonly={readOnly}
-      contentEditable={!readOnly}
-      onInput={(e) => onChange?.((e.target as HTMLDivElement).textContent || '')}
-    >
-      {markdown}
-    </div>
-  )),
-  PostLinkEmbeds: vi.fn(({ content }: { content: string }) => {
-    // Only render if content contains a URL-like pattern
-    if (content.includes('http') || content.includes('youtube') || content.includes('youtu.be')) {
-      return <div data-testid="post-link-embeds">Link preview</div>;
-    }
-    return null;
-  }),
-  MentionPopover: vi.fn(
-    ({
-      users,
-      selectedIndex,
-    }: {
-      users: Array<{ id: string; name: string; pubky: string }>;
-      selectedIndex: number;
-    }) => (
-      <div data-testid="mention-popover" data-users-count={users.length} data-selected-index={selectedIndex}>
-        Mention popover
-      </div>
-    ),
-  ),
-  PostInputAttachments: vi.fn(
-    ({
-      attachments,
-      isSubmitting,
-      isArticle,
-    }: {
-      ref: React.RefObject<HTMLInputElement>;
-      attachments: File[];
-      setAttachments: React.Dispatch<React.SetStateAction<File[]>>;
-      handleFilesAdded: (files: FileList | File[]) => void;
-      isSubmitting: boolean;
-      isArticle?: boolean;
-      handleFileClick?: () => void;
-    }) => (
-      <div data-testid="post-input-attachments" data-submitting={isSubmitting} data-is-article={isArticle}>
-        {attachments.map((file: File, index: number) => (
-          <div key={index} data-testid={`attachment-${file.name}`}>
-            {file.name}
+vi.mock('@/molecules/EmojiPickerDialog/EmojiPickerDialog', () => {
+  return {
+    EmojiPickerDialog: vi.fn(
+      ({
+        open,
+        onOpenChange,
+        onEmojiSelect,
+      }: {
+        open: boolean;
+        onOpenChange: (open: boolean) => void;
+        onEmojiSelect: (emoji: { native: string }) => void;
+      }) =>
+        open ? (
+          <div data-testid="emoji-picker-dialog">
+            <button data-testid="emoji-select" onClick={() => onEmojiSelect({ native: '😀' })}>
+              Select Emoji
+            </button>
+            <button data-testid="emoji-close" onClick={() => onOpenChange(false)}>
+              Close
+            </button>
           </div>
-        ))}
-      </div>
+        ) : null,
     ),
-  ),
-  EmojiPickerDialog: vi.fn(
-    ({
-      open,
-      onOpenChange,
-      onEmojiSelect,
-    }: {
-      open: boolean;
-      onOpenChange: (open: boolean) => void;
-      onEmojiSelect: (emoji: { native: string }) => void;
-    }) =>
-      open ? (
-        <div data-testid="emoji-picker-dialog">
-          <button data-testid="emoji-select" onClick={() => onEmojiSelect({ native: '😀' })}>
-            Select Emoji
-          </button>
-          <button data-testid="emoji-close" onClick={() => onOpenChange(false)}>
-            Close
-          </button>
-        </div>
-      ) : null,
-  ),
-  useToast: vi.fn(() => ({ toast: mockToast })),
-}));
+  };
+});
 
-// Mock the direct import of PostInputAttachments
-vi.mock('@/molecules/PostInputAttachments/PostInputAttachments', () => ({
-  PostInputAttachments: vi.fn(
-    ({
-      attachments,
-      isSubmitting,
-      isArticle,
-    }: {
-      ref: React.RefObject<HTMLInputElement>;
-      attachments: File[];
-      setAttachments: React.Dispatch<React.SetStateAction<File[]>>;
-      handleFilesAdded: (files: FileList | File[]) => void;
-      isSubmitting: boolean;
-      isArticle?: boolean;
-      handleFileClick?: () => void;
-    }) => (
-      <div data-testid="post-input-attachments" data-submitting={isSubmitting} data-is-article={isArticle}>
-        {attachments.map((file: File, index: number) => (
-          <div key={index} data-testid={`attachment-${file.name}`}>
-            {file.name}
-          </div>
-        ))}
+vi.mock('@/molecules/MarkdownEditor/MarkdownEditor', () => {
+  return {
+    MarkdownEditor: vi.fn(({ markdown, onChange, readOnly }) => (
+      <div
+        data-testid="markdown-editor"
+        data-readonly={readOnly}
+        contentEditable={!readOnly}
+        onInput={(e) => onChange?.((e.target as HTMLDivElement).textContent || '')}
+      >
+        {markdown}
       </div>
+    )),
+  };
+});
+
+vi.mock('@/molecules/MentionPopover/MentionPopover', () => {
+  return {
+    MentionPopover: vi.fn(
+      ({
+        users,
+        selectedIndex,
+      }: {
+        users: Array<{ id: string; name: string; pubky: string }>;
+        selectedIndex: number;
+      }) => (
+        <div data-testid="mention-popover" data-users-count={users.length} data-selected-index={selectedIndex}>
+          Mention popover
+        </div>
+      ),
     ),
-  ),
-}));
+  };
+});
+
+vi.mock('@/molecules/PostInputAttachments/PostInputAttachments', () => {
+  return {
+    PostInputAttachments: vi.fn(
+      ({
+        attachments,
+        isSubmitting,
+        isArticle,
+      }: {
+        ref: React.RefObject<HTMLInputElement>;
+        attachments: File[];
+        setAttachments: React.Dispatch<React.SetStateAction<File[]>>;
+        handleFilesAdded: (files: FileList | File[]) => void;
+        isSubmitting: boolean;
+        isArticle?: boolean;
+        handleFileClick?: () => void;
+      }) => (
+        <div data-testid="post-input-attachments" data-submitting={isSubmitting} data-is-article={isArticle}>
+          {attachments.map((file: File, index: number) => (
+            <div key={index} data-testid={`attachment-${file.name}`}>
+              {file.name}
+            </div>
+          ))}
+        </div>
+      ),
+    ),
+  };
+});
+
+vi.mock('@/molecules/PostLinkEmbeds/PostLinkEmbeds', () => {
+  return {
+    PostLinkEmbeds: vi.fn(({ content }: { content: string }) => {
+      // Only render if content contains a URL-like pattern
+      if (content.includes('http') || content.includes('youtube') || content.includes('youtu.be')) {
+        return <div data-testid="post-link-embeds">Link preview</div>;
+      }
+      return null;
+    }),
+  };
+});
+
+vi.mock('@/molecules/PostPreviewCard/PostPreviewCard', () => {
+  return {
+    PostPreviewCard: vi.fn(({ postId, className }: { postId: string; className?: string }) => (
+      <div data-testid="post-preview-card" data-post-id={postId} className={className}>
+        Original Post: {postId}
+      </div>
+    )),
+  };
+});
+
+vi.mock('@/molecules/PostTag/PostTag', () => {
+  return {
+    PostTag: vi.fn(({ label }) => <div data-testid={`post-tag-${label}`}>{label}</div>),
+  };
+});
+
+vi.mock('@/molecules/PostTagAddButton/PostTagAddButton', () => {
+  return {
+    PostTagAddButton: vi.fn(({ onClick, disabled }) => (
+      <button data-testid="add-tag-button" onClick={onClick} disabled={disabled}>
+        +
+      </button>
+    )),
+  };
+});
+
+vi.mock('@/molecules/TagInput/TagInput', () => {
+  return {
+    TagInput: vi.fn(() => <div data-testid="tag-input" />),
+  };
+});
+
+vi.mock('@/molecules/Toaster/use-toast', () => {
+  return {
+    useToast: vi.fn(() => ({ toast: mockToast })),
+  };
+});
 
 // Shared refs so React populates them when mock components render
 const mockTextareaRef = createRef<HTMLTextAreaElement>();

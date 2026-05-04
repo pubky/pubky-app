@@ -1,10 +1,10 @@
-import { forwardRef } from 'react';
-import * as Types from './Container.types';
+import { forwardRef, type ElementType, type HTMLAttributes, type Ref } from 'react';
+import type { ContainerElementProps, ContainerProps } from './Container.types';
 import { cn } from '@/libs/utils/utils';
 
 export const Container = forwardRef<
   HTMLDivElement | HTMLHtmlElement | HTMLBodyElement,
-  Types.ContainerProps & React.HTMLAttributes<HTMLDivElement>
+  ContainerProps & HTMLAttributes<HTMLDivElement>
 >(function Container(
   {
     as = 'div',
@@ -14,7 +14,7 @@ export const Container = forwardRef<
     'data-testid': dataTestId,
     className,
     ...props
-  }: Types.ContainerProps,
+  }: ContainerProps,
   ref,
 ) {
   const defaultClasses = 'mx-auto w-full flex-col';
@@ -36,14 +36,14 @@ export const Container = forwardRef<
     ? cn(className)
     : cn(defaultClasses, displayClasses[display], sizeClasses[size], className);
 
-  const Tag = (as || 'div') as React.ElementType;
+  const Tag = (as || 'div') as ElementType;
 
   // Only pass ref when component is a div
-  const elementProps: Types.ContainerElementProps = {
+  const elementProps: ContainerElementProps = {
     ...props,
     'data-testid': dataTestId || 'container',
     className: containerClassName,
-    ref: ref as React.Ref<HTMLDivElement>,
+    ref: ref as Ref<HTMLDivElement>,
   };
 
   return <Tag {...elementProps}>{props.children}</Tag>;

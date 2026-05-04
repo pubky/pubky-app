@@ -50,13 +50,13 @@ vi.mock('@/hooks/useAuthStatus/useAuthStatus', () => ({
 }));
 
 // Mock @/app
-vi.mock('@/app', () => ({
+vi.mock('@/app/routes', () => ({
   PUBLIC_ROUTES: ['/landing'],
   isDynamicPublicRoute: (path: string) => path.startsWith('/post/') || path.startsWith('/profile/'),
 }));
 
-// Mock @/providers
-vi.mock('@/providers', () => ({
+// Mock @/providers/RouteGuardProvider/RouteGuardProvider.constants
+vi.mock('@/providers/RouteGuardProvider/RouteGuardProvider.constants', () => ({
   ROUTE_ACCESS_MAP: {
     AUTHENTICATED: { allowedRoutes: ['/feed', '/settings'], redirectTo: '/feed' },
     UNAUTHENTICATED: { allowedRoutes: ['/login', '/landing'], redirectTo: '/login' },
@@ -65,9 +65,11 @@ vi.mock('@/providers', () => ({
 }));
 
 // Mock @/atoms
-vi.mock('@/atoms', () => ({
-  Spinner: (props: Record<string, unknown>) => <div data-testid="spinner" {...props} />,
-}));
+vi.mock('@/atoms/Spinner/Spinner', () => {
+  return {
+    Spinner: (props: Record<string, unknown>) => <div data-testid="spinner" {...props} />,
+  };
+});
 
 vi.mock('@/libs/logger/logger', () => ({
   Logger: { error: vi.fn(), warn: vi.fn(), info: vi.fn() },

@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { userStreamApi, buildUserStreamBodyUrl } from './userStream.api';
-import { asInvalid } from '@/test-utils';
+import { asInvalid } from '@/test-utils/type-assertions';
 import { buildUserCompositeId } from '@/models/stream/user/userStream.helper';
 import { UserStreamTypes } from '@/models/stream/user/userStream.types';
 import { UserStreamReach, UserStreamTimeframe } from '@/services/nexus/nexus.types';

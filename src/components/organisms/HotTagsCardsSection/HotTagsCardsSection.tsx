@@ -6,10 +6,13 @@ import { useIsMobile } from '@/hooks/useIsMobile/useIsMobile';
 import { useMemo, useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { useTranslations } from 'next-intl';
-import * as Atoms from '@/atoms';
-import * as Molecules from '@/molecules';
+import { Container } from '@/atoms/Container/Container';
+import { Heading } from '@/atoms/Heading/Heading';
+import { Typography } from '@/atoms/Typography/Typography';
+import { HotTagCard } from '@/molecules/HotTagCard/HotTagCard';
+
 import { APP_ROUTES } from '@/app/routes';
-import { HOT_TAGS_FEATURED_COUNT } from '@/config';
+import { HOT_TAGS_FEATURED_COUNT } from '@/config/tags';
 import { HotTagsCardsSectionSkeleton } from './HotTagsCardsSection.skeleton';
 import type { HotTagsCardsSectionProps } from './HotTagsCardsSection.types';
 import { MAX_AVATARS_MOBILE, MAX_AVATARS_DEFAULT, MAX_AVATARS_XL } from './HotTagsCardsSection.constants';
@@ -76,41 +79,41 @@ export function HotTagsCardsSection({ className }: HotTagsCardsSectionProps) {
 
   if (error) {
     return (
-      <Atoms.Container overrideDefaults className={cn('flex w-full flex-col gap-2', className)}>
-        <Atoms.Heading level={5} size="lg" className="font-light text-muted-foreground">
+      <Container overrideDefaults className={cn('flex w-full flex-col gap-2', className)}>
+        <Heading level={5} size="lg" className="font-light text-muted-foreground">
           {t('hotTags')}
-        </Atoms.Heading>
-        <Atoms.Typography className="text-destructive">{t('failedToLoadTags')}</Atoms.Typography>
-      </Atoms.Container>
+        </Heading>
+        <Typography className="text-destructive">{t('failedToLoadTags')}</Typography>
+      </Container>
     );
   }
 
   if (isEffectivelyLoading) {
     return (
-      <Atoms.Container overrideDefaults className={cn('flex w-full flex-col gap-2', className)}>
-        <Atoms.Heading level={5} size="lg" className="font-light text-muted-foreground">
+      <Container overrideDefaults className={cn('flex w-full flex-col gap-2', className)}>
+        <Heading level={5} size="lg" className="font-light text-muted-foreground">
           {t('hotTags')}
-        </Atoms.Heading>
+        </Heading>
         <HotTagsCardsSectionSkeleton maxAvatars={maxAvatars} />
-      </Atoms.Container>
+      </Container>
     );
   }
 
   return (
-    <Atoms.Container
+    <Container
       overrideDefaults
       className={cn('flex w-full flex-col gap-2', className)}
       data-testid="hot-tags-cards-section"
     >
-      <Atoms.Heading level={5} size="lg" className="font-light text-muted-foreground">
+      <Heading level={5} size="lg" className="font-light text-muted-foreground">
         {t('hotTags')}
-      </Atoms.Heading>
+      </Heading>
       {featuredTags.length === 0 ? (
-        <Atoms.Typography className="font-light text-muted-foreground">{t('noTagsToShow')}</Atoms.Typography>
+        <Typography className="font-light text-muted-foreground">{t('noTagsToShow')}</Typography>
       ) : (
-        <Atoms.Container overrideDefaults className="flex flex-col gap-3 sm:flex-row">
+        <Container overrideDefaults className="flex flex-col gap-3 sm:flex-row">
           {featuredTags.map((tag, index) => (
-            <Molecules.HotTagCard
+            <HotTagCard
               key={tag.label}
               rank={index + 1}
               tagName={tag.label}
@@ -121,8 +124,8 @@ export function HotTagsCardsSection({ className }: HotTagsCardsSectionProps) {
               onClick={handleTagClick}
             />
           ))}
-        </Atoms.Container>
+        </Container>
       )}
-    </Atoms.Container>
+    </Container>
   );
 }

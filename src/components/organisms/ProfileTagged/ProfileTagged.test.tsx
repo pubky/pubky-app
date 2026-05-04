@@ -6,7 +6,7 @@ import { useTagged } from '@/hooks/useTagged/useTagged';
 import { useUserProfile } from '@/hooks/useUserProfile/useUserProfile';
 
 // Mock providers
-vi.mock('@/providers', () => ({
+vi.mock('@/providers/ProfileProvider/ProfileProvider', () => ({
   useProfileContext: () => ({
     pubky: 'test-user-pubky',
     isOwnProfile: true,
@@ -28,12 +28,15 @@ vi.mock('@/hooks/useTagged/useTagged', () => ({
 }));
 
 // Mock molecules
-vi.mock('@/molecules', async (importOriginal) => {
-  const actual = await importOriginal<typeof import('@/molecules')>();
+vi.mock('@/molecules/TaggedEmpty/TaggedEmpty', () => {
   return {
-    ...actual,
-    TaggedSection: () => <div data-testid="tagged-section">TaggedSection</div>,
     TaggedEmpty: () => <div data-testid="tagged-empty">TaggedEmpty</div>,
+  };
+});
+
+vi.mock('@/molecules/TaggedSection/TaggedSection', () => {
+  return {
+    TaggedSection: () => <div data-testid="tagged-section">TaggedSection</div>,
   };
 });
 

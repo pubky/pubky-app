@@ -4,32 +4,34 @@ import { PostAttachmentsCarouselImage } from './PostAttachmentsCarouselImage';
 import type { AttachmentConstructed } from '@/organisms/PostAttachments/PostAttachments.types';
 
 // Mock @/atoms
-vi.mock('@/atoms', () => ({
-  Image: ({
-    src,
-    alt,
-    className,
-    id,
-    onLoad,
-    'data-testid': dataTestId,
-  }: {
-    src: string;
-    alt: string;
-    className?: string;
-    id?: string;
-    onLoad?: () => void;
-    'data-testid'?: string;
-  }) => (
-    <img
-      data-testid={dataTestId || `image-${src.includes('feed') ? 'feed' : 'main'}`}
-      src={src}
-      alt={alt}
-      className={className}
-      id={id}
-      onLoad={onLoad}
-    />
-  ),
-}));
+vi.mock('@/atoms/Image/Image', () => {
+  return {
+    Image: ({
+      src,
+      alt,
+      className,
+      id,
+      onLoad,
+      'data-testid': dataTestId,
+    }: {
+      src: string;
+      alt: string;
+      className?: string;
+      id?: string;
+      onLoad?: () => void;
+      'data-testid'?: string;
+    }) => (
+      <img
+        data-testid={dataTestId || `image-${src.includes('feed') ? 'feed' : 'main'}`}
+        src={src}
+        alt={alt}
+        className={className}
+        id={id}
+        onLoad={onLoad}
+      />
+    ),
+  };
+});
 
 const createMockImage = (overrides: Partial<AttachmentConstructed> = {}): AttachmentConstructed => ({
   type: 'image/jpeg',

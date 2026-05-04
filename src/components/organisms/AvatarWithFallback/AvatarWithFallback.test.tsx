@@ -48,89 +48,101 @@ vi.mock('@/stores/localFiles/localFiles.store', () => ({
 }));
 
 // Mock Config
-vi.mock('@/config', () => ({
+vi.mock('@/config/nexus', () => ({
   CDN_URL: 'https://cdn.example.com',
 }));
 
 // Mock Atoms components
-vi.mock('@/atoms', () => ({
-  Avatar: ({
-    children,
-    className,
-    'data-testid': dataTestId,
-  }: {
-    children: React.ReactNode;
-    className?: string;
-    'data-testid'?: string;
-  }) => (
-    <div data-testid={dataTestId || 'avatar'} className={className}>
-      {children}
-    </div>
-  ),
-  AvatarImage: ({
-    src,
-    alt,
-    onError,
-    className,
-  }: {
-    src: string;
-    alt: string;
-    onError?: (event: React.SyntheticEvent<HTMLImageElement>) => void;
-    className?: string;
-  }) => <img data-testid="avatar-image" src={src} alt={alt} onError={onError} className={className} />,
-  AvatarFallback: ({ children, className }: { children: React.ReactNode; className?: string }) => (
-    <div data-testid="avatar-fallback" className={className}>
-      {children}
-    </div>
-  ),
-  Container: ({
-    children,
-    onClick,
-    onKeyDown,
-    className,
-    role,
-    tabIndex,
-    'aria-label': ariaLabel,
-  }: {
-    children: React.ReactNode;
-    onClick?: (e: React.MouseEvent) => void;
-    onKeyDown?: (e: React.KeyboardEvent) => void;
-    className?: string;
-    role?: string;
-    tabIndex?: number;
-    'aria-label'?: string;
-    overrideDefaults?: boolean;
-  }) => (
-    <div
-      data-testid="unblur-button"
-      onClick={onClick}
-      onKeyDown={onKeyDown}
-      className={className}
-      role={role}
-      tabIndex={tabIndex}
-      aria-label={ariaLabel}
-    >
-      {children}
-    </div>
-  ),
-  Typography: ({
-    as: Tag = 'p',
-    children,
-    className,
-    'data-testid': dataTestId,
-  }: {
-    as?: React.ElementType;
-    children: React.ReactNode;
-    className?: string;
-    'data-testid'?: string;
-    overrideDefaults?: boolean;
-    style?: React.CSSProperties;
-  }) => (
-    <Tag data-testid={dataTestId} className={className}>
-      {children}
-    </Tag>
-  ),
-}));
+vi.mock('@/atoms/Avatar/Avatar', () => {
+  return {
+    Avatar: ({
+      children,
+      className,
+      'data-testid': dataTestId,
+    }: {
+      children: React.ReactNode;
+      className?: string;
+      'data-testid'?: string;
+    }) => (
+      <div data-testid={dataTestId || 'avatar'} className={className}>
+        {children}
+      </div>
+    ),
+    AvatarImage: ({
+      src,
+      alt,
+      onError,
+      className,
+    }: {
+      src: string;
+      alt: string;
+      onError?: (event: React.SyntheticEvent<HTMLImageElement>) => void;
+      className?: string;
+    }) => <img data-testid="avatar-image" src={src} alt={alt} onError={onError} className={className} />,
+    AvatarFallback: ({ children, className }: { children: React.ReactNode; className?: string }) => (
+      <div data-testid="avatar-fallback" className={className}>
+        {children}
+      </div>
+    ),
+  };
+});
+
+vi.mock('@/atoms/Container/Container', () => {
+  return {
+    Container: ({
+      children,
+      onClick,
+      onKeyDown,
+      className,
+      role,
+      tabIndex,
+      'aria-label': ariaLabel,
+    }: {
+      children: React.ReactNode;
+      onClick?: (e: React.MouseEvent) => void;
+      onKeyDown?: (e: React.KeyboardEvent) => void;
+      className?: string;
+      role?: string;
+      tabIndex?: number;
+      'aria-label'?: string;
+      overrideDefaults?: boolean;
+    }) => (
+      <div
+        data-testid="unblur-button"
+        onClick={onClick}
+        onKeyDown={onKeyDown}
+        className={className}
+        role={role}
+        tabIndex={tabIndex}
+        aria-label={ariaLabel}
+      >
+        {children}
+      </div>
+    ),
+  };
+});
+
+vi.mock('@/atoms/Typography/Typography', () => {
+  return {
+    Typography: ({
+      as: Tag = 'p',
+      children,
+      className,
+      'data-testid': dataTestId,
+    }: {
+      as?: React.ElementType;
+      children: React.ReactNode;
+      className?: string;
+      'data-testid'?: string;
+      overrideDefaults?: boolean;
+      style?: React.CSSProperties;
+    }) => (
+      <Tag data-testid={dataTestId} className={className}>
+        {children}
+      </Tag>
+    ),
+  };
+});
 
 describe('AvatarWithFallback', () => {
   const mockProps = {

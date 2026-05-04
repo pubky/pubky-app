@@ -2,7 +2,16 @@
 
 import { useIsMobile } from '@/hooks/useIsMobile/useIsMobile';
 import { useTranslations } from 'next-intl';
-import * as Atoms from '@/atoms';
+import { Button } from '@/atoms/Button/Button';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '@/atoms/Dialog/Dialog';
+
 import { RefreshCw } from 'lucide-react';
 
 type DialogAuthExpiredProps = {
@@ -18,19 +27,19 @@ export function DialogAuthExpired({ open, onRefresh, isLoading = false }: Dialog
   const title = isMobile ? t('titleMobile') : t('titleDesktop');
   const description = isMobile ? t('descriptionMobile') : t('descriptionDesktop');
   return (
-    <Atoms.Dialog open={open}>
-      <Atoms.DialogContent showCloseButton={false} hiddenTitle={title}>
-        <Atoms.DialogHeader>
-          <Atoms.DialogTitle>{title}</Atoms.DialogTitle>
-        </Atoms.DialogHeader>
-        <Atoms.DialogDescription>{description}</Atoms.DialogDescription>
-        <Atoms.DialogFooter>
-          <Atoms.Button size="lg" onClick={onRefresh} disabled={isLoading}>
+    <Dialog open={open}>
+      <DialogContent showCloseButton={false} hiddenTitle={title}>
+        <DialogHeader>
+          <DialogTitle>{title}</DialogTitle>
+        </DialogHeader>
+        <DialogDescription>{description}</DialogDescription>
+        <DialogFooter>
+          <Button size="lg" onClick={onRefresh} disabled={isLoading}>
             <RefreshCw className="size-4" />
             {t('refresh')}
-          </Atoms.Button>
-        </Atoms.DialogFooter>
-      </Atoms.DialogContent>
-    </Atoms.Dialog>
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
   );
 }

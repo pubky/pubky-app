@@ -1,6 +1,59 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen, fireEvent } from '@testing-library/react';
 import { DialogBackupEncrypted } from './DialogBackupEncrypted';
+vi.mock('@/atoms/Dialog/Dialog', () => {
+  return {
+    Dialog: ({ children }: { children: React.ReactNode }) => <div data-testid="dialog">{children}</div>,
+    DialogTrigger: ({ children, asChild }: { children: React.ReactNode; asChild?: boolean }) => (
+      <div data-testid="dialog-trigger" data-as-child={asChild}>
+        {children}
+      </div>
+    ),
+    DialogContent: ({
+      children,
+      className,
+      hiddenTitle,
+    }: {
+      children: React.ReactNode;
+      className?: string;
+      hiddenTitle?: string;
+    }) => (
+      <div data-testid="dialog-content" className={className} data-hidden-title={hiddenTitle}>
+        {hiddenTitle && (
+          <h2 className="sr-only" data-testid="dialog-hidden-title">
+            {hiddenTitle}
+          </h2>
+        )}
+        {children}
+      </div>
+    ),
+    DialogHeader: ({ children, className }: { children: React.ReactNode; className?: string }) => (
+      <div data-testid="dialog-header" className={className}>
+        {children}
+      </div>
+    ),
+    DialogTitle: ({ children, className }: { children: React.ReactNode; className?: string }) => (
+      <h2 data-testid="dialog-title" className={className}>
+        {children}
+      </h2>
+    ),
+    DialogDescription: ({ children, className }: { children: React.ReactNode; className?: string }) => (
+      <p data-testid="dialog-description" className={className}>
+        {children}
+      </p>
+    ),
+    DialogClose: ({ children, asChild }: { children: React.ReactNode; asChild?: boolean }) => (
+      <div data-testid="dialog-close" data-as-child={asChild}>
+        {children}
+      </div>
+    ),
+    DialogFooter: ({ children, className }: { children: React.ReactNode; className?: string }) => (
+      <div data-testid="dialog-footer" className={className}>
+        {children}
+      </div>
+    ),
+  };
+});
 
 // Mock Next.js Image
 vi.mock('next/image', () => ({
@@ -32,133 +85,111 @@ vi.mock('@/controllers/profile/profile', () => ({
 }));
 
 // Mock atoms
-vi.mock('@/components/atoms', () => ({
-  Dialog: ({ children }: { children: React.ReactNode }) => <div data-testid="dialog">{children}</div>,
-  DialogTrigger: ({ children, asChild }: { children: React.ReactNode; asChild?: boolean }) => (
-    <div data-testid="dialog-trigger" data-as-child={asChild}>
-      {children}
-    </div>
-  ),
-  DialogContent: ({
-    children,
-    className,
-    hiddenTitle,
-  }: {
-    children: React.ReactNode;
-    className?: string;
-    hiddenTitle?: string;
-  }) => (
-    <div data-testid="dialog-content" className={className} data-hidden-title={hiddenTitle}>
-      {hiddenTitle && (
-        <h2 className="sr-only" data-testid="dialog-hidden-title">
-          {hiddenTitle}
-        </h2>
-      )}
-      {children}
-    </div>
-  ),
-  DialogHeader: ({ children, className }: { children: React.ReactNode; className?: string }) => (
-    <div data-testid="dialog-header" className={className}>
-      {children}
-    </div>
-  ),
-  DialogTitle: ({ children, className }: { children: React.ReactNode; className?: string }) => (
-    <h2 data-testid="dialog-title" className={className}>
-      {children}
-    </h2>
-  ),
-  DialogDescription: ({ children, className }: { children: React.ReactNode; className?: string }) => (
-    <p data-testid="dialog-description" className={className}>
-      {children}
-    </p>
-  ),
-  DialogClose: ({ children, asChild }: { children: React.ReactNode; asChild?: boolean }) => (
-    <div data-testid="dialog-close" data-as-child={asChild}>
-      {children}
-    </div>
-  ),
-  Button: ({
-    children,
-    variant,
-    className,
-    onClick,
-    disabled,
-  }: {
-    children: React.ReactNode;
-    variant?: string;
-    className?: string;
-    onClick?: () => void;
-    disabled?: boolean;
-  }) => (
-    <button data-testid={`button-${variant || 'default'}`} className={className} onClick={onClick} disabled={disabled}>
-      {children}
-    </button>
-  ),
-  Container: ({
-    children,
-    className,
-    onKeyDown,
-    tabIndex,
-  }: {
-    children: React.ReactNode;
-    className?: string;
-    onKeyDown?: (e: React.KeyboardEvent<HTMLDivElement>) => void;
-    tabIndex?: number;
-  }) => (
-    <div data-testid="container" className={className} onKeyDown={onKeyDown} tabIndex={tabIndex}>
-      {children}
-    </div>
-  ),
-  Label: ({ children, className, htmlFor }: { children: React.ReactNode; className?: string; htmlFor?: string }) => (
-    <label data-testid="label" className={className} htmlFor={htmlFor}>
-      {children}
-    </label>
-  ),
-  Input: ({
-    id,
-    type,
-    value,
-    onChange,
-    className,
-    placeholder,
-    autoComplete,
-    disabled,
-    ...props
-  }: {
-    id?: string;
-    type?: string;
-    value?: string;
-    onChange?: (e: React.ChangeEvent<HTMLInputElement>) => void;
-    className?: string;
-    placeholder?: string;
-    autoComplete?: string;
-    disabled?: boolean;
-    [key: string]: unknown;
-  }) => (
-    <input
-      data-testid="input"
-      id={id}
-      type={type}
-      value={value}
-      onChange={onChange}
-      className={className}
-      placeholder={placeholder}
-      autoComplete={autoComplete}
-      disabled={disabled}
-      {...props}
-    />
-  ),
-  Typography: ({ children, size, className }: { children: React.ReactNode; size?: string; className?: string }) => (
-    <p data-testid="typography" data-size={size} className={className}>
-      {children}
-    </p>
-  ),
-  DialogFooter: ({ children, className }: { children: React.ReactNode; className?: string }) => (
-    <div data-testid="dialog-footer" className={className}>
-      {children}
-    </div>
-  ),
-}));
+vi.mock('@/atoms/Button/Button', () => {
+  return {
+    Button: ({
+      children,
+      variant,
+      className,
+      onClick,
+      disabled,
+    }: {
+      children: React.ReactNode;
+      variant?: string;
+      className?: string;
+      onClick?: () => void;
+      disabled?: boolean;
+    }) => (
+      <button
+        data-testid={`button-${variant || 'default'}`}
+        className={className}
+        onClick={onClick}
+        disabled={disabled}
+      >
+        {children}
+      </button>
+    ),
+  };
+});
+
+vi.mock('@/atoms/Container/Container', () => {
+  return {
+    Container: ({
+      children,
+      className,
+      onKeyDown,
+      tabIndex,
+    }: {
+      children: React.ReactNode;
+      className?: string;
+      onKeyDown?: (e: React.KeyboardEvent<HTMLDivElement>) => void;
+      tabIndex?: number;
+    }) => (
+      <div data-testid="container" className={className} onKeyDown={onKeyDown} tabIndex={tabIndex}>
+        {children}
+      </div>
+    ),
+  };
+});
+
+vi.mock('@/atoms/Input/Input', () => {
+  return {
+    Input: ({
+      id,
+      type,
+      value,
+      onChange,
+      className,
+      placeholder,
+      autoComplete,
+      disabled,
+      ...props
+    }: {
+      id?: string;
+      type?: string;
+      value?: string;
+      onChange?: (e: React.ChangeEvent<HTMLInputElement>) => void;
+      className?: string;
+      placeholder?: string;
+      autoComplete?: string;
+      disabled?: boolean;
+      [key: string]: unknown;
+    }) => (
+      <input
+        data-testid="input"
+        id={id}
+        type={type}
+        value={value}
+        onChange={onChange}
+        className={className}
+        placeholder={placeholder}
+        autoComplete={autoComplete}
+        disabled={disabled}
+        {...props}
+      />
+    ),
+  };
+});
+
+vi.mock('@/atoms/Label/Label', () => {
+  return {
+    Label: ({ children, className, htmlFor }: { children: React.ReactNode; className?: string; htmlFor?: string }) => (
+      <label data-testid="label" className={className} htmlFor={htmlFor}>
+        {children}
+      </label>
+    ),
+  };
+});
+
+vi.mock('@/atoms/Typography/Typography', () => {
+  return {
+    Typography: ({ children, size, className }: { children: React.ReactNode; size?: string; className?: string }) => (
+      <p data-testid="typography" data-size={size} className={className}>
+        {children}
+      </p>
+    ),
+  };
+});
 
 describe('DialogBackupEncrypted', () => {
   beforeEach(() => {

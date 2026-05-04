@@ -1,6 +1,6 @@
-import * as Molecules from '@/molecules';
+import { Metadata } from '@/molecules/Metadata/Metadata';
 
-export const metadata = Molecules.Metadata({
+export const metadata = Metadata({
   title: 'Offline - Pubky App',
   description: 'You are currently offline.',
   robots: false,

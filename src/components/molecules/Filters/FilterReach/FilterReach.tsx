@@ -2,7 +2,9 @@
 
 import * as React from 'react';
 import { useTranslations } from 'next-intl';
-import * as Molecules from '@/molecules';
+import { FilterRadioGroup } from '../FilterRadioGroup/FilterRadioGroup';
+import { BaseFilterProps } from '../Filters.types';
+
 import { Radio, HeartHandshake } from 'lucide-react';
 import { UsersRound2 } from '@/icons';
 import { REACH, type ReachType } from '@/stores/home/home.types';
@@ -11,7 +13,7 @@ export function FilterReach({
   defaultSelectedTab = REACH.ALL,
   onTabChange,
   disabled,
-}: Molecules.BaseFilterProps<ReachType>) {
+}: BaseFilterProps<ReachType>) {
   const t = useTranslations('filters.reach');
   const items = React.useMemo(
     () => [
@@ -37,7 +39,7 @@ export function FilterReach({
     [t, disabled],
   );
   return (
-    <Molecules.FilterRadioGroup
+    <FilterRadioGroup
       title={t('title')}
       items={items}
       selectedValue={selectedTab}

@@ -3,8 +3,11 @@
 import { useIsMobile } from '@/hooks/useIsMobile/useIsMobile';
 import { usePostTaggers } from '@/hooks/usePostTaggers/usePostTaggers';
 import { useEffect, useMemo, useState } from 'react';
-import * as Atoms from '@/atoms';
-import * as Molecules from '@/molecules';
+import { Button } from '@/atoms/Button/Button';
+import { Container } from '@/atoms/Container/Container';
+import { Popover, PopoverContent, PopoverTrigger } from '@/atoms/Popover/Popover';
+import { WhoTaggedExpandedList } from '../WhoTaggedExpandedList/WhoTaggedExpandedList';
+
 import type { PostTagPopoverWrapperProps } from './PostTagPopoverWrapper.types';
 import { POPOVER_HOVER_DELAY, MAX_VISIBLE_AVATARS } from './PostTagPopoverWrapper.constants';
 import { TaggerAvatar } from './TaggerAvatar/TaggerAvatar';
@@ -58,31 +61,31 @@ export function PostTagPopoverWrapper({
   const overflowCount = Math.max(0, taggersCount - visibleTaggers.length);
 
   return (
-    <Atoms.Popover hover hoverDelay={POPOVER_HOVER_DELAY} open={open} onOpenChange={handleOpenChange}>
-      <Atoms.PopoverTrigger asChild>{children}</Atoms.PopoverTrigger>
-      <Atoms.PopoverContent
+    <Popover hover hoverDelay={POPOVER_HOVER_DELAY} open={open} onOpenChange={handleOpenChange}>
+      <PopoverTrigger asChild>{children}</PopoverTrigger>
+      <PopoverContent
         side="bottom"
         sideOffset={4}
         align="start"
         className="w-auto border-none bg-transparent p-0 shadow-none"
         onOpenAutoFocus={(e) => e.preventDefault()}
       >
-        <Atoms.Container overrideDefaults className="flex items-center">
+        <Container overrideDefaults className="flex items-center">
           {visibleTaggers.map((tagger, index) => (
             <TaggerAvatar key={tagger.id} tagger={tagger} index={index} />
           ))}
           {overflowCount > 0 && (
-            <Atoms.Popover open={showAllTaggers} onOpenChange={setShowAllTaggers}>
-              <Atoms.PopoverTrigger asChild>
-                <Atoms.Button
+            <Popover open={showAllTaggers} onOpenChange={setShowAllTaggers}>
+              <PopoverTrigger asChild>
+                <Button
                   overrideDefaults
                   className="z-0 -ml-2 flex size-8 shrink-0 cursor-pointer items-center justify-center rounded-full border-2 border-background bg-muted text-xs font-medium shadow-sm transition-opacity hover:opacity-80"
                   aria-label={`Show all ${taggersCount} taggers`}
                 >
                   +{overflowCount}
-                </Atoms.Button>
-              </Atoms.PopoverTrigger>
-              <Atoms.PopoverContent
+                </Button>
+              </PopoverTrigger>
+              <PopoverContent
                 side="bottom"
                 sideOffset={8}
                 align="start"
@@ -90,17 +93,17 @@ export function PostTagPopoverWrapper({
                 onOpenAutoFocus={(e) => e.preventDefault()}
               >
                 {showAllTaggers && (
-                  <Molecules.WhoTaggedExpandedList
+                  <WhoTaggedExpandedList
                     taggerIds={expandedTaggerIds ?? initialTaggerIds}
                     fallbackTaggers={taggers}
                     isLoadingTaggers={isLoadingTaggers}
                   />
                 )}
-              </Atoms.PopoverContent>
-            </Atoms.Popover>
+              </PopoverContent>
+            </Popover>
           )}
-        </Atoms.Container>
-      </Atoms.PopoverContent>
-    </Atoms.Popover>
+        </Container>
+      </PopoverContent>
+    </Popover>
   );
 }

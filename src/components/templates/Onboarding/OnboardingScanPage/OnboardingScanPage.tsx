@@ -1,11 +1,11 @@
-import * as Molecules from '@/molecules';
-import * as Organisms from '@/organisms';
+import { OnboardingLayout } from '@/molecules/OnboardingLayout/OnboardingLayout';
+import { ScanContent, ScanFooter, ScanNavigation } from '@/organisms/Scan/Scan';
 
 export function OnboardingScanPage() {
   return (
-    <Molecules.OnboardingLayout testId="scan-page-content" navigation={<Organisms.ScanNavigation />}>
-      <Organisms.ScanContent />
-      <Organisms.ScanFooter />
-    </Molecules.OnboardingLayout>
+    <OnboardingLayout testId="scan-page-content" navigation={<ScanNavigation />}>
+      <ScanContent />
+      <ScanFooter />
+    </OnboardingLayout>
   );
 }

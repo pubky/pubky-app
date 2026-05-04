@@ -3,12 +3,20 @@
 import { useControlledState } from '@/hooks/useControlledState/useControlledState';
 import { useRadiogroupKeyboard } from '@/hooks/useRadiogroupKeyboard/useRadiogroupKeyboard';
 import * as React from 'react';
-import * as Atoms from '@/atoms';
-import * as Molecules from '@/molecules';
+import { Container } from '@/atoms/Container/Container';
+import {
+  FilterHeader,
+  FilterItem,
+  FilterItemIcon,
+  FilterItemLabel,
+  FilterList,
+  FilterRoot,
+} from '@/atoms/Filter/Filter';
+import { FilterListItem } from '../Filters.types';
 
 export interface FilterRadioGroupProps<T = string> {
   title: string;
-  items: Molecules.FilterListItem<T>[];
+  items: FilterListItem<T>[];
   selectedValue?: T;
   defaultValue?: T;
   onChange?: (value: T) => void;
@@ -57,10 +65,10 @@ export function FilterRadioGroup<T extends string = string>({
   );
 
   return (
-    <Atoms.FilterRoot>
-      <Atoms.FilterHeader title={title} id={headerId} />
+    <FilterRoot>
+      <FilterHeader title={title} id={headerId} />
 
-      <Atoms.Container
+      <Container
         overrideDefaults
         ref={listRef}
         role="radiogroup"
@@ -68,12 +76,12 @@ export function FilterRadioGroup<T extends string = string>({
         data-cy={dataCy}
         data-testid={testId || `filter-${title.toLowerCase()}-radiogroup`}
       >
-        <Atoms.FilterList>
+        <FilterList>
           {items.map(({ key, label, icon: Icon, disabled, dataCy: itemDataCy }, index) => {
             const isSelected = selectedValue === key;
 
             return (
-              <Atoms.FilterItem
+              <FilterItem
                 key={String(key)}
                 isSelected={isSelected}
                 onClick={() => handleItemClick(key, disabled)}
@@ -86,13 +94,13 @@ export function FilterRadioGroup<T extends string = string>({
                 data-cy={itemDataCy}
                 className={disabled ? 'cursor-default opacity-40' : undefined}
               >
-                <Atoms.FilterItemIcon icon={Icon} />
-                <Atoms.FilterItemLabel>{label}</Atoms.FilterItemLabel>
-              </Atoms.FilterItem>
+                <FilterItemIcon icon={Icon} />
+                <FilterItemLabel>{label}</FilterItemLabel>
+              </FilterItem>
             );
           })}
-        </Atoms.FilterList>
-      </Atoms.Container>
-    </Atoms.FilterRoot>
+        </FilterList>
+      </Container>
+    </FilterRoot>
   );
 }

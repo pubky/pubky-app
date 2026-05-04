@@ -1,10 +1,10 @@
-import type * as Atoms from '@/atoms';
+import { AvatarSize } from '@/atoms/Avatar/Avatar.variants';
 
 export interface AvatarWithFallbackProps {
   avatarUrl?: string;
   name: string;
   fallbackSeed?: string;
-  size?: Atoms.AvatarSize;
+  size?: AvatarSize;
   className?: string;
   fallbackClassName?: string;
   alt?: string;

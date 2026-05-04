@@ -3,7 +3,7 @@ import { describe, it, expect, vi } from 'vitest';
 import { render, screen } from '@testing-library/react';
 import { SettingsMobileMenu } from './SettingsMobileMenu';
 
-import { SETTINGS_ROUTES } from '@/app';
+import { SETTINGS_ROUTES } from '@/app/routes';
 
 // Mock next/navigation
 vi.mock('next/navigation', () => ({

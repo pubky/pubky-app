@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { VerificationHandler } from './HumanLightningPayment.utils';
-import { asOpaque } from '@/test-utils';
+import { asOpaque } from '@/test-utils/type-assertions';
 import { HomegateController } from '@/controllers/homegate/homegate';
 type VerificationHandlerInternals = { checkPaymentStatus: () => Promise<void> };
 

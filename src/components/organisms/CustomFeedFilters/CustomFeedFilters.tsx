@@ -1,8 +1,12 @@
 'use client';
 
 import { useCustomFeed } from '@/hooks/useCustomFeed/useCustomFeed';
-import * as Atoms from '@/atoms';
-import * as Molecules from '@/molecules';
+import { Container } from '@/atoms/Container/Container';
+import { FilterContent } from '@/molecules/Filters/FilterContent/FilterContent';
+import { FilterLayout } from '@/molecules/Filters/FilterLayout/FilterLayout';
+import { FilterReach } from '@/molecules/Filters/FilterReach/FilterReach';
+import { FilterSort } from '@/molecules/Filters/FilterSort/FilterSort';
+
 import { CONTENT } from '@/stores/home/home.types';
 import {
   pubkyLayoutToHomeLayout,
@@ -27,24 +31,24 @@ export function CustomFeedFilters({ variant }: CustomFeedFiltersProps) {
         : undefined;
 
   return (
-    <Atoms.Container overrideDefaults className="flex flex-col gap-6">
-      <Molecules.FilterReach selectedTab={reach} defaultSelectedTab={undefined} disabled />
+    <Container overrideDefaults className="flex flex-col gap-6">
+      <FilterReach selectedTab={reach} defaultSelectedTab={undefined} disabled />
 
-      <Molecules.FilterSort selectedTab={sort} defaultSelectedTab={undefined} disabled />
+      <FilterSort selectedTab={sort} defaultSelectedTab={undefined} disabled />
 
       {variant === 'sidebar' ? (
-        <Atoms.Container overrideDefaults className="sticky top-[100px] flex w-full flex-col gap-6 self-start">
-          <Molecules.FilterLayout selectedTab={layout} defaultSelectedTab={undefined} disabled showVisual />
+        <Container overrideDefaults className="sticky top-[100px] flex w-full flex-col gap-6 self-start">
+          <FilterLayout selectedTab={layout} defaultSelectedTab={undefined} disabled showVisual />
 
-          <Molecules.FilterContent selectedTab={content} defaultSelectedTab={undefined} disabled />
-        </Atoms.Container>
+          <FilterContent selectedTab={content} defaultSelectedTab={undefined} disabled />
+        </Container>
       ) : (
         <>
-          <Molecules.FilterLayout selectedTab={layout} defaultSelectedTab={undefined} disabled showVisual />
+          <FilterLayout selectedTab={layout} defaultSelectedTab={undefined} disabled showVisual />
 
-          <Molecules.FilterContent selectedTab={content} defaultSelectedTab={undefined} disabled />
+          <FilterContent selectedTab={content} defaultSelectedTab={undefined} disabled />
         </>
       )}
-    </Atoms.Container>
+    </Container>
   );
 }

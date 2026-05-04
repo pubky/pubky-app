@@ -39,7 +39,7 @@ vi.mock('@/stores/home/home.store', () => ({
   useHomeStore: () => mockUseHomeStore(),
 }));
 
-vi.mock('@/atoms/Container', () => ({
+vi.mock('@/atoms/Container/Container', () => ({
   Container: ({ children, className }: { children: React.ReactNode; className?: string }) => (
     <div data-testid="container" className={className}>
       {children}
@@ -47,10 +47,19 @@ vi.mock('@/atoms/Container', () => ({
   ),
 }));
 
-vi.mock('@/molecules/Filters/', () => ({
+vi.mock('@/molecules/Filters/FilterReach/FilterReach', () => ({
   FilterReach: (props: BaseFilterMockProps) => mockFilterReach(props),
+}));
+
+vi.mock('@/molecules/Filters/FilterSort/FilterSort', () => ({
   FilterSort: (props: BaseFilterMockProps) => mockFilterSort(props),
+}));
+
+vi.mock('@/molecules/Filters/FilterContent/FilterContent', () => ({
   FilterContent: (props: BaseFilterMockProps) => mockFilterContent(props),
+}));
+
+vi.mock('@/molecules/Filters/FilterLayout/FilterLayout', () => ({
   FilterLayout: ({ selectedTab, onTabChange }: { selectedTab?: string; onTabChange?: (tab: string) => void }) =>
     mockFilterLayout({ selectedTab, onTabChange }),
 }));

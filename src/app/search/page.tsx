@@ -1,5 +1,1 @@
-import * as Templates from '@/templates';
-
-export default function SearchPage() {
-  return <Templates.Search />;
-}
+export { Search as default } from '@/templates/Feed/Search/Search';

@@ -1,10 +1,8 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { FollowResult } from 'pubky-app-specs';
 import { UserController } from './user';
-import { asOpaque } from '@/test-utils';
+import { asOpaque } from '@/test-utils/type-assertions';
 import { HttpMethod } from '@/libs/http/http.types';
-import * as useHomeStoreModule from '@/stores/home/home.store';
-import * as getStreamIdModule from '@/stores/home/home.utils';
 import { UserApplication } from '@/application/user/user';
 import type { Pubky } from '@/models/models.types';
 import type { PostStreamTypes } from '@/models/stream/post/postStream.types';
@@ -12,6 +10,39 @@ import type { UserCountsModel } from '@/models/user/counts/userCounts';
 import { FollowNormalizer } from '@/pipes/follow/follow.normalizer';
 import type { NexusTag, NexusTaggers, NexusUserCounts, NexusUserDetails } from '@/services/nexus/nexus.types';
 import { useHomeStore } from '@/stores/home/home.store';
+import { CONTENT, REACH, SORT } from '@/stores/home/home.types';
+import { getStreamId } from '@/stores/home/home.utils';
+
+vi.mock('@/stores/home/home.store', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('@/stores/home/home.store')>();
+  const useHomeStoreMock = Object.assign(vi.fn(), {
+    getState: vi.fn(),
+  });
+  return {
+    ...actual,
+    useHomeStore: useHomeStoreMock,
+  };
+});
+
+vi.mock('@/stores/home/home.utils', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('@/stores/home/home.utils')>();
+  return {
+    ...actual,
+    getStreamId: vi.fn(),
+  };
+});
+
+const mockUseHomeStore = vi.mocked(useHomeStore);
+const mockUseHomeStoreGetState = vi.mocked(useHomeStore.getState);
+const mockGetStreamId = vi.mocked(getStreamId);
+
+const createMockHomeState = () =>
+  asOpaque<ReturnType<typeof useHomeStore.getState>>({
+    sort: SORT.TIMELINE,
+    reach: REACH.ALL,
+    content: CONTENT.ALL,
+  });
+
 // Valid 52-character z-base32 encoded pubky IDs for testing
 const TEST_PUBKY = {
   USER_1: '5a1diz4pghi47ywdfyfzpit5f3bdomzt4pugpbmq4rngdd4iub4y' as Pubky,
@@ -21,6 +52,9 @@ const TEST_PUBKY = {
 describe('UserController', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    mockUseHomeStore.mockReset();
+    mockUseHomeStoreGetState.mockReset();
+    mockGetStreamId.mockReset();
   });
 
   afterEach(() => {
@@ -370,11 +404,7 @@ describe('UserController', () => {
       );
 
       // Mock useHomeStore to return null for activeStreamId (not on /home route)
-      vi.spyOn(useHomeStoreModule, 'useHomeStore').mockReturnValue(
-        asOpaque<typeof useHomeStore>({
-          getState: () => ({ sort: 'all', reach: 'all', content: 'all' }),
-        }),
-      );
+      mockUseHomeStoreGetState.mockReturnValue(createMockHomeState());
       const followSpy = vi.spyOn(UserApplication, 'commitFollow').mockResolvedValue(undefined);
 
       await UserController.commitFollow(HttpMethod.PUT, { follower, followee });
@@ -407,11 +437,7 @@ describe('UserController', () => {
       );
 
       // Mock useHomeStore to return null for activeStreamId (not on /home route)
-      vi.spyOn(useHomeStoreModule, 'useHomeStore').mockReturnValue(
-        asOpaque<typeof useHomeStore>({
-          getState: () => ({ sort: 'all', reach: 'all', content: 'all' }),
-        }),
-      );
+      mockUseHomeStoreGetState.mockReturnValue(createMockHomeState());
       const followSpy = vi.spyOn(UserApplication, 'commitFollow').mockResolvedValue(undefined);
 
       await UserController.commitFollow(HttpMethod.DELETE, { follower, followee });
@@ -454,11 +480,7 @@ describe('UserController', () => {
       );
 
       // Mock useHomeStore to return null for activeStreamId (not on /home route)
-      vi.spyOn(useHomeStoreModule, 'useHomeStore').mockReturnValue(
-        asOpaque<typeof useHomeStore>({
-          getState: () => ({ sort: 'all', reach: 'all', content: 'all' }),
-        }),
-      );
+      mockUseHomeStoreGetState.mockReturnValue(createMockHomeState());
       vi.spyOn(UserApplication, 'commitFollow').mockRejectedValue(new Error('delegate-fail'));
 
       await expect(UserController.commitFollow(HttpMethod.PUT, { follower, followee })).rejects.toThrow(
@@ -488,12 +510,8 @@ describe('UserController', () => {
         writable: true,
       });
       // Mock useHomeStore and getStreamId to return the mock stream ID
-      vi.spyOn(useHomeStoreModule, 'useHomeStore').mockReturnValue(
-        asOpaque<typeof useHomeStore>({
-          getState: () => ({ sort: 'all', reach: 'all', content: 'all' }),
-        }),
-      );
-      vi.spyOn(getStreamIdModule, 'getStreamId').mockReturnValue(mockStreamId);
+      mockUseHomeStoreGetState.mockReturnValue(createMockHomeState());
+      mockGetStreamId.mockReturnValue(mockStreamId);
       const followSpy = vi.spyOn(UserApplication, 'commitFollow').mockResolvedValue(undefined);
 
       await UserController.commitFollow(HttpMethod.PUT, { follower, followee });

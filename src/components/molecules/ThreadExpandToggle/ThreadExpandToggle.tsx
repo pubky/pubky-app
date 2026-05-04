@@ -1,6 +1,6 @@
 'use client';
+import { Button } from '@/atoms/Button/Button';
 
-import * as Atoms from '@/atoms';
 import { useTranslations } from 'next-intl';
 import { CircleMinus, CirclePlus } from 'lucide-react';
 interface ThreadExpandToggleProps {
@@ -20,7 +20,7 @@ export function ThreadExpandToggle({ expanded, onToggle }: ThreadExpandTogglePro
   const tThreadTree = useTranslations('common.threadTree');
   const Icon = expanded ? CircleMinus : CirclePlus;
   return (
-    <Atoms.Button
+    <Button
       variant="ghost"
       size="icon"
       onClick={(e) => {
@@ -31,6 +31,6 @@ export function ThreadExpandToggle({ expanded, onToggle }: ThreadExpandTogglePro
       aria-label={expanded ? tThreadTree('collapseAllReplies') : tThreadTree('expandAllReplies')}
     >
       <Icon className="size-5" />
-    </Atoms.Button>
+    </Button>
   );
 }

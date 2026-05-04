@@ -7,7 +7,7 @@ import {
   FeedResult,
   PubkySpecsBuilder,
 } from 'pubky-app-specs';
-import { asOpaque } from '@/test-utils';
+import { asOpaque } from '@/test-utils/type-assertions';
 import { AppError } from '@/libs/error/error';
 import { ValidationErrorCode } from '@/libs/error/error.codes';
 import { ErrorCategory, ErrorService } from '@/libs/error/error.types';

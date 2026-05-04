@@ -34,7 +34,7 @@ vi.mock('@/controllers/profile/profile', () => ({
 }));
 
 // Mock @/providers
-vi.mock('@/providers', () => ({
+vi.mock('@/providers/ProfileProvider/ProfileProvider', () => ({
   useProfileContext: vi.fn(() => ({
     pubky: 'test-pubky-123',
     isOwnProfile: true,

@@ -1,4 +1,4 @@
-import { URL_TRUNCATE_LENGTH, TITLE_TRUNCATE_LENGTH } from '@/config';
+import { URL_TRUNCATE_LENGTH, TITLE_TRUNCATE_LENGTH } from '@/config/urls';
 import { normalizeImageUrl, isHttpProtocol } from '../nextjs.utils';
 import { extractFromHtml, OG_PATTERNS } from '@/libs/html/html';
 import { HttpStatusCode } from '@/libs/http/http.types';

@@ -4,7 +4,10 @@ import { ClassAttributes, HTMLAttributes, useEffect, useState } from 'react';
 import type { ExtraProps } from 'react-markdown';
 import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter';
 import { oneDark } from 'react-syntax-highlighter/dist/esm/styles/prism';
-import * as Atoms from '@/atoms';
+import { Button } from '@/atoms/Button/Button';
+import { Container } from '@/atoms/Container/Container';
+import { Typography } from '@/atoms/Typography/Typography';
+
 import { Check, Clipboard } from 'lucide-react';
 import { cn, copyToClipboard } from '@/libs/utils/utils';
 type PostCodeBlockProps = ClassAttributes<HTMLElement> & HTMLAttributes<HTMLElement> & ExtraProps;
@@ -32,14 +35,11 @@ export const PostCodeBlock = (props: PostCodeBlockProps) => {
   }, [copied]);
   return lang ? (
     // Full code block with syntax highlighting and copy functionality (ex. ``` or ```ts)
-    <Atoms.Container
-      overrideDefaults
-      className="max-w-69.5 xsm:max-w-72 sm:max-w-120 md:max-w-168 lg:max-w-130 xl:max-w-175"
-    >
-      <Atoms.Container className="flex-row items-center justify-between gap-x-2 rounded-t-md bg-gray-600 px-4">
-        <Atoms.Typography size="sm">{lang}</Atoms.Typography>
+    <Container overrideDefaults className="max-w-69.5 xsm:max-w-72 sm:max-w-120 md:max-w-168 lg:max-w-130 xl:max-w-175">
+      <Container className="flex-row items-center justify-between gap-x-2 rounded-t-md bg-gray-600 px-4">
+        <Typography size="sm">{lang}</Typography>
 
-        <Atoms.Button
+        <Button
           onClick={(e) => {
             e.stopPropagation();
             copyCodeBlock();
@@ -50,9 +50,9 @@ export const PostCodeBlock = (props: PostCodeBlockProps) => {
         >
           {copied ? <Check size={16} /> : <Clipboard size={16} />}
 
-          <Atoms.Typography size="sm">{copied ? 'Copied!' : 'Copy'}</Atoms.Typography>
-        </Atoms.Button>
-      </Atoms.Container>
+          <Typography size="sm">{copied ? 'Copied!' : 'Copy'}</Typography>
+        </Button>
+      </Container>
 
       <SyntaxHighlighter
         {...rest}
@@ -66,7 +66,7 @@ export const PostCodeBlock = (props: PostCodeBlockProps) => {
       >
         {codeSyntaxHighlight}
       </SyntaxHighlighter>
-    </Atoms.Container>
+    </Container>
   ) : (
     // Inline code block (ex. ``)
     <code

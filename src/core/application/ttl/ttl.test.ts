@@ -1,7 +1,7 @@
 import { describe, expect, it, vi, beforeEach } from 'vitest';
 
-import { asOpaque } from '@/test-utils';
-import * as queryNexusModule from '@/services/nexus/nexus.utils';
+import { asOpaque } from '@/test-utils/type-assertions';
+import { queryNexus } from '@/services/nexus/nexus.utils';
 import { FileApplication } from '@/application/file/file';
 import { PostStreamApplication } from '@/application/stream/posts/post';
 import { TtlApplication } from '@/application/ttl/ttl';
@@ -13,6 +13,17 @@ import type { NexusPost, NexusUser } from '@/services/nexus/nexus.types';
 import { postStreamApi } from '@/services/nexus/stream/posts/postStream.api';
 import { NexusUserStreamService } from '@/services/nexus/stream/users/userStream';
 import { userStreamApi } from '@/services/nexus/stream/users/userStream.api';
+
+vi.mock('@/services/nexus/nexus.utils', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('@/services/nexus/nexus.utils')>();
+  return {
+    ...actual,
+    queryNexus: vi.fn(),
+  };
+});
+
+const mockQueryNexus = vi.mocked(queryNexus);
+
 describe('TtlApplication', () => {
   beforeEach(() => {
     vi.restoreAllMocks();
@@ -80,7 +91,7 @@ describe('TtlApplication', () => {
         },
       ];
 
-      const queryNexusSpy = vi.spyOn(queryNexusModule, 'queryNexus').mockResolvedValue(nexusPosts);
+      const queryNexusSpy = mockQueryNexus.mockResolvedValue(nexusPosts);
       const persistPostsSpy = vi
         .spyOn(LocalStreamPostsService, 'persistPosts')
         .mockResolvedValue(
@@ -108,7 +119,7 @@ describe('TtlApplication', () => {
         body: { post_ids: ['alice:1'], viewer_id: viewerId },
       } as ReturnType<typeof postStreamApi.postsByIds>);
 
-      vi.spyOn(queryNexusModule, 'queryNexus').mockRejectedValue(new Error('Network down'));
+      mockQueryNexus.mockRejectedValue(new Error('Network down'));
       const persistPostsSpy = vi
         .spyOn(LocalStreamPostsService, 'persistPosts')
         .mockResolvedValue({ attachmentMetadata: [] });
@@ -147,7 +158,7 @@ describe('TtlApplication', () => {
         body: { post_ids: ['reposter:repost-1'], viewer_id: viewerId },
       } as ReturnType<typeof postStreamApi.postsByIds>);
 
-      vi.spyOn(queryNexusModule, 'queryNexus').mockResolvedValue([repostNexusPost]);
+      mockQueryNexus.mockResolvedValue([repostNexusPost]);
       vi.spyOn(LocalStreamPostsService, 'persistPosts').mockResolvedValue(
         asOpaque<Awaited<ReturnType<typeof LocalStreamPostsService.persistPosts>>>({ attachmentMetadata: [] }),
       );
@@ -192,7 +203,7 @@ describe('TtlApplication', () => {
         body: { post_ids: ['alice:post-1'], viewer_id: viewerId },
       } as ReturnType<typeof postStreamApi.postsByIds>);
 
-      vi.spyOn(queryNexusModule, 'queryNexus').mockResolvedValue([regularPost]);
+      mockQueryNexus.mockResolvedValue([regularPost]);
       vi.spyOn(LocalStreamPostsService, 'persistPosts').mockResolvedValue(
         asOpaque<Awaited<ReturnType<typeof LocalStreamPostsService.persistPosts>>>({ attachmentMetadata: [] }),
       );

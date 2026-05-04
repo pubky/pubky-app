@@ -5,15 +5,18 @@ import { useMutedUsers } from '@/hooks/useMutedUsers/useMutedUsers';
 import { usePullToRefresh } from '@/hooks/usePullToRefresh/usePullToRefresh';
 import { useStreamPagination } from '@/hooks/useStreamPagination/useStreamPagination';
 import { useEffect, useRef } from 'react';
-import { TIMELINE_FEED_VARIANT } from '@/config';
-import * as Atoms from '@/atoms';
-import * as Molecules from '@/molecules';
-import * as Organisms from '@/organisms';
+import { TIMELINE_FEED_VARIANT } from '@/config/feed';
+import { Container } from '@/atoms/Container/Container';
+import { PullToRefreshIndicator } from '@/molecules/PullToRefreshIndicator/PullToRefreshIndicator';
+import { TimelineLoading } from '@/molecules/Timeline/TimelineLoading';
+import { TimelinePosts } from '../../Posts/Posts';
+
 import type { TagsLayout } from '@/organisms/PostMain/PostMain.types';
 import { PostMainLayoutProvider } from '@/organisms/PostMain/PostMainLayout';
 import type { TimelineFeedProps, TimelineFeedContextValue } from '../TimelineFeed/TimelineFeed.types';
 import { TimelineFeedContext } from '../TimelineFeed/TimelineFeedContext';
-import { NewPostsSection } from '../NewPostsSection';
+import { NewPostsSection } from '../NewPostsSection/NewPostsSection';
+
 import { VisualTimelinePosts } from '../TimelineFeed/VisualTimelinePosts';
 import { MuteFilter } from '@/application/stream/posts/muting/mute-filter';
 import type { PostStreamId } from '@/models/stream/post/postStream.types';
@@ -47,7 +50,7 @@ export function TimelineFeedWithStream({
   children,
 }: TimelineFeedWithStreamProps) {
   if (!streamId) {
-    return <Molecules.TimelineLoading />;
+    return <TimelineLoading />;
   }
 
   return (
@@ -125,8 +128,8 @@ function TimelineFeedContent({ streamId, variant, tagsLayout, layoutResolution, 
   return (
     <TimelineFeedContext.Provider value={contextValue}>
       <PostMainLayoutProvider tagsLayout={tagsLayout}>
-        <Atoms.Container ref={containerRef} className="min-w-0 flex-1 gap-6 lg:overflow-hidden">
-          {enablePullToRefresh && <Molecules.PullToRefreshIndicator state={pullState} pullDistance={pullDistance} />}
+        <Container ref={containerRef} className="min-w-0 flex-1 gap-6 lg:overflow-hidden">
+          {enablePullToRefresh && <PullToRefreshIndicator state={pullState} pullDistance={pullDistance} />}
           {!isVisualActive ? children : null}
           <NewPostsSection
             streamId={streamId}
@@ -145,7 +148,7 @@ function TimelineFeedContent({ streamId, variant, tagsLayout, layoutResolution, 
               loadMore={loadMore}
             />
           ) : (
-            <Organisms.TimelinePosts
+            <TimelinePosts
               postIds={postIds}
               loading={loading}
               loadingMore={loadingMore}
@@ -154,7 +157,7 @@ function TimelineFeedContent({ streamId, variant, tagsLayout, layoutResolution, 
               loadMore={loadMore}
             />
           )}
-        </Atoms.Container>
+        </Container>
       </PostMainLayoutProvider>
     </TimelineFeedContext.Provider>
   );

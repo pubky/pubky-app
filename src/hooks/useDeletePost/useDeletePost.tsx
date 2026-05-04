@@ -2,8 +2,9 @@
 
 import { useState } from 'react';
 import { useTranslations } from 'next-intl';
-import * as Molecules from '@/molecules';
-import * as Organisms from '@/organisms';
+import { useToast } from '@/molecules/Toaster/use-toast';
+import { useTimelineFeedContext } from '@/organisms/Timeline/Feed/TimelineFeed/TimelineFeedContext';
+
 import type { UseDeletePostResult } from './useDeletePost.types';
 import { Logger } from '@/libs/logger/logger';
 import { PostController } from '@/controllers/post/post';
@@ -30,10 +31,10 @@ import type { PostDetailsModelSchema } from '@/models/post/details/postDetails.s
  */
 export function useDeletePost(): UseDeletePostResult {
   const [isDeleting, setIsDeleting] = useState(false);
-  const { toast } = Molecules.useToast();
+  const { toast } = useToast();
   const tToast = useTranslations('toast');
   const tPost = useTranslations('toast.post');
-  const timelineFeed = Organisms.useTimelineFeedContext();
+  const timelineFeed = useTimelineFeedContext();
 
   const deletePost = async (postId: string) => {
     if (isDeleting) {

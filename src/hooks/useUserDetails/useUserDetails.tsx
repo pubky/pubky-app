@@ -1,7 +1,7 @@
 'use client';
 
 import { useLocalFirstQuery } from '@/hooks/useLocalFirstQuery/useLocalFirstQuery';
-import * as Types from './useUserDetails.types';
+import type { UseUserDetailsResult } from './useUserDetails.types';
 import { UserController } from '@/controllers/user/user';
 import type { NexusUserDetails } from '@/services/nexus/nexus.types';
 /**
@@ -22,7 +22,7 @@ import type { NexusUserDetails } from '@/services/nexus/nexus.types';
  * return <span>{userDetails?.name ?? 'Unknown'}</span>;
  * ```
  */
-export function useUserDetails(userId: string | null | undefined): Types.UseUserDetailsResult {
+export function useUserDetails(userId: string | null | undefined): UseUserDetailsResult {
   const { data, isLoading } = useLocalFirstQuery<NexusUserDetails>({
     queryFn: () => UserController.getDetails({ userId: userId! }),
     fetchFn: () => UserController.fetchDetails({ userId: userId! }),

@@ -3,7 +3,22 @@
 import { useEnterSubmit } from '@/hooks/useEnterSubmit/useEnterSubmit';
 import { useState, useRef } from 'react';
 import { useTranslations } from 'next-intl';
-import * as Atoms from '@/atoms';
+import { Button } from '@/atoms/Button/Button';
+import { Container } from '@/atoms/Container/Container';
+import {
+  Dialog,
+  DialogClose,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from '@/atoms/Dialog/Dialog';
+import { Input } from '@/atoms/Input/Input';
+import { Label } from '@/atoms/Label/Label';
+import { Typography } from '@/atoms/Typography/Typography';
+
 import { FileUp, FileText, Loader2, RotateCcw } from 'lucide-react';
 import { AppError } from '@/libs/error/error';
 import { ErrorService } from '@/libs/error/error.types';
@@ -87,33 +102,33 @@ export function DialogRestoreEncryptedFile({ onRestore }: { onRestore: () => voi
   const handleKeyDown = useEnterSubmit(isFormValid, handleRestore);
   const selectedFileDisplayName = selectedFile ? formatFileName(selectedFile.name) : 'encryptedfile.pkarr';
   return (
-    <Atoms.Dialog>
-      <Atoms.DialogTrigger asChild>
-        <Atoms.Button
+    <Dialog>
+      <DialogTrigger asChild>
+        <Button
           id="restore-encrypted-file-btn"
           variant="outline"
           className="w-full rounded-full sm:w-auto md:flex-none"
         >
           <FileUp className="mr-2 h-4 w-4" />
           <span>{t('useEncryptedFile')}</span>
-        </Atoms.Button>
-      </Atoms.DialogTrigger>
-      <Atoms.DialogContent className="max-w-full gap-6 overflow-hidden p-8" hiddenTitle={tRestore('title')}>
-        <Atoms.DialogHeader className="space-y-1.5 pr-6">
-          <Atoms.DialogTitle className="text-2xl leading-8 font-bold sm:text-xl sm:leading-7">
+        </Button>
+      </DialogTrigger>
+      <DialogContent className="max-w-full gap-6 overflow-hidden p-8" hiddenTitle={tRestore('title')}>
+        <DialogHeader className="space-y-1.5 pr-6">
+          <DialogTitle className="text-2xl leading-8 font-bold sm:text-xl sm:leading-7">
             {tRestore('title')}
-          </Atoms.DialogTitle>
-          <Atoms.DialogDescription className="text-sm leading-5">{tRestore('description')}</Atoms.DialogDescription>
-        </Atoms.DialogHeader>
+          </DialogTitle>
+          <DialogDescription className="text-sm leading-5">{tRestore('description')}</DialogDescription>
+        </DialogHeader>
 
-        <Atoms.Container className="gap-6">
+        <Container className="gap-6">
           {/* File Upload Section */}
-          <Atoms.Container className="space-y-2">
-            <Atoms.Label className="text-xs font-medium tracking-widest text-muted-foreground">
+          <Container className="space-y-2">
+            <Label className="text-xs font-medium tracking-widest text-muted-foreground">
               {tRestore('uploadLabel')}
-            </Atoms.Label>
+            </Label>
 
-            <Atoms.Container
+            <Container
               className="relative flex w-full cursor-pointer flex-row items-center justify-between gap-3 overflow-hidden rounded-lg border-2 border-dashed border-border px-4 py-3 transition-colors hover:bg-card/80"
               onClick={handleFileSelect}
             >
@@ -124,7 +139,7 @@ export function DialogRestoreEncryptedFile({ onRestore }: { onRestore: () => voi
                 {selectedFileDisplayName}
               </span>
 
-              <Atoms.Button
+              <Button
                 type="button"
                 variant="secondary"
                 size="sm"
@@ -136,8 +151,8 @@ export function DialogRestoreEncryptedFile({ onRestore }: { onRestore: () => voi
               >
                 <FileText className="h-4 w-4" />
                 {tRestore('selectFile')}
-              </Atoms.Button>
-            </Atoms.Container>
+              </Button>
+            </Container>
 
             <input
               id="encrypted-file-input"
@@ -148,17 +163,14 @@ export function DialogRestoreEncryptedFile({ onRestore }: { onRestore: () => voi
               className="hidden"
               aria-label={tRestore('selectFile')}
             />
-          </Atoms.Container>
+          </Container>
 
           {/* Password Section */}
-          <Atoms.Container className="space-y-2">
-            <Atoms.Label
-              htmlFor="restore-password"
-              className="text-xs font-medium tracking-widest text-muted-foreground"
-            >
+          <Container className="space-y-2">
+            <Label htmlFor="restore-password" className="text-xs font-medium tracking-widest text-muted-foreground">
               {tRestore('passwordLabel')}
-            </Atoms.Label>
-            <Atoms.Input
+            </Label>
+            <Input
               id="restore-password"
               type="password"
               value={password}
@@ -169,22 +181,22 @@ export function DialogRestoreEncryptedFile({ onRestore }: { onRestore: () => voi
               autoComplete="current-password"
               disabled={isRestoring}
             />
-          </Atoms.Container>
+          </Container>
 
           {/* Error Message */}
           {error && (
-            <Atoms.Container className="rounded-md border border-destructive/20 bg-destructive/10 p-3">
-              <Atoms.Typography size="sm" className="text-xs font-medium text-destructive">
+            <Container className="rounded-md border border-destructive/20 bg-destructive/10 p-3">
+              <Typography size="sm" className="text-xs font-medium text-destructive">
                 {error}
-              </Atoms.Typography>
-            </Atoms.Container>
+              </Typography>
+            </Container>
           )}
-        </Atoms.Container>
+        </Container>
 
         {/* Action Buttons */}
-        <Atoms.DialogFooter>
-          <Atoms.DialogClose asChild>
-            <Atoms.Button
+        <DialogFooter>
+          <DialogClose asChild>
+            <Button
               variant="outline"
               size="lg"
               className="order-2 sm:order-1"
@@ -192,9 +204,9 @@ export function DialogRestoreEncryptedFile({ onRestore }: { onRestore: () => voi
               disabled={isRestoring}
             >
               {tRestore('cancel')}
-            </Atoms.Button>
-          </Atoms.DialogClose>
-          <Atoms.Button
+            </Button>
+          </DialogClose>
+          <Button
             id="encrypted-file-restore-btn"
             size="lg"
             className="order-1 sm:order-2"
@@ -212,9 +224,9 @@ export function DialogRestoreEncryptedFile({ onRestore }: { onRestore: () => voi
                 {tRestore('restore')}
               </>
             )}
-          </Atoms.Button>
-        </Atoms.DialogFooter>
-      </Atoms.DialogContent>
-    </Atoms.Dialog>
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
   );
 }

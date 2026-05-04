@@ -1,7 +1,11 @@
 'use client';
 
 import { useProfileMenuActions } from '@/hooks/useProfileMenuActions/useProfileMenuActions';
-import * as Atoms from '@/atoms';
+import { Button } from '@/atoms/Button/Button';
+import { Container } from '@/atoms/Container/Container';
+import { DropdownMenuItem } from '@/atoms/DropdownMenu/DropdownMenu';
+import { Typography } from '@/atoms/Typography/Typography';
+
 import { MENU_VARIANT } from '@/config/ui';
 import { ProfileMenuActionsContentSkeleton } from './ProfileMenuActionsContent.skeleton';
 import type { ProfileMenuActionsContentProps } from './ProfileMenuActionsContent.types';
@@ -27,7 +31,7 @@ export function ProfileMenuActionsContent({ userId, variant, onActionComplete }:
         const Icon = item.icon;
 
         return variant === MENU_VARIANT.SHEET ? (
-          <Atoms.Button
+          <Button
             key={item.id}
             data-cy={`profile-menu-action-${item.id}`}
             variant="ghost"
@@ -35,36 +39,32 @@ export function ProfileMenuActionsContent({ userId, variant, onActionComplete }:
             disabled={item.disabled}
             className="justify-start overflow-hidden"
           >
-            <Atoms.Container overrideDefaults className="flex items-center gap-2 overflow-hidden">
+            <Container overrideDefaults className="flex items-center gap-2 overflow-hidden">
               <Icon className="size-4 shrink-0 text-muted-foreground" />
-              <Atoms.Typography
-                as="span"
-                overrideDefaults
-                className="truncate text-base font-medium text-muted-foreground"
-              >
+              <Typography as="span" overrideDefaults className="truncate text-base font-medium text-muted-foreground">
                 {item.label}
-              </Atoms.Typography>
-            </Atoms.Container>
-          </Atoms.Button>
+              </Typography>
+            </Container>
+          </Button>
         ) : (
-          <Atoms.DropdownMenuItem
+          <DropdownMenuItem
             key={item.id}
             data-cy={`profile-menu-action-${item.id}`}
             onClick={() => handleItemClick(item)}
             disabled={item.disabled}
             className="group p-0"
           >
-            <Atoms.Container overrideDefaults className="flex items-center gap-2 overflow-hidden p-0">
+            <Container overrideDefaults className="flex items-center gap-2 overflow-hidden p-0">
               <Icon className="size-4 shrink-0 text-muted-foreground transition-colors group-hover:text-foreground" />
-              <Atoms.Typography
+              <Typography
                 as="span"
                 overrideDefaults
                 className="truncate text-base font-medium text-muted-foreground transition-colors group-hover:text-foreground"
               >
                 {item.label}
-              </Atoms.Typography>
-            </Atoms.Container>
-          </Atoms.DropdownMenuItem>
+              </Typography>
+            </Container>
+          </DropdownMenuItem>
         );
       })}
     </>

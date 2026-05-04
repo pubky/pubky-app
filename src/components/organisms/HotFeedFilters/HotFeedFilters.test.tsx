@@ -14,35 +14,41 @@ vi.mock('@/stores/hot/hot.store', () => ({
 }));
 
 // Mock Atoms
-vi.mock('@/atoms', () => ({
-  FilterRoot: ({ children }: { children: React.ReactNode }) => <div data-testid="filter-root">{children}</div>,
-  FilterHeader: ({ title }: { title: string }) => <div data-testid="filter-header">{title}</div>,
-  FilterList: ({ children }: { children: React.ReactNode }) => <ul data-testid="filter-list">{children}</ul>,
-  FilterItem: ({
-    children,
-    isSelected,
-    onClick,
-  }: {
-    children: React.ReactNode;
-    isSelected: boolean;
-    onClick: () => void;
-  }) => (
-    <li data-testid="filter-item" data-selected={isSelected} onClick={onClick}>
-      {children}
-    </li>
-  ),
-  FilterItemIcon: ({ icon: Icon }: { icon: React.ComponentType }) => (
-    <span data-testid="filter-icon">
-      <Icon />
-    </span>
-  ),
-  FilterItemLabel: ({ children }: { children: React.ReactNode }) => <span data-testid="filter-label">{children}</span>,
-}));
+vi.mock('@/atoms/Filter/Filter', () => {
+  return {
+    FilterRoot: ({ children }: { children: React.ReactNode }) => <div data-testid="filter-root">{children}</div>,
+    FilterHeader: ({ title }: { title: string }) => <div data-testid="filter-header">{title}</div>,
+    FilterList: ({ children }: { children: React.ReactNode }) => <ul data-testid="filter-list">{children}</ul>,
+    FilterItem: ({
+      children,
+      isSelected,
+      onClick,
+    }: {
+      children: React.ReactNode;
+      isSelected: boolean;
+      onClick: () => void;
+    }) => (
+      <li data-testid="filter-item" data-selected={isSelected} onClick={onClick}>
+        {children}
+      </li>
+    ),
+    FilterItemIcon: ({ icon: Icon }: { icon: React.ComponentType }) => (
+      <span data-testid="filter-icon">
+        <Icon />
+      </span>
+    ),
+    FilterItemLabel: ({ children }: { children: React.ReactNode }) => (
+      <span data-testid="filter-label">{children}</span>
+    ),
+  };
+});
 
 // Mock Molecules
-vi.mock('@/molecules', () => ({
-  FilterReach: () => <div data-testid="filter-reach">FilterReach</div>,
-}));
+vi.mock('@/molecules/Filters/FilterReach/FilterReach', () => {
+  return {
+    FilterReach: () => <div data-testid="filter-reach">FilterReach</div>,
+  };
+});
 
 describe('FilterTimeframe', () => {
   it('renders all timeframe options', () => {

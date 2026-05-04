@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { mockSession } from '@/test-utils';
+import { mockSession } from '@/test-utils/pubky';
 import { TtlController } from '@/controllers/ttl/ttl';
 import { TtlCoordinator } from '@/coordinators/ttl/ttl';
 import type { Pubky } from '@/models/models.types';

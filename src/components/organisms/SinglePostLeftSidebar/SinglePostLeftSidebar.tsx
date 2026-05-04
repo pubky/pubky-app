@@ -1,8 +1,10 @@
 'use client';
+import { Container } from '@/atoms/Container/Container';
+import { FilterContent } from '@/molecules/Filters/FilterContent/FilterContent';
+import { FilterLayout } from '@/molecules/Filters/FilterLayout/FilterLayout';
+import { FilterReach } from '@/molecules/Filters/FilterReach/FilterReach';
+import { FilterSort } from '@/molecules/Filters/FilterSort/FilterSort';
 
-import { Container } from '@/atoms/Container';
-
-import { FilterReach, FilterSort, FilterLayout, FilterContent } from '@/molecules/Filters/';
 import { useHomeStore } from '@/stores/home/home.store';
 /**
  * SinglePostFilters

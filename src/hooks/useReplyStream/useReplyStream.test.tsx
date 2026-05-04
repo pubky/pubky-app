@@ -3,7 +3,6 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { useLiveQuery } from 'dexie-react-hooks';
 import { usePostCounts } from '@/hooks/usePostCounts/usePostCounts';
 import { useReplyStream } from './useReplyStream';
-import * as buildPostReplyStreamIdModule from '@/models/stream/post/postStream.types';
 import { StreamPostsController } from '@/controllers/stream/posts/posts';
 vi.mock('dexie-react-hooks', () => ({
   useLiveQuery: vi.fn(),
@@ -70,7 +69,6 @@ describe('useReplyStream', () => {
       localTotalCount: 2,
     });
 
-    vi.spyOn(buildPostReplyStreamIdModule, 'buildPostReplyStreamId').mockReturnValue('post_replies:author:post-1');
     const getOrFetchSpy = vi
       .spyOn(StreamPostsController, 'getOrFetchStreamSlice')
       .mockResolvedValueOnce({
@@ -107,7 +105,6 @@ describe('useReplyStream', () => {
       localTotalCount: 3,
     });
 
-    vi.spyOn(buildPostReplyStreamIdModule, 'buildPostReplyStreamId').mockReturnValue('post_replies:author:post-1');
     const getOrFetchSpy = vi.spyOn(StreamPostsController, 'getOrFetchStreamSlice').mockResolvedValue({
       nextPageIds: ['author:reply-4'],
       timestamp: 1,
@@ -139,7 +136,6 @@ describe('useReplyStream', () => {
       localTotalCount: 3,
     });
 
-    vi.spyOn(buildPostReplyStreamIdModule, 'buildPostReplyStreamId').mockReturnValue('post_replies:author:post-1');
     const getOrFetchSpy = vi.spyOn(StreamPostsController, 'getOrFetchStreamSlice').mockResolvedValue({
       nextPageIds: [],
       timestamp: 1,
@@ -173,7 +169,6 @@ describe('useReplyStream', () => {
       localTotalCount: 3,
     });
 
-    vi.spyOn(buildPostReplyStreamIdModule, 'buildPostReplyStreamId').mockReturnValue('post_replies:author:post-1');
     let callCount = 0;
     vi.spyOn(StreamPostsController, 'getOrFetchStreamSlice').mockImplementation(async () => {
       callCount++;

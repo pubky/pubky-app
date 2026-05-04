@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import { filesApi, buildFileBodyUrl } from './file.api';
 import { FileVariant, type TFileParams, type TFileBody } from './file.types';
-import * as Config from '@/config';
+import { CDN_URL, NEXUS_URL } from '@/config/nexus';
 
 const pubky = 'qr3xqyz3e5cyf9npgxc5zfp15ehhcis6gqsxob4une7bwwazekry';
 const encodedPubky = encodeURIComponent(pubky);
@@ -12,13 +12,13 @@ describe('File API', () => {
   describe('filesApi.getAvatarUrl', () => {
     it('should generate correct avatar URL for valid pubky', () => {
       const result = filesApi.getAvatarUrl(pubky);
-      expect(result).toBe(`${Config.CDN_URL}/avatar/${encodedPubky}`);
+      expect(result).toBe(`${CDN_URL}/avatar/${encodedPubky}`);
     });
 
     it('should append version query param when provided', () => {
       const version = 12345;
       const result = filesApi.getAvatarUrl(pubky, version);
-      expect(result).toBe(`${Config.CDN_URL}/avatar/${encodedPubky}?v=${version}`);
+      expect(result).toBe(`${CDN_URL}/avatar/${encodedPubky}?v=${version}`);
     });
   });
 
@@ -31,7 +31,7 @@ describe('File API', () => {
       };
 
       const result = filesApi.getFileUrl(params);
-      expect(result).toBe(`${Config.CDN_URL}/files/${encodedPubky}/${encodedFileId}/small`);
+      expect(result).toBe(`${CDN_URL}/files/${encodedPubky}/${encodedFileId}/small`);
     });
 
     it('should generate correct URL for FEED variant', () => {
@@ -42,7 +42,7 @@ describe('File API', () => {
       };
 
       const result = filesApi.getFileUrl(params);
-      expect(result).toBe(`${Config.CDN_URL}/files/${encodedPubky}/${encodedFileId}/feed`);
+      expect(result).toBe(`${CDN_URL}/files/${encodedPubky}/${encodedFileId}/feed`);
     });
 
     it('should generate correct URL for MAIN variant', () => {
@@ -53,7 +53,7 @@ describe('File API', () => {
       };
 
       const result = filesApi.getFileUrl(params);
-      expect(result).toBe(`${Config.CDN_URL}/files/${encodedPubky}/${encodedFileId}/main`);
+      expect(result).toBe(`${CDN_URL}/files/${encodedPubky}/${encodedFileId}/main`);
     });
   });
 
@@ -62,7 +62,7 @@ describe('File API', () => {
       const fileUris = [pubky];
       const result = filesApi.getFiles(fileUris);
 
-      expect(result.url).toBe(`${Config.NEXUS_URL}/v0/files/by_ids`);
+      expect(result.url).toBe(`${NEXUS_URL}/v0/files/by_ids`);
       expect(result.body).toEqual({ uris: fileUris });
     });
 
@@ -70,7 +70,7 @@ describe('File API', () => {
       const fileUris = [pubky, `${pubky}-2`, `${pubky}-3`];
       const result = filesApi.getFiles(fileUris);
 
-      expect(result.url).toBe(`${Config.NEXUS_URL}/v0/files/by_ids`);
+      expect(result.url).toBe(`${NEXUS_URL}/v0/files/by_ids`);
       expect(result.body).toEqual({ uris: fileUris });
     });
 
@@ -78,7 +78,7 @@ describe('File API', () => {
       const fileUris = Array.from({ length: 100 }, (_, i) => `${pubky}-${i}`);
       const result = filesApi.getFiles(fileUris);
 
-      expect(result.url).toBe(`${Config.NEXUS_URL}/v0/files/by_ids`);
+      expect(result.url).toBe(`${NEXUS_URL}/v0/files/by_ids`);
       expect(result.body).toEqual({ uris: fileUris });
       expect(result.body.uris).toHaveLength(100);
     });
@@ -87,7 +87,7 @@ describe('File API', () => {
       const fileUris: string[] = [];
       const result = filesApi.getFiles(fileUris);
 
-      expect(result.url).toBe(`${Config.NEXUS_URL}/v0/files/by_ids`);
+      expect(result.url).toBe(`${NEXUS_URL}/v0/files/by_ids`);
       expect(result.body).toEqual({ uris: [] });
       expect(result.body.uris).toHaveLength(0);
     });

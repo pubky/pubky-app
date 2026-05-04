@@ -1,9 +1,12 @@
 'use client';
 
 import { Controller, FieldValues } from 'react-hook-form';
-import * as Atoms from '@/atoms';
-import * as Config from '@/config';
-import * as Molecules from '@/molecules';
+import { Container } from '@/atoms/Container/Container';
+import { Label } from '@/atoms/Label/Label';
+
+import { FORM_LABEL_CLASSES } from '@/config/forms';
+import { TextareaField } from '../TextareaField/TextareaField';
+
 import type { ControlledTextareaFieldProps } from './ControlledTextareaField.types';
 
 export function ControlledTextareaField<T extends FieldValues>({
@@ -19,15 +22,15 @@ export function ControlledTextareaField<T extends FieldValues>({
   textareaClassName,
 }: ControlledTextareaFieldProps<T>) {
   return (
-    <Atoms.Container className="gap-2">
-      <Atoms.Label htmlFor={name} className={Config.FORM_LABEL_CLASSES}>
+    <Container className="gap-2">
+      <Label htmlFor={name} className={FORM_LABEL_CLASSES}>
         {label}
-      </Atoms.Label>
+      </Label>
       <Controller
         name={name}
         control={control}
         render={({ field, fieldState }) => (
-          <Molecules.TextareaField
+          <TextareaField
             id={name}
             name={field.name}
             value={field.value}
@@ -46,6 +49,6 @@ export function ControlledTextareaField<T extends FieldValues>({
           />
         )}
       />
-    </Atoms.Container>
+    </Container>
   );
 }

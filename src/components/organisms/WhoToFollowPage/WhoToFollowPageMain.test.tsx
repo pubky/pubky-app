@@ -5,7 +5,7 @@ import { WhoToFollowPageMain } from './WhoToFollowPageMain';
 import { useFollowUser } from '@/hooks/useFollowUser/useFollowUser';
 import { useInfiniteScroll } from '@/hooks/useInfiniteScroll/useInfiniteScroll';
 import { useUserStream } from '@/hooks/useUserStream/useUserStream';
-import { asOpaque } from '@/test-utils';
+import { asOpaque } from '@/test-utils/type-assertions';
 import type { Pubky } from '@/models/models.types';
 // Mock dependencies
 vi.mock('@/stores/auth/auth.store', () => ({
@@ -56,37 +56,61 @@ vi.mock('@/hooks/useFollowUser/useFollowUser', () => ({
 }));
 
 // Mock Atoms
-vi.mock('@/atoms', () => ({
-  Container: ({
-    children,
-    className,
-    'data-testid': dataTestId,
-  }: {
-    children: ReactNode;
-    className?: string;
-    'data-testid'?: string;
-  }) => (
-    <div data-testid={dataTestId || 'container'} className={className}>
-      {children}
-    </div>
-  ),
-  Heading: ({ children }: { children: ReactNode }) => <h5 data-testid="heading">{children}</h5>,
-  Spinner: () => <div data-testid="spinner">Loading...</div>,
-  Typography: ({ children, as: Tag = 'p' }: { children: ReactNode; as?: ElementType }) => {
-    const Component = Tag;
-    return <Component>{children}</Component>;
-  },
-}));
+vi.mock('@/atoms/Container/Container', () => {
+  return {
+    Container: ({
+      children,
+      className,
+      'data-testid': dataTestId,
+    }: {
+      children: ReactNode;
+      className?: string;
+      'data-testid'?: string;
+    }) => (
+      <div data-testid={dataTestId || 'container'} className={className}>
+        {children}
+      </div>
+    ),
+  };
+});
+
+vi.mock('@/atoms/Heading/Heading', () => {
+  return {
+    Heading: ({ children }: { children: ReactNode }) => <h5 data-testid="heading">{children}</h5>,
+  };
+});
+
+vi.mock('@/atoms/Spinner/Spinner', () => {
+  return {
+    Spinner: () => <div data-testid="spinner">Loading...</div>,
+  };
+});
+
+vi.mock('@/atoms/Typography/Typography', () => {
+  return {
+    Typography: ({ children, as: Tag = 'p' }: { children: ReactNode; as?: ElementType }) => {
+      const Component = Tag;
+      return <Component>{children}</Component>;
+    },
+  };
+});
 
 // Mock Organisms
-vi.mock('@/organisms', () => ({
-  UserListItem: ({ user, followButtonVariant = 'icon' }: { user: { id: string }; followButtonVariant?: string }) => (
-    <div data-testid="user-list-item" data-user-id={user.id} data-follow-button-variant={followButtonVariant}>
-      User item
-    </div>
-  ),
-  FullUserListItemSkeleton: () => <div data-testid="user-list-item-skeleton-full">Skeleton item</div>,
-}));
+vi.mock('@/organisms/FullUserListItemSkeleton/FullUserListItemSkeleton', () => {
+  return {
+    FullUserListItemSkeleton: () => <div data-testid="user-list-item-skeleton-full">Skeleton item</div>,
+  };
+});
+
+vi.mock('@/organisms/UserListItem/UserListItem', () => {
+  return {
+    UserListItem: ({ user, followButtonVariant = 'icon' }: { user: { id: string }; followButtonVariant?: string }) => (
+      <div data-testid="user-list-item" data-user-id={user.id} data-follow-button-variant={followButtonVariant}>
+        User item
+      </div>
+    ),
+  };
+});
 
 const mockUsers = [
   {

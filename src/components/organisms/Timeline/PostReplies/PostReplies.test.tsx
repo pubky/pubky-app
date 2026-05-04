@@ -42,28 +42,32 @@ vi.mock('@/hooks/usePostCounts/usePostCounts', () => ({
 }));
 
 // Mock atoms
-vi.mock('@/atoms', () => ({
-  Container: ({
-    children,
-    overrideDefaults: _overrideDefaults,
-    ...props
-  }: {
-    children?: React.ReactNode;
-    overrideDefaults?: boolean;
-    [key: string]: unknown;
-  }) => (
-    <div data-testid="container" {...props}>
-      {children}
-    </div>
-  ),
-}));
+vi.mock('@/atoms/Container/Container', () => {
+  return {
+    Container: ({
+      children,
+      overrideDefaults: _overrideDefaults,
+      ...props
+    }: {
+      children?: React.ReactNode;
+      overrideDefaults?: boolean;
+      [key: string]: unknown;
+    }) => (
+      <div data-testid="container" {...props}>
+        {children}
+      </div>
+    ),
+  };
+});
 
 // Mock ThreadTree organism
-vi.mock('@/organisms', () => ({
-  ThreadTree: ({ postId, showQuickReply }: { postId: string; showQuickReply?: boolean }) => (
-    <div data-testid="thread-tree" data-post-id={postId} data-show-quick-reply={String(showQuickReply)} />
-  ),
-}));
+vi.mock('@/organisms/ThreadTree/ThreadTree', () => {
+  return {
+    ThreadTree: ({ postId, showQuickReply }: { postId: string; showQuickReply?: boolean }) => (
+      <div data-testid="thread-tree" data-post-id={postId} data-show-quick-reply={String(showQuickReply)} />
+    ),
+  };
+});
 
 // Import after mocks
 describe('TimelinePostReplies', () => {

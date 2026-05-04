@@ -1,6 +1,7 @@
 import type { Metadata as NextMetadata } from 'next';
 import type { ArticleJSON } from '@/hooks/usePostArticle/usePostArticle.types';
-import * as Templates from '@/templates';
+import { SinglePost } from '@/templates/Post/SinglePost/SinglePost';
+
 import { Metadata } from '@/molecules/Metadata/Metadata';
 import { isPostDeleted } from '@/libs/utils/utils';
 import { httpResponseToError } from '@/libs/error/error.http';
@@ -102,5 +103,5 @@ export default async function PostPage({ params }: PostPageProps) {
   const { userId, postId } = await params;
   const compositeId = buildCompositeId({ pubky: userId, id: postId });
 
-  return <Templates.SinglePost postId={compositeId} />;
+  return <SinglePost postId={compositeId} />;
 }

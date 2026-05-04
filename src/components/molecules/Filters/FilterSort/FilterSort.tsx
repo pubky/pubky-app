@@ -2,7 +2,9 @@
 
 import * as React from 'react';
 import { useTranslations } from 'next-intl';
-import * as Molecules from '@/molecules';
+import { FilterRadioGroup } from '../FilterRadioGroup/FilterRadioGroup';
+import { BaseFilterProps } from '../Filters.types';
+
 import { SquareAsterisk, Flame } from 'lucide-react';
 import { SORT, type SortType } from '@/stores/home/home.types';
 export function FilterSort({
@@ -10,7 +12,7 @@ export function FilterSort({
   defaultSelectedTab = SORT.TIMELINE,
   onTabChange,
   disabled,
-}: Molecules.BaseFilterProps<SortType>) {
+}: BaseFilterProps<SortType>) {
   const t = useTranslations('filters.sort');
   const items = React.useMemo(
     () => [
@@ -30,7 +32,7 @@ export function FilterSort({
     [t, disabled],
   );
   return (
-    <Molecules.FilterRadioGroup
+    <FilterRadioGroup
       title={t('title')}
       items={items}
       selectedValue={selectedTab}

@@ -1,6 +1,6 @@
-import * as Config from '@/config';
+import { MODERATED_TAGS, MODERATION_ID } from '@/config/moderation';
 
-const MODERATED_TAG_SET = new Set(Config.MODERATED_TAGS);
+const MODERATED_TAG_SET = new Set(MODERATED_TAGS);
 
 /**
  * Detects if a post is moderated based on its tags.
@@ -8,7 +8,7 @@ const MODERATED_TAG_SET = new Set(Config.MODERATED_TAGS);
  */
 export const detectModerationFromTags = (tags: { label: string; taggers: string[] }[] | null | undefined): boolean => {
   if (!tags) return false;
-  return tags.some((tag) => MODERATED_TAG_SET.has(tag.label) && tag.taggers.includes(Config.MODERATION_ID));
+  return tags.some((tag) => MODERATED_TAG_SET.has(tag.label) && tag.taggers.includes(MODERATION_ID));
 };
 
 /**

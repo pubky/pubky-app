@@ -4,8 +4,9 @@ import { useBulkUserAvatars } from '@/hooks/useBulkUserAvatars/useBulkUserAvatar
 import { useFollowUser } from '@/hooks/useFollowUser/useFollowUser';
 import { useRequireAuth } from '@/hooks/useRequireAuth/useRequireAuth';
 import { useRouter } from 'next/navigation';
-import * as Atoms from '@/atoms';
-import * as Molecules from '@/molecules';
+import { Container } from '@/atoms/Container/Container';
+import { TaggerUserRow } from '../TaggerUserRow/TaggerUserRow';
+
 import { APP_ROUTES } from '@/app/routes';
 import type { TaggerWithAvatar } from '@/molecules/TaggedItem/TaggedItem.types';
 import type { WhoTaggedExpandedListProps } from './WhoTaggedExpandedList.types';
@@ -63,7 +64,7 @@ export function WhoTaggedExpandedList({
   }
 
   return (
-    <Atoms.Container
+    <Container
       aria-label="Who tagged expanded list"
       role="list"
       overrideDefaults
@@ -71,7 +72,7 @@ export function WhoTaggedExpandedList({
       data-testid={dataTestId || 'who-tagged-expanded-list'}
     >
       {taggers.map((tagger) => (
-        <Molecules.TaggerUserRow
+        <TaggerUserRow
           key={tagger.id}
           tagger={tagger}
           isLoading={isUserLoading(tagger.id)}
@@ -80,6 +81,6 @@ export function WhoTaggedExpandedList({
           onFollowClick={handleFollowClick}
         />
       ))}
-    </Atoms.Container>
+    </Container>
   );
 }

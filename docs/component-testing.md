@@ -139,7 +139,8 @@ const authStore = {
 const event = { key: 'Enter', preventDefault: vi.fn() } as any;
 
 // After — the helpers type-check the partials and add sensible defaults
-import { mockAuthStore, mockKeyboardEvent } from '@/test-utils';
+import { mockKeyboardEvent } from '@/test-utils/react-events';
+import { mockAuthStore } from '@/test-utils/stores';
 
 const authStore = mockAuthStore({
   currentUserPubky: 'abc',

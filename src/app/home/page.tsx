@@ -1,5 +1,1 @@
-import * as Templates from '@/templates';
-
-export default function HomePage() {
-  return <Templates.Home />;
-}
+export { Home as default } from '@/templates/Feed/Home/Home';

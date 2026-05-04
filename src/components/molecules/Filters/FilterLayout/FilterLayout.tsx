@@ -2,10 +2,12 @@
 
 import * as React from 'react';
 import { useTranslations } from 'next-intl';
-import * as Molecules from '@/molecules';
+import { FilterRadioGroup } from '../FilterRadioGroup/FilterRadioGroup';
+import { BaseFilterProps, FilterListItem } from '../Filters.types';
+
 import { Columns3, Menu, LayoutGrid } from 'lucide-react';
 import { LAYOUT, type LayoutType } from '@/stores/home/home.types';
-interface FilterLayoutProps extends Molecules.BaseFilterProps<LayoutType> {
+interface FilterLayoutProps extends BaseFilterProps<LayoutType> {
   showVisual?: boolean;
 }
 export function FilterLayout({
@@ -43,11 +45,11 @@ export function FilterLayout({
               dataCy: 'visual-layout-toggle',
             }
           : null,
-      ].filter(Boolean) as Molecules.FilterListItem<LayoutType>[],
+      ].filter(Boolean) as FilterListItem<LayoutType>[],
     [t, disabled, showVisual],
   );
   return (
-    <Molecules.FilterRadioGroup
+    <FilterRadioGroup
       title={t('title')}
       items={items}
       selectedValue={displaySelectedTab}

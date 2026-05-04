@@ -4,9 +4,14 @@ import React, { useState } from 'react';
 
 import { useTranslations } from 'next-intl';
 import { ArrowLeft, ArrowRight } from 'lucide-react';
+import { Button } from '@/atoms/Button/Button';
+import { Container } from '@/atoms/Container/Container';
+import { PageHeader } from '@/atoms/PageHeader/PageHeader';
+import { PageSubtitle } from '@/atoms/PageSubtitle/PageSubtitle';
+import { HumanPhoneInputField } from '@/molecules/HumanPhoneInputField/HumanPhoneInputField';
+import { PageTitle } from '@/molecules/Page/Page';
+import { toast } from '@/molecules/Toaster/use-toast';
 
-import * as Atoms from '@/atoms';
-import * as Molecules from '@/molecules';
 import { parsePhoneNumber } from '@/libs/phone/phone';
 import { cn } from '@/libs/utils/utils';
 import { HomegateController } from '@/controllers/homegate/homegate';
@@ -36,7 +41,7 @@ export const HumanPhoneInput = ({ onBack, onCodeSent, initialPhoneNumber }: Huma
       if (!result.success) {
         switch (result.errorType) {
           case SmsCodeErrorType.BLOCKED:
-            Molecules.toast({
+            toast({
               title: t('blocked'),
               description: t('blockedDescription'),
             });
@@ -47,26 +52,26 @@ export const HumanPhoneInput = ({ onBack, onCodeSent, initialPhoneNumber }: Huma
                   seconds: result.retryAfter,
                 })
               : t('tooManyAttemptsDescription');
-            Molecules.toast({
+            toast({
               title: t('tooManyAttempts'),
               description: retryMessage,
             });
             break;
           }
           case SmsCodeErrorType.RATE_LIMITED_WEEKLY:
-            Molecules.toast({
+            toast({
               title: t('weeklyLimitReached'),
               description: t('weeklyLimitDescription'),
             });
             break;
           case SmsCodeErrorType.RATE_LIMITED_YEARLY:
-            Molecules.toast({
+            toast({
               title: t('yearlyLimitReached'),
               description: t('yearlyLimitDescription'),
             });
             break;
           default:
-            Molecules.toast({
+            toast({
               title: t('sendFailed'),
               description: t('sendFailedDescription'),
             });
@@ -75,7 +80,7 @@ export const HumanPhoneInput = ({ onBack, onCodeSent, initialPhoneNumber }: Huma
       }
       onCodeSent(phoneNumber);
     } catch {
-      Molecules.toast({
+      toast({
         title: t('sendFailed'),
         description: t('sendFailedDescription'),
       });
@@ -85,22 +90,22 @@ export const HumanPhoneInput = ({ onBack, onCodeSent, initialPhoneNumber }: Huma
   }
   return (
     <React.Fragment>
-      <Atoms.PageHeader>
-        <Molecules.PageTitle size="large">
+      <PageHeader>
+        <PageTitle size="large">
           {t.rich('title', {
             highlight: (chunks) => <span className="text-brand">{chunks}</span>,
           })}
-        </Molecules.PageTitle>
-        <Atoms.PageSubtitle>{t('subtitle')}</Atoms.PageSubtitle>
-      </Atoms.PageHeader>
-      <Molecules.HumanPhoneInputField
+        </PageTitle>
+        <PageSubtitle>{t('subtitle')}</PageSubtitle>
+      </PageHeader>
+      <HumanPhoneInputField
         value={phoneNumberInput}
         onChange={handlePhoneNumberChange}
         isValid={isValidNumber}
         onEnter={() => isValidNumber && onSendCode(phoneNumberInput)}
       />
-      <Atoms.Container className={cn('mt-6 flex-row justify-between gap-3 lg:gap-6')}>
-        <Atoms.Button
+      <Container className={cn('mt-6 flex-row justify-between gap-3 lg:gap-6')}>
+        <Button
           id="human-phone-back-btn"
           size="lg"
           className="w-full flex-1 rounded-full md:flex-0"
@@ -109,8 +114,8 @@ export const HumanPhoneInput = ({ onBack, onCodeSent, initialPhoneNumber }: Huma
         >
           <ArrowLeft className="mr-2 h-4 w-4" />
           {tCommon('back')}
-        </Atoms.Button>
-        <Atoms.Button
+        </Button>
+        <Button
           id="human-phone-send-code-btn"
           size="lg"
           className="w-full flex-1 rounded-full md:flex-0"
@@ -120,8 +125,8 @@ export const HumanPhoneInput = ({ onBack, onCodeSent, initialPhoneNumber }: Huma
         >
           <ArrowRight className="mr-2 h-4 w-4" />
           {t('sendCode')}
-        </Atoms.Button>
-      </Atoms.Container>
+        </Button>
+      </Container>
     </React.Fragment>
   );
 };

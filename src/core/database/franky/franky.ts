@@ -1,5 +1,5 @@
 import Dexie from 'dexie';
-import * as Config from '@/config';
+import { DB_NAME, DB_VERSION } from '@/config/database';
 
 import { Logger } from '@/libs/logger/logger';
 import { DatabaseErrorCode } from '@/libs/error/error.codes';
@@ -68,11 +68,11 @@ export class AppDatabase extends Dexie {
   // Moderation
   moderation!: Dexie.Table<ModerationModelSchema>;
 
-  constructor(databaseName: string = Config.DB_NAME) {
+  constructor(databaseName: string = DB_NAME) {
     super(databaseName);
 
     try {
-      this.version(Config.DB_VERSION).stores({
+      this.version(DB_VERSION).stores({
         // User related tables
         user_counts: userCountsTableSchema,
         user_details: userDetailsTableSchema,
@@ -189,7 +189,7 @@ export class AppDatabase extends Dexie {
         context: {
           currentVersion,
           rawVersion,
-          expectedVersion: Config.DB_VERSION,
+          expectedVersion: DB_VERSION,
           databaseName: this.name,
         },
         cause: error,
@@ -197,7 +197,7 @@ export class AppDatabase extends Dexie {
     }
 
     try {
-      // Note: expected new DB version is already set in the constructor this.version(Config.DB_VERSION)
+      // Note: expected new DB version is already set in the constructor this.version(DB_VERSION)
       await this.open();
       Logger.info('Database recreated with new schema');
     } catch (error) {
@@ -205,7 +205,7 @@ export class AppDatabase extends Dexie {
         service: ErrorService.Local,
         operation: 'recreateDatabase',
         context: {
-          version: Config.DB_VERSION,
+          version: DB_VERSION,
           rawVersion,
           databaseName: this.name,
         },
@@ -251,12 +251,12 @@ export class AppDatabase extends Dexie {
         return { wasDbReset };
       }
 
-      if (currentVersion !== Config.DB_VERSION) {
-        Logger.info(`Database version mismatch. Current: ${currentVersion}, Expected: ${Config.DB_VERSION}`, {
+      if (currentVersion !== DB_VERSION) {
+        Logger.info(`Database version mismatch. Current: ${currentVersion}, Expected: ${DB_VERSION}`, {
           rawVersion,
           normalizedVersion: currentVersion,
-          expectedVersion: Config.DB_VERSION,
-          expectedInternalVersion: Config.DB_VERSION * AppDatabase.DEXIE_VERSION_MULTIPLIER,
+          expectedVersion: DB_VERSION,
+          expectedInternalVersion: DB_VERSION * AppDatabase.DEXIE_VERSION_MULTIPLIER,
         });
         await this.recreateDatabase(currentVersion, rawVersion);
         wasDbReset = true;

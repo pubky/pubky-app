@@ -16,7 +16,7 @@ vi.mock('@/hooks/useReportPost/useReportPost', () => ({
 }));
 
 // Mock sub-components
-vi.mock('./DialogReportPostIssueStep', () => ({
+vi.mock('./DialogReportPostIssueStep/DialogReportPostIssueStep', () => ({
   DialogReportPostIssueStep: ({ onSelectIssueType }: { onSelectIssueType: (type: string) => void }) => (
     <div
       data-testid="dialog-report-post-issue-step"
@@ -27,7 +27,7 @@ vi.mock('./DialogReportPostIssueStep', () => ({
   ),
 }));
 
-vi.mock('./DialogReportPostReasonStep', () => ({
+vi.mock('./DialogReportPostReasonStep/DialogReportPostReasonStep', () => ({
   DialogReportPostReasonStep: ({ onCancel, onSubmit }: { onCancel: () => void; onSubmit: () => void }) => (
     <div data-testid="dialog-report-post-reason-step">
       <button data-testid="back-button" onClick={onCancel}>
@@ -41,7 +41,7 @@ vi.mock('./DialogReportPostReasonStep', () => ({
   ),
 }));
 
-vi.mock('./DialogReportPostSuccess', () => ({
+vi.mock('./DialogReportPostSuccess/DialogReportPostSuccess', () => ({
   DialogReportPostSuccess: ({ onOpenChange }: { onOpenChange: (open: boolean) => void }) => (
     <div data-testid="dialog-report-post-success" onClick={() => onOpenChange(false)}>
       DialogReportPostSuccess

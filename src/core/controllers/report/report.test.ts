@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import type { TReportSubmitParams } from './report.types';
-import { asInvalid } from '@/test-utils';
+import { asInvalid } from '@/test-utils/type-assertions';
 import { ReportApplication } from '@/application/report/report';
 import type { Pubky } from '@/models/models.types';
 import {

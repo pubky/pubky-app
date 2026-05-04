@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { render, screen, waitFor } from '@testing-library/react';
-import { TIMELINE_FEED_VARIANT } from '@/config';
+import { TIMELINE_FEED_VARIANT } from '@/config/feed';
 import { PubkyAppFeedLayout, PubkyAppFeedReach, PubkyAppFeedSort } from 'pubky-app-specs';
 import { TimelineFeed, useTimelineFeedContext } from './TimelineFeed';
 import { useBookmarksStreamId } from '@/hooks/useBookmarksStreamId/useBookmarksStreamId';
@@ -9,8 +9,8 @@ import { useCustomStreamId } from '@/hooks/useCustomStreamId/useCustomStreamId';
 import { useFeedLayoutResolution } from '@/hooks/useFeedLayoutResolution/useFeedLayoutResolution';
 import { useStreamIdFromFilters } from '@/hooks/useStreamIdFromFilters/useStreamIdFromFilters';
 import { useStreamPagination } from '@/hooks/useStreamPagination/useStreamPagination';
-import * as Providers from '@/providers';
-import { asInvalid } from '@/test-utils';
+import { ProfileProvider } from '@/providers/ProfileProvider/ProfileProvider';
+import { asInvalid } from '@/test-utils/type-assertions';
 import type { UsePullToRefreshResult } from '@/hooks/usePullToRefresh/usePullToRefresh.types';
 import { PostStreamTypes, type PostStreamId } from '@/models/stream/post/postStream.types';
 import { useHomeStore } from '@/stores/home/home.store';
@@ -96,53 +96,59 @@ vi.mock('@/hooks/usePullToRefresh/usePullToRefresh', () => ({
   usePullToRefresh: mockUsePullToRefresh,
 }));
 
-vi.mock('@/providers', async (importOriginal) => {
-  const actual = await importOriginal<typeof import('@/providers')>();
+// Mock components
+vi.mock('@/molecules/NewPostsButton/NewPostsButton', () => {
   return {
-    ...actual,
-    ProfileContext: actual.ProfileContext,
+    NewPostsButton: ({
+      count,
+      visible,
+    }: {
+      count: number;
+      onClick: () => void;
+      visible: boolean;
+      isScrolled?: boolean;
+    }) => (visible && count > 0 ? <div data-testid="new-posts-button">{count} new posts</div> : null),
   };
 });
 
-// Mock components
-vi.mock('@/molecules', () => ({
-  TimelineLoading: () => <div data-testid="timeline-loading">Loading...</div>,
-  NewPostsButton: ({
-    count,
-    visible,
-  }: {
-    count: number;
-    onClick: () => void;
-    visible: boolean;
-    isScrolled?: boolean;
-  }) => (visible && count > 0 ? <div data-testid="new-posts-button">{count} new posts</div> : null),
-  PullToRefreshIndicator: ({ state }: { state: string; pullDistance: number }) =>
-    state !== 'idle' ? <div data-testid="pull-to-refresh-indicator">{state}</div> : null,
-}));
+vi.mock('@/molecules/PullToRefreshIndicator/PullToRefreshIndicator', () => {
+  return {
+    PullToRefreshIndicator: ({ state }: { state: string; pullDistance: number }) =>
+      state !== 'idle' ? <div data-testid="pull-to-refresh-indicator">{state}</div> : null,
+  };
+});
 
-vi.mock('@/organisms', () => ({
-  TimelinePosts: ({
-    postIds,
-    loading,
-    loadingMore,
-    error,
-    hasMore,
-  }: {
-    postIds: string[];
-    loading: boolean;
-    loadingMore: boolean;
-    error: string | null;
-    hasMore: boolean;
-  }) => (
-    <div data-testid="timeline-posts">
-      <span data-testid="post-count">{postIds.length}</span>
-      <span data-testid="loading">{loading.toString()}</span>
-      <span data-testid="loading-more">{loadingMore.toString()}</span>
-      <span data-testid="error">{error || 'none'}</span>
-      <span data-testid="has-more">{hasMore.toString()}</span>
-    </div>
-  ),
-}));
+vi.mock('@/molecules/Timeline/TimelineLoading', () => {
+  return {
+    TimelineLoading: () => <div data-testid="timeline-loading">Loading...</div>,
+  };
+});
+
+vi.mock('@/organisms/Timeline/Posts/Posts', () => {
+  return {
+    TimelinePosts: ({
+      postIds,
+      loading,
+      loadingMore,
+      error,
+      hasMore,
+    }: {
+      postIds: string[];
+      loading: boolean;
+      loadingMore: boolean;
+      error: string | null;
+      hasMore: boolean;
+    }) => (
+      <div data-testid="timeline-posts">
+        <span data-testid="post-count">{postIds.length}</span>
+        <span data-testid="loading">{loading.toString()}</span>
+        <span data-testid="loading-more">{loadingMore.toString()}</span>
+        <span data-testid="error">{error || 'none'}</span>
+        <span data-testid="has-more">{hasMore.toString()}</span>
+      </div>
+    ),
+  };
+});
 
 vi.mock('./VisualTimelinePosts', () => ({
   VisualTimelinePosts: ({
@@ -520,9 +526,9 @@ describe('TimelineFeed', () => {
   describe('Profile Variant', () => {
     it('should show loading when profile context has no pubky', () => {
       render(
-        <Providers.ProfileProvider>
+        <ProfileProvider>
           <TimelineFeed variant={TIMELINE_FEED_VARIANT.PROFILE} />
-        </Providers.ProfileProvider>,
+        </ProfileProvider>,
       );
 
       // When pubky is not available, streamId is undefined

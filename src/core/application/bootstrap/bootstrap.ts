@@ -1,17 +1,15 @@
 import { Env } from '@/libs/env/env';
+import { AppError } from '@/libs/error/error';
 import { HttpMethod, HttpStatusCode } from '@/libs/http/http.types';
 import { Logger } from '@/libs/logger/logger';
-import { AppError } from '@/libs/error/error';
 import type { TBootstrapParams } from '@/application/bootstrap/bootstrap.types';
 import { FeedApplication } from '@/application/feed/feed';
 import { FileApplication } from '@/application/file/file';
 import { MuteApplication } from '@/application/mute/mute';
 import { NotificationApplication } from '@/application/notification/notification';
-import { SettingsApplication } from '@/application/settings/settings';
-import type { TBootstrapResponse } from '@/controllers/auth/auth.types';
 import { TtlCoordinator } from '@/coordinators/ttl/ttl';
 import { buildHotTagsId } from '@/models/hot/hot.helper';
-import type { Pubky } from '@/models/models.types';
+import type { NotificationType } from '@/models/notification/notification.types';
 import { PostStreamTypes } from '@/models/stream/post/postStream.types';
 import { TagStreamTypes } from '@/models/stream/tag/tagStream.types';
 import { UserStreamTypes } from '@/models/stream/user/userStream.types';
@@ -24,7 +22,8 @@ import { LocalStreamUsersService } from '@/services/local/stream/users/users';
 import { LocalUserService } from '@/services/local/user/user';
 import { NexusBootstrapService } from '@/services/nexus/bootstrap/bootstrap';
 import { UserStreamTimeframe } from '@/services/nexus/nexus.types';
-import type { SettingsState } from '@/stores/settings/settings.types';
+import type { NotificationState } from '@/stores/notification/notification.types';
+
 /**
  * Callback type for reporting bootstrap progress to the Controller layer.
  * This allows the Controller to update stores without violating architecture rules.
@@ -41,18 +40,16 @@ export class BootstrapApplication {
    * @param params.pubky, The user's public key identifier
    * @param params.lastReadUrl, URL to fetch user's last read timestamp from homeserver
    * @param onProgress, Optional callback to report progress to the Controller layer
-   * @returns Promise resolving to notification state with unread count and last read timestamp
+   * @returns Promise resolving to notification state with preference-filtered unread count
    */
   static async initialize(
-    params: TBootstrapParams & { localSettings: SettingsState },
+    params: TBootstrapParams & { allowedTypes: NotificationType[] },
     onProgress?: BootstrapProgressCallback,
-  ): Promise<TBootstrapResponse> {
+  ): Promise<NotificationState> {
     const pubky = params.pubky;
-    const [bootstrapData, userLastRead, remoteSettings] = await Promise.all([
+    const [bootstrapData, userLastRead] = await Promise.all([
       NexusBootstrapService.fetch(pubky),
       this.fetchOrPutLastRead(params),
-      // Initialize settings from homeserver (non-blocking, errors are logged but don't fail bootstrap)
-      this.syncSettings(pubky, params.localSettings),
       MuteApplication.fetchMutedUsers(pubky), // fetches and persists MUTED stream internally
       FeedApplication.fetchFeeds(pubky),
     ]);
@@ -70,10 +67,12 @@ export class BootstrapApplication {
       // Subscribe to TTL coordinator for periodic staleness checks
       TtlCoordinator.getInstance().subscribeUser({ pubky });
     }
+
     const [{ unread, nextPollCursor }] = await Promise.all([
       NotificationApplication.persistAndSummarize({
         notifications: bootstrapData.notifications,
         lastRead: userLastRead,
+        allowedTypes: params.allowedTypes,
       }),
       LocalStreamUsersService.persistUsers(bootstrapData.users),
       LocalStreamPostsService.persistPosts({ posts: bootstrapData.posts }),
@@ -98,28 +97,7 @@ export class BootstrapApplication {
     // TODO: We will not have that step, but we will add HomeserverSignIn step before step 1 to catch errors
     onProgress?.('homeserverSynced'); // Step 5 complete (100%)
 
-    const notification = { unread, lastRead: userLastRead, lastPolledTimestamp: nextPollCursor };
-
-    return { notification, remoteSettings: remoteSettings ?? null };
-  }
-
-  /**
-   * Syncs user settings with the homeserver.
-   * Returns remote settings if newer, null otherwise.
-   * Errors are caught and logged — settings failure must not block bootstrap.
-   *
-   * @private
-   * @param pubky - The user's public key identifier
-   * @param localSettings - Current local settings state (passed from Controller layer)
-   */
-  private static async syncSettings(pubky: Pubky, localSettings: SettingsState): Promise<SettingsState | null> {
-    try {
-      return await SettingsApplication.initializeSettings(pubky, localSettings);
-    } catch (error) {
-      // Log but don't throw, settings sync failure shouldn't block bootstrap
-      Logger.error('Failed to initialize settings during bootstrap', { error, pubky });
-      return null;
-    }
+    return { unread, lastRead: userLastRead, lastPolledTimestamp: nextPollCursor };
   }
 
   /**

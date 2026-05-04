@@ -7,8 +7,9 @@ import type {
   FormatPublicKeyProps,
   GetDisplayTagsOptions,
 } from './utils.types';
-import type { PostInputVariant } from '@/organisms';
-import * as Config from '@/config';
+import type { PostInputVariant } from '@/organisms/PostInput/PostInput.types';
+
+import { DEFAULT_DISPLAY_PUBLIC_KEY_LENGTH, TAG_MAX_LENGTH } from '@/config/posts';
 import { RADIX_ID_REGEX, RADIX_ID_TEST_REGEX, TAG_BANNED_CHARS } from './utils.constants';
 
 export function cn(...inputs: ClassValue[]) {
@@ -36,7 +37,7 @@ export function stripPubkyPrefix(key: string): string {
 
 export function formatPublicKey({
   key,
-  length = Config.DEFAULT_DISPLAY_PUBLIC_KEY_LENGTH,
+  length = DEFAULT_DISPLAY_PUBLIC_KEY_LENGTH,
   includePrefix = false,
 }: FormatPublicKeyProps) {
   if (!key) return '';
@@ -573,7 +574,7 @@ export function sanitizeTagInput(value: string): string {
  */
 export function isValidTagLabel(value: string): boolean {
   const charCount = getCharacterCount(value);
-  return charCount > 0 && charCount <= Config.TAG_MAX_LENGTH && sanitizeTagInput(value) === value;
+  return charCount > 0 && charCount <= TAG_MAX_LENGTH && sanitizeTagInput(value) === value;
 }
 
 /**

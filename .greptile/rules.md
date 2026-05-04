@@ -97,21 +97,29 @@ const handleClick = () => {
 };
 ```
 
-### Avoid barrel re-exports
+### Avoid aggregate re-exports
 
-Don't create `index.ts` files whose sole purpose is re-exporting from child modules, and don't re-export constants or functions through intermediate modules without good reason. Barrel files add a layer of indirection that confuses IDE go-to-definition, makes circular dependency bugs harder to trace, and can defeat tree-shaking in bundlers. Import directly from the source module instead. For hooks and layered modules, use aliases such as `@/hooks/*`, `@/controllers/*`, `@/services/*`, `@/models/*`, and `@/stores/*`.
+Do not add `index.ts` / `index.tsx` files whose only job is re-exporting from child modules, and do not re-export constants or functions through intermediate modules without a strong reason. Those aggregates add indirection (harder go-to-definition), make circular dependency bugs harder to trace, and can defeat tree-shaking. Import from the defining source file instead. For hooks and layered code, use path aliases such as `@/hooks/*`, `@/controllers/*`, `@/services/*`, `@/models/*`, and `@/stores/*`.
+
+**Config:** import from `@/config/<module>` (files under `src/config/`). Do not add `src/config/index.ts` that re-exports the whole config surface.
+
+**App routes:** import route enums, maps, and helpers from `@/app/routes` (`src/app/routes.ts`).
+
+Components follow the same rule: under `src/components`, import concrete modules with the atomic path aliases:
 
 ```typescript
-// BAD — barrel that just re-exports
-// src/core/post/index.ts
-export { PostController } from './controllers/post.controller';
-export { PostApplication } from './application/post.application';
+// GOOD — concrete component module
+import { Button } from '@/atoms/Button/Button';
+import { FilterContent } from '@/molecules/Filters/FilterContent/FilterContent';
+import { PostHeader } from '@/organisms/PostHeader/PostHeader';
+```
 
-// GOOD — import from the actual file
+```typescript
+// Import from the actual file
 import { PostController } from '@/controllers/post/post';
 ```
 
-Exception: the top-level `src/components/atoms/index.ts` barrel is intentional for grouping atomic components — that pattern is established and acceptable.
+Do not add `src/components/**/index.ts` or `src/components/**/index.tsx` that only re-export; there is no exception for components.
 
 ### Scrutinize optional parameters
 

@@ -1,5 +1,7 @@
-import * as Atoms from '@/atoms';
-import * as Types from './ButtonsNavigation.types';
+import { Button } from '@/atoms/Button/Button';
+import { Container } from '@/atoms/Container/Container';
+
+import type { ButtonsNavigationProps } from './ButtonsNavigation.types';
 import { ArrowLeft, Loader2, ArrowRight } from 'lucide-react';
 import { cn } from '@/libs/utils/utils';
 export function ButtonsNavigation({
@@ -16,11 +18,11 @@ export function ButtonsNavigation({
   loadingContinueButton = false,
   backButtonClassName,
   continueButtonClassName,
-}: Types.ButtonsNavigationProps) {
+}: ButtonsNavigationProps) {
   return (
-    <Atoms.Container className={cn('justify-between gap-3 py-6 md:flex-row lg:gap-6', className)}>
+    <Container className={cn('justify-between gap-3 py-6 md:flex-row lg:gap-6', className)}>
       {!hiddenBackButton && (
-        <Atoms.Button
+        <Button
           id={`${id}-back-btn`}
           size="lg"
           className={cn('rounded-full', backButtonClassName)}
@@ -30,10 +32,10 @@ export function ButtonsNavigation({
         >
           <ArrowLeft className="mr-1.5 h-4 w-4" />
           {backText}
-        </Atoms.Button>
+        </Button>
       )}
       {!hiddenContinueButton && (
-        <Atoms.Button
+        <Button
           id={`${id}-continue-btn`}
           size="lg"
           className={cn('rounded-full', continueButtonClassName)}
@@ -51,8 +53,8 @@ export function ButtonsNavigation({
               {continueText}
             </>
           )}
-        </Atoms.Button>
+        </Button>
       )}
-    </Atoms.Container>
+    </Container>
   );
 }

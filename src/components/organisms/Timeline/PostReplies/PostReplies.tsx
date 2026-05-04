@@ -3,8 +3,9 @@
 import { usePostCounts } from '@/hooks/usePostCounts/usePostCounts';
 import { usePostDetails } from '@/hooks/usePostDetails/usePostDetails';
 import { useRequireAuth } from '@/hooks/useRequireAuth/useRequireAuth';
-import * as Atoms from '@/atoms';
-import * as Organisms from '@/organisms';
+import { Container } from '@/atoms/Container/Container';
+import { ThreadTree } from '../../ThreadTree/ThreadTree';
+
 import { isPostDeleted } from '@/libs/utils/utils';
 
 interface TimelinePostRepliesProps {
@@ -42,8 +43,8 @@ export function TimelinePostReplies({ postId }: TimelinePostRepliesProps) {
   }
 
   return (
-    <Atoms.Container overrideDefaults className="ml-3">
-      <Organisms.ThreadTree postId={postId} showQuickReply={shouldShowQuickReply} />
-    </Atoms.Container>
+    <Container overrideDefaults className="ml-3">
+      <ThreadTree postId={postId} showQuickReply={shouldShowQuickReply} />
+    </Container>
   );
 }

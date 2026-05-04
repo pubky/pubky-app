@@ -12,10 +12,8 @@ vi.mock('next/navigation', () => ({
 }));
 
 // Mock TaggedItem
-vi.mock('@/molecules', async (importOriginal) => {
-  const actual = await importOriginal<typeof import('@/molecules')>();
+vi.mock('@/molecules/TaggedItem/TaggedItem', () => {
   return {
-    ...actual,
     TaggedItem: ({ tag }: { tag: TagWithAvatars }) => <div data-testid="tagged-item">{tag.label}</div>,
   };
 });

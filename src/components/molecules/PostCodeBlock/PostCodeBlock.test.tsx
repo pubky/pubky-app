@@ -14,43 +14,55 @@ vi.mock('@/libs/utils/utils', async () => {
 });
 
 // Mock @/atoms
-vi.mock('@/atoms', () => ({
-  Container: ({
-    children,
-    className,
-    overrideDefaults,
-  }: {
-    children: React.ReactNode;
-    className?: string;
-    overrideDefaults?: boolean;
-  }) => (
-    <div data-testid="container" data-override-defaults={overrideDefaults} className={className}>
-      {children}
-    </div>
-  ),
-  Button: ({
-    children,
-    onClick,
-    variant,
-    size,
-    className,
-  }: {
-    children: React.ReactNode;
-    onClick?: (e: React.MouseEvent) => void;
-    variant?: string;
-    size?: string;
-    className?: string;
-  }) => (
-    <button data-testid="copy-button" data-variant={variant} data-size={size} className={className} onClick={onClick}>
-      {children}
-    </button>
-  ),
-  Typography: ({ children, size, className }: { children: React.ReactNode; size?: string; className?: string }) => (
-    <span data-testid="typography" data-size={size} className={className}>
-      {children}
-    </span>
-  ),
-}));
+vi.mock('@/atoms/Button/Button', () => {
+  return {
+    Button: ({
+      children,
+      onClick,
+      variant,
+      size,
+      className,
+    }: {
+      children: React.ReactNode;
+      onClick?: (e: React.MouseEvent) => void;
+      variant?: string;
+      size?: string;
+      className?: string;
+    }) => (
+      <button data-testid="copy-button" data-variant={variant} data-size={size} className={className} onClick={onClick}>
+        {children}
+      </button>
+    ),
+  };
+});
+
+vi.mock('@/atoms/Container/Container', () => {
+  return {
+    Container: ({
+      children,
+      className,
+      overrideDefaults,
+    }: {
+      children: React.ReactNode;
+      className?: string;
+      overrideDefaults?: boolean;
+    }) => (
+      <div data-testid="container" data-override-defaults={overrideDefaults} className={className}>
+        {children}
+      </div>
+    ),
+  };
+});
+
+vi.mock('@/atoms/Typography/Typography', () => {
+  return {
+    Typography: ({ children, size, className }: { children: React.ReactNode; size?: string; className?: string }) => (
+      <span data-testid="typography" data-size={size} className={className}>
+        {children}
+      </span>
+    ),
+  };
+});
 
 describe('PostCodeBlock', () => {
   beforeEach(() => {

@@ -2,7 +2,10 @@
 
 import { ReactNode } from 'react';
 import { useTranslations } from 'next-intl';
-import * as Atoms from '@/atoms';
+import { Container } from '@/atoms/Container/Container';
+import { Input } from '@/atoms/Input/Input';
+import { Typography } from '@/atoms/Typography/Typography';
+
 import { Loader2 } from 'lucide-react';
 import { cn } from '@/libs/utils/utils';
 interface InputFieldProps {
@@ -79,7 +82,7 @@ export function InputField({
   } as const;
   return (
     <>
-      <Atoms.Container
+      <Container
         className={cn(
           '!bg-alpha-90/10 mx-0 mb-2 w-full cursor-pointer flex-row items-center gap-0 rounded-md border bg-transparent',
           icon && iconPosition === 'left' ? 'pl-4.5' : 'pl-2',
@@ -91,18 +94,18 @@ export function InputField({
         )}
       >
         {loading && (
-          <Atoms.Container className="w-auto items-center justify-center">
+          <Container className="w-auto items-center justify-center">
             {loadingIcon ?? (
               <Loader2 className="linear infinite h-4 w-4 animate-spin text-brand" data-testid="loading-icon" />
             )}
-          </Atoms.Container>
+          </Container>
         )}
         {!loading && icon && iconPosition === 'left' && (
-          <Atoms.Container onClick={onClickIcon} className={cn('w-auto cursor-pointer items-center justify-center')}>
+          <Container onClick={onClickIcon} className={cn('w-auto cursor-pointer items-center justify-center')}>
             {icon}
-          </Atoms.Container>
+          </Container>
         )}
-        <Atoms.Input
+        <Input
           id={id}
           name={name}
           type="text"
@@ -120,18 +123,15 @@ export function InputField({
           data-cy={dataCy}
         />
         {!loading && icon && iconPosition === 'right' && (
-          <Atoms.Container
-            onClick={onClickIcon}
-            className={cn('mr-5 w-auto cursor-pointer items-center justify-center')}
-          >
+          <Container onClick={onClickIcon} className={cn('mr-5 w-auto cursor-pointer items-center justify-center')}>
             {icon}
-          </Atoms.Container>
+          </Container>
         )}
-      </Atoms.Container>
+      </Container>
       {message && (
-        <Atoms.Typography as="small" size="sm" className={cn('ml-1', messageClasses[messageType])}>
+        <Typography as="small" size="sm" className={cn('ml-1', messageClasses[messageType])}>
           {message}
-        </Atoms.Typography>
+        </Typography>
       )}
     </>
   );

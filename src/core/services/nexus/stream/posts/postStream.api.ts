@@ -1,13 +1,14 @@
 import { buildNexusUrl } from '@/services/nexus/nexus.utils';
-import { STREAM_PREFIX, StreamSource } from '@/services/nexus/stream/posts/postStream.types';
-import type {
-  TStreamAllParams,
-  TStreamAuthorParams,
-  TStreamAuthorRepliesParams,
-  TStreamPostRepliesParams,
-  TStreamPostsByIdsParams,
-  TStreamQueryParams,
-  TStreamWithObserverParams,
+import {
+  STREAM_PREFIX,
+  StreamSource,
+  type TStreamAllParams,
+  type TStreamAuthorParams,
+  type TStreamAuthorRepliesParams,
+  type TStreamPostRepliesParams,
+  type TStreamPostsByIdsParams,
+  type TStreamQueryParams,
+  type TStreamWithObserverParams,
 } from '@/services/nexus/stream/posts/postStream.types';
 /**
  * Post stream API Endpoints

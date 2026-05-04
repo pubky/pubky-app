@@ -1,5 +1,7 @@
-import * as Atoms from '@/atoms';
-import { COLORS } from '@/config';
+import { Tag } from '@/atoms/Tag/Tag';
+import { Toggle } from '@/atoms/Toggle/Toggle';
+
+import { COLORS } from '@/config/theme';
 import type { PostTagProps } from './PostTag.types';
 import { X } from 'lucide-react';
 import { cn, generateRandomColor, hexToRgba } from '@/libs/utils/utils';
@@ -21,7 +23,7 @@ export function PostTag({
     onClose?.(e);
   };
   return (
-    <Atoms.Toggle
+    <Toggle
       {...rest}
       pressed={selected}
       onClick={(e) => {
@@ -46,7 +48,7 @@ export function PostTag({
       }}
       aria-label={count !== undefined ? `${label} tag (${count} posts)` : `${label} tag`}
     >
-      <Atoms.Tag
+      <Tag
         name={label}
         count={count}
         countDataCy="post-tag-count"
@@ -85,6 +87,6 @@ export function PostTag({
           aria-hidden="true"
         />
       )}
-    </Atoms.Toggle>
+    </Toggle>
   );
 }

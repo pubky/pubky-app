@@ -43,8 +43,8 @@ vi.mock('@/controllers/file/file', () => ({
 }));
 
 // Mock Config to provide DEFAULT_URL
-vi.mock('@/config', async (importOriginal) => {
-  const actual = await importOriginal<typeof import('@/config')>();
+vi.mock('@/config/metadata', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('@/config/metadata')>();
   return {
     ...actual,
     DEFAULT_URL: 'https://example.com',

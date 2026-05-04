@@ -1,11 +1,11 @@
 import { buildNexusUrl, buildUrlWithQuery, encodePathSegment } from '@/services/nexus/nexus.utils';
-import { POST_PATH_PARAMS } from '@/services/nexus/post/post.types';
-import type {
-  TPostBase,
-  TPostBasePathParams,
-  TPostTaggersParams,
-  TPostTagsParams,
-  TPostViewParams,
+import {
+  POST_PATH_PARAMS,
+  type TPostBase,
+  type TPostBasePathParams,
+  type TPostTaggersParams,
+  type TPostTagsParams,
+  type TPostViewParams,
 } from '@/services/nexus/post/post.types';
 /**
  * Post API Endpoints

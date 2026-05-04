@@ -3,9 +3,12 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
 import { useTranslations } from 'next-intl';
+import { Button } from '@/atoms/Button/Button';
+import { Container } from '@/atoms/Container/Container';
+import { Typography } from '@/atoms/Typography/Typography';
+import { ContentLayout } from '@/organisms/ContentLayout/ContentLayout';
+import { PostInput } from '@/organisms/PostInput/PostInput';
 
-import * as Atoms from '@/atoms';
-import * as Organisms from '@/organisms';
 import { POST_INPUT_VARIANT } from '@/organisms/PostInput/PostInput.constants';
 import { APP_ROUTES } from '@/app/routes';
 import { ShareTargetSkeleton } from './ShareTarget.skeleton';
@@ -56,18 +59,18 @@ export function ShareTarget() {
   }
 
   return (
-    <Organisms.ContentLayout>
-      <Atoms.Container className="mx-auto w-full max-w-2xl gap-4 p-4">
-        <Atoms.Container className="flex-row items-center justify-between" overrideDefaults>
-          <Atoms.Typography as="h2" size="lg">
+    <ContentLayout>
+      <Container className="mx-auto w-full max-w-2xl gap-4 p-4">
+        <Container className="flex-row items-center justify-between" overrideDefaults>
+          <Typography as="h2" size="lg">
             {t('title')}
-          </Atoms.Typography>
-          <Atoms.Button variant="ghost" size="sm" onClick={handleCancel}>
+          </Typography>
+          <Button variant="ghost" size="sm" onClick={handleCancel}>
             {t('cancel')}
-          </Atoms.Button>
-        </Atoms.Container>
+          </Button>
+        </Container>
 
-        <Organisms.PostInput
+        <PostInput
           dataCy="share-target-post-input"
           variant={POST_INPUT_VARIANT.POST}
           expanded={true}
@@ -75,7 +78,7 @@ export function ShareTarget() {
           initialContent={initialContent}
           initialAttachments={initialAttachments.length > 0 ? initialAttachments : undefined}
         />
-      </Atoms.Container>
-    </Organisms.ContentLayout>
+      </Container>
+    </ContentLayout>
   );
 }

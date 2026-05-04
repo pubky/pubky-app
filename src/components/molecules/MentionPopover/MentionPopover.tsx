@@ -1,8 +1,9 @@
 'use client';
 
 import { useRef, useEffect } from 'react';
-import * as Atoms from '@/atoms';
-import * as Molecules from '@/molecules';
+import { Container } from '@/atoms/Container/Container';
+import { SearchUserSuggestion } from '../SearchUserSuggestion/SearchUserSuggestion';
+
 import type { MentionPopoverProps } from './MentionPopover.types';
 import { cn } from '@/libs/utils/utils';
 
@@ -46,7 +47,7 @@ export function MentionPopover({ users, selectedIndex, onSelect, onHover }: Ment
   }
 
   return (
-    <Atoms.Container
+    <Container
       ref={containerRef}
       role="listbox"
       aria-label="User suggestions"
@@ -56,7 +57,7 @@ export function MentionPopover({ users, selectedIndex, onSelect, onHover }: Ment
       className={cn(POPOVER_CLASSNAME)}
     >
       {users.map((user, index) => (
-        <Atoms.Container
+        <Container
           key={user.id}
           ref={(el) => {
             itemRefs.current[index] = el;
@@ -68,9 +69,9 @@ export function MentionPopover({ users, selectedIndex, onSelect, onHover }: Ment
           className={cn('rounded-md transition-colors', selectedIndex === index && 'bg-accent')}
           onMouseEnter={() => onHover(index)}
         >
-          <Molecules.SearchUserSuggestion user={user} onClick={() => onSelect(user.id)} />
-        </Atoms.Container>
+          <SearchUserSuggestion user={user} onClick={() => onSelect(user.id)} />
+        </Container>
       ))}
-    </Atoms.Container>
+    </Container>
   );
 }

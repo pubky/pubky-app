@@ -7,33 +7,33 @@ const validPubkyKey = 'o1gg96ewuojmopcjbz8895478wdtxtzzber7aezq6ror5a91j7dy';
 
 const mockUseUserProfile = vi.fn();
 
-vi.mock('@/atoms', () => ({
-  Link: ({
-    children,
-    href,
-    className,
-    onClick,
-    ...props
-  }: {
-    children: React.ReactNode;
-    href: string;
-    className?: string;
-    onClick?: (e: React.MouseEvent) => void;
-  }) => (
-    <a data-testid="link" href={href} className={className} onClick={onClick} {...props}>
-      {children}
-    </a>
-  ),
-}));
+vi.mock('@/atoms/Link/Link', () => {
+  return {
+    Link: ({
+      children,
+      href,
+      className,
+      onClick,
+      ...props
+    }: {
+      children: React.ReactNode;
+      href: string;
+      className?: string;
+      onClick?: (e: React.MouseEvent) => void;
+    }) => (
+      <a data-testid="link" href={href} className={className} onClick={onClick} {...props}>
+        {children}
+      </a>
+    ),
+  };
+});
 
 vi.mock('@/hooks/useUserProfile/useUserProfile', () => ({
   useUserProfile: (userId: string) => mockUseUserProfile(userId),
 }));
 
-vi.mock('@/molecules', async (importOriginal) => {
-  const actual = await importOriginal<typeof import('@/molecules')>();
+vi.mock('@/molecules/UserInfoPopover/UserInfoPopover', () => {
   return {
-    ...actual,
     UserInfoPopover: ({ children }: { children: React.ReactNode }) => <>{children}</>,
   };
 });

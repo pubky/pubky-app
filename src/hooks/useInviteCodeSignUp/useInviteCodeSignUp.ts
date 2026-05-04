@@ -1,8 +1,7 @@
 'use client';
 
 import { useTranslations } from 'next-intl';
-
-import * as Molecules from '@/molecules';
+import { useToast } from '@/molecules/Toaster/use-toast';
 
 import type { UseInviteCodeSignUpResult } from './useInviteCodeSignUp.types';
 import { getRetryAfter, isAppError, isAuthError, isRetryable } from '@/libs/error/error.utils';
@@ -32,7 +31,7 @@ const SIGN_UP_RETRY_MAX_DELAY_MS = 5000;
  * };
  */
 export function useInviteCodeSignUp(): UseInviteCodeSignUpResult {
-  const { toast } = Molecules.useToast();
+  const { toast } = useToast();
   const t = useTranslations('onboarding.pubky');
 
   const getRetryDelayMs = (attempt: number, retryAfterSeconds?: number): number => {

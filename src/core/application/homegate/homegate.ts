@@ -1,4 +1,12 @@
-import type * as Types from './homegate.types';
+import type {
+  THomegateAwaitLnVerificationResult,
+  THomegateCreateLnVerificationResult,
+  THomegateLnInfoResult,
+  THomegateSendSmsCodeResult,
+  THomegateSmsInfoResult,
+  THomegateVerifySmsCodeParams,
+  THomegateVerifySmsCodeResult,
+} from './homegate.types';
 import { ExchangerateService } from '@/services/exchangerate/exchangerate';
 import type { BtcRate } from '@/services/exchangerate/exchangerate.types';
 import { HomegateService } from '@/services/homegate/homegate';
@@ -21,7 +29,7 @@ export class HomegateApplication {
    * @returns The availability status
    * @throws AppError if retrieval fails
    */
-  static async getSmsVerificationInfo(): Promise<Types.THomegateSmsInfoResult> {
+  static async getSmsVerificationInfo(): Promise<THomegateSmsInfoResult> {
     return await HomegateService.getSmsVerificationInfo();
   }
 
@@ -31,7 +39,7 @@ export class HomegateApplication {
    * @returns The availability status and price if available
    * @throws AppError if retrieval fails
    */
-  static async getLnVerificationInfo(): Promise<Types.THomegateLnInfoResult> {
+  static async getLnVerificationInfo(): Promise<THomegateLnInfoResult> {
     return await HomegateService.getLnVerificationInfo();
   }
 
@@ -41,7 +49,7 @@ export class HomegateApplication {
    * @returns The verification details including the BOLT11 invoice
    * @throws AppError if creation fails
    */
-  static async createLnVerification(): Promise<Types.THomegateCreateLnVerificationResult> {
+  static async createLnVerification(): Promise<THomegateCreateLnVerificationResult> {
     return HomegateService.createLnVerification();
   }
 
@@ -57,7 +65,7 @@ export class HomegateApplication {
   static async awaitLnVerification(
     verificationId: string,
     signal?: AbortSignal,
-  ): Promise<Types.THomegateAwaitLnVerificationResult> {
+  ): Promise<THomegateAwaitLnVerificationResult> {
     if (signal) {
       return HomegateService.awaitLnVerification(verificationId, signal);
     }
@@ -75,7 +83,7 @@ export class HomegateApplication {
   static async verifySmsCode({
     phoneNumber,
     code,
-  }: Types.THomegateVerifySmsCodeParams): Promise<Types.THomegateVerifySmsCodeResult> {
+  }: THomegateVerifySmsCodeParams): Promise<THomegateVerifySmsCodeResult> {
     return HomegateService.verifySmsCode({ phoneNumber, code });
   }
 
@@ -86,7 +94,7 @@ export class HomegateApplication {
    * @returns The result of the SMS send request
    * @throws AppError if sending fails
    */
-  static async sendSmsCode(phoneNumber: string): Promise<Types.THomegateSendSmsCodeResult> {
+  static async sendSmsCode(phoneNumber: string): Promise<THomegateSendSmsCodeResult> {
     return HomegateService.sendSmsCode(phoneNumber);
   }
 

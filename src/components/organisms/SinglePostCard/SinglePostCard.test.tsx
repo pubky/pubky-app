@@ -20,109 +20,148 @@ vi.mock('@/hooks/useIsMobile/useIsMobile', () => ({
 }));
 
 // Mock organisms
-vi.mock('@/organisms', () => ({
-  PostHeader: ({
-    postId,
-    size,
-    timeAgoPlacement,
-  }: {
-    postId: string;
-    size?: 'normal' | 'large';
-    timeAgoPlacement?: 'top-right' | 'bottom-left';
-  }) => mockPostHeader({ postId, size, timeAgoPlacement }),
-  PostContent: ({ postId, textClassName }: { postId: string; textClassName?: string }) => (
-    <div data-testid="post-content" data-text-class-name={textClassName}>
-      Content: {postId}
-    </div>
-  ),
-  PostActionsBar: ({
-    postId,
-    onTagClick,
-    onReplyClick,
-    onRepostClick,
-  }: {
-    postId: string;
-    onTagClick?: () => void;
-    onReplyClick?: () => void;
-    onRepostClick?: () => void;
-  }) => (
-    <div data-testid="post-actions-bar">
-      <button data-testid="tag-action" onClick={onTagClick}>
-        Tag
-      </button>
-      <button data-testid="reply-action" onClick={onReplyClick}>
-        Reply
-      </button>
-      <button data-testid="repost-action" onClick={onRepostClick}>
-        Repost
-      </button>
-      Actions: {postId}
-    </div>
-  ),
-  PostTagsPanel: forwardRef<
-    { focus: () => void },
-    { postId: string; className?: string; widthMode?: 'fit' | 'full'; autoFocusInput?: boolean }
-  >(function MockPostTagsPanel({ postId, className, widthMode, autoFocusInput }, ref) {
-    const inputRef = useRef<HTMLInputElement>(null);
+vi.mock('@/organisms/ClickableTagsList/ClickableTagsList', () => {
+  return {
+    ClickableTagsList: ({ taggedId }: { taggedId: string }) => (
+      <div data-testid="clickable-tags-list">ClickableTagsList {taggedId}</div>
+    ),
+  };
+});
 
-    useImperativeHandle(ref, () => ({
-      focus: () => {
-        const panelType = widthMode === 'full' ? 'desktop' : 'inline';
-        mockPostTagsPanelFocus(panelType);
-        inputRef.current?.focus();
-      },
-    }));
-
-    const panelType = widthMode === 'full' ? 'desktop' : 'inline';
-
-    return (
-      <div data-testid={`post-tags-panel-${panelType}`} data-class-name={className} data-width-mode={widthMode}>
-        <input ref={inputRef} data-testid={`tag-input-${panelType}`} autoFocus={autoFocusInput} />
-        Tags: {postId}
+vi.mock('@/organisms/DialogReply/DialogReply', () => {
+  return {
+    DialogReply: ({ postId, open }: { postId: string; open: boolean }) => (
+      <div data-testid="dialog-reply" data-open={open}>
+        Reply Dialog: {postId}
       </div>
-    );
-  }),
-  DialogReply: ({ postId, open }: { postId: string; open: boolean }) => (
-    <div data-testid="dialog-reply" data-open={open}>
-      Reply Dialog: {postId}
-    </div>
-  ),
-  DialogRepost: ({ postId, open }: { postId: string; open: boolean }) => (
-    <div data-testid="dialog-repost" data-open={open}>
-      Repost Dialog: {postId}
-    </div>
-  ),
-  ClickableTagsList: ({ taggedId }: { taggedId: string }) => (
-    <div data-testid="clickable-tags-list">ClickableTagsList {taggedId}</div>
-  ),
-}));
+    ),
+  };
+});
+
+vi.mock('@/organisms/DialogRepost/DialogRepost', () => {
+  return {
+    DialogRepost: ({ postId, open }: { postId: string; open: boolean }) => (
+      <div data-testid="dialog-repost" data-open={open}>
+        Repost Dialog: {postId}
+      </div>
+    ),
+  };
+});
+
+vi.mock('@/organisms/PostActionsBar/PostActionsBar', () => {
+  return {
+    PostActionsBar: ({
+      postId,
+      onTagClick,
+      onReplyClick,
+      onRepostClick,
+    }: {
+      postId: string;
+      onTagClick?: () => void;
+      onReplyClick?: () => void;
+      onRepostClick?: () => void;
+    }) => (
+      <div data-testid="post-actions-bar">
+        <button data-testid="tag-action" onClick={onTagClick}>
+          Tag
+        </button>
+        <button data-testid="reply-action" onClick={onReplyClick}>
+          Reply
+        </button>
+        <button data-testid="repost-action" onClick={onRepostClick}>
+          Repost
+        </button>
+        Actions: {postId}
+      </div>
+    ),
+  };
+});
+
+vi.mock('@/organisms/PostContent/PostContent', () => {
+  return {
+    PostContent: ({ postId, textClassName }: { postId: string; textClassName?: string }) => (
+      <div data-testid="post-content" data-text-class-name={textClassName}>
+        Content: {postId}
+      </div>
+    ),
+  };
+});
+
+vi.mock('@/organisms/PostHeader/PostHeader', () => {
+  return {
+    PostHeader: ({
+      postId,
+      size,
+      timeAgoPlacement,
+    }: {
+      postId: string;
+      size?: 'normal' | 'large';
+      timeAgoPlacement?: 'top-right' | 'bottom-left';
+    }) => mockPostHeader({ postId, size, timeAgoPlacement }),
+  };
+});
+
+vi.mock('@/organisms/PostTagsPanel/PostTagsPanel', () => {
+  return {
+    PostTagsPanel: forwardRef<
+      { focus: () => void },
+      { postId: string; className?: string; widthMode?: 'fit' | 'full'; autoFocusInput?: boolean }
+    >(function MockPostTagsPanel({ postId, className, widthMode, autoFocusInput }, ref) {
+      const inputRef = useRef<HTMLInputElement>(null);
+
+      useImperativeHandle(ref, () => ({
+        focus: () => {
+          const panelType = widthMode === 'full' ? 'desktop' : 'inline';
+          mockPostTagsPanelFocus(panelType);
+          inputRef.current?.focus();
+        },
+      }));
+
+      const panelType = widthMode === 'full' ? 'desktop' : 'inline';
+
+      return (
+        <div data-testid={`post-tags-panel-${panelType}`} data-class-name={className} data-width-mode={widthMode}>
+          <input ref={inputRef} data-testid={`tag-input-${panelType}`} autoFocus={autoFocusInput} />
+          Tags: {postId}
+        </div>
+      );
+    }),
+  };
+});
 
 // Mock atoms
-vi.mock('@/atoms', () => ({
-  Card: ({ children, className }: { children: React.ReactNode; className?: string }) => (
-    <div data-testid="card" className={className}>
-      {children}
-    </div>
-  ),
-  CardContent: ({ children, className }: { children: React.ReactNode; className?: string }) => (
-    <div data-testid="card-content" className={className}>
-      {children}
-    </div>
-  ),
-  Container: ({
-    children,
-    className,
-    onClick,
-  }: {
-    children: React.ReactNode;
-    className?: string;
-    onClick?: () => void;
-  }) => (
-    <div data-testid="container" data-class-name={className} className={className} onClick={onClick}>
-      {children}
-    </div>
-  ),
-}));
+vi.mock('@/atoms/Card/Card', () => {
+  return {
+    Card: ({ children, className }: { children: React.ReactNode; className?: string }) => (
+      <div data-testid="card" className={className}>
+        {children}
+      </div>
+    ),
+    CardContent: ({ children, className }: { children: React.ReactNode; className?: string }) => (
+      <div data-testid="card-content" className={className}>
+        {children}
+      </div>
+    ),
+  };
+});
+
+vi.mock('@/atoms/Container/Container', () => {
+  return {
+    Container: ({
+      children,
+      className,
+      onClick,
+    }: {
+      children: React.ReactNode;
+      className?: string;
+      onClick?: () => void;
+    }) => (
+      <div data-testid="container" data-class-name={className} className={className} onClick={onClick}>
+        {children}
+      </div>
+    ),
+  };
+});
 
 describe('SinglePostCard', () => {
   const mockPostId = 'author:post123';

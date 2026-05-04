@@ -9,40 +9,47 @@ vi.mock('@/hooks/useBodyScrollLock/useBodyScrollLock', () => ({
 }));
 
 // Mock Atoms components
-vi.mock('@/atoms', () => ({
-  Container: ({
-    children,
-    className,
-    onClick,
-    'data-testid': testId,
-    ...props
-  }: {
-    children: React.ReactNode;
-    className?: string;
-    onClick?: () => void;
-    'data-testid'?: string;
-    [key: string]: unknown;
-  }) => {
-    return (
-      <div className={className} onClick={onClick} data-testid={testId} {...props}>
+vi.mock('@/atoms/Avatar/Avatar', () => {
+  return {
+    Avatar: ({ children, className }: { children: React.ReactNode; className?: string }) => (
+      <div data-testid="avatar" className={className}>
         {children}
       </div>
-    );
-  },
-  Avatar: ({ children, className }: { children: React.ReactNode; className?: string }) => (
-    <div data-testid="avatar" className={className}>
-      {children}
-    </div>
-  ),
-  AvatarImage: ({ src, alt }: { src: string; alt: string }) => <img data-testid="avatar-image" src={src} alt={alt} />,
-  AvatarFallback: ({ children }: { children: React.ReactNode }) => <div data-testid="avatar-fallback">{children}</div>,
-}));
+    ),
+    AvatarImage: ({ src, alt }: { src: string; alt: string }) => <img data-testid="avatar-image" src={src} alt={alt} />,
+    AvatarFallback: ({ children }: { children: React.ReactNode }) => (
+      <div data-testid="avatar-fallback">{children}</div>
+    ),
+  };
+});
+
+vi.mock('@/atoms/Container/Container', () => {
+  return {
+    Container: ({
+      children,
+      className,
+      onClick,
+      'data-testid': testId,
+      ...props
+    }: {
+      children: React.ReactNode;
+      className?: string;
+      onClick?: () => void;
+      'data-testid'?: string;
+      [key: string]: unknown;
+    }) => {
+      return (
+        <div className={className} onClick={onClick} data-testid={testId} {...props}>
+          {children}
+        </div>
+      );
+    },
+  };
+});
 
 // Mock Organisms components
-vi.mock('@/organisms', async (importOriginal) => {
-  const actual = await importOriginal<typeof import('@/organisms')>();
+vi.mock('@/organisms/AvatarWithFallback/AvatarWithFallback', () => {
   return {
-    ...actual,
     AvatarWithFallback: ({
       avatarUrl,
       name,

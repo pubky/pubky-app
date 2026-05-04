@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { PubkyAppPostKind, PostResult, PubkyAppPostEmbed, PubkyAppPost, type FileResult } from 'pubky-app-specs';
-import { asInvalid, asOpaque } from '@/test-utils';
+import { asInvalid, asOpaque } from '@/test-utils/type-assertions';
 import {
   TEST_PUBKY,
   TEST_POST_IDS,
@@ -10,7 +10,6 @@ import {
   buildPubkyUri,
 } from '../pipes.test-utils';
 import { Logger } from '@/libs/logger/logger';
-import * as buildCompositeIdFromPubkyUriModule from '@/models/models.utils';
 import { PostDetailsModel } from '@/models/post/details/postDetails';
 import type { PostDetailsModelSchema } from '@/models/post/details/postDetails.schema';
 import { PostRelationshipsModel } from '@/models/post/relationships/postRelationships';
@@ -19,6 +18,10 @@ import type { TFileAttachmentResult } from '@/pipes/file/file.types';
 import { PubkySpecsSingleton } from '@/pipes/pipes.builder';
 import type { PostValidatorData } from '@/pipes/pipes.types';
 import { PostNormalizer } from '@/pipes/post/post.normalizer';
+
+const spyOnBuildCompositeIdFromPubkyUri = async () =>
+  vi.spyOn(await import('@/models/models.utils'), 'buildCompositeIdFromPubkyUri');
+
 describe('PostNormalizer', () => {
   // Test data factories
   const createBasicPost = (overrides?: Partial<PostValidatorData>): PostValidatorData => ({
@@ -162,7 +165,7 @@ describe('PostNormalizer', () => {
         const embeddedPostId = `${TEST_PUBKY.USER_2}:embedded123`;
 
         it('should create embed object when embed post exists', async () => {
-          vi.spyOn(buildCompositeIdFromPubkyUriModule, 'buildCompositeIdFromPubkyUri').mockReturnValue(embeddedPostId);
+          (await spyOnBuildCompositeIdFromPubkyUri()).mockReturnValue(embeddedPostId);
           vi.spyOn(PostDetailsModel, 'findById').mockResolvedValue(createMockPostDetails(embeddedPostId));
 
           const post = createBasicPost({ embed: embedUri });
@@ -178,7 +181,7 @@ describe('PostNormalizer', () => {
         });
 
         it('should pass null embed when URI is invalid', async () => {
-          vi.spyOn(buildCompositeIdFromPubkyUriModule, 'buildCompositeIdFromPubkyUri').mockReturnValue(null);
+          (await spyOnBuildCompositeIdFromPubkyUri()).mockReturnValue(null);
 
           const post = createBasicPost({ embed: embedUri });
           await PostNormalizer.to(post, TEST_PUBKY.USER_1);
@@ -187,7 +190,7 @@ describe('PostNormalizer', () => {
         });
 
         it('should pass null embed when embedded post not found', async () => {
-          vi.spyOn(buildCompositeIdFromPubkyUriModule, 'buildCompositeIdFromPubkyUri').mockReturnValue(embeddedPostId);
+          (await spyOnBuildCompositeIdFromPubkyUri()).mockReturnValue(embeddedPostId);
           vi.spyOn(PostDetailsModel, 'findById').mockResolvedValue(null);
 
           const post = createBasicPost({ embed: embedUri });
@@ -224,7 +227,7 @@ describe('PostNormalizer', () => {
           const embedUri = buildPubkyUri(TEST_PUBKY.USER_2, 'posts/embed');
           const embeddedPostId = `${TEST_PUBKY.USER_2}:embed`;
 
-          vi.spyOn(buildCompositeIdFromPubkyUriModule, 'buildCompositeIdFromPubkyUri').mockReturnValue(embeddedPostId);
+          (await spyOnBuildCompositeIdFromPubkyUri()).mockReturnValue(embeddedPostId);
           vi.spyOn(PostDetailsModel, 'findById').mockResolvedValue(createMockPostDetails(embeddedPostId));
 
           const post = createBasicPost({
@@ -249,12 +252,10 @@ describe('PostNormalizer', () => {
         it.each([
           [
             'buildCompositeIdFromPubkyUri',
-            () =>
-              vi
-                .spyOn(buildCompositeIdFromPubkyUriModule, 'buildCompositeIdFromPubkyUri')
-                .mockImplementation((_params) => {
-                  throw new Error('URI error');
-                }),
+            async () =>
+              (await spyOnBuildCompositeIdFromPubkyUri()).mockImplementation((_params) => {
+                throw new Error('URI error');
+              }),
           ],
           [
             'createPost',
@@ -264,14 +265,14 @@ describe('PostNormalizer', () => {
               }),
           ],
         ])('should propagate errors from %s', async (_, setupError) => {
-          setupError();
+          await setupError();
           const post = createBasicPost({ embed: 'pubky://embed' });
 
           await expect(PostNormalizer.to(post, TEST_PUBKY.USER_1)).rejects.toThrow();
         });
 
         it('should propagate errors from PostDetailsModel.findById', async () => {
-          vi.spyOn(buildCompositeIdFromPubkyUriModule, 'buildCompositeIdFromPubkyUri').mockReturnValue('valid-id');
+          (await spyOnBuildCompositeIdFromPubkyUri()).mockReturnValue('valid-id');
           vi.spyOn(PostDetailsModel, 'findById').mockRejectedValue(new Error('Database error'));
 
           const post = createBasicPost({ embed: 'pubky://embed' });
@@ -559,7 +560,7 @@ describe('PostNormalizer', () => {
         vi.spyOn(PostRelationshipsModel, 'findById').mockResolvedValue(
           createMockPostRelationships({ reposted: repostedUri }),
         );
-        vi.spyOn(buildCompositeIdFromPubkyUriModule, 'buildCompositeIdFromPubkyUri').mockReturnValue(embeddedPostId);
+        (await spyOnBuildCompositeIdFromPubkyUri()).mockReturnValue(embeddedPostId);
 
         await PostNormalizer.toEdit({
           compositePostId,

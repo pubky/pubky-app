@@ -36,9 +36,11 @@ vi.mock('@/stores/auth/auth.store', () => ({
 }));
 
 const mockToast = vi.fn();
-vi.mock('@/molecules', () => ({
-  useToast: () => ({ toast: mockToast }),
-}));
+vi.mock('@/molecules/Toaster/use-toast', () => {
+  return {
+    useToast: () => ({ toast: mockToast }),
+  };
+});
 
 vi.mock('next-intl', () => ({
   useTranslations: () => (key: string) => {

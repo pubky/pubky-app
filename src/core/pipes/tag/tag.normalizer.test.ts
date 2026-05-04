@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { TagResult, postUriBuilder } from 'pubky-app-specs';
-import { asInvalid, asOpaque } from '@/test-utils';
+import { asInvalid, asOpaque } from '@/test-utils/type-assertions';
 import {
   TEST_PUBKY,
   TEST_POST_IDS,
@@ -12,12 +12,14 @@ import {
 import { AppError } from '@/libs/error/error';
 import { ValidationErrorCode } from '@/libs/error/error.codes';
 import { ErrorCategory, ErrorService } from '@/libs/error/error.types';
-import * as parseCompositeIdModule from '@/models/models.utils';
 import { TagKind } from '@/application/tag/tag.types';
 import type { TTagEventParams } from '@/controllers/tag/tag.types';
 import { parseCompositeId } from '@/models/models.utils';
 import { PubkySpecsSingleton } from '@/pipes/pipes.builder';
 import { TagNormalizer } from '@/pipes/tag/tag.normalizer';
+
+const spyOnParseCompositeId = async () => vi.spyOn(await import('@/models/models.utils'), 'parseCompositeId');
+
 describe('TagNormalizer', () => {
   const createMockBuilder = (overrides?: Partial<{ createTag: ReturnType<typeof vi.fn> }>) => ({
     createTag: vi.fn((uri: string, label: string) =>
@@ -276,8 +278,8 @@ describe('TagNormalizer', () => {
       afterEach(restoreMocks);
 
       describe('POST tag creation', () => {
-        it('should parse composite ID and build post URI', () => {
-          vi.spyOn(parseCompositeIdModule, 'parseCompositeId').mockReturnValue({
+        it('should parse composite ID and build post URI', async () => {
+          (await spyOnParseCompositeId()).mockReturnValue({
             pubky: TEST_PUBKY.USER_2,
             id: TEST_POST_IDS.POST_1,
           });
@@ -298,8 +300,8 @@ describe('TagNormalizer', () => {
           );
         });
 
-        it('should return normalized response with lowercase label', () => {
-          vi.spyOn(parseCompositeIdModule, 'parseCompositeId').mockReturnValue({
+        it('should return normalized response with lowercase label', async () => {
+          (await spyOnParseCompositeId()).mockReturnValue({
             pubky: TEST_PUBKY.USER_2,
             id: TEST_POST_IDS.POST_1,
           });
@@ -355,8 +357,8 @@ describe('TagNormalizer', () => {
       });
 
       describe('error handling', () => {
-        it('should throw AppError with correct properties when parseCompositeId fails', () => {
-          vi.spyOn(parseCompositeIdModule, 'parseCompositeId').mockImplementation(() => {
+        it('should throw AppError with correct properties when parseCompositeId fails', async () => {
+          (await spyOnParseCompositeId()).mockImplementation(() => {
             throw 'Invalid composite ID';
           });
 
@@ -381,8 +383,8 @@ describe('TagNormalizer', () => {
           }
         });
 
-        it('should throw AppError when createTag fails', () => {
-          vi.spyOn(parseCompositeIdModule, 'parseCompositeId').mockReturnValue({
+        it('should throw AppError when createTag fails', async () => {
+          (await spyOnParseCompositeId()).mockReturnValue({
             pubky: TEST_PUBKY.USER_2,
             id: TEST_POST_IDS.POST_1,
           });

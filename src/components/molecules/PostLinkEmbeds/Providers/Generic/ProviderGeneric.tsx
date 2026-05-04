@@ -1,4 +1,4 @@
-import * as ProviderTypes from '../Provider.types';
+import type { EmbedData, EmbedProvider } from '../Provider.types';
 import { GenericPreview } from './GenericPreview';
 
 /**
@@ -6,7 +6,7 @@ import { GenericPreview } from './GenericPreview';
  * Implements the standard EmbedProvider interface
  * Uses client-side SWR for caching and deduplication
  */
-export const Generic: ProviderTypes.EmbedProvider = {
+export const Generic: EmbedProvider = {
   /**
    * This provider will support all domains not included in the others
    */
@@ -16,7 +16,7 @@ export const Generic: ProviderTypes.EmbedProvider = {
    * Parse Generic URL and return embed information
    * Returns the URL immediately - fetching happens in the component with SWR
    */
-  parseEmbed: (url: string): ProviderTypes.EmbedData => {
+  parseEmbed: (url: string): EmbedData => {
     // Just return the URL - the component will handle fetching with SWR
     return { type: 'url', value: url };
   },
@@ -24,7 +24,7 @@ export const Generic: ProviderTypes.EmbedProvider = {
   /**
    * Render Generic website preview using SWR for caching
    */
-  renderEmbed: (embedData: ProviderTypes.EmbedData) => {
+  renderEmbed: (embedData: EmbedData) => {
     // Type guard: ensure we have a URL type
     if (embedData.type !== 'url') return null;
 

@@ -2,7 +2,8 @@
 
 import Image from 'next/image';
 import { usePathname } from 'next/navigation';
-import * as Atoms from '@/atoms';
+import { Link } from '@/atoms/Link/Link';
+
 import { cn } from '@/libs/utils/utils';
 
 interface LogoProps {
@@ -23,7 +24,7 @@ export function Logo({
   const isHome = pathname === '/home';
 
   return !noLink ? (
-    <Atoms.Link
+    <Link
       href="/home"
       data-cy="header-logo"
       onClick={(event) => {
@@ -49,7 +50,7 @@ export function Logo({
       className={cn(`flex items-center min-w-[${width}px] min-h-[${height}px]`, props.className)}
     >
       <LogoImage width={width} height={height} />
-    </Atoms.Link>
+    </Link>
   ) : (
     <LogoImage width={width} height={height} />
   );

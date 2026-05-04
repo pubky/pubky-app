@@ -37,98 +37,117 @@ vi.mock('@/stores/home/home.types', () => ({
 }));
 
 // Mock atoms
-vi.mock('@/atoms', () => ({
-  Container: ({
-    children,
-    className,
-    'data-testid': dataTestId,
-  }: {
-    children: React.ReactNode;
-    overrideDefaults?: boolean;
-    className?: string;
-    'data-testid'?: string;
-  }) => (
-    <div data-testid={dataTestId ?? 'container'} className={className}>
-      {children}
-    </div>
-  ),
-}));
+vi.mock('@/atoms/Container/Container', () => {
+  return {
+    Container: ({
+      children,
+      className,
+      'data-testid': dataTestId,
+    }: {
+      children: React.ReactNode;
+      overrideDefaults?: boolean;
+      className?: string;
+      'data-testid'?: string;
+    }) => (
+      <div data-testid={dataTestId ?? 'container'} className={className}>
+        {children}
+      </div>
+    ),
+  };
+});
 
 // Mock molecules — filter components capture their props for assertion
-vi.mock('@/molecules', () => ({
-  FilterReach: ({
-    selectedTab,
-    defaultSelectedTab,
-    disabled,
-  }: {
-    selectedTab?: string;
-    defaultSelectedTab?: string;
-    disabled?: boolean;
-  }) => (
-    <div
-      data-testid="filter-reach"
-      data-selected-tab={selectedTab ?? ''}
-      data-default-selected-tab={defaultSelectedTab ?? ''}
-      data-disabled={disabled}
-    >
-      FilterReach
-    </div>
-  ),
-  FilterSort: ({
-    selectedTab,
-    defaultSelectedTab,
-    disabled,
-  }: {
-    selectedTab?: string;
-    defaultSelectedTab?: string;
-    disabled?: boolean;
-  }) => (
-    <div
-      data-testid="filter-sort"
-      data-selected-tab={selectedTab ?? ''}
-      data-default-selected-tab={defaultSelectedTab ?? ''}
-      data-disabled={disabled}
-    >
-      FilterSort
-    </div>
-  ),
-  FilterLayout: ({
-    selectedTab,
-    defaultSelectedTab,
-    disabled,
-  }: {
-    selectedTab?: string;
-    defaultSelectedTab?: string;
-    disabled?: boolean;
-  }) => (
-    <div
-      data-testid="filter-layout"
-      data-selected-tab={selectedTab ?? ''}
-      data-default-selected-tab={defaultSelectedTab ?? ''}
-      data-disabled={disabled}
-    >
-      FilterLayout
-    </div>
-  ),
-  FilterContent: ({
-    selectedTab,
-    defaultSelectedTab,
-    disabled,
-  }: {
-    selectedTab?: string;
-    defaultSelectedTab?: string;
-    disabled?: boolean;
-  }) => (
-    <div
-      data-testid="filter-content"
-      data-selected-tab={selectedTab ?? ''}
-      data-default-selected-tab={defaultSelectedTab ?? ''}
-      data-disabled={disabled}
-    >
-      FilterContent
-    </div>
-  ),
-}));
+vi.mock('@/molecules/Filters/FilterContent/FilterContent', () => {
+  return {
+    FilterContent: ({
+      selectedTab,
+      defaultSelectedTab,
+      disabled,
+    }: {
+      selectedTab?: string;
+      defaultSelectedTab?: string;
+      disabled?: boolean;
+    }) => (
+      <div
+        data-testid="filter-content"
+        data-selected-tab={selectedTab ?? ''}
+        data-default-selected-tab={defaultSelectedTab ?? ''}
+        data-disabled={disabled}
+      >
+        FilterContent
+      </div>
+    ),
+  };
+});
+
+vi.mock('@/molecules/Filters/FilterLayout/FilterLayout', () => {
+  return {
+    FilterLayout: ({
+      selectedTab,
+      defaultSelectedTab,
+      disabled,
+    }: {
+      selectedTab?: string;
+      defaultSelectedTab?: string;
+      disabled?: boolean;
+    }) => (
+      <div
+        data-testid="filter-layout"
+        data-selected-tab={selectedTab ?? ''}
+        data-default-selected-tab={defaultSelectedTab ?? ''}
+        data-disabled={disabled}
+      >
+        FilterLayout
+      </div>
+    ),
+  };
+});
+
+vi.mock('@/molecules/Filters/FilterReach/FilterReach', () => {
+  return {
+    FilterReach: ({
+      selectedTab,
+      defaultSelectedTab,
+      disabled,
+    }: {
+      selectedTab?: string;
+      defaultSelectedTab?: string;
+      disabled?: boolean;
+    }) => (
+      <div
+        data-testid="filter-reach"
+        data-selected-tab={selectedTab ?? ''}
+        data-default-selected-tab={defaultSelectedTab ?? ''}
+        data-disabled={disabled}
+      >
+        FilterReach
+      </div>
+    ),
+  };
+});
+
+vi.mock('@/molecules/Filters/FilterSort/FilterSort', () => {
+  return {
+    FilterSort: ({
+      selectedTab,
+      defaultSelectedTab,
+      disabled,
+    }: {
+      selectedTab?: string;
+      defaultSelectedTab?: string;
+      disabled?: boolean;
+    }) => (
+      <div
+        data-testid="filter-sort"
+        data-selected-tab={selectedTab ?? ''}
+        data-default-selected-tab={defaultSelectedTab ?? ''}
+        data-disabled={disabled}
+      >
+        FilterSort
+      </div>
+    ),
+  };
+});
 
 const createMockFeed = (overrides?: Partial<FeedModelSchema>): FeedModelSchema => ({
   id: 'feed-1',

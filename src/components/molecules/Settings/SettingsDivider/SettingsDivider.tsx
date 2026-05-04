@@ -1,5 +1,5 @@
-import * as Atoms from '@/atoms';
+import { Container } from '@/atoms/Container/Container';
 
 export function SettingsDivider() {
-  return <Atoms.Container overrideDefaults className="h-px w-full bg-border" aria-hidden="true" />;
+  return <Container overrideDefaults className="h-px w-full bg-border" aria-hidden="true" />;
 }

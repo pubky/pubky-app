@@ -1,7 +1,10 @@
 'use client';
 
 import { useEffect } from 'react';
-import * as Atoms from '@/atoms';
+import { Button } from '@/atoms/Button/Button';
+import { Container } from '@/atoms/Container/Container';
+import { Typography } from '@/atoms/Typography/Typography';
+
 import { Logger } from '@/libs/logger/logger';
 
 export default function Error({ error, reset }: { error: Error & { digest?: string }; reset: () => void }) {
@@ -10,16 +13,16 @@ export default function Error({ error, reset }: { error: Error & { digest?: stri
   }, [error]);
 
   return (
-    <Atoms.Container className="flex min-h-[50vh] flex-col items-center justify-center p-8 text-center">
-      <Atoms.Typography as="h2" size="lg">
+    <Container className="flex min-h-[50vh] flex-col items-center justify-center p-8 text-center">
+      <Typography as="h2" size="lg">
         Something went wrong
-      </Atoms.Typography>
-      <Atoms.Typography size="md" className="mt-2 text-destructive">
+      </Typography>
+      <Typography size="md" className="mt-2 text-destructive">
         {error.message || 'An unexpected error occurred'}
-      </Atoms.Typography>
-      <Atoms.Button type="button" className="mt-4" variant="brand" onClick={reset}>
+      </Typography>
+      <Button type="button" className="mt-4" variant="brand" onClick={reset}>
         Try again
-      </Atoms.Button>
-    </Atoms.Container>
+      </Button>
+    </Container>
   );
 }

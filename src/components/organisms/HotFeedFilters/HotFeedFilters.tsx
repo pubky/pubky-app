@@ -2,8 +2,16 @@
 
 import { useTranslations } from 'next-intl';
 import { Calendar, CalendarRange, Clock, Star } from 'lucide-react';
-import * as Atoms from '@/atoms';
-import * as Molecules from '@/molecules';
+import {
+  FilterHeader,
+  FilterItem,
+  FilterItemIcon,
+  FilterItemLabel,
+  FilterList,
+  FilterRoot,
+} from '@/atoms/Filter/Filter';
+import { FilterReach } from '@/molecules/Filters/FilterReach/FilterReach';
+
 import { useHotStore } from '@/stores/hot/hot.store';
 import { TIMEFRAME, type TimeframeType } from '@/stores/hot/hot.types';
 // ============================================================================
@@ -53,20 +61,20 @@ export function FilterTimeframe({ selectedTab = TIMEFRAME.THIS_MONTH, onTabChang
     onTabChange?.(tab);
   };
   return (
-    <Atoms.FilterRoot>
-      <Atoms.FilterHeader title={t('title')} />
-      <Atoms.FilterList>
+    <FilterRoot>
+      <FilterHeader title={t('title')} />
+      <FilterList>
         {timeframeTabs.map(({ key, label, icon: Icon }) => {
           const isSelected = selectedTab === key;
           return (
-            <Atoms.FilterItem key={key} isSelected={isSelected} onClick={() => handleTabClick(key)}>
-              <Atoms.FilterItemIcon icon={Icon} />
-              <Atoms.FilterItemLabel>{label}</Atoms.FilterItemLabel>
-            </Atoms.FilterItem>
+            <FilterItem key={key} isSelected={isSelected} onClick={() => handleTabClick(key)}>
+              <FilterItemIcon icon={Icon} />
+              <FilterItemLabel>{label}</FilterItemLabel>
+            </FilterItem>
           );
         })}
-      </Atoms.FilterList>
-    </Atoms.FilterRoot>
+      </FilterList>
+    </FilterRoot>
   );
 }
 
@@ -85,7 +93,7 @@ export function HotFeedSidebar() {
   const { reach, setReach, timeframe, setTimeframe } = useHotStore();
   return (
     <>
-      <Molecules.FilterReach selectedTab={reach} onTabChange={setReach} />
+      <FilterReach selectedTab={reach} onTabChange={setReach} />
       <div className="sticky top-[100px] w-full self-start">
         <FilterTimeframe selectedTab={timeframe} onTabChange={setTimeframe} />
       </div>
@@ -103,7 +111,7 @@ export function HotFeedDrawer() {
   const { reach, setReach, timeframe, setTimeframe } = useHotStore();
   return (
     <div className="flex flex-col gap-6">
-      <Molecules.FilterReach selectedTab={reach} onTabChange={setReach} />
+      <FilterReach selectedTab={reach} onTabChange={setReach} />
       <FilterTimeframe selectedTab={timeframe} onTabChange={setTimeframe} />
     </div>
   );

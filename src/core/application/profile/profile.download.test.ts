@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { asOpaque } from '@/test-utils';
+import { asOpaque } from '@/test-utils/type-assertions';
 import type { Pubky } from '@/models/models.types';
 import { HomeserverService } from '@/services/homeserver/homeserver';
 const mockFile = vi.fn();
@@ -14,24 +14,33 @@ vi.mock('pubky-app-specs', () => ({
 }));
 
 // Mock config
-vi.mock('@/config', async (importOriginal) => {
-  const actual = await importOriginal<typeof import('@/config')>();
+vi.mock('@/config/database', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('@/config/database')>();
   return {
     ...actual,
     DB_NAME: 'test-db',
     DB_VERSION: 1,
-    MODERATED_TAGS: [],
-    MODERATION_ID: 'test-moderation-id',
   };
 });
 
-// Mock the Env module (admin credentials are now server-side only)
-vi.mock('@/libs/env/env', () => ({
-  Env: {
-    HOMESERVER_ADMIN_URL: 'http://test-admin.com',
-    HOMESERVER_ADMIN_PASSWORD: 'test-password',
-  },
+vi.mock('@/config/moderation', () => ({
+  MODERATED_TAGS: [],
+  MODERATION_ID: 'test-moderation-id',
 }));
+
+// Mock the Env module (admin credentials are now server-side only).
+// Merge with real Env so @/config/database still gets NEXT_PUBLIC_DB_NAME / NEXT_PUBLIC_DB_VERSION
+// (franky is loaded via the module graph; a partial Env would break Dexie.version()).
+vi.mock('@/libs/env/env', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('@/libs/env/env')>();
+  return {
+    Env: {
+      ...actual.Env,
+      HOMESERVER_ADMIN_URL: 'http://test-admin.com',
+      HOMESERVER_ADMIN_PASSWORD: 'test-password',
+    },
+  };
+});
 
 // Mock HomeserverService methods
 vi.mock('@/services/homeserver/homeserver', () => ({

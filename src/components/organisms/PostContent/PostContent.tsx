@@ -1,8 +1,9 @@
 'use client';
 
 import { useRepostInfo } from '@/hooks/useRepostInfo/useRepostInfo';
-import * as Molecules from '@/molecules';
-import * as Organisms from '@/organisms';
+import { PostPreviewCard } from '@/molecules/PostPreviewCard/PostPreviewCard';
+import { PostContentBase } from '../PostContentBase/PostContentBase';
+
 import type { PostContentOrganismProps } from './PostContent.types';
 
 /**
@@ -23,10 +24,10 @@ export function PostContent({ postId, className, textClassName }: PostContentOrg
   return (
     <>
       {/* Always render PostContentBase - it's a structural wrapper for content elements */}
-      <Organisms.PostContentBase postId={postId} className={className} textClassName={textClassName} />
+      <PostContentBase postId={postId} className={className} textClassName={textClassName} />
 
       {/* Show original post preview for reposts */}
-      {shouldRenderRepostPreview && <Molecules.PostPreviewCard postId={originalPostId} className={'bg-muted'} />}
+      {shouldRenderRepostPreview && <PostPreviewCard postId={originalPostId} className={'bg-muted'} />}
     </>
   );
 }

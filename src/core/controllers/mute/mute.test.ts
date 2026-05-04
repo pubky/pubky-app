@@ -1,7 +1,7 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { MuteResult } from 'pubky-app-specs';
 import { MuteController } from './mute';
-import { asOpaque } from '@/test-utils';
+import { asOpaque } from '@/test-utils/type-assertions';
 import { HttpMethod } from '@/libs/http/http.types';
 import { MuteApplication } from '@/application/mute/mute';
 import type { Pubky } from '@/models/models.types';

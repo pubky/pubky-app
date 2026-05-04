@@ -1,8 +1,54 @@
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { DialogRepost } from './DialogRepost';
-import * as Organisms from '@/organisms';
+import { PostInput } from '../PostInput/PostInput';
+
 import { POST_INPUT_VARIANT } from '@/organisms/PostInput/PostInput.constants';
+vi.mock('@/atoms/Dialog/Dialog', () => {
+  return {
+    Dialog: ({
+      children,
+      open,
+      onOpenChange,
+    }: {
+      children: React.ReactNode;
+      open?: boolean;
+      onOpenChange?: (open: boolean) => void;
+    }) => (
+      <div data-testid="dialog" data-open={open} onClick={() => onOpenChange?.(false)}>
+        {children}
+      </div>
+    ),
+    DialogContent: ({
+      children,
+      className,
+      hiddenTitle,
+      'aria-describedby': ariaDescribedBy,
+      ...props
+    }: {
+      children: React.ReactNode;
+      className?: string;
+      hiddenTitle?: string;
+      'aria-describedby'?: string;
+      [key: string]: unknown;
+    }) => (
+      <div
+        data-testid="dialog-content"
+        className={className}
+        aria-label={hiddenTitle}
+        aria-describedby={ariaDescribedBy}
+        {...props}
+      >
+        {children}
+      </div>
+    ),
+    DialogHeader: ({ children }: { children: React.ReactNode }) => <div data-testid="dialog-header">{children}</div>,
+    DialogTitle: ({ children }: { children: React.ReactNode }) => <h2 data-testid="dialog-title">{children}</h2>,
+    DialogDescription: ({ children }: { children: React.ReactNode }) => (
+      <p data-testid="dialog-description">{children}</p>
+    ),
+  };
+});
 
 // Mock hooks
 const mockUseConfirmableDialog = vi.fn();
@@ -12,129 +58,93 @@ vi.mock('@/hooks/useConfirmableDialog/useConfirmableDialog', () => ({
 }));
 
 // Mock organisms
-vi.mock('@/organisms', () => ({
-  PostHeader: vi.fn(({ postId }: { postId: string }) => (
-    <div data-testid="post-header" data-post-id={postId}>
-      PostHeader {postId}
-    </div>
-  )),
-  PostContent: vi.fn(({ postId }: { postId: string }) => (
-    <div data-testid="post-content" data-post-id={postId}>
-      PostContent {postId}
-    </div>
-  )),
-  PostInput: vi.fn(
-    ({
-      variant,
-      originalPostId,
-      onSuccess,
-      showThreadConnector,
-      onContentChange,
-    }: {
-      variant: string;
-      originalPostId: string;
-      onSuccess?: () => void;
-      showThreadConnector?: boolean;
-      onContentChange?: (content: string, tags: string[], attachments: File[], articleTitle: string) => void;
-    }) => (
-      <div
-        data-testid="post-input"
-        data-variant={variant}
-        data-original-post-id={originalPostId}
-        data-show-thread={showThreadConnector}
-        data-has-content-change={!!onContentChange}
-      >
-        <button data-testid="mock-success-btn" onClick={onSuccess}>
-          Success
-        </button>
+vi.mock('@/organisms/PostContent/PostContent', () => {
+  return {
+    PostContent: vi.fn(({ postId }: { postId: string }) => (
+      <div data-testid="post-content" data-post-id={postId}>
+        PostContent {postId}
       </div>
-    ),
-  ),
-}));
+    )),
+  };
+});
+
+vi.mock('@/organisms/PostHeader/PostHeader', () => {
+  return {
+    PostHeader: vi.fn(({ postId }: { postId: string }) => (
+      <div data-testid="post-header" data-post-id={postId}>
+        PostHeader {postId}
+      </div>
+    )),
+  };
+});
 
 // Mock atoms
-vi.mock('@/atoms', () => ({
-  Dialog: ({
-    children,
-    open,
-    onOpenChange,
-  }: {
-    children: React.ReactNode;
-    open?: boolean;
-    onOpenChange?: (open: boolean) => void;
-  }) => (
-    <div data-testid="dialog" data-open={open} onClick={() => onOpenChange?.(false)}>
-      {children}
-    </div>
-  ),
-  DialogContent: ({
-    children,
-    className,
-    hiddenTitle,
-    'aria-describedby': ariaDescribedBy,
-    ...props
-  }: {
-    children: React.ReactNode;
-    className?: string;
-    hiddenTitle?: string;
-    'aria-describedby'?: string;
-    [key: string]: unknown;
-  }) => (
+vi.mock('@/atoms/Card/Card', () => {
+  return {
+    Card: ({ children, className }: { children: React.ReactNode; className?: string }) => (
+      <div data-testid="card" className={className}>
+        {children}
+      </div>
+    ),
+    CardContent: ({ children, className }: { children: React.ReactNode; className?: string }) => (
+      <div data-testid="card-content" className={className}>
+        {children}
+      </div>
+    ),
+  };
+});
+
+vi.mock('@/atoms/Container/Container', () => {
+  return {
+    Container: ({
+      children,
+      className,
+      overrideDefaults,
+    }: {
+      children: React.ReactNode;
+      className?: string;
+      overrideDefaults?: boolean;
+    }) => (
+      <div data-testid="container" className={className} data-override-defaults={overrideDefaults}>
+        {children}
+      </div>
+    ),
+  };
+});
+
+vi.mock('../PostInput/PostInput', () => ({
+  PostInput: vi.fn(({ onSuccess, onContentChange, variant, originalPostId, showThreadConnector }) => (
     <div
-      data-testid="dialog-content"
-      className={className}
-      aria-label={hiddenTitle}
-      aria-describedby={ariaDescribedBy}
-      {...props}
+      data-testid="post-input"
+      data-variant={variant}
+      data-original-post-id={originalPostId}
+      data-show-thread={String(showThreadConnector)}
+      data-has-content-change={String(Boolean(onContentChange))}
     >
-      {children}
+      <button data-testid="mock-success-btn" onClick={() => onSuccess?.('repost-id')}>
+        Success
+      </button>
     </div>
-  ),
-  DialogHeader: ({ children }: { children: React.ReactNode }) => <div data-testid="dialog-header">{children}</div>,
-  DialogTitle: ({ children }: { children: React.ReactNode }) => <h2 data-testid="dialog-title">{children}</h2>,
-  DialogDescription: ({ children }: { children: React.ReactNode }) => (
-    <p data-testid="dialog-description">{children}</p>
-  ),
-  Container: ({
-    children,
-    className,
-    overrideDefaults,
-  }: {
-    children: React.ReactNode;
-    className?: string;
-    overrideDefaults?: boolean;
-  }) => (
-    <div data-testid="container" className={className} data-override-defaults={overrideDefaults}>
-      {children}
-    </div>
-  ),
-  Card: ({ children, className }: { children: React.ReactNode; className?: string }) => (
-    <div data-testid="card" className={className}>
-      {children}
-    </div>
-  ),
-  CardContent: ({ children, className }: { children: React.ReactNode; className?: string }) => (
-    <div data-testid="card-content" className={className}>
-      {children}
-    </div>
-  ),
+  )),
 }));
 
 // Mock molecules
-vi.mock('@/molecules', () => ({
-  DialogConfirmDiscard: vi.fn(
-    ({ open, onOpenChange, onConfirm }: { open: boolean; onOpenChange: () => void; onConfirm: () => void }) => (
-      <div data-testid="dialog-confirm-discard" data-open={open}>
-        <button data-testid="confirm-discard-cancel" onClick={onOpenChange}>
-          Cancel
-        </button>
-        <button data-testid="confirm-discard-confirm" onClick={onConfirm}>
-          Discard
-        </button>
-      </div>
+vi.mock('@/molecules/DialogConfirmDiscard/DialogConfirmDiscard', () => {
+  return {
+    DialogConfirmDiscard: vi.fn(
+      ({ open, onOpenChange, onConfirm }: { open: boolean; onOpenChange: () => void; onConfirm: () => void }) => (
+        <div data-testid="dialog-confirm-discard" data-open={open}>
+          <button data-testid="confirm-discard-cancel" onClick={onOpenChange}>
+            Cancel
+          </button>
+          <button data-testid="confirm-discard-confirm" onClick={onConfirm}>
+            Discard
+          </button>
+        </div>
+      ),
     ),
-  ),
-}));
+  };
+});
 
 // Use real libs - use actual implementations
 
@@ -170,7 +180,7 @@ describe('DialogRepost', () => {
     const onOpenChangeAction = vi.fn();
     render(<DialogRepost postId="test-post-123" open={false} onOpenChangeAction={onOpenChangeAction} />);
 
-    expect(Organisms.PostInput).toHaveBeenCalledWith(
+    expect(PostInput).toHaveBeenCalledWith(
       {
         dataCy: 'repost-post-input',
         variant: POST_INPUT_VARIANT.REPOST,

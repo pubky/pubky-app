@@ -5,9 +5,13 @@ import { useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useTranslations } from 'next-intl';
-import * as Atoms from '@/atoms';
-import * as Molecules from '@/molecules';
-import * as Organisms from '@/organisms';
+import { Container } from '@/atoms/Container/Container';
+import { Typography } from '@/atoms/Typography/Typography';
+import { NotificationIcon } from '@/molecules/NotificationIcon/NotificationIcon';
+import { PostTag } from '@/molecules/PostTag/PostTag';
+import { useToast } from '@/molecules/Toaster/use-toast';
+import { AvatarWithFallback } from '../AvatarWithFallback/AvatarWithFallback';
+
 import type { ArticleJSON } from '@/hooks/usePostArticle/usePostArticle.types';
 import { buildSearchUrl } from '@/hooks/useTagSearch/useTagSearch.utils';
 import { resolvePubkyToNames } from './NotificationItem.helpers';
@@ -35,7 +39,7 @@ export function NotificationItem({ notification, isUnread }: NotificationItemPro
   const tPostToast = useTranslations('toast.post');
   const tPost = useTranslations('post');
   const router = useRouter();
-  const { toast } = Molecules.useToast();
+  const { toast } = useToast();
 
   // Extract the user ID from the notification (the actor who triggered it)
   const actorUserId = getUserIdFromNotification(notification);
@@ -134,16 +138,16 @@ export function NotificationItem({ notification, isUnread }: NotificationItemPro
   };
 
   return (
-    <Atoms.Container
+    <Container
       overrideDefaults={true}
       className={`flex w-full min-w-0 items-center justify-between gap-2 ${notificationLink ? 'cursor-pointer' : ''}`}
       onClick={handleRowClick}
     >
-      <Atoms.Container overrideDefaults={true} className="flex min-w-0 flex-1 items-center gap-2">
+      <Container overrideDefaults={true} className="flex min-w-0 flex-1 items-center gap-2">
         {/* Avatar - links to user profile */}
         {userProfileLink ? (
           <Link href={userProfileLink} className="shrink-0 transition-opacity hover:opacity-80">
-            <Organisms.AvatarWithFallback
+            <AvatarWithFallback
               avatarUrl={avatarUrl}
               name={userName}
               fallbackSeed={actorUserId || userName}
@@ -152,7 +156,7 @@ export function NotificationItem({ notification, isUnread }: NotificationItemPro
             />
           </Link>
         ) : (
-          <Organisms.AvatarWithFallback
+          <AvatarWithFallback
             avatarUrl={avatarUrl}
             name={userName}
             fallbackSeed={actorUserId || userName}
@@ -161,8 +165,8 @@ export function NotificationItem({ notification, isUnread }: NotificationItemPro
           />
         )}
 
-        <Atoms.Container overrideDefaults={true} className="flex min-w-0 flex-1 items-center gap-2">
-          <Atoms.Typography
+        <Container overrideDefaults={true} className="flex min-w-0 flex-1 items-center gap-2">
+          <Typography
             as="p"
             className="min-w-0 shrink truncate text-sm leading-none font-medium text-foreground lg:text-base lg:leading-normal"
           >
@@ -182,7 +186,7 @@ export function NotificationItem({ notification, isUnread }: NotificationItemPro
             ) : (
               <span className="text-foreground">{actionText}</span>
             )}
-          </Atoms.Typography>
+          </Typography>
 
           {/* Post preview text for desktop - dynamically fetched from database */}
           {previewText &&
@@ -194,18 +198,15 @@ export function NotificationItem({ notification, isUnread }: NotificationItemPro
                 {previewText}
               </Link>
             ) : (
-              <Atoms.Typography
-                as="p"
-                className="hidden shrink-0 text-base font-medium text-muted-foreground xl:inline"
-              >
+              <Typography as="p" className="hidden shrink-0 text-base font-medium text-muted-foreground xl:inline">
                 {previewText}
-              </Atoms.Typography>
+              </Typography>
             ))}
 
           {/* Tag badge for tagged notifications - click navigates to search */}
           {(notification.type === NotificationType.TagPost || notification.type === NotificationType.TagProfile) &&
             'tag_label' in notification && (
-              <Molecules.PostTag
+              <PostTag
                 label={notification.tag_label}
                 showClose={false}
                 className="shrink-0"
@@ -215,53 +216,47 @@ export function NotificationItem({ notification, isUnread }: NotificationItemPro
 
           {/* Friend notification extra text */}
           {notification.type === NotificationType.NewFriend && (
-            <Atoms.Typography as="p" className="hidden shrink-0 text-base font-medium text-muted-foreground xl:inline">
+            <Typography as="p" className="hidden shrink-0 text-base font-medium text-muted-foreground xl:inline">
               {tProfile('friendsWithYou')}
-            </Atoms.Typography>
+            </Typography>
           )}
-        </Atoms.Container>
-      </Atoms.Container>
+        </Container>
+      </Container>
 
       {/* Timestamp and icon - links to notification target */}
       {notificationLink ? (
         <Link href={notificationLink} className="flex shrink-0 items-center gap-2 transition-opacity hover:opacity-80">
           {/* Short timestamp for mobile and medium screens */}
-          <Atoms.Typography
-            as="p"
-            className="text-xs font-medium tracking-[1.2px] text-muted-foreground uppercase xl:hidden"
-          >
+          <Typography as="p" className="text-xs font-medium tracking-[1.2px] text-muted-foreground uppercase xl:hidden">
             {timestampShort}
-          </Atoms.Typography>
+          </Typography>
           {/* Long timestamp for large desktop */}
-          <Atoms.Typography
+          <Typography
             as="p"
             className="hidden text-xs font-medium tracking-[1.2px] text-muted-foreground uppercase xl:block"
           >
             {timestampLong}
-          </Atoms.Typography>
+          </Typography>
 
-          <Molecules.NotificationIcon type={notification.type} showBadge={isUnread} />
+          <NotificationIcon type={notification.type} showBadge={isUnread} />
         </Link>
       ) : (
-        <Atoms.Container overrideDefaults={true} className="flex items-center gap-2">
+        <Container overrideDefaults={true} className="flex items-center gap-2">
           {/* Short timestamp for mobile and medium screens */}
-          <Atoms.Typography
-            as="p"
-            className="text-xs font-medium tracking-[1.2px] text-muted-foreground uppercase xl:hidden"
-          >
+          <Typography as="p" className="text-xs font-medium tracking-[1.2px] text-muted-foreground uppercase xl:hidden">
             {timestampShort}
-          </Atoms.Typography>
+          </Typography>
           {/* Long timestamp for large desktop */}
-          <Atoms.Typography
+          <Typography
             as="p"
             className="hidden text-xs font-medium tracking-[1.2px] text-muted-foreground uppercase xl:block"
           >
             {timestampLong}
-          </Atoms.Typography>
+          </Typography>
 
-          <Molecules.NotificationIcon type={notification.type} showBadge={isUnread} />
-        </Atoms.Container>
+          <NotificationIcon type={notification.type} showBadge={isUnread} />
+        </Container>
       )}
-    </Atoms.Container>
+    </Container>
   );
 }

@@ -1,6 +1,8 @@
 'use client';
+import { Button } from '@/atoms/Button/Button';
+import { Container } from '@/atoms/Container/Container';
+import { Typography } from '@/atoms/Typography/Typography';
 
-import * as Atoms from '@/atoms';
 import type { MobileTabBarProps } from './MobileTabBar.types';
 import { cn } from '@/libs/utils/utils';
 
@@ -23,7 +25,7 @@ export function MobileTabBar({
   'data-testid': dataTestId,
 }: MobileTabBarProps) {
   return (
-    <Atoms.Container
+    <Container
       overrideDefaults
       data-testid={dataTestId}
       className={cn(
@@ -33,13 +35,13 @@ export function MobileTabBar({
         className,
       )}
     >
-      <Atoms.Container overrideDefaults className="flex w-full">
+      <Container overrideDefaults className="flex w-full">
         {items.map((item) => {
           const Icon = item.icon;
           const { isActive } = item;
 
           return (
-            <Atoms.Container
+            <Container
               key={item.key}
               overrideDefaults
               className={cn(
@@ -47,7 +49,7 @@ export function MobileTabBar({
                 isActive ? 'border-foreground' : 'border-border',
               )}
             >
-              <Atoms.Button
+              <Button
                 overrideDefaults
                 onClick={item.onSelect}
                 className={cn('px-2.5 py-2', showLabels && 'flex items-center gap-2')}
@@ -56,18 +58,18 @@ export function MobileTabBar({
               >
                 <Icon size={20} className={isActive ? 'text-foreground' : 'text-muted-foreground'} />
                 {showLabels && (
-                  <Atoms.Typography
+                  <Typography
                     as="span"
                     className={cn('text-sm font-medium', isActive ? 'text-foreground' : 'text-muted-foreground')}
                   >
                     {item.label}
-                  </Atoms.Typography>
+                  </Typography>
                 )}
-              </Atoms.Button>
-            </Atoms.Container>
+              </Button>
+            </Container>
           );
         })}
-      </Atoms.Container>
-    </Atoms.Container>
+      </Container>
+    </Container>
   );
 }

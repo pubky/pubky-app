@@ -1,7 +1,7 @@
 import { describe, it, expect, vi } from 'vitest';
 import { render, screen, fireEvent } from '@testing-library/react';
 import { ProfileProfile } from './ProfileProfile';
-import * as App from '@/app';
+import { AUTH_ROUTES } from '@/app/routes';
 
 // Mock next/navigation
 const mockPush = vi.fn();
@@ -39,7 +39,7 @@ vi.mock('@/hooks/useProfileHeader/useProfileHeader', () => ({
       onCopyPublicKey: vi.fn(),
       onCopyLink: vi.fn(),
       onSignOut: vi.fn(() => {
-        mockPush(App.AUTH_ROUTES.LOGOUT);
+        mockPush(AUTH_ROUTES.LOGOUT);
       }),
       onStatusClick: vi.fn(),
     },
@@ -77,20 +77,21 @@ vi.mock('@/hooks/useTagged/useTagged', () => ({
 }));
 
 // Mock molecules
-vi.mock('@/molecules', async (importOriginal) => {
-  const actual = await importOriginal<typeof import('@/molecules')>();
+vi.mock('@/molecules/ProfilePageLinks/ProfilePageLinks', () => {
   return {
-    ...actual,
-    ProfilePageTaggedAs: () => <div data-testid="profile-page-tagged-as">Tagged as section</div>,
     ProfilePageLinks: () => <div data-testid="profile-page-links">Links section</div>,
   };
 });
 
-// Mock organisms
-vi.mock('@/organisms', async (importOriginal) => {
-  const actual = await importOriginal<typeof import('@/organisms')>();
+vi.mock('@/molecules/ProfilePageTaggedAs/ProfilePageTaggedAs', () => {
   return {
-    ...actual,
+    ProfilePageTaggedAs: () => <div data-testid="profile-page-tagged-as">Tagged as section</div>,
+  };
+});
+
+// Mock organisms
+vi.mock('@/organisms/ProfilePageHeader/ProfilePageHeader', () => {
+  return {
     ProfilePageHeader: ({
       profile,
       actions,
@@ -157,7 +158,7 @@ describe('ProfileProfile', () => {
     const signOutButton = screen.getByText('Sign out');
     fireEvent.click(signOutButton);
 
-    expect(mockPush).toHaveBeenCalledWith(App.AUTH_ROUTES.LOGOUT);
+    expect(mockPush).toHaveBeenCalledWith(AUTH_ROUTES.LOGOUT);
   });
 
   it('matches snapshot', () => {

@@ -19,25 +19,32 @@ vi.mock('@/hooks/useUnreadPosts/useUnreadPosts', () => ({
 
 const mockUseUnreadPosts = vi.mocked(useUnreadPosts);
 
-vi.mock('@/molecules', () => ({
-  NewPostsButton: ({
-    count,
-    visible,
-    onClick,
-    isScrolled,
-  }: {
-    count: number;
-    visible: boolean;
-    onClick: () => void;
-    isScrolled: boolean;
-  }) =>
-    visible ? (
-      <button data-testid="new-posts-button" data-count={count} data-scrolled={isScrolled} onClick={onClick}>
-        {count} new posts
-      </button>
-    ) : null,
-  showErrorToast: vi.fn(),
-}));
+vi.mock('@/molecules/NewPostsButton/NewPostsButton', () => {
+  return {
+    NewPostsButton: ({
+      count,
+      visible,
+      onClick,
+      isScrolled,
+    }: {
+      count: number;
+      visible: boolean;
+      onClick: () => void;
+      isScrolled: boolean;
+    }) =>
+      visible ? (
+        <button data-testid="new-posts-button" data-count={count} data-scrolled={isScrolled} onClick={onClick}>
+          {count} new posts
+        </button>
+      ) : null,
+  };
+});
+
+vi.mock('@/molecules/Toaster/showErrorToast', () => {
+  return {
+    showErrorToast: vi.fn(),
+  };
+});
 
 vi.mock('@/application/stream/posts/muting/mute-filter', () => ({
   MuteFilter: {

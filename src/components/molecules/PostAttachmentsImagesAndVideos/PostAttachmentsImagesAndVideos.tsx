@@ -1,9 +1,23 @@
 'use client';
+import { Button } from '@/atoms/Button/Button';
+import {
+  Carousel,
+  CarouselContent,
+  CarouselItem,
+  CarouselNext,
+  CarouselPrevious,
+  type CarouselApi,
+} from '@/atoms/Carousel/Carousel';
+import { Container } from '@/atoms/Container/Container';
+import { Dialog, DialogClose, DialogContent, DialogTrigger } from '@/atoms/Dialog/Dialog';
+import { Image } from '@/atoms/Image/Image';
+import { Typography } from '@/atoms/Typography/Typography';
+import { Video } from '@/atoms/Video/Video';
+import { PostAttachmentsCarouselImage } from '../PostAttachmentsCarouselImage/PostAttachmentsCarouselImage';
+import { useToast } from '../Toaster/use-toast';
 
-import * as Atoms from '@/atoms';
-import * as Molecules from '@/molecules';
 import type { AttachmentConstructed } from '@/organisms/PostAttachments/PostAttachments.types';
-import type { CarouselApi } from '@/components/atoms/Carousel';
+
 import { useEffect, useState } from 'react';
 import { useTranslations } from 'next-intl';
 import { X, Maximize } from 'lucide-react';
@@ -17,7 +31,7 @@ export const PostAttachmentsImagesAndVideos = ({ imagesAndVideos }: PostAttachme
   const [api, setApi] = useState<CarouselApi>();
   const [currentIndex, setCurrentIndex] = useState(0);
   const [isFullscreen, setIsFullscreen] = useState(false);
-  const { toast } = Molecules.useToast();
+  const { toast } = useToast();
   const tFullscreen = useTranslations('toast.fullscreen');
   const handleFullscreen = () => {
     const currentMedia = document.getElementById(`media-item-${currentIndex}`);
@@ -51,24 +65,24 @@ export const PostAttachmentsImagesAndVideos = ({ imagesAndVideos }: PostAttachme
   }, []);
   const isOnlyMedia = imagesAndVideos.length === 1;
   return (
-    <Atoms.Dialog open={open} onOpenChange={setOpen}>
+    <Dialog open={open} onOpenChange={setOpen}>
       {/* Grid layout */}
-      <Atoms.Container display="grid" className="gap-3 sm:grid-cols-2">
+      <Container display="grid" className="gap-3 sm:grid-cols-2">
         {imagesAndVideos.map((media, i) =>
           media.type.startsWith('image') ? (
-            <Atoms.DialogTrigger
+            <DialogTrigger
               key={i}
               asChild
               className="relative h-52 w-full cursor-pointer only:static only:h-auto only:w-fit sm:last:odd:col-span-2"
             >
-              <Atoms.Button
+              <Button
                 overrideDefaults
                 onClick={(e) => {
                   e.stopPropagation();
                   setCurrentIndex(i);
                 }}
               >
-                <Atoms.Image
+                <Image
                   src={media.type === 'image/gif' ? media.urls.main : (media.urls.feed as string)}
                   alt={media.name}
                   fill={!isOnlyMedia}
@@ -77,10 +91,10 @@ export const PostAttachmentsImagesAndVideos = ({ imagesAndVideos }: PostAttachme
                     isOnlyMedia ? 'max-h-96 w-fit object-contain' : 'object-cover object-center',
                   )}
                 />
-              </Atoms.Button>
-            </Atoms.DialogTrigger>
+              </Button>
+            </DialogTrigger>
           ) : (
-            <Atoms.Video
+            <Video
               key={i}
               onClick={(e) => {
                 e.stopPropagation();
@@ -91,10 +105,10 @@ export const PostAttachmentsImagesAndVideos = ({ imagesAndVideos }: PostAttachme
             />
           ),
         )}
-      </Atoms.Container>
+      </Container>
 
       {/* Carousel dialog */}
-      <Atoms.DialogContent
+      <DialogContent
         hiddenTitle="Post Attachments Media Carousel"
         aria-describedby={undefined}
         showCloseButton={false}
@@ -103,11 +117,11 @@ export const PostAttachmentsImagesAndVideos = ({ imagesAndVideos }: PostAttachme
           e.stopPropagation();
         }}
       >
-        <Atoms.DialogClose className="absolute top-4 right-4 z-60 flex size-8 cursor-pointer items-center justify-center rounded-full bg-[rgba(5,5,10,0.30)] text-secondary-foreground/70 transition-colors hover:bg-[rgba(5,5,10,0.40)] hover:text-secondary-foreground">
+        <DialogClose className="absolute top-4 right-4 z-60 flex size-8 cursor-pointer items-center justify-center rounded-full bg-[rgba(5,5,10,0.30)] text-secondary-foreground/70 transition-colors hover:bg-[rgba(5,5,10,0.40)] hover:text-secondary-foreground">
           <X className="size-4" />
-        </Atoms.DialogClose>
+        </DialogClose>
 
-        <Atoms.Carousel
+        <Carousel
           opts={{
             startIndex: currentIndex,
             loop: true,
@@ -117,33 +131,33 @@ export const PostAttachmentsImagesAndVideos = ({ imagesAndVideos }: PostAttachme
           setApi={setApi}
           className="w-full max-w-80 xsm:max-w-dvw sm:max-w-[75dvw] 2xl:max-w-[50dvw]"
         >
-          <Atoms.CarouselContent className="-ml-3 items-center">
+          <CarouselContent className="-ml-3 items-center">
             {imagesAndVideos.map((media, i) => (
-              <Atoms.CarouselItem key={i} className="basis-full pl-3">
+              <CarouselItem key={i} className="basis-full pl-3">
                 {media.type.startsWith('image') ? (
-                  <Molecules.PostAttachmentsCarouselImage id={`media-item-${i}`} image={media} />
+                  <PostAttachmentsCarouselImage id={`media-item-${i}`} image={media} />
                 ) : (
-                  <Atoms.Video
+                  <Video
                     id={`media-item-${i}`}
                     src={media.urls.main}
                     pauseVideo={currentIndex !== i}
                     className="max-h-[75dvh] w-full"
                   />
                 )}
-              </Atoms.CarouselItem>
+              </CarouselItem>
             ))}
-          </Atoms.CarouselContent>
+          </CarouselContent>
 
           {total > 1 && (
             <>
-              <Atoms.CarouselPrevious className="hidden hover:bg-secondary sm:inline-flex" />
-              <Atoms.CarouselNext className="hidden hover:bg-secondary sm:inline-flex" />
+              <CarouselPrevious className="hidden hover:bg-secondary sm:inline-flex" />
+              <CarouselNext className="hidden hover:bg-secondary sm:inline-flex" />
             </>
           )}
-        </Atoms.Carousel>
+        </Carousel>
 
-        <Atoms.Container className="mt-8 flex-row items-center justify-center gap-x-5.5">
-          <Atoms.Button
+        <Container className="mt-8 flex-row items-center justify-center gap-x-5.5">
+          <Button
             onClick={handleFullscreen}
             disabled={!document.fullscreenEnabled}
             variant="secondary"
@@ -151,15 +165,15 @@ export const PostAttachmentsImagesAndVideos = ({ imagesAndVideos }: PostAttachme
             className="text-xs hover:bg-secondary"
           >
             Fullscreen <Maximize className="size-3" />
-          </Atoms.Button>
+          </Button>
 
           {total > 1 && (
-            <Atoms.Typography size="xs" className="text-muted-foreground">
+            <Typography size="xs" className="text-muted-foreground">
               {currentIndex + 1}/{total}
-            </Atoms.Typography>
+            </Typography>
           )}
-        </Atoms.Container>
-      </Atoms.DialogContent>
-    </Atoms.Dialog>
+        </Container>
+      </DialogContent>
+    </Dialog>
   );
 };

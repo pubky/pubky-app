@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { MigrationController } from './migration';
-import { mockSettingsStore } from '@/test-utils';
+import { mockSettingsStore } from '@/test-utils/stores';
 import { MigrationApplication } from '@/application/migration/migration';
 import type { Pubky } from '@/models/models.types';
 import { SettingsNormalizer } from '@/pipes/settings/settings.normalizer';

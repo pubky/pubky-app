@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { asInvalid } from '@/test-utils';
+import { asInvalid } from '@/test-utils/type-assertions';
 import { UserApplication } from './user';
 import { HttpMethod } from '@/libs/http/http.types';
 import type { Pubky } from '@/models/models.types';

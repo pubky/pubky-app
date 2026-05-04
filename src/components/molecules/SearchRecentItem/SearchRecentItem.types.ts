@@ -1,4 +1,5 @@
-import * as Molecules from '@/molecules';
+import { RecentTagSearchItem, RecentUserSearchItem } from '../SearchRecentUserItem/SearchRecentUserItem.types';
+
 import { RECENT_ITEM_TYPE } from './SearchRecentItem.constants';
 import type { Pubky } from '@/models/models.types';
 /**
@@ -13,9 +14,9 @@ export interface SearchRecentItemProps {
   /** Type of recent search item */
   type: RecentItemType;
   /** User data (required if type is 'user') */
-  user?: Molecules.RecentUserSearchItem;
+  user?: RecentUserSearchItem;
   /** Tag data (required if type is 'tag') */
-  tag?: Molecules.RecentTagSearchItem;
+  tag?: RecentTagSearchItem;
   /** Callback when user item is clicked (only for type='user') */
   onUserClick?: (userId: Pubky) => void;
   /** Callback when tag item is clicked (only for type='tag') */

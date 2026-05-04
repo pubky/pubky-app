@@ -4,10 +4,11 @@ import { useConfirmableDialog } from '@/hooks/useConfirmableDialog/useConfirmabl
 import { useCurrentUserProfile } from '@/hooks/useCurrentUserProfile/useCurrentUserProfile';
 import { useFeedback } from '@/hooks/useFeedback/useFeedback';
 import { useEffect } from 'react';
-import * as Atoms from '@/atoms';
-import * as Molecules from '@/molecules';
-import { DialogFeedbackContent } from './DialogFeedbackContent';
-import { DialogFeedbackSuccess } from './DialogFeedbackSuccess';
+import { Dialog, DialogContent } from '@/atoms/Dialog/Dialog';
+import { DialogConfirmDiscard } from '@/molecules/DialogConfirmDiscard/DialogConfirmDiscard';
+import { DialogFeedbackContent } from './DialogFeedbackContent/DialogFeedbackContent';
+import { DialogFeedbackSuccess } from './DialogFeedbackSuccess/DialogFeedbackSuccess';
+
 import type { DialogFeedbackProps } from './DialogFeedback.types';
 
 export function DialogFeedback({ open, onOpenChange }: DialogFeedbackProps) {
@@ -31,8 +32,8 @@ export function DialogFeedback({ open, onOpenChange }: DialogFeedbackProps) {
   }
 
   return (
-    <Atoms.Dialog open={open} onOpenChange={handleOpenChange}>
-      <Atoms.DialogContent className="w-2xl" hiddenTitle="Provide Feedback">
+    <Dialog open={open} onOpenChange={handleOpenChange}>
+      <DialogContent className="w-2xl" hiddenTitle="Provide Feedback">
         {isSuccess ? (
           <DialogFeedbackSuccess onOpenChange={onOpenChange} />
         ) : (
@@ -46,12 +47,12 @@ export function DialogFeedback({ open, onOpenChange }: DialogFeedbackProps) {
           />
         )}
         {/* Nested inside parent dialog to avoid mobile touch event issues with sibling portals */}
-        <Molecules.DialogConfirmDiscard
+        <DialogConfirmDiscard
           open={showConfirmDialog}
           onOpenChange={() => setShowConfirmDialog(false)}
           onConfirm={handleDiscard}
         />
-      </Atoms.DialogContent>
-    </Atoms.Dialog>
+      </DialogContent>
+    </Dialog>
   );
 }

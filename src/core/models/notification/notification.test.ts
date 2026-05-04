@@ -143,41 +143,57 @@ describe('NotificationModel', () => {
     });
   });
 
-  describe('countNewerThan', () => {
-    it('should count only notifications with timestamp strictly above the given value', async () => {
-      await NotificationModel.bulkSave([1000, 2000, 3000].map((t) => createNotification(t)));
+  describe('countFilteredNewerThan', () => {
+    it('should count only notifications with matching types above the timestamp', async () => {
+      await NotificationModel.bulkSave([
+        createNotification(1000, NotificationType.Follow),
+        createNotification(2000, NotificationType.Follow),
+        createReply(3000),
+      ]);
 
-      const count = await NotificationModel.countNewerThan(1500);
+      const count = await NotificationModel.countFilteredNewerThan(500, [NotificationType.Follow]);
 
       expect(count).toBe(2);
     });
 
-    it('should exclude notifications at exact timestamp boundary', async () => {
-      await NotificationModel.bulkSave([1000, 2000, 3000].map((t) => createNotification(t)));
+    it('should exclude notifications of types not in allowedTypes', async () => {
+      await NotificationModel.bulkSave([createNotification(2000, NotificationType.Follow), createReply(3000)]);
 
-      const count = await NotificationModel.countNewerThan(2000);
+      const count = await NotificationModel.countFilteredNewerThan(1000, [NotificationType.Reply]);
 
       expect(count).toBe(1);
     });
 
-    it('should return 0 when no notifications are newer', async () => {
-      await NotificationModel.bulkSave([1000, 2000].map((t) => createNotification(t)));
+    it('should exclude notifications at or below the timestamp boundary', async () => {
+      await NotificationModel.bulkSave([
+        createNotification(1000, NotificationType.Follow),
+        createNotification(2000, NotificationType.Follow),
+        createNotification(3000, NotificationType.Follow),
+      ]);
 
-      const count = await NotificationModel.countNewerThan(5000);
+      const count = await NotificationModel.countFilteredNewerThan(2000, [NotificationType.Follow]);
+
+      expect(count).toBe(1);
+    });
+
+    it('should return 0 when no notifications match', async () => {
+      await NotificationModel.bulkSave([createNotification(1000, NotificationType.Follow)]);
+
+      const count = await NotificationModel.countFilteredNewerThan(1000, [NotificationType.Reply]);
 
       expect(count).toBe(0);
     });
 
-    it('should return full count when threshold is 0', async () => {
-      await NotificationModel.bulkSave([1000, 2000, 3000].map((t) => createNotification(t)));
+    it('should return 0 when allowedTypes is empty', async () => {
+      await NotificationModel.bulkSave([createNotification(2000, NotificationType.Follow)]);
 
-      const count = await NotificationModel.countNewerThan(0);
+      const count = await NotificationModel.countFilteredNewerThan(1000, []);
 
-      expect(count).toBe(3);
+      expect(count).toBe(0);
     });
 
     it('should return 0 on empty table', async () => {
-      const count = await NotificationModel.countNewerThan(0);
+      const count = await NotificationModel.countFilteredNewerThan(0, [NotificationType.Follow]);
 
       expect(count).toBe(0);
     });

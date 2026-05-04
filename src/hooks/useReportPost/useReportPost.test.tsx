@@ -36,10 +36,8 @@ vi.mock('@/models/models.utils', () => ({
 
 // Mock toast helpers
 const mockShowErrorToast = vi.fn();
-vi.mock('@/molecules', async (importOriginal) => {
-  const actual = await importOriginal<typeof import('@/molecules')>();
+vi.mock('@/molecules/Toaster/showErrorToast', () => {
   return {
-    ...actual,
     showErrorToast: (params: { title?: string; description: string }) => mockShowErrorToast(params),
   };
 });

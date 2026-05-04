@@ -2,11 +2,19 @@
 
 import { useState } from 'react';
 import { useTranslations } from 'next-intl';
-import * as Atoms from '@/atoms';
-import * as Molecules from '@/molecules';
-import * as Organisms from '@/organisms';
+import { Button } from '@/atoms/Button/Button';
+import { Container } from '@/atoms/Container/Container';
+import { Heading } from '@/atoms/Heading/Heading';
+import { Typography } from '@/atoms/Typography/Typography';
+import { FAQAccordion } from '../../FAQAccordion/FAQAccordion';
+import { SettingsDivider } from '../SettingsDivider/SettingsDivider';
+import { DialogFeedback } from '@/organisms/DialogFeedback/DialogFeedback';
+import { DialogPrivacy } from '@/organisms/DialogPrivacy/DialogPrivacy';
+import { DialogTerms } from '@/organisms/DialogTerms/DialogTerms';
+
 import { SUPPORT_LINKS } from './HelpContent.constants';
-import type { FAQAccordionItem } from '@/molecules/FAQAccordion';
+import type { FAQAccordionItem } from '../../FAQAccordion/FAQAccordion.types';
+
 import { HelpCircle, FileText, MessageCircle, Send, LockKeyhole, MessageSquare } from 'lucide-react';
 export function HelpContent() {
   const t = useTranslations('help');
@@ -119,130 +127,126 @@ export function HelpContent() {
     },
   ];
   return (
-    <Atoms.Container overrideDefaults className="flex w-full flex-col items-start gap-10">
+    <Container overrideDefaults className="flex w-full flex-col items-start gap-10">
       {/* FAQ Section */}
-      <Atoms.Container overrideDefaults className="flex w-full flex-col items-start gap-6">
-        <Atoms.Container overrideDefaults className="inline-flex items-center gap-3">
+      <Container overrideDefaults className="flex w-full flex-col items-start gap-6">
+        <Container overrideDefaults className="inline-flex items-center gap-3">
           <HelpCircle size={24} />
-          <Atoms.Heading level={2} size="lg" className="leading-8">
+          <Heading level={2} size="lg" className="leading-8">
             {t('faq')}
-          </Atoms.Heading>
-        </Atoms.Container>
-        <Atoms.Typography as="p" overrideDefaults className="text-base leading-6 font-medium text-secondary-foreground">
+          </Heading>
+        </Container>
+        <Typography as="p" overrideDefaults className="text-base leading-6 font-medium text-secondary-foreground">
           {t('faqDescription')}
-        </Atoms.Typography>
+        </Typography>
 
-        <Atoms.Container overrideDefaults className="flex w-full flex-col items-start gap-6">
+        <Container overrideDefaults className="flex w-full flex-col items-start gap-6">
           {faqSections.map((section) => (
-            <Atoms.Container key={section.id} overrideDefaults className="flex w-full flex-col items-start gap-6">
-              <Atoms.Heading level={4} size="md" className="leading-7 font-bold">
+            <Container key={section.id} overrideDefaults className="flex w-full flex-col items-start gap-6">
+              <Heading level={4} size="md" className="leading-7 font-bold">
                 {section.title}
-              </Atoms.Heading>
-              <Molecules.FAQAccordion items={section.questions} className="w-full gap-3" />
-            </Atoms.Container>
+              </Heading>
+              <FAQAccordion items={section.questions} className="w-full gap-3" />
+            </Container>
           ))}
-        </Atoms.Container>
-      </Atoms.Container>
+        </Container>
+      </Container>
 
-      <Molecules.SettingsDivider />
+      <SettingsDivider />
 
       {/* Feedback Section - Mobile only (hidden on lg screens where sidebar is visible) */}
-      <Atoms.Container overrideDefaults className="flex w-full flex-col items-start gap-6 lg:hidden">
-        <Atoms.Container overrideDefaults className="inline-flex items-center gap-3">
+      <Container overrideDefaults className="flex w-full flex-col items-start gap-6 lg:hidden">
+        <Container overrideDefaults className="inline-flex items-center gap-3">
           <MessageSquare size={24} />
-          <Atoms.Heading level={2} size="lg" className="leading-8">
+          <Heading level={2} size="lg" className="leading-8">
             {t('feedback')}
-          </Atoms.Heading>
-        </Atoms.Container>
-        <Atoms.Typography as="p" overrideDefaults className="text-base leading-6 font-medium text-secondary-foreground">
+          </Heading>
+        </Container>
+        <Typography as="p" overrideDefaults className="text-base leading-6 font-medium text-secondary-foreground">
           {t('feedbackDescription')}
-        </Atoms.Typography>
-        <Atoms.Button id="feedback-btn" variant="secondary" size="default" onClick={handleFeedbackClick}>
+        </Typography>
+        <Button id="feedback-btn" variant="secondary" size="default" onClick={handleFeedbackClick}>
           <Send size={16} />
           {t('sendFeedback')}
-        </Atoms.Button>
-      </Atoms.Container>
+        </Button>
+      </Container>
 
-      <Atoms.Container overrideDefaults className="w-full lg:hidden">
-        <Molecules.SettingsDivider />
-      </Atoms.Container>
+      <Container overrideDefaults className="w-full lg:hidden">
+        <SettingsDivider />
+      </Container>
 
       {/* User Guide Section */}
-      <Atoms.Container overrideDefaults className="flex w-full flex-col items-start gap-6">
-        <Atoms.Container overrideDefaults className="inline-flex items-center gap-3">
+      <Container overrideDefaults className="flex w-full flex-col items-start gap-6">
+        <Container overrideDefaults className="inline-flex items-center gap-3">
           <FileText size={24} />
-          <Atoms.Heading level={2} size="lg" className="leading-8">
+          <Heading level={2} size="lg" className="leading-8">
             {t('userGuide')}
-          </Atoms.Heading>
-        </Atoms.Container>
-        <Atoms.Typography as="p" overrideDefaults className="text-base leading-6 font-medium text-secondary-foreground">
+          </Heading>
+        </Container>
+        <Typography as="p" overrideDefaults className="text-base leading-6 font-medium text-secondary-foreground">
           {t('userGuideDescription')}
-        </Atoms.Typography>
-        <Atoms.Button id="user-guide-btn" variant="secondary" size="default" onClick={handleUserGuideClick}>
+        </Typography>
+        <Button id="user-guide-btn" variant="secondary" size="default" onClick={handleUserGuideClick}>
           <FileText size={16} />
           {t('userGuideButton')}
-        </Atoms.Button>
-      </Atoms.Container>
+        </Button>
+      </Container>
 
-      <Molecules.SettingsDivider />
+      <SettingsDivider />
 
       {/* Support Section */}
-      <Atoms.Container overrideDefaults className="flex w-full flex-col items-start gap-6">
-        <Atoms.Container overrideDefaults className="inline-flex items-center gap-3">
+      <Container overrideDefaults className="flex w-full flex-col items-start gap-6">
+        <Container overrideDefaults className="inline-flex items-center gap-3">
           <MessageCircle size={24} />
-          <Atoms.Heading level={2} size="lg" className="leading-8">
+          <Heading level={2} size="lg" className="leading-8">
             {t('support')}
-          </Atoms.Heading>
-        </Atoms.Container>
-        <Atoms.Typography as="p" overrideDefaults className="text-base leading-6 font-medium text-secondary-foreground">
+          </Heading>
+        </Container>
+        <Typography as="p" overrideDefaults className="text-base leading-6 font-medium text-secondary-foreground">
           {t('supportDescription')}
-        </Atoms.Typography>
-        <Atoms.Button id="support-btn" variant="secondary" size="default" onClick={handleSupportClick}>
+        </Typography>
+        <Button id="support-btn" variant="secondary" size="default" onClick={handleSupportClick}>
           <Send size={16} />
           {t('supportButton')}
-        </Atoms.Button>
-      </Atoms.Container>
+        </Button>
+      </Container>
 
       {/* Terms of Service & Privacy - Mobile only (hidden on lg screens where sidebar is visible) */}
-      <Atoms.Container overrideDefaults className="flex w-full flex-col items-start gap-6 lg:hidden">
-        <Molecules.SettingsDivider />
-        <Atoms.Container overrideDefaults className="flex w-full flex-col items-start gap-6">
-          <Atoms.Container overrideDefaults className="inline-flex items-center gap-3">
+      <Container overrideDefaults className="flex w-full flex-col items-start gap-6 lg:hidden">
+        <SettingsDivider />
+        <Container overrideDefaults className="flex w-full flex-col items-start gap-6">
+          <Container overrideDefaults className="inline-flex items-center gap-3">
             <LockKeyhole size={24} />
-            <Atoms.Heading level={2} size="lg" className="leading-8">
+            <Heading level={2} size="lg" className="leading-8">
               {t('termsPrivacy')}
-            </Atoms.Heading>
-          </Atoms.Container>
-          <Atoms.Typography
-            as="p"
-            overrideDefaults
-            className="text-base leading-6 font-medium text-secondary-foreground"
-          >
+            </Heading>
+          </Container>
+          <Typography as="p" overrideDefaults className="text-base leading-6 font-medium text-secondary-foreground">
             {t('termsPrivacyDescription')}
-          </Atoms.Typography>
-          <Atoms.Container overrideDefaults className="flex flex-wrap gap-2">
-            <Organisms.DialogTerms
+          </Typography>
+          <Container overrideDefaults className="flex flex-wrap gap-2">
+            <DialogTerms
               trigger={
-                <Atoms.Button id="tos-btn" variant="secondary" size="default">
+                <Button id="tos-btn" variant="secondary" size="default">
                   <FileText size={16} />
                   {t('termsOfService')}
-                </Atoms.Button>
+                </Button>
               }
             />
-            <Organisms.DialogPrivacy
+            <DialogPrivacy
               trigger={
-                <Atoms.Button id="privacy-btn" variant="secondary" size="default">
+                <Button id="privacy-btn" variant="secondary" size="default">
                   <LockKeyhole size={16} />
                   {t('privacyPolicy')}
-                </Atoms.Button>
+                </Button>
               }
             />
-          </Atoms.Container>
-        </Atoms.Container>
-      </Atoms.Container>
+          </Container>
+        </Container>
+      </Container>
 
       {/* Feedback Dialog */}
-      <Organisms.DialogFeedback open={isFeedbackDialogOpen} onOpenChange={setIsFeedbackDialogOpen} />
-    </Atoms.Container>
+      <DialogFeedback open={isFeedbackDialogOpen} onOpenChange={setIsFeedbackDialogOpen} />
+    </Container>
   );
 }

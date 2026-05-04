@@ -7,13 +7,14 @@ import { useHotStreamId } from '@/hooks/useHotStreamId/useHotStreamId';
 import { useSearchStreamId } from '@/hooks/useSearchStreamId/useSearchStreamId';
 import { useStreamIdFromFilters } from '@/hooks/useStreamIdFromFilters/useStreamIdFromFilters';
 import { useSyncInteractiveVisualContent } from '@/hooks/useSyncInteractiveVisualContent/useSyncInteractiveVisualContent';
-import { TIMELINE_FEED_VARIANT } from '@/config';
-import * as Molecules from '@/molecules';
-import * as Providers from '@/providers';
+import { TIMELINE_FEED_VARIANT } from '@/config/feed';
+import { TimelineLoading } from '@/molecules/Timeline/TimelineLoading';
+import { useProfileContext } from '@/providers/ProfileProvider/ProfileProvider';
 import { getTagsLayoutForSurfaceLayout } from '@/organisms/PostMain/PostMainLayout';
 import type { TimelineFeedProps } from './TimelineFeed.types';
 import { resolveVisualFeedContent } from './TimelineFeedVisual.helpers';
-import { TimelineFeedWithStream } from '../TimelineFeedContent';
+import { TimelineFeedWithStream } from '../TimelineFeedContent/TimelineFeedContent';
+
 import type { AuthorStreamCompositeId } from '@/models/stream/post/postStream.types';
 import { StreamSource } from '@/services/nexus/stream/posts/postStream.types';
 import { useHomeStore } from '@/stores/home/home.store';
@@ -40,7 +41,7 @@ export function TimelineFeed({ variant, children }: TimelineFeedProps) {
     case TIMELINE_FEED_VARIANT.SEARCH:
       return <SearchTimelineFeed>{children}</SearchTimelineFeed>;
     default:
-      return <Molecules.TimelineLoading />;
+      return <TimelineLoading />;
   }
 }
 
@@ -110,7 +111,7 @@ function BookmarksTimelineFeed({ children }: { children?: TimelineFeedProps['chi
 }
 
 function ProfileTimelineFeed({ children }: { children?: TimelineFeedProps['children'] }) {
-  const { pubky } = Providers.useProfileContext();
+  const { pubky } = useProfileContext();
   const streamId = pubky ? (`${StreamSource.AUTHOR}:${pubky}` as AuthorStreamCompositeId) : undefined;
   const layoutResolution = useFeedLayoutResolution(TIMELINE_FEED_VARIANT.PROFILE);
   const tagsLayout = getTagsLayoutForSurfaceLayout(layoutResolution.effectiveLayout);

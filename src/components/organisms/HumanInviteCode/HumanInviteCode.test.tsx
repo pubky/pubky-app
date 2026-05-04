@@ -3,11 +3,8 @@ import { render, screen, fireEvent } from '@testing-library/react';
 
 import { HumanInviteCode } from './HumanInviteCode';
 
-vi.mock('@/molecules', async () => {
-  const actual = await vi.importActual<Record<string, unknown>>('@/molecules');
-
+vi.mock('@/molecules/HumanFooter/HumanFooter', () => {
   return {
-    ...actual,
     HumanFooter: () => <div data-testid="mock-human-footer">Human Footer</div>,
   };
 });

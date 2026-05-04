@@ -1,7 +1,8 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { act, render } from '@testing-library/react';
 import { GlobalErrorHandlerProvider } from './GlobalErrorHandlerProvider';
-import * as Molecules from '@/molecules';
+import { showErrorToast } from '@/molecules/Toaster/showErrorToast';
+
 import { Logger } from '@/libs/logger/logger';
 
 vi.mock('@/libs/logger/logger', async (importOriginal) => {
@@ -15,10 +16,8 @@ vi.mock('@/libs/logger/logger', async (importOriginal) => {
   };
 });
 
-vi.mock('@/molecules', async (importOriginal) => {
-  const actual = await importOriginal<typeof import('@/molecules')>();
+vi.mock('@/molecules/Toaster/showErrorToast', () => {
   return {
-    ...actual,
     showErrorToast: vi.fn(),
   };
 });
@@ -55,7 +54,7 @@ describe('GlobalErrorHandlerProvider', () => {
     });
 
     expect(Logger.error).toHaveBeenCalled();
-    expect(Molecules.showErrorToast).toHaveBeenCalledWith({ description: 'boom' });
+    expect(showErrorToast).toHaveBeenCalledWith({ description: 'boom' });
   });
 
   it('handles unhandledrejection events', () => {
@@ -72,7 +71,7 @@ describe('GlobalErrorHandlerProvider', () => {
     });
 
     expect(Logger.error).toHaveBeenCalled();
-    expect(Molecules.showErrorToast).toHaveBeenCalledWith({ description: 'promise failed' });
+    expect(showErrorToast).toHaveBeenCalledWith({ description: 'promise failed' });
   });
 
   it('throttles duplicate error toasts within the cooldown window', () => {
@@ -91,13 +90,13 @@ describe('GlobalErrorHandlerProvider', () => {
     });
 
     expect(Logger.error).toHaveBeenCalledTimes(2);
-    expect(Molecules.showErrorToast).toHaveBeenCalledTimes(1);
+    expect(showErrorToast).toHaveBeenCalledTimes(1);
 
     act(() => {
       vi.advanceTimersByTime(3001);
       window.dispatchEvent(new ErrorEvent('error', { error: new Error('boom'), message: 'boom' }));
     });
 
-    expect(Molecules.showErrorToast).toHaveBeenCalledTimes(2);
+    expect(showErrorToast).toHaveBeenCalledTimes(2);
   });
 });

@@ -4,10 +4,10 @@ import { ProfileFollowing } from './ProfileFollowing';
 import { useFollowUser } from '@/hooks/useFollowUser/useFollowUser';
 import { useInfiniteScroll } from '@/hooks/useInfiniteScroll/useInfiniteScroll';
 import { useProfileConnections } from '@/hooks/useProfileConnections/useProfileConnections';
-import { asOpaque } from '@/test-utils';
+import { asOpaque } from '@/test-utils/type-assertions';
 import type { Pubky } from '@/models/models.types';
 // Mock Providers
-vi.mock('@/providers', () => ({
+vi.mock('@/providers/ProfileProvider/ProfileProvider', () => ({
   useProfileContext: vi.fn(() => ({
     pubky: 'user123',
     isOwnProfile: true,
@@ -59,30 +59,51 @@ vi.mock('@/hooks/useFollowUser/useFollowUser', () => ({
 }));
 
 // Mock Atoms
-vi.mock('@/atoms', () => ({
-  Container: ({ children, className }: { children: React.ReactNode; className?: string }) => (
-    <div data-testid="container" className={className}>
-      {children}
-    </div>
-  ),
-  Heading: ({ children }: { children: React.ReactNode }) => <h5 data-testid="heading">{children}</h5>,
-  Spinner: () => <div data-testid="spinner">Loading...</div>,
-}));
+vi.mock('@/atoms/Container/Container', () => {
+  return {
+    Container: ({ children, className }: { children: React.ReactNode; className?: string }) => (
+      <div data-testid="container" className={className}>
+        {children}
+      </div>
+    ),
+  };
+});
+
+vi.mock('@/atoms/Heading/Heading', () => {
+  return {
+    Heading: ({ children }: { children: React.ReactNode }) => <h5 data-testid="heading">{children}</h5>,
+  };
+});
+
+vi.mock('@/atoms/Spinner/Spinner', () => {
+  return {
+    Spinner: () => <div data-testid="spinner">Loading...</div>,
+  };
+});
 
 // Mock Molecules
-vi.mock('@/molecules', () => ({
-  FollowingEmpty: () => <div data-testid="following-empty">No following</div>,
-}));
+vi.mock('@/molecules/FollowingEmpty/FollowingEmpty', () => {
+  return {
+    FollowingEmpty: () => <div data-testid="following-empty">No following</div>,
+  };
+});
 
 // Mock Organisms
-vi.mock('@/organisms', () => ({
-  UserListItem: ({ user, followButtonVariant }: { user: { id: string }; followButtonVariant?: string }) => (
-    <div data-testid="user-list-item" data-user-id={user.id} data-follow-button-variant={followButtonVariant}>
-      User item
-    </div>
-  ),
-  FullUserListItemSkeleton: () => <div data-testid="user-list-item-skeleton-full">Skeleton</div>,
-}));
+vi.mock('@/organisms/FullUserListItemSkeleton/FullUserListItemSkeleton', () => {
+  return {
+    FullUserListItemSkeleton: () => <div data-testid="user-list-item-skeleton-full">Skeleton</div>,
+  };
+});
+
+vi.mock('@/organisms/UserListItem/UserListItem', () => {
+  return {
+    UserListItem: ({ user, followButtonVariant }: { user: { id: string }; followButtonVariant?: string }) => (
+      <div data-testid="user-list-item" data-user-id={user.id} data-follow-button-variant={followButtonVariant}>
+        User item
+      </div>
+    ),
+  };
+});
 
 const mockConnections = [
   {

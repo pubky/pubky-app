@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
-import * as Config from '@/config';
+import { NEXUS_POSTS_PER_PAGE } from '@/config/nexus';
 import { StreamPostsController } from './posts';
 import { PostStreamApplication } from '@/application/stream/posts/post';
 import type { Pubky } from '@/models/models.types';
@@ -40,7 +40,7 @@ describe('StreamPostsController', () => {
 
       expect(getOrFetchStreamSliceSpy).toHaveBeenCalledWith({
         streamId,
-        limit: Config.NEXUS_POSTS_PER_PAGE,
+        limit: NEXUS_POSTS_PER_PAGE,
         streamHead: 0,
         streamTail: 0,
         lastPostId: undefined,
@@ -75,7 +75,7 @@ describe('StreamPostsController', () => {
 
       expect(getOrFetchStreamSliceSpy).toHaveBeenCalledWith({
         streamId,
-        limit: Config.NEXUS_POSTS_PER_PAGE,
+        limit: NEXUS_POSTS_PER_PAGE,
         streamHead: 0,
         streamTail: 0,
         lastPostId: undefined,
@@ -135,7 +135,7 @@ describe('StreamPostsController', () => {
 
       expect(getOrFetchStreamSliceSpy).toHaveBeenCalledWith({
         streamId,
-        limit: Config.NEXUS_POSTS_PER_PAGE,
+        limit: NEXUS_POSTS_PER_PAGE,
         streamHead: 0,
         lastPostId,
         streamTail,
@@ -160,7 +160,7 @@ describe('StreamPostsController', () => {
 
       expect(getOrFetchStreamSliceSpy).toHaveBeenCalledWith({
         streamId,
-        limit: Config.NEXUS_POSTS_PER_PAGE,
+        limit: NEXUS_POSTS_PER_PAGE,
         streamHead: 0,
         streamTail: 0,
         lastPostId: undefined,
@@ -230,7 +230,7 @@ describe('StreamPostsController', () => {
       // Should call with null viewerId (unauthenticated users can still view posts)
       expect(getOrFetchStreamSliceSpy).toHaveBeenCalledWith({
         streamId,
-        limit: Config.NEXUS_POSTS_PER_PAGE,
+        limit: NEXUS_POSTS_PER_PAGE,
         streamHead: 0,
         streamTail: 0,
         lastPostId: undefined,
@@ -263,7 +263,7 @@ describe('StreamPostsController', () => {
       // Verify getOrFetchStreamSlice was called (error happened during execution)
       expect(getOrFetchStreamSliceSpy).toHaveBeenCalledWith({
         streamId,
-        limit: Config.NEXUS_POSTS_PER_PAGE,
+        limit: NEXUS_POSTS_PER_PAGE,
         streamHead: 0,
         streamTail: 0,
         lastPostId: undefined,
@@ -326,7 +326,7 @@ describe('StreamPostsController', () => {
 
       expect(getOrFetchStreamSliceSpy).toHaveBeenCalledWith({
         streamId,
-        limit: Config.NEXUS_POSTS_PER_PAGE,
+        limit: NEXUS_POSTS_PER_PAGE,
         streamHead: 0,
         lastPostId,
         streamTail,
@@ -355,7 +355,7 @@ describe('StreamPostsController', () => {
       // This test verifies the method accepts it without error
       expect(getOrFetchStreamSliceSpy).toHaveBeenCalledWith({
         streamId,
-        limit: Config.NEXUS_POSTS_PER_PAGE,
+        limit: NEXUS_POSTS_PER_PAGE,
         streamHead: 0,
         streamTail: 0,
         lastPostId: undefined,
@@ -381,7 +381,7 @@ describe('StreamPostsController', () => {
 
       expect(getOrFetchStreamSliceSpy).toHaveBeenCalledWith({
         streamId: engagementStreamId,
-        limit: Config.NEXUS_POSTS_PER_PAGE,
+        limit: NEXUS_POSTS_PER_PAGE,
         streamHead: 0,
         streamTail: 0,
         lastPostId: undefined,
@@ -553,7 +553,7 @@ describe('StreamPostsController', () => {
 
       expect(getOrFetchStreamSliceSpy).toHaveBeenCalledWith({
         streamId,
-        limit: Config.NEXUS_POSTS_PER_PAGE,
+        limit: NEXUS_POSTS_PER_PAGE,
         streamHead: 0,
         streamTail: 0,
         lastPostId: undefined,
@@ -578,7 +578,7 @@ describe('StreamPostsController', () => {
 
       expect(getOrFetchStreamSliceSpy).toHaveBeenCalledWith({
         streamId,
-        limit: Config.NEXUS_POSTS_PER_PAGE,
+        limit: NEXUS_POSTS_PER_PAGE,
         streamHead: 0,
         streamTail: 0,
         lastPostId: undefined,

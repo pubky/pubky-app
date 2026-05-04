@@ -2,31 +2,40 @@ import { render, screen, fireEvent } from '@testing-library/react';
 import { describe, it, expect, vi } from 'vitest';
 import { SearchTagSection } from './SearchTagSection';
 
-vi.mock('@/atoms', () => ({
-  Container: ({
-    children,
-    className,
-    overrideDefaults,
-    ...props
-  }: React.PropsWithChildren<{ className?: string; overrideDefaults?: boolean }>) => (
-    <div data-testid="container" className={className} data-override-defaults={overrideDefaults} {...props}>
-      {children}
-    </div>
-  ),
-  Typography: ({ children, className, size }: React.PropsWithChildren<{ className?: string; size?: string }>) => (
-    <span data-testid="typography" className={className} data-size={size}>
-      {children}
-    </span>
-  ),
-}));
+vi.mock('@/atoms/Container/Container', () => {
+  return {
+    Container: ({
+      children,
+      className,
+      overrideDefaults,
+      ...props
+    }: React.PropsWithChildren<{ className?: string; overrideDefaults?: boolean }>) => (
+      <div data-testid="container" className={className} data-override-defaults={overrideDefaults} {...props}>
+        {children}
+      </div>
+    ),
+  };
+});
 
-vi.mock('@/molecules', () => ({
-  PostTag: ({ label, color, onClick }: { label: string; color?: string; onClick?: () => void }) => (
-    <button data-testid={`tag-${label}`} data-color={color} onClick={onClick}>
-      {label}
-    </button>
-  ),
-}));
+vi.mock('@/atoms/Typography/Typography', () => {
+  return {
+    Typography: ({ children, className, size }: React.PropsWithChildren<{ className?: string; size?: string }>) => (
+      <span data-testid="typography" className={className} data-size={size}>
+        {children}
+      </span>
+    ),
+  };
+});
+
+vi.mock('@/molecules/PostTag/PostTag', () => {
+  return {
+    PostTag: ({ label, color, onClick }: { label: string; color?: string; onClick?: () => void }) => (
+      <button data-testid={`tag-${label}`} data-color={color} onClick={onClick}>
+        {label}
+      </button>
+    ),
+  };
+});
 
 describe('SearchTagSection', () => {
   const mockTags = [

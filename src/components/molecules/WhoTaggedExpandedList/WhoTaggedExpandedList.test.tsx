@@ -43,10 +43,8 @@ vi.mock('@/stores/auth/auth.store', () => ({
 }));
 
 // Mock TaggerUserRow - this is what WhoTaggedExpandedList directly uses
-vi.mock('@/molecules', async (importOriginal) => {
-  const actual = await importOriginal<typeof import('@/molecules')>();
+vi.mock('@/molecules/TaggerUserRow/TaggerUserRow', () => {
   return {
-    ...actual,
     TaggerUserRow: ({
       tagger,
       onUserClick,

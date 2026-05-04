@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, waitFor, fireEvent, screen } from '@testing-library/react';
-import { asOpaque } from '@/test-utils';
+import { asOpaque } from '@/test-utils/type-assertions';
 import { HumanLightningPayment } from './HumanLightningPayment';
 import { VerificationHandler } from './HumanLightningPayment.utils';
 import { HomegateController } from '@/controllers/homegate/homegate';
@@ -24,10 +24,8 @@ vi.mock('@/libs/utils/utils', async (importOriginal) => {
   };
 });
 
-vi.mock('@/molecules', async (importOriginal) => {
-  const actual = await importOriginal<typeof import('@/molecules')>();
+vi.mock('@/molecules/Toaster/use-toast', () => {
   return {
-    ...actual,
     useToast: () => ({ toast: mockToast }),
   };
 });
