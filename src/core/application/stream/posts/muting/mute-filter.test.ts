@@ -1,26 +1,21 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { MuteFilter } from './mute-filter';
-import type { Pubky } from '@/core';
-
+import type { Pubky } from '@/models/models.types';
 // Mock the parseCompositeId function
-vi.mock('@/core', async (importOriginal) => {
-  const actual = await importOriginal<typeof import('@/core')>();
-  return {
-    ...actual,
-    parseCompositeId: vi.fn((id: string) => {
-      // Simulate parsing: "author:postId" format
-      if (id.includes(':')) {
-        const [pubky, postId] = id.split(':');
-        return { pubky, postId };
-      }
-      throw new Error('Invalid composite ID format');
-    }),
-  };
-});
+vi.mock('@/models/models.utils', () => ({
+  parseCompositeId: vi.fn((id: string) => {
+    // Simulate parsing: "author:postId" format
+    if (id.includes(':')) {
+      const [pubky, postId] = id.split(':');
+      return { pubky, postId };
+    }
+    throw new Error('Invalid composite ID format');
+  }),
+}));
 
 // Mock the Logger to prevent console output during tests
-vi.mock('@/libs', async (importOriginal) => {
-  const actual = await importOriginal<typeof import('@/libs')>();
+vi.mock('@/libs/logger/logger', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('@/libs/logger/logger')>();
   return {
     ...actual,
     Logger: {

@@ -2,7 +2,7 @@ import { render, screen } from '@testing-library/react';
 import { describe, it, expect, vi } from 'vitest';
 import { SinglePostRightPanel } from './SinglePostRightPanel';
 
-vi.mock('@/atoms/Container', () => ({
+vi.mock('@/atoms/Container/Container', () => ({
   Container: ({ children, className }: { children: React.ReactNode; className?: string }) => (
     <div data-testid="container" className={className}>
       {children}
@@ -10,11 +10,11 @@ vi.mock('@/atoms/Container', () => ({
   ),
 }));
 
-vi.mock('@/organisms/FeedbackCard', () => ({
+vi.mock('@/organisms/FeedbackCard/FeedbackCard', () => ({
   FeedbackCard: () => <div data-testid="feedback-card">FeedbackCard</div>,
 }));
 
-vi.mock('../SinglePostParticipants', () => ({
+vi.mock('../SinglePostParticipants/SinglePostParticipants', () => ({
   SinglePostParticipants: ({ postId }: { postId: string }) => (
     <div data-testid="single-post-participants" data-post-id={postId}>
       SinglePostParticipants

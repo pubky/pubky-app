@@ -1,5 +1,5 @@
 import { describe, expect, it, vi, beforeEach, afterEach } from 'vitest';
-import { asOpaque } from '@/test-utils';
+import { asOpaque } from '@/test-utils/type-assertions';
 import { cropImageToBlob } from './cropImage';
 
 describe('cropImage', () => {

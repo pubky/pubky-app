@@ -1,13 +1,14 @@
 'use client';
 
+import { useReportPost } from '@/hooks/useReportPost/useReportPost';
 import { useEffect } from 'react';
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/atoms/Dialog/Dialog';
 
-import * as Atoms from '@/atoms';
-import * as Hooks from '@/hooks';
-import { REPORT_POST_STEPS } from '@/hooks/useReportPost';
-import { DialogReportPostIssueStep } from './DialogReportPostIssueStep';
-import { DialogReportPostReasonStep } from './DialogReportPostReasonStep';
-import { DialogReportPostSuccess } from './DialogReportPostSuccess';
+import { REPORT_POST_STEPS } from '@/hooks/useReportPost/useReportPost.constants';
+import { DialogReportPostIssueStep } from './DialogReportPostIssueStep/DialogReportPostIssueStep';
+import { DialogReportPostReasonStep } from './DialogReportPostReasonStep/DialogReportPostReasonStep';
+import { DialogReportPostSuccess } from './DialogReportPostSuccess/DialogReportPostSuccess';
+
 import type { DialogReportPostProps } from './DialogReportPost.types';
 
 export function DialogReportPost({ open, onOpenChange, postId }: DialogReportPostProps) {
@@ -22,7 +23,7 @@ export function DialogReportPost({ open, onOpenChange, postId }: DialogReportPos
     handleReasonChange,
     submit,
     reset,
-  } = Hooks.useReportPost(postId);
+  } = useReportPost(postId);
 
   // Reset state when the dialog closes
   useEffect(() => {
@@ -63,14 +64,14 @@ export function DialogReportPost({ open, onOpenChange, postId }: DialogReportPos
   };
 
   return (
-    <Atoms.Dialog open={open} onOpenChange={onOpenChange}>
-      <Atoms.DialogContent className="w-xl" hiddenTitle="Report Post" onOpenAutoFocus={(e) => e.preventDefault()}>
-        <Atoms.DialogHeader>
-          <Atoms.DialogTitle className="sr-only">Report Post</Atoms.DialogTitle>
-          <Atoms.DialogDescription className="sr-only">Report post dialog</Atoms.DialogDescription>
-        </Atoms.DialogHeader>
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="w-xl" hiddenTitle="Report Post" onOpenAutoFocus={(e) => e.preventDefault()}>
+        <DialogHeader>
+          <DialogTitle className="sr-only">Report Post</DialogTitle>
+          <DialogDescription className="sr-only">Report post dialog</DialogDescription>
+        </DialogHeader>
         {renderContent()}
-      </Atoms.DialogContent>
-    </Atoms.Dialog>
+      </DialogContent>
+    </Dialog>
   );
 }

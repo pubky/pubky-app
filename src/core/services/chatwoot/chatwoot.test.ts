@@ -1,5 +1,6 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { asOpaque, mockResponse } from '@/test-utils';
+import { asOpaque } from '@/test-utils/type-assertions';
+import { mockResponse } from '@/test-utils/dom';
 import type {
   TChatwootContact,
   TChatwootContactSearchResponse,
@@ -165,7 +166,7 @@ describe('ChatwootService', () => {
 
     it('should throw AppError when environment variables are missing', async () => {
       // Override the Env values to undefined to test service validation
-      const mockEnv = await import('@/libs/env');
+      const mockEnv = await import('@/libs/env/env');
       const originalValues = {
         BASE_URL_SUPPORT: mockEnv.Env.BASE_URL_SUPPORT,
         SUPPORT_API_ACCESS_TOKEN: mockEnv.Env.SUPPORT_API_ACCESS_TOKEN,
@@ -224,7 +225,7 @@ describe('ChatwootService', () => {
 
     it('should throw AppError when environment variables are missing', async () => {
       // Override the Env values to undefined to test service validation
-      const mockEnv = await import('@/libs/env');
+      const mockEnv = await import('@/libs/env/env');
       const originalValues = {
         BASE_URL_SUPPORT: mockEnv.Env.BASE_URL_SUPPORT,
         SUPPORT_API_ACCESS_TOKEN: mockEnv.Env.SUPPORT_API_ACCESS_TOKEN,

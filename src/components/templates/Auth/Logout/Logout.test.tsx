@@ -2,7 +2,6 @@ import React from 'react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import { Logout } from './Logout';
-import { asOpaque } from '@/test-utils';
 
 const mocks = vi.hoisted(() => {
   const authState = {
@@ -49,67 +48,106 @@ vi.mock('next-intl', () => ({
   },
 }));
 
-vi.mock('@/app', () => ({
+vi.mock('@/app/routes', () => ({
   ROOT_ROUTES: '/',
 }));
 
-vi.mock('@/libs', () => ({
+vi.mock('@/libs/logger/logger', () => ({
   Logger: {
     error: (...args: unknown[]) => mocks.mockLoggerError(...args),
   },
 }));
 
-vi.mock('@/atoms', () => ({
-  Container: ({ children, className, size }: { children: React.ReactNode; className?: string; size?: string }) => (
-    <div data-testid="container" data-class={className} data-size={size}>
-      {children}
-    </div>
-  ),
-  PageHeader: ({ children }: { children: React.ReactNode }) => <div data-testid="page-header">{children}</div>,
-  PageSubtitle: ({ children }: { children: React.ReactNode }) => <p>{children}</p>,
-  Spinner: ({ size }: { size?: string }) => <div data-testid="spinner" data-size={size} />,
-}));
-
-vi.mock('@/molecules', () => ({
-  LogoutContent: () => <div data-testid="logout-content">Logout content</div>,
-  LogoutNavigation: () => <div data-testid="logout-navigation">Logout navigation</div>,
-  PageTitle: ({ children }: { children: React.ReactNode }) => <h1>{children}</h1>,
-  ContentCard: ({ children }: { children: React.ReactNode }) => <div data-testid="content-card">{children}</div>,
-  ButtonsNavigation: ({
-    backText,
-    continueText,
-    onHandleBackButton,
-    onHandleContinueButton,
-  }: {
-    backText: string;
-    continueText: string;
-    onHandleBackButton: () => void;
-    onHandleContinueButton: () => void;
-  }) => (
-    <div data-testid="buttons-navigation">
-      <button onClick={onHandleBackButton}>{backText}</button>
-      <button onClick={onHandleContinueButton}>{continueText}</button>
-    </div>
-  ),
-}));
-
-vi.mock('@/core', () => {
-  const useAuthStore = ((selector?: (state: typeof mocks.authState) => unknown) =>
-    selector ? selector(mocks.authState) : mocks.authState) as typeof import('@/core').useAuthStore;
-  useAuthStore.getState = () => asOpaque<ReturnType<typeof useAuthStore.getState>>(mocks.authState);
-
-  const useOnboardingStore = ((selector?: (state: typeof mocks.onboardingState) => unknown) =>
-    selector ? selector(mocks.onboardingState) : mocks.onboardingState) as typeof import('@/core').useOnboardingStore;
-  useOnboardingStore.getState = () => mocks.onboardingState as ReturnType<typeof useOnboardingStore.getState>;
-
+vi.mock('@/atoms/Container/Container', () => {
   return {
-    useAuthStore,
-    useOnboardingStore,
-    AuthController: {
-      logout: (...args: unknown[]) => mocks.mockLogout(...args),
-    },
+    Container: ({ children, className, size }: { children: React.ReactNode; className?: string; size?: string }) => (
+      <div data-testid="container" data-class={className} data-size={size}>
+        {children}
+      </div>
+    ),
   };
 });
+
+vi.mock('@/atoms/PageHeader/PageHeader', () => {
+  return {
+    PageHeader: ({ children }: { children: React.ReactNode }) => <div data-testid="page-header">{children}</div>,
+  };
+});
+
+vi.mock('@/atoms/PageSubtitle/PageSubtitle', () => {
+  return {
+    PageSubtitle: ({ children }: { children: React.ReactNode }) => <p>{children}</p>,
+  };
+});
+
+vi.mock('@/atoms/Spinner/Spinner', () => {
+  return {
+    Spinner: ({ size }: { size?: string }) => <div data-testid="spinner" data-size={size} />,
+  };
+});
+
+vi.mock('@/molecules/ButtonsNavigation/ButtonsNavigation', () => {
+  return {
+    ButtonsNavigation: ({
+      backText,
+      continueText,
+      onHandleBackButton,
+      onHandleContinueButton,
+    }: {
+      backText: string;
+      continueText: string;
+      onHandleBackButton: () => void;
+      onHandleContinueButton: () => void;
+    }) => (
+      <div data-testid="buttons-navigation">
+        <button onClick={onHandleBackButton}>{backText}</button>
+        <button onClick={onHandleContinueButton}>{continueText}</button>
+      </div>
+    ),
+  };
+});
+
+vi.mock('@/molecules/Content/Content', () => {
+  return {
+    ContentCard: ({ children }: { children: React.ReactNode }) => <div data-testid="content-card">{children}</div>,
+  };
+});
+
+vi.mock('@/molecules/Logout/Logout', () => {
+  return {
+    LogoutContent: () => <div data-testid="logout-content">Logout content</div>,
+    LogoutNavigation: () => <div data-testid="logout-navigation">Logout navigation</div>,
+  };
+});
+
+vi.mock('@/molecules/Page/Page', () => {
+  return {
+    PageTitle: ({ children }: { children: React.ReactNode }) => <h1>{children}</h1>,
+  };
+});
+
+vi.mock('@/stores/auth/auth.store', () => ({
+  useAuthStore: Object.assign(
+    (selector?: (state: typeof mocks.authState) => unknown) => (selector ? selector(mocks.authState) : mocks.authState),
+    {
+      getState: () => mocks.authState,
+    },
+  ),
+}));
+vi.mock('@/stores/onboarding/onboarding.store', () => ({
+  useOnboardingStore: Object.assign(
+    (selector?: (state: typeof mocks.onboardingState) => unknown) =>
+      selector ? selector(mocks.onboardingState) : mocks.onboardingState,
+    {
+      getState: () => mocks.onboardingState,
+    },
+  ),
+}));
+vi.mock('@/controllers/auth/auth', () => ({
+  AuthController: {
+    logout: (...args: unknown[]) => mocks.mockLogout(...args),
+  },
+}));
 
 describe('Logout', () => {
   beforeEach(() => {

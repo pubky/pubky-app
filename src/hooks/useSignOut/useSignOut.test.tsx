@@ -12,16 +12,18 @@ vi.mock('next/navigation', () => ({
   }),
 }));
 
-vi.mock('@/core', () => ({
+vi.mock('@/controllers/auth/auth', () => ({
   AuthController: { logout: (...args: unknown[]) => mockLogout(...args) },
 }));
 
-vi.mock('@/molecules', () => ({
-  useToast: () => ({ toast: mockToast }),
-}));
+vi.mock('@/molecules/Toaster/use-toast', () => {
+  return {
+    useToast: () => ({ toast: mockToast }),
+  };
+});
 
-vi.mock('@/app', async (importOriginal) => {
-  const actual = await importOriginal<typeof import('@/app')>();
+vi.mock('@/app/routes', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('@/app/routes')>();
   return {
     ...actual,
     AUTH_ROUTES: { LOGOUT: '/logout' },

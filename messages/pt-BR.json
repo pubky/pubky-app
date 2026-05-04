@@ -1082,7 +1082,10 @@
     "failedToLoadUsers": "Falha ao carregar usuarios",
     "failedToLoadTags": "Falha ao carregar tags",
     "noUsersToShow": "Nenhum usuario para mostrar",
-    "noTagsToShow": "Nenhuma tag para mostrar"
+    "noTagsToShow": "Nenhuma tag para mostrar",
+    "tags": "Tags",
+    "users": "Usuários",
+    "posts": "Publicações"
   },
   "privacy": {
     "showConfirmation": "Mostrar confirmação antes de redirecionar",

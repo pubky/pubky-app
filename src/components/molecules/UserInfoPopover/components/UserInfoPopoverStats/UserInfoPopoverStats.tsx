@@ -1,8 +1,10 @@
 'use client';
 
 import { useTranslations } from 'next-intl';
-import * as Atoms from '@/atoms';
-import * as Molecules from '@/molecules';
+import { Container } from '@/atoms/Container/Container';
+import { Typography } from '@/atoms/Typography/Typography';
+import { AvatarGroup } from '../../../AvatarGroup/AvatarGroup';
+
 import type { AvatarGroupItem } from '@/molecules/AvatarGroup/AvatarGroup.types';
 
 interface UserInfoPopoverStatsProps {
@@ -25,18 +27,18 @@ function StatsColumn({
   maxAvatars: number;
 }) {
   return (
-    <Atoms.Container className="flex-1 items-start gap-2">
-      <Atoms.Typography
+    <Container className="flex-1 items-start gap-2">
+      <Typography
         className="text-xs leading-4 font-medium tracking-[1.2px] whitespace-pre-wrap text-muted-foreground uppercase"
         overrideDefaults
       >
-        <Atoms.Typography as="span" className="text-foreground" overrideDefaults>
+        <Typography as="span" className="text-foreground" overrideDefaults>
           {count}
-        </Atoms.Typography>{' '}
+        </Typography>{' '}
         {label}
-      </Atoms.Typography>
-      {avatars.length > 0 ? <Molecules.AvatarGroup items={avatars} totalCount={count} maxAvatars={maxAvatars} /> : null}
-    </Atoms.Container>
+      </Typography>
+      {avatars.length > 0 ? <AvatarGroup items={avatars} totalCount={count} maxAvatars={maxAvatars} /> : null}
+    </Container>
   );
 }
 
@@ -50,7 +52,7 @@ export function UserInfoPopoverStats({
   const t = useTranslations('userList');
 
   return (
-    <Atoms.Container className="flex items-start gap-2.5" overrideDefaults>
+    <Container className="flex items-start gap-2.5" overrideDefaults>
       <StatsColumn count={followersCount} label={t('followers')} avatars={followersAvatars} maxAvatars={maxAvatars} />
       <StatsColumn
         count={followingCount}
@@ -58,6 +60,6 @@ export function UserInfoPopoverStats({
         avatars={followingAvatars}
         maxAvatars={maxAvatars}
       />
-    </Atoms.Container>
+    </Container>
   );
 }

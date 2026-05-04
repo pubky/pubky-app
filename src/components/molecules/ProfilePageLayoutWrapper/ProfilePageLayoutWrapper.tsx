@@ -1,4 +1,4 @@
-import * as Atoms from '@/atoms';
+import { Container } from '@/atoms/Container/Container';
 
 export interface ProfilePageLayoutWrapperProps {
   children: React.ReactNode;
@@ -6,11 +6,8 @@ export interface ProfilePageLayoutWrapperProps {
 
 export function ProfilePageLayoutWrapper({ children }: ProfilePageLayoutWrapperProps) {
   return (
-    <Atoms.Container
-      overrideDefaults={true}
-      className="mx-auto mt-6 w-full max-w-(--container-max-width) px-6 pt-0 xl:px-0"
-    >
+    <Container overrideDefaults={true} className="mx-auto mt-6 w-full max-w-(--container-max-width) px-6 pt-0 xl:px-0">
       {children}
-    </Atoms.Container>
+    </Container>
   );
 }

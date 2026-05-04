@@ -2,30 +2,6 @@ import { describe, it, expect, vi } from 'vitest';
 import { render, screen } from '@testing-library/react';
 import { ActionSection } from './ActionSection';
 
-// Mock UI components
-vi.mock('@/components/ui', () => ({
-  Container: ({ children, className }: { children: React.ReactNode; className?: string }) => (
-    <div data-testid="container" className={className}>
-      {children}
-    </div>
-  ),
-  Button: ({
-    children,
-    variant,
-    className,
-    onClick,
-  }: {
-    children: React.ReactNode;
-    variant?: string;
-    className?: string;
-    onClick?: () => void;
-  }) => (
-    <button data-slot="button" data-variant={variant} className={className} onClick={onClick}>
-      {children}
-    </button>
-  ),
-}));
-
 describe('ActionSection', () => {
   it('renders with actions', () => {
     const mockAction = vi.fn();

@@ -2,14 +2,13 @@ import { render, screen } from '@testing-library/react';
 import { describe, it, expect, vi } from 'vitest';
 import { SettingsInfo } from './SettingsInfo';
 
-vi.mock('@/config', async (importOriginal) => {
-  const actual = await importOriginal<typeof import('@/config')>();
-  return {
-    ...actual,
-    APP_VERSION: '1.2.3',
-    APP_RELEASE_URL: 'https://github.com/pubky/pubky-app/releases/tag/1.2.3',
-  };
-});
+vi.mock('@/config/app', () => ({
+  APP_VERSION: '1.2.3',
+}));
+
+vi.mock('@/config/externalLinks', () => ({
+  APP_RELEASE_URL: 'https://github.com/pubky/pubky-app/releases/tag/1.2.3',
+}));
 
 describe('SettingsInfo', () => {
   it('renders without crashing', () => {

@@ -13,12 +13,15 @@ import {
 } from './PostText.utils';
 import { PostTextProps, RemarkAnchorProps } from './PostText.types';
 import { TRUNCATION_LIMIT } from './PostText.constants';
-import * as Libs from '@/libs';
-import * as Atoms from '@/atoms';
-import * as Molecules from '@/molecules';
-import * as Organisms from '@/organisms';
+import { Button } from '@/atoms/Button/Button';
+import { Container } from '@/atoms/Container/Container';
+import { PostCodeBlock } from '../PostCodeBlock/PostCodeBlock';
+import { PostHashtags } from '../PostHashtags/PostHashtags';
+import { PostMentions } from '@/organisms/PostMentions/PostMentions';
+
 import { usePathname } from 'next/navigation';
 import { POST_ROUTES } from '@/app/routes';
+import { cn } from '@/libs/utils/utils';
 
 /**
  * Renders formatted text content with markdown, hashtags, mentions, and links.
@@ -76,10 +79,10 @@ export const PostText = memo(function PostText({ content, isArticle, onLinkClick
   );
 
   return (
-    <Atoms.Container
+    <Container
       data-cy="post-text"
       overrideDefaults
-      className={Libs.cn(
+      className={cn(
         'text-base leading-6 font-medium wrap-anywhere hyphens-auto whitespace-pre-line text-secondary-foreground',
         className,
       )}
@@ -92,8 +95,8 @@ export const PostText = memo(function PostText({ content, isArticle, onLinkClick
           a(props: RemarkAnchorProps) {
             const { children, className, 'data-type': dataType, node: _node, ref: _ref, ...rest } = props;
 
-            if (dataType === 'hashtag') return <Molecules.PostHashtags {...props} />;
-            if (dataType === 'mention') return <Organisms.PostMentions {...props} />;
+            if (dataType === 'hashtag') return <PostHashtags {...props} />;
+            if (dataType === 'mention') return <PostMentions {...props} />;
 
             return (
               <a
@@ -107,7 +110,7 @@ export const PostText = memo(function PostText({ content, isArticle, onLinkClick
                     onLinkClick(rest.href, e);
                   }
                 }}
-                className={Libs.cn(className, 'cursor-pointer text-brand transition-colors hover:text-brand/80')}
+                className={cn(className, 'cursor-pointer text-brand transition-colors hover:text-brand/80')}
               >
                 {children}
               </a>
@@ -117,10 +120,7 @@ export const PostText = memo(function PostText({ content, isArticle, onLinkClick
             const { children, className, node: _node, ref: _ref, ...rest } = props;
 
             return (
-              <blockquote
-                {...rest}
-                className={Libs.cn(className, 'border-l-4 border-foreground pl-4 whitespace-normal')}
-              >
+              <blockquote {...rest} className={cn(className, 'border-l-4 border-foreground pl-4 whitespace-normal')}>
                 {children}
               </blockquote>
             );
@@ -129,7 +129,7 @@ export const PostText = memo(function PostText({ content, isArticle, onLinkClick
             const { children, className, node: _node, ref: _ref, ...rest } = props;
 
             return (
-              <ol {...rest} className={Libs.cn(className, 'list-inside list-decimal whitespace-normal')}>
+              <ol {...rest} className={cn(className, 'list-inside list-decimal whitespace-normal')}>
                 {children}
               </ol>
             );
@@ -138,19 +138,19 @@ export const PostText = memo(function PostText({ content, isArticle, onLinkClick
             const { children, className, node: _node, ref: _ref, ...rest } = props;
 
             return (
-              <ul {...rest} className={Libs.cn(className, 'list-inside list-disc whitespace-normal')}>
+              <ul {...rest} className={cn(className, 'list-inside list-disc whitespace-normal')}>
                 {children}
               </ul>
             );
           },
           code(props) {
-            return <Molecules.PostCodeBlock {...props} />;
+            return <PostCodeBlock {...props} />;
           },
           h1(props) {
             const { children, className, node: _node, ref: _ref, ...rest } = props;
 
             return (
-              <h1 {...rest} className={Libs.cn(className, 'text-2xl leading-8 font-bold text-white')}>
+              <h1 {...rest} className={cn(className, 'text-2xl leading-8 font-bold text-white')}>
                 {children}
               </h1>
             );
@@ -159,7 +159,7 @@ export const PostText = memo(function PostText({ content, isArticle, onLinkClick
             const { children, className, node: _node, ref: _ref, ...rest } = props;
 
             return (
-              <h2 {...rest} className={Libs.cn(className, 'text-xl leading-7 font-bold text-white')}>
+              <h2 {...rest} className={cn(className, 'text-xl leading-7 font-bold text-white')}>
                 {children}
               </h2>
             );
@@ -168,7 +168,7 @@ export const PostText = memo(function PostText({ content, isArticle, onLinkClick
             const { children, className, node: _node, ref: _ref, ...rest } = props;
 
             return (
-              <h3 {...rest} className={Libs.cn(className, 'text-lg leading-7 font-bold text-white')}>
+              <h3 {...rest} className={cn(className, 'text-lg leading-7 font-bold text-white')}>
                 {children}
               </h3>
             );
@@ -177,7 +177,7 @@ export const PostText = memo(function PostText({ content, isArticle, onLinkClick
             const { children, className, node: _node, ref: _ref, ...rest } = props;
 
             return (
-              <h4 {...rest} className={Libs.cn(className, 'text-[17px] leading-6 font-bold text-white')}>
+              <h4 {...rest} className={cn(className, 'text-[17px] leading-6 font-bold text-white')}>
                 {children}
               </h4>
             );
@@ -186,7 +186,7 @@ export const PostText = memo(function PostText({ content, isArticle, onLinkClick
             const { children, className, node: _node, ref: _ref, ...rest } = props;
 
             return (
-              <h5 {...rest} className={Libs.cn(className, 'text-[16.5px] leading-6 font-light text-muted-foreground')}>
+              <h5 {...rest} className={cn(className, 'text-[16.5px] leading-6 font-light text-muted-foreground')}>
                 {children}
               </h5>
             );
@@ -195,7 +195,7 @@ export const PostText = memo(function PostText({ content, isArticle, onLinkClick
             const { children, className, node: _node, ref: _ref, ...rest } = props;
 
             return (
-              <h6 {...rest} className={Libs.cn(className, 'text-[16.25px] leading-6 font-light text-muted-foreground')}>
+              <h6 {...rest} className={cn(className, 'text-[16.25px] leading-6 font-light text-muted-foreground')}>
                 {children}
               </h6>
             );
@@ -207,14 +207,14 @@ export const PostText = memo(function PostText({ content, isArticle, onLinkClick
 
       {/* No stopPropagation on this element therefore click takes user to post via parent element */}
       {contentTruncated && (
-        <Atoms.Button
+        <Button
           overrideDefaults
           aria-label="Show full post content"
           className="mt-4 cursor-pointer text-brand transition-colors hover:text-brand/80"
         >
           Show more
-        </Atoms.Button>
+        </Button>
       )}
-    </Atoms.Container>
+    </Container>
   );
 });

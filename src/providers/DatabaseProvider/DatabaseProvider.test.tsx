@@ -1,15 +1,12 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { render, screen, act } from '@testing-library/react';
-import { DatabaseProvider, DatabaseContext, type DatabaseContextType } from '@/providers';
-import { db, useMigrationStore } from '@/core';
-import { Err, ErrorService, ErrorCategory, DatabaseErrorCode } from '@/libs';
-
-// Mock the database
-vi.mock('@/database', () => ({
-  db: {
-    initialize: vi.fn(),
-  },
-}));
+import { DatabaseProvider, DatabaseContext } from '@/providers/DatabaseProvider/DatabaseProvider';
+import { type DatabaseContextType } from '@/providers/DatabaseProvider/DatabaseProvider.types';
+import { DatabaseErrorCode } from '@/libs/error/error.codes';
+import { Err } from '@/libs/error/error.factories';
+import { ErrorCategory, ErrorService } from '@/libs/error/error.types';
+import { db } from '@/database/franky/franky';
+import { useMigrationStore } from '@/stores/migration/migration.store';
 
 describe('DatabaseProvider', () => {
   beforeEach(() => {

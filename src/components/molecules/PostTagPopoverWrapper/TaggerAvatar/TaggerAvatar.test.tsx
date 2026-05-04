@@ -3,20 +3,17 @@ import { describe, it, expect, vi } from 'vitest';
 import { TaggerAvatar } from './TaggerAvatar';
 import type { TaggerWithAvatar } from '@/molecules/TaggedItem/TaggedItem.types';
 
-vi.mock('@/organisms', () => ({
-  AvatarWithFallback: ({ name }: { name: string }) => <div data-testid={`avatar-${name}`}>Avatar</div>,
-}));
+vi.mock('@/organisms/AvatarWithFallback/AvatarWithFallback', () => {
+  return {
+    AvatarWithFallback: ({ name }: { name: string }) => <div data-testid={`avatar-${name}`}>Avatar</div>,
+  };
+});
 
-vi.mock('../../UserInfoPopover', () => ({
+vi.mock('../../UserInfoPopover/UserInfoPopover', () => ({
   UserInfoPopover: ({ children }: { children: React.ReactNode }) => (
     <div data-testid="user-info-popover">{children}</div>
   ),
 }));
-
-vi.mock('@/libs', async (importOriginal) => {
-  const actual = await importOriginal<typeof import('@/libs')>();
-  return { ...actual, formatPublicKey: () => 'formatted-key' };
-});
 
 const mockTagger: TaggerWithAvatar = {
   id: 'user1',

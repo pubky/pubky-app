@@ -1,13 +1,11 @@
 import { Table } from 'dexie';
+import { db } from '@/database/franky/franky';
+import type { FileDetailsModelSchema } from '@/models/file/fileDetails.schema';
+import type { Pubky } from '@/models/models.types';
+import { RecordModelBase } from '@/models/shared/base/record/baseRecord';
 
-import * as Core from '@/core';
-import { RecordModelBase } from '@/core/models/shared/base/record/baseRecord';
-
-export class FileDetailsModel
-  extends RecordModelBase<Core.Pubky, Core.FileDetailsModelSchema>
-  implements Core.FileDetailsModelSchema
-{
-  static table: Table<Core.FileDetailsModelSchema> = Core.db.table('file_details');
+export class FileDetailsModel extends RecordModelBase<Pubky, FileDetailsModelSchema> implements FileDetailsModelSchema {
+  static table: Table<FileDetailsModelSchema> = db.table('file_details');
 
   id: string;
   name: string;
@@ -25,7 +23,7 @@ export class FileDetailsModel
     small: string;
   };
 
-  constructor(fileDetails: Core.FileDetailsModelSchema) {
+  constructor(fileDetails: FileDetailsModelSchema) {
     super(fileDetails);
     this.id = fileDetails.id;
     this.name = fileDetails.name;

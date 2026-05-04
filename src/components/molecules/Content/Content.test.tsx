@@ -20,18 +20,25 @@ vi.mock('next/image', () => ({
 }));
 
 // Mock atoms
-vi.mock('@/atoms', () => ({
-  Container: ({ children, className }: { children: React.ReactNode; className?: string }) => (
-    <div data-testid="container" className={className}>
-      {children}
-    </div>
-  ),
-  Card: ({ children, className }: { children: React.ReactNode; className?: string }) => (
-    <div data-testid="card" className={className}>
-      {children}
-    </div>
-  ),
-}));
+vi.mock('@/atoms/Card/Card', () => {
+  return {
+    Card: ({ children, className }: { children: React.ReactNode; className?: string }) => (
+      <div data-testid="card" className={className}>
+        {children}
+      </div>
+    ),
+  };
+});
+
+vi.mock('@/atoms/Container/Container', () => {
+  return {
+    Container: ({ children, className }: { children: React.ReactNode; className?: string }) => (
+      <div data-testid="container" className={className}>
+        {children}
+      </div>
+    ),
+  };
+});
 
 describe('ContentCard', () => {
   it('renders with default props', () => {

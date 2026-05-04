@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, beforeEach, type Mock } from 'vitest';
 import { renderHook, act } from '@testing-library/react';
-import { asOpaque } from '@/test-utils';
+import { asOpaque } from '@/test-utils/type-assertions';
 import { useLocalFirstQuery } from './useLocalFirstQuery';
 import type { UseLocalFirstQueryParams } from './useLocalFirstQuery.types';
 
@@ -34,9 +34,9 @@ vi.mock('dexie-react-hooks', () => ({
   },
 }));
 
-// Mock @/libs
+// Mock logger
 const mockLoggerError = vi.fn();
-vi.mock('@/libs', () => ({
+vi.mock('@/libs/logger/logger', () => ({
   Logger: {
     error: (...args: unknown[]) => mockLoggerError(...args),
   },

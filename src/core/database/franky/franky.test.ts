@@ -1,9 +1,8 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { indexedDB } from 'fake-indexeddb';
-import { DB_NAME, DB_VERSION } from '@/config';
-import { AppDatabase } from '@/core';
-import * as Libs from '@/libs';
-
+import { DB_NAME, DB_VERSION } from '@/config/database';
+import { Logger } from '@/libs/logger/logger';
+import { AppDatabase } from '@/database/franky/franky';
 const waitForDatabaseDeletion = async (name: string, onBlocked?: () => void) => {
   await new Promise<void>((resolve, reject) => {
     const deleteRequest = indexedDB.deleteDatabase(name);
@@ -81,7 +80,7 @@ describe('Database Initialization', () => {
 
     await waitForDatabaseDeletion(reproductionDbName, () => reproductionDb.close());
 
-    const loggerInfoSpy = vi.spyOn(Libs.Logger, 'info');
+    const loggerInfoSpy = vi.spyOn(Logger, 'info');
 
     // Step 1 & 2 from the reproduction: sign in and observe the current version.
     await reproductionDb.initialize();
@@ -154,7 +153,7 @@ describe('Database Initialization', () => {
 
     await waitForDatabaseDeletion(testDbName, () => testDb.close());
 
-    const loggerInfoSpy = vi.spyOn(Libs.Logger, 'info');
+    const loggerInfoSpy = vi.spyOn(Logger, 'info');
 
     try {
       // Initialize the database normally
@@ -254,7 +253,7 @@ describe('Database Initialization', () => {
     const testDbName = `${DB_NAME}-no-indexeddb`;
     const testDb = new AppDatabase(testDbName);
 
-    const loggerWarnSpy = vi.spyOn(Libs.Logger, 'warn');
+    const loggerWarnSpy = vi.spyOn(Logger, 'warn');
 
     // Mock indexedDB as undefined to simulate environments where it's not available
     const originalIndexedDB = globalThis.indexedDB;

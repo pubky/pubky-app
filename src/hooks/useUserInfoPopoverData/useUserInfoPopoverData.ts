@@ -1,7 +1,11 @@
 'use client';
 
-import * as Hooks from '@/hooks';
-import type { UserConnectionData } from '@/hooks/useProfileConnections/useProfileConnections.types';
+import { useProfileConnections } from '@/hooks/useProfileConnections/useProfileConnections';
+import { useCurrentUserProfile } from '@/hooks/useCurrentUserProfile/useCurrentUserProfile';
+import { useIsFollowing } from '@/hooks/useIsFollowing/useIsFollowing';
+import { useProfileStats } from '@/hooks/useProfileStats/useProfileStats';
+import { useUserProfile } from '@/hooks/useUserProfile/useUserProfile';
+import { CONNECTION_TYPE, type UserConnectionData } from '@/hooks/useProfileConnections/useProfileConnections.types';
 
 interface UseUserInfoPopoverDataResult {
   isCurrentUser: boolean;
@@ -19,21 +23,15 @@ interface UseUserInfoPopoverDataResult {
 }
 
 export function useUserInfoPopoverData(userId: string): UseUserInfoPopoverDataResult {
-  const { currentUserPubky } = Hooks.useCurrentUserProfile();
+  const { currentUserPubky } = useCurrentUserProfile();
   const isCurrentUser = currentUserPubky === userId;
 
-  const { profile, isLoading: isProfileLoading } = Hooks.useUserProfile(userId);
-  const { stats, isLoading: isStatsLoading } = Hooks.useProfileStats(userId);
-  const { isFollowing, isLoading: isFollowingStatusLoading } = Hooks.useIsFollowing(userId);
+  const { profile, isLoading: isProfileLoading } = useUserProfile(userId);
+  const { stats, isLoading: isStatsLoading } = useProfileStats(userId);
+  const { isFollowing, isLoading: isFollowingStatusLoading } = useIsFollowing(userId);
 
-  const { connections: followers, count: followersCount } = Hooks.useProfileConnections(
-    Hooks.CONNECTION_TYPE.FOLLOWERS,
-    userId,
-  );
-  const { connections: following, count: followingCount } = Hooks.useProfileConnections(
-    Hooks.CONNECTION_TYPE.FOLLOWING,
-    userId,
-  );
+  const { connections: followers, count: followersCount } = useProfileConnections(CONNECTION_TYPE.FOLLOWERS, userId);
+  const { connections: following, count: followingCount } = useProfileConnections(CONNECTION_TYPE.FOLLOWING, userId);
 
   // Consider loaded when profile and stats are ready (connections can load lazily)
   const isLoading = isProfileLoading || isStatsLoading;

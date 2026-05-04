@@ -1,21 +1,27 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
-import * as Core from '@/core';
 import { LocalUserService } from './user';
-
+import type { Pubky } from '@/models/models.types';
+import { UserCountsModel } from '@/models/user/counts/userCounts';
+import type { UserCountsModelSchema } from '@/models/user/counts/userCounts.schema';
+import { UserDetailsModel } from '@/models/user/details/userDetails';
+import { UserRelationshipsModel } from '@/models/user/relationships/userRelationships';
+import type { UserRelationshipsModelSchema } from '@/models/user/relationships/userRelationships.schema';
+import { UserTtlModel } from '@/models/user/ttl/userTtl';
+import type { NexusUserDetails } from '@/services/nexus/nexus.types';
 describe('LocalUserService', () => {
   beforeEach(async () => {
     vi.clearAllMocks();
-    await Core.UserDetailsModel.table.clear();
-    await Core.UserRelationshipsModel.table.clear();
-    await Core.UserCountsModel.table.clear();
-    await Core.UserTtlModel.table.clear();
+    await UserDetailsModel.table.clear();
+    await UserRelationshipsModel.table.clear();
+    await UserCountsModel.table.clear();
+    await UserTtlModel.table.clear();
   });
 
   describe('readDetails', () => {
-    const userId = 'test-user-id' as Core.Pubky;
+    const userId = 'test-user-id' as Pubky;
 
     it('should return user details from local database when found', async () => {
-      const mockUserDetails: Core.NexusUserDetails = {
+      const mockUserDetails: NexusUserDetails = {
         id: userId,
         name: 'Test User',
         bio: 'Test bio',
@@ -25,7 +31,7 @@ describe('LocalUserService', () => {
         indexed_at: Date.now(),
       };
 
-      await Core.UserDetailsModel.create(mockUserDetails);
+      await UserDetailsModel.create(mockUserDetails);
 
       const result = await LocalUserService.readDetails({ userId });
 
@@ -45,7 +51,7 @@ describe('LocalUserService', () => {
     });
 
     it('should handle user with minimal fields', async () => {
-      const minimalUserDetails: Core.NexusUserDetails = {
+      const minimalUserDetails: NexusUserDetails = {
         id: userId,
         name: 'Minimal User',
         bio: '',
@@ -55,7 +61,7 @@ describe('LocalUserService', () => {
         indexed_at: Date.now(),
       };
 
-      await Core.UserDetailsModel.create(minimalUserDetails);
+      await UserDetailsModel.create(minimalUserDetails);
 
       const result = await LocalUserService.readDetails({ userId });
 
@@ -70,16 +76,16 @@ describe('LocalUserService', () => {
   });
 
   describe('readRelationships', () => {
-    const userId = 'test-user-id' as Core.Pubky;
+    const userId = 'test-user-id' as Pubky;
 
     it('should return user relationships from local database when found', async () => {
-      const mockRelationships: Core.UserRelationshipsModelSchema = {
+      const mockRelationships: UserRelationshipsModelSchema = {
         id: userId,
         following: true,
         followed_by: true,
       };
 
-      await Core.UserRelationshipsModel.create(mockRelationships);
+      await UserRelationshipsModel.create(mockRelationships);
 
       const result = await LocalUserService.readRelationships({ userId });
 
@@ -95,13 +101,13 @@ describe('LocalUserService', () => {
     });
 
     it('should handle user with all false relationships', async () => {
-      const emptyRelationships: Core.UserRelationshipsModelSchema = {
+      const emptyRelationships: UserRelationshipsModelSchema = {
         id: userId,
         following: false,
         followed_by: false,
       };
 
-      await Core.UserRelationshipsModel.create(emptyRelationships);
+      await UserRelationshipsModel.create(emptyRelationships);
 
       const result = await LocalUserService.readRelationships({ userId });
 
@@ -112,10 +118,10 @@ describe('LocalUserService', () => {
   });
 
   describe('updateCounts', () => {
-    const userId = 'test-user-id' as Core.Pubky;
+    const userId = 'test-user-id' as Pubky;
 
     it('should update user counts by applying count changes', async () => {
-      const initialCounts: Core.UserCountsModelSchema = {
+      const initialCounts: UserCountsModelSchema = {
         id: userId,
         tagged: 0,
         tags: 0,
@@ -128,14 +134,14 @@ describe('LocalUserService', () => {
         bookmarks: 3,
       };
 
-      await Core.UserCountsModel.create(initialCounts);
+      await UserCountsModel.create(initialCounts);
 
       await LocalUserService.updateCounts({
         userId,
         countChanges: { posts: 1, replies: 1 },
       });
 
-      const result = await Core.UserCountsModel.findById(userId);
+      const result = await UserCountsModel.findById(userId);
 
       expect(result).not.toBeNull();
       expect(result!.posts).toBe(6);
@@ -144,7 +150,7 @@ describe('LocalUserService', () => {
     });
 
     it('should not go below zero when decrementing counts', async () => {
-      const initialCounts: Core.UserCountsModelSchema = {
+      const initialCounts: UserCountsModelSchema = {
         id: userId,
         tagged: 0,
         tags: 0,
@@ -157,14 +163,14 @@ describe('LocalUserService', () => {
         bookmarks: 0,
       };
 
-      await Core.UserCountsModel.create(initialCounts);
+      await UserCountsModel.create(initialCounts);
 
       await LocalUserService.updateCounts({
         userId,
         countChanges: { posts: -5 },
       });
 
-      const result = await Core.UserCountsModel.findById(userId);
+      const result = await UserCountsModel.findById(userId);
 
       expect(result).not.toBeNull();
       expect(result!.posts).toBe(0);
@@ -176,13 +182,13 @@ describe('LocalUserService', () => {
         countChanges: { posts: 1 },
       });
 
-      const result = await Core.UserCountsModel.findById(userId);
+      const result = await UserCountsModel.findById(userId);
       expect(result).toBeNull();
     });
   });
 
   describe('upsertTtlWithDelay', () => {
-    const userId = 'test-user-id' as Core.Pubky;
+    const userId = 'test-user-id' as Pubky;
 
     it('should create TTL record with calculated timestamp for 1 minute delay', async () => {
       const retryDelayMs = 60_000; // 1 minute
@@ -191,7 +197,7 @@ describe('LocalUserService', () => {
       await LocalUserService.upsertTtlWithDelay(userId, retryDelayMs);
 
       const afterTimestamp = Date.now();
-      const result = await Core.UserTtlModel.findById(userId);
+      const result = await UserTtlModel.findById(userId);
 
       expect(result).not.toBeNull();
       expect(result!.id).toBe(userId);
@@ -215,7 +221,7 @@ describe('LocalUserService', () => {
       await LocalUserService.upsertTtlWithDelay(userId, 60_000);
 
       const afterTimestamp = Date.now();
-      const result = await Core.UserTtlModel.findById(userId);
+      const result = await UserTtlModel.findById(userId);
 
       expect(result).not.toBeNull();
 
@@ -229,8 +235,8 @@ describe('LocalUserService', () => {
     });
 
     it('should handle multiple users with different delay values', async () => {
-      const userId1 = 'user-1' as Core.Pubky;
-      const userId2 = 'user-2' as Core.Pubky;
+      const userId1 = 'user-1' as Pubky;
+      const userId2 = 'user-2' as Pubky;
 
       const beforeTimestamp = Date.now();
 
@@ -238,8 +244,8 @@ describe('LocalUserService', () => {
       await LocalUserService.upsertTtlWithDelay(userId2, 120_000); // 2 min delay
 
       const afterTimestamp = Date.now();
-      const result1 = await Core.UserTtlModel.findById(userId1);
-      const result2 = await Core.UserTtlModel.findById(userId2);
+      const result1 = await UserTtlModel.findById(userId1);
+      const result2 = await UserTtlModel.findById(userId2);
 
       const userTtlMs = 600_000;
 

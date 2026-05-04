@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
-import * as Core from '@/core';
-import * as Libs from '@/libs';
-
+import { HttpStatusCode } from '@/libs/http/http.types';
+import { handleApiError } from '@/libs/api/route-error-handler';
+import { CopyrightController } from '@/controllers/copyright/copyright';
 /**
  * API Route for copyright/DMCA takedown request submission to Chatwoot
  *
@@ -34,7 +34,7 @@ export async function POST(request: NextRequest) {
     } = body;
 
     // Delegate to controller - validation happens there
-    await Core.CopyrightController.submit({
+    await CopyrightController.submit({
       nameOwner,
       originalContentUrls,
       briefDescription,
@@ -55,14 +55,14 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json({ message: 'Success' });
   } catch (error) {
-    return Libs.handleApiError(error, 'api.copyright.POST');
+    return handleApiError(error, 'api.copyright.POST');
   }
 }
 
 export async function GET() {
   return NextResponse.json(
     { error: 'Method not allowed. Use POST instead.' },
-    { status: Libs.HttpStatusCode.METHOD_NOT_ALLOWED },
+    { status: HttpStatusCode.METHOD_NOT_ALLOWED },
   );
 }
 

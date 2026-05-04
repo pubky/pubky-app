@@ -2,12 +2,6 @@ import { describe, it, expect, vi } from 'vitest';
 import { render, screen, fireEvent } from '@testing-library/react';
 import { NewPostsButton } from './NewPostsButton';
 
-// Mock libs - use actual utility functions and icons from lucide-react
-vi.mock('@/libs', async () => {
-  const actual = await vi.importActual('@/libs');
-  return { ...actual };
-});
-
 describe('NewPostsButton', () => {
   it('renders nothing when visible is false', () => {
     const { container } = render(<NewPostsButton count={5} onClick={vi.fn()} visible={false} />);

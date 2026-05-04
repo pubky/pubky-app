@@ -1,9 +1,6 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import * as Core from '@/core';
-import * as Libs from '@/libs';
-import { AppError, ErrorCategory, ValidationErrorCode, ErrorService } from '@/libs';
 import { BookmarkResult, postUriBuilder } from 'pubky-app-specs';
-import { asOpaque } from '@/test-utils';
+import { asOpaque } from '@/test-utils/type-assertions';
 import {
   TEST_PUBKY,
   TEST_POST_IDS,
@@ -14,7 +11,12 @@ import {
   buildPubkyUri,
   createPostUri,
 } from '../pipes.test-utils';
-
+import { AppError } from '@/libs/error/error';
+import { ValidationErrorCode } from '@/libs/error/error.codes';
+import { ErrorCategory, ErrorService } from '@/libs/error/error.types';
+import { Logger } from '@/libs/logger/logger';
+import { BookmarkNormalizer } from '@/pipes/bookmark/bookmark.normalizer';
+import { PubkySpecsSingleton } from '@/pipes/pipes.builder';
 describe('BookmarkNormalizer', () => {
   const createMockBuilder = (overrides?: Partial<{ createBookmark: ReturnType<typeof vi.fn> }>) => ({
     createBookmark: vi.fn((uri: string) =>
@@ -42,24 +44,24 @@ describe('BookmarkNormalizer', () => {
     describe('to - successful creation', () => {
       it('should create bookmark and log debug message', () => {
         const postUri = createPostUri();
-        const result = Core.BookmarkNormalizer.to(postUri, TEST_PUBKY.USER_1);
+        const result = BookmarkNormalizer.to(postUri, TEST_PUBKY.USER_1);
 
         expect(result).toHaveProperty('bookmark');
         expect(result).toHaveProperty('meta');
-        expect(Libs.Logger.debug).toHaveBeenCalledWith('Bookmark validated', { result });
+        expect(Logger.debug).toHaveBeenCalledWith('Bookmark validated', { result });
       });
 
       it('should call PubkySpecsSingleton.get with userId and createBookmark with postUri', () => {
         const postUri = createPostUri();
-        Core.BookmarkNormalizer.to(postUri, TEST_PUBKY.USER_1);
+        BookmarkNormalizer.to(postUri, TEST_PUBKY.USER_1);
 
-        expect(Core.PubkySpecsSingleton.get).toHaveBeenCalledWith(TEST_PUBKY.USER_1);
+        expect(PubkySpecsSingleton.get).toHaveBeenCalledWith(TEST_PUBKY.USER_1);
         expect(mockBuilder.createBookmark).toHaveBeenCalledWith(postUri);
       });
 
       it('should return correct structure with bookmark and meta URL', () => {
         const postUri = createPostUri();
-        const result = Core.BookmarkNormalizer.to(postUri, TEST_PUBKY.USER_1);
+        const result = BookmarkNormalizer.to(postUri, TEST_PUBKY.USER_1);
 
         expect(result.bookmark).toHaveProperty('toJson');
         expect(result.bookmark.toJson().uri).toBe(postUri);
@@ -75,7 +77,7 @@ describe('BookmarkNormalizer', () => {
         ['author 1, post 3', TEST_PUBKY.USER_1, TEST_POST_IDS.POST_3],
       ])('should handle %s', (_, author, postId) => {
         const uri = createPostUri(author, postId);
-        Core.BookmarkNormalizer.to(uri, TEST_PUBKY.USER_1);
+        BookmarkNormalizer.to(uri, TEST_PUBKY.USER_1);
         expect(mockBuilder.createBookmark).toHaveBeenCalledWith(uri);
       });
 
@@ -83,8 +85,8 @@ describe('BookmarkNormalizer', () => {
         ['USER_1', TEST_PUBKY.USER_1],
         ['USER_2', TEST_PUBKY.USER_2],
       ])('should handle different userId: %s', (_, userId) => {
-        Core.BookmarkNormalizer.to(createPostUri(), userId);
-        expect(Core.PubkySpecsSingleton.get).toHaveBeenCalledWith(userId);
+        BookmarkNormalizer.to(createPostUri(), userId);
+        expect(PubkySpecsSingleton.get).toHaveBeenCalledWith(userId);
       });
     });
 
@@ -97,7 +99,7 @@ describe('BookmarkNormalizer', () => {
         const postUri = createPostUri();
 
         try {
-          Core.BookmarkNormalizer.to(postUri, TEST_PUBKY.USER_1);
+          BookmarkNormalizer.to(postUri, TEST_PUBKY.USER_1);
           expect.fail('Should have thrown');
         } catch (error) {
           expect(error).toBeInstanceOf(AppError);
@@ -113,13 +115,13 @@ describe('BookmarkNormalizer', () => {
 
       it('should throw AppError when PubkySpecsSingleton.get fails', () => {
         const errorMessage = 'Singleton initialization failed';
-        vi.spyOn(Core.PubkySpecsSingleton, 'get').mockImplementation(() => {
+        vi.spyOn(PubkySpecsSingleton, 'get').mockImplementation(() => {
           throw errorMessage;
         });
         const postUri = createPostUri();
 
         try {
-          Core.BookmarkNormalizer.to(postUri, TEST_PUBKY.USER_1);
+          BookmarkNormalizer.to(postUri, TEST_PUBKY.USER_1);
           expect.fail('Should have thrown');
         } catch (error) {
           expect(error).toBeInstanceOf(AppError);
@@ -136,8 +138,8 @@ describe('BookmarkNormalizer', () => {
           throw 'Error';
         });
 
-        expect(() => Core.BookmarkNormalizer.to(createPostUri(), TEST_PUBKY.USER_1)).toThrow(AppError);
-        expect(Libs.Logger.debug).not.toHaveBeenCalled();
+        expect(() => BookmarkNormalizer.to(createPostUri(), TEST_PUBKY.USER_1)).toThrow(AppError);
+        expect(Logger.debug).not.toHaveBeenCalled();
       });
     });
 
@@ -148,7 +150,7 @@ describe('BookmarkNormalizer', () => {
         ['query parameters', `${createPostUri()}?param=value`],
         ['very long URI', createPostUri(TEST_PUBKY.USER_1, 'a'.repeat(1000))],
       ])('should pass %s postUri to builder', (_, uri) => {
-        Core.BookmarkNormalizer.to(uri, TEST_PUBKY.USER_1);
+        BookmarkNormalizer.to(uri, TEST_PUBKY.USER_1);
         expect(mockBuilder.createBookmark).toHaveBeenCalledWith(uri);
       });
 
@@ -159,8 +161,8 @@ describe('BookmarkNormalizer', () => {
         ['invalid format userId', INVALID_INPUTS.INVALID_FORMAT],
       ])('should pass %s to PubkySpecsSingleton.get (unit test)', (_, invalidUserId) => {
         // In unit tests, mocks don't validate - just verify calls
-        Core.BookmarkNormalizer.to(createPostUri(), invalidUserId);
-        expect(Core.PubkySpecsSingleton.get).toHaveBeenCalledWith(invalidUserId);
+        BookmarkNormalizer.to(createPostUri(), invalidUserId);
+        expect(PubkySpecsSingleton.get).toHaveBeenCalledWith(invalidUserId);
       });
     });
   });
@@ -179,7 +181,7 @@ describe('BookmarkNormalizer', () => {
     describe('successful creation with real library', () => {
       it('should create valid result with correct URL format', () => {
         const postUri = createRealPostUri();
-        const result = Core.BookmarkNormalizer.to(postUri, TEST_PUBKY.USER_1);
+        const result = BookmarkNormalizer.to(postUri, TEST_PUBKY.USER_1);
 
         expect(result.bookmark).toBeDefined();
         expect(result.meta.url).toMatch(/^pubky:\/\/.+\/pub\/pubky\.app\/bookmarks\/.+/);
@@ -188,7 +190,7 @@ describe('BookmarkNormalizer', () => {
 
       it('should store correct post URI in bookmark JSON', () => {
         const postUri = createRealPostUri();
-        const result = Core.BookmarkNormalizer.to(postUri, TEST_PUBKY.USER_1);
+        const result = BookmarkNormalizer.to(postUri, TEST_PUBKY.USER_1);
 
         expect(result.bookmark.toJson().uri).toBe(postUri);
       });
@@ -197,8 +199,8 @@ describe('BookmarkNormalizer', () => {
         const uri1 = createRealPostUri(TEST_PUBKY.USER_1, TEST_POST_IDS.POST_1);
         const uri2 = createRealPostUri(TEST_PUBKY.USER_1, TEST_POST_IDS.POST_2);
 
-        const result1 = Core.BookmarkNormalizer.to(uri1, TEST_PUBKY.USER_1);
-        const result2 = Core.BookmarkNormalizer.to(uri2, TEST_PUBKY.USER_1);
+        const result1 = BookmarkNormalizer.to(uri1, TEST_PUBKY.USER_1);
+        const result2 = BookmarkNormalizer.to(uri2, TEST_PUBKY.USER_1);
 
         expect(result1.meta.url).not.toBe(result2.meta.url);
       });
@@ -212,7 +214,7 @@ describe('BookmarkNormalizer', () => {
         ['invalid format', INVALID_INPUTS.INVALID_FORMAT],
       ])('should throw AppError for %s post URI', (_, invalidUri) => {
         try {
-          Core.BookmarkNormalizer.to(invalidUri, TEST_PUBKY.USER_1);
+          BookmarkNormalizer.to(invalidUri, TEST_PUBKY.USER_1);
           expect.fail('Should have thrown');
         } catch (error) {
           expect(error).toBeInstanceOf(AppError);
@@ -234,7 +236,7 @@ describe('BookmarkNormalizer', () => {
         ['http protocol', 'http://example/pub/pubky.app/posts/post123'],
         ['incomplete structure', 'pubky://somevalue'],
       ])('should accept %s (library is permissive)', (_, permissiveUri) => {
-        const result = Core.BookmarkNormalizer.to(permissiveUri, TEST_PUBKY.USER_1);
+        const result = BookmarkNormalizer.to(permissiveUri, TEST_PUBKY.USER_1);
         expect(result).toBeDefined();
         expect(result.bookmark.toJson().uri).toBe(permissiveUri);
       });

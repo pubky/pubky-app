@@ -1,19 +1,21 @@
 'use client';
 
-import * as Core from '@/core';
-import * as Atoms from '@/atoms';
-import * as Molecules from '@/molecules';
-import * as Hooks from '@/hooks';
-import * as Libs from '@/libs';
-import { getTagsLayoutForSurfaceLayout, PostMainLayoutProvider } from '@/organisms/PostMain/PostMainLayout';
-import { SinglePostArticle } from '../SinglePostArticle';
-import { SinglePostCard } from '../SinglePostCard';
+import { usePostDetails } from '@/hooks/usePostDetails/usePostDetails';
+import { useRequireAuth } from '@/hooks/useRequireAuth/useRequireAuth';
+import { Card } from '@/atoms/Card/Card';
+import { Container } from '@/atoms/Container/Container';
+import { PostDeleted } from '@/molecules/PostDeleted/PostDeleted';
 
-import { PostPageHeader } from '../PostPageHeader';
+import { getTagsLayoutForSurfaceLayout, PostMainLayoutProvider } from '@/organisms/PostMain/PostMainLayout';
+import { SinglePostArticle } from '../SinglePostArticle/SinglePostArticle';
+import { SinglePostCard } from '../SinglePostCard/SinglePostCard';
+import { PostPageHeader } from '../PostPageHeader/PostPageHeader';
+
 import { SinglePostContentSkeleton } from './SinglePostContent.skeleton';
 import { ThreadTree } from '../ThreadTree/ThreadTree';
 import type { SinglePostContentProps } from './SinglePostContent.types';
-
+import { isPostDeleted } from '@/libs/utils/utils';
+import { useHomeStore } from '@/stores/home/home.store';
 /**
  * SinglePostContent Organism
  *
@@ -29,15 +31,15 @@ import type { SinglePostContentProps } from './SinglePostContent.types';
  * following the atomic design pattern where only organisms can call hooks.
  */
 export function SinglePostContent({ postId }: SinglePostContentProps) {
-  const layout = Core.useHomeStore((state) => state.layout);
+  const layout = useHomeStore((state) => state.layout);
   const tagsLayout = getTagsLayoutForSurfaceLayout(layout);
 
   // Check authentication status - unauthenticated users see limited view
-  const { isAuthenticated } = Hooks.useRequireAuth();
+  const { isAuthenticated } = useRequireAuth();
 
   // Check if parent post is deleted to determine replyability
-  const { postDetails } = Hooks.usePostDetails(postId);
-  const isDeleted = Libs.isPostDeleted(postDetails?.content);
+  const { postDetails } = usePostDetails(postId);
+  const isDeleted = isPostDeleted(postDetails?.content);
 
   if (!postDetails) {
     return <SinglePostContentSkeleton />;
@@ -52,9 +54,9 @@ export function SinglePostContent({ postId }: SinglePostContentProps) {
 
       {/* Main post - FULL WIDTH - always visible */}
       {isDeleted ? (
-        <Atoms.Card className="rounded-md py-0">
-          <Molecules.PostDeleted />
-        </Atoms.Card>
+        <Card className="rounded-md py-0">
+          <PostDeleted />
+        </Card>
       ) : isArticle ? (
         <SinglePostArticle
           postId={postId}
@@ -68,14 +70,14 @@ export function SinglePostContent({ postId }: SinglePostContentProps) {
 
       {/* Replies section - only visible for authenticated users */}
       {isAuthenticated && (
-        <Atoms.Container overrideDefaults className="mb-6 flex">
+        <Container overrideDefaults className="mb-6 flex">
           {/* Left column - Replies thread with QuickReply at the end (larger) */}
-          <Atoms.Container className="mb-12 w-full min-w-0 flex-1 gap-0 overflow-hidden sm:mb-0">
-            <Atoms.Container overrideDefaults className="ml-3">
+          <Container className="mb-12 w-full min-w-0 flex-1 gap-0 overflow-hidden sm:mb-0">
+            <Container overrideDefaults className="ml-3">
               <ThreadTree key={postId} postId={postId} showQuickReply={!isDeleted} />
-            </Atoms.Container>
-          </Atoms.Container>
-        </Atoms.Container>
+            </Container>
+          </Container>
+        </Container>
       )}
     </PostMainLayoutProvider>
   );

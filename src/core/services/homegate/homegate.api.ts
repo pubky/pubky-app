@@ -1,4 +1,4 @@
-import { HOMEGATE_URL } from '@/config';
+import { HOMEGATE_URL } from '@/config/network';
 
 /**
  * Homegate API Endpoints

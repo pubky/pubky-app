@@ -11,39 +11,30 @@ vi.mock('next/navigation', () => ({
 }));
 
 // Mock atoms
-vi.mock('@/atoms', () => ({
-  Button: ({
-    children,
-    onClick,
-    id,
-    variant,
-    ...props
-  }: {
-    children: React.ReactNode;
-    onClick?: () => void;
-    id?: string;
-    variant?: string;
-    [key: string]: unknown;
-  }) => (
-    <button id={id} onClick={onClick} data-variant={variant} {...props}>
-      {children}
-    </button>
-  ),
-}));
-
-// Mock libs
-vi.mock('@/libs', async () => {
-  const actual = await vi.importActual('@/libs');
+vi.mock('@/atoms/Button/Button', () => {
   return {
-    ...actual,
-    UserRoundPlus: ({ className }: { className?: string }) => (
-      <span data-testid="user-round-plus-icon" className={className} />
+    Button: ({
+      children,
+      onClick,
+      id,
+      variant,
+      ...props
+    }: {
+      children: React.ReactNode;
+      onClick?: () => void;
+      id?: string;
+      variant?: string;
+      [key: string]: unknown;
+    }) => (
+      <button id={id} onClick={onClick} data-variant={variant} {...props}>
+        {children}
+      </button>
     ),
   };
 });
 
 // Mock app
-vi.mock('@/app', () => ({
+vi.mock('@/app/routes', () => ({
   ONBOARDING_ROUTES: {
     HUMAN: '/onboarding/human',
   },

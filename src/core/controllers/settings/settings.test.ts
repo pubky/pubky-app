@@ -1,11 +1,37 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { SettingsController } from './settings';
-import * as i18nUtils from '@/i18n/utils';
-import * as Core from '@/core';
-import { defaultNotificationPreferences, defaultPrivacyPreferences } from '@/core/stores/settings/settings.types';
-import { asOpaque, mockAuthStore, mockSettingsStore } from '@/test-utils';
+import { setLocaleCookie } from '@/i18n/utils';
+import { asOpaque } from '@/test-utils/type-assertions';
+import { mockAuthStore, mockSettingsStore } from '@/test-utils/stores';
+import { NotificationApplication } from '@/application/notification/notification';
+import { SettingsApplication } from '@/application/settings/settings';
+import type { Pubky } from '@/models/models.types';
+import { NotificationType } from '@/models/notification/notification.types';
+import { NotificationNormalizer } from '@/pipes/notification/notification.normalizer';
+import { SettingsNormalizer } from '@/pipes/settings/settings.normalizer';
+import { useAuthStore } from '@/stores/auth/auth.store';
+import { useNotificationStore } from '@/stores/notification/notification.store';
+import type { NotificationStore } from '@/stores/notification/notification.types';
+import { useSettingsStore } from '@/stores/settings/settings.store';
+import {
+  defaultNotificationPreferences,
+  defaultPrivacyPreferences,
+  type SettingsState,
+} from '@/stores/settings/settings.types';
 
-const TEST_PUBKY = 'o1gg96ewuojmopcjbz8895478wdtxtzzuxnfjjz8o8e77csa1ngo' as Core.Pubky;
+vi.mock('@/i18n/utils', () => ({
+  setLocaleCookie: vi.fn(),
+}));
+
+const TEST_PUBKY = 'o1gg96ewuojmopcjbz8895478wdtxtzzuxnfjjz8o8e77csa1ngo' as Pubky;
+const MOCK_LAST_READ = 5000;
+const MOCK_ALLOWED_TYPES = [NotificationType.Follow, NotificationType.Reply];
+const mockSetLocaleCookie = vi.mocked(setLocaleCookie);
+
+const mockNotificationStoreActions = {
+  selectLastRead: () => MOCK_LAST_READ,
+  setUnread: vi.fn(),
+};
 
 const mockStoreActions = {
   setNotificationPreference: vi.fn(),
@@ -31,7 +57,7 @@ const mockStoreActions = {
   version: 1,
 };
 
-const mockSettingsState: Core.SettingsState = {
+const mockSettingsState: SettingsState = {
   notifications: defaultNotificationPreferences,
   privacy: defaultPrivacyPreferences,
   muted: [],
@@ -42,25 +68,28 @@ const mockSettingsState: Core.SettingsState = {
 
 describe('SettingsController', () => {
   let commitUpdateSpy: ReturnType<typeof vi.spyOn>;
-  let extractStateSpy: ReturnType<typeof vi.spyOn>;
-  let setLocaleCookieSpy: ReturnType<typeof vi.spyOn>;
+  let countFilteredSpy: ReturnType<typeof vi.spyOn>;
 
   beforeEach(() => {
     vi.clearAllMocks();
+    mockSetLocaleCookie.mockImplementation(() => {});
 
     // Reset pendingCommit between tests to avoid chaining across tests
     // pendingCommit is private; an opaque cast is needed to reset static state between tests
     asOpaque<{ pendingCommit: Promise<void> }>(SettingsController).pendingCommit = Promise.resolve();
 
-    vi.spyOn(Core.useSettingsStore, 'getState').mockReturnValue(mockSettingsStore(mockStoreActions));
+    vi.spyOn(useSettingsStore, 'getState').mockReturnValue(mockSettingsStore(mockStoreActions));
 
-    vi.spyOn(Core.useAuthStore, 'getState').mockReturnValue(
-      mockAuthStore({ selectCurrentUserPubky: () => TEST_PUBKY }),
+    vi.spyOn(useAuthStore, 'getState').mockReturnValue(mockAuthStore({ selectCurrentUserPubky: () => TEST_PUBKY }));
+
+    vi.spyOn(useNotificationStore, 'getState').mockReturnValue(
+      asOpaque<NotificationStore>(mockNotificationStoreActions),
     );
 
-    extractStateSpy = vi.spyOn(Core.SettingsNormalizer, 'extractState').mockReturnValue(mockSettingsState);
-    commitUpdateSpy = vi.spyOn(Core.SettingsApplication, 'commitUpdate').mockResolvedValue(undefined);
-    setLocaleCookieSpy = vi.spyOn(i18nUtils, 'setLocaleCookie').mockImplementation(() => {});
+    vi.spyOn(SettingsNormalizer, 'extractState').mockReturnValue(mockSettingsState);
+    vi.spyOn(NotificationNormalizer, 'toEnabledTypes').mockReturnValue(MOCK_ALLOWED_TYPES);
+    commitUpdateSpy = vi.spyOn(SettingsApplication, 'commitUpdate').mockResolvedValue(undefined);
+    countFilteredSpy = vi.spyOn(NotificationApplication, 'countFilteredUnreadSince').mockResolvedValue(3);
   });
 
   afterEach(() => {
@@ -68,11 +97,79 @@ describe('SettingsController', () => {
   });
 
   describe('setNotificationPreference', () => {
-    it('should update zustand store and sync to homeserver', async () => {
+    it('should update zustand store', async () => {
       await SettingsController.setNotificationPreference('follow', false);
 
       expect(mockStoreActions.setNotificationPreference).toHaveBeenCalledWith('follow', false);
-      expect(extractStateSpy).toHaveBeenCalled();
+    });
+
+    it('should recalculate unread badge count when types are enabled', async () => {
+      countFilteredSpy.mockResolvedValue(3);
+      await SettingsController.setNotificationPreference('follow', true);
+
+      expect(countFilteredSpy).toHaveBeenCalledWith(MOCK_LAST_READ, MOCK_ALLOWED_TYPES);
+      expect(mockNotificationStoreActions.setUnread).toHaveBeenCalledWith(3);
+    });
+
+    it('should recalculate unread badge count to 0 when no types match', async () => {
+      countFilteredSpy.mockResolvedValue(0);
+      await SettingsController.setNotificationPreference('follow', false);
+
+      expect(countFilteredSpy).toHaveBeenCalledWith(MOCK_LAST_READ, MOCK_ALLOWED_TYPES);
+      expect(mockNotificationStoreActions.setUnread).toHaveBeenCalledWith(0);
+    });
+
+    it('should sync to homeserver', async () => {
+      await SettingsController.setNotificationPreference('follow', false);
+
+      expect(commitUpdateSpy).toHaveBeenCalledWith(mockSettingsState, TEST_PUBKY);
+    });
+
+    it('should still sync to homeserver when badge recalculation fails', async () => {
+      countFilteredSpy.mockRejectedValue(new Error('db-fail'));
+
+      await expect(SettingsController.setNotificationPreference('follow', false)).rejects.toThrow('db-fail');
+      expect(commitUpdateSpy).toHaveBeenCalledWith(mockSettingsState, TEST_PUBKY);
+    });
+  });
+
+  describe('setAllNotifications', () => {
+    it('should update zustand store', async () => {
+      const preferences = { ...defaultNotificationPreferences, follow: false };
+      await SettingsController.setAllNotifications(preferences);
+
+      expect(mockStoreActions.setAllNotifications).toHaveBeenCalledWith(preferences);
+    });
+
+    it('should recalculate unread badge count when types are enabled', async () => {
+      countFilteredSpy.mockResolvedValue(3);
+      const preferences = { ...defaultNotificationPreferences, follow: false };
+      await SettingsController.setAllNotifications(preferences);
+
+      expect(countFilteredSpy).toHaveBeenCalledWith(MOCK_LAST_READ, MOCK_ALLOWED_TYPES);
+      expect(mockNotificationStoreActions.setUnread).toHaveBeenCalledWith(3);
+    });
+
+    it('should recalculate unread badge count to 0 when no types match', async () => {
+      countFilteredSpy.mockResolvedValue(0);
+      const preferences = { ...defaultNotificationPreferences, follow: false };
+      await SettingsController.setAllNotifications(preferences);
+
+      expect(countFilteredSpy).toHaveBeenCalledWith(MOCK_LAST_READ, MOCK_ALLOWED_TYPES);
+      expect(mockNotificationStoreActions.setUnread).toHaveBeenCalledWith(0);
+    });
+
+    it('should sync to homeserver', async () => {
+      const preferences = { ...defaultNotificationPreferences, follow: false };
+      await SettingsController.setAllNotifications(preferences);
+
+      expect(commitUpdateSpy).toHaveBeenCalledWith(mockSettingsState, TEST_PUBKY);
+    });
+
+    it('should still sync to homeserver when badge recalculation fails', async () => {
+      countFilteredSpy.mockRejectedValue(new Error('db-fail'));
+
+      await expect(SettingsController.setAllNotifications(defaultNotificationPreferences)).rejects.toThrow('db-fail');
       expect(commitUpdateSpy).toHaveBeenCalledWith(mockSettingsState, TEST_PUBKY);
     });
   });
@@ -100,7 +197,7 @@ describe('SettingsController', () => {
       await SettingsController.setLanguage('es');
 
       expect(mockStoreActions.setLanguage).toHaveBeenCalledWith('es');
-      expect(setLocaleCookieSpy).toHaveBeenCalledWith('es');
+      expect(mockSetLocaleCookie).toHaveBeenCalledWith('es');
       expect(commitUpdateSpy).toHaveBeenCalledWith(mockSettingsState, TEST_PUBKY);
     });
   });

@@ -5,4 +5,6 @@ export interface PostTagAddButtonProps {
   className?: string;
   /** Whether the button is disabled */
   disabled?: boolean;
+  /** Visual style variant for the button chrome. */
+  variant?: 'dashed' | 'plain';
 }

@@ -1,10 +1,11 @@
 'use client';
 
 import { Facehash } from 'facehash';
-import * as Atoms from '@/atoms';
-import * as Libs from '@/libs';
+import { Typography } from '@/atoms/Typography/Typography';
+
 import { FACEHASH_AVATAR_COLORS } from './FacehashAvatar.constants';
 import type { FacehashAvatarProps } from './FacehashAvatar.types';
+import { cn } from '@/libs/utils/utils';
 
 /**
  * Renders a deterministic generative face avatar using the `facehash` library.
@@ -19,16 +20,16 @@ export function FacehashAvatar({ seed, initial, className }: FacehashAvatarProps
       showInitial={false}
       colors={FACEHASH_AVATAR_COLORS}
       enableBlink
-      className={Libs.cn('h-full w-full rounded-full text-background', className)}
+      className={cn('h-full w-full rounded-full text-background', className)}
       onRenderMouth={() => (
-        <Atoms.Typography
+        <Typography
           as="span"
           overrideDefaults
           data-testid="avatar-fallback-initial"
           style={{ fontSize: '26cqw', lineHeight: 1 }}
         >
           {initial}
-        </Atoms.Typography>
+        </Typography>
       )}
     />
   );

@@ -1,6 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { renderHook, act, waitFor } from '@testing-library/react';
 import { useMuteUser } from './useMuteUser';
+import { HttpMethod } from '@/libs/http/http.types';
 
 const { mockUseAuthStore, mockCommitMute, mockIsAppError, mockLogger } = vi.hoisted(() => ({
   mockUseAuthStore: vi.fn(),
@@ -12,19 +13,19 @@ const { mockUseAuthStore, mockCommitMute, mockIsAppError, mockLogger } = vi.hois
   },
 }));
 
-vi.mock('@/core', () => ({
+vi.mock('@/stores/auth/auth.store', () => ({
   useAuthStore: () => mockUseAuthStore(),
+}));
+vi.mock('@/controllers/mute/mute', () => ({
   MuteController: {
     commitMute: (...args: unknown[]) => mockCommitMute(...args),
   },
 }));
 
-vi.mock('@/libs', () => ({
-  HttpMethod: {
-    PUT: 'PUT',
-    DELETE: 'DELETE',
-  },
+vi.mock('@/libs/logger/logger', () => ({
   Logger: mockLogger,
+}));
+vi.mock('@/libs/error/error.utils', () => ({
   isAppError: (...args: unknown[]) => mockIsAppError(...args),
 }));
 
@@ -66,7 +67,7 @@ describe('useMuteUser', () => {
       await result.current.toggleMute('user-1', false);
     });
 
-    expect(mockCommitMute).toHaveBeenCalledWith('PUT', { muter: 'current-user', mutee: 'user-1' });
+    expect(mockCommitMute).toHaveBeenCalledWith(HttpMethod.PUT, { muter: 'current-user', mutee: 'user-1' });
   });
 
   it('calls commitMute with DELETE when unmuting', async () => {
@@ -76,7 +77,7 @@ describe('useMuteUser', () => {
       await result.current.toggleMute('user-1', true);
     });
 
-    expect(mockCommitMute).toHaveBeenCalledWith('DELETE', { muter: 'current-user', mutee: 'user-1' });
+    expect(mockCommitMute).toHaveBeenCalledWith(HttpMethod.DELETE, { muter: 'current-user', mutee: 'user-1' });
   });
 
   it('sets error and rethrows on failure', async () => {

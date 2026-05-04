@@ -3,7 +3,7 @@ import { renderHook } from '@testing-library/react';
 import { useKeyboardOffset } from './useKeyboardOffset';
 
 // Mock useKeyboardVisible
-vi.mock('../useKeyboardVisible', () => ({
+vi.mock('../useKeyboardVisible/useKeyboardVisible', () => ({
   useKeyboardVisible: vi.fn(() => false),
 }));
 
@@ -39,7 +39,7 @@ describe('useKeyboardOffset', () => {
     });
 
     // Reset the mock
-    const { useKeyboardVisible } = await import('../useKeyboardVisible');
+    const { useKeyboardVisible } = await import('../useKeyboardVisible/useKeyboardVisible');
     vi.mocked(useKeyboardVisible).mockReturnValue(false);
   });
 
@@ -59,7 +59,7 @@ describe('useKeyboardOffset', () => {
   });
 
   it('returns isKeyboardVisible as false and keyboardOffset as 0 when keyboard is not visible', async () => {
-    const { useKeyboardVisible } = await import('../useKeyboardVisible');
+    const { useKeyboardVisible } = await import('../useKeyboardVisible/useKeyboardVisible');
     vi.mocked(useKeyboardVisible).mockReturnValue(false);
 
     const { result } = renderHook(() => useKeyboardOffset());
@@ -69,7 +69,7 @@ describe('useKeyboardOffset', () => {
   });
 
   it('returns isKeyboardVisible as true and calculates keyboardOffset when keyboard is visible', async () => {
-    const { useKeyboardVisible } = await import('../useKeyboardVisible');
+    const { useKeyboardVisible } = await import('../useKeyboardVisible/useKeyboardVisible');
     vi.mocked(useKeyboardVisible).mockReturnValue(true);
     mockVisualViewport.height = 500; // Keyboard open
     mockVisualViewport.offsetTop = 0;
@@ -82,7 +82,7 @@ describe('useKeyboardOffset', () => {
   });
 
   it('adds event listeners to visualViewport when keyboard is visible', async () => {
-    const { useKeyboardVisible } = await import('../useKeyboardVisible');
+    const { useKeyboardVisible } = await import('../useKeyboardVisible/useKeyboardVisible');
     vi.mocked(useKeyboardVisible).mockReturnValue(true);
 
     renderHook(() => useKeyboardOffset());
@@ -92,7 +92,7 @@ describe('useKeyboardOffset', () => {
   });
 
   it('removes event listeners on unmount', async () => {
-    const { useKeyboardVisible } = await import('../useKeyboardVisible');
+    const { useKeyboardVisible } = await import('../useKeyboardVisible/useKeyboardVisible');
     vi.mocked(useKeyboardVisible).mockReturnValue(true);
 
     const { unmount } = renderHook(() => useKeyboardOffset());
@@ -104,7 +104,7 @@ describe('useKeyboardOffset', () => {
   });
 
   it('handles missing visualViewport API gracefully', async () => {
-    const { useKeyboardVisible } = await import('../useKeyboardVisible');
+    const { useKeyboardVisible } = await import('../useKeyboardVisible/useKeyboardVisible');
     vi.mocked(useKeyboardVisible).mockReturnValue(true);
 
     Object.defineProperty(window, 'visualViewport', {
@@ -121,7 +121,7 @@ describe('useKeyboardOffset', () => {
   });
 
   it('calculates offset with non-zero offsetTop', async () => {
-    const { useKeyboardVisible } = await import('../useKeyboardVisible');
+    const { useKeyboardVisible } = await import('../useKeyboardVisible/useKeyboardVisible');
     vi.mocked(useKeyboardVisible).mockReturnValue(true);
     mockVisualViewport.height = 500;
     mockVisualViewport.offsetTop = 50;
@@ -133,7 +133,7 @@ describe('useKeyboardOffset', () => {
   });
 
   it('resets offset to 0 when keyboard closes', async () => {
-    const { useKeyboardVisible } = await import('../useKeyboardVisible');
+    const { useKeyboardVisible } = await import('../useKeyboardVisible/useKeyboardVisible');
 
     // Reset offsetTop for this test
     mockVisualViewport.offsetTop = 0;
@@ -155,7 +155,7 @@ describe('useKeyboardOffset', () => {
   });
 
   it('applies offsetAdjustment to reduce the calculated offset', async () => {
-    const { useKeyboardVisible } = await import('../useKeyboardVisible');
+    const { useKeyboardVisible } = await import('../useKeyboardVisible/useKeyboardVisible');
     vi.mocked(useKeyboardVisible).mockReturnValue(true);
     mockVisualViewport.height = 500; // Keyboard open
     mockVisualViewport.offsetTop = 0;
@@ -168,7 +168,7 @@ describe('useKeyboardOffset', () => {
   });
 
   it('applies larger offsetAdjustment for centered dialogs', async () => {
-    const { useKeyboardVisible } = await import('../useKeyboardVisible');
+    const { useKeyboardVisible } = await import('../useKeyboardVisible/useKeyboardVisible');
     vi.mocked(useKeyboardVisible).mockReturnValue(true);
     mockVisualViewport.height = 500;
     mockVisualViewport.offsetTop = 0;
@@ -180,7 +180,7 @@ describe('useKeyboardOffset', () => {
   });
 
   it('ensures offset never goes below 0 with large adjustments', async () => {
-    const { useKeyboardVisible } = await import('../useKeyboardVisible');
+    const { useKeyboardVisible } = await import('../useKeyboardVisible/useKeyboardVisible');
     vi.mocked(useKeyboardVisible).mockReturnValue(true);
     mockVisualViewport.height = 500;
     mockVisualViewport.offsetTop = 0;
@@ -192,7 +192,7 @@ describe('useKeyboardOffset', () => {
   });
 
   it('uses default offsetAdjustment of 0 when not provided', async () => {
-    const { useKeyboardVisible } = await import('../useKeyboardVisible');
+    const { useKeyboardVisible } = await import('../useKeyboardVisible/useKeyboardVisible');
     vi.mocked(useKeyboardVisible).mockReturnValue(true);
     mockVisualViewport.height = 500;
     mockVisualViewport.offsetTop = 0;

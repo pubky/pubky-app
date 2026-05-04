@@ -11,11 +11,16 @@ exports[`PostInputTags - Snapshots > matches snapshot with empty tags 1`] = `
     data-override-defaults="true"
     data-testid="container"
   >
-    <button
-      data-testid="add-tag-button"
+    <div
+      data-testid="tag-input-toggle"
     >
-      +
-    </button>
+      <button
+        data-testid="add-tag-button"
+        data-variant="plain"
+      >
+        +
+      </button>
+    </div>
   </div>
 </div>
 `;
@@ -32,24 +37,29 @@ exports[`PostInputTags - Snapshots > matches snapshot with input open 1`] = `
     data-testid="container"
   >
     <div
-      data-testid="tag-input-wrapper"
+      data-testid="tag-input-toggle"
     >
-      <input
-        data-testid="tag-input"
-        value=""
-      />
-      <button
-        aria-label="Open emoji picker"
-        data-testid="emoji-button"
+      <div
+        data-container-variant="plain"
+        data-testid="tag-input-wrapper"
       >
-        😀
-      </button>
-      <button
-        aria-label="Close tag input"
-        data-testid="close-button"
-      >
-        ×
-      </button>
+        <input
+          data-testid="tag-input"
+          value=""
+        />
+        <button
+          aria-label="Open emoji picker"
+          data-testid="emoji-button"
+        >
+          😀
+        </button>
+        <button
+          aria-label="Close tag input"
+          data-testid="close-button"
+        >
+          ×
+        </button>
+      </div>
     </div>
   </div>
 </div>
@@ -66,11 +76,16 @@ exports[`PostInputTags - Snapshots > matches snapshot with tags 1`] = `
     data-override-defaults="true"
     data-testid="container"
   >
-    <button
-      data-testid="add-tag-button"
+    <div
+      data-testid="tag-input-toggle"
     >
-      +
-    </button>
+      <button
+        data-testid="add-tag-button"
+        data-variant="plain"
+      >
+        +
+      </button>
+    </div>
   </div>
 </div>
 `;

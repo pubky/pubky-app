@@ -1,8 +1,9 @@
 import { describe, it, expect } from 'vitest';
 import { ReportValidators } from './report.validators';
 import { REPORT_ISSUE_TYPES, REPORT_REASON_MAX_LENGTH, REPORT_ISSUE_TYPE_VALUES } from './report.constants';
-import * as Libs from '@/libs';
-import { AppError, ErrorCategory, ValidationErrorCode, ErrorService } from '@/libs';
+import { AppError } from '@/libs/error/error';
+import { ValidationErrorCode } from '@/libs/error/error.codes';
+import { ErrorCategory, ErrorService } from '@/libs/error/error.types';
 
 describe('ReportValidators', () => {
   describe('validatePostUrl', () => {
@@ -33,15 +34,15 @@ describe('ReportValidators', () => {
     });
 
     it('should throw AppError for whitespace-only string', () => {
-      expect(() => ReportValidators.validatePostUrl('   ')).toThrow(Libs.AppError);
+      expect(() => ReportValidators.validatePostUrl('   ')).toThrow(AppError);
     });
 
     it('should throw AppError for null', () => {
-      expect(() => ReportValidators.validatePostUrl(null)).toThrow(Libs.AppError);
+      expect(() => ReportValidators.validatePostUrl(null)).toThrow(AppError);
     });
 
     it('should throw AppError for undefined', () => {
-      expect(() => ReportValidators.validatePostUrl(undefined)).toThrow(Libs.AppError);
+      expect(() => ReportValidators.validatePostUrl(undefined)).toThrow(AppError);
     });
 
     it('should throw AppError with FORMAT_ERROR for invalid URL', () => {
@@ -61,7 +62,7 @@ describe('ReportValidators', () => {
     });
 
     it('should throw AppError for URL without protocol', () => {
-      expect(() => ReportValidators.validatePostUrl('example.com/post/123')).toThrow(Libs.AppError);
+      expect(() => ReportValidators.validatePostUrl('example.com/post/123')).toThrow(AppError);
     });
   });
 
@@ -100,15 +101,15 @@ describe('ReportValidators', () => {
     });
 
     it('should throw AppError for whitespace-only string', () => {
-      expect(() => ReportValidators.validateIssueType('   ')).toThrow(Libs.AppError);
+      expect(() => ReportValidators.validateIssueType('   ')).toThrow(AppError);
     });
 
     it('should throw AppError for null', () => {
-      expect(() => ReportValidators.validateIssueType(null)).toThrow(Libs.AppError);
+      expect(() => ReportValidators.validateIssueType(null)).toThrow(AppError);
     });
 
     it('should throw AppError for undefined', () => {
-      expect(() => ReportValidators.validateIssueType(undefined)).toThrow(Libs.AppError);
+      expect(() => ReportValidators.validateIssueType(undefined)).toThrow(AppError);
     });
 
     it('should throw AppError with INVALID_INPUT for invalid issue type', () => {
@@ -155,15 +156,15 @@ describe('ReportValidators', () => {
     });
 
     it('should throw AppError for whitespace-only string', () => {
-      expect(() => ReportValidators.validateReason('   ')).toThrow(Libs.AppError);
+      expect(() => ReportValidators.validateReason('   ')).toThrow(AppError);
     });
 
     it('should throw AppError for null', () => {
-      expect(() => ReportValidators.validateReason(null)).toThrow(Libs.AppError);
+      expect(() => ReportValidators.validateReason(null)).toThrow(AppError);
     });
 
     it('should throw AppError for undefined', () => {
-      expect(() => ReportValidators.validateReason(undefined)).toThrow(Libs.AppError);
+      expect(() => ReportValidators.validateReason(undefined)).toThrow(AppError);
     });
 
     it('should accept reason at max length', () => {
@@ -224,15 +225,15 @@ describe('ReportValidators', () => {
     });
 
     it('should throw AppError for whitespace-only string', () => {
-      expect(() => ReportValidators.validatePubky('   ')).toThrow(Libs.AppError);
+      expect(() => ReportValidators.validatePubky('   ')).toThrow(AppError);
     });
 
     it('should throw AppError for null', () => {
-      expect(() => ReportValidators.validatePubky(null)).toThrow(Libs.AppError);
+      expect(() => ReportValidators.validatePubky(null)).toThrow(AppError);
     });
 
     it('should throw AppError for undefined', () => {
-      expect(() => ReportValidators.validatePubky(undefined)).toThrow(Libs.AppError);
+      expect(() => ReportValidators.validatePubky(undefined)).toThrow(AppError);
     });
   });
 
@@ -259,15 +260,15 @@ describe('ReportValidators', () => {
     });
 
     it('should throw AppError for whitespace-only string', () => {
-      expect(() => ReportValidators.validateName('   ')).toThrow(Libs.AppError);
+      expect(() => ReportValidators.validateName('   ')).toThrow(AppError);
     });
 
     it('should throw AppError for null', () => {
-      expect(() => ReportValidators.validateName(null)).toThrow(Libs.AppError);
+      expect(() => ReportValidators.validateName(null)).toThrow(AppError);
     });
 
     it('should throw AppError for undefined', () => {
-      expect(() => ReportValidators.validateName(undefined)).toThrow(Libs.AppError);
+      expect(() => ReportValidators.validateName(undefined)).toThrow(AppError);
     });
   });
 });

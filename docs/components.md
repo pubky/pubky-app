@@ -39,16 +39,22 @@ templates/ → Page layouts
 src/components/atoms/Button/
 ├── Button.tsx           # Main component
 ├── Button.test.tsx      # Unit + snapshot tests
-├── Button.types.ts      # Type definitions
-└── index.ts             # Exports
+└── Button.types.ts      # Type definitions
 ```
+
+Do not add `index.ts` / `index.tsx` under `src/components` whose sole job is re-exporting from child folders. Component folders expose their symbols directly from concrete files (for example `Button/Button.tsx`, not `Button/index.ts` that only re-exports).
+
+### Config and app routes
+
+- **Config:** import from `@/config/<topic>` (concrete modules under `src/config/`, such as `@/config/nexus`, `@/config/posts`). Do not introduce an aggregate `src/config/index.ts` that re-exports the whole tree.
+- **Routes:** import route constants and helpers from `@/app/routes` (implemented in `src/app/routes.ts`). Use named imports; use `import type` when you only need types from a colocated `*.types.ts` file.
 
 ## Component Template
 
 ```tsx
 import * as React from 'react';
 import { cva, type VariantProps } from 'class-variance-authority';
-import { cn } from '@/libs';
+import { cn } from '@/libs/utils/utils';
 
 const buttonVariants = cva('inline-flex items-center justify-center rounded-md text-sm font-medium', {
   variants: {
@@ -86,20 +92,69 @@ export { Button, buttonVariants };
 
 ```tsx
 // CORRECT
-import { cn } from '@/libs';
-import { Button } from '@/components/atoms';
+import { cn } from '@/libs/utils/utils';
+import { Button } from '@/atoms/Button/Button';
+import { PostHeader } from '@/organisms/PostHeader/PostHeader';
 
 // WRONG
 import { cn } from 'src/lib/utils';
 import { cn } from '../../libs/utils';
+// Do not import components through folder indexes or aggregate modules.
 ```
 
+Use the component namespace aliases from `tsconfig.json` for non-local component imports:
+
+- `@/atoms/*`
+- `@/molecules/*`
+- `@/organisms/*`
+- `@/templates/*`
+
+Import from the file that defines the symbol, not from a folder, tier, or aggregate module. For sibling components in the same atomic tier or feature subtree, prefer local relative imports.
+
 ```tsx
-// src/components/atoms/index.ts
-export * from './Button';
-export * from './Input';
-export * from './Avatar';
+// Same component folder
+import type { ButtonProps } from './Button.types';
+
+// Sibling molecule
+import { ProgressSteps } from '../ProgressSteps/ProgressSteps';
+
+// Cross-tier or app-level consumer
+import { AvatarWithFallback } from '@/organisms/AvatarWithFallback/AvatarWithFallback';
 ```
+
+Route files that only render a template can re-export the template directly:
+
+```tsx
+export { Home as default } from '@/templates/Feed/Home/Home';
+```
+
+## Icons (Lucide and custom)
+
+Icons are split on purpose: **stock Lucide** ships from the `lucide-react` package; **app-owned SVGs** (brands, bespoke marks, non-Lucide shapes) live in a single module behind the **`@/icons`** path alias (`src/libs/icons/icons.tsx`).
+
+### Stock Lucide icons
+
+```tsx
+import { ChevronDown, Plus, Trash2 } from 'lucide-react';
+```
+
+Use named imports from `lucide-react` only.
+
+### Custom / brand icons
+
+```tsx
+import { MarkdownMark, UsersRound2 } from '@/icons';
+```
+
+The `@/icons` alias is defined in `tsconfig.json` and points at `src/libs/icons/icons.tsx`. Add new custom components there; keep them out of generic libs utility modules.
+
+### URL → icon / label helpers
+
+Helpers such as **`getIconFromUrl`** and **`getLabelFromUrl`** live in **`@/libs/utils/urlToIcon`** (`src/libs/utils/urlToIcon.ts`). They return Lucide component types or labels for link previews — import them from `@/libs/utils/urlToIcon`, not from `@/icons`.
+
+### Tests
+
+Component tests must use **real** `lucide-react` and `@/icons` implementations (no `vi.mock('lucide-react')` / `vi.mock('@/icons')` for icons). See `docs/component-testing.md` — _Icon components: Always Real_.
 
 ## Design System Integration
 
@@ -170,11 +225,11 @@ When migrating/creating a component:
 - [ ] Figma design analyzed
 - [ ] Shadcn installed if available
 - [ ] Placed at correct atomic level
-- [ ] Imports using `@/libs`
+- [ ] Utilities from concrete `@/libs/*` files (e.g. `cn` from `@/libs/utils/utils`); **icons** from `lucide-react` or `@/icons` per [Icons (Lucide and custom)](#icons-lucide-and-custom)
+- [ ] Component imports point at concrete files (e.g. `@/atoms/Button/Button`), not aggregate folder indexes or re-export-only paths
 - [ ] All Figma variants implemented
 - [ ] CVA used for variant management
 - [ ] Tests created (unit + snapshot) — see `docs/component-testing.md`
-- [ ] Exports updated in `atoms/index.ts`
 - [ ] Build passes (`npm run build`)
 - [ ] Visual verification in browser
 
@@ -184,9 +239,9 @@ When creating/modifying components:
 
 - [ ] Shadcn checked first?
 - [ ] File structure follows pattern?
-- [ ] Using `@/` import aliases?
+- [ ] Using concrete `@/atoms/*`, `@/molecules/*`, `@/organisms/*`, or `@/templates/*` imports?
 - [ ] Design tokens (not hardcoded colors)?
 - [ ] Figma sizing/spacing matched?
 - [ ] Tests created (unit + snapshot)?
-- [ ] Exported in index.ts?
+- [ ] No re-export-only `index.ts` / `index.tsx` added under `src/components`?
 - [ ] Build passes?

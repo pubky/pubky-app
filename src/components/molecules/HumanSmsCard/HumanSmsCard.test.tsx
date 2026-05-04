@@ -1,5 +1,6 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { render, fireEvent, screen } from '@testing-library/react';
+import { HumanSmsCard } from './HumanSmsCard';
 
 const mockPush = vi.fn();
 vi.mock('next/navigation', () => ({
@@ -9,11 +10,9 @@ vi.mock('next/navigation', () => ({
 }));
 
 const mockUseSmsVerificationInfo = vi.fn();
-vi.mock('@/hooks/useSmsVerificationInfo', () => ({
+vi.mock('@/hooks/useSmsVerificationInfo/useSmsVerificationInfo', () => ({
   useSmsVerificationInfo: () => mockUseSmsVerificationInfo(),
 }));
-
-import { HumanSmsCard } from './HumanSmsCard';
 
 vi.mock('next/image', () => ({
   __esModule: true,

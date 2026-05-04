@@ -1,79 +1,144 @@
 import { render, screen, fireEvent } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { SinglePostArticle } from './SinglePostArticle';
-import * as Hooks from '@/hooks';
-import * as Core from '@/core';
+import { usePostArticle } from '@/hooks/usePostArticle/usePostArticle';
 import type { AttachmentConstructed } from '../PostAttachments/PostAttachments.types';
-
+import { useLocalFilesStore } from '@/stores/localFiles/localFiles.store';
 // Mock hooks
-vi.mock('@/hooks', async (importOriginal) => {
-  const actual = await importOriginal<typeof import('@/hooks')>();
+vi.mock('@/hooks/usePostArticle/usePostArticle', () => ({
+  usePostArticle: vi.fn(),
+}));
+
+vi.mock('@/hooks/useLinkConfirmation/useLinkConfirmation', () => ({
+  useLinkConfirmation: vi.fn().mockReturnValue({
+    dialogOpen: false,
+    setDialogOpen: vi.fn(),
+    clickedLink: '',
+    handleLinkClick: vi.fn(),
+  }),
+}));
+
+// Mock atoms
+vi.mock('@/atoms/Container/Container', () => {
   return {
-    ...actual,
-    usePostArticle: vi.fn(),
-    useLinkConfirmation: vi.fn().mockReturnValue({
-      dialogOpen: false,
-      setDialogOpen: vi.fn(),
-      clickedLink: '',
-      handleLinkClick: vi.fn(),
-    }),
+    Container: ({ children, className }: { children: React.ReactNode; className?: string }) => (
+      <div data-testid="container" className={className}>
+        {children}
+      </div>
+    ),
   };
 });
 
-// Mock atoms
-vi.mock('@/atoms', () => ({
-  Container: ({ children, className }: { children: React.ReactNode; className?: string }) => (
-    <div data-testid="container" className={className}>
-      {children}
-    </div>
-  ),
-  Typography: ({
-    children,
-    as: Tag = 'p',
-    size,
-    className,
-  }: {
-    children: React.ReactNode;
-    as?: React.ElementType;
-    size?: string;
-    className?: string;
-  }) => (
-    <Tag data-testid="typography" data-size={size} className={className}>
-      {children}
-    </Tag>
-  ),
-  Image: ({ src, alt, className }: { src: string; alt: string; className?: string }) => (
-    <img data-testid="cover-image" src={src} alt={alt} className={className} />
-  ),
-}));
+vi.mock('@/atoms/Image/Image', () => {
+  return {
+    Image: ({ src, alt, className }: { src: string; alt: string; className?: string }) => (
+      <img data-testid="cover-image" src={src} alt={alt} className={className} />
+    ),
+  };
+});
+
+vi.mock('@/atoms/Typography/Typography', () => {
+  return {
+    Typography: ({
+      children,
+      as: Tag = 'p',
+      size,
+      className,
+    }: {
+      children: React.ReactNode;
+      as?: React.ElementType;
+      size?: string;
+      className?: string;
+    }) => (
+      <Tag data-testid="typography" data-size={size} className={className}>
+        {children}
+      </Tag>
+    ),
+  };
+});
 
 // Mock molecules
-vi.mock('@/molecules', () => ({
-  PostText: ({
-    content,
-    isArticle,
-    onLinkClick,
-  }: {
-    content: string;
-    isArticle?: boolean;
-    onLinkClick?: (url: string, e: React.MouseEvent) => void;
-  }) => (
-    <div data-testid="post-text" data-is-article={isArticle} data-has-link-click={!!onLinkClick}>
-      {content}
-    </div>
-  ),
-}));
-
-// Mock organisms
-vi.mock('@/organisms', async (importOriginal) => {
-  const actual = await importOriginal<typeof import('@/organisms')>();
+vi.mock('@/molecules/PostText/PostText', () => {
   return {
-    ...actual,
-    PostHeader: ({ postId, size, timeAgoPlacement }: { postId: string; size?: string; timeAgoPlacement?: string }) => (
-      <div data-testid="post-header" data-post-id={postId} data-size={size} data-time-placement={timeAgoPlacement}>
-        PostHeader
+    PostText: ({
+      content,
+      isArticle,
+      onLinkClick,
+    }: {
+      content: string;
+      isArticle?: boolean;
+      onLinkClick?: (url: string, e: React.MouseEvent) => void;
+    }) => (
+      <div data-testid="post-text" data-is-article={isArticle} data-has-link-click={!!onLinkClick}>
+        {content}
       </div>
     ),
+  };
+});
+
+// Mock organisms
+vi.mock('@/organisms/DialogCheckLink/DialogCheckLink', () => {
+  return {
+    DialogCheckLink: ({
+      open,
+      onOpenChangeAction,
+      linkUrl,
+    }: {
+      open: boolean;
+      onOpenChangeAction: (open: boolean) => void;
+      linkUrl: string;
+    }) => (
+      <div data-testid="dialog-check-link" data-open={open} data-link-url={linkUrl}>
+        <button data-testid="dialog-check-link-close" onClick={() => onOpenChangeAction(false)}>
+          Close Check Link
+        </button>
+      </div>
+    ),
+  };
+});
+
+vi.mock('@/organisms/DialogReply/DialogReply', () => {
+  return {
+    DialogReply: ({
+      postId,
+      open,
+      onOpenChangeAction,
+    }: {
+      postId: string;
+      open: boolean;
+      onOpenChangeAction: (open: boolean) => void;
+    }) => (
+      <div data-testid="dialog-reply" data-post-id={postId} data-open={open}>
+        <button data-testid="close-reply-dialog" onClick={() => onOpenChangeAction(false)}>
+          Close Reply
+        </button>
+      </div>
+    ),
+  };
+});
+
+vi.mock('@/organisms/DialogRepost/DialogRepost', () => {
+  return {
+    DialogRepost: ({
+      postId,
+      open,
+      onOpenChangeAction,
+    }: {
+      postId: string;
+      open: boolean;
+      onOpenChangeAction: (open: boolean) => void;
+    }) => (
+      <div data-testid="dialog-repost" data-post-id={postId} data-open={open}>
+        <button data-testid="close-repost-dialog" onClick={() => onOpenChangeAction(false)}>
+          Close Repost
+        </button>
+      </div>
+    ),
+  };
+});
+
+vi.mock('@/organisms/PostActionsBar/PostActionsBar', () => {
+  return {
     PostActionsBar: ({
       postId,
       onReplyClick,
@@ -94,74 +159,45 @@ vi.mock('@/organisms', async (importOriginal) => {
         </button>
       </div>
     ),
+  };
+});
+
+vi.mock('@/organisms/PostContentBlurred/PostContentBlurred', () => {
+  return {
     PostContentBlurred: ({ postId }: { postId: string }) => (
       <div data-testid="post-content-blurred" data-post-id={postId}>
         Blurred Content
       </div>
     ),
+  };
+});
+
+vi.mock('@/organisms/PostHeader/PostHeader', () => {
+  return {
+    PostHeader: ({ postId, size, timeAgoPlacement }: { postId: string; size?: string; timeAgoPlacement?: string }) => (
+      <div data-testid="post-header" data-post-id={postId} data-size={size} data-time-placement={timeAgoPlacement}>
+        PostHeader
+      </div>
+    ),
+  };
+});
+
+vi.mock('@/organisms/PostTagsPanel/PostTagsPanel', () => {
+  return {
     PostTagsPanel: ({ postId, className }: { postId: string; className?: string }) => (
       <div data-testid="post-tags-panel" data-post-id={postId} className={className}>
         Tags Panel
       </div>
     ),
-    DialogReply: ({
-      postId,
-      open,
-      onOpenChangeAction,
-    }: {
-      postId: string;
-      open: boolean;
-      onOpenChangeAction: (open: boolean) => void;
-    }) => (
-      <div data-testid="dialog-reply" data-post-id={postId} data-open={open}>
-        <button data-testid="close-reply-dialog" onClick={() => onOpenChangeAction(false)}>
-          Close Reply
-        </button>
-      </div>
-    ),
-    DialogRepost: ({
-      postId,
-      open,
-      onOpenChangeAction,
-    }: {
-      postId: string;
-      open: boolean;
-      onOpenChangeAction: (open: boolean) => void;
-    }) => (
-      <div data-testid="dialog-repost" data-post-id={postId} data-open={open}>
-        <button data-testid="close-repost-dialog" onClick={() => onOpenChangeAction(false)}>
-          Close Repost
-        </button>
-      </div>
-    ),
-    DialogCheckLink: ({
-      open,
-      onOpenChangeAction,
-      linkUrl,
-    }: {
-      open: boolean;
-      onOpenChangeAction: (open: boolean) => void;
-      linkUrl: string;
-    }) => (
-      <div data-testid="dialog-check-link" data-open={open} data-link-url={linkUrl}>
-        <button data-testid="dialog-check-link-close" onClick={() => onOpenChangeAction(false)}>
-          Close Check Link
-        </button>
-      </div>
-    ),
   };
 });
 
-// Mock core with importOriginal to preserve all exports
-vi.mock('@/core', async (importOriginal) => {
-  const actual = await importOriginal<typeof import('@/core')>();
-  return {
-    ...actual,
-    useLocalFilesStore: vi.fn(),
-  };
-});
+// Mock dependencies
+vi.mock('@/stores/localFiles/localFiles.store', () => ({
+  useLocalFilesStore: vi.fn(),
+}));
 
-const mockUseLocalFilesStore = vi.mocked(Core.useLocalFilesStore);
+const mockUseLocalFilesStore = vi.mocked(useLocalFilesStore);
 
 // Helper to create a mock LocalFilesStore state with required actions
 const createMockLocalFilesStore = (posts: Record<string, AttachmentConstructed[] | undefined> = {}) => ({
@@ -172,13 +208,7 @@ const createMockLocalFilesStore = (posts: Record<string, AttachmentConstructed[]
   reset: vi.fn(),
 });
 
-// Use real libs
-vi.mock('@/libs', async (importOriginal) => {
-  const actual = await importOriginal<typeof import('@/libs')>();
-  return { ...actual };
-});
-
-const mockUsePostArticle = vi.mocked(Hooks.usePostArticle);
+const mockUsePostArticle = vi.mocked(usePostArticle);
 
 describe('SinglePostArticle', () => {
   const defaultProps = {

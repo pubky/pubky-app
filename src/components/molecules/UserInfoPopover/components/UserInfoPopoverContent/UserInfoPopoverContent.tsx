@@ -1,9 +1,11 @@
 'use client';
 
 import { useTranslations } from 'next-intl';
-import * as Atoms from '@/atoms';
-import * as Libs from '@/libs';
-import * as Molecules from '@/molecules';
+import { Button } from '@/atoms/Button/Button';
+import { Container } from '@/atoms/Container/Container';
+import { Typography } from '@/atoms/Typography/Typography';
+import { PostText } from '../../../PostText/PostText';
+
 import type { AvatarGroupItem } from '@/molecules/AvatarGroup/AvatarGroup.types';
 import type { UserConnectionData } from '@/hooks/useProfileConnections/useProfileConnections.types';
 import { UserInfoPopoverHeader } from '../UserInfoPopoverHeader/UserInfoPopoverHeader';
@@ -12,16 +14,15 @@ import { UserInfoPopoverFollowButton } from '../UserInfoPopoverFollowButton/User
 import { UserInfoPopoverSkeleton } from './UserInfoPopoverContent.skeleton';
 import { useUserInfoPopoverData } from '@/hooks/useUserInfoPopoverData/useUserInfoPopoverData';
 import { useUserInfoPopoverActions } from '@/hooks/useUserInfoPopoverActions/useUserInfoPopoverActions';
+import { Pencil } from 'lucide-react';
 
 const MAX_AVATARS = 3;
-
 interface UserInfoPopoverContentProps {
   userId: string;
   userName: string;
   avatarUrl?: string;
   formattedPublicKey: string;
 }
-
 function transformConnectionsToAvatarItems(connections: UserConnectionData[], limit: number): AvatarGroupItem[] {
   return connections.slice(0, limit).map((connection) => ({
     id: connection.id,
@@ -29,11 +30,9 @@ function transformConnectionsToAvatarItems(connections: UserConnectionData[], li
     avatarUrl: connection.avatarUrl || undefined,
   }));
 }
-
 function normalizeStatsValue(statsValue: number, connectionsCount: number): number {
   return !isNaN(statsValue) && statsValue > 0 ? statsValue : Math.max(0, connectionsCount);
 }
-
 export function UserInfoPopoverContent({
   userId,
   userName,
@@ -41,7 +40,6 @@ export function UserInfoPopoverContent({
   formattedPublicKey,
 }: UserInfoPopoverContentProps) {
   const t = useTranslations('userList');
-
   const {
     isCurrentUser,
     isLoading: isDataLoading,
@@ -56,7 +54,6 @@ export function UserInfoPopoverContent({
     isFollowing,
     isFollowingStatusLoading,
   } = useUserInfoPopoverData(userId);
-
   const {
     isLoading: isActionLoading,
     onEditClick,
@@ -67,19 +64,15 @@ export function UserInfoPopoverContent({
     isFollowing,
     isFollowingStatusLoading,
   });
-
   if (isDataLoading) {
     return <UserInfoPopoverSkeleton />;
   }
-
   const normalizedFollowers = normalizeStatsValue(statsFollowers, followersCount);
   const normalizedFollowing = normalizeStatsValue(statsFollowing, followingCount);
-
   const followersAvatars = transformConnectionsToAvatarItems(followers, MAX_AVATARS);
   const followingAvatars = transformConnectionsToAvatarItems(following, MAX_AVATARS);
-
   return (
-    <Atoms.Container className="gap-3">
+    <Container className="gap-3">
       <UserInfoPopoverHeader
         userId={userId}
         userName={userName}
@@ -87,9 +80,9 @@ export function UserInfoPopoverContent({
         avatarUrl={profileAvatarUrl || avatarUrl}
       />
       {profileBio ? (
-        <Atoms.Container className="max-h-(--popover-bio-max-height) overflow-y-auto" overrideDefaults>
-          <Molecules.PostText content={profileBio} />
-        </Atoms.Container>
+        <Container className="max-h-(--popover-bio-max-height) overflow-y-auto" overrideDefaults>
+          <PostText content={profileBio} />
+        </Container>
       ) : null}
       <UserInfoPopoverStats
         followersCount={normalizedFollowers}
@@ -99,15 +92,15 @@ export function UserInfoPopoverContent({
         maxAvatars={MAX_AVATARS}
       />
       {isCurrentUser ? (
-        <Atoms.Button variant="secondary" size="sm" onClick={onEditClick} aria-label={t('editProfile')}>
-          <Libs.Pencil className="size-4" />
-          <Atoms.Typography className="text-xs leading-4 font-bold" overrideDefaults>
+        <Button variant="secondary" size="sm" onClick={onEditClick} aria-label={t('editProfile')}>
+          <Pencil className="size-4" />
+          <Typography className="text-xs leading-4 font-bold" overrideDefaults>
             {t('editProfile')}
-          </Atoms.Typography>
-        </Atoms.Button>
+          </Typography>
+        </Button>
       ) : (
         <UserInfoPopoverFollowButton isFollowing={isFollowing} isLoading={isActionLoading} onClick={onFollowClick} />
       )}
-    </Atoms.Container>
+    </Container>
   );
 }

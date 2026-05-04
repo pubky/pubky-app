@@ -1,10 +1,11 @@
 'use client';
 
 import { useRef, useEffect } from 'react';
-import * as Atoms from '@/atoms';
-import * as Molecules from '@/molecules';
-import * as Libs from '@/libs';
+import { Container } from '@/atoms/Container/Container';
+import { SearchUserSuggestion } from '../SearchUserSuggestion/SearchUserSuggestion';
+
 import type { MentionPopoverProps } from './MentionPopover.types';
+import { cn } from '@/libs/utils/utils';
 
 const POPOVER_CLASSNAME =
   'absolute z-50 mt-1 w-[var(--mention-popover-width)] max-h-[var(--mention-popover-max-height)] overflow-y-auto rounded-md border border-border bg-popover p-2';
@@ -46,17 +47,17 @@ export function MentionPopover({ users, selectedIndex, onSelect, onHover }: Ment
   }
 
   return (
-    <Atoms.Container
+    <Container
       ref={containerRef}
       role="listbox"
       aria-label="User suggestions"
       data-cy="mention-popover"
       data-testid="mention-popover"
       overrideDefaults
-      className={Libs.cn(POPOVER_CLASSNAME)}
+      className={cn(POPOVER_CLASSNAME)}
     >
       {users.map((user, index) => (
-        <Atoms.Container
+        <Container
           key={user.id}
           ref={(el) => {
             itemRefs.current[index] = el;
@@ -65,12 +66,12 @@ export function MentionPopover({ users, selectedIndex, onSelect, onHover }: Ment
           aria-selected={selectedIndex === index}
           overrideDefaults
           data-testid={`mention-popover-item-${index}`}
-          className={Libs.cn('rounded-md transition-colors', selectedIndex === index && 'bg-accent')}
+          className={cn('rounded-md transition-colors', selectedIndex === index && 'bg-accent')}
           onMouseEnter={() => onHover(index)}
         >
-          <Molecules.SearchUserSuggestion user={user} onClick={() => onSelect(user.id)} />
-        </Atoms.Container>
+          <SearchUserSuggestion user={user} onClick={() => onSelect(user.id)} />
+        </Container>
       ))}
-    </Atoms.Container>
+    </Container>
   );
 }

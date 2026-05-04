@@ -1,9 +1,8 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
-import type { THomeserverSessionResult } from '@/core';
 import { useAuthStore } from './auth.store';
-
+import type { THomeserverSessionResult } from '@/services/homeserver/homeserver.types';
 // Mock the logger
-vi.mock('@/libs/logger', () => ({
+vi.mock('@/libs/logger/logger', () => ({
   Logger: {
     info: vi.fn(),
     debug: vi.fn(),

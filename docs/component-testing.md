@@ -81,10 +81,10 @@ it('matches snapshot for small size', () => {
 
 ### Default: Use Real Implementations
 
-Always prefer real implementations from `@/libs` for pure functions and business logic:
+Always prefer real implementations from concrete `@/libs/*` files for pure functions and business logic:
 
 ```typescript
-import { formatDate, validateEmail } from '@/libs/utils';
+import { formatPublicKey, truncateString } from '@/libs/utils/utils';
 // No mocking needed for pure functions
 ```
 
@@ -101,8 +101,8 @@ Mock only for:
 ### Selective Mocking
 
 ```typescript
-vi.mock('@/libs', async () => {
-  const actual = await vi.importActual('@/libs');
+vi.mock('@/libs/logger/logger', async () => {
+  const actual = await vi.importActual<typeof import('@/libs/logger/logger')>('@/libs/logger/logger');
   return {
     ...actual,
     Logger: { ...actual.Logger, error: vi.fn() },
@@ -129,16 +129,18 @@ Each helper takes a `Partial<T>` (or a named `T` type parameter) and buries the 
 
 ```typescript
 // Before — silently disables the type check on AuthStore and the keyboard event
-import * as Core from '@/core';
+import type { AuthStore } from '@/stores/auth/auth.types';
+
 const authStore = {
   currentUserPubky: 'abc',
   signIn: vi.fn(),
-} as unknown as Core.AuthStore;
+} as unknown as AuthStore;
 
 const event = { key: 'Enter', preventDefault: vi.fn() } as any;
 
 // After — the helpers type-check the partials and add sensible defaults
-import { mockAuthStore, mockKeyboardEvent } from '@/test-utils';
+import { mockKeyboardEvent } from '@/test-utils/react-events';
+import { mockAuthStore } from '@/test-utils/stores';
 
 const authStore = mockAuthStore({
   currentUserPubky: 'abc',
@@ -152,7 +154,9 @@ A single-step widening cast like `value as unknown` or `[] as unknown[]` (inside
 
 ### Icon Components: Always Real
 
-Icon components from `@/libs/icons` should **always** use real implementations. This ensures snapshots capture actual SVG rendering and visual regression tests detect icon changes.
+Stock Lucide icons imported from `lucide-react` and custom SVG icons from `@/icons` (`src/libs/icons/icons.tsx`) should **always** use real implementations in tests—do not `vi.mock('lucide-react')` or `vi.mock('@/icons')` to stub icons. This ensures snapshots capture actual SVG output and visual regression tests detect icon changes.
+
+Application import conventions (where to import icons, URL helpers, and what not to do) are documented in **`docs/components.md`** — _Icons (Lucide and custom)_.
 
 ### Radix UI Components: Always Real
 

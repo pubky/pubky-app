@@ -1,7 +1,8 @@
 'use client';
 
 import { useTranslations } from 'next-intl';
-import * as Atoms from '@/atoms';
+import { Heading } from '@/atoms/Heading/Heading';
+
 import type { SearchHeaderProps } from './SearchHeader.types';
 
 /**
@@ -20,8 +21,8 @@ export function SearchHeader({ tags }: SearchHeaderProps) {
   }
 
   return (
-    <Atoms.Heading level={2} size="lg" className="font-light text-muted-foreground">
+    <Heading level={2} size="lg" className="font-light text-muted-foreground">
       {t('results', { tags: tags.join(', ') })}
-    </Atoms.Heading>
+    </Heading>
   );
 }

@@ -1,5 +1,4 @@
-import type { Pubky } from '@/core';
-
+import type { Pubky } from '@/models/models.types';
 export interface AutocompleteUserData {
   id: Pubky;
   name: string;

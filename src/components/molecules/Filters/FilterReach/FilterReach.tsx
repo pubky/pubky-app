@@ -2,29 +2,44 @@
 
 import * as React from 'react';
 import { useTranslations } from 'next-intl';
-import * as Libs from '@/libs';
-import * as Core from '@/core';
-import * as Molecules from '@/molecules';
+import { FilterRadioGroup } from '../FilterRadioGroup/FilterRadioGroup';
+import { BaseFilterProps } from '../Filters.types';
 
+import { Radio, HeartHandshake } from 'lucide-react';
+import { UsersRound2 } from '@/icons';
+import { REACH, type ReachType } from '@/stores/home/home.types';
 export function FilterReach({
   selectedTab,
-  defaultSelectedTab = Core.REACH.ALL,
+  defaultSelectedTab = REACH.ALL,
   onTabChange,
   disabled,
-}: Molecules.BaseFilterProps<Core.ReachType>) {
+}: BaseFilterProps<ReachType>) {
   const t = useTranslations('filters.reach');
-
   const items = React.useMemo(
     () => [
-      { key: Core.REACH.ALL, label: t('all'), icon: Libs.Radio, disabled },
-      { key: Core.REACH.FOLLOWING, label: t('following'), icon: Libs.UsersRound2, disabled },
-      { key: Core.REACH.FRIENDS, label: t('friends'), icon: Libs.HeartHandshake, disabled },
+      {
+        key: REACH.ALL,
+        label: t('all'),
+        icon: Radio,
+        disabled,
+      },
+      {
+        key: REACH.FOLLOWING,
+        label: t('following'),
+        icon: UsersRound2,
+        disabled,
+      },
+      {
+        key: REACH.FRIENDS,
+        label: t('friends'),
+        icon: HeartHandshake,
+        disabled,
+      },
     ],
     [t, disabled],
   );
-
   return (
-    <Molecules.FilterRadioGroup
+    <FilterRadioGroup
       title={t('title')}
       items={items}
       selectedValue={selectedTab}

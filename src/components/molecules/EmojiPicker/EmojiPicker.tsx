@@ -3,10 +3,11 @@
 import { useEffect, useRef } from 'react';
 import data from '@emoji-mart/data';
 import { Picker } from 'emoji-mart';
-import * as Atoms from '@/components/atoms';
-import * as Types from './EmojiPicker.types';
+import { Container } from '@/atoms/Container/Container';
 
-export function EmojiPicker({ onEmojiSelect, maxLength, currentInput }: Types.EmojiPickerProps) {
+import type { EmojiData, EmojiPickerProps, PickerOptions } from './EmojiPicker.types';
+
+export function EmojiPicker({ onEmojiSelect, maxLength, currentInput }: EmojiPickerProps) {
   const pickerRef = useRef<HTMLDivElement>(null);
   const onEmojiSelectRef = useRef(onEmojiSelect);
   const maxLengthRef = useRef(maxLength);
@@ -23,7 +24,7 @@ export function EmojiPicker({ onEmojiSelect, maxLength, currentInput }: Types.Em
     const pickerElement = pickerRef.current;
     if (!pickerElement) return;
 
-    const handleEmojiSelect = (emojiObject: Types.EmojiData) => {
+    const handleEmojiSelect = (emojiObject: EmojiData) => {
       const maxLen = maxLengthRef.current;
       const current = currentInputRef.current;
 
@@ -46,7 +47,7 @@ export function EmojiPicker({ onEmojiSelect, maxLength, currentInput }: Types.Em
       theme: 'dark',
       onEmojiSelect: handleEmojiSelect,
       parent: pickerElement,
-    } as Types.PickerOptions);
+    } as PickerOptions);
 
     return () => {
       // Cleanup
@@ -56,5 +57,5 @@ export function EmojiPicker({ onEmojiSelect, maxLength, currentInput }: Types.Em
     };
   }, []); // Only run once on mount
 
-  return <Atoms.Container ref={pickerRef} overrideDefaults className="w-full overflow-hidden" />;
+  return <Container ref={pickerRef} overrideDefaults className="w-full overflow-hidden" />;
 }

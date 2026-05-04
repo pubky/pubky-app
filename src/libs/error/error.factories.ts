@@ -1,7 +1,9 @@
 import { AppError, type AppErrorParams } from './error';
 import { ErrorCategory, ErrorService } from './error.types';
-import { Logger } from '../logger';
+
 import { captureAppError } from '../observability/sentry';
+import { Logger } from '../logger/logger';
+
 import type {
   ErrorCodeByCategory,
   NetworkErrorCode,

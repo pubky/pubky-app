@@ -1,7 +1,20 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { PostStreamQueue, postStreamQueue } from './post-stream-queue';
-import * as Core from '@/core';
-
+import { PostStreamApplication } from '@/application/stream/posts/post';
+import type { Pubky } from '@/models/models.types';
+import { PostDetailsModel } from '@/models/post/details/postDetails';
+import { PostStreamTypes, type PostStreamId } from '@/models/stream/post/postStream.types';
+import { PostStreamModel } from '@/models/stream/post/tables/postStream';
+import { UnreadPostStreamModel } from '@/models/stream/post/tables/postStream.unread';
+import { UserStreamModel } from '@/models/stream/user/userStream';
+import { UserStreamTypes, type UserStreamId } from '@/models/stream/user/userStream.types';
+import { UserCountsModel } from '@/models/user/counts/userCounts';
+import { UserDetailsModel } from '@/models/user/details/userDetails';
+import { UserRelationshipsModel } from '@/models/user/relationships/userRelationships';
+import { UserTagsModel } from '@/models/user/tags/userTags';
+import { LocalStreamPostsService } from '@/services/local/stream/posts/posts';
+import type { NexusPostsKeyStream } from '@/services/nexus/nexus.types';
+import { NexusPostStreamService } from '@/services/nexus/stream/posts/postStream';
 /**
  * Tests for mute filtering with stream pagination
  *
@@ -29,7 +42,7 @@ const createMockNexusPostsKeyStream = (
   startIndex: number = 1,
   author: string = DEFAULT_AUTHOR,
   startTimestamp: number = BASE_TIMESTAMP,
-): Core.NexusPostsKeyStream => {
+): NexusPostsKeyStream => {
   const postKeys = Array.from({ length: count }, (_, i) => `${author}:post-${startIndex + i}`);
   const lastPostScore = startTimestamp + count - 1;
   return {
@@ -41,7 +54,7 @@ const createMockNexusPostsKeyStream = (
 const createPostDetails = async (postIds: string[], startTimestamp: number = BASE_TIMESTAMP) => {
   return Promise.all(
     postIds.map((postId, i) =>
-      Core.PostDetailsModel.create({
+      PostDetailsModel.create({
         id: postId,
         content: `Content for ${postId}`,
         kind: 'short',
@@ -53,21 +66,21 @@ const createPostDetails = async (postIds: string[], startTimestamp: number = BAS
   );
 };
 
-const createStreamWithPosts = async (streamId: Core.PostStreamId, postIds: string[]) => {
-  await Core.PostStreamModel.create(streamId, postIds);
+const createStreamWithPosts = async (streamId: PostStreamId, postIds: string[]) => {
+  await PostStreamModel.create(streamId, postIds);
 };
 
 const setupMutedUsers = async (mutedUserIds: string[]) => {
   // BaseStreamModel.upsert's static `this` / Table generic does not narrow for UserStreamModel here
   // (tsc error TS2684), but the runtime call matches other tests. Cast keeps the test compiling.
-  await (Core.UserStreamModel as { upsert: (id: Core.UserStreamId, stream?: Core.Pubky[]) => Promise<unknown> }).upsert(
-    Core.UserStreamTypes.MUTED,
-    mutedUserIds as Core.Pubky[],
+  await (UserStreamModel as { upsert: (id: UserStreamId, stream?: Pubky[]) => Promise<unknown> }).upsert(
+    UserStreamTypes.MUTED,
+    mutedUserIds as Pubky[],
   );
 };
 
 const clearMutedUsers = async () => {
-  await Core.UserStreamModel.table.clear();
+  await UserStreamModel.table.clear();
 };
 
 // ============================================================================
@@ -76,7 +89,7 @@ const clearMutedUsers = async () => {
 
 describe('Mute filtering with stream pagination', () => {
   let queue: PostStreamQueue;
-  const streamId = 'timeline:all:all' as Core.PostStreamId;
+  const streamId = 'timeline:all:all' as PostStreamId;
 
   beforeEach(() => {
     queue = new PostStreamQueue();
@@ -104,7 +117,7 @@ describe('Mute filtering with stream pagination', () => {
      */
     it('should advance cursor correctly when cache returns all posts but mute filter removes some', async () => {
       // Setup: Mock post details to return timestamps
-      vi.spyOn(Core.PostDetailsModel, 'findById').mockImplementation(async (id) => {
+      vi.spyOn(PostDetailsModel, 'findById').mockImplementation(async (id) => {
         const idStr = id as string;
         const match = idStr.match(/post-(\d+)/);
         const index = match ? parseInt(match[1]) : 0;
@@ -114,7 +127,7 @@ describe('Mute filtering with stream pagination', () => {
           content: `Post ${idStr}`,
           kind: 'short' as const,
           uri: `pubky://author/${idStr}`,
-          author: 'author1' as Core.Pubky,
+          author: 'author1' as Pubky,
           attachments: null,
         };
       });
@@ -182,7 +195,7 @@ describe('Mute filtering with stream pagination', () => {
       const posts = Array.from({ length: 15 }, (_, i) => `author:post-${i}`);
       queue['save'](streamId, posts, BASE_TIMESTAMP);
 
-      vi.spyOn(Core.PostDetailsModel, 'findById').mockImplementation(async (id) => {
+      vi.spyOn(PostDetailsModel, 'findById').mockImplementation(async (id) => {
         const idStr = id as string;
         const match = idStr.match(/post-(\d+)/);
         const index = match ? parseInt(match[1]) : 0;
@@ -192,7 +205,7 @@ describe('Mute filtering with stream pagination', () => {
           content: `Post ${idStr}`,
           kind: 'short' as const,
           uri: `pubky://author/${idStr}`,
-          author: 'author1' as Core.Pubky,
+          author: 'author1' as Pubky,
           attachments: null,
         };
       });
@@ -306,7 +319,7 @@ describe('Mute filtering with stream pagination', () => {
 
   describe('Multi-page pagination with muting', () => {
     it('should paginate correctly through multiple pages with heavily muted content', async () => {
-      vi.spyOn(Core.PostDetailsModel, 'findById').mockImplementation(async (id) => {
+      vi.spyOn(PostDetailsModel, 'findById').mockImplementation(async (id) => {
         const idStr = id as string;
         const match = idStr.match(/post-(\d+)/);
         const index = match ? parseInt(match[1]) : 0;
@@ -316,7 +329,7 @@ describe('Mute filtering with stream pagination', () => {
           content: `Post ${idStr}`,
           kind: 'short' as const,
           uri: `pubky://author/${idStr}`,
-          author: 'author1' as Core.Pubky,
+          author: 'author1' as Pubky,
           attachments: null,
         };
       });
@@ -418,21 +431,21 @@ describe('Mute filtering with stream pagination', () => {
 // ============================================================================
 
 describe('PostStreamApplication: Cache and Nexus transitions with muting', () => {
-  const streamId = Core.PostStreamTypes.TIMELINE_ALL_ALL as Core.PostStreamId;
+  const streamId = PostStreamTypes.TIMELINE_ALL_ALL as PostStreamId;
 
   beforeEach(async () => {
     vi.restoreAllMocks();
     vi.clearAllMocks();
 
     // Clear all relevant tables
-    await Core.PostStreamModel.table.clear();
-    await Core.UnreadPostStreamModel.table.clear();
-    await Core.PostDetailsModel.table.clear();
-    await Core.UserDetailsModel.table.clear();
-    await Core.UserCountsModel.table.clear();
-    await Core.UserRelationshipsModel.table.clear();
-    await Core.UserTagsModel.table.clear();
-    await Core.UserStreamModel.table.clear();
+    await PostStreamModel.table.clear();
+    await UnreadPostStreamModel.table.clear();
+    await PostDetailsModel.table.clear();
+    await UserDetailsModel.table.clear();
+    await UserCountsModel.table.clear();
+    await UserRelationshipsModel.table.clear();
+    await UserTagsModel.table.clear();
+    await UserStreamModel.table.clear();
     postStreamQueue.clear();
   });
 
@@ -451,12 +464,12 @@ describe('PostStreamApplication: Cache and Nexus transitions with muting', () =>
       await createStreamWithPosts(streamId, postIds);
       await createPostDetails(postIds, BASE_TIMESTAMP);
 
-      const result = await Core.PostStreamApplication.getOrFetchStreamSlice({
+      const result = await PostStreamApplication.getOrFetchStreamSlice({
         streamId,
         limit: 10,
         streamHead: 0,
         streamTail: 0,
-        viewerId: 'user-viewer' as Core.Pubky,
+        viewerId: 'user-viewer' as Pubky,
       });
 
       expect(result.nextPageIds).toHaveLength(10);
@@ -473,31 +486,31 @@ describe('PostStreamApplication: Cache and Nexus transitions with muting', () =>
 
       // Mock Nexus for second page
       const mockNexusPostsKeyStream = createMockNexusPostsKeyStream(10, 11, DEFAULT_AUTHOR, BASE_TIMESTAMP + 10);
-      vi.spyOn(Core.NexusPostStreamService, 'fetch').mockResolvedValue(mockNexusPostsKeyStream);
-      vi.spyOn(Core.LocalStreamPostsService, 'getNotPersistedPostsInCache').mockResolvedValue(
+      vi.spyOn(NexusPostStreamService, 'fetch').mockResolvedValue(mockNexusPostsKeyStream);
+      vi.spyOn(LocalStreamPostsService, 'getNotPersistedPostsInCache').mockResolvedValue(
         mockNexusPostsKeyStream.post_keys,
       );
 
       // First page (full cache hit)
-      const result1 = await Core.PostStreamApplication.getOrFetchStreamSlice({
+      const result1 = await PostStreamApplication.getOrFetchStreamSlice({
         streamId,
         limit: 10,
         streamHead: 0,
         streamTail: 0,
-        viewerId: 'user-viewer' as Core.Pubky,
+        viewerId: 'user-viewer' as Pubky,
       });
 
       expect(result1.nextPageIds).toHaveLength(10);
       expect(result1.timestamp).toBeDefined();
 
       // Second page should use the timestamp as cursor
-      const result2 = await Core.PostStreamApplication.getOrFetchStreamSlice({
+      const result2 = await PostStreamApplication.getOrFetchStreamSlice({
         streamId,
         limit: 10,
         streamHead: 0,
         streamTail: result1.timestamp!,
         lastPostId: result1.nextPageIds[result1.nextPageIds.length - 1],
-        viewerId: 'user-viewer' as Core.Pubky,
+        viewerId: 'user-viewer' as Pubky,
       });
 
       expect(result2.nextPageIds).toHaveLength(10);
@@ -516,22 +529,22 @@ describe('PostStreamApplication: Cache and Nexus transitions with muting', () =>
     it('should work correctly with empty cache (fetch from Nexus)', async () => {
       // No cache created - empty
       const mockNexusPostsKeyStream = createMockNexusPostsKeyStream(10, 1, DEFAULT_AUTHOR, BASE_TIMESTAMP);
-      vi.spyOn(Core.NexusPostStreamService, 'fetch').mockResolvedValue(mockNexusPostsKeyStream);
-      vi.spyOn(Core.LocalStreamPostsService, 'getNotPersistedPostsInCache').mockResolvedValue(
+      vi.spyOn(NexusPostStreamService, 'fetch').mockResolvedValue(mockNexusPostsKeyStream);
+      vi.spyOn(LocalStreamPostsService, 'getNotPersistedPostsInCache').mockResolvedValue(
         mockNexusPostsKeyStream.post_keys,
       );
 
-      const result = await Core.PostStreamApplication.getOrFetchStreamSlice({
+      const result = await PostStreamApplication.getOrFetchStreamSlice({
         streamId,
         limit: 10,
         streamHead: 0,
         streamTail: 0,
-        viewerId: 'user-viewer' as Core.Pubky,
+        viewerId: 'user-viewer' as Pubky,
       });
 
       expect(result.nextPageIds).toHaveLength(10);
       expect(result.timestamp).toBe(BASE_TIMESTAMP + 9);
-      expect(Core.NexusPostStreamService.fetch).toHaveBeenCalled();
+      expect(NexusPostStreamService.fetch).toHaveBeenCalled();
     });
 
     it('should work correctly with existing cache (serve from cache)', async () => {
@@ -539,14 +552,14 @@ describe('PostStreamApplication: Cache and Nexus transitions with muting', () =>
       await createStreamWithPosts(streamId, postIds);
       await createPostDetails(postIds, BASE_TIMESTAMP);
 
-      const nexusSpy = vi.spyOn(Core.NexusPostStreamService, 'fetch');
+      const nexusSpy = vi.spyOn(NexusPostStreamService, 'fetch');
 
-      const result = await Core.PostStreamApplication.getOrFetchStreamSlice({
+      const result = await PostStreamApplication.getOrFetchStreamSlice({
         streamId,
         limit: 10,
         streamHead: 0,
         streamTail: 0,
-        viewerId: 'user-viewer' as Core.Pubky,
+        viewerId: 'user-viewer' as Pubky,
       });
 
       expect(result.nextPageIds).toHaveLength(10);
@@ -562,22 +575,22 @@ describe('PostStreamApplication: Cache and Nexus transitions with muting', () =>
 
       // Mock Nexus for remaining posts
       const mockNexusPostsKeyStream = createMockNexusPostsKeyStream(5, 6, DEFAULT_AUTHOR, BASE_TIMESTAMP + 5);
-      vi.spyOn(Core.NexusPostStreamService, 'fetch').mockResolvedValue(mockNexusPostsKeyStream);
-      vi.spyOn(Core.LocalStreamPostsService, 'getNotPersistedPostsInCache').mockResolvedValue(
+      vi.spyOn(NexusPostStreamService, 'fetch').mockResolvedValue(mockNexusPostsKeyStream);
+      vi.spyOn(LocalStreamPostsService, 'getNotPersistedPostsInCache').mockResolvedValue(
         mockNexusPostsKeyStream.post_keys,
       );
 
-      const result = await Core.PostStreamApplication.getOrFetchStreamSlice({
+      const result = await PostStreamApplication.getOrFetchStreamSlice({
         streamId,
         limit: 10,
         streamHead: 0,
         streamTail: 0,
-        viewerId: 'user-viewer' as Core.Pubky,
+        viewerId: 'user-viewer' as Pubky,
       });
 
       // Should combine 5 from cache + 5 from Nexus
       expect(result.nextPageIds).toHaveLength(10);
-      expect(Core.NexusPostStreamService.fetch).toHaveBeenCalled();
+      expect(NexusPostStreamService.fetch).toHaveBeenCalled();
     });
   });
 
@@ -594,28 +607,28 @@ describe('PostStreamApplication: Cache and Nexus transitions with muting', () =>
 
       // Mock Nexus to return posts 11-20 (continuation)
       const mockNexusPostsKeyStream = createMockNexusPostsKeyStream(10, 11, DEFAULT_AUTHOR, BASE_TIMESTAMP + 10);
-      vi.spyOn(Core.NexusPostStreamService, 'fetch').mockResolvedValue(mockNexusPostsKeyStream);
-      vi.spyOn(Core.LocalStreamPostsService, 'getNotPersistedPostsInCache').mockResolvedValue(
+      vi.spyOn(NexusPostStreamService, 'fetch').mockResolvedValue(mockNexusPostsKeyStream);
+      vi.spyOn(LocalStreamPostsService, 'getNotPersistedPostsInCache').mockResolvedValue(
         mockNexusPostsKeyStream.post_keys,
       );
 
       // First page from cache
-      const result1 = await Core.PostStreamApplication.getOrFetchStreamSlice({
+      const result1 = await PostStreamApplication.getOrFetchStreamSlice({
         streamId,
         limit: 10,
         streamHead: 0,
         streamTail: 0,
-        viewerId: 'user-viewer' as Core.Pubky,
+        viewerId: 'user-viewer' as Pubky,
       });
 
       // Second page should transition to Nexus
-      const result2 = await Core.PostStreamApplication.getOrFetchStreamSlice({
+      const result2 = await PostStreamApplication.getOrFetchStreamSlice({
         streamId,
         limit: 10,
         streamHead: 0,
         streamTail: result1.timestamp!,
         lastPostId: result1.nextPageIds[result1.nextPageIds.length - 1],
-        viewerId: 'user-viewer' as Core.Pubky,
+        viewerId: 'user-viewer' as Pubky,
       });
 
       // Verify sequential post IDs with no gaps
@@ -652,17 +665,17 @@ describe('PostStreamApplication: Cache and Nexus transitions with muting', () =>
 
       // Mock Nexus for additional posts (all valid)
       const mockNexusPostsKeyStream = createMockNexusPostsKeyStream(10, 11, DEFAULT_AUTHOR, BASE_TIMESTAMP + 10);
-      vi.spyOn(Core.NexusPostStreamService, 'fetch').mockResolvedValue(mockNexusPostsKeyStream);
-      vi.spyOn(Core.LocalStreamPostsService, 'getNotPersistedPostsInCache').mockResolvedValue(
+      vi.spyOn(NexusPostStreamService, 'fetch').mockResolvedValue(mockNexusPostsKeyStream);
+      vi.spyOn(LocalStreamPostsService, 'getNotPersistedPostsInCache').mockResolvedValue(
         mockNexusPostsKeyStream.post_keys,
       );
 
-      const result = await Core.PostStreamApplication.getOrFetchStreamSlice({
+      const result = await PostStreamApplication.getOrFetchStreamSlice({
         streamId,
         limit: 10,
         streamHead: 0,
         streamTail: 0,
-        viewerId: 'user-viewer' as Core.Pubky,
+        viewerId: 'user-viewer' as Pubky,
       });
 
       // Should have filtered out muted posts
@@ -690,19 +703,19 @@ describe('PostStreamApplication: Cache and Nexus transitions with muting', () =>
 
       // Mock Nexus to return more posts if queue needs them (due to mute filtering)
       const mockNexusKeyStream = createMockNexusPostsKeyStream(10, 21, DEFAULT_AUTHOR, BASE_TIMESTAMP + 20);
-      vi.spyOn(Core.NexusPostStreamService, 'fetch').mockResolvedValue(mockNexusKeyStream);
-      vi.spyOn(Core.LocalStreamPostsService, 'getNotPersistedPostsInCache').mockResolvedValue([]);
-      vi.spyOn(Core.LocalStreamPostsService, 'persistNewStreamChunk').mockResolvedValue(undefined);
+      vi.spyOn(NexusPostStreamService, 'fetch').mockResolvedValue(mockNexusKeyStream);
+      vi.spyOn(LocalStreamPostsService, 'getNotPersistedPostsInCache').mockResolvedValue([]);
+      vi.spyOn(LocalStreamPostsService, 'persistNewStreamChunk').mockResolvedValue(undefined);
 
       // First: with muted user
       await setupMutedUsers([MUTED_AUTHOR]);
 
-      const resultMuted = await Core.PostStreamApplication.getOrFetchStreamSlice({
+      const resultMuted = await PostStreamApplication.getOrFetchStreamSlice({
         streamId,
         limit: 5,
         streamHead: 0,
         streamTail: 0,
-        viewerId: 'user-viewer' as Core.Pubky,
+        viewerId: 'user-viewer' as Pubky,
       });
 
       // Should only have non-muted posts
@@ -716,12 +729,12 @@ describe('PostStreamApplication: Cache and Nexus transitions with muting', () =>
       // Now: unmute the user
       await clearMutedUsers();
 
-      const resultUnmuted = await Core.PostStreamApplication.getOrFetchStreamSlice({
+      const resultUnmuted = await PostStreamApplication.getOrFetchStreamSlice({
         streamId,
         limit: 10,
         streamHead: 0,
         streamTail: 0,
-        viewerId: 'user-viewer' as Core.Pubky,
+        viewerId: 'user-viewer' as Pubky,
       });
 
       // Should now include all posts (including previously muted)
@@ -743,20 +756,20 @@ describe('PostStreamApplication: Cache and Nexus transitions with muting', () =>
 
       // Mock Nexus in case queue needs more posts
       const mockNexusKeyStream = createMockNexusPostsKeyStream(10, 41, DEFAULT_AUTHOR, BASE_TIMESTAMP + 40);
-      vi.spyOn(Core.NexusPostStreamService, 'fetch').mockResolvedValue(mockNexusKeyStream);
-      vi.spyOn(Core.LocalStreamPostsService, 'getNotPersistedPostsInCache').mockResolvedValue([]);
-      vi.spyOn(Core.LocalStreamPostsService, 'persistNewStreamChunk').mockResolvedValue(undefined);
+      vi.spyOn(NexusPostStreamService, 'fetch').mockResolvedValue(mockNexusKeyStream);
+      vi.spyOn(LocalStreamPostsService, 'getNotPersistedPostsInCache').mockResolvedValue([]);
+      vi.spyOn(LocalStreamPostsService, 'persistNewStreamChunk').mockResolvedValue(undefined);
 
       // Start with muted user
       await setupMutedUsers([MUTED_AUTHOR]);
 
       // First page with muting active
-      const result1 = await Core.PostStreamApplication.getOrFetchStreamSlice({
+      const result1 = await PostStreamApplication.getOrFetchStreamSlice({
         streamId,
         limit: 5,
         streamHead: 0,
         streamTail: 0,
-        viewerId: 'user-viewer' as Core.Pubky,
+        viewerId: 'user-viewer' as Pubky,
       });
 
       expect(result1.nextPageIds.every((id) => !id.startsWith(MUTED_AUTHOR))).toBe(true);
@@ -767,13 +780,13 @@ describe('PostStreamApplication: Cache and Nexus transitions with muting', () =>
       postStreamQueue.clear(); // Clear queue to ensure fresh state
 
       // Second page after unmuting - should continue from where we left off
-      const result2 = await Core.PostStreamApplication.getOrFetchStreamSlice({
+      const result2 = await PostStreamApplication.getOrFetchStreamSlice({
         streamId,
         limit: 5,
         streamHead: 0,
         streamTail: result1.timestamp!,
         lastPostId: result1.nextPageIds[result1.nextPageIds.length - 1],
-        viewerId: 'user-viewer' as Core.Pubky,
+        viewerId: 'user-viewer' as Pubky,
       });
 
       // Key assertions: pagination continues correctly after unmuting
@@ -799,18 +812,18 @@ describe('PostStreamApplication: Cache and Nexus transitions with muting', () =>
       await createPostDetails(postIds, BASE_TIMESTAMP);
 
       // Mock Nexus to return empty (end of stream)
-      vi.spyOn(Core.NexusPostStreamService, 'fetch').mockResolvedValue({
+      vi.spyOn(NexusPostStreamService, 'fetch').mockResolvedValue({
         post_keys: [],
         last_post_score: 0,
       });
 
-      const result = await Core.PostStreamApplication.getOrFetchStreamSlice({
+      const result = await PostStreamApplication.getOrFetchStreamSlice({
         streamId,
         limit: 10,
         streamHead: 0,
         streamTail: BASE_TIMESTAMP + 4,
         lastPostId: `${DEFAULT_AUTHOR}:post-5`,
-        viewerId: 'user-viewer' as Core.Pubky,
+        viewerId: 'user-viewer' as Pubky,
       });
 
       expect(result.reachedEnd).toBe(true);
@@ -821,12 +834,12 @@ describe('PostStreamApplication: Cache and Nexus transitions with muting', () =>
       await createStreamWithPosts(streamId, postIds);
       await createPostDetails(postIds, BASE_TIMESTAMP);
 
-      const result = await Core.PostStreamApplication.getOrFetchStreamSlice({
+      const result = await PostStreamApplication.getOrFetchStreamSlice({
         streamId,
         limit: 10,
         streamHead: 0,
         streamTail: 0,
-        viewerId: 'user-viewer' as Core.Pubky,
+        viewerId: 'user-viewer' as Pubky,
       });
 
       // Full cache hit with exactly limit posts - might have more

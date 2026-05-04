@@ -10,8 +10,8 @@ const { mockToast } = vi.hoisted(() => ({
   mockToast: vi.fn(),
 }));
 
-vi.mock('@/libs', async () => {
-  const actual = await vi.importActual('@/libs');
+vi.mock('@/libs/utils/utils', async () => {
+  const actual = await vi.importActual<typeof import('@/libs/utils/utils')>('@/libs/utils/utils');
   return {
     ...actual,
     copyToClipboard: mockCopyToClipboard,
@@ -28,7 +28,7 @@ vi.mock('next-intl', () => ({
   useTranslations: () => mockTranslate,
 }));
 
-vi.mock('@/atoms/Button', () => ({
+vi.mock('@/atoms/Button/Button', () => ({
   Button: ({
     children,
     onClick,

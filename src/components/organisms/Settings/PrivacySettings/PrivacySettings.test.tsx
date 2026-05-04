@@ -1,8 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen, fireEvent } from '@testing-library/react';
 import { PrivacySettings } from './PrivacySettings';
-import { defaultPrivacyPreferences } from '@/core/stores/settings/settings.types';
-
+import { defaultPrivacyPreferences } from '@/stores/settings/settings.types';
 // Mock settings store and hook
 const mockSetShowConfirm = vi.fn();
 const mockSetBlurCensored = vi.fn();
@@ -14,30 +13,22 @@ const mockSetHideSearch = vi.fn();
 const mockSetNeverShowPosts = vi.fn();
 const mockUseSettingsStore = vi.fn();
 
-vi.mock('@/core', async (importOriginal) => {
-  const actual = await importOriginal<typeof import('@/core')>();
-  return {
-    ...actual,
-    useSettingsStore: () => mockUseSettingsStore(),
-  };
-});
+vi.mock('@/stores/settings/settings.store', () => ({
+  useSettingsStore: () => mockUseSettingsStore(),
+}));
 
-vi.mock('@/hooks/useSettingsActions', async (importOriginal) => {
-  const actual = await importOriginal<typeof import('@/hooks/useSettingsActions')>();
-  return {
-    ...actual,
-    useSettingsActions: () => ({
-      setShowConfirm: mockSetShowConfirm,
-      setBlurCensored: mockSetBlurCensored,
-      setSignOutInactive: mockSetSignOutInactive,
-      setRequirePin: mockSetRequirePin,
-      setHideWhoToFollow: mockSetHideWhoToFollow,
-      setHideActiveFriends: mockSetHideActiveFriends,
-      setHideSearch: mockSetHideSearch,
-      setNeverShowPosts: mockSetNeverShowPosts,
-    }),
-  };
-});
+vi.mock('@/hooks/useSettingsActions/useSettingsActions', () => ({
+  useSettingsActions: () => ({
+    setShowConfirm: mockSetShowConfirm,
+    setBlurCensored: mockSetBlurCensored,
+    setSignOutInactive: mockSetSignOutInactive,
+    setRequirePin: mockSetRequirePin,
+    setHideWhoToFollow: mockSetHideWhoToFollow,
+    setHideActiveFriends: mockSetHideActiveFriends,
+    setHideSearch: mockSetHideSearch,
+    setNeverShowPosts: mockSetNeverShowPosts,
+  }),
+}));
 
 describe('PrivacySettings', () => {
   beforeEach(() => {

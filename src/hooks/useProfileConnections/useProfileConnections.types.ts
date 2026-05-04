@@ -1,5 +1,4 @@
-import * as Core from '@/core';
-
+import type { NexusUserDetails } from '@/services/nexus/nexus.types';
 // ============================================================================
 // Constants
 // ============================================================================
@@ -16,7 +15,7 @@ export type ConnectionType = (typeof CONNECTION_TYPE)[keyof typeof CONNECTION_TY
 // Types
 // ============================================================================
 
-export interface UserConnectionData extends Core.NexusUserDetails {
+export interface UserConnectionData extends NexusUserDetails {
   /** Avatar URL computed from user ID, null if user has no avatar */
   avatarUrl: string | null;
   tags?: string[];

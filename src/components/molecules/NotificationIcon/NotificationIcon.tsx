@@ -1,22 +1,23 @@
 'use client';
+import { Container } from '@/atoms/Container/Container';
 
-import * as Icons from '@/libs/icons';
-import * as Atoms from '@/atoms';
 import type { NotificationIconProps } from './NotificationIcon.types';
 import { NOTIFICATION_ICON_MAP, ICON_SIZE, BADGE_SIZE } from './NotificationIcon.constants';
-
+import { StickyNote } from 'lucide-react';
 export function NotificationIcon({ type, showBadge }: NotificationIconProps) {
-  const IconComponent = NOTIFICATION_ICON_MAP[type] || Icons.StickyNote;
-
+  const IconComponent = NOTIFICATION_ICON_MAP[type] || StickyNote;
   return (
-    <Atoms.Container
+    <Container
       overrideDefaults={true}
       className="relative shrink-0"
-      style={{ width: ICON_SIZE, height: ICON_SIZE }}
+      style={{
+        width: ICON_SIZE,
+        height: ICON_SIZE,
+      }}
     >
       <IconComponent className="text-foreground" size={ICON_SIZE} />
       {showBadge && (
-        <Atoms.Container
+        <Container
           data-cy="notification-unread-dot"
           overrideDefaults={true}
           className="absolute right-0 bottom-0 rounded-full bg-brand"
@@ -26,6 +27,6 @@ export function NotificationIcon({ type, showBadge }: NotificationIconProps) {
           }}
         />
       )}
-    </Atoms.Container>
+    </Container>
   );
 }

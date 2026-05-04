@@ -1,10 +1,11 @@
 'use client';
+import { Button } from '@/atoms/Button/Button';
+import { AvatarWithFallback } from '@/organisms/AvatarWithFallback/AvatarWithFallback';
 
-import * as Atoms from '@/atoms';
-import * as Organisms from '@/organisms';
-import * as Libs from '@/libs';
 import type { TaggerAvatarProps } from '../PostTagPopoverWrapper.types';
-import { UserInfoPopover } from '../../UserInfoPopover';
+import { UserInfoPopover } from '../../UserInfoPopover/UserInfoPopover';
+
+import { cn, formatPublicKey } from '@/libs/utils/utils';
 
 /**
  * TaggerAvatar
@@ -22,27 +23,27 @@ function TaggerAvatar({ tagger, index }: TaggerAvatarProps) {
       userId={tagger.id}
       userName={tagger.name ?? ''}
       avatarUrl={tagger.avatarUrl}
-      formattedPublicKey={Libs.formatPublicKey({ key: tagger.id })}
+      formattedPublicKey={formatPublicKey({ key: tagger.id })}
       hover={false}
       sideOffset={8}
       alignOffset={0}
     >
-      <Atoms.Button
+      <Button
         overrideDefaults
-        className={Libs.cn(
+        className={cn(
           'cursor-pointer rounded-full transition-opacity hover:opacity-80',
           index === 0 ? 'ml-0' : '-ml-2',
           zIndexClass,
         )}
       >
-        <Organisms.AvatarWithFallback
+        <AvatarWithFallback
           name={tagger.name ?? tagger.id}
           avatarUrl={tagger.avatarUrl}
           fallbackSeed={tagger.id}
           size="md"
           className="shrink-0 border-2 border-background shadow-sm"
         />
-      </Atoms.Button>
+      </Button>
     </UserInfoPopover>
   );
 }

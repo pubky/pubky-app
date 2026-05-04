@@ -1,5 +1,4 @@
-import * as Core from '@/core';
-
+import { StreamSource } from '@/services/nexus/stream/posts/postStream.types';
 // Post Stream ID Pattern: sorting:source:kind
 // - SORTING: timeline (recent), total_engagement (popularity)
 // - SOURCE: all, following, friends, me, bookmarks, post_replies, author, author_replies
@@ -101,12 +100,12 @@ export enum PostStreamTypes {
   POPULARITY_FRIENDS_FILE = 'total_engagement:friends:file',
 }
 
-export type ReplyStreamCompositeId = `${Core.StreamSource.REPLIES}:${string}`;
-export type AuthorStreamCompositeId = `${Core.StreamSource.AUTHOR}:${string}`;
-export type AuthorRepliesStreamCompositeId = `${Core.StreamSource.AUTHOR_REPLIES}:${string}`;
+export type ReplyStreamCompositeId = `${StreamSource.REPLIES}:${string}`;
+export type AuthorStreamCompositeId = `${StreamSource.AUTHOR}:${string}`;
+export type AuthorRepliesStreamCompositeId = `${StreamSource.AUTHOR_REPLIES}:${string}`;
 
 export function buildPostReplyStreamId(compositePostId: string): ReplyStreamCompositeId {
-  return `${Core.StreamSource.REPLIES}:${compositePostId}`;
+  return `${StreamSource.REPLIES}:${compositePostId}`;
 }
 
 export type PostStreamId =

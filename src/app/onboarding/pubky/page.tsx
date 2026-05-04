@@ -1,11 +1,11 @@
-import * as Templates from '@/templates';
-import * as Molecules from '@/molecules';
+import { PublicKey } from '@/templates/Onboarding/PublicKey/PublicKey';
+import { Metadata } from '@/molecules/Metadata/Metadata';
 
-export const metadata = Molecules.Metadata({
+export const metadata = Metadata({
   title: 'Pubky - Onboarding',
   description: 'Onboarding pubky page on pubky app.',
 });
 
 export default function PubkyPage() {
-  return <Templates.PublicKey />;
+  return <PublicKey />;
 }

@@ -1,12 +1,13 @@
 'use client';
 
 import { useTranslations } from 'next-intl';
-import * as Molecules from '@/molecules';
-import { useSettingsStore } from '@/core';
-import { useSettingsActions } from '@/hooks/useSettingsActions';
+import { SettingsSwitchGroup } from '@/molecules/Settings/SettingsSwitchGroup/SettingsSwitchGroup';
+import { SettingsSwitchItem } from '@/molecules/Settings/SettingsSwitchItem/SettingsSwitchItem';
+
+import { useSettingsActions } from '@/hooks/useSettingsActions/useSettingsActions';
 import { NOTIFICATION_LABEL_KEYS } from './NotificationSettings.constants';
 import type { NotificationType } from './NotificationSettings.types';
-
+import { useSettingsStore } from '@/stores/settings/settings.store';
 export function NotificationSettings() {
   const t = useTranslations('notifications.settings');
   const { notifications } = useSettingsStore();
@@ -19,9 +20,9 @@ export function NotificationSettings() {
   const notificationTypes = Object.keys(NOTIFICATION_LABEL_KEYS) as NotificationType[];
 
   return (
-    <Molecules.SettingsSwitchGroup>
+    <SettingsSwitchGroup>
       {notificationTypes.map((type) => (
-        <Molecules.SettingsSwitchItem
+        <SettingsSwitchItem
           key={type}
           id={`notification-switch-${type}`}
           label={t(NOTIFICATION_LABEL_KEYS[type])}
@@ -29,6 +30,6 @@ export function NotificationSettings() {
           onChange={() => handleToggle(type)}
         />
       ))}
-    </Molecules.SettingsSwitchGroup>
+    </SettingsSwitchGroup>
   );
 }

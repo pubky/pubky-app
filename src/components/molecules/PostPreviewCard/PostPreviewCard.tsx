@@ -1,10 +1,13 @@
 'use client';
 
-import * as Atoms from '@/atoms';
-import * as Organisms from '@/organisms';
-import * as Hooks from '@/hooks';
-import * as Libs from '@/libs';
+import { usePostNavigation } from '@/hooks/usePostNavigation/usePostNavigation';
+import { useTtlSubscription } from '@/hooks/useTtlSubscription/useTtlSubscription';
+import { Card, CardContent } from '@/atoms/Card/Card';
+import { PostContentBase } from '@/organisms/PostContentBase/PostContentBase';
+import { PostHeader } from '@/organisms/PostHeader/PostHeader';
+
 import type { PostPreviewCardProps } from './PostPreviewCard.types';
+import { cn } from '@/libs/utils/utils';
 
 /**
  * PostPreviewCard - Compact preview card for displaying a post in a nested context.
@@ -28,8 +31,8 @@ import type { PostPreviewCardProps } from './PostPreviewCard.types';
  * - Any nested context where a compact post preview is needed
  */
 export function PostPreviewCard({ postId, className }: PostPreviewCardProps) {
-  const { navigateToPost } = Hooks.usePostNavigation();
-  const { ref: ttlRef } = Hooks.useTtlSubscription({
+  const { navigateToPost } = usePostNavigation();
+  const { ref: ttlRef } = useTtlSubscription({
     type: 'post',
     id: postId,
   });
@@ -48,20 +51,20 @@ export function PostPreviewCard({ postId, className }: PostPreviewCardProps) {
   };
 
   return (
-    <Atoms.Card
+    <Card
       ref={ttlRef}
       data-cy="post-preview-card"
-      className={Libs.cn('min-w-0 cursor-pointer rounded-md py-0 transition-colors hover:bg-accent/50', className)}
+      className={cn('min-w-0 cursor-pointer rounded-md py-0 transition-colors hover:bg-accent/50', className)}
       onClick={handleClick}
       onKeyDown={handleKeyDown}
       role="link"
       tabIndex={0}
       aria-label="View original post"
     >
-      <Atoms.CardContent className="flex min-w-0 flex-col gap-4 p-6">
-        <Organisms.PostHeader postId={postId} showPopover={false} />
-        <Organisms.PostContentBase postId={postId} />
-      </Atoms.CardContent>
-    </Atoms.Card>
+      <CardContent className="flex min-w-0 flex-col gap-4 p-6">
+        <PostHeader postId={postId} showPopover={false} />
+        <PostContentBase postId={postId} />
+      </CardContent>
+    </Card>
   );
 }

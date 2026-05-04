@@ -8,7 +8,7 @@ const mockUnsubscribePost = vi.fn();
 const mockSubscribeUser = vi.fn();
 const mockUnsubscribeUser = vi.fn();
 
-vi.mock('@/core', () => ({
+vi.mock('@/coordinators/ttl/ttl', () => ({
   TtlCoordinator: {
     getInstance: () => ({
       subscribePost: mockSubscribePost,

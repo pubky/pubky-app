@@ -18,11 +18,11 @@ const { mockSettingsController, mockIsAppError } = vi.hoisted(() => ({
   mockIsAppError: vi.fn(),
 }));
 
-vi.mock('@/core', () => ({
+vi.mock('@/controllers/settings/settings', () => ({
   SettingsController: mockSettingsController,
 }));
 
-vi.mock('@/libs', () => ({
+vi.mock('@/libs/error/error.utils', () => ({
   isAppError: (...args: unknown[]) => mockIsAppError(...args),
 }));
 

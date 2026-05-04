@@ -1,5 +1,7 @@
-import * as Config from '@/config';
-import { Err, ValidationErrorCode, ErrorService } from '@/libs';
+import { VALIDATION_MESSAGES, VALIDATION_PATTERNS } from '@/config/forms';
+import { ValidationErrorCode } from '@/libs/error/error.codes';
+import { Err } from '@/libs/error/error.factories';
+import { ErrorService } from '@/libs/error/error.types';
 
 /**
  * Copyright input validators
@@ -18,8 +20,8 @@ export class CopyrightValidators {
    * @throws AppError if email is invalid
    */
   private static validateEmailFormat(email: string): string {
-    if (!Config.VALIDATION_PATTERNS.EMAIL.test(email)) {
-      throw Err.validation(ValidationErrorCode.FORMAT_ERROR, Config.VALIDATION_MESSAGES.INVALID_EMAIL, {
+    if (!VALIDATION_PATTERNS.EMAIL.test(email)) {
+      throw Err.validation(ValidationErrorCode.FORMAT_ERROR, VALIDATION_MESSAGES.INVALID_EMAIL, {
         service: ErrorService.NextJsServer,
         operation: 'validateEmailFormat',
         context: { field: 'email', value: email },
@@ -60,8 +62,8 @@ export class CopyrightValidators {
    * @throws AppError if phone number is invalid
    */
   private static validatePhoneNumberFormat(phoneNumber: string): string {
-    if (!Config.VALIDATION_PATTERNS.PHONE.test(phoneNumber)) {
-      throw Err.validation(ValidationErrorCode.FORMAT_ERROR, Config.VALIDATION_MESSAGES.INVALID_PHONE, {
+    if (!VALIDATION_PATTERNS.PHONE.test(phoneNumber)) {
+      throw Err.validation(ValidationErrorCode.FORMAT_ERROR, VALIDATION_MESSAGES.INVALID_PHONE, {
         service: ErrorService.NextJsServer,
         operation: 'validatePhoneNumberFormat',
         context: { field: 'phoneNumber', value: phoneNumber },
@@ -204,7 +206,7 @@ export class CopyrightValidators {
     isReportingOnBehalf: boolean | undefined | null,
   ): void {
     if (!isRightsOwner && !isReportingOnBehalf) {
-      throw Err.validation(ValidationErrorCode.MISSING_FIELD, Config.VALIDATION_MESSAGES.ROLE_REQUIRED, {
+      throw Err.validation(ValidationErrorCode.MISSING_FIELD, VALIDATION_MESSAGES.ROLE_REQUIRED, {
         service: ErrorService.NextJsServer,
         operation: 'validateRole',
         context: { field: 'role', isRightsOwner, isReportingOnBehalf },

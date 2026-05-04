@@ -2,12 +2,12 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen, fireEvent, act } from '@testing-library/react';
 import React, { createRef } from 'react';
 import type { MDXEditorMethods } from '@mdxeditor/editor';
-import { asOpaque } from '@/test-utils';
+import { asOpaque } from '@/test-utils/type-assertions';
 import InitializedMDXEditor from './InitializedMDXEditor';
 
 // Mock config - use a smaller value for easier testing
 const MOCK_MAX_LENGTH = 1000;
-vi.mock('@/config', () => ({
+vi.mock('@/config/posts', () => ({
   ARTICLE_MAX_CHARACTER_LENGTH: 1000,
 }));
 
@@ -120,125 +120,115 @@ vi.mock('@codemirror/language-data', () => ({
 let capturedOnEmojiSelect: ((emoji: { native: string }) => void) | null = null;
 
 // Mock EmojiPickerDialog
-vi.mock('@/components/molecules', () => ({
-  EmojiPickerDialog: ({
-    open,
-    onOpenChange,
-    onEmojiSelect,
-  }: {
-    open: boolean;
-    onOpenChange: (open: boolean) => void;
-    onEmojiSelect: (emoji: { native: string }) => void;
-  }) => {
-    // Capture the callback for testing
-    capturedOnEmojiSelect = onEmojiSelect;
-    if (!open) return null;
-    return (
-      <div data-testid="emoji-picker-dialog">
-        <button
-          data-testid="emoji-select-button"
-          onClick={() => {
-            // Match real EmojiPickerDialog behavior: call onEmojiSelect then close
-            onEmojiSelect({ native: '🎉' });
-            onOpenChange(false);
-          }}
-        >
-          Select Emoji
-        </button>
-      </div>
-    );
-  },
-}));
-
-// Mock icons
-vi.mock('@/libs/icons', () => ({
-  Smile: ({ className }: { className?: string }) => (
-    <svg data-testid="smile-icon" className={className}>
-      <title>Smile</title>
-    </svg>
-  ),
-  AlertTriangle: ({ className }: { className?: string }) => (
-    <svg data-testid="alert-triangle-icon" className={className}>
-      <title>Alert Triangle</title>
-    </svg>
-  ),
-  Type: ({ className }: { className?: string }) => (
-    <svg data-testid="type-icon" className={className}>
-      <title>Type</title>
-    </svg>
-  ),
-  MarkdownMark: ({ className }: { className?: string }) => (
-    <svg data-testid="markdown-mark-icon" className={className}>
-      <title>Markdown Mark</title>
-    </svg>
-  ),
-}));
+vi.mock('@/molecules/EmojiPickerDialog/EmojiPickerDialog', () => {
+  return {
+    EmojiPickerDialog: ({
+      open,
+      onOpenChange,
+      onEmojiSelect,
+    }: {
+      open: boolean;
+      onOpenChange: (open: boolean) => void;
+      onEmojiSelect: (emoji: { native: string }) => void;
+    }) => {
+      // Capture the callback for testing
+      capturedOnEmojiSelect = onEmojiSelect;
+      if (!open) return null;
+      return (
+        <div data-testid="emoji-picker-dialog">
+          <button
+            data-testid="emoji-select-button"
+            onClick={() => {
+              // Match real EmojiPickerDialog behavior: call onEmojiSelect then close
+              onEmojiSelect({ native: '🎉' });
+              onOpenChange(false);
+            }}
+          >
+            Select Emoji
+          </button>
+        </div>
+      );
+    },
+  };
+});
 
 // Mock useEmojiInsert hook
 const mockHandleMarkdownEmojiSelect = vi.fn();
-vi.mock('@/hooks', () => ({
+vi.mock('@/hooks/useEmojiInsert/useEmojiInsert', () => ({
   useEmojiInsert: vi.fn(() => mockHandleMarkdownEmojiSelect),
 }));
 
 // Mock @/atoms
-vi.mock('@/atoms', () => ({
-  Container: ({
-    children,
-    className,
-    overrideDefaults,
-    ...props
-  }: {
-    children?: React.ReactNode;
-    className?: string;
-    overrideDefaults?: boolean;
-  }) => (
-    <div className={className} data-override-defaults={overrideDefaults} {...props}>
-      {children}
-    </div>
-  ),
-  Typography: ({
-    children,
-    className,
-    overrideDefaults,
-    ...props
-  }: {
-    children: React.ReactNode;
-    className?: string;
-    overrideDefaults?: boolean;
-  }) => (
-    <span className={className} data-override-defaults={overrideDefaults} {...props}>
-      {children}
-    </span>
-  ),
-  Button: ({
-    children,
-    className,
-    variant,
-    size,
-    disabled,
-    ...props
-  }: {
-    children?: React.ReactNode;
-    className?: string;
-    variant?: string;
-    size?: string;
-    disabled?: boolean;
-    title?: string;
-    onClick?: () => void;
-  }) => (
-    <button className={className} data-variant={variant} data-size={size} disabled={disabled} {...props}>
-      {children}
-    </button>
-  ),
-  Textarea: vi.fn(({ className, readOnly, ...props }: Record<string, unknown>) => (
-    <textarea className={className as string} readOnly={readOnly as boolean} {...(props as Record<string, string>)} />
-  )),
-}));
+vi.mock('@/atoms/Button/Button', () => {
+  return {
+    Button: ({
+      children,
+      className,
+      variant,
+      size,
+      disabled,
+      ...props
+    }: {
+      children?: React.ReactNode;
+      className?: string;
+      variant?: string;
+      size?: string;
+      disabled?: boolean;
+      title?: string;
+      onClick?: () => void;
+    }) => (
+      <button className={className} data-variant={variant} data-size={size} disabled={disabled} {...props}>
+        {children}
+      </button>
+    ),
+  };
+});
 
-// Mock @/libs/utils
-vi.mock('@/libs/utils', () => ({
-  cn: (...classes: (string | boolean | undefined)[]) => classes.filter(Boolean).join(' '),
-}));
+vi.mock('@/atoms/Container/Container', () => {
+  return {
+    Container: ({
+      children,
+      className,
+      overrideDefaults,
+      ...props
+    }: {
+      children?: React.ReactNode;
+      className?: string;
+      overrideDefaults?: boolean;
+    }) => (
+      <div className={className} data-override-defaults={overrideDefaults} {...props}>
+        {children}
+      </div>
+    ),
+  };
+});
+
+vi.mock('@/atoms/Textarea/Textarea', () => {
+  return {
+    Textarea: vi.fn(({ className, readOnly, ...props }: Record<string, unknown>) => (
+      <textarea className={className as string} readOnly={readOnly as boolean} {...(props as Record<string, string>)} />
+    )),
+  };
+});
+
+vi.mock('@/atoms/Typography/Typography', () => {
+  return {
+    Typography: ({
+      children,
+      className,
+      overrideDefaults,
+      ...props
+    }: {
+      children: React.ReactNode;
+      className?: string;
+      overrideDefaults?: boolean;
+    }) => (
+      <span className={className} data-override-defaults={overrideDefaults} {...props}>
+        {children}
+      </span>
+    ),
+  };
+});
 
 /** Creates a mock editor ref with stub methods for mode-switching tests. */
 function createMockEditorRef(markdown = '') {
@@ -354,9 +344,9 @@ describe('InitializedMDXEditor', () => {
     });
 
     it('renders smile icons in emoji buttons', () => {
-      render(<InitializedMDXEditor editorRef={null} markdown="" />);
+      const { container } = render(<InitializedMDXEditor editorRef={null} markdown="" />);
 
-      const smileIcons = screen.getAllByTestId('smile-icon');
+      const smileIcons = container.querySelectorAll('.lucide-smile');
       // One in the markdown toolbar, one in the rich text toolbar
       expect(smileIcons).toHaveLength(2);
       smileIcons.forEach((icon) => {
@@ -367,7 +357,8 @@ describe('InitializedMDXEditor', () => {
     it('renders markdown mark icon in markdown button', () => {
       render(<InitializedMDXEditor editorRef={null} markdown="" />);
 
-      const markdownIcon = screen.getByTestId('markdown-mark-icon');
+      const markdownButton = screen.getByTestId('button-with-tooltip-markdown');
+      const markdownIcon = markdownButton.querySelector('svg[viewBox="0 0 208 128"]');
       expect(markdownIcon).toBeInTheDocument();
       expect(markdownIcon).toHaveClass('size-6');
     });
@@ -469,7 +460,8 @@ describe('InitializedMDXEditor', () => {
     it('renders type icon in rich text mode switch button', () => {
       render(<InitializedMDXEditor editorRef={null} markdown="" />);
 
-      expect(screen.getByTestId('type-icon')).toBeInTheDocument();
+      const richTextButton = screen.getByTestId('markdown-richtext-button');
+      expect(richTextButton.querySelector('.lucide-type')).toBeInTheDocument();
     });
 
     it('disables markdown toolbar buttons when readOnly', () => {
@@ -886,7 +878,8 @@ describe('InitializedMDXEditor', () => {
         capturedOnChange?.('a'.repeat(MOCK_MAX_LENGTH - 50));
       });
 
-      const alertIcon = screen.getByTestId('alert-triangle-icon');
+      const warning = screen.getByTestId('max-length-warning');
+      const alertIcon = warning.querySelector('.lucide-triangle-alert');
       expect(alertIcon).toBeInTheDocument();
       expect(alertIcon).toHaveClass('size-4');
       expect(alertIcon).toHaveClass('shrink-0');

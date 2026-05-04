@@ -1,16 +1,10 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import type { Session, Keypair, PublicKey } from '@synonymdev/pubky';
-import {
-  HttpMethod,
-  AppError,
-  ErrorCategory,
-  ServerErrorCode,
-  AuthErrorCode,
-  ClientErrorCode,
-  ValidationErrorCode,
-} from '@/libs';
-import { asOpaque } from '@/test-utils';
-
+import { asOpaque } from '@/test-utils/type-assertions';
+import { AppError } from '@/libs/error/error';
+import { AuthErrorCode, ClientErrorCode, ServerErrorCode, ValidationErrorCode } from '@/libs/error/error.codes';
+import { ErrorCategory, ErrorService } from '@/libs/error/error.types';
+import { HttpMethod } from '@/libs/http/http.types';
 // =============================================================================
 // HOISTED MOCKS - Must be hoisted to run before module imports
 // =============================================================================
@@ -52,7 +46,7 @@ vi.mock('pubky-app-specs', () => ({
 }));
 
 // Mock Logger to suppress console output during tests
-vi.mock('@/libs/logger', () => ({
+vi.mock('@/libs/logger/logger', () => ({
   Logger: {
     debug: vi.fn(),
     info: vi.fn(),
@@ -62,20 +56,16 @@ vi.mock('@/libs/logger', () => ({
 }));
 
 // Mock useAuthStore to provide session
-vi.mock('@/core', async (importOriginal) => {
-  const actual = await importOriginal<typeof import('@/core')>();
-  return {
-    ...actual,
-    useAuthStore: {
-      getState: () => ({
-        selectSession: () => {
-          // Access mockState.currentSession at call time, not at mock creation time
-          return mockState.currentSession;
-        },
-      }),
-    },
-  };
-});
+vi.mock('@/stores/auth/auth.store', () => ({
+  useAuthStore: {
+    getState: () => ({
+      selectSession: () => {
+        // Access mockState.currentSession at call time, not at mock creation time
+        return mockState.currentSession;
+      },
+    }),
+  },
+}));
 
 // =============================================================================
 // MOCK @synonymdev/pubky MODULE
@@ -163,7 +153,7 @@ const createMockKeypair = (): Keypair =>
 // =============================================================================
 
 describe('HomeserverService', () => {
-  let HomeserverService: typeof import('@/core/services/homeserver/homeserver').HomeserverService;
+  let HomeserverService: typeof import('@/services/homeserver/homeserver').HomeserverService;
 
   beforeEach(async () => {
     // Reset all mocks
@@ -194,8 +184,7 @@ describe('HomeserverService', () => {
 
     // Reset module cache and re-import
     vi.resetModules();
-    const homeserverModule = await import('@/core/services/homeserver/homeserver');
-    HomeserverService = homeserverModule.HomeserverService;
+    ({ HomeserverService } = await import('@/services/homeserver/homeserver'));
   });
 
   // ===========================================================================
@@ -845,10 +834,9 @@ describe('HomeserverService', () => {
   describe('Edge Cases & Error Handling', () => {
     describe('handleError (private)', () => {
       it('should re-throw AppError instances without wrapping', async () => {
-        // Import Libs after module reset to get matching AppError class
-        const freshLibs = await import('@/libs');
-        const appError = freshLibs.Err.auth(freshLibs.AuthErrorCode.UNAUTHORIZED, 'Already an AppError', {
-          service: freshLibs.ErrorService.Homeserver,
+        const { Err: FreshErr } = await import('@/libs/error/error.factories');
+        const appError = FreshErr.auth(AuthErrorCode.UNAUTHORIZED, 'Already an AppError', {
+          service: ErrorService.Homeserver,
           operation: 'test',
         });
         mockState.signup.mockRejectedValue(appError);
@@ -862,8 +850,8 @@ describe('HomeserverService', () => {
         } catch (error) {
           // Should be the exact same error instance (not wrapped)
           expect(error).toBe(appError);
-          expect((error as AppError).category).toBe(freshLibs.ErrorCategory.Auth);
-          expect((error as AppError).code).toBe(freshLibs.AuthErrorCode.UNAUTHORIZED);
+          expect((error as AppError).category).toBe(ErrorCategory.Auth);
+          expect((error as AppError).code).toBe(AuthErrorCode.UNAUTHORIZED);
           expect((error as AppError).message).toBe('Already an AppError');
         }
       });

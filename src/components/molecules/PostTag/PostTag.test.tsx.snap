@@ -4,23 +4,28 @@ exports[`PostTag - Snapshots > matches snapshot when selected 1`] = `
 <button
   aria-label="bitcoin tag"
   aria-pressed="true"
-  class="cursor-pointer inline-flex items-center justify-center bg-transparent focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 min-w-9 group relative h-8 max-w-full gap-1 rounded-md px-3 backdrop-blur-lg border-0 text-sm leading-5 font-bold text-white transition-all duration-200 hover:bg-transparent hover:text-white data-[state=on]:border data-[state=on]:border-solid data-[state=on]:bg-transparent data-[state=on]:text-white"
+  class="cursor-pointer inline-flex items-center justify-center bg-transparent focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 min-w-9 group relative h-8 max-w-full gap-1 rounded-md px-3 backdrop-blur-lg border-0 text-sm leading-5 font-bold text-white subpixel-antialiased transition-all duration-200 hover:bg-transparent hover:text-white data-[state=on]:border data-[state=on]:border-solid data-[state=on]:bg-transparent data-[state=on]:text-white"
   data-cy="post-tag"
   data-state="on"
   data-tag-label="bitcoin"
   style="background-image: linear-gradient(90deg, rgba(5, 5, 10, 0.7) 0%, rgba(5, 5, 10, 0.7) 100%), linear-gradient(90deg, rgb(255, 153, 0) 0%, rgb(255, 153, 0) 100%); box-shadow: inset 0 0 0 1px #FF9900;"
   type="button"
 >
-  <span
-    class="flex min-w-0 items-center gap-1.5 text-sm leading-5"
+  <div
+    class="flex h-8 w-fit max-w-full min-w-0 cursor-pointer items-center justify-between rounded-md transition-all duration-200 px-0"
+    data-cy="tag"
+    data-testid="tag"
+    style="background-color: transparent; border: medium; box-shadow: none;"
+    title="bitcoin"
   >
-    <span
-      class="truncate font-bold"
-      data-cy="post-tag-label"
+    <p
+      class="text-sm text-foreground truncate font-bold"
+      data-cy="tag-name"
+      data-testid="tag-name"
     >
       bitcoin
-    </span>
-  </span>
+    </p>
+  </div>
   <span
     aria-hidden="true"
     class="pointer-events-none absolute inset-0 rounded-md opacity-0 transition-opacity group-hover:opacity-100"
@@ -38,41 +43,60 @@ exports[`PostTag - Snapshots > matches snapshot with all features 1`] = `
 <button
   aria-label="bitcoin tag (16 posts)"
   aria-pressed="true"
-  class="cursor-pointer inline-flex items-center justify-center bg-transparent focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 min-w-9 group relative h-8 max-w-full gap-1 rounded-md px-3 backdrop-blur-lg border-0 text-sm leading-5 font-bold text-white transition-all duration-200 hover:bg-transparent hover:text-white data-[state=on]:border data-[state=on]:border-solid data-[state=on]:bg-transparent data-[state=on]:text-white"
+  class="cursor-pointer inline-flex items-center justify-center bg-transparent focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 min-w-9 group relative h-8 max-w-full gap-1 rounded-md px-3 backdrop-blur-lg border-0 text-sm leading-5 font-bold text-white subpixel-antialiased transition-all duration-200 hover:bg-transparent hover:text-white data-[state=on]:border data-[state=on]:border-solid data-[state=on]:bg-transparent data-[state=on]:text-white"
   data-cy="post-tag"
   data-state="on"
   data-tag-label="bitcoin"
   style="background-image: linear-gradient(90deg, rgba(5, 5, 10, 0.7) 0%, rgba(5, 5, 10, 0.7) 100%), linear-gradient(90deg, rgb(255, 153, 0) 0%, rgb(255, 153, 0) 100%); box-shadow: inset 0 0 0 1px #FF9900;"
   type="button"
 >
-  <span
-    class="flex min-w-0 items-center gap-1.5 text-sm leading-5"
+  <div
+    class="flex h-8 w-fit max-w-full min-w-0 cursor-pointer items-center justify-between rounded-md transition-all duration-200 px-0"
+    data-cy="tag"
+    data-testid="tag"
+    style="background-color: transparent; border: medium; box-shadow: none;"
+    title="bitcoin"
   >
-    <span
-      class="truncate font-bold"
-      data-cy="post-tag-label"
+    <p
+      class="text-sm text-foreground truncate font-bold"
+      data-cy="tag-name"
+      data-testid="tag-name"
     >
       bitcoin
-    </span>
-    <span
-      class="shrink-0 font-medium opacity-50"
+    </p>
+    <p
+      class="text-sm ml-1.5 shrink-0 font-medium text-foreground/50"
       data-cy="post-tag-count"
+      data-testid="tag-count"
     >
       16
-    </span>
-  </span>
+    </p>
+  </div>
   <span
     aria-label="Remove bitcoin tag"
     class="flex size-4 shrink-0 cursor-pointer items-center justify-center rounded opacity-70 transition-opacity hover:opacity-100"
     role="button"
   >
-    <div
-      class="size-3"
-      data-stroke-width="2"
-      data-testid="x-icon"
+    <svg
+      aria-hidden="true"
+      class="lucide lucide-x size-3"
+      fill="none"
+      height="24"
+      stroke="currentColor"
+      stroke-linecap="round"
+      stroke-linejoin="round"
+      stroke-width="2"
+      viewBox="0 0 24 24"
+      width="24"
+      xmlns="http://www.w3.org/2000/svg"
     >
-      X
-    </div>
+      <path
+        d="M18 6 6 18"
+      />
+      <path
+        d="m6 6 12 12"
+      />
+    </svg>
   </span>
   <span
     aria-hidden="true"
@@ -91,35 +115,53 @@ exports[`PostTag - Snapshots > matches snapshot with close button 1`] = `
 <button
   aria-label="bitcoin tag"
   aria-pressed="false"
-  class="cursor-pointer inline-flex items-center justify-center bg-transparent focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 min-w-9 group relative h-8 max-w-full gap-1 rounded-md px-3 backdrop-blur-lg border-0 text-sm leading-5 font-bold text-white transition-all duration-200 hover:bg-transparent hover:text-white data-[state=on]:border data-[state=on]:border-solid data-[state=on]:bg-transparent data-[state=on]:text-white"
+  class="cursor-pointer inline-flex items-center justify-center bg-transparent focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 min-w-9 group relative h-8 max-w-full gap-1 rounded-md px-3 backdrop-blur-lg border-0 text-sm leading-5 font-bold text-white subpixel-antialiased transition-all duration-200 hover:bg-transparent hover:text-white data-[state=on]:border data-[state=on]:border-solid data-[state=on]:bg-transparent data-[state=on]:text-white"
   data-cy="post-tag"
   data-state="off"
   data-tag-label="bitcoin"
   style="background-image: linear-gradient(90deg, rgba(5, 5, 10, 0.7) 0%, rgba(5, 5, 10, 0.7) 100%), linear-gradient(90deg, rgb(255, 153, 0) 0%, rgb(255, 153, 0) 100%);"
   type="button"
 >
-  <span
-    class="flex min-w-0 items-center gap-1.5 text-sm leading-5"
+  <div
+    class="flex h-8 w-fit max-w-full min-w-0 cursor-pointer items-center justify-between rounded-md transition-all duration-200 px-0"
+    data-cy="tag"
+    data-testid="tag"
+    style="background-color: transparent; border: medium; box-shadow: none;"
+    title="bitcoin"
   >
-    <span
-      class="truncate font-bold"
-      data-cy="post-tag-label"
+    <p
+      class="text-sm text-foreground truncate font-bold"
+      data-cy="tag-name"
+      data-testid="tag-name"
     >
       bitcoin
-    </span>
-  </span>
+    </p>
+  </div>
   <span
     aria-label="Remove bitcoin tag"
     class="flex size-4 shrink-0 cursor-pointer items-center justify-center rounded opacity-70 transition-opacity hover:opacity-100"
     role="button"
   >
-    <div
-      class="size-3"
-      data-stroke-width="2"
-      data-testid="x-icon"
+    <svg
+      aria-hidden="true"
+      class="lucide lucide-x size-3"
+      fill="none"
+      height="24"
+      stroke="currentColor"
+      stroke-linecap="round"
+      stroke-linejoin="round"
+      stroke-width="2"
+      viewBox="0 0 24 24"
+      width="24"
+      xmlns="http://www.w3.org/2000/svg"
     >
-      X
-    </div>
+      <path
+        d="M18 6 6 18"
+      />
+      <path
+        d="m6 6 12 12"
+      />
+    </svg>
   </span>
   <span
     aria-hidden="true"
@@ -133,29 +175,35 @@ exports[`PostTag - Snapshots > matches snapshot with counter 1`] = `
 <button
   aria-label="bitcoin tag (16 posts)"
   aria-pressed="false"
-  class="cursor-pointer inline-flex items-center justify-center bg-transparent focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 min-w-9 group relative h-8 max-w-full gap-1 rounded-md px-3 backdrop-blur-lg border-0 text-sm leading-5 font-bold text-white transition-all duration-200 hover:bg-transparent hover:text-white data-[state=on]:border data-[state=on]:border-solid data-[state=on]:bg-transparent data-[state=on]:text-white"
+  class="cursor-pointer inline-flex items-center justify-center bg-transparent focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 min-w-9 group relative h-8 max-w-full gap-1 rounded-md px-3 backdrop-blur-lg border-0 text-sm leading-5 font-bold text-white subpixel-antialiased transition-all duration-200 hover:bg-transparent hover:text-white data-[state=on]:border data-[state=on]:border-solid data-[state=on]:bg-transparent data-[state=on]:text-white"
   data-cy="post-tag"
   data-state="off"
   data-tag-label="bitcoin"
   style="background-image: linear-gradient(90deg, rgba(5, 5, 10, 0.7) 0%, rgba(5, 5, 10, 0.7) 100%), linear-gradient(90deg, rgb(255, 153, 0) 0%, rgb(255, 153, 0) 100%);"
   type="button"
 >
-  <span
-    class="flex min-w-0 items-center gap-1.5 text-sm leading-5"
+  <div
+    class="flex h-8 w-fit max-w-full min-w-0 cursor-pointer items-center justify-between rounded-md transition-all duration-200 px-0"
+    data-cy="tag"
+    data-testid="tag"
+    style="background-color: transparent; border: medium; box-shadow: none;"
+    title="bitcoin"
   >
-    <span
-      class="truncate font-bold"
-      data-cy="post-tag-label"
+    <p
+      class="text-sm text-foreground truncate font-bold"
+      data-cy="tag-name"
+      data-testid="tag-name"
     >
       bitcoin
-    </span>
-    <span
-      class="shrink-0 font-medium opacity-50"
+    </p>
+    <p
+      class="text-sm ml-1.5 shrink-0 font-medium text-foreground/50"
       data-cy="post-tag-count"
+      data-testid="tag-count"
     >
       16
-    </span>
-  </span>
+    </p>
+  </div>
   <span
     aria-hidden="true"
     class="pointer-events-none absolute inset-0 rounded-md opacity-0 transition-opacity group-hover:opacity-100"
@@ -168,23 +216,28 @@ exports[`PostTag - Snapshots > matches snapshot with custom color 1`] = `
 <button
   aria-label="bitcoin tag"
   aria-pressed="false"
-  class="cursor-pointer inline-flex items-center justify-center bg-transparent focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 min-w-9 group relative h-8 max-w-full gap-1 rounded-md px-3 backdrop-blur-lg border-0 text-sm leading-5 font-bold text-white transition-all duration-200 hover:bg-transparent hover:text-white data-[state=on]:border data-[state=on]:border-solid data-[state=on]:bg-transparent data-[state=on]:text-white"
+  class="cursor-pointer inline-flex items-center justify-center bg-transparent focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 min-w-9 group relative h-8 max-w-full gap-1 rounded-md px-3 backdrop-blur-lg border-0 text-sm leading-5 font-bold text-white subpixel-antialiased transition-all duration-200 hover:bg-transparent hover:text-white data-[state=on]:border data-[state=on]:border-solid data-[state=on]:bg-transparent data-[state=on]:text-white"
   data-cy="post-tag"
   data-state="off"
   data-tag-label="bitcoin"
   style="background-image: linear-gradient(90deg, rgba(5, 5, 10, 0.7) 0%, rgba(5, 5, 10, 0.7) 100%), linear-gradient(90deg, rgb(255, 0, 0) 0%, rgb(255, 0, 0) 100%);"
   type="button"
 >
-  <span
-    class="flex min-w-0 items-center gap-1.5 text-sm leading-5"
+  <div
+    class="flex h-8 w-fit max-w-full min-w-0 cursor-pointer items-center justify-between rounded-md transition-all duration-200 px-0"
+    data-cy="tag"
+    data-testid="tag"
+    style="background-color: transparent; border: medium; box-shadow: none;"
+    title="bitcoin"
   >
-    <span
-      class="truncate font-bold"
-      data-cy="post-tag-label"
+    <p
+      class="text-sm text-foreground truncate font-bold"
+      data-cy="tag-name"
+      data-testid="tag-name"
     >
       bitcoin
-    </span>
-  </span>
+    </p>
+  </div>
   <span
     aria-hidden="true"
     class="pointer-events-none absolute inset-0 rounded-md opacity-0 transition-opacity group-hover:opacity-100"
@@ -197,23 +250,28 @@ exports[`PostTag - Snapshots > matches snapshot with default state 1`] = `
 <button
   aria-label="bitcoin tag"
   aria-pressed="false"
-  class="cursor-pointer inline-flex items-center justify-center bg-transparent focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 min-w-9 group relative h-8 max-w-full gap-1 rounded-md px-3 backdrop-blur-lg border-0 text-sm leading-5 font-bold text-white transition-all duration-200 hover:bg-transparent hover:text-white data-[state=on]:border data-[state=on]:border-solid data-[state=on]:bg-transparent data-[state=on]:text-white"
+  class="cursor-pointer inline-flex items-center justify-center bg-transparent focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 min-w-9 group relative h-8 max-w-full gap-1 rounded-md px-3 backdrop-blur-lg border-0 text-sm leading-5 font-bold text-white subpixel-antialiased transition-all duration-200 hover:bg-transparent hover:text-white data-[state=on]:border data-[state=on]:border-solid data-[state=on]:bg-transparent data-[state=on]:text-white"
   data-cy="post-tag"
   data-state="off"
   data-tag-label="bitcoin"
   style="background-image: linear-gradient(90deg, rgba(5, 5, 10, 0.7) 0%, rgba(5, 5, 10, 0.7) 100%), linear-gradient(90deg, rgb(255, 153, 0) 0%, rgb(255, 153, 0) 100%);"
   type="button"
 >
-  <span
-    class="flex min-w-0 items-center gap-1.5 text-sm leading-5"
+  <div
+    class="flex h-8 w-fit max-w-full min-w-0 cursor-pointer items-center justify-between rounded-md transition-all duration-200 px-0"
+    data-cy="tag"
+    data-testid="tag"
+    style="background-color: transparent; border: medium; box-shadow: none;"
+    title="bitcoin"
   >
-    <span
-      class="truncate font-bold"
-      data-cy="post-tag-label"
+    <p
+      class="text-sm text-foreground truncate font-bold"
+      data-cy="tag-name"
+      data-testid="tag-name"
     >
       bitcoin
-    </span>
-  </span>
+    </p>
+  </div>
   <span
     aria-hidden="true"
     class="pointer-events-none absolute inset-0 rounded-md opacity-0 transition-opacity group-hover:opacity-100"

@@ -27,84 +27,115 @@ vi.mock('next-intl', () => ({
   },
 }));
 
-// Mock Libs
-const mockGetSharedFiles = vi.fn();
-const mockComposeShareContent = vi.fn();
-
-vi.mock('@/libs', () => ({
-  getSharedFiles: () => mockGetSharedFiles(),
-  composeShareContent: (params: { title?: string; text?: string; url?: string }) => mockComposeShareContent(params),
+const { mockGetSharedFiles } = vi.hoisted(() => ({
+  mockGetSharedFiles: vi.fn(),
 }));
+
+vi.mock('@/libs/share/shareTarget', async () => {
+  const actual = await vi.importActual<typeof import('@/libs/share/shareTarget')>('@/libs/share/shareTarget');
+  return {
+    ...actual,
+    getSharedFiles: () => mockGetSharedFiles(),
+  };
+});
 
 // Mock Atoms
-vi.mock('@/atoms', () => ({
-  Container: ({ children, className }: { children: React.ReactNode; className?: string }) => (
-    <div data-testid="container" className={className}>
-      {children}
-    </div>
-  ),
-  Typography: ({ children, as: Tag = 'span' }: { children: React.ReactNode; as?: ElementType; size?: string }) => {
-    const Comp = Tag as ElementType;
-    return <Comp data-testid="typography">{children}</Comp>;
-  },
-  Button: ({
-    children,
-    onClick,
-    variant,
-    size,
-  }: {
-    children: React.ReactNode;
-    onClick?: () => void;
-    variant?: string;
-    size?: string;
-  }) => (
-    <button data-testid="button" data-variant={variant} data-size={size} onClick={onClick}>
-      {children}
-    </button>
-  ),
-  Spinner: () => <div data-testid="spinner">Loading...</div>,
-  Skeleton: ({ className }: { className?: string }) => <div data-testid="skeleton" className={className} />,
-}));
+vi.mock('@/atoms/Button/Button', () => {
+  return {
+    Button: ({
+      children,
+      onClick,
+      variant,
+      size,
+    }: {
+      children: React.ReactNode;
+      onClick?: () => void;
+      variant?: string;
+      size?: string;
+    }) => (
+      <button data-testid="button" data-variant={variant} data-size={size} onClick={onClick}>
+        {children}
+      </button>
+    ),
+  };
+});
+
+vi.mock('@/atoms/Container/Container', () => {
+  return {
+    Container: ({ children, className }: { children: React.ReactNode; className?: string }) => (
+      <div data-testid="container" className={className}>
+        {children}
+      </div>
+    ),
+  };
+});
+
+vi.mock('@/atoms/Skeleton/Skeleton', () => {
+  return {
+    Skeleton: ({ className }: { className?: string }) => <div data-testid="skeleton" className={className} />,
+  };
+});
+
+vi.mock('@/atoms/Spinner/Spinner', () => {
+  return {
+    Spinner: () => <div data-testid="spinner">Loading...</div>,
+  };
+});
+
+vi.mock('@/atoms/Typography/Typography', () => {
+  return {
+    Typography: ({ children, as: Tag = 'span' }: { children: React.ReactNode; as?: ElementType; size?: string }) => {
+      const Comp = Tag as ElementType;
+      return <Comp data-testid="typography">{children}</Comp>;
+    },
+  };
+});
 
 // Mock Organisms
-vi.mock('@/organisms', () => ({
-  ContentLayout: ({ children }: { children: React.ReactNode }) => <div data-testid="content-layout">{children}</div>,
-  PostInput: ({
-    dataCy,
-    variant,
-    expanded,
-    onSuccess,
-    initialContent,
-    initialAttachments,
-  }: {
-    dataCy?: string;
-    variant?: string;
-    expanded?: boolean;
-    onSuccess?: () => void;
-    initialContent?: string;
-    initialAttachments?: File[];
-  }) => (
-    <div
-      data-testid="post-input"
-      data-cy={dataCy}
-      data-variant={variant}
-      data-expanded={expanded}
-      data-initial-content={initialContent}
-      data-has-attachments={initialAttachments && initialAttachments.length > 0}
-    >
-      <button data-testid="post-submit" onClick={onSuccess}>
-        Submit
-      </button>
-    </div>
-  ),
-}));
+vi.mock('@/organisms/ContentLayout/ContentLayout', () => {
+  return {
+    ContentLayout: ({ children }: { children: React.ReactNode }) => <div data-testid="content-layout">{children}</div>,
+  };
+});
+
+vi.mock('@/organisms/PostInput/PostInput', () => {
+  return {
+    PostInput: ({
+      dataCy,
+      variant,
+      expanded,
+      onSuccess,
+      initialContent,
+      initialAttachments,
+    }: {
+      dataCy?: string;
+      variant?: string;
+      expanded?: boolean;
+      onSuccess?: () => void;
+      initialContent?: string;
+      initialAttachments?: File[];
+    }) => (
+      <div
+        data-testid="post-input"
+        data-cy={dataCy}
+        data-variant={variant}
+        data-expanded={expanded}
+        data-initial-content={initialContent}
+        data-has-attachments={initialAttachments && initialAttachments.length > 0}
+      >
+        <button data-testid="post-submit" onClick={onSuccess}>
+          Submit
+        </button>
+      </div>
+    ),
+  };
+});
 
 describe('ShareTarget', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     mockSearchParams.clear();
     mockGetSharedFiles.mockResolvedValue([]);
-    mockComposeShareContent.mockReturnValue('');
   });
 
   it('renders without errors', async () => {
@@ -168,16 +199,14 @@ describe('ShareTarget', () => {
     mockSearchParams.set('title', 'Test Title');
     mockSearchParams.set('text', 'Test text content');
     mockSearchParams.set('url', 'https://example.com');
-    mockComposeShareContent.mockReturnValue('Test text content\n\nhttps://example.com');
 
     render(<ShareTarget />);
 
     await waitFor(() => {
-      expect(mockComposeShareContent).toHaveBeenCalledWith({
-        title: 'Test Title',
-        text: 'Test text content',
-        url: 'https://example.com',
-      });
+      expect(screen.getByTestId('post-input')).toHaveAttribute(
+        'data-initial-content',
+        'Test text content\n\nhttps://example.com',
+      );
     });
   });
 
@@ -204,8 +233,6 @@ describe('ShareTarget', () => {
   });
 
   it('renders PostInput with correct props', async () => {
-    mockComposeShareContent.mockReturnValue('Shared content');
-
     render(<ShareTarget />);
 
     await waitFor(() => {
@@ -217,7 +244,7 @@ describe('ShareTarget', () => {
   });
 
   it('passes initial content to PostInput', async () => {
-    mockComposeShareContent.mockReturnValue('Test shared content');
+    mockSearchParams.set('text', 'Test shared content');
 
     render(<ShareTarget />);
 
@@ -246,7 +273,6 @@ describe('ShareTarget - Snapshots', () => {
     vi.clearAllMocks();
     mockSearchParams.clear();
     mockGetSharedFiles.mockResolvedValue([]);
-    mockComposeShareContent.mockReturnValue('');
   });
 
   it('matches snapshot for loading state', () => {
@@ -258,7 +284,7 @@ describe('ShareTarget - Snapshots', () => {
   });
 
   it('matches snapshot for content state', async () => {
-    mockComposeShareContent.mockReturnValue('Shared content from another app');
+    mockSearchParams.set('text', 'Shared content from another app');
 
     const { container } = render(<ShareTarget />);
 
@@ -271,7 +297,6 @@ describe('ShareTarget - Snapshots', () => {
 
   it('matches snapshot with text content only', async () => {
     mockSearchParams.set('text', 'Just some text');
-    mockComposeShareContent.mockReturnValue('Just some text');
 
     const { container } = render(<ShareTarget />);
 

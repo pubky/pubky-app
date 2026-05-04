@@ -1,5 +1,7 @@
-import * as Core from '@/core';
-
+import { HotApplication } from '@/application/hot/hot';
+import type { NexusHotTag } from '@/services/nexus/nexus.types';
+import type { TTagHotParams } from '@/services/nexus/tag/tag.types';
+import { useAuthStore } from '@/stores/auth/auth.store';
 export class HotController {
   private constructor() {} // Prevent instantiation
 
@@ -14,14 +16,14 @@ export class HotController {
    * @param params.taggers_limit - Limit for taggers array in response
    * @returns Array of hot tags with metadata
    */
-  static async getOrFetch(params: Core.TTagHotParams): Promise<Core.NexusHotTag[]> {
+  static async getOrFetch(params: TTagHotParams): Promise<NexusHotTag[]> {
     // API requires user_id and reach to be provided together
     if (params.reach && !params.user_id) {
-      const currentUserPubky = Core.useAuthStore.getState().currentUserPubky;
+      const currentUserPubky = useAuthStore.getState().currentUserPubky;
       if (currentUserPubky) {
-        return await Core.HotApplication.getOrFetch({ ...params, user_id: currentUserPubky });
+        return await HotApplication.getOrFetch({ ...params, user_id: currentUserPubky });
       }
     }
-    return await Core.HotApplication.getOrFetch(params);
+    return await HotApplication.getOrFetch(params);
   }
 }

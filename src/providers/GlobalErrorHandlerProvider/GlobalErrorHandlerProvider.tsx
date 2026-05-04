@@ -1,9 +1,9 @@
 'use client';
+import { useEffect, useRef, type ReactNode } from 'react';
+import { showErrorToast } from '@/molecules/Toaster/showErrorToast';
 
-import type { ReactNode } from 'react';
-import { useEffect, useRef } from 'react';
-import * as Libs from '@/libs';
-import * as Molecules from '@/molecules';
+import { Logger } from '@/libs/logger/logger';
+import { getErrorMessage } from '@/libs/error/error.utils';
 
 interface GlobalErrorHandlerProviderProps {
   children: ReactNode;
@@ -21,12 +21,12 @@ export function GlobalErrorHandlerProvider({ children }: GlobalErrorHandlerProvi
       // Err.* factory would emit a second event with a different fingerprint (the wrapper
       // stack frames replace the original's), creating duplicate Sentry issues.
       // This provider owns the UX side-effect (toast + log) only.
-      const message = Libs.getErrorMessage(error);
+      const message = getErrorMessage(error);
       const now = Date.now();
       const toastKey = `${operation}:${message}`;
       const lastToastTime = toastTimestampsRef.current.get(toastKey);
 
-      Libs.Logger.error(`[GlobalErrorHandlerProvider] ${operation}`, {
+      Logger.error(`[GlobalErrorHandlerProvider] ${operation}`, {
         ...context,
         error,
       });
@@ -42,7 +42,7 @@ export function GlobalErrorHandlerProvider({ children }: GlobalErrorHandlerProvi
       }
 
       toastTimestampsRef.current.set(toastKey, now);
-      Molecules.showErrorToast({ description: message });
+      showErrorToast({ description: message });
     };
 
     const onWindowError = (event: ErrorEvent) => {

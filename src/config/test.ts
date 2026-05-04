@@ -9,13 +9,12 @@ import { beforeAll, afterAll, afterEach, beforeEach } from 'vitest';
 
 // Import English messages for i18n mock
 import enMessages from '../../messages/en.json';
-
 // =============================================================================
 // IMPORTANT: Set environment variables BEFORE importing any app code
 // =============================================================================
-// The Env singleton in @/libs/env is parsed at module load time.
-// If we import from @/libs/utils before setting process.env, the import chain
-// (@/libs/utils -> @/config -> @/libs/env) will initialize Env with wrong values.
+// The Env singleton in @/libs/env/env is parsed at module load time.
+// If we import from @/libs/utils/utils before setting process.env, the import chain
+// (@/libs/utils/utils -> @/config/<module> -> @/libs/env/env) will initialize Env with wrong values.
 // See: https://github.com/pubky/pubky-app/issues/1101
 
 process.env.NEXT_PUBLIC_DB_VERSION = '1';
@@ -45,10 +44,12 @@ process.env.SUPPORT_FEEDBACK_INBOX_ID = '26';
 // NOW we can safely import app code that depends on Env
 // =============================================================================
 
+const { db } = await import('@/database/franky/franky');
+
 // Global snapshot serializer to normalize Radix UI generated IDs
 // This ensures snapshot tests are consistent across test runs
 // See: https://github.com/pubky/pubky-app/issues/1101
-const { radixIdSerializer } = await import('@/libs/utils');
+const { radixIdSerializer } = await import('@/libs/utils/utils');
 expect.addSnapshotSerializer(radixIdSerializer);
 
 /**
@@ -283,8 +284,6 @@ vi.mock('next/font/google', () => ({
     className: 'inter-tight',
   })),
 }));
-
-const { db } = await import('@/core');
 
 afterEach(() => {
   cleanup();

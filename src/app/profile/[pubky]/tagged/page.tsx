@@ -1,5 +1,1 @@
-import * as Templates from '@/templates';
-
-export default function DynamicProfileTaggedPage() {
-  return <Templates.ProfilePageTagged />;
-}
+export { ProfileTaggedPage as default } from '@/templates/Profile/Tagged/ProfileTaggedPage';

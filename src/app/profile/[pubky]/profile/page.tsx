@@ -1,5 +1,1 @@
-import * as Templates from '@/templates';
-
-export default function DynamicProfileProfilePage() {
-  return <Templates.ProfilePageProfile />;
-}
+export { ProfileOverviewPage as default } from '@/templates/Profile/Profile/ProfileOverviewPage';

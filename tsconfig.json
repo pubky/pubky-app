@@ -23,35 +23,56 @@
       }
     ],
     "paths": {
-      "@/atoms": [
-        "./src/components/atoms/index.ts"
-      ],
       "@/atoms/*": [
         "./src/components/atoms/*"
-      ],
-      "@/molecules": [
-        "./src/components/molecules/index.ts"
       ],
       "@/molecules/*": [
         "./src/components/molecules/*"
       ],
-      "@/organisms": [
-        "./src/components/organisms/index.ts"
-      ],
       "@/organisms/*": [
         "./src/components/organisms/*"
-      ],
-      "@/templates": [
-        "./src/components/templates/index.ts"
       ],
       "@/templates/*": [
         "./src/components/templates/*"
       ],
-      "@/hooks": [
-        "./src/hooks/index.ts"
+      "@/application/*": [
+        "./src/core/application/*"
+      ],
+      "@/controllers/*": [
+        "./src/core/controllers/*"
+      ],
+      "@/coordinators/*": [
+        "./src/core/coordinators/*"
+      ],
+      "@/database/*": [
+        "./src/core/database/*"
+      ],
+      "@/models/*": [
+        "./src/core/models/*"
+      ],
+      "@/services/*": [
+        "./src/core/services/*"
+      ],
+      "@/pipes/*": [
+        "./src/core/pipes/*"
+      ],
+      "@/stores/*": [
+        "./src/core/stores/*"
+      ],
+      "@/utils/*": [
+        "./src/core/utils/*"
       ],
       "@/hooks/*": [
         "./src/hooks/*"
+      ],
+      "@/providers/*": [
+        "./src/providers/*"
+      ],
+      "@/libs/*": [
+        "./src/libs/*"
+      ],
+      "@/icons": [
+        "./src/libs/icons/icons.tsx"
       ],
       "@/*": [
         "./src/*"

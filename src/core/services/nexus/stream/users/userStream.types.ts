@@ -1,5 +1,6 @@
-import * as Core from '@/core';
-
+import type { Pubky } from '@/models/models.types';
+import type { UserStreamId } from '@/models/stream/user/userStream.types';
+import type { TPaginationParams, TUserId, UserStreamReach, UserStreamTimeframe } from '@/services/nexus/nexus.types';
 export enum USER_STREAM_PREFIX {
   USERS = 'v0/stream/users',
   USER_IDS = 'v0/stream/users/ids',
@@ -18,27 +19,27 @@ export enum UserStreamSource {
   MOST_FOLLOWED = 'most_followed',
 }
 
-export type TUserStreamBase = Core.TPaginationParams & {
-  viewer_id?: Core.Pubky;
+export type TUserStreamBase = TPaginationParams & {
+  viewer_id?: Pubky;
   // Provide a random selection of size 3 for sources supporting preview. Passing 'preview', ignores skip and limit parameters
   preview?: boolean;
 };
 
-export type TUserStreamWithUserIdParams = Core.TUserId & TUserStreamBase;
+export type TUserStreamWithUserIdParams = TUserId & TUserStreamBase;
 
 export type TUserStreamInfluencersParams = TUserStreamBase &
-  Core.TUserId & {
-    reach?: Core.UserStreamReach;
-    timeframe?: Core.UserStreamTimeframe;
+  TUserId & {
+    reach?: UserStreamReach;
+    timeframe?: UserStreamTimeframe;
   };
 
 export type TUserStreamPostRepliesParams = TUserStreamBase & {
-  author_id: Core.Pubky;
+  author_id: Pubky;
   post_id: string;
 };
 
 export type TUserStreamWithDepthParams = TUserStreamBase &
-  Core.TUserId & {
+  TUserId & {
     depth?: number;
   };
 
@@ -47,8 +48,8 @@ export type TUserStreamUsernameParams = Omit<TUserStreamBase, 'preview'> & {
 };
 
 export type TUserStreamUsersByIdsParams = {
-  user_ids: Core.Pubky[];
-  viewer_id?: Core.Pubky;
+  user_ids: Pubky[];
+  viewer_id?: Pubky;
   depth?: number;
 };
 
@@ -58,7 +59,7 @@ export type TUserStreamUsersByIdsParams = {
  * params: Pagination parameters
  */
 export type TFetchUserStreamParams = {
-  streamId: Core.UserStreamId;
+  streamId: UserStreamId;
   params: TUserStreamBase;
 };
 

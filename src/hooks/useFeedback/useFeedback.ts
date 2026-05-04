@@ -1,10 +1,12 @@
 'use client';
 
+import { useCurrentUserProfile } from '@/hooks/useCurrentUserProfile/useCurrentUserProfile';
 import { useState, useCallback, useMemo } from 'react';
 import { useTranslations } from 'next-intl';
-import * as Molecules from '@/molecules';
-import * as Hooks from '@/hooks';
-import { Logger, postJson } from '@/libs';
+import { showErrorToast as showErrorToastMessage } from '@/molecules/Toaster/showErrorToast';
+
+import { Logger } from '@/libs/logger/logger';
+import { postJson } from '@/libs/api/client-request';
 
 /**
  * Hook to handle feedback submission.
@@ -21,14 +23,14 @@ import { Logger, postJson } from '@/libs';
  * @returns reset - Resets all state to initial values
  */
 export function useFeedback() {
-  const { currentUserPubky, userDetails } = Hooks.useCurrentUserProfile();
+  const { currentUserPubky, userDetails } = useCurrentUserProfile();
   const tFeedback = useTranslations('toast.feedback');
   const [feedback, setFeedback] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isSuccess, setIsSuccess] = useState(false);
 
   const showErrorToast = useCallback((description: string) => {
-    Molecules.showErrorToast({ description });
+    showErrorToastMessage({ description });
   }, []);
 
   const handleChange = useCallback((e: React.ChangeEvent<HTMLTextAreaElement>) => {

@@ -1,12 +1,10 @@
 'use client';
-
-import { ContentLayout } from '@/organisms/ContentLayout';
+import { ContentLayout } from '@/organisms/ContentLayout/ContentLayout';
 
 import type { SinglePostProps } from './SinglePost.types';
-
-import { SinglePostContent } from '@/organisms/SinglePostContent';
-import { SinglePostLeftDrawer, SinglePostLeftSidebar } from '@/organisms/SinglePostLeftSidebar';
-import { SinglePostRightPanel } from '@/organisms/SinglePostRightPanel';
+import { SinglePostContent } from '@/organisms/SinglePostContent/SinglePostContent';
+import { SinglePostLeftDrawer, SinglePostLeftSidebar } from '@/organisms/SinglePostLeftSidebar/SinglePostLeftSidebar';
+import { SinglePostRightPanel } from '@/organisms/SinglePostRightPanel/SinglePostRightPanel';
 
 /**
  * SinglePost Template

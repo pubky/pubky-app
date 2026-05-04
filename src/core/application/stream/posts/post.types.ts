@@ -1,19 +1,21 @@
-import * as Core from '@/core';
-
+import type { Pubky } from '@/models/models.types';
+import type { PostStreamId } from '@/models/stream/post/postStream.types';
+import type { NexusPost } from '@/services/nexus/nexus.types';
+import type { StreamOrder } from '@/services/nexus/stream/posts/postStream.types';
 export interface TFetchStreamParams {
-  streamId: Core.PostStreamId;
+  streamId: PostStreamId;
   streamHead: number;
   streamTail: number;
   limit: number;
   /** Optional viewer ID for relationship data. Null for unauthenticated views. */
-  viewerId: Core.Pubky | null;
+  viewerId: Pubky | null;
   lastPostId?: string;
   tags?: string[];
-  order?: Core.StreamOrder;
+  order?: StreamOrder;
 }
 
 export interface TInitialStreamParams {
-  streamId: Core.PostStreamId;
+  streamId: PostStreamId;
   limit: number;
   cachedStream: { stream: string[] } | null;
 }
@@ -31,15 +33,15 @@ export interface TPartialCacheHitParams {
   cachedStreamChunk: string[];
   limit: number;
   streamTail: number;
-  streamId: Core.PostStreamId;
+  streamId: PostStreamId;
   /** Optional viewer ID for relationship data. Null for unauthenticated views. */
-  viewerId: Core.Pubky | null;
+  viewerId: Pubky | null;
 }
 
 export interface TMissingPostsParams {
   cacheMissPostIds: string[];
   /** Optional viewer ID for relationship data. Null/undefined for unauthenticated views. */
-  viewerId?: Core.Pubky | null;
+  viewerId?: Pubky | null;
 }
 
 export interface TCacheStreamParams {
@@ -49,13 +51,13 @@ export interface TCacheStreamParams {
 }
 
 export interface TFetchMissingUsersParams {
-  posts: Core.NexusPost[];
+  posts: NexusPost[];
   /** Optional viewer ID for relationship data. Null/undefined for unauthenticated views. */
-  viewerId?: Core.Pubky | null;
+  viewerId?: Pubky | null;
 }
 
 export interface TPersistUnreadNewStreamChunkParams {
-  streamId: Core.PostStreamId;
+  streamId: PostStreamId;
   compositePostIds: string[];
 }
 

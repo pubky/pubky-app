@@ -1,9 +1,8 @@
 import { Table } from 'dexie';
-import { db } from '@/core/database';
 import { HotTagsModelSchema } from './hot.schema';
-import { NexusHotTag } from '@/core/services/nexus/nexus.types';
-import { RecordModelBase } from '@/core/models/shared/base/record/baseRecord';
-
+import { db } from '@/database/franky/franky';
+import { RecordModelBase } from '@/models/shared/base/record/baseRecord';
+import type { NexusHotTag } from '@/services/nexus/nexus.types';
 /**
  * Hot Tags Model
  * Manages hot/trending tags cache in IndexedDB

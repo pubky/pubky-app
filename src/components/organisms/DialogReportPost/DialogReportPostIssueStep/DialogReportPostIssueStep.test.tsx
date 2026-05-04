@@ -2,29 +2,20 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { useRouter } from 'next/navigation';
-import * as Atoms from '@/atoms';
-import { DialogReportPostIssueStep } from './DialogReportPostIssueStep';
-import { REPORT_ISSUE_TYPES, REPORT_ISSUE_LABELS } from '@/core/pipes/report';
+import { Dialog, DialogContent } from '@/atoms/Dialog/Dialog';
 
+import { DialogReportPostIssueStep } from './DialogReportPostIssueStep';
+import { REPORT_ISSUE_LABELS, REPORT_ISSUE_TYPES } from '@/pipes/report/report.constants';
 // Mock next/navigation
 vi.mock('next/navigation', () => ({
   useRouter: vi.fn(),
 }));
 
-// Mock @/libs - use actual implementations and only stub cn helper
-vi.mock('@/libs', async (importOriginal) => {
-  const actual = await importOriginal<typeof import('@/libs')>();
-  return {
-    ...actual,
-    cn: (...inputs: (string | undefined | null | false)[]) => inputs.filter(Boolean).join(' '),
-  };
-});
-
 const renderWithDialog = (component: React.ReactElement) => {
   return render(
-    <Atoms.Dialog open={true}>
-      <Atoms.DialogContent>{component}</Atoms.DialogContent>
-    </Atoms.Dialog>,
+    <Dialog open={true}>
+      <DialogContent>{component}</DialogContent>
+    </Dialog>,
   );
 };
 

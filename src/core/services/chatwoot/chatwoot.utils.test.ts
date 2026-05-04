@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import { buildChatwootEmail, extractSourceId, CHATWOOT_EMAIL_DOMAIN } from './chatwoot.utils';
 import type { TChatwootContact } from './chatwoot.types';
-import { asInvalid } from '@/test-utils';
+import { asInvalid } from '@/test-utils/type-assertions';
 
 const testData = {
   pubky: 'o1gg96ewuojmopcjbz8895478wdtxtzzuxnfjjz8o8e77csa1ngo',

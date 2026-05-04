@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { detectModerationFromTags, shouldBlur } from './moderation.utils';
-import * as Config from '@/config';
+import { MODERATED_TAGS, MODERATION_ID } from '@/config/moderation';
 
 describe('moderation.utils', () => {
   describe('detectModerationFromTags', () => {
@@ -22,8 +22,8 @@ describe('moderation.utils', () => {
     it('should return true when tag has moderation label and moderation tagger', () => {
       const tags = [
         {
-          label: Config.MODERATED_TAGS[0],
-          taggers: [Config.MODERATION_ID],
+          label: MODERATED_TAGS[0],
+          taggers: [MODERATION_ID],
         },
       ];
 
@@ -34,7 +34,7 @@ describe('moderation.utils', () => {
     it('should return false when tag has moderation label but wrong tagger', () => {
       const tags = [
         {
-          label: Config.MODERATED_TAGS[0],
+          label: MODERATED_TAGS[0],
           taggers: ['other-tagger'],
         },
       ];
@@ -47,7 +47,7 @@ describe('moderation.utils', () => {
       const tags = [
         {
           label: 'other-label',
-          taggers: [Config.MODERATION_ID],
+          taggers: [MODERATION_ID],
         },
       ];
 
@@ -62,8 +62,8 @@ describe('moderation.utils', () => {
           taggers: ['other-tagger'],
         },
         {
-          label: Config.MODERATED_TAGS[0],
-          taggers: [Config.MODERATION_ID],
+          label: MODERATED_TAGS[0],
+          taggers: [MODERATION_ID],
         },
         {
           label: 'another-label',

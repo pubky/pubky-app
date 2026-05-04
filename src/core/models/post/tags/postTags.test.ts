@@ -1,32 +1,34 @@
 import { describe, it, expect, beforeEach } from 'vitest';
-import * as Core from '@/core';
-
+import { resetDatabase } from '@/database/franky/franky.helpers';
+import { PostTagsModel } from '@/models/post/tags/postTags';
+import type { NexusModelTuple } from '@/models/shared/base/tuple/baseTuple.type';
+import { TagModel } from '@/models/shared/tag/tag';
+import { generateTestUserId } from '@/models/user/users.helpers';
+import type { NexusTag } from '@/services/nexus/nexus.types';
 describe('PostTagsModel', () => {
   beforeEach(async () => {
-    await Core.resetDatabase();
+    await resetDatabase();
   });
 
   const testPostId1 = 'post-test-1';
   const testPostId2 = 'post-test-2';
-  const testUserId1 = Core.generateTestUserId(1);
-  const testUserId2 = Core.generateTestUserId(2);
+  const testUserId1 = generateTestUserId(1);
+  const testUserId2 = generateTestUserId(2);
 
-  const MOCK_TAGS_1: Core.NexusTag[] = [
+  const MOCK_TAGS_1: NexusTag[] = [
     { label: 'tech', taggers: [testUserId1], taggers_count: 1, relationship: false },
     { label: 'announcement', taggers: [testUserId2], taggers_count: 1, relationship: false },
   ];
 
-  const MOCK_TAGS_2: Core.NexusTag[] = [
-    { label: 'news', taggers: [testUserId1], taggers_count: 1, relationship: false },
-  ];
+  const MOCK_TAGS_2: NexusTag[] = [{ label: 'news', taggers: [testUserId1], taggers_count: 1, relationship: false }];
 
   describe('Constructor', () => {
     it('should create PostTagsModel instance with id and TagModel array', () => {
       const data = { id: testPostId1, tags: MOCK_TAGS_1 };
-      const model = new Core.PostTagsModel(data);
+      const model = new PostTagsModel(data);
       expect(model.id).toBe(testPostId1);
       expect(model.tags.length).toBe(2);
-      expect(model.tags[0]).toBeInstanceOf(Core.TagModel);
+      expect(model.tags[0]).toBeInstanceOf(TagModel);
       const labels = model.tags.map((t) => t.label).sort();
       expect(labels).toEqual(['announcement', 'tech']);
     });
@@ -34,7 +36,7 @@ describe('PostTagsModel', () => {
 
   describe('Instance helpers', () => {
     it('should save and remove a tag for a user', () => {
-      const model = new Core.PostTagsModel({ id: testPostId1, tags: [] });
+      const model = new PostTagsModel({ id: testPostId1, tags: [] });
 
       expect(model.addTagger('tech', testUserId1)).toBe(false); // Returns false because tag didn't exist
       const techTag = model.findByLabel('tech');
@@ -47,7 +49,7 @@ describe('PostTagsModel', () => {
     });
 
     it('should find tag by label', () => {
-      const model = new Core.PostTagsModel({ id: testPostId1, tags: MOCK_TAGS_1 });
+      const model = new PostTagsModel({ id: testPostId1, tags: MOCK_TAGS_1 });
 
       const techTag = model.findByLabel('tech');
       expect(techTag).not.toBeNull();
@@ -62,7 +64,7 @@ describe('PostTagsModel', () => {
     });
 
     it('should handle removing taggers via removeTag', () => {
-      const model = new Core.PostTagsModel({ id: testPostId1, tags: MOCK_TAGS_1 });
+      const model = new PostTagsModel({ id: testPostId1, tags: MOCK_TAGS_1 });
 
       // Remove existing tagger
       const techExisting = model.findByLabel('tech');
@@ -80,16 +82,16 @@ describe('PostTagsModel', () => {
   describe('Static Methods', () => {
     it('should insert post tags', async () => {
       const rec = { id: testPostId1, tags: MOCK_TAGS_1 };
-      const result = await Core.PostTagsModel.create(rec);
+      const result = await PostTagsModel.create(rec);
       expect(result).toBe(rec.id);
     });
 
     it('should find post tags by id', async () => {
       const rec = { id: testPostId1, tags: MOCK_TAGS_1 };
-      await Core.PostTagsModel.create(rec);
-      const found = await Core.PostTagsModel.findById(testPostId1);
+      await PostTagsModel.create(rec);
+      const found = await PostTagsModel.findById(testPostId1);
       expect(found).not.toBeNull();
-      expect(found!).toBeInstanceOf(Core.PostTagsModel);
+      expect(found!).toBeInstanceOf(PostTagsModel);
       expect(found!.id).toBe(testPostId1);
       const labels = found!.tags.map((t) => t.label).sort();
       expect(labels).toEqual(['announcement', 'tech']);
@@ -97,21 +99,21 @@ describe('PostTagsModel', () => {
 
     it('should return null for non-existent post tags', async () => {
       const nonExistentId = 'non-existent-post-999';
-      const result = await Core.PostTagsModel.findById(nonExistentId);
+      const result = await PostTagsModel.findById(nonExistentId);
       expect(result).toBeNull();
     });
 
     it('should bulk save post tags from tuples', async () => {
-      const tuples: Core.NexusModelTuple<Core.NexusTag[]>[] = [
+      const tuples: NexusModelTuple<NexusTag[]>[] = [
         [testPostId1, MOCK_TAGS_1],
         [testPostId2, MOCK_TAGS_2],
       ];
 
-      const result = await Core.PostTagsModel.bulkSave(tuples);
+      const result = await PostTagsModel.bulkSave(tuples);
       expect(result).toBeDefined();
 
-      const tags1 = await Core.PostTagsModel.findById(testPostId1);
-      const tags2 = await Core.PostTagsModel.findById(testPostId2);
+      const tags1 = await PostTagsModel.findById(testPostId1);
+      const tags2 = await PostTagsModel.findById(testPostId2);
 
       expect(tags1).not.toBeNull();
       expect(tags2).not.toBeNull();
@@ -120,7 +122,7 @@ describe('PostTagsModel', () => {
     });
 
     it('should handle empty array in bulk save', async () => {
-      const result = await Core.PostTagsModel.bulkSave([]);
+      const result = await PostTagsModel.bulkSave([]);
       expect(result).toBeUndefined();
     });
 
@@ -130,11 +132,11 @@ describe('PostTagsModel', () => {
         id: testPostId1,
         tags: [
           { label: 'trending', taggers: [testUserId1, testUserId2], taggers_count: 2, relationship: false },
-        ] as Core.NexusTag[],
+        ] as NexusTag[],
       };
 
-      await Core.PostTagsModel.create(postWithMultipleTaggers);
-      const found = await Core.PostTagsModel.findById(testPostId1);
+      await PostTagsModel.create(postWithMultipleTaggers);
+      const found = await PostTagsModel.findById(testPostId1);
       expect(found).not.toBeNull();
 
       const trending = found!.findByLabel('trending');

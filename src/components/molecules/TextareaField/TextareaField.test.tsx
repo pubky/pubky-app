@@ -3,55 +3,67 @@ import { render, screen, fireEvent } from '@testing-library/react';
 import { TextareaField } from './TextareaField';
 
 // Mock atoms
-vi.mock('@/atoms', () => ({
-  Container: ({ children, className }: { children: React.ReactNode; className?: string }) => (
-    <div data-testid="container" className={className}>
-      {children}
-    </div>
-  ),
-  Textarea: ({
-    className,
-    value,
-    onChange,
-    placeholder,
-    rows,
-    disabled,
-    readOnly,
-    onClick,
-    maxLength,
-    ...props
-  }: {
-    className?: string;
-    value?: string;
-    onChange?: (e: React.ChangeEvent<HTMLTextAreaElement>) => void;
-    placeholder?: string;
-    rows?: number;
-    disabled?: boolean;
-    readOnly?: boolean;
-    onClick?: () => void;
-    maxLength?: number;
-    [key: string]: unknown;
-  }) => (
-    <textarea
-      data-testid="textarea"
-      className={className}
-      value={value}
-      onChange={onChange}
-      placeholder={placeholder}
-      rows={rows}
-      disabled={disabled}
-      readOnly={readOnly}
-      onClick={onClick}
-      maxLength={maxLength}
-      {...props}
-    />
-  ),
-  Typography: ({ children, className }: { children: React.ReactNode; className?: string }) => (
-    <div data-testid="typography" className={className}>
-      {children}
-    </div>
-  ),
-}));
+vi.mock('@/atoms/Container/Container', () => {
+  return {
+    Container: ({ children, className }: { children: React.ReactNode; className?: string }) => (
+      <div data-testid="container" className={className}>
+        {children}
+      </div>
+    ),
+  };
+});
+
+vi.mock('@/atoms/Textarea/Textarea', () => {
+  return {
+    Textarea: ({
+      className,
+      value,
+      onChange,
+      placeholder,
+      rows,
+      disabled,
+      readOnly,
+      onClick,
+      maxLength,
+      ...props
+    }: {
+      className?: string;
+      value?: string;
+      onChange?: (e: React.ChangeEvent<HTMLTextAreaElement>) => void;
+      placeholder?: string;
+      rows?: number;
+      disabled?: boolean;
+      readOnly?: boolean;
+      onClick?: () => void;
+      maxLength?: number;
+      [key: string]: unknown;
+    }) => (
+      <textarea
+        data-testid="textarea"
+        className={className}
+        value={value}
+        onChange={onChange}
+        placeholder={placeholder}
+        rows={rows}
+        disabled={disabled}
+        readOnly={readOnly}
+        onClick={onClick}
+        maxLength={maxLength}
+        {...props}
+      />
+    ),
+  };
+});
+
+vi.mock('@/atoms/Typography/Typography', () => {
+  return {
+    Typography: ({ children, className }: { children: React.ReactNode; className?: string }) => (
+      <div data-testid="typography" className={className}>
+        {children}
+      </div>
+    ),
+  };
+});
 
 describe('TextareaField', () => {
   it('renders with required value prop', () => {

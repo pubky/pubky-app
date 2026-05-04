@@ -2,9 +2,9 @@
 
 import Image from 'next/image';
 import { usePathname } from 'next/navigation';
+import { Link } from '@/atoms/Link/Link';
 
-import * as Libs from '@/libs';
-import * as Atoms from '@/atoms';
+import { cn } from '@/libs/utils/utils';
 
 interface LogoProps {
   width?: number;
@@ -24,7 +24,7 @@ export function Logo({
   const isHome = pathname === '/home';
 
   return !noLink ? (
-    <Atoms.Link
+    <Link
       href="/home"
       data-cy="header-logo"
       onClick={(event) => {
@@ -47,10 +47,10 @@ export function Logo({
           // Ignore storage errors and keep default navigation behavior.
         }
       }}
-      className={Libs.cn(`flex items-center min-w-[${width}px] min-h-[${height}px]`, props.className)}
+      className={cn(`flex items-center min-w-[${width}px] min-h-[${height}px]`, props.className)}
     >
       <LogoImage width={width} height={height} />
-    </Atoms.Link>
+    </Link>
   ) : (
     <LogoImage width={width} height={height} />
   );
@@ -61,7 +61,7 @@ const LogoImage = ({ width, height, className }: { width: number; height: number
     <Image
       src="/pubky-logo.svg"
       alt="Pubky"
-      className={Libs.cn(`w-[${width}px] h-[${height}px] -mt-1`, className)}
+      className={cn(`w-[${width}px] h-[${height}px] -mt-1`, className)}
       width={width}
       height={height}
     />

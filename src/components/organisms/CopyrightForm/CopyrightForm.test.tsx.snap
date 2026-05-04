@@ -7,7 +7,7 @@ exports[`CopyrightForm - Snapshots > matches snapshot for default state 1`] = `
 >
   <form>
     <div
-      class="flex flex-col gap-6 rounded-xl bg-card py-6 text-card-foreground shadow-sm rounded-t-lg rounded-b-none border border-border p-8 md:p-12"
+      class="flex flex-col gap-6 rounded-xl bg-card text-card-foreground shadow-sm rounded-t-lg rounded-b-none border border-border p-8 md:p-12"
       data-slot="card"
       data-testid="card"
     >
@@ -22,13 +22,13 @@ exports[`CopyrightForm - Snapshots > matches snapshot for default state 1`] = `
           Copyright Removal Request
         </h1>
         <p
-          class="text-sm font-medium text-foreground font-normal text-muted-foreground"
+          class="text-sm font-normal text-muted-foreground"
           data-testid="typography"
         >
           Date: 01/15/2026
         </p>
         <p
-          class="text-sm font-medium text-foreground font-normal text-muted-foreground"
+          class="text-sm font-normal text-muted-foreground"
           data-testid="typography"
         >
           Synonym Software, S.A. de C.V. ("Synonym")
@@ -45,7 +45,7 @@ exports[`CopyrightForm - Snapshots > matches snapshot for default state 1`] = `
           data-testid="container"
         >
           <p
-            class="text-sm font-medium text-foreground font-normal text-muted-foreground"
+            class="text-sm font-normal text-muted-foreground"
             data-testid="typography"
           >
             Dear Synonym:
@@ -62,7 +62,7 @@ exports[`CopyrightForm - Snapshots > matches snapshot for default state 1`] = `
         </p>
         <div
           aria-required="true"
-          class="grid gap-3 gap-4 xl:auto-cols-fr xl:grid-flow-col"
+          class="grid gap-4 xl:auto-cols-fr xl:grid-flow-col"
           dir="ltr"
           role="radiogroup"
           style="outline: none;"
@@ -106,7 +106,7 @@ exports[`CopyrightForm - Snapshots > matches snapshot for default state 1`] = `
               data-testid="container"
             >
               <label
-                class="flex items-center gap-2 text-sm leading-none font-medium select-none group-data-[disabled=true]:pointer-events-none group-data-[disabled=true]:opacity-50 peer-disabled:cursor-not-allowed peer-disabled:opacity-50 cursor-pointer text-base leading-none font-medium text-foreground peer-disabled:cursor-not-allowed peer-disabled:opacity-50"
+                class="flex items-center gap-2 select-none group-data-[disabled=true]:pointer-events-none group-data-[disabled=true]:opacity-50 cursor-pointer text-base leading-none font-medium text-foreground peer-disabled:cursor-not-allowed peer-disabled:opacity-50"
                 data-slot="label"
                 for="radix-normalized"
               >
@@ -142,7 +142,7 @@ exports[`CopyrightForm - Snapshots > matches snapshot for default state 1`] = `
               data-testid="container"
             >
               <label
-                class="flex items-center gap-2 text-sm leading-none font-medium select-none group-data-[disabled=true]:pointer-events-none group-data-[disabled=true]:opacity-50 peer-disabled:cursor-not-allowed peer-disabled:opacity-50 cursor-pointer text-base leading-none font-medium text-foreground peer-disabled:cursor-not-allowed peer-disabled:opacity-50"
+                class="flex items-center gap-2 select-none group-data-[disabled=true]:pointer-events-none group-data-[disabled=true]:opacity-50 cursor-pointer text-base leading-none font-medium text-foreground peer-disabled:cursor-not-allowed peer-disabled:opacity-50"
                 data-slot="label"
                 for="radix-normalized"
               >
@@ -156,7 +156,7 @@ exports[`CopyrightForm - Snapshots > matches snapshot for default state 1`] = `
           data-testid="container"
         >
           <label
-            class="flex items-center gap-2 text-sm leading-none font-medium select-none group-data-[disabled=true]:pointer-events-none group-data-[disabled=true]:opacity-50 peer-disabled:cursor-not-allowed peer-disabled:opacity-50 text-xs font-medium tracking-wide text-muted-foreground uppercase"
+            class="flex items-center gap-2 select-none group-data-[disabled=true]:pointer-events-none group-data-[disabled=true]:opacity-50 peer-disabled:cursor-not-allowed peer-disabled:opacity-50 text-xs font-medium tracking-wide text-muted-foreground uppercase"
             data-slot="label"
             for="nameOwner"
           >
@@ -170,12 +170,12 @@ exports[`CopyrightForm - Snapshots > matches snapshot for default state 1`] = `
             </span>
           </label>
           <div
-            class="mx-auto w-full flex-col flex !bg-alpha-90/10 mx-0 mb-2 w-full cursor-pointer flex-row items-center gap-0 rounded-md border bg-transparent pl-2 border-dashed h-14 text-lg mb-0"
+            class="flex !bg-alpha-90/10 mx-0 w-full cursor-pointer flex-row items-center gap-0 rounded-md border bg-transparent pl-2 border-dashed h-14 text-lg mb-0"
             data-testid="container"
           >
             <input
               aria-invalid="false"
-              class="file:text-foreground placeholder:text-muted-foreground selection:bg-primary selection:text-primary-foreground border-input flex h-9 w-full min-w-0 rounded-md border bg-transparent px-3 py-1 text-base shadow-xs transition-[color,box-shadow] outline-none file:inline-flex file:h-7 file:border-0 file:bg-transparent file:text-sm file:font-medium disabled:pointer-events-none disabled:cursor-not-allowed disabled:opacity-50 aria-invalid:ring-destructive/20 aria-invalid:ring-destructive/40 aria-invalid:border-destructive focus:outline-none hover:outline-none hover:ring-0 focus:ring-0 focus:ring-offset-0 w-full border-none !bg-transparent"
+              class="flex h-9 min-w-0 rounded-md border border-input bg-transparent px-3 py-1 text-base shadow-xs transition-[color,box-shadow] outline-none selection:bg-primary selection:text-primary-foreground file:inline-flex file:h-7 file:border-0 file:bg-transparent file:text-sm file:font-medium file:text-foreground placeholder:text-muted-foreground disabled:pointer-events-none disabled:cursor-not-allowed disabled:opacity-50 hover:ring-0 hover:outline-none focus:ring-0 focus:ring-offset-0 focus:outline-none aria-invalid:border-destructive aria-invalid:ring-destructive/40 w-full border-none !bg-transparent"
               data-testid="input"
               id="nameOwner"
               maxlength="50"
@@ -196,7 +196,7 @@ exports[`CopyrightForm - Snapshots > matches snapshot for default state 1`] = `
           data-testid="container"
         >
           <p
-            class="text-sm font-medium text-foreground font-normal text-muted-foreground"
+            class="text-sm font-normal text-muted-foreground"
             data-testid="typography"
           >
             We hereby provide notice of copyright infringements pursuant to the terms of the Digital Millennium Copyright Act (the "Act") and the Pubky Terms and Conditions. Copyright Owner is the owner of the copyrights in the following work(s) (collectively, the "Work(s)"):
@@ -211,19 +211,19 @@ exports[`CopyrightForm - Snapshots > matches snapshot for default state 1`] = `
             data-testid="container"
           >
             <label
-              class="flex items-center gap-2 text-sm leading-none font-medium select-none group-data-[disabled=true]:pointer-events-none group-data-[disabled=true]:opacity-50 peer-disabled:cursor-not-allowed peer-disabled:opacity-50 text-xs font-medium tracking-wide text-muted-foreground uppercase"
+              class="flex items-center gap-2 select-none group-data-[disabled=true]:pointer-events-none group-data-[disabled=true]:opacity-50 peer-disabled:cursor-not-allowed peer-disabled:opacity-50 text-xs font-medium tracking-wide text-muted-foreground uppercase"
               data-slot="label"
               for="originalContentUrls"
             >
               Original Content URLs
             </label>
             <div
-              class="mx-auto w-full flex-col flex flex-1 cursor-pointer w-full items-center flex-row border gap-0 rounded-md font-medium border-dashed !bg-alpha-90/10 min-w-0"
+              class="mx-auto flex w-full flex-1 cursor-pointer flex-row items-center gap-0 rounded-md border font-medium !bg-alpha-90/10 border-dashed min-w-0"
               data-testid="container"
             >
               <textarea
                 aria-invalid="false"
-                class="flex field-sizing-content w-full rounded-md bg-transparent text-base wrap-anywhere outline-none placeholder:text-muted-foreground disabled:cursor-not-allowed disabled:opacity-50 aria-invalid:border-destructive aria-invalid:ring-destructive/40 transition-[color,box-shadow] min-h-6 resize-none border-none p-0 font-medium text-secondary-foreground shadow-none focus-visible:ring-0 focus-visible:ring-offset-0 px-5 py-4 h-25 overflow-y-auto overflow-x-hidden break-words"
+                class="flex field-sizing-content w-full rounded-md bg-transparent text-base wrap-anywhere outline-none placeholder:text-muted-foreground disabled:cursor-not-allowed disabled:opacity-50 aria-invalid:border-destructive aria-invalid:ring-destructive/40 transition-[color,box-shadow] min-h-6 resize-none border-none p-0 font-medium text-secondary-foreground shadow-none focus-visible:ring-0 focus-visible:ring-offset-0 h-25 px-5 py-4 overflow-y-auto overflow-x-hidden break-words"
                 data-slot="textarea"
                 id="originalContentUrls"
                 name="originalContentUrls"
@@ -237,19 +237,19 @@ exports[`CopyrightForm - Snapshots > matches snapshot for default state 1`] = `
             data-testid="container"
           >
             <label
-              class="flex items-center gap-2 text-sm leading-none font-medium select-none group-data-[disabled=true]:pointer-events-none group-data-[disabled=true]:opacity-50 peer-disabled:cursor-not-allowed peer-disabled:opacity-50 text-xs font-medium tracking-wide text-muted-foreground uppercase"
+              class="flex items-center gap-2 select-none group-data-[disabled=true]:pointer-events-none group-data-[disabled=true]:opacity-50 peer-disabled:cursor-not-allowed peer-disabled:opacity-50 text-xs font-medium tracking-wide text-muted-foreground uppercase"
               data-slot="label"
               for="briefDescription"
             >
               Brief description of your original content
             </label>
             <div
-              class="mx-auto w-full flex-col flex flex-1 cursor-pointer w-full items-center flex-row border gap-0 rounded-md font-medium border-dashed !bg-alpha-90/10 min-w-0"
+              class="mx-auto flex w-full flex-1 cursor-pointer flex-row items-center gap-0 rounded-md border font-medium !bg-alpha-90/10 border-dashed min-w-0"
               data-testid="container"
             >
               <textarea
                 aria-invalid="false"
-                class="flex field-sizing-content w-full rounded-md bg-transparent text-base wrap-anywhere outline-none placeholder:text-muted-foreground disabled:cursor-not-allowed disabled:opacity-50 aria-invalid:border-destructive aria-invalid:ring-destructive/40 transition-[color,box-shadow] min-h-6 resize-none border-none p-0 font-medium text-secondary-foreground shadow-none focus-visible:ring-0 focus-visible:ring-offset-0 px-5 py-4 h-25 overflow-y-auto overflow-x-hidden"
+                class="flex field-sizing-content w-full rounded-md bg-transparent text-base wrap-anywhere outline-none placeholder:text-muted-foreground disabled:cursor-not-allowed disabled:opacity-50 aria-invalid:border-destructive aria-invalid:ring-destructive/40 transition-[color,box-shadow] min-h-6 resize-none border-none p-0 font-medium text-secondary-foreground shadow-none focus-visible:ring-0 focus-visible:ring-offset-0 h-25 px-5 py-4 overflow-y-auto overflow-x-hidden"
                 data-slot="textarea"
                 id="briefDescription"
                 name="briefDescription"
@@ -269,7 +269,7 @@ exports[`CopyrightForm - Snapshots > matches snapshot for default state 1`] = `
           data-testid="container"
         >
           <p
-            class="text-sm font-medium text-foreground font-normal text-muted-foreground"
+            class="text-sm font-normal text-muted-foreground"
             data-testid="typography"
           >
             It has come to Copyright Owner's attention that your platform (the "Platform") displays, provides access to or caches materials that infringe Copyright Owner's copyrights in the Work(s). The following is a list of the infringing material(s) and the URL(s), if applicable, at which the infringing material(s) are accessible on the Platform:
@@ -286,19 +286,19 @@ exports[`CopyrightForm - Snapshots > matches snapshot for default state 1`] = `
           data-testid="container"
         >
           <label
-            class="flex items-center gap-2 text-sm leading-none font-medium select-none group-data-[disabled=true]:pointer-events-none group-data-[disabled=true]:opacity-50 peer-disabled:cursor-not-allowed peer-disabled:opacity-50 text-xs font-medium tracking-wide text-muted-foreground uppercase"
+            class="flex items-center gap-2 select-none group-data-[disabled=true]:pointer-events-none group-data-[disabled=true]:opacity-50 peer-disabled:cursor-not-allowed peer-disabled:opacity-50 text-xs font-medium tracking-wide text-muted-foreground uppercase"
             data-slot="label"
             for="infringingContentUrl"
           >
             Infringing Content URLs
           </label>
           <div
-            class="mx-auto w-full flex-col flex flex-1 cursor-pointer w-full items-center flex-row border gap-0 rounded-md font-medium border-dashed !bg-alpha-90/10 min-w-0"
+            class="mx-auto flex w-full flex-1 cursor-pointer flex-row items-center gap-0 rounded-md border font-medium !bg-alpha-90/10 border-dashed min-w-0"
             data-testid="container"
           >
             <textarea
               aria-invalid="false"
-              class="flex field-sizing-content w-full rounded-md bg-transparent text-base wrap-anywhere outline-none placeholder:text-muted-foreground disabled:cursor-not-allowed disabled:opacity-50 aria-invalid:border-destructive aria-invalid:ring-destructive/40 transition-[color,box-shadow] min-h-6 resize-none border-none p-0 font-medium text-secondary-foreground shadow-none focus-visible:ring-0 focus-visible:ring-offset-0 px-5 py-4 h-25 overflow-y-auto overflow-x-hidden break-words"
+              class="flex field-sizing-content w-full rounded-md bg-transparent text-base wrap-anywhere outline-none placeholder:text-muted-foreground disabled:cursor-not-allowed disabled:opacity-50 aria-invalid:border-destructive aria-invalid:ring-destructive/40 transition-[color,box-shadow] min-h-6 resize-none border-none p-0 font-medium text-secondary-foreground shadow-none focus-visible:ring-0 focus-visible:ring-offset-0 h-25 px-5 py-4 overflow-y-auto overflow-x-hidden break-words"
               data-slot="textarea"
               id="infringingContentUrl"
               name="infringingContentUrl"
@@ -317,7 +317,7 @@ exports[`CopyrightForm - Snapshots > matches snapshot for default state 1`] = `
           data-testid="container"
         >
           <p
-            class="text-sm font-medium text-foreground font-normal text-muted-foreground"
+            class="text-sm font-normal text-muted-foreground"
             data-testid="typography"
           >
             We have a good faith belief that the use of the Works described in this letter are not authorized by Copyright Owner, any agent of Copyright Owner or any applicable law. The information in this notification is accurate. We swear under penalty of perjury that we are authorized to act on behalf of Copyright Owner with respect to the subject matter of this letter.
@@ -341,19 +341,19 @@ exports[`CopyrightForm - Snapshots > matches snapshot for default state 1`] = `
             data-testid="container"
           >
             <label
-              class="flex items-center gap-2 text-sm leading-none font-medium select-none group-data-[disabled=true]:pointer-events-none group-data-[disabled=true]:opacity-50 peer-disabled:cursor-not-allowed peer-disabled:opacity-50 text-xs font-medium tracking-wide text-muted-foreground uppercase"
+              class="flex items-center gap-2 select-none group-data-[disabled=true]:pointer-events-none group-data-[disabled=true]:opacity-50 peer-disabled:cursor-not-allowed peer-disabled:opacity-50 text-xs font-medium tracking-wide text-muted-foreground uppercase"
               data-slot="label"
               for="firstName"
             >
               First Name
             </label>
             <div
-              class="mx-auto w-full flex-col flex !bg-alpha-90/10 mx-0 mb-2 w-full cursor-pointer flex-row items-center gap-0 rounded-md border bg-transparent pl-2 border-dashed h-14 text-lg mb-0"
+              class="flex !bg-alpha-90/10 mx-0 w-full cursor-pointer flex-row items-center gap-0 rounded-md border bg-transparent pl-2 border-dashed h-14 text-lg mb-0"
               data-testid="container"
             >
               <input
                 aria-invalid="false"
-                class="file:text-foreground placeholder:text-muted-foreground selection:bg-primary selection:text-primary-foreground border-input flex h-9 w-full min-w-0 rounded-md border bg-transparent px-3 py-1 text-base shadow-xs transition-[color,box-shadow] outline-none file:inline-flex file:h-7 file:border-0 file:bg-transparent file:text-sm file:font-medium disabled:pointer-events-none disabled:cursor-not-allowed disabled:opacity-50 aria-invalid:ring-destructive/20 aria-invalid:ring-destructive/40 aria-invalid:border-destructive focus:outline-none hover:outline-none hover:ring-0 focus:ring-0 focus:ring-offset-0 w-full border-none !bg-transparent"
+                class="flex h-9 min-w-0 rounded-md border border-input bg-transparent px-3 py-1 text-base shadow-xs transition-[color,box-shadow] outline-none selection:bg-primary selection:text-primary-foreground file:inline-flex file:h-7 file:border-0 file:bg-transparent file:text-sm file:font-medium file:text-foreground placeholder:text-muted-foreground disabled:pointer-events-none disabled:cursor-not-allowed disabled:opacity-50 hover:ring-0 hover:outline-none focus:ring-0 focus:ring-offset-0 focus:outline-none aria-invalid:border-destructive aria-invalid:ring-destructive/40 w-full border-none !bg-transparent"
                 data-testid="input"
                 id="firstName"
                 maxlength="30"
@@ -369,19 +369,19 @@ exports[`CopyrightForm - Snapshots > matches snapshot for default state 1`] = `
             data-testid="container"
           >
             <label
-              class="flex items-center gap-2 text-sm leading-none font-medium select-none group-data-[disabled=true]:pointer-events-none group-data-[disabled=true]:opacity-50 peer-disabled:cursor-not-allowed peer-disabled:opacity-50 text-xs font-medium tracking-wide text-muted-foreground uppercase"
+              class="flex items-center gap-2 select-none group-data-[disabled=true]:pointer-events-none group-data-[disabled=true]:opacity-50 peer-disabled:cursor-not-allowed peer-disabled:opacity-50 text-xs font-medium tracking-wide text-muted-foreground uppercase"
               data-slot="label"
               for="lastName"
             >
               Last Name
             </label>
             <div
-              class="mx-auto w-full flex-col flex !bg-alpha-90/10 mx-0 mb-2 w-full cursor-pointer flex-row items-center gap-0 rounded-md border bg-transparent pl-2 border-dashed h-14 text-lg mb-0"
+              class="flex !bg-alpha-90/10 mx-0 w-full cursor-pointer flex-row items-center gap-0 rounded-md border bg-transparent pl-2 border-dashed h-14 text-lg mb-0"
               data-testid="container"
             >
               <input
                 aria-invalid="false"
-                class="file:text-foreground placeholder:text-muted-foreground selection:bg-primary selection:text-primary-foreground border-input flex h-9 w-full min-w-0 rounded-md border bg-transparent px-3 py-1 text-base shadow-xs transition-[color,box-shadow] outline-none file:inline-flex file:h-7 file:border-0 file:bg-transparent file:text-sm file:font-medium disabled:pointer-events-none disabled:cursor-not-allowed disabled:opacity-50 aria-invalid:ring-destructive/20 aria-invalid:ring-destructive/40 aria-invalid:border-destructive focus:outline-none hover:outline-none hover:ring-0 focus:ring-0 focus:ring-offset-0 w-full border-none !bg-transparent"
+                class="flex h-9 min-w-0 rounded-md border border-input bg-transparent px-3 py-1 text-base shadow-xs transition-[color,box-shadow] outline-none selection:bg-primary selection:text-primary-foreground file:inline-flex file:h-7 file:border-0 file:bg-transparent file:text-sm file:font-medium file:text-foreground placeholder:text-muted-foreground disabled:pointer-events-none disabled:cursor-not-allowed disabled:opacity-50 hover:ring-0 hover:outline-none focus:ring-0 focus:ring-offset-0 focus:outline-none aria-invalid:border-destructive aria-invalid:ring-destructive/40 w-full border-none !bg-transparent"
                 data-testid="input"
                 id="lastName"
                 maxlength="30"
@@ -402,19 +402,19 @@ exports[`CopyrightForm - Snapshots > matches snapshot for default state 1`] = `
             data-testid="container"
           >
             <label
-              class="flex items-center gap-2 text-sm leading-none font-medium select-none group-data-[disabled=true]:pointer-events-none group-data-[disabled=true]:opacity-50 peer-disabled:cursor-not-allowed peer-disabled:opacity-50 text-xs font-medium tracking-wide text-muted-foreground uppercase"
+              class="flex items-center gap-2 select-none group-data-[disabled=true]:pointer-events-none group-data-[disabled=true]:opacity-50 peer-disabled:cursor-not-allowed peer-disabled:opacity-50 text-xs font-medium tracking-wide text-muted-foreground uppercase"
               data-slot="label"
               for="email"
             >
               Email
             </label>
             <div
-              class="mx-auto w-full flex-col flex !bg-alpha-90/10 mx-0 mb-2 w-full cursor-pointer flex-row items-center gap-0 rounded-md border bg-transparent pl-2 border-dashed h-14 text-lg mb-0"
+              class="flex !bg-alpha-90/10 mx-0 w-full cursor-pointer flex-row items-center gap-0 rounded-md border bg-transparent pl-2 border-dashed h-14 text-lg mb-0"
               data-testid="container"
             >
               <input
                 aria-invalid="false"
-                class="file:text-foreground placeholder:text-muted-foreground selection:bg-primary selection:text-primary-foreground border-input flex h-9 w-full min-w-0 rounded-md border bg-transparent px-3 py-1 text-base shadow-xs transition-[color,box-shadow] outline-none file:inline-flex file:h-7 file:border-0 file:bg-transparent file:text-sm file:font-medium disabled:pointer-events-none disabled:cursor-not-allowed disabled:opacity-50 aria-invalid:ring-destructive/20 aria-invalid:ring-destructive/40 aria-invalid:border-destructive focus:outline-none hover:outline-none hover:ring-0 focus:ring-0 focus:ring-offset-0 w-full border-none !bg-transparent"
+                class="flex h-9 min-w-0 rounded-md border border-input bg-transparent px-3 py-1 text-base shadow-xs transition-[color,box-shadow] outline-none selection:bg-primary selection:text-primary-foreground file:inline-flex file:h-7 file:border-0 file:bg-transparent file:text-sm file:font-medium file:text-foreground placeholder:text-muted-foreground disabled:pointer-events-none disabled:cursor-not-allowed disabled:opacity-50 hover:ring-0 hover:outline-none focus:ring-0 focus:ring-offset-0 focus:outline-none aria-invalid:border-destructive aria-invalid:ring-destructive/40 w-full border-none !bg-transparent"
                 data-testid="input"
                 id="email"
                 maxlength="100"
@@ -430,19 +430,19 @@ exports[`CopyrightForm - Snapshots > matches snapshot for default state 1`] = `
             data-testid="container"
           >
             <label
-              class="flex items-center gap-2 text-sm leading-none font-medium select-none group-data-[disabled=true]:pointer-events-none group-data-[disabled=true]:opacity-50 peer-disabled:cursor-not-allowed peer-disabled:opacity-50 text-xs font-medium tracking-wide text-muted-foreground uppercase"
+              class="flex items-center gap-2 select-none group-data-[disabled=true]:pointer-events-none group-data-[disabled=true]:opacity-50 peer-disabled:cursor-not-allowed peer-disabled:opacity-50 text-xs font-medium tracking-wide text-muted-foreground uppercase"
               data-slot="label"
               for="phoneNumber"
             >
               Phone number
             </label>
             <div
-              class="mx-auto w-full flex-col flex !bg-alpha-90/10 mx-0 mb-2 w-full cursor-pointer flex-row items-center gap-0 rounded-md border bg-transparent pl-2 border-dashed h-14 text-lg mb-0"
+              class="flex !bg-alpha-90/10 mx-0 w-full cursor-pointer flex-row items-center gap-0 rounded-md border bg-transparent pl-2 border-dashed h-14 text-lg mb-0"
               data-testid="container"
             >
               <input
                 aria-invalid="false"
-                class="file:text-foreground placeholder:text-muted-foreground selection:bg-primary selection:text-primary-foreground border-input flex h-9 w-full min-w-0 rounded-md border bg-transparent px-3 py-1 text-base shadow-xs transition-[color,box-shadow] outline-none file:inline-flex file:h-7 file:border-0 file:bg-transparent file:text-sm file:font-medium disabled:pointer-events-none disabled:cursor-not-allowed disabled:opacity-50 aria-invalid:ring-destructive/20 aria-invalid:ring-destructive/40 aria-invalid:border-destructive focus:outline-none hover:outline-none hover:ring-0 focus:ring-0 focus:ring-offset-0 w-full border-none !bg-transparent"
+                class="flex h-9 min-w-0 rounded-md border border-input bg-transparent px-3 py-1 text-base shadow-xs transition-[color,box-shadow] outline-none selection:bg-primary selection:text-primary-foreground file:inline-flex file:h-7 file:border-0 file:bg-transparent file:text-sm file:font-medium file:text-foreground placeholder:text-muted-foreground disabled:pointer-events-none disabled:cursor-not-allowed disabled:opacity-50 hover:ring-0 hover:outline-none focus:ring-0 focus:ring-offset-0 focus:outline-none aria-invalid:border-destructive aria-invalid:ring-destructive/40 w-full border-none !bg-transparent"
                 data-testid="input"
                 id="phoneNumber"
                 maxlength="30"
@@ -469,19 +469,19 @@ exports[`CopyrightForm - Snapshots > matches snapshot for default state 1`] = `
             data-testid="container"
           >
             <label
-              class="flex items-center gap-2 text-sm leading-none font-medium select-none group-data-[disabled=true]:pointer-events-none group-data-[disabled=true]:opacity-50 peer-disabled:cursor-not-allowed peer-disabled:opacity-50 text-xs font-medium tracking-wide text-muted-foreground uppercase"
+              class="flex items-center gap-2 select-none group-data-[disabled=true]:pointer-events-none group-data-[disabled=true]:opacity-50 peer-disabled:cursor-not-allowed peer-disabled:opacity-50 text-xs font-medium tracking-wide text-muted-foreground uppercase"
               data-slot="label"
               for="streetAddress"
             >
               Street address
             </label>
             <div
-              class="mx-auto w-full flex-col flex !bg-alpha-90/10 mx-0 mb-2 w-full cursor-pointer flex-row items-center gap-0 rounded-md border bg-transparent pl-2 border-dashed h-14 text-lg mb-0"
+              class="flex !bg-alpha-90/10 mx-0 w-full cursor-pointer flex-row items-center gap-0 rounded-md border bg-transparent pl-2 border-dashed h-14 text-lg mb-0"
               data-testid="container"
             >
               <input
                 aria-invalid="false"
-                class="file:text-foreground placeholder:text-muted-foreground selection:bg-primary selection:text-primary-foreground border-input flex h-9 w-full min-w-0 rounded-md border bg-transparent px-3 py-1 text-base shadow-xs transition-[color,box-shadow] outline-none file:inline-flex file:h-7 file:border-0 file:bg-transparent file:text-sm file:font-medium disabled:pointer-events-none disabled:cursor-not-allowed disabled:opacity-50 aria-invalid:ring-destructive/20 aria-invalid:ring-destructive/40 aria-invalid:border-destructive focus:outline-none hover:outline-none hover:ring-0 focus:ring-0 focus:ring-offset-0 w-full border-none !bg-transparent"
+                class="flex h-9 min-w-0 rounded-md border border-input bg-transparent px-3 py-1 text-base shadow-xs transition-[color,box-shadow] outline-none selection:bg-primary selection:text-primary-foreground file:inline-flex file:h-7 file:border-0 file:bg-transparent file:text-sm file:font-medium file:text-foreground placeholder:text-muted-foreground disabled:pointer-events-none disabled:cursor-not-allowed disabled:opacity-50 hover:ring-0 hover:outline-none focus:ring-0 focus:ring-offset-0 focus:outline-none aria-invalid:border-destructive aria-invalid:ring-destructive/40 w-full border-none !bg-transparent"
                 data-testid="input"
                 id="streetAddress"
                 maxlength="100"
@@ -497,19 +497,19 @@ exports[`CopyrightForm - Snapshots > matches snapshot for default state 1`] = `
             data-testid="container"
           >
             <label
-              class="flex items-center gap-2 text-sm leading-none font-medium select-none group-data-[disabled=true]:pointer-events-none group-data-[disabled=true]:opacity-50 peer-disabled:cursor-not-allowed peer-disabled:opacity-50 text-xs font-medium tracking-wide text-muted-foreground uppercase"
+              class="flex items-center gap-2 select-none group-data-[disabled=true]:pointer-events-none group-data-[disabled=true]:opacity-50 peer-disabled:cursor-not-allowed peer-disabled:opacity-50 text-xs font-medium tracking-wide text-muted-foreground uppercase"
               data-slot="label"
               for="country"
             >
               Country
             </label>
             <div
-              class="mx-auto w-full flex-col flex !bg-alpha-90/10 mx-0 mb-2 w-full cursor-pointer flex-row items-center gap-0 rounded-md border bg-transparent pl-2 border-dashed h-14 text-lg mb-0"
+              class="flex !bg-alpha-90/10 mx-0 w-full cursor-pointer flex-row items-center gap-0 rounded-md border bg-transparent pl-2 border-dashed h-14 text-lg mb-0"
               data-testid="container"
             >
               <input
                 aria-invalid="false"
-                class="file:text-foreground placeholder:text-muted-foreground selection:bg-primary selection:text-primary-foreground border-input flex h-9 w-full min-w-0 rounded-md border bg-transparent px-3 py-1 text-base shadow-xs transition-[color,box-shadow] outline-none file:inline-flex file:h-7 file:border-0 file:bg-transparent file:text-sm file:font-medium disabled:pointer-events-none disabled:cursor-not-allowed disabled:opacity-50 aria-invalid:ring-destructive/20 aria-invalid:ring-destructive/40 aria-invalid:border-destructive focus:outline-none hover:outline-none hover:ring-0 focus:ring-0 focus:ring-offset-0 w-full border-none !bg-transparent"
+                class="flex h-9 min-w-0 rounded-md border border-input bg-transparent px-3 py-1 text-base shadow-xs transition-[color,box-shadow] outline-none selection:bg-primary selection:text-primary-foreground file:inline-flex file:h-7 file:border-0 file:bg-transparent file:text-sm file:font-medium file:text-foreground placeholder:text-muted-foreground disabled:pointer-events-none disabled:cursor-not-allowed disabled:opacity-50 hover:ring-0 hover:outline-none focus:ring-0 focus:ring-offset-0 focus:outline-none aria-invalid:border-destructive aria-invalid:ring-destructive/40 w-full border-none !bg-transparent"
                 data-testid="input"
                 id="country"
                 maxlength="50"
@@ -530,19 +530,19 @@ exports[`CopyrightForm - Snapshots > matches snapshot for default state 1`] = `
             data-testid="container"
           >
             <label
-              class="flex items-center gap-2 text-sm leading-none font-medium select-none group-data-[disabled=true]:pointer-events-none group-data-[disabled=true]:opacity-50 peer-disabled:cursor-not-allowed peer-disabled:opacity-50 text-xs font-medium tracking-wide text-muted-foreground uppercase"
+              class="flex items-center gap-2 select-none group-data-[disabled=true]:pointer-events-none group-data-[disabled=true]:opacity-50 peer-disabled:cursor-not-allowed peer-disabled:opacity-50 text-xs font-medium tracking-wide text-muted-foreground uppercase"
               data-slot="label"
               for="city"
             >
               City
             </label>
             <div
-              class="mx-auto w-full flex-col flex !bg-alpha-90/10 mx-0 mb-2 w-full cursor-pointer flex-row items-center gap-0 rounded-md border bg-transparent pl-2 border-dashed h-14 text-lg mb-0"
+              class="flex !bg-alpha-90/10 mx-0 w-full cursor-pointer flex-row items-center gap-0 rounded-md border bg-transparent pl-2 border-dashed h-14 text-lg mb-0"
               data-testid="container"
             >
               <input
                 aria-invalid="false"
-                class="file:text-foreground placeholder:text-muted-foreground selection:bg-primary selection:text-primary-foreground border-input flex h-9 w-full min-w-0 rounded-md border bg-transparent px-3 py-1 text-base shadow-xs transition-[color,box-shadow] outline-none file:inline-flex file:h-7 file:border-0 file:bg-transparent file:text-sm file:font-medium disabled:pointer-events-none disabled:cursor-not-allowed disabled:opacity-50 aria-invalid:ring-destructive/20 aria-invalid:ring-destructive/40 aria-invalid:border-destructive focus:outline-none hover:outline-none hover:ring-0 focus:ring-0 focus:ring-offset-0 w-full border-none !bg-transparent"
+                class="flex h-9 min-w-0 rounded-md border border-input bg-transparent px-3 py-1 text-base shadow-xs transition-[color,box-shadow] outline-none selection:bg-primary selection:text-primary-foreground file:inline-flex file:h-7 file:border-0 file:bg-transparent file:text-sm file:font-medium file:text-foreground placeholder:text-muted-foreground disabled:pointer-events-none disabled:cursor-not-allowed disabled:opacity-50 hover:ring-0 hover:outline-none focus:ring-0 focus:ring-offset-0 focus:outline-none aria-invalid:border-destructive aria-invalid:ring-destructive/40 w-full border-none !bg-transparent"
                 data-testid="input"
                 id="city"
                 maxlength="50"
@@ -558,19 +558,19 @@ exports[`CopyrightForm - Snapshots > matches snapshot for default state 1`] = `
             data-testid="container"
           >
             <label
-              class="flex items-center gap-2 text-sm leading-none font-medium select-none group-data-[disabled=true]:pointer-events-none group-data-[disabled=true]:opacity-50 peer-disabled:cursor-not-allowed peer-disabled:opacity-50 text-xs font-medium tracking-wide text-muted-foreground uppercase"
+              class="flex items-center gap-2 select-none group-data-[disabled=true]:pointer-events-none group-data-[disabled=true]:opacity-50 peer-disabled:cursor-not-allowed peer-disabled:opacity-50 text-xs font-medium tracking-wide text-muted-foreground uppercase"
               data-slot="label"
               for="stateProvince"
             >
               State/Province
             </label>
             <div
-              class="mx-auto w-full flex-col flex !bg-alpha-90/10 mx-0 mb-2 w-full cursor-pointer flex-row items-center gap-0 rounded-md border bg-transparent pl-2 border-dashed h-14 text-lg mb-0"
+              class="flex !bg-alpha-90/10 mx-0 w-full cursor-pointer flex-row items-center gap-0 rounded-md border bg-transparent pl-2 border-dashed h-14 text-lg mb-0"
               data-testid="container"
             >
               <input
                 aria-invalid="false"
-                class="file:text-foreground placeholder:text-muted-foreground selection:bg-primary selection:text-primary-foreground border-input flex h-9 w-full min-w-0 rounded-md border bg-transparent px-3 py-1 text-base shadow-xs transition-[color,box-shadow] outline-none file:inline-flex file:h-7 file:border-0 file:bg-transparent file:text-sm file:font-medium disabled:pointer-events-none disabled:cursor-not-allowed disabled:opacity-50 aria-invalid:ring-destructive/20 aria-invalid:ring-destructive/40 aria-invalid:border-destructive focus:outline-none hover:outline-none hover:ring-0 focus:ring-0 focus:ring-offset-0 w-full border-none !bg-transparent"
+                class="flex h-9 min-w-0 rounded-md border border-input bg-transparent px-3 py-1 text-base shadow-xs transition-[color,box-shadow] outline-none selection:bg-primary selection:text-primary-foreground file:inline-flex file:h-7 file:border-0 file:bg-transparent file:text-sm file:font-medium file:text-foreground placeholder:text-muted-foreground disabled:pointer-events-none disabled:cursor-not-allowed disabled:opacity-50 hover:ring-0 hover:outline-none focus:ring-0 focus:ring-offset-0 focus:outline-none aria-invalid:border-destructive aria-invalid:ring-destructive/40 w-full border-none !bg-transparent"
                 data-testid="input"
                 id="stateProvince"
                 maxlength="50"
@@ -587,19 +587,19 @@ exports[`CopyrightForm - Snapshots > matches snapshot for default state 1`] = `
           data-testid="container"
         >
           <label
-            class="flex items-center gap-2 text-sm leading-none font-medium select-none group-data-[disabled=true]:pointer-events-none group-data-[disabled=true]:opacity-50 peer-disabled:cursor-not-allowed peer-disabled:opacity-50 text-xs font-medium tracking-wide text-muted-foreground uppercase"
+            class="flex items-center gap-2 select-none group-data-[disabled=true]:pointer-events-none group-data-[disabled=true]:opacity-50 peer-disabled:cursor-not-allowed peer-disabled:opacity-50 text-xs font-medium tracking-wide text-muted-foreground uppercase"
             data-slot="label"
             for="zipCode"
           >
             Zip code
           </label>
           <div
-            class="mx-auto w-full flex-col flex !bg-alpha-90/10 mx-0 mb-2 w-full cursor-pointer flex-row items-center gap-0 rounded-md border bg-transparent pl-2 border-dashed h-14 text-lg mb-0"
+            class="flex !bg-alpha-90/10 mx-0 w-full cursor-pointer flex-row items-center gap-0 rounded-md border bg-transparent pl-2 border-dashed h-14 text-lg mb-0"
             data-testid="container"
           >
             <input
               aria-invalid="false"
-              class="file:text-foreground placeholder:text-muted-foreground selection:bg-primary selection:text-primary-foreground border-input flex h-9 w-full min-w-0 rounded-md border bg-transparent px-3 py-1 text-base shadow-xs transition-[color,box-shadow] outline-none file:inline-flex file:h-7 file:border-0 file:bg-transparent file:text-sm file:font-medium disabled:pointer-events-none disabled:cursor-not-allowed disabled:opacity-50 aria-invalid:ring-destructive/20 aria-invalid:ring-destructive/40 aria-invalid:border-destructive focus:outline-none hover:outline-none hover:ring-0 focus:ring-0 focus:ring-offset-0 w-full border-none !bg-transparent"
+              class="flex h-9 min-w-0 rounded-md border border-input bg-transparent px-3 py-1 text-base shadow-xs transition-[color,box-shadow] outline-none selection:bg-primary selection:text-primary-foreground file:inline-flex file:h-7 file:border-0 file:bg-transparent file:text-sm file:font-medium file:text-foreground placeholder:text-muted-foreground disabled:pointer-events-none disabled:cursor-not-allowed disabled:opacity-50 hover:ring-0 hover:outline-none focus:ring-0 focus:ring-offset-0 focus:outline-none aria-invalid:border-destructive aria-invalid:ring-destructive/40 w-full border-none !bg-transparent"
               data-testid="input"
               id="zipCode"
               maxlength="20"
@@ -626,19 +626,19 @@ exports[`CopyrightForm - Snapshots > matches snapshot for default state 1`] = `
           data-testid="container"
         >
           <label
-            class="flex items-center gap-2 text-sm leading-none font-medium select-none group-data-[disabled=true]:pointer-events-none group-data-[disabled=true]:opacity-50 peer-disabled:cursor-not-allowed peer-disabled:opacity-50 text-xs font-medium tracking-wide text-muted-foreground uppercase"
+            class="flex items-center gap-2 select-none group-data-[disabled=true]:pointer-events-none group-data-[disabled=true]:opacity-50 peer-disabled:cursor-not-allowed peer-disabled:opacity-50 text-xs font-medium tracking-wide text-muted-foreground uppercase"
             data-slot="label"
             for="signature"
           >
             Full Name as Signature
           </label>
           <div
-            class="mx-auto w-full flex-col flex !bg-alpha-90/10 mx-0 mb-2 w-full cursor-pointer flex-row items-center gap-0 rounded-md border bg-transparent pl-2 border-dashed h-14 text-lg mb-0"
+            class="flex !bg-alpha-90/10 mx-0 w-full cursor-pointer flex-row items-center gap-0 rounded-md border bg-transparent pl-2 border-dashed h-14 text-lg mb-0"
             data-testid="container"
           >
             <input
               aria-invalid="false"
-              class="file:text-foreground placeholder:text-muted-foreground selection:bg-primary selection:text-primary-foreground border-input flex h-9 w-full min-w-0 rounded-md border bg-transparent px-3 py-1 text-base shadow-xs transition-[color,box-shadow] outline-none file:inline-flex file:h-7 file:border-0 file:bg-transparent file:text-sm file:font-medium disabled:pointer-events-none disabled:cursor-not-allowed disabled:opacity-50 aria-invalid:ring-destructive/20 aria-invalid:ring-destructive/40 aria-invalid:border-destructive focus:outline-none hover:outline-none hover:ring-0 focus:ring-0 focus:ring-offset-0 w-full border-none !bg-transparent"
+              class="flex h-9 min-w-0 rounded-md border border-input bg-transparent px-3 py-1 text-base shadow-xs transition-[color,box-shadow] outline-none selection:bg-primary selection:text-primary-foreground file:inline-flex file:h-7 file:border-0 file:bg-transparent file:text-sm file:font-medium file:text-foreground placeholder:text-muted-foreground disabled:pointer-events-none disabled:cursor-not-allowed disabled:opacity-50 hover:ring-0 hover:outline-none focus:ring-0 focus:ring-offset-0 focus:outline-none aria-invalid:border-destructive aria-invalid:ring-destructive/40 w-full border-none !bg-transparent"
               data-testid="input"
               id="signature"
               maxlength="100"
@@ -652,17 +652,17 @@ exports[`CopyrightForm - Snapshots > matches snapshot for default state 1`] = `
       </div>
     </div>
     <div
-      class="flex flex-col gap-6 rounded-xl bg-card py-6 text-card-foreground shadow-sm rounded-t-none rounded-b-lg border border-t-0 border-border p-8"
+      class="flex flex-col gap-6 rounded-xl bg-card text-card-foreground shadow-sm rounded-t-none rounded-b-lg border border-t-0 border-border p-8"
       data-slot="card"
       data-testid="card"
     >
       <div
-        class="mx-auto w-full flex-col flex flex-row justify-end"
+        class="mx-auto w-full flex flex-row justify-end"
         data-testid="container"
       >
         <button
           aria-label="Submit Form"
-          class="inline-flex items-center justify-center gap-2 whitespace-nowrap text-sm font-medium transition-all disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg:not([class*=\\"size-\\"])]:size-4 shrink-0 [&_svg]:shrink-0 outline-none focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[3px] aria-invalid:ring-destructive/20 aria-invalid:ring-destructive/40 aria-invalid:border-destructive font-semibold cursor-pointer rounded-full border shadow-xs bg-brand/16 text-brand hover:!bg-brand/30 border-brand h-auto gap-2 px-8 py-5 text-sm font-bold leading-normal w-auto"
+          class="inline-flex items-center justify-center whitespace-nowrap transition-all disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg:not([class*=\\"size-\\"])]:size-4 shrink-0 [&_svg]:shrink-0 outline-none focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[3px] aria-invalid:ring-destructive/40 aria-invalid:border-destructive cursor-pointer rounded-full border shadow-xs bg-brand/16 text-brand hover:!bg-brand/30 border-brand h-auto gap-2 px-8 py-5 text-sm font-bold leading-normal w-auto"
           data-size="lg"
           data-slot="button"
           type="submit"
