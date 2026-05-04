@@ -3,7 +3,7 @@ import './globals.css';
 
 import { useEffect } from 'react';
 import * as Sentry from '@sentry/nextjs';
-import { AppError } from '@/libs';
+import { AppError } from '@/libs/error/error';
 
 export default function GlobalError({ error, reset }: { error: Error & { digest?: string }; reset: () => void }) {
   useEffect(() => {
