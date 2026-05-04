@@ -1,9 +1,16 @@
 'use client';
 
 import { useState, useCallback } from 'react';
-import * as Atoms from '@/atoms';
-import * as Molecules from '@/molecules';
-import * as Organisms from '@/organisms';
+import { Container } from '@/atoms/Container/Container';
+import { AvatarZoomModal } from '@/molecules/AvatarZoomModal/AvatarZoomModal';
+import { MobileFooter } from '@/molecules/MobileFooter/MobileFooter';
+import { MobileHeader } from '@/molecules/MobileHeader/MobileHeader';
+import { ProfilePageFilterBar } from '@/molecules/ProfilePageFilterBar/ProfilePageFilterBar';
+import { ProfilePageLayoutWrapper } from '@/molecules/ProfilePageLayoutWrapper/ProfilePageLayoutWrapper';
+import { ProfilePageMobileMenu } from '@/molecules/ProfilePageMobileMenu/ProfilePageMobileMenu';
+import { ProfilePageHeader } from '../ProfilePageHeader/ProfilePageHeader';
+import { ProfilePageSidebar } from '../ProfilePageSidebar/ProfilePageSidebar';
+
 import { ProfilePageLayoutProps } from './ProfilePageLayout.types';
 
 /**
@@ -64,47 +71,35 @@ export function ProfilePageLayout({
 
   return (
     <>
-      <Molecules.MobileHeader hasGradientBackground={false} showLeftButton={false} showRightButton={false} />
+      <MobileHeader hasGradientBackground={false} showLeftButton={false} showRightButton={false} />
 
-      <Molecules.ProfilePageMobileMenu
-        activePage={activePage}
-        onPageChangeAction={navigateToPage}
-        isOwnProfile={isOwnProfile}
-      />
+      <ProfilePageMobileMenu activePage={activePage} onPageChangeAction={navigateToPage} isOwnProfile={isOwnProfile} />
 
-      <Molecules.ProfilePageLayoutWrapper>
-        <Atoms.Container
-          overrideDefaults={true}
-          className="hidden overflow-hidden bg-background pb-12 shadow-sm lg:block"
-        >
+      <ProfilePageLayoutWrapper>
+        <Container overrideDefaults={true} className="hidden overflow-hidden bg-background pb-12 shadow-sm lg:block">
           {!isLoading && (
-            <Organisms.ProfilePageHeader
-              profile={profile}
-              actions={headerActions}
-              isOwnProfile={isOwnProfile}
-              userId={userId}
-            />
+            <ProfilePageHeader profile={profile} actions={headerActions} isOwnProfile={isOwnProfile} userId={userId} />
           )}
-        </Atoms.Container>
+        </Container>
 
-        <Atoms.Container overrideDefaults={true} className="flex gap-6">
-          <Molecules.ProfilePageFilterBar
+        <Container overrideDefaults={true} className="flex gap-6">
+          <ProfilePageFilterBar
             activePage={filterBarActivePage}
             onPageChangeAction={navigateToPage}
             stats={stats}
             isOwnProfile={isOwnProfile}
           />
 
-          <Atoms.Container data-cy="profile-tab-content" overrideDefaults={true} className="min-w-0 flex-1">
+          <Container data-cy="profile-tab-content" overrideDefaults={true} className="min-w-0 flex-1">
             {children}
-          </Atoms.Container>
-          <Organisms.ProfilePageSidebar />
-        </Atoms.Container>
-      </Molecules.ProfilePageLayoutWrapper>
+          </Container>
+          <ProfilePageSidebar />
+        </Container>
+      </ProfilePageLayoutWrapper>
 
-      <Molecules.MobileFooter />
+      <MobileFooter />
 
-      <Molecules.AvatarZoomModal
+      <AvatarZoomModal
         open={isAvatarZoomOpen}
         onClose={handleCloseAvatarZoom}
         avatarUrl={profile.avatarUrl}

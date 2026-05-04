@@ -8,9 +8,24 @@ import { useRelativeTime } from '@/hooks/useRelativeTime/useRelativeTime';
 import { useUserDetails } from '@/hooks/useUserDetails/useUserDetails';
 import { useViewportObserver } from '@/hooks/useViewportObserver/useViewportObserver';
 import * as React from 'react';
-import * as Atoms from '@/atoms';
-import * as Molecules from '@/molecules';
-import * as Organisms from '@/organisms';
+import { Container } from '@/atoms/Container/Container';
+import { Image } from '@/atoms/Image/Image';
+import { Skeleton } from '@/atoms/Skeleton/Skeleton';
+import { Video } from '@/atoms/Video/Video';
+import { PostHeaderTimestamp } from '@/molecules/PostHeaderTimestamp/PostHeaderTimestamp';
+import { PostHeaderUserInfo } from '@/molecules/PostHeaderUserInfo/PostHeaderUserInfo';
+import { PostText } from '@/molecules/PostText/PostText';
+import { truncateAtWordBoundary } from '@/molecules/PostText/PostText.utils';
+import { TimelineEndMessage } from '@/molecules/Timeline/TimelineEndMessage';
+import { TimelineError } from '@/molecules/Timeline/TimelineError';
+import { TimelineLoadingMore } from '@/molecules/Timeline/TimelineLoadingMore';
+import { TimelineStateWrapper } from '@/molecules/Timeline/TimelineStateWrapper/TimelineStateWrapper';
+import { ClickableTagsList } from '../../../ClickableTagsList/ClickableTagsList';
+import { DialogReply } from '../../../DialogReply/DialogReply';
+import { DialogRepost } from '../../../DialogRepost/DialogRepost';
+import { PostActionsBar } from '../../../PostActionsBar/PostActionsBar';
+import { PostContentBlurred } from '../../../PostContentBlurred/PostContentBlurred';
+
 import { useVisualFeedTiles } from './useVisualFeedTiles';
 import { cn } from '@/libs/utils/utils';
 
@@ -66,8 +81,8 @@ function VisualTileVideo({ tile }: VisualTileVideoProps) {
   }, []);
 
   return (
-    <Atoms.Container ref={ref} overrideDefaults className="absolute inset-0">
-      <Atoms.Video
+    <Container ref={ref} overrideDefaults className="absolute inset-0">
+      <Video
         ref={videoRef}
         src={tile.mainSrc}
         controls={false}
@@ -79,7 +94,7 @@ function VisualTileVideo({ tile }: VisualTileVideoProps) {
         onTimeUpdate={handleTimeUpdate}
         className="h-full w-full rounded-none object-cover"
       />
-    </Atoms.Container>
+    </Container>
   );
 }
 
@@ -101,7 +116,7 @@ function VisualTileImage({ tile }: VisualTileImageProps) {
     setCurrentSrc(tile.mainSrc);
   }, [tile.mainSrc, tile.previewSrc]);
 
-  return <Atoms.Image src={currentSrc} alt={tile.attachmentName} fill className="object-cover" onError={handleError} />;
+  return <Image src={currentSrc} alt={tile.attachmentName} fill className="object-cover" onError={handleError} />;
 }
 
 function VisualTimelineTileOverlay({ tile, size, onReplyClick, onRepostClick }: VisualTimelineTileOverlayProps) {
@@ -120,61 +135,58 @@ function VisualTimelineTileOverlay({ tile, size, onReplyClick, onRepostClick }: 
     }
 
     const limit = isCompact ? 120 : size === 'wide' ? 260 : 180;
-    return Molecules.truncateAtWordBoundary(trimmedContent, limit);
+    return truncateAtWordBoundary(trimmedContent, limit);
   }, [isCompact, size, tile.content]);
 
   return (
-    <Atoms.Container
+    <Container
       overrideDefaults
       className={cn(
         'pointer-events-none absolute inset-0 flex flex-col justify-between bg-[linear-gradient(180deg,rgba(5,5,10,0.58)_0%,rgba(5,5,10,0.72)_100%)] opacity-0 backdrop-blur-[3px] transition-opacity duration-200 group-focus-within:opacity-100 group-hover:opacity-100',
         isCompact ? 'p-4' : 'p-5',
       )}
     >
-      <Atoms.Container
+      <Container
         overrideDefaults
         className="pointer-events-none drop-shadow-[0_2px_10px_rgba(5,5,10,0.9)] group-focus-within:pointer-events-auto group-hover:pointer-events-auto"
       >
-        <Atoms.Container
+        <Container
           overrideDefaults
           data-testid="visual-overlay-content-stack"
           className={cn('flex flex-col gap-4', isCompact ? 'max-h-44' : 'max-h-56')}
         >
-          <Atoms.Container overrideDefaults className="flex items-start justify-between gap-4">
-            <Atoms.Container overrideDefaults className="min-w-0 flex-1">
+          <Container overrideDefaults className="flex items-start justify-between gap-4">
+            <Container overrideDefaults className="min-w-0 flex-1">
               {userDetails ? (
-                <Molecules.PostHeaderUserInfo userId={userId} userName={userDetails.name || ''} avatarUrl={avatarUrl} />
+                <PostHeaderUserInfo userId={userId} userName={userDetails.name || ''} avatarUrl={avatarUrl} />
               ) : (
-                <Atoms.Container overrideDefaults className="flex items-center gap-2">
-                  <Atoms.Skeleton className="size-6 rounded-full bg-white/20" />
-                  <Atoms.Skeleton className="h-3 w-20 rounded-md bg-white/20" />
-                </Atoms.Container>
+                <Container overrideDefaults className="flex items-center gap-2">
+                  <Skeleton className="size-6 rounded-full bg-white/20" />
+                  <Skeleton className="h-3 w-20 rounded-md bg-white/20" />
+                </Container>
               )}
-            </Atoms.Container>
+            </Container>
 
-            <Atoms.Container overrideDefaults className="shrink-0 pt-0.5 [&_span]:text-white/70 [&_svg]:text-white/70">
-              <Molecules.PostHeaderTimestamp timeAgo={formatRelativeTime(indexedAt)} indexedAt={indexedAt} />
-            </Atoms.Container>
-          </Atoms.Container>
+            <Container overrideDefaults className="shrink-0 pt-0.5 [&_span]:text-white/70 [&_svg]:text-white/70">
+              <PostHeaderTimestamp timeAgo={formatRelativeTime(indexedAt)} indexedAt={indexedAt} />
+            </Container>
+          </Container>
 
           {truncatedContent ? (
-            <Atoms.Container
-              overrideDefaults
-              className={cn('overflow-hidden', isCompact ? 'max-h-[84px]' : 'max-h-[96px]')}
-            >
-              <Molecules.PostText
+            <Container overrideDefaults className={cn('overflow-hidden', isCompact ? 'max-h-[84px]' : 'max-h-[96px]')}>
+              <PostText
                 content={truncatedContent}
                 className={cn(
                   'text-white drop-shadow-[0_2px_10px_rgba(5,5,10,0.9)] [&_*]:text-white [&_blockquote]:border-white/30 [&_button]:text-white [&_button]:hover:text-white/80',
                   isCompact ? 'text-sm leading-5' : 'text-base leading-6',
                 )}
               />
-            </Atoms.Container>
+            </Container>
           ) : null}
-        </Atoms.Container>
-      </Atoms.Container>
+        </Container>
+      </Container>
 
-      <Atoms.Container
+      <Container
         overrideDefaults
         onClick={stopPropagation}
         onPointerDown={stopPropagation}
@@ -183,7 +195,7 @@ function VisualTimelineTileOverlay({ tile, size, onReplyClick, onRepostClick }: 
           isCompact ? 'mt-4 flex flex-col gap-4' : 'mt-4 flex flex-wrap items-end justify-between gap-x-6 gap-y-4',
         )}
       >
-        <Organisms.ClickableTagsList
+        <ClickableTagsList
           taggedId={tile.postId}
           taggedKind={TagKind.POST}
           showCount={true}
@@ -194,7 +206,7 @@ function VisualTimelineTileOverlay({ tile, size, onReplyClick, onRepostClick }: 
           className={cn('text-white [&_[role=button]]:border-white/20', isCompact ? 'max-w-full' : 'min-w-0 flex-1')}
         />
 
-        <Organisms.PostActionsBar
+        <PostActionsBar
           postId={tile.postId}
           variant="visual"
           onTagClick={() => setTagsExpanded((previousValue) => !previousValue)}
@@ -202,8 +214,8 @@ function VisualTimelineTileOverlay({ tile, size, onReplyClick, onRepostClick }: 
           onRepostClick={onRepostClick}
           className={cn(isCompact ? 'justify-start' : 'shrink-0 justify-end')}
         />
-      </Atoms.Container>
-    </Atoms.Container>
+      </Container>
+    </Container>
   );
 }
 
@@ -230,7 +242,7 @@ function VisualTimelineTile({ tile, size, onNavigate }: VisualTimelineTileProps)
 
   return (
     <>
-      <Atoms.Container
+      <Container
         overrideDefaults
         role="button"
         tabIndex={0}
@@ -242,7 +254,7 @@ function VisualTimelineTile({ tile, size, onNavigate }: VisualTimelineTileProps)
         style={{ aspectRatio: VISUAL_TILE_ASPECT_RATIOS[size] }}
       >
         {tile.isBlurred ? (
-          <Organisms.PostContentBlurred postId={tile.postId} className="h-full rounded-none" />
+          <PostContentBlurred postId={tile.postId} className="h-full rounded-none" />
         ) : tile.mediaKind === 'video' ? (
           <VisualTileVideo tile={tile} />
         ) : (
@@ -257,17 +269,17 @@ function VisualTimelineTile({ tile, size, onNavigate }: VisualTimelineTileProps)
             onRepostClick={() => setRepostDialogOpen(true)}
           />
         ) : null}
-      </Atoms.Container>
+      </Container>
 
-      <Organisms.DialogReply postId={tile.postId} open={replyDialogOpen} onOpenChangeAction={setReplyDialogOpen} />
-      <Organisms.DialogRepost postId={tile.postId} open={repostDialogOpen} onOpenChangeAction={setRepostDialogOpen} />
+      <DialogReply postId={tile.postId} open={replyDialogOpen} onOpenChangeAction={setReplyDialogOpen} />
+      <DialogRepost postId={tile.postId} open={repostDialogOpen} onOpenChangeAction={setRepostDialogOpen} />
     </>
   );
 }
 
 function VisualTimelineRow({ cell, onNavigate }: VisualTimelineRowProps) {
   return (
-    <Atoms.Container
+    <Container
       overrideDefaults
       className="min-w-0"
       style={{
@@ -275,7 +287,7 @@ function VisualTimelineRow({ cell, onNavigate }: VisualTimelineRowProps) {
       }}
     >
       {cell.isSpacer || !cell.tile ? (
-        <Atoms.Container
+        <Container
           overrideDefaults
           aria-hidden="true"
           className="rounded-md border border-dashed border-white/10 bg-white/[0.03]"
@@ -284,7 +296,7 @@ function VisualTimelineRow({ cell, onNavigate }: VisualTimelineRowProps) {
       ) : (
         <VisualTimelineTile tile={cell.tile} size={cell.size} onNavigate={onNavigate} />
       )}
-    </Atoms.Container>
+    </Container>
   );
 }
 
@@ -318,36 +330,32 @@ export function VisualTimelinePosts({
     !hasPendingFiles;
 
   return (
-    <Molecules.TimelineStateWrapper
-      loading={loading}
-      error={error}
-      hasItems={postIds.length > 0 && !showFilteredEmptyState}
-    >
+    <TimelineStateWrapper loading={loading} error={error} hasItems={postIds.length > 0 && !showFilteredEmptyState}>
       {!showFilteredEmptyState ? (
-        <Atoms.Container data-cy="visual-feed-container">
-          <Atoms.Container
+        <Container data-cy="visual-feed-container">
+          <Container
             overrideDefaults
             className="mx-auto flex w-full flex-col gap-6"
             style={{ maxWidth: `${VISUAL_GRID_MAX_WIDTH_PX}px` }}
           >
             {rows.map((row) => (
-              <Atoms.Container key={row.key} overrideDefaults className="grid grid-cols-12 gap-6">
+              <Container key={row.key} overrideDefaults className="grid grid-cols-12 gap-6">
                 {row.cells.map((cell) => (
                   <VisualTimelineRow key={cell.key} cell={cell} onNavigate={navigateToPost} />
                 ))}
-              </Atoms.Container>
+              </Container>
             ))}
 
-            {loadingMore && <Molecules.TimelineLoadingMore />}
+            {loadingMore && <TimelineLoadingMore />}
 
-            {error && postIds.length > 0 && <Molecules.TimelineError message={error} />}
+            {error && postIds.length > 0 && <TimelineError message={error} />}
 
-            {!hasMore && !loadingMore && rows.length > 0 && <Molecules.TimelineEndMessage />}
+            {!hasMore && !loadingMore && rows.length > 0 && <TimelineEndMessage />}
 
-            <Atoms.Container overrideDefaults className="h-5" ref={sentinelRef} />
-          </Atoms.Container>
-        </Atoms.Container>
+            <Container overrideDefaults className="h-5" ref={sentinelRef} />
+          </Container>
+        </Container>
       ) : null}
-    </Molecules.TimelineStateWrapper>
+    </TimelineStateWrapper>
   );
 }

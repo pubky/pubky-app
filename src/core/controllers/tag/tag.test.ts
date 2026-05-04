@@ -1,7 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { TagResult } from 'pubky-app-specs';
 import type { TTagEventParams } from './tag.types';
-import { asOpaque } from '@/test-utils';
+import { asOpaque } from '@/test-utils/type-assertions';
 import { HttpMethod } from '@/libs/http/http.types';
 import { TagKind } from '@/application/tag/tag.types';
 import { db } from '@/database/franky/franky';

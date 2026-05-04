@@ -1,4 +1,4 @@
-import * as Types from './copyright.types';
+import type { TCopyrightSubmitInput } from './copyright.types';
 import { ChatwootService } from '@/services/chatwoot/chatwoot';
 import { CHATWOOT_INBOX_IDS } from '@/services/chatwoot/chatwoot.constants';
 import { extractSourceId } from '@/services/chatwoot/chatwoot.utils';
@@ -25,7 +25,7 @@ export class CopyrightApplication {
   /**
    * Format form data as JSON string for message body
    */
-  private static formatFormData(formData: Types.TCopyrightSubmitInput): string {
+  private static formatFormData(formData: TCopyrightSubmitInput): string {
     return JSON.stringify(formData, null, 2);
   }
 
@@ -42,7 +42,7 @@ export class CopyrightApplication {
    * @param params - Parameters object with all copyright form fields
    * @throws AppError if submission fails
    */
-  static async submit(params: Types.TCopyrightSubmitInput): Promise<void> {
+  static async submit(params: TCopyrightSubmitInput): Promise<void> {
     const email = params.email;
     const inboxId = CHATWOOT_INBOX_IDS.COPYRIGHT;
     const name = `${params.firstName} ${params.lastName}`.trim();

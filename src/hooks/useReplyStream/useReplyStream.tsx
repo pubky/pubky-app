@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from 'react';
 import { useLiveQuery } from 'dexie-react-hooks';
-import * as Config from '@/config';
+import { NEXUS_POSTS_PER_PAGE } from '@/config/nexus';
 import { useMutedUsers } from '@/hooks/useMutedUsers/useMutedUsers';
 import { usePostCounts } from '@/hooks/usePostCounts/usePostCounts';
 import { MAX_EXPAND_PAGES } from './useReplyStream.constants';
@@ -150,7 +150,7 @@ export function useReplyStream(
 
     try {
       const streamId = buildPostReplyStreamId(postId);
-      const pageSize = Config.NEXUS_POSTS_PER_PAGE;
+      const pageSize = NEXUS_POSTS_PER_PAGE;
       let cursor = 0;
       let pagesLoaded = 0;
 

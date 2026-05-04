@@ -1,9 +1,10 @@
-import * as Atoms from '@/atoms';
+import { Container } from '@/atoms/Container/Container';
+import { Spinner } from '@/atoms/Spinner/Spinner';
 
 export default function ProfileLoading() {
   return (
-    <Atoms.Container overrideDefaults={true} className="flex min-h-[400px] items-center justify-center">
-      <Atoms.Spinner />
-    </Atoms.Container>
+    <Container overrideDefaults={true} className="flex min-h-[400px] items-center justify-center">
+      <Spinner />
+    </Container>
   );
 }

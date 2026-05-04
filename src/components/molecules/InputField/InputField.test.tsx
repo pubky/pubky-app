@@ -2,43 +2,6 @@ import { describe, it, expect, vi } from 'vitest';
 import { render, screen, fireEvent } from '@testing-library/react';
 import { InputField } from './InputField';
 
-// Mock UI components
-vi.mock('@/components/ui', () => ({
-  Input: ({
-    type,
-    className,
-    value,
-    placeholder,
-    disabled,
-    readOnly,
-    onClick,
-  }: {
-    type?: string;
-    className?: string;
-    value?: string;
-    placeholder?: string;
-    disabled?: boolean;
-    readOnly?: boolean;
-    onClick?: () => void;
-  }) => (
-    <input
-      data-testid="input"
-      type={type}
-      className={className}
-      value={value}
-      placeholder={placeholder}
-      disabled={disabled}
-      readOnly={readOnly}
-      onClick={onClick}
-    />
-  ),
-  Container: ({ children, className }: { children: React.ReactNode; className?: string }) => (
-    <div data-testid="container" className={className}>
-      {children}
-    </div>
-  ),
-}));
-
 describe('InputField', () => {
   it('renders with default props', () => {
     render(<InputField value="test value" />);

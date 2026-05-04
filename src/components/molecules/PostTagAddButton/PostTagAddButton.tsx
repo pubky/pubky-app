@@ -1,12 +1,13 @@
 import * as React from 'react';
-import * as Atoms from '@/atoms';
+import { Button } from '@/atoms/Button/Button';
+
 import type { PostTagAddButtonProps } from './PostTagAddButton.types';
 import { Plus } from 'lucide-react';
 import { cn } from '@/libs/utils/utils';
 
 export function PostTagAddButton({ onClick, className, disabled, variant = 'dashed' }: PostTagAddButtonProps) {
   return (
-    <Atoms.Button
+    <Button
       data-cy="post-tag-add-button"
       onClick={onClick}
       variant="outline"
@@ -26,6 +27,6 @@ export function PostTagAddButton({ onClick, className, disabled, variant = 'dash
         className="pointer-events-none absolute top-1/2 left-1/2 size-4 -translate-x-1/2 -translate-y-1/2 opacity-[0.32]"
         strokeWidth={2}
       />
-    </Atoms.Button>
+    </Button>
   );
 }

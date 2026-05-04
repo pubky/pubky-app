@@ -1,5 +1,1 @@
-import * as Templates from '@/templates';
-
-export default function SettingsAccountPage() {
-  return <Templates.Account />;
-}
+export { Account as default } from '@/templates/Settings/Account/Account';

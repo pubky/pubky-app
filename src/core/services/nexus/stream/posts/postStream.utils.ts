@@ -7,13 +7,15 @@ import type {
 } from '@/services/local/stream/posts/post.types';
 import { StreamSorting } from '@/services/nexus/nexus.types';
 import { POST_STREAM_TAG_DELIMITER } from '@/services/nexus/stream/posts/postStream.constants';
-import { StreamKind, StreamOrder, StreamSource } from '@/services/nexus/stream/posts/postStream.types';
-import type {
-  TPostStreamFetchParams,
-  TStreamBase,
-  TStreamExtraParams,
-  TStreamIdBreakdown,
-  TStreamSource,
+import {
+  StreamKind,
+  StreamOrder,
+  StreamSource,
+  type TPostStreamFetchParams,
+  type TStreamBase,
+  type TStreamExtraParams,
+  type TStreamIdBreakdown,
+  type TStreamSource,
 } from '@/services/nexus/stream/posts/postStream.types';
 /**
  * Creates parameters for fetching a post stream based on the stream ID and pagination settings.

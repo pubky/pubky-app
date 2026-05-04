@@ -10,70 +10,82 @@ vi.mock('@/hooks/useIsMobile/useIsMobile', () => ({
 }));
 
 // Minimal atoms used by PostInputActionBar
-vi.mock('@/atoms', () => ({
-  Button: ({
-    children,
-    onClick,
-    disabled,
-    className,
-    variant,
-    size,
-    style,
-    'aria-label': aria,
-  }: {
-    children: React.ReactNode;
-    onClick?: React.MouseEventHandler;
-    disabled?: boolean;
-    className?: string;
-    variant?: string;
-    size?: string;
-    style?: React.CSSProperties;
-    'aria-label'?: string;
-  }) => (
-    <button
-      onClick={onClick}
-      disabled={disabled}
-      className={className}
-      data-variant={variant}
-      data-size={size}
-      style={style}
-      aria-label={aria}
-    >
-      {children}
-    </button>
-  ),
-  Container: ({
-    children,
-    className,
-    overrideDefaults,
-  }: {
-    children: React.ReactNode;
-    className?: string;
-    overrideDefaults?: boolean;
-  }) => (
-    <div data-testid="container" className={className} data-override-defaults={overrideDefaults}>
-      {children}
-    </div>
-  ),
-  Typography: ({
-    children,
-    as,
-    size,
-    className,
-  }: {
-    children: React.ReactNode;
-    as?: React.ElementType;
-    size?: string;
-    className?: string;
-  }) => {
-    const Tag = as || 'p';
-    return (
-      <Tag data-testid="typography" data-as={as} data-size={size} className={className}>
+vi.mock('@/atoms/Button/Button', () => {
+  return {
+    Button: ({
+      children,
+      onClick,
+      disabled,
+      className,
+      variant,
+      size,
+      style,
+      'aria-label': aria,
+    }: {
+      children: React.ReactNode;
+      onClick?: React.MouseEventHandler;
+      disabled?: boolean;
+      className?: string;
+      variant?: string;
+      size?: string;
+      style?: React.CSSProperties;
+      'aria-label'?: string;
+    }) => (
+      <button
+        onClick={onClick}
+        disabled={disabled}
+        className={className}
+        data-variant={variant}
+        data-size={size}
+        style={style}
+        aria-label={aria}
+      >
         {children}
-      </Tag>
-    );
-  },
-}));
+      </button>
+    ),
+  };
+});
+
+vi.mock('@/atoms/Container/Container', () => {
+  return {
+    Container: ({
+      children,
+      className,
+      overrideDefaults,
+    }: {
+      children: React.ReactNode;
+      className?: string;
+      overrideDefaults?: boolean;
+    }) => (
+      <div data-testid="container" className={className} data-override-defaults={overrideDefaults}>
+        {children}
+      </div>
+    ),
+  };
+});
+
+vi.mock('@/atoms/Typography/Typography', () => {
+  return {
+    Typography: ({
+      children,
+      as,
+      size,
+      className,
+    }: {
+      children: React.ReactNode;
+      as?: React.ElementType;
+      size?: string;
+      className?: string;
+    }) => {
+      const Tag = as || 'p';
+      return (
+        <Tag data-testid="typography" data-as={as} data-size={size} className={className}>
+          {children}
+        </Tag>
+      );
+    },
+  };
+});
 
 describe('PostInputActionBar', () => {
   const mockUseIsMobile = vi.mocked(useIsMobile);

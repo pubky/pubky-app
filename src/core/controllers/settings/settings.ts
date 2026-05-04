@@ -1,7 +1,10 @@
 import { setLocaleCookie } from '@/i18n/utils';
+import { NotificationApplication } from '@/application/notification/notification';
 import { SettingsApplication } from '@/application/settings/settings';
+import { NotificationNormalizer } from '@/pipes/notification/notification.normalizer';
 import { SettingsNormalizer } from '@/pipes/settings/settings.normalizer';
 import { useAuthStore } from '@/stores/auth/auth.store';
+import { useNotificationStore } from '@/stores/notification/notification.store';
 import { useSettingsStore } from '@/stores/settings/settings.store';
 import type { NotificationPreferences } from '@/stores/settings/settings.types';
 /**
@@ -37,19 +40,40 @@ export class SettingsController {
   }
 
   /**
-   * Updates a notification preference and syncs to homeserver.
+   * Updates a notification preference, recalculates the unread badge count,
+   * and syncs to homeserver.
    */
   static async setNotificationPreference(type: keyof NotificationPreferences, enabled: boolean): Promise<void> {
     useSettingsStore.getState().setNotificationPreference(type, enabled);
-    await this.commitUpdate();
+    try {
+      await this.recalculateUnreadBadge();
+    } finally {
+      await this.commitUpdate();
+    }
   }
 
   /**
-   * Updates all notification preferences and syncs to homeserver.
+   * Updates all notification preferences, recalculates the unread badge count,
+   * and syncs to homeserver.
    */
   static async setAllNotifications(preferences: NotificationPreferences): Promise<void> {
     useSettingsStore.getState().setAllNotifications(preferences);
-    await this.commitUpdate();
+    try {
+      await this.recalculateUnreadBadge();
+    } finally {
+      await this.commitUpdate();
+    }
+  }
+
+  /**
+   * Recalculates the unread badge count based on current notification preferences.
+   */
+  private static async recalculateUnreadBadge(): Promise<void> {
+    const preferences = useSettingsStore.getState().notifications;
+    const allowedTypes = NotificationNormalizer.toEnabledTypes(preferences);
+    const lastRead = useNotificationStore.getState().selectLastRead();
+    const unread = await NotificationApplication.countFilteredUnreadSince(lastRead, allowedTypes);
+    useNotificationStore.getState().setUnread(unread);
   }
 
   /**

@@ -5,8 +5,11 @@ import { usePostCounts } from '@/hooks/usePostCounts/usePostCounts';
 import { useRequireAuth } from '@/hooks/useRequireAuth/useRequireAuth';
 import { useTranslations } from 'next-intl';
 import { cva } from 'class-variance-authority';
-import * as Atoms from '@/atoms';
-import * as Organisms from '@/organisms';
+import { Button } from '@/atoms/Button/Button';
+import { Container } from '@/atoms/Container/Container';
+import { Typography } from '@/atoms/Typography/Typography';
+import { PostMenuActions } from '../PostMenuActions/PostMenuActions';
+
 import { PostActionsBarSkeleton } from './PostActionsBar.skeleton';
 import type { PostActionsBarProps, ActionButtonConfig } from './PostActionsBar.types';
 import { Tag, MessageCircle, Repeat, Loader2, Bookmark, Ellipsis } from 'lucide-react';
@@ -103,15 +106,15 @@ export function PostActionsBar({
     },
   ];
   const moreButton = (
-    <Atoms.Button {...commonButtonProps} aria-label="More options" data-cy="post-more-btn">
+    <Button {...commonButtonProps} aria-label="More options" data-cy="post-more-btn">
       <Ellipsis />
-    </Atoms.Button>
+    </Button>
   );
   return (
-    <Atoms.Container overrideDefaults className={cn('flex flex-wrap gap-2', className)}>
+    <Container overrideDefaults className={cn('flex flex-wrap gap-2', className)}>
       {actionButtons.map(
         ({ id, icon: Icon, count, onClick, ariaLabel, className: btnClassName, iconProps, disabled }) => (
-          <Atoms.Button
+          <Button
             key={id}
             data-cy={`post-${id}-btn`}
             {...commonButtonProps}
@@ -122,14 +125,14 @@ export function PostActionsBar({
           >
             <Icon {...iconProps} />
             {count !== undefined && (
-              <Atoms.Typography as="span" overrideDefaults className={countClassName}>
+              <Typography as="span" overrideDefaults className={countClassName}>
                 {count}
-              </Atoms.Typography>
+              </Typography>
             )}
-          </Atoms.Button>
+          </Button>
         ),
       )}
-      <Organisms.PostMenuActions postId={postId} trigger={moreButton} />
-    </Atoms.Container>
+      <PostMenuActions postId={postId} trigger={moreButton} />
+    </Container>
   );
 }

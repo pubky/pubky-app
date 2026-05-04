@@ -2,10 +2,12 @@
 
 import * as React from 'react';
 import { useTranslations } from 'next-intl';
-import * as Molecules from '@/molecules';
+import { FilterRadioGroup } from '../FilterRadioGroup/FilterRadioGroup';
+import { BaseFilterProps } from '../Filters.types';
+
 import { Layers, StickyNote, Newspaper, Image, CirclePlay, Link, Download } from 'lucide-react';
 import { CONTENT, type ContentType } from '@/stores/home/home.types';
-interface FilterContentProps extends Molecules.BaseFilterProps<ContentType> {
+interface FilterContentProps extends BaseFilterProps<ContentType> {
   disabledTabs?: ContentType[];
 }
 export function FilterContent({
@@ -71,7 +73,7 @@ export function FilterContent({
     [t, isDisabled],
   );
   return (
-    <Molecules.FilterRadioGroup
+    <FilterRadioGroup
       title={t('title')}
       items={items}
       selectedValue={selectedTab}

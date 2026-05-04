@@ -1,7 +1,9 @@
 'use client';
 
 import * as React from 'react';
-import * as Molecules from '@/molecules';
+import { FilterRadioGroup } from '../FilterRadioGroup/FilterRadioGroup';
+import { FilterListItem } from '../Filters.types';
+
 import { WHO_TO_FOLLOW_SORT } from './FilterSortWhoToFollow.constants';
 import type { WhoToFollowSortType } from './FilterSortWhoToFollow.types';
 
@@ -14,7 +16,7 @@ import type { WhoToFollowSortType } from './FilterSortWhoToFollow.types';
  */
 import { Lightbulb, ArrowLeftRight, Users, AtSign } from 'lucide-react';
 export function FilterSortWhoToFollow() {
-  const items = React.useMemo<Molecules.FilterListItem<WhoToFollowSortType>[]>(
+  const items = React.useMemo<FilterListItem<WhoToFollowSortType>[]>(
     () => [
       {
         key: WHO_TO_FOLLOW_SORT.SUGGESTED,
@@ -44,7 +46,7 @@ export function FilterSortWhoToFollow() {
     [],
   );
   return (
-    <Molecules.FilterRadioGroup
+    <FilterRadioGroup
       title="Sort"
       items={items}
       selectedValue={WHO_TO_FOLLOW_SORT.SUGGESTED}

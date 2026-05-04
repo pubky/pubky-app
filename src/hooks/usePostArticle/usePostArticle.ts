@@ -2,7 +2,8 @@
 
 import { useEffect, useState } from 'react';
 import { useTranslations } from 'next-intl';
-import * as Molecules from '@/molecules';
+import { useToast } from '@/molecules/Toaster/use-toast';
+
 import type { ArticleJSON } from './usePostArticle.types';
 import { FileController } from '@/controllers/file/file';
 import type { PostDetailsModel } from '@/models/post/details/postDetails';
@@ -46,7 +47,7 @@ export function usePostArticle({
   attachments,
   coverImageVariant,
 }: UsePostArticleParams): UsePostArticleResult {
-  const { toast } = Molecules.useToast();
+  const { toast } = useToast();
   const tToast = useTranslations('toast');
   const tPost = useTranslations('toast.post');
 

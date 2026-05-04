@@ -1,5 +1,5 @@
 import { Table } from 'dexie';
-import * as Config from '@/config';
+import { NEXUS_NOTIFICATIONS_LIMIT } from '@/config/nexus';
 import { FlatNotification, NotificationType } from './notification.types';
 import { Logger } from '@/libs/logger/logger';
 import { DatabaseErrorCode } from '@/libs/error/error.codes';
@@ -83,7 +83,7 @@ export class NotificationModel {
     }
   }
 
-  static async getRecent(limit: number = Config.NEXUS_NOTIFICATIONS_LIMIT): Promise<FlatNotification[]> {
+  static async getRecent(limit: number = NEXUS_NOTIFICATIONS_LIMIT): Promise<FlatNotification[]> {
     try {
       return await this.table.orderBy('timestamp').reverse().limit(limit).toArray();
     } catch (error) {
@@ -119,7 +119,7 @@ export class NotificationModel {
 
   static async getRecentByType(
     type: NotificationType,
-    limit: number = Config.NEXUS_NOTIFICATIONS_LIMIT,
+    limit: number = NEXUS_NOTIFICATIONS_LIMIT,
   ): Promise<FlatNotification[]> {
     try {
       return await this.table
@@ -143,20 +143,25 @@ export class NotificationModel {
   }
 
   /**
-   * Counts notifications with a timestamp strictly greater than the given value.
-   * Used to get the total unread count by passing the lastRead timestamp.
+   * Counts notifications with a timestamp strictly greater than the given value,
+   * filtered to only include the specified allowed types.
+   * Used to get the filtered unread count by passing the lastRead timestamp.
    */
-  static async countNewerThan(timestamp: number): Promise<number> {
+  static async countFilteredNewerThan(timestamp: number, allowedTypes: NotificationType[]): Promise<number> {
     try {
-      return await this.table.where('timestamp').above(timestamp).count();
+      return await this.table
+        .where('timestamp')
+        .above(timestamp)
+        .and((n) => allowedTypes.includes(n.type))
+        .count();
     } catch (error) {
       throw Err.database(
         DatabaseErrorCode.QUERY_FAILED,
-        `Failed to count notifications newer than ${timestamp} from ${this.table.name}`,
+        `Failed to count filtered notifications newer than ${timestamp} from ${this.table.name}`,
         {
           service: ErrorService.Local,
-          operation: 'countNewerThan',
-          context: { table: this.table.name, timestamp },
+          operation: 'countFilteredNewerThan',
+          context: { table: this.table.name, timestamp, allowedTypes },
           cause: error,
         },
       );
@@ -171,10 +176,7 @@ export class NotificationModel {
    * @param limit - Maximum number of notifications to return
    * @returns Promise resolving to array of notifications ordered by timestamp descending
    */
-  static async getOlderThan(
-    olderThan: number,
-    limit: number = Config.NEXUS_NOTIFICATIONS_LIMIT,
-  ): Promise<FlatNotification[]> {
+  static async getOlderThan(olderThan: number, limit: number = NEXUS_NOTIFICATIONS_LIMIT): Promise<FlatNotification[]> {
     try {
       return await this.table.where('timestamp').below(olderThan).reverse().limit(limit).toArray();
     } catch (error) {

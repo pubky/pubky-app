@@ -2,31 +2,46 @@ import { render, screen } from '@testing-library/react';
 import { describe, it, expect, vi } from 'vitest';
 import { SearchUsersSection } from './SearchUsersSection';
 import type { Pubky } from '@/models/models.types';
-vi.mock('@/atoms', () => ({
-  Container: ({ children, className, ...props }: React.PropsWithChildren<{ className?: string }>) => (
-    <div className={className} {...props}>
-      {children}
-    </div>
-  ),
-  Typography: ({
-    children,
-    className,
-    size,
-    ...props
-  }: React.PropsWithChildren<{ className?: string; size?: string }>) => (
-    <span className={className} data-size={size} {...props}>
-      {children}
-    </span>
-  ),
-}));
+vi.mock('@/atoms/Container/Container', () => {
+  return {
+    Container: ({ children, className, ...props }: React.PropsWithChildren<{ className?: string }>) => (
+      <div className={className} {...props}>
+        {children}
+      </div>
+    ),
+  };
+});
 
-vi.mock('@/molecules', () => ({
-  SearchUserSuggestion: ({ user, onClick }: { user: { id: string; name: string }; onClick?: (id: string) => void }) => (
-    <div data-testid={`user-${user.id}`} onClick={() => onClick?.(user.id)}>
-      {user.name}
-    </div>
-  ),
-}));
+vi.mock('@/atoms/Typography/Typography', () => {
+  return {
+    Typography: ({
+      children,
+      className,
+      size,
+      ...props
+    }: React.PropsWithChildren<{ className?: string; size?: string }>) => (
+      <span className={className} data-size={size} {...props}>
+        {children}
+      </span>
+    ),
+  };
+});
+
+vi.mock('@/molecules/SearchUserSuggestion/SearchUserSuggestion', () => {
+  return {
+    SearchUserSuggestion: ({
+      user,
+      onClick,
+    }: {
+      user: { id: string; name: string };
+      onClick?: (id: string) => void;
+    }) => (
+      <div data-testid={`user-${user.id}`} onClick={() => onClick?.(user.id)}>
+        {user.name}
+      </div>
+    ),
+  };
+});
 
 describe('SearchUsersSection', () => {
   const mockUsers = [

@@ -1,4 +1,4 @@
-import * as Config from '@/config';
+import { NEXUS_POSTS_PER_PAGE } from '@/config/nexus';
 import { PostStreamApplication } from '@/application/stream/posts/post';
 import { NOT_FOUND_CACHED_STREAM, SKIP_FETCH_NEW_POSTS } from '@/controllers/stream/posts/post.constants';
 import type {
@@ -31,7 +31,7 @@ export class StreamPostsController {
    * @param params.streamHead - Identifier of the newest post in the current page for pagination.
    * @param params.streamTail - Identifier of the last post in the current page for pagination. timestamp (timeline mode) or skip (engagement mode)
    * @param params.lastPostId - Post ID of the last post in the current page. We use to get the chunk of the stream from the cache.
-   * @param params.limit - Limit of posts to fetch. Default is Config.NEXUS_POSTS_PER_PAGE.
+   * @param params.limit - Limit of posts to fetch. Default is NEXUS_POSTS_PER_PAGE.
    *
    * @returns Promise resolving to stream slice response containing:
    * - nextPageIds: Array of post IDs for the current page
@@ -55,7 +55,7 @@ export class StreamPostsController {
     streamHead = SKIP_FETCH_NEW_POSTS,
     streamTail = NOT_FOUND_CACHED_STREAM,
     lastPostId,
-    limit = Config.NEXUS_POSTS_PER_PAGE,
+    limit = NEXUS_POSTS_PER_PAGE,
     order,
   }: TReadPostStreamChunkParams): Promise<TReadPostStreamChunkResponse> {
     // selectCurrentUserPubky() throws an error when user is not authenticated;

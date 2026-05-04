@@ -37,11 +37,8 @@ vi.mock('@/hooks/useCurrentUserProfile/useCurrentUserProfile', () => ({
 }));
 
 // Mock Organisms
-vi.mock('@/organisms', async (importOriginal) => {
-  const actual = await importOriginal<typeof import('@/organisms')>();
+vi.mock('@/organisms/AvatarWithFallback/AvatarWithFallback', () => {
   return {
-    ...actual,
-    DialogFeedback: () => <div data-testid="dialog-feedback" />,
     AvatarWithFallback: ({
       avatarUrl,
       name,
@@ -71,12 +68,16 @@ vi.mock('@/organisms', async (importOriginal) => {
   };
 });
 
+vi.mock('@/organisms/DialogFeedback/DialogFeedback', () => {
+  return {
+    DialogFeedback: () => <div data-testid="dialog-feedback" />,
+  };
+});
+
 // Mock Molecules
 const mockToast = vi.fn();
-vi.mock('@/molecules', async (importOriginal) => {
-  const actual = await importOriginal<typeof import('@/molecules')>();
+vi.mock('@/molecules/Toaster/use-toast', () => {
   return {
-    ...actual,
     useToast: vi.fn(() => ({
       toast: mockToast,
     })),
@@ -84,10 +85,26 @@ vi.mock('@/molecules', async (importOriginal) => {
 });
 
 // Mock Atoms
-vi.mock('@/atoms', async (importOriginal) => {
-  const actual = await importOriginal<typeof import('@/atoms')>();
+vi.mock('@/atoms/Button/Button', () => {
   return {
-    ...actual,
+    Button: ({
+      children,
+      className,
+      ...props
+    }: {
+      children: React.ReactNode;
+      className?: string;
+      [key: string]: unknown;
+    }) => (
+      <button data-testid="button" className={className} {...props}>
+        {children}
+      </button>
+    ),
+  };
+});
+
+vi.mock('@/atoms/Container/Container', () => {
+  return {
     Container: ({
       children,
       className,
@@ -103,19 +120,11 @@ vi.mock('@/atoms', async (importOriginal) => {
         {children}
       </div>
     ),
-    Button: ({
-      children,
-      className,
-      ...props
-    }: {
-      children: React.ReactNode;
-      className?: string;
-      [key: string]: unknown;
-    }) => (
-      <button data-testid="button" className={className} {...props}>
-        {children}
-      </button>
-    ),
+  };
+});
+
+vi.mock('@/atoms/Heading/Heading', () => {
+  return {
     Heading: ({
       children,
       level,

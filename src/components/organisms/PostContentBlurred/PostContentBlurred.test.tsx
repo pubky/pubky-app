@@ -11,60 +11,72 @@ vi.mock('@/controllers/moderation/moderation', () => ({
 }));
 
 // Mock Atoms
-vi.mock('@/atoms', () => ({
-  Button: ({
-    children,
-    onClick,
-    className,
-    overrideDefaults,
-    ...props
-  }: {
-    children: React.ReactNode;
-    onClick?: (e: React.MouseEvent) => void;
-    className?: string;
-    overrideDefaults?: boolean;
-  }) => (
-    <button
-      data-testid="blurred-content-button"
-      data-override-defaults={overrideDefaults}
-      onClick={onClick}
-      className={className}
-      {...props}
-    >
-      {children}
-    </button>
-  ),
-  Typography: ({
-    children,
-    className,
-    as: Component = 'span',
-    overrideDefaults,
-    ...props
-  }: {
-    children: React.ReactNode;
-    className?: string;
-    as?: React.ElementType;
-    overrideDefaults?: boolean;
-  }) => (
-    <Component data-testid="typography" data-override-defaults={overrideDefaults} className={className} {...props}>
-      {children}
-    </Component>
-  ),
-  Container: ({
-    children,
-    className,
-    overrideDefaults,
-    ...props
-  }: {
-    children: React.ReactNode;
-    className?: string;
-    overrideDefaults?: boolean;
-  }) => (
-    <div data-testid="container" data-override-defaults={overrideDefaults} className={className} {...props}>
-      {children}
-    </div>
-  ),
-}));
+vi.mock('@/atoms/Button/Button', () => {
+  return {
+    Button: ({
+      children,
+      onClick,
+      className,
+      overrideDefaults,
+      ...props
+    }: {
+      children: React.ReactNode;
+      onClick?: (e: React.MouseEvent) => void;
+      className?: string;
+      overrideDefaults?: boolean;
+    }) => (
+      <button
+        data-testid="blurred-content-button"
+        data-override-defaults={overrideDefaults}
+        onClick={onClick}
+        className={className}
+        {...props}
+      >
+        {children}
+      </button>
+    ),
+  };
+});
+
+vi.mock('@/atoms/Container/Container', () => {
+  return {
+    Container: ({
+      children,
+      className,
+      overrideDefaults,
+      ...props
+    }: {
+      children: React.ReactNode;
+      className?: string;
+      overrideDefaults?: boolean;
+    }) => (
+      <div data-testid="container" data-override-defaults={overrideDefaults} className={className} {...props}>
+        {children}
+      </div>
+    ),
+  };
+});
+
+vi.mock('@/atoms/Typography/Typography', () => {
+  return {
+    Typography: ({
+      children,
+      className,
+      as: Component = 'span',
+      overrideDefaults,
+      ...props
+    }: {
+      children: React.ReactNode;
+      className?: string;
+      as?: React.ElementType;
+      overrideDefaults?: boolean;
+    }) => (
+      <Component data-testid="typography" data-override-defaults={overrideDefaults} className={className} {...props}>
+        {children}
+      </Component>
+    ),
+  };
+});
 
 describe('PostContentBlurred', () => {
   const defaultProps = {

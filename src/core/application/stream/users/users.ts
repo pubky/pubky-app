@@ -1,4 +1,4 @@
-import * as Config from '@/config';
+import { NEXUS_USERS_PER_PAGE } from '@/config/nexus';
 import { Logger } from '@/libs/logger/logger';
 import type {
   TFetchStreamFromNexusParams,
@@ -87,7 +87,7 @@ export class UserStreamApplication {
   private static async fetchStreamFromNexus({
     streamId,
     skip = 0,
-    limit = Config.NEXUS_USERS_PER_PAGE,
+    limit = NEXUS_USERS_PER_PAGE,
     viewerId,
     cachedStream,
   }: TFetchStreamFromNexusParams): Promise<TUserStreamChunkResponse> {

@@ -8,22 +8,19 @@ const { mockToast, mockShowErrorToast } = vi.hoisted(() => ({
   mockToast: vi.fn(),
   mockShowErrorToast: vi.fn(),
 }));
-vi.mock('@/molecules', async (importOriginal) => {
-  const actual = await importOriginal<typeof import('@/molecules')>();
+vi.mock('@/molecules/Toaster/showErrorToast', () => {
   return {
-    ...actual,
-    toast: mockToast,
     showErrorToast: mockShowErrorToast,
   };
 });
 
-// Mock @/atoms - provide minimal mocks for snapshot testing
-vi.mock('@/atoms', async (importOriginal) => {
-  const actual = await importOriginal<typeof import('@/atoms')>();
+vi.mock('@/molecules/Toaster/use-toast', () => {
   return {
-    ...actual,
+    toast: mockToast,
   };
 });
+
+// Mock @/atoms - provide minimal mocks for snapshot testing
 
 // Mock fetch
 global.fetch = vi.fn();

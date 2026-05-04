@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { asOpaque } from '@/test-utils';
+import { asOpaque } from '@/test-utils/type-assertions';
 
 const mockDispatchSignals = vi.fn();
 vi.mock('@prelude.so/js-sdk/signals', () => ({

@@ -3,15 +3,22 @@
 import { useEnterSubmit } from '@/hooks/useEnterSubmit/useEnterSubmit';
 import { useState, useEffect, useRef } from 'react';
 import { useTranslations } from 'next-intl';
-import * as Atoms from '@/atoms';
-import * as Molecules from '@/molecules';
-import * as Config from '@/config';
-import * as Types from './index';
+import { Button } from '@/atoms/Button/Button';
+import { Container } from '@/atoms/Container/Container';
+import { Input } from '@/atoms/Input/Input';
+import { Label } from '@/atoms/Label/Label';
+import { Typography } from '@/atoms/Typography/Typography';
+import { EmojiPickerDialog } from '../../EmojiPickerDialog/EmojiPickerDialog';
+
+import { USER_STATUS_MAX_LENGTH } from '@/config/user';
+import { STATUS_OPTIONS } from './StatusPickerContent.constants';
+import { StatusPickerContentProps } from './StatusPickerContent.types';
+
 import { Check, Smile } from 'lucide-react';
 import { parseStatus } from '@/libs/status/status';
 import { cn } from '@/libs/utils/utils';
 
-export function StatusPickerContent({ onStatusSelect, currentStatus }: Types.StatusPickerContentProps) {
+export function StatusPickerContent({ onStatusSelect, currentStatus }: StatusPickerContentProps) {
   const t = useTranslations('status');
   const [customStatus, setCustomStatus] = useState('');
   const [selectedEmoji, setSelectedEmoji] = useState('');
@@ -59,20 +66,20 @@ export function StatusPickerContent({ onStatusSelect, currentStatus }: Types.Sta
   };
   const handleKeyDown = useEnterSubmit(isValidCustomStatus, handleCustomStatusSave);
   return (
-    <Atoms.Container className="gap-2">
+    <Container className="gap-2">
       {/* Predefined status options */}
-      {Types.STATUS_OPTIONS.map((option) => {
+      {STATUS_OPTIONS.map((option) => {
         const isSelected = !isCustomStatus && currentStatus === option.value;
         return (
-          <Atoms.Button
+          <Button
             key={option.value}
             overrideDefaults={true}
             onClick={() => handlePredefinedStatusClick(option.value)}
             className={cn('w-full justify-between gap-2 p-0', 'inline-flex cursor-pointer items-center', 'group')}
           >
-            <Atoms.Container overrideDefaults className="flex items-center gap-2">
+            <Container overrideDefaults className="flex items-center gap-2">
               <span>{option.emoji}</span>
-              <Atoms.Typography
+              <Typography
                 as="span"
                 className={cn(
                   'text-base leading-6 font-medium transition-colors',
@@ -80,25 +87,25 @@ export function StatusPickerContent({ onStatusSelect, currentStatus }: Types.Sta
                 )}
               >
                 {t(option.value as Parameters<typeof t>[0])}
-              </Atoms.Typography>
-            </Atoms.Container>
+              </Typography>
+            </Container>
             {isSelected && <Check className="size-5 text-popover-foreground" />}
-          </Atoms.Button>
+          </Button>
         );
       })}
 
       {/* Custom Status Section */}
-      <Atoms.Container className="gap-2.5 pt-1 pb-0">
-        <Atoms.Label className="text-xs leading-5 tracking-[1.2px] text-muted-foreground uppercase">
+      <Container className="gap-2.5 pt-1 pb-0">
+        <Label className="text-xs leading-5 tracking-[1.2px] text-muted-foreground uppercase">
           {t('customStatus')}
-        </Atoms.Label>
-        <Atoms.Container className="gap-3">
-          <Atoms.Container
+        </Label>
+        <Container className="gap-3">
+          <Container
             overrideDefaults={true}
             className="flex items-center gap-2 rounded-md border border-dashed border-input bg-background/10 px-5 py-4 shadow-sm focus-within:border-white/80"
           >
             {selectedEmoji ? (
-              <Atoms.Button
+              <Button
                 overrideDefaults={true}
                 onClick={() => setShowEmojiPicker(true)}
                 className={cn(
@@ -109,9 +116,9 @@ export function StatusPickerContent({ onStatusSelect, currentStatus }: Types.Sta
                 aria-label="Change emoji"
               >
                 <span className="text-2xl leading-none">{selectedEmoji}</span>
-              </Atoms.Button>
+              </Button>
             ) : (
-              <Atoms.Button
+              <Button
                 overrideDefaults={true}
                 onClick={() => setShowEmojiPicker(true)}
                 className={cn(
@@ -122,14 +129,14 @@ export function StatusPickerContent({ onStatusSelect, currentStatus }: Types.Sta
                 aria-label="Open emoji picker"
               >
                 <Smile className="size-5" strokeWidth={2} />
-              </Atoms.Button>
+              </Button>
             )}
-            <Atoms.Input
+            <Input
               ref={inputRef}
               type="text"
               value={customStatus}
               placeholder={t('addStatus')}
-              maxLength={Config.USER_STATUS_MAX_LENGTH}
+              maxLength={USER_STATUS_MAX_LENGTH}
               onChange={(e) => setCustomStatus(e.target.value)}
               onKeyDown={handleKeyDown}
               className={cn(
@@ -140,16 +147,12 @@ export function StatusPickerContent({ onStatusSelect, currentStatus }: Types.Sta
                 customStatus ? 'text-foreground' : 'text-input',
               )}
             />
-          </Atoms.Container>
-        </Atoms.Container>
-      </Atoms.Container>
+          </Container>
+        </Container>
+      </Container>
 
       {/* Emoji Picker Dialog */}
-      <Molecules.EmojiPickerDialog
-        open={showEmojiPicker}
-        onOpenChange={setShowEmojiPicker}
-        onEmojiSelect={handleEmojiSelect}
-      />
-    </Atoms.Container>
+      <EmojiPickerDialog open={showEmojiPicker} onOpenChange={setShowEmojiPicker} onEmojiSelect={handleEmojiSelect} />
+    </Container>
   );
 }

@@ -16,15 +16,18 @@ vi.mock('@/hooks/useCopyToClipboard/useCopyToClipboard', () => ({
   }),
 }));
 
-vi.mock('@/molecules', async (importOriginal) => {
-  const actual = await importOriginal<typeof import('@/molecules')>();
+vi.mock('@/molecules/Page/Page', () => {
   return {
-    ...actual,
     PageTitle: ({ children, size }: { children: React.ReactNode; size?: string }) => (
       <h1 data-testid="page-title" data-size={size}>
         {children}
       </h1>
     ),
+  };
+});
+
+vi.mock('@/molecules/PopoverPublicKey/PopoverPublicKey', () => {
+  return {
     PopoverPublicKey: ({ className }: { className?: string }) => (
       <div data-testid="popover-public-key" className={className} />
     ),

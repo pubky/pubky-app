@@ -1,4 +1,4 @@
-import { EXCHANGE_RATE_API } from '@/config';
+import { EXCHANGE_RATE_API } from '@/config/network';
 import { exchangerateQueryClient } from './exchangerate.query-client';
 import { BlockTankResponse, BtcRate } from './exchangerate.types';
 import { HttpMethod } from '@/libs/http/http.types';

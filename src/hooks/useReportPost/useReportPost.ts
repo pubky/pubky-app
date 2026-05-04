@@ -3,7 +3,8 @@
 import { useCurrentUserProfile } from '@/hooks/useCurrentUserProfile/useCurrentUserProfile';
 import { useState, useCallback } from 'react';
 import { useTranslations } from 'next-intl';
-import * as Molecules from '@/molecules';
+import { showErrorToast as showErrorToastMessage } from '@/molecules/Toaster/showErrorToast';
+
 import { POST_ROUTES } from '@/app/routes';
 import { REPORT_POST_STEPS, REPORT_API_ENDPOINT } from './useReportPost.constants';
 import type { ReportPostStep } from './useReportPost.types';
@@ -35,7 +36,7 @@ export function useReportPost(postId: string): UseReportPostReturn {
   const [isSuccess, setIsSuccess] = useState(false);
 
   const showErrorToast = (description: string) => {
-    Molecules.showErrorToast({
+    showErrorToastMessage({
       description,
     });
   };

@@ -62,28 +62,32 @@ describe('LocalNotificationService', () => {
     });
   });
 
-  describe('countUnreadSince', () => {
-    it('should delegate to NotificationModel.countNewerThan with the correct argument', async () => {
-      const modelSpy = vi.spyOn(NotificationModel, 'countNewerThan').mockResolvedValue(3);
+  describe('countFilteredUnreadSince', () => {
+    const allowedTypes = [NotificationType.Follow, NotificationType.Reply];
 
-      const result = await LocalNotificationService.countUnreadSince(1000);
+    it('should delegate to NotificationModel.countFilteredNewerThan', async () => {
+      const modelSpy = vi.spyOn(NotificationModel, 'countFilteredNewerThan').mockResolvedValue(2);
 
-      expect(modelSpy).toHaveBeenCalledWith(1000);
-      expect(result).toBe(3);
+      const result = await LocalNotificationService.countFilteredUnreadSince(1000, allowedTypes);
+
+      expect(modelSpy).toHaveBeenCalledWith(1000, allowedTypes);
+      expect(result).toBe(2);
     });
 
     it('should return 0 when no unread notifications exist', async () => {
-      vi.spyOn(NotificationModel, 'countNewerThan').mockResolvedValue(0);
+      vi.spyOn(NotificationModel, 'countFilteredNewerThan').mockResolvedValue(0);
 
-      const result = await LocalNotificationService.countUnreadSince(5000);
+      const result = await LocalNotificationService.countFilteredUnreadSince(5000, allowedTypes);
 
       expect(result).toBe(0);
     });
 
     it('should bubble model errors', async () => {
-      vi.spyOn(NotificationModel, 'countNewerThan').mockRejectedValue(new Error('count-failed'));
+      vi.spyOn(NotificationModel, 'countFilteredNewerThan').mockRejectedValue(new Error('count-failed'));
 
-      await expect(LocalNotificationService.countUnreadSince(1000)).rejects.toThrow('count-failed');
+      await expect(LocalNotificationService.countFilteredUnreadSince(1000, allowedTypes)).rejects.toThrow(
+        'count-failed',
+      );
     });
   });
 });

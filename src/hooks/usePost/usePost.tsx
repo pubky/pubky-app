@@ -2,8 +2,9 @@
 
 import { useState, useEffect } from 'react';
 import { useTranslations } from 'next-intl';
-import * as Atoms from '@/atoms';
-import * as Molecules from '@/molecules';
+import { ToastAction } from '@/atoms/Toast/Toast';
+import { useToast } from '@/molecules/Toaster/use-toast';
+
 import type {
   UsePostReplyOptions,
   UsePostPostOptions,
@@ -46,7 +47,7 @@ export function usePost(): UsePostReturn {
   // selectCurrentUserPubky() throws an error when user is not authenticated;
   // access currentUserPubky directly to get null instead (post actions return early if null)
   const currentUserId = useAuthStore((state) => state.currentUserPubky);
-  const { toast } = Molecules.useToast();
+  const { toast } = useToast();
   const tToast = useTranslations('toast');
   const tPost = useTranslations('toast.post');
 
@@ -157,7 +158,7 @@ export function usePost(): UsePostReturn {
           ? tPost('repostSuccessDesc', { author: originalAuthorName })
           : tPost('repostSuccessDescFallback'),
         action: (
-          <Atoms.ToastAction
+          <ToastAction
             altText={tPost('repostUndo')}
             onClick={() => {
               toastInstance.dismiss();
@@ -165,7 +166,7 @@ export function usePost(): UsePostReturn {
             }}
           >
             {tPost('repostUndo')}
-          </Atoms.ToastAction>
+          </ToastAction>
         ),
       });
 

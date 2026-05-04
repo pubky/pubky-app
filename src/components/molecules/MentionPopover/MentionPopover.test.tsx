@@ -2,24 +2,29 @@ import { render, screen, fireEvent } from '@testing-library/react';
 import { describe, it, expect, vi } from 'vitest';
 import { MentionPopover } from './MentionPopover';
 import type { Pubky } from '@/models/models.types';
-vi.mock('@/atoms', () => ({
-  Container: ({
-    children,
-    className,
-    onMouseEnter,
-    ...props
-  }: React.PropsWithChildren<{ className?: string; onMouseEnter?: () => void }>) => (
-    <div className={className} onMouseEnter={onMouseEnter} {...props}>
-      {children}
-    </div>
-  ),
-  Spinner: ({ size }: { size: string }) => <div data-testid="spinner" data-size={size} />,
-}));
-
-vi.mock('@/molecules', async () => {
-  const actual = await vi.importActual('@/molecules');
+vi.mock('@/atoms/Container/Container', () => {
   return {
-    ...actual,
+    Container: ({
+      children,
+      className,
+      onMouseEnter,
+      ...props
+    }: React.PropsWithChildren<{ className?: string; onMouseEnter?: () => void }>) => (
+      <div className={className} onMouseEnter={onMouseEnter} {...props}>
+        {children}
+      </div>
+    ),
+  };
+});
+
+vi.mock('@/atoms/Spinner/Spinner', () => {
+  return {
+    Spinner: ({ size }: { size: string }) => <div data-testid="spinner" data-size={size} />,
+  };
+});
+
+vi.mock('@/molecules/SearchUserSuggestion/SearchUserSuggestion', () => {
+  return {
     SearchUserSuggestion: ({
       user,
       onClick,

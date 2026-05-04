@@ -1,4 +1,4 @@
-import { SETTINGS_ROUTES } from '@/app';
+import { SETTINGS_ROUTES } from '@/app/routes';
 import type { SettingsMenuItem } from './SettingsMenu.types';
 import { UserRound, Bell, Shield, MegaphoneOff, Globe, CircleHelp } from 'lucide-react';
 export const SETTINGS_MENU_ITEMS: SettingsMenuItem[] = [

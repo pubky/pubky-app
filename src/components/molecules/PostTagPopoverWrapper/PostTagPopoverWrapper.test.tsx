@@ -33,15 +33,13 @@ vi.mock('@/hooks/usePostTaggers/usePostTaggers', () => ({
   }),
 }));
 
-vi.mock('@/organisms', async (importOriginal) => {
-  const actual = await importOriginal<typeof import('@/organisms')>();
+vi.mock('@/organisms/AvatarWithFallback/AvatarWithFallback', () => {
   return {
-    ...actual,
     AvatarWithFallback: ({ name }: { name: string }) => <div data-testid={`avatar-${name}`}>Avatar</div>,
   };
 });
 
-vi.mock('../UserInfoPopover', () => ({
+vi.mock('../UserInfoPopover/UserInfoPopover', () => ({
   UserInfoPopover: ({ children }: { children: React.ReactNode }) => (
     <div data-testid="user-info-popover">{children}</div>
   ),

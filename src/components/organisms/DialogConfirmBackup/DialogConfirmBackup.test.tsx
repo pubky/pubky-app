@@ -10,17 +10,13 @@ vi.mock('@/stores/onboarding/onboarding.store', () => ({
 }));
 
 // Mock atoms - use actual implementations
-vi.mock('@/atoms', async (importOriginal) => {
-  const actual = await importOriginal<typeof import('@/atoms')>();
-  return {
-    ...actual,
-  };
-});
 
 // Mock organisms
-vi.mock('@/organisms', () => ({
-  DialogBackup: vi.fn(() => <div data-testid="dialog-backup">DialogBackup</div>),
-}));
+vi.mock('@/organisms/DialogBackup/DialogBackup', () => {
+  return {
+    DialogBackup: vi.fn(() => <div data-testid="dialog-backup">DialogBackup</div>),
+  };
+});
 
 describe('DialogConfirmBackup - Snapshot', () => {
   it('matches snapshot for default DialogConfirmBackup', () => {

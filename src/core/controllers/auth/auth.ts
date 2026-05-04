@@ -7,6 +7,7 @@ import { clearCookies, sleep } from '@/libs/utils/utils';
 import { AuthApplication } from '@/application/auth/auth';
 import type { TKeypairParams } from '@/application/auth/auth.types';
 import { BootstrapApplication, type BootstrapProgressCallback } from '@/application/bootstrap/bootstrap';
+import { SettingsApplication } from '@/application/settings/settings';
 import { postStreamQueue } from '@/application/stream/posts/muting/post-stream-queue';
 import type {
   TLoginWithEncryptedFileParams,
@@ -18,6 +19,7 @@ import { NotificationCoordinator } from '@/coordinators/notifications/notificati
 import { StreamCoordinator } from '@/coordinators/streams/stream';
 import { TtlCoordinator } from '@/coordinators/ttl/ttl';
 import { clearDatabase } from '@/database/franky/franky.helpers';
+import type { Pubky } from '@/models/models.types';
 import { NotificationNormalizer } from '@/pipes/notification/notification.normalizer';
 import { PubkySpecsSingleton } from '@/pipes/pipes.builder';
 import { SettingsNormalizer } from '@/pipes/settings/settings.normalizer';
@@ -31,6 +33,7 @@ import { useNotificationStore } from '@/stores/notification/notification.store';
 import { useOnboardingStore } from '@/stores/onboarding/onboarding.store';
 import { useSearchStore } from '@/stores/search/search.store';
 import { useSettingsStore } from '@/stores/settings/settings.store';
+import type { SettingsState } from '@/stores/settings/settings.types';
 import { useSignInStore } from '@/stores/signIn/signIn.store';
 export class AuthController {
   private constructor() {} // Prevent instantiation
@@ -114,10 +117,15 @@ export class AuthController {
     };
 
     const localSettings = SettingsNormalizer.extractState(useSettingsStore.getState());
-    const { notification, remoteSettings } = await BootstrapApplication.initialize(
-      { pubky, lastReadUrl: url, localSettings },
-      onProgress,
-    );
+
+    // Sync settings from homeserver before bootstrap; errors are logged and fall back to local settings.
+    const remoteSettings = await this.syncSettings(pubky, localSettings);
+
+    // Resolve final preferences: remote settings win if available, otherwise use local
+    const preferences = (remoteSettings ?? localSettings).notifications;
+    const allowedTypes = NotificationNormalizer.toEnabledTypes(preferences);
+
+    const notification = await BootstrapApplication.initialize({ pubky, lastReadUrl: url, allowedTypes }, onProgress);
     useNotificationStore.getState().setState(notification);
 
     // Apply remote settings to store + cookie (store mutation stays in Controller layer)
@@ -345,6 +353,20 @@ export class AuthController {
     await sleep(5000);
     await this.hydrateMeImAlive({ pubky });
     authStore.setHasProfile(true);
+  }
+
+  /**
+   * Syncs user settings with the homeserver.
+   * Returns remote settings if newer, null otherwise.
+   * All failures are treated as non-blocking and fall back to local settings.
+   */
+  private static async syncSettings(pubky: Pubky, localSettings: SettingsState): Promise<SettingsState | null> {
+    try {
+      return await SettingsApplication.initializeSettings(pubky, localSettings);
+    } catch (error) {
+      Logger.error('Failed to initialize settings during bootstrap', { error, pubky });
+      return null;
+    }
   }
 
   /**

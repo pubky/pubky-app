@@ -1,29 +1,35 @@
 'use client';
 
 import { useRouter } from 'next/navigation';
+import { ButtonsNavigation } from '../ButtonsNavigation/ButtonsNavigation';
+import { PageTitle } from '../Page/Page';
+import { DialogAge } from '@/organisms/DialogAge/DialogAge';
+import { DialogPrivacy } from '@/organisms/DialogPrivacy/DialogPrivacy';
+import { DialogTerms } from '@/organisms/DialogTerms/DialogTerms';
+import { FooterLinks } from '@/atoms/FooterLinks/FooterLinks';
+import { PageHeader } from '@/atoms/PageHeader/PageHeader';
+import { PageSubtitle } from '@/atoms/PageSubtitle/PageSubtitle';
 
-import * as Molecules from '@/molecules';
-import * as Organisms from '@/organisms';
-import * as Atoms from '@/atoms';
-import * as App from '@/app';
+import { ONBOARDING_ROUTES } from '@/app/routes';
 
 export const HomeserverHeader = () => {
   return (
-    <Atoms.PageHeader>
-      <Molecules.PageTitle size="large">
+    <PageHeader>
+      <PageTitle size="large">
         Choose <span className="text-brand">homeserver.</span>
-      </Molecules.PageTitle>
-      <Atoms.PageSubtitle>Enter your invite code to access the Pubky homeserver. </Atoms.PageSubtitle>
-    </Atoms.PageHeader>
+      </PageTitle>
+      <PageSubtitle>Enter your invite code to access the Pubky homeserver. </PageSubtitle>
+    </PageHeader>
   );
 };
 
 export const HomeserverFooter = () => {
   return (
-    <Atoms.FooterLinks>
-      By creating an account on the Pubky homeserver, you agree to the <Organisms.DialogTerms />,{' '}
-      <Organisms.DialogPrivacy />, and you confirm that you are <Organisms.DialogAge />
-    </Atoms.FooterLinks>
+    <FooterLinks>
+      By creating an account on the Pubky homeserver, you agree to the <DialogTerms />,
+      <DialogPrivacy />, and you confirm that you are
+      <DialogAge />
+    </FooterLinks>
   );
 };
 
@@ -39,11 +45,11 @@ export const HomeserverNavigation = ({
   const router = useRouter();
 
   const onHandleBackButton = () => {
-    router.push(App.ONBOARDING_ROUTES.BACKUP);
+    router.push(ONBOARDING_ROUTES.BACKUP);
   };
 
   return (
-    <Molecules.ButtonsNavigation
+    <ButtonsNavigation
       id="homeserver-navigation"
       onHandleBackButton={onHandleBackButton}
       onHandleContinueButton={onHandleContinueButton}

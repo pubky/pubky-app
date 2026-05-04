@@ -5,8 +5,12 @@ import { useUserStream } from '@/hooks/useUserStream/useUserStream';
 import { useMemo } from 'react';
 import { useRouter } from 'next/navigation';
 import { useTranslations } from 'next-intl';
-import * as Atoms from '@/atoms';
-import * as Organisms from '@/organisms';
+import { Container } from '@/atoms/Container/Container';
+import { Heading } from '@/atoms/Heading/Heading';
+import { Typography } from '@/atoms/Typography/Typography';
+import { FullUserListItemSkeleton } from '../FullUserListItemSkeleton/FullUserListItemSkeleton';
+import { UserListItem } from '../UserListItem/UserListItem';
+
 import { APP_ROUTES } from '@/app/routes';
 import type { HotActiveUsersProps } from './HotActiveUsers.types';
 import { cn } from '@/libs/utils/utils';
@@ -67,28 +71,24 @@ export function HotActiveUsers({ limit = DEFAULT_USERS_LIMIT, className }: HotAc
   };
 
   return (
-    <Atoms.Container
-      overrideDefaults
-      className={cn('flex w-full flex-col gap-2', className)}
-      data-testid="hot-active-users"
-    >
-      <Atoms.Heading level={5} size="lg" className="font-light text-muted-foreground">
+    <Container overrideDefaults className={cn('flex w-full flex-col gap-2', className)} data-testid="hot-active-users">
+      <Heading level={5} size="lg" className="font-light text-muted-foreground">
         {t('activeUsers')}
-      </Atoms.Heading>
+      </Heading>
       {error ? (
-        <Atoms.Typography className="text-destructive">{t('failedToLoadUsers')}</Atoms.Typography>
+        <Typography className="text-destructive">{t('failedToLoadUsers')}</Typography>
       ) : isLoading ? (
-        <Atoms.Container className="gap-3.5 rounded-md py-2 lg:gap-3">
+        <Container className="gap-3.5 rounded-md py-2 lg:gap-3">
           {Array.from({ length: limit }).map((_, index) => (
-            <Organisms.FullUserListItemSkeleton key={`hot-active-users-skeleton-${index}`} />
+            <FullUserListItemSkeleton key={`hot-active-users-skeleton-${index}`} />
           ))}
-        </Atoms.Container>
+        </Container>
       ) : users.length === 0 ? (
-        <Atoms.Typography className="font-light text-muted-foreground">{t('noUsersToShow')}</Atoms.Typography>
+        <Typography className="font-light text-muted-foreground">{t('noUsersToShow')}</Typography>
       ) : (
-        <Atoms.Container className="gap-3.5 rounded-md py-2 lg:gap-3">
+        <Container className="gap-3.5 rounded-md py-2 lg:gap-3">
           {users.map((user) => (
-            <Organisms.UserListItem
+            <UserListItem
               key={user.id}
               user={user}
               variant="full"
@@ -99,8 +99,8 @@ export function HotActiveUsers({ limit = DEFAULT_USERS_LIMIT, className }: HotAc
               onFollowClick={handleFollowClick}
             />
           ))}
-        </Atoms.Container>
+        </Container>
       )}
-    </Atoms.Container>
+    </Container>
   );
 }

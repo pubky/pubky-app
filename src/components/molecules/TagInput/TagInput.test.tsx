@@ -16,10 +16,8 @@ vi.mock('@/hooks/useTagSuggestions/useTagSuggestions', () => ({
   useTagSuggestions: mockUseTagSuggestions,
 }));
 
-vi.mock('@/molecules', async (importOriginal) => {
-  const actual = await importOriginal<typeof import('@/molecules')>();
+vi.mock('@/molecules/EmojiPickerDialog/EmojiPickerDialog', () => {
   return {
-    ...actual,
     EmojiPickerDialog: ({ open }: { open: boolean }) => (open ? <div data-testid="emoji-picker" /> : null),
   };
 });

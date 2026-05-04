@@ -9,15 +9,33 @@ vi.mock('next/navigation', () => ({
   }),
 }));
 
-vi.mock('@/organisms', async () => {
-  const actual = await vi.importActual('@/organisms');
+vi.mock('@/organisms/HumanInviteCode/HumanInviteCode', () => {
   return {
-    ...actual,
-    HumanSelection: () => <div data-testid="human-selection">Human Selection</div>,
-    HumanPhoneInput: () => <div data-testid="human-phone-input">Human Phone Input</div>,
-    HumanPhoneCode: () => <div data-testid="human-phone-code">Human Phone Code</div>,
-    HumanLightningPayment: () => <div data-testid="human-lightning-payment">Human Lightning Payment</div>,
     HumanInviteCode: () => <div data-testid="human-invite-code">Human Invite Code</div>,
+  };
+});
+
+vi.mock('@/organisms/HumanLightningPayment/HumanLightningPayment', () => {
+  return {
+    HumanLightningPayment: () => <div data-testid="human-lightning-payment">Human Lightning Payment</div>,
+  };
+});
+
+vi.mock('@/organisms/HumanPhoneCode/HumanPhoneCode', () => {
+  return {
+    HumanPhoneCode: () => <div data-testid="human-phone-code">Human Phone Code</div>,
+  };
+});
+
+vi.mock('@/organisms/HumanPhoneInput/HumanPhoneInput', () => {
+  return {
+    HumanPhoneInput: () => <div data-testid="human-phone-input">Human Phone Input</div>,
+  };
+});
+
+vi.mock('@/organisms/HumanSelection/HumanSelection', () => {
+  return {
+    HumanSelection: () => <div data-testid="human-selection">Human Selection</div>,
   };
 });
 

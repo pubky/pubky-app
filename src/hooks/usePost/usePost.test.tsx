@@ -46,10 +46,8 @@ vi.mock('@/stores/auth/auth.store', () => ({
 }));
 
 // Mock Molecules
-vi.mock('@/molecules', async (importOriginal) => {
-  const actual = await importOriginal<typeof import('@/molecules')>();
+vi.mock('@/molecules/Toaster/use-toast', () => {
   return {
-    ...actual,
     useToast: vi.fn(() => ({
       toast: mockToast,
     })),

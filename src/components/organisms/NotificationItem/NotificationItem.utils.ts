@@ -1,4 +1,4 @@
-import { APP_ROUTES, POST_ROUTES, PROFILE_ROUTES } from '@/app';
+import { APP_ROUTES, POST_ROUTES, PROFILE_ROUTES } from '@/app/routes';
 import { USER_CENTRIC_NOTIFICATION_TYPES } from './NotificationItem.constants';
 import { Logger } from '@/libs/logger/logger';
 import { truncateString } from '@/libs/utils/utils';

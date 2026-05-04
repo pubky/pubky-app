@@ -63,16 +63,23 @@ vi.mock('next/dynamic', () => ({
 }));
 
 // Mock Atoms for Container component
-vi.mock('@/atoms', () => ({
-  Container: ({ className, children, ...props }: { className?: string; children?: React.ReactNode }) => (
-    <div data-testid="container" className={className} {...props}>
-      {children}
-    </div>
-  ),
-  Skeleton: ({ className, ...props }: { className?: string }) => (
-    <div data-testid="skeleton" data-slot="skeleton" className={className} {...props} />
-  ),
-}));
+vi.mock('@/atoms/Container/Container', () => {
+  return {
+    Container: ({ className, children, ...props }: { className?: string; children?: React.ReactNode }) => (
+      <div data-testid="container" className={className} {...props}>
+        {children}
+      </div>
+    ),
+  };
+});
+
+vi.mock('@/atoms/Skeleton/Skeleton', () => {
+  return {
+    Skeleton: ({ className, ...props }: { className?: string }) => (
+      <div data-testid="skeleton" data-slot="skeleton" className={className} {...props} />
+    ),
+  };
+});
 
 describe('MarkdownEditor', () => {
   beforeEach(() => {

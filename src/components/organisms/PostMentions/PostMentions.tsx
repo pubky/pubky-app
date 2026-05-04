@@ -3,8 +3,9 @@
 import { useUserProfile } from '@/hooks/useUserProfile/useUserProfile';
 import { RemarkAnchorProps } from '@/molecules/PostText/PostText.types';
 import { extractTextFromChildren } from '@/molecules/PostText/PostText.utils';
-import * as Atoms from '@/atoms';
-import * as Molecules from '@/molecules';
+import { Link } from '@/atoms/Link/Link';
+import { UserInfoPopover } from '@/molecules/UserInfoPopover/UserInfoPopover';
+
 import { Identity } from '@/libs/identity/identity';
 import { cn, formatPublicKey, withPubkyPrefix } from '@/libs/utils/utils';
 
@@ -24,24 +25,24 @@ export const PostMentions = (props: RemarkAnchorProps) => {
   const finalMention = profile?.name ? `@${profile.name}` : fallbackMention;
 
   const linkContent = (
-    <Atoms.Link
+    <Link
       {...rest}
       href={href || ''}
       onClick={(e) => e.stopPropagation()}
       className={cn(className, 'text-base', !profile?.name && 'uppercase')}
     >
       {finalMention}
-    </Atoms.Link>
+    </Link>
   );
 
   return (
-    <Molecules.UserInfoPopover
+    <UserInfoPopover
       userId={userId}
       userName={userName}
       avatarUrl={profile?.avatarUrl}
       formattedPublicKey={fallbackMention}
     >
       {linkContent}
-    </Molecules.UserInfoPopover>
+    </UserInfoPopover>
   );
 };

@@ -4,9 +4,11 @@ import { useConfirmableDialog } from '@/hooks/useConfirmableDialog/useConfirmabl
 import { useKeyboardOffset } from '@/hooks/useKeyboardOffset/useKeyboardOffset';
 import { useState } from 'react';
 import { useTranslations } from 'next-intl';
-import * as Atoms from '@/atoms';
-import * as Molecules from '@/molecules';
-import * as Organisms from '@/organisms';
+import { Container } from '@/atoms/Container/Container';
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/atoms/Dialog/Dialog';
+import { DialogConfirmDiscard } from '@/molecules/DialogConfirmDiscard/DialogConfirmDiscard';
+import { PostInput } from '../PostInput/PostInput';
+
 import { POST_INPUT_VARIANT } from '@/organisms/PostInput/PostInput.constants';
 import type { DialogNewPostProps } from './DialogNewPost.types';
 import { cn } from '@/libs/utils/utils';
@@ -24,8 +26,8 @@ export function DialogNewPost({ open, onOpenChangeAction }: DialogNewPostProps) 
   const { isKeyboardVisible, keyboardOffset } = useKeyboardOffset({ offsetAdjustment: 200 });
 
   return (
-    <Atoms.Dialog open={open} onOpenChange={handleOpenChange}>
-      <Atoms.DialogContent
+    <Dialog open={open} onOpenChange={handleOpenChange}>
+      <DialogContent
         className={cn('w-3xl', isKeyboardVisible && 'transition-transform duration-75')}
         style={
           isKeyboardVisible && keyboardOffset > 0
@@ -36,12 +38,12 @@ export function DialogNewPost({ open, onOpenChangeAction }: DialogNewPostProps) 
         }
         hiddenTitle={title}
       >
-        <Atoms.DialogHeader>
-          <Atoms.DialogTitle>{title}</Atoms.DialogTitle>
-          <Atoms.DialogDescription className="sr-only">{t('description', { title })}</Atoms.DialogDescription>
-        </Atoms.DialogHeader>
-        <Atoms.Container className="gap-3">
-          <Organisms.PostInput
+        <DialogHeader>
+          <DialogTitle>{title}</DialogTitle>
+          <DialogDescription className="sr-only">{t('description', { title })}</DialogDescription>
+        </DialogHeader>
+        <Container className="gap-3">
+          <PostInput
             dataCy="new-post-input"
             key={resetKey}
             variant={POST_INPUT_VARIANT.POST}
@@ -50,14 +52,14 @@ export function DialogNewPost({ open, onOpenChangeAction }: DialogNewPostProps) 
             onContentChange={handleContentChange}
             onArticleModeChange={setIsArticle}
           />
-        </Atoms.Container>
+        </Container>
         {/* Nested inside parent dialog to avoid mobile touch event issues with sibling portals */}
-        <Molecules.DialogConfirmDiscard
+        <DialogConfirmDiscard
           open={showConfirmDialog}
           onOpenChange={() => setShowConfirmDialog(false)}
           onConfirm={handleDiscard}
         />
-      </Atoms.DialogContent>
-    </Atoms.Dialog>
+      </DialogContent>
+    </Dialog>
   );
 }

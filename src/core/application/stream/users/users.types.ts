@@ -6,7 +6,7 @@ import type { UserStreamId } from '@/models/stream/user/userStream.types';
  * - A composite ID (userId:reach) e.g., 'user123:followers', 'user456:following'
  * - A UserStreamType (source:timeframe:reach) e.g., 'influencers:today:all', 'recommended:all:all'
  *
- * Note: limit is not included as it's controlled by Config.NEXUS_USERS_PER_PAGE
+ * Note: limit is not included as it's controlled by NEXUS_USERS_PER_PAGE
  * viewerId is not included as it's extracted from auth store by the controller
  */
 export type TReadUserStreamChunkParams = {
@@ -17,7 +17,7 @@ export type TReadUserStreamChunkParams = {
 
 /**
  * Internal parameters for fetching user stream (extends public params with limit and viewerId)
- * Used internally by application layer - limit comes from Config.NEXUS_USERS_PER_PAGE
+ * Used internally by application layer - limit comes from NEXUS_USERS_PER_PAGE
  */
 export type TFetchUserStreamChunkParams = TReadUserStreamChunkParams & {
   limit: number;

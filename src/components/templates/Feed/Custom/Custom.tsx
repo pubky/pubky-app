@@ -1,25 +1,32 @@
-import * as Organisms from '@/organisms';
-import { TIMELINE_FEED_VARIANT } from '@/config';
+import { AlertBackup } from '@/organisms/AlertBackup/AlertBackup';
+import { ContentLayout } from '@/organisms/ContentLayout/ContentLayout';
+import { CustomFeedFilters } from '@/organisms/CustomFeedFilters/CustomFeedFilters';
+import { FeedNavigation } from '@/organisms/FeedNavigation/FeedNavigation';
+import { HomeFeedRightDrawer, HomeFeedRightSidebar } from '@/organisms/FeedRightSidebar/FeedRightSidebar';
+import { PostInput } from '@/organisms/PostInput/PostInput';
+import { TimelineFeed } from '@/organisms/Timeline/Feed/TimelineFeed/TimelineFeed';
+
+import { TIMELINE_FEED_VARIANT } from '@/config/feed';
 import { POST_INPUT_VARIANT } from '@/organisms/PostInput/PostInput.constants';
 
 export function Custom() {
   return (
     <>
-      <Organisms.ContentLayout
+      <ContentLayout
         feedVariant={TIMELINE_FEED_VARIANT.CUSTOM}
-        leftSidebarContent={<Organisms.CustomFeedFilters variant="sidebar" />}
-        rightSidebarContent={<Organisms.HomeFeedRightSidebar />}
-        leftDrawerContent={<Organisms.CustomFeedFilters variant="drawer" />}
-        rightDrawerContent={<Organisms.HomeFeedRightDrawer />}
-        leftDrawerContentMobile={<Organisms.CustomFeedFilters variant="drawer" />}
-        rightDrawerContentMobile={<Organisms.FeedNavigation className="lg:hidden" />}
+        leftSidebarContent={<CustomFeedFilters variant="sidebar" />}
+        rightSidebarContent={<HomeFeedRightSidebar />}
+        leftDrawerContent={<CustomFeedFilters variant="drawer" />}
+        rightDrawerContent={<HomeFeedRightDrawer />}
+        leftDrawerContentMobile={<CustomFeedFilters variant="drawer" />}
+        rightDrawerContentMobile={<FeedNavigation className="lg:hidden" />}
       >
-        <Organisms.AlertBackup />
-        <Organisms.FeedNavigation className="hidden lg:flex" />
-        <Organisms.TimelineFeed variant={TIMELINE_FEED_VARIANT.CUSTOM}>
-          <Organisms.PostInput variant={POST_INPUT_VARIANT.POST} />
-        </Organisms.TimelineFeed>
-      </Organisms.ContentLayout>
+        <AlertBackup />
+        <FeedNavigation className="hidden lg:flex" />
+        <TimelineFeed variant={TIMELINE_FEED_VARIANT.CUSTOM}>
+          <PostInput variant={POST_INPUT_VARIANT.POST} />
+        </TimelineFeed>
+      </ContentLayout>
     </>
   );
 }

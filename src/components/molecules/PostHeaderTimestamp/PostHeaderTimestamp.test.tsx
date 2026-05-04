@@ -2,7 +2,8 @@ import type { ReactElement } from 'react';
 import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import * as Atoms from '@/atoms';
+import { TooltipProvider } from '@/atoms/Tooltip/Tooltip';
+
 import { PostHeaderTimestamp } from './PostHeaderTimestamp';
 
 const TEST_DATE = new Date('2025-06-01T12:00:00Z');
@@ -13,15 +14,18 @@ vi.mock('@/hooks/useIsMobile/useIsMobile', () => ({
   useIsMobile: mockUseIsMobile,
 }));
 
-vi.mock('@/atoms', async (importOriginal) => {
-  const actual = await importOriginal<typeof import('@/atoms')>();
+vi.mock('@/atoms/Container/Container', () => {
   return {
-    ...actual,
     Container: ({ children, className }: { children: React.ReactNode; className?: string }) => (
       <div data-testid="container" className={className}>
         {children}
       </div>
     ),
+  };
+});
+
+vi.mock('@/atoms/Typography/Typography', () => {
+  return {
     Typography: ({
       children,
       as: Tag = 'p',
@@ -39,7 +43,7 @@ vi.mock('@/atoms', async (importOriginal) => {
 });
 
 function renderWithTooltip(ui: ReactElement) {
-  return render(<Atoms.TooltipProvider delayDuration={0}>{ui}</Atoms.TooltipProvider>);
+  return render(<TooltipProvider delayDuration={0}>{ui}</TooltipProvider>);
 }
 
 describe('PostHeaderTimestamp', () => {

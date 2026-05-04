@@ -31,111 +31,145 @@ interface ActionProps {
 }
 
 // Mock molecules
-vi.mock('@/molecules', () => ({
-  useToast: () => ({
+vi.mock('@/molecules/ActionSection/ActionSection', () => {
+  return {
+    ActionSection: ({
+      children,
+      actions,
+      className,
+    }: {
+      children: React.ReactNode;
+      actions?: ActionProps[];
+      className?: string;
+    }) => (
+      <div data-testid="action-section" className={className}>
+        {actions?.map((action: ActionProps, index: number) => (
+          <button
+            key={index}
+            data-testid={`action-button-${index}`}
+            onClick={action.onClick}
+            data-variant={action.variant}
+            className={action.className}
+          >
+            {action.icon}
+            {action.label}
+          </button>
+        ))}
+        {children}
+      </div>
+    ),
+  };
+});
+
+vi.mock('@/molecules/Content/Content', () => {
+  return {
+    ContentCard: ({ children, image }: { children: React.ReactNode; image?: ImageProps }) => (
+      <div data-testid="content-card">
+        {image && <img data-testid="content-card-image" src={image.src} alt={image.alt} data-size={image.size} />}
+        {children}
+      </div>
+    ),
+  };
+});
+
+vi.mock('@/molecules/InputField/InputField', () => {
+  return {
+    InputField: ({
+      value,
+      variant,
+      readOnly,
+      onClick,
+      loading,
+      loadingText,
+      loadingIcon,
+      icon,
+    }: {
+      value?: string;
+      variant?: string;
+      readOnly?: boolean;
+      onClick?: () => void;
+      loading?: boolean;
+      loadingText?: string;
+      loadingIcon?: React.ReactNode;
+      icon?: React.ReactNode;
+    }) => (
+      <div data-testid="input-field">
+        {loading ? (
+          <div data-testid="loading">
+            {loadingIcon}
+            {loadingText}
+          </div>
+        ) : (
+          <div>
+            {icon}
+            <input data-testid="input" value={value} readOnly={readOnly} onClick={onClick} data-variant={variant} />
+          </div>
+        )}
+      </div>
+    ),
+  };
+});
+
+vi.mock('@/molecules/PopoverPublicKey/PopoverPublicKey', () => {
+  return {
+    PopoverPublicKey: () => <div data-testid="popover-public-key">Popover</div>,
+  };
+});
+
+vi.mock('@/molecules/Toaster/use-toast', () => {
+  return {
+    useToast: () => ({
+      toast: mockToast,
+    }),
     toast: mockToast,
-  }),
-  toast: mockToast,
-  ContentCard: ({ children, image }: { children: React.ReactNode; image?: ImageProps }) => (
-    <div data-testid="content-card">
-      {image && <img data-testid="content-card-image" src={image.src} alt={image.alt} data-size={image.size} />}
-      {children}
-    </div>
-  ),
-  PopoverPublicKey: () => <div data-testid="popover-public-key">Popover</div>,
-  ActionSection: ({
-    children,
-    actions,
-    className,
-  }: {
-    children: React.ReactNode;
-    actions?: ActionProps[];
-    className?: string;
-  }) => (
-    <div data-testid="action-section" className={className}>
-      {actions?.map((action: ActionProps, index: number) => (
-        <button
-          key={index}
-          data-testid={`action-button-${index}`}
-          onClick={action.onClick}
-          data-variant={action.variant}
-          className={action.className}
-        >
-          {action.icon}
-          {action.label}
-        </button>
-      ))}
-      {children}
-    </div>
-  ),
-  InputField: ({
-    value,
-    variant,
-    readOnly,
-    onClick,
-    loading,
-    loadingText,
-    loadingIcon,
-    icon,
-  }: {
-    value?: string;
-    variant?: string;
-    readOnly?: boolean;
-    onClick?: () => void;
-    loading?: boolean;
-    loadingText?: string;
-    loadingIcon?: React.ReactNode;
-    icon?: React.ReactNode;
-  }) => (
-    <div data-testid="input-field">
-      {loading ? (
-        <div data-testid="loading">
-          {loadingIcon}
-          {loadingText}
-        </div>
-      ) : (
-        <div>
-          {icon}
-          <input data-testid="input" value={value} readOnly={readOnly} onClick={onClick} data-variant={variant} />
-        </div>
-      )}
-    </div>
-  ),
-}));
+  };
+});
 
 // Mock atoms
-vi.mock('@/atoms', () => ({
-  Container: ({ children, className }: { children: React.ReactNode; className?: string }) => (
-    <div data-testid="container" className={className}>
-      {children}
-    </div>
-  ),
-  Heading: ({ children, level, size }: { children: React.ReactNode; level: number; size?: string }) => (
-    <div data-testid={`heading-${level}`} data-size={size}>
-      {children}
-    </div>
-  ),
-  Button: ({
-    children,
-    variant,
-    className,
-    onClick,
-  }: {
-    children: React.ReactNode;
-    variant?: string;
-    className?: string;
-    onClick?: () => void;
-  }) => (
-    <button
-      data-testid={variant ? `button-${variant}` : 'button'}
-      className={className}
-      onClick={onClick}
-      data-variant={variant}
-    >
-      {children}
-    </button>
-  ),
-}));
+vi.mock('@/atoms/Button/Button', () => {
+  return {
+    Button: ({
+      children,
+      variant,
+      className,
+      onClick,
+    }: {
+      children: React.ReactNode;
+      variant?: string;
+      className?: string;
+      onClick?: () => void;
+    }) => (
+      <button
+        data-testid={variant ? `button-${variant}` : 'button'}
+        className={className}
+        onClick={onClick}
+        data-variant={variant}
+      >
+        {children}
+      </button>
+    ),
+  };
+});
+
+vi.mock('@/atoms/Container/Container', () => {
+  return {
+    Container: ({ children, className }: { children: React.ReactNode; className?: string }) => (
+      <div data-testid="container" className={className}>
+        {children}
+      </div>
+    ),
+  };
+});
+
+vi.mock('@/atoms/Heading/Heading', () => {
+  return {
+    Heading: ({ children, level, size }: { children: React.ReactNode; level: number; size?: string }) => (
+      <div data-testid={`heading-${level}`} data-size={size}>
+        {children}
+      </div>
+    ),
+  };
+});
 
 // Mock dependencies
 const mockSetKeypair = vi.fn();

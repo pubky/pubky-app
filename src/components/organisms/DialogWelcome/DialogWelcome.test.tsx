@@ -2,6 +2,51 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen, fireEvent } from '@testing-library/react';
 import { useLiveQuery } from 'dexie-react-hooks';
 import { DialogWelcome } from './DialogWelcome';
+vi.mock('@/atoms/Dialog/Dialog', () => {
+  return {
+    Dialog: ({
+      children,
+      open,
+      onOpenChange,
+    }: {
+      children: React.ReactNode;
+      open?: boolean;
+      onOpenChange?: (open: boolean) => void;
+    }) => (
+      <div data-testid="dialog" data-open={open} onClick={() => onOpenChange?.(false)}>
+        {children}
+      </div>
+    ),
+    DialogContent: ({
+      children,
+      className,
+      hiddenTitle,
+    }: {
+      children: React.ReactNode;
+      className?: string;
+      hiddenTitle?: string;
+    }) => (
+      <div data-testid="dialog-content" className={className} data-hidden-title={hiddenTitle}>
+        {children}
+      </div>
+    ),
+    DialogHeader: ({ children, className }: { children: React.ReactNode; className?: string }) => (
+      <div data-testid="dialog-header" className={className}>
+        {children}
+      </div>
+    ),
+    DialogTitle: ({ children, id }: { children: React.ReactNode; id?: string }) => (
+      <h2 data-testid="dialog-title" id={id}>
+        {children}
+      </h2>
+    ),
+    DialogDescription: ({ children, className }: { children: React.ReactNode; className?: string }) => (
+      <div data-testid="dialog-description" className={className}>
+        {children}
+      </div>
+    ),
+  };
+});
 
 const { mockGetAvatarUrl, mockCopyToClipboard, mockSetShowWelcomeDialog } = vi.hoisted(() => ({
   mockGetAvatarUrl: vi.fn((pubky: string) => `https://mocked.avatar/${pubky}`),
@@ -59,131 +104,111 @@ vi.mock('@/hooks/useCopyToClipboard/useCopyToClipboard', () => ({
 }));
 
 // Mock atoms
-vi.mock('@/atoms', () => ({
-  Dialog: ({
-    children,
-    open,
-    onOpenChange,
-  }: {
-    children: React.ReactNode;
-    open?: boolean;
-    onOpenChange?: (open: boolean) => void;
-  }) => (
-    <div data-testid="dialog" data-open={open} onClick={() => onOpenChange?.(false)}>
-      {children}
-    </div>
-  ),
-  DialogContent: ({
-    children,
-    className,
-    hiddenTitle,
-  }: {
-    children: React.ReactNode;
-    className?: string;
-    hiddenTitle?: string;
-  }) => (
-    <div data-testid="dialog-content" className={className} data-hidden-title={hiddenTitle}>
-      {children}
-    </div>
-  ),
-  DialogHeader: ({ children, className }: { children: React.ReactNode; className?: string }) => (
-    <div data-testid="dialog-header" className={className}>
-      {children}
-    </div>
-  ),
-  DialogTitle: ({ children, id }: { children: React.ReactNode; id?: string }) => (
-    <h2 data-testid="dialog-title" id={id}>
-      {children}
-    </h2>
-  ),
-  DialogDescription: ({ children, className }: { children: React.ReactNode; className?: string }) => (
-    <div data-testid="dialog-description" className={className}>
-      {children}
-    </div>
-  ),
-  Container: ({ children, className }: { children: React.ReactNode; className?: string }) => (
-    <div data-testid="container" className={className}>
-      {children}
-    </div>
-  ),
-  Typography: ({
-    children,
-    className,
-    size,
-  }: {
-    children: React.ReactNode;
-    as?: React.ElementType;
-    className?: string;
-    size?: string;
-  }) => {
-    return (
-      <p data-testid="typography" data-size={size} className={className}>
+vi.mock('@/atoms/Button/Button', () => {
+  return {
+    Button: ({
+      children,
+      onClick,
+      variant,
+      className,
+      size,
+      id,
+    }: {
+      children: React.ReactNode;
+      onClick?: () => void;
+      variant?: string;
+      className?: string;
+      size?: string;
+      id?: string;
+    }) => (
+      <button
+        data-testid={variant === 'secondary' ? 'button-secondary' : 'button-primary'}
+        onClick={onClick}
+        data-variant={variant}
+        className={className}
+        data-size={size}
+        id={id}
+      >
         {children}
-      </p>
-    );
-  },
-  Button: ({
-    children,
-    onClick,
-    variant,
-    className,
-    size,
-    id,
-  }: {
-    children: React.ReactNode;
-    onClick?: () => void;
-    variant?: string;
-    className?: string;
-    size?: string;
-    id?: string;
-  }) => (
-    <button
-      data-testid={variant === 'secondary' ? 'button-secondary' : 'button-primary'}
-      onClick={onClick}
-      data-variant={variant}
-      className={className}
-      data-size={size}
-      id={id}
-    >
-      {children}
-    </button>
-  ),
-  Card: ({ children, className }: { children: React.ReactNode; className?: string }) => (
-    <div data-testid="card" className={className}>
-      {children}
-    </div>
-  ),
-}));
+      </button>
+    ),
+  };
+});
+
+vi.mock('@/atoms/Card/Card', () => {
+  return {
+    Card: ({ children, className }: { children: React.ReactNode; className?: string }) => (
+      <div data-testid="card" className={className}>
+        {children}
+      </div>
+    ),
+  };
+});
+
+vi.mock('@/atoms/Container/Container', () => {
+  return {
+    Container: ({ children, className }: { children: React.ReactNode; className?: string }) => (
+      <div data-testid="container" className={className}>
+        {children}
+      </div>
+    ),
+  };
+});
+
+vi.mock('@/atoms/Typography/Typography', () => {
+  return {
+    Typography: ({
+      children,
+      className,
+      size,
+    }: {
+      children: React.ReactNode;
+      as?: React.ElementType;
+      className?: string;
+      size?: string;
+    }) => {
+      return (
+        <p data-testid="typography" data-size={size} className={className}>
+          {children}
+        </p>
+      );
+    },
+  };
+});
 
 // Mock organisms
-vi.mock('@/organisms', () => ({
-  AvatarWithFallback: ({
-    avatarUrl,
-    name,
-    className,
-    fallbackClassName,
-  }: {
-    avatarUrl?: string;
-    name?: string;
-    className?: string;
-    fallbackClassName?: string;
-  }) => (
-    <div
-      data-testid="avatar-with-fallback"
-      data-avatar-url={avatarUrl}
-      data-name={name}
-      className={className}
-      data-fallback-class={fallbackClassName}
-    />
-  ),
-}));
+vi.mock('@/organisms/AvatarWithFallback/AvatarWithFallback', () => {
+  return {
+    AvatarWithFallback: ({
+      avatarUrl,
+      name,
+      className,
+      fallbackClassName,
+    }: {
+      avatarUrl?: string;
+      name?: string;
+      className?: string;
+      fallbackClassName?: string;
+    }) => (
+      <div
+        data-testid="avatar-with-fallback"
+        data-avatar-url={avatarUrl}
+        data-name={name}
+        className={className}
+        data-fallback-class={fallbackClassName}
+      />
+    ),
+  };
+});
 
 // Mock molecules
-vi.mock('@/molecules', () => ({
-  toast: vi.fn(() => ({
-    dismiss: vi.fn(),
-  })),
-}));
+vi.mock('@/molecules/Toaster/use-toast', () => {
+  return {
+    toast: vi.fn(() => ({
+      dismiss: vi.fn(),
+    })),
+  };
+});
 
 describe('DialogWelcome', () => {
   beforeEach(() => {

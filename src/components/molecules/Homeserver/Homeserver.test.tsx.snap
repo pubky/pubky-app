@@ -1,8 +1,9 @@
 // Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
 
 exports[`Homeserver Components - Snapshots > HomeserverFooter - Snapshots > matches snapshot for default HomeserverFooter 1`] = `
-<div
-  data-testid="footer-links"
+<p
+  class="leading-light text-sm font-medium text-muted-foreground opacity-80"
+  data-testid="typography"
 >
   By creating an account on the Pubky homeserver, you agree to the 
   <span
@@ -11,19 +12,18 @@ exports[`Homeserver Components - Snapshots > HomeserverFooter - Snapshots > matc
     Terms of Service
   </span>
   ,
-   
   <span
     data-testid="dialog-privacy"
   >
     Privacy Policy
   </span>
-  , and you confirm that you are 
+  , and you confirm that you are
   <span
     data-testid="dialog-age"
   >
     over 18 years old.
   </span>
-</div>
+</p>
 `;
 
 exports[`Homeserver Components - Snapshots > HomeserverHeader - Snapshots > matches snapshot for default HomeserverHeader 1`] = `

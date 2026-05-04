@@ -12,23 +12,24 @@ vi.mock('@/hooks/useThreadReplies/useThreadReplies', () => ({
   useThreadReplies: vi.fn(),
 }));
 
-vi.mock('@/organisms', async () => {
-  const actual = await vi.importActual<typeof import('@/organisms')>('@/organisms');
+vi.mock('@/organisms/QuickReply/QuickReply', () => {
   return {
-    ...actual,
     QuickReply: ({ parentPostId }: { parentPostId: string }) => (
       <div data-testid="quick-reply" data-parent-post-id={parentPostId} />
     ),
+  };
+});
+
+vi.mock('@/organisms/ReplyWithNested/ReplyWithNested', () => {
+  return {
     ReplyWithNested: ({ replyId, isLastReply }: { replyId: string; isLastReply: boolean }) => (
       <div data-testid="reply-with-nested" data-reply-id={replyId} data-is-last-reply={String(isLastReply)} />
     ),
   };
 });
 
-vi.mock('@/molecules', async () => {
-  const actual = await vi.importActual<typeof import('@/molecules')>('@/molecules');
+vi.mock('@/molecules/ShowMoreReplies/ShowMoreReplies', () => {
   return {
-    ...actual,
     ShowMoreReplies: ({ count, isLast, onClick }: { count: number; isLast: boolean; onClick: () => void }) => (
       <button
         type="button"

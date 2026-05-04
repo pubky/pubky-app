@@ -2,7 +2,7 @@ import { createRef } from 'react';
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { render, screen, fireEvent } from '@testing-library/react';
 import { PostInputAttachments } from './PostInputAttachments';
-import { POST_ATTACHMENT_ACCEPT_STRING } from '@/config';
+import { POST_ATTACHMENT_ACCEPT_STRING } from '@/config/posts';
 
 // Mock URL.createObjectURL and URL.revokeObjectURL
 const mockCreateObjectURL = vi.fn();
@@ -19,148 +19,185 @@ afterEach(() => {
 });
 
 // Mock @/atoms
-vi.mock('@/atoms', () => ({
-  Input: vi.fn(
-    ({
-      ref,
-      type,
-      accept,
-      multiple,
-      onChange,
+vi.mock('@/atoms/Audio/Audio', () => {
+  return {
+    Audio: ({
+      src,
       className,
       'data-testid': dataTestId,
     }: {
-      ref?: React.Ref<HTMLInputElement>;
-      type?: string;
-      accept?: string;
-      multiple?: boolean;
-      onChange?: (e: React.ChangeEvent<HTMLInputElement>) => void;
+      src: string;
+      className?: string;
+      'data-testid'?: string;
+    }) => <audio data-testid={dataTestId || 'audio'} src={src} className={className} controls />,
+  };
+});
+
+vi.mock('@/atoms/Button/Button', () => {
+  return {
+    Button: ({
+      children,
+      variant,
+      size,
+      onClick,
+      disabled,
+      className,
+      'data-testid': dataTestId,
+    }: {
+      children: React.ReactNode;
+      variant?: string;
+      size?: string;
+      onClick?: () => void;
+      disabled?: boolean;
       className?: string;
       'data-testid'?: string;
     }) => (
-      <input
-        ref={ref}
-        data-testid={dataTestId || 'file-input'}
-        type={type}
-        accept={accept}
-        multiple={multiple}
-        onChange={onChange}
+      <button
+        data-testid={dataTestId || 'button'}
+        data-variant={variant}
+        data-size={size}
+        onClick={onClick}
+        disabled={disabled}
         className={className}
-      />
+      >
+        {children}
+      </button>
     ),
-  ),
-  Container: ({
-    children,
-    className,
-    'data-testid': dataTestId,
-  }: {
-    children: React.ReactNode;
-    className?: string;
-    'data-testid'?: string;
-  }) => (
-    <div data-testid={dataTestId || 'container'} className={className}>
-      {children}
-    </div>
-  ),
-  Button: ({
-    children,
-    variant,
-    size,
-    onClick,
-    disabled,
-    className,
-    'data-testid': dataTestId,
-  }: {
-    children: React.ReactNode;
-    variant?: string;
-    size?: string;
-    onClick?: () => void;
-    disabled?: boolean;
-    className?: string;
-    'data-testid'?: string;
-  }) => (
-    <button
-      data-testid={dataTestId || 'button'}
-      data-variant={variant}
-      data-size={size}
-      onClick={onClick}
-      disabled={disabled}
-      className={className}
-    >
-      {children}
-    </button>
-  ),
-  Image: ({
-    src,
-    alt,
-    className,
-    'data-testid': dataTestId,
-  }: {
-    src: string;
-    alt?: string;
-    className?: string;
-    'data-testid'?: string;
-  }) => <img data-testid={dataTestId || 'image'} src={src} alt={alt} className={className} />,
-  Video: ({
-    src,
-    className,
-    'data-testid': dataTestId,
-  }: {
-    src: string;
-    className?: string;
-    'data-testid'?: string;
-  }) => <video data-testid={dataTestId || 'video'} src={src} className={className} />,
-  Audio: ({
-    src,
-    className,
-    'data-testid': dataTestId,
-  }: {
-    src: string;
-    className?: string;
-    'data-testid'?: string;
-  }) => <audio data-testid={dataTestId || 'audio'} src={src} className={className} controls />,
-  Typography: ({
-    children,
-    size,
-    className,
-    'data-testid': dataTestId,
-  }: {
-    children: React.ReactNode;
-    size?: string;
-    className?: string;
-    'data-testid'?: string;
-  }) => (
-    <span data-testid={dataTestId || 'typography'} data-size={size} className={className}>
-      {children}
-    </span>
-  ),
-  Card: ({
-    children,
-    className,
-    'data-testid': dataTestId,
-  }: {
-    children: React.ReactNode;
-    className?: string;
-    'data-testid'?: string;
-  }) => (
-    <div data-testid={dataTestId || 'card'} className={className}>
-      {children}
-    </div>
-  ),
-  CardContent: ({
-    children,
-    className,
-    'data-testid': dataTestId,
-  }: {
-    children: React.ReactNode;
-    className?: string;
-    'data-testid'?: string;
-  }) => (
-    <div data-testid={dataTestId || 'card-content'} className={className}>
-      {children}
-    </div>
-  ),
-}));
+  };
+});
+
+vi.mock('@/atoms/Card/Card', () => {
+  return {
+    Card: ({
+      children,
+      className,
+      'data-testid': dataTestId,
+    }: {
+      children: React.ReactNode;
+      className?: string;
+      'data-testid'?: string;
+    }) => (
+      <div data-testid={dataTestId || 'card'} className={className}>
+        {children}
+      </div>
+    ),
+    CardContent: ({
+      children,
+      className,
+      'data-testid': dataTestId,
+    }: {
+      children: React.ReactNode;
+      className?: string;
+      'data-testid'?: string;
+    }) => (
+      <div data-testid={dataTestId || 'card-content'} className={className}>
+        {children}
+      </div>
+    ),
+  };
+});
+
+vi.mock('@/atoms/Container/Container', () => {
+  return {
+    Container: ({
+      children,
+      className,
+      'data-testid': dataTestId,
+    }: {
+      children: React.ReactNode;
+      className?: string;
+      'data-testid'?: string;
+    }) => (
+      <div data-testid={dataTestId || 'container'} className={className}>
+        {children}
+      </div>
+    ),
+  };
+});
+
+vi.mock('@/atoms/Image/Image', () => {
+  return {
+    Image: ({
+      src,
+      alt,
+      className,
+      'data-testid': dataTestId,
+    }: {
+      src: string;
+      alt?: string;
+      className?: string;
+      'data-testid'?: string;
+    }) => <img data-testid={dataTestId || 'image'} src={src} alt={alt} className={className} />,
+  };
+});
+
+vi.mock('@/atoms/Input/Input', () => {
+  return {
+    Input: vi.fn(
+      ({
+        ref,
+        type,
+        accept,
+        multiple,
+        onChange,
+        className,
+        'data-testid': dataTestId,
+      }: {
+        ref?: React.Ref<HTMLInputElement>;
+        type?: string;
+        accept?: string;
+        multiple?: boolean;
+        onChange?: (e: React.ChangeEvent<HTMLInputElement>) => void;
+        className?: string;
+        'data-testid'?: string;
+      }) => (
+        <input
+          ref={ref}
+          data-testid={dataTestId || 'file-input'}
+          type={type}
+          accept={accept}
+          multiple={multiple}
+          onChange={onChange}
+          className={className}
+        />
+      ),
+    ),
+  };
+});
+
+vi.mock('@/atoms/Typography/Typography', () => {
+  return {
+    Typography: ({
+      children,
+      size,
+      className,
+      'data-testid': dataTestId,
+    }: {
+      children: React.ReactNode;
+      size?: string;
+      className?: string;
+      'data-testid'?: string;
+    }) => (
+      <span data-testid={dataTestId || 'typography'} data-size={size} className={className}>
+        {children}
+      </span>
+    ),
+  };
+});
+
+vi.mock('@/atoms/Video/Video', () => {
+  return {
+    Video: ({
+      src,
+      className,
+      'data-testid': dataTestId,
+    }: {
+      src: string;
+      className?: string;
+      'data-testid'?: string;
+    }) => <video data-testid={dataTestId || 'video'} src={src} className={className} />,
+  };
+});
 
 const createMockFile = (name: string, type: string): File => {
   return new File(['test content'], name, { type });

@@ -1,5 +1,6 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { asOpaque, mockResponse } from '@/test-utils';
+import { asOpaque } from '@/test-utils/type-assertions';
+import { mockResponse } from '@/test-utils/dom';
 import type {
   TChatwootContact,
   TChatwootContactSearchResponse,

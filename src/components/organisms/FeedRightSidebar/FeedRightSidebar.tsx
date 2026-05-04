@@ -1,8 +1,10 @@
 'use client';
-
-import * as Atoms from '@/atoms';
-import * as Molecules from '@/molecules';
-import * as Organisms from '@/organisms';
+import { Container } from '@/atoms/Container/Container';
+import { FeedSection } from '@/molecules/FeedSection/FeedSection';
+import { ActiveUsers } from '../ActiveUsers/ActiveUsers';
+import { FeedbackCard } from '../FeedbackCard/FeedbackCard';
+import { HotTags } from '../HotTags/HotTags';
+import { WhoToFollowSidebar } from '../WhoToFollowSidebar/WhoToFollowSidebar';
 
 // ============================================================================
 // Shared Components
@@ -18,10 +20,10 @@ import { UsersRound, Pencil } from 'lucide-react';
 function HomeFeedContent() {
   return (
     <>
-      <Organisms.WhoToFollowSidebar />
-      <Organisms.ActiveUsers />
-      <Organisms.HotTags />
-      <Organisms.FeedbackCard />
+      <WhoToFollowSidebar />
+      <ActiveUsers />
+      <HotTags />
+      <FeedbackCard />
     </>
   );
 }
@@ -47,9 +49,9 @@ export function HomeFeedRightSidebar() {
  */
 export function HomeFeedRightDrawer() {
   return (
-    <Atoms.Container overrideDefaults className="flex flex-col gap-6">
+    <Container overrideDefaults className="flex flex-col gap-6">
       <HomeFeedContent />
-    </Atoms.Container>
+    </Container>
   );
 }
 
@@ -60,7 +62,7 @@ export function HomeFeedRightDrawer() {
  */
 export function HomeFeedRightDrawerMobile() {
   return (
-    <Molecules.FeedSection
+    <FeedSection
       feeds={[
         {
           icon: UsersRound,
@@ -93,10 +95,10 @@ export function HomeFeedRightDrawerMobile() {
 export function HotFeedRightSidebar() {
   return (
     <>
-      <Organisms.WhoToFollowSidebar />
-      <Atoms.Container overrideDefaults className="sticky top-[100px] self-start">
-        <Organisms.FeedbackCard />
-      </Atoms.Container>
+      <WhoToFollowSidebar />
+      <Container overrideDefaults className="sticky top-[100px] self-start">
+        <FeedbackCard />
+      </Container>
     </>
   );
 }
@@ -108,9 +110,9 @@ export function HotFeedRightSidebar() {
  */
 export function HotFeedRightDrawer() {
   return (
-    <Atoms.Container overrideDefaults className="flex flex-col gap-6">
-      <Organisms.WhoToFollowSidebar />
-      <Organisms.FeedbackCard />
-    </Atoms.Container>
+    <Container overrideDefaults className="flex flex-col gap-6">
+      <WhoToFollowSidebar />
+      <FeedbackCard />
+    </Container>
   );
 }

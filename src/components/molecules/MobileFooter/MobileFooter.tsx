@@ -5,9 +5,12 @@ import { useKeyboardOffset } from '@/hooks/useKeyboardOffset/useKeyboardOffset';
 import { usePublicRoute } from '@/hooks/usePublicRoute/usePublicRoute';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import * as Atoms from '@/atoms';
-import * as Organisms from '@/organisms';
-import * as App from '@/app';
+import { Badge } from '@/atoms/Badge/Badge';
+import { Container } from '@/atoms/Container/Container';
+import { Typography } from '@/atoms/Typography/Typography';
+import { AvatarWithFallback } from '@/organisms/AvatarWithFallback/AvatarWithFallback';
+
+import { APP_ROUTES, SETTINGS_ROUTES } from '@/app/routes';
 import { useTranslations } from 'next-intl';
 import { Home, Search, Flame, Bookmark, Settings } from 'lucide-react';
 import { cn } from '@/libs/utils/utils';
@@ -51,34 +54,34 @@ export function MobileFooter({ className }: MobileFooterProps) {
   const avatarName = userDetails?.name || 'U';
   const navItems = [
     {
-      href: App.APP_ROUTES.HOME,
+      href: APP_ROUTES.HOME,
       icon: Home,
       label: 'Home',
     },
     {
-      href: App.APP_ROUTES.SEARCH,
+      href: APP_ROUTES.SEARCH,
       icon: Search,
       label: 'Search',
     },
     {
-      href: App.APP_ROUTES.HOT,
+      href: APP_ROUTES.HOT,
       icon: Flame,
       label: 'Hot',
     },
     {
-      href: App.APP_ROUTES.BOOKMARKS,
+      href: APP_ROUTES.BOOKMARKS,
       icon: Bookmark,
       label: 'Bookmarks',
     },
     {
-      href: App.SETTINGS_ROUTES.ACCOUNT,
-      activePrefix: App.APP_ROUTES.SETTINGS,
+      href: SETTINGS_ROUTES.ACCOUNT,
+      activePrefix: APP_ROUTES.SETTINGS,
       icon: Settings,
       label: 'Settings',
     },
   ];
   return (
-    <Atoms.Container
+    <Container
       overrideDefaults
       className={cn(
         'fixed bottom-0 z-40 w-full overflow-x-auto bg-gradient-to-t from-background via-background/95 to-transparent px-3 py-4 transition-transform duration-75 lg:hidden',
@@ -92,14 +95,14 @@ export function MobileFooter({ className }: MobileFooterProps) {
           : undefined
       }
     >
-      <Atoms.Container
+      <Container
         overrideDefaults
         className="mx-auto flex max-w-[380px] items-center justify-between sm:max-w-[600px] md:max-w-[720px]"
       >
         {navItems.map((item) => {
           const Icon = item.icon;
           const activePath = item.activePrefix ?? item.href;
-          const isHome = item.href === App.APP_ROUTES.HOME;
+          const isHome = item.href === APP_ROUTES.HOME;
           const isHomeActive = isHome && isActive(item.href);
           return (
             <Link
@@ -139,11 +142,11 @@ export function MobileFooter({ className }: MobileFooterProps) {
         })}
         <Link
           data-cy="footer-nav-profile-btn"
-          href={App.APP_ROUTES.PROFILE}
+          href={APP_ROUTES.PROFILE}
           aria-label={tCommon('profile')}
           className="relative shrink-0 rounded-full"
         >
-          <Organisms.AvatarWithFallback
+          <AvatarWithFallback
             avatarUrl={avatarUrl}
             name={avatarName}
             fallbackSeed={currentUserPubky || avatarName}
@@ -152,22 +155,22 @@ export function MobileFooter({ className }: MobileFooterProps) {
             alt={tCommon('profile')}
           />
           {unreadNotifications > 0 && (
-            <Atoms.Badge
+            <Badge
               data-testid="mobile-notification-counter"
               data-cy="mobile-notification-counter"
               className="absolute right-0 bottom-0 h-5 w-5 rounded-full bg-brand shadow-sm"
               variant="secondary"
             >
-              <Atoms.Typography
+              <Typography
                 className={cn('font-semibold text-primary-foreground', unreadNotifications > 21 && 'text-xs')}
                 size="xs"
               >
                 {unreadNotifications > 21 ? '21+' : unreadNotifications}
-              </Atoms.Typography>
-            </Atoms.Badge>
+              </Typography>
+            </Badge>
           )}
         </Link>
-      </Atoms.Container>
-    </Atoms.Container>
+      </Container>
+    </Container>
   );
 }

@@ -1,7 +1,8 @@
 import { renderHook, act, waitFor } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { useDeletePost } from './useDeletePost';
-import * as Organisms from '@/organisms';
+import { useTimelineFeedContext } from '@/organisms/Timeline/Feed/TimelineFeed/TimelineFeedContext';
+
 import { PostController } from '@/controllers/post/post';
 // Mock dependencies
 const mockDelete = vi.fn();
@@ -15,11 +16,13 @@ vi.mock('@/controllers/post/post', () => ({
 
 // Mock molecules (useToast)
 const mockToast = vi.fn();
-vi.mock('@/molecules', () => ({
-  useToast: () => ({
-    toast: mockToast,
-  }),
-}));
+vi.mock('@/molecules/Toaster/use-toast', () => {
+  return {
+    useToast: () => ({
+      toast: mockToast,
+    }),
+  };
+});
 
 // Mock organisms (useTimelineFeedContext)
 const mockRemovePosts = vi.fn();
@@ -29,9 +32,11 @@ const mockTimelineFeed = {
   prependPosts: mockPrependPosts,
 };
 
-vi.mock('@/organisms', () => ({
-  useTimelineFeedContext: vi.fn(),
-}));
+vi.mock('@/organisms/Timeline/Feed/TimelineFeed/TimelineFeedContext', () => {
+  return {
+    useTimelineFeedContext: vi.fn(),
+  };
+});
 
 describe('useDeletePost', () => {
   const mockPostId = 'author:post-123';
@@ -40,7 +45,7 @@ describe('useDeletePost', () => {
     vi.clearAllMocks();
     vi.mocked(PostController.commitDelete).mockImplementation(mockDelete);
     vi.mocked(PostController.getDetails).mockImplementation(mockGetPostDetails);
-    vi.mocked(Organisms.useTimelineFeedContext).mockReturnValue(mockTimelineFeed);
+    vi.mocked(useTimelineFeedContext).mockReturnValue(mockTimelineFeed);
     // Default: post exists (for tests that expect restoration)
     mockGetPostDetails.mockResolvedValue({ id: mockPostId, content: 'Test post' });
   });
@@ -216,7 +221,7 @@ describe('useDeletePost', () => {
   });
 
   it('works without timeline feed context', async () => {
-    vi.mocked(Organisms.useTimelineFeedContext).mockReturnValue(null);
+    vi.mocked(useTimelineFeedContext).mockReturnValue(null);
     mockDelete.mockResolvedValue(undefined);
 
     const { result } = renderHook(() => useDeletePost());

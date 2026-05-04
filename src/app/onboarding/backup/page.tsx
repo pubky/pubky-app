@@ -1,11 +1,11 @@
-import * as Templates from '@/templates';
-import * as Molecules from '@/molecules';
+import { BackupPage as TemplatesBackupPage } from '@/templates/Onboarding/BackupPage/BackupPage';
+import { Metadata } from '@/molecules/Metadata/Metadata';
 
-export const metadata = Molecules.Metadata({
+export const metadata = Metadata({
   title: 'Backup - Onboarding',
   description: 'Onboarding backup page on pubky app.',
 });
 
 export default function BackupPage() {
-  return <Templates.BackupPage />;
+  return <TemplatesBackupPage />;
 }

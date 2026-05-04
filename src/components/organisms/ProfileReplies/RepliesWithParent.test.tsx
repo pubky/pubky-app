@@ -25,43 +25,77 @@ vi.mock('@/hooks/useInfiniteScroll/useInfiniteScroll', () => ({
 }));
 
 // Mock components
-vi.mock('@/atoms', () => ({
-  Container: ({ children, ...props }: { children?: React.ReactNode; [key: string]: unknown }) => (
-    <div data-testid="container" {...props}>
-      {children}
-    </div>
-  ),
-  PostThreadSpacer: () => <div data-testid="post-thread-spacer" />,
-}));
+vi.mock('@/atoms/Container/Container', () => {
+  return {
+    Container: ({ children, ...props }: { children?: React.ReactNode; [key: string]: unknown }) => (
+      <div data-testid="container" {...props}>
+        {children}
+      </div>
+    ),
+  };
+});
 
-vi.mock('@/molecules', () => ({
-  TimelineLoading: () => <div data-testid="timeline-loading">Loading...</div>,
-  TimelineLoadingMore: () => <div data-testid="timeline-loading-more">Loading more...</div>,
-  TimelineError: ({ message }: { message: string }) => <div data-testid="timeline-error">Error: {message}</div>,
-  TimelineEndMessage: () => <div data-testid="timeline-end-message">End of replies</div>,
-  TimelineStateWrapper: ({
-    loading,
-    error,
-    hasItems,
-    children,
-  }: {
-    loading: boolean;
-    error: string | null;
-    hasItems: boolean;
-    children: React.ReactNode;
-  }) => {
-    if (loading) return <div data-testid="timeline-loading">Loading...</div>;
-    if (error && !hasItems) return <div data-testid="timeline-initial-error">Error: {error}</div>;
-    if (!hasItems) return <div data-testid="timeline-empty">No replies</div>;
-    return <>{children}</>;
-  },
-}));
+vi.mock('@/atoms/PostThreadSpacer/PostThreadSpacer', () => {
+  return {
+    PostThreadSpacer: () => <div data-testid="post-thread-spacer" />,
+  };
+});
 
-vi.mock('@/organisms', () => ({
-  PostMain: ({ postId, onClick, isReply }: { postId: string; onClick: () => void; isReply: boolean }) => (
-    <div data-testid={`post-${postId}`} onClick={onClick} data-is-reply={isReply} />
-  ),
-}));
+vi.mock('@/molecules/Timeline/TimelineEndMessage', () => {
+  return {
+    TimelineEndMessage: () => <div data-testid="timeline-end-message">End of replies</div>,
+  };
+});
+
+vi.mock('@/molecules/Timeline/TimelineError', () => {
+  return {
+    TimelineError: ({ message }: { message: string }) => <div data-testid="timeline-error">Error: {message}</div>,
+  };
+});
+
+vi.mock('@/molecules/Timeline/TimelineLoading', () => {
+  return {
+    TimelineLoading: () => <div data-testid="timeline-loading">Loading...</div>,
+  };
+});
+
+vi.mock('@/molecules/Timeline/TimelineLoadingMore', () => {
+  return {
+    TimelineLoadingMore: () => <div data-testid="timeline-loading-more">Loading more...</div>,
+  };
+});
+
+vi.mock('@/molecules/Timeline/TimelineStateWrapper/TimelineStateWrapper', async (importOriginal) => {
+  const actual =
+    await importOriginal<typeof import('@/molecules/Timeline/TimelineStateWrapper/TimelineStateWrapper')>();
+  return {
+    ...actual,
+    TimelineStateWrapper: ({
+      loading,
+      error,
+      hasItems,
+      children,
+    }: {
+      loading: boolean;
+      error: string | null;
+      hasItems: boolean;
+      children: React.ReactNode;
+    }) => {
+      if (loading) return <div data-testid="timeline-loading">Loading...</div>;
+      if (error && !hasItems) return <div data-testid="timeline-initial-error">Error: {error}</div>;
+      if (!hasItems) return <div data-testid="timeline-empty">No replies</div>;
+      return <>{children}</>;
+    },
+  };
+});
+
+vi.mock('@/organisms/PostMain/PostMain', () => {
+  return {
+    PostMain: ({ postId, onClick, isReply }: { postId: string; onClick: () => void; isReply: boolean }) => (
+      <div data-testid={`post-${postId}`} onClick={onClick} data-is-reply={isReply} />
+    ),
+  };
+});
 
 const mockUseLiveQuery = vi.mocked(useLiveQuery);
 const mockUseStreamPagination = vi.mocked(useStreamPagination);

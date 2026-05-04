@@ -2,46 +2,50 @@ import { render, screen, fireEvent } from '@testing-library/react';
 import { describe, it, expect, vi } from 'vitest';
 import { SearchSuggestions } from './SearchSuggestions';
 
-vi.mock('@/atoms', () => ({
-  Container: ({
-    children,
-    className,
-    style,
-    overrideDefaults,
-    ...props
-  }: React.PropsWithChildren<{ className?: string; style?: React.CSSProperties; overrideDefaults?: boolean }>) => (
-    <div
-      data-testid="container"
-      className={className}
-      style={style}
-      data-override-defaults={overrideDefaults}
-      {...props}
-    >
-      {children}
-    </div>
-  ),
-}));
+vi.mock('@/atoms/Container/Container', () => {
+  return {
+    Container: ({
+      children,
+      className,
+      style,
+      overrideDefaults,
+      ...props
+    }: React.PropsWithChildren<{ className?: string; style?: React.CSSProperties; overrideDefaults?: boolean }>) => (
+      <div
+        data-testid="container"
+        className={className}
+        style={style}
+        data-override-defaults={overrideDefaults}
+        {...props}
+      >
+        {children}
+      </div>
+    ),
+  };
+});
 
-vi.mock('@/molecules', () => ({
-  SearchTagSection: ({
-    title,
-    tags,
-    onTagClick,
-  }: {
-    title: string;
-    tags: Array<{ name: string }>;
-    onTagClick: (tag: string) => void;
-  }) => (
-    <div data-testid={`section-${title.toLowerCase().replace(/\s/g, '-')}`}>
-      <span>{title}</span>
-      {tags.map((tag) => (
-        <button key={tag.name} data-testid={`tag-${tag.name}`} onClick={() => onTagClick(tag.name)}>
-          {tag.name}
-        </button>
-      ))}
-    </div>
-  ),
-}));
+vi.mock('@/molecules/SearchTagSection/SearchTagSection', () => {
+  return {
+    SearchTagSection: ({
+      title,
+      tags,
+      onTagClick,
+    }: {
+      title: string;
+      tags: Array<{ name: string }>;
+      onTagClick: (tag: string) => void;
+    }) => (
+      <div data-testid={`section-${title.toLowerCase().replace(/\s/g, '-')}`}>
+        <span>{title}</span>
+        {tags.map((tag) => (
+          <button key={tag.name} data-testid={`tag-${tag.name}`} onClick={() => onTagClick(tag.name)}>
+            {tag.name}
+          </button>
+        ))}
+      </div>
+    ),
+  };
+});
 
 vi.mock('@/config/search', () => ({
   SEARCH_EXPANDED_STYLE: {

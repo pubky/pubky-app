@@ -28,17 +28,19 @@ Only these can initiate workflows:
 
 Modules are imported directly through the path aliases in `tsconfig.json`. Keep imports pointed at concrete source modules rather than aggregate re-export files.
 
-| Layer        | Alias              |
+**App configuration** lives under `src/config/`: import from `@/config/<module>` (for example `@/config/nexus`). Do not add `src/config/index.ts` that re-exports the entire config surface.
+
+**Route constants and helpers** live in `src/app/routes.ts`: import from `@/app/routes` (named imports; use `import type` when a colocated `*.types.ts` file only contributes types).
 | ------------ | ------------------ |
-| Hooks        | `@/hooks/*`        |
-| Application  | `@/application/*`  |
-| Controllers  | `@/controllers/*`  |
+| Hooks | `@/hooks/*` |
+| Application | `@/application/*` |
+| Controllers | `@/controllers/*` |
 | Coordinators | `@/coordinators/*` |
-| Database     | `@/database/*`     |
-| Models       | `@/models/*`       |
-| Pipes        | `@/pipes/*`        |
-| Services     | `@/services/*`     |
-| Stores       | `@/stores/*`       |
+| Database | `@/database/*` |
+| Models | `@/models/*` |
+| Pipes | `@/pipes/*` |
+| Services | `@/services/*` |
+| Stores | `@/stores/*` |
 
 ## Layer Responsibilities
 

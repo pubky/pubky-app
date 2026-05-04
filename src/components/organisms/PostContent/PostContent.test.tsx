@@ -1,7 +1,8 @@
 import { render, screen } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { PostContent } from './PostContent';
-import * as Organisms from '@/organisms';
+import { PostContentBase } from '../PostContentBase/PostContentBase';
+
 import { usePostDetails } from '@/hooks/usePostDetails/usePostDetails';
 import { useRepostInfo } from '@/hooks/useRepostInfo/useRepostInfo';
 import type { EnrichedPostDetails } from '@/application/moderation/moderation.types';
@@ -14,24 +15,9 @@ vi.mock('@/hooks/useRepostInfo/useRepostInfo', () => ({
   useRepostInfo: vi.fn(),
 }));
 
-// Mock PostContentBase
-vi.mock('@/organisms', async (importOriginal) => {
-  const actual = await importOriginal<typeof import('@/organisms')>();
-  return {
-    ...actual,
-    PostContentBase: vi.fn(({ postId, className }: { postId: string; className?: string }) => (
-      <div data-testid="post-content-base" data-post-id={postId} className={className}>
-        PostContentBase {postId}
-      </div>
-    )),
-  };
-});
-
 // Mock molecules - PostPreviewCard, PostText, PostLinkEmbeds
-vi.mock('@/molecules', async (importOriginal) => {
-  const actual = await importOriginal<typeof import('@/molecules')>();
+vi.mock('@/molecules/PostPreviewCard/PostPreviewCard', () => {
   return {
-    ...actual,
     PostPreviewCard: vi.fn(({ postId, className }: { postId: string; className?: string }) => (
       <div data-testid="post-preview-card" data-post-id={postId} className={className}>
         PostPreviewCard {postId}
@@ -39,6 +25,14 @@ vi.mock('@/molecules', async (importOriginal) => {
     )),
   };
 });
+
+vi.mock('../PostContentBase/PostContentBase', () => ({
+  PostContentBase: vi.fn(({ postId, className }: { postId: string; className?: string }) => (
+    <div data-testid="post-content-base" data-post-id={postId} className={className}>
+      PostContentBase {postId}
+    </div>
+  )),
+}));
 
 const mockUsePostDetails = vi.mocked(usePostDetails);
 const mockUseRepostInfo = vi.mocked(useRepostInfo);
@@ -153,13 +147,11 @@ describe('PostContent', () => {
 describe('PostContent - Snapshots', () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    vi.mocked(Organisms.PostContentBase).mockImplementation(
-      ({ postId, className }: { postId: string; className?: string }) => (
-        <div data-testid="post-content-base" data-post-id={postId} className={className}>
-          PostContentBase {postId}
-        </div>
-      ),
-    );
+    vi.mocked(PostContentBase).mockImplementation(({ postId, className }: { postId: string; className?: string }) => (
+      <div data-testid="post-content-base" data-post-id={postId} className={className}>
+        PostContentBase {postId}
+      </div>
+    ));
   });
 
   it('matches snapshot with single-line content', () => {

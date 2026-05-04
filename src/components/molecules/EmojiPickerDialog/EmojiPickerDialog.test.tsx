@@ -1,38 +1,8 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen, waitFor } from '@testing-library/react';
 import { EmojiPickerDialog } from './EmojiPickerDialog';
-
-// Mock EmojiPicker
-const mockOnEmojiSelect = vi.fn();
-vi.mock('@/components/molecules', () => ({
-  EmojiPicker: ({
-    onEmojiSelect,
-    maxLength,
-    currentInput,
-  }: {
-    onEmojiSelect: (emoji: { native: string }) => void;
-    maxLength?: number;
-    currentInput?: string;
-  }) => {
-    // Store the callback for testing
-    mockOnEmojiSelect.mockImplementation(onEmojiSelect);
-    return (
-      <div data-testid="emoji-picker">
-        <button data-testid="test-emoji-select" onClick={() => onEmojiSelect({ native: '😊' })}>
-          Select Emoji
-        </button>
-        <div data-testid="max-length">{maxLength || 'none'}</div>
-        <div data-testid="current-input">{currentInput || 'none'}</div>
-      </div>
-    );
-  },
-}));
-
-// Mock Dialog components
-vi.mock('@/components/atoms', async () => {
-  const actual = await vi.importActual<typeof import('@/components/atoms')>('@/components/atoms');
+vi.mock('@/atoms/Dialog/Dialog', () => {
   return {
-    ...actual,
     Dialog: ({
       children,
       open,
@@ -53,6 +23,40 @@ vi.mock('@/components/atoms', async () => {
     DialogDescription: ({ children }: { children: React.ReactNode }) => (
       <p data-testid="dialog-description">{children}</p>
     ),
+  };
+});
+
+// Mock EmojiPicker
+const mockOnEmojiSelect = vi.fn();
+vi.mock('@/molecules/EmojiPicker/EmojiPicker', () => {
+  return {
+    EmojiPicker: ({
+      onEmojiSelect,
+      maxLength,
+      currentInput,
+    }: {
+      onEmojiSelect: (emoji: { native: string }) => void;
+      maxLength?: number;
+      currentInput?: string;
+    }) => {
+      // Store the callback for testing
+      mockOnEmojiSelect.mockImplementation(onEmojiSelect);
+      return (
+        <div data-testid="emoji-picker">
+          <button data-testid="test-emoji-select" onClick={() => onEmojiSelect({ native: '😊' })}>
+            Select Emoji
+          </button>
+          <div data-testid="max-length">{maxLength || 'none'}</div>
+          <div data-testid="current-input">{currentInput || 'none'}</div>
+        </div>
+      );
+    },
+  };
+});
+
+// Mock Dialog components
+vi.mock('@/atoms/Container/Container', () => {
+  return {
     Container: ({ children, className }: { children: React.ReactNode; className?: string }) => (
       <div data-testid="container" className={className}>
         {children}

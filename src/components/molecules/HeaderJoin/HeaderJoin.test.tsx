@@ -10,38 +10,45 @@ vi.mock('@/stores/auth/auth.store', () => ({
 }));
 
 // Mock atoms
-vi.mock('@/atoms', () => ({
-  Container: ({
-    children,
-    className,
-    ...props
-  }: {
-    children: React.ReactNode;
-    className?: string;
-    [key: string]: unknown;
-  }) => (
-    <div className={className} {...props}>
-      {children}
-    </div>
-  ),
-  Button: ({
-    children,
-    onClick,
-    'aria-label': ariaLabel,
-    'data-testid': testId,
-    ...props
-  }: {
-    children: React.ReactNode;
-    onClick?: () => void;
-    'aria-label'?: string;
-    'data-testid'?: string;
-    [key: string]: unknown;
-  }) => (
-    <button onClick={onClick} aria-label={ariaLabel} data-testid={testId} {...props}>
-      {children}
-    </button>
-  ),
-}));
+vi.mock('@/atoms/Button/Button', () => {
+  return {
+    Button: ({
+      children,
+      onClick,
+      'aria-label': ariaLabel,
+      'data-testid': testId,
+      ...props
+    }: {
+      children: React.ReactNode;
+      onClick?: () => void;
+      'aria-label'?: string;
+      'data-testid'?: string;
+      [key: string]: unknown;
+    }) => (
+      <button onClick={onClick} aria-label={ariaLabel} data-testid={testId} {...props}>
+        {children}
+      </button>
+    ),
+  };
+});
+
+vi.mock('@/atoms/Container/Container', () => {
+  return {
+    Container: ({
+      children,
+      className,
+      ...props
+    }: {
+      children: React.ReactNode;
+      className?: string;
+      [key: string]: unknown;
+    }) => (
+      <div className={className} {...props}>
+        {children}
+      </div>
+    ),
+  };
+});
 
 describe('HeaderJoin', () => {
   beforeEach(() => {

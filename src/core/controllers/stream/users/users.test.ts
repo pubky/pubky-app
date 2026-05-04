@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
-import * as Config from '@/config';
+import { NEXUS_USERS_PER_PAGE } from '@/config/nexus';
 import { StreamUserController } from './users';
 import { UserStreamApplication } from '@/application/stream/users/users';
 import type { Pubky } from '@/models/models.types';
@@ -35,14 +35,14 @@ describe('StreamUserController', () => {
 
       const result = await StreamUserController.getOrFetchStreamSlice({
         streamId,
-        limit: Config.NEXUS_USERS_PER_PAGE,
+        limit: NEXUS_USERS_PER_PAGE,
         skip: 0,
       });
 
       expect(getOrFetchStreamSliceSpy).toHaveBeenCalledWith({
         streamId,
         skip: 0,
-        limit: Config.NEXUS_USERS_PER_PAGE,
+        limit: NEXUS_USERS_PER_PAGE,
         viewerId,
       });
       expect(fetchMissingUsersSpy).not.toHaveBeenCalled();
@@ -67,14 +67,14 @@ describe('StreamUserController', () => {
 
       const result = await StreamUserController.getOrFetchStreamSlice({
         streamId,
-        limit: Config.NEXUS_USERS_PER_PAGE,
+        limit: NEXUS_USERS_PER_PAGE,
         skip: 0,
       });
 
       expect(getOrFetchStreamSliceSpy).toHaveBeenCalledWith({
         streamId,
         skip: 0,
-        limit: Config.NEXUS_USERS_PER_PAGE,
+        limit: NEXUS_USERS_PER_PAGE,
         viewerId,
       });
       expect(fetchMissingUsersSpy).toHaveBeenCalledWith({
@@ -99,14 +99,14 @@ describe('StreamUserController', () => {
 
       await StreamUserController.getOrFetchStreamSlice({
         streamId,
-        limit: Config.NEXUS_USERS_PER_PAGE,
+        limit: NEXUS_USERS_PER_PAGE,
         skip,
       });
 
       expect(getOrFetchStreamSliceSpy).toHaveBeenCalledWith({
         streamId,
         skip,
-        limit: Config.NEXUS_USERS_PER_PAGE,
+        limit: NEXUS_USERS_PER_PAGE,
         viewerId,
       });
     });
@@ -129,19 +129,19 @@ describe('StreamUserController', () => {
 
       await StreamUserController.getOrFetchStreamSlice({
         streamId,
-        limit: Config.NEXUS_USERS_PER_PAGE,
+        limit: NEXUS_USERS_PER_PAGE,
         skip: 0,
       });
 
       expect(getOrFetchStreamSliceSpy).toHaveBeenCalledWith({
         streamId,
         skip: 0,
-        limit: Config.NEXUS_USERS_PER_PAGE,
+        limit: NEXUS_USERS_PER_PAGE,
         viewerId: customViewerId,
       });
     });
 
-    it('should use Config.NEXUS_USERS_PER_PAGE as limit', async () => {
+    it('should use NEXUS_USERS_PER_PAGE as limit', async () => {
       const streamId = buildUserCompositeId({ userId: targetUserId, reach: 'followers' });
 
       const getOrFetchStreamSliceSpy = vi.spyOn(UserStreamApplication, 'getOrFetchStreamSlice').mockResolvedValue({
@@ -152,14 +152,14 @@ describe('StreamUserController', () => {
 
       await StreamUserController.getOrFetchStreamSlice({
         streamId,
-        limit: Config.NEXUS_USERS_PER_PAGE,
+        limit: NEXUS_USERS_PER_PAGE,
         skip: 0,
       });
 
       expect(getOrFetchStreamSliceSpy).toHaveBeenCalledWith({
         streamId,
         skip: 0,
-        limit: Config.NEXUS_USERS_PER_PAGE,
+        limit: NEXUS_USERS_PER_PAGE,
         viewerId,
       });
     });
@@ -177,7 +177,7 @@ describe('StreamUserController', () => {
 
       await StreamUserController.getOrFetchStreamSlice({
         streamId,
-        limit: Config.NEXUS_USERS_PER_PAGE,
+        limit: NEXUS_USERS_PER_PAGE,
         skip: 0,
       });
 
@@ -195,7 +195,7 @@ describe('StreamUserController', () => {
 
       const result = await StreamUserController.getOrFetchStreamSlice({
         streamId,
-        limit: Config.NEXUS_USERS_PER_PAGE,
+        limit: NEXUS_USERS_PER_PAGE,
         skip: 0,
       });
 
@@ -213,14 +213,14 @@ describe('StreamUserController', () => {
 
       await StreamUserController.getOrFetchStreamSlice({
         streamId,
-        limit: Config.NEXUS_USERS_PER_PAGE,
+        limit: NEXUS_USERS_PER_PAGE,
         skip: 0,
       });
 
       expect(getOrFetchStreamSliceSpy).toHaveBeenCalledWith({
         streamId,
         skip: 0,
-        limit: Config.NEXUS_USERS_PER_PAGE,
+        limit: NEXUS_USERS_PER_PAGE,
         viewerId,
       });
     });
@@ -240,7 +240,7 @@ describe('StreamUserController', () => {
 
       const result = await StreamUserController.getOrFetchStreamSlice({
         streamId,
-        limit: Config.NEXUS_USERS_PER_PAGE,
+        limit: NEXUS_USERS_PER_PAGE,
         skip: 0,
       });
 

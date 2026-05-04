@@ -1,10 +1,17 @@
 'use client';
 
 import { useIsMobile } from '@/hooks/useIsMobile/useIsMobile';
-import * as Molecules from '@/molecules';
-import * as Organisms from '@/organisms';
-import * as Atoms from '@/atoms';
-import { TIMELINE_FEED_VARIANT } from '@/config';
+import { SearchEmptyState } from '@/molecules/SearchEmptyState/SearchEmptyState';
+import { SearchHeader } from '@/molecules/SearchHeader/SearchHeader';
+import { ContentLayout } from '@/organisms/ContentLayout/ContentLayout';
+import { DialogWelcome } from '@/organisms/DialogWelcome/DialogWelcome';
+import { HomeFeedRightDrawer, HomeFeedRightSidebar } from '@/organisms/FeedRightSidebar/FeedRightSidebar';
+import { HomeFeedDrawer, HomeFeedDrawerMobile, HomeFeedSidebar } from '@/organisms/HomeFeedSidebar/HomeFeedSidebar';
+import { SearchInput } from '@/organisms/SearchInput/SearchInput';
+import { TimelineFeed } from '@/organisms/Timeline/Feed/TimelineFeed/TimelineFeed';
+import { Container } from '@/atoms/Container/Container';
+
+import { TIMELINE_FEED_VARIANT } from '@/config/feed';
 import { useSearchTags } from '@/hooks/useSearchStreamId/useSearchStreamId';
 
 /**
@@ -28,42 +35,38 @@ export function Search() {
 
   return (
     <>
-      <Organisms.DialogWelcome />
-      <Organisms.ContentLayout
+      <DialogWelcome />
+      <ContentLayout
         feedVariant={TIMELINE_FEED_VARIANT.SEARCH}
         showRightMobileButton={false}
         leftSidebarContent={
-          <Organisms.HomeFeedSidebar hideReachFilter allowVisualLayout feedVariant={TIMELINE_FEED_VARIANT.SEARCH} />
+          <HomeFeedSidebar hideReachFilter allowVisualLayout feedVariant={TIMELINE_FEED_VARIANT.SEARCH} />
         }
-        rightSidebarContent={<Organisms.HomeFeedRightSidebar />}
+        rightSidebarContent={<HomeFeedRightSidebar />}
         leftDrawerContent={
-          <Organisms.HomeFeedDrawer hideReachFilter allowVisualLayout feedVariant={TIMELINE_FEED_VARIANT.SEARCH} />
+          <HomeFeedDrawer hideReachFilter allowVisualLayout feedVariant={TIMELINE_FEED_VARIANT.SEARCH} />
         }
-        rightDrawerContent={<Organisms.HomeFeedRightDrawer />}
+        rightDrawerContent={<HomeFeedRightDrawer />}
         leftDrawerContentMobile={
-          <Organisms.HomeFeedDrawerMobile
-            hideReachFilter
-            allowVisualLayout
-            feedVariant={TIMELINE_FEED_VARIANT.SEARCH}
-          />
+          <HomeFeedDrawerMobile hideReachFilter allowVisualLayout feedVariant={TIMELINE_FEED_VARIANT.SEARCH} />
         }
       >
         {/* Mobile search input - hidden on desktop (shown in header there) */}
-        <Atoms.Container className="lg:hidden">
-          <Organisms.SearchInput autoFocus={!hasTags || isMobile} />
-        </Atoms.Container>
+        <Container className="lg:hidden">
+          <SearchInput autoFocus={!hasTags || isMobile} />
+        </Container>
 
         {hasTags ? (
           <>
-            <Molecules.SearchHeader tags={tags} />
-            <Atoms.Container data-cy="post-search-results" overrideDefaults>
-              <Organisms.TimelineFeed variant={TIMELINE_FEED_VARIANT.SEARCH} />
-            </Atoms.Container>
+            <SearchHeader tags={tags} />
+            <Container data-cy="post-search-results" overrideDefaults>
+              <TimelineFeed variant={TIMELINE_FEED_VARIANT.SEARCH} />
+            </Container>
           </>
         ) : (
-          <Molecules.SearchEmptyState />
+          <SearchEmptyState />
         )}
-      </Organisms.ContentLayout>
+      </ContentLayout>
     </>
   );
 }

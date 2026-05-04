@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { mockSession } from '@/test-utils';
+import { mockSession } from '@/test-utils/pubky';
 import { HttpMethod } from '@/libs/http/http.types';
 import { FileApplication } from '@/application/file/file';
 import { PostApplication } from '@/application/post/post';

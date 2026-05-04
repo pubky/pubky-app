@@ -1,4 +1,4 @@
-import * as Config from '@/config';
+import { NEXUS_USERS_PER_PAGE } from '@/config/nexus';
 import { UserStreamApplication } from '@/application/stream/users/users';
 import type {
   TGetOrFetchUsersParams,
@@ -26,7 +26,7 @@ export class StreamUserController {
    */
   static async getOrFetchStreamSlice({
     streamId,
-    limit = Config.NEXUS_USERS_PER_PAGE,
+    limit = NEXUS_USERS_PER_PAGE,
     skip,
   }: TReadUserStreamChunkParams): Promise<TReadUserStreamChunkResponse> {
     // selectCurrentUserPubky() throws an error when user is not authenticated;

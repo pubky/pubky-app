@@ -1,4 +1,4 @@
-import * as Config from '@/config';
+import { FEEDBACK_MAX_CHARACTER_LENGTH } from '@/config/posts';
 import { ValidationErrorCode } from '@/libs/error/error.codes';
 import { Err } from '@/libs/error/error.factories';
 import { ErrorService } from '@/libs/error/error.types';
@@ -42,14 +42,14 @@ export class FeedbackValidators {
       });
     }
 
-    if (comment.length > Config.FEEDBACK_MAX_CHARACTER_LENGTH) {
+    if (comment.length > FEEDBACK_MAX_CHARACTER_LENGTH) {
       throw Err.validation(
         ValidationErrorCode.INVALID_INPUT,
-        `Comment must be no more than ${Config.FEEDBACK_MAX_CHARACTER_LENGTH} characters`,
+        `Comment must be no more than ${FEEDBACK_MAX_CHARACTER_LENGTH} characters`,
         {
           service: ErrorService.NextJsServer,
           operation: 'validateComment',
-          context: { field: 'comment', maxLength: Config.FEEDBACK_MAX_CHARACTER_LENGTH, actualLength: comment.length },
+          context: { field: 'comment', maxLength: FEEDBACK_MAX_CHARACTER_LENGTH, actualLength: comment.length },
         },
       );
     }

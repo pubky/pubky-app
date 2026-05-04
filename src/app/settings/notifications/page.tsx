@@ -1,5 +1,1 @@
-import * as Templates from '@/templates';
-
-export default function SettingsNotificationsPage() {
-  return <Templates.Notifications />;
-}
+export { Notifications as default } from '@/templates/Settings/Notifications/Notifications';

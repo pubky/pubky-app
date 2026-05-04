@@ -1,19 +1,23 @@
 'use client';
 
 import * as React from 'react';
-import * as Atoms from '@/atoms';
+import { Button } from '../Button/Button';
+import { Container } from '../Container/Container';
+import { Heading } from '../Heading/Heading';
+import { Typography } from '../Typography/Typography';
+
 import { cn } from '@/libs/utils/utils';
 
 function FilterRoot({ className, children, ...props }: React.HTMLAttributes<HTMLElement>) {
   return (
-    <Atoms.Container
+    <Container
       data-slot="filter-root"
       data-testid="filter-root"
       className={cn('m-0 min-w-0 gap-2 bg-background p-0', className)}
       {...props}
     >
       {children}
-    </Atoms.Container>
+    </Container>
   );
 }
 
@@ -28,30 +32,30 @@ function FilterHeader({
   className?: string;
 } & React.HTMLAttributes<HTMLElement>) {
   return (
-    <Atoms.Container
+    <Container
       overrideDefaults
       data-slot="filter-header"
       data-testid="filter-header"
       className="m-0 gap-2 p-0"
       {...props}
     >
-      <Atoms.Heading level={2} size="lg" className={cn('font-light text-muted-foreground', className)}>
+      <Heading level={2} size="lg" className={cn('font-light text-muted-foreground', className)}>
         {title}
-      </Atoms.Heading>
+      </Heading>
       {subtitle && (
-        <Atoms.Typography size="md" className="text-base leading-normal font-medium text-secondary-foreground">
+        <Typography size="md" className="text-base leading-normal font-medium text-secondary-foreground">
           {subtitle}
-        </Atoms.Typography>
+        </Typography>
       )}
-    </Atoms.Container>
+    </Container>
   );
 }
 
 function FilterList({ className, children, ...props }: React.HTMLAttributes<HTMLElement>) {
   return (
-    <Atoms.Container data-slot="filter-list" data-testid="filter-list" className={className} {...props}>
+    <Container data-slot="filter-list" data-testid="filter-list" className={className} {...props}>
       {children}
-    </Atoms.Container>
+    </Container>
   );
 }
 
@@ -68,7 +72,7 @@ function FilterItem({
   children: React.ReactNode;
 } & React.ButtonHTMLAttributes<HTMLButtonElement>) {
   return (
-    <Atoms.Button
+    <Button
       type="button"
       data-slot="filter-item"
       data-testid="filter-item"
@@ -87,7 +91,7 @@ function FilterItem({
       {...props}
     >
       {children}
-    </Atoms.Button>
+    </Button>
   );
 }
 

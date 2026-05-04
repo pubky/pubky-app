@@ -23,69 +23,90 @@ vi.mock('@/hooks/useLinkConfirmation/useLinkConfirmation', () => ({
 }));
 
 // Mock atoms
-vi.mock('@/atoms', () => ({
-  Container: ({ children, className }: { children: React.ReactNode; className?: string }) => (
-    <div data-testid="container" className={className}>
-      {children}
-    </div>
-  ),
-  Typography: ({ children, size, className }: { children: React.ReactNode; size?: string; className?: string }) => (
-    <span data-testid="typography" data-size={size} className={className}>
-      {children}
-    </span>
-  ),
-  Image: ({
-    src,
-    alt,
-    className,
-    width,
-    height,
-  }: {
-    src: string;
-    alt: string;
-    className?: string;
-    width?: number;
-    height?: number;
-  }) => <img data-testid="cover-image" src={src} alt={alt} className={className} width={width} height={height} />,
-}));
+vi.mock('@/atoms/Container/Container', () => {
+  return {
+    Container: ({ children, className }: { children: React.ReactNode; className?: string }) => (
+      <div data-testid="container" className={className}>
+        {children}
+      </div>
+    ),
+  };
+});
+
+vi.mock('@/atoms/Image/Image', () => {
+  return {
+    Image: ({
+      src,
+      alt,
+      className,
+      width,
+      height,
+    }: {
+      src: string;
+      alt: string;
+      className?: string;
+      width?: number;
+      height?: number;
+    }) => <img data-testid="cover-image" src={src} alt={alt} className={className} width={width} height={height} />,
+  };
+});
+
+vi.mock('@/atoms/Typography/Typography', () => {
+  return {
+    Typography: ({ children, size, className }: { children: React.ReactNode; size?: string; className?: string }) => (
+      <span data-testid="typography" data-size={size} className={className}>
+        {children}
+      </span>
+    ),
+  };
+});
 
 // Mock molecules
-vi.mock('@/molecules', () => ({
-  PostText: ({
-    content,
-    isArticle,
-    onLinkClick,
-    className,
-  }: {
-    content: string;
-    isArticle?: boolean;
-    onLinkClick?: (url: string, e: React.MouseEvent) => void;
-    className?: string;
-  }) => (
-    <div data-testid="post-text" data-is-article={isArticle} data-has-link-click={!!onLinkClick} className={className}>
-      {content}
-    </div>
-  ),
-}));
+vi.mock('@/molecules/PostText/PostText', () => {
+  return {
+    PostText: ({
+      content,
+      isArticle,
+      onLinkClick,
+      className,
+    }: {
+      content: string;
+      isArticle?: boolean;
+      onLinkClick?: (url: string, e: React.MouseEvent) => void;
+      className?: string;
+    }) => (
+      <div
+        data-testid="post-text"
+        data-is-article={isArticle}
+        data-has-link-click={!!onLinkClick}
+        className={className}
+      >
+        {content}
+      </div>
+    ),
+  };
+});
 
 // Mock organisms
-vi.mock('@/organisms', () => ({
-  DialogCheckLink: ({
-    open,
-    onOpenChangeAction,
-    linkUrl,
-  }: {
-    open: boolean;
-    onOpenChangeAction: (open: boolean) => void;
-    linkUrl: string;
-  }) => (
-    <div data-testid="dialog-check-link" data-open={open} data-link-url={linkUrl}>
-      <button data-testid="dialog-close" onClick={() => onOpenChangeAction(false)}>
-        Close
-      </button>
-    </div>
-  ),
-}));
+vi.mock('@/organisms/DialogCheckLink/DialogCheckLink', () => {
+  return {
+    DialogCheckLink: ({
+      open,
+      onOpenChangeAction,
+      linkUrl,
+    }: {
+      open: boolean;
+      onOpenChangeAction: (open: boolean) => void;
+      linkUrl: string;
+    }) => (
+      <div data-testid="dialog-check-link" data-open={open} data-link-url={linkUrl}>
+        <button data-testid="dialog-close" onClick={() => onOpenChangeAction(false)}>
+          Close
+        </button>
+      </div>
+    ),
+  };
+});
 
 describe('PostArticle', () => {
   const defaultProps = {

@@ -7,7 +7,8 @@ import { useMuteUser } from '@/hooks/useMuteUser/useMuteUser';
 import { useMutedUsers } from '@/hooks/useMutedUsers/useMutedUsers';
 import { useUserProfile } from '@/hooks/useUserProfile/useUserProfile';
 import { useTranslations } from 'next-intl';
-import * as Molecules from '@/molecules';
+import { toast } from '@/molecules/Toaster/use-toast';
+
 import { PROFILE_ROUTES } from '@/app/routes';
 import { PROFILE_MENU_ACTION_IDS } from './useProfileMenuActions.constants';
 import type { UseProfileMenuActionsResult, ProfileMenuActionItem } from './useProfileMenuActions.types';
@@ -62,7 +63,7 @@ export function useProfileMenuActions(userId: string): UseProfileMenuActionsResu
       try {
         await toggleFollow(userId, isFollowing);
       } catch (error) {
-        Molecules.toast({
+        toast({
           title: tErrors('title'),
           description: isAppError(error) ? error.message : tToast('follow.failed'),
         });
@@ -80,7 +81,7 @@ export function useProfileMenuActions(userId: string): UseProfileMenuActionsResu
       try {
         await copyPubky(withPubkyPrefix(userId));
       } catch (error) {
-        Molecules.toast({
+        toast({
           title: tErrors('title'),
           description: isAppError(error) ? error.message : tToast('copy.copyFailed'),
         });
@@ -97,7 +98,7 @@ export function useProfileMenuActions(userId: string): UseProfileMenuActionsResu
       try {
         await copyLink(profileUrl);
       } catch (error) {
-        Molecules.toast({
+        toast({
           title: tErrors('title'),
           description: isAppError(error) ? error.message : tToast('copy.copyFailed'),
         });
@@ -119,7 +120,7 @@ export function useProfileMenuActions(userId: string): UseProfileMenuActionsResu
     onClick: async () => {
       try {
         await toggleMute(userId, isUserMuted);
-        Molecules.toast({
+        toast({
           title: isUserMuted ? tToast('mute.unmuted') : tToast('mute.muted'),
           description: isUserMuted
             ? tToast('mute.unmutedDesc', {
@@ -130,7 +131,7 @@ export function useProfileMenuActions(userId: string): UseProfileMenuActionsResu
               }),
         });
       } catch (error) {
-        Molecules.toast({
+        toast({
           title: tErrors('title'),
           description: isAppError(error) ? error.message : tToast('mute.failed'),
         });

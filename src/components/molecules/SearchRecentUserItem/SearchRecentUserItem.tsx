@@ -2,8 +2,10 @@
 
 import { useAvatarUrl } from '@/hooks/useAvatarUrl/useAvatarUrl';
 import { useUserDetails } from '@/hooks/useUserDetails/useUserDetails';
-import * as Atoms from '@/atoms';
-import * as Organisms from '@/organisms';
+import { Container } from '@/atoms/Container/Container';
+import { Typography } from '@/atoms/Typography/Typography';
+import { AvatarWithFallback } from '@/organisms/AvatarWithFallback/AvatarWithFallback';
+
 import type { SearchRecentUserItemProps } from './SearchRecentUserItem.types';
 import { formatPublicKey } from '@/libs/utils/utils';
 
@@ -22,7 +24,7 @@ export function SearchRecentUserItem({ user, onClick }: SearchRecentUserItemProp
   };
 
   return (
-    <Atoms.Container
+    <Container
       overrideDefaults
       className="flex min-w-0 cursor-pointer items-center gap-2 rounded-md transition-colors hover:bg-secondary"
       onClick={handleClick}
@@ -30,30 +32,30 @@ export function SearchRecentUserItem({ user, onClick }: SearchRecentUserItemProp
       role="button"
       aria-label={`View profile for ${userDetails?.name || user.id}`}
     >
-      <Organisms.AvatarWithFallback
+      <AvatarWithFallback
         avatarUrl={avatarUrl}
         name={userDetails?.name || ''}
         fallbackSeed={user.id}
         size="default"
         className="shrink-0"
       />
-      <Atoms.Container overrideDefaults className="min-w-0 flex-1 flex-col items-start">
-        <Atoms.Typography
+      <Container overrideDefaults className="min-w-0 flex-1 flex-col items-start">
+        <Typography
           className="block max-w-full truncate text-sm font-bold text-foreground"
           overrideDefaults
           data-testid="user-name"
         >
           {userDetails?.name || 'Unknown User'}
-        </Atoms.Typography>
-        <Atoms.Typography
+        </Typography>
+        <Typography
           as="span"
           className="text-xs leading-4 font-medium tracking-[0.075rem] whitespace-nowrap text-muted-foreground uppercase"
           overrideDefaults
           data-testid="user-pubky"
         >
           {formatPublicKey({ key: user.id })}
-        </Atoms.Typography>
-      </Atoms.Container>
-    </Atoms.Container>
+        </Typography>
+      </Container>
+    </Container>
   );
 }

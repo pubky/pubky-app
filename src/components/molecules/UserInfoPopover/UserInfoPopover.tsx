@@ -1,7 +1,8 @@
 'use client';
 
 import { useState } from 'react';
-import * as Atoms from '@/atoms';
+import { Popover, PopoverContent, PopoverTrigger } from '@/atoms/Popover/Popover';
+
 import { useClosingPresence } from '@/hooks/useClosingPresence/useClosingPresence';
 import { POPOVER_ALIGN_OFFSET, POPOVER_HOVER_DELAY, POPOVER_SIDE_OFFSET } from './UserInfoPopover.constants';
 import { UserInfoPopoverContent } from './components/UserInfoPopoverContent/UserInfoPopoverContent';
@@ -53,9 +54,9 @@ export function UserInfoPopover({
   };
 
   return (
-    <Atoms.Popover hover={hover} hoverDelay={POPOVER_HOVER_DELAY} open={open} onOpenChange={handleOpenChange}>
-      <Atoms.PopoverTrigger asChild>{children}</Atoms.PopoverTrigger>
-      <Atoms.PopoverContent
+    <Popover hover={hover} hoverDelay={POPOVER_HOVER_DELAY} open={open} onOpenChange={handleOpenChange}>
+      <PopoverTrigger asChild>{children}</PopoverTrigger>
+      <PopoverContent
         sideOffset={sideOffset}
         align="start"
         alignOffset={alignOffset}
@@ -71,7 +72,7 @@ export function UserInfoPopover({
             formattedPublicKey={formattedPublicKey}
           />
         ) : null}
-      </Atoms.PopoverContent>
-    </Atoms.Popover>
+      </PopoverContent>
+    </Popover>
   );
 }

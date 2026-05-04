@@ -1,4 +1,4 @@
-import * as Types from './report.types';
+import type { TReportSubmitInput } from './report.types';
 import { Logger } from '@/libs/logger/logger';
 import { AppError } from '@/libs/error/error';
 import { ServerErrorCode } from '@/libs/error/error.codes';
@@ -78,7 +78,7 @@ export class ReportApplication {
    * @param params.name - Reporter's display name
    * @throws AppError if submission fails
    */
-  static async submit({ pubky, postUrl, issueType, reason, name }: Types.TReportSubmitInput): Promise<void> {
+  static async submit({ pubky, postUrl, issueType, reason, name }: TReportSubmitInput): Promise<void> {
     try {
       // Build email from pubky
       const email = buildChatwootEmail(pubky);

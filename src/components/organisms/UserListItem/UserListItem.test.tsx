@@ -14,45 +14,69 @@ vi.mock('@/hooks/useTtlSubscription/useTtlSubscription', () => ({
 }));
 
 // Mock Atoms - lightweight pass-through components
-vi.mock('@/atoms', () => ({
-  Button: ({
-    children,
-    variant,
-    size,
-    overrideDefaults: _overrideDefaults,
-    ...rest
-  }: React.PropsWithChildren<Record<string, unknown>>) => (
-    <button data-size={size} data-variant={variant} {...rest}>
-      {children}
-    </button>
-  ),
-  Container: ({
-    children,
-    overrideDefaults: _overrideDefaults,
-    ...rest
-  }: React.PropsWithChildren<Record<string, unknown>>) => <div {...rest}>{children}</div>,
-  Typography: ({
-    children,
-    as: Tag = 'span',
-    overrideDefaults: _overrideDefaults,
-    size: _size,
-    ...rest
-  }: React.PropsWithChildren<{ as?: React.ElementType } & Record<string, unknown>>) => {
-    const Component = Tag as React.ElementType;
-    return <Component {...rest}>{children}</Component>;
-  },
-  Link: ({
-    children,
-    overrideDefaults: _overrideDefaults,
-    ...rest
-  }: React.PropsWithChildren<Record<string, unknown>>) => <a {...rest}>{children}</a>,
-}));
+vi.mock('@/atoms/Button/Button', () => {
+  return {
+    Button: ({
+      children,
+      variant,
+      size,
+      overrideDefaults: _overrideDefaults,
+      ...rest
+    }: React.PropsWithChildren<Record<string, unknown>>) => (
+      <button data-size={size} data-variant={variant} {...rest}>
+        {children}
+      </button>
+    ),
+  };
+});
+
+vi.mock('@/atoms/Container/Container', () => {
+  return {
+    Container: ({
+      children,
+      overrideDefaults: _overrideDefaults,
+      ...rest
+    }: React.PropsWithChildren<Record<string, unknown>>) => <div {...rest}>{children}</div>,
+  };
+});
+
+vi.mock('@/atoms/Link/Link', () => {
+  return {
+    Link: ({
+      children,
+      overrideDefaults: _overrideDefaults,
+      ...rest
+    }: React.PropsWithChildren<Record<string, unknown>>) => <a {...rest}>{children}</a>,
+  };
+});
+
+vi.mock('@/atoms/Typography/Typography', () => {
+  return {
+    Typography: ({
+      children,
+      as: Tag = 'span',
+      overrideDefaults: _overrideDefaults,
+      size: _size,
+      ...rest
+    }: React.PropsWithChildren<{ as?: React.ElementType } & Record<string, unknown>>) => {
+      const Component = Tag as React.ElementType;
+      return <Component {...rest}>{children}</Component>;
+    },
+  };
+});
 
 // Mock Organisms
-vi.mock('@/organisms', () => ({
-  AvatarWithFallback: () => <div data-testid="avatar" />,
-  ClickableTagsList: () => <div data-testid="tags-list" />,
-}));
+vi.mock('@/organisms/AvatarWithFallback/AvatarWithFallback', () => {
+  return {
+    AvatarWithFallback: () => <div data-testid="avatar" />,
+  };
+});
+
+vi.mock('@/organisms/ClickableTagsList/ClickableTagsList', () => {
+  return {
+    ClickableTagsList: () => <div data-testid="tags-list" />,
+  };
+});
 
 // Mock dependencies
 vi.mock('@/application/tag/tag.types', () => ({
@@ -60,10 +84,9 @@ vi.mock('@/application/tag/tag.types', () => ({
 }));
 
 // Mock Config
-vi.mock('@/config', () => ({
+vi.mock('@/config/tags', () => ({
   USER_LIST_TAG_MAX_LENGTH: 8,
   USER_LIST_TAGS_MAX_TOTAL_CHARS: 20,
-  USER_LIST_TAGS_MAX_COUNT: 3,
 }));
 
 const mockUser: UserListItemData = {

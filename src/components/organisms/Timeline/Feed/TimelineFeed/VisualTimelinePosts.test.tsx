@@ -54,73 +54,152 @@ vi.mock('@/hooks/useRelativeTime/useRelativeTime', () => ({
   }),
 }));
 
-vi.mock('@/atoms', () => ({
-  Container: React.forwardRef<HTMLDivElement, React.HTMLAttributes<HTMLDivElement> & { overrideDefaults?: boolean }>(
-    function Container({ overrideDefaults: _overrideDefaults, ...props }, ref) {
-      return <div ref={ref} {...props} />;
+vi.mock('@/atoms/Container/Container', () => {
+  return {
+    Container: React.forwardRef<HTMLDivElement, React.HTMLAttributes<HTMLDivElement> & { overrideDefaults?: boolean }>(
+      function Container({ overrideDefaults: _overrideDefaults, ...props }, ref) {
+        return <div ref={ref} {...props} />;
+      },
+    ),
+  };
+});
+
+vi.mock('@/atoms/Image/Image', () => {
+  return {
+    Image: ({ fill: _fill, alt, ...props }: React.ImgHTMLAttributes<HTMLImageElement> & { fill?: boolean }) => (
+      <img alt={alt ?? ''} {...props} />
+    ),
+  };
+});
+
+vi.mock('@/atoms/Typography/Typography', () => {
+  return {
+    Typography: (props: React.HTMLAttributes<HTMLElement>) => <span {...props} />,
+  };
+});
+
+vi.mock('@/atoms/Video/Video', () => {
+  return {
+    Video: React.forwardRef<HTMLVideoElement, React.VideoHTMLAttributes<HTMLVideoElement>>(function Video(props, ref) {
+      return <video ref={ref} {...props} />;
+    }),
+  };
+});
+
+vi.mock('@/molecules/PostHeaderTimestamp/PostHeaderTimestamp', () => {
+  return {
+    PostHeaderTimestamp: ({ timeAgo }: { timeAgo: string; indexedAt: Date }) => (
+      <div data-testid="visual-overlay-timestamp">{timeAgo}</div>
+    ),
+  };
+});
+
+vi.mock('@/molecules/PostHeaderUserInfo/PostHeaderUserInfo', () => {
+  return {
+    PostHeaderUserInfo:
+      mockPostHeaderUserInfo as typeof import('@/molecules/PostHeaderUserInfo/PostHeaderUserInfo').PostHeaderUserInfo,
+  };
+});
+
+vi.mock('@/molecules/PostText/PostText', () => {
+  return {
+    PostText: ({ content }: { content: string }) => <div data-testid="visual-overlay-text">{content}</div>,
+  };
+});
+
+vi.mock('@/molecules/PostText/PostText.utils', () => {
+  return {
+    truncateAtWordBoundary: (content: string, limit: number) => {
+      return content.length > limit ? `${content.slice(0, limit)}...` : content;
     },
-  ),
-  Image: ({ fill: _fill, alt, ...props }: React.ImgHTMLAttributes<HTMLImageElement> & { fill?: boolean }) => (
-    <img alt={alt ?? ''} {...props} />
-  ),
-  Video: React.forwardRef<HTMLVideoElement, React.VideoHTMLAttributes<HTMLVideoElement>>(function Video(props, ref) {
-    return <video ref={ref} {...props} />;
-  }),
-  Typography: (props: React.HTMLAttributes<HTMLElement>) => <span {...props} />,
-}));
+  };
+});
 
-vi.mock('@/molecules', () => ({
-  TimelineStateWrapper: ({
-    children,
-    loading,
-    error,
-    hasItems,
-    emptyComponent,
-  }: {
-    children: React.ReactNode;
-    loading: boolean;
-    error: string | null;
-    hasItems: boolean;
-    emptyComponent?: React.ReactNode;
-  }) => {
-    if (loading) return <div data-testid="timeline-loading">Loading</div>;
-    if (error && !hasItems) return <div data-testid="timeline-error-state">{error}</div>;
-    if (!hasItems) return <>{emptyComponent ?? <div data-testid="timeline-empty">Empty</div>}</>;
-    return <>{children}</>;
-  },
-  TimelineLoadingMore: () => <div data-testid="timeline-loading-more">Loading more</div>,
-  TimelineError: ({ message }: { message: string }) => <div data-testid="timeline-error">{message}</div>,
-  TimelineEndMessage: () => <div data-testid="timeline-end">End</div>,
-  PostHeaderUserInfo:
-    mockPostHeaderUserInfo as typeof import('@/molecules/PostHeaderUserInfo/PostHeaderUserInfo').PostHeaderUserInfo,
-  PostHeaderTimestamp: ({ timeAgo }: { timeAgo: string; indexedAt: Date }) => (
-    <div data-testid="visual-overlay-timestamp">{timeAgo}</div>
-  ),
-  PostText: ({ content }: { content: string }) => <div data-testid="visual-overlay-text">{content}</div>,
-  truncateAtWordBoundary: (content: string, limit: number) => {
-    return content.length > limit ? `${content.slice(0, limit)}...` : content;
-  },
-}));
+vi.mock('@/molecules/Timeline/TimelineEndMessage', () => {
+  return {
+    TimelineEndMessage: () => <div data-testid="timeline-end">End</div>,
+  };
+});
 
-vi.mock('@/organisms', () => ({
-  ClickableTagsList: () => <div data-testid="visual-overlay-tags">Tags</div>,
-  PostActionsBar: ({
-    onReplyClick,
-  }: {
-    onTagClick?: () => void;
-    onReplyClick?: () => void;
-    onRepostClick?: () => void;
-  }) => (
-    <button data-testid="visual-overlay-reply" onClick={onReplyClick}>
-      Reply
-    </button>
-  ),
-  DialogReply: ({ open }: { postId: string; open: boolean; onOpenChangeAction: (open: boolean) => void }) =>
-    open ? <div data-testid="reply-dialog">Reply dialog</div> : null,
-  DialogRepost: ({ open }: { postId: string; open: boolean; onOpenChangeAction: (open: boolean) => void }) =>
-    open ? <div data-testid="repost-dialog">Repost dialog</div> : null,
-  PostContentBlurred: ({ postId }: { postId: string; className?: string }) => <div>{postId}</div>,
-}));
+vi.mock('@/molecules/Timeline/TimelineError', () => {
+  return {
+    TimelineError: ({ message }: { message: string }) => <div data-testid="timeline-error">{message}</div>,
+  };
+});
+
+vi.mock('@/molecules/Timeline/TimelineLoadingMore', () => {
+  return {
+    TimelineLoadingMore: () => <div data-testid="timeline-loading-more">Loading more</div>,
+  };
+});
+
+vi.mock('@/molecules/Timeline/TimelineStateWrapper/TimelineStateWrapper', async (importOriginal) => {
+  const actual =
+    await importOriginal<typeof import('@/molecules/Timeline/TimelineStateWrapper/TimelineStateWrapper')>();
+  return {
+    ...actual,
+    TimelineStateWrapper: ({
+      children,
+      loading,
+      error,
+      hasItems,
+      emptyComponent,
+    }: {
+      children: React.ReactNode;
+      loading: boolean;
+      error: string | null;
+      hasItems: boolean;
+      emptyComponent?: React.ReactNode;
+    }) => {
+      if (loading) return <div data-testid="timeline-loading">Loading</div>;
+      if (error && !hasItems) return <div data-testid="timeline-error-state">{error}</div>;
+      if (!hasItems) return <>{emptyComponent ?? <div data-testid="timeline-empty">Empty</div>}</>;
+      return <>{children}</>;
+    },
+  };
+});
+
+vi.mock('@/organisms/ClickableTagsList/ClickableTagsList', () => {
+  return {
+    ClickableTagsList: () => <div data-testid="visual-overlay-tags">Tags</div>,
+  };
+});
+
+vi.mock('@/organisms/DialogReply/DialogReply', () => {
+  return {
+    DialogReply: ({ open }: { postId: string; open: boolean; onOpenChangeAction: (open: boolean) => void }) =>
+      open ? <div data-testid="reply-dialog">Reply dialog</div> : null,
+  };
+});
+
+vi.mock('@/organisms/DialogRepost/DialogRepost', () => {
+  return {
+    DialogRepost: ({ open }: { postId: string; open: boolean; onOpenChangeAction: (open: boolean) => void }) =>
+      open ? <div data-testid="repost-dialog">Repost dialog</div> : null,
+  };
+});
+
+vi.mock('@/organisms/PostActionsBar/PostActionsBar', () => {
+  return {
+    PostActionsBar: ({
+      onReplyClick,
+    }: {
+      onTagClick?: () => void;
+      onReplyClick?: () => void;
+      onRepostClick?: () => void;
+    }) => (
+      <button data-testid="visual-overlay-reply" onClick={onReplyClick}>
+        Reply
+      </button>
+    ),
+  };
+});
+
+vi.mock('@/organisms/PostContentBlurred/PostContentBlurred', () => {
+  return {
+    PostContentBlurred: ({ postId }: { postId: string; className?: string }) => <div>{postId}</div>,
+  };
+});
 
 function createRows(): VisualRow[] {
   return [

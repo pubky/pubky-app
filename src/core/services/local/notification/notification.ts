@@ -8,6 +8,7 @@ import { buildCompositeIdFromPubkyUri } from '@/models/models.utils';
 import { NotificationModel } from '@/models/notification/notification';
 import { NotificationType } from '@/models/notification/notification.types';
 import type { TOlderThanQueryParams } from '@/services/local/notification/notification.types';
+
 export class LocalNotificationService {
   private constructor() {}
 
@@ -32,12 +33,14 @@ export class LocalNotificationService {
   }
 
   /**
-   * Counts unread notifications by querying IndexedDB for entries newer than lastRead.
+   * Counts unread notifications (entries newer than lastRead) filtered by allowed types.
+   *
    * @param lastRead - Timestamp of the last read notification
-   * @returns Promise resolving to the total number of unread notifications
+   * @param allowedTypes - Notification types to include in the count
+   * @returns Promise resolving to the number of filtered unread notifications
    */
-  static async countUnreadSince(lastRead: number): Promise<number> {
-    return await NotificationModel.countNewerThan(lastRead);
+  static async countFilteredUnreadSince(lastRead: number, allowedTypes: NotificationType[]): Promise<number> {
+    return await NotificationModel.countFilteredNewerThan(lastRead, allowedTypes);
   }
 
   /**

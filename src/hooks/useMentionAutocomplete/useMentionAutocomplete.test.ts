@@ -1,6 +1,6 @@
 import { renderHook, act } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { mockKeyboardEvent } from '@/test-utils';
+import { mockKeyboardEvent } from '@/test-utils/react-events';
 import { useMentionAutocomplete } from './useMentionAutocomplete';
 import type { Pubky } from '@/models/models.types';
 import type { NexusUserDetails } from '@/services/nexus/nexus.types';

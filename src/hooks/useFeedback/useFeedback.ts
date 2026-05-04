@@ -3,7 +3,8 @@
 import { useCurrentUserProfile } from '@/hooks/useCurrentUserProfile/useCurrentUserProfile';
 import { useState, useCallback, useMemo } from 'react';
 import { useTranslations } from 'next-intl';
-import * as Molecules from '@/molecules';
+import { showErrorToast as showErrorToastMessage } from '@/molecules/Toaster/showErrorToast';
+
 import { Logger } from '@/libs/logger/logger';
 import { postJson } from '@/libs/api/client-request';
 
@@ -29,7 +30,7 @@ export function useFeedback() {
   const [isSuccess, setIsSuccess] = useState(false);
 
   const showErrorToast = useCallback((description: string) => {
-    Molecules.showErrorToast({ description });
+    showErrorToastMessage({ description });
   }, []);
 
   const handleChange = useCallback((e: React.ChangeEvent<HTMLTextAreaElement>) => {

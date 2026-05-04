@@ -2,7 +2,7 @@ import { render, screen, within } from '@testing-library/react';
 import { describe, it, expect, vi } from 'vitest';
 import { SinglePost } from './SinglePost';
 
-vi.mock('@/organisms/ContentLayout', () => ({
+vi.mock('@/organisms/ContentLayout/ContentLayout', () => ({
   ContentLayout: ({
     children,
     leftSidebarContent,
@@ -30,12 +30,12 @@ vi.mock('@/organisms/ContentLayout', () => ({
   ),
 }));
 
-vi.mock('@/organisms/SinglePostLeftSidebar', () => ({
+vi.mock('@/organisms/SinglePostLeftSidebar/SinglePostLeftSidebar', () => ({
   SinglePostLeftSidebar: () => <div data-testid="single-post-left-sidebar">SinglePostLeftSidebar</div>,
   SinglePostLeftDrawer: () => <div data-testid="single-post-left-drawer">SinglePostLeftDrawer</div>,
 }));
 
-vi.mock('@/organisms/SinglePostRightPanel', () => ({
+vi.mock('@/organisms/SinglePostRightPanel/SinglePostRightPanel', () => ({
   SinglePostRightPanel: ({ postId, showFeedback = true }: { postId: string; showFeedback?: boolean }) => (
     <div data-testid="single-post-right-panel" data-post-id={postId} data-show-feedback={String(showFeedback)}>
       SinglePostRightPanel
@@ -43,20 +43,13 @@ vi.mock('@/organisms/SinglePostRightPanel', () => ({
   ),
 }));
 
-vi.mock('@/organisms/SinglePostContent', () => ({
+vi.mock('@/organisms/SinglePostContent/SinglePostContent', () => ({
   SinglePostContent: ({ postId }: { postId: string }) => (
     <div data-testid="single-post-content" data-post-id={postId}>
       SinglePostContent
     </div>
   ),
 }));
-
-vi.mock('@/config', async (importOriginal) => {
-  const actual = await importOriginal<typeof import('@/config')>();
-  return {
-    ...actual,
-  };
-});
 
 describe('SinglePost', () => {
   it('renders content layout shell', () => {

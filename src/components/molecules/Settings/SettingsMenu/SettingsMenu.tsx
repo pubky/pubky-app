@@ -3,7 +3,15 @@
 import { usePathname } from 'next/navigation';
 import { useTranslations } from 'next-intl';
 import Link from 'next/link';
-import * as Atoms from '@/atoms';
+import {
+  FilterHeader,
+  FilterItem,
+  FilterItemIcon,
+  FilterItemLabel,
+  FilterList,
+  FilterRoot,
+} from '@/atoms/Filter/Filter';
+
 import { SETTINGS_MENU_ITEMS } from './SettingsMenu.constants';
 
 export function SettingsMenu() {
@@ -11,23 +19,23 @@ export function SettingsMenu() {
   const t = useTranslations('settings');
 
   return (
-    <Atoms.FilterRoot>
-      <Atoms.FilterHeader title={t('title')} />
+    <FilterRoot>
+      <FilterHeader title={t('title')} />
 
-      <Atoms.FilterList>
+      <FilterList>
         {SETTINGS_MENU_ITEMS.map((item) => {
           const Icon = item.icon;
           const isSelected = pathname === item.path;
           return (
             <Link key={item.labelKey} href={item.path} data-cy={`settings-menu-item-${item.labelKey}`}>
-              <Atoms.FilterItem isSelected={isSelected} onClick={() => {}}>
-                <Atoms.FilterItemIcon icon={Icon} />
-                <Atoms.FilterItemLabel>{t(`menu.${item.labelKey}`)}</Atoms.FilterItemLabel>
-              </Atoms.FilterItem>
+              <FilterItem isSelected={isSelected} onClick={() => {}}>
+                <FilterItemIcon icon={Icon} />
+                <FilterItemLabel>{t(`menu.${item.labelKey}`)}</FilterItemLabel>
+              </FilterItem>
             </Link>
           );
         })}
-      </Atoms.FilterList>
-    </Atoms.FilterRoot>
+      </FilterList>
+    </FilterRoot>
   );
 }

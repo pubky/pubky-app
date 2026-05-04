@@ -9,21 +9,23 @@ vi.mock('next/navigation', () => ({
   useSelectedLayoutSegments: vi.fn(),
 }));
 
-vi.mock('@/atoms', () => ({
-  Container: ({
-    children,
-    className,
-    overrideDefaults,
-  }: {
-    children: React.ReactNode;
-    className?: string;
-    overrideDefaults?: boolean;
-  }) => (
-    <div data-testid="container" data-override-defaults={overrideDefaults ? 'true' : 'false'} className={className}>
-      {children}
-    </div>
-  ),
-}));
+vi.mock('@/atoms/Container/Container', () => {
+  return {
+    Container: ({
+      children,
+      className,
+      overrideDefaults,
+    }: {
+      children: React.ReactNode;
+      className?: string;
+      overrideDefaults?: boolean;
+    }) => (
+      <div data-testid="container" data-override-defaults={overrideDefaults ? 'true' : 'false'} className={className}>
+        {children}
+      </div>
+    ),
+  };
+});
 
 describe('HomeLayout', () => {
   beforeEach(() => {

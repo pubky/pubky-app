@@ -4,72 +4,96 @@ import { FollowerItem } from './FollowerItem';
 import type { UserConnectionData } from '@/hooks/useProfileConnections/useProfileConnections.types';
 import type { Pubky } from '@/models/models.types';
 // Mock atoms
-vi.mock('@/atoms', () => ({
-  Container: ({ children, className }: { children: React.ReactNode; className?: string }) => (
-    <div data-testid="container" className={className}>
-      {children}
-    </div>
-  ),
-  Typography: ({
-    children,
-    as: Tag = 'p',
-    className,
-  }: {
-    children: React.ReactNode;
-    as?: React.ElementType;
-    className?: string;
-  }) => (
-    <Tag data-testid="typography" className={className}>
-      {children}
-    </Tag>
-  ),
-  Button: ({
-    children,
-    className,
-    onClick,
-    'aria-label': ariaLabel,
-  }: {
-    children: React.ReactNode;
-    className?: string;
-    onClick?: () => void;
-    'aria-label'?: string;
-  }) => (
-    <button data-testid="button" className={className} onClick={onClick} aria-label={ariaLabel}>
-      {children}
-    </button>
-  ),
-  Link: ({ children, href, className }: { children: React.ReactNode; href: string; className?: string }) => (
-    <a data-testid="link" href={href} className={className}>
-      {children}
-    </a>
-  ),
-  Tag: ({ name }: { name: string }) => <span data-testid="tag">{name}</span>,
-}));
+vi.mock('@/atoms/Button/Button', () => {
+  return {
+    Button: ({
+      children,
+      className,
+      onClick,
+      'aria-label': ariaLabel,
+    }: {
+      children: React.ReactNode;
+      className?: string;
+      onClick?: () => void;
+      'aria-label'?: string;
+    }) => (
+      <button data-testid="button" className={className} onClick={onClick} aria-label={ariaLabel}>
+        {children}
+      </button>
+    ),
+  };
+});
+
+vi.mock('@/atoms/Container/Container', () => {
+  return {
+    Container: ({ children, className }: { children: React.ReactNode; className?: string }) => (
+      <div data-testid="container" className={className}>
+        {children}
+      </div>
+    ),
+  };
+});
+
+vi.mock('@/atoms/Link/Link', () => {
+  return {
+    Link: ({ children, href, className }: { children: React.ReactNode; href: string; className?: string }) => (
+      <a data-testid="link" href={href} className={className}>
+        {children}
+      </a>
+    ),
+  };
+});
+
+vi.mock('@/atoms/Tag/Tag', () => {
+  return {
+    Tag: ({ name }: { name: string }) => <span data-testid="tag">{name}</span>,
+  };
+});
+
+vi.mock('@/atoms/Typography/Typography', () => {
+  return {
+    Typography: ({
+      children,
+      as: Tag = 'p',
+      className,
+    }: {
+      children: React.ReactNode;
+      as?: React.ElementType;
+      className?: string;
+    }) => (
+      <Tag data-testid="typography" className={className}>
+        {children}
+      </Tag>
+    ),
+  };
+});
 
 // Mock organisms
-vi.mock('@/organisms', () => ({
-  AvatarWithFallback: ({
-    avatarUrl,
-    name,
-    size,
-    className,
-  }: {
-    avatarUrl?: string;
-    name: string;
-    size?: string;
-    className?: string;
-  }) => (
-    <div
-      data-testid="avatar-with-fallback"
-      data-name={name}
-      data-avatar={avatarUrl}
-      data-size={size}
-      className={className}
-    >
-      {avatarUrl ? <img src={avatarUrl} alt={name} /> : <span>{name[0]}</span>}
-    </div>
-  ),
-}));
+vi.mock('@/organisms/AvatarWithFallback/AvatarWithFallback', () => {
+  return {
+    AvatarWithFallback: ({
+      avatarUrl,
+      name,
+      size,
+      className,
+    }: {
+      avatarUrl?: string;
+      name: string;
+      size?: string;
+      className?: string;
+    }) => (
+      <div
+        data-testid="avatar-with-fallback"
+        data-name={name}
+        data-avatar={avatarUrl}
+        data-size={size}
+        className={className}
+      >
+        {avatarUrl ? <img src={avatarUrl} alt={name} /> : <span>{name[0]}</span>}
+      </div>
+    ),
+  };
+});
 
 // Mock dependencies
 vi.mock('@/models/user/users.helpers', () => ({

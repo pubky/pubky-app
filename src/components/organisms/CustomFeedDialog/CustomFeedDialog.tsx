@@ -2,8 +2,16 @@
 
 import { useCustomFeed } from '@/hooks/useCustomFeed/useCustomFeed';
 import { useEffect, useState, type ComponentType, type ReactNode } from 'react';
-import * as Atoms from '@/atoms';
-import * as Molecules from '@/molecules';
+import { Button } from '@/atoms/Button/Button';
+import { Container } from '@/atoms/Container/Container';
+import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from '@/atoms/Dialog/Dialog';
+import { Input } from '@/atoms/Input/Input';
+import { Label } from '@/atoms/Label/Label';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/atoms/Select/Select';
+import { PostTag } from '@/molecules/PostTag/PostTag';
+import { TagInput } from '@/molecules/TagInput/TagInput';
+import { useToast } from '@/molecules/Toaster/use-toast';
+
 import { useTranslations } from 'next-intl';
 import { PubkyAppFeedLayout, PubkyAppFeedReach, PubkyAppFeedSort, PubkyAppPostKind } from 'pubky-app-specs';
 import { useRouter } from 'next/navigation';
@@ -40,7 +48,7 @@ function isVisualCustomFeedContentSupported(content?: CustomFeedDialogContent): 
 }
 export const CustomFeedDialog = ({ mode, children }: CustomFeedDialogProps) => {
   const router = useRouter();
-  const { toast } = Molecules.useToast();
+  const { toast } = useToast();
   const customFeed = useCustomFeed();
   const tFilter = useTranslations('filters');
   const tDialog = useTranslations('dialogs.customFeed');
@@ -272,12 +280,12 @@ export const CustomFeedDialog = ({ mode, children }: CustomFeedDialogProps) => {
     }
   };
   return (
-    <Atoms.Dialog open={open} onOpenChange={setOpen}>
-      <Atoms.DialogTrigger asChild disabled={mode === 'edit' && !customFeed} data-testid="custom-feed-dialog-trigger">
+    <Dialog open={open} onOpenChange={setOpen}>
+      <DialogTrigger asChild disabled={mode === 'edit' && !customFeed} data-testid="custom-feed-dialog-trigger">
         {children}
-      </Atoms.DialogTrigger>
+      </DialogTrigger>
 
-      <Atoms.DialogContent
+      <DialogContent
         onOpenAutoFocus={(e) => {
           if (mode === 'edit') e.preventDefault();
         }}
@@ -285,16 +293,14 @@ export const CustomFeedDialog = ({ mode, children }: CustomFeedDialogProps) => {
         className="w-3xl"
         data-testid="custom-feed-dialog-content"
       >
-        <Atoms.DialogHeader>
-          <Atoms.DialogTitle>{mode === 'create' ? tDialog('createTitle') : tDialog('editTitle')}</Atoms.DialogTitle>
-        </Atoms.DialogHeader>
+        <DialogHeader>
+          <DialogTitle>{mode === 'create' ? tDialog('createTitle') : tDialog('editTitle')}</DialogTitle>
+        </DialogHeader>
 
-        <Atoms.Container className="gap-y-2">
-          <Atoms.Label className="text-xs tracking-wide text-muted-foreground uppercase">
-            {tDialog('feedName')}
-          </Atoms.Label>
+        <Container className="gap-y-2">
+          <Label className="text-xs tracking-wide text-muted-foreground uppercase">{tDialog('feedName')}</Label>
 
-          <Atoms.Input
+          <Input
             required
             placeholder={tDialog('feedNamePlaceholder')}
             value={name}
@@ -303,116 +309,106 @@ export const CustomFeedDialog = ({ mode, children }: CustomFeedDialogProps) => {
             className="h-14 border-dashed"
             data-testid="feed-name-input"
           />
-        </Atoms.Container>
+        </Container>
 
-        <Atoms.Container className="flex-wrap gap-x-8 gap-y-4 sm:flex-row">
-          <Atoms.Container overrideDefaults className="flex flex-col gap-y-2" data-testid="reach-filter-section">
-            <Atoms.Label className="text-xs tracking-wide text-muted-foreground uppercase">
-              {tDialog('reach')}
-            </Atoms.Label>
+        <Container className="flex-wrap gap-x-8 gap-y-4 sm:flex-row">
+          <Container overrideDefaults className="flex flex-col gap-y-2" data-testid="reach-filter-section">
+            <Label className="text-xs tracking-wide text-muted-foreground uppercase">{tDialog('reach')}</Label>
 
-            <Atoms.Select
+            <Select
               value={reach === undefined ? reach : String(reach)}
               onValueChange={(v) => setReach(Number(v))}
               disabled={disabled}
               data-testid="reach-select"
             >
-              <Atoms.SelectTrigger className="w-full sm:w-fit">
-                <Atoms.SelectValue placeholder={tDialog('reachPlaceholder')} />
-              </Atoms.SelectTrigger>
+              <SelectTrigger className="w-full sm:w-fit">
+                <SelectValue placeholder={tDialog('reachPlaceholder')} />
+              </SelectTrigger>
 
-              <Atoms.SelectContent>
+              <SelectContent>
                 {reachFilters.map((r) => (
-                  <Atoms.SelectItem key={r.value} value={String(r.value)}>
+                  <SelectItem key={r.value} value={String(r.value)}>
                     <r.icon /> {r.label}
-                  </Atoms.SelectItem>
+                  </SelectItem>
                 ))}
-              </Atoms.SelectContent>
-            </Atoms.Select>
-          </Atoms.Container>
+              </SelectContent>
+            </Select>
+          </Container>
 
-          <Atoms.Container overrideDefaults className="flex flex-col gap-y-2" data-testid="sort-filter-section">
-            <Atoms.Label className="text-xs tracking-wide text-muted-foreground uppercase">
-              {tDialog('sort')}
-            </Atoms.Label>
+          <Container overrideDefaults className="flex flex-col gap-y-2" data-testid="sort-filter-section">
+            <Label className="text-xs tracking-wide text-muted-foreground uppercase">{tDialog('sort')}</Label>
 
-            <Atoms.Select
+            <Select
               value={sort === undefined ? sort : String(sort)}
               onValueChange={(v) => setSort(Number(v))}
               disabled={disabled}
               data-testid="sort-select"
             >
-              <Atoms.SelectTrigger className="w-full sm:w-fit">
-                <Atoms.SelectValue placeholder={tDialog('sortPlaceholder')} />
-              </Atoms.SelectTrigger>
+              <SelectTrigger className="w-full sm:w-fit">
+                <SelectValue placeholder={tDialog('sortPlaceholder')} />
+              </SelectTrigger>
 
-              <Atoms.SelectContent>
+              <SelectContent>
                 {sortFilters.map((r) => (
-                  <Atoms.SelectItem key={r.value} value={String(r.value)}>
+                  <SelectItem key={r.value} value={String(r.value)}>
                     <r.icon /> {r.label}
-                  </Atoms.SelectItem>
+                  </SelectItem>
                 ))}
-              </Atoms.SelectContent>
-            </Atoms.Select>
-          </Atoms.Container>
+              </SelectContent>
+            </Select>
+          </Container>
 
-          <Atoms.Container overrideDefaults className="flex flex-col gap-y-2" data-testid="layout-filter-section">
-            <Atoms.Label className="text-xs tracking-wide text-muted-foreground uppercase">
-              {tDialog('layout')}
-            </Atoms.Label>
+          <Container overrideDefaults className="flex flex-col gap-y-2" data-testid="layout-filter-section">
+            <Label className="text-xs tracking-wide text-muted-foreground uppercase">{tDialog('layout')}</Label>
 
-            <Atoms.Select
+            <Select
               value={layout === undefined ? layout : String(layout)}
               onValueChange={handleLayoutChange}
               disabled={disabled}
               data-testid="layout-select"
             >
-              <Atoms.SelectTrigger className="w-full sm:w-fit">
-                <Atoms.SelectValue placeholder={tDialog('layoutPlaceholder')} />
-              </Atoms.SelectTrigger>
+              <SelectTrigger className="w-full sm:w-fit">
+                <SelectValue placeholder={tDialog('layoutPlaceholder')} />
+              </SelectTrigger>
 
-              <Atoms.SelectContent>
+              <SelectContent>
                 {layoutFilters.map((r) => (
-                  <Atoms.SelectItem key={r.value} value={String(r.value)}>
+                  <SelectItem key={r.value} value={String(r.value)}>
                     <r.icon /> {r.label}
-                  </Atoms.SelectItem>
+                  </SelectItem>
                 ))}
-              </Atoms.SelectContent>
-            </Atoms.Select>
-          </Atoms.Container>
+              </SelectContent>
+            </Select>
+          </Container>
 
-          <Atoms.Container overrideDefaults className="flex flex-col gap-y-2" data-testid="content-filter-section">
-            <Atoms.Label className="text-xs tracking-wide text-muted-foreground uppercase">
-              {tDialog('content')}
-            </Atoms.Label>
+          <Container overrideDefaults className="flex flex-col gap-y-2" data-testid="content-filter-section">
+            <Label className="text-xs tracking-wide text-muted-foreground uppercase">{tDialog('content')}</Label>
 
-            <Atoms.Select
+            <Select
               value={content === undefined ? content : String(content)}
               onValueChange={(v) => setContent(v === 'ALL' ? v : Number(v))}
               disabled={disabled}
               data-testid="content-select"
             >
-              <Atoms.SelectTrigger className="w-full sm:w-fit">
-                <Atoms.SelectValue placeholder={tDialog('contentPlaceholder')} />
-              </Atoms.SelectTrigger>
+              <SelectTrigger className="w-full sm:w-fit">
+                <SelectValue placeholder={tDialog('contentPlaceholder')} />
+              </SelectTrigger>
 
-              <Atoms.SelectContent>
+              <SelectContent>
                 {contentFilters.map((r) => (
-                  <Atoms.SelectItem key={r.value} value={String(r.value)}>
+                  <SelectItem key={r.value} value={String(r.value)}>
                     <r.icon /> {r.label}
-                  </Atoms.SelectItem>
+                  </SelectItem>
                 ))}
-              </Atoms.SelectContent>
-            </Atoms.Select>
-          </Atoms.Container>
-        </Atoms.Container>
+              </SelectContent>
+            </Select>
+          </Container>
+        </Container>
 
-        <Atoms.Container className="gap-y-2">
-          <Atoms.Label className="text-xs tracking-wide text-muted-foreground uppercase">
-            {tDialog('filterTags')}
-          </Atoms.Label>
+        <Container className="gap-y-2">
+          <Label className="text-xs tracking-wide text-muted-foreground uppercase">{tDialog('filterTags')}</Label>
 
-          <Molecules.TagInput
+          <TagInput
             onTagAdd={(tag) => setTags([...tags, tag])}
             existingTags={tags.map((tag) => ({
               label: tag,
@@ -429,21 +425,21 @@ export const CustomFeedDialog = ({ mode, children }: CustomFeedDialogProps) => {
           />
 
           {tags.length > 0 && (
-            <Atoms.Container className="flex-row flex-wrap gap-2">
+            <Container className="flex-row flex-wrap gap-2">
               {tags.map((tag, index) => (
-                <Molecules.PostTag
+                <PostTag
                   key={`${tag}-${index}`}
                   label={tag}
                   showClose={!disabled}
                   onClose={() => setTags((prevTags) => prevTags.filter((_, i) => i !== index))}
                 />
               ))}
-            </Atoms.Container>
+            </Container>
           )}
-        </Atoms.Container>
+        </Container>
 
-        <Atoms.DialogFooter>
-          <Atoms.Button
+        <DialogFooter>
+          <Button
             variant="secondary"
             size="lg"
             onClick={handleSaveFeed}
@@ -453,10 +449,10 @@ export const CustomFeedDialog = ({ mode, children }: CustomFeedDialogProps) => {
           >
             <Activity className="size-4" />
             {tDialog('saveFeed')}
-          </Atoms.Button>
+          </Button>
 
           {mode === 'edit' && (
-            <Atoms.Button
+            <Button
               variant="destructive"
               size="lg"
               onClick={handleDeleteFeed}
@@ -466,10 +462,10 @@ export const CustomFeedDialog = ({ mode, children }: CustomFeedDialogProps) => {
             >
               <Delete className="size-4" />
               {tDialog('deleteFeed')}
-            </Atoms.Button>
+            </Button>
           )}
-        </Atoms.DialogFooter>
-      </Atoms.DialogContent>
-    </Atoms.Dialog>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
   );
 };

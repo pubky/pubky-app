@@ -10,10 +10,8 @@ vi.mock('@/hooks/useIsFollowing/useIsFollowing', () => ({
 }));
 
 // Mock UserListItem organism
-vi.mock('@/organisms', async (importOriginal) => {
-  const actual = await importOriginal<typeof import('@/organisms')>();
+vi.mock('@/organisms/UserListItem/UserListItem', () => {
   return {
-    ...actual,
     UserListItem: ({
       user,
       variant,

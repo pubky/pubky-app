@@ -3,8 +3,11 @@
 import { useFollowUser } from '@/hooks/useFollowUser/useFollowUser';
 import { useInfiniteScroll } from '@/hooks/useInfiniteScroll/useInfiniteScroll';
 import { useUserStream } from '@/hooks/useUserStream/useUserStream';
-import * as Atoms from '@/atoms';
-import * as Organisms from '@/organisms';
+import { Container } from '@/atoms/Container/Container';
+import { Typography } from '@/atoms/Typography/Typography';
+import { FullUserListItemSkeleton } from '../FullUserListItemSkeleton/FullUserListItemSkeleton';
+import { UserListItem } from '../UserListItem/UserListItem';
+
 import { USERS_PER_PAGE } from './WhoToFollowPageMain.constants';
 import { Users } from 'lucide-react';
 import type { Pubky } from '@/models/models.types';
@@ -42,44 +45,44 @@ export function WhoToFollowPageMain() {
   };
   if (isLoading) {
     return (
-      <Atoms.Container className="mt-6 gap-4 lg:mt-0">
-        <Atoms.Container className="gap-3.5 rounded-md bg-transparent p-0 lg:gap-3 lg:bg-card lg:p-6">
+      <Container className="mt-6 gap-4 lg:mt-0">
+        <Container className="gap-3.5 rounded-md bg-transparent p-0 lg:gap-3 lg:bg-card lg:p-6">
           {Array.from({
             length: USERS_PER_PAGE,
           }).map((_, index) => (
-            <Organisms.FullUserListItemSkeleton key={`who-to-follow-page-skeleton-${index}`} />
+            <FullUserListItemSkeleton key={`who-to-follow-page-skeleton-${index}`} />
           ))}
-        </Atoms.Container>
-      </Atoms.Container>
+        </Container>
+      </Container>
     );
   }
   if (users.length === 0) {
     return (
-      <Atoms.Container data-testid="who-to-follow-empty" className="relative mt-6 items-center gap-6 px-0 py-6 lg:mt-0">
+      <Container data-testid="who-to-follow-empty" className="relative mt-6 items-center gap-6 px-0 py-6 lg:mt-0">
         {/* Icon */}
-        <Atoms.Container overrideDefaults className="flex items-center rounded-full bg-brand/16 p-6">
+        <Container overrideDefaults className="flex items-center rounded-full bg-brand/16 p-6">
           <Users className="size-12 text-brand" strokeWidth={1.5} />
-        </Atoms.Container>
+        </Container>
 
         {/* Title and subtitle */}
-        <Atoms.Container className="items-center gap-6">
-          <Atoms.Typography as="h3" size="lg">
+        <Container className="items-center gap-6">
+          <Typography as="h3" size="lg">
             No recommendations yet
-          </Atoms.Typography>
-          <Atoms.Typography className="text-center text-base leading-6 font-medium text-secondary-foreground">
+          </Typography>
+          <Typography className="text-center text-base leading-6 font-medium text-secondary-foreground">
             We&apos;re still learning about your interests.
             <br />
             Follow some users or explore tags to get personalized recommendations.
-          </Atoms.Typography>
-        </Atoms.Container>
-      </Atoms.Container>
+          </Typography>
+        </Container>
+      </Container>
     );
   }
   return (
-    <Atoms.Container data-cy="who-to-follow-page" className="mt-6 gap-4 lg:mt-0">
-      <Atoms.Container className="gap-3.5 rounded-md bg-transparent p-0 lg:gap-3 lg:bg-card lg:p-6">
+    <Container data-cy="who-to-follow-page" className="mt-6 gap-4 lg:mt-0">
+      <Container className="gap-3.5 rounded-md bg-transparent p-0 lg:gap-3 lg:bg-card lg:p-6">
         {users.map((user) => (
-          <Organisms.UserListItem
+          <UserListItem
             key={user.id}
             user={user}
             variant="full"
@@ -89,20 +92,20 @@ export function WhoToFollowPageMain() {
             onFollowClick={handleFollow}
           />
         ))}
-      </Atoms.Container>
+      </Container>
 
       {/* Infinite scroll trigger */}
-      <Atoms.Container overrideDefaults ref={sentinelRef} className="h-1" />
+      <Container overrideDefaults ref={sentinelRef} className="h-1" />
 
       {isLoadingMore && (
-        <Atoms.Container className="gap-4 py-4">
+        <Container className="gap-4 py-4">
           {Array.from({
             length: LOAD_MORE_SKELETON_COUNT,
           }).map((_, i) => (
-            <Organisms.FullUserListItemSkeleton key={`who-to-follow-load-more-skeleton-${i}`} />
+            <FullUserListItemSkeleton key={`who-to-follow-load-more-skeleton-${i}`} />
           ))}
-        </Atoms.Container>
+        </Container>
       )}
-    </Atoms.Container>
+    </Container>
   );
 }

@@ -2,8 +2,10 @@
 
 import { usePostNavigation } from '@/hooks/usePostNavigation/usePostNavigation';
 import { useTtlSubscription } from '@/hooks/useTtlSubscription/useTtlSubscription';
-import * as Atoms from '@/atoms';
-import * as Organisms from '@/organisms';
+import { Card, CardContent } from '@/atoms/Card/Card';
+import { PostContentBase } from '@/organisms/PostContentBase/PostContentBase';
+import { PostHeader } from '@/organisms/PostHeader/PostHeader';
+
 import type { PostPreviewCardProps } from './PostPreviewCard.types';
 import { cn } from '@/libs/utils/utils';
 
@@ -49,7 +51,7 @@ export function PostPreviewCard({ postId, className }: PostPreviewCardProps) {
   };
 
   return (
-    <Atoms.Card
+    <Card
       ref={ttlRef}
       data-cy="post-preview-card"
       className={cn('min-w-0 cursor-pointer rounded-md py-0 transition-colors hover:bg-accent/50', className)}
@@ -59,10 +61,10 @@ export function PostPreviewCard({ postId, className }: PostPreviewCardProps) {
       tabIndex={0}
       aria-label="View original post"
     >
-      <Atoms.CardContent className="flex min-w-0 flex-col gap-4 p-6">
-        <Organisms.PostHeader postId={postId} showPopover={false} />
-        <Organisms.PostContentBase postId={postId} />
-      </Atoms.CardContent>
-    </Atoms.Card>
+      <CardContent className="flex min-w-0 flex-col gap-4 p-6">
+        <PostHeader postId={postId} showPopover={false} />
+        <PostContentBase postId={postId} />
+      </CardContent>
+    </Card>
   );
 }

@@ -2,12 +2,12 @@ import { HttpMethod } from '@/libs/http/http.types';
 import type { NexusPostsKeyStream, NexusPostWithAttachmentMetadata } from '@/services/nexus/nexus.types';
 import { queryNexus } from '@/services/nexus/nexus.utils';
 import { postStreamApi } from '@/services/nexus/stream/posts/postStream.api';
-import { StreamSource } from '@/services/nexus/stream/posts/postStream.types';
-import type {
-  TPostStreamFetchParams,
-  TStreamAuthorParams,
-  TStreamPostRepliesParams,
-  TStreamPostsByIdsParams,
+import {
+  StreamSource,
+  type TPostStreamFetchParams,
+  type TStreamAuthorParams,
+  type TStreamPostRepliesParams,
+  type TStreamPostsByIdsParams,
 } from '@/services/nexus/stream/posts/postStream.types';
 /**
  * Nexus Post Stream Service

@@ -40,67 +40,96 @@ vi.mock('@/libs/share/shareTarget', async () => {
 });
 
 // Mock Atoms
-vi.mock('@/atoms', () => ({
-  Container: ({ children, className }: { children: React.ReactNode; className?: string }) => (
-    <div data-testid="container" className={className}>
-      {children}
-    </div>
-  ),
-  Typography: ({ children, as: Tag = 'span' }: { children: React.ReactNode; as?: ElementType; size?: string }) => {
-    const Comp = Tag as ElementType;
-    return <Comp data-testid="typography">{children}</Comp>;
-  },
-  Button: ({
-    children,
-    onClick,
-    variant,
-    size,
-  }: {
-    children: React.ReactNode;
-    onClick?: () => void;
-    variant?: string;
-    size?: string;
-  }) => (
-    <button data-testid="button" data-variant={variant} data-size={size} onClick={onClick}>
-      {children}
-    </button>
-  ),
-  Spinner: () => <div data-testid="spinner">Loading...</div>,
-  Skeleton: ({ className }: { className?: string }) => <div data-testid="skeleton" className={className} />,
-}));
+vi.mock('@/atoms/Button/Button', () => {
+  return {
+    Button: ({
+      children,
+      onClick,
+      variant,
+      size,
+    }: {
+      children: React.ReactNode;
+      onClick?: () => void;
+      variant?: string;
+      size?: string;
+    }) => (
+      <button data-testid="button" data-variant={variant} data-size={size} onClick={onClick}>
+        {children}
+      </button>
+    ),
+  };
+});
+
+vi.mock('@/atoms/Container/Container', () => {
+  return {
+    Container: ({ children, className }: { children: React.ReactNode; className?: string }) => (
+      <div data-testid="container" className={className}>
+        {children}
+      </div>
+    ),
+  };
+});
+
+vi.mock('@/atoms/Skeleton/Skeleton', () => {
+  return {
+    Skeleton: ({ className }: { className?: string }) => <div data-testid="skeleton" className={className} />,
+  };
+});
+
+vi.mock('@/atoms/Spinner/Spinner', () => {
+  return {
+    Spinner: () => <div data-testid="spinner">Loading...</div>,
+  };
+});
+
+vi.mock('@/atoms/Typography/Typography', () => {
+  return {
+    Typography: ({ children, as: Tag = 'span' }: { children: React.ReactNode; as?: ElementType; size?: string }) => {
+      const Comp = Tag as ElementType;
+      return <Comp data-testid="typography">{children}</Comp>;
+    },
+  };
+});
 
 // Mock Organisms
-vi.mock('@/organisms', () => ({
-  ContentLayout: ({ children }: { children: React.ReactNode }) => <div data-testid="content-layout">{children}</div>,
-  PostInput: ({
-    dataCy,
-    variant,
-    expanded,
-    onSuccess,
-    initialContent,
-    initialAttachments,
-  }: {
-    dataCy?: string;
-    variant?: string;
-    expanded?: boolean;
-    onSuccess?: () => void;
-    initialContent?: string;
-    initialAttachments?: File[];
-  }) => (
-    <div
-      data-testid="post-input"
-      data-cy={dataCy}
-      data-variant={variant}
-      data-expanded={expanded}
-      data-initial-content={initialContent}
-      data-has-attachments={initialAttachments && initialAttachments.length > 0}
-    >
-      <button data-testid="post-submit" onClick={onSuccess}>
-        Submit
-      </button>
-    </div>
-  ),
-}));
+vi.mock('@/organisms/ContentLayout/ContentLayout', () => {
+  return {
+    ContentLayout: ({ children }: { children: React.ReactNode }) => <div data-testid="content-layout">{children}</div>,
+  };
+});
+
+vi.mock('@/organisms/PostInput/PostInput', () => {
+  return {
+    PostInput: ({
+      dataCy,
+      variant,
+      expanded,
+      onSuccess,
+      initialContent,
+      initialAttachments,
+    }: {
+      dataCy?: string;
+      variant?: string;
+      expanded?: boolean;
+      onSuccess?: () => void;
+      initialContent?: string;
+      initialAttachments?: File[];
+    }) => (
+      <div
+        data-testid="post-input"
+        data-cy={dataCy}
+        data-variant={variant}
+        data-expanded={expanded}
+        data-initial-content={initialContent}
+        data-has-attachments={initialAttachments && initialAttachments.length > 0}
+      >
+        <button data-testid="post-submit" onClick={onSuccess}>
+          Submit
+        </button>
+      </div>
+    ),
+  };
+});
 
 describe('ShareTarget', () => {
   beforeEach(() => {

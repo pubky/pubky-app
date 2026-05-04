@@ -2,7 +2,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen, cleanup } from '@testing-library/react';
 import { QuickReply } from './QuickReply';
 import { QUICK_REPLY_PROMPTS_COUNT } from './QuickReply.constants';
-import { POST_MAX_CHARACTER_LENGTH } from '@/config';
+import { POST_MAX_CHARACTER_LENGTH } from '@/config/posts';
 import { PostMainLayoutProvider } from '@/organisms/PostMain/PostMainLayout';
 import { useIsMobile } from '@/hooks/useIsMobile/useIsMobile';
 
@@ -53,28 +53,61 @@ function createUsePostInputReturn(options: unknown, overrides: Record<string, un
   };
 }
 
-vi.mock('@/atoms', () => ({
-  Container: ({ children, ...props }: { children?: React.ReactNode; [key: string]: unknown }) => (
-    <div data-testid="container" {...props}>
-      {children}
-    </div>
-  ),
-  Textarea: ({ 'data-testid': dataTestId, ...props }: { 'data-testid'?: string; [key: string]: unknown }) => (
-    <textarea data-testid={dataTestId ?? 'textarea'} {...props} />
-  ),
-  PostThreadConnector: ({ ...props }: { [key: string]: unknown }) => <div data-testid="thread-connector" {...props} />,
-  POST_THREAD_CONNECTOR_VARIANTS: { LAST: 'last', REGULAR: 'regular', DIALOG_REPLY: 'dialog-reply' },
-}));
+vi.mock('@/atoms/Container/Container', () => {
+  return {
+    Container: ({ children, ...props }: { children?: React.ReactNode; [key: string]: unknown }) => (
+      <div data-testid="container" {...props}>
+        {children}
+      </div>
+    ),
+  };
+});
 
-vi.mock('@/organisms', () => ({
-  AvatarWithFallback: ({ size }: { size?: string }) => <div data-testid="avatar" data-size={size} />,
-}));
+vi.mock('@/atoms/PostThreadConnector/PostThreadConnector', () => {
+  return {
+    PostThreadConnector: ({ ...props }: { [key: string]: unknown }) => (
+      <div data-testid="thread-connector" {...props} />
+    ),
+  };
+});
 
-vi.mock('@/molecules', () => ({
-  PostLinkEmbeds: ({ ...props }: { [key: string]: unknown }) => <div data-testid="link-embeds" {...props} />,
-  PostTag: ({ label }: { label: string }) => <div data-testid="tag">{label}</div>,
-  EmojiPickerDialog: ({ ...props }: { [key: string]: unknown }) => <div data-testid="emoji-dialog" {...props} />,
-}));
+vi.mock('@/atoms/PostThreadConnector/PostThreadConnector.constants', () => {
+  return {
+    POST_THREAD_CONNECTOR_VARIANTS: { LAST: 'last', REGULAR: 'regular', DIALOG_REPLY: 'dialog-reply' },
+  };
+});
+
+vi.mock('@/atoms/Textarea/Textarea', () => {
+  return {
+    Textarea: ({ 'data-testid': dataTestId, ...props }: { 'data-testid'?: string; [key: string]: unknown }) => (
+      <textarea data-testid={dataTestId ?? 'textarea'} {...props} />
+    ),
+  };
+});
+
+vi.mock('@/organisms/AvatarWithFallback/AvatarWithFallback', () => {
+  return {
+    AvatarWithFallback: ({ size }: { size?: string }) => <div data-testid="avatar" data-size={size} />,
+  };
+});
+
+vi.mock('@/molecules/EmojiPickerDialog/EmojiPickerDialog', () => {
+  return {
+    EmojiPickerDialog: ({ ...props }: { [key: string]: unknown }) => <div data-testid="emoji-dialog" {...props} />,
+  };
+});
+
+vi.mock('@/molecules/PostLinkEmbeds/PostLinkEmbeds', () => {
+  return {
+    PostLinkEmbeds: ({ ...props }: { [key: string]: unknown }) => <div data-testid="link-embeds" {...props} />,
+  };
+});
+
+vi.mock('@/molecules/PostTag/PostTag', () => {
+  return {
+    PostTag: ({ label }: { label: string }) => <div data-testid="tag">{label}</div>,
+  };
+});
 
 vi.mock('@/molecules/PostInputAttachments/PostInputAttachments', () => ({
   PostInputAttachments: ({ ...props }: { [key: string]: unknown }) => (
@@ -82,15 +115,15 @@ vi.mock('@/molecules/PostInputAttachments/PostInputAttachments', () => ({
   ),
 }));
 
-vi.mock('@/organisms/PostInputActionBar', () => ({
+vi.mock('@/organisms/PostInputActionBar/PostInputActionBar', () => ({
   PostInputActionBar: ({ ...props }: { [key: string]: unknown }) => <div data-testid="action-bar" {...props} />,
 }));
 
-vi.mock('@/organisms/PostInputTags', () => ({
+vi.mock('@/organisms/PostInputTags/PostInputTags', () => ({
   PostInputTags: ({ ...props }: { [key: string]: unknown }) => <div data-testid="tags-input" {...props} />,
 }));
 
-vi.mock('@/organisms/PostInputExpandableSection', () => ({
+vi.mock('@/organisms/PostInputExpandableSection/PostInputExpandableSection', () => ({
   PostInputExpandableSection: ({
     characterLimit,
   }: {

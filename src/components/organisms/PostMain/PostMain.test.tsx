@@ -6,7 +6,7 @@ import { usePostDetails } from '@/hooks/usePostDetails/usePostDetails';
 import { usePostHeaderVisibility } from '@/hooks/usePostHeaderVisibility/usePostHeaderVisibility';
 import { PostMain } from './PostMain';
 import { PostMainLayoutProvider } from './PostMainLayout';
-import { POST_THREAD_CONNECTOR_VARIANTS } from '@/components/atoms/PostThreadConnector/PostThreadConnector.constants';
+import { POST_THREAD_CONNECTOR_VARIANTS } from '@/atoms/PostThreadConnector/PostThreadConnector.constants';
 
 // Use vi.hoisted to define mock functions before vi.mock calls (which are hoisted)
 const { mockPostHeader } = vi.hoisted(() => ({
@@ -18,9 +18,22 @@ const { mockPostHeader } = vi.hoisted(() => ({
 }));
 
 // Minimal atoms used by PostMain
-vi.mock('@/atoms', async () => {
-  const { POST_THREAD_CONNECTOR_VARIANTS } =
-    await import('@/components/atoms/PostThreadConnector/PostThreadConnector.constants');
+vi.mock('@/atoms/Card/Card', () => {
+  return {
+    Card: vi.fn(({ children, className }: { children: React.ReactNode; className?: string }) => (
+      <div data-testid="card" data-class-name={className}>
+        {children}
+      </div>
+    )),
+    CardContent: ({ children, className }: { children: React.ReactNode; className?: string }) => (
+      <div data-testid="card-content" data-class-name={className}>
+        {children}
+      </div>
+    ),
+  };
+});
+
+vi.mock('@/atoms/Container/Container', () => {
   return {
     Container: (
       props: React.PropsWithChildren<{
@@ -43,129 +56,161 @@ vi.mock('@/atoms', async () => {
         </div>
       );
     },
-    Card: vi.fn(({ children, className }: { children: React.ReactNode; className?: string }) => (
-      <div data-testid="card" data-class-name={className}>
-        {children}
-      </div>
-    )),
-    CardContent: ({ children, className }: { children: React.ReactNode; className?: string }) => (
-      <div data-testid="card-content" data-class-name={className}>
-        {children}
-      </div>
-    ),
+  };
+});
+
+vi.mock('@/atoms/PostThreadConnector/PostThreadConnector', () => {
+  return {
     PostThreadConnector: ({ height, variant }: { height: number; variant?: string }) => (
       <div data-testid="thread-connector" data-height={height} data-variant={variant}>
         ThreadConnector
       </div>
     ),
-    POST_THREAD_CONNECTOR_VARIANTS,
   };
 });
 
 // Stub organisms composed inside PostMain
-vi.mock('@/organisms', () => ({
-  PostHeader: ({
-    postId,
-    size,
-    timeAgoPlacement,
-  }: {
-    postId: string;
-    size?: 'normal' | 'large';
-    timeAgoPlacement?: 'top-right' | 'bottom-left';
-  }) => mockPostHeader({ postId, size, timeAgoPlacement }),
-  PostContent: ({ postId, textClassName }: { postId: string; textClassName?: string }) => (
-    <div data-testid="post-content" data-text-class-name={textClassName}>
-      PostContent {postId}
-    </div>
-  ),
-  PostActionsBar: ({
-    postId,
-    className,
-    onTagClick,
-    onReplyClick,
-    onRepostClick,
-  }: {
-    postId: string;
-    className?: string;
-    onTagClick?: () => void;
-    onReplyClick?: () => void;
-    onRepostClick?: () => void;
-  }) => (
-    <div data-testid="post-actions" data-class-name={className}>
-      Actions {postId}
-      {onTagClick && (
-        <button data-testid="tag-button" onClick={onTagClick}>
-          Tag
-        </button>
-      )}
-      {onReplyClick && <button onClick={onReplyClick}>Reply</button>}
-      {onRepostClick && <button onClick={onRepostClick}>Repost</button>}
-    </div>
-  ),
-  PostTagsPanel: ({ postId, className }: { postId: string; className?: string }) => (
-    <div data-testid="post-tags-panel" data-post-id={postId} data-class-name={className}>
-      PostTagsPanel {postId}
-    </div>
-  ),
-  DialogReply: ({
-    postId,
-    open,
-    onOpenChangeAction,
-  }: {
-    postId: string;
-    open: boolean;
-    onOpenChangeAction: (open: boolean) => void;
-  }) => (
-    <div data-testid="dialog-reply" data-post-id={postId} data-open={open} onClick={() => onOpenChangeAction(false)}>
-      DialogReply
-    </div>
-  ),
-  DialogRepost: ({
-    postId,
-    open,
-    onOpenChangeAction,
-  }: {
-    postId: string;
-    open: boolean;
-    onOpenChangeAction: (open: boolean) => void;
-  }) => (
-    <div data-testid="dialog-repost" data-post-id={postId} data-open={open} onClick={() => onOpenChangeAction(false)}>
-      DialogRepost
-    </div>
-  ),
-  ClickableTagsList: ({
-    taggedId,
-    taggedKind,
-    showCount: _showCount,
-    showInput: _showInput,
-    showAddButton: _showAddButton,
-    addMode: _addMode,
-  }: {
-    taggedId: string;
-    taggedKind: unknown;
-    showCount?: boolean;
-    showInput?: boolean;
-    showAddButton?: boolean;
-    addMode?: boolean;
-    [key: string]: unknown;
-  }) => (
-    <div
-      data-testid="clickable-tags-list"
-      data-tagged-id={taggedId}
-      data-tagged-kind={String(taggedKind)}
-      data-show-add-button={String(_showAddButton)}
-    >
-      ClickableTagsList {taggedId}
-    </div>
-  ),
-}));
+vi.mock('@/organisms/ClickableTagsList/ClickableTagsList', () => {
+  return {
+    ClickableTagsList: ({
+      taggedId,
+      taggedKind,
+      showCount: _showCount,
+      showInput: _showInput,
+      showAddButton: _showAddButton,
+      addMode: _addMode,
+    }: {
+      taggedId: string;
+      taggedKind: unknown;
+      showCount?: boolean;
+      showInput?: boolean;
+      showAddButton?: boolean;
+      addMode?: boolean;
+      [key: string]: unknown;
+    }) => (
+      <div
+        data-testid="clickable-tags-list"
+        data-tagged-id={taggedId}
+        data-tagged-kind={String(taggedKind)}
+        data-show-add-button={String(_showAddButton)}
+      >
+        ClickableTagsList {taggedId}
+      </div>
+    ),
+  };
+});
+
+vi.mock('@/organisms/DialogReply/DialogReply', () => {
+  return {
+    DialogReply: ({
+      postId,
+      open,
+      onOpenChangeAction,
+    }: {
+      postId: string;
+      open: boolean;
+      onOpenChangeAction: (open: boolean) => void;
+    }) => (
+      <div data-testid="dialog-reply" data-post-id={postId} data-open={open} onClick={() => onOpenChangeAction(false)}>
+        DialogReply
+      </div>
+    ),
+  };
+});
+
+vi.mock('@/organisms/DialogRepost/DialogRepost', () => {
+  return {
+    DialogRepost: ({
+      postId,
+      open,
+      onOpenChangeAction,
+    }: {
+      postId: string;
+      open: boolean;
+      onOpenChangeAction: (open: boolean) => void;
+    }) => (
+      <div data-testid="dialog-repost" data-post-id={postId} data-open={open} onClick={() => onOpenChangeAction(false)}>
+        DialogRepost
+      </div>
+    ),
+  };
+});
+
+vi.mock('@/organisms/PostActionsBar/PostActionsBar', () => {
+  return {
+    PostActionsBar: ({
+      postId,
+      className,
+      onTagClick,
+      onReplyClick,
+      onRepostClick,
+    }: {
+      postId: string;
+      className?: string;
+      onTagClick?: () => void;
+      onReplyClick?: () => void;
+      onRepostClick?: () => void;
+    }) => (
+      <div data-testid="post-actions" data-class-name={className}>
+        Actions {postId}
+        {onTagClick && (
+          <button data-testid="tag-button" onClick={onTagClick}>
+            Tag
+          </button>
+        )}
+        {onReplyClick && <button onClick={onReplyClick}>Reply</button>}
+        {onRepostClick && <button onClick={onRepostClick}>Repost</button>}
+      </div>
+    ),
+  };
+});
+
+vi.mock('@/organisms/PostContent/PostContent', () => {
+  return {
+    PostContent: ({ postId, textClassName }: { postId: string; textClassName?: string }) => (
+      <div data-testid="post-content" data-text-class-name={textClassName}>
+        PostContent {postId}
+      </div>
+    ),
+  };
+});
+
+vi.mock('@/organisms/PostHeader/PostHeader', () => {
+  return {
+    PostHeader: ({
+      postId,
+      size,
+      timeAgoPlacement,
+    }: {
+      postId: string;
+      size?: 'normal' | 'large';
+      timeAgoPlacement?: 'top-right' | 'bottom-left';
+    }) => mockPostHeader({ postId, size, timeAgoPlacement }),
+  };
+});
+
+vi.mock('@/organisms/PostTagsPanel/PostTagsPanel', () => {
+  return {
+    PostTagsPanel: ({ postId, className }: { postId: string; className?: string }) => (
+      <div data-testid="post-tags-panel" data-post-id={postId} data-class-name={className}>
+        PostTagsPanel {postId}
+      </div>
+    ),
+  };
+});
 
 // Stub molecules used by PostMain
-vi.mock('@/molecules', () => ({
-  PostTagsList: ({ postId }: { postId: string }) => <div data-testid="post-tags-list">PostTagsList {postId}</div>,
-  PostDeleted: () => <div data-testid="post-deleted">PostDeleted</div>,
-  RepostHeader: () => <div data-testid="repost-header">You reposted</div>,
-}));
+vi.mock('@/molecules/PostDeleted/PostDeleted', () => {
+  return {
+    PostDeleted: () => <div data-testid="post-deleted">PostDeleted</div>,
+  };
+});
+
+vi.mock('@/molecules/RepostHeader/RepostHeader', () => {
+  return {
+    RepostHeader: () => <div data-testid="repost-header">You reposted</div>,
+  };
+});
 
 // Mock hooks
 vi.mock('@/hooks/useElementHeight/useElementHeight', () => ({

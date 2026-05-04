@@ -3,6 +3,62 @@ import { useState, useEffect } from 'react';
 import { render, fireEvent, screen, act } from '@testing-library/react';
 import { DialogBackupPhrase } from './DialogBackupPhrase';
 import { useRecoveryPhraseValidation } from '@/hooks/useRecoveryPhraseValidation/useRecoveryPhraseValidation';
+vi.mock('@/atoms/Dialog/Dialog', () => {
+  return {
+    Dialog: ({ children, onOpenChange }: { children: React.ReactNode; onOpenChange?: (open: boolean) => void }) => {
+      dialogMockControls.onOpenChange = onOpenChange;
+      return <div data-testid="dialog">{children}</div>;
+    },
+    DialogTrigger: ({ children, asChild }: { children: React.ReactNode; asChild?: boolean }) => (
+      <div data-testid="dialog-trigger" data-as-child={asChild}>
+        {children}
+      </div>
+    ),
+    DialogContent: ({
+      children,
+      className,
+      hiddenTitle,
+    }: {
+      children: React.ReactNode;
+      className?: string;
+      hiddenTitle?: string;
+    }) => (
+      <div data-testid="dialog-content" className={className} data-hidden-title={hiddenTitle}>
+        {hiddenTitle && (
+          <h2 className="sr-only" data-testid="dialog-hidden-title">
+            {hiddenTitle}
+          </h2>
+        )}
+        {children}
+      </div>
+    ),
+    DialogHeader: ({ children, className }: { children: React.ReactNode; className?: string }) => (
+      <div data-testid="dialog-header" className={className}>
+        {children}
+      </div>
+    ),
+    DialogTitle: ({ children, className }: { children: React.ReactNode; className?: string }) => (
+      <h2 data-testid="dialog-title" className={className}>
+        {children}
+      </h2>
+    ),
+    DialogDescription: ({ children, className }: { children: React.ReactNode; className?: string }) => (
+      <p data-testid="dialog-description" className={className}>
+        {children}
+      </p>
+    ),
+    DialogFooter: ({ children, className }: { children: React.ReactNode; className?: string }) => (
+      <div data-testid="dialog-footer" className={className}>
+        {children}
+      </div>
+    ),
+    DialogClose: ({ children, asChild }: { children: React.ReactNode; asChild?: boolean }) => (
+      <div data-testid="dialog-close" data-as-child={asChild}>
+        {children}
+      </div>
+    ),
+  };
+});
 
 const dialogMockControls: {
   onOpenChange?: (open: boolean) => void;
@@ -35,135 +91,107 @@ vi.mock('@/stores/onboarding/onboarding.store', () => ({
 }));
 
 // Mock atoms
-vi.mock('@/atoms', () => ({
-  Dialog: ({ children, onOpenChange }: { children: React.ReactNode; onOpenChange?: (open: boolean) => void }) => {
-    dialogMockControls.onOpenChange = onOpenChange;
-    return <div data-testid="dialog">{children}</div>;
-  },
-  DialogTrigger: ({ children, asChild }: { children: React.ReactNode; asChild?: boolean }) => (
-    <div data-testid="dialog-trigger" data-as-child={asChild}>
-      {children}
-    </div>
-  ),
-  DialogContent: ({
-    children,
-    className,
-    hiddenTitle,
-  }: {
-    children: React.ReactNode;
-    className?: string;
-    hiddenTitle?: string;
-  }) => (
-    <div data-testid="dialog-content" className={className} data-hidden-title={hiddenTitle}>
-      {hiddenTitle && (
-        <h2 className="sr-only" data-testid="dialog-hidden-title">
-          {hiddenTitle}
-        </h2>
-      )}
-      {children}
-    </div>
-  ),
-  DialogHeader: ({ children, className }: { children: React.ReactNode; className?: string }) => (
-    <div data-testid="dialog-header" className={className}>
-      {children}
-    </div>
-  ),
-  DialogTitle: ({ children, className }: { children: React.ReactNode; className?: string }) => (
-    <h2 data-testid="dialog-title" className={className}>
-      {children}
-    </h2>
-  ),
-  DialogDescription: ({ children, className }: { children: React.ReactNode; className?: string }) => (
-    <p data-testid="dialog-description" className={className}>
-      {children}
-    </p>
-  ),
-  DialogFooter: ({ children, className }: { children: React.ReactNode; className?: string }) => (
-    <div data-testid="dialog-footer" className={className}>
-      {children}
-    </div>
-  ),
-  DialogClose: ({ children, asChild }: { children: React.ReactNode; asChild?: boolean }) => (
-    <div data-testid="dialog-close" data-as-child={asChild}>
-      {children}
-    </div>
-  ),
-  Button: ({
-    children,
-    variant,
-    className,
-    onClick,
-    disabled,
-    size,
-  }: {
-    children: React.ReactNode;
-    variant?: string;
-    className?: string;
-    onClick?: () => void;
-    disabled?: boolean;
-    size?: string;
-  }) => (
-    <button
-      data-testid={`button-${variant || 'default'}`}
-      className={className}
-      onClick={onClick}
-      disabled={disabled}
-      data-size={size}
-    >
-      {children}
-    </button>
-  ),
-  Container: ({ children, className }: { children: React.ReactNode; className?: string }) => (
-    <div data-testid="container" className={className}>
-      {children}
-    </div>
-  ),
-  Card: ({ children, className }: { children: React.ReactNode; className?: string }) => (
-    <div data-testid="card" className={className}>
-      {children}
-    </div>
-  ),
-  Typography: ({ children, size, className }: { children: React.ReactNode; size?: string; className?: string }) => (
-    <p data-testid="typography" data-size={size} className={className}>
-      {children}
-    </p>
-  ),
-  Badge: ({ children, variant, className }: { children: React.ReactNode; variant?: string; className?: string }) => (
-    <span data-testid="badge" data-variant={variant} className={className}>
-      {children}
-    </span>
-  ),
-}));
+vi.mock('@/atoms/Badge/Badge', () => {
+  return {
+    Badge: ({ children, variant, className }: { children: React.ReactNode; variant?: string; className?: string }) => (
+      <span data-testid="badge" data-variant={variant} className={className}>
+        {children}
+      </span>
+    ),
+  };
+});
+
+vi.mock('@/atoms/Button/Button', () => {
+  return {
+    Button: ({
+      children,
+      variant,
+      className,
+      onClick,
+      disabled,
+      size,
+    }: {
+      children: React.ReactNode;
+      variant?: string;
+      className?: string;
+      onClick?: () => void;
+      disabled?: boolean;
+      size?: string;
+    }) => (
+      <button
+        data-testid={`button-${variant || 'default'}`}
+        className={className}
+        onClick={onClick}
+        disabled={disabled}
+        data-size={size}
+      >
+        {children}
+      </button>
+    ),
+  };
+});
+
+vi.mock('@/atoms/Card/Card', () => {
+  return {
+    Card: ({ children, className }: { children: React.ReactNode; className?: string }) => (
+      <div data-testid="card" className={className}>
+        {children}
+      </div>
+    ),
+  };
+});
+
+vi.mock('@/atoms/Container/Container', () => {
+  return {
+    Container: ({ children, className }: { children: React.ReactNode; className?: string }) => (
+      <div data-testid="container" className={className}>
+        {children}
+      </div>
+    ),
+  };
+});
+
+vi.mock('@/atoms/Typography/Typography', () => {
+  return {
+    Typography: ({ children, size, className }: { children: React.ReactNode; size?: string; className?: string }) => (
+      <p data-testid="typography" data-size={size} className={className}>
+        {children}
+      </p>
+    ),
+  };
+});
 
 // Mock molecules
-vi.mock('@/molecules', () => ({
-  WordSlot: ({
-    mode,
-    index,
-    word,
-    isCorrect,
-    isError,
-    onClear,
-  }: {
-    mode: string;
-    index: number;
-    word: string;
-    isCorrect: boolean;
-    isError: boolean;
-    onClear: (index: number) => void;
-  }) => (
-    <div
-      data-testid={`word-slot-${index}`}
-      data-mode={mode}
-      data-word={word}
-      data-is-correct={isCorrect}
-      data-is-error={isError}
-      onClick={() => onClear(index)}
-    >
-      {word || `Slot ${index + 1}`}
-    </div>
-  ),
-}));
+vi.mock('@/molecules/WordSlot/WordSlot', () => {
+  return {
+    WordSlot: ({
+      mode,
+      index,
+      word,
+      isCorrect,
+      isError,
+      onClear,
+    }: {
+      mode: string;
+      index: number;
+      word: string;
+      isCorrect: boolean;
+      isError: boolean;
+      onClear: (index: number) => void;
+    }) => (
+      <div
+        data-testid={`word-slot-${index}`}
+        data-mode={mode}
+        data-word={word}
+        data-is-correct={isCorrect}
+        data-is-error={isError}
+        onClick={() => onClear(index)}
+      >
+        {word || `Slot ${index + 1}`}
+      </div>
+    ),
+  };
+});
 
 describe('DialogBackupPhrase - Snapshots', () => {
   it('matches snapshot for default DialogBackupPhrase', () => {

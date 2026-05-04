@@ -1,14 +1,15 @@
 import { buildNexusUrl } from '@/services/nexus/nexus.utils';
-import { USER_STREAM_PREFIX, UserStreamSource } from '@/services/nexus/stream/users/userStream.types';
-import type {
-  TUserStreamBase,
-  TUserStreamInfluencersParams,
-  TUserStreamPostRepliesParams,
-  TUserStreamQueryParams,
-  TUserStreamUsernameParams,
-  TUserStreamUsersByIdsParams,
-  TUserStreamWithDepthParams,
-  TUserStreamWithUserIdParams,
+import {
+  USER_STREAM_PREFIX,
+  UserStreamSource,
+  type TUserStreamBase,
+  type TUserStreamInfluencersParams,
+  type TUserStreamPostRepliesParams,
+  type TUserStreamQueryParams,
+  type TUserStreamUsernameParams,
+  type TUserStreamUsersByIdsParams,
+  type TUserStreamWithDepthParams,
+  type TUserStreamWithUserIdParams,
 } from '@/services/nexus/stream/users/userStream.types';
 /**
  * Users Stream API Endpoints

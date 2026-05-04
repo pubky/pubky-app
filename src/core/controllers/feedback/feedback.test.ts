@@ -1,7 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import * as Config from '@/config';
+import { FEEDBACK_MAX_CHARACTER_LENGTH } from '@/config/posts';
 import type { TFeedbackSubmitParams } from './feedback.types';
-import { asInvalid } from '@/test-utils';
+import { asInvalid } from '@/test-utils/type-assertions';
 import { FeedbackApplication } from '@/application/feedback/feedback';
 import type { Pubky } from '@/models/models.types';
 const testData = {
@@ -101,7 +101,7 @@ describe('FeedbackController', () => {
     });
 
     it('should accept comment at max length', async () => {
-      const maxLengthComment = 'a'.repeat(Config.FEEDBACK_MAX_CHARACTER_LENGTH);
+      const maxLengthComment = 'a'.repeat(FEEDBACK_MAX_CHARACTER_LENGTH);
       const params = createFeedbackParams({ comment: maxLengthComment });
       const submitSpy = vi.spyOn(FeedbackApplication, 'submit');
 
@@ -115,11 +115,11 @@ describe('FeedbackController', () => {
     });
 
     it('should throw when comment exceeds max length', async () => {
-      const longComment = 'a'.repeat(Config.FEEDBACK_MAX_CHARACTER_LENGTH + 1);
+      const longComment = 'a'.repeat(FEEDBACK_MAX_CHARACTER_LENGTH + 1);
       const params = createFeedbackParams({ comment: longComment });
 
       await expect(FeedbackController.submit(params)).rejects.toThrow(
-        `Comment must be no more than ${Config.FEEDBACK_MAX_CHARACTER_LENGTH} characters`,
+        `Comment must be no more than ${FEEDBACK_MAX_CHARACTER_LENGTH} characters`,
       );
     });
   });
