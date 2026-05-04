@@ -4,9 +4,9 @@ import { Err } from '@/libs/error/error.factories';
 import { ErrorService } from '@/libs/error/error.types';
 import { stripImageMetadata } from '@/libs/image/stripImageMetadata';
 
-import type { TToFileParams, TUploadFileParams } from '@/core/controllers/file/file.types';
-import type { TFileAttachmentResult } from '@/core/pipes/file/file.types';
-import { PubkySpecsSingleton } from '@/core/pipes/pipes.builder';
+import type { TToFileParams, TUploadFileParams } from '@/controllers/file/file.types';
+import type { TFileAttachmentResult } from '@/pipes/file/file.types';
+import { PubkySpecsSingleton } from '@/pipes/pipes.builder';
 export class FileNormalizer {
   private constructor() {}
 

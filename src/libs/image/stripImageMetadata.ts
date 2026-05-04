@@ -7,6 +7,8 @@ const IMAGE_MIME_TYPE_TO_EXTENSION: Record<string, string> = {
 };
 
 const MIME_TYPES_WITH_CANVAS_SANITIZATION = new Set(['image/jpeg', 'image/png', 'image/webp']);
+const MIME_TYPES_WITH_LOSSY_REENCODING = new Set(['image/jpeg', 'image/webp']);
+const LOSSY_IMAGE_ENCODE_QUALITY = 1;
 
 function getImageFileExtension(file: File): string {
   const mappedExtension = IMAGE_MIME_TYPE_TO_EXTENSION[file.type];
@@ -44,15 +46,23 @@ function loadImage(src: string): Promise<HTMLImageElement> {
   });
 }
 
-function canvasToBlob(canvas: HTMLCanvasElement, mimeType: string): Promise<Blob> {
+function getCanvasEncodeQuality(mimeType: string): number | undefined {
+  return MIME_TYPES_WITH_LOSSY_REENCODING.has(mimeType) ? LOSSY_IMAGE_ENCODE_QUALITY : undefined;
+}
+
+function canvasToBlob(canvas: HTMLCanvasElement, mimeType: string, quality?: number): Promise<Blob> {
   return new Promise((resolve, reject) => {
-    canvas.toBlob((blob) => {
-      if (!blob) {
-        reject(new Error('Failed to encode sanitized image'));
-        return;
-      }
-      resolve(blob);
-    }, mimeType);
+    canvas.toBlob(
+      (blob) => {
+        if (!blob) {
+          reject(new Error('Failed to encode sanitized image'));
+          return;
+        }
+        resolve(blob);
+      },
+      mimeType,
+      quality,
+    );
   });
 }
 
@@ -71,7 +81,7 @@ async function sanitizeRasterImage(file: File): Promise<Blob> {
     }
 
     context.drawImage(image, 0, 0, canvas.width, canvas.height);
-    return await canvasToBlob(canvas, file.type);
+    return await canvasToBlob(canvas, file.type, getCanvasEncodeQuality(file.type));
   } finally {
     URL.revokeObjectURL(objectUrl);
   }
@@ -80,6 +90,7 @@ async function sanitizeRasterImage(file: File): Promise<Blob> {
 /**
  * Removes sensitive metadata from supported image formats before upload.
  * - JPEG/PNG/WebP: re-encodes via canvas to strip metadata (fail-closed on errors)
+ * - JPEG/WebP: encoded at quality 1.0 to avoid browser default quality reduction
  * - GIF/SVG and other image types: keep bytes to avoid visual regressions
  * - All image types: replace original filename with an obfuscated one
  */

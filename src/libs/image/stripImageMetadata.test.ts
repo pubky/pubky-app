@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { asOpaque } from '@/test-utils';
+import { asOpaque } from '@/test-utils/type-assertions';
 import { stripImageMetadata } from './stripImageMetadata';
 
 describe('stripImageMetadata', () => {
@@ -83,6 +83,7 @@ describe('stripImageMetadata', () => {
     expect(mockContext.drawImage).toHaveBeenCalledWith(mockImage, 0, 0, 120, 80);
     expect(mockCanvas.toBlob).toHaveBeenCalled();
     expect((mockCanvas.toBlob as ReturnType<typeof vi.fn>).mock.calls[0][1]).toBe('image/jpeg');
+    expect((mockCanvas.toBlob as ReturnType<typeof vi.fn>).mock.calls[0][2]).toBe(1);
     expect(URL.createObjectURL).toHaveBeenCalledWith(inputFile);
     expect(URL.revokeObjectURL).toHaveBeenCalledWith('blob:input-image');
   });

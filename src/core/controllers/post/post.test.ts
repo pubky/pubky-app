@@ -15,8 +15,8 @@ import { PostTagsModel } from '@/models/post/tags/postTags';
 import { HomeserverService } from '@/services/homeserver/homeserver';
 import type { NexusTaggers } from '@/services/nexus/nexus.types';
 import { useAuthStore } from '@/stores/auth/auth.store';
-import { FileNormalizer } from '@/core/pipes/file/file.normalizer';
-import { TFileAttachmentResult } from '@/core/pipes/file/file.types';
+import { FileNormalizer } from '@/pipes/file/file.normalizer';
+import { TFileAttachmentResult } from '@/pipes/file/file.types';
 // Mock HomeserverService
 vi.mock('@/services/homeserver/homeserver', () => ({
   HomeserverService: {

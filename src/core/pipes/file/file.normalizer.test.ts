@@ -13,8 +13,8 @@ import { ValidationErrorCode } from '@/libs/error/error.codes';
 import { ErrorCategory, ErrorService } from '@/libs/error/error.types';
 import * as ImageSanitizer from '@/libs/image/stripImageMetadata';
 
-import { FileNormalizer } from '@/core/pipes/file/file.normalizer';
-import { PubkySpecsSingleton } from '@/core/pipes/pipes.builder';
+import { FileNormalizer } from '@/pipes/file/file.normalizer';
+import { PubkySpecsSingleton } from '@/pipes/pipes.builder';
 // File-specific test data
 const FILE_TEST_DATA = {
   name: 'test-image.png',
