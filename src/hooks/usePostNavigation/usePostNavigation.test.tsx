@@ -169,6 +169,29 @@ describe('usePostNavigation', () => {
     });
   });
 
+  describe('handlePostClick', () => {
+    it('does not hijack click on interactive elements in post content', () => {
+      const { result } = renderHook(() => usePostNavigation());
+      const openSpy = vi.spyOn(window, 'open').mockImplementation(() => null);
+      const link = document.createElement('a');
+      const linkChild = document.createElement('span');
+      link.appendChild(linkChild);
+
+      act(() => {
+        result.current.handlePostClick(
+          'author1:post1',
+          mockMouseEvent({
+            target: linkChild,
+            metaKey: true,
+          }),
+        );
+      });
+
+      expect(mockPush).not.toHaveBeenCalled();
+      expect(openSpy).not.toHaveBeenCalled();
+    });
+  });
+
   describe('Edge Cases', () => {
     it('should throw error for empty string post ID', () => {
       const { result } = renderHook(() => usePostNavigation());
