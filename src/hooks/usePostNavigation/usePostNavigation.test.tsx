@@ -1,5 +1,6 @@
 import { renderHook, act } from '@testing-library/react';
 import { describe, it, expect, beforeEach, vi } from 'vitest';
+import { mockMouseEvent } from '@/test-utils/react-events';
 import { usePostNavigation } from './usePostNavigation';
 
 // Mock next/navigation
@@ -115,6 +116,56 @@ describe('usePostNavigation', () => {
       });
 
       expect(mockPush).toHaveBeenCalledTimes(10);
+    });
+  });
+
+  describe('handlePostAuxClick', () => {
+    it('opens post in a new tab for middle-click on non-interactive areas', () => {
+      const { result } = renderHook(() => usePostNavigation());
+      const preventDefault = vi.fn();
+      const openSpy = vi.spyOn(window, 'open').mockImplementation(() => null);
+
+      act(() => {
+        result.current.handlePostAuxClick(
+          'author1:post1',
+          mockMouseEvent({
+            button: 1,
+            preventDefault,
+            target: document.createElement('div'),
+          }),
+        );
+      });
+
+      expect(preventDefault).toHaveBeenCalledTimes(1);
+      expect(openSpy).toHaveBeenCalledWith('/post/author1/post1', '_blank', 'noopener,noreferrer');
+    });
+
+    it('does not hijack middle-click on links or buttons', () => {
+      const { result } = renderHook(() => usePostNavigation());
+      const preventDefault = vi.fn();
+      const openSpy = vi.spyOn(window, 'open').mockImplementation(() => null);
+
+      act(() => {
+        result.current.handlePostAuxClick(
+          'author1:post1',
+          mockMouseEvent({
+            button: 1,
+            preventDefault,
+            target: document.createElement('a'),
+          }),
+        );
+        result.current.handlePostAuxClick(
+          'author1:post1',
+          mockMouseEvent({
+            button: 1,
+            preventDefault,
+            target: document.createElement('button'),
+          }),
+        );
+      });
+
+      expect(preventDefault).not.toHaveBeenCalled();
+      expect(openSpy).not.toHaveBeenCalled();
     });
   });
 

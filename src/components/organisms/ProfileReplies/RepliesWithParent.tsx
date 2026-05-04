@@ -1,6 +1,8 @@
 'use client';
 
 import { useInfiniteScroll } from '@/hooks/useInfiniteScroll/useInfiniteScroll';
+import { usePostListKeyboard } from '@/hooks/usePostListKeyboard/usePostListKeyboard';
+import { usePostNavigation } from '@/hooks/usePostNavigation/usePostNavigation';
 import { useStreamPagination } from '@/hooks/useStreamPagination/useStreamPagination';
 import { useLiveQuery } from 'dexie-react-hooks';
 import { useEffect, useRef } from 'react';
@@ -37,12 +39,28 @@ export function RepliesWithParent({ streamId }: RepliesWithParentProps) {
     debounceMs: 20,
   });
 
+  const { handlePostKeyDown } = usePostNavigation();
+  const { focusedIndex, setCardRef, onListKeyDown, onCardFocus } = usePostListKeyboard(postIds.length);
+
   return (
     <TimelineStateWrapper loading={loading} error={error} hasItems={postIds.length > 0}>
       <Container>
-        <Container overrideDefaults className="space-y-4">
-          {postIds.map((postId: string) => (
-            <ReplyWithParent key={`reply_${postId}`} replyPostId={postId} />
+        <Container overrideDefaults role="feed" className="space-y-4" onKeyDown={onListKeyDown}>
+          {postIds.map((postId: string, index: number) => (
+            <Container
+              key={`reply_${postId}`}
+              overrideDefaults
+              ref={setCardRef(index)}
+              role="article"
+              aria-posinset={index + 1}
+              aria-setsize={postIds.length}
+              tabIndex={focusedIndex === index ? 0 : -1}
+              onFocus={() => onCardFocus(index)}
+              onKeyDown={(e) => handlePostKeyDown(postId, e)}
+              className="rounded-md outline-none focus-visible:ring-2 focus-visible:ring-ring"
+            >
+              <ReplyWithParent replyPostId={postId} />
+            </Container>
           ))}
 
           {/* Loading More Indicator */}

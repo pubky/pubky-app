@@ -1,5 +1,7 @@
 'use client';
 
+import { usePostListKeyboard } from '@/hooks/usePostListKeyboard/usePostListKeyboard';
+import { usePostNavigation } from '@/hooks/usePostNavigation/usePostNavigation';
 import { useThreadReplies } from '@/hooks/useThreadReplies/useThreadReplies';
 import { Container } from '@/atoms/Container/Container';
 import { PostThreadSpacer } from '@/atoms/PostThreadSpacer/PostThreadSpacer';
@@ -24,6 +26,8 @@ interface ThreadTreeProps {
  */
 export function ThreadTree({ postId, showQuickReply = true }: ThreadTreeProps) {
   const { replyIds, hasMore, totalCount, isExpandingAll, expandAll } = useThreadReplies(postId);
+  const { handlePostKeyDown } = usePostNavigation();
+  const { focusedIndex, setCardRef, onListKeyDown, onCardFocus } = usePostListKeyboard(replyIds.length);
 
   if (replyIds.length === 0 && !hasMore) {
     // No replies -- only show quick reply if enabled
@@ -38,12 +42,27 @@ export function ThreadTree({ postId, showQuickReply = true }: ThreadTreeProps) {
   const remaining = Math.max(0, totalCount - replyIds.length);
 
   return (
-    <Container overrideDefaults>
+    <Container overrideDefaults role="feed" onKeyDown={onListKeyDown}>
       {/* Level 1 replies */}
       {replyIds.map((replyId, index) => {
         const isLastReply = index === replyIds.length - 1 && !hasMore && !showQuickReply;
 
-        return <ReplyWithNested key={replyId} replyId={replyId} isLastReply={isLastReply} />;
+        return (
+          <Container
+            key={replyId}
+            overrideDefaults
+            ref={setCardRef(index)}
+            role="article"
+            aria-posinset={index + 1}
+            aria-setsize={replyIds.length}
+            tabIndex={focusedIndex === index ? 0 : -1}
+            onFocus={() => onCardFocus(index)}
+            onKeyDown={(e) => handlePostKeyDown(replyId, e)}
+            className="rounded-md outline-none focus-visible:ring-2 focus-visible:ring-ring"
+          >
+            <ReplyWithNested replyId={replyId} isLastReply={isLastReply} />
+          </Container>
+        );
       })}
 
       {/* "+N more replies" button for Level 1 */}

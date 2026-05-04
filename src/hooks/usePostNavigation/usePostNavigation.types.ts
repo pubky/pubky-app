@@ -18,4 +18,10 @@ export interface UsePostNavigationResult {
    * Auxiliary-click handler. Middle-click (button === 1) opens the post in a new tab.
    */
   handlePostAuxClick: (postId: string, event: React.MouseEvent) => void;
+  /**
+   * Keyboard handler for focusable post wrappers.
+   * Enter / Space → SPA navigation. Cmd/Ctrl/Shift + Enter → opens in a new tab.
+   * Only activates when the keydown originated on the wrapper itself (event.target === event.currentTarget).
+   */
+  handlePostKeyDown: (postId: string, event: React.KeyboardEvent) => void;
 }

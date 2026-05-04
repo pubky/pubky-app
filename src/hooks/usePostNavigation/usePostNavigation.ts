@@ -6,12 +6,27 @@ import { useRouter } from 'next/navigation';
 import { POST_ROUTES } from '@/app/routes';
 import type { UsePostNavigationResult } from './usePostNavigation.types';
 import { parseCompositeId } from '@/models/models.utils';
+
+const INTERACTIVE_SELECTOR = 'a,button,input,textarea,select,label,[role="button"],[role="link"]';
+
+function getEventTargetElement(target: EventTarget | null): Element | null {
+  if (!target) return null;
+  if (target instanceof Element) return target;
+  if (target instanceof Node) return target.parentElement;
+  return null;
+}
+
+function isInteractiveTarget(target: EventTarget | null): boolean {
+  const element = getEventTargetElement(target);
+  return Boolean(element?.closest(INTERACTIVE_SELECTOR));
+}
 /**
  * usePostNavigation
  *
  * Shared hook for post navigation logic.
  * Handles routing to post detail pages, including new-tab opens
- * via Cmd/Ctrl/Shift+Click and middle-click.
+ * via Cmd/Ctrl/Shift+Click, middle-click, and Cmd/Ctrl/Shift+Enter
+ * when a post wrapper is keyboard-focused.
  */
 export function usePostNavigation(): UsePostNavigationResult {
   const router = useRouter();
@@ -47,11 +62,29 @@ export function usePostNavigation(): UsePostNavigationResult {
   const handlePostAuxClick = useCallback(
     (postId: string, event: React.MouseEvent) => {
       if (event.button !== 1) return;
+      if (isInteractiveTarget(event.target)) return;
       event.preventDefault();
       window.open(getPostHref(postId), '_blank', 'noopener,noreferrer');
     },
     [getPostHref],
   );
 
-  return { getPostHref, navigateToPost, handlePostClick, handlePostAuxClick };
+  const handlePostKeyDown = useCallback(
+    (postId: string, event: React.KeyboardEvent) => {
+      // Only act when the wrapper itself has focus, not a descendant (button, link, input).
+      if (event.target !== event.currentTarget) return;
+      if (event.key !== 'Enter' && event.key !== ' ') return;
+      event.preventDefault();
+
+      const href = getPostHref(postId);
+      if (event.metaKey || event.ctrlKey || event.shiftKey) {
+        window.open(href, '_blank', 'noopener,noreferrer');
+        return;
+      }
+      router.push(href);
+    },
+    [router, getPostHref],
+  );
+
+  return { getPostHref, navigateToPost, handlePostClick, handlePostAuxClick, handlePostKeyDown };
 }

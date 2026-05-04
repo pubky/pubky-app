@@ -283,6 +283,7 @@ describe('PostMain', () => {
       navigateToPost: vi.fn(),
       handlePostClick: mockHandlePostClick,
       handlePostAuxClick: mockHandlePostAuxClick,
+      handlePostKeyDown: vi.fn(),
     });
     vi.mocked(usePostDetails).mockReturnValue({
       postDetails: {

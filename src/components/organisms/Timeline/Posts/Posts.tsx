@@ -1,6 +1,8 @@
 'use client';
 
 import { useInfiniteScroll } from '@/hooks/useInfiniteScroll/useInfiniteScroll';
+import { usePostListKeyboard } from '@/hooks/usePostListKeyboard/usePostListKeyboard';
+import { usePostNavigation } from '@/hooks/usePostNavigation/usePostNavigation';
 import { Container } from '@/atoms/Container/Container';
 import { TimelineEndMessage } from '@/molecules/Timeline/TimelineEndMessage';
 import { TimelineError } from '@/molecules/Timeline/TimelineError';
@@ -36,12 +38,32 @@ export function TimelinePosts({ postIds, loading, loadingMore, error, hasMore, l
     debounceMs: 20,
   });
 
+  const { handlePostKeyDown } = usePostNavigation();
+  const { focusedIndex, setCardRef, onListKeyDown, onCardFocus } = usePostListKeyboard(postIds.length);
+
   return (
     <TimelineStateWrapper loading={loading} error={error} hasItems={postIds.length > 0}>
       <Container data-cy="timeline-container">
-        <Container data-cy="timeline-posts" overrideDefaults className="space-y-4">
-          {postIds.map((postId) => (
-            <Container key={`main_${postId}`} data-cy="post-card">
+        <Container
+          data-cy="timeline-posts"
+          overrideDefaults
+          role="feed"
+          className="space-y-4"
+          onKeyDown={onListKeyDown}
+        >
+          {postIds.map((postId, index) => (
+            <Container
+              key={`main_${postId}`}
+              data-cy="post-card"
+              ref={setCardRef(index)}
+              role="article"
+              aria-posinset={index + 1}
+              aria-setsize={postIds.length}
+              tabIndex={focusedIndex === index ? 0 : -1}
+              onFocus={() => onCardFocus(index)}
+              onKeyDown={(e) => handlePostKeyDown(postId, e)}
+              className="rounded-md outline-none focus-visible:ring-2 focus-visible:ring-ring"
+            >
               <PostMain postId={postId} isReply={false} />
               <TimelinePostReplies postId={postId} />
             </Container>
