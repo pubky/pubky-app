@@ -238,7 +238,11 @@ const envSchema = z.object({
   NEXT_PUBLIC_SENTRY_DSN: z
     .string()
     .optional()
-    .transform((val) => (val && val.trim() !== '' ? val : undefined)),
+    .transform((val) => {
+      const trimmed = val?.trim();
+      return trimmed && trimmed !== '' ? trimmed : undefined;
+    })
+    .pipe(z.url().optional()),
 
   // Environment tag attached to every event (e.g. "production", "staging", "preview").
   // Defaults to NODE_ENV when unset.

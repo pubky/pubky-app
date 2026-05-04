@@ -61,7 +61,11 @@ Pubky App is decentralized social — strict defaults:
 
 - `sendDefaultPii: false` (no IP, no headers)
 - Replay: `maskAllText: true`, `maskAllInputs: true`, `blockAllMedia: true`, `networkCaptureBodies: false`
-- `beforeSend` defensively redacts strings containing `pubky://...` URIs
+- `beforeSend` defensively redacts user identifiers and user-provided data from app-controlled payloads:
+  `email`, `phone` / `phoneNumber`, `name`, `firstName`, `lastName`, `displayName`, `username`, `bio`, `file`,
+  `user`, raw Pubky public keys, `pubky://...` URIs, compact Pubky URLs, and `_pubky.` HTTP hostnames.
+- `captureAppError()` sanitizes `error.context` before attaching it to Sentry. New `Err.*` contexts must avoid raw user
+  data unless the key is covered by the scrubber in `src/libs/observability/sentry.ts`.
 
 Never call `Sentry.setUser({ email, ... })`. If user attribution is ever needed, use the user's Pubky public key as `id` only.
 
